@@ -213,7 +213,9 @@ tr.pasif td:first-child{opacity:1}
 .haritaHucre.simdi{border-color:var(--vurgu);box-shadow:0 0 0 1px var(--vurgu) inset}
 .haritaHucre.tamam{background:var(--vurgu-yumusak)}
 .haritaHucre.telafi{border-color:var(--uyari)}
+.haritaHucre.telafi-anlatim{border-color:var(--vurgu)}
 .haritaHucre.atlandi{border-color:var(--kritik)}
+.haritaHucre.atlandi-onemsiz{border-color:var(--soluk);opacity:.75}
 .haritaHucre.tiklanabilir{cursor:pointer}
 .haritaHucre.tiklanabilir:hover{border-color:var(--murekkep)}
 .haritaYildiz{position:absolute;top:6px;right:8px;color:var(--uyari);font-size:13px}
@@ -222,7 +224,9 @@ tr.pasif td:first-child{opacity:1}
 .haritaEtiket{font-size:11px;margin-top:5px}
 .haritaHucre.tamam .haritaEtiket{color:var(--iyi)}
 .haritaHucre.atlandi .haritaEtiket{color:var(--kritik)}
+.haritaHucre.atlandi-onemsiz .haritaEtiket{color:var(--soluk)}
 .haritaHucre.telafi .haritaEtiket{color:var(--uyari)}
+.haritaHucre.telafi-anlatim .haritaEtiket{color:var(--vurgu)}
 .haritaHucre.simdi .haritaEtiket{color:var(--vurgu)}
 .haritaPanel{margin:-2px 0 8px}
 .bugunSerit{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ikincil)}
@@ -912,12 +916,14 @@ function telafiAnlatimHaftaBul(si, baslangicHb, haftaTakip, siniri) {
 const HAFTA_NEDEN_ETIKET = {
   geldi_cozmedi: 'okula geldi, testleri kaldı',
   gelmedi_cozmedi: 'okula gelmedi, telafi anlatımı eklendi',
-  cozdu_gelmedi: 'test çözdü, yeni konular telafiye eklendi'
+  cozdu_gelmedi: 'test çözdü, yeni konular telafiye eklendi',
+  onemsiz: 'önemsiz sayıldı, atlandı'
 };
 const HAFTA_NEDEN_ACIKLAMA = {
   geldi_cozmedi: 'Okula geldi, sadece testler çözülmedi. O haftanın ve devreden eski haftaların testleri bir hafta sonrasına ertelenecek.',
   gelmedi_cozmedi: 'Okula gelmedi, hiçbir şey yapılmadı. Devreden eski haftaların testleri ertelenecek; o haftanın hiç işlenmemiş yeni konuları sonraki haftaya “konu anlatımı” olarak eklenecek — öğrenci anlatıldı/izledi dedikten sonra ilk testleri normal akışa girer.',
-  cozdu_gelmedi: 'Okula gelmedi ama testleri kendi çözdü. Devreden eski konulara dokunulmayacak; o haftanın hiç işlenmemiş yeni konuları sonraki haftaya “konu anlatımı” olarak eklenecek — öğrenci anlatıldı/izledi dedikten sonra ilk testleri normal akışa girer.'
+  cozdu_gelmedi: 'Okula gelmedi ama testleri kendi çözdü. Devreden eski konulara dokunulmayacak; o haftanın hiç işlenmemiş yeni konuları sonraki haftaya “konu anlatımı” olarak eklenecek — öğrenci anlatıldı/izledi dedikten sonra ilk testleri normal akışa girer.',
+  onemsiz: 'Hiçbir şey ertelenmez, hiçbir konu telafiye eklenmez — bu hafta sadece “karara bağlandı” olarak işaretlenip haritada gri görünür, bir daha sormaz.'
 };
 
 // bir haftayı "yapılamadı" olarak işaretleyip nedene göre telafi eder:
@@ -1657,6 +1663,7 @@ function gorunumPlan() {
   // "ileri haftadasınız" uyarısı yalnızca ondan da ötesi için, aksi hep can sıkıcı bir şekilde çıkıyordu
   const gecmisHafta = hb + 6 < bugunNo(), ileriHafta = hb > buHafta() + 7;
   const dh = duzenlenenHafta();
+  const atlanan = atlananHaftalar(si);
   return (dh !== null && !ogrenciMi()
       ? '<div class="uyari-serit"><b>Düzenleme açık — ' + ggyy(dh) + ' – ' + ggyy(dh + 6) + ' haftası.</b> ' +
         (dh === hb ? 'Geçmiş günlere de kutu taşıyabilir, konu ekleyip çıkarabilirsiniz. '
@@ -1694,6 +1701,16 @@ function gorunumPlan() {
         '<div class="mini" style="margin-top:7px">' +
         p.bekleyen.slice(0, 8).map(x => kacis(konuAl(x.ki)[3]) + ' <span style="opacity:.7">(' + ggyy(x.due) + ')</span>').join(' · ') +
         (p.bekleyen.length > 8 ? ' · +' + (p.bekleyen.length - 8) + ' daha' : '') + '</div></div>'
+      : '') +
+    // Haftalar Haritası'na hiç gitmeden de fark edilsin diye: sonuç girilmemiş, karara
+    // bağlanmamış haftalar burada da hatırlatılır, tek tıkla ilgili haftanın karar
+    // paneline gidilir (bkz. atlananHaftalar / data-haritaGit).
+    (atlanan.length
+      ? '<div class="uyari-serit"><b>' + atlanan.length + ' hafta için sonuç girilmedi, ne olduğu işaretlenmedi.</b> ' +
+        'O hafta(lar)da okula gelindi mi, testler çözüldü mü işaretlenmeden telafi ayarlanmaz — ' +
+        'önemli değilse de öyle işaretlenip geçilebilir. ' +
+        '<button class="dugme birincil" data-haritaGit="' + atlanan[0] + '">' + ggyy(atlanan[0]) + ' haftasını işaretle</button>' +
+        (atlanan.length > 1 ? ' <span class="mini">· toplam ' + atlanan.length + ' hafta bekliyor</span>' : '') + '</div>'
       : '') +
     (o.aktif === false && !ogrenciMi() ? '<div class="uyari-serit">Bu öğrenciye programı henüz vermediniz; ' +
       'şube veya sınıf geneli eklemelerde ve toplu çıktıda atlanır. Çıktıyı verince yandaki ' +
@@ -2009,6 +2026,54 @@ function gorunumRapor() {
   return h;
 }
 
+// bir haftanın Haftalar Haritası'ndaki durumunu hesaplar — haritanın kendisi ve haftalık
+// plan ekranındaki proaktif uyarı (bkz. atlananHaftalar) aynı mantığı burada paylaşır,
+// iki yerde birbirinden kayabilecek iki ayrı kopya olmasın diye.
+function haftaHaritaDurumu(si, hb, baslangicHb, bugunHb) {
+  const o = D.ogr[si];
+  if (hb < baslangicHb) return { durum: 'gelecek', etiket: 'henüz katılmamıştı' };
+  if (hb === bugunHb) return { durum: 'simdi', etiket: 'bu hafta' };
+  if (hb > bugunHb) return { durum: 'gelecek', etiket: '' };
+  const marked = (D.haftaDurum || {})[si + '|' + hb];
+  if (marked) {
+    // "onemsiz" kendi rengini alır (gri, atlandı); geri kalanı, o haftaya gerçekten
+    // konu anlatımı eklenip eklenmediğine göre ayrılır — hangi neden metnine bakmak yerine
+    // haftayiTelafiEt'in gerçekte ne yaptığını (marked.konu) kullanmak daha güvenilir.
+    const durum = marked.neden === 'onemsiz' ? 'atlandi-onemsiz' : (marked.konu > 0 ? 'telafi-anlatim' : 'telafi');
+    return { durum: durum, etiket: HAFTA_NEDEN_ETIKET[marked.neden] || 'telafi edildi' };
+  }
+  const sonuc = haftaSonucSayisi(si, hb);
+  if (sonuc > 0) return { durum: 'tamam', etiket: sonuc + ' sonuç girildi' };
+  // O hafta için kâğıt/çıktı verilmediyse (o.cikti o haftadan eskiyse), işlenmemiş
+  // konular zaten kendiliğinden bir sonraki haftaya kaymıştır (bkz. sonucBekliyor) —
+  // telafi kararı istemenin bir anlamı yok, ekranda zaten hiç "sıkışmış" bir şey yok.
+  if (!(o.cikti && o.cikti >= hb)) return { durum: 'gelecek', etiket: 'otomatik ertelendi' };
+  return { durum: 'atlandi', etiket: 'sonuç yok' };
+}
+// öğrenci dönem başından SONRA katıldıysa (programı ilk o zaman verildi), ondan önceki
+// haftalar bu öğrenci için hiç var olmadı — "sonuç yok" diye kırmızı işaretlenmesin.
+// o.cikti EN SON verilen çıktının tarihidir, her yazdırmada ileri kayar — "ilk katıldığı
+// gün" için kullanılamaz (haftalık düzenli çıktı alan bir öğrencide sürekli "bu hafta
+// katıldı" gösterirdi). o.ilkAktif bunun için ayrı tutulur, yalnızca İLK aktifleşmede
+// yazılır. Yoksa (eski veri / hiç aktifleşmemiş) eski davranış korunur.
+const haftaBaslangici = o => o.ilkAktif ? Math.max(pazartesi(gunNo(D.ayar.donemBasi)), pazartesi(o.ilkAktif))
+                                        : pazartesi(gunNo(D.ayar.donemBasi));
+// "sonuç yok, karar bekliyor" (atlandi) durumundaki haftaları listeler — Haftalar
+// Haritası'na hiç gitmeden, haftalık plan ekranından da fark edilsin diye.
+function atlananHaftalar(si) {
+  const o = D.ogr[si];
+  if (!o || !D.ayar.donemBasi) return [];
+  const donemHb = pazartesi(gunNo(D.ayar.donemBasi));
+  const sinavHb = pazartesi(gunNo(D.ayar.sinav));
+  const bugunHb = buHafta();
+  if (donemHb > sinavHb) return [];
+  const baslangicHb = haftaBaslangici(o);
+  const sonuc = [];
+  for (let hb = donemHb; hb <= Math.min(bugunHb, sinavHb); hb += 7)
+    if (haftaHaritaDurumu(si, hb, baslangicHb, bugunHb).durum === 'atlandi') sonuc.push(hb);
+  return sonuc;
+}
+
 function gorunumHaritasi() {
   const si = EK.ogr;
   if (si === undefined || !D.ogr[si] || !D.ayar.donemBasi) {
@@ -2020,13 +2085,7 @@ function gorunumHaritasi() {
   const sinavG = gunNo(D.ayar.sinav);
   const sinavHb = pazartesi(sinavG);
   const bugunHb = buHafta();
-  // öğrenci dönem başından SONRA katıldıysa (programı ilk o zaman verildi), ondan önceki
-  // haftalar bu öğrenci için hiç var olmadı — "sonuç yok" diye kırmızı işaretlenmesin.
-  // o.cikti EN SON verilen çıktının tarihidir, her yazdırmada ileri kayar — "ilk katıldığı
-  // gün" için kullanılamaz (haftalık düzenli çıktı alan bir öğrencide sürekli "bu hafta
-  // katıldı" gösterirdi). o.ilkAktif bunun için ayrı tutulur, yalnızca İLK aktifleşmede
-  // yazılır. Yoksa (eski veri / hiç aktifleşmemiş) eski davranış korunur.
-  const baslangicHb = o.ilkAktif ? Math.max(donemHb, pazartesi(o.ilkAktif)) : donemHb;
+  const baslangicHb = haftaBaslangici(o);
   let h = '<div class="baslik"><h1>Haftalar Haritası</h1><p>' + kacis(o.ad) +
     ' · dönem başından (' + ggyy(donemHb) + ') YKS haftasına kadar. ★ YKS haftası; kırmızı çerçeve o hafta ' +
     'hiç sonuç girilmediğini gösterir, üzerine tıklayıp nasıl geçtiğini işaretleyebilirsiniz.</p></div>' +
@@ -2036,19 +2095,7 @@ function gorunumHaritasi() {
   for (let hb = donemHb; hb <= sinavHb; hb += 7) {
     const no = haftaNo(hb);
     const isYks = sinavG >= hb && sinavG <= hb + 6;
-    const sonuc = haftaSonucSayisi(si, hb);
-    const marked = (D.haftaDurum || {})[si + '|' + hb];
-    let durum, etiket;
-    if (hb < baslangicHb) { durum = 'gelecek'; etiket = 'henüz katılmamıştı'; }
-    else if (hb === bugunHb) { durum = 'simdi'; etiket = 'bu hafta'; }
-    else if (hb > bugunHb) { durum = 'gelecek'; etiket = ''; }
-    else if (marked) { durum = 'telafi'; etiket = HAFTA_NEDEN_ETIKET[marked.neden] || 'telafi edildi'; }
-    else if (sonuc > 0) { durum = 'tamam'; etiket = sonuc + ' sonuç girildi'; }
-    // O hafta için kâğıt/çıktı verilmediyse (o.cikti o haftadan eskiyse), işlenmemiş
-    // konular zaten kendiliğinden bir sonraki haftaya kaymıştır (bkz. sonucBekliyor) —
-    // telafi kararı istemenin bir anlamı yok, ekranda zaten hiç "sıkışmış" bir şey yok.
-    else if (!(o.cikti && o.cikti >= hb)) { durum = 'gelecek'; etiket = 'otomatik ertelendi'; }
-    else { durum = 'atlandi'; etiket = 'sonuç yok'; }
+    const { durum, etiket } = haftaHaritaDurumu(si, hb, baslangicHb, bugunHb);
     const acilir = durum === 'atlandi';
     h += '<div class="haritaHucre ' + durum + (acilir ? ' tiklanabilir' : '') + '"' +
       (acilir ? ' data-haritaAc="' + hb + '"' : '') + '>' +
@@ -2073,6 +2120,8 @@ function gorunumHaritasi() {
             '<button class="dugme haritaNeden" data-neden="geldi_cozmedi" data-hb="' + hb + '">Okula geldi, test çözmedi</button>' +
             '<button class="dugme haritaNeden" data-neden="gelmedi_cozmedi" data-hb="' + hb + '">Okula gelmedi, test de çözmedi</button>' +
             '<button class="dugme haritaNeden" data-neden="cozdu_gelmedi" data-hb="' + hb + '">Okula gelmedi, testleri çözdü</button>' +
+            '<button class="dugme haritaNeden" data-neden="onemsiz" data-hb="' + hb + '" ' +
+            'title="Hiçbir şey ertelenmez/eklenmez, sadece karara bağlanmış sayılır">Önemli değildi, atla</button>' +
             '<button class="dugme" data-haritaKapat="1">Vazgeç</button></div>') +
         '</div>';
     }
@@ -3560,10 +3609,16 @@ document.addEventListener('click', async ev => {
     o.off.sort((a, b) => a - b);
     await kaydet(true); ciz(); return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) { EK.girisAcik[+t.dataset.ki] = true; ciz(); return; }
   if (t.dataset.haritaac !== undefined) { EK.haritaAcik = +t.dataset.haritaac; EK.haritaOnay = null; ciz(); return; }
+  // haftalık plandaki proaktif uyarıdan tek tıkla harita sekmesine geçip o haftanın
+  // karar panelini de doğrudan açar — kullanıcı ayrıca sekmeyi arayıp haftayı bulmasın
+  if (t.dataset.haritagit !== undefined) {
+    EK.sekme = 'harita'; EK.haritaAcik = +t.dataset.haritagit; EK.haritaOnay = null;
+    PENCERE = null; pencereCiz(); ciz(); return;
+  }
   if (t.dataset.haritakapat !== undefined) { EK.haritaAcik = null; EK.haritaOnay = null; ciz(); return; }
   if (t.dataset.haritaonayvazgec !== undefined) { EK.haritaOnay = null; ciz(); return; }
   if (t.classList.contains('haritaNeden')) {
