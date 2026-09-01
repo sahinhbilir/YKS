@@ -1669,6 +1669,7 @@ function gorunumPlan() {
   const gecmisHafta = hb + 6 < bugunNo(), ileriHafta = hb > buHafta() + 7;
   const dh = duzenlenenHafta();
   const atlanan = atlananHaftalar(si);
+  const katilmadanOnceki = katilmadanOnceHaftaSayisi(si);
   return (dh !== null && !ogrenciMi()
       ? '<div class="uyari-serit"><b>Düzenleme açık — ' + ggyy(dh) + ' – ' + ggyy(dh + 6) + ' haftası.</b> ' +
         (dh === hb ? 'Geçmiş günlere de kutu taşıyabilir, konu ekleyip çıkarabilirsiniz. '
@@ -1716,6 +1717,15 @@ function gorunumPlan() {
         'önemli değilse de öyle işaretlenip geçilebilir. ' +
         '<button class="dugme birincil" data-haritaGit="' + atlanan[0] + '">' + ggyy(atlanan[0]) + ' haftasını işaretle</button>' +
         (atlanan.length > 1 ? ' <span class="mini">· toplam ' + atlanan.length + ' hafta bekliyor</span>' : '') + '</div>'
+      : '') +
+    // Dönem başı ile öğrencinin fiilen katıldığı hafta arasında haftalar varsa (geç
+    // başlangıç), bunu Haftalar Haritası hiç göstermez (o haftalar "henüz katılmamıştı"
+    // sayılır) — burada isteğe bağlı bir tek seferlik "getir" düğmesiyle telafi edilebilir.
+    (katilmadanOnceki > 0
+      ? '<div class="uyari-serit"><b>Programa ' + katilmadanOnceki + ' hafta sonra katılmışsın.</b> ' +
+        'Dönem başından beri işlenmiş ama sana hiç yazılmamış konular var. İstersen bunları şimdiki haftadan ' +
+        'başlayarak plana ekleyebilirsin; sığmayanlar otomatik olarak sonraki haftalara yayılır. ' +
+        '<button class="dugme birincil" id="katilmadanOnceGetir">Geçmiş konuları getir</button></div>'
       : '') +
     (o.aktif === false && !ogrenciMi() ? '<div class="uyari-serit">Bu öğrenciye programı henüz vermediniz; ' +
       'şube veya sınıf geneli eklemelerde ve toplu çıktıda atlanır. Çıktıyı verince yandaki ' +
@@ -2077,6 +2087,48 @@ function atlananHaftalar(si) {
   for (let hb = donemHb; hb <= Math.min(bugunHb, sinavHb); hb += 7)
     if (haftaHaritaDurumu(si, hb, baslangicHb, bugunHb).durum === 'atlandi') sonuc.push(hb);
   return sonuc;
+}
+// dönem başı ile öğrencinin fiilen katıldığı hafta arasında kaç hafta olduğunu söyler
+// (0 ise gecikme yok, eklenecek bir şey de yok) — hafif bir kontrol, konu çözümlemesi yapmaz.
+function katilmadanOnceHaftaSayisi(si) {
+  const o = D.ogr[si];
+  if (!o || !D.ayar.donemBasi || o.telafiGecmisYapildi) return 0;
+  const donemHb = pazartesi(gunNo(D.ayar.donemBasi));
+  return Math.max(0, Math.round((haftaBaslangici(o) - donemHb) / 7));
+}
+// Öğrenci dönem başından SONRA katıldıysa, arada kalan haftaların konu planındaki
+// konularını bu öğrenciye ÖZEL bir "işlendi" kaydı olarak yazar (D.ogrIslenis) —
+// şubenin ya da aynı şubedeki diğer öğrencilerin kaydına dokunmadan. Konu adı -> ki
+// çözümlemesi ve o haftanın hangi güne düştüğü, programUygula'nın da kullandığı AYNI
+// haftaYerlesim/kullaniciKonusu fonksiyonlarıyla yapılır — burada yeni bir eşleştirme
+// mantığı yok. Yazılan tarihler geçmişte kalsa da planHesapla bunu zaten olağan yoldan
+// işler (işlendikten D.ayar.ilk gün sonra vade); sığmayan konular her zaman olduğu gibi
+// sonraki haftalara devreder — kapasiteyi aşmama garantisi planHesapla'nın kendisinden
+// gelir, burada ayrıca bir "N haftaya dağıt" mantığı yazılmadı.
+function katilmadanOnceIsle(si) {
+  const o = D.ogr[si];
+  const n = katilmadanOnceHaftaSayisi(si);
+  if (!n) return { hafta: 0, konu: 0 };
+  const donemHb = pazartesi(gunNo(D.ayar.donemBasi));
+  const baslangicHb = haftaBaslangici(o);
+  D.ogrIslenis = D.ogrIslenis || {};
+  D.ogrIslenis[si] = D.ogrIslenis[si] || {};
+  const sayac = { bulundu: 0, yeni: 0 };
+  let haftaSayisi = 0, konuSayisi = 0;
+  for (let hb = donemHb; hb < baslangicHb; hb += 7) {
+    const hafta = planHaftasi(o.sube, hb);
+    const yer = haftaYerlesim(o.sube, hafta, hb);
+    if (!yer.length) continue;
+    let eklendi = 0;
+    yer.forEach(y => {
+      const ki = kullaniciKonusu(y.dersIdx, y.ad, sayac);
+      D.konuDers[ki] = D.konuDers[ki] || y.dersAd;
+      if (D.ogrIslenis[si][ki] === undefined) { D.ogrIslenis[si][ki] = hb + y.gi; eklendi++; }
+    });
+    if (eklendi) { haftaSayisi++; konuSayisi += eklendi; }
+  }
+  o.telafiGecmisYapildi = true;   // aynı öğrenci için tekrar tekrar önerilmesin
+  return { hafta: haftaSayisi, konu: konuSayisi };
 }
 
 function gorunumHaritasi() {
@@ -3604,6 +3656,15 @@ document.addEventListener('click', async ev => {
     if (!confirm('Bu haftanın elle yaptığınız düzenlemeleri silinecek; plan yeniden hesaplanacak. Devam?')) return;
     delete D.elle[EK.ogr + '|' + haftaBasi()];
     await kaydet(true); ciz(); return;
+  }
+  if (ev.target.id === 'katilmadanOnceGetir') {
+    const n = katilmadanOnceHaftaSayisi(EK.ogr);
+    if (!confirm(n + ' haftanın konuları bu haftadan başlayarak plana eklenecek, sığmayanlar sonraki ' +
+                 'haftalara yayılacak. Devam?')) return;
+    const r = katilmadanOnceIsle(EK.ogr);
+    await kaydet(true); ciz();
+    bilgiVer(r.konu ? (r.konu + ' konu, ' + r.hafta + ' haftadan eklendi.') : 'Eklenecek yeni konu bulunamadı.');
+    return;
   }
   const gd = ev.target.closest('.gunDugme');
   if (gd && gd.dataset.i !== undefined) {
