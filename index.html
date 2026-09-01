@@ -819,9 +819,14 @@ function takvimiKaydir(hafta) {
 
 function elleAl(si, hb, olustur) {
   const a = si + '|' + hb;
-  if (!D.elle) D.elle = {};
-  if (!D.elle[a] && olustur) D.elle[a] = { ek: [], sil: [], yer: {}, soru: {} };
-  return D.elle[a] || { ek: [], sil: [], yer: {}, soru: {} };
+  // yalnızca gerçekten yazılacaksa D.elle'i oluştur — okuma amaçlı çağrılar (olustur
+  // verilmemiş) D'ye hiç dokunmamalı; planHesapla gibi "salt okunur" sayılan fonksiyonlar
+  // buradan geçiyor, kayıt tutan bir konteyner boş bile olsa sessizce oluşturulmamalı.
+  if (olustur && (!D.elle || !D.elle[a])) {
+    D.elle = D.elle || {};
+    D.elle[a] = D.elle[a] || { ek: [], sil: [], yer: {}, soru: {} };
+  }
+  return (D.elle || {})[a] || { ek: [], sil: [], yer: {}, soru: {} };
 }
 
 // --- yapılamayan konunun ertelenmesi (sonuç girilmeden tarih kaydırma)
