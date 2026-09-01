@@ -868,10 +868,18 @@ function sonucBekliyor(si, ki, kart, due, hb) {
   const off = Array.isArray(o.off) ? o.off : [];
   const islenis = due - (D.ayar.ilk || 0);      // konunun işlendiği gün (kart yoksa due = işleniş + ilk)
   if (off.indexOf(haftaGunu(islenis)) >= 0) return false;  // öğrencinin izin gününe işlenmiş görünüyorsa veri tuhaflığıdır, beklemeye sayılmaz
-  const gecmisHafta = pazartesi(due);
-  const yerlesmisti = (elleAl(si, gecmisHafta).yer || {})[ki] !== undefined;
-  if (yerlesmisti) return true;                 // o haftanın kâğıdında yeri vardı
-  return !!o.cikti && o.cikti >= gecmisHafta;   // o hafta için çıktı verilmiş
+  // Bir konu ancak GERÇEKTEN dondurulmuş (yazdırılmış) bir haftanın kâğıdında yer
+  // almışsa "beklemede" sayılır — hangi haftada dondurulduğu önemli değil, bir konu
+  // taşma/telafi yüzünden asıl vade haftasından başka bir haftaya sabitlenmiş olabilir.
+  // Önceki sürüm bunun yerine "en son ne zaman çıktı verildi" tarihine bakan bir TAHMİN
+  // kullanıyordu (o.cikti >= konunun vade haftası); bu, hiç kâğıda yazılmamış ama vadesi
+  // geçmiş bir konuyu da (ör. bu hafta kapasiteye sığmayıp gelecek haftaya taşan bir
+  // konu, sonraki hafta yeniden değerlendirilirken) yanlışlıkla "beklemede" sayabiliyordu
+  // — gerçek sınav: kâğıtta yeri var mıydı, tahmini bir zamanlama değil.
+  return Object.keys(D.elle || {}).some(a => {
+    const par = a.split('|');
+    return +par[0] === si && (D.elle[a].yer || {})[ki] !== undefined;
+  });
 }
 
 // --- haftalar haritası: atlanmış bir haftanın telafisi
