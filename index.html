@@ -3267,7 +3267,7 @@ document.addEventListener('click', async ev => {
                ilkAktif: bugunNo(), maddeler: [], rutin: { once: '', ara: '', sonra: '' } }];
     D.konuPlani = D.konuPlani || {};
     D.konuPlani['benim'] = JSON.parse(JSON.stringify(VARSAYILAN_KONU_PLANI[alan] || VARSAYILAN_KONU_PLANI.SAY));
-    if (donem) D.ayar.donemBasi = isoDan(pazartesi(gunNo(donem)));
+    if (donem) { D.ayar.donemBasi = isoDan(pazartesi(gunNo(donem))); D.ayar.donemElle = true; }
     EK.ogr = 0; EK.sekme = 'ayarlar'; EK.sube = 'benim'; EK.hafta = null;
     await kaydet(true); ciz();
     bilgiVer(ad + ', konu planın hazır. Şimdi aşağıdan okulunun ders programını AI ile aktar ya da hücrelere ' +
