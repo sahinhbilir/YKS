@@ -759,7 +759,10 @@ function takvimiKaydir(hafta) {
   });
   (D.ogr || []).forEach(o => { if (typeof o.cikti === 'number') o.cikti += g; });
   if (D.ayar.planBasi) D.ayar.planBasi = isoDan(gunNo(D.ayar.planBasi) + g);
-  if (D.ayar.donemBasi) D.ayar.donemBasi = isoDan(gunNo(D.ayar.donemBasi) + g);
+  // Bu, kullanıcının "planı ileri/geri al" düğmesiyle bilerek verdiği bir karardır
+  // (ör. sınıf bir hafta ara verdi) — otomatik bir tahmin değil, o yüzden elleMi=true:
+  // donemHizala() bu kaydırmayı sonradan sessizce geri almasın.
+  if (D.ayar.donemBasi) donemBasiniAyarla(isoDan(gunNo(D.ayar.donemBasi) + g), true);
 }
 
 function elleAl(si, hb, olustur) {
@@ -2544,6 +2547,17 @@ function planHaftasi(sube, hb) {
   const n = planHaftaSayisi(sube) || 1;
   return Math.min(n, Math.max(1, haftaNo(hb)));
 }
+// donemBasi ve donemElle'yi HER ZAMAN birlikte yazan tek kapı. Bu ikisi ayrı ayrı
+// güncellenirse (yeni bir çağrı noktası elleMi'yi unutursa) donemHizala() az sonra
+// tarihi sessizce "bugün"e sıfırlar — geçmişte gerçekten olmuş bir hata buydu.
+// Kullanıcının açıkça verdiği HER tarih (Ayarlar'dan elle giriş, hafta numarası
+// seçimi, öğrenci kurulum sihirbazı, "planı ileri at" düğmesi) elleMi=true ile
+// buradan geçer; yalnızca varsayılan/otomatik hizalama yolları (varsayilan(),
+// donemHizala()'nın kendisi) bu fonksiyonu atlayıp doğrudan yazar.
+function donemBasiniAyarla(tarih, elleMi) {
+  D.ayar.donemBasi = tarih;
+  D.ayar.donemElle = !!elleMi;
+}
 // dönem başı plan aralığının dışındaysa bu haftayı 1. hafta say (kullanıcı elle ayarlamadıysa)
 function donemHizala() {
   if (D.ayar.donemElle) return false;
@@ -3267,7 +3281,7 @@ document.addEventListener('click', async ev => {
                ilkAktif: bugunNo(), maddeler: [], rutin: { once: '', ara: '', sonra: '' } }];
     D.konuPlani = D.konuPlani || {};
     D.konuPlani['benim'] = JSON.parse(JSON.stringify(VARSAYILAN_KONU_PLANI[alan] || VARSAYILAN_KONU_PLANI.SAY));
-    if (donem) { D.ayar.donemBasi = isoDan(pazartesi(gunNo(donem))); D.ayar.donemElle = true; }
+    if (donem) donemBasiniAyarla(isoDan(pazartesi(gunNo(donem))), true);
     EK.ogr = 0; EK.sekme = 'ayarlar'; EK.sube = 'benim'; EK.hafta = null;
     await kaydet(true); ciz();
     bilgiVer(ad + ', konu planın hazır. Şimdi aşağıdan okulunun ders programını AI ile aktar ya da hücrelere ' +
@@ -3838,12 +3852,11 @@ document.addEventListener('change', async ev => {
     return;
   }
   if (el.id === 'donemBasi') {
-    D.ayar.donemBasi = isoDan(pazartesi(gunNo(el.value)));   // her zaman o haftanın Pazartesi'sine yuvarla
-    D.ayar.donemElle = true; await kaydet(true); ciz(); return;
+    donemBasiniAyarla(isoDan(pazartesi(gunNo(el.value))), true);   // her zaman o haftanın Pazartesi'sine yuvarla
+    await kaydet(true); ciz(); return;
   }
   if (el.id === 'haftaSec') {
-    D.ayar.donemBasi = isoDan(haftaBasi() - (+el.value - 1) * 7);
-    D.ayar.donemElle = true;
+    donemBasiniAyarla(isoDan(haftaBasi() - (+el.value - 1) * 7), true);
     await kaydet(true); ciz();
     bilgiVer('Bu hafta artık ' + el.value + '. hafta sayılıyor (dönem başı ' + ggyy(gunNo(D.ayar.donemBasi)) + ').');
     return;
