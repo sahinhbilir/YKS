@@ -1723,8 +1723,10 @@ function gorunumPlan() {
     // sayılır) — burada isteğe bağlı bir tek seferlik "getir" düğmesiyle telafi edilebilir.
     (katilmadanOnceki > 0
       ? '<div class="uyari-serit"><b>Programa ' + katilmadanOnceki + ' hafta sonra katılmışsın.</b> ' +
-        'Dönem başından beri işlenmiş ama sana hiç yazılmamış konular var. İstersen bunları şimdiki haftadan ' +
-        'başlayarak plana ekleyebilirsin; sığmayanlar otomatik olarak sonraki haftalara yayılır. ' +
+        'Dönem başından beri işlenmiş ama sana hiç yazılmamış konular var. İstersen bunları plana ekleyebilirsin; ' +
+        'bu konular daha önce işlendiği için unutulma riski daha yüksek sayılır ve bu haftaki bazı konulardan ' +
+        '<b>önce</b> sıraya girebilir — sığan kadarı bu haftaya, sığmayanlar sonraki haftalara yayılır, mevcut ' +
+        'planındaki konular kaybolmaz, sırası değişebilir. ' +
         '<button class="dugme birincil" id="katilmadanOnceGetir">Geçmiş konuları getir</button></div>'
       : '') +
     (o.aktif === false && !ogrenciMi() ? '<div class="uyari-serit">Bu öğrenciye programı henüz vermediniz; ' +
@@ -3659,8 +3661,9 @@ document.addEventListener('click', async ev => {
   }
   if (ev.target.id === 'katilmadanOnceGetir') {
     const n = katilmadanOnceHaftaSayisi(EK.ogr);
-    if (!confirm(n + ' haftanın konuları bu haftadan başlayarak plana eklenecek, sığmayanlar sonraki ' +
-                 'haftalara yayılacak. Devam?')) return;
+    if (!confirm(n + ' haftanın konuları plana eklenecek. Bu konular en eski işlenmiş olduğu için unutulma riski ' +
+                 'daha yüksektir; sıralamada bu haftanın bazı konularından önce yer alabilir ve onları sonraki ' +
+                 'haftaya itebilir — hiçbir şey kaybolmaz, yalnızca sırası değişir. Devam?')) return;
     const r = katilmadanOnceIsle(EK.ogr);
     await kaydet(true); ciz();
     bilgiVer(r.konu ? (r.konu + ' konu, ' + r.hafta + ' haftadan eklendi.') : 'Eklenecek yeni konu bulunamadı.');
