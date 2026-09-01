@@ -606,6 +606,54 @@ async function durumuYukle() {
     if (!Array.isArray(o.off)) o.off = (o.tatil === undefined || o.tatil === null || o.tatil < 0) ? [] : [o.tatil];
     delete o.tatil;
   });
+  const uyarilar = tutarlilikUyarilari();
+  if (uyarilar.length) console.warn('[YKS Tekrar Defteri] Tutarlılık uyarıları (veri DEĞİŞTİRİLMEDİ):\n- ' + uyarilar.join('\n- '));
+  return uyarilar;
+}
+// --- teşhis: "olmaması gereken" durumları arar, HİÇBİR VERİYİ DEĞİŞTİRMEZ — yalnızca
+// konsola yazar ve açılışta kısa bir bildirim gösterir. donemHizala()'nın aksine burada
+// otomatik bir "düzeltme" YOK: geçmişte gerçek veriyi bozan birkaç hatanın (cikti/ilkAktif
+// karışıklığı, dönem başı sıkışması gibi) ortak belirtisi hep buradaki türden bir tutarsızlıktı,
+// ama fark edilmesi hep bir kullanıcı şikâyetini bekledi. Bunları sessizce göz ardı etmek
+// yerine görünür kılmak, "gerçek yedekle test et" alışkanlığının açılışta otomatik çalışan hâli.
+function tutarlilikUyarilari() {
+  const uyari = [];
+  const donemG = gunNo(D.ayar.donemBasi);
+  const sinavG = gunNo(D.ayar.sinav);
+  if (donemG > sinavG) uyari.push('Dönem başı (' + ggyy(donemG) + ') YKS tarihinden (' + ggyy(sinavG) + ') sonra görünüyor.');
+
+  const erken = t => typeof t === 'number' && t < donemG;
+  if (Object.keys(D.islenis || {}).some(k => erken(D.islenis[k])))
+    uyari.push('Genel "işlendi" kayıtlarından en az biri dönem başından önceki bir tarihte.');
+  Object.keys(D.subeIslenis || {}).forEach(su => {
+    if (Object.keys(D.subeIslenis[su] || {}).some(k => erken(D.subeIslenis[su][k])))
+      uyari.push('"' + su + '" şubesinin işlendi kayıtlarından en az biri dönem başından önceki bir tarihte.');
+  });
+  Object.keys(D.ogrIslenis || {}).forEach(si => {
+    if (Object.keys(D.ogrIslenis[si] || {}).some(k => erken(D.ogrIslenis[si][k])))
+      uyari.push('Bir öğrencinin işlendi kayıtlarından en az biri dönem başından önceki bir tarihte.');
+  });
+
+  const kartSorunlu = Object.keys(D.kart || {}).filter(k => {
+    const c = D.kart[k];
+    return typeof c.due === 'number' && typeof c.son === 'number' && c.due < c.son;
+  });
+  if (kartSorunlu.length) uyari.push(kartSorunlu.length + ' kartın bir sonraki tekrar tarihi, son görülme tarihinden önce görünüyor.');
+
+  // h < 1 (dönem henüz başlamadı) kasıtlı ve desteklenen bir durum — donemElle=true ile
+  // ileri tarihli bir dönem kurulduğunda tam olarak beklenen hâl budur, uyarılmaz.
+  // h > n (konu planı bitmiş, hâlâ o haftadayız) ise gerçekten dikkat gerektirir: ya plan
+  // dönemin geri kalanını kapsamıyor ya da dönem başı yanlışlıkla çok geride kalmış.
+  Object.keys(D.konuPlani || {}).forEach(su => {
+    const n = planHaftaSayisi(su);
+    if (!n) return;
+    if (!(D.ogr || []).some(o => !o.silindi && o.sube === su)) return;    // öğrencisiz şube uyarıyı gereksiz kirletmesin
+    const h = haftaNo(buHafta());
+    if (h > n) uyari.push('"' + su + '" şubesi: içinde bulunulan hafta (' + h + '. hafta) konu planının (' +
+      n + ' hafta) sonunu geçmiş — içerik son haftaya sıkışıyor olabilir.');
+  });
+
+  return uyari;
 }
 
 function tamBelge() {
@@ -3960,7 +4008,7 @@ document.addEventListener('drop', async ev => {
     if (s) { const y = JSON.parse(s); EK.sekme = y.sekme || EK.sekme; EK.ogr = y.ogr || 0; sessionStorage.removeItem('yks_ek'); }
   } catch (e) { /* yok */ }
   EK.hafta = null;                     // uygulama her zaman içinde bulunulan haftayla açılır
-  await durumuYukle();
+  const acilisUyarilari = await durumuYukle();
   // ders programı ve konu planı hazırsa gelecek haftaları kendiliğinden doldur:
   // aynı işlemi tekrar tekrar yapmak zararsız, çünkü işlenmiş konuya dokunulmuyor
   try {
@@ -3972,6 +4020,8 @@ document.addEventListener('drop', async ev => {
     }
   } catch (e) { /* dağıtım başarısızsa uygulama yine de açılsın */ }
   ciz();
+  if (acilisUyarilari && acilisUyarilari.length)
+    bilgiVer(acilisUyarilari.length + ' veri tutarsızlığı bulundu — ayrıntı için tarayıcı konsoluna bakın.');
   yetenek('downloads'); yetenek('artifact');   // önbelleği ısıt: yazdır tıklaması beklemesin
 })();
 
