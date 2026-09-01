@@ -2314,6 +2314,9 @@ function ogrenciPaketi(si) {
 // öğrenci tarafında paketi aç
 function paketiYukle(pk) {
   if (!pk || pk.tur !== 'yks-ogrenci-paketi') throw new Error('Bu dosya bir öğrenci paketi değil.');
+  if (pk.surum !== PAKET_SURUM) throw new Error('Bu öğrenci paketi bu uygulama sürümüyle uyumlu değil ' +
+    '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', beklenen: ' + PAKET_SURUM +
+    '). Rehber öğretmeninizden güncel bir dosya isteyin ya da uygulamayı güncelleyin.');
   const y = varsayilan();
   y.rol = 'ogrenci'; y.kurum = pk.kurum || '';
   y.ayar = pk.ayar; y.anlasma = pk.anlasma; y.rutinBasliklari = pk.rutinBasliklari || y.rutinBasliklari;
@@ -2353,6 +2356,9 @@ function sonucPaketi(sinir) {
 // öğretmen tarafında sonuç paketini işle
 function sonucPaketiUygula(pk) {
   if (!pk || pk.tur !== 'yks-sonuc') throw new Error('Bu dosya bir sonuç paketi değil.');
+  if (pk.surum !== PAKET_SURUM) throw new Error('Bu sonuç paketi bu uygulama sürümüyle uyumlu değil ' +
+    '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', beklenen: ' + PAKET_SURUM +
+    '). Öğrenciden güncel bir uygulama ile oluşturulmuş bir dosya isteyin.');
   const si = D.ogr.findIndex(o => !o.silindi && (String(o.no) === String(pk.no) ||
     (pk.ad && o.ad.toLocaleLowerCase('tr') === String(pk.ad).toLocaleLowerCase('tr'))));
   if (si < 0) throw new Error((pk.ad || pk.no) + ' listede bulunamadı.');
