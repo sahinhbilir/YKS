@@ -859,6 +859,12 @@ function sonucBekliyor(si, ki, kart, due, hb) {
   const ert = erteleAl(si, ki);
   if (ert !== undefined && ert >= hb) return false;   // elle ileri alınmış, bekleyen değil
   const o = D.ogr[si];
+  // Öğrenci o haftada henüz uygulamada yoksa (bkz. haftaBaslangici), o hafta için hiçbir
+  // şey basılmış olamaz — "katılmadan önceki konuları getir" ile geriye tarihli eklenen
+  // konular tam olarak bu durumda: gerçek geçmiş bir tarihe sahipler ama hiçbir zaman bir
+  // kâğıda yazılmadılar. Bunları aşağıdaki "cikti tarihine bakarak tahmin et" sezgisiyle
+  // yanlışlıkla "beklemede" saymamak için en baştan eleniyor.
+  if (pazartesi(due) < haftaBaslangici(o)) return false;
   const off = Array.isArray(o.off) ? o.off : [];
   const islenis = due - (D.ayar.ilk || 0);      // konunun işlendiği gün (kart yoksa due = işleniş + ilk)
   if (off.indexOf(haftaGunu(islenis)) >= 0) return false;  // öğrencinin izin gününe işlenmiş görünüyorsa veri tuhaflığıdır, beklemeye sayılmaz

@@ -203,7 +203,12 @@ function kontrolEt(ad, kosul, detay) {
           const hb = buHafta() + k * 7;
           const p = planHesapla(0, hb);
           for (let g = 0; g < 7; g++) {
-            const dizi = p.gunler[g];
+            // Sabitlenmiş (pin) öğeler kapasite kontrolünden muaftır -- kâğıtta neyse o
+            // kalır, sonradan kap düşürülse bile. Kontrol yalnızca YENİ yerleştirilen
+            // (pin olmayan) öğelerin kapasiteyi aşmadığını doğrulamalı; aksi hâlde gerçek
+            // bir yedekte önceden dondurulmuş bir haftaya karşı çalıştırıldığında yanlış
+            // pozitif verir (sabitlenmiş yük, sonradan değişen kap ile karşılaştırılır).
+            const dizi = p.gunler[g].filter(y => !y.pin);
             const testYuku = dizi.reduce((a, y) => a + (y.anlatim ? 0 : (y.test || 1)), 0);
             const anlatimYuku = dizi.filter(y => y.anlatim).length;
             if (testYuku > kap) asim = { tip: 'test', hb, g, yuk: testYuku, sinir: kap };
