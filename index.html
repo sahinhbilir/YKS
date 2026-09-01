@@ -1668,6 +1668,13 @@ function gorunumPlan() {
       ? '<div class="uyari-serit"><b>Geçmiş bir haftaya bakıyorsunuz</b> (' + ggyy(hb) + ' – ' + ggyy(hb + 6) +
         '). Bugün ' + ggyy(bugunNo()) + '. ' +
         '<button class="dugme birincil" data-hafta="0">bu haftaya dön</button> ' + duzenleDugmesi(si, hb) + '</div>'
+      : (p.elle && p.elle.sabit)
+      // Yazdırılıp öğrenciye verilmiş bir hafta, takvimde henüz "geçmiş" sayılmasa bile
+      // (ör. haftanın ilk günü) fiilen aynı durumdadır: düzen kâğıtta sabit, tek eksik
+      // sonuçların girilmesi. Bunu, geçmiş-hafta uyarısıyla aynı görünürlükte göster —
+      // önceden yalnızca küçük bir alt not vardı, kolayca gözden kaçıyordu.
+      ? '<div class="uyari-serit"><b>Bu haftanın planı ' + ggyy(p.elle.sabit) + ' tarihinde verildi/sabitlendi.</b> ' +
+        'Kâğıttaki sıra değişmez; tek beklenen, sonuçların girilmesi. ' + duzenleDugmesi(si, hb) + '</div>'
       : ileriHafta
       ? '<div class="mini" style="margin-bottom:10px">İleri bir haftaya bakıyorsunuz. Burada yalnızca <b>tarihi kesinleşmiş</b> ' +
         'tekrarlar görünür; sonucu girilmemiş bir konunun bir sonraki tarihi belli olmadığı için buraya yazılmaz. ' +
@@ -1698,7 +1705,9 @@ function gorunumPlan() {
     (ogrenciMi() ? '' :
       '<label class="dugme ciktiEtiket' + (o.aktif !== false ? ' secili' : '') + '" title="İşaretlediğinizde öğrenci “kullanıyor” listesine girer">' +
       '<input type="checkbox" id="ciktiVerildi"' + (o.aktif !== false ? ' checked' : '') + '> çıktı verildi' +
-      (o.cikti ? ' <span class="mini">· ' + ggyy(o.cikti) + '</span>' : '') + '</label>') +
+      (o.cikti ? ' <span class="mini">· son çıktı ' + ggyy(o.cikti) + '</span>' : '') +
+      (o.ilkAktif ? ' <span class="mini" title="Bu öğrenci ilk kez aktifleştirildiğinde kaydedilir, değişmez">· ilk aktif ' +
+        ggyy(o.ilkAktif) + '</span>' : '') + '</label>') +
     '<span style="flex:1"></span>' +
     '<button class="dugme birincil" id="yazdir">Yazdır / PDF</button>' +
     (ogrenciMi() ? '' :
@@ -1714,9 +1723,7 @@ function gorunumPlan() {
                  : 'Bir kutuya tıklayıp konu arayabilir, soru sayısını yazabilir, ' +
                    'kutuları sürükleyerek başka güne taşıyabilirsiniz.') +
     (ilkGun(hb) > hb ? ' <span class="bugunSerit">· Bugün <b>' + GUN_AD[haftaGunu(bugunNo())] + ' ' + ggyy(bugunNo()) +
-      '</b> — geçmiş günler kilitli, yeni işler bugünden itibaren yerleşiyor.</span> ' + duzenleDugmesi(si, hb) : '') +
-    (p.elle && p.elle.sabit ? ' <span class="bugunSerit">· Bu haftanın düzeni <b>' + ggyy(p.elle.sabit) +
-      '</b> tarihinde sabitlendi; kâğıttaki sıra değişmez.</span>' : '') + '</div>' +
+      '</b> — geçmiş günler kilitli, yeni işler bugünden itibaren yerleşiyor.</span> ' + duzenleDugmesi(si, hb) : '') + '</div>' +
     (EK.toplu ? '<div class="uyari-serit">Düzenlemek/kaldırmak istediğiniz kutuları işaretleyin. ' +
       '<button class="dugme" id="topluHepsi">Hepsini seç</button> ' +
       '<button class="dugme" id="topluYariya">Seçilenlerin soru sayısını yarıya indir</button> ' +
@@ -1934,7 +1941,8 @@ function gorunumOgrenciler() {
       '<td class="sayisal">' + kayit.length + '</td>' +
       '<td class="sayisal">' + (ort === null ? '—' : '%' + ort) + '</td>' +
       '<td class="sayisal">' + p.toplam + (p.devreden ? ' <span class="rozet kritik">+' + p.devreden + '</span>' : '') + '</td>' +
-      '<td class="mini">' + (o.cikti ? ggyy(o.cikti) : '—') + '</td>' +
+      '<td class="mini">' + (o.cikti ? ggyy(o.cikti) : '—') +
+        (o.ilkAktif ? '<br><span title="İlk aktifleştirme tarihi, değişmez">ilk: ' + ggyy(o.ilkAktif) + '</span>' : '') + '</td>' +
       '<td style="white-space:nowrap">' +
       '<button class="dugme ogrPaket" data-i="' + i + '" style="padding:3px 9px" ' +
       'title="Bu öğrencinin kendi uygulaması için dosya indir">paket</button> ' +
@@ -2259,6 +2267,17 @@ function gorunumAyarlar() {
     ggyy(gunNo(gercekBugun)) + '.</div>' +
     '<input type="date" id="aTestTarih" value="' + (a.testTarih || '') + '"> ' +
     '<button class="dugme" id="testTarihSifirla">Gerçek tarihe dön</button></div>' +
+    (ogrenciMi() && D.ogr[0]
+      ? '<div class="kart sarma" style="margin-bottom:20px"><table><tbody>' +
+        satir('Günde kaç test çözerim', '<input type="number" min="1" max="12" value="' + (D.ogr[0].kap || 6) +
+          '" class="oKap" data-i="0" style="width:64px">',
+          'Planın günlere dağılımı bu sayıya göre yapılır. Yoğunsa düşürüp, boş günün varsa yükseltebilirsin.') +
+        satir('Hangi gün(ler) boşum', '<div class="gunSec">' + GUN_AD.map((g, j) =>
+          '<button class="gunDugme' + ((D.ogr[0].off || []).indexOf(j) >= 0 ? ' kapali' : '') + '" data-i="0" data-g="' +
+          j + '" title="' + g + '">' + g.slice(0, 1) + (j === 5 ? 'ts' : j === 6 ? 'z' : '') + '</button>').join('') + '</div>',
+          'İşaretlediğin günlere yeni iş yazılmaz.') +
+        '</tbody></table></div>'
+      : '') +
     (subeListesi().length ? gorunumProgram() : '') +
     '<div class="kart sarma" style="margin-bottom:20px"><table><tbody>' +
     satir('Tek teste geçiş eşiği', '<select id="aTek">' + [0.70, 0.75, 0.80, 0.85, 0.90].map(v =>
