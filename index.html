@@ -750,6 +750,21 @@ function programDegistiTetikle(sube) {
     }
   } catch (e) { /* dolduramazsa program yine de kaydedilmiş olsun */ }
 }
+// programDegistiTetikle SADECE bugünden itibaren sabit (ileriHafta, varsayılan 8) haftalık bir
+// pencereyi yeniden dağıtır. dersSirasiKaydir bir dersi onlarca hafta ileri erteleyebildiğinden
+// (ya da bir konuyu dersin en sonuna kadar sürükleyebildiğinden), etkilenen aralık bu sabit
+// pencerenin çok dışına taşabilir; o zaman henüz sonuçlanmamış bir yerleşim dagitimiGeriAl ile
+// silinir ama ileriDagit pencere dışında kaldığı için hiç yeniden eklenmez — konu, ekrandan (bazen
+// çıktısı zaten verilmiş, sabitlenmiş bir haftadan) sessizce kaybolur. Bu yüzden dersSirasiKaydir
+// sonrası, o çağrının bildirdiği gerçek etki aralığını (plan haftası cinsinden) da ayrıca eşitleriz.
+function etkilenenAraligiEsitle(sube, etkiBaslangic, etkiBitis) {
+  try {
+    const hb0 = haftaTakvimi(etkiBaslangic);
+    const n = Math.max(1, etkiBitis - etkiBaslangic + 1);
+    for (let k = 0; k < n; k++) dagitimiGeriAl(hb0 + k * 7, sube);
+    ileriDagit(hb0, sube || null, n);
+  } catch (e) { /* eşitlenemezse program yine de kaydedilmiş olsun */ }
+}
 function haftaBasi() {
   const b = buHafta();
   // düzenleme açıkken ekran o haftada açılır; kapanınca yine içinde bulunulan haftaya döner
@@ -2722,6 +2737,11 @@ function haftaNo(hb) {
   const d = pazartesi(D.ayar.donemBasi ? gunNo(D.ayar.donemBasi) : gunNo(D.ayar.planBasi));
   return Math.floor((hb - d) / 7) + 1;
 }
+// haftaNo'nun tersi: 1 tabanlı bir plan haftası numarasından o haftanın takvim Pazartesi'sini üretir
+function haftaTakvimi(hafta) {
+  const d = pazartesi(D.ayar.donemBasi ? gunNo(D.ayar.donemBasi) : gunNo(D.ayar.planBasi));
+  return d + (hafta - 1) * 7;
+}
 function planHaftaSayisi(sube) { return (((D.konuPlani || {})[sube]) || []).length; }
 // --- ders programı haftadan haftaya değişebilir: her hafta ayrı saklanır
 const BOS_PROGRAM = () => ({ saatler: [], gunler: [[], [], [], [], [], [], []] });
@@ -3013,6 +3033,7 @@ function dersSirasiKaydir(sube, dersAdi, hafta, yon) {
   if (!plan) return { hata: 'Bu şubenin konu planı yok.' };
   const w = hafta - 1;
   if (w < 0) return { hata: anahtar + ' zaten ilk haftada, daha geri alınamaz.' };
+  const eskiPlanUzunlugu = plan.length;
   const sutun = plan.map(h => (h && h[anahtar]) || null);   // yalnızca bu dersin haftalık sütunu
   const eskiIcerik = sutun[w] || [];
   let mesaj;
@@ -3032,11 +3053,16 @@ function dersSirasiKaydir(sube, dersAdi, hafta, yon) {
     else mesaj = 'Bu haftadaki erteleme geri alındı, sonraki haftalar bir öne kaydı.';
   }
   while (plan.length < sutun.length) plan.push({});
+  // sutun eskisinden kısaldıysa (boşluk kapatan "ileri"), dizinin eski kuyruğunda bu dersin
+  // yazdığı içerik yeni sutun'un artık kapsamadığı indekslerde kalır — temizlenmezse aynı içerik
+  // hem doğru yeni yerinde hem de eski, artık yanlış olan kuyruk indeksinde ikilenmiş kalırdı.
+  for (let i = sutun.length; i < eskiPlanUzunlugu; i++) { if (plan[i]) delete plan[i][anahtar]; }
   sutun.forEach((icerik, i) => {
     plan[i] = plan[i] || {};
     if (icerik && icerik.length) plan[i][anahtar] = icerik; else delete plan[i][anahtar];
   });
-  return { ders: anahtar, hafta: hafta, mesaj: mesaj };
+  return { ders: anahtar, hafta: hafta, mesaj: mesaj,
+           etkiBaslangic: hafta, etkiBitis: Math.max(sutun.length, eskiPlanUzunlugu) };
 }
 
 // --- bir hücrede (gün, ders) o hafta işlenen konular
@@ -3596,6 +3622,7 @@ document.addEventListener('click', async ev => {
     const r = dersSirasiKaydir(sube, sk.dataset.ders, hafta, +sk.dataset.yon);
     if (r.hata) { bilgiVer(r.hata); return; }
     programDegistiTetikle(sube);   // yeni sırayla hemen yeniden dağıt — elle "dağıt" beklemesin
+    etkilenenAraligiEsitle(sube, r.etkiBaslangic, r.etkiBitis);   // sabit 8 haftalık pencerenin ötesi de eşitlensin
     await kaydet(true); ciz(); pencereCiz();
     bilgiVer(r.ders + ' · ' + hafta + '. hafta: ' + r.mesaj);
     return;
