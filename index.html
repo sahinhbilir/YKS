@@ -1364,6 +1364,16 @@ function hedefOgrenciler() {
   return [EK.ogr];
 }
 
+// Pencere açıkken bir ders için "hangi haftadayız" konumu: ilk basışta takvimden hesaplanır,
+// sonraki ileri/geri basışları bu değeri günceller. Takvim haftası basışlarla değişmediğinden,
+// hep yeniden planHaftasi()'dan okunsaydı art arda "geri" aynı iki haftayı ileri geri sallardı
+// (kullanıcı raporu: "iki konu her tıklamada birbirine dönüşüyor").
+function pencereDersHafta(sube, anahtar) {
+  if (!PENCERE) return planHaftasi(sube, haftaBasi());
+  PENCERE.dHafta = PENCERE.dHafta || {};
+  if (PENCERE.dHafta[anahtar] === undefined) PENCERE.dHafta[anahtar] = planHaftasi(sube, haftaBasi());
+  return PENCERE.dHafta[anahtar];
+}
 // Pencerede: bu ders için konu sırasını bir konu ileri/geri alma
 // Öğretmenler yıl içinde yavaşlar ya da hızlanır; her ders kendi hızında ilerlesin.
 function dersSirasiKutusu(si, mevcut) {
@@ -1372,7 +1382,7 @@ function dersSirasiKutusu(si, mevcut) {
   const dersAd = mevcut.dersAd || konuDersAdi(mevcut.ki);
   const anahtar = planDersAnahtari(sube, dersAd);
   if (!anahtar) return '';
-  const hafta = planHaftasi(sube, haftaBasi());
+  const hafta = pencereDersHafta(sube, anahtar);
   const d = dersDizisi(sube, anahtar);
   const suan = (((D.konuPlani || {})[sube] || [])[hafta - 1] || {})[anahtar] || [];
   return '<div class="p-gunler"><div class="etiket">' + kacis(anahtar) + ' — sınıfın nerede olduğu</div>' +
@@ -1507,6 +1517,12 @@ function pencereCiz() {
 function tasi(si, hb, kaynak, hedef) {
   if (gunGecti(hb, hedef.g) || gunGecti(hb, kaynak.g)) {
     bilgiVer('Geçmiş güne iş yazılamaz — bugün ' + ggyy(bugunNo()) + '.');
+    return false;
+  }
+  const sabit = elleAl(si, hb, false).sabit;
+  if (sabit) {
+    bilgiVer('Bu haftanın planı ' + ggyy(sabit) + ' tarihinde verildi/sabitlendi; kâğıttaki sıra değişmesin diye ' +
+             'taşınamaz. Değiştirmek gerekiyorsa önce “Elle düzeni sıfırla”yı kullanın.');
     return false;
   }
   const p = planHesapla(si, hb);
@@ -3362,6 +3378,12 @@ document.addEventListener('click', async ev => {
   if (hucre && !ev.target.closest('.pencere')) {
     const hb0 = haftaBasi(), g0 = +hucre.dataset.g;
     if (gunGecti(hb0, g0)) { bilgiVer('O gün geçti — bugün ' + ggyy(bugunNo()) + '.'); return; }
+    const sabit0 = elleAl(EK.ogr, hb0, false).sabit;
+    if (sabit0) {
+      bilgiVer('Bu haftanın planı ' + ggyy(sabit0) + ' tarihinde verildi/sabitlendi; kâğıttaki sıra değişmesin ' +
+               'diye düzenlenemez. Değiştirmek gerekiyorsa önce “Elle düzeni sıfırla”yı kullanın.');
+      return;
+    }
     PENCERE = { g: g0, s: +hucre.dataset.s, arama: '' };
     pencereCiz(); return;
   }
@@ -3560,9 +3582,12 @@ document.addEventListener('click', async ev => {
   const sk = ev.target.closest('.sirakaydir');
   if (sk && PENCERE) {
     const si = EK.ogr, sube = D.ogr[si].sube;
-    const hafta = planHaftasi(sube, haftaBasi());
-    const r = dersSirasiKaydir(sube, sk.dataset.ders, hafta, +sk.dataset.yon);
+    const anahtar = planDersAnahtari(sube, sk.dataset.ders);
+    const yon = +sk.dataset.yon;
+    const hafta = pencereDersHafta(sube, anahtar);
+    const r = dersSirasiKaydir(sube, sk.dataset.ders, hafta, yon);
     if (r.hata) { bilgiVer(r.hata); return; }
+    PENCERE.dHafta[anahtar] = hafta + yon;   // bir sonraki basış buradan devam etsin, aynı iki haftayı sallamasın
     programDegistiTetikle(sube);   // yeni sırayla hemen yeniden dağıt — elle "dağıt" beklemesin
     await kaydet(true); ciz(); pencereCiz();
     bilgiVer(r.ders + ' · ' + hafta + '. hafta: “' + r.eski + '” yerine “' + r.yeni + '”. ' +
