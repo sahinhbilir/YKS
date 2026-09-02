@@ -555,9 +555,9 @@ function varsayilan() {
         'Çözemediğim testi ertelemek yerine aynı gün rehber öğretmenime bildireceğim.',
         'Doğru sayılarımı olduğu gibi, eksiksiz yazacağım.',
         'Hastalık, yoğunluk gibi bir aksilik olursa hemen rehber öğretmenime haber vereceğim.',
-        'Planımı kaybetmeyecek, dosyamda saklayacağım.'
-      ],
-      imza: ['Öğrenci', 'Rehber öğretmen']
+        'Planımı kaybetmeyecek, dosyamda saklayacağım.',
+        'Aşağıya kendi el yazımla "Bu programı uygulayacağıma söz veriyorum." yazıp imzalayacağım.'
+      ]
     },
     rutinBasliklari: ['Ders çalışmadan önce', 'Ders arası', 'Ders çalıştıktan sonra'],
     ekKonular: [], islenis: {}, subeIslenis: {}, konuKaynak: {}, konuDers: {}, kart: {}, log: [],
@@ -1569,9 +1569,7 @@ function planTablosu(si, hb, p, tumu) {
       '<div class="a-baslik">' + kacis(a.baslik || 'ANLAŞMA') + '</div>' +
       '<div class="a-giris">' + kacis(a.giris || '') + '</div>' +
       '<ol class="a-maddeler">' + maddeler.map(m => '<li>' + kacis(m) + '</li>').join('') + '</ol>' +
-      '<div class="a-imza">' + (a.imza || ['Öğrenci', 'Rehber öğretmen']).map(ad =>
-        '<div class="a-satir"><span>' + kacis(ad) + '</span><i></i></div>').join('') +
-      '<div class="a-satir"><span>Tarih</span><i></i></div></div></aside></div>';
+      '</aside></div>';
     const b = D.rutinBasliklari || ['Ders çalışmadan önce', 'Ders arası', 'Ders çalıştıktan sonra'];
     const r = o.rutin || {};
     const metin = [r.once, r.ara, r.sonra];
@@ -2626,9 +2624,7 @@ function gorunumAnlasma() {
     '<input type="text" id="aBaslik" value="' + kacis(a.baslik) + '" style="width:100%;margin:8px 0 6px">' +
     '<input type="text" id="aGiris" value="' + kacis(a.giris) + '" style="width:100%;margin-bottom:8px">' +
     '<textarea id="aMaddeler" rows="8" style="width:100%">' + kacis((a.maddeler || []).join('\n')) + '</textarea>' +
-    '<div class="mini">Her satır bir madde. Bütün öğrencilerin çıktısında çıkar.</div>' +
-    '<div class="p-satir" style="margin-top:10px"><label>İmza satırları</label>' +
-    '<input type="text" id="aImza" value="' + kacis((a.imza || []).join(', ')) + '" style="flex:1"></div></div>' +
+    '<div class="mini">Her satır bir madde. Bütün öğrencilerin çıktısında çıkar.</div></div>' +
     '<div class="kart" style="padding:15px 17px"><div class="etiket">Öğrenciye özel</div>' +
     '<div style="margin:8px 0 10px">' + ogrSecici() + '</div>' +
     '<div class="mini" style="margin-bottom:4px">Bu öğrenciyle konuşup eklediğiniz maddeler (her satır bir madde)</div>' +
@@ -3573,9 +3569,7 @@ function yazdirSayfa(si, hb) {
   if (anlasmaVar) {
     const maddeler = (a.maddeler || []).concat(o.maddeler || []);
     h += '<aside class="anl"><h3>' + kacis(a.baslik || 'ANLAŞMA') + '</h3><p>' + kacis(a.giris || '') + '</p><ol>' +
-      maddeler.map(m => '<li>' + kacis(m) + '</li>').join('') + '</ol><div class="imz">' +
-      (a.imza || ['Öğrenci', 'Rehber öğretmen']).concat(['Tarih']).map(ad =>
-        '<div><span>' + kacis(ad) + '</span><i></i></div>').join('') + '</div></aside>';
+      maddeler.map(m => '<li>' + kacis(m) + '</li>').join('') + '</ol></aside>';
   }
   h += '</div>';
   if (anlasmaVar) {
@@ -4120,7 +4114,6 @@ document.addEventListener('click', async ev => {
     D.anlasma.baslik = document.getElementById('aBaslik').value.trim();
     D.anlasma.giris = document.getElementById('aGiris').value.trim();
     D.anlasma.maddeler = document.getElementById('aMaddeler').value.split('\n').map(x => x.trim()).filter(Boolean);
-    D.anlasma.imza = document.getElementById('aImza').value.split(',').map(x => x.trim()).filter(Boolean);
     D.anlasma.aktif = document.getElementById('aAktif').checked;
     o.maddeler = document.getElementById('oMaddeler').value.split('\n').map(x => x.trim()).filter(Boolean);
     o.rutin = o.rutin || {};
