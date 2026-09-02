@@ -547,17 +547,8 @@ function varsayilan() {
     anlasma: {
       aktif: true,
       baslik: 'HAFTALIK ÇALIŞMA ANLAŞMASI',
-      giris: 'Aşağıdaki maddeleri okudum ve kabul ediyorum:',
-      maddeler: [
-        'Planımdaki testleri verilen gün ve sırayla çözeceğim.',
-        'Her günün sonunda yanlışlarımı ayırırım; ertesi gün ilgili öğretmenime sorar, ' +
-        'doğru çözümü ya da sınıfta anlatılanı yerinde öğrenirim.',
-        'Çözemediğim testi ertelemek yerine aynı gün rehber öğretmenime bildireceğim.',
-        'Doğru sayılarımı olduğu gibi, eksiksiz yazacağım.',
-        'Hastalık, yoğunluk gibi bir aksilik olursa hemen rehber öğretmenime haber vereceğim.',
-        'Planımı kaybetmeyecek, dosyamda saklayacağım.',
-        'Aşağıya kendi el yazımla "Bu programı uygulayacağıma söz veriyorum." yazıp imzalayacağım.'
-      ]
+      giris: 'Aşağıya kendine vermek istediğin sözleri yaz ve imzala:',
+      maddeler: []
     },
     rutinBasliklari: ['Ders çalışmadan önce', 'Ders arası', 'Ders çalıştıktan sonra'],
     ekKonular: [], islenis: {}, subeIslenis: {}, konuKaynak: {}, konuDers: {}, kart: {}, log: [],
@@ -1569,6 +1560,8 @@ function planTablosu(si, hb, p, tumu) {
       '<div class="a-baslik">' + kacis(a.baslik || 'ANLAŞMA') + '</div>' +
       '<div class="a-giris">' + kacis(a.giris || '') + '</div>' +
       '<ol class="a-maddeler">' + maddeler.map(m => '<li>' + kacis(m) + '</li>').join('') + '</ol>' +
+      '<div class="a-imza"><div class="a-satir"><i></i></div><div class="a-satir"><i></i></div>' +
+      '<div class="a-satir"><i></i></div><div class="a-satir"><span>İmza</span><i></i></div></div>' +
       '</aside></div>';
     const b = D.rutinBasliklari || ['Ders çalışmadan önce', 'Ders arası', 'Ders çalıştıktan sonra'];
     const r = o.rutin || {};
@@ -3569,7 +3562,9 @@ function yazdirSayfa(si, hb) {
   if (anlasmaVar) {
     const maddeler = (a.maddeler || []).concat(o.maddeler || []);
     h += '<aside class="anl"><h3>' + kacis(a.baslik || 'ANLAŞMA') + '</h3><p>' + kacis(a.giris || '') + '</p><ol>' +
-      maddeler.map(m => '<li>' + kacis(m) + '</li>').join('') + '</ol></aside>';
+      maddeler.map(m => '<li>' + kacis(m) + '</li>').join('') + '</ol>' +
+      '<div class="imz"><div><i></i></div><div><i></i></div><div><i></i></div>' +
+      '<div><span>İmza</span><i></i></div></div></aside>';
   }
   h += '</div>';
   if (anlasmaVar) {
