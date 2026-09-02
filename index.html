@@ -2265,6 +2265,8 @@ function gorunumKonuPlani() {
         (i === 0 ? ' disabled' : '') + ' title="Yukarı taşı">▲</button> ' +
         '<button class="dugme mini kpAsagi" data-ders="' + kacis(anahtar) + '" data-i="' + i + '"' +
         (i === d.dizi.length - 1 ? ' disabled' : '') + ' title="Aşağı taşı">▼</button> ' +
+        '<button class="dugme mini kpUzat" data-ders="' + kacis(anahtar) + '" data-i="' + i +
+        '" title="Bu konu bir hafta daha sürdü — sonraki haftaya da yayılsın, kalan konular bir hafta kaysın">+1 hf</button> ' +
         '<button class="dugme mini kpSil" data-ders="' + kacis(anahtar) + '" data-i="' + i + '" title="Sil">sil</button>' +
         '</td></tr>';
     });
@@ -4102,7 +4104,7 @@ document.addEventListener('click', async ev => {
     bilgiVer(r.ders + ': ' + r.mesaj);
     return;
   }
-  const kp = ev.target.closest('.kpYukari,.kpAsagi,.kpSil,.kpEkle');
+  const kp = ev.target.closest('.kpYukari,.kpAsagi,.kpUzat,.kpSil,.kpEkle');
   if (kp) {
     const sube = EK.sube || (D.ogr[EK.ogr] || {}).sube;
     const anahtar = kp.dataset.ders;
@@ -4116,6 +4118,7 @@ document.addEventListener('click', async ev => {
       const i = +kp.dataset.i;
       if (kp.classList.contains('kpYukari') && i > 0) { const t = adlar[i - 1]; adlar[i - 1] = adlar[i]; adlar[i] = t; }
       else if (kp.classList.contains('kpAsagi') && i < adlar.length - 1) { const t = adlar[i + 1]; adlar[i + 1] = adlar[i]; adlar[i] = t; }
+      else if (kp.classList.contains('kpUzat')) { adlar.splice(i + 1, 0, adlar[i]); }
       else if (kp.classList.contains('kpSil')) {
         if (!confirm('“' + adlar[i] + '” konu planından silinsin mi? Sonucu girilmiş bir konuysa geçmişine dokunulmaz.')) return;
         adlar.splice(i, 1);
