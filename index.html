@@ -2561,8 +2561,10 @@ function gorunumProgram() {
   let h = '<div class="baslik"><h1>Ders programı</h1><p>Soldaki liste okulun ders programı, altındaki etiketler o derste işlenecek konu. ' +
     'Konuyu değiştirdiğinizde o dersin kalan konuları da kayar; “dağıt” dediğinizde konular öğrencilerin planına ' +
     D.ayar.ilk + ' gün sonrası ilk test olacak şekilde düşer.</p></div>' +
-    '<div class="kart" style="padding:14px 16px;margin-bottom:14px">' +
+    '<div class="kart" style="padding:14px 16px;margin-bottom:14px' + (pk.yok ? ';border-color:var(--kritik)' : '') + '">' +
     '<div class="etiket">Programı AI ile aktar</div>' +
+    (pk.yok ? '<p class="mini" style="color:var(--kritik);font-weight:600;margin:4px 0 8px">Önce ders programınızı ' +
+      'buradan yükleyin — program yüklenmeden haftalık planınız oluşturulamaz.</p>' : '') +
     '<p class="mini" style="max-width:70ch;margin:6px 0 10px">Her okulun ders programı görüntüsü farklı ' +
     'dizayn edildiği için burada otomatik okunmuyor. Bunun yerine: aşağıdaki metni kopyalayın, bir yapay zekâ ' +
     'sohbetine (ör. ChatGPT, Claude, Gemini) ders programınızın fotoğrafıyla birlikte yapıştırın; ' +
@@ -2726,6 +2728,7 @@ function gorunumAyarlar() {
     ggyy(gunNo(gercekBugun)) + '.</div>' +
     '<input type="date" id="aTestTarih" value="' + (a.testTarih || '') + '"> ' +
     '<button class="dugme" id="testTarihSifirla">Gerçek tarihe dön</button></div>' : '') +
+    (subeListesi().length ? gorunumProgram() : '') +
     (ogrenciMi() && D.ogr[0]
       ? '<div class="kart sarma" style="margin-bottom:20px"><table><tbody>' +
         satir('Günde kaç test çözerim', '<input type="number" min="1" max="12" value="' + (D.ogr[0].kap || 6) +
@@ -2737,7 +2740,6 @@ function gorunumAyarlar() {
           'İşaretlediğin günlere yeni iş yazılmaz.') +
         '</tbody></table></div>'
       : '') +
-    (subeListesi().length ? gorunumProgram() : '') +
     '<div class="kart sarma" style="margin-bottom:20px"><table><tbody>' +
     satir('Tek teste geçiş eşiği', '<select id="aTek">' + [0.70, 0.75, 0.80, 0.85, 0.90].map(v =>
       '<option value="' + v + '"' + (Math.abs((a.tekEsik || 0.8) - v) < 1e-9 ? ' selected' : '') +
