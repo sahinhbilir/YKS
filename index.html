@@ -1,7 +1,10 @@
+<!doctype html>
+<html lang="tr">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>YKS Tekrar Defteri</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style id="stil">
 :root{
   --zemin:#F5F6F8; --kagit:#FFFFFF; --murekkep:#16202B; --soluk:#5A6675; --cizgi:#DCE0E6;
@@ -183,14 +186,14 @@ tr.pasif td:first-child{opacity:1}
 .kurulum{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:30px 0}
 .kur-kutu{max-width:680px;width:100%}
 .kur-kutu h1{font-size:34px;margin:8px 0 6px}
-.kur-oz{color:var(--ikincil);margin-bottom:22px}
+.kur-oz{color:var(--soluk);margin-bottom:22px}
 .kur-secim{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .kur-kart{text-align:left;background:var(--kagit);border:1px solid var(--cizgi);border-radius:12px;
   padding:20px 22px;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;gap:8px}
 .kur-kart:hover{border-color:var(--vurgu)}
 .kur-kart:focus-visible{outline:2px solid var(--vurgu);outline-offset:2px}
 .kur-kart b{font-size:18px}
-.kur-kart span{font-size:14px;color:var(--ikincil);line-height:1.5}
+.kur-kart span{font-size:14px;color:var(--soluk);line-height:1.5}
 .kur-alt{margin-top:20px;padding-top:18px;border-top:1px solid var(--cizgi);
   display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 @media (max-width:620px){.kur-secim{grid-template-columns:1fr}}
@@ -199,13 +202,13 @@ tr.pasif td:first-child{opacity:1}
 .plan td.dolu.anlatim{background:var(--vurgu-yumusak)}
 .plan td.dolu.anlatim .n b{color:var(--vurgu)}
 .altUyari{margin-top:6px;padding:8px 11px;border-radius:8px;background:var(--vurgu-yumusak);
-  font-size:12px;line-height:1.5;color:var(--ikincil);display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+  font-size:12px;line-height:1.5;color:var(--soluk);display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
 .altUyari b{color:var(--murekkep)}
 .altUyari .dugme{padding:3px 10px;font-size:12px;white-space:nowrap;margin-left:auto}
 .gunYuk{font-size:10px;font-weight:600;color:var(--soluk);letter-spacing:.03em}
 .gunYuk.asti{color:var(--uyari,#B0362B)}
 .programDurum{font-size:12.5px;margin:8px 0 12px;padding:9px 12px;border-radius:8px;line-height:1.5}
-.programDurum.tam{background:var(--vurgu-yumusak);color:var(--ikincil)}
+.programDurum.tam{background:var(--vurgu-yumusak);color:var(--soluk)}
 .programDurum.eksik{background:var(--zemin);color:var(--soluk);border:1px solid var(--cizgi)}
 .haritaIzgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:20px}
 .haritaHucre{position:relative;border:1px solid var(--cizgi);border-radius:10px;padding:10px 12px;background:var(--kagit)}
@@ -229,7 +232,7 @@ tr.pasif td:first-child{opacity:1}
 .haritaHucre.telafi-anlatim .haritaEtiket{color:var(--vurgu)}
 .haritaHucre.simdi .haritaEtiket{color:var(--vurgu)}
 .haritaPanel{margin:-2px 0 8px}
-.bugunSerit{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ikincil)}
+.bugunSerit{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--soluk)}
 .bugunSerit b{color:var(--vurgu)}
 .cipSil{border:0;background:transparent;color:var(--soluk);cursor:pointer;font-size:13px;line-height:1;padding:0 2px;margin-left:auto}
 .cipSil:hover{color:var(--kritik)}
@@ -243,6 +246,7 @@ tr.pasif td:first-child{opacity:1}
   padding:11px 16px;border-radius:9px;font-size:13.5px;box-shadow:0 8px 30px rgba(0,0,0,.3);z-index:80;max-width:min(560px,92vw)}
 table.plan td[data-hucre]{cursor:pointer}
 table.plan td[data-hucre]:hover{outline:2px solid var(--vurgu);outline-offset:-2px}
+[data-hucre]:focus-visible{outline:3px solid var(--vurgu);outline-offset:-3px}
 table.plan td.bos:hover::after{content:'+ konu ekle';font-size:11px;color:var(--vurgu);display:block;padding:2px}
 table.plan td.suruklenen{opacity:.35}
 table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;background:var(--vurgu-yumusak)}
@@ -285,7 +289,9 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 @media (max-width:820px){
   .kabuk{grid-template-columns:1fr}
   .ray{position:static;height:auto;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--cizgi);padding:10px}
-  .ray .marka,.ray .durum,.ray .bosluk{display:none}
+  .ray .marka,.ray .bosluk{display:none}
+  .ray .durum{display:block;flex:0 0 auto;position:sticky;right:0;background:var(--kagit);border-top:0;
+    border-left:1px solid var(--cizgi);white-space:nowrap;z-index:2}
   .ray button{width:auto;white-space:nowrap}
   main{padding:18px 14px 50px}
   .sekme-mobil{display:block}
@@ -340,11 +346,13 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
   .altUyari .dugme{margin-left:0;width:100%}
 }
 </style>
+</head>
+<body>
 <div class="kabuk">
-  <nav class="ray" id="ray">
+  <nav class="ray" id="ray" aria-label="Ana menü">
     <div class="marka">YKS Tekrar Defteri<small>Aralıklı tekrar · FSRS-6</small></div>
   </nav>
-  <main id="ana"></main>
+  <main id="ana" tabindex="-1"></main>
 </div>
 <script id="veri" type="application/json">null</script>
 <script id="uygulama">
@@ -353,6 +361,11 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 const DERS = ['Türk Dili ve Edebiyatı','Matematik','Fizik','Kimya','Biyoloji','Tarih','İnkılap Tarihi','Coğrafya','Felsefe','Din Kültürü'];
 const KISA = ['Edebiyat','Matematik','Fizik','Kimya','Biyoloji','Tarih','İnkılap','Coğrafya','Felsefe','Din Kültürü'];
 const ALAN_DERS = {SAY:[1,2,3,4], EA:[0,1,5,7], 'SÖZ':[0,5,6,7,8,9], 'DİL':[0]};
+const VERI_SURUMU = 9;
+const GELISTIRME_MODU = (() => {
+  try { return new URLSearchParams(location.search).get('dev') === '1'; }
+  catch (e) { return false; }
+})();
 
 const VARSAYILAN_KONU_PLANI = {SAY:[{"Fizik":["Fizik Bilimine Giriş","Madde ve Özellikleri"],"Kimya":["Kimya Bilimi","Atom Modelleri, Atomun Temel Tanecikleri"],"Biyoloji":["Canlıların Ortak Özellikleri","Canlıların Temel Bileşenleri"],"Geometri":["Temel Kavramlar ve Düzlemde Açılar","Üçgende Açılar"],"Matematik TYT":["Temel Kavramlar, Tek-Çift ve Negatif-Pozitif Sayılar","Asal Sayılar, Ardışık Sayılar, Faktöriyel","Basamak Kavramı, Asal Çarpanlara Ayırma"],"Matematik AYT":["Fonksiyon Kavramı - Tanım ve Görüntü Kümesi","Fonksiyon Çeşitleri"],"Türkçe":["Sözcükte Anlam","Söz Öbeklerinde Anlam"]},{"Fizik":["Basınç","Vektörler ve Kuvvet"],"Kimya":["Atomun Kuantum Modeli"],"Biyoloji":["Nükleik Asitlerin Yapısı ve Çeşitleri","DNA Replikasyonu"],"Geometri":["Üçgende Eşlik","Üçgende Benzerlik"],"Matematik TYT":["Bölme ve Bölünebilme","EBOB-EKOK ve Periyodik Tekrar Eden Durumların Problemleri"],"Matematik AYT":["Fonksiyonlarda İşlemler","Parçalı ve Mutlak Değer Fonksiyonu"],"Türkçe":["Sözcükte Yapı","Cümlede Anlam ve Anlatım"]},{"Fizik":["Tork ve Tork Dengesi","Kesişen Kuvvetlerin Dengesi"],"Kimya":["Periyodik Sistem ve Periyodik Özellikler","Redoks Tepkimelerinin Denkleştirilmesi / Aktiflik"],"Biyoloji":["Genden Proteine (Protein Sentezi)","Genden Proteine (Genetik Mühendisliği ve Biyoteknoloji)"],"Geometri":["Dik Üçgen","İkizkenar Üçgen"],"Matematik TYT":["Rasyonel Sayılar","Birinci Dereceden Denklemler","Basit Eşitsizlikler"],"Matematik AYT":["Grafik Yorumlama","Bir Fonksiyonun Tersi"],"Türkçe":["Anlatımın Temel Nitelikleri ve Anlamla İlgili Anlatım Bozuklukları","Ses Bilgisi"]},{"Fizik":["Kütle ve Ağırlık Merkezi","Basit Makineler"],"Kimya":["Piller"],"Biyoloji":["Hücre","Canlı Çeşitliliği ve Sınıflandırılması"],"Geometri":["Eşkenar Üçgen","Üçgende Açıortay"],"Matematik TYT":["Mutlak Değer","Çarpanlara Ayırma"],"Matematik AYT":["Bileşke Fonksiyon ve Özellikleri","Bileşke ve Ters Fonksiyon"],"Türkçe":["Yazım Kuralları","Noktalama İşaretleri"]},{"Fizik":["Kaldırma Kuvveti","Isı ve Sıcaklık"],"Kimya":["Elektroliz / Korozyon","Kimyanın Temel Kanunları"],"Biyoloji":["Canlı Âlemleri ve Virüsler","Canlılık ve Enerji (Fotosentez - Kemosentez - Hücresel Solunum - Fermantasyon)"],"Geometri":["Üçgende Kenarortay","Üçgende Açı-Kenar Bağıntıları"],"Matematik TYT":["Üslü İfadeler","Köklü İfadeler","Oran-Orantı"],"Matematik AYT":["Periyodik Fonksiyon","Artan - Azalan Fonksiyon"],"Türkçe":["Paragrafta Anlatım","Paragrafta Yapı"]},{"Fizik":["Aydınlanma","Tam ve Yarı Gölge"],"Kimya":["Mol Kavramı"],"Biyoloji":["Ekosistem Ekolojisi","Komünite Ekolojisi"],"Geometri":["Üçgende Alan","Çokgenler"],"Matematik TYT":["Sayı Problemleri","Kesir Problemleri"],"Matematik AYT":["Ortalama Değişim Hızı","Dönüşüm - Ötelenme - Simetri"],"Türkçe":["Paragrafta Anlam","Adlar (İsimler)"]},{"Fizik":["Yansıma","Küresel Aynalar"],"Kimya":["Kimyasal Tepkimeler ve Denklemler","Kimyasal Hesaplamalar"],"Biyoloji":["Popülasyon Ekolojisi","Hücre Bölünmeleri ve Üreme"],"Geometri":["Dörtgenler","Yamuk"],"Matematik TYT":["Yaş Problemleri","Yüzde Problemleri","Kâr-Zarar Problemleri"],"Matematik AYT":["Üstel Fonksiyon ve Tersi","Logaritma Fonksiyonu ve Grafiği"],"Türkçe":["Ön Adlar (Sıfatlar)","Adıllar (Zamirler)"]},{"Fizik":["Çembersel Hareket","Basit Harmonik Hareket"],"Kimya":["Kimyasal Türler / Türler Arası Etkileşimlerin Sınıflandırılması"],"Biyoloji":["Kalıtım ve Biyolojik Çeşitlilik","Canlılar ve Çevre"],"Geometri":["Paralelkenar","Eşkenar Dörtgen"],"Matematik TYT":["Karışım Problemleri","Hareket Problemleri"],"Matematik AYT":["Logaritma Fonksiyonunun Özellikleri","Üstel-Logaritmik Denklem ve Eşitsizlikler"],"Türkçe":["Zarflar (Belirteçler)","Edat (İlgeç) - Bağlaç - Ünlem"]},{"Fizik":["Dalga Mekaniği (su dalgalarında kırınım ve girişim)","Kırılma"],"Kimya":["Güçlü ve Zayıf Etkileşimler","Fiziksel ve Kimyasal Değişimler"],"Biyoloji":["Bitkilerin Yapısı","Bitkilerde Madde Taşınması"],"Geometri":["Deltoid","Dikdörtgen"],"Matematik TYT":["İşçi Problemleri","Grafik Problemleri","Polinomlar"],"Matematik AYT":["Gerçek Hayat Durumları İle İlgili Üstel ve Logaritmik Fonksiyon Problemleri","Dizi ve Fonksiyon Kavramı Arasındaki İlişki"],"Türkçe":["Fiiller (Eylemler)","Fiilimsiler (Eylemsiler)"]},{"Fizik":["Prizmalar","Renk"],"Kimya":["Karbon Kimyasına Giriş"],"Biyoloji":["Bitkilerde Eşeyli Üreme","Sinir Sistemi"],"Geometri":["Kare","Noktanın Analitiği"],"Matematik TYT":["Veri Analizi","Mantık"],"Matematik AYT":["Genel Terimi ve İndirgenme Bağıntısı Verilen Bir Dizinin Terimleri","Aritmetik Dizi"],"Türkçe":["Fiilimsiler (Eylemsiler) - devamı","Cümlenin Ögeleri"]},{"Fizik":["Mercekler","Dalgalar (dalgaların temel özellikleri ve yay dalgaları)"],"Kimya":["Alkanlar","Alkenler"],"Biyoloji":["Endokrin Sistem","Duyu Organları"],"Geometri":["Doğrunun Analitiği","Dönüşüm Geometrisi"],"Matematik TYT":["Kümeler","Permütasyon","Kombinasyon"],"Matematik AYT":["Geometrik Dizi","Diskriminant Kavramı ve Denklemlerin Kökleri"],"Türkçe":["Fiilde (Eylemde) Çatı","Kelime Grupları (Sözcük Öbekleri)"]},{"Fizik":["Işık Teorileri","Elektromanyetik Dalgalar"],"Kimya":["Alkinler"],"Biyoloji":["Dolaşım Sistemi","Lenf ve Bağışıklık Sistemi"],"Geometri":["Genel Tekrar","Çemberde Temel Elemanlar"],"Matematik TYT":["Binom Açılımı","Olasılık"],"Matematik AYT":["Karmaşık Sayılar","Kök-Katsayı Bağıntıları"],"Türkçe":["Cümle Türleri","Dil Bilgisiyle İlgili Anlatım Bozuklukları"]},{"Fizik":["Bağıl Hareket","Newton\u0027un Hareket Yasaları"],"Kimya":["Aromatik Bileşikler","Maddenin Hâlleri"],"Biyoloji":["Sindirim Sistemi","Destek ve Hareket Sistemi"],"Geometri":["Çemberde Açı","Çemberde Uzunluk"],"Matematik AYT":["Tepe Noktası ve Simetri Ekseni","En Büyük - En Küçük Değer"],"Türkçe":["İletişim, Dil ve Kültür"]},{"Fizik":["Dalgalar (su dalgaları, ses dalgaları ve deprem dalgaları)","Elektrostatik"],"Kimya":["Karışımlar"],"Biyoloji":["Solunum Sistemi","Üriner Sistem"],"Geometri":["Dairenin Çevresi ve Alanı","Katı Cisimler"],"Matematik AYT":["Parabol Denklemini Yazma","Parabol ve Doğrunun Birbirlerine Göre Durumları"]},{"Fizik":["Elektrik Akımı","Üreteçler"],"Kimya":["Asitler, Bazlar ve Tuzlar","Alkoller ve Eterler"],"Biyoloji":["Üreme Sistemi ve Embriyonik Gelişim"],"Geometri":["Çemberin Analitiği"],"Matematik AYT":["İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler","Eşitsizlik Sistemleri"]},{"Fizik":["Elektriksel Enerji ve Güç","Lambalar"],"Kimya":["Aldehitler ve Ketonlar"],"Matematik AYT":["Açı Ölçü Birimleri","Esas Ölçü"]},{"Fizik":["Atom Modelleri","Büyük Patlama ve Evrenin Oluşumu"],"Kimya":["Karboksilik Asitler ve Esterler","Gazlar"],"Matematik AYT":["Birim Çemberde Trigonometrik Oranlar","Trigonometrik Özdeşlikler"]},{"Fizik":["Radyoaktivite","Modern Fizik"],"Kimya":["Doğa ve Kimya"],"Matematik AYT":["Sıralama ve İşaret İncelemesi","Trigonometrik Dönüşümler"]},{"Fizik":["Elektriksel Kuvvet","Elektrik Alan"],"Kimya":["Kimya Her Yerde","Sıvı Çözeltiler ve Çözünürlük"],"Matematik AYT":["Periyot ve Grafik","Ters Trigonometrik Fonksiyonlar"]},{"Fizik":["Elektrik Potansiyel Enerjisi ve Elektrik Potansiyeli","Düzgün Elektrik Alan"],"Kimya":["Kimyasal Tepkimelerde Enerji"],"Matematik AYT":["Sinüs ve Cosinüs Teoremi","Toplam-Fark ve Yarım Açı"]},{"Fizik":["Sığaçlar","Atışlar"],"Kimya":["Kimyasal Tepkimelerde Hız","Kimyasal Tepkimelerde Denge"],"Matematik AYT":["Trigonometrik Denklemler","Bir Fonksiyonun Sağdan ve Soldan Limit Kavramı"]},{"Fizik":["İş-Güç-Enerji","Mıknatıslar"],"Kimya":["Sulu Ortamlarda Asit-Baz Dengesi"],"Matematik AYT":["Limitin Özellikleri ve Uygulamaları","Parçalı Fonksiyonların Limiti"]},{"Fizik":["Manyetik Alan","Manyetik Kuvvet"],"Kimya":["Tuzların Çözünürlük Dengesi","Enerji Kaynakları ve Bilimsel Gelişmeler"],"Matematik AYT":["Belirsizlik Durumu","Limit Uygulamaları"]},{"Fizik":["Elektromanyetik İndüklenme","Alternatif Akım"],"Matematik AYT":["Süreklilik Kavramı","Anlık Değişim Hızı - Ortalama Değişim Hızı"]},{"Fizik":["Transformatör","İtme ve Momentum"],"Matematik AYT":["Soldan ve Sağdan Türev","Türev Alma Kuralları"]},{"Fizik":["Görüntüleme Teknikleri","Yarı İletken Teknolojisi"],"Matematik AYT":["Bileşke Fonksiyonun Türevi","Zincir Kuralı"]},{"Fizik":["Nanoteknoloji","Lazer"],"Matematik AYT":["İkinci Mertebeden Türev ve Türevin Limit Uygulamaları","Birinci Türevin Geometrik Yorumu"]},{"Matematik AYT":["Artan ve Azalan Fonksiyonlar","Yerel Ekstremum Noktaları"]},{"Matematik AYT":["Polinom Fonksiyonlarının Grafikleri","Maksimum - Minimum Problemleri"]},{"Matematik AYT":["Belirsiz İntegral ve İntegral Alma Kuralları","Değişken Değiştirme Metodu"]},{"Matematik AYT":["Riemann Toplamı","Belirli İntegral ve Özellikleri"]},{"Matematik AYT":["Belirli İntegral ve Alan Hesabı"]}],EA:[{"Türk Dili ve Edebiyatı":["Sanat ve Edebiyat","Türk Dilinin ve Edebiyatının Tarihî Dönemleri"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Mustafa Kemal\u0027in Hayatı","XX. Yüzyıl Başlarında Osmanlı Devleti"],"Coğrafya":["Doğa ve İnsan Etkileşimi (TYT)","Coğrafyanın Konusu, Bölümleri ve Gelişimi (TYT)"],"Türkçe":["Sözcükte Anlam","Söz Öbeklerinde Anlam"],"Felsefe (+ Felsefe Grubu)":["Felsefeyi Tanıma"],"Geometri":["Temel Kavramlar ve Düzlemde Açılar","Üçgende Açılar"],"Matematik TYT":["Temel Kavramlar, Tek-Çift ve Negatif-Pozitif Sayılar","Asal Sayılar, Ardışık Sayılar, Faktöriyel"],"Matematik AYT":["Fonksiyon Kavramı - Tanım ve Görüntü Kümesi","Fonksiyon Çeşitleri","Fonksiyonlarda İşlemler"]},{"Türk Dili ve Edebiyatı":["Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["I. Dünya Savaşı ve Sonrası Gelişmeler"],"Coğrafya":["Dünya\u0027nın Şekli ve Hareketleri (TYT)","Ekosistemlerin Özellikleri ve İşleyişi (AYT)"],"Türkçe":["Sözcükte Yapı","Cümlede Anlam ve Anlatım"],"Felsefe (+ Felsefe Grubu)":["Felsefe ile Düşünme"],"Geometri":["Üçgende Eşlik","Üçgende Benzerlik"],"Matematik TYT":["Basamak Kavramı, Asal Çarpanlara Ayırma"],"Matematik AYT":["Parçalı ve Mutlak Değer Fonksiyonu","Grafik Yorumlama"]},{"Türk Dili ve Edebiyatı":["Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)","Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Millî Mücadele\u0027nin Hazırlık Çalışmaları","Büyük Millet Meclisi\u0027nin Açılması"],"Coğrafya":["Ekstrem Doğa Olayları - Küresel İklim Değişimi (AYT)","Koordinat Sistemi ve Coğrafi Konum (TYT)"],"Türkçe":["Anlatımın Temel Nitelikleri ve Anlamla İlgili Anlatım Bozuklukları","Ses Bilgisi"],"Felsefe (+ Felsefe Grubu)":["Psikoloji Bilimini Tanıyalım"],"Geometri":["Dik Üçgen","İkizkenar Üçgen"],"Matematik TYT":["Bölme ve Bölünebilme","EBOB-EKOK ve Periyodik Tekrar Eden Durumların Problemleri"],"Matematik AYT":["Bir Fonksiyonun Tersi","Bileşke Fonksiyon ve Özellikleri","Bileşke ve Ters Fonksiyon"]},{"Türk Dili ve Edebiyatı":["Tarihsel Süreç İçinde Şiir (Halk Edebiyatı / Divan Edebiyatı)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Sevr Antlaşması"],"Coğrafya":["Harita Bilgisi (TYT)","Ekonomik Faaliyetlerin Sosyal ve Kültürel Etkileri (AYT)"],"Türkçe":["Yazım Kuralları","Noktalama İşaretleri"],"Felsefe (+ Felsefe Grubu)":["Psikolojinin Temel Süreçleri"],"Geometri":["Eşkenar Üçgen","Üçgende Açıortay"],"Matematik TYT":["Rasyonel Sayılar"],"Matematik AYT":["Periyodik Fonksiyon","Artan - Azalan Fonksiyon"]},{"Türk Dili ve Edebiyatı":["Şiirde Edebî Akımlar","Batı Etkisindeki Türk Şiiri (Tanzimat, Servetifünun, Fecriati Dönemlerinde Şiir)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Doğu ve Güney Cephesi","Batı Cephesi"],"Coğrafya":["Geçmişten Geleceğe Şehir ve Ekonomi (AYT)","Türkiye\u0027nin İşlevsel Bölgeleri ve Kalkınma Projeleri (AYT)"],"Türkçe":["Paragrafta Anlatım","Paragrafta Yapı"],"Felsefe (+ Felsefe Grubu)":["Felsefenin Temel Konuları ve Problemleri"],"Geometri":["Üçgende Kenarortay","Üçgende Açı-Kenar Bağıntıları"],"Matematik TYT":["Birinci Dereceden Denklemler","Basit Eşitsizlikler"],"Matematik AYT":["Ortalama Değişim Hızı","Dönüşüm - Ötelenme - Simetri","Üstel Fonksiyon ve Tersi"]},{"Türk Dili ve Edebiyatı":["Millî Edebiyat Dönemi\u0027nde Şiir"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Lozan Barış Antlaşması"],"Coğrafya":["Türkiye\u0027de Ulaşım, Enerji Güzergâhları ve Etkileri (AYT)","Küresel Ticaret ve Türkiye\u0027de Ticaret (AYT)"],"Türkçe":["Paragrafta Anlam","Adlar (İsimler)"],"Felsefe (+ Felsefe Grubu)":["Psikolojinin Temel Süreçleri (devamı)"],"Geometri":["Üçgende Alan","Çokgenler"],"Matematik TYT":["Mutlak Değer"],"Matematik AYT":["Logaritma Fonksiyonu ve Grafiği","Logaritma Fonksiyonunun Özellikleri"]},{"Türk Dili ve Edebiyatı":["Cumhuriyet Dönemi\u0027nde Şiir","Anlatmaya Bağlı Metin Türleri"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Atatürkçülük ve Türk İnkılabı","İki Savaş Arasındaki Dönemde Türkiye ve Dünya"],"Coğrafya":["Atmosfer ve Özellikleri (TYT)","Dünyada ve Türkiye\u0027de İklim Elemanları (TYT)"],"Türkçe":["Ön Adlar (Sıfatlar)","Adıllar (Zamirler)"],"Felsefe (+ Felsefe Grubu)":["Öğrenme, Bellek, Düşünme"],"Geometri":["Dörtgenler","Yamuk"],"Matematik TYT":["Çarpanlara Ayırma","Üslü İfadeler"],"Matematik AYT":["Üstel-Logaritmik Denklem ve Eşitsizlikler","Gerçek Hayat Durumları İle İlgili Üstel ve Logaritmik Fonksiyon Problemleri","Dizi ve Fonksiyon Kavramı Arasındaki İlişki"]},{"Türk Dili ve Edebiyatı":["Anlatmaya Bağlı Metinlerde Edebî Akımlar"],"T.C. İnkılap Tarihi ve Atatürkçülük":["II. Dünya Savaşı Sürecinde Türkiye ve Dünya"],"Coğrafya":["Nüfus Politikaları (AYT)","Şehirler ve Etki Alanları - Türkiye\u0027de Yerleşmeler (AYT)"],"Türkçe":["Zarflar (Belirteçler)","Edat (İlgeç) - Bağlaç - Ünlem"],"Felsefe (+ Felsefe Grubu)":["Felsefenin Temel Konuları ve Problemleri (devamı)"],"Geometri":["Paralelkenar","Eşkenar Dörtgen"],"Matematik TYT":["Köklü İfadeler"],"Matematik AYT":["Genel Terimi ve İndirgenme Bağıntısı Verilen Bir Dizinin Terimleri","Aritmetik Dizi"]},{"Türk Dili ve Edebiyatı":["Anlatmaya Bağlı Metinlerde Unsurlar ve Teknikler","Anlatmaya Bağlı Metinler (Tanzimat, Servetifünun, Millî Edebiyat Dönemlerinde Hikâye ve Roman)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["II. Dünya Savaşı Sonrasında Türkiye ve Dünya","Toplumsal Devrim Çağında Dünya ve Türkiye"],"Coğrafya":["Ekonomik Faaliyetler (Üretim-Dağıtım-Tüketim) ve Doğal Kaynaklar (AYT)","İklim Tipleri ve Bitki Örtüsü (TYT)"],"Türkçe":["Fiiller (Eylemler)","Fiilimsiler (Eylemsiler)"],"Felsefe (+ Felsefe Grubu)":["Öğrenme, Bellek, Düşünme (devamı)"],"Geometri":["Deltoid","Dikdörtgen"],"Matematik TYT":["Oran-Orantı","Sayı Problemleri"],"Matematik AYT":["Geometrik Dizi","Diskriminant Kavramı ve Denklemlerin Kökleri","Karmaşık Sayılar"]},{"Türk Dili ve Edebiyatı":["Anlatmaya Bağlı Metinler (Cumhuriyet Dönemi\u0027nde Hikâye ve Roman)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["XXI. Yüzyılın Eşiğinde Türkiye ve Dünya"],"Coğrafya":["Türkiye\u0027de İklim Tipleri (TYT)","Dünya\u0027nın Yapısı ve Oluşum Süreci (TYT)"],"Türkçe":["Fiilimsiler (Eylemsiler) - devamı","Cümlenin Ögeleri"],"Felsefe (+ Felsefe Grubu)":["Ruh Sağlığının Temelleri"],"Geometri":["Kare","Noktanın Analitiği"],"Matematik TYT":["Kesir Problemleri"],"Matematik AYT":["Kök-Katsayı Bağıntıları","Tepe Noktası ve Simetri Ekseni"]},{"Türk Dili ve Edebiyatı":["Göstermeye Bağlı Metinler (Tiyatro / Tiyatronun Özellikleri, Unsurları)","Göstermeye Bağlı Metinler (Geleneksel Türk Tiyatrosu / Tanzimat, Millî Edebiyat, Cumhuriyet Dönemlerinde Tiyatro)"],"Coğrafya":["Dünyada ve Türkiye\u0027de İç Kuvvetler (TYT)","Türkiye\u0027nin Ekonomi Politikaları ve Ekonominin Sektörel Dağılımı (AYT)"],"Türkçe":["Fiilde (Eylemde) Çatı","Kelime Grupları (Sözcük Öbekleri)"],"Felsefe (+ Felsefe Grubu)":["Felsefenin Temel Konuları ve Problemleri (devamı)"],"Geometri":["Doğrunun Analitiği","Dönüşüm Geometrisi"],"Matematik TYT":["Yaş Problemleri","Yüzde Problemleri"],"Matematik AYT":["En Büyük - En Küçük Değer","Parabol Denklemini Yazma","Parabol ve Doğrunun Birbirlerine Göre Durumları"]},{"Türk Dili ve Edebiyatı":["Öğretici Metinler"],"Coğrafya":["Türkiye\u0027de Tarım, Ormancılık ve Hayvancılık (AYT)","Türkiye\u0027de Madenler ve Enerji Kaynakları (AYT)"],"Türkçe":["Cümle Türleri","Dil Bilgisiyle İlgili Anlatım Bozuklukları"],"Felsefe (+ Felsefe Grubu)":["Felsefi Okuma ve Yazma"],"Geometri":["Genel Tekrar","Çemberde Temel Elemanlar"],"Matematik TYT":["Kâr-Zarar Problemleri"],"Matematik AYT":["İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler","Eşitsizlik Sistemleri"]},{"Türk Dili ve Edebiyatı":["Sözlü Anlatım Türleri"],"Coğrafya":["Türkiye\u0027de Sanayi (AYT)","Dünyada ve Türkiye\u0027de Topraklar (TYT)"],"Türkçe":["İletişim, Dil ve Kültür"],"Felsefe (+ Felsefe Grubu)":["MÖ 6. Yüzyıl - MS 2. Yüzyıl Felsefesi"],"Geometri":["Çemberde Açı","Çemberde Uzunluk"],"Matematik TYT":["Karışım Problemleri","Hareket Problemleri"],"Matematik AYT":["Açı Ölçü Birimleri","Esas Ölçü","Birim Çemberde Trigonometrik Oranlar"]},{"Coğrafya":["Dünyada ve Türkiye\u0027de Su Kaynakları (TYT)","Dünyada ve Türkiye\u0027de Dış Kuvvetler (TYT)"],"Felsefe (+ Felsefe Grubu)":["MS 2. Yüzyıl - 15. Yüzyıl Felsefesi"],"Geometri":["Dairenin Çevresi ve Alanı","Katı Cisimler"],"Matematik TYT":["İşçi Problemleri"],"Matematik AYT":["Trigonometrik Özdeşlikler","Sıralama ve İşaret İncelemesi"]},{"Coğrafya":["Küresel Ticaret - Hammadde-Üretim-Pazar (AYT)","Dünyada ve Türkiye\u0027de Turizm (AYT)"],"Felsefe (+ Felsefe Grubu)":["Ruh Sağlığının Temelleri (devamı)"],"Geometri":["Çemberin Analitiği"],"Matematik TYT":["Grafik Problemleri","Polinomlar"],"Matematik AYT":["Trigonometrik Dönüşümler","Periyot ve Grafik","Ters Trigonometrik Fonksiyonlar"]},{"Coğrafya":["İlk Kültür Merkezleri ve Kültür Bölgeleri (AYT)","Türk Kültürü ve Özellikleri (AYT)"],"Felsefe (+ Felsefe Grubu)":["Sosyolojiye Giriş"],"Matematik TYT":["Veri Analizi"],"Matematik AYT":["Sinüs ve Cosinüs Teoremi","Toplam-Fark ve Yarım Açı"]},{"Coğrafya":["Jeopolitik Konum (AYT)","Dünya\u0027da ve Türkiye\u0027de Nüfusun Özellikleri, Değişim ve Dağılışı (TYT)"],"Felsefe (+ Felsefe Grubu)":["Birey ve Toplum"],"Matematik TYT":["Mantık","Kümeler"],"Matematik AYT":["Trigonometrik Denklemler","Bir Fonksiyonun Sağdan ve Soldan Limit Kavramı","Limitin Özellikleri ve Uygulamaları"]},{"Coğrafya":["Nüfus Piramitleri (TYT)","Dünyada ve Türkiye\u0027de Göçler (TYT)"],"Felsefe (+ Felsefe Grubu)":["Toplumsal Yapı"],"Matematik TYT":["Permütasyon"],"Matematik AYT":["Parçalı Fonksiyonların Limiti","Belirsizlik Durumu"]},{"Coğrafya":["Ekonomik Faaliyetler (TYT)","Yerleşmeler (TYT)"],"Felsefe (+ Felsefe Grubu)":["MS 2. Yüzyıl - 15. Yüzyıl Felsefesi (devamı)"],"Matematik TYT":["Kombinasyon","Binom Açılımı"],"Matematik AYT":["Limit Uygulamaları","Süreklilik Kavramı","Anlık Değişim Hızı - Ortalama Değişim Hızı"]},{"Coğrafya":["Bölgeler ve Ülkeler (TYT)","Uluslararası Ulaşım Hatları (TYT)"],"Felsefe (+ Felsefe Grubu)":["15. Yüzyıl - 17. Yüzyıl Felsefesi"],"Matematik TYT":["Olasılık"],"Matematik AYT":["Soldan ve Sağdan Türev","Türev Alma Kuralları"]},{"Coğrafya":["Afetler (TYT)","İnsanların Doğal Ortamı Kullanma Şekilleri (TYT)"],"Felsefe (+ Felsefe Grubu)":["Toplumsal Değişme ve Gelişme"],"Matematik AYT":["Bileşke Fonksiyonun Türevi","Zincir Kuralı","İkinci Mertebeden Türev ve Türevin Limit Uygulamaları"]},{"Coğrafya":["Teknolojik Gelişmelerin Kültürel ve Ekonomik Etkileri (AYT)","Ülkelerin Gelişmesinde Etkili Olan Faktörler (AYT)"],"Felsefe (+ Felsefe Grubu)":["Toplum ve Kültür"],"Matematik AYT":["Birinci Türevin Geometrik Yorumu","Artan ve Azalan Fonksiyonlar"]},{"Coğrafya":["Sıcak Çatışma Bölgeleri ve Ülkeler (AYT)","Küresel Bölgeler ve Örgütler (AYT)"],"Felsefe (+ Felsefe Grubu)":["Toplumsal Kurumlar"],"Matematik AYT":["Yerel Ekstremum Noktaları","Polinom Fonksiyonlarının Grafikleri","Maksimum - Minimum Problemleri"]},{"Coğrafya":["Çevre Sorunları ve Türleri (AYT)","Çevre Sorunlarının Çözümüne Yönelik Yaklaşımlar (AYT)"],"Felsefe (+ Felsefe Grubu)":["18. Yüzyıl - 19. Yüzyıl Felsefesi"],"Matematik AYT":["Belirsiz İntegral ve İntegral Alma Kuralları","Değişken Değiştirme Metodu"]},{"Felsefe (+ Felsefe Grubu)":["20. Yüzyıl Felsefesi"],"Matematik AYT":["Riemann Toplamı","Belirli İntegral ve Özellikleri","Belirli İntegral ve Alan Hesabı"]},{"Felsefe (+ Felsefe Grubu)":["Mantığa Giriş"]},{"Felsefe (+ Felsefe Grubu)":["Klasik Mantık"]},{"Felsefe (+ Felsefe Grubu)":["Mantık ve Dil"]},{"Felsefe (+ Felsefe Grubu)":["Sembolik Mantık"]}]};
 const GUN_AD = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
@@ -361,7 +374,13 @@ const KATALOG = [[0,9,"1. Ünite: Giriş","1. Ünite: Giriş",0,"9.1,9.2,9.3"],[
 const konuAl = ki => ki < KATALOG.length ? KATALOG[ki] : ((D && D.ekKonular) || [])[ki - KATALOG.length];
 const konuDersAdi = ki => (D && D.konuDers && D.konuDers[ki]) || KISA[(konuAl(ki) || [0])[0]];
 const konuSayisi = () => KATALOG.length + (((D && D.ekKonular) || []).length);
-const OGRENCILER = [];
+function katalogImzasi() {
+  const metin = JSON.stringify(KATALOG);
+  let h = 2166136261;
+  for (let i = 0; i < metin.length; i++) h = Math.imul(h ^ metin.charCodeAt(i), 16777619);
+  return 'fnv1a-' + (h >>> 0).toString(16);
+}
+const KATALOG_IMZA = katalogImzasi();
 
 // ---------------------------------------------------------------- FSRS-6
 const W = [0.212,1.2931,2.3065,8.2956,6.4133,0.8334,3.0194,0.001,1.8722,0.1666,0.796,
@@ -504,20 +523,20 @@ const ggyy = g => gg(g) + '.' + new Date(g * 864e5).getUTCFullYear();
 const haftaGunu = g => ((g + 3) % 7 + 7) % 7;
 // geliştirme/test amaçlı: Ayarlar'dan bir tarih verilmişse "bugün" o olur (gerçek cihaz tarihi değişmez)
 const bugunNo = () => {
-  if (D && D.ayar && D.ayar.testTarih) return gunNo(D.ayar.testTarih);
+  if (GELISTIRME_MODU && D && D.ayar && D.ayar.testTarih) return gunNo(D.ayar.testTarih);
   const t = new Date(); return gunNo(t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'));
 };
 const pazartesi = g => g - haftaGunu(g);
 
 // ---------------------------------------------------------------- durum
-let D = null, EK = { sekme: 'plan', ogr: 0, hafta: null, kirli: false, yazar: true, son: '', girisAcik: {}, haritaAcik: null, haritaOnay: null };
+let D = null, EK = { sekme: 'plan', ogr: 0, hafta: null, kirli: false, son: '', girisAcik: {}, haritaAcik: null, haritaOnay: null };
 const ROL = () => (D && D.rol) || '';
 const rehberMi = () => ROL() === 'rehber';
 const ogrenciMi = () => ROL() === 'ogrenci';
 
 function varsayilan() {
   return {
-    v: 1, ts: 0, ayarSurum: 8,   // yeni kurulum: eski verileri güncellemek için yazılmış geçiş adımlarının hiçbiri çalışmasın
+    v: 1, ts: 0, ayarSurum: VERI_SURUMU, katalogImza: KATALOG_IMZA,
     ayar: { planBasi: isoDan(pazartesi(bugunNo())), sinav: '2027-06-19', hedef: 0.90, maks: 60,
             ilk: 2, relearn: 1, esik: [50, 70, 90], soru: 12, donemBasi: '2026-09-14',
             gecmisSerbest: false, tekEsik: 0.80, ileriHafta: 8,
@@ -547,71 +566,188 @@ function varsayilan() {
   };
 }
 
-async function durumuYukle() {
-  const adaylar = [];
-  try {
-    const r = await fetch('data/veri.json', { cache: 'no-store' });
-    if (r.ok) adaylar.push(await r.json());
-  } catch (e) { /* dosya yok */ }
-  try {
-    const y = localStorage.getItem('yks_veri');
-    if (y) adaylar.push(JSON.parse(y));
-  } catch (e) { /* depolama kapalı */ }
-  try {
-    const g = document.getElementById('veri').textContent.trim();
-    if (g && g !== 'null') adaylar.push(JSON.parse(g));
-  } catch (e) { /* gömülü veri yok */ }
-  adaylar.sort((a, b) => (b && b.ts || 0) - (a && a.ts || 0));
-  D = adaylar[0] || varsayilan();
-  if (!D.ayar) D = varsayilan();
+function isoTarihGecerli(v) {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const g = gunNo(v);
+  return Number.isFinite(g) && isoDan(g) === v;
+}
+
+function yedekDogrula(y) {
+  if (!y || typeof y !== 'object' || Array.isArray(y)) throw new Error('Yedek bir veri nesnesi değil.');
+  if (!y.ayar || typeof y.ayar !== 'object') throw new Error('Yedekte ayarlar bölümü yok.');
+  if (!Array.isArray(y.ogr)) throw new Error('Yedekte öğrenci listesi yok.');
+  if (y.ayarSurum !== undefined && (!Number.isInteger(+y.ayarSurum) || +y.ayarSurum < 1 || +y.ayarSurum > VERI_SURUMU))
+    throw new Error('Desteklenmeyen veri sürümü: ' + y.ayarSurum + '.');
+  ['sinav', 'planBasi', 'donemBasi'].forEach(k => {
+    if (y.ayar[k] !== undefined && !isoTarihGecerli(y.ayar[k])) throw new Error('Geçersiz tarih alanı: ' + k + '.');
+  });
+  if (isoTarihGecerli(y.ayar.planBasi) && isoTarihGecerli(y.ayar.sinav) &&
+      gunNo(y.ayar.planBasi) >= gunNo(y.ayar.sinav)) throw new Error('Program başlangıcı YKS tarihinden önce olmalı.');
+  const aralik = (alan, alt, ust, tam) => {
+    if (y.ayar[alan] === undefined) return;
+    const v = y.ayar[alan];
+    if (typeof v !== 'number' || !Number.isFinite(v) || (tam && !Number.isInteger(v)) || v < alt || v > ust)
+      throw new Error('Sınır dışı ayar alanı: ' + alan + '.');
+  };
+  aralik('hedef', 0.50, 0.99, false); aralik('maks', 7, 365, true);
+  aralik('ilk', 0, 7, true); aralik('relearn', 1, 7, true); aralik('soru', 1, 200, true);
+  aralik('telafiGunKap', 1, 12, true); aralik('tekEsik', 0.50, 0.99, false);
+  aralik('ileriHafta', 0, 300, true); aralik('genisEsik', 2, 10, true);
+  if (y.ayar.esik !== undefined && (!Array.isArray(y.ayar.esik) || y.ayar.esik.length !== 3 ||
+      y.ayar.esik.some(x => typeof x !== 'number' || !Number.isFinite(x) || x <= 0 || x >= 100) ||
+      !(y.ayar.esik[0] < y.ayar.esik[1] && y.ayar.esik[1] < y.ayar.esik[2])))
+    throw new Error('Geçersiz not eşikleri.');
+  if (y.katalogImza && y.katalogImza !== KATALOG_IMZA)
+    throw new Error('Bu yedek farklı bir konu kataloğuyla oluşturulmuş. Konu indeksleri güvenle eşleştirilemiyor.');
+  if (y.log !== undefined && !Array.isArray(y.log)) throw new Error('Sonuç geçmişi dizi değil.');
+  const konuAdedi = KATALOG.length + (Array.isArray(y.ekKonular) ? y.ekKonular.length : 0);
+  y.ogr.forEach((o, i) => {
+    if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('Geçersiz öğrenci kaydı: ' + (i + 1) + '. satır.');
+    if (typeof o.ad !== 'string' || !o.ad.trim() || o.ad.length > 120) throw new Error('Geçersiz öğrenci adı: ' + (i + 1) + '. satır.');
+    if (typeof o.sube !== 'string' || !o.sube.trim() || o.sube.length > 40) throw new Error('Geçersiz öğrenci şubesi: ' + (i + 1) + '. satır.');
+    if (ALAN_DERS[o.alan] === undefined) throw new Error('Geçersiz öğrenci alanı: ' + (i + 1) + '. satır.');
+    if (o.no !== undefined && (!Number.isInteger(o.no) || o.no < 1 || o.no > 9999))
+      throw new Error('Geçersiz öğrenci numarası: ' + (i + 1) + '. satır.');
+    if (o.kap !== undefined && (!Number.isInteger(o.kap) || o.kap < 1 || o.kap > 12))
+      throw new Error('Geçersiz günlük kapasite: ' + (i + 1) + '. satır.');
+    if (o.off !== undefined && (!Array.isArray(o.off) || o.off.some(g => !Number.isInteger(g) || g < 0 || g > 6)))
+      throw new Error('Geçersiz tatil günü: ' + (i + 1) + '. satır.');
+    if (o.hedef !== undefined && o.hedef !== null &&
+        (typeof o.hedef !== 'number' || !Number.isFinite(o.hedef) || o.hedef < 0.50 || o.hedef > 0.99))
+      throw new Error('Geçersiz öğrenci hedefi: ' + (i + 1) + '. satır.');
+  });
+  Object.keys(y.kart || {}).forEach(k => {
+    const p = k.split(':'), c = y.kart[k];
+    const si = +p[0], ki = +p[1];
+    if (p.length !== 2 || !Number.isInteger(si) || si < 0 || si >= y.ogr.length ||
+        !Number.isInteger(ki) || ki < 0 || ki >= konuAdedi || !c || typeof c !== 'object' ||
+        typeof c.s !== 'number' || !Number.isFinite(c.s) || c.s <= 0 ||
+        typeof c.d !== 'number' || !Number.isFinite(c.d) || c.d < 1 || c.d > 10 ||
+        !Number.isInteger(c.son) || !Number.isInteger(c.due) || !Number.isInteger(c.n) || c.n < 0 ||
+        typeof c.y !== 'number' || !Number.isFinite(c.y) || c.y < 0 || c.y > 100)
+      throw new Error('Geçersiz tekrar kartı: ' + k + '.');
+  });
+  const sinavG = isoTarihGecerli(y.ayar.sinav) ? gunNo(y.ayar.sinav) : null;
+  (y.log || []).forEach((l, i) => {
+    if (!Array.isArray(l) || l.length < 6 || !Number.isInteger(l[0]) || !Number.isInteger(l[1]) ||
+        !Number.isInteger(l[2]) || !Number.isFinite(l[3]) || !Number.isFinite(l[4]))
+      throw new Error('Geçersiz sonuç kaydı: ' + (i + 1) + '. satır.');
+    if (l[1] < 0 || l[1] >= y.ogr.length || l[2] < 0 || l[2] >= konuAdedi ||
+        !Number.isInteger(l[3]) || !Number.isInteger(l[4]) || l[4] < 1 || l[4] > 200 || l[3] < 0 || l[3] > l[4] ||
+        !Number.isInteger(l[5]) || l[5] < 1 || l[5] > 4 || (sinavG !== null && l[0] >= sinavG) ||
+        (l[6] !== undefined && (!Number.isSafeInteger(l[6]) || l[6] <= 0)))
+      throw new Error('Sınır dışı sonuç kaydı: ' + (i + 1) + '. satır.');
+  });
+  return true;
+}
+
+function veriyiHazirla(y) {
+  yedekDogrula(y);
+  D = y;
+  const temel = varsayilan();
+  D.ayar = Object.assign({}, temel.ayar, D.ayar || {});
   if (!Array.isArray(D.ogr)) D.ogr = [];
   if (!Array.isArray(D.ekKonular)) D.ekKonular = [];
-  if (!D.ayarSurum || D.ayarSurum < 2) { if (D.ayar.soru === undefined) D.ayar.soru = 12; D.ayarSurum = 2; }
-  if (D.ayarSurum < 3) { D.ayar.ilk = 3; D.ayarSurum = 3; }
-  if (!D.subeIslenis) D.subeIslenis = {};
-  if (!D.dersProgrami) D.dersProgrami = {};
-  if (!D.programHafta) D.programHafta = {};
-  if (D.ayarSurum < 7) { takvimiKaydir(1); D.ayarSurum = 7; }   // mevcut veri bir hafta ileri
-  if (D.ayar.tekEsik === undefined) D.ayar.tekEsik = 0.80;
-  if (D.ayar.telafiGunKap === undefined) D.ayar.telafiGunKap = 2;
-  if (D.ayar.deneme === undefined) D.ayar.deneme = varsayilan().ayar.deneme;
-  if (!D.par) D.par = {};
-  if (D.ayarSurum < 8) {                       // günlük yanlış takibi maddesi
-    const yeni = varsayilan().anlasma.maddeler[1];
-    if (D.anlasma && Array.isArray(D.anlasma.maddeler) && D.anlasma.maddeler.indexOf(yeni) < 0)
-      D.anlasma.maddeler.splice(1, 0, yeni);
-    D.ayarSurum = 8;
-  }
-  if (D.ayarSurum < 6) {                       // eski tek program -> plan başlangıç haftasına ait say
+  if (!Array.isArray(D.log)) D.log = [];
+  ['islenis','subeIslenis','ogrIslenis','konuKaynak','konuDers','kart','dersProgrami','programHafta',
+   'konuPlani','elle','par','ertele'].forEach(k => {
+    if (!D[k] || typeof D[k] !== 'object' || Array.isArray(D[k])) D[k] = {};
+  });
+
+  const eskiSurum = Number.isInteger(+D.ayarSurum) ? +D.ayarSurum : 1;
+  if (eskiSurum < 2 && D.ayar.soru === undefined) D.ayar.soru = 12;
+  if (eskiSurum < 3) D.ayar.ilk = 3;
+  if (eskiSurum < 4) D.ayar.donemElle = false;
+  if (eskiSurum < 5) D.ogr.forEach(o => { o.aktif = !!o.cikti; });
+  if (eskiSurum < 6) {                       // eski tek program -> plan başlangıç haftasına ait say
     const hb0 = pazartesi(gunNo(D.ayar.planBasi));
-    Object.keys(D.dersProgrami || {}).forEach(su => {
+    Object.keys(D.dersProgrami).forEach(su => {
       const t = D.dersProgrami[su];
-      if (!t || !t.saatler || !t.saatler.length) return;
+      if (!t || !Array.isArray(t.saatler) || !t.saatler.length) return;
       D.programHafta[su] = D.programHafta[su] || {};
       if (!Object.keys(D.programHafta[su]).length) D.programHafta[su][hb0] = t;
     });
-    D.ayarSurum = 6;
   }
-  if (!D.konuPlani) D.konuPlani = {};
-  if (!D.ayar.donemBasi) D.ayar.donemBasi = varsayilan().ayar.donemBasi;
-  if (D.ayarSurum < 4) { D.ayar.donemElle = false; D.ayarSurum = 4; }
-  if (D.ayarSurum < 5) { D.ogr.forEach(o => { o.aktif = !!o.cikti; }); D.ayarSurum = 5; }
-  if (!D.konuDers) D.konuDers = {};
-  dersAdlariniTazele();
-  donemHizala();
-  if (!D.anlasma) D.anlasma = varsayilan().anlasma;
-  if (!D.rutinBasliklari) D.rutinBasliklari = varsayilan().rutinBasliklari;
+  if (eskiSurum < 7) {                       // mevcut veri bir hafta ileri; elle/otomatik seçimini bozma
+    const donemElleOnce = !!D.ayar.donemElle;
+    takvimiKaydir(1);
+    D.ayar.donemElle = donemElleOnce;
+  }
+  if (eskiSurum < 8) {                       // günlük yanlış takibi maddesi
+    const yeni = temel.anlasma.maddeler[1];
+    if (D.anlasma && Array.isArray(D.anlasma.maddeler) && D.anlasma.maddeler.indexOf(yeni) < 0)
+      D.anlasma.maddeler.splice(1, 0, yeni);
+  }
+  if (eskiSurum < 9) {                       // sonuçları tekilleştir + değişiklik zamanını ekle
+    const taban = Number.isFinite(+D.ts) && +D.ts > 0 ? +D.ts : Date.now();
+    const tekil = new Map(), tekrarKonular = {};
+    D.log.forEach((l, i) => {
+      const k = l[0] + ':' + l[1] + ':' + l[2];
+      if (tekil.has(k)) tekrarKonular[l[1] + ':' + l[2]] = 1;
+      const satir = l.slice();
+      if (!Number.isFinite(+satir[6]) || +satir[6] <= 0) satir[6] = taban + i;
+      tekil.set(k, satir);
+    });
+    D.log = Array.from(tekil.values()).sort((a, b) => a[0] - b[0] || a[6] - b[6]);
+    Object.keys(tekrarKonular).forEach(k => {
+      const p = k.split(':'); kartiYenidenHesapla(+p[0], +p[1]);
+    });
+    delete D.sonGonderim;
+    delete D.sonGonderimTs;
+  }
+
+  D.ayarSurum = VERI_SURUMU;
+  D.katalogImza = KATALOG_IMZA;
+  // Sonuç paketleri her dışa aktarmada tam geçmişi taşır. Alıcı taraf tekilleştirdiği için
+  // bir "son gönderim" işaretçisi tutmak gereksizdir ve başarısız indirmede veri kaybettirebilir.
+  delete D.sonGonderim;
+  delete D.sonGonderimTs;
+  if (!D.anlasma) D.anlasma = temel.anlasma;
+  if (!D.rutinBasliklari) D.rutinBasliklari = temel.rutinBasliklari;
   D.ogr.forEach(o => {
     if (o.aktif === undefined) o.aktif = false;
     if (!Array.isArray(o.maddeler)) o.maddeler = [];
     if (!o.rutin) o.rutin = { once: '', ara: '', sonra: '' };
-  });
-  D.ogr.forEach(o => {                       // eski tek tatil alanını çoklu güne çevir
     if (!Array.isArray(o.off)) o.off = (o.tatil === undefined || o.tatil === null || o.tatil < 0) ? [] : [o.tatil];
     delete o.tatil;
   });
-  const uyarilar = tutarlilikUyarilari();
-  if (uyarilar.length) console.warn('[YKS Tekrar Defteri] Tutarlılık uyarıları (veri DEĞİŞTİRİLMEDİ):\n- ' + uyarilar.join('\n- '));
+  dersAdlariniTazele();
+  donemHizala();
+  return tutarlilikUyarilari();
+}
+
+async function durumuYukle() {
+  const adaylar = [];
+  try {
+    const r = await fetch('data/veri.json', { cache: 'no-store' });
+    if (r.ok) adaylar.push({ kaynak: 'sunucu', veri: await r.json() });
+  } catch (e) { /* dosya yok */ }
+  try {
+    const y = localStorage.getItem('yks_veri');
+    if (y) adaylar.push({ kaynak: 'cihaz', veri: JSON.parse(y) });
+  } catch (e) { /* depolama kapalı */ }
+  try {
+    const g = document.getElementById('veri').textContent.trim();
+    if (g && g !== 'null') adaylar.push({ kaynak: 'gömülü', veri: JSON.parse(g) });
+  } catch (e) { /* gömülü veri yok */ }
+  adaylar.sort((a, b) => (+b.veri.rev || 0) - (+a.veri.rev || 0) || (+b.veri.ts || 0) - (+a.veri.ts || 0));
+  const gecersiz = [];
+  let secilen = null;
+  for (const a of adaylar) {
+    try { yedekDogrula(a.veri); secilen = a.veri; break; }
+    catch (e) { gecersiz.push(a.kaynak + ': ' + (e.message || e)); }
+  }
+  let uyarilar;
+  try {
+    uyarilar = veriyiHazirla(secilen || varsayilan());
+  } catch (e) {
+    // veriyiHazirla doğrulamadan geçmiş bir adayda bile beklenmedik şekilde patlarsa (ör. göç
+    // adımlarından biri), yarı göçmüş bir D ile açılış çökmesin — bilinen iyi durumla devam et.
+    uyarilar = veriyiHazirla(varsayilan());
+    uyarilar.push('Veri hazırlanamadı, varsayılan durumla başlatıldı — ' + (e.message || e));
+  }
+  gecersiz.forEach(x => uyarilar.push('Geçersiz veri kaynağı atlandı — ' + x));
+  if (uyarilar.length) console.warn('[YKS Tekrar Defteri] Tutarlılık uyarıları:\n- ' + uyarilar.join('\n- '));
   return uyarilar;
 }
 // --- teşhis: "olmaması gereken" durumları arar, HİÇBİR VERİYİ DEĞİŞTİRMEZ — yalnızca
@@ -660,7 +796,7 @@ function tutarlilikUyarilari() {
   return uyari;
 }
 
-function tamBelge() {
+function tamBelge(veri) {
   const stil = document.getElementById('stil').textContent;
   const kod = document.getElementById('uygulama').textContent;
   const kabuk = '<div class="kabuk"><nav class="ray" id="ray"></nav><main id="ana"></main></div>';
@@ -668,10 +804,15 @@ function tamBelge() {
   return '<!doctype html>\n<html lang="tr">\n<head>\n<meta charset="utf-8">\n' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
     '<title>YKS Tekrar Defteri</title>\n' +
-    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">\n' +
     '<style id="stil">' + stil + '</style>\n</head>\n<body>\n' + kabuk + '\n' +
-    s + ' id="veri" type="application/json">' + JSON.stringify(D) + k + '\n' +
+    s + ' id="veri" type="application/json">' + betikIciJson(veri || D) + k + '\n' +
     s + ' id="uygulama">' + kod + k + '\n</body>\n</html>';
+}
+
+function betikIciJson(v) {
+  return JSON.stringify(v).replace(/[<>&\u2028\u2029]/g, c => ({
+    '<': '\\u003c', '>': '\\u003e', '&': '\\u0026', '\u2028': '\\u2028', '\u2029': '\\u2029'
+  }[c]));
 }
 
 const YETENEK = {};
@@ -683,29 +824,58 @@ async function yetenek(ad) {
   } catch (e) { YETENEK[ad] = null; }
   return YETENEK[ad];
 }
-async function kaydet(sessiz) {
+let KAYIT_ZINCIRI = Promise.resolve(true);
+function kaydet(sessiz) {
+  const calistir = () => kaydetGercek(sessiz);
+  KAYIT_ZINCIRI = KAYIT_ZINCIRI.then(calistir, calistir);
+  return KAYIT_ZINCIRI;
+}
+
+async function kaydetGercek(sessiz) {
   D.ts = Date.now();
-  try { localStorage.setItem('yks_veri', JSON.stringify(D)); } catch (e) { /* dolu olabilir */ }
-  EK.kirli = false;
+  D.rev = Math.max(0, +D.rev || 0) + 1;
+  let json;
+  try { json = JSON.stringify(D); }
+  catch (e) {
+    EK.kirli = true; EK.son = 'kaydedilemedi — veri JSON’a çevrilemedi'; rayCiz(); return false;
+  }
+
+  let yerelBasarili = false, bulutBasarili = false, yerelHata = null, bulutHata = null;
+  try { localStorage.setItem('yks_veri', json); yerelBasarili = true; }
+  catch (e) { yerelHata = e; }
+
   const a = await yetenek('artifact');
-  if (!a) { rayCiz(); return; }
-  try {
-    await a.publish({ 'data/veri.json': { content: JSON.stringify(D), contentType: 'application/json' } });
-    EK.son = 'kaydedildi · ' + new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-    EK.yazar = true;
-  } catch (e) {
-    if (e && e.code === 'conflict') { EK.son = 'başka bir yerde değişti, sayfa yenileniyor'; }
-    else if (e && (e.code === 'not_writer' || e.code === 'not_granted')) { EK.yazar = false; EK.son = 'salt okunur görünüm'; }
-    else {
-      try {
-        sessionStorage.setItem('yks_ek', JSON.stringify({ sekme: EK.sekme, ogr: EK.ogr }));
-        await a.publish(tamBelge());
-        EK.son = 'kaydedildi';
-      } catch (e2) { EK.son = 'kaydedilemedi (' + (e2 && e2.code || 'bilinmeyen') + ') — yedek indirin'; }
+  if (a) {
+    try {
+      await a.publish({ 'data/veri.json': { content: json, contentType: 'application/json' } });
+      bulutBasarili = true;
+    } catch (e) {
+      bulutHata = e;
+      if (!(e && (e.code === 'conflict' || e.code === 'not_writer' || e.code === 'not_granted'))) {
+        try {
+          sessionStorage.setItem('yks_ek', JSON.stringify({ sekme: EK.sekme, ogr: EK.ogr }));
+          await a.publish(tamBelge(JSON.parse(json)));
+          bulutBasarili = true; bulutHata = null;
+        } catch (e2) { bulutHata = e2; }
+      }
     }
   }
+
+  const kalici = yerelBasarili || bulutBasarili;
+  EK.kirli = !kalici;
+  const saat = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  if (yerelBasarili && bulutBasarili) EK.son = 'kaydedildi · ' + saat;
+  else if (yerelBasarili && bulutHata && bulutHata.code === 'conflict')
+    EK.son = 'cihazda kayıtlı · bulut çakışması, yedek alın';
+  else if (yerelBasarili && bulutHata && (bulutHata.code === 'not_writer' || bulutHata.code === 'not_granted'))
+    EK.son = 'cihazda kayıtlı · buluta yazma izni yok';
+  else if (yerelBasarili) EK.son = a ? 'cihazda kayıtlı · bulut kaydı başarısız' : 'cihazda kaydedildi · ' + saat;
+  else if (bulutBasarili) EK.son = 'bulutta kayıtlı · cihaz depolaması kapalı';
+  else EK.son = 'KAYDEDİLEMEDİ · yedek indirin';
+  if (!kalici) console.error('[YKS Tekrar Defteri] Kayıt başarısız', { yerelHata: yerelHata, bulutHata: bulutHata });
   rayCiz();
   if (!sessiz) ciz();
+  return kalici;
 }
 
 // ---------------------------------------------------------------- plan
@@ -749,21 +919,6 @@ function programDegistiTetikle(sube) {
       ileriDagit(hb0, sube || null, n);
     }
   } catch (e) { /* dolduramazsa program yine de kaydedilmiş olsun */ }
-}
-// programDegistiTetikle SADECE bugünden itibaren sabit (ileriHafta, varsayılan 8) haftalık bir
-// pencereyi yeniden dağıtır. dersSirasiKaydir bir dersi onlarca hafta ileri erteleyebildiğinden
-// (ya da bir konuyu dersin en sonuna kadar sürükleyebildiğinden), etkilenen aralık bu sabit
-// pencerenin çok dışına taşabilir; o zaman henüz sonuçlanmamış bir yerleşim dagitimiGeriAl ile
-// silinir ama ileriDagit pencere dışında kaldığı için hiç yeniden eklenmez — konu, ekrandan (bazen
-// çıktısı zaten verilmiş, sabitlenmiş bir haftadan) sessizce kaybolur. Bu yüzden dersSirasiKaydir
-// sonrası, o çağrının bildirdiği gerçek etki aralığını (plan haftası cinsinden) da ayrıca eşitleriz.
-function etkilenenAraligiEsitle(sube, etkiBaslangic, etkiBitis) {
-  try {
-    const hb0 = haftaTakvimi(etkiBaslangic);
-    const n = Math.max(1, etkiBitis - etkiBaslangic + 1);
-    for (let k = 0; k < n; k++) dagitimiGeriAl(hb0 + k * 7, sube);
-    ileriDagit(hb0, sube || null, n);
-  } catch (e) { /* eşitlenemezse program yine de kaydedilmiş olsun */ }
 }
 function haftaBasi() {
   const b = buHafta();
@@ -839,10 +994,12 @@ function elleAl(si, hb, olustur) {
   // buradan geçiyor, kayıt tutan bir konteyner boş bile olsa sessizce oluşturulmamalı.
   if (olustur && (!D.elle || !D.elle[a])) {
     D.elle = D.elle || {};
-    D.elle[a] = D.elle[a] || { ek: [], sil: [], yer: {}, soru: {} };
+    D.elle[a] = D.elle[a] || { ek: [], sil: [], yer: {}, soru: {}, degisim: {}, konuSlot: {} };
   }
-  return (D.elle || {})[a] || { ek: [], sil: [], yer: {}, soru: {} };
+  return (D.elle || {})[a] || { ek: [], sil: [], yer: {}, soru: {}, degisim: {}, konuSlot: {} };
 }
+
+const planSlotAnahtari = x => x && x.slotKi !== undefined ? x.slotKi : x && x.ki;
 
 // --- yapılamayan konunun ertelenmesi (sonuç girilmeden tarih kaydırma)
 const erteleAl = (si, ki) => (D.ertele || {})[si + ':' + ki];
@@ -1112,6 +1269,16 @@ function planHesapla(si, hb, derinlik) {
     if (!ogeler.some(x => x.ki === ki))
       ogeler.push({ ki: ki, due: hb, ders: konuAl(ki)[0], kart: D.kart[si + ':' + ki], ek: true });
   });
+  // Bir test hücresinin konusu değiştirildiyse hücrenin kimliği (slotKi) aynı kalır;
+  // yalnızca o hücrede çözülecek gerçek konu (ki) değişir. Aynı konu farklı hücrelerde
+  // tekrar edebilir; yer, soru sayısı ve silme işlemleri bu yüzden konuya değil hücreye bağlıdır.
+  const degisim = ov.degisim || {};
+  ogeler = ogeler.map(x => {
+    const hedef = Number(degisim[x.ki]);
+    if (!Number.isInteger(hedef) || !konuAl(hedef) || konuAl(hedef)[6] || hedef === x.ki) return x;
+    return Object.assign({}, x, { slotKi: x.ki, ki: hedef, ders: konuAl(hedef)[0],
+      kart: D.kart[si + ':' + hedef], degisim: true });
+  });
   const anl = ov.anlatim || {};
   const anlKi = Object.keys(anl).map(Number);
   if (anlKi.length) ogeler = ogeler.filter(x => anlKi.indexOf(x.ki) < 0);   // aynı hafta hem anlatım hem test olmasın
@@ -1122,6 +1289,13 @@ function planHesapla(si, hb, derinlik) {
   const sb = ov.serbest || {};
   Object.keys(sb).forEach(id => {
     ogeler.push({ ki: id, due: hb, ders: -1, kart: null, serbest: true, ek: true });
+  });
+  const konuSlot = ov.konuSlot || {};
+  Object.keys(konuSlot).forEach(id => {
+    const ki = Number((konuSlot[id] || {}).ki);
+    if (!Number.isInteger(ki) || !konuAl(ki) || konuAl(ki)[6]) return;
+    ogeler.push({ ki: ki, slotKi: id, due: hb, ders: konuAl(ki)[0], kart: D.kart[si + ':' + ki],
+      ek: true, slotEk: true });
   });
   ogeler.forEach(x => {
     if (x.serbest) {
@@ -1150,17 +1324,18 @@ function planHesapla(si, hb, derinlik) {
       x.test = !x.kart ? 2 : ((x.R < D.ayar.tekEsik || zayifSonuc) ? 2 : 1);
       x.mod = !x.kart ? 'ilk' : (x.test === 1 ? 'koruma' : 'pekiştirme');
       x.neden = !x.kart || x.test === 1 ? '' : (x.R < D.ayar.tekEsik ? 'hatırlama düştü' : 'önceki sonuç zayıf');
-      const elleSoru = ov.soru && ov.soru[x.ki];
+      const slot = planSlotAnahtari(x);
+      const elleSoru = ov.soru && ov.soru[slot];
       x.soru = elleSoru || x.test * D.ayar.soru;
       if (elleSoru) x.test = Math.max(1, Math.round(elleSoru / D.ayar.soru));
     }
-    x.pin = (ov.yer && ov.yer[x.ki]) || null;
+    x.pin = (ov.yer && ov.yer[planSlotAnahtari(x)]) || null;
   });
   // dondurulmuş (verilmiş) bir konu bu hafta içinde cevaplandıysa VE algoritmanın bulduğu
   // bir sonraki vade de aynı haftaya düşüyorsa (kısa aralık), o yeni tekrar için sabitlenmemiş,
   // ayrı bir satır aç — yoksa cevaplanan slotun sabit kalması bir sonraki tekrarı tamamen gizler
   ogeler.slice().forEach(x => {
-    if (x.serbest || x.anlatim || !x.pin || !x.kart) return;
+    if (x.serbest || x.anlatim || x.degisim || x.slotEk || !x.pin || !x.kart) return;
     if (!(x.kart.son >= hb && x.kart.son <= hs)) return;
     if (!(x.due > x.kart.son && x.due <= hs)) return;
     ogeler.push(Object.assign({}, x, { pin: null }));
@@ -1225,38 +1400,85 @@ function dondur(si, hb, p) {
   ov.yer = {};
   ov.soru = ov.soru || {};
   p.gunler.forEach((liste, g) => liste.forEach((x, i) => {
-    ov.yer[x.ki] = [g, i];
+    const slot = planSlotAnahtari(x);
+    ov.yer[slot] = [g, i];
     // soru/test sayısını da dondur — sonradan "test başına soru" ayarı değişse bile
     // verilmiş (yazdırılmış) bir haftanın rakamları kağıttakiyle aynı kalsın
-    if (!x.serbest && !x.anlatim) ov.soru[x.ki] = x.soru;
+    if (!x.serbest && !x.anlatim) ov.soru[slot] = x.soru;
   }));
 }
 
-function sonucIsle(si, kayitlar) {
+function sonucKaydiDogrula(si, r) {
+  if (!Number.isInteger(si) || !D.ogr[si] || D.ogr[si].silindi) throw new Error('Sonuç için geçerli bir öğrenci bulunamadı.');
+  const ki = +r.ki, gun = +r.gun, dogru = +r.dogru, soru = +r.soru;
+  if (!Number.isInteger(ki) || ki < 0 || ki >= konuSayisi() || !konuAl(ki)) throw new Error('Sonuçta geçersiz konu numarası var.');
+  if (!Number.isInteger(gun) || gun > bugunNo()) throw new Error('Sonuç tarihi bugün veya daha eski, geçerli bir gün olmalı.');
+  if (gun >= gunNo(D.ayar.sinav)) throw new Error('YKS tarihine veya sonrasına sonuç girilemez.');
+  if (!Number.isInteger(soru) || soru < 1 || soru > 200) throw new Error('Soru sayısı 1–200 arasında tam sayı olmalı.');
+  if (!Number.isInteger(dogru) || dogru < 0 || dogru > soru) throw new Error('Doğru sayısı 0 ile soru sayısı arasında olmalı.');
+  let guncellemeTs = null;
+  if (r.guncellemeTs !== undefined && r.guncellemeTs !== null) {
+    guncellemeTs = +r.guncellemeTs;
+    if (!Number.isSafeInteger(guncellemeTs) || guncellemeTs <= 0)
+      throw new Error('Sonuçta geçersiz güncelleme zamanı var.');
+  }
+  return { ki: ki, gun: gun, dogru: dogru, soru: soru, guncellemeTs: guncellemeTs };
+}
+
+function kartiYenidenHesapla(si, ki) {
+  const anahtar = si + ':' + ki;
+  if (!D.ogr[si] || !konuAl(ki)) { delete D.kart[anahtar]; return null; }
   const o = D.ogr[si], dr = o.hedef || D.ayar.hedef, sinavG = gunNo(D.ayar.sinav);
-  kayitlar.slice().sort((a, b) => a.gun - b.gun).forEach(r => {
-    const yuzde = r.dogru / r.soru * 100;
-    const not = notVer(yuzde, D.ayar.esik);
-    const anahtar = si + ':' + r.ki, kart = D.kart[anahtar];
-    const gecen = kart ? Math.max(0, r.gun - kart.son) : 0;
-    const y = tekrarla(kart, not, gecen, dr, D.ayar.maks, D.ayar.relearn, parametreAl(si, r.ki));
-    D.kart[anahtar] = { s: y.s, d: y.d, son: r.gun, due: Math.min(r.gun + y.ivl, sinavG - 1),
-                        n: (kart ? kart.n : 0) + 1, y: Math.round(yuzde) };
-    D.log.push([r.gun, si, r.ki, r.dogru, r.soru, not]);
-    erteleSil(si, r.ki);                    // sonuç geldi, erteleme kaydına gerek kalmadı
+  const kayitlar = D.log.filter(l => l[1] === si && l[2] === ki)
+    .sort((a, b) => a[0] - b[0] || (+a[6] || 0) - (+b[6] || 0));
+  let kart = null;
+  kayitlar.forEach(l => {
+    const yuzde = l[3] / l[4] * 100;
+    const not = Number.isInteger(+l[5]) && +l[5] >= 1 && +l[5] <= 4 ? +l[5] : notVer(yuzde, D.ayar.esik);
+    const gecen = kart ? Math.max(0, l[0] - kart.son) : 0;
+    const y = tekrarla(kart, not, gecen, dr, D.ayar.maks, D.ayar.relearn, parametreAl(si, ki));
+    kart = { s: y.s, d: y.d, son: l[0], due: Math.min(l[0] + y.ivl, sinavG - 1),
+             n: (kart ? kart.n : 0) + 1, y: Math.round(yuzde) };
   });
+  if (kart) D.kart[anahtar] = kart; else delete D.kart[anahtar];
+  return kart;
+}
+
+function sonucIsle(si, kayitlar) {
+  if (!Array.isArray(kayitlar)) throw new Error('Sonuç kayıtları liste biçiminde değil.');
+  const tekil = new Map();
+  kayitlar.forEach(r => {
+    const temiz = sonucKaydiDogrula(si, r);
+    tekil.set(temiz.gun + ':' + temiz.ki, temiz);       // aynı pakette son değer kazanır
+  });
+  const yeni = Array.from(tekil.values());
+  if (!yeni.length) return 0;
+  const degisen = new Set(yeni.map(r => r.ki));
+  const degisenGun = new Set(yeni.map(r => r.gun + ':' + r.ki));
+  D.log = D.log.filter(l => l[1] !== si || !degisenGun.has(l[0] + ':' + l[2]));
+  const enYeni = D.log.reduce((m, l) => Math.max(m, Number.isSafeInteger(+l[6]) ? +l[6] : 0), 0);
+  const zaman = Math.max(Date.now(), enYeni + 1);
+  yeni.sort((a, b) => a.gun - b.gun || a.ki - b.ki).forEach((r, i) => {
+    const yuzde = r.dogru / r.soru * 100;
+    D.log.push([r.gun, si, r.ki, r.dogru, r.soru, notVer(yuzde, D.ayar.esik), r.guncellemeTs || zaman + i]);
+    erteleSil(si, r.ki);
+  });
+  degisen.forEach(ki => kartiYenidenHesapla(si, ki));
+  return yeni.length;
 }
 
 
 // ---------------------------------------------------------------- yardımcı çizim
-const kacis = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const kacis = s => String(s).replace(/[&<>"']/g, c => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[c]));
 const ogrSecici = () => {
   const gruplar = {};
   canliOgrenciler().forEach(i => { (gruplar[D.ogr[i].sube] = gruplar[D.ogr[i].sube] || []).push(i); });
   return '<select class="genis" id="ogrSec">' + Object.keys(gruplar).sort().map(su =>
     '<optgroup label="' + kacis(su) + '">' + gruplar[su].map(i =>
       '<option value="' + i + '"' + (i === EK.ogr ? ' selected' : '') + '>' + kacis(D.ogr[i].ad) +
-      ' · ' + D.ogr[i].alan + (D.ogr[i].aktif === false ? ' · çıktı verilmedi' : '') + '</option>').join('') +
+      ' · ' + kacis(D.ogr[i].alan) + (D.ogr[i].aktif === false ? ' · çıktı verilmedi' : '') + '</option>').join('') +
     '</optgroup>').join('') + '</select>';
 };
 const haftaSecici = () => {
@@ -1281,7 +1503,8 @@ function planListesi(si, hb, p) {
       (izin ? '<em>izin</em>' : '<span class="pl-yuk">' + (p.gunYuk[g] || 0) + '/' + p.kap + ' test</span>') +
       '</div>' +
       (liste.length ? liste.map((x, i) => '<div class="pl-oge"' +
-          (gecti ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + i + '"') + '>' +
+          (gecti ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + i +
+            '" role="button" tabindex="0" aria-label="' + kacis(GUN_AD[g] + ' ' + x.ad + ' çalışmasını düzenle') + '"') + '>' +
           '<div class="d">' + kacis(dersKisaAd(x.dersAd)) + '</div>' +
           '<div class="k">' + kacis(x.ad) + '</div>' +
           '<div class="n">' + (x.anlatim ? 'KONU ANLATIMI' + (x.kaynak ? ' · ' + kacis(x.kaynak) : '')
@@ -1310,7 +1533,11 @@ function planTablosu(si, hb, p, tumu) {
     for (let g = 0; g < 7; g++) {
       const x = p.gunler[g][s2];
       const gecti = !tumu && gunGecti(hb, g);
-      const kilit = (tumu || gecti) ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + s2 + '"';
+      const hucreEtiketi = x
+        ? GUN_AD[g] + ' ' + x.ad + ' çalışmasını düzenle'
+        : GUN_AD[g] + ' ' + (s2 + 1) + '. boş sıraya çalışma ekle';
+      const kilit = (tumu || gecti) ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + s2 +
+        '" role="button" tabindex="0" aria-label="' + kacis(hucreEtiketi) + '"';
       if (!x) { h += '<td class="bos' + (gecti ? ' gecti' : '') + '"' + kilit + '></td>'; continue; }
       // bu hücre, kartın zaten cevaplandığı hafta içindeki sabitlenmiş (tarihsel) satırsa, o cevabın
       // kaydedildiği anki deneme numarasını göster (n); aksi hâlde önümüzdeki denemenin numarasını (n+1)
@@ -1322,10 +1549,11 @@ function planTablosu(si, hb, p, tumu) {
         ? ' · %' + Math.round(x.R * 100) + ' hatırlama' : '';
       h += '<td class="dolu' + (gecti ? ' gecti' : '') + (x.anlatim ? ' anlatim' : '') + '"' + kilit +
         (tumu || EK.toplu || gecti ? '' : ' draggable="true"') + '>' +
-        (!tumu && EK.toplu ? '<label class="topluEtiket"><input type="checkbox" class="topluKutu" data-ki="' + x.ki + '"> seç</label>' : '') +
+        (!tumu && EK.toplu ? '<label class="topluEtiket"><input type="checkbox" class="topluKutu" data-slot="' +
+          kacis(planSlotAnahtari(x)) + '"> seç</label>' : '') +
         '<div class="d">' + kacis(dersKisaAd(x.dersAd)) + '</div><div class="k">' + kacis(x.ad) + '</div>' +
         '<div class="n"><b>' + (x.anlatim ? 'ANLATIM' : (x.test > 1 ? x.test + ' test · ' : '') + x.soru + (x.birim === 'dakika' ? ' dakika' : ' soru')) +
-        '</b> · ' + bilgi + modEk + '</div></td>';
+        '</b> · ' + kacis(bilgi + modEk) + '</div></td>';
     }
     h += '</tr>';
   }
@@ -1359,6 +1587,7 @@ function planTablosu(si, hb, p, tumu) {
 
 // ---------------------------------------------------------------- konu penceresi
 let PENCERE = null;   // {g, s, ki}
+let PENCERE_ONCESI = null;
 
 const kullanan = i => D.ogr[i].aktif !== false;
 const kullananlar = () => D.ogr.map((o, i) => i).filter(i => !D.ogr[i].silindi && kullanan(i));
@@ -1379,35 +1608,39 @@ function hedefOgrenciler() {
   return [EK.ogr];
 }
 
-// Pencerede: bu ders için konu sırasını bir konu ileri/geri alma
-// Öğretmenler yıl içinde yavaşlar ya da hızlanır; her ders kendi hızında ilerlesin.
+// Bu düğmeler yalnızca açık olan test hücresini değiştirir. Komşu hücrelere dokunulmaz;
+// aynı mikro konu farklı günlerde bilinçli olarak tekrar seçilebilir.
 function dersSirasiKutusu(si, mevcut) {
-  if (!mevcut || mevcut.serbest) return '';
+  if (!mevcut || mevcut.serbest || mevcut.anlatim ||
+      (mevcut.kart && !mevcut.degisim && !mevcut.slotEk) || !Number.isInteger(mevcut.ki)) return '';
   const sube = (D.ogr[si] || {}).sube;
   const dersAd = mevcut.dersAd || konuDersAdi(mevcut.ki);
   const anahtar = planDersAnahtari(sube, dersAd);
   if (!anahtar) return '';
-  const hafta = planHaftasi(sube, haftaBasi());
-  const d = dersDizisi(sube, anahtar);
-  const suan = (((D.konuPlani || {})[sube] || [])[hafta - 1] || {})[anahtar] || [];
-  return '<div class="p-gunler"><div class="etiket">' + kacis(anahtar) + ' — sınıfın nerede olduğu</div>' +
-    '<div class="mini" style="margin-bottom:7px">' + hafta + '. haftada planlanan: <b>' +
-    (suan.length ? kacis(suan.join(' · ')) : '—') + '</b>. ' +
-    'Öğretmen geride kaldıysa bir konu geri alın — bu haftadan itibaren dersin geri kalanı bir hafta ' +
-    'ertelenir, sığmazsa sona yeni hafta eklenir; art arda basıp birden çok hafta erteleyebilirsiniz. ' +
-    'Öne geçtiyse bir konu ileri alın. Yalnızca bu dersin sırası kayar, diğer dersler etkilenmez.</div>' +
-    '<div class="gunSec"><button class="dugme sirakaydir" data-yon="-1" data-ders="' + kacis(dersAd) +
-    '"' + (hafta <= 1 ? ' disabled title="1. haftadan daha geri alınamaz"' : '') + '>◀ bir konu geri</button>' +
-    '<button class="dugme sirakaydir" data-yon="1" data-ders="' + kacis(dersAd) +
-    '">bir konu ileri ▶</button></div>' +
-    '<div class="mini" style="margin-top:6px">' + kacis(anahtar) + ' planı ' + d.dizi.length +
-    ' konu · ' + planHaftaSayisi(sube) + ' hafta</div></div>';
+  const onceki = dersSirasiOnizleme(si, anahtar, mevcut.ki, -1);
+  const sonraki = dersSirasiOnizleme(si, anahtar, mevcut.ki, 1);
+  if (onceki.gizle && sonraki.gizle) return '';
+  return '<div class="p-gunler"><div class="etiket">Bu testteki mikro konuyu değiştir</div>' +
+    '<div class="mini" style="margin-bottom:7px">Yalnızca seçili <b>' + kacis(mevcut.ad) +
+    '</b> testi değişir. Önceki/sonraki testler ve konu planı aynı kalır; aynı konu başka bir testte tekrar edebilir.</div>' +
+    '<div class="gunSec"><button class="dugme sirakaydir" data-yon="-1" data-ki="' + mevcut.ki +
+    '" data-ders="' + kacis(anahtar) + '"' + (onceki.hata ? ' disabled title="' + kacis(onceki.hata) + '"' :
+      ' title="Bu testte ' + kacis(onceki.hedefAd) + ' olsun"') + '>◀ önceki konu</button>' +
+    '<button class="dugme sirakaydir" data-yon="1" data-ki="' + mevcut.ki + '" data-ders="' + kacis(anahtar) +
+    '"' + (sonraki.hata ? ' disabled title="' + kacis(sonraki.hata) + '"' :
+      ' title="Bu testte ' + kacis(sonraki.hedefAd) + ' olsun"') + '>sonraki konu ▶</button>' +
+    '<button class="dugme sonrakiEkle"' + (sonraki.hata ? ' disabled title="' + kacis(sonraki.hata) + '"' :
+      ' title="' + kacis(sonraki.hedefAd) + ' için aynı güne ayrı test ekle"') + '>+ sonraki konuyu bugün ekle</button></div></div>';
 }
 
 function pencereCiz() {
   const eski = document.getElementById('ortu');
   if (eski) eski.remove();
-  if (!PENCERE) return;
+  if (!PENCERE) {
+    if (PENCERE_ONCESI && document.contains(PENCERE_ONCESI)) PENCERE_ONCESI.focus();
+    PENCERE_ONCESI = null;
+    return;
+  }
   const si = EK.ogr, hb = haftaBasi(), p = planHesapla(si, hb);
   const { g, s } = PENCERE;
   const mevcut = p.gunler[g][s] || null;
@@ -1420,7 +1653,7 @@ function pencereCiz() {
   const kapsamSecimi = () => ogrenciMi() ? '' : '<div class="p-gunler"><div class="etiket">Kime</div><div class="gunSec">' +
     [['ogrenci', 'Bu öğrenci'], ['sube', D.ogr[si].sube + ' şubesi (' + suSayi + ')'], ['hepsi', 'Tüm sınıf (' + kullananlar().length + ')']]
       .map(p2 => '<button class="dugme kapsamDugme' + (PENCERE.kapsam === p2[0] ? ' secili' : '') +
-        '" data-kapsam="' + p2[0] + '">' + p2[1] + '</button>').join('') + '</div></div>';
+        '" data-kapsam="' + p2[0] + '">' + kacis(p2[1]) + '</button>').join('') + '</div></div>';
   const gunSecimi = () => '<div class="p-gunler"><div class="etiket">Hangi günlere</div><div class="gunSec">' +
     GUN_AD.map((ad, j) => {
       const gec = gunGecti(hb, j);
@@ -1458,8 +1691,8 @@ function pencereCiz() {
   }
   const planda = {};
   p.gunler.forEach(l => l.forEach(x => { planda[x.ki] = 1; }));
-  let h = '<div class="ortu" id="ortu"><div class="pencere" role="dialog" aria-label="Konu kutusu">' +
-    '<div class="p-ust"><b>' + GUN_AD[g] + ' ' + gg(hb + g) + '</b> · ' + (s + 1) + '. sıra' +
+  let h = '<div class="ortu" id="ortu"><div class="pencere" role="dialog" aria-modal="true" aria-labelledby="pBaslik">' +
+    '<div class="p-ust" id="pBaslik"><b>' + GUN_AD[g] + ' ' + gg(hb + g) + '</b> · ' + (s + 1) + '. sıra' +
     '<button class="kapat" id="pKapat" aria-label="Kapat">×</button></div>';
   if (mevcut) {
     const k = mevcut.serbest ? null : konuAl(mevcut.ki);
@@ -1468,7 +1701,7 @@ function pencereCiz() {
         ? '<input id="pAd" class="p-adGiris" value="' + kacis(mevcut.ad) + '">'
         : '<div class="p-ad">' + kacis(mevcut.ad) + '</div>') +
       '<div class="mini">' + (k ? kacis(k[2]) + (k[5] ? ' · ' + kacis(k[5]) : '') : 'Kendi yazdığınız çalışma — tekrar algoritmasına girmez') + '</div>' +
-      '<div class="p-satir"><label>Kaç soru çözecek</label>' +
+      '<div class="p-satir"><label for="pSoru">Kaç soru çözecek</label>' +
       '<input type="number" min="1" max="200" id="pSoru" value="' + mevcut.soru + '"></div>' +
       '<div class="p-satir"><label>Taşı</label><div class="gunSec">' +
       GUN_AD.map((ad, j) => '<button class="gunDugme' + (j === g ? ' kapali' : '') +
@@ -1477,27 +1710,21 @@ function pencereCiz() {
       dersSirasiKutusu(si, mevcut) +
       '<div class="p-dugmeler"><button class="dugme" id="pKopyala">Seçili günlere kopyala</button> ' +
       (mevcut.serbest && !mevcut.kopya ? '<button class="dugme" id="pKonuyaCevir">Konu listesine ekle</button> ' : '') +
-      '<button class="dugme" id="pKaldir">' +
-      (takvimdenMi(si, mevcut.ki) ? 'Bu haftadan çıkar' : 'Sil (tamamen)') + '</button>' +
-      '<span class="mini" style="margin-left:9px">' +
-      (takvimdenMi(si, mevcut.ki)
-        ? (mevcut.kart ? 'tekrar takvimi bu konuyu sırası gelince yeniden getirir'
-                       : 'ilk tekrar; sonucu girilene kadar sırası gelince yine gelir')
-        : 'elle eklenmiş satır, tamamen silinir') +
-      '</span></div></div>';
+      '<button class="dugme" id="pKaldir">Bu testi sil</button>' +
+      '<span class="mini" style="margin-left:9px">yalnızca seçili test kaldırılır; diğer testlere dokunulmaz</span></div></div>';
   }
   h += kapsamSecimi() + turSecimi() + gunSecimi() + '<div class="p-yaz"><div class="etiket">Kendin yaz — karışık problem, deneme, ödev…</div>' +
-    '<input id="pSerbestAd" placeholder="örn. Karışık problem seti / TYT denemesi" value="' + kacis(PENCERE.yaziAd || '') + '">' +
-    '<div class="p-satir"><select id="pSerbestDers"><option value="">ders yok</option>' +
+    '<input id="pSerbestAd" aria-label="Çalışma adı" placeholder="örn. Karışık problem seti / TYT denemesi" value="' + kacis(PENCERE.yaziAd || '') + '">' +
+    '<div class="p-satir"><select id="pSerbestDers" aria-label="Ders"><option value="">ders yok</option>' +
     (function () {
       // okulun kendi ders adları (Matematik AYT, Geometri, ...) — 10 katalog dersinden
       // daha ayrıntılı, Konu Planı'ndaki adlarla aynı; öğrenci/şubenin planı boşsa genel listeye düş
       const sube = (D.ogr[si] || {}).sube;
       const adlar = (sube && konuPlaniDersleri(sube).length) ? konuPlaniDersleri(sube)
         : okulDersAdlari().filter(d => d !== 'REHBERLİK');
-      return adlar.map(d => '<option' + (PENCERE.yaziDers === d ? ' selected' : '') + '>' + d + '</option>').join('');
+      return adlar.map(d => '<option' + (PENCERE.yaziDers === d ? ' selected' : '') + '>' + kacis(d) + '</option>').join('');
     })() + '</select>' +
-    '<input type="number" id="pSerbestSoru" min="1" max="200" value="' + (PENCERE.yaziSoru || 20) + '" ' +
+    '<input type="number" id="pSerbestSoru" aria-label="Soru veya dakika" min="1" max="200" value="' + (PENCERE.yaziSoru || 20) + '" ' +
     'title="' + (PENCERE.yaziAnlatim ? 'dakika' : 'soru') + '">' +
     '<button class="dugme birincil" id="pSerbestEkle">Ekle</button></div>' +
     '<label class="mini" style="display:block;margin-top:7px"><input type="checkbox" id="pSerbestAnlatim"' +
@@ -1591,22 +1818,31 @@ function takvimdenMi(si, ki) {
   return ogIsl[ki] !== undefined || suIsl[ki] !== undefined || D.islenis[ki] !== undefined;
 }
 
-function plandanKaldir(si, hb, ki) {
+function plandanKaldir(si, hb, slot) {
   const p = planHesapla(si, hb);
+  let cikarilan = null;
   p.gunler.forEach(liste => {
-    const i = liste.findIndex(x => x.ki === ki);
-    if (i >= 0) liste.splice(i, 1);
+    const i = liste.findIndex(x => String(planSlotAnahtari(x)) === String(slot));
+    if (i >= 0) cikarilan = liste.splice(i, 1)[0];
   });
+  if (!cikarilan) return false;
   dondur(si, hb, p);
   const ov = elleAl(si, hb, true);
-  delete ov.yer[ki];
-  if (ov.soru) delete ov.soru[ki];
-  if (ov.serbest) delete ov.serbest[ki];
-  if (ov.anlatim) delete ov.anlatim[ki];
-  ov.ek = (ov.ek || []).filter(k => k !== ki);
+  if (ov.yer) delete ov.yer[slot];
+  if (ov.soru) delete ov.soru[slot];
+  if (ov.serbest) delete ov.serbest[slot];
+  if (ov.konuSlot) delete ov.konuSlot[slot];
+  const kaynakKi = Number(slot);
+  if (Number.isInteger(kaynakKi)) {
+    if (ov.degisim) delete ov.degisim[kaynakKi];
+    if (ov.anlatim) delete ov.anlatim[kaynakKi];
+    ov.ek = (ov.ek || []).filter(k => k !== kaynakKi);
+  }
   // Takvimin ürettiği her konu bu haftadan çıkarılır (sırası gelince yine gelir).
   // Yalnızca serbest satırlar tamamen silinir; onların sil listesinde işi yok.
-  if (takvimdenMi(si, ki) && (ov.sil || []).indexOf(ki) < 0) (ov.sil = ov.sil || []).push(ki);
+  if (Number.isInteger(kaynakKi) && takvimdenMi(si, kaynakKi) && (ov.sil || []).indexOf(kaynakKi) < 0)
+    (ov.sil = ov.sil || []).push(kaynakKi);
+  return true;
 }
 
 function kopyaEkle(si, hb, ad, ders, soru, g, s, birim) {
@@ -1767,8 +2003,8 @@ function gorunumPlan() {
       : '') +
     (o.aktif === false && !ogrenciMi() ? '<div class="uyari-serit">Bu öğrenciye programı henüz vermediniz; ' +
       'şube veya sınıf geneli eklemelerde ve toplu çıktıda atlanır. Çıktıyı verince yandaki ' +
-      '<b>“çıktı verildi”</b> kutusunu işaretleyin — yazdırdığınızda kendiliğinden de işaretlenir.</div>' : '') +
-    '<div class="baslik"><h1>Haftalık plan</h1><p>' + o.alan + ' · ' + o.sube +
+      '<b>“çıktı verildi”</b> kutusunu işaretleyin. Yazdırma yalnızca belgeyi oluşturur; teslim edildiğini varsaymaz.</div>' : '') +
+    '<div class="baslik"><h1>Haftalık plan</h1><p>' + kacis(o.alan) + ' · ' + kacis(o.sube) +
     ' · günde ' + (o.kap || 6) + ' konu testi · tatil ' + (o.tatil >= 0 ? GUN_AD[o.tatil].toLowerCase() : 'yok') +
     ' · hedef tutma %' + Math.round((o.hedef || D.ayar.hedef) * 100) + '</p></div>' +
     '<div class="arac">' + (ogrenciMi() ? '' : ogrSecici()) + haftaSecici() +
@@ -1845,12 +2081,15 @@ function gorunumGiris() {
         return;
       }
       if (x.anlatim) {
+        const anlatimGunu = hb + g, anlatimGelecek = anlatimGunu > bugunNo();
         h += '<div class="giris-satir"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span>' +
           '<span>' + kacis(x.ad) + ' <span class="mini">· konu anlatımı' +
           (x.kaynak ? ' (' + kacis(x.kaynak) + ')' : '') + '</span></span>' +
           '<label class="mini" style="grid-column:span 2;display:flex;align-items:center;gap:7px">' +
-          '<input type="checkbox" class="gAnlatim" data-ki="' + x.ki + '" data-gun="' + (hb + g) + '">' +
-          'anlatıldı / izledi — ilk test ' + D.ayar.ilk + ' gün sonra gelsin</label></div>';
+          '<input type="checkbox" class="gAnlatim" data-ki="' + x.ki + '" data-gun="' + anlatimGunu + '"' +
+          (anlatimGelecek ? ' disabled' : '') + '>' +
+          (anlatimGelecek ? 'bu gün henüz gelmedi' : 'anlatıldı / izledi — ilk test ' + D.ayar.ilk + ' gün sonra gelsin') +
+          '</label></div>';
         return;
       }
       const genis = !x.serbest && genisKonu(x.ki);
@@ -1858,13 +2097,14 @@ function gorunumGiris() {
       // bu satırın TAM OLARAK bu gün için bir sonuç kaydı var mı? (sabitlenmiş olsun olmasın çalışır —
       // kartın "son" tarihine değil, o güne ait gerçek log kaydına bakar; aynı haftaya düşen yeni bir
       // tekrar farklı bir günde oturduğu için kendi günü boş kaldıkça hep düzenlenebilir kalır)
-      const sonKayit = (D.log || []).find(l => l[1] === si && l[2] === x.ki && l[0] === gun);
+      const sonKayit = (D.log || []).filter(l => l[1] === si && l[2] === x.ki && l[0] === gun).slice(-1)[0];
       const cevaplandi = !!sonKayit;
-      if (cevaplandi && !EK.girisAcik[x.ki]) {
+      const girisAnahtari = x.ki + ':' + gun;
+      if (cevaplandi && !EK.girisAcik[girisAnahtari]) {
         h += '<div class="giris-satir giris-kilitli"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span>' +
           '<span>' + kacis(x.ad) + '</span>' +
           '<span class="mini" style="text-align:center">✓ cevaplandı · ' + sonKayit[3] + '/' + sonKayit[4] + '</span>' +
-          '<button class="dugme" data-girisduzenle="1" data-ki="' + x.ki + '">Düzenle</button></div>';
+          '<button class="dugme" data-girisduzenle="1" data-ki="' + x.ki + '" data-gun="' + gun + '">Düzenle</button></div>';
         return;
       }
       h += '<div class="giris-satir"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span>' +
@@ -1876,8 +2116,10 @@ function gorunumGiris() {
           'o başlığı ayrı konu olarak açın; algoritma onu daha zor ve daha sık görülecek şekilde takip eder.' +
           '<button class="dugme altKonuAc" data-ki="' + x.ki + '">Alt konu aç</button></div>' : '') +
         '</span>' +
-        '<input type="number" min="0" max="199" placeholder="doğru" data-ki="' + x.ki + '" data-gun="' + (hb + g) + '" class="gDogru">' +
-        '<input type="number" min="1" max="200" value="' + (x.soru || D.ayar.soru) + '" class="gSoru">' +
+        '<input type="number" min="0" max="200" placeholder="doğru" data-ki="' + x.ki + '" data-gun="' + (hb + g) +
+        '" data-slot="' + kacis(planSlotAnahtari(x)) + '" class="gDogru"' +
+        (sonKayit ? ' value="' + sonKayit[3] + '"' : '') + '>' +
+        '<input type="number" min="1" max="200" value="' + (sonKayit ? sonKayit[4] : (x.soru || D.ayar.soru)) + '" class="gSoru">' +
         (x.serbest ? '<span></span>' :
           '<button class="dugme mini erteleDug" data-ki="' + x.ki + '" ' +
           'title="Öğrenci çözemedi — sonuç yazmadan ileri al">yapamadı</button>') +
@@ -1931,7 +2173,7 @@ function gorunumKonuPlani() {
     'değişiklik gelecek haftaların planına hemen yansır; sonucu girilmiş konulara dokunulmaz.</p></div>';
   if (!sube) return h + '<div class="uyari-serit">Önce bir ders programı / konu planı yüklenmeli.</div>';
   h += '<div class="arac">' + (ogrenciMi() ? '' :
-    '<select id="subeSec">' + subeler.map(s2 => '<option' + (s2 === sube ? ' selected' : '') + '>' + s2 + '</option>').join('') + '</select>') +
+    '<select id="subeSec">' + subeler.map(s2 => '<option' + (s2 === sube ? ' selected' : '') + '>' + kacis(s2) + '</option>').join('') + '</select>') +
     '<span class="mini">' + kacis(sube) + ' — alanına göre gelen varsayılan plan; okulunuzun hızına göre düzenleyin.</span></div>';
   const dersler = konuPlaniDersleri(sube);
   if (!dersler.length) return h + '<div class="uyari-serit">Bu şube için henüz konu planı yok.</div>';
@@ -2267,7 +2509,7 @@ function gorunumProgram() {
     '<div class="arac" style="margin-top:8px"><button class="dugme birincil" id="dpCiktiUygula">Bu programı kullan</button>' +
     '<button class="dugme" id="bosTabloOlustur">Elle doldurmak için boş tablo oluştur</button></div></div>' +
     '<div class="arac">' +
-    (ogrenciMi() ? '' : '<select id="subeSec">' + subeler.map(s2 => '<option' + (s2 === sube ? ' selected' : '') + '>' + s2 + '</option>').join('') + '</select>') +
+    (ogrenciMi() ? '' : '<select id="subeSec">' + subeler.map(s2 => '<option' + (s2 === sube ? ' selected' : '') + '>' + kacis(s2) + '</option>').join('') + '</select>') +
     '<span class="mini">Bu hafta (' + ggyy(hb) + ') planın</span>' +
     '<select id="haftaSec">' + Array.from({ length: Math.max(haftaSayisi, hafta) }, (x, i) => i + 1).map(w => {
       const hp = ((D.konuPlani || {})[sube] || [])[w - 1] || {};
@@ -2347,7 +2589,7 @@ function gorunumProgram() {
         h += '<div class="konuKutu">' +
           (atanan.length
             ? atanan.map(ki => '<div class="konuCip">' + kacis(konuAl(ki)[3]) +
-                '<button class="cipSil" data-ki="' + ki + '" data-sube="' + sube + '" title="Bu günden kaldır">×</button></div>').join('')
+                '<button class="cipSil" data-ki="' + ki + '" data-sube="' + kacis(sube) + '" title="Bu günden kaldır">×</button></div>').join('')
             : oneri.length
               ? oneri.map(ad => '<div class="konuCip oneri" title="Konu planından öneri — dağıtınca kesinleşir">' + kacis(ad) + '</div>').join('')
               : '<span class="mini">konu yok</span>');
@@ -2405,14 +2647,14 @@ function gorunumAyarlar() {
     '</td><td class="mini">' + aciklama + '</td></tr>';
   const gercekBugun = (() => { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); })();
   return '<div class="baslik"><h1>Ayarlar</h1><p>Değiştirdiğiniz an bütün planlar yeniden hesaplanır.</p></div>' +
-    '<div class="kart" style="margin-bottom:20px;padding:14px 16px;border-color:var(--kritik)">' +
+    (GELISTIRME_MODU ? '<div class="kart" style="margin-bottom:20px;padding:14px 16px;border-color:var(--kritik)">' +
     '<div style="font-weight:600;color:var(--kritik);margin-bottom:6px">Geliştirme — yalnızca test için</div>' +
     '<div class="mini" style="margin-bottom:10px">Uygulamanın “bugün” kabul ettiği tarihi geçici olarak değiştirir; ' +
     'plan, sonuç girişi ve dondurma mantığının haftanın farklı günlerinde nasıl davrandığını (ör. pazartesi program ' +
     'verilip pazar sonuç girilmesi) test etmek içindir. Cihazın gerçek tarihini değiştirmez. Gerçek tarih: ' +
     ggyy(gunNo(gercekBugun)) + '.</div>' +
     '<input type="date" id="aTestTarih" value="' + (a.testTarih || '') + '"> ' +
-    '<button class="dugme" id="testTarihSifirla">Gerçek tarihe dön</button></div>' +
+    '<button class="dugme" id="testTarihSifirla">Gerçek tarihe dön</button></div>' : '') +
     (ogrenciMi() && D.ogr[0]
       ? '<div class="kart sarma" style="margin-bottom:20px"><table><tbody>' +
         satir('Günde kaç test çözerim', '<input type="number" min="1" max="12" value="' + (D.ogr[0].kap || 6) +
@@ -2492,7 +2734,7 @@ function ogrenciPaketi(si) {
   const kart = {}, ekIx = {};
   Object.keys(D.kart).forEach(a => { const par = a.split(':');
     if (+par[0] === si) kart[par[1]] = D.kart[a]; });
-  const log = D.log.filter(l => l[1] === si).map(l => [l[0], l[2], l[3], l[4], l[5]]);
+  const log = D.log.filter(l => l[1] === si).map(l => [l[0], l[2], l[3], l[4], l[5], l[6]]);
   const elle = {};
   Object.keys(D.elle || {}).forEach(a => { const par = a.split('|');
     if (+par[0] === si) elle[par[1]] = D.elle[a]; });
@@ -2508,7 +2750,8 @@ function ogrenciPaketi(si) {
   const ekK = {};
   Object.keys(gerekli).forEach(ix => { ekK[ix] = (D.ekKonular || [])[ix]; });
   return {
-    tur: 'yks-ogrenci-paketi', surum: PAKET_SURUM, kurum: D.kurum || '', tarih: bugunNo(),
+    tur: 'yks-ogrenci-paketi', surum: PAKET_SURUM, katalogImza: KATALOG_IMZA,
+    kurum: D.kurum || '', tarih: bugunNo(),
     ogr: JSON.parse(JSON.stringify(o)),
     ayar: JSON.parse(JSON.stringify(D.ayar)),
     anlasma: JSON.parse(JSON.stringify(D.anlasma || {})),
@@ -2530,6 +2773,9 @@ function paketiYukle(pk) {
   if (pk.surum !== PAKET_SURUM) throw new Error('Bu öğrenci paketi bu uygulama sürümüyle uyumlu değil ' +
     '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', beklenen: ' + PAKET_SURUM +
     '). Rehber öğretmeninizden güncel bir dosya isteyin ya da uygulamayı güncelleyin.');
+  if (pk.katalogImza && pk.katalogImza !== KATALOG_IMZA)
+    throw new Error('Öğrenci paketi farklı bir konu kataloğuyla oluşturulmuş. Güncel paketi isteyin.');
+  if (!pk.ayar || !pk.ogr || typeof pk.ogr !== 'object') throw new Error('Öğrenci paketinde zorunlu bilgiler eksik.');
   const y = varsayilan();
   y.rol = 'ogrenci'; y.kurum = pk.kurum || '';
   y.ayar = pk.ayar; y.anlasma = pk.anlasma; y.rutinBasliklari = pk.rutinBasliklari || y.rutinBasliklari;
@@ -2544,7 +2790,7 @@ function paketiYukle(pk) {
   });
   const cev = ki => (harita[ki] !== undefined ? harita[ki] : +ki);
   y.kart = {}; Object.keys(pk.kart || {}).forEach(k => { y.kart['0:' + cev(+k)] = pk.kart[k]; });
-  y.log = (pk.log || []).map(l => [l[0], 0, cev(l[1]), l[2], l[3], l[4]]);
+  y.log = (pk.log || []).map((l, i) => [l[0], 0, cev(l[1]), l[2], l[3], l[4], +l[5] || Date.now() + i]);
   y.elle = {}; Object.keys(pk.elle || {}).forEach(hb => { y.elle['0|' + hb] = pk.elle[hb]; });
   y.islenis = {}; Object.keys(pk.islenis || {}).forEach(k => { y.islenis[cev(+k)] = pk.islenis[k]; });
   y.subeIslenis = {}; y.subeIslenis[pk.ogr.sube] = {};
@@ -2555,16 +2801,19 @@ function paketiYukle(pk) {
   y.konuKaynak = {}; Object.keys(pk.konuKaynak || {}).forEach(k => { y.konuKaynak[cev(+k)] = pk.konuKaynak[k]; });
   y.altKonu = {}; Object.keys(pk.altKonu || {}).forEach(k => { y.altKonu[cev(+k)] = cev(pk.altKonu[k]); });
   y.par = {}; if (pk.par && Object.keys(pk.par).length) y.par[0] = pk.par;
-  y.ayarSurum = 8;
+  y.ayarSurum = VERI_SURUMU; y.katalogImza = KATALOG_IMZA;
+  yedekDogrula(y);
   return y;
 }
 // öğrenciden öğretmene: yalnızca yeni sonuçlar
 function sonucPaketi(sinir) {
   const o = D.ogr[0] || {};
-  const kesme = sinir === undefined ? (D.sonGonderim || 0) : sinir;
-  return { tur: 'yks-sonuc', surum: PAKET_SURUM, no: o.no, ad: o.ad, sube: o.sube,
-           tarih: bugunNo(),
-           kayit: D.log.filter(l => l[0] > kesme).map(l => [l[0], l[2], l[3], l[4]]) };
+  const kesme = sinir === undefined ? 0 : Math.max(0, +sinir || 0);
+  const olusturmaTs = Date.now();
+  return { tur: 'yks-sonuc', surum: PAKET_SURUM, katalogImza: KATALOG_IMZA,
+           no: o.no, ad: o.ad, sube: o.sube, tarih: bugunNo(), olusturmaTs: olusturmaTs,
+           kayit: D.log.filter(l => (+l[6] || 0) > kesme)
+             .map(l => [l[0], l[2], l[3], l[4], l[6]]) };
 }
 // öğretmen tarafında sonuç paketini işle
 function sonucPaketiUygula(pk) {
@@ -2572,18 +2821,52 @@ function sonucPaketiUygula(pk) {
   if (pk.surum !== PAKET_SURUM) throw new Error('Bu sonuç paketi bu uygulama sürümüyle uyumlu değil ' +
     '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', beklenen: ' + PAKET_SURUM +
     '). Öğrenciden güncel bir uygulama ile oluşturulmuş bir dosya isteyin.');
-  const si = D.ogr.findIndex(o => !o.silindi && (String(o.no) === String(pk.no) ||
-    (pk.ad && o.ad.toLocaleLowerCase('tr') === String(pk.ad).toLocaleLowerCase('tr'))));
-  if (si < 0) throw new Error((pk.ad || pk.no) + ' listede bulunamadı.');
+  if (pk.katalogImza && pk.katalogImza !== KATALOG_IMZA)
+    throw new Error('Sonuç paketi farklı bir konu kataloğuyla oluşturulmuş.');
+  if (!Array.isArray(pk.kayit)) throw new Error('Sonuç paketinde kayıt listesi yok.');
+  if (pk.kayit.length > 50000) throw new Error('Sonuç paketi beklenenden büyük.');
+  const noEslesme = pk.no === undefined || pk.no === null || pk.no === '' ? [] :
+    D.ogr.map((o, i) => ({ o: o, i: i })).filter(x => !x.o.silindi && String(x.o.no) === String(pk.no));
+  const adEslesme = pk.ad ? D.ogr.map((o, i) => ({ o: o, i: i })).filter(x => !x.o.silindi &&
+    x.o.ad.toLocaleLowerCase('tr') === String(pk.ad).toLocaleLowerCase('tr') &&
+    (!pk.sube || x.o.sube === pk.sube)) : [];
+  const aday = noEslesme.length ? noEslesme : adEslesme;
+  if (aday.length !== 1) throw new Error(aday.length ? 'Öğrenci eşleşmesi belirsiz; numara/şubeyi kontrol edin.' :
+    (pk.ad || pk.no) + ' listede bulunamadı.');
+  const si = aday[0].i;
   const varOlan = {};
-  D.log.filter(l => l[1] === si).forEach(l => { varOlan[l[0] + ':' + l[2]] = 1; });
-  const yeni = (pk.kayit || []).filter(k => !varOlan[k[0] + ':' + k[1]])
-    .map(k => ({ ki: k[1], gun: k[0], dogru: k[2], soru: k[3] }));
+  D.log.filter(l => l[1] === si).forEach(l => {
+    const anahtar = l[0] + ':' + l[2];
+    varOlan[anahtar] = Math.max(varOlan[anahtar] || 0, Number.isSafeInteger(+l[6]) ? +l[6] : 0);
+  });
+  const paketteki = new Map();
+  pk.kayit.forEach((k, i) => {
+    if (!Array.isArray(k) || k.length < 4) throw new Error('Geçersiz sonuç paketi kaydı: ' + (i + 1) + '. satır.');
+    const ts = k[4] === undefined || k[4] === null ? null : +k[4];
+    const temiz = sonucKaydiDogrula(si, {
+      ki: k[1], gun: k[0], dogru: k[2], soru: k[3], guncellemeTs: ts
+    });
+    const anahtar = temiz.gun + ':' + temiz.ki;
+    const onceki = paketteki.get(anahtar);
+    if (!onceki || (temiz.guncellemeTs || 0) >= (onceki.guncellemeTs || 0)) paketteki.set(anahtar, temiz);
+  });
+  const yeni = Array.from(paketteki.values()).filter(k => {
+    const oncekiTs = varOlan[k.gun + ':' + k.ki];
+    return oncekiTs === undefined || (k.guncellemeTs !== null && k.guncellemeTs > oncekiTs);
+  });
   if (yeni.length) sonucIsle(si, yeni);
   return { ad: D.ogr[si].ad, eklenen: yeni.length, atlanan: (pk.kayit || []).length - yeni.length };
 }
 
 // ---------------------------------------------------------------- dışa aktarma
+function dosyaAdiParcasi(v, yedek) {
+  const temiz = String(v === undefined || v === null ? '' : v).normalize('NFKC')
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '-')
+    .replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^[.\-]+|[.\-]+$/g, '')
+    .slice(0, 80);
+  return temiz || (yedek || 'dosya');
+}
+
 function csvOlustur(si, hb) {
   const p = planHesapla(si, hb);
   const enCok = Math.max(8, ...p.gunler.map(g => g.length));
@@ -2604,7 +2887,9 @@ function csvOlustur(si, hb) {
 
 function klasikIndir(adi, icerik, tur) {
   try {
-    const blob = new Blob([icerik], { type: tur === 'json' ? 'application/json' : 'text/csv;charset=utf-8' });
+    const mime = tur === 'json' ? 'application/json;charset=utf-8' :
+      tur === 'html' ? 'text/html;charset=utf-8' : 'text/csv;charset=utf-8';
+    const blob = new Blob([icerik], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = adi; document.body.appendChild(a); a.click();
@@ -2616,17 +2901,20 @@ function klasikIndir(adi, icerik, tur) {
 async function indir(adi, icerik, tur) {
   const d = await yetenek('downloads');
   if (!d) {
-    if (!klasikIndir(adi, icerik, tur))
+    const tamam = klasikIndir(adi, icerik, tur);
+    if (!tamam)
       alert('Dosya indirilemedi. Planı kâğıda dökmek için “Yazdır” düğmesini kullanabilirsiniz.');
-    return;
+    return tamam;
   }
-  try { await d.save({ filename: adi, data: icerik }); }
+  try { await d.save({ filename: adi, data: icerik }); return true; }
   catch (e) {
     if (e && e.code === 'extension_not_enabled' && tur === 'csv') {
-      try { await d.save({ filename: adi.replace(/\.csv$/, '.txt'), data: icerik }); return; } catch (e2) { e = e2; }
+      try { await d.save({ filename: adi.replace(/\.csv$/, '.txt'), data: icerik }); return true; } catch (e2) { e = e2; }
     }
-    if (e && e.code === 'declined') return;
-    if (!klasikIndir(adi, icerik, tur)) alert('İndirilemedi: ' + (e && e.code || 'bilinmeyen hata'));
+    if (e && e.code === 'declined') return false;
+    const tamam = klasikIndir(adi, icerik, tur);
+    if (!tamam) alert('İndirilemedi: ' + (e && e.code || 'bilinmeyen hata'));
+    return tamam;
   }
 }
 
@@ -3012,57 +3300,148 @@ function ileriDagit(hb0, sube, haftaSayisi) {
   return { eklenen: say() - once, hafta: n, sonPlanHaftasi: sonHafta };
 }
 
-// --- bir dersin konu sırasını bir konu ileri/geri kaydır
-// Öğretmen yavaşladıysa (-1), o haftadan itibaren (dahil) bu dersin geri kalan TÜMÜ bir hafta
-// ertelenir — sona sığmazsa derse yeni hafta(lar) eklenir (yalnızca bu sube+ders için; diğer
-// dersler o haftalarda boş kalır, sınıfın toplam hafta sayısı gerekirse uzar). Art arda basınca
-// aynı haftadan (pivot sabit — takvimden okunur, basışla değişmez) art arda erteler, böylece N
-// kez basmak N hafta erteler ve dersin bitiş haftası da o kadar sona kayar.
-// hızlandıysa (+1): o haftada daha önce "geri" ile açılmış boş bir yer varsa onu kapatır (erteleme
-// geri alınır). O haftada gerçek bir konu varsa, kaybetmeden sona iter (dersin en sonuna) ve
-// sonraki haftalar bir öne kayar — konu asla sessizce silinmez.
-// (Önceki sürüm iki komşu haftayı basitçe takas ediyordu: geri dönüşü kolaydı ama üst üste "geri"
-// basmak aynı iki haftayı ileri geri sallıyordu, dersin gerçekten ertelenmesini sağlamıyordu —
-// kullanıcı raporu. Ondan da önceki bir sürüm konuları düz bir diziye çevirip yeniden dağıtıyordu;
-// 1. haftada "önceki" haftaya yer olmadığından konu sessizce kayboluyordu.)
-function dersSirasiKaydir(sube, dersAdi, hafta, yon) {
-  const anahtar = planDersAnahtari(sube, dersAdi);
-  if (!anahtar) return { hata: 'Bu ders konu planında bulunamadı.' };
-  D.konuPlani = D.konuPlani || {};
-  const plan = D.konuPlani[sube];
-  if (!plan) return { hata: 'Bu şubenin konu planı yok.' };
-  const w = hafta - 1;
-  if (w < 0) return { hata: anahtar + ' zaten ilk haftada, daha geri alınamaz.' };
-  const eskiPlanUzunlugu = plan.length;
-  const sutun = plan.map(h => (h && h[anahtar]) || null);   // yalnızca bu dersin haftalık sütunu
-  const eskiIcerik = sutun[w] || [];
-  let mesaj;
-  if (yon < 0) {
-    if (w >= sutun.length || sutun.slice(w).every(x => !x))
-      return { hata: anahtar + ' bu hafta ya da sonrasında bulunamadı.' };
-    sutun.splice(w, 0, null);
-    mesaj = eskiIcerik.length ? '“' + eskiIcerik.join(', ') + '” dahil bu haftadan sonrası bir hafta ertelendi.'
-                               : 'Bu haftadan sonrası bir hafta ertelendi.';
-  } else {
-    // sutun[w] boş (null) olabilir — bu, önceden "geri" ile açılmış bir erteleme boşluğudur ve
-    // burada onu kapatmak (silmek) tam olarak istenen "ileri" işlemidir. Gerçek içerikse konu
-    // kaybolmasın diye dersin sonuna itilir.
-    if (w >= sutun.length) return { hata: anahtar + ' bu haftada zaten yok, ileri alınacak bir şey yok.' };
-    sutun.splice(w, 1);
-    if (eskiIcerik.length) { sutun.push(eskiIcerik); mesaj = '“' + eskiIcerik.join(', ') + '” dersin sonuna ertelendi, sonraki haftalar bir öne kaydı.'; }
-    else mesaj = 'Bu haftadaki erteleme geri alındı, sonraki haftalar bir öne kaydı.';
-  }
-  while (plan.length < sutun.length) plan.push({});
-  // sutun eskisinden kısaldıysa (boşluk kapatan "ileri"), dizinin eski kuyruğunda bu dersin
-  // yazdığı içerik yeni sutun'un artık kapsamadığı indekslerde kalır — temizlenmezse aynı içerik
-  // hem doğru yeni yerinde hem de eski, artık yanlış olan kuyruk indeksinde ikilenmiş kalırdı.
-  for (let i = sutun.length; i < eskiPlanUzunlugu; i++) { if (plan[i]) delete plan[i][anahtar]; }
-  sutun.forEach((icerik, i) => {
-    plan[i] = plan[i] || {};
-    if (icerik && icerik.length) plan[i][anahtar] = icerik; else delete plan[i][anahtar];
+// Konu planındaki adları bu öğrencinin gerçek konu kimlikleriyle eşleştirir. Bu yalnızca
+// hedef konuyu bulmak içindir; konu planı ve işleniş tarihleri burada asla değiştirilmez.
+function ogrenciIslenisTarihi(si, ki) {
+  const o = D.ogr[si] || {}, og = (D.ogrIslenis || {})[si] || {};
+  const su = (D.subeIslenis || {})[o.sube] || {};
+  if (Number.isInteger(og[ki])) return og[ki];
+  if (Number.isInteger(su[ki])) return su[ki];
+  return Number.isInteger((D.islenis || {})[ki]) ? D.islenis[ki] : null;
+}
+
+function ogrenciPlanKonusuKimligi(si, sube, anahtar, ad, hedefHafta) {
+  const aranan = iskelet(ad), hedef = haftaTakvimi(hedefHafta), ids = {};
+  const ekle = m => Object.keys(m || {}).forEach(k => { ids[k] = 1; });
+  ekle((D.ogrIslenis || {})[si]);
+  ekle((D.subeIslenis || {})[sube]);
+  ekle(D.islenis);
+  Object.keys(D.kart || {}).forEach(k => {
+    const p = k.split(':'); if (+p[0] === si) ids[p[1]] = 1;
   });
-  return { ders: anahtar, hafta: hafta, mesaj: mesaj,
-           etkiBaslangic: hafta, etkiBitis: Math.max(sutun.length, eskiPlanUzunlugu) };
+  const aday = [];
+  Object.keys(ids).forEach(k => {
+    const ki = +k, konu = konuAl(ki), tarih = ogrenciIslenisTarihi(si, ki);
+    if (!konu || konu[6] || iskelet(konu[3]) !== aranan || !Number.isInteger(tarih)) return;
+    const ders = (D.konuDers && D.konuDers[ki]) || konuDersAdi(ki);
+    if (planDersAnahtari(sube, ders) !== anahtar) return;
+    aday.push({ ki: ki, tarih: tarih, uzaklik: Math.abs(pazartesi(tarih) - hedef) });
+  });
+  aday.sort((a, b) => a.uzaklik - b.uzaklik || a.ki - b.ki);
+  return aday[0] || null;
+}
+
+function dersKonuKonumu(si, anahtar, ki) {
+  const o = D.ogr[si], konu = konuAl(ki), dizi = o ? dersDizisi(o.sube, anahtar).dizi : [];
+  if (!konu || !dizi.length) return null;
+  const ad = iskelet(konu[3]), tarih = ogrenciIslenisTarihi(si, ki);
+  const aday = dizi.map((x, i) => ({ x: x, i: i })).filter(a => iskelet(a.x.ad) === ad);
+  if (!aday.length) return null;
+  aday.sort((a, b) => !Number.isInteger(tarih) ? a.i - b.i :
+    Math.abs(haftaTakvimi(a.x.hafta) - pazartesi(tarih)) -
+    Math.abs(haftaTakvimi(b.x.hafta) - pazartesi(tarih)));
+  return { dizi: dizi, index: aday[0].i };
+}
+
+function planKonusuYedekKimligi(anahtar, ad) {
+  const aranan = iskelet(ad), dersIdx = dersEsle(anahtar), aday = [];
+  for (let ki = 0; ki < konuSayisi(); ki++) {
+    const konu = konuAl(ki);
+    if (!konu || konu[6] || iskelet(konu[3]) !== aranan) continue;
+    const atanmis = D.konuDers && D.konuDers[ki];
+    if (atanmis === anahtar) aday.push({ ki: ki, oncelik: 0 });
+    else if (konu[0] === dersIdx) aday.push({ ki: ki, oncelik: 1 });
+  }
+  aday.sort((a, b) => a.oncelik - b.oncelik || a.ki - b.ki);
+  return aday.length ? aday[0].ki : null;
+}
+
+function dersSirasiOnizleme(si, dersAdi, ki, yon) {
+  const o = D.ogr[si], anahtar = o && planDersAnahtari(o.sube, dersAdi);
+  if (!o || !anahtar || !Number.isInteger(ki) || (yon !== -1 && yon !== 1))
+    return { gizle: true, hata: 'Konu güvenle belirlenemedi.' };
+  const konum = dersKonuKonumu(si, anahtar, ki);
+  if (!konum) return { gizle: true, hata: 'Konu ders planında bulunamadı.' };
+  const hedefIndex = konum.index + yon;
+  if (hedefIndex < 0 || hedefIndex >= konum.dizi.length)
+    return { hata: yon < 0 ? 'Bu zaten dersin ilk konusu.' : 'Bu zaten dersin son konusu.' };
+  const hedef = konum.dizi[hedefIndex];
+  const kimlik = ogrenciPlanKonusuKimligi(si, o.sube, anahtar, hedef.ad, hedef.hafta);
+  const hedefKi = kimlik ? kimlik.ki : planKonusuYedekKimligi(anahtar, hedef.ad);
+  if (!Number.isInteger(hedefKi)) return { hata: 'Hedef konu katalogda bulunamadı.' };
+  return { anahtar: anahtar, hedefAd: hedef.ad, hedefKi: hedefKi };
+}
+
+function ayniGunAyniKonuVar(p, g, s, hedefKi) {
+  return (p.gunler[g] || []).some((x, i) => i !== s && !x.serbest && !x.anlatim && x.ki === hedefKi);
+}
+
+// Yalnızca seçilen test hücresinin konusunu değiştirir. Kaynak hücrenin ayrı kimliği
+// korunur; bu nedenle önceki konu başka bir günde zaten varsa bile ikinci kez seçilebilir.
+// Konu planı, işleniş tarihleri ve diğer test hücreleri değişmez.
+function dersSirasiKaydir(si, hb, g, s, yon) {
+  const p = planHesapla(si, hb), mevcut = (p.gunler[g] || [])[s];
+  if (!mevcut || mevcut.serbest || mevcut.anlatim ||
+      (mevcut.kart && !mevcut.degisim && !mevcut.slotEk))
+    return { hata: 'Yalnızca sonucu girilmemiş bir konu testi değiştirilebilir.' };
+  const onizleme = dersSirasiOnizleme(si, mevcut.dersAd || konuDersAdi(mevcut.ki), mevcut.ki, yon);
+  if (onizleme.hata || onizleme.gizle) return { hata: onizleme.hata || 'Hedef konu bulunamadı.' };
+  if (ayniGunAyniKonuVar(p, g, s, onizleme.hedefKi))
+    return { hata: 'Aynı konu bu günde zaten var. İkinci testi başka bir güne taşıyın veya mevcut testi silin.' };
+  const slot = planSlotAnahtari(mevcut), eskiAd = mevcut.ad;
+  const gecerliSlot = (typeof slot === 'string' && /^K\d+$/.test(slot)) || Number.isInteger(+slot);
+  if (!gecerliSlot) return { hata: 'Seçilen test hücresinin kimliği bulunamadı.' };
+  dondur(si, hb, p);
+  const ov = elleAl(si, hb, true);
+  ov.degisim = ov.degisim || {};
+  ov.konuSlot = ov.konuSlot || {};
+  if (typeof slot === 'string' && ov.konuSlot[slot]) {
+    ov.konuSlot[slot].ki = onizleme.hedefKi;
+  } else if (Number.isInteger(+slot)) {
+    const kaynakKi = +slot;
+    if (kaynakKi === onizleme.hedefKi) delete ov.degisim[kaynakKi];
+    else ov.degisim[kaynakKi] = onizleme.hedefKi;
+  }
+  return { ders: onizleme.anahtar, eski: eskiAd, yeni: onizleme.hedefAd,
+           mesaj: 'Yalnızca seçilen test “' + eskiAd + '” yerine “' + onizleme.hedefAd + '” oldu.' };
+}
+
+function sonrakiKonuyuEkle(si, hb, g, s) {
+  const p = planHesapla(si, hb), mevcut = (p.gunler[g] || [])[s];
+  if (!mevcut || mevcut.serbest || mevcut.anlatim)
+    return { hata: 'Yanına konu eklenecek test bulunamadı.' };
+  const onizleme = dersSirasiOnizleme(si, mevcut.dersAd || konuDersAdi(mevcut.ki), mevcut.ki, 1);
+  if (onizleme.hata || onizleme.gizle) return { hata: onizleme.hata || 'Sonraki konu bulunamadı.' };
+  if (ayniGunAyniKonuVar(p, g, -1, onizleme.hedefKi))
+    return { hata: 'Sonraki konu bu günde zaten var.' };
+  dondur(si, hb, p);
+  const ov = elleAl(si, hb, true);
+  ov.konuSlot = ov.konuSlot || {};
+  let n = 1; while (ov.konuSlot['K' + n]) n++;
+  const id = 'K' + n;
+  Object.keys(ov.yer || {}).forEach(k => {
+    const yer = ov.yer[k]; if (yer && yer[0] === g && yer[1] > s) yer[1]++;
+  });
+  ov.konuSlot[id] = { ki: onizleme.hedefKi };
+  ov.yer[id] = [g, s + 1];
+  return { ders: onizleme.anahtar, yeni: onizleme.hedefAd,
+           mesaj: '“' + onizleme.hedefAd + '” aynı güne ayrı bir test olarak eklendi.' };
+}
+
+function planSlotSonuclandi(si, hb, slot) {
+  const ov = elleAl(si, hb, false);
+  if (typeof slot === 'string' && /^K\d+$/.test(slot) && ov.konuSlot && ov.konuSlot[slot]) {
+    delete ov.konuSlot[slot];
+    if (ov.yer) delete ov.yer[slot];
+    if (ov.soru) delete ov.soru[slot];
+    return;
+  }
+  const kaynakKi = Number(slot);
+  if (!Number.isInteger(kaynakKi) || !ov.degisim || ov.degisim[kaynakKi] === undefined) return;
+  delete ov.degisim[kaynakKi];
+  if ((ov.sil || []).indexOf(kaynakKi) < 0) (ov.sil = ov.sil || []).push(kaynakKi);
+  if (ov.yer) delete ov.yer[kaynakKi];
+  if (ov.soru) delete ov.soru[kaynakKi];
 }
 
 // --- bir hücrede (gün, ders) o hafta işlenen konular
@@ -3226,15 +3605,16 @@ async function metindenYukle(metin) {
           (e.message || e) + ')');
     return null;
   }
+  const onceki = D;
   try {
     if (y && y.tur === 'yks-ogrenci-paketi') {
-      D = paketiYukle(y);
+      veriyiHazirla(paketiYukle(y));
       EK.ogr = 0; EK.sekme = 'plan'; EK.hafta = null;
       await kaydet(true); ciz();
       return 'Hoş geldin ' + D.ogr[0].ad + ' — planın hazır.';
     }
     if (y && y.ayar && y.ogr) {
-      D = y; if (!D.rol) D.rol = 'rehber';
+      veriyiHazirla(y); if (!D.rol) D.rol = 'rehber';
       EK.hafta = null; EK.sekme = 'plan';
       // yedekten gelen veride gelecek haftalar boş olabilir; hemen doldur
       let ek = 0;
@@ -3251,6 +3631,7 @@ async function metindenYukle(metin) {
     alert('Bu dosya tanındı ama içinde öğrenci verisi yok. Doğru yedeği seçtiğinizden emin olun.');
     return null;
   } catch (e) {
+    D = onceki;
     alert('Yükleme sırasında hata: ' + (e.message || e));
     return null;
   }
@@ -3262,35 +3643,41 @@ async function planYazdir(kapsam) {
   if (kapsam === 'hepsi') { liste = kullananlar(); etiket = 'tum-sinif'; }
   else if (kapsam && kapsam.sube !== undefined) {
     liste = subeKullananlar(kapsam.sube);
-    etiket = 'sube-' + String(kapsam.sube).replace(/\s+/g, '');
-  } else { liste = [EK.ogr]; etiket = D.ogr[EK.ogr].ad.replace(/\s+/g, '-').toLocaleLowerCase('tr'); }
-  if (!liste.length) { alert('Bu kapsamda çıktı alacak öğrenci yok.'); return; }
+    etiket = 'sube-' + dosyaAdiParcasi(kapsam.sube, 'sube');
+  } else { liste = [EK.ogr]; etiket = dosyaAdiParcasi(D.ogr[EK.ogr].ad, 'ogrenci').toLocaleLowerCase('tr'); }
+  if (!liste.length) { alert('Bu kapsamda çıktı alacak öğrenci yok.'); return false; }
   const belge = yazdirBelgesi(liste, hb);
   const d = await yetenek('downloads');
   if (!d) { // çevrimdışı kopya: doğrudan yazdır
     const w = window.open('', '_blank');
-    if (w) { w.document.write(belge); w.document.close(); return; }
-    if (!klasikIndir('plan-' + isoDan(hb) + '.html', belge, 'html'))
+    if (w) { w.document.write(belge); w.document.close(); return true; }
+    const tamam = klasikIndir('plan-' + isoDan(hb) + '.html', belge, 'html');
+    if (!tamam)
       alert('Yazdırma açılamadı.');
-    return;
+    return tamam;
   }
   const ad = etiket + '-' + isoDan(hb) + '.html';
   try {
     await d.save({ filename: ad, data: belge });
     bilgiVer(liste.length + ' sayfa indirildi. Açıp Ctrl+P deyin — A4 yatay, her öğrenci bir sayfa.');
+    return true;
   } catch (e) {
-    if (e && e.code === 'declined') return;
+    if (e && e.code === 'declined') return false;
     if (e && e.code === 'extension_not_enabled') {
       alert('Bu hesapta HTML indirme kapalı görünüyor. Ayarlar → Yedek indir ile veriyi alıp bilgisayarda açabilirsiniz.');
-      return;
+      return false;
     }
-    if (!klasikIndir(ad, belge, 'html')) alert('İndirilemedi: ' + (e && e.code || 'bilinmeyen'));
+    const tamam = klasikIndir(ad, belge, 'html');
+    if (!tamam) alert('İndirilemedi: ' + (e && e.code || 'bilinmeyen'));
+    return tamam;
   }
 }
 
 function bilgiVer(metin) {
   const v = document.createElement('div');
   v.className = 'bildirim';
+  v.setAttribute('role', 'status');
+  v.setAttribute('aria-live', 'polite');
   v.textContent = metin;
   document.body.appendChild(v);
   setTimeout(function () { v.remove(); }, 5000);
@@ -3309,7 +3696,8 @@ function rayCiz() {
   ray.innerHTML = '<div class="marka">YKS Tekrar Defteri<small>' +
     (D && D.kurum ? kacis(D.kurum) : 'Aralıklı tekrar · FSRS-6') + '</small></div>' +
     SEKMELER().map(s => '<button data-sekme="' + s[0] + '"' + (EK.sekme === s[0] ? ' aria-current="page"' : '') + '>' + s[1] + '</button>').join('') +
-    '<div class="bosluk"></div><div class="durum">' + (EK.kirli ? '<b>kaydedilmemiş değişiklik</b>' : (EK.son || 'hazır')) + '</div>';
+    '<div class="bosluk"></div><div class="durum" role="status" aria-live="polite">' +
+    (EK.kirli ? '<b>kaydedilmemiş değişiklik</b>' : kacis(EK.son || 'hazır')) + '</div>';
 }
 
 function gorunumKurulum() {
@@ -3420,6 +3808,7 @@ document.addEventListener('click', async ev => {
                'diye düzenlenemez. Değiştirmek gerekiyorsa önce “Elle düzeni sıfırla”yı kullanın.');
       return;
     }
+    PENCERE_ONCESI = hucre;
     PENCERE = { g: g0, s: +hucre.dataset.s, arama: '' };
     pencereCiz(); return;
   }
@@ -3427,7 +3816,8 @@ document.addEventListener('click', async ev => {
     const ad = (document.getElementById('pSerbestAd').value || '').trim();
     if (!ad) { document.getElementById('pSerbestAd').focus(); return; }
     const ders = document.getElementById('pSerbestDers').value;
-    const soru = +document.getElementById('pSerbestSoru').value;
+    const soru = Number(document.getElementById('pSerbestSoru').value);
+    if (!Number.isInteger(soru) || soru < 1 || soru > 200) { alert('Soru/dakika değeri 1–200 arasında tam sayı olmalı.'); return; }
     const anlatim = document.getElementById('pSerbestAnlatim') && document.getElementById('pSerbestAnlatim').checked;
     const birim = anlatim ? 'dakika' : '';
     const hb = haftaBasi();
@@ -3491,9 +3881,11 @@ document.addEventListener('click', async ev => {
     const hb = haftaBasi(), p = planHesapla(EK.ogr, hb);
     const x = p.gunler[PENCERE.g][PENCERE.s];
     if (x) {
+      const slot = planSlotAnahtari(x);
       const hedefG = +tasiD.dataset.tasi;
       tasi(EK.ogr, hb, { g: PENCERE.g, s: PENCERE.s }, { g: hedefG, s: p.gunler[hedefG].length });
-      PENCERE = { g: hedefG, s: planHesapla(EK.ogr, hb).gunler[hedefG].findIndex(y => y.ki === x.ki), arama: '', odak: false };
+      PENCERE = { g: hedefG, s: planHesapla(EK.ogr, hb).gunler[hedefG]
+        .findIndex(y => String(planSlotAnahtari(y)) === String(slot)), arama: '', odak: false };
       await kaydet(true); ciz(); pencereCiz();
     }
     return;
@@ -3501,7 +3893,7 @@ document.addEventListener('click', async ev => {
   if (ev.target.id === 'pKaldir' && PENCERE) {
     const hb = haftaBasi(), p = planHesapla(EK.ogr, hb);
     const x = p.gunler[PENCERE.g][PENCERE.s];
-    if (x) plandanKaldir(EK.ogr, hb, x.ki);
+    if (x) plandanKaldir(EK.ogr, hb, planSlotAnahtari(x));
     PENCERE = null; pencereCiz(); await kaydet(true); ciz(); return;
   }
   const eks = ev.target.closest('.ekKonuSil');
@@ -3582,9 +3974,10 @@ document.addEventListener('click', async ev => {
   const opk = ev.target.closest('.ogrPaket');
   if (opk) {
     const i = +opk.dataset.i, o = D.ogr[i];
-    await indir('ogrenci-' + (o.no || i) + '-' + o.ad.replace(/\s+/g, '-').toLocaleLowerCase('tr') + '.yks.json',
+    const tamam = await indir('ogrenci-' + dosyaAdiParcasi(o.no || i, 'no') + '-' +
+      dosyaAdiParcasi(o.ad, 'ogrenci').toLocaleLowerCase('tr') + '.yks.json',
       JSON.stringify(ogrenciPaketi(i)), 'json');
-    bilgiVer(o.ad + ' için paket indirildi. Dosyayı kendisine gönderin.');
+    bilgiVer(tamam ? o.ad + ' için paket indirildi. Dosyayı kendisine gönderin.' : 'Paket oluşturulmadı; tekrar deneyin.');
     return;
   }
   const osil = ev.target.closest('.ogrSil');
@@ -3617,14 +4010,20 @@ document.addEventListener('click', async ev => {
   }
   const sk = ev.target.closest('.sirakaydir');
   if (sk && PENCERE) {
-    const si = EK.ogr, sube = D.ogr[si].sube;
-    const hafta = planHaftasi(sube, haftaBasi());
-    const r = dersSirasiKaydir(sube, sk.dataset.ders, hafta, +sk.dataset.yon);
+    const r = dersSirasiKaydir(EK.ogr, haftaBasi(), PENCERE.g, PENCERE.s, +sk.dataset.yon);
     if (r.hata) { bilgiVer(r.hata); return; }
-    programDegistiTetikle(sube);   // yeni sırayla hemen yeniden dağıt — elle "dağıt" beklemesin
-    etkilenenAraligiEsitle(sube, r.etkiBaslangic, r.etkiBitis);   // sabit 8 haftalık pencerenin ötesi de eşitlensin
-    await kaydet(true); ciz(); pencereCiz();
-    bilgiVer(r.ders + ' · ' + hafta + '. hafta: ' + r.mesaj);
+    PENCERE = null; pencereCiz();
+    await kaydet(true); ciz();
+    bilgiVer(r.ders + ': ' + r.mesaj);
+    return;
+  }
+  const se = ev.target.closest('.sonrakiEkle');
+  if (se && PENCERE) {
+    const r = sonrakiKonuyuEkle(EK.ogr, haftaBasi(), PENCERE.g, PENCERE.s);
+    if (r.hata) { bilgiVer(r.hata); return; }
+    PENCERE = null; pencereCiz();
+    await kaydet(true); ciz();
+    bilgiVer(r.ders + ': ' + r.mesaj);
     return;
   }
   const kp = ev.target.closest('.kpYukari,.kpAsagi,.kpSil,.kpEkle');
@@ -3754,7 +4153,9 @@ document.addEventListener('click', async ev => {
   }
   const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
-  if (t.dataset.girisduzenle !== undefined) { EK.girisAcik[+t.dataset.ki] = true; ciz(); return; }
+  if (t.dataset.girisduzenle !== undefined) {
+    EK.girisAcik[(+t.dataset.ki) + ':' + (+t.dataset.gun)] = true; ciz(); return;
+  }
   if (t.dataset.haritaac !== undefined) { EK.haritaAcik = +t.dataset.haritaac; EK.haritaOnay = null; ciz(); return; }
   // haftalık plandaki proaktif uyarıdan tek tıkla harita sekmesine geçip o haftanın
   // karar panelini de doğrudan açar — kullanıcı ayrıca sekmeyi arayıp haftayı bulmasın
@@ -3857,14 +4258,8 @@ document.addEventListener('click', async ev => {
     return;
   }
   if (t.id === 'yazdir') {
-    const o2 = D.ogr[EK.ogr];
-    const yeni = o2.aktif === false;
-    o2.aktif = true; o2.cikti = bugunNo();
-    if (!o2.ilkAktif) o2.ilkAktif = bugunNo();
-    haftayiSabitle(EK.ogr, haftaBasi());       // kâğıt neyse ekran o kalsın
-    await planYazdir(null);                  // önce yazdır: tarayıcı indirmeyi ancak tıklamanın hemen ardından açar
-    if (yeni) { ciz(); bilgiVer(o2.ad + ' çıktı aldı — “kullanıyor” listesine eklendi.'); }
-    kaydet(true);
+    const tamam = await planYazdir(null);
+    if (tamam && rehberMi()) bilgiVer('Belge hazır. Öğrenciye teslim ettikten sonra “çıktı verildi” kutusunu işaretleyin.');
     return;
   }
   if (t.dataset && t.dataset.yazdirsube !== undefined) {
@@ -3875,34 +4270,41 @@ document.addEventListener('click', async ev => {
             'ya da Öğrenciler sekmesinden kutucuklarını işaretleyin.');
       return;
     }
+    const tamam = await planYazdir({ sube: su });
+    if (!tamam) return;
+    if (!confirm('Belge oluşturuldu. Bu planların öğrencilere teslim edildiğini onaylayıp haftaları sabitlemek istiyor musunuz?')) return;
     const bugun = bugunNo(), hb3 = haftaBasi();
-    liste.forEach(i => { D.ogr[i].cikti = bugun; haftayiSabitle(i, hb3); });
-    await planYazdir({ sube: su });
-    ciz(); kaydet(true);
+    liste.forEach(i => { D.ogr[i].cikti = bugun; if (!D.ogr[i].ilkAktif) D.ogr[i].ilkAktif = bugun; haftayiSabitle(i, hb3); });
+    await kaydet(true); ciz();
     return;
   }
   if (t.id === 'tumYazdir') {
     const liste = kullananlar();
     if (!liste.length) { alert('Henüz kimseye çıktı vermediniz. Bir öğrencinin planını yazdırınca listeye eklenir.'); return; }
+    const tamam = await planYazdir('hepsi');
+    if (!tamam) return;
+    if (!confirm('Belge oluşturuldu. Bu planların öğrencilere teslim edildiğini onaylayıp haftaları sabitlemek istiyor musunuz?')) return;
     const bugun = bugunNo(), hb4 = haftaBasi();
-    liste.forEach(i => { D.ogr[i].cikti = bugun; haftayiSabitle(i, hb4); });
-    await planYazdir('hepsi');
-    ciz(); kaydet(true);
+    liste.forEach(i => { D.ogr[i].cikti = bugun; if (!D.ogr[i].ilkAktif) D.ogr[i].ilkAktif = bugun; haftayiSabitle(i, hb4); });
+    await kaydet(true); ciz();
     return;
   }
   if (t.id === 'ogrEkle') {
     const ad = (document.getElementById('yAd').value || '').trim();
     if (!ad) { alert('Önce öğrencinin adını yazın.'); return; }
+    if (ad.length > 120) { alert('Öğrenci adı en fazla 120 karakter olabilir.'); return; }
     const su = document.getElementById('ySube');
     let sube = su.value === '__yeni'
       ? (document.getElementById('ySubeYeni').value || '').trim()
       : su.value;
     if (!sube) { alert('Şube kodunu yazın.'); return; }
-    const no = +document.getElementById('yNo').value ||
-      (Math.max(0, ...D.ogr.map(o => +o.no || 0)) + 1);
+    const noGiris = document.getElementById('yNo').value.trim();
+    const no = noGiris ? Number(noGiris) : (Math.max(0, ...D.ogr.map(o => +o.no || 0)) + 1);
+    if (!Number.isInteger(no) || no < 1 || no > 9999) { alert('Öğrenci numarası 1–9999 arasında tam sayı olmalı.'); return; }
+    if (D.ogr.some(o => !o.silindi && String(o.no) === String(no))) { alert('Bu öğrenci numarası zaten kullanılıyor.'); return; }
     D.ogr.push({
       no: no, ad: ad, alan: document.getElementById('yAlan').value, sube: sube,
-      kap: Math.max(1, +document.getElementById('yKap').value || 6),
+      kap: Math.max(1, Math.min(12, +document.getElementById('yKap').value || 6)),
       off: [6], hedef: null, aktif: false, cikti: null,
       maddeler: [], rutin: { once: '', ara: '', sonra: '' }
     });
@@ -3912,16 +4314,16 @@ document.addEventListener('click', async ev => {
   }
   if (t.id === 'topluSil') { EK.toplu = !EK.toplu; ciz(); return; }
   if (t.id === 'topluUygula') {
-    const secili = [...document.querySelectorAll('.topluKutu:checked')].map(c => c.dataset.ki);
+    const secili = [...document.querySelectorAll('.topluKutu:checked')].map(c => c.dataset.slot);
     if (!secili.length) { alert('Önce silmek istediğiniz kutuları işaretleyin.'); return; }
     if (!confirm(secili.length + ' kutu plandan kaldırılacak. Devam?')) return;
     const hb = haftaBasi();
-    secili.forEach(k => plandanKaldir(EK.ogr, hb, /^S/.test(k) ? k : +k));
+    secili.forEach(k => plandanKaldir(EK.ogr, hb, k));
     EK.toplu = false;
     await kaydet(true); ciz(); return;
   }
   if (t.id === 'topluYariya') {
-    const secili = [...document.querySelectorAll('.topluKutu:checked')].map(c => c.dataset.ki);
+    const secili = [...document.querySelectorAll('.topluKutu:checked')].map(c => c.dataset.slot);
     if (!secili.length) { alert('Önce soru sayısını değiştirmek istediğiniz kutuları işaretleyin.'); return; }
     const hb = haftaBasi(), si = EK.ogr;
     const p = planHesapla(si, hb);
@@ -3929,11 +4331,11 @@ document.addEventListener('click', async ev => {
     const ov = elleAl(si, hb, true);
     let n = 0;
     secili.forEach(kStr => {
-      const x = hepsi.find(o => String(o.ki) === kStr);
+      const x = hepsi.find(o => String(planSlotAnahtari(o)) === kStr);
       if (!x || x.anlatim) return;
       const yeni = Math.max(1, Math.round((x.soru || D.ayar.soru) / 2));
       if (x.serbest) { ov.serbest = ov.serbest || {}; if (ov.serbest[kStr]) ov.serbest[kStr].soru = yeni; }
-      else { ov.soru = ov.soru || {}; ov.soru[+kStr] = yeni; }
+      else { ov.soru = ov.soru || {}; ov.soru[kStr] = yeni; }
       n++;
     });
     EK.toplu = false;
@@ -3947,30 +4349,46 @@ document.addEventListener('click', async ev => {
   }
   if (t.id === 'csv') {
     const hb = haftaBasi();
-    await indir('plan-' + D.ogr[EK.ogr].ad.replace(/\s+/g, '-').toLowerCase() + '-' + isoDan(hb) + '.csv', csvOlustur(EK.ogr, hb), 'csv');
+    await indir('plan-' + dosyaAdiParcasi(D.ogr[EK.ogr].ad, 'ogrenci').toLocaleLowerCase('tr') +
+      '-' + isoDan(hb) + '.csv', csvOlustur(EK.ogr, hb), 'csv');
     return;
   }
   if (t.id === 'sonucKaydet' || t.id === 'hepsiIyi') {
-    const kayitlar = [];
-    document.querySelectorAll('.gDogru').forEach(el => {
-      const soru = +el.parentElement.querySelector('.gSoru').value || D.ayar.soru;
-      let dogru = el.value === '' ? null : +el.value;
-      if (dogru === null && t.id === 'hepsiIyi') dogru = Math.round(soru * (D.ayar.esik[1] + D.ayar.esik[2]) / 200);
-      if (dogru === null) return;
-      kayitlar.push({ ki: +el.dataset.ki, gun: +el.dataset.gun, dogru: Math.min(dogru, soru), soru: soru });
-    });
-    let anlSay = 0;
-    document.querySelectorAll('.gAnlatim:checked').forEach(el => {
-      anlatimTamam(EK.ogr, +el.dataset.ki, +el.dataset.gun); anlSay++;
-    });
-    if (!kayitlar.length && !anlSay) { alert('Hiç doğru sayısı girilmemiş.'); return; }
+    const kayitlar = [], anlatimlar = [], tamamlananSlotlar = [];
+    try {
+      for (const el of document.querySelectorAll('.gDogru')) {
+        const soruEl = el.parentElement.querySelector('.gSoru');
+        const soru = Number(soruEl.value);
+        let dogru = el.value === '' ? null : Number(el.value);
+        if (dogru === null && t.id === 'hepsiIyi' && +el.dataset.gun <= bugunNo())
+          dogru = Math.round(soru * (D.ayar.esik[1] + D.ayar.esik[2]) / 200);
+        if (dogru === null) continue;
+        const temiz = sonucKaydiDogrula(EK.ogr, { ki: +el.dataset.ki, gun: +el.dataset.gun, dogru: dogru, soru: soru });
+        kayitlar.push(temiz);
+        if (el.dataset.slot !== undefined)
+          tamamlananSlotlar.push({ slot: el.dataset.slot, gun: temiz.gun });
+      }
+      for (const el of document.querySelectorAll('.gAnlatim:checked')) {
+        const ki = +el.dataset.ki, gun = +el.dataset.gun;
+        if (!Number.isInteger(ki) || ki < 0 || ki >= konuSayisi() || !konuAl(ki))
+          throw new Error('Konu anlatımında geçersiz konu numarası var.');
+        if (!Number.isInteger(gun) || gun > bugunNo() || gun >= gunNo(D.ayar.sinav))
+          throw new Error('Konu anlatımı yalnızca bugün veya geçmiş geçerli bir gün için işaretlenebilir.');
+        anlatimlar.push({ ki: ki, gun: gun });
+      }
+    } catch (e) { alert(e.message || e); return; }
+    if (!kayitlar.length && !anlatimlar.length) { alert('Hiç doğru sayısı girilmemiş.'); return; }
+    try { if (kayitlar.length) sonucIsle(EK.ogr, kayitlar); }
+    catch (e) { alert(e.message || e); return; }
+    tamamlananSlotlar.forEach(x => planSlotSonuclandi(EK.ogr, pazartesi(x.gun), x.slot));
+    anlatimlar.forEach(x => anlatimTamam(EK.ogr, x.ki, x.gun));
+    const anlSay = anlatimlar.length;
     if (!kayitlar.length) {
       await kaydet(true); ciz();
       bilgiVer(anlSay + ' konu anlatımı işaretlendi; ilk testleri ' + D.ayar.ilk + ' gün sonrasına yazıldı.');
       return;
     }
     const hb = haftaBasi();
-    sonucIsle(EK.ogr, kayitlar);
     await kaydet(true);
     EK.hafta = hb + 7;          // sonuç girildi -> gelecek haftanın planı hazır
     EK.sekme = 'plan';
@@ -3989,22 +4407,36 @@ document.addEventListener('click', async ev => {
     await kaydet(true); ciz(); return;
   }
   if (t.id === 'ayarKaydet') {
-    D.ayar.planBasi = document.getElementById('aPlan').value;
-    D.ayar.sinav = document.getElementById('aSinav').value;
-    D.ayar.hedef = +document.getElementById('aHedef').value;
-    D.ayar.maks = +document.getElementById('aMaks').value;
-    D.ayar.ilk = +document.getElementById('aIlk').value;
-    D.ayar.relearn = +document.getElementById('aRel').value;
-    D.ayar.soru = +document.getElementById('aSoru').value;
-    D.ayar.telafiGunKap = Math.max(1, +document.getElementById('aTelafiKap').value || 2);
-    D.ayar.gecmisSerbest = document.getElementById('aGecmis').checked;
-    const ilr = document.getElementById('aIleri');
-    if (ilr) D.ayar.ileriHafta = Math.max(0, Math.min(40, +ilr.value || 0));
-    D.ayar.tekEsik = +document.getElementById('aTek').value;
-    D.ayar.genisEsik = Math.max(2, +document.getElementById('aGenis').value || 3);
-    const e = document.getElementById('aEsik').value.split(/[,;\s]+/).map(Number).filter(x => x > 0 && x <= 100);
-    if (e.length === 3) D.ayar.esik = e.sort((a, b) => a - b);
-    D.ayar.testTarih = document.getElementById('aTestTarih').value || null;
+    const planBasi = document.getElementById('aPlan').value;
+    const sinav = document.getElementById('aSinav').value;
+    const oku = (id, min, max, tam) => {
+      const n = Number(document.getElementById(id).value);
+      if (!Number.isFinite(n) || n < min || n > max || (tam && !Number.isInteger(n)))
+        throw new Error(id + ' alanı ' + min + '–' + max + ' arasında' + (tam ? ' tam sayı' : '') + ' olmalı.');
+      return n;
+    };
+    let yeni;
+    try {
+      if (!isoTarihGecerli(planBasi) || !isoTarihGecerli(sinav)) throw new Error('Program başlangıcı ve YKS tarihi geçerli olmalı.');
+      if (gunNo(planBasi) >= gunNo(sinav)) throw new Error('Program başlangıcı YKS tarihinden önce olmalı.');
+      const esik = document.getElementById('aEsik').value.split(/[,;\s]+/).filter(Boolean).map(Number).sort((a, b) => a - b);
+      if (esik.length !== 3 || esik.some(x => !Number.isFinite(x) || x <= 0 || x >= 100) ||
+          !(esik[0] < esik[1] && esik[1] < esik[2])) throw new Error('Not eşikleri artan üç sayı olmalı; örn. 50, 70, 90.');
+      yeni = {
+        planBasi: planBasi, sinav: sinav,
+        hedef: oku('aHedef', 0.80, 0.95, false), maks: oku('aMaks', 7, 365, true),
+        ilk: oku('aIlk', 0, 7, true), relearn: oku('aRel', 1, 7, true),
+        soru: oku('aSoru', 1, 60, true), telafiGunKap: oku('aTelafiKap', 1, 12, true),
+        gecmisSerbest: document.getElementById('aGecmis').checked,
+        tekEsik: oku('aTek', 0.70, 0.90, false), genisEsik: oku('aGenis', 2, 10, true), esik: esik
+      };
+      const ilr = document.getElementById('aIleri');
+      if (ilr) yeni.ileriHafta = Math.max(0, Math.min(300, Number(ilr.value) || 0));
+      const testEl = GELISTIRME_MODU ? document.getElementById('aTestTarih') : null;
+      yeni.testTarih = testEl && testEl.value ? testEl.value : null;
+      if (yeni.testTarih && !isoTarihGecerli(yeni.testTarih)) throw new Error('Test tarihi geçersiz.');
+    } catch (e) { alert(e.message || e); return; }
+    Object.assign(D.ayar, yeni);
     EK.hafta = null;
     await kaydet(true); ciz(); return;
   }
@@ -4025,12 +4457,12 @@ document.addEventListener('click', async ev => {
   }
   if (t.id === 'sonucGonder') {
     const pk = sonucPaketi();
-    if (!pk.kayit.length) { alert('Gönderilecek yeni sonuç yok. Önce “Sonuç gir” sekmesinden doğru sayılarınızı girin.'); return; }
+    if (!pk.kayit.length) { alert('Dışa aktarılacak sonuç yok. Önce “Sonuç gir” sekmesinden doğru sayılarınızı girin.'); return; }
     const o = D.ogr[0] || {};
-    await indir('sonuc-' + (o.no || '') + '-' + isoDan(bugunNo()) + '.yks.json', JSON.stringify(pk), 'json');
-    D.sonGonderim = bugunNo();
-    kaydet(true);
-    bilgiVer(pk.kayit.length + ' sonuç dışa aktarıldı. Dosyayı rehber öğretmeninize gönderin.');
+    const tamam = await indir('sonuc-' + dosyaAdiParcasi(o.no, 'ogrenci') + '-' +
+      isoDan(bugunNo()) + '.yks.json', JSON.stringify(pk), 'json');
+    if (!tamam) { bilgiVer('Dosya oluşturulmadı; sonuçlar gönderilmemiş olarak kaldı.'); return; }
+    bilgiVer(pk.kayit.length + ' güncel sonuç dışa aktarıldı. Dosyayı rehber öğretmeninize gönderin.');
     return;
   }
   if (t.id === 'yedekIndir') { await indir('yks-tekrar-yedek-' + isoDan(bugunNo()) + '.json', JSON.stringify(D), 'json'); return; }
@@ -4059,7 +4491,7 @@ document.addEventListener('change', async ev => {
         ov.serbest[x.ki] = kayit;
       } else {
       ov.soru = ov.soru || {};
-      ov.soru[x.ki] = Math.max(1, Math.min(200, +el.value || D.ayar.soru));
+      ov.soru[planSlotAnahtari(x)] = Math.max(1, Math.min(200, +el.value || D.ayar.soru));
       }
       await kaydet(true); ciz(); PENCERE.odak = false; pencereCiz();
     }
@@ -4068,7 +4500,7 @@ document.addEventListener('change', async ev => {
   if ((el.id === 'pSerbestAd' || el.id === 'pSerbestDers' || el.id === 'pSerbestSoru') && PENCERE) {
     PENCERE.yaziAd = (document.getElementById('pSerbestAd') || {}).value || '';
     PENCERE.yaziDers = (document.getElementById('pSerbestDers') || {}).value || '';
-    PENCERE.yaziSoru = +((document.getElementById('pSerbestSoru') || {}).value) || 20;
+    PENCERE.yaziSoru = Math.max(1, Math.min(200, +((document.getElementById('pSerbestSoru') || {}).value) || 20));
     return;
   }
   if (el.id === 'pSerbestAnlatim' && PENCERE) {
@@ -4105,10 +4537,21 @@ document.addEventListener('change', async ev => {
     bilgiVer(el.checked ? o2.ad + ' “kullanıyor” listesine eklendi.' : o2.ad + ' listeden çıkarıldı.');
     return;
   }
-  if (el.classList.contains('oKap')) { D.ogr[+el.dataset.i].kap = Math.max(1, +el.value || 6); await kaydet(true); ciz(); return; }
+  if (el.classList.contains('oKap')) { D.ogr[+el.dataset.i].kap = Math.max(1, Math.min(12, +el.value || 6)); await kaydet(true); ciz(); return; }
   if (el.classList.contains('oAlan')) { D.ogr[+el.dataset.i].alan = el.value; await kaydet(true); ciz(); return; }
-  if (el.classList.contains('oAd')) { D.ogr[+el.dataset.i].ad = el.value.trim() || D.ogr[+el.dataset.i].ad; await kaydet(true); return; }
-  if (el.classList.contains('oNo')) { D.ogr[+el.dataset.i].no = +el.value || D.ogr[+el.dataset.i].no; await kaydet(true); return; }
+  if (el.classList.contains('oAd')) {
+    const ad = el.value.trim();
+    if (!ad || ad.length > 120) { alert('Öğrenci adı 1–120 karakter olmalı.'); ciz(); return; }
+    D.ogr[+el.dataset.i].ad = ad; await kaydet(true); return;
+  }
+  if (el.classList.contains('oNo')) {
+    const i = +el.dataset.i, no = Number(el.value);
+    if (!Number.isInteger(no) || no < 1 || no > 9999) { alert('Öğrenci numarası 1–9999 arasında tam sayı olmalı.'); ciz(); return; }
+    if (D.ogr.some((o, j) => j !== i && !o.silindi && String(o.no) === String(no))) {
+      alert('Bu öğrenci numarası zaten kullanılıyor.'); ciz(); return;
+    }
+    D.ogr[i].no = no; await kaydet(true); return;
+  }
   if (el.classList.contains('oSube')) { D.ogr[+el.dataset.i].sube = el.value.trim() || D.ogr[+el.dataset.i].sube; await kaydet(true); ciz(); return; }
   if (el.id === 'ySube') {
     const y = document.getElementById('ySubeYeni');
@@ -4116,7 +4559,7 @@ document.addEventListener('change', async ev => {
     return;
   }
   if (el.classList.contains('oHedef')) { D.ogr[+el.dataset.i].hedef = el.value ? +el.value : null; await kaydet(true); ciz(); return; }
-  if (el.classList.contains('oTelafiKap')) { D.ogr[+el.dataset.i].telafiGunKap = el.value ? +el.value : null; await kaydet(true); ciz(); return; }
+  if (el.classList.contains('oTelafiKap')) { D.ogr[+el.dataset.i].telafiGunKap = el.value ? Math.max(1, Math.min(12, +el.value)) : null; await kaydet(true); ciz(); return; }
   if (el.id === 'subeSec') { EK.sube = el.value; ciz(); return; }
   if (el.classList.contains('kpAd')) {
     const sube = EK.sube || (D.ogr[EK.ogr] || {}).sube;
@@ -4131,6 +4574,7 @@ document.addEventListener('change', async ev => {
     return;
   }
   if (el.id === 'donemBasi') {
+    if (!isoTarihGecerli(el.value)) { alert('Dönem başlangıcı geçerli bir tarih olmalı.'); ciz(); return; }
     donemBasiniAyarla(isoDan(pazartesi(gunNo(el.value))), true);   // her zaman o haftanın Pazartesi'sine yuvarla
     await kaydet(true); ciz(); return;
   }
@@ -4180,17 +4624,51 @@ document.addEventListener('change', async ev => {
   }
   if (el.id === 'yedekYukle' && el.files && el.files[0]) {
     const metin = await el.files[0].text();
+    const onceki = D;
     try {
       const y = JSON.parse(metin);
-      if (!y.ayar || !y.ogr) throw new Error('biçim');
+      yedekDogrula(y);
       if (!confirm('Yedekteki veriler mevcut verilerin yerine geçecek. Devam?')) return;
-      D = y; await kaydet(true); ciz();
-    } catch (e) { alert('Bu dosya okunamadı; geçerli bir yedek JSON’u seçin.'); }
+      veriyiHazirla(y); await kaydet(true); ciz();
+    } catch (e) { D = onceki; alert('Bu dosya yüklenemedi: ' + (e.message || e)); }
   }
 });
 
 document.addEventListener('keydown', ev => {
-  if (ev.key === 'Escape' && PENCERE) { PENCERE = null; pencereCiz(); }
+  if (ev.key === 'Escape' && PENCERE) {
+    ev.preventDefault();
+    PENCERE = null;
+    pencereCiz();
+    return;
+  }
+  if (PENCERE && ev.key === 'Tab') {
+    const pencere = document.querySelector('.pencere');
+    if (!pencere) return;
+    const odaklanabilir = Array.from(pencere.querySelectorAll(
+      'button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+    )).filter(el => !el.hidden && el.getClientRects().length > 0);
+    if (!odaklanabilir.length) { ev.preventDefault(); return; }
+    const ilk = odaklanabilir[0], son = odaklanabilir[odaklanabilir.length - 1];
+    if (!pencere.contains(document.activeElement)) {
+      ev.preventDefault();
+      ilk.focus();
+    } else if (ev.shiftKey && document.activeElement === ilk) {
+      ev.preventDefault();
+      son.focus();
+    } else if (!ev.shiftKey && document.activeElement === son) {
+      ev.preventDefault();
+      ilk.focus();
+    }
+    return;
+  }
+  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target && ev.target.closest) {
+    const hucre = ev.target.closest('[data-hucre][role="button"]');
+    const denetim = ev.target.closest('button,input,select,textarea,a');
+    if (hucre && !denetim) {
+      ev.preventDefault();
+      hucre.click();
+    }
+  }
 });
 
 // --- sürükle & bırak
@@ -4251,3 +4729,5 @@ document.addEventListener('drop', async ev => {
 })();
 
 </script>
+</body>
+</html>
