@@ -361,7 +361,7 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 const DERS = ['Türk Dili ve Edebiyatı','Matematik','Fizik','Kimya','Biyoloji','Tarih','İnkılap Tarihi','Coğrafya','Felsefe','Din Kültürü'];
 const KISA = ['Edebiyat','Matematik','Fizik','Kimya','Biyoloji','Tarih','İnkılap','Coğrafya','Felsefe','Din Kültürü'];
 const ALAN_DERS = {SAY:[1,2,3,4], EA:[0,1,5,7], 'SÖZ':[0,5,6,7,8,9], 'DİL':[0]};
-const VERI_SURUMU = 9;
+const VERI_SURUMU = 10;
 const GELISTIRME_MODU = (() => {
   try { return new URLSearchParams(location.search).get('dev') === '1'; }
   catch (e) { return false; }
@@ -702,6 +702,18 @@ function veriyiHazirla(y) {
     if (!Array.isArray(o.off)) o.off = (o.tatil === undefined || o.tatil === null || o.tatil < 0) ? [] : [o.tatil];
     delete o.tatil;
   });
+  // v10: Daha önce "sabit" işaretlenmiş haftaları gerçek birer plan anlığına çevir.
+  // Eski sürümlerde yalnızca hücre konumları tutuluyordu; sonradan eklenen adaylar bu
+  // haftalara sızabiliyordu. `planHesapla`, plan anlığı olmayan eski sabit kayıtlarda
+  // yalnızca `yer` içindeki üyeleri kullanarak güvenli bir geriye-uyum görünümü üretir.
+  if (eskiSurum < 10) {
+    Object.keys(D.elle || {}).forEach(a => {
+      const par = a.split('|'), si = +par[0], hb = +par[1], ov = D.elle[a];
+      if (!ov || !ov.sabit || ov.plan || !Number.isInteger(si) || !D.ogr[si] || !Number.isInteger(hb)) return;
+      try { planAnliginiKaydet(si, hb, planHesapla(si, hb)); }
+      catch (e) { console.warn('[YKS Tekrar Defteri] Eski sabit hafta dönüştürülemedi:', a, e); }
+    });
+  }
   dersAdlariniTazele();
   donemHizala();
   return tutarlilikUyarilari();
@@ -723,20 +735,21 @@ async function durumuYukle() {
   } catch (e) { /* gömülü veri yok */ }
   adaylar.sort((a, b) => (+b.veri.rev || 0) - (+a.veri.rev || 0) || (+b.veri.ts || 0) - (+a.veri.ts || 0));
   const gecersiz = [];
-  let secilen = null;
   for (const a of adaylar) {
-    try { yedekDogrula(a.veri); secilen = a.veri; break; }
-    catch (e) { gecersiz.push(a.kaynak + ': ' + (e.message || e)); }
+    const onceki = D;
+    try {
+      yedekDogrula(a.veri);
+      const uyarilar = veriyiHazirla(a.veri);
+      gecersiz.forEach(x => uyarilar.push('Geçersiz veri kaynağı atlandı — ' + x));
+      if (uyarilar.length) console.warn('[YKS Tekrar Defteri] Tutarlılık uyarıları:\n- ' + uyarilar.join('\n- '));
+      return uyarilar;
+    } catch (e) {
+      D = onceki;                              // yarım kalmış geçiş asla canlı duruma dönüşmesin
+      gecersiz.push(a.kaynak + ': ' + (e.message || e));
+    }
   }
-  let uyarilar;
-  try {
-    uyarilar = veriyiHazirla(secilen || varsayilan());
-  } catch (e) {
-    // veriyiHazirla doğrulamadan geçmiş bir adayda bile beklenmedik şekilde patlarsa (ör. göç
-    // adımlarından biri), yarı göçmüş bir D ile açılış çökmesin — bilinen iyi durumla devam et.
-    uyarilar = veriyiHazirla(varsayilan());
-    uyarilar.push('Veri hazırlanamadı, varsayılan durumla başlatıldı — ' + (e.message || e));
-  }
+  D = null;
+  const uyarilar = veriyiHazirla(varsayilan());
   gecersiz.forEach(x => uyarilar.push('Geçersiz veri kaynağı atlandı — ' + x));
   if (uyarilar.length) console.warn('[YKS Tekrar Defteri] Tutarlılık uyarıları:\n- ' + uyarilar.join('\n- '));
   return uyarilar;
@@ -992,6 +1005,47 @@ function elleAl(si, hb, olustur) {
 
 const planSlotAnahtari = x => x && x.slotKi !== undefined ? x.slotKi : x && x.ki;
 
+// Kullanıma alınmış bir hafta artık canlı hesap değil, tarihsel kayıttır. Planın tamamını
+// saklamak; yalnızca hücre koordinatlarını saklamaktan farklı olarak sonradan işlenen,
+// içe aktarılan veya telafi için eklenen konuların eski kâğıda sızmasını engeller.
+function planAnliginiKaydet(si, hb, p) {
+  const ov = elleAl(si, hb, true);
+  ov.plan = {
+    surum: 2,
+    slotlar: (p.gunler || [[], [], [], [], [], [], []]).map(liste =>
+      liste.map(x => String(planSlotAnahtari(x)))),
+    off: (p.off || []).slice(), kap: p.kap,
+    devreden: p.devreden || 0, tasan: (p.tasan || []).slice()
+  };
+  return ov.plan;
+}
+
+function bosHaftaPlani(si, ov, kayitYok) {
+  const o = D.ogr[si] || {}, kap = Math.max(1, o.kap || 6), gunler = [[], [], [], [], [], [], []];
+  return { gunler: gunler, devreden: 0, tasan: [], toplam: 0, bekleyen: [], testToplam: 0,
+           gunYuk: [0, 0, 0, 0, 0, 0, 0], kap: kap, off: Array.isArray(o.off) ? o.off.slice() : [],
+           elle: ov, kayitYok: !!kayitYok };
+}
+
+function sabitPlandaKonuVar(si, ki) {
+  return Object.keys(D.elle || {}).some(a => {
+    const par = a.split('|'), ov = D.elle[a];
+    if (+par[0] !== si || !ov || !ov.sabit) return false;
+    if (ov.plan && Array.isArray(ov.plan.slotlar)) {
+      return ov.plan.slotlar.some(liste => Array.isArray(liste) && liste.some(slot => {
+        if (ov.konuSlot && ov.konuSlot[slot]) return +(ov.konuSlot[slot] || {}).ki === ki;
+        if (ov.degisim && ov.degisim[slot] !== undefined) return +ov.degisim[slot] === ki;
+        return +slot === ki;
+      }));
+    }
+    // v9 ve daha eski sabit haftalar için geriye uyum: değiştirilmiş/eklenmiş hücrenin
+    // gerçek konu kimliğini de kontrol et, yalnızca kaynak slot kimliğini değil.
+    if (ov.yer && ov.yer[ki] !== undefined && (!ov.degisim || ov.degisim[ki] === undefined)) return true;
+    if (Object.keys(ov.degisim || {}).some(k => +(ov.degisim || {})[k] === ki && ov.yer && ov.yer[k] !== undefined)) return true;
+    return Object.keys(ov.konuSlot || {}).some(k => +(ov.konuSlot[k] || {}).ki === ki && ov.yer && ov.yer[k] !== undefined);
+  });
+}
+
 // --- yapılamayan konunun ertelenmesi (sonuç girilmeden tarih kaydırma)
 const erteleAl = (si, ki) => (D.ertele || {})[si + ':' + ki];
 function erteleSil(si, ki) { if (D.ertele) delete D.ertele[si + ':' + ki]; }
@@ -1021,28 +1075,10 @@ function sonucBekliyor(si, ki, kart, due, hb) {
   if (due >= hb) return false;                  // vadesi bu hafta veya sonrası
   const ert = erteleAl(si, ki);
   if (ert !== undefined && ert >= hb) return false;   // elle ileri alınmış, bekleyen değil
-  const o = D.ogr[si];
-  // Öğrenci o haftada henüz uygulamada yoksa (bkz. haftaBaslangici), o hafta için hiçbir
-  // şey basılmış olamaz — "katılmadan önceki konuları getir" ile geriye tarihli eklenen
-  // konular tam olarak bu durumda: gerçek geçmiş bir tarihe sahipler ama hiçbir zaman bir
-  // kâğıda yazılmadılar. Bunları aşağıdaki "cikti tarihine bakarak tahmin et" sezgisiyle
-  // yanlışlıkla "beklemede" saymamak için en baştan eleniyor.
-  if (pazartesi(due) < haftaBaslangici(o)) return false;
-  const off = Array.isArray(o.off) ? o.off : [];
-  const islenis = due - (D.ayar.ilk || 0);      // konunun işlendiği gün (kart yoksa due = işleniş + ilk)
-  if (off.indexOf(haftaGunu(islenis)) >= 0) return false;  // öğrencinin izin gününe işlenmiş görünüyorsa veri tuhaflığıdır, beklemeye sayılmaz
-  // Bir konu ancak GERÇEKTEN dondurulmuş (yazdırılmış) bir haftanın kâğıdında yer
-  // almışsa "beklemede" sayılır — hangi haftada dondurulduğu önemli değil, bir konu
-  // taşma/telafi yüzünden asıl vade haftasından başka bir haftaya sabitlenmiş olabilir.
-  // Önceki sürüm bunun yerine "en son ne zaman çıktı verildi" tarihine bakan bir TAHMİN
-  // kullanıyordu (o.cikti >= konunun vade haftası); bu, hiç kâğıda yazılmamış ama vadesi
-  // geçmiş bir konuyu da (ör. bu hafta kapasiteye sığmayıp gelecek haftaya taşan bir
-  // konu, sonraki hafta yeniden değerlendirilirken) yanlışlıkla "beklemede" sayabiliyordu
-  // — gerçek sınav: kâğıtta yeri var mıydı, tahmini bir zamanlama değil.
-  return Object.keys(D.elle || {}).some(a => {
-    const par = a.split('|');
-    return +par[0] === si && (D.elle[a].yer || {})[ki] !== undefined;
-  });
+  // Tek yetkili kaynak gerçek plan anlığıdır. Konunun işleniş tarihi öğrencinin katılımından
+  // önce olsa veya izin gününe denk gelse bile, sabit planda gerçekten yer aldıysa artık
+  // sonuç bekliyordur. Tarih sezgileri burada kullanılırsa telafi konuları yeniden yazılır.
+  return sabitPlandaKonuVar(si, ki);
 }
 
 // --- haftalar haritası: atlanmış bir haftanın telafisi
@@ -1192,15 +1228,23 @@ function haftayiTelafiEt(si, hb, neden) {
 function planHesapla(si, hb, derinlik) {
   derinlik = derinlik || 0;
   const hs = hb + 6, o = D.ogr[si];
+  const ov = elleAl(si, hb);
+  // Tarihsel bir hafta için kullanılmış plan kaydı yoksa bugünkü aday havuzuyla geçmişi
+  // yeniden yazma. Öğretmen açıkça düzenleme kipini açarsa eski veriyi onarmak için canlı
+  // hesap yine kullanılabilir; normal görüntüleme ise "kayıt yok" olarak kalır.
+  if (hb < buHafta() && !ov.sabit && !duzenlemeAcik(hb)) return bosHaftaPlani(si, ov, true);
   // gelecek haftaya bakılıyorsa: önceki haftada yer bulamamış konular buraya devreder
   let devir = [];
   if (hb > buHafta() && derinlik < 4) {
     const onceki = planHesapla(si, hb - 7, derinlik + 1);
     devir = onceki.tasan || [];
   }
-  const kap = Math.max(1, o.kap || 6);
-  const off = Array.isArray(o.off) ? o.off : [];
-  const ov = elleAl(si, hb);
+  const kap = Math.max(1, (ov.sabit && ov.plan && ov.plan.kap) || o.kap || 6);
+  const off = ov.sabit && ov.plan && Array.isArray(ov.plan.off) ? ov.plan.off.slice()
+            : Array.isArray(o.off) ? o.off : [];
+  // Sabit haftada `yer` yalnızca konum değil, üyelik sınırıdır. Bu sınır uygulanmazsa
+  // sonradan eklenen her yeni aday eski kâğıda sızar.
+  const sabitli = !!ov.sabit;
   const suIsl = (D.subeIslenis || {})[o.sube] || {};
   const ogIsl = (D.ogrIslenis || {})[si] || {};
   const islenisAl = ki => (ogIsl[ki] !== undefined ? ogIsl[ki]
@@ -1210,6 +1254,7 @@ function planHesapla(si, hb, derinlik) {
   for (const a in suIsl) aday[+a] = 1;
   for (const a in ogIsl) aday[+a] = 1;
   for (const a in D.kart) { const par = a.split(':'); if (+par[0] === si) aday[+par[1]] = 1; }
+  if (sabitli) Object.keys(ov.yer || {}).forEach(k => { if (Number.isInteger(+k)) aday[+k] = 1; });
   // bir konu BAŞKA bir haftada "konu anlatımı" olarak bekliyorsa (telafi vb.), o hafta
   // gelene kadar buradaki eski işleniş tarihinden ötürü ikinci kez normal aday olarak
   // çıkmasın — yoksa hem kendi anlatım haftasında hem burada aynı anda görünür (kopya)
@@ -1221,15 +1266,17 @@ function planHesapla(si, hb, derinlik) {
     if (ov2.anlatim) Object.keys(ov2.anlatim).forEach(k => { digerHaftaAnlatimKi[k] = 1; });
   });
   const liste = [], bekleyen = [];
+  const oncekiHaftaSabit = hb > buHafta() && !!elleAl(si, hb - 7, false).sabit;
   for (const anahtar in aday) {
     const ki = +anahtar;
     const kk = konuAl(ki);
-    if (!kk || kk[6]) continue;
-    if (!alanUygun(si, ki)) continue;
+    const pinli = !!(ov.yer && ov.yer[ki] !== undefined);
+    if (!kk || (kk[6] && !pinli)) continue;
+    if (!pinli && !alanUygun(si, ki)) continue;
     const kart = D.kart[si + ':' + ki];
     // bu hafta zaten dondurulmuşsa (yer atanmışsa) konu, güncel vadesi ne olursa olsun
     // burada görünmeye devam eder — dondurulmuş bir hafta verilmiş kâğıdın tıpatıp aynısı kalmalı
-    const pinli = !!(ov.yer && ov.yer[ki] !== undefined);
+    if (sabitli && !pinli) continue;
     if (!pinli && digerHaftaAnlatimKi[ki]) continue;
     let due;
     if (kart) due = kart.due;
@@ -1240,7 +1287,7 @@ function planHesapla(si, hb, derinlik) {
     if (ert !== undefined && ert > due) due = ert;
     // gelecek haftalara bakarken, vadesi daha önceki bir haftaya düşen konu buraya taşınmaz —
     // sonucu girilmeden sonraki tarihi belli olmaz. Yalnızca yer bulamayıp devredenler gelir.
-    if (!pinli && hb > buHafta() && due < hb && devir.indexOf(ki) < 0) continue;
+    if (!pinli && hb > buHafta() && due < hb && devir.indexOf(ki) < 0 && !oncekiHaftaSabit) continue;
     // çıktısı verilmiş ama sonucu girilmemiş konu: yeni haftaya taşınmaz, sonucu beklenir.
     // (elle "bu haftaya al" denmişse ov.ek içindedir, aşağıda yine eklenir; kendi dondurulmuş
     // haftasındaysa zaten kendi kâğıdıdır, bekleyene düşmez)
@@ -1257,7 +1304,7 @@ function planHesapla(si, hb, derinlik) {
 
   let ogeler = liste.filter(x => (ov.sil || []).indexOf(x.ki) < 0);
   (ov.ek || []).forEach(ki => {
-    if (!ogeler.some(x => x.ki === ki))
+    if ((!sabitli || (ov.yer && ov.yer[ki] !== undefined)) && !ogeler.some(x => x.ki === ki))
       ogeler.push({ ki: ki, due: hb, ders: konuAl(ki)[0], kart: D.kart[si + ':' + ki], ek: true });
   });
   // Bir test hücresinin konusu değiştirildiyse hücrenin kimliği (slotKi) aynı kalır;
@@ -1271,7 +1318,7 @@ function planHesapla(si, hb, derinlik) {
       kart: D.kart[si + ':' + hedef], degisim: true });
   });
   const anl = ov.anlatim || {};
-  const anlKi = Object.keys(anl).map(Number);
+  const anlKi = Object.keys(anl).map(Number).filter(ki => !sabitli || (ov.yer && ov.yer[ki] !== undefined));
   if (anlKi.length) ogeler = ogeler.filter(x => anlKi.indexOf(x.ki) < 0);   // aynı hafta hem anlatım hem test olmasın
   anlKi.forEach(ki => {
     if (!konuAl(ki) || konuAl(ki)[6]) return;
@@ -1279,10 +1326,12 @@ function planHesapla(si, hb, derinlik) {
   });
   const sb = ov.serbest || {};
   Object.keys(sb).forEach(id => {
+    if (sabitli && (!ov.yer || ov.yer[id] === undefined)) return;
     ogeler.push({ ki: id, due: hb, ders: -1, kart: null, serbest: true, ek: true });
   });
   const konuSlot = ov.konuSlot || {};
   Object.keys(konuSlot).forEach(id => {
+    if (sabitli && (!ov.yer || ov.yer[id] === undefined)) return;
     const ki = Number((konuSlot[id] || {}).ki);
     if (!Number.isInteger(ki) || !konuAl(ki) || konuAl(ki)[6]) return;
     ogeler.push({ ki: ki, slotKi: id, due: hb, ders: konuAl(ki)[0], kart: D.kart[si + ':' + ki],
@@ -1325,7 +1374,7 @@ function planHesapla(si, hb, derinlik) {
   // dondurulmuş (verilmiş) bir konu bu hafta içinde cevaplandıysa VE algoritmanın bulduğu
   // bir sonraki vade de aynı haftaya düşüyorsa (kısa aralık), o yeni tekrar için sabitlenmemiş,
   // ayrı bir satır aç — yoksa cevaplanan slotun sabit kalması bir sonraki tekrarı tamamen gizler
-  ogeler.slice().forEach(x => {
+  if (!ov.sabit) ogeler.slice().forEach(x => {
     if (x.serbest || x.anlatim || x.degisim || x.slotEk || !x.pin || !x.kart) return;
     if (!(x.kart.son >= hb && x.kart.son <= hs)) return;
     if (!(x.due > x.kart.son && x.due <= hs)) return;
@@ -1370,7 +1419,9 @@ function planHesapla(si, hb, derinlik) {
   });
   const yerlesen = gunler.reduce((a, d) => a + d.length, 0);
   bekleyen.sort((a, b) => a.due - b.due || a.ki - b.ki);
-  return { gunler: gunler, devreden: devreden, tasan: tasan, toplam: yerlesen, bekleyen: bekleyen,
+  const sonTasan = sabitli && ov.plan && Array.isArray(ov.plan.tasan) ? ov.plan.tasan.slice() : tasan;
+  const sonDevreden = sabitli && ov.plan ? (ov.plan.devreden || 0) : devreden;
+  return { gunler: gunler, devreden: sonDevreden, tasan: sonTasan, toplam: yerlesen, bekleyen: bekleyen,
            testToplam: gunler.reduce((a, d) => a + yuk(d), 0),
            gunYuk: gunler.map(yuk), kap: kap, off: off, elle: ov };
 }
@@ -1383,7 +1434,21 @@ function haftayiSabitle(si, hb) {
   dondur(si, hb, p);
   const ov = elleAl(si, hb, true);
   ov.sabit = bugunNo();
+  planAnliginiKaydet(si, hb, p);
   return p.toplam;
+}
+
+// "Plan kullanılıyor" durumunun bütün eşlik eden alanlarını tek yerden yaz. Öğrenci,
+// tek öğretmen çıktısı ve toplu çıktı aynı kurala tabi olsun; biri unutulup diğeri
+// güncellendiğinde haftanın yeniden akmaya başlaması mümkün olmasın.
+function haftayiKullanimaAl(si, hb) {
+  const toplam = haftayiSabitle(si, hb);
+  if (!toplam) return 0;
+  const o = D.ogr[si], bugun = bugunNo();
+  o.aktif = true;
+  o.cikti = bugun;
+  if (!o.ilkAktif) o.ilkAktif = bugun;
+  return toplam;
 }
 
 function dondur(si, hb, p) {
@@ -1940,9 +2005,13 @@ function gorunumPlan() {
         '<button class="dugme birincil" id="duzenleBitir">düzenlemeyi bitir</button></div>'
       : '') +
     (gecmisHafta
-      ? '<div class="uyari-serit"><b>Geçmiş bir haftaya bakıyorsunuz</b> (' + ggyy(hb) + ' – ' + ggyy(hb + 6) +
-        '). Bugün ' + ggyy(bugunNo()) + '. ' +
-        '<button class="dugme birincil" data-hafta="0">bu haftaya dön</button> ' + duzenleDugmesi(si, hb) + '</div>'
+      ? (p.kayitYok
+        ? '<div class="uyari-serit"><b>Bu hafta için kullanıma alınmış bir plan kaydı yok.</b> ' +
+          'Bugünkü konularla geçmişi yeniden üretmek yanlış bir plan göstereceği için tablo boş bırakıldı. ' +
+          '<button class="dugme birincil" data-hafta="0">bu haftaya dön</button> ' + duzenleDugmesi(si, hb) + '</div>'
+        : '<div class="uyari-serit"><b>Sabitlenmiş geçmiş plana bakıyorsunuz</b> (' + ggyy(hb) + ' – ' + ggyy(hb + 6) +
+          '). Bu kayıt sonraki konu veya tarih değişikliklerinden etkilenmez. ' +
+          '<button class="dugme birincil" data-hafta="0">bu haftaya dön</button> ' + duzenleDugmesi(si, hb) + '</div>')
       : (p.elle && p.elle.sabit)
       // Yazdırılıp öğrenciye verilmiş bir hafta, takvimde henüz "geçmiş" sayılmasa bile
       // (ör. haftanın ilk günü) fiilen aynı durumdadır: düzen kâğıtta sabit, tek eksik
@@ -2006,6 +2075,9 @@ function gorunumPlan() {
         ggyy(o.ilkAktif) + '</span>' : '') + '</label>') +
     '<span style="flex:1"></span>' +
     '<button class="dugme birincil" id="yazdir">Yazdır / PDF</button>' +
+    (ogrenciMi() && hb === buHafta() && p.toplam && !(p.elle && p.elle.sabit)
+      ? '<button class="dugme" id="planiSabitle" title="Bu haftayı kullanıma al; sonraki değişiklikler eski planı değiştirmesin">Planı kullanmaya başla</button>'
+      : '') +
     '<button class="dugme" id="yazdirOnizle" title="Hiçbir şeyi kaydetmez ya da sabitlemez — yalnızca şu an ' +
     'ekranda ne varsa onu kâğıda döker">Taslak gör</button>' +
     (ogrenciMi() ? '' :
@@ -2014,7 +2086,7 @@ function gorunumPlan() {
       '<button class="dugme" id="tumYazdir">Tüm sınıf (' + kullananlar().length + ' sayfa)</button>' +
       '<button class="dugme" id="topluSil">Toplu sil</button>' +
       '<button class="dugme" id="csv">Excel (CSV)</button>') +
-    (Object.keys(p.elle.yer || {}).length || (p.elle.ek || []).length || (p.elle.sil || []).length
+    ((!ogrenciMi() || !p.elle.sabit) && (Object.keys(p.elle.yer || {}).length || (p.elle.ek || []).length || (p.elle.sil || []).length)
       ? '<button class="dugme" id="elleSifirla">Elle düzeni sıfırla</button>' : '') + '</div>' +
     '<div class="mini ozet-gizle" style="margin:-6px 0 12px">' +
     (ogrenciMi() ? 'Çözdükçe “Sonuç gir” sekmesinden doğru sayını yaz.'
@@ -3419,6 +3491,9 @@ function sonrakiKonuyuEkle(si, hb, g, s) {
 
 function planSlotSonuclandi(si, hb, slot) {
   const ov = elleAl(si, hb, false);
+  // Kullanıma alınmış haftanın hücresi sonuç girilince silinmez; tarihsel plan kâğıdın
+  // aynısı olarak kalır. Sonuç durumu zaten D.log üzerinden ayrıca gösterilir.
+  if (ov.sabit) return;
   if (typeof slot === 'string' && /^K\d+$/.test(slot) && ov.konuSlot && ov.konuSlot[slot]) {
     delete ov.konuSlot[slot];
     if (ov.yer) delete ov.yer[slot];
@@ -4138,7 +4213,7 @@ document.addEventListener('click', async ev => {
     o.off.sort((a, b) => a - b);
     await kaydet(true); ciz(); return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     EK.girisAcik[(+t.dataset.ki) + ':' + (+t.dataset.gun)] = true; ciz(); return;
@@ -4236,17 +4311,35 @@ document.addEventListener('click', async ev => {
     EK.girisAcik = {};
     ciz(); return;
   }
+  if (t.id === 'planiSabitle') {
+    const hb = haftaBasi();
+    if (hb !== buHafta()) { bilgiVer('Yalnızca içinde bulunduğun haftanın planı kullanıma alınabilir.'); return; }
+    if (!confirm('Bu haftanın planı sabitlenecek. Sonradan geçmiş konu eklesen veya tarih değişse bile bu haftanın içeriği değişmeyecek. Devam?')) return;
+    const toplam = haftayiKullanimaAl(EK.ogr, hb);
+    if (!toplam) { bilgiVer('Sabitlenecek çalışma yok.'); return; }
+    await kaydet(true); ciz();
+    bilgiVer('Plan kullanıma alındı; bu haftanın kaydı artık değişmeyecek.');
+    return;
+  }
   if (t.id === 'yazdirOnizle') {
-    // gerçek "Yazdır / PDF"in aksine hiçbir şeyi sabitlemez, kaydetmez, öğrenciyi
-    // aktifleştirmez — sadece o an ekranda hesaplanan planı kâğıda döker. Bir taslağa
+    // Taslak görünümü hiçbir şeyi sabitlemez, kaydetmez, öğrenciyi aktifleştirmez —
+    // sadece o an ekranda hesaplanan planı kâğıda döker. Bir taslağa
     // bakmak isteyen, sonradan başka bir şeyin (ör. geçmiş konu ekleme) bu haftayı
     // değiştirmesini engellemesin diye buradan gitmeli.
     await planYazdir(null);
     return;
   }
   if (t.id === 'yazdir') {
+    const hb = haftaBasi(), zatenSabit = !!elleAl(EK.ogr, hb, false).sabit;
     const tamam = await planYazdir(null);
-    if (tamam && rehberMi()) bilgiVer('Belge hazır. Öğrenciye teslim ettikten sonra “çıktı verildi” kutusunu işaretleyin.');
+    if (!tamam || zatenSabit) return;
+    const soru = ogrenciMi()
+      ? 'Belge oluşturuldu. Bu planı kullanacaksan haftayı şimdi sabitlemek istiyor musun?'
+      : 'Belge oluşturuldu. Öğrenciye teslim edilen plan bu mu? Onaylarsanız hafta sabitlenecek.';
+    if (!confirm(soru)) return;
+    haftayiKullanimaAl(EK.ogr, hb);
+    await kaydet(true); ciz();
+    bilgiVer('Plan sabitlendi; ekrandaki hafta kâğıtla aynı kalacak.');
     return;
   }
   if (t.dataset && t.dataset.yazdirsube !== undefined) {
@@ -4260,8 +4353,8 @@ document.addEventListener('click', async ev => {
     const tamam = await planYazdir({ sube: su });
     if (!tamam) return;
     if (!confirm('Belge oluşturuldu. Bu planların öğrencilere teslim edildiğini onaylayıp haftaları sabitlemek istiyor musunuz?')) return;
-    const bugun = bugunNo(), hb3 = haftaBasi();
-    liste.forEach(i => { D.ogr[i].cikti = bugun; if (!D.ogr[i].ilkAktif) D.ogr[i].ilkAktif = bugun; haftayiSabitle(i, hb3); });
+    const hb3 = haftaBasi();
+    liste.forEach(i => { haftayiKullanimaAl(i, hb3); });
     await kaydet(true); ciz();
     return;
   }
@@ -4271,8 +4364,8 @@ document.addEventListener('click', async ev => {
     const tamam = await planYazdir('hepsi');
     if (!tamam) return;
     if (!confirm('Belge oluşturuldu. Bu planların öğrencilere teslim edildiğini onaylayıp haftaları sabitlemek istiyor musunuz?')) return;
-    const bugun = bugunNo(), hb4 = haftaBasi();
-    liste.forEach(i => { D.ogr[i].cikti = bugun; if (!D.ogr[i].ilkAktif) D.ogr[i].ilkAktif = bugun; haftayiSabitle(i, hb4); });
+    const hb4 = haftaBasi();
+    liste.forEach(i => { haftayiKullanimaAl(i, hb4); });
     await kaydet(true); ciz();
     return;
   }
@@ -4365,6 +4458,12 @@ document.addEventListener('click', async ev => {
       }
     } catch (e) { alert(e.message || e); return; }
     if (!kayitlar.length && !anlatimlar.length) { alert('Hiç doğru sayısı girilmemiş.'); return; }
+    // Görünen plan hücresine sonuç girilmesi, bu planın gerçekten kullanıldığının
+    // kesin kanıtıdır. FSRS kartları değişmeden önce haftayı anlık görüntü olarak sakla.
+    if (tamamlananSlotlar.length) {
+      const gorunenHb = haftaBasi(), ov = elleAl(EK.ogr, gorunenHb, false);
+      if (!ov.sabit) haftayiKullanimaAl(EK.ogr, gorunenHb);
+    }
     try { if (kayitlar.length) sonucIsle(EK.ogr, kayitlar); }
     catch (e) { alert(e.message || e); return; }
     tamamlananSlotlar.forEach(x => planSlotSonuclandi(EK.ogr, pazartesi(x.gun), x.slot));
@@ -4517,9 +4616,8 @@ document.addEventListener('change', async ev => {
   }
   if (el.id === 'ciktiVerildi') {
     const o2 = D.ogr[EK.ogr];
-    o2.aktif = el.checked;
-    if (el.checked && !o2.ilkAktif) o2.ilkAktif = bugunNo();
-    if (el.checked) { o2.cikti = bugunNo(); haftayiSabitle(EK.ogr, haftaBasi()); }
+    if (el.checked) haftayiKullanimaAl(EK.ogr, haftaBasi());
+    else o2.aktif = false;
     await kaydet(true); ciz();
     bilgiVer(el.checked ? o2.ad + ' “kullanıyor” listesine eklendi.' : o2.ad + ' listeden çıkarıldı.');
     return;
@@ -4698,7 +4796,15 @@ document.addEventListener('drop', async ev => {
     if (s) { const y = JSON.parse(s); EK.sekme = y.sekme || EK.sekme; EK.ogr = y.ogr || 0; sessionStorage.removeItem('yks_ek'); }
   } catch (e) { /* yok */ }
   EK.hafta = null;                     // uygulama her zaman içinde bulunulan haftayla açılır
-  const acilisUyarilari = await durumuYukle();
+  let acilisUyarilari = [];
+  try { acilisUyarilari = await durumuYukle(); }
+  catch (e) {
+    console.error('[YKS Tekrar Defteri] Veri yüklenemedi; temiz başlangıca dönüldü.', e);
+    D = null;
+    try { veriyiHazirla(varsayilan()); }
+    catch (e2) { D = varsayilan(); }
+    acilisUyarilari = ['Kayıtlı veri yüklenemedi; hiçbir bozuk veya yarım veri kullanılmadı. Yedeğinizi Ayarlar’dan yeniden yükleyin.'];
+  }
   // ders programı ve konu planı hazırsa gelecek haftaları kendiliğinden doldur:
   // aynı işlemi tekrar tekrar yapmak zararsız, çünkü işlenmiş konuya dokunulmuyor
   try {
