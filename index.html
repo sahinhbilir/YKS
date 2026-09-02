@@ -110,10 +110,9 @@ table.plan td.dolu{background:var(--kagit)}
 .a-giris{color:var(--soluk);margin-bottom:5px}
 .a-maddeler{margin:0;padding-left:16px}
 .a-maddeler li{margin-bottom:4px}
+.a-yazma{margin-top:6px}
+.a-yazma i{display:block;border-bottom:1px dotted var(--cizgi);height:18px}
 .a-imza{margin-top:10px;border-top:1px solid var(--cizgi);padding-top:8px}
-.a-satir{display:flex;align-items:flex-end;gap:6px;margin-top:11px;font-size:10.5px;color:var(--soluk)}
-.a-satir span{white-space:nowrap}
-.a-satir i{flex:1;border-bottom:1px dotted var(--murekkep);height:11px}
 .rutin{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 .r-kutu{border:1px solid var(--cizgi);border-radius:4px;padding:7px 9px;min-height:64px}
 .r-baslik{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--vurgu);margin-bottom:5px}
@@ -319,7 +318,6 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
   .plan-duzen{grid-template-columns:1fr 40mm;gap:4mm}
   .anlasma{font-size:8px;line-height:1.28;padding:6px 7px}
   .a-baslik{font-size:9px}
-  .a-satir{font-size:8px;margin-top:9px}
   .rutin{margin-top:5mm;gap:5mm}
   .r-kutu{min-height:20mm}
   .r-baslik{font-size:8.5px}
@@ -664,11 +662,6 @@ function veriyiHazirla(y) {
     takvimiKaydir(1);
     D.ayar.donemElle = donemElleOnce;
   }
-  if (eskiSurum < 8) {                       // günlük yanlış takibi maddesi
-    const yeni = temel.anlasma.maddeler[1];
-    if (D.anlasma && Array.isArray(D.anlasma.maddeler) && D.anlasma.maddeler.indexOf(yeni) < 0)
-      D.anlasma.maddeler.splice(1, 0, yeni);
-  }
   if (eskiSurum < 9) {                       // sonuçları tekilleştir + değişiklik zamanını ekle
     const taban = Number.isFinite(+D.ts) && +D.ts > 0 ? +D.ts : Date.now();
     const tekil = new Map(), tekrarKonular = {};
@@ -693,12 +686,25 @@ function veriyiHazirla(y) {
   // bir "son gönderim" işaretçisi tutmak gereksizdir ve başarısız indirmede veri kaybettirebilir.
   delete D.sonGonderim;
   delete D.sonGonderimTs;
-  if (!D.anlasma) D.anlasma = temel.anlasma;
-  if (!D.rutinBasliklari) D.rutinBasliklari = temel.rutinBasliklari;
+  // İçe aktarılan eski/kısmi veride anlaşma nesnesinin yalnızca bir bölümü bulunabilir.
+  // Görünümde "undefined" üretmek yerine alanları burada tek seferde normalleştir;
+  // bilinmeyen alanları geriye uyum için koru.
+  const gelenAnlasma = D.anlasma && typeof D.anlasma === 'object' && !Array.isArray(D.anlasma) ? D.anlasma : {};
+  D.anlasma = Object.assign({}, temel.anlasma, gelenAnlasma);
+  D.anlasma.baslik = typeof D.anlasma.baslik === 'string' ? D.anlasma.baslik : temel.anlasma.baslik;
+  D.anlasma.giris = typeof D.anlasma.giris === 'string' ? D.anlasma.giris : temel.anlasma.giris;
+  D.anlasma.maddeler = Array.isArray(D.anlasma.maddeler)
+    ? D.anlasma.maddeler.filter(x => typeof x === 'string').map(x => x.trim()).filter(Boolean) : [];
+  D.anlasma.aktif = D.anlasma.aktif !== false;
+  const gelenRutinBasliklari = Array.isArray(D.rutinBasliklari) ? D.rutinBasliklari : [];
+  D.rutinBasliklari = temel.rutinBasliklari.map((ad, i) =>
+    typeof gelenRutinBasliklari[i] === 'string' && gelenRutinBasliklari[i].trim() ? gelenRutinBasliklari[i] : ad);
   D.ogr.forEach(o => {
     if (o.aktif === undefined) o.aktif = false;
-    if (!Array.isArray(o.maddeler)) o.maddeler = [];
-    if (!o.rutin) o.rutin = { once: '', ara: '', sonra: '' };
+    o.maddeler = Array.isArray(o.maddeler)
+      ? o.maddeler.filter(x => typeof x === 'string').map(x => x.trim()).filter(Boolean) : [];
+    if (!o.rutin || typeof o.rutin !== 'object' || Array.isArray(o.rutin)) o.rutin = {};
+    ['once', 'ara', 'sonra'].forEach(k => { if (typeof o.rutin[k] !== 'string') o.rutin[k] = ''; });
     if (!Array.isArray(o.off)) o.off = (o.tatil === undefined || o.tatil === null || o.tatil < 0) ? [] : [o.tatil];
     delete o.tatil;
   });
@@ -1625,6 +1631,7 @@ function planTablosu(si, hb, p, tumu) {
       '<div class="a-baslik">' + kacis(a.baslik || 'ANLAŞMA') + '</div>' +
       '<div class="a-giris">' + kacis(a.giris || '') + '</div>' +
       '<ol class="a-maddeler">' + maddeler.map(m => '<li>' + kacis(m) + '</li>').join('') + '</ol>' +
+      '<div class="a-yazma" aria-label="Öğrencinin yazacağı sözler"><i></i><i></i><i></i></div>' +
       '<div class="a-imza" style="text-align:center;padding-bottom:36px">İmza</div>' +
       '</aside></div>';
     const b = D.rutinBasliklari || ['Ders çalışmadan önce', 'Ders arası', 'Ders çalıştıktan sonra'];
@@ -3599,9 +3606,8 @@ function yazdirCSS() {
     '.anl h3{margin:0 0 1.5mm;font-size:7.4pt;text-align:center;border-bottom:.3mm solid #999;padding-bottom:1mm}' +
     '.anl p{margin:0 0 1mm;color:#555}' +
     '.anl ol{margin:0;padding-left:4mm}.anl li{margin-bottom:.9mm}' +
+    '.sozler{margin-top:1mm}.sozler i{display:block;border-bottom:.25mm dotted #999;height:5mm}' +
     '.imz{margin-top:auto;border-top:.3mm solid #999;padding-top:1.5mm}' +
-    '.imz div{display:flex;align-items:flex-end;gap:1.5mm;margin-top:2.6mm;font-size:6.2pt;color:#555}' +
-    '.imz i{flex:1;border-bottom:.25mm dotted #000;height:2.4mm}' +
     '.anl-h{background:#f0f0f0}.anl-h .n{font-weight:700}' +
     '.dnot{margin-top:2.4mm;font-size:6.4pt;color:#444;text-align:center;letter-spacing:.02em}' +
     '.rut{display:flex;gap:4mm;height:20mm;margin-top:4mm}' +
@@ -3638,6 +3644,7 @@ function yazdirSayfa(si, hb) {
     const maddeler = (a.maddeler || []).concat(o.maddeler || []);
     h += '<aside class="anl"><h3>' + kacis(a.baslik || 'ANLAŞMA') + '</h3><p>' + kacis(a.giris || '') + '</p><ol>' +
       maddeler.map(m => '<li>' + kacis(m) + '</li>').join('') + '</ol>' +
+      '<div class="sozler"><i></i><i></i><i></i></div>' +
       '<div class="imz" style="text-align:center;padding-bottom:9mm">İmza</div></aside>';
   }
   h += '</div>';
