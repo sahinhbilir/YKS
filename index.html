@@ -2072,7 +2072,11 @@ function gorunumPlan() {
       '<b>“çıktı verildi”</b> kutusunu işaretleyin. Yazdırma yalnızca belgeyi oluşturur; teslim edildiğini varsaymaz.</div>' : '') +
     '<div class="baslik"><h1>Haftalık plan</h1><p>' + kacis(o.alan) + ' · ' + kacis(o.sube) +
     ' · günde ' + (o.kap || 6) + ' konu testi · tatil ' + (o.tatil >= 0 ? GUN_AD[o.tatil].toLowerCase() : 'yok') +
-    ' · hedef tutma %' + Math.round((o.hedef || D.ayar.hedef) * 100) + '</p></div>' +
+    ' · hedef tutma %' + Math.round((o.hedef || D.ayar.hedef) * 100) + '</p>' +
+    (ogrenciMi() ? '<p class="mini">Her hafta haftalık programınızı ' +
+      '<a href="mailto:sahinbilir.rehberlik@gmail.com">sahinbilir.rehberlik@gmail.com</a> e posta olarak gönderin. ' +
+      'Ayrıca eğer geçen hafta ders çalışmakta zorluk hissettiyseniz bunun hakkında kısa bir paragraf yazın.</p>' : '') +
+    '</div>' +
     '<div class="arac">' + (ogrenciMi() ? '' : ogrSecici()) + haftaSecici() +
     (ogrenciMi() ? '' :
       '<label class="dugme ciktiEtiket' + (o.aktif !== false ? ' secili' : '') + '" title="İşaretlediğinizde öğrenci “kullanıyor” listesine girer">' +
