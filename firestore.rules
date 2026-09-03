@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /ogrenciler/{syncId} {
+
+      // Öğretmen kendi öğrencisi için ayrılmış boş yuvayı oluşturur.
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.ogretmenUid
+        && request.resource.data.bagliUid == null
+        && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','bagliUid','paket','sunucuTs'])
+        && request.resource.data.ogrenciAd is string && request.resource.data.ogrenciAd.size() <= 100;
+
+      // Yalnızca bu yuvanın sahibi öğretmen ya da bağlı öğrenci cihazı okuyabilir.
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.ogretmenUid || request.auth.uid == resource.data.bagliUid);
+
+      // İlk bağlanma: yuva boşsa cihaz kendini bağlayabilir; sonrasında yalnızca
+      // zaten bağlı olan aynı UID güncelleyebilir. Kimlik alanları asla değişemez.
+      allow update: if request.auth != null
+        && ((resource.data.bagliUid == null && request.resource.data.bagliUid == request.auth.uid)
+            || resource.data.bagliUid == request.auth.uid)
+        && request.resource.data.ogretmenUid == resource.data.ogretmenUid
+        && request.resource.data.ogrenciNo == resource.data.ogrenciNo
+        && request.resource.data.ogrenciAd == resource.data.ogrenciAd
+        && request.resource.data.ogrenciSube == resource.data.ogrenciSube
+        && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','bagliUid','paket','sunucuTs'])
+        && request.resource.data.paket.tur == 'yks-sonuc'
+        && request.resource.data.paket.kayit is list
+        && request.resource.data.paket.kayit.size() <= 5000;
+
+      allow delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

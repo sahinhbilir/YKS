@@ -344,6 +344,49 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
   .altUyari .dugme{margin-left:0;width:100%}
 }
 </style>
+<script type="module">
+// Bulut senkronizasyonu (Firestore) — bkz. plan §1/§2/§3. Uygulamanın geri kalanı
+// module-script olmadığından, burada kurulan istemciler window.bulut üzerinden paylaşılır.
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
+import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+
+// TODO: gerçek Firebase Console kurulumundan sonra bu değerleri değiştirin (plan §1).
+// Bu değerler istemci tarafında görünür olması güvenlik açığı YARATMAZ — asıl koruma
+// firestore.rules içindeki kurallardır.
+const firebaseConfig = {
+  apiKey: 'YER-TUTUCU', authDomain: 'YER-TUTUCU.firebaseapp.com', projectId: 'YER-TUTUCU',
+  storageBucket: 'YER-TUTUCU.appspot.com', messagingSenderId: 'YER-TUTUCU', appId: 'YER-TUTUCU'
+};
+const uygulama = initializeApp(firebaseConfig);
+const auth = getAuth(uygulama);
+const db = getFirestore(uygulama);
+
+// Öğrenci cihazı: sessiz, anonim giriş — kullanıcı hareketi gerekmez, ilk çağrıda başlar
+// ve sonucu bütün çağıranlar arasında paylaşılır.
+let ogrenciGirisi = null;
+function girisOgrenci() {
+  if (!ogrenciGirisi) {
+    ogrenciGirisi = new Promise((resolve, reject) => {
+      const zamanAsimi = setTimeout(() => reject(new Error('Bulut girişi zaman aşımına uğradı. İnternet bağlantınızı kontrol edin.')), 15000);
+      const durdur = onAuthStateChanged(auth, (kullanici) => {
+        if (kullanici) { clearTimeout(zamanAsimi); durdur(); resolve(kullanici); }
+      });
+      signInAnonymously(auth).catch((e) => { clearTimeout(zamanAsimi); reject(e); });
+    });
+  }
+  return ogrenciGirisi;
+}
+
+// Öğretmen: kalıcı, gerçek bir hesapla (Google) açıkça giriş yapar. Bir popup açtığı için
+// yalnızca bir düğme tıklamasının İÇİNDEN çağrılmalı — sayfa yüklenirken otomatik çalışmaz.
+function girisOgretmen() {
+  return signInWithPopup(auth, new GoogleAuthProvider()).then(r => r.user);
+}
+
+window.bulut = { db, doc, getDoc, setDoc, updateDoc, girisOgrenci, girisOgretmen,
+  mevcutKullanici: () => auth.currentUser };
+</script>
 </head>
 <body>
 <div class="kabuk">
@@ -2860,17 +2903,21 @@ function gorunumAyarlar() {
     '<button class="dugme" id="kurYapistirAc">İçeriği yapıştır</button>' +
     (rehberMi()
       ? '<label class="dugme" style="cursor:pointer">Öğrenciden gelen sonucu yükle' +
-        '<input type="file" id="sonucYukle" multiple hidden></label>'
+        '<input type="file" id="sonucYukle" multiple hidden></label>' +
+        '<button class="dugme" id="bulutBaglan">Buluta bağlan</button>' +
+        '<button class="dugme" id="bulutCek">Buluttan sonuçları çek</button>'
       : '<label class="dugme birincil" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
         '<input type="file" id="paketYukle" hidden></label>' +
-        '<button class="dugme" id="sonucGonder">Sonuçlarımı dışa aktar</button>') +
+        '<button class="dugme" id="sonucGonder">Sonuçlarımı dışa aktar</button>' +
+        '<button class="dugme" id="bulutGonder">Sonuçlarımı buluta gönder</button>') +
     '<button class="dugme" id="sifirla">Verileri sıfırla</button></div>' +
     (rehberMi()
       ? '<div class="mini" style="margin-top:10px;max-width:74ch">Öğrenciye kendi uygulamasını kurmak için: ' +
         '<b>Öğrenciler</b> sekmesinde satırın sonundaki <b>paket</b> düğmesiyle o öğrencinin dosyasını ' +
         'indirin ve kendisine gönderin. Öğrenci uygulamayı açıp “Öğrenciyim” der, dosyayı yükler; ' +
-        'kendi planını görür ve sonuçlarını kendi girer. Girdiği sonuçları size dosya olarak gönderir, ' +
-        'siz de yukarıdaki düğmeyle içeri alırsınız.</div>'
+        'kendi planını görür ve sonuçlarını kendi girer. Girdiği sonuçları size dosya olarak, ya da ' +
+        '(internete bağlıysa) “Sonuçlarımı buluta gönder” ile gönderir; siz de yukarıdaki düğmelerle ' +
+        'içeri alırsınız. Buluttan çekebilmek için önce bir kere “Buluta bağlan”a tıklamanız gerekir.</div>'
       : '') +
     '<div id="yapistirAlan" hidden style="margin-top:12px"><textarea id="yapistirMetin" rows="5" ' +
     'placeholder="Yedek dosyasının içeriğini buraya yapıştırın. { ile başlar."></textarea>' +
@@ -2906,9 +2953,12 @@ function ogrenciPaketi(si) {
   Object.keys(((D.ogrIslenis || {})[si]) || {}).forEach(k => isaretle(+k));
   const ekK = {};
   Object.keys(gerekli).forEach(ix => { ekK[ix] = (D.ekKonular || [])[ix]; });
+  // Bulut senkronizasyonu için kalıcı bir kimlik: bir kere üretilir, paket her
+  // yeniden oluşturulduğunda aynı kalır (öğrencinin Firestore'daki yuvası değişmez).
+  if (!o.syncId) o.syncId = crypto.randomUUID();
   return {
     tur: 'yks-ogrenci-paketi', surum: PAKET_SURUM, katalogImza: KATALOG_IMZA,
-    kurum: D.kurum || '', tarih: bugunNo(),
+    kurum: D.kurum || '', tarih: bugunNo(), syncId: o.syncId,
     ogr: JSON.parse(JSON.stringify(o)),
     ayar: JSON.parse(JSON.stringify(D.ayar)),
     anlasma: JSON.parse(JSON.stringify(D.anlasma || {})),
@@ -2937,6 +2987,7 @@ function paketiYukle(pk) {
   y.rol = 'ogrenci'; y.kurum = pk.kurum || '';
   y.ayar = pk.ayar; y.anlasma = pk.anlasma; y.rutinBasliklari = pk.rutinBasliklari || y.rutinBasliklari;
   y.ogr = [pk.ogr];
+  y.ogr[0].syncId = pk.syncId || null;
   y.ekKonular = [];
   const harita = {};                                  // eski ki -> yeni ki
   Object.keys(pk.ekKonular || {}).forEach(ix => {
@@ -3086,6 +3137,74 @@ function sonucPaketiUygula(pk) {
   if (yeni.length) sonucIsle(si, yeni);
   const bilinmeyenKonu = pk.kayit.length - dogrulanmis.length;
   return { ad: D.ogr[si].ad, eklenen: yeni.length, atlanan: pk.kayit.length - yeni.length - bilinmeyenKonu, bilinmeyenKonu: bilinmeyenKonu };
+}
+
+// ------------------------------------------------------------ bulut senkronizasyonu
+// Öğretmen, bir öğrencinin paketini ilk kez indirdiğinde onun Firestore'daki yuvasını
+// (bkz. firestore.rules) boş olarak ayırır — kimlik alanları (ogrenciNo/Ad/Sube) burada,
+// yalnızca öğretmenin kendi yazdığı bu tek yerde belirlenir. Öğretmen henüz buluta
+// bağlanmadıysa (mevcutKullanici() null) sessizce hiçbir şey yapmaz; dosya tabanlı akış
+// buluttan bağımsız çalışmaya devam eder.
+async function oncedenAyir(si) {
+  if (!window.bulut) return;
+  const kullanici = window.bulut.mevcutKullanici();
+  if (!kullanici) return;
+  const o = D.ogr[si];
+  if (!o.syncId) return;
+  try {
+    await window.bulut.setDoc(window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId), {
+      ogretmenUid: kullanici.uid, ogrenciNo: o.no, ogrenciAd: o.ad, ogrenciSube: o.sube,
+      bagliUid: null, paket: null, sunucuTs: null
+    });
+  } catch (e) { /* yuva zaten ayrılmış olabilir ya da bağlantı sorunu var — sessizce geç */ }
+}
+// Öğrenci tarafı: güncel sonuçlarını kendi bağlı yuvasına yazar. Firestore iç içe diziyi
+// (array-of-arrays) kabul etmediğinden, kayit satırları burada nesneye çevrilir; öğretmen
+// tarafı bunu geri çevirip mevcut sonucPaketiUygula()'ya verir (bkz. sunucudanCek).
+async function sunucuyaGonder() {
+  if (!window.bulut) throw new Error('Bulut modülü yüklenemedi.');
+  const o = D.ogr[0] || {};
+  if (!o.syncId) throw new Error('Bu cihaz bir öğretmen paketiyle kurulmadığı için buluta gönderemez. Dosyayla gönderin.');
+  const kullanici = await window.bulut.girisOgrenci();
+  const pk = sonucPaketi();
+  if (!pk.kayit.length) return 0;
+  const kayitBulut = pk.kayit.map(k => ({ g: k[0], k: k[1], d: k[2], s: k[3], t: k[4] }));
+  const ref = window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId);
+  await window.bulut.updateDoc(ref, {
+    bagliUid: kullanici.uid,
+    paket: { tur: pk.tur, surum: pk.surum, katalogImza: pk.katalogImza, no: pk.no, ad: pk.ad, sube: pk.sube,
+             tarih: pk.tarih, olusturmaTs: pk.olusturmaTs, kayit: kayitBulut, konular: pk.konular },
+    sunucuTs: Date.now()
+  });
+  return pk.kayit.length;
+}
+// Öğretmen tarafı: kendi listesindeki her syncId için yuvayı okur; kimliği HER ZAMAN
+// öğretmenin kendisinin yazdığı ogrenciNo/Ad/Sube'den alır (paket'in kendi bildirdiği
+// alanlardan değil), sonra kayıtları tekrar diziye çevirip mevcut, değişmemiş
+// sonucPaketiUygula()'ya verir.
+async function sunucudanCek() {
+  if (!window.bulut) throw new Error('Bulut modülü yüklenemedi.');
+  await window.bulut.girisOgretmen();
+  const rapor = [];
+  for (let i = 0; i < D.ogr.length; i++) {
+    const o = D.ogr[i];
+    if (o.silindi || !o.syncId) continue;
+    let anlik;
+    try { anlik = await window.bulut.getDoc(window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId)); }
+    catch (e) { continue; }
+    if (!anlik.exists()) continue;
+    const veri = anlik.data();
+    if (!veri.paket || !veri.bagliUid) continue;
+    const kayitYerel = (veri.paket.kayit || []).map(r => [r.g, r.k, r.d, r.s, r.t]);
+    try {
+      rapor.push(sonucPaketiUygula({
+        tur: veri.paket.tur, surum: veri.paket.surum, katalogImza: veri.paket.katalogImza,
+        no: veri.ogrenciNo, ad: veri.ogrenciAd, sube: veri.ogrenciSube,
+        kayit: kayitYerel, konular: veri.paket.konular
+      }));
+    } catch (e) { rapor.push({ hata: o.ad + ': ' + (e.message || e) }); }
+  }
+  return rapor;
 }
 
 // ---------------------------------------------------------------- dışa aktarma
@@ -4211,9 +4330,12 @@ document.addEventListener('click', async ev => {
   const opk = ev.target.closest('.ogrPaket');
   if (opk) {
     const i = +opk.dataset.i, o = D.ogr[i];
+    const pk = ogrenciPaketi(i);
+    await kaydet(true);          // o.syncId yeni üretilmiş olabilir, kalıcı olsun
+    oncedenAyir(i);               // bulut yuvasını arka planda ayırır; başarısız olursa sessizce geçer
     const tamam = await indir('ogrenci-' + dosyaAdiParcasi(o.no || i, 'no') + '-' +
       dosyaAdiParcasi(o.ad, 'ogrenci').toLocaleLowerCase('tr') + '.yks.json',
-      JSON.stringify(ogrenciPaketi(i)), 'json');
+      JSON.stringify(pk), 'json');
     bilgiVer(tamam ? o.ad + ' için paket indirildi. Dosyayı kendisine gönderin.' : 'Paket oluşturulmadı; tekrar deneyin.');
     return;
   }
@@ -4397,7 +4519,7 @@ document.addEventListener('click', async ev => {
     o.off.sort((a, b) => a - b);
     await kaydet(true); ciz(); return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutCek,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     EK.girisAcik[(+t.dataset.ki) + ':' + (+t.dataset.gun)] = true; ciz(); return;
@@ -4750,6 +4872,32 @@ document.addEventListener('click', async ev => {
       isoDan(bugunNo()) + '.yks.json', JSON.stringify(pk), 'json');
     if (!tamam) { bilgiVer('Dosya oluşturulmadı; sonuçlar gönderilmemiş olarak kaldı.'); return; }
     bilgiVer(pk.kayit.length + ' güncel sonuç dışa aktarıldı. Dosyayı rehber öğretmeninize gönderin.');
+    return;
+  }
+  if (t.id === 'bulutGonder') {
+    try {
+      const n = await sunucuyaGonder();
+      if (!n) { alert('Buluta gönderilecek sonuç yok. Önce “Sonuç gir” sekmesinden doğru sayılarınızı girin.'); return; }
+      bilgiVer(n + ' güncel sonuç buluta gönderildi.');
+    } catch (e) { alert('Buluta gönderilemedi: ' + (e.message || e)); }
+    return;
+  }
+  if (t.id === 'bulutBaglan') {
+    try {
+      if (!window.bulut) throw new Error('Bulut modülü yüklenemedi.');
+      const kullanici = await window.bulut.girisOgretmen();
+      bilgiVer('Buluta bağlandınız: ' + (kullanici.email || kullanici.uid) + '.');
+    } catch (e) { alert('Buluta bağlanılamadı: ' + (e.message || e)); }
+    return;
+  }
+  if (t.id === 'bulutCek') {
+    try {
+      const rapor = await sunucudanCek();
+      if (!rapor.length) { bilgiVer('Buluttan çekilecek yeni sonuç bulunamadı.'); return; }
+      await kaydet(true); ciz();
+      bilgiVer(rapor.map(r => r.hata ? r.hata : r.ad + ': ' + r.eklenen + ' yeni sonuç' +
+        (r.atlanan ? ' (' + r.atlanan + ' zaten vardı)' : '')).join(' · '));
+    } catch (e) { alert('Buluttan çekilemedi: ' + (e.message || e)); }
     return;
   }
   if (t.id === 'yedekIndir') { await indir('yks-tekrar-yedek-' + isoDan(bugunNo()) + '.json', JSON.stringify(D), 'json'); return; }
