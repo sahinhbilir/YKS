@@ -3,10 +3,23 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /ogrenciler/{syncId} {
 
-      // Öğretmen kendi öğrencisi için ayrılmış boş yuvayı oluşturur.
-      allow create: if request.auth != null
+      function kimlikAlanlariAyni() {
+        return request.resource.data.ogretmenUid == resource.data.ogretmenUid
+          && request.resource.data.ogrenciNo == resource.data.ogrenciNo
+          && request.resource.data.ogrenciAd == resource.data.ogrenciAd
+          && request.resource.data.ogrenciSube == resource.data.ogrenciSube
+          && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','bagliUid','paket','sunucuTs']);
+      }
+      function gercekHesap() {
+        return request.auth.token.firebase.sign_in_provider != 'anonymous';
+      }
+
+      // Öğretmen kendi öğrencisi için ayrılmış boş yuvayı oluşturur. Yalnızca kalıcı
+      // (anonim olmayan) bir hesap yuva sahibi olabilir.
+      allow create: if request.auth != null && gercekHesap()
         && request.auth.uid == request.resource.data.ogretmenUid
         && request.resource.data.bagliUid == null
+        && request.resource.data.paket == null
         && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','bagliUid','paket','sunucuTs'])
         && request.resource.data.ogrenciAd is string && request.resource.data.ogrenciAd.size() <= 100;
 
@@ -14,19 +27,25 @@ service cloud.firestore {
       allow read: if request.auth != null &&
         (request.auth.uid == resource.data.ogretmenUid || request.auth.uid == resource.data.bagliUid);
 
-      // İlk bağlanma: yuva boşsa cihaz kendini bağlayabilir; sonrasında yalnızca
-      // zaten bağlı olan aynı UID güncelleyebilir. Kimlik alanları asla değişemez.
-      allow update: if request.auth != null
-        && ((resource.data.bagliUid == null && request.resource.data.bagliUid == request.auth.uid)
-            || resource.data.bagliUid == request.auth.uid)
-        && request.resource.data.ogretmenUid == resource.data.ogretmenUid
-        && request.resource.data.ogrenciNo == resource.data.ogrenciNo
-        && request.resource.data.ogrenciAd == resource.data.ogrenciAd
-        && request.resource.data.ogrenciSube == resource.data.ogrenciSube
-        && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','bagliUid','paket','sunucuTs'])
-        && request.resource.data.paket.tur == 'yks-sonuc'
-        && request.resource.data.paket.kayit is list
-        && request.resource.data.paket.kayit.size() <= 5000;
+      // (a) Öğrenci cihazı: ilk bağlanma ya da bağlıyken tekrar senkron — bagliUid ilk
+      //     bağlanmada null'dan kendi uid'sine geçebilir, sonrasında asla değişemez.
+      // (b) Sahip öğretmen: kayıp/silinmiş cihaz durumunda yuvayı sıfırlar (bagliUid ve
+      //     paket yeniden null olur). Her iki dalda da kimlik alanları asla değişemez.
+      allow update: if request.auth != null && kimlikAlanlariAyni() && (
+        (
+          ((resource.data.bagliUid == null && request.resource.data.bagliUid == request.auth.uid)
+            || (resource.data.bagliUid == request.auth.uid && request.resource.data.bagliUid == resource.data.bagliUid))
+          && request.resource.data.paket.tur == 'yks-sonuc'
+          && request.resource.data.paket.kayit is list
+          && request.resource.data.paket.kayit.size() <= 5000
+          && (!('konular' in request.resource.data.paket) || request.resource.data.paket.konular.size() <= 2000)
+        )
+        ||
+        (
+          request.auth.uid == resource.data.ogretmenUid && gercekHesap()
+          && request.resource.data.bagliUid == null && request.resource.data.paket == null
+        )
+      );
 
       allow delete: if false;
     }

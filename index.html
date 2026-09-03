@@ -385,7 +385,10 @@ function girisOgretmen() {
 }
 
 window.bulut = { db, doc, getDoc, setDoc, updateDoc, girisOgrenci, girisOgretmen,
-  mevcutKullanici: () => auth.currentUser };
+  mevcutKullanici: () => auth.currentUser,
+  // Gerçek firebaseConfig değerleri girilene kadar bulut düğmeleri arayüzde gösterilmez —
+  // yapılandırılmamış, kesin başarısız olacak kontroller kullanıcıya sunulmaz.
+  yapilandirilmis: firebaseConfig.apiKey !== 'YER-TUTUCU' };
 </script>
 </head>
 <body>
@@ -2449,6 +2452,10 @@ function gorunumOgrenciler() {
       '<td style="white-space:nowrap">' +
       '<button class="dugme ogrPaket" data-i="' + i + '" style="padding:3px 9px" ' +
       'title="Bu öğrencinin kendi uygulaması için dosya indir">paket</button> ' +
+      (window.bulut && window.bulut.yapilandirilmis && o.syncId
+        ? '<button class="dugme ogrBulutSifirla" data-i="' + i + '" style="padding:3px 9px" ' +
+          'title="Kayıp/değişen cihaz için bulut bağlantısını sıfırla">bulutu sıfırla</button> '
+        : '') +
       '<button class="dugme ogrSil" data-i="' + i + '" style="padding:3px 9px" title="Listeden çıkar">×</button></td></tr>';
   });
   return h + '</tbody></table></div>';
@@ -2904,20 +2911,26 @@ function gorunumAyarlar() {
     (rehberMi()
       ? '<label class="dugme" style="cursor:pointer">Öğrenciden gelen sonucu yükle' +
         '<input type="file" id="sonucYukle" multiple hidden></label>' +
-        '<button class="dugme" id="bulutBaglan">Buluta bağlan</button>' +
-        '<button class="dugme" id="bulutCek">Buluttan sonuçları çek</button>'
+        (window.bulut && window.bulut.yapilandirilmis
+          ? '<button class="dugme" id="bulutBaglan">Buluta bağlan</button>' +
+            '<button class="dugme" id="bulutCek">Buluttan sonuçları çek</button>'
+          : '')
       : '<label class="dugme birincil" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
         '<input type="file" id="paketYukle" hidden></label>' +
         '<button class="dugme" id="sonucGonder">Sonuçlarımı dışa aktar</button>' +
-        '<button class="dugme" id="bulutGonder">Sonuçlarımı buluta gönder</button>') +
+        (window.bulut && window.bulut.yapilandirilmis
+          ? '<button class="dugme" id="bulutGonder">Sonuçlarımı buluta gönder</button>'
+          : '')) +
     '<button class="dugme" id="sifirla">Verileri sıfırla</button></div>' +
     (rehberMi()
       ? '<div class="mini" style="margin-top:10px;max-width:74ch">Öğrenciye kendi uygulamasını kurmak için: ' +
         '<b>Öğrenciler</b> sekmesinde satırın sonundaki <b>paket</b> düğmesiyle o öğrencinin dosyasını ' +
         'indirin ve kendisine gönderin. Öğrenci uygulamayı açıp “Öğrenciyim” der, dosyayı yükler; ' +
-        'kendi planını görür ve sonuçlarını kendi girer. Girdiği sonuçları size dosya olarak, ya da ' +
-        '(internete bağlıysa) “Sonuçlarımı buluta gönder” ile gönderir; siz de yukarıdaki düğmelerle ' +
-        'içeri alırsınız. Buluttan çekebilmek için önce bir kere “Buluta bağlan”a tıklamanız gerekir.</div>'
+        'kendi planını görür ve sonuçlarını kendi girer. Girdiği sonuçları size dosya olarak' +
+        (window.bulut && window.bulut.yapilandirilmis
+          ? ', ya da (internete bağlıysa) “Sonuçlarımı buluta gönder” ile gönderir; siz de yukarıdaki ' +
+            'düğmelerle içeri alırsınız. Buluttan çekebilmek için önce bir kere “Buluta bağlan”a tıklamanız gerekir.'
+          : ' gönderir; siz de yukarıdaki düğmeyle içeri alırsınız.') + '</div>'
       : '') +
     '<div id="yapistirAlan" hidden style="margin-top:12px"><textarea id="yapistirMetin" rows="5" ' +
     'placeholder="Yedek dosyasının içeriğini buraya yapıştırın. { ile başlar."></textarea>' +
@@ -3164,22 +3177,29 @@ function sonucPaketiUygula(pk) {
 // ------------------------------------------------------------ bulut senkronizasyonu
 // Öğretmen, bir öğrencinin paketini ilk kez indirdiğinde onun Firestore'daki yuvasını
 // (bkz. firestore.rules) boş olarak ayırır — kimlik alanları (ogrenciNo/Ad/Sube) burada,
-// yalnızca öğretmenin kendi yazdığı bu tek yerde belirlenir. Öğretmen henüz buluta
-// bağlanmadıysa (mevcutKullanici() null) sessizce hiçbir şey yapmaz; dosya tabanlı akış
-// buluttan bağımsız çalışmaya devam eder.
+// yalnızca öğretmenin kendi yazdığı bu tek yerde belirlenir. Sonucu çağırana bildirir —
+// çağıran (paket indirme veya sıfırlama akışı) başarısızlığı kullanıcıya göstermeli;
+// burada sessizce yutulmaz.
 async function oncedenAyir(si) {
-  if (!window.bulut) return;
+  if (!window.bulut) return { tur: 'yok' };
   const kullanici = window.bulut.mevcutKullanici();
-  if (!kullanici) return;
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
   const o = D.ogr[si];
-  if (!o.syncId) return;
+  if (!o.syncId) return { tur: 'yok' };
   try {
     await window.bulut.setDoc(window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId), {
       ogretmenUid: kullanici.uid, ogrenciNo: o.no, ogrenciAd: o.ad, ogrenciSube: o.sube,
       bagliUid: null, paket: null, sunucuTs: null
     });
-  } catch (e) { /* yuva zaten ayrılmış olabilir ya da bağlantı sorunu var — sessizce geç */ }
+    return { tur: 'tamam' };
+  } catch (e) { return { tur: 'hata', mesaj: e.message || String(e) }; }
 }
+// Kayıp/silinmiş bir öğrenci cihazı için: yuvayı yeniden boşa çıkarır (bagliUid ve paket
+// null'a döner), kimlik alanları değişmez. oncedenAyir() ile aynı yazma işlemi — burada
+// yalnızca açık bir onay adımının (confirm) ardından, kullanıcıya görünür biçimde çağrılır.
+// Yalnızca bağlı, gerçek (anonim olmayan) bir öğretmen hesabı bunu yapabilir (bkz.
+// firestore.rules "sahip öğretmen" dalı).
+const bulutBaglantisiniSifirla = oncedenAyir;
 // Öğrenci tarafı: güncel sonuçlarını kendi bağlı yuvasına yazar. Firestore iç içe diziyi
 // (array-of-arrays) kabul etmediğinden, kayit satırları burada nesneye çevrilir; öğretmen
 // tarafı bunu geri çevirip mevcut sonucPaketiUygula()'ya verir (bkz. sunucudanCek).
@@ -3206,19 +3226,22 @@ async function sunucuyaGonder() {
 // sonucPaketiUygula()'ya verir.
 async function sunucudanCek() {
   if (!window.bulut) throw new Error('Bulut modülü yüklenemedi.');
-  await window.bulut.girisOgretmen();
+  const oncekiKullanici = window.bulut.mevcutKullanici();
+  if (!oncekiKullanici || oncekiKullanici.isAnonymous) await window.bulut.girisOgretmen();
   const rapor = [];
   for (let i = 0; i < D.ogr.length; i++) {
     const o = D.ogr[i];
     if (o.silindi || !o.syncId) continue;
-    let anlik;
-    try { anlik = await window.bulut.getDoc(window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId)); }
-    catch (e) { continue; }
-    if (!anlik.exists()) continue;
-    const veri = anlik.data();
-    if (!veri.paket || !veri.bagliUid) continue;
-    const kayitYerel = (veri.paket.kayit || []).map(r => [r.g, r.k, r.d, r.s, r.t]);
     try {
+      const anlik = await window.bulut.getDoc(window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId));
+      if (!anlik.exists()) continue;
+      const veri = anlik.data();
+      if (!veri.paket || !veri.bagliUid) continue;
+      if (!Array.isArray(veri.paket.kayit)) throw new Error('Buluttaki sonuç paketi bozuk (kayıt listesi yok).');
+      const kayitYerel = veri.paket.kayit.map(r => {
+        if (!r || typeof r !== 'object') throw new Error('Buluttaki sonuç paketinde geçersiz kayıt satırı var.');
+        return [r.g, r.k, r.d, r.s, r.t];
+      });
       rapor.push(sonucPaketiUygula({
         tur: veri.paket.tur, surum: veri.paket.surum, katalogImza: veri.paket.katalogImza,
         no: veri.ogrenciNo, ad: veri.ogrenciAd, sube: veri.ogrenciSube,
@@ -4354,11 +4377,26 @@ document.addEventListener('click', async ev => {
     const i = +opk.dataset.i, o = D.ogr[i];
     const pk = ogrenciPaketi(i);
     await kaydet(true);          // o.syncId yeni üretilmiş olabilir, kalıcı olsun
-    oncedenAyir(i);               // bulut yuvasını arka planda ayırır; başarısız olursa sessizce geçer
+    const ayirma = await oncedenAyir(i);
     const tamam = await indir('ogrenci-' + dosyaAdiParcasi(o.no || i, 'no') + '-' +
       dosyaAdiParcasi(o.ad, 'ogrenci').toLocaleLowerCase('tr') + '.yks.json',
       JSON.stringify(pk), 'json');
-    bilgiVer(tamam ? o.ad + ' için paket indirildi. Dosyayı kendisine gönderin.' : 'Paket oluşturulmadı; tekrar deneyin.');
+    let mesaj = tamam ? o.ad + ' için paket indirildi. Dosyayı kendisine gönderin.' : 'Paket oluşturulmadı; tekrar deneyin.';
+    if (ayirma.tur === 'hata') mesaj += ' Bulut yuvası ayrılamadı (' + ayirma.mesaj + ') — öğrenci yalnızca dosyayla senkronize edebilir.';
+    else if (ayirma.tur === 'baglanilmadi') mesaj += ' Buluta henüz bağlı değilsiniz; “Buluta bağlan”a tıklarsanız bu öğrenci de buluttan senkronize edebilir.';
+    bilgiVer(mesaj);
+    return;
+  }
+  const obsifirla = ev.target.closest('.ogrBulutSifirla');
+  if (obsifirla) {
+    const i = +obsifirla.dataset.i, o = D.ogr[i];
+    if (!confirm(o.ad + ' için bulut bağlantısı sıfırlanacak: öğrencinin eski cihazı artık senkronize edemeyecek, ' +
+      'yalnızca yeniden gönderdiğiniz paketi açan bir sonraki cihaz bağlanabilecek. Devam?')) return;
+    const sonuc = await bulutBaglantisiniSifirla(i);
+    if (sonuc.tur === 'tamam') bilgiVer(o.ad + ' için bulut bağlantısı sıfırlandı.');
+    else if (sonuc.tur === 'baglanilmadi') alert('Önce “Buluta bağlan”a tıklayın.');
+    else if (sonuc.tur === 'hata') alert('Sıfırlanamadı: ' + sonuc.mesaj);
+    else alert('Bu öğrencinin bulut yuvası yok (henüz paket indirilmemiş).');
     return;
   }
   const osil = ev.target.closest('.ogrSil');
