@@ -1,6 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    match /ogretmenler/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;   // yalnızca Firebase konsolundan elle eklenir, bkz. plan §1
+    }
+
     match /ogrenciler/{syncId} {
 
       function kimlikAlanlariAyni() {
@@ -8,33 +14,61 @@ service cloud.firestore {
           && request.resource.data.ogrenciNo == resource.data.ogrenciNo
           && request.resource.data.ogrenciAd == resource.data.ogrenciAd
           && request.resource.data.ogrenciSube == resource.data.ogrenciSube
-          && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','bagliUid','paket','sunucuTs']);
+          && request.resource.data.ogrenciBulutId == resource.data.ogrenciBulutId
+          && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','durum','sonrakiSyncId']);
       }
-      function gercekHesap() {
-        return request.auth.token.firebase.sign_in_provider != 'anonymous';
+      function yetkiliOgretmen() {
+        return request.auth.token.firebase.sign_in_provider != 'anonymous'
+          && exists(/databases/$(database)/documents/ogretmenler/$(request.auth.uid));
+      }
+      // Devre dışı bırakma sırasında, sonrakiSyncId'nin GERÇEKTEN bu işlemle birlikte
+      // YENİ oluşturulan, aynı öğretmen/öğrenciye ait, aktif bir belgeyi gösterdiğini
+      // doğrular. Saldırganlar zaten kimlikAlanlariAyni()/yetkiliOgretmen() ile
+      // engelleniyor — bu, hatalı istemci kodunun bozuk bir zincir yazmasına karşı
+      // ekstra bir güvence. !exists() belgenin transaction ÖNCESİ var olmadığını
+      // kanıtlar — yani bu belgenin YAZILMASI zorunlu olarak "create" kuralından geçer,
+      // ve o kural zaten bagliUid==null/paket==null/durum=='aktif' şartlarını kendi
+      // başına dayatır — burada onları tekrarlamaya gerek yok.
+      function sonrakiGecerli() {
+        let yeniYol = /databases/$(database)/documents/ogrenciler/$(request.resource.data.sonrakiSyncId);
+        let sonraki = getAfter(yeniYol).data;
+        return !exists(yeniYol)
+          && sonraki.durum == 'aktif'
+          && sonraki.ogretmenUid == resource.data.ogretmenUid
+          && sonraki.ogrenciNo == resource.data.ogrenciNo
+          && sonraki.ogrenciAd == resource.data.ogrenciAd
+          && sonraki.ogrenciSube == resource.data.ogrenciSube
+          && sonraki.ogrenciBulutId == resource.data.ogrenciBulutId;
       }
 
-      // Öğretmen kendi öğrencisi için ayrılmış boş yuvayı oluşturur. Yalnızca kalıcı
-      // (anonim olmayan) bir hesap yuva sahibi olabilir.
-      allow create: if request.auth != null && gercekHesap()
+      allow create: if request.auth != null && yetkiliOgretmen()
         && request.auth.uid == request.resource.data.ogretmenUid
         && request.resource.data.bagliUid == null
         && request.resource.data.paket == null
-        && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','bagliUid','paket','sunucuTs'])
-        && request.resource.data.ogrenciAd is string && request.resource.data.ogrenciAd.size() <= 100;
+        && request.resource.data.durum == 'aktif'
+        && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','durum'])
+        && request.resource.data.ogrenciAd is string && request.resource.data.ogrenciAd.size() <= 100
+        && request.resource.data.ogrenciBulutId is string && request.resource.data.ogrenciBulutId.size() > 0;
 
-      // Yalnızca bu yuvanın sahibi öğretmen ya da bağlı öğrenci cihazı okuyabilir.
+      // Devre dışı bırakılmış (durum != 'aktif') bir yuvayı artık yalnızca sahip öğretmen
+      // okuyabilir — eski/kayıp cihaz bir daha bu belgeyi okuyamaz, dolayısıyla
+      // sonrakiSyncId'yi asla öğrenemez. Öğretmen erişimi de allowlist'e bağlı: listeden
+      // çıkarılan bir öğretmen kendi eski kayıtlarını da okuyamaz olur.
       allow read: if request.auth != null &&
-        (request.auth.uid == resource.data.ogretmenUid || request.auth.uid == resource.data.bagliUid);
+        ((request.auth.uid == resource.data.ogretmenUid && yetkiliOgretmen())
+          || (request.auth.uid == resource.data.bagliUid && resource.data.durum == 'aktif'));
 
-      // (a) Öğrenci cihazı: ilk bağlanma ya da bağlıyken tekrar senkron — bagliUid ilk
-      //     bağlanmada null'dan kendi uid'sine geçebilir, sonrasında asla değişemez.
-      // (b) Sahip öğretmen: kayıp/silinmiş cihaz durumunda yuvayı sıfırlar (bagliUid ve
-      //     paket yeniden null olur). Her iki dalda da kimlik alanları asla değişemez.
       allow update: if request.auth != null && kimlikAlanlariAyni() && (
         (
-          ((resource.data.bagliUid == null && request.resource.data.bagliUid == request.auth.uid)
+          resource.data.durum == 'aktif'
+          && !('sonrakiSyncId' in request.resource.data)   // yalnızca devre dışı bırakma dalı bunu yazabilir
+          // Üretimde öğrenci cihazları HER ZAMAN anonim oturum açar (girisOgrenci()) — bunu
+          // burada da zorunlu kılmak, olası bir istemci hatasının (örn. paylaşılan auth
+          // örneğinde kalan gerçek bir hesabın) bu belgeyi hiç yazamamasını garantiler.
+          && request.auth.token.firebase.sign_in_provider == 'anonymous'
+          && ((resource.data.bagliUid == null && request.resource.data.bagliUid == request.auth.uid)
             || (resource.data.bagliUid == request.auth.uid && request.resource.data.bagliUid == resource.data.bagliUid))
+          && request.resource.data.durum == 'aktif'
           && request.resource.data.paket.tur == 'yks-sonuc'
           && request.resource.data.paket.kayit is list
           && request.resource.data.paket.kayit.size() <= 5000
@@ -42,8 +76,15 @@ service cloud.firestore {
         )
         ||
         (
-          request.auth.uid == resource.data.ogretmenUid && gercekHesap()
-          && request.resource.data.bagliUid == null && request.resource.data.paket == null
+          // Devre dışı bırakma (syncId rotasyonunun bir adımı): yalnızca durum ve
+          // sonrakiSyncId değişir; bagliUid (denetim için) ve paket (öğretmen zaten
+          // transaction içinde okudu) dokunulmaz.
+          request.auth.uid == resource.data.ogretmenUid && yetkiliOgretmen()
+          && resource.data.durum == 'aktif' && request.resource.data.durum == 'iptal'
+          && request.resource.data.sonrakiSyncId is string
+          && request.resource.data.bagliUid == resource.data.bagliUid
+          && request.resource.data.paket == resource.data.paket
+          && sonrakiGecerli()
         )
       );
 

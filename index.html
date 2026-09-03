@@ -348,8 +348,9 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 // Bulut senkronizasyonu (Firestore) — bkz. plan §1/§2/§3. Uygulamanın geri kalanı
 // module-script olmadığından, burada kurulan istemciler window.bulut üzerinden paylaşılır.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
-import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js';
+import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 // TODO: gerçek Firebase Console kurulumundan sonra bu değerleri değiştirin (plan §1).
 // Bu değerler istemci tarafında görünür olması güvenlik açığı YARATMAZ — asıl koruma
@@ -362,18 +363,29 @@ const uygulama = initializeApp(firebaseConfig);
 const auth = getAuth(uygulama);
 const db = getFirestore(uygulama);
 
+// App Check: yalnızca istemci tarafı bağlama. Gerçek koruma Firebase Console → App Check
+// üzerinden AYRI bir adımda etkinleştirilir (bkz. plan §1/§7) — bu, gerçek bir site
+// anahtarı girilene kadar hiçbir şey yapmaz.
+const RECAPTCHA_SITE_KEY = 'YER-TUTUCU-RECAPTCHA-SITE-KEY';
+if (!RECAPTCHA_SITE_KEY.includes('YER-TUTUCU')) {
+  initializeAppCheck(uygulama, { provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY), isTokenAutoRefreshEnabled: true });
+}
+
 // Öğrenci cihazı: sessiz, anonim giriş — kullanıcı hareketi gerekmez, ilk çağrıda başlar
-// ve sonucu bütün çağıranlar arasında paylaşılır.
+// ve sonucu bütün çağıranlar arasında paylaşılır. Kalıcı bir "çözülmüş kullanıcı" önbelleği
+// DEĞİL — yalnızca devam eden bir girişi tekilleştirir; auth.currentUser her çağrıda taze
+// okunur, böylece aynı sekmede "Verileri sıfırla" ile öğretmen rolüne geçilip geri
+// dönüldüğünde bayat bir kimlik asla döndürülmez.
 let ogrenciGirisi = null;
 function girisOgrenci() {
+  if (auth.currentUser && auth.currentUser.isAnonymous) return Promise.resolve(auth.currentUser);
   if (!ogrenciGirisi) {
-    ogrenciGirisi = new Promise((resolve, reject) => {
-      const zamanAsimi = setTimeout(() => reject(new Error('Bulut girişi zaman aşımına uğradı. İnternet bağlantınızı kontrol edin.')), 15000);
-      const durdur = onAuthStateChanged(auth, (kullanici) => {
-        if (kullanici) { clearTimeout(zamanAsimi); durdur(); resolve(kullanici); }
-      });
-      signInAnonymously(auth).catch((e) => { clearTimeout(zamanAsimi); reject(e); });
+    let zamanAsimiId;
+    const girisSonucu = signInAnonymously(auth).then(cred => { clearTimeout(zamanAsimiId); ogrenciGirisi = null; return cred.user; });
+    const zamanAsimi = new Promise((_, reject) => {
+      zamanAsimiId = setTimeout(() => reject(new Error('Bulut girişi zaman aşımına uğradı. İnternet bağlantınızı kontrol edin.')), 15000);
     });
+    ogrenciGirisi = Promise.race([girisSonucu, zamanAsimi]).catch((e) => { clearTimeout(zamanAsimiId); ogrenciGirisi = null; throw e; });
   }
   return ogrenciGirisi;
 }
@@ -384,11 +396,11 @@ function girisOgretmen() {
   return signInWithPopup(auth, new GoogleAuthProvider()).then(r => r.user);
 }
 
-window.bulut = { db, doc, getDoc, setDoc, updateDoc, girisOgrenci, girisOgretmen,
+window.bulut = { db, doc, getDoc, setDoc, updateDoc, runTransaction, girisOgrenci, girisOgretmen,
   mevcutKullanici: () => auth.currentUser,
   // Gerçek firebaseConfig değerleri girilene kadar bulut düğmeleri arayüzde gösterilmez —
   // yapılandırılmamış, kesin başarısız olacak kontroller kullanıcıya sunulmaz.
-  yapilandirilmis: firebaseConfig.apiKey !== 'YER-TUTUCU' };
+  yapilandirilmis: Object.values(firebaseConfig).every(v => typeof v === 'string' && v && !v.includes('YER-TUTUCU')) };
 </script>
 </head>
 <body>
@@ -2918,7 +2930,10 @@ function gorunumAyarlar() {
       : '<label class="dugme birincil" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
         '<input type="file" id="paketYukle" hidden></label>' +
         '<button class="dugme" id="sonucGonder">Sonuçlarımı dışa aktar</button>' +
-        (window.bulut && window.bulut.yapilandirilmis
+        // Firebase yapılandırılmış olsa bile, BU öğrencinin paketi buluta hazır bir
+        // syncId taşımıyorsa (ör. öğretmen buluta bağlanmadan önce indirilmiş bir dosya)
+        // düğme hiç gösterilmez — aksi halde tıklandığında kesin başarısız olurdu.
+        (window.bulut && window.bulut.yapilandirilmis && (D.ogr[0] || {}).syncId
           ? '<button class="dugme" id="bulutGonder">Sonuçlarımı buluta gönder</button>'
           : '')) +
     '<button class="dugme" id="sifirla">Verileri sıfırla</button></div>' +
@@ -2928,8 +2943,10 @@ function gorunumAyarlar() {
         'indirin ve kendisine gönderin. Öğrenci uygulamayı açıp “Öğrenciyim” der, dosyayı yükler; ' +
         'kendi planını görür ve sonuçlarını kendi girer. Girdiği sonuçları size dosya olarak' +
         (window.bulut && window.bulut.yapilandirilmis
-          ? ', ya da (internete bağlıysa) “Sonuçlarımı buluta gönder” ile gönderir; siz de yukarıdaki ' +
-            'düğmelerle içeri alırsınız. Buluttan çekebilmek için önce bir kere “Buluta bağlan”a tıklamanız gerekir.'
+          ? ', ya da (internete bağlıysa, ve önce buluta bağlanıp bu öğrenci için paket dosyası ' +
+            'oluşturduysanız) “Sonuçlarımı buluta gönder” ile gönderir; siz de yukarıdaki düğmelerle ' +
+            'içeri alırsınız. Öğrenciye buluta bağlanmadan ÖNCE bir dosya gönderdiyseniz, bulut ' +
+            'seçeneğinin görünmesi için “paket” ile dosyayı YENİDEN oluşturup göndermeniz gerekir.'
           : ' gönderir; siz de yukarıdaki düğmeyle içeri alırsınız.') + '</div>'
       : '') +
     '<div id="yapistirAlan" hidden style="margin-top:12px"><textarea id="yapistirMetin" rows="5" ' +
@@ -2947,6 +2964,18 @@ const PAKET_SURUM = 1;
 // değişebilir, birini bozan bir format değişikliği diğerini gereksiz yere geçersiz kılmasın.
 const SONUC_PAKET_SURUM = 2;
 const SONUC_KONU_AD_UST_SINIR = 160;
+// Bulut senkronizasyonu için kalıcı kimlikler: bir kere üretilir, paket her yeniden
+// oluşturulduğunda aynı kalır (öğrencinin Firestore'daki yuvası değişmez). syncId Firestore
+// belge kimliği; ogrenciBulutId ise AYRI ve DEĞİŞMEZ bir kimlik — syncId rotasyonlarında
+// (bkz. bulutBaglantisiniSifirla) yeniden üretilmeden kopyalanır, bu yüzden bulutYuvasiCoz
+// yerel kaydın gerçekten aynı öğrenciye ait bir Firestore belgesini takip ettiğini
+// doğrulayabilir (ad/no/şube gibi meşru şekilde değişebilen alanların aksine).
+function syncIdSagla(si) {
+  const o = D.ogr[si];
+  if (!o.syncId) o.syncId = crypto.randomUUID();
+  if (!o.ogrenciBulutId) o.ogrenciBulutId = crypto.randomUUID();
+  return o.syncId;
+}
 function ogrenciPaketi(si) {
   const o = D.ogr[si];
   const kart = {}, ekIx = {};
@@ -2967,9 +2996,6 @@ function ogrenciPaketi(si) {
   Object.keys(((D.ogrIslenis || {})[si]) || {}).forEach(k => isaretle(+k));
   const ekK = {};
   Object.keys(gerekli).forEach(ix => { ekK[ix] = (D.ekKonular || [])[ix]; });
-  // Bulut senkronizasyonu için kalıcı bir kimlik: bir kere üretilir, paket her
-  // yeniden oluşturulduğunda aynı kalır (öğrencinin Firestore'daki yuvası değişmez).
-  if (!o.syncId) o.syncId = crypto.randomUUID();
   return {
     tur: 'yks-ogrenci-paketi', surum: PAKET_SURUM, katalogImza: KATALOG_IMZA,
     kurum: D.kurum || '', tarih: bugunNo(), syncId: o.syncId,
@@ -3186,20 +3212,137 @@ async function oncedenAyir(si) {
   if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
   const o = D.ogr[si];
   if (!o.syncId) return { tur: 'yok' };
+  if (!o.ogrenciBulutId) {
+    // Eski yerel kayıtlar için tembel tamamlama — HEMEN kaydedilir, çünkü bu fonksiyon
+    // #bulutBaglan'ın toplu taramasından da çağrılır ve o döngü kendi başına kaydet()
+    // çağırmaz. Burada kaydedilmezse: setDoc Firestore'a bu ogrenciBulutId'yi yazar ama
+    // sayfa yeniden yüklenirse yerel D bunu unutur, bir sonraki çağrı FARKLI bir UUID
+    // üretir ve bulutYuvasiCoz bunu sahte bir kimlik uyuşmazlığı sanır.
+    o.ogrenciBulutId = crypto.randomUUID();
+    if (!(await kaydet(true))) return { tur: 'hata', mesaj: 'Cihaza kaydedilemedi; tekrar deneyin.' };
+  }
   try {
-    await window.bulut.setDoc(window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId), {
-      ogretmenUid: kullanici.uid, ogrenciNo: o.no, ogrenciAd: o.ad, ogrenciSube: o.sube,
-      bagliUid: null, paket: null, sunucuTs: null
-    });
-    return { tur: 'tamam' };
+    const coz = await bulutYuvasiCoz(si);
+    if (coz.hata) return { tur: 'hata', mesaj: coz.hata };
+    if (coz.anlik && coz.anlik.exists()) return { tur: 'zatenVar' };   // dokunma — asla mevcut bir belgeyi değiştirmez
+    try {
+      await window.bulut.setDoc(window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId), {
+        ogretmenUid: kullanici.uid, ogrenciNo: o.no, ogrenciAd: o.ad, ogrenciSube: o.sube,
+        ogrenciBulutId: o.ogrenciBulutId, bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif'
+      });
+      return { tur: 'tamam' };
+    } catch (e2) {
+      // İki sekme/oturum aynı anda aynı (daha önce hiç ayrılmamış) öğrenciyi ayırmaya
+      // çalışmış olabilir: create kuralı yalnızca BİRİNİ kabul eder, kaybeden taraf burada
+      // "permission-denied" alır. Veri kaybı yok — sadece yeniden okuyup kazananın
+      // belgesini bulmak yeterli.
+      const coz2 = await bulutYuvasiCoz(si);
+      if (coz2.hata) return { tur: 'hata', mesaj: coz2.hata };
+      if (coz2.anlik && coz2.anlik.exists()) return { tur: 'zatenVar' };
+      return { tur: 'hata', mesaj: e2.message || String(e2) };
+    }
   } catch (e) { return { tur: 'hata', mesaj: e.message || String(e) }; }
 }
-// Kayıp/silinmiş bir öğrenci cihazı için: yuvayı yeniden boşa çıkarır (bagliUid ve paket
-// null'a döner), kimlik alanları değişmez. oncedenAyir() ile aynı yazma işlemi — burada
-// yalnızca açık bir onay adımının (confirm) ardından, kullanıcıya görünür biçimde çağrılır.
-// Yalnızca bağlı, gerçek (anonim olmayan) bir öğretmen hesabı bunu yapabilir (bkz.
-// firestore.rules "sahip öğretmen" dalı).
-const bulutBaglantisiniSifirla = oncedenAyir;
+// Yerel syncId işaretçisini, işaret ettiği belge devre dışıysa (durum:'iptal') zincir
+// boyunca ileri taşır: her devre dışı durağın bekleyen bir paketi varsa ÖNCE içeri alır,
+// SONRA ilerler — aksi halde eski yuvadaki bir sonuç sessizce erişilemez hale gelir.
+// kaydet() başarısız olursa işaretçi ESKİ değerine döner (D.log'daki içe alınmış satırlar
+// kalır — yeniden denemek güvenli) ki BİR SONRAKİ çağrı kaydetmeyi açıkça tekrar dener.
+async function bulutYuvasiCoz(si) {
+  const o = D.ogr[si];
+  const baslangicSyncId = o.syncId;
+  let syncId = o.syncId, anlik = null, atlanan = 0, degisti = false;
+  const gorulen = new Set();
+  while (syncId) {
+    if (gorulen.has(syncId)) return { anlik: null, syncId: null, hata: 'Bulut yuva zincirinde döngü bulundu; desteğe başvurun.' };
+    if (atlanan >= 50) return { anlik: null, syncId: null, hata: 'Bulut yuva zinciri çok uzun; desteğe başvurun.' };
+    gorulen.add(syncId);
+    anlik = await window.bulut.getDoc(window.bulut.doc(window.bulut.db, 'ogrenciler', syncId));
+    if (!anlik.exists()) {
+      // atlanan===0: bu öğrenci için henüz hiç yuva ayrılmamış — normal, hata değil.
+      // atlanan>0: kurallarca garanti edilen bir zincirin ortasında belge KAYIP —
+      // asla olmaması gereken bir bozulma/hata sinyali, sessizce yutulmamalı.
+      return { anlik: null, syncId: null, hata: atlanan > 0 ? 'Bulut zinciri kırık: bir sonraki yuva artık yok; desteğe başvurun.' : null };
+    }
+    const veri = anlik.data();
+    if (o.ogrenciBulutId && veri.ogrenciBulutId !== o.ogrenciBulutId) {
+      // Yerel syncId bozulmuş/karışmış olabilir ve başka bir öğrenciye ait bir belgeye
+      // işaret ediyor olabilir. ogretmenUid eşleşmesi zaten sunucu tarafında allow read
+      // ile garanti; ogrenciBulutId AYNI öğretmenin FARKLI bir öğrencisine karışmayı da
+      // kapatır — ogrenciNo/Ad/Sube'nin aksine bu alan hiçbir zaman meşru şekilde değişmez.
+      return { anlik, syncId, hata: 'Bulut yuvası başka bir öğrenciye ait görünüyor (kimlik uyuşmuyor); desteğe başvurun.' };
+    }
+    if (veri.durum === 'aktif') break;
+    if (!veri.sonrakiSyncId) return { anlik, syncId, hata: 'Bulut yuvası devre dışı ama bir sonraki adres yok.' };
+    if (veri.paket) {
+      if (!Array.isArray(veri.paket.kayit)) return { anlik, syncId, hata: 'Eski sonuç paketi bozuk (kayıt listesi yok); ilerlenmedi.' };
+      try {
+        const kayitYerel = veri.paket.kayit.map(r => [r.g, r.k, r.d, r.s, r.t]);
+        sonucPaketiUygula({ tur: veri.paket.tur, surum: veri.paket.surum, katalogImza: veri.paket.katalogImza,
+          no: o.no, ad: o.ad, sube: o.sube, kayit: kayitYerel, konular: veri.paket.konular });
+      } catch (e) { return { anlik, syncId, hata: 'Eski sonuç içeri alınamadı: ' + (e.message || e) }; }   // ilerleme YOK
+    }
+    syncId = veri.sonrakiSyncId; atlanan++; degisti = true;
+  }
+  if (degisti) {
+    o.syncId = syncId;
+    const kayitTamam = await kaydet(true);
+    if (!kayitTamam) {
+      o.syncId = baslangicSyncId;
+      return { anlik, syncId, hata: 'Cihaza kaydedilemedi; bir sonraki bulut işleminde tekrar denenecek.' };
+    }
+  }
+  return { anlik, syncId, hata: null };
+}
+// Kayıp/silinmiş bir öğrenci cihazı için gerçek kurtarma: syncId'yi ROTASYONLA yeniler.
+// Eski yuva kalıcı olarak dondurulur (durum:'iptal') — eski cihaz bir daha ne yazabilir ne
+// okuyabilir, dolayısıyla yeni syncId'yi asla öğrenemez. Yalnızca bağlı, gerçek (anonim
+// olmayan), allowlist'teki bir öğretmen hesabı bunu yapabilir (bkz. firestore.rules).
+async function bulutBaglantisiniSifirla(si) {
+  if (!window.bulut) return { tur: 'yok' };
+  const kullanici = window.bulut.mevcutKullanici();
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
+  const o = D.ogr[si];
+  if (!o.syncId) return { tur: 'yok' };
+  const coz1 = await bulutYuvasiCoz(si);   // önce olası tamamlanmamış bir önceki rotasyonu bitir
+  if (coz1.hata) return { tur: 'hata', mesaj: coz1.hata };
+  if (!coz1.anlik || !coz1.anlik.exists() || !coz1.anlik.data().bagliUid) return { tur: 'zatenBos' };
+  const eskiRef = window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId);
+  const yeniSyncId = crypto.randomUUID();
+  const yeniRef = window.bulut.doc(window.bulut.db, 'ogrenciler', yeniSyncId);
+  let sonuc;
+  try {
+    sonuc = await window.bulut.runTransaction(async (tx) => {
+      const anlik = await tx.get(eskiRef);
+      if (!anlik.exists() || anlik.data().durum !== 'aktif' || !anlik.data().bagliUid) return { zatenBos: true };
+      const veri = anlik.data();
+      tx.update(eskiRef, { durum: 'iptal', sonrakiSyncId: yeniSyncId });
+      tx.set(yeniRef, {
+        // ogrenciBulutId KOPYALANIR, asla yeniden üretilmez — rotasyonlar arasında sabit
+        // kalması bu alanın tüm amacı.
+        ogretmenUid: kullanici.uid, ogrenciNo: veri.ogrenciNo, ogrenciAd: veri.ogrenciAd, ogrenciSube: veri.ogrenciSube,
+        ogrenciBulutId: veri.ogrenciBulutId, bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif'
+      });
+      return { zatenBos: false };
+    });
+  } catch (e) { return { tur: 'hata', mesaj: e.message || String(e) }; }
+  if (sonuc.zatenBos) {
+    // Transaction sırasında biri (başka bir sekme/oturum) zaten sıfırlamış — bu sekmenin
+    // o.syncId'si artık eski, devre dışı bir belgeyi gösteriyor. Hemen şimdi izleyip yerel
+    // kaydı güncelle; aksi hâlde bu sekme bir sonraki bulut işlemine kadar eski kalır. Bu
+    // izleme çağrısının KENDİSİ de başarısız olabilir — o hatayı sessizce yutmak yerine
+    // kismenTamam olarak yukarı taşı.
+    const coz3 = await bulutYuvasiCoz(si);
+    if (coz3.hata) return { tur: 'kismenTamam', mesaj: coz3.hata };
+    return { tur: 'zatenBos' };
+  }
+  // Transaction ATOMİK olarak uygulandı: eski yuva artık kalıcı olarak dondu, sonrakiSyncId'yi
+  // taşıyor. İçeri alma + ilerletme, TEK bir yerde (bulutYuvasiCoz) uygulanan aynı
+  // invaryanttan geçsin diye burada TEKRARLANMAZ.
+  const coz2 = await bulutYuvasiCoz(si);
+  if (coz2.hata) return { tur: 'kismenTamam', mesaj: coz2.hata };
+  return { tur: 'tamam' };
+}
 // Öğrenci tarafı: güncel sonuçlarını kendi bağlı yuvasına yazar. Firestore iç içe diziyi
 // (array-of-arrays) kabul etmediğinden, kayit satırları burada nesneye çevrilir; öğretmen
 // tarafı bunu geri çevirip mevcut sonucPaketiUygula()'ya verir (bkz. sunucudanCek).
@@ -3233,8 +3376,15 @@ async function sunucudanCek() {
     const o = D.ogr[i];
     if (o.silindi || !o.syncId) continue;
     try {
-      const anlik = await window.bulut.getDoc(window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId));
-      if (!anlik.exists()) continue;
+      // bulutYuvasiCoz, yerel işaretçi devre dışı bir belgede kalmışsa (ör. yarım kalmış
+      // bir sıfırlama) bekleyen sonucu içeri alıp ilerletir — bu yüzden sıradan bir çekim
+      // bile bunu yakalar, yalnızca sıfırlama düğmesi yeniden denendiğinde değil.
+      const { anlik, hata } = await bulutYuvasiCoz(i);
+      if (hata) { rapor.push({ hata: o.ad + ': ' + hata }); continue; }
+      if (!anlik || !anlik.exists()) {
+        rapor.push({ hata: o.ad + ': bulut yuvası bulunamadı — buluta bağlıyken "paket" ile yeniden dosya oluşturun.' });
+        continue;
+      }
       const veri = anlik.data();
       if (!veri.paket || !veri.bagliUid) continue;
       if (!Array.isArray(veri.paket.kayit)) throw new Error('Buluttaki sonuç paketi bozuk (kayıt listesi yok).');
@@ -4375,27 +4525,35 @@ document.addEventListener('click', async ev => {
   const opk = ev.target.closest('.ogrPaket');
   if (opk) {
     const i = +opk.dataset.i, o = D.ogr[i];
-    const pk = ogrenciPaketi(i);
-    await kaydet(true);          // o.syncId yeni üretilmiş olabilir, kalıcı olsun
-    const ayirma = await oncedenAyir(i);
+    syncIdSagla(i);
+    const kayitTamam = await kaydet(true);
+    let ayirma = { tur: 'yok' };
+    if (kayitTamam) ayirma = await oncedenAyir(i);   // burada o.syncId ileri taşınmış olabilir (bulutYuvasiCoz)
+    const pk = ogrenciPaketi(i);              // artık SAF — yalnızca bir kez, her şey çözüldükten SONRA çağrılır
+    const bulutHazir = ayirma.tur === 'tamam' || ayirma.tur === 'zatenVar';
+    if (!bulutHazir) { delete pk.syncId; if (pk.ogr) delete pk.ogr.syncId; }   // dosya bulut vaat ETMESİN
     const tamam = await indir('ogrenci-' + dosyaAdiParcasi(o.no || i, 'no') + '-' +
       dosyaAdiParcasi(o.ad, 'ogrenci').toLocaleLowerCase('tr') + '.yks.json',
       JSON.stringify(pk), 'json');
     let mesaj = tamam ? o.ad + ' için paket indirildi. Dosyayı kendisine gönderin.' : 'Paket oluşturulmadı; tekrar deneyin.';
-    if (ayirma.tur === 'hata') mesaj += ' Bulut yuvası ayrılamadı (' + ayirma.mesaj + ') — öğrenci yalnızca dosyayla senkronize edebilir.';
-    else if (ayirma.tur === 'baglanilmadi') mesaj += ' Buluta henüz bağlı değilsiniz; “Buluta bağlan”a tıklarsanız bu öğrenci de buluttan senkronize edebilir.';
+    if (!kayitTamam) mesaj += ' Cihaza kaydedilemediği için bulut yuvası ayrılamadı; dosyayla göndermeye devam edebilirsiniz, sonra tekrar deneyin.';
+    else if (ayirma.tur === 'hata') mesaj += ' Bulut yuvası ayrılamadı (' + ayirma.mesaj + ') — bu dosya yalnızca dosyayla senkronize edebilir; düzeltip PAKETİ YENİDEN OLUŞTURMANIZ gerekecek.';
+    else if (ayirma.tur === 'baglanilmadi') mesaj += ' Buluta henüz bağlı değilsiniz; bu dosya şimdilik yalnızca dosyayla senkronize edebilir. Buluta bağlandıktan sonra bu öğrenci için PAKETİ YENİDEN İNDİRİP GÖNDERMENİZ gerekir — bu dosya kendiliğinden bulut kazanmaz.';
     bilgiVer(mesaj);
     return;
   }
   const obsifirla = ev.target.closest('.ogrBulutSifirla');
   if (obsifirla) {
     const i = +obsifirla.dataset.i, o = D.ogr[i];
-    if (!confirm(o.ad + ' için bulut bağlantısı sıfırlanacak: öğrencinin eski cihazı artık senkronize edemeyecek, ' +
-      'yalnızca yeniden gönderdiğiniz paketi açan bir sonraki cihaz bağlanabilecek. Devam?')) return;
+    if (!confirm(o.ad + ' için bulut bağlantısı sıfırlanacak: yeni bir bulut adresi üretilecek, öğrencinin ' +
+      'eski cihazı bu belgeyi bir daha ne yazabilecek ne de okuyabilecek (dolayısıyla yeni adresi asla ' +
+      'öğrenemeyecek) — yalnızca yeniden gönderdiğiniz paketi açan bir sonraki cihaz bağlanabilecek. Devam?')) return;
     const sonuc = await bulutBaglantisiniSifirla(i);
     if (sonuc.tur === 'tamam') bilgiVer(o.ad + ' için bulut bağlantısı sıfırlandı.');
+    else if (sonuc.tur === 'kismenTamam') alert('Bulut bağlantısı sıfırlandı ama şu adım tamamlanamadı: ' + sonuc.mesaj + ' Tekrar “bulutu sıfırla”ya tıklayın.');
     else if (sonuc.tur === 'baglanilmadi') alert('Önce “Buluta bağlan”a tıklayın.');
     else if (sonuc.tur === 'hata') alert('Sıfırlanamadı: ' + sonuc.mesaj);
+    else if (sonuc.tur === 'zatenBos') alert('Bu öğrencinin bağlı bir cihazı yok; sıfırlamaya gerek yok.');
     else alert('Bu öğrencinin bulut yuvası yok (henüz paket indirilmemiş).');
     return;
   }
@@ -4948,7 +5106,22 @@ document.addEventListener('click', async ev => {
     try {
       if (!window.bulut) throw new Error('Bulut modülü yüklenemedi.');
       const kullanici = await window.bulut.girisOgretmen();
-      bilgiVer('Buluta bağlandınız: ' + (kullanici.email || kullanici.uid) + '.');
+      // Zaten dosyayla gönderilmiş (syncId'si olan) her öğrenci için bulut yuvasını
+      // otomatik ayır — böylece daha önce indirilmiş dosyalar da buluttan senkronize
+      // edebilir hâle gelir, öğretmenin her öğrenci için tek tek "bulutu sıfırla" ya da
+      // "paket"i yeniden indirip göndermesi gerekmez.
+      const basarisiz = [], ayrilanlar = [];
+      for (const [i, o] of D.ogr.entries()) {
+        if (o.silindi || !o.syncId) continue;
+        const sonuc = await oncedenAyir(i);
+        if (sonuc.tur === 'hata') basarisiz.push(o.ad + ' (' + sonuc.mesaj + ')');
+        else if (sonuc.tur === 'tamam') ayrilanlar.push(o.ad);
+      }
+      bilgiVer('Buluta bağlandınız: ' + (kullanici.email || kullanici.uid) + '.' +
+        (ayrilanlar.length ? ' Şunlar için bulut yuvası ayrıldı: ' + ayrilanlar.join(', ') +
+          ' — bu öğrencilere DAHA ÖNCE paket gönderdiyseniz, buluttan senkronize edebilmeleri için "paket" ile ' +
+          'yeniden bir dosya indirip göndermeniz gerekir (eski dosyada bulut adresi yoktu).' : '') +
+        (basarisiz.length ? ' Bazı öğrenciler için bulut yuvası ayrılamadı: ' + basarisiz.join(', ') + '.' : ''));
     } catch (e) { alert('Buluta bağlanılamadı: ' + (e.message || e)); }
     return;
   }
