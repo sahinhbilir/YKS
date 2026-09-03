@@ -3114,8 +3114,10 @@ function kullaniciKonusuTam(dersIdx, ad) {
   D.ekKonular.push([dersIdx, 12, 'Sonuç paketinden', ad, 0, '']);
   return KATALOG.length + D.ekKonular.length - 1;
 }
-// öğretmen tarafında sonuç paketini işle
-function sonucPaketiUygula(pk) {
+// öğretmen tarafında sonuç paketini işle. hedefSi yalnızca bulut akışının, sabit
+// ogrenciBulutId ile zaten doğruladığı yerel öğrenci indeksidir. Dosya içe aktarma
+// hedefSi göndermez ve aşağıdaki numara/ad eşleştirmesini kullanmaya devam eder.
+function sonucPaketiUygula(pk, hedefSi) {
   if (!pk || pk.tur !== 'yks-sonuc') throw new Error('Bu dosya bir sonuç paketi değil.');
   if (pk.surum !== 1 && pk.surum !== SONUC_PAKET_SURUM) throw new Error('Bu sonuç paketi bu uygulama sürümüyle uyumlu değil ' +
     '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', desteklenen: 1 veya ' + SONUC_PAKET_SURUM +
@@ -3124,15 +3126,23 @@ function sonucPaketiUygula(pk) {
     throw new Error('Sonuç paketi farklı bir konu kataloğuyla oluşturulmuş.');
   if (!Array.isArray(pk.kayit)) throw new Error('Sonuç paketinde kayıt listesi yok.');
   if (pk.kayit.length > 50000) throw new Error('Sonuç paketi beklenenden büyük.');
-  const noEslesme = pk.no === undefined || pk.no === null || pk.no === '' ? [] :
-    D.ogr.map((o, i) => ({ o: o, i: i })).filter(x => !x.o.silindi && String(x.o.no) === String(pk.no));
-  const adEslesme = pk.ad ? D.ogr.map((o, i) => ({ o: o, i: i })).filter(x => !x.o.silindi &&
-    x.o.ad.toLocaleLowerCase('tr') === String(pk.ad).toLocaleLowerCase('tr') &&
-    (!pk.sube || x.o.sube === pk.sube)) : [];
-  const aday = noEslesme.length ? noEslesme : adEslesme;
-  if (aday.length !== 1) throw new Error(aday.length ? 'Öğrenci eşleşmesi belirsiz; numara/şubeyi kontrol edin.' :
-    (pk.ad || pk.no) + ' listede bulunamadı.');
-  const si = aday[0].i;
+  let si;
+  if (hedefSi !== undefined) {
+    if (!Number.isInteger(hedefSi) || hedefSi < 0 || hedefSi >= D.ogr.length ||
+        !D.ogr[hedefSi] || D.ogr[hedefSi].silindi)
+      throw new Error('Bulut sonucu için hedef öğrenci geçersiz.');
+    si = hedefSi;
+  } else {
+    const noEslesme = pk.no === undefined || pk.no === null || pk.no === '' ? [] :
+      D.ogr.map((o, i) => ({ o: o, i: i })).filter(x => !x.o.silindi && String(x.o.no) === String(pk.no));
+    const adEslesme = pk.ad ? D.ogr.map((o, i) => ({ o: o, i: i })).filter(x => !x.o.silindi &&
+      x.o.ad.toLocaleLowerCase('tr') === String(pk.ad).toLocaleLowerCase('tr') &&
+      (!pk.sube || x.o.sube === pk.sube)) : [];
+    const aday = noEslesme.length ? noEslesme : adEslesme;
+    if (aday.length !== 1) throw new Error(aday.length ? 'Öğrenci eşleşmesi belirsiz; numara/şubeyi kontrol edin.' :
+      (pk.ad || pk.no) + ' listede bulunamadı.');
+    si = aday[0].i;
+  }
 
   // 1) Konu çözüm planı + tam doğrulama — bu adımda D'ye hiçbir şey yazılmaz. Gönderenin
   // "ki" numarası yalnızca kendi cihazında anlamlıydı; katalog dışı her numara burada
@@ -3279,7 +3289,7 @@ async function bulutYuvasiCoz(si) {
       try {
         const kayitYerel = veri.paket.kayit.map(r => [r.g, r.k, r.d, r.s, r.t]);
         sonucPaketiUygula({ tur: veri.paket.tur, surum: veri.paket.surum, katalogImza: veri.paket.katalogImza,
-          no: o.no, ad: o.ad, sube: o.sube, kayit: kayitYerel, konular: veri.paket.konular });
+          no: o.no, ad: o.ad, sube: o.sube, kayit: kayitYerel, konular: veri.paket.konular }, si);
       } catch (e) { return { anlik, syncId, hata: 'Eski sonuç içeri alınamadı: ' + (e.message || e) }; }   // ilerleme YOK
     }
     syncId = veri.sonrakiSyncId; atlanan++; degisti = true;
@@ -3363,10 +3373,9 @@ async function sunucuyaGonder() {
   });
   return pk.kayit.length;
 }
-// Öğretmen tarafı: kendi listesindeki her syncId için yuvayı okur; kimliği HER ZAMAN
-// öğretmenin kendisinin yazdığı ogrenciNo/Ad/Sube'den alır (paket'in kendi bildirdiği
-// alanlardan değil), sonra kayıtları tekrar diziye çevirip mevcut, değişmemiş
-// sonucPaketiUygula()'ya verir.
+// Öğretmen tarafı: kendi listesindeki her syncId için yuvayı okur. bulutYuvasiCoz()
+// sabit ogrenciBulutId'yi doğruladıktan sonra aynı yerel öğrenci indeksini içe aktarıcıya
+// açıkça geçirir; değişebilen numara/ad/şube ile ikinci kez öğrenci aramaz.
 async function sunucudanCek() {
   if (!window.bulut) throw new Error('Bulut modülü yüklenemedi.');
   const oncekiKullanici = window.bulut.mevcutKullanici();
@@ -3396,7 +3405,7 @@ async function sunucudanCek() {
         tur: veri.paket.tur, surum: veri.paket.surum, katalogImza: veri.paket.katalogImza,
         no: veri.ogrenciNo, ad: veri.ogrenciAd, sube: veri.ogrenciSube,
         kayit: kayitYerel, konular: veri.paket.konular
-      }));
+      }, i));
     } catch (e) { rapor.push({ hata: o.ad + ': ' + (e.message || e) }); }
   }
   return rapor;
@@ -5106,10 +5115,9 @@ document.addEventListener('click', async ev => {
     try {
       if (!window.bulut) throw new Error('Bulut modülü yüklenemedi.');
       const kullanici = await window.bulut.girisOgretmen();
-      // Zaten dosyayla gönderilmiş (syncId'si olan) her öğrenci için bulut yuvasını
-      // otomatik ayır — böylece daha önce indirilmiş dosyalar da buluttan senkronize
-      // edebilir hâle gelir, öğretmenin her öğrenci için tek tek "bulutu sıfırla" ya da
-      // "paket"i yeniden indirip göndermesi gerekmez.
+      // syncId'si olan her öğrenci için bulut yuvasını otomatik ayır. Daha önce gönderilen
+      // file-only paket bulut adresi taşımadığı için kendiliğinden bulut kazanmaz; aşağıdaki
+      // mesaj öğretmene o öğrenci için paketi yeniden indirip göndermesini açıkça söyler.
       const basarisiz = [], ayrilanlar = [];
       for (const [i, o] of D.ogr.entries()) {
         if (o.silindi || !o.syncId) continue;

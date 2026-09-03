@@ -296,6 +296,59 @@ test('sunucudanCek-reports-non-array-kayit-as-hata', async () => {
   assert(rapor.length === 1 && rapor[0].hata, 'non-array kayit must be reported as hata');
 });
 
+test('sunucudanCek-keeps-validated-target-after-roster-identity-edit', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 99, ad: 'Yeni Ad', sube: '12B', syncId: 's1', ogrenciBulutId: 'b1' })]);
+  const docs = {
+    s1: { ogretmenUid: 'teacher-uid', ogrenciNo: 1, ogrenciAd: 'Eski Ad', ogrenciSube: '12A', ogrenciBulutId: 'b1',
+      durum: 'aktif', bagliUid: 'stu1', paket: { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 1, k: 5, d: 8, s: 10, t: 1 }], konular: {} } }
+  };
+  sandbox.window.bulut = baseBulut({ getDoc: async (id) => docSnap(!!docs[id], docs[id]) });
+  const rapor = await run('sunucudanCek()');
+  assert(rapor.length === 1 && !rapor[0].hata, 'a roster rename/renumber must not break an already-validated cloud link: ' + JSON.stringify(rapor));
+  equal(rapor[0].ad, 'Yeni Ad', 'the result must be reported under the current local identity');
+  equal(run('D.log.length'), 1, 'the cloud result must be imported');
+  equal(run('D.log[0][1]'), 0, 'the result must be written to the validated local student index');
+});
+
+test('sunucudanCek-duplicate-numbers-use-validated-cloud-target', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [
+    student({ no: 7, ad: 'Hedef Ogrenci', sube: '12A', syncId: 's1', ogrenciBulutId: 'b1' }),
+    student({ no: 7, ad: 'Baska Ogrenci', sube: '12B' })
+  ]);
+  const docs = {
+    s1: { ogretmenUid: 'teacher-uid', ogrenciNo: 7, ogrenciAd: 'Hedef Ogrenci', ogrenciSube: '12A', ogrenciBulutId: 'b1',
+      durum: 'aktif', bagliUid: 'stu1', paket: { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 1, k: 5, d: 7, s: 10, t: 1 }], konular: {} } }
+  };
+  sandbox.window.bulut = baseBulut({ getDoc: async (id) => docSnap(!!docs[id], docs[id]) });
+  const rapor = await run('sunucudanCek()');
+  assert(rapor.length === 1 && !rapor[0].hata, 'duplicate student numbers must not make a validated cloud target ambiguous: ' + JSON.stringify(rapor));
+  equal(run('D.log.length'), 1, 'the cloud result must be imported exactly once');
+  equal(run('D.log[0][1]'), 0, 'the result must belong to the student whose stable cloud id was validated');
+});
+
+test('bulutYuvasiCoz-old-package-uses-validated-target-with-duplicate-numbers', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [
+    student({ no: 7, ad: 'Hedef Ogrenci', sube: '12A', syncId: 'old', ogrenciBulutId: 'b1' }),
+    student({ no: 7, ad: 'Baska Ogrenci', sube: '12B' })
+  ]);
+  const docs = {
+    old: { ogretmenUid: 'teacher-uid', ogrenciNo: 7, ogrenciAd: 'Hedef Ogrenci', ogrenciSube: '12A', ogrenciBulutId: 'b1',
+      durum: 'iptal', sonrakiSyncId: 'new', bagliUid: 'stu1',
+      paket: { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 1, k: 5, d: 9, s: 10, t: 1 }], konular: {} } },
+    new: { ogretmenUid: 'teacher-uid', ogrenciNo: 7, ogrenciAd: 'Hedef Ogrenci', ogrenciSube: '12A', ogrenciBulutId: 'b1',
+      durum: 'aktif', bagliUid: null, paket: null }
+  };
+  sandbox.window.bulut = baseBulut({ getDoc: async (id) => docSnap(!!docs[id], docs[id]) });
+  const sonuc = await run('bulutYuvasiCoz(0)');
+  assert(!sonuc.hata, 'a pending package in a rotated slot must use the already-validated target: ' + JSON.stringify(sonuc));
+  equal(run('D.ogr[0].syncId'), 'new', 'the cloud pointer must advance after the import');
+  equal(run('D.log.length'), 1, 'the pending result must be imported');
+  equal(run('D.log[0][1]'), 0, 'the pending result must belong to the validated student');
+});
+
 // ================================================================== (j) .ogrPaket handler: final syncId, honest file-only fallback
 test('ogrPaket-package-carries-post-resolution-syncId', async () => {
   const { sandbox, run, listeners } = loadAppSandbox();
