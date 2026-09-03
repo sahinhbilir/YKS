@@ -2933,6 +2933,7 @@ const PAKET_SURUM = 1;
 // Sonuç paketi, öğrenci paketinden ayrı bir sürüm numarası taşır: ikisi farklı zamanlarda
 // değişebilir, birini bozan bir format değişikliği diğerini gereksiz yere geçersiz kılmasın.
 const SONUC_PAKET_SURUM = 2;
+const SONUC_KONU_AD_UST_SINIR = 160;
 function ogrenciPaketi(si) {
   const o = D.ogr[si];
   const kart = {}, ekIx = {};
@@ -3029,7 +3030,9 @@ function sonucPaketi(sinir) {
     const ki = k[1];
     if (ki >= KATALOG.length && konular[ki] === undefined) {
       const kk = konuAl(ki);
-      if (kk) konular[ki] = [kk[0], kk[3]];
+      if (!kk) throw new Error('Dışa aktarılacak sonuçta bulunamayan bir özel konu var. Yedeği kontrol edin.');
+      const bilgi = sonucKonuBilgisiDogrula(kk[0], kk[3]);
+      konular[ki] = [bilgi.dersIdx, bilgi.ad];
     }
   });
   return { tur: 'yks-sonuc', surum: SONUC_PAKET_SURUM, katalogImza: KATALOG_IMZA,
@@ -3042,12 +3045,26 @@ function sonucPaketi(sinir) {
 // bağımsız cihazın konu listelerini uzlaştırırken çok daha pahalı bir hataya dönüşür —
 // "Fonksiyonlarda İşlemler" ile "Fonksiyonlarda İşlemler ve Uygulamalar" gibi iki farklı
 // konu, ya da başka bir dersteki aynı adlı bir konu, yanlışlıkla birleştirilebilir.
+// PDF ders adı eşleştirmesi için tasarlanan iskelet() burada kullanılmaz: o fonksiyon bazı
+// Türkçe harfleri ve noktalama işaretlerini bilerek siler, dolayısıyla iki ayrı konu adını
+// aynı anahtara indirgeyebilir.
+function konuAdiTamAnahtari(ad) {
+  return String(ad).normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr');
+}
+function sonucKonuBilgisiDogrula(dersIdx, ad) {
+  const temizAd = typeof ad === 'string' ? ad.trim().replace(/\s+/g, ' ') : '';
+  if (!Number.isInteger(dersIdx) || dersIdx < 0 || dersIdx >= DERS.length)
+    throw new Error('Sonuç paketinde geçersiz ders numarası var.');
+  if (!temizAd || temizAd.length > SONUC_KONU_AD_UST_SINIR)
+    throw new Error('Sonuç paketinde geçersiz konu adı var.');
+  return { dersIdx: dersIdx, ad: temizAd };
+}
 function konuBulTamEslesme(dersIdx, ad) {
-  const t = iskelet(ad);
+  const t = konuAdiTamAnahtari(ad);
   for (let i = 0; i < konuSayisi(); i++) {
     const k = konuAl(i);
     if (!k || k[6]) continue;
-    if (k[0] === dersIdx && iskelet(k[3]) === t) return i;
+    if (k[0] === dersIdx && konuAdiTamAnahtari(k[3]) === t) return i;
   }
   return -1;
 }
@@ -3062,7 +3079,7 @@ function kullaniciKonusuTam(dersIdx, ad) {
 function sonucPaketiUygula(pk) {
   if (!pk || pk.tur !== 'yks-sonuc') throw new Error('Bu dosya bir sonuç paketi değil.');
   if (pk.surum !== 1 && pk.surum !== SONUC_PAKET_SURUM) throw new Error('Bu sonuç paketi bu uygulama sürümüyle uyumlu değil ' +
-    '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', beklenen: ' + SONUC_PAKET_SURUM +
+    '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', desteklenen: 1 veya ' + SONUC_PAKET_SURUM +
     '). Öğrenciden güncel bir uygulama ile oluşturulmuş bir dosya isteyin.');
   if (pk.katalogImza && pk.katalogImza !== KATALOG_IMZA)
     throw new Error('Sonuç paketi farklı bir konu kataloğuyla oluşturulmuş.');
@@ -3082,27 +3099,33 @@ function sonucPaketiUygula(pk) {
   // "ki" numarası yalnızca kendi cihazında anlamlıydı; katalog dışı her numara burada
   // ada/derse göre yeniden çözülür. Bozuk bir satır varsa, henüz hiçbir konu
   // oluşturulmamışken burada fırlatılır — kısmi/yarım bir durum asla kalmaz.
+  if (pk.surum === SONUC_PAKET_SURUM &&
+      (!pk.konular || typeof pk.konular !== 'object' || Array.isArray(pk.konular)))
+    throw new Error('Sonuç paketinde konu eşleştirme bilgisi yok. Öğrenciden dosyayı güncel uygulamayla yeniden oluşturmasını isteyin.');
   const konular = pk.konular || {};
   const cozum = {};
   const dogrulanmis = [];
   pk.kayit.forEach((k, i) => {
     if (!Array.isArray(k) || k.length < 4) throw new Error('Geçersiz sonuç paketi kaydı: ' + (i + 1) + '. satır.');
-    const senderKi = +k[1];
+    const senderKi = k[1];
+    if (!Number.isInteger(senderKi) || senderKi < 0)
+      throw new Error('Sonuç paketinde geçersiz konu numarası var: ' + (i + 1) + '. satır.');
     if (cozum[senderKi] === undefined) {
-      if (!Number.isInteger(senderKi) || senderKi < 0) cozum[senderKi] = { tur: 'bilinmeyen' };
-      else if (senderKi < KATALOG.length) cozum[senderKi] = { tur: 'katalog', ki: senderKi };
+      if (senderKi < KATALOG.length) cozum[senderKi] = { tur: 'katalog', ki: senderKi };
       else {
+        if (pk.surum === 1)
+          throw new Error('Eski sonuç paketi özel konu içeriyor; konu güvenle eşleştirilemez. Öğrenciden dosyayı güncel uygulamayla yeniden oluşturmasını isteyin.');
         const bilgi = konular[senderKi];
-        if (!bilgi || !Array.isArray(bilgi) || typeof bilgi[1] !== 'string' || !bilgi[1].trim())
-          cozum[senderKi] = { tur: 'bilinmeyen' };
-        else {
-          const dersIdx = Number.isInteger(+bilgi[0]) ? +bilgi[0] : -1;
-          const mevcut = konuBulTamEslesme(dersIdx, bilgi[1]);
-          cozum[senderKi] = mevcut >= 0 ? { tur: 'mevcut', ki: mevcut } : { tur: 'yeni', dersIdx: dersIdx, ad: bilgi[1] };
-        }
+        if (!Array.isArray(bilgi) || bilgi.length < 2)
+          throw new Error('Sonuç paketinde özel konu bilgisi eksik: ' + (i + 1) + '. satır.');
+        let konuBilgisi;
+        try { konuBilgisi = sonucKonuBilgisiDogrula(bilgi[0], bilgi[1]); }
+        catch (e) { throw new Error((e.message || e) + ' Kayıt: ' + (i + 1) + '. satır.'); }
+        const mevcut = konuBulTamEslesme(konuBilgisi.dersIdx, konuBilgisi.ad);
+        cozum[senderKi] = mevcut >= 0 ? { tur: 'mevcut', ki: mevcut } :
+          { tur: 'yeni', dersIdx: konuBilgisi.dersIdx, ad: konuBilgisi.ad };
       }
     }
-    if (cozum[senderKi].tur === 'bilinmeyen') return;    // bu satır atlanacak, doğrulamaya girmez
     const ts = k[4] === undefined || k[4] === null ? null : +k[4];
     // ki: 0 burada yalnızca "her zaman geçerli" bir yer tutucudur — gerçek konu ataması
     // aşağıdaki 2. adımda yapılır; tarih/soru/doğru doğrulaması burada tamamen biter.
@@ -3135,8 +3158,7 @@ function sonucPaketiUygula(pk) {
     return oncekiTs === undefined || (k.guncellemeTs !== null && k.guncellemeTs > oncekiTs);
   });
   if (yeni.length) sonucIsle(si, yeni);
-  const bilinmeyenKonu = pk.kayit.length - dogrulanmis.length;
-  return { ad: D.ogr[si].ad, eklenen: yeni.length, atlanan: pk.kayit.length - yeni.length - bilinmeyenKonu, bilinmeyenKonu: bilinmeyenKonu };
+  return { ad: D.ogr[si].ad, eklenen: yeni.length, atlanan: pk.kayit.length - yeni.length, bilinmeyenKonu: 0 };
 }
 
 // ------------------------------------------------------------ bulut senkronizasyonu
@@ -4865,7 +4887,9 @@ document.addEventListener('click', async ev => {
     return;
   }
   if (t.id === 'sonucGonder') {
-    const pk = sonucPaketi();
+    let pk;
+    try { pk = sonucPaketi(); }
+    catch (e) { alert('Sonuç dosyası oluşturulamadı: ' + (e.message || e)); return; }
     if (!pk.kayit.length) { alert('Dışa aktarılacak sonuç yok. Önce “Sonuç gir” sekmesinden doğru sayılarınızı girin.'); return; }
     const o = D.ogr[0] || {};
     const tamam = await indir('sonuc-' + dosyaAdiParcasi(o.no, 'ogrenci') + '-' +
@@ -5053,7 +5077,8 @@ document.addEventListener('change', async ev => {
     }
     await kaydet(true); ciz();
     bilgiVer(rapor.map(r => r.hata ? r.hata : r.ad + ': ' + r.eklenen + ' yeni sonuç' +
-      (r.atlanan ? ' (' + r.atlanan + ' zaten vardı)' : '')).join(' · '));
+      (r.atlanan ? ' (' + r.atlanan + ' zaten vardı)' : '') +
+      (r.bilinmeyenKonu ? ' (' + r.bilinmeyenKonu + ' konu eşleştirilemedi; aktarılmadı)' : '')).join(' · '));
     return;
   }
   if (el.id === 'yedekYukle' && el.files && el.files[0]) {
