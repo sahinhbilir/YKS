@@ -91,6 +91,15 @@ await check('create-rejects-non-aktif-durum', async () => {
 });
 
 // ================================================================== read + allowlist revocation
+await check('allowlisted-teacher-can-check-missing-slot-before-create', async () => {
+  const missingSid = sid('read-missing');
+  const snapshot = await assertSucceeds(getDoc(doc(ogretmenDb, 'ogrenciler', missingSid)));
+  if (snapshot.exists()) throw new Error('fresh random syncId unexpectedly exists');
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogrenciler', missingSid), bosYuva()));
+});
+await check('non-allowlisted-teacher-cannot-probe-missing-slot', async () => {
+  await assertFails(getDoc(doc(ogretmen2Db, 'ogrenciler', sid('read-missing-nonallow'))));
+});
 const readSid = sid('read');
 await testEnv.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(ctx.firestore(), 'ogrenciler', readSid), bosYuva());

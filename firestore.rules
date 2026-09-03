@@ -50,12 +50,17 @@ service cloud.firestore {
         && request.resource.data.ogrenciAd is string && request.resource.data.ogrenciAd.size() <= 100
         && request.resource.data.ogrenciBulutId is string && request.resource.data.ogrenciBulutId.size() > 0;
 
-      // Devre dışı bırakılmış (durum != 'aktif') bir yuvayı artık yalnızca sahip öğretmen
-      // okuyabilir — eski/kayıp cihaz bir daha bu belgeyi okuyamaz, dolayısıyla
-      // sonrakiSyncId'yi asla öğrenemez. Öğretmen erişimi de allowlist'e bağlı: listeden
-      // çıkarılan bir öğretmen kendi eski kayıtlarını da okuyamaz olur.
-      allow read: if request.auth != null &&
-        ((request.auth.uid == resource.data.ogretmenUid && yetkiliOgretmen())
+      // İlk ayırmada istemci rastgele ürettiği syncId'nin boş olduğunu getDoc() ile
+      // denetler. Olmayan belgede resource.data yoktur; allowlist'teki öğretmene yalnızca
+      // bu "yok" sonucunu okumaya izin vermezsek güvenli create akışı hiç başlayamaz.
+      // Mevcut belgelerde ise öğretmen hâlâ yalnızca KENDİ belgesini okuyabilir. list
+      // izni verilmez; başka öğretmenlerin belgeleri taranamaz.
+      // Devre dışı bırakılmış bir yuvayı öğrenci okuyamaz; eski cihaz sonrakiSyncId'yi
+      // öğrenemez. Öğretmen erişimi allowlist'e bağlı kalır.
+      allow get: if request.auth != null &&
+        ((yetkiliOgretmen() &&
+            (!exists(/databases/$(database)/documents/ogrenciler/$(syncId)) ||
+              request.auth.uid == resource.data.ogretmenUid))
           || (request.auth.uid == resource.data.bagliUid && resource.data.durum == 'aktif'));
 
       allow update: if request.auth != null && kimlikAlanlariAyni() && (
