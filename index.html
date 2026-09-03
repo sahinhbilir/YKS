@@ -2883,6 +2883,9 @@ function gorunumAyarlar() {
 
 // ---------------------------------------------------------------- öğrenci paketi
 const PAKET_SURUM = 1;
+// Sonuç paketi, öğrenci paketinden ayrı bir sürüm numarası taşır: ikisi farklı zamanlarda
+// değişebilir, birini bozan bir format değişikliği diğerini gereksiz yere geçersiz kılmasın.
+const SONUC_PAKET_SURUM = 2;
 function ogrenciPaketi(si) {
   const o = D.ogr[si];
   const kart = {}, ekIx = {};
@@ -2964,16 +2967,51 @@ function sonucPaketi(sinir) {
   const o = D.ogr[0] || {};
   const kesme = sinir === undefined ? 0 : Math.max(0, +sinir || 0);
   const olusturmaTs = Date.now();
-  return { tur: 'yks-sonuc', surum: PAKET_SURUM, katalogImza: KATALOG_IMZA,
+  const kayit = D.log.filter(l => (+l[6] || 0) > kesme).map(l => [l[0], l[2], l[3], l[4], l[6]]);
+  // Katalog dışı (kullanıcının kendi eklediği ya da ders programından türetilmiş) konular,
+  // bu cihaza özel bir "ki" numarasıyla saklanır — başka bir cihazda aynı numara tamamen
+  // başka bir konuya denk gelebilir. Paket bu yüzden ilgili konuların ders ve adını da
+  // taşır; alıcı taraf ham numaraya güvenmek yerine bunu kendi eşleştirmesinden geçirip
+  // kendi yerel numarasına çevirir (bkz. sonucPaketiUygula).
+  const konular = {};
+  kayit.forEach(k => {
+    const ki = k[1];
+    if (ki >= KATALOG.length && konular[ki] === undefined) {
+      const kk = konuAl(ki);
+      if (kk) konular[ki] = [kk[0], kk[3]];
+    }
+  });
+  return { tur: 'yks-sonuc', surum: SONUC_PAKET_SURUM, katalogImza: KATALOG_IMZA,
            no: o.no, ad: o.ad, sube: o.sube, tarih: bugunNo(), olusturmaTs: olusturmaTs,
-           kayit: D.log.filter(l => (+l[6] || 0) > kesme)
-             .map(l => [l[0], l[2], l[3], l[4], l[6]]) };
+           kayit: kayit, konular: konular };
+}
+// İçe aktarımda YALNIZCA tam ve aynı-ders eşleşmesi kabul edilir. konuBul()'un bulanık
+// (önek) eşleşmesi ve farklı derse düşme davranışı burada KASITLI olarak kullanılmaz:
+// tek bir kullanıcının kendi konu listesini genişletirken makul olan bu tolerans, iki
+// bağımsız cihazın konu listelerini uzlaştırırken çok daha pahalı bir hataya dönüşür —
+// "Fonksiyonlarda İşlemler" ile "Fonksiyonlarda İşlemler ve Uygulamalar" gibi iki farklı
+// konu, ya da başka bir dersteki aynı adlı bir konu, yanlışlıkla birleştirilebilir.
+function konuBulTamEslesme(dersIdx, ad) {
+  const t = iskelet(ad);
+  for (let i = 0; i < konuSayisi(); i++) {
+    const k = konuAl(i);
+    if (!k || k[6]) continue;
+    if (k[0] === dersIdx && iskelet(k[3]) === t) return i;
+  }
+  return -1;
+}
+function kullaniciKonusuTam(dersIdx, ad) {
+  D.ekKonular = D.ekKonular || [];
+  const v = konuBulTamEslesme(dersIdx, ad);
+  if (v >= 0) return v;
+  D.ekKonular.push([dersIdx, 12, 'Sonuç paketinden', ad, 0, '']);
+  return KATALOG.length + D.ekKonular.length - 1;
 }
 // öğretmen tarafında sonuç paketini işle
 function sonucPaketiUygula(pk) {
   if (!pk || pk.tur !== 'yks-sonuc') throw new Error('Bu dosya bir sonuç paketi değil.');
-  if (pk.surum !== PAKET_SURUM) throw new Error('Bu sonuç paketi bu uygulama sürümüyle uyumlu değil ' +
-    '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', beklenen: ' + PAKET_SURUM +
+  if (pk.surum !== 1 && pk.surum !== SONUC_PAKET_SURUM) throw new Error('Bu sonuç paketi bu uygulama sürümüyle uyumlu değil ' +
+    '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', beklenen: ' + SONUC_PAKET_SURUM +
     '). Öğrenciden güncel bir uygulama ile oluşturulmuş bir dosya isteyin.');
   if (pk.katalogImza && pk.katalogImza !== KATALOG_IMZA)
     throw new Error('Sonuç paketi farklı bir konu kataloğuyla oluşturulmuş.');
@@ -2988,28 +3026,66 @@ function sonucPaketiUygula(pk) {
   if (aday.length !== 1) throw new Error(aday.length ? 'Öğrenci eşleşmesi belirsiz; numara/şubeyi kontrol edin.' :
     (pk.ad || pk.no) + ' listede bulunamadı.');
   const si = aday[0].i;
+
+  // 1) Konu çözüm planı + tam doğrulama — bu adımda D'ye hiçbir şey yazılmaz. Gönderenin
+  // "ki" numarası yalnızca kendi cihazında anlamlıydı; katalog dışı her numara burada
+  // ada/derse göre yeniden çözülür. Bozuk bir satır varsa, henüz hiçbir konu
+  // oluşturulmamışken burada fırlatılır — kısmi/yarım bir durum asla kalmaz.
+  const konular = pk.konular || {};
+  const cozum = {};
+  const dogrulanmis = [];
+  pk.kayit.forEach((k, i) => {
+    if (!Array.isArray(k) || k.length < 4) throw new Error('Geçersiz sonuç paketi kaydı: ' + (i + 1) + '. satır.');
+    const senderKi = +k[1];
+    if (cozum[senderKi] === undefined) {
+      if (!Number.isInteger(senderKi) || senderKi < 0) cozum[senderKi] = { tur: 'bilinmeyen' };
+      else if (senderKi < KATALOG.length) cozum[senderKi] = { tur: 'katalog', ki: senderKi };
+      else {
+        const bilgi = konular[senderKi];
+        if (!bilgi || !Array.isArray(bilgi) || typeof bilgi[1] !== 'string' || !bilgi[1].trim())
+          cozum[senderKi] = { tur: 'bilinmeyen' };
+        else {
+          const dersIdx = Number.isInteger(+bilgi[0]) ? +bilgi[0] : -1;
+          const mevcut = konuBulTamEslesme(dersIdx, bilgi[1]);
+          cozum[senderKi] = mevcut >= 0 ? { tur: 'mevcut', ki: mevcut } : { tur: 'yeni', dersIdx: dersIdx, ad: bilgi[1] };
+        }
+      }
+    }
+    if (cozum[senderKi].tur === 'bilinmeyen') return;    // bu satır atlanacak, doğrulamaya girmez
+    const ts = k[4] === undefined || k[4] === null ? null : +k[4];
+    // ki: 0 burada yalnızca "her zaman geçerli" bir yer tutucudur — gerçek konu ataması
+    // aşağıdaki 2. adımda yapılır; tarih/soru/doğru doğrulaması burada tamamen biter.
+    const temiz = sonucKaydiDogrula(si, { ki: 0, gun: k[0], dogru: k[2], soru: k[3], guncellemeTs: ts });
+    dogrulanmis.push({ senderKi: senderKi, gun: temiz.gun, dogru: temiz.dogru, soru: temiz.soru, guncellemeTs: temiz.guncellemeTs });
+  });
+
+  // 2) Yeni konuları oluştur — yalnızca yukarıdaki doğrulama tamamen bittiyse buraya gelinir.
+  Object.keys(cozum).forEach(k => {
+    const c = cozum[k];
+    if (c.tur === 'yeni') { c.ki = kullaniciKonusuTam(c.dersIdx, c.ad); c.tur = 'mevcut'; }
+  });
+
+  // 3) Uygula — tekilleştirme ve "yalnızca daha yeni sonucu al" kuralı değişmedi.
   const varOlan = {};
   D.log.filter(l => l[1] === si).forEach(l => {
     const anahtar = l[0] + ':' + l[2];
     varOlan[anahtar] = Math.max(varOlan[anahtar] || 0, Number.isSafeInteger(+l[6]) ? +l[6] : 0);
   });
   const paketteki = new Map();
-  pk.kayit.forEach((k, i) => {
-    if (!Array.isArray(k) || k.length < 4) throw new Error('Geçersiz sonuç paketi kaydı: ' + (i + 1) + '. satır.');
-    const ts = k[4] === undefined || k[4] === null ? null : +k[4];
-    const temiz = sonucKaydiDogrula(si, {
-      ki: k[1], gun: k[0], dogru: k[2], soru: k[3], guncellemeTs: ts
-    });
-    const anahtar = temiz.gun + ':' + temiz.ki;
+  dogrulanmis.forEach(r => {
+    const ki = cozum[r.senderKi].ki;
+    const anahtar = r.gun + ':' + ki;
+    const aday2 = { ki: ki, gun: r.gun, dogru: r.dogru, soru: r.soru, guncellemeTs: r.guncellemeTs };
     const onceki = paketteki.get(anahtar);
-    if (!onceki || (temiz.guncellemeTs || 0) >= (onceki.guncellemeTs || 0)) paketteki.set(anahtar, temiz);
+    if (!onceki || (aday2.guncellemeTs || 0) >= (onceki.guncellemeTs || 0)) paketteki.set(anahtar, aday2);
   });
   const yeni = Array.from(paketteki.values()).filter(k => {
     const oncekiTs = varOlan[k.gun + ':' + k.ki];
     return oncekiTs === undefined || (k.guncellemeTs !== null && k.guncellemeTs > oncekiTs);
   });
   if (yeni.length) sonucIsle(si, yeni);
-  return { ad: D.ogr[si].ad, eklenen: yeni.length, atlanan: (pk.kayit || []).length - yeni.length };
+  const bilinmeyenKonu = pk.kayit.length - dogrulanmis.length;
+  return { ad: D.ogr[si].ad, eklenen: yeni.length, atlanan: pk.kayit.length - yeni.length - bilinmeyenKonu, bilinmeyenKonu: bilinmeyenKonu };
 }
 
 // ---------------------------------------------------------------- dışa aktarma
