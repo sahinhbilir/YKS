@@ -101,6 +101,25 @@ service cloud.firestore {
           && get(hesapYolu).data.syncId == syncId;
       }
 
+      // Planı başlatma ve sonuç kaydetme, ayrıca bir onay istemeden aynı sonuç
+      // paketini yollar. Bu küçük olay alanı hangi kullanıcı işleminin son
+      // senkronizasyonu tetiklediğini belirtir; istemcinin rastgele veri eklemesine izin vermez.
+      function istemciOlayGecerli() {
+        return !('istemciOlay' in request.resource.data.paket)
+          || (
+            request.resource.data.paket.istemciOlay is map
+            && request.resource.data.paket.istemciOlay.keys().hasOnly(['tur','hafta','ts','toplam'])
+            && (request.resource.data.paket.istemciOlay.tur == 'plan-baslatildi'
+              || request.resource.data.paket.istemciOlay.tur == 'sonuclar-kaydedildi')
+            && request.resource.data.paket.istemciOlay.hafta is int
+            && request.resource.data.paket.istemciOlay.ts is int
+            && (!('toplam' in request.resource.data.paket.istemciOlay)
+              || (request.resource.data.paket.istemciOlay.toplam is int
+                && request.resource.data.paket.istemciOlay.toplam >= 0
+                && request.resource.data.paket.istemciOlay.toplam <= 5000))
+          );
+      }
+
       allow create: if request.auth != null && yetkiliOgretmen()
         && request.auth.uid == request.resource.data.ogretmenUid
         && (request.resource.data.bagliUid == null
@@ -148,6 +167,7 @@ service cloud.firestore {
           && request.resource.data.paket.kayit is list
           && request.resource.data.paket.kayit.size() <= 5000
           && (!('konular' in request.resource.data.paket) || request.resource.data.paket.konular.size() <= 2000)
+          && istemciOlayGecerli()
         )
         ||
         (

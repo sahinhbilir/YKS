@@ -123,6 +123,20 @@ await check('password-student-account-can-send-results-to-own-slot', async () =>
     sunucuTs: null
   }));
 });
+await check('password-student-can-record-valid-automatic-sync-event', async () => {
+  await assertSucceeds(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', hesapSid), {
+    paket: { tur: 'yks-sonuc', surum: 2, kayit: [], konular: {},
+      istemciOlay: { tur: 'plan-baslatildi', hafta: 100, ts: 1750000000000, toplam: 7 } },
+    sunucuTs: 1750000000000
+  }));
+});
+await check('password-student-cannot-record-arbitrary-sync-event', async () => {
+  await assertFails(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', hesapSid), {
+    paket: { tur: 'yks-sonuc', surum: 2, kayit: [], konular: {},
+      istemciOlay: { tur: 'hesabi-sil', hafta: 100, ts: 1750000000000, gizli: true } },
+    sunucuTs: 1750000000000
+  }));
+});
 await check('password-student-account-cannot-use-another-sync-slot', async () => {
   const baskaSid = sid('account-other-slot');
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
