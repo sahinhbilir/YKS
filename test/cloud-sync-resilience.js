@@ -859,6 +859,86 @@ test('permission-denied-is-explained-not-shown-raw', async () => {
   equal(run('D.rol'), 'rehber', 'setup must still complete locally');
 });
 
+test('save-schedules-a-cloud-backup-that-actually-uploads', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = (id) => { if (timers[id - 1]) timers[id - 1] = null; };
+  resetOgr(sandbox, [student({})]);
+  const uploads = [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async (ref, d) => { uploads.push({ ref, boyut: d.boyut }); } });
+  await run('kaydet(true)');
+  const bekleyen = timers.filter(Boolean).filter(t => t.ms === run('BULUT_YEDEK_GECIKME'));
+  equal(bekleyen.length, 1, 'a save must schedule exactly one backup upload');
+  equal(uploads.length, 0, 'nothing may be uploaded before the delay elapses');
+  await bekleyen[0].fn();
+  equal(uploads.length, 1, 'the scheduled timer must actually perform the upload');
+  equal(uploads[0].ref, 'teacher-uid', 'upload must go to the teacher own backup doc');
+  await run('kaydet(true)');
+  assert(timers.filter(Boolean).some(t => t.ms === run('BULUT_YEDEK_GECIKME')), 'a later save must schedule again');
+});
+
+test('hiding-the-tab-flushes-a-pending-backup-immediately', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = (id) => { if (timers[id - 1]) timers[id - 1] = null; };
+  resetOgr(sandbox, [student({})]);
+  const uploads = [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async () => { uploads.push(1); } });
+  await run('kaydet(true)');
+  equal(uploads.length, 0, 'still pending');
+  await run('bulutYedekBosalt()');
+  await new Promise(r => setImmediate(r));
+  equal(uploads.length, 1, 'closing/hiding the tab must send the pending backup, not drop it');
+  // bekleyen yoksa boşaltmak boşuna yazmamalı
+  await run('bulutYedekBosalt()');
+  await new Promise(r => setImmediate(r));
+  equal(uploads.length, 1, 'flushing with nothing pending must not write again');
+});
+
+test('manual-backup-button-uploads-and-reports', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({})]);
+  const uploads = [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async (ref, d) => { uploads.push({ ref, boyut: d.boyut }); } });
+  const dugme = Object.assign(element(), { id: 'bulutYedekle',
+    closest(sel) { return sel.indexOf('#bulutYedekle') >= 0 ? this : null; } });
+  await listeners.click[0]({ target: dugme });
+  equal(uploads.length, 1, 'the manual button must upload immediately, with no waiting');
+  equal(uploads[0].ref, 'teacher-uid');
+  const gorunum = run("D.rol='rehber'; gorunumAyarlar()");
+  assert(/id="bulutYedekle"/.test(gorunum), 'the button must be rendered for a connected teacher');
+  assert(/Bulut yedeği:/.test(gorunum), 'settings must show the backup status line');
+});
+
+test('failed-automatic-backup-is-recorded-not-swallowed', async () => {
+  // Asıl tehlike: sessiz başarısızlık. Öğretmen "yedeğim var" sanıp bulutta hiçbir şey olmaması.
+  const { sandbox, run } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = (id) => { if (timers[id - 1]) timers[id - 1] = null; };
+  resetOgr(sandbox, [student({})]);
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    setDoc: async () => { throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' }); }
+  });
+  await run('kaydet(true)');
+  const bekleyen = timers.filter(Boolean).filter(t => t.ms === run('BULUT_YEDEK_GECIKME'));
+  await bekleyen[0].fn();
+  await new Promise(r => setImmediate(r));
+  const hata = run('EK.bulutYedekHata');
+  assert(hata, 'a failed automatic upload must be recorded somewhere the teacher can see it');
+  assert(/yayınlanmamış|ogretmenler/.test(hata), 'and it must explain the likely cause: ' + hata);
+  const gorunum = run('gorunumAyarlar()');
+  assert(/son deneme başarısız/.test(gorunum), 'settings must show the failure, not claim everything is fine');
+  // sonraki başarılı yükleme uyarıyı temizlemeli
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async () => {} });
+  await run('bulutaYedekle()');
+  equal(run('EK.bulutYedekHata'), '', 'a later success must clear the warning');
+  assert(run('!!EK.bulutYedekTs'), 'and record when it succeeded');
+});
+
 // ================================================================== özet
 (async () => {
   for (const t of pending) await t();
