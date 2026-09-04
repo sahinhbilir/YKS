@@ -1781,6 +1781,19 @@ function subeListesi() {
   return Object.keys(k).sort();
 }
 
+// Rehber kurulumunda yeni bir şube oluşturulurken de, tek öğrencili kurulumda
+// olduğu gibi alanın hazır konu planını kur. Yalnızca anahtar hiç yoksa yazar;
+// kullanıcının bilerek boşalttığı ya da düzenlediği mevcut planı ezmez.
+function varsayilanKonuPlaniniHazirla(sube, alan) {
+  if (!sube) return { hata: 'Şube seçilmedi.' };
+  D.konuPlani = D.konuPlani || {};
+  if (Object.prototype.hasOwnProperty.call(D.konuPlani, sube)) return { olustu: false };
+  const kaynak = VARSAYILAN_KONU_PLANI[alan];
+  if (!kaynak) return { hata: 'Bu şubenin alanı belirlenemedi; konu planı oluşturulamadı.' };
+  D.konuPlani[sube] = JSON.parse(JSON.stringify(kaynak));
+  return { olustu: true };
+}
+
 function hedefOgrenciler() {
   if (PENCERE && duzenlemeAcik(haftaBasi(), EK.ogr)) return [EK.ogr];
   const kap = PENCERE && PENCERE.kapsam;
@@ -4814,12 +4827,26 @@ document.addEventListener('click', async ev => {
     const kutu = document.getElementById('dpCiktiYapistir');
     const sonuc = dersProgramiJsonAyristir(kutu ? kutu.value : '');
     if (sonuc.hata) { alert(sonuc.hata); return; }
+    const alanlar = [...new Set((D.ogr || []).filter(o => !o.silindi && o.sube === EK.sube).map(o => o.alan).filter(Boolean))];
+    const konuHazir = Object.prototype.hasOwnProperty.call(D.konuPlani || {}, EK.sube)
+      ? { olustu: false }
+      : (alanlar.length === 1
+          ? varsayilanKonuPlaniniHazirla(EK.sube, alanlar[0])
+          : { hata: alanlar.length
+              ? 'Bu şubede farklı alanlarda öğrenciler var; ortak konu planı otomatik seçilemedi.'
+              : 'Bu şubede alanı belirlenmiş bir öğrenci yok; konu planı oluşturulamadı.' });
+    if (konuHazir.hata) { alert(konuHazir.hata); return; }
+    if (!planHaftaSayisi(EK.sube)) {
+      alert('Bu şubenin konu planı boş. Önce Konu Planı sekmesinde en az bir konu ekleyin.');
+      return;
+    }
     const ilr = document.getElementById('aIleri');           // yukarıda yazılan hafta sayısı hemen geçerli olsun
     if (ilr) D.ayar.ileriHafta = Math.max(0, Math.min(300, +ilr.value || 0));
     programYaz(EK.sube, haftaBasi(), sonuc.tablo);
     programDegistiTetikle(EK.sube);
     EK.kirli = true; await kaydet(true); ciz();
-    bilgiVer(ileriHaftaSayisi() + ' hafta için ders programı aktarıldı, plan hesaplandı.');
+    bilgiVer((konuHazir.olustu ? alanlar[0] + ' konu planı hazırlandı. ' : '') +
+      ileriHaftaSayisi() + ' hafta için ders programı aktarıldı, plan hesaplandı.');
     return;
   }
   if (ev.target.id === 'anlasmaKaydet') {
@@ -5052,12 +5079,14 @@ document.addEventListener('click', async ev => {
     const no = noGiris ? Number(noGiris) : (Math.max(0, ...D.ogr.map(o => +o.no || 0)) + 1);
     if (!Number.isInteger(no) || no < 1 || no > 9999) { alert('Öğrenci numarası 1–9999 arasında tam sayı olmalı.'); return; }
     if (D.ogr.some(o => !o.silindi && String(o.no) === String(no))) { alert('Bu öğrenci numarası zaten kullanılıyor.'); return; }
+    const alan = document.getElementById('yAlan').value;
     D.ogr.push({
-      no: no, ad: ad, alan: document.getElementById('yAlan').value, sube: sube,
+      no: no, ad: ad, alan: alan, sube: sube,
       kap: Math.max(1, Math.min(12, +document.getElementById('yKap').value || 6)),
       off: [6], hedef: null, aktif: false, cikti: null,
       maddeler: [], rutin: { once: '', ara: '', sonra: '' }
     });
+    varsayilanKonuPlaniniHazirla(sube, alan);
     await kaydet(true); ciz();
     bilgiVer(ad + ' listeye eklendi (' + sube + '). Çıktı verdiğinizde “kullanıyor” olarak işaretlenecek.');
     return;
