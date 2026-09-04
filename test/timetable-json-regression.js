@@ -93,4 +93,19 @@ const tooLarge = parse(' '.repeat(200001));
 if (!tooLarge.hata || !/çok büyük/.test(tooLarge.hata)) throw new Error('oversized-output-must-be-rejected-quickly');
 checks.push('oversized-output-rejected');
 
+
+// Yeni bir şubenin henüz programı yokken ilk aktarım boş anahtara yazılmamalı.
+// Bu, arayüzün "aktarıldı" deyip haftalık planda hiçbir şey göstermediği hatanın regresyon testidir.
+const initialClass = vm.runInContext(`
+  D = varsayilan();
+  D.rol = 'rehber';
+  D.ogr = [{ ad: 'Test Öğrenci', sube: '12A', silindi: false }];
+  EK.sube = '';
+  const html = gorunumProgram();
+  ({ sube: EK.sube, secenekte: html.includes('<option selected>12A</option>') });
+`, sandbox);
+if (initialClass.sube !== '12A' || !initialClass.secenekte)
+  throw new Error('first-timetable-import-must-target-real-class: ' + JSON.stringify(initialClass));
+checks.push('first-timetable-import-targets-real-class');
+
 console.log(JSON.stringify({ passed: checks.length, checks }, null, 2));
