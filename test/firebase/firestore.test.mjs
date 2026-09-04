@@ -314,6 +314,66 @@ await check('disabled-slot-cannot-be-reclaimed-or-read-by-original-uid', async (
   await assertFails(getDoc(doc(ogrenciDb, 'ogrenciler', oldS)));
 });
 
+// ================================================================== öğretmenin kendi bulut yedeği
+// Öğretmenin defterinin tamamı (31 öğrencinin adı dahil) burada durur; en sıkı testler bunlar.
+const yedekVeri = () => ({ veri: JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Ayşe Yılmaz' }] }),
+  ts: 1750000000000, surum: 10, boyut: 60 });
+
+await check('teacher-can-write-and-read-own-backup', async () => {
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+  const anlik = await assertSucceeds(getDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID)));
+  if (!anlik.exists()) throw new Error('yedek yazıldı ama okunamadı');
+});
+await check('teacher-cannot-read-another-teachers-backup', async () => {
+  // OGRETMEN2 allowlist'te değil; ayrıca başkasının UID'si altına hiç bakamamalı
+  await assertFails(getDoc(doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID)));
+  // allowlist'teki öğretmen bile BAŞKASININ yedeğini okuyamaz
+  await assertFails(getDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN2_UID)));
+});
+await check('teacher-cannot-write-into-another-teachers-backup', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN2_UID), yedekVeri()));
+});
+await check('anonymous-student-cannot-touch-any-teacher-backup', async () => {
+  await assertFails(getDoc(doc(ogrenciDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(setDoc(doc(ogrenciDb, 'ogretmenYedek', OGRENCI_UID), yedekVeri()));
+});
+await check('unauthenticated-cannot-touch-teacher-backup', async () => {
+  await assertFails(getDoc(doc(anonDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(setDoc(doc(anonDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+});
+await check('non-allowlisted-real-account-cannot-write-own-backup', async () => {
+  // Kendi UID'si altına bile yazamaz: allowlist dışı bir hesap depolamayı kullanamamalı
+  await assertFails(setDoc(doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN2_UID), yedekVeri()));
+});
+await check('backup-rejects-oversized-payload', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
+    Object.assign(yedekVeri(), { veri: 'x'.repeat(900001) })));
+});
+await check('backup-rejects-unknown-fields-and-bad-types', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
+    Object.assign(yedekVeri(), { fazladan: 'sızma' })));
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
+    Object.assign(yedekVeri(), { veri: { nesne: 1 } })));
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
+    Object.assign(yedekVeri(), { veri: '' })));
+});
+await check('backup-cannot-be-deleted', async () => {
+  const { deleteDoc } = await import('firebase/firestore');
+  await assertFails(deleteDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID)));
+});
+await check('de-allowlisted-teacher-loses-access-to-own-backup', async () => {
+  const tempDb = testEnv.authenticatedContext(TEMP_TEACHER_UID, gercekToken).firestore();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogretmenler', TEMP_TEACHER_UID), {});
+  });
+  await assertSucceeds(setDoc(doc(tempDb, 'ogretmenYedek', TEMP_TEACHER_UID), yedekVeri()));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(ctx.firestore(), 'ogretmenler', TEMP_TEACHER_UID));
+  });
+  await assertFails(getDoc(doc(tempDb, 'ogretmenYedek', TEMP_TEACHER_UID)));
+});
+
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
 await testEnv.cleanup();
 process.exit(fail ? 1 : 0);

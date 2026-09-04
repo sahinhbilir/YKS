@@ -949,6 +949,8 @@ async function kaydetGercek(sessiz) {
   else if (bulutBasarili) EK.son = 'bulutta kayıtlı · cihaz depolaması kapalı';
   else EK.son = 'KAYDEDİLEMEDİ · yedek indirin';
   if (!kalici) console.error('[YKS Tekrar Defteri] Kayıt başarısız', { yerelHata: yerelHata, bulutHata: bulutHata });
+  // Cihaza yazılabildiyse, öğretmenin bulut yedeğini de tazele (gecikmeli, tek seferlik).
+  if (kalici) { try { bulutYedekPlanla(); } catch (e) { /* yedek planlanamazsa kayıt yine geçerli */ } }
   rayCiz();
   if (!sessiz) ciz();
   return kalici;
@@ -3273,6 +3275,67 @@ function sonucPaketiUygula(pk, hedefSi) {
   return { ad: D.ogr[si].ad, eklenen: yeni.length, atlanan: pk.kayit.length - yeni.length, bilinmeyenKonu: 0 };
 }
 
+// ------------------------------------------------------ öğretmenin kendi bulut yedeği
+// Öğretmenin defterinin TAMAMI (yedek JSON'u) kendi UID'si altında saklanır; böylece yeni
+// bir cihazda "Rehber öğretmenim" deyip Google hesabıyla girince defter kendiliğinden geri
+// gelir. Veri, iç içe dizi barındırdığı için (D.log satırları) Firestore'a NESNE olarak
+// değil, tek bir JSON DİZESİ olarak yazılır — Firestore iç içe diziyi kabul etmez.
+const BULUT_YEDEK_UST_SINIR = 900000;      // Firestore belge sınırı 1 MiB; güvenli pay
+let bulutYedekZamani = null;
+
+async function bulutaYedekle() {
+  if (!window.bulut || !window.bulut.yapilandirilmis) return { tur: 'yok' };
+  if (!rehberMi()) return { tur: 'yok' };
+  const kullanici = window.bulut.mevcutKullanici();
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
+  let json;
+  try { json = JSON.stringify(D); }
+  catch (e) { return { tur: 'hata', mesaj: 'Veri JSON’a çevrilemedi.' }; }
+  if (json.length > BULUT_YEDEK_UST_SINIR)
+    return { tur: 'hata', mesaj: 'Defter bulut yedeği için çok büyük (' +
+      Math.round(json.length / 1024) + ' KB). "Yedek indir" ile dosya yedeği alın.' };
+  try {
+    await window.bulut.setDoc(window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid),
+      { veri: json, ts: Number.isSafeInteger(+D.ts) && +D.ts > 0 ? +D.ts : Date.now(),
+        surum: VERI_SURUMU, boyut: json.length });
+    return { tur: 'tamam', boyut: json.length };
+  } catch (e) { return { tur: 'hata', mesaj: e.message || String(e) }; }
+}
+// Her kayıtta buluta yazmak hem gereksiz hem pahalı: son değişiklikten bir dakika sonra
+// TEK bir yükleme yapılır. Başarısızlık sessizdir — bir sonraki kayıt yeniden planlar,
+// ve cihazdaki kayıt zaten tamamlanmıştır (bulut yedeği ikinci bir kopyadır, tek kopya değil).
+function bulutYedekPlanla() {
+  if (bulutYedekZamani) return;
+  bulutYedekZamani = setTimeout(() => {
+    bulutYedekZamani = null;
+    Promise.resolve(bulutaYedekle()).catch(() => {});
+  }, 60000);
+}
+async function buluttanYedekAl() {
+  if (!window.bulut) return { tur: 'yok' };
+  const kullanici = window.bulut.mevcutKullanici();
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
+  try {
+    const anlik = await window.bulut.getDoc(
+      window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid));
+    if (!anlik || !anlik.exists()) return { tur: 'yok' };
+    const veri = anlik.data() || {};
+    if (typeof veri.veri !== 'string' || !veri.veri)
+      return { tur: 'hata', mesaj: 'Buluttaki yedek beklenen biçimde değil.' };
+    let y;
+    try { y = JSON.parse(veri.veri); }
+    catch (e) { return { tur: 'hata', mesaj: 'Buluttaki yedek okunamadı (bozuk JSON).' }; }
+    return { tur: 'tamam', yedek: y, ts: Number.isSafeInteger(+veri.ts) ? +veri.ts : 0 };
+  } catch (e) { return { tur: 'hata', mesaj: e.message || String(e) }; }
+}
+// Yedekteki silinmemiş öğrenci sayısı — geri yükleme onayında kullanıcıya ne geleceğini
+// gösterir. Bozuk bir yedekte ogr dizi olmayabilir; bu sayaç ASLA fırlatmamalı, çünkü
+// kurulum ekranındaki tek düğmenin akışında çağrılıyor (fırlatırsa kurulum hiç yapılamaz).
+function yedekOgrenciSayisi(y) {
+  const liste = (y || {}).ogr;
+  return Array.isArray(liste) ? liste.filter(o => o && !o.silindi).length : 0;
+}
+
 // ------------------------------------------------------------ bulut senkronizasyonu
 // Öğretmen, bir öğrencinin paketini ilk kez indirdiğinde onun Firestore'daki yuvasını
 // (bkz. firestore.rules) boş olarak ayırır — kimlik alanları (ogrenciNo/Ad/Sube) burada,
@@ -4645,6 +4708,42 @@ document.addEventListener('click', async ev => {
     return;
   }
   if (ev.target.closest('#rolRehber')) {
+    // Önce Google hesabıyla giriş dene: aynı hesabın bulutta yedeği varsa defter olduğu gibi
+    // geri gelir (yeni cihaz / sıfırlama sonrası). Bulut yoksa, giriş iptal edilirse ya da
+    // yedek yoksa aşağıdaki normal kurulum akışına düşer — hiçbir durumda kilitlenmez.
+    // Bu blok komple korumalı: kurulum ekranındaki tek düğme bu, bulut tarafında BEKLENMEDİK
+    // bir hata çıkarsa bile öğretmen yerel kurulumu yapabilmeli.
+    try {
+    if (window.bulut && window.bulut.yapilandirilmis) {
+      let kullanici = null;
+      try { kullanici = await window.bulut.girisOgretmen(); }
+      catch (e) { kullanici = null; }
+      if (kullanici) {
+        const sonuc = await buluttanYedekAl();
+        if (sonuc.tur === 'tamam') {
+          const say = yedekOgrenciSayisi(sonuc.yedek);
+          const tarih = sonuc.ts ? new Date(sonuc.ts).toLocaleString('tr-TR') : 'tarihi bilinmeyen';
+          if (confirm((kullanici.email || kullanici.uid) + ' hesabında ' + tarih +
+              ' tarihli bulut yedeğiniz bulundu (' + say + ' öğrenci). Bu cihaza geri yüklensin mi?')) {
+            const onceki = D;
+            try {
+              veriyiHazirla(sonuc.yedek);
+              D.rol = 'rehber';
+              EK.sekme = 'ogrenciler'; EK.ogr = 0; EK.hafta = null;
+              await kaydet(true); ciz();
+              bilgiVer('Bulut yedeğiniz geri yüklendi: ' + say + ' öğrenci.');
+              return;
+            } catch (e) {
+              D = onceki;
+              alert('Bulut yedeği yüklenemedi: ' + (e.message || e) + ' Kuruluma devam edebilirsiniz.');
+            }
+          }
+        } else if (sonuc.tur === 'hata') {
+          alert('Bulut yedeği okunamadı: ' + sonuc.mesaj + ' Kuruluma devam edebilirsiniz.');
+        }
+      }
+    }
+    } catch (e) { alert('Bulut yedeği alınamadı: ' + (e.message || e) + ' Kuruluma devam edebilirsiniz.'); }
     const ad = prompt('Okulun / kurumun adı (çıktıların altında görünür):', '') || '';
     D.rol = 'rehber'; D.kurum = ad.trim();
     EK.sekme = 'ogrenciler';
@@ -5330,11 +5429,16 @@ document.addEventListener('click', async ev => {
         if (sonuc.tur === 'hata') basarisiz.push(o.ad + ' (' + sonuc.mesaj + ')');
         else if (sonuc.tur === 'tamam') ayrilanlar.push(o.ad);
       }
+      // Bağlanır bağlanmaz defterin bulut yedeğini de tazele: yeni bir cihazda "Rehber
+      // öğretmenim" dendiğinde geri yüklenecek kopya budur, bir dakika beklemesin.
+      const yedek = await bulutaYedekle();
       bilgiVer('Buluta bağlandınız: ' + (kullanici.email || kullanici.uid) + '.' +
+        (yedek.tur === 'tamam' ? ' Defteriniz buluta yedeklendi.' : '') +
         (ayrilanlar.length ? ' Şunlar için bulut yuvası ayrıldı: ' + ayrilanlar.join(', ') +
           ' — bu öğrencilere DAHA ÖNCE paket gönderdiyseniz, buluttan senkronize edebilmeleri için "paket" ile ' +
           'yeniden bir dosya indirip göndermeniz gerekir (eski dosyada bulut adresi yoktu).' : '') +
-        (basarisiz.length ? ' Bazı öğrenciler için bulut yuvası ayrılamadı: ' + basarisiz.join(', ') + '.' : ''));
+        (basarisiz.length ? ' Bazı öğrenciler için bulut yuvası ayrılamadı: ' + basarisiz.join(', ') + '.' : '') +
+        (yedek.tur === 'hata' ? ' Defter yedeği buluta yazılamadı: ' + yedek.mesaj : ''));
     } catch (e) { alert('Buluta bağlanılamadı: ' + (e.message || e)); }
     return;
   }

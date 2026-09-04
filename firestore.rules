@@ -2,9 +2,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Bu blokta tanımlı olduğu için aşağıdaki bütün match'lerden görülür.
+    function yetkiliOgretmen() {
+      return request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && exists(/databases/$(database)/documents/ogretmenler/$(request.auth.uid));
+    }
+
     match /ogretmenler/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if false;   // yalnızca Firebase konsolundan elle eklenir, bkz. plan §1
+    }
+
+    // Öğretmenin kendi defterinin tamamı (yedek JSON'u), YALNIZCA kendi UID'si altında.
+    // Başka bir öğretmen, öğrenci ya da anonim oturum bu belgeye erişemez; listeleme
+    // izni yoktur, silme kapalıdır (yanlışlıkla ya da kötü niyetle yedek yok edilemesin —
+    // üzerine yazmak için bile allowlist'te olmak gerekir).
+    match /ogretmenYedek/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen();
+      allow create, update: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen()
+        && request.resource.data.keys().hasOnly(['veri','ts','surum','boyut'])
+        && request.resource.data.veri is string
+        && request.resource.data.veri.size() > 0
+        && request.resource.data.veri.size() <= 900000
+        && request.resource.data.ts is int;
+      allow delete: if false;
     }
 
     match /ogrenciler/{syncId} {
@@ -16,10 +37,6 @@ service cloud.firestore {
           && request.resource.data.ogrenciSube == resource.data.ogrenciSube
           && request.resource.data.ogrenciBulutId == resource.data.ogrenciBulutId
           && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','durum','sonrakiSyncId']);
-      }
-      function yetkiliOgretmen() {
-        return request.auth.token.firebase.sign_in_provider != 'anonymous'
-          && exists(/databases/$(database)/documents/ogretmenler/$(request.auth.uid));
       }
       // Devre dışı bırakma sırasında, sonrakiSyncId'nin GERÇEKTEN bu işlemle birlikte
       // YENİ oluşturulan, aynı öğretmen/öğrenciye ait, aktif bir belgeyi gösterdiğini

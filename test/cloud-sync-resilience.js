@@ -631,6 +631,145 @@ test('girisOgrenci-does-not-return-stale-user-after-role-switch', async () => {
   equal(calls.signInAnonymously, 2, 'the role-switch must force a fresh signInAnonymously call, not reuse the old cache');
 });
 
+// ================================================================== öğretmenin bulut yedeği
+test('bulutaYedekle-writes-whole-notebook-as-json-string', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ ad: 'Ada' }), student({ no: 2, ad: 'Deniz' })]);
+  let yazilan = null, ref = null;
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    setDoc: async (r, data) => { ref = r; yazilan = data; }
+  });
+  const r = await run('bulutaYedekle()');
+  equal(r.tur, 'tamam', 'expected tamam: ' + JSON.stringify(r));
+  equal(ref, 'teacher-uid', 'backup must be written under the teacher own UID');
+  assert(typeof yazilan.veri === 'string', 'veri must be a JSON STRING (Firestore rejects nested arrays)');
+  const geri = JSON.parse(yazilan.veri);
+  equal(geri.ogr.length, 2, 'the whole roster must be in the backup');
+  assert(Number.isSafeInteger(yazilan.ts) && yazilan.ts > 0, 'ts must be a positive integer');
+  equal(yazilan.boyut, yazilan.veri.length, 'boyut must match the payload length');
+  assert(Object.keys(yazilan).sort().join(',') === 'boyut,surum,ts,veri',
+    'payload must carry exactly the fields the rules allow: ' + Object.keys(yazilan).join(','));
+});
+
+test('bulutaYedekle-refuses-when-not-connected-or-not-teacher', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({})]);
+  let setDocCalls = 0;
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    mevcutKullanici: () => ({ uid: 'anon', isAnonymous: true }),
+    setDoc: async () => { setDocCalls++; }
+  });
+  equal((await run('bulutaYedekle()')).tur, 'baglanilmadi', 'anonymous session must not upload a teacher backup');
+  // öğrenci rolündeki bir cihaz asla öğretmen yedeği yazmamalı
+  resetOgr(sandbox, [student({})], 'ogrenci');
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async () => { setDocCalls++; } });
+  equal((await run('bulutaYedekle()')).tur, 'yok', 'student role must never upload a teacher backup');
+  equal(setDocCalls, 0, 'no write may be attempted in either case');
+});
+
+test('bulutaYedekle-refuses-oversized-notebook', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({})]);
+  let setDocCalls = 0;
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async () => { setDocCalls++; } });
+  run('D.kurum = "x".repeat(BULUT_YEDEK_UST_SINIR + 10);');
+  const r = await run('bulutaYedekle()');
+  equal(r.tur, 'hata', 'an oversized notebook must be reported, not silently truncated or rejected by Firestore');
+  assert(/KB/.test(r.mesaj), 'the message should tell the teacher how big it got: ' + r.mesaj);
+  equal(setDocCalls, 0, 'no doomed write may be attempted');
+});
+
+test('buluttanYedekAl-reads-missing-and-corrupt-cases', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({})]);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, getDoc: async () => docSnap(false, undefined) });
+  equal((await run('buluttanYedekAl()')).tur, 'yok', 'no cloud backup yet must read as yok, not an error');
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, getDoc: async () => docSnap(true, { veri: '{bozuk', ts: 1 }) });
+  equal((await run('buluttanYedekAl()')).tur, 'hata', 'corrupt JSON must be reported');
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, getDoc: async () => docSnap(true, { veri: { nesne: 1 }, ts: 1 }) });
+  equal((await run('buluttanYedekAl()')).tur, 'hata', 'a non-string veri field must be reported');
+  const gecerli = JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Ada' }, { ad: 'Silinmis', silindi: true }] });
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, getDoc: async () => docSnap(true, { veri: gecerli, ts: 1750000000000 }) });
+  const ok = await run('buluttanYedekAl()');
+  equal(ok.tur, 'tamam');
+  equal(ok.ts, 1750000000000, 'ts must survive the round trip');
+  equal(run('yedekOgrenciSayisi(' + JSON.stringify(JSON.parse(gecerli)) + ')'), 1, 'deleted students must not be counted');
+});
+
+test('rolRehber-restores-cloud-backup-after-google-sign-in', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  run('D = varsayilan(); D.rol = null;');   // kurulum ekranı durumu
+  const yedek = run(`(() => {
+    D = varsayilan(); D.rol = 'rehber'; D.kurum = 'Karamürsel';
+    D.ogr = [{no:1,ad:'Ada',alan:'SAY',sube:'201',hedef:null},{no:2,ad:'Deniz',alan:'EA',sube:'301',hedef:null}];
+    const s = JSON.stringify(D); D = varsayilan(); D.rol = null; return s;
+  })()`);
+  let girisSayisi = 0;
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    girisOgretmen: async () => { girisSayisi++; return { uid: 'teacher-uid', isAnonymous: false, email: 'x@y.com' }; },
+    getDoc: async () => docSnap(true, { veri: yedek, ts: 1750000000000 }),
+    setDoc: async () => {}
+  });
+  let sorulan = '';
+  sandbox.confirm = (m) => { sorulan = m; return true; };
+  sandbox.prompt = () => { throw new Error('kurum adı sorulmamalıydı — yedek geri yüklendi'); };
+  const target = Object.assign(element(), { closest(sel) { return sel.indexOf('#rolRehber') >= 0 ? this : null; } });
+  await listeners.click[0]({ target });
+  equal(girisSayisi, 1, 'clicking the teacher role must trigger the Google sign-in itself');
+  assert(/2 öğrenci/.test(sorulan), 'the confirmation must say how many students are coming back: ' + sorulan);
+  const sonuc = run('({ rol: D.rol, kurum: D.kurum, ogr: D.ogr.length, sekme: EK.sekme })');
+  equal(sonuc.rol, 'rehber'); equal(sonuc.kurum, 'Karamürsel');
+  equal(sonuc.ogr, 2, 'the cloud roster must be restored');
+});
+
+test('rolRehber-falls-back-to-normal-setup-when-no-backup-or-sign-in-fails', async () => {
+  for (const senaryo of ['yedek-yok', 'giris-basarisiz']) {
+    const { sandbox, run, listeners } = loadAppSandbox();
+    run('D = varsayilan(); D.rol = null;');
+    sandbox.window.bulut = baseBulut({
+      yapilandirilmis: true,
+      girisOgretmen: async () => {
+        if (senaryo === 'giris-basarisiz') throw new Error('popup kapatıldı');
+        return { uid: 'teacher-uid', isAnonymous: false, email: 'x@y.com' };
+      },
+      getDoc: async () => docSnap(false, undefined),
+      setDoc: async () => {}
+    });
+    let promptSorusu = 0;
+    sandbox.prompt = () => { promptSorusu++; return 'Yeni Okul'; };
+    const target = Object.assign(element(), { closest(sel) { return sel.indexOf('#rolRehber') >= 0 ? this : null; } });
+    await listeners.click[0]({ target });
+    equal(promptSorusu, 1, senaryo + ': normal kuruluma düşmeliydi');
+    equal(run('D.rol'), 'rehber', senaryo + ': rol yine de öğretmen olmalı');
+    equal(run('D.kurum'), 'Yeni Okul', senaryo + ': girilen kurum adı kaydedilmeli');
+  }
+});
+
+test('rolRehber-keeps-local-data-when-restore-is-declined-or-broken', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  run('D = varsayilan(); D.rol = null;');
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    girisOgretmen: async () => ({ uid: 'teacher-uid', isAnonymous: false, email: 'x@y.com' }),
+    // şema doğrulamasından geçmeyecek bir yedek: veriyiHazirla fırlatmalı, D bozulmamalı
+    getDoc: async () => docSnap(true, { veri: JSON.stringify({ rol: 'rehber', ogr: 'dizi-degil' }), ts: 1 }),
+    setDoc: async () => {}
+  });
+  sandbox.confirm = () => true;
+  let uyari = '';
+  sandbox.alert = (m) => { uyari = m; };
+  sandbox.prompt = () => 'Yedek Okulu';
+  const target = Object.assign(element(), { closest(sel) { return sel.indexOf('#rolRehber') >= 0 ? this : null; } });
+  await listeners.click[0]({ target });
+  assert(/yüklenemedi|okunamadı/.test(uyari), 'a broken cloud backup must be reported: ' + uyari);
+  equal(run('D.rol'), 'rehber', 'the teacher must still end up set up locally');
+  equal(run('D.kurum'), 'Yedek Okulu', 'the normal setup must continue after a failed restore');
+  assert(Array.isArray(run('D.ogr')), 'D must not be left holding the invalid backup');
+});
+
 // ================================================================== özet
 (async () => {
   for (const t of pending) await t();
