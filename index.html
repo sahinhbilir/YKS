@@ -2723,7 +2723,7 @@ function gorunumProgram() {
   // öğrenci tek şubeli ("benim"): henüz hiç program yüklemediyse de kendi şubesi görünür kalmalı,
   // yoksa ilk kurulumda seçilecek şube bulunamaz
   const subeler = ogrenciMi() ? [(D.ogr[EK.ogr] || {}).sube || 'benim']
-    : subeListesi().filter(x => (D.dersProgrami || {})[x] || (D.programHafta || {})[x]);
+    : subeListesi();
   const sube = EK.sube && subeler.indexOf(EK.sube) >= 0 ? EK.sube : (subeler[0] || '');
   EK.sube = sube;
   const hb = haftaBasi();
