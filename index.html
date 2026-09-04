@@ -3592,27 +3592,105 @@ function dersProgramiPromptMetni() {
     'TÜRK DİLİ VE EDEBİYATI, FİZİK, KİMYA, BİYOLOJİ, COĞRAFYA, FELSEFE, TARİH, ' +
     'T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK, DİN KÜLTÜRÜ, REHBERLİK.\n' +
     '- Öğretmen adı, sınıf adı gibi bilgileri yazma, yalnızca ders adını yaz.\n' +
+    '- Görselde haftanın günleri ve ders saatlerinden oluşan okunabilir bir ders programı YOKSA tahmin etme; ' +
+    'yalnızca {"hata":"Görselde okunabilir bir haftalık ders programı bulunamadı."} döndür.\n' +
     '- Yalnızca JSON döndür; açıklama, markdown ya da başka metin ekleme.';
 }
-// AI'dan dönen (muhtemelen ```json ... ``` gibi sarmalanmış) metni ayrıştırır ve doğrular
+// Metindeki dengeli {...} parçalarını çıkarır. İlk "{" ile son "}" arasını almak doğru
+// değildir: AI JSON'dan önce/sonra başka bir nesne, örnek veya açıklama yazarsa iki ayrı
+// parça tek ve geçersiz bir metin haline gelir. Dize içindeki süslü parantezler sayılmaz.
+function dengeliJsonNesneleri(metin) {
+  const t = String(metin || '');
+  const sonuc = [];
+  let baslangicSayisi = 0;
+  for (let bas = 0; bas < t.length; bas++) {
+    if (t[bas] !== '{') continue;
+    if (++baslangicSayisi > 100) break;       // bozuk/devasa metin tarayıcıyı kilitlemesin
+    let derinlik = 0, dize = false, kacisli = false;
+    for (let i = bas; i < t.length; i++) {
+      const c = t[i];
+      if (dize) {
+        if (kacisli) kacisli = false;
+        else if (c === '\\') kacisli = true;
+        else if (c === '"') dize = false;
+        continue;
+      }
+      if (c === '"') { dize = true; continue; }
+      if (c === '{') derinlik++;
+      else if (c === '}' && --derinlik === 0) { sonuc.push(t.slice(bas, i + 1)); break; }
+    }
+  }
+  return sonuc;
+}
+
+// JSON'a göre anlamsız ama AI çıktılarında sık görülen kapanıştan önceki virgülü yalnızca
+// dizelerin DIŞINDA kaldırır. eval/Function/JSON5 kullanılmaz; belirsiz JavaScript kabul edilmez.
+function jsonSondakiVirgulTemizle(metin) {
+  const t = String(metin || '').replace(/\u00a0/g, ' ');
+  let sonuc = '', dize = false, kacisli = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (dize) {
+      sonuc += c;
+      if (kacisli) kacisli = false;
+      else if (c === '\\') kacisli = true;
+      else if (c === '"') dize = false;
+      continue;
+    }
+    if (c === '"') { dize = true; sonuc += c; continue; }
+    if (c === ',') {
+      let j = i + 1;
+      while (j < t.length && /\s/.test(t[j])) j++;
+      if (t[j] === ']' || t[j] === '}') continue;
+    }
+    sonuc += c;
+  }
+  return sonuc;
+}
+
+// AI'dan dönen (muhtemelen ```json ... ``` gibi sarmalanmış) metni ayrıştırır ve doğrular.
+// Önce tam ve katı JSON denenir; sonra yalnızca güvenli, anlamı değiştirmeyen yaygın biçim
+// hataları denenir. Birden fazla nesne varsa program şemasına benzeyen nesne seçilir.
 function dersProgramiJsonAyristir(metin) {
-  let t = String(metin || '').trim();
-  t = t.replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/i, '').trim();
-  const bas = t.indexOf('{'), son = t.lastIndexOf('}');
-  if (bas >= 0 && son > bas) t = t.slice(bas, son + 1);
-  let y;
-  try { y = JSON.parse(t); }
-  catch (e) { return { hata: 'Bu metin geçerli bir JSON değil. AI’nın çıktısını olduğu gibi, baştan sona yapıştırdığınızdan emin olun.' }; }
+  let t = String(metin || '').replace(/^\uFEFF/, '');
+  if (t.length > 200000) return { hata: 'AI çıktısı beklenenden çok büyük; yalnızca ders programı JSON’unu yapıştırın.' };
+  t = t.trim();
+  const fencesiz = t.replace(/^```[^\r\n]*[\r\n]+/i, '').replace(/```\s*$/i, '').trim();
+  const adaylar = Array.from(new Set([t, fencesiz].concat(dengeliJsonNesneleri(t)))).filter(Boolean);
+  const ayrisan = [];
+  adaylar.forEach(aday => {
+    const denemeler = [aday, jsonSondakiVirgulTemizle(aday)];
+    // Bazı kopyalama yüzeyleri bütün JSON tırnaklarını akıllı tırnağa dönüştürür.
+    // Yalnızca hiç düz çift tırnak kalmamışsa bu mekanik dönüşümü denemek güvenlidir.
+    if (!aday.includes('"') && /[“”]/.test(aday)) {
+      const akilliTirnaksiz = aday.replace(/[“”]/g, '"');
+      denemeler.push(akilliTirnaksiz, jsonSondakiVirgulTemizle(akilliTirnaksiz));
+    }
+    for (const deneme of Array.from(new Set(denemeler))) {
+      try { ayrisan.push(JSON.parse(deneme)); break; } catch (e) { /* sıradaki güvenli aday */ }
+    }
+  });
+  const tam = ayrisan.find(x => x && typeof x === 'object' && Array.isArray(x.saatler) && Array.isArray(x.gunler));
+  const benzer = ayrisan.find(x => x && typeof x === 'object' && ('saatler' in x || 'gunler' in x));
+  const bildirim = ayrisan.find(x => x && typeof x === 'object' && typeof x.hata === 'string');
+  const y = tam || benzer || bildirim || ayrisan[0];
+  if (!y) return { hata: 'Bu metin geçerli bir JSON değil. AI çıktısında eksik tırnak, parantez veya geçersiz bir ifade olabilir.' };
+  if (typeof y.hata === 'string' && y.hata.trim())
+    return { hata: y.hata.trim().slice(0, 300) };
   if (!y || !Array.isArray(y.saatler) || !y.saatler.length) return { hata: '“saatler” listesi bulunamadı ya da boş.' };
-  if (!Array.isArray(y.gunler) || y.gunler.length !== 7) return { hata: '“gunler” tam olarak 7 gün içermeli (Pazartesi–Pazar).' };
+  if (!Array.isArray(y.gunler) || (y.gunler.length !== 5 && y.gunler.length !== 7))
+    return { hata: '“gunler” 5 iş günü veya 7 gün içermeli (Pazartesi’den başlayarak).' };
+  if (!y.gunler.every(Array.isArray)) return { hata: '“gunler” içindeki her gün ayrı bir ders listesi olmalı.' };
   const saatler = y.saatler.map(s => String(s || '').trim());
   const gunler = y.gunler.map(g => {
     const dizi = (Array.isArray(g) ? g : []).map(x => String(x || '').trim().toLocaleUpperCase('tr'));
     while (dizi.length < saatler.length) dizi.push('');
     return dizi.slice(0, saatler.length);
   });
+  while (gunler.length < 7) gunler.push(saatler.map(() => ''));
   return { tablo: { saatler: saatler, gunler: gunler } };
 }
+
 // --- haftalık konuları ders programına göre dağıt
 function haftaNo(hb) {
   // dönem başı Pazartesi olmayan bir tarihse (elle girilmiş ya da eski varsayılan),
