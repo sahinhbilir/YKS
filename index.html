@@ -1776,8 +1776,8 @@ const subeKullananlar = su => kullananlar().filter(i => D.ogr[i].sube === su);
 function subeListesi() {
   const k = {};
   (D.ogr || []).forEach(o => { if (!o.silindi && o.sube) k[o.sube] = 1; });
-  Object.keys(D.dersProgrami || {}).forEach(x => { k[x] = 1; });
-  Object.keys(D.programHafta || {}).forEach(x => { k[x] = 1; });
+  Object.keys(D.dersProgrami || {}).forEach(x => { if (x) k[x] = 1; });
+  Object.keys(D.programHafta || {}).forEach(x => { if (x) k[x] = 1; });
   return Object.keys(k).sort();
 }
 
