@@ -100,11 +100,13 @@ const initialClass = vm.runInContext(`
   D = varsayilan();
   D.rol = 'rehber';
   D.ogr = [{ ad: 'Test Öğrenci', sube: '12A', silindi: false }];
+  D.dersProgrami[''] = { saatler: ['09:00'], gunler: [[], [], [], [], [], [], []] };
+  D.programHafta[''] = {};
   EK.sube = '';
   const html = gorunumProgram();
-  ({ sube: EK.sube, secenekte: html.includes('<option selected>12A</option>') });
+  ({ sube: EK.sube, subeler: subeListesi(), secenekte: html.includes('<option selected>12A</option>') });
 `, sandbox);
-if (initialClass.sube !== '12A' || !initialClass.secenekte)
+if (initialClass.sube !== '12A' || initialClass.subeler.includes('') || !initialClass.secenekte)
   throw new Error('first-timetable-import-must-target-real-class: ' + JSON.stringify(initialClass));
 checks.push('first-timetable-import-targets-real-class');
 
