@@ -2242,6 +2242,28 @@ function gorunumPlan() {
     '<div id="tumu"></div>';
 }
 
+// Yeni bir öğretmen paketi, öğretmenin planını esas alır. Öğrencinin önceki cihazda
+// plana eklediği bir çalışma buluta sonuç olarak ulaşmış olabilir ama öğretmenin
+// planında bulunmayabilir. Bu kayıtlar Karne'de kalırken Sonuç girişi'nden kaybolursa
+// artık düzeltilemezler. Planı iki cihaz arasında sessizce birleştirmek yerine, yalnızca
+// o haftanın planda karşılığı olmayan gerçek sonuçlarını ayrı ve düzenlenebilir göster.
+function planDisiHaftaSonuclari(si, hb, p) {
+  const planda = new Set();
+  (p.gunler || []).forEach((liste, g) => (liste || []).forEach(x => {
+    if (!x.serbest && !x.anlatim) planda.add((hb + g) + ':' + x.ki);
+  }));
+  (p.bekleyen || []).forEach(x => planda.add(x.due + ':' + x.ki));
+  const tekil = new Map();
+  (D.log || []).forEach(l => {
+    if (l[1] !== si || l[0] < hb || l[0] > hb + 6 || !konuAl(l[2])) return;
+    const anahtar = l[0] + ':' + l[2];
+    const onceki = tekil.get(anahtar);
+    if (!onceki || (+l[6] || 0) >= (+onceki[6] || 0)) tekil.set(anahtar, l);
+  });
+  return Array.from(tekil.entries()).filter(([anahtar]) => !planda.has(anahtar))
+    .map(([, l]) => l).sort((a, b) => a[0] - b[0] || a[2] - b[2]);
+}
+
 function gorunumGiris() {
   const si = EK.ogr, hb = haftaBasi(), p = planHesapla(si, hb);
   let h = '<div class="baslik"><h1>Sonuç girişi</h1><p>Öğrencinin bu hafta çözdüğü testlerin doğru sayısını girin. ' +
@@ -2249,9 +2271,29 @@ function gorunumGiris() {
     'en yakın uygun güne taşınır, algoritma hakkında karar vermez.</p></div>' +
     '<div class="arac">' + ogrSecici() + haftaSecici() + '</div>';
   const bek = p.bekleyen || [];
-  if (!p.toplam && !bek.length)
+  const planDisi = planDisiHaftaSonuclari(si, hb, p);
+  if (!p.toplam && !bek.length && !planDisi.length)
     return h + '<div class="uyari-serit">Bu hafta bu öğrenci için planlanmış konu yok.</div>';
   h += '<div class="kart" style="padding:16px 18px">';
+  if (planDisi.length) {
+    h += '<div class="gun-basi">Plan dışında kaydedilmiş sonuçlar</div>' +
+      '<div class="mini" style="margin-bottom:6px">Sonuç geçmişi korunmuştur; yüklü planda karşılığı olmayan kayıtları buradan düzeltebilirsiniz.</div>';
+    planDisi.forEach(l => {
+      const ki = l[2], gun = l[0], konu = konuAl(ki), girisAnahtari = ki + ':' + gun;
+      if (!EK.girisAcik[girisAnahtari]) {
+        h += '<div class="giris-satir giris-kilitli"><span class="gun">' + ggyy(gun) + '</span>' +
+          '<span>' + kacis(konu[3]) + ' <span class="mini">· ' + kacis(konuDersAdi(ki)) + '</span></span>' +
+          '<span class="mini" style="text-align:center">✓ kaydedildi · ' + l[3] + '/' + l[4] + '</span>' +
+          '<button class="dugme" data-girisduzenle="1" data-ki="' + ki + '" data-gun="' + gun + '">Düzenle</button></div>';
+        return;
+      }
+      h += '<div class="giris-satir"><span class="gun">' + ggyy(gun) + '</span>' +
+        '<span>' + kacis(konu[3]) + ' <span class="mini">· plan dışı sonuç</span></span>' +
+        '<input type="number" min="0" max="200" value="' + l[3] + '" data-ki="' + ki + '" data-gun="' + gun + '" class="gDogru">' +
+        '<input type="number" min="1" max="200" value="' + l[4] + '" class="gSoru"><span></span></div>';
+    });
+    if (p.toplam || bek.length) h += '<div style="height:10px"></div>';
+  }
   if (bek.length) {
     h += '<div class="gun-basi">Önceki haftalardan — sonucu girilmedi</div>';
     bek.forEach(x => {
