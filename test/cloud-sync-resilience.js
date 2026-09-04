@@ -978,6 +978,96 @@ test('daily-snapshot-failure-does-not-fail-the-main-backup', async () => {
   equal((await run('bulutaYedekle()')).tur, 'tamam', 'the main backup must still count as done');
 });
 
+// ================================================================== otomatik öğrenci sonucu senkronizasyonu
+test('sunucuyaGonder-records-plan-start-even-before-any-result', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  let payload = null, signIns = 0;
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    girisOgrenci: async () => { signIns++; return { uid: 'student-uid' }; },
+    updateDoc: async (_ref, data) => { payload = data; }
+  });
+  const adet = await run("sunucuyaGonder({tur:'plan-baslatildi',hafta:100,toplam:7})");
+  equal(adet, 0, 'a plan event may be sent with zero result rows');
+  equal(signIns, 1, 'the student must authenticate before the automatic write');
+  assert(payload && payload.bagliUid === 'student-uid', 'the write must stay bound to the signed-in student');
+  equal(payload.paket.istemciOlay.tur, 'plan-baslatildi');
+  equal(payload.paket.istemciOlay.hafta, 100);
+  equal(payload.paket.istemciOlay.toplam, 7);
+  assert(Number.isSafeInteger(payload.paket.istemciOlay.ts), 'the event must have an integer timestamp');
+});
+
+test('manual-sunucuyaGonder-still-skips-empty-results', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  let writes = 0, signIns = 0;
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    girisOgrenci: async () => { signIns++; return { uid: 'student-uid' }; },
+    updateDoc: async () => { writes++; }
+  });
+  equal(await run('sunucuyaGonder()'), 0);
+  equal(signIns, 0, 'an empty manual retry need not authenticate');
+  equal(writes, 0, 'an empty manual retry must not overwrite the server record');
+});
+
+test('automatic-cloud-sync-is-student-only-and-keeps-permission-errors-nonfatal', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'rehber');
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true });
+  equal((await run("ogrenciBulutOtomatikGonder({tur:'plan-baslatildi',hafta:100})")).tur, 'atlan',
+    'teacher actions must not enter the student upload path');
+
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    girisOgrenci: async () => ({ uid: 'student-uid' }),
+    updateDoc: async () => { const e = new Error('Missing or insufficient permissions.'); e.code = 'permission-denied'; throw e; }
+  });
+  const sonuc = await run("ogrenciBulutOtomatikGonder({tur:'plan-baslatildi',hafta:100})");
+  equal(sonuc.tur, 'hata', 'the local button flow must receive a status, not a thrown error');
+  assert(/izni reddedildi/.test(sonuc.mesaj), 'the raw Firebase permission text must be translated: ' + JSON.stringify(sonuc));
+});
+
+test('planiSabitle-click-triggers-automatic-server-write', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  run(`EK.ogr = 0; otomatikOlay = null; sonBildirim = '';
+    haftayiKullanimaAl = () => 4;
+    kaydet = async () => true;
+    ciz = () => {};
+    bilgiVer = m => { sonBildirim = m; };
+    ogrenciBulutOtomatikGonder = async o => { otomatikOlay = o; return {tur:'tamam',adet:0}; };`);
+  const target = Object.assign(element(), { id: 'planiSabitle',
+    closest(sel) { return sel.indexOf('#planiSabitle') >= 0 ? this : null; } });
+  await listeners.click[0]({ target });
+  equal(run('otomatikOlay.tur'), 'plan-baslatildi');
+  equal(run('otomatikOlay.toplam'), 4);
+  assert(/Sunucuya otomatik gönderildi/.test(run('sonBildirim')), 'the student must see successful auto-sync status');
+});
+
+test('sonucKaydet-click-triggers-automatic-server-write', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  const gun = run('bugunNo()');
+  const soru = { value: '10' };
+  const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
+    parentElement: { querySelector: () => soru } });
+  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  run(`EK.ogr = 0; otomatikOlay = null; sonBildirim = '';
+    sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
+    kaydet = async () => true;
+    ciz = () => {};
+    bilgiVer = m => { sonBildirim = m; };
+    ogrenciBulutOtomatikGonder = async o => { otomatikOlay = o; return {tur:'tamam',adet:1}; };`);
+  const target = Object.assign(element(), { id: 'sonucKaydet',
+    closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
+  await listeners.click[0]({ target });
+  equal(run('otomatikOlay.tur'), 'sonuclar-kaydedildi');
+  equal(run('otomatikOlay.toplam'), 1);
+  equal(run('D.log.length'), 1, 'the result must be applied locally before upload');
+  assert(/1 sonuç kaydedildi/.test(run('sonBildirim')) && /Sunucuya otomatik gönderildi/.test(run('sonBildirim')),
+    'the student must see both local-save and auto-sync success');
+});
+
 test('history-lists-newest-first-and-restores-a-chosen-day', async () => {
   const { sandbox, run, listeners } = loadAppSandbox();
   resetOgr(sandbox, [student({}), student({ no: 2, ad: 'Deniz' })]);
