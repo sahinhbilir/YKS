@@ -24,10 +24,12 @@ const OGRETMEN2_UID = 'ogretmen-2';         // gerçek bir hesap ama allowlist't
 const TEMP_TEACHER_UID = 'ogretmen-gecici'; // yalnızca de-allowlist testinde kullanılır
 const OGRENCI_UID = 'ogrenci-gercek-1';     // birincil öğrenci — üretimdeki gibi ANONİM
 const OGRENCI2_UID = 'ogrenci-gercek-2';    // ikinci öğrenci (Fix E: ikinci syncId üzerinde tekrar)
+const HESAPLI_OGRENCI_UID = 'ogrenci-hesap-1';
 const SALDIRGAN_UID = 'saldirgan-1';
 
 const gercekToken = { firebase: { sign_in_provider: 'google.com', identities: {} } };
 const anonimToken = { firebase: { sign_in_provider: 'anonymous', identities: {} } };
+const sifreToken = { firebase: { sign_in_provider: 'password', identities: {} } };
 
 const ogretmenDb = testEnv.authenticatedContext(OGRETMEN_UID, gercekToken).firestore();
 const ogretmen2Db = testEnv.authenticatedContext(OGRETMEN2_UID, gercekToken).firestore();
@@ -40,6 +42,7 @@ const anonDb = testEnv.unauthenticatedContext().firestore();
 const ogrenciDb = testEnv.authenticatedContext(OGRENCI_UID, anonimToken).firestore();
 const ogrenciGercekHesapDb = testEnv.authenticatedContext(OGRENCI_UID, gercekToken).firestore();
 const ogrenci2Db = testEnv.authenticatedContext(OGRENCI2_UID, anonimToken).firestore();
+const hesapliOgrenciDb = testEnv.authenticatedContext(HESAPLI_OGRENCI_UID, sifreToken).firestore();
 
 // Allowlist tohumlama: gerçek dünyada bu, öğretmenin ilk gerçek Google girişinden sonra
 // Firebase konsolundan elle yapılan tek seferlik bir adımdır (bkz. plan §1).
@@ -50,6 +53,10 @@ await testEnv.withSecurityRulesDisabled(async (ctx) => {
 const bosYuva = (over) => Object.assign({
   ogretmenUid: OGRETMEN_UID, ogrenciNo: 3, ogrenciAd: 'Ayşe Yılmaz', ogrenciSube: '12A',
   ogrenciBulutId: 'bulut-id-1', bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif'
+}, over || {});
+const hesapVeri = (syncId, over) => Object.assign({
+  veri: JSON.stringify({ tur: 'yks-ogrenci-paketi', ogr: { no: 3 } }),
+  syncId, aktif: true, ts: 1750000000000, surum: 1
 }, over || {});
 
 let sidN = 0;
@@ -88,6 +95,60 @@ await check('create-rejects-empty-ogrenciBulutId', async () => {
 });
 await check('create-rejects-non-aktif-durum', async () => {
   await assertFails(setDoc(doc(ogretmenDb, 'ogrenciler', sid('create-baddurum')), bosYuva({ durum: 'iptal' })));
+});
+
+// ================================================================== önceden seçilmiş öğrenci hesabı
+const hesapSid = sid('account');
+await check('teacher-can-publish-student-account-package', async () => {
+  await assertSucceeds(setDoc(
+    doc(ogretmenDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID), hesapVeri(hesapSid)));
+});
+await check('student-can-read-only-own-active-account-package', async () => {
+  await assertSucceeds(getDoc(doc(hesapliOgrenciDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID)));
+  await assertFails(getDoc(doc(ogrenciGercekHesapDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID)));
+  await assertFails(getDoc(doc(anonDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID)));
+});
+await check('student-cannot-write-account-package', async () => {
+  await assertFails(updateDoc(
+    doc(hesapliOgrenciDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID), { aktif: false }));
+});
+await check('teacher-can-create-slot-prebound-to-published-account', async () => {
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogrenciler', hesapSid),
+    bosYuva({ bagliUid: HESAPLI_OGRENCI_UID })));
+});
+await check('password-student-account-can-send-results-to-own-slot', async () => {
+  await assertSucceeds(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', hesapSid), {
+    bagliUid: HESAPLI_OGRENCI_UID,
+    paket: { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 100, k: 5, d: 8, s: 10, t: 1 }], konular: {} },
+    sunucuTs: null
+  }));
+});
+await check('password-student-account-cannot-use-another-sync-slot', async () => {
+  const baskaSid = sid('account-other-slot');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', baskaSid),
+      bosYuva({ bagliUid: HESAPLI_OGRENCI_UID, ogrenciBulutId: 'other-cloud-id' }));
+  });
+  await assertFails(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', baskaSid), {
+    bagliUid: HESAPLI_OGRENCI_UID,
+    paket: { tur: 'yks-sonuc', surum: 2, kayit: [], konular: {} },
+    sunucuTs: null
+  }));
+});
+await check('teacher-can-rebind-existing-slot-only-to-matching-published-account', async () => {
+  const rebindSid = sid('account-rebind');
+  await assertSucceeds(setDoc(
+    doc(ogretmenDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID), hesapVeri(rebindSid)));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', rebindSid), bosYuva());
+  });
+  await assertSucceeds(updateDoc(
+    doc(ogretmenDb, 'ogrenciler', rebindSid), { bagliUid: HESAPLI_OGRENCI_UID }));
+  await assertFails(updateDoc(
+    doc(ogretmenDb, 'ogrenciler', rebindSid), { bagliUid: 'not-a-published-account' }));
+  // Sonraki testler asıl hesap belgesini ilk syncId ile kullanır.
+  await assertSucceeds(setDoc(
+    doc(ogretmenDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID), hesapVeri(hesapSid)));
 });
 
 // ================================================================== read + allowlist revocation
