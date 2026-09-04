@@ -770,6 +770,32 @@ test('rolRehber-keeps-local-data-when-restore-is-declined-or-broken', async () =
   assert(Array.isArray(run('D.ogr')), 'D must not be left holding the invalid backup');
 });
 
+
+test('permission-denied-is-explained-not-shown-raw', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  run('D = varsayilan(); D.rol = null;');
+  const izinHatasi = Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    girisOgretmen: async () => ({ uid: 'teacher-uid', isAnonymous: false, email: 'x@y.com' }),
+    getDoc: async () => { throw izinHatasi; },
+    setDoc: async () => { throw izinHatasi; }
+  });
+  equal((await run('buluttanYedekAl()')).tur, 'izinYok', 'a permission error must be classified, not passed through raw');
+  run("D.rol = 'rehber';");   // yükleme yolu yalnızca öğretmen rolünde çalışır
+  const yukleme = await run('bulutaYedekle()');
+  assert(/yayınlanmamış|ogretmenler/.test(yukleme.mesaj || ''), 'upload must explain the likely cause: ' + yukleme.mesaj);
+  run('D.rol = null;');       // kurulum ekranı durumuna geri dön
+  let uyari = '';
+  sandbox.alert = (m) => { uyari = m; };
+  sandbox.prompt = () => 'Okul';
+  const target = Object.assign(element(), { closest(sel) { return sel.indexOf('#rolRehber') >= 0 ? this : null; } });
+  await listeners.click[0]({ target });
+  assert(!/insufficient permissions/i.test(uyari), 'the raw Firebase string must not be what the teacher sees: ' + uyari);
+  assert(/Rules|ogretmenler/.test(uyari), 'the alert must name what to check: ' + uyari);
+  equal(run('D.rol'), 'rehber', 'setup must still complete locally');
+});
+
 // ================================================================== özet
 (async () => {
   for (const t of pending) await t();

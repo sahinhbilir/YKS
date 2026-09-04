@@ -3299,7 +3299,9 @@ async function bulutaYedekle() {
       { veri: json, ts: Number.isSafeInteger(+D.ts) && +D.ts > 0 ? +D.ts : Date.now(),
         surum: VERI_SURUMU, boyut: json.length });
     return { tur: 'tamam', boyut: json.length };
-  } catch (e) { return { tur: 'hata', mesaj: e.message || String(e) }; }
+  } catch (e) {
+    return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA } : { tur: 'hata', mesaj: e.message || String(e) };
+  }
 }
 // Her kayıtta buluta yazmak hem gereksiz hem pahalı: son değişiklikten bir dakika sonra
 // TEK bir yükleme yapılır. Başarısızlık sessizdir — bir sonraki kayıt yeniden planlar,
@@ -3326,8 +3328,18 @@ async function buluttanYedekAl() {
     try { y = JSON.parse(veri.veri); }
     catch (e) { return { tur: 'hata', mesaj: 'Buluttaki yedek okunamadı (bozuk JSON).' }; }
     return { tur: 'tamam', yedek: y, ts: Number.isSafeInteger(+veri.ts) ? +veri.ts : 0 };
-  } catch (e) { return { tur: 'hata', mesaj: e.message || String(e) }; }
+  } catch (e) { return izinHatasiMi(e) ? { tur: 'izinYok' } : { tur: 'hata', mesaj: e.message || String(e) }; }
 }
+// Firestore "permission-denied" hatası bu uygulamada neredeyse her zaman iki şeyden birini
+// gösterir; ham mesaj ("Missing or insufficient permissions") bunların hiçbirini söylemez.
+function izinHatasiMi(e) {
+  const t = String((e && (e.code || e.message)) || '');
+  return /permission[-_ ]?denied|insufficient permissions/i.test(t);
+}
+const BULUT_IZIN_ACIKLAMA =
+  'Buluta erişim izni yok. Muhtemel iki neden: (1) firestore.rules dosyasının güncel hâli ' +
+  'Firebase konsolunda yayınlanmamış olabilir (Firestore Database → Rules → Publish), ' +
+  '(2) bu Google hesabının kimliği "ogretmenler" listesinde olmayabilir.';
 // Yedekteki silinmemiş öğrenci sayısı — geri yükleme onayında kullanıcıya ne geleceğini
 // gösterir. Bozuk bir yedekte ogr dizi olmayabilir; bu sayaç ASLA fırlatmamalı, çünkü
 // kurulum ekranındaki tek düğmenin akışında çağrılıyor (fırlatırsa kurulum hiç yapılamaz).
@@ -4738,6 +4750,9 @@ document.addEventListener('click', async ev => {
               alert('Bulut yedeği yüklenemedi: ' + (e.message || e) + ' Kuruluma devam edebilirsiniz.');
             }
           }
+        } else if (sonuc.tur === 'izinYok') {
+          alert(BULUT_IZIN_ACIKLAMA + ' Şimdilik kuruluma devam edebilirsiniz; ' +
+            'düzelttikten sonra "Verileri sıfırla" deyip yeniden deneyebilir ya da dosya yedeğinizi yükleyebilirsiniz.');
         } else if (sonuc.tur === 'hata') {
           alert('Bulut yedeği okunamadı: ' + sonuc.mesaj + ' Kuruluma devam edebilirsiniz.');
         }
