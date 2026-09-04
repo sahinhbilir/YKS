@@ -3322,7 +3322,7 @@ async function bulutBaglantisiniSifirla(si) {
   const yeniRef = window.bulut.doc(window.bulut.db, 'ogrenciler', yeniSyncId);
   let sonuc;
   try {
-    sonuc = await window.bulut.runTransaction(async (tx) => {
+    sonuc = await window.bulut.runTransaction(window.bulut.db, async (tx) => {
       const anlik = await tx.get(eskiRef);
       if (!anlik.exists() || anlik.data().durum !== 'aktif' || !anlik.data().bagliUid) return { zatenBos: true };
       const veri = anlik.data();
