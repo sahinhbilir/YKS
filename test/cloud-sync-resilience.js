@@ -205,10 +205,12 @@ test('bulutBaglantisiniSifirla-single-transaction-delegates-import', async () =>
     old: { ogretmenUid: 't', ogrenciNo: 1, ogrenciAd: 'Ada', ogrenciSube: '12A', ogrenciBulutId: 'b1', durum: 'aktif', bagliUid: 'stu-old', paket: null }
   };
   let txCalls = 0;
+  let txDb = null;
   sandbox.window.bulut = baseBulut({
     getDoc: async (id) => docSnap(!!docs[id], docs[id]),
-    runTransaction: async (cb) => {
+    runTransaction: async (db, cb) => {
       txCalls++;
+      txDb = db;
       const tx = {
         get: async (ref) => docSnap(!!docs[ref], docs[ref]),
         update: (ref, data) => { Object.assign(docs[ref], data); },
@@ -220,6 +222,7 @@ test('bulutBaglantisiniSifirla-single-transaction-delegates-import', async () =>
   const r = await run('bulutBaglantisiniSifirla(0)');
   assert(r.tur === 'tamam', 'expected tamam: ' + JSON.stringify(r));
   equal(txCalls, 1, 'runTransaction must be called exactly once');
+  assert(txDb === sandbox.window.bulut.db, 'runTransaction must receive the Firestore db as its first argument');
   assert(docs.old.durum === 'iptal' && docs.old.sonrakiSyncId, 'old doc must be frozen with a successor pointer');
   const newId = docs.old.sonrakiSyncId;
   assert(docs[newId] && docs[newId].durum === 'aktif' && docs[newId].ogrenciBulutId === 'b1', 'new doc must carry the same ogrenciBulutId');
