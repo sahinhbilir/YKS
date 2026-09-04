@@ -349,7 +349,7 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 // module-script olmadığından, burada kurulan istemciler window.bulut üzerinden paylaşılır.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js';
-import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
+import { getAuth, signInAnonymously, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, updateDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 // Bu değerler istemci tarafında görünür olması güvenlik açığı YARATMAZ — asıl koruma
@@ -378,6 +378,38 @@ if (firebaseYapilandirildi) {
 }
 const auth = getAuth(uygulama);
 const db = getFirestore(uygulama);
+// Öğretmenin öğrenci hesaplarını hazırlarken kendi Google oturumunu kaybetmemesi için
+// hesap oluşturma işlemleri ayrı bir Auth örneğinde yürür.
+const ogrenciHesapUygulamasi = initializeApp(firebaseConfig, 'ogrenci-hesaplari');
+const ogrenciHesapAuth = getAuth(ogrenciHesapUygulamasi);
+
+function ogrenciGirisMetni(v) {
+  return String(v == null ? '' : v).normalize('NFKC').toLocaleLowerCase('tr-TR')
+    .replace(/\s+/g, ' ').trim();
+}
+async function ogrenciGirisKimligi(ad, no) {
+  const kaynak = ogrenciGirisMetni(ad) + '|' + String(no == null ? '' : no).trim();
+  const ozetBayt = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(kaynak));
+  const ozet = Array.from(new Uint8Array(ozetBayt), b => b.toString(16).padStart(2, '0')).join('');
+  return {
+    // Gerçek öğrenci adı veya numarası Firebase Authentication e-posta alanına yazılmaz.
+    email: 'ogr-' + ozet.slice(0, 40) + '@student.ykstekrar.app',
+    sifre: 'Yks!' + ozet
+  };
+}
+async function girisOgrenciHesabi(ad, no) {
+  const k = await ogrenciGirisKimligi(ad, no);
+  return (await signInWithEmailAndPassword(auth, k.email, k.sifre)).user;
+}
+async function ogrenciHesabiHazirla(ad, no) {
+  const k = await ogrenciGirisKimligi(ad, no);
+  try {
+    return (await createUserWithEmailAndPassword(ogrenciHesapAuth, k.email, k.sifre)).user;
+  } catch (e) {
+    if (!e || e.code !== 'auth/email-already-in-use') throw e;
+    return (await signInWithEmailAndPassword(ogrenciHesapAuth, k.email, k.sifre)).user;
+  }
+}
 
 // Öğrenci cihazı: sessiz, anonim giriş — kullanıcı hareketi gerekmez, ilk çağrıda başlar
 // ve sonucu bütün çağıranlar arasında paylaşılır. Kalıcı bir "çözülmüş kullanıcı" önbelleği
@@ -386,7 +418,9 @@ const db = getFirestore(uygulama);
 // dönüldüğünde bayat bir kimlik asla döndürülmez.
 let ogrenciGirisi = null;
 function girisOgrenci() {
-  if (auth.currentUser && auth.currentUser.isAnonymous) return Promise.resolve(auth.currentUser);
+  if (auth.currentUser && (auth.currentUser.isAnonymous ||
+      String(auth.currentUser.email || '').endsWith('@student.ykstekrar.app')))
+    return Promise.resolve(auth.currentUser);
   if (!ogrenciGirisi) {
     let zamanAsimiId;
     const girisSonucu = signInAnonymously(auth).then(cred => { clearTimeout(zamanAsimiId); ogrenciGirisi = null; return cred.user; });
@@ -405,6 +439,7 @@ function girisOgretmen() {
 }
 
 window.bulut = { db, doc, getDoc, setDoc, updateDoc, runTransaction, girisOgrenci, girisOgretmen,
+  girisOgrenciHesabi, ogrenciHesabiHazirla,
   mevcutKullanici: () => auth.currentUser,
   // Gerçek firebaseConfig değerleri girilene kadar bulut düğmeleri arayüzde gösterilmez —
   // yapılandırılmamış, kesin başarısız olacak kontroller kullanıcıya sunulmaz.
@@ -2991,7 +3026,8 @@ function gorunumAyarlar() {
         (window.bulut && window.bulut.yapilandirilmis
           ? '<button class="dugme" id="bulutBaglan">Buluta bağlan</button>' +
             '<button class="dugme" id="bulutCek">Buluttan sonuçları çek</button>' +
-            '<button class="dugme" id="bulutYedekle">Defteri buluta yedekle</button>'
+            '<button class="dugme" id="bulutYedekle">Defteri buluta yedekle</button>' +
+            '<button class="dugme birincil" id="ogrenciHesapYayinla">Öğrenci girişlerini yayınla</button>'
           : '')
       : '<label class="dugme birincil" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
         '<input type="file" id="paketYukle" hidden></label>' +
@@ -3126,6 +3162,87 @@ function paketiYukle(pk) {
   y.ayarSurum = VERI_SURUMU; y.katalogImza = KATALOG_IMZA;
   yedekDogrula(y);
   return y;
+}
+
+async function ogrenciHesabindanYukle(ad, no) {
+  if (!window.bulut || !window.bulut.yapilandirilmis)
+    throw new Error('Bulut bağlantısı yapılandırılmamış.');
+  const kullanici = await window.bulut.girisOgrenciHesabi(ad, no);
+  const anlik = await window.bulut.getDoc(
+    window.bulut.doc(window.bulut.db, 'ogrenciHesaplari', kullanici.uid));
+  if (!anlik || !anlik.exists()) throw new Error('Bu öğrenci için yayınlanmış veri bulunamadı.');
+  const hesap = anlik.data() || {};
+  if (hesap.aktif !== true || typeof hesap.veri !== 'string' || !hesap.veri)
+    throw new Error('Bu öğrenci hesabı kullanıma açık değil.');
+  let paket;
+  try { paket = JSON.parse(hesap.veri); }
+  catch (e) { throw new Error('Sunucudaki öğrenci verisi okunamadı. Rehber öğretmeninize bildirin.'); }
+  veriyiHazirla(paketiYukle(paket));
+  EK.ogr = 0; EK.sekme = 'plan'; EK.hafta = null;
+  await kaydet(true);
+  ciz();
+  return D.ogr[0];
+}
+
+async function ogrenciHesaplariniYayinla() {
+  if (!rehberMi()) throw new Error('Bu işlem yalnızca rehber öğretmen hesabında yapılabilir.');
+  if (!window.bulut || !window.bulut.yapilandirilmis)
+    throw new Error('Bulut bağlantısı yapılandırılmamış.');
+  const onceki = window.bulut.mevcutKullanici();
+  const ogretmen = (!onceki || onceki.isAnonymous ||
+    String(onceki.email || '').endsWith('@student.ykstekrar.app'))
+    ? await window.bulut.girisOgretmen() : onceki;
+  if (!ogretmen || ogretmen.isAnonymous) throw new Error('Öğretmen Google girişi tamamlanamadı.');
+
+  const rapor = [];
+  for (let i = 0; i < D.ogr.length; i++) {
+    const o = D.ogr[i];
+    if (!o || o.silindi) continue;
+    try {
+      syncIdSagla(i);
+      const eskiHesapUid = o.hesapUid || null;
+      const hesap = await window.bulut.ogrenciHesabiHazirla(o.ad, o.no);
+      o.hesapUid = hesap.uid;
+      const paket = ogrenciPaketi(i);
+      const veri = JSON.stringify(paket);
+      if (!veri || veri.length > BULUT_YEDEK_UST_SINIR)
+        throw new Error('Öğrenci paketi sunucu sınırını aşıyor.');
+
+      await window.bulut.setDoc(
+        window.bulut.doc(window.bulut.db, 'ogrenciHesaplari', hesap.uid),
+        { veri: veri, syncId: o.syncId, aktif: true, ts: Date.now(), surum: PAKET_SURUM });
+
+      const yuvaRef = window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId);
+      const yuva = await window.bulut.getDoc(yuvaRef);
+      if (!yuva || !yuva.exists()) {
+        await window.bulut.setDoc(yuvaRef, {
+          ogretmenUid: ogretmen.uid, ogrenciNo: o.no, ogrenciAd: o.ad, ogrenciSube: o.sube,
+          ogrenciBulutId: o.ogrenciBulutId, bagliUid: hesap.uid, paket: null,
+          sunucuTs: null, durum: 'aktif'
+        });
+      } else {
+        const mevcut = yuva.data() || {};
+        if (mevcut.ogretmenUid !== ogretmen.uid || mevcut.ogrenciBulutId !== o.ogrenciBulutId)
+          throw new Error('Mevcut bulut yuvası başka bir kayda ait.');
+        if (mevcut.durum !== 'aktif') throw new Error('Mevcut bulut yuvası etkin değil.');
+        if (mevcut.bagliUid !== hesap.uid)
+          await window.bulut.updateDoc(yuvaRef, { bagliUid: hesap.uid });
+      }
+
+      if (eskiHesapUid && eskiHesapUid !== hesap.uid) {
+        try {
+          await window.bulut.updateDoc(
+            window.bulut.doc(window.bulut.db, 'ogrenciHesaplari', eskiHesapUid),
+            { aktif: false, ts: Date.now() });
+        } catch (e) { /* eski hesap yoksa yeni hesabın yayını yine geçerlidir */ }
+      }
+      rapor.push({ i: i, tamam: true });
+    } catch (e) {
+      rapor.push({ i: i, tamam: false, mesaj: e && (e.message || e.code) || String(e) });
+    }
+  }
+  await kaydet(true);
+  return rapor;
 }
 // öğrenciden öğretmene: yalnızca yeni sonuçlar
 function sonucPaketi(sinir) {
@@ -4544,9 +4661,20 @@ function gorunumKurulum() {
     '<span>Sınıfın tamamını yönetirim: öğrencileri eklerim, ders programını yüklerim, ' +
     'konuları dağıtırım, haftalık planları basarım.</span></button>' +
     '<button class="kur-kart" id="rolOgrenci"><b>Öğrenciyim</b>' +
-    '<span>Rehber öğretmenimin verdiği dosyayı yüklerim; kendi planımı görür, ' +
-    'çözdüğüm testlerin doğru sayısını kendim girerim.</span></button>' +
+    '<span>Adım ve okul numaramla giriş yaparım; öğretmenimin hazırladığı plan ' +
+    'sunucudan otomatik yüklenir.</span></button>' +
     '</div>' +
+    '<div id="ogrenciGirisAlan" hidden style="max-width:420px;margin:18px auto 0;text-align:left">' +
+    '<h2 style="text-align:center;margin-bottom:12px">Öğrenci girişi</h2>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">' +
+    '<label class="etiket">Ad soyad<br><input type="text" id="ogrenciGirisAd" autocomplete="off" ' +
+    'style="width:100%;margin-top:4px" placeholder="Ad Soyad"></label>' +
+    '<label class="etiket">Okul numarası<br><input type="number" id="ogrenciGirisNo" autocomplete="off" ' +
+    'min="1" max="9999" inputmode="numeric" style="width:100%;margin-top:4px" placeholder="Numara"></label>' +
+    '<button class="dugme birincil" id="ogrenciBulutGiris">Giriş yap</button>' +
+    '<span class="mini" id="ogrenciGirisDurum" role="status" aria-live="polite">Adınızı ve numaranızı ' +
+    'öğretmeninizin listesindeki biçimde yazın. Veriniz onay sorulmadan otomatik yüklenir.</span>' +
+    '</div></div>' +
     '<div class="kur-alt"><label class="dugme" style="cursor:pointer">Yedek dosyasından geri yükle' +
     '<input type="file" id="kurYedek" hidden></label>' +
     '<button class="dugme" id="kurYapistirAc">Dosya açılmıyor mu? İçeriği yapıştır</button>' +
@@ -4797,8 +4925,37 @@ document.addEventListener('click', async ev => {
     return;
   }
   if (ev.target.closest('#rolOgrenci')) {
-    D.rol = 'ogrenci'; EK.sekme = 'plan';
-    await kaydet(true); ciz();
+    const alan = document.getElementById('ogrenciGirisAlan');
+    if (alan) {
+      alan.hidden = false;
+      const ad = document.getElementById('ogrenciGirisAd');
+      if (ad) ad.focus();
+    }
+    return;
+  }
+  if (ev.target.closest('#ogrenciBulutGiris')) {
+    const dugme = ev.target.closest('#ogrenciBulutGiris');
+    const ad = ((document.getElementById('ogrenciGirisAd') || {}).value || '').trim();
+    const noMetin = ((document.getElementById('ogrenciGirisNo') || {}).value || '').trim();
+    const no = Number(noMetin);
+    const durum = document.getElementById('ogrenciGirisDurum');
+    if (!ad || !Number.isInteger(no) || no < 1 || no > 9999) {
+      if (durum) durum.textContent = 'Ad soyadınızı ve geçerli okul numaranızı girin.';
+      return;
+    }
+    if (dugme) { dugme.disabled = true; dugme.textContent = 'Veriniz yükleniyor…'; }
+    if (durum) durum.textContent = 'Kimliğiniz doğrulanıyor ve planınız sunucudan alınıyor…';
+    try {
+      const ogrenci = await ogrenciHesabindanYukle(ad, no);
+      bilgiVer('Hoş geldin ' + ogrenci.ad + ' — planın sunucudan yüklendi.');
+    } catch (e) {
+      const kod = String(e && e.code || '');
+      const mesaj = /invalid-credential|user-not-found|wrong-password/.test(kod)
+        ? 'Ad veya okul numarası eşleşmedi. Bilgilerinizi kontrol edin.'
+        : (e && e.message || 'Öğrenci verisi yüklenemedi.');
+      if (durum) durum.textContent = mesaj;
+      if (dugme) { dugme.disabled = false; dugme.textContent = 'Giriş yap'; }
+    }
     return;
   }
   if (ev.target.closest('#kOgrBaslat')) {
@@ -5093,7 +5250,7 @@ document.addEventListener('click', async ev => {
     o.off.sort((a, b) => a - b);
     await kaydet(true); ciz(); return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutCek,#bulutYedekle,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutCek,#bulutYedekle,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     EK.girisAcik[(+t.dataset.ki) + ':' + (+t.dataset.gun)] = true; ciz(); return;
@@ -5485,6 +5642,26 @@ document.addEventListener('click', async ev => {
         (basarisiz.length ? ' Bazı öğrenciler için bulut yuvası ayrılamadı: ' + basarisiz.join(', ') + '.' : '') +
         (yedek.tur === 'hata' ? ' Defter yedeği buluta yazılamadı: ' + yedek.mesaj : ''));
     } catch (e) { alert('Buluta bağlanılamadı: ' + (e.message || e)); }
+    return;
+  }
+  if (t.id === 'ogrenciHesapYayinla') {
+    const adet = D.ogr.filter(o => o && !o.silindi).length;
+    if (!adet) { alert('Yayınlanacak öğrenci bulunamadı.'); return; }
+    if (!confirm(adet + ' öğrencinin ad + okul numarası girişi hazırlanacak ve kişisel planları ' +
+        'Firebase sunucusuna yüklenecek. Daha önce yayınlanan hesaplar güncellenecek. Devam?')) return;
+    t.disabled = true; t.textContent = 'Öğrenci girişleri yayınlanıyor…';
+    try {
+      const rapor = await ogrenciHesaplariniYayinla();
+      const tamam = rapor.filter(r => r.tamam).length;
+      const hatali = rapor.filter(r => !r.tamam);
+      ciz();
+      bilgiVer(tamam + ' öğrenci girişi yayınlandı.' +
+        (hatali.length ? ' ' + hatali.length + ' öğrenci hazırlanamadı; ayrıntı için konsola bakın.' : ''));
+      if (hatali.length) console.error('[YKS Tekrar Defteri] Öğrenci hesabı yayınlama hataları', hatali);
+    } catch (e) {
+      alert('Öğrenci girişleri yayınlanamadı: ' + (e.message || e));
+      t.disabled = false; t.textContent = 'Öğrenci girişlerini yayınla';
+    }
     return;
   }
   if (t.id === 'bulutYedekle') {

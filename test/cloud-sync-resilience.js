@@ -57,7 +57,7 @@ function loadAppSandbox() {
   sandbox.window.document = sandbox.document;
   vm.createContext(sandbox);
   new vm.Script(appSource, { filename: target }).runInContext(sandbox);
-  return { sandbox, run: code => vm.runInContext(code, sandbox), listeners };
+  return { sandbox, run: code => vm.runInContext(code, sandbox), listeners, nodes };
 }
 
 function resetOgr(sandbox, ogrList, role) {
@@ -533,6 +533,8 @@ const modSource = modSourceRaw.split('\n').filter(line => !/^\s*import\s/.test(l
 
 function loadModuleSandbox() {
   const authObj = { currentUser: null };
+  const secondaryAuthObj = { currentUser: null };
+  let authCall = 0;
   let signInAnonymouslyImpl = () => Promise.reject(new Error('not mocked'));
   const calls = { signInAnonymously: 0 };
   const initOrder = [];
@@ -540,14 +542,16 @@ function loadModuleSandbox() {
   const sandbox = {
     console,
     setTimeout: (fn, ms) => setTimeout(fn, Math.min(ms, 15)),   // gerçek 15sn'yi testte beklememek için sıkıştırılmış
-    clearTimeout, crypto,
+    clearTimeout, crypto, TextEncoder,
     window: {},
     initializeApp: () => { initOrder.push('app'); return {}; },
     initializeAppCheck: (_, options) => { initOrder.push('app-check'); appCheckOptions = options; return {}; },
     ReCaptchaEnterpriseProvider: function ReCaptchaEnterpriseProvider(key) { this.key = key; },
-    getAuth: () => { initOrder.push('auth'); return authObj; },
+    getAuth: () => { initOrder.push('auth'); return authCall++ === 0 ? authObj : secondaryAuthObj; },
     signInAnonymously: (...args) => { calls.signInAnonymously++; return signInAnonymouslyImpl(...args); },
     signInWithPopup: () => Promise.reject(new Error('not mocked in this harness')),
+    signInWithEmailAndPassword: () => Promise.reject(new Error('not mocked in this harness')),
+    createUserWithEmailAndPassword: () => Promise.reject(new Error('not mocked in this harness')),
     GoogleAuthProvider: function GoogleAuthProvider() {},
     getFirestore: () => { initOrder.push('firestore'); return {}; },
     doc: () => {}, getDoc: () => {}, setDoc: () => {}, updateDoc: () => {}, runTransaction: () => {}
@@ -560,7 +564,7 @@ function loadModuleSandbox() {
 
 test('enterprise-app-check-starts-before-auth-and-firestore', () => {
   const { initOrder, getAppCheckOptions } = loadModuleSandbox();
-  equal(initOrder.join(','), 'app,app-check,auth,firestore');
+  equal(initOrder.join(','), 'app,app-check,auth,firestore,app,auth');
   const options = getAppCheckOptions();
   assert(options && options.provider instanceof Object, 'Enterprise App Check provider must be configured');
   assert(options.provider.key && !options.provider.key.includes('YER-TUTUCU'), 'Enterprise site key must be real');
@@ -768,6 +772,65 @@ test('rolRehber-keeps-local-data-when-restore-is-declined-or-broken', async () =
   equal(run('D.rol'), 'rehber', 'the teacher must still end up set up locally');
   equal(run('D.kurum'), 'Yedek Okulu', 'the normal setup must continue after a failed restore');
   assert(Array.isArray(run('D.ogr')), 'D must not be left holding the invalid backup');
+});
+
+test('student-name-number-login-downloads-package-without-confirmation', async () => {
+  const { sandbox, run, listeners, nodes } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync', ogrenciBulutId: 'cloud-1' })]);
+  const paket = run('ogrenciPaketi(0)');
+  run('D = varsayilan(); D.rol = null;');
+  nodes.ogrenciGirisAd = Object.assign(element(), { value: 'Ada Öğrenci' });
+  nodes.ogrenciGirisNo = Object.assign(element(), { value: '42' });
+  nodes.ogrenciGirisDurum = element();
+  let giris = null, confirmSayisi = 0;
+  sandbox.confirm = () => { confirmSayisi++; return true; };
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    girisOgrenciHesabi: async (ad, no) => { giris = { ad, no }; return { uid: 'student-account-42' }; },
+    getDoc: async () => docSnap(true, { aktif: true, veri: JSON.stringify(paket), syncId: 'student-sync' }),
+    setDoc: async () => {}
+  });
+  const target = Object.assign(element(), {
+    id: 'ogrenciBulutGiris',
+    closest(sel) { return sel === '#ogrenciBulutGiris' ? this : null; }
+  });
+  await listeners.click[0]({ target });
+  equal(giris, { ad: 'Ada Öğrenci', no: 42 }, 'visible credentials must be passed to Firebase Auth');
+  equal(confirmSayisi, 0, 'a successful student login must not ask before loading the package');
+  equal(run('D.rol'), 'ogrenci', 'the downloaded package must switch to student mode');
+  equal(run('D.ogr[0].no'), 42, 'the downloaded package must belong to the selected student');
+});
+
+test('teacher-publishes-one-private-package-and-sync-slot-per-student', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [
+    student({ no: 11, ad: 'Bir Öğrenci' }),
+    student({ no: 12, ad: 'İki Öğrenci', alan: 'EA', sube: '12B' })
+  ]);
+  const writes = [];
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    ogrenciHesabiHazirla: async (_ad, no) => ({ uid: 'account-' + no }),
+    getDoc: async () => docSnap(false, undefined),
+    setDoc: async (ref, data) => { writes.push({ ref, data }); },
+    updateDoc: async () => { throw new Error('new slots must not need update'); }
+  });
+  const rapor = await run('ogrenciHesaplariniYayinla()');
+  equal(rapor.filter(r => r.tamam).length, 2, 'both students must be published');
+  const hesaplar = writes.filter(w => w.ref.startsWith('ogrenciHesaplari/'));
+  const yuvalar = writes.filter(w => w.ref.startsWith('ogrenciler/'));
+  equal(hesaplar.length, 2, 'one private package document per student');
+  equal(yuvalar.length, 2, 'one result sync slot per student');
+  hesaplar.forEach(w => {
+    const pk = JSON.parse(w.data.veri);
+    assert(pk.tur === 'yks-ogrenci-paketi', 'server data must use the validated student package format');
+    assert(pk.ogr && pk.ogr.hesapUid, 'package must carry its own account UID');
+    assert(w.data.syncId === pk.syncId, 'account package and result slot must share syncId');
+  });
+  yuvalar.forEach(w => {
+    assert(/^account-/.test(w.data.bagliUid), 'published result slot must be pre-bound to the selected account');
+  });
 });
 
 

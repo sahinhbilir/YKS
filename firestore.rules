@@ -4,7 +4,8 @@ service cloud.firestore {
 
     // Bu blokta tanımlı olduğu için aşağıdaki bütün match'lerden görülür.
     function yetkiliOgretmen() {
-      return request.auth.token.firebase.sign_in_provider != 'anonymous'
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
         && exists(/databases/$(database)/documents/ogretmenler/$(request.auth.uid));
     }
 
@@ -26,6 +27,26 @@ service cloud.firestore {
         && request.resource.data.veri.size() <= 900000
         && request.resource.data.ts is int;
       allow delete: if false;
+    }
+
+    // Rehber öğretmenin önceden hazırladığı öğrenci hesabı. Paket JSON dizesi olarak
+    // saklanır; böylece iç içe diziler Firestore belge biçimini bozmaz. Öğrenci yalnızca
+    // Firebase Authentication tarafından doğrulanan kendi UID belgesini okuyabilir.
+    match /ogrenciHesaplari/{uid} {
+      function hesapBelgesiGecerli() {
+        return request.resource.data.keys().hasOnly(['veri','syncId','aktif','ts','surum'])
+          && request.resource.data.veri is string
+          && request.resource.data.veri.size() > 0
+          && request.resource.data.veri.size() <= 900000
+          && request.resource.data.syncId is string
+          && request.resource.data.syncId.size() > 0
+          && request.resource.data.aktif is bool
+          && request.resource.data.ts is int
+          && request.resource.data.surum is int;
+      }
+      allow get: if request.auth != null && request.auth.uid == uid && resource.data.aktif == true;
+      allow create, update: if yetkiliOgretmen() && hesapBelgesiGecerli();
+      allow delete, list: if false;
     }
 
     match /ogrenciler/{syncId} {
@@ -58,9 +79,18 @@ service cloud.firestore {
           && sonraki.ogrenciBulutId == resource.data.ogrenciBulutId;
       }
 
+      function yayinlanmisHesap(uid) {
+        let hesapYolu = /databases/$(database)/documents/ogrenciHesaplari/$(uid);
+        return exists(hesapYolu)
+          && get(hesapYolu).data.aktif == true
+          && get(hesapYolu).data.syncId == syncId;
+      }
+
       allow create: if request.auth != null && yetkiliOgretmen()
         && request.auth.uid == request.resource.data.ogretmenUid
-        && request.resource.data.bagliUid == null
+        && (request.resource.data.bagliUid == null
+          || (request.resource.data.bagliUid is string
+            && yayinlanmisHesap(request.resource.data.bagliUid)))
         && request.resource.data.paket == null
         && request.resource.data.durum == 'aktif'
         && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','durum'])
@@ -84,12 +114,20 @@ service cloud.firestore {
         (
           resource.data.durum == 'aktif'
           && !('sonrakiSyncId' in request.resource.data)   // yalnızca devre dışı bırakma dalı bunu yazabilir
-          // Üretimde öğrenci cihazları HER ZAMAN anonim oturum açar (girisOgrenci()) — bunu
-          // burada da zorunlu kılmak, olası bir istemci hatasının (örn. paylaşılan auth
-          // örneğinde kalan gerçek bir hesabın) bu belgeyi hiç yazamamasını garantiler.
-          && request.auth.token.firebase.sign_in_provider == 'anonymous'
-          && ((resource.data.bagliUid == null && request.resource.data.bagliUid == request.auth.uid)
-            || (resource.data.bagliUid == request.auth.uid && request.resource.data.bagliUid == resource.data.bagliUid))
+          // Eski dosya-paketi akışındaki cihaz anonim oturum açar. Yeni ad+numara akışında
+          // ise parola sağlayıcılı hesabın hem bu yuvaya bağlı olması hem de aynı syncId'yi
+          // taşıyan etkin ogrenciHesaplari belgesine sahip olması gerekir.
+          && (
+            (request.auth.token.firebase.sign_in_provider == 'anonymous'
+              && ((resource.data.bagliUid == null && request.resource.data.bagliUid == request.auth.uid)
+                || (resource.data.bagliUid == request.auth.uid
+                  && request.resource.data.bagliUid == resource.data.bagliUid)))
+            ||
+            (request.auth.token.firebase.sign_in_provider == 'password'
+              && resource.data.bagliUid == request.auth.uid
+              && request.resource.data.bagliUid == resource.data.bagliUid
+              && yayinlanmisHesap(request.auth.uid))
+          )
           && request.resource.data.durum == 'aktif'
           && request.resource.data.paket.tur == 'yks-sonuc'
           && request.resource.data.paket.kayit is list
@@ -107,6 +145,17 @@ service cloud.firestore {
           && request.resource.data.bagliUid == resource.data.bagliUid
           && request.resource.data.paket == resource.data.paket
           && sonrakiGecerli()
+        )
+        ||
+        (
+          // Öğretmen, ad+numara hesabını yayınlarken mevcut yuvayı o hesabın UID'sine
+          // bağlayabilir. Yalnızca bagliUid değişebilir ve hedef hesabın bu syncId için
+          // önceden yayınlanmış olması zorunludur.
+          request.auth.uid == resource.data.ogretmenUid && yetkiliOgretmen()
+          && resource.data.durum == 'aktif' && request.resource.data.durum == 'aktif'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bagliUid'])
+          && request.resource.data.bagliUid is string
+          && yayinlanmisHesap(request.resource.data.bagliUid)
         )
       );
 
