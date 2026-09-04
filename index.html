@@ -2990,7 +2990,8 @@ function gorunumAyarlar() {
         '<input type="file" id="sonucYukle" multiple hidden></label>' +
         (window.bulut && window.bulut.yapilandirilmis
           ? '<button class="dugme" id="bulutBaglan">Buluta bağlan</button>' +
-            '<button class="dugme" id="bulutCek">Buluttan sonuçları çek</button>'
+            '<button class="dugme" id="bulutCek">Buluttan sonuçları çek</button>' +
+            '<button class="dugme" id="bulutYedekle">Defteri buluta yedekle</button>'
           : '')
       : '<label class="dugme birincil" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
         '<input type="file" id="paketYukle" hidden></label>' +
@@ -3017,6 +3018,14 @@ function gorunumAyarlar() {
     '<div id="yapistirAlan" hidden style="margin-top:12px"><textarea id="yapistirMetin" rows="5" ' +
     'placeholder="Yedek dosyasının içeriğini buraya yapıştırın. { ile başlar."></textarea>' +
     '<div class="arac" style="margin-top:8px"><button class="dugme birincil" id="yapistirYukle">Yapıştırılanı yükle</button></div></div>' +
+    (rehberMi() && window.bulut && window.bulut.yapilandirilmis
+      ? '<div class="mini" style="margin-top:10px">Bulut yedeği: ' +
+        (EK.bulutYedekTs ? kacis(new Date(EK.bulutYedekTs).toLocaleString('tr-TR')) + ' (bu oturumda)'
+          : 'bu oturumda henüz gönderilmedi — değişiklikten ' + (BULUT_YEDEK_GECIKME / 1000) +
+            ' sn sonra ya da sekmeyi kapatırken kendiliğinden gönderilir') +
+        (EK.bulutYedekHata ? ' <b style="color:var(--kritik)">· son deneme başarısız: ' +
+          kacis(EK.bulutYedekHata) + '</b>' : '') + '</div>'
+      : '') +
     '<div class="mini" style="margin-top:14px;max-width:70ch">Kayıt: ' + D.log.length + ' test sonucu · ' +
     Object.keys(D.kart).length + ' kart · ' + Object.keys(D.islenis).length + ' işlenmiş konu. ' +
     'Veriler bu sayfanın içinde saklanır; yine de haftada bir yedek indirmeniz iyi olur.</div>' +
@@ -3298,6 +3307,7 @@ async function bulutaYedekle() {
     await window.bulut.setDoc(window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid),
       { veri: json, ts: Number.isSafeInteger(+D.ts) && +D.ts > 0 ? +D.ts : Date.now(),
         surum: VERI_SURUMU, boyut: json.length });
+    EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = '';
     return { tur: 'tamam', boyut: json.length };
   } catch (e) {
     return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA } : { tur: 'hata', mesaj: e.message || String(e) };
@@ -3306,12 +3316,32 @@ async function bulutaYedekle() {
 // Her kayıtta buluta yazmak hem gereksiz hem pahalı: son değişiklikten bir dakika sonra
 // TEK bir yükleme yapılır. Başarısızlık sessizdir — bir sonraki kayıt yeniden planlar,
 // ve cihazdaki kayıt zaten tamamlanmıştır (bulut yedeği ikinci bir kopyadır, tek kopya değil).
+const BULUT_YEDEK_GECIKME = 10000;
 function bulutYedekPlanla() {
   if (bulutYedekZamani) return;
   bulutYedekZamani = setTimeout(() => {
     bulutYedekZamani = null;
-    Promise.resolve(bulutaYedekle()).catch(() => {});
-  }, 60000);
+    bulutYedekDene();
+  }, BULUT_YEDEK_GECIKME);
+}
+// Sekme gizlenirken/kapanırken bekleyen yedeği HEMEN gönder. Aksi halde gecikme dolmadan
+// kapatılan bir sekmedeki değişiklikler buluta hiç çıkmıyordu — kullanıcı açısından
+// 'otomatik yedek çalışmıyor' demek olan asıl durum buydu.
+function bulutYedekBosalt() {
+  if (!bulutYedekZamani) return;
+  clearTimeout(bulutYedekZamani);
+  bulutYedekZamani = null;
+  bulutYedekDene();
+}
+// Otomatik yüklemenin sonucunu SAKLAR. Eskiden her hata sessizce yutuluyordu; sonuç,
+// öğretmenin "yedeğim var" sanıp aslında bulutta hiçbir şey olmamasıydı. Artık başarısızlık
+// Ayarlar'da görünür ve rayCiz() ile üst çubuğa yansır.
+function bulutYedekDene() {
+  Promise.resolve(bulutaYedekle()).then(r => {
+    if (r && r.tur === 'hata') EK.bulutYedekHata = r.mesaj || 'bilinmeyen hata';
+    else if (r && r.tur === 'baglanilmadi') EK.bulutYedekHata = 'Google hesabıyla giriş yapılmadı.';
+    if (r && r.tur !== 'tamam' && typeof rayCiz === 'function') { try { rayCiz(); } catch (e) { /* yoksay */ } }
+  }).catch(e => { EK.bulutYedekHata = e && e.message ? e.message : String(e); });
 }
 async function buluttanYedekAl() {
   if (!window.bulut) return { tur: 'yok' };
@@ -5063,7 +5093,7 @@ document.addEventListener('click', async ev => {
     o.off.sort((a, b) => a - b);
     await kaydet(true); ciz(); return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutCek,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutCek,#bulutYedekle,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     EK.girisAcik[(+t.dataset.ki) + ':' + (+t.dataset.gun)] = true; ciz(); return;
@@ -5457,6 +5487,14 @@ document.addEventListener('click', async ev => {
     } catch (e) { alert('Buluta bağlanılamadı: ' + (e.message || e)); }
     return;
   }
+  if (t.id === 'bulutYedekle') {
+    const r = await bulutaYedekle();
+    if (r.tur === 'tamam') { ciz(); bilgiVer('Defteriniz buluta yedeklendi (' + Math.round(r.boyut / 1024) + ' KB).'); }
+    else if (r.tur === 'baglanilmadi') alert('Önce “Buluta bağlan”a tıklayıp Google hesabınızla girin.');
+    else if (r.tur === 'hata') alert('Buluta yedeklenemedi: ' + r.mesaj);
+    else alert('Bulut yedeği yalnızca öğretmen görünümünde ve bulut yapılandırılmışken alınabilir.');
+    return;
+  }
   if (t.id === 'bulutCek') {
     try {
       const rapor = await sunucudanCek();
@@ -5472,6 +5510,11 @@ document.addEventListener('click', async ev => {
     if (!confirm('Bütün sonuçlar, işleniş tarihleri ve öğrenci ayarları silinecek. Emin misiniz?')) return;
     D = varsayilan(); await kaydet(true); ciz(); return;
   }
+});
+
+// Sekme arka plana alınınca / kapatılınca bekleyen bulut yedeğini hemen gönder.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { try { bulutYedekBosalt(); } catch (e) { /* yoksay */ } }
 });
 
 document.addEventListener('input', ev => {
