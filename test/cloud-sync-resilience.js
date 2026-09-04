@@ -535,25 +535,37 @@ function loadModuleSandbox() {
   const authObj = { currentUser: null };
   let signInAnonymouslyImpl = () => Promise.reject(new Error('not mocked'));
   const calls = { signInAnonymously: 0 };
+  const initOrder = [];
+  let appCheckOptions = null;
   const sandbox = {
     console,
     setTimeout: (fn, ms) => setTimeout(fn, Math.min(ms, 15)),   // gerçek 15sn'yi testte beklememek için sıkıştırılmış
     clearTimeout, crypto,
     window: {},
-    initializeApp: () => ({}),
-    initializeAppCheck: () => ({}),
-    ReCaptchaV3Provider: function ReCaptchaV3Provider() {},
-    getAuth: () => authObj,
+    initializeApp: () => { initOrder.push('app'); return {}; },
+    initializeAppCheck: (_, options) => { initOrder.push('app-check'); appCheckOptions = options; return {}; },
+    ReCaptchaEnterpriseProvider: function ReCaptchaEnterpriseProvider(key) { this.key = key; },
+    getAuth: () => { initOrder.push('auth'); return authObj; },
     signInAnonymously: (...args) => { calls.signInAnonymously++; return signInAnonymouslyImpl(...args); },
     signInWithPopup: () => Promise.reject(new Error('not mocked in this harness')),
     GoogleAuthProvider: function GoogleAuthProvider() {},
-    getFirestore: () => ({}),
+    getFirestore: () => { initOrder.push('firestore'); return {}; },
     doc: () => {}, getDoc: () => {}, setDoc: () => {}, updateDoc: () => {}, runTransaction: () => {}
   };
   vm.createContext(sandbox);
   new vm.Script(modSource, { filename: target + '(module)' }).runInContext(sandbox);
-  return { sandbox, authObj, calls, setImpl: fn => { signInAnonymouslyImpl = fn; } };
+  return { sandbox, authObj, calls, initOrder, getAppCheckOptions: () => appCheckOptions,
+    setImpl: fn => { signInAnonymouslyImpl = fn; } };
 }
+
+test('enterprise-app-check-starts-before-auth-and-firestore', () => {
+  const { initOrder, getAppCheckOptions } = loadModuleSandbox();
+  equal(initOrder.join(','), 'app,app-check,auth,firestore');
+  const options = getAppCheckOptions();
+  assert(options && options.provider instanceof Object, 'Enterprise App Check provider must be configured');
+  assert(options.provider.key && !options.provider.key.includes('YER-TUTUCU'), 'Enterprise site key must be real');
+  equal(options.isTokenAutoRefreshEnabled, true);
+});
 
 test('girisOgrenci-dedups-concurrent-in-flight-calls', async () => {
   const { sandbox, authObj, calls, setImpl } = loadModuleSandbox();
