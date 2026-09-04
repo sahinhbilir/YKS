@@ -348,28 +348,36 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 // Bulut senkronizasyonu (Firestore) — bkz. plan §1/§2/§3. Uygulamanın geri kalanı
 // module-script olmadığından, burada kurulan istemciler window.bulut üzerinden paylaşılır.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js';
 import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, updateDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
-// TODO: gerçek Firebase Console kurulumundan sonra bu değerleri değiştirin (plan §1).
 // Bu değerler istemci tarafında görünür olması güvenlik açığı YARATMAZ — asıl koruma
-// firestore.rules içindeki kurallardır.
+// firestore.rules ve App Check ayarlarıdır.
 const firebaseConfig = {
-  apiKey: 'YER-TUTUCU', authDomain: 'YER-TUTUCU.firebaseapp.com', projectId: 'YER-TUTUCU',
-  storageBucket: 'YER-TUTUCU.appspot.com', messagingSenderId: 'YER-TUTUCU', appId: 'YER-TUTUCU'
+  apiKey: 'AIzaSyB6yva2CUC2xpdINIGS_QWRLBPDWtA4Dvg',
+  authDomain: 'yks-tekrar-manual-test.firebaseapp.com',
+  projectId: 'yks-tekrar-manual-test',
+  storageBucket: 'yks-tekrar-manual-test.firebasestorage.app',
+  messagingSenderId: '956991282138',
+  appId: '1:956991282138:web:a8eabfd7cb6a4bd7897ee3'
 };
+const RECAPTCHA_SITE_KEY = '6LeMz6gtAAAAANlUbeHiGwEfw2jI4dZlUEgvQFZX';
+const firebaseYapilandirildi = Object.values(firebaseConfig).every(v =>
+  typeof v === 'string' && v && !v.includes('YER-TUTUCU'))
+  && typeof RECAPTCHA_SITE_KEY === 'string' && RECAPTCHA_SITE_KEY
+  && !RECAPTCHA_SITE_KEY.includes('YER-TUTUCU');
+
 const uygulama = initializeApp(firebaseConfig);
+// App Check, koruduğu Firebase servislerinden ÖNCE başlatılmalıdır.
+if (firebaseYapilandirildi) {
+  initializeAppCheck(uygulama, {
+    provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
+    isTokenAutoRefreshEnabled: true
+  });
+}
 const auth = getAuth(uygulama);
 const db = getFirestore(uygulama);
-
-// App Check: yalnızca istemci tarafı bağlama. Gerçek koruma Firebase Console → App Check
-// üzerinden AYRI bir adımda etkinleştirilir (bkz. plan §1/§7) — bu, gerçek bir site
-// anahtarı girilene kadar hiçbir şey yapmaz.
-const RECAPTCHA_SITE_KEY = 'YER-TUTUCU-RECAPTCHA-SITE-KEY';
-if (!RECAPTCHA_SITE_KEY.includes('YER-TUTUCU')) {
-  initializeAppCheck(uygulama, { provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY), isTokenAutoRefreshEnabled: true });
-}
 
 // Öğrenci cihazı: sessiz, anonim giriş — kullanıcı hareketi gerekmez, ilk çağrıda başlar
 // ve sonucu bütün çağıranlar arasında paylaşılır. Kalıcı bir "çözülmüş kullanıcı" önbelleği
@@ -400,7 +408,7 @@ window.bulut = { db, doc, getDoc, setDoc, updateDoc, runTransaction, girisOgrenc
   mevcutKullanici: () => auth.currentUser,
   // Gerçek firebaseConfig değerleri girilene kadar bulut düğmeleri arayüzde gösterilmez —
   // yapılandırılmamış, kesin başarısız olacak kontroller kullanıcıya sunulmaz.
-  yapilandirilmis: Object.values(firebaseConfig).every(v => typeof v === 'string' && v && !v.includes('YER-TUTUCU')) };
+  yapilandirilmis: firebaseYapilandirildi };
 </script>
 </head>
 <body>
