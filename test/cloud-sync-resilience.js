@@ -554,7 +554,8 @@ function loadModuleSandbox() {
     createUserWithEmailAndPassword: () => Promise.reject(new Error('not mocked in this harness')),
     GoogleAuthProvider: function GoogleAuthProvider() {},
     getFirestore: () => { initOrder.push('firestore'); return {}; },
-    doc: () => {}, getDoc: () => {}, setDoc: () => {}, updateDoc: () => {}, runTransaction: () => {}
+    doc: () => {}, getDoc: () => {}, setDoc: () => {}, updateDoc: () => {}, runTransaction: () => {},
+    collection: () => {}, getDocs: async () => ({ forEach() {} })
   };
   vm.createContext(sandbox);
   new vm.Script(modSource, { filename: target + '(module)' }).runInContext(sandbox);
@@ -639,14 +640,17 @@ test('girisOgrenci-does-not-return-stale-user-after-role-switch', async () => {
 test('bulutaYedekle-writes-whole-notebook-as-json-string', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({ ad: 'Ada' }), student({ no: 2, ad: 'Deniz' })]);
-  let yazilan = null, ref = null;
+  const cagrilar = [];
   sandbox.window.bulut = baseBulut({
     yapilandirilmis: true,
-    setDoc: async (r, data) => { ref = r; yazilan = data; }
+    doc: (db, ...yol) => yol.join('/'),
+    setDoc: async (r, data) => { cagrilar.push({ ref: r, data: data }); }
   });
   const r = await run('bulutaYedekle()');
   equal(r.tur, 'tamam', 'expected tamam: ' + JSON.stringify(r));
-  equal(ref, 'teacher-uid', 'backup must be written under the teacher own UID');
+  const canli = cagrilar.find(c => c.ref.indexOf('gecmis/') < 0);
+  const ref = canli.ref, yazilan = canli.data;
+  equal(ref, 'ogretmenYedek/teacher-uid', 'backup must be written under the teacher own UID');
   assert(typeof yazilan.veri === 'string', 'veri must be a JSON STRING (Firestore rejects nested arrays)');
   const geri = JSON.parse(yazilan.veri);
   equal(geri.ogr.length, 2, 'the whole roster must be in the backup');
@@ -866,14 +870,18 @@ test('save-schedules-a-cloud-backup-that-actually-uploads', async () => {
   sandbox.clearTimeout = (id) => { if (timers[id - 1]) timers[id - 1] = null; };
   resetOgr(sandbox, [student({})]);
   const uploads = [];
-  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async (ref, d) => { uploads.push({ ref, boyut: d.boyut }); } });
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, doc: (db, ...yol) => yol.join('/'),
+    setDoc: async (ref, d) => { uploads.push({ ref, boyut: d.boyut }); } });
   await run('kaydet(true)');
   const bekleyen = timers.filter(Boolean).filter(t => t.ms === run('BULUT_YEDEK_GECIKME'));
   equal(bekleyen.length, 1, 'a save must schedule exactly one backup upload');
   equal(uploads.length, 0, 'nothing may be uploaded before the delay elapses');
   await bekleyen[0].fn();
-  equal(uploads.length, 1, 'the scheduled timer must actually perform the upload');
-  equal(uploads[0].ref, 'teacher-uid', 'upload must go to the teacher own backup doc');
+  await new Promise(r => setImmediate(r));   // bulutYedekDene() ateşle-unut; mikrogörevler bitsin
+  // canlı yedek + o günün kopyası
+  equal(uploads.filter(u => u.ref.indexOf('gecmis/') < 0).length, 1, 'the scheduled timer must actually perform the upload');
+  equal(uploads.filter(u => u.ref.indexOf('gecmis/') >= 0).length, 1, 'and also record the day snapshot');
+  equal(uploads[0].ref, 'ogretmenYedek/teacher-uid', 'upload must go to the teacher own backup doc');
   await run('kaydet(true)');
   assert(timers.filter(Boolean).some(t => t.ms === run('BULUT_YEDEK_GECIKME')), 'a later save must schedule again');
 });
@@ -890,23 +898,24 @@ test('hiding-the-tab-flushes-a-pending-backup-immediately', async () => {
   equal(uploads.length, 0, 'still pending');
   await run('bulutYedekBosalt()');
   await new Promise(r => setImmediate(r));
-  equal(uploads.length, 1, 'closing/hiding the tab must send the pending backup, not drop it');
+  equal(uploads.length, 2, 'closing/hiding the tab must send the pending backup (live + day copy), not drop it');
   // bekleyen yoksa boşaltmak boşuna yazmamalı
   await run('bulutYedekBosalt()');
   await new Promise(r => setImmediate(r));
-  equal(uploads.length, 1, 'flushing with nothing pending must not write again');
+  equal(uploads.length, 2, 'flushing with nothing pending must not write again');
 });
 
 test('manual-backup-button-uploads-and-reports', async () => {
   const { sandbox, run, listeners } = loadAppSandbox();
   resetOgr(sandbox, [student({})]);
   const uploads = [];
-  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async (ref, d) => { uploads.push({ ref, boyut: d.boyut }); } });
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, doc: (db, ...yol) => yol.join('/'),
+    setDoc: async (ref, d) => { uploads.push({ ref, boyut: d.boyut }); } });
   const dugme = Object.assign(element(), { id: 'bulutYedekle',
     closest(sel) { return sel.indexOf('#bulutYedekle') >= 0 ? this : null; } });
   await listeners.click[0]({ target: dugme });
-  equal(uploads.length, 1, 'the manual button must upload immediately, with no waiting');
-  equal(uploads[0].ref, 'teacher-uid');
+  equal(uploads.filter(u => u.ref.indexOf('gecmis/') < 0).length, 1, 'the manual button must upload immediately, with no waiting');
+  equal(uploads[0].ref, 'ogretmenYedek/teacher-uid');
   const gorunum = run("D.rol='rehber'; gorunumAyarlar()");
   assert(/id="bulutYedekle"/.test(gorunum), 'the button must be rendered for a connected teacher');
   assert(/Bulut yedeği:/.test(gorunum), 'settings must show the backup status line');
@@ -937,6 +946,91 @@ test('failed-automatic-backup-is-recorded-not-swallowed', async () => {
   await run('bulutaYedekle()');
   equal(run('EK.bulutYedekHata'), '', 'a later success must clear the warning');
   assert(run('!!EK.bulutYedekTs'), 'and record when it succeeded');
+});
+
+// ================================================================== günlük yedek geçmişi
+test('backup-also-writes-a-dated-daily-snapshot', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({}), student({ no: 2, ad: 'Deniz' })]);
+  const yazilan = [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    setDoc: async (ref, d) => { yazilan.push({ ref, d }); } });
+  const r = await run('bulutaYedekle()');
+  equal(r.tur, 'tamam');
+  equal(yazilan.length, 2, 'one live backup plus one dated daily snapshot');
+  const bugun = run('isoDan(bugunNo())');
+  const gunluk = yazilan.find(y => y.ref.indexOf('gecmis/') >= 0);
+  assert(gunluk, 'a daily snapshot must be written: ' + JSON.stringify(yazilan.map(y => y.ref)));
+  equal(gunluk.ref, 'ogretmenYedek/teacher-uid/gecmis/' + bugun, 'snapshot id must be today date');
+  equal(gunluk.d.ogrenciSayisi, 2, 'snapshot must carry the student count for the listing');
+  assert(Object.keys(gunluk.d).sort().join(',') === 'boyut,ogrenciSayisi,sonucSayisi,surum,ts,veri',
+    'snapshot fields must match what the rules allow: ' + Object.keys(gunluk.d).join(','));
+});
+
+test('daily-snapshot-failure-does-not-fail-the-main-backup', async () => {
+  // Asıl yedek yazıldıysa gün kopyası yazılamadı diye başarısız sayılmamalı.
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({})]);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    setDoc: async (ref) => { if (ref.indexOf('gecmis/') >= 0) throw new Error('gün kopyası yazılamadı'); } });
+  equal((await run('bulutaYedekle()')).tur, 'tamam', 'the main backup must still count as done');
+});
+
+test('history-lists-newest-first-and-restores-a-chosen-day', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({}), student({ no: 2, ad: 'Deniz' })]);
+  const eskiDefter = run(`(() => { const k = JSON.parse(JSON.stringify(D));
+    k.ogr = [{no:9,ad:'Eski Ogrenci',alan:'SAY',sube:'201',hedef:null}]; k.log = []; return JSON.stringify(k); })()`);
+  const gunler = {
+    '2026-09-01': { veri: eskiDefter, ts: 1756684800000, boyut: eskiDefter.length, ogrenciSayisi: 1, sonucSayisi: 0 },
+    '2026-09-03': { veri: eskiDefter, ts: 1756857600000, boyut: eskiDefter.length, ogrenciSayisi: 1, sonucSayisi: 0 }
+  };
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    collection: (db, ...yol) => yol.join('/'),
+    getDocs: async () => ({ forEach: (fn) => Object.keys(gunler).forEach(g => fn({ id: g, data: () => gunler[g] })) }),
+    getDoc: async (ref) => { const g = String(ref).split('/').pop();
+      return { exists: () => !!gunler[g], data: () => gunler[g] }; },
+    setDoc: async () => {} });
+  const liste = await run('bulutYedekGecmisi()');
+  equal(liste.tur, 'tamam');
+  equal(liste.liste.map(x => x.gun), ['2026-09-03', '2026-09-01'], 'newest day must come first');
+  // Ayarlar geçmişi göstermeli
+  run('EK.bulutGecmis = ' + JSON.stringify(liste.liste) + ';');
+  const gorunum = run('gorunumAyarlar()');
+  assert(/bulutGunYukle/.test(gorunum), 'each day needs a restore button');
+  assert(/03\.09\.2026/.test(gorunum), 'the day must be shown in local format: ' + /.{0,40}09\.2026.{0,20}/.exec(gorunum));
+  // geri yükleme
+  sandbox.confirm = () => true;
+  const dugme = Object.assign(element(), { dataset: { gun: '2026-09-01' },
+    closest(sel) { return sel === '.bulutGunYukle' ? this : null; } });
+  await listeners.click[0]({ target: dugme });
+  equal(run('D.ogr.length'), 1, 'the chosen day must replace the current notebook');
+  equal(run('D.ogr[0].ad'), 'Eski Ogrenci');
+  equal(run('EK.bulutGecmis'), null, 'the stale listing must be cleared after restoring');
+});
+
+test('declining-or-failing-a-day-restore-keeps-current-data', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ ad: 'Simdiki' })]);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    getDoc: async () => ({ exists: () => true, data: () => ({ veri: JSON.stringify({ rol: 'rehber', ogr: 'dizi-degil' }), ts: 1 }) }),
+    setDoc: async () => {} });
+  sandbox.confirm = () => false;
+  const dugme = Object.assign(element(), { dataset: { gun: '2026-09-01' },
+    closest(sel) { return sel === '.bulutGunYukle' ? this : null; } });
+  await listeners.click[0]({ target: dugme });
+  equal(run('D.ogr[0].ad'), 'Simdiki', 'declining the confirmation must change nothing');
+  // onaylanırsa ama yedek bozuksa da mevcut veri korunmalı
+  sandbox.confirm = () => true;
+  let uyari = '';
+  sandbox.alert = (m) => { uyari = m; };
+  await listeners.click[0]({ target: dugme });
+  assert(/yüklenemedi/.test(uyari), 'a broken snapshot must be reported: ' + uyari);
+  equal(run('D.ogr[0].ad'), 'Simdiki', 'and the current notebook must survive it');
 });
 
 // ================================================================== özet

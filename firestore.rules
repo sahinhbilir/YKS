@@ -29,6 +29,21 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Günlük anlık görüntüler: her gün için bir belge, kimliği o günün tarihi (YYYY-AA-GG).
+    // Amaç bir güvenlik önlemi değil, GERİ ALMA yeteneği: bir sonuç yanlış girilir ya da
+    // bozulursa öğretmen önceki bir güne dönebilir. Silme kapalıdır ki geçmiş, üzerine
+    // yazılarak ya da temizlenerek kaybolmasın; yalnızca o günün belgesi tazelenir.
+    match /ogretmenYedek/{uid}/gecmis/{gun} {
+      allow get, list: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen();
+      allow create, update: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen()
+        && request.resource.data.keys().hasOnly(['veri','ts','surum','boyut','ogrenciSayisi','sonucSayisi'])
+        && request.resource.data.veri is string
+        && request.resource.data.veri.size() > 0
+        && request.resource.data.veri.size() <= 900000
+        && request.resource.data.ts is int;
+      allow delete: if false;
+    }
+
     // Rehber öğretmenin önceden hazırladığı öğrenci hesabı. Paket JSON dizesi olarak
     // saklanır; böylece iç içe diziler Firestore belge biçimini bozmaz. Öğrenci yalnızca
     // Firebase Authentication tarafından doğrulanan kendi UID belgesini okuyabilir.

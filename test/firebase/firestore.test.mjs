@@ -435,6 +435,44 @@ await check('de-allowlisted-teacher-loses-access-to-own-backup', async () => {
   await assertFails(getDoc(doc(tempDb, 'ogretmenYedek', TEMP_TEACHER_UID)));
 });
 
+// ================================================================== günlük yedek geçmişi
+const gunVeri = (over) => Object.assign({
+  veri: JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Ayşe Yılmaz' }] }),
+  ts: 1750000000000, surum: 10, boyut: 60, ogrenciSayisi: 1, sonucSayisi: 0
+}, over || {});
+
+await check('teacher-can-write-and-list-own-daily-snapshots', async () => {
+  const { collection, getDocs } = await import('firebase/firestore');
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01'), gunVeri()));
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-02'), gunVeri()));
+  const liste = await assertSucceeds(getDocs(collection(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis')));
+  if (liste.size !== 2) throw new Error('beklenen 2 gün, gelen ' + liste.size);
+});
+await check('nobody-else-can-read-or-list-a-teachers-snapshots', async () => {
+  const { collection, getDocs } = await import('firebase/firestore');
+  await assertFails(getDoc(doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+  await assertFails(getDocs(collection(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'gecmis')));
+  await assertFails(getDoc(doc(ogrenciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+  await assertFails(getDoc(doc(hesapliOgrenciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+  await assertFails(getDoc(doc(anonDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+});
+await check('nobody-can-write-into-another-teachers-snapshots', async () => {
+  await assertFails(setDoc(doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-03'), gunVeri()));
+  await assertFails(setDoc(doc(hesapliOgrenciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-03'), gunVeri()));
+});
+await check('snapshots-cannot-be-deleted-so-history-cannot-be-erased', async () => {
+  const { deleteDoc } = await import('firebase/firestore');
+  await assertFails(deleteDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+});
+await check('snapshot-rejects-unknown-fields-and-oversized-payload', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-04'),
+    gunVeri({ fazladan: 'sızma' })));
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-04'),
+    gunVeri({ veri: 'x'.repeat(900001) })));
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-04'),
+    gunVeri({ veri: '' })));
+});
+
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
 await testEnv.cleanup();
 process.exit(fail ? 1 : 0);

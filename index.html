@@ -350,7 +350,7 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js';
 import { getAuth, signInAnonymously, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, runTransaction, collection, getDocs } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 // Bu değerler istemci tarafında görünür olması güvenlik açığı YARATMAZ — asıl koruma
 // firestore.rules ve App Check ayarlarıdır.
@@ -438,7 +438,7 @@ function girisOgretmen() {
   return signInWithPopup(auth, new GoogleAuthProvider()).then(r => r.user);
 }
 
-window.bulut = { db, doc, getDoc, setDoc, updateDoc, runTransaction, girisOgrenci, girisOgretmen,
+window.bulut = { db, doc, getDoc, setDoc, updateDoc, runTransaction, collection, getDocs, girisOgrenci, girisOgretmen,
   girisOgrenciHesabi, ogrenciHesabiHazirla,
   mevcutKullanici: () => auth.currentUser,
   // Gerçek firebaseConfig değerleri girilene kadar bulut düğmeleri arayüzde gösterilmez —
@@ -3055,7 +3055,23 @@ function gorunumAyarlar() {
     'placeholder="Yedek dosyasının içeriğini buraya yapıştırın. { ile başlar."></textarea>' +
     '<div class="arac" style="margin-top:8px"><button class="dugme birincil" id="yapistirYukle">Yapıştırılanı yükle</button></div></div>' +
     (rehberMi() && window.bulut && window.bulut.yapilandirilmis
-      ? '<div class="mini" style="margin-top:10px">Bulut yedeği: ' +
+      ? '<div class="arac" style="margin-top:10px"><button class="dugme" id="bulutGecmisAc">' +
+        (EK.bulutGecmis ? 'Bulut yedek geçmişini yenile' : 'Bulut yedek geçmişini göster') + '</button></div>' +
+        (EK.bulutGecmis && EK.bulutGecmis.length
+          ? '<div class="mini" style="margin-top:8px">Her gün için bir kopya saklanır. Yanlış giren ' +
+            'bir sonucu fark ederseniz o günden öncesine dönebilirsiniz.</div>' +
+            '<div class="kaydir" style="margin-top:6px"><table class="plan"><thead><tr><th>Gün</th>' +
+            '<th class="sayisal">Öğrenci</th><th class="sayisal">Sonuç</th><th class="sayisal">Boyut</th>' +
+            '<th></th></tr></thead><tbody>' +
+            EK.bulutGecmis.map(y => '<tr><td>' + kacis(ggyy(gunNo(y.gun))) + '</td>' +
+              '<td class="sayisal">' + y.ogrenciSayisi + '</td>' +
+              '<td class="sayisal">' + y.sonucSayisi + '</td>' +
+              '<td class="sayisal">' + Math.round(y.boyut / 1024) + ' KB</td>' +
+              '<td><button class="dugme bulutGunYukle" data-gun="' + kacis(y.gun) +
+              '" style="padding:3px 9px">geri yükle</button></td></tr>').join('') +
+            '</tbody></table></div>'
+          : (EK.bulutGecmis ? '<div class="mini" style="margin-top:8px">Bulutta henüz günlük kopya yok.</div>' : '')) +
+        '<div class="mini" style="margin-top:10px">Bulut yedeği: ' +
         (EK.bulutYedekTs ? kacis(new Date(EK.bulutYedekTs).toLocaleString('tr-TR')) + ' (bu oturumda)'
           : 'bu oturumda henüz gönderilmedi — değişiklikten ' + (BULUT_YEDEK_GECIKME / 1000) +
             ' sn sonra ya da sekmeyi kapatırken kendiliğinden gönderilir') +
@@ -3421,9 +3437,19 @@ async function bulutaYedekle() {
     return { tur: 'hata', mesaj: 'Defter bulut yedeği için çok büyük (' +
       Math.round(json.length / 1024) + ' KB). "Yedek indir" ile dosya yedeği alın.' };
   try {
+    const ts = Number.isSafeInteger(+D.ts) && +D.ts > 0 ? +D.ts : Date.now();
     await window.bulut.setDoc(window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid),
-      { veri: json, ts: Number.isSafeInteger(+D.ts) && +D.ts > 0 ? +D.ts : Date.now(),
-        surum: VERI_SURUMU, boyut: json.length });
+      { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length });
+    // Günlük anlık görüntü: aynı gün içinde üzerine yazılır, günler birikir. Böylece yanlış
+    // girilmiş ya da bozulmuş bir sonuç fark edildiğinde önceki bir güne dönülebilir —
+    // tek bir "son yedek" bunu yapamaz, çünkü hatalı hâli de o tek kopyaya yazılır.
+    try {
+      await window.bulut.setDoc(
+        window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'gecmis', isoDan(bugunNo())),
+        { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length,
+          ogrenciSayisi: (D.ogr || []).filter(o => o && !o.silindi).length,
+          sonucSayisi: (D.log || []).length });
+    } catch (e) { /* günlük kopya yazılamazsa asıl yedek yine geçerlidir */ }
     EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = '';
     return { tur: 'tamam', boyut: json.length };
   } catch (e) {
@@ -3487,6 +3513,51 @@ const BULUT_IZIN_ACIKLAMA =
   'Buluta erişim izni yok. Muhtemel iki neden: (1) firestore.rules dosyasının güncel hâli ' +
   'Firebase konsolunda yayınlanmamış olabilir (Firestore Database → Rules → Publish), ' +
   '(2) bu Google hesabının kimliği "ogretmenler" listesinde olmayabilir.';
+// Bulutta duran günlük anlık görüntüleri listeler (en yeni önce). Belge içeriğini indirmez
+// gibi davranamayız — Firestore tüm alanları getirir — ama liste yılda birkaç yüz kayıt
+// mertebesinde kaldığı için bu kabul edilebilir; yine de yalnızca istendiğinde çağrılır.
+async function bulutYedekGecmisi() {
+  if (!window.bulut || !window.bulut.yapilandirilmis) return { tur: 'yok' };
+  const kullanici = window.bulut.mevcutKullanici();
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
+  try {
+    const anlik = await window.bulut.getDocs(
+      window.bulut.collection(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'gecmis'));
+    const liste = [];
+    anlik.forEach(b => {
+      const v = b.data() || {};
+      liste.push({ gun: b.id, ts: +v.ts || 0, boyut: +v.boyut || 0,
+        ogrenciSayisi: +v.ogrenciSayisi || 0, sonucSayisi: +v.sonucSayisi || 0 });
+    });
+    liste.sort((a, b) => (a.gun < b.gun ? 1 : a.gun > b.gun ? -1 : 0));
+    return { tur: 'tamam', liste: liste };
+  } catch (e) {
+    return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA }
+      : { tur: 'hata', mesaj: e.message || String(e) };
+  }
+}
+// Belirli bir günün anlık görüntüsünü getirir. Uygulamaz — çağıran önce kullanıcıya ne
+// geleceğini gösterip onay almalı, çünkü bu işlem mevcut defterin YERİNE geçer.
+async function buluttanGunAl(gun) {
+  if (!window.bulut) return { tur: 'yok' };
+  const kullanici = window.bulut.mevcutKullanici();
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
+  try {
+    const anlik = await window.bulut.getDoc(
+      window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'gecmis', gun));
+    if (!anlik || !anlik.exists()) return { tur: 'yok' };
+    const veri = anlik.data() || {};
+    if (typeof veri.veri !== 'string' || !veri.veri)
+      return { tur: 'hata', mesaj: 'Bu günün yedeği beklenen biçimde değil.' };
+    let y;
+    try { y = JSON.parse(veri.veri); }
+    catch (e) { return { tur: 'hata', mesaj: 'Bu günün yedeği okunamadı (bozuk JSON).' }; }
+    return { tur: 'tamam', yedek: y, ts: +veri.ts || 0 };
+  } catch (e) {
+    return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA }
+      : { tur: 'hata', mesaj: e.message || String(e) };
+  }
+}
 // Yedekteki silinmemiş öğrenci sayısı — geri yükleme onayında kullanıcıya ne geleceğini
 // gösterir. Bozuk bir yedekte ogr dizi olmayabilir; bu sayaç ASLA fırlatmamalı, çünkü
 // kurulum ekranındaki tek düğmenin akışında çağrılıyor (fırlatırsa kurulum hiç yapılamaz).
@@ -5021,6 +5092,31 @@ document.addEventListener('click', async ev => {
       ' tarihinde ilk testi gelecek.');
     return;
   }
+  const bgy = ev.target.closest('.bulutGunYukle');
+  if (bgy) {
+    const gun = bgy.dataset.gun;
+    const r = await buluttanGunAl(gun);
+    if (r.tur !== 'tamam') {
+      alert(r.tur === 'yok' ? 'Bu güne ait yedek bulunamadı.'
+        : r.tur === 'baglanilmadi' ? 'Önce “Buluta bağlan”a tıklayın.'
+        : 'Yedek alınamadı: ' + r.mesaj);
+      return;
+    }
+    const gelen = yedekOgrenciSayisi(r.yedek), gelenSonuc = ((r.yedek || {}).log || []).length;
+    const simdiki = yedekOgrenciSayisi(D), simdikiSonuc = (D.log || []).length;
+    if (!confirm(ggyy(gunNo(gun)) + ' tarihli yedeğe dönülecek.\n\n' +
+        'O gün: ' + gelen + ' öğrenci, ' + gelenSonuc + ' sonuç\n' +
+        'Şu an: ' + simdiki + ' öğrenci, ' + simdikiSonuc + ' sonuç\n\n' +
+        'O tarihten sonra yapılan değişiklikler bu cihazdan silinir. Devam edilsin mi?')) return;
+    const onceki = D;
+    try {
+      veriyiHazirla(r.yedek);
+      EK.ogr = 0; EK.hafta = null; EK.bulutGecmis = null;
+      await kaydet(true); ciz();
+      bilgiVer(ggyy(gunNo(gun)) + ' tarihli yedek geri yüklendi: ' + gelen + ' öğrenci, ' + gelenSonuc + ' sonuç.');
+    } catch (e) { D = onceki; ciz(); alert('Yedek yüklenemedi: ' + (e.message || e)); }
+    return;
+  }
   const opk = ev.target.closest('.ogrPaket');
   if (opk) {
     const i = +opk.dataset.i, o = D.ogr[i];
@@ -5250,7 +5346,7 @@ document.addEventListener('click', async ev => {
     o.off.sort((a, b) => a - b);
     await kaydet(true); ciz(); return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutCek,#bulutYedekle,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     EK.girisAcik[(+t.dataset.ki) + ':' + (+t.dataset.gun)] = true; ciz(); return;
@@ -5662,6 +5758,14 @@ document.addEventListener('click', async ev => {
       alert('Öğrenci girişleri yayınlanamadı: ' + (e.message || e));
       t.disabled = false; t.textContent = 'Öğrenci girişlerini yayınla';
     }
+    return;
+  }
+  if (t.id === 'bulutGecmisAc') {
+    const r = await bulutYedekGecmisi();
+    if (r.tur === 'tamam') { EK.bulutGecmis = r.liste; ciz();
+      bilgiVer(r.liste.length + ' günlük bulut kopyası bulundu.'); }
+    else if (r.tur === 'baglanilmadi') alert('Önce “Buluta bağlan”a tıklayıp Google hesabınızla girin.');
+    else if (r.tur === 'hata') alert('Bulut yedek geçmişi okunamadı: ' + r.mesaj);
     return;
   }
   if (t.id === 'bulutYedekle') {
