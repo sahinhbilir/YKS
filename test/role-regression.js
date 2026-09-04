@@ -190,12 +190,31 @@ function studentState(extra) {
   })()`);
   assert(frozenEdit, 'Açık düzenleme kipinde sabit geçmiş plan taşınamıyor.');
 
-  console.log(JSON.stringify({ passed: 23, checks: [
+  studentState(`
+    const hb4=haftaBasi(); EK.hafta=hb4;
+    D.log=[[hb4,0,0,6,10,2,Date.now()]];
+  `);
+  const outsidePlanResult = run(`(() => {
+    const hb=haftaBasi(), locked=gorunumGiris();
+    EK.girisAcik['0:'+hb]=true;
+    const editing=gorunumGiris();
+    return {locked,editing};
+  })()`);
+  assert(outsidePlanResult.locked.includes('Plan dışında kaydedilmiş sonuçlar') &&
+    outsidePlanResult.locked.includes('data-girisduzenle="1"') &&
+    outsidePlanResult.locked.includes('6/10'),
+    'Yüklü planda karşılığı kalmayan sonuç Sonuç girişi ekranında görünmüyor.');
+  assert(outsidePlanResult.editing.includes('class="gDogru"') &&
+    outsidePlanResult.editing.includes('value="6"') && outsidePlanResult.editing.includes('value="10"'),
+    'Plan dışı korunmuş sonuç mevcut düzenleme akışına açılamıyor.');
+
+  console.log(JSON.stringify({ passed: 24, checks: [
     'student-agreement-tab', 'student-route-reachable', 'personal-fields-visible', 'teacher-fields-hidden',
     'teacher-agreement-isolated', 'student-output-toggle', 'student-items-save', 'student-routines-save',
     'past-unissued-empty', 'past-recovery-button', 'edit-banner-actions', 'reconstructed-plan-saved',
     'snapshot-immutable', 'discard-restores-existing', 'discard-removes-new', 'edit-state-cleared',
     'empty-snapshot-supported', 'edit-bound-to-student', 'other-student-return-banner',
-    'edit-scope-isolated', 'result-locks-snapshot', 'result-survives-discard', 'frozen-plan-editable'
+    'edit-scope-isolated', 'result-locks-snapshot', 'result-survives-discard', 'frozen-plan-editable',
+    'outside-plan-result-remains-editable'
   ] }, null, 2));
 })().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
