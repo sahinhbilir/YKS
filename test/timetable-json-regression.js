@@ -110,4 +110,34 @@ if (initialClass.sube !== '12A' || initialClass.subeler.includes('') || !initial
   throw new Error('first-timetable-import-must-target-real-class: ' + JSON.stringify(initialClass));
 checks.push('first-timetable-import-targets-real-class');
 
+
+// Rehber tarafında eklenen ilk öğrenci için eksik konu planı, ders programının
+// "aktarıldı" deyip boş haftalık plan üretmesine yol açmamalı.
+const teacherPlan = vm.runInContext(`
+  D = varsayilan();
+  D.rol = 'rehber';
+  D.ayar.donemBasi = '2026-09-14';
+  D.ayar.testTarih = '2026-09-16';
+  D.ogr = [{ ad: 'Test Öğrenci', no: 1, sube: '12A', alan: 'SAY', silindi: false,
+    aktif: false, kap: 6, off: [6], hedef: null, maddeler: [], rutin: { once: '', ara: '', sonra: '' } }];
+  EK.ogr = 0; EK.sube = '12A';
+  const hazir = varsayilanKonuPlaniniHazirla('12A', 'SAY');
+  programYaz('12A', haftaBasi(), ${JSON.stringify(base)});
+  programDegistiTetikle('12A');
+  const p = planHesapla(0, haftaBasi());
+  ({ olustu: hazir.olustu, hafta: D.konuPlani['12A'].length, toplam: p.toplam });
+`, sandbox);
+if (!teacherPlan.olustu || teacherPlan.hafta < 1 || teacherPlan.toplam < 1)
+  throw new Error('teacher-class-must-get-default-topic-plan: ' + JSON.stringify(teacherPlan));
+checks.push('teacher-class-gets-default-topic-plan');
+
+const existingPlan = vm.runInContext(`
+  D.konuPlani['12A'][0]['Matematik TYT'][0] = 'Özel konu';
+  const yeniden = varsayilanKonuPlaniniHazirla('12A', 'SAY');
+  ({ olustu: yeniden.olustu, ad: D.konuPlani['12A'][0]['Matematik TYT'][0] });
+`, sandbox);
+if (existingPlan.olustu || existingPlan.ad !== 'Özel konu')
+  throw new Error('existing-topic-plan-must-never-be-overwritten: ' + JSON.stringify(existingPlan));
+checks.push('existing-topic-plan-is-not-overwritten');
+
 console.log(JSON.stringify({ passed: checks.length, checks }, null, 2));
