@@ -594,7 +594,7 @@ function varsayilan() {
   return {
     v: 1, ts: 0, ayarSurum: VERI_SURUMU, katalogImza: KATALOG_IMZA,
     ayar: { planBasi: isoDan(pazartesi(bugunNo())), sinav: '2027-06-19', hedef: 0.90, maks: 60,
-            ilk: 2, relearn: 1, esik: [50, 70, 90], soru: 12, donemBasi: '2026-09-14',
+            ilk: 2, relearn: 1, esik: [50, 70, 90], soru: 12, donemBasi: DONEM_BASI_SABIT,
             gecmisSerbest: false, tekEsik: 0.80, ileriHafta: 8,
             telafiGunKap: 2,
             deneme: '' },
@@ -3535,6 +3535,38 @@ const OKUL_DERS = [
   ['REHBERLİK', -1]
 ];
 const okulDersAdlari = () => OKUL_DERS.map(d => d[0]);
+// Okulun 2026-2027 haftalık ders programları. Öğrenci kurulumda şubesini seçtiğinde bu tablo
+// hazır yüklenir; AI ile aktarma yolu (Ders programı sekmesi) yine açık kalır — yalnızca
+// herkesin tek tek yapması gereken bir iş olmaktan çıkar. Ders adları OKUL_DERS ile aynı
+// yazımda tutulur ki dersEsle() doğrudan eşleştirsin.
+const OKUL_SAATLERI = ['09:00', '09:55', '10:45', '11:35', '12:25', '13:00', '13:50'];
+const BOS_GUN = ['', '', '', '', '', '', ''];
+const OKUL_SUBE_PROGRAMLARI = {
+  '201': { alan: 'SAY', prog: { saatler: OKUL_SAATLERI, gunler: [
+    ['MATEMATİK AYT', 'MATEMATİK AYT', 'FİZİK', 'FİZİK', '', 'GEOMETRİ', 'GEOMETRİ'],
+    ['MATEMATİK TYT', 'MATEMATİK TYT', 'BİYOLOJİ', 'BİYOLOJİ', '', 'KİMYA', 'KİMYA'],
+    ['GEOMETRİ', 'GEOMETRİ', 'KİMYA', 'KİMYA', '', 'BİYOLOJİ', 'BİYOLOJİ'],
+    ['TÜRKÇE', 'TÜRKÇE', 'FİZİK', 'FİZİK', '', 'MATEMATİK AYT', 'MATEMATİK AYT'],
+    ['TÜRKÇE', 'TÜRKÇE', 'REHBERLİK', 'MATEMATİK TYT', 'MATEMATİK TYT', '', ''],
+    BOS_GUN, BOS_GUN] } },
+  '205': { alan: 'SAY', prog: { saatler: OKUL_SAATLERI, gunler: [
+    ['FİZİK', 'FİZİK', 'GEOMETRİ', 'GEOMETRİ', '', 'MATEMATİK AYT', 'MATEMATİK AYT'],
+    ['MATEMATİK TYT', 'MATEMATİK TYT', 'TÜRKÇE', 'TÜRKÇE', '', 'BİYOLOJİ', 'BİYOLOJİ'],
+    ['KİMYA', 'REHBERLİK', 'BİYOLOJİ', 'BİYOLOJİ', '', 'MATEMATİK TYT', 'KİMYA'],
+    ['MATEMATİK AYT', 'MATEMATİK AYT', 'GEOMETRİ', 'GEOMETRİ', '', 'FİZİK', 'FİZİK'],
+    ['TÜRKÇE', 'TÜRKÇE', 'MATEMATİK TYT', 'MATEMATİK TYT', 'KİMYA', '', ''],
+    BOS_GUN, BOS_GUN] } },
+  '301': { alan: 'EA', prog: { saatler: OKUL_SAATLERI, gunler: [
+    ['TÜRK DİLİ VE EDEBİYATI', 'TÜRK DİLİ VE EDEBİYATI', 'MATEMATİK TYT', 'MATEMATİK TYT', '', 'MATEMATİK AYT', 'MATEMATİK AYT'],
+    ['T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK', 'T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK', 'MATEMATİK AYT', 'MATEMATİK AYT', '', 'COĞRAFYA', 'COĞRAFYA'],
+    ['COĞRAFYA', 'COĞRAFYA', 'MATEMATİK TYT', 'MATEMATİK TYT', '', 'GEOMETRİ', 'GEOMETRİ'],
+    ['TÜRKÇE', 'TÜRKÇE', 'T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK', 'REHBERLİK', '', 'GEOMETRİ', 'GEOMETRİ'],
+    ['FELSEFE', 'FELSEFE', 'TÜRKÇE', 'TÜRKÇE', 'TÜRK DİLİ VE EDEBİYATI', '', ''],
+    BOS_GUN, BOS_GUN] } }
+};
+// Okulun dönem başı sabittir; öğrenciye sorulmaz (yanlış tarih girilen bir kurulum bütün
+// plan haftalarını kaydırıyordu). Öğretmen Ayarlar'dan yine değiştirebilir.
+const DONEM_BASI_SABIT = '2026-08-24';
 // bazı PDF'lerde Türkçe harfler metin katmanında eksik gelir; karşılaştırmayı iskelet üzerinden yaparız
 const dersAdiUyar = (a, b) => {
   const x = iskelet(a), y = iskelet(b);
@@ -4453,11 +4485,17 @@ function cizIc() {
       (ogrenciMi()
         ? '<div style="max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:10px">' +
           '<label class="etiket">Adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Ad Soyad"></label>' +
+          '<label class="etiket">Sınıfın<br><select id="kOgrSube" style="width:100%;margin-top:4px">' +
+          Object.keys(OKUL_SUBE_PROGRAMLARI).map(su => '<option value="' + kacis(su) + '">' + kacis(su) +
+            ' (' + (OKUL_SUBE_PROGRAMLARI[su].alan === 'EA' ? 'Eşit Ağırlık' : 'Sayısal') + ')</option>').join('') +
+          '<option value="">Sınıfım listede yok</option></select>' +
+          '<span class="mini">Sınıfını seçersen ders programın ve alanın hazır gelir; ders programını ayrıca ' +
+          'yüklemen gerekmez.</span></label>' +
           '<label class="etiket">Alanın<br><select id="kOgrAlan" style="width:100%;margin-top:4px">' +
-          '<option value="SAY">SAY (Sayısal / MF)</option><option value="EA">EA (Eşit Ağırlık / TM)</option></select></label>' +
-          '<label class="etiket">Okul hangi hafta başladı (bilmiyorsan boş bırak)<br>' +
-          '<input type="date" id="kOgrDonem" style="width:100%;margin-top:4px"></label>' +
+          '<option value="SAY">SAY (Sayısal / MF)</option><option value="EA">EA (Eşit Ağırlık / TM)</option></select>' +
+          '<span class="mini">Sınıfını seçtiysen kendiliğinden ayarlanır.</span></label>' +
           '<button class="dugme birincil" id="kOgrBaslat" style="margin-top:6px">Başla</button>' +
+          '<span class="mini">Ders yılı başlangıcı: ' + ggyy(gunNo(DONEM_BASI_SABIT)) + ' (okul için sabit).</span>' +
           '</div>' +
           '<div class="kur-alt" style="margin-top:18px"><label class="dugme" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
           '<input type="file" id="paketYukle" hidden></label>' +
@@ -4614,18 +4652,28 @@ document.addEventListener('click', async ev => {
   if (ev.target.closest('#kOgrBaslat')) {
     const ad = (document.getElementById('kOgrAd').value || '').trim();
     if (!ad) { alert('Önce adını yaz.'); return; }
-    const alan = document.getElementById('kOgrAlan').value || 'SAY';
-    const donem = document.getElementById('kOgrDonem').value;
+    const subeSecim = ((document.getElementById('kOgrSube') || {}).value || '').trim();
+    const hazir = OKUL_SUBE_PROGRAMLARI[subeSecim];          // seçilen şubenin hazır ders programı
+    const sube = hazir ? subeSecim : 'benim';
+    const alan = hazir ? hazir.alan : (document.getElementById('kOgrAlan').value || 'SAY');
     D.rol = 'ogrenci';
-    D.ogr = [{ no: 1, ad: ad, alan: alan, sube: 'benim', kap: 6, off: [6], hedef: null, aktif: true,
+    D.ogr = [{ no: 1, ad: ad, alan: alan, sube: sube, kap: 6, off: [6], hedef: null, aktif: true,
                ilkAktif: bugunNo(), maddeler: [], rutin: { once: '', ara: '', sonra: '' } }];
     D.konuPlani = D.konuPlani || {};
-    D.konuPlani['benim'] = JSON.parse(JSON.stringify(VARSAYILAN_KONU_PLANI[alan] || VARSAYILAN_KONU_PLANI.SAY));
-    if (donem) donemBasiniAyarla(isoDan(pazartesi(gunNo(donem))), true);
-    EK.ogr = 0; EK.sekme = 'ayarlar'; EK.sube = 'benim'; EK.hafta = null;
+    D.konuPlani[sube] = JSON.parse(JSON.stringify(VARSAYILAN_KONU_PLANI[alan] || VARSAYILAN_KONU_PLANI.SAY));
+    // Dönem başı okul için sabit; öğrenciye sorulmaz.
+    donemBasiniAyarla(isoDan(pazartesi(gunNo(DONEM_BASI_SABIT))), true);
+    // Hazır program dönem başı haftasına yazılır: programAl() sonraki haftalarda da bunu bulur.
+    if (hazir) {
+      programYaz(sube, pazartesi(gunNo(DONEM_BASI_SABIT)), JSON.parse(JSON.stringify(hazir.prog)));
+      programDegistiTetikle(sube);
+    }
+    EK.ogr = 0; EK.sekme = hazir ? 'plan' : 'ayarlar'; EK.sube = sube; EK.hafta = null;
     await kaydet(true); ciz();
-    bilgiVer(ad + ', konu planın hazır. Şimdi aşağıdan okulunun ders programını AI ile aktar ya da hücrelere ' +
-             'tıklayıp elle doldur — haftalık planın hemen çıkar.');
+    bilgiVer(hazir
+      ? ad + ', ' + sube + ' sınıfının ders programı ve konu planın hazır — haftalık planın aşağıda.'
+      : ad + ', konu planın hazır. Şimdi aşağıdan okulunun ders programını AI ile aktar ya da hücrelere ' +
+        'tıklayıp elle doldur — haftalık planın hemen çıkar.');
     return;
   }
   const kal = ev.target.closest('.kalibreEt');
@@ -5305,6 +5353,14 @@ document.addEventListener('input', ev => {
 
 document.addEventListener('change', async ev => {
   const el = ev.target;
+  // Öğrenci kurulumunda sınıf seçilince alan kendiliğinden ayarlansın — ekranda görünen
+  // değer ile kurulumda kullanılacak değer birbirinden ayrılmasın.
+  if (el.id === 'kOgrSube') {
+    const bilgi = OKUL_SUBE_PROGRAMLARI[el.value];
+    const alanEl = document.getElementById('kOgrAlan');
+    if (bilgi && alanEl) alanEl.value = bilgi.alan;
+    return;
+  }
   if ((el.id === 'pSoru' || el.id === 'pAd') && PENCERE) {
     const hb = haftaBasi(), p = planHesapla(EK.ogr, hb);
     const x = p.gunler[PENCERE.g][PENCERE.s];

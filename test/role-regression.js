@@ -208,13 +208,60 @@ function studentState(extra) {
     outsidePlanResult.editing.includes('value="6"') && outsidePlanResult.editing.includes('value="10"'),
     'Plan dışı korunmuş sonuç mevcut düzenleme akışına açılamıyor.');
 
-  console.log(JSON.stringify({ passed: 24, checks: [
+  // --- öğrenci kurulumu: şube seçimi hazır ders programını yükler, dönem başı sabittir ---
+  run(`D = varsayilan(); EK = { sekme:'plan', ogr:0, hafta:null, kirli:false, son:'', girisAcik:{},
+    haritaAcik:null, haritaOnay:null };`);
+  nodes.kOgrAd = Object.assign(element(), { id: 'kOgrAd', value: 'Ada Yılmaz' });
+  nodes.kOgrSube = Object.assign(element(), { id: 'kOgrSube', value: '301' });
+  nodes.kOgrAlan = Object.assign(element(), { id: 'kOgrAlan', value: 'SAY' });
+  const kurulumDugmesi = Object.assign(element(), {
+    id: 'kOgrBaslat',
+    closest(selector) { return selector.indexOf('#kOgrBaslat') >= 0 ? this : null; }
+  });
+  await listeners.click[0]({ target: kurulumDugmesi });
+  const hazirKurulum = run(`({ sube: D.ogr[0].sube, alan: D.ogr[0].alan, donemBasi: D.ayar.donemBasi,
+    program: !!(D.dersProgrami || {})['301'], planHafta: ((D.konuPlani || {})['301'] || []).length,
+    dagitilan: Object.keys((D.subeIslenis || {})['301'] || {}).length, sekme: EK.sekme })`);
+  // Alan, kutuda 'SAY' yazsa bile şubeden türetilmeli: ekrandaki değer değil şube belirleyici.
+  assert(hazirKurulum.sube === '301' && hazirKurulum.alan === 'EA',
+    'Öğrenci seçtiği şubeyle (ve şubenin alanıyla) kurulmadı.');
+  assert(hazirKurulum.donemBasi === '2026-08-24', 'Dönem başı sabit tarihe ayarlanmadı.');
+  assert(hazirKurulum.program && hazirKurulum.planHafta > 0 && hazirKurulum.dagitilan > 0,
+    'Şubenin hazır ders programı yüklenip konular dağıtılmadı.');
+  assert(hazirKurulum.sekme === 'plan', 'Programı hazır öğrenci hâlâ ders programı adımına yönlendiriliyor.');
+
+  nodes.kOgrAd.value = 'Deniz Kaya'; nodes.kOgrSube.value = ''; nodes.kOgrAlan.value = 'EA';
+  await listeners.click[0]({ target: kurulumDugmesi });
+  const listeDisi = run(`({ sube: D.ogr[0].sube, alan: D.ogr[0].alan, donemBasi: D.ayar.donemBasi,
+    program: !!(D.dersProgrami || {})['benim'], sekme: EK.sekme })`);
+  assert(listeDisi.sube === 'benim' && listeDisi.alan === 'EA',
+    '“Sınıfım listede yok” seçiminde kendi alanı korunmadı.');
+  assert(listeDisi.donemBasi === '2026-08-24', 'Liste dışı kurulumda da dönem başı sabit kalmalı.');
+  assert(!listeDisi.program && listeDisi.sekme === 'ayarlar',
+    'Programı olmayan öğrenci ders programı adımına yönlendirilmedi.');
+
+  const programSorunlari = run(`(() => {
+    const sorun = [];
+    Object.keys(OKUL_SUBE_PROGRAMLARI).forEach(su => {
+      const p = OKUL_SUBE_PROGRAMLARI[su].prog;
+      if (p.gunler.length !== 7) sorun.push(su + ': 7 gün değil');
+      p.gunler.forEach((g, gi) => {
+        if (g.length !== p.saatler.length) sorun.push(su + ' gün ' + gi + ': saat sayısı tutmuyor');
+        g.forEach(d => { if (d && d !== 'REHBERLİK' && dersEsle(d) < 0) sorun.push(su + ': tanınmayan ders ' + d); });
+      });
+    });
+    return sorun;
+  })()`);
+  assert(!programSorunlari.length, 'Hazır şube programlarında sorun: ' + programSorunlari.join(' · '));
+
+  console.log(JSON.stringify({ passed: 27, checks: [
     'student-agreement-tab', 'student-route-reachable', 'personal-fields-visible', 'teacher-fields-hidden',
     'teacher-agreement-isolated', 'student-output-toggle', 'student-items-save', 'student-routines-save',
     'past-unissued-empty', 'past-recovery-button', 'edit-banner-actions', 'reconstructed-plan-saved',
     'snapshot-immutable', 'discard-restores-existing', 'discard-removes-new', 'edit-state-cleared',
     'empty-snapshot-supported', 'edit-bound-to-student', 'other-student-return-banner',
     'edit-scope-isolated', 'result-locks-snapshot', 'result-survives-discard', 'frozen-plan-editable',
-    'outside-plan-result-remains-editable'
+    'outside-plan-result-remains-editable', 'student-class-loads-builtin-timetable',
+    'unlisted-class-keeps-manual-setup', 'builtin-timetables-are-well-formed'
   ] }, null, 2));
 })().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
