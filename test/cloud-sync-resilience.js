@@ -978,23 +978,46 @@ test('daily-snapshot-failure-does-not-fail-the-main-backup', async () => {
   equal((await run('bulutaYedekle()')).tur, 'tamam', 'the main backup must still count as done');
 });
 
+test('stalled-teacher-backup-returns-a-timeout-status', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = id => { if (timers[id - 1]) timers[id - 1].cleared = true; };
+  resetOgr(sandbox, [student({})]);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    setDoc: () => new Promise(() => {})
+  });
+  const islem = run('bulutaYedekle()');
+  const sure = timers.find(t => t.ms === run('BULUT_YAZMA_ZAMAN_ASIMI'));
+  assert(sure, 'the teacher live-backup write must have a deadline');
+  sure.fn();
+  const sonuc = await islem;
+  equal(sonuc.tur, 'hata');
+  assert(/zamanında onay alamadı/.test(sonuc.mesaj), 'the timeout must be visible in backup status');
+});
+
 // ================================================================== otomatik öğrenci sonucu senkronizasyonu
-test('sunucuyaGonder-records-plan-start-even-before-any-result', async () => {
+test('event-only-upload-does-not-replace-a-populated-package', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
   let payload = null, signIns = 0;
+  const eskiPaket = { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 90, k: 4, d: 8, s: 10, t: 1 }] };
+  const sunucu = { paket: JSON.parse(JSON.stringify(eskiPaket)) };
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
     girisOgrenci: async () => { signIns++; return { uid: 'student-uid' }; },
-    updateDoc: async (_ref, data) => { payload = data; }
+    updateDoc: async (_ref, data) => { payload = data; Object.assign(sunucu, data); }
   });
   const adet = await run("sunucuyaGonder({tur:'plan-baslatildi',hafta:100,toplam:7})");
   equal(adet, 0, 'a plan event may be sent with zero result rows');
   equal(signIns, 1, 'the student must authenticate before the automatic write');
   assert(payload && payload.bagliUid === 'student-uid', 'the write must stay bound to the signed-in student');
-  equal(payload.paket.istemciOlay.tur, 'plan-baslatildi');
-  equal(payload.paket.istemciOlay.hafta, 100);
-  equal(payload.paket.istemciOlay.toplam, 7);
-  assert(Number.isSafeInteger(payload.paket.istemciOlay.ts), 'the event must have an integer timestamp');
+  equal(payload.istemciOlay.tur, 'plan-baslatildi');
+  equal(payload.istemciOlay.hafta, 100);
+  equal(payload.istemciOlay.toplam, 7);
+  assert(Number.isSafeInteger(payload.istemciOlay.ts), 'the event must have an integer timestamp');
+  assert(!Object.prototype.hasOwnProperty.call(payload, 'paket'),
+    'an event-only update must omit paket instead of sending an empty result snapshot');
+  equal(sunucu.paket, eskiPaket, 'the populated server package must survive the event-only patch unchanged');
 });
 
 test('manual-sunucuyaGonder-still-skips-empty-results', async () => {
@@ -1030,18 +1053,20 @@ test('automatic-cloud-sync-is-student-only-and-keeps-permission-errors-nonfatal'
 test('planiSabitle-click-triggers-automatic-server-write', async () => {
   const { sandbox, run, listeners } = loadAppSandbox();
   resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
-  run(`EK.ogr = 0; otomatikOlay = null; sonBildirim = '';
+  run(`EK.ogr = 0; otomatikOlay = null; bildirimler = [];
     haftayiKullanimaAl = () => 4;
     kaydet = async () => true;
     ciz = () => {};
-    bilgiVer = m => { sonBildirim = m; };
+    bilgiVer = m => { bildirimler.push(m); };
     ogrenciBulutOtomatikGonder = async o => { otomatikOlay = o; return {tur:'tamam',adet:0}; };`);
   const target = Object.assign(element(), { id: 'planiSabitle',
     closest(sel) { return sel.indexOf('#planiSabitle') >= 0 ? this : null; } });
   await listeners.click[0]({ target });
   equal(run('otomatikOlay.tur'), 'plan-baslatildi');
   equal(run('otomatikOlay.toplam'), 4);
-  assert(/Sunucuya otomatik gönderildi/.test(run('sonBildirim')), 'the student must see successful auto-sync status');
+  const bildirimler = run('bildirimler');
+  assert(/cihazda kaydedildi/.test(bildirimler[0]), 'local success must be shown before upload status');
+  assert(/Sunucuya otomatik gönderildi/.test(bildirimler[1]), 'the student must see successful auto-sync status');
 });
 
 test('sonucKaydet-click-triggers-automatic-server-write', async () => {
@@ -1052,11 +1077,11 @@ test('sonucKaydet-click-triggers-automatic-server-write', async () => {
   const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
     parentElement: { querySelector: () => soru } });
   sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
-  run(`EK.ogr = 0; otomatikOlay = null; sonBildirim = '';
+  run(`EK.ogr = 0; otomatikOlay = null; bildirimler = [];
     sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
     kaydet = async () => true;
     ciz = () => {};
-    bilgiVer = m => { sonBildirim = m; };
+    bilgiVer = m => { bildirimler.push(m); };
     ogrenciBulutOtomatikGonder = async o => { otomatikOlay = o; return {tur:'tamam',adet:1}; };`);
   const target = Object.assign(element(), { id: 'sonucKaydet',
     closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
@@ -1064,8 +1089,99 @@ test('sonucKaydet-click-triggers-automatic-server-write', async () => {
   equal(run('otomatikOlay.tur'), 'sonuclar-kaydedildi');
   equal(run('otomatikOlay.toplam'), 1);
   equal(run('D.log.length'), 1, 'the result must be applied locally before upload');
-  assert(/1 sonuç kaydedildi/.test(run('sonBildirim')) && /Sunucuya otomatik gönderildi/.test(run('sonBildirim')),
-    'the student must see both local-save and auto-sync success');
+  const bildirimler = run('bildirimler');
+  assert(/1 sonuç cihazda kaydedildi/.test(bildirimler[0]), 'local result success must be shown first');
+  assert(/Sunucuya otomatik gönderildi/.test(bildirimler[1]), 'cloud success must be shown separately');
+});
+
+test('stalled-upload-does-not-block-the-local-save', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = id => { if (timers[id - 1]) timers[id - 1].cleared = true; };
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  const hb = run('haftaBasi()'), gun = run('bugunNo()');
+  const soru = { value: '10' };
+  const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
+    parentElement: { querySelector: () => soru } });
+  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    girisOgrenci: async () => ({ uid: 'student-uid' }),
+    updateDoc: () => new Promise(() => {})
+  });
+  run(`EK.ogr = 0; bildirimler = []; cizSayisi = 0;
+    sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
+    kaydet = async () => true;
+    ciz = () => { cizSayisi++; };
+    bilgiVer = m => { bildirimler.push(m); };`);
+  const target = Object.assign(element(), { id: 'sonucKaydet',
+    closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
+  const islem = listeners.click[0]({ target });
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+
+  equal(run('cizSayisi'), 1, 'the result view must redraw before server acknowledgement');
+  equal(run('EK.hafta'), hb + 7, 'the week must advance while the network write is still pending');
+  assert(/1 sonuç cihazda kaydedildi/.test(run('bildirimler[0]')),
+    'local confirmation must be visible while upload is pending');
+  const sure = timers.find(t => t.ms === run('BULUT_YAZMA_ZAMAN_ASIMI'));
+  assert(sure, 'the pending updateDoc must have a deadline');
+  sure.fn();
+  await islem;
+  assert(/20 saniye/.test(run('bildirimler[bildirimler.length - 1]')),
+    'the later status must explain the acknowledgement timeout');
+});
+
+test('failed-local-save-is-not-reported-as-success', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  const hb = run('haftaBasi()'), gun = run('bugunNo()');
+  const soru = { value: '10' };
+  const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
+    parentElement: { querySelector: () => soru } });
+  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  run(`EK.ogr = 0; bildirimler = []; yuklemeSayisi = 0; cizSayisi = 0;
+    sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
+    kaydet = async () => false;
+    ciz = () => { cizSayisi++; };
+    bilgiVer = m => { bildirimler.push(m); };
+    ogrenciBulutOtomatikGonder = async () => { yuklemeSayisi++; return {tur:'tamam'}; };`);
+  const target = Object.assign(element(), { id: 'sonucKaydet',
+    closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
+  await listeners.click[0]({ target });
+
+  equal(run('yuklemeSayisi'), 0, 'cloud upload must not run after local persistence fails');
+  equal(run('EK.hafta'), null, 'a failed local save must not advance away from the entered results');
+  equal(run('cizSayisi'), 1, 'the status rail and in-memory result must still redraw');
+  const mesaj = run('bildirimler[bildirimler.length - 1]');
+  assert(/kaydedilemedi/.test(mesaj) && !/\bkaydedildi\b/.test(mesaj),
+    'the toast must not claim success after a failed local save: ' + mesaj);
+  equal(hb, run('buHafta()'), 'test setup must begin on the current week');
+});
+
+test('result-save-does-not-clobber-navigation-changed-during-local-save', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  const hb = run('haftaBasi()'), gun = run('bugunNo()');
+  const soru = { value: '10' };
+  const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
+    parentElement: { querySelector: () => soru } });
+  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  let kaydiBitir;
+  const kayitBekliyor = new Promise(resolve => { kaydiBitir = resolve; });
+  sandbox.kayitBekliyor = kayitBekliyor;
+  run(`EK.ogr = 0; bildirimler = [];
+    sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
+    kaydet = () => kayitBekliyor;
+    ciz = () => {};
+    bilgiVer = m => { bildirimler.push(m); };
+    ogrenciBulutOtomatikGonder = async () => ({tur:'tamam',adet:1});`);
+  const target = Object.assign(element(), { id: 'sonucKaydet',
+    closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
+  const islem = listeners.click[0]({ target });
+  run('EK.hafta = ' + (hb - 7) + ';');
+  kaydiBitir(true);
+  await islem;
+  equal(run('EK.hafta'), hb - 7, 'the returning handler must preserve the week chosen during its await');
 });
 
 test('history-lists-newest-first-and-restores-a-chosen-day', async () => {
@@ -1189,6 +1305,36 @@ test('restore-aborts-before-mutation-when-protection-point-cannot-be-written', a
   equal(run('D.ogr[0].ad'), 'Korunacak Defter', 'failed protection must abort before changing D');
   assert(/değiştirilmedi/.test(uyari) && /koruma yazılamadı/.test(uyari),
     'the teacher must be told that restore stopped safely: ' + uyari);
+});
+
+test('stalled-protection-write-times-out-before-restore-mutation', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = id => { if (timers[id - 1]) timers[id - 1].cleared = true; };
+  resetOgr(sandbox, [student({ ad: 'Korunacak Defter' })]);
+  const eskiDefter = run(`(() => { const k = JSON.parse(JSON.stringify(D));
+    k.ogr = [{no:9,ad:'Eski Defter',alan:'SAY',sube:'201',hedef:null}]; return JSON.stringify(k); })()`);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    getDoc: async () => ({ exists: () => true,
+      data: () => ({ veri: eskiDefter, ts: 1, boyut: eskiDefter.length, ogrenciSayisi: 1, sonucSayisi: 0 }) }),
+    setDoc: () => new Promise(() => {})
+  });
+  sandbox.confirm = () => true;
+  let uyari = '';
+  sandbox.alert = m => { uyari = m; };
+  const dugme = Object.assign(element(), { dataset: { gun: '2026-09-01' },
+    closest(sel) { return sel === '.bulutGunYukle' ? this : null; } });
+  const islem = listeners.click[0]({ target: dugme });
+  for (let i = 0; i < 6; i++) await Promise.resolve();
+  const sure = timers.find(t => t.ms === run('BULUT_YAZMA_ZAMAN_ASIMI'));
+  assert(sure, 'the pre-restore protection write must have a deadline');
+  sure.fn();
+  await islem;
+  equal(run('D.ogr[0].ad'), 'Korunacak Defter', 'timeout must abort before changing D');
+  assert(/değiştirilmedi/.test(uyari) && /zamanında onay alamadı/.test(uyari),
+    'the teacher must see a safe-abort timeout message: ' + uyari);
 });
 
 test('restore-point-history-is-visible-and-restores-reversibly', async () => {

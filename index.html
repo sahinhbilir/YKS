@@ -3450,17 +3450,21 @@ async function bulutaYedekle() {
       Math.round(json.length / 1024) + ' KB). "Yedek indir" ile dosya yedeği alın.' };
   try {
     const ts = Number.isSafeInteger(+D.ts) && +D.ts > 0 ? +D.ts : Date.now();
-    await window.bulut.setDoc(window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid),
-      { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length });
+    await sureSinirli(
+      window.bulut.setDoc(window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid),
+        { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length }),
+      BULUT_YAZMA_ZAMAN_ASIMI, 'Bulut yedeği sunucudan zamanında onay alamadı.');
     // Günlük anlık görüntü: aynı gün içinde üzerine yazılır, günler birikir. Böylece yanlış
     // girilmiş ya da bozulmuş bir sonuç fark edildiğinde önceki bir güne dönülebilir —
     // tek bir "son yedek" bunu yapamaz, çünkü hatalı hâli de o tek kopyaya yazılır.
     try {
-      await window.bulut.setDoc(
-        window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'gecmis', isoDan(bugunNo())),
-        { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length,
-          ogrenciSayisi: (D.ogr || []).filter(o => o && !o.silindi).length,
-          sonucSayisi: (D.log || []).length });
+      await sureSinirli(
+        window.bulut.setDoc(
+          window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'gecmis', isoDan(bugunNo())),
+          { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length,
+            ogrenciSayisi: (D.ogr || []).filter(o => o && !o.silindi).length,
+            sonucSayisi: (D.log || []).length }),
+        BULUT_YAZMA_ZAMAN_ASIMI, 'Günlük bulut kopyası sunucudan zamanında onay alamadı.');
     } catch (e) { /* günlük kopya yazılamazsa asıl yedek yine geçerlidir */ }
     EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = '';
     return { tur: 'tamam', boyut: json.length };
@@ -3520,6 +3524,21 @@ async function buluttanYedekAl() {
 function izinHatasiMi(e) {
   const t = String((e && (e.code || e.message)) || '');
   return /permission[-_ ]?denied|insufficient permissions/i.test(t);
+}
+const BULUT_YAZMA_ZAMAN_ASIMI = 20000;
+function sureSinirli(sozVerme, ms, mesaj) {
+  let zamanAsimiId;
+  const zamanAsimi = new Promise((_, reddet) => {
+    zamanAsimiId = setTimeout(() => {
+      const hata = new Error(mesaj || 'Sunucu zamanında yanıt vermedi.');
+      hata.code = 'yks-zaman-asimi';
+      reddet(hata);
+    }, ms);
+  });
+  // Bu yalnızca arayüzün bekleme süresini sınırlar; Firestore yazısını iptal etmez.
+  // Bağlantı geri gelirse SDK bekleyen yazıyı daha sonra tamamlayabilir.
+  return Promise.race([Promise.resolve(sozVerme), zamanAsimi])
+    .finally(() => clearTimeout(zamanAsimiId));
 }
 const BULUT_IZIN_ACIKLAMA =
   'Buluta erişim izni yok. Muhtemel iki neden: (1) firestore.rules dosyasının güncel hâli ' +
@@ -3604,11 +3623,14 @@ async function geriYuklemeNoktasiOlustur(kaynak) {
   const id = geriYuklemeNoktasiKimligi(ts);
   const kaynakMetni = String(kaynak || 'bilinmeyen').slice(0, 100);
   try {
-    await window.bulut.setDoc(
-      window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'geriNoktalari', id),
-      { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length,
-        ogrenciSayisi: (D.ogr || []).filter(o => o && !o.silindi).length,
-        sonucSayisi: (D.log || []).length, kaynak: kaynakMetni });
+    await sureSinirli(
+      window.bulut.setDoc(
+        window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'geriNoktalari', id),
+        { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length,
+          ogrenciSayisi: (D.ogr || []).filter(o => o && !o.silindi).length,
+          sonucSayisi: (D.log || []).length, kaynak: kaynakMetni }),
+      BULUT_YAZMA_ZAMAN_ASIMI,
+      'Geri yükleme koruma noktası sunucudan zamanında onay alamadı. Mevcut defter değiştirilmedi.');
     return { tur: 'tamam', id: id, ts: ts, boyut: json.length };
   } catch (e) {
     return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA }
@@ -3861,15 +3883,17 @@ async function sunucuyaGonder(olay) {
   if (!pk.kayit.length && !istemciOlay) return 0;
   const kullanici = await window.bulut.girisOgrenci();
   const kayitBulut = pk.kayit.map(k => ({ g: k[0], k: k[1], d: k[2], s: k[3], t: k[4] }));
-  const paket = { tur: pk.tur, surum: pk.surum, katalogImza: pk.katalogImza, no: pk.no, ad: pk.ad, sube: pk.sube,
-                  tarih: pk.tarih, olusturmaTs: pk.olusturmaTs, kayit: kayitBulut, konular: pk.konular };
-  if (istemciOlay) paket.istemciOlay = istemciOlay;
+  const yazilacak = { bagliUid: kullanici.uid, sunucuTs: Date.now() };
+  // Plan olayı sonuç paketi DEĞİLDİR. Yerel geçmiş boşsa paket alanını hiç gönderme:
+  // updateDoc böylece sunucuda birikmiş sonuç paketini olduğu gibi bırakır.
+  if (pk.kayit.length) yazilacak.paket = {
+    tur: pk.tur, surum: pk.surum, katalogImza: pk.katalogImza, no: pk.no, ad: pk.ad, sube: pk.sube,
+    tarih: pk.tarih, olusturmaTs: pk.olusturmaTs, kayit: kayitBulut, konular: pk.konular
+  };
+  if (istemciOlay) yazilacak.istemciOlay = istemciOlay;
   const ref = window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId);
-  await window.bulut.updateDoc(ref, {
-    bagliUid: kullanici.uid,
-    paket: paket,
-    sunucuTs: Date.now()
-  });
+  await sureSinirli(window.bulut.updateDoc(ref, yazilacak), BULUT_YAZMA_ZAMAN_ASIMI,
+    'Sunucu 20 saniye içinde yanıt vermedi; bekleyen gönderim bağlantı gelince tamamlanabilir.');
   return pk.kayit.length;
 }
 // Otomatik gönderim yerel kaydın başarısını geri almaz: ağ/izin hatası dönülür,
@@ -3880,8 +3904,8 @@ async function ogrenciBulutOtomatikGonder(olay) {
     return { tur: 'atlan', adet: 0 };
   try { return { tur: 'tamam', adet: await sunucuyaGonder(olay) }; }
   catch (e) {
-    const mesaj = izinHatasiMi(e)
-      ? 'sunucu izni reddedildi; öğretmeninize bildirin'
+    const mesaj = e && e.code === 'yks-zaman-asimi' ? e.message : izinHatasiMi(e)
+      ? 'sunucu izni reddedildi; öğretmeninize bildirin.'
       : (e.message || String(e));
     return { tur: 'hata', adet: 0, mesaj: mesaj };
   }
@@ -3889,7 +3913,9 @@ async function ogrenciBulutOtomatikGonder(olay) {
 function otomatikBulutMesaji(sonuc) {
   if (sonuc && sonuc.tur === 'tamam') return ' Sunucuya otomatik gönderildi.';
   if (sonuc && sonuc.tur === 'hata')
-    return ' Cihaza kaydedildi; sunucuya gönderilemedi: ' + sonuc.mesaj + '. Ayarlar’dan tekrar deneyin.';
+    return ' Sunucu durumu: ' + sonuc.mesaj + ' Ayarlar’dan tekrar deneyebilirsiniz.';
+  if (sonuc && sonuc.tur === 'yerelHata')
+    return ' Sayfayı kapatmayın ve Ayarlar’dan yedek indirin.';
   return '';
 }
 // Öğretmen tarafı: kendi listesindeki her syncId için yuvayı okur. bulutYuvasiCoz()
@@ -5660,11 +5686,16 @@ document.addEventListener('click', async ev => {
     const toplam = haftayiKullanimaAl(EK.ogr, hb);
     if (!toplam) { bilgiVer('Sabitlenecek çalışma yok.'); return; }
     const yerelTamam = await kaydet(true);
-    const bulutSonucu = yerelTamam
-      ? await ogrenciBulutOtomatikGonder({ tur: 'plan-baslatildi', hafta: hb, toplam: toplam })
-      : { tur: 'atlan' };
     ciz();
-    bilgiVer('Plan kullanıma alındı; bu haftanın kaydı artık değişmeyecek.' + otomatikBulutMesaji(bulutSonucu));
+    if (!yerelTamam) {
+      bilgiVer('Plan kalıcı olarak kaydedilemedi.' + otomatikBulutMesaji({ tur: 'yerelHata' }));
+      return;
+    }
+    bilgiVer('Plan cihazda kaydedildi.');
+    const bulutSonucu = await ogrenciBulutOtomatikGonder(
+      { tur: 'plan-baslatildi', hafta: hb, toplam: toplam });
+    const bulutMesaji = otomatikBulutMesaji(bulutSonucu);
+    if (bulutMesaji) bilgiVer('Plan cihazda kayıtlı.' + bulutMesaji);
     return;
   }
   if (t.id === 'yazdirOnizle') {
@@ -5816,25 +5847,38 @@ document.addEventListener('click', async ev => {
     catch (e) { alert(e.message || e); return; }
     tamamlananSlotlar.forEach(x => planSlotSonuclandi(EK.ogr, pazartesi(x.gun), x.slot));
     anlatimlar.forEach(x => anlatimTamam(EK.ogr, x.ki, x.gun));
-    const anlSay = anlatimlar.length, kaydedilenHb = haftaBasi();
+    const anlSay = anlatimlar.length, kaydedilenHb = haftaBasi(), kaydedilenOgr = EK.ogr;
     if (!kayitlar.length) {
       const yerelTamam = await kaydet(true);
-      const bulutSonucu = yerelTamam
-        ? await ogrenciBulutOtomatikGonder({ tur: 'sonuclar-kaydedildi', hafta: kaydedilenHb, toplam: anlSay })
-        : { tur: 'atlan' };
       ciz();
-      bilgiVer(anlSay + ' konu anlatımı işaretlendi; ilk testleri ' + D.ayar.ilk + ' gün sonrasına yazıldı.' +
-        otomatikBulutMesaji(bulutSonucu));
+      if (!yerelTamam) {
+        bilgiVer('Konu anlatımı kalıcı olarak kaydedilemedi.' + otomatikBulutMesaji({ tur: 'yerelHata' }));
+        return;
+      }
+      bilgiVer(anlSay + ' konu anlatımı cihazda kaydedildi.');
+      const bulutSonucu = await ogrenciBulutOtomatikGonder(
+        { tur: 'sonuclar-kaydedildi', hafta: kaydedilenHb, toplam: anlSay });
+      const bulutMesaji = otomatikBulutMesaji(bulutSonucu);
+      if (bulutMesaji) bilgiVer(anlSay + ' konu anlatımı cihazda kayıtlı.' + bulutMesaji);
       return;
     }
     const yerelTamam = await kaydet(true);
-    const bulutSonucu = yerelTamam
-      ? await ogrenciBulutOtomatikGonder({ tur: 'sonuclar-kaydedildi', hafta: kaydedilenHb, toplam: kayitlar.length + anlSay })
-      : { tur: 'atlan' };
-    EK.hafta = kaydedilenHb + 7;          // sonuç girildi -> gelecek haftanın planı hazır
-    EK.sekme = 'plan';
+    // Kullanıcı yerel kayıt sürerken başka öğrenciye/haftaya geçtiyse onun seçimini ezme.
+    // Hâlâ başladığı görünümdeyse sonuçtan sonra gelecek haftaya ilerlet.
+    if (yerelTamam && EK.ogr === kaydedilenOgr && haftaBasi() === kaydedilenHb) {
+      EK.hafta = kaydedilenHb + 7;
+      EK.sekme = 'plan';
+    }
     ciz();
-    bilgiVer(kayitlar.length + ' sonuç kaydedildi.' + otomatikBulutMesaji(bulutSonucu));
+    if (!yerelTamam) {
+      bilgiVer('Sonuçlar kalıcı olarak kaydedilemedi.' + otomatikBulutMesaji({ tur: 'yerelHata' }));
+      return;
+    }
+    bilgiVer(kayitlar.length + ' sonuç cihazda kaydedildi.');
+    const bulutSonucu = await ogrenciBulutOtomatikGonder(
+      { tur: 'sonuclar-kaydedildi', hafta: kaydedilenHb, toplam: kayitlar.length + anlSay });
+    const bulutMesaji = otomatikBulutMesaji(bulutSonucu);
+    if (bulutMesaji) bilgiVer(kayitlar.length + ' sonuç cihazda kayıtlı.' + bulutMesaji);
     return;
   }
   if (t.id === 'yeniKonu') {

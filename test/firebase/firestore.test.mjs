@@ -5,6 +5,7 @@
 // credentials needed. See ../../firestore.rules for the rules under test.)
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
+import { isDeepStrictEqual } from 'node:util';
 import { doc, getDoc, setDoc, updateDoc, runTransaction } from 'firebase/firestore';
 
 let pass = 0, fail = 0;
@@ -124,16 +125,21 @@ await check('password-student-account-can-send-results-to-own-slot', async () =>
   }));
 });
 await check('password-student-can-record-valid-automatic-sync-event', async () => {
+  const yol = doc(hesapliOgrenciDb, 'ogrenciler', hesapSid);
+  const oncekiPaket = (await assertSucceeds(getDoc(yol))).data().paket;
   await assertSucceeds(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', hesapSid), {
-    paket: { tur: 'yks-sonuc', surum: 2, kayit: [], konular: {},
-      istemciOlay: { tur: 'plan-baslatildi', hafta: 100, ts: 1750000000000, toplam: 7 } },
+    istemciOlay: { tur: 'plan-baslatildi', hafta: 100, ts: 1750000000000, toplam: 7 },
     sunucuTs: 1750000000000
   }));
+  const sonraki = (await assertSucceeds(getDoc(yol))).data();
+  if (!isDeepStrictEqual(sonraki.paket, oncekiPaket))
+    throw new Error('olay-only güncelleme mevcut sonuç paketini değiştirdi');
+  if (!sonraki.istemciOlay || sonraki.istemciOlay.tur !== 'plan-baslatildi')
+    throw new Error('üst düzey istemci olayı kaydedilmedi');
 });
 await check('password-student-cannot-record-arbitrary-sync-event', async () => {
   await assertFails(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', hesapSid), {
-    paket: { tur: 'yks-sonuc', surum: 2, kayit: [], konular: {},
-      istemciOlay: { tur: 'hesabi-sil', hafta: 100, ts: 1750000000000, gizli: true } },
+    istemciOlay: { tur: 'hesabi-sil', hafta: 100, ts: 1750000000000, gizli: true },
     sunucuTs: 1750000000000
   }));
 });
