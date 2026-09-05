@@ -640,8 +640,7 @@ function varsayilan() {
     ayar: { planBasi: isoDan(pazartesi(bugunNo())), sinav: '2027-06-19', hedef: 0.90, maks: 60,
             ilk: 2, relearn: 1, esik: [50, 70, 90], soru: 12, donemBasi: DONEM_BASI_SABIT,
             gecmisSerbest: false, tekEsik: 0.80, ileriHafta: 8,
-            telafiGunKap: 2,
-            deneme: '' },
+            telafiGunKap: 2 },
     rol: '', kurum: '', ertele: {},
     ogr: [],
     anlasma: {
@@ -5056,7 +5055,6 @@ function yazdirCSS() {
     '.sozler{margin-top:1mm}.sozler i{display:block;border-bottom:.25mm dotted #999;height:5mm}' +
     '.imz{margin-top:auto;border-top:.3mm solid #999;padding-top:1.5mm}' +
     '.anl-h{background:#f0f0f0}.anl-h .n{font-weight:700}' +
-    '.dnot{margin-top:2.4mm;font-size:6.4pt;color:#444;text-align:center;letter-spacing:.02em}' +
     '.rut{display:flex;gap:4mm;height:20mm;margin-top:4mm}' +
     '.rut div{flex:1;border:.3mm solid #999;padding:1.5mm 2mm}' +
     '.rut h4{margin:0 0 1mm;font-size:6.6pt;text-transform:uppercase;letter-spacing:.03em;color:#333}' +
@@ -5100,7 +5098,6 @@ function yazdirSayfa(si, hb) {
     h += '<div class="rut">' + b.map((ad, i) => '<div><h4>' + kacis(ad) + '</h4>' +
       (m[i] ? '<p>' + kacis(m[i]).replace(/\n/g, '<br>') + '</p>' : '<u></u><u></u><u></u>') + '</div>').join('') + '</div>';
   }
-  if (D.ayar.deneme) h += '<div class="dnot">' + kacis(D.ayar.deneme) + '</div>';
   return h + '</div>';
 }
 
