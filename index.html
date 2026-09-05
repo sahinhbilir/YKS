@@ -3192,12 +3192,33 @@ function paketiYukle(pk) {
   return y;
 }
 
+// Firestore, iç içe dizileri kabul etmediği için sonuç satırları bulutta nesne olarak
+// tutulur. Hem öğrenci yeniden girişinde hem öğretmen çekiminde aynı katı dönüşümden geçsin;
+// bozuk tek bir satır varsa paket kısmen uygulanmaz.
+function bulutSonucPaketiniYerellestir(veri) {
+  if (!veri || !veri.paket) return null;
+  if (!Array.isArray(veri.paket.kayit))
+    throw new Error('Buluttaki sonuç paketi bozuk (kayıt listesi yok).');
+  const kayitYerel = veri.paket.kayit.map(r => {
+    if (!r || typeof r !== 'object' || Array.isArray(r))
+      throw new Error('Buluttaki sonuç paketinde geçersiz kayıt satırı var.');
+    return [r.g, r.k, r.d, r.s, r.t];
+  });
+  return {
+    tur: veri.paket.tur, surum: veri.paket.surum, katalogImza: veri.paket.katalogImza,
+    no: veri.ogrenciNo, ad: veri.ogrenciAd, sube: veri.ogrenciSube,
+    kayit: kayitYerel, konular: veri.paket.konular
+  };
+}
+
 async function ogrenciHesabindanYukle(ad, no) {
   if (!window.bulut || !window.bulut.yapilandirilmis)
     throw new Error('Bulut bağlantısı yapılandırılmamış.');
-  const kullanici = await window.bulut.girisOgrenciHesabi(ad, no);
-  const anlik = await window.bulut.getDoc(
-    window.bulut.doc(window.bulut.db, 'ogrenciHesaplari', kullanici.uid));
+  const kullanici = await sureSinirli(window.bulut.girisOgrenciHesabi(ad, no),
+    BULUT_YAZMA_ZAMAN_ASIMI, 'Öğrenci girişi sunucudan zamanında yanıt alamadı.');
+  const anlik = await sureSinirli(window.bulut.getDoc(
+    window.bulut.doc(window.bulut.db, 'ogrenciHesaplari', kullanici.uid)),
+    BULUT_YAZMA_ZAMAN_ASIMI, 'Öğrenci planı sunucudan zamanında alınamadı.');
   if (!anlik || !anlik.exists()) throw new Error('Bu öğrenci için yayınlanmış veri bulunamadı.');
   const hesap = anlik.data() || {};
   if (hesap.aktif !== true || typeof hesap.veri !== 'string' || !hesap.veri)
@@ -3205,11 +3226,47 @@ async function ogrenciHesabindanYukle(ad, no) {
   let paket;
   try { paket = JSON.parse(hesap.veri); }
   catch (e) { throw new Error('Sunucudaki öğrenci verisi okunamadı. Rehber öğretmeninize bildirin.'); }
-  veriyiHazirla(paketiYukle(paket));
-  EK.ogr = 0; EK.sekme = 'plan'; EK.hafta = null;
-  await kaydet(true);
+  const yeni = paketiYukle(paket), o = yeni.ogr[0] || {};
+  if (!o.syncId || hesap.syncId !== o.syncId || !o.ogrenciBulutId || o.hesapUid !== kullanici.uid)
+    throw new Error('Öğrenci planı ile sonuç yuvası eşleşmiyor. Rehber öğretmeniniz planı yeniden yayınlamalı.');
+
+  // Yeni cihazın boş/eski geçmişi sunucudaki daha dolu paketin üzerine yazmasın. Sonuç
+  // yuvasını mutlaka oku ve birleştir; okuma başarısızsa güvensiz bir yerel durumla giriş
+  // tamamlanmaz. İlk kez kullanılan hesapta paket null olabilir — bu geçerli ve güvenlidir.
+  let yuvaAnlik;
+  try {
+    yuvaAnlik = await sureSinirli(window.bulut.getDoc(
+      window.bulut.doc(window.bulut.db, 'ogrenciler', o.syncId)),
+      BULUT_YAZMA_ZAMAN_ASIMI, 'Mevcut sonuç geçmişi sunucudan zamanında alınamadı.');
+  } catch (e) {
+    if (izinHatasiMi(e))
+      throw new Error('Mevcut sonuç geçmişine erişim izni yok. Rehber öğretmeniniz öğrenci hesabını yeniden yayınlamalı.');
+    throw e;
+  }
+  if (!yuvaAnlik || !yuvaAnlik.exists())
+    throw new Error('Sonuç yuvası bulunamadı. Rehber öğretmeniniz öğrenci hesabını yeniden yayınlamalı.');
+  const yuva = yuvaAnlik.data() || {};
+  if (yuva.durum !== 'aktif' || yuva.bagliUid !== kullanici.uid ||
+      yuva.ogrenciBulutId !== o.ogrenciBulutId)
+    throw new Error('Sonuç yuvası bu öğrenci hesabıyla eşleşmiyor. Rehber öğretmeninize bildirin.');
+  const sunucuPaketi = bulutSonucPaketiniYerellestir(yuva);
+
+  const oncekiD = D;
+  const oncekiEk = { ogr: EK.ogr, sekme: EK.sekme, hafta: EK.hafta };
+  let birlesme;
+  try {
+    veriyiHazirla(yeni);
+    birlesme = sunucuPaketi ? sonucPaketiUygula(sunucuPaketi, 0) : { eklenen: 0 };
+    EK.ogr = 0; EK.sekme = 'plan'; EK.hafta = null;
+    if (!(await kaydet(true))) throw new Error('Birleştirilen öğrenci verisi bu cihaza kaydedilemedi. Sayfayı kapatmadan yeniden deneyin.');
+  } catch (e) {
+    D = oncekiD;
+    Object.assign(EK, oncekiEk);
+    try { ciz(); } catch (cizimHatasi) { /* asıl veri hatasını koru */ }
+    throw e;
+  }
   ciz();
-  return D.ogr[0];
+  return { ad: D.ogr[0].ad, sunucudanAlinanSonuc: birlesme.eklenen || 0 };
 }
 
 async function ogrenciHesaplariniYayinla() {
@@ -3941,16 +3998,7 @@ async function sunucudanCek() {
       }
       const veri = anlik.data();
       if (!veri.paket || !veri.bagliUid) continue;
-      if (!Array.isArray(veri.paket.kayit)) throw new Error('Buluttaki sonuç paketi bozuk (kayıt listesi yok).');
-      const kayitYerel = veri.paket.kayit.map(r => {
-        if (!r || typeof r !== 'object') throw new Error('Buluttaki sonuç paketinde geçersiz kayıt satırı var.');
-        return [r.g, r.k, r.d, r.s, r.t];
-      });
-      rapor.push(sonucPaketiUygula({
-        tur: veri.paket.tur, surum: veri.paket.surum, katalogImza: veri.paket.katalogImza,
-        no: veri.ogrenciNo, ad: veri.ogrenciAd, sube: veri.ogrenciSube,
-        kayit: kayitYerel, konular: veri.paket.konular
-      }, i));
+      rapor.push(sonucPaketiUygula(bulutSonucPaketiniYerellestir(veri), i));
     } catch (e) { rapor.push({ hata: o.ad + ': ' + (e.message || e) }); }
   }
   return rapor;
@@ -5207,7 +5255,9 @@ document.addEventListener('click', async ev => {
     if (durum) durum.textContent = 'Kimliğiniz doğrulanıyor ve planınız sunucudan alınıyor…';
     try {
       const ogrenci = await ogrenciHesabindanYukle(ad, no);
-      bilgiVer('Hoş geldin ' + ogrenci.ad + ' — planın sunucudan yüklendi.');
+      bilgiVer('Hoş geldin ' + ogrenci.ad + ' — planın sunucudan yüklendi.' +
+        (ogrenci.sunucudanAlinanSonuc
+          ? ' Önceki cihazından ' + ogrenci.sunucudanAlinanSonuc + ' sonuç bu cihaza birleştirildi.' : ''));
     } catch (e) {
       const kod = String(e && e.code || '');
       const mesaj = /invalid-credential|user-not-found|wrong-password/.test(kod)

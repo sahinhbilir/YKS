@@ -780,7 +780,8 @@ test('rolRehber-keeps-local-data-when-restore-is-declined-or-broken', async () =
 
 test('student-name-number-login-downloads-package-without-confirmation', async () => {
   const { sandbox, run, listeners, nodes } = loadAppSandbox();
-  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync', ogrenciBulutId: 'cloud-1' })]);
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })]);
   const paket = run('ogrenciPaketi(0)');
   run('D = varsayilan(); D.rol = null;');
   nodes.ogrenciGirisAd = Object.assign(element(), { value: 'Ada Öğrenci' });
@@ -791,7 +792,10 @@ test('student-name-number-login-downloads-package-without-confirmation', async (
   sandbox.window.bulut = baseBulut({
     yapilandirilmis: true,
     girisOgrenciHesabi: async (ad, no) => { giris = { ad, no }; return { uid: 'student-account-42' }; },
-    getDoc: async () => docSnap(true, { aktif: true, veri: JSON.stringify(paket), syncId: 'student-sync' }),
+    doc: (_db, coll, id) => coll + '/' + id,
+    getDoc: async ref => ref === 'ogrenciHesaplari/student-account-42'
+      ? docSnap(true, { aktif: true, veri: JSON.stringify(paket), syncId: 'student-sync' })
+      : docSnap(true, { durum: 'aktif', bagliUid: 'student-account-42', ogrenciBulutId: 'cloud-1', paket: null }),
     setDoc: async () => {}
   });
   const target = Object.assign(element(), {
@@ -803,6 +807,85 @@ test('student-name-number-login-downloads-package-without-confirmation', async (
   equal(confirmSayisi, 0, 'a successful student login must not ask before loading the package');
   equal(run('D.rol'), 'ogrenci', 'the downloaded package must switch to student mode');
   equal(run('D.ogr[0].no'), 42, 'the downloaded package must belong to the selected student');
+});
+
+test('student-account-login-merges-existing-server-results-before-first-upload', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })]);
+  run('D.log = [[100,0,0,6,10,2,1000]];');
+  const hesapPaketi = run('ogrenciPaketi(0)');
+  const katalogImza = run('KATALOG_IMZA');
+  run("D = varsayilan(); D.rol = null; D.kurum = 'Önceki Yerel Durum';");
+  let gonderilen = null;
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    girisOgrenciHesabi: async () => ({ uid: 'student-account-42' }),
+    girisOgrenci: async () => ({ uid: 'student-account-42' }),
+    getDoc: async ref => ref === 'ogrenciHesaplari/student-account-42'
+      ? docSnap(true, { aktif: true, veri: JSON.stringify(hesapPaketi), syncId: 'student-sync' })
+      : docSnap(true, { durum: 'aktif', bagliUid: 'student-account-42', ogrenciBulutId: 'cloud-1',
+        ogrenciNo: 42, ogrenciAd: 'Ada Öğrenci', ogrenciSube: '12A',
+        paket: { tur: 'yks-sonuc', surum: 2, katalogImza: katalogImza,
+          kayit: [{ g: 100, k: 0, d: 9, s: 10, t: 2000 },
+                  { g: 101, k: 1, d: 7, s: 10, t: 3000 }], konular: {} } }),
+    updateDoc: async (_ref, data) => { gonderilen = data; },
+    setDoc: async () => {}
+  });
+
+  const sonuc = await run("ogrenciHesabindanYukle('Ada Öğrenci', 42)");
+  equal(sonuc.sunucudanAlinanSonuc, 2, 'newer and missing server rows must both be merged');
+  equal(run('D.log.length'), 2, 'the new device must hold the union before it can upload');
+  equal(run('D.log.find(l => l[0] === 100)[3]'), 9, 'the newer server value must replace the stale setup value');
+  await run("sunucuyaGonder({tur:'sonuclar-kaydedildi',hafta:100,toplam:1})");
+  equal(gonderilen.paket.kayit.length, 2,
+    'the first upload after login must carry the reconciled history, not a one-row stale snapshot');
+});
+
+test('student-account-login-aborts-atomically-when-result-slot-is-malformed', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })]);
+  const hesapPaketi = run('ogrenciPaketi(0)');
+  run("D = varsayilan(); D.rol = null; D.kurum = 'Korunacak Yerel Durum';");
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    girisOgrenciHesabi: async () => ({ uid: 'student-account-42' }),
+    getDoc: async ref => ref === 'ogrenciHesaplari/student-account-42'
+      ? docSnap(true, { aktif: true, veri: JSON.stringify(hesapPaketi), syncId: 'student-sync' })
+      : docSnap(true, { durum: 'aktif', bagliUid: 'student-account-42', ogrenciBulutId: 'cloud-1',
+        ogrenciNo: 42, ogrenciAd: 'Ada Öğrenci', ogrenciSube: '12A',
+        paket: { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 100 }], konular: {} } })
+  });
+  let hata = '';
+  try { await run("ogrenciHesabindanYukle('Ada Öğrenci', 42)"); }
+  catch (e) { hata = e.message || String(e); }
+  assert(/geçersiz|bozuk/.test(hata), 'the malformed server package must be rejected: ' + hata);
+  equal(run('D.rol'), null, 'login failure must not switch the current role');
+  equal(run('D.kurum'), 'Korunacak Yerel Durum', 'the previous local state must remain intact');
+});
+
+test('student-account-login-never-falls-back-when-result-slot-cannot-be-read', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })]);
+  const hesapPaketi = run('ogrenciPaketi(0)');
+  run("D = varsayilan(); D.rol = null; D.kurum = 'Korunacak Yerel Durum';");
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    girisOgrenciHesabi: async () => ({ uid: 'student-account-42' }),
+    getDoc: async ref => {
+      if (ref === 'ogrenciHesaplari/student-account-42')
+        return docSnap(true, { aktif: true, veri: JSON.stringify(hesapPaketi), syncId: 'student-sync' });
+      throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
+    }
+  });
+  let hata = '';
+  try { await run("ogrenciHesabindanYukle('Ada Öğrenci', 42)"); }
+  catch (e) { hata = e.message || String(e); }
+  assert(/erişim izni yok/.test(hata), 'unsafe fallback must be replaced by an actionable error: ' + hata);
+  equal(run('D.rol'), null);
+  equal(run('D.kurum'), 'Korunacak Yerel Durum');
 });
 
 test('teacher-publishes-one-private-package-and-sync-slot-per-student', async () => {
