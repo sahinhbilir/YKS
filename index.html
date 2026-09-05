@@ -628,7 +628,8 @@ const bugunNo = () => {
 const pazartesi = g => g - haftaGunu(g);
 
 // ---------------------------------------------------------------- durum
-let D = null, EK = { sekme: 'plan', ogr: 0, hafta: null, kirli: false, son: '', girisAcik: {}, haritaAcik: null, haritaOnay: null };
+let D = null, EK = { sekme: 'plan', ogr: 0, hafta: null, kirli: false, son: '', girisAcik: {}, haritaAcik: null,
+  haritaOnay: null, bulutGeriNoktalar: null };
 const ROL = () => (D && D.rol) || '';
 const rehberMi = () => ROL() === 'rehber';
 const ogrenciMi = () => ROL() === 'ogrenci';
@@ -3071,6 +3072,17 @@ function gorunumAyarlar() {
               '" style="padding:3px 9px">geri yükle</button></td></tr>').join('') +
             '</tbody></table></div>'
           : (EK.bulutGecmis ? '<div class="mini" style="margin-top:8px">Bulutta henüz günlük kopya yok.</div>' : '')) +
+        (EK.bulutGeriNoktalar && EK.bulutGeriNoktalar.length
+          ? '<div class="mini" style="margin-top:14px"><b>Geri yükleme öncesi koruma noktaları</b> · ' +
+            'Her geri yüklemeden hemen önceki defteri saklar.</div>' +
+            '<div class="kaydir" style="margin-top:6px"><table class="plan"><thead><tr><th>Oluşturuldu</th>' +
+            '<th>İşlem</th><th class="sayisal">Öğrenci</th><th class="sayisal">Sonuç</th><th></th>' +
+            '</tr></thead><tbody>' + EK.bulutGeriNoktalar.map(y => '<tr><td>' +
+              kacis(new Date(y.ts).toLocaleString('tr-TR')) + '</td><td>' + kacis(y.kaynak || 'geri yükleme') +
+              '</td><td class="sayisal">' + y.ogrenciSayisi + '</td><td class="sayisal">' + y.sonucSayisi +
+              '</td><td><button class="dugme bulutGeriNoktaYukle" data-id="' + kacis(y.id) +
+              '" style="padding:3px 9px">bu hâle dön</button></td></tr>').join('') + '</tbody></table></div>'
+          : '') +
         '<div class="mini" style="margin-top:10px">Bulut yedeği: ' +
         (EK.bulutYedekTs ? kacis(new Date(EK.bulutYedekTs).toLocaleString('tr-TR')) + ' (bu oturumda)'
           : 'bu oturumda henüz gönderilmedi — değişiklikten ' + (BULUT_YEDEK_GECIKME / 1000) +
@@ -3556,6 +3568,122 @@ async function buluttanGunAl(gun) {
   } catch (e) {
     return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA }
       : { tur: 'hata', mesaj: e.message || String(e) };
+  }
+}
+
+// Bir bulut yedeği geri yüklenmeden ÖNCE o anda açık olan defteri benzersiz bir kimlikle
+// saklar. Günlük kopyadan ayrı bir koleksiyondur: geri yüklemeden sonra çalışan 10 saniyelik
+// otomatik yedek bugünün `gecmis/{gun}` belgesini değiştirse bile bu kopyaya dokunamaz.
+// Belge yalnızca oluşturulur; Rules güncellemeyi ve silmeyi reddeder.
+function geriYuklemeNoktasiKimligi(ts) {
+  let rastgele = '';
+  try {
+    const c = typeof crypto !== 'undefined' ? crypto : null;
+    if (c && typeof c.randomUUID === 'function') rastgele = c.randomUUID();
+    else if (c && typeof c.getRandomValues === 'function') {
+      const sayilar = c.getRandomValues(new Uint32Array(4));
+      rastgele = Array.from(sayilar).map(n => n.toString(36)).join('-');
+    }
+  } catch (e) { /* eski/offline tarayıcı: aşağıdaki çakışma emniyetli yola düş */ }
+  if (!rastgele) rastgele = Math.random().toString(36).slice(2) + '-' + Math.random().toString(36).slice(2);
+  return ts.toString(36) + '-' + rastgele;
+}
+
+async function geriYuklemeNoktasiOlustur(kaynak) {
+  if (!window.bulut || !window.bulut.yapilandirilmis) return { tur: 'yok' };
+  if (!rehberMi()) return { tur: 'yok' };
+  const kullanici = window.bulut.mevcutKullanici();
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
+  let json;
+  try { yedekDogrula(D); json = JSON.stringify(D); }
+  catch (e) { return { tur: 'hata', mesaj: 'Mevcut defter geri dönüş noktası için doğrulanamadı: ' + (e.message || e) }; }
+  if (!json || json.length > BULUT_YEDEK_UST_SINIR)
+    return { tur: 'hata', mesaj: 'Mevcut defter geri dönüş noktası için çok büyük (' +
+      Math.round((json || '').length / 1024) + ' KB). Önce “Yedek indir” ile dosya yedeği alın.' };
+  const ts = Date.now();
+  const id = geriYuklemeNoktasiKimligi(ts);
+  const kaynakMetni = String(kaynak || 'bilinmeyen').slice(0, 100);
+  try {
+    await window.bulut.setDoc(
+      window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'geriNoktalari', id),
+      { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length,
+        ogrenciSayisi: (D.ogr || []).filter(o => o && !o.silindi).length,
+        sonucSayisi: (D.log || []).length, kaynak: kaynakMetni });
+    return { tur: 'tamam', id: id, ts: ts, boyut: json.length };
+  } catch (e) {
+    return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA }
+      : { tur: 'hata', mesaj: e.message || String(e) };
+  }
+}
+
+async function bulutGeriYuklemeNoktalari() {
+  if (!window.bulut || !window.bulut.yapilandirilmis) return { tur: 'yok' };
+  const kullanici = window.bulut.mevcutKullanici();
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
+  try {
+    const anlik = await window.bulut.getDocs(
+      window.bulut.collection(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'geriNoktalari'));
+    const liste = [];
+    anlik.forEach(b => {
+      const v = b.data() || {};
+      liste.push({ id: b.id, ts: +v.ts || 0, boyut: +v.boyut || 0, kaynak: String(v.kaynak || ''),
+        ogrenciSayisi: +v.ogrenciSayisi || 0, sonucSayisi: +v.sonucSayisi || 0 });
+    });
+    liste.sort((a, b) => b.ts - a.ts || a.id.localeCompare(b.id));
+    return { tur: 'tamam', liste: liste };
+  } catch (e) {
+    return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA }
+      : { tur: 'hata', mesaj: e.message || String(e) };
+  }
+}
+
+async function buluttanGeriYuklemeNoktasiAl(id) {
+  if (!window.bulut) return { tur: 'yok' };
+  if (typeof id !== 'string' || !/^[a-z0-9-]{10,100}$/i.test(id))
+    return { tur: 'hata', mesaj: 'Geri dönüş noktası kimliği geçersiz.' };
+  const kullanici = window.bulut.mevcutKullanici();
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
+  try {
+    const anlik = await window.bulut.getDoc(
+      window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'geriNoktalari', id));
+    if (!anlik || !anlik.exists()) return { tur: 'yok' };
+    const veri = anlik.data() || {};
+    if (typeof veri.veri !== 'string' || !veri.veri)
+      return { tur: 'hata', mesaj: 'Geri dönüş noktası beklenen biçimde değil.' };
+    let y;
+    try { y = JSON.parse(veri.veri); }
+    catch (e) { return { tur: 'hata', mesaj: 'Geri dönüş noktası okunamadı (bozuk JSON).' }; }
+    return { tur: 'tamam', yedek: y, ts: +veri.ts || 0, kaynak: String(veri.kaynak || '') };
+  } catch (e) {
+    return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA }
+      : { tur: 'hata', mesaj: e.message || String(e) };
+  }
+}
+
+// Kaynak yedeği önce doğrular, sonra mevcut defteri ayrı ve değiştirilemez bir noktaya
+// yazar. Koruma yazısı tamamlanmadan D'ye dokunulmaz. Yerel kayıt da başarısız olursa
+// ekrandaki defter eski hâline döner; buluttaki koruma noktası güvenlik ağı olarak kalır.
+async function guvenliGeriYukle(yedek, kaynak) {
+  try { yedekDogrula(yedek); }
+  catch (e) { return { tur: 'hata', mesaj: 'Seçilen yedek geçersiz: ' + (e.message || e) }; }
+  const koruma = await geriYuklemeNoktasiOlustur(kaynak);
+  if (koruma.tur !== 'tamam') return koruma;
+  const onceki = D;
+  const oncekiEk = {
+    ogr: EK.ogr,
+    hafta: EK.hafta,
+    bulutGecmis: EK.bulutGecmis,
+    bulutGeriNoktalar: EK.bulutGeriNoktalar
+  };
+  try {
+    veriyiHazirla(yedek);
+    EK.ogr = 0; EK.hafta = null; EK.bulutGecmis = null; EK.bulutGeriNoktalar = null;
+    if (!(await kaydet(true))) throw new Error('Geri yüklenen defter cihaza kaydedilemedi.');
+    return { tur: 'tamam', korumaId: koruma.id };
+  } catch (e) {
+    D = onceki;
+    Object.assign(EK, oncekiEk);
+    return { tur: 'hata', mesaj: e.message || String(e), korumaId: koruma.id };
   }
 }
 // Yedekteki silinmemiş öğrenci sayısı — geri yükleme onayında kullanıcıya ne geleceğini
@@ -5143,13 +5271,42 @@ document.addEventListener('click', async ev => {
         'O gün: ' + gelen + ' öğrenci, ' + gelenSonuc + ' sonuç\n' +
         'Şu an: ' + simdiki + ' öğrenci, ' + simdikiSonuc + ' sonuç\n\n' +
         'O tarihten sonra yapılan değişiklikler bu cihazdan silinir. Devam edilsin mi?')) return;
-    const onceki = D;
-    try {
-      veriyiHazirla(r.yedek);
-      EK.ogr = 0; EK.hafta = null; EK.bulutGecmis = null;
-      await kaydet(true); ciz();
-      bilgiVer(ggyy(gunNo(gun)) + ' tarihli yedek geri yüklendi: ' + gelen + ' öğrenci, ' + gelenSonuc + ' sonuç.');
-    } catch (e) { D = onceki; ciz(); alert('Yedek yüklenemedi: ' + (e.message || e)); }
+    const sonuc = await guvenliGeriYukle(r.yedek, ggyy(gunNo(gun)) + ' tarihli günlük yedeğe dönüş');
+    if (sonuc.tur !== 'tamam') {
+      ciz();
+      alert('Yedek yüklenemedi; geri yükleme durduruldu ve mevcut defter değiştirilmedi: ' +
+        (sonuc.mesaj || 'koruma noktası oluşturulamadı'));
+      return;
+    }
+    ciz();
+    bilgiVer(ggyy(gunNo(gun)) + ' tarihli yedek geri yüklendi: ' + gelen + ' öğrenci, ' + gelenSonuc +
+      ' sonuç. Önceki defteriniz koruma noktası olarak saklandı.');
+    return;
+  }
+  const bgn = ev.target.closest('.bulutGeriNoktaYukle');
+  if (bgn) {
+    const id = bgn.dataset.id;
+    const r = await buluttanGeriYuklemeNoktasiAl(id);
+    if (r.tur !== 'tamam') {
+      alert(r.tur === 'yok' ? 'Bu geri dönüş noktası bulunamadı.'
+        : r.tur === 'baglanilmadi' ? 'Önce “Buluta bağlan”a tıklayın.'
+        : 'Geri dönüş noktası alınamadı: ' + r.mesaj);
+      return;
+    }
+    const gelen = yedekOgrenciSayisi(r.yedek), gelenSonuc = ((r.yedek || {}).log || []).length;
+    if (!confirm(new Date(r.ts).toLocaleString('tr-TR') + ' tarihinde saklanan deftere dönülecek.\n\n' +
+        gelen + ' öğrenci, ' + gelenSonuc + ' sonuç geri gelecek.\n' +
+        'Şu anki defteriniz de önce ayrı bir koruma noktası olarak saklanacak. Devam edilsin mi?')) return;
+    const sonuc = await guvenliGeriYukle(r.yedek, 'Koruma noktasına dönüş: ' + id);
+    if (sonuc.tur !== 'tamam') {
+      ciz();
+      alert('Yedek yüklenemedi; geri yükleme durduruldu ve mevcut defter değiştirilmedi: ' +
+        (sonuc.mesaj || 'koruma noktası oluşturulamadı'));
+      return;
+    }
+    ciz();
+    bilgiVer('Koruma noktası geri yüklendi: ' + gelen + ' öğrenci, ' + gelenSonuc +
+      ' sonuç. Az önceki defteriniz de yeni bir koruma noktasında saklandı.');
     return;
   }
   const opk = ev.target.closest('.ogrPaket');
@@ -5808,9 +5965,15 @@ document.addEventListener('click', async ev => {
     return;
   }
   if (t.id === 'bulutGecmisAc') {
-    const r = await bulutYedekGecmisi();
-    if (r.tur === 'tamam') { EK.bulutGecmis = r.liste; ciz();
-      bilgiVer(r.liste.length + ' günlük bulut kopyası bulundu.'); }
+    const [r, gn] = await Promise.all([bulutYedekGecmisi(), bulutGeriYuklemeNoktalari()]);
+    if (r.tur === 'tamam') {
+      EK.bulutGecmis = r.liste;
+      EK.bulutGeriNoktalar = gn.tur === 'tamam' ? gn.liste : [];
+      ciz();
+      bilgiVer(r.liste.length + ' günlük bulut kopyası ve ' + EK.bulutGeriNoktalar.length +
+        ' geri yükleme koruma noktası bulundu.' +
+        (gn.tur === 'hata' ? ' Koruma noktaları okunamadı: ' + gn.mesaj : ''));
+    }
     else if (r.tur === 'baglanilmadi') alert('Önce “Buluta bağlan”a tıklayıp Google hesabınızla girin.');
     else if (r.tur === 'hata') alert('Bulut yedek geçmişi okunamadı: ' + r.mesaj);
     return;

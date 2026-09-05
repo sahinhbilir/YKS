@@ -1123,6 +1123,112 @@ test('declining-or-failing-a-day-restore-keeps-current-data', async () => {
   equal(run('D.ogr[0].ad'), 'Simdiki', 'and the current notebook must survive it');
 });
 
+test('restore-preserves-current-notebook-before-delayed-backup-replaces-today', async () => {
+  // Canlı hata: geri yükleme kaydet(true) çağırır; 10 saniye sonra otomatik yedek hem
+  // canlı belgeyi hem bugünün günlük kopyasını geri yüklenen ESKİ veriyle değiştirir.
+  // O zaman bugünkü iyi durum yalnızca benzersiz ve değiştirilemez geriNoktalari belgesinde kalmalıdır.
+  const { sandbox, run, listeners } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = (id) => { if (timers[id - 1]) timers[id - 1] = null; };
+  resetOgr(sandbox, [student({ ad: 'Bugunku Defter' }), student({ no: 2, ad: 'Yeni Sonuc Sahibi' })]);
+  run('D.log = [[100,0,0,8,10,3,1750000000000]]; D.ayar.testTarih = "2026-09-05";');
+  const bugunkuJson = run('JSON.stringify(D)');
+  const eskiDefter = run(`(() => { const k = JSON.parse(JSON.stringify(D));
+    k.ogr = [{no:9,ad:'Eski Defter',alan:'SAY',sube:'201',hedef:null}]; k.log = [];
+    return JSON.stringify(k); })()`);
+  const yazilan = [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    getDoc: async () => ({ exists: () => true,
+      data: () => ({ veri: eskiDefter, ts: 1756684800000, boyut: eskiDefter.length,
+        ogrenciSayisi: 1, sonucSayisi: 0 }) }),
+    setDoc: async (ref, data) => { yazilan.push({ ref, data: JSON.parse(JSON.stringify(data)) }); }
+  });
+  sandbox.confirm = () => true;
+  const dugme = Object.assign(element(), { dataset: { gun: '2026-09-01' },
+    closest(sel) { return sel === '.bulutGunYukle' ? this : null; } });
+  await listeners.click[0]({ target: dugme });
+
+  equal(run('D.ogr[0].ad'), 'Eski Defter', 'the chosen old snapshot must become the active notebook');
+  const koruma = yazilan.find(y => y.ref.indexOf('/geriNoktalari/') >= 0);
+  assert(koruma, 'the current notebook must be preserved under a unique restore-point id before mutation');
+  equal(koruma.data.veri, bugunkuJson, 'the restore point must contain the exact pre-restore notebook');
+  equal(JSON.parse(koruma.data.veri).ogr[0].ad, 'Bugunku Defter');
+  assert(!/geriNoktalari\/2026-09-05$/.test(koruma.ref), 'restore point must not reuse the daily date key');
+  const bekleyen = timers.filter(Boolean).filter(t => t.ms === run('BULUT_YEDEK_GECIKME'));
+  equal(bekleyen.length, 1, 'restoring must still schedule the restored state as the new live backup');
+
+  await bekleyen[0].fn();
+  await new Promise(r => setImmediate(r));
+  const bugununGunlugu = yazilan.find(y => /\/gecmis\/2026-09-05$/.test(y.ref));
+  assert(bugununGunlugu, 'the delayed backup must still update today daily snapshot');
+  equal(JSON.parse(bugununGunlugu.data.veri).ogr[0].ad, 'Eski Defter',
+    'the test must reproduce the overwrite that previously destroyed today only good copy');
+  equal(JSON.parse(koruma.data.veri).ogr[0].ad, 'Bugunku Defter',
+    'the immutable restore point must retain today state after the delayed overwrite');
+});
+
+test('restore-aborts-before-mutation-when-protection-point-cannot-be-written', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ ad: 'Korunacak Defter' })]);
+  const eskiDefter = run(`(() => { const k = JSON.parse(JSON.stringify(D));
+    k.ogr = [{no:9,ad:'Eski Defter',alan:'SAY',sube:'201',hedef:null}]; return JSON.stringify(k); })()`);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    getDoc: async () => ({ exists: () => true,
+      data: () => ({ veri: eskiDefter, ts: 1, boyut: eskiDefter.length, ogrenciSayisi: 1, sonucSayisi: 0 }) }),
+    setDoc: async (ref) => { if (ref.indexOf('/geriNoktalari/') >= 0) throw new Error('koruma yazılamadı'); }
+  });
+  sandbox.confirm = () => true;
+  let uyari = '';
+  sandbox.alert = m => { uyari = m; };
+  const dugme = Object.assign(element(), { dataset: { gun: '2026-09-01' },
+    closest(sel) { return sel === '.bulutGunYukle' ? this : null; } });
+  await listeners.click[0]({ target: dugme });
+  equal(run('D.ogr[0].ad'), 'Korunacak Defter', 'failed protection must abort before changing D');
+  assert(/değiştirilmedi/.test(uyari) && /koruma yazılamadı/.test(uyari),
+    'the teacher must be told that restore stopped safely: ' + uyari);
+});
+
+test('restore-point-history-is-visible-and-restores-reversibly', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ ad: 'Su Anki Defter' })]);
+  const korunanDefter = run(`(() => { const k = JSON.parse(JSON.stringify(D));
+    k.ogr = [{no:7,ad:'Korunan Defter',alan:'SAY',sube:'201',hedef:null}]; k.log = [];
+    return JSON.stringify(k); })()`);
+  const noktalar = {
+    'nokta-1757000000000-a': { veri: korunanDefter, ts: 1757000000000, boyut: korunanDefter.length,
+      kaynak: '02.09.2026 tarihli günlük yedeğe dönüş', ogrenciSayisi: 1, sonucSayisi: 0 },
+    'nokta-1756000000000-b': { veri: korunanDefter, ts: 1756000000000, boyut: korunanDefter.length,
+      kaynak: 'eski nokta', ogrenciSayisi: 1, sonucSayisi: 0 }
+  };
+  const yazilan = [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'), collection: (db, ...yol) => yol.join('/'),
+    getDocs: async () => ({ forEach: fn => Object.keys(noktalar).forEach(id =>
+      fn({ id, data: () => noktalar[id] })) }),
+    getDoc: async ref => { const id = String(ref).split('/').pop();
+      return { exists: () => !!noktalar[id], data: () => noktalar[id] }; },
+    setDoc: async (ref, data) => { yazilan.push({ ref, data }); }
+  });
+  const liste = await run('bulutGeriYuklemeNoktalari()');
+  equal(liste.liste.map(x => x.id), ['nokta-1757000000000-a', 'nokta-1756000000000-b'],
+    'restore points must be newest first');
+  run('EK.bulutGecmis = []; EK.bulutGeriNoktalar = ' + JSON.stringify(liste.liste) + ';');
+  assert(/bulutGeriNoktaYukle/.test(run('gorunumAyarlar()')),
+    'settings must offer an undo button for persisted restore points');
+
+  sandbox.confirm = () => true;
+  const dugme = Object.assign(element(), { dataset: { id: 'nokta-1757000000000-a' },
+    closest(sel) { return sel === '.bulutGeriNoktaYukle' ? this : null; } });
+  await listeners.click[0]({ target: dugme });
+  equal(run('D.ogr[0].ad'), 'Korunan Defter', 'the selected protection point must be restorable');
+  const yeniKoruma = yazilan.find(y => y.ref.indexOf('/geriNoktalari/') >= 0);
+  assert(yeniKoruma && JSON.parse(yeniKoruma.data.veri).ogr[0].ad === 'Su Anki Defter',
+    'undoing a restore must first preserve the state it replaces, so the undo is itself reversible');
+});
+
 // ================================================================== özet
 (async () => {
   for (const t of pending) await t();

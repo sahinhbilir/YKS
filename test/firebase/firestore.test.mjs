@@ -487,6 +487,49 @@ await check('snapshot-rejects-unknown-fields-and-oversized-payload', async () =>
     gunVeri({ veri: '' })));
 });
 
+// ================================================================== geri yükleme öncesi değiştirilemez koruma noktaları
+const geriNoktasiVeri = (over) => {
+  const veri = JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Geri Dönüş Öncesi' }] });
+  return Object.assign({ veri, ts: 1757000000000, surum: 10, boyut: veri.length,
+    ogrenciSayisi: 1, sonucSayisi: 7, kaynak: '02.09.2026 tarihli günlük yedeğe dönüş' }, over || {});
+};
+
+await check('teacher-can-create-read-and-list-own-restore-points', async () => {
+  const { collection, getDocs } = await import('firebase/firestore');
+  const yol = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'nokta-1');
+  await assertSucceeds(setDoc(yol, geriNoktasiVeri()));
+  await assertSucceeds(getDoc(yol));
+  const liste = await assertSucceeds(
+    getDocs(collection(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari')));
+  if (liste.size !== 1) throw new Error('beklenen 1 geri dönüş noktası, gelen ' + liste.size);
+});
+await check('restore-points-are-immutable-and-cannot-be-deleted', async () => {
+  const { deleteDoc } = await import('firebase/firestore');
+  const yol = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'nokta-1');
+  await assertFails(updateDoc(yol, { kaynak: 'değiştirildi' }));
+  await assertFails(setDoc(yol, geriNoktasiVeri()));
+  await assertFails(deleteDoc(yol));
+});
+await check('nobody-else-can-read-list-or-write-a-teachers-restore-points', async () => {
+  const { collection, getDocs } = await import('firebase/firestore');
+  const yol = doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'nokta-1');
+  await assertFails(getDoc(yol));
+  await assertFails(getDocs(collection(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari')));
+  await assertFails(setDoc(doc(hesapliOgrenciDb, 'ogretmenYedek', OGRETMEN_UID,
+    'geriNoktalari', 'ogrenci-noktasi'), geriNoktasiVeri()));
+  await assertFails(getDoc(doc(anonDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'nokta-1')));
+});
+await check('restore-point-rejects-malformed-payloads', async () => {
+  const taban = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'bozuk');
+  await assertFails(setDoc(taban, geriNoktasiVeri({ fazladan: true })));
+  await assertFails(setDoc(taban, geriNoktasiVeri({ kaynak: '' })));
+  await assertFails(setDoc(taban, geriNoktasiVeri({ ts: 0 })));
+  await assertFails(setDoc(taban, geriNoktasiVeri({ surum: 0 })));
+  await assertFails(setDoc(taban, geriNoktasiVeri({ boyut: 0 })));
+  const buyuk = 'x'.repeat(900001);
+  await assertFails(setDoc(taban, geriNoktasiVeri({ veri: buyuk, boyut: buyuk.length })));
+});
+
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
 await testEnv.cleanup();
 process.exit(fail ? 1 : 0);

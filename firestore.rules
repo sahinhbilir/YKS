@@ -44,6 +44,37 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Bir günlük yedek geri yüklenmeden hemen önce açık olan defter burada benzersiz
+    // bir belge olarak saklanır. Günlük kopyadan farklı olarak üzerine yazılamaz: geri
+    // yüklemenin ardından çalışan otomatik yedek bu koruma noktasını yok edemez.
+    match /ogretmenYedek/{uid}/geriNoktalari/{noktaId} {
+      function geriNoktasiGecerli() {
+        return request.resource.data.keys().hasOnly(
+            ['veri','ts','surum','boyut','ogrenciSayisi','sonucSayisi','kaynak'])
+          && request.resource.data.veri is string
+          && request.resource.data.veri.size() > 0
+          && request.resource.data.veri.size() <= 900000
+          && request.resource.data.ts is int
+          && request.resource.data.ts > 0
+          && request.resource.data.surum is int
+          && request.resource.data.surum > 0
+          && request.resource.data.boyut is int
+          && request.resource.data.boyut > 0
+          && request.resource.data.boyut <= 900000
+          && request.resource.data.ogrenciSayisi is int
+          && request.resource.data.ogrenciSayisi >= 0
+          && request.resource.data.sonucSayisi is int
+          && request.resource.data.sonucSayisi >= 0
+          && request.resource.data.kaynak is string
+          && request.resource.data.kaynak.size() > 0
+          && request.resource.data.kaynak.size() <= 100;
+      }
+      allow get, list: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen();
+      allow create: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen()
+        && geriNoktasiGecerli();
+      allow update, delete: if false;
+    }
+
     // Rehber öğretmenin önceden hazırladığı öğrenci hesabı. Paket JSON dizesi olarak
     // saklanır; böylece iç içe diziler Firestore belge biçimini bozmaz. Öğrenci yalnızca
     // Firebase Authentication tarafından doğrulanan kendi UID belgesini okuyabilir.
