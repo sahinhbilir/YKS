@@ -21,6 +21,8 @@ jobs:
           node-version: 22
       - name: Role regression
         run: node test/role-regression.js
+      - name: Automatic student workflow and eight-week simulation
+        run: node test/student-automation-regression.js
       - name: Result-package regression
         run: node test/result-package-regression.js
       - name: Cloud-sync resilience

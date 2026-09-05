@@ -480,7 +480,7 @@ test('bulutYuvasiCoz-accepts-missing-local-ogrenciBulutId-legacy-record', async 
 });
 
 // ================================================================== (s) #bulutGonder gating (Fix K)
-test('bulutGonder-hidden-without-syncId-shown-with-it', async () => {
+test('student-sync-is-automatic-without-manual-upload-button', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({})], 'ogrenci');
   sandbox.window.bulut = { yapilandirilmis: true };
@@ -489,7 +489,7 @@ test('bulutGonder-hidden-without-syncId-shown-with-it', async () => {
   resetOgr(sandbox, [student({ syncId: 's1' })], 'ogrenci');
   sandbox.window.bulut = { yapilandirilmis: true };
   const withSyncId = run('gorunumAyarlar()');
-  assert(/id="bulutGonder"/.test(withSyncId), 'bulutGonder must be shown once both yapilandirilmis and syncId are present');
+  assert(!/id="bulutGonder"/.test(withSyncId) && /otomatik eşitlenir/.test(withSyncId), 'Student sees automatic sync status instead of a manual upload step');
 });
 
 // ================================================================== (t) lazy ogrenciBulutId persists before any Firestore write
@@ -1169,15 +1169,14 @@ test('planiSabitle-click-triggers-automatic-server-write', async () => {
     kaydet = async () => true;
     ciz = () => {};
     bilgiVer = m => { bildirimler.push(m); };
-    ogrenciBulutOtomatikGonder = async o => { otomatikOlay = o; return {tur:'tamam',adet:0}; };`);
+    ogrenciEsitlemePlanla = ms => { otomatikOlay = {gecikme:ms}; };`);
   const target = Object.assign(element(), { id: 'planiSabitle',
     closest(sel) { return sel.indexOf('#planiSabitle') >= 0 ? this : null; } });
   await listeners.click[0]({ target });
-  equal(run('otomatikOlay.tur'), 'plan-baslatildi');
-  equal(run('otomatikOlay.toplam'), 4);
+  equal(run('otomatikOlay.gecikme'), 0, 'Plan save must enqueue an immediate background sync');
   const bildirimler = run('bildirimler');
   assert(/cihazda kaydedildi/.test(bildirimler[0]), 'local success must be shown before upload status');
-  assert(/Sunucuya otomatik gönderildi/.test(bildirimler[1]), 'the student must see successful auto-sync status');
+  assert(bildirimler.length === 1, 'Do not claim cloud success before background sync completes');
 });
 
 test('sonucKaydet-click-triggers-automatic-server-write', async () => {
@@ -1193,16 +1192,15 @@ test('sonucKaydet-click-triggers-automatic-server-write', async () => {
     kaydet = async () => true;
     ciz = () => {};
     bilgiVer = m => { bildirimler.push(m); };
-    ogrenciBulutOtomatikGonder = async o => { otomatikOlay = o; return {tur:'tamam',adet:1}; };`);
+    ogrenciEsitlemePlanla = ms => { otomatikOlay = {gecikme:ms}; };`);
   const target = Object.assign(element(), { id: 'sonucKaydet',
     closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
   await listeners.click[0]({ target });
-  equal(run('otomatikOlay.tur'), 'sonuclar-kaydedildi');
-  equal(run('otomatikOlay.toplam'), 1);
+  equal(run('otomatikOlay.gecikme'), 0, 'Result save must enqueue an immediate background sync');
   equal(run('D.log.length'), 1, 'the result must be applied locally before upload');
   const bildirimler = run('bildirimler');
   assert(/1 sonuç cihazda kaydedildi/.test(bildirimler[0]), 'local result success must be shown first');
-  assert(/Sunucuya otomatik gönderildi/.test(bildirimler[1]), 'cloud success must be shown separately');
+  assert(bildirimler.length === 1, 'Do not claim cloud success before background sync completes');
 });
 
 test('stalled-upload-does-not-block-the-local-save', async () => {
@@ -1234,12 +1232,10 @@ test('stalled-upload-does-not-block-the-local-save', async () => {
   equal(run('EK.hafta'), hb + 7, 'the week must advance while the network write is still pending');
   assert(/1 sonuç cihazda kaydedildi/.test(run('bildirimler[0]')),
     'local confirmation must be visible while upload is pending');
-  const sure = timers.find(t => t.ms === run('BULUT_YAZMA_ZAMAN_ASIMI'));
-  assert(sure, 'the pending updateDoc must have a deadline');
-  sure.fn();
   await islem;
-  assert(/20 saniye/.test(run('bildirimler[bildirimler.length - 1]')),
-    'the later status must explain the acknowledgement timeout');
+  assert(timers.some(t => t.ms === 0), 'Upload must be queued outside the local save handler');
+  assert(!timers.some(t => t.ms === run('BULUT_YAZMA_ZAMAN_ASIMI')),
+    'The local save must finish without waiting for a network operation to start');
 });
 
 test('failed-local-save-is-not-reported-as-success', async () => {
