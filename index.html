@@ -6048,9 +6048,15 @@ document.addEventListener('click', async ev => {
       const rapor = await ogrenciHesaplariniYayinla();
       const tamam = rapor.filter(r => r.tamam).length;
       const hatali = rapor.filter(r => !r.tamam);
+      const hataliOgrenciler = hatali.map(r => {
+        const o = D.ogr[r.i];
+        if (!o) return 'Bilinmeyen öğrenci (#' + r.i + ')';
+        return o.ad + (o.no === undefined || o.no === null || o.no === '' ? '' : ' (' + o.no + ')');
+      });
       ciz();
       bilgiVer(tamam + ' öğrenci girişi yayınlandı.' +
-        (hatali.length ? ' ' + hatali.length + ' öğrenci hazırlanamadı; ayrıntı için konsola bakın.' : ''));
+        (hatali.length ? ' Hazırlanamayan öğrenciler: ' + hataliOgrenciler.join(', ') +
+          '. Teknik ayrıntılar konsolda.' : ''));
       if (hatali.length) console.error('[YKS Tekrar Defteri] Öğrenci hesabı yayınlama hataları', hatali);
     } catch (e) {
       alert('Öğrenci girişleri yayınlanamadı: ' + (e.message || e));

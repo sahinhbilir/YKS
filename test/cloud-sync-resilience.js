@@ -920,6 +920,34 @@ test('teacher-publishes-one-private-package-and-sync-slot-per-student', async ()
   });
 });
 
+test('student-account-publish-toast-names-every-failed-student', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [
+    student({ no: 11, ad: 'Başarılı Öğrenci' }),
+    student({ no: 12, ad: 'Ada Öğrenci' }),
+    student({ no: 13, ad: 'Ece Öğrenci' })
+  ]);
+  let bildirim = '';
+  sandbox.console = { error() {} }; // beklenen yayın hatası test çıktısındaki JSON'u kirletmesin
+  run(`ogrenciHesaplariniYayinla = async () => [
+      {i:0,tamam:true},
+      {i:1,tamam:false,mesaj:'ilk hata'},
+      {i:2,tamam:false,mesaj:'ikinci hata'}
+    ];
+    ciz = () => {};
+    bilgiVer = m => { sonYayinBildirimi = m; };`);
+  sandbox.sonYayinBildirimi = bildirim;
+  sandbox.confirm = () => true;
+  const target = Object.assign(element(), { id: 'ogrenciHesapYayinla',
+    closest(sel) { return sel.indexOf('#ogrenciHesapYayinla') >= 0 ? this : null; } });
+  await listeners.click[0]({ target });
+
+  bildirim = run('sonYayinBildirimi');
+  assert(/Ada Öğrenci \(12\)/.test(bildirim), 'the first failed student must be named in the toast: ' + bildirim);
+  assert(/Ece Öğrenci \(13\)/.test(bildirim), 'the second failed student must be named in the toast: ' + bildirim);
+  assert(!/ayrıntı için konsola bakın/.test(bildirim), 'the teacher must not need DevTools to identify failures');
+});
+
 
 test('permission-denied-is-explained-not-shown-raw', async () => {
   const { sandbox, run, listeners } = loadAppSandbox();
