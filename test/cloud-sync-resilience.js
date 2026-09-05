@@ -780,7 +780,8 @@ test('rolRehber-keeps-local-data-when-restore-is-declined-or-broken', async () =
 
 test('student-name-number-login-downloads-package-without-confirmation', async () => {
   const { sandbox, run, listeners, nodes } = loadAppSandbox();
-  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync', ogrenciBulutId: 'cloud-1' })]);
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })]);
   const paket = run('ogrenciPaketi(0)');
   run('D = varsayilan(); D.rol = null;');
   nodes.ogrenciGirisAd = Object.assign(element(), { value: 'Ada Öğrenci' });
@@ -791,7 +792,10 @@ test('student-name-number-login-downloads-package-without-confirmation', async (
   sandbox.window.bulut = baseBulut({
     yapilandirilmis: true,
     girisOgrenciHesabi: async (ad, no) => { giris = { ad, no }; return { uid: 'student-account-42' }; },
-    getDoc: async () => docSnap(true, { aktif: true, veri: JSON.stringify(paket), syncId: 'student-sync' }),
+    doc: (_db, coll, id) => coll + '/' + id,
+    getDoc: async ref => ref === 'ogrenciHesaplari/student-account-42'
+      ? docSnap(true, { aktif: true, veri: JSON.stringify(paket), syncId: 'student-sync' })
+      : docSnap(true, { durum: 'aktif', bagliUid: 'student-account-42', ogrenciBulutId: 'cloud-1', paket: null }),
     setDoc: async () => {}
   });
   const target = Object.assign(element(), {
@@ -803,6 +807,85 @@ test('student-name-number-login-downloads-package-without-confirmation', async (
   equal(confirmSayisi, 0, 'a successful student login must not ask before loading the package');
   equal(run('D.rol'), 'ogrenci', 'the downloaded package must switch to student mode');
   equal(run('D.ogr[0].no'), 42, 'the downloaded package must belong to the selected student');
+});
+
+test('student-account-login-merges-existing-server-results-before-first-upload', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })]);
+  run('D.log = [[100,0,0,6,10,2,1000]];');
+  const hesapPaketi = run('ogrenciPaketi(0)');
+  const katalogImza = run('KATALOG_IMZA');
+  run("D = varsayilan(); D.rol = null; D.kurum = 'Önceki Yerel Durum';");
+  let gonderilen = null;
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    girisOgrenciHesabi: async () => ({ uid: 'student-account-42' }),
+    girisOgrenci: async () => ({ uid: 'student-account-42' }),
+    getDoc: async ref => ref === 'ogrenciHesaplari/student-account-42'
+      ? docSnap(true, { aktif: true, veri: JSON.stringify(hesapPaketi), syncId: 'student-sync' })
+      : docSnap(true, { durum: 'aktif', bagliUid: 'student-account-42', ogrenciBulutId: 'cloud-1',
+        ogrenciNo: 42, ogrenciAd: 'Ada Öğrenci', ogrenciSube: '12A',
+        paket: { tur: 'yks-sonuc', surum: 2, katalogImza: katalogImza,
+          kayit: [{ g: 100, k: 0, d: 9, s: 10, t: 2000 },
+                  { g: 101, k: 1, d: 7, s: 10, t: 3000 }], konular: {} } }),
+    updateDoc: async (_ref, data) => { gonderilen = data; },
+    setDoc: async () => {}
+  });
+
+  const sonuc = await run("ogrenciHesabindanYukle('Ada Öğrenci', 42)");
+  equal(sonuc.sunucudanAlinanSonuc, 2, 'newer and missing server rows must both be merged');
+  equal(run('D.log.length'), 2, 'the new device must hold the union before it can upload');
+  equal(run('D.log.find(l => l[0] === 100)[3]'), 9, 'the newer server value must replace the stale setup value');
+  await run("sunucuyaGonder({tur:'sonuclar-kaydedildi',hafta:100,toplam:1})");
+  equal(gonderilen.paket.kayit.length, 2,
+    'the first upload after login must carry the reconciled history, not a one-row stale snapshot');
+});
+
+test('student-account-login-aborts-atomically-when-result-slot-is-malformed', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })]);
+  const hesapPaketi = run('ogrenciPaketi(0)');
+  run("D = varsayilan(); D.rol = null; D.kurum = 'Korunacak Yerel Durum';");
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    girisOgrenciHesabi: async () => ({ uid: 'student-account-42' }),
+    getDoc: async ref => ref === 'ogrenciHesaplari/student-account-42'
+      ? docSnap(true, { aktif: true, veri: JSON.stringify(hesapPaketi), syncId: 'student-sync' })
+      : docSnap(true, { durum: 'aktif', bagliUid: 'student-account-42', ogrenciBulutId: 'cloud-1',
+        ogrenciNo: 42, ogrenciAd: 'Ada Öğrenci', ogrenciSube: '12A',
+        paket: { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 100 }], konular: {} } })
+  });
+  let hata = '';
+  try { await run("ogrenciHesabindanYukle('Ada Öğrenci', 42)"); }
+  catch (e) { hata = e.message || String(e); }
+  assert(/geçersiz|bozuk/.test(hata), 'the malformed server package must be rejected: ' + hata);
+  equal(run('D.rol'), null, 'login failure must not switch the current role');
+  equal(run('D.kurum'), 'Korunacak Yerel Durum', 'the previous local state must remain intact');
+});
+
+test('student-account-login-never-falls-back-when-result-slot-cannot-be-read', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })]);
+  const hesapPaketi = run('ogrenciPaketi(0)');
+  run("D = varsayilan(); D.rol = null; D.kurum = 'Korunacak Yerel Durum';");
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    girisOgrenciHesabi: async () => ({ uid: 'student-account-42' }),
+    getDoc: async ref => {
+      if (ref === 'ogrenciHesaplari/student-account-42')
+        return docSnap(true, { aktif: true, veri: JSON.stringify(hesapPaketi), syncId: 'student-sync' });
+      throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
+    }
+  });
+  let hata = '';
+  try { await run("ogrenciHesabindanYukle('Ada Öğrenci', 42)"); }
+  catch (e) { hata = e.message || String(e); }
+  assert(/erişim izni yok/.test(hata), 'unsafe fallback must be replaced by an actionable error: ' + hata);
+  equal(run('D.rol'), null);
+  equal(run('D.kurum'), 'Korunacak Yerel Durum');
 });
 
 test('teacher-publishes-one-private-package-and-sync-slot-per-student', async () => {
@@ -835,6 +918,34 @@ test('teacher-publishes-one-private-package-and-sync-slot-per-student', async ()
   yuvalar.forEach(w => {
     assert(/^account-/.test(w.data.bagliUid), 'published result slot must be pre-bound to the selected account');
   });
+});
+
+test('student-account-publish-toast-names-every-failed-student', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [
+    student({ no: 11, ad: 'Başarılı Öğrenci' }),
+    student({ no: 12, ad: 'Ada Öğrenci' }),
+    student({ no: 13, ad: 'Ece Öğrenci' })
+  ]);
+  let bildirim = '';
+  sandbox.console = { error() {} }; // beklenen yayın hatası test çıktısındaki JSON'u kirletmesin
+  run(`ogrenciHesaplariniYayinla = async () => [
+      {i:0,tamam:true},
+      {i:1,tamam:false,mesaj:'ilk hata'},
+      {i:2,tamam:false,mesaj:'ikinci hata'}
+    ];
+    ciz = () => {};
+    bilgiVer = m => { sonYayinBildirimi = m; };`);
+  sandbox.sonYayinBildirimi = bildirim;
+  sandbox.confirm = () => true;
+  const target = Object.assign(element(), { id: 'ogrenciHesapYayinla',
+    closest(sel) { return sel.indexOf('#ogrenciHesapYayinla') >= 0 ? this : null; } });
+  await listeners.click[0]({ target });
+
+  bildirim = run('sonYayinBildirimi');
+  assert(/Ada Öğrenci \(12\)/.test(bildirim), 'the first failed student must be named in the toast: ' + bildirim);
+  assert(/Ece Öğrenci \(13\)/.test(bildirim), 'the second failed student must be named in the toast: ' + bildirim);
+  assert(!/ayrıntı için konsola bakın/.test(bildirim), 'the teacher must not need DevTools to identify failures');
 });
 
 
@@ -978,23 +1089,46 @@ test('daily-snapshot-failure-does-not-fail-the-main-backup', async () => {
   equal((await run('bulutaYedekle()')).tur, 'tamam', 'the main backup must still count as done');
 });
 
+test('stalled-teacher-backup-returns-a-timeout-status', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = id => { if (timers[id - 1]) timers[id - 1].cleared = true; };
+  resetOgr(sandbox, [student({})]);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    setDoc: () => new Promise(() => {})
+  });
+  const islem = run('bulutaYedekle()');
+  const sure = timers.find(t => t.ms === run('BULUT_YAZMA_ZAMAN_ASIMI'));
+  assert(sure, 'the teacher live-backup write must have a deadline');
+  sure.fn();
+  const sonuc = await islem;
+  equal(sonuc.tur, 'hata');
+  assert(/zamanında onay alamadı/.test(sonuc.mesaj), 'the timeout must be visible in backup status');
+});
+
 // ================================================================== otomatik öğrenci sonucu senkronizasyonu
-test('sunucuyaGonder-records-plan-start-even-before-any-result', async () => {
+test('event-only-upload-does-not-replace-a-populated-package', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
   let payload = null, signIns = 0;
+  const eskiPaket = { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 90, k: 4, d: 8, s: 10, t: 1 }] };
+  const sunucu = { paket: JSON.parse(JSON.stringify(eskiPaket)) };
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
     girisOgrenci: async () => { signIns++; return { uid: 'student-uid' }; },
-    updateDoc: async (_ref, data) => { payload = data; }
+    updateDoc: async (_ref, data) => { payload = data; Object.assign(sunucu, data); }
   });
   const adet = await run("sunucuyaGonder({tur:'plan-baslatildi',hafta:100,toplam:7})");
   equal(adet, 0, 'a plan event may be sent with zero result rows');
   equal(signIns, 1, 'the student must authenticate before the automatic write');
   assert(payload && payload.bagliUid === 'student-uid', 'the write must stay bound to the signed-in student');
-  equal(payload.paket.istemciOlay.tur, 'plan-baslatildi');
-  equal(payload.paket.istemciOlay.hafta, 100);
-  equal(payload.paket.istemciOlay.toplam, 7);
-  assert(Number.isSafeInteger(payload.paket.istemciOlay.ts), 'the event must have an integer timestamp');
+  equal(payload.istemciOlay.tur, 'plan-baslatildi');
+  equal(payload.istemciOlay.hafta, 100);
+  equal(payload.istemciOlay.toplam, 7);
+  assert(Number.isSafeInteger(payload.istemciOlay.ts), 'the event must have an integer timestamp');
+  assert(!Object.prototype.hasOwnProperty.call(payload, 'paket'),
+    'an event-only update must omit paket instead of sending an empty result snapshot');
+  equal(sunucu.paket, eskiPaket, 'the populated server package must survive the event-only patch unchanged');
 });
 
 test('manual-sunucuyaGonder-still-skips-empty-results', async () => {
@@ -1030,18 +1164,20 @@ test('automatic-cloud-sync-is-student-only-and-keeps-permission-errors-nonfatal'
 test('planiSabitle-click-triggers-automatic-server-write', async () => {
   const { sandbox, run, listeners } = loadAppSandbox();
   resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
-  run(`EK.ogr = 0; otomatikOlay = null; sonBildirim = '';
+  run(`EK.ogr = 0; otomatikOlay = null; bildirimler = [];
     haftayiKullanimaAl = () => 4;
     kaydet = async () => true;
     ciz = () => {};
-    bilgiVer = m => { sonBildirim = m; };
+    bilgiVer = m => { bildirimler.push(m); };
     ogrenciBulutOtomatikGonder = async o => { otomatikOlay = o; return {tur:'tamam',adet:0}; };`);
   const target = Object.assign(element(), { id: 'planiSabitle',
     closest(sel) { return sel.indexOf('#planiSabitle') >= 0 ? this : null; } });
   await listeners.click[0]({ target });
   equal(run('otomatikOlay.tur'), 'plan-baslatildi');
   equal(run('otomatikOlay.toplam'), 4);
-  assert(/Sunucuya otomatik gönderildi/.test(run('sonBildirim')), 'the student must see successful auto-sync status');
+  const bildirimler = run('bildirimler');
+  assert(/cihazda kaydedildi/.test(bildirimler[0]), 'local success must be shown before upload status');
+  assert(/Sunucuya otomatik gönderildi/.test(bildirimler[1]), 'the student must see successful auto-sync status');
 });
 
 test('sonucKaydet-click-triggers-automatic-server-write', async () => {
@@ -1052,11 +1188,11 @@ test('sonucKaydet-click-triggers-automatic-server-write', async () => {
   const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
     parentElement: { querySelector: () => soru } });
   sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
-  run(`EK.ogr = 0; otomatikOlay = null; sonBildirim = '';
+  run(`EK.ogr = 0; otomatikOlay = null; bildirimler = [];
     sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
     kaydet = async () => true;
     ciz = () => {};
-    bilgiVer = m => { sonBildirim = m; };
+    bilgiVer = m => { bildirimler.push(m); };
     ogrenciBulutOtomatikGonder = async o => { otomatikOlay = o; return {tur:'tamam',adet:1}; };`);
   const target = Object.assign(element(), { id: 'sonucKaydet',
     closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
@@ -1064,8 +1200,99 @@ test('sonucKaydet-click-triggers-automatic-server-write', async () => {
   equal(run('otomatikOlay.tur'), 'sonuclar-kaydedildi');
   equal(run('otomatikOlay.toplam'), 1);
   equal(run('D.log.length'), 1, 'the result must be applied locally before upload');
-  assert(/1 sonuç kaydedildi/.test(run('sonBildirim')) && /Sunucuya otomatik gönderildi/.test(run('sonBildirim')),
-    'the student must see both local-save and auto-sync success');
+  const bildirimler = run('bildirimler');
+  assert(/1 sonuç cihazda kaydedildi/.test(bildirimler[0]), 'local result success must be shown first');
+  assert(/Sunucuya otomatik gönderildi/.test(bildirimler[1]), 'cloud success must be shown separately');
+});
+
+test('stalled-upload-does-not-block-the-local-save', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = id => { if (timers[id - 1]) timers[id - 1].cleared = true; };
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  const hb = run('haftaBasi()'), gun = run('bugunNo()');
+  const soru = { value: '10' };
+  const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
+    parentElement: { querySelector: () => soru } });
+  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    girisOgrenci: async () => ({ uid: 'student-uid' }),
+    updateDoc: () => new Promise(() => {})
+  });
+  run(`EK.ogr = 0; bildirimler = []; cizSayisi = 0;
+    sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
+    kaydet = async () => true;
+    ciz = () => { cizSayisi++; };
+    bilgiVer = m => { bildirimler.push(m); };`);
+  const target = Object.assign(element(), { id: 'sonucKaydet',
+    closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
+  const islem = listeners.click[0]({ target });
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+
+  equal(run('cizSayisi'), 1, 'the result view must redraw before server acknowledgement');
+  equal(run('EK.hafta'), hb + 7, 'the week must advance while the network write is still pending');
+  assert(/1 sonuç cihazda kaydedildi/.test(run('bildirimler[0]')),
+    'local confirmation must be visible while upload is pending');
+  const sure = timers.find(t => t.ms === run('BULUT_YAZMA_ZAMAN_ASIMI'));
+  assert(sure, 'the pending updateDoc must have a deadline');
+  sure.fn();
+  await islem;
+  assert(/20 saniye/.test(run('bildirimler[bildirimler.length - 1]')),
+    'the later status must explain the acknowledgement timeout');
+});
+
+test('failed-local-save-is-not-reported-as-success', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  const hb = run('haftaBasi()'), gun = run('bugunNo()');
+  const soru = { value: '10' };
+  const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
+    parentElement: { querySelector: () => soru } });
+  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  run(`EK.ogr = 0; bildirimler = []; yuklemeSayisi = 0; cizSayisi = 0;
+    sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
+    kaydet = async () => false;
+    ciz = () => { cizSayisi++; };
+    bilgiVer = m => { bildirimler.push(m); };
+    ogrenciBulutOtomatikGonder = async () => { yuklemeSayisi++; return {tur:'tamam'}; };`);
+  const target = Object.assign(element(), { id: 'sonucKaydet',
+    closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
+  await listeners.click[0]({ target });
+
+  equal(run('yuklemeSayisi'), 0, 'cloud upload must not run after local persistence fails');
+  equal(run('EK.hafta'), null, 'a failed local save must not advance away from the entered results');
+  equal(run('cizSayisi'), 1, 'the status rail and in-memory result must still redraw');
+  const mesaj = run('bildirimler[bildirimler.length - 1]');
+  assert(/kaydedilemedi/.test(mesaj) && !/\bkaydedildi\b/.test(mesaj),
+    'the toast must not claim success after a failed local save: ' + mesaj);
+  equal(hb, run('buHafta()'), 'test setup must begin on the current week');
+});
+
+test('result-save-does-not-clobber-navigation-changed-during-local-save', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  const hb = run('haftaBasi()'), gun = run('bugunNo()');
+  const soru = { value: '10' };
+  const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
+    parentElement: { querySelector: () => soru } });
+  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  let kaydiBitir;
+  const kayitBekliyor = new Promise(resolve => { kaydiBitir = resolve; });
+  sandbox.kayitBekliyor = kayitBekliyor;
+  run(`EK.ogr = 0; bildirimler = [];
+    sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
+    kaydet = () => kayitBekliyor;
+    ciz = () => {};
+    bilgiVer = m => { bildirimler.push(m); };
+    ogrenciBulutOtomatikGonder = async () => ({tur:'tamam',adet:1});`);
+  const target = Object.assign(element(), { id: 'sonucKaydet',
+    closest(sel) { return sel.indexOf('#sonucKaydet') >= 0 ? this : null; } });
+  const islem = listeners.click[0]({ target });
+  run('EK.hafta = ' + (hb - 7) + ';');
+  kaydiBitir(true);
+  await islem;
+  equal(run('EK.hafta'), hb - 7, 'the returning handler must preserve the week chosen during its await');
 });
 
 test('history-lists-newest-first-and-restores-a-chosen-day', async () => {
@@ -1121,6 +1348,142 @@ test('declining-or-failing-a-day-restore-keeps-current-data', async () => {
   await listeners.click[0]({ target: dugme });
   assert(/yüklenemedi/.test(uyari), 'a broken snapshot must be reported: ' + uyari);
   equal(run('D.ogr[0].ad'), 'Simdiki', 'and the current notebook must survive it');
+});
+
+test('restore-preserves-current-notebook-before-delayed-backup-replaces-today', async () => {
+  // Canlı hata: geri yükleme kaydet(true) çağırır; 10 saniye sonra otomatik yedek hem
+  // canlı belgeyi hem bugünün günlük kopyasını geri yüklenen ESKİ veriyle değiştirir.
+  // O zaman bugünkü iyi durum yalnızca benzersiz ve değiştirilemez geriNoktalari belgesinde kalmalıdır.
+  const { sandbox, run, listeners } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = (id) => { if (timers[id - 1]) timers[id - 1] = null; };
+  resetOgr(sandbox, [student({ ad: 'Bugunku Defter' }), student({ no: 2, ad: 'Yeni Sonuc Sahibi' })]);
+  run('D.log = [[100,0,0,8,10,3,1750000000000]]; D.ayar.testTarih = "2026-09-05";');
+  const bugunkuJson = run('JSON.stringify(D)');
+  const eskiDefter = run(`(() => { const k = JSON.parse(JSON.stringify(D));
+    k.ogr = [{no:9,ad:'Eski Defter',alan:'SAY',sube:'201',hedef:null}]; k.log = [];
+    return JSON.stringify(k); })()`);
+  const yazilan = [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    getDoc: async () => ({ exists: () => true,
+      data: () => ({ veri: eskiDefter, ts: 1756684800000, boyut: eskiDefter.length,
+        ogrenciSayisi: 1, sonucSayisi: 0 }) }),
+    setDoc: async (ref, data) => { yazilan.push({ ref, data: JSON.parse(JSON.stringify(data)) }); }
+  });
+  sandbox.confirm = () => true;
+  const dugme = Object.assign(element(), { dataset: { gun: '2026-09-01' },
+    closest(sel) { return sel === '.bulutGunYukle' ? this : null; } });
+  await listeners.click[0]({ target: dugme });
+
+  equal(run('D.ogr[0].ad'), 'Eski Defter', 'the chosen old snapshot must become the active notebook');
+  const koruma = yazilan.find(y => y.ref.indexOf('/geriNoktalari/') >= 0);
+  assert(koruma, 'the current notebook must be preserved under a unique restore-point id before mutation');
+  equal(koruma.data.veri, bugunkuJson, 'the restore point must contain the exact pre-restore notebook');
+  equal(JSON.parse(koruma.data.veri).ogr[0].ad, 'Bugunku Defter');
+  assert(!/geriNoktalari\/2026-09-05$/.test(koruma.ref), 'restore point must not reuse the daily date key');
+  const bekleyen = timers.filter(Boolean).filter(t => t.ms === run('BULUT_YEDEK_GECIKME'));
+  equal(bekleyen.length, 1, 'restoring must still schedule the restored state as the new live backup');
+
+  await bekleyen[0].fn();
+  await new Promise(r => setImmediate(r));
+  const bugununGunlugu = yazilan.find(y => /\/gecmis\/2026-09-05$/.test(y.ref));
+  assert(bugununGunlugu, 'the delayed backup must still update today daily snapshot');
+  equal(JSON.parse(bugununGunlugu.data.veri).ogr[0].ad, 'Eski Defter',
+    'the test must reproduce the overwrite that previously destroyed today only good copy');
+  equal(JSON.parse(koruma.data.veri).ogr[0].ad, 'Bugunku Defter',
+    'the immutable restore point must retain today state after the delayed overwrite');
+});
+
+test('restore-aborts-before-mutation-when-protection-point-cannot-be-written', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ ad: 'Korunacak Defter' })]);
+  const eskiDefter = run(`(() => { const k = JSON.parse(JSON.stringify(D));
+    k.ogr = [{no:9,ad:'Eski Defter',alan:'SAY',sube:'201',hedef:null}]; return JSON.stringify(k); })()`);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    getDoc: async () => ({ exists: () => true,
+      data: () => ({ veri: eskiDefter, ts: 1, boyut: eskiDefter.length, ogrenciSayisi: 1, sonucSayisi: 0 }) }),
+    setDoc: async (ref) => { if (ref.indexOf('/geriNoktalari/') >= 0) throw new Error('koruma yazılamadı'); }
+  });
+  sandbox.confirm = () => true;
+  let uyari = '';
+  sandbox.alert = m => { uyari = m; };
+  const dugme = Object.assign(element(), { dataset: { gun: '2026-09-01' },
+    closest(sel) { return sel === '.bulutGunYukle' ? this : null; } });
+  await listeners.click[0]({ target: dugme });
+  equal(run('D.ogr[0].ad'), 'Korunacak Defter', 'failed protection must abort before changing D');
+  assert(/değiştirilmedi/.test(uyari) && /koruma yazılamadı/.test(uyari),
+    'the teacher must be told that restore stopped safely: ' + uyari);
+});
+
+test('stalled-protection-write-times-out-before-restore-mutation', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  const timers = [];
+  sandbox.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
+  sandbox.clearTimeout = id => { if (timers[id - 1]) timers[id - 1].cleared = true; };
+  resetOgr(sandbox, [student({ ad: 'Korunacak Defter' })]);
+  const eskiDefter = run(`(() => { const k = JSON.parse(JSON.stringify(D));
+    k.ogr = [{no:9,ad:'Eski Defter',alan:'SAY',sube:'201',hedef:null}]; return JSON.stringify(k); })()`);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'),
+    getDoc: async () => ({ exists: () => true,
+      data: () => ({ veri: eskiDefter, ts: 1, boyut: eskiDefter.length, ogrenciSayisi: 1, sonucSayisi: 0 }) }),
+    setDoc: () => new Promise(() => {})
+  });
+  sandbox.confirm = () => true;
+  let uyari = '';
+  sandbox.alert = m => { uyari = m; };
+  const dugme = Object.assign(element(), { dataset: { gun: '2026-09-01' },
+    closest(sel) { return sel === '.bulutGunYukle' ? this : null; } });
+  const islem = listeners.click[0]({ target: dugme });
+  for (let i = 0; i < 6; i++) await Promise.resolve();
+  const sure = timers.find(t => t.ms === run('BULUT_YAZMA_ZAMAN_ASIMI'));
+  assert(sure, 'the pre-restore protection write must have a deadline');
+  sure.fn();
+  await islem;
+  equal(run('D.ogr[0].ad'), 'Korunacak Defter', 'timeout must abort before changing D');
+  assert(/değiştirilmedi/.test(uyari) && /zamanında onay alamadı/.test(uyari),
+    'the teacher must see a safe-abort timeout message: ' + uyari);
+});
+
+test('restore-point-history-is-visible-and-restores-reversibly', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({ ad: 'Su Anki Defter' })]);
+  const korunanDefter = run(`(() => { const k = JSON.parse(JSON.stringify(D));
+    k.ogr = [{no:7,ad:'Korunan Defter',alan:'SAY',sube:'201',hedef:null}]; k.log = [];
+    return JSON.stringify(k); })()`);
+  const noktalar = {
+    'nokta-1757000000000-a': { veri: korunanDefter, ts: 1757000000000, boyut: korunanDefter.length,
+      kaynak: '02.09.2026 tarihli günlük yedeğe dönüş', ogrenciSayisi: 1, sonucSayisi: 0 },
+    'nokta-1756000000000-b': { veri: korunanDefter, ts: 1756000000000, boyut: korunanDefter.length,
+      kaynak: 'eski nokta', ogrenciSayisi: 1, sonucSayisi: 0 }
+  };
+  const yazilan = [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (db, ...yol) => yol.join('/'), collection: (db, ...yol) => yol.join('/'),
+    getDocs: async () => ({ forEach: fn => Object.keys(noktalar).forEach(id =>
+      fn({ id, data: () => noktalar[id] })) }),
+    getDoc: async ref => { const id = String(ref).split('/').pop();
+      return { exists: () => !!noktalar[id], data: () => noktalar[id] }; },
+    setDoc: async (ref, data) => { yazilan.push({ ref, data }); }
+  });
+  const liste = await run('bulutGeriYuklemeNoktalari()');
+  equal(liste.liste.map(x => x.id), ['nokta-1757000000000-a', 'nokta-1756000000000-b'],
+    'restore points must be newest first');
+  run('EK.bulutGecmis = []; EK.bulutGeriNoktalar = ' + JSON.stringify(liste.liste) + ';');
+  assert(/bulutGeriNoktaYukle/.test(run('gorunumAyarlar()')),
+    'settings must offer an undo button for persisted restore points');
+
+  sandbox.confirm = () => true;
+  const dugme = Object.assign(element(), { dataset: { id: 'nokta-1757000000000-a' },
+    closest(sel) { return sel === '.bulutGeriNoktaYukle' ? this : null; } });
+  await listeners.click[0]({ target: dugme });
+  equal(run('D.ogr[0].ad'), 'Korunan Defter', 'the selected protection point must be restorable');
+  const yeniKoruma = yazilan.find(y => y.ref.indexOf('/geriNoktalari/') >= 0);
+  assert(yeniKoruma && JSON.parse(yeniKoruma.data.veri).ogr[0].ad === 'Su Anki Defter',
+    'undoing a restore must first preserve the state it replaces, so the undo is itself reversible');
 });
 
 // ================================================================== özet

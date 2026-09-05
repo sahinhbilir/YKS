@@ -44,6 +44,37 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Bir günlük yedek geri yüklenmeden hemen önce açık olan defter burada benzersiz
+    // bir belge olarak saklanır. Günlük kopyadan farklı olarak üzerine yazılamaz: geri
+    // yüklemenin ardından çalışan otomatik yedek bu koruma noktasını yok edemez.
+    match /ogretmenYedek/{uid}/geriNoktalari/{noktaId} {
+      function geriNoktasiGecerli() {
+        return request.resource.data.keys().hasOnly(
+            ['veri','ts','surum','boyut','ogrenciSayisi','sonucSayisi','kaynak'])
+          && request.resource.data.veri is string
+          && request.resource.data.veri.size() > 0
+          && request.resource.data.veri.size() <= 900000
+          && request.resource.data.ts is int
+          && request.resource.data.ts > 0
+          && request.resource.data.surum is int
+          && request.resource.data.surum > 0
+          && request.resource.data.boyut is int
+          && request.resource.data.boyut > 0
+          && request.resource.data.boyut <= 900000
+          && request.resource.data.ogrenciSayisi is int
+          && request.resource.data.ogrenciSayisi >= 0
+          && request.resource.data.sonucSayisi is int
+          && request.resource.data.sonucSayisi >= 0
+          && request.resource.data.kaynak is string
+          && request.resource.data.kaynak.size() > 0
+          && request.resource.data.kaynak.size() <= 100;
+      }
+      allow get, list: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen();
+      allow create: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen()
+        && geriNoktasiGecerli();
+      allow update, delete: if false;
+    }
+
     // Rehber öğretmenin önceden hazırladığı öğrenci hesabı. Paket JSON dizesi olarak
     // saklanır; böylece iç içe diziler Firestore belge biçimini bozmaz. Öğrenci yalnızca
     // Firebase Authentication tarafından doğrulanan kendi UID belgesini okuyabilir.
@@ -72,7 +103,7 @@ service cloud.firestore {
           && request.resource.data.ogrenciAd == resource.data.ogrenciAd
           && request.resource.data.ogrenciSube == resource.data.ogrenciSube
           && request.resource.data.ogrenciBulutId == resource.data.ogrenciBulutId
-          && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','durum','sonrakiSyncId']);
+          && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','istemciOlay','durum','sonrakiSyncId']);
       }
       // Devre dışı bırakma sırasında, sonrakiSyncId'nin GERÇEKTEN bu işlemle birlikte
       // YENİ oluşturulan, aynı öğretmen/öğrenciye ait, aktif bir belgeyi gösterdiğini
@@ -101,22 +132,22 @@ service cloud.firestore {
           && get(hesapYolu).data.syncId == syncId;
       }
 
-      // Planı başlatma ve sonuç kaydetme, ayrıca bir onay istemeden aynı sonuç
-      // paketini yollar. Bu küçük olay alanı hangi kullanıcı işleminin son
-      // senkronizasyonu tetiklediğini belirtir; istemcinin rastgele veri eklemesine izin vermez.
+      // Planı başlatma ve sonuç kaydetme ayrıca bir onay istemeden senkronizasyonu
+      // tetikler. Paket dışında duran bu küçük olay alanı, boş bir yerel geçmişin
+      // sunucudaki sonuç paketini silmesine gerek kalmadan son işlemi kaydeder.
       function istemciOlayGecerli() {
-        return !('istemciOlay' in request.resource.data.paket)
+        return !('istemciOlay' in request.resource.data)
           || (
-            request.resource.data.paket.istemciOlay is map
-            && request.resource.data.paket.istemciOlay.keys().hasOnly(['tur','hafta','ts','toplam'])
-            && (request.resource.data.paket.istemciOlay.tur == 'plan-baslatildi'
-              || request.resource.data.paket.istemciOlay.tur == 'sonuclar-kaydedildi')
-            && request.resource.data.paket.istemciOlay.hafta is int
-            && request.resource.data.paket.istemciOlay.ts is int
-            && (!('toplam' in request.resource.data.paket.istemciOlay)
-              || (request.resource.data.paket.istemciOlay.toplam is int
-                && request.resource.data.paket.istemciOlay.toplam >= 0
-                && request.resource.data.paket.istemciOlay.toplam <= 5000))
+            request.resource.data.istemciOlay is map
+            && request.resource.data.istemciOlay.keys().hasOnly(['tur','hafta','ts','toplam'])
+            && (request.resource.data.istemciOlay.tur == 'plan-baslatildi'
+              || request.resource.data.istemciOlay.tur == 'sonuclar-kaydedildi')
+            && request.resource.data.istemciOlay.hafta is int
+            && request.resource.data.istemciOlay.ts is int
+            && (!('toplam' in request.resource.data.istemciOlay)
+              || (request.resource.data.istemciOlay.toplam is int
+                && request.resource.data.istemciOlay.toplam >= 0
+                && request.resource.data.istemciOlay.toplam <= 5000))
           );
       }
 
@@ -163,10 +194,16 @@ service cloud.firestore {
               && yayinlanmisHesap(request.auth.uid))
           )
           && request.resource.data.durum == 'aktif'
-          && request.resource.data.paket.tur == 'yks-sonuc'
-          && request.resource.data.paket.kayit is list
-          && request.resource.data.paket.kayit.size() <= 5000
-          && (!('konular' in request.resource.data.paket) || request.resource.data.paket.konular.size() <= 2000)
+          && (
+            request.resource.data.paket == resource.data.paket
+            || (
+              request.resource.data.paket is map
+              && request.resource.data.paket.tur == 'yks-sonuc'
+              && request.resource.data.paket.kayit is list
+              && request.resource.data.paket.kayit.size() <= 5000
+              && (!('konular' in request.resource.data.paket) || request.resource.data.paket.konular.size() <= 2000)
+            )
+          )
           && istemciOlayGecerli()
         )
         ||

@@ -1,0 +1,52 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node-regressions:
+    name: Node regression suites
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Role regression
+        run: node test/role-regression.js
+      - name: Result-package regression
+        run: node test/result-package-regression.js
+      - name: Cloud-sync resilience
+        run: node test/cloud-sync-resilience.js
+      - name: Timetable JSON regression
+        run: node test/timetable-json-regression.js
+
+  firestore-rules:
+    name: Firestore rules emulator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: test/firebase/package-lock.json
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install Firebase test dependencies
+        working-directory: test/firebase
+        run: npm ci
+      - name: Run Firestore security-rule checks
+        run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/firestore.test.mjs"
