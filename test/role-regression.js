@@ -62,7 +62,7 @@ function studentState(extra) {
     EK.sekme = 'anlasma'; cizIc();
     return { tabs: SEKMELER(), section: document.getElementById('ana').innerHTML, selected: EK.sekme };
   })()`);
-  assert(roleView.tabs.length === 4 && !roleView.tabs.some(x => x[0] === 'anlasma') && run('gorunumAyarlar()').includes('data-sekme="anlasma"'), 'Kişisel anlaşma gelişmiş ayarlardan erişilebilir olmalı.');
+  assert(roleView.tabs.some(x => x[0] === 'harita') && !roleView.tabs.some(x => x[0] === 'anlasma') && run('gorunumAyarlar()').includes('data-sekme="anlasma"'), 'Haftalar haritası görünür, kişisel anlaşma gelişmiş ayarlardan erişilebilir olmalı.');
   assert(roleView.selected === 'anlasma', 'Öğrenci anlaşma sekmesinden plana yönlendirildi.');
   assert(roleView.section.includes('id="oMaddeler"') && roleView.section.includes('class="oRutin"'),
     'Öğrencinin kişisel madde/rutin alanları yok.');

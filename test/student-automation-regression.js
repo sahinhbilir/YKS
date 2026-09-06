@@ -76,7 +76,7 @@ function fillPlan(p,h,week=0,limit=Infinity) {
 }
 (async()=>{
  init(); await draw();
- check('four-student-tabs',run('SEKMELER().length')===4);
+ check('learning-map-in-student-navigation',run('SEKMELER().some(t=>t[0]==="harita")'));
  check('student-controls-are-simple',!/(planiSabitle|Taslak gör|katilmadanOnceGetir|data-hucre)/.test(run('gorunumPlan()')));
  const settings=run('gorunumAyarlar()');
  check('advanced-settings-collapsed',settings.includes('<details')&&!settings.includes('padding:20px" open'));
@@ -183,6 +183,46 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  await run('kaydet(true)');
  check('automation-error-does-not-lose-results',JSON.parse(saved.yks_veri).log.length===1&&run('D.log.length')===1&&!!run('EK.ogrOtoHata'));
  run('ileriDagit=savedDistributor');await draw();
+ // Learning context must remain accurate as later FSRS reviews arrive.
+ init('2026-09-28');
+ run(`sonucIsle(0,[{ki:0,gun:gunNo('2026-09-07'),dogru:8,soru:10},
+   {ki:0,gun:gunNo('2026-09-14'),dogru:9,soru:10},
+   {ki:0,gun:gunNo('2026-09-21'),dogru:10,soru:10}]);`);
+ const historyBefore=run('JSON.stringify([D.log,D.kart])');
+ check('historical-first-review-stays-first',run(`tekrarBilgisi(0,{ki:0,kart:D.kart['0:0']},gunNo('2026-09-07')).n===1`));
+ check('historical-second-review-stays-second',run(`tekrarBilgisi(0,{ki:0,kart:D.kart['0:0']},gunNo('2026-09-14')).n===2`));
+ check('previous-score-is-relative-to-scheduled-day',run(`tekrarBilgisi(0,{ki:0,kart:D.kart['0:0']},gunNo('2026-09-14')).aciklama.includes('%80')`));
+ check('upcoming-review-is-fourth',run(`tekrarBilgisi(0,{ki:0,kart:D.kart['0:0']},bugunNo()).n===4`));
+ check('same-day-result-is-shown-without-incrementing-stage',run(`tekrarBilgisi(0,{ki:0},gunNo('2026-09-14')).cevap==='9/10'`));
+ check('routine-is-not-a-repetition',run(`tekrarBilgisi(0,{ki:'S1',serbest:true},bugunNo()).tur==='diger'`));
+ check('learning-labels-never-change-fsrs',historyBefore===run('JSON.stringify([D.log,D.kart])'));
+ const fakePlan={gunler:[[{ki:0,kart:run('D.kart["0:0"]'),ad:'Konu',dersAd:'Matematik',test:2,soru:24},{ki:1,ad:'Yeni konu',dersAd:'Fizik',test:2,soru:24},{ki:'S1',serbest:true,ad:'Rutin',soru:20}],[],[],[],[],[],[]],off:[6],gunYuk:[5,0,0,0,0,0,0],kap:6};
+ sandbox.learningPlan=fakePlan;
+ const summary=run(`ogrenciHaftaOzeti(0,gunNo('2026-09-14'),learningPlan)`);
+ check('summary-counts-topics-not-test-units-or-routines',summary.toplam===2&&summary.ilk===1&&summary.tekrar===1&&summary.girilen===1);
+ check('read-only-desktop-plan-shows-stage',run(`planTablosu(0,gunNo('2026-09-14'),learningPlan,false,true)`).includes('2. tekrar'));
+ check('mobile-plan-shows-stage',run(`planListesi(0,gunNo('2026-09-14'),learningPlan,true)`).includes('2. tekrar'));
+ check('weeks-map-does-not-infer-completion',run('gorunumHaritasi()').includes('1 sonuç')&&!run('gorunumHaritasi()').includes('hafta tamamlandı'));
+ check('weeks-map-is-not-a-manual-catch-up-form',!run('gorunumHaritasi()').includes('haritaNeden'));
+ const mapTarget=Object.assign(element(),{dataset:{ogrHafta:String(run("gunNo('2026-09-14')"))},closest(s){return s==='[data-ogr-hafta]'?this:null;}});
+ for(const fn of listeners.click||[]) await fn({target:mapTarget});
+ check('map-opens-historical-plan',run(`EK.sekme==='plan'&&EK.hafta===gunNo('2026-09-14')`));
+ run('D.ayar.testTarih=D.ayar.sinav');
+ check('exam-day-countdown-is-not-negative',run('ogrenciYksYolu(false)').includes('Sınav günü geldi'));
+ init(); await draw(); run('EK.hafta=buHafta()+7');
+ check('printout-retains-repetition-labels',run('yazdirSayfa(0,haftaBasi())').includes('1. tekrar'));
+ // Optional private fixture: inspect a supplied backup locally; never include it in git or upload it.
+ if(process.env.YKS_BACKUP){
+   sandbox.privateBackup=JSON.parse(fs.readFileSync(process.env.YKS_BACKUP,'utf8'));
+   run(`yedekDogrula(privateBackup);D=JSON.parse(JSON.stringify(privateBackup));D.ayar.testTarih='2026-09-06';
+     EK={ogr:0,sekme:'plan',hafta:gunNo('2026-09-07'),girisAcik:{}};`);
+   const unchanged=run('JSON.stringify([D.kart,D.log,D.elle])');
+   const realPlan=getPlan(run('haftaBasi()')), realSummary=run('ogrenciHaftaOzeti(0,haftaBasi(),planHesapla(0,haftaBasi()))');
+   check('supplied-backup-has-first-and-later-reviews',realSummary.ilk>0&&realSummary.tekrar>0);
+   check('supplied-backup-print-and-screen-show-second-review',run('gorunumPlan()').includes('2. tekrar')&&run('yazdirSayfa(0,haftaBasi())').includes('2. tekrar'));
+   check('supplied-backup-reading-preserves-history',unchanged===run('JSON.stringify([D.kart,D.log,D.elle])'));
+   console.error(JSON.stringify({realBackup:{...realSummary,testUnits:realPlan.testToplam,results:run('D.log.length')}}));
+ }
  // Optional static render output for visual QA, no live services in this document.
  if(process.env.YKS_PREVIEW_DIR){
    run('D.rol="ogrenci";EK.ogrenciDetay=false;EK.sekme="plan";');

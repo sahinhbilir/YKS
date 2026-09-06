@@ -1,10 +1,14 @@
 # Automatic student flow
 
-Students should study and enter their results without managing the scheduler.
+Students should understand what to study, why it returns, and how much preparation time remains, without managing the scheduler. Simplicity means automating administrative decisions while keeping learning information visible.
 
 ## Daily interface
 
-The student navigation is Planım, Sonuç gir, Karnem and Ayarlar. The plan is read-only by default and offers one download action. Detailed editing, topic planning, historical decisions, personal routines, data recovery and algorithm controls remain accessible through Gelişmiş ayarlar. Teacher navigation and manual tools remain available.
+The student navigation is Planım, Sonuç gir, Haftalar haritası, Karnem and Ayarlar. The plan is read-only by default and offers one download action. Its visible exam countdown and compact weeks map place the current week within the preparation period. The full map opens past plans and distinguishes recorded results from an actually completed week; one recorded result never implies completion. The countdown uses the notebook's configured exam date, not an independently verified official date.
+
+Each scheduled test shows its repetition number, previous result date and score, and any result recorded for that scheduled day. Desktop, mobile, result entry and printable plans retain this information. Repetition stages are counted from results preceding the scheduled date, so future reviews do not renumber historical plans. “2. tekrar” describes the learning stage; “2 test” describes the question load within that stage. The weekly summary counts first measurements, later repetitions and recorded topic results, excluding free routines and lesson explanations.
+
+Detailed editing, topic planning, personal routines, data recovery and algorithm controls remain accessible through Gelişmiş ayarlar. Teacher navigation and manual tools remain available.
 
 Basic settings contain daily test capacity and rest days. They save automatically and affect upcoming plans. The current issued plan stays intact. Each result requires an actual score: blank rows are never scored as correct, incorrect or completed. Saving a partial set stays on that week's results; saving the complete set opens the upcoming plan.
 
@@ -32,6 +36,6 @@ The UI reports result-sync status, not a claim that every notebook setting or dr
 
 ## Validation
 
-`node test/student-automation-regression.js` exercises eight Sunday-only weeks with deterministic synthetic scores, draft downloads, week transitions, serialization/reload, historical-plan stability, partial results, late joining, missed weeks, catch-up reversal, capacity changes, result merging, retry and account isolation. It makes no real Firebase writes. The other four Node regression suites cover teacher compatibility, result packages, cloud behavior and timetable imports. CI runs all five suites.
+`node test/student-automation-regression.js` exercises eight Sunday-only weeks with deterministic synthetic scores, draft downloads, week transitions, serialization/reload, historical-plan stability, partial results, late joining, missed weeks, catch-up reversal, capacity changes, result merging, retry and account isolation. It also checks historical repetition labels, previous scores, consistent desktop/mobile/print labels, honest progress counts, map navigation and the exam-day countdown. It makes no real Firebase writes. The optional `YKS_BACKUP=/path/to/backup.json` check loads a private backup locally to verify real plans and preservation of existing history; the fixture is never committed. The other four Node regression suites cover teacher compatibility, result packages, cloud behavior and timetable imports. CI runs all five suites.
 
 The generated student-plan and settings markup was inspected for primary controls and duplicate IDs. A local-file browser preview was blocked by the browser's URL policy; no visual-browser pass is claimed. Production Firebase App Check behavior still depends on deployment configuration.
