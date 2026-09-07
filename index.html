@@ -103,6 +103,20 @@ table.plan td .k{font-size:12.5px;line-height:1.35;margin-top:1px}
 table.plan td .n{font-size:10.5px;color:var(--soluk);margin-top:3px;font-variant-numeric:tabular-nums}
 table.plan td.dolu{background:var(--kagit)}
 .ozet{margin-top:12px;font-size:13px;color:var(--soluk)}
+#disariAktar{position:fixed;inset:0;z-index:1200;overflow:auto;background:var(--zemin);color:var(--murekkep);padding:20px}
+body.cikti-acik{overflow:hidden}body.cikti-acik>.kabuk{display:none}
+.cikti-arac{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.cikti-arac h1{font-size:22px}
+#disariAktar textarea{display:block;width:100%;max-width:900px;margin:12px 0;font-size:12px}
+#disariAktar details{margin-top:24px}
+#planBaski{background:#fff;padding:12px;margin-top:16px;overflow:auto}
+@media print{
+  body.cikti-acik{overflow:visible!important}
+  body.cikti-acik>*:not(#disariAktar){display:none!important}
+  #disariAktar{position:static;overflow:visible;padding:0;background:#fff}
+  #disariAktar>*:not(#planBaski){display:none!important}
+  #planBaski{padding:0;margin:0;overflow:visible}
+}
 .yks-yolu{padding:20px 22px;margin-bottom:26px;border-top:3px solid var(--vurgu)}
 .yol-baslik{display:flex;justify-content:space-between;align-items:center;gap:16px}
 .yol-baslik h2{font-size:30px;margin-top:3px;font-variant-numeric:tabular-nums}
@@ -4400,36 +4414,97 @@ function csvOlustur(si, hb) {
   return '\ufeff' + satir.map(r => r.map(h => '"' + String(h === undefined ? '' : h).replace(/"/g, '""') + '"').join(';')).join('\r\n');
 }
 
+function dosyaMime(tur) {
+  return tur === 'json' ? 'application/json' : tur === 'html' ? 'text/html' : 'text/csv';
+}
+function appleMobilMi() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+let DISARI_AKTAR = null;
+function disariAktarmayiKapat() {
+  const once = DISARI_AKTAR;
+  document.getElementById('disariAktar')?.remove();
+  document.body.classList?.remove('cikti-acik');
+  DISARI_AKTAR = null;
+  if (once) {
+    document.title = once.baslik;
+    once.odak?.focus();
+    // Safari may still be reading a selected download after the preview closes.
+    if (once.url) setTimeout(() => URL.revokeObjectURL(once.url), 60000);
+  }
+}
+function disariAktarmaAc(icerik, baslik) {
+  disariAktarmayiKapat();
+  DISARI_AKTAR = { odak: document.activeElement, baslik: document.title };
+  const panel = document.createElement('section');
+  panel.id = 'disariAktar';
+  panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true');
+  panel.setAttribute('aria-label', baslik);
+  panel.innerHTML = '<div class="cikti-arac"><button class="dugme" id="ciktiKapat">Geri dön</button>' +
+    '<h1>' + kacis(baslik) + '</h1></div>' + icerik;
+  document.body.appendChild(panel);
+  document.body.classList?.add('cikti-acik');
+  document.getElementById('ciktiKapat')?.focus();
+  return panel;
+}
+function dosyaKurtarmaAc(adi, icerik, tur) {
+  const url = URL.createObjectURL(new Blob([icerik], { type: dosyaMime(tur) + ';charset=utf-8' }));
+  disariAktarmaAc('<p>Dosyan hazır. İndirmek için aşağıdaki bağlantıya dokun.</p>' +
+    '<p><a class="dugme birincil" href="' + url + '" download="' + kacis(adi) + '">Dosyayı indir</a></p>' +
+    '<p class="mini">Safari dosyayı açarsa Paylaş menüsünden Dosyalara Kaydet’i seçebilirsin.</p>' +
+    '<details><summary>İndirme açılmıyorsa içeriği kopyala</summary>' +
+    '<p class="mini">Tamamını bir metin dosyasına kaydet. Bu içerik, geri yüklemedeki “İçeriği yapıştır” alanına da yüklenebilir.</p>' +
+    '<textarea id="ciktiMetni" aria-label="Dosyanın tam içeriği" readonly rows="8"></textarea>' +
+    '<button class="dugme" id="yedekKopyala">İçeriği kopyala</button><p id="ciktiDurum" role="status"></p></details>', 'Dosyayı kaydet');
+  DISARI_AKTAR.url = url;
+  document.getElementById('ciktiMetni').value = icerik;
+  return false; // Prepared is not saved: callers must not claim a successful export yet.
+}
 function klasikIndir(adi, icerik, tur) {
   try {
-    const mime = tur === 'json' ? 'application/json;charset=utf-8' :
-      tur === 'html' ? 'text/html;charset=utf-8' : 'text/csv;charset=utf-8';
+    const mime = dosyaMime(tur) + ';charset=utf-8';
     const blob = new Blob([icerik], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = adi; document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1500);
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 60000);
     return true;
   } catch (e) { return false; }
 }
 
-async function indir(adi, icerik, tur) {
-  const d = await yetenek('downloads');
-  if (!d) {
-    const tamam = klasikIndir(adi, icerik, tur);
-    if (!tamam)
-      alert('Dosya indirilemedi. Planı kâğıda dökmek için “Yazdır” düğmesini kullanabilirsiniz.');
-    return tamam;
+async function tarayicidaIndir(adi, icerik, tur) {
+  if (appleMobilMi()) {
+    if (typeof File === 'function' && navigator.canShare && navigator.share) {
+      const dosya = new File([icerik], adi, { type: dosyaMime(tur) });
+      try {
+        if (navigator.canShare({ files: [dosya] })) {
+          // Call within the tap, before any capability discovery or other await.
+          await navigator.share({ files: [dosya] });
+          return true;
+        }
+      } catch (e) {
+        if (e && e.name === 'AbortError') return false; // User cancelled the sheet.
+        // Unsupported file types, expired activation and embedded browsers get a visible recovery.
+      }
+    }
+    return dosyaKurtarmaAc(adi, icerik, tur);
   }
+  if (klasikIndir(adi, icerik, tur)) return true;
+  return dosyaKurtarmaAc(adi, icerik, tur);
+}
+async function indir(adi, icerik, tur) {
+  // On the website, never await the optional artifact-host bridge before a browser save.
+  if (!window.claude || typeof window.claude.use !== 'function') return tarayicidaIndir(adi, icerik, tur);
+  const d = await yetenek('downloads');
+  if (!d) return tarayicidaIndir(adi, icerik, tur);
   try { await d.save({ filename: adi, data: icerik }); return true; }
   catch (e) {
     if (e && e.code === 'extension_not_enabled' && tur === 'csv') {
       try { await d.save({ filename: adi.replace(/\.csv$/, '.txt'), data: icerik }); return true; } catch (e2) { e = e2; }
     }
     if (e && e.code === 'declined') return false;
-    const tamam = klasikIndir(adi, icerik, tur);
-    if (!tamam) alert('İndirilemedi: ' + (e && e.code || 'bilinmeyen hata'));
-    return tamam;
+    return tarayicidaIndir(adi, icerik, tur);
   }
 }
 
@@ -5154,7 +5229,7 @@ function yazdirCSS() {
     '.orta{display:flex;gap:4mm;flex:1;min-height:0}' +
     'table{border-collapse:collapse;table-layout:fixed;width:100%;height:100%}' +
     'th,td{border:.3mm solid #999;vertical-align:top;padding:1mm 1.2mm;overflow:hidden}' +
-    'th{border-color:#000;text-align:center;font-size:8pt;height:8mm}' +
+    'th{border-color:#000;text-align:center;font-size:8pt;height:8mm;color:#000}' +
     'td.sira{width:7mm;text-align:center;vertical-align:middle;font-size:9pt;color:#555}' +
     '.d{font-size:6.4pt;letter-spacing:.02em;text-transform:uppercase;color:#555}' +
     '.k{font-size:8pt;line-height:1.15}' +
@@ -5223,6 +5298,34 @@ function yazdirBelgesi(liste, hb) {
     '</body></html>';
 }
 
+function planBaskiStili() {
+  // Reuse the actual print layout without applying its table/body styles to the app.
+  const stil = yazdirCSS().replace(/@page\{[^}]*\}/g, '');
+  return stil.replace(/(^|\})([^{}]+)\{/g, (_, son, seciciler) => son +
+    seciciler.split(',').map(s => s.trim() === 'body' ? '#planBaski' : '#planBaski ' + s.trim()).join(',') + '{');
+}
+function planBaskiyiBaslat() {
+  try {
+    if (typeof window.print !== 'function') throw new Error('print unavailable');
+    window.print(); // Same document and the current tap: no popup, iframe or delayed load handler.
+    return true;
+  } catch (e) {
+    const durum = document.getElementById('ciktiDurum');
+    if (durum) durum.textContent = 'Yazdırma açılamadı. Safari’de Paylaş → Yazdır yolunu deneyebilirsin.';
+    return false;
+  }
+}
+function planOnizlemeAc(liste, hb) {
+  const sayfalar = liste.map(si => yazdirSayfa(si, hb)).join('');
+  disariAktarmaAc('<button class="dugme birincil" id="ciktiYazdir">Yazdır / PDF olarak kaydet</button>' +
+    '<p class="mini">iPhone / iPad: yazdırma önizlemesini büyütüp Paylaş → Dosyalara Kaydet’i seçebilirsin.</p>' +
+    '<p id="ciktiDurum" role="status">Yazdırma açılmazsa yukarıdaki düğmeye dokun. Önizleme için yana kaydırabilirsin.</p>' +
+    '<style>' + planBaskiStili() + '@media print{@page{size:A4 landscape;margin:8mm}}</style>' +
+    '<div id="planBaski">' + sayfalar + '</div>', 'Haftalık plan · ' + ggyy(hb));
+  document.title = 'YKS-plan-' + isoDan(hb);
+  return planBaskiyiBaslat();
+}
+
 // yedek / öğrenci paketi yükleme — hem dosyadan hem yapıştırmadan aynı yol
 async function metindenYukle(metin) {
   let y;
@@ -5273,16 +5376,10 @@ async function planYazdir(kapsam) {
     etiket = 'sube-' + dosyaAdiParcasi(kapsam.sube, 'sube');
   } else { liste = [EK.ogr]; etiket = dosyaAdiParcasi(D.ogr[EK.ogr].ad, 'ogrenci').toLocaleLowerCase('tr'); }
   if (!liste.length) { alert('Bu kapsamda çıktı alacak öğrenci yok.'); return false; }
+  if (!window.claude || typeof window.claude.use !== 'function') return planOnizlemeAc(liste, hb);
   const belge = yazdirBelgesi(liste, hb);
   const d = await yetenek('downloads');
-  if (!d) { // çevrimdışı kopya: doğrudan yazdır
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(belge); w.document.close(); return true; }
-    const tamam = klasikIndir('plan-' + isoDan(hb) + '.html', belge, 'html');
-    if (!tamam)
-      alert('Yazdırma açılamadı.');
-    return tamam;
-  }
+  if (!d) return planOnizlemeAc(liste, hb);
   const ad = etiket + '-' + isoDan(hb) + '.html';
   try {
     await d.save({ filename: ad, data: belge });
@@ -5290,13 +5387,7 @@ async function planYazdir(kapsam) {
     return true;
   } catch (e) {
     if (e && e.code === 'declined') return false;
-    if (e && e.code === 'extension_not_enabled') {
-      alert('Bu hesapta HTML indirme kapalı görünüyor. Ayarlar → Yedek indir ile veriyi alıp bilgisayarda açabilirsiniz.');
-      return false;
-    }
-    const tamam = klasikIndir(ad, belge, 'html');
-    if (!tamam) alert('İndirilemedi: ' + (e && e.code || 'bilinmeyen'));
-    return tamam;
+    return planOnizlemeAc(liste, hb);
   }
 }
 
@@ -5433,6 +5524,23 @@ function cizIc() {
 
 // --- konu penceresi ve sürükleme
 document.addEventListener('click', async ev => {
+  const ciktiDugme = ev.target.closest('#ciktiKapat,#ciktiYazdir,#yedekKopyala');
+  if (ciktiDugme) {
+    if (ciktiDugme.id === 'ciktiKapat') disariAktarmayiKapat();
+    else if (ciktiDugme.id === 'ciktiYazdir') planBaskiyiBaslat();
+    else {
+      const alan = document.getElementById('ciktiMetni'), durum = document.getElementById('ciktiDurum');
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('clipboard unavailable');
+        await navigator.clipboard.writeText(alan.value);
+        durum.textContent = 'İçeriğin tamamı kopyalandı.';
+      } catch (e) {
+        alan.focus(); alan.select(); alan.setSelectionRange(0, alan.value.length);
+        durum.textContent = 'İçerik seçildi. Seçime basılı tutup Kopyala’yı seçebilirsin.';
+      }
+    }
+    return;
+  }
   if (ev.target.id === 'ogrGelecekHafta') { EK.hafta = buHafta() + 7; ciz(); return; }
   const yolHafta = ev.target.closest('[data-ogr-hafta]');
   if (yolHafta && ogrenciMi()) {
@@ -6487,6 +6595,9 @@ document.addEventListener('visibilitychange', () => {
   else if (ogrenciMi()) { ciz(); ogrenciEsitlemePlanla(0, true); }
 });
 
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && DISARI_AKTAR) { ev.preventDefault(); disariAktarmayiKapat(); }
+});
 document.addEventListener('input', ev => {
   if (ev.target.id === 'pAra' && PENCERE) { PENCERE.arama = ev.target.value; pencereCiz(); }
 });

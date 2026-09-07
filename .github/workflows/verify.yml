@@ -23,6 +23,8 @@ jobs:
         run: node test/role-regression.js
       - name: Automatic student workflow and eight-week simulation
         run: node test/student-automation-regression.js
+      - name: Mobile backups and print recovery
+        run: node test/mobile-export-regression.js
       - name: Result-package regression
         run: node test/result-package-regression.js
       - name: Cloud-sync resilience

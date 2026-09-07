@@ -34,8 +34,16 @@ Successful local saves queue background sync. Startup, connection recovery and r
 
 The UI reports result-sync status, not a claim that every notebook setting or draft has been backed up to the cloud. Local weekly snapshots remain device-local until included in a notebook backup; the existing server result schema is unchanged.
 
-## Validation
+## Backups and printing on Apple devices
 
-`node test/student-automation-regression.js` exercises eight Sunday-only weeks with deterministic synthetic scores, draft downloads, week transitions, serialization/reload, historical-plan stability, partial results, late joining, missed weeks, catch-up reversal, capacity changes, result merging, retry and account isolation. It also checks historical repetition labels, previous scores, consistent desktop/mobile/print labels, honest progress counts, map navigation and the exam-day countdown. It makes no real Firebase writes. The optional `YKS_BACKUP=/path/to/backup.json` check loads a private backup locally to verify real plans and preservation of existing history; the fixture is never committed. The other four Node regression suites cover teacher compatibility, result packages, cloud behavior and timetable imports. CI runs all five suites.
+On iPhone and iPad, file exports call native file sharing inside the tap when the browser supports that file type. Cancelling does not trigger another download. Unsupported or blocked sharing opens a recovery view with a real download link and the complete backup text for copying. Desktop downloads also start without awaiting the optional artifact-host bridge. Blob URLs remain available for at least a minute rather than being revoked immediately.
+
+Website printing renders the existing print document in a separate view inside the same page and calls `window.print()` directly. The preview remains available after cancellation or a failed print call, with a retry action and an iPhone PDF-saving hint. Closing restores the app and its title. This avoids depending on a pop-up or a delayed load-handler print, and does not change plans, FSRS cards or results. The embedded artifact-host download path remains supported.
+
+`node test/mobile-export-regression.js` covers activation timing, iPhone/iPad detection, file contents, cancellation, unsupported sharing, download/copy recovery, direct printing and app-state preservation. These tests use browser API doubles; a physical iPhone print/share sheet still requires device verification.
+
+## Scheduling validation
+
+`node test/student-automation-regression.js` exercises eight Sunday-only weeks with deterministic synthetic scores, draft downloads, week transitions, serialization/reload, historical-plan stability, partial results, late joining, missed weeks, catch-up reversal, capacity changes, result merging, retry and account isolation. It also checks historical repetition labels, previous scores, consistent desktop/mobile/print labels, honest progress counts, map navigation and the exam-day countdown. It makes no real Firebase writes. The optional `YKS_BACKUP=/path/to/backup.json` check loads a private backup locally to verify real plans and preservation of existing history; the fixture is never committed. The other four Node regression suites cover teacher compatibility, result packages, cloud behavior and timetable imports. CI runs these five suites plus the mobile export suite.
 
 The generated student-plan and settings markup was inspected for primary controls and duplicate IDs. A local-file browser preview was blocked by the browser's URL policy; no visual-browser pass is claimed. Production Firebase App Check behavior still depends on deployment configuration.
