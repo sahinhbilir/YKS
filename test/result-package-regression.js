@@ -75,7 +75,7 @@ const results = vm.runInContext(`(() => {
   const state = () => JSON.stringify({ ekKonular: D.ekKonular, log: D.log, kart: D.kart });
 
   test('separate-result-package-version', () => {
-    assert(SONUC_PAKET_SURUM === 2 && PAKET_SURUM === 1, 'package versions are not independent');
+    assert(SONUC_PAKET_SURUM === 3 && PAKET_SURUM === 1, 'package versions are not independent');
   });
 
   test('export-includes-custom-topic-metadata', () => {
@@ -83,7 +83,7 @@ const results = vm.runInContext(`(() => {
     D.ekKonular.push([0, 12, 'Test', 'Öğrencinin konusu', 0, '']);
     D.log = [[day, 0, custom, 8, 10, 3, 1001]];
     const p = sonucPaketi();
-    assert(p.surum === 2, 'wrong result package version');
+    assert(p.surum === 3, 'wrong result package version');
     equal(p.konular[custom], [0, 'Öğrencinin konusu'], 'custom topic metadata missing');
   });
 
@@ -197,7 +197,7 @@ const results = vm.runInContext(`(() => {
 
   test('future-package-version-is-rejected', () => {
     reset();
-    expectThrow(() => sonucPaketiUygula(packet(3, [[day, 0, 8, 10, 1001]], {})), /uyumlu değil/i);
+    expectThrow(() => sonucPaketiUygula(packet(4, [[day, 0, 8, 10, 1001]], {})), /uyumlu değil/i);
   });
 
   test('newest-duplicate-row-wins', () => {

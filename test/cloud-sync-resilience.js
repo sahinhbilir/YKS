@@ -26,6 +26,23 @@ function element() {
     getClientRects() { return [1]; }, closest() { return null; }
   };
 }
+// Current result entry uses a [data-sonuc-row] wrapper with numeric fallback inputs.
+// Keep the tests coupled to that public DOM contract instead of the removed bare .gDogru list.
+function resultRow(dogru, soru, ki, gun) {
+  const dogruEl = Object.assign(element(), { value: String(dogru) });
+  const soruEl = Object.assign(element(), { value: String(soru) });
+  const sayisal = Object.assign(element(), { hidden: false });
+  return Object.assign(element(), {
+    dataset: { ki: String(ki), gun: String(gun), slot: String(ki), deferred: '0' },
+    querySelector(selector) {
+      if (selector === '.sonuc-not.secili') return null;
+      if (selector === '.sonuc-sayisal') return sayisal;
+      if (selector === '[data-sonuc-dogru]') return dogruEl;
+      if (selector === '[data-sonuc-soru]') return soruEl;
+      return null;
+    }
+  });
+}
 
 function loadAppSandbox() {
   const listeners = {};
@@ -152,6 +169,32 @@ test('bulutYuvasiCoz-import-before-advance-success', async () => {
   assert(logLen === 1, 'the pending package must have been imported into D.log');
   const oSyncId = run('D.ogr[0].syncId');
   equal(oSyncId, 'new', 'o.syncId must have advanced');
+});
+
+test('bulutYuvasiCoz-v3-rotation-preserves-rating-and-reset', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'old', ogrenciBulutId: 'b1' })]);
+  run("D.ayar.testTarih='2026-09-07'");
+  const today = run('bugunNo()'), week = run('buHafta()'), nextWeek = week + 7;
+  const resetEvent = { si: 0, ki: 3, gun: today, hafta: week, at: 200,
+    kaydirilan: 0, ilkTekrarGunu: nextWeek, overrides: { 3: nextWeek } };
+  const docs = {
+    old: { ogretmenUid: 't', ogrenciNo: 1, ogrenciAd: 'Ada', ogrenciSube: '12A', ogrenciBulutId: 'b1',
+      durum: 'iptal', sonrakiSyncId: 'new', bagliUid: 'u1', paket: {
+        tur: 'yks-sonuc', surum: 3, katalogImza: run('KATALOG_IMZA'), tarih: today,
+        olusturmaTs: 201, kayit: [{ g: today - 1, k: 3, d: null, s: null, n: 2, t: 100 }],
+        konular: {}, konuAnlatilmadi: [resetEvent]
+      } },
+    new: { ogretmenUid: 't', ogrenciNo: 1, ogrenciAd: 'Ada', ogrenciSube: '12A', ogrenciBulutId: 'b1',
+      durum: 'aktif', bagliUid: null, paket: null }
+  };
+  sandbox.window.bulut = baseBulut({ getDoc: async id => docSnap(!!docs[id], docs[id]) });
+  const r = await run('bulutYuvasiCoz(0)');
+  assert(!r.hata && r.syncId === 'new', 'v3 rotation should advance: ' + JSON.stringify(r));
+  equal(run('D.log[0].slice(3,6)'), [null, null, 2], 'rating-only row must remain rating-only');
+  equal(run('D.konuAnlatilmadi.length'), 1, 'reset metadata must survive rotation');
+  equal(run('D.ogrIslenis[0][3]'), nextWeek, 'reset teaching override must be applied');
+  assert(!run("D.kart['0:3']"), 'pre-reset rating must remain outside the active FSRS epoch');
 });
 
 test('bulutYuvasiCoz-never-advances-past-unimportable-package', async () => {
@@ -1144,6 +1187,21 @@ test('manual-sunucuyaGonder-still-skips-empty-results', async () => {
   equal(writes, 0, 'an empty manual retry must not overwrite the server record');
 });
 
+test('reset-only-sunucuyaGonder-writes-version-3-package', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
+  run('D.islenis[3]=bugunNo()-3; konuAnlatilmadi(0,3,bugunNo())');
+  let payload = null;
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    girisOgrenci: async () => ({ uid: 'student-uid' }),
+    updateDoc: async (_ref, data) => { payload = data; }
+  });
+  equal(await run('sunucuyaGonder()'), 0, 'a reset-only packet has zero score rows');
+  assert(payload && payload.paket && payload.paket.surum === 3, 'the reset must still upload a result package');
+  equal(payload.paket.kayit.length, 0, 'no score row may be fabricated for a reset');
+  equal(payload.paket.konuAnlatilmadi.length, 1, 'the reset event must be uploaded');
+});
+
 test('automatic-cloud-sync-is-student-only-and-keeps-permission-errors-nonfatal', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'rehber');
@@ -1186,7 +1244,7 @@ test('sonucKaydet-click-triggers-automatic-server-write', async () => {
   const soru = { value: '10' };
   const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
     parentElement: { querySelector: () => soru } });
-  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  sandbox.document.querySelectorAll = selector => selector === '[data-sonuc-row]' ? [resultRow(8, 10, 0, gun)] : [];
   run(`EK.ogr = 0; otomatikOlay = null; bildirimler = [];
     sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
     kaydet = async () => true;
@@ -1213,7 +1271,7 @@ test('stalled-upload-does-not-block-the-local-save', async () => {
   const soru = { value: '10' };
   const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
     parentElement: { querySelector: () => soru } });
-  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  sandbox.document.querySelectorAll = selector => selector === '[data-sonuc-row]' ? [resultRow(8, 10, 0, gun)] : [];
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
     girisOgrenci: async () => ({ uid: 'student-uid' }),
     updateDoc: () => new Promise(() => {})
@@ -1245,7 +1303,7 @@ test('failed-local-save-is-not-reported-as-success', async () => {
   const soru = { value: '10' };
   const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
     parentElement: { querySelector: () => soru } });
-  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  sandbox.document.querySelectorAll = selector => selector === '[data-sonuc-row]' ? [resultRow(8, 10, 0, gun)] : [];
   run(`EK.ogr = 0; bildirimler = []; yuklemeSayisi = 0; cizSayisi = 0;
     sonucIsle = (si, kayitlar) => { const k = kayitlar[0]; D.log.push([k.gun,si,k.ki,k.dogru,k.soru,1,k.guncellemeTs]); };
     kaydet = async () => false;
@@ -1272,7 +1330,7 @@ test('result-save-does-not-clobber-navigation-changed-during-local-save', async 
   const soru = { value: '10' };
   const dogru = Object.assign(element(), { value: '8', dataset: { ki: '0', gun: String(gun) },
     parentElement: { querySelector: () => soru } });
-  sandbox.document.querySelectorAll = selector => selector === '.gDogru' ? [dogru] : [];
+  sandbox.document.querySelectorAll = selector => selector === '[data-sonuc-row]' ? [resultRow(8, 10, 0, gun)] : [];
   let kaydiBitir;
   const kayitBekliyor = new Promise(resolve => { kaydiBitir = resolve; });
   sandbox.kayitBekliyor = kayitBekliyor;

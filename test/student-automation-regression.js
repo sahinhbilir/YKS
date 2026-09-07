@@ -20,6 +20,23 @@ const element = () => ({
   setAttribute() {}, appendChild() {}, click() {}, remove() {}, focus() {}, select() {},
   getClientRects() { return [1]; }, closest() { return null; }
 });
+// Current result entry renders one row per topic. Numeric fallback values live in
+// data-sonuc-dogru/data-sonuc-soru descendants, rather than bare .gDogru elements.
+function resultRow(value, soru, ki, gun, slot) {
+  const dogru = Object.assign(element(), { value: String(value) });
+  const soruEl = Object.assign(element(), { value: String(soru) });
+  const numeric = Object.assign(element(), { hidden: false });
+  return Object.assign(element(), {
+    dataset: { ki: String(ki), gun: String(gun), slot: String(slot), deferred: '0' },
+    querySelector(selector) {
+      if (selector === '.sonuc-not.secili') return null;
+      if (selector === '.sonuc-sayisal') return numeric;
+      if (selector === '[data-sonuc-dogru]') return dogru;
+      if (selector === '[data-sonuc-soru]') return soruEl;
+      return null;
+    }
+  });
+}
 const sandbox = {
   console, setTimeout(fn,ms) { timers.push({fn,ms}); return timers.length; }, clearTimeout(id) { if(timers[id-1]) timers[id-1].cancelled=true; }, Blob, URL, URLSearchParams,
   location: { search: '?dev=1' }, Date, Math, JSON, Intl,
@@ -35,7 +52,7 @@ const sandbox = {
     contains() { return true; },
     getElementById(id) { return nodes[id] || null; },
     querySelector() { return null; },
-    querySelectorAll(selector) { return selector === '.gDogru' ? inputRows : selector === '.oRutin' ? (nodes.__routines || []) : []; },
+    querySelectorAll(selector) { return selector === '[data-sonuc-row]' ? inputRows : selector === '.oRutin' ? (nodes.__routines || []) : []; },
     createElement() { return element(); },
     body: { appendChild() {}, insertAdjacentHTML(_where, markup) { this.lastHTML = markup; } }
   }
@@ -69,9 +86,7 @@ function fillPlan(p,h,week=0,limit=Infinity) {
   p.gunler.forEach((a,g)=>a.forEach(x=>{
     if(x.anlatim||x.serbest||inputRows.length>=limit)return;
     const profile=x.ki%5, pct=profile===0?.35:profile===1?Math.min(.95,.50+week*.06):profile===2?.8:profile===3?.96:week===4?.25:.85;
-    inputRows.push(Object.assign(element(),{value:String(Math.round(x.soru*pct)),
-      dataset:{ki:String(x.ki),gun:String(h+g),slot:String(x.slotKi??x.ki)},
-      parentElement:{querySelector(){return {value:String(x.soru)};}}}));
+    inputRows.push(resultRow(Math.round(x.soru*pct), x.soru, x.ki, h + g, x.slotKi ?? x.ki));
   }));
 }
 (async()=>{

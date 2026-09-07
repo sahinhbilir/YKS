@@ -25,6 +25,12 @@ jobs:
         run: node test/student-automation-regression.js
       - name: Mobile backups and print recovery
         run: node test/mobile-export-regression.js
+      - name: Background return preserves the current screen
+        run: node test/visibility-regression.js
+      - name: Learning feedback and lesson postponement
+        run: node test/learning-feedback-regression.js
+      - name: Student recall feedback interactions
+        run: node test/result-feedback-ui-regression.js
       - name: Result-package regression
         run: node test/result-package-regression.js
       - name: Cloud-sync resilience

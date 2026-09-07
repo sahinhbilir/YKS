@@ -10,7 +10,15 @@ Each scheduled test shows its repetition number, previous result date and score,
 
 Detailed editing, topic planning, personal routines, data recovery and algorithm controls remain accessible through Gelişmiş ayarlar. Teacher navigation and manual tools remain available.
 
-Basic settings contain daily test capacity and rest days. They save automatically and affect upcoming plans. The current issued plan stays intact. Each result requires an actual score: blank rows are never scored as correct, incorrect or completed. Saving a partial set stays on that week's results; saving the complete set opens the upcoming plan.
+Basic settings contain daily test capacity and rest days. They save automatically and affect upcoming plans. The current issued plan stays intact. Each result requires an explicit recall rating or an actual score: blank rows are never scored as correct, incorrect or completed. Saving a partial set stays on that week's results; saving the complete set opens the upcoming plan.
+
+## Recall feedback and lessons not yet taught
+
+Students primarily choose Tekrar, Zor, İyi or Kolay. Tekrar means unsuccessful recall; Zor means successful recall with substantial difficulty. İyi means normal recall effort and Kolay means immediate, easy recall. A first-use explanation introduces these choices and can be reopened. Numeric correct/total entry remains an alternative. Rating-only results contain no invented question counts or percentages.
+
+“Bu konu daha anlatılmadı” is a teaching delay, not a failed review. It preserves the issued paper, postpones the student's affected course sequence and starts a new learning attempt for the marked topic. Earlier attempts remain in history but do not train the new attempt. Previously learned other topics retain their FSRS reviews. The next first repetition enters the following plan subject to available capacity and the exam boundary; no unfreeze action is needed.
+
+The rating meanings follow the [FSRS usage guide](https://github.com/open-spaced-repetition/fsrs4anki/blob/main/docs/tutorial.md). Weekly test feedback estimates recall at topic level; it does not guarantee that every topic will remain remembered until the exam.
 
 ## Personal work in the weekly plan
 
@@ -38,9 +46,11 @@ This is workload management, not a guarantee of zero overdue work or measured 90
 
 ## Background result sync
 
-Successful local saves queue background sync. Startup, connection recovery and returning to the tab also check for remote results. A Firestore transaction merges remote scores with the local snapshot before updating the result package, retaining newer corrections and other-device results. Failed sync retries with bounded exponential backoff. A first anonymous legacy-package connection binds its UID without replacing the server's result package. Account changes cancel stale work.
+Successful local saves queue background sync. Startup, connection recovery and returning to the tab also check for remote results. A Firestore transaction merges remote ratings, numeric scores and lesson-delay events with the local snapshot before updating the result package, retaining newer corrections and other-device results. Failed sync retries with bounded exponential backoff. A first anonymous legacy-package connection binds its UID without replacing the server's result package. Account changes cancel stale work.
 
-The UI reports result-sync status, not a claim that every notebook setting or draft has been backed up to the cloud. Local weekly snapshots remain device-local until included in a notebook backup; the existing server result schema is unchanged.
+Returning to the tab on the same day does not replace the page contents. A date change may refresh an idle plan, while result entry, settings and open dialogs retain their unfinished inputs. Background result sync updates its status without replacing the active form.
+
+The UI reports result-sync status, not a claim that every notebook setting or draft has been backed up to the cloud. Local weekly snapshots remain device-local until included in a notebook backup. Result packages use version 3 for ratings and lesson-delay events; version 1 and 2 numeric packages remain importable.
 
 ## Backups and printing on Apple devices
 
@@ -52,6 +62,8 @@ Website printing renders the existing print document in a separate view inside t
 
 ## Scheduling validation
 
-`node test/student-automation-regression.js` exercises eight Sunday-only weeks with deterministic synthetic scores, draft downloads, week transitions, serialization/reload, historical-plan stability, partial results, late joining, missed weeks, catch-up reversal, capacity changes, result merging, retry and account isolation. It also checks historical repetition labels, previous scores, consistent desktop/mobile/print labels, honest progress counts, map navigation and the exam-day countdown. It makes no real Firebase writes. The optional `YKS_BACKUP=/path/to/backup.json` check loads a private backup locally to verify real plans and preservation of existing history; the fixture is never committed. The other four Node regression suites cover teacher compatibility, result packages, cloud behavior and timetable imports. CI runs these five suites plus the mobile export suite.
+`node test/student-automation-regression.js` exercises eight Sunday-only weeks with deterministic synthetic scores, draft downloads, week transitions, serialization/reload, historical-plan stability, partial results, late joining, missed weeks, catch-up reversal, capacity changes, result merging, retry and account isolation. It also checks historical repetition labels, previous scores, consistent desktop/mobile/print labels, honest progress counts, map navigation and the exam-day countdown. It makes no real Firebase writes. The optional `YKS_BACKUP=/path/to/backup.json` check loads a private backup locally to verify real plans and preservation of existing history; the fixture is never committed.
+
+CI runs nine Node suites covering teacher compatibility, student automation, mobile export, tab visibility, recall-feedback interactions, lesson postponement and learning-history epochs, result packages, cloud behavior and timetable imports.
 
 The generated student-plan and settings markup was inspected for primary controls and duplicate IDs. A local-file browser preview was blocked by the browser's URL policy; no visual-browser pass is claimed. Production Firebase App Check behavior still depends on deployment configuration.
