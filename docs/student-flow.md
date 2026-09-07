@@ -12,7 +12,15 @@ Detailed editing, topic planning, personal routines, data recovery and algorithm
 
 Basic settings contain daily test capacity and rest days. They save automatically and affect upcoming plans. The current issued plan stays intact. Each result requires an actual score: blank rows are never scored as correct, incorrect or completed. Saving a partial set stays on that week's results; saving the complete set opens the upcoming plan.
 
-## Plan lifecycle
+## Personal work in the weekly plan
+
+The student plan ends with three optional daily question targets: Karışık Paragraf, Karışık Problem and Karışık Geometri. Selecting a target and entering 1–200 questions saves it automatically. Targets repeat every calendar day, including rest days, until changed or disabled; the UI states this explicitly. Changes begin today or at the start of the selected future week. Dated preference records preserve earlier days and stop at the configured exam date.
+
+Daily mixed practice is added to the displayed and printed plan and CSV, without consuming the automatic scheduler's test capacity or creating FSRS cards. Its question count is shown separately from scheduled test questions. The preferences are part of the notebook backup and student package; result-only cloud sync does not back up these preferences.
+
+At the end, Daha fazla opens the existing manual work dialog for the student's own plan. It includes a custom task name, question/minute count, day selection and topic search, with no Kime selector. New work can be appended to an issued week without reopening or moving its existing rows. Students may remove their own uncompleted additions; existing scheduled work and scored additions cannot be removed through these controls. Specific topic tests enter FSRS through actual results; mixed/free tasks do not.
+
+## Automatic plan lifecycle
 
 1. On opening or saving a student notebook, fill the topic horizon from its class timetable. Teacher packets now include that class's topic plan and timetable. For older packages, use a built-in class timetable only when none is present.
 2. Prepare and persist a lightweight snapshot for the immediately upcoming week in `ogrTaslak`. This is still a live preview and is recomputed after results or settings change.

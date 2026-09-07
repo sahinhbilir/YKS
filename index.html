@@ -103,6 +103,15 @@ table.plan td .k{font-size:12.5px;line-height:1.35;margin-top:1px}
 table.plan td .n{font-size:10.5px;color:var(--soluk);margin-top:3px;font-variant-numeric:tabular-nums}
 table.plan td.dolu{background:var(--kagit)}
 .ozet{margin-top:12px;font-size:13px;color:var(--soluk)}
+.ogr-plan-ekleri{padding:18px;margin-top:22px}.ogr-plan-ekleri h2{font-size:19px}
+.gunluk-ekler{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.gunluk-ek-kutu{border:1px solid var(--cizgi);border-radius:8px;padding:12px;font-size:13px}
+.gunluk-ek-kutu>label:first-child{display:block;font-weight:600;cursor:pointer}
+.gunluk-ek-soru{display:flex;align-items:center;gap:7px;margin-top:10px;color:var(--soluk)}
+.gunluk-ek-soru input{width:70px}.ogr-plan-ekleri details{border-top:1px solid var(--cizgi);padding-top:14px;margin-top:16px}
+.ogr-ek-listesi{padding-left:18px;font-size:13px}.ogr-ek-listesi li{margin-top:8px}
+@media(max-width:620px){.gunluk-ekler{grid-template-columns:1fr}.gunluk-ek-kutu{display:flex;align-items:center;justify-content:space-between;gap:8px}.gunluk-ek-soru{margin:0}}
+@media print{.ogr-plan-ekleri{display:none}}
 #disariAktar{position:fixed;inset:0;z-index:1200;overflow:auto;background:var(--zemin);color:var(--murekkep);padding:20px}
 body.cikti-acik{overflow:hidden}body.cikti-acik>.kabuk{display:none}
 .cikti-arac{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
@@ -1810,7 +1819,67 @@ function tekrarEtiketi(si, x, gun) {
     '<span>' + kacis(b.aciklama) + '</span>' +
     (b.cevap ? '<span class="tekrar-kayit">✓ Sonuç: ' + b.cevap + '</span>' : '') + '</div>';
 }
+const GUNLUK_EK_SECENEKLER = [
+  ['paragraf', 'Karışık Paragraf', 'Türkçe'],
+  ['problem', 'Karışık Problem', 'Matematik TYT'],
+  ['geometri', 'Karışık Geometri', 'Geometri']
+];
+function gunlukEkSorusu(si, tur, gun) {
+  const kayitlar = (((D.ogr[si] || {}).gunlukEk || {})[tur] || []);
+  if (!Array.isArray(kayitlar)) return 0;
+  const uygun = kayitlar.filter(x => Number.isInteger(x.gun) && x.gun <= gun && Number.isInteger(x.soru) && x.soru >= 0 && x.soru <= 200)
+    .sort((a, b) => b.gun - a.gun);
+  return uygun.length ? uygun[0].soru : 0;
+}
+function gunlukEkAyarla(tur, soru) {
+  const bas = Math.max(bugunNo(), haftaBasi());
+  if (!ogrenciMi() || !GUNLUK_EK_SECENEKLER.some(x => x[0] === tur) ||
+      !Number.isInteger(soru) || soru < 0 || soru > 200 || bas >= gunNo(D.ayar.sinav)) return false;
+  const o = D.ogr[EK.ogr]; o.gunlukEk = o.gunlukEk || {};
+  o.gunlukEk[tur] = (Array.isArray(o.gunlukEk[tur]) ? o.gunlukEk[tur] : []).filter(x => x.gun < bas);
+  o.gunlukEk[tur].push({ gun: bas, soru });
+  return true;
+}
+// Daily mixed practice is a dated personal target, not a fabricated FSRS topic/result.
+// Decorate views only: it must not enter frozen slots or consume the scheduler's capacity.
+function gunlukEkliPlan(si, hb, p) {
+  if (p.gunlukEkli) return p;
+  const gunler = p.gunler.map((liste, g) => {
+    const yeni = liste.slice(), gun = hb + g;
+    if (gun >= gunNo(D.ayar.sinav)) return yeni;
+    GUNLUK_EK_SECENEKLER.forEach(([tur, ad, dersAd]) => {
+      const soru = gunlukEkSorusu(si, tur, gun);
+      if (soru) yeni.push({ki:'GUNLUK_' + tur + '_' + gun, serbest:true, gunlukEk:true, ad, dersAd, soru, test:0});
+    });
+    return yeni;
+  });
+  return Object.assign({}, p, {gunler, gunlukEkli:true, toplam:gunler.flat().length});
+}
+function ogrenciPlanEkleri(si, hb, p) {
+  const bas = Math.max(bugunNo(), hb), kapali = hb < buHafta() || bas >= gunNo(D.ayar.sinav);
+  const secenekler = GUNLUK_EK_SECENEKLER.map(([tur, ad]) => {
+    const soru = gunlukEkSorusu(si, tur, bas);
+    return '<div class="gunluk-ek-kutu"><label><input type="checkbox" class="ogrGunlukSec" data-tur="' + tur + '"' +
+      (soru ? ' checked' : '') + (kapali ? ' disabled' : '') + '> ' + ad + '</label>' +
+      '<label class="gunluk-ek-soru">Her gün <input id="ogrGunlukSoru_' + tur + '" class="ogrGunlukSoru" data-tur="' + tur + '" type="number" inputmode="numeric" min="1" max="200" value="' +
+      (soru || 20) + '" aria-label="' + ad + ' günlük soru sayısı"' + (!soru || kapali ? ' disabled' : '') + '> soru</label></div>';
+  }).join('');
+  const ekler = p.gunler.flatMap((liste, g) => liste.filter(x => (p.elle.ogrEk || {})[planSlotAnahtari(x)])
+    .map(x => '<li>' + kacis(GUN_AD[g] + ' · ' + x.ad) + ' · ' + x.soru + (x.birim === 'dakika' ? ' dakika' : ' soru') +
+      (!kapali && hb + g >= bugunNo() && !D.log.some(l => l[1] === si && l[2] === x.ki && l[0] === hb + g)
+        ? ' <button class="dugme mini" data-ogr-ek-sil="' + kacis(planSlotAnahtari(x)) + '">Kaldır</button>' : '') + '</li>')).join('');
+  return '<section class="kart ogr-plan-ekleri"><h2>Günlük soru hedeflerin</h2>' +
+    '<p class="mini">Seç, soru sayını yaz; her gün planına eklensin. Dinlenme günleri dahil. Karışık çalışmalar, konu tekrarlarının yerini almaz.</p>' +
+    '<div class="gunluk-ekler">' + secenekler + '</div><p class="mini">' +
+    (kapali ? 'Geçmiş günlerin hedefleri korunur. Değişiklik yapmak için bu haftaya dön.' :
+      ggyy(bas) + ' tarihinden itibaren otomatik kaydedilir; sonraki haftalarda da devam eder.') + '</p>' +
+    '<details><summary>Daha fazla</summary><p class="mini">Kendi çalışmanı yaz veya konu listesinden seç. Eklediğin çalışmalar günlük yükünü artırır.</p>' +
+    '<button class="dugme" id="ogrManuelEkle"' + (kapali ? ' disabled' : '') + '>Planıma çalışma ekle</button>' +
+    (ekler ? '<ul class="ogr-ek-listesi">' + ekler + '</ul>' : '') + '</details></section>';
+}
+
 function planListesi(si, hb, p, salt) {
+  p = gunlukEkliPlan(si, hb, p);
   let h = '<div class="plan-liste">';
   for (let g = 0; g < 7; g++) {
     const izin = p.off.indexOf(haftaGunu(hb + g)) >= 0;
@@ -1820,10 +1889,10 @@ function planListesi(si, hb, p, salt) {
     h += '<div class="pl-gun' + (gecti ? ' gecti' : '') + (bugun ? ' bugun' : '') + '">' +
       '<div class="pl-bas"><b>' + GUN_AD[g] + '</b><span>' + gg(hb + g) + '</span>' +
       (bugun ? '<em>bugün</em>' : gecti ? '<em>geçti</em>' : '') +
-      (izin ? '<em>izin</em>' : '<span class="pl-yuk">' + (p.gunYuk[g] || 0) + '/' + p.kap + ' test</span>') +
+      (izin ? '<em>' + (liste.some(x => x.gunlukEk) ? 'tekrar izni' : 'izin') + '</em>' : '<span class="pl-yuk">' + (p.gunYuk[g] || 0) + '/' + p.kap + ' test</span>') +
       '</div>' +
       (liste.length ? liste.map((x, i) => '<div class="pl-oge"' +
-          (gecti || salt ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + i +
+          (gecti || salt || x.gunlukEk ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + i +
             '" role="button" tabindex="0" aria-label="' + kacis(GUN_AD[g] + ' ' + x.ad + ' çalışmasını düzenle') + '"') + '>' +
           '<div class="d">' + kacis(dersKisaAd(x.dersAd)) + '</div>' +
           '<div class="k">' + kacis(x.ad) + '</div>' + tekrarEtiketi(si, x, hb + g) +
@@ -1835,6 +1904,7 @@ function planListesi(si, hb, p, salt) {
 }
 
 function planTablosu(si, hb, p, tumu, salt) {
+  p = gunlukEkliPlan(si, hb, p);
   const enCok = Math.max(salt ? 1 : 8, ...p.gunler.map(g => g.length));
   let h = '<div class="sayfa' + (tumu ? ' tumu-sayfa' : '') + '"><div class="sayfa-ust">' +
     '<div class="isim">' + kacis(D.ogr[si].ad) + '</div>' +
@@ -1845,7 +1915,7 @@ function planTablosu(si, hb, p, tumu, salt) {
     const gecti = !tumu && gunGecti(hb, g), bugun = !tumu && bugunMu(hb, g);
     h += '<th class="' + (tatil ? 'tatil ' : '') + (gecti ? 'gecti ' : '') + (bugun ? 'bugun' : '') + '">' +
       GUN_AD[g].toUpperCase() + '<br>' + gg(hb + g) +
-      (tatil ? ' · izin' : '') + (bugun ? ' · bugün' : gecti ? ' · geçti' : '') + '</th>';
+      (tatil ? (p.gunler[g].some(x => x.gunlukEk) ? ' · tekrar izni' : ' · izin') : '') + (bugun ? ' · bugün' : gecti ? ' · geçti' : '') + '</th>';
   }
   h += '</tr></thead><tbody>';
   for (let s2 = 0; s2 < enCok; s2++) {
@@ -1856,7 +1926,7 @@ function planTablosu(si, hb, p, tumu, salt) {
       const hucreEtiketi = x
         ? GUN_AD[g] + ' ' + x.ad + ' çalışmasını düzenle'
         : GUN_AD[g] + ' ' + (s2 + 1) + '. boş sıraya çalışma ekle';
-      const kilit = (tumu || gecti || salt) ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + s2 +
+      const kilit = (tumu || gecti || salt || (x && x.gunlukEk)) ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + s2 +
         '" role="button" tabindex="0" aria-label="' + kacis(hucreEtiketi) + '"';
       if (!x) { h += '<td class="bos' + (gecti ? ' gecti' : '') + '"' + kilit + '></td>'; continue; }
       // Sonraki sonuçlar, bu güne ait tekrar numarasını değiştirmesin.
@@ -1867,8 +1937,8 @@ function planTablosu(si, hb, p, tumu, salt) {
       const modEk = (!x.serbest && x.R !== null && x.R !== undefined)
         ? ' · %' + Math.round(x.R * 100) + ' hatırlama' : '';
       h += '<td class="dolu' + (gecti ? ' gecti' : '') + (x.anlatim ? ' anlatim' : '') + '"' + kilit +
-        (tumu || EK.toplu || gecti || salt ? '' : ' draggable="true"') + '>' +
-        (!tumu && EK.toplu ? '<label class="topluEtiket"><input type="checkbox" class="topluKutu" data-slot="' +
+        (tumu || EK.toplu || gecti || salt || x.gunlukEk ? '' : ' draggable="true"') + '>' +
+        (!tumu && EK.toplu && !x.gunlukEk ? '<label class="topluEtiket"><input type="checkbox" class="topluKutu" data-slot="' +
           kacis(planSlotAnahtari(x)) + '"> seç</label>' : '') +
         '<div class="d">' + kacis(dersKisaAd(x.dersAd)) + '</div><div class="k">' + kacis(x.ad) + '</div>' +
         (salt ? tekrarEtiketi(si, x, hb + g) : '') +
@@ -1935,6 +2005,7 @@ function varsayilanKonuPlaniniHazirla(sube, alan) {
 }
 
 function hedefOgrenciler() {
+  if (ogrenciMi()) return [EK.ogr];
   if (PENCERE && duzenlemeAcik(haftaBasi(), EK.ogr)) return [EK.ogr];
   const kap = PENCERE && PENCERE.kapsam;
   if (kap === 'sube') { const su = D.ogr[EK.ogr].sube; return kullananlar().filter(i => D.ogr[i].sube === su); }
@@ -2196,8 +2267,58 @@ function kopyaEkle(si, hb, ad, ders, soru, g, s, birim) {
   dondur(si, hb, p);
 }
 
+// Append student-requested work without reopening or rearranging issued FSRS rows.
+function ogrenciElleEkle(si, hb, secim, asil) {
+  if (!ogrenciMi() || si !== EK.ogr || hb < buHafta()) return 0;
+  const gunler = [...new Set(secim)].filter(g => Number.isInteger(g) && g >= 0 && g < 7 &&
+    hb + g >= bugunNo() && hb + g < gunNo(D.ayar.sinav)).sort((a,b) => a-b);
+  if (!gunler.length) return 0;
+  if (asil.tur !== 'serbest' && !konuAl(asil.ki)) return 0;
+  const p = planHesapla(si, hb), ov = elleAl(si, hb, true);
+  ov.yer = ov.yer || {}; ov.soru = ov.soru || {}; ov.ogrEk = ov.ogrEk || {};
+  let adet = 0;
+  gunler.forEach((g, i) => {
+    // A lesson uses its topic ID in the existing format; never replace an existing assignment.
+    if (asil.tur === 'anlatim' && (p.gunler.flat().some(x => x.ki === asil.ki) || adet)) return;
+    let n = 1; while (ov.yer['OGREK' + n] || (ov.serbest || {})['OGREK' + n] || (ov.konuSlot || {})['OGREK' + n]) n++;
+    const slot = asil.tur === 'anlatim' ? String(asil.ki) : 'OGREK' + n;
+    if (asil.tur === 'anlatim') {
+      ov.anlatim = ov.anlatim || {}; ov.anlatim[slot] = {kaynak:asil.kaynak || ''};
+      ov.sil = (ov.sil || []).filter(k => k !== asil.ki);
+    } else if (asil.tur === 'konu' && i === 0) {
+      // Two entries for the same topic/date would share one result, so keep them distinct by day.
+      if (p.gunler[g].some(x => !x.serbest && x.ki === asil.ki)) return;
+      ov.konuSlot = ov.konuSlot || {}; ov.konuSlot[slot] = {ki:asil.ki};
+      ov.soru[slot] = asil.soru || D.ayar.soru;
+    } else {
+      ov.serbest = ov.serbest || {};
+      ov.serbest[slot] = {ad:asil.ad, ders:asil.ders || '', soru:asil.soru || D.ayar.soru,
+        birim:asil.birim || '', kopya:asil.tur === 'konu'};
+    }
+    ov.yer[slot] = [g, p.gunler[g].length]; ov.ogrEk[slot] = true;
+    if (ov.plan && Array.isArray(ov.plan.slotlar)) ov.plan.slotlar[g].push(slot);
+    adet++;
+  });
+  if (!adet) bilgiVer('Bu konu seçtiğin planda zaten var. Başka bir gün veya çalışma seçebilirsin.');
+  return adet;
+}
+function ogrenciElleKaldir(slot) {
+  const si = EK.ogr, hb = haftaBasi(), ov = elleAl(si, hb), p = planHesapla(si, hb);
+  if (!ogrenciMi() || !(ov.ogrEk || {})[slot]) return false;
+  let bulunan;
+  p.gunler.forEach((l,g) => l.forEach(x => {if (String(planSlotAnahtari(x)) === slot) bulunan = {x,g};}));
+  if (!bulunan || hb + bulunan.g < bugunNo() || D.log.some(l => l[1] === si && l[2] === bulunan.x.ki && l[0] === hb + bulunan.g)) return false;
+  delete ov.yer[slot]; delete ov.soru[slot]; delete ov.ogrEk[slot];
+  if (ov.serbest) delete ov.serbest[slot];
+  if (ov.konuSlot) delete ov.konuSlot[slot];
+  if (ov.anlatim) delete ov.anlatim[slot];
+  if (ov.plan && Array.isArray(ov.plan.slotlar)) ov.plan.slotlar = ov.plan.slotlar.map(l => l.filter(k => String(k) !== slot));
+  return true;
+}
+
 // bir öğeyi seçilen günlere dağıtır: ilk gün aslı, diğerleri "ek çözüm" kopyası
 function gunlereDagit(si, hb, secim, asil) {
+  if (ogrenciMi() && PENCERE && PENCERE.ogrenciEkle) return ogrenciElleEkle(si, hb, secim, asil);
   const gunler = secim.filter(g => !gunGecti(hb, g)).sort((a, b) => a - b);
   if (!gunler.length) return;
   gunler.forEach((g, i) => {
@@ -2318,6 +2439,7 @@ function ogrenciHaftaSecici() {
 }
 function gorunumOgrenciPlan() {
   const si = EK.ogr, hb = haftaBasi(), p = planHesapla(si, hb), o = D.ogr[si];
+  const gorunen = gunlukEkliPlan(si, hb, p), ekSoru = gorunen.gunler.flat().filter(x => x.gunlukEk).reduce((n,x) => n + x.soru, 0);
   const gelecek = hb > buHafta(), gecmis = hb < buHafta(), z = ogrenciHaftaOzeti(si, hb, p);
   const sorular = p.gunler.flat().reduce((n, x) => n + (x.anlatim || x.birim === 'dakika' ? 0 : x.soru || 0), 0);
   return '<div class="ogrenci-plan">' + ogrenciYksYolu(false) +
@@ -2333,15 +2455,15 @@ function gorunumOgrenciPlan() {
     (EK.ogrOtoHata ? '<p role="alert">' + kacis(EK.ogrOtoHata) + '</p>' : '') +
     '<div class="arac"><button class="dugme birincil" data-sekme="giris">Sonuç gir</button>' +
     '<button class="dugme" id="yazdirOnizle">Planı indir / PDF</button></div>' +
-    '<p class="mini">' + p.testToplam + ' test · ' + sorular + ' soru · günde en fazla ' + p.kap + ' test' +
+    '<p class="mini">' + p.testToplam + ' plan testi · ' + sorular + ' soru' + (ekSoru ? ' + ' + ekSoru + ' günlük hedef sorusu' : '') + ' · otomatik plan sınırın günde ' + p.kap + ' test' +
     (p.off.length ? ' · dinlenme: ' + p.off.map(g => GUN_AD[g]).join(', ') : '') + '</p>' +
     '<p class="tekrar-rehber"><b>1. tekrar: ilk ölçüm. 2. tekrar ve sonrası: aralıklı tekrar.</b> ' +
     'Doğru sayıların FSRS’ye bir sonraki tekrar zamanını hesaplatır. Bir konu için yazılan “2 test”, aynı tekrarın soru yüküdür.</p>' +
     (p.devreden ? '<p class="mini">' + p.devreden + ' çalışma bu haftaya sığmadı; sonraki planlarda yeniden değerlendirilir. Günlük sınırın korunur.</p>' : '') +
-    (!p.toplam ? '<div class="kart" style="padding:20px">' +
+    (!gorunen.toplam ? '<div class="kart" style="padding:20px">' +
       (bugunNo() >= gunNo(D.ayar.sinav) ? 'Program dönemi tamamlandı. Sonuçlarını Karnem bölümünde görebilirsin.' :
        'Bu hafta için çalışma yok. Gelecek haftanın planını kontrol edebilirsin.') + '</div>' :
-      planTablosu(si, hb, p, false, true)) + '</div>';
+      planTablosu(si, hb, p, false, true)) + ogrenciPlanEkleri(si, hb, p) + '</div>';
 }
 function gorunumPlan() {
   if (ogrenciMi() && !EK.ogrenciDetay && !duzenlemeKaydi()) return gorunumOgrenciPlan();
@@ -4397,7 +4519,7 @@ function dosyaAdiParcasi(v, yedek) {
 }
 
 function csvOlustur(si, hb) {
-  const p = planHesapla(si, hb);
+  const p = gunlukEkliPlan(si, hb, planHesapla(si, hb));
   const enCok = Math.max(8, ...p.gunler.map(g => g.length));
   const satir = [];
   satir.push([D.ogr[si].ad, ggyy(hb) + ' - ' + ggyy(hb + 6)]);
@@ -5249,14 +5371,14 @@ function yazdirCSS() {
 }
 
 function yazdirSayfa(si, hb) {
-  const p = planHesapla(si, hb), o = D.ogr[si], a = D.anlasma || {};
+  const p = gunlukEkliPlan(si, hb, planHesapla(si, hb)), o = D.ogr[si], a = D.anlasma || {};
   const enCok = Math.max(1, ...p.gunler.map(x => x.length));
   const anlasmaVar = a.aktif !== false;
   let h = '<div class="syf"><div class="ust"><b>' + kacis(o.ad) + '</b><span>' +
     ggyy(hb) + ' – ' + ggyy(hb + 6) + '</span></div><div class="orta"><table><tr><th style="width:7mm">Sıra</th>';
   for (let g = 0; g < 7; g++) {
     const izin = p.off.indexOf(haftaGunu(hb + g)) >= 0;
-    h += '<th>' + GUN_AD[g].toUpperCase() + '<br>' + gg(hb + g) + (izin ? ' · izin' : '') + '</th>';
+    h += '<th>' + GUN_AD[g].toUpperCase() + '<br>' + gg(hb + g) + (izin ? (p.gunler[g].some(x => x.gunlukEk) ? ' · tekrar izni' : ' · izin') : '') + '</th>';
   }
   h += '</tr>';
   for (let r = 0; r < enCok; r++) {
@@ -5524,6 +5646,19 @@ function cizIc() {
 
 // --- konu penceresi ve sürükleme
 document.addEventListener('click', async ev => {
+  if (ev.target.id === 'ogrManuelEkle' && ogrenciMi()) {
+    const hb = haftaBasi(), g = Math.max(0, bugunNo() - hb);
+    if (g > 6 || hb + g >= gunNo(D.ayar.sinav)) return;
+    const p = planHesapla(EK.ogr, hb);
+    PENCERE_ONCESI = ev.target;
+    PENCERE = {g, s:p.gunler[g].length, arama:'', ogrenciEkle:true, kapsam:'ogrenci'};
+    pencereCiz(); return;
+  }
+  const ogrEkSil = ev.target.closest('[data-ogr-ek-sil]');
+  if (ogrEkSil && ogrenciMi()) {
+    if (ogrenciElleKaldir(ogrEkSil.dataset.ogrEkSil)) { await kaydet(true); ciz(); }
+    return;
+  }
   const ciktiDugme = ev.target.closest('#ciktiKapat,#ciktiYazdir,#yedekKopyala');
   if (ciktiDugme) {
     if (ciktiDugme.id === 'ciktiKapat') disariAktarmayiKapat();
@@ -6604,6 +6739,16 @@ document.addEventListener('input', ev => {
 
 document.addEventListener('change', async ev => {
   const el = ev.target;
+  if (ogrenciMi() && (el.classList.contains('ogrGunlukSec') || el.classList.contains('ogrGunlukSoru'))) {
+    const tur = el.dataset.tur, secim = el.classList.contains('ogrGunlukSec');
+    const alan = secim ? document.getElementById('ogrGunlukSoru_' + tur) : el;
+    const soru = secim && !el.checked ? 0 : +(alan ? alan.value : 20);
+    if ((!secim || el.checked) && (!Number.isInteger(soru) || soru < 1 || soru > 200)) {
+      bilgiVer('Günlük soru sayısı 1–200 arasında tam sayı olmalı.'); return;
+    }
+    if (gunlukEkAyarla(tur, soru)) { await kaydet(true); ciz(); }
+    return;
+  }
   if (ogrenciMi() && (el.id === 'ogrOtoTelafi' || el.id === 'ogrDengeliYuk')) {
     const o = D.ogr[0];
     EK.gelismisAcik = true;
