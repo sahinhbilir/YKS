@@ -163,7 +163,7 @@ body.cikti-acik{overflow:hidden}body.cikti-acik>.kabuk{display:none}
 @media(max-width:600px){
   .yks-yolu{padding:15px}.yol-baslik h2{font-size:25px}.yol-baslik h2 span{display:block;font-size:14px}
   .hafta-ozeti{gap:6px}.hafta-ozeti>div{padding:2px 8px}.hafta-ozeti strong{font-size:24px}
-  .hafta-ozeti small{display:none}.hafta-ozeti span{font-size:12px}.yol-link{margin-left:0}
+  .hafta-ozeti small{display:none}.hafta-ozeti span{font-size:12px}.yol-link{margin-left:auto}
 }
 @media print{.yks-yolu,.hafta-ozeti,.tekrar-rehber{display:none}.tekrar-bilgi b{color:#111;background:none;border:1px solid #bbb}.tekrar-bilgi span{color:#444}}
 .plan-duzen{display:grid;grid-template-columns:1fr 210px;gap:12px;align-items:start}
@@ -546,7 +546,7 @@ window.bulut = { db, doc, getDoc, setDoc, updateDoc, runTransaction, collection,
 <body>
 <div class="kabuk">
   <nav class="ray" id="ray" aria-label="Ana menü">
-    <div class="marka">YKS Tekrar Defteri<small>Aralıklı tekrar · FSRS-6</small></div>
+    <div class="marka">YKS Tekrar Defteri<small>Aralıklı tekrar</small></div>
   </nav>
   <main id="ana" tabindex="-1"></main>
 </div>
@@ -2615,8 +2615,8 @@ function ogrenciYksYolu(detay) {
   let h = '<section class="yks-yolu kart" aria-label="YKS’ye kalan zaman ve haftalar haritası">' +
     '<div class="yol-baslik"><div><div class="etiket">YKS’ye giden yol</div><h2>' +
     (kalan ? Math.floor(kalan / 7) + ' hafta <span>' + kalan % 7 + ' gün kaldı</span>' : 'Sınav günü' + (bugun > sinav ? ' geride kaldı' : ' geldi')) +
-    '</h2></div><div class="yol-tarih">' + ggyy(sinav) + '<br><span>Ayarlardaki YKS tarihi</span></div></div>' +
-    '<p class="mini">' + Math.min(gecen, Math.ceil((sinav - bas) / 7)) + ' hafta geride kaldı. Her kutu hazırlık dönemindeki bir hafta.</p>' +
+    '</h2></div>' + (detay ? '<div class="yol-tarih">' + ggyy(sinav) + '<br><span>Ayarlardaki YKS tarihi</span></div>' : '') + '</div>' +
+    (detay ? '<p class="mini">' + Math.min(gecen, Math.ceil((sinav - bas) / 7)) + ' hafta geride kaldı. Her kutu hazırlık dönemindeki bir hafta.</p>' : '') +
     '<div class="yol-haftalar' + (detay ? ' detay' : '') + '">';
   // The map records evidence, never infers that one score means a completed week.
   for (let gun = bas; gun <= sinav; gun += 7) {
@@ -2633,8 +2633,8 @@ function ogrenciYksYolu(detay) {
       (simdi ? 'Bu hafta' : adet ? adet + ' sonuç' : gun < hb ? 'Kayıt yok' : son ? 'YKS' : 'Önümüzde') + '</small>' : '') +
       '</' + (acilir ? 'button' : 'span') + '>';
   }
-  return h + '</div><div class="yol-anahtar"><span>● Sonuç kaydı var</span><span>○ Kayıt yok / önümüzde</span>' +
-    '<span>Çerçeve: seçili hafta · ★ YKS</span>' + (!detay ? '<button class="yol-link" data-sekme="harita">Haftalar haritası →</button>' : '') +
+  return h + '</div><div class="yol-anahtar">' + (detay ? '<span>● Sonuç kaydı var</span><span>○ Kayıt yok / önümüzde</span>' +
+    '<span>Çerçeve: seçili hafta · ★ YKS</span>' : '<button class="yol-link" data-sekme="harita">Haftalar haritası →</button>') +
     '</div>' + (detay ? '<p class="mini">Bir sonuç kaydı, haftanın tamamlandığı anlamına gelmez. Geçmiş bir haftaya dokunarak planını ve sonuçlarını açabilirsin. Gelecek haftaların tekrarları, yeni sonuçların geldikçe belirlenir.</p>' : '') + '</section>';
 }
 function ogrenciHaftaSecici() {
@@ -2644,27 +2644,16 @@ function ogrenciHaftaSecici() {
     '<span>' + ggyy(hb) + ' – ' + ggyy(hb + 6) + '</span></div>';
 }
 function gorunumOgrenciPlan() {
-  const si = EK.ogr, hb = haftaBasi(), p = planHesapla(si, hb), o = D.ogr[si];
-  const gorunen = gunlukEkliPlan(si, hb, p), ekSoru = gorunen.gunler.flat().filter(x => x.gunlukEk).reduce((n,x) => n + x.soru, 0);
-  const gelecek = hb > buHafta(), gecmis = hb < buHafta(), z = ogrenciHaftaOzeti(si, hb, p);
-  const sorular = p.gunler.flat().reduce((n, x) => n + (x.anlatim || x.birim === 'dakika' ? 0 : x.soru || 0), 0);
+  const si = EK.ogr, hb = haftaBasi(), p = planHesapla(si, hb);
+  const gorunen = gunlukEkliPlan(si, hb, p);
+  const gelecek = hb > buHafta(), gecmis = hb < buHafta();
   return '<div class="ogrenci-plan">' + ogrenciYksYolu(false) +
-    '<div class="baslik"><h1>' + (gelecek ? 'Gelecek haftan' : gecmis ? 'Geçmiş haftan' : 'Haftalık planın') + '</h1><p>' +
-    (gelecek ? 'Sonuçların geldikçe güncellenir. Hafta başladığında kendiliğinden kaydedilir.' :
-      'Çalışmalarını tamamla, konuyu ne kadar hatırladığını seç veya doğru / soru sayısıyla gir; gerisini biz hazırlayalım.') + '</p></div>' +
+    '<div class="baslik"><h1>' + (gelecek ? 'Gelecek haftan' : gecmis ? 'Geçmiş haftan' : 'Haftalık planın') + '</h1>' +
+    (gelecek ? '<p>Sonuçların geldikçe güncellenir. Hafta başladığında kendiliğinden kaydedilir.</p>' : '') + '</div>' +
     ogrenciHaftaSecici() +
-    '<div class="hafta-ozeti" aria-label="Haftanın çalışma dağılımı">' +
-    '<div><strong>' + z.tekrar + '</strong><span>aralıklı tekrar</span><small>Önceden ölçtüğün konuları koru</small></div>' +
-    '<div><strong>' + z.ilk + '</strong><span>ilk ölçüm</span><small>Bu konularda tekrar takibini başlat</small></div>' +
-    '<div><strong>' + z.girilen + '<i> / ' + z.toplam + '</i></strong><span>konu sonucu kaydedildi</span>' +
-    '<small>' + (gelecek ? 'Bu plan sonuçlarınla güncellenir' : z.toplam && z.girilen === z.toplam ? 'Planındaki tüm test sonuçları kaydedildi' : 'Çözdükçe veya pazar günü gir') + '</small></div></div>' +
     (EK.ogrOtoHata ? '<p role="alert">' + kacis(EK.ogrOtoHata) + '</p>' : '') +
     '<div class="arac"><button class="dugme birincil" data-sekme="giris">Sonuç gir</button>' +
     '<button class="dugme" id="yazdirOnizle">Planı indir / PDF</button></div>' +
-    '<p class="mini">' + p.testToplam + ' plan testi · ' + sorular + ' soru' + (ekSoru ? ' + ' + ekSoru + ' günlük hedef sorusu' : '') + ' · otomatik plan sınırın günde ' + p.kap + ' test' +
-    (p.off.length ? ' · dinlenme: ' + p.off.map(g => GUN_AD[g]).join(', ') : '') + '</p>' +
-    '<p class="tekrar-rehber"><b>1. tekrar: ilk ölçüm. 2. tekrar ve sonrası: aralıklı tekrar.</b> ' +
-    'Doğru sayıların FSRS’ye bir sonraki tekrar zamanını hesaplatır. Bir konu için yazılan “2 test”, aynı tekrarın soru yüküdür.</p>' +
     (p.devreden ? '<p class="mini">' + p.devreden + ' çalışma bu haftaya sığmadı; sonraki planlarda yeniden değerlendirilir. Günlük sınırın korunur.</p>' : '') +
     (!gorunen.toplam ? '<div class="kart" style="padding:20px">' +
       (bugunNo() >= gunNo(D.ayar.sinav) ? 'Program dönemi tamamlandı. Sonuçlarını Karnem bölümünde görebilirsin.' :
@@ -5844,7 +5833,7 @@ const SEKMELER = () => ogrenciMi() ? SEKME_OGRENCI : SEKME_REHBER;
 function rayCiz() {
   const ray = document.getElementById('ray');
   ray.innerHTML = '<div class="marka">YKS Tekrar Defteri<small>' +
-    (D && D.kurum ? kacis(D.kurum) : 'Aralıklı tekrar · FSRS-6') + '</small></div>' +
+    (D && D.kurum ? kacis(D.kurum) : 'Aralıklı tekrar') + '</small></div>' +
     SEKMELER().map(s => '<button data-sekme="' + s[0] + '"' + (EK.sekme === s[0] ? ' aria-current="page"' : '') + '>' + s[1] + '</button>').join('') +
     '<div class="bosluk"></div><div class="durum" role="status" aria-live="polite">' +
     (EK.kirli ? '<b>kaydedilmemiş değişiklik</b>' : kacis(ogrenciMi() ? (EK.ogrSyncDurum || EK.son || 'Planın hazır') : (EK.son || 'hazır'))) + '</div>';
