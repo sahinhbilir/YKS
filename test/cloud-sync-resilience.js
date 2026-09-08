@@ -863,6 +863,7 @@ test('student-login-persistence-failure-stays-visible-after-rollback-redraw', as
     set(markup) {
       ['ogrenciGirisAd', 'ogrenciGirisNo', 'ogrenciGirisDurum', 'ogrenciBulutGiris'].forEach(id => { delete nodes[id]; });
       for (const m of String(markup).matchAll(/id="([^"]+)"/g)) nodes[m[1]] = element();
+      if (nodes.ogrenciGirisAlan) nodes.ogrenciGirisAlan.hidden = true;
     }, get() { return ''; }
   });
   run('ciz()');
@@ -882,12 +883,63 @@ test('student-login-persistence-failure-stays-visible-after-rollback-redraw', as
   await listeners.click[0]({ target: oldButton });
   equal(run('D.rol'), null, 'failed persistence must restore the pre-login state');
   assert(nodes.ogrenciBulutGiris !== oldButton, 'rollback must exercise the real redraw path');
+  assert(nodes.ogrenciGirisAlan.hidden === false, 'the redrawn login panel must be open so its error is visible');
   assert(/kaydedilemedi/.test(nodes.ogrenciGirisDurum.textContent), 'the current status node must show the persistence error');
   assert(nodes.ogrenciBulutGiris.disabled === false && nodes.ogrenciBulutGiris.textContent === 'Giriş yap',
     'the current login button must be enabled again');
   equal([nodes.ogrenciGirisAd.value, nodes.ogrenciGirisNo.value], ['Şahin Bilir', '1699'],
     'entered identity fields must survive the redraw');
   assert(!('href' in sandbox.location), 'login failure must not navigate');
+});
+
+test('student-login-restores-reset-with-local-course-label-and-new-custom-peer', async () => {
+  for (const [course, label, legacy] of [[1, 'Matematik TYT', false], [0, 'Türkçe', false], [1, 'Matematik TYT', true], [7, 'Coğrafya AYT', true]]) {
+    const { sandbox, run } = loadAppSandbox();
+    resetOgr(sandbox, [student({ no: 42, ad: 'Ada', syncId: 'student-sync',
+      ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })], 'ogrenci');
+    sandbox.course = course; sandbox.courseLabel = label;
+    run(`D.ayar.testTarih = '2026-09-09';
+      D.ekKonular = [[course,12,'Özel','İlk özel konu',0,'']];
+      D.konuDers[KATALOG.length] = courseLabel;
+      D.konuPlani['12A'] = [{[courseLabel]:['İlk özel konu','Sonradan eklenen konu']}];
+      D.islenis[KATALOG.length] = buHafta()-7;
+      sonucIsle(0,[{ki:KATALOG.length,gun:buHafta()-4,not:3,dogru:null,soru:null}]);`);
+    const account = run('ogrenciPaketi(0)');
+    // A topic added on the previous device after the teacher published the account
+    // has subject/name metadata, but no display label in the v3 result packet.
+    run(`D.ekKonular.push([course,12,'Özel','Sonradan eklenen konu',0,'']);
+      D.konuDers[KATALOG.length+1] = courseLabel;
+      D.islenis[KATALOG.length+1] = buHafta()-6;
+      konuAnlatilmadi(0,KATALOG.length,bugunNo());`);
+    const results = run('sonucPaketi()');
+    if (legacy) Object.values(results.konular).forEach(k => k.splice(2));
+    results.kayit = results.kayit.map(k => ({g:k[0],k:k[1],d:k[2],s:k[3],n:k[4],t:k[5]}));
+    run('D = varsayilan(); D.rol = null;');
+    let uploaded;
+    sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+      doc: (_db, coll, id) => coll + '/' + id,
+      girisOgrenciHesabi: async () => ({uid:'student-account-42'}),
+      girisOgrenci: async () => ({uid:'student-account-42'}),
+      getDoc: async ref => ref === 'ogrenciHesaplari/student-account-42'
+        ? docSnap(true, {aktif:true,veri:JSON.stringify(account),syncId:'student-sync'})
+        : docSnap(true, {durum:'aktif',bagliUid:'student-account-42',ogrenciBulutId:'cloud-1',
+          ogrenciNo:42,ogrenciAd:'Ada',ogrenciSube:'12A',paket:results}),
+      updateDoc: async (_ref, data) => { uploaded = data; }, setDoc: async () => {}
+    });
+    await run("ogrenciHesabindanYukle('Ada',42)");
+    equal(run('D.rol'), 'ogrenci', 'valid postponed topics must not block login');
+    equal(run('D.log.length'), 1, 'the earlier attempt stays in history');
+    equal(run('D.konuAnlatilmadi.length'), 1, 'the reset must survive login');
+    equal(run('aktifSonucKayitlari(0,KATALOG.length).length'), 0, 'old attempt stays outside active FSRS');
+    equal(run('D.ogrIslenis[0][konuBulTamEslesme(course,"Sonradan eklenen konu")]'),
+      results.konuAnlatilmadi[0].overrides[run('KATALOG.length+1')], 'the new peer retains its shifted date');
+    await run('sunucuyaGonder()');
+    equal(uploaded.paket.kayit.length, 1, 'first sync must preserve the earlier attempt');
+    equal(uploaded.paket.konuAnlatilmadi.length, 1, 'first sync must preserve the reset');
+    run(`D.ayar.testTarih='2026-09-16';
+      sonucIsle(0,[{ki:KATALOG.length,gun:bugunNo(),not:3,dogru:null,soru:null}]);`);
+    equal(run("D.kart['0:'+KATALOG.length].n"), 1, 'next actual attempt starts at first repetition');
+  }
 });
 
 test('student-account-login-merges-existing-server-results-before-first-upload', async () => {

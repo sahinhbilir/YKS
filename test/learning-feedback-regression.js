@@ -37,6 +37,57 @@ const out=vm.runInContext(`(()=>{
  t('after-exam-v3-imports-history-but-keeps-content-bounds',()=>{reset('2026-09-16');D.ayar.sinav='2026-09-30';D.islenis[same[0]]=mon-14;D.islenis[same[1]]=mon-13;sonucIsle(0,[{ki:same[0],gun:mon-6,dogru:8,soru:10},{ki:same[1],gun:mon-5,not:2,dogru:null,soru:null}]);konuAnlatilmadi(0,same[0],mon+9);D.ayar.testTarih='2026-10-05';const p=sonucPaketi();a(p.tarih>=gunNo(D.ayar.sinav),'after-exam fixture');reset('2026-10-05','rehber');D.ayar.sinav='2026-09-30';sonucPaketiUygula(p);eq(D.log.map(l=>l.slice(3,6)),[[8,10,3],[null,null,2]],'old results');eq(D.konuAnlatilmadi.length,1,'reset history');const stable=JSON.stringify(D),sinav=gunNo(D.ayar.sinav);for(const bad of [Object.assign({},p,{kayit:p.kayit.concat([[sinav,same[2],8,10,3,9999]])}),Object.assign({},p,{tarih:bugunNo()+1}),Object.assign({},p,{konuAnlatilmadi:p.konuAnlatilmadi.map(e=>Object.assign({},e,{ilkTekrarGunu:sinav}))})]){let threw=false;try{sonucPaketiUygula(bad)}catch(e){threw=true}a(threw,'invalid after-exam content');eq(JSON.stringify(D),stable,'atomic bounds')}});
  t('stale-replay-cannot-undo-newer-week-shift',()=>{reset('2026-09-21','rehber');const packet=e=>({tur:'yks-sonuc',surum:3,katalogImza:KATALOG_IMZA,no:1,ad:'Ada',sube:'12-A',tarih:mon+14,olusturmaTs:e.at,kayit:[],konular:{},konuAnlatilmadi:[e]});const old={si:0,ki:same[0],gun:mon,hafta:mon,at:100,kaydirilan:0,ilkTekrarGunu:mon+7,overrides:{[same[0]]:mon+7}},fresh={si:0,ki:same[0],gun:mon+7,hafta:mon+7,at:200,kaydirilan:0,ilkTekrarGunu:mon+14,overrides:{[same[0]]:mon+14}};sonucPaketiUygula(packet(fresh));sonucPaketiUygula(packet(old));eq(D.ogrIslenis[0][same[0]],mon+14,'teaching');eq(erteleAl(0,same[0]),mon+14,'retry');eq(D.konuAnlatilmadi.length,2,'history')});
  t('malformed-reset-packet-is-atomic-before-custom-topic-creation',()=>{reset('2026-09-09','rehber');const sender=KATALOG.length+40,before=JSON.stringify(D),p={tur:'yks-sonuc',surum:3,katalogImza:KATALOG_IMZA,no:1,ad:'Ada',sube:'12-A',tarih:wed,olusturmaTs:500,kayit:[],konular:{[sender]:[0,'Yeni özel']},konuAnlatilmadi:[{si:0,ki:sender,gun:wed,hafta:mon,at:501,kaydirilan:1,ilkTekrarGunu:wed+7,overrides:{[sender]:mon+7,[otherKi]:mon+7}}]};let threw=false;try{sonucPaketiUygula(p)}catch(e){threw=true}a(threw,'must reject');eq(JSON.stringify(D),before,'atomic')});
+ t('tyt-ayt-math-and-geography-have-independent-topic-cards-and-postponements',()=>{
+   for(const subject of ['Matematik','Coğrafya']){
+     reset(); const tyt=subject+' TYT',ayt=subject+' AYT',title=KATALOG.find(k=>k[0]===dersEsle(subject))[3];
+     D.konuPlani['12-A']=[{[tyt]:[title],[ayt]:[title]}];
+     const tk=konuGuneAta('12-A',mon-7,0,tyt,title),ak=konuGuneAta('12-A',mon-7,1,ayt,title);
+     a(tk!==ak,'separate topic identities');
+     a(dersKimligi(konuDersAdi(tk))!==dersKimligi(konuDersAdi(ak)),'separate course labels');
+     sonucIsle(0,[{ki:tk,gun:mon-4,not:2,dogru:null,soru:null},{ki:ak,gun:mon-4,not:4,dogru:null,soru:null}]);
+     const aytCard=JSON.stringify(D.kart['0:'+ak]);
+     konuAnlatilmadi(0,tk,wed);
+     eq(JSON.stringify(D.kart['0:'+ak]),aytCard,'AYT memory unchanged');
+     a(!D.ogrIslenis[0][ak],'AYT lesson must not shift');
+     const p=sonucPaketi();reset('2026-09-09','rehber');
+     sonucPaketiUygula(p);
+     const lt=konuBulTamEslesme(dersEsle(tyt),title,tyt),la=konuBulTamEslesme(dersEsle(ayt),title,ayt);
+     a(lt>=0&&la>=0&&lt!==la,'separate identities after transfer');
+     a(!D.kart['0:'+lt]&&D.kart['0:'+la].n===1,'independent FSRS after transfer');
+     const bad=JSON.parse(JSON.stringify(p));bad.konuAnlatilmadi[0].overrides[ak]=mon+7;
+     const before=JSON.stringify(D);let threw=false;try{sonucPaketiUygula(bad)}catch(e){threw=true}
+     a(threw,'cross-track reset rejected');eq(JSON.stringify(D),before,'rejection atomic');
+     a(dersAdiUyar('TYT '+subject,tyt),'prefix/suffix equivalent');
+     a(!dersAdiUyar(tyt,ayt),'tracks never match');
+   }
+ });
+ t('legacy-catalog-alias-keeps-its-course-through-reexport',()=>{
+   reset();const alias=KATALOG.findIndex(k=>k[0]===2),main=KATALOG.length;
+   D.konuDers[alias]='Matematik TYT';D.ekKonular.push([1,12,'Özel','Matematik konusu',0,'']);
+   D.konuDers[main]='Matematik TYT';D.islenis[main]=mon-7;D.islenis[alias]=mon-6;
+   konuAnlatilmadi(0,main,wed);const p=sonucPaketi();
+   a(yedekDogrula(JSON.parse(JSON.stringify(D))),'backup accepts explicit course scope');
+   reset('2026-09-09','rehber');sonucPaketiUygula(p);
+   const event=D.konuAnlatilmadi[0];a(Object.keys(event.overrides).length===2,'both dates preserved');
+   a(Object.keys(event.overrides).every(ki=>dersKimligi(konuDersAdi(+ki))===dersKimligi('Matematik TYT')),'scope preserved');
+   D.rol='ogrenci';const again=sonucPaketi();reset('2026-09-09','rehber');sonucPaketiUygula(again);
+   eq(D.konuAnlatilmadi.length,1,'can sign in and sync again');
+ });
+ t('legacy-topic-scope-uses-student-curriculum-and-rejects-ambiguity',()=>{
+   reset('2026-09-09','rehber');
+   const ty=kullaniciKonusuTam(1,'Ortak eski konu','Matematik TYT'),ay=kullaniciKonusuTam(1,'Ortak eski konu','Matematik AYT');
+   D.konuPlani['12-A']=[{'Matematik TYT':['Ortak eski konu']}];
+   const sender=KATALOG.length+99,p={tur:'yks-sonuc',surum:2,no:1,ad:'Ada',konular:{[sender]:[1,'Ortak eski konu']},kayit:[[mon,sender,8,10,100]]};
+   sonucPaketiUygula(p);a(D.kart['0:'+ty]&&!D.kart['0:'+ay],'only student course receives result');
+   D.konuPlani['12-A'][0]['Matematik AYT']=['Ortak eski konu'];const before=JSON.stringify(D);
+   let threw=false;try{sonucPaketiUygula(p)}catch(e){threw=true}a(threw,'ambiguous legacy topic cannot be guessed');eq(JSON.stringify(D),before,'atomic');
+ });
+ t('timetable-does-not-fallback-from-tyt-to-ayt',()=>{
+   reset();D.konuPlani['12-A']=[{'Coğrafya TYT':['TYT konu'],'Coğrafya AYT':['AYT konu']}];
+   D.dersProgrami['12-A']={saatler:['09:00'],gunler:[['Coğrafya AYT'],[],[],[],[],[],[]]};
+   const rows=haftaYerlesim('12-A',1);a(rows.length===1&&rows[0].dersAd==='Coğrafya AYT','only scheduled track');
+   a(planDersAnahtari('12-A','Coğrafya')===null,'ambiguous generic subject not guessed');
+ });
  t('legacy-v1-and-v2-numeric-packets-still-import',()=>{for(const version of [1,2]){reset('2026-09-09','rehber');const p={tur:'yks-sonuc',surum:version,no:1,ad:'Ada',sube:'12-A',kayit:[[mon-1,same[0],7,10,123]]};if(version===2){p.katalogImza=KATALOG_IMZA;p.konular={}}sonucPaketiUygula(p);eq(D.log[0].slice(3,6),[7,10,notVer(70,D.ayar.esik)],'v'+version)}});
  const failed=checks.filter(x=>!x.ok); return {passed:checks.length-failed.length,total:checks.length,checks};
 })()`,sandbox);

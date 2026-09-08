@@ -854,7 +854,8 @@ function yedekDogrula(y) {
   const dogrulamaBugun = GELISTIRME_MODU && isoTarihGecerli(y.ayar.testTarih) ? gunNo(y.ayar.testTarih) : bugunNo();
   const yedekKonuDersi = ki => {
     const k = ki < KATALOG.length ? KATALOG[ki] : (y.ekKonular || [])[ki - KATALOG.length];
-    return k && Number.isInteger(k[0]) && DERS[k[0]] !== undefined ? dersKisaAd(DERS[k[0]]) : null;
+    return k && Number.isInteger(k[0]) && DERS[k[0]] !== undefined
+      ? dersKimligi((y.konuDers || {})[ki] || KISA[k[0]]) : null;
   };
   (y.konuAnlatilmadi || []).forEach((e, i) => {
     if (!e || typeof e !== 'object' || Array.isArray(e) || !Number.isInteger(e.si) || e.si < 0 || e.si >= y.ogr.length ||
@@ -1393,7 +1394,7 @@ function konuAnlatilmadi(si, ki, gun, formHafta) {
   const hb = pazartesi(gun), mevcut = resetKayitlari(si, +ki).find(e => e.hafta === hb);
   if (mevcut) return { kaydirilan: mevcut.kaydirilan || 0, ilkTekrarGunu: mevcut.ilkTekrarGunu };
   D.konuAnlatilmadi = D.konuAnlatilmadi || [];
-  const ders = dersKisaAd(konuDersAdi(+ki));
+  const ders = dersKimligi(konuDersAdi(+ki));
   const bas = ogrenciIslenisTarihi(si, +ki);
   const basGun = Number.isInteger(bas) ? bas : gun;
   const yeniIslenisGunu = hb + 7;
@@ -1408,7 +1409,7 @@ function konuAnlatilmadi(si, ki, gun, formHafta) {
   const add = m => Object.keys(m || {}).forEach(k => { if (Number.isInteger(+k)) aday[+k] = m[k]; });
   add(D.islenis); add((D.subeIslenis || {})[(D.ogr[si] || {}).sube]); add(D.ogrIslenis[si]);
   const kursOlaylari = (D.konuAnlatilmadi || []).filter(e => e.si === si && e.hafta === hb &&
-    dersKisaAd(konuDersAdi(e.ki)) === ders);
+    dersKimligi(konuDersAdi(e.ki)) === ders);
   // Aynı ders/haftadaki işaretler tek bir kaydırma kümesi oluşturur. Sonraki işaret,
   // daha önce kaydırılmış konuyu tekrar +7 yapmaz; ancak ilk işaretin başlangıcından
   // önce kaldığı için o zaman görülemeyen yeni konuları kümeye ekleyebilir.
@@ -1416,7 +1417,7 @@ function konuAnlatilmadi(si, ki, gun, formHafta) {
   kursOlaylari.forEach(e => Object.keys(e.overrides || {}).forEach(k => { overrides[k] = e.overrides[k]; }));
   let kaydirilan = 0;
   Object.keys(aday).map(Number).forEach(otherKi => {
-    if (dersKisaAd(konuDersAdi(otherKi)) !== ders || otherKi !== +ki &&
+    if (dersKimligi(konuDersAdi(otherKi)) !== ders || otherKi !== +ki &&
         (D.log || []).some(l => l[1] === si && l[2] === otherKi && !sonucDevreDisiMi(si, otherKi, l[0]))) return;
     const t = Number(aday[otherKi]);
     if (!Number.isInteger(t) || t < basGun) return;
@@ -3213,7 +3214,7 @@ function katilmadanOnceIsle(si) {
     if (!yer.length) continue;
     let eklendi = 0;
     yer.forEach(y => {
-      const ki = kullaniciKonusu(y.dersIdx, y.ad, sayac);
+      const ki = kullaniciKonusu(y.dersIdx, y.ad, sayac, y.dersAd);
       D.konuDers[ki] = D.konuDers[ki] || y.dersAd;
       if (D.ogrIslenis[si][ki] === undefined) { D.ogrIslenis[si][ki] = hb + y.gi; eklendi++; }
     });
@@ -3978,19 +3979,21 @@ function sonucPaketi(sinir) {
   const konular = {};
   kayit.forEach(k => {
     const ki = k[1];
-    if (ki >= KATALOG.length && konular[ki] === undefined) {
+    if ((ki >= KATALOG.length || (D.konuDers || {})[ki]) && konular[ki] === undefined) {
       const kk = konuAl(ki);
       if (!kk) throw new Error('Dışa aktarılacak sonuçta bulunamayan bir özel konu var. Yedeği kontrol edin.');
       const bilgi = sonucKonuBilgisiDogrula(kk[0], kk[3]);
       konular[ki] = [bilgi.dersIdx, bilgi.ad];
+      if ((D.konuDers || {})[ki]) konular[ki].push(D.konuDers[ki]);
     }
   });
   (D.konuAnlatilmadi || []).filter(e => e.si === 0).forEach(e => {
     [e.ki].concat(Object.keys(e.overrides || {}).map(Number)).forEach(ki => {
-      if (ki < KATALOG.length || konular[ki] !== undefined) return;
+      if (ki < KATALOG.length && !(D.konuDers || {})[ki] || konular[ki] !== undefined) return;
       const kk = konuAl(ki);
       if (!kk) throw new Error('Dışa aktarılacak reset kaydında bulunamayan bir özel konu var. Yedeği kontrol edin.');
       const bilgi = sonucKonuBilgisiDogrula(kk[0], kk[3]); konular[ki] = [bilgi.dersIdx, bilgi.ad];
+      if ((D.konuDers || {})[ki]) konular[ki].push(D.konuDers[ki]);
     });
   });
   return { tur: 'yks-sonuc', surum: SONUC_PAKET_SURUM, katalogImza: KATALOG_IMZA,
@@ -4019,21 +4022,50 @@ function sonucKonuBilgisiDogrula(dersIdx, ad) {
     throw new Error('Sonuç paketinde geçersiz konu adı var.');
   return { dersIdx: dersIdx, ad: temizAd };
 }
-function konuBulTamEslesme(dersIdx, ad) {
+function dersKimligi(ad) {
+  let t = String(ad || '').normalize('NFKC').toLocaleUpperCase('tr');
+  const sinav = (t.match(/\b(TYT|AYT|YDT)\b/) || [])[1] || '';
+  t = t.replace(/\b(TYT|AYT|YDT)\b/g, '').replace(/[()]/g, '').trim();
+  t = dersKisaAd(dersBaslik(t)).toLocaleUpperCase('tr').replace(/\s+/g, ' ').trim();
+  return iskelet(t) + (sinav ? ' ' + sinav : '');
+}
+// Legacy packets omitted the course label. Recover it only from an exact,
+// unambiguous topic match in this student's curriculum, never from the subject alone.
+function sonucPlanDersi(si, dersIdx, ad) {
+  const aday = new Map(), plan = (D.konuPlani || {})[(D.ogr[si] || {}).sube] || [];
+  plan.forEach(h => Object.keys(h || {}).forEach(d => {
+    if (dersEsle(d) === dersIdx && (h[d] || []).some(x => konuAdiTamAnahtari(x) === konuAdiTamAnahtari(ad)))
+      aday.set(dersKimligi(d), d);
+  }));
+  if (!aday.size) Object.keys(D.konuDers || {}).forEach(ki => {
+    const k = konuAl(+ki);
+    if (k && !k[6] && k[0] === dersIdx && konuAdiTamAnahtari(k[3]) === konuAdiTamAnahtari(ad))
+      aday.set(dersKimligi(D.konuDers[ki]), D.konuDers[ki]);
+  });
+  if (aday.size > 1) throw new Error('Eski sonuç paketindeki konu birden fazla derste bulunuyor. Güncel cihazdan sonuçları yeniden eşitleyin.');
+  return aday.size === 1 ? Array.from(aday.values())[0] : null;
+}
+function konuBulTamEslesme(dersIdx, ad, dersAd) {
   const t = konuAdiTamAnahtari(ad);
+  let etiketsiz = -1;
   for (let i = 0; i < konuSayisi(); i++) {
     const k = konuAl(i);
-    if (!k || k[6]) continue;
-    if (k[0] === dersIdx && konuAdiTamAnahtari(k[3]) === t) return i;
+    if (!k || k[6] || k[0] !== dersIdx || konuAdiTamAnahtari(k[3]) !== t) continue;
+    if (!dersAd || dersKimligi(konuDersAdi(i)) === dersKimligi(dersAd)) return i;
+    if (!(D.konuDers || {})[i] && etiketsiz < 0) etiketsiz = i;
   }
-  return -1;
+  // The first explicit course assignment may claim an unlabeled topic. An
+  // already labeled TYT/AYT topic is never relabeled to satisfy another track.
+  return etiketsiz;
 }
-function kullaniciKonusuTam(dersIdx, ad) {
+function kullaniciKonusuTam(dersIdx, ad, dersAd) {
   D.ekKonular = D.ekKonular || [];
-  const v = konuBulTamEslesme(dersIdx, ad);
+  const v = konuBulTamEslesme(dersIdx, ad, dersAd);
   if (v >= 0) return v;
   D.ekKonular.push([dersIdx, 12, 'Sonuç paketinden', ad, 0, '']);
-  return KATALOG.length + D.ekKonular.length - 1;
+  const ki = KATALOG.length + D.ekKonular.length - 1;
+  if (dersAd) { D.konuDers = D.konuDers || {}; D.konuDers[ki] = dersAd; }
+  return ki;
 }
 // öğretmen tarafında sonuç paketini işle. hedefSi yalnızca bulut akışının, sabit
 // ogrenciBulutId ile zaten doğruladığı yerel öğrenci indeksidir. Dosya içe aktarma
@@ -4079,6 +4111,15 @@ function sonucPaketiUygula(pk, hedefSi) {
     const bilgi = konular[k];
     if (!Array.isArray(bilgi) || bilgi.length < 2) throw new Error('Sonuç paketinde geçersiz konu eşleştirme bilgisi var.');
     sonucKonuBilgisiDogrula(bilgi[0], bilgi[1]);
+    // Older timetable imports could reuse a catalog title from another subject.
+    // Preserve that historical ID; its explicit lesson label is the transfer scope.
+    // Distinct labels still resolve to distinct topics and cannot share a reset.
+    if (bilgi[2] !== undefined && (typeof bilgi[2] !== 'string' || !bilgi[2].trim() ||
+        bilgi[2].length > 100 || dersEsle(bilgi[2]) < 0))
+      throw new Error('Sonuç paketinde geçersiz ders kimliği var.');
+    if (+k < KATALOG.length && (bilgi[0] !== KATALOG[+k][0] ||
+        konuAdiTamAnahtari(bilgi[1]) !== konuAdiTamAnahtari(KATALOG[+k][3])))
+      throw new Error('Sonuç paketinde katalog konusu eşleşmiyor.');
   });
   if (pk.konuAnlatilmadi !== undefined && !Array.isArray(pk.konuAnlatilmadi))
     throw new Error('Sonuç paketinde geçersiz konu anlatılmadı listesi var.');
@@ -4110,16 +4151,22 @@ function sonucPaketiUygula(pk, hedefSi) {
     if (!Number.isInteger(senderKi) || senderKi < 0)
       throw new Error('Sonuç paketinde geçersiz konu numarası var' + (baglam ? ': ' + baglam : '') + '.');
     if (cozum[senderKi] !== undefined) return cozum[senderKi];
-    if (senderKi < KATALOG.length) return (cozum[senderKi] = { tur: 'katalog', ki: senderKi });
+    if (senderKi < KATALOG.length && !(konular[senderKi] || [])[2]) {
+      const k = konuAl(senderKi), dersAd = (D.konuDers || {})[senderKi] || sonucPlanDersi(si, k[0], k[3]) || konuDersAdi(senderKi);
+      return (cozum[senderKi] = { tur: 'katalog', ki: senderKi, dersAd: dersAd });
+    }
     if (pk.surum === 1)
       throw new Error('Eski sonuç paketi özel konu içeriyor; konu güvenle eşleştirilemez. Öğrenciden dosyayı güncel uygulamayla yeniden oluşturmasını isteyin.');
     const bilgi = konular[senderKi];
     if (!Array.isArray(bilgi) || bilgi.length < 2)
       throw new Error('Sonuç paketinde özel konu bilgisi eksik' + (baglam ? ': ' + baglam : '') + '.');
     const konuBilgisi = sonucKonuBilgisiDogrula(bilgi[0], bilgi[1]);
-    const mevcut = konuBulTamEslesme(konuBilgisi.dersIdx, konuBilgisi.ad);
-    return (cozum[senderKi] = mevcut >= 0 ? { tur: 'mevcut', ki: mevcut } :
-      { tur: 'yeni', dersIdx: konuBilgisi.dersIdx, ad: konuBilgisi.ad });
+    const dersAd = bilgi[2] || sonucPlanDersi(si, konuBilgisi.dersIdx, konuBilgisi.ad);
+    let mevcut = konuBulTamEslesme(konuBilgisi.dersIdx, konuBilgisi.ad, dersAd);
+    if (mevcut >= 0 && dersAd && Object.values(cozum).some(c => c.ki === mevcut &&
+        dersKimligi(c.dersAd) !== dersKimligi(dersAd))) mevcut = -1;
+    return (cozum[senderKi] = mevcut >= 0 ? { tur: 'mevcut', ki: mevcut, dersAd: dersAd || konuDersAdi(mevcut) } :
+      { tur: 'yeni', dersIdx: konuBilgisi.dersIdx, ad: konuBilgisi.ad, dersAd: dersAd || KISA[konuBilgisi.dersIdx] });
   };
   const dogrulanmis = [];
   pk.kayit.forEach((k, i) => {
@@ -4138,16 +4185,17 @@ function sonucPaketiUygula(pk, hedefSi) {
   (pk.konuAnlatilmadi || []).forEach((e, i) => {
     const ana = konuCoz(e.ki, 'reset ' + (i + 1));
     Object.keys(e.overrides).forEach(k => konuCoz(+k, 'reset ' + (i + 1) + ' tarih eşleştirmesi'));
-    const ders = ana.ki !== undefined ? dersKisaAd(konuDersAdi(ana.ki)) : dersKisaAd(DERS[ana.dersIdx]);
+    const ders = dersKimligi(ana.dersAd);
     Object.keys(e.overrides).forEach(k => {
-      const c = cozum[k], d = c.ki !== undefined ? dersKisaAd(konuDersAdi(c.ki)) : dersKisaAd(DERS[c.dersIdx]);
+      const c = cozum[k], d = dersKimligi(c.dersAd);
       if (d !== ders) throw new Error('Reset tarih eşleştirmesi başka bir derse ait konu içeriyor: ' + (i + 1) + '. satır.');
     });
   });
   // 2) Yeni konuları oluştur — yalnızca yukarıdaki doğrulama tamamen bittiyse buraya gelinir.
   Object.keys(cozum).forEach(k => {
     const c = cozum[k];
-    if (c.tur === 'yeni') { c.ki = kullaniciKonusuTam(c.dersIdx, c.ad); c.tur = 'mevcut'; }
+    if (c.tur === 'yeni') { c.ki = kullaniciKonusuTam(c.dersIdx, c.ad, c.dersAd); c.tur = 'mevcut'; }
+    if (c.dersAd && !(D.konuDers || {})[c.ki]) { D.konuDers = D.konuDers || {}; D.konuDers[c.ki] = c.dersAd; }
   });
 
   // 3) Uygula — tekilleştirme ve "yalnızca daha yeni sonucu al" kuralı değişmedi.
@@ -4973,8 +5021,10 @@ const OKUL_SUBE_PROGRAMLARI = {
 const DONEM_BASI_SABIT = '2026-08-24';
 // bazı PDF'lerde Türkçe harfler metin katmanında eksik gelir; karşılaştırmayı iskelet üzerinden yaparız
 const dersAdiUyar = (a, b) => {
-  const x = iskelet(a), y = iskelet(b);
+  const x = dersKimligi(a), y = dersKimligi(b);
   if (!x || !y) return false;
+  const sinav = t => (t.match(/ (TYT|AYT|YDT)$/) || [])[1] || '';
+  if (sinav(x) !== sinav(y)) return false;
   return x === y || x.indexOf(y) === 0 || y.indexOf(x) === 0;
 };
 const iskelet = t => String(t).toLocaleUpperCase('tr').replace(/[ÇĞİÖŞÜIı\s.\-]/g, '');
@@ -5014,7 +5064,8 @@ function dersEsle(ad) {
   const t = String(ad || '').toLocaleUpperCase('tr').replace(/\s+/g, ' ').trim();
   for (const [okul, idx] of OKUL_DERS) if (t.indexOf(okul) >= 0) return idx;
   if (t.indexOf('FELSEFE') >= 0) return 8;
-  return -1;
+  const kisa = KISA.findIndex(d => dersKimligi(d) === dersKimligi(ad));
+  return kisa;
 }
 
 // Her okulun ders programı görüntüsü farklı dizayn edildiği için koordinat tabanlı PDF
@@ -5212,7 +5263,8 @@ function planDersAnahtari(sube, dersAdi) {
   const tam = anahtarlar.find(k => dersAdiUyar(k, dersAdi));
   if (tam) return tam;
   const di = dersEsle(dersAdi);
-  return anahtarlar.find(k => dersEsle(k) === di) || null;
+  const aday = anahtarlar.filter(k => dersEsle(k) === di);
+  return aday.length === 1 && !/\b(TYT|AYT|YDT)\b/i.test(dersAdi) ? aday[0] : null;
 }
 function dersDizisi(sube, anahtar) {
   const plan = (D.konuPlani || {})[sube] || [];
@@ -5321,9 +5373,14 @@ function konuBul(dersIdx, ad) {
   }
   return ayniDers >= 0 ? ayniDers : baskaDers;
 }
-function kullaniciKonusu(dersIdx, ad, sayac) {
+function kullaniciKonusu(dersIdx, ad, sayac, dersAd) {
   D.ekKonular = D.ekKonular || [];
-  const v = konuBul(dersIdx, ad);
+  let v = dersAd ? konuBulTamEslesme(dersIdx, ad, dersAd) : konuBul(dersIdx, ad);
+  if (v < 0 && dersAd) {
+    const aday = konuBul(dersIdx, ad);
+    // An unlabeled catalog topic may acquire its first lesson identity once.
+    if (aday >= 0 && konuAl(aday)[0] === dersIdx && !(D.konuDers || {})[aday]) v = aday;
+  }
   if (v >= 0) { if (sayac) sayac.bulundu++; return v; }
   D.ekKonular.push([dersIdx, 12, 'Ders programından', ad, 0, '']);
   if (sayac) sayac.yeni++;
@@ -5343,7 +5400,9 @@ function haftaYerlesim(sube, hafta, hb) {
       if ((prog.gunler[g] || []).some(d => d && dersAdiUyar(d, dersAd))) gunler.push(g);
     if (!gunler.length)
       for (let g = 0; g < 7; g++)
-        if ((prog.gunler[g] || []).some(d => d && dersEsle(d) === dersIdx)) gunler.push(g);
+        if ((prog.gunler[g] || []).some(d => d && dersEsle(d) === dersIdx &&
+            !/\b(TYT|AYT|YDT)\b/i.test(d) &&
+            Object.keys(plan).filter(k => dersEsle(k) === dersIdx).length === 1)) gunler.push(g);
     if (!gunler.length) return;
     (plan[dersAd] || []).forEach((ad, i) => {
       if (!ad) return;
@@ -5367,7 +5426,7 @@ function programUygula(hb, tekSube) {
     D.subeIslenis[sube] = D.subeIslenis[sube] || {};
     let sayi = 0;
     yer.forEach(y => {
-      const ki = kullaniciKonusu(y.dersIdx, y.ad, sayac);
+      const ki = kullaniciKonusu(y.dersIdx, y.ad, sayac, y.dersAd);
       D.konuKaynak[ki] = iskelet(y.dersAd);
       D.konuDers[ki] = y.dersAd;
       if (D.subeIslenis[sube][ki] === undefined) { D.subeIslenis[sube][ki] = hb + y.gi; sayi++; }
@@ -5596,7 +5655,7 @@ function konuGuneAta(sube, hb, gi, dersAdi, ad) {
   D.subeIslenis[sube] = D.subeIslenis[sube] || {};
   D.konuKaynak = D.konuKaynak || {};
   D.konuDers = D.konuDers || {};
-  const ki = kullaniciKonusu(dersEsle(dersAdi), ad);
+  const ki = kullaniciKonusu(dersEsle(dersAdi), ad, null, dersGosterAdi(sube, dersAdi));
   D.konuKaynak[ki] = iskelet(dersAdi);
   D.konuDers[ki] = dersGosterAdi(sube, dersAdi);
   D.subeIslenis[sube][ki] = hb + gi;
@@ -6232,6 +6291,8 @@ document.addEventListener('click', async ev => {
       const guncelDugme = document.getElementById('ogrenciBulutGiris') || dugme;
       const guncelAd = document.getElementById('ogrenciGirisAd');
       const guncelNo = document.getElementById('ogrenciGirisNo');
+      const guncelAlan = document.getElementById('ogrenciGirisAlan');
+      if (guncelAlan) guncelAlan.hidden = false;
       if (guncelAd) guncelAd.value = ad;
       if (guncelNo) guncelNo.value = noMetin;
       if (guncelDurum) guncelDurum.textContent = mesaj;
