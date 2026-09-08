@@ -852,6 +852,44 @@ test('student-name-number-login-downloads-package-without-confirmation', async (
   equal(run('D.ogr[0].no'), 42, 'the downloaded package must belong to the selected student');
 });
 
+test('student-login-persistence-failure-stays-visible-after-rollback-redraw', async () => {
+  const { sandbox, run, listeners, nodes } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 1699, ad: 'Şahin Bilir', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1699', hesapUid: 'student-account-1699' })]);
+  const paket = run('ogrenciPaketi(0)');
+  run('D = varsayilan(); D.rol = null;');
+  Object.defineProperty(nodes.ana, 'innerHTML', {
+    configurable: true,
+    set(markup) {
+      ['ogrenciGirisAd', 'ogrenciGirisNo', 'ogrenciGirisDurum', 'ogrenciBulutGiris'].forEach(id => { delete nodes[id]; });
+      for (const m of String(markup).matchAll(/id="([^"]+)"/g)) nodes[m[1]] = element();
+    }, get() { return ''; }
+  });
+  run('ciz()');
+  nodes.ogrenciGirisAd.value = 'Şahin Bilir'; nodes.ogrenciGirisNo.value = '1699';
+  nodes.ogrenciBulutGiris.id = 'ogrenciBulutGiris';
+  nodes.ogrenciBulutGiris.closest = function (sel) { return sel === '#ogrenciBulutGiris' ? this : null; };
+  sandbox.localStorage.setItem = () => { throw new Error('storage unavailable'); };
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    girisOgrenciHesabi: async () => ({ uid: 'student-account-1699' }),
+    doc: (_db, coll, id) => coll + '/' + id,
+    getDoc: async ref => ref === 'ogrenciHesaplari/student-account-1699'
+      ? docSnap(true, { aktif: true, veri: JSON.stringify(paket), syncId: 'student-sync' })
+      : docSnap(true, { durum: 'aktif', bagliUid: 'student-account-1699', ogrenciBulutId: 'cloud-1699', paket: null })
+  });
+  const oldButton = nodes.ogrenciBulutGiris;
+  await listeners.click[0]({ target: oldButton });
+  equal(run('D.rol'), null, 'failed persistence must restore the pre-login state');
+  assert(nodes.ogrenciBulutGiris !== oldButton, 'rollback must exercise the real redraw path');
+  assert(/kaydedilemedi/.test(nodes.ogrenciGirisDurum.textContent), 'the current status node must show the persistence error');
+  assert(nodes.ogrenciBulutGiris.disabled === false && nodes.ogrenciBulutGiris.textContent === 'Giriş yap',
+    'the current login button must be enabled again');
+  equal([nodes.ogrenciGirisAd.value, nodes.ogrenciGirisNo.value], ['Şahin Bilir', '1699'],
+    'entered identity fields must survive the redraw');
+  assert(!('href' in sandbox.location), 'login failure must not navigate');
+});
+
 test('student-account-login-merges-existing-server-results-before-first-upload', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',

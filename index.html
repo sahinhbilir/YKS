@@ -5727,6 +5727,8 @@ function planBaskiStili() {
     seciciler.split(',').map(s => s.trim() === 'body' ? '#planBaski' : '#planBaski ' + s.trim()).join(',') + '{');
 }
 function planBaskiyiBaslat() {
+  const engel = sonrakiHaftaYazdirmaEngeli(EK.ogr, haftaBasi());
+  if (engel) return sonrakiHaftaSonucModalAc(engel.hb);
   try {
     if (typeof window.print !== 'function') throw new Error('print unavailable');
     window.print(); // Same document and the current tap: no popup, iframe or delayed load handler.
@@ -5736,6 +5738,39 @@ function planBaskiyiBaslat() {
     if (durum) durum.textContent = 'Yazdırma açılamadı. Safari’de Paylaş → Yazdır yolunu deneyebilirsin.';
     return false;
   }
+}
+function oncekiHaftaTestiCozulduMu(si, ki, gun) {
+  if (konuResetMuafMi(si, ki, gun)) return true;
+  const ertelenen = erteleAl(si, ki);
+  if (Number.isInteger(+ertelenen) && +ertelenen > gun) return true;
+  return (D.log || []).some(l => l[1] === si && l[2] === ki && l[0] === gun &&
+    (sonucSayisalMi(l) || (Number.isInteger(+l[5]) && +l[5] >= 1 && +l[5] <= 4)));
+}
+function oncekiHaftaEksikTestSayisi(si, hb, p) {
+  let eksik = 0;
+  (p.gunler || []).forEach((liste, g) => (liste || []).forEach(x => {
+    if (!x.serbest && !x.anlatim && !oncekiHaftaTestiCozulduMu(si, x.ki, hb + g)) eksik++;
+  }));
+  return eksik;
+}
+function sonrakiHaftaYazdirmaEngeli(si, hb) {
+  if (!ogrenciMi() || hb !== buHafta() + 7) return null;
+  const oncekiHb = hb - 7, ov = elleAl(si, oncekiHb, false);
+  // Yalnızca gerçekten kullanıma alınmış tarihsel plan yükümlülük doğurur. Canlı bir
+  // geçmiş plan hesaplamak, yeni katılan öğrenciye hiç verilmemiş testler uydurabilir.
+  if (!ov.sabit || !ov.plan || !Array.isArray(ov.plan.slotlar)) return null;
+  if ((D.haftaDurum || {})[si + '|' + oncekiHb]) return null;
+  const p = planHesapla(si, oncekiHb);
+  const eksik = oncekiHaftaEksikTestSayisi(si, oncekiHb, p);
+  return eksik ? { hb: oncekiHb, adet: eksik } : null;
+}
+function sonrakiHaftaSonucModalAc(hb) {
+  disariAktarmaAc('<p>Sonraki haftanın testlerini alman için önceki haftanın sonuçlarını girmen gerekiyor.</p>' +
+    '<p><button class="dugme birincil" id="eksikSonucGir" data-sonuc-hafta="' + hb + '">Sonuç gir</button></p>',
+    'Sonuçlar eksik');
+  const dugme = document.getElementById('eksikSonucGir');
+  if (dugme) dugme.focus();
+  return false;
 }
 function planOnizlemeAc(liste, hb) {
   const sayfalar = liste.map(si => yazdirSayfa(si, hb)).join('');
@@ -5798,6 +5833,8 @@ async function planYazdir(kapsam) {
     etiket = 'sube-' + dosyaAdiParcasi(kapsam.sube, 'sube');
   } else { liste = [EK.ogr]; etiket = dosyaAdiParcasi(D.ogr[EK.ogr].ad, 'ogrenci').toLocaleLowerCase('tr'); }
   if (!liste.length) { alert('Bu kapsamda çıktı alacak öğrenci yok.'); return false; }
+  const engel = sonrakiHaftaYazdirmaEngeli(EK.ogr, hb);
+  if (engel) return sonrakiHaftaSonucModalAc(engel.hb);
   if (!window.claude || typeof window.claude.use !== 'function') return planOnizlemeAc(liste, hb);
   const belge = yazdirBelgesi(liste, hb);
   const d = await yetenek('downloads');
@@ -5959,10 +5996,16 @@ document.addEventListener('click', async ev => {
     if (ogrenciElleKaldir(ogrEkSil.dataset.ogrEkSil)) { await kaydet(true); ciz(); }
     return;
   }
-  const ciktiDugme = ev.target.closest('#ciktiKapat,#ciktiYazdir,#yedekKopyala');
+  const ciktiDugme = ev.target.closest('#ciktiKapat,#ciktiYazdir,#yedekKopyala,#eksikSonucGir');
   if (ciktiDugme) {
     if (ciktiDugme.id === 'ciktiKapat') disariAktarmayiKapat();
     else if (ciktiDugme.id === 'ciktiYazdir') planBaskiyiBaslat();
+    else if (ciktiDugme.id === 'eksikSonucGir') {
+      const hb = +ciktiDugme.dataset.sonucHafta;
+      disariAktarmayiKapat();
+      EK.sekme = 'giris'; EK.hafta = hb; EK.girisAcik = {};
+      ciz();
+    }
     else {
       const alan = document.getElementById('ciktiMetni'), durum = document.getElementById('ciktiDurum');
       try {
@@ -6183,8 +6226,16 @@ document.addEventListener('click', async ev => {
       const mesaj = /invalid-credential|user-not-found|wrong-password/.test(kod)
         ? 'Ad veya okul numarası eşleşmedi. Bilgilerinizi kontrol edin.'
         : (e && e.message || 'Öğrenci verisi yüklenemedi.');
-      if (durum) durum.textContent = mesaj;
-      if (dugme) { dugme.disabled = false; dugme.textContent = 'Giriş yap'; }
+      // ogrenciHesabindanYukle kalıcı kayıt başarısızlığında eski D'yi geri yükleyip
+      // ekranı yeniden çizer. İlk düğme/durum referansları bu durumda DOM'dan kopmuştur.
+      const guncelDurum = document.getElementById('ogrenciGirisDurum') || durum;
+      const guncelDugme = document.getElementById('ogrenciBulutGiris') || dugme;
+      const guncelAd = document.getElementById('ogrenciGirisAd');
+      const guncelNo = document.getElementById('ogrenciGirisNo');
+      if (guncelAd) guncelAd.value = ad;
+      if (guncelNo) guncelNo.value = noMetin;
+      if (guncelDurum) guncelDurum.textContent = mesaj;
+      if (guncelDugme) { guncelDugme.disabled = false; guncelDugme.textContent = 'Giriş yap'; }
     }
     return;
   }

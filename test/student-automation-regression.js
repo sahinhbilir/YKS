@@ -54,7 +54,7 @@ const sandbox = {
     querySelector() { return null; },
     querySelectorAll(selector) { return selector === '[data-sonuc-row]' ? inputRows : selector === '.oRutin' ? (nodes.__routines || []) : []; },
     createElement() { return element(); },
-    body: { appendChild() {}, insertAdjacentHTML(_where, markup) { this.lastHTML = markup; } }
+    body: { appendChild(el) { this.lastPanel = el; }, insertAdjacentHTML(_where, markup) { this.lastHTML = markup; } }
   }
 };
 sandbox.window.document = sandbox.document;
@@ -276,6 +276,48 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  check('manual-future-addition-keeps-week-as-draft',!run('elleAl(0,haftaBasi()).sabit'));
  run('D.ayar.testTarih="2026-09-20"');await draw();
  check('manual-future-addition-survives-week-transition',getPlan(run('buHafta()')).gunler[0].some(x=>x.ad==='Next-week addition'&&x.soru===15));
+ // The next-week PDF gate reads only the preceding frozen snapshot and never mutates it.
+ init('2026-09-09');
+ run(`D.elle={};D.ogrTaslak={};D.log=[];D.kart={};D.ertele={};D.konuAnlatilmadi=[];D.haftaDurum={};
+   D.islenis={0:buHafta()-3};D.subeIslenis={};D.ogrIslenis={0:{}};
+   const _p=planHesapla(0,buHafta());ogrenciHaftayiSakla(0,buHafta(),_p);EK.hafta=buHafta()+7;`);
+ const gateBefore=run('JSON.stringify([D.log,D.kart,D.elle,D.ertele,D.konuAnlatilmadi])');
+ const assigned=run(`(()=>{const p=planHesapla(0,buHafta());for(let g=0;g<7;g++)for(const x of p.gunler[g])
+   if(!x.serbest&&!x.anlatim)return {ki:x.ki,gun:buHafta()+g};return null;})()`);
+ sandbox.assigned=assigned;
+ check('next-week-incomplete-snapshot-is-blocked',!!assigned&&run('sonrakiHaftaYazdirmaEngeli(0,buHafta()+7).adet')===1);
+ check('gate-check-does-not-freeze-or-change-fsrs',gateBefore===run('JSON.stringify([D.log,D.kart,D.elle,D.ertele,D.konuAnlatilmadi])'));
+ const mixed={gunler:[[{ki:assigned.ki},{ki:'free',serbest:true},{ki:assigned.ki,anlatim:true}],[],[],[],[],[],[]]};sandbox.mixed=mixed;
+ check('free-and-lesson-rows-are-ignored',run('oncekiHaftaEksikTestSayisi(0,assigned.gun,mixed)')===1);
+ run('D.log=[[assigned.gun,0,assigned.ki,9,12,null,1]]');
+ check('numeric-result-resolves-assigned-test',run('oncekiHaftaEksikTestSayisi(0,buHafta(),planHesapla(0,buHafta()))')===0);
+ run('D.log=[[assigned.gun,0,assigned.ki,null,null,3,2]]');
+ check('rating-result-resolves-assigned-test',!run('sonrakiHaftaYazdirmaEngeli(0,buHafta()+7)'));
+ run('D.log=[];D.ertele["0:"+assigned.ki]=assigned.gun+7');
+ check('deferred-test-is-resolved',!run('sonrakiHaftaYazdirmaEngeli(0,buHafta()+7)'));
+ run(`D.ertele={};D.konuAnlatilmadi=[{si:0,ki:assigned.ki,gun:assigned.gun,hafta:buHafta(),at:3,
+   ilkTekrarGunu:assigned.gun+7,overrides:{}}]`);
+ check('not-taught-test-is-resolved',!run('sonrakiHaftaYazdirmaEngeli(0,buHafta()+7)'));
+ run('D.konuAnlatilmadi=[];D.elle={}');
+ check('new-student-without-snapshot-is-not-blocked',!run('sonrakiHaftaYazdirmaEngeli(0,buHafta()+7)'));
+ check('current-and-past-printing-are-not-blocked',!run('sonrakiHaftaYazdirmaEngeli(0,buHafta())')&&!run('sonrakiHaftaYazdirmaEngeli(0,buHafta()-7)'));
+ run('D.rol="rehber"');
+ check('teacher-printing-is-not-blocked',!run('sonrakiHaftaYazdirmaEngeli(0,buHafta()+7)'));
+ run(`D.rol='ogrenci';D.elle={};D.log=[];D.ertele={};D.konuAnlatilmadi=[];
+   D.islenis={0:buHafta()-3};const _p2=planHesapla(0,buHafta());ogrenciHaftayiSakla(0,buHafta(),_p2);EK.hafta=buHafta()+7;`);
+ let printCalls=0;sandbox.window.print=()=>{printCalls++;};
+ check('central-guard-prevents-print-side-effect',!(await run('planYazdir(null)'))&&printCalls===0);
+ check('blocking-modal-has-required-message-and-action',sandbox.document.body.lastPanel.innerHTML.includes('Sonraki haftanın testlerini alman için önceki haftanın sonuçlarını girmen gerekiyor.')&&sandbox.document.body.lastPanel.innerHTML.includes('>Sonuç gir</button>'));
+ const missingHb=run('buHafta()');
+ const gateAction=Object.assign(element(),{id:'eksikSonucGir',dataset:{sonucHafta:String(missingHb)},closest(s){return s.includes('#eksikSonucGir')?this:null;}});
+ for(const fn of listeners.click||[])await fn({target:gateAction});
+ check('result-action-opens-the-missing-week',run('EK.sekme')==='giris'&&run('EK.hafta')===missingHb);
+ run('D.log=[[assigned.gun,0,assigned.ki,null,null,3,4]];EK.sekme="plan";EK.hafta=buHafta()+7');
+ check('complete-next-week-print-proceeds',(await run('planYazdir(null)'))&&printCalls===1);
+ run('D.log=[]');
+ const previewPrint=Object.assign(element(),{id:'ciktiYazdir',closest(s){return s.includes('#ciktiYazdir')?this:null;}});
+ for(const fn of listeners.click||[])await fn({target:previewPrint});
+ check('preview-print-rechecks-central-guard',printCalls===1&&sandbox.document.body.lastPanel.innerHTML.includes('Sonraki haftanın testlerini alman için önceki haftanın sonuçlarını girmen gerekiyor.'));
  init();await draw();run('EK.hafta=buHafta()+7');
  // Optional private fixture: inspect a supplied backup locally; never include it in git or upload it.
  if(process.env.YKS_BACKUP){
