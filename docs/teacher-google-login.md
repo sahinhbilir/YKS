@@ -8,6 +8,8 @@ Teacher setup now reports this error before continuing to local setup, so a fail
 
 ## User retry
 
+After successful authentication, missing notebook data is a separate issue. See [cloud notebook recovery](cloud-notebook-recovery.md) for the corrected download flow and backup-history recovery steps.
+
 1. Reload the updated site and open **Ayarlar → Buluta bağlan**.
 2. Select the Google account used for the teacher's existing notebook.
 3. If the 401 recovery message appears, click **Buluta bağlan** again and approve Google's sign-in consent.
