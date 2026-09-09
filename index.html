@@ -986,7 +986,9 @@ async function durumuYukle() {
     const g = document.getElementById('veri').textContent.trim();
     if (g && g !== 'null') adaylar.push({ kaynak: 'gömülü', veri: JSON.parse(g) });
   } catch (e) { /* gömülü veri yok */ }
-  adaylar.sort((a, b) => (+b.veri.rev || 0) - (+a.veri.rev || 0) || (+b.veri.ts || 0) - (+a.veri.ts || 0));
+  // Kaynak JSON'u null da olabilir; sıralama doğrulamadan önce açılışı durdurmasın.
+  const sira = (a, k) => a.veri && Number.isFinite(+a.veri[k]) ? +a.veri[k] : 0;
+  adaylar.sort((a, b) => sira(b, 'rev') - sira(a, 'rev') || sira(b, 'ts') - sira(a, 'ts'));
   const gecersiz = [];
   for (const a of adaylar) {
     const onceki = D;
@@ -3822,6 +3824,27 @@ function syncIdSagla(si) {
   if (!o.ogrenciBulutId) o.ogrenciBulutId = crypto.randomUUID();
   return o.syncId;
 }
+// Öğrenci paketi özel konuları sıkıştırır. Konu numaraları haftalık hücrelerin hem
+// anahtarlarında hem değerlerinde bulunur; S1/OGREK/HAFTA gibi serbest hücre kimlikleri
+// ise değişmez. Aynı yürüyüş dışa aktarımda gereken konuları da toplar.
+function paketPlanKonulariniCevir(plan, cev) {
+  const ov = JSON.parse(JSON.stringify(plan));
+  const slot = k => /^(0|[1-9]\d*)$/.test(String(k)) ? String(cev(+k)) : k;
+  ['ek', 'sil'].forEach(k => { if (ov[k]) ov[k] = ov[k].map(cev); });
+  ['yer', 'soru', 'degisim', 'anlatim', 'ogrEk', 'konuSlot'].forEach(alan => {
+    if (!ov[alan]) return;
+    ov[alan] = Object.fromEntries(Object.entries(ov[alan]).map(([k, v]) => {
+      if (alan === 'degisim') v = cev(+v);
+      if (alan === 'konuSlot') v = Object.assign({}, v, {ki:cev(+v.ki)});
+      return [slot(k), v];
+    }));
+  });
+  if (ov.plan) {
+    if (ov.plan.slotlar) ov.plan.slotlar = ov.plan.slotlar.map(gun => gun.map(slot));
+    if (ov.plan.tasan) ov.plan.tasan = ov.plan.tasan.map(cev);
+  }
+  return ov;
+}
 function ogrenciPaketi(si) {
   const o = D.ogr[si];
   const kart = {}, ekIx = {};
@@ -3832,8 +3855,19 @@ function ogrenciPaketi(si) {
   Object.keys(D.elle || {}).forEach(a => { const par = a.split('|');
     if (+par[0] === si) elle[par[1]] = D.elle[a]; });
   // öğrencinin gördüğü konulardan katalog dışı olanları da yolla
-  const gerekli = {};
-  const isaretle = ki => { if (ki >= KATALOG.length) gerekli[ki - KATALOG.length] = 1; };
+  const gerekli = {}, gorulen = new Set();
+  const isaretle = ki => {
+    ki = +ki;
+    if (gorulen.has(ki)) return ki;
+    gorulen.add(ki);
+    if (ki >= KATALOG.length) {
+      if (!konuAl(ki)) throw new Error('Öğrenci paketinde özel konu bilgisi eksik: ' + ki + '.');
+      gerekli[ki - KATALOG.length] = 1;
+    }
+    const ana = (D.altKonu || {})[ki];
+    if (ana !== undefined) isaretle(ana);
+    return ki;
+  };
   Object.keys(kart).forEach(k => isaretle(+k));
   log.forEach(l => isaretle(l[1]));
   const suIsl = (D.subeIslenis || {})[o.sube] || {};
@@ -3843,6 +3877,9 @@ function ogrenciPaketi(si) {
   (D.konuAnlatilmadi || []).filter(e => e.si === si).forEach(e => {
     isaretle(+e.ki); Object.keys(e.overrides || {}).forEach(k => isaretle(+k));
   });
+  Object.values(elle).forEach(ov => paketPlanKonulariniCevir(ov, isaretle));
+  (o.otoTelafiHaric || []).forEach(isaretle);
+  (o.otoTelafiEklenen || []).forEach(x => isaretle(x.ki));
   const ekK = {};
   Object.keys(gerekli).forEach(ix => { ekK[ix] = (D.ekKonular || [])[ix]; });
   return {
@@ -3879,7 +3916,7 @@ function paketiYukle(pk) {
   const y = varsayilan();
   y.rol = 'ogrenci'; y.kurum = pk.kurum || '';
   y.ayar = pk.ayar; y.anlasma = pk.anlasma; y.rutinBasliklari = pk.rutinBasliklari || y.rutinBasliklari;
-  y.ogr = [pk.ogr];
+  y.ogr = [JSON.parse(JSON.stringify(pk.ogr))];
   if (Array.isArray(pk.konuPlani)) y.konuPlani[pk.ogr.sube] = pk.konuPlani;
   if (pk.dersProgrami && typeof pk.dersProgrami === 'object') y.dersProgrami[pk.ogr.sube] = pk.dersProgrami;
   if (pk.programHafta && typeof pk.programHafta === 'object') y.programHafta[pk.ogr.sube] = pk.programHafta;
@@ -3892,22 +3929,34 @@ function paketiYukle(pk) {
     y.ekKonular.push(k);
     harita[KATALOG.length + (+ix)] = KATALOG.length + y.ekKonular.length - 1;
   });
-  const cev = ki => (harita[ki] !== undefined ? harita[ki] : +ki);
+  const konuVar = ki => Number.isSafeInteger(+ki) && +ki >= 0 &&
+    (+ki < KATALOG.length || harita[ki] !== undefined);
+  const cev = ki => {
+    if (!konuVar(ki)) throw new Error('Öğrenci paketinde özel konu bilgisi eksik: ' + ki + '.');
+    return harita[ki] !== undefined ? harita[ki] : +ki;
+  };
+  if (y.ogr[0].otoTelafiHaric) y.ogr[0].otoTelafiHaric = y.ogr[0].otoTelafiHaric.map(cev);
+  if (y.ogr[0].otoTelafiEklenen) y.ogr[0].otoTelafiEklenen = y.ogr[0].otoTelafiEklenen
+    .map(x => Object.assign({}, x, {ki:cev(x.ki)}));
   y.kart = {}; Object.keys(pk.kart || {}).forEach(k => { y.kart['0:' + cev(+k)] = pk.kart[k]; });
   y.log = (pk.log || []).map((l, i) => [l[0], 0, cev(l[1]), l[2] === undefined ? null : l[2], l[3] === undefined ? null : l[3], l[4], +l[5] || Date.now() + i]);
   y.konuAnlatilmadi = (pk.konuAnlatilmadi || []).map(e => {
     const overrides = {}; Object.keys(e.overrides || {}).forEach(k => { overrides[cev(+k)] = +e.overrides[k]; });
     return Object.assign({}, e, { si: 0, ki: cev(+e.ki), overrides: overrides });
   });
-  y.elle = {}; Object.keys(pk.elle || {}).forEach(hb => { y.elle['0|' + hb] = pk.elle[hb]; });
+  y.elle = {}; Object.keys(pk.elle || {}).forEach(hb => {
+    y.elle['0|' + hb] = paketPlanKonulariniCevir(pk.elle[hb], cev);
+  });
   y.islenis = {}; Object.keys(pk.islenis || {}).forEach(k => { y.islenis[cev(+k)] = pk.islenis[k]; });
   y.subeIslenis = {}; y.subeIslenis[pk.ogr.sube] = {};
   Object.keys(pk.subeIslenis || {}).forEach(k => { y.subeIslenis[pk.ogr.sube][cev(+k)] = pk.subeIslenis[k]; });
   y.ogrIslenis = { 0: {} };
   Object.keys(pk.ogrIslenis || {}).forEach(k => { y.ogrIslenis[0][cev(+k)] = pk.ogrIslenis[k]; });
-  y.konuDers = {}; Object.keys(pk.konuDers || {}).forEach(k => { y.konuDers[cev(+k)] = pk.konuDers[k]; });
-  y.konuKaynak = {}; Object.keys(pk.konuKaynak || {}).forEach(k => { y.konuKaynak[cev(+k)] = pk.konuKaynak[k]; });
-  y.altKonu = {}; Object.keys(pk.altKonu || {}).forEach(k => { y.altKonu[cev(+k)] = cev(pk.altKonu[k]); });
+  // Eski paketler bütün sınıfların etiketlerini taşıyabilir. Gönderilmeyen konunun
+  // eski numarası ileride bu cihazda başka bir konuya ait olacağı için onu aktarma.
+  y.konuDers = {}; Object.keys(pk.konuDers || {}).filter(konuVar).forEach(k => { y.konuDers[cev(+k)] = pk.konuDers[k]; });
+  y.konuKaynak = {}; Object.keys(pk.konuKaynak || {}).filter(konuVar).forEach(k => { y.konuKaynak[cev(+k)] = pk.konuKaynak[k]; });
+  y.altKonu = {}; Object.keys(pk.altKonu || {}).filter(konuVar).forEach(k => { y.altKonu[cev(+k)] = cev(pk.altKonu[k]); });
   y.par = {}; if (pk.par && Object.keys(pk.par).length) y.par[0] = pk.par;
   y.ayarSurum = VERI_SURUMU; y.katalogImza = KATALOG_IMZA;
   yedekDogrula(y);
@@ -4086,6 +4135,7 @@ function sonucPaketi(sinir) {
   });
   return { tur: 'yks-sonuc', surum: SONUC_PAKET_SURUM, katalogImza: KATALOG_IMZA,
            no: o.no, ad: o.ad, sube: o.sube, tarih: bugunNo(), olusturmaTs: olusturmaTs,
+           ...(o.ogrenciBulutId ? {ogrenciBulutId:o.ogrenciBulutId} : {}),
            kayit: kayit, konular: konular, haftaDuzeni: o.haftaDuzeni ? JSON.parse(JSON.stringify(o.haftaDuzeni)) : undefined,
            konuAnlatilmadi: (D.konuAnlatilmadi || []).filter(e => e.si === 0)
              .map(e => Object.assign({}, e, { si: 0 })) };
@@ -4174,12 +4224,16 @@ function sonucPaketiUygula(pk, hedefSi) {
       throw new Error('Bulut sonucu için hedef öğrenci geçersiz.');
     si = hedefSi;
   } else {
-    const noEslesme = pk.no === undefined || pk.no === null || pk.no === '' ? [] :
-      D.ogr.map((o, i) => ({ o: o, i: i })).filter(x => !x.o.silindi && String(x.o.no) === String(pk.no));
-    const adEslesme = pk.ad ? D.ogr.map((o, i) => ({ o: o, i: i })).filter(x => !x.o.silindi &&
-      x.o.ad.toLocaleLowerCase('tr') === String(pk.ad).toLocaleLowerCase('tr') &&
-      (!pk.sube || x.o.sube === pk.sube)) : [];
-    const aday = noEslesme.length ? noEslesme : adEslesme;
+    const liste = D.ogr.map((o, i) => ({o:o, i:i})).filter(x => !x.o.silindi);
+    const noVar = pk.no !== undefined && pk.no !== null && pk.no !== '';
+    // Kalıcı kimlik varsa ad/numara/şube değişikliklerinden etkilenmez. Eski dosyada
+    // verilen bütün kimlik alanları uyuşmalı; yalnız numara başka öğrenciyi seçemez.
+    const aday = pk.ogrenciBulutId !== undefined
+      ? liste.filter(x => typeof pk.ogrenciBulutId === 'string' && pk.ogrenciBulutId.length > 0 &&
+          x.o.ogrenciBulutId === pk.ogrenciBulutId)
+      : liste.filter(x => (noVar || pk.ad) && (!noVar || String(x.o.no) === String(pk.no)) &&
+          (!pk.ad || konuAdiTamAnahtari(x.o.ad) === konuAdiTamAnahtari(pk.ad)) &&
+          (!pk.sube || x.o.sube === pk.sube));
     if (aday.length !== 1) throw new Error(aday.length ? 'Öğrenci eşleşmesi belirsiz; numara/şubeyi kontrol edin.' :
       (pk.ad || pk.no) + ' listede bulunamadı.');
     si = aday[0].i;
