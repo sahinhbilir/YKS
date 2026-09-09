@@ -595,7 +595,11 @@ function loadModuleSandbox() {
     signInWithPopup: () => Promise.reject(new Error('not mocked in this harness')),
     signInWithEmailAndPassword: () => Promise.reject(new Error('not mocked in this harness')),
     createUserWithEmailAndPassword: () => Promise.reject(new Error('not mocked in this harness')),
-    GoogleAuthProvider: function GoogleAuthProvider() {},
+    GoogleAuthProvider: class GoogleAuthProvider {
+      constructor() { this.scopes = ['profile']; this.parameters = {}; }
+      addScope(scope) { if (!this.scopes.includes(scope)) this.scopes.push(scope); return this; }
+      setCustomParameters(parameters) { this.parameters = parameters; return this; }
+    },
     getFirestore: () => { initOrder.push('firestore'); return {}; },
     doc: () => {}, getDoc: () => {}, setDoc: () => {}, updateDoc: () => {}, runTransaction: () => {},
     collection: () => {}, getDocs: async () => ({ forEach() {} })
@@ -613,6 +617,114 @@ test('enterprise-app-check-starts-before-auth-and-firestore', () => {
   assert(options && options.provider instanceof Object, 'Enterprise App Check provider must be configured');
   assert(options.provider.key && !options.provider.key.includes('YER-TUTUCU'), 'Enterprise site key must be real');
   equal(options.isTokenAutoRefreshEnabled, true);
+});
+
+const googleUserinfo401 = () => Object.assign(new Error(
+  'Firebase: Failed to fetch resource from https://www.googleapis.com/oauth2/v1/userinfo, http status: 401, ' +
+  'Request is missing required authentication credential. (auth/invalid-credential).'),
+  {code: 'auth/invalid-credential'});
+
+test('teacher-google-popup-requests-identity-scopes-in-the-original-click', async () => {
+  const { sandbox, authObj } = loadModuleSandbox();
+  let calls = 0;
+  const user = { uid: 'teacher-1', email: 'teacher@example.com', isAnonymous: false };
+  sandbox.signInWithPopup = (auth, provider) => {
+    calls++;
+    assert(auth === authObj, 'teacher uses the primary auth instance');
+    equal(provider.scopes.slice().sort(), ['email', 'openid', 'profile']);
+    equal(provider.parameters.prompt, 'select_account', 'normal login does not force re-consent');
+    return Promise.resolve({user});
+  };
+  const promise = vm.runInContext('girisOgretmen()', sandbox);
+  equal(calls, 1, 'popup starts immediately, without awaiting another operation');
+  assert(await promise === user, 'return the real Firebase-authenticated user');
+});
+
+test('teacher-google-401-reconsents-on-next-click-without-an-automatic-popup', async () => {
+  const { sandbox, authObj } = loadModuleSandbox();
+  const oldUser = {uid: 'existing-session', isAnonymous: true};
+  authObj.currentUser = oldUser;
+  const providers = [];
+  sandbox.signInWithPopup = (_auth, provider) => {
+    providers.push(provider);
+    return Promise.reject(googleUserinfo401());
+  };
+  let error;
+  try { await vm.runInContext('girisOgretmen()', sandbox); } catch (e) { error = e; }
+  assert(error && /tekrar|yeniden/i.test(error.message), 'actionable retry message');
+  equal(error.code, 'auth/invalid-credential');
+  equal(providers.length, 1, 'failure must not open an unrequested second popup');
+  assert(authObj.currentUser === oldUser, 'failure must not sign out the existing session');
+  sandbox.signInWithPopup = (_auth, provider) => {
+    providers.push(provider);
+    return Promise.resolve({user: {uid:'teacher-1', isAnonymous:false}});
+  };
+  await vm.runInContext('girisOgretmen()', sandbox);
+  equal(providers[1].parameters.prompt, 'consent select_account');
+  await vm.runInContext('girisOgretmen()', sandbox);
+  equal(providers[2].parameters.prompt, 'select_account', 'success clears recovery mode');
+});
+
+test('teacher-google-repeated-401-reports-configuration-investigation', async () => {
+  const { sandbox } = loadModuleSandbox();
+  sandbox.signInWithPopup = () => Promise.reject(googleUserinfo401());
+  for (let i=0; i<2; i++) {
+    try { await vm.runInContext('girisOgretmen()', sandbox); }
+    catch (e) {
+      if (i === 1) {
+        assert(/Firebase.*Google|Google.*ayar/i.test(e.message), 'repeated failure needs an administrator diagnosis');
+        assert(/veri.*sıfırlama/i.test(e.message), 'do not instruct the teacher to erase the notebook');
+      }
+    }
+  }
+});
+
+test('teacher-google-other-errors-do-not-trigger-consent-recovery', async () => {
+  for (const code of ['auth/popup-closed-by-user', 'auth/popup-blocked', 'auth/unauthorized-domain',
+    'auth/network-request-failed', 'auth/operation-not-allowed', 'auth/invalid-credential']) {
+    const { sandbox } = loadModuleSandbox();
+    const original = Object.assign(new Error(code), {code});
+    sandbox.signInWithPopup = () => Promise.reject(original);
+    let error;
+    try { await vm.runInContext('girisOgretmen()', sandbox); } catch (e) { error = e; }
+    assert(error === original, 'unrelated errors keep their actual cause: ' + code);
+    sandbox.signInWithPopup = (_auth, provider) => {
+      assert(!String(provider.parameters.prompt || '').includes('consent'), 'no unrelated forced consent');
+      return Promise.resolve({user:{uid:'teacher-1'}});
+    };
+    await vm.runInContext('girisOgretmen()', sandbox);
+  }
+});
+
+test('teacher-role-setup-does-not-silently-hide-google-authorization-failure', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  run('D=varsayilan(); D.rol=null;');
+  const alerts = [];
+  sandbox.alert = message => alerts.push(message);
+  sandbox.prompt = () => 'My school';
+  sandbox.window.bulut = baseBulut({yapilandirilmis:true,
+    girisOgretmen: async () => { throw Object.assign(new Error('Google izni yenilenmeli.'), {googleIzinHatasi:true}); }
+  });
+  const target = Object.assign(element(), {closest(sel) { return sel === '#rolRehber' ? this : null; }});
+  await listeners.click[0]({target});
+  assert(alerts.some(message => /Google izni yenilenmeli/.test(message)), 'show sign-in error before local setup');
+  equal(run('D.rol'), 'rehber', 'local setup still works');
+});
+
+test('teacher-connect-failure-never-writes-cloud-data-or-clears-local-notebook', async () => {
+  const { sandbox, run, listeners } = loadAppSandbox();
+  resetOgr(sandbox, [student({syncId:'s1',ogrenciBulutId:'b1'})]);
+  const before = run('JSON.stringify(D)');
+  let writes = 0, message = '';
+  sandbox.alert = value => { message = value; };
+  sandbox.window.bulut = baseBulut({
+    girisOgretmen: async () => { throw googleUserinfo401(); },
+    setDoc: async () => { writes++; }, updateDoc: async () => { writes++; }
+  });
+  const target = Object.assign(element(), {id:'bulutBaglan',closest(sel) { return sel.includes('#bulutBaglan') ? this : null; }});
+  await listeners.click[0]({target});
+  equal(writes, 0); equal(run('JSON.stringify(D)'), before);
+  assert(/Buluta bağlanılamadı/.test(message), 'connection failure remains visible');
 });
 
 test('girisOgrenci-dedups-concurrent-in-flight-calls', async () => {
