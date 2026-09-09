@@ -1953,6 +1953,32 @@ test('failed-local-restore-does-not-acknowledge-cloud-or-claim-success', async (
   assert(!state.messages.some(m => /geri yüklendi:/.test(m)), 'failed local persistence is not a successful restore');
 });
 
+test('restoring-an-empty-latest-backup-does-not-erase-a-populated-daily-copy', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, []);
+  const empty = run('JSON.stringify(D)'), state = notebookCloud(ctx, empty);
+  const daily = state.main + '/gecmis/' + run('isoDan(bugunNo())');
+  const good = remoteNotebook(run); state.docs[daily] = { veri: good };
+  await clickButton(listeners, 'bulutDefterAl');
+  const r = await run('bulutaYedekle()');
+  equal(r.tur, 'hata'); equal(state.docs[daily].veri, good);
+  equal(state.docs[state.main].veri, empty);
+  assert(!state.writes.some(w => w.ref === daily), 'an empty latest backup must not erase surviving daily history');
+});
+
+test('local-edits-during-restore-protection-are-not-discarded', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, [student()]); const state = notebookCloud(ctx, remoteNotebook(run));
+  const saveArchive = sandbox.window.bulut.setDoc;
+  sandbox.window.bulut.setDoc = async (ref, data) => {
+    await saveArchive(ref, data);
+    run('D.kurum = "Edited while the archive was saving"');
+  };
+  await clickButton(listeners, 'bulutDefterAl');
+  equal(run('D.ogr[0].ad'), 'Ada'); equal(run('D.kurum'), 'Edited while the archive was saving');
+  assert(state.messages.some(m => /yerel defter değişti/.test(m)));
+});
+
 // ================================================================== özet
 (async () => {
   for (const t of pending) await t();

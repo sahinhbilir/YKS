@@ -4505,7 +4505,10 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
             { veri: eski.veri, ts: korumaTs, surum: VERI_SURUMU, boyut: eski.veri.length,
               ogrenciSayisi: yedekOgrenciSayisi(eskiDefter), sonucSayisi: (eskiDefter.log || []).length,
               kaynak: 'Yerel defter yüklenmeden önce buluttaki defter' });
-        } else if (!yerel.ogr.length && !yerel.log.length) {
+        }
+        // Son yedek zaten boş olsa bile bugünün geçmiş kopyası dolu olabilir.
+        // Boş defteri yeniden yazmak elde kalan o kurtarma kopyasını silmemeli.
+        if (!yerel.ogr.length && !yerel.log.length && typeof onaylananVeri !== 'string') {
           throw new Error('Bu cihazdaki defter boş; buluta yazılmadı. Önce bulut yedek geçmişini kontrol edin.');
         }
         tx.set(ref, { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length });
@@ -4792,8 +4795,11 @@ async function buluttanGeriYuklemeNoktasiAl(id) {
 async function guvenliGeriYukle(yedek, kaynak) {
   try { yedekDogrula(yedek); }
   catch (e) { return { tur: 'hata', mesaj: 'Seçilen yedek geçersiz: ' + (e.message || e) }; }
+  const korunacak = D, korunacakJson = JSON.stringify(D);
   const koruma = await geriYuklemeNoktasiOlustur(kaynak);
   if (koruma.tur !== 'tamam') return koruma;
+  if (D !== korunacak || JSON.stringify(D) !== korunacakJson)
+    return { tur: 'hata', mesaj: 'Koruma noktası hazırlanırken yerel defter değişti. Son değişiklikleriniz korundu; geri yüklemeyi yeniden deneyin.' };
   const onceki = D;
   const oncekiEk = {
     ogr: EK.ogr,
