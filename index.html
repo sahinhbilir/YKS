@@ -531,8 +531,30 @@ function girisOgrenci() {
 
 // Öğretmen: kalıcı, gerçek bir hesapla (Google) açıkça giriş yapar. Bir popup açtığı için
 // yalnızca bir düğme tıklamasının İÇİNDEN çağrılmalı — sayfa yüklenirken otomatik çalışmaz.
+let ogretmenGoogleIzniYenile = false;
 function girisOgretmen() {
-  return signInWithPopup(auth, new GoogleAuthProvider()).then(r => r.user);
+  const provider = new GoogleAuthProvider();
+  ['openid', 'email', 'profile'].forEach(scope => provider.addScope(scope));
+  const izinYenileniyor = ogretmenGoogleIzniYenile;
+  provider.setCustomParameters({prompt: izinYenileniyor ? 'consent select_account' : 'select_account'});
+  // İlk popup tıklamanın içinde açılsın. Başarısızlıktan sonra otomatik ikinci popup
+  // açmak tarayıcı tarafından engellenebilir; izin yenileme sonraki tıklamada yapılır.
+  return signInWithPopup(auth, provider).then(r => {
+    ogretmenGoogleIzniYenile = false;
+    return r.user;
+  }).catch(e => {
+    const mesaj = String(e && e.message || '');
+    if (!/https:\/\/www\.googleapis\.com\/oauth2\/v1\/userinfo/.test(mesaj) || !/\b401\b/.test(mesaj)) throw e;
+    ogretmenGoogleIzniYenile = true;
+    const hata = new Error(izinYenileniyor
+      ? 'Google, yenilenen giriş iznini de doğrulayamadı (401). Firebase projesinin Google giriş ayarları kontrol edilmeli. ' +
+        'Lütfen verilerinizi sıfırlamayın; bu işlem defterinizi silmedi.'
+      : 'Google giriş iznini doğrulayamadı (401). “Buluta bağlan”a tekrar basın; Google hesabınızı seçip giriş iznini yeniden onaylayın. ' +
+        'Bu işlem defterinizi silmedi.');
+    hata.code = e.code || 'auth/invalid-credential';
+    hata.googleIzinHatasi = true;
+    throw hata;
+  });
 }
 
 window.bulut = { db, doc, getDoc, setDoc, updateDoc, runTransaction, collection, getDocs, girisOgrenci, girisOgretmen,
@@ -6362,7 +6384,10 @@ document.addEventListener('click', async ev => {
     if (window.bulut && window.bulut.yapilandirilmis) {
       let kullanici = null;
       try { kullanici = await window.bulut.girisOgretmen(); }
-      catch (e) { kullanici = null; }
+      catch (e) {
+        kullanici = null;
+        if (e && e.googleIzinHatasi) alert(e.message + ' Bulut defteriniz henüz alınamadı; şimdilik yerel kuruluma devam edebilirsiniz.');
+      }
       if (kullanici) {
         const sonuc = await buluttanYedekAl();
         if (sonuc.tur === 'tamam') {
