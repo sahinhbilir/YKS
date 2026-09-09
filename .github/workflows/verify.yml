@@ -35,6 +35,8 @@ jobs:
         run: node test/result-feedback-ui-regression.js
       - name: Result-package regression
         run: node test/result-package-regression.js
+      - name: Student-package integrity and startup recovery
+        run: node test/data-integrity-regression.js
       - name: Cloud-sync resilience
         run: node test/cloud-sync-resilience.js
       - name: Timetable JSON regression
