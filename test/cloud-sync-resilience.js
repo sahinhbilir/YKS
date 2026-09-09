@@ -44,15 +44,14 @@ function resultRow(dogru, soru, ki, gun) {
   });
 }
 
-function loadAppSandbox() {
+function loadAppSandbox(store = {}) {
   const listeners = {};
   const nodes = {
     ray: { innerHTML: '' }, ana: { innerHTML: '' },
     stil: { textContent: 'body{}' }, uygulama: { textContent: appSource }, veri: { textContent: 'null' }
   };
-  const store = {};
   const sandbox = {
-    console, setTimeout, clearTimeout, Blob, URL, URLSearchParams, crypto,
+    console, setTimeout, clearTimeout, Blob, URL, URLSearchParams, crypto, TextEncoder,
     location: { search: '?dev=1' }, Date, Math, JSON, Intl,
     alert() {}, confirm() { return true; }, prompt() { return ''; },
     fetch: async () => ({ ok: false }),
@@ -94,6 +93,7 @@ const results = [];
 const pending = [];
 function test(name, fn) {
   pending.push(async () => {
+    if (process.env.YKS_TEST_TRACE) console.error(name);
     try { await fn(); results.push({ name, ok: true }); }
     catch (e) { results.push({ name, ok: false, error: String((e && e.stack) || e) }); }
   });
@@ -105,12 +105,21 @@ function equal(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw n
 function docSnap(exists, data) { return { exists: () => exists, data: () => data }; }
 
 function baseBulut(overrides) {
-  return Object.assign({
+  const b = Object.assign({
     db: {},
     doc: (db, coll, id) => id,
+    getDoc: async () => docSnap(false),
+    getDocFromServer: ref => b.getDoc(ref),
+    runTransaction: async (_db, fn) => {
+      const writes = [];
+      const result = await fn({ get: ref => b.getDoc(ref), set: (ref, data) => writes.push({ ref, data }) });
+      for (const w of writes) await b.setDoc(w.ref, w.data);
+      return result;
+    },
     mevcutKullanici: () => ({ uid: 'teacher-uid', isAnonymous: false }),
     girisOgretmen: async () => ({ uid: 'teacher-uid', isAnonymous: false, email: 't@x.com' })
   }, overrides || {});
+  return b;
 }
 
 // ================================================================== (a) oncedenAyir idempotent
@@ -601,7 +610,7 @@ function loadModuleSandbox() {
       setCustomParameters(parameters) { this.parameters = parameters; return this; }
     },
     getFirestore: () => { initOrder.push('firestore'); return {}; },
-    doc: () => {}, getDoc: () => {}, setDoc: () => {}, updateDoc: () => {}, runTransaction: () => {},
+    doc: () => {}, getDoc: () => {}, getDocFromServer: () => {}, setDoc: () => {}, updateDoc: () => {}, runTransaction: () => {},
     collection: () => {}, getDocs: async () => ({ forEach() {} })
   };
   vm.createContext(sandbox);
@@ -724,7 +733,7 @@ test('teacher-connect-failure-never-writes-cloud-data-or-clears-local-notebook',
   const target = Object.assign(element(), {id:'bulutBaglan',closest(sel) { return sel.includes('#bulutBaglan') ? this : null; }});
   await listeners.click[0]({target});
   equal(writes, 0); equal(run('JSON.stringify(D)'), before);
-  assert(/Buluta bağlanılamadı/.test(message), 'connection failure remains visible');
+  assert(/Bulut.*alınamadı/.test(message), 'connection failure remains visible');
 });
 
 test('girisOgrenci-dedups-concurrent-in-flight-calls', async () => {
@@ -853,7 +862,7 @@ test('buluttanYedekAl-reads-missing-and-corrupt-cases', async () => {
   equal((await run('buluttanYedekAl()')).tur, 'hata', 'corrupt JSON must be reported');
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true, getDoc: async () => docSnap(true, { veri: { nesne: 1 }, ts: 1 }) });
   equal((await run('buluttanYedekAl()')).tur, 'hata', 'a non-string veri field must be reported');
-  const gecerli = JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Ada' }, { ad: 'Silinmis', silindi: true }] });
+  const gecerli = run('JSON.stringify(D)');
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true, getDoc: async () => docSnap(true, { veri: gecerli, ts: 1750000000000 }) });
   const ok = await run('buluttanYedekAl()');
   equal(ok.tur, 'tamam');
@@ -1233,6 +1242,7 @@ test('save-schedules-a-cloud-backup-that-actually-uploads', async () => {
   equal(bekleyen.length, 1, 'a save must schedule exactly one backup upload');
   equal(uploads.length, 0, 'nothing may be uploaded before the delay elapses');
   await bekleyen[0].fn();
+  await run('bulutYedekIsi');
   await new Promise(r => setImmediate(r));   // bulutYedekDene() ateşle-unut; mikrogörevler bitsin
   // canlı yedek + o günün kopyası
   equal(uploads.filter(u => u.ref.indexOf('gecmis/') < 0).length, 1, 'the scheduled timer must actually perform the upload');
@@ -1253,6 +1263,7 @@ test('hiding-the-tab-flushes-a-pending-backup-immediately', async () => {
   await run('kaydet(true)');
   equal(uploads.length, 0, 'still pending');
   await run('bulutYedekBosalt()');
+  await run('bulutYedekIsi');
   await new Promise(r => setImmediate(r));
   equal(uploads.length, 2, 'closing/hiding the tab must send the pending backup (live + day copy), not drop it');
   // bekleyen yoksa boşaltmak boşuna yazmamalı
@@ -1618,7 +1629,7 @@ test('declining-or-failing-a-day-restore-keeps-current-data', async () => {
   equal(run('D.ogr[0].ad'), 'Simdiki', 'and the current notebook must survive it');
 });
 
-test('restore-preserves-current-notebook-before-delayed-backup-replaces-today', async () => {
+test('restore-preserves-current-notebook-before-confirmed-backup-replaces-today', async () => {
   // Canlı hata: geri yükleme kaydet(true) çağırır; 10 saniye sonra otomatik yedek hem
   // canlı belgeyi hem bugünün günlük kopyasını geri yüklenen ESKİ veriyle değiştirir.
   // O zaman bugünkü iyi durum yalnızca benzersiz ve değiştirilemez geriNoktalari belgesinde kalmalıdır.
@@ -1655,9 +1666,14 @@ test('restore-preserves-current-notebook-before-delayed-backup-replaces-today', 
   equal(bekleyen.length, 1, 'restoring must still schedule the restored state as the new live backup');
 
   await bekleyen[0].fn();
+  await run('bulutYedekIsi');
   await new Promise(r => setImmediate(r));
+  assert(!yazilan.some(y => /\/gecmis\//.test(y.ref)), 'an unreviewed cloud copy must survive the automatic backup');
+  const yedekDugmesi = Object.assign(element(), { id: 'bulutYedekle',
+    closest(sel) { return sel.includes('#bulutYedekle') ? this : null; } });
+  await listeners.click[0]({ target: yedekDugmesi });
   const bugununGunlugu = yazilan.find(y => /\/gecmis\/2026-09-05$/.test(y.ref));
-  assert(bugununGunlugu, 'the delayed backup must still update today daily snapshot');
+  assert(bugununGunlugu, 'an explicitly confirmed backup must update today daily snapshot');
   equal(JSON.parse(bugununGunlugu.data.veri).ogr[0].ad, 'Eski Defter',
     'the test must reproduce the overwrite that previously destroyed today only good copy');
   equal(JSON.parse(koruma.data.veri).ogr[0].ad, 'Bugunku Defter',
@@ -1752,6 +1768,215 @@ test('restore-point-history-is-visible-and-restores-reversibly', async () => {
   const yeniKoruma = yazilan.find(y => y.ref.indexOf('/geriNoktalari/') >= 0);
   assert(yeniKoruma && JSON.parse(yeniKoruma.data.veri).ogr[0].ad === 'Su Anki Defter',
     'undoing a restore must first preserve the state it replaces, so the undo is itself reversible');
+});
+
+// ================================================================== teacher connection must restore before upload
+function clickButton(listeners, id) {
+  const target = Object.assign(element(), { id,
+    closest(sel) { return sel.includes('#' + id) ? this : null; } });
+  return listeners.click[0]({ target });
+}
+function notebookCloud(ctx, remote) {
+  const { sandbox, run } = ctx;
+  const main = 'ogretmenYedek/teacher-uid';
+  const docs = {};
+  if (remote !== undefined) docs[main] = { veri: remote, ts: 1750000000000, boyut: remote.length, surum: 1 };
+  const state = { docs, writes: [], reads: [], messages: [], main, failArchive: false };
+  run('ciz = () => {}; bulutYedekPlanla = () => {};');
+  sandbox.alert = m => state.messages.push(m);
+  sandbox.bilgiVer = m => state.messages.push(m);
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (_db, ...path) => path.join('/'),
+    getDoc: async ref => { state.reads.push(ref); return docSnap(!!docs[ref], docs[ref]); },
+    getDocFromServer: async ref => { state.serverRead = true; return sandbox.window.bulut.getDoc(ref); },
+    setDoc: async (ref, data) => {
+      if (state.failArchive && ref.includes('/geriNoktalari/')) throw new Error('archive failed');
+      state.writes.push({ ref, data }); docs[ref] = JSON.parse(JSON.stringify(data));
+    },
+    runTransaction: async (_db, fn) => {
+      const writes = [];
+      await fn({ get: ref => sandbox.window.bulut.getDoc(ref), set: (ref, data) => writes.push({ ref, data }) });
+      if (state.failArchive && writes.some(w => w.ref.includes('/geriNoktalari/'))) throw new Error('archive failed');
+      for (const w of writes) { state.writes.push(w); docs[w.ref] = JSON.parse(JSON.stringify(w.data)); }
+    }
+  });
+  return state;
+}
+function remoteNotebook(run) {
+  return run(`(() => { const y = varsayilan(); y.rol = 'rehber'; y.kurum = 'Cloud School';
+    y.ogr = [{ no: 7, ad: 'Cloud Student', sube: '12A', alan: 'SAY', hedef: null }];
+    y.log = [[100,0,0,8,10,3,1750000000000]];
+    y.ekKonular = [[0,0,1,'Saved custom topic',0]];
+    return JSON.stringify(y); })()`);
+}
+
+test('settings-connect-restores-whole-cloud-notebook-without-overwriting-it', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, []);
+  const remote = remoteNotebook(run), state = notebookCloud(ctx, remote);
+  await clickButton(listeners, 'bulutBaglan');
+  assert(state.serverRead, 'the restore must read the server, not an offline cache');
+  equal(run('D.ogr[0].ad'), 'Cloud Student'); equal(run('D.log.length'), 1);
+  equal(run('D.ekKonular[0][3]'), 'Saved custom topic');
+  equal(state.docs[state.main].veri, remote, 'connecting must not replace the cloud notebook');
+  assert(!state.writes.some(w => w.ref === state.main || w.ref.includes('/gecmis/')), 'only a separate local protection point may be written');
+  assert(state.messages.some(m => /1 öğrenci, 1 sonuç/.test(m)), 'restored counts must be visible');
+});
+
+test('latest-notebook-button-uses-current-session-and-preserves-local-copy', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, [student({ ad: 'Local Student' })]);
+  const local = run('JSON.stringify(D)'), state = notebookCloud(ctx, remoteNotebook(run));
+  sandbox.window.bulut.girisOgretmen = () => { throw new Error('already signed in'); };
+  await clickButton(listeners, 'bulutDefterAl');
+  equal(run('D.ogr[0].ad'), 'Cloud Student');
+  assert(state.writes.some(w => w.ref.includes('/geriNoktalari/') && w.data.veri === local), 'local notebook must remain recoverable');
+  assert(/id="bulutDefterAl"/.test(run('gorunumAyarlar()')), 'a signed-in teacher needs an explicit download action');
+});
+
+test('cancelled-cloud-restore-blocks-later-automatic-overwrite', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, [student()]);
+  const local = run('JSON.stringify(D)'), remote = remoteNotebook(run), state = notebookCloud(ctx, remote);
+  // Even an earlier acknowledgement must be revoked when this restore is declined.
+  await run('bulutYedekTemeliniHatirla("teacher-uid", ' + JSON.stringify(remote) + ')');
+  sandbox.confirm = () => false;
+  await clickButton(listeners, 'bulutBaglan');
+  const r = await run('bulutaYedekle()');
+  assert(r.cakisma, 'automatic backup must pause after declining the other copy');
+  equal(run('JSON.stringify(D)'), local); equal(state.docs[state.main].veri, remote); equal(state.writes.length, 0);
+});
+
+test('empty-device-cannot-overwrite-cloud-even-with-a-remembered-baseline', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run } = ctx;
+  resetOgr(sandbox, []);
+  const remote = remoteNotebook(run), state = notebookCloud(ctx, remote);
+  await run('bulutYedekTemeliniHatirla("teacher-uid", ' + JSON.stringify(remote) + ')');
+  assert((await run('bulutaYedekle()')).cakisma, 'empty local data must not replace a populated cloud notebook');
+  equal(state.writes.length, 0); equal(state.docs[state.main].veri, remote);
+});
+
+test('connecting-with-no-cloud-backup-does-not-create-an-empty-backup', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, []); const state = notebookCloud(ctx);
+  await clickButton(listeners, 'bulutBaglan');
+  equal((await run('bulutaYedekle()')).tur, 'hata');
+  equal(state.writes.length, 0); assert(!state.docs[state.main]);
+  assert(state.messages.some(m => /yedek geçmişini/.test(m)), 'missing latest backup must point to recovery history');
+});
+
+test('failed-or-corrupt-cloud-read-never-turns-into-an-upload', async () => {
+  for (const scenario of ['offline', 'permission-denied', 'bad-json', 'bad-schema']) {
+    const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+    resetOgr(sandbox, [student()]); const local = run('JSON.stringify(D)');
+    const remote = scenario === 'bad-json' ? '{broken' : scenario === 'bad-schema' ? '{"ogr":"bad"}' : remoteNotebook(run);
+    const state = notebookCloud(ctx, remote);
+    if (scenario === 'offline' || scenario === 'permission-denied') sandbox.window.bulut.getDocFromServer = async () => {
+      throw Object.assign(new Error(scenario), { code: scenario });
+    };
+    await clickButton(listeners, 'bulutBaglan');
+    equal(run('JSON.stringify(D)'), local, scenario); equal(state.writes.length, 0, scenario);
+    assert(state.messages.length, scenario + ' must be visible');
+  }
+});
+
+test('automatic-backup-is-paused-while-sign-in-or-restore-is-pending', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, []); const state = notebookCloud(ctx, remoteNotebook(run));
+  let resolveSignIn;
+  sandbox.window.bulut.girisOgretmen = () => new Promise(resolve => { resolveSignIn = resolve; });
+  const click = clickButton(listeners, 'bulutBaglan');
+  equal((await run('bulutaYedekle()')).tur, 'hata'); equal(state.writes.length, 0);
+  resolveSignIn({ uid: 'teacher-uid', email: 'teacher@example.test', isAnonymous: false });
+  await click; equal(run('D.ogr[0].ad'), 'Cloud Student');
+});
+
+test('manual-local-upload-preserves-the-previous-cloud-notebook-atomically', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, [student({ ad: 'Local Student' })]);
+  const local = run('JSON.stringify(D)'), remote = remoteNotebook(run), state = notebookCloud(ctx, remote);
+  await clickButton(listeners, 'bulutYedekle');
+  equal(state.docs[state.main].veri, local);
+  assert(state.writes.some(w => w.ref.includes('/geriNoktalari/') && w.data.veri === remote), 'the previous server copy must remain recoverable');
+});
+
+test('failed-protection-write-leaves-latest-cloud-and-daily-backups-intact', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, [student()]);
+  const remote = remoteNotebook(run), state = notebookCloud(ctx, remote); state.failArchive = true;
+  await clickButton(listeners, 'bulutYedekle');
+  equal(state.docs[state.main].veri, remote); equal(state.writes.length, 0);
+  assert(state.messages.some(m => /archive failed/.test(m)), 'a failed protection write must be visible');
+});
+
+test('remote-change-after-confirmation-is-not-overwritten', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, [student()]); const state = notebookCloud(ctx, remoteNotebook(run));
+  const newer = JSON.parse(state.docs[state.main].veri); newer.kurum = 'Changed by another device';
+  sandbox.confirm = () => { state.docs[state.main].veri = JSON.stringify(newer); return true; };
+  await clickButton(listeners, 'bulutYedekle');
+  equal(state.docs[state.main].veri, JSON.stringify(newer)); equal(state.writes.length, 0);
+  assert(state.messages.some(m => /Üzerine yazılmadı/.test(m)));
+});
+
+test('acknowledged-backups-survive-reload-but-do-not-authorize-another-account', async () => {
+  const store = {}; const ctx = loadAppSandbox(store); const { sandbox, run } = ctx;
+  resetOgr(sandbox, [student()]); const state = notebookCloud(ctx);
+  equal((await run('bulutaYedekle()')).tur, 'tamam');
+  const reopened = loadAppSandbox(store); resetOgr(reopened.sandbox, [student()]);
+  const next = notebookCloud(reopened, state.docs[state.main].veri);
+  reopened.run('D.kurum = "Edited after reload"');
+  equal((await reopened.run('bulutaYedekle()')).tur, 'tamam', 'normal backups must continue after reload');
+  next.docs['ogretmenYedek/other-teacher'] = { ...next.docs[next.main] };
+  reopened.sandbox.window.bulut.mevcutKullanici = () => ({ uid: 'other-teacher', isAnonymous: false });
+  reopened.run('D.kurum = "Different local notebook"');
+  const r = await reopened.run('bulutaYedekle()');
+  assert(r.cakisma, 'one account acknowledgement cannot authorize another account');
+});
+
+test('automatic-backup-rejects-another-device-update', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run } = ctx;
+  resetOgr(sandbox, [student()]); const state = notebookCloud(ctx);
+  equal((await run('bulutaYedekle()')).tur, 'tamam');
+  const remote = JSON.parse(state.docs[state.main].veri); remote.kurum = 'Other device';
+  state.docs[state.main].veri = JSON.stringify(remote); state.writes.length = 0;
+  run('D.kurum = "This device"');
+  assert((await run('bulutaYedekle()')).cakisma); equal(state.writes.length, 0);
+});
+
+test('failed-local-restore-does-not-acknowledge-cloud-or-claim-success', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, [student()]); const local = run('JSON.stringify(D)');
+  const state = notebookCloud(ctx, remoteNotebook(run)); sandbox.kaydet = async () => false;
+  await clickButton(listeners, 'bulutDefterAl');
+  equal(run('JSON.stringify(D)'), local); assert((await run('bulutaYedekle()')).cakisma);
+  assert(!state.messages.some(m => /geri yüklendi:/.test(m)), 'failed local persistence is not a successful restore');
+});
+
+test('restoring-an-empty-latest-backup-does-not-erase-a-populated-daily-copy', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, []);
+  const empty = run('JSON.stringify(D)'), state = notebookCloud(ctx, empty);
+  const daily = state.main + '/gecmis/' + run('isoDan(bugunNo())');
+  const good = remoteNotebook(run); state.docs[daily] = { veri: good };
+  await clickButton(listeners, 'bulutDefterAl');
+  const r = await run('bulutaYedekle()');
+  equal(r.tur, 'hata'); equal(state.docs[daily].veri, good);
+  equal(state.docs[state.main].veri, empty);
+  assert(!state.writes.some(w => w.ref === daily), 'an empty latest backup must not erase surviving daily history');
+});
+
+test('local-edits-during-restore-protection-are-not-discarded', async () => {
+  const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
+  resetOgr(sandbox, [student()]); const state = notebookCloud(ctx, remoteNotebook(run));
+  const saveArchive = sandbox.window.bulut.setDoc;
+  sandbox.window.bulut.setDoc = async (ref, data) => {
+    await saveArchive(ref, data);
+    run('D.kurum = "Edited while the archive was saving"');
+  };
+  await clickButton(listeners, 'bulutDefterAl');
+  equal(run('D.ogr[0].ad'), 'Ada'); equal(run('D.kurum'), 'Edited while the archive was saving');
+  assert(state.messages.some(m => /yerel defter değişti/.test(m)));
 });
 
 // ================================================================== özet

@@ -536,6 +536,34 @@ await check('restore-point-rejects-malformed-payloads', async () => {
   await assertFails(setDoc(taban, geriNoktasiVeri({ veri: buyuk, boyut: buyuk.length })));
 });
 
+await check('teacher-can-atomically-preserve-cloud-copy-before-replacing-latest', async () => {
+  const latest = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID);
+  const archive = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'before-local-upload');
+  const before = (await getDoc(latest)).data();
+  const next = yedekVeri(); next.veri = JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Local notebook' }] });
+  next.boyut = next.veri.length;
+  await assertSucceeds(runTransaction(ogretmenDb, async tx => {
+    const current = (await tx.get(latest)).data();
+    tx.set(archive, geriNoktasiVeri({ veri: current.veri, boyut: current.veri.length,
+      kaynak: 'Yerel defter yüklenmeden önce buluttaki defter' }));
+    tx.set(latest, next);
+  }));
+  if ((await getDoc(archive)).data().veri !== before.veri) throw new Error('previous cloud copy was not preserved');
+  if ((await getDoc(latest)).data().veri !== next.veri) throw new Error('new notebook was not committed');
+});
+await check('failed-cloud-archive-aborts-the-latest-backup-replacement', async () => {
+  const latest = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID);
+  const archive = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'before-local-upload');
+  const before = (await getDoc(latest)).data();
+  // The existing archive is immutable: rejection must also roll back the latest write.
+  await assertFails(runTransaction(ogretmenDb, async tx => {
+    await tx.get(latest);
+    tx.set(archive, geriNoktasiVeri());
+    tx.set(latest, yedekVeri());
+  }));
+  if (!isDeepStrictEqual((await getDoc(latest)).data(), before)) throw new Error('latest changed despite failed archive');
+});
+
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
 await testEnv.cleanup();
 process.exit(fail ? 1 : 0);
