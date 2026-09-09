@@ -23,6 +23,8 @@ jobs:
         run: node test/role-regression.js
       - name: Automatic student workflow and eight-week simulation
         run: node test/student-automation-regression.js
+      - name: Optional student reporting cycles
+        run: node test/weekly-cycle-regression.js
       - name: Mobile backups and print recovery
         run: node test/mobile-export-regression.js
       - name: Background return preserves the current screen

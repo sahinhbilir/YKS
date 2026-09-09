@@ -1277,6 +1277,18 @@ test('manual-sunucuyaGonder-still-skips-empty-results', async () => {
   equal(writes, 0, 'an empty manual retry must not overwrite the server record');
 });
 
+test('reporting-week-setting-syncs-without-results', async () => {
+  const {sandbox, run} = loadAppSandbox();
+  resetOgr(sandbox, [student({syncId:'student-slot'})], 'ogrenci');
+  run('ogrenciHaftaGunuAyarla(2)');
+  let payload;
+  sandbox.window.bulut=baseBulut({yapilandirilmis:true,
+    girisOgrenci:async()=>({uid:'student-1'}), updateDoc:async(_ref,data)=>{payload=data;}});
+  equal(await run('sunucuyaGonder()'),0,'no synthetic scores');
+  equal(payload.paket.haftaDuzeni,run('D.ogr[0].haftaDuzeni'),'preference is uploaded');
+  equal(payload.paket.kayit.length,0,'no result is required to save the preference');
+});
+
 test('reset-only-sunucuyaGonder-writes-version-3-package', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
