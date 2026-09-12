@@ -87,13 +87,13 @@ async function exportFile() {
   run(`D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-07';
     D.ogr=[{ad:'Örnek Öğrenci',no:0,sube:'201',alan:'SAY',kap:6,off:[6],aktif:true}];
     EK={ogr:0,sekme:'plan',hafta:null,girisAcik:{}};ogrenciOtomasyonHazirla();`);
-  const before = run('JSON.stringify(D)');
+  const before = run('JSON.stringify([D.log,D.elle])');
   active = true; const printResult = run('planYazdir(null)');
   check('printing-starts-in-original-tap', printing === 1); active = false;
   check('print-call-completes', await printResult);
   check('print-preview-has-visible-retry', nodes.disariAktar.innerHTML.includes('id="ciktiYazdir"'));
   check('print-preview-retains-repetition-labels', nodes.disariAktar.innerHTML.includes('1. tekrar'));
-  check('printing-does-not-change-results-or-freeze-plans', before === run('JSON.stringify(D)'));
+  check('printing-does-not-change-results-or-freeze-plans', before === run('JSON.stringify([D.log,D.elle])'));
   active = true; await click('ciktiYazdir'); check('visible-print-retry-works', printing === 2);
   await click('ciktiKapat'); check('print-close-restores-original-title', context.document.title === 'YKS');
   context.window.print = () => { throw Error('Print unavailable in embedded browser'); };
