@@ -584,7 +584,7 @@ const modSourceRaw = html.slice(modStart, modEnd);
 const modSource = modSourceRaw.split('\n').filter(line => !/^\s*import\s/.test(line)).join('\n');
 
 function loadModuleSandbox() {
-  const authObj = { currentUser: null };
+  const authObj = { currentUser: null, authStateReady: async () => {} };
   const secondaryAuthObj = { currentUser: null };
   let authCall = 0;
   let signInAnonymouslyImpl = () => Promise.reject(new Error('not mocked'));
@@ -600,6 +600,7 @@ function loadModuleSandbox() {
     initializeAppCheck: (_, options) => { initOrder.push('app-check'); appCheckOptions = options; return {}; },
     ReCaptchaEnterpriseProvider: function ReCaptchaEnterpriseProvider(key) { this.key = key; },
     getAuth: () => { initOrder.push('auth'); return authCall++ === 0 ? authObj : secondaryAuthObj; },
+    onAuthStateChanged: () => () => {},
     signInAnonymously: (...args) => { calls.signInAnonymously++; return signInAnonymouslyImpl(...args); },
     signInWithPopup: () => Promise.reject(new Error('not mocked in this harness')),
     signInWithEmailAndPassword: () => Promise.reject(new Error('not mocked in this harness')),
@@ -612,6 +613,7 @@ function loadModuleSandbox() {
     getFirestore: () => { initOrder.push('firestore'); return {}; },
     doc: () => {}, getDoc: () => {}, getDocFromServer: () => {}, setDoc: () => {}, updateDoc: () => {}, runTransaction: () => {},
     collection: () => {}, getDocs: async () => ({ forEach() {} })
+    , onSnapshot: () => () => {}
   };
   vm.createContext(sandbox);
   new vm.Script(modSource, { filename: target + '(module)' }).runInContext(sandbox);
@@ -742,6 +744,7 @@ test('girisOgrenci-dedups-concurrent-in-flight-calls', async () => {
   setImpl(() => new Promise(res => { resolveFn = res; }).then(user => { authObj.currentUser = user; return { user }; }));
   const p1 = vm.runInContext('girisOgrenci()', sandbox);
   const p2 = vm.runInContext('girisOgrenci()', sandbox);
+  await new Promise(resolve => setImmediate(resolve));
   resolveFn({ uid: 'anon1', isAnonymous: true });
   const [u1, u2] = await Promise.all([p1, p2]);
   equal(calls.signInAnonymously, 1, 'a second concurrent call must reuse the in-flight promise');
@@ -1977,6 +1980,60 @@ test('local-edits-during-restore-protection-are-not-discarded', async () => {
   await clickButton(listeners, 'bulutDefterAl');
   equal(run('D.ogr[0].ad'), 'Ada'); equal(run('D.kurum'), 'Edited while the archive was saving');
   assert(state.messages.some(m => /yerel defter değişti/.test(m)));
+});
+
+test('student-sync-waits-for-persisted-auth-before-considering-anonymous-login', async () => {
+  const { sandbox, authObj, calls } = loadModuleSandbox();
+  let ready;
+  authObj.authStateReady = () => new Promise(resolve => { ready = resolve; });
+  const p = vm.runInContext('girisOgrenci({hesapUid:"published-student",ad:"Ada",no:1})', sandbox);
+  equal(calls.signInAnonymously, 0);
+  authObj.currentUser = { uid:'published-student', isAnonymous:false, email:'ogr-test@student.ykstekrar.app' };
+  ready();
+  equal((await p).uid, 'published-student'); equal(calls.signInAnonymously, 0);
+});
+
+test('published-student-session-recovers-with-name-and-number-without-anonymous-fallback', async () => {
+  const { sandbox, calls } = loadModuleSandbox();
+  let passwordCalls = 0;
+  sandbox.signInWithEmailAndPassword = async () => { passwordCalls++; return { user: { uid:'account-1',isAnonymous:false } }; };
+  equal((await vm.runInContext('girisOgrenci({hesapUid:"account-1",ad:"Ada",no:1})',sandbox)).uid,'account-1');
+  equal(passwordCalls,1); equal(calls.signInAnonymously,0);
+  sandbox.signInWithEmailAndPassword = async () => { throw new Error('account unavailable'); };
+  let error;
+  try { await vm.runInContext('girisOgrenci({hesapUid:"account-1",ad:"Ada",no:1})',sandbox); } catch(e) { error=e; }
+  assert(error && /account unavailable/.test(error.message)); equal(calls.signInAnonymously,0);
+});
+
+test('work-snapshot-preserves-custom-plan-lesson-completion-and-student-settings', async () => {
+  const ctx=loadAppSandbox(); const {sandbox,run}=ctx;
+  resetOgr(sandbox,[student({ogrenciBulutId:'identity',syncId:'slot',hesapUid:'account'})],'ogrenci');
+  run(`D.ekKonular=[[0,12,'Own','Student-only topic',0,'']];
+    D.ogrCalismaTs=200;D.ogr[0].kap=3;D.elle={};
+    D.elle['0|100']={sabit:true,ek:[KATALOG.length],yer:{[KATALOG.length]:[0,0]},plan:{slotlar:[[String(KATALOG.length)],[],[],[],[],[],[]]}};
+    D.ogrIslenis={0:{[KATALOG.length]:100}};D.ertele={['0:'+KATALOG.length]:110};`);
+  const packet=run('sonucPaketi()');
+  assert(packet.calisma && packet.kayit.length===0,'plan-only work must have a cloud payload');
+  resetOgr(sandbox,[student({ogrenciBulutId:'identity',syncId:'slot'})],'rehber');
+  run("D.ekKonular=[[1,12,'Own','Unrelated teacher topic',0,'']];");
+  sandbox.packet=packet;run('sonucPaketiUygula(packet,0)');
+  equal(run('D.ogr[0].kap'),3);
+  equal(run("D.elle['0|100'].plan.slotlar[0][0]"),String(run('KATALOG.length+1')));
+  equal(run('D.ogrIslenis[0][KATALOG.length+1]'),100);
+  equal(run("D.ertele['0:'+(KATALOG.length+1)]"),110);
+  equal(run('D.ekKonular[0][3]'),'Unrelated teacher topic');
+});
+
+test('malformed-work-snapshot-cannot-partially-import-results', async () => {
+  const {sandbox,run}=loadAppSandbox();
+  resetOgr(sandbox,[student({ogrenciBulutId:'identity',syncId:'slot'})],'ogrenci');
+  run('sonucIsle(0,[{ki:0,gun:bugunNo(),dogru:8,soru:10}])');
+  const pk=run('sonucPaketi()');
+  const source=JSON.parse(pk.calisma.veri);source.elle={'0|100':{ek:[999999]}};pk.calisma.veri=JSON.stringify(source);
+  resetOgr(sandbox,[student({ogrenciBulutId:'identity',syncId:'slot'})],'rehber');
+  const before=run('JSON.stringify(D)'); sandbox.pk=pk;let failed=false;
+  try { run('sonucPaketiUygula(pk,0)'); } catch(e) { failed=true; }
+  assert(failed);equal(run('JSON.stringify(D)'),before);
 });
 
 // ================================================================== özet
