@@ -63,4 +63,6 @@ jobs:
         working-directory: test/firebase
         run: npm ci
       - name: Run Firestore security-rule checks
-        run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/firestore.test.mjs && node test/firebase/save-print-flow.test.mjs"
+        run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/firestore.test.mjs"
+      - name: Verify save and print delivery with a fresh emulator
+        run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/save-print-flow.test.mjs"
