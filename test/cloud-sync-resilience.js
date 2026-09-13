@@ -2036,6 +2036,25 @@ test('malformed-work-snapshot-cannot-partially-import-results', async () => {
   assert(failed);equal(run('JSON.stringify(D)'),before);
 });
 
+test('save-during-an-in-flight-teacher-backup-flushes-the-newer-notebook', async () => {
+  const ctx=loadAppSandbox(); const {sandbox,run}=ctx;
+  resetOgr(sandbox,[student()]); const state=notebookCloud(ctx);
+  const transaction=sandbox.window.bulut.runTransaction;
+  let release,started,first=true;
+  const gate=new Promise(resolve=>{release=resolve;});
+  const pending=new Promise(resolve=>{started=resolve;});
+  sandbox.window.bulut.runTransaction=async (...args)=>{
+    const r=await transaction(...args);
+    if(first){first=false;started();await gate;}
+    return r;
+  };
+  run('D.kurum="Before print"');
+  const old=run('bulutaYedekle()');await pending;
+  run('D.kurum="Changed by print"');
+  const flush=run('bulutYedekDene()');release();await old;await flush;
+  equal(JSON.parse(state.docs[state.main].veri).kurum,'Changed by print');
+});
+
 // ================================================================== özet
 (async () => {
   for (const t of pending) await t();

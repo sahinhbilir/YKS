@@ -66,8 +66,8 @@ function app(db,user) {
   const a={s,run,click,result,store,messages,close(){run('ogretmenDinlemeyiDurdur()');timers.forEach(clearTimeout);}};
   apps.push(a);return a;
 }
-async function eventually(fn,label) {
-  const end=Date.now()+15000;
+async function eventually(fn,label,timeout=15000) {
+  const end=Date.now()+timeout;
   while(Date.now()<end) { if(await fn()) return; await new Promise(resolve=>setTimeout(resolve,30)); }
   throw new Error(label+' timed out; '+apps.map(a=>a.run('JSON.stringify({student:EK.ogrSyncHata,teacher:EK.ogretmenSyncDurum,backup:EK.bulutYedekHata})')).join(' | '));
 }
@@ -120,7 +120,7 @@ try {
   check('pdf-click-saves-before-print-and-reaches-teacher-without-new-results',()=>assert.equal(prints,1));
   teacher.run("D.kurum='Teacher print saved';");teacher.s.window.print=()=>{};
   await teacher.click('yazdir');
-  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).kurum==='Teacher print saved';},'teacher print backup');
+  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).kurum==='Teacher print saved';},'teacher print backup without the ten-second fallback',5000);
   check('teacher-print-also-flushes-the-complete-server-backup',()=>assert.equal(teacher.run('D.log.length'),2));
   console.log(`SAVE/PRINT DELIVERY: ${passed} checks passed`);
 } finally {

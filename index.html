@@ -4666,11 +4666,18 @@ function bulutYedekBosalt() {
 // öğretmenin "yedeğim var" sanıp aslında bulutta hiçbir şey olmamasıydı. Artık başarısızlık
 // Ayarlar'da görünür ve rayCiz() ile üst çubuğa yansır.
 function bulutYedekDene() {
-  Promise.resolve(bulutaYedekle()).then(r => {
+  const defter = D;
+  // Önceki yükleme farklı bir anlık kopyayı taşıyor olabilir. Bittiğinde güncel
+  // defteri gönder; yazdır/kaydet çağrısı eski yüklemenin onayıyla tamamlanmasın.
+  return Promise.resolve(bulutYedekIsi).then(() => {
+    if (D !== defter || bulutDefterIslemi) return;
+    return bulutaYedekle();
+  }).then(r => {
+    if (D !== defter) return;
     if (r && r.tur === 'hata') EK.bulutYedekHata = r.mesaj || 'bilinmeyen hata';
     else if (r && r.tur === 'baglanilmadi') EK.bulutYedekHata = 'Google hesabıyla giriş yapılmadı.';
     if (r && typeof rayCiz === 'function') { try { rayCiz(); } catch (e) { /* yoksay */ } }
-  }).catch(e => { EK.bulutYedekHata = e && e.message ? e.message : String(e); });
+  }).catch(e => { if (D === defter) { EK.bulutYedekHata = e && e.message ? e.message : String(e); rayCiz(); } });
 }
 async function buluttanYedekAl() {
   if (!window.bulut) return { tur: 'yok' };
