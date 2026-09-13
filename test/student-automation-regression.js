@@ -39,7 +39,7 @@ function resultRow(value, soru, ki, gun, slot) {
 }
 const sandbox = {
   console, setTimeout(fn,ms) { timers.push({fn,ms}); return timers.length; }, clearTimeout(id) { if(timers[id-1]) timers[id-1].cancelled=true; }, Blob, URL, URLSearchParams,
-  location: { search: '?dev=1' }, Date, Math, JSON, Intl,
+  location: { search: '?dev=1' }, Date, Math, JSON, Intl, TextEncoder,
   alert(m) { alerts.push(m); }, confirm() { return true; }, prompt() { return ''; },
   fetch: async () => ({ ok: false }),
   localStorage: { getItem(k) { return saved[k] || null; }, setItem(k,v) { saved[k]=v; } },
@@ -64,7 +64,7 @@ const run = code => vm.runInContext(code, sandbox);
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
 const checks = [], weeks = [];
-function check(name, ok) { assert(ok,name); checks.push(name); }
+function check(name, ok) { assert(ok,name + (run('EK.ogrSyncHata') ? ': ' + run('EK.ogrSyncHata') : '')); checks.push(name); }
 function init(date='2026-09-06',joined='2026-08-31') {
   sandbox.date=date; sandbox.joined=joined; inputRows=[]; sandbox.window.bulut=null;
   run(`D=null; D=varsayilan(); D.rol='ogrenci'; D.ayar.testTarih=date;
@@ -103,8 +103,9 @@ function fillPlan(p,h,week=0,limit=Infinity) {
    run('EK.hafta='+h); await draw();
    const draft=getPlan(h), expected=layout(draft);
    check('week-'+w+'-future-is-a-preview',!run('elleAl(0,'+h+').sabit'));
-   const beforePrint=run('JSON.stringify(D)'); await click('yazdirOnizle');
-   check('week-'+w+'-download-does-not-lock',run('JSON.stringify(D)')===beforePrint);
+   const beforePrint=run('JSON.stringify(D.elle)'); await click('yazdirOnizle');
+   check('week-'+w+'-download-does-not-lock',run('JSON.stringify(D.elle)')===beforePrint);
+   check('week-'+w+'-download-saves-locally',!!saved.yks_veri);
    run('D.ayar.testTarih=isoDan('+(h+6)+');EK.hafta=null;EK.sekme="giris";EK.girisAcik={};');
    await draw();
    const p=getPlan(h);
