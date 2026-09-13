@@ -32,7 +32,15 @@ function app(db,user) {
     localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>{store[k]=v;}},
     sessionStorage:{getItem:()=>null,setItem(){},removeItem(){}},
     window:{scrollTo(){},open:()=>null,print(){},addEventListener(k,fn){(windowEvents[k] ||= []).push(fn);},
-      bulut:{db,doc,getDoc,getDocFromServer,setDoc,updateDoc,runTransaction,onSnapshot,collection,getDocs,yapilandirilmis:true,
+      // The app VM and SDK have different Object prototypes. Clone across that
+      // test-only boundary; all persistence still uses actual Firestore calls.
+      bulut:{db,doc,getDoc,getDocFromServer,
+        setDoc:(ref,data)=>setDoc(ref,structuredClone(data)),
+        updateDoc:(ref,data)=>updateDoc(ref,structuredClone(data)),
+        runTransaction:(database,fn)=>runTransaction(database,tx=>fn({
+          get:ref=>tx.get(ref),set:(ref,data)=>tx.set(ref,structuredClone(data)),
+          update:(ref,data)=>tx.update(ref,structuredClone(data))})),
+        onSnapshot,collection,getDocs,yapilandirilmis:true,
         mevcutKullanici:()=>user,girisOgretmen:async()=>user,girisOgrenci:async()=>user,girisOgrenciHesabi:async()=>user}},
     document:{activeElement:null,title:'YKS',visibilityState:'visible',
       addEventListener(k,fn){(listeners[k] ||= []).push(fn);},getElementById:id=>nodes[id]||null,
