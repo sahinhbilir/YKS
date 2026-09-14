@@ -101,6 +101,32 @@ check('storage-failure-keeps-the-entire-original-notebook',()=>{
   assert.throws(()=>save([row()]),e=>/depolama alanı dolu/.test(e.message)&&/Yedek indir/.test(e.message)&&e.sebep&&e.sebep.message==='quota');
   assert.equal(run('JSON.stringify(D)'),before);assert.equal(store.yks_veri,before);assert.equal(store.yks_plan_kurtarma_oncesi,before);
 });
+check('row-errors-name-the-row-the-user-sees-even-when-rows-are-excluded',()=>{
+  // Ekranda satırlar elenmeden numaralanır ve dahil edilmeyenler (soluk da olsa) durur.
+  // Bu yüzden 1. satır dışarıda bırakılsa bile hatalı satır "3. satır" olarak bildirilmeli.
+  const rows=[row(0,{dahil:false}),row(1),row(2,{durum:'planlandi',dogru:null,not:1})];
+  assert.throws(()=>prepare(rows),e=>/^3\. satırda sonuç var/.test(e.message));
+  // Sonuç taşıyan satır tamamlanmış test olmalı; ileti ne yapılacağını da söylemeli.
+  assert.throws(()=>prepare(rows),/doğru sayısı ve değerlendirme boş olmalı/);
+});
+check('a-planned-row-without-any-score-is-accepted',()=>{
+  const p=prepare([row(),row(1,{durum:'planlandi',dogru:null,not:null})]);
+  assert.equal(p.satir,2);assert.equal(p.rapor.bekleyen,1);assert.equal(p.rapor.sonuc,1);
+});
+check('every-row-check-reports-a-row-number',()=>{
+  // assert.throws(fn, /re/) sicimlestirilmis hatayla eslesir; satir numarasinin iletinin
+  // BASINDA oldugunu dogrulamak icin e.message'a bakan bir dogrulayici kullanilir.
+  const ikinciSatir=e=>/^2\. satır/.test(e.message);
+  assert.throws(()=>prepare([row(),row(1,{tarih:'not-a-date'})]),ikinciSatir);
+  assert.throws(()=>prepare([row(),row(1,{tur:'bilinmiyor'})]),ikinciSatir);
+  assert.throws(()=>prepare([row(),row(1,{dogru:99,soru:10})]),ikinciSatir);
+  assert.throws(()=>prepare([row(),row(1,{tur:'serbest',konu:''})]),ikinciSatir);
+});
+check('the-ai-prompt-states-both-hard-rules',()=>{
+  const t=run('gecmisPlanPromptMetni()');
+  assert(/KATI KURAL 1/.test(t)&&/hem dogru hem not MUTLAKA null/.test(t));
+  assert(/KATI KURAL 2/.test(t)&&/BİREBİR AYNI/.test(t));
+});
 check('student-role-rejects-a-multiple-student-notebook',()=>{
   run("D.rol='ogrenci'");assert.throws(()=>save([row()]),/öğrenci seçin/);assert.equal(run('gorunumPlanKurtarma()'),'');
 });

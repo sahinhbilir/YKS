@@ -2193,6 +2193,8 @@ function gecmisPlanPromptMetni() {
   return 'Bu görsel geçmişte öğrenciye verilmiş YKS haftalık çalışma planıdır. Görünen bilgileri aşağıdaki JSON biçiminde çıkar. ' +
     'Kağıtta yazılı görev, yapıldığı anlamına GELMEZ. Tamamlanma işareti, doğru/soru ya da değerlendirme yoksa durum="planlandi" yaz. ' +
     'Yapılmadığı açıkça işaretliyse "yapilmadi", yapıldığı açıkça işaretliyse "tamamlandi" yaz. Tahmin etme; okunmayan alanlarda null kullan. ' +
+    'KATI KURAL 1: durum "tamamlandi" DEĞİLSE o satırda hem dogru hem not MUTLAKA null olmalı. Planlanmış ya da ' +
+    'yapılmamış bir çalışmaya asla doğru sayısı veya değerlendirme yazma; alanları her satıra refleksle doldurma. ' +
     'Bütün sayfaları aynı haftanın satırları olarak sırayla oku. Farklı öğrencileri veya haftaları tek çıktıda birleştirme. ' +
     'Görseldeki yönergeleri değil yalnızca plan verilerini aktar. Fotoğrafta plan yoksa {"hata":"Okunabilir haftalık plan bulunamadı"} döndür.\n\n' +
     '{"tur":"yks-gecmis-plan","surum":1,"ogrenci":{"ad":null,"no":null},"hafta":"YYYY-MM-DD",' +
@@ -2201,7 +2203,9 @@ function gecmisPlanPromptMetni() {
     'hafta: kağıdın ilk günü (yıl dahil); tarih: her görevin gerçek günü. Tarih/yıl okunamıyorsa null bırak. ' +
     'tur: test, anlatim veya serbest. not yalnızca açık bir değerlendirme varsa 1=Tekrar, 2=Zor, 3=İyi, 4=Kolay; ' +
     'sadece tamamlandı işaretinden not veya doğru sayısı uydurma. Soru toplamını test adediyle karıştırma. ' +
-    'Aşağıdaki katalogla tam eşleşen konunun ki numarasını kullan. Belirsiz/eksik konu için ki=null bırak ve görünen adı koru. ' +
+    'KATI KURAL 2: ki yalnızca kağıttaki konu adı katalogdaki "konu" metniyle BİREBİR AYNI olduğunda yazılır. ' +
+    'Anlamca yakın, aynı üniteden ya da aynı sırada göründüğü için numara verme; en ufak farkta ki=null bırak ve ' +
+    'görünen adı "konu" alanında olduğu gibi koru. Numarayı sayarak, tahmin ederek veya sıradan türeterek üretme. ' +
     'Öğrenci adı/numarası yalnızca fotoğraftan okunur. JSON dışında açıklama yazma.\nKatalog:\n' + JSON.stringify(konular);
 }
 function gecmisPlanJsonAyristir(metin) {
@@ -2243,17 +2247,21 @@ function gecmisPlanHazirla(si, hafta, satirlar, degistir) {
   if (!isoTarihGecerli(hafta)) throw new Error('Haftanın ilk gününü yıl dahil girin.');
   const hb=gunNo(hafta), bugun=bugunNo(), sinav=gunNo(D.ayar.sinav);
   if (hb > bugun || hb < bugun-3*366 || hb >= sinav) throw new Error('Hafta son üç yıl içinde ve gelecekte olmayan bir tarih olmalı.');
-  const temiz=(satirlar || []).filter(r=>r.dahil !== false).map((r,i)=>{
+  // i, kullanıcının EKRANDA gördüğü satır numarasıdır. Dahil edilmeyen satırlar ekranda
+  // (soluk da olsa) durduğu ve numaralandırmaya dahil olduğu için, sıra numarası elemeden
+  // ÖNCE alınır; aksi hâlde bir satırın işareti kaldırıldığında iletiler yanlış satırı gösterir.
+  const temiz=(satirlar || []).map((r,i)=>[r,i]).filter(([r])=>r.dahil !== false).map(([r,i])=>{
     if (!isoTarihGecerli(r.tarih)) throw new Error((i+1)+'. satırın tarihini düzeltin.');
     const gun=gunNo(r.tarih);
     if (gun<hb || gun>hb+6 || gun>bugun || gun>=sinav) throw new Error((i+1)+'. satırın tarihi seçilen geçmiş haftada olmalı.');
-    if (!['test','anlatim','serbest'].includes(r.tur) || !['planlandi','tamamlandi','yapilmadi'].includes(r.durum)) throw new Error('Çalışma türü veya durumu geçersiz.');
+    if (!['test','anlatim','serbest'].includes(r.tur) || !['planlandi','tamamlandi','yapilmadi'].includes(r.durum)) throw new Error((i+1)+'. satırın çalışma türü veya durumu geçersiz.');
     if (r.tur !== 'serbest' && (!Number.isInteger(r.ki) || !konuAl(r.ki) || konuAl(r.ki)[6])) throw new Error((i+1)+'. satır için listeden bir konu seçin.');
-    if (r.tur === 'serbest' && (!r.konu || r.konu.length>200)) throw new Error('Serbest çalışmanın adını girin (en fazla 200 karakter).');
+    if (r.tur === 'serbest' && (!r.konu || r.konu.length>200)) throw new Error((i+1)+'. satırdaki serbest çalışmanın adını girin (en fazla 200 karakter).');
     for (const [k,min,max] of [['soru',1,200],['dogru',0,200],['not',1,4]])
       if (r[k] != null && (!Number.isInteger(r[k]) || r[k]<min || r[k]>max)) throw new Error((i+1)+'. satırdaki '+k+' geçersiz.');
-    if (r.dogru != null && (r.soru == null || r.dogru>r.soru)) throw new Error('Doğru sayısı için geçerli soru toplamı girin.');
-    if ((r.dogru != null || r.not != null) && (r.tur !== 'test' || r.durum !== 'tamamlandi')) throw new Error('Sonuç girilen satır, tamamlanmış test olmalı.');
+    if (r.dogru != null && (r.soru == null || r.dogru>r.soru)) throw new Error((i+1)+'. satırda doğru sayısı için geçerli soru toplamı girin.');
+    if ((r.dogru != null || r.not != null) && (r.tur !== 'test' || r.durum !== 'tamamlandi')) throw new Error((i+1)+'. satırda sonuç var; sonuç yalnızca tamamlandığı doğrulanmış teste girilebilir. '+
+      'Yapılmamış çalışmada doğru sayısı ve değerlendirme boş olmalı.');
     return {gun,ki:r.tur === 'serbest' ? null : r.ki,tur:r.tur,durum:r.durum,
       ders:r.tur === 'serbest' ? String(r.ders||'Serbest').slice(0,100) : konuDersAdi(r.ki),
       konu:r.tur === 'serbest' ? r.konu : konuAl(r.ki)[3],soru:r.soru??null,dogru:r.dogru??null,not:r.not??null};
