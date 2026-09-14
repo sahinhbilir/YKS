@@ -41,6 +41,29 @@ jobs:
         run: node test/cloud-sync-resilience.js
       - name: Timetable JSON regression
         run: node test/timetable-json-regression.js
+      - name: Past plan photo recovery
+        run: node test/past-plan-recovery-regression.js
+
+  photo-recovery-browser:
+    name: Past plan recovery browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser test runner
+        run: npm install --prefix "$RUNNER_TEMP/yks-browser" --no-save playwright@1.62.1
+      - name: Install Chromium
+        run: node "$RUNNER_TEMP/yks-browser/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Review and save a photographed plan on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/past-plan-recovery-browser.cjs
+      - name: Keep synthetic review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: photo-recovery-browser
+          path: ${{ runner.temp }}/yks-photo-ui
 
   firestore-rules:
     name: Firestore rules emulator

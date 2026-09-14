@@ -122,6 +122,27 @@ try {
   await teacher.click('yazdir');
   await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).kurum==='Teacher print saved';},'teacher print backup without the ten-second fallback',5000);
   check('teacher-print-also-flushes-the-complete-server-backup',()=>assert.equal(teacher.run('D.log.length'),2));
+  teacher.run(`gecmisPlaniKaydet(0,'2026-09-07',[{tarih:'2026-09-08',ki:0,tur:'test',durum:'tamamlandi',soru:10,dogru:7,not:null,dahil:true}],true)`);
+  await teacher.run('kaydet(true)');teacher.run('sunucuKaydiniBaslat()');
+  await teacher.run('gecmisPlaniOgrenciyeYayinla(0)');
+  const recovered=app(studentDb,{uid:studentUid,isAnonymous:false,email:'ogr-delivery@student.ykstekrar.app'});
+  await recovered.run('ogrenciHesabindanYukle("Delivery Student",42)');
+  check('photo-recovered-history-reaches-student-login-with-existing-results-intact',()=>{
+    assert.equal(recovered.run('D.log.length'),3);
+    assert.equal(recovered.run("D.elle['0|'+gunNo('2026-09-07')].kurtarma.satirlar[0].gun"),recovered.run("gunNo('2026-09-08')"));
+    assert.equal(recovered.run("D.log.find(l=>l[0]===gunNo('2026-09-08'))[3]"),7);
+  });
+  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).log.length===3;},'recovered teacher history backup',5000);
+  check('photo-recovery-is-in-the-teacher-server-backup',()=>assert.equal(teacher.run('D.log.length'),3));
+  recovered.run(`gecmisPlaniKaydet(0,'2026-08-31',[{tarih:'2026-09-01',ki:0,tur:'test',durum:'tamamlandi',soru:10,dogru:6,not:null,dahil:true}],false)`);
+  await recovered.run('kaydet(true)');await recovered.run('ogrenciEsitlemeBosalt()');
+  await eventually(()=>teacher.run('D.log.length')===4,'student photo recovery delivery');
+  check('student-photo-recovery-delivers-the-original-week-and-result-to-teacher',()=>{
+    assert.ok(teacher.run("D.elle['0|'+gunNo('2026-08-31')].kurtarma"));
+    assert.equal(teacher.run("D.log.find(l=>l[0]===gunNo('2026-09-01'))[3]"),6);
+  });
+  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).log.length===4;},'student recovered history teacher backup',5000);
+  check('student-photo-recovery-is-in-the-teacher-server-backup',()=>assert.equal(teacher.run('D.log.length'),4));
   console.log(`SAVE/PRINT DELIVERY: ${passed} checks passed`);
 } finally {
   apps.forEach(a=>a.close());
