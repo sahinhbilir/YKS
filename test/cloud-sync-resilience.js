@@ -856,6 +856,26 @@ test('bulutaYedekle-refuses-oversized-notebook', async () => {
   equal(setDocCalls, 0, 'no doomed write may be attempted');
 });
 
+// Firestore'un belge sınırı BAYT cinsindendir. Türkçe harfler UTF-8'de iki bayt tuttuğu için
+// karakterle ölçmek gerçek boyutu olduğundan küçük gösterir: aşağıdaki defter 600 bin KARAKTER
+// (sınırın altında) ama 1,2 milyon BAYT — Firestore'un 1 MiB'lik gerçek sınırının da üstünde.
+// Karakterle ölçen eski denetim bu yazıyı geçirir ve sunucu reddederdi.
+test('bulutaYedekle-measures-the-size-limit-in-utf8-bytes-not-characters', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({})]);
+  let setDocCalls = 0;
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async () => { setDocCalls++; } });
+  run('D.kurum = "ş".repeat(600000);');
+  const uzunluk = run('JSON.stringify(D).length'), bayt = run('baytBoyu(JSON.stringify(D))');
+  assert(uzunluk < run('BULUT_YEDEK_UST_SINIR'), 'the fixture must be UNDER the limit by characters: ' + uzunluk);
+  assert(bayt > run('BULUT_YEDEK_UST_SINIR'), 'the fixture must be OVER the limit by bytes: ' + bayt);
+  const r = await run('bulutaYedekle()');
+  equal(r.tur, 'hata', 'a notebook over the byte limit must be refused even though its character count fits');
+  assert(/KB/.test(r.mesaj) && !/900 KB/.test(r.mesaj),
+    'the reported size must be the real byte size, not the character count: ' + r.mesaj);
+  equal(setDocCalls, 0, 'no doomed write may be attempted');
+});
+
 test('buluttanYedekAl-reads-missing-and-corrupt-cases', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({})]);

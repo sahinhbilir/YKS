@@ -2305,8 +2305,18 @@ function gecmisPlaniKaydet(si, hafta, satirlar, degistir) {
   if(p.tekrar)return p;
   // Tamamı doğrulandıktan sonra iki kalıcı kopya: işlem öncesi geri dönüş ve yeni defter.
   // Kota/disk hatasında bellekteki defter de değiştirilmez.
-  localStorage.setItem('yks_plan_kurtarma_oncesi',JSON.stringify(D));
-  localStorage.setItem('yks_veri',JSON.stringify(p.yeni));
+  try {
+    localStorage.setItem('yks_plan_kurtarma_oncesi',JSON.stringify(D));
+    localStorage.setItem('yks_veri',JSON.stringify(p.yeni));
+  } catch(e) {
+    // Tarayıcının ham kota hatası (QuotaExceededError) kullanıcıya hiçbir şey anlatmaz.
+    // Ne olduğunu ve ne yapacağını söyle; asıl hata ayıklama için sebep olarak taşınır.
+    // Yeniden denemek işe yaramaz: yer açmak için eski kurtarma yedeği silinse bile
+    // hemen aynı boyutta yenisi yazılacağı için kazanılan yer sıfırdır.
+    const hata=new Error('Cihazın depolama alanı dolu; kurtarma kaydedilemedi. Defteriniz olduğu gibi duruyor. ' +
+      'Ayarlar’dan “Yedek indir” ile dosya yedeği alın, sonra tarayıcının site verilerinde yer açıp yeniden deneyin.');
+    hata.sebep=e; throw hata;
+  }
   D=p.yeni;EK.ogr=si;EK.kirli=false;
   return p;
 }
@@ -4416,7 +4426,7 @@ async function ogrenciHesaplariniYayinla() {
       o.hesapUid = hesap.uid;
       const paket = ogrenciPaketi(i);
       const veri = JSON.stringify(paket);
-      if (!veri || veri.length > BULUT_YEDEK_UST_SINIR)
+      if (!veri || baytBoyu(veri) > BULUT_YEDEK_UST_SINIR)
         throw new Error('Öğrenci paketi sunucu sınırını aşıyor.');
 
       await window.bulut.setDoc(
@@ -4841,6 +4851,12 @@ function ogrenciCalismasiniUygula(calisma, si) {
 // gelir. Veri, iç içe dizi barındırdığı için (D.log satırları) Firestore'a NESNE olarak
 // değil, tek bir JSON DİZESİ olarak yazılır — Firestore iç içe diziyi kabul etmez.
 const BULUT_YEDEK_UST_SINIR = 900000;      // Firestore belge sınırı 1 MiB; güvenli pay
+// Firestore'un belge sınırı BAYT cinsindendir. Türkçe harfler (ı ş ğ ü ö ç) UTF-8'de iki
+// bayt tuttuğu için karakter sayısı gerçek boyutu OLDUĞUNDAN KÜÇÜK gösterir: karakterle
+// ölçen bir denetimden geçen bir yazı sunucuda yine de reddedilebilir. Bu yüzden sunucuya
+// GİDEN her yazı bu ölçüyle sınırlanır. Gelen veriyi doğrulayan denetimler bilerek karakter
+// ölçüsünde kalır — daha önce karakterle ölçülüp kaydedilmiş paketler yüklenebilsin.
+const baytBoyu = s => new TextEncoder().encode(String(s == null ? '' : s)).length;
 let bulutYedekZamani = null;
 let bulutDefterIslemi = false, bulutYedekIsi = null;
 // Bu sekmenin gerçekten açtığı/yazdığı bulut sürümü. Diğer sekmelerin sonradan
@@ -4889,9 +4905,10 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
   let json;
   try { json = JSON.stringify(D); }
   catch (e) { return { tur: 'hata', mesaj: 'Veri JSON’a çevrilemedi.' }; }
-  if (json.length > BULUT_YEDEK_UST_SINIR)
+  const yedekBayt = baytBoyu(json);
+  if (yedekBayt > BULUT_YEDEK_UST_SINIR)
     return { tur: 'hata', mesaj: 'Defter bulut yedeği için çok büyük (' +
-      Math.round(json.length / 1024) + ' KB). "Yedek indir" ile dosya yedeği alın.' };
+      Math.round(yedekBayt / 1024) + ' KB). "Yedek indir" ile dosya yedeği alın.' };
   try {
     const ts = Number.isSafeInteger(+D.ts) && +D.ts > 0 ? +D.ts : Date.now();
     const temel = bulutYedekTemelleri[kullanici.uid];
@@ -5147,9 +5164,10 @@ async function geriYuklemeNoktasiOlustur(kaynak) {
   let json;
   try { yedekDogrula(D); json = JSON.stringify(D); }
   catch (e) { return { tur: 'hata', mesaj: 'Mevcut defter geri dönüş noktası için doğrulanamadı: ' + (e.message || e) }; }
-  if (!json || json.length > BULUT_YEDEK_UST_SINIR)
+  const noktaBayt = baytBoyu(json);
+  if (!json || noktaBayt > BULUT_YEDEK_UST_SINIR)
     return { tur: 'hata', mesaj: 'Mevcut defter geri dönüş noktası için çok büyük (' +
-      Math.round((json || '').length / 1024) + ' KB). Önce “Yedek indir” ile dosya yedeği alın.' };
+      Math.round(noktaBayt / 1024) + ' KB). Önce “Yedek indir” ile dosya yedeği alın.' };
   const ts = Date.now();
   const id = geriYuklemeNoktasiKimligi(ts);
   const kaynakMetni = String(kaynak || 'bilinmeyen').slice(0, 100);

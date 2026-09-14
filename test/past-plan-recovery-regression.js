@@ -96,7 +96,10 @@ check('lesson-and-test-of-the-same-topic-keep-separate-historical-slots',()=>{
 });
 check('storage-failure-keeps-the-entire-original-notebook',()=>{
   const before=run('JSON.stringify(D)');store.yks_veri=before;sandbox.localStorage.setItem=(k,v)=>{if(k==='yks_veri')throw Error('quota');store[k]=v;};
-  assert.throws(()=>save([row()]),/quota/);assert.equal(run('JSON.stringify(D)'),before);assert.equal(store.yks_veri,before);assert.equal(store.yks_plan_kurtarma_oncesi,before);
+  // Ham QuotaExceededError yerine ne olduğunu ve ne yapılacağını anlatan bir ileti
+  // bekleriz; tarayıcının asıl hatası hata ayıklama için `sebep` altında korunur.
+  assert.throws(()=>save([row()]),e=>/depolama alanı dolu/.test(e.message)&&/Yedek indir/.test(e.message)&&e.sebep&&e.sebep.message==='quota');
+  assert.equal(run('JSON.stringify(D)'),before);assert.equal(store.yks_veri,before);assert.equal(store.yks_plan_kurtarma_oncesi,before);
 });
 check('student-role-rejects-a-multiple-student-notebook',()=>{
   run("D.rol='ogrenci'");assert.throws(()=>save([row()]),/öğrenci seçin/);assert.equal(run('gorunumPlanKurtarma()'),'');
