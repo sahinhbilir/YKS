@@ -17,7 +17,7 @@ const sandbox = { console, setTimeout, clearTimeout, Blob, URL, URLSearchParams,
   localStorage:{getItem(){return null},setItem(){}}, sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},
   navigator:{}, window:{scrollTo(){},open(){return null},addEventListener(){}},
   document:{activeElement:null,body:{appendChild(){}},contains(){return true},
-    addEventListener(type,fn){listeners[type]=fn},getElementById(id){return nodes[id]||null},
+    addEventListener(type,fn){(listeners[type] ||= []).push(fn)},getElementById(id){return nodes[id]||null},
     querySelector(){return null},querySelectorAll(){return []},createElement(){return node()}}
 };
 sandbox.window.document=sandbox.document;
@@ -34,7 +34,7 @@ function row(ki, deferred=false, pending=false){
   const target={disabled:false,closest(sel){return sel.includes('sonuc-not')?this:sel.includes('sonuc-row')?r:null}};
   return {r,buttons,numeric,dogru,soru,target};
 }
-async function click(target){ return listeners.click({target}); }
+async function click(target){ for (const listener of listeners.click || []) await listener({target}); }
 const checks=[]; const check=(name, ok, msg)=>checks.push({name,ok,error:ok?'':msg});
 (async()=>{
   let a=row(0), b=row(1); nodes.sonucBilgiModal=node();
@@ -48,14 +48,14 @@ const checks=[]; const check=(name, ok, msg)=>checks.push({name,ok,error:ok?'':m
   b.numeric.closest=sel=>sel.includes('sonuc-sayisal-ac')?b.numeric:sel.includes('sonuc-row')?b.r:null;
   await click({disabled:false,closest:sel=>sel.includes('sonuc-sayisal-ac')?b.numeric:sel.includes('sonuc-row')?b.r:null});
   check('numeric-mode-switch-keeps-first-draft', a.buttons[3].classList._s && b.numeric.hidden===false, 'mode switch');
-  const blank=row(1); nodes.sonucBilgiModal.hidden=true; sandbox.document.querySelectorAll=()=>[blank.r];
+  const blank=row(1); nodes.sonucBilgiModal.hidden=true; sandbox.document.querySelectorAll=q=>q==='[data-sonuc-row]'?[blank.r]:[];
   const saveTarget={id:'sonucKaydet',dataset:{sonucOgr:'0',sonucHafta:String(day)},classList:{contains(){return false}},closest(sel){return sel.includes('#sonucKaydet')?this:null}};
   await click(saveTarget);
   check('blank-row-not-scored', run('D.log.length===0'), 'blank row was scored');
-  sandbox.document.querySelectorAll=()=>[a.r];
+  sandbox.document.querySelectorAll=q=>q==='[data-sonuc-row]'?[a.r]:[];
   await click(saveTarget);
   check('rating-save-has-no-fake-score', run('D.log.length===1 && D.log[0][3]===null && D.log[0][4]===null && D.log[0][5]===4'), 'rating persistence');
-  const failA=row(0), failB=row(1); sandbox.document.querySelectorAll=()=>[failA.r,failB.r];
+  const failA=row(0), failB=row(1); sandbox.document.querySelectorAll=q=>q==='[data-sonuc-row]'?[failA.r,failB.r]:[];
   failA.buttons[1].closest=sel=>sel.includes('sonuc-not')?failA.buttons[1]:sel.includes('sonuc-row')?failA.r:null;
   await click(failA.buttons[1]);
   run('kaydet=async()=>false');
@@ -72,13 +72,13 @@ const checks=[]; const check=(name, ok, msg)=>checks.push({name,ok,error:ok?'':m
   await click({id:'sonucBilgiAnladim',dataset:{},classList:{contains(){return false}},closest(sel){return sel.includes('#sonucBilgiAnladim')?this:null}});
   check('modal-ack-persisted', run('D.ogr[0].sonucBilgiOkundu===true') && modal.hidden===true && opener.focused===true, 'acknowledgment');
   run('D.rol="ogrenci"; D.islenis[3]=' + (day - 3) + '; freezeCalls=0; savedHaftayiKullanimaAl=haftayiKullanimaAl; haftayiKullanimaAl=(...args)=>{freezeCalls++;return savedHaftayiKullanimaAl(...args)}');
-  const freezeDeferred=row(3,true,true); freezeDeferred.r.dataset.slot='3'; sandbox.document.querySelectorAll=()=>[freezeDeferred.r];
+  const freezeDeferred=row(3,true,true); freezeDeferred.r.dataset.slot='3'; sandbox.document.querySelectorAll=q=>q==='[data-sonuc-row]'?[freezeDeferred.r]:[];
   await click(saveTarget);
   check('new-deferred-row-freezes-issued-plan-before-shift', run('freezeCalls===1 && D.konuAnlatilmadi.length===1'), 'issued snapshot was not preserved');
-  let deferred=row(2,true,false); sandbox.document.querySelectorAll=()=>[deferred.r]; sandbox.deferredCalls=0; run('konuAnlatilmadi=(si,ki,gun)=>{deferredCalls++;return {kaydirilan:0,ilkTekrarGunu:gun+7}}');
+  let deferred=row(2,true,false); sandbox.document.querySelectorAll=q=>q==='[data-sonuc-row]'?[deferred.r]:[]; sandbox.deferredCalls=0; run('konuAnlatilmadi=(si,ki,gun)=>{deferredCalls++;return {kaydirilan:0,ilkTekrarGunu:gun+7}}');
   await click(saveTarget);
   check('already-deferred-row-does-not-revalidate-or-add-result', run('D.log.length===2 && deferredCalls===0'), 'saved deferred row was reprocessed');
-  const pendingDeferred=row(3,true,true); sandbox.document.querySelectorAll=()=>[pendingDeferred.r];
+  const pendingDeferred=row(3,true,true); sandbox.document.querySelectorAll=q=>q==='[data-sonuc-row]'?[pendingDeferred.r]:[];
   await click(saveTarget);
   check('new-deferred-row-does-not-add-result', run('D.log.length===2 && deferredCalls===1'), 'new deferred row scored or ignored');
   const failed=checks.filter(x=>!x.ok); console.log(JSON.stringify({passed:checks.length-failed.length,total:checks.length,checks},null,2)); if(failed.length)process.exitCode=1;
