@@ -2186,6 +2186,14 @@ function gecmisPlanKonuBul(r) {
   if (Number.isInteger(r.ki) && aday.includes(r.ki)) return r.ki;
   return aday.length === 1 ? aday[0] : null;
 }
+function gecmisPlanTurunuDegistir(r, tur) {
+  if(tur==='serbest') {
+    // Keep a manually typed activity name when it did not match the topic picker.
+    if(!Number.isInteger(r.ki) && r.konuArama?.trim()) r.konu=r.konuArama.trim();
+    r.ki=null;delete r.konuArama;
+  } else if(!Number.isInteger(r.ki)) r.ki=gecmisPlanKonuBul(r);
+  r.tur=tur;
+}
 function gecmisPlanPromptMetni() {
   const konular = [];
   for (let ki=0; ki<konuSayisi(); ki++) if (konuAl(ki) && !konuAl(ki)[6])
@@ -2201,7 +2209,11 @@ function gecmisPlanPromptMetni() {
     '"satirlar":[{"tarih":"YYYY-MM-DD","ders":"MATEMATİK TYT","konu":"Konu adı",' +
     '"ki":null,"tur":"test","durum":"planlandi","soru":null,"dogru":null,"not":null}]}\n\n' +
     'hafta: kağıdın ilk günü (yıl dahil); tarih: her görevin gerçek günü. Tarih/yıl okunamıyorsa null bırak. ' +
-    'tur: test, anlatim veya serbest. not yalnızca açık bir değerlendirme varsa 1=Tekrar, 2=Zor, 3=İyi, 4=Kolay; ' +
+    'tur: belirli bir konunun testi/tekrarı için test, konu anlatımı için anlatim; karışık veya serbest çalışma için serbest. ' +
+    'Karışık Paragraf, Karışık Problem, Karışık Geometri, genel deneme ve ödev gibi belirli bir katalog konusuna bağlı olmayan görevlerde tur="serbest", ki=null yaz. ' +
+    'Serbest çalışmanın kağıttaki adını konu alanında, dersini ders alanında koru; tarih, soru toplamı ve tamamlanma durumunu aynen aktar. ' +
+    'Bunları benzer adlı bir katalog konusuna bağlama. Ancak örneğin edebiyatın Deneme konusu gibi gerçek bir konu testini serbest çalışmaya çevirme. ' +
+    'not yalnızca açık bir değerlendirme varsa 1=Tekrar, 2=Zor, 3=İyi, 4=Kolay; ' +
     'sadece tamamlandı işaretinden not veya doğru sayısı uydurma. Soru toplamını test adediyle karıştırma. ' +
     'KATI KURAL 2: ki yalnızca kağıttaki konu adı katalogdaki "konu" metniyle BİREBİR AYNI olduğunda yazılır. ' +
     'Anlamca yakın, aynı üniteden ya da aynı sırada göründüğü için numara verme; en ufak farkta ki=null bırak ve ' +
@@ -2237,7 +2249,10 @@ function gecmisPlanJsonAyristir(metin) {
       const konu=String(r.konu || '').trim(), ders=String(r.ders || '').trim();
       if (konu.length > 200 || ders.length > 100) throw new Error('Konu veya ders adı çok uzun.');
       const ki=r.tur === 'serbest' ? null : gecmisPlanKonuBul(r);
-      return {tarih:typeof r.tarih === 'string' ? r.tarih : '',ders,konu,ki,tur:r.tur,durum:r.durum,
+      // Older AI outputs label daily mixed practice as a topic test. Correct only
+      // known activity names without an exact catalog match; unknown topics still need review.
+      const tur=r.tur==='test' && ki===null && GUNLUK_EK_SECENEKLER.some(([,ad])=>konuAdiTamAnahtari(ad)===konuAdiTamAnahtari(konu)) ? 'serbest' : r.tur;
+      return {tarih:typeof r.tarih === 'string' ? r.tarih : '',ders,konu,ki,tur,durum:r.durum,
         soru:sayi(r.soru,'Soru sayısı',1,200),dogru:sayi(r.dogru,'Doğru sayısı',0,200),not:sayi(r.not,'Değerlendirme',1,4),dahil:true};
     }) };
 }
@@ -2255,11 +2270,12 @@ function gecmisPlanHazirla(si, hafta, satirlar, degistir) {
     const gun=gunNo(r.tarih);
     if (gun<hb || gun>hb+6 || gun>bugun || gun>=sinav) throw new Error((i+1)+'. satırın tarihi seçilen geçmiş haftada olmalı.');
     if (!['test','anlatim','serbest'].includes(r.tur) || !['planlandi','tamamlandi','yapilmadi'].includes(r.durum)) throw new Error((i+1)+'. satırın çalışma türü veya durumu geçersiz.');
-    if (r.tur !== 'serbest' && (!Number.isInteger(r.ki) || !konuAl(r.ki) || konuAl(r.ki)[6])) throw new Error((i+1)+'. satır için listeden bir konu seçin.');
-    if (r.tur === 'serbest' && (!r.konu || r.konu.length>200)) throw new Error((i+1)+'. satırdaki serbest çalışmanın adını girin (en fazla 200 karakter).');
+    if (r.tur !== 'serbest' && (!Number.isInteger(r.ki) || !konuAl(r.ki) || konuAl(r.ki)[6])) throw new Error((i+1)+'. satır için listeden bir konu seçin. Karışık çalışma, deneme veya ödev ise çalışma türünü “Karışık / serbest çalışma” yapın.');
+    if (r.tur === 'serbest' && (typeof r.konu !== 'string' || !r.konu.trim() || r.konu.length>200)) throw new Error((i+1)+'. satırdaki serbest çalışmanın adını girin (en fazla 200 karakter).');
     for (const [k,min,max] of [['soru',1,200],['dogru',0,200],['not',1,4]])
       if (r[k] != null && (!Number.isInteger(r[k]) || r[k]<min || r[k]>max)) throw new Error((i+1)+'. satırdaki '+k+' geçersiz.');
     if (r.dogru != null && (r.soru == null || r.dogru>r.soru)) throw new Error((i+1)+'. satırda doğru sayısı için geçerli soru toplamı girin.');
+    if (r.tur === 'serbest' && (r.dogru != null || r.not != null)) throw new Error((i+1)+'. satır karışık / serbest çalışma; yalnızca soru toplamı ve tamamlanma durumu kaydedilir. Doğru sayısı ve değerlendirmeyi boş bırakın; bu bir konu testi ise çalışma türünü “Test / tekrar” yapıp konuyu seçin.');
     if ((r.dogru != null || r.not != null) && (r.tur !== 'test' || r.durum !== 'tamamlandi')) throw new Error((i+1)+'. satırda sonuç var; sonuç yalnızca tamamlandığı doğrulanmış teste girilebilir. '+
       'Yapılmamış çalışmada doğru sayısı ve değerlendirme boş olmalı.');
     return {gun,ki:r.tur === 'serbest' ? null : r.ki,tur:r.tur,durum:r.durum,
@@ -2368,13 +2384,15 @@ function gorunumPlanKurtarma() {
     s.satirlar.map((r,i)=>'<div class="kart gpSatir" style="padding:12px;margin-bottom:10px;'+(r.dahil===false?'opacity:.5':'')+'"><div class="arac"><b>'+(i+1)+'. çalışma</b><label><input type="checkbox" data-gp-i="'+i+'" data-gp-alan="dahil"'+(r.dahil!==false?' checked':'')+'> Dahil et</label></div>'+
       '<p class="mini">Kağıttan: '+kacis(r.ders)+' — '+kacis(r.konu)+'</p><div class="gpAlanlar">'+
       alan(i,'tarih','Tarih','type="date"',r.tarih)+
-      '<label>Çalışma<select data-gp-i="'+i+'" data-gp-alan="tur">'+opt(r.tur,[['test','Test / tekrar'],['anlatim','Konu anlatımı'],['serbest','Serbest çalışma']])+'</select></label>'+
+      '<label>Çalışma<select data-gp-i="'+i+'" data-gp-alan="tur">'+opt(r.tur,[['test','Test / tekrar'],['anlatim','Konu anlatımı'],['serbest','Karışık / serbest çalışma']])+'</select></label>'+
       '<label>Durum<select data-gp-i="'+i+'" data-gp-alan="durum">'+opt(r.durum,[['planlandi','Yalnızca planlandı / bilinmiyor'],['tamamlandi','Tamamlandığı doğrulandı'],['yapilmadi','Yapılmadığı doğrulandı']])+'</select></label></div>'+
-      (r.tur==='serbest'?'<div class="gpAlanlar">'+alan(i,'konu','Çalışmanın adı','type="text" maxlength="200"',r.konu)+alan(i,'ders','Ders','type="text" maxlength="100"',r.ders)+'</div>':
-      '<label style="display:block">Katalogdaki konu<input list="gpKonular" data-gp-i="'+i+'" data-gp-alan="konuSecim" value="'+kacis(Number.isInteger(r.ki)?gecmisPlanKonuEtiketi(r.ki):'')+'" placeholder="Ders veya konu adını yazıp listeden seçin" style="width:100%"></label>'+
-      (!Number.isInteger(r.ki)?'<p class="mini" style="color:var(--kritik)">Konu eşleşmedi. Listeden seçin; listede yoksa Konular bölümünden ekleyip geri dönün.</p>':''))+
-      '<div class="gpAlanlar">'+alan(i,'soru','Soru toplamı','type="number" min="1" max="200"',r.soru)+alan(i,'dogru','Doğru (biliniyorsa)','type="number" min="0" max="200"',r.dogru)+
-      '<label>Değerlendirme<select data-gp-i="'+i+'" data-gp-alan="not">'+opt(r.not??'',[['','Bilinmiyor'],[1,'Tekrar'],[2,'Zor'],[3,'İyi'],[4,'Kolay']])+'</select></label></div></div>').join('')+
+      (r.tur==='serbest'?'<div class="gpAlanlar">'+alan(i,'konu','Çalışmanın adı','type="text" maxlength="200"',r.konu)+alan(i,'ders','Ders','type="text" maxlength="100"',r.ders)+'</div><p class="mini">Konu seçimi gerekmez. Tarih, soru toplamı ve tamamlanma durumu saklanır; konu tekrar hesabını etkilemez.</p>'+
+      (r.dogru!=null||r.not!=null?'<p class="mini" style="color:var(--kritik)">Bu çalışmada doğru sayısı veya değerlendirme var. Serbest çalışmada bu alanları boş bırakın; bir konu testi ise çalışma türünü düzeltin.</p>':''):
+      '<label style="display:block">Katalogdaki konu<input list="gpKonular" data-gp-i="'+i+'" data-gp-alan="konuSecim" value="'+kacis(Number.isInteger(r.ki)?gecmisPlanKonuEtiketi(r.ki):r.konuArama||'')+'" placeholder="Ders veya konu adını yazıp listeden seçin" style="width:100%"></label>'+
+      (!Number.isInteger(r.ki)?'<p class="mini" style="color:var(--kritik)">Konu eşleşmedi. Konu testi veya anlatımıysa listeden seçin. Karışık paragraf, problem, deneme ya da ödev gibi bir çalışma ise konu seçmeniz gerekmez.</p><button class="dugme" id="gpSerbest_'+i+'">Karışık / serbest çalışma olarak kullan</button>':''))+
+      '<div class="gpAlanlar">'+alan(i,'soru','Soru toplamı','type="number" min="1" max="200"',r.soru)+
+      (r.tur!=='serbest'||r.dogru!=null||r.not!=null?alan(i,'dogru','Doğru (biliniyorsa)','type="number" min="0" max="200"',r.dogru)+
+      '<label>Değerlendirme<select data-gp-i="'+i+'" data-gp-alan="not">'+opt(r.not??'',[['','Bilinmiyor'],[1,'Tekrar'],[2,'Zor'],[3,'İyi'],[4,'Kolay']])+'</select></label>':'')+'</div></div>').join('')+
     (s.satirlar.length?'<p class="mini">Kağıtta görev yazması, yapıldığı anlamına gelmez. Tamamlanan puansız test için kısa bir ölçüm tekrarı planlanır; başarı notu üretilmez. Soru toplamı boşsa planda varsayılan soru sayısı kullanılır. Aynı gün/konunun mevcut sonucu korunur.</p>':'')+
     '<label style="display:block;margin:10px 0"><input id="gpDegistir" type="checkbox"'+(s.degistir?' checked':'')+'> Bu haftanın mevcut planı varsa fotoğraftaki planla değiştir. Diğer haftalar ve mevcut sonuçlar korunur.</label>'+
     '<button class="dugme" id="gpOnizle">Değişiklikleri önizle</button><p id="gpOzet" role="status" aria-live="polite">'+kacis(s.ozet)+'</p>'+
@@ -2441,7 +2459,7 @@ function planCalismaEtiketi(si, hb, x, gun) {
   const sonuc=!x.anlatim&&!x.serbest&&(D.log||[]).find(l=>l[1]===si&&l[2]===x.ki&&l[0]===gun);
   const tamam=x.anlatim && ((ov.anlatim||{})[x.ki]?.tamamGun===gun || r?.durum==='tamamlandi');
   const metin=sonuc?'✓ Sonuç: '+sonucEtiketi(sonuc):tamam?'✓ Anlatım tamamlandı':
-    r?.durum==='tamamlandi'?'✓ Tamamlandı · puan bilinmiyor':r?.durum==='yapilmadi'?'Yapılmadı':
+    r?.durum==='tamamlandi'?(x.serbest?'✓ Tamamlandı':'✓ Tamamlandı · puan bilinmiyor'):r?.durum==='yapilmadi'?'Yapılmadı':
     r?.durum==='planlandi'?'Planlandı · tamamlanma bilinmiyor':ov.sabit?(gun>bugunNo()?'Planlandı':'Tamamlanma kaydı bekleniyor'):'';
   return metin?'<div class="mini plan-calisma-durumu">'+kacis(metin)+'</div>':'';
 }
@@ -2469,7 +2487,8 @@ function gunlukEkAyarla(tur, soru) {
 // Daily mixed practice is a dated personal target, not a fabricated FSRS topic/result.
 // Decorate views only: it must not enter frozen slots or consume the scheduler's capacity.
 function gunlukEkliPlan(si, hb, p) {
-  if (p.gunlukEkli) return p;
+  // A recovered sheet already contains the actual daily activities for that week.
+  if (p.gunlukEkli || elleAl(si,hb).kurtarma) return p;
   const gunler = p.gunler.map((liste, g) => {
     const yeni = liste.slice(), gun = hb + g;
     if (gun > planHaftaSonu(si, hb) || gun >= gunNo(D.ayar.sinav)) return yeni;
@@ -8364,10 +8383,12 @@ document.addEventListener('input', ev=>{
   const alan=el.dataset?.gpAlan,r=s.satirlar[+el.dataset?.gpI];
   if(!alan||!r)return;
   if(alan==='konuSecim'){
+    r.konuArama=el.value;
     r.ki=null;for(let ki=0;ki<konuSayisi();ki++)if(konuAl(ki)&&!konuAl(ki)[6]&&gecmisPlanKonuEtiketi(ki)===el.value){r.ki=ki;break;}
   } else if(['soru','dogru','not'].includes(alan))r[alan]=el.value===''?null:Number(el.value);
   else if(alan==='dahil')r.dahil=el.checked;
-  else if(['tarih','konu','ders','tur','durum'].includes(alan))r[alan]=el.value;
+  else if(alan==='tur')gecmisPlanTurunuDegistir(r,el.value);
+  else if(['tarih','konu','ders','durum'].includes(alan))r[alan]=el.value;
   gecmisPlanDuzenlendi(s);
 });
 document.addEventListener('change',ev=>{
@@ -8388,6 +8409,10 @@ document.addEventListener('click',async ev=>{
   if(!id || !id.startsWith('gp') || EK.sekme!=='kurtarma')return;
   const s=gecmisPlanDurumu();
   try {
+    if(/^gpSerbest_\d+$/.test(id)){
+      const r=s.satirlar[+id.slice(10)];if(!r)return;
+      gecmisPlanTurunuDegistir(r,'serbest');gecmisPlanDuzenlendi(s);ciz();return;
+    }
     if(id==='gpPromptKopyala'){
       try {await navigator.clipboard.writeText(gecmisPlanPromptMetni());bilgiVer('Metin kopyalandı. AI sohbetine bu metni ve plan fotoğrafını ekleyin.');}
       catch(e){const k=document.getElementById('gpPrompt');k.closest('details').open=true;k.focus();k.select();bilgiVer('Metni seçtim; elle kopyalayabilirsiniz.');}return;
