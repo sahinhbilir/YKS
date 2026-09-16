@@ -65,6 +65,7 @@ let browser;
  await page.getByRole('button',{name:'Haftalar haritası',exact:true}).click();
  const past=await page.evaluate(()=>gunNo('2026-08-31'));await page.locator('[data-ogr-hafta="'+past+'"]').click();
  assert.equal(await page.evaluate(()=>EK.hafta),past);assert.match(await page.locator('#ana').innerText(),/8\/10/);
- assert.equal((await page.locator('#ana').innerText()).match(/Karışık Paragraf/g).length,1);
+ // The student's daily-target settings also mention this name; count only plan tasks.
+ assert.equal(await page.locator('.plan-liste .pl-oge .k').filter({hasText:'Karışık Paragraf'}).count(),1);
  assert.deepEqual(errors,[]);console.log('Browser checks passed: photo preview, mixed practice recognition, free activity conversion, teacher/student save, archive, past-week opening, manual row and mobile width.');await browser.close();
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();});
