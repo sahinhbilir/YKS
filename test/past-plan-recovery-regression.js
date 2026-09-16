@@ -32,6 +32,74 @@ check('uncertain-topic-never-silently-matches-a-subject-or-ai-id',()=>{
   const p=parse(packet([row(0,{ki:1,konu:'Unreadable'})]));assert.equal(p.satirlar[0].ki,null);
   assert.throws(()=>prepare(p.satirlar),/listeden/);
 });
+check('mixed-practice-from-old-ai-output-needs-no-catalog-topic',()=>{
+  const activities=[['TÜRKÇE','Karışık Paragraf'],['MATEMATİK TYT','Karışık Problem'],['GEOMETRİ','KARIŞIK   GEOMETRİ']];
+  const rows=activities.map(([ders,konu],i)=>row(0,{ders,konu,tarih:'2026-09-'+String(8+i).padStart(2,'0'),soru:20,dogru:null,durum:['tamamlandi','planlandi','yapilmadi'][i]}));
+  const p=parse(packet(rows));
+  p.satirlar.forEach((r,i)=>{assert.equal(r.tur,'serbest');assert.equal(r.ki,null);
+    for(const k of ['ders','konu','tarih','soru','durum'])assert.equal(r[k],rows[i][k]);});
+  save(p.satirlar);
+  assert.equal(run('D.log.length'),0);assert.equal(run('Object.keys(D.kart).length'),0);
+  assert.equal(run('Object.keys(gecmisPlanCalismalari(0)).length'),0);
+  assert.equal(run('D.ekKonular.length'),0);
+  const plan=run("planHesapla(0,gunNo('2026-09-07'))");
+  activities.forEach(([,name],i)=>{const item=plan.gunler[i+1][0];assert.equal(item.ad,name);assert.equal(item.soru,20);assert.equal(item.serbest,true);});
+  const h=run("planTablosu(0,gunNo('2026-09-07'),planHesapla(0,gunNo('2026-09-07')),false,false)");
+  assert(h.includes('✓ Tamamlandı'));assert(!h.includes('puan bilinmiyor'));assert(h.includes('Yapılmadı'));assert(h.includes('tamamlanma bilinmiyor'));
+  assert.equal(save(p.satirlar,true).tekrar,true);
+});
+check('real-literature-deneme-topic-and-explicit-lessons-remain-topics',()=>{
+  const ki=run("KATALOG.findIndex(k=>k[3]==='6. Ünite: Deneme')");assert(ki>=0);
+  const p=parse(packet([row(ki),row(0,{konu:'Karışık Paragraf',tur:'anlatim',dogru:null})]));
+  assert.equal(p.satirlar[0].tur,'test');assert.equal(p.satirlar[0].ki,ki);
+  assert.equal(p.satirlar[1].tur,'anlatim');assert.equal(p.satirlar[1].ki,null);
+});
+check('an-exact-custom-topic-is-not-reclassified-by-its-name',()=>{
+  run("D.ekKonular=[[0,12,'Own','Karışık Problem',0,'']]");const ki=run('KATALOG.length');
+  const p=parse(packet([row(ki)]));assert.equal(p.satirlar[0].tur,'test');assert.equal(p.satirlar[0].ki,ki);
+});
+check('arbitrary-free-activities-keep-their-name-and-are-not-added-to-the-catalog',()=>{
+  const p=parse(packet([row(0,{tur:'serbest',ders:'Genel',konu:'Süre tutarak hız çalışması',soru:30,dogru:null})]));
+  save(p.satirlar);assert.equal(run('D.ekKonular.length'),0);assert.equal(run('D.log.length'),0);
+  assert.equal(run("planHesapla(0,gunNo('2026-09-07')).gunler[1][0].ad"),'Süre tutarak hız çalışması');
+  assert.throws(()=>prepare([row(0,{tur:'serbest',konu:'  ',dogru:null})]),/adını girin/);
+});
+check('converting-a-manual-row-preserves-typed-name-and-observed-values',()=>{
+  const r=row(0,{ki:null,konu:'',konuArama:'  Haftalık ödev  ',soru:20});sandbox.manual=r;
+  run("gecmisPlanTurunuDegistir(manual,'serbest')");
+  assert.equal(r.konu,'Haftalık ödev');assert.equal(r.ki,null);assert.equal(r.soru,20);assert.equal(r.dogru,8);
+  assert.equal(r.tarih,'2026-09-08');assert.equal(r.durum,'tamamlandi');assert.equal(r.konuArama,undefined);
+});
+check('mixed-practice-scores-are-never-silently-discarded-or-applied-to-a-topic',()=>{
+  const p=parse(packet([row(0,{konu:'Karışık Paragraf',ders:'Türkçe',soru:20,dogru:17,not:3})]));
+  assert.equal(p.satirlar[0].dogru,17);assert.equal(p.satirlar[0].not,3);
+  assert.throws(()=>save(p.satirlar),/karışık \/ serbest çalışma/);assert.equal(run('D.log.length'),0);
+  sandbox.parsed=p;run("gecmisPlanDurumu().satirlar=parsed.satirlar");
+  const h=run('gorunumPlanKurtarma()');assert(h.includes('data-gp-alan="dogru"'));assert(h.includes('value="17"'));assert(h.includes('bu alanları boş bırakın'));
+});
+check('recovered-weeks-do-not-gain-extra-daily-targets-or-duplicate-mixed-practice',()=>{
+  const p=parse(packet([row(0,{konu:'Karışık Paragraf',ders:'Türkçe',soru:20,dogru:null})]));save(p.satirlar);
+  run("D.ogr[0].gunlukEk={paragraf:[{gun:gunNo('2026-09-01'),soru:40}],problem:[{gun:gunNo('2026-09-01'),soru:30}]}");
+  const old=run("gunlukEkliPlan(0,gunNo('2026-09-07'),planHesapla(0,gunNo('2026-09-07')))");
+  assert.equal(old.gunler.flat().length,1);assert.equal(old.gunler[1][0].soru,20);
+  const current=run('gunlukEkliPlan(0,buHafta(0),planHesapla(0,buHafta(0)))');
+  assert(current.gunler.flat().some(x=>x.gunlukEk&&x.ad==='Karışık Paragraf'&&x.soru===40));
+});
+check('mixed-practice-survives-student-package-and-teacher-delivery',()=>{
+  const p=parse(packet([row(0,{konu:'Karışık Problem',ders:'Matematik TYT',soru:20,dogru:null,durum:'planlandi'})]));save(p.satirlar);
+  run('teacherNotebook=D;D=paketiYukle(ogrenciPaketi(0));');
+  p.satirlar[0].durum='tamamlandi';save(p.satirlar,true);
+  run('studentWork=ogrenciCalismaPaketi();studentWork.ts=Date.now()+10000;D=teacherNotebook;ogrenciCalismasiniUygula(studentWork,0)');
+  assert.equal(run("D.elle['0|'+gunNo('2026-09-07')].kurtarma.satirlar[0].durum"),'tamamlandi');
+  const item=run("planHesapla(0,gunNo('2026-09-07')).gunler[1][0]");assert.equal(item.ad,'Karışık Problem');assert.equal(item.soru,20);
+  assert.equal(run('D.log.length'),0);assert.equal(run('Object.keys(D.kart).length'),0);assert.equal(run('D.ogr[1].cikti'),undefined);
+});
+check('recovery-ui-offers-free-work-without-sending-students-to-topics',()=>{
+  const p=parse(packet([row(0,{konu:'Karışık Problem',dogru:null}),row(0,{konu:'Hız çalışması',dogru:null})]));
+  sandbox.parsed=p;run('D=paketiYukle(ogrenciPaketi(0));gecmisPlanDurumu().satirlar=parsed.satirlar');
+  const h=run('gorunumPlanKurtarma()');assert(h.includes('Karışık / serbest çalışma'));assert(h.includes('id="gpSerbest_1"'));
+  assert(!h.includes('Konular bölümünden'));assert(h.includes('data-gp-alan="konu"'));assert(!h.includes('data-gp-i="0" data-gp-alan="dogru"'));
+});
 check('multiple-ai-plans-are-rejected-without-picking-one',()=>{
   assert.throws(()=>parse(JSON.stringify(packet([row()]))+'\n'+JSON.stringify(packet([row(1)]))),/Birden fazla/);
 });
@@ -126,6 +194,8 @@ check('the-ai-prompt-states-both-hard-rules',()=>{
   const t=run('gecmisPlanPromptMetni()');
   assert(/KATI KURAL 1/.test(t)&&/hem dogru hem not MUTLAKA null/.test(t));
   assert(/KATI KURAL 2/.test(t)&&/BİREBİR AYNI/.test(t));
+  assert(t.includes('Karışık Paragraf, Karışık Problem, Karışık Geometri'));
+  assert(t.includes('tur="serbest", ki=null'));assert(t.includes('gerçek bir konu testini serbest çalışmaya çevirme'));
 });
 check('student-role-rejects-a-multiple-student-notebook',()=>{
   run("D.rol='ogrenci'");assert.throws(()=>save([row()]),/öğrenci seçin/);assert.equal(run('gorunumPlanKurtarma()'),'');

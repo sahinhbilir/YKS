@@ -4,6 +4,8 @@ Teachers and students have a **Geçmiş plan kurtar** page. Teachers select a st
 
 The user reviews the original photo alongside editable dates, topic matches, assignment types, completion states and any visible results. Unreadable dates stay empty. Ambiguous topics require selection from the catalog. A photo containing multiple weeks or students must be processed separately. The final confirmation covers the selected student as well as the extracted work.
 
+Mixed practice and other activities use **Karışık / serbest çalışma**, without a catalog topic. The prompt distinguishes these from topic tests. Older AI responses that label **Karışık Paragraf**, **Karışık Problem** or **Karışık Geometri** as tests are corrected automatically unless there is an exact catalog match. For another unmatched activity, use **Karışık / serbest çalışma olarak kullan**, or select that type and enter its name and subject. This is available to both teachers and students. Dates, question totals and completion states are preserved; no topic, result or learning grade is created. Supplied scores remain visible for correction and must be cleared before saving as free work; they are never silently discarded. Real catalog topics, including literature’s Deneme topic, retain topic-test behavior.
+
 ## Scheduling behavior
 
 - Confirmed test scores or recall ratings are entered on their original dates. The existing learning model rebuilds the affected topic chronologically, including any later results already recorded.
@@ -11,6 +13,7 @@ The user reviews the original photo alongside editable dates, topic matches, ass
 - Assigned work whose completion is unknown remains awaiting evidence on the teacher side. Work confirmed missed can return to the scheduler without a failing grade being invented.
 - Confirmed completed lessons can restore a missing student-specific lesson date and start the normal first-review interval. Existing real dates and later learning resets are respected.
 - The photographed week is stored as an issued historical plan, with its original row positions and question totals when known. Lessons and tests of the same topic retain separate slots. Future unissued weeks use the recovered history; other issued weeks remain intact.
+- Daily practice targets do not add or duplicate tasks in a recovered week. The archived plan shows the activities recovered from the sheet; targets still apply to ordinary weeks.
 
 ## Preservation and delivery
 
