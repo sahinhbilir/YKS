@@ -444,13 +444,14 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 }
 
 .gpDuzen{display:grid;grid-template-columns:minmax(220px,1fr) minmax(320px,2fr);gap:16px;align-items:start}.gpAlanlar{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}.gpAlanlar label{flex:1;min-width:130px}.gpAlanlar input,.gpAlanlar select{display:block;width:100%;margin-top:4px}.gpSatir input[list]{margin-top:4px}@media(max-width:760px){.gpDuzen{grid-template-columns:1fr}.gpDuzen img{max-height:65vh;object-fit:contain}}
+.cikis-durum{position:fixed;z-index:10000;bottom:16px;left:50%;transform:translateX(-50%);width:min(540px,calc(100vw - 24px));padding:18px;background:var(--kagit);color:var(--murekkep);border:1px solid var(--cizgi);border-radius:12px;box-shadow:0 8px 32px #0003}.cikis-durum .arac{margin-top:12px}@media print{.cikis-durum,#oturumKapat{display:none!important}}
 </style>
 <script type="module">
 // Bulut senkronizasyonu (Firestore) — bkz. plan §1/§2/§3. Uygulamanın geri kalanı
 // module-script olmadığından, burada kurulan istemciler window.bulut üzerinden paylaşılır.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js';
-import { getAuth, signInAnonymously, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
+import { getAuth, signOut, signInAnonymously, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocFromServer, setDoc, updateDoc, runTransaction, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 // Bu değerler istemci tarafında görünür olması güvenlik açığı YARATMAZ — asıl koruma
@@ -575,6 +576,11 @@ function girisOgretmen() {
 window.bulut = { db, doc, getDoc, getDocFromServer, setDoc, updateDoc, runTransaction, collection, getDocs, onSnapshot, girisOgrenci, girisOgretmen,
   girisOgrenciHesabi, ogrenciHesabiHazirla,
   mevcutKullanici: () => auth.currentUser, oturumHazir: () => auth.authStateReady(),
+  oturumuKapat: async () => {
+    // Öğretmenin hesap hazırlama oturumu da bu tarayıcıda kalmasın.
+    await Promise.all([signOut(auth), signOut(ogrenciHesapAuth)]);
+    if (auth.currentUser || ogrenciHesapAuth.currentUser) throw new Error('Oturum kapatılamadı; yeniden deneyin.');
+  },
   // Gerçek firebaseConfig değerleri girilene kadar bulut düğmeleri arayüzde gösterilmez —
   // yapılandırılmamış, kesin başarısız olacak kontroller kullanıcıya sunulmaz.
   yapilandirilmis: firebaseYapilandirildi };
@@ -681,9 +687,44 @@ function altKonuAc(si, anaKi, ad, yuzde) {
 
 // --- derse özel parametreler: her öğrencinin her dersi ayrı bir profil
 function dersAnahtari(ki) { return dersKisaAd(konuDersAdi(ki)); }
+const HAFIZA_SEVIYELERI = [['normal','Normal · sonuçlardan öğren'],['guclu','Güçlü · daha seyrek başla'],['cok-guclu','Çok güçlü · en seyrek başlangıç']];
+function hafizaBaslangicParametreleri(si) {
+  const seviye=D.ogr[si]?.hafizaSeviyesi;
+  if(!['guclu','cok-guclu'].includes(seviye))return null;
+  const w=W.slice(), gun=seviye==='guclu'?7:14;
+  // A self-reported starting prior, never a fabricated Easy result. Failed/hard
+  // first attempts retain the ordinary initial stability; calibrated lessons win.
+  w[2]=gun;w[3]=gun*2;
+  return w;
+}
+function ilkTekrarAraligi(si, ki, islenis) {
+  if(sonResetKaydi(si,ki) || D.altKonu?.[ki]!==undefined)return D.ayar.ilk;
+  const w=hafizaBaslangicParametreleri(si);
+  if(!w)return D.ayar.ilk;
+  const aralik=Math.min(D.ayar.maks,Math.max(D.ayar.ilk,w[2]));
+  // A longer starting interval must not push an otherwise possible first check past the exam.
+  return Number.isInteger(islenis)?Math.min(aralik,Math.max(1,gunNo(D.ayar.sinav)-islenis-1)):aralik;
+}
+function hafizaSeviyesiniUygula(si, seviye) {
+  if(!Number.isInteger(si)||!D.ogr[si]||D.ogr[si].silindi||!HAFIZA_SEVIYELERI.some(x=>x[0]===seviye)||
+      !(rehberMi()||ogrenciMi()&&si===0&&D.ogr.length===1))return false;
+  if((D.ogr[si].hafizaSeviyesi||'normal')===seviye)return false;
+  D.ogr[si].hafizaSeviyesi=seviye;D.ogr[si].ogrCalismaTs=Date.now();
+  hafizaKartlariniYenile(si);
+  return true;
+}
+function hafizaKartlariniYenile(si) {
+  // Rebuild only cards backed by actual results; keep untested subtopic seeds.
+  new Set((D.log||[]).filter(l=>l[1]===si).map(l=>l[2])).forEach(ki=>kartiYenidenHesapla(si,ki));
+  Object.keys(D.ogrTaslak||{}).forEach(k=>{if(+k.split('|')[0]===si)delete D.ogrTaslak[k];});
+}
+function hafizaSecici(si) {
+  return '<select class="oHafiza" data-i="'+si+'" aria-label="Başlangıç hafıza düzeyi">'+HAFIZA_SEVIYELERI.map(([v,ad])=>
+    '<option value="'+v+'"'+((D.ogr[si].hafizaSeviyesi||'normal')===v?' selected':'')+'>'+ad+'</option>').join('')+'</select>';
+}
 function parametreAl(si, ki) {
   const t = ((D.par || {})[si] || {})[dersAnahtari(ki)];
-  return (Array.isArray(t) && t.length === 21) ? t : null;
+  return (Array.isArray(t) && t.length === 21) ? t : hafizaBaslangicParametreleri(si);
 }
 // bir öğrencinin bir dersindeki tüm tekrarları, tarih sırasıyla
 function dersKayitlari(si, dersAd) {
@@ -692,6 +733,7 @@ function dersKayitlari(si, dersAd) {
 }
 // kayıtları verilen parametrelerle yeniden oynatıp tahmin hatasını (log-loss) ölçer
 function kayipOlc(si, kayitlar, w) {
+  w=w||hafizaBaslangicParametreleri(si);
   const kart = {}, dr = D.ogr[si].hedef || D.ayar.hedef;
   let kayip = 0, n = 0, dogruTahmin = 0;
   kayitlar.forEach(l => {
@@ -719,7 +761,7 @@ function dersKalibre(si, dersAd, enAzKayit) {
   const kayitlar = dersKayitlari(si, dersAd);
   const bas = kayipOlc(si, kayitlar, null);
   if (!bas || bas.n < (enAzKayit || 25)) return { yeter: false, n: bas ? bas.n : 0 };
-  let w = W.slice(), enIyi = kayipOlc(si, kayitlar, w).kayip;
+  let w = (hafizaBaslangicParametreleri(si)||W).slice(), enIyi = kayipOlc(si, kayitlar, w).kayip;
   const carpan = [0.6, 0.75, 0.9, 1.1, 1.35, 1.7];
   for (let tur = 0; tur < 4; tur++) {
     let gelisme = false;
@@ -789,6 +831,7 @@ let D = null, EK = { sekme: 'plan', ogr: 0, hafta: null, kirli: false, son: '', 
 const ROL = () => (D && D.rol) || '';
 const rehberMi = () => ROL() === 'rehber';
 const ogrenciMi = () => ROL() === 'ogrenci';
+let CIKIS_DURUMU = '', CIKIS_IS = null;
 
 function varsayilan() {
   return {
@@ -862,6 +905,8 @@ function yedekDogrula(y) {
     if (o.hedef !== undefined && o.hedef !== null &&
         (typeof o.hedef !== 'number' || !Number.isFinite(o.hedef) || o.hedef < 0.50 || o.hedef > 0.99))
       throw new Error('Geçersiz öğrenci hedefi: ' + (i + 1) + '. satır.');
+    if(o.hafizaSeviyesi!==undefined&&!HAFIZA_SEVIYELERI.some(x=>x[0]===o.hafizaSeviyesi))
+      throw new Error('Geçersiz başlangıç hafıza düzeyi: '+(i+1)+'. satır.');
   });
   Object.keys(y.kart || {}).forEach(k => {
     const p = k.split(':'), c = y.kart[k];
@@ -1129,7 +1174,8 @@ async function yetenek(ad) {
   return YETENEK[ad];
 }
 let KAYIT_ZINCIRI = Promise.resolve(true);
-function kaydet(sessiz) {
+function kaydet(sessiz, cikisIcin) {
+  if (CIKIS_DURUMU && !cikisIcin) return Promise.resolve(false);
   const calistir = () => kaydetGercek(sessiz);
   KAYIT_ZINCIRI = KAYIT_ZINCIRI.then(calistir, calistir);
   return KAYIT_ZINCIRI;
@@ -1649,7 +1695,7 @@ function haftayiTelafiEt(si, hb, neden) {
     if (t === undefined) continue;
     const kart = D.kart[si + ':' + ki];
     if (t >= hb && t <= hs && !kart) { ilkBuHafta.push(ki); continue; }        // bu hafta ilk kez işlenmiş, henüz test yazılmamış
-    const due = kart ? kart.due : t + D.ayar.ilk;
+    const due = kart ? kart.due : t + ilkTekrarAraligi(si,ki,t);
     if (t < hb && due >= hb && due <= hs) devirBuHafta.push({ ki: ki, kart: kart, due: due });  // önceki haftalardan devreden tekrar
   }
   const yukTakip = {};
@@ -1763,7 +1809,7 @@ function planHesapla(si, hb, derinlik, ham) {
     if (kart) due = kart.due;
     else if (islenisAl(ki) !== undefined) {
       const t = islenisAl(ki), resetDue = resetIlkTekrarGunu(si, ki);
-      due = resetDue === null ? t + D.ayar.ilk : resetDue;
+      due = resetDue === null ? t + ilkTekrarAraligi(si,ki,t) : resetDue;
       if (due > hs && !pinli) continue;
     }
     else if (kurtarilan[ki]) due = kurtarilan[ki].gun;
@@ -1860,7 +1906,7 @@ function planHesapla(si, hb, derinlik, ham) {
       const olcumGun = Math.max(x.due, ilkGun(hb, si));
       x.R = x.kart ? hatirlama(Math.max(0, olcumGun - x.kart.son), x.kart.s) : null;
       const zayifSonuc = x.kart && (x.kart.y === null ? x.kart.not !== 4 : x.kart.y < D.ayar.esik[1]);
-      x.test = !x.kart ? 2 : ((x.R < D.ayar.tekEsik || zayifSonuc) ? 2 : 1);
+      x.test = !x.kart ? (hafizaBaslangicParametreleri(si)&&!sonResetKaydi(si,x.ki)?1:2) : ((x.R < D.ayar.tekEsik || zayifSonuc) ? 2 : 1);
       x.mod = !x.kart ? 'ilk' : (x.test === 1 ? 'koruma' : 'pekiştirme');
       x.neden = !x.kart || x.test === 1 ? '' : (x.R < D.ayar.tekEsik ? 'hatırlama düştü' : 'önceki sonuç zayıf');
       const slot = planSlotAnahtari(x);
@@ -3473,7 +3519,7 @@ function gorunumOgrenciler() {
     '<span class="mini">test</span>' +
     '<button class="dugme birincil" id="ogrEkle">Öğrenci ekle</button></div>' +
     '<div class="kart sarma"><table><thead><tr><th>Kullanıyor</th><th>No</th><th>Ad Soyad</th><th>Şube</th><th>Alan</th>' +
-    '<th>Günde kaç test</th><th>İzinli günler (tıkla)</th><th>Hedef tutma</th><th title="Telafide bir güne en fazla kaç konu anlatımı eklenir">Telafi/gün</th><th class="sayisal">Çözülen</th>' +
+    '<th>Günde kaç test</th><th>İzinli günler (tıkla)</th><th>Hedef tutma</th><th>Başlangıç hafızası</th><th title="Telafide bir güne en fazla kaç konu anlatımı eklenir">Telafi/gün</th><th class="sayisal">Çözülen</th>' +
     '<th class="sayisal">Ortalama</th><th class="sayisal">Bu hafta</th><th>Son çıktı</th><th></th></tr></thead><tbody>';
   const hb = haftaBasi();
   D.ogr.forEach((o, i) => {
@@ -3499,7 +3545,7 @@ function gorunumOgrenciler() {
       '<td><select class="oHedef" data-i="' + i + '"><option value=""' + (!o.hedef ? ' selected' : '') + '>genel</option>' +
         [0.85, 0.88, 0.90, 0.92, 0.95].map(v => '<option value="' + v + '"' + (o.hedef === v ? ' selected' : '') + '>%' + Math.round(v * 100) + '</option>').join('') +
       '</select></td>' +
-      '<td><select class="oTelafiKap" data-i="' + i + '"><option value=""' + (o.telafiGunKap == null ? ' selected' : '') +
+      '<td>'+hafizaSecici(i)+'</td><td><select class="oTelafiKap" data-i="' + i + '"><option value=""' + (o.telafiGunKap == null ? ' selected' : '') +
         '>genel (' + (D.ayar.telafiGunKap || 2) + ')</option>' +
         [1, 2, 3, 4, 5].map(v => '<option value="' + v + '"' + (o.telafiGunKap === v ? ' selected' : '') + '>' + v + '</option>').join('') +
       '</select></td>' +
@@ -4032,6 +4078,9 @@ function gorunumOgrenciAyarlar() {
     '<select id="ogrHaftaGunu">' + GUN_AD.map((ad,g) => '<option value="'+g+'"'+
       (g === ((o.haftaDuzeni && o.haftaDuzeni.donemler.slice(-1)[0]) || {gun:0}).gun ? ' selected' : '')+'>'+ad+(g===0?' (varsayılan)':'')+'</option>').join('')+'</select>' +
     '<p class="mini">Sonuçlarını değerlendirdiğin günü seçebilirsin. Çarşamba seçersen planın Çarşamba–Salı olur. Seçilen gün geldiğinde yeni düzen başlar; atanmış çalışmaların tarihleri korunur.</p></div>' +
+    '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Başlangıç hafıza düzeyin · isteğe bağlı</h2>'+hafizaSecici(0)+
+    '<p class="mini">Konuları rahat hatırladığını düşünüyorsan daha seyrek bir başlangıç seçebilirsin. Güçlü: ilk kontrol yaklaşık 7 gün; Çok güçlü: yaklaşık 14 gün. İlk kontrolde bir test verilir. Normal, mevcut düzeni korur.</p>'+
+    '<p class="mini">Bu seçim kendi tahminindir; otomatik “Kolay” sonucu girmez. Gerçek sonuçların aralıkları ayarlar; derse özel öğrenilmiş profil varsa o kullanılır. Kaydedilmiş haftaların görevleri korunur. İstediğin zaman Normal’e dönebilirsin.</p></div>'+
     '<p class="mini" role="status">' + kacis(EK.ogrSyncDurum || (o.syncId ? 'Sonuçların otomatik eşitlenir.' : 'Çalışmaların bu cihazda kaydedilir.')) + '</p>' +
     '<details class="kart" style="padding:20px"' + (EK.gelismisAcik ? ' open' : '') + '><summary style="cursor:pointer;font-weight:600">Gelişmiş ayarlar</summary>' +
     '<div style="margin-top:18px"><label><input id="ogrOtoTelafi" type="checkbox"' + (o.otoTelafi !== false ? ' checked' : '') +
@@ -4816,7 +4865,7 @@ function ogrenciCalismasiniUygula(calisma, si) {
   const kopya = JSON.parse(JSON.stringify(D));
   try {
     D = kopya;
-    const o = D.ogr[si], kaynak = y.ogr[0], harita = {};
+    const o = D.ogr[si], kaynak = y.ogr[0], harita = {}, eskiHafiza=o.hafizaSeviyesi||'normal';
     const dahaYeni = calisma.ts > (+o.ogrCalismaTs || (ogrenciMi() ? +D.ogrCalismaTs || +D.ts || 0 : 0));
     const cev = ki => {
       ki = +ki;
@@ -4860,11 +4909,12 @@ function ogrenciCalismasiniUygula(calisma, si) {
     });
     if (dahaYeni) {
       ['kap','off','aktif','cikti','ilkAktif','hedef','maddeler','rutin','gunlukEk','otoTelafi','dengeliYuk',
-       'telafiGecmisYapildi','telafiGunKap'].forEach(k => { if (kaynak[k] !== undefined) o[k] = kaynak[k]; });
+       'telafiGecmisYapildi','telafiGunKap','hafizaSeviyesi'].forEach(k => { if (kaynak[k] !== undefined) o[k] = kaynak[k]; });
       if (kaynak.otoTelafiHaric) o.otoTelafiHaric = kaynak.otoTelafiHaric.map(cev);
       if (kaynak.otoTelafiEklenen) o.otoTelafiEklenen = kaynak.otoTelafiEklenen.map(x => Object.assign({}, x, {ki:cev(x.ki)}));
       o.ogrCalismaTs = calisma.ts;
     }
+    if(eskiHafiza!==(o.hafizaSeviyesi||'normal'))hafizaKartlariniYenile(si);
     yedekDogrula(D);
   } finally { D = onceki; }
   Object.assign(D.ogr[si], kopya.ogr[si]);
@@ -5000,6 +5050,7 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
 // ve cihazdaki kayıt zaten tamamlanmıştır (bulut yedeği ikinci bir kopyadır, tek kopya değil).
 const BULUT_YEDEK_GECIKME = 10000;
 function bulutYedekPlanla() {
+  if (CIKIS_DURUMU) return;
   if (bulutYedekZamani) return;
   bulutYedekZamani = setTimeout(() => {
     bulutYedekZamani = null;
@@ -5010,6 +5061,7 @@ function bulutYedekPlanla() {
 // kapatılan bir sekmedeki değişiklikler buluta hiç çıkmıyordu — kullanıcı açısından
 // 'otomatik yedek çalışmıyor' demek olan asıl durum buydu.
 function bulutYedekBosalt() {
+  if (CIKIS_DURUMU) return;
   if (!bulutYedekZamani) return;
   clearTimeout(bulutYedekZamani);
   bulutYedekZamani = null;
@@ -5019,11 +5071,12 @@ function bulutYedekBosalt() {
 // öğretmenin "yedeğim var" sanıp aslında bulutta hiçbir şey olmamasıydı. Artık başarısızlık
 // Ayarlar'da görünür ve rayCiz() ile üst çubuğa yansır.
 function bulutYedekDene() {
+  if (CIKIS_DURUMU) return Promise.resolve();
   const defter = D;
   // Önceki yükleme farklı bir anlık kopyayı taşıyor olabilir. Bittiğinde güncel
   // defteri gönder; yazdır/kaydet çağrısı eski yüklemenin onayıyla tamamlanmasın.
   return Promise.resolve(bulutYedekIsi).then(() => {
-    if (D !== defter || bulutDefterIslemi) return;
+    if (CIKIS_DURUMU || D !== defter || bulutDefterIslemi) return;
     return bulutaYedekle();
   }).then(r => {
     if (D !== defter) return;
@@ -5503,12 +5556,13 @@ function otomatikBulutMesaji(sonuc) {
 }
 
 let OGRENCI_SYNC_ZAMAN = null, OGRENCI_SYNC_IS = null, OGRENCI_SYNC_DENEME = 0;
-function ogrenciEsitlemeImzasi() {
-  const kopya = Object.assign({}, D);
+function ogrenciEsitlemeImzasi(defter = D) {
+  const kopya = Object.assign({}, defter);
   ['ogrSonEsitlenen','ogrTaslak','ts','rev','ogrCalismaTs'].forEach(k => delete kopya[k]);
   return JSON.stringify(kopya);
 }
 function ogrenciEsitlemePlanla(gecikme, zorla) {
+  if (CIKIS_DURUMU) return;
   const o = D && D.ogr && D.ogr[0];
   if (!ogrenciMi() || !o || !o.syncId || !window.bulut || !window.bulut.yapilandirilmis) return;
   if (!zorla && D.ogrSonEsitlenen === ogrenciEsitlemeImzasi()) return;
@@ -5522,7 +5576,8 @@ function ogrenciEsitlemePlanla(gecikme, zorla) {
   // Node tabanlı çevrimdışı simülasyonlarda arka plan işi süreci açık tutmasın.
   if (OGRENCI_SYNC_ZAMAN && typeof OGRENCI_SYNC_ZAMAN.unref === 'function') OGRENCI_SYNC_ZAMAN.unref();
 }
-async function ogrenciEsitlemeyiDene() {
+async function ogrenciEsitlemeyiDene(cikisIcin) {
+  if (CIKIS_DURUMU && !cikisIcin) return;
   if (OGRENCI_SYNC_IS) return OGRENCI_SYNC_IS;
   if (bulutDefterIslemi || !ogrenciMi() || !D.ogr[0] || !D.ogr[0].syncId || !window.bulut || !window.bulut.yapilandirilmis) return;
   if (navigator.onLine === false) { EK.ogrSyncDurum = 'Cihazda kayıtlı · bağlantı bekleniyor'; rayCiz(); return; }
@@ -5578,11 +5633,13 @@ async function ogrenciEsitlemeyiDene() {
       EK.ogrSyncHata = '';
       EK.ogrSyncDurum = 'Sunucuya kaydedildi · ' + new Date().toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
       if (imza !== ogrenciEsitlemeImzasi()) ogrenciEsitlemePlanla();
+      return {tur:'tamam',imza,uid:kullanici.uid,syncId};
     } catch (e) {
       if (D !== defter) return;
       EK.ogrSyncDurum = 'Cihazda kayıtlı · eşitleme yeniden denenecek';
       EK.ogrSyncHata = String(e.message || e);
       ogrenciEsitlemePlanla(Math.min(300000, 30000 * Math.pow(2, Math.min(4, OGRENCI_SYNC_DENEME++))));
+      return {tur:'hata',mesaj:EK.ogrSyncHata};
     } finally {
       OGRENCI_SYNC_IS = null;
       if (D === defter) rayCiz();
@@ -5601,6 +5658,7 @@ function sunucuKaydiniBaslat() {
   else if (rehberMi()) { ogretmenDinlemeyiBaslat(); bulutYedekDene(); }
 }
 function baskiIcinKaydet() {
+  if (CIKIS_DURUMU) return Promise.resolve(false);
   const defter = D;
   // Yazdır penceresi JS işlerini durdurabilir. Yerel kopyayı pencere açılmadan
   // önce yaz; ağ onayı ayrı görünür ve bağlantı yoksa sonraki açılışta yeniden denenir.
@@ -5613,6 +5671,146 @@ function baskiIcinKaydet() {
   }).catch(e => { EK.bulutYedekHata = e.message || String(e); rayCiz(); });
 }
 
+// Çıkış: önce güncel defterin sunucu onayı, sonra Auth çıkışı, en son yerel temizlik.
+// Normal kaydet/eşitleme göstergesi eski bir isteğe ait olabilir; çıkış kendi onayını alır.
+const CIKIS_KILIT_ADI = 'yks-defter-oturumu';
+let CIKIS_SEKME_BIRAK = null, CIKIS_SEKME_IS = null, CIKIS_SEKME_HAZIR = null;
+function oturumSekmesiniKaydet() {
+  if (!navigator.locks?.request || CIKIS_SEKME_HAZIR) return CIKIS_SEKME_HAZIR || Promise.resolve();
+  CIKIS_SEKME_HAZIR = new Promise((resolve, reject) => {
+    CIKIS_SEKME_IS = navigator.locks.request(CIKIS_KILIT_ADI, {mode:'shared'}, () =>
+      new Promise(birak => { CIKIS_SEKME_BIRAK=birak; resolve(); })).catch(reject);
+  });
+  return CIKIS_SEKME_HAZIR;
+}
+async function cikisTekSekmede(islem) {
+  if (!navigator.locks?.request) throw new Error('Bu tarayıcı güvenli çıkışı desteklemiyor. Güncel bir tarayıcı kullanın; cihazdaki kayıt silinmedi.');
+  await oturumSekmesiniKaydet();
+  // Check before releasing our shared lock: two simultaneous logout clicks must
+  // not both surrender their tab locks and let one erase the other's notebook.
+  if(navigator.locks.query) {
+    const durum=await navigator.locks.query();
+    if(durum.held.filter(k=>k.name===CIKIS_KILIT_ADI).length>1)
+      throw new Error('Bu uygulama başka bir sekmede de açık. Oradaki çalışmayı kaydedip sekmeyi kapatın, sonra çıkışı yeniden deneyin.');
+  }
+  CIKIS_SEKME_BIRAK(); await CIKIS_SEKME_IS;
+  CIKIS_SEKME_BIRAK=null;CIKIS_SEKME_IS=null;CIKIS_SEKME_HAZIR=null;
+  try {
+    return await navigator.locks.request(CIKIS_KILIT_ADI,{mode:'exclusive',ifAvailable:true},kilit=>{
+      if(!kilit)throw new Error('Bu uygulama başka bir sekmede de açık. Oradaki çalışmayı kaydedip sekmeyi kapatın, sonra çıkışı yeniden deneyin.');
+      return islem();
+    });
+  } finally { if(CIKIS_DURUMU!=='tamam')await oturumSekmesiniKaydet(); }
+}
+function cikisTaslakHatasi() {
+  if (duzenlemeKaydi() || PENCERE || DISARI_AKTAR) return 'Açık düzenlemeyi veya önizlemeyi kapatıp yeniden çıkış yapın.';
+  if (sonucTaslaklariniAl().some(r=>r.not || r.dogru!=='' || r.deferred &&
+      document.querySelector('[data-sonuc-row][data-ki="'+r.ki+'"][data-gun="'+r.gun+'"][data-deferred-pending="1"]')) ||
+      Array.from(document.querySelectorAll('.gAnlatim:checked')).some(e=>!e.disabled))
+    return 'Formda henüz kaydedilmemiş sonuçlar var. Önce “Sonuçları kaydet” düğmesine basın, sonra çıkış yapın.';
+  if(EK.sekme==='kurtarma'&&GECMIS_PLAN?.defter===D&&!GECMIS_PLAN.sonuc&&(GECMIS_PLAN.satirlar.length||GECMIS_PLAN.metin))
+    return 'Kurtarma ekranındaki değişiklikleri önce gözden geçirip kaydedin.';
+  if(EK.sekme==='anlasma'||document.getElementById('ayarKaydet')) {
+    const degisti=Array.from(document.querySelectorAll('#ana input[id^="a"], #ana textarea[id^="a"], #ana select[id^="a"], #oMaddeler, .oRutin')).some(e=>
+      e.tagName==='SELECT'?Array.from(e.options).some(o=>o.selected!==o.defaultSelected):
+      e.type==='checkbox'?e.checked!==e.defaultChecked:e.value!==e.defaultValue);
+    if(degisti)return 'Değiştirdiğiniz ayarları önce Kaydet düğmesiyle kaydedin.';
+  }
+  return '';
+}
+function cikisArkaPlaniDurdur() {
+  if(bulutYedekZamani!==null)clearTimeout(bulutYedekZamani);bulutYedekZamani=null;
+  if(OGRENCI_SYNC_ZAMAN!==null)clearTimeout(OGRENCI_SYNC_ZAMAN);OGRENCI_SYNC_ZAMAN=null;
+  ogretmenDinlemeyiDurdur();
+}
+function cikisDurumunuGoster(metin, bekliyor) {
+  let panel=document.getElementById('cikisDurum');
+  if(!panel){panel=document.createElement('section');panel.id='cikisDurum';panel.className='cikis-durum';panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');document.body.appendChild(panel);}
+  panel.innerHTML='<div>'+kacis(metin)+'</div>'+(!bekliyor&&CIKIS_DURUMU!=='tamam'?'<div class="arac"><button class="dugme" id="cikisTekrar">Tekrar dene</button><button class="dugme" id="cikisKapat">Çalışmaya dön</button></div>':'');
+  const kabuk=document.querySelector('.kabuk');if(kabuk)kabuk.inert=!!bekliyor;
+  const dugme=document.getElementById('oturumKapat');if(dugme)dugme.disabled=!!bekliyor;
+}
+function cikisYerelVerisiniTemizle() {
+  // Yalnızca bu uygulamanın kayıtları; aynı origin'deki başka uygulamalar korunur.
+  // Asıl defter en son silinir: önceki silmelerden biri engellenirse hâlâ cihazdadır.
+  for(const depo of [sessionStorage,localStorage]) {
+    const anahtarlar=[];
+    for(let i=0;i<depo.length;i++){const k=depo.key(i);if(k?.startsWith('yks_'))anahtarlar.push(k);}
+    anahtarlar.sort((a,b)=>(a==='yks_veri')-(b==='yks_veri'));
+    for(const k of anahtarlar){depo.removeItem(k);if(depo.getItem(k)!==null)throw new Error('Tarayıcıdaki kayıt silinemedi.');}
+  }
+}
+function kaydedipCikisYap() {
+  if(CIKIS_IS)return CIKIS_IS;
+  if(CIKIS_DURUMU)return Promise.resolve(false);
+  const taslak=cikisTaslakHatasi();
+  if(taslak){cikisDurumunuGoster(taslak,false);return Promise.resolve(false);}
+  CIKIS_DURUMU='kayit';cikisArkaPlaniDurdur();
+  cikisDurumunuGoster('Çıkış için sunucuya kaydediliyor… Bu sayfayı açık tutun.',true);
+  CIKIS_IS=cikisTekSekmede(kaydedipCikisYapGercek).catch(e=>{
+    CIKIS_DURUMU='';
+    cikisDurumunuGoster('Çıkış tamamlanmadı; cihazdaki çalışma korunuyor. '+(e.message||e),false);
+    if(ogrenciMi())ogrenciEsitlemePlanla();else{ogretmenDinlemeyiBaslat();bulutYedekPlanla();}
+    return false;
+  }).finally(()=>{CIKIS_IS=null;});
+  return CIKIS_IS;
+}
+async function kaydedipCikisYapGercek() {
+  const b=window.bulut,defter=D,ogr=ogrenciMi();
+  if(!defter?.rol||!b?.yapilandirilmis||typeof b.oturumuKapat!=='function')throw new Error('Sunucu bağlantısı hazır değil. Ayarlar’dan buluta bağlanın.');
+  if(navigator.onLine===false)throw new Error('İnternet bağlantısı yok. Çıkış için sunucu onayı gerekiyor.');
+  if(bulutDefterIslemi)throw new Error('Devam eden bulut işlemi bittikten sonra yeniden deneyin.');
+  if(ogr&&(!D.ogr[0]?.hesapUid||!D.ogr[0]?.syncId))throw new Error('Ad ve numarayla yeniden açılabilen öğrenci hesabı gerekli. Öğretmeninizden öğrenci girişinizi yayınlamasını isteyin.');
+  // Devam eden eski kayıtlar/aktarımlar son defterin önüne geçmesin.
+  await sureSinirli(Promise.all([KAYIT_ZINCIRI,OGRENCI_SYNC_IS,bulutYedekIsi]),3*BULUT_YAZMA_ZAMAN_ASIMI,'Devam eden kayıt henüz bitmedi; yeniden deneyin.');
+  await sureSinirli(b.oturumHazir?.(),BULUT_YAZMA_ZAMAN_ASIMI,'Oturum doğrulanamadı.');
+  const kullanici=ogr?await sureSinirli(b.girisOgrenci(D.ogr[0]),BULUT_YAZMA_ZAMAN_ASIMI,'Öğrenci oturumu doğrulanamadı.'):b.mevcutKullanici();
+  if(!kullanici||kullanici.isAnonymous||(ogr?kullanici.uid!==D.ogr[0].hesapUid:String(kullanici.email||'').endsWith('@student.ykstekrar.app')))
+    throw new Error('Kalıcı hesabınızla giriş yapın; sunucudaki veriyi sonra yeniden açabilmeniz gerekiyor.');
+  const oturumAyni=()=>D===defter&&b.mevcutKullanici()?.uid===kullanici.uid;
+  if(!oturumAyni())throw new Error('Oturum değişti; çıkış durduruldu.');
+  if(!await sureSinirli(kaydet(true,true),BULUT_YAZMA_ZAMAN_ASIMI,'Son değişikliklerin kaydı henüz tamamlanmadı.'))throw new Error('Son değişiklikler kaydedilemedi.');
+  let onayliImza;
+  if(ogr) {
+    let r;
+    for(let deneme=0;deneme<2;deneme++) {
+      r=await ogrenciEsitlemeyiDene(true);
+      if(r?.tur!=='tamam')throw new Error(r?.mesaj||EK.ogrSyncHata||'Sunucudan kayıt onayı alınamadı.');
+      if(r.imza===ogrenciEsitlemeImzasi())break;
+    }
+    if(!oturumAyni()||r.imza!==ogrenciEsitlemeImzasi())throw new Error('Kayıt sırasında çalışma değişti; yeniden çıkış yapın.');
+    const a=await sureSinirli(b.getDocFromServer(b.doc(b.db,'ogrenciler',r.syncId)),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki son kopya doğrulanamadı.');
+    const v=a.exists()?a.data():null;
+    if(!v||v.bagliUid!==kullanici.uid||v.durum!=='aktif'||v.ogrenciBulutId!==D.ogr[0].ogrenciBulutId||
+        !v.paket?.calisma||ogrenciEsitlemeImzasi(JSON.parse(v.paket.calisma.veri))!==r.imza)
+      throw new Error('Sunucudaki çalışma bu cihazın son kaydıyla eşleşmiyor.');
+    onayliImza=ogrenciEsitlemeImzasi();
+  } else {
+    onayliImza=JSON.stringify(D);
+    const r=await bulutaYedekle();
+    if(r?.tur!=='tamam')throw new Error(r?.mesaj||'Öğretmen defteri sunucuya kaydedilemedi.');
+    const a=await sureSinirli(b.getDocFromServer(b.doc(b.db,'ogretmenYedek',kullanici.uid)),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki son yedek doğrulanamadı.');
+    if(!a.exists()||a.data().veri!==onayliImza)throw new Error('Sunucudaki yedek bu cihazın son kaydıyla eşleşmiyor.');
+  }
+  const veriAyni=()=>D===defter&&(ogr?ogrenciEsitlemeImzasi():JSON.stringify(D))===onayliImza;
+  if(!oturumAyni()||!veriAyni())throw new Error('Kayıt sırasında oturum veya çalışma değişti; cihaz temizlenmedi.');
+  CIKIS_DURUMU='temizlik';cikisArkaPlaniDurdur();
+  cikisDurumunuGoster('Sunucu kaydı doğrulandı. Oturum kapatılıyor ve bu uygulamanın cihazdaki kayıtları temizleniyor…',true);
+  await sureSinirli(b.oturumuKapat(),BULUT_YAZMA_ZAMAN_ASIMI,'Oturum kapatma tamamlanmadı; cihazdaki veriler korunuyor.');
+  if(b.mevcutKullanici()||!veriAyni())throw new Error('Çıkış sırasında oturum veya veri değişti; cihaz temizlenmedi.');
+  cikisYerelVerisiniTemizle();
+  if(GECMIS_PLAN?.foto)URL.revokeObjectURL(GECMIS_PLAN.foto);GECMIS_PLAN=null;
+  D=varsayilan();D.rol='';EK={sekme:'plan',ogr:0,hafta:null,kirli:false,son:'',girisAcik:{}};
+  const gomulu=document.getElementById('veri');if(gomulu)gomulu.textContent='null';
+  Object.keys(bulutYedekTemelleri).forEach(k=>delete bulutYedekTemelleri[k]);
+  CIKIS_DURUMU='tamam';
+  cikisDurumunuGoster('Sunucuya kaydedildi. Çıkış yapıldı ve bu uygulamanın cihazdaki kayıtları temizlendi.',false);
+  cizIc();
+  // Yeni oturum temiz JS belleğiyle başlasın; eski zamanlayıcılar veri geri yazamasın.
+  if(typeof window.location?.reload==='function')window.location.reload();
+  return true;
+}
+
 const OGRETMEN_DINLEYICILER = new Map();
 let OGRETMEN_DINLENEN_DEFTER = null, OGRETMEN_DINLENEN_UID = null;
 function ogretmenDinlemeyiDurdur() {
@@ -5620,6 +5818,7 @@ function ogretmenDinlemeyiDurdur() {
   OGRETMEN_DINLEYICILER.clear(); OGRETMEN_DINLENEN_DEFTER = null; OGRETMEN_DINLENEN_UID = null;
 }
 function ogretmenDinlemeyiBaslat(zorla) {
+  if (CIKIS_DURUMU) return;
   const b = window.bulut, u = b && typeof b.mevcutKullanici === 'function' ? b.mevcutKullanici() : null;
   if (!rehberMi() || !b || !b.yapilandirilmis || !u || u.isAnonymous ||
       String(u.email || '').endsWith('@student.ykstekrar.app')) { ogretmenDinlemeyiDurdur(); return; }
@@ -5633,7 +5832,7 @@ function ogretmenDinlemeyiBaslat(zorla) {
     if (OGRETMEN_DINLEYICILER.has(id)) return;
     OGRETMEN_DINLEYICILER.set(id, null);
     const dur = b.onSnapshot(b.doc(b.db, 'ogrenciler', id), {includeMetadataChanges:true}, anlik => {
-      if (D !== defter || !rehberMi() || bulutDefterIslemi || b.mevcutKullanici()?.uid !== u.uid ||
+      if (CIKIS_DURUMU || D !== defter || !rehberMi() || bulutDefterIslemi || b.mevcutKullanici()?.uid !== u.uid ||
           anlik.metadata?.hasPendingWrites || anlik.metadata?.fromCache) return;
       if (!anlik.exists()) return;
       const veri = anlik.data(), si = D.ogr.findIndex(o => o && !o.silindi && o.syncId === id);
@@ -5662,7 +5861,7 @@ function ogretmenDinlemeyiBaslat(zorla) {
   });
 }
 window.bulutDegisti = () => {
-  if (!D) return;
+  if (!D || CIKIS_DURUMU) return;
   if (rehberMi()) { ogretmenDinlemeyiBaslat(true); bulutYedekPlanla(); }
   else { ogretmenDinlemeyiDurdur(); if (ogrenciMi()) ogrenciEsitlemePlanla(0, true); }
 };
@@ -6773,7 +6972,7 @@ function rayCiz() {
   ray.innerHTML = '<div class="marka">YKS Tekrar Defteri<small>' +
     (D && D.kurum ? kacis(D.kurum) : 'Aralıklı tekrar') + '</small></div>' +
     SEKMELER().map(s => '<button data-sekme="' + s[0] + '"' + (EK.sekme === s[0] ? ' aria-current="page"' : '') + '>' + s[1] + '</button>').join('') +
-    '<div class="bosluk"></div><div class="durum" role="status" aria-live="polite">' +
+    '<div class="bosluk"></div>'+(D?.rol?'<button id="oturumKapat" title="Önce sunucuya kaydeder, onaydan sonra bu uygulamanın cihazdaki verisini temizler"'+(CIKIS_DURUMU?' disabled':'')+'>Kaydet ve çıkış yap</button>':'')+'<div class="durum" role="status" aria-live="polite">' +
     (EK.kirli ? '<b>kaydedilmemiş değişiklik</b>' : kacis(ogrenciMi() ? (EK.ogrSyncDurum || EK.son || 'Planın hazır') : (EK.son || 'hazır'))) +
     (rehberMi() ? '<br>' + kacis(EK.bulutYedekHata || EK.ogretmenSyncDurum || (EK.bulutYedekTs ? 'Sunucuya kaydedildi' : 'Bulut yedeği henüz onaylanmadı')) : '') + '</div>';
 }
@@ -6817,6 +7016,7 @@ function gorunumKurulum() {
 // çökerse kullanıcı boş/donmuş bir ekranla baş başa kalmasın — veri cihazda duruyor,
 // kurtarma ekranı gösterip yedek indirmeyi ya da Ayarlar'a dönmeyi teklif et.
 function ciz() {
+  if (CIKIS_DURUMU) return;
   try { if (ogrenciOtomasyonHazirla()) kaydet(true); cizIc(); }
   catch (e) { hataEkraniGoster(e); }
 }
@@ -6887,6 +7087,10 @@ function cizIc() {
 
 // --- konu penceresi ve sürükleme
 document.addEventListener('click', async ev => {
+  const cikisId=ev.target.closest?.('button')?.id;
+  if(cikisId==='oturumKapat'||cikisId==='cikisTekrar'){await kaydedipCikisYap();return;}
+  if(cikisId==='cikisKapat'){document.getElementById('cikisDurum')?.remove();return;}
+  if(CIKIS_DURUMU)return;
   if (ev.target.id === 'ogrManuelEkle' && ogrenciMi()) {
     const hb = haftaBasi(), g = Math.max(0, bugunNo() - hb);
     if (g > 6 || hb + g >= gunNo(D.ayar.sinav)) return;
@@ -8109,6 +8313,7 @@ document.addEventListener('input', ev => {
 });
 
 document.addEventListener('change', async ev => {
+  if(CIKIS_DURUMU)return;
   const el = ev.target;
   if (ogrenciMi() && (el.classList.contains('ogrGunlukSec') || el.classList.contains('ogrGunlukSoru'))) {
     const tur = el.dataset.tur, secim = el.classList.contains('ogrGunlukSec');
@@ -8222,6 +8427,7 @@ document.addEventListener('change', async ev => {
     if (y) { y.style.display = el.value === '__yeni' ? '' : 'none'; if (el.value === '__yeni') y.focus(); }
     return;
   }
+  if(el.classList.contains('oHafiza')) { if(hafizaSeviyesiniUygula(+el.dataset.i,el.value)){await kaydet(true);ciz();}return; }
   if (el.classList.contains('oHedef')) { D.ogr[+el.dataset.i].hedef = el.value ? +el.value : null; await kaydet(true); ciz(); return; }
   if (el.classList.contains('oTelafiKap')) { D.ogr[+el.dataset.i].telafiGunKap = el.value ? Math.max(1, Math.min(12, +el.value)) : null; await kaydet(true); ciz(); return; }
   if (el.id === 'subeSec') { EK.sube = el.value; ciz(); return; }
@@ -8451,6 +8657,9 @@ document.addEventListener('click',async ev=>{
 
 // ---------------------------------------------------------------- başlangıç
 (async function () {
+  // Hold a shared tab lock before reading or changing the notebook. Logout can
+  // clear origin storage only while no other updated tab is using it.
+  try { await oturumSekmesiniKaydet(); } catch(e) { /* The notebook stays usable; logout will report the lock failure. */ }
   try {
     const s = sessionStorage.getItem('yks_ek');
     if (s) { const y = JSON.parse(s); EK.sekme = y.sekme || EK.sekme; EK.ogr = y.ogr || 0; sessionStorage.removeItem('yks_ek'); }
