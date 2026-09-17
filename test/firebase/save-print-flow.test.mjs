@@ -21,15 +21,16 @@ const element=()=>({style:{},dataset:{},hidden:false,value:'',innerHTML:'',textC
   classList:{add(){},remove(){},contains(){return false;}},setAttribute(){},appendChild(){},remove(){},focus(){},
   getClientRects(){return [1];},closest(){return null;}});
 function app(db,user) {
+  let currentUser=user;
   const listeners={},store={},timers=new Set(),windowEvents={},messages=[];
   const nodes={ray:element(),ana:element(),stil:{textContent:''},veri:{textContent:'null'},uygulama:{textContent:source}};
   let rows=[];
   const s={console,JSON,Date,Math,Intl,TextEncoder,crypto:webcrypto,URL,URLSearchParams,Blob,
-    location:{search:'?dev=1'},navigator:{onLine:true},fetch:async()=>({ok:false}),
+    location:{search:'?dev=1'},navigator:{onLine:true,locks:{request:async(_name,_options,fn)=>fn({})}},fetch:async()=>({ok:false}),
     setTimeout(fn,ms){const timer=setTimeout(()=>{timers.delete(timer);fn();},ms);timers.add(timer);return timer;},
     clearTimeout(timer){clearTimeout(timer);timers.delete(timer);},
     alert:m=>messages.push(m),confirm:()=>true,prompt:()=>'',
-    localStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>{store[k]=v;}},
+    localStorage:{get length(){return Object.keys(store).length;},key:i=>Object.keys(store)[i]??null,getItem:k=>store[k]||null,setItem:(k,v)=>{store[k]=v;},removeItem:k=>{delete store[k];}},
     sessionStorage:{getItem:()=>null,setItem(){},removeItem(){}},
     window:{scrollTo(){},open:()=>null,print(){},addEventListener(k,fn){(windowEvents[k] ||= []).push(fn);},
       // The app VM and SDK have different Object prototypes. Clone across that
@@ -41,7 +42,8 @@ function app(db,user) {
           get:ref=>tx.get(ref),set:(ref,data)=>tx.set(ref,structuredClone(data)),
           update:(ref,data)=>tx.update(ref,structuredClone(data))})),
         onSnapshot,collection,getDocs,yapilandirilmis:true,
-        mevcutKullanici:()=>user,girisOgretmen:async()=>user,girisOgrenci:async()=>user,girisOgrenciHesabi:async()=>user}},
+        mevcutKullanici:()=>currentUser,oturumHazir:async()=>{},oturumuKapat:async()=>{currentUser=null;},
+        girisOgretmen:async()=>currentUser,girisOgrenci:async()=>currentUser,girisOgrenciHesabi:async()=>currentUser}},
     document:{activeElement:null,title:'YKS',visibilityState:'visible',
       addEventListener(k,fn){(listeners[k] ||= []).push(fn);},getElementById:id=>nodes[id]||null,
       querySelector:()=>null,querySelectorAll:q=>q==='[data-sonuc-row]'?rows:[],contains:()=>true,
@@ -143,6 +145,25 @@ try {
   });
   await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).log.length===4;},'student recovered history teacher backup',5000);
   check('student-photo-recovery-is-in-the-teacher-server-backup',()=>assert.equal(teacher.run('D.log.length'),4));
+  recovered.run("hafizaSeviyesiniUygula(0,'cok-guclu');DISARI_AKTAR=null;EK.sekme='plan';");
+  assert.equal(await recovered.run('kaydedipCikisYap()'),true);
+  check('student-logout-clears-device-only-after-real-server-readback',()=>{
+    assert.equal(recovered.store.yks_veri,undefined);assert.equal(recovered.s.window.bulut.mevcutKullanici(),null);
+  });
+  await eventually(()=>teacher.run('D.ogr[0].hafizaSeviyesi')==='cok-guclu','memory setting delivery');
+  const afterLogout=app(studentDb,{uid:studentUid,isAnonymous:false,email:'ogr-delivery@student.ykstekrar.app'});
+  await afterLogout.run('ogrenciHesabindanYukle("Delivery Student",42)');
+  check('fresh-student-login-restores-logout-backup-including-memory-and-frozen-weeks',()=>{
+    assert.equal(afterLogout.run('D.log.length'),4);assert.equal(afterLogout.run('D.ogr[0].hafizaSeviyesi'),'cok-guclu');
+    assert.ok(afterLogout.run("D.elle['0|'+gunNo('2026-08-31')].kurtarma"));
+  });
+  teacher.run("DISARI_AKTAR=null;EK.sekme='plan';D.kurum='Saved on logout'");
+  assert.equal(await teacher.run('kaydedipCikisYap()'),true);
+  const savedTeacher=JSON.parse((await getDocFromServer(teacherRef)).data().veri);
+  check('teacher-logout-persists-complete-notebook-before-clearing-device',()=>{
+    assert.equal(teacher.store.yks_veri,undefined);assert.equal(savedTeacher.kurum,'Saved on logout');
+    assert.equal(savedTeacher.log.length,4);assert.equal(savedTeacher.ogr[0].hafizaSeviyesi,'cok-guclu');
+  });
   console.log(`SAVE/PRINT DELIVERY: ${passed} checks passed`);
 } finally {
   apps.forEach(a=>a.close());
