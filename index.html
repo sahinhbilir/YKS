@@ -5686,6 +5686,13 @@ function oturumSekmesiniKaydet() {
 async function cikisTekSekmede(islem) {
   if (!navigator.locks?.request) throw new Error('Bu tarayıcı güvenli çıkışı desteklemiyor. Güncel bir tarayıcı kullanın; cihazdaki kayıt silinmedi.');
   await oturumSekmesiniKaydet();
+  // Check before releasing our shared lock: two simultaneous logout clicks must
+  // not both surrender their tab locks and let one erase the other's notebook.
+  if(navigator.locks.query) {
+    const durum=await navigator.locks.query();
+    if(durum.held.filter(k=>k.name===CIKIS_KILIT_ADI).length>1)
+      throw new Error('Bu uygulama başka bir sekmede de açık. Oradaki çalışmayı kaydedip sekmeyi kapatın, sonra çıkışı yeniden deneyin.');
+  }
   CIKIS_SEKME_BIRAK(); await CIKIS_SEKME_IS;
   CIKIS_SEKME_BIRAK=null;CIKIS_SEKME_IS=null;CIKIS_SEKME_HAZIR=null;
   try {

@@ -59,6 +59,10 @@ const retained=a=>{assert(a.store.yks_veri);assert(a.run('D.ogr.length')===1);as
     try{assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);assert(a.user());}finally{clearTimeout(keepAlive);}
   });
   await check('another-tab-prevents-storage-cleanup',async a=>{assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);assert(!a.events.includes('write'));},'rehber',{otherTab:true});
+  await check('concurrent-logout-attempts-keep-the-shared-tab-lock',async a=>{
+    a.sandbox.navigator.locks.query=async()=>({held:[{name:'yks-defter-oturumu'},{name:'yks-defter-oturumu'}]});
+    assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);assert.equal(a.run("typeof CIKIS_SEKME_BIRAK"),'function');
+  });
   await check('unsupported-locks-do-not-break-notebook-or-erase-data',async a=>{delete a.sandbox.navigator.locks;assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);});
   await check('anonymous-and-unlinked-accounts-cannot-erase-the-only-recoverable-copy',async a=>{a.user().isAnonymous=true;assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);},'ogrenci');
   await check('unlinked-file-student-keeps-data',async a=>{a.run('delete D.ogr[0].hesapUid');assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);},'ogrenci');
