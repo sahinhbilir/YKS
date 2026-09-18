@@ -1,0 +1,50 @@
+name: ITU tanıtım başvuru takibi
+
+on:
+  schedule:
+    # Her 5 dakikada bir. GitHub yoğunlukta bu tetiği 5-15 dakika geciktirebilir.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: itu-tanitim-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    name: Başvuru sayfasını kontrol et
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Takip mantığını doğrula
+        run: node test/itu-tanitim-watch-regression.js
+      - name: Sayfaları kontrol et ve değişiklikte Telegram'dan haber ver
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node tools/itu-tanitim-watch.js
+      - name: Son durumu depoya yaz
+        run: |
+          if git diff --quiet -- .watch; then
+            echo "Değişiklik yok, commit gerekmiyor."
+            exit 0
+          fi
+          git config user.name "itu-tanitim-watch"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .watch
+          git commit -m "İTÜ tanıtım sayfası durumu güncellendi [skip ci]"
+          for attempt in 1 2 3 4; do
+            if git push; then exit 0; fi
+            echo "Push başarısız, yeniden deneniyor ($attempt)."
+            sleep $((2 ** attempt))
+            git pull --rebase --autostash
+          done
+          exit 1
