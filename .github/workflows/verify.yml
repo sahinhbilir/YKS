@@ -45,6 +45,8 @@ jobs:
         run: node test/past-plan-recovery-regression.js
       - name: Confirmed cloud logout and optional memory level
         run: node test/logout-memory-regression.js
+      - name: Dated school timetables and persistent AYT priority
+        run: node test/ayt-timetable-regression.js
 
   photo-recovery-browser:
     name: Past plan recovery browser

@@ -722,6 +722,40 @@ function hafizaSecici(si) {
   return '<select class="oHafiza" data-i="'+si+'" aria-label="Başlangıç hafıza düzeyi">'+HAFIZA_SEVIYELERI.map(([v,ad])=>
     '<option value="'+v+'"'+((D.ogr[si].hafizaSeviyesi||'normal')===v?' selected':'')+'>'+ad+'</option>').join('')+'</select>';
 }
+function aytOnceliginiUygula(si, acik) {
+  if (typeof acik !== 'boolean' || !Number.isInteger(si) || !D.ogr[si] || D.ogr[si].silindi ||
+      !(rehberMi() || ogrenciMi() && si === 0 && D.ogr.length === 1)) return false;
+  if (!!D.ogr[si].aytOncelik === acik) return false;
+  D.ogr[si].aytOncelik = acik;
+  D.ogr[si].ogrCalismaTs = Date.now();
+  Object.keys(D.ogrTaslak || {}).forEach(k => { if (+k.split('|')[0] === si) delete D.ogrTaslak[k]; });
+  return true;
+}
+function aytOncelikSecici(si) {
+  return '<label><input type="checkbox" class="oAytOncelik" data-i="'+si+'"'+
+    (D.ogr[si].aytOncelik ? ' checked' : '')+'> Ağırlığı TYT’den AYT’ye al</label>';
+}
+// Explicit exam labels win. Imported mixed science lessons use the built-in topic
+// map; unknown/custom and shared geometry topics keep their ordinary workload.
+function konuSinavTuru(ki) {
+  const k = konuAl(ki);
+  if (!k) return '';
+  const ders = konuDersAdi(ki), ad = k[3];
+  const etiket = (ders + ' ' + ad).toLocaleUpperCase('tr').match(/\b(TYT|AYT|YDT)\b/g) || [];
+  if (new Set(etiket).size === 1) return etiket[0];
+  if (etiket.length) return '';
+  if (Number.isInteger(D.altKonu?.[ki]) && D.altKonu[ki] < ki) return konuSinavTuru(D.altKonu[ki]);
+  if (dersKimligi(ders) === dersKimligi('Türkçe')) return 'TYT';
+  if (dersKimligi(ders) === dersKimligi('Türk Dili ve Edebiyatı')) return 'AYT';
+  if (PLAN_FEN_SINAVI[k[0]]?.[ad]) return PLAN_FEN_SINAVI[k[0]][ad];
+  if (ki < KATALOG.length && [2,3,4].includes(k[0])) return k[4] === 1 ? 'AYT' : 'TYT';
+  return '';
+}
+function aytPlanOnceligi(x, gun) {
+  if (x.serbest || x.anlatim || x.ek || x.due <= gun - 7) return 0;
+  if (x.kart && (x.kart.y === null ? x.kart.not <= 2 : x.kart.y < D.ayar.esik[1])) return 0;
+  return konuSinavTuru(x.ki) === 'AYT' ? 1 : 2;
+}
 function parametreAl(si, ki) {
   const t = ((D.par || {})[si] || {})[dersAnahtari(ki)];
   return (Array.isArray(t) && t.length === 21) ? t : hafizaBaslangicParametreleri(si);
@@ -907,6 +941,8 @@ function yedekDogrula(y) {
       throw new Error('Geçersiz öğrenci hedefi: ' + (i + 1) + '. satır.');
     if(o.hafizaSeviyesi!==undefined&&!HAFIZA_SEVIYELERI.some(x=>x[0]===o.hafizaSeviyesi))
       throw new Error('Geçersiz başlangıç hafıza düzeyi: '+(i+1)+'. satır.');
+    if (o.aytOncelik !== undefined && typeof o.aytOncelik !== 'boolean')
+      throw new Error('Geçersiz AYT önceliği: '+(i+1)+'. satır.');
   });
   Object.keys(y.kart || {}).forEach(k => {
     const p = k.split(':'), c = y.kart[k];
@@ -1917,6 +1953,18 @@ function planHesapla(si, hb, derinlik, ham) {
     x.pin = (ov.yer && ov.yer[planSlotAnahtari(x)]) || null;
   });
   const dengeli = ogrenciMi() && o.dengeliYuk !== false && !sabitli;
+  const aytOncelik = o.aytOncelik === true && !sabitli;
+  if (aytOncelik) ogeler.forEach(x => {
+    if (x.pin || x.serbest || x.anlatim || x.ek || x.degisim ||
+        (ov.soru || {})[planSlotAnahtari(x)] || sonResetKaydi(si,x.ki) ||
+        D.altKonu?.[x.ki] !== undefined || konuSinavTuru(x.ki) !== 'TYT') return;
+    // The student's preference permits a short first TYT check. After a result,
+    // shorten only successful, still-remembered topics; weak TYT keeps two tests.
+    const basarili = x.kart && (x.kart.y === null ? x.kart.not >= 3 : x.kart.y >= 80);
+    if (!x.kart || basarili && x.R >= D.ayar.tekEsik) {
+      x.test = 1; x.soru = D.ayar.soru; x.mod = 'TYT kısa kontrol';
+    }
+  });
   const haftaKapasitesi = Array.from({length:Math.max(0,hs-hb+1)},(_,g)=>hb+g).filter(g=>!off.includes(haftaGunu(g))).length * kap;
   const yogun = dengeli && ogeler.reduce((n, x) => n + (x.test || 1), 0) > haftaKapasitesi;
   if (dengeli) ogeler.forEach(x => {
@@ -1965,10 +2013,11 @@ function planHesapla(si, hb, derinlik, ham) {
   // (ör. bugünün hemen ertesi) atlanıp haftalarca sonrasına düşebilirler. Yerleştirmeden
   // önce gerçek vade sırasına göre sıralamak bunu düzeltir.
   ogeler.filter(x => !x.pin).sort((a, b) =>
-    (dengeli && yogun ? Number(!a.kart) - Number(!b.kart) : 0) || a.due - b.due || (a.dsira || 0) - (b.dsira || 0) ||
+    (aytOncelik ? aytPlanOnceligi(a,enErken) - aytPlanOnceligi(b,enErken) : 0) ||
+    (dengeli && yogun && !aytOncelik ? Number(!a.kart) - Number(!b.kart) : 0) || a.due - b.due || (a.dsira || 0) - (b.dsira || 0) ||
     String(a.ki).localeCompare(String(b.ki))).forEach(x => {
     // Öncelikli tekrarın geç vadesi, daha erken boş günleri yeni konulara kapatmasın.
-    let g = Math.max(x.due, enErken, dengeli ? enErken : x.anlatim ? ilerleAnlatim : ilerle);
+    let g = Math.max(x.due, enErken, dengeli || aytOncelik ? enErken : x.anlatim ? ilerleAnlatim : ilerle);
     while (g <= hs && (off.indexOf(haftaGunu(g)) >= 0 ||
            (x.anlatim ? anlatimSayisi(gunler[g - hb]) >= anlatimSiniriGun
                       : yuk(gunler[g - hb]) + (x.test || 1) > kap))) g++;
@@ -3519,7 +3568,7 @@ function gorunumOgrenciler() {
     '<span class="mini">test</span>' +
     '<button class="dugme birincil" id="ogrEkle">Öğrenci ekle</button></div>' +
     '<div class="kart sarma"><table><thead><tr><th>Kullanıyor</th><th>No</th><th>Ad Soyad</th><th>Şube</th><th>Alan</th>' +
-    '<th>Günde kaç test</th><th>İzinli günler (tıkla)</th><th>Hedef tutma</th><th>Başlangıç hafızası</th><th title="Telafide bir güne en fazla kaç konu anlatımı eklenir">Telafi/gün</th><th class="sayisal">Çözülen</th>' +
+    '<th>Günde kaç test</th><th>İzinli günler (tıkla)</th><th>Hedef tutma</th><th>Başlangıç hafızası</th><th>Çalışma ağırlığı</th><th title="Telafide bir güne en fazla kaç konu anlatımı eklenir">Telafi/gün</th><th class="sayisal">Çözülen</th>' +
     '<th class="sayisal">Ortalama</th><th class="sayisal">Bu hafta</th><th>Son çıktı</th><th></th></tr></thead><tbody>';
   const hb = haftaBasi();
   D.ogr.forEach((o, i) => {
@@ -3545,7 +3594,7 @@ function gorunumOgrenciler() {
       '<td><select class="oHedef" data-i="' + i + '"><option value=""' + (!o.hedef ? ' selected' : '') + '>genel</option>' +
         [0.85, 0.88, 0.90, 0.92, 0.95].map(v => '<option value="' + v + '"' + (o.hedef === v ? ' selected' : '') + '>%' + Math.round(v * 100) + '</option>').join('') +
       '</select></td>' +
-      '<td>'+hafizaSecici(i)+'</td><td><select class="oTelafiKap" data-i="' + i + '"><option value=""' + (o.telafiGunKap == null ? ' selected' : '') +
+      '<td>'+hafizaSecici(i)+'</td><td>'+aytOncelikSecici(i)+'</td><td><select class="oTelafiKap" data-i="' + i + '"><option value=""' + (o.telafiGunKap == null ? ' selected' : '') +
         '>genel (' + (D.ayar.telafiGunKap || 2) + ')</option>' +
         [1, 2, 3, 4, 5].map(v => '<option value="' + v + '"' + (o.telafiGunKap === v ? ' selected' : '') + '>' + v + '</option>').join('') +
       '</select></td>' +
@@ -3783,7 +3832,7 @@ function ogrenciOtomasyonUygula() {
   }
   if (OKUL_SUBE_PROGRAMLARI[o.sube] && !Object.prototype.hasOwnProperty.call(D.dersProgrami || {}, o.sube) &&
       !Object.keys((D.programHafta || {})[o.sube] || {}).length) {
-    programYaz(o.sube, pazartesi(gunNo(D.ayar.donemBasi)), JSON.parse(JSON.stringify(OKUL_SUBE_PROGRAMLARI[o.sube].prog)));
+    okulPrograminiHazirla(o.sube);
     degisti = true;
   }
   if (ogrenciGecmisiniHazirla(si)) degisti = true;
@@ -3904,6 +3953,7 @@ function gorunumProgram() {
   let h = '<div class="baslik"><h1>Ders programı</h1><p>Soldaki liste okulun ders programı, altındaki etiketler o derste işlenecek konu. ' +
     'Konuyu değiştirdiğinizde o dersin kalan konuları da kayar; “dağıt” dediğinizde konular öğrencilerin planına ' +
     D.ayar.ilk + ' gün sonrası ilk test olacak şekilde düşer.</p></div>' +
+    '<p class="mini">Bu ders programı seçilen haftadan itibaren sonraki haftalarda da kullanılır; yeni bir program kaydedene kadar devam eder.</p>' +
     '<div class="kart" style="padding:14px 16px;margin-bottom:14px' + (pk.yok ? ';border-color:var(--kritik)' : '') + '">' +
     '<div class="etiket">Programı AI ile aktar</div>' +
     (pk.yok ? '<p class="mini" style="color:var(--kritik);font-weight:600;margin:4px 0 8px">Önce ders programınızı ' +
@@ -4081,6 +4131,9 @@ function gorunumOgrenciAyarlar() {
     '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Başlangıç hafıza düzeyin · isteğe bağlı</h2>'+hafizaSecici(0)+
     '<p class="mini">Konuları rahat hatırladığını düşünüyorsan daha seyrek bir başlangıç seçebilirsin. Güçlü: ilk kontrol yaklaşık 7 gün; Çok güçlü: yaklaşık 14 gün. İlk kontrolde bir test verilir. Normal, mevcut düzeni korur.</p>'+
     '<p class="mini">Bu seçim kendi tahminindir; otomatik “Kolay” sonucu girmez. Gerçek sonuçların aralıkları ayarlar; derse özel öğrenilmiş profil varsa o kullanılır. Kaydedilmiş haftaların görevleri korunur. İstediğin zaman Normal’e dönebilirsin.</p></div>'+
+    '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Çalışma ağırlığın · isteğe bağlı</h2>'+aytOncelikSecici(0)+
+    '<p class="mini">TYT sana kolay geliyor, AYT’yi yeni öğreniyorsan açabilirsin. Yeni AYT çalışmalarına önce yer ayrılır; TYT’de ilk kontrol ve başarılı tekrarlar bir test olur. Zayıf TYT sonuçları ve geciken çalışmalar önceliğini korur.</p>'+
+    '<p class="mini">Günlük kapasiten artmaz. Sonuçlar, tekrar tarihleri ve kaydedilmiş haftalar değişmez; seçim sonraki taslak plana yansır. İstediğin zaman kapatabilirsin.</p></div>'+
     '<p class="mini" role="status">' + kacis(EK.ogrSyncDurum || (o.syncId ? 'Sonuçların otomatik eşitlenir.' : 'Çalışmaların bu cihazda kaydedilir.')) + '</p>' +
     '<details class="kart" style="padding:20px"' + (EK.gelismisAcik ? ' open' : '') + '><summary style="cursor:pointer;font-weight:600">Gelişmiş ayarlar</summary>' +
     '<div style="margin-top:18px"><label><input id="ogrOtoTelafi" type="checkbox"' + (o.otoTelafi !== false ? ' checked' : '') +
@@ -4321,6 +4374,7 @@ function ogrenciPaketi(si) {
     konuPlani: JSON.parse(JSON.stringify((D.konuPlani || {})[o.sube] || null)),
     dersProgrami: JSON.parse(JSON.stringify((D.dersProgrami || {})[o.sube] || null)),
     programHafta: JSON.parse(JSON.stringify((D.programHafta || {})[o.sube] || null)),
+    okulProgramSurumu: (D.okulProgramSurumu || {})[o.sube] || null,
     kart: kart, log: log, elle: elle,
     konuAnlatilmadi: JSON.parse(JSON.stringify((D.konuAnlatilmadi || []).filter(e => e.si === si).map(e => Object.assign({}, e, { si: 0 })))),
     islenis: JSON.parse(JSON.stringify(D.islenis)),
@@ -4349,6 +4403,7 @@ function paketiYukle(pk) {
   if (Array.isArray(pk.konuPlani)) y.konuPlani[pk.ogr.sube] = pk.konuPlani;
   if (pk.dersProgrami && typeof pk.dersProgrami === 'object') y.dersProgrami[pk.ogr.sube] = pk.dersProgrami;
   if (pk.programHafta && typeof pk.programHafta === 'object') y.programHafta[pk.ogr.sube] = pk.programHafta;
+  if (typeof pk.okulProgramSurumu === 'string') y.okulProgramSurumu = {[pk.ogr.sube]:pk.okulProgramSurumu};
   y.ogr[0].syncId = pk.syncId || null;
   y.ekKonular = [];
   const harita = {};                                  // eski ki -> yeni ki
@@ -4865,7 +4920,7 @@ function ogrenciCalismasiniUygula(calisma, si) {
   const kopya = JSON.parse(JSON.stringify(D));
   try {
     D = kopya;
-    const o = D.ogr[si], kaynak = y.ogr[0], harita = {}, eskiHafiza=o.hafizaSeviyesi||'normal';
+    const o = D.ogr[si], kaynak = y.ogr[0], harita = {}, eskiHafiza=o.hafizaSeviyesi||'normal', eskiAyt=!!o.aytOncelik;
     const dahaYeni = calisma.ts > (+o.ogrCalismaTs || (ogrenciMi() ? +D.ogrCalismaTs || +D.ts || 0 : 0));
     const cev = ki => {
       ki = +ki;
@@ -4909,12 +4964,13 @@ function ogrenciCalismasiniUygula(calisma, si) {
     });
     if (dahaYeni) {
       ['kap','off','aktif','cikti','ilkAktif','hedef','maddeler','rutin','gunlukEk','otoTelafi','dengeliYuk',
-       'telafiGecmisYapildi','telafiGunKap','hafizaSeviyesi'].forEach(k => { if (kaynak[k] !== undefined) o[k] = kaynak[k]; });
+       'telafiGecmisYapildi','telafiGunKap','hafizaSeviyesi','aytOncelik'].forEach(k => { if (kaynak[k] !== undefined) o[k] = kaynak[k]; });
       if (kaynak.otoTelafiHaric) o.otoTelafiHaric = kaynak.otoTelafiHaric.map(cev);
       if (kaynak.otoTelafiEklenen) o.otoTelafiEklenen = kaynak.otoTelafiEklenen.map(x => Object.assign({}, x, {ki:cev(x.ki)}));
       o.ogrCalismaTs = calisma.ts;
     }
     if(eskiHafiza!==(o.hafizaSeviyesi||'normal'))hafizaKartlariniYenile(si);
+    if(eskiAyt!==!!o.aytOncelik)Object.keys(D.ogrTaslak||{}).forEach(k=>{if(+k.split('|')[0]===si)delete D.ogrTaslak[k];});
     yedekDogrula(D);
   } finally { D = onceki; }
   Object.assign(D.ogr[si], kopya.ogr[si]);
@@ -6030,31 +6086,119 @@ const okulDersAdlari = () => OKUL_DERS.map(d => d[0]);
 // hazır yüklenir; AI ile aktarma yolu (Ders programı sekmesi) yine açık kalır — yalnızca
 // herkesin tek tek yapması gereken bir iş olmaktan çıkar. Ders adları OKUL_DERS ile aynı
 // yazımda tutulur ki dersEsle() doğrudan eşleştirsin.
-const OKUL_SAATLERI = ['09:00', '09:55', '10:45', '11:35', '12:25', '13:00', '13:50'];
-const BOS_GUN = ['', '', '', '', '', '', ''];
-const OKUL_SUBE_PROGRAMLARI = {
-  '201': { alan: 'SAY', prog: { saatler: OKUL_SAATLERI, gunler: [
+const ESKI_OKUL_SAATLERI = ['09:00', '09:55', '10:45', '11:35', '12:25', '13:00', '13:50'];
+const ESKI_BOS_GUN = ['', '', '', '', '', '', ''];
+const ESKI_OKUL_SUBE_PROGRAMLARI = {
+  '201': { alan: 'SAY', prog: { saatler: ESKI_OKUL_SAATLERI, gunler: [
     ['MATEMATİK AYT', 'MATEMATİK AYT', 'FİZİK', 'FİZİK', '', 'GEOMETRİ', 'GEOMETRİ'],
     ['MATEMATİK TYT', 'MATEMATİK TYT', 'BİYOLOJİ', 'BİYOLOJİ', '', 'KİMYA', 'KİMYA'],
     ['GEOMETRİ', 'GEOMETRİ', 'KİMYA', 'KİMYA', '', 'BİYOLOJİ', 'BİYOLOJİ'],
     ['TÜRKÇE', 'TÜRKÇE', 'FİZİK', 'FİZİK', '', 'MATEMATİK AYT', 'MATEMATİK AYT'],
     ['TÜRKÇE', 'TÜRKÇE', 'REHBERLİK', 'MATEMATİK TYT', 'MATEMATİK TYT', '', ''],
-    BOS_GUN, BOS_GUN] } },
-  '205': { alan: 'SAY', prog: { saatler: OKUL_SAATLERI, gunler: [
+    ESKI_BOS_GUN, ESKI_BOS_GUN] } },
+  '205': { alan: 'SAY', prog: { saatler: ESKI_OKUL_SAATLERI, gunler: [
     ['FİZİK', 'FİZİK', 'GEOMETRİ', 'GEOMETRİ', '', 'MATEMATİK AYT', 'MATEMATİK AYT'],
     ['MATEMATİK TYT', 'MATEMATİK TYT', 'TÜRKÇE', 'TÜRKÇE', '', 'BİYOLOJİ', 'BİYOLOJİ'],
     ['KİMYA', 'REHBERLİK', 'BİYOLOJİ', 'BİYOLOJİ', '', 'MATEMATİK TYT', 'KİMYA'],
     ['MATEMATİK AYT', 'MATEMATİK AYT', 'GEOMETRİ', 'GEOMETRİ', '', 'FİZİK', 'FİZİK'],
     ['TÜRKÇE', 'TÜRKÇE', 'MATEMATİK TYT', 'MATEMATİK TYT', 'KİMYA', '', ''],
-    BOS_GUN, BOS_GUN] } },
-  '301': { alan: 'EA', prog: { saatler: OKUL_SAATLERI, gunler: [
+    ESKI_BOS_GUN, ESKI_BOS_GUN] } },
+  '301': { alan: 'EA', prog: { saatler: ESKI_OKUL_SAATLERI, gunler: [
     ['TÜRK DİLİ VE EDEBİYATI', 'TÜRK DİLİ VE EDEBİYATI', 'MATEMATİK TYT', 'MATEMATİK TYT', '', 'MATEMATİK AYT', 'MATEMATİK AYT'],
     ['T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK', 'T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK', 'MATEMATİK AYT', 'MATEMATİK AYT', '', 'COĞRAFYA', 'COĞRAFYA'],
     ['COĞRAFYA', 'COĞRAFYA', 'MATEMATİK TYT', 'MATEMATİK TYT', '', 'GEOMETRİ', 'GEOMETRİ'],
     ['TÜRKÇE', 'TÜRKÇE', 'T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK', 'REHBERLİK', '', 'GEOMETRİ', 'GEOMETRİ'],
     ['FELSEFE', 'FELSEFE', 'TÜRKÇE', 'TÜRKÇE', 'TÜRK DİLİ VE EDEBİYATI', '', ''],
-    BOS_GUN, BOS_GUN] } }
+    ESKI_BOS_GUN, ESKI_BOS_GUN] } }
 };
+// 23 September PDFs: 40 lessons, nine possible start times (Friday lunch differs).
+// Apply from the week of publication; older weekly timetables remain available.
+const OKUL_PROGRAM_BASLANGIC = '2026-09-21';
+const OKUL_PROGRAM_SURUMU = '2026-09-23';
+const OKUL_SAATLERI = ['09:00','09:55','10:45','11:35','12:25','13:00','13:50','14:40','15:30'];
+const BOS_GUN = OKUL_SAATLERI.map(() => '');
+const OKUL_SUBE_PROGRAMLARI = {
+  '201': { alan:'SAY', prog:{ saatler:OKUL_SAATLERI, gunler:[
+    ['MATEMATİK TYT','MATEMATİK TYT','FİZİK','FİZİK','','GEOMETRİ','GEOMETRİ','KİMYA','KİMYA'],
+    ['KİMYA','KİMYA','BİYOLOJİ','BİYOLOJİ','','MATEMATİK TYT','MATEMATİK TYT','T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK','COĞRAFYA'],
+    ['TÜRKÇE','FİZİK','FİZİK','GEOMETRİ','','BİYOLOJİ','BİYOLOJİ','MATEMATİK AYT','MATEMATİK AYT'],
+    ['GEOMETRİ','GEOMETRİ','FELSEFE','DİN KÜLTÜRÜ','','BİYOLOJİ','MATEMATİK AYT','MATEMATİK AYT','TÜRKÇE'],
+    ['KİMYA','MATEMATİK TYT','MATEMATİK AYT','FİZİK','FİZİK','','KİMYA','TÜRKÇE','TÜRKÇE'], BOS_GUN,BOS_GUN] } },
+  '205': { alan:'SAY', prog:{ saatler:OKUL_SAATLERI, gunler:[
+    ['KİMYA','KİMYA','MATEMATİK AYT','MATEMATİK AYT','','FİZİK','FİZİK','GEOMETRİ','TÜRKÇE'],
+    ['FİZİK','FİZİK','MATEMATİK AYT','MATEMATİK AYT','','BİYOLOJİ','BİYOLOJİ','COĞRAFYA','T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK'],
+    ['KİMYA','KİMYA','MATEMATİK TYT','FELSEFE','','GEOMETRİ','GEOMETRİ','BİYOLOJİ','BİYOLOJİ'],
+    ['FİZİK','TÜRKÇE','MATEMATİK AYT','BİYOLOJİ','','MATEMATİK TYT','MATEMATİK TYT','GEOMETRİ','GEOMETRİ'],
+    ['MATEMATİK TYT','FİZİK','MATEMATİK TYT','KİMYA','KİMYA','','DİN KÜLTÜRÜ','TÜRKÇE','TÜRKÇE'], BOS_GUN,BOS_GUN] } },
+  '301': { alan:'EA', prog:{ saatler:OKUL_SAATLERI, gunler:[
+    ['MATEMATİK AYT','MATEMATİK AYT','T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK','COĞRAFYA','','COĞRAFYA','T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK','TÜRK DİLİ VE EDEBİYATI','GEOMETRİ'],
+    ['COĞRAFYA','COĞRAFYA','TÜRKÇE','TÜRKÇE','','MATEMATİK TYT','MATEMATİK TYT','KİMYA','FİZİK'],
+    ['FELSEFE','FELSEFE','MATEMATİK TYT','T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK','','MATEMATİK AYT','MATEMATİK AYT','GEOMETRİ','GEOMETRİ'],
+    ['MATEMATİK AYT','MATEMATİK AYT','DİN KÜLTÜRÜ','FELSEFE','','GEOMETRİ','GEOMETRİ','TÜRK DİLİ VE EDEBİYATI','TÜRK DİLİ VE EDEBİYATI'],
+    ['TÜRK DİLİ VE EDEBİYATI','TÜRK DİLİ VE EDEBİYATI','TÜRKÇE','TÜRKÇE','BİYOLOJİ','','TÜRKÇE','MATEMATİK TYT','MATEMATİK TYT'], BOS_GUN,BOS_GUN] } }
+};
+// Only known built-in science topics are mapped here. A school's mixed science
+// lesson is not automatically TYT just because an imported topic has k[4] = 0.
+const PLAN_FEN_SINAVI = (() => {
+  const tyt = {
+    Fizik:['Fizik Bilimine Giriş','Madde ve Özellikleri','Basınç','Kaldırma Kuvveti','Isı ve Sıcaklık','Aydınlanma','Tam ve Yarı Gölge','Yansıma','Küresel Aynalar','Kırılma','Prizmalar','Renk','Mercekler','Dalgalar (dalgaların temel özellikleri ve yay dalgaları)','Dalgalar (su dalgaları, ses dalgaları ve deprem dalgaları)','Elektrostatik','Elektrik Akımı','Üreteçler','Elektriksel Enerji ve Güç','Lambalar','Mıknatıslar'],
+    Kimya:['Kimya Bilimi','Atom Modelleri, Atomun Temel Tanecikleri','Periyodik Sistem ve Periyodik Özellikler','Kimyanın Temel Kanunları','Mol Kavramı','Kimyasal Tepkimeler ve Denklemler','Kimyasal Hesaplamalar','Kimyasal Türler / Türler Arası Etkileşimlerin Sınıflandırılması','Güçlü ve Zayıf Etkileşimler','Fiziksel ve Kimyasal Değişimler','Maddenin Hâlleri','Karışımlar','Asitler, Bazlar ve Tuzlar','Doğa ve Kimya','Kimya Her Yerde'],
+    Biyoloji:['Canlıların Ortak Özellikleri','Canlıların Temel Bileşenleri','Hücre','Canlı Çeşitliliği ve Sınıflandırılması','Canlı Âlemleri ve Virüsler','Ekosistem Ekolojisi','Hücre Bölünmeleri ve Üreme','Kalıtım ve Biyolojik Çeşitlilik']
+  };
+  const out = {};
+  ['Fizik','Kimya','Biyoloji'].forEach((ders,i) => {
+    out[i+2] = {};
+    VARSAYILAN_KONU_PLANI.SAY.forEach(h => (h[ders] || []).forEach(ad => {
+      out[i+2][ad] = tyt[ders].includes(ad) ? 'TYT' : 'AYT';
+    }));
+  });
+  return out;
+})();
+function okulProgramlariniGuncelle() {
+  if (!D || !D.rol) return false;
+  const bas = gunNo(OKUL_PROGRAM_BASLANGIC);
+  if (bugunNo() < bas) return false;
+  let degisti = false;
+  const subeler = new Set([...D.ogr.filter(o=>!o.silindi).map(o=>o.sube), ...Object.keys(D.dersProgrami || {})]);
+  subeler.forEach(sube => {
+    if (!OKUL_SUBE_PROGRAMLARI[sube]) return;
+    D.programHafta = D.programHafta || {};
+    const h = D.programHafta[sube] = D.programHafta[sube] || {};
+    // Install the supplied revision once, even if the old timetable was already
+    // saved for this week. Subsequent user edits must not trigger reinstallation.
+    if (D.okulProgramSurumu?.[sube] === OKUL_PROGRAM_SURUMU) return;
+    if (!Object.keys(h).some(k=>+k<bas)) {
+      const eski = D.dersProgrami?.[sube] || ESKI_OKUL_SUBE_PROGRAMLARI[sube].prog;
+      const ilk = Math.min(bas-7,pazartesi(gunNo(D.ayar.donemBasi || DONEM_BASI_SABIT)));
+      h[ilk] = JSON.parse(JSON.stringify(eski));
+    }
+    h[bas] = JSON.parse(JSON.stringify(OKUL_SUBE_PROGRAMLARI[sube].prog));
+    D.dersProgrami = D.dersProgrami || {};
+    D.dersProgrami[sube] = h[Math.max(...Object.keys(h).map(Number))];
+    // Reassign only future, automatic dates. Actual results, personal overrides,
+    // manual dates and topics in issued weeks retain their original dates.
+    const m = D.subeIslenis?.[sube] || {};
+    const ogrenciler = D.ogr.map((o,i)=>o.sube===sube?i:-1).filter(i=>i>=0);
+    Object.keys(m).forEach(k => {
+      const ki = +k;
+      if (m[k] < Math.max(bugunNo(),bas) || !D.konuKaynak?.[ki]) return;
+      if (ogrenciler.some(si => D.kart[si+':'+ki] || D.log.some(l=>l[1]===si&&l[2]===ki) || sabitPlandaKonuVar(si,ki))) return;
+      delete m[k];
+    });
+    ileriDagit(Math.max(bas,pazartesi(bugunNo())),sube,ileriHaftaSayisi());
+    Object.keys(D.ogrTaslak || {}).forEach(k => { const [si,hb]=k.split('|').map(Number); if (ogrenciler.includes(si) && hb > buHafta(si)) delete D.ogrTaslak[k]; });
+    D.okulProgramSurumu = D.okulProgramSurumu || {};
+    D.okulProgramSurumu[sube] = OKUL_PROGRAM_SURUMU;
+    degisti = true;
+  });
+  return degisti;
+}
+function okulPrograminiHazirla(sube) {
+  const eski = ESKI_OKUL_SUBE_PROGRAMLARI[sube];
+  if (!eski) return;
+  programYaz(sube,Math.min(gunNo(OKUL_PROGRAM_BASLANGIC)-7,pazartesi(gunNo(D.ayar.donemBasi || DONEM_BASI_SABIT))),JSON.parse(JSON.stringify(eski.prog)));
+  okulProgramlariniGuncelle();
+}
 // Okulun dönem başı sabittir; öğrenciye sorulmaz (yanlış tarih girilen bir kurulum bütün
 // plan haftalarını kaydırıyordu). Öğretmen Ayarlar'dan yine değiştirebilir.
 const DONEM_BASI_SABIT = '2026-08-24';
@@ -7017,7 +7161,7 @@ function gorunumKurulum() {
 // kurtarma ekranı gösterip yedek indirmeyi ya da Ayarlar'a dönmeyi teklif et.
 function ciz() {
   if (CIKIS_DURUMU) return;
-  try { if (ogrenciOtomasyonHazirla()) kaydet(true); cizIc(); }
+  try { const okulDegisti = okulProgramlariniGuncelle(); if (ogrenciOtomasyonHazirla() || okulDegisti) kaydet(true); cizIc(); }
   catch (e) { hataEkraniGoster(e); }
 }
 function hataEkraniGoster(e) {
@@ -7339,7 +7483,7 @@ document.addEventListener('click', async ev => {
     donemBasiniAyarla(isoDan(pazartesi(gunNo(DONEM_BASI_SABIT))), true);
     // Hazır program dönem başı haftasına yazılır: programAl() sonraki haftalarda da bunu bulur.
     if (hazir) {
-      programYaz(sube, pazartesi(gunNo(DONEM_BASI_SABIT)), JSON.parse(JSON.stringify(hazir.prog)));
+      okulPrograminiHazirla(sube);
       programDegistiTetikle(sube);
     }
     EK.ogr = 0; EK.sekme = hazir ? 'plan' : 'ayarlar'; EK.sube = sube; EK.hafta = null;
@@ -8427,6 +8571,7 @@ document.addEventListener('change', async ev => {
     if (y) { y.style.display = el.value === '__yeni' ? '' : 'none'; if (el.value === '__yeni') y.focus(); }
     return;
   }
+  if(el.classList.contains('oAytOncelik')) { if(aytOnceliginiUygula(+el.dataset.i,el.checked)){await kaydet(true);ciz();}return; }
   if(el.classList.contains('oHafiza')) { if(hafizaSeviyesiniUygula(+el.dataset.i,el.value)){await kaydet(true);ciz();}return; }
   if (el.classList.contains('oHedef')) { D.ogr[+el.dataset.i].hedef = el.value ? +el.value : null; await kaydet(true); ciz(); return; }
   if (el.classList.contains('oTelafiKap')) { D.ogr[+el.dataset.i].telafiGunKap = el.value ? Math.max(1, Math.min(12, +el.value)) : null; await kaydet(true); ciz(); return; }
