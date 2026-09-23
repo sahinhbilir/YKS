@@ -38,7 +38,8 @@ function app(role='rehber',options={}) {
 const checks=[];
 async function check(name,fn,role='rehber',options={}) {const a=app(role,options);try{await fn(a);checks.push(name);}finally{a.close();}}
 const retained=a=>{assert(a.store.yks_veri);assert(a.run('D.ogr.length')===1);assert(!a.events.some(e=>e.startsWith('local:remove:')));};
-(async()=>{
+module.exports={app};
+if(require.main===module)(async()=>{
   for(const role of ['rehber','ogrenci'])await check(role+'-logout-verifies-server-before-clearing-only-app-data',async a=>{
     a.run("sonucIsle(0,[{ki:0,gun:bugunNo(),not:4}]);hafizaSeviyesiniUygula(0,'guclu');");
     assert.equal(await a.run('kaydedipCikisYap()'),true,a.nodes.cikisDurum.innerHTML);

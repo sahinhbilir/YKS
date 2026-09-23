@@ -157,6 +157,25 @@ try {
     assert.equal(afterLogout.run('D.log.length'),4);assert.equal(afterLogout.run('D.ogr[0].hafizaSeviyesi'),'cok-guclu');
     assert.ok(afterLogout.run("D.elle['0|'+gunNo('2026-08-31')].kurtarma"));
   });
+  await teacher.run('KAYIT_ZINCIRI');await teacher.run('bulutYedekIsi');
+  const dayRef=doc(teacherDb,'ogretmenYedek',teacherUid,'geriNoktalari',teacher.run('bulutGunBaslangiciKimligi()'));
+  const dayBefore=(await getDocFromServer(dayRef)).data().veri;
+  teacher.s.rollbackTarget=JSON.parse(teacher.run('JSON.stringify(D)'));
+  teacher.run("D.kurum='Change to undo';");await teacher.run('kaydet(true)');await teacher.run('bulutaYedekle()');
+  check('day-start-is-create-only-and-preserved-after-subsequent-backups',()=>assert.ok(dayBefore));
+  assert.equal((await getDocFromServer(dayRef)).data().veri,dayBefore);
+  await teacher.run('bulutSifirlamaSecenekleriniAc()');
+  assert.equal(await teacher.run('bulutSurumuneDon(rollbackTarget,"emulator rollback",EK.bulutSifirlama)'),true);
+  const rolledBack=JSON.parse((await getDocFromServer(teacherRef)).data().veri);
+  check('cloud-rollback-archives-and-restores-using-existing-firestore-rules',()=>{
+    assert.equal(rolledBack.kurum,teacher.s.rollbackTarget.kurum);assert.equal(rolledBack.log.length,4);
+    assert.ok(rolledBack.bulutGeriAlma);assert.equal(JSON.parse(teacher.store.yks_veri).kurum,rolledBack.kurum);
+  });
+  const points=await getDocs(collection(teacherDb,'ogretmenYedek',teacherUid,'geriNoktalari'));
+  check('cloud-rollback-keeps-the-overwritten-notebook-for-undo',()=>{
+    assert(points.docs.some(d=>d.id.endsWith('-bulut')&&JSON.parse(d.data().veri).kurum==='Change to undo'));
+    assert(points.docs.some(d=>d.id.endsWith('-yerel')&&JSON.parse(d.data().veri).kurum==='Change to undo'));
+  });
   teacher.run("DISARI_AKTAR=null;EK.sekme='plan';D.kurum='Saved on logout'");
   assert.equal(await teacher.run('kaydedipCikisYap()'),true);
   const savedTeacher=JSON.parse((await getDocFromServer(teacherRef)).data().veri);

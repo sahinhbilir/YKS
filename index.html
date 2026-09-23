@@ -4147,6 +4147,20 @@ function gorunumOgrenciAyarlar() {
     (EK.ogrSyncHata ? '<p class="mini">Son eşitleme: ' + kacis(EK.ogrSyncHata) + '</p>' : '') +
     gorunumAyarlar(true) + '</div></details>';
 }
+function veriYonetimiGorunumu() {
+  const secim = EK.bulutSifirlama;
+  return '<div class="kart" style="padding:18px;margin:16px 0"><h2>Verileri sıfırla</h2>' +
+    '<div class="arac"><button class="dugme" id="tarayiciSifirla">Tarayıcı verilerini sıfırla</button>' +
+    (rehberMi() ? '<button class="dugme" id="bulutSifirla">Bulut verilerini sıfırla</button>' : '') + '</div>' +
+    '<p class="mini">Tarayıcı sıfırlama bu cihazdaki YKS kayıtlarını siler ve çıkış yapar. Buluta yeni kayıt göndermez; buluttaki kopya korunur. Henüz gönderilmemiş çalışmalar bu cihazdan silinir.</p>' +
+    (rehberMi() ? '<p class="mini">Bulut sıfırlama: öğretmen defterini seçtiğiniz eski yedeğe döndürür. Bugünkü değişiklikler buluta kaydedilmiş olsa da uygun bir eski kopya varsa geri alınabilir. Öğrencilerin kendi hesaplarını ve cihazlarını değiştirmez.</p>' : '') +
+    (D.bulutGeriAlma ? '<p class="mini"><b>Geri alınan kayıtların yeniden gelmemesi için öğrencilerden otomatik alım duraklatıldı.</b> “Buluttan sonuçları çek” ile yeniden başlatabilirsiniz.</p>' : '') +
+    (rehberMi() && secim ? '<div role="region" aria-label="Bulut geri alma yedekleri"><h3>Dönülecek yedeği seçin</h3>' +
+      '<p class="mini">Gün başlangıcı, o günün ilk bulut değişikliğinden önceki kopyadır. Günlük yedek ise o günün son kaydıdır. Bu özellikten önce saklanmamış bir sürüm geri getirilemez. Şu anki defter işlemden önce ayrıca korunur.</p>' +
+      (secim.liste.length ? '<div class="kaydir"><table><thead><tr><th>Yedek</th><th>Öğrenci / sonuç</th><th></th></tr></thead><tbody>' +
+        secim.liste.map((y,i) => '<tr><td>'+kacis(y.ad)+'</td><td>'+y.ogrenciSayisi+' / '+y.sonucSayisi+'</td><td><button class="dugme bulutSurumSec" data-i="'+i+'">Bu yedeğe dön</button></td></tr>').join('') +
+        '</tbody></table></div>' : '<p>Bulutta geri dönülebilecek yedek bulunamadı.</p>') + '</div>' : '') + '</div>';
+}
 function gorunumAyarlar(gelismis) {
   if (ogrenciMi() && D.ogr[0] && !gelismis) return gorunumOgrenciAyarlar();
   const a = D.ayar;
@@ -4229,7 +4243,7 @@ function gorunumAyarlar(gelismis) {
         // syncId taşımıyorsa (ör. öğretmen buluta bağlanmadan önce indirilmiş bir dosya)
         // düğme hiç gösterilmez — aksi halde tıklandığında kesin başarısız olurdu.
         '') +
-    '<button class="dugme" id="sifirla">Verileri sıfırla</button></div>' +
+    '</div>' + veriYonetimiGorunumu() +
     (rehberMi()
       ? '<div class="mini" style="margin-top:10px;max-width:74ch">Öğrenciye kendi uygulamasını kurmak için: ' +
         '<b>Öğrenciler</b> sekmesinde satırın sonundaki <b>paket</b> düğmesiyle o öğrencinin dosyasını ' +
@@ -5048,11 +5062,13 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
     const ref = window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid);
     const yerel = JSON.parse(json);
     const korumaTs = Date.now(), korumaId = geriYuklemeNoktasiKimligi(korumaTs);
+    const gunRef = window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'geriNoktalari', bulutGunBaslangiciKimligi());
     let etkin = true;
     try {
       await sureSinirli(window.bulut.runTransaction(window.bulut.db, async tx => {
         const anlik = await tx.get(ref);
         const eski = anlik.exists() ? anlik.data() : null;
+        const gunKopyasi = eski ? await tx.get(gunRef) : null;
         const mevcut = window.bulut.mevcutKullanici();
         if (!etkin || !mevcut || mevcut.uid !== kullanici.uid) throw new Error('Bulut yedekleme oturumu değişti; işlem durduruldu.');
         if (eski) {
@@ -5066,6 +5082,8 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
           if (!ayni && !onayli && (bosaliyor || !temel || temel !== await bulutYedekImzasi(eski.veri)))
             throw Object.assign(new Error(BULUT_DEFTER_CAKISMA), { code: 'yks-defter-cakisma' });
           if (!etkin) throw new Error('Bulut yedeği sunucudan zamanında onay alamadı.');
+          if (!ayni && !gunKopyasi.exists()) tx.set(gunRef, bulutKorumaBelgesi(eski.veri, korumaTs,
+            'Gün başlangıcı · ' + bulutGercekGun()));
           // Kullanıcı farklı yerel defteri seçtiğinde buluttaki eski kopya da aynı
           // atomik işlemde korunur; günlük kopyanın üzerine yazılması onu silemez.
           if (onayli && !ayni) tx.set(window.bulut.doc(window.bulut.db, 'ogretmenYedek', kullanici.uid, 'geriNoktalari', korumaId),
@@ -5759,7 +5777,10 @@ async function cikisTekSekmede(islem) {
   } finally { if(CIKIS_DURUMU!=='tamam')await oturumSekmesiniKaydet(); }
 }
 function cikisTaslakHatasi() {
-  if (duzenlemeKaydi() || PENCERE || DISARI_AKTAR) return 'Açık düzenlemeyi veya önizlemeyi kapatıp yeniden çıkış yapın.';
+  // Haftanın düzenleme bayrağı D içinde kalıcıdır; başka ekrana geçmek onu
+  // kapatmaz. Çıkış bunu aşağıda kaydeder. Salt okunur önizleme de engel değildir.
+  if (PENCERE && (document.getElementById('pSerbestAd')?.value || '').trim())
+    return 'Çalışma ekleme penceresinde yazdığınız adı önce “Ekle” ile plana ekleyin veya alanı boşaltın.';
   if (sonucTaslaklariniAl().some(r=>r.not || r.dogru!=='' || r.deferred &&
       document.querySelector('[data-sonuc-row][data-ki="'+r.ki+'"][data-gun="'+r.gun+'"][data-deferred-pending="1"]')) ||
       Array.from(document.querySelectorAll('.gAnlatim:checked')).some(e=>!e.disabled))
@@ -5779,10 +5800,10 @@ function cikisArkaPlaniDurdur() {
   if(OGRENCI_SYNC_ZAMAN!==null)clearTimeout(OGRENCI_SYNC_ZAMAN);OGRENCI_SYNC_ZAMAN=null;
   ogretmenDinlemeyiDurdur();
 }
-function cikisDurumunuGoster(metin, bekliyor) {
+function cikisDurumunuGoster(metin, bekliyor, tekrar = true) {
   let panel=document.getElementById('cikisDurum');
   if(!panel){panel=document.createElement('section');panel.id='cikisDurum';panel.className='cikis-durum';panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');document.body.appendChild(panel);}
-  panel.innerHTML='<div>'+kacis(metin)+'</div>'+(!bekliyor&&CIKIS_DURUMU!=='tamam'?'<div class="arac"><button class="dugme" id="cikisTekrar">Tekrar dene</button><button class="dugme" id="cikisKapat">Çalışmaya dön</button></div>':'');
+  panel.innerHTML='<div>'+kacis(metin)+'</div>'+(!bekliyor&&CIKIS_DURUMU!=='tamam'?'<div class="arac">'+(tekrar?'<button class="dugme" id="cikisTekrar">Tekrar dene</button>':'')+'<button class="dugme" id="cikisKapat">Çalışmaya dön</button></div>':'');
   const kabuk=document.querySelector('.kabuk');if(kabuk)kabuk.inert=!!bekliyor;
   const dugme=document.getElementById('oturumKapat');if(dugme)dugme.disabled=!!bekliyor;
 }
@@ -5825,6 +5846,8 @@ async function kaydedipCikisYapGercek() {
     throw new Error('Kalıcı hesabınızla giriş yapın; sunucudaki veriyi sonra yeniden açabilmeniz gerekiyor.');
   const oturumAyni=()=>D===defter&&b.mevcutKullanici()?.uid===kullanici.uid;
   if(!oturumAyni())throw new Error('Oturum değişti; çıkış durduruldu.');
+  if(duzenlemeKaydi())duzenlemeyiAnlikOlarakKaydet();
+  PENCERE=null;pencereCiz();disariAktarmayiKapat();
   if(!await sureSinirli(kaydet(true,true),BULUT_YAZMA_ZAMAN_ASIMI,'Son değişikliklerin kaydı henüz tamamlanmadı.'))throw new Error('Son değişiklikler kaydedilemedi.');
   let onayliImza;
   if(ogr) {
@@ -5854,17 +5877,131 @@ async function kaydedipCikisYapGercek() {
   cikisDurumunuGoster('Sunucu kaydı doğrulandı. Oturum kapatılıyor ve bu uygulamanın cihazdaki kayıtları temizleniyor…',true);
   await sureSinirli(b.oturumuKapat(),BULUT_YAZMA_ZAMAN_ASIMI,'Oturum kapatma tamamlanmadı; cihazdaki veriler korunuyor.');
   if(b.mevcutKullanici()||!veriAyni())throw new Error('Çıkış sırasında oturum veya veri değişti; cihaz temizlenmedi.');
+  return yerelOturumuBitir('Sunucuya kaydedildi. Çıkış yapıldı ve bu uygulamanın cihazdaki kayıtları temizlendi.');
+}
+function yerelOturumuBitir(mesaj) {
   cikisYerelVerisiniTemizle();
   if(GECMIS_PLAN?.foto)URL.revokeObjectURL(GECMIS_PLAN.foto);GECMIS_PLAN=null;
   D=varsayilan();D.rol='';EK={sekme:'plan',ogr:0,hafta:null,kirli:false,son:'',girisAcik:{}};
   const gomulu=document.getElementById('veri');if(gomulu)gomulu.textContent='null';
   Object.keys(bulutYedekTemelleri).forEach(k=>delete bulutYedekTemelleri[k]);
   CIKIS_DURUMU='tamam';
-  cikisDurumunuGoster('Sunucuya kaydedildi. Çıkış yapıldı ve bu uygulamanın cihazdaki kayıtları temizlendi.',false);
+  cikisDurumunuGoster(mesaj,false);
   cizIc();
   // Yeni oturum temiz JS belleğiyle başlasın; eski zamanlayıcılar veri geri yazamasın.
   if(typeof window.location?.reload==='function')window.location.reload();
   return true;
+}
+
+// Tarayıcı temizliği bilerek son değişiklikleri yüklemez. Devam eden yazılar
+// tamamlanmadan ve Auth çıkmadan depolama silinmez; başka sekme de engellenir.
+async function tarayiciVerileriniSifirla() {
+  if(CIKIS_DURUMU||CIKIS_IS)return false;
+  CIKIS_DURUMU='yerel-sifirlama';cikisArkaPlaniDurdur();
+  cikisDurumunuGoster('Tarayıcı kayıtları temizleniyor. Yeni bulut kaydı gönderilmiyor…',true);
+  try {
+    return await cikisTekSekmede(async()=>{
+      if(bulutDefterIslemi)throw new Error('Devam eden bulut işleminin bitmesini bekleyin.');
+      await sureSinirli(Promise.all([KAYIT_ZINCIRI,OGRENCI_SYNC_IS,bulutYedekIsi]),3*BULUT_YAZMA_ZAMAN_ASIMI,'Devam eden kayıt bitmedi; tarayıcı verileri silinmedi.');
+      const b=window.bulut;
+      if(b?.yapilandirilmis) {
+        if(typeof b.oturumuKapat!=='function')throw new Error('Oturum kapatma hazır değil; veriler silinmedi.');
+        await sureSinirli(b.oturumuKapat(),BULUT_YAZMA_ZAMAN_ASIMI,'Oturum kapatılamadı; veriler silinmedi.');
+        if(b.mevcutKullanici())throw new Error('Oturum hâlâ açık; veriler silinmedi.');
+      }
+      PENCERE=null;disariAktarmayiKapat();
+      return yerelOturumuBitir('Tarayıcı verileri sıfırlandı. Buluttaki kayıtlar korundu.');
+    });
+  } catch(e) {
+    CIKIS_DURUMU='';cikisDurumunuGoster('Tarayıcı sıfırlanamadı. '+(e.message||e),false,false);
+    return false;
+  }
+}
+// Gerçek Türkiye tarihi; geliştirme ekranındaki tarih denemesi yedek adını değiştirmez.
+function bulutGercekGun() { return new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Istanbul'}); }
+function bulutGunBaslangiciKimligi() { return 'gun-baslangici-'+bulutGercekGun(); }
+function bulutKorumaBelgesi(json,ts,kaynak) {
+  const y=JSON.parse(json);yedekDogrula(y);
+  if(baytBoyu(json)>BULUT_YEDEK_UST_SINIR)throw new Error('Koruma yedeği çok büyük; işlem durduruldu.');
+  return {veri:json,ts,surum:VERI_SURUMU,boyut:json.length,ogrenciSayisi:yedekOgrenciSayisi(y),
+    sonucSayisi:(y.log||[]).length,kaynak:String(kaynak).slice(0,100)};
+}
+async function bulutSifirlamaSecenekleriniAc() {
+  const b=window.bulut,u=b?.mevcutKullanici(),defter=D;
+  if(!rehberMi()||!u||u.isAnonymous)throw new Error('Önce öğretmen hesabınızla buluta bağlanın.');
+  const [gunler,noktalar,son]=await sureSinirli(Promise.all([bulutYedekGecmisi(),bulutGeriYuklemeNoktalari(),
+    b.getDocFromServer(b.doc(b.db,'ogretmenYedek',u.uid))]),BULUT_YAZMA_ZAMAN_ASIMI,'Yedekler sunucudan alınamadı.');
+  if(D!==defter||b.mevcutKullanici()?.uid!==u.uid)throw new Error('Oturum değişti; yedekleri yeniden açın.');
+  if(gunler.tur!=='tamam'||noktalar.tur!=='tamam')throw new Error(gunler.mesaj||noktalar.mesaj||'Yedek geçmişi okunamadı.');
+  if(!son.exists()||typeof son.data().veri!=='string')throw new Error('Bulutta öğretmen defteri bulunamadı.');
+  EK.bulutSifirlama={uid:u.uid,mevcut:son.data().veri,liste:[
+    ...gunler.liste.map(y=>({...y,tur:'gun',id:y.gun,ad:ggyy(gunNo(y.gun))+' · günlük son kayıt'})),
+    ...noktalar.liste.map(y=>({...y,tur:'nokta',ad:y.kaynak+' · '+new Date(y.ts).toLocaleString('tr-TR')}))
+  ].sort((a,b)=>b.ts-a.ts)};
+  ciz();
+}
+async function bulutSurumuneDon(yedek,kaynak,secim) {
+  if(CIKIS_DURUMU||CIKIS_IS)return false;
+  const b=window.bulut,defter=D,u=b?.mevcutKullanici();
+  if(!rehberMi()||!u||u.isAnonymous||u.uid!==secim?.uid)throw new Error('Öğretmen oturumu değişti; yedekleri yeniden açın.');
+  yedekDogrula(yedek);
+  if(yedek.rol && yedek.rol!=='rehber')throw new Error('Bu yedek öğretmen defteri değil.');
+  CIKIS_DURUMU='bulut-geri-alma';cikisArkaPlaniDurdur();
+  cikisDurumunuGoster('Mevcut kopyalar korunuyor ve seçilen yedek sunucuya uygulanıyor…',true);
+  let yazmaBasladi=false;
+  try {
+    return await cikisTekSekmede(async()=>{
+      if(bulutDefterIslemi)throw new Error('Devam eden bulut işleminin bitmesini bekleyin.');
+      if(navigator.onLine===false)throw new Error('Buluttaki değişikliği geri almak için internet bağlantısı gerekiyor.');
+      await sureSinirli(Promise.all([KAYIT_ZINCIRI,OGRENCI_SYNC_IS,bulutYedekIsi]),3*BULUT_YAZMA_ZAMAN_ASIMI,'Devam eden kayıt bitmedi.');
+      const oncekiJson=JSON.stringify(D),ts=Date.now();
+      const yerelKoruma=bulutKorumaBelgesi(oncekiJson,ts,'Bulut geri alma öncesi cihazdaki defter');
+      let hedef;
+      try {
+        veriyiHazirla(JSON.parse(JSON.stringify(yedek)));D.rol='rehber';
+        D.bulutGeriAlma={ts,kaynak:String(kaynak).slice(0,100)};
+        D.ts=ts;D.rev=Math.max(+D.rev||0,+defter.rev||0)+1;
+        hedef=D;
+      } finally { D=defter; }
+      const json=JSON.stringify(hedef);
+      const hedefBelge=bulutKorumaBelgesi(json,ts,kaynak);
+      // Yerel güvenlik kopyaları ağ işlemi başlamadan yazılır; kota hatası bulutu değiştirmez.
+      localStorage.setItem('yks_bulut_geri_alma_oncesi',oncekiJson);
+      localStorage.setItem('yks_bulut_geri_alma_hedefi',json);
+      const ref=b.doc(b.db,'ogretmenYedek',u.uid),id=geriYuklemeNoktasiKimligi(ts);
+      let etkin=true;
+      try {
+        yazmaBasladi=true;
+        await sureSinirli(b.runTransaction(b.db,async tx=>{
+          const anlik=await tx.get(ref);
+          if(!etkin||D!==defter||JSON.stringify(D)!==oncekiJson||b.mevcutKullanici()?.uid!==u.uid)
+            throw new Error('İşlem sırasında oturum veya defter değişti.');
+          if(!anlik.exists()||anlik.data().veri!==secim.mevcut)
+            throw new Error('Buluttaki defter değişmiş. Yedek listesini yeniden açıp kontrol edin.');
+          const uzakKoruma=bulutKorumaBelgesi(anlik.data().veri,ts,'Bulut geri alma öncesi sunucudaki defter');
+          tx.set(b.doc(b.db,'ogretmenYedek',u.uid,'geriNoktalari',id+'-yerel'),yerelKoruma);
+          tx.set(b.doc(b.db,'ogretmenYedek',u.uid,'geriNoktalari',id+'-bulut'),uzakKoruma);
+          tx.set(ref,{veri:json,ts,surum:VERI_SURUMU,boyut:hedefBelge.boyut});
+        }),BULUT_YAZMA_ZAMAN_ASIMI,'Geri alma sunucudan zamanında onay alamadı. “Buluttaki defteri aç” ile son durumu kontrol edin.');
+      } finally { etkin=false; }
+      const son=await sureSinirli(b.getDocFromServer(ref),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki geri alma doğrulanamadı. “Buluttaki defteri aç” ile kontrol edin.');
+      if(D!==defter||JSON.stringify(D)!==oncekiJson||b.mevcutKullanici()?.uid!==u.uid||!son.exists()||son.data().veri!==json)
+        throw new Error('Sunucudaki yedek veya oturum değişti; cihazdaki defter korundu.');
+      localStorage.setItem('yks_veri',json);
+      D=hedef;PENCERE=null;disariAktarmayiKapat();
+      EK.ogr=0;EK.hafta=null;EK.bulutSifirlama=null;EK.bulutGecmis=null;EK.bulutGeriNoktalar=null;
+      await bulutYedekTemeliniHatirla(u.uid,json);
+      CIKIS_DURUMU='';ciz();
+      cikisDurumunuGoster('Seçilen yedek tarayıcıya ve buluta uygulandı. Önceki kopyalar korundu. Öğrencilerden otomatik alım, siz yeniden başlatana kadar duraklatıldı.',false,false);
+      return true;
+    });
+  } catch(e) {
+    // Zaman aşımı yazının iptal edildiği anlamına gelmez. Eski defter daha sonra
+    // otomatik yüklenerek onaylanmış geri almayı silemesin.
+    if(yazmaBasladi)bulutYedekTemeliniUnut(u.uid);
+    CIKIS_DURUMU='';cikisDurumunuGoster('Geri alma tamamlanamadı; mevcut cihaz kopyası korunuyor. '+(e.message||e),false,false);
+    return false;
+  }
 }
 
 const OGRETMEN_DINLEYICILER = new Map();
@@ -5875,6 +6012,7 @@ function ogretmenDinlemeyiDurdur() {
 }
 function ogretmenDinlemeyiBaslat(zorla) {
   if (CIKIS_DURUMU) return;
+  if (D?.bulutGeriAlma) { ogretmenDinlemeyiDurdur(); return; }
   const b = window.bulut, u = b && typeof b.mevcutKullanici === 'function' ? b.mevcutKullanici() : null;
   if (!rehberMi() || !b || !b.yapilandirilmis || !u || u.isAnonymous ||
       String(u.email || '').endsWith('@student.ykstekrar.app')) { ogretmenDinlemeyiDurdur(); return; }
@@ -7235,6 +7373,28 @@ document.addEventListener('click', async ev => {
   if(cikisId==='oturumKapat'||cikisId==='cikisTekrar'){await kaydedipCikisYap();return;}
   if(cikisId==='cikisKapat'){document.getElementById('cikisDurum')?.remove();return;}
   if(CIKIS_DURUMU)return;
+  if(cikisId==='tarayiciSifirla') {
+    if(confirm('Yalnızca bu cihazdaki YKS kayıtları silinecek ve çıkış yapılacak. Buluttaki kopya değişmeyecek.\n\nHenüz buluta gönderilmemiş çalışmalar kaybolur. Devam eden bir gönderim varsa önce bitmesi beklenir. Tarayıcı verileri sıfırlansın mı?'))
+      await tarayiciVerileriniSifirla();
+    return;
+  }
+  if(cikisId==='bulutSifirla') {
+    const hata=cikisTaslakHatasi();if(hata){bilgiVer(hata);return;}
+    try { await bulutSifirlamaSecenekleriniAc(); }
+    catch(e){bilgiVer('Yedekler açılamadı: '+(e.message||e));}
+    return;
+  }
+  const geriSec=ev.target.closest('.bulutSurumSec');
+  if(geriSec && rehberMi()) {
+    const secim=EK.bulutSifirlama,y=secim?.liste[+geriSec.dataset.i];if(!y)return;
+    try {
+      const r=await (y.tur==='gun'?buluttanGunAl(y.id):buluttanGeriYuklemeNoktasiAl(y.id));
+      if(r.tur!=='tamam')throw new Error(r.mesaj||'Seçilen yedek okunamadı.');
+      if(!confirm(y.ad+' yedeğine dönülecek.\n\n'+yedekOgrenciSayisi(r.yedek)+' öğrenci, '+(r.yedek.log||[]).length+' sonuç geri gelecek.\nTarayıcıdaki ve buluttaki öğretmen defteri bu yedekle değişecek; mevcut kopyalar ayrıca korunacak.\n\nÖğrencilerin hesapları değişmez. Geri alınan kayıtların yeniden gelmemesi için otomatik sonuç alımı duraklatılacak. Devam edilsin mi?'))return;
+      await bulutSurumuneDon(r.yedek,y.ad,secim);
+    } catch(e){bilgiVer('Geri alma başlatılamadı: '+(e.message||e));}
+    return;
+  }
   if (ev.target.id === 'ogrManuelEkle' && ogrenciMi()) {
     const hb = haftaBasi(), g = Math.max(0, bugunNo() - hb);
     if (g > 6 || hb + g >= gunNo(D.ayar.sinav)) return;
@@ -8395,6 +8555,10 @@ document.addEventListener('click', async ev => {
   }
   if (t.id === 'bulutCek') {
     try {
+      if(D.bulutGeriAlma) {
+        if(!confirm('Öğrencilerden sonuç alımı yeniden başlayacak. Geri aldığınız öğrenci kayıtları tekrar gelebilir. Devam edilsin mi?'))return;
+        delete D.bulutGeriAlma;await kaydet(true);ogretmenDinlemeyiBaslat();
+      }
       const rapor = await sunucudanCek();
       if (!rapor.length) { bilgiVer('Buluttan çekilecek yeni sonuç bulunamadı.'); return; }
       await kaydet(true); ciz();
@@ -8404,10 +8568,6 @@ document.addEventListener('click', async ev => {
     return;
   }
   if (t.id === 'yedekIndir') { await indir('yks-tekrar-yedek-' + isoDan(bugunNo()) + '.json', JSON.stringify(D), 'json'); return; }
-  if (t.id === 'sifirla') {
-    if (!confirm('Bütün sonuçlar, işleniş tarihleri ve öğrenci ayarları silinecek. Emin misiniz?')) return;
-    D = varsayilan(); await kaydet(true); ciz(); return;
-  }
 });
 
 // Sekme arka plana alınınca / kapatılınca bekleyen bulut yedeğini hemen gönder.

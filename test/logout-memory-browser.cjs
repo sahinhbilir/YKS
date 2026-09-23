@@ -26,6 +26,8 @@ let browser;
          await fn({get:async ref=>snap(window.__cloud[ref]),set:(ref,data)=>writes.push([ref,data]),update:(ref,data)=>writes.push([ref,{...window.__cloud[ref],...data}])});
          for(const [ref,data] of writes){window.__cloud[ref]=structuredClone(data);await window.__record({event:'write',ref,data});}},
        setDoc:async(ref,data)=>{window.__cloud[ref]=structuredClone(data);},
+       collection:(_db,...p)=>p.join('/'),getDoc:async ref=>snap(window.__cloud[ref]),
+       getDocs:async ref=>({forEach(fn){Object.entries(window.__cloud).filter(([key])=>key.startsWith(ref+'/')).forEach(([key,data])=>fn({id:key.split('/').at(-1),data:()=>structuredClone(data)}));}}),
        async getDocFromServer(ref){await window.__record({event:'readback',ref});return snap(window.__cloud[ref]);},
        async oturumuKapat(){if(!localStorage.getItem('yks_veri'))throw Error('Device data was cleared before sign-out');await window.__record({event:'signout'});user=null;}};
    },role);
@@ -48,7 +50,23 @@ let browser;
      await page.getByRole('button',{name:'Ayarlar',exact:true}).click();await page.locator('#aSoru').fill('25');
      await page.locator('#oturumKapat').click();await page.getByText('Değiştirdiğiniz ayarları önce Kaydet düğmesiyle kaydedin.',{exact:true}).waitFor();
      assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await page.locator('#cikisKapat').click();await page.locator('#ayarKaydet').click();
+     // Rollback is driven through the visible two-button settings flow.
+     await page.evaluate(async()=>{
+       D.kurum='Before today';await kaydet(true);await bulutaYedekle();
+       D.kurum='Changed today';await kaydet(true);await bulutaYedekle();
+     });
+     await page.getByRole('button',{name:'Bulut verilerini sıfırla',exact:true}).click();
+     await page.getByRole('heading',{name:'Dönülecek yedeği seçin'}).waitFor();
+     await page.screenshot({path:path.join(out,'cloud-reset-options.png'),fullPage:true});
+     page.removeAllListeners('dialog');page.on('dialog',d=>d.accept());
+     await page.getByRole('row').filter({hasText:'Gün başlangıcı'}).getByRole('button',{name:'Bu yedeğe dön'}).click();
+     await page.waitForFunction(()=>D.kurum==='Before today'&&D.bulutGeriAlma);
+     assert.equal(await page.evaluate(()=>JSON.parse(window.__cloud['ogretmenYedek/teacher'].veri).kurum),'Before today');
+     await page.locator('#cikisKapat').click();
+     page.removeAllListeners('dialog');page.on('dialog',d=>d.dismiss());
    }
+   // The persistent week editor can be hidden by navigation. Logout must finish it.
+   await page.evaluate(()=>{duzenlemeBaslat(0,buHafta(0)+7);});
    await context.setOffline(true);await page.locator('#oturumKapat').click();
    await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('İnternet bağlantısı yok'));
    assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await context.setOffline(false);await page.locator('#cikisKapat').click();
@@ -67,6 +85,7 @@ let browser;
    const written=records.filter(r=>r.event==='write').at(-1).data;
    const saved=JSON.parse(role==='ogrenci'?written.paket.calisma.veri:written.veri);
    assert.equal(saved.log.length,1);assert.equal(saved.ogr[0].hafizaSeviyesi,'cok-guclu');assert.equal(saved.ogr[0].aytOncelik,true);
+   assert.equal(saved.duzenleHafta,undefined);assert(Object.values(saved.elle).some(x=>x.plan),'edited week was saved');
    assert(records.findIndex(r=>r.event==='readback')<records.findIndex(r=>r.event==='signout'));assert.deepEqual(errors,[]);
    await context.close();
  }
@@ -87,5 +106,16 @@ let browser;
    await timetable.screenshot({path:path.join(out,'timetable-'+su+'.png'),fullPage:true});
  }
  assert.deepEqual(timetableErrors,[]);await timetableContext.close();
+ // Browser-only reset also works without sending anything to a cloud account.
+ const resetContext=await browser.newContext(),resetPage=await resetContext.newPage();
+ await resetContext.route('**/*',route=>route.request().url().startsWith('http://localhost/')?
+   route.fulfill({status:route.request().url().includes('/data/')?404:200,contentType:'text/html',body:html}):route.abort());
+ resetPage.on('dialog',d=>d.accept());await resetPage.goto('http://localhost/?dev=1');
+ await resetPage.getByText('Kimsiniz?',{exact:true}).waitFor();
+ await resetPage.evaluate(()=>{D=varsayilan();D.rol='rehber';D.ogr=[{ad:'Local test',no:44,sube:'12A',alan:'EA',kap:6,off:[]}];EK.sekme='ayarlar';ciz();localStorage.setItem('yks_veri',JSON.stringify(D));localStorage.setItem('other-app','keep');});
+ await resetPage.getByRole('button',{name:'Tarayıcı verilerini sıfırla',exact:true}).click();
+ await resetPage.getByText('Kimsiniz?',{exact:true}).waitFor();
+ assert.equal(await resetPage.evaluate(()=>localStorage.getItem('yks_veri')),null);
+ assert.equal(await resetPage.evaluate(()=>localStorage.getItem('other-app')),'keep');await resetContext.close();
  console.log('Browser checks passed: teacher/student memory and persistent AYT settings, three updated timetables, offline and rejected saves, unsaved forms, real multi-tab locks, retry, server readback and clean logout.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();});
