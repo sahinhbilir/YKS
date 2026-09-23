@@ -32,6 +32,13 @@ let browser;
    await page.locator('.oHafiza').selectOption('cok-guclu');
    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[0].hafizaSeviyesi==='cok-guclu');
    assert.equal(await page.evaluate(()=>D.log.length),1);assert.equal(await page.evaluate(()=>D.kart['0:0'].s),28);
+   await page.locator('.oAytOncelik').check();
+   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[0].aytOncelik===true);
+   assert.equal(await page.locator('.oAytOncelik').isChecked(),true);
+   await page.locator('.oAytOncelik').uncheck();
+   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[0].aytOncelik===false);
+   await page.locator('.oAytOncelik').check();
+   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[0].aytOncelik===true);
    if(role==='ogrenci'){
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'student settings overflow');
      await page.screenshot({path:path.join(out,'memory-setting-mobile.png'),fullPage:true});
@@ -46,6 +53,7 @@ let browser;
    await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('İnternet bağlantısı yok'));
    assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await context.setOffline(false);await page.locator('#cikisKapat').click();
    const second=await context.newPage();await second.goto('http://localhost/?dev=1');await second.waitForFunction(()=>!!D?.rol);
+   assert.equal(await second.evaluate(()=>D.ogr[0].aytOncelik),true,'AYT setting survives fresh page load');
    await page.locator('#oturumKapat').click();await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('başka bir sekmede'));
    assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await second.close();await page.locator('#cikisKapat').click();
    await page.evaluate(()=>{window.__failWrite=true;});await page.locator('#oturumKapat').click();
@@ -58,9 +66,26 @@ let browser;
    assert.equal(await page.evaluate(()=>localStorage.getItem('other-app')),'keep');
    const written=records.filter(r=>r.event==='write').at(-1).data;
    const saved=JSON.parse(role==='ogrenci'?written.paket.calisma.veri:written.veri);
-   assert.equal(saved.log.length,1);assert.equal(saved.ogr[0].hafizaSeviyesi,'cok-guclu');
+   assert.equal(saved.log.length,1);assert.equal(saved.ogr[0].hafizaSeviyesi,'cok-guclu');assert.equal(saved.ogr[0].aytOncelik,true);
    assert(records.findIndex(r=>r.event==='readback')<records.findIndex(r=>r.event==='signout'));assert.deepEqual(errors,[]);
    await context.close();
  }
- console.log('Browser checks passed: teacher/student memory settings, offline and rejected saves, unsaved forms, real multi-tab locks, retry, server readback and clean logout.');
+ const timetableContext=await browser.newContext({viewport:{width:1280,height:950}});
+ await timetableContext.route('**/*',route=>route.request().url().startsWith('http://localhost/')?
+   route.fulfill({status:route.request().url().includes('/data/')?404:200,contentType:'text/html',body:html}):route.abort());
+ const timetable=await timetableContext.newPage(),timetableErrors=[];timetable.on('pageerror',e=>timetableErrors.push(e.message));
+ await timetable.goto('http://localhost/?dev=1');await timetable.getByText('Kimsiniz?',{exact:true}).waitFor();
+ await timetable.evaluate(()=>{
+   D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-09-23';D.ayar.donemBasi='2026-08-24';D.ayar.donemElle=true;
+   D.ogr=['201','205','301'].map((sube,i)=>({ad:'Example '+i,no:40+i,sube,alan:sube==='301'?'EA':'SAY',kap:6,off:[]}));
+   D.dersProgrami={};D.programHafta={};D.konuPlani={};EK.ogr=0;EK.sekme='program';EK.sube='201';EK.hafta=null;ciz();
+ });
+ for(const su of ['201','205','301']){
+   await timetable.evaluate(su=>{EK.sube=su;ciz();},su);
+   await timetable.getByText('15:30',{exact:true}).waitFor();
+   assert.equal(await timetable.evaluate(su=>programAl(su,gunNo('2026-11-02')).prog.gunler.flat().filter(Boolean).length,su),40);
+   await timetable.screenshot({path:path.join(out,'timetable-'+su+'.png'),fullPage:true});
+ }
+ assert.deepEqual(timetableErrors,[]);await timetableContext.close();
+ console.log('Browser checks passed: teacher/student memory and persistent AYT settings, three updated timetables, offline and rejected saves, unsaved forms, real multi-tab locks, retry, server readback and clean logout.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();});

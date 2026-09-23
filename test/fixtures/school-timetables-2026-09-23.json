@@ -1,0 +1,278 @@
+{
+  "301": {
+    "saatler": [
+      "09:00",
+      "09:55",
+      "10:45",
+      "11:35",
+      "12:25",
+      "13:00",
+      "13:50",
+      "14:40",
+      "15:30"
+    ],
+    "gunler": [
+      [
+        "MATEMATİK AYT",
+        "MATEMATİK AYT",
+        "T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK",
+        "COĞRAFYA",
+        "",
+        "COĞRAFYA",
+        "T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK",
+        "TÜRK DİLİ VE EDEBİYATI",
+        "GEOMETRİ"
+      ],
+      [
+        "COĞRAFYA",
+        "COĞRAFYA",
+        "TÜRKÇE",
+        "TÜRKÇE",
+        "",
+        "MATEMATİK TYT",
+        "MATEMATİK TYT",
+        "KİMYA",
+        "FİZİK"
+      ],
+      [
+        "FELSEFE",
+        "FELSEFE",
+        "MATEMATİK TYT",
+        "T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK",
+        "",
+        "MATEMATİK AYT",
+        "MATEMATİK AYT",
+        "GEOMETRİ",
+        "GEOMETRİ"
+      ],
+      [
+        "MATEMATİK AYT",
+        "MATEMATİK AYT",
+        "DİN KÜLTÜRÜ",
+        "FELSEFE",
+        "",
+        "GEOMETRİ",
+        "GEOMETRİ",
+        "TÜRK DİLİ VE EDEBİYATI",
+        "TÜRK DİLİ VE EDEBİYATI"
+      ],
+      [
+        "TÜRK DİLİ VE EDEBİYATI",
+        "TÜRK DİLİ VE EDEBİYATI",
+        "TÜRKÇE",
+        "TÜRKÇE",
+        "BİYOLOJİ",
+        "",
+        "TÜRKÇE",
+        "MATEMATİK TYT",
+        "MATEMATİK TYT"
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  "205": {
+    "saatler": [
+      "09:00",
+      "09:55",
+      "10:45",
+      "11:35",
+      "12:25",
+      "13:00",
+      "13:50",
+      "14:40",
+      "15:30"
+    ],
+    "gunler": [
+      [
+        "KİMYA",
+        "KİMYA",
+        "MATEMATİK AYT",
+        "MATEMATİK AYT",
+        "",
+        "FİZİK",
+        "FİZİK",
+        "GEOMETRİ",
+        "TÜRKÇE"
+      ],
+      [
+        "FİZİK",
+        "FİZİK",
+        "MATEMATİK AYT",
+        "MATEMATİK AYT",
+        "",
+        "BİYOLOJİ",
+        "BİYOLOJİ",
+        "COĞRAFYA",
+        "T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK"
+      ],
+      [
+        "KİMYA",
+        "KİMYA",
+        "MATEMATİK TYT",
+        "FELSEFE",
+        "",
+        "GEOMETRİ",
+        "GEOMETRİ",
+        "BİYOLOJİ",
+        "BİYOLOJİ"
+      ],
+      [
+        "FİZİK",
+        "TÜRKÇE",
+        "MATEMATİK AYT",
+        "BİYOLOJİ",
+        "",
+        "MATEMATİK TYT",
+        "MATEMATİK TYT",
+        "GEOMETRİ",
+        "GEOMETRİ"
+      ],
+      [
+        "MATEMATİK TYT",
+        "FİZİK",
+        "MATEMATİK TYT",
+        "KİMYA",
+        "KİMYA",
+        "",
+        "DİN KÜLTÜRÜ",
+        "TÜRKÇE",
+        "TÜRKÇE"
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  "201": {
+    "saatler": [
+      "09:00",
+      "09:55",
+      "10:45",
+      "11:35",
+      "12:25",
+      "13:00",
+      "13:50",
+      "14:40",
+      "15:30"
+    ],
+    "gunler": [
+      [
+        "MATEMATİK TYT",
+        "MATEMATİK TYT",
+        "FİZİK",
+        "FİZİK",
+        "",
+        "GEOMETRİ",
+        "GEOMETRİ",
+        "KİMYA",
+        "KİMYA"
+      ],
+      [
+        "KİMYA",
+        "KİMYA",
+        "BİYOLOJİ",
+        "BİYOLOJİ",
+        "",
+        "MATEMATİK TYT",
+        "MATEMATİK TYT",
+        "T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK",
+        "COĞRAFYA"
+      ],
+      [
+        "TÜRKÇE",
+        "FİZİK",
+        "FİZİK",
+        "GEOMETRİ",
+        "",
+        "BİYOLOJİ",
+        "BİYOLOJİ",
+        "MATEMATİK AYT",
+        "MATEMATİK AYT"
+      ],
+      [
+        "GEOMETRİ",
+        "GEOMETRİ",
+        "FELSEFE",
+        "DİN KÜLTÜRÜ",
+        "",
+        "BİYOLOJİ",
+        "MATEMATİK AYT",
+        "MATEMATİK AYT",
+        "TÜRKÇE"
+      ],
+      [
+        "KİMYA",
+        "MATEMATİK TYT",
+        "MATEMATİK AYT",
+        "FİZİK",
+        "FİZİK",
+        "",
+        "KİMYA",
+        "TÜRKÇE",
+        "TÜRKÇE"
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  }
+}
