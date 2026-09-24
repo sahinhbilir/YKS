@@ -929,6 +929,8 @@ function yedekDogrula(y) {
     if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('Geçersiz öğrenci kaydı: ' + (i + 1) + '. satır.');
     if (typeof o.ad !== 'string' || !o.ad.trim() || o.ad.length > 120) throw new Error('Geçersiz öğrenci adı: ' + (i + 1) + '. satır.');
     if (typeof o.sube !== 'string' || !o.sube.trim() || o.sube.length > 40) throw new Error('Geçersiz öğrenci şubesi: ' + (i + 1) + '. satır.');
+    if (o.sinif !== undefined && ![9,10,11,12].includes(o.sinif)) throw new Error('Geçersiz sınıf düzeyi.');
+    if (o.mufredatBaslangic !== undefined && !isoTarihGecerli(o.mufredatBaslangic)) throw new Error('Geçersiz müfredat başlangıcı.');
     if (ALAN_DERS[o.alan] === undefined) throw new Error('Geçersiz öğrenci alanı: ' + (i + 1) + '. satır.');
     if (o.no !== undefined && (!Number.isInteger(o.no) || o.no < 1 || o.no > 9999))
       throw new Error('Geçersiz öğrenci numarası: ' + (i + 1) + '. satır.');
@@ -1272,6 +1274,11 @@ async function kaydetGercek(sessiz) {
 function alanUygun(si, ki) {
   const k = konuAl(ki);
   if (!k) return false;
+  const sinif = ogrenciSinifi(D.ogr[si]);
+  const mufredat = mufredatKonuBilgisi(k[0], k[3]);
+  if (mufredat) return mufredat.sinif === sinif;
+  if (ki >= KATALOG.length && k[1] >= 9 && k[1] < 12) return k[1] === sinif;
+  if (sinif < 12 && (ki < KATALOG.length || k[1] !== sinif)) return false;
   if (k[4] === 0) return true;
   return (ALAN_DERS[D.ogr[si].alan] || []).indexOf(k[0]) >= 0;
 }
@@ -2734,11 +2741,169 @@ function subeListesi() {
 // Rehber kurulumunda yeni bir şube oluşturulurken de, tek öğrencili kurulumda
 // olduğu gibi alanın hazır konu planını kur. Yalnızca anahtar hiç yoksa yazar;
 // kullanıcının bilerek boşalttığı ya da düzenlediği mevcut planı ezmez.
-function varsayilanKonuPlaniniHazirla(sube, alan) {
+const MUFREDAT_2026 = {"yil":"2026–2027","surum":"2026-09-23","kademeliKaynak":"https://ogm.meb.gov.tr/www/2026-2027-egitim-ogretim-yili-turkiye-yuzyili-maarif-modeli-taslak-cerceve-planlar-yayimlandi/icerik/2633/tr","siniflar":{"9":[{"ders":0,"ad":"Türk Dili ve Edebiyatı","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/turk-dili-ve-edebiyati-dersi/11","kitaplar":[{"name":"İncele 9.Sınıf Türk Dili Ve Edebiyatı 9.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/45/turk-dili-ve-edebiyati-9sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/turk-dili-ve-edebiyati-9sinif-ders-kitabi_20260908_185914_237.pdf"}],"uniteler":[{"ad":"1. Tema: Sözün İnceliği","saat":43,"konular":["Şiir ve deneme: edebî dil, imge ve sembol","Mülakat dinleme / izleme","Denemeden hareketle konuşma","Betimleme paragrafı yazma"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/76","kisaKonular":["Şiir ve deneme: edebî dil, imge ve sembol","Mülakat dinleme / izleme","Denemeden hareketle konuşma","Betimleme paragrafı yazma"]},{"ad":"2. Tema: Anlam Arayışı","saat":43,"konular":["Hikâye, anı ve İstiklal Marşı","Şiir dinleme / izleme","Hikâye karakterini tanıtma","Şiir yazma"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/101","kisaKonular":["Hikâye, anı ve İstiklal Marşı","Şiir dinleme / izleme","Hikâye karakterini tanıtma","Şiir yazma"]},{"ad":"3. Tema: Anlamın Yapı Taşları","saat":43,"konular":["Hikâye, gezi yazısı ve şiirde yapı","Belgesel dinleme / izleme","Mekânları karşılaştıran sunum","Bilgi görseli oluşturma"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/106","kisaKonular":["Hikâye, gezi yazısı ve şiirde yapı","Belgesel dinleme / izleme","Mekânları karşılaştıran sunum","Bilgi görseli oluşturma"]},{"ad":"4. Tema: Dilin Zenginliği","saat":43,"konular":["Roman, tiyatro ve eleştiride üslup","Otobiyografi dinleme / izleme","Sosyal medya dili üzerine sunum","Otobiyografi yazma"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/112","kisaKonular":["Roman, tiyatro ve eleştiride üslup","Otobiyografi dinleme / izleme","Sosyal medya dili üzerine sunum","Otobiyografi yazma"]}]},{"ders":1,"ad":"Matematik","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/matematik-dersi/11","kitaplar":[{"name":"İncele 9.Sınıf Matematik 9.Sınıf Ders Kitabı (1.Kitap)","url":"https://tymm.meb.gov.tr/kitap/41/matematik-9sinif-ders-kitabi-1kitap","pdf":"https://tymm.meb.gov.tr/assets/pdf/matematik-9sinif-ders-kitabi-1kitap_20260908_111051_343.pdf"},{"name":"İncele 9.Sınıf Matematik 9.Sınıf Ders Kitabı (2.Kitap)","url":"https://tymm.meb.gov.tr/kitap/42/matematik-9sinif-ders-kitabi-2kitap","pdf":"https://tymm.meb.gov.tr/assets/pdf/matematik-9sinif-ders-kitabi-2kitap_20260908_111224_539.pdf"}],"uniteler":[{"ad":"1. Tema: Sayılar","saat":38,"konular":["Gerçek Sayıların Üslü ve Köklü Gösterimleri ile Yapılan İşlemler","Gerçek Sayı Aralıklarının Gösterimi ve Aralıklarla İlgili İşlemlerde Küme Sembollerinin Kullanımı","Sayı Kümeleri ve İşlem Özellikleri","Gerçek Sayıların İşlem Özelliklerini Cebirsel Olarak İfade Etme"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/21","kisaKonular":["Gerçek Sayıların Üslü ve Köklü Gösterimleri ile Yapılan İşlemler","Gerçek Sayı Aralıklarının Gösterimi ve Aralıklarla İlgili İşlemlerde Küme Sembollerinin Kullanımı","Sayı Kümeleri ve İşlem Özellikleri","Gerçek Sayıların İşlem Özelliklerini Cebirsel Olarak İfade Etme"]},{"ad":"2. Tema: Nicelikler Ve Değişimler","saat":38,"konular":["Doğrusal Fonksiyonlar ve Nitel Özellikleri","Mutlak Değer Fonksiyonu ve Nitel Özellikleri","Doğrusal Fonksiyonlarla İfade Edilebilen Denklem ve Eşitsizlikler İçeren Problemler"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/23","kisaKonular":["Doğrusal Fonksiyonlar ve Nitel Özellikleri","Mutlak Değer Fonksiyonu ve Nitel Özellikleri","Doğrusal Fonksiyonlarla İfade Edilebilen Denklem ve Eşitsizlikler İçeren Problemler"]},{"ad":"3. Tema: Geometrik Şekiller","saat":12,"konular":["Üçgende Açı ve Kenarla İlgili Özellikler ve Bu Özellikler Arasındaki İlişkiler"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/25","kisaKonular":["Üçgende Açı ve Kenarla İlgili Özellikler ve Bu Özellikler Arasındaki İlişkiler"]},{"ad":"4. Tema: Eşlik Ve Benzerlik","saat":36,"konular":["Geometrik Dönüşümler","Eşlik ve Benzerlik Koşulları","Benzer Üçgenler Oluşturma","Tales, Öklid ve Pisagor Teoremleri","Eşlik ve Benzerlik Problemleri"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/83","kisaKonular":["Geometrik Dönüşümler","Eşlik ve Benzerlik Koşulları","Benzer Üçgenler Oluşturma","Tales, Öklid ve Pisagor Teoremleri","Eşlik ve Benzerlik Problemleri"]},{"ad":"5. Tema: Algoritma Ve Bilişim","saat":30,"konular":["Algoritma Temelli Problemler","Mantık Bağlaçları ve Niceleyiciler","Mantık Bağlaçları ve Niceleyicilerin Algoritmik Problemlerde Kullanımı"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/24","kisaKonular":["Algoritma Temelli Problemler","Mantık Bağlaçları ve Niceleyiciler","Mantık Bağlaçları ve Niceleyicilerin Algoritmik Problemlerde Kullanımı"]},{"ad":"6. Tema: İstatistiksel Araştırma Süreci","saat":34,"konular":["Tek Nicel Değişkenli Veri Dağılımları","Başkaları Tarafından Oluşturulan Tek Nicel Değişkenli Veri Dağılımlarını İnceleme"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/91","kisaKonular":["Tek Nicel Değişkenli Veri Dağılımları","Başkaları Tarafından Oluşturulan Tek Nicel Değişkenli Veri Dağılımlarını İnceleme"]},{"ad":"7. Tema: Veriden Olasılığa","saat":18,"konular":["Deneysel Olasılık","Teorik Olasılık"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/97","kisaKonular":["Deneysel Olasılık","Teorik Olasılık"]}]},{"ders":2,"ad":"Fizik","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/fizik-dersi/11","kitaplar":[{"name":"İncele 9.Sınıf Fizik Dersi 9.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/38/fizik-dersi-9sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/fizik-dersi-9-sinif-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Ünite: Fizik Bilimi Ve Kariyer Keşfi","saat":8,"konular":["Fizik Bilimi","Fizik Biliminin Alt Dalları","Fizik Bilimine Yön Verenler","Fizik Bilimi İle İlgili Kariyer Keşfi"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/43","kisaKonular":["Fizik Bilimi","Fizik Biliminin Alt Dalları","Fizik Bilimine Yön Verenler","Fizik Bilimi İle İlgili Kariyer Keşfi"]},{"ad":"2. Ünite: Kuvvet Ve Hareket","saat":24,"konular":["Temel ve Türetilmiş Nicelikler","Skaler ve Vektörel Nicelikler","Vektörler","Doğadaki Temel Kuvvetler","Hareket ve Hareket Türleri"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/57","kisaKonular":["Temel ve Türetilmiş Nicelikler","Skaler ve Vektörel Nicelikler","Vektörler","Doğadaki Temel Kuvvetler","Hareket ve Hareket Türleri"]},{"ad":"3. Ünite: Akışkanlar","saat":18,"konular":["Basınç","Sıvılarda Basınç","Açık Hava Basıncı","Kaldırma Kuvveti","Bernoulli İlkesi"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/65","kisaKonular":["Basınç","Sıvılarda Basınç","Açık Hava Basıncı","Kaldırma Kuvveti","Bernoulli İlkesi"]},{"ad":"4. Ünite: Enerji","saat":18,"konular":["İç Enerji, Isı ve Sıcaklık Arasındaki İlişki","Isı, Öz Isı, Isı Sığası ve Sıcaklık Farkı Arasındaki İlişki","Hâl Değişimi","Isıl Denge","Isı Aktarım Yolları","Isı İletim Hızı"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/82","kisaKonular":["İç Enerji, Isı ve Sıcaklık Arasındaki İlişki","Isı, Öz Isı, Isı Sığası ve Sıcaklık Farkı Arasındaki İlişki","Hâl Değişimi","Isıl Denge","Isı Aktarım Yolları","Isı İletim Hızı"]}]},{"ders":3,"ad":"Kimya","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/kimya-dersi/11","kitaplar":[{"name":"İncele 9.Sınıf Kimya 9.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/39/kimya-9sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/kimya-9sinif-ders-kitabi_20260908_105401_981.pdf"}],"uniteler":[{"ad":"1. Tema: Etkileşim","saat":22,"konular":["Kimya Hayattır — Günlük Hayatta Kimya","Kimya Hayattır — Kimyasal Maddelerin Kullanımı ve Güvenlik","Kimya Hayattır — Kimyanın Alt Disiplinleri","Kimya Hayattır — Kimya Alanında Kariyer Olanakları","Atomdan Periyodik Tabloya — Atom Teorileri (Bohr Atom Teorisi, Modern Atom Teorisi) ve Atomun Yapısı","Atomdan Periyodik Tabloya — Atom Orbitalleri ve Elektron Dizilimi","Atomdan Periyodik Tabloya — Periyodik Tabloda Yer Bulma","Atomdan Periyodik Tabloya — Periyodik Özellikler (Atom Yarıçapı, İyonlaşma Enerjisi ve Elektronegatiflik)"],"kaynak":"https://tymm.meb.gov.tr/kimya-dersi/unite/92","kisaKonular":["Kimya Hayattır — Günlük Hayatta Kimya","Kimya Hayattır — Kimyasal Maddelerin Kullanımı ve Güvenlik","Kimya Hayattır — Kimyanın Alt Disiplinleri","Kimya Hayattır — Kimya Alanında Kariyer Olanakları","Atomdan Periyodik Tabloya — Atom Teorileri","Atomdan Periyodik Tabloya — Atom Orbitalleri ve Elektron Dizilimi","Atomdan Periyodik Tabloya — Periyodik Tabloda Yer Bulma","Atomdan Periyodik Tabloya — Periyodik Özellikler"]},{"ad":"2. Tema: Çeşitlilik","saat":38,"konular":["Etkileşimler — Metalik Bağ","Etkileşimler — İyonik Bağ","Etkileşimler — Kovalent Bağ","Etkileşimler — Lewis Nokta Yapısı","Etkileşimler — Molekül Polarlığı ve Apolarlığı","Etkileşimler — Bileşiklerin Adlandırılması","Etkileşimden Maddeye — Moleküller Arası Etkileşimler","Etkileşimden Maddeye — Katılar ve Özellikleri (Amorf ve Kristal Katılar)","Etkileşimden Maddeye — Sıvılar ve Özellikleri (Kaynama Sıcaklığı ve Buhar Basıncı, Viskozite, Adezyon ve Kohezyon Kuvvetleri, Yüzey Gerilimi)"],"kaynak":"https://tymm.meb.gov.tr/kimya-dersi/unite/121","kisaKonular":["Etkileşimler — Metalik Bağ","Etkileşimler — İyonik Bağ","Etkileşimler — Kovalent Bağ","Etkileşimler — Lewis Nokta Yapısı","Etkileşimler — Molekül Polarlığı ve Apolarlığı","Etkileşimler — Bileşiklerin Adlandırılması","Etkileşimden Maddeye — Moleküller Arası Etkileşimler","Etkileşimden Maddeye — Katılar ve Özellikleri","Etkileşimden Maddeye — Sıvılar ve Özellikleri"]},{"ad":"3. Tema: Sürdürülebilirlik","saat":8,"konular":["Nanoparçacıklar ve Ekolojik Sürdürülebilirlik — Metal Nanoparçacıklar","Nanoparçacıklar ve Ekolojik Sürdürülebilirlik — Metal","Nanoparçacıklar ve Ekolojik Sürdürülebilirlik — Alaşım ve Metal Nanoparçacıkların Çevresel Etkileri","Nanoparçacıklar ve Ekolojik Sürdürülebilirlik — Yeşil Kimyanın Atık Önleme İlkesi"],"kaynak":"https://tymm.meb.gov.tr/kimya-dersi/unite/137","kisaKonular":["Nanoparçacıklar ve Ekolojik Sürdürülebilirlik — Metal Nanoparçacıklar","Nanoparçacıklar ve Ekolojik Sürdürülebilirlik — Metal","Nanoparçacıklar ve Ekolojik Sürdürülebilirlik — Alaşım ve Metal Nanoparçacıkların Çevresel Etkileri","Nanoparçacıklar ve Ekolojik Sürdürülebilirlik — Yeşil Kimyanın Atık Önleme İlkesi"]}]},{"ders":4,"ad":"Biyoloji","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/biyoloji-dersi/11","kitaplar":[{"name":"İncele 9.Sınıf Biyoloji Dersi 9.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/36/biyoloji-dersi-9sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/biyoloji-9-sinif-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Tema: Yaşam","saat":44,"konular":["Yaşam Bilimi: Biyoloji","Biyolojinin Önemi","Biyoloji Biliminin Gelişimindeki Dönüm Noktaları","Bilimin Doğası","Bilimsel Araştırma Süreçleri","Bilim Etiği","Canlıların Ortak Özellikleri (Hücresel Yapı, Organizasyon, Beslenme, Enerji Üretimi ve Tüketimi, Boşaltım, Büyüme ve Gelişme, Metabolizma, Uyarılara Tepki, Homeostazi, Üreme, Varyasyon ve Adaptasyon)","Temel Bileşenler","İnorganik Moleküller (Su, Mineraller)","Organik Moleküller (Karbohidratlar [Monosakkaritler (Riboz, Deoksiriboz, Fruktoz, Glikoz, Galaktoz)], Disakkaritler (Sükroz, Maltoz, Laktoz), Polisakkaritler (Glikojen, Nişasta, Selüloz, Kitin), Lipitler (Yağ Asitleri, Trigliseritler, Fosfolipitler, Steroitler), Proteinler (Amino Asitlerin Yapısı, Enzimler (Basit ve Bileşik Enzimler, Aktivasyon Enerjisi, Enzim-Substrat İlişkisi, Enzimatik Reaksiyonlara Etki Eden Faktörler), Nükleik Asitler (DNA ve RNA’nın Yapısı), Vitaminler (Yağda Çözünen Vitaminler, Suda Çözünen Vitaminler)"],"kaynak":"https://tymm.meb.gov.tr/biyoloji-dersi/unite/2","kisaKonular":["Yaşam Bilimi: Biyoloji","Biyolojinin Önemi","Biyoloji Biliminin Gelişimindeki Dönüm Noktaları","Bilimin Doğası","Bilimsel Araştırma Süreçleri","Bilim Etiği","Canlıların Ortak Özellikleri","Temel Bileşenler","İnorganik Moleküller","Organik Moleküller"]},{"ad":"2. Tema: Organizasyon","saat":24,"konular":["Hücrenin Organizasyonu","Prokaryot ve Ökaryot Hücre","Hücre Zarı","Sitoplazma","Sitoplazmik Yapılar","Organeller ve Çekirdek","Hücre Zarından Madde Geçişleri (Pasif Taşıma, Basit Difüzyon, Kolaylaştırılmış Difüzyon, Ozmoz, Aktif Taşıma, Endositoz, Ekzositoz)","Sınıflandırma ve Biyoçeşitlilik","Sınıflandırmada Temel Yaklaşımlar ve Modern Sınıflandırma (Linne ve İkili Adlandırma, Sınıflandırma Kategorileri)","Üç Üst Âlem (Domain) Sisteminde Yer Alan Canlılar ve Genel Özellikleri [Bakteriler, Arkeler, Ökaryotlar (Protistler, Bitkiler, Mantarlar, Hayvanlar)]","Biyoçeşitlilik"],"kaynak":"https://tymm.meb.gov.tr/biyoloji-dersi/unite/3","kisaKonular":["Hücrenin Organizasyonu","Prokaryot ve Ökaryot Hücre","Hücre Zarı","Sitoplazma","Sitoplazmik Yapılar","Organeller ve Çekirdek","Hücre Zarından Madde Geçişleri","Sınıflandırma ve Biyoçeşitlilik","Sınıflandırmada Temel Yaklaşımlar ve Modern Sınıflandırma","Üç Üst Âlem","Biyoçeşitlilik"]}]},{"ders":5,"ad":"Tarih","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/tarih-dersi/11","kitaplar":[{"name":"İncele 9.Sınıf Tarih 9.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/43/tarih-9sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/tarih-9sinif-ders-kitabi_20260908_184825_403.pdf"}],"uniteler":[{"ad":"1. Ünite : Geçmişin İnşa Sürecinde Tarih","saat":18,"konular":["Tarih Öğrenmenin Faydaları","Tarihin Doğası","Tarihsel Bilginin Üretim Süreci","Tarih Araştırma ve Yazımında Dijitalleşme"],"kaynak":"https://tymm.meb.gov.tr/tarih-dersi/unite/26","kisaKonular":["Tarih Öğrenmenin Faydaları","Tarihin Doğası","Tarihsel Bilginin Üretim Süreci","Tarih Araştırma ve Yazımında Dijitalleşme"]},{"ad":"2. Ünite : Eski Çağ Medeniyetleri","saat":24,"konular":["Tarım Devrimi’nin Eski Çağ Medeniyetlerindeki Yerleşmeye ve Ekonomiye Etkisi","Eski Çağ Medeniyetlerinde Yönetim ve Ordu","Eski Çağ Medeniyetlerinde Hukuk","Eski Çağ’da İnançlar ile Bilim ve Sanat Anlayışları","Türklerde Konargöçer Yaşam"],"kaynak":"https://tymm.meb.gov.tr/tarih-dersi/unite/27","kisaKonular":["Tarım Devrimi’nin Eski Çağ Medeniyetlerindeki Yerleşmeye ve Ekonomiye Etkisi","Eski Çağ Medeniyetlerinde Yönetim ve Ordu","Eski Çağ Medeniyetlerinde Hukuk","Eski Çağ’da İnançlar ile Bilim ve Sanat Anlayışları","Türklerde Konargöçer Yaşam"]},{"ad":"3. Ünite : Orta Çağ Medeniyetleri","saat":26,"konular":["Orta Çağ’da Yaşanan Kitlesel Göçler","Orta Çağ’daki Başlıca Devletlerin Yönetim ve Ordu Yapıları","Orta Çağ’daki Ticaret Yolları","Orta Çağ’daki Başlıca Medeniyet Havzalarında Bilim, Kültür ve Sanat"],"kaynak":"https://tymm.meb.gov.tr/tarih-dersi/unite/29","kisaKonular":["Orta Çağ’da Yaşanan Kitlesel Göçler","Orta Çağ’daki Başlıca Devletlerin Yönetim ve Ordu Yapıları","Orta Çağ’daki Ticaret Yolları","Orta Çağ’daki Başlıca Medeniyet Havzalarında Bilim, Kültür ve Sanat"]}]},{"ders":7,"ad":"Coğrafya","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/cografya-dersi/11","kitaplar":[{"name":"İncele 9.Sınıf Coğrafya Dersi 9.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/37/cografya-dersi-9sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/cografya-dersi-sinif-9-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Ünite: Coğrafyanın Doğası","saat":6,"konular":["Coğrafya Biliminin Konusu ve Bölümleri","Niçin Coğrafya Öğrenmeliyiz?","Coğrafya Biliminin Gelişimi"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/28","kisaKonular":["Coğrafya Biliminin Konusu ve Bölümleri","Niçin Coğrafya Öğrenmeliyiz?","Coğrafya Biliminin Gelişimi"]},{"ad":"2. Ünite: Mekânsal Bilgi Teknolojileri","saat":10,"konular":["Mekânın Aynası Haritalar","Türkiye’nin Coğrafi Konumu","Mekânsal Bilgi Teknolojilerinin Bileşenleri"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/31","kisaKonular":["Mekânın Aynası Haritalar","Türkiye’nin Coğrafi Konumu","Mekânsal Bilgi Teknolojilerinin Bileşenleri"]},{"ad":"3. Ünite: Doğal Sistemler Ve Süreçler","saat":20,"konular":["Hava Olayları ve Günlük Hayata Etkileri","İklim Sisteminin Bileşen ve Değişkenleri","İklim Türleri","İklim Sisteminde Yaşanan Değişiklikler"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/34","kisaKonular":["Hava Olayları ve Günlük Hayata Etkileri","İklim Sisteminin Bileşen ve Değişkenleri","İklim Türleri","İklim Sisteminde Yaşanan Değişiklikler"]},{"ad":"4. Ünite: Beşerî Sistemler Ve Süreçler","saat":16,"konular":["Nüfusun Tarihsel Değişimi ve Geleceği","Nüfusun Dağılışı ve Hareketleri","Demografik Dönüşüm ve Nüfus Piramitleri","Nüfusla İlgili Fırsat, Sorun ve Politikalar"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/37","kisaKonular":["Nüfusun Tarihsel Değişimi ve Geleceği","Nüfusun Dağılışı ve Hareketleri","Demografik Dönüşüm ve Nüfus Piramitleri","Nüfusla İlgili Fırsat, Sorun ve Politikalar"]},{"ad":"5. Ünite: Ekonomik Faaliyetler Ve Etkileri","saat":4,"konular":["Ekonomik Faaliyetleri Etkileyen Coğrafi Faktörler"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/40","kisaKonular":["Ekonomik Faaliyetleri Etkileyen Coğrafi Faktörler"]},{"ad":"6. Ünite: Afetler Ve Sürdürülebilir Çevre","saat":8,"konular":["Tehlike, Risk ve Afet","Afet Türleri","Bütüncül Afet Yönetimi"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/42","kisaKonular":["Tehlike, Risk ve Afet","Afet Türleri","Bütüncül Afet Yönetimi"]},{"ad":"7. Ünite: Bölgeler, Ülkeler Ve Küresel Bağlantılar","saat":4,"konular":["Bölge ve Bölge Sınırı"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/47","kisaKonular":["Bölge ve Bölge Sınırı"]}]},{"ders":9,"ad":"Din Kültürü","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/din-kulturu-ve-ahlak-bilgisi-dersi-2/11","kitaplar":[{"name":"İncele 9.Sınıf Din Kültürü Ve Ahlak Bilgisi 9.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/35/din-kulturu-ve-ahlak-bilgisi-9sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/din-kulturu-ve-ahlak-bilgisi-9.pdf"}],"uniteler":[{"ad":"1. Ünite: Allah-İnsan İlişkisi","saat":14,"konular":["İnsan ve İnsanın Yaratılışı","Doğruyu Arayan Bir Varlık Olarak İnsan","İbadet ve Dua Eden Bir Varlık Olarak İnsan","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/139","kisaKonular":["İnsan ve İnsanın Yaratılışı","Doğruyu Arayan Bir Varlık Olarak İnsan","İbadet ve Dua Eden Bir Varlık Olarak İnsan","Kur’an’dan Mesajlar"]},{"ad":"2. Ünite: İslam’da İnanç Esasları","saat":16,"konular":["İman ve İmanın mahiyeti","İslam’da İman Esasları","İmanın Bireye ve Topluma Kazandırdıkları","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/140","kisaKonular":["İman ve İmanın mahiyeti","İslam’da İman Esasları","İmanın Bireye ve Topluma Kazandırdıkları","Kur’an’dan Mesajlar"]},{"ad":"3. Ünite: İslam’da İbadetler","saat":14,"konular":["İslam’da İbadetin Kapsamı","İslam’da Temel İbadetler","İnsan ve İbadet","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/141","kisaKonular":["İslam’da İbadetin Kapsamı","İslam’da Temel İbadetler","İnsan ve İbadet","Kur’an’dan Mesajlar"]},{"ad":"4. Ünite: İslam’da Ahlak İlkeleri","saat":12,"konular":["İslam’da Ahlakın Mahiyeti","Ahlakın Temel Unsurları","Ahlaki Tutum ve Davranışlar","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/142","kisaKonular":["İslam’da Ahlakın Mahiyeti","Ahlakın Temel Unsurları","Ahlaki Tutum ve Davranışlar","Kur’an’dan Mesajlar"]},{"ad":"5. Ünite: Kur’an’a Göre Hz. Muhammed","saat":12,"konular":["Hz. Muhammed’in Beşerî ve Peygamberlik Yönü","Hz. Muhammed’in Örnekliği","Kültürümüzde Hz. Muhammed ve Ehlibeyt Sevgisi","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/143","kisaKonular":["Hz. Muhammed’in Beşerî ve Peygamberlik Yönü","Hz. Muhammed’in Örnekliği","Kültürümüzde Hz. Muhammed ve Ehlibeyt Sevgisi","Kur’an’dan Mesajlar"]}]}],"10":[{"ders":0,"ad":"Türk Dili ve Edebiyatı","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/turk-dili-ve-edebiyati-dersi/12","kitaplar":[{"name":"İncele 10.Sınıf Türk Dili Ve Edebiyatı 10.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/78/turk-dili-ve-edebiyati-10sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/turk-dili-ve-edebiyati-10sinif-ders-kitabi_20260908_190036_827.pdf"}],"uniteler":[{"ad":"1. Tema: Sözün Ezgisi","saat":43,"konular":["Koşuk, türkü, koşma ve ninni","Masal dinleme / izleme","Şiir dinletisi","Masalı film şeridine dönüştürme"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/242","kisaKonular":["Koşuk, türkü, koşma ve ninni","Masal dinleme / izleme","Şiir dinletisi","Masalı film şeridine dönüştürme"]},{"ad":"2. Tema: Kelimelerin Ritmi","saat":43,"konular":["Gazel ve saf şiir","Söyleşi dinleme / izleme","Şair / yazar tanıtımı: podcast","Bilgilendirici metni edebî metne dönüştürme"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/247","kisaKonular":["Gazel ve saf şiir","Söyleşi dinleme / izleme","Şair / yazar tanıtımı: podcast","Bilgilendirici metni edebî metne dönüştürme"]},{"ad":"3. Tema: Dünden Bugüne","saat":43,"konular":["Destan ve mesnevi","Fabl dinleme / izleme","Türk destanları sunumu","Fabl yazma"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/256","kisaKonular":["Destan ve mesnevi","Fabl dinleme / izleme","Türk destanları sunumu","Fabl yazma"]},{"ad":"4. Tema: Nesillerin Mirası","saat":43,"konular":["Dede Korkut, Tanzimat şiiri, Servetifünun romanı ve Fecriati şiiri","Millî Edebiyat hikâyesi dinleme / izleme","Dede Korkut hikâyesini canlandırma","Hikâyeyi şiire dönüştürme"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/261","kisaKonular":["Dede Korkut, Tanzimat şiiri, Servetifünun romanı ve Fecriati şiiri","Millî Edebiyat hikâyesi dinleme / izleme","Dede Korkut hikâyesini canlandırma","Hikâyeyi şiire dönüştürme"]}]},{"ders":1,"ad":"Matematik","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/matematik-dersi/12","kitaplar":[{"name":"İncele 10.Sınıf Matematik 10.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/76/matematik-10sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/matematik-10sinif-ders-kitabi_20260908_111459_880.pdf"}],"uniteler":[{"ad":"1. Tema: Geometrik Şekiller","saat":36,"konular":["Dik Üçgende Trigonometrik Oranlar ve Trigonometrik Özdeşlikler","Üçgende Yardımcı Elemanlar","Üçgenin Alanı","Sinüs ve Kosinüs Teoremleri"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/260","kisaKonular":["Dik Üçgende Trigonometrik Oranlar ve Trigonometrik Özdeşlikler","Üçgende Yardımcı Elemanlar","Üçgenin Alanı","Sinüs ve Kosinüs Teoremleri"]},{"ad":"2. Tema: İstatistiksel Araştırma Süreci","saat":24,"konular":["İki Kategorik Değişkenli Veriler","Başkaları Tarafından Oluşturulan İki Kategorik Değişkenli Verileri İnceleme"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/271","kisaKonular":["İki Kategorik Değişkenli Veriler","Başkaları Tarafından Oluşturulan İki Kategorik Değişkenli Verileri İnceleme"]},{"ad":"3. Tema: Sayılar","saat":20,"konular":["Bir Doğal Sayının Asal Çarpanları, Bölenleri","En Büyük Ortak Bölen, En Küçük Ortak Kat","Bölünebilme"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/244","kisaKonular":["Bir Doğal Sayının Asal Çarpanları, Bölenleri","En Büyük Ortak Bölen, En Küçük Ortak Kat","Bölünebilme"]},{"ad":"4. Tema: Nicelikler Ve Değişimler","saat":58,"konular":["Gerçek Sayılarda Fonksiyon Olma Şartları","Karesel Fonksiyon ve Nitel Özellikleri","Karekök Fonksiyonu ve Nitel Özellikleri","Rasyonel Fonksiyon ve Nitel Özellikleri","Doğrusal, Karesel, Karekök ve Rasyonel Fonksiyonların Ters Fonksiyonları","Gerçek Sayılarda Tanımlı Fonksiyonlarla İfade Edilebilen Denklem ve Eşitsizlikler İçeren Problemler"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/250","kisaKonular":["Gerçek Sayılarda Fonksiyon Olma Şartları","Karesel Fonksiyon ve Nitel Özellikleri","Karekök Fonksiyonu ve Nitel Özellikleri","Rasyonel Fonksiyon ve Nitel Özellikleri","Doğrusal, Karesel, Karekök ve Rasyonel Fonksiyonların Ters Fonksiyonları","Gerçek Sayılarda Tanımlı Fonksiyonlarla İfade Edilebilen Denklem ve Eşitsizlikler İçeren Problemler"]},{"ad":"5. Tema: Sayma, Algoritma Ve Bilişim","saat":28,"konular":["Sayma Stratejileri","Cebirsel ve Fonksiyonel İşlemlerin Algoritmik Yapısı"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/251","kisaKonular":["Sayma Stratejileri","Cebirsel ve Fonksiyonel İşlemlerin Algoritmik Yapısı"]},{"ad":"6. Tema: Analitik İnceleme","saat":22,"konular":["Dik Koordinat Sisteminde Noktanın Analitik İncelenmesi","Dik Koordinat Sisteminde Doğrunun Analitik İncelenmesi"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/263","kisaKonular":["Dik Koordinat Sisteminde Noktanın Analitik İncelenmesi","Dik Koordinat Sisteminde Doğrunun Analitik İncelenmesi"]},{"ad":"7. Tema: Veriden Olasılığa","saat":18,"konular":["Koşullu Olasılık","Bayes Teoremi"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/274","kisaKonular":["Koşullu Olasılık","Bayes Teoremi"]}]},{"ders":2,"ad":"Fizik","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/fizik-dersi/12","kitaplar":[{"name":"İncele 10.Sınıf Fizik Dersi 10.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/74/fizik-dersi-10sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/fizik-dersi-10-sinif-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Ünite: Kuvvet Ve Hareket","saat":14,"konular":["Sabit Hızlı Hareket","Bir Boyutta Sabit İvmeli Hareket"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/100","kisaKonular":["Sabit Hızlı Hareket","Bir Boyutta Sabit İvmeli Hareket"]},{"ad":"2. Ünite: Enerji","saat":16,"konular":["İş, Enerji ve Güç","Enerji Biçimleri","Mekanik Enerji","Enerji Kaynakları"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/108","kisaKonular":["İş, Enerji ve Güç","Enerji Biçimleri","Mekanik Enerji","Enerji Kaynakları"]},{"ad":"3. Ünite: Elektrik","saat":22,"konular":["Basit Elektrik Devreleri","Elektrik Akımı","Ohm Yasası","Dirençlerin Bağlanması","Üreteçlerin Bağlanması","Elektrik Akımının Oluşturabileceği Tehlikelere Karşı Alınması Gereken Önlemler","Topraklamanın Önemi"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/111","kisaKonular":["Basit Elektrik Devreleri","Elektrik Akımı","Ohm Yasası","Dirençlerin Bağlanması","Üreteçlerin Bağlanması","Elektrik Akımının Oluşturabileceği Tehlikelere Karşı Alınması Gereken Önlemler","Topraklamanın Önemi"]},{"ad":"4. Ünite: Dalgalar","saat":16,"konular":["Periyodik Hareketler","Dalgaların Temel Kavramları","Dalgaların Sınıflandırılması","Dalgaların Yayılma Süratini Etkileyen Etmenler","Su Dalgalarında Yansıma ve Kırılma","Rezonans ve Deprem"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/122","kisaKonular":["Periyodik Hareketler","Dalgaların Temel Kavramları","Dalgaların Sınıflandırılması","Dalgaların Yayılma Süratini Etkileyen Etmenler","Su Dalgalarında Yansıma ve Kırılma","Rezonans ve Deprem"]}]},{"ders":3,"ad":"Kimya","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/kimya-dersi/12","kitaplar":[{"name":"İncele 10.Sınıf Kimya 10.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/75/kimya-10sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/kimya-10sinif-ders-kitabi_20260908_105608_516.pdf"}],"uniteler":[{"ad":"1. Tema: Etkileşim","saat":32,"konular":["Kimyasal Tepkimeler — Kimyasal Değişimin Göstergeleri","Kimyasal Tepkimeler — Kimyasal Tepkimelerin Oluşumu","Kimyasal Tepkimeler — Kimyasal Tepkime Türleri","Kimyasal Tepkimeler — Mol Kavramı","Kimyasal Tepkimeler — Kimyasal Tepkime Denklemlerinin Denkleştirilmesi","Kimyasal Tepkimeler — Kimyasal (Stokiyometrik) Hesaplamalar","Gazlar — Gazların Özellikleri ve Kinetik Moleküler Teori","Gazlar — Gaz Yasaları","Gazlar — İdeal Gaz Yasası","Gazlar — Graham Difüzyon ve Efüzyon Yasası"],"kaynak":"https://tymm.meb.gov.tr/kimya-dersi/unite/138","kisaKonular":["Kimyasal Tepkimeler — Kimyasal Değişimin Göstergeleri","Kimyasal Tepkimeler — Kimyasal Tepkimelerin Oluşumu","Kimyasal Tepkimeler — Kimyasal Tepkime Türleri","Kimyasal Tepkimeler — Mol Kavramı","Kimyasal Tepkimeler — Kimyasal Tepkime Denklemlerinin Denkleştirilmesi","Kimyasal Tepkimeler — Kimyasal","Gazlar — Gazların Özellikleri ve Kinetik Moleküler Teori","Gazlar — Gaz Yasaları","Gazlar — İdeal Gaz Yasası","Gazlar — Graham Difüzyon ve Efüzyon Yasası"]},{"ad":"2. Tema: Çeşitlilik","saat":26,"konular":["Çözeltiler — Çözünme Süreci","Çözeltiler — Maddelerin Birbiri İçindeki Çözünebilirliği","Çözeltiler — Çözünme Olayının Sınıflandırılması","Çözeltiler — Çözünürlük","Çözeltiler — Çözünürlüğe Etki Eden Faktörler (Sıcaklık, Basınç ve Madde Cinsi)","Çözeltiler — Çözeltilerin Sınıflandırılması","Çözeltiler — Derişim Birimleri (Molarite ve ppm)","Çözeltiler — Koligatif Özellikler (Kaynama Noktası Yükselmesi ve Donma Noktası Düşmesi)"],"kaynak":"https://tymm.meb.gov.tr/kimya-dersi/unite/159","kisaKonular":["Çözeltiler — Çözünme Süreci","Çözeltiler — Maddelerin Birbiri İçindeki Çözünebilirliği","Çözeltiler — Çözünme Olayının Sınıflandırılması","Çözeltiler — Çözünürlük","Çözeltiler — Çözünürlüğe Etki Eden Faktörler","Çözeltiler — Çözeltilerin Sınıflandırılması","Çözeltiler — Derişim Birimleri","Çözeltiler — Koligatif Özellikler"]},{"ad":"3. Tema: Sürdürülebilirlik","saat":10,"konular":["Yeşil Kimya, Çevresel ve Ekolojik Sürdürülebilirlik — Makro ve Mikro Ölçekli Deneyler","Yeşil Kimya, Çevresel ve Ekolojik Sürdürülebilirlik — Atmosferdeki Tepkimeler ve Küresel Sorunlar"],"kaynak":"https://tymm.meb.gov.tr/kimya-dersi/unite/160","kisaKonular":["Yeşil Kimya, Çevresel ve Ekolojik Sürdürülebilirlik — Makro ve Mikro Ölçekli Deneyler","Yeşil Kimya, Çevresel ve Ekolojik Sürdürülebilirlik — Atmosferdeki Tepkimeler ve Küresel Sorunlar"]}]},{"ders":4,"ad":"Biyoloji","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/biyoloji-dersi/12","kitaplar":[{"name":"İncele 10.Sınıf Biyoloji Dersi 10.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/71/biyoloji-dersi-10sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/biyoloji-dersi-10-sinif-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Tema: Enerji","saat":34,"konular":["Güneşten Besinlere","Canlılık İçin Enerjinin Önemi (ATP’nin Yapısı ve Enerji Aktarımında ATP’nin Rolü)","Işık Enerjisi Kullanılarak Besin Sentezi: Fotosentez (Işığın Kullanıldığı Tepkimeler, Işığın Kullanılmadığı Tepkimeler, Fotosentez Hızına Etki Eden Çevresel Faktörler)","Işık Enerjisi Kullanılmadan Besin Sentezi: Kemosentez","Besinlerden Enerjiye","Sindirim (Hücre İçi Sindirim ve Hücre Dışı Sindirim)","Canlılarda Sindirim Yapıları","İnsanda Sindirim","Emilim ve Taşınma","Hücresel Solunum (Glikoliz, Sitrik Asit Döngüsü, Elektron Taşıma Sistemi)","Besinlerin Solunuma Katılma Yolları","Fermantasyon (Laktik Asit Fermantasyonu, Etil Alkol Fermantasyonu)","Enerji-Metabolizma İlişkisi"],"kaynak":"https://tymm.meb.gov.tr/biyoloji-dersi/unite/8","kisaKonular":["Güneşten Besinlere","Canlılık İçin Enerjinin Önemi","Işık Enerjisi Kullanılarak Besin Sentezi: Fotosentez","Işık Enerjisi Kullanılmadan Besin Sentezi: Kemosentez","Besinlerden Enerjiye","Sindirim","Canlılarda Sindirim Yapıları","İnsanda Sindirim","Emilim ve Taşınma","Hücresel Solunum","Besinlerin Solunuma Katılma Yolları","Fermantasyon","Enerji-Metabolizma İlişkisi"]},{"ad":"2. Tema: Ekoloji","saat":34,"konular":["Ekosistemler","Ekosistemin Bileşenleri (Cansız ve Canlı Bileşenler, Popülasyon, Komünite, Ekosistem)","Tür İçi ve Türler Arası Etkileşimler","Süksesyon","Popülasyon Dinamikleri","Ekosistemde Madde ve Enerji Akışı (Besin Zinciri, Besin Ağı, Ekolojik Piramitler, Biyolojik Birikim ve Etkileri)","Madde Döngüleri (Su, Karbon, Azot Döngüsü)","Ekolojik Sürdürülebilirlik","Ekolojik Sürdürülebilirliğin Önemi","Ekolojik Sürdürülebilirliği Kısıtlayan/Engelleyen Durumlar (Habitat Kaybı/Parçalanması, Kirlilik ve Çevre Sorunları, Biyoçeşitlilik Kaybı)","Ekolojik Sürdürülebilirliğin Sağlanması (Ekolojik Ayak İzinin Küçültülmesi, Doğal Kaynakların ve Biyoçeşitliliğin Korunması, Atık Yönetimi)"],"kaynak":"https://tymm.meb.gov.tr/biyoloji-dersi/unite/10","kisaKonular":["Ekosistemler","Ekosistemin Bileşenleri","Tür İçi ve Türler Arası Etkileşimler","Süksesyon","Popülasyon Dinamikleri","Ekosistemde Madde ve Enerji Akışı","Madde Döngüleri","Ekolojik Sürdürülebilirlik","Ekolojik Sürdürülebilirliğin Önemi","Ekolojik Sürdürülebilirliği Kısıtlayan/Engelleyen Durumlar","Ekolojik Sürdürülebilirliğin Sağlanması"]}]},{"ders":5,"ad":"Tarih","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/tarih-dersi/12","kitaplar":[{"name":"İncele 10.Sınıf Tarih 10.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/77/tarih-10sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/tarih-10sinif-ders-kitabi_20260908_185021_146.pdf"}],"uniteler":[{"ad":"1. Ünite : Türkistan’dan Türkiye’ye (1040-1299)","saat":20,"konular":["Türkistan’dan Türkiye’ye Uzanan Süreçte Meydana Gelen Önemli Askerî Mücadeleler","Türkistan’dan Türkiye’ye Uzanan Süreçte Türk Devlet ve Ordu Teşkilatında Meydana Gelen Değişim","Türkistan’dan Türkiye’ye Uzanan Süreçte Türklerin Sosyal Yaşamları ve Ekonomik Faaliyetleri","Türk-İslam Medeniyetinin Bilim, Kültür, Eğitim ve Sanat Alanlarında Ortaya Çıkardığı Etkiler"],"kaynak":"https://tymm.meb.gov.tr/tarih-dersi/unite/36","kisaKonular":["Türkistan’dan Türkiye’ye Uzanan Süreçte Meydana Gelen Önemli Askerî Mücadeleler","Türkistan’dan Türkiye’ye Uzanan Süreçte Türk Devlet ve Ordu Teşkilatında Meydana Gelen Değişim","Türkistan’dan Türkiye’ye Uzanan Süreçte Türklerin Sosyal Yaşamları ve Ekonomik Faaliyetleri","Türk-İslam Medeniyetinin Bilim, Kültür, Eğitim ve Sanat Alanlarında Ortaya Çıkardığı Etkiler"]},{"ad":"2. Ünite : Beylikten Devlete Osmanlı (1299-1453)","saat":24,"konular":["Osmanlı Devleti’nin Kuruluşuna Dair Farklı Görüşler","Osmanlı Devleti’nin Anadolu ve Rumeli’deki Siyasi ve Askerî Mücadeleleri","Osmanlı Devleti’nin Devletleşme Süreci ile Ordu, Hukuk ve Toprak Sistemleri Arasındaki İlişkiler","Osmanlı Devleti’nin Fethettiği Topraklarda Kalıcı Olabilmek İçin İzlediği Politikalar","Osmanlı Devleti’nin İlim ve İrfan Geleneğinin Oluşmasında Mekânların ve Kişilerin Etkisi"],"kaynak":"https://tymm.meb.gov.tr/tarih-dersi/unite/39","kisaKonular":["Osmanlı Devleti’nin Kuruluşuna Dair Farklı Görüşler","Osmanlı Devleti’nin Anadolu ve Rumeli’deki Siyasi ve Askerî Mücadeleleri","Osmanlı Devleti’nin Devletleşme Süreci ile Ordu, Hukuk ve Toprak Sistemleri Arasındaki İlişkiler","Osmanlı Devleti’nin Fethettiği Topraklarda Kalıcı Olabilmek İçin İzlediği Politikalar","Osmanlı Devleti’nin İlim ve İrfan Geleneğinin Oluşmasında Mekânların ve Kişilerin Etkisi"]},{"ad":"3. Ünite : Cihan Devleti Osmanlı (1453-1683)","saat":24,"konular":["1453-1683 Yılları Arasındaki Siyasi ve Askerî Mücadeleler","Osmanlı Devleti’nin Yönetim ve Ordu Yapısında Meydana Gelen Değişim","Avrupa’nın Sömürgeci Politikalarının Etkileri","Osmanlı Devleti’ndeki Önemli İsyanların Neden ve Sonuçları","1453-1683 Yılları Arasında Osmanlı Devleti’nde Bilim, Kültür, Eğitim ve Sanat Alanında Yaşanan Gelişmeler"],"kaynak":"https://tymm.meb.gov.tr/tarih-dersi/unite/48","kisaKonular":["1453-1683 Yılları Arasındaki Siyasi ve Askerî Mücadeleler","Osmanlı Devleti’nin Yönetim ve Ordu Yapısında Meydana Gelen Değişim","Avrupa’nın Sömürgeci Politikalarının Etkileri","Osmanlı Devleti’ndeki Önemli İsyanların Neden ve Sonuçları","1453-1683 Yılları Arasında Osmanlı Devleti’nde Bilim, Kültür, Eğitim ve Sanat Alanında Yaşanan Gelişmeler"]}]},{"ders":7,"ad":"Coğrafya","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/cografya-dersi/12","kitaplar":[{"name":"İncele 10.Sınıf Coğrafya Dersi 10.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/72/cografya-dersi-10sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/cografya-dersi-sinif-10-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Ünite: Coğrafyanın Doğası","saat":4,"konular":["Coğrafi Bakış"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/56","kisaKonular":["Coğrafi Bakış"]},{"ad":"2. Ünite: Mekânsal Bilgi Teknolojileri","saat":6,"konular":["CBS ve Uzaktan Algılamanın Uygulama Alanları","Mekânsal Verilerin Haritalara Aktarılması"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/58","kisaKonular":["CBS ve Uzaktan Algılamanın Uygulama Alanları","Mekânsal Verilerin Haritalara Aktarılması"]},{"ad":"3. Ünite: Doğal Sistemler Ve Süreçler","saat":18,"konular":["Tektonik Süreçler","İklim ve Kayaç Yapısının Aşınma ve Çözünme Süreçlerine Etkisi","Aşınım ve Birikim Süreçlerinin Yeryüzü Şekillerinin Oluşumuna Etkisi","Yeryüzü Şekilleri ile İlgili Gözlem ve Saha Çalışması","Yeryüzü Şekilleri ile Beşerî Faaliyetler Arasındaki Etkileşim"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/63","kisaKonular":["Tektonik Süreçler","İklim ve Kayaç Yapısının Aşınma ve Çözünme Süreçlerine Etkisi","Aşınım ve Birikim Süreçlerinin Yeryüzü Şekillerinin Oluşumuna Etkisi","Yeryüzü Şekilleri ile İlgili Gözlem ve Saha Çalışması","Yeryüzü Şekilleri ile Beşerî Faaliyetler Arasındaki Etkileşim"]},{"ad":"4. Ünite: Beşerî Sistemler Ve Süreçler","saat":8,"konular":["Yerleşmelerin Kuruluşu ve Gelişimi","Yerleşmelerin Fonksiyonları"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/81","kisaKonular":["Yerleşmelerin Kuruluşu ve Gelişimi","Yerleşmelerin Fonksiyonları"]},{"ad":"5. Ünite: Ekonomik Faaliyetler Ve Etkileri","saat":10,"konular":["Ekonomik Faaliyetlerin Özellikleri","Ekonomik Sektörler ve Gelişmişlik","Türkiye Ekonomisinin Sektörel Dağılımı"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/89","kisaKonular":["Ekonomik Faaliyetlerin Özellikleri","Ekonomik Sektörler ve Gelişmişlik","Türkiye Ekonomisinin Sektörel Dağılımı"]},{"ad":"6. Ünite: Afetler Ve Sürdürülebilir Çevre","saat":16,"konular":["Afetlerle Mücadelede İyi Uygulama Örnekleri","Afetlere Karşı Dirençli Yaşam Alanları","Afetlerden Korunma","Afet Bilinci"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/94","kisaKonular":["Afetlerle Mücadelede İyi Uygulama Örnekleri","Afetlere Karşı Dirençli Yaşam Alanları","Afetlerden Korunma","Afet Bilinci"]},{"ad":"7. Ünite: Bölgeler, Ülkeler Ve Küresel Bağlantılar","saat":6,"konular":["Türk Kültürünün Mekânsal Özellikleri"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/98","kisaKonular":["Türk Kültürünün Mekânsal Özellikleri"]}]},{"ders":8,"ad":"Felsefe","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/felsefe-dersi/12","kitaplar":[{"name":"İncele 10.Sınıf Felsefe Dersi 10.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/73/felsefe-dersi-10sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/felsefe-dersi-10-sinif-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Ünite: Felsefenin Doğası","saat":10,"konular":["Felsefenin Anlamı","Felsefi Düşüncenin Özellikleri","Felsefi Düşüncenin Gelişimi","Felsefi Sorunun Temel Özellikleri","Felsefenin Diğer Alanlarla İlişkisi","Felsefenin Bireysel ve Toplumsal İşlevi"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/30","kisaKonular":["Felsefenin Anlamı","Felsefi Düşüncenin Özellikleri","Felsefi Düşüncenin Gelişimi","Felsefi Sorunun Temel Özellikleri","Felsefenin Diğer Alanlarla İlişkisi","Felsefenin Bireysel ve Toplumsal İşlevi"]},{"ad":"2. Ünite: Felsefe, Mantık Ve Argümantasyon","saat":8,"konular":["Düşünme ve Dil İlişkisi","Mantık ve Argümantasyonun Temel Kavramları","Argümantasyonun Yapısı"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/32","kisaKonular":["Düşünme ve Dil İlişkisi","Mantık ve Argümantasyonun Temel Kavramları","Argümantasyonun Yapısı"]},{"ad":"3. Ünite: Varlık Felsefesi","saat":8,"konular":["Varlık Felsefesinin Konusu ve Temel Kavramları","Varlık Felsefesinin Temel Problemleri (Varlığın Var Olup Olmadığı, Varlığın Ne Olduğu)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/35","kisaKonular":["Varlık Felsefesinin Konusu ve Temel Kavramları","Varlık Felsefesinin Temel Problemleri"]},{"ad":"4. Ünite: Bilgi Felsefesi","saat":8,"konular":["Bilgi Felsefesinin Konusu ve Temel Kavramları","Bilgi Felsefesinin Temel Problemleri (Bilginin İmkânı, Kaynağı ve Doğruluk Ölçütleri)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/38","kisaKonular":["Bilgi Felsefesinin Konusu ve Temel Kavramları","Bilgi Felsefesinin Temel Problemleri"]},{"ad":"5. Ünite: Ahlak Felsefesi","saat":8,"konular":["Ahlak Felsefesinin Konusu ve Temel Kavramları","Ahlak Felsefesinin Temel Problemleri (Evrensel Ahlak Yasasının İmkânı Özgürlük-Sorumluluk İlişkisi)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/41","kisaKonular":["Ahlak Felsefesinin Konusu ve Temel Kavramları","Ahlak Felsefesinin Temel Problemleri"]},{"ad":"6. Ünite: Estetik Ve Sanat Felsefesi","saat":6,"konular":["Estetik ve Sanat Felsefesinin Konusu ve Temel Kavramları","Estetik ve Sanat Felsefesinin Temel Problemleri (Sanatın Ne Olduğu, Güzellik ve Ortak Estetik Yargıların İmkânı)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/46","kisaKonular":["Estetik ve Sanat Felsefesinin Konusu ve Temel Kavramları","Estetik ve Sanat Felsefesinin Temel Problemleri"]},{"ad":"7. Ünite: Siyaset Felsefesi","saat":8,"konular":["Siyaset Felsefesinin Konusu ve Temel Kavramları Siyaset Felsefesinin Temel Problemleri (Devletin Kökeni, İktidarın Kaynağı ve Meşruiyeti, İdeal Düzen ve Ütopyalar)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/51","kisaKonular":["Siyaset Felsefesinin Konusu ve Temel Kavramları Siyaset Felsefesinin Temel Problemleri"]},{"ad":"8. Ünite: Din Felsefesi","saat":6,"konular":["Din Felsefesinin Konusu ve Temel Kavramları","Din Felsefesinin Temel Problemleri (Tanrı’nın Varlığına İlişkin Görüşler,","Tanrı’nın Varlığına Yönelik argüman, Evrenin Sonluluğu ve Sonsuzluğu, Ruhun Ölümsüzlüğü)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/60","kisaKonular":["Din Felsefesinin Konusu ve Temel Kavramları","Din Felsefesinin Temel Problemleri","Tanrı’nın Varlığına Yönelik argüman, Evrenin Sonluluğu ve Sonsuzluğu, Ruhun Ölümsüzlüğü)"]},{"ad":"9. Ünite: Bilim Felsefesi","saat":6,"konular":["Bilim Felsefesinin Konusu ve Temel Kavramları","Bilim Felsefesinin Temel Problemleri (Bilimin Ne Olduğu, Bilimi Oluşturan Unsurlar)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/62","kisaKonular":["Bilim Felsefesinin Konusu ve Temel Kavramları","Bilim Felsefesinin Temel Problemleri"]}]},{"ders":9,"ad":"Din Kültürü","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/din-kulturu-ve-ahlak-bilgisi-dersi-2/12","kitaplar":[],"uniteler":[{"ad":"1. Ünite: İslam’da Varlık Ve Bilgi","saat":14,"konular":["İslam’da Bilgi ve Bilginin Kaynakları","Allah-Âlem İlişkisi","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/144","kisaKonular":["İslam’da Bilgi ve Bilginin Kaynakları","Allah-Âlem İlişkisi","Kur’an’dan Mesajlar"]},{"ad":"2. Ünite: Allah’ı Tanımak","saat":16,"konular":["Allah’ın Varlığının Delilleri","Allah’ı İsim ve Sıfatlarıyla Tanımak","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/145","kisaKonular":["Allah’ın Varlığının Delilleri","Allah’ı İsim ve Sıfatlarıyla Tanımak","Kur’an’dan Mesajlar"]},{"ad":"3. Ünite: İslam’ın Evrensel Mesajları","saat":14,"konular":["İslam’ın Tevhit İlkesi","İslam’da Adalet ve Eşitlik","İslam ve Barış","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/146","kisaKonular":["İslam’ın Tevhit İlkesi","İslam’da Adalet ve Eşitlik","İslam ve Barış","Kur’an’dan Mesajlar"]},{"ad":"4. Ünite: Din, Çevre Ve Teknoloji","saat":12,"konular":["İnsan, Çevre ve Ahlak","Teknoloji ve Ahlak","Çevre ve Teknoloji","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/147","kisaKonular":["İnsan, Çevre ve Ahlak","Teknoloji ve Ahlak","Çevre ve Teknoloji","Kur’an’dan Mesajlar"]},{"ad":"5. Ünite: İslam Düşüncesinde İtikadi-Siyasi Ve Fıkhi Yorumlar","saat":12,"konular":["Dinî Yorum Farklılıklarının Sebepleri","İslam Düşüncesinde İtikadi-Siyasi ve Fıkhi Yorumlar","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/148","kisaKonular":["Dinî Yorum Farklılıklarının Sebepleri","İslam Düşüncesinde İtikadi-Siyasi ve Fıkhi Yorumlar","Kur’an’dan Mesajlar"]}]}],"11":[{"ders":0,"ad":"Türk Dili ve Edebiyatı","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/turk-dili-ve-edebiyati-dersi/13","kitaplar":[{"name":"İncele 11.Sınıf Türk Dili Ve Edebiyatı 11.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/430/turk-dili-ve-edebiyati-11sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/turk-dili-ve-edebiyati-11sinif-ders-kitabi_20260908_190220_499.pdf"}],"uniteler":[{"ad":"1. Tema: Bir Diyeceğim Var!","saat":43,"konular":["Karagöz, mektup ve dilekçe","E-posta ve iletişim: dinleme / izleme","İletişim engellerini canlandırma","E-posta yazma"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/267","kisaKonular":["Karagöz, mektup ve dilekçe","E-posta ve iletişim: dinleme / izleme","İletişim engellerini canlandırma","E-posta yazma"]},{"ad":"2. Tema: Kültür Yolculuğu","saat":43,"konular":["Türk dünyası hikâyesi, Orhun Abideleri, anı ve Dîvânu Lugâti’t-Türk","Âşık atışması dinleme / izleme","Türk kültürünü tanıtan konuşma","Çevrim içi müze gezisi hakkında yazma"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/276","kisaKonular":["Türk dünyası hikâyesi, Orhun Abideleri, anı ve Dîvânu Lugâti’t-Türk","Âşık atışması dinleme / izleme","Türk kültürünü tanıtan konuşma","Çevrim içi müze gezisi hakkında yazma"]},{"ad":"3. Tema: Yaşamın İzinde","saat":43,"konular":["Roman, biyografi ve tezkire","Radyo tiyatrosu dinleme / izleme","Roman kişisiyle kurmaca mülakat","Diyaloğu başka türe dönüştürme"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/322","kisaKonular":["Roman, biyografi ve tezkire","Radyo tiyatrosu dinleme / izleme","Roman kişisiyle kurmaca mülakat","Diyaloğu başka türe dönüştürme"]},{"ad":"4. Tema: Hayatın Aynası","saat":43,"konular":["Tiyatro ve küçürek hikâye","Belgesel dinleme / izleme","Tiyatro canlandırma","Belgesel afişi hazırlama"],"kaynak":"https://tymm.meb.gov.tr/turk-dili-ve-edebiyati-dersi/unite/332","kisaKonular":["Tiyatro ve küçürek hikâye","Belgesel dinleme / izleme","Tiyatro canlandırma","Belgesel afişi hazırlama"]}]},{"ders":1,"ad":"Matematik","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/matematik-dersi/13","kitaplar":[{"name":"İncele 11.Sınıf Matematik Dersi 11.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/418/matematik-dersi-11sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/matematik-dersi-11sinif-ders-kitabi_20260908_112426_175.pdf"}],"uniteler":[{"ad":"1. Tema: İstatistiksel Araştırma Süreci","saat":24,"konular":["İki Nicel Değişkenli Veriler","Başkaları Tarafından Oluşturulan İki Nicel Değişkenli Verileri İnceleme"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/298","kisaKonular":["İki Nicel Değişkenli Veriler","Başkaları Tarafından Oluşturulan İki Nicel Değişkenli Verileri İnceleme"]},{"ad":"2. Tema: Geometrik Şekiller","saat":62,"konular":["Dörtgenlerin Özellikleri","Özel Dörtgenler Arasındaki İlişkiler","Çokgenlerin Sınıflandırılması","Dışbükey Çokgenlerin Özellikleri","Çokgenlerle İlgili Problemler"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/297","kisaKonular":["Dörtgenlerin Özellikleri","Özel Dörtgenler Arasındaki İlişkiler","Çokgenlerin Sınıflandırılması","Dışbükey Çokgenlerin Özellikleri","Çokgenlerle İlgili Problemler"]},{"ad":"3. Tema: Nicelikler Ve Değişimler (1)","saat":42,"konular":["Trigonometrik Fonksiyonlar ve Nitel Özellikleri","Trigonometrik Fonksiyonlarla İfade Edilebilen Denklemler İçeren Problemler"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/281","kisaKonular":["Trigonometrik Fonksiyonlar ve Nitel Özellikleri","Trigonometrik Fonksiyonlarla İfade Edilebilen Denklemler İçeren Problemler"]},{"ad":"3. Tema: Nicelikler Ve Değişimler (2)","saat":42,"konular":["Üstel Fonksiyonlar ve Nitel Özellikleri","Üstel Fonksiyonların Ters Fonksiyonları","Logaritmik Fonksiyonlar ve Nitel Özellikleri","Üstel ve Logaritmik Fonksiyonlarla İfade Edilebilen Denklem ve Eşitsizlikler İçeren Problemler"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/295","kisaKonular":["Üstel Fonksiyonlar ve Nitel Özellikleri","Üstel Fonksiyonların Ters Fonksiyonları","Logaritmik Fonksiyonlar ve Nitel Özellikleri","Üstel ve Logaritmik Fonksiyonlarla İfade Edilebilen Denklem ve Eşitsizlikler İçeren Problemler"]},{"ad":"3. Tema: Nicelikler Ve Değişimler (3)","saat":36,"konular":["Fonksiyonların Bileşkesi","Fonksiyonlarda Dört İşlem"],"kaynak":"https://tymm.meb.gov.tr/matematik-dersi/unite/296","kisaKonular":["Fonksiyonların Bileşkesi","Fonksiyonlarda Dört İşlem"]}]},{"ders":2,"ad":"Fizik","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/fizik-dersi/13","kitaplar":[{"name":"İncele 11.Sınıf Fizik Dersi 11.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/404/fizik-dersi-11sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/fizik-dersi-11-sinif-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Ünite: Kuvvet Ve Hareket","saat":54,"konular":["Serbest Düşme","İki Boyutta Sabit İvmeli Hareket","Newton Hareket Yasaları","Sürtünme Kuvveti","Limit Hız","Çembersel Hareket"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/243","kisaKonular":["Serbest Düşme","İki Boyutta Sabit İvmeli Hareket","Newton Hareket Yasaları","Sürtünme Kuvveti","Limit Hız","Çembersel Hareket"]},{"ad":"2. Ünite: Elektrik Ve Manyetizma","saat":48,"konular":["Elektriksel Kuvvet ve Elektriksel Alan","Manyetik Alan ve Manyetik Kuvvet","İndüksiyon Akımı","Transformatörler"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/248","kisaKonular":["Elektriksel Kuvvet ve Elektriksel Alan","Manyetik Alan ve Manyetik Kuvvet","İndüksiyon Akımı","Transformatörler"]},{"ad":"3. Ünite: Optik","saat":36,"konular":["Işık Şiddeti, Işık Akısı ve Aydınlanma","Düzlem Aynalar","Küresel Aynalar","Kırılma","Görünür Derinlik","Fiber Optik","Prizmalar","Mercekler"],"kaynak":"https://tymm.meb.gov.tr/fizik-dersi/unite/259","kisaKonular":["Işık Şiddeti, Işık Akısı ve Aydınlanma","Düzlem Aynalar","Küresel Aynalar","Kırılma","Görünür Derinlik","Fiber Optik","Prizmalar","Mercekler"]}]},{"ders":3,"ad":"Kimya","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/kimya-dersi/13","kitaplar":[{"name":"İncele 11.Sınıf Kimya 11.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/416/kimya-11sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/kimya-11sinif-ders-kitabi_20260908_105854_643.pdf"}],"uniteler":[{"ad":"1. Tema: Etkileşim","saat":48,"konular":["Enerji — Tepkimelerde Meydana Gelen Enerji Değişimi","Enerji — Maddelerin Enerji Kaynağı Olma Potansiyeli","Enerji — Bağ Enerjileriyle Tepkime Entalpisinin Hesaplanması","Enerji — Standart Oluşum Entalpileriyle Tepkime Entalpisinin Hesaplanması","Kimyasal Tepkimelerde Hız — Kimyasal Tepkimelerin Gerçekleşmesi İçin Gerekli Şartlar","Kimyasal Tepkimelerde Hız — Tepken ve Ürün Derişimleriyle Ortalama Tepkime Hızlarının Hesaplanması","Kimyasal Tepkimelerde Hız — Tepkime Hızına Etki Eden Faktörler (Tepken Cinsi, Maddelerin Fiziksel Hâlleri, Derişim, Sıcaklık, Katı Tepkenin Temas Yüzeyi ve Katalizör)","Kimyasal Tepkimelerde Hız — Tek Basamaklı Kimyasal Tepkimelerin Hız Denkleminin Deneysel Veriler Yardımıyla Belirlenmesi"],"kaynak":"https://tymm.meb.gov.tr/kimya-dersi/unite/161","kisaKonular":["Enerji — Tepkimelerde Meydana Gelen Enerji Değişimi","Enerji — Maddelerin Enerji Kaynağı Olma Potansiyeli","Enerji — Bağ Enerjileriyle Tepkime Entalpisinin Hesaplanması","Enerji — Standart Oluşum Entalpileriyle Tepkime Entalpisinin Hesaplanması","Kimyasal Tepkimelerde Hız — Kimyasal Tepkimelerin Gerçekleşmesi İçin Gerekli Şartlar","Kimyasal Tepkimelerde Hız — Tepken ve Ürün Derişimleriyle Ortalama Tepkime Hızlarının Hesaplanması","Kimyasal Tepkimelerde Hız — Tepkime Hızına Etki Eden Faktörler","Kimyasal Tepkimelerde Hız — Tek Basamaklı Kimyasal Tepkimelerin Hız Denkleminin Deneysel Veriler Yardımıyla Belirlenmesi"]},{"ad":"2. Tema: Çeşitlilik","saat":70,"konular":["Denge — Tersinir Tepkimelerin Özellikleri","Denge — Fiziksel ve Kimyasal Değişimlerde Denge","Denge — Denge Sabiti İfadesinin Yazılması","Denge — Tepkime Oranı","Denge — Dengeyi Etkileyen Faktörler (Derişim, Hacim, Basınç, Sıcaklık ve Katalizör)","Asit ve Baz Çözeltilerinde Denge — Suyun Otoiyonizasyonu","Asit ve Baz Çözeltilerinde Denge — Asit Baz Teorilerinin Karşılaştırılması","Asit ve Baz Çözeltilerinde Denge — Asitlerin ve Bazların Kuvveti","Asit ve Baz Çözeltilerinde Denge — Kuvvetli Asit-Zayıf Asit ve Kuvvetli Baz-Zayıf Baz Sulu Çözeltilerindeki pH Hesaplamaları","Asit ve Baz Çözeltilerinde Denge — Kuvvetli Asit ve Kuvvetli Bazların Nötralleşme Tepkimeleri","Asit ve Baz Çözeltilerinde Denge — Kuvvetli Asit-Kuvvetli Baz Titrasyonları","Asit ve Baz Çözeltilerinde Denge — Asidik ve Bazik Ürünlerin Seçiminde Dikkat Edilmesi Gerekenler","Çözünürlük Dengesi — Suda Az Çözünen Tuzların Molar Çözünürlükleri","Çözünürlük Dengesi — Çözünürlük Çarpımı (Kçç)","Çözünürlük Dengesi — Tuzların Çözünürlüğüne Etki Eden Faktörler (Sıcaklık ve Ortak İyon)"],"kaynak":"https://tymm.meb.gov.tr/kimya-dersi/unite/162","kisaKonular":["Denge — Tersinir Tepkimelerin Özellikleri","Denge — Fiziksel ve Kimyasal Değişimlerde Denge","Denge — Denge Sabiti İfadesinin Yazılması","Denge — Tepkime Oranı","Denge — Dengeyi Etkileyen Faktörler","Asit ve Baz Çözeltilerinde Denge — Suyun Otoiyonizasyonu","Asit ve Baz Çözeltilerinde Denge — Asit Baz Teorilerinin Karşılaştırılması","Asit ve Baz Çözeltilerinde Denge — Asitlerin ve Bazların Kuvveti","Asit ve Baz Çözeltilerinde Denge — Kuvvetli Asit-Zayıf Asit ve Kuvvetli Baz-Zayıf Baz Sulu Çözeltilerindeki pH Hesaplamaları","Asit ve Baz Çözeltilerinde Denge — Kuvvetli Asit ve Kuvvetli Bazların Nötralleşme Tepkimeleri","Asit ve Baz Çözeltilerinde Denge — Kuvvetli Asit-Kuvvetli Baz Titrasyonları","Asit ve Baz Çözeltilerinde Denge — Asidik ve Bazik Ürünlerin Seçiminde Dikkat Edilmesi Gerekenler","Çözünürlük Dengesi — Suda Az Çözünen Tuzların Molar Çözünürlükleri","Çözünürlük Dengesi — Çözünürlük Çarpımı","Çözünürlük Dengesi — Tuzların Çözünürlüğüne Etki Eden Faktörler"]},{"ad":"3. Tema: Sürdürülebilirlik","saat":20,"konular":["Nanoteknoloji ve Sürdürülebilirlik — Fermantasyon Yöntemi ile Yeşil Hidrojen Enerjisi ve Hidrojen Gazı Miktarına Etki Eden Faktörler","Nanoteknoloji ve Sürdürülebilirlik — Nanoteknolojik Ürünlerin Potansiyel Faydaları ve Olası Zararları","Nanoteknoloji ve Sürdürülebilirlik — Mikroplastik ve Nanoplastiklerin Etkileri"],"kaynak":"https://tymm.meb.gov.tr/kimya-dersi/unite/163","kisaKonular":["Nanoteknoloji ve Sürdürülebilirlik","Nanoteknoloji ve Sürdürülebilirlik — Nanoteknolojik Ürünlerin Potansiyel Faydaları ve Olası Zararları","Nanoteknoloji ve Sürdürülebilirlik — Mikroplastik ve Nanoplastiklerin Etkileri"]}]},{"ders":4,"ad":"Biyoloji","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/biyoloji-dersi/13","kitaplar":[{"name":"İncele 11.Sınıf Biyoloji Dersi 11.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/400/biyoloji-dersi-11sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/biyoloji-dersi-11-sinif-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Tema: Tepki","saat":78,"konular":["Canlılık ve Tepki","Farklı Canlıların Uyaranlara Karşı Oluşturduğu Tepkiler","Bitkilerde Tepki","Bitkilerde Hormonlar","Bitkilerde Tepki Mekanizmaları (Tropizma, Nasti)","Hayvanlarda Tepki","Uyartıların Alınması (Reseptörler, Uyaran Çeşitleri)","Nöronların Yapısı","Nöronlarda Sinyal İletimi ve Sinaps","Duyu Organları","Uyarıların Yorumlanması","Hayvanlarda Sinir Sistemi Farklılıkları","İnsan Sinir Sisteminin Yapısı","Refleksler","Uyartıya Mekanik Tepki","Kemik","Eklem ve Kasların Hareketteki Rolü","Kemik ve Kasların Birlikte Çalışma İlişkisi","Kaslarda Kasılmanın Kontrolü","Kasların Kasılma Mekanizması","Bağışıklık","Doğal Bağışıklık","Kazanılmış Bağışıklık (Aktif ve Pasif Bağışıklık)","Alerji"],"kaynak":"https://tymm.meb.gov.tr/biyoloji-dersi/unite/13","kisaKonular":["Canlılık ve Tepki","Farklı Canlıların Uyaranlara Karşı Oluşturduğu Tepkiler","Bitkilerde Tepki","Bitkilerde Hormonlar","Bitkilerde Tepki Mekanizmaları","Hayvanlarda Tepki","Uyartıların Alınması","Nöronların Yapısı","Nöronlarda Sinyal İletimi ve Sinaps","Duyu Organları","Uyarıların Yorumlanması","Hayvanlarda Sinir Sistemi Farklılıkları","İnsan Sinir Sisteminin Yapısı","Refleksler","Uyartıya Mekanik Tepki","Kemik","Eklem ve Kasların Hareketteki Rolü","Kemik ve Kasların Birlikte Çalışma İlişkisi","Kaslarda Kasılmanın Kontrolü","Kasların Kasılma Mekanizması","Bağışıklık","Doğal Bağışıklık","Kazanılmış Bağışıklık","Alerji"]},{"ad":"2. Tema: Homeostazi","saat":60,"konular":["Homeostazi ve Canlılar İçin Önemi","Farklı Canlı Türlerindeki Homeostatik Yapı ve Sistemler","Homeostatik Süreçler","Pozitif ve Negatif Geri Bildirim","Sinir Sistemi ve Homeostazi","Endokrin Sistem ve Homeostazi","Dolaşım Sistemi ve Homeostazi","Solunum Sistemi ve Homeostazi","Boşaltım Sistemi ve Homeostazi","Sistemlerin Es Güdümlü Çalışması","Homeostazinin Sağlanamadığı Durumlarda Oluşabilecek Sağlık Problemleri","Homeostazinin Sağlanamadığı Durumlarda Oluşabilecek Sağlık Problemleri (Diabetes Mellitus, Diabetes İnsipidus, Kan Basıncı Anormallikleri, Obezite)"],"kaynak":"https://tymm.meb.gov.tr/biyoloji-dersi/unite/16","kisaKonular":["Homeostazi ve Canlılar İçin Önemi","Farklı Canlı Türlerindeki Homeostatik Yapı ve Sistemler","Homeostatik Süreçler","Pozitif ve Negatif Geri Bildirim","Sinir Sistemi ve Homeostazi","Endokrin Sistem ve Homeostazi","Dolaşım Sistemi ve Homeostazi","Solunum Sistemi ve Homeostazi","Boşaltım Sistemi ve Homeostazi","Sistemlerin Es Güdümlü Çalışması","Homeostazinin Sağlanamadığı Durumlarda Oluşabilecek Sağlık Problemleri","Homeostazinin Sağlanamadığı Durumlarda Oluşabilecek Sağlık Problemleri"]}]},{"ders":5,"ad":"Tarih","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/tarih-dersi/13","kitaplar":[{"name":"İncele 11.Sınıf Tarih 11.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/428/tarih-11sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/tarih-11sinif-ders-kitabi_20260908_185409_779.pdf"}],"uniteler":[{"ad":"1. Ünite : Değişen Dünyada Osmanlı Devleti (1683-1789)","saat":22,"konular":["Osmanlı Devleti’nin 1683-1789 Yılları Arasındaki Siyasi ve Askerî Mücadeleleri","Lale Devri’nin Devlet ve Toplum Hayatına Etkileri","1755 Lizbon ve 1766 İstanbul Depremlerinin Etkileri","Sanayi Devrimi’nin Meydana Getirdiği Siyasi, Sosyal ve Ekonomik Değişim"],"kaynak":"https://tymm.meb.gov.tr/tarih-dersi/unite/68","kisaKonular":["Osmanlı Devleti’nin 1683-1789 Yılları Arasındaki Siyasi ve Askerî Mücadeleleri","Lale Devri’nin Devlet ve Toplum Hayatına Etkileri","1755 Lizbon ve 1766 İstanbul Depremlerinin Etkileri","Sanayi Devrimi’nin Meydana Getirdiği Siyasi, Sosyal ve Ekonomik Değişim"]},{"ad":"2. Ünite : Dönüşüm Sürecinde Osmanlı (1789-1908)","saat":26,"konular":["Fransız İhtilali’nin Devlet ve Toplum Hayatında Meydana Getirdiği Değişim","1789-1908 Yılları Arasında Osmanlı Devleti’nde Meydana Gelen Siyasi, Askerî ve İdari Gelişmeler","1789-1908 Yılları Arasında Osmanlı Devleti’nde Bilim, Sanat ve Teknoloji Alanlarında Meydana Gelen Gelişmeler","Osmanlı Devleti’nde Sanayileşme Çabaları"],"kaynak":"https://tymm.meb.gov.tr/tarih-dersi/unite/72","kisaKonular":["Fransız İhtilali’nin Devlet ve Toplum Hayatında Meydana Getirdiği Değişim","1789-1908 Yılları Arasında Osmanlı Devleti’nde Meydana Gelen Siyasi, Askerî ve İdari Gelişmeler","1789-1908 Yılları Arasında Osmanlı Devleti’nde Bilim, Sanat ve Teknoloji Alanlarında Meydana Gelen Gelişmeler","Osmanlı Devleti’nde Sanayileşme Çabaları"]},{"ad":"3. Ünite : Savaşlar Sarmalında Osmanlı (1908- 1918)","saat":20,"konular":["1908-1918 Yılları Arasında Osmanlı Devleti’nde Meydana Gelen Siyasi ve Askerî Gelişmeler","1908-1918 Yılları Arasında Gerçekleşen Kitlesel Göç ve Salgınlar","Osmanlı Devleti’nin İnsanlık Tarihine Katkıları"],"kaynak":"https://tymm.meb.gov.tr/tarih-dersi/unite/80","kisaKonular":["1908-1918 Yılları Arasında Osmanlı Devleti’nde Meydana Gelen Siyasi ve Askerî Gelişmeler","1908-1918 Yılları Arasında Gerçekleşen Kitlesel Göç ve Salgınlar","Osmanlı Devleti’nin İnsanlık Tarihine Katkıları"]}]},{"ders":7,"ad":"Coğrafya","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/cografya-dersi/13","kitaplar":[{"name":"İncele 11.Sınıf Coğrafya Dersi 11.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/401/cografya-dersi-11sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/cografya-dersi-sinif-11-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Ünite: Coğrafyanın Doğası","saat":6,"konular":["Mekânsal Sorunlar Karşısında Coğrafya Bilimi"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/107","kisaKonular":["Mekânsal Sorunlar Karşısında Coğrafya Bilimi"]},{"ad":"2. Ünite: Mekânsal Bilgi Teknolojileri","saat":12,"konular":["Web Tabanlı CBS Uygulamaları"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/110","kisaKonular":["Web Tabanlı CBS Uygulamaları"]},{"ad":"3. Ünite: Doğal Sistemler Ve Süreçler","saat":16,"konular":["Su Kaynakları","Türkiye’deki Su Kaynaklarının Etkileri"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/114","kisaKonular":["Su Kaynakları","Türkiye’deki Su Kaynaklarının Etkileri"]},{"ad":"4. Ünite: Beşerî Sistemler Ve Süreçler","saat":12,"konular":["Yerleşmelerin Mekânsal Organizasyonları","Yerleşmelerin Etki Alanları"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/123","kisaKonular":["Yerleşmelerin Mekânsal Organizasyonları","Yerleşmelerin Etki Alanları"]},{"ad":"5. Ünite: Ekonomik Faaliyetler Ve Etkileri","saat":34,"konular":["Tarımsal Faaliyetler ve Gıda Güvencesi","Tarım Uygulamalarında Sürdürülebilirlik","Stratejik ve Kritik Madenler","Enerji Kaynakları","Sanayileşmenin Mekânsal Etkileri"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/253","kisaKonular":["Tarımsal Faaliyetler ve Gıda Güvencesi","Tarım Uygulamalarında Sürdürülebilirlik","Stratejik ve Kritik Madenler","Enerji Kaynakları","Sanayileşmenin Mekânsal Etkileri"]},{"ad":"6. Ünite: Afetler Ve Sürdürülebilir Çevre","saat":22,"konular":["Gezegen Sınırı","Küresel İklim Değişikliği","Türkiye’de Suyun Sürdürülebilir Kullanımı"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/255","kisaKonular":["Gezegen Sınırı","Küresel İklim Değişikliği","Türkiye’de Suyun Sürdürülebilir Kullanımı"]},{"ad":"7. Ünite: Bölgeler, Ülkeler Ve Küresel Bağlantılar","saat":36,"konular":["Türkiye’nin Kültürel Hinterlandı","Tarımsal Üretim: Örnek Ülke","Sanayileşme Süreci: Örnek Ülkeler","Madencilik Faaliyetleri: Örnek Ülke","Enerji Kaynakları: Örnek Ülkeler"],"kaynak":"https://tymm.meb.gov.tr/cografya-dersi/unite/257","kisaKonular":["Türkiye’nin Kültürel Hinterlandı","Tarımsal Üretim: Örnek Ülke","Sanayileşme Süreci: Örnek Ülkeler","Madencilik Faaliyetleri: Örnek Ülke","Enerji Kaynakları: Örnek Ülkeler"]}]},{"ders":8,"ad":"Felsefe","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/felsefe-dersi/13","kitaplar":[{"name":"İncele 11.Sınıf Felsefe Dersi 11.Sınıf Ders Kitabı","url":"https://tymm.meb.gov.tr/kitap/403/felsefe-dersi-11sinif-ders-kitabi","pdf":"https://tymm.meb.gov.tr/assets/pdf/felsefe-dersi-11-sinif-ders-kitabi.pdf"}],"uniteler":[{"ad":"1. Ünite: Çevre Sorunları Ve Felsefe","saat":12,"konular":["Çevre ve İnsan İlişkisi","Çevre Etiği (İnsan Merkezci Etik, Canlı Merkezci Etik, Çevre Merkezci Etik)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/66","kisaKonular":["Çevre ve İnsan İlişkisi","Çevre Etiği"]},{"ad":"2. Ünite: Teknoloji Ve Hayat","saat":12,"konular":["Teknoloji ve İnsan Hayatı","Teknoloji Bağlamında Ontolojik Problemler (Ontolojik Anlam Kaybı, Yabancılaşma)","Teknoloji Bağlamında Aksiyolojik Problemler (Güvenlik Sorunları, Değerlerin Tahribatı, Ahlaki Eylemin İmkânı)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/69","kisaKonular":["Teknoloji ve İnsan Hayatı","Teknoloji Bağlamında Ontolojik Problemler","Teknoloji Bağlamında Aksiyolojik Problemler"]},{"ad":"3. Ünite: Akıl Ve İnanç","saat":10,"konular":["Akıl-İnanç İlişkisine Yönelik Felsefi Sorular ve Problemler","Akıl-İnanç İlişkisine Yönelik Felsefi Görüş ve Argümanlar"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/77","kisaKonular":["Akıl-İnanç İlişkisine Yönelik Felsefi Sorular ve Problemler","Akıl-İnanç İlişkisine Yönelik Felsefi Görüş ve Argümanlar"]},{"ad":"4. Ünite: Edebiyat Ve Felsefe","saat":12,"konular":["Edebiyat Felsefe İlişkisi","Edebiyat Felsefe İlişkisi Problemleri (Edebî Unsurlara Felsefi Bakış, Edebî Unsurlarla Felsefe Yapma)"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/85","kisaKonular":["Edebiyat Felsefe İlişkisi","Edebiyat Felsefe İlişkisi Problemleri"]},{"ad":"5. Ünite: Hayatın Anlamı","saat":12,"konular":["Hayatın Anlamına Yönelik Felsefi Sorular ve Problemler (Mutluluk ve Hayat İlişkisi, Varoluş ve Kendi Olma) Hayatın Anlamına Yönelik Felsefi Görüş ve Argümanlar"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/93","kisaKonular":["Hayatın Anlamına Yönelik Felsefi Sorular ve Problemler"]},{"ad":"6. Ünite: Hukuk Ve Felsefe","saat":10,"konular":["Hukuk ve İnsan","Hukukun Doğasına Yönelik Felsefi Problemler [Hukukun Gereği ve Önemi, Hukukun Kaynağı (Doğal Hukuk, Pozitif Hukuk), Ahlak-Hukuk İlişkisi]"],"kaynak":"https://tymm.meb.gov.tr/felsefe-dersi/unite/103","kisaKonular":["Hukuk ve İnsan","Hukukun Doğasına Yönelik Felsefi Problemler [Hukukun Gereği ve Önemi, Hukukun Kaynağı"]}]},{"ders":9,"ad":"Din Kültürü","kaynak":"https://tymm.meb.gov.tr/ogretim-programlari/din-kulturu-ve-ahlak-bilgisi-dersi-2/13","kitaplar":[],"uniteler":[{"ad":"1. Ünite: Kader, İrade Ve Sorumluluk","saat":14,"konular":["İnsan ve Kader","Akıl, İrade ve Sorumluluk Sahibi Bir Varlık Olarak İnsan","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/149","kisaKonular":["İnsan ve Kader","Akıl, İrade ve Sorumluluk Sahibi Bir Varlık Olarak İnsan","Kur’an’dan Mesajlar"]},{"ad":"2. Ünite: Din, Felsefe, Bilim Ve Sanat","saat":14,"konular":["Din","Din, Felsefe ve Bilim","Din ve Sanat","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/150","kisaKonular":["Din","Din, Felsefe ve Bilim","Din ve Sanat","Kur’an’dan Mesajlar"]},{"ad":"3. Ünite: İslam Medeniyeti Ve Gönül Coğrafyamız","saat":14,"konular":["Medeniyetin Oluşumu","İslam Medeniyetinin İzleri","İslam Medeniyetinin Bugünü ve Geleceği","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/151","kisaKonular":["Medeniyetin Oluşumu","İslam Medeniyetinin İzleri","İslam Medeniyetinin Bugünü ve Geleceği","Kur’an’dan Mesajlar"]},{"ad":"4. Ünite: İnançla İlgili Meseleler","saat":16,"konular":["İnançla İlgili Felsefi Yaklaşımlar","Kötülük Problemi","Yeni Dinî Hareketler ve Din İstismarı","Kur’an’dan Mesajlar"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/152","kisaKonular":["İnançla İlgili Felsefi Yaklaşımlar","Kötülük Problemi","Yeni Dinî Hareketler ve Din İstismarı","Kur’an’dan Mesajlar"]},{"ad":"5. Ünite: Yahudilik Ve Hristiyanlık","saat":10,"konular":["Yahudilik","Hristiyanlık"],"kaynak":"https://tymm.meb.gov.tr/din-kulturu-ve-ahlak-bilgisi-dersi-2/unite/153","kisaKonular":["Yahudilik","Hristiyanlık"]}]}],"12":[{"ders":0,"ad":"Türk Dili ve Edebiyatı","kaynak":"https://mufredat.meb.gov.tr/ProgramDetay.aspx?PID=353","kitaplar":[],"uniteler":[{"ad":"1. Ünite: Giriş","saat":0,"konular":["Giriş"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229132522794-T%C3%BCrk%20Dili%20ve%20Edebiyat%C4%B1%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Giriş"]},{"ad":"2. Ünite: Hikâye","saat":0,"konular":["Hikâye"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229132522794-T%C3%BCrk%20Dili%20ve%20Edebiyat%C4%B1%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Hikâye"]},{"ad":"3. Ünite: Şiir","saat":0,"konular":["Şiir"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229132522794-T%C3%BCrk%20Dili%20ve%20Edebiyat%C4%B1%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Şiir"]},{"ad":"4. Ünite: Roman","saat":0,"konular":["Roman"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229132522794-T%C3%BCrk%20Dili%20ve%20Edebiyat%C4%B1%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Roman"]},{"ad":"5. Ünite: Tiyatro","saat":0,"konular":["Tiyatro"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229132522794-T%C3%BCrk%20Dili%20ve%20Edebiyat%C4%B1%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Tiyatro"]},{"ad":"6. Ünite: Deneme","saat":0,"konular":["Deneme"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229132522794-T%C3%BCrk%20Dili%20ve%20Edebiyat%C4%B1%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Deneme"]},{"ad":"7. Ünite: Söylev (Nutuk)","saat":0,"konular":["Söylev (Nutuk)"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229132522794-T%C3%BCrk%20Dili%20ve%20Edebiyat%C4%B1%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Söylev"]}]},{"ders":1,"ad":"Matematik","kaynak":"https://mufredat.meb.gov.tr/ProgramDetay.aspx?PID=343","kitaplar":[],"uniteler":[{"ad":"1. Ünite: Üstel ve Logaritmik Fonksiyonlar","saat":0,"konular":["Üstel Fonksiyon","Logaritma Fonksiyonu","Üstel, Logaritmik Denklemler ve Eşitsizlikler"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201821102727101-OGM%20MATEMAT%C4%B0K%20PRG%2020.01.2018.pdf","kisaKonular":["Üstel Fonksiyon","Logaritma Fonksiyonu","Üstel, Logaritmik Denklemler ve Eşitsizlikler"]},{"ad":"2. Ünite: Diziler","saat":0,"konular":["Gerçek Sayı Dizileri"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201821102727101-OGM%20MATEMAT%C4%B0K%20PRG%2020.01.2018.pdf","kisaKonular":["Gerçek Sayı Dizileri"]},{"ad":"3. Ünite: Trigonometri","saat":0,"konular":["Toplam-Fark ve İki kat Açı Formülleri","Trigonometrik Denklemler"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201821102727101-OGM%20MATEMAT%C4%B0K%20PRG%2020.01.2018.pdf","kisaKonular":["Toplam-Fark ve İki kat Açı Formülleri","Trigonometrik Denklemler"]},{"ad":"4. Ünite: Dönüşümler","saat":0,"konular":["Analitik Düzlemde Temel Dönüşümler"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201821102727101-OGM%20MATEMAT%C4%B0K%20PRG%2020.01.2018.pdf","kisaKonular":["Analitik Düzlemde Temel Dönüşümler"]},{"ad":"5. Ünite: Türev","saat":0,"konular":["Limit ve Süreklilik","Anlık Değişim Oranı ve Türev","Türevin Uygulamaları"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201821102727101-OGM%20MATEMAT%C4%B0K%20PRG%2020.01.2018.pdf","kisaKonular":["Limit ve Süreklilik","Anlık Değişim Oranı ve Türev","Türevin Uygulamaları"]},{"ad":"6. Ünite: İntegral","saat":0,"konular":["Belirsiz İntegral","Belirli İntegral ve Uygulamaları"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201821102727101-OGM%20MATEMAT%C4%B0K%20PRG%2020.01.2018.pdf","kisaKonular":["Belirsiz İntegral","Belirli İntegral ve Uygulamaları"]},{"ad":"7. Ünite: Analitik Geometri","saat":0,"konular":["Çemberin Analitik İncelenmesi"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201821102727101-OGM%20MATEMAT%C4%B0K%20PRG%2020.01.2018.pdf","kisaKonular":["Çemberin Analitik İncelenmesi"]}]},{"ders":2,"ad":"Fizik","kaynak":"https://mufredat.meb.gov.tr/ProgramDetay.aspx?PID=351","kitaplar":[],"uniteler":[{"ad":"1. Ünite: Çembersel hareket","saat":0,"konular":["Düzgün çembersel hareket","Dönerek öteleme hareketi","Açısal momentum","Kütle çekim kuvveti","Kepler kanunları"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812103112910-orta%C3%B6%C4%9Fretim_fizik_son.pdf","kisaKonular":["Düzgün çembersel hareket","Dönerek öteleme hareketi","Açısal momentum","Kütle çekim kuvveti","Kepler kanunları"]},{"ad":"2. Ünite: Basit harmonik hareket","saat":0,"konular":["Basit harmonik hareket"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812103112910-orta%C3%B6%C4%9Fretim_fizik_son.pdf","kisaKonular":["Basit harmonik hareket"]},{"ad":"3. Ünite: Dalga mekaniği","saat":0,"konular":["Dalgalarda kırınım, girişim ve doppler olayı","Elektromanyetik dalgalar"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812103112910-orta%C3%B6%C4%9Fretim_fizik_son.pdf","kisaKonular":["Dalgalarda kırınım, girişim ve doppler olayı","Elektromanyetik dalgalar"]},{"ad":"4. Ünite: Atom fiziğine giriş ve radyoaktivite","saat":0,"konular":["Atom kavramının tarihsel gelişimi","Büyük patlama ve evrenin oluşumu","Radyoaktivite"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812103112910-orta%C3%B6%C4%9Fretim_fizik_son.pdf","kisaKonular":["Atom kavramının tarihsel gelişimi","Büyük patlama ve evrenin oluşumu","Radyoaktivite"]},{"ad":"5. Ünite: Modern fizik","saat":0,"konular":["Özel görelilik","Kuantum fiziğine giriş","Fotoelektrik olayı","Compton saçılması ve de broglie dalga boyu"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812103112910-orta%C3%B6%C4%9Fretim_fizik_son.pdf","kisaKonular":["Özel görelilik","Kuantum fiziğine giriş","Fotoelektrik olayı","Compton saçılması ve de broglie dalga boyu"]},{"ad":"6. Ünite: Modern fiziğin teknolojideki uygulamaları","saat":0,"konular":["Görüntüleme teknolojileri","Yarı iletken teknolojisi","Süper iletkenler","Nanoteknoloji","Laser ışınları"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812103112910-orta%C3%B6%C4%9Fretim_fizik_son.pdf","kisaKonular":["Görüntüleme teknolojileri","Yarı iletken teknolojisi","Süper iletkenler","Nanoteknoloji","Laser ışınları"]}]},{"ders":3,"ad":"Kimya","kaynak":"https://mufredat.meb.gov.tr/ProgramDetay.aspx?PID=350","kitaplar":[],"uniteler":[{"ad":"1. Ünite: Kimya ve elektrik","saat":0,"konular":["İndirgenme-Yükseltgenme Tepkimelerinde Elektrik Akımı","Elektrotlar ve Elektrokimyasal Hücreler","Elektrot Potansiyelleri","Kimyasallardan Elektrik Üretimi","Elektroliz","Korozyon"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812102955190-19.01.2018%20Kimya%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["İndirgenme-Yükseltgenme Tepkimelerinde Elektrik Akımı","Elektrotlar ve Elektrokimyasal Hücreler","Elektrot Potansiyelleri","Kimyasallardan Elektrik Üretimi","Elektroliz","Korozyon"]},{"ad":"2. Ünite: Karbon kimyasına giriş","saat":0,"konular":["Anorganik ve Organik Bileşikler","Basit Formül ve Molekül Formülü","Doğada Karbon","Lewis Formülleri","Hibritleşme-Molekül Geometrileri"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812102955190-19.01.2018%20Kimya%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Anorganik ve Organik Bileşikler","Basit Formül ve Molekül Formülü","Doğada Karbon","Lewis Formülleri","Hibritleşme-Molekül Geometrileri"]},{"ad":"3. Ünite: Organik bileşikler","saat":0,"konular":["Hidrokarbonlar","Fonksiyonel Gruplar","Alkoller","Eterler","Karbonil Bileşikleri","Karboksilik Asitler","Esterler"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812102955190-19.01.2018%20Kimya%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Hidrokarbonlar","Fonksiyonel Gruplar","Alkoller","Eterler","Karbonil Bileşikleri","Karboksilik Asitler","Esterler"]},{"ad":"4. Ünite: Enerji kaynakları ve bilimsel gelişmeler","saat":0,"konular":["Fosil Yakıtlar","Alternatif Enerji Kaynakları","Sürdürülebilirlik","Nanoteknoloji"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/201812102955190-19.01.2018%20Kimya%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Fosil Yakıtlar","Alternatif Enerji Kaynakları","Sürdürülebilirlik","Nanoteknoloji"]}]},{"ders":4,"ad":"Biyoloji","kaynak":"https://mufredat.meb.gov.tr/ProgramDetay.aspx?PID=361","kitaplar":[],"uniteler":[{"ad":"1. Ünite: Genden Proteine","saat":0,"konular":["Nükleik Asitlerin Keşfi ve Önemi","Genetik Şifre ve Protein Sentezi"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20182215535566-Biyoloji%20d%C3%B6p.pdf","kisaKonular":["Nükleik Asitlerin Keşfi ve Önemi","Genetik Şifre ve Protein Sentezi"]},{"ad":"2. Ünite: Canlılarda Enerji Dönüşümleri","saat":0,"konular":["Canlılık ve Enerji","Fotosentez","Kemosentez","Hücresel Solunum"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20182215535566-Biyoloji%20d%C3%B6p.pdf","kisaKonular":["Canlılık ve Enerji","Fotosentez","Kemosentez","Hücresel Solunum"]},{"ad":"3. Ünite: Bitki Biyolojisi","saat":0,"konular":["Bitkilerin Yapısı","Bitkilerde Madde Taşınması","Bitkilerde Eşeyli Üreme"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20182215535566-Biyoloji%20d%C3%B6p.pdf","kisaKonular":["Bitkilerin Yapısı","Bitkilerde Madde Taşınması","Bitkilerde Eşeyli Üreme"]},{"ad":"4. Ünite: Canlılar ve Çevre","saat":0,"konular":["Canlılar ve Çevre"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20182215535566-Biyoloji%20d%C3%B6p.pdf","kisaKonular":["Canlılar ve Çevre"]}]},{"ders":6,"ad":"T.C. İnkılap Tarihi ve Atatürkçülük","kaynak":"https://mufredat.meb.gov.tr/ProgramDetay.aspx?PID=346","kitaplar":[],"uniteler":[{"ad":"1. Ünite: 20. yüzyıl başlarında osmanlı devleti ve dünya","saat":0,"konular":["20. yüzyıl başlarında osmanlı devleti ve dünya"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229131923491-T.C.%20%C4%B0nk%C4%B1lap%20Tarihi%20ve%20Atat%C3%BCrk%C3%A7%C3%BCl%C3%BCk%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["20. yüzyıl başlarında osmanlı devleti ve dünya"]},{"ad":"2. Ünite: Millî mücadele","saat":0,"konular":["Millî mücadele"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229131923491-T.C.%20%C4%B0nk%C4%B1lap%20Tarihi%20ve%20Atat%C3%BCrk%C3%A7%C3%BCl%C3%BCk%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Millî mücadele"]},{"ad":"3. Ünite: Atatürkçülük ve türk inkılabı","saat":0,"konular":["Atatürkçülük ve türk inkılabı"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229131923491-T.C.%20%C4%B0nk%C4%B1lap%20Tarihi%20ve%20Atat%C3%BCrk%C3%A7%C3%BCl%C3%BCk%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Atatürkçülük ve türk inkılabı"]},{"ad":"4. Ünite: İki savaş arasındaki dönemde türkiye ve dünya","saat":0,"konular":["İki savaş arasındaki dönemde türkiye ve dünya"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229131923491-T.C.%20%C4%B0nk%C4%B1lap%20Tarihi%20ve%20Atat%C3%BCrk%C3%A7%C3%BCl%C3%BCk%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["İki savaş arasındaki dönemde türkiye ve dünya"]},{"ad":"5. Ünite: II. dünya savaşı sürecinde türkiye ve dünya","saat":0,"konular":["II. dünya savaşı sürecinde türkiye ve dünya"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229131923491-T.C.%20%C4%B0nk%C4%B1lap%20Tarihi%20ve%20Atat%C3%BCrk%C3%A7%C3%BCl%C3%BCk%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["II. dünya savaşı sürecinde türkiye ve dünya"]},{"ad":"6. Ünite: II. dünya savaşı sonrasında türkiye ve dünya","saat":0,"konular":["II. dünya savaşı sonrasında türkiye ve dünya"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229131923491-T.C.%20%C4%B0nk%C4%B1lap%20Tarihi%20ve%20Atat%C3%BCrk%C3%A7%C3%BCl%C3%BCk%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["II. dünya savaşı sonrasında türkiye ve dünya"]},{"ad":"7. Ünite: Toplumsal devrim çağında dünya ve türkiye","saat":0,"konular":["Toplumsal devrim çağında dünya ve türkiye"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229131923491-T.C.%20%C4%B0nk%C4%B1lap%20Tarihi%20ve%20Atat%C3%BCrk%C3%A7%C3%BCl%C3%BCk%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["Toplumsal devrim çağında dünya ve türkiye"]},{"ad":"8. Ünite: 21. yüzyılın eşiğinde türkiye ve dünya","saat":0,"konular":["21. yüzyılın eşiğinde türkiye ve dünya"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229131923491-T.C.%20%C4%B0nk%C4%B1lap%20Tarihi%20ve%20Atat%C3%BCrk%C3%A7%C3%BCl%C3%BCk%20Dersi%20%C3%96%C4%9Fretim%20Program%C4%B1.pdf","kisaKonular":["21. yüzyılın eşiğinde türkiye ve dünya"]}]},{"ders":7,"ad":"Coğrafya","kaynak":"https://mufredat.meb.gov.tr/ProgramDetay.aspx?PID=336","kitaplar":[],"uniteler":[{"ad":"1. Ünite: Doğal Sistemler","saat":0,"konular":["Ekstrem doğa olayları","Doğal sistemlerdeki değişimler ve küresel iklim değişimi"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/2018120203724482-Cografya%20dop%20pdf.pdf","kisaKonular":["Ekstrem doğa olayları","Doğal sistemlerdeki değişimler ve küresel iklim değişimi"]},{"ad":"2. Ünite: Beşerî Sistemler","saat":0,"konular":["Ekonomik faaliyetlerin sosyal ve kültürel etkileri","Şehirleşme, göç ve sanayileşme","Nüfus, yerleşme ve ekonominin geleceği","Türkiye’nin işlevsel bölgeleri ve kalkınma projeleri","Hizmet sektörü ve ulaşım","Dünya ve Türkiye ticareti","Türkiye’de turizm"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/2018120203724482-Cografya%20dop%20pdf.pdf","kisaKonular":["Ekonomik faaliyetlerin sosyal ve kültürel etkileri","Şehirleşme, göç ve sanayileşme","Nüfus, yerleşme ve ekonominin geleceği","Türkiye’nin işlevsel bölgeleri ve kalkınma projeleri","Hizmet sektörü ve ulaşım","Dünya ve Türkiye ticareti","Türkiye’de turizm"]},{"ad":"3. Ünite: Küresel Ortam: Bölgeler ve Ülkeler","saat":0,"konular":["Kıtalar ve okyanuslar","Ülkelerin konumu ve jeopolitik etkileri","Türkiye’nin jeopolitik konumu ve Türk kültür bölgeleri","Teknoloji, gelişmişlik ve ekonomi","Küresel ve bölgesel örgütler","Sıcak çatışma bölgeleri"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/2018120203724482-Cografya%20dop%20pdf.pdf","kisaKonular":["Kıtalar ve okyanuslar","Ülkelerin konumu ve jeopolitik etkileri","Türkiye’nin jeopolitik konumu ve Türk kültür bölgeleri","Teknoloji, gelişmişlik ve ekonomi","Küresel ve bölgesel örgütler","Sıcak çatışma bölgeleri"]},{"ad":"4. Ünite: Çevre ve Toplum","saat":0,"konular":["Doğal çevrenin sınırlılığı","Doğal kaynakların yönetimi","Çevre sorunları ve çözüm yaklaşımları","Ortak doğal ve kültürel miras"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/2018120203724482-Cografya%20dop%20pdf.pdf","kisaKonular":["Doğal çevrenin sınırlılığı","Doğal kaynakların yönetimi","Çevre sorunları ve çözüm yaklaşımları","Ortak doğal ve kültürel miras"]}]},{"ders":9,"ad":"Din Kültürü","kaynak":"https://mufredat.meb.gov.tr/ProgramDetay.aspx?PID=319","kitaplar":[],"uniteler":[{"ad":"1. Ünite: İslam ve Bilim","saat":0,"konular":["İslam ve Bilim"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229134742302-DKAB_%289-12.%20S%C4%B1n%C4%B1f%29_DOP_%202018.pdf","kisaKonular":["İslam ve Bilim"]},{"ad":"2. Ünite: Anadolu’da İslam","saat":0,"konular":["Anadolu’da İslam"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229134742302-DKAB_%289-12.%20S%C4%B1n%C4%B1f%29_DOP_%202018.pdf","kisaKonular":["Anadolu’da İslam"]},{"ad":"3. Ünite: İslam Düşüncesinde Tasavvufi Yorumlar","saat":0,"konular":["İslam Düşüncesinde Tasavvufi Yorumlar"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229134742302-DKAB_%289-12.%20S%C4%B1n%C4%B1f%29_DOP_%202018.pdf","kisaKonular":["İslam Düşüncesinde Tasavvufi Yorumlar"]},{"ad":"4. Ünite: Güncel Dinî Meseleler","saat":0,"konular":["Güncel Dinî Meseleler"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229134742302-DKAB_%289-12.%20S%C4%B1n%C4%B1f%29_DOP_%202018.pdf","kisaKonular":["Güncel Dinî Meseleler"]},{"ad":"5. Ünite: Hint ve Çin Dinleri","saat":0,"konular":["Hint ve Çin Dinleri"],"kaynak":"https://mufredat.meb.gov.tr/Dosyalar/20221229134742302-DKAB_%289-12.%20S%C4%B1n%C4%B1f%29_DOP_%202018.pdf","kisaKonular":["Hint ve Çin Dinleri"]}]}]}};
+const YKS_EK_DERSLER = {"Tarih":["Tarih ve Zaman","İnsanlığın İlk Dönemleri","Orta Çağ’da Dünya","İlk ve Orta Çağlarda Türk Dünyası","İslam Medeniyetinin Doğuşu","Türklerin İslamiyet’i Kabulü ve İlk Türk İslam Devletleri","Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi","Beylikten Devlete Osmanlı Siyaseti (1302–1453)","Devletleşme Sürecinde Savaşçılar ve Askerler","Beylikten Devlete Osmanlı Medeniyeti","Dünya Gücü Osmanlı (1453–1595)","Sultan ve Osmanlı Merkez Teşkilatı","Klasik Çağda Osmanlı Toplum Düzeni","Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595–1774)","Değişim Çağında Avrupa ve Osmanlı","Devrimler Çağında Değişen Devlet-Toplum İlişkileri","Uluslararası İlişkilerde Denge Stratejisi (1774–1914)","XIX ve XX. Yüzyılda Değişen Sosyoekonomik Hayat"],"Din Kültürü":["Bilgi ve İnanç","Din ve İslam","İslam ve İbadet","Gençlik ve Değerler","Gönül Coğrafyamız","Allah İnsan İlişkisi","Hz. Muhammed ve Gençlik","Din ve Hayat","Ahlaki Tutum ve Davranışlar","İslam Düşüncesinde İtikadi, Siyasi ve Fıkhi Yorumlar","Dünya ve Ahiret","Kur’an’a Göre Hz. Muhammed","Kur’an’da Bazı Kavramlar","İnançla İlgili Meseleler","Yahudilik ve Hıristiyanlık","İslam ve Bilim","Anadolu’da İslam","İslam Düşüncesinde Tasavvufi Yorumlar","Güncel Dinî Meseleler","Hint ve Çin Dinleri"]};
+// Current school curricula are versioned separately from the persisted YKS catalog.
+// Never reorder KATALOG: its row indices are part of saved results and cloud packets.
+function ogrenciSinifi(o) { return o && o.sinif !== undefined ? o.sinif : 12; }
+function subeSinifi(sube) {
+  const o = (D.ogr || []).find(o => !o.silindi && o.sube === sube);
+  return ogrenciSinifi(o);
+}
+function subeSinifHatasi(sube, sinif, haric) {
+  if (![9, 10, 11, 12].includes(sinif)) return 'Sınıf düzeyi 9–12 arasında olmalı.';
+  if (!sube || sube.length > 40) return 'Şube kodu 1–40 karakter olmalı.';
+  if (sinif !== 12 && OKUL_SUBE_PROGRAMLARI[sube]) return 'Bu hazır şube 12. sınıfa ait. Yeni bir şube kodu kullanın.';
+  if ((D.ogr || []).some((o, i) => i !== haric && !o.silindi && o.sube === sube && ogrenciSinifi(o) !== sinif))
+    return 'Aynı şubede farklı sınıf düzeyleri olamaz. Ayrı bir şube oluşturun.';
+  return '';
+}
+function sinifSecenekleri(secili) {
+  return [9, 10, 11, 12].map(n => '<option value="' + n + '"' + (n === secili ? ' selected' : '') + '>' + n + '. sınıf</option>').join('');
+}
+function mufredatKonuAdi(g, ui, ti, ad) { return g + '. sınıf · ' + (ui + 1) + '.' + (ti + 1) + ' · ' + ad; }
+function mufredatKonuBilgisi(ders, ad) {
+  const m = /^(9|10|11)\. sınıf · (\d+)\.(\d+) · /.exec(ad || '');
+  if (!m) return null;
+  const c = MUFREDAT_2026.siniflar[m[1]].find(c => c.ders === ders);
+  const u = c && c.uniteler[+m[2] - 1], ti = +m[3] - 1;
+  if (!u || mufredatKonuAdi(+m[1], +m[2]-1, ti, u.kisaKonular[ti]) !== ad) return null;
+  return { sinif: +m[1], unite: u.ad, kaynak: u.kaynak };
+}
+function okulKonuPlani(sinif) {
+  const plan = Array.from({ length: 36 }, () => ({}));
+  (MUFREDAT_2026.siniflar[sinif] || []).forEach(c => {
+    const toplam = c.uniteler.reduce((s, u) => s + (u.saat || u.konular.length), 0);
+    let once = 0;
+    c.uniteler.forEach((u, ui) => {
+      const agirlik = u.saat || u.konular.length;
+      u.kisaKonular.forEach((ad, ti) => {
+        const hafta = Math.min(35, Math.floor(36 * (once + agirlik * ti / u.konular.length) / toplam));
+        (plan[hafta][c.ad] ||= []).push(mufredatKonuAdi(sinif, ui, ti, ad));
+      });
+      once += agirlik;
+    });
+  });
+  return plan;
+}
+function yksPlanEksikleri(sube) {
+  if (subeSinifi(sube) !== 12) return [];
+  const o = D.ogr.find(o => !o.silindi && o.sube === sube);
+  if (!o) return [];
+  const eski = D.konuPlani?.[sube];
+  if (!eski || !eski.length) return [];
+  const hedef = yeniYksKonuPlani(o.alan), mevcut = new Set(eski.flatMap(h => Object.keys(h)));
+  const eksik = [];
+  for (const ders of new Set(hedef.flatMap(h => Object.keys(h)))) {
+    if (mevcut.has(ders) || [...mevcut].some(d => dersEsle(d) === dersEsle(ders))) continue;
+    const konular = [...new Set(hedef.flatMap(h => h[ders] || []))];
+    if (konular.length) eksik.push({ ders, konular });
+  }
+  if (o.alan === 'SAY' && !eski.some(h => Object.values(h).flat().some(ad => iskelet(ad).includes(iskelet('Süper İletken')))))
+    eksik.push({ ders: 'Fizik', konular: ['Süper İletkenler'] });
+  return eksik;
+}
+function yksEksikleriniEkle(sube, hb) {
+  const eksik = yksPlanEksikleri(sube), plan = D.konuPlani?.[sube];
+  if (!eksik.length || !plan) return 0;
+  // Start strictly after the visible/current week; retain every old entry.
+  const ilk = Math.max(0, Math.floor((Math.max(hb, pazartesi(bugunNo())) - subePlanBaslangici(sube)) / 7) + 1);
+  const son = Math.max(ilk + 1, plan.length);
+  while (plan.length < son) plan.push({});
+  let n = 0;
+  eksik.forEach(x => x.konular.forEach((ad, i) => {
+    let h = ilk + Math.floor(i * (son - ilk) / x.konular.length);
+    if (ad === 'Süper İletkenler') {
+      const yari = plan.findIndex(w => (w.Fizik || []).includes('Yarı İletken Teknolojisi'));
+      h = Math.max(ilk, yari);
+    }
+    const liste = plan[h][x.ders] ||= [];
+    const yari = liste.indexOf('Yarı İletken Teknolojisi');
+    if (ad === 'Süper İletkenler' && yari >= 0) liste.splice(yari + 1, 0, ad);
+    else liste.push(ad);
+    n++;
+  }));
+  return n;
+}
+function yeniYksKonuPlani(alan) {
+  const plan = JSON.parse(JSON.stringify(VARSAYILAN_KONU_PLANI[alan] || VARSAYILAN_KONU_PLANI.EA));
+  const yay = (ders, konular) => konular.forEach((ad, i) => {
+    const h = Math.min(plan.length - 1, Math.floor(i * plan.length / konular.length));
+    (plan[h][ders] ||= []).push(ad);
+  });
+  if (alan === 'SÖZ' || alan === 'DİL') plan.forEach(h => { delete h['Matematik AYT']; });
+  if (alan === 'DİL') plan.forEach(h => {
+    delete h['Türk Dili ve Edebiyatı']; delete h['T.C. İnkılap Tarihi ve Atatürkçülük'];
+    h.Coğrafya = (h.Coğrafya || []).filter(ad => ad.includes('(TYT)'));
+  });
+  if (alan !== 'SÖZ') plan.forEach(h => {
+    const f = h['Felsefe (+ Felsefe Grubu)'];
+    if (f) { h.Felsefe = f.filter(ad => /Felsef|Felsefi/.test(ad)); delete h['Felsefe (+ Felsefe Grubu)']; }
+  });
+  if (alan === 'SAY') {
+    VARSAYILAN_KONU_PLANI.EA.forEach((h, i) => {
+      plan[i].Coğrafya = (h.Coğrafya || []).filter(ad => ad.includes('(TYT)'));
+      plan[i].Felsefe = (h['Felsefe (+ Felsefe Grubu)'] || []).filter(ad => /Felsef|Felsefi/.test(ad));
+    });
+    // Official 12.6.3, between semiconductors and nanotechnology.
+    const h = plan.find(h => (h.Fizik || []).includes('Yarı İletken Teknolojisi'));
+    if (h) h.Fizik.splice(h.Fizik.indexOf('Yarı İletken Teknolojisi') + 1, 0, 'Süper İletkenler');
+  } else {
+    ['Fizik', 'Kimya', 'Biyoloji'].forEach((ders, i) => {
+      yay(ders, VARSAYILAN_KONU_PLANI.SAY.flatMap(h => h[ders] || []).filter(ad => PLAN_FEN_SINAVI[i+2][ad] === 'TYT'));
+    });
+  }
+  yay('Tarih', YKS_EK_DERSLER.Tarih);
+  yay('Din Kültürü', YKS_EK_DERSLER['Din Kültürü']);
+  return plan;
+}
+function sinifaGoreKonuPlani(sinif, alan) {
+  if (![9,10,11,12].includes(sinif) || !Object.hasOwn(ALAN_DERS, alan)) throw new Error('Geçersiz sınıf veya alan.');
+  return sinif === 12 ? yeniYksKonuPlani(alan) : okulKonuPlani(sinif);
+}
+function subePlanBaslangici(sube) {
+  const o = (D.ogr || []).find(o => !o.silindi && o.sube === sube);
+  return o && ogrenciSinifi(o) < 12 && isoTarihGecerli(o.mufredatBaslangic)
+    ? pazartesi(gunNo(o.mufredatBaslangic))
+    : pazartesi(gunNo(D.ayar.donemBasi || D.ayar.planBasi));
+}
+function mufredatKatalogUnitesi(k) {
+  if (k[0] !== 2) return k[2];
+  const ad = k[3];
+  if (ad === 'Alternatif Akım') return 'Elektrik ve Manyetizma';
+  if (ad === 'Kaldırma Kuvveti') return 'Basınç ve Kaldırma Kuvveti';
+  if (/Kırınım|Girişim|Doppler|Elektromanyetik Dalgalar/.test(ad)) return 'Dalga Mekaniği';
+  if (/Büyük Patlama|Radyoaktivite/.test(ad)) return 'Atom Fiziğine Giriş ve Radyoaktivite';
+  return k[2];
+}
+function gorunumMufredat() {
+  const g = EK.mufredatSinif || ogrenciSinifi((D.ogr || [])[EK.ogr]);
+  let h = '<div class="baslik"><h1>Müfredat ve kaynaklar</h1><p>2026–2027 öğretim yılı · kontrol: 23 Eylül 2026</p></div>' +
+    '<div class="arac"><label>Sınıf düzeyi <select id="mufredatSinif">' + sinifSecenekleri(g) + '</select></label></div>' +
+    '<div class="kart" style="padding:16px;margin-bottom:16px"><p><b>9, 10 ve 11. sınıf: Türkiye Yüzyılı Maarif Modeli. 12. sınıf: önceki öğretim programı.</b> ' +
+    '<a href="' + MUFREDAT_2026.kademeliKaynak + '" target="_blank" rel="noopener">MEB kademeli geçiş duyurusu</a></p>' +
+    '<p>Bu sayfa uygulamanın desteklediği temel akademik dersleri kapsar. Yabancı dil, seçmeli ve meslek dersleri için ' +
+    '<a href="https://tymm.meb.gov.tr/ders-kitaplari/ortaogretim" target="_blank" rel="noopener">MEB kitapları</a> ve okulunuzun ders çizelgesini kullanın.</p>' +
+    (g === 12 ? '<p>Buradaki sıra 12. sınıf okul programıdır. Konu Planı’ndaki TYT/AYT tekrar sırası, Drive’daki 2025–2026 YKS modüllerine dayanır ve önceki sınıfları da kapsar. Bu iki sıra aynı değildir. Eski planlarda eksik sosyal/fen dersleri ve fizikte Süper İletkenler başlığı bulunabilir; kontrol için Konu Planı’nı açın. DİL planı yalnızca TYT hazırlığını içerir; YDT içeriği dahil değildir.</p>' :
+    '<p>Yeni planlar aşağıdaki MEB ünite ve konu sırasını izler. Ders saatlerine göre önerilen 36 haftalık dağılım düzenlenebilir; resmî yıllık takvim değildir, tatilleri otomatik atlamaz. 2025–2026 Drive modüllerindeki eski 11. sınıf sırası bu yıl için kullanılmaz.</p>') + '</div>';
+  (MUFREDAT_2026.siniflar[g] || []).forEach(c => {
+    h += '<details class="kart" style="padding:16px;margin-bottom:12px"><summary><b>' + kacis(c.ad) + '</b> · ' + c.uniteler.length + ' ünite / tema</summary>' +
+      '<p><a target="_blank" rel="noopener" href="' + kacis(c.kaynak) + '">Resmî öğretim programı</a>' +
+      c.kitaplar.map(b => ' · <a target="_blank" rel="noopener" href="' + kacis(b.url) + '">MEB ders kitabı</a>').join('') + '</p>';
+    c.uniteler.forEach(u => {
+      h += '<h3>' + kacis(u.ad) + '</h3><ol>' + u.konular.map(t => '<li>' + kacis(t) + '</li>').join('') +
+        '</ol><p class="mini"><a target="_blank" rel="noopener" href="' + kacis(u.kaynak) + '">Ünite kaynağı</a>' + (u.saat ? ' · ' + u.saat + ' ders saati' : '') + '</p>';
+    });
+    h += '</details>';
+  });
+  return h;
+}
+
+function varsayilanKonuPlaniniHazirla(sube, alan, sinif = 12) {
   if (!sube) return { hata: 'Şube seçilmedi.' };
   D.konuPlani = D.konuPlani || {};
   if (Object.prototype.hasOwnProperty.call(D.konuPlani, sube)) return { olustu: false };
-  const kaynak = VARSAYILAN_KONU_PLANI[alan];
+  const kaynak = sinifaGoreKonuPlani(sinif, alan);
   if (!kaynak) return { hata: 'Bu şubenin alanı belirlenemedi; konu planı oluşturulamadı.' };
   D.konuPlani[sube] = JSON.parse(JSON.stringify(kaynak));
   return { olustu: true };
@@ -3480,7 +3645,7 @@ function gorunumKonular() {
   for (let i = 0; i < konuSayisi(); i++) { const k = konuAl(i); if (k && !k[6]) hepsi.push({ k: k, i: i, kendi: i >= KATALOG.length }); }
   const satirlar = hepsi.filter(x => x.k[0] === secDers).sort((a, b) => (b.kendi ? 1 : 0) - (a.kendi ? 1 : 0));
   let h = '<div class="baslik"><h1>Konular</h1><p>İşlediğiniz konunun tarihini girin; o konu tüm sınıfın planına girer. ' +
-    'ÖSYM 2026 kazanım listesinden çıkarılmış ' + KATALOG.length + ' konu' +
+    '12. sınıfların TYT/AYT tekrarı için eski program kataloğu: ' + KATALOG.length + ' konu' +
     ((D.ekKonular || []).length ? ' + kendi eklediğiniz ' + D.ekKonular.filter(k => !k[6]).length + ' konu' : '') + '.</p></div>' +
     '<div class="arac"><select id="dersSec">' + DERS.map((d, i) =>
       '<option value="' + i + '"' + (i === secDers ? ' selected' : '') + '>' + d + '</option>').join('') + '</select>' +
@@ -3494,12 +3659,12 @@ function gorunumKonular() {
     const sayisalKayitlar = kayitlar.filter(l => sonucYuzdesi(l) !== null);
     const ort = sayisalKayitlar.length ? Math.round(sayisalKayitlar.reduce((a, l) => a + sonucYuzdesi(l), 0) / sayisalKayitlar.length) : null;
     h += '<tr><td><input type="checkbox" class="konuSec" data-ki="' + x.i + '"></td>' +
-      '<td class="mini">' + kacis(x.k[2]) + '</td><td>' +
+      '<td class="mini">' + kacis(mufredatKatalogUnitesi(x.k)) + '</td><td>' +
       (x.kendi ? '<input class="ekKonuAd" data-ki="' + x.i + '" value="' + kacis(x.k[3]) + '" style="width:100%">' +
                  '<button class="ekKonuSil dugme" data-ki="' + x.i + '" style="padding:2px 7px;margin-top:4px">kaldır</button>'
                : kacis(x.k[3])) + '</td>' +
       '<td class="sayisal">' + (x.k[1] || '') + '</td>' +
-      '<td><span class="rozet">' + (x.k[4] ? 'AYT' : 'TYT') + '</span></td>' +
+      '<td><span class="rozet">' + (mufredatKonuBilgisi(x.k[0], x.k[3]) ? 'Okul' : x.k[4] ? 'AYT' : 'TYT') + '</span></td>' +
       '<td><input type="date" class="isleniTarih" data-ki="' + x.i + '" value="' + (t ? isoDan(t) : '') + '"></td>' +
       '<td class="sayisal">' + (ort === null ? '—' : '%' + ort) + '</td></tr>';
   });
@@ -3518,6 +3683,12 @@ function gorunumKonuPlani() {
   h += '<div class="arac">' + (ogrenciMi() ? '' :
     '<select id="subeSec">' + subeler.map(s2 => '<option' + (s2 === sube ? ' selected' : '') + '>' + kacis(s2) + '</option>').join('') + '</select>') +
     '<span class="mini">' + kacis(sube) + ' — alanına göre gelen varsayılan plan; okulunuzun hızına göre düzenleyin.</span></div>';
+  h += '<p class="mini">' + subeSinifi(sube) + '. sınıf · 2026–2027 · <button class="dugme mini" data-sekme="mufredat">Müfredat ve kaynaklar</button></p>';
+  if (subeSinifi(sube) < 12) h += '<p>36 haftalık öneri; tatiller ve okulun ilerleyişine göre düzenleyin. Alan seçimi ortak okul konularını gizlemez.</p><label>Bu şubenin plan başlangıcı <input id="subeMufredatBaslangic" type="date" value="' + isoDan(subePlanBaslangici(sube)) + '"></label>';
+  else {
+    const eksik = yksPlanEksikleri(sube);
+    if (eksik.length) h += '<div class="uyari-serit"><b>Kaynak kontrolü: eksik başlıklar</b><p>' + kacis(eksik.map(x => x.ders + ': ' + x.konular.length + ' konu').join(' · ')) + '</p><details><summary>Eklenecek konuları göster</summary>' + eksik.map(x => '<p><b>' + kacis(x.ders) + '</b>: ' + x.konular.map(kacis).join(' · ') + '</p>').join('') + '</details><p>Yalnızca eksik dersler ve Süper İletkenler başlığı gelecek haftalara eklenir. Mevcut konu sırası, sonuçlar ve teslim edilmiş planlar korunur.</p><button class="dugme" id="yksEksikleriEkle">Gösterilen eksikleri gelecek haftalara ekle</button></div>';
+  }
   const dersler = konuPlaniDersleri(sube);
   if (!dersler.length) return h + '<div class="uyari-serit">Bu şube için henüz konu planı yok.</div>';
   dersler.forEach(anahtar => {
@@ -3563,11 +3734,13 @@ function gorunumOgrenciler() {
         '<input id="ySubeYeni" placeholder="şube kodu" style="width:110px;display:none">'
       : '<select id="ySube" style="display:none"><option value="__yeni"></option></select>' +
         '<input id="ySubeYeni" placeholder="şube kodu (örn. 12-A)" style="width:150px">') +
+    '<label>Sınıf <select id="ySinif">' + sinifSecenekleri(subeSinifi(subeListesi()[0])) + '</select></label>' +
+    '<label>9–11 plan başlangıcı <input id="yMufredatBaslangic" type="date" value="' + isoDan(pazartesi(bugunNo())) + '"></label>' +
     '<select id="yAlan">' + ['SAY', 'EA', 'SÖZ', 'DİL'].map(a => '<option>' + a + '</option>').join('') + '</select>' +
     '<span class="mini">günde</span><input id="yKap" type="number" min="1" max="12" value="6" style="width:64px">' +
     '<span class="mini">test</span>' +
     '<button class="dugme birincil" id="ogrEkle">Öğrenci ekle</button></div>' +
-    '<div class="kart sarma"><table><thead><tr><th>Kullanıyor</th><th>No</th><th>Ad Soyad</th><th>Şube</th><th>Alan</th>' +
+    '<div class="kart sarma"><table><thead><tr><th>Kullanıyor</th><th>No</th><th>Ad Soyad</th><th>Şube</th><th>Sınıf</th><th>Alan</th>' +
     '<th>Günde kaç test</th><th>İzinli günler (tıkla)</th><th>Hedef tutma</th><th>Başlangıç hafızası</th><th>Çalışma ağırlığı</th><th title="Telafide bir güne en fazla kaç konu anlatımı eklenir">Telafi/gün</th><th class="sayisal">Çözülen</th>' +
     '<th class="sayisal">Ortalama</th><th class="sayisal">Bu hafta</th><th>Son çıktı</th><th></th></tr></thead><tbody>';
   const hb = haftaBasi();
@@ -3584,6 +3757,7 @@ function gorunumOgrenciler() {
         '" style="width:80px"></td>' +
       '<td><input class="oAd" data-i="' + i + '" value="' + kacis(o.ad) + '" style="min-width:190px;width:100%"></td>' +
       '<td><input class="oSube" data-i="' + i + '" value="' + kacis(o.sube) + '" style="width:72px"></td>' +
+      '<td>' + ogrenciSinifi(o) + '. sınıf</td>' +
       '<td><select class="oAlan" data-i="' + i + '">' + ['SAY', 'EA', 'SÖZ', 'DİL'].map(a =>
         '<option' + (a === o.alan ? ' selected' : '') + '>' + a + '</option>').join('') + '</select></td>' +
       '<td><input type="number" min="1" max="12" value="' + (o.kap || 6) + '" class="oKap" data-i="' + i + '" style="width:64px"></td>' +
@@ -3705,14 +3879,14 @@ function haftaHaritaDurumu(si, hb, baslangicHb, bugunHb) {
 // gün" için kullanılamaz (haftalık düzenli çıktı alan bir öğrencide sürekli "bu hafta
 // katıldı" gösterirdi). o.ilkAktif bunun için ayrı tutulur, yalnızca İLK aktifleşmede
 // yazılır. Yoksa (eski veri / hiç aktifleşmemiş) eski davranış korunur.
-const haftaBaslangici = o => o.ilkAktif ? Math.max(pazartesi(gunNo(D.ayar.donemBasi)), pazartesi(o.ilkAktif))
-                                        : pazartesi(gunNo(D.ayar.donemBasi));
+const haftaBaslangici = o => o.ilkAktif ? Math.max(subePlanBaslangici(o.sube), pazartesi(o.ilkAktif))
+                                        : subePlanBaslangici(o.sube);
 // "sonuç yok, karar bekliyor" (atlandi) durumundaki haftaları listeler — Haftalar
 // Haritası'na hiç gitmeden, haftalık plan ekranından da fark edilsin diye.
 function atlananHaftalar(si) {
   const o = D.ogr[si];
   if (!o || !D.ayar.donemBasi) return [];
-  const donemHb = pazartesi(gunNo(D.ayar.donemBasi));
+  const donemHb = subePlanBaslangici(o.sube);
   const sinavHb = pazartesi(gunNo(D.ayar.sinav));
   const bugunHb = buHafta();
   if (donemHb > sinavHb) return [];
@@ -3727,7 +3901,7 @@ function atlananHaftalar(si) {
 function katilmadanOnceHaftaSayisi(si) {
   const o = D.ogr[si];
   if (!o || !D.ayar.donemBasi || o.telafiGecmisYapildi) return 0;
-  const donemHb = pazartesi(gunNo(D.ayar.donemBasi));
+  const donemHb = subePlanBaslangici(o.sube);
   return Math.max(0, Math.round((haftaBaslangici(o) - donemHb) / 7));
 }
 // Öğrenci dönem başından SONRA katıldıysa, arada kalan haftaların konu planındaki
@@ -3743,7 +3917,7 @@ function katilmadanOnceIsle(si) {
   const o = D.ogr[si];
   const n = katilmadanOnceHaftaSayisi(si);
   if (!n) return { hafta: 0, konu: 0 };
-  const donemHb = pazartesi(gunNo(D.ayar.donemBasi));
+  const donemHb = subePlanBaslangici(o.sube);
   const baslangicHb = haftaBaslangici(o);
   D.ogrIslenis = D.ogrIslenis || {};
   D.ogrIslenis[si] = D.ogrIslenis[si] || {};
@@ -3755,7 +3929,7 @@ function katilmadanOnceIsle(si) {
     if (!yer.length) continue;
     let eklendi = 0;
     yer.forEach(y => {
-      const ki = kullaniciKonusu(y.dersIdx, y.ad, sayac, y.dersAd);
+      const ki = kullaniciKonusu(y.dersIdx, y.ad, sayac, y.dersAd, ogrenciSinifi(o));
       D.konuDers[ki] = D.konuDers[ki] || y.dersAd;
       if (D.ogrIslenis[si][ki] === undefined) { D.ogrIslenis[si][ki] = hb + y.gi; eklendi++; }
     });
@@ -3863,7 +4037,7 @@ function ogrenciOtomasyonUygula() {
 }
 
 function haritaHaftalari(si) {
-  const sinav=gunNo(D.ayar.sinav), bas=pazartesi(gunNo(D.ayar.donemBasi)), haftalar=new Set();
+  const sinav=gunNo(D.ayar.sinav), bas=subePlanBaslangici(D.ogr[si]?.sube), haftalar=new Set();
   if(!Number.isFinite(bas)||!Number.isFinite(sinav)||bas>sinav)return [];
   for(let h=bas;h<=sinav;h=sonrakiHafta(si,h))haftalar.add(h);
   Object.entries(D.elle||{}).forEach(([k,v])=>{
@@ -3884,7 +4058,7 @@ function gorunumHaritasi() {
       (D.ogr.length ? 'Önce bir öğrenci seçin.' : 'Önce bir öğrenci ekleyin.') + '</div>';
   }
   const o = D.ogr[si];
-  const donemHb = pazartesi(gunNo(D.ayar.donemBasi));
+  const donemHb = subePlanBaslangici(o.sube);
   const sinavG = gunNo(D.ayar.sinav);
   const sinavHb = pazartesi(sinavG);
   const bugunHb = buHafta();
@@ -3896,7 +4070,7 @@ function gorunumHaritasi() {
   if (donemHb > sinavHb) return h + '<div class="kart">Dönem başı YKS tarihinden sonra görünüyor, Ayarlar’dan kontrol edin.</div>';
   h += '<div class="haritaIzgara">';
   for (const hb of haritaHaftalari(si)) {
-    const no = haftaNo(hb);
+    const no = Math.floor((hb - subePlanBaslangici(o.sube)) / 7) + 1;
     const isYks = sinavG >= hb && sinavG <= hb + 6;
     const { durum, etiket } = haftaHaritaDurumu(si, hb, baslangicHb, bugunHb);
     const acilir = durum === 'atlandi';
@@ -3946,7 +4120,7 @@ function gorunumProgram() {
   const prog = pk.prog;
   const haftaSayisi = planHaftaSayisi(sube);
   const hafta = planHaftasi(sube, hb);
-  const takvim = haftaNo(hb);
+  const takvim = Math.floor((hb - subePlanBaslangici(sube)) / 7) + 1;
   const plan = ((D.konuPlani || {})[sube] || [])[hafta - 1] || {};
   const secenek = ders => '<option value=""></option>' + okulDersAdlari().filter(d => d !== 'MATEMATİK').map(d =>
     '<option' + (d === ders ? ' selected' : '') + '>' + d + '</option>').join('');
@@ -4692,12 +4866,13 @@ function sonucPlanDersi(si, dersIdx, ad) {
   if (aday.size > 1) throw new Error('Eski sonuç paketindeki konu birden fazla derste bulunuyor. Güncel cihazdan sonuçları yeniden eşitleyin.');
   return aday.size === 1 ? Array.from(aday.values())[0] : null;
 }
-function konuBulTamEslesme(dersIdx, ad, dersAd) {
+function konuBulTamEslesme(dersIdx, ad, dersAd, sinif) {
   const t = konuAdiTamAnahtari(ad);
   let etiketsiz = -1;
   for (let i = 0; i < konuSayisi(); i++) {
     const k = konuAl(i);
     if (!k || k[6] || k[0] !== dersIdx || konuAdiTamAnahtari(k[3]) !== t) continue;
+    if (sinif < 12 && (i < KATALOG.length || k[1] !== sinif)) continue;
     if (!dersAd || dersKimligi(konuDersAdi(i)) === dersKimligi(dersAd)) return i;
     if (!(D.konuDers || {})[i] && etiketsiz < 0) etiketsiz = i;
   }
@@ -4705,11 +4880,12 @@ function konuBulTamEslesme(dersIdx, ad, dersAd) {
   // already labeled TYT/AYT topic is never relabeled to satisfy another track.
   return etiketsiz;
 }
-function kullaniciKonusuTam(dersIdx, ad, dersAd) {
+function kullaniciKonusuTam(dersIdx, ad, dersAd, sinif = 12) {
   D.ekKonular = D.ekKonular || [];
-  const v = konuBulTamEslesme(dersIdx, ad, dersAd);
+  const v = konuBulTamEslesme(dersIdx, ad, dersAd, sinif);
   if (v >= 0) return v;
-  D.ekKonular.push([dersIdx, 12, 'Sonuç paketinden', ad, 0, '']);
+  const mk = mufredatKonuBilgisi(dersIdx, ad);
+  D.ekKonular.push([dersIdx, mk ? mk.sinif : sinif, mk ? mk.unite : 'Sonuç paketinden', ad, 0, '']);
   const ki = KATALOG.length + D.ekKonular.length - 1;
   if (dersAd) { D.konuDers = D.konuDers || {}; D.konuDers[ki] = dersAd; }
   return ki;
@@ -4819,7 +4995,7 @@ function sonucPaketiUygula(pk, hedefSi) {
       throw new Error('Sonuç paketinde özel konu bilgisi eksik' + (baglam ? ': ' + baglam : '') + '.');
     const konuBilgisi = sonucKonuBilgisiDogrula(bilgi[0], bilgi[1]);
     const dersAd = bilgi[2] || sonucPlanDersi(si, konuBilgisi.dersIdx, konuBilgisi.ad);
-    let mevcut = konuBulTamEslesme(konuBilgisi.dersIdx, konuBilgisi.ad, dersAd);
+    let mevcut = konuBulTamEslesme(konuBilgisi.dersIdx, konuBilgisi.ad, dersAd, ogrenciSinifi(D.ogr[si]));
     if (mevcut >= 0 && dersAd && Object.values(cozum).some(c => c.ki === mevcut &&
         dersKimligi(c.dersAd) !== dersKimligi(dersAd))) mevcut = -1;
     return (cozum[senderKi] = mevcut >= 0 ? { tur: 'mevcut', ki: mevcut, dersAd: dersAd || konuDersAdi(mevcut) } :
@@ -4851,7 +5027,7 @@ function sonucPaketiUygula(pk, hedefSi) {
   // 2) Yeni konuları oluştur — yalnızca yukarıdaki doğrulama tamamen bittiyse buraya gelinir.
   Object.keys(cozum).forEach(k => {
     const c = cozum[k];
-    if (c.tur === 'yeni') { c.ki = kullaniciKonusuTam(c.dersIdx, c.ad, c.dersAd); c.tur = 'mevcut'; }
+    if (c.tur === 'yeni') { c.ki = kullaniciKonusuTam(c.dersIdx, c.ad, c.dersAd, ogrenciSinifi(D.ogr[si])); c.tur = 'mevcut'; }
     if (c.dersAd && !(D.konuDers || {})[c.ki]) { D.konuDers = D.konuDers || {}; D.konuDers[c.ki] = c.dersAd; }
   });
 
@@ -4945,7 +5121,7 @@ function ogrenciCalismasiniUygula(calisma, si) {
       const ders = (y.konuDers || {})[ki];
       if (ki < KATALOG.length && !ders) return (harita[ki] = ki);
       sonucKonuBilgisiDogrula(k[0], k[3]);
-      return (harita[ki] = kullaniciKonusuTam(k[0], k[3], ders || KISA[k[0]]));
+      return (harita[ki] = kullaniciKonusuTam(k[0], k[3], ders || KISA[k[0]], ogrenciSinifi(o)));
     };
     D.elle = D.elle || {};
     Object.entries(y.elle || {}).forEach(([anahtar, ov]) => {
@@ -6299,7 +6475,7 @@ function okulProgramlariniGuncelle() {
   let degisti = false;
   const subeler = new Set([...D.ogr.filter(o=>!o.silindi).map(o=>o.sube), ...Object.keys(D.dersProgrami || {})]);
   subeler.forEach(sube => {
-    if (!OKUL_SUBE_PROGRAMLARI[sube]) return;
+    if (!OKUL_SUBE_PROGRAMLARI[sube] || subeSinifi(sube) !== 12) return;
     D.programHafta = D.programHafta || {};
     const h = D.programHafta[sube] = D.programHafta[sube] || {};
     // Install the supplied revision once, even if the old timetable was already
@@ -6520,8 +6696,8 @@ function haftaNo(hb) {
   return Math.floor((hb - d) / 7) + 1;
 }
 // haftaNo'nun tersi: 1 tabanlı bir plan haftası numarasından o haftanın takvim Pazartesi'sini üretir
-function haftaTakvimi(hafta) {
-  const d = pazartesi(D.ayar.donemBasi ? gunNo(D.ayar.donemBasi) : gunNo(D.ayar.planBasi));
+function haftaTakvimi(hafta, sube) {
+  const d = subePlanBaslangici(sube);
   return d + (hafta - 1) * 7;
 }
 function planHaftaSayisi(sube) { return (((D.konuPlani || {})[sube]) || []).length; }
@@ -6551,7 +6727,7 @@ function programYaz(sube, hb, tablo) {
 // takvim haftasına karşılık gelen plan haftası (plan dışına taşmaz)
 function planHaftasi(sube, hb) {
   const n = planHaftaSayisi(sube) || 1;
-  return Math.min(n, Math.max(1, haftaNo(hb)));
+  return Math.min(n, Math.max(1, Math.floor((hb - subePlanBaslangici(sube)) / 7) + 1));
 }
 // donemBasi ve donemElle'yi HER ZAMAN birlikte yazan tek kapı. Bu ikisi ayrı ayrı
 // güncellenirse (yeni bir çağrı noktası elleMi'yi unutursa) donemHizala() az sonra
@@ -6694,16 +6870,19 @@ function konuBul(dersIdx, ad) {
   }
   return ayniDers >= 0 ? ayniDers : baskaDers;
 }
-function kullaniciKonusu(dersIdx, ad, sayac, dersAd) {
+function kullaniciKonusu(dersIdx, ad, sayac, dersAd, sinif = 12) {
   D.ekKonular = D.ekKonular || [];
-  let v = dersAd ? konuBulTamEslesme(dersIdx, ad, dersAd) : konuBul(dersIdx, ad);
-  if (v < 0 && dersAd) {
+  const mufredat = mufredatKonuBilgisi(dersIdx, ad);
+  let v = dersAd || mufredat || sinif < 12 ? konuBulTamEslesme(dersIdx, ad, dersAd, sinif) : konuBul(dersIdx, ad);
+  if (sinif < 12 && v >= 0 && (v < KATALOG.length || konuAl(v)[1] !== sinif)) v = -1;
+  if (v < 0 && dersAd && !mufredat && sinif === 12) {
     const aday = konuBul(dersIdx, ad);
     // An unlabeled catalog topic may acquire its first lesson identity once.
     if (aday >= 0 && konuAl(aday)[0] === dersIdx && !(D.konuDers || {})[aday]) v = aday;
   }
   if (v >= 0) { if (sayac) sayac.bulundu++; return v; }
-  D.ekKonular.push([dersIdx, 12, 'Ders programından', ad, 0, '']);
+  const mk = mufredatKonuBilgisi(dersIdx, ad);
+  D.ekKonular.push([dersIdx, mk ? mk.sinif : sinif, mk ? mk.unite : 'Ders programından', ad, 0, '']);
   if (sayac) sayac.yeni++;
   return KATALOG.length + D.ekKonular.length - 1;
 }
@@ -6740,6 +6919,7 @@ function programUygula(hb, tekSube) {
   D.konuKaynak = D.konuKaynak || {};
   D.konuDers = D.konuDers || {};
   Object.keys(D.dersProgrami || {}).filter(s => !tekSube || s === tekSube).forEach(sube => {
+    if (hb < subePlanBaslangici(sube)) return;
     const hafta = planHaftasi(sube, hb);
     haftaGosterge = hafta;
     const yer = haftaYerlesim(sube, hafta, hb);
@@ -6747,7 +6927,7 @@ function programUygula(hb, tekSube) {
     D.subeIslenis[sube] = D.subeIslenis[sube] || {};
     let sayi = 0;
     yer.forEach(y => {
-      const ki = kullaniciKonusu(y.dersIdx, y.ad, sayac, y.dersAd);
+      const ki = kullaniciKonusu(y.dersIdx, y.ad, sayac, y.dersAd, subeSinifi(sube));
       D.konuKaynak[ki] = iskelet(y.dersAd);
       D.konuDers[ki] = y.dersAd;
       if (D.subeIslenis[sube][ki] === undefined) { D.subeIslenis[sube][ki] = hb + y.gi; sayi++; }
@@ -6813,7 +6993,7 @@ function ogrenciIslenisTarihi(si, ki) {
 }
 
 function ogrenciPlanKonusuKimligi(si, sube, anahtar, ad, hedefHafta) {
-  const aranan = iskelet(ad), hedef = haftaTakvimi(hedefHafta), ids = {};
+  const aranan = iskelet(ad), hedef = haftaTakvimi(hedefHafta, sube), ids = {};
   const ekle = m => Object.keys(m || {}).forEach(k => { ids[k] = 1; });
   ekle((D.ogrIslenis || {})[si]);
   ekle((D.subeIslenis || {})[sube]);
@@ -6840,8 +7020,8 @@ function dersKonuKonumu(si, anahtar, ki) {
   const aday = dizi.map((x, i) => ({ x: x, i: i })).filter(a => iskelet(a.x.ad) === ad);
   if (!aday.length) return null;
   aday.sort((a, b) => !Number.isInteger(tarih) ? a.i - b.i :
-    Math.abs(haftaTakvimi(a.x.hafta) - pazartesi(tarih)) -
-    Math.abs(haftaTakvimi(b.x.hafta) - pazartesi(tarih)));
+    Math.abs(haftaTakvimi(a.x.hafta, o.sube) - pazartesi(tarih)) -
+    Math.abs(haftaTakvimi(b.x.hafta, o.sube) - pazartesi(tarih)));
   return { dizi: dizi, index: aday[0].i };
 }
 
@@ -6976,7 +7156,7 @@ function konuGuneAta(sube, hb, gi, dersAdi, ad) {
   D.subeIslenis[sube] = D.subeIslenis[sube] || {};
   D.konuKaynak = D.konuKaynak || {};
   D.konuDers = D.konuDers || {};
-  const ki = kullaniciKonusu(dersEsle(dersAdi), ad, null, dersGosterAdi(sube, dersAdi));
+  const ki = kullaniciKonusu(dersEsle(dersAdi), ad, null, dersGosterAdi(sube, dersAdi), subeSinifi(sube));
   D.konuKaynak[ki] = iskelet(dersAdi);
   D.konuDers[ki] = dersGosterAdi(sube, dersAdi);
   D.subeIslenis[sube][ki] = hb + gi;
@@ -7243,10 +7423,10 @@ function bilgiVer(metin) {
 }
 
 // ---------------------------------------------------------------- çizim + olaylar
-const SEKME_REHBER = [['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'],
+const SEKME_REHBER = [['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
                   ['ogrenciler', 'Öğrenciler'], ['konuplani', 'Konu Planı'], ['harita', 'Haftalar Haritası'],
                   ['kurtarma', 'Geçmiş plan kurtar'], ['anlasma', 'Anlaşma ve rutin'], ['rapor', 'Karne'], ['ayarlar', 'Ayarlar']];
-const SEKME_OGRENCI = [['plan', 'Planım'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['rapor', 'Karnem'], ['ayarlar', 'Ayarlar']];
+const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['rapor', 'Karnem'], ['ayarlar', 'Ayarlar']];
 const SEKMELER = () => ogrenciMi() ? SEKME_OGRENCI : SEKME_REHBER;
 
 function rayCiz() {
@@ -7327,7 +7507,7 @@ function cizIc() {
   if (canli.length && (EK.ogr === undefined || !D.ogr[EK.ogr] || D.ogr[EK.ogr].silindi)) EK.ogr = canli[0];
   rayCiz();
   const ana = document.getElementById('ana');
-  if (!canli.length && EK.sekme !== 'ayarlar' && EK.sekme !== 'ogrenciler') {
+  if (!canli.length && EK.sekme !== 'ayarlar' && EK.sekme !== 'ogrenciler' && EK.sekme !== 'mufredat') {
     ana.innerHTML = '<div class="kurulum"><div class="kur-kutu" style="text-align:' + (ogrenciMi() ? 'left' : 'center') + '">' +
       '<h1 style="text-align:center">' + (ogrenciMi() ? 'Bilgilerini gir, başlayalım' : 'Henüz öğrenci yok') + '</h1>' +
       '<p class="kur-oz" style="text-align:center">' + (ogrenciMi()
@@ -7336,14 +7516,16 @@ function cizIc() {
       (ogrenciMi()
         ? '<div style="max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:10px">' +
           '<label class="etiket">Adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Ad Soyad"></label>' +
-          '<label class="etiket">Sınıfın<br><select id="kOgrSube" style="width:100%;margin-top:4px">' +
+          '<label class="etiket">Sınıf düzeyin<br><select id="kOgrSinif">' + sinifSecenekleri(12) + '</select></label>' +
+          '<label class="etiket">9–11 plan başlangıcı<br><input type="date" id="kMufredatBaslangic" value="' + isoDan(pazartesi(bugunNo())) + '"></label>' +
+          '<label class="etiket">12. sınıf hazır şuben<br><select id="kOgrSube" style="width:100%;margin-top:4px">' +
           Object.keys(OKUL_SUBE_PROGRAMLARI).map(su => '<option value="' + kacis(su) + '">' + kacis(su) +
             ' (' + (OKUL_SUBE_PROGRAMLARI[su].alan === 'EA' ? 'Eşit Ağırlık' : 'Sayısal') + ')</option>').join('') +
           '<option value="">Sınıfım listede yok</option></select>' +
           '<span class="mini">Sınıfını seçersen ders programın ve alanın hazır gelir; ders programını ayrıca ' +
           'yüklemen gerekmez.</span></label>' +
           '<label class="etiket">Alanın<br><select id="kOgrAlan" style="width:100%;margin-top:4px">' +
-          '<option value="SAY">SAY (Sayısal / MF)</option><option value="EA">EA (Eşit Ağırlık / TM)</option></select>' +
+          '<option value="SAY">SAY (Sayısal / MF)</option><option value="EA">EA (Eşit Ağırlık / TM)</option><option value="SÖZ">SÖZ (Sözel)</option><option value="DİL">DİL (Yalnızca TYT planı)</option></select>' +
           '<span class="mini">Sınıfını seçtiysen kendiliğinden ayarlanır.</span></label>' +
           '<button class="dugme birincil" id="kOgrBaslat" style="margin-top:6px">Başla</button>' +
           '<span class="mini">Ders yılı başlangıcı: ' + ggyy(gunNo(DONEM_BASI_SABIT)) + ' (okul için sabit).</span>' +
@@ -7355,7 +7537,7 @@ function cizIc() {
       '</div></div>';
     window.scrollTo(0, 0); return;
   }
-  ana.innerHTML = EK.sekme === 'plan' ? gorunumPlan() :
+  ana.innerHTML = EK.sekme === 'mufredat' ? gorunumMufredat() : EK.sekme === 'plan' ? gorunumPlan() :
     EK.sekme === 'kurtarma' ? gorunumPlanKurtarma() :
     EK.sekme === 'giris' ? gorunumGiris() :
     EK.sekme === 'konular' ? gorunumKonular() :
@@ -7631,14 +7813,18 @@ document.addEventListener('click', async ev => {
     const ad = (document.getElementById('kOgrAd').value || '').trim();
     if (!ad) { alert('Önce adını yaz.'); return; }
     const subeSecim = ((document.getElementById('kOgrSube') || {}).value || '').trim();
-    const hazir = OKUL_SUBE_PROGRAMLARI[subeSecim];          // seçilen şubenin hazır ders programı
+    const sinif = +(document.getElementById('kOgrSinif')?.value || 12);
+    if (![9,10,11,12].includes(sinif)) { alert('Geçerli bir sınıf seç.'); return; }
+    const bas = document.getElementById('kMufredatBaslangic')?.value || isoDan(pazartesi(bugunNo()));
+    if (sinif < 12 && !isoTarihGecerli(bas)) { alert('Geçerli bir başlangıç tarihi seç.'); return; }
+    const hazir = sinif === 12 && OKUL_SUBE_PROGRAMLARI[subeSecim];          // seçilen şubenin hazır ders programı
     const sube = hazir ? subeSecim : 'benim';
     const alan = hazir ? hazir.alan : (document.getElementById('kOgrAlan').value || 'SAY');
     D.rol = 'ogrenci';
-    D.ogr = [{ no: 1, ad: ad, alan: alan, sube: sube, kap: 6, off: [6], hedef: null, aktif: true,
+    D.ogr = [{ no: 1, ad: ad, alan: alan, sube: sube, sinif: sinif, ...(sinif < 12 ? { mufredatBaslangic: bas } : {}), kap: 6, off: [6], hedef: null, aktif: true,
                ilkAktif: bugunNo(), maddeler: [], rutin: { once: '', ara: '', sonra: '' } }];
     D.konuPlani = D.konuPlani || {};
-    D.konuPlani[sube] = JSON.parse(JSON.stringify(VARSAYILAN_KONU_PLANI[alan] || VARSAYILAN_KONU_PLANI.SAY));
+    D.konuPlani[sube] = sinifaGoreKonuPlani(sinif, alan);
     // Dönem başı okul için sabit; öğrenciye sorulmaz.
     donemBasiniAyarla(isoDan(pazartesi(gunNo(DONEM_BASI_SABIT))), true);
     // Hazır program dönem başı haftasına yazılır: programAl() sonraki haftalarda da bunu bulur.
@@ -8039,7 +8225,7 @@ document.addEventListener('click', async ev => {
     }
     return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#yksEksikleriEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     const taslak = sonucTaslaklariniAl();
@@ -8232,6 +8418,11 @@ document.addEventListener('click', async ev => {
     ciz();
     return;
   }
+  if (t.id === 'yksEksikleriEkle') {
+    const n = yksEksikleriniEkle(EK.sube, haftaBasi());
+    if (n) { programDegistiTetikle(EK.sube); await kaydet(true); }
+    ciz(); bilgiVer(n + ' eksik konu gelecek haftalara eklendi.'); return;
+  }
   if (t.id === 'ogrEkle') {
     const ad = (document.getElementById('yAd').value || '').trim();
     if (!ad) { alert('Önce öğrencinin adını yazın.'); return; }
@@ -8246,13 +8437,19 @@ document.addEventListener('click', async ev => {
     if (!Number.isInteger(no) || no < 1 || no > 9999) { alert('Öğrenci numarası 1–9999 arasında tam sayı olmalı.'); return; }
     if (D.ogr.some(o => !o.silindi && String(o.no) === String(no))) { alert('Bu öğrenci numarası zaten kullanılıyor.'); return; }
     const alan = document.getElementById('yAlan').value;
+    const sinif = +(document.getElementById('ySinif')?.value || 12);
+    const hata = subeSinifHatasi(sube, sinif);
+    if (hata) { alert(hata); return; }
+    const mevcut = D.ogr.find(o => !o.silindi && o.sube === sube);
+    const bas = mevcut?.mufredatBaslangic || document.getElementById('yMufredatBaslangic')?.value || isoDan(pazartesi(bugunNo()));
+    if (sinif < 12 && !isoTarihGecerli(bas)) { alert('Geçerli bir plan başlangıcı seçin.'); return; }
     D.ogr.push({
-      no: no, ad: ad, alan: alan, sube: sube,
+      no: no, ad: ad, alan: alan, sube: sube, sinif: sinif, ...(sinif < 12 ? { mufredatBaslangic: bas } : {}),
       kap: Math.max(1, Math.min(12, +document.getElementById('yKap').value || 6)),
       off: [6], hedef: null, aktif: false, cikti: null,
       maddeler: [], rutin: { once: '', ara: '', sonra: '' }
     });
-    varsayilanKonuPlaniniHazirla(sube, alan);
+    varsayilanKonuPlaniniHazirla(sube, alan, sinif);
     await kaydet(true); ciz();
     bilgiVer(ad + ' listeye eklendi (' + sube + '). Çıktı verdiğinizde “kullanıyor” olarak işaretlenecek.');
     return;
@@ -8646,6 +8843,17 @@ document.addEventListener('change', async ev => {
   }
   // Öğrenci kurulumunda sınıf seçilince alan kendiliğinden ayarlansın — ekranda görünen
   // değer ile kurulumda kullanılacak değer birbirinden ayrılmasın.
+  if (el.id === 'subeMufredatBaslangic') {
+    if (!isoTarihGecerli(el.value)) { alert('Geçerli bir başlangıç tarihi seçin.'); ciz(); return; }
+    D.ogr.filter(o => !o.silindi && o.sube === EK.sube && ogrenciSinifi(o) < 12).forEach(o => { o.mufredatBaslangic = isoDan(pazartesi(gunNo(el.value))); });
+    programDegistiTetikle(EK.sube); await kaydet(true); ciz(); return;
+  }
+  if (el.id === 'mufredatSinif') { EK.mufredatSinif = +el.value; ciz(); return; }
+  if (el.id === 'kOgrSinif') {
+    const su = document.getElementById('kOgrSube');
+    if (su) { su.disabled = +el.value !== 12; if (su.disabled) su.value = ''; }
+    return;
+  }
   if (el.id === 'kOgrSube') {
     const bilgi = OKUL_SUBE_PROGRAMLARI[el.value];
     const alanEl = document.getElementById('kOgrAlan');
@@ -8725,8 +8933,18 @@ document.addEventListener('change', async ev => {
     }
     D.ogr[i].no = no; await kaydet(true); return;
   }
-  if (el.classList.contains('oSube')) { D.ogr[+el.dataset.i].sube = el.value.trim() || D.ogr[+el.dataset.i].sube; await kaydet(true); ciz(); return; }
+  if (el.classList.contains('oSube')) {
+    const i = +el.dataset.i, o = D.ogr[i], sube = el.value.trim();
+    const hata = subeSinifHatasi(sube, ogrenciSinifi(o), i);
+    if (hata) { alert(hata); ciz(); return; }
+    const mevcut = D.ogr.find((x,j) => j !== i && !x.silindi && x.sube === sube);
+    o.sube = sube; if (ogrenciSinifi(o) < 12 && mevcut?.mufredatBaslangic) o.mufredatBaslangic = mevcut.mufredatBaslangic;
+    varsayilanKonuPlaniniHazirla(sube, o.alan, ogrenciSinifi(o));
+    await kaydet(true); ciz(); return;
+  }
   if (el.id === 'ySube') {
+    const g = document.getElementById('ySinif');
+    if (g && el.value !== '__yeni') g.value = subeSinifi(el.value);
     const y = document.getElementById('ySubeYeni');
     if (y) { y.style.display = el.value === '__yeni' ? '' : 'none'; if (el.value === '__yeni') y.focus(); }
     return;
