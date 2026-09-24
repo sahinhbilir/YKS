@@ -757,6 +757,7 @@ function konuSinavTuru(ki) {
   const etiket = (ders + ' ' + ad).toLocaleUpperCase('tr').match(/\b(TYT|AYT|YDT)\b/g) || [];
   if (new Set(etiket).size === 1) return etiket[0];
   if (etiket.length) return '';
+  if (k[1] === 11 && dersKimligi(ders) === dersKimligi('Matematik')) return 'AYT';
   if (Number.isInteger(D.altKonu?.[ki]) && D.altKonu[ki] < ki) return konuSinavTuru(D.altKonu[ki]);
   if (dersKimligi(ders) === dersKimligi('Türkçe')) return 'TYT';
   if (dersKimligi(ders) === dersKimligi('Türk Dili ve Edebiyatı')) return 'AYT';
@@ -1351,8 +1352,11 @@ function ileriHaftaSayisi() {
 // sıkıştırılır; programUygula bir konuyu yalnızca BİR KEZ işler, o yüzden ilk sıkışan
 // hafta içeriği alır, aradaki haftalar boş kalır (dönem başına kadar) — bu düzeltme
 // doldurmayı hiçbir zaman dönem başından daha erken başlatmayarak bunu önler.
-function ileriDagitBaslangic() {
-  return Math.max(pazartesi(bugunNo()), pazartesi(gunNo(D.ayar.donemBasi)));
+function ileriDagitBaslangic(sube) {
+  const baslangiclar = sube ? [subePlanBaslangici(sube)] :
+    Object.keys(D.dersProgrami || {}).map(su => subePlanBaslangici(su));
+  const bas = baslangiclar.length ? Math.min(...baslangiclar) : pazartesi(gunNo(D.ayar.donemBasi));
+  return Math.max(pazartesi(bugunNo()), bas);
 }
 // YKS tarihine kadar kaç hafta kaldığı — "sınava kadar doldur" kısayolu için
 function haftaSinavaKadar() {
@@ -1367,7 +1371,7 @@ function programDegistiTetikle(sube) {
   try {
     if (Object.keys(D.konuPlani || {}).length && Object.keys(D.dersProgrami || {}).length) {
       const n = Math.max(1, ileriHaftaSayisi());
-      const hb0 = ileriDagitBaslangic();
+      const hb0 = ileriDagitBaslangic(sube);
       for (let k = 0; k < n; k++) dagitimiGeriAl(hb0 + k * 7, sube);
       ileriDagit(hb0, sube || null, n);
     }
@@ -2880,6 +2884,12 @@ function subePlanBaslangici(sube) {
     ? pazartesi(gunNo(o.mufredatBaslangic))
     : pazartesi(gunNo(D.ayar.donemBasi || D.ayar.planBasi));
 }
+function subePlanBaslangiciniAyarla(sube, tarih) {
+  const bas = isoDan(pazartesi(gunNo(tarih)));
+  if (subeSinifi(sube) < 12) {
+    D.ogr.filter(o => !o.silindi && o.sube === sube).forEach(o => { o.mufredatBaslangic = bas; });
+  } else donemBasiniAyarla(bas, true);
+}
 function mufredatKatalogUnitesi(k) {
   if (k[0] !== 2) return k[2];
   const ad = k[3];
@@ -2912,7 +2922,7 @@ function gorunumMufredat() {
   return h;
 }
 
-function varsayilanKonuPlaniniHazirla(sube, alan, sinif = 12) {
+function varsayilanKonuPlaniniHazirla(sube, alan, sinif = subeSinifi(sube)) {
   if (!sube) return { hata: 'Şube seçilmedi.' };
   D.konuPlani = D.konuPlani || {};
   if (Object.prototype.hasOwnProperty.call(D.konuPlani, sube)) return { olustu: false };
@@ -4135,12 +4145,14 @@ function gorunumProgram() {
   const hafta = planHaftasi(sube, hb);
   const takvim = Math.floor((hb - subePlanBaslangici(sube)) / 7) + 1;
   const plan = ((D.konuPlani || {})[sube] || [])[hafta - 1] || {};
-  const secenek = ders => '<option value=""></option>' + okulDersAdlari().filter(d => d !== 'MATEMATİK').map(d =>
-    '<option' + (d === ders ? ' selected' : '') + '>' + d + '</option>').join('');
+  const dersSecenekleri = [...new Set([...okulDersAdlari(), ...prog.gunler.flat().filter(Boolean)])];
+  const secenek = ders => '<option value=""></option>' + dersSecenekleri.map(d =>
+    '<option' + (d === ders ? ' selected' : '') + '>' + kacis(d) + '</option>').join('');
   let h = '<div class="baslik"><h1>Ders programı</h1><p>Soldaki liste okulun ders programı, altındaki etiketler o derste işlenecek konu. ' +
     'Konuyu değiştirdiğinizde o dersin kalan konuları da kayar; “dağıt” dediğinizde konular öğrencilerin planına ' +
     D.ayar.ilk + ' gün sonrası ilk test olacak şekilde düşer.</p></div>' +
     '<p class="mini">Bu ders programı seçilen haftadan itibaren sonraki haftalarda da kullanılır; yeni bir program kaydedene kadar devam eder.</p>' +
+    (subeSinifi(sube) === 11 ? '<p class="mini">11. sınıfta Matematik ve Matematik AYT, 11. sınıf konularını kullanır. Matematik TYT ayrı bir konu sırasıdır.</p>' : '') +
     '<div class="kart" style="padding:14px 16px;margin-bottom:14px' + (pk.yok ? ';border-color:var(--kritik)' : '') + '">' +
     '<div class="etiket">Programı AI ile aktar</div>' +
     (pk.yok ? '<p class="mini" style="color:var(--kritik);font-weight:600;margin:4px 0 8px">Önce ders programınızı ' +
@@ -4179,7 +4191,7 @@ function gorunumProgram() {
     'dağıtılacağını Ayarlar’dan değiştirebilirsiniz. Ders programı ve konu planı belli olduğu için gelecek ' +
     'haftalar şimdiden hesaplanabilir; işlenmiş konulara dokunulmaz.</span></div>' +
     '<div class="arac" style="margin-top:-4px">' +
-    '<span class="mini">Dönem başı</span><input type="date" id="donemBasi" value="' + D.ayar.donemBasi + '">' +
+    '<span class="mini">Dönem başı</span><input type="date" id="donemBasi" value="' + isoDan(subePlanBaslangici(sube)) + '">' +
     '<span class="mini">Sınıf bir hafta ara verdiyse (tatil, sınav vb.):</span>' +
     '<button class="dugme" data-kaydir="ileri">Planı 1 hafta ileri at</button></div>';
   h += pk.tam
@@ -6574,6 +6586,9 @@ function dersEsle(ad) {
   const t = String(ad || '').toLocaleUpperCase('tr').replace(/\s+/g, ' ').trim();
   for (const [okul, idx] of OKUL_DERS) if (t.indexOf(okul) >= 0) return idx;
   if (t.indexOf('FELSEFE') >= 0) return 8;
+  const kimlik = dersKimligi(ad).replace(/ (TYT|AYT|YDT)$/, '');
+  const okul = OKUL_DERS.find(([ad]) => dersKimligi(ad) === kimlik);
+  if (okul) return okul[1];
   const kisa = KISA.findIndex(d => dersKimligi(d) === dersKimligi(ad));
   return kisa;
 }
@@ -6602,6 +6617,7 @@ function dersProgramiPromptMetni() {
     'TÜRK DİLİ VE EDEBİYATI, FİZİK, KİMYA, BİYOLOJİ, COĞRAFYA, FELSEFE, TARİH, ' +
     'T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK, DİN KÜLTÜRÜ, REHBERLİK.\n' +
     '- Öğretmen adı, sınıf adı gibi bilgileri yazma, yalnızca ders adını yaz.\n' +
+    '- TYT ve AYT etiketlerini koru; yalnızca MATEMATİK yazan dersi TYT olarak değiştirme.\n' +
     '- Görselde haftanın günleri ve ders saatlerinden oluşan okunabilir bir ders programı YOKSA tahmin etme; ' +
     'yalnızca {"hata":"Görselde okunabilir bir haftalık ders programı bulunamadı."} döndür.\n' +
     '- Yalnızca JSON döndür; açıklama, markdown ya da başka metin ekleme.';
@@ -6736,6 +6752,25 @@ function programYaz(sube, hb, tablo) {
   D.programHafta[sube][hb] = tablo;
   D.dersProgrami = D.dersProgrami || {};
   D.dersProgrami[sube] = tablo;          // eski alan da güncel kalsın
+  programTytMatematikHazirla(sube, hb);
+}
+// Grade 11 school maths and TYT revision are separate courses. Add the existing
+// TYT sequence only when it is explicitly present in the uploaded timetable.
+// Keep school topics, teacher edits and even intentionally empty TYT keys intact.
+function programTytMatematikHazirla(sube, hb) {
+  const plan = D.konuPlani?.[sube];
+  if (subeSinifi(sube) !== 11 || !plan?.length) return;
+  const tyt = dersKimligi('Matematik TYT');
+  if (plan.some(h => Object.keys(h || {}).some(d => dersKimligi(d) === tyt))) return;
+  if (!programAl(sube, hb).prog.gunler.some(g => g.some(d => dersKimligi(d) === tyt))) return;
+  const kaynak = VARSAYILAN_KONU_PLANI.SAY;
+  kaynak.forEach((h, i) => {
+    const konular = h['Matematik TYT'] || [];
+    if (!konular.length) return;
+    const hafta = Math.floor(i * 36 / kaynak.length);
+    while (plan.length <= hafta) plan.push({});
+    (plan[hafta]['Matematik TYT'] ||= []).push(...konular);
+  });
 }
 // takvim haftasına karşılık gelen plan haftası (plan dışına taşmaz)
 function planHaftasi(sube, hb) {
@@ -6765,6 +6800,14 @@ function donemHizala() {
   return true;
 }
 // bir dersin plandaki bütün konuları, hafta bilgisiyle
+function subeDersKimligi(sube, ad) {
+  const kimlik = dersKimligi(ad);
+  return subeSinifi(sube) === 11 && kimlik === dersKimligi('Matematik AYT')
+    ? dersKimligi('Matematik') : kimlik;
+}
+function subeDersAdiUyar(sube, a, b) {
+  return dersAdiUyar(subeDersKimligi(sube, a), subeDersKimligi(sube, b));
+}
 function planDersAnahtari(sube, dersAdi) {
   const plan = (D.konuPlani || {})[sube] || [];
   const say = {};
@@ -6772,7 +6815,11 @@ function planDersAnahtari(sube, dersAdi) {
   const anahtarlar = Object.keys(say);
   const tam = anahtarlar.find(k => dersAdiUyar(k, dersAdi));
   if (tam) return tam;
+  const eslesen = anahtarlar.filter(k => subeDersAdiUyar(sube, k, dersAdi));
+  if (eslesen.length === 1) return eslesen[0];
   const di = dersEsle(dersAdi);
+  // Maths/geometry and Turkish/literature share catalog indices, not topic plans.
+  if (di < 0 || di === 0 || di === 1) return null;
   const aday = anahtarlar.filter(k => dersEsle(k) === di);
   return aday.length === 1 && !/\b(TYT|AYT|YDT)\b/i.test(dersAdi) ? aday[0] : null;
 }
@@ -6905,17 +6952,21 @@ function haftaYerlesim(sube, hafta, hb) {
   const plan = ((D.konuPlani || {})[sube] || [])[hafta - 1];
   const out = [];
   if (!prog || !prog.saatler || !prog.saatler.length || !plan) return out;
+  const dersGunleri = {}, eslesmeler = new Map();
+  for (let g = 0; g < 7; g++) {
+    const gunDersleri = new Set();
+    for (const d of prog.gunler[g] || []) {
+      if (!d) continue;
+      if (!eslesmeler.has(d)) eslesmeler.set(d, planDersAnahtari(sube, d));
+      const anahtar = eslesmeler.get(d);
+      if (anahtar) gunDersleri.add(anahtar);
+    }
+    gunDersleri.forEach(d => { (dersGunleri[d] ||= []).push(g); });
+  }
   Object.keys(plan).forEach(dersAd => {
     const dersIdx = dersEsle(dersAd);
     if (dersIdx < 0) return;
-    let gunler = [];
-    for (let g = 0; g < 7; g++)
-      if ((prog.gunler[g] || []).some(d => d && dersAdiUyar(d, dersAd))) gunler.push(g);
-    if (!gunler.length)
-      for (let g = 0; g < 7; g++)
-        if ((prog.gunler[g] || []).some(d => d && dersEsle(d) === dersIdx &&
-            !/\b(TYT|AYT|YDT)\b/i.test(d) &&
-            Object.keys(plan).filter(k => dersEsle(k) === dersIdx).length === 1)) gunler.push(g);
+    const gunler = dersGunleri[dersAd] || [];
     if (!gunler.length) return;
     (plan[dersAd] || []).forEach((ad, i) => {
       if (!ad) return;
@@ -6933,6 +6984,7 @@ function programUygula(hb, tekSube) {
   D.konuDers = D.konuDers || {};
   Object.keys(D.dersProgrami || {}).filter(s => !tekSube || s === tekSube).forEach(sube => {
     if (hb < subePlanBaslangici(sube)) return;
+    programTytMatematikHazirla(sube, hb);
     const hafta = planHaftasi(sube, hb);
     haftaGosterge = hafta;
     const yer = haftaYerlesim(sube, hafta, hb);
@@ -7151,18 +7203,18 @@ function hucreKonulari(sube, hb, gi, dersAdi) {
   Object.keys(isl).forEach(a => {
     const ki = +a, k = konuAl(ki);
     if (!k || k[6] || isl[ki] !== hb + gi) return;
-    if (kaynak[ki]) { if (dersAdiUyar(kaynak[ki], dersAdi)) out.push(ki); }
-    else if (k[0] === dersIdx) out.push(ki);
+    const ders = D.konuDers?.[ki] || (kaynak[ki] && konuPlaniDersleri(sube).find(d => iskelet(d) === kaynak[ki]));
+    if (ders) { if (subeDersAdiUyar(sube, ders, dersAdi)) out.push(ki); }
+    else if (kaynak[ki]) { if (iskelet(dersAdi) === kaynak[ki]) out.push(ki); }
+    else if (k[0] === dersIdx && !/\b(TYT|AYT|YDT)\b/i.test(dersAdi)) out.push(ki);
   });
   return out;
 }
 // --- hücrenin konu planından gelen önerisi (henüz dağıtılmamışsa)
 function oneriKonulari(sube, hafta, gi, dersAdi, hb) {
-  const dersIdx = dersEsle(dersAdi);
+  const anahtar = planDersAnahtari(sube, dersAdi);
   const yer = haftaYerlesim(sube, hafta, hb).filter(y => y.gi === gi);
-  const tam = yer.filter(y => dersAdiUyar(y.dersAd, dersAdi)).map(y => y.ad);
-  if (tam.length) return tam;
-  return yer.filter(y => y.dersIdx === dersIdx).map(y => y.ad);
+  return yer.filter(y => y.dersAd === anahtar).map(y => y.ad);
 }
 function konuGuneAta(sube, hb, gi, dersAdi, ad) {
   D.subeIslenis = D.subeIslenis || {};
@@ -7198,11 +7250,12 @@ function hucreyeKonuAta(sube, hb, gi, dersAdi, ad) {
     Object.keys(isl).forEach(a => {
       const ki = +a;
       if (isl[ki] < hb || isl[ki] > hb + 6) return;
-      if (D.konuKaynak && D.konuKaynak[ki] && !dersAdiUyar(D.konuKaynak[ki], dersAdi)) return;
+      if (D.konuDers?.[ki] && !subeDersAdiUyar(sube, D.konuDers[ki], dersAdi)) return;
+      if (!D.konuDers?.[ki] && D.konuKaynak?.[ki] && iskelet(dersAdi) !== D.konuKaynak[ki]) return;
       if (!(D.konuKaynak && D.konuKaynak[ki]) && konuAl(ki) && konuAl(ki)[0] !== dersEsle(dersAdi)) return;
       delete isl[ki];
     });
-    haftaYerlesim(sube, hafta, hb).filter(y => dersAdiUyar(y.dersAd, dersAdi)).forEach(y => {
+    haftaYerlesim(sube, hafta, hb).filter(y => subeDersAdiUyar(sube, y.dersAd, dersAdi)).forEach(y => {
       konuGuneAta(sube, hb, y.gi, dersAdi, y.ad);
     });
   } else {
@@ -8858,7 +8911,7 @@ document.addEventListener('change', async ev => {
   // değer ile kurulumda kullanılacak değer birbirinden ayrılmasın.
   if (el.id === 'subeMufredatBaslangic') {
     if (!isoTarihGecerli(el.value)) { alert('Geçerli bir başlangıç tarihi seçin.'); ciz(); return; }
-    D.ogr.filter(o => !o.silindi && o.sube === EK.sube && ogrenciSinifi(o) < 12).forEach(o => { o.mufredatBaslangic = isoDan(pazartesi(gunNo(el.value))); });
+    subePlanBaslangiciniAyarla(EK.sube, el.value);
     programDegistiTetikle(EK.sube); await kaydet(true); ciz(); return;
   }
   if (el.id === 'mufredatSinif') { EK.mufredatSinif = +el.value; ciz(); return; }
@@ -8981,13 +9034,15 @@ document.addEventListener('change', async ev => {
   }
   if (el.id === 'donemBasi') {
     if (!isoTarihGecerli(el.value)) { alert('Dönem başlangıcı geçerli bir tarih olmalı.'); ciz(); return; }
-    donemBasiniAyarla(isoDan(pazartesi(gunNo(el.value))), true);   // her zaman o haftanın Pazartesi'sine yuvarla
+    subePlanBaslangiciniAyarla(EK.sube, el.value);
+    programDegistiTetikle(EK.sube);
     await kaydet(true); ciz(); return;
   }
   if (el.id === 'haftaSec') {
-    donemBasiniAyarla(isoDan(haftaBasi() - (+el.value - 1) * 7), true);
+    subePlanBaslangiciniAyarla(EK.sube, isoDan(haftaBasi() - (+el.value - 1) * 7));
+    programDegistiTetikle(EK.sube);
     await kaydet(true); ciz();
-    bilgiVer('Bu hafta artık ' + el.value + '. hafta sayılıyor (dönem başı ' + ggyy(gunNo(D.ayar.donemBasi)) + ').');
+    bilgiVer('Bu hafta artık ' + el.value + '. hafta sayılıyor (dönem başı ' + ggyy(subePlanBaslangici(EK.sube)) + ').');
     return;
   }
   if (el.classList.contains('konuAta')) {

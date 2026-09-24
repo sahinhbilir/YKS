@@ -21,6 +21,8 @@ jobs:
           node-version: 22
       - name: Current grade curricula and legacy preservation
         run: node test/curriculum-regression.js
+      - name: Grade 11 timetable topics and TYT mathematics separation
+        run: node --test test/grade11-timetable-regression.cjs
       - name: Role regression
         run: node test/role-regression.js
       - name: Automatic student workflow and eight-week simulation
