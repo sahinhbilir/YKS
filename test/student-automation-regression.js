@@ -96,7 +96,7 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  const settings=run('gorunumAyarlar()');
  check('advanced-settings-collapsed',settings.includes('<details')&&!settings.includes('padding:20px" open'));
  check('manual-cloud-send-removed',!settings.includes('id="bulutGonder"'));
- check('teacher-controls-preserved',run(`(()=>{D.rol='rehber';const h=gorunumPlan(),t=SEKMELER().length;D.rol='ogrenci';return h.includes('id="yazdir"')&&t===10;})()`));
+ check('teacher-controls-preserved',run(`(()=>{D.rol='rehber';const h=gorunumPlan(),t=SEKMELER().map(x=>x[0]);D.rol='ogrenci';return h.includes('id="yazdir"')&&['ogrenciler','konular','konuplani','mufredat'].every(x=>t.includes(x));})()`));
  const savedLayouts=[];
  for(let w=0;w<8;w++) {
    const h=run("gunNo('2026-09-07')")+w*7;

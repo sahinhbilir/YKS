@@ -19,6 +19,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Current grade curricula and legacy preservation
+        run: node test/curriculum-regression.js
       - name: Role regression
         run: node test/role-regression.js
       - name: Automatic student workflow and eight-week simulation
@@ -66,6 +68,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/past-plan-recovery-browser.cjs
       - name: Logout failure, retry, multiple tabs and memory settings
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/logout-memory-browser.cjs
+      - name: Grade enrollment on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/curriculum-browser.cjs
       - name: Keep synthetic review screenshots
         if: always()
         uses: actions/upload-artifact@v4
