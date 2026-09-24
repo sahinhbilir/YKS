@@ -41,6 +41,8 @@ jobs:
         run: node test/data-integrity-regression.js
       - name: Cloud-sync resilience
         run: node test/cloud-sync-resilience.js
+      - name: Firebase Analytics isolation and production-only collection
+        run: node --experimental-vm-modules test/firebase-analytics-regression.cjs
       - name: Timetable JSON regression
         run: node test/timetable-json-regression.js
       - name: Past plan photo recovery
