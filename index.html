@@ -462,7 +462,8 @@ const firebaseConfig = {
   projectId: 'yks-tekrar-manual-test',
   storageBucket: 'yks-tekrar-manual-test.firebasestorage.app',
   messagingSenderId: '956991282138',
-  appId: '1:956991282138:web:a8eabfd7cb6a4bd7897ee3'
+  appId: '1:956991282138:web:a8eabfd7cb6a4bd7897ee3',
+  measurementId: 'G-NPVTE6VQTZ'
 };
 const RECAPTCHA_SITE_KEY = '6LeMz6gtAAAAANlUbeHiGwEfw2jI4dZlUEgvQFZX';
 const firebaseYapilandirildi = Object.values(firebaseConfig).every(v =>
@@ -586,6 +587,18 @@ window.bulut = { db, doc, getDoc, getDocFromServer, setDoc, updateDoc, runTransa
   yapilandirilmis: firebaseYapilandirildi };
 onAuthStateChanged(auth, () => { if (window.bulutDegisti) window.bulutDegisti(); });
 if (window.bulutDegisti) window.bulutDegisti();
+
+// Ölçüm yalnızca canlı sitede çalışır; çevrimdışı öğrenci dosyaları ve testler hariç.
+// Dinamik yükleme sayesinde engellenen Analytics, Auth/Firestore'u durdurmaz.
+if (location.protocol === 'https:' &&
+    ['ykstekrar.com', 'www.ykstekrar.com'].includes(location.hostname) &&
+    new URLSearchParams(location.search).get('dev') !== '1') {
+  import('https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js')
+    .then(async ({ getAnalytics, isSupported }) => {
+      if (await isSupported()) getAnalytics(uygulama);
+    })
+    .catch(() => console.warn('[YKS] Analytics kullanılamıyor.'));
+}
 </script>
 </head>
 <body>
