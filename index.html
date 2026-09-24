@@ -590,7 +590,7 @@ if (window.bulutDegisti) window.bulutDegisti();
 
 // Ölçüm yalnızca canlı sitede çalışır; çevrimdışı öğrenci dosyaları ve testler hariç.
 // Dinamik yükleme sayesinde engellenen Analytics, Auth/Firestore'u durdurmaz.
-if (location.protocol === 'https:' &&
+if (typeof location !== 'undefined' && location.protocol === 'https:' &&
     ['ykstekrar.com', 'www.ykstekrar.com'].includes(location.hostname) &&
     new URLSearchParams(location.search).get('dev') !== '1') {
   import('https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js')
