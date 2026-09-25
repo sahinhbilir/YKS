@@ -3372,6 +3372,84 @@ function ogrenciHaftaSecici() {
     '<button class="dugme" id="ogrGelecekHafta"' + (hb === sonrakiHafta(EK.ogr, simdi) ? ' aria-current="true"' : '') + '>Gelecek hafta</button>' +
     '<span>' + ggyy(hb) + ' – ' + ggyy(planHaftaSonu(EK.ogr, hb)) + '</span></div>';
 }
+// A timetable can arrive after the student's first automatic snapshot. Offer a
+// deliberate rebuild of the current, unscored automatic week. Merely opening a
+// screen must never rewrite an issued plan or a week with recorded results.
+function ogrenciProgramYenileOnizleme(si, hb) {
+  const ov = elleAl(si, hb), o = D.ogr[si];
+  if (!ogrenciMi() || !o || hb !== buHafta(si) || !ov.sabit || !ov.ogrenciOtomatik ||
+      duzenlemeKaydi() || haftaSonucSayisi(si, hb) || bugunNo() >= gunNo(D.ayar.sinav) ||
+      !D.dersProgrami?.[o.sube] || !D.konuPlani?.[o.sube]?.length) return null;
+  const once = D, eski = planHesapla(si, hb);
+  try {
+    D = JSON.parse(JSON.stringify(once));
+    programDegistiTetikle(o.sube);
+    const yeniOv = D.elle[si + '|' + hb];
+    // Keep explicit edits/additions, but release positions created by auto-freeze.
+    Object.keys(yeniOv.yer || {}).forEach(k => {
+      if (!yeniOv.konuSlot?.[k] && !yeniOv.serbest?.[k] && !yeniOv.anlatim?.[k] &&
+          !yeniOv.ogrEk?.[k] && !Object.hasOwn(yeniOv.degisim || {}, k) &&
+          !(yeniOv.ek || []).includes(+k)) delete yeniOv.yer[k];
+    });
+    delete yeniOv.sabit; delete yeniOv.plan; delete yeniOv.ogrenciOtomatik;
+    Object.keys(D.ogrTaslak || {}).filter(k => +k.split('|')[0] === si && +k.split('|')[1] >= hb)
+      .forEach(k => delete D.ogrTaslak[k]);
+    const p = planHesapla(si, hb), eskiIds = new Set(eski.gunler.flat().map(x => x.ki));
+    const yeniIds = new Set(p.gunler.flat().map(x => x.ki));
+    const eklenen = p.gunler.flat().filter(x => !eskiIds.has(x.ki));
+    if (!eklenen.some(x => !x.serbest && !x.anlatim && D.konuKaynak?.[x.ki])) return null;
+    return { veri: D, plan: p, eskiToplam: eski.toplam, eklenen,
+      cikarilan: eski.gunler.flat().filter(x => !yeniIds.has(x.ki)) };
+  } finally { D = once; }
+}
+function ogrenciPrograminiYenile(si, hb) {
+  const r = ogrenciProgramYenileOnizleme(si, hb);
+  if (!r) return null;
+  // Retain a complete local recovery copy before changing the current plan.
+  localStorage.setItem('yks_program_yenile_oncesi', JSON.stringify(D));
+  D = r.veri;
+  ogrenciHaftayiSakla(si, hb, r.plan);
+  ogrenciOtomasyonUygula();
+  return { toplam: r.plan.toplam, eklenen: r.eklenen.length };
+}
+function programYenileYedegiVar() {
+  try { return !!localStorage.getItem('yks_program_yenile_oncesi'); } catch (e) { return false; }
+}
+function ogrenciProgramYenileUyarisi(si, hb) {
+  const r = ogrenciProgramYenileOnizleme(si, hb);
+  if (!r) return '';
+  return '<section class="uyari-serit" aria-label="Ders programına göre planı güncelle"><b>Ders programındaki konular bu haftanın planına yansımamış.</b>' +
+    '<p>Bu hafta henüz sonuç girmedin. Güncel programla ' + r.eskiToplam + ' çalışma yerine ' + r.plan.toplam +
+    ' çalışma planlanacak. Çalışmalar bugünden sonraki uygun günlere dağıtılır.</p>' +
+    '<details><summary>Değişecek konuları gör</summary><p><b>Eklenecek:</b> ' + r.eklenen.map(x => kacis(x.ad)).join(' · ') + '</p>' +
+    (r.cikarilan.length ? '<p><b>Bu haftadan çıkacak:</b> ' + r.cikarilan.map(x => kacis(x.ad)).join(' · ') +
+      '. Güncel işleniş tarihlerine göre sonraki planlarda değerlendirilir.</p>' : '') + '</details>' +
+    '<p>Önceki planın yedeği saklanır. Geçmiş haftalar ve sonuç kayıtları korunur.</p>' +
+    '<button class="dugme birincil" id="ogrProgramYenile">Bu haftayı ders programına göre yenile</button></section>';
+}
+function programEksikDersleri(sube, hb) {
+  const dersler = programAl(sube, hb).prog.gunler.flat().filter(d => d && dersEsle(d) >= 0);
+  return [...new Set(dersler)].filter(d => !planDersAnahtari(sube, d));
+}
+function ogrenciProgramKapsami(si, hb) {
+  const o = D.ogr[si];
+  if (!o || ogrenciSinifi(o) === 12) return '';
+  const okulHb = pazartesi(hb), hafta = planHaftasi(o.sube, okulHb);
+  const plan = D.konuPlani?.[o.sube] || [], eksik = programEksikDersleri(o.sube, okulHb);
+  const dersler = [...new Set(programAl(o.sube, okulHb).prog.gunler.flat()
+    .map(d => planDersAnahtari(o.sube, d)).filter(Boolean))];
+  if (!dersler.length && !eksik.length) return '';
+  return '<details class="kart" style="padding:16px;margin-bottom:16px"><summary>Bu haftanın okul konuları · ' + hafta + '. plan haftası</summary>' +
+    '<p class="mini">Ders programındaki konu planıdır. Tekrar testleri işlenişten sonra, tekrar aralığına ve günlük kapasiteye göre gelir.</p>' +
+    dersler.map(d => {
+      let w = hafta - 1;
+      while (w >= 0 && !Object.hasOwn(plan[w] || {}, d)) w--;
+      const konular = (plan[w] || {})[d] || [];
+      return '<p><b>' + kacis(d) + ':</b> ' + (konular.length ? konular.map(kacis).join(' · ') +
+        (w < hafta - 1 ? ' <span class="mini">(planda yeni konu yok; önceki başlık devam ediyor)</span>' : '') : 'Bu hafta için konu belirtilmemiş.') + '</p>';
+    }).join('') + (eksik.length ? '<p role="status"><b>Konu planı eksik:</b> ' + eksik.map(kacis).join(', ') +
+      '. Bu dersler için kitap konularını Konu Planı’na ekleyin.</p><button class="dugme" data-sekme="konuplani">Konu Planı’nı aç</button>' : '') + '</details>';
+}
 function gorunumOgrenciPlan() {
   const si = EK.ogr, hb = haftaBasi(), p = planHesapla(si, hb);
   const gorunen = gunlukEkliPlan(si, hb, p);
@@ -3379,10 +3457,11 @@ function gorunumOgrenciPlan() {
   return '<div class="ogrenci-plan">' + ogrenciYksYolu(false) +
     '<div class="baslik"><h1>' + (gelecek ? 'Gelecek haftan' : gecmis ? 'Geçmiş haftan' : 'Haftalık planın') + '</h1>' +
     (p.elle?.sabit?'<p>Bu haftanın sabitlenmiş planı. Çalışmaların tarihleri ve sırası korunur; tamamlanma bilgileri aşağıda görünür.</p>':gelecek ? '<p>Sonuçların geldikçe güncellenir. Hafta başladığında kendiliğinden kaydedilir.</p>' : '') + '</div>' +
-    ogrenciHaftaSecici() +
+    ogrenciHaftaSecici() + ogrenciProgramYenileUyarisi(si, hb) + ogrenciProgramKapsami(si, hb) +
     (EK.ogrOtoHata ? '<p role="alert">' + kacis(EK.ogrOtoHata) + '</p>' : '') +
     '<div class="arac"><button class="dugme birincil" data-sekme="giris">Sonuç gir</button>' +
-    '<button class="dugme" id="yazdirOnizle">Planı indir / PDF</button></div>' +
+    '<button class="dugme" id="yazdirOnizle">Planı indir / PDF</button>' +
+    (programYenileYedegiVar() ? '<button class="dugme" id="ogrProgramYedek">Yenilemeden önceki yedeği indir</button>' : '') + '</div>' +
     (p.devreden ? '<p class="mini">' + p.devreden + ' çalışma bu haftaya sığmadı; sonraki planlarda yeniden değerlendirilir. Günlük sınırın korunur.</p>' : '') +
     (!gorunen.toplam ? '<div class="kart" style="padding:20px">' +
       (p.kayitYok?'Bu haftanın kaydedilmiş planı bulunamadı. Eski kağıdın varsa <button class="dugme" data-sekme="kurtarma">Geçmiş plan kurtar</button> ile geri yükleyebilirsin.':bugunNo() >= gunNo(D.ayar.sinav) ? 'Program dönemi tamamlandı. Sonuçlarını Karnem bölümünde görebilirsin.' :
@@ -3712,7 +3791,7 @@ function gorunumKonuPlani() {
     const eksik = yksPlanEksikleri(sube);
     if (eksik.length) h += '<div class="uyari-serit"><b>Kaynak kontrolü: eksik başlıklar</b><p>' + kacis(eksik.map(x => x.ders + ': ' + x.konular.length + ' konu').join(' · ')) + '</p><details><summary>Eklenecek konuları göster</summary>' + eksik.map(x => '<p><b>' + kacis(x.ders) + '</b>: ' + x.konular.map(kacis).join(' · ') + '</p>').join('') + '</details><p>Yalnızca eksik dersler ve Süper İletkenler başlığı gelecek haftalara eklenir. Mevcut konu sırası, sonuçlar ve teslim edilmiş planlar korunur.</p><button class="dugme" id="yksEksikleriEkle">Gösterilen eksikleri gelecek haftalara ekle</button></div>';
   }
-  const dersler = konuPlaniDersleri(sube);
+  const dersler = [...new Set([...konuPlaniDersleri(sube), ...programEksikDersleri(sube, pazartesi(haftaBasi()))])];
   if (!dersler.length) return h + '<div class="uyari-serit">Bu şube için henüz konu planı yok.</div>';
   dersler.forEach(anahtar => {
     const d = dersDizisi(sube, anahtar);
@@ -7618,6 +7697,20 @@ function cizIc() {
 // --- konu penceresi ve sürükleme
 document.addEventListener('click', async ev => {
   const cikisId=ev.target.closest?.('button')?.id;
+  if (cikisId === 'ogrProgramYenile') {
+    try {
+      const r = ogrenciPrograminiYenile(EK.ogr, haftaBasi());
+      if (!r) { bilgiVer('Bu hafta yenilenemiyor. Sonuç girilmiş veya plan zaten güncel.'); return; }
+      const tamam = await kaydet(true); ciz();
+      bilgiVer(tamam ? 'Bu haftanın planı güncellendi: ' + r.toplam + ' çalışma.' : 'Plan güncellendi fakat kalıcı kayıt başarısız. Yedek indirin.');
+    } catch (e) { bilgiVer('Plan yenilenemedi: ' + (e.message || e)); }
+    return;
+  }
+  if (cikisId === 'ogrProgramYedek' && ogrenciMi()) {
+    const json = localStorage.getItem('yks_program_yenile_oncesi');
+    if (json) await indir('program-yenileme-oncesi.json', json, 'application/json');
+    return;
+  }
   if(cikisId==='oturumKapat'||cikisId==='cikisTekrar'){await kaydedipCikisYap();return;}
   if(cikisId==='cikisKapat'){document.getElementById('cikisDurum')?.remove();return;}
   if(CIKIS_DURUMU)return;
@@ -8082,6 +8175,7 @@ document.addEventListener('click', async ev => {
     const sube = EK.sube || (D.ogr[EK.ogr] || {}).sube;
     const anahtar = kp.dataset.ders;
     const adlar = dersDizisi(sube, anahtar).dizi.map(x => x.ad);
+    const bosDers = adlar.length === 0;
     if (kp.classList.contains('kpEkle')) {
       const kutu = kp.parentElement.querySelector('.kpYeniAd');
       const yeni = (kutu && kutu.value || '').trim();
@@ -8097,7 +8191,12 @@ document.addEventListener('click', async ev => {
         adlar.splice(i, 1);
       } else return;
     }
-    dersDizisiYaz(sube, anahtar, adlar);
+    if (bosDers && kp.classList.contains('kpEkle')) {
+      const h = planHaftasi(sube, pazartesi(haftaBasi())) - 1;
+      const plan = (D.konuPlani ||= {})[sube] ||= [];
+      while (plan.length <= h) plan.push({});
+      plan[h][anahtar] = adlar;
+    } else dersDizisiYaz(sube, anahtar, adlar);
     programDegistiTetikle(sube);
     EK.kirli = true; await kaydet(true); ciz();
     return;

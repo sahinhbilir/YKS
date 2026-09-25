@@ -48,6 +48,37 @@ fs.mkdirSync(out,{recursive:true});
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'curriculum viewport overflow');
    await page.screenshot({path:path.join(out,'curriculum-'+width+'.png'),fullPage:true});
    await page.locator('#mufredatSinif').selectOption('12');assert((await page.locator('#ana').innerText()).includes('önceki öğretim programı'));
+   // A student who uploads a timetable after auto-freeze needs a visible repair.
+   // Synthetic notebook only: no account or personal data from the reported backup.
+   await page.evaluate(()=>{
+    D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-25';
+    D.ogr=[{ad:'Synthetic Grade Eleven',no:1,sube:'11-X',alan:'EA',sinif:11,mufredatBaslangic:'2026-09-21',kap:6,off:[6],aktif:true}];
+    D.konuPlani['11-X']=okulKonuPlani(11);EK.ogr=0;EK.sube='11-X';EK.hafta=null;EK.sekme='plan';
+    programYaz('11-X',buHafta(),{saatler:['09:00','10:00','11:00'],gunler:[
+     ['TÜRK DİLİ VE EDEBİYATI','TARİH','COĞRAFYA'],['MATEMATİK'],['FELSEFE','MATEMATİK TYT'],['DİN KÜLTÜRÜ'],['GEOMETRİ','TÜRKÇE'],[],[]]});
+    programDegistiTetikle('11-X');
+    const ki=+Object.keys(D.subeIslenis['11-X']).find(k=>konuAl(+k)[3].includes('Web Tabanlı'));
+    D.ogr[0].cikti=buHafta();D.ogr[0].ilkAktif=bugunNo();
+    D.elle['0|'+buHafta()]={ek:[],sil:[],yer:{[ki]:[3,0]},soru:{[ki]:24},degisim:{},konuSlot:{},sabit:buHafta(),ogrenciOtomatik:true,
+     plan:{surum:2,slotlar:[[],[],[],[String(ki)],[],[],[]],off:[6],kap:6,devreden:0,tasan:[]}};
+    ciz();
+   });
+   await page.locator('#ogrProgramYenile').waitFor();
+   assert.equal(await page.evaluate(()=>planHesapla(0,buHafta()).toplam),1);
+   await page.locator('#ogrProgramYenile').click();
+   await page.waitForFunction(()=>planHesapla(0,buHafta()).toplam>1);
+   assert.equal(await page.locator('#ogrProgramYenile').count(),0);
+   assert(await page.locator('#ogrProgramYedek').isVisible());
+   assert(await page.evaluate(()=>JSON.parse(localStorage.getItem('yks_program_yenile_oncesi')).elle['0|'+buHafta()].plan.slotlar.flat().length===1));
+   await page.getByText('Bu haftanın okul konuları · 1. plan haftası',{exact:true}).click();
+   assert((await page.locator('#ana').innerText()).includes('İki Nicel Değişkenli Veriler'));
+   assert((await page.locator('#ana').innerText()).includes('GEOMETRİ, TÜRKÇE'));
+   await page.screenshot({path:path.join(out,'grade11-current-week-repaired-'+width+'.png'),fullPage:true});
+   await page.getByText('Konu Planı’nı aç',{exact:true}).click();
+   await page.locator('.kpYeniAd[data-ders="GEOMETRİ"]').fill('Geometrik Şekiller');
+   await page.locator('.kpEkle[data-ders="GEOMETRİ"]').click();
+   await page.waitForFunction(()=>D.konuPlani['11-X'][0]['GEOMETRİ']?.[0]==='Geometrik Şekiller');
+   assert.equal(await page.evaluate(()=>D.konuPlani['11-X'].length),36,'new course must not be appended in week 37');
    // Teacher adds grade11 to a notebook containing existing grade12 students.
    await page.evaluate(()=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-09-23';
     D.ogr=[{no:1,ad:'Mevcut Öğrenci',sube:'12-A',alan:'SAY',aktif:false}];

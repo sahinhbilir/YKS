@@ -34,3 +34,28 @@ Validation covers the real upload/change handlers, both maths tracks on the same
 day, aliases and ASCII labels, dated schedule inheritance, branch isolation,
 preserved results, and student exports. Desktop/mobile UI checks upload a mixed
 Grade 11 timetable and change its plan week.
+
+## Current student plans created before a timetable upload
+
+Timetable assignment and the student's saved study week are different records.
+A student can already have an automatic frozen week with one topic before a fuller
+timetable is uploaded. Updating `subeIslenis` does not add members to that snapshot.
+The reported September backup reproduced this failure; no personal backup data is
+included in the repository or CI artifacts.
+
+The student plan now offers a previewed rebuild when its current automatic,
+unscored snapshot is missing timetable-derived work. This is an explicit button;
+page rendering never rewrites saved weeks. A complete local backup is written
+before replacement and can be downloaded from the plan screen. Current weeks with
+results, past weeks, and nonautomatic issued snapshots are excluded. Rebuilding
+uses existing review delays, days off and workload limits, and preserves explicit
+additions and recorded results. New work starts on or after today.
+
+A separate school-topic overview shows the current curriculum week and ongoing
+headings when a week introduces no new topic. This display does not create repeated
+lesson dates or duplicate review tasks. Explicit empty course entries stop the
+continuation display. Academic timetable lessons without a matching topic plan,
+such as separate Geometry or Turkish lessons, are identified and appear as editable
+empty courses in Konu Planı. Their first topic is added to the selected plan week,
+not silently appended after week 36. Book photos identifying a monthly unit do not
+establish exact lesson-by-lesson pacing or the contents of an unseen Turkish book.
