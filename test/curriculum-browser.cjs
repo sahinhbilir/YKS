@@ -51,7 +51,7 @@ fs.mkdirSync(out,{recursive:true});
    // A student who uploads a timetable after auto-freeze needs a visible repair.
    // Synthetic notebook only: no account or personal data from the reported backup.
    await page.evaluate(()=>{
-    D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-25';
+    D=varsayilan();D.elle={};D.rol='ogrenci';D.ayar.testTarih='2026-09-25';
     D.ogr=[{ad:'Synthetic Grade Eleven',no:1,sube:'11-X',alan:'EA',sinif:11,mufredatBaslangic:'2026-09-21',kap:6,off:[6],aktif:true}];
     D.konuPlani['11-X']=okulKonuPlani(11);EK.ogr=0;EK.sube='11-X';EK.hafta=null;EK.sekme='plan';
     programYaz('11-X',buHafta(),{saatler:['09:00','10:00','11:00'],gunler:[
