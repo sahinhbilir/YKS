@@ -257,3 +257,15 @@ test('school overview carries ongoing topics for display without scheduling dupl
   a.run("D.konuPlani['11-A'][1].Matematik=[]");
   assert(!a.run('ogrenciProgramKapsami(0,buHafta()+7)').includes('İki Nicel Değişkenli Veriler'),'explicit empty weeks stop continuation');
 });
+
+test('topic display omits curriculum bookkeeping while saved identities remain intact',()=>{
+  const a=staleStudentWeek();a.run('ogrenciPrograminiYenile(0,buHafta())');
+  const before=a.run('JSON.stringify(D)');
+  for(const code of ['gorunumOgrenciPlan()','gorunumGiris()','yazdirSayfa(0,buHafta())','gorunumKonuPlani()']) {
+    const html=a.run(code);assert(!/11\. sınıf · \d+\.\d+ · /.test(html),code);
+  }
+  assert.equal(a.run('JSON.stringify(D)'),before);
+  assert(a.run("D.konuPlani['11-A'][0].Matematik[0].startsWith('11. sınıf · 1.1 · ')"));
+  assert.equal(a.run("konuDuzenlemeAdi('11. sınıf · 1.1 · Eski','Yeni')"),'11. sınıf · 1.1 · Yeni');
+  assert.equal(a.run("konuHtml('11. sınıf · 1.1 · <script>')"),'&lt;script&gt;');
+});
