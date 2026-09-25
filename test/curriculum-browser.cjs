@@ -17,6 +17,30 @@ fs.mkdirSync(out,{recursive:true});
    await page.locator('#kMufredatBaslangic').fill('2026-09-21');await page.locator('#kOgrBaslat').click();
    await page.waitForFunction(()=>D.ogr.length===1&&D.ogr[0].sinif===11);
    assert.equal(await page.evaluate(()=>D.konuPlani.benim[0].Matematik[0].startsWith('11. sınıf')),true);
+   // A real schedule upload must fill the Grade 11 course and separate TYT cells.
+   const openAdvanced=async()=>{
+    const details=page.locator('details').filter({has:page.getByText('Gelişmiş ayarlar',{exact:true})});
+    if(await details.getAttribute('open')===null)await details.locator('summary').click();
+   };
+   await page.locator('[data-sekme="ayarlar"]').first().click();await openAdvanced();
+   await page.locator('#dpCiktiYapistir').fill(JSON.stringify({saatler:['09:00','10:00'],
+    gunler:[['MATEMATİK','TYT MATEMATİK'],['AYT MATEMATİK',''],[],[],[],[],[]]}));
+   await page.locator('#dpCiktiUygula').click();
+   await page.waitForFunction(()=>D.konuPlani.benim[0]['Matematik TYT']?.length);
+   await openAdvanced();
+   const mathCell=page.locator('td').filter({has:page.locator('.progHucre[data-g="0"][data-s="0"]')});
+   const tytCell=page.locator('td').filter({has:page.locator('.progHucre[data-g="0"][data-s="1"]')});
+   assert.equal(await mathCell.locator('select.progHucre').inputValue(),'MATEMATİK');
+   assert.equal(await tytCell.locator('select.progHucre').inputValue(),'TYT MATEMATİK');
+   assert((await mathCell.locator('.konuKutu').innerText()).includes('11. sınıf'));
+   assert(await tytCell.locator('.konuCip').count()>0);
+   assert(!(await tytCell.locator('.konuCip').first().innerText()).includes('11. sınıf'));
+   assert.equal(await page.locator('#donemBasi').inputValue(),'2026-09-21');
+   await page.locator('#haftaSec').selectOption('3');
+   await page.waitForFunction(()=>planHaftasi('benim',gunNo('2026-09-21'))===3);
+   await openAdvanced();
+   assert.equal(await page.locator('#donemBasi').inputValue(),'2026-09-07');
+   await page.screenshot({path:path.join(out,'grade11-timetable-'+width+'.png'),fullPage:true});
    await page.locator('[data-sekme="mufredat"]').first().click();
    await page.getByRole('heading',{name:'Müfredat ve kaynaklar'}).waitFor();
    await page.locator('summary').filter({hasText:'Matematik'}).click();
