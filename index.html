@@ -2531,6 +2531,16 @@ function gecmisPlanDuzenlendi(s) {
 const kacis = s => String(s).replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 }[c]));
+// Keep curriculum identity in saved data; show only the topic title in the UI.
+function konuGorunenAdi(ad) {
+  return String(ad).replace(/^(?:9|10|11|12)\. sınıf · \d+\.\d+ · /, '');
+}
+const konuHtml = ad => kacis(konuGorunenAdi(ad));
+function konuDuzenlemeAdi(eski, yeni) {
+  const ek = String(eski).match(/^(?:9|10|11|12)\. sınıf · \d+\.\d+ · /);
+  return (ek ? ek[0] : '') + konuGorunenAdi(yeni);
+}
+
 const ogrSecici = () => {
   const gruplar = {};
   canliOgrenciler().forEach(i => { (gruplar[D.ogr[i].sube] = gruplar[D.ogr[i].sube] || []).push(i); });
@@ -2629,7 +2639,7 @@ function ogrenciPlanEkleri(si, hb, p) {
       (soru || 20) + '" aria-label="' + ad + ' günlük soru sayısı"' + (!soru || kapali ? ' disabled' : '') + '> soru</label></div>';
   }).join('');
   const ekler = p.gunler.flatMap((liste, g) => liste.filter(x => (p.elle.ogrEk || {})[planSlotAnahtari(x)])
-    .map(x => '<li>' + kacis(GUN_AD[haftaGunu(hb + g)] + ' · ' + x.ad) + ' · ' + x.soru + (x.birim === 'dakika' ? ' dakika' : ' soru') +
+    .map(x => '<li>' + kacis(GUN_AD[haftaGunu(hb + g)] + ' · ' + konuGorunenAdi(x.ad)) + ' · ' + x.soru + (x.birim === 'dakika' ? ' dakika' : ' soru') +
       (!kapali && hb + g >= bugunNo() && !D.log.some(l => l[1] === si && l[2] === x.ki && l[0] === hb + g)
         ? ' <button class="dugme mini" data-ogr-ek-sil="' + kacis(planSlotAnahtari(x)) + '">Kaldır</button>' : '') + '</li>')).join('');
   return '<section class="kart ogr-plan-ekleri"><h2>Günlük soru hedeflerin</h2>' +
@@ -2657,9 +2667,9 @@ function planListesi(si, hb, p, salt) {
       '</div>' +
       (liste.length ? liste.map((x, i) => '<div class="pl-oge"' +
           (gecti || salt || x.gunlukEk ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + i +
-            '" role="button" tabindex="0" aria-label="' + kacis(GUN_AD[haftaGunu(hb + g)] + ' ' + x.ad + ' çalışmasını düzenle') + '"') + '>' +
+            '" role="button" tabindex="0" aria-label="' + kacis(GUN_AD[haftaGunu(hb + g)] + ' ' + konuGorunenAdi(x.ad) + ' çalışmasını düzenle') + '"') + '>' +
           '<div class="d">' + kacis(dersKisaAd(x.dersAd)) + '</div>' +
-          '<div class="k">' + kacis(x.ad) + '</div>' + tekrarEtiketi(si, x, hb + g) +
+          '<div class="k">' + konuHtml(x.ad) + '</div>' + tekrarEtiketi(si, x, hb + g) +
           '<div class="n">' + (x.anlatim ? 'KONU ANLATIMI' + (x.kaynak ? ' · ' + kacis(x.kaynak) : '')
             : (x.test > 1 ? x.test + ' test · ' : '') + x.soru + (x.birim === 'dakika' ? ' dakika' : ' soru')) + '</div>'+planCalismaEtiketi(si,hb,x,hb+g)+'</div>').join('')
         : '<div class="pl-bos">' + (izin ? 'izin günü' : 'boş') + '</div>') + '</div>';
@@ -2688,7 +2698,7 @@ function planTablosu(si, hb, p, tumu, salt) {
       const x = p.gunler[g][s2];
       const gecti = !tumu && gunGecti(hb, g);
       const hucreEtiketi = x
-        ? GUN_AD[haftaGunu(hb + g)] + ' ' + x.ad + ' çalışmasını düzenle'
+        ? GUN_AD[haftaGunu(hb + g)] + ' ' + konuGorunenAdi(x.ad) + ' çalışmasını düzenle'
         : GUN_AD[haftaGunu(hb + g)] + ' ' + (s2 + 1) + '. boş sıraya çalışma ekle';
       const kilit = (tumu || gecti || salt || (x && x.gunlukEk)) ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + s2 +
         '" role="button" tabindex="0" aria-label="' + kacis(hucreEtiketi) + '"';
@@ -2704,7 +2714,7 @@ function planTablosu(si, hb, p, tumu, salt) {
         (tumu || EK.toplu || gecti || salt || x.gunlukEk ? '' : ' draggable="true"') + '>' +
         (!tumu && EK.toplu && !x.gunlukEk ? '<label class="topluEtiket"><input type="checkbox" class="topluKutu" data-slot="' +
           kacis(planSlotAnahtari(x)) + '"> seç</label>' : '') +
-        '<div class="d">' + kacis(dersKisaAd(x.dersAd)) + '</div><div class="k">' + kacis(x.ad) + '</div>' +
+        '<div class="d">' + kacis(dersKisaAd(x.dersAd)) + '</div><div class="k">' + konuHtml(x.ad) + '</div>' +
         (salt ? tekrarEtiketi(si, x, hb + g) : '') +
         '<div class="n"><b>' + (x.anlatim ? 'ANLATIM' : (x.test > 1 ? x.test + ' test · ' : '') + x.soru + (x.birim === 'dakika' ? ' dakika' : ' soru')) +
         '</b>' + (salt ? '' : ' · ' + kacis(bilgi + modEk)) + '</div>'+planCalismaEtiketi(si,hb,x,hb+g)+'</td>';
@@ -2954,16 +2964,16 @@ function dersSirasiKutusu(si, mevcut) {
   const sonraki = dersSirasiOnizleme(si, anahtar, mevcut.ki, 1);
   if (onceki.gizle && sonraki.gizle) return '';
   return '<div class="p-gunler"><div class="etiket">Bu testteki mikro konuyu değiştir</div>' +
-    '<div class="mini" style="margin-bottom:7px">Yalnızca seçili <b>' + kacis(mevcut.ad) +
+    '<div class="mini" style="margin-bottom:7px">Yalnızca seçili <b>' + konuHtml(mevcut.ad) +
     '</b> testi değişir. Önceki/sonraki testler ve konu planı aynı kalır; aynı konu başka bir testte tekrar edebilir.</div>' +
     '<div class="gunSec"><button class="dugme sirakaydir" data-yon="-1" data-ki="' + mevcut.ki +
     '" data-ders="' + kacis(anahtar) + '"' + (onceki.hata ? ' disabled title="' + kacis(onceki.hata) + '"' :
-      ' title="Bu testte ' + kacis(onceki.hedefAd) + ' olsun"') + '>◀ önceki konu</button>' +
+      ' title="Bu testte ' + konuHtml(onceki.hedefAd) + ' olsun"') + '>◀ önceki konu</button>' +
     '<button class="dugme sirakaydir" data-yon="1" data-ki="' + mevcut.ki + '" data-ders="' + kacis(anahtar) +
     '"' + (sonraki.hata ? ' disabled title="' + kacis(sonraki.hata) + '"' :
-      ' title="Bu testte ' + kacis(sonraki.hedefAd) + ' olsun"') + '>sonraki konu ▶</button>' +
+      ' title="Bu testte ' + konuHtml(sonraki.hedefAd) + ' olsun"') + '>sonraki konu ▶</button>' +
     '<button class="dugme sonrakiEkle"' + (sonraki.hata ? ' disabled title="' + kacis(sonraki.hata) + '"' :
-      ' title="' + kacis(sonraki.hedefAd) + ' için aynı güne ayrı test ekle"') + '>+ sonraki konuyu bugün ekle</button></div></div>';
+      ' title="' + konuHtml(sonraki.hedefAd) + ' için aynı güne ayrı test ekle"') + '>+ sonraki konuyu bugün ekle</button></div></div>';
 }
 
 function pencereCiz() {
@@ -3032,8 +3042,8 @@ function pencereCiz() {
     const k = mevcut.serbest ? null : konuAl(mevcut.ki);
     h += '<div class="p-konu"><div class="etiket">' + kacis(dersKisaAd(mevcut.dersAd)) + '</div>' +
       (mevcut.serbest
-        ? '<input id="pAd" class="p-adGiris" value="' + kacis(mevcut.ad) + '">'
-        : '<div class="p-ad">' + kacis(mevcut.ad) + '</div>') +
+        ? '<input id="pAd" class="p-adGiris" value="' + konuHtml(mevcut.ad) + '">'
+        : '<div class="p-ad">' + konuHtml(mevcut.ad) + '</div>') +
       '<div class="mini">' + (k ? kacis(k[2]) + (k[5] ? ' · ' + kacis(k[5]) : '') : 'Kendi yazdığınız çalışma — tekrar algoritmasına girmez') + '</div>' +
       '<div class="p-satir"><label for="pSoru">Kaç soru çözecek</label>' +
       '<input type="number" min="1" max="200" id="pSoru" value="' + mevcut.soru + '"></div>' +
@@ -3073,7 +3083,7 @@ function pencereCiz() {
       const k = konuAl(ki);
       return '<button class="p-oge" data-ekle="' + ki + '">' +
         '<span class="p-ders">' + kacis(dersKisaAd(konuDersAdi(ki))) + '</span>' +
-        '<span class="p-baslik">' + kacis(k[3]) + '</span>' +
+        '<span class="p-baslik">' + konuHtml(k[3]) + '</span>' +
         '<span class="mini">' + kacis(k[2]) + (planda[ki] ? ' · planda' : (D.islenis[ki] ? '' : ' · işlenmedi')) + '</span></button>';
     }).join('') : '<div class="mini" style="padding:10px">Sonuç yok. Başka bir kelime deneyin.</div>') +
     '</div></div></div>';
@@ -3372,6 +3382,84 @@ function ogrenciHaftaSecici() {
     '<button class="dugme" id="ogrGelecekHafta"' + (hb === sonrakiHafta(EK.ogr, simdi) ? ' aria-current="true"' : '') + '>Gelecek hafta</button>' +
     '<span>' + ggyy(hb) + ' – ' + ggyy(planHaftaSonu(EK.ogr, hb)) + '</span></div>';
 }
+// A timetable can arrive after the student's first automatic snapshot. Offer a
+// deliberate rebuild of the current, unscored automatic week. Merely opening a
+// screen must never rewrite an issued plan or a week with recorded results.
+function ogrenciProgramYenileOnizleme(si, hb) {
+  const ov = elleAl(si, hb), o = D.ogr[si];
+  if (!ogrenciMi() || !o || hb !== buHafta(si) || !ov.sabit || !ov.ogrenciOtomatik ||
+      duzenlemeKaydi() || haftaSonucSayisi(si, hb) || bugunNo() >= gunNo(D.ayar.sinav) ||
+      !D.dersProgrami?.[o.sube] || !D.konuPlani?.[o.sube]?.length) return null;
+  const once = D, eski = planHesapla(si, hb);
+  try {
+    D = JSON.parse(JSON.stringify(once));
+    programDegistiTetikle(o.sube);
+    const yeniOv = D.elle[si + '|' + hb];
+    // Keep explicit edits/additions, but release positions created by auto-freeze.
+    Object.keys(yeniOv.yer || {}).forEach(k => {
+      if (!yeniOv.konuSlot?.[k] && !yeniOv.serbest?.[k] && !yeniOv.anlatim?.[k] &&
+          !yeniOv.ogrEk?.[k] && !Object.hasOwn(yeniOv.degisim || {}, k) &&
+          !(yeniOv.ek || []).includes(+k)) delete yeniOv.yer[k];
+    });
+    delete yeniOv.sabit; delete yeniOv.plan; delete yeniOv.ogrenciOtomatik;
+    Object.keys(D.ogrTaslak || {}).filter(k => +k.split('|')[0] === si && +k.split('|')[1] >= hb)
+      .forEach(k => delete D.ogrTaslak[k]);
+    const p = planHesapla(si, hb), eskiIds = new Set(eski.gunler.flat().map(x => x.ki));
+    const yeniIds = new Set(p.gunler.flat().map(x => x.ki));
+    const eklenen = p.gunler.flat().filter(x => !eskiIds.has(x.ki));
+    if (!eklenen.some(x => !x.serbest && !x.anlatim && D.konuKaynak?.[x.ki])) return null;
+    return { veri: D, plan: p, eskiToplam: eski.toplam, eklenen,
+      cikarilan: eski.gunler.flat().filter(x => !yeniIds.has(x.ki)) };
+  } finally { D = once; }
+}
+function ogrenciPrograminiYenile(si, hb) {
+  const r = ogrenciProgramYenileOnizleme(si, hb);
+  if (!r) return null;
+  // Retain a complete local recovery copy before changing the current plan.
+  localStorage.setItem('yks_program_yenile_oncesi', JSON.stringify(D));
+  D = r.veri;
+  ogrenciHaftayiSakla(si, hb, r.plan);
+  ogrenciOtomasyonUygula();
+  return { toplam: r.plan.toplam, eklenen: r.eklenen.length };
+}
+function programYenileYedegiVar() {
+  try { return !!localStorage.getItem('yks_program_yenile_oncesi'); } catch (e) { return false; }
+}
+function ogrenciProgramYenileUyarisi(si, hb) {
+  const r = ogrenciProgramYenileOnizleme(si, hb);
+  if (!r) return '';
+  return '<section class="uyari-serit" aria-label="Ders programına göre planı güncelle"><b>Ders programındaki konular bu haftanın planına yansımamış.</b>' +
+    '<p>Bu hafta henüz sonuç girmedin. Güncel programla ' + r.eskiToplam + ' çalışma yerine ' + r.plan.toplam +
+    ' çalışma planlanacak. Çalışmalar bugünden sonraki uygun günlere dağıtılır.</p>' +
+    '<details><summary>Değişecek konuları gör</summary><p><b>Eklenecek:</b> ' + r.eklenen.map(x => konuHtml(x.ad)).join(' · ') + '</p>' +
+    (r.cikarilan.length ? '<p><b>Bu haftadan çıkacak:</b> ' + r.cikarilan.map(x => konuHtml(x.ad)).join(' · ') +
+      '. Güncel işleniş tarihlerine göre sonraki planlarda değerlendirilir.</p>' : '') + '</details>' +
+    '<p>Önceki planın yedeği saklanır. Geçmiş haftalar ve sonuç kayıtları korunur.</p>' +
+    '<button class="dugme birincil" id="ogrProgramYenile">Bu haftayı ders programına göre yenile</button></section>';
+}
+function programEksikDersleri(sube, hb) {
+  const dersler = programAl(sube, hb).prog.gunler.flat().filter(d => d && dersEsle(d) >= 0);
+  return [...new Set(dersler)].filter(d => !planDersAnahtari(sube, d));
+}
+function ogrenciProgramKapsami(si, hb) {
+  const o = D.ogr[si];
+  if (!o || ogrenciSinifi(o) === 12) return '';
+  const okulHb = pazartesi(hb), hafta = planHaftasi(o.sube, okulHb);
+  const plan = D.konuPlani?.[o.sube] || [], eksik = programEksikDersleri(o.sube, okulHb);
+  const dersler = [...new Set(programAl(o.sube, okulHb).prog.gunler.flat()
+    .map(d => planDersAnahtari(o.sube, d)).filter(Boolean))];
+  if (!dersler.length && !eksik.length) return '';
+  return '<details class="kart" style="padding:16px;margin-bottom:16px"><summary>Bu haftanın okul konuları · ' + hafta + '. plan haftası</summary>' +
+    '<p class="mini">Ders programındaki konu planıdır. Tekrar testleri işlenişten sonra, tekrar aralığına ve günlük kapasiteye göre gelir.</p>' +
+    dersler.map(d => {
+      let w = hafta - 1;
+      while (w >= 0 && !Object.hasOwn(plan[w] || {}, d)) w--;
+      const konular = (plan[w] || {})[d] || [];
+      return '<p><b>' + kacis(d) + ':</b> ' + (konular.length ? konular.map(konuHtml).join(' · ') +
+        (w < hafta - 1 ? ' <span class="mini">(planda yeni konu yok; önceki başlık devam ediyor)</span>' : '') : 'Bu hafta için konu belirtilmemiş.') + '</p>';
+    }).join('') + (eksik.length ? '<p role="status"><b>Konu planı eksik:</b> ' + eksik.map(kacis).join(', ') +
+      '. Bu dersler için kitap konularını Konu Planı’na ekleyin.</p><button class="dugme" data-sekme="konuplani">Konu Planı’nı aç</button>' : '') + '</details>';
+}
 function gorunumOgrenciPlan() {
   const si = EK.ogr, hb = haftaBasi(), p = planHesapla(si, hb);
   const gorunen = gunlukEkliPlan(si, hb, p);
@@ -3379,10 +3467,11 @@ function gorunumOgrenciPlan() {
   return '<div class="ogrenci-plan">' + ogrenciYksYolu(false) +
     '<div class="baslik"><h1>' + (gelecek ? 'Gelecek haftan' : gecmis ? 'Geçmiş haftan' : 'Haftalık planın') + '</h1>' +
     (p.elle?.sabit?'<p>Bu haftanın sabitlenmiş planı. Çalışmaların tarihleri ve sırası korunur; tamamlanma bilgileri aşağıda görünür.</p>':gelecek ? '<p>Sonuçların geldikçe güncellenir. Hafta başladığında kendiliğinden kaydedilir.</p>' : '') + '</div>' +
-    ogrenciHaftaSecici() +
+    ogrenciHaftaSecici() + ogrenciProgramYenileUyarisi(si, hb) + ogrenciProgramKapsami(si, hb) +
     (EK.ogrOtoHata ? '<p role="alert">' + kacis(EK.ogrOtoHata) + '</p>' : '') +
     '<div class="arac"><button class="dugme birincil" data-sekme="giris">Sonuç gir</button>' +
-    '<button class="dugme" id="yazdirOnizle">Planı indir / PDF</button></div>' +
+    '<button class="dugme" id="yazdirOnizle">Planı indir / PDF</button>' +
+    (programYenileYedegiVar() ? '<button class="dugme" id="ogrProgramYedek">Yenilemeden önceki yedeği indir</button>' : '') + '</div>' +
     (p.devreden ? '<p class="mini">' + p.devreden + ' çalışma bu haftaya sığmadı; sonraki planlarda yeniden değerlendirilir. Günlük sınırın korunur.</p>' : '') +
     (!gorunen.toplam ? '<div class="kart" style="padding:20px">' +
       (p.kayitYok?'Bu haftanın kaydedilmiş planı bulunamadı. Eski kağıdın varsa <button class="dugme" data-sekme="kurtarma">Geçmiş plan kurtar</button> ile geri yükleyebilirsin.':bugunNo() >= gunNo(D.ayar.sinav) ? 'Program dönemi tamamlandı. Sonuçlarını Karnem bölümünde görebilirsin.' :
@@ -3444,7 +3533,7 @@ function gorunumPlan() {
         '<button class="dugme" id="bekleyeniAl">bu haftaya al</button> ' +
         '<button class="dugme" id="bekleyeniErtele">hepsini ileri al</button>' +
         '<div class="mini" style="margin-top:7px">' +
-        p.bekleyen.slice(0, 8).map(x => kacis(konuAl(x.ki)[3]) + ' <span style="opacity:.7">(' + ggyy(x.due) + ')</span>').join(' · ') +
+        p.bekleyen.slice(0, 8).map(x => konuHtml(konuAl(x.ki)[3]) + ' <span style="opacity:.7">(' + ggyy(x.due) + ')</span>').join(' · ') +
         (p.bekleyen.length > 8 ? ' · +' + (p.bekleyen.length - 8) + ' daha' : '') + '</div></div>'
       : '') +
     // Haftalar Haritası'na hiç gitmeden de fark edilsin diye: sonuç girilmemiş, karara
@@ -3585,11 +3674,11 @@ function sonucSatiriHtml(o) {
   const si = o.si, ki = o.ki, gun = o.gun, l = o.kayit, future = gun > bugunNo();
   const konu = o.konu || konuAl(ki), ders = o.ders || konuDersAdi(ki);
   if (o.deferred) return '<div class="sonuc-satir sonuc-gelecek" data-sonuc-deferred="1" data-ki="' + ki + '" data-gun="' + gun + '" data-deferred="1">' +
-    '<span class="gun">' + kacis(o.gunEtiketi || ggyy(gun)) + '</span><div class="sonuc-baslik"><span>' + kacis(konu[3]) + ' <span class="mini">· ' + kacis(ders) + '</span></span>' +
+    '<span class="gun">' + kacis(o.gunEtiketi || ggyy(gun)) + '</span><div class="sonuc-baslik"><span>' + konuHtml(konu[3]) + ' <span class="mini">· ' + kacis(ders) + '</span></span>' +
     '<div class="sonuc-gecmis">Anlatılmadı · ilk tekrar gelecek planda</div></div><span></span></div>';
   const kilitli = !!l && !o.duzenle;
   if (kilitli) return '<div class="giris-satir giris-kilitli"><span class="gun">' + kacis(o.gunEtiketi || ggyy(gun)) + '</span>' +
-    '<span>' + kacis(konu[3]) + ' <span class="mini">· ' + kacis(ders) + '</span>' + tekrarEtiketi(si, {ki: ki, anlatim: false, kart: D.kart[si + ':' + ki]}, gun) + '</span>' +
+    '<span>' + konuHtml(konu[3]) + ' <span class="mini">· ' + kacis(ders) + '</span>' + tekrarEtiketi(si, {ki: ki, anlatim: false, kart: D.kart[si + ':' + ki]}, gun) + '</span>' +
     '<span class="mini" style="text-align:center">✓ kaydedildi · ' + kacis(sonucEtiketiGuvenli(l)) + '</span>' +
     '<button class="dugme" data-girisduzenle="1" data-ki="' + ki + '" data-gun="' + gun + '">Düzenle</button></div>';
   const not = l && Number.isInteger(+l[5]) && +l[5] >= 1 && +l[5] <= 4 ? +l[5] : null;
@@ -3599,11 +3688,11 @@ function sonucSatiriHtml(o) {
     kacis(n === 1 ? 'Hatırlayamadım' : n === 2 ? 'Doğru hatırladım ama çok zorlandım' : n === 3 ? 'Normal çabayla hatırladım' : 'Hemen ve rahat hatırladım') + '"' + devreDisi + '>' + NOT_AD[n] + '</button>').join('');
   return '<div class="sonuc-satir' + (future ? ' sonuc-gelecek' : '') + '" data-sonuc-row data-ki="' + ki + '" data-gun="' + gun + '"' +
     (o.slot === undefined ? '' : ' data-slot="' + kacis(o.slot) + '"') + '>' +
-    '<span class="gun">' + kacis(o.gunEtiketi || ggyy(gun)) + '</span><div class="sonuc-baslik"><span>' + kacis(konu[3]) +
+    '<span class="gun">' + kacis(o.gunEtiketi || ggyy(gun)) + '</span><div class="sonuc-baslik"><span>' + konuHtml(konu[3]) +
     ' <span class="mini">· ' + kacis(ders) + '</span>' + (o.test > 1 ? ' <span class="rozet">' + o.test + ' test</span>' : '') + '</span>' +
-    (o.extra || '') + '<div class="sonuc-notlar" role="group" aria-label="' + kacis(konu[3] + ' hatırlama sonucu') + '">' + notlar + '</div>' +
+    (o.extra || '') + '<div class="sonuc-notlar" role="group" aria-label="' + konuHtml(konu[3] + ' hatırlama sonucu') + '">' + notlar + '</div>' +
     '<button type="button" class="sonuc-sayisal-ac"' + devreDisi + '>Doğru / soru sayısıyla gir</button>' +
-    '<div class="sonuc-sayisal"' + (sayisal ? '' : ' hidden') + '><label class="mini">Doğru <input type="number" min="0" max="200" placeholder="doğru" data-sonuc-dogru class="gDogru" aria-label="' + kacis(konu[3] + ' doğru sayısı') + '"' + (sayisal ? ' value="' + l[3] + '"' : '') + devreDisi + '></label>' +
+    '<div class="sonuc-sayisal"' + (sayisal ? '' : ' hidden') + '><label class="mini">Doğru <input type="number" min="0" max="200" placeholder="doğru" data-sonuc-dogru class="gDogru" aria-label="' + konuHtml(konu[3] + ' doğru sayısı') + '"' + (sayisal ? ' value="' + l[3] + '"' : '') + devreDisi + '></label>' +
     '<label class="mini">Soru <input type="number" min="1" max="200" data-sonuc-soru class="gSoru" value="' + (sayisal ? l[4] : (o.soru || D.ayar.soru)) + '"' + devreDisi + '></label></div>' +
     (future ? '<div class="sonuc-gecmis">Bu gün henüz gelmedi.</div>' : '') + '</div>' +
     (ogrenciMi() ? '<button type="button" class="dugme sonuc-anlatilmadi" data-sonuc-anlatilmadi' + anlatilmadiDevreDisi +
@@ -3643,12 +3732,12 @@ function gorunumGiris() {
     if (!p.gunler[g].length) continue;
     h += '<div class="gun-basi">' + GUN_AD[haftaGunu(hb + g)] + ' ' + gg(hb + g) + '</div>';
     p.gunler[g].forEach(x => {
-      if (x.serbest) { h += '<div class="giris-satir"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span><span>' + kacis(x.ad) + ' <span class="mini">· serbest çalışma, sonuç girilmez</span></span><span class="mini" style="text-align:center">' + x.soru + (x.birim === 'dakika' ? ' dakika' : ' soru') + '</span><span></span></div>'; return; }
+      if (x.serbest) { h += '<div class="giris-satir"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span><span>' + konuHtml(x.ad) + ' <span class="mini">· serbest çalışma, sonuç girilmez</span></span><span class="mini" style="text-align:center">' + x.soru + (x.birim === 'dakika' ? ' dakika' : ' soru') + '</span><span></span></div>'; return; }
       const gun = hb + g;
       if (x.anlatim) {
         const anlatimGelecek = gun > bugunNo();
         const anlatimBitti=p.elle?.anlatim?.[x.ki]?.tamamGun===gun || (p.elle?.kurtarma?.satirlar||[]).some(r=>r.tur==='anlatim'&&r.ki===x.ki&&r.gun===gun&&r.durum==='tamamlandi');
-        h += '<div class="giris-satir"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span><span>' + kacis(x.ad) + ' <span class="mini">· konu anlatımı' + (x.kaynak ? ' (' + kacis(x.kaynak) + ')' : '') + '</span></span><label class="mini" style="grid-column:span 2;display:flex;align-items:center;gap:7px"><input type="checkbox" class="gAnlatim" data-ki="' + x.ki + '" data-gun="' + gun + '"' + (anlatimBitti?' checked disabled':anlatimGelecek ? ' disabled' : '') + '>' + (anlatimBitti?'Anlatım tamamlandı':anlatimGelecek ? 'bu gün henüz gelmedi' : 'anlatıldı / izledi — ilk test ' + D.ayar.ilk + ' gün sonra gelsin') + '</label></div>';
+        h += '<div class="giris-satir"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span><span>' + konuHtml(x.ad) + ' <span class="mini">· konu anlatımı' + (x.kaynak ? ' (' + kacis(x.kaynak) + ')' : '') + '</span></span><label class="mini" style="grid-column:span 2;display:flex;align-items:center;gap:7px"><input type="checkbox" class="gAnlatim" data-ki="' + x.ki + '" data-gun="' + gun + '"' + (anlatimBitti?' checked disabled':anlatimGelecek ? ' disabled' : '') + '>' + (anlatimBitti?'Anlatım tamamlandı':anlatimGelecek ? 'bu gün henüz gelmedi' : 'anlatıldı / izledi — ilk test ' + D.ayar.ilk + ' gün sonra gelsin') + '</label></div>';
         return;
       }
       const deferred = konuAnlatilmadiDurumu(si, x.ki, gun), sonKayit = (D.log || []).filter(l => l[1] === si && l[2] === x.ki && l[0] === gun).slice(-1)[0], acik = !!EK.girisAcik[x.ki + ':' + gun];
@@ -3683,9 +3772,9 @@ function gorunumKonular() {
     const ort = sayisalKayitlar.length ? Math.round(sayisalKayitlar.reduce((a, l) => a + sonucYuzdesi(l), 0) / sayisalKayitlar.length) : null;
     h += '<tr><td><input type="checkbox" class="konuSec" data-ki="' + x.i + '"></td>' +
       '<td class="mini">' + kacis(mufredatKatalogUnitesi(x.k)) + '</td><td>' +
-      (x.kendi ? '<input class="ekKonuAd" data-ki="' + x.i + '" value="' + kacis(x.k[3]) + '" style="width:100%">' +
+      (x.kendi ? '<input class="ekKonuAd" data-ki="' + x.i + '" value="' + konuHtml(x.k[3]) + '" style="width:100%">' +
                  '<button class="ekKonuSil dugme" data-ki="' + x.i + '" style="padding:2px 7px;margin-top:4px">kaldır</button>'
-               : kacis(x.k[3])) + '</td>' +
+               : konuHtml(x.k[3])) + '</td>' +
       '<td class="sayisal">' + (x.k[1] || '') + '</td>' +
       '<td><span class="rozet">' + (mufredatKonuBilgisi(x.k[0], x.k[3]) ? 'Okul' : x.k[4] ? 'AYT' : 'TYT') + '</span></td>' +
       '<td><input type="date" class="isleniTarih" data-ki="' + x.i + '" value="' + (t ? isoDan(t) : '') + '"></td>' +
@@ -3710,9 +3799,9 @@ function gorunumKonuPlani() {
   if (subeSinifi(sube) < 12) h += '<p>36 haftalık öneri; tatiller ve okulun ilerleyişine göre düzenleyin. Alan seçimi ortak okul konularını gizlemez.</p><label>Bu şubenin plan başlangıcı <input id="subeMufredatBaslangic" type="date" value="' + isoDan(subePlanBaslangici(sube)) + '"></label>';
   else {
     const eksik = yksPlanEksikleri(sube);
-    if (eksik.length) h += '<div class="uyari-serit"><b>Kaynak kontrolü: eksik başlıklar</b><p>' + kacis(eksik.map(x => x.ders + ': ' + x.konular.length + ' konu').join(' · ')) + '</p><details><summary>Eklenecek konuları göster</summary>' + eksik.map(x => '<p><b>' + kacis(x.ders) + '</b>: ' + x.konular.map(kacis).join(' · ') + '</p>').join('') + '</details><p>Yalnızca eksik dersler ve Süper İletkenler başlığı gelecek haftalara eklenir. Mevcut konu sırası, sonuçlar ve teslim edilmiş planlar korunur.</p><button class="dugme" id="yksEksikleriEkle">Gösterilen eksikleri gelecek haftalara ekle</button></div>';
+    if (eksik.length) h += '<div class="uyari-serit"><b>Kaynak kontrolü: eksik başlıklar</b><p>' + kacis(eksik.map(x => x.ders + ': ' + x.konular.length + ' konu').join(' · ')) + '</p><details><summary>Eklenecek konuları göster</summary>' + eksik.map(x => '<p><b>' + kacis(x.ders) + '</b>: ' + x.konular.map(konuHtml).join(' · ') + '</p>').join('') + '</details><p>Yalnızca eksik dersler ve Süper İletkenler başlığı gelecek haftalara eklenir. Mevcut konu sırası, sonuçlar ve teslim edilmiş planlar korunur.</p><button class="dugme" id="yksEksikleriEkle">Gösterilen eksikleri gelecek haftalara ekle</button></div>';
   }
-  const dersler = konuPlaniDersleri(sube);
+  const dersler = [...new Set([...konuPlaniDersleri(sube), ...programEksikDersleri(sube, pazartesi(haftaBasi()))])];
   if (!dersler.length) return h + '<div class="uyari-serit">Bu şube için henüz konu planı yok.</div>';
   dersler.forEach(anahtar => {
     const d = dersDizisi(sube, anahtar);
@@ -3722,7 +3811,7 @@ function gorunumKonuPlani() {
     d.dizi.forEach((x, i) => {
       h += '<tr><td class="sayisal mini" style="width:34px">' + (i + 1) + '</td>' +
         '<td><input type="text" class="kpAd" data-ders="' + kacis(anahtar) + '" data-i="' + i +
-        '" value="' + kacis(x.ad) + '" style="width:100%"></td>' +
+        '" value="' + konuHtml(x.ad) + '" style="width:100%"></td>' +
         '<td class="mini sayisal" style="width:60px">' + x.hafta + '. hf</td>' +
         '<td style="white-space:nowrap;width:1%">' +
         '<button class="dugme mini kpYukari" data-ders="' + kacis(anahtar) + '" data-i="' + i + '"' +
@@ -3865,7 +3954,7 @@ function gorunumRapor() {
     '</tbody></table></div>';
   h += '<div class="kart sarma"><table><thead><tr><th>En zayıf konular</th><th>Ders</th><th class="sayisal">Son başarı</th>' +
     '<th class="sayisal">Zorluk</th><th class="sayisal">Sonraki tekrar</th></tr></thead><tbody>' +
-    (zayif.length ? zayif.map(x => '<tr><td>' + kacis(konuAl(x.ki)[3]) + '</td><td class="mini">' + kacis(dersKisaAd(konuDersAdi(x.ki))) +
+    (zayif.length ? zayif.map(x => '<tr><td>' + konuHtml(konuAl(x.ki)[3]) + '</td><td class="mini">' + kacis(dersKisaAd(konuDersAdi(x.ki))) +
       '</td><td class="sayisal">' + (x.v.y === null ? NOT_AD[x.v.not] : '%' + x.v.y) + '</td><td class="sayisal">' + x.v.d.toFixed(1) +
       '</td><td class="sayisal">' + ggyy(x.v.due) + '</td></tr>').join('')
       : '<tr><td colspan="5" class="mini">Henüz sonuç girilmedi.</td></tr>') + '</tbody></table></div>';
@@ -4255,10 +4344,10 @@ function gorunumProgram() {
         const tumu = anahtar ? dersDizisi(sube, anahtar).dizi : [];
         h += '<div class="konuKutu">' +
           (atanan.length
-            ? atanan.map(ki => '<div class="konuCip">' + kacis(konuAl(ki)[3]) +
+            ? atanan.map(ki => '<div class="konuCip">' + konuHtml(konuAl(ki)[3]) +
                 '<button class="cipSil" data-ki="' + ki + '" data-sube="' + kacis(sube) + '" title="Bu günden kaldır">×</button></div>').join('')
             : oneri.length
-              ? oneri.map(ad => '<div class="konuCip oneri" title="Konu planından öneri — dağıtınca kesinleşir">' + kacis(ad) + '</div>').join('')
+              ? oneri.map(ad => '<div class="konuCip oneri" title="Konu planından öneri — dağıtınca kesinleşir">' + konuHtml(ad) + '</div>').join('')
               : '<span class="mini">konu yok</span>');
         if (tumu.length) {
           const gruplar = {};
@@ -4266,7 +4355,7 @@ function gorunumProgram() {
           h += '<select class="konuAta" data-g="' + gi + '" data-d="' + kacis(ders) + '">' +
             '<option value="">konu ekle / değiştir…</option>' +
             Object.keys(gruplar).map(w => '<optgroup label="' + w + '. hafta' + (+w === hafta ? ' (bu hafta)' : '') + '">' +
-              gruplar[w].map(a => '<option value="' + kacis(a) + '">' + kacis(a) + '</option>').join('') +
+              gruplar[w].map(a => '<option value="' + kacis(a) + '">' + konuHtml(a) + '</option>').join('') +
               '</optgroup>').join('') + '</select>';
         }
         h += '</div>';
@@ -7150,7 +7239,7 @@ function dersSirasiKaydir(si, hb, g, s, yon) {
     else ov.degisim[kaynakKi] = onizleme.hedefKi;
   }
   return { ders: onizleme.anahtar, eski: eskiAd, yeni: onizleme.hedefAd,
-           mesaj: 'Yalnızca seçilen test “' + eskiAd + '” yerine “' + onizleme.hedefAd + '” oldu.' };
+           mesaj: 'Yalnızca seçilen test “' + konuGorunenAdi(eskiAd) + '” yerine “' + konuGorunenAdi(onizleme.hedefAd) + '” oldu.' };
 }
 
 function sonrakiKonuyuEkle(si, hb, g, s) {
@@ -7172,7 +7261,7 @@ function sonrakiKonuyuEkle(si, hb, g, s) {
   ov.konuSlot[id] = { ki: onizleme.hedefKi };
   ov.yer[id] = [g, s + 1];
   return { ders: onizleme.anahtar, yeni: onizleme.hedefAd,
-           mesaj: '“' + onizleme.hedefAd + '” aynı güne ayrı bir test olarak eklendi.' };
+           mesaj: '“' + konuGorunenAdi(onizleme.hedefAd) + '” aynı güne ayrı bir test olarak eklendi.' };
 }
 
 function planSlotSonuclandi(si, hb, slot) {
@@ -7312,7 +7401,7 @@ function yazdirSayfa(si, hb) {
     for (let g = 0; g <= planHaftaSonu(si, hb) - hb; g++) {
       const x = p.gunler[g][r];
       h += x ? '<td' + (x.anlatim ? ' class="anl-h"' : '') + '><div class="d">' +
-        kacis(dersKisaAd(x.dersAd)) + '</div><div class="k">' + kacis(x.ad) + '</div>' +
+        kacis(dersKisaAd(x.dersAd)) + '</div><div class="k">' + konuHtml(x.ad) + '</div>' +
         (!x.anlatim && !x.serbest ? '<div class="n"><b>' + kacis(tekrarBilgisi(si, x, hb + g).etiket) + '</b> · ' +
           kacis(tekrarBilgisi(si, x, hb + g).aciklama) + '</div>' : '') + '<div class="n">' +
         (x.anlatim ? 'KONU ANLATIMI' + (x.kaynak ? ' · ' + kacis(x.kaynak) : '')
@@ -7618,6 +7707,20 @@ function cizIc() {
 // --- konu penceresi ve sürükleme
 document.addEventListener('click', async ev => {
   const cikisId=ev.target.closest?.('button')?.id;
+  if (cikisId === 'ogrProgramYenile') {
+    try {
+      const r = ogrenciPrograminiYenile(EK.ogr, haftaBasi());
+      if (!r) { bilgiVer('Bu hafta yenilenemiyor. Sonuç girilmiş veya plan zaten güncel.'); return; }
+      const tamam = await kaydet(true); ciz();
+      bilgiVer(tamam ? 'Bu haftanın planı güncellendi: ' + r.toplam + ' çalışma.' : 'Plan güncellendi fakat kalıcı kayıt başarısız. Yedek indirin.');
+    } catch (e) { bilgiVer('Plan yenilenemedi: ' + (e.message || e)); }
+    return;
+  }
+  if (cikisId === 'ogrProgramYedek' && ogrenciMi()) {
+    const json = localStorage.getItem('yks_program_yenile_oncesi');
+    if (json) await indir('program-yenileme-oncesi.json', json, 'application/json');
+    return;
+  }
   if(cikisId==='oturumKapat'||cikisId==='cikisTekrar'){await kaydedipCikisYap();return;}
   if(cikisId==='cikisKapat'){document.getElementById('cikisDurum')?.remove();return;}
   if(CIKIS_DURUMU)return;
@@ -8082,6 +8185,7 @@ document.addEventListener('click', async ev => {
     const sube = EK.sube || (D.ogr[EK.ogr] || {}).sube;
     const anahtar = kp.dataset.ders;
     const adlar = dersDizisi(sube, anahtar).dizi.map(x => x.ad);
+    const bosDers = adlar.length === 0;
     if (kp.classList.contains('kpEkle')) {
       const kutu = kp.parentElement.querySelector('.kpYeniAd');
       const yeni = (kutu && kutu.value || '').trim();
@@ -8093,11 +8197,16 @@ document.addEventListener('click', async ev => {
       else if (kp.classList.contains('kpAsagi') && i < adlar.length - 1) { const t = adlar[i + 1]; adlar[i + 1] = adlar[i]; adlar[i] = t; }
       else if (kp.classList.contains('kpUzat')) { adlar.splice(i + 1, 0, adlar[i]); }
       else if (kp.classList.contains('kpSil')) {
-        if (!confirm('“' + adlar[i] + '” konu planından silinsin mi? Sonucu girilmiş bir konuysa geçmişine dokunulmaz.')) return;
+        if (!confirm('“' + konuGorunenAdi(adlar[i]) + '” konu planından silinsin mi? Sonucu girilmiş bir konuysa geçmişine dokunulmaz.')) return;
         adlar.splice(i, 1);
       } else return;
     }
-    dersDizisiYaz(sube, anahtar, adlar);
+    if (bosDers && kp.classList.contains('kpEkle')) {
+      const h = planHaftasi(sube, pazartesi(haftaBasi())) - 1;
+      const plan = (D.konuPlani ||= {})[sube] ||= [];
+      while (plan.length <= h) plan.push({});
+      plan[h][anahtar] = adlar;
+    } else dersDizisiYaz(sube, anahtar, adlar);
     programDegistiTetikle(sube);
     EK.kirli = true; await kaydet(true); ciz();
     return;
@@ -8363,7 +8472,7 @@ document.addEventListener('click', async ev => {
     const si = EK.ogr, ki = +t.dataset.ki;
     const g = konuyuErtele(si, ki);
     EK.kirli = true; await kaydet(true); ciz();
-    bilgiVer(kacis(konuAl(ki)[3]) + ' → ' + GUN_AD[haftaGunu(g)] + ' ' + ggyy(g) +
+    bilgiVer(konuHtml(konuAl(ki)[3]) + ' → ' + GUN_AD[haftaGunu(g)] + ' ' + ggyy(g) +
              '. Sonuç yazılmadı, konu hâlâ ilk tekrar olarak bekliyor.');
     return;
   }
@@ -8961,7 +9070,7 @@ document.addEventListener('change', async ev => {
   if (el.id === 'dersSec') { EK.ders = +el.value; ciz(); return; }
   if (el.classList.contains('ekKonuAd')) {
     const k = konuAl(+el.dataset.ki);
-    if (k) k[3] = el.value.trim() || k[3];
+    if (k && el.value.trim()) k[3] = konuDuzenlemeAdi(k[3], el.value.trim());
     await kaydet(true); return;
   }
   if (el.classList.contains('isleniTarih')) {
@@ -9025,8 +9134,8 @@ document.addEventListener('change', async ev => {
     const anahtar = el.dataset.ders, i = +el.dataset.i;
     const adlar = dersDizisi(sube, anahtar).dizi.map(x => x.ad);
     const yeni = (el.value || '').trim();
-    if (!yeni || yeni === adlar[i]) { ciz(); return; }
-    adlar[i] = yeni;
+    if (!yeni || yeni === konuGorunenAdi(adlar[i])) { ciz(); return; }
+    adlar[i] = konuDuzenlemeAdi(adlar[i], yeni);
     dersDizisiYaz(sube, anahtar, adlar);
     programDegistiTetikle(sube);
     EK.kirli = true; await kaydet(true); ciz();

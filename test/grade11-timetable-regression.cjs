@@ -185,3 +185,87 @@ test('later weekly schedules inherit correctly without moving protected results 
   const rows = a.json("haftaYerlesim('11-A',2,gunNo('2026-09-28'))");
   assert(rows.filter(x => x.dersAd === 'Matematik TYT').every(x => x.gi === 2));
 });
+
+// Anonymous reproduction of a schedule added after the student's initial freeze.
+function staleStudentWeek() {
+  const a=app();
+  a.run(`D.ogr=D.ogr.slice(0,1);D.ogr[0].alan='EA';D.ogr[0].off=[6];D.ogr[0].aktif=true;
+    D.ayar.testTarih='2026-09-25';D.ayar.gecmisSerbest=false;D.rol='ogrenci';EK.sekme='plan';`);
+  a.schedule([['TÜRK DİLİ VE EDEBİYATI','TARİH','COĞRAFYA'],['MATEMATİK'],['FELSEFE','MATEMATİK TYT'],
+    ['DİN KÜLTÜRÜ'],['GEOMETRİ','TÜRKÇE']]);
+  a.run(`const staleKi=+Object.keys(D.subeIslenis['11-A']).find(k=>konuAl(+k)[3].includes('Web Tabanlı'));
+    const h=buHafta();D.ogr[0].cikti=h;
+    D.elle['0|'+h]={ek:[],sil:[],yer:{[staleKi]:[3,0]},soru:{[staleKi]:24},degisim:{},konuSlot:{},
+      sabit:h,ogrenciOtomatik:true,plan:{surum:2,slotlar:[[],[],[],[String(staleKi)],[],[],[]],off:[6],kap:6,devreden:0,tasan:[]}};`);
+  return a;
+}
+
+test('current student view detects a frozen one-topic week after timetable upload',()=>{
+  const a=staleStudentWeek(),before=a.run('JSON.stringify(D)');
+  assert.equal(a.run('planHesapla(0,buHafta()).toplam'),1);
+  const r=a.json('(()=>{const r=ogrenciProgramYenileOnizleme(0,buHafta());return {n:r.plan.toplam,ads:r.eklenen.map(x=>x.ad)};})()');
+  assert(r.n>1);assert(r.ads.some(x=>x.includes('İki Nicel Değişkenli')));
+  assert.match(a.run('gorunumOgrenciPlan()'),/id="ogrProgramYenile"/);
+  assert.equal(a.run('JSON.stringify(D)'),before,'preview and rendering do not change stored plans');
+});
+
+test('explicit rebuild uses current topics, is repeatable, and preserves other weeks and results',()=>{
+  const a=staleStudentWeek();
+  a.run(`D.elle['0|'+(buHafta()-7)]={sabit:buHafta()-7,plan:{sentinel:'historical'}};
+    D.log=[[bugunNo()-10,0,0,3,20,0,0]];D.kart['0:0']={due:bugunNo()+30};`);
+  const records=a.run('JSON.stringify([D.log,D.kart,D.elle["0|"+(buHafta()-7)]])');
+  assert(a.run('ogrenciPrograminiYenile(0,buHafta()).toplam')>1);
+  const plan=a.json('planHesapla(0,buHafta()).gunler.map(g=>g.map(x=>x.ad))');
+  assert(!plan.flat().some(x=>x.includes('Web Tabanlı')),'future curriculum topic leaves current week');
+  assert(plan.slice(0,4).every(g=>g.length===0),'do not invent completed work earlier this week');
+  assert(plan.flat().some(x=>x.includes('İki Nicel Değişkenli')));
+  assert.equal(a.run('JSON.stringify([D.log,D.kart,D.elle["0|"+(buHafta()-7)]])'),records);
+  assert.equal(a.run('ogrenciProgramYenileOnizleme(0,buHafta())'),null);
+});
+
+test('scored weeks, historical weeks, and explicitly issued weeks cannot be rebuilt',()=>{
+  const a=staleStudentWeek();
+  assert.equal(a.run('ogrenciProgramYenileOnizleme(0,buHafta()-7)'),null);
+  a.run('D.log=[[bugunNo(),0,staleKi,3,20,0,0]]');
+  assert.equal(a.run('ogrenciPrograminiYenile(0,buHafta())'),null);
+  a.run('D.log=[];delete D.elle["0|"+buHafta()].ogrenciOtomatik');
+  assert.equal(a.run('ogrenciProgramYenileOnizleme(0,buHafta())'),null);
+});
+
+test('a failed recovery-backup write leaves the original notebook untouched',()=>{
+  const a=staleStudentWeek(),before=a.run('JSON.stringify(D)');
+  a.run('localStorage.setItem=()=>{throw Error("quota")}');
+  assert.throws(()=>a.run('ogrenciPrograminiYenile(0,buHafta())'),/quota/);
+  assert.equal(a.run('JSON.stringify(D)'),before);
+});
+
+test('missing geometry and Turkish plans are visible and editable without borrowing other subjects',()=>{
+  const a=staleStudentWeek();
+  assert.deepEqual(a.json("programEksikDersleri('11-A',buHafta())"),['GEOMETRİ','TÜRKÇE']);
+  const html=a.run('gorunumOgrenciPlan()');
+  assert.match(html,/Konu planı eksik/);assert.match(html,/GEOMETRİ, TÜRKÇE/);
+  const editor=a.run('gorunumKonuPlani()');
+  assert.match(editor,/class="kpYeniAd" data-ders="GEOMETRİ"/);
+});
+
+test('school overview carries ongoing topics for display without scheduling duplicate reviews',()=>{
+  const a=staleStudentWeek(),before=a.run('JSON.stringify(D)');
+  const html=a.run('ogrenciProgramKapsami(0,buHafta()+7)');
+  assert.match(html,/İki Nicel Değişkenli Veriler/);
+  assert.match(html,/önceki başlık devam ediyor/);
+  assert.equal(a.run('JSON.stringify(D)'),before);
+  a.run("D.konuPlani['11-A'][1].Matematik=[]");
+  assert(!a.run('ogrenciProgramKapsami(0,buHafta()+7)').includes('İki Nicel Değişkenli Veriler'),'explicit empty weeks stop continuation');
+});
+
+test('topic display omits curriculum bookkeeping while saved identities remain intact',()=>{
+  const a=staleStudentWeek();a.run('ogrenciPrograminiYenile(0,buHafta())');
+  const before=a.run('JSON.stringify(D)');
+  for(const code of ['gorunumOgrenciPlan()','gorunumGiris()','yazdirSayfa(0,buHafta())','gorunumKonuPlani()']) {
+    const html=a.run(code);assert(!/11\. sınıf · \d+\.\d+ · /.test(html),code);
+  }
+  assert.equal(a.run('JSON.stringify(D)'),before);
+  assert(a.run("D.konuPlani['11-A'][0].Matematik[0].startsWith('11. sınıf · 1.1 · ')"));
+  assert.equal(a.run("konuDuzenlemeAdi('11. sınıf · 1.1 · Eski','Yeni')"),'11. sınıf · 1.1 · Yeni');
+  assert.equal(a.run("konuHtml('11. sınıf · 1.1 · <script>')"),'&lt;script&gt;');
+});
