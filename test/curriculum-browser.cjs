@@ -32,7 +32,7 @@ fs.mkdirSync(out,{recursive:true});
    const tytCell=page.locator('td').filter({has:page.locator('.progHucre[data-g="0"][data-s="1"]')});
    assert.equal(await mathCell.locator('select.progHucre').inputValue(),'MATEMATİK');
    assert.equal(await tytCell.locator('select.progHucre').inputValue(),'TYT MATEMATİK');
-   assert((await mathCell.locator('.konuKutu').innerText()).includes('İki Nicel Değişkenli'));
+   assert((await mathCell.locator('.konuKutu').innerText()).includes('İstatistiksel Araştırma Süreci — Araştırma sorusu'));
    assert(!(await mathCell.locator('.konuKutu').innerText()).includes('11. sınıf'));
    assert(await tytCell.locator('.konuCip').count()>0);
    assert(!(await tytCell.locator('.konuCip').first().innerText()).includes('11. sınıf'));
@@ -54,7 +54,7 @@ fs.mkdirSync(out,{recursive:true});
    await page.evaluate(()=>{
     D=varsayilan();D.elle={};D.rol='ogrenci';D.ayar.testTarih='2026-09-25';
     D.ogr=[{ad:'Synthetic Grade Eleven',no:1,sube:'11-X',alan:'EA',sinif:11,mufredatBaslangic:'2026-09-21',kap:6,off:[6],aktif:true}];
-    D.konuPlani['11-X']=okulKonuPlani(11);EK.ogr=0;EK.sube='11-X';EK.hafta=null;EK.sekme='plan';
+    D.konuPlani['11-X']=okulKonuPlani(11,false);EK.ogr=0;EK.sube='11-X';EK.hafta=null;EK.sekme='plan';
     programYaz('11-X',buHafta(),{saatler:['09:00','10:00','11:00'],gunler:[
      ['TÜRK DİLİ VE EDEBİYATI','TARİH','COĞRAFYA'],['MATEMATİK'],['FELSEFE','MATEMATİK TYT'],['DİN KÜLTÜRÜ'],['GEOMETRİ','TÜRKÇE'],[],[]]});
     programDegistiTetikle('11-X');
@@ -81,6 +81,24 @@ fs.mkdirSync(out,{recursive:true});
    await page.locator('.kpEkle[data-ders="GEOMETRİ"]').click();
    await page.waitForFunction(()=>D.konuPlani['11-X'][0]['GEOMETRİ']?.[0]==='Geometrik Şekiller');
    assert.equal(await page.evaluate(()=>D.konuPlani['11-X'].length),36,'new course must not be appended in week 37');
+   // Existing notebooks can adopt the weekly outcome groups with a visible preview.
+   assert.equal(await page.locator('.kazanimDersSec:checked').count(),9);
+   await page.getByText('Hafta hafta değişiklikleri gör',{exact:true}).click();
+   assert((await page.locator('#ana').innerText()).includes('İstatistiksel Araştırma Süreci — Veriyi hazırlama'));
+   await page.locator('#kazanimPlaniUygula').click();
+   await page.waitForFunction(()=>D.konuPlani['11-X'][1].Matematik[0].includes('Veriyi hazırlama'));
+   assert.equal(await page.locator('#kazanimPlaniUygula').count(),0);
+   assert(await page.locator('#kazanimPlaniYedek').isVisible());
+   assert.equal(await page.evaluate(()=>new Set(D.konuPlani['11-X'].slice(0,4).flatMap(w=>w.Matematik)).size),4);
+   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('yks_kazanim_plani_oncesi')).konuPlani['11-X'][0].Matematik[0].includes('İki Nicel')),true);
+   assert.equal(await page.evaluate(()=>D.konuPlani['11-X'][0].GEOMETRİ[0]),'Geometrik Şekiller');
+   assert(await page.evaluate(()=>D.konuPlani['11-X'][0]['Matematik TYT'].length>0));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'outcome editor viewport overflow');
+   await page.locator('[data-sekme="plan"]').first().click();
+   await page.getByText('Bu haftanın okul konuları · 1. plan haftası',{exact:true}).click();
+   assert((await page.locator('#ana').innerText()).includes('İstatistiksel Araştırma Süreci — Araştırma sorusu'));
+   assert(!(await page.locator('#ana').innerText()).includes('11. sınıf ·'));
+   await page.screenshot({path:path.join(out,'grade11-weekly-outcomes-'+width+'.png'),fullPage:true});
    // Teacher adds grade11 to a notebook containing existing grade12 students.
    await page.evaluate(()=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-09-23';
     D.ogr=[{no:1,ad:'Mevcut Öğrenci',sube:'12-A',alan:'SAY',aktif:false}];

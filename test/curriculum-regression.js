@@ -60,7 +60,7 @@ a.equal(run('subeSinifHatasi("11-B",11)'), '');
 for(const g of [9,10,11]) {
  sandbox.grade=g;
  const count=run(`(()=>{const p=okulKonuPlani(grade); let n=0; for(const c of MUFREDAT_2026.siniflar[grade]) {
- const actual=p.flatMap(h=>h[c.ad]||[]); const expected=c.uniteler.flatMap((u,ui)=>u.kisaKonular.map((ad,ti)=>mufredatKonuAdi(grade,ui,ti,ad)));
+ const actual=p.flatMap(h=>h[c.ad]||[]); const expected=c.uniteler.flatMap((u,ui)=>grade===11 ? u.haftalikKazanimlar.map((x,i)=>mufredatKonuAdi(11,ui,1000+i,u.planBasligi+' — '+x.ad)) : u.kisaKonular.map((ad,ti)=>mufredatKonuAdi(grade,ui,ti,ad)));
  if(JSON.stringify(actual)!==JSON.stringify(expected))throw Error('topic order '+c.ad);
  for(const ad of actual) { if(ad.length>SONUC_KONU_AD_UST_SINIR || !mufredatKonuBilgisi(c.ders,ad))throw Error('identity '+ad); }
  n+=actual.length; } return n;})()`);

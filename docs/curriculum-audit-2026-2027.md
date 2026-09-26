@@ -53,3 +53,7 @@ Official online unit content frames were checked for the supported grades 9–11
 - Lower-grade topics use distinct identities and are filtered by grade. Ordinary user-authored topics also retain their grade. Student exports carry grade, branch start and custom topic data.
 - Existing grade-12 repairs are previewed in Konu Planı and added only after the current/visible week. The existing topic sequence is retained; a missed topic whose original week has passed is scheduled for future catch-up. Repeating the repair does not add duplicates.
 - No real student data was used in tests. Existing regressions plus grade-specific tests cover record preservation, timetable assignment, package roundtrip, branch isolation, and enrollment.
+
+## 26 September update: Grade 11 weekly outcomes
+
+Grade 11 now repeats the main topic with distinct learning-outcome subtopics each week. See [weekly outcome planning and upgrade rules](grade11-weekly-outcomes.md). The old broad-topic generator remains available internally for identifying unchanged legacy plans; Grades 9, 10 and 12 are unchanged.
