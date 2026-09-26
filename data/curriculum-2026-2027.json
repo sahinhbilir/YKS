@@ -1,6 +1,6 @@
 {
   "yil": "2026–2027",
-  "surum": "2026-09-23",
+  "surum": "2026-09-26",
   "kademeliKaynak": "https://ogm.meb.gov.tr/www/2026-2027-egitim-ogretim-yili-turkiye-yuzyili-maarif-modeli-taslak-cerceve-planlar-yayimlandi/icerik/2633/tr",
   "siniflar": {
     "9": [
@@ -1627,6 +1627,88 @@
               "E-posta ve iletişim: dinleme / izleme",
               "İletişim engellerini canlandırma",
               "E-posta yazma"
+            ],
+            "ciktiKodlari": [
+              "TDE1.1",
+              "TDE1.2",
+              "TDE1.3",
+              "TDE1.4",
+              "TDE2.1",
+              "TDE2.2",
+              "TDE2.3",
+              "TDE2.4",
+              "TDE3.1",
+              "TDE3.2",
+              "TDE3.3",
+              "TDE3.4",
+              "TDE4.1",
+              "TDE4.2",
+              "TDE4.3",
+              "TDE4.4"
+            ],
+            "planBasligi": "Bir Diyeceğim Var!",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Karagöz ve mektup: okumaya hazırlık ve anlam",
+                "ciktilar": [
+                  "TDE2.1",
+                  "TDE2.2"
+                ]
+              },
+              {
+                "ad": "Karagöz ve mektup: yapı, dil ve anlatım",
+                "ciktilar": [
+                  "TDE2.3"
+                ]
+              },
+              {
+                "ad": "Okuma yorumlarını gerekçelendirme ve değerlendirme",
+                "ciktilar": [
+                  "TDE2.4"
+                ]
+              },
+              {
+                "ad": "İletişim ve e-posta: dinleme ve anlam",
+                "ciktilar": [
+                  "TDE1.1",
+                  "TDE1.2"
+                ]
+              },
+              {
+                "ad": "Dinlenen metni çözümleme ve süreci değerlendirme",
+                "ciktilar": [
+                  "TDE1.3",
+                  "TDE1.4"
+                ]
+              },
+              {
+                "ad": "İletişim engelleri draması: içerik hazırlama",
+                "ciktilar": [
+                  "TDE3.1",
+                  "TDE3.2"
+                ]
+              },
+              {
+                "ad": "Konuşmayı uygulama ve değerlendirme",
+                "ciktilar": [
+                  "TDE3.3",
+                  "TDE3.4"
+                ]
+              },
+              {
+                "ad": "E-posta: plan ve taslak",
+                "ciktilar": [
+                  "TDE4.1",
+                  "TDE4.2"
+                ]
+              },
+              {
+                "ad": "Yazıyı düzenleme ve değerlendirme",
+                "ciktilar": [
+                  "TDE4.3",
+                  "TDE4.4"
+                ]
+              }
             ]
           },
           {
@@ -1644,6 +1726,88 @@
               "Âşık atışması dinleme / izleme",
               "Türk kültürünü tanıtan konuşma",
               "Çevrim içi müze gezisi hakkında yazma"
+            ],
+            "ciktiKodlari": [
+              "TDE1.1",
+              "TDE1.2",
+              "TDE1.3",
+              "TDE1.4",
+              "TDE2.1",
+              "TDE2.2",
+              "TDE2.3",
+              "TDE2.4",
+              "TDE3.1",
+              "TDE3.2",
+              "TDE3.3",
+              "TDE3.4",
+              "TDE4.1",
+              "TDE4.2",
+              "TDE4.3",
+              "TDE4.4"
+            ],
+            "planBasligi": "Kültür Yolculuğu",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Kültürel miras metinleri: okumaya hazırlık ve anlam",
+                "ciktilar": [
+                  "TDE2.1",
+                  "TDE2.2"
+                ]
+              },
+              {
+                "ad": "Kültürel miras metinleri: yapı, dil ve anlatım",
+                "ciktilar": [
+                  "TDE2.3"
+                ]
+              },
+              {
+                "ad": "Okuma yorumlarını gerekçelendirme ve değerlendirme",
+                "ciktilar": [
+                  "TDE2.4"
+                ]
+              },
+              {
+                "ad": "Kültür temalı dinleme metni: dinleme ve anlam",
+                "ciktilar": [
+                  "TDE1.1",
+                  "TDE1.2"
+                ]
+              },
+              {
+                "ad": "Dinlenen metni çözümleme ve süreci değerlendirme",
+                "ciktilar": [
+                  "TDE1.3",
+                  "TDE1.4"
+                ]
+              },
+              {
+                "ad": "Türk dünyasında ortak kültür: içerik hazırlama",
+                "ciktilar": [
+                  "TDE3.1",
+                  "TDE3.2"
+                ]
+              },
+              {
+                "ad": "Konuşmayı uygulama ve değerlendirme",
+                "ciktilar": [
+                  "TDE3.3",
+                  "TDE3.4"
+                ]
+              },
+              {
+                "ad": "Kültürel miras gözlemleri: plan ve taslak",
+                "ciktilar": [
+                  "TDE4.1",
+                  "TDE4.2"
+                ]
+              },
+              {
+                "ad": "Yazıyı düzenleme ve değerlendirme",
+                "ciktilar": [
+                  "TDE4.3",
+                  "TDE4.4"
+                ]
+              }
             ]
           },
           {
@@ -1661,6 +1825,88 @@
               "Radyo tiyatrosu dinleme / izleme",
               "Roman kişisiyle kurmaca mülakat",
               "Diyaloğu başka türe dönüştürme"
+            ],
+            "ciktiKodlari": [
+              "TDE1.1",
+              "TDE1.2",
+              "TDE1.3",
+              "TDE1.4",
+              "TDE2.1",
+              "TDE2.2",
+              "TDE2.3",
+              "TDE2.4",
+              "TDE3.1",
+              "TDE3.2",
+              "TDE3.3",
+              "TDE3.4",
+              "TDE4.1",
+              "TDE4.2",
+              "TDE4.3",
+              "TDE4.4"
+            ],
+            "planBasligi": "Yaşamın İzinde",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Yaşamdan izler taşıyan metinler: okumaya hazırlık ve anlam",
+                "ciktilar": [
+                  "TDE2.1",
+                  "TDE2.2"
+                ]
+              },
+              {
+                "ad": "Yaşamdan izler taşıyan metinler: yapı, dil ve anlatım",
+                "ciktilar": [
+                  "TDE2.3"
+                ]
+              },
+              {
+                "ad": "Okuma yorumlarını gerekçelendirme ve değerlendirme",
+                "ciktilar": [
+                  "TDE2.4"
+                ]
+              },
+              {
+                "ad": "Sanatçının yaşamını ele alan metin: dinleme ve anlam",
+                "ciktilar": [
+                  "TDE1.1",
+                  "TDE1.2"
+                ]
+              },
+              {
+                "ad": "Dinlenen metni çözümleme ve süreci değerlendirme",
+                "ciktilar": [
+                  "TDE1.3",
+                  "TDE1.4"
+                ]
+              },
+              {
+                "ad": "Sanatçı ve karakterin yaşamı: içerik hazırlama",
+                "ciktilar": [
+                  "TDE3.1",
+                  "TDE3.2"
+                ]
+              },
+              {
+                "ad": "Konuşmayı uygulama ve değerlendirme",
+                "ciktilar": [
+                  "TDE3.3",
+                  "TDE3.4"
+                ]
+              },
+              {
+                "ad": "Yaşamdan beslenen kurgu: plan ve taslak",
+                "ciktilar": [
+                  "TDE4.1",
+                  "TDE4.2"
+                ]
+              },
+              {
+                "ad": "Yazıyı düzenleme ve değerlendirme",
+                "ciktilar": [
+                  "TDE4.3",
+                  "TDE4.4"
+                ]
+              }
             ]
           },
           {
@@ -1678,6 +1924,88 @@
               "Belgesel dinleme / izleme",
               "Tiyatro canlandırma",
               "Belgesel afişi hazırlama"
+            ],
+            "ciktiKodlari": [
+              "TDE1.1",
+              "TDE1.2",
+              "TDE1.3",
+              "TDE1.4",
+              "TDE2.1",
+              "TDE2.2",
+              "TDE2.3",
+              "TDE2.4",
+              "TDE3.1",
+              "TDE3.2",
+              "TDE3.3",
+              "TDE3.4",
+              "TDE4.1",
+              "TDE4.2",
+              "TDE4.3",
+              "TDE4.4"
+            ],
+            "planBasligi": "Hayatın Aynası",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Sosyal hayatı yansıtan metinler: okumaya hazırlık ve anlam",
+                "ciktilar": [
+                  "TDE2.1",
+                  "TDE2.2"
+                ]
+              },
+              {
+                "ad": "Sosyal hayatı yansıtan metinler: yapı, dil ve anlatım",
+                "ciktilar": [
+                  "TDE2.3"
+                ]
+              },
+              {
+                "ad": "Okuma yorumlarını gerekçelendirme ve değerlendirme",
+                "ciktilar": [
+                  "TDE2.4"
+                ]
+              },
+              {
+                "ad": "Günlük yaşamı ele alan metin: dinleme ve anlam",
+                "ciktilar": [
+                  "TDE1.1",
+                  "TDE1.2"
+                ]
+              },
+              {
+                "ad": "Dinlenen metni çözümleme ve süreci değerlendirme",
+                "ciktilar": [
+                  "TDE1.3",
+                  "TDE1.4"
+                ]
+              },
+              {
+                "ad": "Günlük yaşamı canlandırma: içerik hazırlama",
+                "ciktilar": [
+                  "TDE3.1",
+                  "TDE3.2"
+                ]
+              },
+              {
+                "ad": "Konuşmayı uygulama ve değerlendirme",
+                "ciktilar": [
+                  "TDE3.3",
+                  "TDE3.4"
+                ]
+              },
+              {
+                "ad": "Sosyal hayata farklı bakışlar: plan ve taslak",
+                "ciktilar": [
+                  "TDE4.1",
+                  "TDE4.2"
+                ]
+              },
+              {
+                "ad": "Yazıyı düzenleme ve değerlendirme",
+                "ciktilar": [
+                  "TDE4.3",
+                  "TDE4.4"
+                ]
+              }
             ]
           }
         ]
@@ -1705,6 +2033,38 @@
             "kisaKonular": [
               "İki Nicel Değişkenli Veriler",
               "Başkaları Tarafından Oluşturulan İki Nicel Değişkenli Verileri İnceleme"
+            ],
+            "ciktiKodlari": [
+              "MAT.11.1.1",
+              "MAT.11.1.2"
+            ],
+            "planBasligi": "İstatistiksel Araştırma Süreci",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Araştırma sorusu ve veri toplama planı",
+                "ciktilar": [
+                  "MAT.11.1.1"
+                ]
+              },
+              {
+                "ad": "Veriyi hazırlama ve gösterim aracını seçme",
+                "ciktilar": [
+                  "MAT.11.1.1"
+                ]
+              },
+              {
+                "ad": "Veriyi analiz etme ve bulguları yorumlama",
+                "ciktilar": [
+                  "MAT.11.1.1"
+                ]
+              },
+              {
+                "ad": "Sonuçları değerlendirme; hata ve yanlılıkları ayırt etme",
+                "ciktilar": [
+                  "MAT.11.1.1",
+                  "MAT.11.1.2"
+                ]
+              }
             ]
           },
           {
@@ -1724,6 +2084,82 @@
               "Çokgenlerin Sınıflandırılması",
               "Dışbükey Çokgenlerin Özellikleri",
               "Çokgenlerle İlgili Problemler"
+            ],
+            "ciktiKodlari": [
+              "MAT.11.2.1",
+              "MAT.11.2.2",
+              "MAT.11.2.3",
+              "MAT.11.2.4",
+              "MAT.11.2.5"
+            ],
+            "planBasligi": "Geometrik Şekiller",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Dörtgenlerde kenar, açı ve köşegen ilişkileri",
+                "ciktilar": [
+                  "MAT.11.2.1"
+                ]
+              },
+              {
+                "ad": "Dörtgenlerde simetri ve alan örüntüleri",
+                "ciktilar": [
+                  "MAT.11.2.1"
+                ]
+              },
+              {
+                "ad": "Dörtgen özellikleri için önerme oluşturma",
+                "ciktilar": [
+                  "MAT.11.2.1"
+                ]
+              },
+              {
+                "ad": "Üçgenlerden yararlanarak dörtgen özelliklerini ispatlama",
+                "ciktilar": [
+                  "MAT.11.2.1"
+                ]
+              },
+              {
+                "ad": "Özel dörtgenler arasındaki ilişkileri kurma",
+                "ciktilar": [
+                  "MAT.11.2.2"
+                ]
+              },
+              {
+                "ad": "İçbükey ve dışbükey çokgenleri ayırt etme",
+                "ciktilar": [
+                  "MAT.11.2.3"
+                ]
+              },
+              {
+                "ad": "Dışbükey çokgenlerde açı ve köşegen örüntüleri",
+                "ciktilar": [
+                  "MAT.11.2.4"
+                ]
+              },
+              {
+                "ad": "Dışbükey çokgenlerde simetri ve alan çıkarımları",
+                "ciktilar": [
+                  "MAT.11.2.4"
+                ]
+              },
+              {
+                "ad": "Çokgen problemini şekil ve bağıntılarla temsil etme",
+                "ciktilar": [
+                  "MAT.11.2.5"
+                ]
+              },
+              {
+                "ad": "Çokgen problemleri için çözüm stratejisi geliştirme",
+                "ciktilar": [
+                  "MAT.11.2.5"
+                ]
+              },
+              {
+                "ad": "Çözümü kontrol etme ve farklı stratejileri karşılaştırma",
+                "ciktilar": [
+                  "MAT.11.2.5"
+                ]
+              }
             ]
           },
           {
@@ -1737,6 +2173,55 @@
             "kisaKonular": [
               "Trigonometrik Fonksiyonlar ve Nitel Özellikleri",
               "Trigonometrik Fonksiyonlarla İfade Edilebilen Denklemler İçeren Problemler"
+            ],
+            "ciktiKodlari": [
+              "MAT.11.3.1",
+              "MAT.11.3.2"
+            ],
+            "planBasligi": "Trigonometrik Fonksiyonlar",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Sinüs ve kosinüsün nitel özelliklerini inceleme",
+                "ciktilar": [
+                  "MAT.11.3.1"
+                ]
+              },
+              {
+                "ad": "Tanjant ve kotanjantın nitel özelliklerini inceleme",
+                "ciktilar": [
+                  "MAT.11.3.1"
+                ]
+              },
+              {
+                "ad": "Grafik dönüşümlerinden genellemelere ulaşma",
+                "ciktilar": [
+                  "MAT.11.3.1"
+                ]
+              },
+              {
+                "ad": "Türetilmiş fonksiyonların özelliklerini gerekçelendirme",
+                "ciktilar": [
+                  "MAT.11.3.1"
+                ]
+              },
+              {
+                "ad": "Trigonometrik denklem problemini temsil etme",
+                "ciktilar": [
+                  "MAT.11.3.2"
+                ]
+              },
+              {
+                "ad": "Denklem için çözüm stratejisi oluşturma",
+                "ciktilar": [
+                  "MAT.11.3.2"
+                ]
+              },
+              {
+                "ad": "Çözümü sınama ve başka problemlere uyarlama",
+                "ciktilar": [
+                  "MAT.11.3.2"
+                ]
+              }
             ]
           },
           {
@@ -1754,6 +2239,63 @@
               "Üstel Fonksiyonların Ters Fonksiyonları",
               "Logaritmik Fonksiyonlar ve Nitel Özellikleri",
               "Üstel ve Logaritmik Fonksiyonlarla İfade Edilebilen Denklem ve Eşitsizlikler İçeren Problemler"
+            ],
+            "ciktiKodlari": [
+              "MAT.11.3.3",
+              "MAT.11.3.4",
+              "MAT.11.3.5",
+              "MAT.11.3.6"
+            ],
+            "planBasligi": "Üstel ve Logaritmik Fonksiyonlar",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Üstel fonksiyonun özelliklerini inceleme",
+                "ciktilar": [
+                  "MAT.11.3.3"
+                ]
+              },
+              {
+                "ad": "Üstel grafik dönüşümlerini yorumlama",
+                "ciktilar": [
+                  "MAT.11.3.3"
+                ]
+              },
+              {
+                "ad": "Ters fonksiyondan logaritmaya ulaşma",
+                "ciktilar": [
+                  "MAT.11.3.4"
+                ]
+              },
+              {
+                "ad": "Üstel ve logaritmik ilişkileri gerekçelendirme",
+                "ciktilar": [
+                  "MAT.11.3.4"
+                ]
+              },
+              {
+                "ad": "Logaritmik fonksiyonun özelliklerini inceleme",
+                "ciktilar": [
+                  "MAT.11.3.5"
+                ]
+              },
+              {
+                "ad": "Logaritmik grafik dönüşümlerini yorumlama",
+                "ciktilar": [
+                  "MAT.11.3.5"
+                ]
+              },
+              {
+                "ad": "Denklem ve eşitsizlik problemini modelleme",
+                "ciktilar": [
+                  "MAT.11.3.6"
+                ]
+              },
+              {
+                "ad": "Çözüm stratejisini uygulama ve doğrulama",
+                "ciktilar": [
+                  "MAT.11.3.6"
+                ]
+              }
             ]
           },
           {
@@ -1767,6 +2309,49 @@
             "kisaKonular": [
               "Fonksiyonların Bileşkesi",
               "Fonksiyonlarda Dört İşlem"
+            ],
+            "ciktiKodlari": [
+              "MAT.11.3.7",
+              "MAT.11.3.8"
+            ],
+            "planBasligi": "Fonksiyonlarda İşlemler",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Bileşke işlemini örneklerle inceleme",
+                "ciktilar": [
+                  "MAT.11.3.7"
+                ]
+              },
+              {
+                "ad": "Bileşkede tanım ve görüntü ilişkilerini kurma",
+                "ciktilar": [
+                  "MAT.11.3.7"
+                ]
+              },
+              {
+                "ad": "Bileşke özelliklerini genelleme ve gerekçelendirme",
+                "ciktilar": [
+                  "MAT.11.3.7"
+                ]
+              },
+              {
+                "ad": "Fonksiyonlarda toplam ve farkı yorumlama",
+                "ciktilar": [
+                  "MAT.11.3.8"
+                ]
+              },
+              {
+                "ad": "Fonksiyonlarda çarpım ve bölümü yorumlama",
+                "ciktilar": [
+                  "MAT.11.3.8"
+                ]
+              },
+              {
+                "ad": "Dört işlemin özelliklerini karşılaştırma",
+                "ciktilar": [
+                  "MAT.11.3.8"
+                ]
+              }
             ]
           }
         ]
@@ -1802,6 +2387,105 @@
               "Sürtünme Kuvveti",
               "Limit Hız",
               "Çembersel Hareket"
+            ],
+            "ciktiKodlari": [
+              "FİZ.11.1.1",
+              "FİZ.11.1.2",
+              "FİZ.11.1.3",
+              "FİZ.11.1.4",
+              "FİZ.11.1.5",
+              "FİZ.11.1.6",
+              "FİZ.11.1.7",
+              "FİZ.11.1.8",
+              "FİZ.11.1.9",
+              "FİZ.11.1.10"
+            ],
+            "planBasligi": "Kuvvet ve Hareket",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Serbest düşmede ivme örüntüleri",
+                "ciktilar": [
+                  "FİZ.11.1.1"
+                ]
+              },
+              {
+                "ad": "Serbest düşme için kanıtları yorumlama",
+                "ciktilar": [
+                  "FİZ.11.1.2"
+                ]
+              },
+              {
+                "ad": "İki boyutta hareketi bileşenlerine ayırma",
+                "ciktilar": [
+                  "FİZ.11.1.3"
+                ]
+              },
+              {
+                "ad": "Sabit ivmeli hareketin bağıntılarını kurma",
+                "ciktilar": [
+                  "FİZ.11.1.3"
+                ]
+              },
+              {
+                "ad": "Newton yasalarına gözlemden ulaşma",
+                "ciktilar": [
+                  "FİZ.11.1.4"
+                ]
+              },
+              {
+                "ad": "Serbest cisim diyagramını oluşturma",
+                "ciktilar": [
+                  "FİZ.11.1.5"
+                ]
+              },
+              {
+                "ad": "Kuvvetleri hareketle ilişkilendirme",
+                "ciktilar": [
+                  "FİZ.11.1.5"
+                ]
+              },
+              {
+                "ad": "Statik ve kinetik sürtünmeyi ayırt etme",
+                "ciktilar": [
+                  "FİZ.11.1.6"
+                ]
+              },
+              {
+                "ad": "Sürtünme kuvvetini matematiksel modelleme",
+                "ciktilar": [
+                  "FİZ.11.1.7"
+                ]
+              },
+              {
+                "ad": "Limit hızın değişkenlerini belirleme",
+                "ciktilar": [
+                  "FİZ.11.1.8"
+                ]
+              },
+              {
+                "ad": "Limit hız için çıkarımları sınama",
+                "ciktilar": [
+                  "FİZ.11.1.8"
+                ]
+              },
+              {
+                "ad": "Çembersel harekette yörünge ve hız",
+                "ciktilar": [
+                  "FİZ.11.1.9"
+                ]
+              },
+              {
+                "ad": "Çembersel hareketin değişkenlerini ilişkilendirme",
+                "ciktilar": [
+                  "FİZ.11.1.10"
+                ]
+              },
+              {
+                "ad": "Çembersel hareket modelini gerekçelendirme",
+                "ciktilar": [
+                  "FİZ.11.1.10"
+                ]
+              }
             ]
           },
           {
@@ -1819,6 +2503,102 @@
               "Manyetik Alan ve Manyetik Kuvvet",
               "İndüksiyon Akımı",
               "Transformatörler"
+            ],
+            "ciktiKodlari": [
+              "FİZ.11.2.1",
+              "FİZ.11.2.2",
+              "FİZ.11.2.3",
+              "FİZ.11.2.4",
+              "FİZ.11.2.5",
+              "FİZ.11.2.6",
+              "FİZ.11.2.7",
+              "FİZ.11.2.8",
+              "FİZ.11.2.9",
+              "FİZ.11.2.10",
+              "FİZ.11.2.11",
+              "FİZ.11.2.12",
+              "FİZ.11.2.13"
+            ],
+            "planBasligi": "Elektrik ve Manyetizma",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Yükler arasındaki kuvveti modelleme",
+                "ciktilar": [
+                  "FİZ.11.2.1"
+                ]
+              },
+              {
+                "ad": "Elektrik alan bağıntısını kurma",
+                "ciktilar": [
+                  "FİZ.11.2.2"
+                ]
+              },
+              {
+                "ad": "Faraday kafesinin uygulamalarını araştırma",
+                "ciktilar": [
+                  "FİZ.11.2.3"
+                ]
+              },
+              {
+                "ad": "Mıknatıs etkileşimlerini gözlemleme",
+                "ciktilar": [
+                  "FİZ.11.2.4"
+                ]
+              },
+              {
+                "ad": "Akım taşıyan telin manyetik alanı",
+                "ciktilar": [
+                  "FİZ.11.2.5"
+                ]
+              },
+              {
+                "ad": "Akım makarasının alanını modelleme",
+                "ciktilar": [
+                  "FİZ.11.2.6"
+                ]
+              },
+              {
+                "ad": "Elektromıknatısların uygulamalarını araştırma",
+                "ciktilar": [
+                  "FİZ.11.2.7"
+                ]
+              },
+              {
+                "ad": "Manyetik alandaki tele etki eden kuvvet",
+                "ciktilar": [
+                  "FİZ.11.2.8"
+                ]
+              },
+              {
+                "ad": "Elektrik motorunun işleyişini açıklama",
+                "ciktilar": [
+                  "FİZ.11.2.9"
+                ]
+              },
+              {
+                "ad": "Manyetik akının değişkenlerini çözümleme",
+                "ciktilar": [
+                  "FİZ.11.2.10"
+                ]
+              },
+              {
+                "ad": "İndüksiyon gerilimini modelleme",
+                "ciktilar": [
+                  "FİZ.11.2.11"
+                ]
+              },
+              {
+                "ad": "İndüksiyon ve alternatif akım ilişkisi",
+                "ciktilar": [
+                  "FİZ.11.2.12"
+                ]
+              },
+              {
+                "ad": "Transformatörün yapısı ve kullanımı",
+                "ciktilar": [
+                  "FİZ.11.2.13"
+                ]
+              }
             ]
           },
           {
@@ -1844,6 +2624,76 @@
               "Fiber Optik",
               "Prizmalar",
               "Mercekler"
+            ],
+            "ciktiKodlari": [
+              "FİZ.11.3.1",
+              "FİZ.11.3.2",
+              "FİZ.11.3.3",
+              "FİZ.11.3.4",
+              "FİZ.11.3.5",
+              "FİZ.11.3.6",
+              "FİZ.11.3.7",
+              "FİZ.11.3.8",
+              "FİZ.11.3.9",
+              "FİZ.11.3.10"
+            ],
+            "planBasligi": "Optik",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Işık akısı, şiddeti ve aydınlanmayı ilişkilendirme",
+                "ciktilar": [
+                  "FİZ.11.3.1"
+                ]
+              },
+              {
+                "ad": "Düzlem aynada görüntüyü modelleme",
+                "ciktilar": [
+                  "FİZ.11.3.2"
+                ]
+              },
+              {
+                "ad": "Küresel aynaları karşılaştırma",
+                "ciktilar": [
+                  "FİZ.11.3.3"
+                ]
+              },
+              {
+                "ad": "Küresel aynada görüntüyü deneyle inceleme",
+                "ciktilar": [
+                  "FİZ.11.3.4"
+                ]
+              },
+              {
+                "ad": "Saydam ortamlarda ışığın davranışı",
+                "ciktilar": [
+                  "FİZ.11.3.5"
+                ]
+              },
+              {
+                "ad": "Görünür derinlik ve kırılma indisi",
+                "ciktilar": [
+                  "FİZ.11.3.6"
+                ]
+              },
+              {
+                "ad": "Fiber optiğin işleyişini araştırma",
+                "ciktilar": [
+                  "FİZ.11.3.7"
+                ]
+              },
+              {
+                "ad": "Prizmalarda ışığın yolunu belirleme",
+                "ciktilar": [
+                  "FİZ.11.3.8"
+                ]
+              },
+              {
+                "ad": "Mercekleri karşılaştırma ve görüntüyü inceleme",
+                "ciktilar": [
+                  "FİZ.11.3.9",
+                  "FİZ.11.3.10"
+                ]
+              }
             ]
           }
         ]
@@ -1883,6 +2733,97 @@
               "Kimyasal Tepkimelerde Hız — Tepken ve Ürün Derişimleriyle Ortalama Tepkime Hızlarının Hesaplanması",
               "Kimyasal Tepkimelerde Hız — Tepkime Hızına Etki Eden Faktörler",
               "Kimyasal Tepkimelerde Hız — Tek Basamaklı Kimyasal Tepkimelerin Hız Denkleminin Deneysel Veriler Yardımıyla Belirlenmesi"
+            ],
+            "ciktiKodlari": [
+              "KİM.11.1.1",
+              "KİM.11.1.2",
+              "KİM.11.1.3",
+              "KİM.11.1.4",
+              "KİM.11.1.5",
+              "KİM.11.1.6",
+              "KİM.11.1.7",
+              "KİM.11.1.8"
+            ],
+            "planBasligi": "Kimyasal Tepkimelerde Enerji ve Hız",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Enerji değişimi için deney tasarlama",
+                "ciktilar": [
+                  "KİM.11.1.1"
+                ]
+              },
+              {
+                "ad": "Fiziksel ve kimyasal olayların verilerini yorumlama",
+                "ciktilar": [
+                  "KİM.11.1.1"
+                ]
+              },
+              {
+                "ad": "Maddelerin enerji potansiyeli üzerine hipotez kurma",
+                "ciktilar": [
+                  "KİM.11.1.2"
+                ]
+              },
+              {
+                "ad": "Bağ enerjilerinden entalpi değişimini bulma",
+                "ciktilar": [
+                  "KİM.11.1.3"
+                ]
+              },
+              {
+                "ad": "Oluşum entalpilerinden tahmin yapma",
+                "ciktilar": [
+                  "KİM.11.1.4"
+                ]
+              },
+              {
+                "ad": "Tepkimenin gerçekleşme koşullarını belirleme",
+                "ciktilar": [
+                  "KİM.11.1.5"
+                ]
+              },
+              {
+                "ad": "Tepkime koşulları için kanıtları yorumlama",
+                "ciktilar": [
+                  "KİM.11.1.5"
+                ]
+              },
+              {
+                "ad": "Tepkime hızının zamana bağlı değişimi",
+                "ciktilar": [
+                  "KİM.11.1.6"
+                ]
+              },
+              {
+                "ad": "Hızı etkileyen faktörler için soru oluşturma",
+                "ciktilar": [
+                  "KİM.11.1.7"
+                ]
+              },
+              {
+                "ad": "Hız faktörlerini verilerle sorgulama",
+                "ciktilar": [
+                  "KİM.11.1.7"
+                ]
+              },
+              {
+                "ad": "Hız araştırmasının bulgularını değerlendirme",
+                "ciktilar": [
+                  "KİM.11.1.7"
+                ]
+              },
+              {
+                "ad": "Deneysel verilerden hız denklemini kurma",
+                "ciktilar": [
+                  "KİM.11.1.8"
+                ]
+              },
+              {
+                "ad": "Hız denklemiyle tahminleri sınama",
+                "ciktilar": [
+                  "KİM.11.1.8"
+                ]
+              }
             ]
           },
           {
@@ -1922,6 +2863,133 @@
               "Çözünürlük Dengesi — Suda Az Çözünen Tuzların Molar Çözünürlükleri",
               "Çözünürlük Dengesi — Çözünürlük Çarpımı",
               "Çözünürlük Dengesi — Tuzların Çözünürlüğüne Etki Eden Faktörler"
+            ],
+            "ciktiKodlari": [
+              "KİM.11.2.1",
+              "KİM.11.2.2",
+              "KİM.11.2.3",
+              "KİM.11.2.4",
+              "KİM.11.2.5",
+              "KİM.11.2.6",
+              "KİM.11.2.7",
+              "KİM.11.2.8",
+              "KİM.11.2.9",
+              "KİM.11.2.10",
+              "KİM.11.2.11",
+              "KİM.11.2.12",
+              "KİM.11.2.13",
+              "KİM.11.2.14"
+            ],
+            "planBasligi": "Denge, Asitler, Bazlar ve Çözünürlük",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Tersinir tepkimeleri gözlemleme",
+                "ciktilar": [
+                  "KİM.11.2.1"
+                ]
+              },
+              {
+                "ad": "Denge sürecine ilişkin tahmin kurma",
+                "ciktilar": [
+                  "KİM.11.2.2"
+                ]
+              },
+              {
+                "ad": "Denge sabiti bağıntısına ulaşma",
+                "ciktilar": [
+                  "KİM.11.2.3"
+                ]
+              },
+              {
+                "ad": "Tepkimenin denge durumunu verilerle belirleme",
+                "ciktilar": [
+                  "KİM.11.2.4"
+                ]
+              },
+              {
+                "ad": "Dengeyi etkileyen faktörleri sorgulama",
+                "ciktilar": [
+                  "KİM.11.2.5"
+                ]
+              },
+              {
+                "ad": "Denge araştırmasının sonuçlarını değerlendirme",
+                "ciktilar": [
+                  "KİM.11.2.5"
+                ]
+              },
+              {
+                "ad": "Suyun otoiyonizasyonunu inceleme",
+                "ciktilar": [
+                  "KİM.11.2.6"
+                ]
+              },
+              {
+                "ad": "Asit ve baz teorilerini karşılaştırma",
+                "ciktilar": [
+                  "KİM.11.2.7"
+                ]
+              },
+              {
+                "ad": "Asit ve baz kuvvetlerini sorgulama",
+                "ciktilar": [
+                  "KİM.11.2.8"
+                ]
+              },
+              {
+                "ad": "Kuvvetli asit ve bazlarda pH",
+                "ciktilar": [
+                  "KİM.11.2.9"
+                ]
+              },
+              {
+                "ad": "Zayıf asit ve bazlarda pH karşılaştırması",
+                "ciktilar": [
+                  "KİM.11.2.9"
+                ]
+              },
+              {
+                "ad": "Nötralleşmeyi gözlenebilir ölçütlerle tanımlama",
+                "ciktilar": [
+                  "KİM.11.2.10"
+                ]
+              },
+              {
+                "ad": "Titrasyon deneyini planlama",
+                "ciktilar": [
+                  "KİM.11.2.11"
+                ]
+              },
+              {
+                "ad": "Titrasyon verilerinden derişimi belirleme",
+                "ciktilar": [
+                  "KİM.11.2.11"
+                ]
+              },
+              {
+                "ad": "Asidik ve bazik ürünleri ölçütlerle seçme",
+                "ciktilar": [
+                  "KİM.11.2.12"
+                ]
+              },
+              {
+                "ad": "Az çözünen tuzlar için model oluşturma",
+                "ciktilar": [
+                  "KİM.11.2.13"
+                ]
+              },
+              {
+                "ad": "Çözünürlüğü etkileyen değişkenler",
+                "ciktilar": [
+                  "KİM.11.2.14"
+                ]
+              },
+              {
+                "ad": "Çözünürlük çıkarımlarını değerlendirme",
+                "ciktilar": [
+                  "KİM.11.2.14"
+                ]
+              }
             ]
           },
           {
@@ -1937,6 +3005,44 @@
               "Nanoteknoloji ve Sürdürülebilirlik",
               "Nanoteknoloji ve Sürdürülebilirlik — Nanoteknolojik Ürünlerin Potansiyel Faydaları ve Olası Zararları",
               "Nanoteknoloji ve Sürdürülebilirlik — Mikroplastik ve Nanoplastiklerin Etkileri"
+            ],
+            "ciktiKodlari": [
+              "KİM.11.3.1",
+              "KİM.11.3.2",
+              "KİM.11.3.3"
+            ],
+            "planBasligi": "Sürdürülebilir Kimya",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Atıklardan hidrojen üretimi için hipotez kurma",
+                "ciktilar": [
+                  "KİM.11.3.1"
+                ]
+              },
+              {
+                "ad": "Fermantasyon hipotezini gerekçelendirme",
+                "ciktilar": [
+                  "KİM.11.3.1"
+                ]
+              },
+              {
+                "ad": "Nanoteknolojik ürün seçimini sorgulama",
+                "ciktilar": [
+                  "KİM.11.3.2"
+                ]
+              },
+              {
+                "ad": "Nanoteknolojik ürünlere yönelik yargıyı gerekçelendirme",
+                "ciktilar": [
+                  "KİM.11.3.2"
+                ]
+              },
+              {
+                "ad": "Mikroplastik ve nanoplastik etkilerini araştırma",
+                "ciktilar": [
+                  "KİM.11.3.3"
+                ]
+              }
             ]
           }
         ]
@@ -2008,6 +3114,143 @@
               "Doğal Bağışıklık",
               "Kazanılmış Bağışıklık",
               "Alerji"
+            ],
+            "ciktiKodlari": [
+              "BİY.11.1.1",
+              "BİY.11.1.2",
+              "BİY.11.1.3",
+              "BİY.11.1.4",
+              "BİY.11.1.5",
+              "BİY.11.1.6",
+              "BİY.11.1.7",
+              "BİY.11.1.8",
+              "BİY.11.1.9",
+              "BİY.11.1.10",
+              "BİY.11.1.11",
+              "BİY.11.1.12"
+            ],
+            "planBasligi": "Canlılarda Tepki",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Canlıların uyaranlara tepkilerini gözlemleme",
+                "ciktilar": [
+                  "BİY.11.1.1"
+                ]
+              },
+              {
+                "ad": "Tepki mekanizmalarında örüntü bulma",
+                "ciktilar": [
+                  "BİY.11.1.1"
+                ]
+              },
+              {
+                "ad": "Bitkisel hormonların etkilerini ilişkilendirme",
+                "ciktilar": [
+                  "BİY.11.1.2"
+                ]
+              },
+              {
+                "ad": "Bitki tepkileri için sınıflandırma ölçütleri",
+                "ciktilar": [
+                  "BİY.11.1.3"
+                ]
+              },
+              {
+                "ad": "Bitki tepkilerini gruplama",
+                "ciktilar": [
+                  "BİY.11.1.3"
+                ]
+              },
+              {
+                "ad": "Yönelme deneyi tasarlama",
+                "ciktilar": [
+                  "BİY.11.1.4"
+                ]
+              },
+              {
+                "ad": "Yönelme deneyinin verilerini yorumlama",
+                "ciktilar": [
+                  "BİY.11.1.4"
+                ]
+              },
+              {
+                "ad": "Duyu reseptörlerini sınıflandırma",
+                "ciktilar": [
+                  "BİY.11.1.5"
+                ]
+              },
+              {
+                "ad": "Reseptörleri duyu organlarıyla ilişkilendirme",
+                "ciktilar": [
+                  "BİY.11.1.5"
+                ]
+              },
+              {
+                "ad": "Hayvanların sinir sistemlerini karşılaştırma",
+                "ciktilar": [
+                  "BİY.11.1.6"
+                ]
+              },
+              {
+                "ad": "İnsan sinir sisteminin bileşenleri",
+                "ciktilar": [
+                  "BİY.11.1.7"
+                ]
+              },
+              {
+                "ad": "Sinir sistemi yapıları arasındaki ilişkiler",
+                "ciktilar": [
+                  "BİY.11.1.7"
+                ]
+              },
+              {
+                "ad": "Refleksin oluşumunu açıklama",
+                "ciktilar": [
+                  "BİY.11.1.8"
+                ]
+              },
+              {
+                "ad": "İskelet, kas ve eklemlerin birlikte çalışması",
+                "ciktilar": [
+                  "BİY.11.1.9"
+                ]
+              },
+              {
+                "ad": "Hareketin oluşumuna ilişkin görüşü gerekçelendirme",
+                "ciktilar": [
+                  "BİY.11.1.9"
+                ]
+              },
+              {
+                "ad": "Kasılma ve gevşeme için model kurma",
+                "ciktilar": [
+                  "BİY.11.1.10"
+                ]
+              },
+              {
+                "ad": "Kas modelini bulgularla değerlendirme",
+                "ciktilar": [
+                  "BİY.11.1.10"
+                ]
+              },
+              {
+                "ad": "Bağışıklık türlerini ayırt etme",
+                "ciktilar": [
+                  "BİY.11.1.11"
+                ]
+              },
+              {
+                "ad": "Bağışıklığı belirlenen ölçütlerle gruplama",
+                "ciktilar": [
+                  "BİY.11.1.11"
+                ]
+              },
+              {
+                "ad": "Alerjik tepkilerin oluşumunu sorgulama",
+                "ciktilar": [
+                  "BİY.11.1.12"
+                ]
+              }
             ]
           },
           {
@@ -2041,6 +3284,117 @@
               "Sistemlerin Es Güdümlü Çalışması",
               "Homeostazinin Sağlanamadığı Durumlarda Oluşabilecek Sağlık Problemleri",
               "Homeostazinin Sağlanamadığı Durumlarda Oluşabilecek Sağlık Problemleri"
+            ],
+            "ciktiKodlari": [
+              "BİY.11.2.1",
+              "BİY.11.2.2",
+              "BİY.11.2.3",
+              "BİY.11.2.4",
+              "BİY.11.2.5",
+              "BİY.11.2.6",
+              "BİY.11.2.7",
+              "BİY.11.2.8",
+              "BİY.11.2.9",
+              "BİY.11.2.10"
+            ],
+            "planBasligi": "Homeostazi",
+            "haftalikKazanimlar": [
+              {
+                "ad": "İç dengenin canlılar için önemini açıklama",
+                "ciktilar": [
+                  "BİY.11.2.1"
+                ]
+              },
+              {
+                "ad": "Homeostatik süreçlere yönelik soru oluşturma",
+                "ciktilar": [
+                  "BİY.11.2.2"
+                ]
+              },
+              {
+                "ad": "Homeostatik süreçler için kanıt toplama",
+                "ciktilar": [
+                  "BİY.11.2.2"
+                ]
+              },
+              {
+                "ad": "Pozitif ve negatif geri bildirimi karşılaştırma",
+                "ciktilar": [
+                  "BİY.11.2.3"
+                ]
+              },
+              {
+                "ad": "Sinir sisteminin düzenleyici rolü",
+                "ciktilar": [
+                  "BİY.11.2.4"
+                ]
+              },
+              {
+                "ad": "Endokrin sistemin bileşenlerini inceleme",
+                "ciktilar": [
+                  "BİY.11.2.5"
+                ]
+              },
+              {
+                "ad": "Hormonların iç dengeye etkilerini yorumlama",
+                "ciktilar": [
+                  "BİY.11.2.5"
+                ]
+              },
+              {
+                "ad": "Dolaşım ve iç denge için model kurma",
+                "ciktilar": [
+                  "BİY.11.2.6"
+                ]
+              },
+              {
+                "ad": "Dolaşım modelini değerlendirme",
+                "ciktilar": [
+                  "BİY.11.2.6"
+                ]
+              },
+              {
+                "ad": "Solunumun rolünü kanıtlarla açıklama",
+                "ciktilar": [
+                  "BİY.11.2.7"
+                ]
+              },
+              {
+                "ad": "Boşaltımın iç dengeyle ilişkisi",
+                "ciktilar": [
+                  "BİY.11.2.8"
+                ]
+              },
+              {
+                "ad": "Boşaltıma ilişkin çıkarımları değerlendirme",
+                "ciktilar": [
+                  "BİY.11.2.8"
+                ]
+              },
+              {
+                "ad": "Sistemlerin birlikte çalışmasını inceleme",
+                "ciktilar": [
+                  "BİY.11.2.9"
+                ]
+              },
+              {
+                "ad": "Sistemler arası eş güdümü gerekçelendirme",
+                "ciktilar": [
+                  "BİY.11.2.9"
+                ]
+              },
+              {
+                "ad": "İç denge bozulduğunda sağlık hipotezleri",
+                "ciktilar": [
+                  "BİY.11.2.10"
+                ]
+              },
+              {
+                "ad": "Sağlık hipotezlerini nedenlerle ilişkilendirme",
+                "ciktilar": [
+                  "BİY.11.2.10"
+                ]
+              }
             ]
           }
         ]
@@ -2072,6 +3426,87 @@
               "Lale Devri’nin Devlet ve Toplum Hayatına Etkileri",
               "1755 Lizbon ve 1766 İstanbul Depremlerinin Etkileri",
               "Sanayi Devrimi’nin Meydana Getirdiği Siyasi, Sosyal ve Ekonomik Değişim"
+            ],
+            "ciktiKodlari": [
+              "TAR.11.1.1",
+              "TAR.11.1.2",
+              "TAR.11.1.3",
+              "TAR.11.1.4"
+            ],
+            "planBasligi": "Değişen Dünyada Osmanlı (1683–1789)",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Siyasi ve askerî mücadelelerin sonuçlarını belirleme",
+                "ciktilar": [
+                  "TAR.11.1.1"
+                ]
+              },
+              {
+                "ad": "Mücadelelerin sonuçlarını karşılaştırma",
+                "ciktilar": [
+                  "TAR.11.1.1"
+                ]
+              },
+              {
+                "ad": "Siyasi ve askerî sonuçları değerlendirme",
+                "ciktilar": [
+                  "TAR.11.1.1"
+                ]
+              },
+              {
+                "ad": "Lale Devri kaynaklarını inceleme",
+                "ciktilar": [
+                  "TAR.11.1.2"
+                ]
+              },
+              {
+                "ad": "Lale Devri değişimlerini tablolaştırma",
+                "ciktilar": [
+                  "TAR.11.1.2"
+                ]
+              },
+              {
+                "ad": "Devlet ve toplumdaki değişimi yorumlama",
+                "ciktilar": [
+                  "TAR.11.1.2"
+                ]
+              },
+              {
+                "ad": "Lizbon ve İstanbul depremlerinin etkileri",
+                "ciktilar": [
+                  "TAR.11.1.3"
+                ]
+              },
+              {
+                "ad": "Depremlerin ortak ve farklı etkilerini karşılaştırma",
+                "ciktilar": [
+                  "TAR.11.1.3"
+                ]
+              },
+              {
+                "ad": "Sanayi Devrimi'nin nedenlerini belirleme",
+                "ciktilar": [
+                  "TAR.11.1.4"
+                ]
+              },
+              {
+                "ad": "Siyasi, sosyal ve ekonomik sonuçları ilişkilendirme",
+                "ciktilar": [
+                  "TAR.11.1.4"
+                ]
+              },
+              {
+                "ad": "Sanayileşmenin olumlu ve olumsuz etkileri",
+                "ciktilar": [
+                  "TAR.11.1.4"
+                ]
+              },
+              {
+                "ad": "Neden ve sonuçları tarihsel bağlamda açıklama",
+                "ciktilar": [
+                  "TAR.11.1.4"
+                ]
+              }
             ]
           },
           {
@@ -2089,6 +3524,93 @@
               "1789-1908 Yılları Arasında Osmanlı Devleti’nde Meydana Gelen Siyasi, Askerî ve İdari Gelişmeler",
               "1789-1908 Yılları Arasında Osmanlı Devleti’nde Bilim, Sanat ve Teknoloji Alanlarında Meydana Gelen Gelişmeler",
               "Osmanlı Devleti’nde Sanayileşme Çabaları"
+            ],
+            "ciktiKodlari": [
+              "TAR.11.2.1",
+              "TAR.11.2.2",
+              "TAR.11.2.3",
+              "TAR.11.2.4"
+            ],
+            "planBasligi": "Dönüşüm Sürecinde Osmanlı (1789–1908)",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Fransız İhtilali'nin nedenlerini inceleme",
+                "ciktilar": [
+                  "TAR.11.2.1"
+                ]
+              },
+              {
+                "ad": "İhtilalin devlet ve topluma etkileri",
+                "ciktilar": [
+                  "TAR.11.2.1"
+                ]
+              },
+              {
+                "ad": "İhtilali neden ve sonuçlarıyla yorumlama",
+                "ciktilar": [
+                  "TAR.11.2.1"
+                ]
+              },
+              {
+                "ad": "Siyasi, askerî ve idari değişimler için soru oluşturma",
+                "ciktilar": [
+                  "TAR.11.2.2"
+                ]
+              },
+              {
+                "ad": "Yönetim ve toplum yapısına ilişkin kanıt toplama",
+                "ciktilar": [
+                  "TAR.11.2.2"
+                ]
+              },
+              {
+                "ad": "Gelişmelerin etkilerini kaynaklarla yorumlama",
+                "ciktilar": [
+                  "TAR.11.2.2"
+                ]
+              },
+              {
+                "ad": "Değişim üzerine ulaşılan yargıları değerlendirme",
+                "ciktilar": [
+                  "TAR.11.2.2"
+                ]
+              },
+              {
+                "ad": "Bilim, sanat ve teknoloji kaynaklarını inceleme",
+                "ciktilar": [
+                  "TAR.11.2.3"
+                ]
+              },
+              {
+                "ad": "Uygulamaları dönem bağlamında yorumlama",
+                "ciktilar": [
+                  "TAR.11.2.3"
+                ]
+              },
+              {
+                "ad": "Kültürel ve teknolojik değişimi açıklama",
+                "ciktilar": [
+                  "TAR.11.2.3"
+                ]
+              },
+              {
+                "ad": "Sanayileşmenin önündeki etmenleri belirleme",
+                "ciktilar": [
+                  "TAR.11.2.4"
+                ]
+              },
+              {
+                "ad": "Sanayileşme için alternatif fikirler üretme",
+                "ciktilar": [
+                  "TAR.11.2.4"
+                ]
+              },
+              {
+                "ad": "Alternatifleri gerekçelerle değerlendirme",
+                "ciktilar": [
+                  "TAR.11.2.4"
+                ]
+              }
             ]
           },
           {
@@ -2104,6 +3626,80 @@
               "1908-1918 Yılları Arasında Osmanlı Devleti’nde Meydana Gelen Siyasi ve Askerî Gelişmeler",
               "1908-1918 Yılları Arasında Gerçekleşen Kitlesel Göç ve Salgınlar",
               "Osmanlı Devleti’nin İnsanlık Tarihine Katkıları"
+            ],
+            "ciktiKodlari": [
+              "TAR.11.3.1",
+              "TAR.11.3.2",
+              "TAR.11.3.3"
+            ],
+            "planBasligi": "Savaşlar Sarmalında Osmanlı (1908–1918)",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Siyasi ve askerî gelişmeleri kaynaklarla çözümleme",
+                "ciktilar": [
+                  "TAR.11.3.1"
+                ]
+              },
+              {
+                "ad": "Gelişmelerin dönem koşullarını belirleme",
+                "ciktilar": [
+                  "TAR.11.3.1"
+                ]
+              },
+              {
+                "ad": "Sonuçları dönemin koşullarıyla açıklama",
+                "ciktilar": [
+                  "TAR.11.3.1"
+                ]
+              },
+              {
+                "ad": "Gelişmelerin günümüze etkilerini değerlendirme",
+                "ciktilar": [
+                  "TAR.11.3.1"
+                ]
+              },
+              {
+                "ad": "Göç ve salgınlar için kaynak inceleme",
+                "ciktilar": [
+                  "TAR.11.3.2"
+                ]
+              },
+              {
+                "ad": "Göç ve salgınların toplumsal etkileri",
+                "ciktilar": [
+                  "TAR.11.3.2"
+                ]
+              },
+              {
+                "ad": "Geçmiş ve günümüzün etkilerini karşılaştırma",
+                "ciktilar": [
+                  "TAR.11.3.2"
+                ]
+              },
+              {
+                "ad": "Göç ve salgınlara ilişkin çıkarımını sunma",
+                "ciktilar": [
+                  "TAR.11.3.2"
+                ]
+              },
+              {
+                "ad": "Osmanlı'nın katkılarına yönelik kaynak seçme",
+                "ciktilar": [
+                  "TAR.11.3.3"
+                ]
+              },
+              {
+                "ad": "Kaynakların sınırlarını sorgulama ve yorumlama",
+                "ciktilar": [
+                  "TAR.11.3.3"
+                ]
+              },
+              {
+                "ad": "Katkıları kanıta dayalı bir ürünle paylaşma",
+                "ciktilar": [
+                  "TAR.11.3.3"
+                ]
+              }
             ]
           }
         ]
@@ -2129,6 +3725,24 @@
             "kaynak": "https://tymm.meb.gov.tr/cografya-dersi/unite/107",
             "kisaKonular": [
               "Mekânsal Sorunlar Karşısında Coğrafya Bilimi"
+            ],
+            "ciktiKodlari": [
+              "COĞ.11.1.1"
+            ],
+            "planBasligi": "Mekânsal Sorunlar ve Coğrafya",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Mekânsal sorunlarla coğrafi bilgiyi ilişkilendirme",
+                "ciktilar": [
+                  "COĞ.11.1.1"
+                ]
+              },
+              {
+                "ad": "Coğrafyanın çözüm katkısını açıklama",
+                "ciktilar": [
+                  "COĞ.11.1.1"
+                ]
+              }
             ]
           },
           {
@@ -2140,6 +3754,30 @@
             "kaynak": "https://tymm.meb.gov.tr/cografya-dersi/unite/110",
             "kisaKonular": [
               "Web Tabanlı CBS Uygulamaları"
+            ],
+            "ciktiKodlari": [
+              "COĞ.11.2.1"
+            ],
+            "planBasligi": "Web Tabanlı CBS",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Dijital harita okuma",
+                "ciktilar": [
+                  "COĞ.11.2.1"
+                ]
+              },
+              {
+                "ad": "Haritayı çözümleme ve çıkarım yapma",
+                "ciktilar": [
+                  "COĞ.11.2.1"
+                ]
+              },
+              {
+                "ad": "CBS ile kendi haritasını oluşturma",
+                "ciktilar": [
+                  "COĞ.11.2.1"
+                ]
+              }
             ]
           },
           {
@@ -2153,6 +3791,37 @@
             "kisaKonular": [
               "Su Kaynakları",
               "Türkiye’deki Su Kaynaklarının Etkileri"
+            ],
+            "ciktiKodlari": [
+              "COĞ.11.3.1",
+              "COĞ.11.3.2"
+            ],
+            "planBasligi": "Su Kaynakları",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Su kaynaklarını ayırt etme",
+                "ciktilar": [
+                  "COĞ.11.3.1"
+                ]
+              },
+              {
+                "ad": "Su kaynaklarını ölçütlere göre sınıflandırma",
+                "ciktilar": [
+                  "COĞ.11.3.1"
+                ]
+              },
+              {
+                "ad": "Türkiye'nin su kaynakları üzerine soru ve kanıt",
+                "ciktilar": [
+                  "COĞ.11.3.2"
+                ]
+              },
+              {
+                "ad": "Suyun çevresel, ekonomik ve toplumsal etkileri",
+                "ciktilar": [
+                  "COĞ.11.3.2"
+                ]
+              }
             ]
           },
           {
@@ -2166,6 +3835,31 @@
             "kisaKonular": [
               "Yerleşmelerin Mekânsal Organizasyonları",
               "Yerleşmelerin Etki Alanları"
+            ],
+            "ciktiKodlari": [
+              "COĞ.11.4.1",
+              "COĞ.11.4.2"
+            ],
+            "planBasligi": "Yerleşmeler",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Yerleşmelerin mekânsal bileşenleri",
+                "ciktilar": [
+                  "COĞ.11.4.1"
+                ]
+              },
+              {
+                "ad": "Yerleşmelerin mekânsal ilişkilerini çözümleme",
+                "ciktilar": [
+                  "COĞ.11.4.1"
+                ]
+              },
+              {
+                "ad": "Yerleşmelerin etki alanlarını sorgulama",
+                "ciktilar": [
+                  "COĞ.11.4.2"
+                ]
+              }
             ]
           },
           {
@@ -2185,6 +3879,70 @@
               "Stratejik ve Kritik Madenler",
               "Enerji Kaynakları",
               "Sanayileşmenin Mekânsal Etkileri"
+            ],
+            "ciktiKodlari": [
+              "COĞ.11.5.1",
+              "COĞ.11.5.2",
+              "COĞ.11.5.3",
+              "COĞ.11.5.4",
+              "COĞ.11.5.5"
+            ],
+            "planBasligi": "Ekonomik Faaliyetler",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Tarım ve gıda güvencesi için soru oluşturma",
+                "ciktilar": [
+                  "COĞ.11.5.1"
+                ]
+              },
+              {
+                "ad": "Gıda güvencesini verilerle sorgulama",
+                "ciktilar": [
+                  "COĞ.11.5.1"
+                ]
+              },
+              {
+                "ad": "Tarım uygulamalarına sürdürülebilirlik ölçütleri",
+                "ciktilar": [
+                  "COĞ.11.5.2"
+                ]
+              },
+              {
+                "ad": "Tarım uygulamalarını ölçütlerle değerlendirme",
+                "ciktilar": [
+                  "COĞ.11.5.2"
+                ]
+              },
+              {
+                "ad": "Kritik madenlerin ekonomideki yeri",
+                "ciktilar": [
+                  "COĞ.11.5.3"
+                ]
+              },
+              {
+                "ad": "Madenlerin ülkeler arası ilişkilere etkisi",
+                "ciktilar": [
+                  "COĞ.11.5.3"
+                ]
+              },
+              {
+                "ad": "Enerji kullanımındaki değişimi belirleme",
+                "ciktilar": [
+                  "COĞ.11.5.4"
+                ]
+              },
+              {
+                "ad": "Enerji kullanımında değişim ve sürekliliği yorumlama",
+                "ciktilar": [
+                  "COĞ.11.5.4"
+                ]
+              },
+              {
+                "ad": "Sanayinin mekânsal etkilerini sorgulama",
+                "ciktilar": [
+                  "COĞ.11.5.5"
+                ]
+              }
             ]
           },
           {
@@ -2200,6 +3958,50 @@
               "Gezegen Sınırı",
               "Küresel İklim Değişikliği",
               "Türkiye’de Suyun Sürdürülebilir Kullanımı"
+            ],
+            "ciktiKodlari": [
+              "COĞ.11.6.1",
+              "COĞ.11.6.2",
+              "COĞ.11.6.3"
+            ],
+            "planBasligi": "Çevre Sorunları ve Sürdürülebilirlik",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Gezegen sınırları ve çevre sorunlarını ilişkilendirme",
+                "ciktilar": [
+                  "COĞ.11.6.1"
+                ]
+              },
+              {
+                "ad": "Çevre sorunları hakkında içerik hazırlama",
+                "ciktilar": [
+                  "COĞ.11.6.1"
+                ]
+              },
+              {
+                "ad": "İklim etkilerini azaltma stratejileri",
+                "ciktilar": [
+                  "COĞ.11.6.2"
+                ]
+              },
+              {
+                "ad": "İklime uyum seçeneklerini tartışma",
+                "ciktilar": [
+                  "COĞ.11.6.2"
+                ]
+              },
+              {
+                "ad": "Türkiye'de su kullanımı için soru ve kanıt",
+                "ciktilar": [
+                  "COĞ.11.6.3"
+                ]
+              },
+              {
+                "ad": "Sürdürülebilir su kullanımını değerlendirme",
+                "ciktilar": [
+                  "COĞ.11.6.3"
+                ]
+              }
             ]
           },
           {
@@ -2219,6 +4021,70 @@
               "Sanayileşme Süreci: Örnek Ülkeler",
               "Madencilik Faaliyetleri: Örnek Ülke",
               "Enerji Kaynakları: Örnek Ülkeler"
+            ],
+            "ciktiKodlari": [
+              "COĞ.11.7.1",
+              "COĞ.11.7.2",
+              "COĞ.11.7.3",
+              "COĞ.11.7.4",
+              "COĞ.11.7.5"
+            ],
+            "planBasligi": "Bölgeler, Ülkeler ve Küresel Bağlantılar",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Türkiye'nin kültürel bağlarını araştırma",
+                "ciktilar": [
+                  "COĞ.11.7.1"
+                ]
+              },
+              {
+                "ad": "Kültürel etkileşimleri kanıtlarla sorgulama",
+                "ciktilar": [
+                  "COĞ.11.7.1"
+                ]
+              },
+              {
+                "ad": "Örnek ülkenin tarımsal üretimini inceleme",
+                "ciktilar": [
+                  "COĞ.11.7.2"
+                ]
+              },
+              {
+                "ad": "Tarımsal üretimi coğrafi özelliklerle özetleme",
+                "ciktilar": [
+                  "COĞ.11.7.2"
+                ]
+              },
+              {
+                "ad": "Ülkelerin sanayileşme özellikleri",
+                "ciktilar": [
+                  "COĞ.11.7.3"
+                ]
+              },
+              {
+                "ad": "Sanayileşmedeki ortak ve farklı yönler",
+                "ciktilar": [
+                  "COĞ.11.7.3"
+                ]
+              },
+              {
+                "ad": "Madencilik verilerini görselleştirme",
+                "ciktilar": [
+                  "COĞ.11.7.4"
+                ]
+              },
+              {
+                "ad": "Ülkelerin enerji kaynaklarını belirleme",
+                "ciktilar": [
+                  "COĞ.11.7.5"
+                ]
+              },
+              {
+                "ad": "Enerji kaynaklarını coğrafi açıdan karşılaştırma",
+                "ciktilar": [
+                  "COĞ.11.7.5"
+                ]
+              }
             ]
           }
         ]
@@ -2246,6 +4112,49 @@
             "kisaKonular": [
               "Çevre ve İnsan İlişkisi",
               "Çevre Etiği"
+            ],
+            "ciktiKodlari": [
+              "FEL.11.1.1",
+              "FEL.11.1.2"
+            ],
+            "planBasligi": "Çevre Sorunları ve Felsefe",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Çevreye ilişkin felsefi soruları açıklama",
+                "ciktilar": [
+                  "FEL.11.1.1"
+                ]
+              },
+              {
+                "ad": "Çevre problemlerini günlük hayatla ilişkilendirme",
+                "ciktilar": [
+                  "FEL.11.1.1"
+                ]
+              },
+              {
+                "ad": "Çevreye ilişkin argümanları çözümleme",
+                "ciktilar": [
+                  "FEL.11.1.2"
+                ]
+              },
+              {
+                "ad": "Çevre sorunu için görüş oluşturma",
+                "ciktilar": [
+                  "FEL.11.1.2"
+                ]
+              },
+              {
+                "ad": "Görüşünü gerekçeli bir argümana dönüştürme",
+                "ciktilar": [
+                  "FEL.11.1.2"
+                ]
+              },
+              {
+                "ad": "Çevre sorunu üzerine felsefi metin yazma",
+                "ciktilar": [
+                  "FEL.11.1.2"
+                ]
+              }
             ]
           },
           {
@@ -2261,6 +4170,55 @@
               "Teknoloji ve İnsan Hayatı",
               "Teknoloji Bağlamında Ontolojik Problemler",
               "Teknoloji Bağlamında Aksiyolojik Problemler"
+            ],
+            "ciktiKodlari": [
+              "FEL.11.2.1",
+              "FEL.11.2.2"
+            ],
+            "planBasligi": "Teknoloji ve Hayat",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Teknolojiye ilişkin felsefi soruları açıklama",
+                "ciktilar": [
+                  "FEL.11.2.1"
+                ]
+              },
+              {
+                "ad": "Teknolojik sorunları hayatla ilişkilendirme",
+                "ciktilar": [
+                  "FEL.11.2.1"
+                ]
+              },
+              {
+                "ad": "Teknoloji hakkındaki argümanları çözümleme",
+                "ciktilar": [
+                  "FEL.11.2.2"
+                ]
+              },
+              {
+                "ad": "Teknoloji ve hayat için görüş geliştirme",
+                "ciktilar": [
+                  "FEL.11.2.2"
+                ]
+              },
+              {
+                "ad": "Görüş için gerekçeler oluşturma",
+                "ciktilar": [
+                  "FEL.11.2.2"
+                ]
+              },
+              {
+                "ad": "Teknoloji üzerine felsefi metin taslağı",
+                "ciktilar": [
+                  "FEL.11.2.2"
+                ]
+              },
+              {
+                "ad": "Felsefi metni tutarlı biçimde yazma",
+                "ciktilar": [
+                  "FEL.11.2.2"
+                ]
+              }
             ]
           },
           {
@@ -2274,6 +4232,43 @@
             "kisaKonular": [
               "Akıl-İnanç İlişkisine Yönelik Felsefi Sorular ve Problemler",
               "Akıl-İnanç İlişkisine Yönelik Felsefi Görüş ve Argümanlar"
+            ],
+            "ciktiKodlari": [
+              "FEL.11.3.1",
+              "FEL.11.3.2"
+            ],
+            "planBasligi": "Akıl ve İnanç",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Akıl ve inanca ilişkin soruları açıklama",
+                "ciktilar": [
+                  "FEL.11.3.1"
+                ]
+              },
+              {
+                "ad": "Akıl ve inanç problemlerini hayatla ilişkilendirme",
+                "ciktilar": [
+                  "FEL.11.3.1"
+                ]
+              },
+              {
+                "ad": "Akıl ve inanç argümanlarını çözümleme",
+                "ciktilar": [
+                  "FEL.11.3.2"
+                ]
+              },
+              {
+                "ad": "İlişkiye yönelik görüş ve gerekçe oluşturma",
+                "ciktilar": [
+                  "FEL.11.3.2"
+                ]
+              },
+              {
+                "ad": "Akıl ve inanç üzerine felsefi metin yazma",
+                "ciktilar": [
+                  "FEL.11.3.2"
+                ]
+              }
             ]
           },
           {
@@ -2287,6 +4282,49 @@
             "kisaKonular": [
               "Edebiyat Felsefe İlişkisi",
               "Edebiyat Felsefe İlişkisi Problemleri"
+            ],
+            "ciktiKodlari": [
+              "FEL.11.4.1",
+              "FEL.11.4.2"
+            ],
+            "planBasligi": "Edebiyat ve Felsefe",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Edebiyat ve felsefe ilişkisine yönelik sorular",
+                "ciktilar": [
+                  "FEL.11.4.1"
+                ]
+              },
+              {
+                "ad": "Edebiyatla ilgili problemleri hayatla ilişkilendirme",
+                "ciktilar": [
+                  "FEL.11.4.1"
+                ]
+              },
+              {
+                "ad": "Edebiyattaki felsefi argümanları çözümleme",
+                "ciktilar": [
+                  "FEL.11.4.2"
+                ]
+              },
+              {
+                "ad": "Edebiyat ve felsefe için görüş oluşturma",
+                "ciktilar": [
+                  "FEL.11.4.2"
+                ]
+              },
+              {
+                "ad": "Görüşünü argümanla temellendirme",
+                "ciktilar": [
+                  "FEL.11.4.2"
+                ]
+              },
+              {
+                "ad": "İlişkiye yönelik felsefi metin yazma",
+                "ciktilar": [
+                  "FEL.11.4.2"
+                ]
+              }
             ]
           },
           {
@@ -2298,6 +4336,55 @@
             "kaynak": "https://tymm.meb.gov.tr/felsefe-dersi/unite/93",
             "kisaKonular": [
               "Hayatın Anlamına Yönelik Felsefi Sorular ve Problemler"
+            ],
+            "ciktiKodlari": [
+              "FEL.11.5.1",
+              "FEL.11.5.2"
+            ],
+            "planBasligi": "Hayatın Anlamı",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Hayatın anlamına ilişkin soruları açıklama",
+                "ciktilar": [
+                  "FEL.11.5.1"
+                ]
+              },
+              {
+                "ad": "Anlam arayışını hayatla ilişkilendirme",
+                "ciktilar": [
+                  "FEL.11.5.1"
+                ]
+              },
+              {
+                "ad": "Hayatın anlamına ilişkin argümanları çözümleme",
+                "ciktilar": [
+                  "FEL.11.5.2"
+                ]
+              },
+              {
+                "ad": "Anlam arayışına yönelik görüş oluşturma",
+                "ciktilar": [
+                  "FEL.11.5.2"
+                ]
+              },
+              {
+                "ad": "Görüşü gerekçelerle temellendirme",
+                "ciktilar": [
+                  "FEL.11.5.2"
+                ]
+              },
+              {
+                "ad": "Hayatın anlamı üzerine metin taslağı",
+                "ciktilar": [
+                  "FEL.11.5.2"
+                ]
+              },
+              {
+                "ad": "Felsefi metni tutarlı biçimde yazma",
+                "ciktilar": [
+                  "FEL.11.5.2"
+                ]
+              }
             ]
           },
           {
@@ -2311,6 +4398,43 @@
             "kisaKonular": [
               "Hukuk ve İnsan",
               "Hukukun Doğasına Yönelik Felsefi Problemler [Hukukun Gereği ve Önemi, Hukukun Kaynağı"
+            ],
+            "ciktiKodlari": [
+              "FEL.11.6.1",
+              "FEL.11.6.2"
+            ],
+            "planBasligi": "Hukuk ve Felsefe",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Hukukun doğasına ilişkin soruları açıklama",
+                "ciktilar": [
+                  "FEL.11.6.1"
+                ]
+              },
+              {
+                "ad": "Hukuk problemlerini hayatla ilişkilendirme",
+                "ciktilar": [
+                  "FEL.11.6.1"
+                ]
+              },
+              {
+                "ad": "Hukuka ilişkin argümanları çözümleme",
+                "ciktilar": [
+                  "FEL.11.6.2"
+                ]
+              },
+              {
+                "ad": "Hukuk sorunu için görüş ve gerekçe oluşturma",
+                "ciktilar": [
+                  "FEL.11.6.2"
+                ]
+              },
+              {
+                "ad": "Hukuk sorunu üzerine felsefi metin yazma",
+                "ciktilar": [
+                  "FEL.11.6.2"
+                ]
+              }
             ]
           }
         ]
@@ -2334,6 +4458,56 @@
               "İnsan ve Kader",
               "Akıl, İrade ve Sorumluluk Sahibi Bir Varlık Olarak İnsan",
               "Kur’an’dan Mesajlar"
+            ],
+            "ciktiKodlari": [
+              "DKAB.11.1.1",
+              "DKAB.11.1.2",
+              "DKAB.11.1.3"
+            ],
+            "planBasligi": "Kader, İrade ve Sorumluluk",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Kaderle ilgili kavramların ilişkilerini kurma",
+                "ciktilar": [
+                  "DKAB.11.1.1"
+                ]
+              },
+              {
+                "ad": "Kader kavramlarını bir bütün olarak açıklama",
+                "ciktilar": [
+                  "DKAB.11.1.1"
+                ]
+              },
+              {
+                "ad": "İnsan, akıl ve irade ilişkisini sorgulama",
+                "ciktilar": [
+                  "DKAB.11.1.2"
+                ]
+              },
+              {
+                "ad": "Özgürlük ve sorumluluk üzerine akıl yürütme",
+                "ciktilar": [
+                  "DKAB.11.1.2"
+                ]
+              },
+              {
+                "ad": "Özgürlük ve sorumluluk çıkarımlarını açıklama",
+                "ciktilar": [
+                  "DKAB.11.1.2"
+                ]
+              },
+              {
+                "ad": "Bakara 286'nın mesajlarını çözümleme",
+                "ciktilar": [
+                  "DKAB.11.1.3"
+                ]
+              },
+              {
+                "ad": "Ayetin mesajlarını sınıflandırma ve özetleme",
+                "ciktilar": [
+                  "DKAB.11.1.3"
+                ]
+              }
             ]
           },
           {
@@ -2351,6 +4525,63 @@
               "Din, Felsefe ve Bilim",
               "Din ve Sanat",
               "Kur’an’dan Mesajlar"
+            ],
+            "ciktiKodlari": [
+              "DKAB.11.2.1",
+              "DKAB.11.2.2",
+              "DKAB.11.2.3",
+              "DKAB.11.2.4"
+            ],
+            "planBasligi": "Din, Felsefe, Bilim ve Sanat",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Din tanımlarının ortak yönlerini belirleme",
+                "ciktilar": [
+                  "DKAB.11.2.1"
+                ]
+              },
+              {
+                "ad": "Dine ilişkin yaklaşımlardan genelleme yapma",
+                "ciktilar": [
+                  "DKAB.11.2.1"
+                ]
+              },
+              {
+                "ad": "Din ve felsefe ilişkisine yönelik sorular",
+                "ciktilar": [
+                  "DKAB.11.2.2"
+                ]
+              },
+              {
+                "ad": "Din ve bilim ilişkisini sorgulama",
+                "ciktilar": [
+                  "DKAB.11.2.2"
+                ]
+              },
+              {
+                "ad": "Din ve sanat ilişkisinin bileşenleri",
+                "ciktilar": [
+                  "DKAB.11.2.3"
+                ]
+              },
+              {
+                "ad": "Sanat ve din arasındaki bağları çözümleme",
+                "ciktilar": [
+                  "DKAB.11.2.3"
+                ]
+              },
+              {
+                "ad": "Âl-i İmrân 190–191'in mesajlarını inceleme",
+                "ciktilar": [
+                  "DKAB.11.2.4"
+                ]
+              },
+              {
+                "ad": "Ayetlerin mesajlarını özetleme",
+                "ciktilar": [
+                  "DKAB.11.2.4"
+                ]
+              }
             ]
           },
           {
@@ -2368,6 +4599,57 @@
               "İslam Medeniyetinin İzleri",
               "İslam Medeniyetinin Bugünü ve Geleceği",
               "Kur’an’dan Mesajlar"
+            ],
+            "ciktiKodlari": [
+              "DKAB.11.3.1",
+              "DKAB.11.3.2",
+              "DKAB.11.3.3",
+              "DKAB.11.3.4"
+            ],
+            "planBasligi": "İslam Medeniyeti ve Gönül Coğrafyamız",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Medeniyeti oluşturan unsurları belirleme",
+                "ciktilar": [
+                  "DKAB.11.3.1"
+                ]
+              },
+              {
+                "ad": "Medeniyet unsurlarının ilişkilerini çözümleme",
+                "ciktilar": [
+                  "DKAB.11.3.1"
+                ]
+              },
+              {
+                "ad": "İslam medeniyetinin izlerini inceleme",
+                "ciktilar": [
+                  "DKAB.11.3.2"
+                ]
+              },
+              {
+                "ad": "Medeniyetin izlerini ana çizgileriyle açıklama",
+                "ciktilar": [
+                  "DKAB.11.3.2"
+                ]
+              },
+              {
+                "ad": "Medeniyetin bugünü ve geleceği üzerine düşünme",
+                "ciktilar": [
+                  "DKAB.11.3.3"
+                ]
+              },
+              {
+                "ad": "Rûm 9'un mesajlarını çözümleme",
+                "ciktilar": [
+                  "DKAB.11.3.4"
+                ]
+              },
+              {
+                "ad": "Ayetin mesajlarını özetleme",
+                "ciktilar": [
+                  "DKAB.11.3.4"
+                ]
+              }
             ]
           },
           {
@@ -2385,6 +4667,69 @@
               "Kötülük Problemi",
               "Yeni Dinî Hareketler ve Din İstismarı",
               "Kur’an’dan Mesajlar"
+            ],
+            "ciktiKodlari": [
+              "DKAB.11.4.1",
+              "DKAB.11.4.2",
+              "DKAB.11.4.3",
+              "DKAB.11.4.4"
+            ],
+            "planBasligi": "İnançla İlgili Meseleler",
+            "haftalikKazanimlar": [
+              {
+                "ad": "İnanca ilişkin felsefi yaklaşımları araştırma",
+                "ciktilar": [
+                  "DKAB.11.4.1"
+                ]
+              },
+              {
+                "ad": "Yaklaşımların görüşlerini sorgulama",
+                "ciktilar": [
+                  "DKAB.11.4.1"
+                ]
+              },
+              {
+                "ad": "Kötülük problemine yönelik sorular",
+                "ciktilar": [
+                  "DKAB.11.4.2"
+                ]
+              },
+              {
+                "ad": "Kötülük problemine ilişkin gerekçeleri değerlendirme",
+                "ciktilar": [
+                  "DKAB.11.4.2"
+                ]
+              },
+              {
+                "ad": "Din istismarının nedenlerini araştırma",
+                "ciktilar": [
+                  "DKAB.11.4.3"
+                ]
+              },
+              {
+                "ad": "Yeni dinî hareketlerin ortaya çıkışı",
+                "ciktilar": [
+                  "DKAB.11.4.3"
+                ]
+              },
+              {
+                "ad": "İstismar ve yeni hareketlerin sonuçları",
+                "ciktilar": [
+                  "DKAB.11.4.3"
+                ]
+              },
+              {
+                "ad": "Hadîd 1–5'in mesajlarını çözümleme",
+                "ciktilar": [
+                  "DKAB.11.4.4"
+                ]
+              },
+              {
+                "ad": "Ayetlerin mesajlarını özetleme",
+                "ciktilar": [
+                  "DKAB.11.4.4"
+                ]
+              }
             ]
           },
           {
@@ -2398,6 +4743,42 @@
             "kisaKonular": [
               "Yahudilik",
               "Hristiyanlık"
+            ],
+            "ciktiKodlari": [
+              "DKAB.11.5.1"
+            ],
+            "planBasligi": "Yahudilik ve Hristiyanlık",
+            "haftalikKazanimlar": [
+              {
+                "ad": "Yahudiliğin tarihini ve özelliklerini inceleme",
+                "ciktilar": [
+                  "DKAB.11.5.1"
+                ]
+              },
+              {
+                "ad": "Yahudiliğe ilişkin bilgileri sınıflandırma",
+                "ciktilar": [
+                  "DKAB.11.5.1"
+                ]
+              },
+              {
+                "ad": "Hristiyanlığın tarihini ve özelliklerini inceleme",
+                "ciktilar": [
+                  "DKAB.11.5.1"
+                ]
+              },
+              {
+                "ad": "Hristiyanlığa ilişkin bilgileri sınıflandırma",
+                "ciktilar": [
+                  "DKAB.11.5.1"
+                ]
+              },
+              {
+                "ad": "İki dinin temel özelliklerini özetleme",
+                "ciktilar": [
+                  "DKAB.11.5.1"
+                ]
+              }
             ]
           }
         ]
@@ -3082,5 +5463,6 @@
         ]
       }
     ]
-  }
+  },
+  "kazanimPlanSurumu": "11-maarif-2026-09-26"
 }

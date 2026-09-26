@@ -189,7 +189,7 @@ test('later weekly schedules inherit correctly without moving protected results 
 // Anonymous reproduction of a schedule added after the student's initial freeze.
 function staleStudentWeek() {
   const a=app();
-  a.run(`D.ogr=D.ogr.slice(0,1);D.ogr[0].alan='EA';D.ogr[0].off=[6];D.ogr[0].aktif=true;
+  a.run(`D.konuPlani['11-A']=okulKonuPlani(11,false);D.ogr=D.ogr.slice(0,1);D.ogr[0].alan='EA';D.ogr[0].off=[6];D.ogr[0].aktif=true;
     D.ayar.testTarih='2026-09-25';D.ayar.gecmisSerbest=false;D.rol='ogrenci';EK.sekme='plan';`);
   a.schedule([['TÜRK DİLİ VE EDEBİYATI','TARİH','COĞRAFYA'],['MATEMATİK'],['FELSEFE','MATEMATİK TYT'],
     ['DİN KÜLTÜRÜ'],['GEOMETRİ','TÜRKÇE']]);
@@ -268,4 +268,141 @@ test('topic display omits curriculum bookkeeping while saved identities remain i
   assert(a.run("D.konuPlani['11-A'][0].Matematik[0].startsWith('11. sınıf · 1.1 · ')"));
   assert.equal(a.run("konuDuzenlemeAdi('11. sınıf · 1.1 · Eski','Yeni')"),'11. sınıf · 1.1 · Yeni');
   assert.equal(a.run("konuHtml('11. sınıf · 1.1 · <script>')"),'&lt;script&gt;');
+});
+
+test('every Grade 11 school week has a distinct, sourced subtopic with its main topic',()=>{
+  const a=app(),data=JSON.parse(readFileSync('data/curriculum-2026-2027.json','utf8'));
+  const plan=a.json('okulKonuPlani(11)');
+  assert.equal(plan.length,36);
+  for(const c of data.siniflar[11]) {
+    const titles=plan.flatMap(w=>w[c.ad]||[]);
+    assert.equal(titles.length,36,c.ad);assert.equal(new Set(titles).size,36,c.ad);
+    for(const title of titles) {
+      assert(title.length<=160,title);
+      const m=a.json(`mufredatKonuBilgisi(${c.ders},${JSON.stringify(title)})`);
+      assert(m?.anaKonu&&m.altKonu&&m.ciktilar.length,title);
+      assert(a.run(`konuGorunenAdi(${JSON.stringify(title)})`).startsWith(m.anaKonu+' — '));
+      const u=c.uniteler.find(u=>u.kaynak===m.kaynak);
+      assert(m.ciktilar.every(k=>u.ciktiKodlari.includes(k)));
+    }
+    let hours=0,weeks=0;const total=c.uniteler.reduce((s,u)=>s+u.saat,0);
+    for(const u of c.uniteler) {
+      hours+=u.saat;weeks+=u.haftalikKazanimlar.length;
+      assert.equal(weeks,Math.round(36*hours/total),'unit boundaries follow instructional hours');
+      assert.deepEqual([...new Set(u.haftalikKazanimlar.flatMap(x=>x.ciktilar))].sort(),[...u.ciktiKodlari].sort(),'all official unit outcomes covered');
+    }
+  }
+  assert.deepEqual(plan.slice(0,4).map(w=>a.run(`konuGorunenAdi(${JSON.stringify(w.Matematik[0])})`)),[
+    'İstatistiksel Araştırma Süreci — Araştırma sorusu ve veri toplama planı',
+    'İstatistiksel Araştırma Süreci — Veriyi hazırlama ve gösterim aracını seçme',
+    'İstatistiksel Araştırma Süreci — Veriyi analiz etme ve bulguları yorumlama',
+    'İstatistiksel Araştırma Süreci — Sonuçları değerlendirme; hata ve yanlılıkları ayırt etme'
+  ]);
+  assert(plan[4].Matematik[0].includes('Geometrik Şekiller'));
+});
+
+test('successive subtopics get separate timetable identities and keep TYT independent',()=>{
+  const a=app();a.schedule([['MATEMATİK'],['TYT MATEMATİK']]);
+  const ids=[];
+  for(let w=0;w<4;w++) {
+    ids.push(a.json(`hucreKonulari('11-A',gunNo('2026-09-21')+${w}*7,0,'MATEMATİK')`)[0]);
+  }
+  assert.equal(new Set(ids).size,4);
+  assert(ids.every(id=>a.run(`konuSinavTuru(${id})`)==='AYT'));
+  assert(ids.every(id=>a.run(`konuAl(${id})[3].includes('İstatistiksel Araştırma Süreci')`)));
+  const before=a.json('({log:D.log,kart:D.kart})');
+  a.run('D=paketiYukle(ogrenciPaketi(0))');
+  assert.deepEqual(a.json('({log:D.log,kart:D.kart})'),before);
+  for(const id of ids)assert(a.run(`!!mufredatKonuBilgisi(1,konuAl(${id})[3])`));
+});
+
+test('outcome upgrade preview is pure and rebuilding the stale automatic week needs one action',()=>{
+  const a=staleStudentWeek(),before=a.run('JSON.stringify(D)'),tyt=a.json("D.konuPlani['11-A'].map(w=>w['Matematik TYT'])");
+  const r=a.json("kazanimPlaniOnizleme('11-A')");
+  assert.equal(r.degisimler.length,9);assert(r.degisimler.every(x=>!x.ozel));
+  assert.match(a.run('gorunumOgrenciPlan()'),/Seçili derslere haftalık alt konuları uygula/);
+  assert.equal(a.run('JSON.stringify(D)'),before);
+  a.run(`let savedOutcomeBackup;localStorage.setItem=(k,v)=>{if(k==='yks_kazanim_plani_oncesi')savedOutcomeBackup=v};
+    kazanimPlaniniUygula('11-A',kazanimPlaniOnizleme('11-A').degisimler.map(x=>x.ders))`);
+  assert.equal(a.run('savedOutcomeBackup'),before);
+  assert.equal(a.run("kazanimPlaniOnizleme('11-A')"),null);
+  assert(a.run('planHesapla(0,buHafta()).toplam')>1);
+  assert(a.json('planHesapla(0,buHafta()).gunler.flat().map(x=>x.ad)').some(t=>t.includes('İstatistiksel Araştırma Süreci —')));
+  assert.deepEqual(a.json("D.konuPlani['11-A'].map(w=>w['Matematik TYT'])"),tyt);
+  const after=a.run('JSON.stringify(D)');a.run("kazanimPlaniniUygula('11-A',['Matematik'])");
+  assert.equal(a.run('JSON.stringify(D)'),after);
+});
+
+test('outcome upgrade leaves recorded, historical and issued future weeks unchanged',()=>{
+  const a=staleStudentWeek();
+  a.run(`D.ayar.testTarih='2026-09-30';const weekTwo=buHafta();
+    D.log=[[weekTwo,0,staleKi,3,20,0,0]];D.kart['0:'+staleKi]={due:weekTwo+28,n:1};
+    D.elle['0|'+(weekTwo+7)]={sabit:weekTwo+7,plan:{sentinel:'issued future'}};`);
+  const records=a.json('({log:D.log,kart:D.kart,elle:D.elle,ek:D.ekKonular})');
+  const original=a.json("D.konuPlani['11-A']");
+  const dates=a.json("D.subeIslenis['11-A']");
+  a.run("kazanimPlaniniUygula('11-A',kazanimPlaniOnizleme('11-A').degisimler.map(x=>x.ders))");
+  const updated=a.json("D.konuPlani['11-A']");
+  for(let w=0;w<3;w++)assert.deepEqual(updated[w],original[w],'protected week '+w);
+  assert(updated[3].Matematik[0].includes('hata ve yanlılıkları'));
+  assert.deepEqual(a.json('({log:D.log,kart:D.kart,elle:D.elle})'),{log:records.log,kart:records.kart,elle:records.elle});
+  assert.deepEqual(a.json('D.ekKonular').slice(0,records.ek.length),records.ek,'existing topic indexes retain identity');
+  for(const [id,date] of Object.entries(dates))if(date<a.run('weekTwo+14'))assert.equal(a.run(`D.subeIslenis['11-A'][${id}]`),date);
+});
+
+test('edited and empty courses are opt-in, and selecting one course preserves the others',()=>{
+  const a=staleStudentWeek();
+  a.run("D.konuPlani['11-A'][0].Matematik=['Özel okul konusu'];D.konuPlani['11-A'].forEach(w=>w.Felsefe=[])");
+  const before=a.json("D.konuPlani['11-A']"),r=a.json("kazanimPlaniOnizleme('11-A')");
+  assert(r.degisimler.find(x=>x.ders==='Matematik').ozel);assert(r.degisimler.find(x=>x.ders==='Felsefe').ozel);
+  const html=a.run("kazanimPlaniUyarisi('11-A')");
+  assert.match(html,/data-ders="Matematik">/);assert(!html.includes('data-ders="Matematik" checked'));
+  assert.equal(a.run("kazanimPlaniniUygula('11-A',[])"),null);
+  a.run("kazanimPlaniniUygula('11-A',['Matematik'])");
+  const after=a.json("D.konuPlani['11-A']");
+  assert(after[0].Matematik[0].includes('Araştırma sorusu'));
+  for(let w=0;w<36;w++) {
+    delete before[w].Matematik;delete after[w].Matematik;assert.deepEqual(after[w],before[w]);
+  }
+  assert.equal(a.run("kazanimPlaniOnizleme('12-A')"),null);
+});
+
+test('failed outcome backup is atomic and a changed reporting cycle protects overlapping weeks',()=>{
+  const a=staleStudentWeek(),before=a.run('JSON.stringify(D)');
+  a.run('localStorage.setItem=()=>{throw Error("quota")}');
+  assert.throws(()=>a.run("kazanimPlaniniUygula('11-A',['Matematik'])"),/quota/);
+  assert.equal(a.run('JSON.stringify(D)'),before);
+  a.run(`D.ogr[0].haftaDuzeni={at:1,donemler:[{bas:gunNo('2026-09-23'),gun:2}]};
+    D.elle['0|'+gunNo('2026-09-23')]={sabit:gunNo('2026-09-23'),plan:{sentinel:'issued Wednesday'}};`);
+  const r=a.json("kazanimPlaniOnizleme('11-A')");
+  assert(r.korunan.includes(0));assert(r.korunan.includes(1),'Wednesday cycle protects following Monday and Tuesday');
+});
+
+test('retired broad-topic catch-up dates cannot crowd out the weekly subtopics',()=>{
+  const a=staleStudentWeek();
+  a.run(`const oldMath=+Object.keys(D.subeIslenis['11-A']).find(k=>D.konuDers[k]==='Matematik');
+    D.ogrIslenis={0:{[oldMath]:buHafta()-7}};
+    D.ogr.push({ad:'Independent branch',sube:'11-C',sinif:11,alan:'EA'});
+    D.subeIslenis['11-C']={[oldMath]:buHafta()-7};`);
+  const row=a.json('konuAl(oldMath)');
+  a.run("kazanimPlaniniUygula('11-A',['Matematik'])");
+  assert.equal(a.run('D.ogrIslenis[0][oldMath]'),undefined);
+  assert.equal(a.run("D.subeIslenis['11-A'][oldMath]"),undefined);
+  assert.equal(a.run("D.subeIslenis['11-C'][oldMath]"),a.run('buHafta()-7'));
+  assert.deepEqual(a.json('konuAl(oldMath)'),row);
+  assert(!a.json('planHesapla(0,buHafta()).gunler.flat().map(x=>x.ki)').includes(a.run('oldMath')));
+});
+
+test('retiring old headings retains scored and explicitly added personal topics',()=>{
+  for(const protection of ['card','manual']) {
+    const a=staleStudentWeek();
+    a.run(`const oldMath=+Object.keys(D.subeIslenis['11-A']).find(k=>D.konuDers[k]==='Matematik');
+      D.subeIslenis['11-A'][oldMath]=buHafta()-7;D.ogrIslenis={0:{[oldMath]:buHafta()-7}};`);
+    if(protection==='card')a.run('D.kart["0:"+oldMath]={due:buHafta()+14,n:1}');
+    else a.run('D.elle["0|"+buHafta()].ek.push(oldMath)');
+    const before=a.run('JSON.stringify(D.ogrIslenis)');
+    a.run("kazanimPlaniniUygula('11-A',['Matematik'])");
+    assert.equal(a.run('JSON.stringify(D.ogrIslenis)'),before,protection);
+    assert.equal(a.run("D.subeIslenis['11-A'][oldMath]"),a.run('buHafta()-7'));
+  }
 });
