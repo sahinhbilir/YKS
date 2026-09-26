@@ -445,6 +445,7 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 
 .gpDuzen{display:grid;grid-template-columns:minmax(220px,1fr) minmax(320px,2fr);gap:16px;align-items:start}.gpAlanlar{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}.gpAlanlar label{flex:1;min-width:130px}.gpAlanlar input,.gpAlanlar select{display:block;width:100%;margin-top:4px}.gpSatir input[list]{margin-top:4px}@media(max-width:760px){.gpDuzen{grid-template-columns:1fr}.gpDuzen img{max-height:65vh;object-fit:contain}}
 .cikis-durum{position:fixed;z-index:10000;bottom:16px;left:50%;transform:translateX(-50%);width:min(540px,calc(100vw - 24px));padding:18px;background:var(--kagit);color:var(--murekkep);border:1px solid var(--cizgi);border-radius:12px;box-shadow:0 8px 32px #0003}.cikis-durum .arac{margin-top:12px}@media print{.cikis-durum,#oturumKapat{display:none!important}}
+.etkinlik-ozet{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0}.etkinlik-ozet .kart{padding:16px;border:1px solid #cbd5e1;border-radius:12px}.etkinlik-ozet strong{font-size:26px}.etkinlik-satir{display:grid;grid-template-columns:1.5fr 1fr 1fr 1.3fr 1.3fr;gap:12px;padding:16px 0;border-bottom:1px solid #cbd5e1;overflow-wrap:anywhere}.etkinlik-mobil{display:none}.etkinlik-liste time{font-size:13px}#takipArama{max-width:100%}@media(max-width:700px){.etkinlik-ozet{grid-template-columns:repeat(2,minmax(0,1fr))}.etkinlik-satir{grid-template-columns:1fr;gap:10px}.etkinlik-baslik{display:none}.etkinlik-mobil{display:inline;font-weight:600}.etkinlik-satir>div:first-child{font-size:18px}}
 </style>
 <script type="module">
 // Bulut senkronizasyonu (Firestore) — bkz. plan §1/§2/§3. Uygulamanın geri kalanı
@@ -593,11 +594,27 @@ if (window.bulutDegisti) window.bulutDegisti();
 if (typeof location !== 'undefined' && location.protocol === 'https:' &&
     ['ykstekrar.com', 'www.ykstekrar.com'].includes(location.hostname) &&
     new URLSearchParams(location.search).get('dev') !== '1') {
+  // Only explicit, anonymous parameters cross this boundary. Never send names,
+  // school numbers, class labels, authentication email or free-form values.
+  const kuyruk = []; let gonder = null;
+  window.yksAnalitik = (ad, p) => {
+    if (!['student_results_opened','student_results_saved','student_pdf_requested'].includes(ad) || !p ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.student_key || '') ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(p.report_week || '') ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(p.plan_week || '') || !Number.isSafeInteger(p.action_ts)) return;
+    const temiz = {student_key:p.student_key, report_week:p.report_week, plan_week:p.plan_week, action_ts:p.action_ts};
+    if (new URLSearchParams(location.search).get('analytics_debug') === '1') temiz.debug_mode = true;
+    if (gonder) gonder(ad, temiz); else if (kuyruk.length < 50) kuyruk.push([ad, temiz]);
+  };
+  (window.yksAnalitikBekleyen || []).splice(0).forEach(x => window.yksAnalitik(...x));
   import('https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js')
-    .then(async ({ getAnalytics, isSupported }) => {
-      if (await isSupported()) getAnalytics(uygulama);
+    .then(async ({ getAnalytics, isSupported, logEvent }) => {
+      if (!(await isSupported())) { kuyruk.length = 0; window.yksAnalitik = () => {}; return; }
+      const analytics = getAnalytics(uygulama);
+      gonder = (ad, parametre) => { try { logEvent(analytics, ad, parametre); } catch (_) {} };
+      kuyruk.splice(0).forEach(x => gonder(...x));
     })
-    .catch(() => console.warn('[YKS] Analytics kullanılamıyor.'));
+    .catch(() => { kuyruk.length = 0; window.yksAnalitik = () => {}; console.warn('[YKS] Analytics kullanılamıyor.'); });
 }
 </script>
 </head>
@@ -941,6 +958,7 @@ function yedekDogrula(y) {
   const konuAdedi = KATALOG.length + (Array.isArray(y.ekKonular) ? y.ekKonular.length : 0);
   y.ogr.forEach((o, i) => {
     if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('Geçersiz öğrenci kaydı: ' + (i + 1) + '. satır.');
+    if (o.etkinlik !== undefined) etkinlikDogrula(o.etkinlik);
     if (typeof o.ad !== 'string' || !o.ad.trim() || o.ad.length > 120) throw new Error('Geçersiz öğrenci adı: ' + (i + 1) + '. satır.');
     if (typeof o.sube !== 'string' || !o.sube.trim() || o.sube.length > 40) throw new Error('Geçersiz öğrenci şubesi: ' + (i + 1) + '. satır.');
     if (o.sinif !== undefined && ![9,10,11,12].includes(o.sinif)) throw new Error('Geçersiz sınıf düzeyi.');
@@ -4899,7 +4917,7 @@ function bulutSonucPaketiniYerellestir(veri) {
     tur: veri.paket.tur, surum: veri.paket.surum, katalogImza: veri.paket.katalogImza,
     no: veri.ogrenciNo, ad: veri.ogrenciAd, sube: veri.ogrenciSube,
     tarih: veri.paket.tarih, olusturmaTs: veri.paket.olusturmaTs,
-    calisma: veri.paket.calisma,
+    calisma: veri.paket.calisma, etkinlik: veri.paket.etkinlik,
     kayit: kayitYerel, konular: veri.paket.konular, konuAnlatilmadi: veri.paket.konuAnlatilmadi || [], haftaDuzeni: veri.paket.haftaDuzeni
   };
 }
@@ -5065,6 +5083,7 @@ function sonucPaketi(sinir) {
   return { tur: 'yks-sonuc', surum: SONUC_PAKET_SURUM, katalogImza: KATALOG_IMZA,
            no: o.no, ad: o.ad, sube: o.sube, tarih: bugunNo(), olusturmaTs: olusturmaTs,
            ...(o.ogrenciBulutId ? {ogrenciBulutId:o.ogrenciBulutId} : {}),
+           etkinlik: o.etkinlik ? JSON.parse(JSON.stringify(o.etkinlik)) : undefined,
            kayit: kayit, konular: konular, calisma: ogrenciMi() && o.ogrenciBulutId ? ogrenciCalismaPaketi() : undefined,
            haftaDuzeni: o.haftaDuzeni ? JSON.parse(JSON.stringify(o.haftaDuzeni)) : undefined,
            konuAnlatilmadi: (D.konuAnlatilmadi || []).filter(e => e.si === 0)
@@ -5170,6 +5189,8 @@ function sonucPaketiUygula(pk, hedefSi) {
       (pk.ad || pk.no) + ' listede bulunamadı.');
     si = aday[0].i;
   }
+
+  if (pk.etkinlik !== undefined) etkinlikDogrula(pk.etkinlik);
 
   // 1) Konu çözüm planı + tam doğrulama — bu adımda D'ye hiçbir şey yazılmaz. Gönderenin
   // "ki" numarası yalnızca kendi cihazında anlamlıydı; katalog dışı her numara burada
@@ -5330,6 +5351,7 @@ function sonucPaketiUygula(pk, hedefSi) {
   if (yeni.length) sonucIsle(si, yeni);
   resetKonular.forEach(ki => kartiYenidenHesapla(si, ki));
   if (pk.calisma) ogrenciCalismasiniUygula(pk.calisma, si);
+  if (pk.etkinlik) D.ogr[si].etkinlik = etkinlikBirlestir(D.ogr[si].etkinlik, pk.etkinlik);
   return { ad: D.ogr[si].ad, eklenen: yeni.length, atlanan: pk.kayit.length - yeni.length, bilinmeyenKonu: 0 };
 }
 
@@ -5338,6 +5360,7 @@ function sonucPaketiUygula(pk, hedefSi) {
 function ogrenciCalismaPaketi() {
   const kopya = Object.assign({}, D);
   delete kopya.ogrSonEsitlenen;
+  kopya.ogr = D.ogr.map(o => { const k = {...o}; delete k.etkinlik; return k; });
   delete kopya.ogrTaslak; // gelecekteki hesaplama önbelleği; programdan yeniden üretilir
   return { ts: +D.ogrCalismaTs || +D.ts || Date.now(), veri: JSON.stringify(kopya) };
 }
@@ -5638,7 +5661,7 @@ async function bulutDefteriniAc(kullanici) {
     } catch (e) { D = onceki; throw e; }
   }
   await bulutYedekTemeliniHatirla(r.uid, r.veri);
-  EK.sekme = 'ogrenciler'; EK.ogr = 0; EK.hafta = null;
+  EK.sekme = 'takip'; EK.takipHafta = null; EK.ogr = 0; EK.hafta = null;
   EK.bulutYedekHata = ''; ciz();
   bilgiVer('Bulut defteriniz geri yüklendi: ' + say + ' öğrenci, ' + sonucSayisi + ' sonuç.' +
     (!say && !sonucSayisi ? ' Bu yedek boş. Ayarlar → “Bulut yedek geçmişini göster” ile eski kopyaları kontrol edin.' : ''));
@@ -5996,6 +6019,12 @@ async function sunucuyaGonder(olay) {
   if (!window.bulut) throw new Error('Bulut modülü yüklenemedi.');
   const o = D.ogr[0] || {};
   if (!o.syncId) throw new Error('Bu cihaz bir öğretmen paketiyle kurulmadığı için buluta gönderemez. Dosyayla gönderin.');
+  // Updated clients use the read/merge/write transaction for manual sends too.
+  if (ogrenciMi() && o.etkinlik) {
+    const r = await ogrenciEsitlemeBosalt();
+    if (!r || r.tur !== 'tamam') throw new Error(r?.mesaj || 'Eşitleme henüz tamamlanmadı.');
+    return D.log.length;
+  }
   const pk = sonucPaketi();
   let istemciOlay = null;
   if (olay !== undefined && olay !== null) {
@@ -6113,9 +6142,9 @@ async function ogrenciEsitlemeyiDene(cikisIcin) {
         } finally { D = defter; }
         const yaz = { bagliUid: kullanici.uid, sunucuTs: Date.now(),
           istemciOlay: {tur:'plan-baslatildi',hafta:buHafta(),ts:Date.now()} };
-        if (pk.kayit.length || (pk.konuAnlatilmadi || []).length || pk.haftaDuzeni || pk.calisma) yaz.paket = {
+        if (pk.kayit.length || (pk.konuAnlatilmadi || []).length || pk.haftaDuzeni || pk.calisma || pk.etkinlik) yaz.paket = {
           tur: pk.tur, surum: pk.surum, katalogImza: pk.katalogImza, no: pk.no, ad: pk.ad, sube: pk.sube,
-          tarih: pk.tarih, olusturmaTs: pk.olusturmaTs, konular: pk.konular, ...(pk.calisma ? {calisma:pk.calisma} : {}),
+          tarih: pk.tarih, olusturmaTs: pk.olusturmaTs, konular: pk.konular, ...(pk.etkinlik ? {etkinlik:pk.etkinlik} : {}), ...(pk.calisma ? {calisma:pk.calisma} : {}),
           kayit: pk.kayit.map(k => ({g:k[0],k:k[1],d:k[2],s:k[3],n:k[4],t:k[5]})), konuAnlatilmadi: pk.konuAnlatilmadi || [], ...(pk.haftaDuzeni ? {haftaDuzeni:pk.haftaDuzeni} : {})
         };
         if (new TextEncoder().encode(JSON.stringify(yaz)).length > BULUT_YEDEK_UST_SINIR)
@@ -6429,8 +6458,10 @@ async function bulutSurumuneDon(yedek,kaynak,secim) {
 
 const OGRETMEN_DINLEYICILER = new Map();
 let OGRETMEN_DINLENEN_DEFTER = null, OGRETMEN_DINLENEN_UID = null;
+const ETKINLIK_CANLI = new Map();
 function ogretmenDinlemeyiDurdur() {
   OGRETMEN_DINLEYICILER.forEach(d => { if (typeof d === 'function') d(); });
+  ETKINLIK_CANLI.clear();
   OGRETMEN_DINLEYICILER.clear(); OGRETMEN_DINLENEN_DEFTER = null; OGRETMEN_DINLENEN_UID = null;
 }
 function ogretmenDinlemeyiBaslat(zorla) {
@@ -6448,18 +6479,22 @@ function ogretmenDinlemeyiBaslat(zorla) {
   gerekli.forEach(id => {
     if (OGRETMEN_DINLEYICILER.has(id)) return;
     OGRETMEN_DINLEYICILER.set(id, null);
+    ETKINLIK_CANLI.set(id, {durum:'bekliyor'});
     const dur = b.onSnapshot(b.doc(b.db, 'ogrenciler', id), {includeMetadataChanges:true}, anlik => {
       if (CIKIS_DURUMU || D !== defter || !rehberMi() || bulutDefterIslemi || b.mevcutKullanici()?.uid !== u.uid ||
           anlik.metadata?.hasPendingWrites || anlik.metadata?.fromCache) return;
-      if (!anlik.exists()) return;
+      if (!anlik.exists()) { etkinlikCanliDurum(id, 'hata'); return; }
       const veri = anlik.data(), si = D.ogr.findIndex(o => o && !o.silindi && o.syncId === id);
-      if (si < 0 || veri.ogretmenUid !== u.uid || veri.durum !== 'aktif' || !veri.paket || !veri.bagliUid) return;
+      if (si < 0 || veri.ogretmenUid !== u.uid || veri.durum !== 'aktif') { etkinlikCanliDurum(id, 'hata'); return; }
       if (D.ogr[si].ogrenciBulutId && D.ogr[si].ogrenciBulutId !== veri.ogrenciBulutId) {
+        etkinlikCanliDurum(id, 'hata');
         EK.ogretmenSyncDurum = 'Öğrenci bağlantısı eşleşmedi; sonuçlar alınmadı.'; rayCiz(); return;
       }
       try {
+        if (!veri.paket || !veri.bagliUid) { etkinlikCanliDurum(id, 'eski'); return; }
         const once = JSON.stringify(D);
         const r = sonucPaketiUygula(bulutSonucPaketiniYerellestir(veri), si);
+        etkinlikCanliDurum(id, veri.paket.etkinlik ? 'tamam' : 'eski');
         if (JSON.stringify(D) === once) return;
         EK.ogretmenSyncDurum = r.ad + ': sunucudaki çalışma alındı';
         // Açık sonuç/ayar alanlarındaki yazıyı silme. Diğer ekranlar güncellenir.
@@ -6472,8 +6507,8 @@ function ogretmenDinlemeyiBaslat(zorla) {
           if (tamam) bulutYedekDene();
           else { EK.ogretmenSyncDurum = 'Sunucudaki çalışma alındı, fakat bu cihaza kaydedilemedi.'; rayCiz(); }
         });
-      } catch (e) { EK.ogretmenSyncDurum = 'Öğrenci çalışması alınamadı: ' + (e.message || e); rayCiz(); }
-    }, e => { if (D === defter) { EK.ogretmenSyncDurum = 'Öğrenci sonuçları alınamıyor: ' + (izinHatasiMi(e) ? BULUT_IZIN_ACIKLAMA : e.message || e); rayCiz(); } });
+      } catch (e) { etkinlikCanliDurum(id, 'hata'); EK.ogretmenSyncDurum = 'Öğrenci çalışması alınamadı: ' + (e.message || e); rayCiz(); }
+    }, e => { if (D === defter && b.mevcutKullanici()?.uid === u.uid) { etkinlikCanliDurum(id, 'hata'); EK.ogretmenSyncDurum = 'Öğrenci sonuçları alınamıyor: ' + (izinHatasiMi(e) ? BULUT_IZIN_ACIKLAMA : e.message || e); rayCiz(); } });
     OGRETMEN_DINLEYICILER.set(id, dur);
   });
 }
@@ -7710,8 +7745,145 @@ function bilgiVer(metin) {
   setTimeout(function () { v.remove(); }, 5000);
 }
 
+// Weekly activity is part of the student's existing protected result packet.
+// First/last timestamps merge idempotently; transaction retries never count as clicks.
+const ETKINLIK_TURLERI = {acildi:'student_results_opened', kaydedildi:'student_results_saved', pdf:'student_pdf_requested'};
+function etkinlikDogrula(e) {
+  const nesne = x => x && typeof x === 'object' && !Array.isArray(x);
+  const ts = x => Number.isSafeInteger(x) && x > 0 && x < 100000000000000;
+  const gun = x => Number.isSafeInteger(x) && x >= 18000 && x <= 50000;
+  if (!nesne(e) || e.v !== 1 || !ts(e.baslangic) || !Array.isArray(e.kayit) || e.kayit.length > 600 ||
+      Object.keys(e).some(k => !['v','baslangic','kayit'].includes(k))) throw new Error('Öğrenci etkinlik kaydı geçersiz.');
+  const anahtarlar = new Set();
+  e.kayit.forEach(r => {
+    if (!nesne(r) || !Object.hasOwn(ETKINLIK_TURLERI, r.tur) || !gun(r.hafta) || !gun(r.sonucHafta) ||
+        !ts(r.ilk) || !ts(r.son) || r.ilk > r.son || r.ilk < e.baslangic ||
+        (r.tur !== 'pdf' && r.hafta !== r.sonucHafta) || r.hafta < r.sonucHafta || r.hafta > r.sonucHafta + 7 ||
+        Object.keys(r).some(k => !['tur','hafta','sonucHafta','ilk','son'].includes(k)))
+      throw new Error('Öğrenci etkinlik satırı geçersiz.');
+    const k = etkinlikAnahtari(r);
+    if (anahtarlar.has(k)) throw new Error('Öğrenci etkinlik satırı yineleniyor.');
+    anahtarlar.add(k);
+  });
+  return e;
+}
+const etkinlikAnahtari = r => r.tur + ':' + r.sonucHafta + ':' + r.hafta;
+function etkinlikBirlestir(a, b) {
+  if (a) etkinlikDogrula(a); etkinlikDogrula(b);
+  const map = new Map();
+  [...(a?.kayit || []), ...b.kayit].forEach(r => {
+    const k = etkinlikAnahtari(r), once = map.get(k);
+    map.set(k, {...r, ilk:Math.min(once?.ilk || r.ilk, r.ilk), son:Math.max(once?.son || r.son, r.son)});
+  });
+  const kayit = [...map.values()].sort((x,y) => y.son-x.son || etkinlikAnahtari(x).localeCompare(etkinlikAnahtari(y))).slice(0,600);
+  kayit.sort((x,y) => etkinlikAnahtari(x).localeCompare(etkinlikAnahtari(y)));
+  return {v:1, baslangic:Math.min(a?.baslangic || b.baslangic, b.baslangic), kayit};
+}
+function etkinlikHazirla() {
+  if (!ogrenciMi() || D?.ogr?.length !== 1 || D.ogr[0].silindi || D.ogr[0].etkinlik) return false;
+  D.ogr[0].etkinlik = {v:1, baslangic:Date.now(), kayit:[]};
+  return true;
+}
+function etkinlikKaydet(tur, hb, si = EK.ogr) {
+  if (!ogrenciMi() || si !== 0 || D?.ogr?.length !== 1 || D.ogr[0].silindi ||
+      !Object.hasOwn(ETKINLIK_TURLERI, tur) || !Number.isSafeInteger(hb) || CIKIS_DURUMU) return false;
+  try {
+    etkinlikHazirla();
+    const o = D.ogr[0], ts = Date.now();
+    let sonucHafta = hb;
+    if (tur === 'pdf') {
+      // Keep the source result week when the UI advances to its next plan.
+      // This survives reloads and another device receiving the merged packet.
+      const kaynak = o.etkinlik.kayit.filter(r => r.tur !== 'pdf' && r.son <= ts && ts-r.son <= 7*86400000 &&
+        (r.hafta === hb || sonrakiHafta(0,r.hafta) === hb)).sort((a,b) => b.son-a.son)[0];
+      if (kaynak) sonucHafta = kaynak.hafta;
+    }
+    o.etkinlik = etkinlikBirlestir(o.etkinlik, {v:1, baslangic:ts, kayit:[{tur,hafta:hb,sonucHafta,ilk:ts,son:ts}]});
+    // Persist before window.print can suspend JavaScript; network stays asynchronous.
+    try { localStorage.setItem('yks_veri', JSON.stringify(D)); } catch (_) { EK.kirli = true; }
+    kaydet(true).catch(() => {});
+    ogrenciEsitlemePlanla(0);
+    const olay = [ETKINLIK_TURLERI[tur], {student_key:o.ogrenciBulutId,
+      report_week:isoDan(sonucHafta), plan_week:isoDan(hb), action_ts:ts}];
+    if (window.yksAnalitik) window.yksAnalitik(...olay);
+    else if (!GELISTIRME_MODU && typeof location !== 'undefined' && location.protocol === 'https:' &&
+        ['ykstekrar.com','www.ykstekrar.com'].includes(location.hostname)) {
+      const kuyruk = window.yksAnalitikBekleyen || (window.yksAnalitikBekleyen = []);
+      if (kuyruk.length < 50) kuyruk.push(olay);
+    }
+    return true;
+  } catch (_) { return false; } // Tracking must never interrupt results or printing.
+}
+function etkinlikBugun() {
+  if (GELISTIRME_MODU && D?.ayar?.testTarih) return bugunNo();
+  const parca = new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const al = tur => parca.find(x => x.type === tur).value;
+  return gunNo(al('year')+'-'+al('month')+'-'+al('day'));
+}
+function etkinlikSeciliHafta() { return Number.isInteger(EK.takipHafta) ? EK.takipHafta : pazartesi(etkinlikBugun()); }
+function etkinlikSatirlari(hb) {
+  if (!rehberMi()) return [];
+  const kimlikler = new Set();
+  return D.ogr.flatMap((o,si) => {
+    if (!o || o.silindi) return [];
+    const kimlik = o.ogrenciBulutId || o.syncId || 'yerel:'+si;
+    if (kimlikler.has(kimlik)) return []; kimlikler.add(kimlik);
+    const takvim = pazartesi(hb), hafta = ogrenciHaftaBasi(si,takvim+6);
+    const kayit = (o.etkinlik?.kayit || []).filter(r => r.sonucHafta >= takvim && r.sonucHafta < takvim+7);
+    const al = tur => kayit.filter(r => r.tur === tur).sort((a,b) => b.son-a.son)[0];
+    const acildi = al('acildi'), kaydedildi = al('kaydedildi'), pdf = al('pdf');
+    return [{o,si,hafta,acildi,kaydedildi,pdf,akis:!!(acildi && pdf && pdf.son >= acildi.ilk)}];
+  });
+}
+function etkinlikZamani(ts) { return new Date(ts).toLocaleString('tr-TR', {timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+function etkinlikCanliDurum(id, durum) {
+  ETKINLIK_CANLI.set(id, {durum,ts:Date.now()});
+  // Replace only the dashboard, without moving focus or scrolling during snapshots.
+  if (rehberMi() && EK.sekme === 'takip' && !/^(INPUT|SELECT)$/.test(document.activeElement?.tagName || '')) {
+    const ana = document.getElementById('ana'); if (ana) ana.innerHTML = gorunumEtkinlik();
+  }
+}
+function gorunumEtkinlik() {
+  if (!rehberMi()) return '';
+  const hb = etkinlikSeciliHafta(), tum = etkinlikSatirlari(hb), subeler = [...new Set(tum.map(r=>r.o.sube))].sort();
+  const seciliSube = subeler.includes(EK.takipSube) ? EK.takipSube : '';
+  const satirlar = tum.filter(r => !seciliSube || r.o.sube === seciliSube);
+  const filtre = EK.takipFiltre || 'hepsi', arama = (EK.takipArama || '').toLocaleLowerCase('tr');
+  const gorunen = satirlar.filter(r => (!arama || (r.o.ad+' '+r.o.no).toLocaleLowerCase('tr').includes(arama)) &&
+    (filtre === 'hepsi' || filtre === 'bekleyen' ? filtre !== 'bekleyen' || !r.kaydedildi || !r.pdf : !!r[filtre]));
+  const hucre = (r, tur) => {
+    const olay = r[tur];
+    if (!olay) return '<span class="mini">Kayıt ulaşmadı</span>';
+    return '<b>'+({acildi:'Açtı',kaydedildi:'Kaydetti',pdf:'İstedi'})[tur]+'</b><br><time title="İlk: '+kacis(etkinlikZamani(olay.ilk))+'">'+kacis(etkinlikZamani(olay.son))+'</time>'+
+      (tur !== 'pdf' && olay.sonucHafta !== r.hafta ? '<br><span class="mini">Dönem: '+ggyy(olay.sonucHafta)+'</span>' : '')+
+      (tur === 'pdf' ? '<br><span class="mini">Plan: '+ggyy(olay.hafta)+' – '+ggyy(planHaftaSonu(r.si,olay.hafta))+'</span>' : '');
+  };
+  return '<div class="baslik"><div><div class="etiket">Rehber öğretmen</div><h1>Haftalık öğrenci takibi</h1></div></div>'+
+    '<p>Seçtiğiniz sonuç haftasında kim formu açtı, sonuç kaydetti ve PDF istedi? Sayılar tekil öğrencileri gösterir.</p>'+
+    '<div class="arac"><button class="dugme" data-takip-hafta="-1" aria-label="Önceki takip haftası">←</button>'+
+    '<label>Sonuç haftası <input type="date" id="takipHafta" value="'+isoDan(hb)+'"></label>'+
+    '<button class="dugme" data-takip-hafta="1" aria-label="Sonraki takip haftası">→</button><button class="dugme" data-takip-hafta="0">Bu hafta</button>'+
+    '<label>Şube <select id="takipSube"><option value="">Tüm şubeler</option>'+subeler.map(s=>'<option'+(s===seciliSube?' selected':'')+' value="'+kacis(s)+'">'+kacis(s)+'</option>').join('')+'</select></label></div>'+
+    '<p class="mini">'+ggyy(hb)+' – '+ggyy(hb+6)+' · Başlangıcı seçilen haftaya düşen sonuç dönemleri listelenir; kişisel dönem tarihleri aşağıdadır. Saatler Türkiye saatidir.</p>'+
+    '<div class="etkinlik-ozet">'+[['acildi','Sonuç gir açtı'],['kaydedildi','Sonuç kaydetti'],['pdf','PDF istedi'],['akis','Açtı → PDF istedi']].map(([k,ad])=>
+      '<div class="kart"><strong>'+satirlar.filter(r=>r[k]).length+' / '+satirlar.length+'</strong><br>'+ad+'</div>').join('')+'</div>'+
+    '<div class="arac"><label>Öğrenci ara <input id="takipArama" type="search" value="'+kacis(EK.takipArama||'')+'" placeholder="Ad veya numara"></label>'+
+    '<label>Göster <select id="takipFiltre">'+[['hepsi','Tüm öğrenciler'],['acildi','Formu açanlar'],['kaydedildi','Sonuç kaydedenler'],['pdf','PDF isteyenler'],['akis','Açıp PDF isteyenler'],['bekleyen','Sonuç / PDF kaydı eksik']].map(([k,v])=>'<option value="'+k+'"'+(filtre===k?' selected':'')+'>'+v+'</option>').join('')+'</select></label></div>'+
+    '<div class="etkinlik-liste" role="table" aria-label="Haftalık öğrenci etkinlikleri"><div class="etkinlik-satir etkinlik-baslik" role="row">'+['Öğrenci / sonuç dönemi','Sonuç gir','Sonuç kaydı','PDF isteği','Veri durumu'].map(x=>'<b role="columnheader">'+x+'</b>').join('')+'</div>'+
+    gorunen.map(r=>{
+      const canli=ETKINLIK_CANLI.get(r.o.syncId), bas=r.o.etkinlik?.baslangic;
+      const durum=!r.o.syncId?'Öğretmen bağlantısı yok':canli?.durum==='tamam'?'Sunucudan alındı · '+etkinlikZamani(canli.ts):
+        canli?.durum==='hata'?'Bağlantı doğrulanamadı':canli?.durum==='eski'?'Yeni sürümden etkinlik bekleniyor':'Canlı bağlantı bekleniyor';
+      return '<div class="etkinlik-satir" role="row"><div role="cell"><b>'+kacis(r.o.ad)+'</b><br>'+kacis(r.o.sube)+' · '+kacis(r.o.no||'')+
+        '<br><span class="mini">'+ggyy(r.hafta)+' – '+ggyy(planHaftaSonu(r.si,r.hafta))+'</span></div>'+
+        ['acildi','kaydedildi','pdf'].map((k,i)=>'<div role="cell"><span class="etkinlik-mobil">'+['Sonuç gir','Sonuç kaydı','PDF isteği'][i]+': </span>'+hucre(r,k)+'</div>').join('')+
+        '<div role="cell" class="mini">'+kacis(durum)+(bas?'<br>Takip başlangıcı: '+kacis(etkinlikZamani(bas)):'<br>Henüz etkinlik verisi yok')+'</div></div>';
+    }).join('')+'</div>'+(gorunen.length?'':'<p>Bu seçimde öğrenci bulunamadı.</p>')+
+    '<p class="mini">PDF isteği, “Planı indir / PDF” düğmesine basıldığını gösterir; dosyanın cihaza kaydedildiğini doğrulamaz. Sonuç formundan sonraki haftanın PDF’sine geçiş aynı sonuç haftasında, plan tarihiyle gösterilir. Formu açmak sonuç kaydetmek değildir.</p>'+
+    '<p class="mini">Kayıt ulaşmadı: öğrenci henüz işlem yapmamış, çevrimdışı kalmış veya eski sürümü kullanıyor olabilir. Geçmiş tıklamalar geriye dönük doldurulmaz. Bağlantı beklenirken son alınan kayıtlar gösterilir; bu liste Firebase Analytics raporunun gecikmesini beklemez.</p>';
+}
 // ---------------------------------------------------------------- çizim + olaylar
-const SEKME_REHBER = [['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
+const SEKME_REHBER = [['takip', 'Haftalık öğrenci takibi'], ['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
                   ['ogrenciler', 'Öğrenciler'], ['konuplani', 'Konu Planı'], ['harita', 'Haftalar Haritası'],
                   ['kurtarma', 'Geçmiş plan kurtar'], ['anlasma', 'Anlaşma ve rutin'], ['rapor', 'Karne'], ['ayarlar', 'Ayarlar']];
 const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['rapor', 'Karnem'], ['ayarlar', 'Ayarlar']];
@@ -7767,7 +7939,7 @@ function gorunumKurulum() {
 // kurtarma ekranı gösterip yedek indirmeyi ya da Ayarlar'a dönmeyi teklif et.
 function ciz() {
   if (CIKIS_DURUMU) return;
-  try { const okulDegisti = okulProgramlariniGuncelle(); if (ogrenciOtomasyonHazirla() || okulDegisti) kaydet(true); cizIc(); }
+  try { const etkinlikDegisti = etkinlikHazirla(); const okulDegisti = okulProgramlariniGuncelle(); if (ogrenciOtomasyonHazirla() || okulDegisti || etkinlikDegisti) kaydet(true); cizIc(); }
   catch (e) { hataEkraniGoster(e); }
 }
 function hataEkraniGoster(e) {
@@ -7790,12 +7962,12 @@ function cizIc() {
   if (rehberMi()) ogretmenDinlemeyiBaslat();
   if (D && !D.rol) { document.getElementById('ray').innerHTML = '';
     document.getElementById('ana').innerHTML = gorunumKurulum(); window.scrollTo(0, 0); return; }
-  if (ogrenciMi() && ['konular','ogrenciler'].indexOf(EK.sekme) >= 0) EK.sekme = 'plan';
+  if (ogrenciMi() && ['takip','konular','ogrenciler'].indexOf(EK.sekme) >= 0) EK.sekme = 'plan';
   const canli = canliOgrenciler();
   if (canli.length && (EK.ogr === undefined || !D.ogr[EK.ogr] || D.ogr[EK.ogr].silindi)) EK.ogr = canli[0];
   rayCiz();
   const ana = document.getElementById('ana');
-  if (!canli.length && EK.sekme !== 'ayarlar' && EK.sekme !== 'ogrenciler' && EK.sekme !== 'mufredat') {
+  if (!canli.length && EK.sekme !== 'ayarlar' && EK.sekme !== 'ogrenciler' && EK.sekme !== 'mufredat' && EK.sekme !== 'takip') {
     ana.innerHTML = '<div class="kurulum"><div class="kur-kutu" style="text-align:' + (ogrenciMi() ? 'left' : 'center') + '">' +
       '<h1 style="text-align:center">' + (ogrenciMi() ? 'Bilgilerini gir, başlayalım' : 'Henüz öğrenci yok') + '</h1>' +
       '<p class="kur-oz" style="text-align:center">' + (ogrenciMi()
@@ -7825,7 +7997,7 @@ function cizIc() {
       '</div></div>';
     window.scrollTo(0, 0); return;
   }
-  ana.innerHTML = EK.sekme === 'mufredat' ? gorunumMufredat() : EK.sekme === 'plan' ? gorunumPlan() :
+  ana.innerHTML = EK.sekme === 'takip' && rehberMi() ? gorunumEtkinlik() : EK.sekme === 'mufredat' ? gorunumMufredat() : EK.sekme === 'plan' ? gorunumPlan() :
     EK.sekme === 'kurtarma' ? gorunumPlanKurtarma() :
     EK.sekme === 'giris' ? gorunumGiris() :
     EK.sekme === 'konular' ? gorunumKonular() :
@@ -7916,6 +8088,7 @@ document.addEventListener('click', async ev => {
       const hb = +ciktiDugme.dataset.sonucHafta;
       disariAktarmayiKapat();
       EK.sekme = 'giris'; EK.hafta = hb; EK.girisAcik = {};
+      etkinlikKaydet('acildi', hb);
       ciz();
     }
     else {
@@ -8666,6 +8839,7 @@ document.addEventListener('click', async ev => {
         if (haftaBasi() > buHafta()) EK.hafta = null;
         const eksik = sonrakiHaftaYazdirmaEngeli(EK.ogr, buHafta());
         if (eksik && haftaBasi() >= buHafta()) EK.hafta = eksik.hb;
+        etkinlikKaydet('acildi', haftaBasi());
       }
     }
     PENCERE = null; pencereCiz(); ciz(); return;
@@ -8694,11 +8868,13 @@ document.addEventListener('click', async ev => {
     return;
   }
   if (t.id === 'yazdirOnizle') {
+    etkinlikKaydet('pdf', haftaBasi());
     // Yazdırma mevcut defteri kaydeder/eşitler; taslak haftayı sabitlemez.
     await planYazdir(null);
     return;
   }
   if (t.id === 'yazdir') {
+    etkinlikKaydet('pdf', haftaBasi());
     const hb = haftaBasi(), zatenSabit = !!elleAl(EK.ogr, hb, false).sabit;
     const tamam = await planYazdir(null);
     if (!tamam || zatenSabit) return;
@@ -8826,6 +9002,7 @@ document.addEventListener('click', async ev => {
         !Number.isInteger(formHb) || formHb !== ogrenciHaftaBasi(formSi, formHb)) {
       alert('Sonuç formunun öğrenci/hafta bilgisi geçersiz; sekmeyi yeniden açın.'); return;
     }
+    const sonucDefter = D, sonucKimlik = D.ogr[formSi].ogrenciBulutId;
     const girisTaslagi = sonucTaslaklariniAl();
     const kayitlar = [], anlatimlar = [], ertelenenler = [], tamamlananSlotlar = [];
     try {
@@ -8900,6 +9077,8 @@ document.addEventListener('click', async ev => {
       return;
     }
     const yerelTamam = await kaydet(true);
+    if (yerelTamam && D === sonucDefter && D.ogr[formSi]?.ogrenciBulutId === sonucKimlik)
+      etkinlikKaydet('kaydedildi', kaydedilenHb, kaydedilenOgr);
     // Kullanıcı yerel kayıt sürerken başka öğrenciye/haftaya geçtiyse onun seçimini ezme.
     // Hâlâ başladığı görünümdeyse sonuçtan sonra gelecek haftaya ilerlet.
     const kalanSonuc = ogrenciMi() && planHesapla(kaydedilenOgr, kaydedilenHb).gunler.some((liste, g) =>
@@ -9504,6 +9683,22 @@ document.addEventListener('click',async ev=>{
   } catch(e){s.ozet=e.message||String(e);s.hazir=false;const o=document.getElementById('gpOzet');if(o)o.textContent=s.ozet;const b=document.getElementById('gpKaydet');if(b)b.disabled=true;}
 });
 
+document.addEventListener('click', ev => {
+  const t = ev.target.closest?.('[data-takip-hafta]');
+  if (!t || !rehberMi()) return;
+  const d = +t.dataset.takipHafta;
+  EK.takipHafta = d ? etkinlikSeciliHafta()+7*d : null; ciz();
+});
+document.addEventListener('change', ev => {
+  const el=ev.target; if (!rehberMi()) return;
+  if (el.id === 'takipHafta') { if (!isoTarihGecerli(el.value)) return; EK.takipHafta=pazartesi(gunNo(el.value)); }
+  else if (el.id === 'takipSube') EK.takipSube=el.value;
+  else if (el.id === 'takipFiltre') EK.takipFiltre=el.value;
+  else if (el.id === 'takipArama') EK.takipArama=el.value.trim();
+  else return;
+  ciz();
+});
+
 // ---------------------------------------------------------------- başlangıç
 (async function () {
   // Hold a shared tab lock before reading or changing the notebook. Logout can
@@ -9523,6 +9718,7 @@ document.addEventListener('click',async ev=>{
     catch (e2) { D = varsayilan(); }
     acilisUyarilari = ['Kayıtlı veri yüklenemedi; hiçbir bozuk veya yarım veri kullanılmadı. Yedeğinizi Ayarlar’dan yeniden yükleyin.'];
   }
+  if (rehberMi()) { EK.sekme = 'takip'; EK.takipHafta = null; }
   // ders programı ve konu planı hazırsa gelecek haftaları kendiliğinden doldur:
   // aynı işlemi tekrar tekrar yapmak zararsız, çünkü işlenmiş konuya dokunulmuyor
   try {

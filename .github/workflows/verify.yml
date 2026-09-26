@@ -43,6 +43,8 @@ jobs:
         run: node test/data-integrity-regression.js
       - name: Cloud-sync resilience
         run: node test/cloud-sync-resilience.js
+      - name: Weekly student activity and named teacher dashboard
+        run: node test/student-activity-regression.cjs
       - name: Firebase Analytics isolation and production-only collection
         run: node --experimental-vm-modules test/firebase-analytics-regression.cjs
       - name: Timetable JSON regression
@@ -74,6 +76,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/logout-memory-browser.cjs
       - name: Grade enrollment on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/curriculum-browser.cjs
+      - name: Weekly student activity on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/student-activity-browser.cjs
       - name: Keep synthetic review screenshots
         if: always()
         uses: actions/upload-artifact@v4

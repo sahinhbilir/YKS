@@ -92,6 +92,7 @@ try {
   const student=app(studentDb,{uid:studentUid,isAnonymous:false,email:'ogr-delivery@student.ykstekrar.app'});
   await student.run('ogrenciHesabindanYukle("Delivery Student",42)');
   student.run('anlatimTamam(0,1,bugunNo());');
+  student.run("etkinlikKaydet('acildi',buHafta());");
   student.result(0,8);await student.click('sonucKaydet');
   const studentRef=doc(studentDb,'ogrenciler',slot),teacherRef=doc(teacherDb,'ogretmenYedek',teacherUid);
   await eventually(async()=>((await getDocFromServer(studentRef)).data()?.paket?.kayit?.length||0)===1,'result upload');
@@ -120,10 +121,19 @@ try {
   await reopened.click('yazdirOnizle');
   await eventually(()=>teacher.run('D.ogr[0].kap')===3,'print-only work delivery');
   check('pdf-click-saves-before-print-and-reaches-teacher-without-new-results',()=>assert.equal(prints,1));
+  await eventually(()=>teacher.run("D.ogr[0].etkinlik?.kayit.some(r=>r.tur==='pdf')"),'PDF activity delivery');
+  check('weekly-activity-survives-offline-relogin-and-arrives-with-result-and-PDF-weeks',()=>{
+    assert.equal(teacher.run("D.ogr[0].etkinlik.kayit.filter(r=>r.tur==='acildi').length"),1);
+    assert.equal(teacher.run("D.ogr[0].etkinlik.kayit.filter(r=>r.tur==='kaydedildi').length"),1);
+    assert.equal(teacher.run("etkinlikSatirlari(pazartesi(bugunNo()))[0].akis"),true);
+    assert.equal(teacher.run("ETKINLIK_CANLI.get(D.ogr[0].syncId).durum"),'tamam');
+  });
+  const beforeTeacherPrint=teacher.run('JSON.stringify(D.ogr[0].etkinlik)');
   teacher.run("D.kurum='Teacher print saved';");teacher.s.window.print=()=>{};
   await teacher.click('yazdir');
   await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).kurum==='Teacher print saved';},'teacher print backup without the ten-second fallback',5000);
   check('teacher-print-also-flushes-the-complete-server-backup',()=>assert.equal(teacher.run('D.log.length'),2));
+  check('teacher-print-does-not-add-student-activity',()=>assert.equal(teacher.run('JSON.stringify(D.ogr[0].etkinlik)'),beforeTeacherPrint));
   teacher.run(`gecmisPlaniKaydet(0,'2026-09-07',[{tarih:'2026-09-08',ki:0,tur:'test',durum:'tamamlandi',soru:10,dogru:7,not:null,dahil:true}],true)`);
   await teacher.run('kaydet(true)');teacher.run('sunucuKaydiniBaslat()');
   await teacher.run('gecmisPlaniOgrenciyeYayinla(0)');
