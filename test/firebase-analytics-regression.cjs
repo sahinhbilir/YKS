@@ -20,7 +20,7 @@ function deferred() {
 
 async function load({ url = production, missingLocation = false, supported = true,
   importError = false, supportError = false, initError = false, importGate, supportGate } = {}) {
-  const apps = [], order = [], warnings = [], analyticsApps = [], imports = [];
+  const apps = [], order = [], warnings = [], analyticsApps = [], imports = [], events = [];
   const primaryAuth = { currentUser: null, authStateReady: async () => {} };
   const secondaryAuth = { currentUser: null, authStateReady: async () => {} };
   const db = {};
@@ -55,6 +55,7 @@ async function load({ url = production, missingLocation = false, supported = tru
       runTransaction: noop, collection: noop, getDocs: noop, onSnapshot: noop
     },
     'firebase-analytics.js': {
+      logEvent(analytics, name, params) { events.push({name, params:JSON.parse(JSON.stringify(params))}); },
       async isSupported() {
         supportChecks++;
         if (supportGate) await supportGate.promise;
@@ -104,8 +105,42 @@ async function load({ url = production, missingLocation = false, supported = tru
     assert.equal(notifications, 1);
   }
   assertCloudReady();
-  return { apps, imports, analyticsApps, warnings, assertCloudReady, supportChecks: () => supportChecks };
+  return { apps, imports, analyticsApps, warnings, window, events, assertCloudReady, supportChecks: () => supportChecks };
 }
+
+const safeParams = {student_key:'d70ec14d-ab10-43e5-b63f-0dd990c3626b',report_week:'2026-09-21',plan_week:'2026-09-28',action_ts:1790352000000};
+test('early events queue once and strip all student identity fields except opaque UUID', async () => {
+  const importGate=deferred(), state=await load({importGate});
+  state.window.yksAnalitik('student_pdf_requested',{...safeParams,name:'Private Name',email:'private@example.test',school_number:42});
+  assert.equal(state.events.length,0); importGate.resolve(); await flush(); await flush();
+  assert.deepEqual(state.events,[{name:'student_pdf_requested',params:safeParams}]);
+  state.window.yksAnalitik('student_results_opened',safeParams);
+  state.window.yksAnalitik('student_results_saved',safeParams);
+  assert.equal(state.events.length,3); assert.equal(state.imports.length,1);
+});
+test('unexpected events and unsafe identifiers never enter Analytics',async()=>{
+  const state=await load();
+  state.window.yksAnalitik('student_results_opened',{...safeParams,student_key:'Name <email@example.test>'});
+  state.window.yksAnalitik('teacher_results_saved',safeParams);
+  state.window.yksAnalitik('student_results_saved',{...safeParams,report_week:'Class 11 A'});
+  assert.equal(state.events.length,0);
+});
+test('debug flag is explicit; dev and offline clients cannot emit these events',async()=>{
+  const normal=await load(), debug=await load({url:production+'?analytics_debug=1'});
+  normal.window.yksAnalitik('student_results_opened',safeParams);
+  debug.window.yksAnalitik('student_results_opened',safeParams);
+  assert.equal(normal.events[0].params.debug_mode,undefined);
+  assert.equal(debug.events[0].params.debug_mode,true);
+  for(const url of [production+'?dev=1','file:///student.html']){
+    const state=await load({url});assert.equal(state.window.yksAnalitik,undefined);assert.equal(state.events.length,0);
+  }
+});
+test('blocked Analytics drops its queue while cloud remains usable',async()=>{
+  const importGate=deferred(),state=await load({importGate,importError:true});
+  state.window.yksAnalitik('student_results_saved',safeParams);importGate.resolve();await flush();await flush();
+  state.window.yksAnalitik('student_results_saved',safeParams);
+  assert.equal(state.events.length,0);state.assertCloudReady();
+});
 
 for (const [name, url] of [
   ['production root', production],

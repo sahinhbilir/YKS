@@ -112,8 +112,10 @@ function baseBulut(overrides) {
     getDocFromServer: ref => b.getDoc(ref),
     runTransaction: async (_db, fn) => {
       const writes = [];
-      const result = await fn({ get: ref => b.getDoc(ref), set: (ref, data) => writes.push({ ref, data }) });
-      for (const w of writes) await b.setDoc(w.ref, w.data);
+      const result = await fn({ get: ref => b.getDoc(ref),
+        set: (ref, data) => writes.push({ ref, data }),
+        update: (ref, data) => writes.push({ ref, data, update:true }) });
+      for (const w of writes) await (w.update ? b.updateDoc : b.setDoc)(w.ref, w.data);
       return result;
     },
     mevcutKullanici: () => ({ uid: 'teacher-uid', isAnonymous: false }),

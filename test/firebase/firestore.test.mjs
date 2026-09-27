@@ -564,6 +564,23 @@ await check('failed-cloud-archive-aborts-the-latest-backup-replacement', async (
   if (!isDeepStrictEqual((await getDoc(latest)).data(), before)) throw new Error('latest changed despite failed archive');
 });
 
+await check('weekly-activity-is-owned-by-bound-student-and-readable-only-by-owner-teacher', async () => {
+  const id=sid('weekly-activity');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(),'ogrenciler',id),bosYuva({bagliUid:OGRENCI_UID}));
+  });
+  const data={paket:{tur:'yks-sonuc',surum:2,kayit:[],konular:{},etkinlik:{v:1,baslangic:100,
+    kayit:[{tur:'pdf',hafta:20724,sonucHafta:20717,ilk:200,son:200}]}}};
+  await assertSucceeds(updateDoc(doc(ogrenciDb,'ogrenciler',id),data));
+  await assertSucceeds(getDoc(doc(ogretmenDb,'ogrenciler',id)));
+  await assertFails(getDoc(doc(ogretmen2Db,'ogrenciler',id)));
+  await assertFails(getDoc(doc(ogrenci2Db,'ogrenciler',id)));
+  await assertFails(getDoc(doc(anonDb,'ogrenciler',id)));
+  const forged=structuredClone(data);forged.paket.etkinlik.kayit[0].son=999;
+  await assertFails(updateDoc(doc(ogrenci2Db,'ogrenciler',id),forged));
+  await assertFails(updateDoc(doc(ogretmen2Db,'ogrenciler',id),forged));
+});
+
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
 await testEnv.cleanup();
 process.exit(fail ? 1 : 0);

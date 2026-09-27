@@ -42,14 +42,23 @@ module.exports={app};
 if(require.main===module)(async()=>{
   for(const role of ['rehber','ogrenci'])await check(role+'-logout-verifies-server-before-clearing-only-app-data',async a=>{
     a.run("sonucIsle(0,[{ki:0,gun:bugunNo(),not:4}]);hafizaSeviyesiniUygula(0,'guclu');");
+    if(role==='ogrenci')a.run("etkinlikKaydet('kaydedildi',buHafta())");
     assert.equal(await a.run('kaydedipCikisYap()'),true,a.nodes.cikisDurum.innerHTML);
     const data=role==='rehber'?JSON.parse(a.cloud['ogretmenYedek/teacher'].veri):JSON.parse(a.cloud['ogrenciler/slot'].paket.calisma.veri);
     assert.equal(data.log.length,1);assert.equal(data.ogr[0].hafizaSeviyesi,'guclu');
+    if(role==='ogrenci')assert.equal(a.cloud['ogrenciler/slot'].paket.etkinlik.kayit[0].tur,'kaydedildi');
     assert.equal(a.store.yks_veri,undefined);assert.equal(a.store.yks_plan_kurtarma_oncesi,undefined);assert.equal(a.session.yks_ek,undefined);
     assert.equal(a.store.other_app,'keep');assert.equal(a.session.other_session,'keep');assert.equal(a.user(),null);assert.equal(a.run('D.rol'),'');
     assert(a.events.indexOf('readback')<a.events.indexOf('signout'));assert(a.events.indexOf('signout')<a.events.indexOf('local:remove:yks_veri'));
     assert.equal(await a.run('kaydet(true)'),false);assert.equal(a.store.yks_veri,undefined);
   },role);
+  for(const change of ['missing','modified'])await check('student-logout-requires-matching-activity-'+change,async a=>{
+    a.run("etkinlikKaydet('pdf',buHafta())");
+    assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);assert(!a.events.includes('signout'));
+  },'ogrenci',{onRead:a=>{
+    if(change==='missing')delete a.cloud['ogrenciler/slot'].paket.etkinlik;
+    else a.cloud['ogrenciler/slot'].paket.etkinlik.kayit[0].son++;
+  }});
   for(const role of ['rehber','ogrenci'])for(const failure of ['writeFailure','readFailure','mismatch','signoutFailure'])
     await check(role+'-'+failure+'-keeps-local-data',async a=>{assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);assert.equal(a.run('CIKIS_DURUMU'),'');},role,{[failure]:true});
   await check('offline-logout-does-not-clear-or-sign-out',async a=>{a.sandbox.navigator.onLine=false;assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);assert(!a.events.includes('signout'));});
