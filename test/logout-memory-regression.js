@@ -52,6 +52,15 @@ if(require.main===module)(async()=>{
     assert(a.events.indexOf('readback')<a.events.indexOf('signout'));assert(a.events.indexOf('signout')<a.events.indexOf('local:remove:yks_veri'));
     assert.equal(await a.run('kaydet(true)'),false);assert.equal(a.store.yks_veri,undefined);
   },role);
+  await check('student-logout-accepts-identical-firestore-values-in-different-field-order',async a=>{
+    a.run("etkinlikKaydet('acildi',buHafta());etkinlikKaydet('pdf',buHafta())");
+    assert.equal(await a.run('kaydedipCikisYap()'),true,a.nodes.cikisDurum.innerHTML);
+    assert.equal(a.store.yks_veri,undefined);
+  },'ogrenci',{onRead:a=>{
+    const e=a.cloud['ogrenciler/slot'].paket.etkinlik;
+    a.cloud['ogrenciler/slot'].paket.etkinlik={kayit:e.kayit.slice().reverse().map(r=>({
+      son:r.son,ilk:r.ilk,sonucHafta:r.sonucHafta,hafta:r.hafta,tur:r.tur})),baslangic:e.baslangic,v:e.v};
+  }});
   for(const change of ['missing','modified'])await check('student-logout-requires-matching-activity-'+change,async a=>{
     a.run("etkinlikKaydet('pdf',buHafta())");
     assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);assert(!a.events.includes('signout'));

@@ -6317,7 +6317,7 @@ async function kaydedipCikisYapGercek() {
     if(!v||v.bagliUid!==kullanici.uid||v.durum!=='aktif'||v.ogrenciBulutId!==D.ogr[0].ogrenciBulutId||
         !v.paket?.calisma||ogrenciEsitlemeImzasi(JSON.parse(v.paket.calisma.veri))!==
           ogrenciEsitlemeImzasi(JSON.parse(ogrenciCalismaPaketi().veri))||
-        JSON.stringify(v.paket.etkinlik||null)!==JSON.stringify(D.ogr[0].etkinlik||null))
+        etkinlikImzasi(v.paket.etkinlik)!==etkinlikImzasi(D.ogr[0].etkinlik))
       throw new Error('Sunucudaki çalışma bu cihazın son kaydıyla eşleşmiyor.');
     onayliImza=ogrenciEsitlemeImzasi();
   } else {
@@ -7772,6 +7772,15 @@ function etkinlikDogrula(e) {
   return e;
 }
 const etkinlikAnahtari = r => r.tur + ':' + r.sonucHafta + ':' + r.hafta;
+function etkinlikImzasi(e) {
+  if (e === undefined || e === null) return '';
+  etkinlikDogrula(e);
+  // Firestore maps have no application-level field order. Compare values,
+  // including every timestamp, without depending on object or record order.
+  return JSON.stringify([e.v,e.baslangic,e.kayit.slice()
+    .sort((a,b)=>etkinlikAnahtari(a).localeCompare(etkinlikAnahtari(b)))
+    .map(r=>[r.tur,r.hafta,r.sonucHafta,r.ilk,r.son])]);
+}
 function etkinlikBirlestir(a, b) {
   if (a) etkinlikDogrula(a); etkinlikDogrula(b);
   const map = new Map();
