@@ -6312,8 +6312,12 @@ async function kaydedipCikisYapGercek() {
     if(!oturumAyni()||r.imza!==ogrenciEsitlemeImzasi())throw new Error('Kayıt sırasında çalışma değişti; yeniden çıkış yapın.');
     const a=await sureSinirli(b.getDocFromServer(b.doc(b.db,'ogrenciler',r.syncId)),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki son kopya doğrulanamadı.');
     const v=a.exists()?a.data():null;
+    // Activity is stored once, beside calisma, rather than duplicated inside it.
+    // Verify both independent parts against the latest local snapshot before logout.
     if(!v||v.bagliUid!==kullanici.uid||v.durum!=='aktif'||v.ogrenciBulutId!==D.ogr[0].ogrenciBulutId||
-        !v.paket?.calisma||ogrenciEsitlemeImzasi(JSON.parse(v.paket.calisma.veri))!==r.imza)
+        !v.paket?.calisma||ogrenciEsitlemeImzasi(JSON.parse(v.paket.calisma.veri))!==
+          ogrenciEsitlemeImzasi(JSON.parse(ogrenciCalismaPaketi().veri))||
+        JSON.stringify(v.paket.etkinlik||null)!==JSON.stringify(D.ogr[0].etkinlik||null))
       throw new Error('Sunucudaki çalışma bu cihazın son kaydıyla eşleşmiyor.');
     onayliImza=ogrenciEsitlemeImzasi();
   } else {
