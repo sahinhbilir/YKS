@@ -13,10 +13,14 @@ sandbox.window.document=sandbox.document; vm.createContext(sandbox); new vm.Scri
 
 const assert=require('node:assert/strict');
 const run=code=>vm.runInContext(code,sandbox);
-const reset=()=>run(`D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-25';
+function clock(iso) {
+ const now=Date.parse(iso);
+ sandbox.Date=class extends Date { constructor(...args){super(...(args.length?args:[now]));} static now(){return now;} };
+}
+const reset=()=>{clock('2026-09-25T10:00:00+03:00');return run(`D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-25';
  D.ogr=[{no:1,ad:'Synthetic Ada',sube:'11-A',alan:'EA',sinif:11,kap:6,off:[6],aktif:true,
  ogrenciBulutId:'d70ec14d-ab10-43e5-b63f-0dd990c3626b'}];EK.ogr=0;EK.hafta=null;
- kaydet=async()=>true;ogrenciEsitlemePlanla=()=>{};`);
+ EK.takipOlcut='islem';EK.takipHafta=null;kaydet=async()=>true;ogrenciEsitlemePlanla=()=>{};`);};
 const checks=[];
 function check(name,fn){try{reset();fn();checks.push({name,ok:true});}catch(e){checks.push({name,ok:false,error:e.stack});}}
 check('repeated clicks count one named student in only the selected week',()=>{
@@ -47,6 +51,7 @@ check('student events carry opaque identity and separate source and target weeks
  run(`etkinlikKaydet('acildi',buHafta());etkinlikKaydet('kaydedildi',buHafta());etkinlikKaydet('pdf',buHafta()+7);`);
  assert.deepEqual(events.map(x=>x.name),['student_results_opened','student_results_saved','student_pdf_requested']);
  assert.equal(events[2].p.report_week,'2026-09-21');assert.equal(events[2].p.plan_week,'2026-09-28');
+ assert.equal(events[2].p.activity_week,'2026-09-21');
  assert(!JSON.stringify(events).includes('Synthetic'));assert(!JSON.stringify(events).includes('11-A'));
 });
 check('cross-device merging is commutative, idempotent and preserves first/last times',()=>{
@@ -74,10 +79,49 @@ check('activity stays out of the duplicate working snapshot and survives backup 
  assert(run('yedekDogrula(D)'));
 });
 check('student cycle and roster identity control weekly grouping',()=>{
+ clock('2026-09-30T10:00:00+03:00');
  run(`ogrenciHaftaGunuAyarla(2);D.ayar.testTarih='2026-09-30';etkinlikKaydet('acildi',buHafta());
  D.rol='rehber';D.ogr.push({...D.ogr[0]});D.ogr.push({...D.ogr[0],ogrenciBulutId:'different',ad:'Other Student',etkinlik:undefined,haftaDuzeni:undefined});`);
  assert.equal(run("etkinlikSatirlari(gunNo('2026-09-30')).length"),2);
  assert.equal(run("etkinlikSatirlari(gunNo('2026-09-30')).filter(r=>r.acildi).length"),1);
+});
+check('Monday actions for last week appear this week from existing synced v1 records',()=>{
+ clock('2026-09-28T09:00:00+03:00');
+ run(`D.rol='rehber';D.ayar.testTarih='2026-09-28';D.ogr[0].etkinlik={v:1,baslangic:Date.parse('2026-09-28T08:50:00+03:00'),kayit:
+ ['acildi','kaydedildi','pdf'].map((tur,i)=>({tur,sonucHafta:20717,hafta:tur==='pdf'?20724:20717,
+ ilk:Date.parse('2026-09-28T08:52:00+03:00')+i*60000,son:Date.parse('2026-09-28T08:52:00+03:00')+i*60000}))};before=JSON.stringify(D);`);
+ assert.equal(run('etkinlikSeciliHafta()'),20724);
+ assert.equal(run('etkinlikSatirlari(20724)[0].akis'),true);
+ assert.equal(run('etkinlikSatirlari(20724)[0].kaydedildi.sonucHafta'),20717);
+ assert.equal(run('etkinlikSatirlari(20724)[0].pdf.hafta'),20724);
+ assert.equal(run('etkinlikSatirlari(20717)[0].acildi'),undefined);
+ assert.equal(run("etkinlikSatirlari(20717,'sonuc')[0].akis"),true);
+ assert.equal(run("etkinlikSatirlari(20724,'sonuc')[0].acildi"),undefined);
+ const markup=run('gorunumEtkinlik()');assert.match(markup,/İşlem haftası/);
+ assert.match(markup,/Sonuç: 21.09.2026/);assert.match(markup,/Plan: 28.09.2026/);
+ assert.equal(run('JSON.stringify(D)'),run('before'),'read-only presentation fix must not rewrite backups');
+});
+check('Istanbul Monday boundary applies to recorded actions regardless of source period or test date',()=>{
+ clock('2026-09-27T20:59:59Z');run("etkinlikKaydet('acildi',20717)");
+ clock('2026-09-27T21:00:00Z');run("etkinlikKaydet('kaydedildi',20717);D.rol='rehber'");
+ assert.equal(run('etkinlikSatirlari(20717)[0].acildi.tur'),'acildi');
+ assert.equal(run('etkinlikSatirlari(20717)[0].kaydedildi'),undefined);
+ assert.equal(run('etkinlikSatirlari(20724)[0].kaydedildi.tur'),'kaydedildi');
+ assert.equal(run('etkinlikSatirlari(20724)[0].acildi'),undefined);
+});
+check('multiweek first/last observations use in-week times and never invent intermediate clicks',()=>{
+ clock('2026-09-21T10:00:00+03:00');run("etkinlikKaydet('acildi',20717)");
+ clock('2026-10-05T10:00:00+03:00');run("etkinlikKaydet('acildi',20717);D.rol='rehber'");
+ assert.equal(run('etkinlikSatirlari(20717)[0].acildi.son'),Date.parse('2026-09-21T10:00:00+03:00'));
+ assert.equal(run('etkinlikSatirlari(20724)[0].acildi'),undefined);
+ assert.equal(run('etkinlikSatirlari(20731)[0].acildi.ilk'),Date.parse('2026-10-05T10:00:00+03:00'));
+ run('EK.takipHafta=20724');assert.match(run('gorunumEtkinlik()'),/Bu hafta kayıt yok/);
+});
+check('opened then PDF requires the same result period and does not confuse other latest actions',()=>{
+ run("etkinlikKaydet('acildi',20717);etkinlikKaydet('pdf',20731);D.rol='rehber'");
+ assert.equal(run('etkinlikSatirlari(20717)[0].akis'),false);
+ run("D.rol='ogrenci';etkinlikKaydet('pdf',20724);etkinlikKaydet('acildi',20731);D.rol='rehber'");
+ assert.equal(run('etkinlikSatirlari(20717)[0].akis'),true);
 });
 check('unknown activity is not reported as confirmed inactivity',()=>{
  run("D.rol='rehber';");const markup=run('gorunumEtkinlik()');

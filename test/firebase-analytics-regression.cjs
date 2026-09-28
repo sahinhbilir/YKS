@@ -125,6 +125,13 @@ test('unexpected events and unsafe identifiers never enter Analytics',async()=>{
   state.window.yksAnalitik('student_results_saved',{...safeParams,report_week:'Class 11 A'});
   assert.equal(state.events.length,0);
 });
+test('activity week is separate from the result and plan weeks and stays anonymous',async()=>{
+ const state=await load();
+ state.window.yksAnalitik('student_pdf_requested',{...safeParams,activity_week:'2026-10-05',name:'Private Name'});
+ assert.deepEqual(state.events[0].params,{...safeParams,activity_week:'2026-10-05'});
+ state.window.yksAnalitik('student_results_saved',{...safeParams,activity_week:'Private Name'});
+ assert.deepEqual(state.events[1].params,safeParams);
+});
 test('debug flag is explicit; dev and offline clients cannot emit these events',async()=>{
   const normal=await load(), debug=await load({url:production+'?analytics_debug=1'});
   normal.window.yksAnalitik('student_results_opened',safeParams);
