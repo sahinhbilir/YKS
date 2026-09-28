@@ -9,11 +9,12 @@ fs.mkdirSync(out,{recursive:true});
  try {
   for(const width of [1280,390]) {
    const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[];
+   await page.clock.setFixedTime(new Date('2026-09-28T08:52:00+03:00'));
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',async d=>d.accept());
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
    await page.goto('http://localhost/?dev=1');await page.getByText('Kimsiniz?',{exact:true}).waitFor();
    await page.evaluate(()=>{
-    D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-25';D.elle={};D.islenis={};
+    D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-28';D.elle={};D.islenis={};
     const hb=gunNo('2026-09-21');
     D.ogr=[{ad:'Synthetic Ada',no:42,sube:'11-A',sinif:11,alan:'EA',kap:6,off:[6],aktif:true,
      ogrenciBulutId:'d70ec14d-ab10-43e5-b63f-0dd990c3626b',ilkAktif:hb,sonucBilgiOkundu:true}];
@@ -41,12 +42,21 @@ fs.mkdirSync(out,{recursive:true});
     localStorage.setItem('yks_veri',JSON.stringify(D));
    });
    await page.reload();await page.getByRole('heading',{name:'Haftalık öğrenci takibi'}).waitFor();
-   assert.equal(await page.locator('#takipHafta').inputValue(),'2026-09-21');
+   assert.equal(await page.locator('#takipHafta').inputValue(),'2026-09-28');
+   assert.equal(await page.locator('#takipOlcut').inputValue(),'islem');
    const rows=page.locator('.etkinlik-satir:not(.etkinlik-baslik)');
    assert.equal(await rows.count(),2);
    const ada=rows.filter({hasText:'Synthetic Ada'});
    assert((await ada.innerText()).includes('Kaydetti'));assert((await ada.innerText()).includes('28.09.2026'));
    assert.equal(await page.locator('.etkinlik-ozet strong').first().innerText(),'1 / 2');
+   assert((await ada.innerText()).includes('Sonuç: 21.09.2026'));
+   await page.locator('#takipOlcut').selectOption('sonuc');
+   assert.equal(await page.locator('.etkinlik-ozet strong').first().innerText(),'0 / 2');
+   await page.getByRole('button',{name:'Önceki takip haftası'}).click();
+   assert.equal(await page.locator('.etkinlik-ozet strong').first().innerText(),'1 / 2');
+   await page.locator('#takipOlcut').selectOption('islem');
+   assert.equal(await page.locator('.etkinlik-ozet strong').first().innerText(),'0 / 2');
+   await page.getByRole('button',{name:'Bu hafta',exact:true}).click();
    await page.locator('#takipSube').selectOption('11-B');assert.equal(await rows.count(),1);
    assert.equal(await page.locator('.etkinlik-ozet strong').first().innerText(),'0 / 1');
    await page.locator('#takipSube').selectOption('');

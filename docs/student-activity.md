@@ -1,12 +1,17 @@
 # Weekly student activity
 
-Teacher entry opens **Haftalık öğrenci takibi**. Select a result week, class, or
-student name. The calendar week groups reporting periods whose start falls in that
-week, including short transition periods. Counts are distinct roster identities,
-not event totals. Each row
-shows the actual student's reporting period (including non-Monday cycles), the
-last action in Istanbul time, and the PDF's target plan dates. Hover timestamps
-for the first observed action.
+Teacher entry opens **Haftalık öğrenci takibi**, defaulting to **İşlem haftası**
+and the current Monday–Sunday week in Europe/Istanbul. Actions are grouped by when
+they happened. For example, entering September 21 results on Monday September 28
+and requesting the September 28 plan appears in the September 28 activity week.
+The result dates and PDF plan dates remain visible separately. Existing synced
+records immediately benefit from this presentation fix; no re-upload is needed.
+
+**Sonuç haftası** remains available for reviewing a reporting period regardless of
+when its actions happened. That view groups reporting periods whose start falls in
+the selected week, including non-Monday cycles and short transition periods.
+Filter by class or student name. Counts are distinct roster identities, not event
+totals. Hover timestamps for the first observed action in the selected view.
 
 The three actions are deliberately distinct:
 
@@ -19,7 +24,8 @@ The three actions are deliberately distinct:
 An open result form is not a submitted result. An export request is not evidence
 that a PDF file reached the filesystem. Repeated clicks update the last time but
 do not increase the number of students. The “Açtı → PDF istedi” column counts an
-observed form-open followed by a PDF request, without requiring result submission.
+observed form-open followed by a PDF request for the same result period, without
+requiring result submission. Both observations must belong to the selected view.
 The latest related form-open/save within seven days links an immediately following
 plan period back to its result period, even after reload or another device syncs.
 Unrelated PDFs are attributed to their own plan period. Import, render, teacher
@@ -50,6 +56,14 @@ snapshot omits activity; the explicit packet field carries it. At most 600 most
 recent action/period combinations are retained. Names stay in the existing protected
 student roster and are not copied into Analytics parameters.
 
+The v1 wire format is unchanged so older open student sessions keep synchronizing.
+It retains only first/last timestamps for each action/result/plan combination.
+The activity-week view shows those actual observations using in-week timestamps;
+it does not invent activity in intervening weeks. If the exact same old-period
+action is repeated in three or more different weeks, intermediate observations
+are not retained in this ledger. This is not a full click history; Analytics events
+remain separate per-click observations when collection is available.
+
 Tracking begins with this version; old clicks cannot be backfilled. Offline actions
 are saved locally and retried through the existing synchronization queue. “Kayıt
 ulaşmadı” means there is no received evidence, not proof of inactivity. Old exported
@@ -59,7 +73,10 @@ actions are client observations, not an anti-cheating audit or server attestatio
 ## Firebase Analytics verification
 
 The production-only Analytics bridge sends `student_key` (the existing random UUID),
-`report_week` and `plan_week` (ISO dates), and `action_ts` (milliseconds). It whitelists
+`activity_week`, `report_week` and `plan_week` (ISO dates), and `action_ts`
+(milliseconds). `activity_week` is the action's Monday in Europe/Istanbul, even
+when results belong to a prior period. Older queued events without that optional
+parameter still send. The bridge whitelists
 events/parameters and rejects non-UUID identifiers. It never sends student names,
 school numbers, classes, email addresses, result scores or topic text. The SDK loads
 asynchronously, queues early events, and cannot interrupt Auth, Firestore or printing.
@@ -71,13 +88,14 @@ To verify receipt in the actual project **yks-tekrar-manual-test**:
 2. Select a result period and click Sonuç gir. Submit a valid result, then request
    its next plan's PDF. Do not use `?dev=1`; it intentionally disables Analytics.
 3. Open Firebase Analytics → DebugView for the project. Confirm the three event
-   names and inspect `student_key`, `report_week`, `plan_week`, and `action_ts`.
-4. Open the owning teacher session. Select the same result period. Match the
+   names and inspect `student_key`, `activity_week`, `report_week`, `plan_week`, and `action_ts`.
+4. Open the owning teacher session. Select the action week. Match the
    student UUID from the protected roster/packet to the event's opaque key, and
-   confirm the dates and timestamps. Next-period PDF dates should remain visible
-   under the source result week. Repeating a click must not increase unique counts.
+   confirm the dates and timestamps. Switch to Sonuç haftası to inspect the same
+   actions under their source result period. Repeating a click must not increase
+   unique counts. Test a Monday submission for the preceding week's results.
 5. Remove the debug query afterwards. Debug traffic is for validation and may be
-   excluded from aggregate reporting. Register `report_week` and `plan_week` as
+   excluded from aggregate reporting. Register `activity_week`, `report_week` and `plan_week` as
    event-scoped custom dimensions for normal reports, if needed. Count distinct
    students rather than event totals; Analytics may be delayed or blocked.
 

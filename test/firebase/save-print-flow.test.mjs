@@ -125,7 +125,8 @@ try {
   check('weekly-activity-survives-offline-relogin-and-arrives-with-result-and-PDF-weeks',()=>{
     assert.equal(teacher.run("D.ogr[0].etkinlik.kayit.filter(r=>r.tur==='acildi').length"),1);
     assert.equal(teacher.run("D.ogr[0].etkinlik.kayit.filter(r=>r.tur==='kaydedildi').length"),1);
-    assert.equal(teacher.run("etkinlikSatirlari(pazartesi(bugunNo()))[0].akis"),true);
+    assert.equal(teacher.run("etkinlikSatirlari(pazartesi(etkinlikGunu(Date.now())))[0].akis"),true);
+    assert.equal(teacher.run("etkinlikSatirlari(pazartesi(bugunNo()),'sonuc')[0].akis"),true);
     assert.equal(teacher.run("ETKINLIK_CANLI.get(D.ogr[0].syncId).durum"),'tamam');
   });
   const beforeTeacherPrint=teacher.run('JSON.stringify(D.ogr[0].etkinlik)');

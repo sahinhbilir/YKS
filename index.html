@@ -603,6 +603,7 @@ if (typeof location !== 'undefined' && location.protocol === 'https:' &&
         !/^\d{4}-\d{2}-\d{2}$/.test(p.report_week || '') ||
         !/^\d{4}-\d{2}-\d{2}$/.test(p.plan_week || '') || !Number.isSafeInteger(p.action_ts)) return;
     const temiz = {student_key:p.student_key, report_week:p.report_week, plan_week:p.plan_week, action_ts:p.action_ts};
+    if (/^\d{4}-\d{2}-\d{2}$/.test(p.activity_week || '')) temiz.activity_week = p.activity_week;
     if (new URLSearchParams(location.search).get('analytics_debug') === '1') temiz.debug_mode = true;
     if (gonder) gonder(ad, temiz); else if (kuyruk.length < 50) kuyruk.push([ad, temiz]);
   };
@@ -5661,7 +5662,7 @@ async function bulutDefteriniAc(kullanici) {
     } catch (e) { D = onceki; throw e; }
   }
   await bulutYedekTemeliniHatirla(r.uid, r.veri);
-  EK.sekme = 'takip'; EK.takipHafta = null; EK.ogr = 0; EK.hafta = null;
+  EK.sekme = 'takip'; EK.takipHafta = null; EK.takipOlcut = 'islem'; EK.ogr = 0; EK.hafta = null;
   EK.bulutYedekHata = ''; ciz();
   bilgiVer('Bulut defteriniz geri yüklendi: ' + say + ' öğrenci, ' + sonucSayisi + ' sonuç.' +
     (!say && !sonucSayisi ? ' Bu yedek boş. Ayarlar → “Bulut yedek geçmişini göster” ile eski kopyaları kontrol edin.' : ''));
@@ -7752,6 +7753,7 @@ function bilgiVer(metin) {
 // Weekly activity is part of the student's existing protected result packet.
 // First/last timestamps merge idempotently; transaction retries never count as clicks.
 const ETKINLIK_TURLERI = {acildi:'student_results_opened', kaydedildi:'student_results_saved', pdf:'student_pdf_requested'};
+const ETKINLIK_TARIH_BICIMI = new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'});
 function etkinlikDogrula(e) {
   const nesne = x => x && typeof x === 'object' && !Array.isArray(x);
   const ts = x => Number.isSafeInteger(x) && x > 0 && x < 100000000000000;
@@ -7817,7 +7819,7 @@ function etkinlikKaydet(tur, hb, si = EK.ogr) {
     kaydet(true).catch(() => {});
     ogrenciEsitlemePlanla(0);
     const olay = [ETKINLIK_TURLERI[tur], {student_key:o.ogrenciBulutId,
-      report_week:isoDan(sonucHafta), plan_week:isoDan(hb), action_ts:ts}];
+      report_week:isoDan(sonucHafta), plan_week:isoDan(hb), activity_week:isoDan(pazartesi(etkinlikGunu(ts))), action_ts:ts}];
     if (window.yksAnalitik) window.yksAnalitik(...olay);
     else if (!GELISTIRME_MODU && typeof location !== 'undefined' && location.protocol === 'https:' &&
         ['ykstekrar.com','www.ykstekrar.com'].includes(location.hostname)) {
@@ -7829,12 +7831,15 @@ function etkinlikKaydet(tur, hb, si = EK.ogr) {
 }
 function etkinlikBugun() {
   if (GELISTIRME_MODU && D?.ayar?.testTarih) return bugunNo();
-  const parca = new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  return etkinlikGunu(Date.now());
+}
+function etkinlikGunu(ts) {
+  const parca = ETKINLIK_TARIH_BICIMI.formatToParts(new Date(ts));
   const al = tur => parca.find(x => x.type === tur).value;
   return gunNo(al('year')+'-'+al('month')+'-'+al('day'));
 }
 function etkinlikSeciliHafta() { return Number.isInteger(EK.takipHafta) ? EK.takipHafta : pazartesi(etkinlikBugun()); }
-function etkinlikSatirlari(hb) {
+function etkinlikSatirlari(hb, olcut = EK.takipOlcut || 'islem') {
   if (!rehberMi()) return [];
   const kimlikler = new Set();
   return D.ogr.flatMap((o,si) => {
@@ -7842,10 +7847,20 @@ function etkinlikSatirlari(hb) {
     const kimlik = o.ogrenciBulutId || o.syncId || 'yerel:'+si;
     if (kimlikler.has(kimlik)) return []; kimlikler.add(kimlik);
     const takvim = pazartesi(hb), hafta = ogrenciHaftaBasi(si,takvim+6);
-    const kayit = (o.etkinlik?.kayit || []).filter(r => r.sonucHafta >= takvim && r.sonucHafta < takvim+7);
+    const kayit = (o.etkinlik?.kayit || []).flatMap(r => {
+      if (olcut === 'sonuc') return r.sonucHafta >= takvim && r.sonucHafta < takvim+7 ? [r] : [];
+      // Result/plan dates are not click dates. Use only observed timestamps in
+      // this Istanbul calendar week; do not infer clicks between first and last.
+      const zamanlar = [r.ilk,r.son].filter(ts => {
+        const gun = etkinlikGunu(ts); return gun >= takvim && gun < takvim+7;
+      });
+      return zamanlar.length ? [{...r,ilk:Math.min(...zamanlar),son:Math.max(...zamanlar)}] : [];
+    });
     const al = tur => kayit.filter(r => r.tur === tur).sort((a,b) => b.son-a.son)[0];
     const acildi = al('acildi'), kaydedildi = al('kaydedildi'), pdf = al('pdf');
-    return [{o,si,hafta,acildi,kaydedildi,pdf,akis:!!(acildi && pdf && pdf.son >= acildi.ilk)}];
+    const akis = kayit.some(a => a.tur === 'acildi' && kayit.some(p => p.tur === 'pdf' &&
+      p.sonucHafta === a.sonucHafta && p.son >= a.ilk));
+    return [{o,si,hafta,acildi,kaydedildi,pdf,akis}];
   });
 }
 function etkinlikZamani(ts) { return new Date(ts).toLocaleString('tr-TR', {timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
@@ -7858,6 +7873,7 @@ function etkinlikCanliDurum(id, durum) {
 }
 function gorunumEtkinlik() {
   if (!rehberMi()) return '';
+  const sonucOlcutu = EK.takipOlcut === 'sonuc';
   const hb = etkinlikSeciliHafta(), tum = etkinlikSatirlari(hb), subeler = [...new Set(tum.map(r=>r.o.sube))].sort();
   const seciliSube = subeler.includes(EK.takipSube) ? EK.takipSube : '';
   const satirlar = tum.filter(r => !seciliSube || r.o.sube === seciliSube);
@@ -7866,33 +7882,34 @@ function gorunumEtkinlik() {
     (filtre === 'hepsi' || filtre === 'bekleyen' ? filtre !== 'bekleyen' || !r.kaydedildi || !r.pdf : !!r[filtre]));
   const hucre = (r, tur) => {
     const olay = r[tur];
-    if (!olay) return '<span class="mini">Kayıt ulaşmadı</span>';
+    if (!olay) return '<span class="mini">'+(r.o.etkinlik ? 'Bu hafta kayıt yok' : 'Kayıt ulaşmadı')+'</span>';
     return '<b>'+({acildi:'Açtı',kaydedildi:'Kaydetti',pdf:'İstedi'})[tur]+'</b><br><time title="İlk: '+kacis(etkinlikZamani(olay.ilk))+'">'+kacis(etkinlikZamani(olay.son))+'</time>'+
-      (tur !== 'pdf' && olay.sonucHafta !== r.hafta ? '<br><span class="mini">Dönem: '+ggyy(olay.sonucHafta)+'</span>' : '')+
+      '<br><span class="mini">Sonuç: '+ggyy(olay.sonucHafta)+' – '+ggyy(planHaftaSonu(r.si,olay.sonucHafta))+'</span>'+
       (tur === 'pdf' ? '<br><span class="mini">Plan: '+ggyy(olay.hafta)+' – '+ggyy(planHaftaSonu(r.si,olay.hafta))+'</span>' : '');
   };
   return '<div class="baslik"><div><div class="etiket">Rehber öğretmen</div><h1>Haftalık öğrenci takibi</h1></div></div>'+
-    '<p>Seçtiğiniz sonuç haftasında kim formu açtı, sonuç kaydetti ve PDF istedi? Sayılar tekil öğrencileri gösterir.</p>'+
+    '<p>Kim Sonuç gir’i açtı, sonuç kaydetti ve PDF istedi? Sayılar tekil öğrencileri gösterir.</p>'+
+    '<div class="arac"><label>Hafta ölçütü <select id="takipOlcut"><option value="islem"'+(!sonucOlcutu?' selected':'')+'>İşlem haftası</option><option value="sonuc"'+(sonucOlcutu?' selected':'')+'>Sonuç haftası</option></select></label></div>'+
     '<div class="arac"><button class="dugme" data-takip-hafta="-1" aria-label="Önceki takip haftası">←</button>'+
-    '<label>Sonuç haftası <input type="date" id="takipHafta" value="'+isoDan(hb)+'"></label>'+
+    '<label>'+(sonucOlcutu?'Sonuç haftası':'İşlem haftası')+' <input type="date" id="takipHafta" value="'+isoDan(hb)+'"></label>'+
     '<button class="dugme" data-takip-hafta="1" aria-label="Sonraki takip haftası">→</button><button class="dugme" data-takip-hafta="0">Bu hafta</button>'+
     '<label>Şube <select id="takipSube"><option value="">Tüm şubeler</option>'+subeler.map(s=>'<option'+(s===seciliSube?' selected':'')+' value="'+kacis(s)+'">'+kacis(s)+'</option>').join('')+'</select></label></div>'+
-    '<p class="mini">'+ggyy(hb)+' – '+ggyy(hb+6)+' · Başlangıcı seçilen haftaya düşen sonuç dönemleri listelenir; kişisel dönem tarihleri aşağıdadır. Saatler Türkiye saatidir.</p>'+
+    '<p class="mini">'+ggyy(hb)+' – '+ggyy(hb+6)+' · '+(sonucOlcutu?'Başlangıcı seçilen haftaya düşen sonuç dönemlerinin işlemleri gösterilir.':'Bu tarihlerde gözlenen işlemler gösterilir. Önceki haftanın sonuçları bu hafta girildiyse burada görünür.')+' Saatler Türkiye saatidir.</p>'+
     '<div class="etkinlik-ozet">'+[['acildi','Sonuç gir açtı'],['kaydedildi','Sonuç kaydetti'],['pdf','PDF istedi'],['akis','Açtı → PDF istedi']].map(([k,ad])=>
       '<div class="kart"><strong>'+satirlar.filter(r=>r[k]).length+' / '+satirlar.length+'</strong><br>'+ad+'</div>').join('')+'</div>'+
     '<div class="arac"><label>Öğrenci ara <input id="takipArama" type="search" value="'+kacis(EK.takipArama||'')+'" placeholder="Ad veya numara"></label>'+
     '<label>Göster <select id="takipFiltre">'+[['hepsi','Tüm öğrenciler'],['acildi','Formu açanlar'],['kaydedildi','Sonuç kaydedenler'],['pdf','PDF isteyenler'],['akis','Açıp PDF isteyenler'],['bekleyen','Sonuç / PDF kaydı eksik']].map(([k,v])=>'<option value="'+k+'"'+(filtre===k?' selected':'')+'>'+v+'</option>').join('')+'</select></label></div>'+
-    '<div class="etkinlik-liste" role="table" aria-label="Haftalık öğrenci etkinlikleri"><div class="etkinlik-satir etkinlik-baslik" role="row">'+['Öğrenci / sonuç dönemi','Sonuç gir','Sonuç kaydı','PDF isteği','Veri durumu'].map(x=>'<b role="columnheader">'+x+'</b>').join('')+'</div>'+
+    '<div class="etkinlik-liste" role="table" aria-label="Haftalık öğrenci etkinlikleri"><div class="etkinlik-satir etkinlik-baslik" role="row">'+['Öğrenci','Sonuç gir','Sonuç kaydı','PDF isteği','Veri durumu'].map(x=>'<b role="columnheader">'+x+'</b>').join('')+'</div>'+
     gorunen.map(r=>{
       const canli=ETKINLIK_CANLI.get(r.o.syncId), bas=r.o.etkinlik?.baslangic;
       const durum=!r.o.syncId?'Öğretmen bağlantısı yok':canli?.durum==='tamam'?'Sunucudan alındı · '+etkinlikZamani(canli.ts):
         canli?.durum==='hata'?'Bağlantı doğrulanamadı':canli?.durum==='eski'?'Yeni sürümden etkinlik bekleniyor':'Canlı bağlantı bekleniyor';
       return '<div class="etkinlik-satir" role="row"><div role="cell"><b>'+kacis(r.o.ad)+'</b><br>'+kacis(r.o.sube)+' · '+kacis(r.o.no||'')+
-        '<br><span class="mini">'+ggyy(r.hafta)+' – '+ggyy(planHaftaSonu(r.si,r.hafta))+'</span></div>'+
+        '</div>'+
         ['acildi','kaydedildi','pdf'].map((k,i)=>'<div role="cell"><span class="etkinlik-mobil">'+['Sonuç gir','Sonuç kaydı','PDF isteği'][i]+': </span>'+hucre(r,k)+'</div>').join('')+
         '<div role="cell" class="mini">'+kacis(durum)+(bas?'<br>Takip başlangıcı: '+kacis(etkinlikZamani(bas)):'<br>Henüz etkinlik verisi yok')+'</div></div>';
     }).join('')+'</div>'+(gorunen.length?'':'<p>Bu seçimde öğrenci bulunamadı.</p>')+
-    '<p class="mini">PDF isteği, “Planı indir / PDF” düğmesine basıldığını gösterir; dosyanın cihaza kaydedildiğini doğrulamaz. Sonuç formundan sonraki haftanın PDF’sine geçiş aynı sonuç haftasında, plan tarihiyle gösterilir. Formu açmak sonuç kaydetmek değildir.</p>'+
+    '<p class="mini">PDF isteği, “Planı indir / PDF” düğmesine basıldığını gösterir; dosyanın cihaza kaydedildiğini doğrulamaz. Sonuç dönemi ile PDF’nin plan tarihleri ayrı gösterilir. Açtı → PDF istedi sayısı aynı sonuç dönemi için bu sırayla gözlenen işlemleri sayar. Formu açmak sonuç kaydetmek değildir.</p>'+
     '<p class="mini">Kayıt ulaşmadı: öğrenci henüz işlem yapmamış, çevrimdışı kalmış veya eski sürümü kullanıyor olabilir. Geçmiş tıklamalar geriye dönük doldurulmaz. Bağlantı beklenirken son alınan kayıtlar gösterilir; bu liste Firebase Analytics raporunun gecikmesini beklemez.</p>';
 }
 // ---------------------------------------------------------------- çizim + olaylar
@@ -9707,6 +9724,7 @@ document.addEventListener('change', ev => {
   if (el.id === 'takipHafta') { if (!isoTarihGecerli(el.value)) return; EK.takipHafta=pazartesi(gunNo(el.value)); }
   else if (el.id === 'takipSube') EK.takipSube=el.value;
   else if (el.id === 'takipFiltre') EK.takipFiltre=el.value;
+  else if (el.id === 'takipOlcut') EK.takipOlcut=el.value === 'sonuc' ? 'sonuc' : 'islem';
   else if (el.id === 'takipArama') EK.takipArama=el.value.trim();
   else return;
   ciz();
@@ -9731,7 +9749,7 @@ document.addEventListener('change', ev => {
     catch (e2) { D = varsayilan(); }
     acilisUyarilari = ['Kayıtlı veri yüklenemedi; hiçbir bozuk veya yarım veri kullanılmadı. Yedeğinizi Ayarlar’dan yeniden yükleyin.'];
   }
-  if (rehberMi()) { EK.sekme = 'takip'; EK.takipHafta = null; }
+  if (rehberMi()) { EK.sekme = 'takip'; EK.takipHafta = null; EK.takipOlcut = 'islem'; }
   // ders programı ve konu planı hazırsa gelecek haftaları kendiliğinden doldur:
   // aynı işlemi tekrar tekrar yapmak zararsız, çünkü işlenmiş konuya dokunulmuyor
   try {
