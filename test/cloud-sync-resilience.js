@@ -1437,7 +1437,7 @@ test('reporting-week-setting-syncs-without-results', async () => {
   equal(payload.paket.kayit.length,0,'no result is required to save the preference');
 });
 
-test('reset-only-sunucuyaGonder-writes-version-3-package', async () => {
+test('reset-only-sunucuyaGonder-writes-current-package', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
   run('D.islenis[3]=bugunNo()-3; konuAnlatilmadi(0,3,bugunNo())');
@@ -1447,7 +1447,7 @@ test('reset-only-sunucuyaGonder-writes-version-3-package', async () => {
     updateDoc: async (_ref, data) => { payload = data; }
   });
   equal(await run('sunucuyaGonder()'), 0, 'a reset-only packet has zero score rows');
-  assert(payload && payload.paket && payload.paket.surum === 3, 'the reset must still upload a result package');
+  assert(payload && payload.paket && payload.paket.surum === 4, 'the reset must still upload a result package');
   equal(payload.paket.kayit.length, 0, 'no score row may be fabricated for a reset');
   equal(payload.paket.konuAnlatilmadi.length, 1, 'the reset event must be uploaded');
 });

@@ -65,7 +65,7 @@ function app(db,user) {
       querySelector:q=>q==='.sonuc-sayisal'?numeric:q==='[data-sonuc-dogru]'?correctEl:q==='[data-sonuc-soru]'?questions:null}];
     run("EK.sekme='giris';EK.hafta=buHafta();");
   }
-  const a={s,run,click,result,store,messages,close(){run('ogretmenDinlemeyiDurdur()');timers.forEach(clearTimeout);}};
+  const a={s,run,click,result,store,messages,close(){run('ogretmenDinlemeyiDurdur();denemeDinlemeyiDurdur()');timers.forEach(clearTimeout);}};
   apps.push(a);return a;
 }
 async function eventually(fn,label,timeout=15000) {
@@ -116,6 +116,36 @@ try {
     assert.equal(reopened.run('D.log.length'),2);assert.ok(reopened.run("D.elle['0|'+buHafta()].sabit"));
     assert.equal(reopened.run('D.ogrIslenis[0][1]'),student.run('bugunNo()'));
   });
+  // Exam import is delivered to an already-open student without republishing their plan.
+  teacher.run(`D.ogr[0].denemeOkul=[{id:'p:emulator',ad:'Synthetic school exam',tarih:'2026-09-10',tur:'TYT',oturum:'TYT',brans:'',alan:'SAY',dersler:[{kod:'turkce',dogru:30,yanlis:8,soru:null}],sure:null,puan:250,ts:100}];`);
+  reopened.run('denemeDinlemeyiBaslat()');
+  await teacher.run('denemeOkulYayinla(0)');
+  await eventually(()=>reopened.run('D.ogr[0].denemeOkul?.length')===1,'school mock exam live delivery');
+  check('school-import-arrives-without-student-entry-or-new-login',()=>assert.equal(reopened.run('denemeListe()[0].dersler[0].dogru'),30));
+  reopened.run(`D.ogr[0].denemeler=[{...D.ogr[0].denemeOkul[0],id:'m:emulator',ad:'Synthetic personal exam',sure:145,ts:101}];D.ogr[0].denemeSure=[{id:'p:emulator',sure:155,ts:102}];`);
+  await reopened.run('kaydet(true)');await reopened.run('ogrenciEsitlemeBosalt()');
+  await eventually(()=>teacher.run('D.ogr[0].denemeler?.length')===1,'personal exam to teacher');
+  check('student-exam-and-imported-exam-time-reach-teacher-with-scores-intact',()=>{
+    assert.equal(teacher.run('D.ogr[0].denemeSure[0].sure'),155);
+    assert.equal(JSON.parse((teacher.run('JSON.stringify(D.ogr[0].denemeOkul)')))[0].dersler[0].dogru,30);
+  });
+  const examDevice=app(studentDb,{uid:studentUid,isAnonymous:false,email:'ogr-delivery@student.ykstekrar.app'});
+  await examDevice.run('ogrenciHesabindanYukle("Delivery Student",42)');
+  check('new-device-recovers-both-exam-channels-and-personal-time',()=>{
+    assert.equal(examDevice.run('denemeListe().length'),2);
+    assert.equal(examDevice.run("denemeListe().find(r=>r.id==='p:emulator').sure"),155);
+  });
+  reopened.run(`D.ogr[0].denemeler[0].silindi=true;D.ogr[0].denemeler[0].ts=103;`);
+  await reopened.run('kaydet(true)');await reopened.run('ogrenciEsitlemeBosalt()');
+  await examDevice.run('ogrenciEsitlemeBosalt()'); // stale device still holds the undeleted version
+  await eventually(()=>teacher.run('D.ogr[0].denemeler[0].silindi')===true,'mock exam tombstone delivery');
+  check('stale-device-cannot-resurrect-deleted-exam',()=>assert.equal(examDevice.run("denemeListe().filter(r=>r.id==='m:emulator').length"),0));
+  const workTsBeforeImport=reopened.run('D.ogrCalismaTs');
+  teacher.run('D.ogr[0].denemeOkul[0].dersler[0].dogru=31;D.ogr[0].denemeOkul[0].ts=104;');
+  await teacher.run('denemeOkulYayinla(0)');
+  await eventually(()=>reopened.run('D.ogr[0].denemeOkul[0].dersler[0].dogru')===31,'corrected school score');
+  check('corrected-import-keeps-student-completion-time',()=>assert.equal(reopened.run("denemeListe().find(r=>r.id==='p:emulator').sure"),155));
+  check('receiving-import-does-not-make-an-idle-device-a-newer-plan-author',()=>assert.equal(reopened.run('D.ogrCalismaTs'),workTsBeforeImport));
   reopened.run('D.ogr[0].kap=3;');let prints=0;
   reopened.s.window.print=()=>{prints++;assert.equal(JSON.parse(reopened.store.yks_veri).ogr[0].kap,3);};
   await reopened.click('yazdirOnizle');
