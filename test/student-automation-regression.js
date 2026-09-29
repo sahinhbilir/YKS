@@ -351,8 +351,13 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  check('current-week-print-needs-last-week-results',run('planYazdirmaEngeli(0,buHafta()).hb')===prevWeek&&!run('sonrakiHaftaYazdirmaEngeli(0,buHafta())'));
  check('weeks-beyond-next-are-preview-only',!!run('planYazdirmaEngeli(0,buHafta()+14).onizleme')&&!run('planYazdirmaEngeli(0,buHafta()+14).hb'));
  check('teacher-print-is-not-gated',run('(()=>{D.rol="rehber";const r=planYazdirmaEngeli(0,buHafta());D.rol="ogrenci";return r;})()')===null);
- check('map-week-without-results-is-red',mapClass(prevWeek)[1].includes('kirmizi'));
- check('map-current-week-is-not-red-yet',!mapClass(curWeek)[1].includes('kirmizi'));
+ check('map-issued-week-without-results-is-grey',mapClass(prevWeek)[1].includes('gri')&&!mapClass(prevWeek)[1].includes('kirmizi'));
+ // The first week (31 Aug) has no saved plan although the student had joined: no record at all is red.
+ check('map-week-without-a-plan-record-is-red',!run('elleAl(0,'+(prevWeek-7)+').sabit')&&mapClass(prevWeek-7)[1].includes('kirmizi'));
+ run('D.ogr[0].ilkAktif=gunNo("2026-09-07")');
+ check('map-week-before-joining-is-neutral',!/kirmizi|gri|yesil/.test(mapClass(prevWeek-7)[1]));
+ run('D.ogr[0].ilkAktif=gunNo("2026-08-31")');
+ check('map-current-week-is-not-coloured-yet',!/kirmizi|gri/.test(mapClass(curWeek)[1]));
  const [skipped,...rated]=prevTests, doneN=Math.max(1,Math.floor(rated.length/2));
  sandbox.skipped=skipped;sandbox.doneRows=rated.slice(0,doneN).map(x=>({ki:x.ki,gun:x.gun,not:3,dogru:null,soru:null}));sandbox.blank=rated.slice(doneN);
  // "Yapmadım" through the real save handler.

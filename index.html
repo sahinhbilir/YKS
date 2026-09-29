@@ -138,13 +138,14 @@ body.cikti-acik{overflow:hidden}body.cikti-acik>.kabuk{display:none}
 .yol-hafta.kayitli{background:var(--vurgu-yumusak);border-color:var(--vurgu);color:var(--vurgu)}
 .yol-hafta.simdi{background:var(--vurgu);color:var(--zemin);border-color:var(--vurgu)}
 .yol-hafta.secili{outline:2px solid var(--uyari);outline-offset:1px}
-/* Hiç test yapılmayan geçmiş hafta kırmızı; yeşilin koyuluğu verilen testlerin yapılan oranı (--oran). */
+/* Yeşilin koyuluğu verilen testlerin yapılan oranı (--oran); sonuç girilmeyen hafta gri, plan kaydı olmayan hafta kırmızı. */
+.yol-hafta.gri{background:var(--cizgi);background:color-mix(in srgb,var(--soluk) 22%,var(--kagit));border-color:var(--soluk);color:var(--murekkep)}
 .yol-hafta.kirmizi{background:var(--kagit);background:color-mix(in srgb,var(--kritik) 18%,var(--kagit));border-color:var(--kritik);color:var(--kritik)}
 .yol-hafta.yesil{background:var(--iyi);background:color-mix(in srgb,var(--iyi) calc(22% + var(--oran,1) * 78%),var(--cizgi));border-color:var(--iyi);color:var(--kagit)}
 .yol-hafta.yesil.acik{color:var(--murekkep)}
 .yol-hafta.simdi-cerceve{box-shadow:0 0 0 2px var(--vurgu)}
 .yol-anahtar{display:flex;gap:8px 18px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:11px;color:var(--soluk)}
-.yol-anahtar .anahtar-yesil{color:var(--iyi)}.yol-anahtar .anahtar-kirmizi{color:var(--kritik)}
+.yol-anahtar .anahtar-yesil{color:var(--iyi)}.yol-anahtar .anahtar-gri{color:var(--murekkep)}.yol-anahtar .anahtar-kirmizi{color:var(--kritik)}
 .yol-link{border:0;background:transparent;color:var(--vurgu);font-size:12px;padding:3px 0;cursor:pointer;margin-left:auto}
 .yol-haftalar.detay{grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:10px}
 .detay .yol-hafta{flex-direction:column;padding:12px 6px;gap:3px;font-size:14px}
@@ -3605,19 +3606,22 @@ function ogrenciYksYolu(detay) {
     '</h2></div>' + (detay ? '<div class="yol-tarih">' + ggyy(sinav) + '<br><span>Ayarlardaki YKS tarihi</span></div>' : '') + '</div>' +
     (detay ? '<p class="mini">' + Math.min(gecen, Math.ceil((sinav - bas) / 7)) + ' hafta geride kaldı. Her kutu hazırlık dönemindeki bir hafta.</p>' : '') +
     '<div class="yol-haftalar' + (detay ? ' detay' : '') + '">';
-  // Renk, o hafta verilen testlerden gerçekten yapılanların oranıdır; tek bir sonuç haftayı
-  // tamamlanmış göstermez. Hiç yapılmayan geçmiş hafta kırmızıdır; bu hafta bitmeden kırmızı olmaz.
+  // Yeşilin koyuluğu o hafta verilen testlerden yapılanların oranıdır; tek bir sonuç haftayı
+  // tamamlanmış göstermez. Plan verilip hiç sonuç girilmeyen hafta gri; katıldıktan sonra hiç
+  // plan kaydı olmayan (uygulama o hafta hiç kullanılmamış) hafta kırmızıdır. Bu hafta bitmeden renk almaz.
+  const katilim = haftaBaslangici(D.ogr[si]);
   let no = 0;
   for (const gun of haritaHaftalari(si)) {
     no++; const adet = sayilar[gun] || 0;
     const simdi = gun === hb, son = planHaftaSonu(si, gun) >= sinav, kayit = !!elleAl(si, gun).sabit;
     const oz = gun <= hb ? haftaTestOzeti(si, gun, simdi ? bugun : planHaftaSonu(si, gun), yapilan) : null;
     let durum = gun < hb ? 'gecmis' : simdi ? 'simdi' : 'gelecek', oran = null;
-    if (oz && oz.toplam) { if (oz.yapilan) { durum = 'yesil'; oran = oz.yapilan / oz.toplam; } else if (!simdi) durum = 'kirmizi'; }
+    if (oz && oz.toplam) { if (oz.yapilan) { durum = 'yesil'; oran = oz.yapilan / oz.toplam; } else if (!simdi) durum = 'gri'; }
     else if (oz && adet) { durum = 'yesil'; oran = .5; }
+    else if (gun < hb && !kayit && gun >= katilim) durum = 'kirmizi';
     const testMetni = oz && oz.toplam ? oz.yapilan + '/' + oz.toplam + ' test yapıldı' + (oz.yapilmadi ? ', ' + oz.yapilmadi + ' yapılmadı' : '') : '';
     const metin = no + '. hafta · ' + ggyy(gun) + ' · ' + (simdi ? 'bu hafta · ' : '') +
-      (testMetni || (adet ? adet + ' sonuç kaydı' : gun < hb ? 'sonuç kaydı yok' : 'önizleme')) + (son ? ' · YKS haftası' : '');
+      (testMetni || (adet ? adet + ' sonuç kaydı' : gun < hb ? (gun < katilim ? 'katılmadan önce' : 'plan kaydı yok') : 'önizleme')) + (son ? ' · YKS haftası' : '');
     // Her hafta açılabilir: geçmiş ve bu hafta kayıtlı planı, gelecek haftalar önizlemeyi gösterir.
     const acilir = detay;
     h += '<' + (acilir ? 'button type="button" data-ogr-hafta="' + gun + '"' : 'span') +
@@ -3626,11 +3630,12 @@ function ogrenciYksYolu(detay) {
       ' title="' + kacis(metin) + '" aria-label="' + kacis(metin) + '"' + (simdi ? ' aria-current="date"' : '') + '>' +
       '<b>' + (son ? '★' : no) + '</b>' + (detay ? '<span>' + gg(gun) + '</span><small>' +
       (simdi ? 'Bu hafta' + (oz && oz.toplam ? ' · ' + oz.yapilan + '/' + oz.toplam : '') : oz && oz.toplam ? oz.yapilan + '/' + oz.toplam + ' test' :
-        adet ? adet + ' sonuç' : kayit ? 'Plan kayıtlı' : gun < hb ? 'Kayıt yok' : son ? 'YKS' : 'Önizleme') + '</small>' : '') +
+        adet ? adet + ' sonuç' : kayit ? 'Plan kayıtlı' : gun < hb ? (gun < katilim ? 'Katılmadan önce' : 'Kayıt yok') : son ? 'YKS' : 'Önizleme') + '</small>' : '') +
       '</' + (acilir ? 'button' : 'span') + '>';
   }
   return h + '</div><div class="yol-anahtar">' + (detay ? '<span class="anahtar-yesil">■ Yeşil: yapılan test oranı (koyu = hepsi, gri-yeşil = azı)</span>' +
-    '<span class="anahtar-kirmizi">■ Kırmızı: hiç test yapılmadı</span><span>□ Önümüzde · Çerçeve: seçili hafta · ★ YKS</span>' :
+    '<span class="anahtar-gri">■ Gri: plan verildi, sonuç girilmedi</span><span class="anahtar-kirmizi">■ Kırmızı: kayıt yok, o hafta uygulama kullanılmadı</span>' +
+    '<span>□ Önümüzde · Çerçeve: seçili hafta · ★ YKS</span>' :
     '<button class="yol-link" data-sekme="harita">Haftalar haritası →</button>') +
     '</div>' + (detay ? '<p class="mini">Yeşilin koyuluğu, o hafta verilen testlerden kaçını gerçekten yaptığını gösterir. “Yapmadım” dediğin testler sonraki haftaya aktarılır ve yapılmamış sayılır; “Bu konu daha anlatılmadı” sayıya girmez. ' +
     'Bir haftaya dokunarak planını açabilirsin. Gelecek haftalar önizlemedir: sonucu girilmemiş testler İyi seçilmiş varsayılır.</p>' : '') + '</section>';

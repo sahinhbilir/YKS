@@ -14,7 +14,7 @@ Basic settings contain daily test capacity and rest days. They save automaticall
 
 ## Weeks map, “Yapmadım” and printing
 
-Students open the app on Haftalar haritası (a restored tab after a same-tab reload is kept). Each past week is coloured by the share of its issued tests that actually have a result: red when none were done, grey-green when few were, deep green when all were. “Bu konu daha anlatılmadı” tests are left out of the count; “Yapmadım” and blank tests count as not done. The current week is never red before it ends; weeks without an issued plan stay neutral.
+Students open the app on Haftalar haritası (a restored tab after a same-tab reload is kept). Each past week with an issued plan is coloured by the share of its tests that actually have a result: grey when none were done, grey-green when few were, deep green when all were. A past week with no plan record at all (the app was not used that week) is red; weeks before the student joined stay neutral. “Bu konu daha anlatılmadı” tests are left out of the count; “Yapmadım” and blank tests count as not done. The current week is not coloured before it ends.
 
 Each result row has a **Yapmadım** button. It records no FSRS result and moves the test to the next week that has not been issued yet, as if it had not been in that week's plan (it uses the existing postpone, `D.ertele`, plus a per-test `D.yapilmadi` mark that syncs with the work snapshot). A later real result for that test replaces the mark.
 
