@@ -307,18 +307,22 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  run(`D.rol='ogrenci';D.elle={};D.log=[];D.ertele={};D.konuAnlatilmadi=[];
    D.islenis={0:buHafta()-3};const _p2=planHesapla(0,buHafta());ogrenciHaftayiSakla(0,buHafta(),_p2);EK.hafta=buHafta()+7;`);
  let printCalls=0;sandbox.window.print=()=>{printCalls++;};
+ // A student who never used this week (did not download its plan or do anything in it) is not
+ // held to results they cannot remember.
+ check('unused-week-does-not-block-download',!run('planYazdirmaEngeli(0,buHafta()+7)')&&!run('haftaKullanildiMi(0,buHafta())'));
+ run('etkinlikKaydet("pdf",buHafta());EK.sekme="plan";EK.hafta=buHafta()+7');   // the student downloaded this week's plan
  check('central-guard-prevents-print-side-effect',!(await run('planYazdir(null)'))&&printCalls===0);
- check('blocking-modal-has-required-message-and-action',sandbox.document.body.lastPanel.innerHTML.includes('Bu planı alman için önceki haftanın')&&sandbox.document.body.lastPanel.innerHTML.includes('“Yapmadım”')&&sandbox.document.body.lastPanel.innerHTML.includes('>Sonuç gir</button>'));
  const missingHb=run('buHafta()');
- const gateAction=Object.assign(element(),{id:'eksikSonucGir',dataset:{sonucHafta:String(missingHb)},closest(s){return s.includes('#eksikSonucGir')?this:null;}});
- for(const fn of listeners.click||[])await fn({target:gateAction});
- check('result-action-opens-the-missing-week',run('EK.sekme')==='giris'&&run('EK.hafta')===missingHb);
+ check('blocked-download-opens-the-missing-week-results',run('EK.sekme')==='giris'&&run('EK.hafta')===missingHb);
+ check('blocked-download-explains-why',run('gorunumGiris()').includes('Planını indirmeden önce bu haftanın sonuçlarını girmen gerekiyor'));
+ await click('sonucIpucuTamam');
+ check('results-note-can-be-dismissed',run('EK.sonucIpucu')===null&&!run('gorunumGiris()').includes('id="sonucIpucu"'));
  run('D.log=[[assigned.gun,0,assigned.ki,null,null,3,4]];EK.sekme="plan";EK.hafta=buHafta()+7');
  check('complete-next-week-print-proceeds',(await run('planYazdir(null)'))&&printCalls===1);
  run('D.log=[]');
  const previewPrint=Object.assign(element(),{id:'ciktiYazdir',closest(s){return s.includes('#ciktiYazdir')?this:null;}});
  for(const fn of listeners.click||[])await fn({target:previewPrint});
- check('preview-print-rechecks-central-guard',printCalls===1&&sandbox.document.body.lastPanel.innerHTML.includes('Bu planı alman için önceki haftanın'));
+ check('preview-print-rechecks-central-guard',printCalls===1&&run('EK.sekme')==='giris'&&run('EK.sonucIpucu.neden')==='indir');
  init();await draw();run('EK.hafta=buHafta()+7');
  // Optional private fixture: inspect a supplied backup locally; never include it in git or upload it.
  if(process.env.YKS_BACKUP){
@@ -346,12 +350,20 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  const prevWeek=run('oncekiHafta(0,buHafta())'), curWeek=run('buHafta()'), nextWeek=run('sonrakiHafta(0,buHafta())');
  const weekTests=h=>run(`(()=>{const p=planHesapla(0,${h}),r=[];p.gunler.forEach((l,g)=>l.forEach(x=>{if(!x.serbest&&!x.anlatim)r.push({ki:x.ki,gun:${h}+g});}));return r;})()`);
  const prevTests=weekTests(prevWeek);
- const mapClass=h=>(run('ogrenciYksYolu(true)').match(new RegExp('data-ogr-hafta="'+h+'"(?: data-ogr-kurtar="1")? class="([^"]*)"(?: style="--oran:([0-9.]+)")?'))||[]);
+ const mapClass=h=>(run('ogrenciYksYolu(true)').match(new RegExp('data-ogr-hafta="'+h+'"(?: data-ogr-(?:kurtar|sonuc)="1")? class="([^"]*)"(?: style="--oran:([0-9.]+)")?'))||[]);
+ check('returning-student-is-not-blocked-by-an-unused-week',!run('planYazdirmaEngeli(0,buHafta())'));
+ run('etkinlikKaydet("pdf",'+prevWeek+')');   // the student had last week's plan
  check('map-previous-week-was-issued',!!run('elleAl(0,'+prevWeek+').sabit')&&!!run('elleAl(0,'+curWeek+').sabit')&&prevTests.length>=3);
  check('current-week-print-needs-last-week-results',run('planYazdirmaEngeli(0,buHafta()).hb')===prevWeek&&!run('sonrakiHaftaYazdirmaEngeli(0,buHafta())'));
  check('weeks-beyond-next-are-preview-only',!!run('planYazdirmaEngeli(0,buHafta()+14).onizleme')&&!run('planYazdirmaEngeli(0,buHafta()+14).hb'));
  check('teacher-print-is-not-gated',run('(()=>{D.rol="rehber";const r=planYazdirmaEngeli(0,buHafta());D.rol="ogrenci";return r;})()')===null);
  check('map-issued-week-without-results-is-grey',mapClass(prevWeek)[1].includes('gri')&&!mapClass(prevWeek)[1].includes('kirmizi'));
+ // A grey week opens that week's results with a "you forgot" note.
+ check('grey-week-button-offers-results',new RegExp('data-ogr-hafta="'+prevWeek+'" data-ogr-sonuc="1"').test(run('ogrenciYksYolu(true)')));
+ const greyWeek=Object.assign(element(),{dataset:{ogrHafta:String(prevWeek),ogrSonuc:'1'},closest(s){return s==='[data-ogr-hafta]'?this:null;}});
+ for(const fn of listeners.click||[])await fn({target:greyWeek});
+ check('grey-week-opens-its-results',run('EK.sekme')==='giris'&&run('EK.hafta')===prevWeek&&run('gorunumGiris()').includes('sonuçlarını girmeyi unuttun'));
+ run('ipucunuKapat();EK.sekme="plan";EK.hafta=null');
  // The first week (31 Aug) has no saved plan although the student had joined: no record at all is red.
  check('map-week-without-a-plan-record-is-red',!run('elleAl(0,'+(prevWeek-7)+').sabit')&&mapClass(prevWeek-7)[1].includes('kirmizi'));
  // A red week opens plan recovery for that week with a short explanation; dismissing it keeps the page.

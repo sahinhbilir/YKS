@@ -2611,9 +2611,23 @@ function kurtarmaIpucuHtml() {
     '<p class="mini">Kağıdın fotoğrafını açıp AI ile satırlara çevirebilir ya da satırları elle girebilirsin. Kağıdın ilk günü bu haftaya ayarlandı.</p>' +
     '<div class="arac"><button type="button" class="dugme birincil" id="kurtarIpucuTamam">Anladım</button></div></div></div></div>';
 }
-function kurtarmaIpucunuKapat() {
-  EK.kurtarmaIpucu = null;
-  const el = document.getElementById('kurtarIpucu'); if (el) el.remove();
+function ipucunuKapat() {
+  EK.kurtarmaIpucu = null; EK.sonucIpucu = null;
+  ['kurtarIpucu', 'sonucIpucu'].forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+}
+// Haritadaki gri haftadan ya da engellenen plan indirmeden gelen öğrenciye neden burada olduğunu söyler.
+function sonucIpucuHtml(hb) {
+  const ip = EK.sonucIpucu;
+  if (!ip || ip.hb !== hb || !ogrenciMi()) return '';
+  const indir = ip.neden === 'indir';
+  return '<div class="ortu" id="sonucIpucu"><div class="pencere kurtar-ipucu" role="dialog" aria-modal="true" aria-labelledby="sonucIpucuBaslik">' +
+    '<div class="p-ust"><b id="sonucIpucuBaslik">' + (indir ? 'Önce ' + ggyy(hb) + ' haftasının sonuçları' : ggyy(hb) + ' haftasının sonuçları girilmedi') + '</b>' +
+    '<button type="button" class="kapat" id="sonucIpucuKapat" aria-label="Kapat">×</button></div>' +
+    '<div class="kurtar-ipucu-govde"><p>' + (indir
+      ? 'Planını indirmeden önce bu haftanın sonuçlarını girmen gerekiyor. Sonuçlarını buradan gir; sonra planını indirebilirsin.'
+      : 'Bu haftanın sonuçlarını girmeyi unuttun. Sonuçlarını buradan girebilirsin.') + '</p>' +
+    '<p class="mini">Yapmadığın testleri “Yapmadım” diye işaretleyebilirsin; onlar sonraki haftaya aktarılır.</p>' +
+    '<div class="arac"><button type="button" class="dugme birincil" id="sonucIpucuTamam">Anladım</button></div></div></div></div>';
 }
 function gorunumPlanKurtarma() {
   if(!rehberMi() && !(ogrenciMi() && D.ogr.length===1))return '';
@@ -3642,7 +3656,7 @@ function ogrenciYksYolu(detay) {
       (testMetni || (adet ? adet + ' sonuç kaydı' : gun < hb ? (gun < katilim ? 'katılmadan önce' : 'plan kaydı yok, dokunarak planını kurtarabilirsin') : 'önizleme')) + (son ? ' · YKS haftası' : '');
     // Her hafta açılabilir: geçmiş ve bu hafta kayıtlı planı, gelecek haftalar önizlemeyi gösterir.
     const acilir = detay;
-    h += '<' + (acilir ? 'button type="button" data-ogr-hafta="' + gun + '"' + (durum === 'kirmizi' ? ' data-ogr-kurtar="1"' : '') : 'span') +
+    h += '<' + (acilir ? 'button type="button" data-ogr-hafta="' + gun + '"' + (durum === 'kirmizi' ? ' data-ogr-kurtar="1"' : durum === 'gri' ? ' data-ogr-sonuc="1"' : '') : 'span') +
       ' class="yol-hafta ' + durum + (simdi && durum !== 'simdi' ? ' simdi-cerceve' : '') + (oran !== null && oran < .5 ? ' acik' : '') +
       (gun === secili ? ' secili' : '') + '"' + (oran !== null ? ' style="--oran:' + oran.toFixed(2) + '"' : '') +
       ' title="' + kacis(metin) + '" aria-label="' + kacis(metin) + '"' + (simdi ? ' aria-current="date"' : '') + '>' +
@@ -4019,7 +4033,7 @@ function gorunumGiris() {
   // Formu üretirken kullanılan planı da bağlamda tut; eski kâğıdı yeni haftanın canlı
   // hesabıyla yeniden kurmaya çalışmadan aynı anlığı dondurabilelim.
   EK.sonucFormu = { si: si, hb: hb, plan: JSON.parse(JSON.stringify(p)) };
-  let h = '<div class="baslik"><h1>Sonuç girişi</h1><p>' + (ogrenciMi()
+  let h = sonucIpucuHtml(hb) + '<div class="baslik"><h1>Sonuç girişi</h1><p>' + (ogrenciMi()
     ? 'Çözdüğün testte konuyu ne kadar hatırladığını seç. İstersen doğru / soru sayısıyla gir.'
     : 'Öğrencinin her testte konuyu ne kadar hatırladığını seçin; isterseniz doğru / soru sayısıyla da girebilirsiniz.') + '</p></div>' +
     '<div class="arac">' + (ogrenciMi() ? haftaSecici() : ogrSecici() + haftaSecici()) + '</div>' +
@@ -7851,15 +7865,36 @@ function planYazdirmaEngeli(si, hb) {
   if (!ogrenciMi()) return null;
   const bu = buHafta(si), sonraki = sonrakiHafta(si, bu);
   if (hb > sonraki) return { onizleme: true };
-  return hb === bu || hb === sonraki ? oncekiHaftaSonucEngeli(si, hb) : null;
+  if (hb !== bu && hb !== sonraki) return null;
+  const engel = oncekiHaftaSonucEngeli(si, hb);
+  // Öğrenci o haftayı hiç kullanmadıysa (planını indirmedi, o hafta uygulamada bir şey yapmadı)
+  // aradan geçen zamanda sonuçları hatırlayamaz; indirme bunun için engellenmez.
+  return engel && haftaKullanildiMi(si, engel.hb) ? engel : null;
+}
+// O haftanın planı indirildiyse ya da o hafta içinde sonuç açıldı/kaydedildi/plan indirildiyse true.
+function haftaKullanildiMi(si, hb) {
+  const son = planHaftaSonu(si, hb), iceride = ts => Number.isSafeInteger(+ts) && +ts > 0 && (g => g >= hb && g <= son)(etkinlikGunu(+ts));
+  const kayit = (D.ogr[si] && D.ogr[si].etkinlik && D.ogr[si].etkinlik.kayit) || [];
+  if (kayit.some(r => (r.tur === 'pdf' && r.hafta === hb) || iceride(r.ilk) || iceride(r.son))) return true;
+  return (D.log || []).some(l => l[1] === si && +l[6] > 100000000000 && iceride(l[6]));
 }
 function planYazdirmaEngeliniGoster(si, hb) {
   const engel = planYazdirmaEngeli(si, hb);
   if (!engel) return false;
   if (engel.onizleme) disariAktarmaAc('<p>Bu hafta yalnızca önizleme: sonucu girilmemiş testler İyi seçilmiş varsayılarak hesaplandı. ' +
     'Planı, önceki haftanın sonuçlarını girdikten sonra indirebilir veya yazdırabilirsin.</p>', 'Önizleme');
-  else sonrakiHaftaSonucModalAc(engel.hb);
+  else sonucGirisineGotur(engel.hb, 'indir');
   return true;
+}
+// Öğrenciyi bir haftanın sonuç girişine, nedenini anlatan kısa bir pencereyle götürür.
+function sonucGirisineGotur(hb, neden) {
+  if (DISARI_AKTAR) disariAktarmayiKapat();
+  PENCERE = null; pencereCiz();
+  EK.sekme = 'giris'; EK.hafta = hb; EK.ogrenciDetay = false; EK.girisAcik = {}; EK.sonucIpucu = { hb, neden };
+  etkinlikKaydet('acildi', hb);
+  ciz();
+  const b = document.getElementById('sonucIpucuTamam'); if (b) b.focus();
+  return false;
 }
 function oncekiHaftaSonucEngeli(si, hb) {
   const oncekiHb = oncekiHafta(si, hb), ov = elleAl(si, oncekiHb, false);
@@ -7870,15 +7905,6 @@ function oncekiHaftaSonucEngeli(si, hb) {
   const p = planHesapla(si, oncekiHb);
   const eksik = oncekiHaftaEksikTestSayisi(si, oncekiHb, p);
   return eksik ? { hb: oncekiHb, adet: eksik } : null;
-}
-function sonrakiHaftaSonucModalAc(hb) {
-  disariAktarmaAc('<p>Bu planı alman için önceki haftanın (' + ggyy(hb) + ') bütün testlerine sonuç girmen gerekiyor. ' +
-    'Yapmadığın testleri “Yapmadım” diye işaretleyebilirsin; onlar sonraki haftaya aktarılır.</p>' +
-    '<p><button class="dugme birincil" id="eksikSonucGir" data-sonuc-hafta="' + hb + '">Sonuç gir</button></p>',
-    'Sonuçlar eksik');
-  const dugme = document.getElementById('eksikSonucGir');
-  if (dugme) dugme.focus();
-  return false;
 }
 function planOnizlemeAc(liste, hb) {
   const sayfalar = liste.map(si => yazdirSayfa(si, hb)).join('');
@@ -8330,17 +8356,10 @@ document.addEventListener('click', async ev => {
     if (ogrenciElleKaldir(ogrEkSil.dataset.ogrEkSil)) { await kaydet(true); ciz(); }
     return;
   }
-  const ciktiDugme = ev.target.closest('#ciktiKapat,#ciktiYazdir,#yedekKopyala,#eksikSonucGir');
+  const ciktiDugme = ev.target.closest('#ciktiKapat,#ciktiYazdir,#yedekKopyala');
   if (ciktiDugme) {
     if (ciktiDugme.id === 'ciktiKapat') disariAktarmayiKapat();
     else if (ciktiDugme.id === 'ciktiYazdir') planBaskiyiBaslat();
-    else if (ciktiDugme.id === 'eksikSonucGir') {
-      const hb = +ciktiDugme.dataset.sonucHafta;
-      disariAktarmayiKapat();
-      EK.sekme = 'giris'; EK.hafta = hb; EK.girisAcik = {};
-      etkinlikKaydet('acildi', hb);
-      ciz();
-    }
     else {
       const alan = document.getElementById('ciktiMetni'), durum = document.getElementById('ciktiDurum');
       try {
@@ -8367,11 +8386,14 @@ document.addEventListener('click', async ev => {
       const tamam = document.getElementById('kurtarIpucuTamam'); if (tamam) tamam.focus();
       return;
     }
+    // Sonuç girilmemiş (gri) hafta, o haftanın sonuç girişine açılır.
+    if (yolHafta.dataset.ogrSonuc === '1') { if (!duzenlemeKaydi()) sonucGirisineGotur(h, 'harita'); return; }
     if (haritaPlaniniAc(h)) ciz();
     return;
   }
-  if (ev.target.closest?.('#kurtarIpucuTamam,#kurtarIpucuKapat') || ev.target.id === 'kurtarIpucu') {
-    kurtarmaIpucunuKapat(); return;
+  if (ev.target.closest?.('#kurtarIpucuTamam,#kurtarIpucuKapat,#sonucIpucuTamam,#sonucIpucuKapat') ||
+      ['kurtarIpucu', 'sonucIpucu'].includes(ev.target.id)) {
+    ipucunuKapat(); return;
   }
   const haritaPlan=ev.target.closest('[data-harita-plan]');
   if(haritaPlan&&rehberMi()){if(haritaPlaniniAc(+haritaPlan.dataset.haritaPlan))ciz();return;}
@@ -9828,7 +9850,7 @@ document.addEventListener('change', async ev => {
 });
 
 document.addEventListener('keydown', ev => {
-  if (ev.key === 'Escape' && EK.kurtarmaIpucu) { ev.preventDefault(); kurtarmaIpucunuKapat(); return; }
+  if (ev.key === 'Escape' && (EK.kurtarmaIpucu || EK.sonucIpucu)) { ev.preventDefault(); ipucunuKapat(); return; }
   const sonucModal = document.getElementById('sonucBilgiModal');
   if (ev.key === 'Escape' && sonucModal && !sonucModal.hidden) {
     ev.preventDefault(); sonucModal.hidden = true;
