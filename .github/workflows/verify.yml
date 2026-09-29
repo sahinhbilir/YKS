@@ -63,6 +63,8 @@ jobs:
         run: node test/test-account-regression.js
       - name: Minute-based study budget and weekly cap
         run: node test/minute-budget-regression.js
+      - name: Self-paced TYT track next to the school plan
+        run: node test/personal-plan-regression.js
 
   photo-recovery-browser:
     name: Past plan recovery browser
@@ -88,6 +90,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/mock-exam-browser.cjs
       - name: Test account button, nickname setup and first cloud save
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/test-account-browser.cjs
+      - name: Personal TYT plan settings and "not studied yet"
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/personal-plan-browser.cjs
       - name: Keep synthetic review screenshots
         if: always()
         uses: actions/upload-artifact@v4
