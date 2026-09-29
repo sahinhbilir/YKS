@@ -109,7 +109,7 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   put('records',[brans({sure:20}),brans({id:'m:two',tarih:'2026-09-20',sure:null}),brans({id:'m:three',tarih:'2026-09-22',sure:15})]);
   run("EK.denemeTur='BRANS';EK.denemeOturum='TYT';EK.denemeBrans='turkce';EK.denemeMetrik='hiz';D.ogr[0].denemeler=records");
   const svg=run('denemeGrafik(records)');
-  assert.equal((svg.match(/class="dn-dot"/g)||[]).length,2);assert(svg.includes('0,6 net/dk'));assert(svg.includes('1 deneme süre girilmediği'));
+  assert.equal((svg.match(/class="dn-dot[ "]/g)||[]).length,2);assert(svg.includes('0,6 net/dk'));assert(svg.includes('1 deneme süre girilmediği'));
   const ticks=[...svg.matchAll(/text-anchor="end">([^<]+)<\/text>/g)].map(m=>Number(m[1].replace(',','.'))).filter(Number.isFinite);
   assert(Math.max(...ticks)<1,'net/dk axis must not stretch to whole nets: '+ticks);
   const page=run('gorunumDenemeler()');
@@ -122,6 +122,21 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert(tytPage.includes('Son net'));assert(!run('denemeGrafik(tyt)').includes('net/dk'));
   run("EK.denemeTur='BRANS';D.ogr[0].denemeler=records");assert(run('gorunumDenemeler()').includes('<option value="hiz" selected>'),'branş keeps the choice');
   run("EK.denemeMetrik='net';EK.denemeTur='TYT'");
+ });
+ await check('stock-style chart: segments vs previous 4 average, dots vs previous exam',()=>{
+  const nets=[10,12,11,11,15,9];
+  put('records',nets.map((n,i)=>sample({id:'m:s'+i,tarih:'2026-09-'+String(10+i).padStart(2,'0'),sure:100+i*10,dersler:[{kod:'turkce',dogru:n,yanlis:0,soru:40}]})));
+  run("EK.denemeTur='TYT';EK.denemeMetrik='net'");
+  const svg=run('denemeGrafik(records)'),seg=[...svg.matchAll(/class="dn-seg (\w+)"/g)].map(m=>m[1]),dot=[...svg.matchAll(/class="dn-dot (\w+)"/g)].map(m=>m[1]);
+  // Averages of the previous (up to) 4: 10, 11, 11, 11, 12.25 → up, equal, equal, up, down.
+  assert.equal(seg.join(),'yukari,esit,esit,yukari,asagi');
+  assert.equal(dot.join(),'esit,yukari,asagi,esit,yukari,asagi');
+  assert(svg.includes('class="dn-ort"'));assert(svg.includes('önceki denemeye göre +4 net'));assert(svg.includes('önceki 4 deneme ortalaması 11 net'));
+  // Shorter completion time is the improvement, so the süre chart colours the other way.
+  run("EK.denemeMetrik='sure'");
+  assert.equal([...run('denemeGrafik(records)').matchAll(/class="dn-dot (\w+)"/g)].map(m=>m[1]).join(),'esit,asagi,asagi,asagi,asagi,asagi');
+  run("EK.denemeMetrik='net'");
+  put('one',[sample()]);const tek=run('denemeGrafik(one)');assert(!tek.includes('dn-seg'));assert(tek.includes('class="dn-dot esit"'));
  });
  await check('PDF report score is read from the leftmost score column',()=>{
   const pages=JSON.parse(fs.readFileSync('test/fixtures/mock-exam-pdf-items.json','utf8')).tyt;

@@ -470,9 +470,14 @@ main:has(.dn-tabs){min-width:0}
 .dn-stats strong{font-size:28px;font-variant-numeric:tabular-nums;font-weight:600}
 .dn-chart{margin:0 -4px 12px}.dn-chart svg{width:100%;height:auto;min-height:180px;overflow:visible}
 .dn-chart text{fill:var(--soluk);font:12px system-ui}.dn-grid{stroke:var(--cizgi);stroke-dasharray:3 5}
-.dn-area{fill:var(--vurgu);opacity:.07}.dn-line{stroke:var(--vurgu);stroke-width:2.5;fill:none;stroke-linejoin:round}
-.dn-dot{fill:var(--kagit);stroke:var(--vurgu);stroke-width:3;cursor:pointer;transition:fill .1s}
-.dn-dot:hover,.dn-dot:focus{fill:var(--vurgu);stroke-width:5;outline:none}
+.dn-area{fill:var(--vurgu);opacity:.07}
+/* Borsa görünümü: parça önceki 4 denemenin ortalamasına, nokta bir önceki denemeye göre renklenir. */
+.dn-seg{stroke-width:3;fill:none;stroke-linecap:round}
+.dn-seg.yukari{stroke:var(--iyi)}.dn-seg.asagi{stroke:var(--kritik)}.dn-seg.esit{stroke:var(--soluk)}
+.dn-ort{fill:none;stroke:var(--soluk);stroke-width:1.5;stroke-dasharray:4 4;opacity:.7}
+.dn-dot{fill:var(--soluk);stroke:var(--kagit);stroke-width:2;cursor:pointer;transition:stroke-width .1s}
+.dn-dot.yukari{fill:var(--iyi)}.dn-dot.asagi{fill:var(--kritik)}
+.dn-dot:hover,.dn-dot:focus{stroke:var(--murekkep);stroke-width:3;outline:none}
 .dn-bos{text-align:center;padding:50px 12px;color:var(--soluk)}
 .dn-detay-bas{display:flex;align-items:start;justify-content:space-between;gap:16px;border-top:1px solid var(--cizgi);padding-top:18px}
 .dn-detay-bas strong{white-space:nowrap;font-size:23px;color:var(--vurgu)}
@@ -10299,11 +10304,20 @@ function denemeGrafik(liste) {
   const width=Math.max(320,Math.min(900,(document.getElementById('ana')?.clientWidth||960)-56)),height=280,left=50,right=22,top=24,bottom=38,values=points.map(val),lo=Math.min(0,...values),hi=Math.max(...values,m.adim),pad=Math.max((hi-lo)*.12,m.adim),min=lo<0?lo-pad:0,max=hi+pad;
   const dates=points.map(r=>gunNo(r.tarih)),first=Math.min(...dates),last=Math.max(...dates),x=i=>first===last?(points.length===1?width/2:left+i*(width-left-right)/(points.length-1)):left+(dates[i]-first)*(width-left-right)/(last-first),y=v=>height-bottom-(v-min)*(height-top-bottom)/(max-min);
   const coords=points.map((r,i)=>{const same=dates.map((d,j)=>d===dates[i]?j:-1).filter(j=>j>=0),offset=first===last?0:(same.indexOf(i)-(same.length-1)/2)*Math.min(8,24/Math.max(1,same.length-1));return [Math.max(left,Math.min(width-right,x(i)+offset)),y(val(r))];}),line=coords.map(p=>p.join(',')).join(' '),ticks=Array.from({length:5},(_,i)=>min+(max-min)*i/4);
+  // Borsa grafiği gibi: her çizgi parçası, vardığı denemenin önceki (en fazla) 4 denemenin ortalamasına
+  // göre; her nokta bir önceki denemeye göre renklenir. Süre grafiğinde kısalma iyileşmedir.
+  const iyiYon=metrik==='sure'?-1:1,yon=(a,b)=>Math.abs(a-b)<.005?'esit':(a-b)*iyiYon>0?'yukari':'asagi';
+  const ort4=i=>{const once=values.slice(Math.max(0,i-4),i);return once.reduce((s,v)=>s+v,0)/once.length;};
+  const fark=d=>(d>0?'+':'')+denemeSayi(d)+m.birim;
+  const egilim=i=>i?' · önceki denemeye göre '+fark(values[i]-values[i-1])+' · önceki '+Math.min(i,4)+' deneme ortalaması '+denemeSayi(ort4(i))+m.birim:' · ilk deneme';
+  const parcalar=coords.slice(1).map((p,j)=>'<line x1="'+coords[j][0]+'" y1="'+coords[j][1]+'" x2="'+p[0]+'" y2="'+p[1]+'" class="dn-seg '+yon(values[j+1],ort4(j+1))+'"/>').join('');
+  const ortCizgi=points.length>2?'<polyline points="'+coords.slice(1).map((p,j)=>p[0]+','+y(ort4(j+1))).join(' ')+'" class="dn-ort"/>':'';
   return '<div class="dn-chart"><svg viewBox="0 0 '+width+' '+height+'" role="group" aria-label="Deneme gelişim grafiği. Noktaları seçerek sonuçları inceleyin.">'+
     ticks.map(t=>'<line x1="'+left+'" y1="'+y(t)+'" x2="'+(width-right)+'" y2="'+y(t)+'" class="dn-grid"/><text x="'+(left-8)+'" y="'+(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
-    '<polygon points="'+left+','+(height-bottom)+' '+line+' '+coords.at(-1)[0]+','+(height-bottom)+'" class="dn-area"/><polyline points="'+line+'" class="dn-line"/>'+
-    points.map((r,i)=>'<circle class="dn-dot" tabindex="0" role="button" aria-label="'+kacis(r.ad+' '+r.tarih+' '+denemeSayi(val(r))+m.birim)+'" data-dn-dot="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad)+' · '+r.tarih+' · '+denemeSayi(val(r))+m.birim+'</title></circle>').join('')+
+    '<polygon points="'+left+','+(height-bottom)+' '+line+' '+coords.at(-1)[0]+','+(height-bottom)+'" class="dn-area"/>'+ortCizgi+parcalar+
+    points.map((r,i)=>'<circle class="dn-dot '+(i?yon(values[i],values[i-1]):'esit')+'" tabindex="0" role="button" aria-label="'+kacis(r.ad+' '+r.tarih+' '+denemeSayi(val(r))+m.birim+egilim(i))+'" data-dn-dot="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad+' · '+r.tarih+' · '+denemeSayi(val(r))+m.birim+egilim(i))+'</title></circle>').join('')+
     '<text x="'+left+'" y="'+(height-10)+'">'+points[0].tarih+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?points.at(-1).tarih:'')+'</text></svg><p class="mini">Tarih → · '+m.eksen+' · Noktaya gel, dokun veya klavyeyle seç.'+
+    (points.length>1?' Çizgi yeşil: önceki 4 denemenin ortalamasının üstünde (kesikli çizgi), kırmızı: altında, gri: eşit. Nokta yeşil: bir önceki denemeden '+(metrik==='sure'?'kısa':'yüksek')+', kırmızı: '+(metrik==='sure'?'uzun':'düşük')+'.':'')+
     (metrik==='hiz'?' Net = doğru − yanlış / 4; net/dk = net ÷ tamamlama süresi.':'')+(eksik?' '+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.':'')+'</p></div>';
 }
 function denemeFormHtml() {
