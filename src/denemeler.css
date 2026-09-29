@@ -34,3 +34,12 @@ main:has(.dn-tabs){min-width:0}
 @media(max-width:600px){.dn-panel{padding:12px}.dn-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dn-stats strong{font-size:24px}.dn-entry-row{gap:5px;grid-template-columns:minmax(83px,1.5fr) repeat(3,minmax(42px,1fr)) 38px}.dn-entry-row input{padding:6px 3px}.dn-filters input,.dn-filters select{max-width:145px}.dn-detay-bas strong{font-size:19px}}
 
 .dn-panel>.arac .dugme{max-width:100%;white-space:normal}.dn-import>b{overflow-wrap:anywhere}.dn-import .arac label{max-width:100%}
+/* Add/edit form is a popup; the chart filters stay on the page and are labelled as filters. */
+.dn-tabs{align-items:center}.dn-tabs .dn-ekle{margin-left:auto}
+.dn-filtre-baslik{flex-basis:100%;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--soluk)}
+.dn-pencere{width:min(640px,100%)}
+.dn-pencere-ust{position:relative;padding:16px 52px 12px 20px;border-bottom:1px solid var(--cizgi)}.dn-pencere-ust h2{margin:0;font-size:20px}
+.dn-pencere-govde{padding:0 20px 8px;overflow:auto;min-height:0}
+.dn-pencere-alt{margin:0;padding:12px 20px;border-top:1px solid var(--cizgi)}
+#dnFormHata:empty{display:none}
+@media(max-width:600px){#dnOrtu{padding:3vh 8px}.dn-pencere-ust{padding:14px 48px 10px 12px}.dn-pencere-govde{padding:0 12px 8px}.dn-pencere-alt{padding:10px 12px}}

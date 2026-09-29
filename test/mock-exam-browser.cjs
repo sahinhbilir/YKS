@@ -16,6 +16,11 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.evaluate(()=>{
     D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-28';D.ogr=[{ad:'SENTETİK ADA',no:1,sube:'12-A',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,ogrenciBulutId:'synthetic-1'}];EK.ogr=0;EK.sekme='denemeler';ciz();
    });
+   // The add form is a popup dialog, separate from the chart filters; Escape and × close it.
+   await page.getByRole('button',{name:'+ Deneme ekle',exact:true}).click();
+   assert(await page.getByRole('dialog',{name:'Deneme ekle'}).isVisible());assert.equal(await page.evaluate(()=>document.activeElement.id),'dnAd');
+   await page.keyboard.press('Escape');assert.equal(await page.locator('#dnOrtu').count(),0);
+   await page.getByRole('button',{name:'+ Deneme ekle',exact:true}).click();await page.locator('#dnKapat').click();assert.equal(await page.locator('#dnOrtu').count(),0);
    await page.getByRole('button',{name:'+ Deneme ekle',exact:true}).click();
    await page.locator('#dnAd').fill('İlk TYT');await page.locator('#dnTarih').fill('2026-09-18');await page.locator('#dnSure').fill('145');
    await page.locator('[data-dn-ders="turkce"] [data-dn-value="dogru"]').fill('30');await page.locator('[data-dn-ders="turkce"] [data-dn-value="yanlis"]').fill('8');
