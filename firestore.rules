@@ -97,13 +97,18 @@ service cloud.firestore {
 
     match /ogrenciler/{syncId} {
 
+      function denemeOkulGecerli() {
+        return !('denemeOkul' in request.resource.data)
+          || (request.resource.data.denemeOkul is string && request.resource.data.denemeOkul.size() <= 300000);
+      }
+
       function kimlikAlanlariAyni() {
         return request.resource.data.ogretmenUid == resource.data.ogretmenUid
           && request.resource.data.ogrenciNo == resource.data.ogrenciNo
           && request.resource.data.ogrenciAd == resource.data.ogrenciAd
           && request.resource.data.ogrenciSube == resource.data.ogrenciSube
           && request.resource.data.ogrenciBulutId == resource.data.ogrenciBulutId
-          && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','istemciOlay','durum','sonrakiSyncId']);
+          && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','istemciOlay','durum','sonrakiSyncId','denemeOkul']);
       }
       // Devre dışı bırakma sırasında, sonrakiSyncId'nin GERÇEKTEN bu işlemle birlikte
       // YENİ oluşturulan, aynı öğretmen/öğrenciye ait, aktif bir belgeyi gösterdiğini
@@ -151,14 +156,14 @@ service cloud.firestore {
           );
       }
 
-      allow create: if request.auth != null && yetkiliOgretmen()
+      allow create: if request.auth != null && yetkiliOgretmen() && denemeOkulGecerli()
         && request.auth.uid == request.resource.data.ogretmenUid
         && (request.resource.data.bagliUid == null
           || (request.resource.data.bagliUid is string
             && yayinlanmisHesap(request.resource.data.bagliUid)))
         && request.resource.data.paket == null
         && request.resource.data.durum == 'aktif'
-        && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','durum'])
+        && request.resource.data.keys().hasOnly(['ogretmenUid','ogrenciNo','ogrenciAd','ogrenciSube','ogrenciBulutId','bagliUid','paket','sunucuTs','durum','denemeOkul'])
         && request.resource.data.ogrenciAd is string && request.resource.data.ogrenciAd.size() <= 100
         && request.resource.data.ogrenciBulutId is string && request.resource.data.ogrenciBulutId.size() > 0;
 
@@ -201,10 +206,13 @@ service cloud.firestore {
               && request.resource.data.paket.tur == 'yks-sonuc'
               && request.resource.data.paket.kayit is list
               && request.resource.data.paket.kayit.size() <= 5000
+              && (!('denemeler' in request.resource.data.paket) || (request.resource.data.paket.denemeler is list && request.resource.data.paket.denemeler.size() <= 1500))
+              && (!('denemeSure' in request.resource.data.paket) || (request.resource.data.paket.denemeSure is list && request.resource.data.paket.denemeSure.size() <= 3000))
               && (!('konular' in request.resource.data.paket) || request.resource.data.paket.konular.size() <= 2000)
             )
           )
           && istemciOlayGecerli()
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['denemeOkul'])
         )
         ||
         (
@@ -216,6 +224,7 @@ service cloud.firestore {
           && request.resource.data.sonrakiSyncId is string
           && request.resource.data.bagliUid == resource.data.bagliUid
           && request.resource.data.paket == resource.data.paket
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['denemeOkul'])
           && sonrakiGecerli()
         )
         ||
@@ -228,6 +237,14 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bagliUid'])
           && request.resource.data.bagliUid is string
           && yayinlanmisHesap(request.resource.data.bagliUid)
+        )
+        ||
+        (
+          request.auth.uid == resource.data.ogretmenUid && yetkiliOgretmen()
+          && resource.data.durum == 'aktif'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['denemeOkul'])
+          && denemeOkulGecerli()
+          && 'denemeOkul' in request.resource.data
         )
       );
 

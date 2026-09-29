@@ -581,6 +581,44 @@ await check('weekly-activity-is-owned-by-bound-student-and-readable-only-by-owne
   await assertFails(updateDoc(doc(ogretmen2Db,'ogrenciler',id),forged));
 });
 
+await check('teacher-import-channel-is-private-and-student-read-only', async () => {
+  const id=sid('deneme'),ref=db=>doc(db,'ogrenciler',id);
+  await testEnv.withSecurityRulesDisabled(async ctx=>setDoc(ref(ctx.firestore()),bosYuva({bagliUid:OGRENCI_UID})));
+  await assertSucceeds(updateDoc(ref(ogretmenDb),{denemeOkul:'[{"id":"p:exam"}]'}));
+  await assertSucceeds(getDoc(ref(ogrenciDb)));
+  await assertFails(getDoc(ref(ogrenci2Db)));await assertFails(getDoc(ref(anonDb)));
+  await assertFails(updateDoc(ref(ogrenciDb),{denemeOkul:'[]'}));
+  await assertFails(updateDoc(ref(ogrenci2Db),{denemeOkul:'[]'}));
+  await assertFails(updateDoc(ref(ogretmen2Db),{denemeOkul:'[]'}));
+  await assertFails(updateDoc(ref(anonOgretmenDb),{denemeOkul:'[]'}));
+  await assertFails(updateDoc(ref(ogretmenDb),{denemeOkul:'[]',paket:{tur:'yks-sonuc',kayit:[]}}));
+  await assertFails(updateDoc(ref(ogretmenDb),{denemeOkul:{bad:'type'}}));
+  await assertFails(updateDoc(ref(ogretmenDb),{denemeOkul:'x'.repeat(300001)}));
+  await assertSucceeds(updateDoc(ref(ogrenciDb),{paket:{tur:'yks-sonuc',surum:4,kayit:[],konular:{},denemeler:[{id:'m:exam'}],denemeSure:[{id:'p:exam',sure:140,ts:100}]}}));
+  const s=await getDoc(ref(ogretmenDb));
+  if(s.data().denemeOkul!=='[{"id":"p:exam"}]')throw new Error('Student send erased teacher results');
+});
+await check('published-password-student-can-read-but-not-change-teacher-import',async()=>{
+ const id=sid('deneme-password');
+ await testEnv.withSecurityRulesDisabled(async ctx=>{
+  await setDoc(doc(ctx.firestore(),'ogrenciHesaplari',HESAPLI_OGRENCI_UID),hesapVeri(id));
+  await setDoc(doc(ctx.firestore(),'ogrenciler',id),bosYuva({bagliUid:HESAPLI_OGRENCI_UID,denemeOkul:'[]'}));
+ });
+ await assertSucceeds(getDoc(doc(hesapliOgrenciDb,'ogrenciler',id)));
+ await assertFails(updateDoc(doc(hesapliOgrenciDb,'ogrenciler',id),{denemeOkul:'[1]'}));
+ await assertSucceeds(updateDoc(doc(hesapliOgrenciDb,'ogrenciler',id),{paket:{tur:'yks-sonuc',surum:4,kayit:[],denemeler:[],denemeSure:[]}}));
+});
+await check('slot-rotation-preserves-import-and-revokes-old-student',async()=>{
+ const old=sid('deneme-old'),fresh=sid('deneme-new');
+ await testEnv.withSecurityRulesDisabled(async ctx=>setDoc(doc(ctx.firestore(),'ogrenciler',old),bosYuva({bagliUid:OGRENCI_UID,denemeOkul:'[]'})));
+ await assertSucceeds(runTransaction(ogretmenDb,async tx=>{
+  tx.update(doc(ogretmenDb,'ogrenciler',old),{durum:'iptal',sonrakiSyncId:fresh});
+  tx.set(doc(ogretmenDb,'ogrenciler',fresh),bosYuva({denemeOkul:'[]'}));
+ }));
+ await assertFails(getDoc(doc(ogrenciDb,'ogrenciler',old)));
+ await assertFails(getDoc(doc(ogrenciDb,'ogrenciler',fresh)));
+});
+
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
 await testEnv.cleanup();
 process.exit(fail ? 1 : 0);

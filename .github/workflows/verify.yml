@@ -23,6 +23,8 @@ jobs:
         run: node test/curriculum-regression.js
       - name: Grade 11 timetable topics and TYT mathematics separation
         run: node --test test/grade11-timetable-regression.cjs
+      - name: Mock exams, import validation and embedding
+        run: node scripts/embed-denemeler.cjs --check && node test/mock-exam-regression.cjs
       - name: Role regression
         run: node test/role-regression.js
       - name: Automatic student workflow and eight-week simulation
@@ -78,6 +80,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/curriculum-browser.cjs
       - name: Weekly student activity on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/student-activity-browser.cjs
+      - name: Mock exam entry, charts and teacher imports
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/mock-exam-browser.cjs
       - name: Keep synthetic review screenshots
         if: always()
         uses: actions/upload-artifact@v4

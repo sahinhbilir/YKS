@@ -1437,7 +1437,7 @@ test('reporting-week-setting-syncs-without-results', async () => {
   equal(payload.paket.kayit.length,0,'no result is required to save the preference');
 });
 
-test('reset-only-sunucuyaGonder-writes-version-3-package', async () => {
+test('reset-only-sunucuyaGonder-writes-current-package', async () => {
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({ syncId: 'student-slot' })], 'ogrenci');
   run('D.islenis[3]=bugunNo()-3; konuAnlatilmadi(0,3,bugunNo())');
@@ -1447,7 +1447,7 @@ test('reset-only-sunucuyaGonder-writes-version-3-package', async () => {
     updateDoc: async (_ref, data) => { payload = data; }
   });
   equal(await run('sunucuyaGonder()'), 0, 'a reset-only packet has zero score rows');
-  assert(payload && payload.paket && payload.paket.surum === 3, 'the reset must still upload a result package');
+  assert(payload && payload.paket && payload.paket.surum === 4, 'the reset must still upload a result package');
   equal(payload.paket.kayit.length, 0, 'no score row may be fabricated for a reset');
   equal(payload.paket.konuAnlatilmadi.length, 1, 'the reset event must be uploaded');
 });
@@ -2044,6 +2044,44 @@ test('work-snapshot-preserves-custom-plan-lesson-completion-and-student-settings
   equal(run('D.ogrIslenis[0][KATALOG.length+1]'),100);
   equal(run("D.ertele['0:'+(KATALOG.length+1)]"),110);
   equal(run('D.ekKonular[0][3]'),'Unrelated teacher topic');
+});
+
+test('fresh-local-work-wins-after-an-earlier-device-import', async () => {
+  const {sandbox,run}=loadAppSandbox();
+  resetOgr(sandbox,[student({ogrenciBulutId:'identity',kap:6})],'ogrenci');
+  run('D.ogrCalismaTs=200;');
+  sandbox.remote=run('ogrenciCalismaPaketi()');
+  run('D.ogrCalismaTs=100;D.ogr[0].ogrCalismaTs=100;ogrenciCalismasiniUygula(remote,0);');
+  // Another device uploaded after the initial import, but before this local save.
+  sandbox.remote.ts=250;
+  run('D.ogr[0].kap=3;');await run('kaydet(true)');
+  const savedTs=run('D.ogrCalismaTs');
+  run('ogrenciCalismasiniUygula(remote,0)');
+  equal(run('D.ogr[0].kap'),3,'an older imported row timestamp must not override a fresh local save');
+  equal(run('ogrenciCalismaPaketi().ts'),savedTs,'fresh edits keep their work timestamp');
+});
+
+test('received-work-keeps-its-timestamp-when-forwarded-by-an-idle-device', async () => {
+  const {sandbox,run}=loadAppSandbox();
+  resetOgr(sandbox,[student({ogrenciBulutId:'identity',kap:3})],'ogrenci');
+  run('D.ogrCalismaTs=300;');sandbox.latest=run('ogrenciCalismaPaketi()');
+  run('D.ogr[0].kap=6;D.ogrCalismaTs=200;');sandbox.stale=run('ogrenciCalismaPaketi()');
+  run('D.ogrCalismaTs=100;D.ogr[0].ogrCalismaTs=100;ogrenciCalismasiniUygula(latest,0);');
+  equal(run('ogrenciCalismaPaketi().ts'),300,'forwarding remote work must preserve its version');
+  run('ogrenciCalismasiniUygula(stale,0)');
+  equal(run('D.ogr[0].kap'),3,'a delayed older snapshot must not replace received work');
+  equal(run('D.ogrCalismaTs'),300,'receiving work uses the remote version, not the current wall clock');
+});
+
+test('teacher-notebook-timestamp-does-not-block-student-work', async () => {
+  const {sandbox,run}=loadAppSandbox();
+  resetOgr(sandbox,[student({ogrenciBulutId:'identity',kap:3})],'ogrenci');
+  run('D.ogrCalismaTs=200;');sandbox.remote=run('ogrenciCalismaPaketi()');
+  resetOgr(sandbox,[student({ogrenciBulutId:'identity',kap:6,ogrCalismaTs:100})],'rehber');
+  run('D.ts=1000;D.ogrCalismaTs=1000;ogrenciCalismasiniUygula(remote,0);');
+  equal(run('D.ogr[0].kap'),3,'only this student\'s work version applies on the teacher device');
+  equal(run('D.ogr[0].ogrCalismaTs'),200);
+  equal(run('D.ogrCalismaTs'),1000,'student receipt must not change the teacher notebook timestamp');
 });
 
 test('malformed-work-snapshot-cannot-partially-import-results', async () => {

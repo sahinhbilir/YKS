@@ -446,6 +446,45 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 .gpDuzen{display:grid;grid-template-columns:minmax(220px,1fr) minmax(320px,2fr);gap:16px;align-items:start}.gpAlanlar{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}.gpAlanlar label{flex:1;min-width:130px}.gpAlanlar input,.gpAlanlar select{display:block;width:100%;margin-top:4px}.gpSatir input[list]{margin-top:4px}@media(max-width:760px){.gpDuzen{grid-template-columns:1fr}.gpDuzen img{max-height:65vh;object-fit:contain}}
 .cikis-durum{position:fixed;z-index:10000;bottom:16px;left:50%;transform:translateX(-50%);width:min(540px,calc(100vw - 24px));padding:18px;background:var(--kagit);color:var(--murekkep);border:1px solid var(--cizgi);border-radius:12px;box-shadow:0 8px 32px #0003}.cikis-durum .arac{margin-top:12px}@media print{.cikis-durum,#oturumKapat{display:none!important}}
 .etkinlik-ozet{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0}.etkinlik-ozet .kart{padding:16px;border:1px solid #cbd5e1;border-radius:12px}.etkinlik-ozet strong{font-size:26px}.etkinlik-satir{display:grid;grid-template-columns:1.5fr 1fr 1fr 1.3fr 1.3fr;gap:12px;padding:16px 0;border-bottom:1px solid #cbd5e1;overflow-wrap:anywhere}.etkinlik-mobil{display:none}.etkinlik-liste time{font-size:13px}#takipArama{max-width:100%}@media(max-width:700px){.etkinlik-ozet{grid-template-columns:repeat(2,minmax(0,1fr))}.etkinlik-satir{grid-template-columns:1fr;gap:10px}.etkinlik-baslik{display:none}.etkinlik-mobil{display:inline;font-weight:600}.etkinlik-satir>div:first-child{font-size:18px}}
+/* BEGIN DENEMELER */
+main:has(.dn-tabs){min-width:0}
+.dn-panel{padding:20px;margin-top:16px;min-width:0}
+.dn-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0 12px}
+.dn-filters{align-items:end;gap:12px}
+.dn-filters label,.dn-form-grid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--soluk)}
+.dn-filters input,.dn-filters select{max-width:180px}
+.dn-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}
+.dn-stats>div{background:var(--kagit);border:1px solid var(--cizgi);border-radius:12px;padding:16px}
+.dn-stats span{display:block;font-size:12px;color:var(--soluk)}
+.dn-stats strong{font-size:28px;font-variant-numeric:tabular-nums;font-weight:600}
+.dn-chart{margin:0 -4px 12px}.dn-chart svg{width:100%;height:auto;min-height:180px;overflow:visible}
+.dn-chart text{fill:var(--soluk);font:12px system-ui}.dn-grid{stroke:var(--cizgi);stroke-dasharray:3 5}
+.dn-area{fill:var(--vurgu);opacity:.07}.dn-line{stroke:var(--vurgu);stroke-width:2.5;fill:none;stroke-linejoin:round}
+.dn-dot{fill:var(--kagit);stroke:var(--vurgu);stroke-width:3;cursor:pointer;transition:fill .1s}
+.dn-dot:hover,.dn-dot:focus{fill:var(--vurgu);stroke-width:5;outline:none}
+.dn-bos{text-align:center;padding:50px 12px;color:var(--soluk)}
+.dn-detay-bas{display:flex;align-items:start;justify-content:space-between;gap:16px;border-top:1px solid var(--cizgi);padding-top:18px}
+.dn-detay-bas strong{white-space:nowrap;font-size:23px;color:var(--vurgu)}
+.dn-ozet{display:flex;gap:20px;flex-wrap:wrap;margin:12px 0}
+.dn-ders-detay{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:12px 0 18px}
+.dn-ders-detay>div{background:var(--zemin);padding:10px;border-radius:8px;display:grid;grid-template-columns:1fr auto;gap:4px;font-size:12px}
+.dn-ders-detay small{grid-column:1 / -1;color:var(--soluk)}
+.dn-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin:16px 0}
+.dn-form-grid input,.dn-form-grid select{width:100%}
+.dn-entry-row{display:grid;grid-template-columns:minmax(100px,2fr) repeat(3,minmax(50px,1fr)) minmax(40px,.7fr);gap:10px;padding:6px 0;align-items:center;border-bottom:1px solid var(--cizgi)}
+.dn-entry-row input{width:100%;min-width:0;padding:7px}.dn-entry-row label{font-size:13px}.dn-entry-head{font-size:12px;color:var(--soluk)}
+.dn-entry output{font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.dn-scroll{overflow-x:auto;max-width:100%}.dn-scroll table{width:100%;border-collapse:collapse;text-align:left}
+.dn-scroll th,.dn-scroll td{padding:11px 8px;border-bottom:1px solid var(--cizgi);font-size:13px}
+.dn-scroll th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--soluk)}
+.dn-import{margin:18px 0;padding-top:12px;border-top:1px solid var(--cizgi)}
+.dn-import select{max-width:230px}.dn-import input[type=checkbox]{width:20px;height:20px}
+#dnFormHata{color:var(--kritik)}#dnDurum{overflow-wrap:anywhere;font-size:13px}
+@media(max-width:600px){.dn-panel{padding:12px}.dn-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dn-stats strong{font-size:24px}.dn-entry-row{gap:5px;grid-template-columns:minmax(83px,1.5fr) repeat(3,minmax(42px,1fr)) 38px}.dn-entry-row input{padding:6px 3px}.dn-filters input,.dn-filters select{max-width:145px}.dn-detay-bas strong{font-size:19px}}
+
+.dn-panel>.arac .dugme{max-width:100%;white-space:normal}.dn-import>b{overflow-wrap:anywhere}.dn-import .arac label{max-width:100%}
+/* END DENEMELER */
+
 </style>
 <script type="module">
 // Bulut senkronizasyonu (Firestore) — bkz. plan §1/§2/§3. Uygulamanın geri kalanı
@@ -960,6 +999,9 @@ function yedekDogrula(y) {
   y.ogr.forEach((o, i) => {
     if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('Geçersiz öğrenci kaydı: ' + (i + 1) + '. satır.');
     if (o.etkinlik !== undefined) etkinlikDogrula(o.etkinlik);
+    if (o.denemeler !== undefined) denemeDogrula(o.denemeler);
+    if (o.denemeOkul !== undefined) denemeDogrula(o.denemeOkul);
+    if (o.denemeSure !== undefined) denemeSureDogrula(o.denemeSure);
     if (typeof o.ad !== 'string' || !o.ad.trim() || o.ad.length > 120) throw new Error('Geçersiz öğrenci adı: ' + (i + 1) + '. satır.');
     if (typeof o.sube !== 'string' || !o.sube.trim() || o.sube.length > 40) throw new Error('Geçersiz öğrenci şubesi: ' + (i + 1) + '. satır.');
     if (o.sinif !== undefined && ![9,10,11,12].includes(o.sinif)) throw new Error('Geçersiz sınıf düzeyi.');
@@ -4744,7 +4786,7 @@ function gorunumAyarlar(gelismis) {
 const PAKET_SURUM = 1;
 // Sonuç paketi, öğrenci paketinden ayrı bir sürüm numarası taşır: ikisi farklı zamanlarda
 // değişebilir, birini bozan bir format değişikliği diğerini gereksiz yere geçersiz kılmasın.
-const SONUC_PAKET_SURUM = 3;
+const SONUC_PAKET_SURUM = 4;
 const SONUC_KONU_AD_UST_SINIR = 160;
 // Bulut senkronizasyonu için kalıcı kimlikler: bir kere üretilir, paket her yeniden
 // oluşturulduğunda aynı kalır (öğrencinin Firestore'daki yuvası değişmez). syncId Firestore
@@ -4919,6 +4961,7 @@ function bulutSonucPaketiniYerellestir(veri) {
     no: veri.ogrenciNo, ad: veri.ogrenciAd, sube: veri.ogrenciSube,
     tarih: veri.paket.tarih, olusturmaTs: veri.paket.olusturmaTs,
     calisma: veri.paket.calisma, etkinlik: veri.paket.etkinlik,
+    denemeler: veri.paket.denemeler, denemeSure: veri.paket.denemeSure,
     kayit: kayitYerel, konular: veri.paket.konular, konuAnlatilmadi: veri.paket.konuAnlatilmadi || [], haftaDuzeni: veri.paket.haftaDuzeni
   };
 }
@@ -4978,6 +5021,7 @@ async function ogrenciHesabindanYukle(ad, no) {
     veriyiHazirla(yeni);
     birlesme = sunucuPaketi ? sonucPaketiUygula(sunucuPaketi, 0) : { eklenen: 0 };
     if (yerelPaket) sonucPaketiUygula(yerelPaket, 0);
+    denemeOkulUygula(0, yuva.denemeOkul);
     EK.ogr = 0; EK.sekme = 'plan'; EK.hafta = null;
     if (!(await kaydet(true))) throw new Error('Birleştirilen öğrenci verisi bu cihaza kaydedilemedi. Sayfayı kapatmadan yeniden deneyin.');
   } catch (e) {
@@ -5084,6 +5128,8 @@ function sonucPaketi(sinir) {
   return { tur: 'yks-sonuc', surum: SONUC_PAKET_SURUM, katalogImza: KATALOG_IMZA,
            no: o.no, ad: o.ad, sube: o.sube, tarih: bugunNo(), olusturmaTs: olusturmaTs,
            ...(o.ogrenciBulutId ? {ogrenciBulutId:o.ogrenciBulutId} : {}),
+           denemeler: JSON.parse(JSON.stringify(o.denemeler || [])),
+           denemeSure: JSON.parse(JSON.stringify(o.denemeSure || [])),
            etkinlik: o.etkinlik ? JSON.parse(JSON.stringify(o.etkinlik)) : undefined,
            kayit: kayit, konular: konular, calisma: ogrenciMi() && o.ogrenciBulutId ? ogrenciCalismaPaketi() : undefined,
            haftaDuzeni: o.haftaDuzeni ? JSON.parse(JSON.stringify(o.haftaDuzeni)) : undefined,
@@ -5162,8 +5208,8 @@ function kullaniciKonusuTam(dersIdx, ad, dersAd, sinif = 12) {
 // hedefSi göndermez ve aşağıdaki numara/ad eşleştirmesini kullanmaya devam eder.
 function sonucPaketiUygula(pk, hedefSi) {
   if (!pk || pk.tur !== 'yks-sonuc') throw new Error('Bu dosya bir sonuç paketi değil.');
-  if (pk.surum !== 1 && pk.surum !== 2 && pk.surum !== SONUC_PAKET_SURUM) throw new Error('Bu sonuç paketi bu uygulama sürümüyle uyumlu değil ' +
-    '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', desteklenen: 1, 2 veya ' + SONUC_PAKET_SURUM +
+  if (pk.surum !== 1 && pk.surum !== 2 && pk.surum !== 3 && pk.surum !== SONUC_PAKET_SURUM) throw new Error('Bu sonuç paketi bu uygulama sürümüyle uyumlu değil ' +
+    '(paket sürümü: ' + (pk.surum === undefined ? 'belirtilmemiş' : pk.surum) + ', desteklenen: 1, 2, 3 veya ' + SONUC_PAKET_SURUM +
     '). Öğrenciden güncel bir uygulama ile oluşturulmuş bir dosya isteyin.');
   if (pk.katalogImza && pk.katalogImza !== KATALOG_IMZA)
     throw new Error('Sonuç paketi farklı bir konu kataloğuyla oluşturulmuş.');
@@ -5192,6 +5238,9 @@ function sonucPaketiUygula(pk, hedefSi) {
   }
 
   if (pk.etkinlik !== undefined) etkinlikDogrula(pk.etkinlik);
+  const birlesenDenemeler = pk.denemeler === undefined ? null : denemeBirlestir(D.ogr[si].denemeler, pk.denemeler);
+  if (pk.denemeler?.some(r => !r.id.startsWith('m:'))) throw new Error('Öğrenci paketinde öğretmen denemesi olamaz.');
+  const birlesenSureler = pk.denemeSure === undefined ? null : denemeBirlestir(D.ogr[si].denemeSure, pk.denemeSure, true);
 
   // 1) Konu çözüm planı + tam doğrulama — bu adımda D'ye hiçbir şey yazılmaz. Gönderenin
   // "ki" numarası yalnızca kendi cihazında anlamlıydı; katalog dışı her numara burada
@@ -5228,7 +5277,7 @@ function sonucPaketiUygula(pk, hedefSi) {
     finally { D = onceki; }
   }
   const sinavGunu = gunNo(D.ayar.sinav);
-  if (pk.surum === 3) {
+  if (pk.surum >= 3) {
     if (!Number.isInteger(pk.tarih) || pk.tarih > bugunNo())
       throw new Error('Sonuç paketinde geçersiz rapor tarihi var.');
     if (!Number.isSafeInteger(pk.olusturmaTs) || pk.olusturmaTs <= 0)
@@ -5353,6 +5402,8 @@ function sonucPaketiUygula(pk, hedefSi) {
   resetKonular.forEach(ki => kartiYenidenHesapla(si, ki));
   if (pk.calisma) ogrenciCalismasiniUygula(pk.calisma, si);
   if (pk.etkinlik) D.ogr[si].etkinlik = etkinlikBirlestir(D.ogr[si].etkinlik, pk.etkinlik);
+  if (birlesenDenemeler) D.ogr[si].denemeler = birlesenDenemeler;
+  if (birlesenSureler) D.ogr[si].denemeSure = birlesenSureler;
   return { ad: D.ogr[si].ad, eklenen: yeni.length, atlanan: pk.kayit.length - yeni.length, bilinmeyenKonu: 0 };
 }
 
@@ -5361,7 +5412,7 @@ function sonucPaketiUygula(pk, hedefSi) {
 function ogrenciCalismaPaketi() {
   const kopya = Object.assign({}, D);
   delete kopya.ogrSonEsitlenen;
-  kopya.ogr = D.ogr.map(o => { const k = {...o}; delete k.etkinlik; return k; });
+  kopya.ogr = D.ogr.map(o => { const k = {...o}; delete k.etkinlik; delete k.denemeler; delete k.denemeOkul; delete k.denemeSure; delete k.denemeYayinBekliyor; return k; });
   delete kopya.ogrTaslak; // gelecekteki hesaplama önbelleği; programdan yeniden üretilir
   return { ts: +D.ogrCalismaTs || +D.ts || Date.now(), veri: JSON.stringify(kopya) };
 }
@@ -5382,7 +5433,12 @@ function ogrenciCalismasiniUygula(calisma, si) {
   try {
     D = kopya;
     const o = D.ogr[si], kaynak = y.ogr[0], harita = {}, eskiHafiza=o.hafizaSeviyesi||'normal', eskiAyt=!!o.aytOncelik;
-    const dahaYeni = calisma.ts > (+o.ogrCalismaTs || (ogrenciMi() ? +D.ogrCalismaTs || +D.ts || 0 : 0));
+    // Student saves advance the notebook clock; received work also has a per-student
+    // clock. An older imported clock must not hide a newer local edit.
+    const yerelTs = ogrenciMi()
+      ? Math.max(+o.ogrCalismaTs || 0, +D.ogrCalismaTs || +D.ts || 0)
+      : +o.ogrCalismaTs || 0;
+    const dahaYeni = calisma.ts > yerelTs;
     const cev = ki => {
       ki = +ki;
       if (!Number.isSafeInteger(ki) || ki < 0) throw new Error('Çalışma yedeğinde geçersiz konu var.');
@@ -5429,6 +5485,8 @@ function ogrenciCalismasiniUygula(calisma, si) {
       if (kaynak.otoTelafiHaric) o.otoTelafiHaric = kaynak.otoTelafiHaric.map(cev);
       if (kaynak.otoTelafiEklenen) o.otoTelafiEklenen = kaynak.otoTelafiEklenen.map(x => Object.assign({}, x, {ki:cev(x.ki)}));
       o.ogrCalismaTs = calisma.ts;
+      // An idle device must forward received work with its original version.
+      if (ogrenciMi()) D.ogrCalismaTs = calisma.ts;
     }
     if(eskiHafiza!==(o.hafizaSeviyesi||'normal'))hafizaKartlariniYenile(si);
     if(eskiAyt!==!!o.aytOncelik)Object.keys(D.ogrTaslak||{}).forEach(k=>{if(+k.split('|')[0]===si)delete D.ogrTaslak[k];});
@@ -5990,7 +6048,8 @@ async function bulutBaglantisiniSifirla(si) {
         // ogrenciBulutId KOPYALANIR, asla yeniden üretilmez — rotasyonlar arasında sabit
         // kalması bu alanın tüm amacı.
         ogretmenUid: kullanici.uid, ogrenciNo: veri.ogrenciNo, ogrenciAd: veri.ogrenciAd, ogrenciSube: veri.ogrenciSube,
-        ogrenciBulutId: veri.ogrenciBulutId, bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif'
+        ogrenciBulutId: veri.ogrenciBulutId, bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif',
+        ...(veri.denemeOkul !== undefined ? {denemeOkul:veri.denemeOkul} : {})
       });
       return { zatenBos: false };
     });
@@ -6021,7 +6080,7 @@ async function sunucuyaGonder(olay) {
   const o = D.ogr[0] || {};
   if (!o.syncId) throw new Error('Bu cihaz bir öğretmen paketiyle kurulmadığı için buluta gönderemez. Dosyayla gönderin.');
   // Updated clients use the read/merge/write transaction for manual sends too.
-  if (ogrenciMi() && o.etkinlik) {
+  if (ogrenciMi() && (o.etkinlik || o.denemeler?.length || o.denemeSure?.length)) {
     const r = await ogrenciEsitlemeBosalt();
     if (!r || r.tur !== 'tamam') throw new Error(r?.mesaj || 'Eşitleme henüz tamamlanmadı.');
     return D.log.length;
@@ -6121,7 +6180,7 @@ async function ogrenciEsitlemeyiDene(cikisIcin) {
           BULUT_YAZMA_ZAMAN_ASIMI, 'Öğretmen bağlantısı henüz kurulamadı.');
         if (D !== defter || D.ogr[0].syncId !== syncId) return;
       }
-      let uzakPaket = null, imza = null;
+      let uzakPaket = null, uzakDeneme = undefined, imza = null;
       // Transaction: başka cihaz aynı anda yazarsa güncel sunucu kaydıyla tekrar
       // birleştir. Callback uygulama durumuna dokunmaz; yerel kopyada paket üretir.
       await sureSinirli(window.bulut.runTransaction(window.bulut.db, async tx => {
@@ -6133,18 +6192,21 @@ async function ogrenciEsitlemeyiDene(cikisIcin) {
             (defter.ogr[0].ogrenciBulutId && veri.ogrenciBulutId !== defter.ogr[0].ogrenciBulutId))
           throw new Error('Öğretmen bağlantısı doğrulanamadı.');
         uzakPaket = bulutSonucPaketiniYerellestir(veri);
+        uzakDeneme = veri.denemeOkul;
         const kopya = JSON.parse(JSON.stringify(defter));
         let pk;
         try {
           D = kopya;
           if (uzakPaket) sonucPaketiUygula(uzakPaket, 0);
+          denemeOkulUygula(0, uzakDeneme);
           ogrenciOtomasyonHazirla();
           pk = sonucPaketi(); imza = ogrenciEsitlemeImzasi();
         } finally { D = defter; }
         const yaz = { bagliUid: kullanici.uid, sunucuTs: Date.now(),
           istemciOlay: {tur:'plan-baslatildi',hafta:buHafta(),ts:Date.now()} };
-        if (pk.kayit.length || (pk.konuAnlatilmadi || []).length || pk.haftaDuzeni || pk.calisma || pk.etkinlik) yaz.paket = {
+        if (pk.kayit.length || (pk.konuAnlatilmadi || []).length || pk.haftaDuzeni || pk.calisma || pk.etkinlik || pk.denemeler.length || pk.denemeSure.length) yaz.paket = {
           tur: pk.tur, surum: pk.surum, katalogImza: pk.katalogImza, no: pk.no, ad: pk.ad, sube: pk.sube,
+          denemeler: pk.denemeler, denemeSure: pk.denemeSure,
           tarih: pk.tarih, olusturmaTs: pk.olusturmaTs, konular: pk.konular, ...(pk.etkinlik ? {etkinlik:pk.etkinlik} : {}), ...(pk.calisma ? {calisma:pk.calisma} : {}),
           kayit: pk.kayit.map(k => ({g:k[0],k:k[1],d:k[2],s:k[3],n:k[4],t:k[5]})), konuAnlatilmadi: pk.konuAnlatilmadi || [], ...(pk.haftaDuzeni ? {haftaDuzeni:pk.haftaDuzeni} : {})
         };
@@ -6154,6 +6216,8 @@ async function ogrenciEsitlemeyiDene(cikisIcin) {
       }), BULUT_YAZMA_ZAMAN_ASIMI, 'Eşitleme henüz tamamlanmadı.');
       if (D !== defter || D.ogr[0].syncId !== syncId) return;
       if (uzakPaket) sonucPaketiUygula(uzakPaket, 0);
+      denemeOkulUygula(0, uzakDeneme);
+      denemeDinlemeyiBaslat();
       ogrenciOtomasyonHazirla();
       D.ogrSonEsitlenen = imza; OGRENCI_SYNC_DENEME = 0;
       localStorage.setItem('yks_veri', JSON.stringify(D));
@@ -6249,6 +6313,7 @@ function cikisTaslakHatasi() {
   return '';
 }
 function cikisArkaPlaniDurdur() {
+  denemeDinlemeyiDurdur(); DENEME_FORM=null; DENEME_IMPORT=null;
   if(bulutYedekZamani!==null)clearTimeout(bulutYedekZamani);bulutYedekZamani=null;
   if(OGRENCI_SYNC_ZAMAN!==null)clearTimeout(OGRENCI_SYNC_ZAMAN);OGRENCI_SYNC_ZAMAN=null;
   ogretmenDinlemeyiDurdur();
@@ -6496,15 +6561,15 @@ function ogretmenDinlemeyiBaslat(zorla) {
         EK.ogretmenSyncDurum = 'Öğrenci bağlantısı eşleşmedi; sonuçlar alınmadı.'; rayCiz(); return;
       }
       try {
-        if (!veri.paket || !veri.bagliUid) { etkinlikCanliDurum(id, 'eski'); return; }
         const once = JSON.stringify(D);
-        const r = sonucPaketiUygula(bulutSonucPaketiniYerellestir(veri), si);
-        etkinlikCanliDurum(id, veri.paket.etkinlik ? 'tamam' : 'eski');
+        denemeOkulUygula(si, veri.denemeOkul);
+        const r = veri.paket && veri.bagliUid ? sonucPaketiUygula(bulutSonucPaketiniYerellestir(veri), si) : {ad:D.ogr[si].ad};
+        etkinlikCanliDurum(id, veri.paket?.etkinlik ? 'tamam' : 'eski');
         if (JSON.stringify(D) === once) return;
         EK.ogretmenSyncDurum = r.ad + ': sunucudaki çalışma alındı';
         // Açık sonuç/ayar alanlarındaki yazıyı silme. Diğer ekranlar güncellenir.
         const odak = document.activeElement;
-        if (!PENCERE && !DISARI_AKTAR && !['giris','ayarlar','kurtarma'].includes(EK.sekme) &&
+        if (!PENCERE && !DISARI_AKTAR && !['giris','ayarlar','kurtarma'].includes(EK.sekme) && !DENEME_FORM && !DENEME_IMPORT &&
             !/^(INPUT|TEXTAREA|SELECT)$/.test(odak && odak.tagName || '')) ciz();
         else rayCiz();
         kaydet(true).then(tamam => {
@@ -6519,6 +6584,7 @@ function ogretmenDinlemeyiBaslat(zorla) {
 }
 window.bulutDegisti = () => {
   if (!D || CIKIS_DURUMU) return;
+  denemeDinlemeyiDurdur(); denemeDinlemeyiBaslat();
   if (rehberMi()) { ogretmenDinlemeyiBaslat(true); bulutYedekPlanla(); }
   else { ogretmenDinlemeyiDurdur(); if (ogrenciMi()) ogrenciEsitlemePlanla(0, true); }
 };
@@ -7915,8 +7981,8 @@ function gorunumEtkinlik() {
 // ---------------------------------------------------------------- çizim + olaylar
 const SEKME_REHBER = [['takip', 'Haftalık öğrenci takibi'], ['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
                   ['ogrenciler', 'Öğrenciler'], ['konuplani', 'Konu Planı'], ['harita', 'Haftalar Haritası'],
-                  ['kurtarma', 'Geçmiş plan kurtar'], ['anlasma', 'Anlaşma ve rutin'], ['rapor', 'Karne'], ['ayarlar', 'Ayarlar']];
-const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['rapor', 'Karnem'], ['ayarlar', 'Ayarlar']];
+                  ['kurtarma', 'Geçmiş plan kurtar'], ['anlasma', 'Anlaşma ve rutin'], ['denemeler', 'Denemeler'], ['rapor', 'Karne'], ['ayarlar', 'Ayarlar']];
+const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemelerim'], ['rapor', 'Karnem'], ['ayarlar', 'Ayarlar']];
 const SEKMELER = () => ogrenciMi() ? SEKME_OGRENCI : SEKME_REHBER;
 
 function rayCiz() {
@@ -7989,6 +8055,7 @@ function hataEkraniGoster(e) {
   window.scrollTo(0, 0);
 }
 function cizIc() {
+  denemeDinlemeyiBaslat();
   if (rehberMi()) ogretmenDinlemeyiBaslat();
   if (D && !D.rol) { document.getElementById('ray').innerHTML = '';
     document.getElementById('ana').innerHTML = gorunumKurulum(); window.scrollTo(0, 0); return; }
@@ -8035,6 +8102,7 @@ function cizIc() {
     EK.sekme === 'konuplani' ? gorunumKonuPlani() :
     EK.sekme === 'harita' ? gorunumHaritasi() :
     EK.sekme === 'anlasma' ? gorunumAnlasma() :
+    EK.sekme === 'denemeler' ? gorunumDenemeler() :
     EK.sekme === 'rapor' ? gorunumRapor() : gorunumAyarlar();
   window.scrollTo(0, 0);
 }
@@ -9729,6 +9797,402 @@ document.addEventListener('change', ev => {
   else return;
   ciz();
 });
+
+// BEGIN DENEMELER
+// Embedded in index.html by scripts/embed-denemeler.cjs. No student data belongs here.
+const DENEME_DERSLER = {
+  TYT: [['turkce','Türkçe',40],['tarih','Tarih',5],['cografya','Coğrafya',5],['felsefe','Felsefe',5],['din','Din Kültürü',5],['sf','Ek Felsefe (muaf)',5],['mat','Matematik',30],['geo','Geometri',10],['fizik','Fizik',7],['kimya','Kimya',7],['biyoloji','Biyoloji',6]],
+  AYT: [['edebiyat','Edebiyat',24],['tarih1','Tarih-1',10],['cografya1','Coğrafya-1',6],['tarih2','Tarih-2',11],['cografya2','Coğrafya-2',11],['felsefe','Felsefe Grubu',12],['din','Din Kültürü',6],['sf','Ek Felsefe (muaf)',6],['mat','Matematik',30],['geo','Geometri',10],['fizik','Fizik',14],['kimya','Kimya',13],['biyoloji','Biyoloji',13]]
+};
+const DENEME_ALAN = {SAY:['mat','geo','fizik','kimya','biyoloji'],EA:['mat','geo','edebiyat','tarih1','cografya1'],'SÖZ':['edebiyat','tarih1','cografya1','tarih2','cografya2','felsefe','din','sf']};
+const denemeAdAnahtari = s => String(s || '').normalize('NFKC').toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim();
+const denemeSayi = x => Number(x).toLocaleString('tr-TR',{maximumFractionDigits:2});
+const denemeNet = d => d.dogru - d.yanlis / 4;
+const denemeKimligi = r => [denemeAdAnahtari(r.ad),r.tarih,r.tur,r.oturum,r.brans || ''].join('|');
+const denemeAlan = () => DENEME_ALAN[EK.denemeAlan] ? EK.denemeAlan : DENEME_ALAN[D.ogr[EK.ogr]?.alan] ? D.ogr[EK.ogr].alan : 'SAY';
+function denemeToplam(r, alan) {
+  return r.dersler.filter(d => r.tur !== 'AYT' || (DENEME_ALAN[alan || r.alan] || DENEME_ALAN.SAY).includes(d.kod)).reduce((s,d)=>s+denemeNet(d),0);
+}
+function denemeDogrula(liste) {
+  if (!Array.isArray(liste) || liste.length > 1500) throw new Error('Deneme listesi geçersiz veya 1500 kayıt sınırını aşıyor.');
+  const ids = new Set();
+  for (const r of liste) {
+    if (!r || typeof r !== 'object' || typeof r.id !== 'string' || !/^[mp]:/.test(r.id) || r.id.length > 600 || ids.has(r.id) ||
+        typeof r.ad !== 'string' || !r.ad.trim() || r.ad.length > 120 || !isoTarihGecerli(r.tarih) ||
+        !['TYT','AYT','BRANS'].includes(r.tur) || !['TYT','AYT'].includes(r.oturum) ||
+        (r.tur !== 'BRANS' && r.tur !== r.oturum) || !Object.hasOwn(DENEME_ALAN,r.alan) ||
+        !Number.isSafeInteger(r.ts) || r.ts <= 0 || r.ts > 100000000000000 ||
+        (r.silindi !== undefined && typeof r.silindi !== 'boolean') ||
+        (r.sure !== null && (!Number.isFinite(r.sure) || r.sure <= 0 || r.sure > 600)) ||
+        (r.puan !== null && (!Number.isFinite(r.puan) || r.puan < 0 || r.puan > 600)) ||
+        !Array.isArray(r.dersler) || !r.dersler.length || r.dersler.length > 13)
+      throw new Error('Geçersiz deneme kaydı.');
+    ids.add(r.id);
+    const kodlar = new Set();
+    for (const d of r.dersler) {
+      const ders = DENEME_DERSLER[r.oturum].find(x=>x[0]===d.kod);
+      const max = r.tur === 'BRANS' ? 200 : ['mat','geo'].includes(d.kod) ? 40 : ders?.[2];
+      if (!ders || kodlar.has(d.kod) || !Number.isInteger(d.dogru) || !Number.isInteger(d.yanlis) || d.dogru < 0 || d.yanlis < 0 || d.dogru+d.yanlis > max ||
+          (d.soru !== null && (!Number.isInteger(d.soru) || d.soru < 0 || d.soru > max || d.soru < d.dogru+d.yanlis)))
+        throw new Error('Denemenin doğru/yanlış/soru sayıları geçersiz.');
+      kodlar.add(d.kod);
+    }
+    if (r.tur === 'BRANS' && (r.dersler.length !== 1 || r.brans !== r.dersler[0].kod || !r.dersler[0].soru)) throw new Error('Branş denemesinde ders ve soru sayısı gerekli.');
+    if (r.tur !== 'BRANS') {
+      const toplam = kodlar => r.dersler.filter(d=>kodlar.includes(d.kod)).reduce((s,d)=>s+d.dogru+d.yanlis,0);
+      if (toplam(['mat','geo']) > 40 || (r.oturum==='TYT' && toplam(['tarih','cografya','felsefe','din','sf'])>20) ||
+          (r.oturum==='AYT' && toplam(['tarih2','cografya2','felsefe','din','sf'])>40)) throw new Error('Testteki toplam soru sınırı aşıldı.');
+    }
+  }
+  return liste;
+}
+function denemeSureDogrula(liste) {
+  if (!Array.isArray(liste) || liste.length > 3000 || new Set(liste.map(x=>x?.id)).size !== liste.length || liste.some(x=>!x || typeof x.id!=='string' || !/^[mp]:/.test(x.id) || x.id.length>600 || !Number.isSafeInteger(x.ts) || x.ts<=0 || x.ts>100000000000000 || (x.sure!==null && (!Number.isFinite(x.sure) || x.sure<=0 || x.sure>600)))) throw new Error('Deneme süreleri geçersiz.');
+  return liste;
+}
+function denemeBirlestir(a=[], b=[], sure=false) {
+  const dogrula = sure ? denemeSureDogrula : denemeDogrula;
+  dogrula(a); dogrula(b);
+  const map = new Map();
+  for (const r of [...a,...b]) {
+    const eski = map.get(r.id);
+    if (!eski || r.ts>eski.ts || r.ts===eski.ts && JSON.stringify(r)>JSON.stringify(eski)) map.set(r.id,r);
+  }
+  const sonuc=Array.from(map.values()).sort((a,b)=>a.id.localeCompare(b.id));
+  dogrula(sonuc); return JSON.parse(JSON.stringify(sonuc));
+}
+function denemeListe(si=EK.ogr) {
+  const o=D.ogr[si], okul=o?.denemeOkul || [], okulKimlik=new Set(okul.map(denemeKimligi));
+  return [...(o?.denemeler || []).filter(r=>!okulKimlik.has(denemeKimligi(r)) && !okul.some(x=>denemeAyniSonuc(x,r))),...okul].filter(r=>!r.silindi).map(r=>{
+    const sure=(o.denemeSure || []).find(x=>x.id===r.id);
+    return {...r,sure:sure && (r.id.startsWith('p:') || sure.ts>=r.ts)?sure.sure:r.sure};
+  }).sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.id.localeCompare(b.id));
+}
+function denemeOkulUygula(si, veri) {
+  if (veri === undefined) return false;
+  if (typeof veri !== 'string' || veri.length>300000) throw new Error('Okul deneme verisi geçersiz.');
+  const gelen=denemeDogrula(JSON.parse(veri));
+  if(gelen.some(r=>!r.id.startsWith('p:')))throw new Error('Okul deneme kimliği geçersiz.');
+  const o=D.ogr[si], yeni=denemeBirlestir(o.denemeOkul,gelen);
+  if (JSON.stringify(yeni)===JSON.stringify(o.denemeOkul || [])) return false;
+  o.denemeOkul=yeni; return true;
+}
+
+// Parse by PDF coordinates, never by a flattened token sequence: absent AYT nets
+// must not shift TYT values, totals or YKS points into another subject.
+function denemePdfCoz(sayfalar) {
+  const rapor={ad:'',tarih:'',satirlar:[],uyarilar:[]};
+  const merkez=t=>t.x+t.w/2;
+  for (const [pi,items] of sayfalar.entries()) {
+    const alan = etiket => {
+      const t=items.find(x=>x.s===etiket);
+      return t && items.filter(x=>x.x>t.x+t.w && Math.abs(x.y-t.y)<1).sort((a,b)=>a.x-b.x)[0]?.s;
+    };
+    const ad=alan('Sınav Adı:'), tarih=alan('Sınav Tarihi:'), m=tarih?.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (!ad || !m) throw new Error('Sınav adı/tarihi okunamadı. Metin içeren toplu sonuç PDF’si kullanın.');
+    const iso=m[3]+'-'+m[2]+'-'+m[1];
+    if (!isoTarihGecerli(iso) || rapor.ad && (rapor.ad!==ad || rapor.tarih!==iso)) throw new Error('PDF sayfalarında sınav bilgisi tutarsız.');
+    rapor.ad=ad;rapor.tarih=iso;
+    const dy=items.filter(x=>x.s==='D/Y').sort((a,b)=>a.x-b.x), birlesik=dy.length===25;
+    if (![12,25].includes(dy.length)) throw new Error('Bu PDF sütun düzeni desteklenmiyor (TYT veya TYT+AYT toplu sonuç listesi bekleniyor).');
+    const isim=items.find(x=>x.s==='NO/İsim'), sinif=items.find(x=>x.s==='Snf');
+    if(!isim || !sinif)throw new Error('Öğrenci kimlik sütunları okunamadı.');
+    const sutunlar=[...DENEME_DERSLER.TYT,...(birlesik?DENEME_DERSLER.AYT:[])];
+    const beklenen=['TÜR','TAR','COĞ','FEL','DİN KÜL','S.F','MAT','GEO','FİZ','KİM','BİY',...(birlesik?['EDB','TAR','COĞ','TAR','COĞ','FEL GR.','DİN KÜL','S.F','MAT','GEO','FİZ','KİM','BİY']:[])];
+    dy.slice(0,-1).forEach((t,i)=>{
+      if(!items.some(x=>x.s===beklenen[i] && Math.abs(merkez(x)-merkez(t))<3 && x.y>t.y && x.y<t.y+26))throw new Error('PDF ders başlıkları beklenen sırada değil.');
+    });
+    const ranks=items.filter(x=>x.x<isim.x && x.y<dy[0].y && /^\d+$/.test(x.s)).sort((a,b)=>b.y-a.y);
+    if(!ranks.length)throw new Error('PDF’de öğrenci satırı bulunamadı.');
+    for(let ri=0;ri<ranks.length;ri++) {
+      const rank=ranks[ri], ust=ri?(ranks[ri-1].y+rank.y)/2:rank.y+8, alt=ri+1<ranks.length?(rank.y+ranks[ri+1].y)/2:rank.y-9;
+      const row=items.filter(x=>x.y<ust && x.y>alt), names=row.filter(x=>x.x>=isim.x-1 && x.x<sinif.x-12).sort((a,b)=>b.y-a.y||a.x-b.x);
+      const nm=names.map(x=>x.s).join(' ').match(/^(\d+)\s*\/\s*(.+)$/);
+      if(!nm)throw new Error('Sayfa '+(pi+1)+', sıra '+rank.s+': öğrenci adı/numarası okunamadı.');
+      const cell=i=>row.filter(x=>Math.abs(merkez(x)-merkez(dy[i]))<Math.min(7,(i?merkez(dy[i])-merkez(dy[i-1]):20)/3));
+      const dersler=sutunlar.map((d,i)=>{
+        const c=cell(i), pairs=c.filter(x=>/^\d+\s*\/\s*\d+$/.test(x.s));
+        if(pairs.length!==1)throw new Error('Sayfa '+(pi+1)+', sıra '+rank.s+': '+d[1]+' D/Y okunamadı.');
+        const [dogru,yanlis]=pairs[0].s.split('/').map(Number), nets=c.filter(x=>/^-?\d+[.,]\d+$/.test(x.s));
+        if(nets.length>1 || nets.length && Math.abs(Number(nets[0].s.replace(',','.'))-(dogru-yanlis/4))>0.011)throw new Error('PDF neti ile doğru/yanlış sayısı uyuşmuyor.');
+        return {kod:d[0],dogru,yanlis,soru:null,netVar:!!nets.length};
+      });
+      const total=cell(dy.length-1).find(x=>/^-?\d+[.,]\d+$/.test(x.s));
+      if(!total || Math.abs(Number(total.s.replace(',','.'))-dersler.reduce((s,d)=>s+denemeNet(d),0))>0.011)throw new Error('PDF toplam net kontrolü başarısız; hiçbir sonuç aktarılmadı.');
+      for(const oturum of birlesik?['TYT','AYT']:['TYT']) {
+        const bolum=oturum==='TYT'?dersler.slice(0,11):dersler.slice(11);
+        // Missing session is printed as 0/0 in every column with no decimal nets.
+        if(!bolum.some(x=>x.netVar || x.dogru || x.yanlis))continue;
+        const puan=!birlesik ? row.filter(x=>x.x>dy.at(-1).x+12 && /^\d+[.,]\d+$/.test(x.s)).map(x=>Number(x.s.replace(',','.')))[0] ?? null : null;
+        rapor.satirlar.push({no:Number(nm[1]),ad:nm[2].trim(),oturum,puan,dersler:bolum.map(({netVar,...d})=>d),sayfa:pi+1});
+      }
+    }
+  }
+  if (!rapor.satirlar.length) throw new Error('PDF’de aktarılabilir sonuç yok.');
+  return rapor;
+}
+let DENEME_PDF_MODUL;
+async function denemePdfOku(file) {
+  if(file.size>15*1024*1024)throw new Error('PDF en fazla 15 MB olabilir.');
+  if(!DENEME_PDF_MODUL) DENEME_PDF_MODUL=import('https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/legacy/build/pdf.min.mjs').catch(e=>{DENEME_PDF_MODUL=null;throw new Error('PDF okuyucu yüklenemedi. İnternet bağlantısını kontrol edin.');});
+  const pdfjs=await DENEME_PDF_MODUL;
+  pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/legacy/build/pdf.worker.min.mjs';
+  const task=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false,useSystemFonts:true});
+  try {
+    const pdf=await task.promise;
+    if(pdf.numPages>100)throw new Error('PDF en fazla 100 sayfa olabilir.');
+    const pages=[];
+    for(let n=1;n<=pdf.numPages;n++) {
+      const page=await pdf.getPage(n), text=await page.getTextContent();
+      pages.push(text.items.filter(x=>x.str?.trim()).map(x=>({s:x.str.trim(),x:x.transform[4],y:x.transform[5],w:x.width,h:x.height})));
+      page.cleanup();
+    }
+    return {...denemePdfCoz(pages),dosya:file.name};
+  } finally { await task.destroy(); }
+}
+const denemeHedefKimligi = o => o ? [o.ogrenciBulutId || '',o.no,denemeAdAnahtari(o.ad),o.sube].join('|') : '';
+function denemeOgrenciEsle(row) {
+  const aday=D.ogr.map((o,i)=>({o,i})).filter(({o})=>!o.silindi && Number(o.no)===row.no && denemeAdAnahtari(o.ad)===denemeAdAnahtari(row.ad));
+  return aday.length===1?aday[0].i:-1;
+}
+function denemePdfKaydi(rapor,row) {
+  const r={id:'p:'+encodeURIComponent([denemeAdAnahtari(rapor.ad),rapor.tarih,row.oturum].join('|')),ad:rapor.ad,tarih:rapor.tarih,tur:row.oturum,oturum:row.oturum,brans:'',alan:'SAY',dersler:row.dersler,sure:null,puan:row.puan,ts:Date.now()};
+  denemeDogrula([r]);return r;
+}
+function denemeAyniSonuc(a,b) {
+  return denemeAdAnahtari(a.ad)===denemeAdAnahtari(b.ad) && a.oturum===b.oturum && a.tur===b.tur &&
+    JSON.stringify(a.dersler.map(d=>[d.kod,d.dogru,d.yanlis]).sort())===JSON.stringify(b.dersler.map(d=>[d.kod,d.dogru,d.yanlis]).sort());
+}
+let DENEME_IMPORT=null, DENEME_FORM=null, DENEME_ISLEM=false;
+function denemeImportHazirla(raporlar) {
+  // TYT-only reports carry the actual TYT date; combined reports repeat that session.
+  raporlar.sort((a,b)=>Number(a.satirlar.some(r=>r.oturum==='AYT'))-Number(b.satirlar.some(r=>r.oturum==='AYT')));
+  const gorulen=new Map();
+  for(const rapor of raporlar)for(const row of rapor.satirlar) {
+    row.si=denemeOgrenciEsle(row);row.secili=row.si>=0;row.hedefKimlik=denemeHedefKimligi(D.ogr[row.si]);
+    const r=denemePdfKaydi(rapor,row), key=row.no+'|'+denemeAdAnahtari(row.ad);
+    const once=[...(D.ogr[row.si]?.denemeOkul || []),...(gorulen.get(key)||[])];
+    const ayni=once.find(x=>x.id===r.id || denemeAyniSonuc(x,r));
+    row.uyari=ayni ? (denemeAyniSonuc(ayni,r)?'Tekrar sonuç; varsayılan olarak atlanır ('+ayni.tarih+').':'Mevcut sonuç değişecek; kontrol edip seçin.') : row.si<0?'Numara + ad eşleşmedi; öğrenci seçin.':'';
+    if(ayni)row.secili=false;
+    gorulen.set(key,[...(gorulen.get(key)||[]),r]);
+  }
+  return raporlar;
+}
+
+// Only the teacher writes this independent field. Students' result packets can
+// neither erase imported exams nor forge a teacher result. Transactions merge
+// individual IDs, so retries/other teacher tabs do not duplicate the import.
+async function denemeOkulYayinla(si) {
+  if(!rehberMi())throw new Error('Yalnızca rehber öğretmen yayınlayabilir.');
+  const b=window.bulut,u=b?.mevcutKullanici(),defter=D,o=D.ogr[si];
+  if(!b?.yapilandirilmis || !u || u.isAnonymous)throw new Error('Öğretmen Google hesabınızla buluta bağlanın.');
+  syncIdSagla(si);
+  if(!await kaydet(true))throw new Error('Öğrenci bağlantısı cihaza kaydedilemedi.');
+  const ayir=await oncedenAyir(si);
+  if(ayir?.tur==='hata')throw new Error(ayir.mesaj);
+  const coz=await bulutYuvasiCoz(si);
+  if(coz.hata || !coz.anlik)throw new Error(coz.hata || 'Öğrenci bulut bağlantısı yok.');
+  const syncId=o.syncId,ref=b.doc(b.db,'ogrenciler',syncId); let birlesen;
+  await sureSinirli(b.runTransaction(b.db,async tx=>{
+    const s=await tx.get(ref),v=s.exists()?s.data():null;
+    if(D!==defter || !rehberMi() || b.mevcutKullanici()?.uid!==u.uid || o.syncId!==syncId)throw new Error('Oturum değişti.');
+    if(!v || v.durum!=='aktif' || v.ogretmenUid!==u.uid || v.ogrenciBulutId!==o.ogrenciBulutId)throw new Error('Öğrenci bağlantısı eşleşmedi.');
+    birlesen=denemeBirlestir(v.denemeOkul?JSON.parse(v.denemeOkul):[],o.denemeOkul || []);
+    const veri=JSON.stringify(birlesen);
+    if(baytBoyu(veri)>300000 || baytBoyu(JSON.stringify({...v,denemeOkul:veri}))>BULUT_YEDEK_UST_SINIR)throw new Error('Deneme geçmişi sunucu sınırını aşıyor.');
+    tx.update(ref,{denemeOkul:veri});
+  }),BULUT_YAZMA_ZAMAN_ASIMI,'Denemeler sunucuya zamanında ulaşmadı. Yeniden yayınlamayı deneyin.');
+  if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');
+  o.denemeOkul=denemeBirlestir(o.denemeOkul,birlesen);
+  o.denemeYayinBekliyor=false;
+}
+let DENEME_DINLEYICI=null,DENEME_DINLEME_ANAHTAR='',DENEME_DINLEME_DEFTER=null;
+function denemeDinlemeyiDurdur() { if(DENEME_DINLEYICI)DENEME_DINLEYICI();DENEME_DINLEYICI=null;DENEME_DINLEME_ANAHTAR='';DENEME_DINLEME_DEFTER=null; }
+function denemeDinlemeyiBaslat() {
+  const b=window.bulut,u=b?.mevcutKullanici?.(),o=D?.ogr?.[0];
+  if(CIKIS_DURUMU || !ogrenciMi() || !o?.syncId || !b?.yapilandirilmis || !u || typeof b.onSnapshot!=='function'){denemeDinlemeyiDurdur();return;}
+  const key=u.uid+'|'+o.syncId;
+  if(DENEME_DINLEME_ANAHTAR===key && DENEME_DINLEME_DEFTER===D)return;
+  denemeDinlemeyiDurdur();DENEME_DINLEME_ANAHTAR=key;DENEME_DINLEME_DEFTER=D;const defter=D;
+  DENEME_DINLEYICI=b.onSnapshot(b.doc(b.db,'ogrenciler',o.syncId),s=>{
+    if(D!==defter || !ogrenciMi() || CIKIS_DURUMU || b.mevcutKullanici()?.uid!==u.uid || !s.exists() || s.metadata?.hasPendingWrites)return;
+    const v=s.data();if(v.durum!=='aktif' || v.bagliUid!==u.uid || v.ogrenciBulutId!==o.ogrenciBulutId)return;
+    try { if(denemeOkulUygula(0,v.denemeOkul)){
+      // Receiving teacher data is not a student edit. Advancing ogrCalismaTs here
+      // would let an idle device overwrite another device's newer working plan.
+      localStorage.setItem('yks_veri',JSON.stringify(D));
+      if(EK.sekme==='denemeler' && !DENEME_FORM)ciz();
+    } }
+    catch(e){EK.denemeDurum='Okul sonuçları alınamadı: '+e.message;}
+  },e=>{denemeDinlemeyiDurdur();EK.denemeDurum='Okul sonuçları alınamadı; bağlantı yenilendiğinde tekrar denenecek. '+(e.message||e);});
+}
+
+function denemeDetay(r) {
+  const o=D.ogr[EK.ogr],alan=denemeAlan();
+  return '<div class="dn-detay-bas"><div><b>'+kacis(r.ad)+'</b><div class="mini">'+kacis(r.tarih)+' · '+(r.id.startsWith('p:')?'Öğretmen aktarımı':'Elle girildi')+'</div></div><strong>'+denemeSayi(denemeToplam(r,alan))+' net</strong></div>'+
+    '<div class="dn-ozet mini"><span>Süre: '+(r.sure===null?'Girilmedi':denemeSayi(r.sure)+' dk')+'</span>'+(r.puan!==null?'<span>Rapor puanı: '+denemeSayi(r.puan)+'</span>':'')+'</div>'+
+    '<div class="dn-ders-detay">'+r.dersler.map(d=>'<div><span>'+kacis(DENEME_DERSLER[r.oturum].find(x=>x[0]===d.kod)[1])+'</span><b>'+denemeSayi(denemeNet(d))+'</b><small>'+d.dogru+' D / '+d.yanlis+' Y'+(d.soru===null?'':' / '+(d.soru-d.dogru-d.yanlis)+' B')+'</small></div>').join('')+'</div>'+
+    '<div class="arac">'+(ogrenciMi() || r.id.startsWith('p:')?'<button class="dugme" data-dn-sure="'+kacis(r.id)+'">Süreyi gir / düzelt</button>':'')+((r.id.startsWith('p:')?rehberMi():ogrenciMi())?'<button class="dugme" data-dn-edit="'+kacis(r.id)+'">Düzenle</button><button class="dugme" data-dn-sil="'+kacis(r.id)+'">Sil</button>':'')+'</div>';
+}
+function denemeGrafik(liste) {
+  if(!liste.length)return '<div class="dn-bos"><b>Henüz deneme yok</b><p>İlk sonucunu eklediğinde gelişimin burada görünecek.</p></div>';
+  const alan=denemeAlan(),metrik=EK.denemeMetrik || 'net', val=r=>metrik==='sure'?r.sure:metrik==='puan'?r.puan:denemeToplam(r,alan);
+  const points=liste.filter(r=>val(r)!==null);
+  if(!points.length)return '<div class="dn-bos">Bu ölçüm için veri yok. Denemeye süre veya rapor puanı ekleyin.</div>';
+  const width=Math.max(320,Math.min(900,(document.getElementById('ana')?.clientWidth||960)-56)),height=280,left=50,right=22,top=24,bottom=38,values=points.map(val),lo=Math.min(0,...values),hi=Math.max(...values,1),pad=Math.max((hi-lo)*.12,1),min=lo<0?lo-pad:0,max=hi+pad;
+  const dates=points.map(r=>gunNo(r.tarih)),first=Math.min(...dates),last=Math.max(...dates),x=i=>first===last?(points.length===1?width/2:left+i*(width-left-right)/(points.length-1)):left+(dates[i]-first)*(width-left-right)/(last-first),y=v=>height-bottom-(v-min)*(height-top-bottom)/(max-min);
+  const coords=points.map((r,i)=>{const same=dates.map((d,j)=>d===dates[i]?j:-1).filter(j=>j>=0),offset=first===last?0:(same.indexOf(i)-(same.length-1)/2)*Math.min(8,24/Math.max(1,same.length-1));return [Math.max(left,Math.min(width-right,x(i)+offset)),y(val(r))];}),line=coords.map(p=>p.join(',')).join(' '),ticks=Array.from({length:5},(_,i)=>min+(max-min)*i/4);
+  return '<div class="dn-chart"><svg viewBox="0 0 '+width+' '+height+'" role="group" aria-label="Deneme gelişim grafiği. Noktaları seçerek sonuçları inceleyin.">'+
+    ticks.map(t=>'<line x1="'+left+'" y1="'+y(t)+'" x2="'+(width-right)+'" y2="'+y(t)+'" class="dn-grid"/><text x="'+(left-8)+'" y="'+(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
+    '<polygon points="'+left+','+(height-bottom)+' '+line+' '+coords.at(-1)[0]+','+(height-bottom)+'" class="dn-area"/><polyline points="'+line+'" class="dn-line"/>'+
+    points.map((r,i)=>'<circle class="dn-dot" tabindex="0" role="button" aria-label="'+kacis(r.ad+' '+r.tarih+' '+denemeSayi(val(r))+(metrik==='sure'?' dakika':metrik==='puan'?' puan':' net'))+'" data-dn-dot="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad)+' · '+r.tarih+' · '+denemeSayi(val(r))+'</title></circle>').join('')+
+    '<text x="'+left+'" y="'+(height-10)+'">'+points[0].tarih+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?points.at(-1).tarih:'')+'</text></svg><p class="mini">Tarih → · '+(metrik==='sure'?'Tamamlama süresi (dk)':metrik==='puan'?'Rapor puanı':'Net')+' · Noktaya gel, dokun veya klavyeyle seç.</p></div>';
+}
+function denemeFormHtml() {
+  const f=DENEME_FORM;if(!f || f.si!==EK.ogr)return '';
+  const r=f.kayit,sec=(v,x)=>v===x?' selected':'';
+  const dersler=DENEME_DERSLER[r.oturum].filter(d=>r.tur==='BRANS'?d[0]===r.brans:r.tur!=='AYT'||DENEME_ALAN[r.alan].includes(d[0])||r.dersler.some(x=>x.kod===d[0]));
+  return '<form id="dnForm" class="kart dn-panel"><h2>'+(f.edit?'Denemeyi düzenle':'Deneme ekle')+'</h2><div class="dn-form-grid">'+
+    '<label>Deneme adı<input id="dnAd" required maxlength="120" value="'+kacis(r.ad)+'" placeholder="Yayın / deneme adı"></label><label>Tarih<input id="dnTarih" type="date" required value="'+r.tarih+'" max="'+isoDan(etkinlikBugun())+'"></label>'+
+    '<label>Tür<select id="dnTur">'+['TYT','AYT','BRANS'].map(t=>'<option value="'+t+'"'+sec(r.tur,t)+'>'+(t==='BRANS'?'Branş denemesi':t)+'</option>').join('')+'</select></label>'+
+    (r.tur==='BRANS'?'<label>Oturum<select id="dnOturum"><option'+sec(r.oturum,'TYT')+'>TYT</option><option'+sec(r.oturum,'AYT')+'>AYT</option></select></label><label>Branş<select id="dnBrans">'+DENEME_DERSLER[r.oturum].map(d=>'<option value="'+d[0]+'"'+sec(r.brans,d[0])+'>'+d[1]+'</option>').join('')+'</select></label>':'')+
+    (r.tur==='AYT'?'<label>Alan<select id="dnAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+sec(r.alan,a)+'>'+a+'</option>').join('')+'</select></label>':'')+
+    '<label>Tamamlama süresi (dk)<input id="dnSure" type="number" min="0.1" max="600" step="0.1" value="'+(r.sure??'')+'" placeholder="İsteğe bağlı"></label><label>Rapor puanı<input id="dnPuan" type="number" min="0" max="600" step="0.01" value="'+(r.puan??'')+'" placeholder="İsteğe bağlı"></label></div>'+
+    '<p class="mini">Net = doğru − yanlış / 4. Matematik ve geometri ayrı girilir; toplamı 40 soruyu geçemez. Ek felsefe yalnızca Din Kültürü muafiyeti içindir.</p><div class="dn-entry"><div class="dn-entry-row dn-entry-head"><b>Ders</b><b>Soru</b><b>Doğru</b><b>Yanlış</b><b>Net</b></div>'+
+    dersler.map(d=>{const v=r.dersler.find(x=>x.kod===d[0])||{soru:d[2],dogru:0,yanlis:0};return '<div class="dn-entry-row" data-dn-ders="'+d[0]+'"><label>'+d[1]+'</label>'+['soru','dogru','yanlis'].map(k=>'<input aria-label="'+d[1]+' '+k+'" data-dn-value="'+k+'" type="number" min="0" max="200" step="1" required value="'+(v[k]??d[2])+'">').join('')+'<output>'+denemeSayi(denemeNet(v))+'</output></div>';}).join('')+'</div><p id="dnFormHata" role="alert"></p><div class="arac"><button class="dugme birincil" type="submit">Denemeyi kaydet</button><button class="dugme" type="button" id="dnVazgec">Vazgeç</button></div></form>';
+}
+function denemeImportHtml() {
+  if(!DENEME_IMPORT || !rehberMi())return '';
+  return '<section class="kart dn-panel"><h2>Aktarmadan önce kontrol et</h2><p class="mini">Numara ve ad birlikte eşleştirilir. Tekrar sonuçlar işaretlenmez. Tarih farklı olsa da aynı adlı ve aynı D/Y sonuçlu sınav tekrar kabul edilir; gerekiyorsa elle seçebilirsiniz. PDF’de süre yoktur.</p>'+
+    DENEME_IMPORT.map((p,pi)=>'<div class="dn-import"><b>'+kacis(p.dosya || p.ad)+'</b><div class="arac"><label>Sınav adı <input data-dn-rapor="'+pi+'" data-alan="ad" maxlength="120" value="'+kacis(p.ad)+'"></label><label>Tarih <input type="date" data-dn-rapor="'+pi+'" data-alan="tarih" value="'+p.tarih+'"></label></div><div class="dn-scroll"><table><thead><tr><th>Aktar</th><th>PDF öğrencisi</th><th>Hedef öğrenci</th><th>Oturum</th><th>Net</th><th>Kontrol</th></tr></thead><tbody>'+p.satirlar.map((r,ri)=>'<tr><td><input type="checkbox" aria-label="'+kacis(r.ad+' '+r.oturum+' aktar')+'" data-dn-import="'+pi+':'+ri+'"'+(r.secili?' checked':'')+'></td><td>'+r.no+' · '+kacis(r.ad)+'</td><td><select aria-label="Hedef öğrenci" data-dn-match="'+pi+':'+ri+'"><option value="-1">Eşleşmedi</option>'+canliOgrenciler().map(si=>'<option value="'+si+'"'+(si===r.si?' selected':'')+'>'+kacis(D.ogr[si].no+' · '+D.ogr[si].ad)+'</option>').join('')+'</select></td><td>'+r.oturum+'</td><td>'+denemeSayi(denemeToplam(denemePdfKaydi(p,r),D.ogr[r.si]?.alan || 'SAY'))+'</td><td>'+kacis(r.uyari || 'Hazır')+'</td></tr>').join('')+'</tbody></table></div></div>').join('')+
+    '<p class="mini">AYT neti öğrencinin alanına göre hesaplanır; bütün ders ayrıntıları saklanır. Birleşik rapordaki YKS puanı, AYT puanı olarak alınmaz.</p><div class="arac"><button class="dugme birincil" id="dnImportKaydet">Seçilen sonuçları kaydet ve yayınla</button><button class="dugme" id="dnImportIptal">Vazgeç</button></div></section>';
+}
+function gorunumDenemeler() {
+  const tur=EK.denemeTur || 'TYT',oturum=EK.denemeOturum || 'TYT',brans=EK.denemeBrans || DENEME_DERSLER[oturum][0][0],alan=denemeAlan(),tum=denemeListe();
+  let liste=tum.filter(r=>r.tur===tur && (tur!=='BRANS'||r.oturum===oturum && r.brans===brans));
+  if(tur==='AYT')liste=liste.filter(r=>r.id.startsWith('p:') || r.alan===alan);
+  if(EK.denemeBas)liste=liste.filter(r=>r.tarih>=EK.denemeBas);if(EK.denemeSon)liste=liste.filter(r=>r.tarih<=EK.denemeSon);
+  const netler=liste.map(r=>denemeToplam(r,alan)),son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son;
+  return '<div class="baslik"><h1>Denemeler</h1><p>'+kacis(D.ogr[EK.ogr].ad)+' · Netini ve süreni birlikte takip et.</p></div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button></div>':'')+
+    '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
+    '<div class="dn-tabs" role="group" aria-label="Deneme türü">'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'</div>'+
+    '<div class="arac dn-filters">'+(tur==='BRANS'?'<label>Oturum<select id="dnFiltreOturum"><option'+(oturum==='TYT'?' selected':'')+'>TYT</option><option'+(oturum==='AYT'?' selected':'')+'>AYT</option></select></label><label>Branş<select id="dnFiltreBrans">'+DENEME_DERSLER[oturum].map(d=>'<option value="'+d[0]+'"'+(brans===d[0]?' selected':'')+'>'+d[1]+'</option>').join('')+'</select></label>':'')+(tur==='AYT'?'<label>Alan<select id="dnFiltreAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+(alan===a?' selected':'')+'>'+a+'</option>').join('')+'</select></label>':'')+
+    '<label>Grafik<select id="dnMetrik">'+[['net','Net'],['sure','Süre (dk)'],['puan','Rapor puanı']].map(([k,v])=>'<option value="'+k+'"'+((EK.denemeMetrik||'net')===k?' selected':'')+'>'+v+'</option>').join('')+'</select></label><label>Başlangıç<input type="date" id="dnBas" value="'+(EK.denemeBas||'')+'"></label><label>Bitiş<input type="date" id="dnSon" value="'+(EK.denemeSon||'')+'"></label><button class="dugme birincil" id="dnEkle">+ Deneme ekle</button></div>'+denemeFormHtml()+
+    '<div class="dn-stats"><div><span>Deneme</span><strong>'+liste.length+'</strong></div><div><span>Son net</span><strong>'+(son?denemeSayi(denemeToplam(son,alan)):'—')+'</strong></div><div><span>En yüksek net</span><strong>'+(liste.length?denemeSayi(Math.max(...netler)):'—')+'</strong></div><div><span>Ortalama</span><strong>'+(liste.length?denemeSayi(netler.reduce((a,b)=>a+b,0)/liste.length):'—')+'</strong></div></div>'+
+    '<section class="kart dn-panel">'+denemeGrafik(liste)+'<div id="dnDetay" aria-live="polite">'+(selected?denemeDetay(selected):'')+'</div></section>'+
+    '<section class="kart dn-panel"><h2>Deneme geçmişi</h2><div class="dn-scroll"><table class="dn-history"><thead><tr><th>Tarih / deneme</th><th>Net</th><th>Süre</th><th></th></tr></thead><tbody>'+liste.slice().reverse().map(r=>'<tr><td>'+r.tarih+'<br><b>'+kacis(r.ad)+'</b>'+(r.tur==='BRANS'?' · '+r.dersler[0].soru+' soru':'')+'</td><td>'+denemeSayi(denemeToplam(r,alan))+'</td><td>'+(r.sure===null?'—':denemeSayi(r.sure)+' dk')+'</td><td><button class="dugme" data-dn-dot="'+kacis(r.id)+'">Ayrıntı</button></td></tr>').join('')+'</tbody></table></div></section>';
+}
+function denemeFormOku() {
+  const r=DENEME_FORM.kayit,get=id=>document.getElementById(id)?.value;
+  return {...r,ad:get('dnAd').trim(),tarih:get('dnTarih'),sure:get('dnSure')===''?null:Number(get('dnSure')),puan:get('dnPuan')===''?null:Number(get('dnPuan')),dersler:Array.from(document.querySelectorAll('[data-dn-ders]')).map(el=>({kod:el.dataset.dnDers,...Object.fromEntries(Array.from(el.querySelectorAll('input')).map(x=>[x.dataset.dnValue,Number(x.value)]))}))};
+}
+async function denemeYerelKaydet(si,alan,yeni) {
+  const o=D.ogr[si],eski=o[alan];o[alan]=yeni;
+  if(!await kaydet(true)){o[alan]=eski;throw new Error('Cihaza kaydedilemedi. Değişiklik uygulanmadı; yeniden deneyin.');}
+}
+function denemeDurum(m) { EK.denemeDurum=m;const el=document.getElementById('dnDurum');if(el)el.textContent=m; }
+function denemeNoktaSec(id) {const r=denemeListe().find(x=>x.id===id),el=document.getElementById('dnDetay');if(r && el){EK.denemeSecili=id;el.innerHTML=denemeDetay(r);} }
+document.addEventListener('pointerover',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
+document.addEventListener('focusin',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
+document.addEventListener('keydown',ev=>{const el=ev.target.closest?.('circle[data-dn-dot]');if(el && ['Enter',' '].includes(ev.key)){ev.preventDefault();denemeNoktaSec(el.dataset.dnDot);} });
+document.addEventListener('input',ev=>{const row=ev.target.closest?.('[data-dn-ders]');if(row){const get=k=>Number(row.querySelector('[data-dn-value="'+k+'"]').value);row.querySelector('output').textContent=denemeSayi(get('dogru')-get('yanlis')/4);} });
+document.addEventListener('submit',async ev=>{
+  if(ev.target.id!=='dnForm')return;ev.preventDefault();if(DENEME_ISLEM)return;DENEME_ISLEM=true;
+  try {
+    if(!DENEME_FORM || DENEME_FORM.si!==EK.ogr)throw new Error('Öğrenci değişti; formu yeniden açın.');
+    const si=EK.ogr,defter=D;
+    const r={...denemeFormOku(),ts:Math.max(Date.now(),DENEME_FORM.kayit.ts+1,(D.ogr[si].denemeSure||[]).find(x=>x.id===DENEME_FORM.kayit.id)?.ts+1||0)};
+    if(r.tarih>isoDan(etkinlikBugun()))throw new Error('Gelecekteki bir tarihe sonuç girilemez.');denemeDogrula([r]);
+    const alan=r.id.startsWith('p:')?'denemeOkul':'denemeler';
+    if(alan==='denemeOkul' && !rehberMi())throw new Error('Öğretmen sonucu değiştirilemez.');
+    await denemeYerelKaydet(si,alan,denemeBirlestir(D.ogr[si][alan],[r]));
+    if(D!==defter)throw new Error('Oturum değişti.');
+    if(alan==='denemeOkul'){D.ogr[si].denemeYayinBekliyor=true;await kaydet(true);try{await denemeOkulYayinla(si);await kaydet(true);}catch(e){denemeDurum('Cihazda kayıtlı; yayın bekliyor: '+e.message);}}
+    if(D!==defter)return;
+    DENEME_FORM=null;EK.denemeSecili=r.id;ciz();bilgiVer('Deneme kaydedildi.');
+  } catch(e){const el=document.getElementById('dnFormHata');if(el)el.textContent=e.message;else denemeDurum(e.message);}
+  finally{DENEME_ISLEM=false;}
+});
+document.addEventListener('click',async ev=>{
+  const el=ev.target.closest?.('button,[data-dn-dot]');if(!el)return;
+  if(el.dataset.dnDot){denemeNoktaSec(el.dataset.dnDot);return;}
+  if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
+  if(el.id==='dnVazgec'){DENEME_FORM=null;ciz();return;}
+  if(el.id==='dnImportIptal'){DENEME_IMPORT=null;ciz();return;}
+  if((el.id==='dnEkle' || el.dataset.dnEdit) && !DENEME_ISLEM){
+    const tur=EK.denemeTur||'TYT',oturum=tur==='BRANS'?(EK.denemeOturum||'TYT'):tur;
+    const kayit=el.dataset.dnEdit?denemeListe().find(r=>r.id===el.dataset.dnEdit):{id:(rehberMi()?'p:manual-':'m:')+crypto.randomUUID(),ad:'',tarih:isoDan(etkinlikBugun()),tur,oturum,brans:tur==='BRANS'?(EK.denemeBrans||DENEME_DERSLER[oturum][0][0]):'',alan:denemeAlan(),dersler:[],sure:null,puan:null,ts:Date.now()};
+    if(!kayit || el.dataset.dnEdit && !(kayit.id.startsWith('p:')?rehberMi():ogrenciMi()))return;
+    DENEME_FORM={si:EK.ogr,edit:!!el.dataset.dnEdit,kayit:JSON.parse(JSON.stringify(kayit))};ciz();document.getElementById('dnAd')?.focus();return;
+  }
+  if(DENEME_ISLEM)return;
+  if(el.dataset.dnSure || el.dataset.dnSil){
+    const id=el.dataset.dnSure||el.dataset.dnSil,r=denemeListe().find(x=>x.id===id);if(!r)return;
+    try {
+      if(el.dataset.dnSure){
+        const v=prompt('Tamamlama süresi (dakika). Bilinmiyorsa boş bırakın.',r.sure??'');if(v===null)return;
+        const sure=v.trim()===''?null:Number(v.replace(',','.')),entry={id,sure,ts:Math.max(Date.now(),r.ts+1,(D.ogr[EK.ogr].denemeSure||[]).find(x=>x.id===id)?.ts+1||0)};
+        denemeSureDogrula([entry]);
+        if(rehberMi()) {
+          if(!id.startsWith('p:'))throw new Error('Öğrencinin kendi girdiği süreyi öğrenci güncelleyebilir.');
+          const si=EK.ogr;await denemeYerelKaydet(si,'denemeOkul',denemeBirlestir(D.ogr[si].denemeOkul,[{...r,sure,ts:Math.max(entry.ts,r.ts+1)}]));
+          D.ogr[si].denemeYayinBekliyor=true;await kaydet(true);await denemeOkulYayinla(si);await kaydet(true);
+        } else await denemeYerelKaydet(EK.ogr,'denemeSure',denemeBirlestir(D.ogr[EK.ogr].denemeSure,[entry],true));
+      } else {
+        if(!(id.startsWith('p:')?rehberMi():ogrenciMi()))return;if(!confirm(r.ad+' denemesini silmek istiyor musunuz?'))return;
+        const alan=id.startsWith('p:')?'denemeOkul':'denemeler';await denemeYerelKaydet(EK.ogr,alan,denemeBirlestir(D.ogr[EK.ogr][alan],[{...r,silindi:true,ts:Math.max(Date.now(),r.ts+1)}]));
+        if(alan==='denemeOkul'){D.ogr[EK.ogr].denemeYayinBekliyor=true;await kaydet(true);await denemeOkulYayinla(EK.ogr);await kaydet(true);}
+      }ciz();
+    }catch(e){denemeDurum(e.message);}return;
+  }
+  if(el.id==='dnImportKaydet' || el.id==='dnYayinla'){
+    if(!rehberMi())return;DENEME_ISLEM=true;el.disabled=true;const defter=D;
+    try {
+      if(el.id==='dnImportKaydet'){
+        const staged=new Map();
+        for(const p of DENEME_IMPORT || [])for(const row of p.satirlar.filter(r=>r.secili)){
+          if(!D.ogr[row.si] || D.ogr[row.si].silindi)throw new Error('Seçilen her satıra hedef öğrenci atayın.');
+          if(row.hedefKimlik!==denemeHedefKimligi(D.ogr[row.si]))throw new Error('Öğrenci listesi değişti. PDF’yi yeniden seçip eşleşmeleri kontrol edin.');
+          const r=denemePdfKaydi(p,row),old=staged.get(row.si)||D.ogr[row.si].denemeOkul||[],same=old.find(x=>x.id===r.id);
+          if(same)r.ts=Math.max(r.ts,same.ts+1);staged.set(row.si,denemeBirlestir(old,[r]));
+        }
+        if(!staged.size)throw new Error('Aktarılacak sonuç seçilmedi.');
+        const once=JSON.stringify(D.ogr);
+        for(const [si,list] of staged){D.ogr[si].denemeOkul=list;D.ogr[si].denemeYayinBekliyor=true;}
+        if(!await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kayıt başarısız; aktarım uygulanmadı.');}
+        DENEME_IMPORT=null;
+      }
+      const bekleyen=D.ogr.map((o,i)=>({o,i})).filter(x=>!x.o.silindi && x.o.denemeYayinBekliyor);let tamam=0;const errors=[];
+      for(const {o,i} of bekleyen){if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');denemeDurum('Yayınlanıyor: '+(tamam+errors.length+1)+' / '+bekleyen.length);try{await denemeOkulYayinla(i);tamam++;}catch(e){errors.push(o.ad+': '+e.message);}}
+      if(!await kaydet(true))throw new Error('Yayın durumu cihaza kaydedilemedi; tekrar deneyin.');
+      denemeDurum(tamam+' öğrenciye yayınlandı.'+(errors.length?' '+errors.length+' öğrenci cihazda kayıtlı, yayın bekliyor. '+errors.join(' · '):' Öğrenciler sonuçlarını otomatik görecek.'));ciz();
+    }catch(e){denemeDurum(e.message);}finally{DENEME_ISLEM=false;el.disabled=false;}return;
+  }
+});
+document.addEventListener('change',async ev=>{
+  const el=ev.target,id=el.id;
+  if(id==='dnPdf'){
+    if(!rehberMi() || DENEME_ISLEM)return;const files=Array.from(el.files||[]);if(!files.length)return;
+    if(files.length>10){denemeDurum('Bir defada en fazla 10 PDF seçin.');return;}
+    DENEME_ISLEM=true;el.disabled=true;const defter=D;
+    try{const raporlar=[];for(const file of files){denemeDurum('PDF okunuyor: '+file.name);raporlar.push(await denemePdfOku(file));}if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');DENEME_IMPORT=denemeImportHazirla(raporlar);denemeDurum('Önizleme hazır; henüz sonuç kaydedilmedi.');ciz();}
+    catch(e){denemeDurum('PDF aktarılamadı: '+e.message);}finally{DENEME_ISLEM=false;el.disabled=false;el.value='';}return;
+  }
+  if(el.dataset?.dnImport || el.dataset?.dnMatch){const [p,r]=(el.dataset.dnImport||el.dataset.dnMatch).split(':').map(Number),row=DENEME_IMPORT[p].satirlar[r];if(el.dataset.dnImport)row.secili=el.checked;else{row.si=Number(el.value);row.hedefKimlik=denemeHedefKimligi(D.ogr[row.si]);row.secili=row.si>=0;ciz();}return;}
+  if(el.dataset?.dnRapor!==undefined){DENEME_IMPORT[Number(el.dataset.dnRapor)][el.dataset.alan]=el.value;return;}
+  const filters={dnFiltreOturum:'denemeOturum',dnFiltreBrans:'denemeBrans',dnFiltreAlan:'denemeAlan',dnMetrik:'denemeMetrik',dnBas:'denemeBas',dnSon:'denemeSon'};
+  if(filters[id]){EK[filters[id]]=el.value;if(id==='dnFiltreOturum')EK.denemeBrans=DENEME_DERSLER[el.value][0][0];ciz();return;}
+  if(['dnTur','dnOturum','dnBrans','dnAlan'].includes(id) && DENEME_FORM){
+    const r=denemeFormOku();
+    if(id==='dnTur'){r.tur=el.value;r.oturum=el.value==='BRANS'?r.oturum:el.value;r.dersler=[];r.brans=r.tur==='BRANS'?DENEME_DERSLER[r.oturum][0][0]:'';}
+    if(id==='dnOturum'){r.oturum=el.value;r.brans=DENEME_DERSLER[r.oturum][0][0];r.dersler=[];}
+    if(id==='dnBrans'){r.brans=el.value;r.dersler=[];}
+    if(id==='dnAlan'){r.alan=el.value;r.dersler=r.dersler.filter(x=>DENEME_ALAN[r.alan].includes(x.kod));}
+    DENEME_FORM.kayit=r;ciz();
+  }
+});
+// END DENEMELER
 
 // ---------------------------------------------------------------- başlangıç
 (async function () {
