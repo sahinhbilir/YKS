@@ -2,7 +2,11 @@
 
 ## Current state
 
-Work is on branch `feat/mock-exam-tracking`, based on the repository default branch at commit `5df6f72`. The requested mock-exam workflow is implemented in the single-file app and is ready to be reviewed/merged after the commit containing this note.
+Work is on branch `feat/mock-exam-tracking`, based on the repository default branch at commit `5df6f72`. The feature is implemented and published in draft PR #21: https://github.com/sahinhbilir/YKS/pull/21. It has not been merged or deployed.
+
+The 2026-09-29 continuation resolved the outstanding save/print emulator failure. The initial PR CI passed the Node and browser jobs and all 75 security-rule checks, but timed out on `print-only work delivery` after the multi-device exam checks.
+
+`ogrenciCalismasiniUygula` preferred an old per-student work timestamp over a newer local save. It also failed to carry a received work timestamp into the student's outgoing packet. It now compares both student work clocks and preserves the received version when forwarding work. Teacher notebooks still use only the relevant student's clock. The exam listener continues to persist teacher results without advancing the student's work timestamp.
 
 ## User requirements covered
 
@@ -27,14 +31,20 @@ Work is on branch `feat/mock-exam-tracking`, based on the repository default bra
 - `test/mock-exam-browser.cjs` — Playwright desktop/mobile UI coverage.
 - `test/fixtures/mock-exam-pdf-items.json` — synthetic parser fixture; no real student data.
 - `test/firebase/firestore.test.mjs` and `test/firebase/save-print-flow.test.mjs` — emulator coverage, including teacher publication and multi-device behavior.
+- `index.html` (`ogrenciCalismasiniUygula`) and `test/cloud-sync-resilience.js` — work-version conflict fix and three focused regressions.
 
 ## Verification already completed
 
 - `node scripts/embed-denemeler.cjs --check`
 - `git diff --check`
 - `node test/mock-exam-regression.cjs` — 11 checks passed.
-- Existing Node regression suites, cloud-sync resilience, and Firestore rules suites passed before handoff.
+- `node test/cloud-sync-resilience.js` — 101 checks passed, including three new regressions. The two student timestamp checks were reproduced failing before the fix.
+- `node test/result-package-regression.js` — 20 checks passed.
+- All Node regression commands from `.github/workflows/verify.yml` passed on the continuation changes.
+- Full `test/firebase/save-print-flow.test.mjs` emulator run — all 26 checks passed, including live school results, personal results and duration, stale-device deletion, print delivery, logout, and recovery.
+- Full `test/firebase/firestore.test.mjs` emulator run — 75 passed, 0 failed.
 - Desktop and 390px Playwright checks passed during development, including manual entry, editing, graph keyboard interaction, branch/AYT separation, persistence, teacher matching, duplicate handling, publication failure, and retry.
+- The original PR browser CI job passed. Local Chromium could not start in the continuation environment; use the latest PR CI browser job to verify the continuation changes.
 - The three supplied PDFs were tested privately: 29 TYT; 29 TYT + 22 AYT in the combined report; 29 TYT in the readiness report. PDFs and extracted student data were not added to Git.
 
 ## Deployment order
@@ -45,17 +55,18 @@ Work is on branch `feat/mock-exam-tracking`, based on the repository default bra
 
 PDF parsing currently supports the supplied `DENEME SINAVI TOPLU SONUÇ LİSTESİ` coordinate layout. Scanned-image/OCR PDFs and unrelated publisher layouts fail clearly instead of being assigned incorrectly. PDF.js compatibility builds are loaded lazily from the pinned jsDelivr version.
 
-## Next AI should do
+## Verification commands and remaining work
 
-1. Rerun the full emulator command below and inspect the complete log, because the last run was interrupted after the first five legacy flow checks while the new multi-device exam checks were being added:
+Use Node.js 22 or later and Java 21 on `PATH`; the previous handoff's absolute runtime path was temporary. Install the pinned Firebase dependencies with `npm ci --prefix test/firebase`, then run:
 
-   ```bash
-   PATH="/workspace/scratch/763c9520cbc4/test-runtime/jdk-21.0.12.1+1-jre/bin:$PATH" \
-   test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test \
-   "node test/firebase/save-print-flow.test.mjs"
-   ```
+```bash
+node scripts/embed-denemeler.cjs --check
+node test/mock-exam-regression.cjs
+node test/cloud-sync-resilience.js
+test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/firestore.test.mjs"
+test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/save-print-flow.test.mjs"
+```
 
-2. If it passes, commit/push the branch and open the pull request. If it fails, fix only the failing regression and rerun the focused plus full suites.
-3. Review the diff for product wording and run the existing CI workflow after push.
+The existing `.github/workflows/verify.yml` runs all Node, desktop/mobile browser, and emulator suites on branch pushes and PR updates. Confirm its status on the latest PR head before merging. No additional feature work is identified in this handoff. Deployment and the teacher/two-student-device smoke check above remain release tasks.
 
 Do not add the supplied PDFs, generated PDF JSON, screenshots, emulator logs, or runtime downloads to the repository.

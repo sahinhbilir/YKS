@@ -5433,7 +5433,12 @@ function ogrenciCalismasiniUygula(calisma, si) {
   try {
     D = kopya;
     const o = D.ogr[si], kaynak = y.ogr[0], harita = {}, eskiHafiza=o.hafizaSeviyesi||'normal', eskiAyt=!!o.aytOncelik;
-    const dahaYeni = calisma.ts > (+o.ogrCalismaTs || (ogrenciMi() ? +D.ogrCalismaTs || +D.ts || 0 : 0));
+    // Student saves advance the notebook clock; received work also has a per-student
+    // clock. An older imported clock must not hide a newer local edit.
+    const yerelTs = ogrenciMi()
+      ? Math.max(+o.ogrCalismaTs || 0, +D.ogrCalismaTs || +D.ts || 0)
+      : +o.ogrCalismaTs || 0;
+    const dahaYeni = calisma.ts > yerelTs;
     const cev = ki => {
       ki = +ki;
       if (!Number.isSafeInteger(ki) || ki < 0) throw new Error('Çalışma yedeğinde geçersiz konu var.');
@@ -5480,6 +5485,8 @@ function ogrenciCalismasiniUygula(calisma, si) {
       if (kaynak.otoTelafiHaric) o.otoTelafiHaric = kaynak.otoTelafiHaric.map(cev);
       if (kaynak.otoTelafiEklenen) o.otoTelafiEklenen = kaynak.otoTelafiEklenen.map(x => Object.assign({}, x, {ki:cev(x.ki)}));
       o.ogrCalismaTs = calisma.ts;
+      // An idle device must forward received work with its original version.
+      if (ogrenciMi()) D.ogrCalismaTs = calisma.ts;
     }
     if(eskiHafiza!==(o.hafizaSeviyesi||'normal'))hafizaKartlariniYenile(si);
     if(eskiAyt!==!!o.aytOncelik)Object.keys(D.ogrTaslak||{}).forEach(k=>{if(+k.split('|')[0]===si)delete D.ogrTaslak[k];});
