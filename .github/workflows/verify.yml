@@ -61,6 +61,8 @@ jobs:
         run: node test/ayt-timetable-regression.js
       - name: Self-owned test accounts, bounded history and conflicts
         run: node test/test-account-regression.js
+      - name: Minute-based study budget and weekly cap
+        run: node test/minute-budget-regression.js
 
   photo-recovery-browser:
     name: Past plan recovery browser

@@ -1038,6 +1038,11 @@ function yedekDogrula(y) {
       throw new Error('Geçersiz öğrenci numarası: ' + (i + 1) + '. satır.');
     if (o.kap !== undefined && (!Number.isInteger(o.kap) || o.kap < 1 || o.kap > 12))
       throw new Error('Geçersiz günlük kapasite: ' + (i + 1) + '. satır.');
+    if (o.dakika !== undefined && (!o.dakika || typeof o.dakika !== 'object' || Array.isArray(o.dakika) ||
+        Object.keys(o.dakika).some(k => !['hi', 'hs', 'deneme'].includes(k)) ||
+        ['hi', 'hs'].some(k => !Number.isInteger(o.dakika[k]) || o.dakika[k] < 0 || o.dakika[k] > 600) ||
+        (o.dakika.deneme !== undefined && typeof o.dakika.deneme !== 'boolean')))
+      throw new Error('Geçersiz çalışma süresi: ' + (i + 1) + '. satır.');
     if (o.off !== undefined && (!Array.isArray(o.off) || o.off.some(g => !Number.isInteger(g) || g < 0 || g > 6)))
       throw new Error('Geçersiz tatil günü: ' + (i + 1) + '. satır.');
     if (o.hedef !== undefined && o.hedef !== null &&
@@ -1796,20 +1801,66 @@ function sonucBekliyor(si, ki, kart, due, hb, kurtarilan) {
 // çok haftaya yayılacak şekilde yerleştirilir — asla dolu bir güne zorlanmaz.
 function telafiGunuYuku(si, gun, yukTakip) {
   if (yukTakip[gun] === undefined) {
-    const hb = ogrenciHaftaBasi(si, gun);
-    yukTakip[gun] = (planHesapla(si, hb).gunYuk || [])[gun - hb] || 0;
+    const hb = ogrenciHaftaBasi(si, gun), p = planHesapla(si, hb);
+    yukTakip[gun] = ((dakikaModu(si) ? p.gunDakika : p.gunYuk) || [])[gun - hb] || 0;
   }
   return yukTakip[gun];
 }
 function telafiGunBul(si, baslangic, yukTakip, agirlik) {
-  const kap = Math.max(1, D.ogr[si].kap || 6);
+  const dk = dakikaModu(si), kap = Math.max(1, D.ogr[si].kap || 6);
+  // Dakika bütçesinde yük dakika olarak izlenir; bir test birimi D.ayar.soru soruluk testtir.
+  const pay = dk ? agirlik * soruDakikasi(D.ayar.soru) : agirlik;
+  const sigar = g => dk ? gunDakikaButcesi(si, g) : kap;
   let g = ilkUygunGun(si, baslangic);
   for (let i = 0; i < 120; i++) {                     // en fazla ~4 ay ileriye kadar bak
-    if (telafiGunuYuku(si, g, yukTakip) + agirlik <= kap) { yukTakip[g] += agirlik; return g; }
+    if (telafiGunuYuku(si, g, yukTakip) + pay <= sigar(g)) { yukTakip[g] += pay; return g; }
     g = ilkUygunGun(si, g + 1);
   }
-  yukTakip[g] = (yukTakip[g] || 0) + agirlik;
+  yukTakip[g] = (yukTakip[g] || 0) + pay;
   return g;
+}
+
+// --- dakika bütçesi
+// Kapasite test sayısı yerine dakikayla ölçülür: tekrar sorusu 50 sn, konu anlatımı 20 dk.
+// Günlük karışık soru hedefleri o günün süresinden önce ayrılır. Okul saatleri sayılmaz;
+// cumartesi okul denemesi (180 dk) haftalık toplama girer. Haftalık üst sınır 1760 dk:
+// Liu ve ark. (2023), Behavioral Sciences 13(3):237 — PISA 2018 verisinde haftalık toplam
+// öğrenme süresinin en verimli aralığı 1620–1760 dk.
+const SORU_SANIYE = 50, ANLATIM_DAKIKA = 20, DENEME_DAKIKA = 180, HAFTALIK_DAKIKA_SINIRI = 1760;
+const CUMARTESI = 5;
+const VARSAYILAN_DAKIKA = () => ({ hi: 120, hs: 180, deneme: true });
+function dakikaModu(si) {
+  const d = (D.ogr[si] || {}).dakika;
+  return d && typeof d === 'object' ? d : null;
+}
+function soruDakikasi(soru) { return (+soru || 0) * SORU_SANIYE / 60; }
+function isDakikasi(x) {
+  if (x.anlatim) return ANLATIM_DAKIKA;
+  if (x.serbest && x.birim === 'dakika') return +x.soru || 0;
+  return soruDakikasi(x.soru);
+}
+function karisikSoruDakikasi(si, gun) {
+  return GUNLUK_EK_SECENEKLER.reduce((a, [tur]) => a + soruDakikasi(gunlukEkSorusu(si, tur, gun)), 0);
+}
+// O gün planlanan işlere kalan dakika: dinlenme gününde 0; karışık soru hedefi önce düşülür.
+function gunDakikaButcesi(si, gun) {
+  const d = dakikaModu(si), o = D.ogr[si] || {};
+  if (!d || (o.off || []).includes(haftaGunu(gun))) return 0;
+  return Math.max(0, (haftaGunu(gun) >= CUMARTESI ? d.hs : d.hi) - karisikSoruDakikasi(si, gun));
+}
+// Bir haftanın ayarlanan toplamı (okul hariç, deneme dahil). Karışık sorular günlük sürenin içindedir.
+function haftalikDakika(d, off) {
+  let t = d.deneme === false ? 0 : DENEME_DAKIKA;
+  for (let g = 0; g < 7; g++) if (!(off || []).includes(g)) t += g >= CUMARTESI ? d.hs : d.hi;
+  return t;
+}
+function dakikaAyariHatasi(d, off) {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return 'Süre ayarı geçersiz.';
+  for (const k of ['hi', 'hs']) if (!Number.isInteger(d[k]) || d[k] < 0 || d[k] > 600) return 'Günlük süre 0–600 dakika arasında olmalı.';
+  if (d.deneme !== undefined && typeof d.deneme !== 'boolean') return 'Deneme ayarı geçersiz.';
+  const t = haftalikDakika(d, off);
+  if (t > HAFTALIK_DAKIKA_SINIRI) return 'Haftalık toplam ' + t + ' dk oluyor; en fazla ' + HAFTALIK_DAKIKA_SINIRI + ' dk olabilir.';
+  return '';
 }
 // öğrencinin/şubenin günlük telafi-anlatımı sınırı: bazı öğrenciler bir günde çok sayıda
 // "konu anlatımı" kaldıramaz, bazıları daha hızlı toparlamak ister — öğrenciye özel
@@ -2115,13 +2166,18 @@ function planHesapla(si, hb, derinlik, ham) {
       x.test = 1; x.soru = D.ayar.soru; x.mod = 'TYT kısa kontrol';
     }
   });
-  const haftaKapasitesi = Array.from({length:Math.max(0,hs-hb+1)},(_,g)=>hb+g).filter(g=>!off.includes(haftaGunu(g))).length * kap;
-  const yogun = dengeli && ogeler.reduce((n, x) => n + (x.test || 1), 0) > haftaKapasitesi;
+  // Dakika bütçesinde kapasite ve yük dakikayla, eski düzende test birimiyle ölçülür.
+  const dk = dakikaModu(si), butce = g => gunDakikaButcesi(si, g);
+  const calismaGunleri = Array.from({length:Math.max(0,hs-hb+1)},(_,g)=>hb+g).filter(g=>!off.includes(haftaGunu(g)));
+  const haftaKapasitesi = dk ? calismaGunleri.reduce((a, g) => a + butce(g), 0) : calismaGunleri.length * kap;
+  const yogun = dengeli && ogeler.reduce((n, x) => n + (dk ? isDakikasi(x) : (x.test || 1)), 0) > haftaKapasitesi;
+  // Hiçbir gün iki teste yetmiyorsa ilk ölçüm de tek test olur; yoksa iki testlik işler hiç sığmaz.
+  const tekTestlik = dk ? Math.max(0, ...calismaGunleri.map(butce)) < 2 * soruDakikasi(D.ayar.soru) : kap === 1;
   if (dengeli) ogeler.forEach(x => {
     if (x.pin || x.serbest || x.anlatim || (ov.soru || {})[planSlotAnahtari(x)]) return;
     // Yoğun haftada başarılı konuyu tamamen ertelemek yerine kısa bir testle koru.
     // Zayıf sonuç iki test olarak kalır; FSRS vadesi ve kartı değiştirilmez.
-    if ((yogun && x.kart && (x.kart.y === null ? x.kart.not === 4 : x.kart.y >= 80)) || kap === 1) {
+    if ((yogun && x.kart && (x.kart.y === null ? x.kart.not === 4 : x.kart.y >= 80)) || tekTestlik) {
       x.test = 1; x.soru = D.ayar.soru; x.mod = 'kısa tekrar';
     }
   });
@@ -2137,6 +2193,7 @@ function planHesapla(si, hb, derinlik, ham) {
 
   const gunler = [[], [], [], [], [], [], []];
   const yuk = dizi => dizi.reduce((a, y) => a + (y.test || 1), 0);
+  const dakikaYuk = dizi => dizi.reduce((a, y) => a + isDakikasi(y), 0);
   // "konu anlatımı" kısa bir video/okuma — tam bir test gibi günün soru kapasitesini
   // (kap) paylaşmaz, kendi ayrı günlük sınırı vardır (Ayarlar / öğrenci bazlı).
   const anlatimSayisi = dizi => dizi.reduce((a, y) => a + (y.anlatim ? 1 : 0), 0);
@@ -2162,15 +2219,20 @@ function planHesapla(si, hb, derinlik, ham) {
   // vadeli öğelerin ilerlettiği günden başlamak zorunda kalır — boş duran erken günler
   // (ör. bugünün hemen ertesi) atlanıp haftalarca sonrasına düşebilirler. Yerleştirmeden
   // önce gerçek vade sırasına göre sıralamak bunu düzeltir.
+  // Dakika bütçesinde anlatımlar ayrı havuzda değil; önce onlar yerleşir ki gecikmiş testler
+  // yeni öğrenmeyi haftalarca dışarıda bırakmasın. Kalan süreyi testler paylaşır.
   ogeler.filter(x => !x.pin).sort((a, b) =>
+    (dk ? Number(!a.anlatim) - Number(!b.anlatim) : 0) ||
     (aytOncelik ? aytPlanOnceligi(a,enErken) - aytPlanOnceligi(b,enErken) : 0) ||
     (dengeli && yogun && !aytOncelik ? Number(!a.kart) - Number(!b.kart) : 0) || a.due - b.due || (a.dsira || 0) - (b.dsira || 0) ||
     String(a.ki).localeCompare(String(b.ki))).forEach(x => {
     // Öncelikli tekrarın geç vadesi, daha erken boş günleri yeni konulara kapatmasın.
     let g = Math.max(x.due, enErken, dengeli || aytOncelik ? enErken : x.anlatim ? ilerleAnlatim : ilerle);
+    // Dakika bütçesinde anlatım da testlerle aynı süreyi paylaşır; günlük anlatım sayısı sınırı sürer.
     while (g <= hs && (off.indexOf(haftaGunu(g)) >= 0 ||
-           (x.anlatim ? anlatimSayisi(gunler[g - hb]) >= anlatimSiniriGun
-                      : yuk(gunler[g - hb]) + (x.test || 1) > kap))) g++;
+           (x.anlatim && anlatimSayisi(gunler[g - hb]) >= anlatimSiniriGun) ||
+           (dk ? dakikaYuk(gunler[g - hb]) + isDakikasi(x) > butce(g)
+               : !x.anlatim && yuk(gunler[g - hb]) + (x.test || 1) > kap))) g++;
     if (g > hs) { devreden++; if (!x.serbest) tasan.push(x.ki); return; }
     gunler[g - hb].push(x);
     if (x.anlatim) ilerleAnlatim = g; else ilerle = g;
@@ -2184,7 +2246,8 @@ function planHesapla(si, hb, derinlik, ham) {
   const sonDevreden = sabitli && ov.plan ? (ov.plan.devreden || 0) : devreden;
   return { gunler: gunler, devreden: sonDevreden, tasan: sonTasan, toplam: yerlesen, bekleyen: bekleyen,
            testToplam: gunler.reduce((a, d) => a + yuk(d), 0),
-           gunYuk: gunler.map(yuk), kap: kap, off: off, elle: ov };
+           gunYuk: gunler.map(yuk), kap: kap, off: off, elle: ov,
+           ...(dk ? { gunDakika: gunler.map(dakikaYuk), dakikaButce: gunler.map((_, g) => butce(hb + g)) } : {}) };
 }
 
 function haftaGecisiniKoru(si, hb, hs, gunler, ov) {
@@ -2780,6 +2843,11 @@ function gunlukEkliPlan(si, hb, p) {
       const soru = gunlukEkSorusu(si, tur, gun);
       if (soru) yeni.push({ki:'GUNLUK_' + tur + '_' + gun, serbest:true, gunlukEk:true, ad, dersAd, soru, test:0});
     });
+    // Dakika bütçesindeki cumartesi okul denemesi: haftalık toplama girer, gösterilir.
+    const dk = dakikaModu(si);
+    if (dk && dk.deneme !== false && haftaGunu(gun) === CUMARTESI)
+      yeni.unshift({ki:'DENEME_' + gun, serbest:true, gunlukEk:true, deneme:true, ad:'Okul denemesi', dersAd:'Deneme',
+        soru:DENEME_DAKIKA, birim:'dakika', test:0});
     return yeni;
   });
   return Object.assign({}, p, {gunler, gunlukEkli:true, toplam:gunler.flat().length});
@@ -2818,7 +2886,8 @@ function planListesi(si, hb, p, salt) {
     h += '<div class="pl-gun' + (gecti ? ' gecti' : '') + (bugun ? ' bugun' : '') + '">' +
       '<div class="pl-bas"><b>' + GUN_AD[haftaGunu(hb + g)] + '</b><span>' + gg(hb + g) + '</span>' +
       (bugun ? '<em>bugün</em>' : gecti ? '<em>geçti</em>' : '') +
-      (izin ? '<em>' + (liste.some(x => x.gunlukEk) ? 'tekrar izni' : 'izin') + '</em>' : '<span class="pl-yuk">' + (p.gunYuk[g] || 0) + '/' + p.kap + ' test</span>') +
+      (izin ? '<em>' + (liste.some(x => x.gunlukEk && !x.deneme) ? 'tekrar izni' : 'izin') + '</em>' : '<span class="pl-yuk">' +
+        (p.dakikaButce ? Math.round(p.gunDakika[g] || 0) + '/' + Math.round(p.dakikaButce[g]) + ' dk' : (p.gunYuk[g] || 0) + '/' + p.kap + ' test') + '</span>') +
       '</div>' +
       (liste.length ? liste.map((x, i) => '<div class="pl-oge"' +
           (gecti || salt || x.gunlukEk ? '' : ' data-hucre="1" data-g="' + g + '" data-s="' + i +
@@ -2844,7 +2913,7 @@ function planTablosu(si, hb, p, tumu, salt) {
     const gecti = !tumu && gunGecti(hb, g), bugun = !tumu && bugunMu(hb, g);
     h += '<th class="' + (tatil ? 'tatil ' : '') + (gecti ? 'gecti ' : '') + (bugun ? 'bugun' : '') + '">' +
       GUN_AD[haftaGunu(hb + g)].toLocaleUpperCase('tr') + '<br>' + gg(hb + g) +
-      (tatil ? (p.gunler[g].some(x => x.gunlukEk) ? ' · tekrar izni' : ' · izin') : '') + (bugun ? ' · bugün' : gecti ? ' · geçti' : '') + '</th>';
+      (tatil ? (p.gunler[g].some(x => x.gunlukEk && !x.deneme) ? ' · tekrar izni' : ' · izin') : '') + (bugun ? ' · bugün' : gecti ? ' · geçti' : '') + '</th>';
   }
   h += '</tr></thead><tbody>';
   for (let s2 = 0; s2 < enCok; s2++) {
@@ -3888,7 +3957,8 @@ function gorunumPlan() {
       'şube veya sınıf geneli eklemelerde ve toplu çıktıda atlanır. Çıktıyı verince yandaki ' +
       '<b>“çıktı verildi”</b> kutusunu işaretleyin. Yazdırma yalnızca belgeyi oluşturur; teslim edildiğini varsaymaz.</div>' : '') +
     '<div class="baslik"><h1>Haftalık plan</h1><p>' + kacis(o.alan) + ' · ' + kacis(o.sube) +
-    ' · günde ' + (o.kap || 6) + ' konu testi · tatil ' + ((o.off || []).length ? o.off.map(g => GUN_AD[g]).join(', ') : 'yok') +
+    (o.dakika ? ' · hafta içi ' + o.dakika.hi + ' dk, hafta sonu ' + o.dakika.hs + ' dk' + (o.dakika.deneme !== false ? ' + cumartesi denemesi' : '')
+      : ' · günde ' + (o.kap || 6) + ' konu testi') + ' · tatil ' + ((o.off || []).length ? o.off.map(g => GUN_AD[g]).join(', ') : 'yok') +
     ' · hedef tutma %' + Math.round((o.hedef || D.ayar.hedef) * 100) + '</p>' +
     (ogrenciMi() ? '<p class="mini">Her hafta haftalık programınızı ' +
       '<a href="mailto:sahinbilir.rehberlik@gmail.com">sahinbilir.rehberlik@gmail.com</a> e posta olarak gönderin. ' +
@@ -4209,7 +4279,8 @@ function gorunumOgrenciler() {
       '<td>' + ogrenciSinifi(o) + '. sınıf</td>' +
       '<td><select class="oAlan" data-i="' + i + '">' + ['SAY', 'EA', 'SÖZ', 'DİL'].map(a =>
         '<option' + (a === o.alan ? ' selected' : '') + '>' + a + '</option>').join('') + '</select></td>' +
-      '<td><input type="number" min="1" max="12" value="' + (o.kap || 6) + '" class="oKap" data-i="' + i + '" style="width:64px"></td>' +
+      (o.dakika ? '<td class="mini" title="Öğrenci süresini dakikayla planlıyor">' + o.dakika.hi + ' / ' + o.dakika.hs + ' dk</td>'
+        : '<td><input type="number" min="1" max="12" value="' + (o.kap || 6) + '" class="oKap" data-i="' + i + '" style="width:64px"></td>') +
       '<td><div class="gunSec">' + GUN_AD.map((g, j) =>
         '<button class="gunDugme' + ((o.off || []).indexOf(j) >= 0 ? ' kapali' : '') + '" data-i="' + i +
         '" data-g="' + j + '" title="' + g + '">' + g.slice(0, 1) + (j === 5 ? 'ts' : j === 6 ? 'z' : '') + '</button>').join('') +
@@ -4742,9 +4813,12 @@ function gorunumAnlasma() {
 function gorunumOgrenciAyarlar() {
   const o = D.ogr[0];
   return '<div class="baslik"><h1>Ayarlar</h1><p>Çalışma temponu seç. Planın, tekrarların ve telafin otomatik hazırlanır.</p></div>' +
-    '<div class="kart" style="padding:20px;margin-bottom:18px"><label class="etiket">Günde kaç test çözebilirsin? ' +
+    '<div class="kart" style="padding:20px;margin-bottom:18px">' + (o.dakika ? dakikaAyarlari(o) :
+    '<label class="etiket">Günde kaç test çözebilirsin? ' +
     '<input type="number" min="1" max="12" value="' + (o.kap || 6) + '" class="oKap" data-i="0" style="width:70px"></label>' +
     '<p class="mini">Bir test ' + D.ayar.soru + ' soru. Değişiklikler gelecek planına otomatik yansır.</p>' +
+    '<div class="arac"><button class="dugme" id="oDakikayaGec">Süremi dakikayla planla</button></div>' +
+    '<p class="mini">Testler, konu anlatımları, günlük karışık sorular ve cumartesi denemesi aynı süre bütçesine sayılır.</p>') +
     '<div class="etiket">Dinlenme günlerin</div><div class="gunSec" style="margin-top:10px">' +
     GUN_AD.map((g, j) => '<button class="gunDugme' + ((o.off || []).includes(j) ? ' kapali' : '') +
       '" data-i="0" data-g="' + j + '" aria-pressed="' + ((o.off || []).includes(j) ? 'true' : 'false') + '">' + g + '</button>').join('') +
@@ -4772,6 +4846,21 @@ function gorunumOgrenciAyarlar() {
     '<button class="dugme" id="ogrDetayliPlan">Planı elle düzenle</button></div>' +
     (EK.ogrSyncHata ? '<p class="mini">Son eşitleme: ' + kacis(EK.ogrSyncHata) + '</p>' : '') +
     gorunumAyarlar(true) + '</div></details>';
+}
+function dakikaAyarlari(o) {
+  const d = o.dakika, toplam = haftalikDakika(d, o.off), test = soruDakikasi(D.ayar.soru);
+  const alan = (k, etiket) => '<label class="etiket">' + etiket + ' <input type="number" min="0" max="600" step="10" value="' + d[k] +
+    '" class="oDakika" data-k="' + k + '" style="width:80px"> dk</label>';
+  return '<h2>Çalışma süren</h2><div class="arac" style="align-items:flex-end">' +
+    alan('hi', 'Hafta içi her gün') + alan('hs', 'Hafta sonu her gün (deneme hariç)') + '</div>' +
+    '<label style="display:block;margin-top:10px"><input type="checkbox" class="oDakikaDeneme"' + (d.deneme !== false ? ' checked' : '') +
+    '> Cumartesi ' + DENEME_DAKIKA / 60 + ' saatlik okul denemesine giriyorum</label>' +
+    '<p class="mini" role="status"><b>Haftalık toplam: ' + toplam + ' / ' + HAFTALIK_DAKIKA_SINIRI + ' dk</b> (okul dersleri hariç' +
+    (d.deneme !== false ? ', deneme dahil' : '') + ').</p>' +
+    '<p class="mini">Bir test (' + D.ayar.soru + ' soru) ' + Math.round(test) + ' dk, konu anlatımı ' + ANLATIM_DAKIKA +
+    ' dk sayılır; soru başına ' + SORU_SANIYE + ' sn. Günlük karışık soru hedeflerin bu sürenin içindedir. Üst sınır, haftalık ' +
+    '1620–1760 dk’yı en verimli aralık bulan bir PISA 2018 çalışmasından gelir (Liu ve ark., 2023).</p>' +
+    '<div class="arac"><button class="dugme" id="oTesteDon">Test sayısıyla planla</button></div>';
 }
 function veriYonetimiGorunumu() {
   const secim = EK.bulutSifirlama;
@@ -5635,6 +5724,8 @@ function ogrenciCalismasiniUygula(calisma, si) {
     if (dahaYeni) {
       ['kap','off','aktif','cikti','ilkAktif','hedef','maddeler','rutin','gunlukEk','otoTelafi','dengeliYuk',
        'telafiGecmisYapildi','telafiGunKap','hafizaSeviyesi','aytOncelik'].forEach(k => { if (kaynak[k] !== undefined) o[k] = kaynak[k]; });
+      // Dakika bütçesine geçiş de, test sayısına dönüş (alanın silinmesi) de öğrencinin seçimidir.
+      if (kaynak.dakika !== undefined) o.dakika = kaynak.dakika; else delete o.dakika;
       if (kaynak.otoTelafiHaric) o.otoTelafiHaric = kaynak.otoTelafiHaric.map(cev);
       if (kaynak.otoTelafiEklenen) o.otoTelafiEklenen = kaynak.otoTelafiEklenen.map(x => Object.assign({}, x, {ki:cev(x.ki)}));
       o.ogrCalismaTs = calisma.ts;
@@ -7938,7 +8029,7 @@ function yazdirSayfa(si, hb) {
     ggyy(hb) + ' – ' + ggyy(planHaftaSonu(si, hb)) + '</span></div><div class="orta"><table><tr><th style="width:7mm">Sıra</th>';
   for (let g = 0; g <= planHaftaSonu(si, hb) - hb; g++) {
     const izin = p.off.indexOf(haftaGunu(hb + g)) >= 0;
-    h += '<th>' + GUN_AD[haftaGunu(hb + g)].toLocaleUpperCase('tr') + '<br>' + gg(hb + g) + (izin ? (p.gunler[g].some(x => x.gunlukEk) ? ' · tekrar izni' : ' · izin') : '') + '</th>';
+    h += '<th>' + GUN_AD[haftaGunu(hb + g)].toLocaleUpperCase('tr') + '<br>' + gg(hb + g) + (izin ? (p.gunler[g].some(x => x.gunlukEk && !x.deneme) ? ' · tekrar izni' : ' · izin') : '') + '</th>';
   }
   h += '</tr>';
   for (let r = 0; r < enCok; r++) {
@@ -8814,7 +8905,8 @@ document.addEventListener('click', async ev => {
     const sube = hazir ? subeSecim : 'benim';
     const alan = hazir ? hazir.alan : (document.getElementById('kOgrAlan').value || 'SAY');
     D.rol = 'ogrenci';
-    D.ogr = [{ no: 1, ad: ad, alan: alan, sube: sube, sinif: sinif, ...(sinif < 12 ? { mufredatBaslangic: bas } : {}), kap: 6, off: [6], hedef: null, aktif: true,
+    D.ogr = [{ no: 1, ad: ad, alan: alan, sube: sube, sinif: sinif, ...(sinif < 12 ? { mufredatBaslangic: bas } : {}), kap: 6, off: [6],
+               dakika: VARSAYILAN_DAKIKA(), hedef: null, aktif: true,
                ilkAktif: bugunNo(), maddeler: [], rutin: { once: '', ara: '', sonra: '' } }];
     D.konuPlani = D.konuPlani || {};
     D.konuPlani[sube] = sinifaGoreKonuPlani(sinif, alan);
@@ -9153,9 +9245,26 @@ document.addEventListener('click', async ev => {
   if (gd && gd.dataset.i !== undefined) {
     const o = D.ogr[+gd.dataset.i], g = +gd.dataset.g;
     if (!Array.isArray(o.off)) o.off = [];
-    const k = o.off.indexOf(g);
-    if (k >= 0) o.off.splice(k, 1); else o.off.push(g);
-    o.off.sort((a, b) => a - b);
+    const k = o.off.indexOf(g), yeni = k >= 0 ? o.off.filter(x => x !== g) : o.off.concat(g).sort((a, b) => a - b);
+    // Dinlenme günü çalışma gününe dönünce haftalık dakika sınırı aşılmamalı.
+    const hata = o.dakika ? dakikaAyariHatasi(o.dakika, yeni) : '';
+    if (hata) { alert(hata + ' Önce günlük süreni azalt.'); return; }
+    o.off = yeni;
+    await kaydet(true); ciz(); return;
+  }
+  if (ev.target.id === 'oDakikayaGec' && ogrenciMi() && D.ogr[0]) {
+    const o = D.ogr[0], dk = Math.min(600, Math.round((o.kap || 6) * soruDakikasi(D.ayar.soru) / 10) * 10);
+    const d = { hi: dk, hs: dk, deneme: true };
+    // Eski test sayısı yüksekse sınırın içinde kalacak şekilde eşit azalt.
+    while (dakikaAyariHatasi(d, o.off) && (d.hi > 0 || d.hs > 0)) { d.hi = Math.max(0, d.hi - 10); d.hs = Math.max(0, d.hs - 10); }
+    o.dakika = d;
+    await kaydet(true); ciz();
+    bilgiVer('Planın artık dakikayla hazırlanıyor: hafta içi ' + d.hi + ' dk, hafta sonu ' + d.hs + ' dk. Mevcut hafta değişmez.');
+    return;
+  }
+  if (ev.target.id === 'oTesteDon' && ogrenciMi() && D.ogr[0] && D.ogr[0].dakika) {
+    if (!confirm('Plan yeniden günlük test sayısıyla hazırlanacak. Devam edilsin mi?')) return;
+    delete D.ogr[0].dakika;
     await kaydet(true); ciz(); return;
   }
   const sonucModal = ev.target.closest('#sonucBilgiModal');
@@ -9957,6 +10066,15 @@ document.addEventListener('change', async ev => {
     return;
   }
   if (el.classList.contains('oKap')) { D.ogr[+el.dataset.i].kap = Math.max(1, Math.min(12, +el.value || 6)); await kaydet(true); ciz(); return; }
+  if ((el.classList.contains('oDakika') || el.classList.contains('oDakikaDeneme')) && ogrenciMi() && D.ogr[0]?.dakika) {
+    const o = D.ogr[0], d = Object.assign({}, o.dakika);
+    if (el.classList.contains('oDakika')) d[el.dataset.k] = Math.round(+el.value);
+    else d.deneme = el.checked;
+    const hata = dakikaAyariHatasi(d, o.off);
+    if (hata) { alert(hata); ciz(); return; }
+    o.dakika = d;
+    await kaydet(true); ciz(); return;
+  }
   if (el.classList.contains('oAlan')) { D.ogr[+el.dataset.i].alan = el.value; await kaydet(true); ciz(); return; }
   if (el.classList.contains('oAd')) {
     const ad = el.value.trim();
