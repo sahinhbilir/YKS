@@ -6,8 +6,9 @@ const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.l
 const boot = html.indexOf('// ---------------------------------------------------------------- başlangıç', start);
 const source = html.slice(start, boot);
 const node = () => ({innerHTML:'',textContent:'',style:{},hidden:false,setAttribute(){},appendChild(){},remove(){},click(){},focus(){},getClientRects(){return [1]}});
+const listeners={};
 const nodes={ray:node(),ana:node(),stil:{textContent:'body{}'},uygulama:{textContent:source},veri:{textContent:'null'}};
-const sandbox={console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),localStorage:{getItem(){return null},setItem(){}},sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},navigator:{},window:{scrollTo(){},open(){return null},addEventListener(){}},document:{activeElement:null,addEventListener(){},contains(){return true},getElementById(id){return nodes[id]||null},querySelector(){return null},querySelectorAll(){return []},createElement(){return node()},body:{appendChild(){},insertAdjacentHTML(){}}}};
+const sandbox={console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),localStorage:{getItem(){return null},setItem(){}},sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},navigator:{},window:{scrollTo(){},open(){return null},addEventListener(){}},document:{activeElement:null,addEventListener(t,f){(listeners[t]=listeners[t]||[]).push(f)},contains(){return true},getElementById(id){return nodes[id]||null},querySelector(){return null},querySelectorAll(){return []},createElement(){return node()},body:{appendChild(){},insertAdjacentHTML(){}}}};
 sandbox.window.document=sandbox.document; vm.createContext(sandbox); new vm.Script(source).runInContext(sandbox);
 
 
@@ -70,6 +71,71 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
  await check('chart handles zero/negative nets and same-date exams, escapes labels',()=>{
   put('records',[sample({ad:'<img src=x onerror=alert(1)>',dersler:[{kod:'turkce',dogru:0,yanlis:4,soru:40}]}),sample({id:'m:two',dersler:[{kod:'turkce',dogru:0,yanlis:0,soru:40}]})]);
   const svg=run('denemeGrafik(records)');assert(!svg.includes('NaN'));assert(!svg.includes('<img'));assert(svg.includes('tabindex="0"'));
+ });
+ await check('deleted teacher result does not hide the student own entry',()=>{
+  put('own',[sample({id:'m:own'})]);put('tomb',[sample({id:'p:x',silindi:true,ts:300})]);
+  run('D.ogr[0].denemeler=own;D.ogr[0].denemeOkul=tomb');assert.equal(run('JSON.stringify(denemeListe().map(r=>r.id))'),'["m:own"]');
+  put('live',[sample({id:'p:x',ts:300})]);run('D.ogr[0].denemeOkul=live');assert.equal(run('JSON.stringify(denemeListe().map(r=>r.id))'),'["p:x"]');
+ });
+ await check('re-import after deletion is marked deleted; manual re-match re-checks duplicates',()=>{
+  put('row',{no:1,ad:'Synthetic Ada',oturum:'TYT',puan:250,dersler:sample().dersler});
+  run("D.rol='rehber';rapor=()=>({ad:'Exam',tarih:'2026-09-18',satirlar:[{...row}]});D.ogr[0].denemeOkul=[{...denemePdfKaydi(rapor(),row),silindi:true}];DENEME_IMPORT=denemeImportHazirla([rapor()])");
+  assert.equal(run('DENEME_IMPORT[0].satirlar[0].secili'),false);assert.match(run('DENEME_IMPORT[0].satirlar[0].uyari'),/daha önce silindi/);
+  run("D.ogr.push({...D.ogr[0],no:2,ad:'Synthetic Ece',ogrenciBulutId:'other',denemeOkul:[denemePdfKaydi(rapor(),row)]});denemeImportHedefDegistir(0,0,1)");
+  assert.equal(run('DENEME_IMPORT[0].satirlar[0].secili'),false,'manual target already has this result');assert.match(run('DENEME_IMPORT[0].satirlar[0].uyari'),/Tekrar sonuç/);
+  run('denemeImportHedefDegistir(0,0,-1)');assert.match(run('DENEME_IMPORT[0].satirlar[0].uyari'),/eşleşmedi/);
+  run("D.ogr[1].denemeOkul=[];denemeImportHedefDegistir(0,0,1)");assert.equal(run('DENEME_IMPORT[0].satirlar[0].secili'),true);
+  run('DENEME_IMPORT=null');
+ });
+ await check('re-imported school rows keep the student time; a newer teacher time wins',()=>{
+  put('school',[sample({id:'p:one',sure:null,ts:100})]);run('D.ogr[0].denemeOkul=school;D.ogr[0].denemeSure=[{id:"p:one",sure:160,ts:101}]');
+  put('again',[sample({id:'p:one',sure:null,ts:200})]);run('D.ogr[0].denemeOkul=denemeBirlestir(D.ogr[0].denemeOkul,again)');
+  assert.equal(run('denemeListe()[0].sure'),160);
+  put('fix',[sample({id:'p:one',sure:170,ts:300})]);run('D.ogr[0].denemeOkul=denemeBirlestir(D.ogr[0].denemeOkul,fix)');
+  assert.equal(run('denemeListe()[0].sure'),170,'teacher correction is visible');
+  run('D.ogr[0].denemeSure=[{id:"p:one",sure:150,ts:301}]');assert.equal(run('denemeListe()[0].sure'),150);
+ });
+ await check('teacher delete that cannot publish is saved, queued and redrawn',async()=>{
+  put('school',[sample({id:'p:one',sure:null})]);
+  run("D.rol='rehber';D.ogr[0].denemeOkul=school;cizSayisi=0;ciz=()=>{cizSayisi++;};window.bulut=null;");
+  const click=listeners.click.find(f=>String(f).includes('dnSil'));
+  await click({target:{closest:()=>({dataset:{dnSil:'p:one'}})}});
+  assert.equal(run('denemeListe().length'),0);assert.equal(run('D.ogr[0].denemeYayinBekliyor'),true);
+  assert.match(run('EK.denemeDurum'),/Cihazda kayıtlı; yayın bekliyor/);assert.equal(run('cizSayisi'),1);
+ });
+ await check('net per minute (branş only) uses D − Y/4 over completion time and scales the chart',()=>{
+  const brans=o=>sample({tur:'BRANS',brans:'turkce',dersler:[{kod:'turkce',dogru:10,yanlis:4,soru:20}],...o});
+  put('r',brans({sure:20}));assert.equal(run('denemeHiz(r)'),9/20);put('r',brans({sure:null}));assert.equal(run('denemeHiz(r)'),null);
+  put('records',[brans({sure:20}),brans({id:'m:two',tarih:'2026-09-20',sure:null}),brans({id:'m:three',tarih:'2026-09-22',sure:15})]);
+  run("EK.denemeTur='BRANS';EK.denemeOturum='TYT';EK.denemeBrans='turkce';EK.denemeMetrik='hiz';D.ogr[0].denemeler=records");
+  const svg=run('denemeGrafik(records)');
+  assert.equal((svg.match(/class="dn-dot"/g)||[]).length,2);assert(svg.includes('0,6 net/dk'));assert(svg.includes('1 deneme süre girilmediği'));
+  const ticks=[...svg.matchAll(/text-anchor="end">([^<]+)<\/text>/g)].map(m=>Number(m[1].replace(',','.'))).filter(Number.isFinite);
+  assert(Math.max(...ticks)<1,'net/dk axis must not stretch to whole nets: '+ticks);
+  const page=run('gorunumDenemeler()');
+  assert(page.includes('Ortalama net/dk'));assert(page.includes('<option value="hiz" selected>'));assert(page.includes('<th>Net/dk</th>'));assert(page.includes('Net/dk: 0,6'));
+  put('none',[brans({sure:null})]);assert(run('denemeGrafik(none)').includes('tamamlama süresi gerekli'));
+  // TYT/AYT never show net/dk, even with the branş choice still remembered.
+  put('tyt',[sample({sure:120})]);run("EK.denemeTur='TYT';D.ogr[0].denemeler=tyt");
+  const tytPage=run('gorunumDenemeler()');
+  for(const hiz of ['value="hiz"','<th>Net/dk</th>','net/dk','Net/dk'])assert(!tytPage.includes(hiz),'TYT must not show '+hiz);
+  assert(tytPage.includes('Son net'));assert(!run('denemeGrafik(tyt)').includes('net/dk'));
+  run("EK.denemeTur='BRANS';D.ogr[0].denemeler=records");assert(run('gorunumDenemeler()').includes('<option value="hiz" selected>'),'branş keeps the choice');
+  run("EK.denemeMetrik='net';EK.denemeTur='TYT'");
+ });
+ await check('PDF report score is read from the leftmost score column',()=>{
+  const pages=JSON.parse(fs.readFileSync('test/fixtures/mock-exam-pdf-items.json','utf8')).tyt;
+  pages[0].unshift({s:'480.25',x:470,y:470,w:12,h:5});put('pages',pages);assert.equal(run('denemePdfCoz(pages).satirlar[0].puan'),220.5);
+ });
+ await check('embedding works on Windows (CRLF) checkouts and is idempotent',()=>{
+  const {execFileSync}=require('node:child_process'),dir=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'yks-embed-'));
+  try {
+   fs.mkdirSync(path.join(dir,'src'));
+   for(const f of ['index.html','src/denemeler.js','src/denemeler.css'])fs.writeFileSync(path.join(dir,f),fs.readFileSync(f,'utf8').replace(/\r?\n/g,'\r\n'));
+   const script=path.resolve('scripts/embed-denemeler.cjs'),before=fs.readFileSync(path.join(dir,'index.html'),'utf8');
+   execFileSync(process.execPath,[script,'--check'],{cwd:dir});execFileSync(process.execPath,[script],{cwd:dir});execFileSync(process.execPath,[script],{cwd:dir});
+   assert.equal(fs.readFileSync(path.join(dir,'index.html'),'utf8'),before);
+  } finally { fs.rmSync(dir,{recursive:true,force:true}); }
  });
  await check('PDF coordinates: pagination, wrapped name, absent vs zero AYT and negative nets',()=>{
   const fixture=JSON.parse(fs.readFileSync('test/fixtures/mock-exam-pdf-items.json','utf8'));

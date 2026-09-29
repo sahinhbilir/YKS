@@ -2084,6 +2084,70 @@ test('teacher-notebook-timestamp-does-not-block-student-work', async () => {
   equal(run('D.ogrCalismaTs'),1000,'student receipt must not change the teacher notebook timestamp');
 });
 
+// Mock exams: the teacher-owned denemeOkul field shares the student's slot document.
+const tytDeneme = (id, extra) => Object.assign({ id, ad: 'Deneme ' + id, tarih: '2026-09-18', tur: 'TYT', oturum: 'TYT', brans: '', alan: 'SAY',
+  dersler: [['turkce',40],['tarih',5],['cografya',5],['felsefe',5],['din',5],['sf',5],['mat',30],['geo',10],['fizik',7],['kimya',7],['biyoloji',6]]
+    .map(([kod, soru]) => ({ kod, dogru: 1, yanlis: 1, soru })), sure: 120, puan: null, ts: 100 }, extra || {});
+function examSlot(run, sandbox, denemeOkul, ownCount) {
+  resetOgr(sandbox, [student({ syncId: 'student-slot', ogrenciBulutId: 'cloud-1' })], 'ogrenci');
+  sandbox.own = Array.from({ length: ownCount }, (_, i) => tytDeneme('m:' + i));
+  run('D.ogr[0].denemeler = own; ogrenciEsitlemePlanla = () => {};');
+  const sunucu = { durum: 'aktif', bagliUid: 'student-uid', ogrenciBulutId: 'cloud-1', ogrenciNo: 1, ogrenciAd: 'Ada',
+    ogrenciSube: '12A', paket: null, denemeOkul };
+  const writes = [];
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    girisOgrenci: async () => ({ uid: 'student-uid' }),
+    getDoc: async () => docSnap(true, JSON.parse(JSON.stringify(sunucu))),
+    updateDoc: async (_ref, data) => { writes.push(data); }
+  });
+  return writes;
+}
+
+test('unreadable-school-exam-field-does-not-block-student-sync', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  // A newer app version could publish a subject this client does not know yet.
+  const writes = examSlot(run, sandbox, JSON.stringify([tytDeneme('p:new', { dersler: [{ kod: 'yeniDers', dogru: 1, yanlis: 0, soru: null }] })]), 1);
+  await run('sunucuyaGonder()');
+  equal(writes.length, 1, 'plan and result sync must still write');
+  equal(writes[0].paket.denemeler.length, 1, "the student's own exams still upload");
+  assert(/Okul deneme sonuçları alınamadı/.test(run('EK.denemeDurum')), 'the exam problem is reported on its own');
+  equal(run('D.ogr[0].denemeOkul'), undefined, 'unreadable teacher data is not stored');
+});
+
+test('student-account-login-survives-an-unreadable-school-exam-field', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 42, ad: 'Ada Öğrenci', syncId: 'student-sync',
+    ogrenciBulutId: 'cloud-1', hesapUid: 'student-account-42' })]);
+  const hesapPaketi = run('ogrenciPaketi(0)');
+  run("D = varsayilan(); D.rol = null;");
+  sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    girisOgrenciHesabi: async () => ({ uid: 'student-account-42' }),
+    getDoc: async ref => ref === 'ogrenciHesaplari/student-account-42'
+      ? docSnap(true, { aktif: true, veri: JSON.stringify(hesapPaketi), syncId: 'student-sync' })
+      : docSnap(true, { durum: 'aktif', bagliUid: 'student-account-42', ogrenciBulutId: 'cloud-1',
+        ogrenciNo: 42, ogrenciAd: 'Ada Öğrenci', ogrenciSube: '12A', paket: null, denemeOkul: '{not json' }),
+    updateDoc: async () => {}, setDoc: async () => {}
+  });
+  await run("ogrenciHesabindanYukle('Ada Öğrenci', 42)");
+  equal(run('D.rol'), 'ogrenci', 'login must complete');
+  assert(/Okul deneme sonuçları alınamadı/.test(run('EK.denemeDurum')));
+});
+
+test('student-upload-size-check-counts-the-teacher-exam-field', async () => {
+  // About 650 KB of student exams fit alone, but not next to ~290 KB of school results.
+  const okul = JSON.stringify(Array.from({ length: 420 }, (_, i) => tytDeneme('p:' + i)));
+  assert(okul.length > 250000 && okul.length <= 300000, 'fixture size ' + okul.length);
+  const alone = loadAppSandbox(), writesAlone = examSlot(alone.run, alone.sandbox, undefined, 950);
+  await alone.run('sunucuyaGonder()');
+  equal(writesAlone.length, 1, 'control: the student packet fits on its own');
+  const shared = loadAppSandbox(), writesShared = examSlot(shared.run, shared.sandbox, okul, 950);
+  let hata = '';
+  try { await shared.run('sunucuyaGonder()'); } catch (e) { hata = e.message || String(e); }
+  equal(writesShared.length, 0, 'a write Firestore would reject must not be attempted');
+  assert(/sunucu sınırını aşıyor/.test(hata), 'the size problem must be reported: ' + hata);
+});
+
 test('malformed-work-snapshot-cannot-partially-import-results', async () => {
   const {sandbox,run}=loadAppSandbox();
   resetOgr(sandbox,[student({ogrenciBulutId:'identity',syncId:'slot'})],'ogrenci');

@@ -16,7 +16,7 @@ The 2026-09-29 continuation resolved the outstanding save/print emulator failure
 - AYT supports SAY/EA/SÖZ; TYT Matematik and Geometri remain separate.
 - Completion time is stored separately, so a student can add or correct time without changing teacher-imported scores.
 - Teachers can select PDF files, preview parsed students, correct target matches, and publish results to student cloud slots.
-- Matching is strict (school number + normalized name + class/section when available). Changed roster rows are not silently reassigned.
+- Matching is strict (school number + normalized name). Class/section is not read from the PDF rows; the synthetic fixture has no class values to verify a format against. Changed roster rows are not silently reassigned.
 - Duplicate rows are skipped using exam/session/score identity; a combined TYT+AYT report does not duplicate an earlier TYT-only import.
 - Teacher-imported scores and student-entered scores use separate channels. Student packets cannot forge teacher records.
 

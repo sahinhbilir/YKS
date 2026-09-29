@@ -33,6 +33,17 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.reload();await page.getByRole('button',{name:'Denemelerim',exact:true}).click();assert.equal(await page.locator('.dn-dot').count(),1);
    await page.evaluate(()=>{const r=D.ogr[0].denemeler.find(r=>r.tur==='TYT');for(let i=0;i<6;i++)D.ogr[0].denemeler.push({...r,id:'m:chart'+i,tarih:'2026-09-'+String(20+i).padStart(2,'0'),ad:'Deneme '+(i+2),sure:130-i*3,dersler:[{kod:'turkce',dogru:20+i*2,yanlis:6,soru:40}]});ciz();});
    await page.locator('.dn-dot').last().focus();assert((await page.locator('#dnDetay').innerText()).includes('Deneme 7'));
+   // Net per minute (net D − Y/4 ÷ completion time) exists only for branş denemeleri.
+   assert.equal(await page.locator('#dnMetrik option[value="hiz"]').count(),0,'no net/dk on TYT');
+   assert(!(await page.locator('#dnDetay').innerText()).includes('Net/dk'));
+   await page.evaluate(()=>{const r=D.ogr[0].denemeler.find(r=>r.tur==='BRANS');D.ogr[0].denemeler.push({...r,id:'m:brans2',tarih:'2026-09-24',ad:'Türkçe branş 2',sure:25,dersler:[{kod:'turkce',dogru:16,yanlis:4,soru:20}]});ciz();});
+   await page.getByRole('button',{name:'Branş denemeleri',exact:true}).click();await page.locator('#dnMetrik').selectOption('hiz');
+   assert.equal(await page.locator('.dn-dot').count(),1,'only the timed branş exam is plotted');
+   assert((await page.locator('.dn-stats').innerText()).includes('Ortalama net/dk'));
+   await page.locator('.dn-dot').focus();assert((await page.locator('#dnDetay').innerText()).includes('Net/dk: 0,6'));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'branş overflow');
+   await page.screenshot({path:path.join(out,'mock-exam-net-per-minute-'+width+'.png'),fullPage:true});
+   await page.getByRole('button',{name:'TYT',exact:true}).click();assert.equal(await page.locator('#dnMetrik').inputValue(),'net');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'student overflow');await page.screenshot({path:path.join(out,'mock-exam-'+width+'.png'),fullPage:true});
    // Teacher report preview, strict matching, one missing student, and publication failures/retry.
    await page.evaluate(fixture=>{
