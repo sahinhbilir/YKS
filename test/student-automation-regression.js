@@ -308,7 +308,7 @@ function fillPlan(p,h,week=0,limit=Infinity) {
    D.islenis={0:buHafta()-3};const _p2=planHesapla(0,buHafta());ogrenciHaftayiSakla(0,buHafta(),_p2);EK.hafta=buHafta()+7;`);
  let printCalls=0;sandbox.window.print=()=>{printCalls++;};
  check('central-guard-prevents-print-side-effect',!(await run('planYazdir(null)'))&&printCalls===0);
- check('blocking-modal-has-required-message-and-action',sandbox.document.body.lastPanel.innerHTML.includes('Sonraki haftanın testlerini alman için önceki haftanın sonuçlarını girmen gerekiyor.')&&sandbox.document.body.lastPanel.innerHTML.includes('>Sonuç gir</button>'));
+ check('blocking-modal-has-required-message-and-action',sandbox.document.body.lastPanel.innerHTML.includes('Bu planı alman için önceki haftanın')&&sandbox.document.body.lastPanel.innerHTML.includes('“Yapmadım”')&&sandbox.document.body.lastPanel.innerHTML.includes('>Sonuç gir</button>'));
  const missingHb=run('buHafta()');
  const gateAction=Object.assign(element(),{id:'eksikSonucGir',dataset:{sonucHafta:String(missingHb)},closest(s){return s.includes('#eksikSonucGir')?this:null;}});
  for(const fn of listeners.click||[])await fn({target:gateAction});
@@ -318,7 +318,7 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  run('D.log=[]');
  const previewPrint=Object.assign(element(),{id:'ciktiYazdir',closest(s){return s.includes('#ciktiYazdir')?this:null;}});
  for(const fn of listeners.click||[])await fn({target:previewPrint});
- check('preview-print-rechecks-central-guard',printCalls===1&&sandbox.document.body.lastPanel.innerHTML.includes('Sonraki haftanın testlerini alman için önceki haftanın sonuçlarını girmen gerekiyor.'));
+ check('preview-print-rechecks-central-guard',printCalls===1&&sandbox.document.body.lastPanel.innerHTML.includes('Bu planı alman için önceki haftanın'));
  init();await draw();run('EK.hafta=buHafta()+7');
  // Optional private fixture: inspect a supplied backup locally; never include it in git or upload it.
  if(process.env.YKS_BACKUP){
@@ -339,5 +339,54 @@ function fillPlan(p,h,week=0,limit=Infinity) {
    for(const [file,view] of [['student-plan','gorunumPlan()'],['student-settings','gorunumAyarlar()']])
      fs.writeFileSync(process.env.YKS_PREVIEW_DIR+'/'+file+'.html','<!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style><body><nav id="ray"></nav><main>'+run(view)+'</main></body></html>');
  }
+ // Weeks map colours, "Yapmadım", the current-week print gate and İyi-assumed previews.
+ init(); await draw();
+ run('D.ayar.testTarih="2026-09-07";EK.hafta=null;EK.sekme="plan";'); await draw();   // week of 7 Sep is issued
+ run('D.ayar.testTarih="2026-09-14";EK.hafta=null;'); await draw();                   // next Monday, no results entered
+ const prevWeek=run('oncekiHafta(0,buHafta())'), curWeek=run('buHafta()'), nextWeek=run('sonrakiHafta(0,buHafta())');
+ const weekTests=h=>run(`(()=>{const p=planHesapla(0,${h}),r=[];p.gunler.forEach((l,g)=>l.forEach(x=>{if(!x.serbest&&!x.anlatim)r.push({ki:x.ki,gun:${h}+g});}));return r;})()`);
+ const prevTests=weekTests(prevWeek);
+ const mapClass=h=>(run('ogrenciYksYolu(true)').match(new RegExp('data-ogr-hafta="'+h+'" class="([^"]*)"(?: style="--oran:([0-9.]+)")?'))||[]);
+ check('map-previous-week-was-issued',!!run('elleAl(0,'+prevWeek+').sabit')&&!!run('elleAl(0,'+curWeek+').sabit')&&prevTests.length>=3);
+ check('current-week-print-needs-last-week-results',run('planYazdirmaEngeli(0,buHafta()).hb')===prevWeek&&!run('sonrakiHaftaYazdirmaEngeli(0,buHafta())'));
+ check('weeks-beyond-next-are-preview-only',!!run('planYazdirmaEngeli(0,buHafta()+14).onizleme')&&!run('planYazdirmaEngeli(0,buHafta()+14).hb'));
+ check('teacher-print-is-not-gated',run('(()=>{D.rol="rehber";const r=planYazdirmaEngeli(0,buHafta());D.rol="ogrenci";return r;})()')===null);
+ check('map-week-without-results-is-red',mapClass(prevWeek)[1].includes('kirmizi'));
+ check('map-current-week-is-not-red-yet',!mapClass(curWeek)[1].includes('kirmizi'));
+ const [skipped,...rated]=prevTests, doneN=Math.max(1,Math.floor(rated.length/2));
+ sandbox.skipped=skipped;sandbox.doneRows=rated.slice(0,doneN).map(x=>({ki:x.ki,gun:x.gun,not:3,dogru:null,soru:null}));sandbox.blank=rated.slice(doneN);
+ // "Yapmadım" through the real save handler.
+ inputRows=[Object.assign(resultRow(0,12,skipped.ki,skipped.gun,skipped.ki),{dataset:{ki:String(skipped.ki),gun:String(skipped.gun),slot:String(skipped.ki),deferred:'0',yapmadim:'1'}})];
+ run('EK.sekme="giris";EK.hafta='+prevWeek); await click('sonucKaydet'); inputRows=[];
+ check('yapmadim-is-saved-without-a-result',run('yapilmadiMi(0,skipped.ki,skipped.gun)')&&!run('D.log.some(l=>l[2]===skipped.ki&&l[0]===skipped.gun)'));
+ // It is never lost: the already issued current week may hold it (automatic catch-up); otherwise it is
+ // not placed before next week, and a full week passes it on through the overflow list.
+ check('yapmadim-keeps-the-test-for-a-later-week',run('erteleAl(0,skipped.ki)')>=nextWeek&&run(`[planHesapla(0,buHafta()),planHesapla(0,${nextWeek})].some(p=>
+   p.gunler.some(l=>l.some(x=>x.ki===skipped.ki))||(p.tasan||[]).some(x=>(x&&x.ki!==undefined?x.ki:x)===skipped.ki))`));
+ check('yapmadim-row-shows-its-state',run('sonucSatiriHtml({si:0,ki:skipped.ki,gun:skipped.gun,kayit:null})').includes('Yapmadım · sonraki haftaya aktarıldı'));
+ run('sonucIsle(0,doneRows)');
+ const partial=run('haftaTestOzeti(0,'+prevWeek+','+(prevWeek+6)+')');
+ check('week-stats-count-done-and-skipped',partial.toplam===prevTests.length&&partial.yapilan===doneN&&partial.yapilmadi===1);
+ const partialMap=mapClass(prevWeek);
+ check('map-partial-week-is-green-by-share',partialMap[1].includes('yesil')&&+partialMap[2]===+(doneN/prevTests.length).toFixed(2));
+ check('blank-tests-still-block-printing',(run('planYazdirmaEngeli(0,buHafta())')||{adet:0}).adet===sandbox.blank.length);
+ run('blank.forEach(x=>testiYapilmadiIsaretle(0,x.ki,x.gun))');
+ check('yapmadim-settles-the-print-gate',!run('planYazdirmaEngeli(0,buHafta())'));
+ run('sonucIsle(0,[{ki:skipped.ki,gun:skipped.gun,not:4,dogru:null,soru:null}])');
+ check('real-result-replaces-yapmadim',!run('yapilmadiMi(0,skipped.ki,skipped.gun)')&&run('erteleAl(0,skipped.ki)')===undefined);
+ run('D.log=D.log.filter(l=>l[0]<'+prevWeek+'||l[0]>'+(prevWeek+6)+');D.yapilmadi={};sonucIsle(0,'+JSON.stringify(prevTests.map(x=>({ki:x.ki,gun:x.gun,not:3,dogru:null,soru:null}))).replace(/"/g,"'")+')');
+ const fullMap=mapClass(prevWeek);
+ check('map-complete-week-is-full-green',fullMap[1].includes('yesil')&&!fullMap[1].includes('acik')&&+fullMap[2]===1);
+ // Future weeks preview with İyi assumed for tests that have no result yet; nothing is stored.
+ const beforePreview=run('JSON.stringify(D)');
+ const realFuture=run('planHesapla(0,'+nextWeek+')'), previewFuture=run('varsayimliPlan(0,'+nextWeek+')');
+ check('preview-does-not-change-the-notebook',run('JSON.stringify(D)')===beforePreview);
+ // A topic still unanswered this week is reviewed "İyi" in the preview, so its next review moves
+ // past next week, while the real plan (which has no such result) still shows it next week.
+ const curPending=weekTests(curWeek).filter(x=>!run('D.log.some(l=>l[2]==='+x.ki+'&&l[0]==='+x.gun+')')).map(x=>x.ki);
+ const realIds=realFuture.gunler.flat().map(x=>x.ki), previewIds=previewFuture.gunler.flat().map(x=>x.ki);
+ check('preview-assumes-iyi-for-pending-tests',realIds.some(ki=>curPending.includes(ki)&&!previewIds.includes(ki)));
+ run('EK.sekme="plan";EK.hafta='+(nextWeek+7));
+ check('student-future-week-says-preview',run('gorunumOgrenciPlan()').includes('“İyi” seçilmiş varsayılarak'));
  console.log(JSON.stringify({passed:checks.length,checks,weeks,totalResults:weeks.reduce((s,w)=>s+w.results,0)},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});

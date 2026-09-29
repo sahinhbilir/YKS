@@ -4,13 +4,21 @@ Students should understand what to study, why it returns, and how much preparati
 
 ## Daily interface
 
-The student navigation is Planım, Sonuç gir, Haftalar haritası, Karnem and Ayarlar. The plan is read-only by default and offers one download action. Its visible exam countdown and compact weeks map place the current week within the preparation period. The full map opens past plans and distinguishes recorded results from an actually completed week; one recorded result never implies completion. The countdown uses the notebook's configured exam date, not an independently verified official date.
+The student navigation is Planım, Sonuç gir, Haftalar haritası, Karnem and Ayarlar; the app opens on Haftalar haritası. The plan is read-only by default and offers one download action. Its visible exam countdown and compact weeks map place the current week within the preparation period. The full map opens past plans and distinguishes recorded results from an actually completed week; one recorded result never implies completion. The countdown uses the notebook's configured exam date, not an independently verified official date.
 
 Each scheduled test shows its repetition number, previous result date and score, and any result recorded for that scheduled day. Desktop, mobile, result entry and printable plans retain this information. Repetition stages are counted from results preceding the scheduled date, so future reviews do not renumber historical plans. “2. tekrar” describes the learning stage; “2 test” describes the question load within that stage. The weekly summary counts first measurements, later repetitions and recorded topic results, excluding free routines and lesson explanations.
 
 Detailed editing, topic planning, personal routines, data recovery and algorithm controls remain accessible through Gelişmiş ayarlar. Teacher navigation and manual tools remain available.
 
 Basic settings contain daily test capacity and rest days. They save automatically and affect upcoming plans. The current issued plan stays intact. Each result requires an explicit recall rating or an actual score: blank rows are never scored as correct, incorrect or completed. Saving a partial set stays on that week's results; saving the complete set opens the upcoming plan.
+
+## Weeks map, “Yapmadım” and printing
+
+Students open the app on Haftalar haritası (a restored tab after a same-tab reload is kept). Each past week is coloured by the share of its issued tests that actually have a result: red when none were done, grey-green when few were, deep green when all were. “Bu konu daha anlatılmadı” tests are left out of the count; “Yapmadım” and blank tests count as not done. The current week is never red before it ends; weeks without an issued plan stay neutral.
+
+Each result row has a **Yapmadım** button. It records no FSRS result and moves the test to the next week that has not been issued yet, as if it had not been in that week's plan (it uses the existing postpone, `D.ertele`, plus a per-test `D.yapilmadi` mark that syncs with the work snapshot). A later real result for that test replaces the mark.
+
+A student cannot download or print a week's plan until every test of the previous week is settled by a result, “Yapmadım” or “Bu konu daha anlatılmadı”. This applies to the current week and the next week; weeks after that are preview only. Future-week previews assume “İyi” for every test that has no result yet, from the current week onward. The assumption is computed on a copy of the notebook; real results, cards, the prepared draft and printed plans never use it. The automatic weekly snapshot is unchanged.
 
 ## Recall feedback and lessons not yet taught
 
