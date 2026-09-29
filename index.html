@@ -285,7 +285,9 @@ tr.pasif td:first-child{opacity:1}
   .rutin{grid-template-columns:1fr}
   .ikili{grid-template-columns:1fr}
 }
-.kurulum{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:30px 0}
+.kurulum{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:30px 0 96px}
+.test-hesap{position:fixed;right:16px;bottom:16px;z-index:20;display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:min(260px,calc(100vw - 32px));text-align:right}
+.test-hesap .dugme{background:var(--kagit)}
 .kur-kutu{max-width:680px;width:100%}
 .kur-kutu h1{font-size:34px;margin:8px 0 6px}
 .kur-oz{color:var(--soluk);margin-bottom:22px}
@@ -4757,7 +4759,8 @@ function gorunumOgrenciAyarlar() {
     '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Çalışma ağırlığın · isteğe bağlı</h2>'+aytOncelikSecici(0)+
     '<p class="mini">TYT sana kolay geliyor, AYT’yi yeni öğreniyorsan açabilirsin. Yeni AYT çalışmalarına önce yer ayrılır; TYT’de ilk kontrol ve başarılı tekrarlar bir test olur. Zayıf TYT sonuçları ve geciken çalışmalar önceliğini korur.</p>'+
     '<p class="mini">Günlük kapasiten artmaz. Sonuçlar, tekrar tarihleri ve kaydedilmiş haftalar değişmez; seçim sonraki taslak plana yansır. İstediğin zaman kapatabilirsin.</p></div>'+
-    '<p class="mini" role="status">' + kacis(EK.ogrSyncDurum || (o.syncId ? 'Sonuçların otomatik eşitlenir.' : 'Çalışmaların bu cihazda kaydedilir.')) + '</p>' +
+    (testHesabiMi() ? testHesabiKarti()
+      : '<p class="mini" role="status">' + kacis(EK.ogrSyncDurum || (o.syncId ? 'Sonuçların otomatik eşitlenir.' : 'Çalışmaların bu cihazda kaydedilir.')) + '</p>') +
     '<details class="kart" style="padding:20px"' + (EK.gelismisAcik ? ' open' : '') + '><summary style="cursor:pointer;font-weight:600">Gelişmiş ayarlar</summary>' +
     '<div style="margin-top:18px"><label><input id="ogrOtoTelafi" type="checkbox"' + (o.otoTelafi !== false ? ' checked' : '') +
     '> Eksik çalışmaları ve katılmadan önceki konuları otomatik tamamla</label>' +
@@ -4859,8 +4862,8 @@ function gorunumAyarlar(gelismis) {
             '<button class="dugme" id="bulutYedekle">Defteri buluta yedekle</button>' +
             '<button class="dugme birincil" id="ogrenciHesapYayinla">Öğrenci girişlerini yayınla</button>'
           : '')
-      : '<label class="dugme birincil" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
-        '<input type="file" id="paketYukle" hidden></label>' +
+      : (testHesabiMi() ? '' : '<label class="dugme birincil" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
+        '<input type="file" id="paketYukle" hidden></label>') +
         '<button class="dugme" id="sonucGonder">Sonuçlarımı dışa aktar</button>' +
         // Firebase yapılandırılmış olsa bile, BU öğrencinin paketi buluta hazır bir
         // syncId taşımıyorsa (ör. öğretmen buluta bağlanmadan önce indirilmiş bir dosya)
@@ -5700,6 +5703,7 @@ function bulutaYedekle(onaylananVeri, onaylananUid) {
 }
 async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
   if (!window.bulut || !window.bulut.yapilandirilmis) return { tur: 'yok' };
+  if (testHesabiMi()) return testDefterineYedekle(onaylananVeri);
   if (!rehberMi()) return { tur: 'yok' };
   const kullanici = window.bulut.mevcutKullanici();
   if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
@@ -5875,6 +5879,155 @@ async function bulutDefteriniAc(kullanici) {
   bilgiVer('Bulut defteriniz geri yüklendi: ' + say + ' öğrenci, ' + sonucSayisi + ' sonuç.' +
     (!say && !sonucSayisi ? ' Bu yedek boş. Ayarlar → “Bulut yedek geçmişini göster” ile eski kopyaları kontrol edin.' : ''));
   return true;
+}
+
+// ---------------------------------------------------------------- test hesapları
+// Öğretmeni olmadan deneyen öğrenci Google hesabıyla kendi defterini açar:
+// testDefter/{uid}. Öğretmen yedeğinin aksine geçmiş sınırsız büyümez; haftanın her
+// günü için bir kopya üzerine yazılır. Başka cihazın yazdığı defter sessizce ezilmez.
+const testHesabiMi = () => ogrenciMi() && !!(D && D.testHesap && D.testHesap.uid);
+const TEST_CAKISMA = 'Test defterin başka bir cihazda da değişti; üzerine yazılmadı. ' +
+  'Ayarlar → Test hesabın bölümünden hangisiyle devam edeceğini seç.';
+let TEST_DENETIM_IS = null, TEST_ACILIS_JSON = null;
+function testDefterRef(uid, ...yol) { return window.bulut.doc(window.bulut.db, 'testDefter', uid, ...yol); }
+function testDefteriniCoz(json, uid) {
+  if (typeof json !== 'string' || !json) throw new Error('Buluttaki test defteri beklenen biçimde değil.');
+  let y;
+  try { y = JSON.parse(json); yedekDogrula(y); }
+  catch (e) { throw new Error('Buluttaki test defteri okunamadı: ' + (e.message || e)); }
+  if (y.rol !== 'ogrenci' || !y.testHesap || y.testHesap.uid !== uid)
+    throw new Error('Buluttaki defter bu test hesabına ait değil.');
+  return y;
+}
+async function testDefteriniYerlestir(json, uid) {
+  const y = testDefteriniCoz(json, uid), onceki = D;
+  try {
+    veriyiHazirla(y);
+    if (!(await kaydet(true))) throw new Error('Defter bu cihaza kaydedilemedi.');
+  } catch (e) { D = onceki; throw e; }
+  await bulutYedekTemeliniHatirla(uid, json);
+  EK.testCakisma = false; EK.bulutYedekHata = ''; EK.hafta = null;
+}
+// "Test hesabı aç" düğmesi: bir tıklamanın içinden çağrılır (Google penceresi açar).
+// Bulutta defter varsa onu açar; yoksa boş öğrenci defteriyle kurulum ekranına geçer.
+async function testHesabiniAc() {
+  const b = window.bulut;
+  if (!b || !b.yapilandirilmis) throw new Error('Bulut bağlantısı hazır değil. Sayfayı yenileyip yeniden deneyin.');
+  const kullanici = await b.girisOgretmen();
+  const anlik = await sureSinirli(b.getDocFromServer(testDefterRef(kullanici.uid)),
+    BULUT_YAZMA_ZAMAN_ASIMI, 'Test defteri sunucudan zamanında alınamadı.');
+  if (D && D.rol) throw new Error('Bu cihazda zaten açık bir defter var.');
+  if (anlik.exists()) {
+    await testDefteriniYerlestir((anlik.data() || {}).veri, kullanici.uid);
+    EK.sekme = 'harita'; ciz();
+    bilgiVer('Hoş geldin ' + D.ogr[0].ad + ' — test defterin buluttan açıldı.');
+    return;
+  }
+  bulutYedekTemeliniUnut(kullanici.uid);
+  D.rol = 'ogrenci'; D.testHesap = { uid: kullanici.uid, acilis: Date.now() };
+  EK.sekme = 'plan'; EK.hafta = null;
+  await kaydet(true); ciz();
+  bilgiVer('Test hesabın açıldı. Takma adını ve sınıfını gir; planın hazırlansın.');
+}
+// bulutaYedekleGercek'in test hesabı dalı. onaylananVeri: kullanıcının bilerek
+// yerine yazmayı seçtiği bulut kopyası; o kopya önce "cakisma" yuvasına saklanır.
+async function testDefterineYedekle(onaylananVeri) {
+  if (TEST_DENETIM_IS) await TEST_DENETIM_IS;
+  if (!testHesabiMi() || !D.ogr.length) return { tur: 'yok' };
+  const b = window.bulut, uid = D.testHesap.uid, kullanici = b.mevcutKullanici();
+  if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
+  if (kullanici.uid !== uid) return { tur: 'hata', mesaj: 'Bu cihazda başka bir Google hesabı açık; test defterin buluta yazılmadı.' };
+  let json;
+  try { json = JSON.stringify(D); }
+  catch (e) { return { tur: 'hata', mesaj: 'Veri JSON’a çevrilemedi.' }; }
+  const bayt = baytBoyu(json);
+  if (bayt > BULUT_YEDEK_UST_SINIR)
+    return { tur: 'hata', mesaj: 'Defter bulut için çok büyük (' + Math.round(bayt / 1024) + ' KB). "Yedek indir" ile dosya yedeği alın.' };
+  const ts = Date.now(), gun = isoDan(bugunNo()), temel = bulutYedekTemelleri[uid];
+  const belge = veri => ({ veri, ts, surum: VERI_SURUMU, boyut: veri.length });
+  try {
+    await sureSinirli(b.runTransaction(b.db, async tx => {
+      const ref = testDefterRef(uid), anlik = await tx.get(ref);
+      if (anlik.exists()) {
+        const eski = (anlik.data() || {}).veri;
+        const onayli = typeof onaylananVeri === 'string' && onaylananVeri === eski;
+        if (eski !== json && !onayli && (!temel || temel !== await bulutYedekImzasi(String(eski))))
+          throw Object.assign(new Error(TEST_CAKISMA), { code: 'yks-defter-cakisma' });
+        if (onayli && eski !== json) tx.set(testDefterRef(uid, 'gecmis', 'cakisma'), { ...belge(eski), gun });
+      }
+      tx.set(ref, belge(json));
+      tx.set(testDefterRef(uid, 'gecmis', String(haftaGunu(bugunNo()))), { ...belge(json), gun });
+    }), BULUT_YAZMA_ZAMAN_ASIMI, 'Test defteri sunucudan zamanında onay alamadı.');
+  } catch (e) {
+    if (e.code === 'yks-defter-cakisma') { EK.testCakisma = true; return { tur: 'hata', mesaj: TEST_CAKISMA, cakisma: true }; }
+    return izinHatasiMi(e)
+      ? { tur: 'hata', mesaj: 'Buluta erişim izni yok. firestore.rules dosyasının güncel hâli Firebase konsolunda yayınlanmamış olabilir.' }
+      : { tur: 'hata', mesaj: e.message || String(e) };
+  }
+  await bulutYedekTemeliniHatirla(uid, json);
+  EK.testCakisma = false; EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = '';
+  return { tur: 'tamam', boyut: json.length };
+}
+// Açılışta, oturum değişince ve sekmeye dönünce: başka cihaz daha yeni bir defter
+// yazdıysa ve bu cihazda buluta gitmemiş değişiklik yoksa onu sessizce aç. İki taraf da
+// değiştiyse hiçbirini ezme; seçimi kullanıcıya bırak.
+function testDefteriniDenetle() {
+  if (!testHesabiMi() || !window.bulut || !window.bulut.yapilandirilmis || CIKIS_DURUMU) return Promise.resolve();
+  if (!TEST_DENETIM_IS) TEST_DENETIM_IS = testDefteriniDenetleGercek()
+    .catch(e => { EK.bulutYedekHata = e.message || String(e); rayCiz(); })
+    .finally(() => { TEST_DENETIM_IS = null; });
+  return TEST_DENETIM_IS;
+}
+async function testDefteriniDenetleGercek() {
+  const b = window.bulut, defter = D, uid = D.testHesap.uid;
+  if (b.oturumHazir) await b.oturumHazir();
+  const kullanici = b.mevcutKullanici();
+  if (!kullanici || kullanici.uid !== uid) {
+    EK.bulutYedekHata = 'Buluta kaydetmek için Ayarlar → Test hesabın bölümünden Google ile yeniden gir.';
+    rayCiz(); return;
+  }
+  if (!D.ogr.length) return;
+  const anlik = await sureSinirli(b.getDocFromServer(testDefterRef(uid)),
+    BULUT_YAZMA_ZAMAN_ASIMI, 'Test defteri sunucudan zamanında alınamadı.');
+  if (D !== defter || !anlik.exists()) return;
+  const bulutJson = (anlik.data() || {}).veri, temel = bulutYedekTemelleri[uid];
+  if (typeof bulutJson !== 'string' || await bulutYedekImzasi(bulutJson) === temel) return;
+  const yerelJson = JSON.stringify(D), acilis = TEST_ACILIS_JSON;
+  if (bulutJson === yerelJson) { await bulutYedekTemeliniHatirla(uid, bulutJson); return; }
+  // Açılıştaki otomatik plan hazırlığı defteri değiştirmiş olabilir; kullanıcı henüz
+  // dokunmadıysa cihazdaki defter açıldığı andaki hâliyle de karşılaştırılır.
+  const simdiTemiz = !!temel && await bulutYedekImzasi(yerelJson) === temel;
+  const acilistaTemiz = !!temel && typeof acilis === 'string' && await bulutYedekImzasi(acilis) === temel;
+  if (!simdiTemiz && !acilistaTemiz) {
+    TEST_ACILIS_JSON = null;
+    EK.testCakisma = true; EK.bulutYedekHata = TEST_CAKISMA; rayCiz();
+    if (EK.sekme === 'ayarlar') ciz();
+    return;
+  }
+  // İmzalar hesaplanırken kaydedilen ya da yarım kalan bir çalışma varsa sonraki denetime bırak.
+  if (D !== defter || JSON.stringify(D) !== yerelJson || cikisTaslakHatasi() ||
+      (!simdiTemiz && TEST_ACILIS_JSON === null)) return;
+  TEST_ACILIS_JSON = null;
+  await testDefteriniYerlestir(bulutJson, uid);
+  ciz();
+  bilgiVer('Diğer cihazında kaydettiğin son hâl açıldı.');
+}
+function testHesabiKarti() {
+  const b = window.bulut, kullanici = b && b.mevcutKullanici && b.mevcutKullanici();
+  const bagli = !!kullanici && kullanici.uid === D.testHesap.uid;
+  const durum = EK.bulutYedekHata || (EK.bulutYedekTs ? 'Son hâlin bulutta kayıtlı.' : 'Değişikliklerin birkaç saniye içinde buluta kaydedilir.');
+  return '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Test hesabın</h2>' +
+    '<p class="mini">' + (bagli ? 'Google hesabı: ' + kacis(kullanici.email || 'bağlı') : 'Bu cihazda Google oturumu kapalı.') + '</p>' +
+    '<p class="mini" role="status">' + kacis(durum) + '</p>' +
+    (bagli ? '' : '<div class="arac"><button class="dugme birincil" id="testYenidenGir">Google ile yeniden gir</button></div>') +
+    (EK.testCakisma
+      ? '<p><b>Hangisiyle devam edeceğini seç.</b> Bu cihazdaki defter ile buluttaki defter farklı yerlerden değişti.</p>' +
+        '<div class="arac"><button class="dugme" id="testBulutuAc">Buluttakini aç</button>' +
+        '<button class="dugme" id="testYereliYaz">Bu cihazdakini buluta yaz</button></div>' +
+        '<p class="mini">“Buluttakini aç” bu cihazdaki kaydedilmemiş değişiklikleri siler; istersen önce Gelişmiş ayarlar → “Yedek indir”. ' +
+        '“Bu cihazdakini buluta yaz” seçilirse buluttaki önceki kopya ayrıca saklanır.</p>'
+      : '') +
+    '<p class="mini">Başka bir cihazda devam etmeden önce “Kaydet ve çıkış yap”ı kullan. Diğer cihazda “Test hesabı aç” ile aynı Google hesabını seç.</p></div>';
 }
 // Firestore "permission-denied" hatası bu uygulamada neredeyse her zaman iki şeyden birini
 // gösterir; ham mesaj ("Missing or insufficient permissions") bunların hiçbirini söylemez.
@@ -6496,22 +6649,23 @@ function kaydedipCikisYap() {
   CIKIS_IS=cikisTekSekmede(kaydedipCikisYapGercek).catch(e=>{
     CIKIS_DURUMU='';
     cikisDurumunuGoster('Çıkış tamamlanmadı; cihazdaki çalışma korunuyor. '+(e.message||e),false);
-    if(ogrenciMi())ogrenciEsitlemePlanla();else{ogretmenDinlemeyiBaslat();bulutYedekPlanla();}
+    if(ogrenciMi()){ogrenciEsitlemePlanla();if(testHesabiMi())bulutYedekPlanla();}else{ogretmenDinlemeyiBaslat();bulutYedekPlanla();}
     return false;
   }).finally(()=>{CIKIS_IS=null;});
   return CIKIS_IS;
 }
 async function kaydedipCikisYapGercek() {
-  const b=window.bulut,defter=D,ogr=ogrenciMi();
+  const b=window.bulut,defter=D,test=testHesabiMi(),ogr=ogrenciMi()&&!test;
   if(!defter?.rol||!b?.yapilandirilmis||typeof b.oturumuKapat!=='function')throw new Error('Sunucu bağlantısı hazır değil. Ayarlar’dan buluta bağlanın.');
   if(navigator.onLine===false)throw new Error('İnternet bağlantısı yok. Çıkış için sunucu onayı gerekiyor.');
   if(bulutDefterIslemi)throw new Error('Devam eden bulut işlemi bittikten sonra yeniden deneyin.');
   if(ogr&&(!D.ogr[0]?.hesapUid||!D.ogr[0]?.syncId))throw new Error('Ad ve numarayla yeniden açılabilen öğrenci hesabı gerekli. Öğretmeninizden öğrenci girişinizi yayınlamasını isteyin.');
+  if(test&&!D.ogr.length)throw new Error('Önce takma adını ve sınıfını girip planını başlat.');
   // Devam eden eski kayıtlar/aktarımlar son defterin önüne geçmesin.
   await sureSinirli(Promise.all([KAYIT_ZINCIRI,OGRENCI_SYNC_IS,bulutYedekIsi]),3*BULUT_YAZMA_ZAMAN_ASIMI,'Devam eden kayıt henüz bitmedi; yeniden deneyin.');
   await sureSinirli(b.oturumHazir?.(),BULUT_YAZMA_ZAMAN_ASIMI,'Oturum doğrulanamadı.');
   const kullanici=ogr?await sureSinirli(b.girisOgrenci(D.ogr[0]),BULUT_YAZMA_ZAMAN_ASIMI,'Öğrenci oturumu doğrulanamadı.'):b.mevcutKullanici();
-  if(!kullanici||kullanici.isAnonymous||(ogr?kullanici.uid!==D.ogr[0].hesapUid:String(kullanici.email||'').endsWith('@student.ykstekrar.app')))
+  if(!kullanici||kullanici.isAnonymous||(ogr?kullanici.uid!==D.ogr[0].hesapUid:test?kullanici.uid!==D.testHesap.uid:String(kullanici.email||'').endsWith('@student.ykstekrar.app')))
     throw new Error('Kalıcı hesabınızla giriş yapın; sunucudaki veriyi sonra yeniden açabilmeniz gerekiyor.');
   const oturumAyni=()=>D===defter&&b.mevcutKullanici()?.uid===kullanici.uid;
   if(!oturumAyni())throw new Error('Oturum değişti; çıkış durduruldu.');
@@ -6540,8 +6694,8 @@ async function kaydedipCikisYapGercek() {
   } else {
     onayliImza=JSON.stringify(D);
     const r=await bulutaYedekle();
-    if(r?.tur!=='tamam')throw new Error(r?.mesaj||'Öğretmen defteri sunucuya kaydedilemedi.');
-    const a=await sureSinirli(b.getDocFromServer(b.doc(b.db,'ogretmenYedek',kullanici.uid)),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki son yedek doğrulanamadı.');
+    if(r?.tur!=='tamam')throw new Error(r?.mesaj||(test?'Test defteri':'Öğretmen defteri')+' sunucuya kaydedilemedi.');
+    const a=await sureSinirli(b.getDocFromServer(test?testDefterRef(kullanici.uid):b.doc(b.db,'ogretmenYedek',kullanici.uid)),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki son yedek doğrulanamadı.');
     if(!a.exists()||a.data().veri!==onayliImza)throw new Error('Sunucudaki yedek bu cihazın son kaydıyla eşleşmiyor.');
   }
   const veriAyni=()=>D===defter&&(ogr?ogrenciEsitlemeImzasi():JSON.stringify(D))===onayliImza;
@@ -6738,6 +6892,7 @@ window.bulutDegisti = () => {
   denemeDinlemeyiDurdur(); denemeDinlemeyiBaslat();
   if (rehberMi()) { ogretmenDinlemeyiBaslat(true); bulutYedekPlanla(); }
   else { ogretmenDinlemeyiDurdur(); if (ogrenciMi()) ogrenciEsitlemePlanla(0, true); }
+  if (testHesabiMi()) testDefteriniDenetle().then(() => { if (D && testHesabiMi()) bulutYedekPlanla(); });
 };
 window.addEventListener('online', () => { if (rehberMi()) ogretmenDinlemeyiBaslat(true); });
 window.addEventListener('pagehide', () => { bulutYedekBosalt(); ogrenciEsitlemeBosalt(); });
@@ -8175,7 +8330,8 @@ function rayCiz() {
     SEKMELER().map(s => '<button data-sekme="' + s[0] + '"' + (EK.sekme === s[0] ? ' aria-current="page"' : '') + '>' + s[1] + '</button>').join('') +
     '<div class="bosluk"></div>'+(D?.rol?'<button id="oturumKapat" title="Önce sunucuya kaydeder, onaydan sonra bu uygulamanın cihazdaki verisini temizler"'+(CIKIS_DURUMU?' disabled':'')+'>Kaydet ve çıkış yap</button>':'')+'<div class="durum" role="status" aria-live="polite">' +
     (EK.kirli ? '<b>kaydedilmemiş değişiklik</b>' : kacis(ogrenciMi() ? (EK.ogrSyncDurum || EK.son || 'Planın hazır') : (EK.son || 'hazır'))) +
-    (rehberMi() ? '<br>' + kacis(EK.bulutYedekHata || EK.ogretmenSyncDurum || (EK.bulutYedekTs ? 'Sunucuya kaydedildi' : 'Bulut yedeği henüz onaylanmadı')) : '') + '</div>';
+    (rehberMi() ? '<br>' + kacis(EK.bulutYedekHata || EK.ogretmenSyncDurum || (EK.bulutYedekTs ? 'Sunucuya kaydedildi' : 'Bulut yedeği henüz onaylanmadı')) : '') +
+    (testHesabiMi() && D.ogr.length ? '<br>' + kacis(EK.bulutYedekHata || (EK.bulutYedekTs ? 'Buluta kaydedildi' : 'Bulut kaydı bekliyor')) : '') + '</div>';
 }
 
 function gorunumKurulum() {
@@ -8210,7 +8366,9 @@ function gorunumKurulum() {
     'placeholder="Yedek dosyasını bir metin düzenleyicide açıp içindeki her şeyi kopyalayın, buraya yapıştırın. { ile başlar."></textarea>' +
     '<div class="arac" style="margin-top:8px"><button class="dugme birincil" id="yapistirYukle">Yapıştırılanı yükle</button>' +
     '<span class="mini">Telefonda dosya seçici açılmadığında bu yol her zaman çalışır.</span></div></div>' +
-    '</div></div>';
+    '</div></div>' +
+    '<div class="test-hesap"><button class="dugme" id="testHesapAc">Test hesabı aç</button>' +
+    '<span class="mini">Öğretmenin yoksa Google hesabınla dene. Açtıysan aynı hesapla gir.</span></div>';
 }
 
 // ciz() düzinelerce yerden çağrılıyor; herhangi bir görünüm beklenmedik bir veriyle
@@ -8255,7 +8413,10 @@ function cizIc() {
         : 'Önce Öğrenciler sekmesinden sınıfını ekle.') + '</p>' +
       (ogrenciMi()
         ? '<div style="max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:10px">' +
-          '<label class="etiket">Adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Ad Soyad"></label>' +
+          (testHesabiMi()
+            ? '<label class="etiket">Takma adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Takma ad" maxlength="40"></label>' +
+              '<span class="mini">Gerçek adını yazman gerekmez; yalnızca planında görünür.</span>'
+            : '<label class="etiket">Adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Ad Soyad"></label>') +
           '<label class="etiket">Sınıf düzeyin<br><select id="kOgrSinif">' + sinifSecenekleri(12) + '</select></label>' +
           '<label class="etiket">9–11 plan başlangıcı<br><input type="date" id="kMufredatBaslangic" value="' + isoDan(pazartesi(bugunNo())) + '"></label>' +
           '<label class="etiket">12. sınıf hazır şuben<br><select id="kOgrSube" style="width:100%;margin-top:4px">' +
@@ -8270,9 +8431,10 @@ function cizIc() {
           '<button class="dugme birincil" id="kOgrBaslat" style="margin-top:6px">Başla</button>' +
           '<span class="mini">Ders yılı başlangıcı: ' + ggyy(gunNo(DONEM_BASI_SABIT)) + ' (okul için sabit).</span>' +
           '</div>' +
+          (testHesabiMi() ? '' :
           '<div class="kur-alt" style="margin-top:18px"><label class="dugme" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
           '<input type="file" id="paketYukle" hidden></label>' +
-          '<span class="mini">Rehber öğretmenin sana bir dosya verdiyse, kendi bilgilerini girmek yerine buradan yükleyebilirsin.</span></div>'
+          '<span class="mini">Rehber öğretmenin sana bir dosya verdiyse, kendi bilgilerini girmek yerine buradan yükleyebilirsin.</span></div>')
         : '<button class="dugme birincil" data-sekme="ogrenciler">Öğrenci ekle</button>') +
       '</div></div>';
     window.scrollTo(0, 0); return;
@@ -8520,6 +8682,57 @@ document.addEventListener('click', async ev => {
       k[6] = 1; delete D.islenis[ki];
       await kaydet(true); ciz();
     }
+    return;
+  }
+  if (ev.target.closest('#testHesapAc')) {
+    if (bulutDefterIslemi) return;
+    const dugme = ev.target.closest('#testHesapAc');
+    bulutDefterIslemi = true; dugme.disabled = true; dugme.textContent = 'Açılıyor…';
+    try { await testHesabiniAc(); }
+    catch (e) {
+      alert('Test hesabı açılamadı: ' + (e.message || e));
+      const d = document.getElementById('testHesapAc');
+      if (d) { d.disabled = false; d.textContent = 'Test hesabı aç'; }
+    } finally { bulutDefterIslemi = false; }
+    return;
+  }
+  if (ev.target.closest('#testYenidenGir')) {
+    if (!testHesabiMi() || bulutDefterIslemi) return;
+    try {
+      const kullanici = await window.bulut.girisOgretmen();
+      if (kullanici.uid !== D.testHesap.uid) {
+        alert('Bu defter başka bir Google hesabına ait. Test hesabını açtığın hesabı seç.');
+        return;
+      }
+      EK.bulutYedekHata = ''; ciz(); window.bulutDegisti();
+    } catch (e) { alert('Google girişi tamamlanmadı: ' + (e.message || e)); }
+    return;
+  }
+  if (ev.target.closest('#testBulutuAc')) {
+    if (!testHesabiMi() || bulutDefterIslemi) return;
+    if (!confirm('Buluttaki defter bu cihaza açılacak. Bu cihazda buluta gitmemiş değişiklikler silinir. Devam edilsin mi?')) return;
+    bulutDefterIslemi = true;
+    try {
+      const b = window.bulut, uid = D.testHesap.uid;
+      const anlik = await sureSinirli(b.getDocFromServer(testDefterRef(uid)), BULUT_YAZMA_ZAMAN_ASIMI, 'Test defteri sunucudan zamanında alınamadı.');
+      if (!anlik.exists()) throw new Error('Bulutta test defteri bulunamadı.');
+      await testDefteriniYerlestir((anlik.data() || {}).veri, uid);
+      ciz(); bilgiVer('Buluttaki defterin açıldı.');
+    } catch (e) { alert('Buluttaki defter açılamadı: ' + (e.message || e)); }
+    finally { bulutDefterIslemi = false; }
+    return;
+  }
+  if (ev.target.closest('#testYereliYaz')) {
+    if (!testHesabiMi() || bulutDefterIslemi) return;
+    if (!confirm('Bu cihazdaki defter buluta yazılacak. Buluttaki önceki kopya ayrıca saklanır. Devam edilsin mi?')) return;
+    try {
+      const b = window.bulut;
+      if (bulutYedekIsi) await bulutYedekIsi;
+      const anlik = await sureSinirli(b.getDocFromServer(testDefterRef(D.testHesap.uid)), BULUT_YAZMA_ZAMAN_ASIMI, 'Test defteri sunucudan zamanında alınamadı.');
+      const r = await bulutaYedekle(anlik.exists() ? (anlik.data() || {}).veri : undefined);
+      if (r.tur !== 'tamam') throw new Error(r.mesaj || 'Buluta yazılamadı.');
+      ciz(); bilgiVer('Bu cihazdaki defter buluta yazıldı.');
+    } catch (e) { alert('Buluta yazılamadı: ' + (e.message || e)); }
     return;
   }
   if (ev.target.closest('#rolRehber')) {
@@ -9627,6 +9840,7 @@ document.addEventListener('visibilitychange', () => {
     gorunumGizliliktenGeriGetir();
     if (ogrenciMi()) ogrenciEsitlemePlanla(0, true);
     else if (rehberMi()) ogretmenDinlemeyiBaslat();
+    if (testHesabiMi()) testDefteriniDenetle();
   }
 });
 
@@ -10481,6 +10695,11 @@ document.addEventListener('change',async ev=>{
 });
 // END DENEMELER
 
+// Test hesabı: açılış anlığı yalnızca kullanıcı sayfada hiçbir şeye dokunmadan önce
+// "buluta gitmemiş değişiklik yok" kanıtı sayılır (bkz. testDefteriniDenetle). Yakalama
+// evresinde çalıştığı için diğer dinleyicilerden önce işler; kayıt sırası önemsizdir.
+['click', 'change', 'input', 'submit'].forEach(t => document.addEventListener(t, () => { TEST_ACILIS_JSON = null; }, true));
+
 // ---------------------------------------------------------------- başlangıç
 (async function () {
   // Hold a shared tab lock before reading or changing the notebook. Logout can
@@ -10492,6 +10711,8 @@ document.addEventListener('change',async ev=>{
     if (s) { const y = JSON.parse(s); EK.sekme = y.sekme || EK.sekme; EK.ogr = y.ogr || 0; sessionStorage.removeItem('yks_ek'); sekmeGeriYuklendi = true; }
   } catch (e) { /* yok */ }
   EK.hafta = null;                     // uygulama her zaman içinde bulunulan haftayla açılır
+  // Test hesabı: açılış hazırlığı defteri değiştirmeden önceki hâli (bkz. testDefteriniDenetle).
+  try { TEST_ACILIS_JSON = localStorage.getItem('yks_veri'); } catch (e) { TEST_ACILIS_JSON = null; }
   let acilisUyarilari = [];
   try { acilisUyarilari = await durumuYukle(); }
   catch (e) {

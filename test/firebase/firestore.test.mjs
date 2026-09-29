@@ -6,7 +6,7 @@
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
 import { isDeepStrictEqual } from 'node:util';
-import { doc, getDoc, setDoc, updateDoc, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, runTransaction, collection } from 'firebase/firestore';
 
 let pass = 0, fail = 0;
 const check = async (name, fn) => {
@@ -617,6 +617,66 @@ await check('slot-rotation-preserves-import-and-revokes-old-student',async()=>{
  }));
  await assertFails(getDoc(doc(ogrenciDb,'ogrenciler',old)));
  await assertFails(getDoc(doc(ogrenciDb,'ogrenciler',fresh)));
+});
+
+// ================================================================== testDefter
+// "Test hesabı aç": a Google user's own notebook; no teacher allowlist.
+const TESTCI_UID = 'testci-1';
+const testciDb = testEnv.authenticatedContext(TESTCI_UID, gercekToken).firestore();
+const testciAnonDb = testEnv.authenticatedContext(TESTCI_UID, anonimToken).firestore();
+const testciSifreDb = testEnv.authenticatedContext(TESTCI_UID, sifreToken).firestore();
+const testDefter = (over) => Object.assign({ veri: '{"rol":"ogrenci"}', ts: 1750000000000, surum: 20, boyut: 17 }, over || {});
+const testRef = (db, ...yol) => doc(db, 'testDefter', TESTCI_UID, ...yol);
+
+await check('test-account-owner-can-create-read-and-update-own-notebook', async () => {
+  await assertSucceeds(setDoc(testRef(testciDb), testDefter()));
+  await assertSucceeds(getDoc(testRef(testciDb)));
+  await assertSucceeds(setDoc(testRef(testciDb), testDefter({ veri: '{"rol":"ogrenci","v":2}', boyut: 25 })));
+});
+await check('test-account-needs-no-teacher-allowlist-and-is-not-a-teacher', async () => {
+  await assertFails(setDoc(doc(testciDb, 'ogretmenYedek', TESTCI_UID), testDefter()));
+  await assertFails(setDoc(doc(testciDb, 'ogrenciler', sid('testci')), bosYuva({ ogretmenUid: TESTCI_UID })));
+});
+await check('test-account-other-users-cannot-read-or-write', async () => {
+  await assertFails(getDoc(doc(saldirganDb, 'testDefter', TESTCI_UID)));
+  await assertFails(setDoc(doc(saldirganDb, 'testDefter', TESTCI_UID), testDefter()));
+  await assertFails(getDoc(doc(ogretmenDb, 'testDefter', TESTCI_UID)));
+  await assertFails(getDoc(doc(anonDb, 'testDefter', TESTCI_UID)));
+});
+await check('test-account-anonymous-and-password-sessions-rejected', async () => {
+  await assertFails(setDoc(doc(testciAnonDb, 'testDefter', TESTCI_UID), testDefter()));
+  await assertFails(getDoc(doc(testciAnonDb, 'testDefter', TESTCI_UID)));
+  await assertFails(setDoc(doc(testciSifreDb, 'testDefter', TESTCI_UID), testDefter()));
+});
+await check('test-account-notebook-shape-and-size-enforced', async () => {
+  await assertFails(setDoc(testRef(testciDb), testDefter({ fazla: 1 })));
+  await assertFails(setDoc(testRef(testciDb), testDefter({ veri: '' })));
+  await assertFails(setDoc(testRef(testciDb), testDefter({ veri: 'x'.repeat(900001) })));
+  await assertFails(setDoc(testRef(testciDb), testDefter({ ts: 'dün' })));
+});
+await check('test-account-cannot-delete-or-list', async () => {
+  await assertFails(deleteDoc(testRef(testciDb)));
+  await assertFails(getDocs(collection(testciDb, 'testDefter')));
+});
+await check('test-account-history-only-in-weekday-and-conflict-slots', async () => {
+  for (const yuva of ['0', '6', 'cakisma'])
+    await assertSucceeds(setDoc(testRef(testciDb, 'gecmis', yuva), testDefter({ gun: '2026-09-20' })));
+  await assertSucceeds(setDoc(testRef(testciDb, 'gecmis', '6'), testDefter({ gun: '2026-09-27' })));
+  await assertFails(setDoc(testRef(testciDb, 'gecmis', '7'), testDefter({ gun: '2026-09-20' })));
+  await assertFails(setDoc(testRef(testciDb, 'gecmis', '2026-09-20'), testDefter({ gun: '2026-09-20' })));
+  await assertFails(setDoc(testRef(testciDb, 'gecmis', '0'), testDefter()));
+  await assertFails(setDoc(testRef(testciDb, 'gecmis', '0'), testDefter({ gun: 'x'.repeat(11) })));
+  await assertSucceeds(getDocs(collection(testciDb, 'testDefter', TESTCI_UID, 'gecmis')));
+  await assertFails(deleteDoc(testRef(testciDb, 'gecmis', '0')));
+  await assertFails(getDoc(doc(saldirganDb, 'testDefter', TESTCI_UID, 'gecmis', '0')));
+  await assertFails(setDoc(doc(saldirganDb, 'testDefter', TESTCI_UID, 'gecmis', '1'), testDefter({ gun: '2026-09-20' })));
+});
+await check('test-account-transaction-writes-notebook-and-history-together', async () => {
+  await assertSucceeds(runTransaction(testciDb, async tx => {
+    await tx.get(testRef(testciDb));
+    tx.set(testRef(testciDb), testDefter({ veri: '{"rol":"ogrenci","v":3}', boyut: 25 }));
+    tx.set(testRef(testciDb, 'gecmis', '2'), testDefter({ veri: '{"rol":"ogrenci","v":3}', boyut: 25, gun: '2026-09-23' }));
+  }));
 });
 
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
