@@ -362,6 +362,7 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 .kapat{position:absolute;right:8px;top:7px;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;
   color:var(--soluk);padding:2px 8px;border-radius:6px}
 .kapat:hover{background:var(--vurgu-yumusak);color:var(--murekkep)}
+.kurtar-ipucu{width:min(440px,100%)}.kurtar-ipucu-govde{padding:14px}.kurtar-ipucu-govde p{margin:0 0 10px}
 .p-konu{padding:12px 14px;border-bottom:1px solid var(--cizgi);background:var(--vurgu-yumusak)}
 .p-ad{font-family:"IBM Plex Serif",serif;font-size:16px;font-weight:600;margin:1px 0 2px}
 .p-satir{display:flex;align-items:center;gap:10px;margin-top:9px}
@@ -2600,13 +2601,27 @@ function gecmisPlanDurumu() {
   }
   return GECMIS_PLAN;
 }
+// Haritadaki "Kayıt yok" haftasından gelen öğrenciye bu bölümün ne işe yaradığını anlatır.
+function kurtarmaIpucuHtml() {
+  const h = EK.kurtarmaIpucu;
+  if (!Number.isInteger(h) || !ogrenciMi()) return '';
+  return '<div class="ortu" id="kurtarIpucu"><div class="pencere kurtar-ipucu" role="dialog" aria-modal="true" aria-labelledby="kurtarIpucuBaslik">' +
+    '<div class="p-ust"><b id="kurtarIpucuBaslik">' + ggyy(h) + ' haftası için kayıt yok</b><button type="button" class="kapat" id="kurtarIpucuKapat" aria-label="Kapat">×</button></div>' +
+    '<div class="kurtar-ipucu-govde"><p>O hafta bir plan yaptıysan ama sistemde bulamıyorsan, planını bu bölümden kaydedebilirsin.</p>' +
+    '<p class="mini">Kağıdın fotoğrafını açıp AI ile satırlara çevirebilir ya da satırları elle girebilirsin. Kağıdın ilk günü bu haftaya ayarlandı.</p>' +
+    '<div class="arac"><button type="button" class="dugme birincil" id="kurtarIpucuTamam">Anladım</button></div></div></div></div>';
+}
+function kurtarmaIpucunuKapat() {
+  EK.kurtarmaIpucu = null;
+  const el = document.getElementById('kurtarIpucu'); if (el) el.remove();
+}
 function gorunumPlanKurtarma() {
   if(!rehberMi() && !(ogrenciMi() && D.ogr.length===1))return '';
   const s=gecmisPlanDurumu(), konular=[];
   for(let ki=0;ki<konuSayisi();ki++)if(konuAl(ki)&&!konuAl(ki)[6])konular.push(ki);
   const opt=(deger,secenekler)=>secenekler.map(([v,ad])=>'<option value="'+v+'"'+(String(deger)===String(v)?' selected':'')+'>'+ad+'</option>').join('');
   const alan=(i,k,label,extra,v)=>'<label>'+label+'<input data-gp-i="'+i+'" data-gp-alan="'+k+'" '+extra+' value="'+kacis(v??'')+'"></label>';
-  return '<div class="baslik"><h1>Geçmiş planı kurtar</h1><p>Eski haftalık kağıttan çalışma geçmişini geri kurun.</p></div>'+
+  return kurtarmaIpucuHtml()+'<div class="baslik"><h1>Geçmiş planı kurtar</h1><p>Eski haftalık kağıttan çalışma geçmişini geri kurun.</p></div>'+
     '<div class="kart" style="padding:16px"><div class="arac">'+(ogrenciMi()?'<p>Plan sahibi: <b>'+kacis(D.ogr[0].ad)+' · '+kacis(D.ogr[0].no)+'</b></p>':'<label>Öğrenci <select id="gpOgrenci">'+canliOgrenciler().map(i=>
       '<option value="'+i+'"'+(i===s.si?' selected':'')+'>'+kacis(D.ogr[i].ad)+' · '+kacis(D.ogr[i].no)+' · '+kacis(D.ogr[i].sube)+'</option>').join('')+'</select></label>')+
     '<label>Kağıdın ilk günü <input type="date" id="gpHafta" value="'+kacis(s.hafta)+'" max="'+isoDan(bugunNo())+'"></label></div>'+
@@ -3624,10 +3639,10 @@ function ogrenciYksYolu(detay) {
     else if (gun < hb && !kayit && gun >= katilim) durum = 'kirmizi';
     const testMetni = oz && oz.toplam ? oz.yapilan + '/' + oz.toplam + ' test yapıldı' + (oz.yapilmadi ? ', ' + oz.yapilmadi + ' yapılmadı' : '') : '';
     const metin = no + '. hafta · ' + ggyy(gun) + ' · ' + (simdi ? 'bu hafta · ' : '') +
-      (testMetni || (adet ? adet + ' sonuç kaydı' : gun < hb ? (gun < katilim ? 'katılmadan önce' : 'plan kaydı yok') : 'önizleme')) + (son ? ' · YKS haftası' : '');
+      (testMetni || (adet ? adet + ' sonuç kaydı' : gun < hb ? (gun < katilim ? 'katılmadan önce' : 'plan kaydı yok, dokunarak planını kurtarabilirsin') : 'önizleme')) + (son ? ' · YKS haftası' : '');
     // Her hafta açılabilir: geçmiş ve bu hafta kayıtlı planı, gelecek haftalar önizlemeyi gösterir.
     const acilir = detay;
-    h += '<' + (acilir ? 'button type="button" data-ogr-hafta="' + gun + '"' : 'span') +
+    h += '<' + (acilir ? 'button type="button" data-ogr-hafta="' + gun + '"' + (durum === 'kirmizi' ? ' data-ogr-kurtar="1"' : '') : 'span') +
       ' class="yol-hafta ' + durum + (simdi && durum !== 'simdi' ? ' simdi-cerceve' : '') + (oran !== null && oran < .5 ? ' acik' : '') +
       (gun === secili ? ' secili' : '') + '"' + (oran !== null ? ' style="--oran:' + oran.toFixed(2) + '"' : '') +
       ' title="' + kacis(metin) + '" aria-label="' + kacis(metin) + '"' + (simdi ? ' aria-current="date"' : '') + '>' +
@@ -8343,8 +8358,20 @@ document.addEventListener('click', async ev => {
   const yolHafta = ev.target.closest('[data-ogr-hafta]');
   if (yolHafta && ogrenciMi()) {
     const h = +yolHafta.dataset.ogrHafta;
+    // Plan kaydı olmayan (kırmızı) hafta, kağıttaki planın kaydedilebileceği kurtarma bölümüne açılır.
+    if (yolHafta.dataset.ogrKurtar === '1') {
+      if (duzenlemeKaydi()) return;
+      const s = gecmisPlanDurumu();
+      if (s.hafta !== isoDan(h)) { s.hafta = isoDan(h); gecmisPlanDuzenlendi(s); }
+      EK.sekme = 'kurtarma'; EK.kurtarmaIpucu = h; ciz();
+      const tamam = document.getElementById('kurtarIpucuTamam'); if (tamam) tamam.focus();
+      return;
+    }
     if (haritaPlaniniAc(h)) ciz();
     return;
+  }
+  if (ev.target.closest?.('#kurtarIpucuTamam,#kurtarIpucuKapat') || ev.target.id === 'kurtarIpucu') {
+    kurtarmaIpucunuKapat(); return;
   }
   const haritaPlan=ev.target.closest('[data-harita-plan]');
   if(haritaPlan&&rehberMi()){if(haritaPlaniniAc(+haritaPlan.dataset.haritaPlan))ciz();return;}
@@ -9801,6 +9828,7 @@ document.addEventListener('change', async ev => {
 });
 
 document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && EK.kurtarmaIpucu) { ev.preventDefault(); kurtarmaIpucunuKapat(); return; }
   const sonucModal = document.getElementById('sonucBilgiModal');
   if (ev.key === 'Escape' && sonucModal && !sonucModal.hidden) {
     ev.preventDefault(); sonucModal.hidden = true;

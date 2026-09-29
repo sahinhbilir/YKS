@@ -346,7 +346,7 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  const prevWeek=run('oncekiHafta(0,buHafta())'), curWeek=run('buHafta()'), nextWeek=run('sonrakiHafta(0,buHafta())');
  const weekTests=h=>run(`(()=>{const p=planHesapla(0,${h}),r=[];p.gunler.forEach((l,g)=>l.forEach(x=>{if(!x.serbest&&!x.anlatim)r.push({ki:x.ki,gun:${h}+g});}));return r;})()`);
  const prevTests=weekTests(prevWeek);
- const mapClass=h=>(run('ogrenciYksYolu(true)').match(new RegExp('data-ogr-hafta="'+h+'" class="([^"]*)"(?: style="--oran:([0-9.]+)")?'))||[]);
+ const mapClass=h=>(run('ogrenciYksYolu(true)').match(new RegExp('data-ogr-hafta="'+h+'"(?: data-ogr-kurtar="1")? class="([^"]*)"(?: style="--oran:([0-9.]+)")?'))||[]);
  check('map-previous-week-was-issued',!!run('elleAl(0,'+prevWeek+').sabit')&&!!run('elleAl(0,'+curWeek+').sabit')&&prevTests.length>=3);
  check('current-week-print-needs-last-week-results',run('planYazdirmaEngeli(0,buHafta()).hb')===prevWeek&&!run('sonrakiHaftaYazdirmaEngeli(0,buHafta())'));
  check('weeks-beyond-next-are-preview-only',!!run('planYazdirmaEngeli(0,buHafta()+14).onizleme')&&!run('planYazdirmaEngeli(0,buHafta()+14).hb'));
@@ -354,6 +354,15 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  check('map-issued-week-without-results-is-grey',mapClass(prevWeek)[1].includes('gri')&&!mapClass(prevWeek)[1].includes('kirmizi'));
  // The first week (31 Aug) has no saved plan although the student had joined: no record at all is red.
  check('map-week-without-a-plan-record-is-red',!run('elleAl(0,'+(prevWeek-7)+').sabit')&&mapClass(prevWeek-7)[1].includes('kirmizi'));
+ // A red week opens plan recovery for that week with a short explanation; dismissing it keeps the page.
+ check('red-week-button-offers-recovery',new RegExp('data-ogr-hafta="'+(prevWeek-7)+'" data-ogr-kurtar="1"').test(run('ogrenciYksYolu(true)')));
+ const redWeek=Object.assign(element(),{dataset:{ogrHafta:String(prevWeek-7),ogrKurtar:'1'},closest(s){return s==='[data-ogr-hafta]'?this:null;}});
+ for(const fn of listeners.click||[])await fn({target:redWeek});
+ check('red-week-opens-plan-recovery-for-that-week',run('EK.sekme')==='kurtarma'&&run('gecmisPlanDurumu().hafta')===run('isoDan('+(prevWeek-7)+')'));
+ check('red-week-recovery-explains-itself',run('gorunumPlanKurtarma()').includes('planını bu bölümden kaydedebilirsin'));
+ await click('kurtarIpucuTamam');
+ check('recovery-explanation-can-be-dismissed',run('EK.kurtarmaIpucu')===null&&!run('gorunumPlanKurtarma()').includes('id="kurtarIpucu"'));
+ run('EK.sekme="plan";EK.hafta=null;GECMIS_PLAN=null');
  run('D.ogr[0].ilkAktif=gunNo("2026-09-07")');
  check('map-week-before-joining-is-neutral',!/kirmizi|gri|yesil/.test(mapClass(prevWeek-7)[1]));
  run('D.ogr[0].ilkAktif=gunNo("2026-08-31")');
