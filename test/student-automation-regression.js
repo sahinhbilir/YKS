@@ -357,6 +357,12 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  run('D.ogr[0].ilkAktif=gunNo("2026-09-07")');
  check('map-week-before-joining-is-neutral',!/kirmizi|gri|yesil/.test(mapClass(prevWeek-7)[1]));
  run('D.ogr[0].ilkAktif=gunNo("2026-08-31")');
+ // ilkAktif can move later (e.g. a re-published account); a week after the student's first
+ // recorded result is not "before joining" even when it has no plan record of its own.
+ sandbox.savedPrevPlan=run('JSON.stringify(D.elle["0|'+prevWeek+'"])');
+ run('D.log.push(['+(prevWeek-7)+',0,'+prevTests[0].ki+',null,null,3,1]);delete D.elle["0|'+prevWeek+'"];D.ogr[0].ilkAktif=gunNo("2026-09-14")');
+ check('map-week-after-first-activity-is-not-before-joining',mapClass(prevWeek)[1].includes('kirmizi'));
+ run('D.log.pop();D.elle["0|'+prevWeek+'"]=JSON.parse(savedPrevPlan);D.ogr[0].ilkAktif=gunNo("2026-08-31")');
  check('map-current-week-is-not-coloured-yet',!/kirmizi|gri/.test(mapClass(curWeek)[1]));
  const [skipped,...rated]=prevTests, doneN=Math.max(1,Math.floor(rated.length/2));
  sandbox.skipped=skipped;sandbox.doneRows=rated.slice(0,doneN).map(x=>({ki:x.ki,gun:x.gun,not:3,dogru:null,soru:null}));sandbox.blank=rated.slice(doneN);

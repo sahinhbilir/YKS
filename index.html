@@ -3609,7 +3609,10 @@ function ogrenciYksYolu(detay) {
   // Yeşilin koyuluğu o hafta verilen testlerden yapılanların oranıdır; tek bir sonuç haftayı
   // tamamlanmış göstermez. Plan verilip hiç sonuç girilmeyen hafta gri; katıldıktan sonra hiç
   // plan kaydı olmayan (uygulama o hafta hiç kullanılmamış) hafta kırmızıdır. Bu hafta bitmeden renk almaz.
-  const katilim = haftaBaslangici(D.ogr[si]);
+  // Katılım: ilk aktifleştirme ya da daha önceyse öğrencinin ilk kayıtlı planı/sonucu. ilkAktif
+  // sonradan ileri kayabilir (ör. hesap yeniden yayınlandığında); gerçek kayıt ondan önce gelir.
+  const ilkKayitli = haritaHaftalari(si).find(h => sayilar[h] || elleAl(si, h).sabit);
+  const katilim = Math.min(haftaBaslangici(D.ogr[si]), ilkKayitli ?? Infinity);
   let no = 0;
   for (const gun of haritaHaftalari(si)) {
     no++; const adet = sayilar[gun] || 0;
