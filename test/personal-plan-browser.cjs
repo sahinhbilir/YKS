@@ -55,6 +55,27 @@ const ogrenci=(kur)=>{
    assert(/Konu anlatımı\s+Kendi TYT planın/.test(await page.locator('#ana').innerText()),'the lesson arrives next week');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'plan overflow');
    await page.screenshot({path:path.join(out,'personal-plan-next-week-'+width+'.png'),fullPage:true});
+   // 3. Not in school: the setup asks no timetable, Ayarlar starts the full YKS plan.
+   await page.evaluate(()=>{D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-23';EK={ogr:0,sekme:'plan',hafta:null,girisAcik:{}};ciz();});
+   await page.locator('#kOgrAd').fill('Mezun');
+   await page.locator('#kOgrOkul').selectOption('hayir');
+   assert.equal(await page.locator('#kOgrSinif').isVisible(),false,'grade is hidden');
+   assert.equal(await page.locator('#kOgrSube').isVisible(),false,'class is hidden');
+   await page.locator('#kOgrSinav').waitFor();
+   await page.locator('#kOgrAlan').selectOption('EA');
+   await page.locator('#kOgrSinav').fill('2027-06-19');
+   await page.screenshot({path:path.join(out,'no-school-setup-'+width+'.png'),fullPage:true});
+   await page.locator('#kOgrBaslat').click();
+   await page.getByRole('heading',{name:'Kendi YKS planın'}).waitFor();
+   assert.equal(await page.evaluate(()=>D.ogr[0].okul===false&&D.ogr[0].alan==='EA'&&!D.konuPlani.benim),true);
+   await page.locator('.kpSeviye[data-ders="Türkçe"]').selectOption('biraz');
+   await page.locator('#kpBaslat').click();
+   await page.waitForFunction(()=>D.ogr[0].kendiPlan&&D.ogr[0].kendiPlan.tur==='YKS');
+   await page.getByText(/Kendi YKS planın başladı: \d+ konu, haftada yaklaşık \d+ yeni konu\. İlk konular bu haftanın planında\./).waitFor();
+   await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});
+   assert(/Konu anlatımı\s+Kendi YKS planın/.test(await page.locator('#ana').innerText()),'this week carries YKS lessons');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'no-school plan overflow');
+   await page.screenshot({path:path.join(out,'no-school-plan-'+width+'.png'),fullPage:true});
    assert.deepEqual(errors,[]);
    await context.close();
   }
