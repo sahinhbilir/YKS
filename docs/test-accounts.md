@@ -35,8 +35,9 @@ backups, no per-date documents accumulate.
 
 ## Reset ("Test hesabımı sıfırla")
 
-Ayarlar → **Test hesabın** has a collapsed **Test hesabımı sıfırla** section. Only
-test accounts have it. Teachers, students linked to a teacher (`syncId` or
+Ayarlar → Gelişmiş ayarlar → **Verileri sıfırla** has a **Test hesabımı sıfırla**
+button next to "Tarayıcı verilerini sıfırla". The **Test hesabın** card points there.
+Only test accounts have it. Teachers, students linked to a teacher (`syncId` or
 `hesapUid`) and solo students without a test account never see the button, and
 the reset function refuses them (`testSifirlamaIzinli()`), even if a test marker
 was added to a linked notebook by an imported file. The rules allow deletes only
@@ -108,7 +109,8 @@ for teacher login.
   success/failure, reset (typed confirmation, full delete, failure keeps
   everything, refused for teachers and students) and unchanged school paths.
 - `node test/test-account-browser.cjs`: desktop and 390 px Chromium checks of the
-  button position, nickname setup, first cloud save, the settings card and reset.
+  button position, nickname setup, first cloud save, the settings card, the reset's
+  place in Verileri sıfırla, and the reset itself.
 - `test/firebase/firestore.test.mjs`: 9 emulator checks for `testDefter` rules,
   including owner-only delete and the reset transaction.
 

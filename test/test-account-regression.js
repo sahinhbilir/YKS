@@ -262,7 +262,10 @@ async function check(name, fn) {
   await check('reset-needs-the-typed-confirmation', async kapat => {
     const s = sunucu(), a = kapat(await kur(s));
     assert.equal((await yukle(a)).tur, 'tamam');
-    assert.match(a.run("EK.sekme='ayarlar';gorunumAyarlar()"), /id="testSifirla"/);
+    const ayar = a.run("EK.sekme='ayarlar';gorunumAyarlar()");
+    assert.match(ayar, /<h2>Verileri sıfırla<\/h2><div class="arac">[^]*?id="testSifirla"[^]*?<\/div>/, 'in the Verileri sıfırla card');
+    assert.equal(ayar.match(/id="testSifirla"/g).length, 1);
+    assert.match(ayar, /Baştan başlamak için: Gelişmiş ayarlar → Verileri sıfırla/);
     a.istem(null); await a.tikla('testSifirla');
     a.istem('evet'); await a.tikla('testSifirla');
     assert(s.belgeler['testDefter/' + GOOGLE.uid], 'nothing deleted without SIFIRLA');
