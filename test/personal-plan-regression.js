@@ -43,6 +43,13 @@ const haftaKendi = (a, h) => a.run(`(()=>{const p=planHesapla(0,${h});return JSO
   p.gunler.flat().filter(x=>x.anlatim?(p.elle.anlatim[x.ki]||{}).kaynak===KENDI_PLAN_KAYNAK:(p.elle.kendiTest||{})[x.ki])
   .map(x=>({ki:x.ki,anlatim:!!x.anlatim,soru:x.soru,test:x.test}))))})()`);
 const checks = [];
+// Tick a lesson the way the result form does: on its scheduled day (moving "today" there).
+async function tamamla(a, ki, bu) {
+  const gun = a.run(`(()=>{const p=planHesapla(0,${bu});const g=p.gunler.findIndex(l=>l.some(x=>x.anlatim&&x.ki===${ki}));return ${bu}+g;})()`);
+  if (gun > a.run('bugunNo()')) a.run(`D.ayar.testTarih=isoDan(${gun})`);
+  a.run(`anlatimTamam(0,${ki},${gun})`); await a.run('kaydet(true)');
+  return gun;
+}
 async function check(name, fn) { await fn(app()); checks.push(name); }
 
 (async () => {
@@ -111,7 +118,7 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
     ogrenci(a);
     kur(a, {}, '2026-12-21'); a.run('ciz()');
     const bu = a.run('buHafta(0)'), ki = haftaKendi(a, bu)[0].ki;
-    a.run(`anlatimTamam(0,${ki},bugunNo())`);
+    await tamamla(a, ki, bu);
     assert(!a.run(`kendiPlanKuyrugu(0).some(x=>x.ki===${ki})`));
     let test = false;
     for (let w = 0; w < 3 && !test; w++) test = a.run(`planHesapla(0,sonrakiHafta(0,${bu})+${w * 7}).gunler.flat().some(x=>x.ki===${ki}&&!x.anlatim)`);
@@ -202,7 +209,7 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
     await a.tikla('kpBaslat');
     assert.equal(a.run('D.ogr[0].kendiPlan.seviye["Türkçe"]'), 'bilir');
     assert.equal(a.run('D.ogr[0].kendiPlan.hedef'), '2027-01-15');
-    assert(a.events.some(e => e.startsWith('bilgi:Kendi TYT planın başladı')));
+    assert(a.events.some(e => /^bilgi:Kendi TYT planın başladı: \d+ konu \(\d+ konu okulda ya da önceden başladığı için dışarıda\), haftada yaklaşık \d+ yeni konu\. Bu haftanın planı değişmez; yeni konular gelecek haftadan başlar\.$/.test(e)), a.events.join('\n'));
     h = a.run('gorunumAyarlar()');
     assert.match(h, /\d+ konu kaldı<\/b> · hedef 15\.01\.2027/); assert.match(h, /id="kpKapat"/);
     a.nodes.kpHedef = a.el({ value: '2028-01-01' });
@@ -225,6 +232,73 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
       "{tur:'TYT',hedef:'2027-01-01',seviye:{Türkçe:'hepsi'},sira:[]}", "{tur:'TYT',hedef:'2027-01-01',seviye:{},sira:[-1]}",
       "{tur:'TYT',hedef:'2027-01-01',seviye:{},sira:[1],anlatimGerek:{'1':'dün'}}"])
       assert.throws(() => a.run(`(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].kendiPlan=${kotu};yedekDogrula(y);})()`), /kendi TYT planı/);
+  });
+
+  // ---- Okula gitmiyorum: no timetable, the personal plan carries all of YKS.
+  async function okulsuz(a, alan = 'SAY', sinav = '2027-06-19') {
+    a.run("D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-23';EK={ogr:0,sekme:'plan',hafta:null,girisAcik:{}};");
+    Object.assign(a.nodes, { kOgrAd: a.el({ value: 'Mezun' }), kOgrOkul: a.el({ value: 'hayir' }),
+      kOgrAlan: a.el({ value: alan }), kOgrSinav: a.el({ value: sinav }) });
+    await a.tikla('kOgrBaslat');
+  }
+  await check('no-school-setup-needs-no-timetable-and-starts-this-monday', async a => {
+    await okulsuz(a, 'EA', '2028-06-17');
+    const o = JSON.parse(a.run('JSON.stringify(D.ogr[0])'));
+    assert.equal(o.okul, false); assert.equal(o.sube, 'benim'); assert.equal(o.sinif, 12); assert.equal(o.alan, 'EA');
+    assert.deepEqual(o.dakika, { hi: 180, hs: 180, deneme: false });
+    assert.equal(a.run('D.ayar.sinav'), '2028-06-17');
+    assert.equal(a.run('D.ayar.donemBasi'), a.run('isoDan(buHafta(0))'));
+    assert.equal(a.run("Object.hasOwn(D.konuPlani||{},'benim')"), false, 'no school topic plan');
+    assert.equal(a.run('Object.keys(D.dersProgrami||{}).length'), 0, 'no timetable');
+    assert.equal(a.run('EK.sekme'), 'ayarlar');
+    const h = a.run('gorunumAyarlar()');
+    assert(h.indexOf('Kendi YKS planın') >= 0 && h.indexOf('Kendi YKS planın') < h.indexOf('Çalışma süren'), 'the YKS plan card comes first');
+    assert.match(h, /Kendi YKS planımı başlat/);
+    assert.match(h, /data-ders="Türk Dili ve Edebiyatı"/); assert.match(h, /data-ders="Matematik AYT"/);
+    assert.match(a.run("EK.sekme='plan';gorunumPlan()"), /YKS planın henüz başlamadı/);
+  });
+
+  await check('no-school-setup-rejects-a-too-close-exam-date', async a => {
+    await okulsuz(a, 'SAY', '2026-10-01');
+    assert.equal(a.run('D.ogr.length'), 0);
+    assert(a.events.some(e => e.includes('en az dört hafta')));
+  });
+
+  await check('no-school-plan-covers-tyt-and-ayt-and-paces-to-the-exam', async a => {
+    await okulsuz(a, 'SAY');
+    const sayi = kur(a, {}, '2027-04-23');
+    assert.equal(a.run('D.ogr[0].kendiPlan.tur'), 'YKS');
+    assert(sayi > 300, 'all SAY YKS topics: ' + sayi);
+    const dersler = new Set(JSON.parse(a.run('JSON.stringify(D.ogr[0].kendiPlan.sira.map(k=>D.konuDers[k]))')));
+    for (const d of ['Matematik AYT', 'Matematik TYT', 'Türkçe', 'Fizik', 'Kimya', 'Biyoloji']) assert(dersler.has(d), d);
+    assert.equal(a.run('kendiPlanKuyrugu(0).length'), sayi, 'nothing is school-covered');
+    a.run('ciz()');                                                  // the current week is issued with its first topics
+    const bu = a.run('buHafta(0)');
+    const satirlar = a.run(`(()=>{const p=planHesapla(0,${bu});return p.gunler.flat().filter(x=>x.anlatim).map(x=>p.elle.anlatim[x.ki].kaynak)})()`);
+    assert(satirlar.length > 0 && satirlar.every(k => k === 'Kendi YKS planın'));
+    const K = Math.ceil(sayi / Math.ceil((a.run("gunNo('2027-04-23')") - bu) / 7));
+    assert.equal(a.run(`kendiPlanHaftasi(0,sonrakiHafta(0,${bu})).length`), K, 'next week follows the same pace');
+  });
+
+  await check('no-school-ayt-lesson-leads-to-tests-and-uses-personal-wording', async a => {
+    await okulsuz(a, 'SAY');
+    kur(a, {}, '2027-04-23'); a.run('ciz()');
+    const bu = a.run('buHafta(0)');
+    const ki = a.run(`planHesapla(0,${bu}).gunler.flat().find(x=>x.anlatim&&konuSinavTuru(x.ki)==='AYT')?.ki`);
+    assert(Number.isInteger(ki), 'the first issued week already carries an AYT lesson');
+    await tamamla(a, ki, bu);
+    let test = false;
+    for (let w = 0; w < 4 && !test; w++) test = a.run(`planHesapla(0,sonrakiHafta(0,${bu})+${w * 7}).gunler.flat().some(x=>x.ki===${ki}&&!x.anlatim)`);
+    assert(test, 'a test follows the lesson (the topic passes the field filter)');
+    assert.match(a.run(`sonucSatiriHtml({si:0,ki:${ki},gun:bugunNo(),kayit:null,soru:12})`), /Bu konuyu henüz çalışmadım/);
+  });
+
+  await check('no-school-flag-and-yks-plan-validate-and-sync', async a => {
+    await okulsuz(a, 'SAY');
+    kur(a, {}, '2027-04-23');
+    a.run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
+    assert.throws(() => a.run("(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].okul='hayır';yedekDogrula(y);})()"), /okul bilgisi/);
+    assert.match(html, /'hafizaSeviyesi','aytOncelik','okul'\]\.forEach/, 'okul travels with the work snapshot');
   });
 
   await check('without-a-personal-plan-nothing-changes', async a => {

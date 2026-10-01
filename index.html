@@ -1047,7 +1047,7 @@ function yedekDogrula(y) {
       throw new Error('Geçersiz çalışma süresi: ' + (i + 1) + '. satır.');
     if (o.kendiPlan !== undefined) {
       const kp = o.kendiPlan, konu = k => Number.isInteger(+k) && +k >= 0 && +k < konuAdedi;
-      if (!kp || typeof kp !== 'object' || Array.isArray(kp) || kp.tur !== 'TYT' || !isoTarihGecerli(kp.hedef) ||
+      if (!kp || typeof kp !== 'object' || Array.isArray(kp) || !['TYT', 'YKS'].includes(kp.tur) || !isoTarihGecerli(kp.hedef) ||
           !Array.isArray(kp.sira) || kp.sira.length > 2000 || !kp.sira.every(k => Number.isInteger(k) && konu(k)) ||
           !kp.seviye || typeof kp.seviye !== 'object' || Array.isArray(kp.seviye) ||
           Object.values(kp.seviye).some(v => !['hic', 'biraz', 'bilir'].includes(v)) ||
@@ -1055,6 +1055,7 @@ function yedekDogrula(y) {
             Object.entries(kp.anlatimGerek).some(([k, g]) => !konu(k) || !Number.isInteger(g)))))
         throw new Error('Geçersiz kendi TYT planı: ' + (i + 1) + '. satır.');
     }
+    if (o.okul !== undefined && typeof o.okul !== 'boolean') throw new Error('Geçersiz okul bilgisi: ' + (i + 1) + '. satır.');
     if (o.off !== undefined && (!Array.isArray(o.off) || o.off.some(g => !Number.isInteger(g) || g < 0 || g > 6)))
       throw new Error('Geçersiz tatil günü: ' + (i + 1) + '. satır.');
     if (o.hedef !== undefined && o.hedef !== null &&
@@ -2104,7 +2105,7 @@ function planHesapla(si, hb, derinlik, ham) {
   // Kendi TYT planının bu haftaya düşen yeni konuları. ov burada yerel kopyadır; hafta
   // verildiğinde p.elle ile kalıcı olur, sonraki hesaplar da kâğıttakini görür.
   if (!sabitli && o.kendiPlan) kendiPlanHaftasi(si, hb).forEach(x => {
-    if (x.anlatim) { ov.anlatim = ov.anlatim || {}; if (!ov.anlatim[x.ki]) ov.anlatim[x.ki] = { kaynak: KENDI_PLAN_KAYNAK }; return; }
+    if (x.anlatim) { ov.anlatim = ov.anlatim || {}; if (!ov.anlatim[x.ki]) ov.anlatim[x.ki] = { kaynak: kendiPlanEtiketi(o.kendiPlan.tur) }; return; }
     ov.kendiTest = ov.kendiTest || {}; ov.kendiTest[x.ki] = true;
     if (!ogeler.some(y => y.ki === x.ki))
       ogeler.push({ ki: x.ki, due: hb, ders: konuAl(x.ki)[0], kart: D.kart[si + ':' + x.ki], kendi: true });
@@ -2867,7 +2868,7 @@ function gunlukEkliPlan(si, hb, p) {
     // Dakika bütçesindeki cumartesi okul denemesi: haftalık toplama girer, gösterilir.
     const dk = dakikaModu(si);
     if (dk && dk.deneme !== false && haftaGunu(gun) === CUMARTESI)
-      yeni.unshift({ki:'DENEME_' + gun, serbest:true, gunlukEk:true, deneme:true, ad:'Okul denemesi', dersAd:'Deneme',
+      yeni.unshift({ki:'DENEME_' + gun, serbest:true, gunlukEk:true, deneme:true, ad:D.ogr[si].okul === false ? 'Deneme sınavı' : 'Okul denemesi', dersAd:'Deneme',
         soru:DENEME_DAKIKA, birim:'dakika', test:0});
     return yeni;
   });
@@ -3325,8 +3326,11 @@ function varsayilanKonuPlaniniHazirla(sube, alan, sinif = subeSinifi(sube)) {
 // yetişecek kadar yeni konu gelir: "Bilmiyorum" dersinde konu anlatımı (20 dk), "Biraz"
 // ve "Biliyorum" derslerinde tek testlik yoklama. Okulun tarih verdiği konu burada olmaz.
 // Yoklamada Tekrar (Biraz'da Zor da) ya da "Bu konuyu henüz çalışmadım" konu anlatımı ekler.
-const KENDI_PLAN_KAYNAK = 'Kendi TYT planın';
+// Okula gitmeyen öğrencide (o.okul === false) aynı plan bütün YKS'yi (TYT + alanın AYT'si) taşır.
+const KENDI_PLAN_KAYNAK = 'Kendi TYT planın', KENDI_YKS_KAYNAK = 'Kendi YKS planın';
 const KENDI_SEVIYE = [['hic', 'Bilmiyorum'], ['biraz', 'Biraz biliyorum'], ['bilir', 'Biliyorum']];
+const kendiPlanTuru = o => o && o.okul === false ? 'YKS' : 'TYT';
+const kendiPlanEtiketi = tur => tur === 'YKS' ? KENDI_YKS_KAYNAK : KENDI_PLAN_KAYNAK;
 function tytPlanKonusuMu(dersAd, ad) {
   const k = dersKimligi(dersAd);
   if (/\bAYT\b/.test(dersAd) || /\(AYT\)/.test(ad) || k === dersKimligi('Türk Dili ve Edebiyatı') ||
@@ -3337,10 +3341,11 @@ function tytPlanKonusuMu(dersAd, ad) {
   if (k === dersKimligi('Felsefe (+ Felsefe Grubu)')) return /Felsef|Felsefi/.test(ad);
   return idx >= 0;
 }
-function kendiPlanKonulari(alan) {
+function kendiPlanKonulari(alan, tur = 'TYT') {
   const out = [], gor = new Set();
   yeniYksKonuPlani(alan).forEach(h => {
-    const kuyruk = Object.keys(h).map(dersAd => (h[dersAd] || []).filter(ad => ad && tytPlanKonusuMu(dersAd, ad)).map(ad => ({ dersAd, ad })));
+    const kuyruk = Object.keys(h).map(dersAd => (h[dersAd] || [])
+      .filter(ad => ad && (tur === 'YKS' || tytPlanKonusuMu(dersAd, ad))).map(ad => ({ dersAd, ad })));
     for (let i = 0; kuyruk.some(q => q.length > i); i++) kuyruk.forEach(q => {
       const x = q[i];
       if (x && !gor.has(x.dersAd + '|' + x.ad)) { gor.add(x.dersAd + '|' + x.ad); out.push(x); }
@@ -3348,7 +3353,7 @@ function kendiPlanKonulari(alan) {
   });
   return out;
 }
-function kendiPlanDersleri(alan) { return [...new Set(kendiPlanKonulari(alan).map(x => x.dersAd))]; }
+function kendiPlanDersleri(alan, tur = 'TYT') { return [...new Set(kendiPlanKonulari(alan, tur).map(x => x.dersAd))]; }
 const kendiDersAdi = d => String(d).replace(' (+ Felsefe Grubu)', '');
 function kendiPlanVarsayilanHedef() { return isoDan(Math.max(bugunNo() + 28, gunNo(D.ayar.sinav) - 56)); }
 function kendiPlanHedefHatasi(hedef) {
@@ -3360,9 +3365,9 @@ function kendiPlanHedefHatasi(hedef) {
 // Konuları öğrencinin sınıfına göre, okul programının kullandığı aynı kimlik kuralıyla
 // bulur ya da oluşturur; böylece okulun verdiği konu (ör. 11. sınıf TYT matematik) eşleşir.
 function kendiPlanKur(si, seviye, hedef) {
-  const o = D.ogr[si], sinif = ogrenciSinifi(o), sira = [], gor = new Set();
+  const o = D.ogr[si], sinif = ogrenciSinifi(o), sira = [], gor = new Set(), tur = kendiPlanTuru(o);
   D.konuKaynak = D.konuKaynak || {}; D.konuDers = D.konuDers || {};
-  kendiPlanKonulari(o.alan).forEach(({ dersAd, ad }) => {
+  kendiPlanKonulari(o.alan, tur).forEach(({ dersAd, ad }) => {
     const dersIdx = dersEsle(dersAd);
     if (dersIdx < 0) return;
     const ki = kullaniciKonusu(dersIdx, ad, null, dersAd, sinif);
@@ -3370,7 +3375,7 @@ function kendiPlanKur(si, seviye, hedef) {
     gor.add(ki); sira.push(ki);
     if (D.konuDers[ki] === undefined) { D.konuDers[ki] = dersAd; D.konuKaynak[ki] = iskelet(dersAd); }
   });
-  o.kendiPlan = { tur: 'TYT', hedef, seviye: Object.assign({}, seviye), sira, anlatimGerek: {} };
+  o.kendiPlan = { tur, hedef, seviye: Object.assign({}, seviye), sira, anlatimGerek: {} };
   return sira.length;
 }
 function kendiKonuMu(si, ki) {
@@ -3448,16 +3453,19 @@ function kendiPlanCalismadim(si, ki, gun, formHafta) {
   D.yapilmadi = D.yapilmadi || {}; D.yapilmadi[yapilmadiAnahtari(si, +ki, gun)] = Date.now();
 }
 function kendiPlanKarti(si) {
-  const o = D.ogr[si], kp = o.kendiPlan, dersler = kendiPlanDersleri(o.alan);
+  const o = D.ogr[si], kp = o.kendiPlan, tur = kendiPlanTuru(o), dersler = kendiPlanDersleri(o.alan, tur);
   const seviye = d => ((kp && kp.seviye) || {})[d] || 'hic';
   const sec = d => '<label class="etiket kp-ders">' + kacis(kendiDersAdi(d)) + '<br><select class="kpSeviye" data-ders="' + kacis(d) + '">' +
     KENDI_SEVIYE.map(([v, ad]) => '<option value="' + v + '"' + (seviye(d) === v ? ' selected' : '') + '>' + ad + '</option>').join('') +
     '</select></label>';
   const durum = kp ? kendiPlanHaftalikSayi(si) : null;
-  return '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Kendi TYT planın · isteğe bağlı</h2>' +
-    '<p class="mini">Okul müfredatından ayrı olarak TYT konularını kendi hızında baştan geçmek için. Her hafta hedef tarihe ' +
-    'yetişecek kadar yeni konu gelir: bilmediğin derste önce konu anlatımı (' + ANLATIM_DAKIKA + ' dk), bildiğin derste tek testlik yoklama. ' +
-    'Okulda tarihi olan konu burada tekrar edilmez.</p>' +
+  const yeni = 'Her hafta hedef tarihe yetişecek kadar yeni konu gelir: bilmediğin derste önce konu anlatımı (' + ANLATIM_DAKIKA +
+    ' dk), bildiğin derste tek testlik yoklama. ';
+  return '<div class="kart" style="padding:20px;margin-bottom:18px">' + (tur === 'YKS'
+    ? '<h2>Kendi YKS planın</h2><p class="mini">Okula gitmediğin için bütün YKS konuları (TYT ve ' + kacis(o.alan) +
+      ' AYT’si) bu planla gelir. ' + yeni + 'Önce her derste seviyeni seç, sonra planını başlat.</p>'
+    : '<h2>Kendi TYT planın · isteğe bağlı</h2><p class="mini">Okul müfredatından ayrı olarak TYT konularını kendi hızında baştan geçmek için. ' +
+      yeni + 'Okulda tarihi olan konu burada tekrar edilmez.</p>') +
     (durum ? '<p role="status"><b>' + durum.kalan + ' konu kaldı</b> · hedef ' + ggyy(gunNo(kp.hedef)) +
       (durum.kalan ? ' · haftada yaklaşık ' + durum.haftalik + ' yeni konu' : ' · bütün konular başladı') + '</p>' : '') +
     '<div class="kp-dersler">' + dersler.map(sec).join('') + '</div>' +
@@ -3466,7 +3474,7 @@ function kendiPlanKarti(si) {
     '<p class="mini">Yoklama testinde “Tekrar” seçersen (Biraz biliyorsan “Zor” da) o konu için konu anlatımı eklenir. ' +
     'Başlamış konuların tekrarları plan durdurulsa da sürer.</p>' +
     '<div class="arac">' + (kp ? '<button class="dugme" id="kpKapat">Kendi planımı durdur</button>'
-      : '<button class="dugme birincil" id="kpBaslat">Kendi TYT planımı başlat</button>') + '</div></div>';
+      : '<button class="dugme birincil" id="kpBaslat">Kendi ' + tur + ' planımı başlat</button>') + '</div></div>';
 }
 function hedefOgrenciler() {
   if (ogrenciMi()) return [EK.ogr];
@@ -4041,6 +4049,8 @@ function gorunumOgrenciPlan() {
     (p.devreden ? '<p class="mini">' + p.devreden + ' çalışma bu haftaya sığmadı; sonraki planlarda yeniden değerlendirilir. Günlük sınırın korunur.</p>' : '') +
     (!gorunen.toplam ? '<div class="kart" style="padding:20px">' +
       (p.kayitYok?'Bu haftanın kaydedilmiş planı bulunamadı. Eski kağıdın varsa <button class="dugme" data-sekme="kurtarma">Geçmiş plan kurtar</button> ile geri yükleyebilirsin.':bugunNo() >= gunNo(D.ayar.sinav) ? 'Program dönemi tamamlandı. Sonuçlarını Karnem bölümünde görebilirsin.' :
+       D.ogr[si]?.okul === false && !D.ogr[si].kendiPlan ? 'YKS planın henüz başlamadı. Ayarlar’da derslerde seviyeni seçip ' +
+         '<button class="dugme" data-sekme="ayarlar">Kendi YKS planını başlat</button>' :
        'Bu hafta için çalışma yok. Gelecek haftanın planını kontrol edebilirsin.') + '</div>' :
       planTablosu(si, hb, p, false, true)) + ogrenciPlanEkleri(si, hb, p) + '</div>';
 }
@@ -4988,6 +4998,7 @@ function gorunumAnlasma() {
 function gorunumOgrenciAyarlar() {
   const o = D.ogr[0];
   return '<div class="baslik"><h1>Ayarlar</h1><p>Çalışma temponu seç. Planın, tekrarların ve telafin otomatik hazırlanır.</p></div>' +
+    (o.okul === false ? kendiPlanKarti(0) : '') +
     '<div class="kart" style="padding:20px;margin-bottom:18px">' + (o.dakika ? dakikaAyarlari(o) :
     '<label class="etiket">Günde kaç test çözebilirsin? ' +
     '<input type="number" min="1" max="12" value="' + (o.kap || 6) + '" class="oKap" data-i="0" style="width:70px"></label>' +
@@ -5008,7 +5019,7 @@ function gorunumOgrenciAyarlar() {
     '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Çalışma ağırlığın · isteğe bağlı</h2>'+aytOncelikSecici(0)+
     '<p class="mini">TYT sana kolay geliyor, AYT’yi yeni öğreniyorsan açabilirsin. Yeni AYT çalışmalarına önce yer ayrılır; TYT’de ilk kontrol ve başarılı tekrarlar bir test olur. Zayıf TYT sonuçları ve geciken çalışmalar önceliğini korur.</p>'+
     '<p class="mini">Günlük kapasiten artmaz. Sonuçlar, tekrar tarihleri ve kaydedilmiş haftalar değişmez; seçim sonraki taslak plana yansır. İstediğin zaman kapatabilirsin.</p></div>'+
-    kendiPlanKarti(0) +
+    (o.okul === false ? '' : kendiPlanKarti(0)) +
     (testHesabiMi() ? testHesabiKarti()
       : '<p class="mini" role="status">' + kacis(EK.ogrSyncDurum || (o.syncId ? 'Sonuçların otomatik eşitlenir.' : 'Çalışmaların bu cihazda kaydedilir.')) + '</p>') +
     '<details class="kart" style="padding:20px"' + (EK.gelismisAcik ? ' open' : '') + '><summary style="cursor:pointer;font-weight:600">Gelişmiş ayarlar</summary>' +
@@ -5030,7 +5041,7 @@ function dakikaAyarlari(o) {
   return '<h2>Çalışma süren</h2><div class="arac" style="align-items:flex-end">' +
     alan('hi', 'Hafta içi her gün') + alan('hs', 'Hafta sonu her gün (deneme hariç)') + '</div>' +
     '<label style="display:block;margin-top:10px"><input type="checkbox" class="oDakikaDeneme"' + (d.deneme !== false ? ' checked' : '') +
-    '> Cumartesi ' + DENEME_DAKIKA / 60 + ' saatlik okul denemesine giriyorum</label>' +
+    '> Cumartesi ' + DENEME_DAKIKA / 60 + ' saatlik deneme sınavına giriyorum</label>' +
     '<p class="mini" role="status"><b>Haftalık toplam: ' + toplam + ' / ' + HAFTALIK_DAKIKA_SINIRI + ' dk</b> (okul dersleri hariç' +
     (d.deneme !== false ? ', deneme dahil' : '') + ').</p>' +
     '<p class="mini">Bir test (' + D.ayar.soru + ' soru) ' + Math.round(test) + ' dk, konu anlatımı ' + ANLATIM_DAKIKA +
@@ -5899,7 +5910,7 @@ function ogrenciCalismasiniUygula(calisma, si) {
     });
     if (dahaYeni) {
       ['kap','off','aktif','cikti','ilkAktif','hedef','maddeler','rutin','gunlukEk','otoTelafi','dengeliYuk',
-       'telafiGecmisYapildi','telafiGunKap','hafizaSeviyesi','aytOncelik'].forEach(k => { if (kaynak[k] !== undefined) o[k] = kaynak[k]; });
+       'telafiGecmisYapildi','telafiGunKap','hafizaSeviyesi','aytOncelik','okul'].forEach(k => { if (kaynak[k] !== undefined) o[k] = kaynak[k]; });
       // Dakika bütçesine geçiş de, test sayısına dönüş (alanın silinmesi) de öğrencinin seçimidir.
       if (kaynak.dakika !== undefined) o.dakika = kaynak.dakika; else delete o.dakika;
       if (kaynak.kendiPlan) o.kendiPlan = Object.assign({}, kaynak.kendiPlan, { sira: kaynak.kendiPlan.sira.map(cev),
@@ -8679,7 +8690,7 @@ function cizIc() {
     ana.innerHTML = '<div class="kurulum"><div class="kur-kutu" style="text-align:' + (ogrenciMi() ? 'left' : 'center') + '">' +
       '<h1 style="text-align:center">' + (ogrenciMi() ? 'Bilgilerini gir, başlayalım' : 'Henüz öğrenci yok') + '</h1>' +
       '<p class="kur-oz" style="text-align:center">' + (ogrenciMi()
-        ? 'Adını ve alanını gir; konu planı otomatik yüklenir. Sıradaki adımda okulunun ders programını verirsin, planın hemen hazır olur.'
+        ? 'Adını ve alanını gir. Okula gidiyorsan sıradaki adımda ders programını verirsin; gitmiyorsan bütün YKS planın kendi hızına göre hazırlanır.'
         : 'Önce Öğrenciler sekmesinden sınıfını ekle.') + '</p>' +
       (ogrenciMi()
         ? '<div style="max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:10px">' +
@@ -8687,9 +8698,11 @@ function cizIc() {
             ? '<label class="etiket">Takma adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Takma ad" maxlength="40"></label>' +
               '<span class="mini">Gerçek adını yazman gerekmez; yalnızca planında görünür.</span>'
             : '<label class="etiket">Adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Ad Soyad"></label>') +
-          '<label class="etiket">Sınıf düzeyin<br><select id="kOgrSinif">' + sinifSecenekleri(12) + '</select></label>' +
-          '<label class="etiket">9–11 plan başlangıcı<br><input type="date" id="kMufredatBaslangic" value="' + isoDan(pazartesi(bugunNo())) + '"></label>' +
-          '<label class="etiket">12. sınıf hazır şuben<br><select id="kOgrSube" style="width:100%;margin-top:4px">' +
+          '<label class="etiket">Okula gidiyor musun?<br><select id="kOgrOkul" style="width:100%;margin-top:4px">' +
+          '<option value="evet">Evet, okula gidiyorum</option><option value="hayir">Hayır (mezun, açık lise ya da ara verdim)</option></select></label>' +
+          '<label class="etiket kOkulAlani">Sınıf düzeyin<br><select id="kOgrSinif">' + sinifSecenekleri(12) + '</select></label>' +
+          '<label class="etiket kOkulAlani">9–11 plan başlangıcı<br><input type="date" id="kMufredatBaslangic" value="' + isoDan(pazartesi(bugunNo())) + '"></label>' +
+          '<label class="etiket kOkulAlani">12. sınıf hazır şuben<br><select id="kOgrSube" style="width:100%;margin-top:4px">' +
           Object.keys(OKUL_SUBE_PROGRAMLARI).map(su => '<option value="' + kacis(su) + '">' + kacis(su) +
             ' (' + (OKUL_SUBE_PROGRAMLARI[su].alan === 'EA' ? 'Eşit Ağırlık' : 'Sayısal') + ')</option>').join('') +
           '<option value="">Sınıfım listede yok</option></select>' +
@@ -8697,9 +8710,12 @@ function cizIc() {
           'yüklemen gerekmez.</span></label>' +
           '<label class="etiket">Alanın<br><select id="kOgrAlan" style="width:100%;margin-top:4px">' +
           '<option value="SAY">SAY (Sayısal / MF)</option><option value="EA">EA (Eşit Ağırlık / TM)</option><option value="SÖZ">SÖZ (Sözel)</option><option value="DİL">DİL (Yalnızca TYT planı)</option></select>' +
-          '<span class="mini">Sınıfını seçtiysen kendiliğinden ayarlanır.</span></label>' +
+          '<span class="mini kOkulAlani">Sınıfını seçtiysen kendiliğinden ayarlanır.</span></label>' +
+          '<label class="etiket kOkulsuzAlani" hidden>YKS tarihin<br><input type="date" id="kOgrSinav" value="' + kacis(D.ayar.sinav) + '"></label>' +
+          '<span class="mini kOkulsuzAlani" hidden>Okul ders programı istenmez. Bütün YKS konuları bu tarihe göre kendi planına dağıtılır; ' +
+          'sıradaki adımda derslerde seviyeni seçersin.</span>' +
           '<button class="dugme birincil" id="kOgrBaslat" style="margin-top:6px">Başla</button>' +
-          '<span class="mini">Ders yılı başlangıcı: ' + ggyy(gunNo(DONEM_BASI_SABIT)) + ' (okul için sabit).</span>' +
+          '<span class="mini kOkulAlani">Ders yılı başlangıcı: ' + ggyy(gunNo(DONEM_BASI_SABIT)) + ' (okul için sabit).</span>' +
           '</div>' +
           (testHesabiMi() ? '' :
           '<div class="kur-alt" style="margin-top:18px"><label class="dugme" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
@@ -9075,6 +9091,23 @@ document.addEventListener('click', async ev => {
   if (ev.target.closest('#kOgrBaslat')) {
     const ad = (document.getElementById('kOgrAd').value || '').trim();
     if (!ad) { alert('Önce adını yaz.'); return; }
+    // Okula gitmeyen öğrenci: ders programı ve okul konu planı yok. Bütün YKS kendi
+    // planıyla gelir (bkz. kendiPlanKur); plan haftaları bu pazartesi başlar.
+    if ((document.getElementById('kOgrOkul') || {}).value === 'hayir') {
+      const alan = (document.getElementById('kOgrAlan') || {}).value || 'SAY';
+      const sinav = (document.getElementById('kOgrSinav') || {}).value || D.ayar.sinav;
+      if (!Object.hasOwn(ALAN_DERS, alan)) { alert('Geçerli bir alan seç.'); return; }
+      if (!isoTarihGecerli(sinav) || gunNo(sinav) < bugunNo() + 28) { alert('YKS tarihi en az dört hafta sonra olmalı.'); return; }
+      D.rol = 'ogrenci'; D.ayar.sinav = sinav;
+      D.ogr = [{ no: 1, ad: ad, alan: alan, sube: 'benim', sinif: 12, okul: false, kap: 6, off: [6],
+                 dakika: { hi: 180, hs: 180, deneme: false }, telafiGunKap: 3, hedef: null, aktif: true,
+                 ilkAktif: bugunNo(), maddeler: [], rutin: { once: '', ara: '', sonra: '' } }];
+      donemBasiniAyarla(isoDan(pazartesi(bugunNo())), true);
+      EK.ogr = 0; EK.sekme = 'ayarlar'; EK.sube = 'benim'; EK.hafta = null;
+      await kaydet(true); ciz();
+      bilgiVer(ad + ', önce derslerde seviyeni seç, sonra “Kendi YKS planımı başlat”a bas.');
+      return;
+    }
     const subeSecim = ((document.getElementById('kOgrSube') || {}).value || '').trim();
     const sinif = +(document.getElementById('kOgrSinif')?.value || 12);
     if (![9,10,11,12].includes(sinif)) { alert('Geçerli bir sınıf seç.'); return; }
@@ -9447,15 +9480,17 @@ document.addEventListener('click', async ev => {
     if (hata) { alert(hata); return; }
     const seviye = {};
     document.querySelectorAll('.kpSeviye').forEach(s => { if (KENDI_SEVIYE.some(([v]) => v === s.value)) seviye[s.dataset.ders] = s.value; });
-    const sayi = kendiPlanKur(0, seviye, hedef);
+    // Sayılar, bu hafta verilip konular kâğıda geçmeden önce alınır.
+    const buSabit = !!elleAl(0, buHafta(0)).sabit, sayi = kendiPlanKur(0, seviye, hedef), d = kendiPlanHaftalikSayi(0);
     await kaydet(true); ciz();
-    const d = kendiPlanHaftalikSayi(0);
-    bilgiVer('Kendi TYT planın başladı: ' + d.kalan + ' konu' + (sayi > d.kalan ? ' (' + (sayi - d.kalan) + ' konu okulda ya da önceden başladı)' : '') +
-      ', haftada yaklaşık ' + d.haftalik + ' yeni konu. Mevcut hafta değişmez.');
+    bilgiVer(kendiPlanEtiketi(D.ogr[0].kendiPlan.tur) + ' başladı: ' + d.kalan + ' konu' +
+      (sayi > d.kalan ? ' (' + (sayi - d.kalan) + ' konu okulda ya da önceden başladığı için dışarıda)' : '') +
+      ', haftada yaklaşık ' + d.haftalik + ' yeni konu. ' +
+      (buSabit ? 'Bu haftanın planı değişmez; yeni konular gelecek haftadan başlar.' : 'İlk konular bu haftanın planında.'));
     return;
   }
   if (ev.target.id === 'kpKapat' && ogrenciMi() && D.ogr[0] && D.ogr[0].kendiPlan) {
-    if (!confirm('Kendi TYT planına yeni konu eklenmeyecek. Başlamış konuların tekrarları sürer. Devam edilsin mi?')) return;
+    if (!confirm(kendiPlanEtiketi(D.ogr[0].kendiPlan.tur) + 'a yeni konu eklenmeyecek. Başlamış konuların tekrarları sürer. Devam edilsin mi?')) return;
     delete D.ogr[0].kendiPlan;
     await kaydet(true); ciz(); return;
   }
@@ -10194,6 +10229,12 @@ document.addEventListener('change', async ev => {
     programDegistiTetikle(EK.sube); await kaydet(true); ciz(); return;
   }
   if (el.id === 'mufredatSinif') { EK.mufredatSinif = +el.value; ciz(); return; }
+  if (el.id === 'kOgrOkul') {
+    const okulsuz = el.value === 'hayir';
+    document.querySelectorAll('.kOkulAlani').forEach(x => { x.hidden = okulsuz; });
+    document.querySelectorAll('.kOkulsuzAlani').forEach(x => { x.hidden = !okulsuz; });
+    return;
+  }
   if (el.id === 'kOgrSinif') {
     const su = document.getElementById('kOgrSube');
     if (su) { su.disabled = +el.value !== 12; if (su.disabled) su.value = ''; }

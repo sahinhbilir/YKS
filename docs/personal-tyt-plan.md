@@ -5,6 +5,29 @@ curriculum. A typical user is an 11th grader who learns AYT at school but has
 forgotten grade 9–10 content. The school plan keeps running unchanged next to it.
 Students turn it on in Ayarlar → **Kendi TYT planın**.
 
+## Okula gitmiyorum (full YKS plan)
+
+The solo setup now asks **Okula gidiyor musun?** Answering "Hayır" (graduates,
+açık lise, a break from school) changes the setup:
+
+- The grade, class and curriculum-start fields are hidden. Instead it asks for the
+  student's **YKS date** (stored in `D.ayar.sinav`, at least four weeks away).
+- The student is created with:
+  - `okul: false`, `sube: 'benim'`, grade 12 semantics
+  - **no timetable and no school topic plan**
+  - minutes 180/180, no Saturday mock, up to 3 lessons a day
+- Plan weeks start this Monday. Setup then opens Ayarlar.
+- **Kendi YKS planın** is the first card in Ayarlar, the student's main plan. It
+  covers every topic of the field's YKS plan (TYT and AYT; around 310 for SAY,
+  interleaved by course), with the same levels, pacing, checks and "henüz
+  çalışmadım" behaviour as below. Lessons are labelled "Kendi YKS planın".
+- Until the plan starts, the weekly plan shows a prompt pointing to Ayarlar.
+  Starting it before the current week has any work puts the first topics in this
+  week.
+
+`okul` travels with the work snapshot and is validated as a boolean; `kendiPlan.tur`
+is `'TYT'` or `'YKS'`. DİL remains TYT-only (no YDT syllabus is claimed).
+
 ## Topics and identity
 
 - The topic list is the built-in YKS revision plan for the student's field
@@ -75,7 +98,7 @@ It does **not** shift the school course sequence and records no
 
 ## Tests
 
-- `node test/personal-plan-regression.js`, 15 checks:
+- `node test/personal-plan-regression.js`, 20 checks (5 of them for the no-school mode):
   - TYT classification and interleaving for every field
   - school de-duplication
   - pacing and non-overlapping weeks
@@ -93,6 +116,8 @@ It does **not** shift the school course sequence and records no
 - `node test/personal-plan-browser.cjs`, desktop and 390 px Chromium: start from
   Ayarlar; then in Sonuç gir mark a check "Bu konuyu henüz çalışmadım", save, and see
   the lesson in next week's plan.
+  It also runs the no-school setup end to end: answer "Hayır", start the YKS plan, and see
+  this week's lessons.
 
 A student without a personal plan gets identical plans. The local comparison
 against the step-1 commit still shows 50 weeks / 656 rows unchanged.
