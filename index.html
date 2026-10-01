@@ -5080,8 +5080,12 @@ function veriYonetimiGorunumu() {
   const secim = EK.bulutSifirlama;
   return '<div class="kart" style="padding:18px;margin:16px 0"><h2>Verileri sıfırla</h2>' +
     '<div class="arac"><button class="dugme" id="tarayiciSifirla">Tarayıcı verilerini sıfırla</button>' +
-    (rehberMi() ? '<button class="dugme" id="bulutSifirla">Bulut verilerini sıfırla</button>' : '') + '</div>' +
+    (rehberMi() ? '<button class="dugme" id="bulutSifirla">Bulut verilerini sıfırla</button>' : '') +
+    // Yalnızca test hesabı: öğretmen ve okul öğrencisi bu düğmeyi hiç görmez (bkz. testSifirlamaIzinli).
+    (testSifirlamaIzinli() ? '<button class="dugme" id="testSifirla" style="color:var(--kritik);border-color:var(--kritik)">Test hesabımı sıfırla</button>' : '') + '</div>' +
     '<p class="mini">Tarayıcı sıfırlama bu cihazdaki YKS kayıtlarını siler ve çıkış yapar. Buluta yeni kayıt göndermez; buluttaki kopya korunur. Henüz gönderilmemiş çalışmalar bu cihazdan silinir.</p>' +
+    (testSifirlamaIzinli() ? '<p class="mini"><b>Test hesabımı sıfırla:</b> buluttaki test defterin, geçmiş kopyaları ve bu cihazdaki kayıtların kalıcı olarak silinir; ardından Google oturumun kapanır. ' +
+      'Google hesabın silinmez; aynı hesapla yeniden “Test hesabı aç” diyerek baştan başlayabilirsin. Geri alınamaz; istersen önce “Yedek indir” ile kopya al.</p>' : '') +
     (rehberMi() ? '<p class="mini">Bulut sıfırlama: öğretmen defterini seçtiğiniz eski yedeğe döndürür. Bugünkü değişiklikler buluta kaydedilmiş olsa da uygun bir eski kopya varsa geri alınabilir. Öğrencilerin kendi hesaplarını ve cihazlarını değiştirmez.</p>' : '') +
     (D.bulutGeriAlma ? '<p class="mini"><b>Geri alınan kayıtların yeniden gelmemesi için öğrencilerden otomatik alım duraklatıldı.</b> “Buluttan sonuçları çek” ile yeniden başlatabilirsiniz.</p>' : '') +
     (rehberMi() && secim ? '<div role="region" aria-label="Bulut geri alma yedekleri"><h3>Dönülecek yedeği seçin</h3>' +
@@ -6339,10 +6343,7 @@ function testHesabiKarti() {
         '“Bu cihazdakini buluta yaz” seçilirse buluttaki önceki kopya ayrıca saklanır.</p>'
       : '') +
     '<p class="mini">Başka bir cihazda devam etmeden önce “Kaydet ve çıkış yap”ı kullan. Diğer cihazda “Test hesabı aç” ile aynı Google hesabını seç.</p>' +
-    (!testSifirlamaIzinli() ? '</div>' : '<details style="margin-top:12px"><summary>Test hesabımı sıfırla</summary>' +
-    '<p class="mini">Buluttaki test defterin, geçmiş kopyaları ve bu cihazdaki kayıtların kalıcı olarak silinir; ardından Google oturumun kapanır. ' +
-    'Google hesabın silinmez; istersen aynı hesapla yeniden “Test hesabı aç” diyebilirsin. Geri alınamaz; önce Gelişmiş ayarlar → “Yedek indir” ile kopya alabilirsin.</p>' +
-    '<button class="dugme" id="testSifirla" style="color:var(--kritik);border-color:var(--kritik)">Test hesabımı sıfırla</button></details></div>');
+    (testSifirlamaIzinli() ? '<p class="mini">Baştan başlamak için: Gelişmiş ayarlar → Verileri sıfırla → “Test hesabımı sıfırla”.</p>' : '') + '</div>';
 }
 // "Test hesabımı sıfırla": buluttaki defter ve bütün geçmiş yuvaları tek işlemde silinir,
 // silme sunucudan doğrulanır, sonra cihaz temizlenir ve oturum kapanır. Silindikten sonra

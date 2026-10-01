@@ -60,8 +60,14 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'settings overflow');
    await page.screenshot({path:path.join(out,'test-account-settings-'+width+'.png'),fullPage:true});
    // Reset: typed confirmation, then cloud notebook, history and device copy are gone.
-   await page.locator('summary',{hasText:'Test hesabımı sıfırla'}).click();
-   assert.equal(await page.locator('#testSifirla').isVisible(),true);
+   // The reset sits where people look for it: Gelişmiş ayarlar → Verileri sıfırla.
+   await page.getByText('Baştan başlamak için: Gelişmiş ayarlar → Verileri sıfırla').waitFor();
+   assert.equal(await page.locator('#testSifirla').isVisible(),false,'folded away until Gelişmiş ayarlar opens');
+   await page.locator('summary',{hasText:'Gelişmiş ayarlar'}).click();
+   const kart=page.locator('.kart',{has:page.getByRole('heading',{name:'Verileri sıfırla'})});
+   assert.equal(await kart.locator('#testSifirla').isVisible(),true,'next to Tarayıcı verilerini sıfırla');
+   assert.equal(await kart.locator('#tarayiciSifirla').count(),1);
+   await page.screenshot({path:path.join(out,'test-account-reset-'+width+'.png'),fullPage:true});
    assert(bulutYollari.some(k=>k.startsWith('testDefter/google-1')),'the cloud holds the notebook before');
    const yerelSayisi=()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>String(localStorage.getItem(k)).includes('Kuzey')).length);
    assert(await yerelSayisi()>0,'the device holds the notebook before');
