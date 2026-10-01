@@ -75,6 +75,40 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Öğretmeni olmadan "Test hesabı aç" ile Google hesabıyla gelen öğrencinin kendi
+    // defteri. Yalnızca sahibi okur ve yazar; allowlist gerekmez. Anonim ve ad+numara
+    // (password) oturumları bu yolu kullanamaz. Silme ve listeleme kapalıdır.
+    match /testDefter/{uid} {
+      function sahibi() {
+        return request.auth != null && request.auth.uid == uid
+          && request.auth.token.firebase.sign_in_provider == 'google.com';
+      }
+      function defterGecerli(ekAlanlar) {
+        return request.resource.data.keys().hasOnly(['veri','ts','surum','boyut'].concat(ekAlanlar))
+          && request.resource.data.veri is string
+          && request.resource.data.veri.size() > 0
+          && request.resource.data.veri.size() <= 900000
+          && request.resource.data.ts is int
+          && request.resource.data.surum is int
+          && request.resource.data.boyut is int;
+      }
+      allow get: if sahibi();
+      allow create, update: if sahibi() && defterGecerli([]);
+      allow delete, list: if false;
+
+      // Geçmiş sınırsız büyümez: haftanın her günü için bir yuva üzerine yazılır,
+      // "cakisma" ise başka cihazdaki defterin yerine yazılan son bulut kopyasıdır.
+      match /gecmis/{yuva} {
+        allow get, list: if sahibi();
+        allow create, update: if sahibi()
+          && yuva in ['0','1','2','3','4','5','6','cakisma']
+          && defterGecerli(['gun'])
+          && request.resource.data.gun is string
+          && request.resource.data.gun.size() <= 10;
+        allow delete: if false;
+      }
+    }
+
     // Rehber öğretmenin önceden hazırladığı öğrenci hesabı. Paket JSON dizesi olarak
     // saklanır; böylece iç içe diziler Firestore belge biçimini bozmaz. Öğrenci yalnızca
     // Firebase Authentication tarafından doğrulanan kendi UID belgesini okuyabilir.
