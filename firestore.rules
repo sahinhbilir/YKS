@@ -77,7 +77,8 @@ service cloud.firestore {
 
     // Öğretmeni olmadan "Test hesabı aç" ile Google hesabıyla gelen öğrencinin kendi
     // defteri. Yalnızca sahibi okur ve yazar; allowlist gerekmez. Anonim ve ad+numara
-    // (password) oturumları bu yolu kullanamaz. Silme ve listeleme kapalıdır.
+    // (password) oturumları bu yolu kullanamaz. Listeleme kapalıdır; yalnızca sahibi
+    // "Test hesabımı sıfırla" ile kendi defterini ve geçmişini silebilir.
     match /testDefter/{uid} {
       function sahibi() {
         return request.auth != null && request.auth.uid == uid
@@ -94,7 +95,8 @@ service cloud.firestore {
       }
       allow get: if sahibi();
       allow create, update: if sahibi() && defterGecerli([]);
-      allow delete, list: if false;
+      allow delete: if sahibi();
+      allow list: if false;
 
       // Geçmiş sınırsız büyümez: haftanın her günü için bir yuva üzerine yazılır,
       // "cakisma" ise başka cihazdaki defterin yerine yazılan son bulut kopyasıdır.
@@ -105,7 +107,7 @@ service cloud.firestore {
           && defterGecerli(['gun'])
           && request.resource.data.gun is string
           && request.resource.data.gun.size() <= 10;
-        allow delete: if false;
+        allow delete: if sahibi();
       }
     }
 

@@ -217,7 +217,7 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
 
   await check('target-date-must-be-before-the-exam', async a => {
     ogrenci(a);
-    assert.match(a.run("kendiPlanHedefHatasi('2028-01-01')"), /YKS tarihinden/);
+    assert.match(a.run("kendiPlanHedefHatasi('2028-01-01')"), /sınav tarihinden/);
     assert.match(a.run("kendiPlanHedefHatasi('2026-09-01')"), /bugünden sonra/);
     assert.equal(a.run("kendiPlanHedefHatasi('2027-03-01')"), '');
   });
@@ -298,7 +298,7 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
     kur(a, {}, '2027-04-23');
     a.run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
     assert.throws(() => a.run("(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].okul='hayır';yedekDogrula(y);})()"), /okul bilgisi/);
-    assert.match(html, /'hafizaSeviyesi','aytOncelik','okul'\]\.forEach/, 'okul travels with the work snapshot');
+    assert.match(html, /'hafizaSeviyesi','aytOncelik','okul','sinavTuru'\]\.forEach/, 'okul travels with the work snapshot');
   });
 
   await check('without-a-personal-plan-nothing-changes', async a => {

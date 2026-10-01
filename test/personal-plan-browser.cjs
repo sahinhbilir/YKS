@@ -76,6 +76,36 @@ const ogrenci=(kur)=>{
    assert(/Konu anlatımı\s+Kendi YKS planın/.test(await page.locator('#ana').innerText()),'this week carries YKS lessons');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'no-school plan overflow');
    await page.screenshot({path:path.join(out,'no-school-plan-'+width+'.png'),fullPage:true});
+   // 4. Another exam (KPSS): no school or field questions, the date is the student's own.
+   await page.evaluate(()=>{D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-23';EK={ogr:0,sekme:'plan',hafta:null,girisAcik:{}};ciz();});
+   await page.locator('#kOgrAd').fill('Aday');
+   await page.locator('#kOgrSinavTuru').selectOption('KPSS');
+   assert.equal(await page.locator('#kOgrOkul').isVisible(),false,'school question is hidden');
+   assert.equal(await page.locator('#kOgrAlan').isVisible(),false,'field is hidden');
+   assert.equal(await page.locator('#kOgrSinav').inputValue(),'','the YKS date is not offered for KPSS');
+   await page.locator('.kDigerSinavNotu').waitFor();
+   await page.locator('#kOgrSinavTuru').selectOption('YKS');                       // back and forth keeps YKS intact
+   assert.equal(await page.locator('#kOgrOkul').isVisible(),true);
+   await page.locator('#kOgrSinavTuru').selectOption('KPSS');
+   await page.locator('#kOgrSinav').fill('2027-07-11');
+   await page.screenshot({path:path.join(out,'exam-setup-'+width+'.png'),fullPage:true});
+   await page.locator('#kOgrBaslat').click();
+   await page.getByRole('heading',{name:'Kendi KPSS planın'}).waitFor();
+   assert.equal(await page.evaluate(()=>D.ogr[0].sinavTuru==='KPSS'&&D.ayar.sinav==='2027-07-11'),true);
+   assert.equal(await page.locator('#ray button[data-sekme="mufredat"]').count(),0,'no Müfredat tab');
+   assert.equal(await page.locator('#ray button[data-sekme="denemeler"]').count(),0,'no Denemelerim tab');
+   await page.getByText('Kapsam ve kaynaklar').click();
+   await page.getByText(/Genel Yetenek/).first().waitFor();
+   assert(await page.locator('.kpSeviye[data-ders="Vatandaşlık"]').count()===1,'KPSS courses are listed');
+   await page.locator('#kpHedef').fill('2026-12-15');
+   await page.locator('#kpBaslat').click();
+   await page.waitForFunction(()=>D.ogr[0].kendiPlan&&D.ogr[0].kendiPlan.tur==='KPSS');
+   await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});
+   const metin=await page.locator('#ana').innerText();
+   assert(/KPSS’ye giden yol/.test(await page.locator('.yks-yolu .etiket').first().textContent()),'countdown names KPSS');
+   assert(/Konu anlatımı\s+Kendi KPSS planın/.test(metin),'this week carries KPSS lessons');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'exam plan overflow');
+   await page.screenshot({path:path.join(out,'exam-plan-'+width+'.png'),fullPage:true});
    assert.deepEqual(errors,[]);
    await context.close();
   }
