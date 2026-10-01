@@ -35,8 +35,15 @@ backups, no per-date documents accumulate.
 
 ## Reset ("Test hesabımı sıfırla")
 
-Ayarlar → **Test hesabın** has a collapsed **Test hesabımı sıfırla** section. The
-button asks the tester to type `SIFIRLA`; anything else cancels and deletes
+Ayarlar → **Test hesabın** has a collapsed **Test hesabımı sıfırla** section. Only
+test accounts have it. Teachers, students linked to a teacher (`syncId` or
+`hesapUid`) and solo students without a test account never see the button, and
+the reset function refuses them (`testSifirlamaIzinli()`), even if a test marker
+was added to a linked notebook by an imported file. The rules allow deletes only
+inside the signed-in tester's own `testDefter/{uid}`. Teacher backups and
+student documents stay delete-closed.
+
+The button asks the tester to type `SIFIRLA`; anything else cancels and deletes
 nothing. Then, under the same single-tab lock as logout:
 
 1. Pending saves finish. The signed-in Google user must own this notebook.
@@ -95,11 +102,11 @@ for teacher login.
 
 ## Tests
 
-- `node test/test-account-regression.js`: 19 checks, including setup, bounded
+- `node test/test-account-regression.js`: 20 checks, including setup, bounded
   history, second device, automatic pull (with and without a start-up re-save and
   a user click), conflicts in both directions, wrong account, rules denial, logout
   success/failure, reset (typed confirmation, full delete, failure keeps
-  everything) and unchanged school paths.
+  everything, refused for teachers and students) and unchanged school paths.
 - `node test/test-account-browser.cjs`: desktop and 390 px Chromium checks of the
   button position, nickname setup, first cloud save, the settings card and reset.
 - `test/firebase/firestore.test.mjs`: 9 emulator checks for `testDefter` rules,

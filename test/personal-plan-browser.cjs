@@ -25,6 +25,8 @@ const ogrenci=(kur)=>{
    // 1. Start from the settings card.
    await page.evaluate(ogrenci,false);
    await page.getByRole('heading',{name:'Kendi TYT planın · isteğe bağlı'}).waitFor();
+   assert.equal(await page.locator('#testSifirla').count(),0,'a student without a test account has no reset');
+   assert.equal(await page.getByText('Test hesabımı sıfırla').count(),0);
    await page.locator('.kpSeviye[data-ders="Türkçe"]').selectOption('bilir');
    await page.locator('#kpHedef').fill('2027-01-15');
    await page.locator('#kpBaslat').click();
