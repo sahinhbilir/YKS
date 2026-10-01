@@ -26,7 +26,9 @@ açık lise, a break from school) changes the setup:
   week.
 
 `okul` travels with the work snapshot and is validated as a boolean; `kendiPlan.tur`
-is `'TYT'` or `'YKS'`. DİL remains TYT-only (no YDT syllabus is claimed).
+is `'TYT'`, `'YKS'` or one of the other exams. DİL remains TYT-only (no YDT
+syllabus is claimed). LGS, KPSS, ALES, DGS and AGS use this same plan with their
+own topic lists; see [exams.md](exams.md).
 
 ## Topics and identity
 

@@ -10,7 +10,7 @@ const source = html.slice(start, html.indexOf('// ------------------------------
 const GOOGLE = { uid: 'google-1', isAnonymous: false, email: 'tester@example.test' };
 const DIGER = { uid: 'google-2', isAnonymous: false, email: 'other@example.test' };
 
-function sunucu() { return { belgeler: {}, yazma: 0, reddet: false }; }
+function sunucu() { return { belgeler: {}, yazma: 0, reddet: false, silinen: [] }; }
 function cihaz(s, kullanici = GOOGLE, oturumAcik = false) {
   const store = {}, session = {}, listeners = {}, timers = new Set(), events = [];
   const el = extra => Object.assign({ style: {}, dataset: {}, innerHTML: '', textContent: '', value: '', disabled: false,
@@ -21,14 +21,16 @@ function cihaz(s, kullanici = GOOGLE, oturumAcik = false) {
   const storage = data => ({ get length() { return Object.keys(data).length; }, key: i => Object.keys(data)[i] ?? null,
     getItem: k => data[k] ?? null, setItem: (k, v) => { data[k] = String(v); }, removeItem: k => { delete data[k]; } });
   const snap = data => ({ exists: () => !!data, data: () => data && structuredClone(data) });
-  const yaz = (ref, data) => { s.belgeler[ref] = JSON.parse(JSON.stringify(data)); s.yazma++; };
+  const yaz = (ref, data) => { if (data === null) { s.silinen.push(ref); delete s.belgeler[ref]; } else s.belgeler[ref] = JSON.parse(JSON.stringify(data)); s.yazma++; };
+  let istem = '';
   const b = { yapilandirilmis: true, db: {}, doc: (_db, ...p) => p.join('/'), mevcutKullanici: () => user,
     oturumHazir: async () => {},
     girisOgretmen: async () => { user = kullanici; return user; },
     async runTransaction(_db, fn) {
       if (s.reddet) throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
       const writes = [];
-      const r = await fn({ get: async ref => snap(s.belgeler[ref]), set: (ref, data) => writes.push([ref, data]) });
+      const r = await fn({ get: async ref => snap(s.belgeler[ref]), set: (ref, data) => writes.push([ref, data]),
+        delete: ref => writes.push([ref, null]) });
       writes.forEach(([ref, data]) => yaz(ref, data));
       return r;
     },
@@ -38,7 +40,7 @@ function cihaz(s, kullanici = GOOGLE, oturumAcik = false) {
   const sandbox = { console, JSON, Date, Math, Intl, TextEncoder, Blob, URL, URLSearchParams, crypto: webcrypto, structuredClone,
     location: { search: '?dev=1' }, navigator: { onLine: true, locks: { request: async (_n, _o, fn) => fn({}) } },
     localStorage: storage(store), sessionStorage: storage(session), fetch: async () => ({ ok: false }),
-    alert: m => events.push('alert:' + m), confirm: () => true, prompt: () => '',
+    alert: m => events.push('alert:' + m), confirm: () => true, prompt: () => { events.push('prompt'); return istem; },
     setTimeout(fn, ms) { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); t.unref(); timers.add(t); return t; },
     clearTimeout(t) { clearTimeout(t); timers.delete(t); },
     window: { bulut: b, scrollTo() {}, addEventListener() {}, location: { reload() {} } },
@@ -56,7 +58,7 @@ function cihaz(s, kullanici = GOOGLE, oturumAcik = false) {
     for (const fn of listeners.click || []) await fn({ target });
     await run('KAYIT_ZINCIRI');
   };
-  return { run, nodes, store, events, b, tikla, el, sandbox, user: () => user, setUser: u => { user = u; },
+  return { run, nodes, store, events, b, tikla, el, sandbox, user: () => user, setUser: u => { user = u; }, istem: v => { istem = v; },
     close() { timers.forEach(clearTimeout); } };
 }
 // Opens a new test account and completes the existing solo setup as a grade-11 student.
@@ -255,6 +257,80 @@ async function check(name, fn) {
     assert.equal(await a.run('kaydedipCikisYap()'), false);
     assert(a.store.yks_veri); assert(!a.events.includes('signout'));
     assert.equal(a.run('D.ogr[0].ad'), 'Kuzey');
+  });
+
+  await check('reset-needs-the-typed-confirmation', async kapat => {
+    const s = sunucu(), a = kapat(await kur(s));
+    assert.equal((await yukle(a)).tur, 'tamam');
+    assert.match(a.run("EK.sekme='ayarlar';gorunumAyarlar()"), /id="testSifirla"/);
+    a.istem(null); await a.tikla('testSifirla');
+    a.istem('evet'); await a.tikla('testSifirla');
+    assert(s.belgeler['testDefter/' + GOOGLE.uid], 'nothing deleted without SIFIRLA');
+    assert(a.events.some(e => e.startsWith('alert:Sıfırlama iptal edildi')));
+    assert.equal(a.run('D.ogr[0].ad'), 'Kuzey');
+  });
+
+  await check('reset-deletes-cloud-notebook-history-and-device-then-signs-out', async kapat => {
+    const s = sunucu(), a = kapat(await kur(s));
+    for (let g = 0; g < 3; g++) { a.run("D.ayar.testTarih=isoDan(gunNo('2026-09-20')+" + g + ');'); await a.run('kaydet(true)'); await yukle(a); }
+    a.run('TEST_DENETIM_IS=null;');
+    s.belgeler['testDefter/' + GOOGLE.uid + '/gecmis/cakisma'] = { veri: '{}', ts: 1, surum: 1, boyut: 2, gun: '2026-09-20' };
+    s.belgeler['testDefter/' + DIGER.uid] = { veri: 'baskasi', ts: 1, surum: 1, boyut: 7 };
+    assert.equal(Object.keys(s.belgeler).filter(k => k.startsWith('testDefter/' + GOOGLE.uid)).length, 5);
+    a.istem('sıfırla'); await a.tikla('testSifirla');
+    await a.run('CIKIS_IS||Promise.resolve()');
+    assert.deepEqual(Object.keys(s.belgeler).filter(k => k.startsWith('testDefter/' + GOOGLE.uid)), [], 'notebook and every slot deleted');
+    assert(s.belgeler['testDefter/' + DIGER.uid], 'another account is untouched');
+    assert.equal(a.store.yks_veri, undefined); assert(a.events.includes('signout'));
+    assert.equal(a.run('D.rol'), '');
+    const b = kapat(cihaz(s)); await b.tikla('testHesapAc');
+    assert.equal(b.run('D.ogr.length'), 0, 'the same Google account starts from an empty setup');
+  });
+
+  await check('reset-failure-deletes-nothing-and-keeps-the-device', async kapat => {
+    const s = sunucu(), a = kapat(await kur(s));
+    assert.equal((await yukle(a)).tur, 'tamam');
+    s.reddet = true;
+    a.istem('SIFIRLA'); await a.tikla('testSifirla'); await a.run('CIKIS_IS||Promise.resolve()');
+    assert(s.belgeler['testDefter/' + GOOGLE.uid]); assert(a.store.yks_veri); assert(!a.events.includes('signout'));
+    assert.equal(a.run('CIKIS_DURUMU'), ''); assert.equal(a.run('D.ogr[0].ad'), 'Kuzey');
+    s.reddet = false; a.setUser(DIGER);
+    await a.tikla('testSifirla'); await a.run('CIKIS_IS||Promise.resolve()');
+    assert(s.belgeler['testDefter/' + GOOGLE.uid], 'another signed-in account cannot reset this notebook');
+  });
+
+  // Only a test account can reset. Teachers, teacher-linked students, students without a
+  // test account and a test marker forged onto a linked notebook never see or run it.
+  await check('reset-is-only-for-test-accounts-never-teachers-or-students', async kapat => {
+    const s = sunucu();
+    s.belgeler['testDefter/' + GOOGLE.uid] = { veri: 'test', ts: 1, surum: 1, boyut: 4 };
+    const defterler = {
+      ogretmen: "D.rol='rehber';D.ogr=[{no:1,ad:'Ada',alan:'SAY',sube:'12A',kap:6,off:[]}];",
+      okulOgrencisi: "D.rol='ogrenci';D.ogr=[{no:1,ad:'Ada',alan:'SAY',sube:'12A',kap:6,off:[],syncId:'slot',hesapUid:'" + GOOGLE.uid + "'}];",
+      tekBasinaOgrenci: "D.rol='ogrenci';D.ogr=[{no:1,ad:'Ada',alan:'SAY',sube:'benim',kap:6,off:[]}];",
+      sahteTestIsareti: "D.rol='ogrenci';D.testHesap={uid:'" + GOOGLE.uid + "',acilis:1};D.ogr=[{no:1,ad:'Ada',alan:'SAY',sube:'12A',kap:6,off:[],syncId:'slot'}];",
+    };
+    for (const [ad, kod] of Object.entries(defterler)) {
+      const a = kapat(cihaz(s, GOOGLE, true));                   // signed in with the Google account that owns the test notebook
+      a.run("D=varsayilan();D.ayar.testTarih='2026-09-20';EK.sekme='ayarlar';" + kod);
+      await a.run('kaydet(true)');
+      const yerel = a.store.yks_veri;
+      assert.equal(a.run('testSifirlamaIzinli()'), false, ad);
+      assert.doesNotMatch(a.run('gorunumAyarlar()') + a.run('gorunumAyarlar(true)'), /testSifirla|sıfırla<\/summary>/, ad + ' sees no reset');
+      a.istem('SIFIRLA');
+      await a.tikla('testSifirla');
+      assert.equal(await a.run('testHesabiniSifirla()'), false, ad);
+      await assert.rejects(a.run('testHesabiniSifirlaGercek()'), /Yalnızca test hesabı sıfırlanabilir/, ad);
+      assert(!a.events.includes('prompt'), ad + ' is never asked to confirm');
+      assert(!a.events.includes('signout'), ad + ' stays signed in');
+      assert.deepEqual(s.silinen, [], ad + ' deletes nothing in the cloud');
+      assert(s.belgeler['testDefter/' + GOOGLE.uid]);
+      assert.equal(a.store.yks_veri, yerel, ad + ' keeps this device');
+      assert.equal(a.run('CIKIS_DURUMU'), '', ad);
+    }
+    const t = kapat(await kur(sunucu()));                        // the test account itself still can
+    assert.equal(t.run('testSifirlamaIzinli()'), true);
+    assert.match(t.run("EK.sekme='ayarlar';gorunumAyarlar()"), /id="testSifirla"/);
   });
 
   await check('school-student-and-teacher-paths-are-unchanged', async kapat => {

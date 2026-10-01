@@ -654,8 +654,10 @@ await check('test-account-notebook-shape-and-size-enforced', async () => {
   await assertFails(setDoc(testRef(testciDb), testDefter({ veri: 'x'.repeat(900001) })));
   await assertFails(setDoc(testRef(testciDb), testDefter({ ts: 'dün' })));
 });
-await check('test-account-cannot-delete-or-list', async () => {
-  await assertFails(deleteDoc(testRef(testciDb)));
+await check('test-account-only-owner-can-delete-and-nobody-can-list', async () => {
+  await assertFails(deleteDoc(doc(saldirganDb, 'testDefter', TESTCI_UID)));
+  await assertFails(deleteDoc(doc(testciAnonDb, 'testDefter', TESTCI_UID)));
+  await assertFails(deleteDoc(doc(ogretmenDb, 'testDefter', TESTCI_UID)));
   await assertFails(getDocs(collection(testciDb, 'testDefter')));
 });
 await check('test-account-history-only-in-weekday-and-conflict-slots', async () => {
@@ -667,7 +669,7 @@ await check('test-account-history-only-in-weekday-and-conflict-slots', async () 
   await assertFails(setDoc(testRef(testciDb, 'gecmis', '0'), testDefter()));
   await assertFails(setDoc(testRef(testciDb, 'gecmis', '0'), testDefter({ gun: 'x'.repeat(11) })));
   await assertSucceeds(getDocs(collection(testciDb, 'testDefter', TESTCI_UID, 'gecmis')));
-  await assertFails(deleteDoc(testRef(testciDb, 'gecmis', '0')));
+  await assertFails(deleteDoc(doc(saldirganDb, 'testDefter', TESTCI_UID, 'gecmis', '0')));
   await assertFails(getDoc(doc(saldirganDb, 'testDefter', TESTCI_UID, 'gecmis', '0')));
   await assertFails(setDoc(doc(saldirganDb, 'testDefter', TESTCI_UID, 'gecmis', '1'), testDefter({ gun: '2026-09-20' })));
 });
@@ -677,6 +679,18 @@ await check('test-account-transaction-writes-notebook-and-history-together', asy
     tx.set(testRef(testciDb), testDefter({ veri: '{"rol":"ogrenci","v":3}', boyut: 25 }));
     tx.set(testRef(testciDb, 'gecmis', '2'), testDefter({ veri: '{"rol":"ogrenci","v":3}', boyut: 25, gun: '2026-09-23' }));
   }));
+});
+
+await check('test-account-reset-deletes-notebook-and-history-in-one-transaction', async () => {
+  await assertSucceeds(setDoc(testRef(testciDb), testDefter()));
+  await assertSucceeds(setDoc(testRef(testciDb, 'gecmis', '3'), testDefter({ gun: '2026-09-23' })));
+  await assertSucceeds(runTransaction(testciDb, async tx => {
+    [testRef(testciDb)].concat(['0','1','2','3','4','5','6','cakisma'].map(y => testRef(testciDb, 'gecmis', y))).forEach(r => tx.delete(r));
+  }));
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    if ((await getDoc(doc(ctx.firestore(), 'testDefter', TESTCI_UID))).exists()) throw new Error('notebook still exists');
+    if ((await getDoc(doc(ctx.firestore(), 'testDefter', TESTCI_UID, 'gecmis', '3'))).exists()) throw new Error('history still exists');
+  });
 });
 
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');

@@ -1,0 +1,96 @@
+{
+  "surum": "2026-10-01",
+  "not": "Konu adları planlama başlıklarıdır. MEB ve ÖSYM ayrıntılı konu listesi yayımlamadığında yaygın hazırlık kaynaklarında ortak olan başlıklar kullanıldı; resmî kapsam her sınavın kapsam alanında belirtildi. idx, uygulamanın mevcut ders kimliğidir (0 dil, 1 matematik, 2 fen, 5 tarih, 6 inkılap/hukuk, 7 coğrafya, 8 felsefe/eğitim, 9 din); ekranda ders adı görünür.",
+  "sinavlar": {
+    "LGS": {
+      "ad": "LGS",
+      "uzunAd": "Liselere Geçiş Sistemi merkezî sınavı",
+      "kurum": "MEB",
+      "kapsam": "8. sınıf öğretim programlarındaki kazanımlar; 1. ve 2. dönem konuları. MEB 2027 kapsamının 2026 ile aynı olduğunu açıkladı. Sözel oturum: Türkçe, İnkılap Tarihi, Din Kültürü, Yabancı Dil; sayısal oturum: Matematik, Fen Bilimleri.",
+      "kaynaklar": [
+        "https://www.meb.gov.tr/2026-lgs-kapsamindaki-merkezi-sinav-icin-basvuru-ve-uygulama-kilavuzu-yayimlandi/haber/40200/tr",
+        "https://www.kitapsec.com/blog/2027-lgs-konulari-219.html",
+        "https://www.kitapdoldur.com/blog/icerik/2027-lgs-turkce-konulari-ve-soru-dagilimi"
+      ],
+      "dersler": [
+        { "ad": "Türkçe", "idx": 0, "konular": ["Sözcükte Anlam", "Deyimler ve Atasözleri", "Söz Sanatları", "Cümlede Anlam", "Parçada Anlam", "Fiilimsiler", "Cümlenin Ögeleri", "Fiillerde Çatı", "Cümle Türleri", "Yazım Kuralları", "Noktalama İşaretleri", "Metin Türleri", "Anlatım Bozuklukları", "Sözel Mantık ve Görsel Okuma"] },
+        { "ad": "Matematik", "idx": 1, "konular": ["Çarpanlar ve Katlar", "Üslü İfadeler", "Kareköklü İfadeler", "Veri Analizi", "Basit Olayların Olma Olasılığı", "Cebirsel İfadeler ve Özdeşlikler", "Doğrusal Denklemler", "Eşitsizlikler", "Üçgenler", "Eşlik ve Benzerlik", "Dönüşüm Geometrisi", "Geometrik Cisimler"] },
+        { "ad": "Fen Bilimleri", "idx": 2, "konular": ["Mevsimler ve İklim", "DNA ve Genetik Kod", "Basınç", "Madde ve Endüstri", "Basit Makineler", "Enerji Dönüşümleri ve Çevre Bilimi", "Elektrik Yükleri ve Elektrik Enerjisi"] },
+        { "ad": "T.C. İnkılap Tarihi ve Atatürkçülük", "idx": 6, "konular": ["Bir Kahraman Doğuyor", "Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar", "Millî Bir Destan: Ya İstiklal Ya Ölüm!", "Atatürkçülük ve Çağdaşlaşan Türkiye", "Demokratikleşme Çabaları", "Atatürk Dönemi Türk Dış Politikası", "Atatürk'ün Ölümü ve Sonrası"] },
+        { "ad": "Din Kültürü ve Ahlak Bilgisi", "idx": 9, "konular": ["Kader İnancı", "Zekât ve Sadaka", "Din ve Hayat", "Hz. Muhammed'in Örnekliği", "Kur'an-ı Kerim ve Özellikleri"] },
+        { "ad": "İngilizce", "idx": 0, "konular": ["Friendship", "Teen Life", "In the Kitchen", "On the Phone", "The Internet", "Adventures", "Tourism", "Chores", "Science", "Natural Forces"] }
+      ]
+    },
+    "KPSS": {
+      "ad": "KPSS",
+      "uzunAd": "KPSS Genel Yetenek–Genel Kültür",
+      "kurum": "ÖSYM",
+      "kapsam": "ÖSYM'ye göre Genel Yetenek: Türkçe ve Matematik; Genel Kültür: Tarih, Türkiye coğrafyası, temel yurttaşlık bilgisi ve güncel bilgiler. Lisans oturumu için yaygın dağılım 30 Türkçe, 30 Matematik, 27 Tarih, 18 Coğrafya, 9 Vatandaşlık, 6 Güncel Bilgiler. Önlisans ve ortaöğretim aynı alanları kapsar. Eğitim Bilimleri ve alan bilgisi testleri bu plana dahil değildir.",
+      "kaynaklar": [
+        "https://www.dopinghafiza.com/ders/kpss-lisans/kpss-lisans-soru-dagilimi-2026-genel-yetenek-ve-genel-kultur",
+        "https://rehberpanda.com/rehberler/kpss/lisans/konu-dagilimi/",
+        "https://www.bilgenc.com/kpss-lisans-konulari/"
+      ],
+      "dersler": [
+        { "ad": "Türkçe", "idx": 0, "konular": ["Sözcükte Anlam", "Cümlede Anlam", "Paragrafta Anlam", "Ses Bilgisi", "Yapı Bilgisi", "Sözcük Türleri", "Cümlenin Ögeleri", "Cümle Türleri", "Yazım Kuralları", "Noktalama İşaretleri", "Anlatım Bozuklukları", "Sözel Mantık"] },
+        { "ad": "Matematik", "idx": 1, "konular": ["Temel Kavramlar ve Sayılar", "Bölme ve Bölünebilme", "EBOB–EKOK", "Rasyonel ve Ondalık Sayılar", "Basit Eşitsizlikler ve Mutlak Değer", "Üslü ve Köklü Sayılar", "Çarpanlara Ayırma ve Denklemler", "Oran–Orantı", "Sayı ve Kesir Problemleri", "Yaş, İşçi ve Hareket Problemleri", "Yüzde, Kâr–Zarar ve Karışım Problemleri", "Kümeler", "Permütasyon, Kombinasyon ve Olasılık", "Sayısal Mantık", "Tablo ve Grafik Yorumlama"] },
+        { "ad": "Geometri", "idx": 1, "konular": ["Doğruda ve Üçgende Açılar", "Üçgenler", "Dörtgenler ve Çokgenler", "Çember ve Daire", "Katı Cisimler"] },
+        { "ad": "Tarih", "idx": 5, "konular": ["İslamiyet Öncesi Türk Tarihi", "İlk Türk-İslam Devletleri", "Osmanlı Kuruluş ve Yükselme Dönemi", "Osmanlı Kültür ve Medeniyeti", "Osmanlı Duraklama, Gerileme ve Dağılma", "I. Dünya Savaşı ve Mondros", "Kurtuluş Savaşı Hazırlık Dönemi", "Kurtuluş Savaşı Cepheleri ve Antlaşmalar", "Atatürk İlke ve İnkılapları", "Atatürk Dönemi İç ve Dış Politika", "Çağdaş Türk ve Dünya Tarihi"] },
+        { "ad": "Coğrafya", "idx": 7, "konular": ["Türkiye'nin Coğrafi Konumu", "Türkiye'nin Yer Şekilleri", "Türkiye'nin İklimi ve Bitki Örtüsü", "Nüfus, Yerleşme ve Göç", "Tarım ve Hayvancılık", "Madenler, Enerji ve Sanayi", "Ulaşım, Ticaret ve Turizm", "Türkiye'nin Bölgeleri"] },
+        { "ad": "Vatandaşlık", "idx": 6, "konular": ["Hukukun Temel Kavramları", "Devlet Biçimleri ve Demokrasi", "Türk Anayasa Tarihi", "1982 Anayasası Temel İlkeleri", "Temel Hak ve Ödevler", "Yasama", "Yürütme", "Yargı", "İdare Hukuku"] },
+        { "ad": "Güncel Bilgiler", "idx": 7, "konular": ["Türkiye ve Dünya Güncel Olayları", "Uluslararası Kuruluşlar", "Kültür, Sanat ve Spor"] }
+      ]
+    },
+    "ALES": {
+      "ad": "ALES",
+      "uzunAd": "Akademik Personel ve Lisansüstü Eğitimi Giriş Sınavı",
+      "kurum": "ÖSYM",
+      "kapsam": "ÖSYM'ye göre iki test: Sayısal (50 soru; matematik, geometri, sayısal mantık) ve Sözel (50 soru; Türkçe, paragraf, sözel mantık). Yılda birden çok oturum yapılır.",
+      "kaynaklar": [
+        "https://www.bilgenc.com/ales-konulari/",
+        "https://rehberpanda.com/rehberler/ales/konu-dagilimi/",
+        "https://www.xyzakademi.com.tr/ales-konulari/"
+      ],
+      "dersler": [
+        { "ad": "Türkçe", "idx": 0, "konular": ["Sözcükte Anlam", "Cümlede Anlam", "Paragrafta Anlam", "Paragraf Tamamlama ve Düşüncenin Akışı", "Sözel Mantık"] },
+        { "ad": "Matematik", "idx": 1, "konular": ["Temel Kavramlar", "Sayılar ve Bölünebilme", "Rasyonel Sayılar", "Üslü ve Köklü Sayılar", "Mutlak Değer ve Eşitsizlikler", "Oran–Orantı", "Denklem Kurma ve Çözme", "Sayı ve Kesir Problemleri", "Yaş, İşçi ve Hareket Problemleri", "Yüzde, Kâr–Zarar ve Karışım Problemleri", "Tablo ve Grafik Yorumlama", "Sayısal Mantık"] },
+        { "ad": "Geometri", "idx": 1, "konular": ["Doğruda ve Üçgende Açılar", "Üçgenler", "Dörtgenler ve Çokgenler", "Çember ve Daire", "Analitik Geometri", "Katı Cisimler"] }
+      ]
+    },
+    "DGS": {
+      "ad": "DGS",
+      "uzunAd": "Dikey Geçiş Sınavı",
+      "kurum": "ÖSYM",
+      "kapsam": "ÖSYM'ye göre iki test: Sayısal (50 soru; matematik ve geometri) ve Sözel (50 soru; Türkçe ağırlıklı, paragraf ve sözel mantık).",
+      "kaynaklar": [
+        "https://www.bilgenc.com/dgs-konulari/",
+        "https://www.universitego.com/dgs-konulari-ve-soru-dagilimi/",
+        "https://rehberpanda.com/blog/2026-dgs-konulari-soru-dagilimi-guncellenmis/"
+      ],
+      "dersler": [
+        { "ad": "Türkçe", "idx": 0, "konular": ["Sözcükte Anlam", "Cümlede Anlam", "Paragrafta Anlam", "Anlatım Bozuklukları", "Yazım Kuralları ve Noktalama", "Sözel Mantık"] },
+        { "ad": "Matematik", "idx": 1, "konular": ["Temel Kavramlar", "Sayılar ve Bölünebilme", "Rasyonel ve Ondalık Sayılar", "Üslü ve Köklü Sayılar", "Basit Eşitsizlikler ve Mutlak Değer", "Oran–Orantı", "Sayı ve Kesir Problemleri", "Yaş, İşçi ve Hareket Problemleri", "Yüzde, Kâr–Zarar ve Karışım Problemleri", "Sayısal Mantık"] },
+        { "ad": "Geometri", "idx": 1, "konular": ["Doğruda ve Üçgende Açılar", "Üçgenler", "Dörtgenler ve Çokgenler", "Çember ve Daire", "Analitik Geometri", "Katı Cisimler"] }
+      ]
+    },
+    "AGS": {
+      "ad": "AGS",
+      "uzunAd": "MEB Akademi Giriş Sınavı",
+      "kurum": "ÖSYM / MEB",
+      "kapsam": "ÖSYM'nin 8 Ocak 2026 konu dağılımına göre 80 soru, altı alan: Sözel Yetenek, Sayısal Yetenek, Tarih, Türkiye Coğrafyası, Eğitim Bilimleri ve Türk Millî Eğitim Sistemi, Mevzuat. ÖABT (alan bilgisi) ayrı oturumdur ve bu plana dahil değildir. Resmî belgeye bu ortamdan erişilemediği için alt başlıklar onu aktaran kaynaklardan karşılaştırılarak alındı.",
+      "kaynaklar": [
+        "https://dokuman.osym.gov.tr/pdfdokuman/2026/MEB-AGS/konudagilimi08012026.pdf",
+        "https://www.atlasrehberlik.com/2026-ags-konulari-ve-soru-dagilimlari/",
+        "https://murathoca.com.tr/meb-ags-konu-soru-dagilimi/"
+      ],
+      "dersler": [
+        { "ad": "Sözel Yetenek", "idx": 0, "konular": ["Sözcükte Anlam", "Cümlede Anlam", "Anlatımın Oluşması", "Paragrafta Anlam", "Sözel Mantık"] },
+        { "ad": "Sayısal Yetenek", "idx": 1, "konular": ["Temel Matematik", "Grafik ve Tablo Yorumlama", "Mantıksal Muhakeme Problemleri"] },
+        { "ad": "Tarih", "idx": 5, "konular": ["Osmanlı Öncesi Türk Devletleri Tarihi", "Osmanlı Tarihi", "Atatürk İlkeleri ve İnkılap Tarihi", "Çağdaş Türk ve Dünya Tarihi"] },
+        { "ad": "Türkiye Coğrafyası", "idx": 7, "konular": ["Türkiye'nin Fizikî Coğrafyası", "Türkiye'nin Beşerî ve Ekonomik Coğrafyası"] },
+        { "ad": "Eğitim Bilimleri ve Türk Millî Eğitim Sistemi", "idx": 8, "konular": ["Eğitimin Tarihi, Felsefi, Toplumsal, Ekonomik ve Politik Temelleri", "Öğretim Yöntem ve Teknikleri", "Sınıf Yönetimi", "Program Okuryazarlığı", "Eğitimde Ölçme ve Değerlendirme", "Öğrenme Psikolojisi", "Gelişim Psikolojisi", "Rehberlik", "Eğitim ve Öğretim Teknolojileri", "Türk Millî Eğitim Sisteminin Genel Yapısı", "Türkiye Yüzyılı Maarif Modeli"] },
+        { "ad": "Mevzuat", "idx": 6, "konular": ["Türkiye Cumhuriyeti Anayasası (2709)", "İnsan Hakları ve Temel Haklar", "Millî Eğitim Temel Kanunu (1739)", "İlköğretim ve Eğitim Kanunu (222)", "Öğretmenlik Meslek Kanunu (7528)"] }
+      ]
+    }
+  }
+}

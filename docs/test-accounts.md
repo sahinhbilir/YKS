@@ -33,6 +33,33 @@ runs for it. Teachers and teacher-created students are unaffected.
 History is bounded: at most eight notebook copies per tester. Unlike teacher
 backups, no per-date documents accumulate.
 
+## Reset ("Test hesabımı sıfırla")
+
+Ayarlar → **Test hesabın** has a collapsed **Test hesabımı sıfırla** section. Only
+test accounts have it. Teachers, students linked to a teacher (`syncId` or
+`hesapUid`) and solo students without a test account never see the button, and
+the reset function refuses them (`testSifirlamaIzinli()`), even if a test marker
+was added to a linked notebook by an imported file. The rules allow deletes only
+inside the signed-in tester's own `testDefter/{uid}`. Teacher backups and
+student documents stay delete-closed.
+
+The button asks the tester to type `SIFIRLA`; anything else cancels and deletes
+nothing. Then, under the same single-tab lock as logout:
+
+1. Pending saves finish. The signed-in Google user must own this notebook.
+2. One transaction deletes `testDefter/{uid}` and all eight `gecmis` slots.
+3. The device reads the server copy back. If it still exists, the reset stops and
+   the device keeps its notebook.
+4. Only after the cloud is confirmed empty: the device forgets the stored cloud
+   signature, signs out of Google and clears its local data (the same cleanup as
+   logout), then reloads to the start screen.
+
+If the cloud delete fails, nothing is deleted anywhere and the normal cloud backup
+resumes. If the cloud is gone but the device cleanup fails, the message says so
+and asks the tester to clear the site data; the device copy is never re-uploaded.
+Afterwards **Test hesabı aç** with the same Google account starts a fresh setup,
+including the exam choice.
+
 ## Several devices
 
 Each device remembers the signature of the cloud version it last saw (the same
@@ -57,7 +84,8 @@ checks the cloud copy:
 `firestore.rules` allows `testDefter/{uid}` and its `gecmis` slots only to the
 signed-in owner with the `google.com` provider. Anonymous and name+number
 (`password`) sessions are refused, and so are other users, including allowlisted
-teachers. Deletes and collection listing are closed. Documents must match the
+teachers. Only the owner may delete (used by the reset); collection listing is
+closed. Documents must match the
 field list and the 900 000-character limit. History slot IDs are limited to
 `0`–`6` and `cakisma`.
 
@@ -65,7 +93,8 @@ field list and the 900 000-character limit. History slot IDs are limited to
 
 1. Publish the updated `firestore.rules`: Firebase console → Firestore Database →
    Rules → paste → Publish. Until then the button signs testers in, but cloud saves
-   report a missing permission.
+   report a missing permission. Rules published before the reset existed refuse the
+   delete; the reset then reports that nothing was deleted.
 2. Serve the updated `index.html`.
 
 Google sign-in and the `ykstekrar.com` authorized domain are already configured
@@ -73,13 +102,15 @@ for teacher login.
 
 ## Tests
 
-- `node test/test-account-regression.js`: 16 checks, including setup, bounded
+- `node test/test-account-regression.js`: 20 checks, including setup, bounded
   history, second device, automatic pull (with and without a start-up re-save and
   a user click), conflicts in both directions, wrong account, rules denial, logout
-  success/failure and unchanged school paths.
+  success/failure, reset (typed confirmation, full delete, failure keeps
+  everything, refused for teachers and students) and unchanged school paths.
 - `node test/test-account-browser.cjs`: desktop and 390 px Chromium checks of the
-  button position, nickname setup, first cloud save and the settings card.
-- `test/firebase/firestore.test.mjs`: 8 emulator checks for `testDefter` rules.
+  button position, nickname setup, first cloud save, the settings card and reset.
+- `test/firebase/firestore.test.mjs`: 9 emulator checks for `testDefter` rules,
+  including owner-only delete and the reset transaction.
 
 Legal and privacy work (KVKK, parental consent for under-18 users) is deliberately
 out of scope for the private alpha and must be completed before a public launch.

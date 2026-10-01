@@ -1,5 +1,5 @@
 // "Test hesabı aç" in a real browser: bottom-right placement on desktop and phone,
-// Google sign-in (faked), nickname setup and the first cloud save. No real Firebase.
+// Google sign-in (faked), nickname setup, the first cloud save and "Test hesabımı sıfırla". No real Firebase.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
@@ -10,11 +10,12 @@ const sahteBulut=()=>{
   const bulut={},snap=v=>({exists:()=>!!v,data:()=>v&&JSON.parse(JSON.stringify(v))});
   let user=null;
   window.__bulut=bulut;
+  const yansit=()=>window.__yansit&&window.__yansit(Object.keys(bulut));   // survives the reload after a reset
   window.bulut={yapilandirilmis:true,db:{},doc:(_db,...p)=>p.join('/'),mevcutKullanici:()=>user,oturumHazir:async()=>{},
     girisOgretmen:async()=>(user={uid:'google-1',isAnonymous:false,email:'tester@example.test'}),
-    getDocFromServer:async ref=>snap(bulut[ref]),setDoc:async(ref,v)=>{bulut[ref]=JSON.parse(JSON.stringify(v));},
-    async runTransaction(_db,fn){const w=[];await fn({get:async ref=>snap(bulut[ref]),set:(ref,v)=>w.push([ref,v])});
-      w.forEach(([ref,v])=>{bulut[ref]=JSON.parse(JSON.stringify(v));});},
+    getDocFromServer:async ref=>snap(bulut[ref]),setDoc:async(ref,v)=>{bulut[ref]=JSON.parse(JSON.stringify(v));yansit();},
+    async runTransaction(_db,fn){const w=[];await fn({get:async ref=>snap(bulut[ref]),set:(ref,v)=>w.push([ref,v]),delete:ref=>w.push([ref,null])});
+      w.forEach(([ref,v])=>{if(v===null)delete bulut[ref];else bulut[ref]=JSON.parse(JSON.stringify(v));});yansit();},
     oturumuKapat:async()=>{user=null;}};
 };
 const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y+a.height;
@@ -24,7 +25,10 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
   for(const width of [1280,390]) {
    const context=await browser.newContext({viewport:{width,height:800}}),page=await context.newPage(),errors=[];
    page.on('pageerror',e=>{errors.push(e.message);console.error('BROWSER:',e.message);});
-   page.on('dialog',async d=>{errors.push('dialog: '+d.message());await d.dismiss();});
+   let sifirla=false,bulutYollari=[];
+   page.on('dialog',async d=>{if(sifirla&&d.type()==='prompt'&&/SIFIRLA/.test(d.message()))return d.accept('sıfırla');
+     errors.push('dialog: '+d.message());await d.dismiss();});
+   await page.exposeFunction('__yansit',k=>{bulutYollari=k;});
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
    await context.addInitScript(sahteBulut);
    await page.goto('http://localhost/?dev=1');await page.getByText('Kimsiniz?',{exact:true}).waitFor();
@@ -55,6 +59,19 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert((await page.locator('#ana').innerText()).includes('tester@example.test'));
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'settings overflow');
    await page.screenshot({path:path.join(out,'test-account-settings-'+width+'.png'),fullPage:true});
+   // Reset: typed confirmation, then cloud notebook, history and device copy are gone.
+   await page.locator('summary',{hasText:'Test hesabımı sıfırla'}).click();
+   assert.equal(await page.locator('#testSifirla').isVisible(),true);
+   assert(bulutYollari.some(k=>k.startsWith('testDefter/google-1')),'the cloud holds the notebook before');
+   const yerelSayisi=()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>String(localStorage.getItem(k)).includes('Kuzey')).length);
+   assert(await yerelSayisi()>0,'the device holds the notebook before');
+   sifirla=true;
+   await Promise.all([page.waitForEvent('load'),page.locator('#testSifirla').click()]);
+   await page.getByText('Kimsiniz?',{exact:true}).waitFor();
+   assert.deepEqual(bulutYollari.filter(k=>k.startsWith('testDefter/google-1')),[],'notebook and history are deleted');
+   assert.equal(await page.evaluate(()=>D.rol===''&&!D.testHesap&&D.ogr.length===0),true,'the device copy is gone');
+   assert.equal(await yerelSayisi(),0,'no stored copy remains');
+   await page.locator('#testHesapAc').waitFor();
    assert.deepEqual(errors,[]);
    await context.close();
   }
