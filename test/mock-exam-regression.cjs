@@ -123,6 +123,53 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   run("EK.denemeTur='BRANS';D.ogr[0].denemeler=records");assert(run('gorunumDenemeler()').includes('<option value="hiz" selected>'),'branş keeps the choice');
   run("EK.denemeMetrik='net';EK.denemeTur='TYT'");
  });
+ await check('TYT/AYT course sections join the Branş chart with their own marker and are never stored',async()=>{
+  // A teacher-imported TYT (no question counts), a manual TYT and a Türkçe branch exam.
+  put('okul',[sample({id:'p:okul-tyt',ad:'27-YKS-1201',tarih:'2026-09-18',sure:null,puan:null,dersler:[{kod:'turkce',dogru:30,yanlis:4,soru:null},{kod:'mat',dogru:20,yanlis:8,soru:null},{kod:'sf',dogru:0,yanlis:0,soru:null}]})]);
+  put('kendi',[sample({id:'m:tyt',tarih:'2026-09-20',dersler:[{kod:'turkce',dogru:25,yanlis:8,soru:38}]}),
+    sample({id:'m:brans',ad:'Paragraf 1',tur:'BRANS',brans:'turkce',tarih:'2026-09-22',sure:20,dersler:[{kod:'turkce',dogru:18,yanlis:4,soru:25}]}),
+    sample({id:'m:ayt',tur:'AYT',oturum:'AYT',tarih:'2026-09-21',dersler:[{kod:'edebiyat',dogru:0,yanlis:0,soru:24},{kod:'mat',dogru:12,yanlis:4,soru:30}]})]);
+  run("D.ogr[0].denemeOkul=okul;D.ogr[0].denemeler=kendi;EK.denemeTur='BRANS';EK.denemeOturum='TYT';EK.denemeBrans='turkce';EK.denemeMetrik='net';EK.denemeGenel=undefined;");
+  const once=run('JSON.stringify(D)');
+  const bolum=JSON.parse(run("JSON.stringify(denemeGenelBolumleri(denemeListe(),'TYT','turkce'))"));
+  assert.deepEqual(bolum.map(r=>[r.id,r.genel,r.dersler[0].soru,r.kaynakId]),[['g:p:okul-tyt|turkce','TYT',40,'p:okul-tyt'],['g:m:tyt|turkce','TYT',38,'m:tyt']]);
+  assert.throws(()=>run("denemeDogrula(denemeGenelBolumleri(denemeListe(),'TYT','turkce'))"),/Geçersiz deneme/,'a derived section can never be stored');
+  assert.equal(run("denemeGenelBolumleri(denemeListe(),'TYT','sf').length"),0,'blank sections add no point');
+  assert.equal(run("denemeGenelBolumleri(denemeListe(),'AYT','edebiyat').length"),0,'a course outside the field (0 D / 0 Y) adds no point');
+  assert.equal(run("denemeGenelBolumleri(denemeListe(),'AYT','mat')[0].genel"),'AYT');
+  let page=run('gorunumDenemeler()');
+  assert.equal((page.match(/class="dn-dot[ "]/g)||[]).length,3,'branch exam and both TYT sections');
+  assert.equal((page.match(/class="dn-dot \w+ genel"/g)||[]).length,2,'sections use the hollow marker');
+  assert(page.includes('27-YKS-1201 · TYT denemesinden'));assert(page.includes('İçi boş nokta: TYT/AYT denemesindeki bu dersin bölümü'));
+  assert(page.includes('Deneme (TYT/AYT’den 2)'));assert(page.includes('<span class="dn-genel-rozet">TYT denemesinden</span>'));
+  assert.match(page,/id="dnGenel" checked/);
+  assert.equal(run('JSON.stringify(D)'),once,'drawing adds nothing to the notebook');assert(!once.includes('"g:'));
+  // The section detail offers the source exam, never edit/delete/time on the derived row.
+  const detay=run("denemeDetay(denemeBul('g:p:okul-tyt|turkce'))");
+  assert(detay.includes('data-dn-kaynak="p:okul-tyt"'));assert(detay.includes('TYT denemesini aç'));assert(detay.includes('30 D / 4 Y / 6 B · 40 soru'));
+  for(const x of ['data-dn-edit','data-dn-sil','data-dn-sure'])assert(!detay.includes(x),x);
+  // Toggle off, or a time/score chart: sections leave the chart, stats and history.
+  run('EK.denemeGenel=false');page=run('gorunumDenemeler()');
+  assert.equal((page.match(/class="dn-dot[ "]/g)||[]).length,1);assert(!page.includes('genel"'));assert.match(page,/id="dnGenel">/);
+  run("EK.denemeGenel=true;EK.denemeMetrik='sure'");page=run('gorunumDenemeler()');
+  assert(!/class="dn-dot \w+ genel"/.test(page));assert(page.includes('yalnızca Net grafiğinde gösterilir'));
+  // TYT tab: each course tile opens that course's chart with the section selected.
+  run("EK.denemeTur='TYT';EK.denemeMetrik='net'");
+  assert(run("denemeDetay(denemeBul('p:okul-tyt'))").includes('data-dn-brans-git="TYT:turkce" data-dn-kaynak-id="p:okul-tyt"'));
+  assert(!run("denemeDetay(denemeBul('m:brans'))").includes('data-dn-brans-git'),'a branch exam has nothing to open');
+  run("ciz=()=>{};EK.denemeMetrik='sure';EK.denemeGenel=false");
+  const click=listeners.click.find(f=>String(f).includes('dnBransGit'));
+  await click({target:{closest:()=>({dataset:{dnBransGit:'TYT:turkce',dnKaynakId:'p:okul-tyt'}})}});
+  assert.deepEqual(JSON.parse(run('JSON.stringify([EK.denemeTur,EK.denemeOturum,EK.denemeBrans,EK.denemeGenel,EK.denemeMetrik,EK.denemeSecili])')),
+    ['BRANS','TYT','turkce',true,'net','g:p:okul-tyt|turkce']);
+  page=run('gorunumDenemeler()');assert(page.includes('30 D / 4 Y / 6 B'),'the chosen section is shown in the detail');
+  // "TYT denemesini aç" goes back to the source exam.
+  await click({target:{closest:()=>({dataset:{dnKaynak:'p:okul-tyt'}})}});
+  assert.deepEqual(JSON.parse(run('JSON.stringify([EK.denemeTur,EK.denemeSecili])')),['TYT','p:okul-tyt']);
+  await click({target:{closest:()=>({dataset:{dnBransGit:'TYT:yok',dnKaynakId:'p:okul-tyt'}})}});
+  assert.equal(run('EK.denemeTur'),'TYT','an unknown course is ignored');
+  run("EK.denemeTur='TYT';EK.denemeSecili=null");
+ });
  await check('stock-style chart: segments vs previous 4 average, dots vs previous exam',()=>{
   const nets=[10,12,11,11,15,9];
   put('records',nets.map((n,i)=>sample({id:'m:s'+i,tarih:'2026-09-'+String(10+i).padStart(2,'0'),sure:100+i*10,dersler:[{kod:'turkce',dogru:n,yanlis:0,soru:40}]})));

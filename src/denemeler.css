@@ -18,6 +18,12 @@ main:has(.dn-tabs){min-width:0}
 .dn-dot{fill:var(--soluk);stroke:var(--kagit);stroke-width:2;cursor:pointer;transition:stroke-width .1s}
 .dn-dot.yukari{fill:var(--iyi)}.dn-dot.asagi{fill:var(--kritik)}
 .dn-dot:hover,.dn-dot:focus{stroke:var(--murekkep);stroke-width:3;outline:none}
+.dn-dot.genel{fill:var(--kagit);stroke:var(--soluk);stroke-width:2.5}.dn-dot.genel.yukari{stroke:var(--iyi)}.dn-dot.genel.asagi{stroke:var(--kritik)}
+.dn-dot.genel:hover,.dn-dot.genel:focus{stroke-width:4}
+.dn-genel-rozet{display:inline-block;padding:1px 7px;border:1px dashed var(--soluk);border-radius:999px;font-size:11px;color:var(--soluk);white-space:nowrap}
+.dn-genel-sec{display:flex;align-items:center;gap:6px;min-height:34px;color:var(--murekkep);font-size:13px}
+.dn-ders-detay>button{font:inherit;color:inherit;text-align:left;cursor:pointer;background:var(--zemin);padding:10px;border-radius:8px;border:1px solid transparent;display:grid;grid-template-columns:1fr auto;gap:4px;font-size:12px}
+.dn-ders-detay>button:hover,.dn-ders-detay>button:focus-visible{border-color:var(--vurgu)}.dn-ders-detay small.dn-git{color:var(--vurgu)}
 .dn-bos{text-align:center;padding:50px 12px;color:var(--soluk)}
 .dn-detay-bas{display:flex;align-items:start;justify-content:space-between;gap:16px;border-top:1px solid var(--cizgi);padding-top:18px}
 .dn-detay-bas strong{white-space:nowrap;font-size:23px;color:var(--vurgu)}

@@ -482,6 +482,12 @@ main:has(.dn-tabs){min-width:0}
 .dn-dot{fill:var(--soluk);stroke:var(--kagit);stroke-width:2;cursor:pointer;transition:stroke-width .1s}
 .dn-dot.yukari{fill:var(--iyi)}.dn-dot.asagi{fill:var(--kritik)}
 .dn-dot:hover,.dn-dot:focus{stroke:var(--murekkep);stroke-width:3;outline:none}
+.dn-dot.genel{fill:var(--kagit);stroke:var(--soluk);stroke-width:2.5}.dn-dot.genel.yukari{stroke:var(--iyi)}.dn-dot.genel.asagi{stroke:var(--kritik)}
+.dn-dot.genel:hover,.dn-dot.genel:focus{stroke-width:4}
+.dn-genel-rozet{display:inline-block;padding:1px 7px;border:1px dashed var(--soluk);border-radius:999px;font-size:11px;color:var(--soluk);white-space:nowrap}
+.dn-genel-sec{display:flex;align-items:center;gap:6px;min-height:34px;color:var(--murekkep);font-size:13px}
+.dn-ders-detay>button{font:inherit;color:inherit;text-align:left;cursor:pointer;background:var(--zemin);padding:10px;border-radius:8px;border:1px solid transparent;display:grid;grid-template-columns:1fr auto;gap:4px;font-size:12px}
+.dn-ders-detay>button:hover,.dn-ders-detay>button:focus-visible{border-color:var(--vurgu)}.dn-ders-detay small.dn-git{color:var(--vurgu)}
 .dn-bos{text-align:center;padding:50px 12px;color:var(--soluk)}
 .dn-detay-bas{display:flex;align-items:start;justify-content:space-between;gap:16px;border-top:1px solid var(--cizgi);padding-top:18px}
 .dn-detay-bas strong{white-space:nowrap;font-size:23px;color:var(--vurgu)}
@@ -10799,6 +10805,26 @@ function denemeListe(si=EK.ogr) {
     return {...r,sure:sure && (sure.ts>=r.ts || r.id.startsWith('p:') && r.sure===null)?sure.sure:r.sure};
   }).sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.id.localeCompare(b.id));
 }
+// A TYT/AYT exam's section for one course, shown in the Branş chart next to branch
+// exams with its own marker. Derived on every draw and never stored: "g:" ids fail
+// denemeDogrula, so they cannot reach a notebook, packet or cloud write.
+function denemeGenelBolumleri(liste, oturum, brans) {
+  const ders = DENEME_DERSLER[oturum]?.find(d => d[0] === brans);
+  if (!ders) return [];
+  return liste.filter(r => r.tur === oturum).flatMap(r => {
+    const d = r.dersler.find(x => x.kod === brans);
+    // A section left blank or outside the field (0 D / 0 Y) adds no point.
+    if (!d || d.dogru + d.yanlis === 0) return [];
+    return [{id:'g:'+r.id+'|'+brans,ad:r.ad,tarih:r.tarih,tur:'BRANS',oturum,brans,alan:r.alan,
+      dersler:[{...d,soru:d.soru ?? ders[2]}],sure:null,puan:null,ts:r.ts,genel:r.tur,kaynakId:r.id}];
+  });
+}
+function denemeBul(id) {
+  const tum=denemeListe();
+  if (!String(id).startsWith('g:')) return tum.find(x=>x.id===id);
+  const ayrac=id.lastIndexOf('|'),kaynak=tum.find(x=>x.id===id.slice(2,ayrac));
+  return kaynak ? denemeGenelBolumleri([kaynak],kaynak.oturum,id.slice(ayrac+1))[0] : undefined;
+}
 function denemeOkulUygula(si, veri) {
   if (veri === undefined) return false;
   if (typeof veri !== 'string' || veri.length>300000) throw new Error('Okul deneme verisi geçersiz.');
@@ -10981,10 +11007,18 @@ function denemeDinlemeyiBaslat() {
 }
 
 function denemeDetay(r) {
+  if(r.genel){
+    const d=r.dersler[0],ders=DENEME_DERSLER[r.oturum].find(x=>x[0]===d.kod)[1];
+    return '<div class="dn-detay-bas"><div><b>'+kacis(r.ad)+'</b><div class="mini">'+kacis(r.tarih)+' · <span class="dn-genel-rozet">'+r.genel+' denemesinden</span> · '+kacis(ders)+' bölümü</div></div><strong>'+denemeSayi(denemeNet(d))+' net</strong></div>'+
+      '<p class="mini">'+d.dogru+' D / '+d.yanlis+' Y / '+(d.soru-d.dogru-d.yanlis)+' B · '+d.soru+' soru. Süre ve yayınevi puanı bütün denemeye ait olduğu için bu bölümde gösterilmez; değiştirmek için denemenin kendisini aç.</p>'+
+      '<div class="arac"><button class="dugme" data-dn-kaynak="'+kacis(r.kaynakId)+'">'+r.genel+' denemesini aç</button></div>';
+  }
   const alan=denemeAlan(),hiz=denemeHiz(r,alan);
   return '<div class="dn-detay-bas"><div><b>'+kacis(r.ad)+'</b><div class="mini">'+kacis(r.tarih)+' · '+(r.id.startsWith('p:')?'Öğretmen aktarımı':'Elle girildi')+'</div></div><strong>'+denemeSayi(denemeToplam(r,alan))+' net</strong></div>'+
     '<div class="dn-ozet mini"><span>Süre: '+(r.sure===null?'Girilmedi':denemeSayi(r.sure)+' dk')+'</span>'+(denemeHizGecerli(r.tur)?'<span>Net/dk: '+(hiz===null?'süre girilince hesaplanır':denemeSayi(hiz))+'</span>':'')+(r.puan!==null?'<span>Yayınevi puanı: '+denemeSayi(r.puan)+'</span>':'')+'</div>'+
-    '<div class="dn-ders-detay">'+r.dersler.map(d=>'<div><span>'+kacis(DENEME_DERSLER[r.oturum].find(x=>x[0]===d.kod)[1])+'</span><b>'+denemeSayi(denemeNet(d))+'</b><small>'+d.dogru+' D / '+d.yanlis+' Y'+(d.soru===null?'':' / '+(d.soru-d.dogru-d.yanlis)+' B')+'</small></div>').join('')+'</div>'+
+    // In a TYT/AYT exam each course opens its own progress chart under Branş denemeleri.
+    '<div class="dn-ders-detay">'+r.dersler.map(d=>{const ad=DENEME_DERSLER[r.oturum].find(x=>x[0]===d.kod)[1],ic='<span>'+kacis(ad)+'</span><b>'+denemeSayi(denemeNet(d))+'</b><small>'+d.dogru+' D / '+d.yanlis+' Y'+(d.soru===null?'':' / '+(d.soru-d.dogru-d.yanlis)+' B')+'</small>';
+      return r.tur==='BRANS'?'<div>'+ic+'</div>':'<button type="button" data-dn-brans-git="'+r.oturum+':'+d.kod+'" data-dn-kaynak-id="'+kacis(r.id)+'" aria-label="'+kacis(ad+': '+denemeSayi(denemeNet(d))+' net, '+d.dogru+' doğru, '+d.yanlis+' yanlış. '+ad+' gelişimini Branş denemelerinde gör')+'">'+ic+'<small class="dn-git">Ders gelişimi →</small></button>';}).join('')+'</div>'+
     '<div class="arac">'+(ogrenciMi() || r.id.startsWith('p:')?'<button class="dugme" data-dn-sure="'+kacis(r.id)+'">Süreyi gir / düzelt</button>':'')+((r.id.startsWith('p:')?rehberMi():ogrenciMi())?'<button class="dugme" data-dn-edit="'+kacis(r.id)+'">Düzenle</button><button class="dugme" data-dn-sil="'+kacis(r.id)+'">Sil</button>':'')+'</div>';
 }
 function denemeGrafik(liste) {
@@ -11007,9 +11041,10 @@ function denemeGrafik(liste) {
   return '<div class="dn-chart"><svg viewBox="0 0 '+width+' '+height+'" role="group" aria-label="Deneme gelişim grafiği. Noktaları seçerek sonuçları inceleyin.">'+
     ticks.map(t=>'<line x1="'+left+'" y1="'+y(t)+'" x2="'+(width-right)+'" y2="'+y(t)+'" class="dn-grid"/><text x="'+(left-8)+'" y="'+(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
     '<polygon points="'+left+','+(height-bottom)+' '+line+' '+coords.at(-1)[0]+','+(height-bottom)+'" class="dn-area"/>'+ortCizgi+parcalar+
-    points.map((r,i)=>'<circle class="dn-dot '+(i?yon(values[i],values[i-1]):'esit')+'" tabindex="0" role="button" aria-label="'+kacis(r.ad+' '+r.tarih+' '+denemeSayi(val(r))+m.birim+egilim(i))+'" data-dn-dot="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad+' · '+r.tarih+' · '+denemeSayi(val(r))+m.birim+egilim(i))+'</title></circle>').join('')+
+    points.map((r,i)=>{const kaynak=r.genel?' · '+r.genel+' denemesinden':'';return '<circle class="dn-dot '+(i?yon(values[i],values[i-1]):'esit')+(r.genel?' genel':'')+'" tabindex="0" role="button" aria-label="'+kacis(r.ad+kaynak+' '+r.tarih+' '+denemeSayi(val(r))+m.birim+egilim(i))+'" data-dn-dot="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad+kaynak+' · '+r.tarih+' · '+denemeSayi(val(r))+m.birim+egilim(i))+'</title></circle>';}).join('')+
     '<text x="'+left+'" y="'+(height-10)+'">'+points[0].tarih+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?points.at(-1).tarih:'')+'</text></svg><p class="mini">Tarih → · '+m.eksen+' · Noktaya gel, dokun veya klavyeyle seç.'+
     (points.length>1?' Çizgi yeşil: önceki 4 denemenin ortalamasının üstünde (kesikli çizgi), kırmızı: altında, gri: eşit. Nokta yeşil: bir önceki denemeden '+(metrik==='sure'?'kısa':'yüksek')+', kırmızı: '+(metrik==='sure'?'uzun':'düşük')+'.':'')+
+    (points.some(r=>r.genel)?' İçi boş nokta: TYT/AYT denemesindeki bu dersin bölümü; dolu nokta: branş denemesi.':'')+
     (metrik==='hiz'?' Net = doğru − yanlış / 4; net/dk = net ÷ tamamlama süresi.':'')+(eksik?' '+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.':'')+'</p></div>';
 }
 function denemeFormHtml() {
@@ -11033,20 +11068,25 @@ function denemeImportHtml() {
 }
 function gorunumDenemeler() {
   const tur=EK.denemeTur || 'TYT',oturum=EK.denemeOturum || 'TYT',brans=EK.denemeBrans || DENEME_DERSLER[oturum][0][0],alan=denemeAlan(),tum=denemeListe();
+  const metrik=denemeMetrik(),genelAcik=tur==='BRANS' && EK.denemeGenel!==false,genelVar=genelAcik && metrik==='net';
   let liste=tum.filter(r=>r.tur===tur && (tur!=='BRANS'||r.oturum===oturum && r.brans===brans));
   if(tur==='AYT')liste=liste.filter(r=>r.id.startsWith('p:') || r.alan===alan);
+  // Süre and publisher score belong to the whole TYT/AYT exam, so sections join the net chart only.
+  if(genelVar)liste=[...liste,...denemeGenelBolumleri(tum,oturum,brans)].sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.id.localeCompare(b.id));
   if(EK.denemeBas)liste=liste.filter(r=>r.tarih>=EK.denemeBas);if(EK.denemeSon)liste=liste.filter(r=>r.tarih<=EK.denemeSon);
-  const metrik=denemeMetrik(),son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son;
+  const son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son,genelSayi=liste.filter(r=>r.genel).length;
   // With the net/dk chart selected the summary follows it, over exams that have a time.
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan)),birim=hizOzet?' net/dk':' net';
   return '<div class="baslik"><h1>Denemeler</h1><p>'+kacis(D.ogr[EK.ogr].ad)+' · Netini ve süreni birlikte takip et.</p></div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button></div>':'')+
     '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
     '<div class="dn-tabs" role="group" aria-label="Deneme türü">'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'<button class="dugme birincil dn-ekle" id="dnEkle">+ Deneme ekle</button></div>'+
     '<div class="arac dn-filters" role="group" aria-label="Grafik ve geçmiş filtresi"><span class="dn-filtre-baslik">Grafik ve geçmiş filtresi</span>'+(tur==='BRANS'?'<label>Oturum<select id="dnFiltreOturum"><option'+(oturum==='TYT'?' selected':'')+'>TYT</option><option'+(oturum==='AYT'?' selected':'')+'>AYT</option></select></label><label>Branş<select id="dnFiltreBrans">'+DENEME_DERSLER[oturum].map(d=>'<option value="'+d[0]+'"'+(brans===d[0]?' selected':'')+'>'+d[1]+'</option>').join('')+'</select></label>':'')+(tur==='AYT'?'<label>Alan<select id="dnFiltreAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+(alan===a?' selected':'')+'>'+a+'</option>').join('')+'</select></label>':'')+
+    (tur==='BRANS'?'<label>TYT/AYT bölümleri<span class="dn-genel-sec"><input type="checkbox" id="dnGenel"'+(genelAcik?' checked':'')+'> Göster</span></label>':'')+
     '<label>Grafikte göster<select id="dnMetrik">'+Object.entries(DENEME_METRIK).filter(([k])=>k!=='hiz' || hizVar).map(([k,v])=>'<option value="'+k+'"'+(metrik===k?' selected':'')+'>'+v.ad+'</option>').join('')+'</select></label><label>Şu tarihten<input type="date" id="dnBas" value="'+(EK.denemeBas||'')+'"></label><label>Şu tarihe kadar<input type="date" id="dnSon" value="'+(EK.denemeSon||'')+'"></label>'+(EK.denemeBas || EK.denemeSon?'<button class="dugme" id="dnFiltreTemizle">Tarihleri temizle</button>':'')+'</div>'+
-    '<div class="dn-stats"><div><span>'+(hizOzet?'Süreli deneme':'Deneme')+'</span><strong>'+ozet.length+'</strong></div><div><span>Son'+birim+'</span><strong>'+(ozet.length?denemeSayi(ozet.at(-1)):'—')+'</strong></div><div><span>En yüksek'+birim+'</span><strong>'+(ozet.length?denemeSayi(Math.max(...ozet)):'—')+'</strong></div><div><span>Ortalama'+(hizOzet?birim:'')+'</span><strong>'+(ozet.length?denemeSayi(ozet.reduce((a,b)=>a+b,0)/ozet.length):'—')+'</strong></div></div>'+
+    (genelAcik && metrik!=='net'?'<p class="mini">TYT/AYT denemelerindeki bölümler yalnızca Net grafiğinde gösterilir; süre ve yayınevi puanı bütün denemeye aittir.</p>':'')+
+    '<div class="dn-stats"><div><span>'+(hizOzet?'Süreli deneme':'Deneme'+(genelSayi?' (TYT/AYT’den '+genelSayi+')':''))+'</span><strong>'+ozet.length+'</strong></div><div><span>Son'+birim+'</span><strong>'+(ozet.length?denemeSayi(ozet.at(-1)):'—')+'</strong></div><div><span>En yüksek'+birim+'</span><strong>'+(ozet.length?denemeSayi(Math.max(...ozet)):'—')+'</strong></div><div><span>Ortalama'+(hizOzet?birim:'')+'</span><strong>'+(ozet.length?denemeSayi(ozet.reduce((a,b)=>a+b,0)/ozet.length):'—')+'</strong></div></div>'+
     '<section class="kart dn-panel">'+denemeGrafik(liste)+'<div id="dnDetay" aria-live="polite">'+(selected?denemeDetay(selected):'')+'</div></section>'+
-    '<section class="kart dn-panel"><h2>Deneme geçmişi</h2><div class="dn-scroll"><table class="dn-history"><thead><tr><th>Tarih / deneme</th><th>Net</th><th>Süre</th>'+(hizVar?'<th>Net/dk</th>':'')+'<th></th></tr></thead><tbody>'+liste.slice().reverse().map(r=>'<tr><td>'+r.tarih+'<br><b>'+kacis(r.ad)+'</b>'+(r.tur==='BRANS'?' · '+r.dersler[0].soru+' soru':'')+'</td><td>'+denemeSayi(denemeToplam(r,alan))+'</td><td>'+(r.sure===null?'—':denemeSayi(r.sure)+' dk')+'</td>'+(hizVar?'<td>'+(r.sure===null?'—':denemeSayi(denemeHiz(r,alan)))+'</td>':'')+'<td><button class="dugme" data-dn-dot="'+kacis(r.id)+'">Ayrıntı</button></td></tr>').join('')+'</tbody></table></div></section>'+denemeFormHtml();
+    '<section class="kart dn-panel"><h2>Deneme geçmişi</h2><div class="dn-scroll"><table class="dn-history"><thead><tr><th>Tarih / deneme</th><th>Net</th><th>Süre</th>'+(hizVar?'<th>Net/dk</th>':'')+'<th></th></tr></thead><tbody>'+liste.slice().reverse().map(r=>'<tr><td>'+r.tarih+'<br><b>'+kacis(r.ad)+'</b>'+(r.tur==='BRANS'?' · '+r.dersler[0].soru+' soru':'')+(r.genel?' <span class="dn-genel-rozet">'+r.genel+' denemesinden</span>':'')+'</td><td>'+denemeSayi(denemeToplam(r,alan))+'</td><td>'+(r.sure===null?'—':denemeSayi(r.sure)+' dk')+'</td>'+(hizVar?'<td>'+(r.sure===null?'—':denemeSayi(denemeHiz(r,alan)))+'</td>':'')+'<td><button class="dugme" data-dn-dot="'+kacis(r.id)+'">Ayrıntı</button></td></tr>').join('')+'</tbody></table></div></section>'+denemeFormHtml();
 }
 function denemeFormOku() {
   const r=DENEME_FORM.kayit,get=id=>document.getElementById(id)?.value;
@@ -11063,7 +11103,7 @@ async function denemeYayinlaVeyaBeklet(si) {
   try{await denemeOkulYayinla(si);await kaydet(true);}
   catch(e){denemeDurum('Cihazda kayıtlı; yayın bekliyor: '+e.message);}
 }
-function denemeNoktaSec(id) {const r=denemeListe().find(x=>x.id===id),el=document.getElementById('dnDetay');if(r && el){EK.denemeSecili=id;el.innerHTML=denemeDetay(r);} }
+function denemeNoktaSec(id) {const r=denemeBul(id),el=document.getElementById('dnDetay');if(r && el){EK.denemeSecili=id;el.innerHTML=denemeDetay(r);} }
 document.addEventListener('pointerover',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
 document.addEventListener('focusin',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
 document.addEventListener('keydown',ev=>{const el=ev.target.closest?.('circle[data-dn-dot]');if(el && ['Enter',' '].includes(ev.key)){ev.preventDefault();denemeNoktaSec(el.dataset.dnDot);} });
@@ -11090,6 +11130,15 @@ document.addEventListener('click',async ev=>{
   const el=ev.target.closest?.('button,[data-dn-dot]');if(!el)return;
   if(el.dataset.dnDot){denemeNoktaSec(el.dataset.dnDot);return;}
   if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
+  if(el.dataset.dnKaynak){
+    const r=denemeListe().find(x=>x.id===el.dataset.dnKaynak);if(!r)return;
+    EK.denemeTur=r.tur;EK.denemeSecili=r.id;if(r.tur==='AYT' && !r.id.startsWith('p:'))EK.denemeAlan=r.alan;ciz();return;
+  }
+  if(el.dataset.dnBransGit){
+    const [oturum,kod]=el.dataset.dnBransGit.split(':');if(!DENEME_DERSLER[oturum]?.some(d=>d[0]===kod))return;
+    EK.denemeTur='BRANS';EK.denemeOturum=oturum;EK.denemeBrans=kod;EK.denemeGenel=true;EK.denemeMetrik='net';
+    EK.denemeSecili='g:'+el.dataset.dnKaynakId+'|'+kod;ciz();return;
+  }
   if(el.id==='dnVazgec' || el.id==='dnKapat'){DENEME_FORM=null;ciz();return;}
   if(el.id==='dnFiltreTemizle'){EK.denemeBas='';EK.denemeSon='';ciz();return;}
   if(el.id==='dnImportIptal'){DENEME_IMPORT=null;ciz();return;}
@@ -11159,6 +11208,7 @@ document.addEventListener('change',async ev=>{
     return;
   }
   if(el.dataset?.dnRapor!==undefined){DENEME_IMPORT[Number(el.dataset.dnRapor)][el.dataset.alan]=el.value;return;}
+  if(id==='dnGenel'){EK.denemeGenel=el.checked;ciz();return;}
   const filters={dnFiltreOturum:'denemeOturum',dnFiltreBrans:'denemeBrans',dnFiltreAlan:'denemeAlan',dnMetrik:'denemeMetrik',dnBas:'denemeBas',dnSon:'denemeSon'};
   if(filters[id]){EK[filters[id]]=el.value;if(id==='dnFiltreOturum')EK.denemeBrans=DENEME_DERSLER[el.value][0][0];ciz();return;}
   if(['dnTur','dnOturum','dnBrans','dnAlan'].includes(id) && DENEME_FORM){

@@ -30,8 +30,9 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.getByRole('button',{name:'Düzenle',exact:true}).click();await page.locator('[data-dn-ders="turkce"] [data-dn-value="dogru"]').fill('31');await page.getByRole('button',{name:'Denemeyi kaydet',exact:true}).click();await page.waitForFunction(()=>DENEME_FORM===null);
    assert.equal(await page.evaluate(()=>D.ogr[0].denemeler.length),1);
    await page.getByRole('button',{name:'Branş denemeleri',exact:true}).click();await page.getByRole('button',{name:'+ Deneme ekle',exact:true}).click();await page.locator('#dnAd').fill('Türkçe branş');await page.locator('[data-dn-ders="turkce"] [data-dn-value="soru"]').fill('20');await page.locator('[data-dn-ders="turkce"] [data-dn-value="dogru"]').fill('15');await page.locator('[data-dn-ders="turkce"] [data-dn-value="yanlis"]').fill('4');await page.getByRole('button',{name:'Denemeyi kaydet',exact:true}).click();await page.waitForFunction(()=>DENEME_FORM===null);
-   assert.equal(await page.locator('.dn-dot').count(),1);assert((await page.locator('#dnDetay').innerText()).includes('14 net'));
-   await page.locator('#dnFiltreBrans').selectOption('mat');assert.equal(await page.locator('.dn-dot').count(),0);
+   // The branş exam (solid) and the earlier TYT exam's Türkçe section (hollow).
+   assert.equal(await page.locator('.dn-dot:not(.genel)').count(),1);assert.equal(await page.locator('.dn-dot.genel').count(),1);assert((await page.locator('#dnDetay').innerText()).includes('14 net'));
+   await page.locator('#dnFiltreBrans').selectOption('mat');assert.equal(await page.locator('.dn-dot').count(),0,'the TYT exam left Matematik blank');
    await page.getByRole('button',{name:'AYT',exact:true}).click();await page.getByRole('button',{name:'+ Deneme ekle',exact:true}).click();await page.locator('#dnAd').fill('AYT sayısal');await page.locator('[data-dn-ders="mat"] [data-dn-value="dogru"]').fill('20');await page.locator('[data-dn-ders="geo"] [data-dn-value="dogru"]').fill('8');await page.getByRole('button',{name:'Denemeyi kaydet',exact:true}).click();await page.waitForFunction(()=>DENEME_FORM===null);assert.equal(await page.locator('.dn-dot').count(),1);
    await page.getByRole('button',{name:'TYT',exact:true}).click();assert.equal(await page.locator('.dn-dot').count(),1);
    // Reload persistence, escaping, zero and negative nets, same day dots.
@@ -50,6 +51,23 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.screenshot({path:path.join(out,'mock-exam-net-per-minute-'+width+'.png'),fullPage:true});
    await page.getByRole('button',{name:'TYT',exact:true}).click();assert.equal(await page.locator('#dnMetrik').inputValue(),'net');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'student overflow');await page.screenshot({path:path.join(out,'mock-exam-'+width+'.png'),fullPage:true});
+   // A TYT course tile opens that course in Branş denemeleri; TYT sections are hollow dots there.
+   const tytTurkce=await page.evaluate(()=>denemeListe().filter(r=>r.tur==='TYT' && r.dersler.some(d=>d.kod==='turkce' && d.dogru+d.yanlis>0)).length);
+   const bransTurkce=await page.evaluate(()=>denemeListe().filter(r=>r.tur==='BRANS' && r.brans==='turkce').length);
+   assert(tytTurkce>1 && bransTurkce>0);
+   await page.locator('#dnDetay').getByRole('button',{name:'Türkçe gelişimini Branş denemelerinde gör'}).click();
+   assert.equal(await page.getByRole('button',{name:'Branş denemeleri',exact:true}).getAttribute('aria-pressed'),'true');
+   assert.equal(await page.locator('#dnFiltreBrans').inputValue(),'turkce');assert.equal(await page.locator('#dnMetrik').inputValue(),'net');
+   assert.equal(await page.locator('.dn-dot.genel').count(),tytTurkce);assert.equal(await page.locator('.dn-dot:not(.genel)').count(),bransTurkce);
+   assert((await page.locator('#dnDetay').innerText()).includes('TYT denemesinden'));
+   assert((await page.locator('.dn-chart').innerText()).includes('İçi boş nokta'));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'course chart overflow');
+   await page.screenshot({path:path.join(out,'mock-exam-course-sections-'+width+'.png'),fullPage:true});
+   await page.locator('#dnGenel').uncheck();assert.equal(await page.locator('.dn-dot.genel').count(),0);assert.equal(await page.locator('.dn-dot').count(),bransTurkce);
+   await page.locator('#dnGenel').check();await page.locator('.dn-dot.genel').first().focus();
+   await page.locator('#dnDetay').getByRole('button',{name:'TYT denemesini aç'}).click();
+   assert.equal(await page.getByRole('button',{name:'TYT',exact:true}).getAttribute('aria-pressed'),'true');
+   assert.equal(await page.evaluate(()=>JSON.stringify(D).includes('"g:')),false,'sections are never stored');
    // Teacher report preview, strict matching, one missing student, and publication failures/retry.
    await page.evaluate(fixture=>{
     window.testFixture=fixture;D.rol='rehber';D.ogr.push({ad:'SENTETİK ECE',no:2,sube:'12-B',sinif:12,alan:'EA',kap:6,off:[6],aktif:true,ogrenciBulutId:'synthetic-2'});

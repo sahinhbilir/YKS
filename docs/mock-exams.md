@@ -6,6 +6,17 @@
 
 Deneme adı, tarih, derslerin doğru/yanlış/soru sayıları girilir. Net doğru − yanlış / 4 olarak hesaplanır. Tamamlama süresi ve **yayınevi puanı** (yayınevinin sonuç raporunda yazan puan, ör. TYT puanı) isteğe bağlıdır. Grafikte net, süre veya yayınevi puanı seçilir. **Branş denemelerinde** ayrıca **net/dk** (net ÷ tamamlama süresi) seçilebilir; yalnızca süresi girilmiş branş denemeleri bu grafikte yer alır, eksikler grafiğin altında sayılır ve bu grafik seçiliyken özet kartları da net/dk gösterir. Branş denemesi ayrıntısı ve geçmiş tablosu net/dk değerini gösterir. TYT ve AYT’de net/dk gösterilmez; Branş sekmesine dönülünce seçim korunur. Nokta üzerine gelmek, dokunmak veya klavyeyle odaklanmak ders ayrıntılarını gösterir. Düzenleme aynı kaydı günceller; silme, eski cihazların sonucu yeniden getirmesini önleyen bir silme işareti bırakır.
 
+## Genel denemelerdeki ders bölümleri
+
+**Branş denemeleri** grafiği seçilen dersin TYT/AYT denemelerindeki bölümlerini de gösterir (ör. TYT Türkçe: her TYT denemesinin 40 soruluk Türkçe bölümü). Bu noktalar içi boş daire olarak çizilir. Geçmiş tablosunda ve ayrıntıda “TYT denemesinden” ya da “AYT denemesinden” etiketiyle görünür. Özet kartları birlikte sayar; “Deneme (TYT/AYT’den N)” kaçının genel denemeden geldiğini söyler. **TYT/AYT bölümleri → Göster** kutusu bunları gizler.
+
+- Bölümler kaydedilmez. Her çizimde kaynak denemeden türetilir (`denemeGenelBolumleri`, kimlik `g:`). `denemeDogrula` bu kimliği reddeder, bu yüzden deftere, pakete veya buluta yazılamazlar. Kaynak deneme düzenlenir ya da silinirse bölüm de değişir.
+- 0 doğru / 0 yanlış olan bölüm (boş bırakılmış ya da alanına girmeyen AYT dersi) nokta eklemez.
+- Soru sayısı denemede yoksa (PDF aktarımı) sınavdaki standart soru sayısı kullanılır, ör. TYT Türkçe 40, Matematik 30, Geometri 10.
+- Süre ve yayınevi puanı bütün denemeye aittir. Bu yüzden bölümler yalnızca **Net** grafiğinde yer alır; Net/dk, Süre ve Yayınevi puanı grafiklerinde gösterilmez.
+- Bölümün ayrıntısında düzenleme/silme/süre düğmesi yoktur; **TYT denemesini aç** kaynak denemeye gider.
+- TYT/AYT denemesinin ayrıntısındaki her ders kutusu (“Ders gelişimi →”) o dersin Branş grafiğini, bu denemenin bölümü seçili olarak açar.
+
 ## Öğretmen aktarımı
 
 1. **PDF’den toplu aktar** ile bir veya birkaç metin içeren toplu sonuç PDF’si seçin.
@@ -32,7 +43,7 @@ Birleşik raporun TYT tekrarları, başka tarihe sahip olsalar bile aynı sınav
 
 Kaynaklar `src/denemeler.js` ve `src/denemeler.css`. `node scripts/embed-denemeler.cjs` bunları tek dosyalı uygulamaya gömer; `--check` eşitliği denetler; Windows (CRLF) çalışma kopyalarında da aynı sonucu verir. Elle gömülü kopyayı değiştirmeyin.
 
-- `node test/mock-exam-regression.cjs`: alan toplamları, branş net/dk, sayısal sınırlar, sürüm uyumu, silme/birleştirme, silinmiş sonuçlar, süre önceliği, tam öğrenci eşleşmesi, tekrarlar, sentetik PDF koordinatları ve CRLF gömme.
-- `node test/mock-exam-browser.cjs` (Playwright): masaüstü/telefon formu, grafik, düzenleme, branş/AYT ayrımı, kalıcı kayıt, toplu aktarım ve yayınlama hatası/yeniden deneme.
+- `node test/mock-exam-regression.cjs`: alan toplamları, branş net/dk, genel deneme bölümleri (türetme, boş bölüm, kayda girmeme, gizleme, yalnızca net, geçişler), sayısal sınırlar, sürüm uyumu, silme/birleştirme, silinmiş sonuçlar, süre önceliği, tam öğrenci eşleşmesi, tekrarlar, sentetik PDF koordinatları ve CRLF gömme.
+- `node test/mock-exam-browser.cjs` (Playwright): masaüstü/telefon formu, grafik, düzenleme, branş/AYT ayrımı, genel deneme bölümlerinin Branş grafiğinde gösterilmesi ve ders kutusundan geçiş, kalıcı kayıt, toplu aktarım ve yayınlama hatası/yeniden deneme.
 - Mevcut Firestore emulator testleri: öğretmen/öğrenci erişimi, alan korunması, hesap ve yuva rotasyonu; gerçek iki istemciyle anlık teslim, yeni cihaz, kişisel süre ve eski cihazdan silinen sonucun geri gelmemesi.
 - Sağlanan üç PDF ayrıca yerel PDF.js ve Chromium ile sınandı: 29 TYT; birleşik raporda 29 TYT + 22 AYT; hazırlık raporunda 29 TYT. Birleşik dosyadaki 29 TYT tekrarı işaretlenmedi. Gerçek öğrenci PDF’leri veya çıkartılan öğrenci verileri repoya eklenmedi.
