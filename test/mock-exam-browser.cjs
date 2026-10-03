@@ -32,7 +32,9 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.getByRole('button',{name:'Branş denemeleri',exact:true}).click();await page.getByRole('button',{name:'+ Deneme ekle',exact:true}).click();await page.locator('#dnAd').fill('Türkçe branş');await page.locator('[data-dn-ders="turkce"] [data-dn-value="soru"]').fill('20');await page.locator('[data-dn-ders="turkce"] [data-dn-value="dogru"]').fill('15');await page.locator('[data-dn-ders="turkce"] [data-dn-value="yanlis"]').fill('4');await page.getByRole('button',{name:'Denemeyi kaydet',exact:true}).click();await page.waitForFunction(()=>DENEME_FORM===null);
    // The branş exam (solid) and the earlier TYT exam's Türkçe section (hollow).
    assert.equal(await page.locator('.dn-dot:not(.genel)').count(),1);assert.equal(await page.locator('.dn-dot.genel').count(),1);assert((await page.locator('#dnDetay').innerText()).includes('14 net'));
-   await page.locator('#dnFiltreBrans').selectOption('mat');assert.equal(await page.locator('.dn-dot').count(),0,'the TYT exam left Matematik blank');
+   // Matematik was left blank in that TYT exam: still 30 questions, so it is a 0 net point.
+   await page.locator('#dnFiltreBrans').selectOption('mat');assert.equal(await page.locator('.dn-dot.genel').count(),1);assert.equal(await page.locator('.dn-dot:not(.genel)').count(),0);
+   assert((await page.locator('#dnDetay').innerText()).includes('0 D / 0 Y / 30 B'));
    await page.getByRole('button',{name:'AYT',exact:true}).click();await page.getByRole('button',{name:'+ Deneme ekle',exact:true}).click();await page.locator('#dnAd').fill('AYT sayısal');await page.locator('[data-dn-ders="mat"] [data-dn-value="dogru"]').fill('20');await page.locator('[data-dn-ders="geo"] [data-dn-value="dogru"]').fill('8');await page.getByRole('button',{name:'Denemeyi kaydet',exact:true}).click();await page.waitForFunction(()=>DENEME_FORM===null);assert.equal(await page.locator('.dn-dot').count(),1);
    await page.getByRole('button',{name:'TYT',exact:true}).click();assert.equal(await page.locator('.dn-dot').count(),1);
    // Reload persistence, escaping, zero and negative nets, same day dots.

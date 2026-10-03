@@ -82,16 +82,28 @@ function denemeListe(si=EK.ogr) {
     return {...r,sure:sure && (sure.ts>=r.ts || r.id.startsWith('p:') && r.sure===null)?sure.sure:r.sure};
   }).sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.id.localeCompare(b.id));
 }
+// Question counts are fixed, so a blank section (0 D / 0 Y) is a real 0 net. Every
+// student takes the whole TYT and the AYT tests of their field; an AYT course outside
+// the field counts only when answered. Din Kültürü and Ek Felsefe are alternatives:
+// the one answered counts, Din Kültürü when neither was.
+function denemeBolumSayilir(r, kod, alan) {
+  const d = r.dersler.find(x => x.kod === kod), cevap = x => x.dogru + x.yanlis > 0;
+  if (!d) return false;
+  if (cevap(d)) return true;
+  if (kod === 'sf' || kod === 'din' && r.dersler.some(x => x.kod === 'sf' && cevap(x))) return false;
+  return r.oturum === 'TYT' || (DENEME_ALAN[alan] || []).includes(kod);
+}
 // A TYT/AYT exam's section for one course, shown in the Branş chart next to branch
 // exams with its own marker. Derived on every draw and never stored: "g:" ids fail
 // denemeDogrula, so they cannot reach a notebook, packet or cloud write.
 function denemeGenelBolumleri(liste, oturum, brans) {
   const ders = DENEME_DERSLER[oturum]?.find(d => d[0] === brans);
   if (!ders) return [];
+  // School imports carry no field of their own; the student's field decides their AYT tests.
+  const ogrAlan = D.ogr[EK.ogr]?.alan;
   return liste.filter(r => r.tur === oturum).flatMap(r => {
     const d = r.dersler.find(x => x.kod === brans);
-    // A section left blank or outside the field (0 D / 0 Y) adds no point.
-    if (!d || d.dogru + d.yanlis === 0) return [];
+    if (!denemeBolumSayilir(r, brans, r.id.startsWith('p:') ? ogrAlan : r.alan)) return [];
     return [{id:'g:'+r.id+'|'+brans,ad:r.ad,tarih:r.tarih,tur:'BRANS',oturum,brans,alan:r.alan,
       dersler:[{...d,soru:d.soru ?? ders[2]}],sure:null,puan:null,ts:r.ts,genel:r.tur,kaynakId:r.id}];
   });

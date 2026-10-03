@@ -170,6 +170,26 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert.equal(run('EK.denemeTur'),'TYT','an unknown course is ignored');
   run("EK.denemeTur='TYT';EK.denemeSecili=null");
  });
+ await check('blank sections are 0 net within the student own tests; Din/Ek Felsefe count once',()=>{
+  // The harness student is EA. Question counts never change, so 0 D / 0 Y is a 0 net.
+  const dy=(kod,dogru=0,yanlis=0)=>({kod,dogru,yanlis,soru:null});
+  put('okul',[sample({id:'p:tyt',dersler:[dy('turkce',30,4),dy('mat',20,4),dy('geo'),dy('din',3,1),dy('sf')]}),
+    sample({id:'p:tyt-muaf',tarih:'2026-09-19',dersler:[dy('turkce',28,4),dy('din'),dy('sf',4,0)]}),
+    sample({id:'p:tyt-bos',tarih:'2026-09-20',dersler:[dy('turkce',28,4),dy('din'),dy('sf')]}),
+    sample({id:'p:ayt',tur:'AYT',oturum:'AYT',dersler:[dy('edebiyat'),dy('mat',10,2),dy('fizik'),dy('kimya',2,1)]})]);
+  put('kendi',[sample({id:'m:ayt-say',tur:'AYT',oturum:'AYT',alan:'SAY',tarih:'2026-09-21',dersler:[dy('mat'),dy('fizik',5,1)]})]);
+  run('D.ogr[0].denemeOkul=okul;D.ogr[0].denemeler=kendi');
+  const ids=(o,k)=>JSON.parse(run("JSON.stringify(denemeGenelBolumleri(denemeListe(),'"+o+"','"+k+"').map(r=>r.kaynakId))"));
+  const geo=JSON.parse(run("JSON.stringify(denemeGenelBolumleri(denemeListe(),'TYT','geo')[0])"));
+  assert.equal(geo.kaynakId,'p:tyt');assert.equal(run("denemeNet(denemeGenelBolumleri(denemeListe(),'TYT','geo')[0].dersler[0])"),0);
+  assert(run("denemeDetay(denemeGenelBolumleri(denemeListe(),'TYT','geo')[0])").includes('0 D / 0 Y / 10 B · 10 soru'),'blank geometry is 10 blank questions');
+  assert.deepEqual(ids('TYT','din'),['p:tyt','p:tyt-bos'],'Din counts unless Ek Felsefe was answered');
+  assert.deepEqual(ids('TYT','sf'),['p:tyt-muaf'],'Ek Felsefe counts only when answered');
+  // AYT: the EA student's own tests count blank; other fields only when answered.
+  assert.deepEqual(ids('AYT','edebiyat'),['p:ayt']);assert.deepEqual(ids('AYT','fizik'),['m:ayt-say'],'blank AYT physics is outside EA; a SAY entry answered it');
+  assert.deepEqual(ids('AYT','kimya'),['p:ayt'],'an answered course outside the field still counts');
+  assert.deepEqual(ids('AYT','mat'),['p:ayt','m:ayt-say'],'a student entry uses its own field');
+ });
  await check('stock-style chart: segments vs previous 4 average, dots vs previous exam',()=>{
   const nets=[10,12,11,11,15,9];
   put('records',nets.map((n,i)=>sample({id:'m:s'+i,tarih:'2026-09-'+String(10+i).padStart(2,'0'),sure:100+i*10,dersler:[{kod:'turkce',dogru:n,yanlis:0,soru:40}]})));
