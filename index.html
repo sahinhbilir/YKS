@@ -317,17 +317,17 @@ tr.pasif td:first-child{opacity:1}
 .giris-kart label{display:flex;flex-direction:column;gap:6px}
 .giris-kart input{width:100%;padding:11px 12px;font-size:15px;font-weight:400;text-transform:none;letter-spacing:0}
 .giris-kart .dugme{padding:11px 14px;font-size:15px;font-weight:600}
-.giris-ayrac{display:flex;align-items:center;gap:10px;color:var(--soluk);font-size:12px}
-.giris-ayrac::before,.giris-ayrac::after{content:"";flex:1;border-top:1px solid var(--cizgi)}
+.giris-durum:empty{margin-top:-12px}
+.giris-ayrac{border-top:1px solid var(--cizgi);margin:2px 0}
 .giris-diger{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .giris-diger .dugme{box-shadow:none;color:var(--marka-koyu);border-color:var(--marka-acik);background:var(--vurgu-yumusak)}
 .giris-diger .dugme:hover{border-color:var(--vurgu)}
-.giris-not{margin:0;text-align:center}
 .giris-cizim{display:block;width:min(300px,74vw);height:auto;margin:34px auto 0}
 .giris-cizim .c-koyu{fill:var(--il-koyu)}.giris-cizim .c-mavi{fill:var(--il-mavi)}
 .giris-cizim .c-sayfa{fill:#F5F8FE}.giris-cizim .c-cizgi{stroke:#D3DCEE;stroke-width:2;stroke-linecap:round}
 .giris-cizim .c-ip{fill:none;stroke:#E8EEFB;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.giris-cizim .c-dugum{fill:#FFFFFF}
-.giris-yedek{margin-top:22px;color:var(--soluk);line-height:1.8}
+.giris-yedek{margin-top:22px;color:var(--soluk)}.giris-yedek summary{display:inline;list-style:none}
+.giris-yedek summary::-webkit-details-marker{display:none}.giris-yedek[open] summary{display:block;margin-bottom:10px}
 .giris-yedek #yapistirAlan{text-align:left;margin-top:10px}
 .baglanti{background:none;border:0;padding:0;font:inherit;color:var(--vurgu);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .giris-sus{position:absolute;z-index:0;pointer-events:none;height:auto}
@@ -8786,20 +8786,19 @@ function gorunumKurulum() {
     '<label class="etiket">Okul numarası<input type="number" id="ogrenciGirisNo" autocomplete="off" ' +
     'min="1" max="9999" inputmode="numeric" placeholder="Numara"></label>' +
     '<button class="dugme birincil" id="ogrenciBulutGiris">Giriş yap</button>' +
-    '<span class="mini" id="ogrenciGirisDurum" role="status" aria-live="polite">Adını ve numaranı öğretmeninin ' +
-    'listesindeki gibi yaz. Planın sunucudan otomatik yüklenir.</span>' +
-    '<div class="giris-ayrac">veya</div>' +
+    // Boş durum satırı yalnızca hata ve ilerleme iletilerini taşır (ekran okuyucuya da bildirir).
+    '<span class="mini giris-durum" id="ogrenciGirisDurum" role="status" aria-live="polite"></span>' +
+    '<div class="giris-ayrac" role="separator"></div>' +
     '<div class="giris-diger"><button class="dugme" id="rolRehber">Rehber öğretmeniyim</button>' +
     '<button class="dugme" id="testHesapAc">Test hesabı aç</button></div>' +
-    '<p class="mini giris-not">Öğretmenin yoksa “Test hesabı aç” ile Google hesabınla dene. Açtıysan aynı hesapla gir.</p>' +
     '</section>' + GIRIS_CIZIM +
-    '<div class="giris-yedek mini">Yedek dosyan ya da öğretmeninden gelen bir dosya mı var? ' +
-    '<label class="baglanti">Dosyadan geri yükle<input type="file" id="kurYedek" hidden></label> · ' +
-    '<button class="baglanti" id="kurYapistirAc">Dosya açılmıyorsa içeriği yapıştır</button>' +
+    '<details class="giris-yedek mini"><summary class="baglanti">Yedekten geri yükle</summary>' +
+    '<label class="dugme">Dosya seç<input type="file" id="kurYedek" hidden></label> ' +
+    '<button class="baglanti" id="kurYapistirAc">İçeriği yapıştır</button>' +
     '<div id="yapistirAlan" hidden><textarea id="yapistirMetin" rows="5" ' +
     'placeholder="Yedek dosyasını bir metin düzenleyicide açıp içindeki her şeyi kopyalayın, buraya yapıştırın. { ile başlar."></textarea>' +
     '<div class="arac" style="margin-top:8px"><button class="dugme birincil" id="yapistirYukle">Yapıştırılanı yükle</button>' +
-    '<span class="mini">Telefonda dosya seçici açılmadığında bu yol her zaman çalışır.</span></div></div></div>' +
+    '</div></div></details>' +
     '</div></div>';
 }
 
