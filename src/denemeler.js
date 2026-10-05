@@ -336,57 +336,84 @@ function denemeGrafik(liste) {
     (points.some(r=>r.genel)?' İçi boş nokta: TYT/AYT denemesindeki bu dersin bölümü; dolu nokta: branş denemesi.':'')+
     (metrik==='hiz'?' Net = doğru − yanlış / 4; net/dk = net ÷ tamamlama süresi.':'')+(eksik?' '+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.':'')+'</p></div>';
 }
-// Haftalar haritasının yanındaki deneme gelişimi. Eksenler baştan sabittir: x dönem başından YKS
-// tarihine, y 0–120 nete (TYT’nin tamamı). Her yeni deneme kendi tarihine düşer, çizgi zamanla
-// YKS’ye doğru uzar. Öğrencinin belirlediği hedef net (o.denemeHedef) yatay bir çizgidir.
+// Haftalar haritasının yanındaki deneme gelişimi. Üstteki seçim TYT, AYT ya da bir branştır
+// (EK.denemeYol, EK.denemeYolBrans = "TYT:mat"). Eksenler baştan sabittir: x dönem başından
+// YKS tarihine, y 0’dan seçimin soru sayısına (TYT 120, AYT 80, branşta o dersin soruları).
+// Her yeni deneme kendi tarihine düşer, çizgi zamanla YKS’ye doğru uzar. Branşta TYT/AYT
+// denemelerinin o dersteki bölümleri içi boş noktadır. Hedef net her seçim için ayrıdır
+// (o.denemeHedef = {TYT, AYT, "TYT:mat", …}); eski tek sayı TYT hedefidir.
 const DENEME_AY = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+const DENEME_YOL_UST = {TYT:120,AYT:80};
+// Branş listesi: TYT’nin bütün dersleri ve öğrencinin alanındaki AYT dersleri (Ek Felsefe hariç).
+function denemeYolBranslari(o) {
+  const alan=DENEME_ALAN[o?.alan]?o.alan:'SAY';
+  return [['TYT',DENEME_DERSLER.TYT.filter(d=>d[0]!=='sf')],['AYT',DENEME_DERSLER.AYT.filter(d=>d[0]!=='sf' && DENEME_ALAN[alan].includes(d[0]))]];
+}
+function denemeYolSecimi(o) {
+  const tur=['TYT','AYT','BRANS'].includes(EK.denemeYol)?EK.denemeYol:'TYT';
+  if(tur!=='BRANS')return {tur,anahtar:tur,ust:DENEME_YOL_UST[tur],ad:tur};
+  const liste=denemeYolBranslari(o),[oturum,kod]=String(EK.denemeYolBrans || '').split(':');
+  const grup=liste.find(g=>g[0]===oturum),ders=grup?.[1].find(d=>d[0]===kod) || liste[0][1].find(d=>d[0]==='mat');
+  const ot=grup && grup[1].includes(ders)?oturum:'TYT';
+  return {tur,anahtar:ot+':'+ders[0],oturum:ot,kod:ders[0],ust:ders[2],ad:ot+' '+ders[1]};
+}
+function denemeHedefOku(o,anahtar) {
+  const h=o?.denemeHedef,v=typeof h==='number'?(anahtar==='TYT'?h:undefined):h && typeof h==='object'?h[anahtar]:undefined;
+  return Number.isFinite(v)?v:null;
+}
+// Sayılar 4–7 aralığa bölünür; üst sınır adımın katına yuvarlanır (7 soru → 0–7, 13 → 0–14).
+function denemeYolEksen(ust,enAz,enCok) {
+  const tepe=Math.max(ust,enCok),adim=[1,2,4,5,10,20,25,50].find(a=>tepe/a<=7) || 100;
+  return {adim,ust:Math.ceil(tepe/adim)*adim,alt:Math.min(0,Math.floor(enAz/adim)*adim)};
+}
 function denemeYolVerisi(si) {
   const o=D.ogr[si];if(!o)return null;
   const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
   if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return null;
-  const alan=DENEME_ALAN[o.alan]?o.alan:'SAY',tum=denemeListe(si);
-  const seriler=[['TYT',tum.filter(r=>r.tur==='TYT')],['AYT',tum.filter(r=>r.tur==='AYT' && (r.id.startsWith('p:') || r.alan===alan))]]
-    .map(([ad,l])=>({ad,noktalar:l.map(r=>({r,g:gunNo(r.tarih),v:denemeToplam(r,alan)}))}));
-  const once=seriler.reduce((t,s)=>t+s.noktalar.filter(n=>n.g<bas).length,0);
-  seriler.forEach(s=>{s.noktalar=s.noktalar.filter(n=>n.g>=bas && n.g<=son);});
-  const cizilen=seriler.filter(s=>s.noktalar.length),degerler=cizilen.flatMap(s=>s.noktalar.map(n=>n.v));
-  return {o,bas,son,cizilen,degerler,once,hedef:Number.isFinite(o.denemeHedef)?o.denemeHedef:null};
+  const alan=DENEME_ALAN[o.alan]?o.alan:'SAY',tum=denemeListe(si),secim=denemeYolSecimi(o);
+  let liste;
+  if(secim.tur==='TYT')liste=tum.filter(r=>r.tur==='TYT');
+  else if(secim.tur==='AYT')liste=tum.filter(r=>r.tur==='AYT' && (r.id.startsWith('p:') || r.alan===alan));
+  else liste=[...tum.filter(r=>r.tur==='BRANS' && r.oturum===secim.oturum && r.brans===secim.kod),...denemeGenelBolumleri(tum,secim.oturum,secim.kod)];
+  let noktalar=liste.map(r=>({r,g:gunNo(r.tarih),v:denemeToplam(r,alan)}));
+  const once=noktalar.filter(n=>n.g<bas).length;
+  noktalar=noktalar.filter(n=>n.g>=bas && n.g<=son).sort((a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id));
+  const hedef=denemeHedefOku(o,secim.anahtar),degerler=noktalar.map(n=>n.v);
+  return {o,bas,son,secim,noktalar,once,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
 }
-function denemeYolSvg(v,H=270) {
-  const {bas,son,cizilen,degerler,hedef}=v;
-  const W=480,L=34,R=16,T=14,B=30,ust=120,alt=Math.min(0,Math.floor(Math.min(0,...degerler)/20)*20);
+// W×H, kartta kalan alanın kendisidir (ölçek s ile); yazılar böylece her ekranda aynı boyda
+// kalır, büyük ekranda biraz irileşir. Ölçü yoksa (test, yazdırma) 480×270 çizilir.
+function denemeYolSvg(v,H=270,W=480) {
+  const {bas,son,secim,noktalar,hedef,eksen}=v,{alt,ust,adim:yAdim}=eksen;
+  const L=34,R=16,T=14,B=30;
   const x=g=>L+(g-bas)/(son-bas)*(W-L-R),y=v=>H-B-(v-alt)/(ust-alt)*(H-T-B),r1=n=>Math.round(n*10)/10;
-  // Ay başları x ekseninde; en fazla ~8 etiket sığsın diye seyreltilir.
+  // Ay başları x ekseninde; etiketler en az ~55 birim aralıklı kalsın diye seyreltilir.
   const aylar=[];for(let [yil,ay]=isoDan(bas).split('-').map(Number);;){ay++;if(ay>12){ay=1;yil++;}const g=gunNo(yil+'-'+String(ay).padStart(2,'0')+'-01');if(g>=son)break;aylar.push([g,DENEME_AY[ay-1]]);}
-  const adim=Math.max(1,Math.ceil(aylar.length/8)),bugun=bugunNo();
-  const ticks=[];for(let t=alt;t<=ust;t+=20)ticks.push(t);
-  let svg='<svg viewBox="0 0 '+W+' '+H+'" role="group" aria-label="Deneme gelişimi: dönem başından YKS’ye kadar">'+
-    ticks.map(t=>'<line class="yg-izgara" x1="'+L+'" x2="'+(W-R)+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text x="'+(L-6)+'" y="'+r1(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
-    aylar.filter((_,i)=>i%adim===0).map(([g,ad])=>'<text x="'+r1(x(g))+'" y="'+(H-10)+'" text-anchor="middle">'+ad+'</text>').join('')+
-    '<line class="yg-eksen" x1="'+L+'" x2="'+(W-R)+'" y1="'+r1(y(alt))+'" y2="'+r1(y(alt))+'"/>'+
-    (bugun>bas && bugun<son?'<line class="yg-bugun" x1="'+r1(x(bugun))+'" x2="'+r1(x(bugun))+'" y1="'+T+'" y2="'+(H-B)+'"/><text class="yg-bugun-yazi" x="'+r1(x(bugun))+'" y="'+(T+10)+'" text-anchor="middle">Bugün</text>':'')+
-    '<line class="yg-yks" x1="'+r1(x(son))+'" x2="'+r1(x(son))+'" y1="'+T+'" y2="'+(H-B)+'"/><text class="yg-yks-yazi" x="'+r1(x(son)-4)+'" y="'+(T+10)+'" text-anchor="end">★ YKS</text>'+
+  const adim=Math.max(1,Math.ceil(aylar.length/Math.max(2,Math.floor((W-L-R)/55)))),bugun=bugunNo();
+  const ticks=[];for(let t=alt;t<=ust;t+=yAdim)ticks.push(t);
+  let svg='<svg viewBox="0 0 '+r1(W)+' '+r1(H)+'" role="group" aria-label="'+kacis(secim.ad)+' deneme gelişimi: dönem başından YKS’ye kadar">'+
+    ticks.map(t=>'<line class="yg-izgara" x1="'+L+'" x2="'+r1(W-R)+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text x="'+(L-6)+'" y="'+r1(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
+    aylar.filter((_,i)=>i%adim===0).map(([g,ad])=>'<text x="'+r1(x(g))+'" y="'+r1(H-10)+'" text-anchor="middle">'+ad+'</text>').join('')+
+    '<line class="yg-eksen" x1="'+L+'" x2="'+r1(W-R)+'" y1="'+r1(y(alt))+'" y2="'+r1(y(alt))+'"/>'+
+    (bugun>bas && bugun<son?'<line class="yg-bugun" x1="'+r1(x(bugun))+'" x2="'+r1(x(bugun))+'" y1="'+T+'" y2="'+r1(H-B)+'"/><text class="yg-bugun-yazi" x="'+r1(x(bugun))+'" y="'+(T+10)+'" text-anchor="middle">Bugün</text>':'')+
+    '<line class="yg-yks" x1="'+r1(x(son))+'" x2="'+r1(x(son))+'" y1="'+T+'" y2="'+r1(H-B)+'"/><text class="yg-yks-yazi" x="'+r1(x(son)-4)+'" y="'+(T+10)+'" text-anchor="end">★ YKS</text>'+
     (hedef===null?'':'<line class="yg-hedef" x1="'+L+'" x2="'+r1(x(son))+'" y1="'+r1(y(hedef))+'" y2="'+r1(y(hedef))+'"/><text class="yg-hedef-yazi" x="'+(L+6)+'" y="'+r1(y(hedef)-5)+'">Hedef '+denemeSayi(hedef)+'</text>');
-  for(const s of cizilen){
-    const nok=s.noktalar.slice().sort((a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id));
-    if(nok.length>1)svg+='<polyline class="yg-cizgi yg-'+s.ad+'" points="'+nok.map(n=>r1(x(n.g))+','+r1(y(n.v))).join(' ')+'"/>';
-    svg+=nok.map(n=>{const etiket=s.ad+' · '+n.r.ad+' · '+n.r.tarih+' · '+denemeSayi(n.v)+' net';
-      return '<circle class="yg-nokta yg-'+s.ad+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+'. Denemelerim’de aç')+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
-  }
-  if(!cizilen.length)svg+='<text class="yg-bos" x="'+r1((L+W-R)/2)+'" y="'+r1(H/2)+'" text-anchor="middle">Henüz deneme yok</text>';
-  svg+='</svg>';
-  return svg;
+  const sinif='yg-'+(secim.tur==='BRANS'?'BRANS':secim.tur);
+  if(noktalar.length>1)svg+='<polyline class="yg-cizgi '+sinif+'" points="'+noktalar.map(n=>r1(x(n.g))+','+r1(y(n.v))).join(' ')+'"/>';
+  svg+=noktalar.map(n=>{const etiket=secim.ad+' · '+n.r.ad+(n.r.genel?' ('+n.r.genel+' denemesinden)':'')+' · '+n.r.tarih+' · '+denemeSayi(n.v)+' net';
+    return '<circle class="yg-nokta '+sinif+(n.r.genel?' genel':'')+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+'. Denemelerim’de aç')+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
+  if(!noktalar.length)svg+='<text class="yg-bos" x="'+r1((L+W-R)/2)+'" y="'+r1(H/2)+'" text-anchor="middle">Henüz '+kacis(secim.ad)+' denemesi yok</text>';
+  return svg+'</svg>';
 }
-// Grafik kartı haritayla aynı boydadır; çizim, kartta kalan alanın en/boy oranına göre yeniden
-// kurulur (yazılar bozulmadan alanı doldurur). Ölçü yoksa (test, yazdırma) 480×270 kalır.
+// Grafik kartı haritayla aynı boydadır; çizim, kartta kalan alanın ölçüsüne göre yeniden kurulur.
 let DENEME_YOL_ZAMAN=null;
 function denemeYolSigdir() {
   const alan=document.querySelector && document.querySelector('.dn-yol .yg-alan');
   if(!alan || !alan.clientWidth || !alan.clientHeight)return;
-  const H=Math.round(Math.max(220,Math.min(600,480*alan.clientHeight/alan.clientWidth)));
-  if(Math.abs(H-Number(alan.dataset.h))<4)return;
+  const s=Math.max(1,Math.min(1.35,alan.clientWidth/520)),W=Math.round(Math.max(300,alan.clientWidth/s)),H=Math.round(Math.max(200,Math.min(700,alan.clientHeight*W/alan.clientWidth)));
+  if(Math.abs(W-Number(alan.dataset.w))<4 && Math.abs(H-Number(alan.dataset.h))<4)return;
   const v=denemeYolVerisi(Number(alan.dataset.si));if(!v)return;
-  alan.dataset.h=String(H);alan.innerHTML=denemeYolSvg(v,H);
+  alan.dataset.w=String(W);alan.dataset.h=String(H);alan.innerHTML=denemeYolSvg(v,H,W);
 }
 function denemeYolSigdirPlanla() {
   if(typeof window==='undefined' || !window.requestAnimationFrame)return;
@@ -395,13 +422,20 @@ function denemeYolSigdirPlanla() {
 if(typeof window!=='undefined' && window.addEventListener)window.addEventListener('resize',denemeYolSigdirPlanla);
 function denemeYolGrafigi(si=EK.ogr) {
   const v=denemeYolVerisi(si);if(!v)return '';
-  const {bas,cizilen,once,hedef}=v;
+  const {bas,secim,noktalar,once,hedef}=v,hedefUst=secim.ust;
   denemeYolSigdirPlanla();
-  return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas"><button class="dugme" data-sekme="denemeler">Denemelerim →</button></div>'+
-    '<div class="yg-alan" data-si="'+si+'" data-h="270">'+denemeYolSvg(v)+'</div>'+
-    '<p class="mini yg-lejant">'+(cizilen.length?cizilen.map(s=>'<span class="yg-'+s.ad+'">'+s.ad+' net</span>').join(' '):'Sonuç ekledikçe noktalar YKS’ye doğru ilerler.')+
+  const secici='<div class="yg-secim" role="group" aria-label="Grafikte göster">'+[['TYT','TYT'],['AYT','AYT'],['BRANS','Branş']].map(([k,ad])=>
+    '<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-yol-sec="'+k+'">'+ad+'</button>').join('')+'</div>'+
+    (secim.tur==='BRANS'?'<label class="yg-brans">Ders <select id="dnYolBrans">'+denemeYolBranslari(v.o).map(([ot,l])=>'<optgroup label="'+ot+'">'+
+      l.map(d=>'<option value="'+ot+':'+d[0]+'"'+(secim.anahtar===ot+':'+d[0]?' selected':'')+'>'+kacis(d[1])+'</option>').join('')+'</optgroup>').join('')+'</select></label>':'');
+  return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas">'+secici+'</div>'+
+    '<div class="yg-alan" data-si="'+si+'" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div>'+
+    '<p class="mini yg-lejant">'+(!noktalar.length?'Sonuç ekledikçe noktalar YKS’ye doğru ilerler.':secim.tur!=='BRANS'?'<span class="yg-'+secim.tur+'">'+secim.ad+' net</span>':
+      // Branşta dolu nokta branş denemesi, içi boş nokta TYT/AYT denemesindeki o dersin bölümüdür.
+      '<b>'+kacis(secim.ad)+' net:</b> '+[noktalar.some(n=>!n.r.genel)?'<span class="yg-BRANS">branş denemesi</span>':'',
+        noktalar.some(n=>n.r.genel)?'<span class="yg-genel">'+secim.oturum+' denemesinden</span>':''].filter(Boolean).join(' '))+
     (once?' · '+once+' deneme dönem başından ('+ggyy(bas)+') önce; Denemelerim’de görünür.':'')+'</p>'+
-    (ogrenciMi()?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" min="0" max="120" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="Hedef net (0–120)"> net</label>':'')+'</section>';
+    (ogrenciMi()?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" data-anahtar="'+secim.anahtar+'" min="0" max="'+hedefUst+'" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="'+kacis(secim.ad)+' hedef net (0–'+hedefUst+')"> net <small>'+kacis(secim.ad)+'</small></label>':'')+'</section>';
 }
 function denemeFormHtml() {
   const f=DENEME_FORM;if(!f || f.si!==EK.ogr)return '';
@@ -460,7 +494,13 @@ async function denemeYayinlaVeyaBeklet(si) {
   catch(e){denemeDurum('Cihazda kayıtlı; yayın bekliyor: '+e.message);}
 }
 // Ana sayfadaki gelişim noktası: o denemeyi Denemelerim’de, kendi sekmesinde seçili açar.
-function denemeYolAc(id) {const r=denemeListe().find(x=>x.id===id);if(!r)return;EK.sekme='denemeler';EK.denemeTur=r.tur;EK.denemeSecili=r.id;DENEME_FORM=null;ciz();}
+// Branş noktası (branş denemesi ya da TYT/AYT bölümü) Branş denemelerinde o dersle açılır.
+function denemeYolAc(id) {
+  const r=denemeBul(id);if(!r)return;
+  EK.sekme='denemeler';EK.denemeTur=r.tur;EK.denemeSecili=r.id;DENEME_FORM=null;
+  if(r.tur==='BRANS'){EK.denemeOturum=r.oturum;EK.denemeBrans=r.brans;if(r.genel){EK.denemeGenel=true;EK.denemeMetrik='net';}}
+  ciz();
+}
 function denemeNoktaSec(id) {const r=denemeBul(id),el=document.getElementById('dnDetay');if(r && el){EK.denemeSecili=id;el.innerHTML=denemeDetay(r);} }
 document.addEventListener('pointerover',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
 document.addEventListener('focusin',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
@@ -489,6 +529,7 @@ document.addEventListener('click',async ev=>{
   const el=ev.target.closest?.('button,[data-dn-dot],[data-dn-yol]');if(!el)return;
   if(el.dataset.dnDot){denemeNoktaSec(el.dataset.dnDot);return;}
   if(el.dataset.dnYol){denemeYolAc(el.dataset.dnYol);return;}
+  if(el.dataset.dnYolSec){EK.denemeYol=el.dataset.dnYolSec;ciz();document.querySelector('[data-dn-yol-sec="'+EK.denemeYol+'"]')?.focus();return;}
   if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
   if(el.dataset.dnKaynak){
     const r=denemeListe().find(x=>x.id===el.dataset.dnKaynak);if(!r)return;
@@ -569,10 +610,17 @@ document.addEventListener('change',async ev=>{
   }
   if(el.dataset?.dnRapor!==undefined){DENEME_IMPORT[Number(el.dataset.dnRapor)][el.dataset.alan]=el.value;return;}
   if(id==='dnGenel'){EK.denemeGenel=el.checked;ciz();return;}
+  if(id==='dnYolBrans'){EK.denemeYolBrans=el.value;ciz();document.getElementById('dnYolBrans')?.focus();return;}
   if(id==='dnHedef' && ogrenciMi()){
-    const v=el.value.trim(),hedef=v===''?null:Math.round(Number(v)),o=D.ogr[EK.ogr];
-    if(hedef!==null && !(hedef>=0 && hedef<=120)){denemeDurum('Hedef 0 ile 120 net arasında olmalı.');el.value=o.denemeHedef??'';return;}
-    const eski=o.denemeHedef;if(hedef===null)delete o.denemeHedef;else o.denemeHedef=hedef;
+    const o=D.ogr[EK.ogr],k=el.dataset.anahtar,ust=Number(el.max),v=el.value.trim(),hedef=v===''?null:Math.round(Number(v));
+    if(!/^(TYT|AYT)(:[a-z0-9]+)?$/.test(k || ''))return;
+    if(hedef!==null && !(hedef>=0 && hedef<=ust)){denemeDurum('Hedef 0 ile '+ust+' net arasında olmalı.');el.value=denemeHedefOku(o,k)??'';return;}
+    // Tek sayı TYT hedefidir. Yalnızca TYT hedefi varken sayı olarak kalır (önceki sürüm yalnızca
+    // sayıyı tanır); başka bir seçimin hedefi eklenince seçim başına hedeflere dönüşür.
+    const eski=o.denemeHedef,yeni=typeof eski==='number'?{TYT:eski}:{...(eski && typeof eski==='object'?eski:{})};
+    if(hedef===null)delete yeni[k];else yeni[k]=hedef;
+    const ks=Object.keys(yeni);
+    if(!ks.length)delete o.denemeHedef;else o.denemeHedef=ks.length===1 && ks[0]==='TYT'?yeni.TYT:yeni;
     if(!await kaydet(true)){if(eski===undefined)delete o.denemeHedef;else o.denemeHedef=eski;}
     ciz();return;
   }

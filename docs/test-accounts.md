@@ -111,8 +111,10 @@ for teacher login.
   everything, refused for teachers and students) and unchanged school paths.
 - `node test/test-account-browser.cjs`: desktop and 390 px Chromium checks of the
   start screen layout (headline, open student login, teacher and test account
-  buttons under it, drawing below, nothing covering a control), nickname setup, first cloud save, the settings card, the reset's
-  place in Verileri sıfırla, and the reset itself.
+  buttons under it, drawing below, nothing covering a control), nickname setup, first cloud save, the student top bar
+  (brand → home, Planım ▾ menu), the home page (equal cards with a gap, linked
+  headings, TYT · AYT · Branş chart choice with per-choice targets), the settings card,
+  the reset's place in Verileri sıfırla, and the reset itself.
 - `test/firebase/firestore.test.mjs`: 9 emulator checks for `testDefter` rules,
   including owner-only delete and the reset transaction.
 

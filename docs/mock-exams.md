@@ -19,15 +19,18 @@ Deneme adı, tarih, derslerin doğru/yanlış/soru sayıları girilir. Net doğr
 
 ## Ana sayfadaki deneme gelişimi
 
-Öğrencinin Haftalar haritası (girişten sonra açılan sayfa) yanında **Deneme gelişimi** grafiğini gösterir (`denemeYolGrafigi`, yalnızca YKS öğrencisi).
+Öğrencinin ana sayfası (girişten sonra açılan sayfa, marka yazısı “YKS Tekrar Defteri” ile de açılır) Haftalar haritasının yanında **Deneme gelişimi** grafiğini gösterir (`denemeYolGrafigi`, yalnızca YKS öğrencisi).
 
-- Başlık (“Deneme gelişimi”) “Haftalar haritası” ile aynı satırdadır; grafik ve harita altında yan yana durur.
-- y ekseni 0–120 nettir (TYT’nin tamamı) ve sabittir; AYT de aynı eksende çizilir.
-- **Hedef belirle [ ] net:** öğrenci bir hedef net yazar (0–120, boş bırakmak hedefi kaldırır). Hedef, YKS’ye kadar uzanan kesikli bir çizgiyle “Hedef 80” gibi gösterilir. `ogr[].denemeHedef` alanında saklanır, yedek doğrulamasından geçer ve çalışma anlığıyla eşitlenir. Hedefi yalnızca öğrenci belirler.
+- Başlık (“Deneme gelişimi”) “Haftalar haritası” ile aynı satırdadır; grafik ve harita altında yan yana durur. “Deneme gelişimi” başlığı Denemelerim’i, “Haftalar haritası” başlığı haritanın kendi sayfasını açar.
+- Grafiğin üstünde **TYT · AYT · Branş** seçimi vardır (`EK.denemeYol`, varsayılan TYT). Branş seçilince yanında **Ders** listesi açılır (`EK.denemeYolBrans`, ör. `TYT:mat`). Listede TYT’nin bütün dersleri ve öğrencinin alanındaki AYT dersleri vardır; Ek Felsefe (muaf) listede yoktur. Alan dışı ya da bilinmeyen bir ders TYT Matematik’e döner.
+- y ekseni seçime göre sabittir: TYT 0–120, AYT 0–80 (her alanda 80 soru), branşta 0’dan o dersin soru sayısına (ör. Türkçe 40, Matematik 30). Ara çizgiler 4–7 eşit parçadır; sınırı aşan bir değer (ör. 40 soruluk bir branş denemesi) ekseni bir sonraki adıma uzatır.
+- Branşta dolu noktalar o dersin branş denemeleri, içi boş noktalar TYT/AYT denemelerindeki o dersin bölümleridir (`denemeGenelBolumleri`; boş bölüm 0 net, alan ve Din/Ek Felsefe kuralı Denemelerim’deki gibi). Alttaki açıklama yalnızca grafikte bulunan nokta türlerini sayar.
+- **Hedef belirle [ ] net:** öğrenci her seçim için ayrı bir hedef net yazar (0’dan o seçimin soru sayısına; boş bırakmak o hedefi kaldırır). Hedef, YKS’ye kadar uzanan kesikli bir çizgiyle “Hedef 80” gibi gösterilir. `ogr[].denemeHedef` alanında `{TYT, AYT, "TYT:mat", …}` olarak saklanır. Tek sayı TYT hedefidir: yalnızca TYT hedefi varken alan sayı olarak kalır (önceki sürüm yalnızca sayıyı okur), başka bir hedef eklenince bu biçime dönüşür. Yedek doğrulamasından geçer (anahtar `TYT`/`AYT`, isteğe bağlı `:ders`; değer 0–120) ve çalışma anlığıyla eşitlenir. Hedefi yalnızca öğrenci belirler.
 - x ekseni baştan sabittir: dönem başının haftasından YKS tarihine kadar. Deneme eklendikçe eksen uzamaz; her deneme kendi tarihine düşer ve çizgi zamanla sağdaki YKS çizgisine yaklaşır. Hiç deneme yokken de eksen ve YKS çizgisi görünür.
-- TYT ve AYT neti ayrı çizgilerdir. AYT, öğrencinin alanına göre hesaplanır. Okul aktarımı her zaman sayılır; öğrencinin kendi girdiği AYT ise yalnızca kendi alanındaysa sayılır.
+- AYT, öğrencinin alanına göre hesaplanır. Okul aktarımı her zaman sayılır; öğrencinin kendi girdiği AYT ise yalnızca kendi alanındaysa sayılır.
 - “Bugün” kesikli bir çizgiyle gösterilir. Dönem başından önceki denemeler (ör. eski bir hazırbulunuşluk) grafikte yer almaz; alttaki not bunları sayar, Denemelerim’de görünürler.
-- Bir noktaya tıklamak ya da Enter’a basmak o denemeyi Denemelerim’de kendi sekmesinde seçili açar.
+- Çizim kartın ölçüsüyle yeniden kurulur (`denemeYolSigdir`): genişlik ölçülen alana göredir, yazılar geniş kartta en çok 1,35 kat büyür. Böylece yazılar telefonda okunur, büyük ekranda irileşir.
+- Bir noktaya tıklamak ya da Enter’a basmak o denemeyi Denemelerim’de kendi sekmesinde seçili açar. Branş noktası Branş denemelerinde o dersi açar; içi boş nokta TYT/AYT bölümlerini gösterir ve o bölümü seçer.
 
 ## Öğretmen aktarımı
 
@@ -55,7 +58,7 @@ Birleşik raporun TYT tekrarları, başka tarihe sahip olsalar bile aynı sınav
 
 Kaynaklar `src/denemeler.js` ve `src/denemeler.css`. `node scripts/embed-denemeler.cjs` bunları tek dosyalı uygulamaya gömer; `--check` eşitliği denetler; Windows (CRLF) çalışma kopyalarında da aynı sonucu verir. Elle gömülü kopyayı değiştirmeyin.
 
-- `node test/mock-exam-regression.cjs`: ana sayfa grafiğinin sabit eksenleri ve hedef neti (kaydetme, temizleme, aralık dışı değer, doğrulama, eşitleme; yeni deneme eski noktaları kaydırmaz, dönem öncesi denemeler, AYT alanı, noktadan Denemelerim’e geçiş), alan toplamları, branş net/dk, genel deneme bölümleri (türetme, boş bölümün 0 net sayılması, alan ve Din/Ek Felsefe kuralı, kayda girmeme, gizleme, yalnızca net, geçişler), sayısal sınırlar, sürüm uyumu, silme/birleştirme, silinmiş sonuçlar, süre önceliği, tam öğrenci eşleşmesi, tekrarlar, sentetik PDF koordinatları ve CRLF gömme.
+- `node test/mock-exam-regression.cjs`: ana sayfa grafiğinin sabit eksenleri, TYT/AYT/Branş seçimi ve seçim başına hedef neti (kaydetme, temizleme, aralık dışı değer, eski tek sayı hedef, doğrulama, eşitleme; yeni deneme eski noktaları kaydırmaz, dönem öncesi denemeler, AYT alanı ve 0–80 ekseni, branş ders listesi, dolu/içi boş noktalar, noktadan Denemelerim’e geçiş, bağlantılı başlıklar), alan toplamları, branş net/dk, genel deneme bölümleri (türetme, boş bölümün 0 net sayılması, alan ve Din/Ek Felsefe kuralı, kayda girmeme, gizleme, yalnızca net, geçişler), sayısal sınırlar, sürüm uyumu, silme/birleştirme, silinmiş sonuçlar, süre önceliği, tam öğrenci eşleşmesi, tekrarlar, sentetik PDF koordinatları ve CRLF gömme.
 - `node test/mock-exam-browser.cjs` (Playwright): masaüstü/telefon formu, grafik, düzenleme, branş/AYT ayrımı, genel deneme bölümlerinin Branş grafiğinde gösterilmesi ve ders kutusundan geçiş, kalıcı kayıt, toplu aktarım ve yayınlama hatası/yeniden deneme.
 - Mevcut Firestore emulator testleri: öğretmen/öğrenci erişimi, alan korunması, hesap ve yuva rotasyonu; gerçek iki istemciyle anlık teslim, yeni cihaz, kişisel süre ve eski cihazdan silinen sonucun geri gelmemesi.
 - Sağlanan üç PDF ayrıca yerel PDF.js ve Chromium ile sınandı: 29 TYT; birleşik raporda 29 TYT + 22 AYT; hazırlık raporunda 29 TYT. Birleşik dosyadaki 29 TYT tekrarı işaretlenmedi. Gerçek öğrenci PDF’leri veya çıkartılan öğrenci verileri repoya eklenmedi.

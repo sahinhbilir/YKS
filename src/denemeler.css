@@ -54,17 +54,24 @@ main:has(.dn-tabs){min-width:0}
 .dn-pencere-alt{margin:0;padding:12px 20px;border-top:1px solid var(--cizgi)}
 #dnFormHata:empty{display:none}
 @media(max-width:600px){#dnOrtu{padding:3vh 8px}.dn-pencere-ust{padding:14px 48px 10px 12px}.dn-pencere-govde{padding:0 12px 8px}.dn-pencere-alt{padding:10px 12px}}
-.dn-yol{padding:16px 20px 18px}.dn-yol-bas{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-bottom:4px}
+.dn-yol{padding:16px 20px 18px}.dn-yol-bas{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:8px}
+/* TYT · AYT · Branş: tek parça bir seçim; Branş seçilince yanında ders listesi açılır. */
+.yg-secim{display:inline-flex;border:1px solid var(--cizgi);border-radius:999px;padding:3px;background:var(--zemin)}
+.yg-secim button{border:0;background:none;border-radius:999px;padding:6px 16px;font-weight:700;color:var(--soluk);cursor:pointer}
+.yg-secim button:hover{color:var(--marka-koyu)}.yg-secim button.secili{background:var(--marka-koyu);color:var(--kagit)}
+.yg-secim button:focus-visible{outline:2px solid var(--vurgu);outline-offset:1px}
+.yg-brans{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--marka-koyu)}.yg-brans select{font-weight:600}
 .dn-yol svg{display:block;width:100%;height:auto;overflow:visible}.dn-yol text{fill:var(--soluk);font:12px system-ui,sans-serif}
 .dn-yol .yg-izgara{stroke:var(--cizgi);stroke-dasharray:3 5}.dn-yol .yg-eksen{stroke:var(--cizgi)}
 .dn-yol .yg-bugun{stroke:var(--soluk);stroke-dasharray:4 4;opacity:.7}.dn-yol .yg-yks{stroke:var(--marka-koyu);stroke-width:2}
 .dn-yol text.yg-yks-yazi{fill:var(--marka-koyu);font-weight:700}.dn-yol text.yg-bos{font-size:14px}
-.dn-yol .yg-cizgi{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}.dn-yol .yg-cizgi.yg-TYT{stroke:var(--marka)}.dn-yol .yg-cizgi.yg-AYT{stroke:var(--marka-koyu)}
-.dn-yol .yg-nokta{stroke:var(--kagit);stroke-width:2;cursor:pointer}.dn-yol .yg-nokta.yg-TYT{fill:var(--marka)}.dn-yol .yg-nokta.yg-AYT{fill:var(--marka-koyu)}
+.dn-yol .yg-cizgi{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}.dn-yol .yg-cizgi.yg-TYT{stroke:var(--marka)}.dn-yol .yg-cizgi.yg-AYT{stroke:var(--marka-koyu)}.dn-yol .yg-cizgi.yg-BRANS{stroke:var(--vurgu-koyu)}
+.dn-yol .yg-nokta{stroke:var(--kagit);stroke-width:2;cursor:pointer}.dn-yol .yg-nokta.yg-TYT{fill:var(--marka)}.dn-yol .yg-nokta.yg-AYT{fill:var(--marka-koyu)}.dn-yol .yg-nokta.yg-BRANS{fill:var(--vurgu-koyu)}
+.dn-yol .yg-nokta.genel{fill:var(--kagit);stroke:var(--vurgu-koyu);stroke-width:2.5}
 .dn-yol .yg-nokta:hover,.dn-yol .yg-nokta:focus{stroke:var(--murekkep);stroke-width:3;outline:none}
 .yg-lejant span{font-weight:600;color:var(--murekkep);white-space:nowrap}.yg-lejant span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
-.yg-lejant span.yg-TYT::before{background:var(--marka)}.yg-lejant span.yg-AYT::before{background:var(--marka-koyu)}
-@media(max-width:600px){.dn-yol text{font-size:16px}.dn-yol text.yg-bos{font-size:18px}}
+.yg-lejant span.yg-TYT::before{background:var(--marka)}.yg-lejant span.yg-AYT::before{background:var(--marka-koyu)}.yg-lejant span.yg-BRANS::before{background:var(--vurgu-koyu)}
+.yg-lejant span.yg-genel::before{background:var(--kagit);border:2px solid var(--vurgu-koyu);width:7px;height:7px}
 .dn-yol .yg-hedef{stroke:var(--uyari);stroke-width:2;stroke-dasharray:7 5}.dn-yol text.yg-hedef-yazi{fill:var(--uyari);font-weight:700}
-.yg-hedef-sec{display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:600;color:var(--marka-koyu)}.yg-hedef-sec input{width:76px;font-weight:600}
+.yg-hedef-sec{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:10px;font-weight:600;color:var(--marka-koyu);white-space:nowrap}.yg-hedef-sec input{width:76px;font-weight:600}.yg-hedef-sec small{font-weight:500;color:var(--soluk)}
 .yg-alan{position:relative;flex:1 1 auto;min-height:240px}.yg-alan svg{position:absolute;inset:0;width:100%;height:100%}

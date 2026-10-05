@@ -87,7 +87,9 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert(bulut['testDefter/google-1/gecmis/2'],'Wednesday history slot');
    // Student top menu: "Planım" opens the weekly plan; its arrow (hover or click) lists the other plan pages.
    assert.equal(await page.locator('#ray').getAttribute('class'),'ray ust');
-   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['denemeler','mufredat','ayarlar']);
+   // The brand (YKS Tekrar Defteri) is the home button; then Planım ▾, Denemelerim, Müfredat, Ayarlar.
+   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','denemeler','mufredat','ayarlar']);
+   assert.equal(await page.locator('#ray > button.marka').isVisible(),true,'the brand stays visible at '+width);
    const menu=page.locator('#planMenusu'),ok=page.locator('#ray .menu-ac');
    assert.equal(await menu.isVisible(),false,'menu folded');
    await ok.hover();assert.equal(await menu.isVisible(),true,'hovering the arrow opens it');
@@ -98,11 +100,13 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    await page.keyboard.press('Escape');assert.equal(await menu.isVisible(),false,'Esc closes it');
    await ok.click();await menu.getByRole('button',{name:'Haftalar haritası'}).click();
    assert.equal(await page.evaluate(()=>EK.sekme),'harita');assert.equal(await menu.isVisible(),false,'choosing closes it');
-   // Home: the weeks map with the mock-exam chart beside it; its axis already reaches YKS.
+   await page.locator('.yks-yolu').waitFor();assert.equal(await page.locator('.dn-yol').count(),0,'Haftalar haritası is the map alone');
+   // Home (the brand): the weeks map with the mock-exam chart beside it; its axis already reaches YKS.
+   await page.locator('#ray > button.marka').click();assert.equal(await page.evaluate(()=>EK.sekme),'ana');
    await page.locator('.ana-pano .dn-yol').waitFor();
-   assert((await page.locator('.dn-yol').innerText()).includes('Henüz deneme yok'));assert.equal(await page.locator('.dn-yol .yg-yks').count(),1);
+   assert((await page.locator('.dn-yol').innerText()).includes('Henüz TYT denemesi yok'));assert.equal(await page.locator('.dn-yol .yg-yks').count(),1);
    if(width>=1280){const [harita,grafik,b1,b2]=await Promise.all(['.ana-pano .yks-yolu','.ana-pano .dn-yol','.pano-sol-bas h1','.pano-sag-bas h2'].map(s=>page.locator(s).boundingBox()));
-     assert(grafik.x>harita.x+harita.width-1 && Math.abs(grafik.y-harita.y)<2,'the chart sits beside the map');
+     assert(grafik.x>harita.x+harita.width+30 && Math.abs(grafik.y-harita.y)<2,'the chart sits beside the map with a clear gap');
      assert(Math.abs((b1.y+b1.height)-(b2.y+b2.height))<4,'"Deneme gelişimi" heading sits on the same row as "Haftalar haritası"');
      assert(Math.abs(grafik.width-harita.width)<2 && Math.abs(grafik.height-harita.height)<2,'map and chart cards are the same size');
      assert.equal(await page.locator('.ana-pano>.dn-yol').evaluate(e=>getComputedStyle(e).borderTopWidth),'3px','the chart card has the map card style');
@@ -111,10 +115,30 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
      const [alan,svg]=await Promise.all(['.yg-alan','.yg-alan svg'].map(s=>page.locator(s).boundingBox()));
      const vb=await page.locator('.yg-alan svg').evaluate(e=>e.viewBox.baseVal.height/e.viewBox.baseVal.width);
      assert(Math.abs(svg.height-alan.height)<1 && Math.abs(vb-alan.height/alan.width)<0.02,'chart fills its area: '+vb+' vs '+alan.height/alan.width);}
-   // Target net: typed by the student, drawn as a dashed line, kept in the notebook.
+   // Chart text keeps a readable size at every width (the drawing follows the card, not a fixed 480).
+   // The refit runs on the next animation frame after a redraw; measure after it.
+   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+   const yazi=await page.locator('.yg-alan svg text').first().evaluate(e=>e.getBoundingClientRect().height);
+   assert(yazi>=13 && yazi<=22,'axis text height '+yazi);
+   // The headings are links: "Deneme gelişimi" → Denemelerim, "Haftalar haritası" → the map.
+   await page.locator('.pano-sag-bas .baslik-link').click();assert.equal(await page.evaluate(()=>EK.sekme),'denemeler');
+   await page.locator('#ray > button.marka').click();await page.locator('.pano-sol-bas .baslik-link').click();
+   assert.equal(await page.evaluate(()=>EK.sekme),'harita');await page.locator('#ray > button.marka').click();
+   // Target net: typed by the student, drawn as a dashed line, kept in the notebook per choice.
    await page.locator('#dnHedef').fill('80');await page.locator('#dnHedef').press('Enter');await page.locator('#dnHedef').blur();
    await page.waitForFunction(()=>D.ogr[0].denemeHedef===80);await page.locator('.dn-yol .yg-hedef').waitFor({state:'attached'});
    assert((await page.locator('.dn-yol').innerText()).includes('Hedef 80'));
+   // TYT · AYT · Branş: Branş opens a course list; each choice has its own axis and target.
+   await page.locator('[data-dn-yol-sec="AYT"]').click();assert.equal(await page.locator('[data-dn-yol-sec="AYT"]').getAttribute('aria-pressed'),'true');
+   assert.equal(await page.locator('.dn-yol .yg-hedef').count(),0,'the TYT target is not drawn on AYT');
+   assert.equal(await page.locator('#dnYolBrans').count(),0,'no course list outside Branş');
+   await page.locator('[data-dn-yol-sec="BRANS"]').click();await page.locator('#dnYolBrans').selectOption('TYT:turkce');
+   assert.equal(await page.evaluate(()=>EK.denemeYolBrans),'TYT:turkce');assert.equal(await page.locator('#dnHedef').getAttribute('max'),'40');
+   assert((await page.locator('.dn-yol').innerText()).includes('Henüz TYT Türkçe denemesi yok'));
+   await page.locator('#dnHedef').fill('30');await page.locator('#dnHedef').press('Enter');await page.locator('#dnHedef').blur();
+   await page.waitForFunction(()=>D.ogr[0].denemeHedef['TYT:turkce']===30&&D.ogr[0].denemeHedef.TYT===80);
+   await page.screenshot({path:path.join(out,'student-home-brans-'+width+'.png'),fullPage:true});
+   await page.locator('[data-dn-yol-sec="TYT"]').click();
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'home overflow');
    await page.screenshot({path:path.join(out,'student-home-'+width+'.png'),fullPage:true});
    await page.locator('#ray [data-sekme="plan"]').click();assert.equal(await page.evaluate(()=>EK.sekme),'plan','Planım opens the weekly plan');

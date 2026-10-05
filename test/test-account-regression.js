@@ -148,7 +148,7 @@ async function check(name, fn) {
     await b.tikla('testHesapAc');
     assert.equal(b.run('D.ogr[0].ad'), 'Kuzey');
     assert.equal(b.run('D.log.length'), 1);
-    assert.equal(b.run('EK.sekme'), 'harita');
+    assert.equal(b.run('EK.sekme'), 'ana');
     assert(b.events.some(e => e.startsWith('bilgi:Hoş geldin Kuzey')));
   });
 

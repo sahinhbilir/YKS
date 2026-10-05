@@ -192,10 +192,11 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
  });
  await check('home progress chart keeps a fixed axis from term start to YKS',async()=>{
   // The axis is drawn before any exam and never stretches: new exams land at their date.
-  run("D.ayar.donemBasi='2026-08-31';D.ayar.sinav='2027-06-19';D.ogr[0].denemeler=[];D.ogr[0].denemeOkul=[];");
+  run("D.ayar.donemBasi='2026-08-31';D.ayar.sinav='2027-06-19';D.ogr[0].denemeler=[];D.ogr[0].denemeOkul=[];delete EK.denemeYol;delete EK.denemeYolBrans;");
   const cx=(h,id)=>Number(new RegExp('cx="([\\d.]+)"[^>]*data-dn-yol="'+id+'"').exec(h)?.[1]);
   let h=run('denemeYolGrafigi(0)');
-  assert(h.includes('Henüz deneme yok'));assert.match(h,/class="yg-yks" x1="464"/,'the YKS line sits at the right edge from the start');
+  assert(h.includes('Henüz TYT denemesi yok'));assert.match(h,/class="yg-yks" x1="464"/,'the YKS line sits at the right edge from the start');
+  assert.match(h,/data-dn-yol-sec="TYT">TYT</);assert.match(h,/class="secili" aria-pressed="true" data-dn-yol-sec="TYT"/,'TYT is the default choice');
   const t=(id,tarih,dogru)=>sample({id,tarih,sure:null,puan:null,dersler:[{kod:'turkce',dogru,yanlis:0,soru:40}]});
   put('ilk',[t('m:t1','2026-09-18',20)]);run('D.ogr[0].denemeler=ilk');h=run('denemeYolGrafigi(0)');
   const once=cx(h,'m:t1');assert(once>34 && once<80,'mid-September is near the left: '+once);
@@ -203,35 +204,70 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert.equal(cx(h,'m:t1'),once,'adding a later exam does not move earlier points');
   assert(cx(h,'m:t2')>300 && cx(h,'m:t2')<464,'March is toward YKS: '+cx(h,'m:t2'));
   assert.match(h,/class="yg-yks" x1="464"/);assert(h.includes('class="yg-cizgi yg-TYT"'));
+  // A wider drawing area moves the YKS line, not the dates: x follows the measured width.
+  assert.match(run('denemeYolSvg(denemeYolVerisi(0),300,616)'),/class="yg-yks" x1="600"/);
   // Exams before the term start stay in Denemelerim only; AYT follows the student's field (EA here).
   put('okul',[t('p:eski','2024-05-27',10),sample({id:'p:ayt',tur:'AYT',oturum:'AYT',tarih:'2026-10-03',sure:null,puan:null,dersler:[{kod:'mat',dogru:10,yanlis:0,soru:30},{kod:'fizik',dogru:9,yanlis:0,soru:14}]})]);
   put('kendi',[...JSON.parse(JSON.stringify(run('iki'))),sample({id:'m:ayt-say',tur:'AYT',oturum:'AYT',alan:'SAY',tarih:'2026-10-04',sure:null,puan:null,dersler:[{kod:'fizik',dogru:5,yanlis:0,soru:14}]})]);
   run('D.ogr[0].denemeOkul=okul;D.ogr[0].denemeler=kendi');h=run('denemeYolGrafigi(0)');
   assert(!h.includes('data-dn-yol="p:eski"'));assert(h.includes('1 deneme dönem başından (31.08.2026) önce'));
-  assert(h.includes('data-dn-yol="p:ayt"') && !h.includes('data-dn-yol="m:ayt-say"'),'AYT uses the student field');
+  assert(!h.includes('data-dn-yol="p:ayt"'),'the TYT choice shows TYT only');
+  run("EK.denemeYol='AYT'");h=run('denemeYolGrafigi(0)');
+  assert(h.includes('data-dn-yol="p:ayt"') && !h.includes('data-dn-yol="m:t1"') && !h.includes('data-dn-yol="m:ayt-say"'),'AYT uses the student field');
   assert(h.includes('<title>AYT · Örnek deneme · 2026-10-03 · 10 net</title>'),'EA AYT net counts only EA courses (physics left out)');
+  for(const v of ['0','20','40','60','80'])assert(h.includes('text-anchor="end">'+v+'</text>'),'AYT tick '+v);assert(!h.includes('>100</text>'),'AYT ends at 80');
   // A point opens that exam in Denemelerim.
-  run("ciz=()=>{};EK.sekme='harita';denemeYolAc('p:ayt')");
+  run("ciz=()=>{};EK.sekme='ana';denemeYolAc('p:ayt')");
   assert.deepEqual(JSON.parse(run('JSON.stringify([EK.sekme,EK.denemeTur,EK.denemeSecili])')),['denemeler','AYT','p:ayt']);
-  // The net axis is fixed at 0–120 (all of TYT); a target net draws a dashed line the student sets.
-  run("EK.sekme='harita'");h=run('denemeYolGrafigi(0)');
-  for(const t of ['0','20','40','60','80','100','120'])assert(h.includes('text-anchor="end">'+t+'</text>'),'y tick '+t);
-  assert(!h.includes('yg-hedef"'));assert.match(h,/id="dnHedef"[^>]*value=""/);
+  // The TYT net axis is fixed at 0–120; a target net draws a dashed line the student sets.
+  run("EK.sekme='ana';EK.denemeYol='TYT'");h=run('denemeYolGrafigi(0)');
+  for(const v of ['0','20','40','60','80','100','120'])assert(h.includes('text-anchor="end">'+v+'</text>'),'y tick '+v);
+  assert(!h.includes('yg-hedef"'));assert.match(h,/id="dnHedef" data-anahtar="TYT"[^>]*max="120"[^>]*value=""/);
   const degis=listeners.change.find(f=>String(f).includes('dnHedef'));
-  const hedefYaz=async v=>{const el={id:'dnHedef',value:v,dataset:{}};await degis({target:el});return el;};
-  await hedefYaz('80');assert.equal(run('D.ogr[0].denemeHedef'),80);h=run('denemeYolGrafigi(0)');
+  const hedefYaz=async(v,anahtar='TYT',max=120)=>{const el={id:'dnHedef',value:v,max:String(max),dataset:{anahtar}};await degis({target:el});return el;};
+  await hedefYaz('80');assert.equal(run('D.ogr[0].denemeHedef'),80,'a TYT-only target stays a number the previous version reads');h=run('denemeYolGrafigi(0)');
   assert(h.includes('class="yg-hedef"') && h.includes('>Hedef 80</text>'));assert.match(h,/id="dnHedef"[^>]*value="80"/);
   const yHedef=Number(/class="yg-hedef" x1="34" x2="464" y1="([\d.]+)"/.exec(h)[1]);assert(Math.abs(yHedef-(270-30-80/120*226))<0.11,'target line at 80 on a 0–120 axis: '+yHedef);
   const kotu=await hedefYaz('150');assert.equal(run('D.ogr[0].denemeHedef'),80,'out of range is refused');assert.equal(kotu.value,80);
   assert.match(run('EK.denemeDurum'),/0 ile 120/);
   await hedefYaz('');assert.equal(run('D.ogr[0].denemeHedef'),undefined,'empty clears the target');
-  run('D.ogr[0].denemeHedef=75');run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
-  assert.throws(()=>run("(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].denemeHedef=130;yedekDogrula(y);})()"),/deneme hedefi/);
-  assert.match(html,/'okul','sinavTuru','denemeHedef'\]\.forEach/,'the target travels with the work snapshot');
-  run("D.ogr[0].rol;D.rol='rehber'");assert(!run('denemeYolGrafigi(0)').includes('dnHedef'),'only the student sets the target');run("D.rol='ogrenci'");
-  // The student's weeks map shows the chart beside it for YKS only, with both headings on one row.
-  run("EK.sekme='harita'");assert.match(run('gorunumHaritasi()'),/class="ana-pano"><div class="baslik pano-sol-bas"><h1>Haftalar haritası<\/h1>[\s\S]*<h2 class="pano-baslik">Deneme gelişimi<\/h2>[\s\S]*class="kart dn-yol"/);
-  run("D.ogr[0].sinavTuru='KPSS'");assert(!run('gorunumHaritasi()').includes('dn-yol'));run('delete D.ogr[0].sinavTuru');
+  // Each choice keeps its own target. An older single number is the TYT target and survives.
+  run('D.ogr[0].denemeHedef=75');assert.match(run('denemeYolGrafigi(0)'),/>Hedef 75<\/text>/);
+  run("EK.denemeYol='AYT'");assert(!run('denemeYolGrafigi(0)').includes('yg-hedef"'),'the TYT target is not the AYT target');
+  assert.match(run('denemeYolGrafigi(0)'),/data-anahtar="AYT"[^>]*max="80"/);
+  assert.match(String((await hedefYaz('90','AYT',80)).value),/^$/);assert.equal(run('D.ogr[0].denemeHedef'),75,'90 is above the 80 AYT questions');assert.match(run('EK.denemeDurum'),/0 ile 80/);
+  await hedefYaz('50','AYT',80);assert.deepEqual(JSON.parse(run('JSON.stringify(D.ogr[0].denemeHedef)')),{TYT:75,AYT:50});
+  await hedefYaz('','AYT',80);assert.equal(run('D.ogr[0].denemeHedef'),75,'back to a number when only TYT is left');await hedefYaz('50','AYT',80);
+  run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
+  for(const bad of ['130','{"TYT":130}','{"YKS":10}','{"TYT:Mat":10}','[]','"80"'])
+    assert.throws(()=>run("(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].denemeHedef="+bad+";yedekDogrula(y);})()"),/deneme hedefi/,bad);
+  assert.match(html,/'okul','sinavTuru','denemeHedef'(,'\w+')*\]\.forEach/,'the target travels with the work snapshot');
+  // Branş: a course list (TYT courses, AYT courses of the field), branch exams as filled points and
+  // the course's section of every TYT exam as hollow points, on a 0–question-count axis.
+  run("EK.denemeYol='BRANS';EK.denemeYolBrans='TYT:turkce'");
+  put('brans',[sample({id:'m:b1',tur:'BRANS',brans:'turkce',tarih:'2026-10-01',sure:null,puan:null,dersler:[{kod:'turkce',dogru:30,yanlis:4,soru:40}]})]);
+  run('D.ogr[0].denemeler=[...kendi,...brans]');h=run('denemeYolGrafigi(0)');
+  assert.match(h,/<select id="dnYolBrans"><optgroup label="TYT">[\s\S]*<option value="TYT:turkce" selected>Türkçe<\/option>[\s\S]*<optgroup label="AYT">/);
+  const aytDersleri=[...h.split('<optgroup label="AYT">')[1].matchAll(/value="AYT:(\w+)"/g)].map(m=>m[1]);
+  assert.deepEqual(aytDersleri,['edebiyat','tarih1','cografya1','mat','geo'],'AYT courses of the EA field');
+  assert(!h.includes('value="TYT:sf"'),'Ek Felsefe is not a course choice');
+  assert.match(h,/class="yg-nokta yg-BRANS"[^>]*data-dn-yol="m:b1"/);
+  assert.match(h,/class="yg-nokta yg-BRANS genel"[^>]*data-dn-yol="g:m:t1\|turkce"/,'a TYT exam section is a hollow point');
+  for(const v of ['0','10','20','30','40'])assert(h.includes('text-anchor="end">'+v+'</text>'),'Türkçe tick '+v);assert(!h.includes('>120</text>'));
+  assert(h.includes('branş denemesi') && h.includes('TYT denemesinden'));
+  await hedefYaz('35','TYT:turkce',40);assert.deepEqual(JSON.parse(run('JSON.stringify(D.ogr[0].denemeHedef)')),{TYT:75,AYT:50,'TYT:turkce':35});
+  assert.match(run('denemeYolGrafigi(0)'),/>Hedef 35<\/text>/);run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
+  // A hollow point opens the course in Branş denemeleri with that section selected.
+  run("denemeYolAc('g:m:t1|turkce')");
+  assert.deepEqual(JSON.parse(run('JSON.stringify([EK.sekme,EK.denemeTur,EK.denemeOturum,EK.denemeBrans,EK.denemeSecili,EK.denemeGenel])')),['denemeler','BRANS','TYT','turkce','g:m:t1|turkce',true]);
+  run("EK.sekme='ana';denemeYolAc('m:b1')");assert.deepEqual(JSON.parse(run('JSON.stringify([EK.denemeTur,EK.denemeBrans,EK.denemeSecili])')),['BRANS','turkce','m:b1']);
+  // A course outside the field (or unknown) falls back to TYT Matematik.
+  run("EK.denemeYolBrans='AYT:fizik'");assert.match(run('denemeYolGrafigi(0)'),/<option value="TYT:mat" selected>/);
+  run("D.rol='rehber'");assert(!run('denemeYolGrafigi(0)').includes('dnHedef'),'only the student sets the target');run("D.rol='ogrenci'");
+  // The home page: both headings link to their pages; the weeks map page itself is the map only.
+  run("EK.sekme='ana'");assert.match(run('gorunumAnaSayfa()'),/class="ana-pano"><div class="baslik pano-sol-bas"><h1><button class="baslik-link" data-sekme="harita"[^>]*>Haftalar haritası<\/button><\/h1>[\s\S]*<h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler"[^>]*>Deneme gelişimi<\/button><\/h2>[\s\S]*class="kart dn-yol"/);
+  assert(!run('gorunumHaritasi()').includes('dn-yol'),'Haftalar haritası is the map alone');
+  run("D.ogr[0].sinavTuru='KPSS'");assert(!run('gorunumAnaSayfa()').includes('dn-yol'));run('delete D.ogr[0].sinavTuru;delete EK.denemeYol;delete EK.denemeYolBrans');
  });
  await check('stock-style chart: segments vs previous 4 average, dots vs previous exam',()=>{
   const nets=[10,12,11,11,15,9];
