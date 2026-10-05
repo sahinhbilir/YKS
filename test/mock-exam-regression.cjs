@@ -206,11 +206,15 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert.match(h,/class="yg-yks" x1="464"/);assert(h.includes('class="yg-cizgi yg-TYT"'));
   // A wider drawing area moves the YKS line, not the dates: x follows the measured width.
   assert.match(run('denemeYolSvg(denemeYolVerisi(0),300,616)'),/class="yg-yks" x1="600"/);
-  // Exams before the term start stay in Denemelerim only; AYT follows the student's field (EA here).
-  put('okul',[t('p:eski','2024-05-27',10),sample({id:'p:ayt',tur:'AYT',oturum:'AYT',tarih:'2026-10-03',sure:null,puan:null,dersler:[{kod:'mat',dogru:10,yanlis:0,soru:30},{kod:'fizik',dogru:9,yanlis:0,soru:14}]})]);
+  // The latest exam before the term start (e.g. a readiness test) is drawn on the first day of the
+  // chart with its real date; older ones stay in Denemelerim only. AYT follows the student's field (EA here).
+  put('okul',[t('p:eski0','2024-01-10',8),t('p:eski','2024-05-27',10),sample({id:'p:ayt',tur:'AYT',oturum:'AYT',tarih:'2026-10-03',sure:null,puan:null,dersler:[{kod:'mat',dogru:10,yanlis:0,soru:30},{kod:'fizik',dogru:9,yanlis:0,soru:14}]})]);
   put('kendi',[...JSON.parse(JSON.stringify(run('iki'))),sample({id:'m:ayt-say',tur:'AYT',oturum:'AYT',alan:'SAY',tarih:'2026-10-04',sure:null,puan:null,dersler:[{kod:'fizik',dogru:5,yanlis:0,soru:14}]})]);
   run('D.ogr[0].denemeOkul=okul;D.ogr[0].denemeler=kendi');h=run('denemeYolGrafigi(0)');
-  assert(!h.includes('data-dn-yol="p:eski"'));assert(h.includes('1 deneme dönem başından (31.08.2026) önce'));
+  assert.equal(cx(h,'p:eski'),34,'the pre-term exam sits at the start of the axis');assert(!h.includes('data-dn-yol="p:eski0"'),'only the latest pre-term exam');
+  assert.match(h,/class="yg-nokta yg-TYT erken"[^>]*data-dn-yol="p:eski"/);assert(h.includes('<title>TYT · Örnek deneme · 2024-05-27 (dönem başından önce; grafiğin başında) · 10 net</title>'));
+  assert(h.includes('<b>Örnek deneme</b> (27.05.2024) dönem başından önce; grafiğin başında gösterilir. 1 daha eski deneme Denemelerim’de.'));
+  assert.match(h,/class="yg-cizgi yg-TYT" points="34,/,'the line starts from it');
   assert(!h.includes('data-dn-yol="p:ayt"'),'the TYT choice shows TYT only');
   run("EK.denemeYol='AYT'");h=run('denemeYolGrafigi(0)');
   assert(h.includes('data-dn-yol="p:ayt"') && !h.includes('data-dn-yol="m:t1"') && !h.includes('data-dn-yol="m:ayt-say"'),'AYT uses the student field');
