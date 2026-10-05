@@ -44,12 +44,14 @@ On white, `--vurgu` and white-on-`--vurgu` both reach about 7:1 contrast.
 6. One folded "Yedekten geri yükle" link. It opens the file picker and the paste
    option.
 
-The login card is compact: 360 px wide, two inputs whose labels are visually hidden
+The login card is compact: 340 px wide, two inputs whose labels are visually hidden
 (the placeholders "Ad soyad" and "Okul numarası" show instead; screen readers still
 read the labels), and the two secondary buttons sized to their text on one row.
 
-The whole column is centred vertically. When it is shorter than the screen, the space
-above and below is equal. When it is taller (short laptops, phones), it scrolls from a
+The whole column is centred vertically. The gaps between headline, login, drawing and
+link are flexible spacers (`.giris-ara`). They grow only into free space, and only up
+to a cap (30→90, 34→94 and 22→52 px), so a tall screen opens the layout up a little.
+When the column is shorter than the screen, the space above and below is equal. When it is taller (short laptops, phones), it scrolls from a
 small top margin that still clears the corner bands.
 
 The screen carries no hint sentences. The status line under "Giriş yap" stays empty

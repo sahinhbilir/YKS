@@ -308,27 +308,32 @@ tr.pasif td:first-child{opacity:1}
 /* Dikeyde ortalı: içerik ekrandan kısaysa boşluk üstte ve altta eşit; uzunsa normal akar. */
 .giris{position:relative;overflow:hidden;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;background:var(--kagit);
   background-image:linear-gradient(135deg,transparent 0 63%,var(--vurgu-yumusak) 63% 73%,transparent 73%)}
-.giris-ic{position:relative;z-index:1;width:100%;max-width:640px;margin:0 auto;padding:clamp(56px,8vh,88px) 16px;
+/* Bölümler arası boşluklar (.giris-ara) yalnızca boş yer varsa büyür, en fazla sınırları kadar:
+   başlık biraz yukarı, alt kısım biraz aşağı açılır; kalan boşluk üstte ve altta eşit kalır.
+   Yer yoksa en küçük boylarında kalır, ekran kaydırmaya düşmez. */
+.giris-ic{position:relative;z-index:1;width:100%;max-width:640px;min-height:100vh;min-height:100dvh;justify-content:center;margin:0 auto;padding:clamp(56px,8vh,88px) 16px;
   display:flex;flex-direction:column;align-items:center;text-align:center}
 .giris-baslik{font-size:clamp(54px,12vw,96px);font-weight:800;line-height:1;letter-spacing:-.02em;white-space:nowrap}
-.giris-alt{font-family:var(--baslik-font);font-size:clamp(19px,4.6vw,28px);font-weight:600;color:var(--marka-koyu);margin:14px 0 30px}
-.giris-kart{width:100%;max-width:360px;text-align:left;background:var(--kagit);border:1px solid var(--cizgi);border-radius:14px;
-  box-shadow:0 2px 6px rgba(11,42,107,.06),0 14px 32px rgba(11,42,107,.09);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
-.giris-kart h2{font-size:16px;text-align:center;margin-bottom:2px}
-.giris-kart input{width:100%;padding:8px 11px;font-size:14px}
-.giris-kart .dugme{padding:8px 12px;font-size:14px;font-weight:600}
+.giris-alt{font-family:var(--baslik-font);font-size:clamp(19px,4.6vw,28px);font-weight:600;color:var(--marka-koyu);margin:14px 0 0}
+.giris-ara{flex-grow:1;flex-shrink:0;width:1px}
+.ara-kart{flex-basis:30px;max-height:90px}.ara-cizim{flex-basis:34px;max-height:94px}.ara-yedek{flex-basis:22px;max-height:52px}
+.giris-kart{width:100%;max-width:340px;text-align:left;background:var(--kagit);border:1px solid var(--cizgi);border-radius:14px;
+  box-shadow:0 2px 6px rgba(11,42,107,.06),0 14px 32px rgba(11,42,107,.09);padding:14px 16px;display:flex;flex-direction:column;gap:7px}
+.giris-kart h2{font-size:15px;text-align:center;margin-bottom:2px}
+.giris-kart input{width:100%;padding:7px 10px;font-size:13.5px}
+.giris-kart .dugme{padding:7px 12px;font-size:13.5px;font-weight:600}
 /* Görünmez etiket: alan adı ekran okuyucuya kalır, ekranda yer kaplamaz (placeholder gösterir). */
 .gorunmez{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
-.giris-durum:empty{margin-top:-8px}
+.giris-durum:empty{margin-top:-7px}
 .giris-ayrac{border-top:1px solid var(--cizgi);margin:2px 0}
-.giris-diger{display:flex;flex-wrap:wrap;gap:8px}
-.giris-diger .dugme{flex:1 1 auto;white-space:nowrap;padding:7px 10px;font-size:13px;box-shadow:none;color:var(--marka-koyu);border-color:var(--marka-acik);background:var(--vurgu-yumusak)}
+.giris-diger{display:flex;flex-wrap:wrap;gap:7px}
+.giris-diger .dugme{flex:1 1 auto;white-space:nowrap;padding:6px 8px;font-size:12.5px;box-shadow:none;color:var(--marka-koyu);border-color:var(--marka-acik);background:var(--vurgu-yumusak)}
 .giris-diger .dugme:hover{border-color:var(--vurgu)}
-.giris-cizim{display:block;width:min(300px,74vw);height:auto;margin:34px auto 0}
+.giris-cizim{display:block;flex:none;width:min(300px,74vw);height:auto;margin:0 auto}
 .giris-cizim .c-koyu{fill:var(--il-koyu)}.giris-cizim .c-mavi{fill:var(--il-mavi)}
 .giris-cizim .c-sayfa{fill:#F5F8FE}.giris-cizim .c-cizgi{stroke:#D3DCEE;stroke-width:2;stroke-linecap:round}
 .giris-cizim .c-ip{fill:none;stroke:#E8EEFB;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.giris-cizim .c-dugum{fill:#FFFFFF}
-.giris-yedek{margin-top:22px;color:var(--soluk)}.giris-yedek summary{display:inline;list-style:none}
+.giris-yedek{color:var(--soluk)}.giris-yedek summary{display:inline;list-style:none}
 .giris-yedek summary::-webkit-details-marker{display:none}.giris-yedek[open] summary{display:block;margin-bottom:10px}
 .giris-yedek #yapistirAlan{text-align:left;margin-top:10px}
 .baglanti{background:none;border:0;padding:0;font:inherit;color:var(--vurgu);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
@@ -8781,7 +8786,7 @@ function gorunumKurulum() {
   const yil = (/^\d{4}/.exec((D && D.ayar && D.ayar.sinav) || '') || ['2027'])[0];
   return '<div class="giris">' + GIRIS_SUSLER + '<div class="giris-ic">' +
     '<h1 class="giris-baslik">YKS ' + yil + '</h1>' +
-    '<p class="giris-alt">Hedefine bir adım daha yaklaş</p>' +
+    '<p class="giris-alt">Hedefine bir adım daha yaklaş</p><div class="giris-ara ara-kart"></div>' +
     '<section class="giris-kart" id="ogrenciGirisAlan" aria-labelledby="ogrenciGirisBaslik">' +
     '<h2 id="ogrenciGirisBaslik">Öğrenci girişi</h2>' +
     '<label class="gorunmez" for="ogrenciGirisAd">Ad soyad</label><input type="text" id="ogrenciGirisAd" autocomplete="off" placeholder="Ad soyad">' +
@@ -8793,7 +8798,7 @@ function gorunumKurulum() {
     '<div class="giris-ayrac" role="separator"></div>' +
     '<div class="giris-diger"><button class="dugme" id="rolRehber">Rehber öğretmeniyim</button>' +
     '<button class="dugme" id="testHesapAc">Test hesabı aç</button></div>' +
-    '</section>' + GIRIS_CIZIM +
+    '</section><div class="giris-ara ara-cizim"></div>' + GIRIS_CIZIM + '<div class="giris-ara ara-yedek"></div>' +
     '<details class="giris-yedek mini"><summary class="baglanti">Yedekten geri yükle</summary>' +
     '<label class="dugme">Dosya seç<input type="file" id="kurYedek" hidden></label> ' +
     '<button class="baglanti" id="kurYapistirAc">İçeriği yapıştır</button>' +

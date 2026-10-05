@@ -52,7 +52,12 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    await page.setViewportSize({width:1920,height:1080});
    const bosluk=await page.evaluate(()=>({ust:document.querySelector('.giris-baslik').getBoundingClientRect().top,
      alt:innerHeight-document.querySelector('.giris-yedek').getBoundingClientRect().bottom,kaydir:document.documentElement.scrollHeight>innerHeight}));
-   assert(!bosluk.kaydir && Math.abs(bosluk.ust-bosluk.alt)<=2 && bosluk.ust>100,'centred vertically: '+JSON.stringify(bosluk));
+   assert(!bosluk.kaydir && Math.abs(bosluk.ust-bosluk.alt)<=2 && bosluk.ust>60,'centred vertically: '+JSON.stringify(bosluk));
+   // Section gaps open up on a tall screen (capped) and stay at their minimum on a short one.
+   const aralik=()=>page.evaluate(()=>['.ara-kart','.ara-cizim','.ara-yedek'].map(s=>Math.round(document.querySelector(s).getBoundingClientRect().height)));
+   const genis=await aralik();assert(genis[0]>30 && genis[0]<=90 && genis[1]>34 && genis[1]<=94 && genis[2]<=52,'tall screen gaps: '+genis);
+   await page.setViewportSize({width,height:640});
+   assert.deepEqual(await aralik(),[30,34,22],'short screen gaps stay at their minimum');
    await page.setViewportSize({width,height:800});
    assert.equal((await page.locator('#ogrenciGirisDurum').textContent()),'','no hint text until there is something to say');
    await page.locator('#ogrenciBulutGiris').click();
