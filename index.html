@@ -316,7 +316,7 @@ tr.pasif td:first-child{opacity:1}
 .giris-baslik{font-size:clamp(54px,12vw,96px);font-weight:800;line-height:1;letter-spacing:-.02em;white-space:nowrap}
 .giris-alt{font-family:var(--baslik-font);font-size:clamp(19px,4.6vw,28px);font-weight:600;color:var(--marka-koyu);margin:14px 0 0}
 .giris-ara{flex-grow:1;flex-shrink:0;width:1px}
-.ara-kart{flex-basis:30px;max-height:90px}.ara-cizim{flex-basis:34px;max-height:94px}.ara-yedek{flex-basis:22px;max-height:52px}
+.ara-kart{flex-basis:30px;max-height:130px}.ara-cizim{flex-basis:30px;max-height:130px}.ara-yedek{flex-basis:22px;max-height:52px}
 .giris-kart{width:100%;max-width:340px;text-align:left;background:var(--kagit);border:1px solid var(--cizgi);border-radius:14px;
   box-shadow:0 2px 6px rgba(11,42,107,.06),0 14px 32px rgba(11,42,107,.09);padding:14px 16px;display:flex;flex-direction:column;gap:7px}
 .giris-kart h2{font-size:15px;text-align:center;margin-bottom:2px}
@@ -8773,7 +8773,8 @@ const GIRIS_CIZIM = (() => {
   const kitap = (x, y, w, renk) => '<rect class="' + renk + '" x="' + x + '" y="' + y + '" width="' + w + '" height="46" rx="18"/>' +
     '<rect class="c-sayfa" x="' + (x + 10) + '" y="' + (y + 7) + '" width="' + (w - 32) + '" height="32" rx="12"/>' +
     [15, 22, 29].map(d => '<path class="c-cizgi" d="M' + (x + 26) + ' ' + (y + d) + 'H' + (x + w - 34) + '"/>').join('');
-  return '<svg class="giris-cizim" viewBox="0 0 400 312" aria-hidden="true" focusable="false">' +
+  // viewBox kepin tepesinden başlar: çizimin üstünde boşluk kalmaz, kart→kep aralığı ölçüldüğü gibi görünür.
+  return '<svg class="giris-cizim" viewBox="0 54 400 258" aria-hidden="true" focusable="false">' +
     kitap(60, 236, 290, 'c-mavi') + '<path class="c-koyu" d="M98 276h18v32l-9-8l-9 8z"/>' +
     kitap(44, 190, 300, 'c-koyu') + kitap(72, 144, 272, 'c-mavi') +
     '<path class="c-koyu" d="M150 104H250V142Q225 156 200 148Q175 156 150 142Z"/>' +

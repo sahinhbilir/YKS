@@ -55,9 +55,13 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert(!bosluk.kaydir && Math.abs(bosluk.ust-bosluk.alt)<=2 && bosluk.ust>60,'centred vertically: '+JSON.stringify(bosluk));
    // Section gaps open up on a tall screen (capped) and stay at their minimum on a short one.
    const aralik=()=>page.evaluate(()=>['.ara-kart','.ara-cizim','.ara-yedek'].map(s=>Math.round(document.querySelector(s).getBoundingClientRect().height)));
-   const genis=await aralik();assert(genis[0]>30 && genis[0]<=90 && genis[1]>34 && genis[1]<=94 && genis[2]<=52,'tall screen gaps: '+genis);
+   const genis=await aralik();assert(genis[0]>30 && genis[0]<=130 && genis[1]>30 && genis[1]<=130 && genis[2]<=52,'tall screen gaps: '+genis);
+   // Symmetric around the login card: subtitle→card equals card→cap (the drawing starts at the cap).
+   const simetri=await page.evaluate(()=>{const r=s=>document.querySelector(s).getBoundingClientRect();
+     return [r('.giris-kart').top-r('.giris-alt').bottom,r('.giris-cizim').top-r('.giris-kart').bottom];});
+   assert(Math.abs(simetri[0]-simetri[1])<=4,'equal gaps around the login card: '+simetri.map(Math.round));
    await page.setViewportSize({width,height:640});
-   assert.deepEqual(await aralik(),[30,34,22],'short screen gaps stay at their minimum');
+   assert.deepEqual(await aralik(),[30,30,22],'short screen gaps stay at their minimum');
    await page.setViewportSize({width,height:800});
    assert.equal((await page.locator('#ogrenciGirisDurum').textContent()),'','no hint text until there is something to say');
    await page.locator('#ogrenciBulutGiris').click();
