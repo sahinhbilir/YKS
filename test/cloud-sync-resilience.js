@@ -1114,7 +1114,7 @@ test('student-account-login-merges-existing-server-results-before-first-upload',
 
   const sonuc = await run("ogrenciHesabindanYukle('Ada Öğrenci', 42)");
   equal(sonuc.sunucudanAlinanSonuc, 2, 'newer and missing server rows must both be merged');
-  equal(run('EK.sekme'), 'harita', 'a signed-in student starts on the weeks map');
+  equal(run('EK.sekme'), 'ana', 'a signed-in student starts on the home page (weeks map + mock exams)');
   equal(run('D.log.length'), 2, 'the new device must hold the union before it can upload');
   equal(run('D.log.find(l => l[0] === 100)[3]'), 9, 'the newer server value must replace the stale setup value');
   await run("sunucuyaGonder({tur:'sonuclar-kaydedildi',hafta:100,toplam:1})");

@@ -69,6 +69,8 @@ and the start screen spans the full width (`.kabuk:has(>.ray:empty)`).
 
 Students get a top bar (`.ray.ust`). Teachers keep the side menu.
 
+- **YKS Tekrar Defteri** (the brand) is a button that opens the home page (`'ana'`).
+  For a teacher it opens Öğrenci takibi. On phones (≤480 px) it shortens to "YKS".
 - **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Haftalar haritası,
   Sonuç gir, Karnem and Geçmiş plan kurtar (`PLAN_ALT_SEKMELER`). Hovering opens it
   with a mouse (`@media (hover:hover)`), a click toggles it on touch screens, and it
@@ -80,11 +82,22 @@ Students get a top bar (`.ray.ust`). Teachers keep the side menu.
 - On narrow screens the bar wraps rather than scrolling sideways, so the dropdown is
   never clipped.
 
-After login, students land on **Haftalar haritası**. For a YKS student the map has
-the **Deneme gelişimi** chart beside it. The two cards have equal widths and equal
-heights, and the chart card has the map card's look (blue top edge). The week boxes
-are more compact here, and the chart redraws to the card's free area
-(`denemeYolSigdir`), so it fills the card. Both headings sit on one row,
-and the chart has a fixed 0–120 net axis and the student's target line (`denemeYolGrafigi`, see
-docs/mock-exams.md). In a single column (≤1100 px) the chart moves above the map and
-keeps a 480:300 shape.
+After login, students land on the home page (`gorunumAnaSayfa`, tab `'ana'`). It
+shows the weeks map, and for a YKS student the **Deneme gelişimi** chart beside it.
+Both headings are links: "Haftalar haritası" opens the map page (the map alone, also
+in the Planım menu) and "Deneme gelişimi" opens Denemelerim. On hover or focus they
+turn blue, are underlined and show "→".
+
+- The two cards have equal widths and equal heights, with a clear gap between them
+  (`clamp(32px, 3.2vw, 64px)`). The chart card has the map card's look (blue top
+  edge). Both headings sit on one row.
+- The week boxes are more compact here. The chart redraws to the card's free area
+  (`denemeYolSigdir`), so it fills the card. Its drawing follows the measured width,
+  with text scaled up to 1.35× on wide cards, so labels keep a steady size from phone
+  to large monitor.
+- Above the chart, a **TYT · AYT · Branş** control picks what is drawn. Branş adds a
+  course list. Each choice has its own axis and target (see docs/mock-exams.md).
+- At ≥1700 px the page widens to `min(1880px, 94vw)`, and the week boxes, their text
+  and the headings grow.
+- In a single column (≤1100 px) the chart moves above the map and keeps a 480:300
+  shape.
