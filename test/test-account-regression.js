@@ -81,11 +81,18 @@ async function check(name, fn) {
 }
 
 (async () => {
-  await check('start-screen-offers-test-account-bottom-right', async kapat => {
+  await check('start-screen-opens-student-login-with-teacher-and-test-account-below', async kapat => {
     const a = kapat(cihaz(sunucu()));
     const h = a.run('gorunumKurulum()');
-    assert.match(h, /class="test-hesap"><button class="dugme" id="testHesapAc">Test hesabı aç<\/button>/);
-    assert.match(html, /\.test-hesap\{position:fixed;right:16px;bottom:16px/);
+    assert.match(h, /<h1 class="giris-baslik">YKS 2027<\/h1><p class="giris-alt">Hedefine bir adım daha yaklaş<\/p>/);
+    const kart = h.slice(h.indexOf('id="ogrenciGirisAlan"'), h.indexOf('</section>'));
+    assert(!/id="ogrenciGirisAlan"[^>]*hidden/.test(h), 'student login is open');
+    for (const id of ['ogrenciGirisAd', 'ogrenciGirisNo', 'ogrenciBulutGiris', 'rolRehber', 'testHesapAc']) assert(kart.includes('id="' + id + '"'), id);
+    assert(kart.indexOf('id="ogrenciBulutGiris"') < kart.indexOf('id="rolRehber"'), 'teacher login comes after Giriş yap');
+    assert.match(kart, /<button class="dugme" id="rolRehber">Rehber öğretmeniyim<\/button><button class="dugme" id="testHesapAc">Test hesabı aç<\/button>/);
+    assert(h.indexOf('</section>') < h.indexOf('class="giris-cizim"'), 'the drawing comes after the login');
+    a.run("D.ayar.sinav='2028-06-17'");
+    assert.match(a.run('gorunumKurulum()'), /<h1 class="giris-baslik">YKS 2028<\/h1>/, 'the year follows the exam date');
   });
 
   await check('new-account-asks-nickname-and-hides-teacher-file', async kapat => {

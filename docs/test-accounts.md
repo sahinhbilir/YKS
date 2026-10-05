@@ -1,8 +1,9 @@
 # Test accounts ("Test hesabı aç")
 
-Private-alpha testers can use the app without a teacher. The start screen has a
-**Test hesabı aç** button in the bottom-right corner. It opens a Google sign-in
-window. The same button signs a returning tester in on another device.
+Private-alpha testers can use the app without a teacher. On the start screen,
+**Test hesabı aç** sits under the student login, next to "Rehber öğretmeniyim". It
+opens a Google sign-in window. The same button signs a returning tester in on
+another device.
 
 ## Flow
 
@@ -109,7 +110,8 @@ for teacher login.
   success/failure, reset (typed confirmation, full delete, failure keeps
   everything, refused for teachers and students) and unchanged school paths.
 - `node test/test-account-browser.cjs`: desktop and 390 px Chromium checks of the
-  button position, nickname setup, first cloud save, the settings card, the reset's
+  start screen layout (headline, open student login, teacher and test account
+  buttons under it, drawing below, nothing covering a control), nickname setup, first cloud save, the settings card, the reset's
   place in Verileri sıfırla, and the reset itself.
 - `test/firebase/firestore.test.mjs`: 9 emulator checks for `testDefter` rules,
   including owner-only delete and the reset transaction.

@@ -6,37 +6,44 @@
 <meta name="color-scheme" content="light dark">
 <title>YKS Tekrar Defteri</title>
 <style id="stil">
+/* Tasarım dili "YKS 2027 · Hedefine bir adım daha yaklaş" görselinden gelir: beyaz zemin,
+   lacivert (--marka-koyu) başlıklar, kraliyet mavisi (--marka) vurgu, açık mavi yüzeyler ve
+   kalın, sade yazı. Bkz. docs/design.md. */
 :root{
-  --zemin:#F5F6F8; --kagit:#FFFFFF; --murekkep:#16202B; --soluk:#5A6675; --cizgi:#DCE0E6;
-  --vurgu:#1D5B7A; --vurgu-yumusak:#E6EFF4; --vurgu-koyu:#164A63;
+  --baslik-font:"Montserrat","Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --zemin:#F4F7FD; --kagit:#FFFFFF; --murekkep:#0F1E3D; --soluk:#55627A; --cizgi:#DCE3F0;
+  --vurgu:#1F4FC8; --vurgu-yumusak:#E8EFFC; --vurgu-koyu:#0B2A6B;
+  --marka:#1F4FC8; --marka-koyu:#0B2A6B; --marka-acik:#DCE6FB; --il-koyu:#0B2A6B; --il-mavi:#2152D0;
   --iyi:#2E7D5B; --uyari:#A9701A; --kritik:#AE4038;
-  --golge:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+  --golge:0 1px 2px rgba(11,42,107,.06), 0 8px 24px rgba(11,42,107,.06);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --zemin:#0F141A; --kagit:#171E26; --murekkep:#E7ECF2; --soluk:#93A0AF; --cizgi:#2A333E;
-    --vurgu:#6FB6D8; --vurgu-yumusak:#1B2C36; --vurgu-koyu:#8FCBE6;
+    --zemin:#0A1226; --kagit:#111B33; --murekkep:#E6ECF8; --soluk:#9AA8C4; --cizgi:#25314F;
+    --vurgu:#7EA4FF; --vurgu-yumusak:#17254A; --vurgu-koyu:#A9C1FF;
+    --marka:#4D7BEA; --marka-koyu:#A9C1FF; --marka-acik:#17254A; --il-koyu:#9DB8FF; --il-mavi:#4D7BEA;
     --iyi:#63BE95; --uyari:#D5A24E; --kritik:#E0817A;
     --golge:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
   }
 }
 :root[data-theme="dark"]{
-  --zemin:#0F141A; --kagit:#171E26; --murekkep:#E7ECF2; --soluk:#93A0AF; --cizgi:#2A333E;
-  --vurgu:#6FB6D8; --vurgu-yumusak:#1B2C36; --vurgu-koyu:#8FCBE6;
+  --zemin:#0A1226; --kagit:#111B33; --murekkep:#E6ECF8; --soluk:#9AA8C4; --cizgi:#25314F;
+  --vurgu:#7EA4FF; --vurgu-yumusak:#17254A; --vurgu-koyu:#A9C1FF;
+  --marka:#4D7BEA; --marka-koyu:#A9C1FF; --marka-acik:#17254A; --il-koyu:#9DB8FF; --il-mavi:#4D7BEA;
   --iyi:#63BE95; --uyari:#D5A24E; --kritik:#E0817A;
   --golge:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--zemin);color:var(--murekkep);
   font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.5}
-h1,h2,h3{font-family:"IBM Plex Serif","IBM Plex Sans",Georgia,serif;font-weight:600;text-wrap:balance;margin:0}
+h1,h2,h3{font-family:var(--baslik-font);font-weight:700;letter-spacing:-.01em;color:var(--marka-koyu);text-wrap:balance;margin:0}
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--vurgu);outline-offset:2px}
 
 .kabuk{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
 .ray{background:var(--kagit);border-right:1px solid var(--cizgi);padding:18px 12px;position:sticky;top:0;height:100vh;
   display:flex;flex-direction:column;gap:4px}
-.marka{font-family:"IBM Plex Serif",serif;font-size:17px;font-weight:600;padding:2px 10px 14px;letter-spacing:-.01em}
+.marka{font-family:var(--baslik-font);font-size:16px;font-weight:800;color:var(--marka-koyu);padding:2px 10px 14px;letter-spacing:-.02em;white-space:nowrap}
 .marka small{display:block;font-family:"IBM Plex Sans",sans-serif;font-size:10px;font-weight:500;color:var(--soluk);
   letter-spacing:.06em;text-transform:uppercase;margin-top:3px;white-space:nowrap}
 .ray button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:9px 11px;border:0;border-radius:7px;
@@ -89,7 +96,7 @@ tbody tr:last-child td{border-bottom:0}
 /* ---- plan tablosu (ekranda ve kâğıtta aynı) ---- */
 .sayfa{background:var(--kagit);border:1px solid var(--cizgi);border-radius:10px;padding:18px;box-shadow:var(--golge)}
 .sayfa-ust{display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-bottom:12px}
-.sayfa-ust .isim{font-family:"IBM Plex Serif",serif;font-size:19px;font-weight:600}
+.sayfa-ust .isim{font-family:var(--baslik-font);font-size:19px;font-weight:700}
 .sayfa-ust .tarihler{font-variant-numeric:tabular-nums;font-weight:600;font-size:14px}
 table.plan{table-layout:fixed;border:1px solid var(--murekkep)}
 table.plan th,table.plan td{border:1px solid var(--cizgi);vertical-align:top;padding:6px 7px}
@@ -286,23 +293,52 @@ tr.pasif td:first-child{opacity:1}
   .ikili{grid-template-columns:1fr}
 }
 .kurulum{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:30px 0 96px}
-.test-hesap{position:fixed;right:16px;bottom:16px;z-index:20;display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:min(260px,calc(100vw - 32px));text-align:right}
-.test-hesap .dugme{background:var(--kagit)}
 .kp-dersler{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
 .kp-ders select{width:100%;margin-top:4px}
 .kur-kutu{max-width:680px;width:100%}
 .kur-kutu h1{font-size:34px;margin:8px 0 6px}
 .kur-oz{color:var(--soluk);margin-bottom:22px}
-.kur-secim{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.kur-kart{text-align:left;background:var(--kagit);border:1px solid var(--cizgi);border-radius:12px;
-  padding:20px 22px;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;gap:8px}
-.kur-kart:hover{border-color:var(--vurgu)}
-.kur-kart:focus-visible{outline:2px solid var(--vurgu);outline-offset:2px}
-.kur-kart b{font-size:18px}
-.kur-kart span{font-size:14px;color:var(--soluk);line-height:1.5}
 .kur-alt{margin-top:20px;padding-top:18px;border-top:1px solid var(--cizgi);
   display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-@media (max-width:620px){.kur-secim{grid-template-columns:1fr}}
+/* Giriş ekranı: menü yokken (ray boş) sayfa tam genişlik; görseldeki gibi beyaz zemin, köşelerde
+   mavi çapraz şeritler ve nokta ızgaraları, ortada başlık → öğrenci girişi → kep ve kitaplar. */
+.kabuk:has(>.ray:empty){grid-template-columns:1fr}
+.kabuk:has(>.ray:empty)>.ray{display:none}
+.kabuk:has(>.ray:empty)>main{max-width:none;padding:0}
+.giris{position:relative;overflow:hidden;min-height:100vh;background:var(--kagit);
+  background-image:linear-gradient(135deg,transparent 0 63%,var(--vurgu-yumusak) 63% 73%,transparent 73%)}
+.giris-ic{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:clamp(88px,13vw,124px) 16px 170px;
+  display:flex;flex-direction:column;align-items:center;text-align:center}
+.giris-baslik{font-size:clamp(54px,12vw,96px);font-weight:800;line-height:1;letter-spacing:-.02em;white-space:nowrap}
+.giris-alt{font-family:var(--baslik-font);font-size:clamp(19px,4.6vw,28px);font-weight:600;color:var(--marka-koyu);margin:14px 0 30px}
+.giris-kart{width:100%;max-width:440px;text-align:left;background:var(--kagit);border:1px solid var(--cizgi);border-radius:16px;
+  box-shadow:0 2px 6px rgba(11,42,107,.06),0 18px 40px rgba(11,42,107,.10);padding:22px;display:flex;flex-direction:column;gap:12px}
+.giris-kart h2{font-size:19px;text-align:center}
+.giris-kart label{display:flex;flex-direction:column;gap:6px}
+.giris-kart input{width:100%;padding:11px 12px;font-size:15px;font-weight:400;text-transform:none;letter-spacing:0}
+.giris-kart .dugme{padding:11px 14px;font-size:15px;font-weight:600}
+.giris-ayrac{display:flex;align-items:center;gap:10px;color:var(--soluk);font-size:12px}
+.giris-ayrac::before,.giris-ayrac::after{content:"";flex:1;border-top:1px solid var(--cizgi)}
+.giris-diger{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.giris-diger .dugme{box-shadow:none;color:var(--marka-koyu);border-color:var(--marka-acik);background:var(--vurgu-yumusak)}
+.giris-diger .dugme:hover{border-color:var(--vurgu)}
+.giris-not{margin:0;text-align:center}
+.giris-cizim{display:block;width:min(300px,74vw);height:auto;margin:34px auto 0}
+.giris-cizim .c-koyu{fill:var(--il-koyu)}.giris-cizim .c-mavi{fill:var(--il-mavi)}
+.giris-cizim .c-sayfa{fill:#F5F8FE}.giris-cizim .c-cizgi{stroke:#D3DCEE;stroke-width:2;stroke-linecap:round}
+.giris-cizim .c-ip{fill:none;stroke:#E8EEFB;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.giris-cizim .c-dugum{fill:#FFFFFF}
+.giris-yedek{margin-top:22px;color:var(--soluk);line-height:1.8}
+.giris-yedek #yapistirAlan{text-align:left;margin-top:10px}
+.baglanti{background:none;border:0;padding:0;font:inherit;color:var(--vurgu);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.giris-sus{position:absolute;z-index:0;pointer-events:none;height:auto}
+.sus-sol{top:0;left:0;width:min(30vw,260px)}
+.sus-sag{bottom:0;right:0;width:min(36vw,300px);transform:rotate(180deg)}
+.sus-ust{top:22px;right:22px;width:min(20vw,120px)}
+.sus-alt{bottom:26px;left:22px;width:min(20vw,120px);transform:rotate(180deg)}
+.giris-sus .s-acik{fill:var(--marka-acik)}.giris-sus .s-mavi{fill:var(--marka)}.giris-sus .s-koyu{fill:var(--marka-koyu)}
+.giris-sus .s-nokta{fill:#FFFFFF;opacity:.85}.giris-sus .s-nokta-mavi{fill:var(--marka);opacity:.7}
+.giris-sus .s-cizgi{fill:none;stroke:var(--marka);stroke-width:3;stroke-linecap:round;stroke-dasharray:.1 9;opacity:.6}
+@media (max-width:400px){.giris-diger{grid-template-columns:1fr}.sus-ust,.sus-alt{display:none}}
 .turDugme{padding:5px 14px}
 .turDugme.secili{background:var(--vurgu);border-color:var(--vurgu);color:#fff}
 .plan td.dolu.anlatim{background:var(--vurgu-yumusak)}
@@ -368,7 +404,7 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 .kapat:hover{background:var(--vurgu-yumusak);color:var(--murekkep)}
 .kurtar-ipucu{width:min(440px,100%)}.kurtar-ipucu-govde{padding:14px}.kurtar-ipucu-govde p{margin:0 0 10px}
 .p-konu{padding:12px 14px;border-bottom:1px solid var(--cizgi);background:var(--vurgu-yumusak)}
-.p-ad{font-family:"IBM Plex Serif",serif;font-size:16px;font-weight:600;margin:1px 0 2px}
+.p-ad{font-family:var(--baslik-font);font-size:16px;font-weight:700;margin:1px 0 2px}
 .p-satir{display:flex;align-items:center;gap:10px;margin-top:9px}
 .p-satir label{font-size:12px;font-weight:600;color:var(--soluk);min-width:110px}
 .p-satir input[type=number]{width:80px}
@@ -383,7 +419,7 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 .p-yaz .p-satir{margin-top:7px}
 .p-yaz select{flex:1}
 .p-yaz input[type=number]{width:74px}
-.p-adGiris{width:100%;font-family:"IBM Plex Serif",serif;font-size:15px;font-weight:600;margin:2px 0}
+.p-adGiris{width:100%;font-family:var(--baslik-font);font-size:15px;font-weight:700;margin:2px 0}
 .p-ara{padding:10px 14px;border-bottom:1px solid var(--cizgi)}
 .p-ara input{width:100%}
 .p-liste{overflow-y:auto;padding:6px}
@@ -8707,41 +8743,64 @@ function rayCiz() {
     (testHesabiMi() && D.ogr.length ? '<br>' + kacis(EK.bulutYedekHata || (EK.bulutYedekTs ? 'Buluta kaydedildi' : 'Bulut kaydı bekliyor')) : '') + '</div>';
 }
 
+// Giriş ekranı süsleri ve kep + kitap çizimi: tasarım görselinden, tema renkleriyle çizilir
+// (koyu temada da okunur, çevrimdışı kopyada da gelir). Hepsi dekoratiftir (aria-hidden).
+const GIRIS_SUSLER =
+  '<svg class="giris-sus sus-sol" viewBox="0 0 240 240" aria-hidden="true" focusable="false">' +
+  '<path class="s-acik" d="M0 0H232L0 232Z"/><path class="s-mavi" d="M0 0H170L0 170Z"/>' +
+  '<path class="s-koyu" d="M0 0H112C86 30 50 58 0 84Z"/>' +
+  [0, 1, 2, 3].map(i => [0, 1, 2, 3].filter(j => i + j < 5).map(j =>
+    '<circle class="s-nokta" cx="' + (16 + i * 13) + '" cy="' + (16 + j * 13) + '" r="2.4"/>').join('')).join('') + '</svg>' +
+  '<svg class="giris-sus sus-sag" viewBox="0 0 240 240" aria-hidden="true" focusable="false">' +
+  '<path class="s-acik" d="M0 0H232L0 232Z"/><path class="s-mavi" d="M0 0H160L0 160Z"/>' +
+  '<path class="s-koyu" d="M0 0H100C78 26 46 50 0 74Z"/>' +
+  [0, 1, 2, 3].map(i => [0, 1, 2].map(j =>
+    '<circle class="s-nokta" cx="' + (18 + i * 14) + '" cy="' + (18 + j * 14) + '" r="2.6"/>').join('')).join('') + '</svg>' +
+  '<svg class="giris-sus sus-ust" viewBox="0 0 120 120" aria-hidden="true" focusable="false">' +
+  '<path class="s-cizgi" d="M100 4V64M40 84H118"/>' + [0, 1, 2, 3, 4].map(i =>
+    '<circle class="s-nokta-mavi" cx="' + (8 + i * 16) + '" cy="40" r="' + (i % 2 ? 2 : 3) + '"/>').join('') + '</svg>' +
+  '<svg class="giris-sus sus-alt" viewBox="0 0 120 120" aria-hidden="true" focusable="false">' +
+  '<path class="s-cizgi" d="M100 4V64M40 84H118"/>' + [0, 1, 2, 3, 4].map(i =>
+    '<circle class="s-nokta-mavi" cx="' + (8 + i * 16) + '" cy="40" r="' + (i % 2 ? 2 : 3) + '"/>').join('') + '</svg>';
+const GIRIS_CIZIM = (() => {
+  const kitap = (x, y, w, renk) => '<rect class="' + renk + '" x="' + x + '" y="' + y + '" width="' + w + '" height="46" rx="18"/>' +
+    '<rect class="c-sayfa" x="' + (x + 10) + '" y="' + (y + 7) + '" width="' + (w - 32) + '" height="32" rx="12"/>' +
+    [15, 22, 29].map(d => '<path class="c-cizgi" d="M' + (x + 26) + ' ' + (y + d) + 'H' + (x + w - 34) + '"/>').join('');
+  return '<svg class="giris-cizim" viewBox="0 0 400 312" aria-hidden="true" focusable="false">' +
+    kitap(60, 236, 290, 'c-mavi') + '<path class="c-koyu" d="M98 276h18v32l-9-8l-9 8z"/>' +
+    kitap(44, 190, 300, 'c-koyu') + kitap(72, 144, 272, 'c-mavi') +
+    '<path class="c-koyu" d="M150 104H250V142Q225 156 200 148Q175 156 150 142Z"/>' +
+    '<path class="c-koyu" d="M200 56L314 96L200 136L86 96Z"/>' +
+    '<path class="c-ip" d="M200 96L288 104V136"/><circle class="c-dugum" cx="200" cy="96" r="6"/>' +
+    '<circle class="c-koyu" cx="288" cy="137" r="5"/><path class="c-koyu" d="M281 139h14l4 27h-22z"/></svg>';
+})();
+// Açılışta öğrenci girişi hazır gelir; rehber öğretmen ve test hesabı hemen altında.
 function gorunumKurulum() {
-  return '<div class="kurulum"><div class="kur-kutu">' +
-    '<div class="etiket">YKS Tekrar Defteri</div>' +
-    '<h1>Kimsiniz?</h1>' +
-    '<p class="kur-oz">Uygulama iki şekilde kullanılıyor. Sonradan Ayarlar’dan değiştirebilirsiniz.</p>' +
-    '<div class="kur-secim">' +
-    '<button class="kur-kart" id="rolRehber"><b>Rehber öğretmenim</b>' +
-    '<span>Sınıfın tamamını yönetirim: öğrencileri eklerim, ders programını yüklerim, ' +
-    'konuları dağıtırım, haftalık planları basarım.</span></button>' +
-    '<button class="kur-kart" id="rolOgrenci"><b>Öğrenciyim</b>' +
-    '<span>Adım ve okul numaramla giriş yaparım; öğretmenimin hazırladığı plan ' +
-    'sunucudan otomatik yüklenir.</span></button>' +
-    '</div>' +
-    '<div id="ogrenciGirisAlan" hidden style="max-width:420px;margin:18px auto 0;text-align:left">' +
-    '<h2 style="text-align:center;margin-bottom:12px">Öğrenci girişi</h2>' +
-    '<div style="display:flex;flex-direction:column;gap:10px">' +
-    '<label class="etiket">Ad soyad<br><input type="text" id="ogrenciGirisAd" autocomplete="off" ' +
-    'style="width:100%;margin-top:4px" placeholder="Ad Soyad"></label>' +
-    '<label class="etiket">Okul numarası<br><input type="number" id="ogrenciGirisNo" autocomplete="off" ' +
-    'min="1" max="9999" inputmode="numeric" style="width:100%;margin-top:4px" placeholder="Numara"></label>' +
+  const yil = (/^\d{4}/.exec((D && D.ayar && D.ayar.sinav) || '') || ['2027'])[0];
+  return '<div class="giris">' + GIRIS_SUSLER + '<div class="giris-ic">' +
+    '<h1 class="giris-baslik">YKS ' + yil + '</h1>' +
+    '<p class="giris-alt">Hedefine bir adım daha yaklaş</p>' +
+    '<section class="giris-kart" id="ogrenciGirisAlan" aria-labelledby="ogrenciGirisBaslik">' +
+    '<h2 id="ogrenciGirisBaslik">Öğrenci girişi</h2>' +
+    '<label class="etiket">Ad soyad<input type="text" id="ogrenciGirisAd" autocomplete="off" placeholder="Ad Soyad"></label>' +
+    '<label class="etiket">Okul numarası<input type="number" id="ogrenciGirisNo" autocomplete="off" ' +
+    'min="1" max="9999" inputmode="numeric" placeholder="Numara"></label>' +
     '<button class="dugme birincil" id="ogrenciBulutGiris">Giriş yap</button>' +
-    '<span class="mini" id="ogrenciGirisDurum" role="status" aria-live="polite">Adınızı ve numaranızı ' +
-    'öğretmeninizin listesindeki biçimde yazın. Veriniz onay sorulmadan otomatik yüklenir.</span>' +
-    '</div></div>' +
-    '<div class="kur-alt"><label class="dugme" style="cursor:pointer">Yedek dosyasından geri yükle' +
-    '<input type="file" id="kurYedek" hidden></label>' +
-    '<button class="dugme" id="kurYapistirAc">Dosya açılmıyor mu? İçeriği yapıştır</button>' +
-    '<span class="mini">Daha önce kullandıysanız veya öğretmeniniz dosya verdiyse buradan yükleyin.</span></div>' +
+    '<span class="mini" id="ogrenciGirisDurum" role="status" aria-live="polite">Adını ve numaranı öğretmeninin ' +
+    'listesindeki gibi yaz. Planın sunucudan otomatik yüklenir.</span>' +
+    '<div class="giris-ayrac">veya</div>' +
+    '<div class="giris-diger"><button class="dugme" id="rolRehber">Rehber öğretmeniyim</button>' +
+    '<button class="dugme" id="testHesapAc">Test hesabı aç</button></div>' +
+    '<p class="mini giris-not">Öğretmenin yoksa “Test hesabı aç” ile Google hesabınla dene. Açtıysan aynı hesapla gir.</p>' +
+    '</section>' + GIRIS_CIZIM +
+    '<div class="giris-yedek mini">Yedek dosyan ya da öğretmeninden gelen bir dosya mı var? ' +
+    '<label class="baglanti">Dosyadan geri yükle<input type="file" id="kurYedek" hidden></label> · ' +
+    '<button class="baglanti" id="kurYapistirAc">Dosya açılmıyorsa içeriği yapıştır</button>' +
     '<div id="yapistirAlan" hidden><textarea id="yapistirMetin" rows="5" ' +
     'placeholder="Yedek dosyasını bir metin düzenleyicide açıp içindeki her şeyi kopyalayın, buraya yapıştırın. { ile başlar."></textarea>' +
     '<div class="arac" style="margin-top:8px"><button class="dugme birincil" id="yapistirYukle">Yapıştırılanı yükle</button>' +
-    '<span class="mini">Telefonda dosya seçici açılmadığında bu yol her zaman çalışır.</span></div></div>' +
-    '</div></div>' +
-    '<div class="test-hesap"><button class="dugme" id="testHesapAc">Test hesabı aç</button>' +
-    '<span class="mini">Öğretmenin yoksa Google hesabınla dene. Açtıysan aynı hesapla gir.</span></div>';
+    '<span class="mini">Telefonda dosya seçici açılmadığında bu yol her zaman çalışır.</span></div></div></div>' +
+    '</div></div>';
 }
 
 // ciz() düzinelerce yerden çağrılıyor; herhangi bir görünüm beklenmedik bir veriyle
@@ -9145,15 +9204,6 @@ document.addEventListener('click', async ev => {
     EK.sekme = 'ogrenciler';
     await kaydet(true); ciz();
     bilgiVer('Kurulum tamam. Önce öğrencilerinizi ekleyin, sonra Ders programı sekmesinden PDF yükleyin.');
-    return;
-  }
-  if (ev.target.closest('#rolOgrenci')) {
-    const alan = document.getElementById('ogrenciGirisAlan');
-    if (alan) {
-      alan.hidden = false;
-      const ad = document.getElementById('ogrenciGirisAd');
-      if (ad) ad.focus();
-    }
     return;
   }
   if (ev.target.closest('#ogrenciBulutGiris')) {

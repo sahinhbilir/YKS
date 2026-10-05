@@ -10,7 +10,7 @@ fs.mkdirSync(out,{recursive:true});
    const context=await browser.newContext({viewport:{width,height:900}}),page=await context.newPage(),errors=[],dialogs=[];
    page.on('pageerror',e=>{errors.push(e.message);console.error('BROWSER:',e.message);});page.on('dialog',async d=>{dialogs.push(d.message());await d.accept();});
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.getByText('Kimsiniz?',{exact:true}).waitFor();
+   await page.goto('http://localhost/?dev=1');await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
    await page.evaluate(()=>{D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-23';ciz();});
    await page.locator('#kOgrAd').fill('Test Öğrenci');await page.locator('#kOgrSinif').selectOption('11');
    assert(await page.locator('#kOgrSube').isDisabled());

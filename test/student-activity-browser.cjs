@@ -12,7 +12,7 @@ fs.mkdirSync(out,{recursive:true});
    await page.clock.setFixedTime(new Date('2026-09-28T08:52:00+03:00'));
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',async d=>d.accept());
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.getByText('Kimsiniz?',{exact:true}).waitFor();
+   await page.goto('http://localhost/?dev=1');await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
    await page.evaluate(()=>{
     D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-28';D.elle={};D.islenis={};
     const hb=gunNo('2026-09-21');

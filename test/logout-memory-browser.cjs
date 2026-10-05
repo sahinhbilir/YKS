@@ -11,7 +11,7 @@ let browser;
    await context.route('**/*',route=>route.request().url().startsWith('http://localhost/')?
      route.fulfill({status:route.request().url().includes('/data/')?404:200,contentType:'text/html',body:html}):route.abort());
    await page.exposeFunction('__record',x=>records.push(x));
-   await page.goto('http://localhost/?dev=1');await page.getByText('Kimsiniz?',{exact:true}).waitFor();
+   await page.goto('http://localhost/?dev=1');await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
    await page.evaluate(role=>{
      D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-09-20';D.ogr=[{ad:'Example Student',no:42,sube:'12A',alan:'EA',kap:6,off:[],syncId:'slot',hesapUid:'student',ogrenciBulutId:'identity'}];
      D.islenis={};D.ogrIslenis={};D.log=[];D.kart={};D.elle={};D.konuPlani={};D.dersProgrami={};
@@ -79,7 +79,7 @@ let browser;
    assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));assert.equal(await page.evaluate(()=>document.querySelector('.kabuk').inert),false);
    await page.screenshot({path:path.join(out,'logout-retry-'+role+'.png'),fullPage:true});
    await page.evaluate(()=>{window.__failWrite=false;});await page.locator('#cikisTekrar').click();
-   await page.getByText('Kimsiniz?',{exact:true}).waitFor();
+   await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
    assert.equal(await page.evaluate(()=>localStorage.getItem('yks_veri')),null);assert.equal(await page.evaluate(()=>localStorage.getItem('yks_plan_kurtarma_oncesi')),null);
    assert.equal(await page.evaluate(()=>localStorage.getItem('other-app')),'keep');
    const written=records.filter(r=>r.event==='write').at(-1).data;
@@ -93,7 +93,7 @@ let browser;
  await timetableContext.route('**/*',route=>route.request().url().startsWith('http://localhost/')?
    route.fulfill({status:route.request().url().includes('/data/')?404:200,contentType:'text/html',body:html}):route.abort());
  const timetable=await timetableContext.newPage(),timetableErrors=[];timetable.on('pageerror',e=>timetableErrors.push(e.message));
- await timetable.goto('http://localhost/?dev=1');await timetable.getByText('Kimsiniz?',{exact:true}).waitFor();
+ await timetable.goto('http://localhost/?dev=1');await timetable.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
  await timetable.evaluate(()=>{
    D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-09-23';D.ayar.donemBasi='2026-08-24';D.ayar.donemElle=true;
    D.ogr=['201','205','301'].map((sube,i)=>({ad:'Example '+i,no:40+i,sube,alan:sube==='301'?'EA':'SAY',kap:6,off:[]}));
@@ -111,10 +111,10 @@ let browser;
  await resetContext.route('**/*',route=>route.request().url().startsWith('http://localhost/')?
    route.fulfill({status:route.request().url().includes('/data/')?404:200,contentType:'text/html',body:html}):route.abort());
  resetPage.on('dialog',d=>d.accept());await resetPage.goto('http://localhost/?dev=1');
- await resetPage.getByText('Kimsiniz?',{exact:true}).waitFor();
+ await resetPage.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
  await resetPage.evaluate(()=>{D=varsayilan();D.rol='rehber';D.ogr=[{ad:'Local test',no:44,sube:'12A',alan:'EA',kap:6,off:[]}];EK.sekme='ayarlar';ciz();localStorage.setItem('yks_veri',JSON.stringify(D));localStorage.setItem('other-app','keep');});
  await resetPage.getByRole('button',{name:'Tarayıcı verilerini sıfırla',exact:true}).click();
- await resetPage.getByText('Kimsiniz?',{exact:true}).waitFor();
+ await resetPage.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
  assert.equal(await resetPage.evaluate(()=>localStorage.getItem('yks_veri')),null);
  assert.equal(await resetPage.evaluate(()=>localStorage.getItem('other-app')),'keep');await resetContext.close();
  console.log('Browser checks passed: teacher/student memory and persistent AYT settings, three updated timetables, offline and rejected saves, unsaved forms, real multi-tab locks, retry, server readback and clean logout.');
