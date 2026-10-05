@@ -1,4 +1,4 @@
-// "Test hesabı aç" in a real browser: bottom-right placement on desktop and phone,
+// "Test hesabı aç" in a real browser: start screen layout on desktop and phone,
 // Google sign-in (faked), nickname setup, the first cloud save and "Test hesabımı sıfırla". No real Firebase.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
@@ -31,14 +31,19 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    await page.exposeFunction('__yansit',k=>{bulutYollari=k;});
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
    await context.addInitScript(sahteBulut);
-   await page.goto('http://localhost/?dev=1');await page.getByText('Kimsiniz?',{exact:true}).waitFor();
+   await page.goto('http://localhost/?dev=1');await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
+   // Start screen: headline → open student login (teacher and test account below it) → cap and books.
    const dugme=page.locator('#testHesapAc');
    await dugme.waitFor();
-   const kutu=await dugme.boundingBox(),kapsayici=await page.locator('.test-hesap').boundingBox();
-   assert(Math.abs(width-(kapsayici.x+kapsayici.width)-16)<=1,'16px from the right edge');
-   assert(Math.abs(800-(kapsayici.y+kapsayici.height)-16)<=1,'16px from the bottom edge');
-   for(const kart of await page.locator('.kur-kart').all())
-     assert(!kesisir(kutu,await kart.boundingBox()),'button must not cover a role card');
+   assert.equal((await page.locator('.giris-alt').textContent()).trim(),'Hedefine bir adım daha yaklaş');
+   assert.equal(await page.locator('#ogrenciGirisAd').isVisible(),true,'student login is open without a click');
+   const kutu=async sel=>page.locator(sel).boundingBox();
+   const [baslik,girisKart,giris,rehber,test,cizim]=await Promise.all(['.giris-baslik','#ogrenciGirisAlan','#ogrenciBulutGiris','#rolRehber','#testHesapAc','.giris-cizim'].map(kutu));
+   assert(baslik.y+baslik.height<=girisKart.y && girisKart.y+girisKart.height<=cizim.y,'login sits between the headline and the drawing');
+   for(const b of [rehber,test])assert(kesisir(b,girisKart) && b.y>=giris.y+giris.height,'teacher and test account sit under Giriş yap');
+   assert(giris.y+giris.height<=800,'Giriş yap is visible without scrolling');
+   assert.equal(await page.evaluate(()=>['#ogrenciGirisAd','#ogrenciGirisNo','#ogrenciBulutGiris','#rolRehber','#testHesapAc'].every(s=>{
+     const r=document.querySelector(s).getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest(s);})),true,'no decoration covers a control');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'start screen overflow');
    await page.screenshot({path:path.join(out,'test-account-start-'+width+'.png')});
    await dugme.click();
@@ -73,7 +78,7 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert(await yerelSayisi()>0,'the device holds the notebook before');
    sifirla=true;
    await Promise.all([page.waitForEvent('load'),page.locator('#testSifirla').click()]);
-   await page.getByText('Kimsiniz?',{exact:true}).waitFor();
+   await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
    assert.deepEqual(bulutYollari.filter(k=>k.startsWith('testDefter/google-1')),[],'notebook and history are deleted');
    assert.equal(await page.evaluate(()=>D.rol===''&&!D.testHesap&&D.ogr.length===0),true,'the device copy is gone');
    assert.equal(await yerelSayisi(),0,'no stored copy remains');

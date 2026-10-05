@@ -21,7 +21,7 @@ const ogrenci=(kur)=>{
    page.on('pageerror',e=>{errors.push(e.message);console.error('BROWSER:',e.message);});
    page.on('dialog',async d=>{errors.push('dialog: '+d.message());await d.accept();});
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.getByText('Kimsiniz?',{exact:true}).waitFor();
+   await page.goto('http://localhost/?dev=1');await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
    // 1. Start from the settings card.
    await page.evaluate(ogrenci,false);
    await page.getByRole('heading',{name:'Kendi TYT planın · isteğe bağlı'}).waitFor();

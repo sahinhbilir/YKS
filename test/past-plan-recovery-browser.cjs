@@ -10,7 +10,7 @@ let browser;
  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.dismiss());
  const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
  await page.route('**/*',route=>route.request().url().startsWith('http://yks.test/') ? route.fulfill({status:route.request().url().includes('/data/')?404:200,contentType:'text/html',body:html}):route.abort());
- await page.goto('http://yks.test/?dev=1');await page.getByText('Kimsiniz?',{exact:true}).waitFor();
+ await page.goto('http://yks.test/?dev=1');await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
  await page.evaluate(()=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-09-20';D.ogr=[{ad:'Örnek Öğrenci',no:42,sube:'12A',alan:'EA',kap:6,off:[]}];D.islenis={};D.konuPlani={};D.elle={};EK.ogr=0;EK.sekme='kurtarma';ciz();});
  const rows=await page.evaluate(()=>[0,1,2].map((ki,i)=>({tarih:'2026-09-'+(8+i).toString().padStart(2,'0'),ders:konuDersAdi(ki),konu:konuAl(ki)[3],ki,tur:i===2?'anlatim':'test',durum:i===1?'planlandi':'tamamlandi',soru:i===0?10:null,dogru:i===0?8:null,not:null})));
  rows.push(...[['Türkçe','Karışık Paragraf','tamamlandi'],['Matematik TYT','Karışık Problem','planlandi'],['Genel','Süre tutarak hız çalışması','yapilmadi']].map(([ders,konu,durum])=>({tarih:'2026-09-12',ders,konu,ki:null,tur:'test',durum,soru:20,dogru:null,not:null})));
