@@ -336,8 +336,9 @@ function denemeGrafik(liste) {
     (points.some(r=>r.genel)?' İçi boş nokta: TYT/AYT denemesindeki bu dersin bölümü; dolu nokta: branş denemesi.':'')+
     (metrik==='hiz'?' Net = doğru − yanlış / 4; net/dk = net ÷ tamamlama süresi.':'')+(eksik?' '+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.':'')+'</p></div>';
 }
-// Haftalar haritasının yanındaki deneme gelişimi. x ekseni baştan sabittir: dönem başından YKS
-// tarihine kadar. Her yeni deneme kendi tarihine düşer, çizgi zamanla YKS’ye doğru uzar.
+// Haftalar haritasının yanındaki deneme gelişimi. Eksenler baştan sabittir: x dönem başından YKS
+// tarihine, y 0–120 nete (TYT’nin tamamı). Her yeni deneme kendi tarihine düşer, çizgi zamanla
+// YKS’ye doğru uzar. Öğrencinin belirlediği hedef net (o.denemeHedef) yatay bir çizgidir.
 const DENEME_AY = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 function denemeYolGrafigi(si=EK.ogr) {
   const o=D.ogr[si];if(!o)return '';
@@ -349,18 +350,19 @@ function denemeYolGrafigi(si=EK.ogr) {
   const once=seriler.reduce((t,s)=>t+s.noktalar.filter(n=>n.g<bas).length,0);
   seriler.forEach(s=>{s.noktalar=s.noktalar.filter(n=>n.g>=bas && n.g<=son);});
   const cizilen=seriler.filter(s=>s.noktalar.length),degerler=cizilen.flatMap(s=>s.noktalar.map(n=>n.v));
-  const W=480,H=270,L=34,R=16,T=14,B=30,ust=Math.max(20,Math.ceil(Math.max(0,...degerler)*1.15/10)*10),alt=Math.min(0,Math.floor(Math.min(0,...degerler)/10)*10);
+  const W=480,H=270,L=34,R=16,T=14,B=30,ust=120,alt=Math.min(0,Math.floor(Math.min(0,...degerler)/20)*20),hedef=Number.isFinite(o.denemeHedef)?o.denemeHedef:null;
   const x=g=>L+(g-bas)/(son-bas)*(W-L-R),y=v=>H-B-(v-alt)/(ust-alt)*(H-T-B),r1=n=>Math.round(n*10)/10;
   // Ay başları x ekseninde; en fazla ~8 etiket sığsın diye seyreltilir.
   const aylar=[];for(let [yil,ay]=isoDan(bas).split('-').map(Number);;){ay++;if(ay>12){ay=1;yil++;}const g=gunNo(yil+'-'+String(ay).padStart(2,'0')+'-01');if(g>=son)break;aylar.push([g,DENEME_AY[ay-1]]);}
   const adim=Math.max(1,Math.ceil(aylar.length/8)),bugun=bugunNo();
-  const ticks=Array.from({length:5},(_,i)=>alt+(ust-alt)*i/4);
+  const ticks=[];for(let t=alt;t<=ust;t+=20)ticks.push(t);
   let svg='<svg viewBox="0 0 '+W+' '+H+'" role="group" aria-label="Deneme gelişimi: dönem başından YKS’ye kadar">'+
     ticks.map(t=>'<line class="yg-izgara" x1="'+L+'" x2="'+(W-R)+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text x="'+(L-6)+'" y="'+r1(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
     aylar.filter((_,i)=>i%adim===0).map(([g,ad])=>'<text x="'+r1(x(g))+'" y="'+(H-10)+'" text-anchor="middle">'+ad+'</text>').join('')+
     '<line class="yg-eksen" x1="'+L+'" x2="'+(W-R)+'" y1="'+r1(y(alt))+'" y2="'+r1(y(alt))+'"/>'+
     (bugun>bas && bugun<son?'<line class="yg-bugun" x1="'+r1(x(bugun))+'" x2="'+r1(x(bugun))+'" y1="'+T+'" y2="'+(H-B)+'"/><text class="yg-bugun-yazi" x="'+r1(x(bugun))+'" y="'+(T+10)+'" text-anchor="middle">Bugün</text>':'')+
-    '<line class="yg-yks" x1="'+r1(x(son))+'" x2="'+r1(x(son))+'" y1="'+T+'" y2="'+(H-B)+'"/><text class="yg-yks-yazi" x="'+r1(x(son)-4)+'" y="'+(T+10)+'" text-anchor="end">★ YKS</text>';
+    '<line class="yg-yks" x1="'+r1(x(son))+'" x2="'+r1(x(son))+'" y1="'+T+'" y2="'+(H-B)+'"/><text class="yg-yks-yazi" x="'+r1(x(son)-4)+'" y="'+(T+10)+'" text-anchor="end">★ YKS</text>'+
+    (hedef===null?'':'<line class="yg-hedef" x1="'+L+'" x2="'+r1(x(son))+'" y1="'+r1(y(hedef))+'" y2="'+r1(y(hedef))+'"/><text class="yg-hedef-yazi" x="'+(L+6)+'" y="'+r1(y(hedef)-5)+'">Hedef '+denemeSayi(hedef)+'</text>');
   for(const s of cizilen){
     const nok=s.noktalar.slice().sort((a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id));
     if(nok.length>1)svg+='<polyline class="yg-cizgi yg-'+s.ad+'" points="'+nok.map(n=>r1(x(n.g))+','+r1(y(n.v))).join(' ')+'"/>';
@@ -369,9 +371,10 @@ function denemeYolGrafigi(si=EK.ogr) {
   }
   if(!cizilen.length)svg+='<text class="yg-bos" x="'+r1((L+W-R)/2)+'" y="'+r1(H/2)+'" text-anchor="middle">Henüz deneme yok</text>';
   svg+='</svg>';
-  return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas"><h2>Deneme gelişimi</h2><button class="dugme" data-sekme="denemeler">Denemelerim →</button></div>'+svg+
+  return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas"><button class="dugme" data-sekme="denemeler">Denemelerim →</button></div>'+svg+
     '<p class="mini yg-lejant">'+(cizilen.length?cizilen.map(s=>'<span class="yg-'+s.ad+'">'+s.ad+' net</span>').join(' '):'Sonuç ekledikçe noktalar YKS’ye doğru ilerler.')+
-    (once?' · '+once+' deneme dönem başından ('+ggyy(bas)+') önce; Denemelerim’de görünür.':'')+'</p></section>';
+    (once?' · '+once+' deneme dönem başından ('+ggyy(bas)+') önce; Denemelerim’de görünür.':'')+'</p>'+
+    (ogrenciMi()?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" min="0" max="120" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="Hedef net (0–120)"> net</label>':'')+'</section>';
 }
 function denemeFormHtml() {
   const f=DENEME_FORM;if(!f || f.si!==EK.ogr)return '';
@@ -539,6 +542,13 @@ document.addEventListener('change',async ev=>{
   }
   if(el.dataset?.dnRapor!==undefined){DENEME_IMPORT[Number(el.dataset.dnRapor)][el.dataset.alan]=el.value;return;}
   if(id==='dnGenel'){EK.denemeGenel=el.checked;ciz();return;}
+  if(id==='dnHedef' && ogrenciMi()){
+    const v=el.value.trim(),hedef=v===''?null:Math.round(Number(v)),o=D.ogr[EK.ogr];
+    if(hedef!==null && !(hedef>=0 && hedef<=120)){denemeDurum('Hedef 0 ile 120 net arasında olmalı.');el.value=o.denemeHedef??'';return;}
+    const eski=o.denemeHedef;if(hedef===null)delete o.denemeHedef;else o.denemeHedef=hedef;
+    if(!await kaydet(true)){if(eski===undefined)delete o.denemeHedef;else o.denemeHedef=eski;}
+    ciz();return;
+  }
   const filters={dnFiltreOturum:'denemeOturum',dnFiltreBrans:'denemeBrans',dnFiltreAlan:'denemeAlan',dnMetrik:'denemeMetrik',dnBas:'denemeBas',dnSon:'denemeSon'};
   if(filters[id]){EK[filters[id]]=el.value;if(id==='dnFiltreOturum')EK.denemeBrans=DENEME_DERSLER[el.value][0][0];ciz();return;}
   if(['dnTur','dnOturum','dnBrans','dnAlan'].includes(id) && DENEME_FORM){
