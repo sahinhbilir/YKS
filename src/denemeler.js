@@ -336,6 +336,43 @@ function denemeGrafik(liste) {
     (points.some(r=>r.genel)?' İçi boş nokta: TYT/AYT denemesindeki bu dersin bölümü; dolu nokta: branş denemesi.':'')+
     (metrik==='hiz'?' Net = doğru − yanlış / 4; net/dk = net ÷ tamamlama süresi.':'')+(eksik?' '+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.':'')+'</p></div>';
 }
+// Haftalar haritasının yanındaki deneme gelişimi. x ekseni baştan sabittir: dönem başından YKS
+// tarihine kadar. Her yeni deneme kendi tarihine düşer, çizgi zamanla YKS’ye doğru uzar.
+const DENEME_AY = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+function denemeYolGrafigi(si=EK.ogr) {
+  const o=D.ogr[si];if(!o)return '';
+  const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
+  if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return '';
+  const alan=DENEME_ALAN[o.alan]?o.alan:'SAY',tum=denemeListe(si);
+  const seriler=[['TYT',tum.filter(r=>r.tur==='TYT')],['AYT',tum.filter(r=>r.tur==='AYT' && (r.id.startsWith('p:') || r.alan===alan))]]
+    .map(([ad,l])=>({ad,noktalar:l.map(r=>({r,g:gunNo(r.tarih),v:denemeToplam(r,alan)}))}));
+  const once=seriler.reduce((t,s)=>t+s.noktalar.filter(n=>n.g<bas).length,0);
+  seriler.forEach(s=>{s.noktalar=s.noktalar.filter(n=>n.g>=bas && n.g<=son);});
+  const cizilen=seriler.filter(s=>s.noktalar.length),degerler=cizilen.flatMap(s=>s.noktalar.map(n=>n.v));
+  const W=480,H=270,L=34,R=16,T=14,B=30,ust=Math.max(20,Math.ceil(Math.max(0,...degerler)*1.15/10)*10),alt=Math.min(0,Math.floor(Math.min(0,...degerler)/10)*10);
+  const x=g=>L+(g-bas)/(son-bas)*(W-L-R),y=v=>H-B-(v-alt)/(ust-alt)*(H-T-B),r1=n=>Math.round(n*10)/10;
+  // Ay başları x ekseninde; en fazla ~8 etiket sığsın diye seyreltilir.
+  const aylar=[];for(let [yil,ay]=isoDan(bas).split('-').map(Number);;){ay++;if(ay>12){ay=1;yil++;}const g=gunNo(yil+'-'+String(ay).padStart(2,'0')+'-01');if(g>=son)break;aylar.push([g,DENEME_AY[ay-1]]);}
+  const adim=Math.max(1,Math.ceil(aylar.length/8)),bugun=bugunNo();
+  const ticks=Array.from({length:5},(_,i)=>alt+(ust-alt)*i/4);
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" role="group" aria-label="Deneme gelişimi: dönem başından YKS’ye kadar">'+
+    ticks.map(t=>'<line class="yg-izgara" x1="'+L+'" x2="'+(W-R)+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text x="'+(L-6)+'" y="'+r1(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
+    aylar.filter((_,i)=>i%adim===0).map(([g,ad])=>'<text x="'+r1(x(g))+'" y="'+(H-10)+'" text-anchor="middle">'+ad+'</text>').join('')+
+    '<line class="yg-eksen" x1="'+L+'" x2="'+(W-R)+'" y1="'+r1(y(alt))+'" y2="'+r1(y(alt))+'"/>'+
+    (bugun>bas && bugun<son?'<line class="yg-bugun" x1="'+r1(x(bugun))+'" x2="'+r1(x(bugun))+'" y1="'+T+'" y2="'+(H-B)+'"/><text class="yg-bugun-yazi" x="'+r1(x(bugun))+'" y="'+(T+10)+'" text-anchor="middle">Bugün</text>':'')+
+    '<line class="yg-yks" x1="'+r1(x(son))+'" x2="'+r1(x(son))+'" y1="'+T+'" y2="'+(H-B)+'"/><text class="yg-yks-yazi" x="'+r1(x(son)-4)+'" y="'+(T+10)+'" text-anchor="end">★ YKS</text>';
+  for(const s of cizilen){
+    const nok=s.noktalar.slice().sort((a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id));
+    if(nok.length>1)svg+='<polyline class="yg-cizgi yg-'+s.ad+'" points="'+nok.map(n=>r1(x(n.g))+','+r1(y(n.v))).join(' ')+'"/>';
+    svg+=nok.map(n=>{const etiket=s.ad+' · '+n.r.ad+' · '+n.r.tarih+' · '+denemeSayi(n.v)+' net';
+      return '<circle class="yg-nokta yg-'+s.ad+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+'. Denemelerim’de aç')+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
+  }
+  if(!cizilen.length)svg+='<text class="yg-bos" x="'+r1((L+W-R)/2)+'" y="'+r1(H/2)+'" text-anchor="middle">Henüz deneme yok</text>';
+  svg+='</svg>';
+  return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas"><h2>Deneme gelişimi</h2><button class="dugme" data-sekme="denemeler">Denemelerim →</button></div>'+svg+
+    '<p class="mini yg-lejant">'+(cizilen.length?cizilen.map(s=>'<span class="yg-'+s.ad+'">'+s.ad+' net</span>').join(' '):'Sonuç ekledikçe noktalar YKS’ye doğru ilerler.')+
+    (once?' · '+once+' deneme dönem başından ('+ggyy(bas)+') önce; Denemelerim’de görünür.':'')+'</p></section>';
+}
 function denemeFormHtml() {
   const f=DENEME_FORM;if(!f || f.si!==EK.ogr)return '';
   const r=f.kayit,sec=(v,x)=>v===x?' selected':'';
@@ -392,10 +429,13 @@ async function denemeYayinlaVeyaBeklet(si) {
   try{await denemeOkulYayinla(si);await kaydet(true);}
   catch(e){denemeDurum('Cihazda kayıtlı; yayın bekliyor: '+e.message);}
 }
+// Ana sayfadaki gelişim noktası: o denemeyi Denemelerim’de, kendi sekmesinde seçili açar.
+function denemeYolAc(id) {const r=denemeListe().find(x=>x.id===id);if(!r)return;EK.sekme='denemeler';EK.denemeTur=r.tur;EK.denemeSecili=r.id;DENEME_FORM=null;ciz();}
 function denemeNoktaSec(id) {const r=denemeBul(id),el=document.getElementById('dnDetay');if(r && el){EK.denemeSecili=id;el.innerHTML=denemeDetay(r);} }
 document.addEventListener('pointerover',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
 document.addEventListener('focusin',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
 document.addEventListener('keydown',ev=>{const el=ev.target.closest?.('circle[data-dn-dot]');if(el && ['Enter',' '].includes(ev.key)){ev.preventDefault();denemeNoktaSec(el.dataset.dnDot);} });
+document.addEventListener('keydown',ev=>{const el=ev.target.closest?.('circle[data-dn-yol]');if(el && ['Enter',' '].includes(ev.key)){ev.preventDefault();denemeYolAc(el.dataset.dnYol);} });
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape' && DENEME_FORM && !DENEME_ISLEM && document.getElementById('dnOrtu')){ev.preventDefault();DENEME_FORM=null;ciz();}});
 document.addEventListener('input',ev=>{const row=ev.target.closest?.('[data-dn-ders]');if(row){const get=k=>Number(row.querySelector('[data-dn-value="'+k+'"]').value);row.querySelector('output').textContent=denemeSayi(get('dogru')-get('yanlis')/4);} });
 document.addEventListener('submit',async ev=>{
@@ -416,8 +456,9 @@ document.addEventListener('submit',async ev=>{
   finally{DENEME_ISLEM=false;}
 });
 document.addEventListener('click',async ev=>{
-  const el=ev.target.closest?.('button,[data-dn-dot]');if(!el)return;
+  const el=ev.target.closest?.('button,[data-dn-dot],[data-dn-yol]');if(!el)return;
   if(el.dataset.dnDot){denemeNoktaSec(el.dataset.dnDot);return;}
+  if(el.dataset.dnYol){denemeYolAc(el.dataset.dnYol);return;}
   if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
   if(el.dataset.dnKaynak){
     const r=denemeListe().find(x=>x.id===el.dataset.dnKaynak);if(!r)return;

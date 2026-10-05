@@ -62,7 +62,8 @@ let browser;
  await page.waitForFunction(()=>D.log.length===2);assert.equal(await page.locator('#gpYayinla').count(),0);assert.equal(await page.locator('#gpSunucu').count(),1);
  await page.screenshot({path:path.join(out,'student-photo-recovery-mobile.png'),fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'student mobile overflow');
- await page.getByRole('button',{name:'Haftalar haritası',exact:true}).click();
+ // Student pages other than the weekly plan sit under the "Planım" arrow in the top menu.
+ await page.locator('#ray .menu-ac').click();await page.getByRole('button',{name:'Haftalar haritası',exact:true}).click();
  const past=await page.evaluate(()=>gunNo('2026-08-31'));await page.locator('[data-ogr-hafta="'+past+'"]').click();
  assert.equal(await page.evaluate(()=>EK.hafta),past);assert.match(await page.locator('#ana').innerText(),/8\/10/);
  // The student's daily-target settings also mention this name; count only plan tasks.

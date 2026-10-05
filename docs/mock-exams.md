@@ -17,6 +17,15 @@ Deneme adı, tarih, derslerin doğru/yanlış/soru sayıları girilir. Net doğr
 - Bölümün ayrıntısında düzenleme/silme/süre düğmesi yoktur; **TYT denemesini aç** kaynak denemeye gider.
 - TYT/AYT denemesinin ayrıntısındaki her ders kutusu (“Ders gelişimi →”) o dersin Branş grafiğini, bu denemenin bölümü seçili olarak açar.
 
+## Ana sayfadaki deneme gelişimi
+
+Öğrencinin Haftalar haritası (girişten sonra açılan sayfa) yanında **Deneme gelişimi** grafiğini gösterir (`denemeYolGrafigi`, yalnızca YKS öğrencisi).
+
+- x ekseni baştan sabittir: dönem başının haftasından YKS tarihine kadar. Deneme eklendikçe eksen uzamaz; her deneme kendi tarihine düşer ve çizgi zamanla sağdaki YKS çizgisine yaklaşır. Hiç deneme yokken de eksen ve YKS çizgisi görünür.
+- TYT ve AYT neti ayrı çizgilerdir. AYT, öğrencinin alanına göre hesaplanır. Okul aktarımı her zaman sayılır; öğrencinin kendi girdiği AYT ise yalnızca kendi alanındaysa sayılır.
+- “Bugün” kesikli bir çizgiyle gösterilir. Dönem başından önceki denemeler (ör. eski bir hazırbulunuşluk) grafikte yer almaz; alttaki not bunları sayar, Denemelerim’de görünürler.
+- Bir noktaya tıklamak ya da Enter’a basmak o denemeyi Denemelerim’de kendi sekmesinde seçili açar.
+
 ## Öğretmen aktarımı
 
 1. **PDF’den toplu aktar** ile bir veya birkaç metin içeren toplu sonuç PDF’si seçin.
@@ -43,7 +52,7 @@ Birleşik raporun TYT tekrarları, başka tarihe sahip olsalar bile aynı sınav
 
 Kaynaklar `src/denemeler.js` ve `src/denemeler.css`. `node scripts/embed-denemeler.cjs` bunları tek dosyalı uygulamaya gömer; `--check` eşitliği denetler; Windows (CRLF) çalışma kopyalarında da aynı sonucu verir. Elle gömülü kopyayı değiştirmeyin.
 
-- `node test/mock-exam-regression.cjs`: alan toplamları, branş net/dk, genel deneme bölümleri (türetme, boş bölümün 0 net sayılması, alan ve Din/Ek Felsefe kuralı, kayda girmeme, gizleme, yalnızca net, geçişler), sayısal sınırlar, sürüm uyumu, silme/birleştirme, silinmiş sonuçlar, süre önceliği, tam öğrenci eşleşmesi, tekrarlar, sentetik PDF koordinatları ve CRLF gömme.
+- `node test/mock-exam-regression.cjs`: ana sayfa grafiğinin sabit ekseni (yeni deneme eski noktaları kaydırmaz, dönem öncesi denemeler, AYT alanı, noktadan Denemelerim’e geçiş), alan toplamları, branş net/dk, genel deneme bölümleri (türetme, boş bölümün 0 net sayılması, alan ve Din/Ek Felsefe kuralı, kayda girmeme, gizleme, yalnızca net, geçişler), sayısal sınırlar, sürüm uyumu, silme/birleştirme, silinmiş sonuçlar, süre önceliği, tam öğrenci eşleşmesi, tekrarlar, sentetik PDF koordinatları ve CRLF gömme.
 - `node test/mock-exam-browser.cjs` (Playwright): masaüstü/telefon formu, grafik, düzenleme, branş/AYT ayrımı, genel deneme bölümlerinin Branş grafiğinde gösterilmesi ve ders kutusundan geçiş, kalıcı kayıt, toplu aktarım ve yayınlama hatası/yeniden deneme.
 - Mevcut Firestore emulator testleri: öğretmen/öğrenci erişimi, alan korunması, hesap ve yuva rotasyonu; gerçek iki istemciyle anlık teslim, yeni cihaz, kişisel süre ve eski cihazdan silinen sonucun geri gelmemesi.
 - Sağlanan üç PDF ayrıca yerel PDF.js ve Chromium ile sınandı: 29 TYT; birleşik raporda 29 TYT + 22 AYT; hazırlık raporunda 29 TYT. Birleşik dosyadaki 29 TYT tekrarı işaretlenmedi. Gerçek öğrenci PDF’leri veya çıkartılan öğrenci verileri repoya eklenmedi.

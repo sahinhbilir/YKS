@@ -302,6 +302,33 @@ tr.pasif td:first-child{opacity:1}
   display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 /* Giriş ekranı: menü yokken (ray boş) sayfa tam genişlik; görseldeki gibi beyaz zemin, köşelerde
    mavi çapraz şeritler ve nokta ızgaraları, ortada başlık → öğrenci girişi → kep ve kitaplar. */
+/* Öğrenci: menü üstte (ray.ust). Öğretmen kenar menüsünü korur. */
+.kabuk:has(>.ray.ust){grid-template-columns:1fr;grid-template-rows:auto 1fr}
+.ray.ust{position:sticky;top:0;z-index:40;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px;
+  overflow:visible;border-right:0;border-bottom:1px solid var(--cizgi);padding:8px 20px}
+.ray.ust .marka{padding:0 18px 0 0;white-space:nowrap}
+.ray.ust button{width:auto;white-space:nowrap}
+.ray.ust .durum{border-top:0;padding:0 0 0 10px;max-width:230px}
+.kabuk:has(>.ray.ust)>main{max-width:1480px;width:100%;margin:0 auto}
+.menu-grup{position:relative;display:flex;align-items:center}
+.ray.ust .menu-grup>button[data-sekme]{border-radius:7px 0 0 7px;padding-right:6px}
+.ray.ust .menu-ac{padding:9px 9px 9px 5px;border-radius:0 7px 7px 0}
+.ray.ust .menu-grup.alt-secili>button,.ray.ust .menu-grup.alt-secili .menu-ac{background:var(--vurgu-yumusak);color:var(--vurgu)}
+.menu-ac svg{display:block}
+.menu-liste{display:none;position:absolute;top:100%;left:0;min-width:220px;padding:6px;flex-direction:column;gap:2px;
+  background:var(--kagit);border:1px solid var(--cizgi);border-radius:10px;box-shadow:0 12px 30px rgba(11,42,107,.16);z-index:50}
+.ray.ust .menu-liste button{width:100%;text-align:left}
+.menu-grup.acik .menu-liste,.menu-acilir:has(:focus-visible) .menu-liste{display:flex}
+@media (hover:hover){.menu-acilir:hover .menu-liste{display:flex}}
+@media (max-width:820px){
+  .ray.ust{overflow:visible;padding:8px 12px}
+  .ray.ust .durum{position:static;flex-basis:100%;border-left:0;background:none;padding:2px 4px 0;white-space:normal}
+}
+.ana-pano{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(340px,1fr);gap:20px;align-items:start}
+.ana-pano>.yks-yolu{margin-bottom:0}
+.ana-pano>.dn-yol{position:sticky;top:76px}
+/* Tek sütunda gelişim grafiği haritanın üstüne çıkar: uzun haritanın altında kaybolmasın. */
+@media (max-width:1100px){.ana-pano{grid-template-columns:1fr}.ana-pano>.dn-yol{position:static;order:-1;max-width:720px;width:100%}}
 .kabuk:has(>.ray:empty){grid-template-columns:1fr}
 .kabuk:has(>.ray:empty)>.ray{display:none}
 .kabuk:has(>.ray:empty)>main{max-width:none;padding:0}
@@ -561,6 +588,17 @@ main:has(.dn-tabs){min-width:0}
 .dn-pencere-alt{margin:0;padding:12px 20px;border-top:1px solid var(--cizgi)}
 #dnFormHata:empty{display:none}
 @media(max-width:600px){#dnOrtu{padding:3vh 8px}.dn-pencere-ust{padding:14px 48px 10px 12px}.dn-pencere-govde{padding:0 12px 8px}.dn-pencere-alt{padding:10px 12px}}
+.dn-yol{padding:18px 20px}.dn-yol-bas{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}.dn-yol-bas h2{font-size:18px}
+.dn-yol svg{display:block;width:100%;height:auto;overflow:visible}.dn-yol text{fill:var(--soluk);font:12px system-ui,sans-serif}
+.dn-yol .yg-izgara{stroke:var(--cizgi);stroke-dasharray:3 5}.dn-yol .yg-eksen{stroke:var(--cizgi)}
+.dn-yol .yg-bugun{stroke:var(--soluk);stroke-dasharray:4 4;opacity:.7}.dn-yol .yg-yks{stroke:var(--marka-koyu);stroke-width:2}
+.dn-yol text.yg-yks-yazi{fill:var(--marka-koyu);font-weight:700}.dn-yol text.yg-bos{font-size:14px}
+.dn-yol .yg-cizgi{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}.dn-yol .yg-cizgi.yg-TYT{stroke:var(--marka)}.dn-yol .yg-cizgi.yg-AYT{stroke:var(--marka-koyu)}
+.dn-yol .yg-nokta{stroke:var(--kagit);stroke-width:2;cursor:pointer}.dn-yol .yg-nokta.yg-TYT{fill:var(--marka)}.dn-yol .yg-nokta.yg-AYT{fill:var(--marka-koyu)}
+.dn-yol .yg-nokta:hover,.dn-yol .yg-nokta:focus{stroke:var(--murekkep);stroke-width:3;outline:none}
+.yg-lejant span{font-weight:600;color:var(--murekkep);white-space:nowrap}.yg-lejant span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.yg-lejant span.yg-TYT::before{background:var(--marka)}.yg-lejant span.yg-AYT::before{background:var(--marka-koyu)}
+@media(max-width:600px){.dn-yol text{font-size:16px}.dn-yol text.yg-bos{font-size:18px}.dn-yol-bas h2{font-size:16px}}
 /* END DENEMELER */
 
 </style>
@@ -4831,7 +4869,12 @@ function haritaPlaniniAc(h) {
   EK.hafta=h;EK.sekme='plan';EK.ogrenciDetay=false;EK.girisAcik={};return true;
 }
 function gorunumHaritasi() {
-  if (ogrenciMi() && D.ogr[EK.ogr]) return '<div class="baslik"><h1>Haftalar haritası</h1><p>Zamanını ve kaydettiğin emeği birlikte gör.</p></div>' + ogrenciYksYolu(true);
+  if (ogrenciMi() && D.ogr[EK.ogr]) {
+    // Girişten sonra açılan sayfa: haftalar haritası ve yanında deneme gelişimi (yalnızca YKS).
+    const grafik = ogrenciSinavi(D.ogr[EK.ogr]) === 'YKS' ? denemeYolGrafigi(EK.ogr) : '';
+    return '<div class="baslik"><h1>Haftalar haritası</h1><p>Zamanını ve kaydettiğin emeği birlikte gör.</p></div>' +
+      (grafik ? '<div class="ana-pano">' + ogrenciYksYolu(true) + grafik + '</div>' : ogrenciYksYolu(true));
+  }
   const si = EK.ogr;
   if (si === undefined || !D.ogr[si] || !D.ayar.donemBasi) {
     return '<div class="baslik"><h1>Haftalar Haritası</h1></div><div class="kart">' +
@@ -8739,12 +8782,27 @@ const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris',
 const SEKMELER = () => !ogrenciMi() ? SEKME_REHBER : ogrenciSinavi(D && D.ogr && D.ogr[0]) === 'YKS' ? SEKME_OGRENCI
   : SEKME_OGRENCI.filter(([id]) => id !== 'mufredat' && id !== 'denemeler');
 
+// Öğrenci menüsü üstte: "Planım" haftalık plana gider; yanındaki ok (tıklayınca ya da üzerine
+// gelince) planla ilgili diğer sayfaları açar. Denemelerim ortada, Müfredat ve Ayarlar sağda.
+const PLAN_ALT_SEKMELER = ['harita', 'giris', 'rapor', 'kurtarma'];
+const MENU_OK = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function ogrenciMenusu(sekmeler) {
+  const ad = id => (sekmeler.find(s => s[0] === id) || [])[1];
+  const dugme = id => ad(id) ? '<button data-sekme="' + id + '"' + (EK.sekme === id ? ' aria-current="page"' : '') + '>' + ad(id) + '</button>' : '';
+  const alt = PLAN_ALT_SEKMELER.filter(ad);
+  return '<div class="menu-grup' + (alt.includes(EK.sekme) ? ' alt-secili' : '') + '">' + dugme('plan') +
+    '<div class="menu-acilir"><button class="menu-ac" aria-expanded="false" aria-controls="planMenusu" aria-label="Planla ilgili diğer sayfalar">' + MENU_OK + '</button>' +
+    '<div class="menu-liste" id="planMenusu">' + alt.map(dugme).join('') + '</div></div></div>' +
+    dugme('denemeler') + '<div class="bosluk"></div>' + dugme('mufredat') + dugme('ayarlar');
+}
 function rayCiz() {
-  const ray = document.getElementById('ray');
+  const ray = document.getElementById('ray'), ust = ogrenciMi();
+  ray.className = 'ray' + (ust ? ' ust' : '');
   ray.innerHTML = '<div class="marka">YKS Tekrar Defteri<small>' +
     (D && D.kurum ? kacis(D.kurum) : 'Aralıklı tekrar') + '</small></div>' +
-    SEKMELER().map(s => '<button data-sekme="' + s[0] + '"' + (EK.sekme === s[0] ? ' aria-current="page"' : '') + '>' + s[1] + '</button>').join('') +
-    '<div class="bosluk"></div>'+(D?.rol?'<button id="oturumKapat" title="Önce sunucuya kaydeder, onaydan sonra bu uygulamanın cihazdaki verisini temizler"'+(CIKIS_DURUMU?' disabled':'')+'>Kaydet ve çıkış yap</button>':'')+'<div class="durum" role="status" aria-live="polite">' +
+    (ust ? ogrenciMenusu(SEKMELER())
+      : SEKMELER().map(s => '<button data-sekme="' + s[0] + '"' + (EK.sekme === s[0] ? ' aria-current="page"' : '') + '>' + s[1] + '</button>').join('') +
+        '<div class="bosluk"></div>') +(D?.rol?'<button id="oturumKapat" title="Önce sunucuya kaydeder, onaydan sonra bu uygulamanın cihazdaki verisini temizler"'+(CIKIS_DURUMU?' disabled':'')+'>Kaydet ve çıkış yap</button>':'')+'<div class="durum" role="status" aria-live="polite">' +
     (EK.kirli ? '<b>kaydedilmemiş değişiklik</b>' : kacis(ogrenciMi() ? (EK.ogrSyncDurum || EK.son || 'Planın hazır') : (EK.son || 'hazır'))) +
     (rehberMi() ? '<br>' + kacis(EK.bulutYedekHata || EK.ogretmenSyncDurum || (EK.bulutYedekTs ? 'Sunucuya kaydedildi' : 'Bulut yedeği henüz onaylanmadı')) : '') +
     (testHesabiMi() && D.ogr.length ? '<br>' + kacis(EK.bulutYedekHata || (EK.bulutYedekTs ? 'Buluta kaydedildi' : 'Bulut kaydı bekliyor')) : '') + '</div>';
@@ -11116,6 +11174,43 @@ function denemeGrafik(liste) {
     (points.some(r=>r.genel)?' İçi boş nokta: TYT/AYT denemesindeki bu dersin bölümü; dolu nokta: branş denemesi.':'')+
     (metrik==='hiz'?' Net = doğru − yanlış / 4; net/dk = net ÷ tamamlama süresi.':'')+(eksik?' '+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.':'')+'</p></div>';
 }
+// Haftalar haritasının yanındaki deneme gelişimi. x ekseni baştan sabittir: dönem başından YKS
+// tarihine kadar. Her yeni deneme kendi tarihine düşer, çizgi zamanla YKS’ye doğru uzar.
+const DENEME_AY = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+function denemeYolGrafigi(si=EK.ogr) {
+  const o=D.ogr[si];if(!o)return '';
+  const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
+  if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return '';
+  const alan=DENEME_ALAN[o.alan]?o.alan:'SAY',tum=denemeListe(si);
+  const seriler=[['TYT',tum.filter(r=>r.tur==='TYT')],['AYT',tum.filter(r=>r.tur==='AYT' && (r.id.startsWith('p:') || r.alan===alan))]]
+    .map(([ad,l])=>({ad,noktalar:l.map(r=>({r,g:gunNo(r.tarih),v:denemeToplam(r,alan)}))}));
+  const once=seriler.reduce((t,s)=>t+s.noktalar.filter(n=>n.g<bas).length,0);
+  seriler.forEach(s=>{s.noktalar=s.noktalar.filter(n=>n.g>=bas && n.g<=son);});
+  const cizilen=seriler.filter(s=>s.noktalar.length),degerler=cizilen.flatMap(s=>s.noktalar.map(n=>n.v));
+  const W=480,H=270,L=34,R=16,T=14,B=30,ust=Math.max(20,Math.ceil(Math.max(0,...degerler)*1.15/10)*10),alt=Math.min(0,Math.floor(Math.min(0,...degerler)/10)*10);
+  const x=g=>L+(g-bas)/(son-bas)*(W-L-R),y=v=>H-B-(v-alt)/(ust-alt)*(H-T-B),r1=n=>Math.round(n*10)/10;
+  // Ay başları x ekseninde; en fazla ~8 etiket sığsın diye seyreltilir.
+  const aylar=[];for(let [yil,ay]=isoDan(bas).split('-').map(Number);;){ay++;if(ay>12){ay=1;yil++;}const g=gunNo(yil+'-'+String(ay).padStart(2,'0')+'-01');if(g>=son)break;aylar.push([g,DENEME_AY[ay-1]]);}
+  const adim=Math.max(1,Math.ceil(aylar.length/8)),bugun=bugunNo();
+  const ticks=Array.from({length:5},(_,i)=>alt+(ust-alt)*i/4);
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" role="group" aria-label="Deneme gelişimi: dönem başından YKS’ye kadar">'+
+    ticks.map(t=>'<line class="yg-izgara" x1="'+L+'" x2="'+(W-R)+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text x="'+(L-6)+'" y="'+r1(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
+    aylar.filter((_,i)=>i%adim===0).map(([g,ad])=>'<text x="'+r1(x(g))+'" y="'+(H-10)+'" text-anchor="middle">'+ad+'</text>').join('')+
+    '<line class="yg-eksen" x1="'+L+'" x2="'+(W-R)+'" y1="'+r1(y(alt))+'" y2="'+r1(y(alt))+'"/>'+
+    (bugun>bas && bugun<son?'<line class="yg-bugun" x1="'+r1(x(bugun))+'" x2="'+r1(x(bugun))+'" y1="'+T+'" y2="'+(H-B)+'"/><text class="yg-bugun-yazi" x="'+r1(x(bugun))+'" y="'+(T+10)+'" text-anchor="middle">Bugün</text>':'')+
+    '<line class="yg-yks" x1="'+r1(x(son))+'" x2="'+r1(x(son))+'" y1="'+T+'" y2="'+(H-B)+'"/><text class="yg-yks-yazi" x="'+r1(x(son)-4)+'" y="'+(T+10)+'" text-anchor="end">★ YKS</text>';
+  for(const s of cizilen){
+    const nok=s.noktalar.slice().sort((a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id));
+    if(nok.length>1)svg+='<polyline class="yg-cizgi yg-'+s.ad+'" points="'+nok.map(n=>r1(x(n.g))+','+r1(y(n.v))).join(' ')+'"/>';
+    svg+=nok.map(n=>{const etiket=s.ad+' · '+n.r.ad+' · '+n.r.tarih+' · '+denemeSayi(n.v)+' net';
+      return '<circle class="yg-nokta yg-'+s.ad+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+'. Denemelerim’de aç')+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
+  }
+  if(!cizilen.length)svg+='<text class="yg-bos" x="'+r1((L+W-R)/2)+'" y="'+r1(H/2)+'" text-anchor="middle">Henüz deneme yok</text>';
+  svg+='</svg>';
+  return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas"><h2>Deneme gelişimi</h2><button class="dugme" data-sekme="denemeler">Denemelerim →</button></div>'+svg+
+    '<p class="mini yg-lejant">'+(cizilen.length?cizilen.map(s=>'<span class="yg-'+s.ad+'">'+s.ad+' net</span>').join(' '):'Sonuç ekledikçe noktalar YKS’ye doğru ilerler.')+
+    (once?' · '+once+' deneme dönem başından ('+ggyy(bas)+') önce; Denemelerim’de görünür.':'')+'</p></section>';
+}
 function denemeFormHtml() {
   const f=DENEME_FORM;if(!f || f.si!==EK.ogr)return '';
   const r=f.kayit,sec=(v,x)=>v===x?' selected':'';
@@ -11172,10 +11267,13 @@ async function denemeYayinlaVeyaBeklet(si) {
   try{await denemeOkulYayinla(si);await kaydet(true);}
   catch(e){denemeDurum('Cihazda kayıtlı; yayın bekliyor: '+e.message);}
 }
+// Ana sayfadaki gelişim noktası: o denemeyi Denemelerim’de, kendi sekmesinde seçili açar.
+function denemeYolAc(id) {const r=denemeListe().find(x=>x.id===id);if(!r)return;EK.sekme='denemeler';EK.denemeTur=r.tur;EK.denemeSecili=r.id;DENEME_FORM=null;ciz();}
 function denemeNoktaSec(id) {const r=denemeBul(id),el=document.getElementById('dnDetay');if(r && el){EK.denemeSecili=id;el.innerHTML=denemeDetay(r);} }
 document.addEventListener('pointerover',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
 document.addEventListener('focusin',ev=>{const el=ev.target.closest?.('[data-dn-dot]');if(el)denemeNoktaSec(el.dataset.dnDot);});
 document.addEventListener('keydown',ev=>{const el=ev.target.closest?.('circle[data-dn-dot]');if(el && ['Enter',' '].includes(ev.key)){ev.preventDefault();denemeNoktaSec(el.dataset.dnDot);} });
+document.addEventListener('keydown',ev=>{const el=ev.target.closest?.('circle[data-dn-yol]');if(el && ['Enter',' '].includes(ev.key)){ev.preventDefault();denemeYolAc(el.dataset.dnYol);} });
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape' && DENEME_FORM && !DENEME_ISLEM && document.getElementById('dnOrtu')){ev.preventDefault();DENEME_FORM=null;ciz();}});
 document.addEventListener('input',ev=>{const row=ev.target.closest?.('[data-dn-ders]');if(row){const get=k=>Number(row.querySelector('[data-dn-value="'+k+'"]').value);row.querySelector('output').textContent=denemeSayi(get('dogru')-get('yanlis')/4);} });
 document.addEventListener('submit',async ev=>{
@@ -11196,8 +11294,9 @@ document.addEventListener('submit',async ev=>{
   finally{DENEME_ISLEM=false;}
 });
 document.addEventListener('click',async ev=>{
-  const el=ev.target.closest?.('button,[data-dn-dot]');if(!el)return;
+  const el=ev.target.closest?.('button,[data-dn-dot],[data-dn-yol]');if(!el)return;
   if(el.dataset.dnDot){denemeNoktaSec(el.dataset.dnDot);return;}
+  if(el.dataset.dnYol){denemeYolAc(el.dataset.dnYol);return;}
   if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
   if(el.dataset.dnKaynak){
     const r=denemeListe().find(x=>x.id===el.dataset.dnKaynak);if(!r)return;
@@ -11296,6 +11395,23 @@ document.addEventListener('change',async ev=>{
 // "buluta gitmemiş değişiklik yok" kanıtı sayılır (bkz. testDefteriniDenetle). Yakalama
 // evresinde çalıştığı için diğer dinleyicilerden önce işler; kayıt sırası önemsizdir.
 ['click', 'change', 'input', 'submit'].forEach(t => document.addEventListener(t, () => { TEST_ACILIS_JSON = null; }, true));
+
+// Öğrenci üst menüsü: ok düğmesi "Planım" altındaki sayfaları açıp kapar; dışarı tıklama ya da
+// Esc kapatır. Fareyle üzerine gelince ve klavye odağında CSS açar (bkz. .menu-acilir).
+document.addEventListener('click', ev => {
+  const ok = ev.target.closest && ev.target.closest('.menu-ac');
+  document.querySelectorAll('.menu-grup.acik').forEach(g => {
+    if (!ok || !g.contains(ok)) { g.classList.remove('acik'); g.querySelector('.menu-ac')?.setAttribute('aria-expanded', 'false'); }
+  });
+  if (!ok) return;
+  const grup = ok.closest('.menu-grup'), acik = !grup.classList.contains('acik');
+  grup.classList.toggle('acik', acik); ok.setAttribute('aria-expanded', String(acik));
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Escape') return;
+  document.querySelectorAll('.menu-grup.acik').forEach(g => { g.classList.remove('acik'); g.querySelector('.menu-ac')?.setAttribute('aria-expanded', 'false'); });
+  if (document.activeElement && document.activeElement.closest && document.activeElement.closest('.menu-acilir')) document.activeElement.blur();
+});
 
 // ---------------------------------------------------------------- başlangıç
 (async function () {
