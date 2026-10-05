@@ -74,12 +74,14 @@ Students get a top bar (`.ray.ust`). Teachers keep the side menu.
   with a mouse (`@media (hover:hover)`), a click toggles it on touch screens, and it
   opens on keyboard focus. Esc or a click elsewhere closes it, and so does choosing
   a page. The group is highlighted while one of its pages is open.
-- **Denemelerim** follows Planım. **Müfredat** and **Ayarlar** sit on the right,
-  followed by "Kaydet ve çıkış yap" and the save status.
+- **Denemelerim** follows Planım. **Müfredat** and **Ayarlar** sit on the right.
+  A thin divider separates them from "Kaydet ve çıkış yap", and the save status
+  follows on one line (cut short with an ellipsis rather than wrapping).
 - On narrow screens the bar wraps rather than scrolling sideways, so the dropdown is
   never clipped.
 
 After login, students land on **Haftalar haritası**. For a YKS student the map has
-the **Deneme gelişimi** chart beside it (`denemeYolGrafigi`, see
+the **Deneme gelişimi** chart beside it. Both headings sit on one row,
+and the chart has a fixed 0–120 net axis and the student's target line (`denemeYolGrafigi`, see
 docs/mock-exams.md). The chart stays in view while the map scrolls. In a single
 column (≤1100 px) it moves above the map.

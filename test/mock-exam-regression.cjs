@@ -190,7 +190,7 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert.deepEqual(ids('AYT','kimya'),['p:ayt'],'an answered course outside the field still counts');
   assert.deepEqual(ids('AYT','mat'),['p:ayt','m:ayt-say'],'a student entry uses its own field');
  });
- await check('home progress chart keeps a fixed axis from term start to YKS',()=>{
+ await check('home progress chart keeps a fixed axis from term start to YKS',async()=>{
   // The axis is drawn before any exam and never stretches: new exams land at their date.
   run("D.ayar.donemBasi='2026-08-31';D.ayar.sinav='2027-06-19';D.ogr[0].denemeler=[];D.ogr[0].denemeOkul=[];");
   const cx=(h,id)=>Number(new RegExp('cx="([\\d.]+)"[^>]*data-dn-yol="'+id+'"').exec(h)?.[1]);
@@ -213,8 +213,24 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   // A point opens that exam in Denemelerim.
   run("ciz=()=>{};EK.sekme='harita';denemeYolAc('p:ayt')");
   assert.deepEqual(JSON.parse(run('JSON.stringify([EK.sekme,EK.denemeTur,EK.denemeSecili])')),['denemeler','AYT','p:ayt']);
-  // The student's weeks map shows the chart beside it for YKS only.
-  run("EK.sekme='harita'");assert.match(run('gorunumHaritasi()'),/class="ana-pano"[\s\S]*class="kart dn-yol"/);
+  // The net axis is fixed at 0–120 (all of TYT); a target net draws a dashed line the student sets.
+  run("EK.sekme='harita'");h=run('denemeYolGrafigi(0)');
+  for(const t of ['0','20','40','60','80','100','120'])assert(h.includes('text-anchor="end">'+t+'</text>'),'y tick '+t);
+  assert(!h.includes('yg-hedef"'));assert.match(h,/id="dnHedef"[^>]*value=""/);
+  const degis=listeners.change.find(f=>String(f).includes('dnHedef'));
+  const hedefYaz=async v=>{const el={id:'dnHedef',value:v,dataset:{}};await degis({target:el});return el;};
+  await hedefYaz('80');assert.equal(run('D.ogr[0].denemeHedef'),80);h=run('denemeYolGrafigi(0)');
+  assert(h.includes('class="yg-hedef"') && h.includes('>Hedef 80</text>'));assert.match(h,/id="dnHedef"[^>]*value="80"/);
+  const yHedef=Number(/class="yg-hedef" x1="34" x2="464" y1="([\d.]+)"/.exec(h)[1]);assert(Math.abs(yHedef-(270-30-80/120*226))<0.11,'target line at 80 on a 0–120 axis: '+yHedef);
+  const kotu=await hedefYaz('150');assert.equal(run('D.ogr[0].denemeHedef'),80,'out of range is refused');assert.equal(kotu.value,80);
+  assert.match(run('EK.denemeDurum'),/0 ile 120/);
+  await hedefYaz('');assert.equal(run('D.ogr[0].denemeHedef'),undefined,'empty clears the target');
+  run('D.ogr[0].denemeHedef=75');run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
+  assert.throws(()=>run("(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].denemeHedef=130;yedekDogrula(y);})()"),/deneme hedefi/);
+  assert.match(html,/'okul','sinavTuru','denemeHedef'\]\.forEach/,'the target travels with the work snapshot');
+  run("D.ogr[0].rol;D.rol='rehber'");assert(!run('denemeYolGrafigi(0)').includes('dnHedef'),'only the student sets the target');run("D.rol='ogrenci'");
+  // The student's weeks map shows the chart beside it for YKS only, with both headings on one row.
+  run("EK.sekme='harita'");assert.match(run('gorunumHaritasi()'),/class="ana-pano"><div class="baslik pano-sol-bas"><h1>Haftalar haritası<\/h1>[\s\S]*<h2 class="pano-baslik">Deneme gelişimi<\/h2>[\s\S]*class="kart dn-yol"/);
   run("D.ogr[0].sinavTuru='KPSS'");assert(!run('gorunumHaritasi()').includes('dn-yol'));run('delete D.ogr[0].sinavTuru');
  });
  await check('stock-style chart: segments vs previous 4 average, dots vs previous exam',()=>{

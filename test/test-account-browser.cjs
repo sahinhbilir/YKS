@@ -101,8 +101,13 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    // Home: the weeks map with the mock-exam chart beside it; its axis already reaches YKS.
    await page.locator('.ana-pano .dn-yol').waitFor();
    assert((await page.locator('.dn-yol').innerText()).includes('Henüz deneme yok'));assert.equal(await page.locator('.dn-yol .yg-yks').count(),1);
-   if(width>=1280){const [harita,grafik]=await Promise.all(['.ana-pano .yks-yolu','.ana-pano .dn-yol'].map(s=>page.locator(s).boundingBox()));
-     assert(grafik.x>harita.x+harita.width-1 && Math.abs(grafik.y-harita.y)<2,'the chart sits beside the map');}
+   if(width>=1280){const [harita,grafik,b1,b2]=await Promise.all(['.ana-pano .yks-yolu','.ana-pano .dn-yol','.pano-sol-bas h1','.pano-sag-bas h2'].map(s=>page.locator(s).boundingBox()));
+     assert(grafik.x>harita.x+harita.width-1 && Math.abs(grafik.y-harita.y)<2,'the chart sits beside the map');
+     assert(Math.abs((b1.y+b1.height)-(b2.y+b2.height))<4,'"Deneme gelişimi" heading sits on the same row as "Haftalar haritası"');}
+   // Target net: typed by the student, drawn as a dashed line, kept in the notebook.
+   await page.locator('#dnHedef').fill('80');await page.locator('#dnHedef').press('Enter');await page.locator('#dnHedef').blur();
+   await page.waitForFunction(()=>D.ogr[0].denemeHedef===80);await page.locator('.dn-yol .yg-hedef').waitFor({state:'attached'});
+   assert((await page.locator('.dn-yol').innerText()).includes('Hedef 80'));
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'home overflow');
    await page.screenshot({path:path.join(out,'student-home-'+width+'.png'),fullPage:true});
    await page.locator('#ray [data-sekme="plan"]').click();assert.equal(await page.evaluate(()=>EK.sekme),'plan','Planım opens the weekly plan');

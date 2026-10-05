@@ -178,7 +178,7 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
     a.run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
     assert.throws(() => a.run("(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].sinavTuru='TUS';yedekDogrula(y);})()"), /Geçersiz sınav türü/);
     assert.throws(() => a.run("(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].kendiPlan.tur='TUS';yedekDogrula(y);})()"));
-    assert.match(html, /'okul','sinavTuru'\]\.forEach/, 'the exam travels with the work snapshot');
+    assert.match(html, /'okul','sinavTuru'(,'\w+')*\]\.forEach/, 'the exam travels with the work snapshot');
     // An unknown stored value never turns a student into a non-YKS one.
     assert.equal(a.run("ogrenciSinavi({sinavTuru:'TUS'})"), 'YKS');
     assert.equal(a.run("ogrenciSinavi({sinavTuru:'__proto__'})"), 'YKS');
