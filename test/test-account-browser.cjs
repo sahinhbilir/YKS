@@ -116,6 +116,8 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
      const vb=await page.locator('.yg-alan svg').evaluate(e=>e.viewBox.baseVal.height/e.viewBox.baseVal.width);
      assert(Math.abs(svg.height-alan.height)<1 && Math.abs(vb-alan.height/alan.width)<0.02,'chart fills its area: '+vb+' vs '+alan.height/alan.width);}
    // Chart text keeps a readable size at every width (the drawing follows the card, not a fixed 480).
+   // The refit runs on the next animation frame after a redraw; measure after it.
+   await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
    const yazi=await page.locator('.yg-alan svg text').first().evaluate(e=>e.getBoundingClientRect().height);
    assert(yazi>=13 && yazi<=22,'axis text height '+yazi);
    // The headings are links: "Deneme gelişimi" → Denemelerim, "Haftalar haritası" → the map.
