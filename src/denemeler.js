@@ -340,17 +340,21 @@ function denemeGrafik(liste) {
 // tarihine, y 0–120 nete (TYT’nin tamamı). Her yeni deneme kendi tarihine düşer, çizgi zamanla
 // YKS’ye doğru uzar. Öğrencinin belirlediği hedef net (o.denemeHedef) yatay bir çizgidir.
 const DENEME_AY = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
-function denemeYolGrafigi(si=EK.ogr) {
-  const o=D.ogr[si];if(!o)return '';
+function denemeYolVerisi(si) {
+  const o=D.ogr[si];if(!o)return null;
   const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
-  if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return '';
+  if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return null;
   const alan=DENEME_ALAN[o.alan]?o.alan:'SAY',tum=denemeListe(si);
   const seriler=[['TYT',tum.filter(r=>r.tur==='TYT')],['AYT',tum.filter(r=>r.tur==='AYT' && (r.id.startsWith('p:') || r.alan===alan))]]
     .map(([ad,l])=>({ad,noktalar:l.map(r=>({r,g:gunNo(r.tarih),v:denemeToplam(r,alan)}))}));
   const once=seriler.reduce((t,s)=>t+s.noktalar.filter(n=>n.g<bas).length,0);
   seriler.forEach(s=>{s.noktalar=s.noktalar.filter(n=>n.g>=bas && n.g<=son);});
   const cizilen=seriler.filter(s=>s.noktalar.length),degerler=cizilen.flatMap(s=>s.noktalar.map(n=>n.v));
-  const W=480,H=270,L=34,R=16,T=14,B=30,ust=120,alt=Math.min(0,Math.floor(Math.min(0,...degerler)/20)*20),hedef=Number.isFinite(o.denemeHedef)?o.denemeHedef:null;
+  return {o,bas,son,cizilen,degerler,once,hedef:Number.isFinite(o.denemeHedef)?o.denemeHedef:null};
+}
+function denemeYolSvg(v,H=270) {
+  const {bas,son,cizilen,degerler,hedef}=v;
+  const W=480,L=34,R=16,T=14,B=30,ust=120,alt=Math.min(0,Math.floor(Math.min(0,...degerler)/20)*20);
   const x=g=>L+(g-bas)/(son-bas)*(W-L-R),y=v=>H-B-(v-alt)/(ust-alt)*(H-T-B),r1=n=>Math.round(n*10)/10;
   // Ay başları x ekseninde; en fazla ~8 etiket sığsın diye seyreltilir.
   const aylar=[];for(let [yil,ay]=isoDan(bas).split('-').map(Number);;){ay++;if(ay>12){ay=1;yil++;}const g=gunNo(yil+'-'+String(ay).padStart(2,'0')+'-01');if(g>=son)break;aylar.push([g,DENEME_AY[ay-1]]);}
@@ -371,7 +375,30 @@ function denemeYolGrafigi(si=EK.ogr) {
   }
   if(!cizilen.length)svg+='<text class="yg-bos" x="'+r1((L+W-R)/2)+'" y="'+r1(H/2)+'" text-anchor="middle">Henüz deneme yok</text>';
   svg+='</svg>';
-  return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas"><button class="dugme" data-sekme="denemeler">Denemelerim →</button></div>'+svg+
+  return svg;
+}
+// Grafik kartı haritayla aynı boydadır; çizim, kartta kalan alanın en/boy oranına göre yeniden
+// kurulur (yazılar bozulmadan alanı doldurur). Ölçü yoksa (test, yazdırma) 480×270 kalır.
+let DENEME_YOL_ZAMAN=null;
+function denemeYolSigdir() {
+  const alan=document.querySelector && document.querySelector('.dn-yol .yg-alan');
+  if(!alan || !alan.clientWidth || !alan.clientHeight)return;
+  const H=Math.round(Math.max(220,Math.min(600,480*alan.clientHeight/alan.clientWidth)));
+  if(Math.abs(H-Number(alan.dataset.h))<4)return;
+  const v=denemeYolVerisi(Number(alan.dataset.si));if(!v)return;
+  alan.dataset.h=String(H);alan.innerHTML=denemeYolSvg(v,H);
+}
+function denemeYolSigdirPlanla() {
+  if(typeof window==='undefined' || !window.requestAnimationFrame)return;
+  window.cancelAnimationFrame(DENEME_YOL_ZAMAN);DENEME_YOL_ZAMAN=window.requestAnimationFrame(denemeYolSigdir);
+}
+if(typeof window!=='undefined' && window.addEventListener)window.addEventListener('resize',denemeYolSigdirPlanla);
+function denemeYolGrafigi(si=EK.ogr) {
+  const v=denemeYolVerisi(si);if(!v)return '';
+  const {bas,cizilen,once,hedef}=v;
+  denemeYolSigdirPlanla();
+  return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas"><button class="dugme" data-sekme="denemeler">Denemelerim →</button></div>'+
+    '<div class="yg-alan" data-si="'+si+'" data-h="270">'+denemeYolSvg(v)+'</div>'+
     '<p class="mini yg-lejant">'+(cizilen.length?cizilen.map(s=>'<span class="yg-'+s.ad+'">'+s.ad+' net</span>').join(' '):'Sonuç ekledikçe noktalar YKS’ye doğru ilerler.')+
     (once?' · '+once+' deneme dönem başından ('+ggyy(bas)+') önce; Denemelerim’de görünür.':'')+'</p>'+
     (ogrenciMi()?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" min="0" max="120" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="Hedef net (0–120)"> net</label>':'')+'</section>';

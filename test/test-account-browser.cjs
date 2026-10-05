@@ -103,7 +103,14 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert((await page.locator('.dn-yol').innerText()).includes('Henüz deneme yok'));assert.equal(await page.locator('.dn-yol .yg-yks').count(),1);
    if(width>=1280){const [harita,grafik,b1,b2]=await Promise.all(['.ana-pano .yks-yolu','.ana-pano .dn-yol','.pano-sol-bas h1','.pano-sag-bas h2'].map(s=>page.locator(s).boundingBox()));
      assert(grafik.x>harita.x+harita.width-1 && Math.abs(grafik.y-harita.y)<2,'the chart sits beside the map');
-     assert(Math.abs((b1.y+b1.height)-(b2.y+b2.height))<4,'"Deneme gelişimi" heading sits on the same row as "Haftalar haritası"');}
+     assert(Math.abs((b1.y+b1.height)-(b2.y+b2.height))<4,'"Deneme gelişimi" heading sits on the same row as "Haftalar haritası"');
+     assert(Math.abs(grafik.width-harita.width)<2 && Math.abs(grafik.height-harita.height)<2,'map and chart cards are the same size');
+     assert.equal(await page.locator('.ana-pano>.dn-yol').evaluate(e=>getComputedStyle(e).borderTopWidth),'3px','the chart card has the map card style');
+     // The drawing is rebuilt to the card's free area, so it fills the card instead of leaving bands.
+     await page.waitForFunction(()=>document.querySelector('.yg-alan').dataset.h!=='270');
+     const [alan,svg]=await Promise.all(['.yg-alan','.yg-alan svg'].map(s=>page.locator(s).boundingBox()));
+     const vb=await page.locator('.yg-alan svg').evaluate(e=>e.viewBox.baseVal.height/e.viewBox.baseVal.width);
+     assert(Math.abs(svg.height-alan.height)<1 && Math.abs(vb-alan.height/alan.width)<0.02,'chart fills its area: '+vb+' vs '+alan.height/alan.width);}
    // Target net: typed by the student, drawn as a dashed line, kept in the notebook.
    await page.locator('#dnHedef').fill('80');await page.locator('#dnHedef').press('Enter');await page.locator('#dnHedef').blur();
    await page.waitForFunction(()=>D.ogr[0].denemeHedef===80);await page.locator('.dn-yol .yg-hedef').waitFor({state:'attached'});

@@ -81,7 +81,10 @@ Students get a top bar (`.ray.ust`). Teachers keep the side menu.
   never clipped.
 
 After login, students land on **Haftalar haritası**. For a YKS student the map has
-the **Deneme gelişimi** chart beside it. Both headings sit on one row,
+the **Deneme gelişimi** chart beside it. The two cards have equal widths and equal
+heights, and the chart card has the map card's look (blue top edge). The week boxes
+are more compact here, and the chart redraws to the card's free area
+(`denemeYolSigdir`), so it fills the card. Both headings sit on one row,
 and the chart has a fixed 0–120 net axis and the student's target line (`denemeYolGrafigi`, see
-docs/mock-exams.md). The chart stays in view while the map scrolls. In a single
-column (≤1100 px) it moves above the map.
+docs/mock-exams.md). In a single column (≤1100 px) the chart moves above the map and
+keeps a 480:300 shape.
