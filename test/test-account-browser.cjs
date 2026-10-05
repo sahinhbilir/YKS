@@ -44,6 +44,13 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert(giris.y+giris.height<=800,'Giriş yap is visible without scrolling');
    assert.equal(await page.evaluate(()=>['#ogrenciGirisAd','#ogrenciGirisNo','#ogrenciBulutGiris','#rolRehber','#testHesapAc'].every(s=>{
      const r=document.querySelector(s).getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest(s);})),true,'no decoration covers a control');
+   assert.equal((await page.locator('#ogrenciGirisDurum').textContent()),'','no hint text until there is something to say');
+   await page.locator('#ogrenciBulutGiris').click();
+   assert.equal(await page.locator('#ogrenciGirisDurum').textContent(),'Ad soyadınızı ve geçerli okul numaranızı girin.');
+   assert.equal(await page.locator('#kurYapistirAc').isVisible(),false,'backup options are folded');
+   await page.locator('summary',{hasText:'Yedekten geri yükle'}).click();await page.locator('#kurYapistirAc').click();
+   assert.equal(await page.locator('#yapistirMetin').isVisible(),true,'paste option opens');
+   await page.locator('summary',{hasText:'Yedekten geri yükle'}).click();
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'start screen overflow');
    await page.screenshot({path:path.join(out,'test-account-start-'+width+'.png')});
    await dugme.click();

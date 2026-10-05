@@ -41,7 +41,11 @@ On white, `--vurgu` and white-on-`--vurgu` both reach about 7:1 contrast.
 3. The student login, open by default.
 4. Under the login button, "Rehber öğretmeniyim" and "Test hesabı aç".
 5. The cap-and-books drawing.
-6. Small links to restore from a backup file.
+6. One folded "Yedekten geri yükle" link. It opens the file picker and the paste
+   option.
+
+The screen carries no hint sentences. The status line under "Giriş yap" stays empty
+until there is an error or progress message.
 
 The corner bands, dot grids and drawing are inline SVG (`GIRIS_SUSLER`,
 `GIRIS_CIZIM`). They are coloured by the tokens, decorative only (`aria-hidden`), and

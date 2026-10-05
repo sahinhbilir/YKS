@@ -91,6 +91,10 @@ async function check(name, fn) {
     assert(kart.indexOf('id="ogrenciBulutGiris"') < kart.indexOf('id="rolRehber"'), 'teacher login comes after Giriş yap');
     assert.match(kart, /<button class="dugme" id="rolRehber">Rehber öğretmeniyim<\/button><button class="dugme" id="testHesapAc">Test hesabı aç<\/button>/);
     assert(h.indexOf('</section>') < h.indexOf('class="giris-cizim"'), 'the drawing comes after the login');
+    // No hint texts: the status line stays empty until there is an error or progress to show.
+    assert.match(kart, /id="ogrenciGirisDurum" role="status" aria-live="polite"><\/span>/);
+    assert(!/class="mini giris-not"|>veya</.test(h), 'no extra small texts');
+    assert.match(h, /<details class="giris-yedek mini"><summary class="baglanti">Yedekten geri yükle<\/summary>/, 'backup restore is one folded link');
     a.run("D.ayar.sinav='2028-06-17'");
     assert.match(a.run('gorunumKurulum()'), /<h1 class="giris-baslik">YKS 2028<\/h1>/, 'the year follows the exam date');
   });
