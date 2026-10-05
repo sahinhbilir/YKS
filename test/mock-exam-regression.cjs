@@ -190,6 +190,33 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert.deepEqual(ids('AYT','kimya'),['p:ayt'],'an answered course outside the field still counts');
   assert.deepEqual(ids('AYT','mat'),['p:ayt','m:ayt-say'],'a student entry uses its own field');
  });
+ await check('home progress chart keeps a fixed axis from term start to YKS',()=>{
+  // The axis is drawn before any exam and never stretches: new exams land at their date.
+  run("D.ayar.donemBasi='2026-08-31';D.ayar.sinav='2027-06-19';D.ogr[0].denemeler=[];D.ogr[0].denemeOkul=[];");
+  const cx=(h,id)=>Number(new RegExp('cx="([\\d.]+)"[^>]*data-dn-yol="'+id+'"').exec(h)?.[1]);
+  let h=run('denemeYolGrafigi(0)');
+  assert(h.includes('Henüz deneme yok'));assert.match(h,/class="yg-yks" x1="464"/,'the YKS line sits at the right edge from the start');
+  const t=(id,tarih,dogru)=>sample({id,tarih,sure:null,puan:null,dersler:[{kod:'turkce',dogru,yanlis:0,soru:40}]});
+  put('ilk',[t('m:t1','2026-09-18',20)]);run('D.ogr[0].denemeler=ilk');h=run('denemeYolGrafigi(0)');
+  const once=cx(h,'m:t1');assert(once>34 && once<80,'mid-September is near the left: '+once);
+  put('iki',[t('m:t1','2026-09-18',20),t('m:t2','2027-03-01',30)]);run('D.ogr[0].denemeler=iki');h=run('denemeYolGrafigi(0)');
+  assert.equal(cx(h,'m:t1'),once,'adding a later exam does not move earlier points');
+  assert(cx(h,'m:t2')>300 && cx(h,'m:t2')<464,'March is toward YKS: '+cx(h,'m:t2'));
+  assert.match(h,/class="yg-yks" x1="464"/);assert(h.includes('class="yg-cizgi yg-TYT"'));
+  // Exams before the term start stay in Denemelerim only; AYT follows the student's field (EA here).
+  put('okul',[t('p:eski','2024-05-27',10),sample({id:'p:ayt',tur:'AYT',oturum:'AYT',tarih:'2026-10-03',sure:null,puan:null,dersler:[{kod:'mat',dogru:10,yanlis:0,soru:30},{kod:'fizik',dogru:9,yanlis:0,soru:14}]})]);
+  put('kendi',[...JSON.parse(JSON.stringify(run('iki'))),sample({id:'m:ayt-say',tur:'AYT',oturum:'AYT',alan:'SAY',tarih:'2026-10-04',sure:null,puan:null,dersler:[{kod:'fizik',dogru:5,yanlis:0,soru:14}]})]);
+  run('D.ogr[0].denemeOkul=okul;D.ogr[0].denemeler=kendi');h=run('denemeYolGrafigi(0)');
+  assert(!h.includes('data-dn-yol="p:eski"'));assert(h.includes('1 deneme dönem başından (31.08.2026) önce'));
+  assert(h.includes('data-dn-yol="p:ayt"') && !h.includes('data-dn-yol="m:ayt-say"'),'AYT uses the student field');
+  assert(h.includes('<title>AYT · Örnek deneme · 2026-10-03 · 10 net</title>'),'EA AYT net counts only EA courses (physics left out)');
+  // A point opens that exam in Denemelerim.
+  run("ciz=()=>{};EK.sekme='harita';denemeYolAc('p:ayt')");
+  assert.deepEqual(JSON.parse(run('JSON.stringify([EK.sekme,EK.denemeTur,EK.denemeSecili])')),['denemeler','AYT','p:ayt']);
+  // The student's weeks map shows the chart beside it for YKS only.
+  run("EK.sekme='harita'");assert.match(run('gorunumHaritasi()'),/class="ana-pano"[\s\S]*class="kart dn-yol"/);
+  run("D.ogr[0].sinavTuru='KPSS'");assert(!run('gorunumHaritasi()').includes('dn-yol'));run('delete D.ogr[0].sinavTuru');
+ });
  await check('stock-style chart: segments vs previous 4 average, dots vs previous exam',()=>{
   const nets=[10,12,11,11,15,9];
   put('records',nets.map((n,i)=>sample({id:'m:s'+i,tarih:'2026-09-'+String(10+i).padStart(2,'0'),sure:100+i*10,dersler:[{kod:'turkce',dogru:n,yanlis:0,soru:40}]})));

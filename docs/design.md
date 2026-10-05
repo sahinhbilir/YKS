@@ -64,3 +64,22 @@ The corner bands, dot grids and drawing are inline SVG (`GIRIS_SUSLER`,
 never placed over a control. The browser test checks that each control is the top
 element at its own centre. While no role is chosen, the menu is empty and hidden,
 and the start screen spans the full width (`.kabuk:has(>.ray:empty)`).
+
+## Student navigation and home
+
+Students get a top bar (`.ray.ust`). Teachers keep the side menu.
+
+- **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Haftalar haritası,
+  Sonuç gir, Karnem and Geçmiş plan kurtar (`PLAN_ALT_SEKMELER`). Hovering opens it
+  with a mouse (`@media (hover:hover)`), a click toggles it on touch screens, and it
+  opens on keyboard focus. Esc or a click elsewhere closes it, and so does choosing
+  a page. The group is highlighted while one of its pages is open.
+- **Denemelerim** follows Planım. **Müfredat** and **Ayarlar** sit on the right,
+  followed by "Kaydet ve çıkış yap" and the save status.
+- On narrow screens the bar wraps rather than scrolling sideways, so the dropdown is
+  never clipped.
+
+After login, students land on **Haftalar haritası**. For a YKS student the map has
+the **Deneme gelişimi** chart beside it (`denemeYolGrafigi`, see
+docs/mock-exams.md). The chart stays in view while the map scrolls. In a single
+column (≤1100 px) it moves above the map.

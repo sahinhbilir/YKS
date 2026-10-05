@@ -85,6 +85,27 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    const bulut=await page.evaluate(()=>window.__bulut);
    assert.equal(JSON.parse(bulut['testDefter/google-1'].veri).ogr[0].ad,'Kuzey');
    assert(bulut['testDefter/google-1/gecmis/2'],'Wednesday history slot');
+   // Student top menu: "Planım" opens the weekly plan; its arrow (hover or click) lists the other plan pages.
+   assert.equal(await page.locator('#ray').getAttribute('class'),'ray ust');
+   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['denemeler','mufredat','ayarlar']);
+   const menu=page.locator('#planMenusu'),ok=page.locator('#ray .menu-ac');
+   assert.equal(await menu.isVisible(),false,'menu folded');
+   await ok.hover();assert.equal(await menu.isVisible(),true,'hovering the arrow opens it');
+   assert.deepEqual(await menu.locator('button').allTextContents(),['Haftalar haritası','Sonuç gir','Karnem','Geçmiş plan kurtar']);
+   await page.mouse.move(width-20,780);assert.equal(await menu.isVisible(),false,'leaving closes it');
+   await ok.click();await page.mouse.move(width-20,780);
+   assert.equal(await menu.isVisible(),true,'a click keeps it open');assert.equal(await ok.getAttribute('aria-expanded'),'true');
+   await page.keyboard.press('Escape');assert.equal(await menu.isVisible(),false,'Esc closes it');
+   await ok.click();await menu.getByRole('button',{name:'Haftalar haritası'}).click();
+   assert.equal(await page.evaluate(()=>EK.sekme),'harita');assert.equal(await menu.isVisible(),false,'choosing closes it');
+   // Home: the weeks map with the mock-exam chart beside it; its axis already reaches YKS.
+   await page.locator('.ana-pano .dn-yol').waitFor();
+   assert((await page.locator('.dn-yol').innerText()).includes('Henüz deneme yok'));assert.equal(await page.locator('.dn-yol .yg-yks').count(),1);
+   if(width>=1280){const [harita,grafik]=await Promise.all(['.ana-pano .yks-yolu','.ana-pano .dn-yol'].map(s=>page.locator(s).boundingBox()));
+     assert(grafik.x>harita.x+harita.width-1 && Math.abs(grafik.y-harita.y)<2,'the chart sits beside the map');}
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'home overflow');
+   await page.screenshot({path:path.join(out,'student-home-'+width+'.png'),fullPage:true});
+   await page.locator('#ray [data-sekme="plan"]').click();assert.equal(await page.evaluate(()=>EK.sekme),'plan','Planım opens the weekly plan');
    await page.locator('[data-sekme="ayarlar"]').first().click();
    await page.getByRole('heading',{name:'Test hesabın'}).waitFor();
    assert((await page.locator('#ana').innerText()).includes('tester@example.test'));
