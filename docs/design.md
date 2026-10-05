@@ -50,7 +50,9 @@ read the labels), and the two secondary buttons sized to their text on one row.
 
 The whole column is centred vertically. The gaps between headline, login, drawing and
 link are flexible spacers (`.giris-ara`). They grow only into free space, and only up
-to a cap (30→90, 34→94 and 22→52 px), so a tall screen opens the layout up a little.
+to a cap (30→130, 30→130 and 22→52 px), so a tall screen opens the layout up a little.
+The gaps above and below the login card are equal. The drawing's viewBox starts at
+the tip of the cap, so the visible gap is the spacer itself.
 When the column is shorter than the screen, the space above and below is equal. When it is taller (short laptops, phones), it scrolls from a
 small top margin that still clears the corner bands.
 
