@@ -42,6 +42,10 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert(baslik.y+baslik.height<=girisKart.y && girisKart.y+girisKart.height<=cizim.y,'login sits between the headline and the drawing');
    for(const b of [rehber,test])assert(kesisir(b,girisKart) && b.y>=giris.y+giris.height,'teacher and test account sit under Giriş yap');
    assert(giris.y+giris.height<=800,'Giriş yap is visible without scrolling');
+   assert(girisKart.height<=300 && girisKart.width<=362,'compact login card: '+Math.round(girisKart.width)+'×'+Math.round(girisKart.height));
+   assert(Math.abs(rehber.y-test.y)<1,'teacher and test account share one row');
+   assert.equal(await page.getByLabel('Ad soyad').getAttribute('id'),'ogrenciGirisAd','labels stay for screen readers');
+   assert.equal(await page.getByLabel('Okul numarası').getAttribute('id'),'ogrenciGirisNo');
    assert.equal(await page.evaluate(()=>['#ogrenciGirisAd','#ogrenciGirisNo','#ogrenciBulutGiris','#rolRehber','#testHesapAc'].every(s=>{
      const r=document.querySelector(s).getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest(s);})),true,'no decoration covers a control');
    assert.equal((await page.locator('#ogrenciGirisDurum').textContent()),'','no hint text until there is something to say');
