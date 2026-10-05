@@ -44,6 +44,10 @@ On white, `--vurgu` and white-on-`--vurgu` both reach about 7:1 contrast.
 6. One folded "Yedekten geri yükle" link. It opens the file picker and the paste
    option.
 
+The login card is compact: 360 px wide, two inputs whose labels are visually hidden
+(the placeholders "Ad soyad" and "Okul numarası" show instead; screen readers still
+read the labels), and the two secondary buttons sized to their text on one row.
+
 The screen carries no hint sentences. The status line under "Giriş yap" stays empty
 until there is an error or progress message.
 
