@@ -11227,7 +11227,9 @@ function denemeGrafik(liste) {
 // (EK.denemeYol, EK.denemeYolBrans = "TYT:mat"). Eksenler baştan sabittir: x dönem başından
 // YKS tarihine, y 0’dan seçimin soru sayısına (TYT 120, AYT 80, branşta o dersin soruları).
 // Her yeni deneme kendi tarihine düşer, çizgi zamanla YKS’ye doğru uzar. Branşta TYT/AYT
-// denemelerinin o dersteki bölümleri içi boş noktadır. Hedef net her seçim için ayrıdır
+// denemelerinin o dersteki bölümleri içi boş noktadır. Dönem başından önceki son deneme (ör. bir
+// hazırbulunuşluk) grafiğin ilk gününde, gerçek tarihiyle etiketli başlangıç noktasıdır; daha
+// eskileri yalnızca Denemelerim’dedir. Hedef net her seçim için ayrıdır
 // (o.denemeHedef = {TYT, AYT, "TYT:mat", …}); eski tek sayı TYT hedefidir.
 const DENEME_AY = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 const DENEME_YOL_UST = {TYT:120,AYT:80};
@@ -11263,10 +11265,12 @@ function denemeYolVerisi(si) {
   else if(secim.tur==='AYT')liste=tum.filter(r=>r.tur==='AYT' && (r.id.startsWith('p:') || r.alan===alan));
   else liste=[...tum.filter(r=>r.tur==='BRANS' && r.oturum===secim.oturum && r.brans===secim.kod),...denemeGenelBolumleri(tum,secim.oturum,secim.kod)];
   let noktalar=liste.map(r=>({r,g:gunNo(r.tarih),v:denemeToplam(r,alan)}));
-  const once=noktalar.filter(n=>n.g<bas).length;
-  noktalar=noktalar.filter(n=>n.g>=bas && n.g<=son).sort((a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id));
+  const sira=(a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id),eskiler=noktalar.filter(n=>n.g<bas).sort(sira),baslangic=eskiler.at(-1);
+  noktalar=noktalar.filter(n=>n.g>=bas && n.g<=son).sort(sira);
+  if(baslangic)noktalar.unshift({...baslangic,g:bas,erken:true});
+  const once=Math.max(0,eskiler.length-1);
   const hedef=denemeHedefOku(o,secim.anahtar),degerler=noktalar.map(n=>n.v);
-  return {o,bas,son,secim,noktalar,once,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
+  return {o,bas,son,secim,noktalar,once,baslangic:baslangic?.r,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
 }
 // W×H, kartta kalan alanın kendisidir (ölçek s ile); yazılar böylece her ekranda aynı boyda
 // kalır, büyük ekranda biraz irileşir. Ölçü yoksa (test, yazdırma) 480×270 çizilir.
@@ -11287,8 +11291,8 @@ function denemeYolSvg(v,H=270,W=480) {
     (hedef===null?'':'<line class="yg-hedef" x1="'+L+'" x2="'+r1(x(son))+'" y1="'+r1(y(hedef))+'" y2="'+r1(y(hedef))+'"/><text class="yg-hedef-yazi" x="'+(L+6)+'" y="'+r1(y(hedef)-5)+'">Hedef '+denemeSayi(hedef)+'</text>');
   const sinif='yg-'+(secim.tur==='BRANS'?'BRANS':secim.tur);
   if(noktalar.length>1)svg+='<polyline class="yg-cizgi '+sinif+'" points="'+noktalar.map(n=>r1(x(n.g))+','+r1(y(n.v))).join(' ')+'"/>';
-  svg+=noktalar.map(n=>{const etiket=secim.ad+' · '+n.r.ad+(n.r.genel?' ('+n.r.genel+' denemesinden)':'')+' · '+n.r.tarih+' · '+denemeSayi(n.v)+' net';
-    return '<circle class="yg-nokta '+sinif+(n.r.genel?' genel':'')+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+'. Denemelerim’de aç')+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
+  svg+=noktalar.map(n=>{const etiket=secim.ad+' · '+n.r.ad+(n.r.genel?' ('+n.r.genel+' denemesinden)':'')+' · '+n.r.tarih+(n.erken?' (dönem başından önce; grafiğin başında)':'')+' · '+denemeSayi(n.v)+' net';
+    return '<circle class="yg-nokta '+sinif+(n.r.genel?' genel':'')+(n.erken?' erken':'')+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+'. Denemelerim’de aç')+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
   if(!noktalar.length)svg+='<text class="yg-bos" x="'+r1((L+W-R)/2)+'" y="'+r1(H/2)+'" text-anchor="middle">Henüz '+kacis(secim.ad)+' denemesi yok</text>';
   return svg+'</svg>';
 }
@@ -11309,7 +11313,7 @@ function denemeYolSigdirPlanla() {
 if(typeof window!=='undefined' && window.addEventListener)window.addEventListener('resize',denemeYolSigdirPlanla);
 function denemeYolGrafigi(si=EK.ogr) {
   const v=denemeYolVerisi(si);if(!v)return '';
-  const {bas,secim,noktalar,once,hedef}=v,hedefUst=secim.ust;
+  const {secim,noktalar,once,baslangic,hedef}=v,hedefUst=secim.ust;
   denemeYolSigdirPlanla();
   const secici='<div class="yg-secim" role="group" aria-label="Grafikte göster">'+[['TYT','TYT'],['AYT','AYT'],['BRANS','Branş']].map(([k,ad])=>
     '<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-yol-sec="'+k+'">'+ad+'</button>').join('')+'</div>'+
@@ -11321,7 +11325,8 @@ function denemeYolGrafigi(si=EK.ogr) {
       // Branşta dolu nokta branş denemesi, içi boş nokta TYT/AYT denemesindeki o dersin bölümüdür.
       '<b>'+kacis(secim.ad)+' net:</b> '+[noktalar.some(n=>!n.r.genel)?'<span class="yg-BRANS">branş denemesi</span>':'',
         noktalar.some(n=>n.r.genel)?'<span class="yg-genel">'+secim.oturum+' denemesinden</span>':''].filter(Boolean).join(' '))+
-    (once?' · '+once+' deneme dönem başından ('+ggyy(bas)+') önce; Denemelerim’de görünür.':'')+'</p>'+
+    (baslangic?' · <b>'+kacis(baslangic.ad)+'</b> ('+ggyy(gunNo(baslangic.tarih))+') dönem başından önce; grafiğin başında gösterilir.':'')+
+    (once?' '+once+' daha eski deneme Denemelerim’de.':'')+'</p>'+
     (ogrenciMi()?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" data-anahtar="'+secim.anahtar+'" min="0" max="'+hedefUst+'" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="'+kacis(secim.ad)+' hedef net (0–'+hedefUst+')"> net <small>'+kacis(secim.ad)+'</small></label>':'')+'</section>';
 }
 function denemeFormHtml() {
