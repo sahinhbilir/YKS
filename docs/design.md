@@ -48,6 +48,10 @@ The login card is compact: 360 px wide, two inputs whose labels are visually hid
 (the placeholders "Ad soyad" and "Okul numarası" show instead; screen readers still
 read the labels), and the two secondary buttons sized to their text on one row.
 
+The whole column is centred vertically. When it is shorter than the screen, the space
+above and below is equal. When it is taller (short laptops, phones), it scrolls from a
+small top margin that still clears the corner bands.
+
 The screen carries no hint sentences. The status line under "Giriş yap" stays empty
 until there is an error or progress message.
 

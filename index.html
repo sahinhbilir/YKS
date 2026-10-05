@@ -305,9 +305,10 @@ tr.pasif td:first-child{opacity:1}
 .kabuk:has(>.ray:empty){grid-template-columns:1fr}
 .kabuk:has(>.ray:empty)>.ray{display:none}
 .kabuk:has(>.ray:empty)>main{max-width:none;padding:0}
-.giris{position:relative;overflow:hidden;min-height:100vh;background:var(--kagit);
+/* Dikeyde ortalı: içerik ekrandan kısaysa boşluk üstte ve altta eşit; uzunsa normal akar. */
+.giris{position:relative;overflow:hidden;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;background:var(--kagit);
   background-image:linear-gradient(135deg,transparent 0 63%,var(--vurgu-yumusak) 63% 73%,transparent 73%)}
-.giris-ic{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:clamp(88px,13vw,124px) 16px 170px;
+.giris-ic{position:relative;z-index:1;width:100%;max-width:640px;margin:0 auto;padding:clamp(56px,8vh,88px) 16px;
   display:flex;flex-direction:column;align-items:center;text-align:center}
 .giris-baslik{font-size:clamp(54px,12vw,96px);font-weight:800;line-height:1;letter-spacing:-.02em;white-space:nowrap}
 .giris-alt{font-family:var(--baslik-font);font-size:clamp(19px,4.6vw,28px);font-weight:600;color:var(--marka-koyu);margin:14px 0 30px}
