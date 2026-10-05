@@ -48,6 +48,12 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal(await page.getByLabel('Okul numarası').getAttribute('id'),'ogrenciGirisNo');
    assert.equal(await page.evaluate(()=>['#ogrenciGirisAd','#ogrenciGirisNo','#ogrenciBulutGiris','#rolRehber','#testHesapAc'].every(s=>{
      const r=document.querySelector(s).getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest(s);})),true,'no decoration covers a control');
+   // On a tall screen the whole start screen is centred vertically.
+   await page.setViewportSize({width:1920,height:1080});
+   const bosluk=await page.evaluate(()=>({ust:document.querySelector('.giris-baslik').getBoundingClientRect().top,
+     alt:innerHeight-document.querySelector('.giris-yedek').getBoundingClientRect().bottom,kaydir:document.documentElement.scrollHeight>innerHeight}));
+   assert(!bosluk.kaydir && Math.abs(bosluk.ust-bosluk.alt)<=2 && bosluk.ust>100,'centred vertically: '+JSON.stringify(bosluk));
+   await page.setViewportSize({width,height:800});
    assert.equal((await page.locator('#ogrenciGirisDurum').textContent()),'','no hint text until there is something to say');
    await page.locator('#ogrenciBulutGiris').click();
    assert.equal(await page.locator('#ogrenciGirisDurum').textContent(),'Ad soyadınızı ve geçerli okul numaranızı girin.');
