@@ -38,15 +38,25 @@ On white, `--vurgu` and white-on-`--vurgu` both reach about 7:1 contrast.
 
 1. **YKS {year}**. The year comes from the YKS date in the settings.
 2. "Hedefine bir adım daha yaklaş".
-3. The student login, open by default.
-4. Under the login button, "Rehber öğretmeniyim" and "Test hesabı aç".
+3. The student login, open by default. One form serves both kinds of student: a
+   Kaydol account (user name + password) and a school student (name + school
+   number). See docs/kaydol.md.
+4. Under the login button, "Rehber öğretmeniyim" on its own row, then "Kaydol" and
+   "Test hesabı aç" side by side. The three do not fit one 340 px row.
 5. The cap-and-books drawing.
 6. One folded "Yedekten geri yükle" link. It opens the file picker and the paste
    option.
 
-The login card is compact: 340 px wide, two inputs whose labels are visually hidden
-(the placeholders "Ad soyad" and "Okul numarası" show instead; screen readers still
-read the labels), and the two secondary buttons sized to their text on one row.
+The login card is compact: 340 px wide, with two inputs whose labels are visually
+hidden. The placeholders show instead: "Kullanıcı adı - Ad soyad" and "Şifre - Okul
+numarası". Screen readers still read the labels.
+
+- The second input is a password field (no number spinner). An eye button inside it
+  on the right shows or hides the text (`sifreKutusu`, `data-sifre-goster`, with
+  `aria-pressed` and "Şifreyi göster/gizle"). The browser's own reveal button is hidden.
+- Enter in either input submits.
+- "Kaydol" swaps the card for the sign-up card (`kaydolKarti`): user name, password
+  (same eye button) and field, then "Kaydol ve başla" and "Girişe dön".
 
 The whole column is centred vertically. The gaps between headline, login, drawing and
 link are flexible spacers (`.giris-ara`). They grow only into free space, and only up

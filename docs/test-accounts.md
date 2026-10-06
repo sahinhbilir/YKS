@@ -1,7 +1,8 @@
 # Test accounts ("Test hesabı aç")
 
 Private-alpha testers can use the app without a teacher. On the start screen,
-**Test hesabı aç** sits under the student login, next to "Rehber öğretmeniyim". It
+**Test hesabı aç** sits under the student login, next to "Kaydol" (docs/kaydol.md: the
+same notebook storage with a user name and password instead of Google). It
 opens a Google sign-in window. The same button signs a returning tester in on
 another device.
 
@@ -84,8 +85,8 @@ checks the cloud copy:
 ## Security rules
 
 `firestore.rules` allows `testDefter/{uid}` and its `gecmis` slots only to the
-signed-in owner with the `google.com` provider. Anonymous and name+number
-(`password`) sessions are refused, and so are other users, including allowlisted
+signed-in owner with the `google.com` provider, or with a Kaydol `password` account
+(docs/kaydol.md). Anonymous and school name+number (`password`) sessions are refused, and so are other users, including allowlisted
 teachers. Only the owner may delete (used by the reset); collection listing is
 closed. Documents must match the
 field list and the 900 000-character limit. History slot IDs are limited to

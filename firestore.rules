@@ -75,14 +75,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Öğretmeni olmadan "Test hesabı aç" ile Google hesabıyla gelen öğrencinin kendi
-    // defteri. Yalnızca sahibi okur ve yazar; allowlist gerekmez. Anonim ve ad+numara
-    // (password) oturumları bu yolu kullanamaz. Listeleme kapalıdır; yalnızca sahibi
-    // "Test hesabımı sıfırla" ile kendi defterini ve geçmişini silebilir.
+    // Öğretmeni olmadan "Test hesabı aç" (Google) ya da "Kaydol" (kullanıcı adı + şifre) ile
+    // gelen öğrencinin kendi defteri. Yalnızca sahibi okur ve yazar; allowlist gerekmez. Anonim
+    // ve okul öğrencisinin ad+numara oturumları bu yolu kullanamaz. Listeleme kapalıdır; yalnızca
+    // sahibi kendi defterini ve geçmişini silebilir (uygulama bunu yalnızca test hesabına sunar).
     match /testDefter/{uid} {
+      // Sahibi: Google ile "Test hesabı aç" ya da kullanıcı adı + şifreyle "Kaydol" hesabı.
+      // Kaydol hesabının e-postası yalnızca kullanıcı adının özetidir (uye-<40 hex>@uye.ykstekrar.app);
+      // okul öğrencisinin ad+numara hesabı (@student.ykstekrar.app) bu yolu kullanamaz.
       function sahibi() {
         return request.auth != null && request.auth.uid == uid
-          && request.auth.token.firebase.sign_in_provider == 'google.com';
+          && (request.auth.token.firebase.sign_in_provider == 'google.com'
+            || (request.auth.token.firebase.sign_in_provider == 'password'
+              && request.auth.token.email is string
+              && request.auth.token.email.matches('uye-[0-9a-f]{40}@uye[.]ykstekrar[.]app')));
       }
       function defterGecerli(ekAlanlar) {
         return request.resource.data.keys().hasOnly(['veri','ts','surum','boyut'].concat(ekAlanlar))
