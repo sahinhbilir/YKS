@@ -26,7 +26,7 @@ function app() {
   const run = code => vm.runInContext(code, sandbox);
   const tikla = async id => { const t = el({ id }); t.closest = q => q === '#' + id ? t : null;
     for (const fn of listeners.click || []) await fn({ target: t }); await run('KAYIT_ZINCIRI'); };
-  return { run, events, tikla, nodes, secimler, el };
+  return { run, events, tikla, nodes, secimler, el, listeners };
 }
 // Grade 12 SAY in class 201 (built-in timetable) or grade 11 in a personal class.
 function ogrenci(a, { sinif = 12, tarih = '2026-09-23', dakika = { hi: 200, hs: 290, deneme: false } } = {}) {
@@ -299,6 +299,32 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
     a.run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
     assert.throws(() => a.run("(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].okul='hayır';yedekDogrula(y);})()"), /okul bilgisi/);
     assert.match(html, /'hafizaSeviyesi','aytOncelik','okul','sinavTuru'(,'\w+')*\]\.forEach/, 'okul travels with the work snapshot');
+  });
+
+  await check('lesson-only-weeks-are-grey-on-the-map-open-sonuc-gir-and-turn-green', async a => {
+    await okulsuz(a, 'SAY');
+    kur(a, {}, '2027-04-23');
+    a.run('ciz()');                                                  // this week is issued: konu anlatımı only
+    const hb = a.run('buHafta(0)');
+    a.run("D.ayar.testTarih='2026-10-07';ciz();");                    // two weeks later, nothing was marked
+    const kutu = () => (a.run('ogrenciYksYolu(true)').match(new RegExp('<button type="button" data-ogr-hafta="' + hb + '"[^>]*>[\\s\\S]*?</button>')) || [''])[0];
+    assert.match(kutu(), /data-ogr-sonuc="1" class="yol-hafta gri/, 'a past lesson-only week is grey');
+    assert.match(kutu(), /<small>0\/\d+ anlatım<\/small>/);
+    assert.match(kutu(), /aria-label="1\. hafta · [^"]*0\/\d+ konu anlatımı tamamlandı"/);
+    const t = a.el({ dataset: { ogrHafta: String(hb), ogrSonuc: '1' } }); t.closest = q => q === '[data-ogr-hafta]' ? t : null;
+    for (const fn of a.listeners.click || []) await fn({ target: t });
+    assert.equal(a.run('EK.sekme'), 'giris', 'the grey week opens Sonuç gir, not the weekly plan');
+    assert.equal(a.run('EK.hafta'), hb);
+    const giris = a.run('gorunumGiris()');
+    assert.match(giris, /sonuçlarını girmeyi unuttun/);
+    assert.doesNotMatch(giris, /Yapmadığın testleri/, 'no test hint for a week without tests');
+    assert.match(giris, /class="gAnlatim"/);
+    // Marking one lesson turns the week green.
+    const [ki, gun] = JSON.parse(a.run(`(()=>{const p=planHesapla(0,${hb});const g=p.gunler.findIndex(l=>l.some(x=>x.anlatim));
+      return JSON.stringify([p.gunler[g].find(x=>x.anlatim).ki,${hb}+g]);})()`));
+    a.run(`ipucunuKapat();anlatimTamam(0,${ki},${gun})`);
+    assert.match(kutu(), /data-ogr-hafta="\d+" class="yol-hafta yesil acik[ "]/);
+    assert.match(kutu(), /<small>1\/\d+ anlatım<\/small>/);
   });
 
   await check('without-a-personal-plan-nothing-changes', async a => {

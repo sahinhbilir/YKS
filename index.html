@@ -2020,6 +2020,21 @@ function testiYapilmadiIsaretle(si, ki, gun) {
 const haftaYapilanTestler = si => new Set((D.log || []).filter(l => l[1] === si).map(l => l[2] + ':' + l[0]));
 // Haftada verilen testlerden kaçı gerçekten çözüldü. "Bu konu daha anlatılmadı" öğrencinin
 // elinde olmadığı için sayılmaz; "Yapmadım" ve boş kalan test çözülmemiş sayılır.
+// Konu anlatımı satırı Sonuç gir'de "anlatıldı / izledi" diye işaretlendi mi (ya da kurtarmada tamamlandı mı).
+const anlatimTamamMi = (p, ki, gun) => p.elle?.anlatim?.[ki]?.tamamGun === gun ||
+  (p.elle?.kurtarma?.satirlar || []).some(r => r.tur === 'anlatim' && r.ki === ki && r.gun === gun && r.durum === 'tamamlandi');
+// Yalnızca konu anlatımından oluşan hafta (ör. Kaydol'un ilk haftaları) haritada bu sayıyla renk alır.
+function haftaAnlatimOzeti(si, hb, sonGun) {
+  const p = planHesapla(si, hb), oz = { toplam: 0, tamam: 0 };
+  if (p.kayitYok) return oz;
+  (p.gunler || []).forEach((liste, g) => (liste || []).forEach(x => {
+    const gun = hb + g;
+    if (!x.anlatim || gun > sonGun) return;
+    oz.toplam++;
+    if (anlatimTamamMi(p, x.ki, gun)) oz.tamam++;
+  }));
+  return oz;
+}
 function haftaTestOzeti(si, hb, sonGun, yapilan) {
   const p = planHesapla(si, hb), oz = { toplam: 0, yapilan: 0, yapilmadi: 0 };
   if (p.kayitYok) return oz;
@@ -3021,13 +3036,14 @@ function sonucIpucuHtml(hb) {
   const ip = EK.sonucIpucu;
   if (!ip || ip.hb !== hb || !ogrenciMi()) return '';
   const indir = ip.neden === 'indir';
+  const testli = (planHesapla(EK.ogr, hb).gunler || []).some(l => (l || []).some(x => !x.serbest && !x.anlatim));
   return '<div class="ortu" id="sonucIpucu"><div class="pencere kurtar-ipucu" role="dialog" aria-modal="true" aria-labelledby="sonucIpucuBaslik">' +
     '<div class="p-ust"><b id="sonucIpucuBaslik">' + (indir ? 'Önce ' + ggyy(hb) + ' haftasının sonuçları' : ggyy(hb) + ' haftasının sonuçları girilmedi') + '</b>' +
     '<button type="button" class="kapat" id="sonucIpucuKapat" aria-label="Kapat">×</button></div>' +
     '<div class="kurtar-ipucu-govde"><p>' + (indir
       ? 'Planını indirmeden önce bu haftanın sonuçlarını girmen gerekiyor. Sonuçlarını buradan gir; sonra planını indirebilirsin.'
       : 'Bu haftanın sonuçlarını girmeyi unuttun. Sonuçlarını buradan girebilirsin.') + '</p>' +
-    '<p class="mini">Yapmadığın testleri “Yapmadım” diye işaretleyebilirsin; onlar sonraki haftaya aktarılır.</p>' +
+    (testli ? '<p class="mini">Yapmadığın testleri “Yapmadım” diye işaretleyebilirsin; onlar sonraki haftaya aktarılır.</p>' : '') +
     '<div class="arac"><button type="button" class="dugme birincil" id="sonucIpucuTamam">Anladım</button></div></div></div></div>';
 }
 function gorunumPlanKurtarma() {
@@ -4213,14 +4229,19 @@ function ogrenciYksYolu(detay) {
   for (const gun of haritaHaftalari(si)) {
     no++; const adet = sayilar[gun] || 0;
     const simdi = gun === hb, son = planHaftaSonu(si, gun) >= sinav, kayit = !!elleAl(si, gun).sabit;
-    const oz = gun <= hb ? haftaTestOzeti(si, gun, simdi ? bugun : planHaftaSonu(si, gun), yapilan) : null;
+    const sonGun = simdi ? bugun : planHaftaSonu(si, gun);
+    const oz = gun <= hb ? haftaTestOzeti(si, gun, sonGun, yapilan) : null;
+    // Testsiz hafta (yalnızca konu anlatımı): işaretlenen anlatımlar testlerin yerini tutar.
+    const an = oz && !oz.toplam && !adet ? haftaAnlatimOzeti(si, gun, sonGun) : null;
     let durum = gun < hb ? 'gecmis' : simdi ? 'simdi' : 'gelecek', oran = null;
     if (oz && oz.toplam) { if (oz.yapilan) { durum = 'yesil'; oran = oz.yapilan / oz.toplam; } else if (!simdi) durum = 'gri'; }
     else if (oz && adet) { durum = 'yesil'; oran = .5; }
+    else if (an && an.toplam) { if (an.tamam) { durum = 'yesil'; oran = an.tamam / an.toplam; } else if (!simdi) durum = 'gri'; }
     else if (gun < hb && !kayit && gun >= katilim) durum = 'kirmizi';
-    const testMetni = oz && oz.toplam ? oz.yapilan + '/' + oz.toplam + ' test yapıldı' + (oz.yapilmadi ? ', ' + oz.yapilmadi + ' yapılmadı' : '') : '';
+    const testMetni = oz && oz.toplam ? oz.yapilan + '/' + oz.toplam + ' test yapıldı' + (oz.yapilmadi ? ', ' + oz.yapilmadi + ' yapılmadı' : '')
+      : an && an.toplam ? an.tamam + '/' + an.toplam + ' konu anlatımı tamamlandı' : '';
     const metin = no + '. hafta · ' + ggyy(gun) + ' · ' + (simdi ? 'bu hafta · ' : '') +
-      (testMetni || (adet ? adet + ' sonuç kaydı' : gun < hb ? (gun < katilim ? 'katılmadan önce' : 'plan kaydı yok, dokunarak planını kurtarabilirsin') : 'önizleme')) + (son ? ' · YKS haftası' : '');
+      (testMetni || (adet ? adet + ' sonuç kaydı' : gun < hb ? (gun < katilim ? 'katılmadan önce' : kayit ? 'plan kayıtlı' : 'plan kaydı yok, dokunarak planını kurtarabilirsin') : 'önizleme')) + (son ? ' · YKS haftası' : '');
     // Her hafta açılabilir: geçmiş ve bu hafta kayıtlı planı, gelecek haftalar önizlemeyi gösterir.
     const acilir = detay;
     h += '<' + (acilir ? 'button type="button" data-ogr-hafta="' + gun + '"' + (durum === 'kirmizi' ? ' data-ogr-kurtar="1"' : durum === 'gri' ? ' data-ogr-sonuc="1"' : '') : 'span') +
@@ -4228,7 +4249,8 @@ function ogrenciYksYolu(detay) {
       (gun === secili ? ' secili' : '') + '"' + (oran !== null ? ' style="--oran:' + oran.toFixed(2) + '"' : '') +
       ' title="' + kacis(metin) + '" aria-label="' + kacis(metin) + '"' + (simdi ? ' aria-current="date"' : '') + '>' +
       '<b>' + (son ? '★' : no) + '</b>' + (detay ? '<span>' + gg(gun) + '</span><small>' +
-      (simdi ? 'Bu hafta' + (oz && oz.toplam ? ' · ' + oz.yapilan + '/' + oz.toplam : '') : oz && oz.toplam ? oz.yapilan + '/' + oz.toplam + ' test' :
+      (simdi ? 'Bu hafta' + (oz && oz.toplam ? ' · ' + oz.yapilan + '/' + oz.toplam : an && an.toplam ? ' · ' + an.tamam + '/' + an.toplam : '') :
+        oz && oz.toplam ? oz.yapilan + '/' + oz.toplam + ' test' : an && an.toplam ? an.tamam + '/' + an.toplam + ' anlatım' :
         adet ? adet + ' sonuç' : kayit ? 'Plan kayıtlı' : gun < hb ? (gun < katilim ? 'Katılmadan önce' : 'Kayıt yok') : son ? 'YKS' : 'Önizleme') + '</small>' : '') +
       '</' + (acilir ? 'button' : 'span') + '>';
   }
@@ -4625,7 +4647,7 @@ function gorunumGiris() {
       const gun = hb + g;
       if (x.anlatim) {
         const anlatimGelecek = gun > bugunNo();
-        const anlatimBitti=p.elle?.anlatim?.[x.ki]?.tamamGun===gun || (p.elle?.kurtarma?.satirlar||[]).some(r=>r.tur==='anlatim'&&r.ki===x.ki&&r.gun===gun&&r.durum==='tamamlandi');
+        const anlatimBitti = anlatimTamamMi(p, x.ki, gun);
         h += '<div class="giris-satir"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span><span>' + konuHtml(x.ad) + ' <span class="mini">· konu anlatımı' + (x.kaynak ? ' (' + kacis(x.kaynak) + ')' : '') + '</span></span><label class="mini" style="grid-column:span 2;display:flex;align-items:center;gap:7px"><input type="checkbox" class="gAnlatim" data-ki="' + x.ki + '" data-gun="' + gun + '"' + (anlatimBitti?' checked disabled':anlatimGelecek ? ' disabled' : '') + '>' + (anlatimBitti?'Anlatım tamamlandı':anlatimGelecek ? 'bu gün henüz gelmedi' : 'anlatıldı / izledi — ilk test ' + D.ayar.ilk + ' gün sonra gelsin') + '</label></div>';
         return;
       }
