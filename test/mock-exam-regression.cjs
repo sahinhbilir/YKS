@@ -140,7 +140,7 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   let page=run('gorunumDenemeler()');
   assert.equal((page.match(/class="dn-dot[ "]/g)||[]).length,3,'branch exam and both TYT sections');
   assert.equal((page.match(/class="dn-dot \w+ genel"/g)||[]).length,2,'sections use the hollow marker');
-  assert(page.includes('27-YKS-1201 · TYT denemesinden'));assert(page.includes('İçi boş nokta: TYT/AYT denemesindeki bu dersin bölümü'));
+  assert(page.includes('27-YKS-1201 · TYT denemesinden'));assert(!page.includes('İçi boş nokta'),'the hollow marker needs no explanation');
   assert(page.includes('Deneme (TYT/AYT’den 2)'));assert(page.includes('<span class="dn-genel-rozet">TYT denemesinden</span>'));
   assert.match(page,/id="dnGenel" checked/);
   assert.equal(run('JSON.stringify(D)'),once,'drawing adds nothing to the notebook');assert(!once.includes('"g:'));
@@ -152,7 +152,7 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   run('EK.denemeGenel=false');page=run('gorunumDenemeler()');
   assert.equal((page.match(/class="dn-dot[ "]/g)||[]).length,1);assert(!page.includes('genel"'));assert.match(page,/id="dnGenel">/);
   run("EK.denemeGenel=true;EK.denemeMetrik='sure'");page=run('gorunumDenemeler()');
-  assert(!/class="dn-dot \w+ genel"/.test(page));assert(page.includes('yalnızca Net grafiğinde gösterilir'));
+  assert(!/class="dn-dot \w+ genel"/.test(page));
   // TYT tab: each course tile opens that course's chart with the section selected.
   run("EK.denemeTur='TYT';EK.denemeMetrik='net'");
   assert(run("denemeDetay(denemeBul('p:okul-tyt'))").includes('data-dn-brans-git="TYT:turkce" data-dn-kaynak-id="p:okul-tyt"'));
@@ -213,7 +213,7 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   run('D.ogr[0].denemeOkul=okul;D.ogr[0].denemeler=kendi');h=run('denemeYolGrafigi(0)');
   assert.equal(cx(h,'p:eski'),34,'the pre-term exam sits at the start of the axis');assert(!h.includes('data-dn-yol="p:eski0"'),'only the latest pre-term exam');
   assert.match(h,/class="yg-nokta yg-TYT erken"[^>]*data-dn-yol="p:eski"/);assert(h.includes('<title>TYT · Örnek deneme · 2024-05-27 (dönem başından önce; grafiğin başında) · 10 net</title>'));
-  assert(h.includes('<b>Örnek deneme</b> (27.05.2024) dönem başından önce; grafiğin başında gösterilir. 1 daha eski deneme Denemelerim’de.'));
+  assert(!h.includes('yg-lejant') && !h.includes('grafiğin başında gösterilir'),'no explanatory note: the point title carries the real date');
   assert.match(h,/class="yg-cizgi yg-TYT" points="34,/,'the line starts from it');
   assert(!h.includes('data-dn-yol="p:ayt"'),'the TYT choice shows TYT only');
   run("EK.denemeYol='AYT'");h=run('denemeYolGrafigi(0)');

@@ -543,7 +543,9 @@ test('student-sync-is-automatic-without-manual-upload-button', async () => {
   resetOgr(sandbox, [student({ syncId: 's1' })], 'ogrenci');
   sandbox.window.bulut = { yapilandirilmis: true };
   const withSyncId = run('gorunumAyarlar()');
-  assert(!/id="bulutGonder"/.test(withSyncId) && /otomatik eşitlenir/.test(withSyncId), 'Student sees automatic sync status instead of a manual upload step');
+  assert(!/id="bulutGonder"/.test(withSyncId), 'No manual upload step for a linked student');
+  run("EK.ogrSyncDurum='Sunucuya kaydedildi · 10:00'");
+  assert(/role="status">Sunucuya kaydedildi · 10:00</.test(run('gorunumAyarlar()')), 'Student sees the automatic sync status');
 });
 
 // ================================================================== (t) lazy ogrenciBulutId persists before any Firestore write

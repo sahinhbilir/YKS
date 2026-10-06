@@ -69,6 +69,24 @@ small top margin that still clears the corner bands.
 The screen carries no hint sentences. The status line under "Giriş yap" stays empty
 until there is an error or progress message.
 
+## No explanatory text
+
+The design explains itself: no page subtitles that describe the page, no "how it
+works" paragraphs, no colour legends and no hints under fields. What stays:
+
+- data (counts, dates, names, totals), labels and headings;
+- status and error messages, and a short line where a choice has a consequence (for
+  example, "Buluttakini aç" discards unsaved changes on this device);
+- one-line steps a feature cannot be used without (the AI timetable and paper-plan
+  import);
+- warnings in the confirmation dialogs of destructive actions;
+- the opt-in "Nasıl seçilir?" help in Sonuç gir.
+
+Background that some people still need moves into a hover title instead of text on
+the page. Examples: the teacher settings descriptions (the dotted-underlined setting
+name), the weekly minute cap's PISA source, and "Kayıt ulaşmadı" in the activity
+list.
+
 The corner bands, dot grids and drawing are inline SVG (`GIRIS_SUSLER`,
 `GIRIS_CIZIM`). They are coloured by the tokens, decorative only (`aria-hidden`), and
 never placed over a control. The browser test checks that each control is the top

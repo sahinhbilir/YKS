@@ -202,7 +202,7 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
   await check('settings-card-starts-and-reports-the-plan', async a => {
     ogrenci(a); a.run('ciz()');
     let h = a.run("EK.sekme='ayarlar';gorunumAyarlar()");
-    assert.match(h, /Kendi TYT planın · isteğe bağlı/); assert.match(h, /id="kpBaslat"/);
+    assert.match(h, /<h2>Kendi TYT planın<\/h2>/); assert.match(h, /id="kpBaslat"/);
     assert.match(h, /class="kpSeviye" data-ders="Matematik TYT"/);
     a.secimler.push(Object.assign(a.el({ value: 'bilir' }), { dataset: { ders: 'Türkçe' } }));
     a.nodes.kpHedef = a.el({ value: '2027-01-15' });

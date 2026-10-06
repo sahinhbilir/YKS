@@ -419,6 +419,6 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  const realIds=realFuture.gunler.flat().map(x=>x.ki), previewIds=previewFuture.gunler.flat().map(x=>x.ki);
  check('preview-assumes-iyi-for-pending-tests',realIds.some(ki=>curPending.includes(ki)&&!previewIds.includes(ki)));
  run('EK.sekme="plan";EK.hafta='+(nextWeek+7));
- check('student-future-week-says-preview',run('gorunumOgrenciPlan()').includes('“İyi” seçilmiş varsayılarak'));
+ check('student-future-week-says-preview',run('gorunumOgrenciPlan()').includes('<h1>Gelecek haftan</h1><p>Önizleme'));
  console.log(JSON.stringify({passed:checks.length,checks,weeks,totalResults:weeks.reduce((s,w)=>s+w.results,0)},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -165,7 +165,7 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    await page.screenshot({path:path.join(out,'test-account-settings-'+width+'.png'),fullPage:true});
    // Reset: typed confirmation, then cloud notebook, history and device copy are gone.
    // The reset sits where people look for it: Gelişmiş ayarlar → Verileri sıfırla.
-   await page.getByText('Baştan başlamak için: Gelişmiş ayarlar → Verileri sıfırla').waitFor();
+   await page.getByRole('heading',{name:'Test hesabın'}).waitFor();
    assert.equal(await page.locator('#testSifirla').isVisible(),false,'folded away until Gelişmiş ayarlar opens');
    await page.locator('summary',{hasText:'Gelişmiş ayarlar'}).click();
    const kart=page.locator('.kart',{has:page.getByRole('heading',{name:'Verileri sıfırla'})});

@@ -252,7 +252,7 @@ test('school overview carries ongoing topics for display without scheduling dupl
   const a=staleStudentWeek(),before=a.run('JSON.stringify(D)');
   const html=a.run('ogrenciProgramKapsami(0,buHafta()+7)');
   assert.match(html,/İki Nicel Değişkenli Veriler/);
-  assert.match(html,/önceki başlık devam ediyor/);
+  assert.match(html,/İki Nicel Değişkenli Veriler <span class="mini">\(devam\)<\/span>/,'an ongoing topic is marked (devam)');
   assert.equal(a.run('JSON.stringify(D)'),before);
   a.run("D.konuPlani['11-A'][1].Matematik=[]");
   assert(!a.run('ogrenciProgramKapsami(0,buHafta()+7)').includes('İki Nicel Değişkenli Veriler'),'explicit empty weeks stop continuation');

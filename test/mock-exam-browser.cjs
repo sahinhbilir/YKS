@@ -62,7 +62,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    assert.equal(await page.locator('#dnFiltreBrans').inputValue(),'turkce');assert.equal(await page.locator('#dnMetrik').inputValue(),'net');
    assert.equal(await page.locator('.dn-dot.genel').count(),tytTurkce);assert.equal(await page.locator('.dn-dot:not(.genel)').count(),bransTurkce);
    assert((await page.locator('#dnDetay').innerText()).includes('TYT denemesinden'));
-   assert((await page.locator('.dn-chart').innerText()).includes('İçi boş nokta'));
+   assert(!(await page.locator('.dn-chart').innerText()).includes('İçi boş nokta'),'the hollow marker needs no note');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'course chart overflow');
    await page.screenshot({path:path.join(out,'mock-exam-course-sections-'+width+'.png'),fullPage:true});
    await page.locator('#dnGenel').uncheck();assert.equal(await page.locator('.dn-dot.genel').count(),0);assert.equal(await page.locator('.dn-dot').count(),bransTurkce);
