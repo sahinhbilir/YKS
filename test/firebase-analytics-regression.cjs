@@ -47,7 +47,8 @@ async function load({ url = production, missingLocation = false, supported = tru
       getAuth(app) { order.push('auth'); return app === apps[0] ? primaryAuth : secondaryAuth; },
       signOut: noop, signInAnonymously: noop, signInWithPopup: noop,
       signInWithEmailAndPassword: noop, createUserWithEmailAndPassword: noop,
-      GoogleAuthProvider: class {}, onAuthStateChanged: noop
+      GoogleAuthProvider: class {}, onAuthStateChanged: noop,
+      EmailAuthProvider: class {}, reauthenticateWithCredential: noop, updatePassword: noop
     },
     'firebase-firestore.js': {
       getFirestore(app) { assert.equal(app, apps[0]); order.push('firestore'); return db; },

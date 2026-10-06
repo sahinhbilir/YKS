@@ -79,6 +79,26 @@ service cloud.firestore {
     // gelen öğrencinin kendi defteri. Yalnızca sahibi okur ve yazar; allowlist gerekmez. Anonim
     // ve okul öğrencisinin ad+numara oturumları bu yolu kullanamaz. Listeleme kapalıdır; yalnızca
     // sahibi kendi defterini ve geçmişini silebilir (uygulama bunu yalnızca test hesabına sunar).
+    // Şifresini değiştiren okul öğrencisinin girişi: ad soyadın SHA-256 özeti altında hesap e-postası.
+    // Okul hesabının e-postası ad + numaradan türediği için girişte numara olmadan bulunamaz; bu liste
+    // ad soyad + şifreyle girişi sağlar. Yalnızca hesabın kendisi kendi kaydını yazar. Okumak için ad
+    // özetini bilmek gerekir; liste ad değil, yalnızca özet e-posta taşır.
+    match /sifreliGiris/{adOzet} {
+      allow read, write: if false;
+      match /hesaplar/{uid} {
+        allow get, list: if adOzet.matches('[0-9a-f]{64}');
+        allow create, update: if request.auth != null && request.auth.uid == uid
+          && adOzet.matches('[0-9a-f]{64}')
+          && request.auth.token.firebase.sign_in_provider == 'password'
+          && request.auth.token.email is string
+          && request.auth.token.email.matches('ogr-[0-9a-f]{40}@student[.]ykstekrar[.]app')
+          && request.resource.data.keys().hasOnly(['email','ts'])
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.ts is int;
+        allow delete: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
     match /testDefter/{uid} {
       // Sahibi: Google ile "Test hesabı aç" ya da kullanıcı adı + şifreyle "Kaydol" hesabı.
       // Kaydol hesabının e-postası yalnızca kullanıcı adının özetidir (uye-<40 hex>@uye.ykstekrar.app);

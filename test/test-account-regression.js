@@ -88,6 +88,7 @@ function uyeler(a, s) {
     a.setUser(k.u); return k.u;
   };
   a.b.girisOgrenciHesabi = async (ad, no) => { a.cagri.push(['okul', ad, no]); throw kimlikHatasi(); };
+  a.b.okulSifreGirisi = async () => { throw kimlikHatasi(); };   // no school student set a password
   return a;
 }
 async function kaydol(a, ad = 'Ali Veli 07', sifre = 'gizli-123', alan = 'EA') {
@@ -485,6 +486,59 @@ async function check(name, fn) {
     await a.tikla('uyeYenidenGir');
     assert.equal(a.user().uid, 'uye-aliveli07');
     assert.equal((await yukle(a)).tur, 'tamam');
+  });
+
+  await check('change-password-under-the-settings-heading-for-kaydol-only-not-google', async kapat => {
+    const s = sunucu(), a = kapat(await kaydol(uyeler(cihaz(s), s)));
+    const ayar = a.run("EK.sekme='ayarlar';gorunumAyarlar()");
+    assert.match(ayar, /^<div class="baslik"><h1>Ayarlar<\/h1><\/div><details class="kart" id="sifreKart"[^>]*><summary[^>]*>Şifre değiştir<\/summary>/, 'right under the heading, folded');
+    assert.match(ayar, /<input type="password" id="sdMevcut" autocomplete="current-password" placeholder="Mevcut şifre">[\s\S]*<input type="password" id="sdYeni" autocomplete="new-password"/);
+    a.b.sifreDegistir = async (m, y, okul) => { a.cagri.push(['sifre', m, y, okul]); if (m !== 'gizli-123') throw kimlikHatasi(); };
+    const dene = async (mevcut, yeni) => {
+      Object.assign(a.nodes, { sdMevcut: a.el({ value: mevcut }), sdYeni: a.el({ value: yeni }), sifreDurum: a.el() });
+      await a.tikla('sifreDegistir'); return a.nodes.sifreDurum.textContent;
+    };
+    assert.match(await dene('', 'yeni-sifre'), /Mevcut şifreni yaz/);
+    assert.match(await dene('gizli-123', 'kisa'), /en az 6 karakter/);
+    assert.match(await dene('gizli-123', 'gizli-123'), /farklı olmalı/);
+    assert.equal(a.cagri.filter(c => c[0] === 'sifre').length, 0, 'nothing reaches Firebase before the checks pass');
+    assert.equal(await dene('yanlis', 'yeni-sifre'), 'Mevcut şifre yanlış.');
+    assert.equal(await dene('gizli-123', 'yeni-sifre'), 'Şifren değişti.');
+    assert.deepEqual(a.cagri.at(-1), ['sifre', 'gizli-123', 'yeni-sifre', null], 'a Kaydol account has no school lookup');
+    assert(a.events.includes('bilgi:Şifren değişti. Bundan sonra kullanıcı adın ve yeni şifrenle giriş yap.'));
+    const t = kapat(await kur(sunucu()));                       // Google test account: no password here
+    assert.doesNotMatch(t.run("EK.sekme='ayarlar';gorunumAyarlar()"), /sifreKart/);
+  });
+
+  await check('school-student-sets-a-password-and-logs-in-with-name-and-password', async kapat => {
+    const s = sunucu(), a = kapat(cihaz(s));
+    a.run("D.rol='ogrenci';D.ogr=[{no:42,ad:'Ada Yılmaz',alan:'SAY',sube:'12A',sinif:12,kap:6,off:[6],aktif:true,hesapUid:'okul-1',syncId:'slot-1',maddeler:[],rutin:{}}];EK.ogr=0;");
+    assert.match(a.run("EK.sekme='ayarlar';gorunumAyarlar()"), /id="sifreKart"[\s\S]*placeholder="Mevcut şifre - okul numarası"/);
+    let arg = null; a.b.sifreDegistir = async (...x) => { arg = x; };
+    Object.assign(a.nodes, { sdMevcut: a.el({ value: '42' }), sdYeni: a.el({ value: 'yeni-sifre' }), sifreDurum: a.el() });
+    await a.tikla('sifreDegistir');
+    assert.deepEqual(JSON.parse(JSON.stringify(arg)), ['42', 'yeni-sifre', { ad: 'Ada Yılmaz', no: 42 }], 'the school number is the current password');
+    assert(a.events.includes('bilgi:Şifren değişti. Bundan sonra ad soyadın ve yeni şifrenle giriş yap.'));
+    a.b.sifreDegistir = async () => { throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' }); };
+    Object.assign(a.nodes, { sdMevcut: a.el({ value: '42' }), sdYeni: a.el({ value: 'yeni-sifre' }), sifreDurum: a.el() });
+    await a.tikla('sifreDegistir');
+    assert.match(a.nodes.sifreDurum.textContent, /^Şifren değişmedi: buluta erişim izni yok/);
+    a.run('delete D.ogr[0].hesapUid');
+    assert.doesNotMatch(a.run('gorunumAyarlar()'), /sifreKart/, 'a student without a cloud account has no password');
+    // Another device: Kaydol is tried first, then the name lookup; the plan loads with that account.
+    const b = kapat(uyeler(cihaz(s), s));
+    b.b.okulSifreGirisi = async (ad, sifre) => { b.cagri.push(['okulSifre', ad]); if (sifre !== 'yeni-sifre') throw kimlikHatasi(); return { uid: 'okul-1' }; };
+    b.run('ogrenciHesabindanYukle=async(ad,no,hazir)=>{okulYukle=[ad,no,hazir&&hazir.uid];return {ad,sunucudanAlinanSonuc:0};}');
+    assert.match(await girisYap(b, 'Ada Yılmaz', 'yanlis-sifre'), /^Kullanıcı adı ve şifre ya da ad soyad ve okul numarası eşleşmedi/);
+    b.cagri.length = 0;
+    await girisYap(b, 'Ada Yılmaz', 'yeni-sifre');
+    assert.deepEqual(b.cagri, [['giris', 'adayılmaz'], ['okulSifre', 'Ada Yılmaz']]);
+    assert.deepEqual(JSON.parse(b.run('JSON.stringify(okulYukle)')), ['Ada Yılmaz', null, 'okul-1']);
+    assert(b.events.includes('bilgi:Hoş geldin Ada Yılmaz — planın sunucudan yüklendi.'));
+    // Rules not yet published: the lookup read is refused and reads as a mismatch, not a raw error.
+    const c = kapat(uyeler(cihaz(s), s));
+    c.b.okulSifreGirisi = async () => { throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' }); };
+    assert.match(await girisYap(c, 'Ada Yılmaz', 'yeni-sifre'), /eşleşmedi/);
   });
 
   await check('school-student-and-teacher-paths-are-unchanged', async kapat => {

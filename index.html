@@ -377,6 +377,7 @@ tr.pasif td:first-child{opacity:1}
 .giris-kart input,.giris-kart select{width:100%;padding:7px 10px;font-size:13.5px}
 /* Şifre kutusu: sağdaki göz düğmesi şifreyi gösterir / gizler (tarayıcının kendi düğmesi gizlenir). */
 td[title] .ayar-ad{cursor:help;text-decoration:underline dotted var(--cizgi);text-underline-offset:4px}
+.sifre-form{display:flex;flex-direction:column;gap:8px;max-width:340px;margin-top:12px}.sifre-form input{width:100%}
 .sifre-kutu{position:relative}.sifre-kutu input{padding-right:40px}
 .sifre-goster{position:absolute;top:0;right:0;bottom:0;width:38px;display:grid;place-items:center;background:none;border:0;padding:0;
   color:var(--soluk);cursor:pointer;border-radius:0 7px 7px 0}
@@ -656,7 +657,7 @@ main:has(.dn-tabs){min-width:0}
 // module-script olmadığından, burada kurulan istemciler window.bulut üzerinden paylaşılır.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js';
-import { getAuth, signOut, signInAnonymously, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
+import { getAuth, signOut, signInAnonymously, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocFromServer, setDoc, updateDoc, runTransaction, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 // Bu değerler istemci tarafında görünür olması güvenlik açığı YARATMAZ — asıl koruma
@@ -725,6 +726,34 @@ async function uyeKaydol(kullaniciAdi, sifre) {
 async function uyeGiris(kullaniciAdi, sifre) {
   return (await signInWithEmailAndPassword(auth, await uyeEposta(kullaniciAdi), sifre)).user;
 }
+// Şifresini değiştiren okul öğrencisi ad soyad + şifreyle girer. Hesap e-postası ad + numaradan
+// türediği için numara olmadan bulunamaz; bu yüzden şifre değişirken sifreliGiris/{ad özeti}/
+// hesaplar/{uid} = {email} yazılır. Girişte bu listedeki e-postalar şifreyle denenir.
+async function girisAdOzeti(ad) {
+  const ozetBayt = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('giris|' + ogrenciGirisMetni(ad)));
+  return Array.from(new Uint8Array(ozetBayt), b => b.toString(16).padStart(2, '0')).join('');
+}
+// Şifre değiştir: önce mevcut şifreyle (okul öğrencisinde okul numarasıyla da) yeniden doğrulanır.
+// Okul öğrencisinin arama kaydı ŞİFREDEN ÖNCE yazılır: yazılamazsa şifre değişmez, kimse kilitlenmez.
+async function sifreDegistir(mevcut, yeni, okul) {
+  const u = auth.currentUser;
+  if (!u || u.isAnonymous || !u.email) throw Object.assign(new Error('Önce hesabınla giriş yap.'), { code: 'yks/oturum-yok' });
+  const eski = okul && String(mevcut).trim() === String(okul.no) ? (await ogrenciGirisKimligi(okul.ad, okul.no)).sifre : mevcut;
+  await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, eski));
+  if (okul) await setDoc(doc(db, 'sifreliGiris', await girisAdOzeti(okul.ad), 'hesaplar', u.uid), { email: u.email, ts: Date.now() });
+  await updatePassword(u, yeni);
+  return u;
+}
+async function okulSifreGirisi(ad, sifre) {
+  const liste = await getDocs(collection(db, 'sifreliGiris', await girisAdOzeti(ad), 'hesaplar'));
+  for (const belge of liste.docs) {
+    const email = (belge.data() || {}).email;
+    if (typeof email !== 'string' || !/^ogr-[0-9a-f]{40}@student\.ykstekrar\.app$/.test(email)) continue;
+    try { return (await signInWithEmailAndPassword(auth, email, sifre)).user; }
+    catch (e) { if (!/invalid-credential|wrong-password|user-not-found|invalid-login-credentials/.test(String(e && e.code || ''))) throw e; }
+  }
+  throw Object.assign(new Error('Giriş bilgileri eşleşmedi.'), { code: 'auth/invalid-credential' });
+}
 async function ogrenciHesabiHazirla(ad, no) {
   const k = await ogrenciGirisKimligi(ad, no);
   try {
@@ -751,7 +780,14 @@ function girisOgrenci(ogrenci) {
     const mevcut = auth.currentUser;
     if (ogrenci && ogrenci.hesapUid) {
       if (mevcut && mevcut.uid === ogrenci.hesapUid && !mevcut.isAnonymous) return mevcut;
-      const kullanici = await girisOgrenciHesabi(ogrenci.ad, ogrenci.no);
+      let kullanici;
+      try { kullanici = await girisOgrenciHesabi(ogrenci.ad, ogrenci.no); }
+      catch (e) {
+        // Şifresini değiştiren öğrencinin oturumu kapandıysa ad + numara artık geçmez.
+        if (/invalid-credential|wrong-password|invalid-login-credentials/.test(String(e && e.code || '')))
+          throw new Error('Oturumun kapanmış. Çıkış yapıp ad soyadın ve şifrenle yeniden gir.');
+        throw e;
+      }
       if (kullanici.uid !== ogrenci.hesapUid) throw new Error('Öğrenci hesabı bu defterle eşleşmiyor. Öğretmeninize bildirin.');
       return kullanici;
     }
@@ -796,7 +832,7 @@ function girisOgretmen() {
 }
 
 window.bulut = { db, doc, getDoc, getDocFromServer, setDoc, updateDoc, runTransaction, collection, getDocs, onSnapshot, girisOgrenci, girisOgretmen,
-  girisOgrenciHesabi, ogrenciHesabiHazirla, uyeKaydol, uyeGiris,
+  girisOgrenciHesabi, ogrenciHesabiHazirla, uyeKaydol, uyeGiris, sifreDegistir, okulSifreGirisi,
   mevcutKullanici: () => auth.currentUser, oturumHazir: () => auth.authStateReady(),
   oturumuKapat: async () => {
     // Öğretmenin hesap hazırlama oturumu da bu tarayıcıda kalmasın.
@@ -5126,9 +5162,21 @@ function gorunumAnlasma() {
     '</div><div class="arac" style="margin-top:16px"><button class="dugme birincil" id="anlasmaKaydet">Kaydet</button></div>';
 }
 
+// Şifre değiştir: Kaydol hesabı ve buluta bağlı okul öğrencisi (ilk şifresi okul numarasıdır).
+// Google ile açılan test hesabının şifresi yoktur.
+function sifreDegistirKarti(o) {
+  const okul = !uyeHesabiMi() && !!o.hesapUid;
+  if (!(uyeHesabiMi() || okul) || !window.bulut || !window.bulut.yapilandirilmis) return '';
+  return '<details class="kart" id="sifreKart" style="padding:16px 20px;margin-bottom:18px"><summary style="cursor:pointer;font-weight:600">Şifre değiştir</summary>' +
+    '<div class="sifre-form"><label class="gorunmez" for="sdMevcut">Mevcut şifre</label>' +
+    sifreKutusu('sdMevcut', okul ? 'Mevcut şifre - okul numarası' : 'Mevcut şifre', 'current-password') +
+    '<label class="gorunmez" for="sdYeni">Yeni şifre</label>' + sifreKutusu('sdYeni', 'Yeni şifre (en az 6 karakter)', 'new-password', ' minlength="6" maxlength="100"') +
+    '<button class="dugme birincil" id="sifreDegistir">Şifreyi değiştir</button>' +
+    '<span class="mini" id="sifreDurum" role="status" aria-live="polite"></span></div></details>';
+}
 function gorunumOgrenciAyarlar() {
   const o = D.ogr[0];
-  return '<div class="baslik"><h1>Ayarlar</h1></div>' +
+  return '<div class="baslik"><h1>Ayarlar</h1></div>' + sifreDegistirKarti(o) +
     (o.okul === false ? kendiPlanKarti(0) : '') +
     '<div class="kart" style="padding:20px;margin-bottom:18px">' + (o.dakika ? dakikaAyarlari(o) :
     '<label class="etiket">Günde kaç test çözebilirsin? ' +
@@ -5491,10 +5539,11 @@ function bulutSonucPaketiniYerellestir(veri) {
   };
 }
 
-async function ogrenciHesabindanYukle(ad, no) {
+// hazirKullanici: ad soyad + şifreyle (okulSifreGirisi) zaten girilmiş hesap; yoksa ad + numarayla girilir.
+async function ogrenciHesabindanYukle(ad, no, hazirKullanici) {
   if (!window.bulut || !window.bulut.yapilandirilmis)
     throw new Error('Bulut bağlantısı yapılandırılmamış.');
-  const kullanici = await sureSinirli(window.bulut.girisOgrenciHesabi(ad, no),
+  const kullanici = hazirKullanici || await sureSinirli(window.bulut.girisOgrenciHesabi(ad, no),
     BULUT_YAZMA_ZAMAN_ASIMI, 'Öğrenci girişi sunucudan zamanında yanıt alamadı.');
   const anlik = await sureSinirli(window.bulut.getDoc(
     window.bulut.doc(window.bulut.db, 'ogrenciHesaplari', kullanici.uid)),
@@ -5576,7 +5625,14 @@ async function ogrenciHesaplariniYayinla() {
     try {
       syncIdSagla(i);
       const eskiHesapUid = o.hesapUid || null;
-      const hesap = await window.bulut.ogrenciHesabiHazirla(o.ad, o.no);
+      let hesap;
+      try { hesap = await window.bulut.ogrenciHesabiHazirla(o.ad, o.no); }
+      catch (e) {
+        // Öğrenci şifresini değiştirdiyse ad + numarayla girilemez; e-posta aynı kaldığı için hesap da
+        // aynıdır, bilinen uid ile yayınlanır.
+        if (!o.hesapUid || !/invalid-credential|wrong-password|invalid-login-credentials/.test(String(e && e.code || ''))) throw e;
+        hesap = { uid: o.hesapUid };
+      }
       o.hesapUid = hesap.uid;
       const paket = ogrenciPaketi(i);
       const veri = JSON.stringify(paket);
@@ -9287,6 +9343,27 @@ document.addEventListener('click', async ev => {
     } finally { bulutDefterIslemi = false; }
     return;
   }
+  if (ev.target.closest('#sifreDegistir')) {
+    if (bulutDefterIslemi || !ogrenciMi() || !D.ogr[0]) return;
+    const o = D.ogr[0], okul = !uyeHesabiMi() && !!o.hesapUid, durum = document.getElementById('sifreDurum'), dugme = ev.target.closest('#sifreDegistir');
+    const mevcut = (document.getElementById('sdMevcut') || {}).value || '', yeni = (document.getElementById('sdYeni') || {}).value || '';
+    const yaz = m => { if (durum) durum.textContent = m; };
+    if (!mevcut) { yaz('Mevcut şifreni ' + (okul ? 'ya da okul numaranı ' : '') + 'yaz.'); return; }
+    const hata = uyeSifreHatasi(yeni) || (yeni === mevcut ? 'Yeni şifre eskisinden farklı olmalı.' : '');
+    if (hata) { yaz(hata); return; }
+    bulutDefterIslemi = true; dugme.disabled = true; yaz('Şifren değiştiriliyor…');
+    try {
+      await sureSinirli(window.bulut.sifreDegistir(mevcut, yeni, okul ? { ad: o.ad, no: o.no } : null), BULUT_YAZMA_ZAMAN_ASIMI, 'Sunucu zamanında yanıt vermedi; şifren değişmedi.');
+      ['sdMevcut', 'sdYeni'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      yaz('Şifren değişti.');
+      bilgiVer('Şifren değişti. Bundan sonra ' + (okul ? 'ad soyadın' : 'kullanıcı adın') + ' ve yeni şifrenle giriş yap.');
+    } catch (e) {
+      const kod = String(e && e.code || '');
+      yaz(girisKimlikHatasiMi(e) ? 'Mevcut şifre yanlış.' : kod === 'yks/oturum-yok' ? e.message
+        : izinHatasiMi(e) ? 'Şifren değişmedi: buluta erişim izni yok (firestore.rules yayınlanmalı).' : uyeHataMesaji(e));
+    } finally { bulutDefterIslemi = false; dugme.disabled = false; }
+    return;
+  }
   if (ev.target.closest('#uyeYenidenGir')) {
     if (!uyeHesabiMi() || bulutDefterIslemi) return;
     const sifre = (document.getElementById('uyeYenidenSifre') || {}).value || '';
@@ -9436,10 +9513,24 @@ document.addEventListener('click', async ev => {
           (ogrenci.sunucudanAlinanSonuc
             ? ' Önceki cihazından ' + ogrenci.sunucudanAlinanSonuc + ' sonuç bu cihaza birleştirildi.' : ''));
       } else {
-        if (uyeAdiHatasi(uyeAdiTemizle(ad)) || uyeSifreHatasi(sifre))
-          throw kimlikHatasi || Object.assign(new Error('Giriş bilgileri eşleşmedi.'), { code: 'auth/invalid-credential' });
-        const uye = await uyeHesabiniAc(ad, sifre);
-        bilgiVer(uye.yeni ? 'Kaydın yarım kalmış; bilgilerini girip planını başlat.' : 'Hoş geldin ' + uye.ad + ' — defterin buluttan açıldı.');
+        const eslesmedi = () => kimlikHatasi || Object.assign(new Error('Giriş bilgileri eşleşmedi.'), { code: 'auth/invalid-credential' });
+        if (uyeSifreHatasi(sifre)) throw eslesmedi();
+        let uye = null;
+        if (!uyeAdiHatasi(uyeAdiTemizle(ad))) {
+          try { uye = await uyeHesabiniAc(ad, sifre); }
+          catch (e) { if (!girisKimlikHatasiMi(e)) throw e; }
+        }
+        if (uye) bilgiVer(uye.yeni ? 'Kaydın yarım kalmış; bilgilerini girip planını başlat.' : 'Hoş geldin ' + uye.ad + ' — defterin buluttan açıldı.');
+        else {
+          // Şifresini değiştirmiş okul öğrencisi: ad soyad + şifre.
+          let hesap;
+          try {
+            hesap = await sureSinirli(window.bulut.okulSifreGirisi(ad, sifre), BULUT_YAZMA_ZAMAN_ASIMI, 'Giriş sunucudan zamanında yanıt alamadı.');
+          } catch (e) { if (girisKimlikHatasiMi(e) || izinHatasiMi(e)) throw eslesmedi(); throw e; }
+          const ogr = await ogrenciHesabindanYukle(ad, null, hesap);
+          bilgiVer('Hoş geldin ' + ogr.ad + ' — planın sunucudan yüklendi.' +
+            (ogr.sunucudanAlinanSonuc ? ' Önceki cihazından ' + ogr.sunucudanAlinanSonuc + ' sonuç bu cihaza birleştirildi.' : ''));
+        }
       }
     } catch (e) {
       const mesaj = girisKimlikHatasiMi(e)
@@ -10858,9 +10949,10 @@ document.addEventListener('keydown', ev => {
     }
     return;
   }
-  if (ev.key === 'Enter' && ev.target && ['ogrenciGirisAd', 'ogrenciGirisNo', 'kaydolAd', 'kaydolSifre', 'uyeYenidenSifre'].includes(ev.target.id)) {
+  if (ev.key === 'Enter' && ev.target && ['ogrenciGirisAd', 'ogrenciGirisNo', 'kaydolAd', 'kaydolSifre', 'uyeYenidenSifre', 'sdMevcut', 'sdYeni'].includes(ev.target.id)) {
     ev.preventDefault();
-    const hedef = document.getElementById(ev.target.id.startsWith('kaydol') ? 'kaydolBaslat' : ev.target.id === 'uyeYenidenSifre' ? 'uyeYenidenGir' : 'ogrenciBulutGiris');
+    const hedef = document.getElementById(ev.target.id.startsWith('kaydol') ? 'kaydolBaslat' : ev.target.id === 'uyeYenidenSifre' ? 'uyeYenidenGir' :
+      ev.target.id.startsWith('sd') ? 'sifreDegistir' : 'ogrenciBulutGiris');
     if (hedef && !hedef.disabled) hedef.click();
     return;
   }
