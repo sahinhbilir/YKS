@@ -68,7 +68,7 @@ main{padding:26px 30px 60px;max-width:1180px}
 :root:not([data-theme="light"]) .dugme.birincil{color:#0F141A}
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .dugme.birincil{color:#fff}}
 .dugme:disabled{opacity:.45;cursor:default}
-select,input[type=date],input[type=number],input[type=text],input[type=password]{border:1px solid var(--cizgi);background:var(--kagit);
+select,input[type=date],input[type=number],input[type=text],input[type=password],input[type=email]{border:1px solid var(--cizgi);background:var(--kagit);
   border-radius:7px;padding:7px 9px;font-size:13.5px}
 select.genis{min-width:230px;font-weight:600}
 .etiket{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--soluk);font-weight:600}
@@ -378,6 +378,13 @@ tr.pasif td:first-child{opacity:1}
 /* Şifre kutusu: sağdaki göz düğmesi şifreyi gösterir / gizler (tarayıcının kendi düğmesi gizlenir). */
 td[title] .ayar-ad{cursor:help;text-decoration:underline dotted var(--cizgi);text-underline-offset:4px}
 .sifre-form{display:flex;flex-direction:column;gap:8px;max-width:340px;margin-top:12px}.sifre-form input{width:100%}
+.giris-dugmeler{display:grid;grid-template-columns:1fr;gap:7px}.giris-dugmeler.bolunmus{grid-template-columns:1fr 1fr}
+.pencere.parola-pencere{width:min(420px,100%);text-align:left}.parola-govde{padding:14px 18px 18px;display:flex;flex-direction:column;gap:9px}
+.parola-govde p{margin:0}.parola-govde input[type=text],.parola-govde input[type=email]{width:100%}
+.parola-turler{display:flex;flex-wrap:wrap;gap:6px 16px}.parola-tur{font-weight:600;font-size:13.5px}
+.pencere.talep-pencere{width:min(640px,100%);text-align:left}.talep-govde{padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow:auto}
+.talep{border:1px solid var(--cizgi);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}.talep .arac{margin:4px 0 0;align-items:center}
+.talep-sifre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px;letter-spacing:.06em}
 .sifre-kutu{position:relative}.sifre-kutu input{padding-right:40px}
 .sifre-goster{position:absolute;top:0;right:0;bottom:0;width:38px;display:grid;place-items:center;background:none;border:0;padding:0;
   color:var(--soluk);cursor:pointer;border-radius:0 7px 7px 0}
@@ -658,7 +665,7 @@ main:has(.dn-tabs){min-width:0}
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js';
 import { getAuth, signOut, signInAnonymously, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, getDocFromServer, setDoc, updateDoc, runTransaction, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, getDocFromServer, setDoc, updateDoc, deleteDoc, runTransaction, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
 
 // Bu değerler istemci tarafında görünür olması güvenlik açığı YARATMAZ — asıl koruma
 // firestore.rules ve App Check ayarlarıdır.
@@ -696,8 +703,13 @@ function ogrenciGirisMetni(v) {
   return String(v == null ? '' : v).normalize('NFKC').toLocaleLowerCase('tr-TR')
     .replace(/\s+/g, ' ').trim();
 }
-async function ogrenciGirisKimligi(ad, no) {
-  const kaynak = ogrenciGirisMetni(ad) + '|' + String(no == null ? '' : no).trim();
+const ozetHex = async metin => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(metin))),
+  b => b.toString(16).padStart(2, '0')).join('');
+const kimlikHatasiMi = e => /invalid-credential|wrong-password|user-not-found|invalid-login-credentials/.test(String(e && e.code || ''));
+const UYE_EPOSTA = /^uye-[0-9a-f]{40}@uye\.ykstekrar\.app$/, OKUL_EPOSTA = /^ogr-[0-9a-f]{40}@student\.ykstekrar\.app$/;
+// nesil: öğretmen şifreyi okul numarasına sıfırladıkça artar; her nesil ad + numaradan türeyen yeni bir hesaptır.
+async function ogrenciGirisKimligi(ad, no, nesil) {
+  const kaynak = ogrenciGirisMetni(ad) + '|' + String(no == null ? '' : no).trim() + (nesil > 0 ? '|' + nesil : '');
   const ozetBayt = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(kaynak));
   const ozet = Array.from(new Uint8Array(ozetBayt), b => b.toString(16).padStart(2, '0')).join('');
   return {
@@ -706,9 +718,33 @@ async function ogrenciGirisKimligi(ad, no) {
     sifre: 'Yks!' + ozet
   };
 }
-async function girisOgrenciHesabi(ad, no) {
-  const k = await ogrenciGirisKimligi(ad, no);
-  return (await signInWithEmailAndPassword(auth, k.email, k.sifre)).user;
+// Giriş yönü (girisYonu/{anahtar}): sıfırlama ya da kullanıcı adı değişikliğinden sonra girilecek hesap,
+// addan türeyen hesap değildir. Girişte önce yön, sonra türeyen hesap denenir; bu yüzden bir yön kaydı
+// kimseyi kilitleyemez. Okumak için anahtarı (ad özetini) bilmek gerekir.
+const okulYonAnahtari = (ad, no) => ozetHex('okul|' + ogrenciGirisMetni(ad) + '|' + String(no == null ? '' : no).trim());
+const uyeYonAnahtari = ad => ozetHex('uye|' + uyeAdiTemizle(ad));
+async function girisYonuOku(anahtar) {
+  try { const s = await getDoc(doc(db, 'girisYonu', anahtar)); return s.exists() ? (s.data() || null) : null; }
+  catch (e) { return null; }
+}
+async function sirayla(epostalar, sifreAl) {
+  let son = Object.assign(new Error('Giriş bilgileri eşleşmedi.'), { code: 'auth/invalid-credential' });
+  for (const email of [...new Set(epostalar)]) {
+    try { return (await signInWithEmailAndPassword(auth, email, await sifreAl(email))).user; }
+    catch (e) { if (!kimlikHatasiMi(e)) throw e; son = e; }
+  }
+  throw son;
+}
+// bilinenNesil: defteri olan cihaz hesabının neslini bilir (öğretmen paketi taşır); yön okunmaz.
+async function girisOgrenciHesabi(ad, no, bilinenNesil) {
+  if (Number.isInteger(bilinenNesil)) {
+    const k = await ogrenciGirisKimligi(ad, no, bilinenNesil);
+    return (await signInWithEmailAndPassword(auth, k.email, k.sifre)).user;
+  }
+  // Giriş ekranı: yön okuması ve türeyen kimlik birlikte hesaplanır; giriş yolu kısa kalsın.
+  const [yon, k0] = await Promise.all([okulYonAnahtari(ad, no).then(girisYonuOku), ogrenciGirisKimligi(ad, no, 0)]);
+  const kimlikler = [...(yon && Number.isInteger(yon.nesil) && yon.nesil > 0 ? [await ogrenciGirisKimligi(ad, no, yon.nesil)] : []), k0];
+  return sirayla(kimlikler.map(k => k.email), async email => kimlikler.find(k => k.email === email).sifre);
 }
 // "Kaydol" hesabı: kullanıcı adı + şifre. Kullanıcı adı boşluksuz ve küçük harfle eşleşir;
 // Firebase e-postasında yalnızca özeti durur (öğrenci hesaplarından ayrı alan adı).
@@ -721,10 +757,46 @@ async function uyeEposta(kullaniciAdi) {
   return 'uye-' + ozet.slice(0, 40) + '@uye.ykstekrar.app';
 }
 async function uyeKaydol(kullaniciAdi, sifre) {
-  return (await createUserWithEmailAndPassword(auth, await uyeEposta(kullaniciAdi), sifre)).user;
+  const u = (await createUserWithEmailAndPassword(auth, await uyeEposta(kullaniciAdi), sifre)).user;
+  // Kendi yön kaydı: öğretmen şifre sıfırlarken hesabı buradan bulur. Yazılamazsa kayıt yine geçerlidir.
+  try { await setDoc(doc(db, 'girisYonu', await uyeYonAnahtari(kullaniciAdi)), { email: u.email, uid: u.uid, ts: Date.now() }); } catch (e) {}
+  return u;
 }
+let bekleyenUyeYonu = null;
 async function uyeGiris(kullaniciAdi, sifre) {
-  return (await signInWithEmailAndPassword(auth, await uyeEposta(kullaniciAdi), sifre)).user;
+  const anahtar = await uyeYonAnahtari(kullaniciAdi), yon = await girisYonuOku(anahtar), turetilen = await uyeEposta(kullaniciAdi);
+  const u = await sirayla([...(yon && UYE_EPOSTA.test(yon.email || '') ? [yon.email] : []), turetilen], async () => sifre);
+  bekleyenUyeYonu = !yon && u.email === turetilen ? { anahtar, uid: u.uid, email: u.email } : null;
+  return u;
+}
+// Bu özellikten önce açılmış hesap kendi yön kaydını yazar (öğretmen sıfırlarken hesabı bulsun).
+// Defterdeki ad doğrulandıktan sonra çağrılır: adını değiştiren hesap eski adın yönünü geri yazmaz.
+async function uyeYonunuYaz() {
+  const y = bekleyenUyeYonu, u = auth.currentUser;
+  bekleyenUyeYonu = null;
+  if (!y || !u || u.uid !== y.uid) return;
+  try { await setDoc(doc(db, 'girisYonu', y.anahtar), { email: y.email, uid: y.uid, ts: Date.now() }); } catch (e) {}
+}
+const uyeYonu = async kullaniciAdi => girisYonuOku(await uyeYonAnahtari(kullaniciAdi));
+const rastgeleRakam = n => Array.from(crypto.getRandomValues(new Uint32Array(n)), x => x % 10).join('');
+// Kullanıcı adını değiştir: yeni ad, türeyen e-postasıyla rastgele şifreli bir hesap açılarak ayrılır
+// (başkası o adla kaydolamaz), sonra yeni addan bu hesaba yön yazılır; eski adın yönü silinir.
+async function kullaniciAdiDegistir(eskiAd, yeniAd, sifre) {
+  const u = auth.currentUser;
+  if (!u || !UYE_EPOSTA.test(u.email || '')) throw Object.assign(new Error('Önce hesabınla giriş yap.'), { code: 'yks/oturum-yok' });
+  await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, sifre));
+  const alindi = () => Object.assign(new Error('Bu kullanıcı adı alınmış.'), { code: 'auth/email-already-in-use' });
+  const mevcutYon = await girisYonuOku(await uyeYonAnahtari(yeniAd));
+  if (mevcutYon && mevcutYon.uid !== u.uid) throw alindi();
+  const yeniEposta = await uyeEposta(yeniAd);
+  if (yeniEposta !== u.email) {
+    try { await createUserWithEmailAndPassword(ogrenciHesapAuth, yeniEposta, 'Ayr!' + rastgeleRakam(24)); }
+    catch (e) { throw e && e.code === 'auth/email-already-in-use' ? alindi() : e; }
+    finally { await signOut(ogrenciHesapAuth).catch(() => {}); }
+  }
+  await setDoc(doc(db, 'girisYonu', await uyeYonAnahtari(yeniAd)), { email: u.email, uid: u.uid, ts: Date.now() });
+  try { await deleteDoc(doc(db, 'girisYonu', await uyeYonAnahtari(eskiAd))); } catch (e) {}
+  return u;
 }
 // Şifresini değiştiren okul öğrencisi ad soyad + şifreyle girer. Hesap e-postası ad + numaradan
 // türediği için numara olmadan bulunamaz; bu yüzden şifre değişirken sifreliGiris/{ad özeti}/
@@ -735,27 +807,65 @@ async function girisAdOzeti(ad) {
 }
 // Şifre değiştir: önce mevcut şifreyle (okul öğrencisinde okul numarasıyla da) yeniden doğrulanır.
 // Okul öğrencisinin arama kaydı ŞİFREDEN ÖNCE yazılır: yazılamazsa şifre değişmez, kimse kilitlenmez.
-async function sifreDegistir(mevcut, yeni, okul) {
+// eposta: şifre unutulursa öğretmenin talebi doğrulayacağı adres (kurtarma/{ad özeti}/hesaplar/{uid}).
+// Kurtarma ve arama kayıtları ŞİFREDEN ÖNCE yazılır.
+const kurtarmaAnahtari = (tur, ad) => tur === 'okul' ? girisAdOzeti(ad) : uyeYonAnahtari(ad);
+async function kurtarmaEpostasiYaz(tur, ad, eposta) {
+  const u = auth.currentUser;
+  await setDoc(doc(db, 'kurtarma', await kurtarmaAnahtari(tur, ad), 'hesaplar', u.uid), { eposta, tur, ts: Date.now() });
+}
+async function sifreDegistir(mevcut, yeni, okul, eposta, kullaniciAdi) {
   const u = auth.currentUser;
   if (!u || u.isAnonymous || !u.email) throw Object.assign(new Error('Önce hesabınla giriş yap.'), { code: 'yks/oturum-yok' });
-  const eski = okul && String(mevcut).trim() === String(okul.no) ? (await ogrenciGirisKimligi(okul.ad, okul.no)).sifre : mevcut;
+  const nesil = okul && Number.isInteger(okul.nesil) ? okul.nesil : 0;
+  const eski = okul && String(mevcut).trim() === String(okul.no) ? (await ogrenciGirisKimligi(okul.ad, okul.no, nesil)).sifre : mevcut;
   await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, eski));
+  if (eposta) await kurtarmaEpostasiYaz(okul ? 'okul' : 'uye', okul ? okul.ad : kullaniciAdi, eposta);
   if (okul) await setDoc(doc(db, 'sifreliGiris', await girisAdOzeti(okul.ad), 'hesaplar', u.uid), { email: u.email, ts: Date.now() });
   await updatePassword(u, yeni);
   return u;
 }
+// "Parolamı unuttum": oturum gerekmez; öğretmen talebi elle işler.
+async function sifreTalebi(tur, ad, eposta) {
+  await setDoc(doc(db, 'sifreTalepleri', crypto.randomUUID()), { tur, ad: String(ad).slice(0, 80), eposta, ts: Date.now() });
+}
+// Öğretmen tarafı (yalnızca allowlist'teki öğretmen).
+async function sifreTalepleriAl() {
+  return (await getDocs(collection(db, 'sifreTalepleri'))).docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
+}
+const sifreTalebiSil = id => deleteDoc(doc(db, 'sifreTalepleri', id));
+async function kurtarmaKayitlari(tur, ad) {
+  return (await getDocs(collection(db, 'kurtarma', await kurtarmaAnahtari(tur, ad), 'hesaplar'))).docs
+    .map(d => ({ uid: d.id, ...(d.data() || {}) }));
+}
+// Kaydol şifresini sıfırla: aynı kullanıcı adı için yeni bir hesap (8 rastgele rakam) açılır, yön ona
+// çevrilir ve yeni hesaba eski defteri bir kez okuma izni (devir) verilir; ilk girişte defter taşınır.
+// kokUid: ilk hesabın uid'si; art arda iki sıfırlamada ara hesaba hiç girilmediyse defter oradan taşınır.
+async function uyeSifreSifirla(kullaniciAdi, eskiUid, kokUid) {
+  const sifre = rastgeleRakam(8);
+  const email = 'uye-' + (await ozetHex('uye|' + uyeAdiTemizle(kullaniciAdi) + '|' + Date.now() + '|' + rastgeleRakam(12))).slice(0, 40) + '@uye.ykstekrar.app';
+  let yeni;
+  try { yeni = (await createUserWithEmailAndPassword(ogrenciHesapAuth, email, sifre)).user; }
+  finally { await signOut(ogrenciHesapAuth).catch(() => {}); }
+  await setDoc(doc(db, 'devir', eskiUid), { yeniUid: yeni.uid, ts: Date.now() });
+  if (kokUid && kokUid !== eskiUid) await setDoc(doc(db, 'devir', kokUid), { yeniUid: yeni.uid, ts: Date.now() });
+  await setDoc(doc(db, 'girisYonu', await uyeYonAnahtari(kullaniciAdi)),
+    { email, uid: yeni.uid, eskiUid, ...(kokUid && kokUid !== eskiUid ? { kokUid } : {}), ts: Date.now() });
+  return { sifre, uid: yeni.uid };
+}
+// Okul numarasına sıfırla: yeni nesil hesabın yönü yazılır, eski hesabın ad + şifre arama kaydı silinir.
+async function okulYonuYaz(ad, no, nesil) {
+  await setDoc(doc(db, 'girisYonu', await okulYonAnahtari(ad, no)), { nesil, ts: Date.now() });
+}
+async function sifreliGirisSil(ad, uid) {
+  await deleteDoc(doc(db, 'sifreliGiris', await girisAdOzeti(ad), 'hesaplar', uid));
+}
 async function okulSifreGirisi(ad, sifre) {
   const liste = await getDocs(collection(db, 'sifreliGiris', await girisAdOzeti(ad), 'hesaplar'));
-  for (const belge of liste.docs) {
-    const email = (belge.data() || {}).email;
-    if (typeof email !== 'string' || !/^ogr-[0-9a-f]{40}@student\.ykstekrar\.app$/.test(email)) continue;
-    try { return (await signInWithEmailAndPassword(auth, email, sifre)).user; }
-    catch (e) { if (!/invalid-credential|wrong-password|user-not-found|invalid-login-credentials/.test(String(e && e.code || ''))) throw e; }
-  }
-  throw Object.assign(new Error('Giriş bilgileri eşleşmedi.'), { code: 'auth/invalid-credential' });
+  return sirayla(liste.docs.map(b => (b.data() || {}).email).filter(e => typeof e === 'string' && OKUL_EPOSTA.test(e)), async () => sifre);
 }
-async function ogrenciHesabiHazirla(ad, no) {
-  const k = await ogrenciGirisKimligi(ad, no);
+async function ogrenciHesabiHazirla(ad, no, nesil) {
+  const k = await ogrenciGirisKimligi(ad, no, nesil);
   try {
     return (await createUserWithEmailAndPassword(ogrenciHesapAuth, k.email, k.sifre)).user;
   } catch (e) {
@@ -781,7 +891,7 @@ function girisOgrenci(ogrenci) {
     if (ogrenci && ogrenci.hesapUid) {
       if (mevcut && mevcut.uid === ogrenci.hesapUid && !mevcut.isAnonymous) return mevcut;
       let kullanici;
-      try { kullanici = await girisOgrenciHesabi(ogrenci.ad, ogrenci.no); }
+      try { kullanici = await girisOgrenciHesabi(ogrenci.ad, ogrenci.no, Number.isInteger(ogrenci.hesapNesli) ? ogrenci.hesapNesli : 0); }
       catch (e) {
         // Şifresini değiştiren öğrencinin oturumu kapandıysa ad + numara artık geçmez.
         if (/invalid-credential|wrong-password|invalid-login-credentials/.test(String(e && e.code || '')))
@@ -832,7 +942,9 @@ function girisOgretmen() {
 }
 
 window.bulut = { db, doc, getDoc, getDocFromServer, setDoc, updateDoc, runTransaction, collection, getDocs, onSnapshot, girisOgrenci, girisOgretmen,
-  girisOgrenciHesabi, ogrenciHesabiHazirla, uyeKaydol, uyeGiris, sifreDegistir, okulSifreGirisi,
+  girisOgrenciHesabi, ogrenciHesabiHazirla, uyeKaydol, uyeGiris, uyeYonunuYaz, uyeYonu, sifreDegistir, okulSifreGirisi,
+  kullaniciAdiDegistir, kurtarmaEpostasiYaz, sifreTalebi, sifreTalepleriAl, sifreTalebiSil, kurtarmaKayitlari,
+  uyeSifreSifirla, okulYonuYaz, sifreliGirisSil,
   mevcutKullanici: () => auth.currentUser, oturumHazir: () => auth.authStateReady(),
   oturumuKapat: async () => {
     // Öğretmenin hesap hazırlama oturumu da bu tarayıcıda kalmasın.
@@ -1250,6 +1362,8 @@ function yedekDogrula(y) {
         throw new Error('Geçersiz deneme hedefi: ' + (i + 1) + '. satır.');
     }
     if (o.okul !== undefined && typeof o.okul !== 'boolean') throw new Error('Geçersiz okul bilgisi: ' + (i + 1) + '. satır.');
+    if (o.hesapNesli !== undefined && (!Number.isInteger(o.hesapNesli) || o.hesapNesli < 0 || o.hesapNesli >= 1000))
+      throw new Error('Geçersiz hesap nesli: ' + (i + 1) + '. satır.');
     if (o.sinavTuru !== undefined && !['YKS'].concat(DIGER_SINAVLAR).includes(o.sinavTuru)) throw new Error('Geçersiz sınav türü: ' + (i + 1) + '. satır.');
     if (o.off !== undefined && (!Array.isArray(o.off) || o.off.some(g => !Number.isInteger(g) || g < 0 || g > 6)))
       throw new Error('Geçersiz tatil günü: ' + (i + 1) + '. satır.');
@@ -5164,19 +5278,35 @@ function gorunumAnlasma() {
 
 // Şifre değiştir: Kaydol hesabı ve buluta bağlı okul öğrencisi (ilk şifresi okul numarasıdır).
 // Google ile açılan test hesabının şifresi yoktur.
+// E-posta: şifre unutulursa öğretmenin talebi doğrulayıp yeni şifreyi göndereceği adres.
+const EPOSTA_BICIMI = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const epostaHatasi = e => !e ? 'E-posta adresini yaz.' : e.length > 120 || !EPOSTA_BICIMI.test(e) ? 'Geçerli bir e-posta adresi yaz.' : '';
 function sifreDegistirKarti(o) {
   const okul = !uyeHesabiMi() && !!o.hesapUid;
   if (!(uyeHesabiMi() || okul) || !window.bulut || !window.bulut.yapilandirilmis) return '';
+  const eposta = (uyeHesabiMi() ? D.testHesap.eposta : o.eposta) || '';
   return '<details class="kart" id="sifreKart" style="padding:16px 20px;margin-bottom:18px"><summary style="cursor:pointer;font-weight:600">Şifre değiştir</summary>' +
     '<div class="sifre-form"><label class="gorunmez" for="sdMevcut">Mevcut şifre</label>' +
     sifreKutusu('sdMevcut', okul ? 'Mevcut şifre - okul numarası' : 'Mevcut şifre', 'current-password') +
     '<label class="gorunmez" for="sdYeni">Yeni şifre</label>' + sifreKutusu('sdYeni', 'Yeni şifre (en az 6 karakter)', 'new-password', ' minlength="6" maxlength="100"') +
+    '<label class="gorunmez" for="sdEposta">E-posta adresin</label><input type="email" id="sdEposta" autocomplete="email" maxlength="120" ' +
+    'placeholder="E-posta adresin (şifreni unutursan)" value="' + kacis(eposta) + '">' +
     '<button class="dugme birincil" id="sifreDegistir">Şifreyi değiştir</button>' +
     '<span class="mini" id="sifreDurum" role="status" aria-live="polite"></span></div></details>';
 }
+// Yalnızca Kaydol hesabı kullanıcı adını değiştirebilir (okul öğrencisinin adı öğretmenin listesinden gelir).
+function kullaniciAdiKarti() {
+  if (!uyeHesabiMi() || !window.bulut || !window.bulut.yapilandirilmis) return '';
+  return '<details class="kart" id="adKart" style="padding:16px 20px;margin-bottom:18px"><summary style="cursor:pointer;font-weight:600">Kullanıcı adını değiştir</summary>' +
+    '<div class="sifre-form"><label class="gorunmez" for="kaYeni">Yeni kullanıcı adı</label><input type="text" id="kaYeni" maxlength="60" ' +
+    'autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Yeni kullanıcı adı (şu an: ' + kacis(D.testHesap.ad || '') + ')">' +
+    '<label class="gorunmez" for="kaSifre">Şifren</label>' + sifreKutusu('kaSifre', 'Şifren', 'current-password') +
+    '<button class="dugme birincil" id="kullaniciAdiDegistir">Kullanıcı adını değiştir</button>' +
+    '<span class="mini" id="adDurum" role="status" aria-live="polite"></span></div></details>';
+}
 function gorunumOgrenciAyarlar() {
   const o = D.ogr[0];
-  return '<div class="baslik"><h1>Ayarlar</h1></div>' + sifreDegistirKarti(o) +
+  return '<div class="baslik"><h1>Ayarlar</h1></div>' + kullaniciAdiKarti() + sifreDegistirKarti(o) +
     (o.okul === false ? kendiPlanKarti(0) : '') +
     '<div class="kart" style="padding:20px;margin-bottom:18px">' + (o.dakika ? dakikaAyarlari(o) :
     '<label class="etiket">Günde kaç test çözebilirsin? ' +
@@ -5608,7 +5738,8 @@ async function ogrenciHesabindanYukle(ad, no, hazirKullanici) {
   return { ad: D.ogr[0].ad, sunucudanAlinanSonuc: birlesme.eklenen || 0 };
 }
 
-async function ogrenciHesaplariniYayinla() {
+// sadece: yalnızca bu öğrenci indeksleri (ör. şifresi okul numarasına sıfırlanan öğrenci).
+async function ogrenciHesaplariniYayinla(sadece) {
   if (!rehberMi()) throw new Error('Bu işlem yalnızca rehber öğretmen hesabında yapılabilir.');
   if (!window.bulut || !window.bulut.yapilandirilmis)
     throw new Error('Bulut bağlantısı yapılandırılmamış.');
@@ -5621,12 +5752,12 @@ async function ogrenciHesaplariniYayinla() {
   const rapor = [];
   for (let i = 0; i < D.ogr.length; i++) {
     const o = D.ogr[i];
-    if (!o || o.silindi) continue;
+    if (!o || o.silindi || (sadece && !sadece.includes(i))) continue;
     try {
       syncIdSagla(i);
       const eskiHesapUid = o.hesapUid || null;
       let hesap;
-      try { hesap = await window.bulut.ogrenciHesabiHazirla(o.ad, o.no); }
+      try { hesap = await window.bulut.ogrenciHesabiHazirla(o.ad, o.no, o.hesapNesli || 0); }
       catch (e) {
         // Öğrenci şifresini değiştirdiyse ad + numarayla girilemez; e-posta aynı kaldığı için hesap da
         // aynıdır, bilinen uid ile yayınlanır.
@@ -6375,6 +6506,80 @@ async function testHesabiniAc() {
   await kaydet(true); ciz();
   bilgiVer('Test hesabın açıldı. Takma adını ve sınıfını gir; planın hazırlansın.');
 }
+// ---------------------------------------------------------------- şifre talepleri (öğretmen)
+// "Parolamı unuttum" talepleri öğretmen uygulaması açılınca bir pencerede bekler. Öğretmen talebi kayıtlı
+// kurtarma e-postasıyla karşılaştırır, sıfırlar ve e-postayı kendi yazar (mailto); iş elle yürür.
+const adMetni = v => String(v == null ? '' : v).normalize('NFKC').toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
+let TALEP_IS = null;
+function sifreTalepleriniDenetle(zorla) {
+  const b = window.bulut;
+  if (!rehberMi() || !b || !b.yapilandirilmis || !b.sifreTalepleriAl || TALEP_IS) return TALEP_IS;
+  const u = b.mevcutKullanici && b.mevcutKullanici();
+  if (!u || u.isAnonymous || /\.ykstekrar\.app$/.test(String(u.email || ''))) return null;
+  if (!zorla && EK.talepDenetlenen === u.uid) return null;
+  EK.talepDenetlenen = u.uid;
+  TALEP_IS = (async () => {
+    const liste = (await b.sifreTalepleriAl()).sort((x, y) => (x.ts || 0) - (y.ts || 0)), kurtarma = {};
+    for (const t of liste) { try { kurtarma[t.id] = await b.kurtarmaKayitlari(t.tur, t.ad); } catch (e) { kurtarma[t.id] = null; } }
+    EK.sifreTalepleri = liste; EK.talepKurtarma = kurtarma; EK.talepSonuc = EK.talepSonuc || {}; EK.talepHata = {};
+    if (liste.length) EK.talepPenceresi = true;
+    ciz();
+  })().catch(() => { /* öğretmen değil ya da kurallar yayınlanmadı: sessiz kal */ }).finally(() => { TALEP_IS = null; });
+  return TALEP_IS;
+}
+// E-posta adresleri Türkçe kurala göre değil, düz küçük harfle karşılaştırılır (I → i, ı değil).
+const epostaAyni = (x, y) => String(x || '').trim().toLowerCase() === String(y || '').trim().toLowerCase();
+const talepEpostaUyar = t => { const k = (EK.talepKurtarma || {})[t.id]; return !!k && k.some(x => epostaAyni(x.eposta, t.eposta)); };
+function talepMailto(t, sonuc) {
+  const govde = sonuc.sifre
+    ? 'Merhaba,\n\nKullanıcı adın: ' + t.ad + '\nYeni şifren: ' + sonuc.sifre + '\n\nGiriş yaptıktan sonra Ayarlar → Şifre değiştir bölümünden kendi şifreni belirleyebilirsin.'
+    : 'Merhaba,\n\nŞifren okul numarana sıfırlandı. Ad soyadın ve okul numaranla giriş yapabilirsin; istersen Ayarlar → Şifre değiştir bölümünden yeni bir şifre belirleyebilirsin.';
+  return 'mailto:' + encodeURIComponent(t.eposta) + '?subject=' + encodeURIComponent('YKS Tekrar Defteri şifren') + '&body=' + encodeURIComponent(govde);
+}
+function talepKarti(t) {
+  const kayit = (EK.talepKurtarma || {})[t.id], sonuc = (EK.talepSonuc || {})[t.id], id = kacis(t.id), okul = t.tur === 'okul';
+  const dogrulama = kayit === null || kayit === undefined ? 'Kayıtlı e-posta okunamadı' : !kayit.length ? 'Kayıtlı e-posta yok'
+    : talepEpostaUyar(t) ? '✓ Kayıtlı e-postayla aynı' : '⚠ Kayıtlı e-posta farklı';
+  let eylem;
+  if (sonuc) eylem = (sonuc.sifre ? '<span>Yeni şifre: <b class="talep-sifre">' + kacis(sonuc.sifre) + '</b></span>' : '<span>Okul numarasına sıfırlandı.</span>') +
+    '<a class="dugme" href="' + kacis(talepMailto(t, sonuc)) + '">E-posta yaz</a><button class="dugme birincil" data-talep-bitti="' + id + '">Tamamlandı</button>';
+  else if (okul) {
+    const adaylar = canliOgrenciler().filter(i => D.ogr[i].hesapUid && adMetni(D.ogr[i].ad) === adMetni(t.ad));
+    eylem = !adaylar.length ? '<span class="mini">Listende bu adla hesabı olan öğrenci yok.</span>'
+      : (adaylar.length > 1 ? '<select data-talep-ogrenci="' + id + '" aria-label="Öğrenci">' + adaylar.map(i => '<option value="' + i + '">' +
+          kacis(D.ogr[i].ad + ' · ' + D.ogr[i].no + ' · ' + D.ogr[i].sube) + '</option>').join('') + '</select>' : '') +
+        '<button class="dugme birincil" data-talep-okul="' + id + '" data-si="' + adaylar[0] + '">Okul numarasına sıfırla</button>';
+  } else eylem = '<button class="dugme birincil" data-talep-uye="' + id + '">Yeni şifre oluştur</button>';
+  return '<div class="talep"><div><b>' + kacis(t.ad) + '</b> · ' + (okul ? 'Okul numarasıyla' : 'Kaydol') + ' · ' + kacis(t.eposta) +
+    (t.ts ? ' · ' + kacis(new Date(t.ts).toLocaleString('tr-TR')) : '') + '</div><div class="mini">' + dogrulama + '</div>' +
+    '<div class="arac">' + eylem + (sonuc ? '' : '<button class="dugme" data-talep-sil="' + id + '">Sil</button>') + '</div>' +
+    ((EK.talepHata || {})[t.id] ? '<p role="alert">' + kacis(EK.talepHata[t.id]) + '</p>' : '') + '</div>';
+}
+function sifreTalepPenceresi() {
+  const liste = EK.sifreTalepleri || [];
+  if (!EK.talepPenceresi || !liste.length) return '';
+  return '<div class="ortu" id="talepOrtu"><div class="pencere talep-pencere" role="dialog" aria-modal="true" aria-labelledby="talepBaslik">' +
+    '<div class="p-ust"><b id="talepBaslik">E-posta talepleri bekliyor (' + liste.length + ')</b><button type="button" class="kapat" id="talepKapat" aria-label="Kapat">×</button></div>' +
+    '<div class="talep-govde">' + liste.map(talepKarti).join('') + '</div></div></div>';
+}
+// Okul numarasına sıfırla: öğrencinin hesap nesli artar, ad + numaradan yeni bir hesap açılıp plan ona
+// yayınlanır (eski hesap kapanır), giriş yönü yeni nesle çevrilir, eski ad + şifre arama kaydı silinir.
+async function okulSifresiniSifirla(si) {
+  const o = D.ogr[si], b = window.bulut;
+  if (!rehberMi() || !o || !o.hesapUid) throw new Error('Bu öğrencinin bulut hesabı yok.');
+  const eskiUid = o.hesapUid, eskiNesil = o.hesapNesli || 0, yeniNesil = eskiNesil + 1;
+  await b.okulYonuYaz(o.ad, o.no, yeniNesil);      // önce yön: yayın başarısız olsa da eski giriş bozulmaz
+  o.hesapNesli = yeniNesil;
+  const rapor = await ogrenciHesaplariniYayinla([si]).catch(e => [{ i: si, tamam: false, mesaj: e.message || String(e) }]);
+  const r = rapor.find(x => x.i === si);
+  if (!r || !r.tamam || o.hesapUid === eskiUid) {
+    o.hesapNesli = eskiNesil; await kaydet(true);
+    throw new Error((r && r.mesaj) || 'Öğrenci hesabı yayınlanamadı.');
+  }
+  try { await b.sifreliGirisSil(o.ad, eskiUid); } catch (e) { /* arama kaydı yoksa sorun değil */ }
+  await kaydet(true);
+}
+
 // ---------------------------------------------------------------- Kaydol hesapları
 // Kullanıcı adı + şifreyle kendi YKS defteri. Test hesabının bulut defterini (testDefter/{uid})
 // ve çok cihazlı eşitlemesini kullanır; farkları: Google yerine şifre, kurulum kendiliğinden
@@ -6447,10 +6652,35 @@ async function uyeHesabiniAc(kullaniciAdi, sifre) {
     BULUT_YAZMA_ZAMAN_ASIMI, 'Defterin sunucudan zamanında alınamadı.');
   if (D && D.rol) throw new Error('Bu cihazda zaten açık bir defter var.');
   if (anlik.exists()) {
-    await testDefteriniYerlestir((anlik.data() || {}).veri, kullanici.uid);
+    const veri = (anlik.data() || {}).veri;
+    // Kullanıcı adı değiştiyse eski adla girilmez (hesap aynı olsa da).
+    let kayitliAd = null; try { kayitliAd = ((JSON.parse(veri) || {}).testHesap || {}).ad || null; } catch (e) {}
+    if (kayitliAd && kayitliAd !== ad) {
+      try { await b.oturumuKapat(); } catch (e) {}
+      throw Object.assign(new Error('Giriş bilgileri eşleşmedi.'), { code: 'auth/invalid-credential' });
+    }
+    if (b.uyeYonunuYaz) await b.uyeYonunuYaz();
+    await testDefteriniYerlestir(veri, kullanici.uid);
     EK.sekme = 'ana'; ciz();
     return { ad: D.ogr[0] ? D.ogr[0].ad : ad, yeni: false };
   }
+  // Şifresi öğretmence sıfırlanmış hesap: yeni hesap eski defteri (devir izniyle) okuyup kendine taşır.
+  const yon = b.uyeYonu ? await b.uyeYonu(ad) : null;
+  if (yon && yon.uid === kullanici.uid && yon.eskiUid) {
+    let eski = await sureSinirli(b.getDocFromServer(testDefterRef(yon.eskiUid)), BULUT_YAZMA_ZAMAN_ASIMI, 'Eski defterin sunucudan zamanında alınamadı.');
+    if (!eski.exists() && yon.kokUid)
+      eski = await sureSinirli(b.getDocFromServer(testDefterRef(yon.kokUid)), BULUT_YAZMA_ZAMAN_ASIMI, 'Eski defterin sunucudan zamanında alınamadı.');
+    if (eski.exists()) {
+      const y = JSON.parse((eski.data() || {}).veri);
+      y.testHesap = { ...(y.testHesap || {}), uid: kullanici.uid, ad: ad };
+      await testDefteriniYerlestir(JSON.stringify(y), kullanici.uid);
+      bulutYedekTemeliniUnut(kullanici.uid);       // bulutta bu hesabın defteri henüz yok
+      EK.sekme = 'ana'; ciz();
+      await bulutaYedekle();
+      return { ad: D.ogr[0] ? D.ogr[0].ad : ad, yeni: false, tasindi: true };
+    }
+  }
+  if (b.uyeYonunuYaz) await b.uyeYonunuYaz();
   bulutYedekTemeliniUnut(kullanici.uid);
   D.rol = 'ogrenci'; D.testHesap = { uid: kullanici.uid, acilis: Date.now(), tur: 'uye', ad: ad };
   EK.sekme = 'plan'; EK.hafta = null;
@@ -7471,7 +7701,7 @@ function ogretmenDinlemeyiBaslat(zorla) {
 window.bulutDegisti = () => {
   if (!D || CIKIS_DURUMU) return;
   denemeDinlemeyiDurdur(); denemeDinlemeyiBaslat();
-  if (rehberMi()) { ogretmenDinlemeyiBaslat(true); bulutYedekPlanla(); }
+  if (rehberMi()) { ogretmenDinlemeyiBaslat(true); bulutYedekPlanla(); sifreTalepleriniDenetle(); }
   else { ogretmenDinlemeyiDurdur(); if (ogrenciMi()) ogrenciEsitlemePlanla(0, true); }
   if (testHesabiMi()) testDefteriniDenetle().then(() => { if (D && testHesabiMi()) bulutYedekPlanla(); });
 };
@@ -8873,7 +9103,8 @@ function gorunumEtkinlik() {
       '<br><span class="mini">Sonuç: '+ggyy(olay.sonucHafta)+' – '+ggyy(planHaftaSonu(r.si,olay.sonucHafta))+'</span>'+
       (tur === 'pdf' ? '<br><span class="mini">Plan: '+ggyy(olay.hafta)+' – '+ggyy(planHaftaSonu(r.si,olay.hafta))+'</span>' : '');
   };
-  return '<div class="baslik"><div><div class="etiket">Rehber öğretmen</div><h1>Haftalık öğrenci takibi</h1></div></div>'+
+  return '<div class="baslik"><div><div class="etiket">Rehber öğretmen</div><h1>Haftalık öğrenci takibi</h1></div>'+
+    ((EK.sifreTalepleri||[]).length?'<button class="dugme birincil" id="talepAc" style="align-self:center">E-posta talepleri ('+EK.sifreTalepleri.length+')</button>':'')+'</div>'+
     '<div class="arac"><label>Hafta ölçütü <select id="takipOlcut"><option value="islem"'+(!sonucOlcutu?' selected':'')+'>İşlem haftası</option><option value="sonuc"'+(sonucOlcutu?' selected':'')+'>Sonuç haftası</option></select></label></div>'+
     '<div class="arac"><button class="dugme" data-takip-hafta="-1" aria-label="Önceki takip haftası">←</button>'+
     '<label>'+(sonucOlcutu?'Sonuç haftası':'İşlem haftası')+' <input type="date" id="takipHafta" value="'+isoDan(hb)+'"></label>'+
@@ -8972,6 +9203,29 @@ function sifreKutusu(id, yer, otomatik, ek) {
   return '<div class="sifre-kutu"><input type="password" id="' + id + '" autocomplete="' + otomatik + '" placeholder="' + kacis(yer) + '"' + (ek || '') + '>' +
     '<button type="button" class="sifre-goster" data-sifre-goster="' + id + '" aria-controls="' + id + '" aria-pressed="false" aria-label="Şifreyi göster">' + GOZ_SVG + '</button></div>';
 }
+// Yanlış girişten sonra "Giriş yap" ikiye bölünür: yarısı Giriş yap, yarısı Parolamı unuttum.
+function parolaUnuttumGoster() {
+  EK.parolaUnuttum = true;
+  const kutu = document.querySelector && document.querySelector('.giris-dugmeler');
+  if (!kutu || document.getElementById('parolaUnuttum')) return;
+  kutu.classList.add('bolunmus');
+  kutu.insertAdjacentHTML('beforeend', '<button class="dugme" id="parolaUnuttum">Parolamı unuttum</button>');
+}
+function parolaPenceresi(ad) {
+  const okul = /\s/.test(ad);                       // boşluklu ad, büyük olasılıkla ad soyad
+  const secenek = (deger, metin) => '<label class="parola-tur"><input type="radio" name="parolaTur" id="parolaTur' + (deger === 'okul' ? 'Okul' : 'Uye') +
+    '" value="' + deger + '"' + ((deger === 'okul') === okul ? ' checked' : '') + '> ' + metin + '</label>';
+  return '<div class="ortu" id="parolaOrtu"><div class="pencere parola-pencere" role="dialog" aria-modal="true" aria-labelledby="parolaBaslik">' +
+    '<div class="p-ust"><b id="parolaBaslik">Parolamı unuttum</b><button type="button" class="kapat" id="parolaKapat" aria-label="Kapat">×</button></div>' +
+    '<div class="parola-govde"><p>Okul numaranla giriş yaptıysan şifren okul numarana sıfırlanır.</p>' +
+    '<p>Kaydol ile hesap açtıysan şifren rastgele rakamlara sıfırlanır ve e-postana gönderilir.</p>' +
+    '<div class="parola-turler" role="radiogroup" aria-label="Hesabın">' + secenek('okul', 'Okul numaramla giriyordum') + secenek('uye', 'Kaydol ile hesap açtım') + '</div>' +
+    '<label class="gorunmez" for="parolaAd">Ad soyad ya da kullanıcı adı</label><input type="text" id="parolaAd" maxlength="80" ' +
+    'autocapitalize="off" spellcheck="false" placeholder="Ad soyad - Kullanıcı adı" value="' + kacis(ad) + '">' +
+    '<label class="gorunmez" for="parolaEposta">E-posta adresin</label><input type="email" id="parolaEposta" maxlength="120" autocomplete="email" placeholder="E-posta adresin">' +
+    '<button class="dugme birincil" id="parolaGonder">E-posta gönder</button>' +
+    '<span class="mini" id="parolaDurum" role="status" aria-live="polite"></span></div></div></div>';
+}
 // "Kaydol": kullanıcı adı, şifre ve alan. Hesap açılınca YKS planı bu hafta, bugün başlar.
 function kaydolKarti() {
   return '<section class="giris-kart" id="kaydolKart" aria-labelledby="kaydolBaslik">' +
@@ -9000,14 +9254,15 @@ function gorunumKurulum() {
     'autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Kullanıcı adı - Ad soyad">' +
     '<label class="gorunmez" for="ogrenciGirisNo">Şifre ya da okul numarası</label>' +
     sifreKutusu('ogrenciGirisNo', 'Şifre - Okul numarası', 'current-password') +
-    '<button class="dugme birincil" id="ogrenciBulutGiris">Giriş yap</button>' +
+    '<div class="giris-dugmeler' + (EK.parolaUnuttum ? ' bolunmus' : '') + '"><button class="dugme birincil" id="ogrenciBulutGiris">Giriş yap</button>' +
+    (EK.parolaUnuttum ? '<button class="dugme" id="parolaUnuttum">Parolamı unuttum</button>' : '') + '</div>' +
     // Boş durum satırı yalnızca hata ve ilerleme iletilerini taşır (ekran okuyucuya da bildirir).
     '<span class="mini giris-durum" id="ogrenciGirisDurum" role="status" aria-live="polite"></span>' +
     '<div class="giris-ayrac" role="separator"></div>' +
     '<div class="giris-diger"><button class="dugme" id="rolRehber">Rehber öğretmeniyim</button>' +
     '<button class="dugme" id="kaydolAc">Kaydol</button>' +
     '<button class="dugme" id="testHesapAc">Test hesabı aç</button></div>' +
-    '</section>') + '<div class="giris-ara ara-cizim"></div>' + GIRIS_CIZIM + '<div class="giris-ara ara-yedek"></div>' +
+    '</section>') + '<div id="parolaKutu"></div><div class="giris-ara ara-cizim"></div>' + GIRIS_CIZIM + '<div class="giris-ara ara-yedek"></div>' +
     '<details class="giris-yedek mini"><summary class="baglanti">Yedekten geri yükle</summary>' +
     '<label class="dugme">Dosya seç<input type="file" id="kurYedek" hidden></label> ' +
     '<button class="baglanti" id="kurYapistirAc">İçeriği yapıştır</button>' +
@@ -9096,6 +9351,7 @@ function cizIc() {
     EK.sekme === 'anlasma' ? gorunumAnlasma() :
     EK.sekme === 'denemeler' ? gorunumDenemeler() :
     EK.sekme === 'rapor' ? gorunumRapor() : gorunumAyarlar();
+  if (rehberMi()) { sifreTalepleriniDenetle(); const p = sifreTalepPenceresi(); if (p) ana.innerHTML += p; }
   window.scrollTo(0, 0);
 }
 
@@ -9347,14 +9603,18 @@ document.addEventListener('click', async ev => {
     if (bulutDefterIslemi || !ogrenciMi() || !D.ogr[0]) return;
     const o = D.ogr[0], okul = !uyeHesabiMi() && !!o.hesapUid, durum = document.getElementById('sifreDurum'), dugme = ev.target.closest('#sifreDegistir');
     const mevcut = (document.getElementById('sdMevcut') || {}).value || '', yeni = (document.getElementById('sdYeni') || {}).value || '';
+    const eposta = ((document.getElementById('sdEposta') || {}).value || '').trim();
     const yaz = m => { if (durum) durum.textContent = m; };
     if (!mevcut) { yaz('Mevcut şifreni ' + (okul ? 'ya da okul numaranı ' : '') + 'yaz.'); return; }
-    const hata = uyeSifreHatasi(yeni) || (yeni === mevcut ? 'Yeni şifre eskisinden farklı olmalı.' : '');
+    const hata = uyeSifreHatasi(yeni) || (yeni === mevcut ? 'Yeni şifre eskisinden farklı olmalı.' : '') || epostaHatasi(eposta);
     if (hata) { yaz(hata); return; }
     bulutDefterIslemi = true; dugme.disabled = true; yaz('Şifren değiştiriliyor…');
     try {
-      await sureSinirli(window.bulut.sifreDegistir(mevcut, yeni, okul ? { ad: o.ad, no: o.no } : null), BULUT_YAZMA_ZAMAN_ASIMI, 'Sunucu zamanında yanıt vermedi; şifren değişmedi.');
+      await sureSinirli(window.bulut.sifreDegistir(mevcut, yeni, okul ? { ad: o.ad, no: o.no, nesil: o.hesapNesli || 0 } : null, eposta,
+        okul ? null : D.testHesap.ad), BULUT_YAZMA_ZAMAN_ASIMI, 'Sunucu zamanında yanıt vermedi; şifren değişmedi.');
       ['sdMevcut', 'sdYeni'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      if (okul) o.eposta = eposta; else D.testHesap.eposta = eposta;
+      await kaydet(true);
       yaz('Şifren değişti.');
       bilgiVer('Şifren değişti. Bundan sonra ' + (okul ? 'ad soyadın' : 'kullanıcı adın') + ' ve yeni şifrenle giriş yap.');
     } catch (e) {
@@ -9362,6 +9622,30 @@ document.addEventListener('click', async ev => {
       yaz(girisKimlikHatasiMi(e) ? 'Mevcut şifre yanlış.' : kod === 'yks/oturum-yok' ? e.message
         : izinHatasiMi(e) ? 'Şifren değişmedi: buluta erişim izni yok (firestore.rules yayınlanmalı).' : uyeHataMesaji(e));
     } finally { bulutDefterIslemi = false; dugme.disabled = false; }
+    return;
+  }
+  if (ev.target.closest('#kullaniciAdiDegistir')) {
+    if (bulutDefterIslemi || !uyeHesabiMi()) return;
+    const durum = document.getElementById('adDurum'), dugme = ev.target.closest('#kullaniciAdiDegistir'), yaz = m => { if (durum) durum.textContent = m; };
+    const yeni = uyeAdiTemizle((document.getElementById('kaYeni') || {}).value || ''), sifre = (document.getElementById('kaSifre') || {}).value || '';
+    const eski = D.testHesap.ad;
+    const hata = !yeni ? 'Yeni kullanıcı adını yaz.' : uyeAdiHatasi(yeni) || (yeni === eski ? 'Bu zaten kullanıcı adın.' : '') || (!sifre ? 'Şifreni yaz.' : '');
+    if (hata) { yaz(hata); return; }
+    bulutDefterIslemi = true; dugme.disabled = true; yaz('Kullanıcı adın değiştiriliyor…');
+    try {
+      await sureSinirli(window.bulut.kullaniciAdiDegistir(eski, yeni, sifre), BULUT_YAZMA_ZAMAN_ASIMI, 'Sunucu zamanında yanıt vermedi.');
+      D.testHesap.ad = yeni;
+      if (D.ogr[0] && D.ogr[0].ad === eski) D.ogr[0].ad = yeni;
+      // Kayıtlı kurtarma e-postası yeni adın altına da yazılır (öğretmen talebi bu adla arar).
+      if (D.testHesap.eposta) { try { await window.bulut.kurtarmaEpostasiYaz('uye', yeni, D.testHesap.eposta); } catch (e) {} }
+      await kaydet(true); ciz();
+      bilgiVer('Kullanıcı adın artık ' + yeni + '. Giriş yaparken bunu kullan.');
+    } catch (e) {
+      const kod = String(e && e.code || '');
+      yaz(girisKimlikHatasiMi(e) ? 'Şifre yanlış.' : kod === 'auth/email-already-in-use' ? 'Bu kullanıcı adı alınmış.'
+        : izinHatasiMi(e) ? 'Kullanıcı adın değişmedi: buluta erişim izni yok (firestore.rules yayınlanmalı).' : uyeHataMesaji(e));
+      dugme.disabled = false;
+    } finally { bulutDefterIslemi = false; }
     return;
   }
   if (ev.target.closest('#uyeYenidenGir')) {
@@ -9520,7 +9804,9 @@ document.addEventListener('click', async ev => {
           try { uye = await uyeHesabiniAc(ad, sifre); }
           catch (e) { if (!girisKimlikHatasiMi(e)) throw e; }
         }
-        if (uye) bilgiVer(uye.yeni ? 'Kaydın yarım kalmış; bilgilerini girip planını başlat.' : 'Hoş geldin ' + uye.ad + ' — defterin buluttan açıldı.');
+        if (uye) bilgiVer(uye.yeni ? 'Kaydın yarım kalmış; bilgilerini girip planını başlat.' : uye.tasindi
+          ? 'Hoş geldin ' + uye.ad + ' — şifren sıfırlandı, defterin yeni hesabına taşındı. Ayarlar’dan şifreni değiştirebilirsin.'
+          : 'Hoş geldin ' + uye.ad + ' — defterin buluttan açıldı.');
         else {
           // Şifresini değiştirmiş okul öğrencisi: ad soyad + şifre.
           let hesap;
@@ -9549,6 +9835,68 @@ document.addEventListener('click', async ev => {
       if (guncelNo) guncelNo.value = sifre;
       if (guncelDurum) guncelDurum.textContent = mesaj;
       if (guncelDugme) { guncelDugme.disabled = false; guncelDugme.textContent = 'Giriş yap'; }
+      if (girisKimlikHatasiMi(e)) parolaUnuttumGoster();
+    }
+    return;
+  }
+  if (ev.target.closest('#talepKapat') || ev.target.id === 'talepOrtu') { EK.talepPenceresi = false; ciz(); return; }
+  if (ev.target.closest('#talepAc')) { EK.talepPenceresi = true; await sifreTalepleriniDenetle(true); ciz(); return; }
+  const talepDugme = ev.target.closest('[data-talep-sil],[data-talep-bitti],[data-talep-uye],[data-talep-okul]');
+  if (talepDugme && rehberMi()) {
+    const ds = talepDugme.dataset, id = ds.talepSil || ds.talepBitti || ds.talepUye || ds.talepOkul;
+    const t = (EK.sifreTalepleri || []).find(x => x.id === id), b = window.bulut;
+    if (!t || bulutDefterIslemi) return;
+    EK.talepHata = EK.talepHata || {}; delete EK.talepHata[id];
+    if ((ds.talepUye || ds.talepOkul) && !talepEpostaUyar(t) &&
+        !confirm('Talepteki e-posta, öğrencinin kayıtlı e-postasıyla eşleşmiyor ya da kayıtlı e-posta yok. Yine de sıfırlansın mı?')) return;
+    if (ds.talepSil && !confirm(t.ad + ' talebi silinsin mi?')) return;
+    bulutDefterIslemi = true; talepDugme.disabled = true;
+    try {
+      if (ds.talepSil || ds.talepBitti) {
+        await b.sifreTalebiSil(id);
+        EK.sifreTalepleri = EK.sifreTalepleri.filter(x => x.id !== id); delete EK.talepSonuc[id];
+        if (!EK.sifreTalepleri.length) EK.talepPenceresi = false;
+      } else if (ds.talepUye) {
+        const yon = await b.uyeYonu(t.ad), kayit = (EK.talepKurtarma || {})[id] || [];
+        const eskiUid = (yon && yon.uid) || ((kayit.find(k => epostaAyni(k.eposta, t.eposta)) || kayit[0] || {}).uid);
+        if (!eskiUid) throw new Error('Bu kullanıcı adının hesabı bulunamadı.');
+        const r = await b.uyeSifreSifirla(t.ad, eskiUid, yon && (yon.kokUid || yon.eskiUid));
+        EK.talepSonuc[id] = { sifre: r.sifre };
+      } else {
+        const secim = document.querySelector && document.querySelector('[data-talep-ogrenci="' + id + '"]');
+        await okulSifresiniSifirla(+(secim ? secim.value : ds.si));
+        EK.talepSonuc[id] = { okul: true };
+      }
+    } catch (e) {
+      EK.talepHata[id] = izinHatasiMi(e) ? 'Buluta erişim izni yok (firestore.rules yayınlanmalı).' : (e.message || String(e));
+    } finally { bulutDefterIslemi = false; }
+    ciz(); return;
+  }
+  if (ev.target.closest('#parolaUnuttum')) {
+    const kutu = document.getElementById('parolaKutu');
+    if (kutu) kutu.innerHTML = parolaPenceresi(((document.getElementById('ogrenciGirisAd') || {}).value || '').trim());
+    const ilk = document.getElementById('parolaEposta'); if (ilk) ilk.focus();
+    return;
+  }
+  if (ev.target.closest('#parolaKapat') || (ev.target.id === 'parolaOrtu')) {
+    const kutu = document.getElementById('parolaKutu'); if (kutu) kutu.innerHTML = '';
+    return;
+  }
+  if (ev.target.closest('#parolaGonder')) {
+    const dugme = ev.target.closest('#parolaGonder'), durum = document.getElementById('parolaDurum'), yaz = m => { if (durum) durum.textContent = m; };
+    const secili = document.querySelector && document.querySelector('input[name="parolaTur"]:checked');
+    const tur = (secili && secili.value) || ((document.getElementById('parolaTurOkul') || {}).checked ? 'okul' : 'uye');
+    const ad = ((document.getElementById('parolaAd') || {}).value || '').trim(), eposta = ((document.getElementById('parolaEposta') || {}).value || '').trim();
+    const hata = !ad ? (tur === 'okul' ? 'Ad soyadını yaz.' : 'Kullanıcı adını yaz.') : ad.length > 80 ? 'Ad çok uzun.' : epostaHatasi(eposta);
+    if (hata) { yaz(hata); return; }
+    if (!window.bulut || !window.bulut.yapilandirilmis) { yaz('Bulut bağlantısı hazır değil.'); return; }
+    dugme.disabled = true; yaz('Gönderiliyor…');
+    try {
+      await sureSinirli(window.bulut.sifreTalebi(tur, tur === 'uye' ? uyeAdiTemizle(ad) : ad, eposta), BULUT_YAZMA_ZAMAN_ASIMI, 'Sunucu zamanında yanıt vermedi.');
+      yaz('Talebin rehber öğretmene iletildi.');
+    } catch (e) {
+      dugme.disabled = false;
+      yaz(izinHatasiMi(e) ? 'Talep gönderilemedi: buluta erişim izni yok.' : 'Talep gönderilemedi: ' + (e.message || e));
     }
     return;
   }
@@ -10917,6 +11265,8 @@ document.addEventListener('change', async ev => {
 
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape' && (EK.kurtarmaIpucu || EK.sonucIpucu)) { ev.preventDefault(); ipucunuKapat(); return; }
+  if (ev.key === 'Escape' && document.getElementById('parolaOrtu')) { ev.preventDefault(); document.getElementById('parolaKutu').innerHTML = ''; return; }
+  if (ev.key === 'Escape' && EK.talepPenceresi && document.getElementById('talepOrtu')) { ev.preventDefault(); EK.talepPenceresi = false; ciz(); return; }
   const sonucModal = document.getElementById('sonucBilgiModal');
   if (ev.key === 'Escape' && sonucModal && !sonucModal.hidden) {
     ev.preventDefault(); sonucModal.hidden = true;
@@ -10949,10 +11299,11 @@ document.addEventListener('keydown', ev => {
     }
     return;
   }
-  if (ev.key === 'Enter' && ev.target && ['ogrenciGirisAd', 'ogrenciGirisNo', 'kaydolAd', 'kaydolSifre', 'uyeYenidenSifre', 'sdMevcut', 'sdYeni'].includes(ev.target.id)) {
+  if (ev.key === 'Enter' && ev.target && ['ogrenciGirisAd', 'ogrenciGirisNo', 'kaydolAd', 'kaydolSifre', 'uyeYenidenSifre', 'sdMevcut', 'sdYeni', 'sdEposta', 'kaYeni', 'kaSifre', 'parolaAd', 'parolaEposta'].includes(ev.target.id)) {
     ev.preventDefault();
     const hedef = document.getElementById(ev.target.id.startsWith('kaydol') ? 'kaydolBaslat' : ev.target.id === 'uyeYenidenSifre' ? 'uyeYenidenGir' :
-      ev.target.id.startsWith('sd') ? 'sifreDegistir' : 'ogrenciBulutGiris');
+      ev.target.id.startsWith('sd') ? 'sifreDegistir' : ev.target.id.startsWith('ka') ? 'kullaniciAdiDegistir' :
+      ev.target.id.startsWith('parola') ? 'parolaGonder' : 'ogrenciBulutGiris');
     if (hedef && !hedef.disabled) hedef.click();
     return;
   }

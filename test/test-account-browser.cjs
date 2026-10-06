@@ -21,7 +21,9 @@ const sahteBulut=()=>{
     uyeKaydol:async(ad,sifre)=>{window.__uyeKayit=[ad,sifre];return (user={uid:'uye-'+ad,isAnonymous:false,email:'uye-x@uye.ykstekrar.app'});},
     uyeGiris:async()=>{throw Object.assign(new Error('auth'),{code:'auth/invalid-credential'});},
     girisOgrenciHesabi:async()=>{throw Object.assign(new Error('auth'),{code:'auth/invalid-credential'});},
-    sifreDegistir:async(m,y,okul)=>{window.__sifre=[m,y,okul];}};
+    sifreDegistir:async(m,y,okul,eposta)=>{window.__sifre=[m,y,okul,eposta];},
+    okulSifreGirisi:async()=>{throw Object.assign(new Error('auth'),{code:'auth/invalid-credential'});},
+    uyeYonu:async()=>null,sifreTalebi:async(...x)=>{window.__talep=x;}};
 };
 const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y+a.height;
 (async()=>{
@@ -83,6 +85,27 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal((await page.locator('#ogrenciGirisDurum').textContent()),'','no hint text until there is something to say');
    await page.locator('#ogrenciBulutGiris').click();
    assert.equal(await page.locator('#ogrenciGirisDurum').textContent(),'Kullanıcı adını ve şifreni ya da ad soyadını ve okul numaranı gir.');
+   assert.equal(await page.locator('#parolaUnuttum').count(),0,'no split before a wrong login');
+   // A wrong login splits the button: Giriş yap | Parolamı unuttum, side by side, half each.
+   await page.locator('#ogrenciGirisAd').fill('Ada Yılmaz');await page.locator('#ogrenciGirisNo').fill('1234');
+   await page.locator('#ogrenciBulutGiris').click();
+   await page.locator('#parolaUnuttum').waitFor();
+   const [gy,pu]=await Promise.all([page.locator('#ogrenciBulutGiris').boundingBox(),page.locator('#parolaUnuttum').boundingBox()]);
+   assert(Math.abs(gy.y-pu.y)<1 && gy.x+gy.width<=pu.x && Math.abs(gy.width-pu.width)<2,'two halves of one row');
+   await page.screenshot({path:path.join(out,'giris-bolunmus-'+width+'.png')});
+   await page.locator('#parolaUnuttum').click();
+   const pencere=page.locator('#parolaOrtu [role="dialog"]');await pencere.waitFor();
+   assert((await pencere.innerText()).includes('Okul numaranla giriş yaptıysan şifren okul numarana sıfırlanır.'));
+   assert((await pencere.innerText()).includes('Kaydol ile hesap açtıysan şifren rastgele rakamlara sıfırlanır ve e-postana gönderilir.'));
+   assert.equal(await page.locator('#parolaTurOkul').isChecked(),true);assert.equal(await page.locator('#parolaAd').inputValue(),'Ada Yılmaz');
+   await page.locator('#parolaEposta').fill('veli@example.com');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'popup overflow');
+   await page.screenshot({path:path.join(out,'parola-unuttum-'+width+'.png')});
+   await page.locator('#parolaGonder').click();
+   await page.locator('#parolaDurum',{hasText:'Talebin rehber öğretmene iletildi.'}).waitFor();
+   assert.deepEqual(await page.evaluate(()=>window.__talep),['okul','Ada Yılmaz','veli@example.com']);
+   await page.keyboard.press('Escape');assert.equal(await page.locator('#parolaOrtu').count(),0,'Esc closes it');
+   await page.locator('#ogrenciGirisAd').fill('');await page.locator('#ogrenciGirisNo').fill('');
    assert.equal(await page.locator('#kurYapistirAc').isVisible(),false,'backup options are folded');
    await page.locator('summary',{hasText:'Yedekten geri yükle'}).click();await page.locator('#kurYapistirAc').click();
    assert.equal(await page.locator('#yapistirMetin').isVisible(),true,'paste option opens');
@@ -205,20 +228,41 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal((await page.evaluate(()=>bulutaYedekle())).tur,'tamam');
    assert(bulutYollari.includes('testDefter/uye-denizkaya'),'the notebook is saved to the cloud');
    await page.screenshot({path:path.join(out,'kaydol-home-'+width+'.png')});
-   // Ayarlar → Şifre değiştir (folded, right under the heading): current + new password with eye buttons.
+   // Ayarlar → Kullanıcı adını değiştir, then Şifre değiştir (both folded, right under the heading).
    await page.locator('#ray [data-sekme="ayarlar"]').first().click();
    const sifreKart=page.locator('#sifreKart');
-   const [ayarBaslik,kartKutu]=await Promise.all([page.locator('.baslik h1').first().boundingBox(),sifreKart.boundingBox()]);
-   assert(kartKutu.y>ayarBaslik.y+ayarBaslik.height && kartKutu.y-ayarBaslik.y<120,'the card sits under the Ayarlar heading');
+   const [ayarBaslik,adKutu,kartKutu]=await Promise.all([page.locator('.baslik h1').first().boundingBox(),page.locator('#adKart').boundingBox(),sifreKart.boundingBox()]);
+   assert(adKutu.y>ayarBaslik.y+ayarBaslik.height && adKutu.y-ayarBaslik.y<120 && kartKutu.y>=adKutu.y+adKutu.height-1 && kartKutu.y-adKutu.y<120,'the cards sit under the Ayarlar heading');
    assert.equal(await page.locator('#sdMevcut').isVisible(),false,'folded');
    await sifreKart.locator('summary').click();
-   await page.locator('#sdMevcut').fill('gizli-123');await page.locator('#sdYeni').fill('yeni-sifre-1');
+   await page.locator('#sdMevcut').fill('gizli-123');await page.locator('#sdYeni').fill('yeni-sifre-1');await page.locator('#sdEposta').fill('deniz@example.com');
    await page.locator('[data-sifre-goster="sdYeni"]').click();assert.equal(await page.locator('#sdYeni').getAttribute('type'),'text');
    await page.locator('#sdYeni').press('Enter');
    await page.locator('#sifreDurum',{hasText:'Şifren değişti.'}).waitFor();
-   assert.deepEqual(await page.evaluate(()=>window.__sifre),['gizli-123','yeni-sifre-1',null]);
+   assert.deepEqual(await page.evaluate(()=>window.__sifre),['gizli-123','yeni-sifre-1',null,'deniz@example.com']);
+   assert.equal(await page.locator('#adKart summary').textContent(),'Kullanıcı adını değiştir','Kaydol can change the user name');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'settings overflow');
    await page.screenshot({path:path.join(out,'sifre-degistir-'+width+'.png')});
+   // Teacher: requests waiting pop up when the teacher's app opens; a Kaydol reset shows the new password.
+   await page.evaluate(()=>{
+    disariAktarmayiKapat&&disariAktarmayiKapat();
+    D=varsayilan();D.rol='rehber';D.ogr=[{no:42,ad:'Ada Yılmaz',alan:'SAY',sube:'12A',sinif:12,kap:6,off:[6],aktif:true,hesapUid:'okul-1',syncId:'slot-1',maddeler:[],rutin:{}}];
+    EK={ogr:0,sekme:'takip',hafta:null,girisAcik:{}};
+    Object.assign(window.bulut,{mevcutKullanici:()=>({uid:'ogretmen-1',isAnonymous:false,email:'rehber@example.com'}),
+      sifreTalepleriAl:async()=>[{id:'t1',tur:'uye',ad:'denizkaya',eposta:'deniz@example.com',ts:1790000000000},{id:'t2',tur:'okul',ad:'Ada Yılmaz',eposta:'veli@example.com',ts:1790000100000}],
+      kurtarmaKayitlari:async tur=>tur==='uye'?[{uid:'uye-denizkaya',eposta:'deniz@example.com'}]:[],
+      uyeYonu:async()=>({uid:'uye-denizkaya'}),uyeSifreSifirla:async()=>({sifre:'48213307',uid:'uye-2'}),sifreTalebiSil:async()=>{}});
+    ciz();
+   });
+   const talep=page.locator('#talepOrtu [role="dialog"]');await talep.waitFor();
+   assert((await talep.innerText()).includes('E-posta talepleri bekliyor (2)'));
+   assert.equal(await talep.locator('.talep').count(),2);
+   await talep.locator('[data-talep-uye="t1"]').click();
+   await talep.locator('.talep-sifre',{hasText:'48213307'}).waitFor();
+   assert.match(await talep.locator('a.dugme',{hasText:'E-posta yaz'}).getAttribute('href'),/^mailto:deniz%40example\.com\?subject=/);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'teacher popup overflow');
+   await page.screenshot({path:path.join(out,'eposta-talepleri-'+width+'.png')});
+   await page.keyboard.press('Escape');assert.equal(await page.locator('#talepOrtu').count(),0);
    assert.deepEqual(errors,[]);
    await context.close();
   }

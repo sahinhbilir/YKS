@@ -58,7 +58,7 @@ function cihaz(s, kullanici = GOOGLE, oturumAcik = false) {
     for (const fn of listeners.click || []) await fn({ target });
     await run('KAYIT_ZINCIRI');
   };
-  return { run, nodes, store, events, b, tikla, el, sandbox, user: () => user, setUser: u => { user = u; }, istem: v => { istem = v; },
+  return { run, nodes, store, events, b, tikla, el, sandbox, listeners, user: () => user, setUser: u => { user = u; }, istem: v => { istem = v; },
     close() { timers.forEach(clearTimeout); } };
 }
 // Opens a new test account and completes the existing solo setup as a grade-11 student.
@@ -87,6 +87,7 @@ function uyeler(a, s) {
     const k = s.uyeler[ad]; if (!k || k.sifre !== sifre) throw kimlikHatasi();
     a.setUser(k.u); return k.u;
   };
+  a.b.uyeYonunuYaz = async () => { a.cagri.push(['yon']); };
   a.b.girisOgrenciHesabi = async (ad, no) => { a.cagri.push(['okul', ad, no]); throw kimlikHatasi(); };
   a.b.okulSifreGirisi = async () => { throw kimlikHatasi(); };   // no school student set a password
   return a;
@@ -97,6 +98,12 @@ async function kaydol(a, ad = 'Ali Veli 07', sifre = 'gizli-123', alan = 'EA') {
   await a.tikla('kaydolAc');
   await a.tikla('kaydolBaslat');
   return a;
+}
+// Clicks an element that carries data-* attributes (closest() matches any selector naming them).
+async function tiklaVeri(a, dataset) {
+  const target = Object.assign(a.el({ dataset }), { closest: q => Object.keys(dataset).some(k => q.includes('data-' + k.replace(/[A-Z]/g, c => '-' + c.toLowerCase()))) ? target : null });
+  for (const fn of a.listeners.click || []) await fn({ target });
+  await a.run('KAYIT_ZINCIRI');
 }
 async function girisYap(a, ad, sifre) {
   Object.assign(a.nodes, { ogrenciGirisAd: a.el({ value: ad }), ogrenciGirisNo: a.el({ value: sifre }), ogrenciGirisDurum: a.el() });
@@ -443,7 +450,7 @@ async function check(name, fn) {
     assert.equal(await girisYap(b, 'Ali Veli 07', 'yanlış-şifre'), 'Kullanıcı adı ve şifre ya da ad soyad ve okul numarası eşleşmedi. Bilgilerini kontrol et.');
     assert.equal(b.run('D.rol'), '');
     await girisYap(b, '  ALİ veli07 ', 'gizli-123');
-    assert.deepEqual(b.cagri, [['giris', 'aliveli07'], ['giris', 'aliveli07']], 'not tried as a school login');
+    assert.deepEqual(b.cagri, [['giris', 'aliveli07'], ['giris', 'aliveli07'], ['yon']], 'not tried as a school login; the redirect follows the notebook check');
     assert.equal(b.run('D.testHesap.uid'), 'uye-aliveli07'); assert.equal(b.run('D.log.length'), 1);
     assert.equal(b.run('EK.sekme'), 'ana');
     assert(b.events.some(e => e === 'bilgi:Hoş geldin aliveli07 — defterin buluttan açıldı.'));
@@ -457,7 +464,7 @@ async function check(name, fn) {
     assert.deepEqual(b.cagri, [['okul', 'sayi', 1234]], 'a 4-character password cannot be a Kaydol password');
     b.cagri.length = 0;
     await girisYap(b, 'sayi', '123456');
-    assert.deepEqual(b.cagri, [['giris', 'sayi']], 'above 9999 is never a school number');
+    assert.deepEqual(b.cagri, [['giris', 'sayi'], ['yon']], 'above 9999 is never a school number');
     assert.equal(b.run('D.testHesap.uid'), 'uye-sayi');
     // A school student whose number happens to match: the school login wins and Kaydol is not tried.
     const c = kapat(uyeler(cihaz(s), s));
@@ -491,20 +498,24 @@ async function check(name, fn) {
   await check('change-password-under-the-settings-heading-for-kaydol-only-not-google', async kapat => {
     const s = sunucu(), a = kapat(await kaydol(uyeler(cihaz(s), s)));
     const ayar = a.run("EK.sekme='ayarlar';gorunumAyarlar()");
-    assert.match(ayar, /^<div class="baslik"><h1>Ayarlar<\/h1><\/div><details class="kart" id="sifreKart"[^>]*><summary[^>]*>Şifre değiştir<\/summary>/, 'right under the heading, folded');
-    assert.match(ayar, /<input type="password" id="sdMevcut" autocomplete="current-password" placeholder="Mevcut şifre">[\s\S]*<input type="password" id="sdYeni" autocomplete="new-password"/);
-    a.b.sifreDegistir = async (m, y, okul) => { a.cagri.push(['sifre', m, y, okul]); if (m !== 'gizli-123') throw kimlikHatasi(); };
-    const dene = async (mevcut, yeni) => {
-      Object.assign(a.nodes, { sdMevcut: a.el({ value: mevcut }), sdYeni: a.el({ value: yeni }), sifreDurum: a.el() });
+    assert.match(ayar, /^<div class="baslik"><h1>Ayarlar<\/h1><\/div><details class="kart" id="adKart"[^>]*><summary[^>]*>Kullanıcı adını değiştir<\/summary>[\s\S]*?<\/details><details class="kart" id="sifreKart"[^>]*><summary[^>]*>Şifre değiştir<\/summary>/, 'right under the heading, folded');
+    assert.match(ayar, /<input type="password" id="sdMevcut" autocomplete="current-password" placeholder="Mevcut şifre">[\s\S]*<input type="password" id="sdYeni" autocomplete="new-password"[\s\S]*<input type="email" id="sdEposta"/);
+    a.b.sifreDegistir = async (...x) => { a.cagri.push(['sifre', ...x]); if (x[0] !== 'gizli-123') throw kimlikHatasi(); };
+    const dene = async (mevcut, yeni, eposta = 'ali@example.com') => {
+      Object.assign(a.nodes, { sdMevcut: a.el({ value: mevcut }), sdYeni: a.el({ value: yeni }), sdEposta: a.el({ value: eposta }), sifreDurum: a.el() });
       await a.tikla('sifreDegistir'); return a.nodes.sifreDurum.textContent;
     };
     assert.match(await dene('', 'yeni-sifre'), /Mevcut şifreni yaz/);
     assert.match(await dene('gizli-123', 'kisa'), /en az 6 karakter/);
     assert.match(await dene('gizli-123', 'gizli-123'), /farklı olmalı/);
+    assert.equal(await dene('gizli-123', 'yeni-sifre', ''), 'E-posta adresini yaz.');
+    assert.equal(await dene('gizli-123', 'yeni-sifre', 'adres-yok'), 'Geçerli bir e-posta adresi yaz.');
     assert.equal(a.cagri.filter(c => c[0] === 'sifre').length, 0, 'nothing reaches Firebase before the checks pass');
     assert.equal(await dene('yanlis', 'yeni-sifre'), 'Mevcut şifre yanlış.');
     assert.equal(await dene('gizli-123', 'yeni-sifre'), 'Şifren değişti.');
-    assert.deepEqual(a.cagri.at(-1), ['sifre', 'gizli-123', 'yeni-sifre', null], 'a Kaydol account has no school lookup');
+    assert.deepEqual(a.cagri.at(-1), ['sifre', 'gizli-123', 'yeni-sifre', null, 'ali@example.com', 'aliveli07'], 'no school lookup; the e-mail and user name go along');
+    assert.equal(a.run('D.testHesap.eposta'), 'ali@example.com');
+    assert.match(a.run('gorunumAyarlar()'), /id="sdEposta"[^>]*value="ali@example.com"/, 'the e-mail is filled in next time');
     assert(a.events.includes('bilgi:Şifren değişti. Bundan sonra kullanıcı adın ve yeni şifrenle giriş yap.'));
     const t = kapat(await kur(sunucu()));                       // Google test account: no password here
     assert.doesNotMatch(t.run("EK.sekme='ayarlar';gorunumAyarlar()"), /sifreKart/);
@@ -514,13 +525,14 @@ async function check(name, fn) {
     const s = sunucu(), a = kapat(cihaz(s));
     a.run("D.rol='ogrenci';D.ogr=[{no:42,ad:'Ada Yılmaz',alan:'SAY',sube:'12A',sinif:12,kap:6,off:[6],aktif:true,hesapUid:'okul-1',syncId:'slot-1',maddeler:[],rutin:{}}];EK.ogr=0;");
     assert.match(a.run("EK.sekme='ayarlar';gorunumAyarlar()"), /id="sifreKart"[\s\S]*placeholder="Mevcut şifre - okul numarası"/);
+    assert.doesNotMatch(a.run('gorunumAyarlar()'), /adKart/, 'a school student cannot change their name');
     let arg = null; a.b.sifreDegistir = async (...x) => { arg = x; };
-    Object.assign(a.nodes, { sdMevcut: a.el({ value: '42' }), sdYeni: a.el({ value: 'yeni-sifre' }), sifreDurum: a.el() });
+    Object.assign(a.nodes, { sdMevcut: a.el({ value: '42' }), sdYeni: a.el({ value: 'yeni-sifre' }), sdEposta: a.el({ value: 'veli@example.com' }), sifreDurum: a.el() });
     await a.tikla('sifreDegistir');
-    assert.deepEqual(JSON.parse(JSON.stringify(arg)), ['42', 'yeni-sifre', { ad: 'Ada Yılmaz', no: 42 }], 'the school number is the current password');
+    assert.deepEqual(JSON.parse(JSON.stringify(arg)), ['42', 'yeni-sifre', { ad: 'Ada Yılmaz', no: 42, nesil: 0 }, 'veli@example.com', null], 'the school number is the current password');
     assert(a.events.includes('bilgi:Şifren değişti. Bundan sonra ad soyadın ve yeni şifrenle giriş yap.'));
     a.b.sifreDegistir = async () => { throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' }); };
-    Object.assign(a.nodes, { sdMevcut: a.el({ value: '42' }), sdYeni: a.el({ value: 'yeni-sifre' }), sifreDurum: a.el() });
+    Object.assign(a.nodes, { sdMevcut: a.el({ value: '42' }), sdYeni: a.el({ value: 'yeni-sifre' }), sdEposta: a.el({ value: 'veli@example.com' }), sifreDurum: a.el() });
     await a.tikla('sifreDegistir');
     assert.match(a.nodes.sifreDurum.textContent, /^Şifren değişmedi: buluta erişim izni yok/);
     a.run('delete D.ogr[0].hesapUid');
@@ -539,6 +551,118 @@ async function check(name, fn) {
     const c = kapat(uyeler(cihaz(s), s));
     c.b.okulSifreGirisi = async () => { throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' }); };
     assert.match(await girisYap(c, 'Ada Yılmaz', 'yeni-sifre'), /eşleşmedi/);
+  });
+
+  await check('kaydol-user-name-change-only-for-kaydol-with-password', async kapat => {
+    const s = sunucu(), a = kapat(await kaydol(uyeler(cihaz(s), s)));
+    assert.match(a.run("EK.sekme='ayarlar';gorunumAyarlar()"), /id="kaYeni"[^>]*placeholder="Yeni kullanıcı adı \(şu an: aliveli07\)"[\s\S]*id="kaSifre"/);
+    a.run("D.testHesap.eposta='ali@example.com'");
+    a.b.kullaniciAdiDegistir = async (eski, yeni, sifre) => { a.cagri.push(['ad', eski, yeni]); if (sifre !== 'gizli-123') throw kimlikHatasi(); if (yeni === 'mehmet') throw Object.assign(new Error('x'), { code: 'auth/email-already-in-use' }); };
+    a.b.kurtarmaEpostasiYaz = async (...x) => { a.cagri.push(['kurtarma', ...x]); };
+    const dene = async (yeni, sifre) => {
+      Object.assign(a.nodes, { kaYeni: a.el({ value: yeni }), kaSifre: a.el({ value: sifre }), adDurum: a.el() });
+      await a.tikla('kullaniciAdiDegistir'); return a.nodes.adDurum.textContent;
+    };
+    assert.equal(await dene('', 'gizli-123'), 'Yeni kullanıcı adını yaz.');
+    assert.equal(await dene('Ali Veli 07', 'gizli-123'), 'Bu zaten kullanıcı adın.');
+    assert.match(await dene('ab', 'gizli-123'), /3–30 karakter/);
+    assert.equal(await dene('yeniad', ''), 'Şifreni yaz.');
+    assert.equal(a.cagri.filter(c => c[0] === 'ad').length, 0);
+    assert.equal(await dene('mehmet', 'gizli-123'), 'Bu kullanıcı adı alınmış.');
+    assert.equal(await dene('yeniad', 'yanlis'), 'Şifre yanlış.');
+    await dene('Yeni Ad', 'gizli-123');
+    assert.deepEqual(a.cagri.filter(c => c[0] !== 'giris' && c[0] !== 'kaydol').slice(-2), [['ad', 'aliveli07', 'yeniad'], ['kurtarma', 'uye', 'yeniad', 'ali@example.com']]);
+    assert.deepEqual(JSON.parse(a.run('JSON.stringify([D.testHesap.ad,D.ogr[0].ad])')), ['yeniad', 'yeniad']);
+    assert(a.events.includes('bilgi:Kullanıcı adın artık yeniad. Giriş yaparken bunu kullan.'));
+    // Logging in with the old name to the same account is refused.
+    assert.equal((await yukle(a)).tur, 'tamam');
+    const b = kapat(uyeler(cihaz(s), s));
+    s.uyeler.aliveli07 = s.uyeler.aliveli07;                       // the account still holds the old derived e-mail
+    assert.match(await girisYap(b, 'aliveli07', 'gizli-123'), /eşleşmedi/);
+    assert(b.events.includes('signout'), 'and signed out again');
+    assert.equal(b.run('D.rol'), '');
+    assert(!b.cagri.some(c => c[0] === 'yon'), 'and the old name never writes its redirect back');
+    const c = kapat(uyeler(cihaz(s), s));
+    s.uyeler.yeniad = s.uyeler.aliveli07;                          // the new name redirects to the same account
+    await girisYap(c, 'yeniad', 'gizli-123');
+    assert.equal(c.run('D.testHesap.ad'), 'yeniad');
+    assert(c.cagri.some(x => x[0] === 'yon'), 'the new name passes the notebook check');
+  });
+
+  await check('wrong-login-splits-the-button-and-opens-the-forgot-password-request', async kapat => {
+    const s = sunucu(), a = kapat(uyeler(cihaz(s), s));
+    assert.doesNotMatch(a.run('gorunumKurulum()'), /parolaUnuttum/, 'no split before a failed login');
+    await girisYap(a, 'Ada Yılmaz', '1234');
+    assert.equal(a.run('EK.parolaUnuttum'), true);
+    assert.match(a.run('gorunumKurulum()'), /<div class="giris-dugmeler bolunmus"><button class="dugme birincil" id="ogrenciBulutGiris">Giriş yap<\/button><button class="dugme" id="parolaUnuttum">Parolamı unuttum<\/button><\/div>/);
+    // The popup explains both resets; a name with a space suggests the school-number account.
+    Object.assign(a.nodes, { parolaKutu: a.el(), ogrenciGirisAd: a.el({ value: 'Ada Yılmaz' }) });
+    await a.tikla('parolaUnuttum');
+    const p = a.nodes.parolaKutu.innerHTML;
+    assert.match(p, /role="dialog"[\s\S]*Parolamı unuttum/);
+    assert.match(p, /Okul numaranla giriş yaptıysan şifren okul numarana sıfırlanır\./);
+    assert.match(p, /Kaydol ile hesap açtıysan şifren rastgele rakamlara sıfırlanır ve e-postana gönderilir\./);
+    assert.match(p, /id="parolaTurOkul" value="okul" checked/);assert.match(p, /id="parolaAd"[^>]*value="Ada Yılmaz"/);
+    assert.match(p, /id="parolaGonder">E-posta gönder</);
+    a.b.sifreTalebi = async (...x) => { a.cagri.push(['talep', ...x]); };
+    const gonder = async (tur, ad, eposta) => {
+      Object.assign(a.nodes, { parolaTurOkul: a.el({ checked: tur === 'okul' }), parolaAd: a.el({ value: ad }), parolaEposta: a.el({ value: eposta }), parolaDurum: a.el() });
+      await a.tikla('parolaGonder'); return a.nodes.parolaDurum.textContent;
+    };
+    assert.equal(await gonder('okul', '', 'v@example.com'), 'Ad soyadını yaz.');
+    assert.equal(await gonder('okul', 'Ada Yılmaz', 'yok'), 'Geçerli bir e-posta adresi yaz.');
+    assert.equal(await gonder('okul', 'Ada Yılmaz', 'veli@example.com'), 'Talebin rehber öğretmene iletildi.');
+    assert.equal(await gonder('uye', 'Ali Veli 07', 'ali@example.com'), 'Talebin rehber öğretmene iletildi.');
+    assert.deepEqual(a.cagri.filter(c => c[0] === 'talep'), [['talep', 'okul', 'Ada Yılmaz', 'veli@example.com'], ['talep', 'uye', 'aliveli07', 'ali@example.com']], 'a Kaydol name is sent without spaces');
+    await a.tikla('parolaKapat');assert.equal(a.nodes.parolaKutu.innerHTML, '');
+  });
+
+  await check('after-a-teacher-reset-the-new-kaydol-account-takes-over-the-notebook', async kapat => {
+    const s = sunucu(), a = kapat(await kaydol(uyeler(cihaz(s), s)));
+    a.run('sonucIsle(0,[{ki:kendiPlanKuyrugu(0)[0].ki,gun:bugunNo(),not:3}])'); await a.run('kaydet(true)');
+    assert.equal((await yukle(a)).tur, 'tamam');
+    // The teacher made a new account with a new password; the name now points to it.
+    const yeni = { uid: 'uye-yeni', isAnonymous: false, email: 'uye-' + 'b'.repeat(40) + '@uye.ykstekrar.app' };
+    const b = kapat(uyeler(cihaz(s), s));
+    b.b.uyeGiris = async (ad, sifre) => { if (sifre !== '48213307') throw kimlikHatasi(); b.setUser(yeni); return yeni; };
+    b.b.uyeYonu = async () => ({ email: yeni.email, uid: 'uye-yeni', eskiUid: 'uye-aliveli07' });
+    await girisYap(b, 'aliveli07', '48213307');
+    assert.equal(b.run('D.testHesap.uid'), 'uye-yeni');assert.equal(b.run('D.testHesap.ad'), 'aliveli07');
+    assert.equal(b.run('D.log.length'), 1, 'the results came along');
+    assert.equal(bulutDefteri(s, 'uye-yeni').log.length, 1, 'saved under the new account');
+    assert(b.events.some(e => /şifren sıfırlandı, defterin yeni hesabına taşındı/.test(e)));
+  });
+
+  await check('teacher-sees-e-mail-requests-awaiting-and-resets-a-kaydol-password', async kapat => {
+    const a = kapat(cihaz(sunucu(), GOOGLE, true));
+    a.run("D.rol='rehber';D.ogr=[{no:42,ad:'Ada Yılmaz',alan:'SAY',sube:'12A',sinif:12,kap:6,off:[6],aktif:true,hesapUid:'okul-1',syncId:'slot-1',maddeler:[],rutin:{}}];EK.ogr=0;EK.sekme='takip';");
+    const silinen = [];
+    Object.assign(a.b, {
+      sifreTalepleriAl: async () => [{ id: 't1', tur: 'uye', ad: 'aliveli07', eposta: 'ali@example.com', ts: 1 },
+        { id: 't2', tur: 'okul', ad: 'ada  yılmaz', eposta: 'veli@example.com', ts: 2 }, { id: 't3', tur: 'okul', ad: 'Ece Kaya', eposta: 'e@example.com', ts: 3 }],
+      kurtarmaKayitlari: async tur => tur === 'uye' ? [{ uid: 'uye-1', eposta: 'ALI@example.com' }] : [],
+      uyeYonu: async () => ({ email: 'x', uid: 'uye-1' }),
+      uyeSifreSifirla: async (...x) => { a.cagri = x; return { sifre: '48213307', uid: 'uye-2' }; },
+      sifreTalebiSil: async id => { silinen.push(id); }
+    });
+    await a.run('sifreTalepleriniDenetle()');
+    assert.equal(a.run('EK.talepPenceresi'), true, 'the popup opens by itself');
+    let h = a.run('sifreTalepPenceresi()');
+    assert.match(h, /role="dialog"[\s\S]*E-posta talepleri bekliyor \(3\)/);
+    assert.match(h, /<b>aliveli07<\/b> · Kaydol · ali@example.com[\s\S]*?✓ Kayıtlı e-postayla aynı[\s\S]*?data-talep-uye="t1">Yeni şifre oluştur/);
+    assert.match(h, /<b>ada  yılmaz<\/b> · Okul numarasıyla[\s\S]*?Kayıtlı e-posta yok[\s\S]*?data-talep-okul="t2" data-si="0">Okul numarasına sıfırla/, 'matched to the student by name');
+    assert.match(h, /<b>Ece Kaya<\/b>[\s\S]*?Listende bu adla hesabı olan öğrenci yok\./);
+    assert.match(a.run('gorunumEtkinlik()'), /id="talepAc"[^>]*>E-posta talepleri \(3\)/, 'and can be reopened from Takip');
+    a.events.length = 0;
+    await tiklaVeri(a, { talepUye: 't1' });
+    assert.deepEqual(a.cagri, ['aliveli07', 'uye-1', undefined]);
+    h = a.run('sifreTalepPenceresi()');
+    assert.match(h, /Yeni şifre: <b class="talep-sifre">48213307<\/b>/);
+    const mailto = /href="(mailto:[^"]+)"/.exec(h)[1].replace(/&amp;/g, '&');
+    assert(mailto.startsWith('mailto:ali%40example.com?subject='));assert(decodeURIComponent(mailto).includes('Yeni şifren: 48213307'));
+    await tiklaVeri(a, { talepBitti: 't1' });
+    assert.deepEqual(silinen, ['t1']);assert.match(a.run('sifreTalepPenceresi()'), /E-posta talepleri bekliyor \(2\)/);
+    await a.tikla('talepKapat');assert.equal(a.run('sifreTalepPenceresi()'), '');
   });
 
   await check('school-student-and-teacher-paths-are-unchanged', async kapat => {

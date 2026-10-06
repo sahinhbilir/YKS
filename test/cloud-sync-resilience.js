@@ -597,7 +597,9 @@ function loadModuleSandbox() {
   let appCheckOptions = null;
   const sandbox = {
     console,
-    setTimeout: (fn, ms) => setTimeout(fn, Math.min(ms, 15)),   // gerçek 15sn'yi testte beklememek için sıkıştırılmış
+    // Gerçek 15 sn testte beklenmesin diye sıkıştırılır; 15 ms, girişteki SHA-256 özetinden bile kısaydı ve
+    // "girişte doğru hata" testleri ara sıra zaman aşımına yakalanıyordu. 250 ms bekletmez, yarışmaz.
+    setTimeout: (fn, ms) => setTimeout(fn, Math.min(ms, 250)),
     clearTimeout, crypto, TextEncoder,
     window: {},
     initializeApp: () => { initOrder.push('app'); return {}; },
@@ -1221,6 +1223,40 @@ test('teacher-publish-keeps-the-account-of-a-student-who-changed-their-password'
   equal(run('D.ogr[0].hesapUid'), 'account-11');
   assert(writes.some(w => w.ref === 'ogrenciHesaplari/account-11'), 'to the same account');
   equal(rapor[1].tamam, false, 'a student without a known account is not published blindly');
+});
+
+// "Okul numarasına sıfırla": a new account generation from name + number, the plan republished to it,
+// the old account closed, the login redirect and the old name + password lookup handled.
+test('teacher-resets-a-school-student-to-the-school-number-with-a-new-account-generation', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 11, ad: 'Şifreli Öğrenci', hesapUid: 'account-11', syncId: 'slot-11', ogrenciBulutId: 'b11' }),
+    student({ no: 12, ad: 'Diğer Öğrenci', hesapUid: 'account-12' })]);
+  const olaylar = [], writes = [];
+  const yuva = { ogretmenUid: 'teacher-uid', ogrenciBulutId: 'b11', durum: 'aktif', bagliUid: 'account-11' };
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    okulYonuYaz: async (ad, no, nesil) => { olaylar.push(['yon', ad, no, nesil]); },
+    ogrenciHesabiHazirla: async (ad, no, nesil) => { olaylar.push(['hesap', no, nesil]); return { uid: 'account-' + no + (nesil ? '-n' + nesil : '') }; },
+    sifreliGirisSil: async (ad, uid) => { olaylar.push(['arama-sil', uid]); },
+    getDoc: async ref => ref === 'ogrenciler/slot-11' ? docSnap(true, yuva) : docSnap(false, undefined),
+    setDoc: async (ref, data) => { writes.push({ ref, data }); },
+    updateDoc: async (ref, data) => { writes.push({ ref, data, update: true }); }
+  });
+  await run('okulSifresiniSifirla(0)');
+  equal(JSON.stringify(olaylar), JSON.stringify([['yon', 'Şifreli Öğrenci', 11, 1], ['hesap', 11, 1], ['arama-sil', 'account-11']]), 'redirect first, then the new account, then the old lookup');
+  equal(run('D.ogr[0].hesapNesli'), 1);equal(run('D.ogr[0].hesapUid'), 'account-11-n1');
+  assert(writes.some(w => w.ref === 'ogrenciHesaplari/account-11-n1' && w.data.aktif === true), 'the plan is published to the new account');
+  assert(writes.some(w => w.ref === 'ogrenciler/slot-11' && w.update && w.data.bagliUid === 'account-11-n1'), 'the result slot follows it');
+  assert(writes.some(w => w.ref === 'ogrenciHesaplari/account-11' && w.data.aktif === false), 'the old account is closed');
+  assert(!olaylar.some(o => o[1] === 12) && !writes.some(w => /12/.test(w.ref)), 'nobody else is republished');
+  // A failed publish puts the generation back; the redirect to an absent account blocks nobody.
+  sandbox.window.bulut.ogrenciHesabiHazirla = async () => { throw new Error('ağ yok'); };
+  const hata = async kod => { try { await run(kod); return ''; } catch (e) { return e.message; } };
+  assert(/ağ yok/.test(await hata('okulSifresiniSifirla(0)')), 'the publish error is reported');
+  equal(run('D.ogr[0].hesapNesli'), 1);equal(run('D.ogr[0].hesapUid'), 'account-11-n1');
+  run('delete D.ogr[1].hesapUid');
+  assert(/bulut hesabı yok/.test(await hata('okulSifresiniSifirla(1)')), 'a student without a cloud account cannot be reset');
 });
 
 test('student-account-publish-toast-names-every-failed-student', async () => {

@@ -55,6 +55,9 @@ numarası". Screen readers still read the labels.
   on the right shows or hides the text (`sifreKutusu`, `data-sifre-goster`, with
   `aria-pressed` and "Şifreyi göster/gizle"). The browser's own reveal button is hidden.
 - Enter in either input submits.
+- After a failed login, the button splits into two equal halves (`.giris-dugmeler.bolunmus`):
+  "Giriş yap" stays primary on the left, and "Parolamı unuttum" on the right opens a popup
+  (`parolaPenceresi`, see docs/kaydol.md).
 - "Kaydol" swaps the card for the sign-up card (`kaydolKarti`): user name, password
   (same eye button) and field, then "Kaydol ve başla" and "Girişe dön".
 

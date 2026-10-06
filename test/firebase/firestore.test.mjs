@@ -735,6 +735,91 @@ await check('password-lookup-only-own-school-account-writes-and-anyone-with-the-
   await assertSucceeds(deleteDoc(kayit(ogrDb)));
 });
 
+// ===================================================== password reset, user-name change, recovery
+const sifreli = (uid, email, saglayici = 'password') =>
+  testEnv.authenticatedContext(uid, { email, firebase: { sign_in_provider: saglayici, identities: {} } }).firestore();
+const UYE_E = n => 'uye-' + String(n).repeat(40).slice(0, 40) + '@uye.ykstekrar.app';
+const OKUL_E = n => 'ogr-' + String(n).repeat(40).slice(0, 40) + '@student.ykstekrar.app';
+const anahtar = c => c.repeat(64);
+
+await check('login-redirect-own-kaydol-entry-teacher-reset-and-public-get-only', async () => {
+  const uyeDb = sifreli('uye-a', UYE_E('a')), ref = db => doc(db, 'girisYonu', anahtar('1'));
+  await assertSucceeds(setDoc(ref(uyeDb), { email: UYE_E('a'), uid: 'uye-a', ts: 1 }));
+  await assertSucceeds(getDoc(ref(anonDb)), 'login reads it signed out');
+  await assertFails(getDocs(collection(anonDb, 'girisYonu')), 'no listing');
+  await assertFails(getDoc(doc(anonDb, 'girisYonu', 'kisa')), 'only a hash key');
+  // Someone else cannot take or change it; a school account or a Google tester cannot write one.
+  const baskasi = sifreli('uye-b', UYE_E('b'));
+  await assertFails(setDoc(ref(baskasi), { email: UYE_E('b'), uid: 'uye-b', ts: 2 }), 'other owner');
+  await assertFails(setDoc(doc(baskasi, 'girisYonu', anahtar('2')), { email: UYE_E('a'), uid: 'uye-b', ts: 2 }), 'not its own email');
+  await assertFails(setDoc(doc(baskasi, 'girisYonu', anahtar('2')), { email: UYE_E('b'), uid: 'uye-b', ts: 2, nesil: 3 }), 'extra field');
+  await assertFails(setDoc(doc(sifreli('okul-a', OKUL_E('c')), 'girisYonu', anahtar('3')), { email: OKUL_E('c'), uid: 'okul-a', ts: 1 }));
+  await assertFails(setDoc(doc(testciDb, 'girisYonu', anahtar('3')), { email: UYE_E('a'), uid: TESTCI_UID, ts: 1 }), 'not an allowlisted teacher');
+  await assertSucceeds(setDoc(ref(uyeDb), { email: UYE_E('a'), uid: 'uye-a', ts: 3 }), 'owner update');
+  // The teacher points a Kaydol name to a new account, or a school name+number to a new generation.
+  await assertSucceeds(setDoc(ref(ogretmenDb), { email: UYE_E('d'), uid: 'uye-yeni', eskiUid: 'uye-a', ts: 4 }));
+  await assertFails(setDoc(ref(uyeDb), { email: UYE_E('a'), uid: 'uye-a', ts: 5 }), 'the old account cannot take it back');
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'girisYonu', anahtar('4')), { nesil: 2, ts: 1 }));
+  for (const nesil of [0, 1000, 'iki']) await assertFails(setDoc(doc(ogretmenDb, 'girisYonu', anahtar('5')), { nesil, ts: 1 }), 'nesil ' + nesil);
+  await assertFails(setDoc(doc(ogretmenDb, 'girisYonu', anahtar('5')), { email: OKUL_E('e'), ts: 1 }), 'teacher redirects only to Kaydol emails');
+  await assertFails(deleteDoc(ref(uyeDb)), 'no longer the owner');
+  await assertSucceeds(deleteDoc(doc(ogretmenDb, 'girisYonu', anahtar('4'))));
+});
+
+await check('after-a-kaydol-reset-only-the-new-account-reads-the-old-notebook', async () => {
+  const eski = sifreli('uye-eski', UYE_E('e')), yeni = sifreli('uye-yeni2', UYE_E('f')), yabanci = sifreli('uye-x', UYE_E('9'));
+  await assertSucceeds(setDoc(doc(eski, 'testDefter', 'uye-eski'), testDefter()));
+  await assertFails(getDoc(doc(yeni, 'testDefter', 'uye-eski')), 'no hand-over yet');
+  await assertFails(setDoc(doc(yeni, 'devir', 'uye-eski'), { yeniUid: 'uye-yeni2', ts: 1 }), 'only a teacher hands over');
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'devir', 'uye-eski'), { yeniUid: 'uye-yeni2', ts: 1 }));
+  await assertFails(setDoc(doc(ogretmenDb, 'devir', 'uye-z'), { yeniUid: 'a', ts: 1, fazla: 1 }));
+  await assertSucceeds(getDoc(doc(yeni, 'devir', 'uye-eski')));
+  await assertFails(getDoc(doc(yabanci, 'devir', 'uye-eski')));
+  await assertSucceeds(getDoc(doc(yeni, 'testDefter', 'uye-eski')), 'the new account reads the old notebook');
+  await assertFails(getDoc(doc(yabanci, 'testDefter', 'uye-eski')));
+  await assertFails(setDoc(doc(yeni, 'testDefter', 'uye-eski'), testDefter()), 'but cannot write it');
+  await assertFails(getDocs(collection(yeni, 'testDefter', 'uye-eski', 'gecmis')), 'nor its history');
+  await assertSucceeds(setDoc(doc(yeni, 'testDefter', 'uye-yeni2'), testDefter()), 'and saves its own copy');
+});
+
+await check('recovery-email-written-by-the-account-read-only-by-teachers', async () => {
+  const uye = sifreli('uye-r', UYE_E('7')), okul = sifreli('okul-r', OKUL_E('8'));
+  const ref = (db, uid) => doc(db, 'kurtarma', anahtar('6'), 'hesaplar', uid);
+  await assertSucceeds(setDoc(ref(uye, 'uye-r'), { eposta: 'ogrenci@example.com', tur: 'uye', ts: 1 }));
+  await assertSucceeds(setDoc(ref(okul, 'okul-r'), { eposta: 'veli@example.com', tur: 'okul', ts: 1 }));
+  await assertFails(setDoc(ref(uye, 'okul-r'), { eposta: 'x@example.com', tur: 'uye', ts: 1 }), 'another account');
+  for (const eposta of ['adres-yok', 'a@b', 'x'.repeat(121) + '@ex.com'])
+    await assertFails(setDoc(ref(uye, 'uye-r'), { eposta, tur: 'uye', ts: 1 }), eposta);
+  await assertFails(setDoc(ref(uye, 'uye-r'), { eposta: 'o@example.com', tur: 'uye', ts: 1, ad: 'Ali' }), 'extra field');
+  await assertFails(setDoc(ref(testciDb, TESTCI_UID), { eposta: 'o@example.com', tur: 'uye', ts: 1 }), 'Google tester');
+  await assertFails(getDoc(ref(uye, 'uye-r')), 'not even the owner reads it back');
+  await assertFails(getDocs(collection(anonDb, 'kurtarma', anahtar('6'), 'hesaplar')));
+  await assertSucceeds(getDocs(collection(ogretmenDb, 'kurtarma', anahtar('6'), 'hesaplar')));
+});
+
+await check('reset-requests-anyone-creates-only-teachers-read-and-delete', async () => {
+  const ref = (db, id) => doc(db, 'sifreTalepleri', id);
+  await assertSucceeds(setDoc(ref(anonDb, 't1'), { tur: 'okul', ad: 'Ada Yılmaz', eposta: 'veli@example.com', ts: 1 }));
+  await assertSucceeds(setDoc(ref(anonDb, 't2'), { tur: 'uye', ad: 'aliveli07', eposta: 'ali@example.com', ts: 2 }));
+  for (const bad of [{ tur: 'admin', ad: 'a', eposta: 'a@example.com', ts: 1 }, { tur: 'uye', ad: '', eposta: 'a@example.com', ts: 1 },
+      { tur: 'uye', ad: 'x'.repeat(81), eposta: 'a@example.com', ts: 1 }, { tur: 'uye', ad: 'a', eposta: 'nope', ts: 1 },
+      { tur: 'uye', ad: 'a', eposta: 'a@example.com', ts: 1, sifre: '123' }])
+    await assertFails(setDoc(ref(anonDb, 't9'), bad), JSON.stringify(bad));
+  await assertFails(getDoc(ref(anonDb, 't1')));await assertFails(getDocs(collection(anonDb, 'sifreTalepleri')));
+  await assertFails(getDocs(collection(sifreli('uye-q', UYE_E('5')), 'sifreTalepleri')), 'students cannot read requests');
+  await assertFails(setDoc(ref(anonDb, 't1'), { tur: 'okul', ad: 'Değişti', eposta: 'veli@example.com', ts: 9 }), 'no update');
+  await assertSucceeds(getDocs(collection(ogretmenDb, 'sifreTalepleri')));
+  await assertSucceeds(deleteDoc(ref(ogretmenDb, 't1')));
+  await assertFails(deleteDoc(ref(anonDb, 't2')));
+});
+
+await check('teacher-removes-the-name-password-lookup-of-a-reset-school-account', async () => {
+  const okul = sifreli('okul-s', OKUL_E('4')), ref = db => doc(db, 'sifreliGiris', anahtar('7'), 'hesaplar', 'okul-s');
+  await assertSucceeds(setDoc(ref(okul), { email: OKUL_E('4'), ts: 1 }));
+  await assertFails(deleteDoc(ref(sifreli('uye-t', UYE_E('3')))));
+  await assertSucceeds(deleteDoc(ref(ogretmenDb)));
+});
+
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
 await testEnv.cleanup();
 process.exit(fail ? 1 : 0);
