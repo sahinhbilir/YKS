@@ -71,6 +71,37 @@ async function kur(s, ad = 'Kuzey') {
   return a;
 }
 const yukle = a => a.run('bulutaYedekle()');
+// "Kaydol" accounts in the shared server double: user name → {sifre, kullanici}. School
+// name+number login always fails here, so a numeric password falls through to Kaydol.
+const kimlikHatasi = () => Object.assign(new Error('auth'), { code: 'auth/invalid-credential' });
+function uyeler(a, s) {
+  s.uyeler ||= {}; a.cagri = [];
+  a.b.uyeKaydol = async (ad, sifre) => {
+    a.cagri.push(['kaydol', ad]);
+    if (s.uyeler[ad]) throw Object.assign(new Error('taken'), { code: 'auth/email-already-in-use' });
+    const u = { uid: 'uye-' + ad, isAnonymous: false, email: 'uye-' + 'a'.repeat(40) + '@uye.ykstekrar.app' };
+    s.uyeler[ad] = { sifre, u }; a.setUser(u); return u;
+  };
+  a.b.uyeGiris = async (ad, sifre) => {
+    a.cagri.push(['giris', ad]);
+    const k = s.uyeler[ad]; if (!k || k.sifre !== sifre) throw kimlikHatasi();
+    a.setUser(k.u); return k.u;
+  };
+  a.b.girisOgrenciHesabi = async (ad, no) => { a.cagri.push(['okul', ad, no]); throw kimlikHatasi(); };
+  return a;
+}
+async function kaydol(a, ad = 'Ali Veli 07', sifre = 'gizli-123', alan = 'EA') {
+  Object.assign(a.nodes, { kaydolAd: a.el({ value: ad }), kaydolSifre: a.el({ value: sifre }), kaydolAlanSec: a.el({ value: alan }),
+    kaydolDurum: a.el() });
+  await a.tikla('kaydolAc');
+  await a.tikla('kaydolBaslat');
+  return a;
+}
+async function girisYap(a, ad, sifre) {
+  Object.assign(a.nodes, { ogrenciGirisAd: a.el({ value: ad }), ogrenciGirisNo: a.el({ value: sifre }), ogrenciGirisDurum: a.el() });
+  await a.tikla('ogrenciBulutGiris');
+  return a.nodes.ogrenciGirisDurum.textContent;
+}
 const bulutDefteri = (s, uid = GOOGLE.uid) => JSON.parse(s.belgeler['testDefter/' + uid].veri);
 
 const checks = [];
@@ -89,7 +120,11 @@ async function check(name, fn) {
     assert(!/id="ogrenciGirisAlan"[^>]*hidden/.test(h), 'student login is open');
     for (const id of ['ogrenciGirisAd', 'ogrenciGirisNo', 'ogrenciBulutGiris', 'rolRehber', 'testHesapAc']) assert(kart.includes('id="' + id + '"'), id);
     assert(kart.indexOf('id="ogrenciBulutGiris"') < kart.indexOf('id="rolRehber"'), 'teacher login comes after Giriş yap');
-    assert.match(kart, /<button class="dugme" id="rolRehber">Rehber öğretmeniyim<\/button><button class="dugme" id="testHesapAc">Test hesabı aç<\/button>/);
+    assert.match(kart, /<button class="dugme" id="rolRehber">Rehber öğretmeniyim<\/button><button class="dugme" id="kaydolAc">Kaydol<\/button><button class="dugme" id="testHesapAc">Test hesabı aç<\/button>/);
+    // One login for both: Kaydol (user name + password) and school (name + school number).
+    assert.match(kart, /id="ogrenciGirisAd" autocomplete="username"[^>]*placeholder="Kullanıcı adı - Ad soyad"/);
+    assert.match(kart, /<div class="sifre-kutu"><input type="password" id="ogrenciGirisNo" autocomplete="current-password" placeholder="Şifre - Okul numarası"><button type="button" class="sifre-goster" data-sifre-goster="ogrenciGirisNo"[^>]*aria-pressed="false" aria-label="Şifreyi göster">/);
+    assert(!/type="number"|inputmode="numeric"/.test(kart), 'no number spinner on the school number');
     assert(h.indexOf('</section>') < h.indexOf('class="giris-cizim"'), 'the drawing comes after the login');
     // No hint texts: the status line stays empty until there is an error or progress to show.
     assert.match(kart, /id="ogrenciGirisDurum" role="status" aria-live="polite"><\/span>/);
@@ -345,6 +380,111 @@ async function check(name, fn) {
     const t = kapat(await kur(sunucu()));                        // the test account itself still can
     assert.equal(t.run('testSifirlamaIzinli()'), true);
     assert.match(t.run("EK.sekme='ayarlar';gorunumAyarlar()"), /id="testSifirla"/);
+  });
+
+  await check('kaydol-form-removes-spaces-and-validates-before-creating-an-account', async kapat => {
+    const s = sunucu(), a = kapat(uyeler(cihaz(s), s));
+    await a.tikla('kaydolAc');
+    assert.equal(a.run('EK.kaydol'), true);
+    const h = a.nodes.ana.innerHTML;
+    assert.match(h, /<section class="giris-kart" id="kaydolKart"[\s\S]*id="kaydolAd"[\s\S]*<input type="password" id="kaydolSifre" autocomplete="new-password"[\s\S]*data-sifre-goster="kaydolSifre"[\s\S]*<select id="kaydolAlanSec">[\s\S]*id="kaydolBaslat"[\s\S]*id="kaydolGeri"/);
+    assert.equal(a.run("uyeAdiTemizle(' Ali  Veli\\t07 ')"), 'aliveli07', 'spaces anywhere are removed');
+    assert.equal(a.run("uyeAdiTemizle('IŞIK')"), 'ışık', 'Turkish lower case');
+    for (const [ad, sifre, alan, mesaj] of [['', 'gizli-123', 'SAY', /Bir kullanıcı adı seç/], ['a b', 'gizli-123', 'SAY', /3–30 karakter/],
+        ['ali<veli>', 'gizli-123', 'SAY', /yalnızca harf, rakam/], ['aliveli', '12345', 'SAY', /en az 6 karakter/], ['aliveli', 'gizli-123', '', /Alanını seç/]]) {
+      Object.assign(a.nodes, { kaydolAd: a.el({ value: ad }), kaydolSifre: a.el({ value: sifre }), kaydolAlanSec: a.el({ value: alan }), kaydolDurum: a.el() });
+      await a.tikla('kaydolBaslat');
+      assert.match(a.nodes.kaydolDurum.textContent, mesaj, ad + '/' + sifre + '/' + alan);
+    }
+    assert.deepEqual(a.cagri, [], 'nothing reaches Firebase');
+    assert.equal(a.run('D.rol'), '');
+    await a.tikla('kaydolGeri');
+    assert.equal(a.run('EK.kaydol'), false);assert.match(a.nodes.ana.innerHTML, /id="ogrenciGirisAlan"/);
+  });
+
+  await check('kaydol-starts-a-yks-plan-this-week-without-school', async kapat => {
+    const s = sunucu(), a = kapat(await kaydol(uyeler(cihaz(s), s)));
+    assert.deepEqual(a.cagri, [['kaydol', 'aliveli07']], 'the user name is sent without spaces');
+    assert.deepEqual(JSON.parse(a.run('JSON.stringify([D.rol,D.testHesap.tur,D.testHesap.ad,D.testHesap.uid])')), ['ogrenci', 'uye', 'aliveli07', 'uye-aliveli07']);
+    const o = JSON.parse(a.run('JSON.stringify(D.ogr[0])'));
+    assert.equal(o.ad, 'aliveli07'); assert.equal(o.alan, 'EA'); assert.equal(o.okul, false); assert.equal(o.sinavTuru, undefined, 'YKS');
+    assert.equal(o.ilkAktif, a.run('bugunNo()'), 'starts today');
+    assert.equal(a.run('D.ayar.donemBasi'), '2026-09-14', 'weeks start on this Monday');
+    assert.equal(o.kendiPlan.tur, 'YKS', 'all YKS topics come with the own plan');
+    assert(Object.values(o.kendiPlan.seviye).every(v => v === 'hic') && Object.keys(o.kendiPlan.seviye).length > 3);
+    assert(o.kendiPlan.sira.length > 100, 'TYT and EA AYT topics: ' + o.kendiPlan.sira.length);
+    assert(a.run('kendiPlanKuyrugu(0).length') > 0);
+    assert.equal(a.run('EK.sekme'), 'ana'); assert.equal(a.run('EK.kaydol'), false);
+    assert(a.events.some(e => /^bilgi:Hoş geldin aliveli07 — YKS planın bu hafta başladı/.test(e)));
+    // The cloud notebook is the same as a test account's; the reset is not offered.
+    assert.equal((await yukle(a)).tur, 'tamam');
+    assert.equal(bulutDefteri(s, 'uye-aliveli07').testHesap.tur, 'uye');
+    assert.equal(a.run('testSifirlamaIzinli()'), false, 'a Kaydol account cannot reset everything');
+    const ayar = a.run("EK.sekme='ayarlar';gorunumAyarlar()") + a.run('gorunumAyarlar(true)');
+    assert.match(ayar, /<h2>Hesabın<\/h2><p class="mini">Kullanıcı adı: <b>aliveli07<\/b><\/p>/);
+    assert.doesNotMatch(ayar, /testSifirla|Google/);
+  });
+
+  await check('kaydol-refuses-a-taken-user-name-and-keeps-the-form', async kapat => {
+    const s = sunucu(); kapat(await kaydol(uyeler(cihaz(s), s)));
+    const b = kapat(await kaydol(uyeler(cihaz(s), s), 'aliVeli07', 'baska-sifre', 'SAY'));
+    assert.match(b.nodes.kaydolDurum.textContent, /Bu kullanıcı adı alınmış/);
+    assert.equal(b.run('D.rol'), ''); assert.equal(b.run('EK.kaydol'), true);
+    assert.equal(b.nodes.kaydolAd.value, 'aliVeli07', 'what was typed stays');
+  });
+
+  await check('one-login-opens-a-kaydol-notebook-with-user-name-and-password', async kapat => {
+    const s = sunucu(), a = kapat(await kaydol(uyeler(cihaz(s), s)));
+    a.run('sonucIsle(0,[{ki:kendiPlanKuyrugu(0)[0].ki,gun:bugunNo(),not:3}])'); await a.run('kaydet(true)');
+    assert.equal((await yukle(a)).tur, 'tamam');
+    // A letter password goes straight to Kaydol; spaces and capitals in the name do not matter.
+    const b = kapat(uyeler(cihaz(s), s));
+    assert.equal(await girisYap(b, 'Ali Veli 07', 'yanlış-şifre'), 'Kullanıcı adı ve şifre ya da ad soyad ve okul numarası eşleşmedi. Bilgilerini kontrol et.');
+    assert.equal(b.run('D.rol'), '');
+    await girisYap(b, '  ALİ veli07 ', 'gizli-123');
+    assert.deepEqual(b.cagri, [['giris', 'aliveli07'], ['giris', 'aliveli07']], 'not tried as a school login');
+    assert.equal(b.run('D.testHesap.uid'), 'uye-aliveli07'); assert.equal(b.run('D.log.length'), 1);
+    assert.equal(b.run('EK.sekme'), 'ana');
+    assert(b.events.some(e => e === 'bilgi:Hoş geldin aliveli07 — defterin buluttan açıldı.'));
+  });
+
+  await check('a-numeric-password-tries-the-school-login-first', async kapat => {
+    const s = sunucu(), a = kapat(await kaydol(uyeler(cihaz(s), s), 'sayi', '123456', 'SAY'));
+    assert.equal((await yukle(a)).tur, 'tamam');
+    const b = kapat(uyeler(cihaz(s), s));
+    await girisYap(b, 'sayi', '1234');                  // fits a school number, not this account's password
+    assert.deepEqual(b.cagri, [['okul', 'sayi', 1234]], 'a 4-character password cannot be a Kaydol password');
+    b.cagri.length = 0;
+    await girisYap(b, 'sayi', '123456');
+    assert.deepEqual(b.cagri, [['giris', 'sayi']], 'above 9999 is never a school number');
+    assert.equal(b.run('D.testHesap.uid'), 'uye-sayi');
+    // A school student whose number happens to match: the school login wins and Kaydol is not tried.
+    const c = kapat(uyeler(cihaz(s), s));
+    c.run("ogrenciHesabindanYukle=async(ad,no)=>{window.bulut.girisOgrenciHesabi;okulGiris=[ad,no];return {ad,sunucudanAlinanSonuc:0};}");
+    await girisYap(c, 'Ada Yılmaz', ' 42 ');
+    assert.deepEqual(JSON.parse(c.run('JSON.stringify(okulGiris)')), ['Ada Yılmaz', 42]); assert.deepEqual(c.cagri, []);
+  });
+
+  await check('half-finished-kaydol-opens-the-setup-with-the-user-name', async kapat => {
+    const s = sunucu(), a = kapat(uyeler(cihaz(s), s));
+    s.uyeler.yarim = { sifre: 'gizli-123', u: { uid: 'uye-yarim', isAnonymous: false, email: 'x' } };
+    await girisYap(a, 'yarim', 'gizli-123');
+    assert.equal(a.run('D.testHesap.tur'), 'uye'); assert.equal(a.run('D.ogr.length'), 0);
+    assert.match(a.nodes.ana.innerHTML, /id="kOgrAd"[^>]*value="yarim"/);
+  });
+
+  await check('kaydol-account-signs-in-again-with-its-password', async kapat => {
+    const s = sunucu(), a = kapat(await kaydol(uyeler(cihaz(s), s)));
+    a.setUser(null);
+    const kart = a.run("EK.sekme='ayarlar';gorunumAyarlar()");
+    assert.match(kart, /bu cihazda oturum kapalı[\s\S]*<input type="password" id="uyeYenidenSifre"[\s\S]*id="uyeYenidenGir">Yeniden gir/);
+    a.nodes.uyeYenidenSifre = a.el({ value: 'yanlis' });
+    await a.tikla('uyeYenidenGir');
+    assert(a.events.includes('alert:Şifre eşleşmedi.')); assert.equal(a.user(), null);
+    a.nodes.uyeYenidenSifre = a.el({ value: 'gizli-123' });
+    await a.tikla('uyeYenidenGir');
+    assert.equal(a.user().uid, 'uye-aliveli07');
+    assert.equal((await yukle(a)).tur, 'tamam');
   });
 
   await check('school-student-and-teacher-paths-are-unchanged', async kapat => {

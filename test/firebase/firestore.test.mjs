@@ -693,6 +693,24 @@ await check('test-account-reset-deletes-notebook-and-history-in-one-transaction'
   });
 });
 
+// "Kaydol": user name + password account; its Firebase email is only a hash of the name.
+await check('kaydol-account-owns-its-notebook-but-school-password-accounts-do-not', async () => {
+  const UYE_UID = 'uye-1', uyeEposta = 'uye-' + 'a1'.repeat(20) + '@uye.ykstekrar.app';
+  const sifreli = (uid, email, saglayici = 'password') =>
+    testEnv.authenticatedContext(uid, { email, firebase: { sign_in_provider: saglayici, identities: {} } }).firestore();
+  const uyeDb = sifreli(UYE_UID, uyeEposta);
+  await assertSucceeds(setDoc(doc(uyeDb, 'testDefter', UYE_UID), testDefter()));
+  await assertSucceeds(getDoc(doc(uyeDb, 'testDefter', UYE_UID)));
+  await assertSucceeds(setDoc(doc(uyeDb, 'testDefter', UYE_UID, 'gecmis', '2'), testDefter({ gun: '2026-10-06' })));
+  await assertFails(getDoc(doc(uyeDb, 'testDefter', TESTCI_UID)), 'not another account');
+  await assertFails(getDocs(collection(uyeDb, 'testDefter')));
+  // A school name+number account, look-alike emails and other providers stay refused.
+  for (const email of ['ogr-' + 'a1'.repeat(20) + '@student.ykstekrar.app', uyeEposta + '.evil.test', 'x' + uyeEposta,
+                       'uye-' + 'A1'.repeat(20) + '@uye.ykstekrar.app', 'uye-' + 'a1'.repeat(19) + '@uye.ykstekrar.app'])
+    await assertFails(setDoc(doc(sifreli('uye-2', email), 'testDefter', 'uye-2'), testDefter()), email);
+  await assertFails(setDoc(doc(sifreli('uye-3', uyeEposta, 'custom'), 'testDefter', 'uye-3'), testDefter()));
+});
+
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
 await testEnv.cleanup();
 process.exit(fail ? 1 : 0);

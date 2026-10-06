@@ -68,7 +68,7 @@ main{padding:26px 30px 60px;max-width:1180px}
 :root:not([data-theme="light"]) .dugme.birincil{color:#0F141A}
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .dugme.birincil{color:#fff}}
 .dugme:disabled{opacity:.45;cursor:default}
-select,input[type=date],input[type=number],input[type=text]{border:1px solid var(--cizgi);background:var(--kagit);
+select,input[type=date],input[type=number],input[type=text],input[type=password]{border:1px solid var(--cizgi);background:var(--kagit);
   border-radius:7px;padding:7px 9px;font-size:13.5px}
 select.genis{min-width:230px;font-weight:600}
 .etiket{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--soluk);font-weight:600}
@@ -374,14 +374,24 @@ tr.pasif td:first-child{opacity:1}
 .giris-kart{width:100%;max-width:340px;text-align:left;background:var(--kagit);border:1px solid var(--cizgi);border-radius:14px;
   box-shadow:0 2px 6px rgba(11,42,107,.06),0 14px 32px rgba(11,42,107,.09);padding:14px 16px;display:flex;flex-direction:column;gap:7px}
 .giris-kart h2{font-size:15px;text-align:center;margin-bottom:2px}
-.giris-kart input{width:100%;padding:7px 10px;font-size:13.5px}
+.giris-kart input,.giris-kart select{width:100%;padding:7px 10px;font-size:13.5px}
+/* Şifre kutusu: sağdaki göz düğmesi şifreyi gösterir / gizler (tarayıcının kendi düğmesi gizlenir). */
+.sifre-kutu{position:relative}.sifre-kutu input{padding-right:40px}
+.sifre-goster{position:absolute;top:0;right:0;bottom:0;width:38px;display:grid;place-items:center;background:none;border:0;padding:0;
+  color:var(--soluk);cursor:pointer;border-radius:0 7px 7px 0}
+.sifre-goster:hover{color:var(--marka-koyu)}.sifre-goster:focus-visible{outline:2px solid var(--vurgu);outline-offset:-2px}
+.sifre-goster svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sifre-goster .goz-kapali,.sifre-goster[aria-pressed="true"] .goz-acik{display:none}.sifre-goster[aria-pressed="true"] .goz-kapali{display:block}
+input[type=password]::-ms-reveal{display:none}
 .giris-kart .dugme{padding:7px 12px;font-size:13.5px;font-weight:600}
 /* Görünmez etiket: alan adı ekran okuyucuya kalır, ekranda yer kaplamaz (placeholder gösterir). */
 .gorunmez{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 .giris-durum:empty{margin-top:-7px}
 .giris-ayrac{border-top:1px solid var(--cizgi);margin:2px 0}
-.giris-diger{display:flex;flex-wrap:wrap;gap:7px}
-.giris-diger .dugme{flex:1 1 auto;white-space:nowrap;padding:6px 8px;font-size:12.5px;box-shadow:none;color:var(--marka-koyu);border-color:var(--marka-acik);background:var(--vurgu-yumusak)}
+.giris-diger{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+/* Üç düğme bir satıra sığmaz: Rehber öğretmeniyim üstte tam genişlikte, Kaydol ve Test hesabı aç altta yan yana. */
+.giris-diger #rolRehber,.giris-diger>:only-child{grid-column:1/-1}
+.giris-diger .dugme{white-space:nowrap;padding:6px 8px;font-size:12.5px;box-shadow:none;color:var(--marka-koyu);border-color:var(--marka-acik);background:var(--vurgu-yumusak)}
 .giris-diger .dugme:hover{border-color:var(--vurgu)}
 .giris-cizim{display:block;flex:none;width:min(300px,74vw);height:auto;margin:0 auto}
 .giris-cizim .c-koyu{fill:var(--il-koyu)}.giris-cizim .c-mavi{fill:var(--il-mavi)}
@@ -697,6 +707,22 @@ async function girisOgrenciHesabi(ad, no) {
   const k = await ogrenciGirisKimligi(ad, no);
   return (await signInWithEmailAndPassword(auth, k.email, k.sifre)).user;
 }
+// "Kaydol" hesabı: kullanıcı adı + şifre. Kullanıcı adı boşluksuz ve küçük harfle eşleşir;
+// Firebase e-postasında yalnızca özeti durur (öğrenci hesaplarından ayrı alan adı).
+function uyeAdiTemizle(v) {
+  return String(v == null ? '' : v).normalize('NFKC').toLocaleLowerCase('tr-TR').replace(/\s+/g, '');
+}
+async function uyeEposta(kullaniciAdi) {
+  const ozetBayt = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('uye|' + uyeAdiTemizle(kullaniciAdi)));
+  const ozet = Array.from(new Uint8Array(ozetBayt), b => b.toString(16).padStart(2, '0')).join('');
+  return 'uye-' + ozet.slice(0, 40) + '@uye.ykstekrar.app';
+}
+async function uyeKaydol(kullaniciAdi, sifre) {
+  return (await createUserWithEmailAndPassword(auth, await uyeEposta(kullaniciAdi), sifre)).user;
+}
+async function uyeGiris(kullaniciAdi, sifre) {
+  return (await signInWithEmailAndPassword(auth, await uyeEposta(kullaniciAdi), sifre)).user;
+}
 async function ogrenciHesabiHazirla(ad, no) {
   const k = await ogrenciGirisKimligi(ad, no);
   try {
@@ -768,7 +794,7 @@ function girisOgretmen() {
 }
 
 window.bulut = { db, doc, getDoc, getDocFromServer, setDoc, updateDoc, runTransaction, collection, getDocs, onSnapshot, girisOgrenci, girisOgretmen,
-  girisOgrenciHesabi, ogrenciHesabiHazirla,
+  girisOgrenciHesabi, ogrenciHesabiHazirla, uyeKaydol, uyeGiris,
   mevcutKullanici: () => auth.currentUser, oturumHazir: () => auth.authStateReady(),
   oturumuKapat: async () => {
     // Öğretmenin hesap hazırlama oturumu da bu tarayıcıda kalmasın.
@@ -6265,7 +6291,7 @@ function bulutYedekDene() {
   }).then(r => {
     if (D !== defter) return;
     if (r && r.tur === 'hata') EK.bulutYedekHata = r.mesaj || 'bilinmeyen hata';
-    else if (r && r.tur === 'baglanilmadi') EK.bulutYedekHata = 'Google hesabıyla giriş yapılmadı.';
+    else if (r && r.tur === 'baglanilmadi') EK.bulutYedekHata = uyeHesabiMi() ? 'Hesabına giriş yapılmadı; Ayarlar → Hesabın bölümünden şifrenle gir.' : 'Google hesabıyla giriş yapılmadı.';
     if (r && typeof rayCiz === 'function') { try { rayCiz(); } catch (e) { /* yoksay */ } }
   }).catch(e => { if (D === defter) { EK.bulutYedekHata = e && e.message ? e.message : String(e); rayCiz(); } });
 }
@@ -6339,7 +6365,8 @@ async function bulutDefteriniAc(kullanici) {
 const testHesabiMi = () => ogrenciMi() && !!(D && D.testHesap && D.testHesap.uid);
 // Tam sıfırlama yalnızca test hesabınındır. Öğretmen defteri, öğretmene bağlı öğrenci (syncId /
 // hesapUid) ve test hesabı olmayan öğrenci defteri bu düğmeyi görmez, işlemi çalıştıramaz.
-const testSifirlamaIzinli = () => testHesabiMi() && Array.isArray(D.ogr) && D.ogr.every(o => !o || (!o.syncId && !o.hesapUid));
+// Kaydol hesabı da sıfırlanamaz: o, deneme değil gerçek bir öğrenci hesabıdır.
+const testSifirlamaIzinli = () => testHesabiMi() && D.testHesap.tur !== 'uye' && Array.isArray(D.ogr) && D.ogr.every(o => !o || (!o.syncId && !o.hesapUid));
 const TEST_CAKISMA = 'Test defterin başka bir cihazda da değişti; üzerine yazılmadı. ' +
   'Ayarlar → Test hesabın bölümünden hangisiyle devam edeceğini seç.';
 let TEST_DENETIM_IS = null, TEST_ACILIS_JSON = null;
@@ -6383,6 +6410,88 @@ async function testHesabiniAc() {
   await kaydet(true); ciz();
   bilgiVer('Test hesabın açıldı. Takma adını ve sınıfını gir; planın hazırlansın.');
 }
+// ---------------------------------------------------------------- Kaydol hesapları
+// Kullanıcı adı + şifreyle kendi YKS defteri. Test hesabının bulut defterini (testDefter/{uid})
+// ve çok cihazlı eşitlemesini kullanır; farkları: Google yerine şifre, kurulum kendiliğinden
+// (YKS, okula gitmeden, bütün konular kendi planıyla, bu hafta bugün başlar) ve sıfırlama yok.
+const uyeHesabiMi = () => testHesabiMi() && D.testHesap.tur === 'uye';
+// Kullanıcı adındaki boşluklar silinir, büyük/küçük harf fark etmez (bulut modülüyle aynı kural).
+function uyeAdiTemizle(v) {
+  return String(v == null ? '' : v).normalize('NFKC').toLocaleLowerCase('tr-TR').replace(/\s+/g, '');
+}
+function uyeAdiHatasi(ad) {
+  if (ad.length < 3 || ad.length > 30) return 'Kullanıcı adı 3–30 karakter olmalı (boşluklar sayılmaz).';
+  if (!/^[\p{L}\p{N}._-]+$/u.test(ad)) return 'Kullanıcı adında yalnızca harf, rakam, nokta, alt çizgi ve tire olabilir.';
+  return '';
+}
+const uyeSifreHatasi = sifre => sifre.length < 6 ? 'Şifre en az 6 karakter olmalı.' : sifre.length > 100 ? 'Şifre en fazla 100 karakter olabilir.' : '';
+const girisKimlikHatasiMi = e => /invalid-credential|invalid-login-credentials|user-not-found|wrong-password|invalid-email/.test(String(e && e.code || ''));
+function uyeHataMesaji(e) {
+  const kod = String(e && e.code || '');
+  if (kod === 'auth/email-already-in-use') return 'Bu kullanıcı adı alınmış. Başka bir ad dene ya da giriş yap.';
+  if (kod === 'auth/weak-password') return 'Şifre en az 6 karakter olmalı.';
+  if (kod === 'auth/password-does-not-meet-requirements') return 'Şifre yeterince güçlü değil; daha uzun ya da farklı bir şifre dene.';
+  if (kod === 'auth/too-many-requests') return 'Çok fazla deneme yapıldı. Biraz bekleyip yeniden dene.';
+  if (kod === 'auth/network-request-failed') return 'İnternet bağlantısı yok gibi görünüyor.';
+  if (kod === 'auth/operation-not-allowed') return 'Kullanıcı adıyla kayıt şu an kapalı.';
+  return e && e.message || String(e);
+}
+// Okula gitmeyen öğrencinin defteri: ders programı ve okul konu planı yok; plan haftaları bu
+// pazartesi, ilk etkin gün bugün. Kurulum ekranı ("Okula gitmiyorum") ve Kaydol bunu kullanır.
+function okulsuzDefterKur(ad, alan, sinav, sinavTuru) {
+  D.rol = 'ogrenci'; D.ayar.sinav = sinav;
+  D.ogr = [{ no: 1, ad: ad, alan: alan, sube: 'benim', sinif: 12, okul: false, ...(sinavTuru === 'YKS' ? {} : { sinavTuru }), kap: 6, off: [6],
+             dakika: { hi: 180, hs: 180, deneme: false }, telafiGunKap: 3, hedef: null, aktif: true,
+             ilkAktif: bugunNo(), maddeler: [], rutin: { once: '', ara: '', sonra: '' } }];
+  donemBasiniAyarla(isoDan(pazartesi(bugunNo())), true);
+  EK.ogr = 0; EK.sube = 'benim'; EK.hafta = null;
+}
+// Kaydol: bütün dersler "Bilmiyorum" (önce konu anlatımı), hedef bitiş varsayılan tarih.
+function uyeDefteriniKur(ad, alan) {
+  okulsuzDefterKur(ad, alan, D.ayar.sinav, 'YKS');
+  kendiPlanKur(0, Object.fromEntries(kendiPlanDersleri(alan, 'YKS').map(d => [d, 'hic'])), kendiPlanVarsayilanHedef());
+}
+async function kaydolVeBasla(kullaniciAdi, sifre, alan) {
+  const b = window.bulut;
+  if (!b || !b.yapilandirilmis) throw new Error('Bulut bağlantısı hazır değil. Sayfayı yenileyip yeniden dene.');
+  const ad = uyeAdiTemizle(kullaniciAdi), hata = uyeAdiHatasi(ad) || uyeSifreHatasi(sifre) || (Object.hasOwn(ALAN_DERS, alan) ? '' : 'Alanını seç.');
+  if (hata) throw new Error(hata);
+  if (D && D.rol) throw new Error('Bu cihazda zaten açık bir defter var.');
+  if (!isoTarihGecerli(D.ayar.sinav) || gunNo(D.ayar.sinav) < bugunNo() + 28)
+    throw new Error('YKS tarihi dört haftadan yakın; kendi planı kurulamıyor.');
+  const kullanici = await sureSinirli(b.uyeKaydol(ad, sifre), BULUT_YAZMA_ZAMAN_ASIMI, 'Kayıt sunucudan zamanında yanıt alamadı.');
+  if (D && D.rol) throw new Error('Bu cihazda zaten açık bir defter var.');
+  const onceki = JSON.stringify(D);
+  try {
+    bulutYedekTemeliniUnut(kullanici.uid);
+    D.rol = 'ogrenci'; D.testHesap = { uid: kullanici.uid, acilis: Date.now(), tur: 'uye', ad: ad };
+    uyeDefteriniKur(ad, alan);
+    EK.sekme = 'ana'; EK.kaydol = false;
+    if (!(await kaydet(true))) throw new Error('Defter bu cihaza kaydedilemedi.');
+  } catch (e) { D = JSON.parse(onceki); EK.kaydol = true; throw e; }
+  ciz();
+  return { ad, haftalik: kendiPlanHaftalikSayi(0).haftalik };
+}
+// Kaydol hesabıyla giriş. Defter buluttaysa açılır; kayıt yarım kaldıysa kurulum ekranı gelir.
+async function uyeHesabiniAc(kullaniciAdi, sifre) {
+  const b = window.bulut;
+  if (!b || !b.yapilandirilmis) throw new Error('Bulut bağlantısı hazır değil. Sayfayı yenileyip yeniden dene.');
+  const ad = uyeAdiTemizle(kullaniciAdi);
+  const kullanici = await sureSinirli(b.uyeGiris(ad, sifre), BULUT_YAZMA_ZAMAN_ASIMI, 'Giriş sunucudan zamanında yanıt alamadı.');
+  const anlik = await sureSinirli(b.getDocFromServer(testDefterRef(kullanici.uid)),
+    BULUT_YAZMA_ZAMAN_ASIMI, 'Defterin sunucudan zamanında alınamadı.');
+  if (D && D.rol) throw new Error('Bu cihazda zaten açık bir defter var.');
+  if (anlik.exists()) {
+    await testDefteriniYerlestir((anlik.data() || {}).veri, kullanici.uid);
+    EK.sekme = 'ana'; ciz();
+    return { ad: D.ogr[0] ? D.ogr[0].ad : ad, yeni: false };
+  }
+  bulutYedekTemeliniUnut(kullanici.uid);
+  D.rol = 'ogrenci'; D.testHesap = { uid: kullanici.uid, acilis: Date.now(), tur: 'uye', ad: ad };
+  EK.sekme = 'plan'; EK.hafta = null;
+  await kaydet(true); ciz();
+  return { ad, yeni: true };
+}
 // bulutaYedekleGercek'in test hesabı dalı. onaylananVeri: kullanıcının bilerek
 // yerine yazmayı seçtiği bulut kopyası; o kopya önce "cakisma" yuvasına saklanır.
 async function testDefterineYedekle(onaylananVeri) {
@@ -6390,7 +6499,7 @@ async function testDefterineYedekle(onaylananVeri) {
   if (!testHesabiMi() || !D.ogr.length) return { tur: 'yok' };
   const b = window.bulut, uid = D.testHesap.uid, kullanici = b.mevcutKullanici();
   if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
-  if (kullanici.uid !== uid) return { tur: 'hata', mesaj: 'Bu cihazda başka bir Google hesabı açık; test defterin buluta yazılmadı.' };
+  if (kullanici.uid !== uid) return { tur: 'hata', mesaj: 'Bu cihazda başka bir hesap açık; defterin buluta yazılmadı.' };
   let json;
   try { json = JSON.stringify(D); }
   catch (e) { return { tur: 'hata', mesaj: 'Veri JSON’a çevrilemedi.' }; }
@@ -6437,7 +6546,8 @@ async function testDefteriniDenetleGercek() {
   if (b.oturumHazir) await b.oturumHazir();
   const kullanici = b.mevcutKullanici();
   if (!kullanici || kullanici.uid !== uid) {
-    EK.bulutYedekHata = 'Buluta kaydetmek için Ayarlar → Test hesabın bölümünden Google ile yeniden gir.';
+    EK.bulutYedekHata = uyeHesabiMi() ? 'Buluta kaydetmek için Ayarlar → Hesabın bölümünden şifrenle yeniden gir.'
+      : 'Buluta kaydetmek için Ayarlar → Test hesabın bölümünden Google ile yeniden gir.';
     rayCiz(); return;
   }
   if (!D.ogr.length) return;
@@ -6470,10 +6580,15 @@ function testHesabiKarti() {
   const b = window.bulut, kullanici = b && b.mevcutKullanici && b.mevcutKullanici();
   const bagli = !!kullanici && kullanici.uid === D.testHesap.uid;
   const durum = EK.bulutYedekHata || (EK.bulutYedekTs ? 'Son hâlin bulutta kayıtlı.' : 'Değişikliklerin birkaç saniye içinde buluta kaydedilir.');
-  return '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Test hesabın</h2>' +
-    '<p class="mini">' + (bagli ? 'Google hesabı: ' + kacis(kullanici.email || 'bağlı') : 'Bu cihazda Google oturumu kapalı.') + '</p>' +
+  const uye = uyeHesabiMi();
+  return '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>' + (uye ? 'Hesabın' : 'Test hesabın') + '</h2>' +
+    '<p class="mini">' + (uye ? 'Kullanıcı adı: <b>' + kacis(D.testHesap.ad || '') + '</b>' + (bagli ? '' : ' · bu cihazda oturum kapalı.')
+      : bagli ? 'Google hesabı: ' + kacis(kullanici.email || 'bağlı') : 'Bu cihazda Google oturumu kapalı.') + '</p>' +
     '<p class="mini" role="status">' + kacis(durum) + '</p>' +
-    (bagli ? '' : '<div class="arac"><button class="dugme birincil" id="testYenidenGir">Google ile yeniden gir</button></div>') +
+    (bagli ? '' : uye
+      ? '<div class="arac"><label class="gorunmez" for="uyeYenidenSifre">Şifren</label>' + sifreKutusu('uyeYenidenSifre', 'Şifren', 'current-password') +
+        '<button class="dugme birincil" id="uyeYenidenGir">Yeniden gir</button></div>'
+      : '<div class="arac"><button class="dugme birincil" id="testYenidenGir">Google ile yeniden gir</button></div>') +
     (EK.testCakisma
       ? '<p><b>Hangisiyle devam edeceğini seç.</b> Bu cihazdaki defter ile buluttaki defter farklı yerlerden değişti.</p>' +
         '<div class="arac"><button class="dugme" id="testBulutuAc">Buluttakini aç</button>' +
@@ -6481,7 +6596,8 @@ function testHesabiKarti() {
         '<p class="mini">“Buluttakini aç” bu cihazdaki kaydedilmemiş değişiklikleri siler; istersen önce Gelişmiş ayarlar → “Yedek indir”. ' +
         '“Bu cihazdakini buluta yaz” seçilirse buluttaki önceki kopya ayrıca saklanır.</p>'
       : '') +
-    '<p class="mini">Başka bir cihazda devam etmeden önce “Kaydet ve çıkış yap”ı kullan. Diğer cihazda “Test hesabı aç” ile aynı Google hesabını seç.</p>' +
+    '<p class="mini">Başka bir cihazda devam etmeden önce “Kaydet ve çıkış yap”ı kullan. ' +
+      (uye ? 'Diğer cihazda kullanıcı adın ve şifrenle giriş yap.' : 'Diğer cihazda “Test hesabı aç” ile aynı Google hesabını seç.') + '</p>' +
     (testSifirlamaIzinli() ? '<p class="mini">Baştan başlamak için: Gelişmiş ayarlar → Verileri sıfırla → “Test hesabımı sıfırla”.</p>' : '') + '</div>';
 }
 // "Test hesabımı sıfırla": buluttaki defter ve bütün geçmiş yuvaları tek işlemde silinir,
@@ -8889,23 +9005,49 @@ const GIRIS_CIZIM = (() => {
     '<circle class="c-koyu" cx="288" cy="137" r="5"/><path class="c-koyu" d="M281 139h14l4 27h-22z"/></svg>';
 })();
 // Açılışta öğrenci girişi hazır gelir; rehber öğretmen ve test hesabı hemen altında.
+// Şifre alanı ve sağındaki göster/gizle düğmesi (bkz. data-sifre-goster tıklaması).
+const GOZ_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" class="goz-acik"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' +
+  '<svg viewBox="0 0 24 24" aria-hidden="true" class="goz-kapali"><path d="M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.8 9.8 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+function sifreKutusu(id, yer, otomatik, ek) {
+  return '<div class="sifre-kutu"><input type="password" id="' + id + '" autocomplete="' + otomatik + '" placeholder="' + kacis(yer) + '"' + (ek || '') + '>' +
+    '<button type="button" class="sifre-goster" data-sifre-goster="' + id + '" aria-controls="' + id + '" aria-pressed="false" aria-label="Şifreyi göster">' + GOZ_SVG + '</button></div>';
+}
+// "Kaydol": kullanıcı adı, şifre ve alan. Hesap açılınca YKS planı bu hafta, bugün başlar.
+function kaydolKarti() {
+  return '<section class="giris-kart" id="kaydolKart" aria-labelledby="kaydolBaslik">' +
+    '<h2 id="kaydolBaslik">Kaydol</h2>' +
+    '<label class="gorunmez" for="kaydolAd">Kullanıcı adı</label><input type="text" id="kaydolAd" maxlength="60" ' +
+    'autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Kullanıcı adı">' +
+    '<label class="gorunmez" for="kaydolSifre">Şifre</label>' + sifreKutusu('kaydolSifre', 'Şifre (en az 6 karakter)', 'new-password', ' minlength="6" maxlength="100"') +
+    '<label class="gorunmez" for="kaydolAlanSec">Alanın</label><select id="kaydolAlanSec"><option value="" selected disabled>Alanın</option>' +
+    '<option value="SAY">Sayısal (SAY)</option><option value="EA">Eşit ağırlık (EA)</option><option value="SÖZ">Sözel (SÖZ)</option>' +
+    '<option value="DİL">Dil (yalnızca TYT)</option></select>' +
+    '<button class="dugme birincil" id="kaydolBaslat">Kaydol ve başla</button>' +
+    '<span class="mini giris-durum" id="kaydolDurum" role="status" aria-live="polite"></span>' +
+    '<div class="giris-ayrac" role="separator"></div>' +
+    '<div class="giris-diger"><button class="dugme" id="kaydolGeri">Girişe dön</button></div></section>';
+}
 function gorunumKurulum() {
   const yil = (/^\d{4}/.exec((D && D.ayar && D.ayar.sinav) || '') || ['2027'])[0];
   return '<div class="giris">' + GIRIS_SUSLER + '<div class="giris-ic">' +
     '<h1 class="giris-baslik">YKS ' + yil + '</h1>' +
     '<p class="giris-alt">Hedefine bir adım daha yaklaş</p><div class="giris-ara ara-kart"></div>' +
+    (EK.kaydol ? kaydolKarti() :
+    // Tek giriş: Kaydol hesabı (kullanıcı adı + şifre) ya da okul öğrencisi (ad soyad + okul numarası).
     '<section class="giris-kart" id="ogrenciGirisAlan" aria-labelledby="ogrenciGirisBaslik">' +
     '<h2 id="ogrenciGirisBaslik">Öğrenci girişi</h2>' +
-    '<label class="gorunmez" for="ogrenciGirisAd">Ad soyad</label><input type="text" id="ogrenciGirisAd" autocomplete="off" placeholder="Ad soyad">' +
-    '<label class="gorunmez" for="ogrenciGirisNo">Okul numarası</label><input type="number" id="ogrenciGirisNo" autocomplete="off" ' +
-    'min="1" max="9999" inputmode="numeric" placeholder="Okul numarası">' +
+    '<label class="gorunmez" for="ogrenciGirisAd">Kullanıcı adı ya da ad soyad</label><input type="text" id="ogrenciGirisAd" ' +
+    'autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Kullanıcı adı - Ad soyad">' +
+    '<label class="gorunmez" for="ogrenciGirisNo">Şifre ya da okul numarası</label>' +
+    sifreKutusu('ogrenciGirisNo', 'Şifre - Okul numarası', 'current-password') +
     '<button class="dugme birincil" id="ogrenciBulutGiris">Giriş yap</button>' +
     // Boş durum satırı yalnızca hata ve ilerleme iletilerini taşır (ekran okuyucuya da bildirir).
     '<span class="mini giris-durum" id="ogrenciGirisDurum" role="status" aria-live="polite"></span>' +
     '<div class="giris-ayrac" role="separator"></div>' +
     '<div class="giris-diger"><button class="dugme" id="rolRehber">Rehber öğretmeniyim</button>' +
+    '<button class="dugme" id="kaydolAc">Kaydol</button>' +
     '<button class="dugme" id="testHesapAc">Test hesabı aç</button></div>' +
-    '</section><div class="giris-ara ara-cizim"></div>' + GIRIS_CIZIM + '<div class="giris-ara ara-yedek"></div>' +
+    '</section>') + '<div class="giris-ara ara-cizim"></div>' + GIRIS_CIZIM + '<div class="giris-ara ara-yedek"></div>' +
     '<details class="giris-yedek mini"><summary class="baglanti">Yedekten geri yükle</summary>' +
     '<label class="dugme">Dosya seç<input type="file" id="kurYedek" hidden></label> ' +
     '<button class="baglanti" id="kurYapistirAc">İçeriği yapıştır</button>' +
@@ -8959,7 +9101,8 @@ function cizIc() {
       (ogrenciMi()
         ? '<div style="max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:10px">' +
           (testHesabiMi()
-            ? '<label class="etiket">Takma adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Takma ad" maxlength="40"></label>' +
+            ? '<label class="etiket">Takma adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Takma ad" maxlength="40"' +
+              (uyeHesabiMi() ? ' value="' + kacis(D.testHesap.ad || '') + '"' : '') + '></label>' +
               '<span class="mini">Gerçek adını yazman gerekmez; yalnızca planında görünür.</span>'
             : '<label class="etiket">Adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Ad Soyad"></label>') +
           '<label class="etiket">Hangi sınava hazırlanıyorsun?<br><select id="kOgrSinavTuru" style="width:100%;margin-top:4px">' +
@@ -9252,6 +9395,19 @@ document.addEventListener('click', async ev => {
     } finally { bulutDefterIslemi = false; }
     return;
   }
+  if (ev.target.closest('#uyeYenidenGir')) {
+    if (!uyeHesabiMi() || bulutDefterIslemi) return;
+    const sifre = (document.getElementById('uyeYenidenSifre') || {}).value || '';
+    if (!sifre) { alert('Şifreni yaz.'); return; }
+    bulutDefterIslemi = true;
+    try {
+      const kullanici = await window.bulut.uyeGiris(D.testHesap.ad, sifre);
+      if (kullanici.uid !== D.testHesap.uid) { alert('Bu defter başka bir hesaba ait.'); return; }
+      EK.bulutYedekHata = ''; ciz(); window.bulutDegisti();
+    } catch (e) { alert(girisKimlikHatasiMi(e) ? 'Şifre eşleşmedi.' : 'Giriş tamamlanmadı: ' + uyeHataMesaji(e)); }
+    finally { bulutDefterIslemi = false; }
+    return;
+  }
   if (ev.target.closest('#testYenidenGir')) {
     if (!testHesabiMi() || bulutDefterIslemi) return;
     try {
@@ -9320,27 +9476,83 @@ document.addEventListener('click', async ev => {
     bilgiVer('Kurulum tamam. Önce öğrencilerinizi ekleyin, sonra Ders programı sekmesinden PDF yükleyin.');
     return;
   }
+  // Göz düğmesi: şifre alanını gösterir / gizler.
+  const goz = ev.target.closest('[data-sifre-goster]');
+  if (goz) {
+    const alan = document.getElementById(goz.dataset.sifreGoster);
+    if (!alan) return;
+    const goster = alan.type === 'password';
+    alan.type = goster ? 'text' : 'password';
+    goz.setAttribute('aria-pressed', String(goster));
+    goz.setAttribute('aria-label', goster ? 'Şifreyi gizle' : 'Şifreyi göster');
+    return;
+  }
+  if (ev.target.closest('#kaydolAc') || ev.target.closest('#kaydolGeri')) {
+    if (D && D.rol) return;
+    EK.kaydol = !!ev.target.closest('#kaydolAc'); ciz();
+    const ilk = document.getElementById(EK.kaydol ? 'kaydolAd' : 'ogrenciGirisAd');
+    if (ilk) ilk.focus();
+    return;
+  }
+  if (ev.target.closest('#kaydolBaslat')) {
+    if (bulutDefterIslemi) return;
+    const dugme = ev.target.closest('#kaydolBaslat'), durum = document.getElementById('kaydolDurum');
+    const ad = (document.getElementById('kaydolAd') || {}).value || '', sifre = (document.getElementById('kaydolSifre') || {}).value || '';
+    const alan = (document.getElementById('kaydolAlanSec') || {}).value || '', temiz = uyeAdiTemizle(ad);
+    const hata = !temiz ? 'Bir kullanıcı adı seç.' : uyeAdiHatasi(temiz) || uyeSifreHatasi(sifre) || (Object.hasOwn(ALAN_DERS, alan) ? '' : 'Alanını seç.');
+    if (hata) { if (durum) durum.textContent = hata; return; }
+    bulutDefterIslemi = true; dugme.disabled = true; dugme.textContent = 'Hesabın açılıyor…';
+    if (durum) durum.textContent = '';
+    try {
+      const r = await kaydolVeBasla(ad, sifre, alan);
+      bilgiVer('Hoş geldin ' + r.ad + ' — YKS planın bu hafta başladı: haftada yaklaşık ' + r.haftalik + ' yeni konu. ' +
+        'Başka cihazda kullanıcı adın ve şifrenle giriş yapabilirsin.');
+    } catch (e) {
+      // Hata, kart yeniden çizildiyse yeni öğelere yazılır; girilenler korunur.
+      const yaz = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.value = v; };
+      if (!document.getElementById('kaydolKart')) { EK.kaydol = true; ciz(); }
+      yaz('kaydolAd', ad); yaz('kaydolSifre', sifre); yaz('kaydolAlanSec', alan);
+      const d = document.getElementById('kaydolDurum'), bt = document.getElementById('kaydolBaslat');
+      if (d) d.textContent = uyeHataMesaji(e);
+      if (bt) { bt.disabled = false; bt.textContent = 'Kaydol ve başla'; }
+    } finally { bulutDefterIslemi = false; }
+    return;
+  }
   if (ev.target.closest('#ogrenciBulutGiris')) {
     const dugme = ev.target.closest('#ogrenciBulutGiris');
     const ad = ((document.getElementById('ogrenciGirisAd') || {}).value || '').trim();
-    const noMetin = ((document.getElementById('ogrenciGirisNo') || {}).value || '').trim();
-    const no = Number(noMetin);
+    const sifre = (document.getElementById('ogrenciGirisNo') || {}).value || '', noMetin = sifre.trim();
+    // Okul numarası (1–9999) önce ad soyad + numarayla denenir; eşleşmezse ya da numara değilse
+    // aynı bilgiler Kaydol hesabının kullanıcı adı ve şifresi olarak denenir.
+    const okulNo = /^\d{1,4}$/.test(noMetin) && +noMetin >= 1 ? +noMetin : null;
     const durum = document.getElementById('ogrenciGirisDurum');
-    if (!ad || !Number.isInteger(no) || no < 1 || no > 9999) {
-      if (durum) durum.textContent = 'Ad soyadınızı ve geçerli okul numaranızı girin.';
+    if (!ad || !sifre) {
+      if (durum) durum.textContent = 'Kullanıcı adını ve şifreni ya da ad soyadını ve okul numaranı gir.';
       return;
     }
-    if (dugme) { dugme.disabled = true; dugme.textContent = 'Veriniz yükleniyor…'; }
-    if (durum) durum.textContent = 'Kimliğiniz doğrulanıyor ve planınız sunucudan alınıyor…';
+    if (dugme && dugme.disabled) return;
+    if (dugme) { dugme.disabled = true; dugme.textContent = 'Giriş yapılıyor…'; }
+    if (durum) durum.textContent = 'Kimliğin doğrulanıyor ve planın sunucudan alınıyor…';
     try {
-      const ogrenci = await ogrenciHesabindanYukle(ad, no);
-      bilgiVer('Hoş geldin ' + ogrenci.ad + ' — planın sunucudan yüklendi.' +
-        (ogrenci.sunucudanAlinanSonuc
-          ? ' Önceki cihazından ' + ogrenci.sunucudanAlinanSonuc + ' sonuç bu cihaza birleştirildi.' : ''));
+      let ogrenci = null, kimlikHatasi = null;
+      if (okulNo !== null) {
+        try { ogrenci = await ogrenciHesabindanYukle(ad, okulNo); }
+        catch (e) { if (!girisKimlikHatasiMi(e)) throw e; kimlikHatasi = e; }
+      }
+      if (ogrenci) {
+        bilgiVer('Hoş geldin ' + ogrenci.ad + ' — planın sunucudan yüklendi.' +
+          (ogrenci.sunucudanAlinanSonuc
+            ? ' Önceki cihazından ' + ogrenci.sunucudanAlinanSonuc + ' sonuç bu cihaza birleştirildi.' : ''));
+      } else {
+        if (uyeAdiHatasi(uyeAdiTemizle(ad)) || uyeSifreHatasi(sifre))
+          throw kimlikHatasi || Object.assign(new Error('Giriş bilgileri eşleşmedi.'), { code: 'auth/invalid-credential' });
+        const uye = await uyeHesabiniAc(ad, sifre);
+        bilgiVer(uye.yeni ? 'Kaydın yarım kalmış; bilgilerini girip planını başlat.' : 'Hoş geldin ' + uye.ad + ' — defterin buluttan açıldı.');
+      }
     } catch (e) {
-      const kod = String(e && e.code || '');
-      const mesaj = /invalid-credential|user-not-found|wrong-password/.test(kod)
-        ? 'Ad veya okul numarası eşleşmedi. Bilgilerinizi kontrol edin.'
+      const mesaj = girisKimlikHatasiMi(e)
+        ? 'Kullanıcı adı ve şifre ya da ad soyad ve okul numarası eşleşmedi. Bilgilerini kontrol et.'
+        : String(e && e.code || '') === 'auth/too-many-requests' ? uyeHataMesaji(e)
         : (e && e.message || 'Öğrenci verisi yüklenemedi.');
       // ogrenciHesabindanYukle kalıcı kayıt başarısızlığında eski D'yi geri yükleyip
       // ekranı yeniden çizer. İlk düğme/durum referansları bu durumda DOM'dan kopmuştur.
@@ -9351,7 +9563,7 @@ document.addEventListener('click', async ev => {
       const guncelAlan = document.getElementById('ogrenciGirisAlan');
       if (guncelAlan) guncelAlan.hidden = false;
       if (guncelAd) guncelAd.value = ad;
-      if (guncelNo) guncelNo.value = noMetin;
+      if (guncelNo) guncelNo.value = sifre;
       if (guncelDurum) guncelDurum.textContent = mesaj;
       if (guncelDugme) { guncelDugme.disabled = false; guncelDugme.textContent = 'Giriş yap'; }
     }
@@ -9372,12 +9584,8 @@ document.addEventListener('click', async ev => {
       if (!Object.hasOwn(ALAN_DERS, alan)) { alert('Geçerli bir alan seç.'); return; }
       if (!isoTarihGecerli(sinav)) { alert('Sınav tarihini seç.'); return; }
       if (gunNo(sinav) < bugunNo() + (yks ? 28 : 14)) { alert(yks ? 'YKS tarihi en az dört hafta sonra olmalı.' : 'Sınav tarihi en az iki hafta sonra olmalı.'); return; }
-      D.rol = 'ogrenci'; D.ayar.sinav = sinav;
-      D.ogr = [{ no: 1, ad: ad, alan: alan, sube: 'benim', sinif: 12, okul: false, ...(yks ? {} : { sinavTuru }), kap: 6, off: [6],
-                 dakika: { hi: 180, hs: 180, deneme: false }, telafiGunKap: 3, hedef: null, aktif: true,
-                 ilkAktif: bugunNo(), maddeler: [], rutin: { once: '', ara: '', sonra: '' } }];
-      donemBasiniAyarla(isoDan(pazartesi(bugunNo())), true);
-      EK.ogr = 0; EK.sekme = 'ayarlar'; EK.sube = 'benim'; EK.hafta = null;
+      okulsuzDefterKur(ad, alan, sinav, sinavTuru);
+      EK.sekme = 'ayarlar';
       await kaydet(true); ciz();
       bilgiVer(ad + ', önce derslerde seviyeni seç, sonra “Kendi ' + kendiPlanTuru(D.ogr[0]) + ' planımı başlat”a bas.');
       return;
@@ -10465,6 +10673,14 @@ document.addEventListener('keydown', ev => {
 });
 document.addEventListener('input', ev => {
   if (ev.target.id === 'pAra' && PENCERE) { PENCERE.arama = ev.target.value; pencereCiz(); }
+  // Kullanıcı adındaki boşluklar silinir; yazarken nasıl kaydedileceği gösterilir.
+  if (ev.target.id === 'kaydolAd') {
+    const durum = document.getElementById('kaydolDurum'), v = ev.target.value;
+    if (durum) durum.textContent = /\s/.test(v.trim()) || v !== v.toLocaleLowerCase('tr-TR') ? 'Kullanıcı adın: ' + uyeAdiTemizle(v) : '';
+  }
+  // Şifre ya da alan değişince eski uyarı kalmasın.
+  if ((ev.target.id === 'kaydolSifre' || ev.target.id === 'kaydolAlanSec') && document.getElementById('kaydolDurum') &&
+      !document.getElementById('kaydolDurum').textContent.startsWith('Kullanıcı adın:')) document.getElementById('kaydolDurum').textContent = '';
 });
 
 document.addEventListener('change', async ev => {
@@ -10748,6 +10964,12 @@ document.addEventListener('keydown', ev => {
       ev.preventDefault();
       ilk.focus();
     }
+    return;
+  }
+  if (ev.key === 'Enter' && ev.target && ['ogrenciGirisAd', 'ogrenciGirisNo', 'kaydolAd', 'kaydolSifre', 'uyeYenidenSifre'].includes(ev.target.id)) {
+    ev.preventDefault();
+    const hedef = document.getElementById(ev.target.id.startsWith('kaydol') ? 'kaydolBaslat' : ev.target.id === 'uyeYenidenSifre' ? 'uyeYenidenGir' : 'ogrenciBulutGiris');
+    if (hedef && !hedef.disabled) hedef.click();
     return;
   }
   if ((ev.key === 'Enter' || ev.key === ' ') && ev.target && ev.target.closest) {
@@ -11286,7 +11508,8 @@ function denemeYolSvg(v,H=270,W=480) {
     ticks.map(t=>'<line class="yg-izgara" x1="'+L+'" x2="'+r1(W-R)+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text x="'+(L-6)+'" y="'+r1(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
     aylar.filter((_,i)=>i%adim===0).map(([g,ad])=>'<text x="'+r1(x(g))+'" y="'+r1(H-10)+'" text-anchor="middle">'+ad+'</text>').join('')+
     '<line class="yg-eksen" x1="'+L+'" x2="'+r1(W-R)+'" y1="'+r1(y(alt))+'" y2="'+r1(y(alt))+'"/>'+
-    (bugun>bas && bugun<son?'<line class="yg-bugun" x1="'+r1(x(bugun))+'" x2="'+r1(x(bugun))+'" y1="'+T+'" y2="'+r1(H-B)+'"/><text class="yg-bugun-yazi" x="'+r1(x(bugun))+'" y="'+(T+10)+'" text-anchor="middle">Bugün</text>':'')+
+    // "Bugün" yazısı eksenin hemen başındaysa y etiketlerinin üstüne binmesin diye sola yaslanır.
+    (bugun>bas && bugun<son?'<line class="yg-bugun" x1="'+r1(x(bugun))+'" x2="'+r1(x(bugun))+'" y1="'+T+'" y2="'+r1(H-B)+'"/><text class="yg-bugun-yazi" x="'+r1(x(bugun)+(x(bugun)-L<28?4:0))+'" y="'+(T+10)+'" text-anchor="'+(x(bugun)-L<28?'start':'middle')+'">Bugün</text>':'')+
     '<line class="yg-yks" x1="'+r1(x(son))+'" x2="'+r1(x(son))+'" y1="'+T+'" y2="'+r1(H-B)+'"/><text class="yg-yks-yazi" x="'+r1(x(son)-4)+'" y="'+(T+10)+'" text-anchor="end">★ YKS</text>'+
     (hedef===null?'':'<line class="yg-hedef" x1="'+L+'" x2="'+r1(x(son))+'" y1="'+r1(y(hedef))+'" y2="'+r1(y(hedef))+'"/><text class="yg-hedef-yazi" x="'+(L+6)+'" y="'+r1(y(hedef)-5)+'">Hedef '+denemeSayi(hedef)+'</text>');
   const sinif='yg-'+(secim.tur==='BRANS'?'BRANS':secim.tur);

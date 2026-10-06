@@ -16,7 +16,11 @@ const sahteBulut=()=>{
     getDocFromServer:async ref=>snap(bulut[ref]),setDoc:async(ref,v)=>{bulut[ref]=JSON.parse(JSON.stringify(v));yansit();},
     async runTransaction(_db,fn){const w=[];await fn({get:async ref=>snap(bulut[ref]),set:(ref,v)=>w.push([ref,v]),delete:ref=>w.push([ref,null])});
       w.forEach(([ref,v])=>{if(v===null)delete bulut[ref];else bulut[ref]=JSON.parse(JSON.stringify(v));});yansit();},
-    oturumuKapat:async()=>{user=null;}};
+    oturumuKapat:async()=>{user=null;},
+    // Kaydol accounts: the user name arrives without spaces; the password is kept only here.
+    uyeKaydol:async(ad,sifre)=>{window.__uyeKayit=[ad,sifre];return (user={uid:'uye-'+ad,isAnonymous:false,email:'uye-x@uye.ykstekrar.app'});},
+    uyeGiris:async()=>{throw Object.assign(new Error('auth'),{code:'auth/invalid-credential'});},
+    girisOgrenciHesabi:async()=>{throw Object.assign(new Error('auth'),{code:'auth/invalid-credential'});}};
 };
 const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y+a.height;
 (async()=>{
@@ -38,15 +42,27 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal((await page.locator('.giris-alt').textContent()).trim(),'Hedefine bir adım daha yaklaş');
    assert.equal(await page.locator('#ogrenciGirisAd').isVisible(),true,'student login is open without a click');
    const kutu=async sel=>page.locator(sel).boundingBox();
-   const [baslik,girisKart,giris,rehber,test,cizim]=await Promise.all(['.giris-baslik','#ogrenciGirisAlan','#ogrenciBulutGiris','#rolRehber','#testHesapAc','.giris-cizim'].map(kutu));
+   const [baslik,girisKart,giris,rehber,kayit,test,cizim]=await Promise.all(['.giris-baslik','#ogrenciGirisAlan','#ogrenciBulutGiris','#rolRehber','#kaydolAc','#testHesapAc','.giris-cizim'].map(kutu));
    assert(baslik.y+baslik.height<=girisKart.y && girisKart.y+girisKart.height<=cizim.y,'login sits between the headline and the drawing');
-   for(const b of [rehber,test])assert(kesisir(b,girisKart) && b.y>=giris.y+giris.height,'teacher and test account sit under Giriş yap');
+   for(const b of [rehber,kayit,test])assert(kesisir(b,girisKart) && b.y>=giris.y+giris.height,'teacher, Kaydol and test account sit under Giriş yap');
+   // Three buttons do not fit one row: Rehber öğretmeniyim on top, then Kaydol | Test hesabı aç.
+   assert(rehber.y+rehber.height<=kayit.y && Math.abs(kayit.y-test.y)<1 && kayit.x+kayit.width<=test.x,'Kaydol sits between Rehber öğretmeniyim and Test hesabı aç');
+   assert(Math.abs(kayit.width-test.width)<1 && Math.abs(rehber.width-(test.x+test.width-kayit.x))<1,'balanced rows');
    assert(giris.y+giris.height<=800,'Giriş yap is visible without scrolling');
    assert(girisKart.height<=300 && girisKart.width<=362,'compact login card: '+Math.round(girisKart.width)+'×'+Math.round(girisKart.height));
-   assert(Math.abs(rehber.y-test.y)<1,'teacher and test account share one row');
-   assert.equal(await page.getByLabel('Ad soyad').getAttribute('id'),'ogrenciGirisAd','labels stay for screen readers');
-   assert.equal(await page.getByLabel('Okul numarası').getAttribute('id'),'ogrenciGirisNo');
-   assert.equal(await page.evaluate(()=>['#ogrenciGirisAd','#ogrenciGirisNo','#ogrenciBulutGiris','#rolRehber','#testHesapAc'].every(s=>{
+   assert.equal(await page.getByLabel('Kullanıcı adı ya da ad soyad').getAttribute('id'),'ogrenciGirisAd','labels stay for screen readers');
+   assert.equal(await page.getByLabel('Şifre ya da okul numarası').getAttribute('id'),'ogrenciGirisNo');
+   assert.equal(await page.locator('#ogrenciGirisAd').getAttribute('placeholder'),'Kullanıcı adı - Ad soyad');
+   assert.equal(await page.locator('#ogrenciGirisNo').getAttribute('placeholder'),'Şifre - Okul numarası');
+   // The school number / password is hidden like a password, with the usual eye button on its right.
+   const sifre=page.locator('#ogrenciGirisNo'),goz=page.locator('[data-sifre-goster="ogrenciGirisNo"]');
+   assert.equal(await sifre.getAttribute('type'),'password');
+   await sifre.fill('1234');await goz.click();
+   assert.equal(await sifre.getAttribute('type'),'text');assert.equal(await goz.getAttribute('aria-label'),'Şifreyi gizle');
+   const [sKutu,gKutu]=await Promise.all([sifre.boundingBox(),goz.boundingBox()]);
+   assert(gKutu.x>sKutu.x+sKutu.width/2 && gKutu.x+gKutu.width<=sKutu.x+sKutu.width+1 && kesisir(gKutu,sKutu),'the eye sits inside the field, on the right');
+   await goz.click();assert.equal(await sifre.getAttribute('type'),'password');await sifre.fill('');
+   assert.equal(await page.evaluate(()=>['#ogrenciGirisAd','#ogrenciGirisNo','#ogrenciBulutGiris','#rolRehber','#kaydolAc','#testHesapAc','[data-sifre-goster]'].every(s=>{
      const r=document.querySelector(s).getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest(s);})),true,'no decoration covers a control');
    // On a tall screen the whole start screen is centred vertically.
    await page.setViewportSize({width:1920,height:1080});
@@ -65,7 +81,7 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    await page.setViewportSize({width,height:800});
    assert.equal((await page.locator('#ogrenciGirisDurum').textContent()),'','no hint text until there is something to say');
    await page.locator('#ogrenciBulutGiris').click();
-   assert.equal(await page.locator('#ogrenciGirisDurum').textContent(),'Ad soyadınızı ve geçerli okul numaranızı girin.');
+   assert.equal(await page.locator('#ogrenciGirisDurum').textContent(),'Kullanıcı adını ve şifreni ya da ad soyadını ve okul numaranı gir.');
    assert.equal(await page.locator('#kurYapistirAc').isVisible(),false,'backup options are folded');
    await page.locator('summary',{hasText:'Yedekten geri yükle'}).click();await page.locator('#kurYapistirAc').click();
    assert.equal(await page.locator('#yapistirMetin').isVisible(),true,'paste option opens');
@@ -166,6 +182,28 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal(await page.evaluate(()=>D.rol===''&&!D.testHesap&&D.ogr.length===0),true,'the device copy is gone');
    assert.equal(await yerelSayisi(),0,'no stored copy remains');
    await page.locator('#testHesapAc').waitFor();
+   // Kaydol: user name (spaces removed), password with the eye button and the field; the YKS plan
+   // starts this week without school, and the student lands on the home page.
+   await page.locator('#kaydolAc').click();
+   const kayitKart=await page.locator('#kaydolKart').boundingBox();
+   assert(kayitKart.height<=320 && kayitKart.width<=362,'compact sign-up card: '+Math.round(kayitKart.width)+'×'+Math.round(kayitKart.height));
+   await page.locator('#kaydolAd').fill('Deniz Kaya');
+   assert.equal(await page.locator('#kaydolDurum').textContent(),'Kullanıcı adın: denizkaya','spaces are shown removed');
+   await page.locator('#kaydolSifre').fill('gizli-123');
+   await page.locator('[data-sifre-goster="kaydolSifre"]').click();assert.equal(await page.locator('#kaydolSifre').getAttribute('type'),'text');
+   await page.locator('#kaydolBaslat').click();
+   assert.equal(await page.locator('#kaydolDurum').textContent(),'Alanını seç.');
+   await page.locator('#kaydolAlanSec').selectOption('SAY');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'sign-up overflow');
+   await page.screenshot({path:path.join(out,'kaydol-form-'+width+'.png')});
+   await page.locator('#kaydolSifre').press('Enter');                     // Enter submits like the button
+   await page.locator('.ana-pano').waitFor();
+   assert.deepEqual(await page.evaluate(()=>window.__uyeKayit),['denizkaya','gizli-123']);
+   assert.equal(await page.evaluate(()=>D.testHesap.tur==='uye'&&D.ogr[0].okul===false&&D.ogr[0].alan==='SAY'&&D.ogr[0].kendiPlan.tur==='YKS'&&
+     D.ayar.donemBasi===isoDan(pazartesi(bugunNo()))),true,'YKS without school, own plan, weeks from this Monday');
+   assert.equal((await page.evaluate(()=>bulutaYedekle())).tur,'tamam');
+   assert(bulutYollari.includes('testDefter/uye-denizkaya'),'the notebook is saved to the cloud');
+   await page.screenshot({path:path.join(out,'kaydol-home-'+width+'.png')});
    assert.deepEqual(errors,[]);
    await context.close();
   }
