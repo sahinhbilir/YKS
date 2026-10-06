@@ -1202,6 +1202,27 @@ test('teacher-publishes-one-private-package-and-sync-slot-per-student', async ()
   });
 });
 
+// A student who changed their password: name + number no longer signs in, but the account (and its
+// email) is the same one, so publishing keeps its known UID. A brand-new student still needs it.
+test('teacher-publish-keeps-the-account-of-a-student-who-changed-their-password', async () => {
+  const { sandbox, run } = loadAppSandbox();
+  resetOgr(sandbox, [student({ no: 11, ad: 'Şifreli Öğrenci', hesapUid: 'account-11' }), student({ no: 12, ad: 'Yeni Öğrenci' })]);
+  const writes = [];
+  sandbox.window.bulut = baseBulut({
+    yapilandirilmis: true,
+    doc: (_db, coll, id) => coll + '/' + id,
+    ogrenciHesabiHazirla: async () => { throw Object.assign(new Error('auth'), { code: 'auth/invalid-credential' }); },
+    getDoc: async () => docSnap(false, undefined),
+    setDoc: async (ref, data) => { writes.push({ ref, data }); },
+    updateDoc: async () => {}
+  });
+  const rapor = await run('ogrenciHesaplariniYayinla()');
+  equal(rapor[0].tamam, true, 'the student with a password is published');
+  equal(run('D.ogr[0].hesapUid'), 'account-11');
+  assert(writes.some(w => w.ref === 'ogrenciHesaplari/account-11'), 'to the same account');
+  equal(rapor[1].tamam, false, 'a student without a known account is not published blindly');
+});
+
 test('student-account-publish-toast-names-every-failed-student', async () => {
   const { sandbox, run, listeners } = loadAppSandbox();
   resetOgr(sandbox, [

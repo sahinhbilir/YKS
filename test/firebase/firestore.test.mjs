@@ -711,6 +711,30 @@ await check('kaydol-account-owns-its-notebook-but-school-password-accounts-do-no
   await assertFails(setDoc(doc(sifreli('uye-3', uyeEposta, 'custom'), 'testDefter', 'uye-3'), testDefter()));
 });
 
+// A school student who changed their password logs in with name + password through this lookup.
+await check('password-lookup-only-own-school-account-writes-and-anyone-with-the-name-hash-reads', async () => {
+  const ad = 'f'.repeat(64), ogrEposta = 'ogr-' + 'b2'.repeat(20) + '@student.ykstekrar.app';
+  const hesap = (uid, email, saglayici = 'password') =>
+    testEnv.authenticatedContext(uid, { email, firebase: { sign_in_provider: saglayici, identities: {} } }).firestore();
+  const ogrDb = hesap('okul-1', ogrEposta), kayit = db => doc(db, 'sifreliGiris', ad, 'hesaplar', 'okul-1');
+  await assertSucceeds(setDoc(kayit(ogrDb), { email: ogrEposta, ts: 1790000000000 }));
+  await assertSucceeds(getDocs(collection(anonDb, 'sifreliGiris', ad, 'hesaplar')), 'login reads it before signing in');
+  await assertSucceeds(getDoc(kayit(anonDb)));
+  await assertFails(getDocs(collection(anonDb, 'sifreliGiris')), 'names cannot be listed');
+  await assertFails(getDoc(doc(anonDb, 'sifreliGiris', ad)));
+  // Only the account itself, with its own school email, in the exact shape.
+  await assertFails(setDoc(kayit(ogrDb), { email: 'ogr-' + 'c3'.repeat(20) + '@student.ykstekrar.app', ts: 1 }), 'another email');
+  await assertFails(setDoc(kayit(ogrDb), { email: ogrEposta, ts: 1, ad: 'Ali' }), 'extra field');
+  await assertFails(setDoc(doc(ogrDb, 'sifreliGiris', 'kisa', 'hesaplar', 'okul-1'), { email: ogrEposta, ts: 1 }), 'not a hash');
+  await assertFails(setDoc(doc(hesap('okul-2', ogrEposta), 'sifreliGiris', ad, 'hesaplar', 'okul-1'), { email: ogrEposta, ts: 1 }), 'other uid');
+  const uyeEposta = 'uye-' + 'a1'.repeat(20) + '@uye.ykstekrar.app';
+  await assertFails(setDoc(doc(hesap('uye-9', uyeEposta), 'sifreliGiris', ad, 'hesaplar', 'uye-9'), { email: uyeEposta, ts: 1 }), 'Kaydol account');
+  await assertFails(setDoc(doc(hesap('okul-1', ogrEposta, 'google.com'), 'sifreliGiris', ad, 'hesaplar', 'okul-1'), { email: ogrEposta, ts: 1 }), 'Google');
+  await assertFails(setDoc(doc(anonDb, 'sifreliGiris', ad, 'hesaplar', 'okul-1'), { email: ogrEposta, ts: 1 }), 'signed out');
+  await assertFails(deleteDoc(kayit(hesap('okul-2', ogrEposta))), 'only the owner deletes');
+  await assertSucceeds(deleteDoc(kayit(ogrDb)));
+});
+
 console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
 await testEnv.cleanup();
 process.exit(fail ? 1 : 0);

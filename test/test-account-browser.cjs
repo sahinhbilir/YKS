@@ -20,7 +20,8 @@ const sahteBulut=()=>{
     // Kaydol accounts: the user name arrives without spaces; the password is kept only here.
     uyeKaydol:async(ad,sifre)=>{window.__uyeKayit=[ad,sifre];return (user={uid:'uye-'+ad,isAnonymous:false,email:'uye-x@uye.ykstekrar.app'});},
     uyeGiris:async()=>{throw Object.assign(new Error('auth'),{code:'auth/invalid-credential'});},
-    girisOgrenciHesabi:async()=>{throw Object.assign(new Error('auth'),{code:'auth/invalid-credential'});}};
+    girisOgrenciHesabi:async()=>{throw Object.assign(new Error('auth'),{code:'auth/invalid-credential'});},
+    sifreDegistir:async(m,y,okul)=>{window.__sifre=[m,y,okul];}};
 };
 const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y+a.height;
 (async()=>{
@@ -204,6 +205,20 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal((await page.evaluate(()=>bulutaYedekle())).tur,'tamam');
    assert(bulutYollari.includes('testDefter/uye-denizkaya'),'the notebook is saved to the cloud');
    await page.screenshot({path:path.join(out,'kaydol-home-'+width+'.png')});
+   // Ayarlar → Şifre değiştir (folded, right under the heading): current + new password with eye buttons.
+   await page.locator('#ray [data-sekme="ayarlar"]').first().click();
+   const sifreKart=page.locator('#sifreKart');
+   const [ayarBaslik,kartKutu]=await Promise.all([page.locator('.baslik h1').first().boundingBox(),sifreKart.boundingBox()]);
+   assert(kartKutu.y>ayarBaslik.y+ayarBaslik.height && kartKutu.y-ayarBaslik.y<120,'the card sits under the Ayarlar heading');
+   assert.equal(await page.locator('#sdMevcut').isVisible(),false,'folded');
+   await sifreKart.locator('summary').click();
+   await page.locator('#sdMevcut').fill('gizli-123');await page.locator('#sdYeni').fill('yeni-sifre-1');
+   await page.locator('[data-sifre-goster="sdYeni"]').click();assert.equal(await page.locator('#sdYeni').getAttribute('type'),'text');
+   await page.locator('#sdYeni').press('Enter');
+   await page.locator('#sifreDurum',{hasText:'Şifren değişti.'}).waitFor();
+   assert.deepEqual(await page.evaluate(()=>window.__sifre),['gizli-123','yeni-sifre-1',null]);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'settings overflow');
+   await page.screenshot({path:path.join(out,'sifre-degistir-'+width+'.png')});
    assert.deepEqual(errors,[]);
    await context.close();
   }

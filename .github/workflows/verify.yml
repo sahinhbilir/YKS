@@ -49,6 +49,8 @@ jobs:
         run: node test/student-activity-regression.cjs
       - name: Firebase Analytics isolation and production-only collection
         run: node --experimental-vm-modules test/firebase-analytics-regression.cjs
+      - name: Password change and name + password login on the Firebase module
+        run: node --experimental-vm-modules test/password-module-regression.cjs
       - name: Timetable JSON regression
         run: node test/timetable-json-regression.js
       - name: Past plan photo recovery
