@@ -24,7 +24,7 @@ const ogrenci=(kur)=>{
    await page.goto('http://localhost/?dev=1');await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
    // 1. Start from the settings card.
    await page.evaluate(ogrenci,false);
-   await page.getByRole('heading',{name:'Kendi TYT planın · isteğe bağlı'}).waitFor();
+   await page.getByRole('heading',{name:'Kendi TYT planın'}).waitFor();
    assert.equal(await page.locator('#testSifirla').count(),0,'a student without a test account has no reset');
    assert.equal(await page.getByText('Test hesabımı sıfırla').count(),0);
    await page.locator('.kpSeviye[data-ders="Türkçe"]').selectOption('bilir');
@@ -85,7 +85,7 @@ const ogrenci=(kur)=>{
    assert.equal(await page.locator('#kOgrOkul').isVisible(),false,'school question is hidden');
    assert.equal(await page.locator('#kOgrAlan').isVisible(),false,'field is hidden');
    assert.equal(await page.locator('#kOgrSinav').inputValue(),'','the YKS date is not offered for KPSS');
-   await page.locator('.kDigerSinavNotu').waitFor();
+   await page.locator('#kOgrSinav').waitFor();
    await page.locator('#kOgrSinavTuru').selectOption('YKS');                       // back and forth keeps YKS intact
    assert.equal(await page.locator('#kOgrOkul').isVisible(),true);
    await page.locator('#kOgrSinavTuru').selectOption('KPSS');

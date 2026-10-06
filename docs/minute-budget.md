@@ -35,7 +35,7 @@ https://doi.org/10.3390/bs13030237. The study is cross-sectional, uses
 self-reported time from 15-year-olds in four Chinese provinces, and includes
 classroom time in its total. The app uses it as a conservative ceiling for
 out-of-school study, as the product owner decided; it is not a proven optimum for
-YKS preparation.
+YKS preparation. In Ayarlar the source is the hover title of the weekly total.
 
 ## Scheduling
 

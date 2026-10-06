@@ -376,6 +376,7 @@ tr.pasif td:first-child{opacity:1}
 .giris-kart h2{font-size:15px;text-align:center;margin-bottom:2px}
 .giris-kart input,.giris-kart select{width:100%;padding:7px 10px;font-size:13.5px}
 /* Şifre kutusu: sağdaki göz düğmesi şifreyi gösterir / gizler (tarayıcının kendi düğmesi gizlenir). */
+td[title] .ayar-ad{cursor:help;text-decoration:underline dotted var(--cizgi);text-underline-offset:4px}
 .sifre-kutu{position:relative}.sifre-kutu input{padding-right:40px}
 .sifre-goster{position:absolute;top:0;right:0;bottom:0;width:38px;display:grid;place-items:center;background:none;border:0;padding:0;
   color:var(--soluk);cursor:pointer;border-radius:0 7px 7px 0}
@@ -455,6 +456,8 @@ input[type=password]::-ms-reveal{display:none}
 .gunDugme{width:24px;height:26px;border:1px solid var(--cizgi);background:var(--kagit);border-radius:5px;
   cursor:pointer;font-size:11px;font-weight:600;color:var(--soluk);padding:0}
 .gunDugme.kapali{background:var(--vurgu-yumusak);border-color:var(--vurgu);color:var(--vurgu)}
+/* Ayarlar’daki dinlenme günleri tam adla yazılır; tek harflik 24 px kutu onlara dar gelir. */
+.ogr-gunler{flex-wrap:wrap;gap:6px}.ogr-gunler .gunDugme{width:auto;height:32px;padding:0 12px}
 #tumu{display:none}
 .topluEtiket{display:block;font-size:10px;color:var(--vurgu);font-weight:600;margin-bottom:2px;cursor:pointer}
 .bildirim{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--murekkep);color:var(--kagit);
@@ -618,7 +621,6 @@ main:has(.dn-tabs){min-width:0}
 .dn-panel>.arac .dugme{max-width:100%;white-space:normal}.dn-import>b{overflow-wrap:anywhere}.dn-import .arac label{max-width:100%}
 /* Add/edit form is a popup; the chart filters stay on the page and are labelled as filters. */
 .dn-tabs{align-items:center}.dn-tabs .dn-ekle{margin-left:auto}
-.dn-filtre-baslik{flex-basis:100%;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--soluk)}
 .dn-pencere{width:min(640px,100%)}
 .dn-pencere-ust{position:relative;padding:16px 52px 12px 20px;border-bottom:1px solid var(--cizgi)}.dn-pencere-ust h2{margin:0;font-size:20px}
 .dn-pencere-govde{padding:0 20px 8px;overflow:auto;min-height:0}
@@ -2884,11 +2886,11 @@ function gorunumPlanKurtarma() {
   for(let ki=0;ki<konuSayisi();ki++)if(konuAl(ki)&&!konuAl(ki)[6])konular.push(ki);
   const opt=(deger,secenekler)=>secenekler.map(([v,ad])=>'<option value="'+v+'"'+(String(deger)===String(v)?' selected':'')+'>'+ad+'</option>').join('');
   const alan=(i,k,label,extra,v)=>'<label>'+label+'<input data-gp-i="'+i+'" data-gp-alan="'+k+'" '+extra+' value="'+kacis(v??'')+'"></label>';
-  return kurtarmaIpucuHtml()+'<div class="baslik"><h1>Geçmiş planı kurtar</h1><p>Eski haftalık kağıttan çalışma geçmişini geri kurun.</p></div>'+
+  return kurtarmaIpucuHtml()+'<div class="baslik"><h1>Geçmiş planı kurtar</h1></div>'+
     '<div class="kart" style="padding:16px"><div class="arac">'+(ogrenciMi()?'<p>Plan sahibi: <b>'+kacis(D.ogr[0].ad)+' · '+kacis(D.ogr[0].no)+'</b></p>':'<label>Öğrenci <select id="gpOgrenci">'+canliOgrenciler().map(i=>
       '<option value="'+i+'"'+(i===s.si?' selected':'')+'>'+kacis(D.ogr[i].ad)+' · '+kacis(D.ogr[i].no)+' · '+kacis(D.ogr[i].sube)+'</option>').join('')+'</select></label>')+
     '<label>Kağıdın ilk günü <input type="date" id="gpHafta" value="'+kacis(s.hafta)+'" max="'+isoDan(bugunNo())+'"></label></div>'+
-    '<p class="mini">Fotoğrafı açın. Aynı fotoğrafı, aşağıdaki metinle birlikte kullandığınız AI sohbetine ekleyin; dönen çıktıyı buraya yapıştırın. Fotoğraf bu sayfada otomatik okunmaz. İsterseniz satırları elle girebilirsiniz.</p>'+
+    '<p class="mini">Fotoğrafı ve kopyalanan metni bir AI sohbetine ver, çıktıyı buraya yapıştır ya da satırları elle gir.</p>'+
     '<div class="arac"><label class="dugme">Plan fotoğrafını aç<input id="gpFoto" type="file" accept="image/jpeg,image/png,image/webp" hidden></label>'+
     '<button class="dugme" id="gpPromptKopyala">AI için metni kopyala</button><button class="dugme" id="gpSatirEkle">Elle satır ekle</button></div>'+
     '<details style="margin-top:10px"><summary>AI metnini göster / elle kopyala</summary><textarea id="gpPrompt" rows="5" readonly style="width:100%">'+kacis(gecmisPlanPromptMetni())+'</textarea></details>'+
@@ -2909,14 +2911,14 @@ function gorunumPlanKurtarma() {
       '<div class="gpAlanlar">'+alan(i,'soru','Soru toplamı','type="number" min="1" max="200"',r.soru)+
       (r.tur!=='serbest'||r.dogru!=null||r.not!=null?alan(i,'dogru','Doğru (biliniyorsa)','type="number" min="0" max="200"',r.dogru)+
       '<label>Değerlendirme<select data-gp-i="'+i+'" data-gp-alan="not">'+opt(r.not??'',[['','Bilinmiyor'],[1,'Tekrar'],[2,'Zor'],[3,'İyi'],[4,'Kolay']])+'</select></label>':'')+'</div></div>').join('')+
-    (s.satirlar.length?'<p class="mini">Kağıtta görev yazması, yapıldığı anlamına gelmez. Tamamlanan puansız test için kısa bir ölçüm tekrarı planlanır; başarı notu üretilmez. Soru toplamı boşsa planda varsayılan soru sayısı kullanılır. Aynı gün/konunun mevcut sonucu korunur.</p>':'')+
+
     '<label style="display:block;margin:10px 0"><input id="gpDegistir" type="checkbox"'+(s.degistir?' checked':'')+'> Bu haftanın mevcut planı varsa fotoğraftaki planla değiştir. Diğer haftalar ve mevcut sonuçlar korunur.</label>'+
     '<button class="dugme" id="gpOnizle">Değişiklikleri önizle</button><p id="gpOzet" role="status" aria-live="polite">'+kacis(s.ozet)+'</p>'+
     '<label style="display:block;margin:10px 0"><input id="gpKimlik" type="checkbox"'+(s.kimlik?' checked':'')+'> Öğrenciyi, tarihleri, konuları ve tamamlanma işaretlerini kontrol ettim.</label>'+
     '<div class="arac"><button class="dugme birincil" id="gpKaydet"'+(!s.hazir?' disabled':'')+'> Geçmişi kaydet ve yeniden hesapla</button>'+
     (s.sonuc?'<button class="dugme" id="gpHaftayiAc">Kurtarılan haftayı aç</button>'+(ogrenciMi()?'<button class="dugme" id="gpSunucu">Öğretmene gönder / tekrar dene</button>':'<button class="dugme" id="gpYayinla">Öğrenci hesabını güncelle</button>'):'')+
     '<button class="dugme" id="gpOncekiYedek">İşlem öncesi yedeği indir</button></div>'+
-    (s.sonuc?'<p class="mini">'+(ogrenciMi()?'Kurtarılan geçmiş bağlı öğretmen hesabına otomatik gönderilir. Sunucu onayını kayıt durumundan takip edin. Bağlantı yoksa cihazdaki kayıt korunur; internet geldiğinde yeniden denenir. Bağlı hesabınız yoksa Ayarlar’dan sonuç dosyasını öğretmeninize iletin.':'Öğrenci hesabını güncelledikten sonra öğrenci yeniden giriş yaparak kurtarılan planı alır. Bağlı hesabı yoksa Öğrenciler bölümünden paket indirin. Öğretmen bulut yedeğinin durumu solda görünür.')+'</p>':'')+
+
     '</div></div>';
 }
 function gecmisPlanDuzenlendi(s) {
@@ -3045,11 +3047,8 @@ function ogrenciPlanEkleri(si, hb, p) {
       (!kapali && hb + g >= bugunNo() && !D.log.some(l => l[1] === si && l[2] === x.ki && l[0] === hb + g)
         ? ' <button class="dugme mini" data-ogr-ek-sil="' + kacis(planSlotAnahtari(x)) + '">Kaldır</button>' : '') + '</li>')).join('');
   return '<section class="kart ogr-plan-ekleri"><h2>Günlük soru hedeflerin</h2>' +
-    '<p class="mini">Seç, soru sayını yaz; her gün planına eklensin. Dinlenme günleri dahil. Karışık çalışmalar, konu tekrarlarının yerini almaz.</p>' +
-    '<div class="gunluk-ekler">' + secenekler + '</div><p class="mini">' +
-    (kapali ? 'Geçmiş günlerin hedefleri korunur. Değişiklik yapmak için bu haftaya dön.' :
-      ggyy(bas) + ' tarihinden itibaren otomatik kaydedilir; sonraki haftalarda da devam eder.') + '</p>' +
-    '<details><summary>Daha fazla</summary><p class="mini">Kendi çalışmanı yaz veya konu listesinden seç. Eklediğin çalışmalar günlük yükünü artırır.</p>' +
+    '<div class="gunluk-ekler">' + secenekler + '</div>' +
+    '<details><summary>Daha fazla</summary>' +
     '<button class="dugme" id="ogrManuelEkle"' + (kapali ? ' disabled' : '') + '>Planıma çalışma ekle</button>' +
     (ekler ? '<ul class="ogr-ek-listesi">' + ekler + '</ul>' : '') + '</details></section>';
 }
@@ -3283,8 +3282,7 @@ function kazanimPlaniUyarisi(sube) {
     '<details><summary>Hafta hafta değişiklikleri gör</summary>' + r.degisimler.map(x => '<h3>' + kacis(x.ders) + '</h3><ol>' +
       x.haftalar.map(w => '<li value="' + w.hafta + '"><span class="mini">Önce: ' + (w.once.length ? w.once.map(konuHtml).join(' · ') : 'boş') + '</span><br>' +
         w.sonra.map(konuHtml).join(' · ') + '</li>').join('') + '</ol>').join('') + '</details>' +
-    '<p>Seçilen derslerin gösterilen haftaları değiştirilir; önce yedek alınır. Geçmiş haftalar, sonuçlar ve teslim edilmiş planlar korunur. Sonuç girilmemiş otomatik bu hafta planı yenilenebilir.</p>' +
-    '<p class="mini">36 haftalık öneri; okul hızına göre Konu Planı’ndan düzenleyebilirsin. Tatiller otomatik atlanmaz.</p>' +
+    '<p class="mini">Önce yedek alınır; geçmiş haftalar ve sonuçlar korunur.</p>' +
     '<button class="dugme birincil" id="kazanimPlaniUygula">Seçili derslere haftalık alt konuları uygula</button>' + yedekHtml + '</section>';
 }
 function kazanimEskiIslenisleriAyikla(sube, dersler) {
@@ -3450,10 +3448,7 @@ function gorunumMufredat() {
     '<div class="arac"><label>Sınıf düzeyi <select id="mufredatSinif">' + sinifSecenekleri(g) + '</select></label></div>' +
     '<div class="kart" style="padding:16px;margin-bottom:16px"><p><b>9, 10 ve 11. sınıf: Türkiye Yüzyılı Maarif Modeli. 12. sınıf: önceki öğretim programı.</b> ' +
     '<a href="' + MUFREDAT_2026.kademeliKaynak + '" target="_blank" rel="noopener">MEB kademeli geçiş duyurusu</a></p>' +
-    '<p>Bu sayfa uygulamanın desteklediği temel akademik dersleri kapsar. Yabancı dil, seçmeli ve meslek dersleri için ' +
-    '<a href="https://tymm.meb.gov.tr/ders-kitaplari/ortaogretim" target="_blank" rel="noopener">MEB kitapları</a> ve okulunuzun ders çizelgesini kullanın.</p>' +
-    (g === 12 ? '<p>Buradaki sıra 12. sınıf okul programıdır. Konu Planı’ndaki TYT/AYT tekrar sırası, Drive’daki 2025–2026 YKS modüllerine dayanır ve önceki sınıfları da kapsar. Bu iki sıra aynı değildir. Eski planlarda eksik sosyal/fen dersleri ve fizikte Süper İletkenler başlığı bulunabilir; kontrol için Konu Planı’nı açın. DİL planı yalnızca TYT hazırlığını içerir; YDT içeriği dahil değildir.</p>' :
-    '<p>Yeni planlar aşağıdaki MEB ünite ve konu sırasını izler. Ders saatlerine göre önerilen 36 haftalık dağılım düzenlenebilir; resmî yıllık takvim değildir, tatilleri otomatik atlamaz. 2025–2026 Drive modüllerindeki eski 11. sınıf sırası bu yıl için kullanılmaz.</p>') + '</div>';
+    '</div>';
   (MUFREDAT_2026.siniflar[g] || []).forEach(c => {
     h += '<details class="kart" style="padding:16px;margin-bottom:12px"><summary><b>' + kacis(c.ad) + '</b> · ' + c.uniteler.length + ' ünite / tema</summary>' +
       '<p><a target="_blank" rel="noopener" href="' + kacis(c.kaynak) + '">Resmî öğretim programı</a>' +
@@ -3633,27 +3628,18 @@ function kendiPlanKarti(si) {
     KENDI_SEVIYE.map(([v, ad]) => '<option value="' + v + '"' + (seviye(d) === v ? ' selected' : '') + '>' + ad + '</option>').join('') +
     '</select></label>';
   const durum = kp ? kendiPlanHaftalikSayi(si) : null;
-  const yeni = 'Her hafta hedef tarihe yetişecek kadar yeni konu gelir: bilmediğin derste önce konu anlatımı (' + ANLATIM_DAKIKA +
-    ' dk), bildiğin derste tek testlik yoklama. ';
   const sinav = (SINAV_KONULARI.sinavlar || {})[tur];
   return '<div class="kart" style="padding:20px;margin-bottom:18px">' + (sinav
-    ? '<h2>' + kacis(kendiPlanEtiketi(tur)) + '</h2><p class="mini">' + kacis(sinav.uzunAd) + ' konuları bu planla gelir. ' + yeni +
-      'Önce her derste seviyeni seç, sonra planını başlat.</p>' +
-      '<details class="mini"><summary>Kapsam ve kaynaklar</summary><p>' + kacis(sinav.kapsam) + '</p><p>' +
+    ? '<h2>' + kacis(kendiPlanEtiketi(tur)) + '</h2>' +
+      '<details class="mini"><summary>Kapsam ve kaynaklar</summary><p><b>' + kacis(sinav.uzunAd) + '</b> · ' + kacis(sinav.kapsam) + '</p><p>' +
       sinav.kaynaklar.map(u => '<a href="' + kacis(u) + '" target="_blank" rel="noopener">' + kacis(u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</a>').join(' · ') +
       '</p><p>Konu başlıkları ' + kacis(SINAV_KONULARI.surum.split('-').reverse().join('.')) + ' tarihinde derlendi; resmî duyuruları takip et.</p></details>'
-    : tur === 'YKS'
-    ? '<h2>Kendi YKS planın</h2><p class="mini">Okula gitmediğin için bütün YKS konuları (TYT ve ' + kacis(o.alan) +
-      ' AYT’si) bu planla gelir. ' + yeni + 'Önce her derste seviyeni seç, sonra planını başlat.</p>'
-    : '<h2>Kendi TYT planın · isteğe bağlı</h2><p class="mini">Okul müfredatından ayrı olarak TYT konularını kendi hızında baştan geçmek için. ' +
-      yeni + 'Okulda tarihi olan konu burada tekrar edilmez.</p>') +
+    : tur === 'YKS' ? '<h2>Kendi YKS planın</h2>' : '<h2>Kendi TYT planın</h2>') +
     (durum ? '<p role="status"><b>' + durum.kalan + ' konu kaldı</b> · hedef ' + ggyy(gunNo(kp.hedef)) +
       (durum.kalan ? ' · haftada yaklaşık ' + durum.haftalik + ' yeni konu' : ' · bütün konular başladı') + '</p>' : '') +
     '<div class="kp-dersler">' + dersler.map(sec).join('') + '</div>' +
     '<label class="etiket" style="display:block;margin-top:12px">Hedef bitiş tarihi <input type="date" id="kpHedef" value="' +
       (kp ? kp.hedef : kendiPlanVarsayilanHedef()) + '"></label>' +
-    '<p class="mini">Yoklama testinde “Tekrar” seçersen (Biraz biliyorsan “Zor” da) o konu için konu anlatımı eklenir. ' +
-    'Başlamış konuların tekrarları plan durdurulsa da sürer.</p>' +
     '<div class="arac">' + (kp ? '<button class="dugme" id="kpKapat">Kendi planımı durdur</button>'
       : '<button class="dugme birincil" id="kpBaslat">Kendi ' + tur + ' planımı başlat</button>') + '</div></div>';
 }
@@ -3679,8 +3665,6 @@ function dersSirasiKutusu(si, mevcut) {
   const sonraki = dersSirasiOnizleme(si, anahtar, mevcut.ki, 1);
   if (onceki.gizle && sonraki.gizle) return '';
   return '<div class="p-gunler"><div class="etiket">Bu testteki mikro konuyu değiştir</div>' +
-    '<div class="mini" style="margin-bottom:7px">Yalnızca seçili <b>' + konuHtml(mevcut.ad) +
-    '</b> testi değişir. Önceki/sonraki testler ve konu planı aynı kalır; aynı konu başka bir testte tekrar edebilir.</div>' +
     '<div class="gunSec"><button class="dugme sirakaydir" data-yon="-1" data-ki="' + mevcut.ki +
     '" data-ders="' + kacis(anahtar) + '"' + (onceki.hata ? ' disabled title="' + kacis(onceki.hata) + '"' :
       ' title="Bu testte ' + konuHtml(onceki.hedefAd) + ' olsun"') + '>◀ önceki konu</button>' +
@@ -3732,10 +3716,7 @@ function pencereCiz() {
       ? '<div class="p-satir" style="margin-top:8px"><label>Kaynak</label>' +
         '<select id="pKaynak">' + ['', 'öğretmen', 'video', 'arkadaş notu'].map(k =>
           '<option' + ((PENCERE.kaynak || '') === k ? ' selected' : '') + '>' + k + '</option>').join('') +
-        '</select></div>' +
-        '<div class="mini" style="margin-top:6px">Anlatım için doğru sayısı girilmez. ' +
-        '“Anlatıldı” işaretlendiği gün konu o öğrenci için işlenmiş sayılır; ilk test ' +
-        D.ayar.ilk + ' gün sonra gelir.</div>'
+        '</select></div>'
       : '') + '</div>';
   const anahtar = norm(arama).split(/\s+/).filter(Boolean);
   let bulunan = [];
@@ -3770,7 +3751,7 @@ function pencereCiz() {
       '<div class="p-dugmeler"><button class="dugme" id="pKopyala">Seçili günlere kopyala</button> ' +
       (mevcut.serbest && !mevcut.kopya && !gecmisDuzenleme ? '<button class="dugme" id="pKonuyaCevir">Konu listesine ekle</button> ' : '') +
       '<button class="dugme" id="pKaldir">Bu testi sil</button>' +
-      '<span class="mini" style="margin-left:9px">yalnızca seçili test kaldırılır; diğer testlere dokunulmaz</span></div></div>';
+      '</div></div>';
   }
   h += kapsamSecimi() + turSecimi() + gunSecimi() + '<div class="p-yaz"><div class="etiket">Kendin yaz — karışık problem, deneme, ödev…</div>' +
     '<input id="pSerbestAd" aria-label="Çalışma adı" placeholder="örn. Karışık problem seti / TYT denemesi" value="' + kacis(PENCERE.yaziAd || '') + '">' +
@@ -3789,7 +3770,7 @@ function pencereCiz() {
     '<label class="mini" style="display:block;margin-top:7px"><input type="checkbox" id="pSerbestAnlatim"' +
     (PENCERE.yaziAnlatim ? ' checked' : '') + '> konu anlatımı — sayı alanı ' +
     (PENCERE.yaziAnlatim ? '<b>dakika</b>' : 'soru') + ' anlamına gelsin</label>' +
-    (gecmisDuzenleme ? '<div class="mini" style="margin-top:4px">Geçmiş hafta onarılırken yeni çalışma yalnızca bu plana eklenir.</div>' :
+    (gecmisDuzenleme ? '' :
       '<label class="mini" style="display:block;margin-top:4px"><input type="checkbox" id="pKonuOlsun"> ' +
       'konu listesine de ekle (tekrar algoritmasına girsin)</label>') + '</div>' +
     '<div class="p-ara"><input type="search" id="pAra" placeholder="Konu ara — örn. üçgen, paragraf, hücre" value="' +
@@ -4068,8 +4049,8 @@ function ogrenciYksYolu(detay) {
   let h = '<section class="yks-yolu kart" aria-label="' + sinavAdi + ' kalan zaman ve haftalar haritası">' +
     '<div class="yol-baslik"><div><div class="etiket">' + sinavAdi + ' giden yol</div><h2>' +
     (kalan ? Math.floor(kalan / 7) + ' hafta <span>' + kalan % 7 + ' gün kaldı</span>' : 'Sınav günü' + (bugun > sinav ? ' geride kaldı' : ' geldi')) +
-    '</h2></div>' + (detay ? '<div class="yol-tarih">' + ggyy(sinav) + '<br><span>Ayarlardaki ' + ogrenciSinavi(D.ogr[si]) + ' tarihi</span></div>' : '') + '</div>' +
-    (detay ? '<p class="mini">' + Math.min(gecen, Math.ceil((sinav - bas) / 7)) + ' hafta geride kaldı. Her kutu hazırlık dönemindeki bir hafta.</p>' : '') +
+    '</h2></div>' + (detay ? '<div class="yol-tarih" title="Ayarlardaki ' + ogrenciSinavi(D.ogr[si]) + ' tarihi">' + ggyy(sinav) + '</div>' : '') + '</div>' +
+    (detay ? '<p class="mini">' + Math.min(gecen, Math.ceil((sinav - bas) / 7)) + ' hafta geride kaldı.</p>' : '') +
     '<div class="yol-haftalar' + (detay ? ' detay' : '') + '">';
   // Yeşilin koyuluğu o hafta verilen testlerden yapılanların oranıdır; tek bir sonuç haftayı
   // tamamlanmış göstermez. Plan verilip hiç sonuç girilmeyen hafta gri; katıldıktan sonra hiç
@@ -4101,12 +4082,8 @@ function ogrenciYksYolu(detay) {
         adet ? adet + ' sonuç' : kayit ? 'Plan kayıtlı' : gun < hb ? (gun < katilim ? 'Katılmadan önce' : 'Kayıt yok') : son ? 'YKS' : 'Önizleme') + '</small>' : '') +
       '</' + (acilir ? 'button' : 'span') + '>';
   }
-  return h + '</div><div class="yol-anahtar">' + (detay ? '<span class="anahtar-yesil">■ Yeşil: yapılan test oranı (koyu = hepsi, gri-yeşil = azı)</span>' +
-    '<span class="anahtar-gri">■ Gri: plan verildi, sonuç girilmedi</span><span class="anahtar-kirmizi">■ Kırmızı: kayıt yok, o hafta uygulama kullanılmadı</span>' +
-    '<span>□ Önümüzde · Çerçeve: seçili hafta · ★ YKS</span>' :
-    '<button class="yol-link" data-sekme="harita">Haftalar haritası →</button>') +
-    '</div>' + (detay ? '<p class="mini">Yeşilin koyuluğu, o hafta verilen testlerden kaçını gerçekten yaptığını gösterir. “Yapmadım” dediğin testler sonraki haftaya aktarılır ve yapılmamış sayılır; “Bu konu daha anlatılmadı” sayıya girmez. ' +
-    'Bir haftaya dokunarak planını açabilirsin. Gelecek haftalar önizlemedir: sonucu girilmemiş testler İyi seçilmiş varsayılır.</p>' : '') + '</section>';
+  // Kutular kendini anlatır (x/y test, Kayıt yok, Önizleme…); renk anahtarı ve açıklama yok.
+  return h + '</div>' + (detay ? '' : '<div class="yol-anahtar"><button class="yol-link" data-sekme="harita">Haftalar haritası →</button></div>') + '</section>';
 }
 function ogrenciHaftaSecici() {
   const hb = haftaBasi(), simdi = buHafta();
@@ -4182,13 +4159,12 @@ function ogrenciProgramKapsami(si, hb) {
     .map(d => planDersAnahtari(o.sube, d)).filter(Boolean))];
   if (!dersler.length && !eksik.length) return '';
   return '<details class="kart" style="padding:16px;margin-bottom:16px"><summary>Bu haftanın okul konuları · ' + hafta + '. plan haftası</summary>' +
-    '<p class="mini">Ders programındaki konu planıdır. Tekrar testleri işlenişten sonra, tekrar aralığına ve günlük kapasiteye göre gelir.</p>' +
     dersler.map(d => {
       let w = hafta - 1;
       while (w >= 0 && !Object.hasOwn(plan[w] || {}, d)) w--;
       const konular = (plan[w] || {})[d] || [];
       return '<p><b>' + kacis(d) + ':</b> ' + (konular.length ? konular.map(konuHtml).join(' · ') +
-        (w < hafta - 1 ? ' <span class="mini">(planda yeni konu yok; önceki başlık devam ediyor)</span>' : '') : 'Bu hafta için konu belirtilmemiş.') + '</p>';
+        (w < hafta - 1 ? ' <span class="mini">(devam)</span>' : '') : '—') + '</p>';
     }).join('') + (eksik.length ? '<p role="status"><b>Konu planı eksik:</b> ' + eksik.map(kacis).join(', ') +
       '. Bu dersler için kitap konularını Konu Planı’na ekleyin.</p><button class="dugme" data-sekme="konuplani">Konu Planı’nı aç</button>' : '') + '</details>';
 }
@@ -4221,14 +4197,13 @@ function gorunumOgrenciPlan() {
   const gelecek = hb > buHafta(), gecmis = hb < buHafta();
   return '<div class="ogrenci-plan">' + ogrenciYksYolu(false) +
     '<div class="baslik"><h1>' + (gelecek ? 'Gelecek haftan' : gecmis ? 'Geçmiş haftan' : 'Haftalık planın') + '</h1>' +
-    (p.elle?.sabit?'<p>Bu haftanın sabitlenmiş planı. Çalışmaların tarihleri ve sırası korunur; tamamlanma bilgileri aşağıda görünür.</p>':gelecek ? '<p>Önizleme: sonucu henüz girilmemiş testler “İyi” seçilmiş varsayılarak hesaplandı. Gerçek plan sonuçlarını girdikçe kesinleşir ve hafta başladığında kendiliğinden kaydedilir.' +
-      (hb > sonrakiHafta(si, buHafta(si)) ? ' Bu haftayı indirmek için önce önceki haftanın sonuçları gerekir.' : '') + '</p>' : '') + '</div>' +
+    (gelecek ? '<p>Önizleme' + (hb > sonrakiHafta(si, buHafta(si)) ? ' · indirmek için önce önceki haftanın sonuçlarını gir' : '') + '</p>' : '') + '</div>' +
     ogrenciHaftaSecici() + kazanimPlaniUyarisi(D.ogr[si]?.sube) + ogrenciProgramYenileUyarisi(si, hb) + ogrenciProgramKapsami(si, hb) +
     (EK.ogrOtoHata ? '<p role="alert">' + kacis(EK.ogrOtoHata) + '</p>' : '') +
     '<div class="arac"><button class="dugme birincil" data-sekme="giris">Sonuç gir</button>' +
     '<button class="dugme" id="yazdirOnizle">Planı indir / PDF</button>' +
     (programYenileYedegiVar() ? '<button class="dugme" id="ogrProgramYedek">Yenilemeden önceki yedeği indir</button>' : '') + '</div>' +
-    (p.devreden ? '<p class="mini">' + p.devreden + ' çalışma bu haftaya sığmadı; sonraki planlarda yeniden değerlendirilir. Günlük sınırın korunur.</p>' : '') +
+    (p.devreden ? '<p class="mini">' + p.devreden + ' çalışma bu haftaya sığmadı.</p>' : '') +
     (!gorunen.toplam ? '<div class="kart" style="padding:20px">' +
       (p.kayitYok?'Bu haftanın kaydedilmiş planı bulunamadı. Eski kağıdın varsa <button class="dugme" data-sekme="kurtarma">Geçmiş plan kurtar</button> ile geri yükleyebilirsin.':bugunNo() >= gunNo(D.ayar.sinav) ? 'Program dönemi tamamlandı. Sonuçlarını Karnem bölümünde görebilirsin.' :
        D.ogr[si]?.okul === false && !D.ogr[si].kendiPlan ? kacis(kendiPlanTuru(D.ogr[si])) + ' planın henüz başlamadı. Ayarlar’da derslerde seviyeni seçip ' +
@@ -4275,9 +4250,7 @@ function gorunumPlan() {
       ? '<div class="uyari-serit"><b>Bu haftanın planı ' + ggyy(p.elle.sabit) + ' tarihinde verildi/sabitlendi.</b> ' +
         'Kâğıttaki sıra değişmez; tek beklenen, sonuçların girilmesi. ' + duzenleDugmesi(si, hb) + '</div>'
       : ileriHafta
-      ? '<div class="mini" style="margin-bottom:10px">İleri bir haftaya bakıyorsunuz. Burada yalnızca <b>tarihi kesinleşmiş</b> ' +
-        'tekrarlar görünür; sonucu girilmemiş bir konunun bir sonraki tarihi belli olmadığı için buraya yazılmaz. ' +
-        'Sonuçları girdikçe bu hafta dolar.</div>'
+      ? '<div class="mini" style="margin-bottom:10px">İleri hafta: yalnızca tarihi kesinleşmiş tekrarlar.</div>'
       : (!p.toplam && p.devreden)
       ? '<div class="uyari-serit"><b>Bu hafta doldu.</b> Bugün ' + GUN_AD[haftaGunu(bugunNo())] + ' ' + ggyy(bugunNo()) +
         '; geçmiş günlere iş yazılmadığı için bekleyen <b>' + p.devreden + '</b> konu gelecek haftaya devredildi. ' +
@@ -4348,12 +4321,8 @@ function gorunumPlan() {
       '<button class="dugme" id="csv">Excel (CSV)</button>') +
     ((!ogrenciMi() || !p.elle.sabit) && (Object.keys(p.elle.yer || {}).length || (p.elle.ek || []).length || (p.elle.sil || []).length)
       ? '<button class="dugme" id="elleSifirla">Elle düzeni sıfırla</button>' : '') + '</div>' +
-    '<div class="mini ozet-gizle" style="margin:-6px 0 12px">' +
-    (ogrenciMi() ? 'Çözdükçe “Sonuç gir” sekmesinden doğru sayını yaz.'
-                 : 'Bir kutuya tıklayıp konu arayabilir, soru sayısını yazabilir, ' +
-                   'kutuları sürükleyerek başka güne taşıyabilirsiniz.') +
-    (ilkGun(hb) > hb ? ' <span class="bugunSerit">· Bugün <b>' + GUN_AD[haftaGunu(bugunNo())] + ' ' + ggyy(bugunNo()) +
-      '</b> — geçmiş günler kilitli, yeni işler bugünden itibaren yerleşiyor.</span> ' + duzenleDugmesi(si, hb) : '') + '</div>' +
+    (ilkGun(hb) > hb ? '<div class="mini ozet-gizle" style="margin:-6px 0 12px"><span class="bugunSerit">Bugün <b>' + GUN_AD[haftaGunu(bugunNo())] + ' ' + ggyy(bugunNo()) +
+      '</b> — geçmiş günler kilitli.</span> ' + duzenleDugmesi(si, hb) + '</div>' : '') +
     (EK.toplu ? '<div class="uyari-serit">Düzenlemek/kaldırmak istediğiniz kutuları işaretleyin. ' +
       '<button class="dugme" id="topluHepsi">Hepsini seç</button> ' +
       '<button class="dugme" id="topluYariya">Seçilenlerin soru sayısını yarıya indir</button> ' +
@@ -4477,18 +4446,15 @@ function gorunumGiris() {
   // Formu üretirken kullanılan planı da bağlamda tut; eski kâğıdı yeni haftanın canlı
   // hesabıyla yeniden kurmaya çalışmadan aynı anlığı dondurabilelim.
   EK.sonucFormu = { si: si, hb: hb, plan: JSON.parse(JSON.stringify(p)) };
-  let h = sonucIpucuHtml(hb) + '<div class="baslik"><h1>Sonuç girişi</h1><p>' + (ogrenciMi()
-    ? 'Çözdüğün testte konuyu ne kadar hatırladığını seç. İstersen doğru / soru sayısıyla gir.'
-    : 'Öğrencinin her testte konuyu ne kadar hatırladığını seçin; isterseniz doğru / soru sayısıyla da girebilirsiniz.') + '</p></div>' +
+  let h = sonucIpucuHtml(hb) + '<div class="baslik"><h1>Sonuç girişi</h1></div>' +
     '<div class="arac">' + (ogrenciMi() ? haftaSecici() : ogrSecici() + haftaSecici()) + '</div>' +
-    '<div class="sonuc-yardim"><span class="mini">Bir konuyu gördüysen ama hatırlayamadıysan Tekrar; konu henüz anlatılmadıysa ayrı seçeneği kullan.</span>' +
-    '<button type="button" id="sonucBilgiAc">Nasıl seçilir?</button></div>';
+    '<div class="sonuc-yardim"><button type="button" id="sonucBilgiAc">Nasıl seçilir?</button></div>';
   const bek = p.bekleyen || [], planDisi = planDisiHaftaSonuclari(si, hb, p);
   if (!p.toplam && !bek.length && !planDisi.length)
     return h + sonucBilgiModalHtml(!o.sonucBilgiOkundu) + '<div class="uyari-serit">Bu hafta bu öğrenci için planlanmış konu yok.</div>';
   h += '<div class="kart" style="padding:16px 18px">';
   if (planDisi.length) {
-    h += '<div class="gun-basi">Plan dışında kaydedilmiş sonuçlar</div><div class="mini" style="margin-bottom:6px">Sonuç geçmişi korunmuştur; yüklü planda karşılığı olmayan kayıtları buradan düzeltebilirsiniz.</div>';
+    h += '<div class="gun-basi">Plan dışında kaydedilmiş sonuçlar</div>';
     planDisi.forEach(l => { const ki = l[2], gun = l[0], duzenle = !!EK.girisAcik[ki + ':' + gun]; h += sonucSatiriHtml({si, ki, gun, konu: konuAl(ki), ders: konuDersAdi(ki), kayit: l, duzenle, gunEtiketi: ggyy(gun), extra: '<span class="mini">· plan dışı sonuç</span>'}); });
     if (p.toplam || bek.length) h += '<div style="height:10px"></div>';
   }
@@ -4529,9 +4495,7 @@ function gorunumKonular() {
   const hepsi = [];
   for (let i = 0; i < konuSayisi(); i++) { const k = konuAl(i); if (k && !k[6]) hepsi.push({ k: k, i: i, kendi: i >= KATALOG.length }); }
   const satirlar = hepsi.filter(x => x.k[0] === secDers).sort((a, b) => (b.kendi ? 1 : 0) - (a.kendi ? 1 : 0));
-  let h = '<div class="baslik"><h1>Konular</h1><p>İşlediğiniz konunun tarihini girin; o konu tüm sınıfın planına girer. ' +
-    '12. sınıfların TYT/AYT tekrarı için eski program kataloğu: ' + KATALOG.length + ' konu' +
-    ((D.ekKonular || []).length ? ' + kendi eklediğiniz ' + D.ekKonular.filter(k => !k[6]).length + ' konu' : '') + '.</p></div>' +
+  let h = '<div class="baslik"><h1>Konular</h1></div>' +
     '<div class="arac"><select id="dersSec">' + DERS.map((d, i) =>
       '<option value="' + i + '"' + (i === secDers ? ' selected' : '') + '>' + d + '</option>').join('') + '</select>' +
     '<button class="dugme" id="bugunIsle">Seçilenleri ' + ggyy(bugunNo()) + ' olarak işaretle</button>' +
@@ -4561,13 +4525,11 @@ function gorunumKonuPlani() {
   const subeler = ogrenciMi() ? [(D.ogr[EK.ogr] || {}).sube || 'benim'] : subeListesi();
   const sube = EK.sube && subeler.indexOf(EK.sube) >= 0 ? EK.sube : (subeler[0] || '');
   EK.sube = sube;
-  let h = '<div class="baslik"><h1>Konu Planı</h1><p>Her dersin konuları, işleneceği sıraya göre. ' +
-    'Sıra değiştirmek, yeniden adlandırmak, silmek ya da yeni konu eklemek için satırları kullanın — ' +
-    'değişiklik gelecek haftaların planına hemen yansır; sonucu girilmiş konulara dokunulmaz.</p></div>';
+  let h = '<div class="baslik"><h1>Konu Planı</h1></div>';
   if (!sube) return h + '<div class="uyari-serit">Önce bir ders programı / konu planı yüklenmeli.</div>';
   h += '<div class="arac">' + (ogrenciMi() ? '' :
     '<select id="subeSec">' + subeler.map(s2 => '<option' + (s2 === sube ? ' selected' : '') + '>' + kacis(s2) + '</option>').join('') + '</select>') +
-    '<span class="mini">' + kacis(sube) + ' — alanına göre gelen varsayılan plan; okulunuzun hızına göre düzenleyin.</span></div>';
+    '</div>';
   h += '<p class="mini">' + subeSinifi(sube) + '. sınıf · 2026–2027 · <button class="dugme mini" data-sekme="mufredat">Müfredat ve kaynaklar</button></p>';
   if (subeSinifi(sube) < 12) h += '<p>36 haftalık öneri; tatiller ve okulun ilerleyişine göre düzenleyin. Alan seçimi ortak okul konularını gizlemez.</p><label>Bu şubenin plan başlangıcı <input id="subeMufredatBaslangic" type="date" value="' + isoDan(subePlanBaslangici(sube)) + '"></label>';
   else {
@@ -4606,11 +4568,8 @@ function gorunumKonuPlani() {
 }
 
 function gorunumOgrenciler() {
-  let h = '<div class="baslik"><h1>Öğrenciler</h1><p>Günlük test kapasitesi, tatil günü ve hedef tutma oranı öğrenciye özeldir.</p></div>' +
-    '<div class="mini" style="margin:-8px 0 12px">Bu kutu, öğrenciye programın çıktısını verdiğinizde kendiliğinden işaretlenir. ' +
-    'İşaretli olmayan öğrenci; şube/sınıf geneli eklemelere ve toplu çıktıya dahil edilmez. ' +
-    'Şu an <b>' + kullananlar().length + '</b> öğrenci programı kullanıyor · listede <b>' +
-    canliOgrenciler().length + '</b> öğrenci var.</div>' +
+  let h = '<div class="baslik"><h1>Öğrenciler</h1><p><b>' + kullananlar().length + '</b> öğrenci programı kullanıyor · listede <b>' +
+    canliOgrenciler().length + '</b> öğrenci var.</p></div>' +
     '<div class="arac" style="margin-bottom:12px">' +
     '<input id="yAd" placeholder="Ad Soyad" style="min-width:210px">' +
     '<input id="yNo" type="number" min="1" max="9999" placeholder="No" style="width:82px">' +
@@ -4941,13 +4900,12 @@ function haritaPlaniniAc(h) {
 // gelişimi (yalnızca YKS). Başlıklar kendi sayfalarına götürür: Haftalar haritası, Denemelerim.
 function gorunumAnaSayfa() {
   const grafik = ogrenciSinavi(D.ogr[EK.ogr]) === 'YKS' ? denemeYolGrafigi(EK.ogr) : '';
-  const baslik = '<div class="baslik pano-sol-bas"><h1><button class="baslik-link" data-sekme="harita" title="Haftalar haritasını aç">Haftalar haritası</button></h1>' +
-    '<p>Zamanını ve kaydettiğin emeği birlikte gör.</p></div>';
+  const baslik = '<div class="baslik pano-sol-bas"><h1><button class="baslik-link" data-sekme="harita" title="Haftalar haritasını aç">Haftalar haritası</button></h1></div>';
   return grafik ? '<div class="ana-pano">' + baslik + '<div class="baslik pano-sag-bas"><h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler" title="Denemelerim’i aç">Deneme gelişimi</button></h2></div>' +
     ogrenciYksYolu(true) + grafik + '</div>' : baslik + ogrenciYksYolu(true);
 }
 function gorunumHaritasi() {
-  if (ogrenciMi() && D.ogr[EK.ogr]) return '<div class="baslik"><h1>Haftalar haritası</h1><p>Zamanını ve kaydettiğin emeği birlikte gör.</p></div>' + ogrenciYksYolu(true);
+  if (ogrenciMi() && D.ogr[EK.ogr]) return '<div class="baslik"><h1>Haftalar haritası</h1></div>' + ogrenciYksYolu(true);
   const si = EK.ogr;
   if (si === undefined || !D.ogr[si] || !D.ayar.donemBasi) {
     return '<div class="baslik"><h1>Haftalar Haritası</h1></div><div class="kart">' +
@@ -4959,9 +4917,7 @@ function gorunumHaritasi() {
   const sinavHb = pazartesi(sinavG);
   const bugunHb = buHafta();
   const baslangicHb = haftaBaslangici(o);
-  let h = '<div class="baslik"><h1>Haftalar Haritası</h1><p>' + kacis(o.ad) +
-    ' · dönem başından (' + ggyy(donemHb) + ') ' + ogrenciSinavi(o) + ' haftasına kadar. ★ ' + ogrenciSinavi(o) + ' haftası; kırmızı çerçeve o hafta ' +
-    'hiç sonuç girilmediğini gösterir. Haftaya tıklayınca kayıtlı plan ve tamamlanma bilgileri açılır. Kaydı olmayan gelecek haftalar taslaktır.</p></div>' +
+  let h = '<div class="baslik"><h1>Haftalar Haritası</h1><p>' + kacis(o.ad) + '</p></div>' +
     (ogrenciMi() ? '' : '<div class="arac" style="margin-bottom:12px">' + ogrSecici() + '</div>');
   if (donemHb > sinavHb) return h + '<div class="kart">Dönem başı ' + ogrenciSinavi(o) + ' tarihinden sonra görünüyor, Ayarlar’dan kontrol edin.</div>';
   h += '<div class="haritaIzgara">';
@@ -5021,24 +4977,16 @@ function gorunumProgram() {
   const dersSecenekleri = [...new Set([...okulDersAdlari(), ...prog.gunler.flat().filter(Boolean)])];
   const secenek = ders => '<option value=""></option>' + dersSecenekleri.map(d =>
     '<option' + (d === ders ? ' selected' : '') + '>' + kacis(d) + '</option>').join('');
-  let h = '<div class="baslik"><h1>Ders programı</h1><p>Soldaki liste okulun ders programı, altındaki etiketler o derste işlenecek konu. ' +
-    'Konuyu değiştirdiğinizde o dersin kalan konuları da kayar; “dağıt” dediğinizde konular öğrencilerin planına ' +
-    D.ayar.ilk + ' gün sonrası ilk test olacak şekilde düşer.</p></div>' +
-    '<p class="mini">Bu ders programı seçilen haftadan itibaren sonraki haftalarda da kullanılır; yeni bir program kaydedene kadar devam eder.</p>' +
-    (subeSinifi(sube) === 11 ? '<p class="mini">11. sınıfta Matematik ve Matematik AYT, 11. sınıf konularını kullanır. Matematik TYT ayrı bir konu sırasıdır.</p>' : '') +
+  let h = '<div class="baslik"><h1>Ders programı</h1></div>' +
     '<div class="kart" style="padding:14px 16px;margin-bottom:14px' + (pk.yok ? ';border-color:var(--kritik)' : '') + '">' +
     '<div class="etiket">Programı AI ile aktar</div>' +
     (pk.yok ? '<p class="mini" style="color:var(--kritik);font-weight:600;margin:4px 0 8px">Önce ders programınızı ' +
       'buradan yükleyin — program yüklenmeden haftalık planınız oluşturulamaz.</p>' : '') +
-    '<p class="mini" style="max-width:70ch;margin:6px 0 10px">Her okulun ders programı görüntüsü farklı ' +
-    'dizayn edildiği için burada otomatik okunmuyor. Bunun yerine: aşağıdaki metni kopyalayın, bir yapay zekâ ' +
-    'sohbetine (ör. ChatGPT, Claude, Gemini) ders programınızın fotoğrafıyla birlikte yapıştırın; ' +
-    'çıkan JSON çıktısını buraya yapıştırıp “Bu programı kullan” deyin.</p>' +
+    '<p class="mini" style="margin:6px 0 10px">Metni ders programı fotoğrafıyla bir AI sohbetine ver, çıktıyı aşağıya yapıştır.</p>' +
     '<div class="arac" style="margin-bottom:10px;padding:9px 10px;border:1px solid var(--cizgi);border-radius:8px">' +
-    '<span class="mini"><b>Önce</b> kaç hafta ileri doldurulsun</span>' +
+    '<span class="mini">Kaç hafta ileri doldurulsun</span>' +
     '<input type="number" id="aIleri" min="0" max="300" value="' + ileriHaftaSayisi() + '" style="width:70px"> ' +
-    '<button class="dugme mini" id="aIleriYksKadar">YKS’ye kadar (' + haftaSinavaKadar() + ' hafta)</button>' +
-    '<span class="mini">— sonra aşağıda “bu programı kullan” dediğinizde o kadar hafta doldurulur.</span></div>' +
+    '<button class="dugme mini" id="aIleriYksKadar">YKS’ye kadar (' + haftaSinavaKadar() + ' hafta)</button></div>' +
     '<div class="arac" style="margin-bottom:8px"><button class="dugme" id="dpPromptKopyala">Metni kopyala</button>' +
     '<span class="mini" id="dpKopyalandi" hidden>Kopyalandı ✓</span></div>' +
     '<textarea id="dpPromptMetin" rows="4" readonly style="width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;' +
@@ -5060,12 +5008,9 @@ function gorunumProgram() {
     '<span style="flex:1"></span>' +
     '<button class="dugme birincil" id="dagitimGeriAl" title="Bu haftaya yazılan işleniş tarihlerini siler; ' +
     'sonucu girilmiş konulara dokunmaz">Bu haftanın dağıtımını geri al</button></div>' +
-    '<div class="arac" style="margin-top:-4px"><span class="mini" style="max-width:70ch">Kaç hafta ileri ' +
-    'dağıtılacağını Ayarlar’dan değiştirebilirsiniz. Ders programı ve konu planı belli olduğu için gelecek ' +
-    'haftalar şimdiden hesaplanabilir; işlenmiş konulara dokunulmaz.</span></div>' +
     '<div class="arac" style="margin-top:-4px">' +
     '<span class="mini">Dönem başı</span><input type="date" id="donemBasi" value="' + isoDan(subePlanBaslangici(sube)) + '">' +
-    '<span class="mini">Sınıf bir hafta ara verdiyse (tatil, sınav vb.):</span>' +
+    '<span class="mini">Ara hafta:</span>' +
     '<button class="dugme" data-kaydir="ileri">Planı 1 hafta ileri at</button></div>';
   h += pk.tam
     ? '<div class="programDurum tam">✓ <b>' + ggyy(hb) + '</b> haftasının ders programı yüklü.</div>'
@@ -5081,8 +5026,7 @@ function gorunumProgram() {
                 'üç şube için birden</button>')) + '</div>';
   if (takvim !== hafta)
     h += '<div class="mini" style="margin:6px 0 10px;padding:8px 10px;border:1px solid var(--cizgi);border-radius:8px">' +
-      'Takvime göre bu hafta <b>' + takvim + '. hafta</b> çıkıyor; plan ' + haftaSayisi + ' hafta olduğu için <b>' + hafta +
-      '. hafta</b> gösteriliyor. Yukarıdaki listeden doğru haftayı seçerseniz dönem başı ona göre ayarlanır.</div>';
+      'Takvime göre bu hafta <b>' + takvim + '. hafta</b>; plan ' + haftaSayisi + ' hafta olduğu için <b>' + hafta + '. hafta</b> gösteriliyor.</div>';
   // aynı gün aynı dersten birden çok saat varsa tek hücre gibi davranılır
   const n = prog.saatler.length;
   const kutu = [];
@@ -5149,8 +5093,7 @@ function gorunumProgram() {
     h += '</tr>';
   });
   h += '</tbody></table></div>' +
-    '<p class="mini">Konuların adını, sırasını değiştirmek ya da yeni konu eklemek/silmek için ' +
-    '<b>Konu Planı</b> sekmesini kullanın — buradaki tablo oradan gelir.</p>';
+    '';
   return h;
 }
 
@@ -5164,22 +5107,19 @@ function gorunumAnlasma() {
     '<input type="text" id="aBaslik" value="' + kacis(a.baslik) + '" style="width:100%;margin:8px 0 6px">' +
     '<input type="text" id="aGiris" value="' + kacis(a.giris) + '" style="width:100%;margin-bottom:8px">' +
     '<textarea id="aMaddeler" rows="8" style="width:100%">' + kacis((a.maddeler || []).join('\n')) + '</textarea>' +
-    '<div class="mini">Her satır bir madde. Bütün öğrencilerin çıktısında çıkar.</div></div>';
+    '</div>';
   const kisisel = '<div class="kart" style="padding:15px 17px"><div class="etiket">' +
     (ogrenci ? 'Kişisel anlaşmam' : 'Öğrenciye özel') + '</div>' +
     (ogrenci ? '' : '<div style="margin:8px 0 10px">' + ogrSecici() + '</div>') +
     '<div class="mini" style="margin:8px 0 4px">' +
-    (ogrenci ? 'Kendin için eklemek istediğin maddeler' : 'Bu öğrenciyle konuşup eklediğiniz maddeler') +
-    ' (her satır bir madde)</div>' +
+    (ogrenci ? 'Kendi maddelerin' : 'Bu öğrenciye özel maddeler') + '</div>' +
     '<textarea id="oMaddeler" rows="4" style="width:100%">' + kacis((o.maddeler || []).join('\n')) + '</textarea>' +
     '<div class="etiket" style="margin-top:14px">Rutinler' + (ogrenci ? 'im' : 'i') + '</div>' +
     [['once', 0], ['ara', 1], ['sonra', 2]].map(par =>
       '<div style="margin-top:8px"><div class="mini">' + kacis(b[par[1]]) + '</div>' +
       '<textarea class="oRutin" data-alan="' + par[0] + '" rows="2" style="width:100%">' + kacis(r[par[0]] || '') + '</textarea></div>').join('') +
-    '<div class="mini" style="margin-top:8px">Boş bırakırsanız çıktıya elle yazmak için çizgiler basılır.</div></div>';
-  return '<div class="baslik"><h1>' + (ogrenci ? 'Anlaşmam ve rutinim' : 'Anlaşma ve rutin') + '</h1><p>' +
-    (ogrenci ? 'Kişisel maddelerin ve rutinlerin haftalık plan çıktında basılır.'
-              : 'Buradaki metinler haftalık plan çıktısının sağ sütununda ve alt şeridinde basılır.') + '</p></div>' +
+    '</div>';
+  return '<div class="baslik"><h1>' + (ogrenci ? 'Anlaşmam ve rutinim' : 'Anlaşma ve rutin') + '</h1></div>' +
     '<div class="arac"><label class="mini"><input type="checkbox" id="aAktif"' + (a.aktif !== false ? ' checked' : '') +
     '> ' + (ogrenci ? 'çıktıma' : 'çıktıya') + ' anlaşma ve rutin bölümünü ekle</label></div>' +
     '<div class="' + (ogrenci ? '' : 'ikili') + '"' + (ogrenci ? ' style="max-width:720px"' : '') + '>' + ortak + kisisel +
@@ -5188,35 +5128,28 @@ function gorunumAnlasma() {
 
 function gorunumOgrenciAyarlar() {
   const o = D.ogr[0];
-  return '<div class="baslik"><h1>Ayarlar</h1><p>Çalışma temponu seç. Planın, tekrarların ve telafin otomatik hazırlanır.</p></div>' +
+  return '<div class="baslik"><h1>Ayarlar</h1></div>' +
     (o.okul === false ? kendiPlanKarti(0) : '') +
     '<div class="kart" style="padding:20px;margin-bottom:18px">' + (o.dakika ? dakikaAyarlari(o) :
     '<label class="etiket">Günde kaç test çözebilirsin? ' +
     '<input type="number" min="1" max="12" value="' + (o.kap || 6) + '" class="oKap" data-i="0" style="width:70px"></label>' +
-    '<p class="mini">Bir test ' + D.ayar.soru + ' soru. Değişiklikler gelecek planına otomatik yansır.</p>' +
-    '<div class="arac"><button class="dugme" id="oDakikayaGec">Süremi dakikayla planla</button></div>' +
-    '<p class="mini">Testler, konu anlatımları, günlük karışık sorular ve cumartesi denemesi aynı süre bütçesine sayılır.</p>') +
-    '<div class="etiket">Dinlenme günlerin</div><div class="gunSec" style="margin-top:10px">' +
+    '<div class="arac"><button class="dugme" id="oDakikayaGec">Süremi dakikayla planla</button></div>') +
+    '<div class="etiket">Dinlenme günlerin</div><div class="gunSec ogr-gunler" style="margin-top:10px">' +
     GUN_AD.map((g, j) => '<button class="gunDugme' + ((o.off || []).includes(j) ? ' kapali' : '') +
       '" data-i="0" data-g="' + j + '" aria-pressed="' + ((o.off || []).includes(j) ? 'true' : 'false') + '">' + g + '</button>').join('') +
-    '</div><p class="mini">Seçili günlere çalışma konmaz. Tercihlerin kendiliğinden kaydedilir.</p></div>' +
-    '<div class="kart" style="padding:20px;margin-bottom:18px"><label for="ogrHaftaGunu" class="etiket">Haftanın başlangıcı <span class="mini">· isteğe bağlı</span></label>' +
+    '</div></div>' +
+    '<div class="kart" style="padding:20px;margin-bottom:18px"><label for="ogrHaftaGunu" class="etiket">Haftanın başlangıcı</label>' +
     '<select id="ogrHaftaGunu">' + GUN_AD.map((ad,g) => '<option value="'+g+'"'+
       (g === ((o.haftaDuzeni && o.haftaDuzeni.donemler.slice(-1)[0]) || {gun:0}).gun ? ' selected' : '')+'>'+ad+(g===0?' (varsayılan)':'')+'</option>').join('')+'</select>' +
-    '<p class="mini">Sonuçlarını değerlendirdiğin günü seçebilirsin. Çarşamba seçersen planın Çarşamba–Salı olur. Seçilen gün geldiğinde yeni düzen başlar; atanmış çalışmaların tarihleri korunur.</p></div>' +
-    '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Başlangıç hafıza düzeyin · isteğe bağlı</h2>'+hafizaSecici(0)+
-    '<p class="mini">Konuları rahat hatırladığını düşünüyorsan daha seyrek bir başlangıç seçebilirsin. Güçlü: ilk kontrol yaklaşık 7 gün; Çok güçlü: yaklaşık 14 gün. İlk kontrolde bir test verilir. Normal, mevcut düzeni korur.</p>'+
-    '<p class="mini">Bu seçim kendi tahminindir; otomatik “Kolay” sonucu girmez. Gerçek sonuçların aralıkları ayarlar; derse özel öğrenilmiş profil varsa o kullanılır. Kaydedilmiş haftaların görevleri korunur. İstediğin zaman Normal’e dönebilirsin.</p></div>'+
-    (ogrenciSinavi(o) !== 'YKS' ? '' : '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Çalışma ağırlığın · isteğe bağlı</h2>'+aytOncelikSecici(0)+
-    '<p class="mini">TYT sana kolay geliyor, AYT’yi yeni öğreniyorsan açabilirsin. Yeni AYT çalışmalarına önce yer ayrılır; TYT’de ilk kontrol ve başarılı tekrarlar bir test olur. Zayıf TYT sonuçları ve geciken çalışmalar önceliğini korur.</p>'+
-    '<p class="mini">Günlük kapasiten artmaz. Sonuçlar, tekrar tarihleri ve kaydedilmiş haftalar değişmez; seçim sonraki taslak plana yansır. İstediğin zaman kapatabilirsin.</p></div>') +
+    '</div>' +
+    '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Başlangıç hafıza düzeyin</h2>'+hafizaSecici(0)+'</div>'+
+    (ogrenciSinavi(o) !== 'YKS' ? '' : '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>Çalışma ağırlığın</h2>'+aytOncelikSecici(0)+'</div>') +
     (o.okul === false ? '' : kendiPlanKarti(0)) +
     (testHesabiMi() ? testHesabiKarti()
-      : '<p class="mini" role="status">' + kacis(EK.ogrSyncDurum || (o.syncId ? 'Sonuçların otomatik eşitlenir.' : 'Çalışmaların bu cihazda kaydedilir.')) + '</p>') +
+      : EK.ogrSyncDurum ? '<p class="mini" role="status">' + kacis(EK.ogrSyncDurum) + '</p>' : '') +
     '<details class="kart" style="padding:20px"' + (EK.gelismisAcik ? ' open' : '') + '><summary style="cursor:pointer;font-weight:600">Gelişmiş ayarlar</summary>' +
     '<div style="margin-top:18px"><label><input id="ogrOtoTelafi" type="checkbox"' + (o.otoTelafi !== false ? ' checked' : '') +
     '> Eksik çalışmaları ve katılmadan önceki konuları otomatik tamamla</label>' +
-    '<p class="mini">Eksik sonuçlar yanlış sayılmaz. Kapatırsan henüz sonuç girmediğin otomatik geçmiş konular gelecek planından çıkar; eski plan ve sonuçların korunur.</p>' +
     '<label><input id="ogrDengeliYuk" type="checkbox"' + (o.dengeliYuk !== false ? ' checked' : '') +
     '> Yoğun haftalarda başarılı konuları kısa testlerle koru</label>' +
     '<div class="arac" style="margin-top:18px"><button class="dugme" data-sekme="anlasma">Anlaşmam ve rutinim</button>' +
@@ -5234,11 +5167,10 @@ function dakikaAyarlari(o) {
     alan('hi', 'Hafta içi her gün') + alan('hs', 'Hafta sonu her gün (deneme hariç)') + '</div>' +
     '<label style="display:block;margin-top:10px"><input type="checkbox" class="oDakikaDeneme"' + (d.deneme !== false ? ' checked' : '') +
     '> Cumartesi ' + DENEME_DAKIKA / 60 + ' saatlik deneme sınavına giriyorum</label>' +
-    '<p class="mini" role="status"><b>Haftalık toplam: ' + toplam + ' / ' + HAFTALIK_DAKIKA_SINIRI + ' dk</b> (okul dersleri hariç' +
+    '<p class="mini" role="status" title="Bir test (' + D.ayar.soru + ' soru) ' + Math.round(test) + ' dk, konu anlatımı ' + ANLATIM_DAKIKA +
+      ' dk. Üst sınır: haftalık 1620–1760 dk’yı en verimli aralık bulan PISA 2018 çalışması (Liu ve ark., 2023).">' +
+    '<b>Haftalık toplam: ' + toplam + ' / ' + HAFTALIK_DAKIKA_SINIRI + ' dk</b> (okul dersleri hariç' +
     (d.deneme !== false ? ', deneme dahil' : '') + ').</p>' +
-    '<p class="mini">Bir test (' + D.ayar.soru + ' soru) ' + Math.round(test) + ' dk, konu anlatımı ' + ANLATIM_DAKIKA +
-    ' dk sayılır; soru başına ' + SORU_SANIYE + ' sn. Günlük karışık soru hedeflerin bu sürenin içindedir. Üst sınır, haftalık ' +
-    '1620–1760 dk’yı en verimli aralık bulan bir PISA 2018 çalışmasından gelir (Liu ve ark., 2023).</p>' +
     '<div class="arac"><button class="dugme" id="oTesteDon">Test sayısıyla planla</button></div>';
 }
 function veriYonetimiGorunumu() {
@@ -5248,13 +5180,9 @@ function veriYonetimiGorunumu() {
     (rehberMi() ? '<button class="dugme" id="bulutSifirla">Bulut verilerini sıfırla</button>' : '') +
     // Yalnızca test hesabı: öğretmen ve okul öğrencisi bu düğmeyi hiç görmez (bkz. testSifirlamaIzinli).
     (testSifirlamaIzinli() ? '<button class="dugme" id="testSifirla" style="color:var(--kritik);border-color:var(--kritik)">Test hesabımı sıfırla</button>' : '') + '</div>' +
-    '<p class="mini">Tarayıcı sıfırlama bu cihazdaki YKS kayıtlarını siler ve çıkış yapar. Buluta yeni kayıt göndermez; buluttaki kopya korunur. Henüz gönderilmemiş çalışmalar bu cihazdan silinir.</p>' +
-    (testSifirlamaIzinli() ? '<p class="mini"><b>Test hesabımı sıfırla:</b> buluttaki test defterin, geçmiş kopyaları ve bu cihazdaki kayıtların kalıcı olarak silinir; ardından Google oturumun kapanır. ' +
-      'Google hesabın silinmez; aynı hesapla yeniden “Test hesabı aç” diyerek baştan başlayabilirsin. Geri alınamaz; istersen önce “Yedek indir” ile kopya al.</p>' : '') +
-    (rehberMi() ? '<p class="mini">Bulut sıfırlama: öğretmen defterini seçtiğiniz eski yedeğe döndürür. Bugünkü değişiklikler buluta kaydedilmiş olsa da uygun bir eski kopya varsa geri alınabilir. Öğrencilerin kendi hesaplarını ve cihazlarını değiştirmez.</p>' : '') +
+    // Açıklamalar düğmelerin onay penceresinde; burada yalnızca düğmeler durur.
     (D.bulutGeriAlma ? '<p class="mini"><b>Geri alınan kayıtların yeniden gelmemesi için öğrencilerden otomatik alım duraklatıldı.</b> “Buluttan sonuçları çek” ile yeniden başlatabilirsiniz.</p>' : '') +
     (rehberMi() && secim ? '<div role="region" aria-label="Bulut geri alma yedekleri"><h3>Dönülecek yedeği seçin</h3>' +
-      '<p class="mini">Gün başlangıcı, o günün ilk bulut değişikliğinden önceki kopyadır. Günlük yedek ise o günün son kaydıdır. Bu özellikten önce saklanmamış bir sürüm geri getirilemez. Şu anki defter işlemden önce ayrıca korunur.</p>' +
       (secim.liste.length ? '<div class="kaydir"><table><thead><tr><th>Yedek</th><th>Öğrenci / sonuç</th><th></th></tr></thead><tbody>' +
         secim.liste.map((y,i) => '<tr><td>'+kacis(y.ad)+'</td><td>'+y.ogrenciSayisi+' / '+y.sonucSayisi+'</td><td><button class="dugme bulutSurumSec" data-i="'+i+'">Bu yedeğe dön</button></td></tr>').join('') +
         '</tbody></table></div>' : '<p>Bulutta geri dönülebilecek yedek bulunamadı.</p>') + '</div>' : '') + '</div>';
@@ -5262,16 +5190,14 @@ function veriYonetimiGorunumu() {
 function gorunumAyarlar(gelismis) {
   if (ogrenciMi() && D.ogr[0] && !gelismis) return gorunumOgrenciAyarlar();
   const a = D.ayar;
-  const satir = (ad, ic, aciklama) => '<tr><td style="width:230px"><b>' + ad + '</b></td><td style="width:150px">' + ic +
-    '</td><td class="mini">' + aciklama + '</td></tr>';
+  // Açıklama tabloda ayrı sütun değil; ayar adının üzerine gelince görünür.
+  const satir = (ad, ic, aciklama) => '<tr><td style="width:230px" title="' + kacis(String(aciklama).replace(/<[^>]*>/g, '')) +
+    '"><b class="ayar-ad">' + ad + '</b></td><td>' + ic + '</td></tr>';
   const gercekBugun = (() => { const t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); })();
-  return '<div class="baslik"><h1>Ayarlar</h1><p>Değiştirdiğiniz an bütün planlar yeniden hesaplanır.</p></div>' +
+  return '<div class="baslik"><h1>Ayarlar</h1></div>' +
     (GELISTIRME_MODU ? '<div class="kart" style="margin-bottom:20px;padding:14px 16px;border-color:var(--kritik)">' +
     '<div style="font-weight:600;color:var(--kritik);margin-bottom:6px">Geliştirme — yalnızca test için</div>' +
-    '<div class="mini" style="margin-bottom:10px">Uygulamanın “bugün” kabul ettiği tarihi geçici olarak değiştirir; ' +
-    'plan, sonuç girişi ve dondurma mantığının haftanın farklı günlerinde nasıl davrandığını (ör. pazartesi program ' +
-    'verilip pazar sonuç girilmesi) test etmek içindir. Cihazın gerçek tarihini değiştirmez. Gerçek tarih: ' +
-    ggyy(gunNo(gercekBugun)) + '.</div>' +
+    '<div class="mini" style="margin-bottom:10px">Gerçek tarih: ' + ggyy(gunNo(gercekBugun)) + '.</div>' +
     '<input type="date" id="aTestTarih" value="' + (a.testTarih || '') + '"> ' +
     '<button class="dugme" id="testTarihSifirla">Gerçek tarihe dön</button></div>' : '') +
     (subeListesi().length ? gorunumProgram() : '') +
@@ -5342,18 +5268,6 @@ function gorunumAyarlar(gelismis) {
         // düğme hiç gösterilmez — aksi halde tıklandığında kesin başarısız olurdu.
         '') +
     '</div>' + veriYonetimiGorunumu() +
-    (rehberMi()
-      ? '<div class="mini" style="margin-top:10px;max-width:74ch">Öğrenciye kendi uygulamasını kurmak için: ' +
-        '<b>Öğrenciler</b> sekmesinde satırın sonundaki <b>paket</b> düğmesiyle o öğrencinin dosyasını ' +
-        'indirin ve kendisine gönderin. Öğrenci uygulamayı açıp “Öğrenciyim” der, dosyayı yükler; ' +
-        'kendi planını görür ve sonuçlarını kendi girer. Girdiği sonuçları size dosya olarak' +
-        (window.bulut && window.bulut.yapilandirilmis
-          ? ', ya da (internete bağlıysa, ve önce buluta bağlanıp bu öğrenci için paket dosyası ' +
-            'oluşturduysanız) “Sonuçlarımı buluta gönder” ile gönderir; siz de yukarıdaki düğmelerle ' +
-            'içeri alırsınız. Öğrenciye buluta bağlanmadan ÖNCE bir dosya gönderdiyseniz, bulut ' +
-            'seçeneğinin görünmesi için “paket” ile dosyayı YENİDEN oluşturup göndermeniz gerekir.'
-          : ' gönderir; siz de yukarıdaki düğmeyle içeri alırsınız.') + '</div>'
-      : '') +
     '<div id="yapistirAlan" hidden style="margin-top:12px"><textarea id="yapistirMetin" rows="5" ' +
     'placeholder="Yedek dosyasının içeriğini buraya yapıştırın. { ile başlar."></textarea>' +
     '<div class="arac" style="margin-top:8px"><button class="dugme birincil" id="yapistirYukle">Yapıştırılanı yükle</button></div></div>' +
@@ -5361,9 +5275,7 @@ function gorunumAyarlar(gelismis) {
       ? '<div class="arac" style="margin-top:10px"><button class="dugme" id="bulutGecmisAc">' +
         (EK.bulutGecmis ? 'Bulut yedek geçmişini yenile' : 'Bulut yedek geçmişini göster') + '</button></div>' +
         (EK.bulutGecmis && EK.bulutGecmis.length
-          ? '<div class="mini" style="margin-top:8px">Her gün için bir kopya saklanır. Yanlış giren ' +
-            'bir sonucu fark ederseniz o günden öncesine dönebilirsiniz.</div>' +
-            '<div class="kaydir" style="margin-top:6px"><table class="plan"><thead><tr><th>Gün</th>' +
+          ? '<div class="kaydir" style="margin-top:8px"><table class="plan"><thead><tr><th>Gün</th>' +
             '<th class="sayisal">Öğrenci</th><th class="sayisal">Sonuç</th><th class="sayisal">Boyut</th>' +
             '<th></th></tr></thead><tbody>' +
             EK.bulutGecmis.map(y => '<tr><td>' + kacis(ggyy(gunNo(y.gun))) + '</td>' +
@@ -5375,8 +5287,7 @@ function gorunumAyarlar(gelismis) {
             '</tbody></table></div>'
           : (EK.bulutGecmis ? '<div class="mini" style="margin-top:8px">Bulutta henüz günlük kopya yok.</div>' : '')) +
         (EK.bulutGeriNoktalar && EK.bulutGeriNoktalar.length
-          ? '<div class="mini" style="margin-top:14px"><b>Geri yükleme öncesi koruma noktaları</b> · ' +
-            'Her geri yüklemeden hemen önceki defteri saklar.</div>' +
+          ? '<div class="mini" style="margin-top:14px"><b>Geri yükleme öncesi koruma noktaları</b></div>' +
             '<div class="kaydir" style="margin-top:6px"><table class="plan"><thead><tr><th>Oluşturuldu</th>' +
             '<th>İşlem</th><th class="sayisal">Öğrenci</th><th class="sayisal">Sonuç</th><th></th>' +
             '</tr></thead><tbody>' + EK.bulutGeriNoktalar.map(y => '<tr><td>' +
@@ -5387,14 +5298,12 @@ function gorunumAyarlar(gelismis) {
           : '') +
         '<div class="mini" style="margin-top:10px">Bulut yedeği: ' +
         (EK.bulutYedekTs ? kacis(new Date(EK.bulutYedekTs).toLocaleString('tr-TR')) + ' (bu oturumda)'
-          : 'bu oturumda henüz gönderilmedi — değişiklikten ' + (BULUT_YEDEK_GECIKME / 1000) +
-            ' sn sonra ya da sekmeyi kapatırken kendiliğinden gönderilir') +
+          : 'bu oturumda henüz gönderilmedi') +
         (EK.bulutYedekHata ? ' <b style="color:var(--kritik)">· son deneme başarısız: ' +
           kacis(EK.bulutYedekHata) + '</b>' : '') + '</div>'
       : '') +
     '<div class="mini" style="margin-top:14px;max-width:70ch">Kayıt: ' + D.log.length + ' test sonucu · ' +
-    Object.keys(D.kart).length + ' kart · ' + Object.keys(D.islenis).length + ' işlenmiş konu. ' +
-    'Veriler bu sayfanın içinde saklanır; yine de haftada bir yedek indirmeniz iyi olur.</div>' +
+    Object.keys(D.kart).length + ' kart · ' + Object.keys(D.islenis).length + ' işlenmiş konu</div>' +
     '<div class="mini" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--cizgi)">Şahin Bilir · sahinbilir.rehberlik@gmail.com</div>';
 }
 
@@ -6579,12 +6488,12 @@ async function testDefteriniDenetleGercek() {
 function testHesabiKarti() {
   const b = window.bulut, kullanici = b && b.mevcutKullanici && b.mevcutKullanici();
   const bagli = !!kullanici && kullanici.uid === D.testHesap.uid;
-  const durum = EK.bulutYedekHata || (EK.bulutYedekTs ? 'Son hâlin bulutta kayıtlı.' : 'Değişikliklerin birkaç saniye içinde buluta kaydedilir.');
+  const durum = EK.bulutYedekHata || (EK.bulutYedekTs ? 'Son hâlin bulutta kayıtlı.' : '');
   const uye = uyeHesabiMi();
   return '<div class="kart" style="padding:20px;margin-bottom:18px"><h2>' + (uye ? 'Hesabın' : 'Test hesabın') + '</h2>' +
     '<p class="mini">' + (uye ? 'Kullanıcı adı: <b>' + kacis(D.testHesap.ad || '') + '</b>' + (bagli ? '' : ' · bu cihazda oturum kapalı.')
       : bagli ? 'Google hesabı: ' + kacis(kullanici.email || 'bağlı') : 'Bu cihazda Google oturumu kapalı.') + '</p>' +
-    '<p class="mini" role="status">' + kacis(durum) + '</p>' +
+    (durum ? '<p class="mini" role="status">' + kacis(durum) + '</p>' : '') +
     (bagli ? '' : uye
       ? '<div class="arac"><label class="gorunmez" for="uyeYenidenSifre">Şifren</label>' + sifreKutusu('uyeYenidenSifre', 'Şifren', 'current-password') +
         '<button class="dugme birincil" id="uyeYenidenGir">Yeniden gir</button></div>'
@@ -6593,12 +6502,8 @@ function testHesabiKarti() {
       ? '<p><b>Hangisiyle devam edeceğini seç.</b> Bu cihazdaki defter ile buluttaki defter farklı yerlerden değişti.</p>' +
         '<div class="arac"><button class="dugme" id="testBulutuAc">Buluttakini aç</button>' +
         '<button class="dugme" id="testYereliYaz">Bu cihazdakini buluta yaz</button></div>' +
-        '<p class="mini">“Buluttakini aç” bu cihazdaki kaydedilmemiş değişiklikleri siler; istersen önce Gelişmiş ayarlar → “Yedek indir”. ' +
-        '“Bu cihazdakini buluta yaz” seçilirse buluttaki önceki kopya ayrıca saklanır.</p>'
-      : '') +
-    '<p class="mini">Başka bir cihazda devam etmeden önce “Kaydet ve çıkış yap”ı kullan. ' +
-      (uye ? 'Diğer cihazda kullanıcı adın ve şifrenle giriş yap.' : 'Diğer cihazda “Test hesabı aç” ile aynı Google hesabını seç.') + '</p>' +
-    (testSifirlamaIzinli() ? '<p class="mini">Baştan başlamak için: Gelişmiş ayarlar → Verileri sıfırla → “Test hesabımı sıfırla”.</p>' : '') + '</div>';
+        '<p class="mini">“Buluttakini aç” bu cihazdaki kaydedilmemiş değişiklikleri siler.</p>'
+      : '') + '</div>';
 }
 // "Test hesabımı sıfırla": buluttaki defter ve bütün geçmiş yuvaları tek işlemde silinir,
 // silme sunucudan doğrulanır, sonra cihaz temizlenir ve oturum kapanır. Silindikten sonra
@@ -8906,19 +8811,19 @@ function gorunumEtkinlik() {
     (filtre === 'hepsi' || filtre === 'bekleyen' ? filtre !== 'bekleyen' || !r.kaydedildi || !r.pdf : !!r[filtre]));
   const hucre = (r, tur) => {
     const olay = r[tur];
-    if (!olay) return '<span class="mini">'+(r.o.etkinlik ? 'Bu hafta kayıt yok' : 'Kayıt ulaşmadı')+'</span>';
+    if (!olay) return r.o.etkinlik ? '<span class="mini">Bu hafta kayıt yok</span>'
+      : '<span class="mini" title="Öğrenci henüz işlem yapmamış, çevrimdışı kalmış ya da eski sürümü kullanıyor olabilir.">Kayıt ulaşmadı</span>';
     return '<b>'+({acildi:'Açtı',kaydedildi:'Kaydetti',pdf:'İstedi'})[tur]+'</b><br><time title="İlk: '+kacis(etkinlikZamani(olay.ilk))+'">'+kacis(etkinlikZamani(olay.son))+'</time>'+
       '<br><span class="mini">Sonuç: '+ggyy(olay.sonucHafta)+' – '+ggyy(planHaftaSonu(r.si,olay.sonucHafta))+'</span>'+
       (tur === 'pdf' ? '<br><span class="mini">Plan: '+ggyy(olay.hafta)+' – '+ggyy(planHaftaSonu(r.si,olay.hafta))+'</span>' : '');
   };
   return '<div class="baslik"><div><div class="etiket">Rehber öğretmen</div><h1>Haftalık öğrenci takibi</h1></div></div>'+
-    '<p>Kim Sonuç gir’i açtı, sonuç kaydetti ve PDF istedi? Sayılar tekil öğrencileri gösterir.</p>'+
     '<div class="arac"><label>Hafta ölçütü <select id="takipOlcut"><option value="islem"'+(!sonucOlcutu?' selected':'')+'>İşlem haftası</option><option value="sonuc"'+(sonucOlcutu?' selected':'')+'>Sonuç haftası</option></select></label></div>'+
     '<div class="arac"><button class="dugme" data-takip-hafta="-1" aria-label="Önceki takip haftası">←</button>'+
     '<label>'+(sonucOlcutu?'Sonuç haftası':'İşlem haftası')+' <input type="date" id="takipHafta" value="'+isoDan(hb)+'"></label>'+
     '<button class="dugme" data-takip-hafta="1" aria-label="Sonraki takip haftası">→</button><button class="dugme" data-takip-hafta="0">Bu hafta</button>'+
     '<label>Şube <select id="takipSube"><option value="">Tüm şubeler</option>'+subeler.map(s=>'<option'+(s===seciliSube?' selected':'')+' value="'+kacis(s)+'">'+kacis(s)+'</option>').join('')+'</select></label></div>'+
-    '<p class="mini">'+ggyy(hb)+' – '+ggyy(hb+6)+' · '+(sonucOlcutu?'Başlangıcı seçilen haftaya düşen sonuç dönemlerinin işlemleri gösterilir.':'Bu tarihlerde gözlenen işlemler gösterilir. Önceki haftanın sonuçları bu hafta girildiyse burada görünür.')+' Saatler Türkiye saatidir.</p>'+
+    '<p class="mini">'+ggyy(hb)+' – '+ggyy(hb+6)+'</p>'+
     '<div class="etkinlik-ozet">'+[['acildi','Sonuç gir açtı'],['kaydedildi','Sonuç kaydetti'],['pdf','PDF istedi'],['akis','Açtı → PDF istedi']].map(([k,ad])=>
       '<div class="kart"><strong>'+satirlar.filter(r=>r[k]).length+' / '+satirlar.length+'</strong><br>'+ad+'</div>').join('')+'</div>'+
     '<div class="arac"><label>Öğrenci ara <input id="takipArama" type="search" value="'+kacis(EK.takipArama||'')+'" placeholder="Ad veya numara"></label>'+
@@ -8933,8 +8838,7 @@ function gorunumEtkinlik() {
         ['acildi','kaydedildi','pdf'].map((k,i)=>'<div role="cell"><span class="etkinlik-mobil">'+['Sonuç gir','Sonuç kaydı','PDF isteği'][i]+': </span>'+hucre(r,k)+'</div>').join('')+
         '<div role="cell" class="mini">'+kacis(durum)+(bas?'<br>Takip başlangıcı: '+kacis(etkinlikZamani(bas)):'<br>Henüz etkinlik verisi yok')+'</div></div>';
     }).join('')+'</div>'+(gorunen.length?'':'<p>Bu seçimde öğrenci bulunamadı.</p>')+
-    '<p class="mini">PDF isteği, “Planı indir / PDF” düğmesine basıldığını gösterir; dosyanın cihaza kaydedildiğini doğrulamaz. Sonuç dönemi ile PDF’nin plan tarihleri ayrı gösterilir. Açtı → PDF istedi sayısı aynı sonuç dönemi için bu sırayla gözlenen işlemleri sayar. Formu açmak sonuç kaydetmek değildir.</p>'+
-    '<p class="mini">Kayıt ulaşmadı: öğrenci henüz işlem yapmamış, çevrimdışı kalmış veya eski sürümü kullanıyor olabilir. Geçmiş tıklamalar geriye dönük doldurulmaz. Bağlantı beklenirken son alınan kayıtlar gösterilir; bu liste Firebase Analytics raporunun gecikmesini beklemez.</p>';
+    '';
 }
 // ---------------------------------------------------------------- çizim + olaylar
 const SEKME_REHBER = [['takip', 'Haftalık öğrenci takibi'], ['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
@@ -9094,16 +8998,12 @@ function cizIc() {
   const ana = document.getElementById('ana');
   if (!canli.length && EK.sekme !== 'ayarlar' && EK.sekme !== 'ogrenciler' && EK.sekme !== 'mufredat' && EK.sekme !== 'takip') {
     ana.innerHTML = '<div class="kurulum"><div class="kur-kutu" style="text-align:' + (ogrenciMi() ? 'left' : 'center') + '">' +
-      '<h1 style="text-align:center">' + (ogrenciMi() ? 'Bilgilerini gir, başlayalım' : 'Henüz öğrenci yok') + '</h1>' +
-      '<p class="kur-oz" style="text-align:center">' + (ogrenciMi()
-        ? 'Adını ve sınavını gir. YKS’ye okulla birlikte hazırlanıyorsan sıradaki adımda ders programını verirsin; okula gitmiyorsan ya da başka bir sınava hazırlanıyorsan bütün konular kendi hızına göre planlanır.'
-        : 'Önce Öğrenciler sekmesinden sınıfını ekle.') + '</p>' +
+      '<h1 style="text-align:center;margin-bottom:22px">' + (ogrenciMi() ? 'Bilgilerini gir, başlayalım' : 'Henüz öğrenci yok') + '</h1>' +
       (ogrenciMi()
         ? '<div style="max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:10px">' +
           (testHesabiMi()
             ? '<label class="etiket">Takma adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Takma ad" maxlength="40"' +
-              (uyeHesabiMi() ? ' value="' + kacis(D.testHesap.ad || '') + '"' : '') + '></label>' +
-              '<span class="mini">Gerçek adını yazman gerekmez; yalnızca planında görünür.</span>'
+              (uyeHesabiMi() ? ' value="' + kacis(D.testHesap.ad || '') + '"' : '') + '></label>'
             : '<label class="etiket">Adın<br><input type="text" id="kOgrAd" style="width:100%;margin-top:4px" placeholder="Ad Soyad"></label>') +
           '<label class="etiket">Hangi sınava hazırlanıyorsun?<br><select id="kOgrSinavTuru" style="width:100%;margin-top:4px">' +
           '<option value="YKS">YKS · üniversite sınavı</option>' + DIGER_SINAVLAR.map(k => '<option value="' + k + '">' +
@@ -9115,24 +9015,16 @@ function cizIc() {
           '<label class="etiket kOkulAlani">12. sınıf hazır şuben<br><select id="kOgrSube" style="width:100%;margin-top:4px">' +
           Object.keys(OKUL_SUBE_PROGRAMLARI).map(su => '<option value="' + kacis(su) + '">' + kacis(su) +
             ' (' + (OKUL_SUBE_PROGRAMLARI[su].alan === 'EA' ? 'Eşit Ağırlık' : 'Sayısal') + ')</option>').join('') +
-          '<option value="">Sınıfım listede yok</option></select>' +
-          '<span class="mini">Sınıfını seçersen ders programın ve alanın hazır gelir; ders programını ayrıca ' +
-          'yüklemen gerekmez.</span></label>' +
+          '<option value="">Sınıfım listede yok</option></select></label>' +
           '<label class="etiket kYksAlani">Alanın<br><select id="kOgrAlan" style="width:100%;margin-top:4px">' +
           '<option value="SAY">SAY (Sayısal / MF)</option><option value="EA">EA (Eşit Ağırlık / TM)</option><option value="SÖZ">SÖZ (Sözel)</option><option value="DİL">DİL (Yalnızca TYT planı)</option></select>' +
-          '<span class="mini kOkulAlani">Sınıfını seçtiysen kendiliğinden ayarlanır.</span></label>' +
+          '</label>' +
           '<label class="etiket kOkulsuzAlani" hidden>Sınav tarihin<br><input type="date" id="kOgrSinav" value="' + kacis(D.ayar.sinav) + '"></label>' +
-          '<span class="mini kYksOkulsuzNotu" hidden>Okul ders programı istenmez. Bütün YKS konuları bu tarihe göre kendi planına dağıtılır; ' +
-          'sıradaki adımda derslerde seviyeni seçersin.</span>' +
-          '<span class="mini kDigerSinavNotu" hidden>Resmî tarihi MEB ya da ÖSYM takviminden kontrol et. Sınavın konuları bu tarihe göre ' +
-          'kendi planına dağıtılır; sıradaki adımda derslerde seviyeni seçersin.</span>' +
           '<button class="dugme birincil" id="kOgrBaslat" style="margin-top:6px">Başla</button>' +
-          '<span class="mini kOkulAlani">Ders yılı başlangıcı: ' + ggyy(gunNo(DONEM_BASI_SABIT)) + ' (okul için sabit).</span>' +
           '</div>' +
           (testHesabiMi() ? '' :
           '<div class="kur-alt" style="margin-top:18px"><label class="dugme" style="cursor:pointer">Öğretmenimden gelen dosyayı yükle' +
-          '<input type="file" id="paketYukle" hidden></label>' +
-          '<span class="mini">Rehber öğretmenin sana bir dosya verdiyse, kendi bilgilerini girmek yerine buradan yükleyebilirsin.</span></div>')
+          '<input type="file" id="paketYukle" hidden></label></div>')
         : '<button class="dugme birincil" data-sekme="ogrenciler">Öğrenci ekle</button>') +
       '</div></div>';
     window.scrollTo(0, 0); return;
@@ -10725,7 +10617,7 @@ document.addEventListener('change', async ev => {
     const okulsuz = !yks || (document.getElementById('kOgrOkul') || {}).value === 'hayir';
     const goster = (sinif, acik) => document.querySelectorAll(sinif).forEach(x => { x.hidden = !acik; });
     goster('.kYksAlani', yks); goster('.kOkulAlani', !okulsuz); goster('.kOkulsuzAlani', okulsuz);
-    goster('.kYksOkulsuzNotu', yks && okulsuz); goster('.kDigerSinavNotu', !yks);
+
     // YKS'nin varsayılan tarihi başka bir sınav için sessizce kullanılmasın.
     const tarih = document.getElementById('kOgrSinav');
     if (tarih && !yks && tarih.value === D.ayar.sinav) tarih.value = '';
@@ -11408,7 +11300,7 @@ function denemeDetay(r) {
   if(r.genel){
     const d=r.dersler[0],ders=DENEME_DERSLER[r.oturum].find(x=>x[0]===d.kod)[1];
     return '<div class="dn-detay-bas"><div><b>'+kacis(r.ad)+'</b><div class="mini">'+kacis(r.tarih)+' · <span class="dn-genel-rozet">'+r.genel+' denemesinden</span> · '+kacis(ders)+' bölümü</div></div><strong>'+denemeSayi(denemeNet(d))+' net</strong></div>'+
-      '<p class="mini">'+d.dogru+' D / '+d.yanlis+' Y / '+(d.soru-d.dogru-d.yanlis)+' B · '+d.soru+' soru. Süre ve yayınevi puanı bütün denemeye ait olduğu için bu bölümde gösterilmez; değiştirmek için denemenin kendisini aç.</p>'+
+      '<p class="mini">'+d.dogru+' D / '+d.yanlis+' Y / '+(d.soru-d.dogru-d.yanlis)+' B · '+d.soru+' soru</p>'+
       '<div class="arac"><button class="dugme" data-dn-kaynak="'+kacis(r.kaynakId)+'">'+r.genel+' denemesini aç</button></div>';
   }
   const alan=denemeAlan(),hiz=denemeHiz(r,alan);
@@ -11440,10 +11332,8 @@ function denemeGrafik(liste) {
     ticks.map(t=>'<line x1="'+left+'" y1="'+y(t)+'" x2="'+(width-right)+'" y2="'+y(t)+'" class="dn-grid"/><text x="'+(left-8)+'" y="'+(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
     '<polygon points="'+left+','+(height-bottom)+' '+line+' '+coords.at(-1)[0]+','+(height-bottom)+'" class="dn-area"/>'+ortCizgi+parcalar+
     points.map((r,i)=>{const kaynak=r.genel?' · '+r.genel+' denemesinden':'';return '<circle class="dn-dot '+(i?yon(values[i],values[i-1]):'esit')+(r.genel?' genel':'')+'" tabindex="0" role="button" aria-label="'+kacis(r.ad+kaynak+' '+r.tarih+' '+denemeSayi(val(r))+m.birim+egilim(i))+'" data-dn-dot="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad+kaynak+' · '+r.tarih+' · '+denemeSayi(val(r))+m.birim+egilim(i))+'</title></circle>';}).join('')+
-    '<text x="'+left+'" y="'+(height-10)+'">'+points[0].tarih+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?points.at(-1).tarih:'')+'</text></svg><p class="mini">Tarih → · '+m.eksen+' · Noktaya gel, dokun veya klavyeyle seç.'+
-    (points.length>1?' Çizgi yeşil: önceki 4 denemenin ortalamasının üstünde (kesikli çizgi), kırmızı: altında, gri: eşit. Nokta yeşil: bir önceki denemeden '+(metrik==='sure'?'kısa':'yüksek')+', kırmızı: '+(metrik==='sure'?'uzun':'düşük')+'.':'')+
-    (points.some(r=>r.genel)?' İçi boş nokta: TYT/AYT denemesindeki bu dersin bölümü; dolu nokta: branş denemesi.':'')+
-    (metrik==='hiz'?' Net = doğru − yanlış / 4; net/dk = net ÷ tamamlama süresi.':'')+(eksik?' '+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.':'')+'</p></div>';
+    '<text x="'+left+'" y="'+(height-10)+'">'+points[0].tarih+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?points.at(-1).tarih:'')+'</text></svg>'+
+    (eksik?'<p class="mini">'+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.</p>':'')+'</div>';
 }
 // Haftalar haritasının yanındaki deneme gelişimi. Üstteki seçim TYT, AYT ya da bir branştır
 // (EK.denemeYol, EK.denemeYolBrans = "TYT:mat"). Eksenler baştan sabittir: x dönem başından
@@ -11536,7 +11426,7 @@ function denemeYolSigdirPlanla() {
 if(typeof window!=='undefined' && window.addEventListener)window.addEventListener('resize',denemeYolSigdirPlanla);
 function denemeYolGrafigi(si=EK.ogr) {
   const v=denemeYolVerisi(si);if(!v)return '';
-  const {secim,noktalar,once,baslangic,hedef}=v,hedefUst=secim.ust;
+  const {secim,noktalar,hedef}=v,hedefUst=secim.ust;
   denemeYolSigdirPlanla();
   const secici='<div class="yg-secim" role="group" aria-label="Grafikte göster">'+[['TYT','TYT'],['AYT','AYT'],['BRANS','Branş']].map(([k,ad])=>
     '<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-yol-sec="'+k+'">'+ad+'</button>').join('')+'</div>'+
@@ -11544,12 +11434,9 @@ function denemeYolGrafigi(si=EK.ogr) {
       l.map(d=>'<option value="'+ot+':'+d[0]+'"'+(secim.anahtar===ot+':'+d[0]?' selected':'')+'>'+kacis(d[1])+'</option>').join('')+'</optgroup>').join('')+'</select></label>':'');
   return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas">'+secici+'</div>'+
     '<div class="yg-alan" data-si="'+si+'" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div>'+
-    '<p class="mini yg-lejant">'+(!noktalar.length?'Sonuç ekledikçe noktalar YKS’ye doğru ilerler.':secim.tur!=='BRANS'?'<span class="yg-'+secim.tur+'">'+secim.ad+' net</span>':
-      // Branşta dolu nokta branş denemesi, içi boş nokta TYT/AYT denemesindeki o dersin bölümüdür.
-      '<b>'+kacis(secim.ad)+' net:</b> '+[noktalar.some(n=>!n.r.genel)?'<span class="yg-BRANS">branş denemesi</span>':'',
-        noktalar.some(n=>n.r.genel)?'<span class="yg-genel">'+secim.oturum+' denemesinden</span>':''].filter(Boolean).join(' '))+
-    (baslangic?' · <b>'+kacis(baslangic.ad)+'</b> ('+ggyy(gunNo(baslangic.tarih))+') dönem başından önce; grafiğin başında gösterilir.':'')+
-    (once?' '+once+' daha eski deneme Denemelerim’de.':'')+'</p>'+
+    // Açıklama yok; yalnızca Branş’ta iki nokta türü birlikte varsa küçük bir anahtar (dolu / içi boş).
+    (secim.tur==='BRANS' && noktalar.some(n=>!n.r.genel) && noktalar.some(n=>n.r.genel)
+      ? '<p class="mini yg-lejant"><span class="yg-BRANS">branş denemesi</span> <span class="yg-genel">'+secim.oturum+' denemesinden</span></p>' : '')+
     (ogrenciMi()?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" data-anahtar="'+secim.anahtar+'" min="0" max="'+hedefUst+'" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="'+kacis(secim.ad)+' hedef net (0–'+hedefUst+')"> net <small>'+kacis(secim.ad)+'</small></label>':'')+'</section>';
 }
 function denemeFormHtml() {
@@ -11562,14 +11449,14 @@ function denemeFormHtml() {
     (r.tur==='BRANS'?'<label>Oturum<select id="dnOturum"><option'+sec(r.oturum,'TYT')+'>TYT</option><option'+sec(r.oturum,'AYT')+'>AYT</option></select></label><label>Branş<select id="dnBrans">'+DENEME_DERSLER[r.oturum].map(d=>'<option value="'+d[0]+'"'+sec(r.brans,d[0])+'>'+d[1]+'</option>').join('')+'</select></label>':'')+
     (r.tur==='AYT'?'<label>Alan<select id="dnAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+sec(r.alan,a)+'>'+a+'</option>').join('')+'</select></label>':'')+
     '<label>Tamamlama süresi (dk)<input id="dnSure" type="number" min="0.1" max="600" step="0.1" value="'+(r.sure??'')+'" placeholder="İsteğe bağlı"></label><label>Yayınevi puanı<input id="dnPuan" type="number" min="0" max="600" step="0.01" value="'+(r.puan??'')+'" placeholder="İsteğe bağlı · sonuç raporundaki puan"></label></div>'+
-    '<p class="mini">Net = doğru − yanlış / 4. Matematik ve geometri ayrı girilir; toplamı 40 soruyu geçemez. Ek felsefe yalnızca Din Kültürü muafiyeti içindir.</p><div class="dn-entry"><div class="dn-entry-row dn-entry-head"><b>Ders</b><b>Soru</b><b>Doğru</b><b>Yanlış</b><b>Net</b></div>'+
+    '<div class="dn-entry"><div class="dn-entry-row dn-entry-head"><b>Ders</b><b>Soru</b><b>Doğru</b><b>Yanlış</b><b>Net</b></div>'+
     dersler.map(d=>{const v=r.dersler.find(x=>x.kod===d[0])||{soru:d[2],dogru:0,yanlis:0};return '<div class="dn-entry-row" data-dn-ders="'+d[0]+'"><label>'+d[1]+'</label>'+['soru','dogru','yanlis'].map(k=>'<input aria-label="'+d[1]+' '+k+'" data-dn-value="'+k+'" type="number" min="0" max="200" step="1" required value="'+(v[k]??d[2])+'">').join('')+'<output>'+denemeSayi(denemeNet(v))+'</output></div>';}).join('')+'</div><p id="dnFormHata" role="alert"></p></div><div class="arac dn-pencere-alt"><button class="dugme birincil" type="submit">Denemeyi kaydet</button><button class="dugme" type="button" id="dnVazgec">Vazgeç</button></div></form></div>';
 }
 function denemeImportHtml() {
   if(!DENEME_IMPORT || !rehberMi())return '';
-  return '<section class="kart dn-panel"><h2>Aktarmadan önce kontrol et</h2><p class="mini">Numara ve ad birlikte eşleştirilir. Tekrar sonuçlar işaretlenmez. Tarih farklı olsa da aynı adlı ve aynı D/Y sonuçlu sınav tekrar kabul edilir; gerekiyorsa elle seçebilirsiniz. PDF’de süre yoktur.</p>'+
+  return '<section class="kart dn-panel"><h2>Aktarmadan önce kontrol et</h2>'+
     DENEME_IMPORT.map((p,pi)=>'<div class="dn-import"><b>'+kacis(p.dosya || p.ad)+'</b><div class="arac"><label>Sınav adı <input data-dn-rapor="'+pi+'" data-alan="ad" maxlength="120" value="'+kacis(p.ad)+'"></label><label>Tarih <input type="date" data-dn-rapor="'+pi+'" data-alan="tarih" value="'+p.tarih+'"></label></div><div class="dn-scroll"><table><thead><tr><th>Aktar</th><th>PDF öğrencisi</th><th>Hedef öğrenci</th><th>Oturum</th><th>Net</th><th>Kontrol</th></tr></thead><tbody>'+p.satirlar.map((r,ri)=>'<tr><td><input type="checkbox" aria-label="'+kacis(r.ad+' '+r.oturum+' aktar')+'" data-dn-import="'+pi+':'+ri+'"'+(r.secili?' checked':'')+'></td><td>'+r.no+' · '+kacis(r.ad)+'</td><td><select aria-label="Hedef öğrenci" data-dn-match="'+pi+':'+ri+'"><option value="-1">Eşleşmedi</option>'+canliOgrenciler().map(si=>'<option value="'+si+'"'+(si===r.si?' selected':'')+'>'+kacis(D.ogr[si].no+' · '+D.ogr[si].ad)+'</option>').join('')+'</select></td><td>'+r.oturum+'</td><td>'+denemeSayi(denemeToplam(denemePdfKaydi(p,r),D.ogr[r.si]?.alan || 'SAY'))+'</td><td>'+kacis(r.uyari || 'Hazır')+'</td></tr>').join('')+'</tbody></table></div></div>').join('')+
-    '<p class="mini">AYT neti öğrencinin alanına göre hesaplanır; bütün ders ayrıntıları saklanır. Birleşik rapordaki YKS puanı, AYT puanı olarak alınmaz.</p><div class="arac"><button class="dugme birincil" id="dnImportKaydet">Seçilen sonuçları kaydet ve yayınla</button><button class="dugme" id="dnImportIptal">Vazgeç</button></div></section>';
+    '<div class="arac"><button class="dugme birincil" id="dnImportKaydet">Seçilen sonuçları kaydet ve yayınla</button><button class="dugme" id="dnImportIptal">Vazgeç</button></div></section>';
 }
 function gorunumDenemeler() {
   const tur=EK.denemeTur || 'TYT',oturum=EK.denemeOturum || 'TYT',brans=EK.denemeBrans || DENEME_DERSLER[oturum][0][0],alan=denemeAlan(),tum=denemeListe();
@@ -11582,13 +11469,12 @@ function gorunumDenemeler() {
   const son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son,genelSayi=liste.filter(r=>r.genel).length;
   // With the net/dk chart selected the summary follows it, over exams that have a time.
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan)),birim=hizOzet?' net/dk':' net';
-  return '<div class="baslik"><h1>Denemeler</h1><p>'+kacis(D.ogr[EK.ogr].ad)+' · Netini ve süreni birlikte takip et.</p></div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button></div>':'')+
+  return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+kacis(D.ogr[EK.ogr].ad)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button></div>':'')+
     '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
     '<div class="dn-tabs" role="group" aria-label="Deneme türü">'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'<button class="dugme birincil dn-ekle" id="dnEkle">+ Deneme ekle</button></div>'+
-    '<div class="arac dn-filters" role="group" aria-label="Grafik ve geçmiş filtresi"><span class="dn-filtre-baslik">Grafik ve geçmiş filtresi</span>'+(tur==='BRANS'?'<label>Oturum<select id="dnFiltreOturum"><option'+(oturum==='TYT'?' selected':'')+'>TYT</option><option'+(oturum==='AYT'?' selected':'')+'>AYT</option></select></label><label>Branş<select id="dnFiltreBrans">'+DENEME_DERSLER[oturum].map(d=>'<option value="'+d[0]+'"'+(brans===d[0]?' selected':'')+'>'+d[1]+'</option>').join('')+'</select></label>':'')+(tur==='AYT'?'<label>Alan<select id="dnFiltreAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+(alan===a?' selected':'')+'>'+a+'</option>').join('')+'</select></label>':'')+
+    '<div class="arac dn-filters" role="group" aria-label="Grafik ve geçmiş filtresi">'+(tur==='BRANS'?'<label>Oturum<select id="dnFiltreOturum"><option'+(oturum==='TYT'?' selected':'')+'>TYT</option><option'+(oturum==='AYT'?' selected':'')+'>AYT</option></select></label><label>Branş<select id="dnFiltreBrans">'+DENEME_DERSLER[oturum].map(d=>'<option value="'+d[0]+'"'+(brans===d[0]?' selected':'')+'>'+d[1]+'</option>').join('')+'</select></label>':'')+(tur==='AYT'?'<label>Alan<select id="dnFiltreAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+(alan===a?' selected':'')+'>'+a+'</option>').join('')+'</select></label>':'')+
     (tur==='BRANS'?'<label>TYT/AYT bölümleri<span class="dn-genel-sec"><input type="checkbox" id="dnGenel"'+(genelAcik?' checked':'')+'> Göster</span></label>':'')+
     '<label>Grafikte göster<select id="dnMetrik">'+Object.entries(DENEME_METRIK).filter(([k])=>k!=='hiz' || hizVar).map(([k,v])=>'<option value="'+k+'"'+(metrik===k?' selected':'')+'>'+v.ad+'</option>').join('')+'</select></label><label>Şu tarihten<input type="date" id="dnBas" value="'+(EK.denemeBas||'')+'"></label><label>Şu tarihe kadar<input type="date" id="dnSon" value="'+(EK.denemeSon||'')+'"></label>'+(EK.denemeBas || EK.denemeSon?'<button class="dugme" id="dnFiltreTemizle">Tarihleri temizle</button>':'')+'</div>'+
-    (genelAcik && metrik!=='net'?'<p class="mini">TYT/AYT denemelerindeki bölümler yalnızca Net grafiğinde gösterilir; süre ve yayınevi puanı bütün denemeye aittir.</p>':'')+
     '<div class="dn-stats"><div><span>'+(hizOzet?'Süreli deneme':'Deneme'+(genelSayi?' (TYT/AYT’den '+genelSayi+')':''))+'</span><strong>'+ozet.length+'</strong></div><div><span>Son'+birim+'</span><strong>'+(ozet.length?denemeSayi(ozet.at(-1)):'—')+'</strong></div><div><span>En yüksek'+birim+'</span><strong>'+(ozet.length?denemeSayi(Math.max(...ozet)):'—')+'</strong></div><div><span>Ortalama'+(hizOzet?birim:'')+'</span><strong>'+(ozet.length?denemeSayi(ozet.reduce((a,b)=>a+b,0)/ozet.length):'—')+'</strong></div></div>'+
     '<section class="kart dn-panel">'+denemeGrafik(liste)+'<div id="dnDetay" aria-live="polite">'+(selected?denemeDetay(selected):'')+'</div></section>'+
     '<section class="kart dn-panel"><h2>Deneme geçmişi</h2><div class="dn-scroll"><table class="dn-history"><thead><tr><th>Tarih / deneme</th><th>Net</th><th>Süre</th>'+(hizVar?'<th>Net/dk</th>':'')+'<th></th></tr></thead><tbody>'+liste.slice().reverse().map(r=>'<tr><td>'+r.tarih+'<br><b>'+kacis(r.ad)+'</b>'+(r.tur==='BRANS'?' · '+r.dersler[0].soru+' soru':'')+(r.genel?' <span class="dn-genel-rozet">'+r.genel+' denemesinden</span>':'')+'</td><td>'+denemeSayi(denemeToplam(r,alan))+'</td><td>'+(r.sure===null?'—':denemeSayi(r.sure)+' dk')+'</td>'+(hizVar?'<td>'+(r.sure===null?'—':denemeSayi(denemeHiz(r,alan)))+'</td>':'')+'<td><button class="dugme" data-dn-dot="'+kacis(r.id)+'">Ayrıntı</button></td></tr>').join('')+'</tbody></table></div></section>'+denemeFormHtml();

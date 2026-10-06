@@ -38,7 +38,7 @@ backups, no per-date documents accumulate.
 ## Reset ("Test hesabımı sıfırla")
 
 Ayarlar → Gelişmiş ayarlar → **Verileri sıfırla** has a **Test hesabımı sıfırla**
-button next to "Tarayıcı verilerini sıfırla". The **Test hesabın** card points there.
+button next to "Tarayıcı verilerini sıfırla".
 Only test accounts have it. Teachers, students linked to a teacher (`syncId` or
 `hesapUid`) and solo students without a test account never see the button, and
 the reset function refuses them (`testSifirlamaIzinli()`), even if a test marker

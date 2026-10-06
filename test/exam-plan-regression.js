@@ -153,7 +153,7 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
     await kurulum(a, 'ALES');
     let h = a.run('gorunumAyarlar()');
     assert.match(h, /<h2>Kendi ALES planın<\/h2>/);
-    assert.match(h, /Akademik Personel ve Lisansüstü Eğitimi Giriş Sınavı konuları bu planla gelir/);
+    assert.match(h, /<h2>Kendi ALES planın<\/h2><details class="mini"><summary>Kapsam ve kaynaklar<\/summary><p><b>Akademik Personel ve Lisansüstü Eğitimi Giriş Sınavı<\/b>/);
     assert.match(h, /Kapsam ve kaynaklar/); assert.match(h, /href="https:\/\//);
     assert.match(h, /Konu başlıkları 01\.10\.2026 tarihinde derlendi/);
     assert.match(h, /Kendi ALES planımı başlat/);
