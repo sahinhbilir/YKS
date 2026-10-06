@@ -95,8 +95,90 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['email','ts'])
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.ts is int;
-        allow delete: if request.auth != null && request.auth.uid == uid;
+        allow delete: if (request.auth != null && request.auth.uid == uid) || yetkiliOgretmen();
       }
+    }
+
+    // Giriş yönü: şifre sıfırlama ya da kullanıcı adı değişikliğinden sonra hangi hesaba girileceği.
+    // Anahtar ad (ve okulda numara) özetidir; okumak için onu bilmek gerekir. Uygulama önce yönü, sonra
+    // addan türeyen hesabı dener, bu yüzden bir yön kaydı kimseyi kilitleyemez.
+    // - Kaydol hesabı yalnızca kendi e-postası ve uid'siyle {email, uid, ts} yazar (kayıt, ad değişikliği).
+    // - Öğretmen Kaydol sıfırlamasında {email, uid, eskiUid, kokUid?, ts}, okul sıfırlamasında {nesil, ts} yazar.
+    match /girisYonu/{anahtar} {
+      function uyeHesabi() {
+        return request.auth != null && request.auth.token.firebase.sign_in_provider == 'password'
+          && request.auth.token.email is string
+          && request.auth.token.email.matches('uye-[0-9a-f]{40}@uye[.]ykstekrar[.]app');
+      }
+      function kendiYonu() {
+        return uyeHesabi()
+          && request.resource.data.keys().hasOnly(['email','uid','ts'])
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.ts is int;
+      }
+      function ogretmenYonu() {
+        return yetkiliOgretmen()
+          && request.resource.data.keys().hasOnly(['email','uid','eskiUid','kokUid','nesil','ts'])
+          && request.resource.data.ts is int
+          && (!('email' in request.resource.data) || request.resource.data.email.matches('uye-[0-9a-f]{40}@uye[.]ykstekrar[.]app'))
+          && (!('nesil' in request.resource.data) || (request.resource.data.nesil is int
+                && request.resource.data.nesil > 0 && request.resource.data.nesil < 1000));
+      }
+      allow get: if anahtar.matches('[0-9a-f]{64}');
+      allow list: if false;
+      allow create: if anahtar.matches('[0-9a-f]{64}') && (kendiYonu() || ogretmenYonu());
+      allow update: if (kendiYonu() && resource.data.uid == request.auth.uid) || ogretmenYonu();
+      allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || yetkiliOgretmen();
+    }
+
+    // Devir: öğretmen bir Kaydol şifresini sıfırlayınca yeni hesap eski defteri okuyup kendine taşır.
+    match /devir/{eskiUid} {
+      allow get: if request.auth != null && (resource.data.yeniUid == request.auth.uid || yetkiliOgretmen());
+      allow list: if false;
+      allow create, update: if yetkiliOgretmen()
+        && request.resource.data.keys().hasOnly(['yeniUid','ts'])
+        && request.resource.data.yeniUid is string
+        && request.resource.data.ts is int;
+      allow delete: if yetkiliOgretmen();
+    }
+
+    // Kurtarma e-postası: öğrenci şifresini değiştirirken kendi hesabı için yazar; yalnızca öğretmen okur
+    // ve "Parolamı unuttum" talebindeki adresle karşılaştırır.
+    match /kurtarma/{anahtar} {
+      allow read, write: if false;
+      match /hesaplar/{uid} {
+        allow get, list: if yetkiliOgretmen();
+        allow create, update: if request.auth != null && request.auth.uid == uid
+          && anahtar.matches('[0-9a-f]{64}')
+          && request.auth.token.firebase.sign_in_provider == 'password'
+          && request.auth.token.email is string
+          && (request.auth.token.email.matches('uye-[0-9a-f]{40}@uye[.]ykstekrar[.]app')
+            || request.auth.token.email.matches('ogr-[0-9a-f]{40}@student[.]ykstekrar[.]app'))
+          && request.resource.data.keys().hasOnly(['eposta','tur','ts'])
+          && request.resource.data.eposta is string
+          && request.resource.data.eposta.size() <= 120
+          && request.resource.data.eposta.matches('[^@ ]+@[^@ ]+[.][^@ ]+')
+          && request.resource.data.tur in ['uye','okul']
+          && request.resource.data.ts is int;
+        allow delete: if (request.auth != null && request.auth.uid == uid) || yetkiliOgretmen();
+      }
+    }
+
+    // "Parolamı unuttum" talepleri: giriş ekranından, oturum olmadan yazılır; öğretmen elle işler.
+    match /sifreTalepleri/{id} {
+      allow create: if id.size() <= 64
+        && request.resource.data.keys().hasOnly(['tur','ad','eposta','ts'])
+        && request.resource.data.tur in ['uye','okul']
+        && request.resource.data.ad is string
+        && request.resource.data.ad.size() > 0
+        && request.resource.data.ad.size() <= 80
+        && request.resource.data.eposta is string
+        && request.resource.data.eposta.size() <= 120
+        && request.resource.data.eposta.matches('[^@ ]+@[^@ ]+[.][^@ ]+')
+        && request.resource.data.ts is int;
+      allow get, list, delete: if yetkiliOgretmen();
+      allow update: if false;
     }
 
     match /testDefter/{uid} {
@@ -119,7 +201,13 @@ service cloud.firestore {
           && request.resource.data.surum is int
           && request.resource.data.boyut is int;
       }
-      allow get: if sahibi();
+      // Şifresi öğretmence sıfırlanan Kaydol hesabının yeni hesabı eski defteri bir kez okuyup taşır.
+      function devralan() {
+        return request.auth != null
+          && exists(/databases/$(database)/documents/devir/$(uid))
+          && get(/databases/$(database)/documents/devir/$(uid)).data.yeniUid == request.auth.uid;
+      }
+      allow get: if sahibi() || devralan();
       allow create, update: if sahibi() && defterGecerli([]);
       allow delete: if sahibi();
       allow list: if false;

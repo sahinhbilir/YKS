@@ -52,7 +52,7 @@ async function load({ url = production, missingLocation = false, supported = tru
     },
     'firebase-firestore.js': {
       getFirestore(app) { assert.equal(app, apps[0]); order.push('firestore'); return db; },
-      doc: noop, getDoc: noop, getDocFromServer: noop, setDoc: noop, updateDoc: noop,
+      doc: noop, getDoc: noop, getDocFromServer: noop, setDoc: noop, updateDoc: noop, deleteDoc: noop,
       runTransaction: noop, collection: noop, getDocs: noop, onSnapshot: noop
     },
     'firebase-analytics.js': {
