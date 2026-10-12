@@ -218,8 +218,23 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert(!h.includes('data-dn-yol="p:ayt"'),'the TYT choice shows TYT only');
   run("EK.denemeYol='AYT'");h=run('denemeYolGrafigi(0)');
   assert(h.includes('data-dn-yol="p:ayt"') && !h.includes('data-dn-yol="m:t1"') && !h.includes('data-dn-yol="m:ayt-say"'),'AYT uses the student field');
-  assert(h.includes('<title>AYT · Örnek deneme · 2026-10-03 · 10 net</title>'),'EA AYT net counts only EA courses (physics left out)');
+  assert(h.includes('<title>AYT EA · Örnek deneme · 2026-10-03 · 10 net</title>'),'EA AYT net counts only EA courses (physics left out)');
   for(const v of ['0','20','40','60','80'])assert(h.includes('text-anchor="end">'+v+'</text>'),'AYT tick '+v);assert(!h.includes('>100</text>'),'AYT ends at 80');
+  // The field is preselected from the class (EA); another field's total is one click away.
+  assert.match(h,/aria-label="Alan">.*class="secili" aria-pressed="true" data-dn-yol-alan="EA"/,'own field preselected');
+  for(const a of ['SAY','EA','SÖZ'])assert(h.includes('data-dn-yol-alan="'+a+'">'+a+'</button>'),a);
+  const hedefOnce=run('JSON.stringify(D.ogr[0].denemeHedef ?? null)');run('D.ogr[0].denemeHedef={AYT:50}');
+  h=run('denemeYolGrafigi(0)');assert(h.includes('>Hedef 50</text>') && /id="dnHedef" data-anahtar="AYT"/.test(h),'own-field AYT target');
+  const alanSec=listeners.click.find(f=>String(f).includes('dnYolAlan'));
+  await alanSec({target:{closest:()=>({dataset:{dnYolAlan:'SAY'}})}});h=run('denemeYolGrafigi(0)');
+  assert.equal(run('EK.denemeAlan'),'SAY');assert.match(h,/class="secili" aria-pressed="true" data-dn-yol-alan="SAY"/);
+  assert(h.includes('<title>AYT SAY · Örnek deneme · 2026-10-03 · 19 net</title>'),'SAY total counts maths and physics');
+  assert(h.includes('data-dn-yol="m:ayt-say"'),'the student’s own SAY exam shows under SAY');
+  assert(!h.includes('id="dnHedef"') && !h.includes('class="yg-hedef"'),'the AYT target belongs to the own field only');
+  assert.match(run("EK.sekme='denemeler';EK.denemeTur='AYT';gorunumDenemeler()"),/<option selected>SAY<\/option>/,'Denemelerim shows the same field');
+  await alanSec({target:{closest:()=>({dataset:{dnYolAlan:'XYZ'}})}});assert.equal(run('EK.denemeAlan'),'SAY','an unknown field is ignored');
+  await alanSec({target:{closest:()=>({dataset:{dnYolAlan:'EA'}})}});
+  run('D.ogr[0].denemeHedef='+hedefOnce+';if(D.ogr[0].denemeHedef===null)delete D.ogr[0].denemeHedef');h=run('denemeYolGrafigi(0)');
   // A point opens that exam in Denemelerim.
   run("ciz=()=>{};EK.sekme='ana';denemeYolAc('p:ayt')");
   assert.deepEqual(JSON.parse(run('JSON.stringify([EK.sekme,EK.denemeTur,EK.denemeSecili])')),['denemeler','AYT','p:ayt']);
