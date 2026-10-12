@@ -311,6 +311,34 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   put('pages',fixture.tyt);assert.equal(run('denemePdfCoz(pages).satirlar.length'),3);
   put('pages',[...fixture.combined,...fixture.combined]);assert.equal(run('denemePdfCoz(pages).satirlar.length'),10);
  });
+ await check('PDF: a session printed as -/- in every column was not taken ("Net Sayısı Sıralı" reports)',()=>{
+  const fixture=JSON.parse(fs.readFileSync('test/fixtures/mock-exam-pdf-items.json','utf8')),merkez=t=>t.x+t.w/2;
+  // Rewrites student `sira`'s cells in columns [ilk,son) to "-/-" and "-", and lowers the total net accordingly.
+  const tire=(p,sira,ilk,son)=>{
+   const dy=p[0].filter(x=>x.s==='D/Y').sort((a,b)=>a.x-b.x),isim=p[0].find(x=>x.s==='NO/İsim');
+   const r=p[0].find(x=>x.s===String(sira)&&x.x<isim.x),satir=p[0].filter(x=>Math.abs(x.y-r.y)<8);
+   let net=0;
+   for(let i=ilk;i<son;i++)for(const x of satir.filter(x=>Math.abs(merkez(x)-merkez(dy[i]))<7)){
+    if(/^\d+\/\d+$/.test(x.s)){const [d,y]=x.s.split('/').map(Number);net+=d-y/4;x.s='-/-';}
+    else if(/^-?\d+\.\d+$/.test(x.s))x.s='-';
+   }
+   const toplam=satir.find(x=>Math.abs(merkez(x)-merkez(dy[24]))<7&&/^-?\d+\.\d+$/.test(x.s));
+   toplam.s=(Number(toplam.s)-net).toFixed(2);
+   return p;
+  };
+  const coz=()=>JSON.parse(JSON.stringify(run('denemePdfCoz(pages)')));   // compare in this realm
+  put('pages',fixture.combined);const once=coz();
+  // Student 1 sat TYT only (AYT dashed); student 3 sat AYT only (TYT dashed).
+  put('pages',tire(tire(structuredClone(fixture.combined),1,11,24),3,0,11));const r=coz();
+  assert.deepEqual(r.satirlar.filter(x=>x.no===1).map(x=>x.oturum),['TYT']);
+  assert.deepEqual(r.satirlar.filter(x=>x.no===3).map(x=>x.oturum),['AYT']);
+  assert.deepEqual(r.satirlar.find(x=>x.no===3).dersler,once.satirlar.find(x=>x.no===3&&x.oturum==='AYT').dersler,'AYT values unchanged');
+  assert(r.satirlar.every(x=>x.dersler.every(d=>!('yok' in d))),'no parser flag leaks into records');
+  for(const row of r.satirlar){put('row',row);put('report',r);run('denemePdfKaydi(report,row)');}
+  // Dashes mixed with numbers inside one session are not guessed.
+  put('pages',tire(structuredClone(fixture.combined),3,11,12));
+  assert.throws(()=>run('denemePdfCoz(pages)'),/karışık/);
+ });
  await check('PDF corruption and unexpected headers fail before assignment',()=>{
   const fixture=JSON.parse(fs.readFileSync('test/fixtures/mock-exam-pdf-items.json','utf8'));
   const bad=structuredClone(fixture.tyt);bad[0].find(x=>x.s==='TAR').s='UNKNOWN';put('pages',bad);assert.throws(()=>run('denemePdfCoz(pages)'));
