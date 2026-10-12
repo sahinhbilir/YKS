@@ -164,6 +164,8 @@ function denemePdfCoz(sayfalar) {
       const cell=i=>row.filter(x=>Math.abs(merkez(x)-merkez(dy[i]))<Math.min(7,(i?merkez(dy[i])-merkez(dy[i-1]):20)/3));
       const dersler=sutunlar.map((d,i)=>{
         const c=cell(i), pairs=c.filter(x=>/^\d+\s*\/\s*\d+$/.test(x.s));
+        // "Net Sayısı Sıralı" reports print a session the student did not take as "-/-" in every column.
+        if(!pairs.length && c.filter(x=>/^-\s*\/\s*-$/.test(x.s)).length===1)return {kod:d[0],dogru:0,yanlis:0,soru:null,netVar:false,yok:true};
         if(pairs.length!==1)throw new Error('Sayfa '+(pi+1)+', sıra '+rank.s+': '+d[1]+' D/Y okunamadı.');
         const [dogru,yanlis]=pairs[0].s.split('/').map(Number), nets=c.filter(x=>/^-?\d+[.,]\d+$/.test(x.s));
         if(nets.length>1 || nets.length && Math.abs(Number(nets[0].s.replace(',','.'))-(dogru-yanlis/4))>0.011)throw new Error('PDF neti ile doğru/yanlış sayısı uyuşmuyor.');
@@ -173,11 +175,15 @@ function denemePdfCoz(sayfalar) {
       if(!total || Math.abs(Number(total.s.replace(',','.'))-dersler.reduce((s,d)=>s+denemeNet(d),0))>0.011)throw new Error('PDF toplam net kontrolü başarısız; hiçbir sonuç aktarılmadı.');
       for(const oturum of birlesik?['TYT','AYT']:['TYT']) {
         const bolum=oturum==='TYT'?dersler.slice(0,11):dersler.slice(11);
+        if(bolum.some(x=>x.yok)){
+          if(bolum.every(x=>x.yok))continue;
+          throw new Error('Sayfa '+(pi+1)+', sıra '+rank.s+': '+oturum+' satırında boş (-/-) ve dolu dersler karışık; hiçbir sonuç aktarılmadı.');
+        }
         // Missing session is printed as 0/0 in every column with no decimal nets.
         if(!bolum.some(x=>x.netVar || x.dogru || x.yanlis))continue;
         // The score is the first decimal column right of the total net, not the first text item.
         const puan=!birlesik ? row.filter(x=>x.x>dy.at(-1).x+12 && /^\d+[.,]\d+$/.test(x.s)).sort((a,b)=>a.x-b.x).map(x=>Number(x.s.replace(',','.')))[0] ?? null : null;
-        rapor.satirlar.push({no:Number(nm[1]),ad:nm[2].trim(),oturum,puan,dersler:bolum.map(({netVar,...d})=>d),sayfa:pi+1});
+        rapor.satirlar.push({no:Number(nm[1]),ad:nm[2].trim(),oturum,puan,dersler:bolum.map(({netVar,yok,...d})=>d),sayfa:pi+1});
       }
     }
   }
