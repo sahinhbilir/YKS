@@ -11821,8 +11821,14 @@ function denemeYolBranslari(o) {
   const alan=DENEME_ALAN[o?.alan]?o.alan:'SAY';
   return [['TYT',DENEME_DERSLER.TYT.filter(d=>d[0]!=='sf')],['AYT',DENEME_DERSLER.AYT.filter(d=>d[0]!=='sf' && DENEME_ALAN[alan].includes(d[0]))]];
 }
+// AYT toplamı seçilen alana göre (Denemelerim’in Alan seçimiyle ortak); öğrencinin alanı önceden seçilidir.
+// AYT hedefi öğrencinin kendi alanınındır; başka alana bakarken hedef gösterilmez.
 function denemeYolSecimi(o) {
   const tur=['TYT','AYT','BRANS'].includes(EK.denemeYol)?EK.denemeYol:'TYT';
+  if(tur==='AYT'){
+    const kendi=DENEME_ALAN[o?.alan]?o.alan:'SAY',alan=DENEME_ALAN[EK.denemeAlan]?EK.denemeAlan:kendi;
+    return {tur,anahtar:'AYT',ust:DENEME_YOL_UST.AYT,ad:'AYT '+alan,alan,hedefYok:alan!==kendi};
+  }
   if(tur!=='BRANS')return {tur,anahtar:tur,ust:DENEME_YOL_UST[tur],ad:tur};
   const liste=denemeYolBranslari(o),[oturum,kod]=String(EK.denemeYolBrans || '').split(':');
   const grup=liste.find(g=>g[0]===oturum),ders=grup?.[1].find(d=>d[0]===kod) || liste[0][1].find(d=>d[0]==='mat');
@@ -11842,7 +11848,7 @@ function denemeYolVerisi(si) {
   const o=D.ogr[si];if(!o)return null;
   const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
   if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return null;
-  const alan=DENEME_ALAN[o.alan]?o.alan:'SAY',tum=denemeListe(si),secim=denemeYolSecimi(o);
+  const secim=denemeYolSecimi(o),alan=secim.alan || (DENEME_ALAN[o.alan]?o.alan:'SAY'),tum=denemeListe(si);
   let liste;
   if(secim.tur==='TYT')liste=tum.filter(r=>r.tur==='TYT');
   else if(secim.tur==='AYT')liste=tum.filter(r=>r.tur==='AYT' && (r.id.startsWith('p:') || r.alan===alan));
@@ -11852,7 +11858,7 @@ function denemeYolVerisi(si) {
   noktalar=noktalar.filter(n=>n.g>=bas && n.g<=son).sort(sira);
   if(baslangic)noktalar.unshift({...baslangic,g:bas,erken:true});
   const once=Math.max(0,eskiler.length-1);
-  const hedef=denemeHedefOku(o,secim.anahtar),degerler=noktalar.map(n=>n.v);
+  const hedef=secim.hedefYok?null:denemeHedefOku(o,secim.anahtar),degerler=noktalar.map(n=>n.v);
   return {o,bas,son,secim,noktalar,once,baslangic:baslangic?.r,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
 }
 // W×H, kartta kalan alanın kendisidir (ölçek s ile); yazılar böylece her ekranda aynı boyda
@@ -11901,6 +11907,8 @@ function denemeYolGrafigi(si=EK.ogr) {
   denemeYolSigdirPlanla();
   const secici='<div class="yg-secim" role="group" aria-label="Grafikte göster">'+[['TYT','TYT'],['AYT','AYT'],['BRANS','Branş']].map(([k,ad])=>
     '<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-yol-sec="'+k+'">'+ad+'</button>').join('')+'</div>'+
+    (secim.tur==='AYT'?'<div class="yg-secim" role="group" aria-label="Alan">'+Object.keys(DENEME_ALAN).map(a=>
+      '<button type="button" class="'+(secim.alan===a?'secili':'')+'" aria-pressed="'+(secim.alan===a)+'" data-dn-yol-alan="'+a+'">'+a+'</button>').join('')+'</div>':'')+
     (secim.tur==='BRANS'?'<label class="yg-brans">Ders <select id="dnYolBrans">'+denemeYolBranslari(v.o).map(([ot,l])=>'<optgroup label="'+ot+'">'+
       l.map(d=>'<option value="'+ot+':'+d[0]+'"'+(secim.anahtar===ot+':'+d[0]?' selected':'')+'>'+kacis(d[1])+'</option>').join('')+'</optgroup>').join('')+'</select></label>':'');
   return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas">'+secici+'</div>'+
@@ -11908,7 +11916,7 @@ function denemeYolGrafigi(si=EK.ogr) {
     // Açıklama yok; yalnızca Branş’ta iki nokta türü birlikte varsa küçük bir anahtar (dolu / içi boş).
     (secim.tur==='BRANS' && noktalar.some(n=>!n.r.genel) && noktalar.some(n=>n.r.genel)
       ? '<p class="mini yg-lejant"><span class="yg-BRANS">branş denemesi</span> <span class="yg-genel">'+secim.oturum+' denemesinden</span></p>' : '')+
-    (ogrenciMi()?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" data-anahtar="'+secim.anahtar+'" min="0" max="'+hedefUst+'" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="'+kacis(secim.ad)+' hedef net (0–'+hedefUst+')"> net <small>'+kacis(secim.ad)+'</small></label>':'')+'</section>';
+    (ogrenciMi() && !secim.hedefYok?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" data-anahtar="'+secim.anahtar+'" min="0" max="'+hedefUst+'" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="'+kacis(secim.ad)+' hedef net (0–'+hedefUst+')"> net <small>'+kacis(secim.ad)+'</small></label>':'')+'</section>';
 }
 function denemeFormHtml() {
   const f=DENEME_FORM;if(!f || f.si!==EK.ogr)return '';
@@ -12002,6 +12010,7 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.dnDot){denemeNoktaSec(el.dataset.dnDot);return;}
   if(el.dataset.dnYol){denemeYolAc(el.dataset.dnYol);return;}
   if(el.dataset.dnYolSec){EK.denemeYol=el.dataset.dnYolSec;ciz();document.querySelector('[data-dn-yol-sec="'+EK.denemeYol+'"]')?.focus();return;}
+  if(el.dataset.dnYolAlan && DENEME_ALAN[el.dataset.dnYolAlan]){EK.denemeAlan=el.dataset.dnYolAlan;ciz();document.querySelector('[data-dn-yol-alan="'+EK.denemeAlan+'"]')?.focus();return;}
   if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
   if(el.dataset.dnKaynak){
     const r=denemeListe().find(x=>x.id===el.dataset.dnKaynak);if(!r)return;
