@@ -1,0 +1,35 @@
+main:has(.sr-panel){min-width:0}
+.sr-panel{padding:20px;margin-top:16px;min-width:0}
+.sr-panel h2{margin:0 0 12px}
+.sr-bos{text-align:center;padding:28px 12px;color:var(--soluk)}
+.sr-bos p{max-width:56ch;margin:6px auto 0}
+.sr-uyari{color:var(--kritik)}
+.sr-sinavlar td:last-child{text-align:right}
+.sr-secim{align-items:end;gap:12px}
+.sr-secim label,.sr-sirala label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--soluk);min-width:0}
+.sr-secim select{max-width:min(320px,100%)}
+.sr-ok{padding-bottom:8px;color:var(--soluk)}
+.sr-raporlar{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:10px}
+.sr-rapor{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;padding:12px 14px;border:1px solid var(--cizgi);border-radius:10px;min-width:0}
+.sr-rapor.secili{border-color:var(--vurgu);background:var(--vurgu-yumusak)}
+.sr-rapor-ad{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 180px}
+.sr-rapor-dugmeler{display:flex;gap:8px;flex-wrap:wrap}
+.sr-rapor .dugme:disabled{opacity:.45;cursor:not-allowed}
+.sr-sirala{flex-basis:100%;display:flex;flex-wrap:wrap;gap:10px}
+.sr-hepsi{margin:14px 0 0}
+.sr-onizleme-bas{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;margin-bottom:10px}
+.sr-onizleme-bas h2{margin:0}
+.sr-sayfalar{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sr-sayfalar:empty{display:none}
+.sr-sayfalar canvas{display:block;width:100%;height:auto;background:#fff;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+/* Phones: each stored exam becomes a two-column card (details, then the delete button). */
+@media (max-width:640px){
+  .sr-sinavlar thead{display:none}
+  .sr-sinavlar tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;padding:10px 0;border-bottom:1px solid var(--cizgi)}
+  .sr-sinavlar tbody tr:last-child{border-bottom:0}
+  .sr-sinavlar td{display:block;padding:0;border:0;grid-column:1;font-size:12.5px;color:var(--soluk)}
+  .sr-sinavlar td:first-child{font-size:13.5px;color:var(--murekkep)}
+  .sr-sinavlar td:last-child{grid-column:2;grid-row:1 / span 4;align-self:center}
+}
+@media (max-width:640px){.sr-panel{padding:14px}.sr-secim{flex-direction:column;align-items:stretch}.sr-secim select{max-width:100%;width:100%}.sr-ok{display:none}}
+@media print{.sr-panel{box-shadow:none}}
