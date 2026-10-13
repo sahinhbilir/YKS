@@ -282,7 +282,7 @@ async function denemeOkulYayinla(si) {
   await sureSinirli(b.runTransaction(b.db,async tx=>{
     const s=await tx.get(ref),v=s.exists()?s.data():null;
     if(D!==defter || !rehberMi() || b.mevcutKullanici()?.uid!==u.uid || o.syncId!==syncId)throw new Error('Oturum değişti.');
-    if(!v || v.durum!=='aktif' || v.ogretmenUid!==u.uid || v.ogrenciBulutId!==o.ogrenciBulutId)throw new Error('Öğrenci bağlantısı eşleşmedi.');
+    if(!v || v.durum!=='aktif' || v.ogretmenUid!==defterUid(u) || v.ogrenciBulutId!==o.ogrenciBulutId)throw new Error('Öğrenci bağlantısı eşleşmedi.');
     birlesen=denemeBirlestir(v.denemeOkul?JSON.parse(v.denemeOkul):[],o.denemeOkul || []);
     const veri=JSON.stringify(birlesen);
     if(baytBoyu(veri)>300000 || baytBoyu(JSON.stringify({...v,denemeOkul:veri}))>BULUT_YEDEK_UST_SINIR)throw new Error('Deneme geçmişi sunucu sınırını aşıyor.');
