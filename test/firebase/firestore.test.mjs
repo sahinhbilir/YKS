@@ -455,6 +455,67 @@ await check('de-allowlisted-teacher-loses-access-to-own-backup', async () => {
   await assertFails(getDoc(doc(tempDb, 'ogretmenYedek', TEMP_TEACHER_UID)));
 });
 
+// ================================================================== izleyici öğretmen (yalnızca okuma)
+// İzin yalnızca konsoldan: izleyiciler/{izleyiciUid} = {sahipUid}. İzleyici allowlist'te değildir.
+const gunVeriBasit = () => ({ veri: JSON.stringify({ rol: 'rehber', ogr: [] }), ts: 1750000000000, surum: 10, boyut: 30, ogrenciSayisi: 0, sonucSayisi: 0 });
+const IZLEYICI_UID = 'izleyici-1';
+const izleyiciDb = testEnv.authenticatedContext(IZLEYICI_UID, gercekToken).firestore();
+const izleyiciAnonDb = testEnv.authenticatedContext(IZLEYICI_UID, anonimToken).firestore();
+const izleyiciSid = sid('viewer'), digerSid = sid('viewer-other');
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'izleyiciler', IZLEYICI_UID), { sahipUid: OGRETMEN_UID, ad: 'Sentetik Öğretmen' });
+  await setDoc(doc(ctx.firestore(), 'ogretmenYedek', OGRETMEN_UID), yedekVeri());
+  await setDoc(doc(ctx.firestore(), 'ogretmenYedek', OGRETMEN2_UID), yedekVeri());
+  await setDoc(doc(ctx.firestore(), 'ogrenciler', digerSid), bosYuva({ ogretmenUid: OGRETMEN2_UID }));
+});
+await check('viewer-permission-is-console-only-and-readable-only-by-the-viewer', async () => {
+  await assertSucceeds(getDoc(doc(izleyiciDb, 'izleyiciler', IZLEYICI_UID)));
+  await assertFails(getDoc(doc(ogretmenDb, 'izleyiciler', IZLEYICI_UID)));
+  await assertFails(getDocs(collection(izleyiciDb, 'izleyiciler')));
+  await assertFails(setDoc(doc(izleyiciDb, 'izleyiciler', IZLEYICI_UID), { sahipUid: OGRETMEN2_UID }));
+  await assertFails(setDoc(doc(saldirganDb, 'izleyiciler', SALDIRGAN_UID), { sahipUid: OGRETMEN_UID }));
+  await assertFails(setDoc(doc(ogretmenDb, 'izleyiciler', SALDIRGAN_UID), { sahipUid: OGRETMEN_UID }));
+  await assertFails(deleteDoc(doc(izleyiciDb, 'izleyiciler', IZLEYICI_UID)));
+});
+await check('viewer-reads-only-the-owners-notebook', async () => {
+  await assertSucceeds(getDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(getDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN2_UID)));
+  await assertFails(getDoc(doc(izleyiciAnonDb, 'ogretmenYedek', OGRETMEN_UID)), 'anonymous session with the same uid');
+  await assertFails(getDoc(doc(saldirganDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(getDocs(collection(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis')));
+  await assertFails(getDocs(collection(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari')));
+});
+await check('viewer-cannot-write-any-notebook-or-account', async () => {
+  await assertFails(setDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogretmenYedek', IZLEYICI_UID), yedekVeri()));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-10-12'), gunVeriBasit()));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogrenciHesaplari', 'izleyici-hedef'), hesapVeri(izleyiciSid)));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogrenciler', sid('viewer-create')), bosYuva()));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogrenciler', sid('viewer-create-own')), bosYuva({ ogretmenUid: IZLEYICI_UID })));
+});
+await check('viewer-reads-the-owners-student-slots-but-cannot-change-them', async () => {
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogrenciler', izleyiciSid), bosYuva()));
+  await assertSucceeds(getDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid)));
+  await assertFails(getDoc(doc(izleyiciDb, 'ogrenciler', digerSid)), 'another teacher’s slot');
+  await assertFails(getDoc(doc(izleyiciDb, 'ogrenciler', sid('viewer-missing'))), 'no probing of empty slots');
+  await assertFails(updateDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid), { denemeOkul: '[]' }));
+  await assertFails(updateDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid), { bagliUid: IZLEYICI_UID }));
+  await assertFails(updateDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid), { durum: 'iptal', sonrakiSyncId: sid('viewer-next') }));
+  await assertFails(getDocs(collection(izleyiciDb, 'ogrenciler')));
+});
+await check('removing-the-console-permission-ends-viewing', async () => {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'izleyiciler', IZLEYICI_UID), { sahipUid: OGRETMEN2_UID });
+  });
+  await assertFails(getDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(getDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid)));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await deleteDoc(doc(ctx.firestore(), 'izleyiciler', IZLEYICI_UID));
+  });
+  await assertFails(getDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN2_UID)));
+  await assertSucceeds(getDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID)), 'owner keeps access');
+});
+
 // ================================================================== günlük yedek geçmişi
 const gunVeri = (over) => Object.assign({
   veri: JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Ayşe Yılmaz' }] }),
