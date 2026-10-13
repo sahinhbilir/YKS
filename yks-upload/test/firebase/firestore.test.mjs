@@ -1,0 +1,886 @@
+// Firestore security-rule tests for the "ogrenciler/{syncId}" home-sync design (+ the
+// "ogretmenler/{uid}" teacher allowlist). Run from test/firebase/: npm install && npm test
+// (npm test = firebase emulators:exec, which starts a local Firestore emulator, runs this
+// script against it, and tears everything down automatically — no real Firebase project or
+// credentials needed. See ../../firestore.rules for the rules under test.)
+import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
+import { readFileSync } from 'fs';
+import { isDeepStrictEqual } from 'node:util';
+import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, runTransaction, collection } from 'firebase/firestore';
+
+let pass = 0, fail = 0;
+const check = async (name, fn) => {
+  try { await fn(); pass++; console.log('PASS', name); }
+  catch (e) { fail++; console.log('FAIL', name, '-', e.message); }
+};
+
+const testEnv = await initializeTestEnvironment({
+  projectId: 'demo-yks-test',
+  firestore: { rules: readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8'), host: '127.0.0.1', port: 8081 }
+});
+await testEnv.clearFirestore();
+
+const OGRETMEN_UID = 'ogretmen-1';          // allowlist'te — gerçek "sahip öğretmen"
+const OGRETMEN2_UID = 'ogretmen-2';         // gerçek bir hesap ama allowlist'te DEĞİL
+const TEMP_TEACHER_UID = 'ogretmen-gecici'; // yalnızca de-allowlist testinde kullanılır
+const OGRENCI_UID = 'ogrenci-gercek-1';     // birincil öğrenci — üretimdeki gibi ANONİM
+const OGRENCI2_UID = 'ogrenci-gercek-2';    // ikinci öğrenci (Fix E: ikinci syncId üzerinde tekrar)
+const HESAPLI_OGRENCI_UID = 'ogrenci-hesap-1';
+const SALDIRGAN_UID = 'saldirgan-1';
+
+const gercekToken = { firebase: { sign_in_provider: 'google.com', identities: {} } };
+const anonimToken = { firebase: { sign_in_provider: 'anonymous', identities: {} } };
+const sifreToken = { firebase: { sign_in_provider: 'password', identities: {} } };
+
+const ogretmenDb = testEnv.authenticatedContext(OGRETMEN_UID, gercekToken).firestore();
+const ogretmen2Db = testEnv.authenticatedContext(OGRETMEN2_UID, gercekToken).firestore();
+const saldirganDb = testEnv.authenticatedContext(SALDIRGAN_UID, gercekToken).firestore();
+const anonOgretmenDb = testEnv.authenticatedContext(OGRETMEN_UID, anonimToken).firestore();
+const anonDb = testEnv.unauthenticatedContext().firestore();
+// Üretimde öğrenci cihazları HER ZAMAN anonim oturum açar (girisOgrenci()) — bu yüzden
+// birincil öğrenci bağlamları burada da anonim. Gerçek (google.com) bir hesabın aynı
+// işlemleri YAPAMADIĞINI kanıtlamak için ayrıca ogrenciGercekHesapDb tutulur.
+const ogrenciDb = testEnv.authenticatedContext(OGRENCI_UID, anonimToken).firestore();
+const ogrenciGercekHesapDb = testEnv.authenticatedContext(OGRENCI_UID, gercekToken).firestore();
+const ogrenci2Db = testEnv.authenticatedContext(OGRENCI2_UID, anonimToken).firestore();
+const hesapliOgrenciDb = testEnv.authenticatedContext(HESAPLI_OGRENCI_UID, sifreToken).firestore();
+
+// Allowlist tohumlama: gerçek dünyada bu, öğretmenin ilk gerçek Google girişinden sonra
+// Firebase konsolundan elle yapılan tek seferlik bir adımdır (bkz. plan §1).
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'ogretmenler', OGRETMEN_UID), {});
+});
+
+const bosYuva = (over) => Object.assign({
+  ogretmenUid: OGRETMEN_UID, ogrenciNo: 3, ogrenciAd: 'Ayşe Yılmaz', ogrenciSube: '12A',
+  ogrenciBulutId: 'bulut-id-1', bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif'
+}, over || {});
+const hesapVeri = (syncId, over) => Object.assign({
+  veri: JSON.stringify({ tur: 'yks-ogrenci-paketi', ogr: { no: 3 } }),
+  syncId, aktif: true, ts: 1750000000000, surum: 1
+}, over || {});
+
+let sidN = 0;
+const sid = (label) => 'sid-' + label + '-' + (++sidN);
+
+// ================================================================== create
+await check('teacher-can-create-reserved-slot', async () => {
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogrenciler', sid('create-ok')), bosYuva()));
+});
+await check('non-allowlisted-real-account-cannot-create-slot', async () => {
+  await assertFails(setDoc(doc(ogretmen2Db, 'ogrenciler', sid('create-nonallow')),
+    bosYuva({ ogretmenUid: OGRETMEN2_UID })));
+});
+await check('non-owner-cannot-create-slot-claiming-someone-elses-uid', async () => {
+  await assertFails(setDoc(doc(saldirganDb, 'ogrenciler', sid('create-imperson')), bosYuva()));
+});
+await check('unauthenticated-cannot-create-slot', async () => {
+  await assertFails(setDoc(doc(anonDb, 'ogrenciler', sid('create-anon')), bosYuva()));
+});
+await check('create-with-nonnull-bagliUid-rejected', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogrenciler', sid('create-bagli')), bosYuva({ bagliUid: OGRETMEN_UID })));
+});
+await check('create-with-nonnull-paket-rejected', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogrenciler', sid('create-paket')),
+    bosYuva({ paket: { tur: 'yks-sonuc', surum: 2, kayit: [] } })));
+});
+await check('anonymous-account-cannot-create-slot-even-as-self-declared-owner', async () => {
+  await assertFails(setDoc(doc(anonOgretmenDb, 'ogrenciler', sid('create-anonteacher')), bosYuva()));
+});
+await check('create-rejects-missing-ogrenciBulutId', async () => {
+  const veri = bosYuva(); delete veri.ogrenciBulutId;
+  await assertFails(setDoc(doc(ogretmenDb, 'ogrenciler', sid('create-nobulutid')), veri));
+});
+await check('create-rejects-empty-ogrenciBulutId', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogrenciler', sid('create-emptybulutid')), bosYuva({ ogrenciBulutId: '' })));
+});
+await check('create-rejects-non-aktif-durum', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogrenciler', sid('create-baddurum')), bosYuva({ durum: 'iptal' })));
+});
+
+// ================================================================== önceden seçilmiş öğrenci hesabı
+const hesapSid = sid('account');
+await check('teacher-can-publish-student-account-package', async () => {
+  await assertSucceeds(setDoc(
+    doc(ogretmenDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID), hesapVeri(hesapSid)));
+});
+await check('student-can-read-only-own-active-account-package', async () => {
+  await assertSucceeds(getDoc(doc(hesapliOgrenciDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID)));
+  await assertFails(getDoc(doc(ogrenciGercekHesapDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID)));
+  await assertFails(getDoc(doc(anonDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID)));
+});
+await check('student-cannot-write-account-package', async () => {
+  await assertFails(updateDoc(
+    doc(hesapliOgrenciDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID), { aktif: false }));
+});
+await check('teacher-can-create-slot-prebound-to-published-account', async () => {
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogrenciler', hesapSid),
+    bosYuva({ bagliUid: HESAPLI_OGRENCI_UID })));
+});
+await check('password-student-account-can-send-results-to-own-slot', async () => {
+  await assertSucceeds(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', hesapSid), {
+    bagliUid: HESAPLI_OGRENCI_UID,
+    paket: { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 100, k: 5, d: 8, s: 10, t: 1 }], konular: {} },
+    sunucuTs: null
+  }));
+});
+await check('password-student-can-record-valid-automatic-sync-event', async () => {
+  const yol = doc(hesapliOgrenciDb, 'ogrenciler', hesapSid);
+  const oncekiPaket = (await assertSucceeds(getDoc(yol))).data().paket;
+  await assertSucceeds(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', hesapSid), {
+    istemciOlay: { tur: 'plan-baslatildi', hafta: 100, ts: 1750000000000, toplam: 7 },
+    sunucuTs: 1750000000000
+  }));
+  const sonraki = (await assertSucceeds(getDoc(yol))).data();
+  if (!isDeepStrictEqual(sonraki.paket, oncekiPaket))
+    throw new Error('olay-only güncelleme mevcut sonuç paketini değiştirdi');
+  if (!sonraki.istemciOlay || sonraki.istemciOlay.tur !== 'plan-baslatildi')
+    throw new Error('üst düzey istemci olayı kaydedilmedi');
+});
+await check('password-student-cannot-record-arbitrary-sync-event', async () => {
+  await assertFails(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', hesapSid), {
+    istemciOlay: { tur: 'hesabi-sil', hafta: 100, ts: 1750000000000, gizli: true },
+    sunucuTs: 1750000000000
+  }));
+});
+await check('password-student-account-cannot-use-another-sync-slot', async () => {
+  const baskaSid = sid('account-other-slot');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', baskaSid),
+      bosYuva({ bagliUid: HESAPLI_OGRENCI_UID, ogrenciBulutId: 'other-cloud-id' }));
+  });
+  await assertFails(updateDoc(doc(hesapliOgrenciDb, 'ogrenciler', baskaSid), {
+    bagliUid: HESAPLI_OGRENCI_UID,
+    paket: { tur: 'yks-sonuc', surum: 2, kayit: [], konular: {} },
+    sunucuTs: null
+  }));
+});
+await check('teacher-can-rebind-existing-slot-only-to-matching-published-account', async () => {
+  const rebindSid = sid('account-rebind');
+  await assertSucceeds(setDoc(
+    doc(ogretmenDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID), hesapVeri(rebindSid)));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', rebindSid), bosYuva());
+  });
+  await assertSucceeds(updateDoc(
+    doc(ogretmenDb, 'ogrenciler', rebindSid), { bagliUid: HESAPLI_OGRENCI_UID }));
+  await assertFails(updateDoc(
+    doc(ogretmenDb, 'ogrenciler', rebindSid), { bagliUid: 'not-a-published-account' }));
+  // Sonraki testler asıl hesap belgesini ilk syncId ile kullanır.
+  await assertSucceeds(setDoc(
+    doc(ogretmenDb, 'ogrenciHesaplari', HESAPLI_OGRENCI_UID), hesapVeri(hesapSid)));
+});
+
+// ================================================================== read + allowlist revocation
+await check('allowlisted-teacher-can-check-missing-slot-before-create', async () => {
+  const missingSid = sid('read-missing');
+  const snapshot = await assertSucceeds(getDoc(doc(ogretmenDb, 'ogrenciler', missingSid)));
+  if (snapshot.exists()) throw new Error('fresh random syncId unexpectedly exists');
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogrenciler', missingSid), bosYuva()));
+});
+await check('non-allowlisted-teacher-cannot-probe-missing-slot', async () => {
+  await assertFails(getDoc(doc(ogretmen2Db, 'ogrenciler', sid('read-missing-nonallow'))));
+});
+const readSid = sid('read');
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'ogrenciler', readSid), bosYuva());
+});
+await check('stranger-cannot-read-unclaimed-slot', async () => {
+  await assertFails(getDoc(doc(saldirganDb, 'ogrenciler', readSid)));
+});
+await check('unauthenticated-cannot-read-slot', async () => {
+  await assertFails(getDoc(doc(anonDb, 'ogrenciler', readSid)));
+});
+await check('owning-teacher-CAN-read-slot', async () => {
+  await assertSucceeds(getDoc(doc(ogretmenDb, 'ogrenciler', readSid)));
+});
+await check('de-allowlisted-teacher-loses-read-access', async () => {
+  const tempDb = testEnv.authenticatedContext(TEMP_TEACHER_UID, gercekToken).firestore();
+  const tempSid = sid('deallow');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogretmenler', TEMP_TEACHER_UID), {});
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', tempSid), bosYuva({ ogretmenUid: TEMP_TEACHER_UID }));
+  });
+  await assertSucceeds(getDoc(doc(tempDb, 'ogrenciler', tempSid)));   // allowlist'teyken okuyabiliyor
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(ctx.firestore(), 'ogretmenler', TEMP_TEACHER_UID));
+  });
+  await assertFails(getDoc(doc(tempDb, 'ogrenciler', tempSid)));      // allowlist'ten çıkarılınca okuyamıyor
+});
+
+// ================================================================== ilk bağlanma (öğrenci)
+const claimSid = sid('claim');
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'ogrenciler', claimSid), bosYuva());
+});
+const ilkPaket = { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 100, k: 5, d: 8, s: 10, t: 1 }], konular: {} };
+await check('non-anonymous-account-cannot-claim-or-resync-student-slot', async () => {
+  // Gerçek (anonim OLMAYAN) bir hesap — allowlist'teki öğretmenin kendi hesabı bile —
+  // öğrenci dalını kullanamaz. Bu, sağlayıcı kontrolünün yalnızca niyet belgesi değil,
+  // gerçekten yazmayı ENGELLEDİĞİNİ kanıtlar.
+  await assertFails(updateDoc(doc(ogretmenDb, 'ogrenciler', claimSid),
+    { bagliUid: OGRETMEN_UID, paket: ilkPaket, sunucuTs: null }));
+});
+await check('real-student-can-claim-unclaimed-slot', async () => {
+  await assertSucceeds(updateDoc(doc(ogrenciDb, 'ogrenciler', claimSid),
+    { bagliUid: OGRENCI_UID, paket: ilkPaket, sunucuTs: null }));
+});
+await check('attacker-cannot-claim-already-bound-slot', async () => {
+  const sahtePaket = { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 101, k: 5, d: 1, s: 10, t: 2 }] };
+  const saldirganAnonDb = testEnv.authenticatedContext(SALDIRGAN_UID, anonimToken).firestore();
+  await assertFails(updateDoc(doc(saldirganAnonDb, 'ogrenciler', claimSid),
+    { bagliUid: SALDIRGAN_UID, paket: sahtePaket, sunucuTs: null }));
+});
+await check('attacker-cannot-write-with-mismatched-uid-even-if-claiming-same-bagliUid', async () => {
+  const sahtePaket = { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 102, k: 5, d: 0, s: 10, t: 3 }] };
+  const saldirganAnonDb = testEnv.authenticatedContext(SALDIRGAN_UID, anonimToken).firestore();
+  await assertFails(updateDoc(doc(saldirganAnonDb, 'ogrenciler', claimSid),
+    { bagliUid: OGRENCI_UID, paket: sahtePaket, sunucuTs: null }));
+});
+
+// ================================================================== bağlı öğrenci davranışı
+await check('bound-student-cannot-change-ogrenciAd', async () => {
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', claimSid), { ogrenciAd: 'Sahte İsim', paket: ilkPaket }));
+});
+await check('bound-student-cannot-change-ogretmenUid', async () => {
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', claimSid), { ogretmenUid: SALDIRGAN_UID, paket: ilkPaket }));
+});
+await check('bound-student-cannot-change-ogrenciBulutId', async () => {
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', claimSid), { ogrenciBulutId: 'baska-bir-id', paket: ilkPaket }));
+});
+await check('bound-student-cannot-add-unknown-field', async () => {
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', claimSid), { paket: ilkPaket, ekstraAlan: 'sızma-denemesi' }));
+});
+await check('bound-student-cannot-reassign-bagliUid-to-another-uid', async () => {
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', claimSid),
+    { bagliUid: SALDIRGAN_UID, paket: ilkPaket, sunucuTs: null }));
+});
+await check('student-cannot-set-sonrakiSyncId-on-active-slot', async () => {
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', claimSid),
+    { paket: ilkPaket, sunucuTs: null, sonrakiSyncId: sid('sneaky') }));
+});
+await check('bound-student-can-sync-again', async () => {
+  const yeniPaket = { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 103, k: 5, d: 9, s: 10, t: 4 }], konular: {} };
+  await assertSucceeds(updateDoc(doc(ogrenciDb, 'ogrenciler', claimSid), { paket: yeniPaket, sunucuTs: null }));
+});
+await check('bound-student-can-read-own-slot', async () => {
+  await assertSucceeds(getDoc(doc(ogrenciDb, 'ogrenciler', claimSid)));
+});
+await check('stranger-still-cannot-read-bound-slot', async () => {
+  await assertFails(getDoc(doc(saldirganDb, 'ogrenciler', claimSid)));
+});
+
+// ================================================================== Fix E: ikinci (anonim) öğrenci, ikinci syncId
+const claim2Sid = sid('claim2');
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'ogrenciler', claim2Sid), bosYuva({ ogrenciNo: 4, ogrenciAd: 'Deniz Kaya', ogrenciBulutId: 'bulut-id-2' }));
+});
+await check('second-anonymous-student-can-claim-unclaimed-slot', async () => {
+  await assertSucceeds(updateDoc(doc(ogrenci2Db, 'ogrenciler', claim2Sid),
+    { bagliUid: OGRENCI2_UID, paket: ilkPaket, sunucuTs: null }));
+});
+await check('second-anonymous-student-can-resync', async () => {
+  const yeniPaket = { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 104, k: 5, d: 9, s: 10, t: 5 }], konular: {} };
+  await assertSucceeds(updateDoc(doc(ogrenci2Db, 'ogrenciler', claim2Sid), { paket: yeniPaket, sunucuTs: null }));
+});
+
+// ================================================================== malformed / oversized
+const malformedSid = sid('malformed');
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'ogrenciler', malformedSid), bosYuva({ bagliUid: OGRENCI_UID, paket: ilkPaket }));
+});
+await check('malformed-paket-shape-rejected', async () => {
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', malformedSid), { paket: { tur: 'baska-bir-sey' } }));
+});
+await check('oversized-kayit-rejected', async () => {
+  const devasa = { tur: 'yks-sonuc', surum: 2, kayit: new Array(5001).fill({ g: 1, k: 1, d: 1, s: 1, t: 1 }) };
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', malformedSid), { paket: devasa }));
+});
+await check('oversized-konular-rejected', async () => {
+  const konularDevasa = {};
+  for (let i = 0; i < 2001; i++) konularDevasa['k' + i] = [0, 'konu ' + i];
+  const paket = { tur: 'yks-sonuc', surum: 2, kayit: [{ g: 1, k: 1, d: 1, s: 1, t: 1 }], konular: konularDevasa };
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', malformedSid), { paket }));
+});
+
+// ================================================================== devre dışı bırakma (syncId rotasyonu)
+async function disableAndCreate(actorDb, oldSid, newSid, yeniVeri) {
+  return runTransaction(actorDb, async (tx) => {
+    tx.update(doc(actorDb, 'ogrenciler', oldSid), { durum: 'iptal', sonrakiSyncId: newSid });
+    tx.set(doc(actorDb, 'ogrenciler', newSid), yeniVeri);
+  });
+}
+
+await check('allowlisted-teacher-can-disable-then-create-fresh-slot', async () => {
+  const oldS = sid('disable-ok-old'), newS = sid('disable-ok-new');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', oldS), bosYuva({ bagliUid: 'eski-cihaz', paket: ilkPaket }));
+  });
+  await assertSucceeds(disableAndCreate(ogretmenDb, oldS, newS,
+    { ogretmenUid: OGRETMEN_UID, ogrenciNo: 3, ogrenciAd: 'Ayşe Yılmaz', ogrenciSube: '12A',
+      ogrenciBulutId: 'bulut-id-1', bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif' }));
+  // yeni yuva sıradan bir öğrenci tarafından normal şekilde talep edilebilir
+  const yeniOgrenciDb = testEnv.authenticatedContext('yeni-cihaz-uid', anonimToken).firestore();
+  await assertSucceeds(updateDoc(doc(yeniOgrenciDb, 'ogrenciler', newS),
+    { bagliUid: 'yeni-cihaz-uid', paket: ilkPaket, sunucuTs: null }));
+});
+
+await check('disable-branch-cannot-touch-paket-or-identity', async () => {
+  const oldS = sid('disable-tamper-old'), newS = sid('disable-tamper-new');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', oldS), bosYuva({ bagliUid: 'eski-cihaz', paket: ilkPaket }));
+  });
+  await assertFails(runTransaction(ogretmenDb, async (tx) => {
+    tx.update(doc(ogretmenDb, 'ogrenciler', oldS), { durum: 'iptal', sonrakiSyncId: newS, paket: null });
+    tx.set(doc(ogretmenDb, 'ogrenciler', newS),
+      { ogretmenUid: OGRETMEN_UID, ogrenciNo: 3, ogrenciAd: 'Ayşe Yılmaz', ogrenciSube: '12A',
+        ogrenciBulutId: 'bulut-id-1', bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif' });
+  }));
+});
+
+await check('disable-branch-requires-sonrakiSyncId', async () => {
+  const oldS = sid('disable-nonext-old');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', oldS), bosYuva({ bagliUid: 'eski-cihaz', paket: ilkPaket }));
+  });
+  await assertFails(updateDoc(doc(ogretmenDb, 'ogrenciler', oldS), { durum: 'iptal' }));
+});
+
+await check('disable-rejects-mismatched-sonrakiSyncId', async () => {
+  const oldS = sid('disable-mismatch-old'), newS = sid('disable-mismatch-new');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', oldS), bosYuva({ bagliUid: 'eski-cihaz', paket: ilkPaket }));
+  });
+  await assertFails(disableAndCreate(ogretmenDb, oldS, newS,
+    // farklı öğrenci numarasıyla — kimlik eşleşmiyor
+    { ogretmenUid: OGRETMEN_UID, ogrenciNo: 999, ogrenciAd: 'Ayşe Yılmaz', ogrenciSube: '12A',
+      ogrenciBulutId: 'bulut-id-1', bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif' }));
+});
+
+await check('disable-rejects-sonrakiSyncId-with-mismatched-ogrenciBulutId', async () => {
+  const oldS = sid('disable-badbulutid-old'), newS = sid('disable-badbulutid-new');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', oldS), bosYuva({ bagliUid: 'eski-cihaz', paket: ilkPaket }));
+  });
+  await assertFails(disableAndCreate(ogretmenDb, oldS, newS,
+    { ogretmenUid: OGRETMEN_UID, ogrenciNo: 3, ogrenciAd: 'Ayşe Yılmaz', ogrenciSube: '12A',
+      ogrenciBulutId: 'FARKLI-bulut-id', bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif' }));
+});
+
+await check('disable-rejects-sonrakiSyncId-pointing-at-a-pre-existing-document', async () => {
+  const oldS = sid('disable-preexist-old'), preexistS = sid('disable-preexist-new');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', oldS), bosYuva({ bagliUid: 'eski-cihaz', paket: ilkPaket }));
+    // "yeni" belge zaten transaction ÖNCESİNDEN var — sahte bir "taze" halef
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', preexistS), bosYuva());
+  });
+  await assertFails(runTransaction(ogretmenDb, async (tx) => {
+    tx.update(doc(ogretmenDb, 'ogrenciler', oldS), { durum: 'iptal', sonrakiSyncId: preexistS });
+  }));
+});
+
+await check('disabled-slot-cannot-be-reclaimed-or-read-by-original-uid', async () => {
+  const oldS = sid('disable-regress-old'), newS = sid('disable-regress-new');
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogrenciler', oldS), bosYuva({ bagliUid: OGRENCI_UID, paket: ilkPaket, ogrenciBulutId: 'bulut-regress' }));
+  });
+  await assertSucceeds(disableAndCreate(ogretmenDb, oldS, newS,
+    { ogretmenUid: OGRETMEN_UID, ogrenciNo: 3, ogrenciAd: 'Ayşe Yılmaz', ogrenciSube: '12A',
+      ogrenciBulutId: 'bulut-regress', bagliUid: null, paket: null, sunucuTs: null, durum: 'aktif' }));
+  // eski (uncleared) cihaz aynı OGRENCI_UID ile ne yeniden bağlanabilir...
+  await assertFails(updateDoc(doc(ogrenciDb, 'ogrenciler', oldS),
+    { bagliUid: OGRENCI_UID, paket: ilkPaket, sunucuTs: null }));
+  // ...ne de artık eski belgeyi okuyabilir (sonrakiSyncId'yi asla öğrenemez)
+  await assertFails(getDoc(doc(ogrenciDb, 'ogrenciler', oldS)));
+});
+
+// ================================================================== öğretmenin kendi bulut yedeği
+// Öğretmenin defterinin tamamı (31 öğrencinin adı dahil) burada durur; en sıkı testler bunlar.
+const yedekVeri = () => ({ veri: JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Ayşe Yılmaz' }] }),
+  ts: 1750000000000, surum: 10, boyut: 60 });
+
+await check('teacher-can-write-and-read-own-backup', async () => {
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+  const anlik = await assertSucceeds(getDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID)));
+  if (!anlik.exists()) throw new Error('yedek yazıldı ama okunamadı');
+});
+await check('teacher-cannot-read-another-teachers-backup', async () => {
+  // OGRETMEN2 allowlist'te değil; ayrıca başkasının UID'si altına hiç bakamamalı
+  await assertFails(getDoc(doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID)));
+  // allowlist'teki öğretmen bile BAŞKASININ yedeğini okuyamaz
+  await assertFails(getDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN2_UID)));
+});
+await check('teacher-cannot-write-into-another-teachers-backup', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN2_UID), yedekVeri()));
+});
+await check('anonymous-student-cannot-touch-any-teacher-backup', async () => {
+  await assertFails(getDoc(doc(ogrenciDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(setDoc(doc(ogrenciDb, 'ogretmenYedek', OGRENCI_UID), yedekVeri()));
+});
+await check('unauthenticated-cannot-touch-teacher-backup', async () => {
+  await assertFails(getDoc(doc(anonDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(setDoc(doc(anonDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+});
+await check('non-allowlisted-real-account-cannot-write-own-backup', async () => {
+  // Kendi UID'si altına bile yazamaz: allowlist dışı bir hesap depolamayı kullanamamalı
+  await assertFails(setDoc(doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN2_UID), yedekVeri()));
+});
+await check('backup-rejects-oversized-payload', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
+    Object.assign(yedekVeri(), { veri: 'x'.repeat(900001) })));
+});
+await check('backup-rejects-unknown-fields-and-bad-types', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
+    Object.assign(yedekVeri(), { fazladan: 'sızma' })));
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
+    Object.assign(yedekVeri(), { veri: { nesne: 1 } })));
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
+    Object.assign(yedekVeri(), { veri: '' })));
+});
+await check('backup-cannot-be-deleted', async () => {
+  const { deleteDoc } = await import('firebase/firestore');
+  await assertFails(deleteDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID)));
+});
+await check('de-allowlisted-teacher-loses-access-to-own-backup', async () => {
+  const tempDb = testEnv.authenticatedContext(TEMP_TEACHER_UID, gercekToken).firestore();
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'ogretmenler', TEMP_TEACHER_UID), {});
+  });
+  await assertSucceeds(setDoc(doc(tempDb, 'ogretmenYedek', TEMP_TEACHER_UID), yedekVeri()));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(ctx.firestore(), 'ogretmenler', TEMP_TEACHER_UID));
+  });
+  await assertFails(getDoc(doc(tempDb, 'ogretmenYedek', TEMP_TEACHER_UID)));
+});
+
+// ================================================================== izleyici öğretmen (yalnızca okuma)
+// İzin yalnızca konsoldan: izleyiciler/{izleyiciUid} = {sahipUid}. İzleyici allowlist'te değildir.
+const gunVeriBasit = () => ({ veri: JSON.stringify({ rol: 'rehber', ogr: [] }), ts: 1750000000000, surum: 10, boyut: 30, ogrenciSayisi: 0, sonucSayisi: 0 });
+const IZLEYICI_UID = 'izleyici-1';
+const izleyiciDb = testEnv.authenticatedContext(IZLEYICI_UID, gercekToken).firestore();
+const izleyiciAnonDb = testEnv.authenticatedContext(IZLEYICI_UID, anonimToken).firestore();
+const izleyiciSid = sid('viewer'), digerSid = sid('viewer-other');
+await testEnv.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'izleyiciler', IZLEYICI_UID), { sahipUid: OGRETMEN_UID, ad: 'Sentetik Öğretmen' });
+  await setDoc(doc(ctx.firestore(), 'ogretmenYedek', OGRETMEN_UID), yedekVeri());
+  await setDoc(doc(ctx.firestore(), 'ogretmenYedek', OGRETMEN2_UID), yedekVeri());
+  await setDoc(doc(ctx.firestore(), 'ogrenciler', digerSid), bosYuva({ ogretmenUid: OGRETMEN2_UID }));
+});
+await check('viewer-permission-is-console-only-and-readable-only-by-the-viewer', async () => {
+  await assertSucceeds(getDoc(doc(izleyiciDb, 'izleyiciler', IZLEYICI_UID)));
+  await assertFails(getDoc(doc(ogretmenDb, 'izleyiciler', IZLEYICI_UID)));
+  await assertFails(getDocs(collection(izleyiciDb, 'izleyiciler')));
+  await assertFails(setDoc(doc(izleyiciDb, 'izleyiciler', IZLEYICI_UID), { sahipUid: OGRETMEN2_UID }));
+  await assertFails(setDoc(doc(saldirganDb, 'izleyiciler', SALDIRGAN_UID), { sahipUid: OGRETMEN_UID }));
+  await assertFails(setDoc(doc(ogretmenDb, 'izleyiciler', SALDIRGAN_UID), { sahipUid: OGRETMEN_UID }));
+  await assertFails(deleteDoc(doc(izleyiciDb, 'izleyiciler', IZLEYICI_UID)));
+});
+await check('viewer-reads-only-the-owners-notebook', async () => {
+  await assertSucceeds(getDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(getDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN2_UID)));
+  await assertFails(getDoc(doc(izleyiciAnonDb, 'ogretmenYedek', OGRETMEN_UID)), 'anonymous session with the same uid');
+  await assertFails(getDoc(doc(saldirganDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(getDocs(collection(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis')));
+  await assertFails(getDocs(collection(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari')));
+});
+await check('viewer-cannot-write-any-notebook-or-account', async () => {
+  await assertFails(setDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogretmenYedek', IZLEYICI_UID), yedekVeri()));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-10-12'), gunVeriBasit()));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogrenciHesaplari', 'izleyici-hedef'), hesapVeri(izleyiciSid)));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogrenciler', sid('viewer-create')), bosYuva()));
+  await assertFails(setDoc(doc(izleyiciDb, 'ogrenciler', sid('viewer-create-own')), bosYuva({ ogretmenUid: IZLEYICI_UID })));
+});
+await check('viewer-reads-the-owners-student-slots-but-cannot-change-them', async () => {
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogrenciler', izleyiciSid), bosYuva()));
+  await assertSucceeds(getDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid)));
+  await assertFails(getDoc(doc(izleyiciDb, 'ogrenciler', digerSid)), 'another teacher’s slot');
+  await assertFails(getDoc(doc(izleyiciDb, 'ogrenciler', sid('viewer-missing'))), 'no probing of empty slots');
+  await assertFails(updateDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid), { denemeOkul: '[]' }));
+  await assertFails(updateDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid), { bagliUid: IZLEYICI_UID }));
+  await assertFails(updateDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid), { durum: 'iptal', sonrakiSyncId: sid('viewer-next') }));
+  await assertFails(getDocs(collection(izleyiciDb, 'ogrenciler')));
+});
+await check('removing-the-console-permission-ends-viewing', async () => {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'izleyiciler', IZLEYICI_UID), { sahipUid: OGRETMEN2_UID });
+  });
+  await assertFails(getDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(getDoc(doc(izleyiciDb, 'ogrenciler', izleyiciSid)));
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await deleteDoc(doc(ctx.firestore(), 'izleyiciler', IZLEYICI_UID));
+  });
+  await assertFails(getDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN2_UID)));
+  await assertSucceeds(getDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID)), 'owner keeps access');
+});
+
+// ================================================================== günlük yedek geçmişi
+const gunVeri = (over) => Object.assign({
+  veri: JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Ayşe Yılmaz' }] }),
+  ts: 1750000000000, surum: 10, boyut: 60, ogrenciSayisi: 1, sonucSayisi: 0
+}, over || {});
+
+await check('teacher-can-write-and-list-own-daily-snapshots', async () => {
+  const { collection, getDocs } = await import('firebase/firestore');
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01'), gunVeri()));
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-02'), gunVeri()));
+  const liste = await assertSucceeds(getDocs(collection(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis')));
+  if (liste.size !== 2) throw new Error('beklenen 2 gün, gelen ' + liste.size);
+});
+await check('nobody-else-can-read-or-list-a-teachers-snapshots', async () => {
+  const { collection, getDocs } = await import('firebase/firestore');
+  await assertFails(getDoc(doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+  await assertFails(getDocs(collection(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'gecmis')));
+  await assertFails(getDoc(doc(ogrenciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+  await assertFails(getDoc(doc(hesapliOgrenciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+  await assertFails(getDoc(doc(anonDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+});
+await check('nobody-can-write-into-another-teachers-snapshots', async () => {
+  await assertFails(setDoc(doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-03'), gunVeri()));
+  await assertFails(setDoc(doc(hesapliOgrenciDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-03'), gunVeri()));
+});
+await check('snapshots-cannot-be-deleted-so-history-cannot-be-erased', async () => {
+  const { deleteDoc } = await import('firebase/firestore');
+  await assertFails(deleteDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-01')));
+});
+await check('snapshot-rejects-unknown-fields-and-oversized-payload', async () => {
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-04'),
+    gunVeri({ fazladan: 'sızma' })));
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-04'),
+    gunVeri({ veri: 'x'.repeat(900001) })));
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-09-04'),
+    gunVeri({ veri: '' })));
+});
+
+// ================================================================== geri yükleme öncesi değiştirilemez koruma noktaları
+const geriNoktasiVeri = (over) => {
+  const veri = JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Geri Dönüş Öncesi' }] });
+  return Object.assign({ veri, ts: 1757000000000, surum: 10, boyut: veri.length,
+    ogrenciSayisi: 1, sonucSayisi: 7, kaynak: '02.09.2026 tarihli günlük yedeğe dönüş' }, over || {});
+};
+
+await check('teacher-can-create-read-and-list-own-restore-points', async () => {
+  const { collection, getDocs } = await import('firebase/firestore');
+  const yol = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'nokta-1');
+  await assertSucceeds(setDoc(yol, geriNoktasiVeri()));
+  await assertSucceeds(getDoc(yol));
+  const liste = await assertSucceeds(
+    getDocs(collection(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari')));
+  if (liste.size !== 1) throw new Error('beklenen 1 geri dönüş noktası, gelen ' + liste.size);
+});
+await check('restore-points-are-immutable-and-cannot-be-deleted', async () => {
+  const { deleteDoc } = await import('firebase/firestore');
+  const yol = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'nokta-1');
+  await assertFails(updateDoc(yol, { kaynak: 'değiştirildi' }));
+  await assertFails(setDoc(yol, geriNoktasiVeri()));
+  await assertFails(deleteDoc(yol));
+});
+await check('nobody-else-can-read-list-or-write-a-teachers-restore-points', async () => {
+  const { collection, getDocs } = await import('firebase/firestore');
+  const yol = doc(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'nokta-1');
+  await assertFails(getDoc(yol));
+  await assertFails(getDocs(collection(ogretmen2Db, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari')));
+  await assertFails(setDoc(doc(hesapliOgrenciDb, 'ogretmenYedek', OGRETMEN_UID,
+    'geriNoktalari', 'ogrenci-noktasi'), geriNoktasiVeri()));
+  await assertFails(getDoc(doc(anonDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'nokta-1')));
+});
+await check('restore-point-rejects-malformed-payloads', async () => {
+  const taban = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'bozuk');
+  await assertFails(setDoc(taban, geriNoktasiVeri({ fazladan: true })));
+  await assertFails(setDoc(taban, geriNoktasiVeri({ kaynak: '' })));
+  await assertFails(setDoc(taban, geriNoktasiVeri({ ts: 0 })));
+  await assertFails(setDoc(taban, geriNoktasiVeri({ surum: 0 })));
+  await assertFails(setDoc(taban, geriNoktasiVeri({ boyut: 0 })));
+  const buyuk = 'x'.repeat(900001);
+  await assertFails(setDoc(taban, geriNoktasiVeri({ veri: buyuk, boyut: buyuk.length })));
+});
+
+await check('teacher-can-atomically-preserve-cloud-copy-before-replacing-latest', async () => {
+  const latest = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID);
+  const archive = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'before-local-upload');
+  const before = (await getDoc(latest)).data();
+  const next = yedekVeri(); next.veri = JSON.stringify({ rol: 'rehber', ogr: [{ ad: 'Local notebook' }] });
+  next.boyut = next.veri.length;
+  await assertSucceeds(runTransaction(ogretmenDb, async tx => {
+    const current = (await tx.get(latest)).data();
+    tx.set(archive, geriNoktasiVeri({ veri: current.veri, boyut: current.veri.length,
+      kaynak: 'Yerel defter yüklenmeden önce buluttaki defter' }));
+    tx.set(latest, next);
+  }));
+  if ((await getDoc(archive)).data().veri !== before.veri) throw new Error('previous cloud copy was not preserved');
+  if ((await getDoc(latest)).data().veri !== next.veri) throw new Error('new notebook was not committed');
+});
+await check('failed-cloud-archive-aborts-the-latest-backup-replacement', async () => {
+  const latest = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID);
+  const archive = doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'before-local-upload');
+  const before = (await getDoc(latest)).data();
+  // The existing archive is immutable: rejection must also roll back the latest write.
+  await assertFails(runTransaction(ogretmenDb, async tx => {
+    await tx.get(latest);
+    tx.set(archive, geriNoktasiVeri());
+    tx.set(latest, yedekVeri());
+  }));
+  if (!isDeepStrictEqual((await getDoc(latest)).data(), before)) throw new Error('latest changed despite failed archive');
+});
+
+await check('weekly-activity-is-owned-by-bound-student-and-readable-only-by-owner-teacher', async () => {
+  const id=sid('weekly-activity');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(),'ogrenciler',id),bosYuva({bagliUid:OGRENCI_UID}));
+  });
+  const data={paket:{tur:'yks-sonuc',surum:2,kayit:[],konular:{},etkinlik:{v:1,baslangic:100,
+    kayit:[{tur:'pdf',hafta:20724,sonucHafta:20717,ilk:200,son:200}]}}};
+  await assertSucceeds(updateDoc(doc(ogrenciDb,'ogrenciler',id),data));
+  await assertSucceeds(getDoc(doc(ogretmenDb,'ogrenciler',id)));
+  await assertFails(getDoc(doc(ogretmen2Db,'ogrenciler',id)));
+  await assertFails(getDoc(doc(ogrenci2Db,'ogrenciler',id)));
+  await assertFails(getDoc(doc(anonDb,'ogrenciler',id)));
+  const forged=structuredClone(data);forged.paket.etkinlik.kayit[0].son=999;
+  await assertFails(updateDoc(doc(ogrenci2Db,'ogrenciler',id),forged));
+  await assertFails(updateDoc(doc(ogretmen2Db,'ogrenciler',id),forged));
+});
+
+await check('teacher-import-channel-is-private-and-student-read-only', async () => {
+  const id=sid('deneme'),ref=db=>doc(db,'ogrenciler',id);
+  await testEnv.withSecurityRulesDisabled(async ctx=>setDoc(ref(ctx.firestore()),bosYuva({bagliUid:OGRENCI_UID})));
+  await assertSucceeds(updateDoc(ref(ogretmenDb),{denemeOkul:'[{"id":"p:exam"}]'}));
+  await assertSucceeds(getDoc(ref(ogrenciDb)));
+  await assertFails(getDoc(ref(ogrenci2Db)));await assertFails(getDoc(ref(anonDb)));
+  await assertFails(updateDoc(ref(ogrenciDb),{denemeOkul:'[]'}));
+  await assertFails(updateDoc(ref(ogrenci2Db),{denemeOkul:'[]'}));
+  await assertFails(updateDoc(ref(ogretmen2Db),{denemeOkul:'[]'}));
+  await assertFails(updateDoc(ref(anonOgretmenDb),{denemeOkul:'[]'}));
+  await assertFails(updateDoc(ref(ogretmenDb),{denemeOkul:'[]',paket:{tur:'yks-sonuc',kayit:[]}}));
+  await assertFails(updateDoc(ref(ogretmenDb),{denemeOkul:{bad:'type'}}));
+  await assertFails(updateDoc(ref(ogretmenDb),{denemeOkul:'x'.repeat(300001)}));
+  await assertSucceeds(updateDoc(ref(ogrenciDb),{paket:{tur:'yks-sonuc',surum:4,kayit:[],konular:{},denemeler:[{id:'m:exam'}],denemeSure:[{id:'p:exam',sure:140,ts:100}]}}));
+  const s=await getDoc(ref(ogretmenDb));
+  if(s.data().denemeOkul!=='[{"id":"p:exam"}]')throw new Error('Student send erased teacher results');
+});
+await check('published-password-student-can-read-but-not-change-teacher-import',async()=>{
+ const id=sid('deneme-password');
+ await testEnv.withSecurityRulesDisabled(async ctx=>{
+  await setDoc(doc(ctx.firestore(),'ogrenciHesaplari',HESAPLI_OGRENCI_UID),hesapVeri(id));
+  await setDoc(doc(ctx.firestore(),'ogrenciler',id),bosYuva({bagliUid:HESAPLI_OGRENCI_UID,denemeOkul:'[]'}));
+ });
+ await assertSucceeds(getDoc(doc(hesapliOgrenciDb,'ogrenciler',id)));
+ await assertFails(updateDoc(doc(hesapliOgrenciDb,'ogrenciler',id),{denemeOkul:'[1]'}));
+ await assertSucceeds(updateDoc(doc(hesapliOgrenciDb,'ogrenciler',id),{paket:{tur:'yks-sonuc',surum:4,kayit:[],denemeler:[],denemeSure:[]}}));
+});
+await check('slot-rotation-preserves-import-and-revokes-old-student',async()=>{
+ const old=sid('deneme-old'),fresh=sid('deneme-new');
+ await testEnv.withSecurityRulesDisabled(async ctx=>setDoc(doc(ctx.firestore(),'ogrenciler',old),bosYuva({bagliUid:OGRENCI_UID,denemeOkul:'[]'})));
+ await assertSucceeds(runTransaction(ogretmenDb,async tx=>{
+  tx.update(doc(ogretmenDb,'ogrenciler',old),{durum:'iptal',sonrakiSyncId:fresh});
+  tx.set(doc(ogretmenDb,'ogrenciler',fresh),bosYuva({denemeOkul:'[]'}));
+ }));
+ await assertFails(getDoc(doc(ogrenciDb,'ogrenciler',old)));
+ await assertFails(getDoc(doc(ogrenciDb,'ogrenciler',fresh)));
+});
+
+// ================================================================== testDefter
+// "Test hesabı aç": a Google user's own notebook; no teacher allowlist.
+const TESTCI_UID = 'testci-1';
+const testciDb = testEnv.authenticatedContext(TESTCI_UID, gercekToken).firestore();
+const testciAnonDb = testEnv.authenticatedContext(TESTCI_UID, anonimToken).firestore();
+const testciSifreDb = testEnv.authenticatedContext(TESTCI_UID, sifreToken).firestore();
+const testDefter = (over) => Object.assign({ veri: '{"rol":"ogrenci"}', ts: 1750000000000, surum: 20, boyut: 17 }, over || {});
+const testRef = (db, ...yol) => doc(db, 'testDefter', TESTCI_UID, ...yol);
+
+await check('test-account-owner-can-create-read-and-update-own-notebook', async () => {
+  await assertSucceeds(setDoc(testRef(testciDb), testDefter()));
+  await assertSucceeds(getDoc(testRef(testciDb)));
+  await assertSucceeds(setDoc(testRef(testciDb), testDefter({ veri: '{"rol":"ogrenci","v":2}', boyut: 25 })));
+});
+await check('test-account-needs-no-teacher-allowlist-and-is-not-a-teacher', async () => {
+  await assertFails(setDoc(doc(testciDb, 'ogretmenYedek', TESTCI_UID), testDefter()));
+  await assertFails(setDoc(doc(testciDb, 'ogrenciler', sid('testci')), bosYuva({ ogretmenUid: TESTCI_UID })));
+});
+await check('test-account-other-users-cannot-read-or-write', async () => {
+  await assertFails(getDoc(doc(saldirganDb, 'testDefter', TESTCI_UID)));
+  await assertFails(setDoc(doc(saldirganDb, 'testDefter', TESTCI_UID), testDefter()));
+  await assertFails(getDoc(doc(ogretmenDb, 'testDefter', TESTCI_UID)));
+  await assertFails(getDoc(doc(anonDb, 'testDefter', TESTCI_UID)));
+});
+await check('test-account-anonymous-and-password-sessions-rejected', async () => {
+  await assertFails(setDoc(doc(testciAnonDb, 'testDefter', TESTCI_UID), testDefter()));
+  await assertFails(getDoc(doc(testciAnonDb, 'testDefter', TESTCI_UID)));
+  await assertFails(setDoc(doc(testciSifreDb, 'testDefter', TESTCI_UID), testDefter()));
+});
+await check('test-account-notebook-shape-and-size-enforced', async () => {
+  await assertFails(setDoc(testRef(testciDb), testDefter({ fazla: 1 })));
+  await assertFails(setDoc(testRef(testciDb), testDefter({ veri: '' })));
+  await assertFails(setDoc(testRef(testciDb), testDefter({ veri: 'x'.repeat(900001) })));
+  await assertFails(setDoc(testRef(testciDb), testDefter({ ts: 'dün' })));
+});
+await check('test-account-only-owner-can-delete-and-nobody-can-list', async () => {
+  await assertFails(deleteDoc(doc(saldirganDb, 'testDefter', TESTCI_UID)));
+  await assertFails(deleteDoc(doc(testciAnonDb, 'testDefter', TESTCI_UID)));
+  await assertFails(deleteDoc(doc(ogretmenDb, 'testDefter', TESTCI_UID)));
+  await assertFails(getDocs(collection(testciDb, 'testDefter')));
+});
+await check('test-account-history-only-in-weekday-and-conflict-slots', async () => {
+  for (const yuva of ['0', '6', 'cakisma'])
+    await assertSucceeds(setDoc(testRef(testciDb, 'gecmis', yuva), testDefter({ gun: '2026-09-20' })));
+  await assertSucceeds(setDoc(testRef(testciDb, 'gecmis', '6'), testDefter({ gun: '2026-09-27' })));
+  await assertFails(setDoc(testRef(testciDb, 'gecmis', '7'), testDefter({ gun: '2026-09-20' })));
+  await assertFails(setDoc(testRef(testciDb, 'gecmis', '2026-09-20'), testDefter({ gun: '2026-09-20' })));
+  await assertFails(setDoc(testRef(testciDb, 'gecmis', '0'), testDefter()));
+  await assertFails(setDoc(testRef(testciDb, 'gecmis', '0'), testDefter({ gun: 'x'.repeat(11) })));
+  await assertSucceeds(getDocs(collection(testciDb, 'testDefter', TESTCI_UID, 'gecmis')));
+  await assertFails(deleteDoc(doc(saldirganDb, 'testDefter', TESTCI_UID, 'gecmis', '0')));
+  await assertFails(getDoc(doc(saldirganDb, 'testDefter', TESTCI_UID, 'gecmis', '0')));
+  await assertFails(setDoc(doc(saldirganDb, 'testDefter', TESTCI_UID, 'gecmis', '1'), testDefter({ gun: '2026-09-20' })));
+});
+await check('test-account-transaction-writes-notebook-and-history-together', async () => {
+  await assertSucceeds(runTransaction(testciDb, async tx => {
+    await tx.get(testRef(testciDb));
+    tx.set(testRef(testciDb), testDefter({ veri: '{"rol":"ogrenci","v":3}', boyut: 25 }));
+    tx.set(testRef(testciDb, 'gecmis', '2'), testDefter({ veri: '{"rol":"ogrenci","v":3}', boyut: 25, gun: '2026-09-23' }));
+  }));
+});
+
+await check('test-account-reset-deletes-notebook-and-history-in-one-transaction', async () => {
+  await assertSucceeds(setDoc(testRef(testciDb), testDefter()));
+  await assertSucceeds(setDoc(testRef(testciDb, 'gecmis', '3'), testDefter({ gun: '2026-09-23' })));
+  await assertSucceeds(runTransaction(testciDb, async tx => {
+    [testRef(testciDb)].concat(['0','1','2','3','4','5','6','cakisma'].map(y => testRef(testciDb, 'gecmis', y))).forEach(r => tx.delete(r));
+  }));
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    if ((await getDoc(doc(ctx.firestore(), 'testDefter', TESTCI_UID))).exists()) throw new Error('notebook still exists');
+    if ((await getDoc(doc(ctx.firestore(), 'testDefter', TESTCI_UID, 'gecmis', '3'))).exists()) throw new Error('history still exists');
+  });
+});
+
+// "Kaydol": user name + password account; its Firebase email is only a hash of the name.
+await check('kaydol-account-owns-its-notebook-but-school-password-accounts-do-not', async () => {
+  const UYE_UID = 'uye-1', uyeEposta = 'uye-' + 'a1'.repeat(20) + '@uye.ykstekrar.app';
+  const sifreli = (uid, email, saglayici = 'password') =>
+    testEnv.authenticatedContext(uid, { email, firebase: { sign_in_provider: saglayici, identities: {} } }).firestore();
+  const uyeDb = sifreli(UYE_UID, uyeEposta);
+  await assertSucceeds(setDoc(doc(uyeDb, 'testDefter', UYE_UID), testDefter()));
+  await assertSucceeds(getDoc(doc(uyeDb, 'testDefter', UYE_UID)));
+  await assertSucceeds(setDoc(doc(uyeDb, 'testDefter', UYE_UID, 'gecmis', '2'), testDefter({ gun: '2026-10-06' })));
+  await assertFails(getDoc(doc(uyeDb, 'testDefter', TESTCI_UID)), 'not another account');
+  await assertFails(getDocs(collection(uyeDb, 'testDefter')));
+  // A school name+number account, look-alike emails and other providers stay refused.
+  for (const email of ['ogr-' + 'a1'.repeat(20) + '@student.ykstekrar.app', uyeEposta + '.evil.test', 'x' + uyeEposta,
+                       'uye-' + 'A1'.repeat(20) + '@uye.ykstekrar.app', 'uye-' + 'a1'.repeat(19) + '@uye.ykstekrar.app'])
+    await assertFails(setDoc(doc(sifreli('uye-2', email), 'testDefter', 'uye-2'), testDefter()), email);
+  await assertFails(setDoc(doc(sifreli('uye-3', uyeEposta, 'custom'), 'testDefter', 'uye-3'), testDefter()));
+});
+
+// A school student who changed their password logs in with name + password through this lookup.
+await check('password-lookup-only-own-school-account-writes-and-anyone-with-the-name-hash-reads', async () => {
+  const ad = 'f'.repeat(64), ogrEposta = 'ogr-' + 'b2'.repeat(20) + '@student.ykstekrar.app';
+  const hesap = (uid, email, saglayici = 'password') =>
+    testEnv.authenticatedContext(uid, { email, firebase: { sign_in_provider: saglayici, identities: {} } }).firestore();
+  const ogrDb = hesap('okul-1', ogrEposta), kayit = db => doc(db, 'sifreliGiris', ad, 'hesaplar', 'okul-1');
+  await assertSucceeds(setDoc(kayit(ogrDb), { email: ogrEposta, ts: 1790000000000 }));
+  await assertSucceeds(getDocs(collection(anonDb, 'sifreliGiris', ad, 'hesaplar')), 'login reads it before signing in');
+  await assertSucceeds(getDoc(kayit(anonDb)));
+  await assertFails(getDocs(collection(anonDb, 'sifreliGiris')), 'names cannot be listed');
+  await assertFails(getDoc(doc(anonDb, 'sifreliGiris', ad)));
+  // Only the account itself, with its own school email, in the exact shape.
+  await assertFails(setDoc(kayit(ogrDb), { email: 'ogr-' + 'c3'.repeat(20) + '@student.ykstekrar.app', ts: 1 }), 'another email');
+  await assertFails(setDoc(kayit(ogrDb), { email: ogrEposta, ts: 1, ad: 'Ali' }), 'extra field');
+  await assertFails(setDoc(doc(ogrDb, 'sifreliGiris', 'kisa', 'hesaplar', 'okul-1'), { email: ogrEposta, ts: 1 }), 'not a hash');
+  await assertFails(setDoc(doc(hesap('okul-2', ogrEposta), 'sifreliGiris', ad, 'hesaplar', 'okul-1'), { email: ogrEposta, ts: 1 }), 'other uid');
+  const uyeEposta = 'uye-' + 'a1'.repeat(20) + '@uye.ykstekrar.app';
+  await assertFails(setDoc(doc(hesap('uye-9', uyeEposta), 'sifreliGiris', ad, 'hesaplar', 'uye-9'), { email: uyeEposta, ts: 1 }), 'Kaydol account');
+  await assertFails(setDoc(doc(hesap('okul-1', ogrEposta, 'google.com'), 'sifreliGiris', ad, 'hesaplar', 'okul-1'), { email: ogrEposta, ts: 1 }), 'Google');
+  await assertFails(setDoc(doc(anonDb, 'sifreliGiris', ad, 'hesaplar', 'okul-1'), { email: ogrEposta, ts: 1 }), 'signed out');
+  await assertFails(deleteDoc(kayit(hesap('okul-2', ogrEposta))), 'only the owner deletes');
+  await assertSucceeds(deleteDoc(kayit(ogrDb)));
+});
+
+// ===================================================== password reset, user-name change, recovery
+const sifreli = (uid, email, saglayici = 'password') =>
+  testEnv.authenticatedContext(uid, { email, firebase: { sign_in_provider: saglayici, identities: {} } }).firestore();
+const UYE_E = n => 'uye-' + String(n).repeat(40).slice(0, 40) + '@uye.ykstekrar.app';
+const OKUL_E = n => 'ogr-' + String(n).repeat(40).slice(0, 40) + '@student.ykstekrar.app';
+const anahtar = c => c.repeat(64);
+
+await check('login-redirect-own-kaydol-entry-teacher-reset-and-public-get-only', async () => {
+  const uyeDb = sifreli('uye-a', UYE_E('a')), ref = db => doc(db, 'girisYonu', anahtar('1'));
+  await assertSucceeds(setDoc(ref(uyeDb), { email: UYE_E('a'), uid: 'uye-a', ts: 1 }));
+  await assertSucceeds(getDoc(ref(anonDb)), 'login reads it signed out');
+  await assertFails(getDocs(collection(anonDb, 'girisYonu')), 'no listing');
+  await assertFails(getDoc(doc(anonDb, 'girisYonu', 'kisa')), 'only a hash key');
+  // Someone else cannot take or change it; a school account or a Google tester cannot write one.
+  const baskasi = sifreli('uye-b', UYE_E('b'));
+  await assertFails(setDoc(ref(baskasi), { email: UYE_E('b'), uid: 'uye-b', ts: 2 }), 'other owner');
+  await assertFails(setDoc(doc(baskasi, 'girisYonu', anahtar('2')), { email: UYE_E('a'), uid: 'uye-b', ts: 2 }), 'not its own email');
+  await assertFails(setDoc(doc(baskasi, 'girisYonu', anahtar('2')), { email: UYE_E('b'), uid: 'uye-b', ts: 2, nesil: 3 }), 'extra field');
+  await assertFails(setDoc(doc(sifreli('okul-a', OKUL_E('c')), 'girisYonu', anahtar('3')), { email: OKUL_E('c'), uid: 'okul-a', ts: 1 }));
+  await assertFails(setDoc(doc(testciDb, 'girisYonu', anahtar('3')), { email: UYE_E('a'), uid: TESTCI_UID, ts: 1 }), 'not an allowlisted teacher');
+  await assertSucceeds(setDoc(ref(uyeDb), { email: UYE_E('a'), uid: 'uye-a', ts: 3 }), 'owner update');
+  // The teacher points a Kaydol name to a new account, or a school name+number to a new generation.
+  await assertSucceeds(setDoc(ref(ogretmenDb), { email: UYE_E('d'), uid: 'uye-yeni', eskiUid: 'uye-a', ts: 4 }));
+  await assertFails(setDoc(ref(uyeDb), { email: UYE_E('a'), uid: 'uye-a', ts: 5 }), 'the old account cannot take it back');
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'girisYonu', anahtar('4')), { nesil: 2, ts: 1 }));
+  for (const nesil of [0, 1000, 'iki']) await assertFails(setDoc(doc(ogretmenDb, 'girisYonu', anahtar('5')), { nesil, ts: 1 }), 'nesil ' + nesil);
+  await assertFails(setDoc(doc(ogretmenDb, 'girisYonu', anahtar('5')), { email: OKUL_E('e'), ts: 1 }), 'teacher redirects only to Kaydol emails');
+  await assertFails(deleteDoc(ref(uyeDb)), 'no longer the owner');
+  await assertSucceeds(deleteDoc(doc(ogretmenDb, 'girisYonu', anahtar('4'))));
+});
+
+await check('after-a-kaydol-reset-only-the-new-account-reads-the-old-notebook', async () => {
+  const eski = sifreli('uye-eski', UYE_E('e')), yeni = sifreli('uye-yeni2', UYE_E('f')), yabanci = sifreli('uye-x', UYE_E('9'));
+  await assertSucceeds(setDoc(doc(eski, 'testDefter', 'uye-eski'), testDefter()));
+  await assertFails(getDoc(doc(yeni, 'testDefter', 'uye-eski')), 'no hand-over yet');
+  await assertFails(setDoc(doc(yeni, 'devir', 'uye-eski'), { yeniUid: 'uye-yeni2', ts: 1 }), 'only a teacher hands over');
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'devir', 'uye-eski'), { yeniUid: 'uye-yeni2', ts: 1 }));
+  await assertFails(setDoc(doc(ogretmenDb, 'devir', 'uye-z'), { yeniUid: 'a', ts: 1, fazla: 1 }));
+  await assertSucceeds(getDoc(doc(yeni, 'devir', 'uye-eski')));
+  await assertFails(getDoc(doc(yabanci, 'devir', 'uye-eski')));
+  await assertSucceeds(getDoc(doc(yeni, 'testDefter', 'uye-eski')), 'the new account reads the old notebook');
+  await assertFails(getDoc(doc(yabanci, 'testDefter', 'uye-eski')));
+  await assertFails(setDoc(doc(yeni, 'testDefter', 'uye-eski'), testDefter()), 'but cannot write it');
+  await assertFails(getDocs(collection(yeni, 'testDefter', 'uye-eski', 'gecmis')), 'nor its history');
+  await assertSucceeds(setDoc(doc(yeni, 'testDefter', 'uye-yeni2'), testDefter()), 'and saves its own copy');
+});
+
+await check('recovery-email-written-by-the-account-read-only-by-teachers', async () => {
+  const uye = sifreli('uye-r', UYE_E('7')), okul = sifreli('okul-r', OKUL_E('8'));
+  const ref = (db, uid) => doc(db, 'kurtarma', anahtar('6'), 'hesaplar', uid);
+  await assertSucceeds(setDoc(ref(uye, 'uye-r'), { eposta: 'ogrenci@example.com', tur: 'uye', ts: 1 }));
+  await assertSucceeds(setDoc(ref(okul, 'okul-r'), { eposta: 'veli@example.com', tur: 'okul', ts: 1 }));
+  await assertFails(setDoc(ref(uye, 'okul-r'), { eposta: 'x@example.com', tur: 'uye', ts: 1 }), 'another account');
+  for (const eposta of ['adres-yok', 'a@b', 'x'.repeat(121) + '@ex.com'])
+    await assertFails(setDoc(ref(uye, 'uye-r'), { eposta, tur: 'uye', ts: 1 }), eposta);
+  await assertFails(setDoc(ref(uye, 'uye-r'), { eposta: 'o@example.com', tur: 'uye', ts: 1, ad: 'Ali' }), 'extra field');
+  await assertFails(setDoc(ref(testciDb, TESTCI_UID), { eposta: 'o@example.com', tur: 'uye', ts: 1 }), 'Google tester');
+  await assertFails(getDoc(ref(uye, 'uye-r')), 'not even the owner reads it back');
+  await assertFails(getDocs(collection(anonDb, 'kurtarma', anahtar('6'), 'hesaplar')));
+  await assertSucceeds(getDocs(collection(ogretmenDb, 'kurtarma', anahtar('6'), 'hesaplar')));
+});
+
+await check('reset-requests-anyone-creates-only-teachers-read-and-delete', async () => {
+  const ref = (db, id) => doc(db, 'sifreTalepleri', id);
+  await assertSucceeds(setDoc(ref(anonDb, 't1'), { tur: 'okul', ad: 'Ada Yılmaz', eposta: 'veli@example.com', ts: 1 }));
+  await assertSucceeds(setDoc(ref(anonDb, 't2'), { tur: 'uye', ad: 'aliveli07', eposta: 'ali@example.com', ts: 2 }));
+  for (const bad of [{ tur: 'admin', ad: 'a', eposta: 'a@example.com', ts: 1 }, { tur: 'uye', ad: '', eposta: 'a@example.com', ts: 1 },
+      { tur: 'uye', ad: 'x'.repeat(81), eposta: 'a@example.com', ts: 1 }, { tur: 'uye', ad: 'a', eposta: 'nope', ts: 1 },
+      { tur: 'uye', ad: 'a', eposta: 'a@example.com', ts: 1, sifre: '123' }])
+    await assertFails(setDoc(ref(anonDb, 't9'), bad), JSON.stringify(bad));
+  await assertFails(getDoc(ref(anonDb, 't1')));await assertFails(getDocs(collection(anonDb, 'sifreTalepleri')));
+  await assertFails(getDocs(collection(sifreli('uye-q', UYE_E('5')), 'sifreTalepleri')), 'students cannot read requests');
+  await assertFails(setDoc(ref(anonDb, 't1'), { tur: 'okul', ad: 'Değişti', eposta: 'veli@example.com', ts: 9 }), 'no update');
+  await assertSucceeds(getDocs(collection(ogretmenDb, 'sifreTalepleri')));
+  await assertSucceeds(deleteDoc(ref(ogretmenDb, 't1')));
+  await assertFails(deleteDoc(ref(anonDb, 't2')));
+});
+
+await check('teacher-removes-the-name-password-lookup-of-a-reset-school-account', async () => {
+  const okul = sifreli('okul-s', OKUL_E('4')), ref = db => doc(db, 'sifreliGiris', anahtar('7'), 'hesaplar', 'okul-s');
+  await assertSucceeds(setDoc(ref(okul), { email: OKUL_E('4'), ts: 1 }));
+  await assertFails(deleteDoc(ref(sifreli('uye-t', UYE_E('3')))));
+  await assertSucceeds(deleteDoc(ref(ogretmenDb)));
+});
+
+console.log('\n=== TOTAL:', pass, 'passed,', fail, 'failed ===');
+await testEnv.cleanup();
+process.exit(fail ? 1 : 0);
