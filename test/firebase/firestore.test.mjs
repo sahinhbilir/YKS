@@ -6,7 +6,7 @@
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
 import { isDeepStrictEqual } from 'node:util';
-import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, runTransaction, collection } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, runTransaction, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 let pass = 0, fail = 0;
 const check = async (name, fn) => {
@@ -515,6 +515,92 @@ await check('removing-the-console-permission-ends-viewing', async () => {
   await assertFails(getDoc(doc(izleyiciDb, 'ogretmenYedek', OGRETMEN2_UID)));
   await assertSucceeds(getDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID)), 'owner keeps access');
 });
+
+// ================================================================== ortak öğretmen (sahibin yetkileriyle)
+// izleyiciler/{uid} = {sahipUid, yetki: 'ortak'}: sahibin defterinde sahibi gibi çalışır; kilitle tek kişi yazar.
+const ORTAK_UID = 'ortak-1', ORTAK2_UID = 'ortak-2';
+const ortakDb = testEnv.authenticatedContext(ORTAK_UID, gercekToken).firestore();
+const ortakAnonDb = testEnv.authenticatedContext(ORTAK_UID, anonimToken).firestore();
+const ortak2Db = testEnv.authenticatedContext(ORTAK2_UID, gercekToken).firestore();
+const kilitRef = (db, sahip = OGRETMEN_UID) => doc(db, 'defterKilidi', sahip);
+const kilitVeri = (uid, ad = 'Sentetik') => ({ uid, ad, ts: serverTimestamp() });
+const yonetici = fn => testEnv.withSecurityRulesDisabled(ctx => fn(ctx.firestore()));
+await yonetici(async db => {
+  await setDoc(doc(db, 'izleyiciler', ORTAK_UID), { sahipUid: OGRETMEN_UID, ad: 'Sentetik Ortak', yetki: 'ortak' });
+  // ORTAK2: sahibi allowlist'te olmayan bir defterin "ortağı" — hiçbir yetkisi olmamalı.
+  await setDoc(doc(db, 'izleyiciler', ORTAK2_UID), { sahipUid: 'sahip-allowlist-disi', yetki: 'ortak' });
+  await setDoc(doc(db, 'ogretmenYedek', OGRETMEN_UID), yedekVeri());
+  await setDoc(doc(db, 'ogretmenYedek', 'sahip-allowlist-disi'), yedekVeri());
+});
+await check('co-teacher-reads-and-writes-the-owners-notebook-and-history', async () => {
+  await assertSucceeds(getDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertSucceeds(setDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+  await assertSucceeds(setDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-10-13'), gunVeriBasit()));
+  await assertSucceeds(getDocs(collection(ortakDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis')));
+  await assertSucceeds(getDocs(collection(ortakDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari')));
+  await assertSucceeds(setDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'ortak-nokta'),
+    { ...gunVeriBasit(), kaynak: 'Ortak öğretmen testi' }));
+  await assertFails(setDoc(doc(ortakDb, 'ogretmenYedek', ORTAK_UID), yedekVeri()), 'no notebook of its own');
+  await assertFails(setDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN2_UID), yedekVeri()), 'not another teacher’s');
+  await assertFails(getDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN2_UID)));
+  await assertFails(setDoc(doc(ortakAnonDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()), 'anonymous session with the same uid');
+});
+await check('co-teacher-manages-the-owners-students-and-teacher-requests', async () => {
+  const yuva = sid('ortak-yuva');
+  await assertSucceeds(getDoc(doc(ortakDb, 'ogrenciler', sid('ortak-bos'))), 'may probe an empty slot before creating it');
+  await assertSucceeds(setDoc(doc(ortakDb, 'ogrenciler', yuva), bosYuva()));
+  await assertFails(setDoc(doc(ortakDb, 'ogrenciler', sid('ortak-kendi')), bosYuva({ ogretmenUid: ORTAK_UID })), 'slots belong to the owner');
+  await assertFails(setDoc(doc(ortakDb, 'ogrenciler', sid('ortak-baska')), bosYuva({ ogretmenUid: OGRETMEN2_UID })));
+  await assertSucceeds(getDoc(doc(ortakDb, 'ogrenciler', yuva)));
+  await assertSucceeds(getDoc(doc(ogretmenDb, 'ogrenciler', yuva)), 'the owner reads what the co-teacher created');
+  await assertSucceeds(updateDoc(doc(ortakDb, 'ogrenciler', yuva), { denemeOkul: '[]' }));
+  await assertSucceeds(setDoc(doc(ortakDb, 'ogrenciHesaplari', 'ortak-hesap'), hesapVeri(yuva)));
+  await assertSucceeds(getDocs(collection(ortakDb, 'sifreTalepleri')));
+  await assertSucceeds(setDoc(doc(ortakDb, 'devir', 'ortak-devir'), { yeniUid: 'yeni', ts: 1 }));
+  await assertFails(getDoc(doc(ortakDb, 'ogrenciler', digerSid)), 'not another teacher’s student');
+});
+await check('co-teacher-of-a-non-allowlisted-owner-has-no-rights', async () => {
+  await assertFails(setDoc(doc(ortak2Db, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+  await assertFails(setDoc(doc(ortak2Db, 'ogretmenYedek', 'sahip-allowlist-disi'), yedekVeri()));
+  await assertFails(getDocs(collection(ortak2Db, 'sifreTalepleri')));
+  await assertFails(setDoc(doc(ortak2Db, 'ogrenciHesaplari', 'ortak2-hesap'), hesapVeri(sid('ortak2'))));
+});
+await check('edit-lock-lets-one-editor-write-at-a-time', async () => {
+  await assertSucceeds(setDoc(kilitRef(ortakDb), kilitVeri(ORTAK_UID, 'Sentetik Ortak')));
+  await assertSucceeds(getDoc(kilitRef(ogretmenDb)), 'the owner sees who edits');
+  await assertFails(getDoc(kilitRef(ogretmen2Db)));await assertFails(getDoc(kilitRef(anonDb)));
+  await assertFails(setDoc(kilitRef(ogretmenDb), kilitVeri(OGRETMEN_UID)), 'a fresh lock is not taken over');
+  await assertFails(deleteDoc(kilitRef(ogretmenDb)), 'only its holder releases it');
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()), 'even the owner waits while the co-teacher edits');
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-10-13'), gunVeriBasit()));
+  await assertSucceeds(setDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+  await assertSucceeds(setDoc(kilitRef(ortakDb), kilitVeri(ORTAK_UID, 'Sentetik Ortak')), 'the holder refreshes it');
+  for (const kotu of [{ uid: OGRETMEN_UID, ad: 'x', ts: serverTimestamp() }, { uid: ORTAK_UID, ad: 'x', ts: Timestamp.now() },
+      { uid: ORTAK_UID, ad: 'x'.repeat(81), ts: serverTimestamp() }, { uid: ORTAK_UID, ad: 'x', ts: serverTimestamp(), ek: 1 }])
+    await assertFails(setDoc(kilitRef(ortakDb), kotu), JSON.stringify(kotu));
+  await assertSucceeds(deleteDoc(kilitRef(ortakDb)));
+  await assertSucceeds(setDoc(kilitRef(ogretmenDb), kilitVeri(OGRETMEN_UID)));
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+  await assertFails(setDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()), 'the co-teacher waits in turn');
+  // A lock not refreshed for 2 minutes can be taken over.
+  await yonetici(db => setDoc(kilitRef(db), { uid: OGRETMEN_UID, ad: 'x', ts: Timestamp.fromMillis(Date.now() - 5 * 60000) }));
+  await assertSucceeds(setDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()), 'a stale lock does not block');
+  await assertSucceeds(setDoc(kilitRef(ortakDb), kilitVeri(ORTAK_UID)));
+  await yonetici(db => deleteDoc(kilitRef(db)));
+});
+await check('removing-the-ortak-grant-ends-editing', async () => {
+  await yonetici(db => setDoc(doc(db, 'izleyiciler', ORTAK_UID), { sahipUid: OGRETMEN_UID }));
+  await assertSucceeds(getDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID)), 'still a viewer');
+  await assertFails(setDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()));
+  await assertFails(setDoc(kilitRef(ortakDb), kilitVeri(ORTAK_UID)));
+  await yonetici(db => deleteDoc(doc(db, 'izleyiciler', ORTAK_UID)));
+  await assertFails(getDoc(doc(ortakDb, 'ogretmenYedek', OGRETMEN_UID)));
+  await assertFails(getDocs(collection(ortakDb, 'sifreTalepleri')));
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID), yedekVeri()), 'the owner is unaffected');
+});
+// The owner's history counts below start from a clean slate.
+await yonetici(db => Promise.all([deleteDoc(doc(db, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-10-13')),
+  deleteDoc(doc(db, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'ortak-nokta'))]));
 
 // ================================================================== günlük yedek geçmişi
 const gunVeri = (over) => Object.assign({

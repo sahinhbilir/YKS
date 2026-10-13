@@ -54,7 +54,7 @@ async function load() {
       getDocs: async yol => ({ docs: Object.keys(belgeler).filter(k => k.startsWith(yol + '/') && !k.slice(yol.length + 1).includes('/'))
         .map(k => ({ id: k.split('/').pop(), data: () => belgeler[k] })) }),
       getDocFromServer: async () => ({ exists: () => false }),
-      updateDoc: async () => {}, runTransaction: async () => {}, onSnapshot: () => () => {}
+      updateDoc: async () => {}, runTransaction: async () => {}, onSnapshot: () => () => {}, serverTimestamp: () => ({ sunucuSaati: true })
     }
   };
   const modul = id => {

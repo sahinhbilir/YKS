@@ -31,6 +31,8 @@ jobs:
         run: node test/role-regression.js
       - name: Viewing teacher opens a shared notebook read-only
         run: node test/izleyici-regression.cjs
+      - name: Co-teacher edits the owner's notebook, one editor at a time
+        run: node test/ortak-ogretmen-regression.cjs
       - name: Automatic student workflow and eight-week simulation
         run: node test/student-automation-regression.js
       - name: Optional student reporting cycles

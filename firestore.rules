@@ -32,13 +32,67 @@ service cloud.firestore {
       allow list, write: if false;   // yalnızca Firebase konsolundan
     }
 
+    // Ortak öğretmen: izleyiciler/{uid} belgesinde ayrıca yetki == 'ortak' yazılıysa sahibin defterinde
+    // sahibinin yetkileriyle çalışır (defter, öğrenci yuvaları, öğrenci hesapları, şifre talepleri).
+    // İzin yine yalnızca konsoldan verilir; sahip allowlist'ten çıkarılırsa ortak öğretmenin yetkisi de biter.
+    // Bkz. docs/izleyici-ogretmen.md.
+    function ortakKaydi() {
+      return get(/databases/$(database)/documents/izleyiciler/$(request.auth.uid)).data;
+    }
+    function ortakOgretmenHerhangi() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && exists(/databases/$(database)/documents/izleyiciler/$(request.auth.uid))
+        && ortakKaydi().get('yetki', '') == 'ortak'
+        && ortakKaydi().sahipUid is string
+        && ortakKaydi().sahipUid != request.auth.uid
+        && exists(/databases/$(database)/documents/ogretmenler/$(ortakKaydi().sahipUid));
+    }
+    function ortakOgretmen(sahipUid) {
+      return ortakOgretmenHerhangi() && sahipUid is string && ortakKaydi().sahipUid == sahipUid;
+    }
+    // Defterin sahibi (allowlist'te) ya da ortak öğretmeni.
+    function defterYetkilisi(sahipUid) {
+      return (request.auth != null && request.auth.uid == sahipUid && yetkiliOgretmen()) || ortakOgretmen(sahipUid);
+    }
+    // Sahibe bağlı olmayan öğretmen işlemleri (şifre talepleri, öğrenci hesabı yayınlama…).
+    function ogretmenYetkisi() {
+      return yetkiliOgretmen() || ortakOgretmenHerhangi();
+    }
+
+    // Düzenleme kilidi: defteri aynı anda tek kişi düzenler. Kilit {uid, ad, ts} sunucu saatiyle yazılır;
+    // sahibi her dakika tazeler. 2 dakikadır tazelenmeyen kilidi diğer yetkili devralabilir.
+    function kilitBayat(kilit) {
+      return kilit.ts < request.time - duration.value(2, 'm');
+    }
+    match /defterKilidi/{sahipUid} {
+      function kilitGecerli() {
+        return request.resource.data.keys().hasOnly(['uid','ad','ts'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.ad is string
+          && request.resource.data.ad.size() <= 80
+          && request.resource.data.ts == request.time;
+      }
+      allow get: if defterYetkilisi(sahipUid);
+      allow create: if defterYetkilisi(sahipUid) && kilitGecerli();
+      allow update: if defterYetkilisi(sahipUid) && kilitGecerli()
+        && (resource.data.uid == request.auth.uid || kilitBayat(resource.data));
+      allow delete: if defterYetkilisi(sahipUid) && resource.data.uid == request.auth.uid;
+      allow list: if false;
+    }
+    // Başkası taze kilidi tutarken deftere yazılamaz (eski bir sekme ya da sürüm bile).
+    function kilitUygun(sahipUid) {
+      let yol = /databases/$(database)/documents/defterKilidi/$(sahipUid);
+      return !exists(yol) || get(yol).data.uid == request.auth.uid || kilitBayat(get(yol).data);
+    }
+
     // Öğretmenin kendi defterinin tamamı (yedek JSON'u), YALNIZCA kendi UID'si altında.
     // Başka bir öğretmen, öğrenci ya da anonim oturum bu belgeye erişemez; listeleme
     // izni yoktur, silme kapalıdır (yanlışlıkla ya da kötü niyetle yedek yok edilemesin —
     // üzerine yazmak için bile allowlist'te olmak gerekir).
     match /ogretmenYedek/{uid} {
-      allow get: if (request.auth != null && request.auth.uid == uid && yetkiliOgretmen()) || izleyici(uid);
-      allow create, update: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen()
+      allow get: if defterYetkilisi(uid) || izleyici(uid);
+      allow create, update: if defterYetkilisi(uid) && kilitUygun(uid)
         && request.resource.data.keys().hasOnly(['veri','ts','surum','boyut'])
         && request.resource.data.veri is string
         && request.resource.data.veri.size() > 0
@@ -52,8 +106,8 @@ service cloud.firestore {
     // bozulursa öğretmen önceki bir güne dönebilir. Silme kapalıdır ki geçmiş, üzerine
     // yazılarak ya da temizlenerek kaybolmasın; yalnızca o günün belgesi tazelenir.
     match /ogretmenYedek/{uid}/gecmis/{gun} {
-      allow get, list: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen();
-      allow create, update: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen()
+      allow get, list: if defterYetkilisi(uid);
+      allow create, update: if defterYetkilisi(uid) && kilitUygun(uid)
         && request.resource.data.keys().hasOnly(['veri','ts','surum','boyut','ogrenciSayisi','sonucSayisi'])
         && request.resource.data.veri is string
         && request.resource.data.veri.size() > 0
@@ -87,9 +141,8 @@ service cloud.firestore {
           && request.resource.data.kaynak.size() > 0
           && request.resource.data.kaynak.size() <= 100;
       }
-      allow get, list: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen();
-      allow create: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen()
-        && geriNoktasiGecerli();
+      allow get, list: if defterYetkilisi(uid);
+      allow create: if defterYetkilisi(uid) && geriNoktasiGecerli();
       allow update, delete: if false;
     }
 
@@ -113,7 +166,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['email','ts'])
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.ts is int;
-        allow delete: if (request.auth != null && request.auth.uid == uid) || yetkiliOgretmen();
+        allow delete: if (request.auth != null && request.auth.uid == uid) || ogretmenYetkisi();
       }
     }
 
@@ -136,7 +189,7 @@ service cloud.firestore {
           && request.resource.data.ts is int;
       }
       function ogretmenYonu() {
-        return yetkiliOgretmen()
+        return ogretmenYetkisi()
           && request.resource.data.keys().hasOnly(['email','uid','eskiUid','kokUid','nesil','ts'])
           && request.resource.data.ts is int
           && (!('email' in request.resource.data) || request.resource.data.email.matches('uye-[0-9a-f]{40}@uye[.]ykstekrar[.]app'))
@@ -147,18 +200,18 @@ service cloud.firestore {
       allow list: if false;
       allow create: if anahtar.matches('[0-9a-f]{64}') && (kendiYonu() || ogretmenYonu());
       allow update: if (kendiYonu() && resource.data.uid == request.auth.uid) || ogretmenYonu();
-      allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || yetkiliOgretmen();
+      allow delete: if (request.auth != null && resource.data.uid == request.auth.uid) || ogretmenYetkisi();
     }
 
     // Devir: öğretmen bir Kaydol şifresini sıfırlayınca yeni hesap eski defteri okuyup kendine taşır.
     match /devir/{eskiUid} {
-      allow get: if request.auth != null && (resource.data.yeniUid == request.auth.uid || yetkiliOgretmen());
+      allow get: if request.auth != null && (resource.data.yeniUid == request.auth.uid || ogretmenYetkisi());
       allow list: if false;
-      allow create, update: if yetkiliOgretmen()
+      allow create, update: if ogretmenYetkisi()
         && request.resource.data.keys().hasOnly(['yeniUid','ts'])
         && request.resource.data.yeniUid is string
         && request.resource.data.ts is int;
-      allow delete: if yetkiliOgretmen();
+      allow delete: if ogretmenYetkisi();
     }
 
     // Kurtarma e-postası: öğrenci şifresini değiştirirken kendi hesabı için yazar; yalnızca öğretmen okur
@@ -166,7 +219,7 @@ service cloud.firestore {
     match /kurtarma/{anahtar} {
       allow read, write: if false;
       match /hesaplar/{uid} {
-        allow get, list: if yetkiliOgretmen();
+        allow get, list: if ogretmenYetkisi();
         allow create, update: if request.auth != null && request.auth.uid == uid
           && anahtar.matches('[0-9a-f]{64}')
           && request.auth.token.firebase.sign_in_provider == 'password'
@@ -179,7 +232,7 @@ service cloud.firestore {
           && request.resource.data.eposta.matches('[^@ ]+@[^@ ]+[.][^@ ]+')
           && request.resource.data.tur in ['uye','okul']
           && request.resource.data.ts is int;
-        allow delete: if (request.auth != null && request.auth.uid == uid) || yetkiliOgretmen();
+        allow delete: if (request.auth != null && request.auth.uid == uid) || ogretmenYetkisi();
       }
     }
 
@@ -195,7 +248,7 @@ service cloud.firestore {
         && request.resource.data.eposta.size() <= 120
         && request.resource.data.eposta.matches('[^@ ]+@[^@ ]+[.][^@ ]+')
         && request.resource.data.ts is int;
-      allow get, list, delete: if yetkiliOgretmen();
+      allow get, list, delete: if ogretmenYetkisi();
       allow update: if false;
     }
 
@@ -259,7 +312,7 @@ service cloud.firestore {
           && request.resource.data.surum is int;
       }
       allow get: if request.auth != null && request.auth.uid == uid && resource.data.aktif == true;
-      allow create, update: if yetkiliOgretmen() && hesapBelgesiGecerli();
+      allow create, update: if ogretmenYetkisi() && hesapBelgesiGecerli();
       allow delete, list: if false;
     }
 
@@ -324,8 +377,7 @@ service cloud.firestore {
           );
       }
 
-      allow create: if request.auth != null && yetkiliOgretmen() && denemeOkulGecerli()
-        && request.auth.uid == request.resource.data.ogretmenUid
+      allow create: if request.auth != null && defterYetkilisi(request.resource.data.ogretmenUid) && denemeOkulGecerli()
         && (request.resource.data.bagliUid == null
           || (request.resource.data.bagliUid is string
             && yayinlanmisHesap(request.resource.data.bagliUid)))
@@ -342,11 +394,12 @@ service cloud.firestore {
       // izni verilmez; başka öğretmenlerin belgeleri taranamaz.
       // Devre dışı bırakılmış bir yuvayı öğrenci okuyamaz; eski cihaz sonrakiSyncId'yi
       // öğrenemez. Öğretmen erişimi allowlist'e bağlı kalır.
-      // İzleyici öğretmen, sahibinin mevcut yuvalarını yalnızca okur (yazma dallarının hiçbiri ona açık değildir).
+      // İzleyici öğretmen, sahibinin mevcut yuvalarını yalnızca okur (yazma dallarının hiçbiri ona açık değildir);
+      // ortak öğretmen ise sahibin yetkileriyle okur ve yazar (defterYetkilisi).
       allow get: if request.auth != null &&
-        ((yetkiliOgretmen() &&
+        ((ogretmenYetkisi() &&
             (!exists(/databases/$(database)/documents/ogrenciler/$(syncId)) ||
-              request.auth.uid == resource.data.ogretmenUid))
+              defterYetkilisi(resource.data.ogretmenUid)))
           || (request.auth.uid == resource.data.bagliUid && resource.data.durum == 'aktif')
           || (exists(/databases/$(database)/documents/ogrenciler/$(syncId)) && izleyici(resource.data.ogretmenUid)));
 
@@ -389,7 +442,7 @@ service cloud.firestore {
           // Devre dışı bırakma (syncId rotasyonunun bir adımı): yalnızca durum ve
           // sonrakiSyncId değişir; bagliUid (denetim için) ve paket (öğretmen zaten
           // transaction içinde okudu) dokunulmaz.
-          request.auth.uid == resource.data.ogretmenUid && yetkiliOgretmen()
+          defterYetkilisi(resource.data.ogretmenUid)
           && resource.data.durum == 'aktif' && request.resource.data.durum == 'iptal'
           && request.resource.data.sonrakiSyncId is string
           && request.resource.data.bagliUid == resource.data.bagliUid
@@ -402,7 +455,7 @@ service cloud.firestore {
           // Öğretmen, ad+numara hesabını yayınlarken mevcut yuvayı o hesabın UID'sine
           // bağlayabilir. Yalnızca bagliUid değişebilir ve hedef hesabın bu syncId için
           // önceden yayınlanmış olması zorunludur.
-          request.auth.uid == resource.data.ogretmenUid && yetkiliOgretmen()
+          defterYetkilisi(resource.data.ogretmenUid)
           && resource.data.durum == 'aktif' && request.resource.data.durum == 'aktif'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bagliUid'])
           && request.resource.data.bagliUid is string
@@ -410,7 +463,7 @@ service cloud.firestore {
         )
         ||
         (
-          request.auth.uid == resource.data.ogretmenUid && yetkiliOgretmen()
+          defterYetkilisi(resource.data.ogretmenUid)
           && resource.data.durum == 'aktif'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['denemeOkul'])
           && denemeOkulGecerli()
