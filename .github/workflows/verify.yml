@@ -25,8 +25,12 @@ jobs:
         run: node --test test/grade11-timetable-regression.cjs
       - name: Mock exams, import validation and embedding
         run: node scripts/embed-denemeler.cjs --check && node test/mock-exam-regression.cjs
+      - name: Sıralamalar comparison reports, storage and embedding
+        run: node scripts/embed-siralamalar.cjs --check && node test/siralama-regression.cjs
       - name: Role regression
         run: node test/role-regression.js
+      - name: Viewing teacher opens a shared notebook read-only
+        run: node test/izleyici-regression.cjs
       - name: Automatic student workflow and eight-week simulation
         run: node test/student-automation-regression.js
       - name: Optional student reporting cycles
@@ -79,7 +83,7 @@ jobs:
         with:
           node-version: 22
       - name: Install browser test runner
-        run: npm install --prefix "$RUNNER_TEMP/yks-browser" --no-save playwright@1.62.1
+        run: npm install --prefix "$RUNNER_TEMP/yks-browser" --no-save playwright@1.62.1 pdf-lib@1.17.1 @pdf-lib/fontkit@1.1.1 pdfjs-dist@5.6.205 roboto-fontface@0.10.0
       - name: Install Chromium
         run: node "$RUNNER_TEMP/yks-browser/node_modules/playwright/cli.js" install --with-deps chromium
       - name: Review and save a photographed plan on desktop and mobile
@@ -92,6 +96,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/student-activity-browser.cjs
       - name: Mock exam entry, charts and teacher imports
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/mock-exam-browser.cjs
+      - name: Sıralamalar reports on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/siralama-browser.cjs
       - name: Test account button, nickname setup, first cloud save and reset
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/test-account-browser.cjs
       - name: Personal TYT plan, no-school YKS plan and another exam's plan

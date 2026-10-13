@@ -14,12 +14,30 @@ service cloud.firestore {
       allow write: if false;   // yalnızca Firebase konsolundan elle eklenir, bkz. plan §1
     }
 
+    // İzleyici öğretmen: bir öğretmenin defterini ve öğrenci yuvalarını YALNIZCA OKUR.
+    // İzin yalnızca Firebase konsolunda izleyiciler/{izleyiciUid} = {sahipUid, ad?} yazılarak
+    // verilir. İzleyici ogretmenler listesinde olmadığından hiçbir yazma izni yoktur.
+    // Bkz. docs/izleyici-ogretmen.md.
+    function izleyici(sahipUid) {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && sahipUid is string
+        && sahipUid != request.auth.uid
+        && exists(/databases/$(database)/documents/izleyiciler/$(request.auth.uid))
+        && get(/databases/$(database)/documents/izleyiciler/$(request.auth.uid)).data.sahipUid == sahipUid;
+    }
+
+    match /izleyiciler/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;   // yalnızca Firebase konsolundan
+    }
+
     // Öğretmenin kendi defterinin tamamı (yedek JSON'u), YALNIZCA kendi UID'si altında.
     // Başka bir öğretmen, öğrenci ya da anonim oturum bu belgeye erişemez; listeleme
     // izni yoktur, silme kapalıdır (yanlışlıkla ya da kötü niyetle yedek yok edilemesin —
     // üzerine yazmak için bile allowlist'te olmak gerekir).
     match /ogretmenYedek/{uid} {
-      allow get: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen();
+      allow get: if (request.auth != null && request.auth.uid == uid && yetkiliOgretmen()) || izleyici(uid);
       allow create, update: if request.auth != null && request.auth.uid == uid && yetkiliOgretmen()
         && request.resource.data.keys().hasOnly(['veri','ts','surum','boyut'])
         && request.resource.data.veri is string
@@ -324,11 +342,13 @@ service cloud.firestore {
       // izni verilmez; başka öğretmenlerin belgeleri taranamaz.
       // Devre dışı bırakılmış bir yuvayı öğrenci okuyamaz; eski cihaz sonrakiSyncId'yi
       // öğrenemez. Öğretmen erişimi allowlist'e bağlı kalır.
+      // İzleyici öğretmen, sahibinin mevcut yuvalarını yalnızca okur (yazma dallarının hiçbiri ona açık değildir).
       allow get: if request.auth != null &&
         ((yetkiliOgretmen() &&
             (!exists(/databases/$(database)/documents/ogrenciler/$(syncId)) ||
               request.auth.uid == resource.data.ogretmenUid))
-          || (request.auth.uid == resource.data.bagliUid && resource.data.durum == 'aktif'));
+          || (request.auth.uid == resource.data.bagliUid && resource.data.durum == 'aktif')
+          || (exists(/databases/$(database)/documents/ogrenciler/$(syncId)) && izleyici(resource.data.ogretmenUid)));
 
       allow update: if request.auth != null && kimlikAlanlariAyni() && (
         (
