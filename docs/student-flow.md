@@ -18,7 +18,21 @@ Students open the app on Haftalar haritası (a restored tab after a same-tab rel
 
 Each result row has a **Yapmadım** button. It records no FSRS result and moves the test to the next week that has not been issued yet, as if it had not been in that week's plan (it uses the existing postpone, `D.ertele`, plus a per-test `D.yapilmadi` mark that syncs with the work snapshot). A later real result for that test replaces the mark.
 
-A student cannot download or print a week's plan until every test of the previous week is settled by a result, “Yapmadım” or “Bu konu daha anlatılmadı”. This applies to the current week and the next week; weeks after that are preview only. It applies only when the student used that previous week (downloaded its plan, or opened/saved results or downloaded a plan during it); a student returning after a longer break is not held to results they cannot remember. A blocked download opens that week's Sonuç gir with a short note, and tapping a grey week on the map does the same with a “you forgot to enter this week's results” note (the “Yapmadım” line is left out for a week without tests). Other weeks open their plan. Future-week previews assume “İyi” for every test that has no result yet, from the current week onward. The assumption is computed on a copy of the notebook; real results, cards, the prepared draft and printed plans never use it. The automatic weekly snapshot is unchanged.
+A missing result never blocks a plan: this week's and next week's plans can always be downloaded or printed, and weeks after that are preview only (their previous week has not started). The reminders stay. Opening Sonuç gir goes to the previous week while any of its tests has no result, “Yapmadım” or “Bu konu daha anlatılmadı”, and tapping a grey week on the map opens its Sonuç gir with a “you forgot to enter this week's results” note (the “Yapmadım” line is left out for a week without tests). Other weeks open their plan. Future-week previews also count the tests of weeks not yet given as İyi; that part is computed on a copy of the notebook.
+
+## Missing results count as İyi
+
+A test in a given week (a saved plan: printed, downloaded or saved automatically) that has no result is scheduled as if the student had rated it **İyi** on its day. Its 2nd, 3rd and 4th repetitions keep spacing out without Sonuç gir, exactly as if İyi had been entered each time. Nothing is written as a result:
+
+- the weeks map, Sonuç gir, the teacher's "Geçen haftanın sonucu" and the week counts use real results only, so such a week stays grey and keeps asking for its results;
+- FSRS calibration and the result package contain real results only;
+- the card keeps the assumed days (`vg`), and the plan's repetition label counts them ("3. tekrar · Son çözüm 07.10 · sonuç girilmedi").
+
+A real result entered later, even weeks later, replaces the assumption for that day. The card is recomputed and the coming weeks change; weeks already given never change.
+
+Not assumed: a test marked “Yapmadım”, a topic marked “Bu konu daha anlatılmadı” (and the course topics it shifts, before their new date), a week the teacher answered with "okula geldi, testleri kaldı" or "okula gelmedi" in **Nasıl geçti?** (its tests come back, postponed through `D.ertele`), a recovered paper's “yapılmadı” rows, free work, lessons and days on or after the exam. A week that is not given (red) has no tests to assume. A week computed live (not saved) ignores assumptions dated in that week or later, so it never treats its own tests as done.
+
+Code: `varsayimIyiGunleri` (which tests count), `kartHesapla` / `kartiYenidenHesapla` (cards from real and assumed reviews), `varsayimKartlariniGuncelle` (keeps cards in step; run on every render, skipped when the notebook has not changed, and per student after saving a week, a result, “Yapmadım”, a reset or a week decision). On the first load after this change, a postponement an older version wrote onto a card is kept as `D.ertele`. Tests: `test/assumed-good-regression.cjs`.
 
 ## Recall feedback and lessons not yet taught
 
@@ -46,7 +60,7 @@ At the end, Daha fazla opens the existing manual work dialog for the student's o
 
 ## Catch-up and workload
 
-Students joining late automatically receive the earlier curriculum topics in their personal topic pool. Missing scores remain unknown; their work re-enters the queue without altering FSRS grades or learning history. Advanced settings can disable automatic catch-up and exclude unstarted topics introduced by it. Submitted results and existing weekly snapshots are retained.
+Students joining late automatically receive the earlier curriculum topics in their personal topic pool. Missing scores of topics never given remain unknown; their work re-enters the queue without altering FSRS grades or learning history. Advanced settings can disable automatic catch-up and exclude unstarted topics introduced by it. Submitted results and existing weekly snapshots are retained.
 
 Normal weeks keep the existing recall-based one/two-test rule. In overloaded student weeks, previously successful topics (last score at least 80%) can receive one 12-question test instead of two. Weak topics retain two tests. Reviews take priority over new topics when overloaded; placement can reuse earlier free days. A one-test daily capacity permits one initial test rather than starving all two-test items. No new work is placed on or after the exam date.
 
