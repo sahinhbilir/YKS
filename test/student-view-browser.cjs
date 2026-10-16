@@ -24,7 +24,6 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
     const ilk=gunNo('2026-10-05');
     D.ogr=[{ad:'SENTETİK ADA',no:1001,sube:'12-A',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,ilkAktif:ilk,cikti:bugunNo(),ogrenciBulutId:'s1',denemeOkul:[kayit(30)]},
      {ad:'SENTETİK BORA',no:1002,sube:'12-A',sinif:12,alan:'EA',kap:6,off:[6],aktif:true,ilkAktif:ilk,ogrenciBulutId:'s2',denemeOkul:[kayit(20)]}];
-    D.elle={['0|'+ilk]:{ek:[],sil:[],yer:{},soru:{},degisim:{},konuSlot:{},sabit:ilk}};   // Ada's printed week without a result
     EK.ogr=0;EK.sekme='siralamalar';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
     denemePdfSayfalari=async f=>{if(!l[f.name])throw new Error('bilinmeyen dosya');return structuredClone(l[f.name])};ciz();
    },listeler);
@@ -87,8 +86,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
     // The same from every page that names a student.
     const ac=async(sekme,secici,ad)=>{await page.evaluate(s=>{EK.sekme=s;ciz()},sekme);await gozuyle(()=>page.locator(secici).first().click(),ad);
      await page.keyboard.press('Escape');assert.equal(await page.locator('#ogrGor').count(),0,'Esc closes ('+sekme+')');};
-    await ac('ana','#rehberHafta .rh-ad [data-ogr-gor]','SENTETİK ADA');
-    await page.locator('#rehberHafta [data-ra-harita="0"]').click();assert.equal(await page.evaluate(()=>EK.sekme),'harita','the number still opens the weeks map');
+    await ac('ana','#rehberHafta .rh-adlar [data-ogr-gor]','SENTETİK ADA');
     await ac('takip','.etkinlik-satir [data-ogr-gor="1"]','SENTETİK BORA');
     await ac('plan','.sayfa-ust .isim [data-ogr-gor]','SENTETİK ADA');
     await ac('ogrenciler','.ogr-gor-dugme[data-ogr-gor="1"]','SENTETİK BORA');

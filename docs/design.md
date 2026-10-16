@@ -157,16 +157,13 @@ After login, after opening a cloud notebook (own, view-only or co-teacher) and o
 the brand, teachers land on the home page (`gorunumRehberAna`, tab `'ana'`). Like
 the student home, it has two cards with linked headings:
 
-- **Bu hafta** (opens Haftalık öğrenci takibi). It shows the calendar week, the
-  number of students and classes, then four numbers: Plan verildi (`o.cikti` this
-  week), PDF istedi (this week's activity), Geçen haftanın sonucu (a result in the
-  student's previous plan week) and Karar bekleyen (weeks marked "sonuç yok" on the
-  weeks map, the same check as `atlananHaftalar`). The same four columns repeat per
-  class. A class name opens that class's weekly plan. Under "Karar bekleyen" each
-  name opens the student's view and the number beside it opens that student's weeks
-  map. The card refreshes live as student
-  activity arrives. "E-posta talepleri (n)" sits beside the heading while requests
-  wait.
+- **Bu hafta** (opens Haftalık öğrenci takibi). It shows the calendar week and
+  **n/N Plan verildi** (`o.cikti` this week), then only the names of the students
+  given this week's plan, A–Z, in columns. A name opens the student's view. There
+  are no classes and no "Karar bekleyen". Below the names, in small grey text: PDF
+  istedi (this week's activity) and Geçen haftanın sonucu (a result in the student's
+  previous plan week). The card refreshes live as student activity arrives.
+  "E-posta talepleri (n)" sits beside the heading while requests wait.
 - **Deneme ortalaması** (opens Denemeler). It is drawn the same way as the student's
   progress chart, and each point is one school exam (imported from PDF), averaged
   over the students who took it. TYT · AYT picks the exam type. AYT adds SAY · EA ·
@@ -175,8 +172,7 @@ the student home, it has two cards with linked headings:
 - In a single column (≤1100 px) the week card comes first, then the chart.
 
 A student's name anywhere in the teacher pages opens that student's own screens in an
-isolated frame ("Öğrenci gözüyle"); under "Karar bekleyen" the name opens the student's
-view and the number beside it opens the weeks map. See docs/ogrenci-gozuyle.md.
+isolated frame ("Öğrenci gözüyle"). See docs/ogrenci-gozuyle.md.
 
 ## Müfredat (teacher)
 
@@ -198,8 +194,7 @@ One page at the top right, with two tabs:
 The same rule as the student map: a past week whose plan was saved (printed or
 downloaded; `elle.sabit`) but has no result is **grey** and offers **Nasıl geçti?**; a
 past week with no plan at all is **red** ("plan verilmedi") and offers **Planı
-kurtar**, which opens past-plan recovery for that student and week. Only grey weeks
-count as "Karar bekleyen".
+kurtar**, which opens past-plan recovery for that student and week.
 
 ## Printed agreement and routine
 

@@ -43,7 +43,7 @@ fs.mkdirSync(out,{recursive:true});
    });
    // The teacher lands on the main screen; its "Bu hafta" title opens the weekly tracking page.
    await page.reload();await page.getByRole('heading',{name:'Bu hafta'}).waitFor();
-   assert.match(await page.locator('#rehberHafta .rh-sayi').nth(1).innerText(),/^1\/2\s*PDF istedi$/);
+   assert.match(await page.locator('#rehberHafta .rh-ikincil .rh-sayi').first().innerText(),/^1\/2\s*PDF istedi$/);
    await page.getByRole('heading',{name:'Bu hafta'}).getByRole('button').click();await page.getByRole('heading',{name:'Haftalık öğrenci takibi'}).waitFor();
    assert.equal(await page.locator('#takipHafta').inputValue(),'2026-09-28');
    assert.equal(await page.locator('#takipOlcut').inputValue(),'islem');

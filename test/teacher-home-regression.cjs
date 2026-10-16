@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 // Teacher top menu and main screen: menu groups (same pattern as the student's), this week's
-// numbers per class (plan given, PDF requested, last week's result, weeks awaiting a decision)
-// and the class average of school mock exams. Synthetic data only.
+// plan-given students (PDF requested and last week's result as small numbers) and the class
+// average of school mock exams. Synthetic data only.
 const fs = require('fs'), vm = require('vm');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
@@ -65,33 +65,36 @@ check('student menu keeps its layout', () => {
   assert.match(h, /aria-label="Planla ilgili diğer sayfalar"/);
 });
 
-check('this week per class: plan given, PDF requested, last week\'s result, weeks awaiting a decision', () => {
+check('this week: names of students given the plan; PDF requested and last week\'s result small below', () => {
   const ozet = JSON.parse(run(`(() => {
     const hb = buHafta(0), onceki = oncekiHafta(0, hb), ts = Date.parse('2026-10-14T09:00:00+03:00');
     D.ogr[0].cikti = bugunNo();                 // Ada: plan given this week
-    D.ogr[1].cikti = onceki;                    // Bora: plan given last week only, no result → awaiting a decision
-    D.elle = {['1|' + onceki]: {ek: [], sil: [], yer: {}, soru: {}, degisim: {}, konuSlot: {}, sabit: onceki}};
+    D.ogr[2].cikti = bugunNo();                 // Cem: plan given this week
+    D.ogr[1].cikti = onceki;                    // Bora: plan given last week only
+    D.ogr[3].cikti = bugunNo();                 // deleted student: ignored
     D.ogr[0].etkinlik = {v:1,baslangic:ts,kayit:[{tur:'pdf',hafta:hb,sonucHafta:onceki,ilk:ts,son:ts}]};
     D.log.push([onceki + 2, 0, 0, 9, 12, 1, ts]);   // Ada: a result in last week's plan
     D.log.push([onceki + 1, 3, 0, 9, 12, 1, ts]);   // deleted student: ignored
-    return JSON.stringify(rehberHaftaOzeti().map(r => [r.o.ad, r.plan, r.pdf, r.sonuc, r.karar]));
+    return JSON.stringify(rehberHaftaOzeti().map(r => [r.o.ad, r.plan, r.pdf, r.sonuc]));
   })()`));
-  assert.deepEqual(ozet, [['Synthetic Ada', true, true, true, 0], ['Synthetic Bora', false, false, false, 1], ['Synthetic Cem', false, false, false, 0]]);
+  assert.deepEqual(ozet, [['Synthetic Ada', true, true, true], ['Synthetic Bora', false, false, false], ['Synthetic Cem', true, false, false]]);
   const kart = run('rehberHaftaKarti()');
   assert.match(kart, /12\.10\.2026 – 18\.10\.2026/);
-  assert.match(kart, /<h2>3 öğrenci <span>2 şube<\/span><\/h2>/);
-  const sayilar = [...kart.matchAll(/<div class="rh-sayi[^"]*"><strong>(.*?)<\/strong><span>(.*?)<\/span>/g)].map(m => m[2] + ' ' + m[1].replace(/<[^>]+>/g, ''));
-  assert.deepEqual(sayilar, ['Plan verildi 1/3', 'PDF istedi 1/3', 'Geçen haftanın sonucu 1/3', 'Karar bekleyen 1']);
-  assert.match(kart, /<div class="rh-sayi uyari"><strong>1<\/strong><span>Karar bekleyen/);
-  const satirlar = [...kart.matchAll(/data-ra-sube="([^"]*)"[^>]*>([^<]*)<small>(\d+) öğrenci<\/small><\/button><\/th>(.*?)<\/tr>/g)]
-    .map(m => [m[1], m[3], [...m[4].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map(x => x[1].replace(/<[^>]+>/g, ''))]);
-  assert.deepEqual(satirlar, [['12-A', '2', ['1/2', '1/2', '1/2', '1']], ['12-B', '1', ['0/1', '0/1', '0/1', '0']]]);
-  // The name opens Bora's own view; the number opens the weeks map to decide.
-  assert.match(kart, /<span class="rh-ad"><button type="button" class="ogr-ad" data-ogr-gor="1" title="Öğrenci gözüyle gör">Synthetic Bora<\/button><button type="button" data-ra-harita="1"[^>]*>1<\/button><\/span>/);
-  assert.doesNotMatch(kart, /Silinen/);
+  assert.match(kart, /<h2 class="rh-plan">2<small>\/3<\/small> <span>Plan verildi<\/span><\/h2>/);
+  // Only the names of students given this week's plan; each opens that student's own view.
+  assert.deepEqual([...kart.matchAll(/<li><button type="button" class="ogr-ad" data-ogr-gor="(\d+)"[^>]*>([^<]*)<\/button><\/li>/g)].map(m => [m[1], m[2]]),
+    [['0', 'Synthetic Ada'], ['2', 'Synthetic Cem']]);
+  const kucuk = [...kart.matchAll(/<div class="rh-sayi"><strong>(.*?)<\/strong><span>(.*?)<\/span>/g)].map(m => m[2] + ' ' + m[1].replace(/<[^>]+>/g, ''));
+  assert.deepEqual(kucuk, ['PDF istedi 1/3', 'Geçen haftanın sonucu 1/3']);
+  assert.ok(kart.indexOf('rh-adlar') < kart.indexOf('rh-ikincil'), 'the small numbers come after the names');
+  for (const gone of [/Karar bekleyen/, /şube/i, /data-ra-/, /Silinen/]) assert.doesNotMatch(kart, gone);
+  // Nobody given a plan yet: no list, just 0/n.
+  run('D.ogr.forEach(o => { delete o.cikti; })');
+  const bos = run('rehberHaftaKarti()');
+  assert.match(bos, /<h2 class="rh-plan">0<small>\/3<\/small>/); assert.doesNotMatch(bos, /rh-adlar/);
 });
 
-check('the fast per-student count matches the weeks map on a large notebook', () => {
+check('the fast per-student result count matches haftaSonucSayisi on a large notebook', () => {
   const fark = run(`(() => {
     let tohum = 7; const rastgele = n => (tohum = (tohum * 48271) % 2147483647) % n;
     D.ayar.testTarih = '2027-03-10'; const bas = gunNo('2026-08-24');
@@ -99,12 +102,10 @@ check('the fast per-student count matches the weeks map on a large notebook', ()
       ilkAktif: bas + 7 * rastgele(10), cikti: bas + rastgele(200), silindi: i === 39}));
     D.log = Array.from({length: 3000}, () => [bas + rastgele(200), rastgele(40), 0, 9, 12, 1, 1]);
     D.elle = {}; for (let i = 0; i < 40; i++) for (let w = 0; w < 28; w++) if (!rastgele(3)) D.elle[i + '|' + (bas + 7 * w)] = {sabit: bas + 7 * w};
-    D.haftaDurum = {['3|' + (bas + 14)]: {neden: 'onemsiz', konu: 0}};
-    return rehberHaftaOzeti().filter(r => r.karar !== atlananHaftalar(r.si).length ||
-      r.sonuc !== haftaSonucSayisi(r.si, oncekiHafta(r.si, buHafta(r.si))) > 0).map(r => r.si);
+    return rehberHaftaOzeti().filter(r => r.sonuc !== haftaSonucSayisi(r.si, oncekiHafta(r.si, buHafta(r.si))) > 0).map(r => r.si);
   })()`);
   assert.deepEqual(Array.from(fark), []);
-  assert(run('rehberHaftaOzeti().reduce((t, r) => t + r.karar, 0)') > 0, 'the sample has weeks awaiting a decision');
+  assert(run('rehberHaftaOzeti().some(r => r.sonuc) && rehberHaftaOzeti().some(r => !r.sonuc)'), 'the sample has both');
 });
 
 check('weeks map: printed without result is grey (Nasıl geçti?), not printed is red (Planı kurtar)', () => {
