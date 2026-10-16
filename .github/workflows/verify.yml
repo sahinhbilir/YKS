@@ -110,6 +110,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/siralama-browser.cjs
       - name: Test account button, nickname setup, first cloud save and reset
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/test-account-browser.cjs
+      - name: Light and dark contrast, theme preference and mobile navigation
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/design-browser.cjs
       - name: Personal TYT plan, no-school YKS plan and another exam's plan
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/personal-plan-browser.cjs
       - name: Teacher top menu and main screen on desktop and mobile

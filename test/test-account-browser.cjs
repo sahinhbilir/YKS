@@ -52,7 +52,9 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert(rehber.y+rehber.height<=kayit.y && Math.abs(kayit.y-test.y)<1 && kayit.x+kayit.width<=test.x,'Kaydol sits between Rehber öğretmeniyim and Test hesabı aç');
    assert(Math.abs(kayit.width-test.width)<1 && Math.abs(rehber.width-(test.x+test.width-kayit.x))<1,'balanced rows');
    assert(giris.y+giris.height<=800,'Giriş yap is visible without scrolling');
-   assert(girisKart.height<=300 && girisKart.width<=362,'compact login card: '+Math.round(girisKart.width)+'×'+Math.round(girisKart.height));
+   assert(girisKart.width<=400 && girisKart.width<=width-24,'login card fits the screen');
+   for(const selector of ['#ogrenciGirisAd','#ogrenciGirisNo','#ogrenciBulutGiris','#rolRehber','#kaydolAc','#testHesapAc']) assert((await kutu(selector)).height>=44,'comfortable touch target: '+selector);
+   assert(await page.locator('label[for="ogrenciGirisAd"]').isVisible(),'persistent visible field label');
    assert.equal(await page.getByLabel('Kullanıcı adı ya da ad soyad').getAttribute('id'),'ogrenciGirisAd','labels stay for screen readers');
    assert.equal(await page.getByLabel('Şifre ya da okul numarası').getAttribute('id'),'ogrenciGirisNo');
    assert.equal(await page.locator('#ogrenciGirisAd').getAttribute('placeholder'),'Kullanıcı adı - Ad soyad');
@@ -71,13 +73,13 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    await page.setViewportSize({width:1920,height:1080});
    const bosluk=await page.evaluate(()=>({ust:document.querySelector('.giris-baslik').getBoundingClientRect().top,
      alt:innerHeight-document.querySelector('.giris-yedek').getBoundingClientRect().bottom,kaydir:document.documentElement.scrollHeight>innerHeight}));
-   assert(!bosluk.kaydir && Math.abs(bosluk.ust-bosluk.alt)<=2 && bosluk.ust>60,'centred vertically: '+JSON.stringify(bosluk));
+   assert(!bosluk.kaydir && Math.abs(bosluk.ust-bosluk.alt)<=2 && bosluk.ust>=56,'centred vertically: '+JSON.stringify(bosluk));
    // Section gaps open up on a tall screen (capped) and stay at their minimum on a short one.
    const aralik=()=>page.evaluate(()=>['.ara-kart','.ara-cizim','.ara-yedek'].map(s=>Math.round(document.querySelector(s).getBoundingClientRect().height)));
    const genis=await aralik();assert(genis[0]>30 && genis[0]<=130 && genis[1]>30 && genis[1]<=130 && genis[2]<=52,'tall screen gaps: '+genis);
    // Symmetric around the login card: subtitle→card equals card→cap (the drawing starts at the cap).
    const simetri=await page.evaluate(()=>{const r=s=>document.querySelector(s).getBoundingClientRect();
-     return [r('.giris-kart').top-r('.giris-alt').bottom,r('.giris-cizim').top-r('.giris-kart').bottom];});
+     return [r('.giris-kart').top-r('.giris-vaat').bottom,r('.giris-cizim').top-r('.giris-kart').bottom];});
    assert(Math.abs(simetri[0]-simetri[1])<=4,'equal gaps around the login card: '+simetri.map(Math.round));
    await page.setViewportSize({width,height:640});
    assert.deepEqual(await aralik(),[30,30,22],'short screen gaps stay at their minimum');
@@ -128,9 +130,9 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    // Student top menu: "Planım" opens the weekly plan; its arrow (hover or click) lists the other plan pages.
    assert.equal(await page.locator('#ray').getAttribute('class'),'ray ust');
    // The brand (YKS Tekrar Defteri) is the home button; then Planım ▾, Denemelerim, Müfredat, Ayarlar.
-   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','denemeler','mufredat','ayarlar']);
+   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','denemeler']);
    assert.equal(await page.locator('#ray > button.marka').isVisible(),true,'the brand stays visible at '+width);
-   const menu=page.locator('#planMenusu'),ok=page.locator('#ray .menu-ac');
+   const menu=page.locator('#planMenusu'),ok=page.locator('#ray [aria-controls="planMenusu"]');
    assert.equal(await menu.isVisible(),false,'menu folded');
    await ok.hover();assert.equal(await menu.isVisible(),true,'hovering the arrow opens it');
    assert.deepEqual(await menu.locator('button').allTextContents(),['Haftalar haritası','Sonuç gir']);
@@ -182,6 +184,7 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'home overflow');
    await page.screenshot({path:path.join(out,'student-home-'+width+'.png'),fullPage:true});
    await page.locator('#ray [data-sekme="plan"]').click();assert.equal(await page.evaluate(()=>EK.sekme),'plan','Planım opens the weekly plan');
+   if(await page.locator('[aria-controls="hesapMenusu"]').isVisible())await page.locator('[aria-controls="hesapMenusu"]').click();
    await page.locator('[data-sekme="ayarlar"]').first().click();
    await page.getByRole('heading',{name:'Test hesabın'}).waitFor();
    assert((await page.locator('#ana').innerText()).includes('tester@example.test'));
@@ -210,7 +213,8 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    // starts this week without school, and the student lands on the home page.
    await page.locator('#kaydolAc').click();
    const kayitKart=await page.locator('#kaydolKart').boundingBox();
-   assert(kayitKart.height<=320 && kayitKart.width<=362,'compact sign-up card: '+Math.round(kayitKart.width)+'×'+Math.round(kayitKart.height));
+   assert(kayitKart.width<=400 && kayitKart.width<=width-24,'sign-up card fits the screen');
+   assert((await page.locator('#kaydolBaslat').boundingBox()).height>=44,'sign-up touch target');
    await page.locator('#kaydolAd').fill('Deniz Kaya');
    assert.equal(await page.locator('#kaydolDurum').textContent(),'Kullanıcı adın: denizkaya','spaces are shown removed');
    await page.locator('#kaydolSifre').fill('gizli-123');
@@ -229,6 +233,7 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert(bulutYollari.includes('testDefter/uye-denizkaya'),'the notebook is saved to the cloud');
    await page.screenshot({path:path.join(out,'kaydol-home-'+width+'.png')});
    // Ayarlar → Kullanıcı adını değiştir, then Şifre değiştir (both folded, right under the heading).
+   if(await page.locator('[aria-controls="hesapMenusu"]').isVisible())await page.locator('[aria-controls="hesapMenusu"]').click();
    await page.locator('#ray [data-sekme="ayarlar"]').first().click();
    const sifreKart=page.locator('#sifreKart');
    const [ayarBaslik,adKutu,kartKutu]=await Promise.all([page.locator('.baslik h1').first().boundingBox(),page.locator('#adKart').boundingBox(),sifreKart.boundingBox()]);

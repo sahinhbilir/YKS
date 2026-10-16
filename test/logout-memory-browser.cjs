@@ -4,10 +4,12 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
 let browser;
 (async()=>{
- browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.YKS_CHROMIUM?{executablePath:process.env.YKS_CHROMIUM}:{})});
  for(const role of ['rehber','ogrenci']){
    const context=await browser.newContext({viewport:role==='ogrenci'?{width:390,height:844}:{width:1280,height:950}});
-   const errors=[],records=[];const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.dismiss());
+   const errors=[],records=[];const page=await context.newPage();
+   const clickLogout=async()=>{const more=page.locator('[aria-controls="hesapMenusu"]');if(await more.isVisible() && !(await page.locator('#hesapMenusu').isVisible()))await more.click();await page.locator('#oturumKapat').click();};
+   page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.dismiss());
    await context.route('**/*',route=>route.request().url().startsWith('http://localhost/')?
      route.fulfill({status:route.request().url().includes('/data/')?404:200,contentType:'text/html',body:html}):route.abort());
    await page.exposeFunction('__record',x=>records.push(x));
@@ -48,7 +50,7 @@ let browser;
    // Unsaved teacher settings must not vanish when logout is clicked.
    if(role==='rehber'){
      await page.getByRole('button',{name:'Ayarlar',exact:true}).click();await page.locator('#aSoru').fill('25');
-     await page.locator('#oturumKapat').click();await page.getByText('Değiştirdiğiniz ayarları önce Kaydet düğmesiyle kaydedin.',{exact:true}).waitFor();
+     await clickLogout();await page.getByText('Değiştirdiğiniz ayarları önce Kaydet düğmesiyle kaydedin.',{exact:true}).waitFor();
      assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await page.locator('#cikisKapat').click();await page.locator('#ayarKaydet').click();
      // Rollback is driven through the visible two-button settings flow.
      await page.evaluate(async()=>{
@@ -67,14 +69,14 @@ let browser;
    }
    // The persistent week editor can be hidden by navigation. Logout must finish it.
    await page.evaluate(()=>{duzenlemeBaslat(0,buHafta(0)+7);});
-   await context.setOffline(true);await page.locator('#oturumKapat').click();
+   await context.setOffline(true);await clickLogout();
    await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('İnternet bağlantısı yok'));
    assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await context.setOffline(false);await page.locator('#cikisKapat').click();
    const second=await context.newPage();await second.goto('http://localhost/?dev=1');await second.waitForFunction(()=>!!D?.rol);
    assert.equal(await second.evaluate(()=>D.ogr[0].aytOncelik),true,'AYT setting survives fresh page load');
-   await page.locator('#oturumKapat').click();await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('başka bir sekmede'));
+   await clickLogout();await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('başka bir sekmede'));
    assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await second.close();await page.locator('#cikisKapat').click();
-   await page.evaluate(()=>{window.__failWrite=true;});await page.locator('#oturumKapat').click();
+   await page.evaluate(()=>{window.__failWrite=true;});await clickLogout();
    await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('sunucu kaydı reddetti'));
    assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));assert.equal(await page.evaluate(()=>document.querySelector('.kabuk').inert),false);
    await page.screenshot({path:path.join(out,'logout-retry-'+role+'.png'),fullPage:true});

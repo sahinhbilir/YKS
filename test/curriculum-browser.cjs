@@ -27,6 +27,7 @@ fs.mkdirSync(out,{recursive:true});
     const tab=page.locator('[data-ayar-bolum="program"]');
     if(await tab.getAttribute('aria-pressed')!=='true')await tab.click();
    };
+   if(await page.locator('[aria-controls="hesapMenusu"]').isVisible())await page.locator('[aria-controls="hesapMenusu"]').click();
    await page.locator('[data-sekme="ayarlar"]').first().click();await openAdvanced();
    await page.locator('#dpCiktiYapistir').fill(JSON.stringify({saatler:['09:00','10:00'],
     gunler:[['MATEMATİK','TYT MATEMATİK'],['AYT MATEMATİK',''],[],[],[],[],[]]}));
@@ -47,6 +48,7 @@ fs.mkdirSync(out,{recursive:true});
    await openAdvanced();
    assert.equal(await page.locator('#donemBasi').inputValue(),'2026-09-07');
    await page.screenshot({path:path.join(out,'grade11-timetable-'+width+'.png'),fullPage:true});
+   if(await page.locator('[aria-controls="hesapMenusu"]').isVisible())await page.locator('[aria-controls="hesapMenusu"]').click();
    await page.locator('[data-sekme="mufredat"]').first().click();
    await page.getByRole('heading',{name:'Müfredat ve kaynaklar'}).waitFor();
    await page.locator('summary').filter({hasText:'Matematik'}).click();

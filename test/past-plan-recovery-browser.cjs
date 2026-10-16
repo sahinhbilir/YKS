@@ -5,7 +5,7 @@ const path=require('node:path'),os=require('node:os');
 const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-photo-ui-'));fs.mkdirSync(out,{recursive:true});
 let browser;
 (async()=>{
- browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.YKS_CHROMIUM?{executablePath:process.env.YKS_CHROMIUM}:{})});
  const page=await browser.newPage({viewport:{width:1280,height:950}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.dismiss());
  const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
@@ -71,7 +71,7 @@ let browser;
  await page.screenshot({path:path.join(out,'student-photo-recovery-mobile.png'),fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'student mobile overflow');
  // Student pages other than the weekly plan sit under the "Planım" arrow in the top menu.
- await page.locator('#ray .menu-ac').click();await page.getByRole('button',{name:'Haftalar haritası',exact:true}).click();
+ await page.locator('#ray [aria-controls="planMenusu"]').click();await page.getByRole('button',{name:'Haftalar haritası',exact:true}).click();
  const past=await page.evaluate(()=>gunNo('2026-08-31'));await page.locator('[data-ogr-hafta="'+past+'"]').click();
  assert.equal(await page.evaluate(()=>EK.hafta),past);assert.match(await page.locator('#ana').innerText(),/8\/10/);
  // The student's daily-target settings also mention this name; count only plan tasks.
