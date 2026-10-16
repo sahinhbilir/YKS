@@ -33,6 +33,8 @@ jobs:
         run: node test/izleyici-regression.cjs
       - name: Co-teacher edits the owner's notebook, one editor at a time
         run: node test/ortak-ogretmen-regression.cjs
+      - name: Teacher top menu and main screen
+        run: node test/teacher-home-regression.cjs
       - name: Automatic student workflow and eight-week simulation
         run: node test/student-automation-regression.js
       - name: Optional student reporting cycles
@@ -104,6 +106,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/test-account-browser.cjs
       - name: Personal TYT plan, no-school YKS plan and another exam's plan
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/personal-plan-browser.cjs
+      - name: Teacher top menu and main screen on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/teacher-home-browser.cjs
       - name: Keep synthetic review screenshots
         if: always()
         uses: actions/upload-artifact@v4

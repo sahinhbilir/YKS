@@ -428,7 +428,7 @@ function denemeYolSvg(v,H=270,W=480) {
   const sinif='yg-'+(secim.tur==='BRANS'?'BRANS':secim.tur);
   if(noktalar.length>1)svg+='<polyline class="yg-cizgi '+sinif+'" points="'+noktalar.map(n=>r1(x(n.g))+','+r1(y(n.v))).join(' ')+'"/>';
   svg+=noktalar.map(n=>{const etiket=secim.ad+' · '+n.r.ad+(n.r.genel?' ('+n.r.genel+' denemesinden)':'')+' · '+n.r.tarih+(n.erken?' (dönem başından önce; grafiğin başında)':'')+' · '+denemeSayi(n.v)+' net';
-    return '<circle class="yg-nokta '+sinif+(n.r.genel?' genel':'')+(n.erken?' erken':'')+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+'. Denemelerim’de aç')+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
+    return '<circle class="yg-nokta '+sinif+(n.r.genel?' genel':'')+(n.erken?' erken':'')+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+(ogrenciMi()?'. Denemelerim’de aç':'. Denemeler’de aç'))+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
   if(!noktalar.length)svg+='<text class="yg-bos" x="'+r1((L+W-R)/2)+'" y="'+r1(H/2)+'" text-anchor="middle">Henüz '+kacis(secim.ad)+' denemesi yok</text>';
   return svg+'</svg>';
 }
@@ -439,7 +439,7 @@ function denemeYolSigdir() {
   if(!alan || !alan.clientWidth || !alan.clientHeight)return;
   const s=Math.max(1,Math.min(1.35,alan.clientWidth/520)),W=Math.round(Math.max(300,alan.clientWidth/s)),H=Math.round(Math.max(200,Math.min(700,alan.clientHeight*W/alan.clientWidth)));
   if(Math.abs(W-Number(alan.dataset.w))<4 && Math.abs(H-Number(alan.dataset.h))<4)return;
-  const v=denemeYolVerisi(Number(alan.dataset.si));if(!v)return;
+  const v=alan.dataset.ort?denemeOrtalamaVerisi():denemeYolVerisi(Number(alan.dataset.si));if(!v)return;
   alan.dataset.w=String(W);alan.dataset.h=String(H);alan.innerHTML=denemeYolSvg(v,H,W);
 }
 function denemeYolSigdirPlanla() {
@@ -463,6 +463,46 @@ function denemeYolGrafigi(si=EK.ogr) {
     (secim.tur==='BRANS' && noktalar.some(n=>!n.r.genel) && noktalar.some(n=>n.r.genel)
       ? '<p class="mini yg-lejant"><span class="yg-BRANS">branş denemesi</span> <span class="yg-genel">'+secim.oturum+' denemesinden</span></p>' : '')+
     (ogrenciMi() && !secim.hedefYok?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" data-anahtar="'+secim.anahtar+'" min="0" max="'+hedefUst+'" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="'+kacis(secim.ad)+' hedef net (0–'+hedefUst+')"> net <small>'+kacis(secim.ad)+'</small></label>':'')+'</section>';
+}
+// Öğretmen ana sayfası: okul denemelerinin (PDF’den aktarılan) ortalaması, öğrencinin gelişim
+// grafiğiyle aynı çizimle. Her nokta bir sınavdır: o sınava giren öğrencilerin ortalama neti.
+// AYT, seçilen alandaki öğrencilerin ortalamasıdır; şube seçilirse yalnızca o şube.
+function denemeOrtalamaSecimi() {
+  if(EK.anaDenemeTur!=='AYT')return {tur:'TYT',anahtar:'TYT',ust:DENEME_YOL_UST.TYT,ad:'TYT',hedefYok:true};
+  const alan=DENEME_ALAN[EK.anaDenemeAlan]?EK.anaDenemeAlan:'SAY';
+  return {tur:'AYT',anahtar:'AYT',ust:DENEME_YOL_UST.AYT,ad:'AYT '+alan,alan,hedefYok:true};
+}
+const denemeOrtalamaSubeleri=()=>[...new Set(canliOgrenciler().map(si=>D.ogr[si].sube).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
+function denemeOrtalamaVerisi() {
+  const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
+  if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return null;
+  const secim=denemeOrtalamaSecimi(),sube=denemeOrtalamaSubeleri().includes(EK.anaSube)?EK.anaSube:'',gruplar=new Map();
+  canliOgrenciler().forEach(si=>{
+    const o=D.ogr[si];
+    if(sube && o.sube!==sube || secim.tur==='AYT' && o.alan!==secim.alan)return;
+    (o.denemeOkul || []).filter(r=>!r.silindi && r.tur===secim.tur).forEach(r=>{
+      const k=denemeKimligi(r),g=gruplar.get(k) || {r:{id:'o:'+secim.tur+':'+k,ad:r.ad,tarih:r.tarih,tur:r.tur},t:0,n:0};
+      g.t+=denemeToplam(r,secim.alan);g.n++;gruplar.set(k,g);
+    });
+  });
+  let noktalar=Array.from(gruplar.values(),g=>({r:{...g.r,ad:g.r.ad+' · '+g.n+' öğrenci ortalaması'},g:gunNo(g.r.tarih),v:Math.round(g.t/g.n*100)/100}));
+  const sira=(a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id),eskiler=noktalar.filter(n=>n.g<bas).sort(sira),baslangic=eskiler.at(-1);
+  noktalar=noktalar.filter(n=>n.g>=bas && n.g<=son).sort(sira);
+  if(baslangic)noktalar.unshift({...baslangic,g:bas,erken:true});
+  const degerler=noktalar.map(n=>n.v);
+  return {bas,son,secim,sube,noktalar,hedef:null,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(0,...degerler))};
+}
+function denemeOrtalamaGrafigi() {
+  const v=denemeOrtalamaVerisi();if(!v)return '';
+  const {secim,sube}=v,subeler=denemeOrtalamaSubeleri();
+  denemeYolSigdirPlanla();
+  return '<section class="kart dn-yol" aria-label="Deneme ortalaması"><div class="dn-yol-bas"><div class="yg-secim" role="group" aria-label="Grafikte göster">'+
+    ['TYT','AYT'].map(k=>'<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-ort-tur="'+k+'">'+k+'</button>').join('')+'</div>'+
+    (secim.tur==='AYT'?'<div class="yg-secim" role="group" aria-label="Alan">'+Object.keys(DENEME_ALAN).map(a=>
+      '<button type="button" class="'+(secim.alan===a?'secili':'')+'" aria-pressed="'+(secim.alan===a)+'" data-dn-ort-alan="'+a+'">'+a+'</button>').join('')+'</div>':'')+
+    (subeler.length>1?'<label class="yg-brans">Şube <select id="dnOrtSube"><option value="">Tümü</option>'+subeler.map(su=>
+      '<option value="'+kacis(su)+'"'+(su===sube?' selected':'')+'>'+kacis(su)+'</option>').join('')+'</select></label>':'')+
+    '</div><div class="yg-alan" data-ort="1" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div></section>';
 }
 function denemeFormHtml() {
   const f=DENEME_FORM;if(!f || f.si!==EK.ogr)return '';
@@ -522,6 +562,9 @@ async function denemeYayinlaVeyaBeklet(si) {
 // Ana sayfadaki gelişim noktası: o denemeyi Denemelerim’de, kendi sekmesinde seçili açar.
 // Branş noktası (branş denemesi ya da TYT/AYT bölümü) Branş denemelerinde o dersle açılır.
 function denemeYolAc(id) {
+  // Öğretmen ana sayfasındaki ortalama noktası Denemeler’i o türle açar.
+  if(String(id).startsWith('o:')){const tur=String(id).split(':')[1];EK.sekme='denemeler';EK.denemeTur=tur;DENEME_FORM=null;
+    if(tur==='AYT' && DENEME_ALAN[EK.anaDenemeAlan])EK.denemeAlan=EK.anaDenemeAlan;ciz();return;}
   const r=denemeBul(id);if(!r)return;
   EK.sekme='denemeler';EK.denemeTur=r.tur;EK.denemeSecili=r.id;DENEME_FORM=null;
   if(r.tur==='BRANS'){EK.denemeOturum=r.oturum;EK.denemeBrans=r.brans;if(r.genel){EK.denemeGenel=true;EK.denemeMetrik='net';}}
@@ -556,6 +599,8 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.dnDot){denemeNoktaSec(el.dataset.dnDot);return;}
   if(el.dataset.dnYol){denemeYolAc(el.dataset.dnYol);return;}
   if(el.dataset.dnYolSec){EK.denemeYol=el.dataset.dnYolSec;ciz();document.querySelector('[data-dn-yol-sec="'+EK.denemeYol+'"]')?.focus();return;}
+  if(el.dataset.dnOrtTur){EK.anaDenemeTur=el.dataset.dnOrtTur;ciz();document.querySelector('[data-dn-ort-tur="'+EK.anaDenemeTur+'"]')?.focus();return;}
+  if(el.dataset.dnOrtAlan && DENEME_ALAN[el.dataset.dnOrtAlan]){EK.anaDenemeAlan=el.dataset.dnOrtAlan;ciz();document.querySelector('[data-dn-ort-alan="'+EK.anaDenemeAlan+'"]')?.focus();return;}
   if(el.dataset.dnYolAlan && DENEME_ALAN[el.dataset.dnYolAlan]){EK.denemeAlan=el.dataset.dnYolAlan;ciz();document.querySelector('[data-dn-yol-alan="'+EK.denemeAlan+'"]')?.focus();return;}
   if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
   if(el.dataset.dnKaynak){
@@ -643,6 +688,7 @@ document.addEventListener('change',async ev=>{
   if(el.dataset?.dnRapor!==undefined){DENEME_IMPORT[Number(el.dataset.dnRapor)][el.dataset.alan]=el.value;return;}
   if(id==='dnGenel'){EK.denemeGenel=el.checked;ciz();return;}
   if(id==='dnYolBrans'){EK.denemeYolBrans=el.value;ciz();document.getElementById('dnYolBrans')?.focus();return;}
+  if(id==='dnOrtSube'){EK.anaSube=el.value;ciz();document.getElementById('dnOrtSube')?.focus();return;}
   if(id==='dnHedef' && ogrenciMi()){
     const o=D.ogr[EK.ogr],k=el.dataset.anahtar,ust=Number(el.max),v=el.value.trim(),hedef=v===''?null:Math.round(Number(v));
     if(!/^(TYT|AYT)(:[a-z0-9]+)?$/.test(k || ''))return;

@@ -302,7 +302,7 @@ tr.pasif td:first-child{opacity:1}
   display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 /* Giriş ekranı: menü yokken (ray boş) sayfa tam genişlik; görseldeki gibi beyaz zemin, köşelerde
    mavi çapraz şeritler ve nokta ızgaraları, ortada başlık → öğrenci girişi → kep ve kitaplar. */
-/* Öğrenci: menü üstte (ray.ust). Öğretmen kenar menüsünü korur. */
+/* Menü üstte (ray.ust): öğrencide de öğretmende de gruplar halinde. */
 .kabuk:has(>.ray.ust){grid-template-columns:1fr;grid-template-rows:auto 1fr}
 .ray.ust{position:sticky;top:0;z-index:40;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 14px;
   overflow:visible;border-right:0;border-bottom:1px solid var(--cizgi);padding:8px 20px}
@@ -312,6 +312,7 @@ tr.pasif td:first-child{opacity:1}
 .ray.ust button{width:auto;white-space:nowrap}
 .ray.ust #oturumKapat{margin-left:6px;border-left:1px solid var(--cizgi);border-radius:0 7px 7px 0;padding-left:16px}
 .ray.ust .durum{border-top:0;padding:0;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.durum-ayrac{display:none}
 .kabuk:has(>.ray.ust)>main{max-width:1480px;width:100%;margin:0 auto}
 .menu-grup{position:relative;display:flex;align-items:center}
 .ray.ust .menu-grup>button[data-sekme]{border-radius:7px 0 0 7px;padding-right:6px}
@@ -321,11 +322,13 @@ tr.pasif td:first-child{opacity:1}
 .menu-liste{display:none;position:absolute;top:100%;left:0;min-width:220px;padding:6px;flex-direction:column;gap:2px;
   background:var(--kagit);border:1px solid var(--cizgi);border-radius:10px;box-shadow:0 12px 30px rgba(11,42,107,.16);z-index:50}
 .ray.ust .menu-liste button{width:100%;text-align:left}
+.menu-liste.sag{left:auto;right:0}
 .menu-grup.acik .menu-liste,.menu-acilir:has(:focus-visible) .menu-liste{display:flex}
 @media (hover:hover){.menu-acilir:hover .menu-liste{display:flex}}
 @media (max-width:820px){
   .ray.ust{overflow:visible;padding:8px 12px}
   .ray.ust .durum{position:static;flex-basis:100%;max-width:none;border-left:0;background:none;padding:2px 4px 0;white-space:normal}
+  .ray.ust .durum br{display:none}.ray.ust .durum .durum-ayrac{display:inline}
   .ray.ust #oturumKapat{border-left:0;margin-left:0;padding-left:11px;border-radius:7px}
 }
 /* Harita ve deneme gelişimi eşit genişlikte, eşit boyda iki kart. Haftalar kutuları burada
@@ -349,6 +352,36 @@ tr.pasif td:first-child{opacity:1}
   .ana-pano .detay .yol-hafta{padding:8px 4px;font-size:14px}.ana-pano .detay .yol-hafta small{font-size:11px}
   .ana-pano .pano-baslik,.ana-pano h1{font-size:28px}
 }
+/* Öğretmen ana sayfası: solda haftanın özeti (dört sayı, şube tablosu, karar bekleyenler), sağda
+   okul denemelerinin ortalaması; iki kart öğrencininkiyle aynı biçimde (üstte mavi çizgi). */
+.rehber-hafta{padding:20px 22px;border-top:3px solid var(--vurgu);display:flex;flex-direction:column;gap:18px}
+.rh-sayilar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.rh-sayi{border:1px solid var(--cizgi);border-radius:9px;padding:12px 12px 10px;background:var(--zemin)}
+.rh-sayi strong{display:block;font-size:26px;font-weight:800;color:var(--marka-koyu);font-variant-numeric:tabular-nums;line-height:1.1}
+.rh-sayi strong small,.rh-subeler td small{font-size:.62em;font-weight:600;color:var(--soluk)}
+.rh-sayi span{display:block;font-size:12px;color:var(--soluk);margin-top:4px;line-height:1.3}
+.rh-sayi.uyari{border-color:var(--uyari);background:color-mix(in srgb,var(--uyari) 10%,var(--kagit))}.rh-sayi.uyari strong{color:var(--uyari)}
+.rh-subeler{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.rh-subeler th,.rh-subeler td{padding:8px 6px;border-bottom:1px solid var(--cizgi);text-align:center;font-size:15px}
+.rh-subeler thead th{font-size:10.5px;font-weight:600;color:var(--soluk);text-transform:uppercase;letter-spacing:.04em;vertical-align:bottom;line-height:1.3}
+.rh-subeler th[scope=row],.rh-subeler thead th:first-child{text-align:left}
+.rh-subeler td.uyari{color:var(--uyari);font-weight:700}.rh-subeler tbody tr:last-child>*{border-bottom:0}
+.rh-sube{border:0;background:none;padding:2px 0;font:inherit;font-weight:700;color:var(--marka-koyu);cursor:pointer;text-align:left}
+.rh-sube small{display:block;font-weight:400;font-size:11.5px;color:var(--soluk);white-space:nowrap}
+.rh-sube:hover,.rh-sube:focus-visible{color:var(--vurgu);text-decoration:underline;text-underline-offset:3px}
+.rh-adlar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.rh-adlar b{color:var(--uyari);margin-left:4px}
+/* Tek sütunda sıra: haftanın özeti, sonra deneme ortalaması. */
+@media (max-width:1100px){.ana-pano.rehber-pano>.pano-sol-bas{order:0}.ana-pano.rehber-pano>.rehber-hafta{order:1}
+  .ana-pano.rehber-pano>.pano-sag-bas{order:2;margin-top:28px}.ana-pano.rehber-pano>.dn-yol{order:3;margin-bottom:0}}
+/* Öğretmen menüsü daha uzun: orta genişlikte marka kısalır, aralar daralır; telefonda iki satıra sığar. */
+@media (max-width:1250px){.ray.ust.rehber{gap:4px 6px}.ray.ust.rehber button.marka small,.ray.ust.rehber .marka-uzun{display:none}
+  .ray.ust.rehber button.marka{padding-right:10px}.ray.ust.rehber .durum{max-width:200px}}
+@media (max-width:1060px){.ray.ust.rehber .durum{flex-basis:100%;max-width:none;padding:0 4px}
+  .ray.ust.rehber .durum br{display:none}.ray.ust.rehber .durum .durum-ayrac{display:inline}}
+@media (max-width:820px){.ray.ust.rehber{gap:2px 0}.ray.ust.rehber button{padding:8px 9px}.ray.ust.rehber .menu-ac{padding:8px 7px 8px 3px}
+  .ray.ust.rehber .menu-grup>button[data-sekme]{padding-right:4px}}
+@media (max-width:600px){.rehber-hafta{padding:15px}.rh-sayilar{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rh-subeler th,.rh-subeler td{padding:7px 2px;font-size:13.5px}.rh-subeler thead th{font-size:9px;letter-spacing:0}}
 /* Dar ekranda öğrencinin marka yazısı kısa bir ana sayfa düğmesi olarak kalır (ana sayfaya tek yol). */
 @media (max-width:820px){.ray:not(.ust) button.marka{display:none}
   .ray.ust button.marka{display:block;flex:0 0 auto;font-size:15px;padding:0 12px 0 2px}.ray.ust button.marka small{display:none}}
@@ -4965,7 +4998,8 @@ function gorunumRapor() {
 // bir haftanın Haftalar Haritası'ndaki durumunu hesaplar — haritanın kendisi ve haftalık
 // plan ekranındaki proaktif uyarı (bkz. atlananHaftalar) aynı mantığı burada paylaşır,
 // iki yerde birbirinden kayabilecek iki ayrı kopya olmasın diye.
-function haftaHaritaDurumu(si, hb, baslangicHb, bugunHb) {
+// sonucSay: aynı sayımı yapan daha hızlı bir işlev verilebilir (bkz. rehberHaftaOzeti).
+function haftaHaritaDurumu(si, hb, baslangicHb, bugunHb, sonucSay = haftaSonucSayisi) {
   const o = D.ogr[si];
   if (hb < baslangicHb) return { durum: 'gelecek', etiket: 'henüz katılmamıştı' };
   if (hb === bugunHb) return { durum: 'simdi', etiket: 'bu hafta' };
@@ -4978,7 +5012,7 @@ function haftaHaritaDurumu(si, hb, baslangicHb, bugunHb) {
     const durum = marked.neden === 'onemsiz' ? 'atlandi-onemsiz' : (marked.konu > 0 ? 'telafi-anlatim' : 'telafi');
     return { durum: durum, etiket: HAFTA_NEDEN_ETIKET[marked.neden] || 'telafi edildi' };
   }
-  const sonuc = haftaSonucSayisi(si, hb);
+  const sonuc = sonucSay(si, hb);
   if (sonuc > 0) return { durum: 'tamam', etiket: sonuc + ' sonuç girildi' };
   // O hafta için kâğıt/çıktı verilmediyse (o.cikti o haftadan eskiyse), işlenmemiş
   // konular zaten kendiliğinden bir sonraki haftaya kaymıştır (bkz. sonucBekliyor) —
@@ -4996,17 +5030,17 @@ const haftaBaslangici = o => o.ilkAktif ? Math.max(subePlanBaslangici(o.sube), p
                                         : subePlanBaslangici(o.sube);
 // "sonuç yok, karar bekliyor" (atlandi) durumundaki haftaları listeler — Haftalar
 // Haritası'na hiç gitmeden, haftalık plan ekranından da fark edilsin diye.
-function atlananHaftalar(si) {
+function atlananHaftalar(si, sonucSay = haftaSonucSayisi) {
   const o = D.ogr[si];
   if (!o || !D.ayar.donemBasi) return [];
   const donemHb = subePlanBaslangici(o.sube);
   const sinavHb = pazartesi(gunNo(D.ayar.sinav));
-  const bugunHb = buHafta();
+  const bugunHb = buHafta(si);
   if (donemHb > sinavHb) return [];
   const baslangicHb = haftaBaslangici(o);
   const sonuc = [];
   for (let hb = donemHb; hb <= Math.min(bugunHb, sinavHb); hb += 7)
-    if (haftaHaritaDurumu(si, hb, baslangicHb, bugunHb).durum === 'atlandi') sonuc.push(hb);
+    if (haftaHaritaDurumu(si, hb, baslangicHb, bugunHb, sonucSay).durum === 'atlandi') sonuc.push(hb);
   return sonuc;
 }
 // dönem başı ile öğrencinin fiilen katıldığı hafta arasında kaç hafta olduğunu söyler
@@ -6572,7 +6606,7 @@ async function bulutDefteriniAc(kullanici) {
     } catch (e) { D = onceki; throw e; }
   }
   await bulutYedekTemeliniHatirla(r.uid, r.veri);
-  EK.sekme = 'takip'; EK.takipHafta = null; EK.takipOlcut = 'islem'; EK.ogr = 0; EK.hafta = null;
+  EK.sekme = 'ana'; EK.takipHafta = null; EK.takipOlcut = 'islem'; EK.ogr = 0; EK.hafta = null;
   EK.bulutYedekHata = ''; ciz();
   bilgiVer('Bulut defteriniz geri yüklendi: ' + say + ' öğrenci, ' + sonucSayisi + ' sonuç.' +
     (!say && !sonucSayisi ? ' Bu yedek boş. Ayarlar → “Bulut yedek geçmişini göster” ile eski kopyaları kontrol edin.' : ''));
@@ -6648,7 +6682,7 @@ async function izlemeyiBaslat(hedef) {
   if (!mevcut || mevcut.uid !== hedef.izleyiciUid) throw new Error('Google hesabı değişti; yeniden bağlanın.');
   izlemeDinlemeyiDurdur();
   izlemeDefteriniYerlestir(json, hedef);
-  EK.sekme = 'takip'; EK.takipHafta = null; EK.takipOlcut = 'islem'; EK.ogr = 0; EK.hafta = null;
+  EK.sekme = 'ana'; EK.takipHafta = null; EK.takipOlcut = 'islem'; EK.ogr = 0; EK.hafta = null;
   EK.bulutYedekHata = ''; EK.izlemeDurum = '';
   izlemeDinlemeyiBaslat(); ciz();
   // Çağıran düğme işlemi bitince öğrenci yuvaları da dinlenir.
@@ -6873,7 +6907,7 @@ async function ortakDefteriAc(hedef, kullanici) {
   catch (e) { /* bellekte açık kalır; çıkışta zaten silinir */ }
   await bulutYedekTemeliniHatirla(hedef.sahipUid, json);
   KILIT_KAPALI = false;
-  EK.sekme = 'takip'; EK.takipHafta = null; EK.takipOlcut = 'islem'; EK.ogr = 0; EK.hafta = null;
+  EK.sekme = 'ana'; EK.takipHafta = null; EK.takipOlcut = 'islem'; EK.ogr = 0; EK.hafta = null;
   EK.bulutYedekHata = ''; ciz();
   await kilitDenetle(true);
   setTimeout(() => { if (ORTAK) ogretmenDinlemeyiBaslat(true); }, 0);
@@ -9563,9 +9597,9 @@ function etkinlikZamani(ts) { return new Date(ts).toLocaleString('tr-TR', {timeZ
 function etkinlikCanliDurum(id, durum) {
   ETKINLIK_CANLI.set(id, {durum,ts:Date.now()});
   // Replace only the dashboard, without moving focus or scrolling during snapshots.
-  if (rehberMi() && EK.sekme === 'takip' && !/^(INPUT|SELECT)$/.test(document.activeElement?.tagName || '')) {
-    const ana = document.getElementById('ana'); if (ana) ana.innerHTML = gorunumEtkinlik();
-  }
+  if (!rehberMi() || /^(INPUT|SELECT)$/.test(document.activeElement?.tagName || '')) return;
+  if (EK.sekme === 'takip') { const ana = document.getElementById('ana'); if (ana && !document.getElementById('talepOrtu')) ana.innerHTML = izlemeBandi() + gorunumEtkinlik(); }
+  else if (EK.sekme === 'ana') { const kart = document.getElementById('rehberHafta'); if (kart) kart.outerHTML = rehberHaftaKarti(); }
 }
 function gorunumEtkinlik() {
   if (!rehberMi()) return '';
@@ -9608,39 +9642,91 @@ function gorunumEtkinlik() {
     }).join('')+'</div>'+(gorunen.length?'':'<p>Bu seçimde öğrenci bulunamadı.</p>')+
     '';
 }
+// ---------------------------------------------------------------- öğretmen ana sayfası
+// Girişten sonra ve marka yazısıyla açılır. Solda haftanın özeti şube şube (plan verildi, plan PDF'i
+// istendi, geçen haftanın sonucu, karar bekleyen hafta), sağda okul denemelerinin ortalaması.
+// Başlıklar kendi sayfalarına, şube satırı o şubenin haftalık planına, ad haftalar haritasına götürür.
+function rehberHaftaOzeti() {
+  const etkinlik = new Map(etkinlikSatirlari(pazartesi(etkinlikBugun()), 'islem').map(r => [r.si, r]));
+  // haftaSonucSayisi ile aynı sayım, ama sonuçlar bir kez öğrenci öğrenci ayrılır: büyük bir defterde
+  // her öğrencinin her haftası için bütün sonuç listesini taramak saniyeler sürerdi.
+  const gunler = new Map();
+  (D.log || []).forEach(l => { const g = gunler.get(l[1]); if (g) g.push(l[0]); else gunler.set(l[1], [l[0]]); });
+  const sonucSay = (si, hb) => { const son = planHaftaSonu(si, hb); return (gunler.get(si) || []).filter(g => g >= hb && g <= son).length; };
+  return canliOgrenciler().map(si => {
+    const o = D.ogr[si], hb = buHafta(si);
+    return { si, o, plan: Number(o.cikti) >= hb, pdf: !!(etkinlik.get(si) || {}).pdf,
+      sonuc: sonucSay(si, oncekiHafta(si, hb)) > 0, karar: atlananHaftalar(si, sonucSay).length };
+  });
+}
+const REHBER_ANA_SUTUN = [['plan', 'Plan verildi'], ['pdf', 'PDF istedi'], ['sonuc', 'Geçen haftanın sonucu'], ['karar', 'Karar bekleyen']];
+function rehberHaftaKarti() {
+  const satirlar = rehberHaftaOzeti(), takvim = pazartesi(etkinlikBugun());
+  const subeler = [...new Set(satirlar.map(r => r.o.sube || ''))].sort((a, b) => a.localeCompare(b, 'tr'));
+  const say = (liste, k) => liste.filter(r => r[k]).length;
+  const oran = (liste, k) => k === 'karar' ? String(say(liste, k)) : say(liste, k) + '<small>/' + liste.length + '</small>';
+  const kararli = satirlar.filter(r => r.karar);
+  return '<section class="kart rehber-hafta" id="rehberHafta" aria-label="Bu haftanın özeti">' +
+    '<div class="yol-baslik"><div><div class="etiket">' + ggyy(takvim) + ' – ' + ggyy(takvim + 6) + '</div><h2>' + satirlar.length +
+    ' öğrenci <span>' + subeler.length + ' şube</span></h2></div></div>' +
+    '<div class="rh-sayilar">' + REHBER_ANA_SUTUN.map(([k, ad]) => '<div class="rh-sayi' + (k === 'karar' && kararli.length ? ' uyari' : '') + '"><strong>' +
+      oran(satirlar, k) + '</strong><span>' + ad + '</span></div>').join('') + '</div>' +
+    '<table class="rh-subeler"><thead><tr><th scope="col">Şube</th>' + REHBER_ANA_SUTUN.map(([, ad]) => '<th scope="col">' + ad + '</th>').join('') + '</tr></thead><tbody>' +
+    subeler.map(su => { const l = satirlar.filter(r => (r.o.sube || '') === su);
+      return '<tr><th scope="row"><button type="button" class="rh-sube" data-ra-sube="' + kacis(su) + '" title="' + kacis((su || 'Şubesiz') + ' haftalık planı') + '">' +
+        kacis(su || '—') + '<small>' + l.length + ' öğrenci</small></button></th>' +
+        REHBER_ANA_SUTUN.map(([k, ad]) => '<td data-ad="' + ad + '"' + (k === 'karar' && say(l, k) ? ' class="uyari"' : '') + '>' + oran(l, k) + '</td>').join('') + '</tr>'; }).join('') +
+    '</tbody></table>' +
+    (kararli.length ? '<div class="rh-karar"><div class="etiket">Karar bekleyen</div><div class="rh-adlar">' + kararli.map(r =>
+      '<button type="button" class="dugme" data-ra-harita="' + r.si + '" title="Haftalar haritasında aç">' + kacis(r.o.ad) + ' <b>' + r.karar + '</b></button>').join('') + '</div></div>' : '') +
+    '</section>';
+}
+function gorunumRehberAna() {
+  const talep = (EK.sifreTalepleri || []).length;
+  return '<div class="ana-pano rehber-pano"><div class="baslik pano-sol-bas"><h1><button class="baslik-link" data-sekme="takip" title="Haftalık öğrenci takibini aç">Bu hafta</button></h1>' +
+    (talep ? '<button class="dugme birincil" id="talepAc">E-posta talepleri (' + talep + ')</button>' : '') + '</div>' +
+    '<div class="baslik pano-sag-bas"><h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler" title="Denemeler’i aç">Deneme ortalaması</button></h2></div>' +
+    rehberHaftaKarti() + denemeOrtalamaGrafigi() + '</div>';
+}
 // ---------------------------------------------------------------- çizim + olaylar
 const SEKME_REHBER = [['takip', 'Haftalık öğrenci takibi'], ['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
-                  ['ogrenciler', 'Öğrenciler'], ['konuplani', 'Konu Planı'], ['harita', 'Haftalar Haritası'],
+                  ['ogrenciler', 'Öğrenciler'], ['konuplani', 'Konu planı'], ['harita', 'Haftalar haritası'],
                   ['kurtarma', 'Geçmiş plan kurtar'], ['anlasma', 'Anlaşma ve rutin'], ['denemeler', 'Denemeler'], ['siralamalar', 'Sıralamalar'], ['rapor', 'Karne'], ['ayarlar', 'Ayarlar']];
 const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemelerim'], ['rapor', 'Karnem'], ['ayarlar', 'Ayarlar']];
 // Müfredat (lise programı) ve Denemelerim (TYT/AYT) yalnızca YKS öğrencisi içindir.
 const SEKMELER = () => !ogrenciMi() ? SEKME_REHBER : ogrenciSinavi(D && D.ogr && D.ogr[0]) === 'YKS' ? SEKME_OGRENCI
   : SEKME_OGRENCI.filter(([id]) => id !== 'mufredat' && id !== 'denemeler');
 
-// Öğrenci menüsü üstte: "Planım" haftalık plana gider; yanındaki ok (tıklayınca ya da üzerine
-// gelince) planla ilgili diğer sayfaları açar. Denemelerim ortada, Müfredat ve Ayarlar sağda.
+// Menü üstte, gruplar halinde: grubun adı kendi sayfasına gider; yanındaki ok (tıklayınca ya da
+// üzerine gelince) ilgili diğer sayfaları açar. Sağda Müfredat (bir grupta değilse) ve Ayarlar.
+// Öğrenci: Planım ▾ · Denemelerim. Öğretmen: Haftalık plan ▾ · Öğrenciler ▾ · Konular ▾ (Müfredat
+// dahil) · Denemeler ▾ — telefonda da iki satıra sığar.
 const PLAN_ALT_SEKMELER = ['harita', 'giris', 'rapor', 'kurtarma'];
+const MENU_OGRENCI = [['plan', PLAN_ALT_SEKMELER, 'Planla ilgili diğer sayfalar'], ['denemeler', []]];
+const MENU_REHBER = [['plan', ['giris', 'harita', 'rapor', 'kurtarma', 'anlasma'], 'Planla ilgili diğer sayfalar'],
+  ['ogrenciler', ['takip'], 'Öğrencilerle ilgili diğer sayfalar'], ['konular', ['konuplani', 'mufredat'], 'Konularla ilgili diğer sayfalar'],
+  ['denemeler', ['siralamalar'], 'Denemelerle ilgili diğer sayfalar']];
 const MENU_OK = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-function ogrenciMenusu(sekmeler) {
+function ustMenu(sekmeler, gruplar) {
   const ad = id => (sekmeler.find(s => s[0] === id) || [])[1];
   const dugme = id => ad(id) ? '<button data-sekme="' + id + '"' + (EK.sekme === id ? ' aria-current="page"' : '') + '>' + ad(id) + '</button>' : '';
-  const alt = PLAN_ALT_SEKMELER.filter(ad);
-  return '<div class="menu-grup' + (alt.includes(EK.sekme) ? ' alt-secili' : '') + '">' + dugme('plan') +
-    '<div class="menu-acilir"><button class="menu-ac" aria-expanded="false" aria-controls="planMenusu" aria-label="Planla ilgili diğer sayfalar">' + MENU_OK + '</button>' +
-    '<div class="menu-liste" id="planMenusu">' + alt.map(dugme).join('') + '</div></div></div>' +
-    dugme('denemeler') + '<div class="bosluk"></div>' + dugme('mufredat') + dugme('ayarlar');
+  return gruplar.map(([id, altlar, etiket]) => {
+    const alt = altlar.filter(ad);
+    if (!alt.length) return dugme(id);
+    return '<div class="menu-grup' + (alt.includes(EK.sekme) ? ' alt-secili' : '') + '">' + dugme(id) +
+      '<div class="menu-acilir"><button class="menu-ac" aria-expanded="false" aria-controls="' + id + 'Menusu" aria-label="' + etiket + '">' + MENU_OK + '</button>' +
+      '<div class="menu-liste" id="' + id + 'Menusu">' + alt.map(dugme).join('') + '</div></div></div>';
+  }).join('') + '<div class="bosluk"></div>' + ['mufredat', 'ayarlar'].filter(id => !gruplar.some(g => g[0] === id || g[1].includes(id))).map(dugme).join('');
 }
 function rayCiz() {
   const ray = document.getElementById('ray'), ust = ogrenciMi();
-  ray.className = 'ray' + (ust ? ' ust' : '');
-  // Marka yazısı ana sayfaya götürür: öğrencide harita + deneme gelişimi, öğretmende öğrenci takibi.
-  ray.innerHTML = '<button class="marka" data-sekme="' + (ust ? 'ana' : 'takip') + '" title="Ana sayfa">YKS<span class="marka-uzun"> Tekrar Defteri</span><small>' +
+  ray.className = 'ray ust' + (ust ? '' : ' rehber');
+  // Marka yazısı ana sayfaya götürür: öğrencide harita + deneme gelişimi, öğretmende haftanın özeti.
+  ray.innerHTML = '<button class="marka" data-sekme="ana" title="Ana sayfa">YKS<span class="marka-uzun"> Tekrar Defteri</span><small>' +
     (D && D.kurum ? kacis(D.kurum) : 'Aralıklı tekrar') + '</small></button>' +
-    (ust ? ogrenciMenusu(SEKMELER())
-      : SEKMELER().map(s => '<button data-sekme="' + s[0] + '"' + (EK.sekme === s[0] ? ' aria-current="page"' : '') + '>' + s[1] + '</button>').join('') +
-        '<div class="bosluk"></div>') +(D?.rol?'<button id="oturumKapat" title="'+(yalnizcaGoruntuleme()?'Oturumu kapatır ve defterin bu cihazdaki kopyasını siler':'Önce sunucuya kaydeder, onaydan sonra bu uygulamanın cihazdaki verisini temizler')+'"'+(CIKIS_DURUMU?' disabled':'')+'>'+(yalnizcaGoruntuleme()?'Çıkış yap':'Kaydet ve çıkış yap')+'</button>':'')+'<div class="durum" role="status" aria-live="polite">' +
+    ustMenu(SEKMELER(), ust ? MENU_OGRENCI : MENU_REHBER) +(D?.rol?'<button id="oturumKapat" title="'+(yalnizcaGoruntuleme()?'Oturumu kapatır ve defterin bu cihazdaki kopyasını siler':'Önce sunucuya kaydeder, onaydan sonra bu uygulamanın cihazdaki verisini temizler')+'"'+(CIKIS_DURUMU?' disabled':'')+'>'+(yalnizcaGoruntuleme()?'Çıkış yap':'Kaydet ve çıkış yap')+'</button>':'')+'<div class="durum" role="status" aria-live="polite">' +
     (EK.kirli ? '<b>kaydedilmemiş değişiklik</b>' : kacis(ogrenciMi() ? (EK.ogrSyncDurum || EK.son || 'Planın hazır') : (EK.son || 'hazır'))) +
-    (rehberMi() ? '<br>' + kacis(IZLEME ? (EK.izlemeDurum || 'paylaşılan defter') : KILIT.durum === 'baskasinda' ? (KILIT.ad || 'diğer öğretmen') + ' düzenliyor' : EK.bulutYedekHata || EK.ogretmenSyncDurum || (EK.bulutYedekTs ? 'Sunucuya kaydedildi' : 'Bulut yedeği henüz onaylanmadı')) : '') +
+    (rehberMi() ? '<br><span class="durum-ayrac"> · </span>' + kacis(IZLEME ? (EK.izlemeDurum || 'paylaşılan defter') : KILIT.durum === 'baskasinda' ? (KILIT.ad || 'diğer öğretmen') + ' düzenliyor' : EK.bulutYedekHata || EK.ogretmenSyncDurum || (EK.bulutYedekTs ? 'Sunucuya kaydedildi' : 'Bulut yedeği henüz onaylanmadı')) : '') +
     (testHesabiMi() && D.ogr.length ? (ust ? ' · ' : '<br>') + kacis(EK.bulutYedekHata || (EK.bulutYedekTs ? 'Buluta kaydedildi' : 'Bulut kaydı bekliyor')) : '') + '</div>';
 }
 
@@ -9830,6 +9916,7 @@ function cizIc() {
     EK.sekme === 'konuplani' ? gorunumKonuPlani() :
     EK.sekme === 'harita' ? gorunumHaritasi() :
     EK.sekme === 'ana' && ogrenciMi() && D.ogr[EK.ogr] ? gorunumAnaSayfa() :
+    EK.sekme === 'ana' && rehberMi() ? gorunumRehberAna() :
     EK.sekme === 'anlasma' ? gorunumAnlasma() :
     EK.sekme === 'denemeler' ? gorunumDenemeler() :
     EK.sekme === 'siralamalar' && rehberMi() ? gorunumSiralamalar() :
@@ -10883,7 +10970,7 @@ document.addEventListener('click', async ev => {
     }
     return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#yksEksikleriEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-ra-sube],[data-ra-harita],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#anlasmaKaydet,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#yksEksikleriEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     const taslak = sonucTaslaklariniAl();
@@ -10990,6 +11077,17 @@ document.addEventListener('click', async ev => {
     if (!metin) { alert('Önce yedek dosyasının içeriğini kutuya yapıştırın.'); return; }
     const sonuc = await metindenYukle(metin);
     if (sonuc) bilgiVer(sonuc);
+    return;
+  }
+  // Öğretmen ana sayfası: şube satırı o şubenin ilk öğrencisinin haftalık planını, ad haritasını açar.
+  if (t.dataset.raSube !== undefined) {
+    const si = canliOgrenciler().find(i => (D.ogr[i].sube || '') === t.dataset.raSube);
+    if (si !== undefined) { EK.ogr = si; EK.sekme = 'plan'; EK.hafta = null; EK.girisAcik = {}; PENCERE = null; pencereCiz(); ciz(); }
+    return;
+  }
+  if (t.dataset.raHarita !== undefined) {
+    const si = +t.dataset.raHarita;
+    if (D.ogr[si] && !D.ogr[si].silindi) { EK.ogr = si; EK.sekme = 'harita'; EK.haritaAcik = null; EK.haritaOnay = null; ciz(); }
     return;
   }
   if (t.dataset.sekme) {
@@ -12355,7 +12453,7 @@ function denemeYolSvg(v,H=270,W=480) {
   const sinif='yg-'+(secim.tur==='BRANS'?'BRANS':secim.tur);
   if(noktalar.length>1)svg+='<polyline class="yg-cizgi '+sinif+'" points="'+noktalar.map(n=>r1(x(n.g))+','+r1(y(n.v))).join(' ')+'"/>';
   svg+=noktalar.map(n=>{const etiket=secim.ad+' · '+n.r.ad+(n.r.genel?' ('+n.r.genel+' denemesinden)':'')+' · '+n.r.tarih+(n.erken?' (dönem başından önce; grafiğin başında)':'')+' · '+denemeSayi(n.v)+' net';
-    return '<circle class="yg-nokta '+sinif+(n.r.genel?' genel':'')+(n.erken?' erken':'')+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+'. Denemelerim’de aç')+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
+    return '<circle class="yg-nokta '+sinif+(n.r.genel?' genel':'')+(n.erken?' erken':'')+'" cx="'+r1(x(n.g))+'" cy="'+r1(y(n.v))+'" r="5" tabindex="0" role="button" data-dn-yol="'+kacis(n.r.id)+'" aria-label="'+kacis(etiket+(ogrenciMi()?'. Denemelerim’de aç':'. Denemeler’de aç'))+'"><title>'+kacis(etiket)+'</title></circle>';}).join('');
   if(!noktalar.length)svg+='<text class="yg-bos" x="'+r1((L+W-R)/2)+'" y="'+r1(H/2)+'" text-anchor="middle">Henüz '+kacis(secim.ad)+' denemesi yok</text>';
   return svg+'</svg>';
 }
@@ -12366,7 +12464,7 @@ function denemeYolSigdir() {
   if(!alan || !alan.clientWidth || !alan.clientHeight)return;
   const s=Math.max(1,Math.min(1.35,alan.clientWidth/520)),W=Math.round(Math.max(300,alan.clientWidth/s)),H=Math.round(Math.max(200,Math.min(700,alan.clientHeight*W/alan.clientWidth)));
   if(Math.abs(W-Number(alan.dataset.w))<4 && Math.abs(H-Number(alan.dataset.h))<4)return;
-  const v=denemeYolVerisi(Number(alan.dataset.si));if(!v)return;
+  const v=alan.dataset.ort?denemeOrtalamaVerisi():denemeYolVerisi(Number(alan.dataset.si));if(!v)return;
   alan.dataset.w=String(W);alan.dataset.h=String(H);alan.innerHTML=denemeYolSvg(v,H,W);
 }
 function denemeYolSigdirPlanla() {
@@ -12390,6 +12488,46 @@ function denemeYolGrafigi(si=EK.ogr) {
     (secim.tur==='BRANS' && noktalar.some(n=>!n.r.genel) && noktalar.some(n=>n.r.genel)
       ? '<p class="mini yg-lejant"><span class="yg-BRANS">branş denemesi</span> <span class="yg-genel">'+secim.oturum+' denemesinden</span></p>' : '')+
     (ogrenciMi() && !secim.hedefYok?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" data-anahtar="'+secim.anahtar+'" min="0" max="'+hedefUst+'" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="'+kacis(secim.ad)+' hedef net (0–'+hedefUst+')"> net <small>'+kacis(secim.ad)+'</small></label>':'')+'</section>';
+}
+// Öğretmen ana sayfası: okul denemelerinin (PDF’den aktarılan) ortalaması, öğrencinin gelişim
+// grafiğiyle aynı çizimle. Her nokta bir sınavdır: o sınava giren öğrencilerin ortalama neti.
+// AYT, seçilen alandaki öğrencilerin ortalamasıdır; şube seçilirse yalnızca o şube.
+function denemeOrtalamaSecimi() {
+  if(EK.anaDenemeTur!=='AYT')return {tur:'TYT',anahtar:'TYT',ust:DENEME_YOL_UST.TYT,ad:'TYT',hedefYok:true};
+  const alan=DENEME_ALAN[EK.anaDenemeAlan]?EK.anaDenemeAlan:'SAY';
+  return {tur:'AYT',anahtar:'AYT',ust:DENEME_YOL_UST.AYT,ad:'AYT '+alan,alan,hedefYok:true};
+}
+const denemeOrtalamaSubeleri=()=>[...new Set(canliOgrenciler().map(si=>D.ogr[si].sube).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
+function denemeOrtalamaVerisi() {
+  const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
+  if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return null;
+  const secim=denemeOrtalamaSecimi(),sube=denemeOrtalamaSubeleri().includes(EK.anaSube)?EK.anaSube:'',gruplar=new Map();
+  canliOgrenciler().forEach(si=>{
+    const o=D.ogr[si];
+    if(sube && o.sube!==sube || secim.tur==='AYT' && o.alan!==secim.alan)return;
+    (o.denemeOkul || []).filter(r=>!r.silindi && r.tur===secim.tur).forEach(r=>{
+      const k=denemeKimligi(r),g=gruplar.get(k) || {r:{id:'o:'+secim.tur+':'+k,ad:r.ad,tarih:r.tarih,tur:r.tur},t:0,n:0};
+      g.t+=denemeToplam(r,secim.alan);g.n++;gruplar.set(k,g);
+    });
+  });
+  let noktalar=Array.from(gruplar.values(),g=>({r:{...g.r,ad:g.r.ad+' · '+g.n+' öğrenci ortalaması'},g:gunNo(g.r.tarih),v:Math.round(g.t/g.n*100)/100}));
+  const sira=(a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id),eskiler=noktalar.filter(n=>n.g<bas).sort(sira),baslangic=eskiler.at(-1);
+  noktalar=noktalar.filter(n=>n.g>=bas && n.g<=son).sort(sira);
+  if(baslangic)noktalar.unshift({...baslangic,g:bas,erken:true});
+  const degerler=noktalar.map(n=>n.v);
+  return {bas,son,secim,sube,noktalar,hedef:null,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(0,...degerler))};
+}
+function denemeOrtalamaGrafigi() {
+  const v=denemeOrtalamaVerisi();if(!v)return '';
+  const {secim,sube}=v,subeler=denemeOrtalamaSubeleri();
+  denemeYolSigdirPlanla();
+  return '<section class="kart dn-yol" aria-label="Deneme ortalaması"><div class="dn-yol-bas"><div class="yg-secim" role="group" aria-label="Grafikte göster">'+
+    ['TYT','AYT'].map(k=>'<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-ort-tur="'+k+'">'+k+'</button>').join('')+'</div>'+
+    (secim.tur==='AYT'?'<div class="yg-secim" role="group" aria-label="Alan">'+Object.keys(DENEME_ALAN).map(a=>
+      '<button type="button" class="'+(secim.alan===a?'secili':'')+'" aria-pressed="'+(secim.alan===a)+'" data-dn-ort-alan="'+a+'">'+a+'</button>').join('')+'</div>':'')+
+    (subeler.length>1?'<label class="yg-brans">Şube <select id="dnOrtSube"><option value="">Tümü</option>'+subeler.map(su=>
+      '<option value="'+kacis(su)+'"'+(su===sube?' selected':'')+'>'+kacis(su)+'</option>').join('')+'</select></label>':'')+
+    '</div><div class="yg-alan" data-ort="1" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div></section>';
 }
 function denemeFormHtml() {
   const f=DENEME_FORM;if(!f || f.si!==EK.ogr)return '';
@@ -12449,6 +12587,9 @@ async function denemeYayinlaVeyaBeklet(si) {
 // Ana sayfadaki gelişim noktası: o denemeyi Denemelerim’de, kendi sekmesinde seçili açar.
 // Branş noktası (branş denemesi ya da TYT/AYT bölümü) Branş denemelerinde o dersle açılır.
 function denemeYolAc(id) {
+  // Öğretmen ana sayfasındaki ortalama noktası Denemeler’i o türle açar.
+  if(String(id).startsWith('o:')){const tur=String(id).split(':')[1];EK.sekme='denemeler';EK.denemeTur=tur;DENEME_FORM=null;
+    if(tur==='AYT' && DENEME_ALAN[EK.anaDenemeAlan])EK.denemeAlan=EK.anaDenemeAlan;ciz();return;}
   const r=denemeBul(id);if(!r)return;
   EK.sekme='denemeler';EK.denemeTur=r.tur;EK.denemeSecili=r.id;DENEME_FORM=null;
   if(r.tur==='BRANS'){EK.denemeOturum=r.oturum;EK.denemeBrans=r.brans;if(r.genel){EK.denemeGenel=true;EK.denemeMetrik='net';}}
@@ -12483,6 +12624,8 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.dnDot){denemeNoktaSec(el.dataset.dnDot);return;}
   if(el.dataset.dnYol){denemeYolAc(el.dataset.dnYol);return;}
   if(el.dataset.dnYolSec){EK.denemeYol=el.dataset.dnYolSec;ciz();document.querySelector('[data-dn-yol-sec="'+EK.denemeYol+'"]')?.focus();return;}
+  if(el.dataset.dnOrtTur){EK.anaDenemeTur=el.dataset.dnOrtTur;ciz();document.querySelector('[data-dn-ort-tur="'+EK.anaDenemeTur+'"]')?.focus();return;}
+  if(el.dataset.dnOrtAlan && DENEME_ALAN[el.dataset.dnOrtAlan]){EK.anaDenemeAlan=el.dataset.dnOrtAlan;ciz();document.querySelector('[data-dn-ort-alan="'+EK.anaDenemeAlan+'"]')?.focus();return;}
   if(el.dataset.dnYolAlan && DENEME_ALAN[el.dataset.dnYolAlan]){EK.denemeAlan=el.dataset.dnYolAlan;ciz();document.querySelector('[data-dn-yol-alan="'+EK.denemeAlan+'"]')?.focus();return;}
   if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
   if(el.dataset.dnKaynak){
@@ -12570,6 +12713,7 @@ document.addEventListener('change',async ev=>{
   if(el.dataset?.dnRapor!==undefined){DENEME_IMPORT[Number(el.dataset.dnRapor)][el.dataset.alan]=el.value;return;}
   if(id==='dnGenel'){EK.denemeGenel=el.checked;ciz();return;}
   if(id==='dnYolBrans'){EK.denemeYolBrans=el.value;ciz();document.getElementById('dnYolBrans')?.focus();return;}
+  if(id==='dnOrtSube'){EK.anaSube=el.value;ciz();document.getElementById('dnOrtSube')?.focus();return;}
   if(id==='dnHedef' && ogrenciMi()){
     const o=D.ogr[EK.ogr],k=el.dataset.anahtar,ust=Number(el.max),v=el.value.trim(),hedef=v===''?null:Math.round(Number(v));
     if(!/^(TYT|AYT)(:[a-z0-9]+)?$/.test(k || ''))return;
@@ -12602,7 +12746,7 @@ document.addEventListener('change',async ev=>{
 // evresinde çalıştığı için diğer dinleyicilerden önce işler; kayıt sırası önemsizdir.
 ['click', 'change', 'input', 'submit'].forEach(t => document.addEventListener(t, () => { TEST_ACILIS_JSON = null; }, true));
 
-// Öğrenci üst menüsü: ok düğmesi "Planım" altındaki sayfaları açıp kapar; dışarı tıklama ya da
+// Üst menü: ok düğmesi grubun altındaki sayfaları açıp kapar; dışarı tıklama ya da
 // Esc kapatır. Fareyle üzerine gelince ve klavye odağında CSS açar (bkz. .menu-acilir).
 document.addEventListener('click', ev => {
   const ok = ev.target.closest && ev.target.closest('.menu-ac');
@@ -12612,7 +12756,19 @@ document.addEventListener('click', ev => {
   if (!ok) return;
   const grup = ok.closest('.menu-grup'), acik = !grup.classList.contains('acik');
   grup.classList.toggle('acik', acik); ok.setAttribute('aria-expanded', String(acik));
+  if (acik) menuSigdir(grup);
 });
+// Sağ kenara yakın bir grubun listesi ekrandan taşacaksa sağa yaslanır (dar ekranda menü satırları kayar).
+function menuSigdir(grup) {
+  const liste = grup && grup.querySelector('.menu-liste');
+  if (!liste || typeof window === 'undefined') return;
+  liste.classList.remove('sag');
+  if (liste.getBoundingClientRect().right > window.innerWidth - 8) liste.classList.add('sag');
+}
+['mouseover', 'focusin'].forEach(t => document.addEventListener(t, ev => {
+  const grup = ev.target.closest && ev.target.closest('.menu-acilir') && ev.target.closest('.menu-grup');
+  if (grup) menuSigdir(grup);
+}));
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;
   document.querySelectorAll('.menu-grup.acik').forEach(g => { g.classList.remove('acik'); g.querySelector('.menu-ac')?.setAttribute('aria-expanded', 'false'); });
@@ -13228,7 +13384,7 @@ function gorunumSiralamalar(){return SIRALAMA.gorunum()}
   ortakAcilisi();
   let izlemeMesaji = '';
   try { izlemeMesaji = sessionStorage.getItem('yks_izleme_mesaj') || ''; sessionStorage.removeItem('yks_izleme_mesaj'); } catch (e) { /* yok */ }
-  if (rehberMi()) { EK.sekme = 'takip'; EK.takipHafta = null; EK.takipOlcut = 'islem'; }
+  if (rehberMi()) { EK.sekme = 'ana'; EK.takipHafta = null; EK.takipOlcut = 'islem'; }
   else if (ogrenciMi() && !sekmeGeriYuklendi) EK.sekme = 'ana';   // öğrenci ana sayfayla başlar (harita + deneme gelişimi)
   // ders programı ve konu planı hazırsa gelecek haftaları kendiliğinden doldur:
   // aynı işlemi tekrar tekrar yapmak zararsız, çünkü işlenmiş konuya dokunulmuyor

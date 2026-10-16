@@ -112,7 +112,7 @@ fs.mkdirSync(out,{recursive:true});
    assert.equal(await page.evaluate(()=>D.ogr[1].sinif),11);
    assert.equal(await page.evaluate(()=>JSON.stringify(D.konuPlani['12-A'])===window.oldPlan),true);
    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[1].sinif),11);
-   await page.locator('[data-sekme="konuplani"]').first().click();await page.locator('#subeSec').selectOption('12-A');
+   await page.locator('[aria-controls="konularMenusu"]').click();await page.locator('#konularMenusu [data-sekme="konuplani"]').click();await page.locator('#subeSec').selectOption('12-A');
    await page.locator('#yksEksikleriEkle').click();await page.waitForFunction(()=>yksPlanEksikleri('12-A').length===0,null,{timeout:5000});
    assert.deepEqual(errors,[]);await context.close();
   }

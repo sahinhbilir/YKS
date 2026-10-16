@@ -58,7 +58,7 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     const a = uygulama();
     assert.equal(await ac(a), true);
     assert.equal(a.run('yalnizcaGoruntuleme()'), true); assert.equal(a.run('D.ogr[0].ad'), 'SENTETİK ADA'); assert.equal(a.run('D.rol'), 'rehber');
-    assert.equal(a.run('EK.sekme'), 'takip'); assert.equal(a.yerel.get('yks_veri'), '{"kendi":true}');
+    assert.equal(a.run('EK.sekme'), 'ana'); assert.equal(a.yerel.get('yks_veri'), '{"kendi":true}');
     assert.deepEqual(JSON.parse(a.yerel.get('yks_izleme')), { sahipUid: SAHIP, izleyiciUid: IZLEYICI, ad: 'Sentetik Öğretmen' });
     assert.equal(a.yerel.get('yks_izleme_veri'), a.run('SAHIP_DEFTERI'));
     assert(a.nodes.ana.innerHTML.includes('Yalnızca görüntüleme')); assert(a.nodes.ray.innerHTML.includes('>Çıkış yap<'));

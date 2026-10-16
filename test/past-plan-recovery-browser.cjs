@@ -40,13 +40,14 @@ let browser;
  assert.ok(await page.evaluate(()=>localStorage.getItem('yks_plan_kurtarma_oncesi')));
  await page.evaluate(()=>{D.ogr[0].gunlukEk={paragraf:[{gun:gunNo('2026-08-01'),soru:40}],problem:[{gun:gunNo('2026-08-01'),soru:40}]};});
  await page.locator('#gpHaftayiAc').click();assert.ok(await page.evaluate(()=>!!elleAl(0,gunNo('2026-09-07')).sabit));
- await page.getByRole('button',{name:'Haftalar Haritası',exact:true}).click();
+ // Teacher top menu: the plan pages sit under Haftalık plan ▾.
+ await page.locator('[aria-controls="planMenusu"]').click();await page.getByRole('button',{name:'Haftalar haritası',exact:true}).click();
  const week=await page.evaluate(()=>gunNo('2026-09-07'));
  await page.locator('[data-harita-plan="'+week+'"]').click();
  assert.equal(await page.evaluate(()=>EK.hafta),week);assert.match(await page.locator('#ana').innerText(),/8\/10/);
  const weekText=await page.locator('#ana').innerText();assert.equal((weekText.match(/Karışık Paragraf/g)||[]).length,1);assert.equal((weekText.match(/Karışık Problem/g)||[]).length,1);
  assert.match(weekText,/✓ Tamamlandı/);assert.match(weekText,/Süre tutarak hız çalışması/);
- await page.getByRole('button',{name:'Geçmiş plan kurtar',exact:true}).click();
+ await page.locator('[aria-controls="planMenusu"]').click();await page.getByRole('button',{name:'Geçmiş plan kurtar',exact:true}).click();
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(out,'photo-recovery-mobile.png'),fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'mobile overflow');
  await page.locator('#gpSatirEkle').click();assert.equal(await page.locator('.gpSatir').count(),7);
