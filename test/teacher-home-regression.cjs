@@ -81,7 +81,8 @@ check('this week per class: plan given, PDF requested, last week\'s result, week
   const satirlar = [...kart.matchAll(/data-ra-sube="([^"]*)"[^>]*>([^<]*)<small>(\d+) öğrenci<\/small><\/button><\/th>(.*?)<\/tr>/g)]
     .map(m => [m[1], m[3], [...m[4].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map(x => x[1].replace(/<[^>]+>/g, ''))]);
   assert.deepEqual(satirlar, [['12-A', '2', ['1/2', '1/2', '1/2', '1']], ['12-B', '1', ['0/1', '0/1', '0/1', '0']]]);
-  assert.match(kart, /data-ra-harita="1" title="Haftalar haritasında aç">Synthetic Bora <b>1<\/b>/, 'Bora opens the weeks map');
+  // The name opens Bora's own view; the number opens the weeks map to decide.
+  assert.match(kart, /<span class="rh-ad"><button type="button" class="ogr-ad" data-ogr-gor="1" title="Öğrenci gözüyle gör">Synthetic Bora<\/button><button type="button" data-ra-harita="1"[^>]*>1<\/button><\/span>/);
   assert.doesNotMatch(kart, /Silinen/);
 });
 
@@ -110,6 +111,24 @@ check('main screen: titles link to their pages, e-mail requests stay reachable',
   assert.match(run('gorunumRehberAna()'), /id="talepAc">E-posta talepleri \(2\)/);
   run("EK.sekme='ana';cizIc()");
   assert.match(nodes.ana.innerHTML, /class="ana-pano rehber-pano"/, 'the teacher main screen is drawn');
+});
+
+check('a student name opens that student\'s view: one student\'s data, student role, no cloud module', () => {
+  const ad = run('ogrAdDugmesi(0)');
+  assert.equal(ad, '<button type="button" class="ogr-ad" data-ogr-gor="0" title="Öğrenci gözüyle gör">Synthetic Ada</button>');
+  assert.equal(run('ogrAdDugmesi(3)'), 'Synthetic Silinen', 'a deleted student is plain text');
+  assert.equal(run("ogrAdDugmesi(1,'<b>x</b>')").includes('&lt;b&gt;x&lt;/b&gt;'), true, 'escaped');
+  run("D.ogr[0].syncId='synthetic-sync';D.ogr[1].denemeOkul=[{id:'p:b',ad:'Bora sınavı',tarih:'2026-10-01',tur:'TYT',oturum:'TYT',brans:'',alan:'SAY',dersler:[],sure:null,puan:null,ts:1}]");
+  const belge = run('ogrenciGozuyleBelgesi(0)');
+  const hazirlik = belge.indexOf('window.YKS_ONIZLEME = true'), uygulama = belge.indexOf('<script id="uygulama">');
+  assert(hazirlik > 0 && hazirlik < uygulama, 'memory storage is set up before the app runs');
+  assert.doesNotMatch(belge, /type="module"/, 'no Firebase module');
+  const veri = JSON.parse(belge.slice(belge.indexOf('id="veri" type="application/json">') + 34, belge.indexOf('</script>', belge.indexOf('id="veri"'))));
+  assert.equal(veri.rol, 'ogrenci'); assert.equal(veri.ogr.length, 1); assert.equal(veri.ogr[0].ad, 'Synthetic Ada');
+  for (const baska of ['Synthetic Bora', 'Synthetic Cem', 'Bora sınavı']) assert(!belge.includes(baska), baska + ' must not be in Ada\'s view');
+  assert.equal(run('ONIZLEME_MODU'), false, 'the teacher page itself is not a preview');
+  run("D.rol='ogrenci'"); assert.equal(run('ogrAdDugmesi(0)'), 'Synthetic Ada', 'students see plain names');
+  assert.equal(run('ogrenciGozuyleAc(0)'), false);
 });
 
 check('mock exam average per exam, per class and per field', () => {

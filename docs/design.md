@@ -159,8 +159,9 @@ the student home, it has two cards with linked headings:
   week), PDF istedi (this week's activity), Geçen haftanın sonucu (a result in the
   student's previous plan week) and Karar bekleyen (weeks marked "sonuç yok" on the
   weeks map, the same check as `atlananHaftalar`). The same four columns repeat per
-  class. A class name opens that class's weekly plan, and each name under "Karar
-  bekleyen" opens that student's weeks map. The card refreshes live as student
+  class. A class name opens that class's weekly plan. Under "Karar bekleyen" each
+  name opens the student's view and the number beside it opens that student's weeks
+  map. The card refreshes live as student
   activity arrives. "E-posta talepleri (n)" sits beside the heading while requests
   wait.
 - **Deneme ortalaması** (opens Denemeler). It is drawn the same way as the student's
@@ -169,3 +170,7 @@ the student home, it has two cards with linked headings:
   SÖZ and averages only the students of that field. "Şube" narrows it to one class.
   A point opens Denemeler with that exam type. There is no target line.
 - In a single column (≤1100 px) the week card comes first, then the chart.
+
+A student's name anywhere in the teacher pages opens that student's own screens in an
+isolated frame ("Öğrenci gözüyle"); under "Karar bekleyen" the name opens the student's
+view and the number beside it opens the weeks map. See docs/ogrenci-gozuyle.md.

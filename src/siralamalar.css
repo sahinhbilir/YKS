@@ -33,3 +33,22 @@ main:has(.sr-panel){min-width:0}
 }
 @media (max-width:640px){.sr-panel{padding:14px}.sr-secim{flex-direction:column;align-items:stretch}.sr-secim select{max-width:100%;width:100%}.sr-ok{display:none}}
 @media print{.sr-panel{box-shadow:none}}
+/* Exam date: corrected in place; the printed date stays visible under it. */
+.sr-tarih{font-size:13px;padding:5px 7px;max-width:100%}
+/* In-site ranking: the chosen measure's column is highlighted; rises green, falls red. */
+.sr-sira-secim{gap:10px 14px;align-items:center;margin-bottom:12px}
+.sr-sira-secim label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--soluk)}
+.sr-sira-secim .yg-secim{flex-wrap:wrap;border-radius:18px}.sr-sira-secim .yg-secim button{padding:6px 12px;font-size:13px;white-space:nowrap}
+.sr-sira-tablo{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.sr-sira-tablo th,.sr-sira-tablo td{padding:7px 8px;border-bottom:1px solid var(--cizgi);text-align:right;white-space:nowrap;font-size:13.5px}
+.sr-sira-tablo th:nth-child(-n+3),.sr-sira-tablo td:nth-child(-n+3){text-align:left}
+.sr-sira-tablo thead th{font-size:11px;font-weight:600;color:var(--soluk);text-transform:uppercase;letter-spacing:.03em}
+.sr-sira-tablo th.secili{color:var(--vurgu)}.sr-sira-tablo td.secili{background:var(--vurgu-yumusak)}
+.sr-sira-tablo td:first-child{color:var(--soluk);font-weight:600}
+.sr-sira-tablo td.sr-art{color:var(--iyi);font-weight:600}.sr-sira-tablo td.sr-azal{color:var(--kritik);font-weight:600}
+.sr-sira-tablo tbody tr:hover{background:var(--vurgu-yumusak)}
+@media (max-width:640px){
+  .sr-sira-tablo .k-sube,.sr-sira-tablo .k-once,.sr-sira-tablo .k-artis:not(.secili),.sr-sira-tablo .k-yuzde:not(.secili),.sr-sira-tablo .k-fark:not(.secili){display:none}
+  .sr-sira-tablo.olcut-net .k-artis{display:table-cell}
+  .sr-sira-tablo th,.sr-sira-tablo td{padding:7px 5px}.sr-sira-tablo td:nth-child(2),.sr-sira-tablo th{white-space:normal}
+}

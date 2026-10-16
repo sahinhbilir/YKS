@@ -9,6 +9,26 @@
 
 İki liste türü okunur: **Net Sayısı Sıralı** (TYT) ve **Öğrenci Adı Sıralı** (TYT + AYT). Aynı sınavın (aynı sınav adı) listeleri birleşir. Aynı listenin yeniden eklenmesi öğrenci numarasına göre satırları yeniler; listede olmayan öğrenciler kalır, böylece şube listeleri okul listesine eklenebilir. TYT raporu varsa Net Sayısı Sıralı listeyi, yoksa Öğrenci Adı Sıralı listenin TYT bölümünü kullanır; AYT raporu Öğrenci Adı Sıralı listeyi ister.
 
+## Sınav tarihi
+
+Sınavlar tablosundaki **Tarih** alanından bir sınavın tarihi düzeltilir (ör. PDF’de yanlış basılmış hazırbulunuşluk tarihi). Onaydan sonra:
+
+- Düzeltilen tarih sınavın kendisinde (`sinavlar[].tarih`, `gg.aa.yyyy`) saklanır; listelerin basılı tarihi değişmez ve altında “PDF’de: …” olarak görünür. Aynı PDF yeniden eklenince düzeltme korunur.
+- Sınavların sırası (önceki/şimdiki) düzeltilen tarihe göre kurulur.
+- Öğrencilerin bu sınavdaki okul sonuçları (Denemeler, `denemeOkul`) da yeni tarihe taşınır: aynı sınav adı ve eski tarihli satırlar. PDF’den gelen satırın kimliği tarihi taşıdığı için eski satır silinmiş olarak işaretlenir ve aynı sonuç yeni tarihin kimliğiyle eklenir; elle girilen satırın yalnızca tarihi değişir. Öğrencinin kendi girdiği deneme değişmez. Taşınan öğrenciler yayın kuyruğuna alınır ve hemen yayınlanır; yayınlanamayan cihazda kayıtlı kalır (“Bekleyen sonuçları yayınla”).
+- İzleyici öğretmen tarihi yalnızca görür.
+
+## Sıralama (sayfada)
+
+**Sıralama** kartı, Karşılaştır’da seçilen iki sınavın öğrencilerini sayfada sıralar (PDF gerekmez):
+
+- **TYT** ya da **AYT**; AYT’de **SAY · EA · SÖZ · Toplam** (varsayılan, en çok öğrencinin girdiği alan). Alan neti, alanın iki testi de cevaplanmışsa sayılır (raporlardaki kural).
+- **Sırala:** **Net** (şimdiki net), **Net artışı** (şimdiki − önceki), **% artış** ((şimdiki − önceki) / önceki; önceki net 0 ya da altındaysa yok), **Kapanan fark (log)**: `ln((tam − önceki + 1) / (tam − şimdiki + 1))`. Tam net TYT’de 120, alanlarda 80, AYT toplamda 160’tır. Tam nete yakın artış daha değerlidir; +1 tam nette sonucu sonlu tutar. % artış ile kapanan fark aynı sırayı vermez: 40→50 %25 artış ama küçük bir kapanan fark, 100→110 %10 artış ama büyük bir kapanan farktır.
+- Eşit değerler aynı sırayı alır (1, 2, 2, 4); önceki sınavda sonucu olmayanlar artış ölçütlerinde sonda ve sırasızdır.
+- **Şube** seçilirse sıra yalnızca o şubede verilir.
+- Seçilen ölçütün sütunu vurgulanır; telefonda sıra, ad, şimdiki net ve seçilen ölçüt görünür.
+- Defterdeki öğrenciyle (numara ve ad) eşleşen ad, o öğrencinin gözüyle açılır (docs/ogrenci-gozuyle.md).
+
 ## Raporlar
 
 Önceki ve şimdiki sınav seçilir (önceki, şimdikinden hemen önceki sınavdır). Her rapor **Önizle** ile sayfada görülür, **PDF indir** ile kaydedilir; **Hepsini tek PDF’te indir** dört raporu tek dosyada verir.

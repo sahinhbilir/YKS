@@ -534,7 +534,7 @@ function gorunumDenemeler() {
   const son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son,genelSayi=liste.filter(r=>r.genel).length;
   // With the net/dk chart selected the summary follows it, over exams that have a time.
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan)),birim=hizOzet?' net/dk':' net';
-  return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+kacis(D.ogr[EK.ogr].ad)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
+  return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+ogrAdDugmesi(EK.ogr)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
     '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
     '<div class="dn-tabs" role="group" aria-label="Deneme türü">'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'<button class="dugme birincil dn-ekle" id="dnEkle">+ Deneme ekle</button></div>'+
     '<div class="arac dn-filters" role="group" aria-label="Grafik ve geçmiş filtresi">'+(tur==='BRANS'?'<label>Oturum<select id="dnFiltreOturum"><option'+(oturum==='TYT'?' selected':'')+'>TYT</option><option'+(oturum==='AYT'?' selected':'')+'>AYT</option></select></label><label>Branş<select id="dnFiltreBrans">'+DENEME_DERSLER[oturum].map(d=>'<option value="'+d[0]+'"'+(brans===d[0]?' selected':'')+'>'+d[1]+'</option>').join('')+'</select></label>':'')+(tur==='AYT'?'<label>Alan<select id="dnFiltreAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+(alan===a?' selected':'')+'>'+a+'</option>').join('')+'</select></label>':'')+
@@ -551,6 +551,32 @@ function denemeFormOku() {
 async function denemeYerelKaydet(si,alan,yeni) {
   const o=D.ogr[si],eski=o[alan];o[alan]=yeni;
   if(!await kaydet(true)){o[alan]=eski;throw new Error('Cihaza kaydedilemedi. Değişiklik uygulanmadı; yeniden deneyin.');}
+}
+// Publishes every student whose school results wait for publishing; a failed one stays queued.
+async function denemeBekleyenleriYayinla(ilerleme=()=>{}) {
+  const defter=D,bekleyen=D.ogr.map((o,i)=>({o,i})).filter(x=>!x.o.silindi && x.o.denemeYayinBekliyor);let tamam=0;const errors=[];
+  for(const {o,i} of bekleyen){if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');ilerleme('Yayınlanıyor: '+(tamam+errors.length+1)+' / '+bekleyen.length);try{await denemeOkulYayinla(i);tamam++;}catch(e){errors.push(o.ad+': '+e.message);}}
+  if(!await kaydet(true))throw new Error('Yayın durumu cihaza kaydedilemedi; tekrar deneyin.');
+  return tamam+' öğrenciye yayınlandı.'+(errors.length?' '+errors.length+' öğrenci cihazda kayıtlı, yayın bekliyor. '+errors.join(' · '):' Öğrenciler sonuçlarını otomatik görecek.');
+}
+// Moves a school exam to its corrected date for every student (Sıralamalar → Tarih). A record
+// imported from PDF has the date in its id, so it is replaced: the old id becomes a deleted row
+// and the same result is added under the new date's id; publishing moves it on student devices too.
+async function denemeOkulTarihTasi(ad,eskiTarihler,yeniTarih) {
+  if(!rehberMi() || yalnizcaGoruntuleme())throw new Error('Yalnızca rehber öğretmen değiştirebilir.');
+  if(!isoTarihGecerli(yeniTarih))throw new Error('Tarih geçersiz.');
+  const anahtar=denemeAdAnahtari(ad),once=JSON.stringify(D.ogr),ts=Date.now(),pdfId=(t,ot)=>'p:'+encodeURIComponent([anahtar,t,ot].join('|'));
+  let sayi=0;
+  D.ogr.forEach(o=>{
+    if(!o || o.silindi)return;
+    const tasinan=(o.denemeOkul || []).filter(r=>!r.silindi && denemeAdAnahtari(r.ad)===anahtar && eskiTarihler.includes(r.tarih) && r.tarih!==yeniTarih);
+    if(!tasinan.length)return;
+    const yeni=tasinan.flatMap(r=>{const z=Math.max(ts,r.ts+1);
+      return r.id===pdfId(r.tarih,r.oturum)?[{...r,silindi:true,ts:z},{...r,id:pdfId(yeniTarih,r.oturum),tarih:yeniTarih,ts:z}]:[{...r,tarih:yeniTarih,ts:z}];});
+    o.denemeOkul=denemeBirlestir(o.denemeOkul,yeni);o.denemeYayinBekliyor=true;sayi++;
+  });
+  if(sayi && !await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kaydedilemedi; öğrenci sonuçları taşınmadı.');}
+  return sayi;
 }
 function denemeDurum(m) { EK.denemeDurum=m;const el=document.getElementById('dnDurum');if(el)el.textContent=m; }
 // Call after the change is saved on this device: a failed publish leaves it queued, not lost.
@@ -663,10 +689,7 @@ document.addEventListener('click',async ev=>{
         if(!await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kayıt başarısız; aktarım uygulanmadı.');}
         DENEME_IMPORT=null;
       }
-      const bekleyen=D.ogr.map((o,i)=>({o,i})).filter(x=>!x.o.silindi && x.o.denemeYayinBekliyor);let tamam=0;const errors=[];
-      for(const {o,i} of bekleyen){if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');denemeDurum('Yayınlanıyor: '+(tamam+errors.length+1)+' / '+bekleyen.length);try{await denemeOkulYayinla(i);tamam++;}catch(e){errors.push(o.ad+': '+e.message);}}
-      if(!await kaydet(true))throw new Error('Yayın durumu cihaza kaydedilemedi; tekrar deneyin.');
-      denemeDurum(tamam+' öğrenciye yayınlandı.'+(errors.length?' '+errors.length+' öğrenci cihazda kayıtlı, yayın bekliyor. '+errors.join(' · '):' Öğrenciler sonuçlarını otomatik görecek.')+srNot);ciz();
+      denemeDurum(await denemeBekleyenleriYayinla(denemeDurum)+srNot);ciz();
     }catch(e){denemeDurum(e.message+srNot);}finally{DENEME_ISLEM=false;el.disabled=false;}return;
   }
 });
