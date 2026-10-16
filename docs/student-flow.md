@@ -4,7 +4,7 @@ Students should understand what to study, why it returns, and how much preparati
 
 ## Daily interface
 
-The student navigation is Planım, Sonuç gir, Haftalar haritası, Karnem and Ayarlar; the app opens on Haftalar haritası. The plan is read-only by default and offers one download action. Its visible exam countdown and compact weeks map place the current week within the preparation period. The full map opens past plans and distinguishes recorded results from an actually completed week; one recorded result never implies completion. The countdown uses the notebook's configured exam date, not an independently verified official date.
+The student navigation is Planım, Sonuç gir, Haftalar haritası and Ayarlar; the app opens on Haftalar haritası. The plan is read-only by default and offers one download action. Its visible exam countdown and compact weeks map place the current week within the preparation period. The full map opens past plans and distinguishes recorded results from an actually completed week; one recorded result never implies completion. The countdown uses the notebook's configured exam date, not an independently verified official date.
 
 Each scheduled test shows its repetition number, previous result date and score, and any result recorded for that scheduled day. Desktop, mobile, result entry and printable plans retain this information. Repetition stages are counted from results preceding the scheduled date, so future reviews do not renumber historical plans. “2. tekrar” describes the learning stage; “2 test” describes the question load within that stage. The weekly summary counts first measurements, later repetitions and recorded topic results, excluding free routines and lesson explanations.
 

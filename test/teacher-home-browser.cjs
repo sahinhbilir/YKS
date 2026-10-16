@@ -22,6 +22,8 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
     D.ogr=[{ad:'SENTETİK ADA',no:1,sube:'12-A',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,ilkAktif:ilk,cikti:bugunNo(),denemeOkul:[k('p:a1','Deneme 1','2026-09-20',30),k('p:a2','Deneme 2','2026-10-04',36)]},
      {ad:'SENTETİK BORA',no:2,sube:'12-A',sinif:12,alan:'EA',kap:6,off:[6],aktif:true,ilkAktif:ilk,cikti:gunNo('2026-10-06'),denemeOkul:[k('p:b1','Deneme 1','2026-09-20',20)]},
      {ad:'SENTETİK CEM',no:3,sube:'12-B',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,ilkAktif:ilk,denemeOkul:[k('p:c1','Deneme 1','2026-09-20',10),k('p:c2','Deneme 2','2026-10-04',30)]}];
+    // Last week's plans were printed (saved) for Ada and Bora, but no result came back.
+    const sabit=()=>({ek:[],sil:[],yer:{},soru:{},degisim:{},konuSlot:{},sabit:ilk});D.elle={['0|'+ilk]:sabit(),['1|'+ilk]:sabit()};
     EK.ogr=0;EK.sekme='ana';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};ciz();
    });
    const ray=page.locator('#ray');
@@ -30,22 +32,26 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    const yukseklik=await ray.evaluate(e=>e.getBoundingClientRect().height);
    assert(yukseklik<=(width<820?125:70),'top bar height '+yukseklik+' at '+width);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'no horizontal scroll at '+width);
-   assert.deepEqual(await ray.locator('.menu-grup>button[data-sekme]').allTextContents(),['Haftalık plan','Öğrenciler','Konular','Denemeler']);
-   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','ayarlar']);
+   assert.deepEqual(await ray.locator('.menu-grup>button[data-sekme]').allTextContents(),['Haftalık plan','Öğrenciler','Denemeler']);
+   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','mufredat','ayarlar'],'Müfredat and Ayarlar top right');
+   assert.deepEqual(await page.locator('#planMenusu button').allTextContents(),['Sonuç girişi','Haftalar haritası']);
    const liste=page.locator('#ogrencilerMenusu'),ok=page.locator('[aria-controls="ogrencilerMenusu"]');
    assert.equal(await liste.isVisible(),false,'menu folded');
    if(width>=820){await ok.hover();assert.equal(await liste.isVisible(),true,'hovering opens it');await page.mouse.move(width-20,780);assert.equal(await liste.isVisible(),false);}
    await ok.click();await page.mouse.move(width-20,780);assert.equal(await liste.isVisible(),true,'a click keeps it open');assert.equal(await ok.getAttribute('aria-expanded'),'true');
-   await page.keyboard.press('Escape');assert.equal(await liste.isVisible(),false,'Esc closes it');
-   // On a phone the list near the right edge opens leftwards and stays on screen.
-   await page.locator('[aria-controls="konularMenusu"]').click();
-   const kutu=await page.locator('#konularMenusu').boundingBox();
-   assert(kutu.x>=0 && kutu.x+kutu.width<=width,'Konular list inside the screen: '+JSON.stringify(kutu));
-   assert.deepEqual(await page.locator('#konularMenusu button').allTextContents(),['Konu planı','Müfredat']);
+   // On a phone a list near the right edge opens leftwards and stays on screen.
+   const kutu=await liste.boundingBox();
+   assert(kutu.x>=0 && kutu.x+kutu.width<=width,'Öğrenciler list inside the screen: '+JSON.stringify(kutu));
    await page.screenshot({path:path.join(out,'teacher-menu-'+width+'-'+scheme+'.png')});
-   await page.locator('#konularMenusu [data-sekme="mufredat"]').click();
+   await page.keyboard.press('Escape');assert.equal(await liste.isVisible(),false,'Esc closes it');
+   await page.locator('#ray > [data-sekme="mufredat"]').click();
    assert.equal(await page.evaluate(()=>EK.sekme),'mufredat');
-   assert.equal(await ray.locator('.menu-grup.alt-secili>[data-sekme="konular"]').count(),1,'the group shows the open page');
+   assert.equal(await page.locator('#ray > [data-sekme="mufredat"][aria-current="page"]').count(),1);
+   // A class's curriculum opens from the list and keeps Müfredat marked in the menu.
+   await page.locator('[data-mufredat-sube="12-A"]').click();
+   assert.deepEqual(await page.evaluate(()=>[EK.sekme,EK.sube]),['konuplani','12-A']);
+   assert.equal(await page.getByRole('heading',{name:'Özel tasarlanmış müfredat'}).count(),1);
+   assert.equal(await page.locator('#ray > [data-sekme="mufredat"][aria-current="page"]').count(),1);
    // 2) The brand opens the main screen: this week per class, then the class average chart.
    await ray.locator('button.marka').click();await page.getByRole('heading',{name:'Bu hafta'}).waitFor();
    const sayilar=await page.locator('#rehberHafta .rh-sayi').allInnerTexts();

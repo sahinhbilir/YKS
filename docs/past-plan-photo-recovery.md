@@ -1,6 +1,6 @@
 # Recover a past weekly plan from a photo
 
-Teachers and students have a **Geçmiş plan kurtar** page. Teachers select a student; students recover only their own history. Then open a JPG/PNG/WebP photo, and copy the supplied AI prompt. Attach the same photo and prompt to an AI conversation, then paste its JSON response into the page. This follows the existing timetable import workflow; the website does not call an AI/OCR service or upload the image to Firebase. Rows can also be entered manually.
+Teachers and students have a **Geçmiş plan kurtar** page. It is not in the menu: it opens from a red week (no plan given) on the weeks map — **Planı kurtar** for a teacher, a tap on the red box for a student — with that week preset. Teachers select a student; students recover only their own history. Then open a JPG/PNG/WebP photo, and copy the supplied AI prompt. Attach the same photo and prompt to an AI conversation, then paste its JSON response into the page. This follows the existing timetable import workflow; the website does not call an AI/OCR service or upload the image to Firebase. Rows can also be entered manually.
 
 The user reviews the original photo alongside editable dates, topic matches, assignment types, completion states and any visible results. Unreadable dates stay empty. Ambiguous topics require selection from the catalog. A photo containing multiple weeks or students must be processed separately. The final confirmation covers the selected student as well as the extracted work.
 

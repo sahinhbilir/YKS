@@ -47,6 +47,9 @@ main:has(.sr-panel){min-width:0}
 .sr-sira-tablo td:first-child{color:var(--soluk);font-weight:600}
 .sr-sira-tablo td.sr-art{color:var(--iyi);font-weight:600}.sr-sira-tablo td.sr-azal{color:var(--kritik);font-weight:600}
 .sr-sira-tablo tbody tr:hover{background:var(--vurgu-yumusak)}
+/* Average rows (school, then each class) open the table; the last one closes the group. */
+.sr-sira-tablo tr.sr-ort td{background:var(--zemin);font-weight:600}.sr-sira-tablo tr.sr-ort.son td{border-bottom:2px solid var(--cizgi)}
+.sr-sira-tablo tr.sr-ort td:nth-child(2){white-space:normal}
 @media (max-width:640px){
   .sr-sira-tablo .k-sube,.sr-sira-tablo .k-once,.sr-sira-tablo .k-artis:not(.secili),.sr-sira-tablo .k-yuzde:not(.secili),.sr-sira-tablo .k-fark:not(.secili){display:none}
   .sr-sira-tablo.olcut-net .k-artis{display:table-cell}
