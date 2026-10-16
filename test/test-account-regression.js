@@ -316,7 +316,8 @@ async function check(name, fn) {
   await check('reset-needs-the-typed-confirmation', async kapat => {
     const s = sunucu(), a = kapat(await kur(s));
     assert.equal((await yukle(a)).tur, 'tamam');
-    const ayar = a.run("EK.sekme='ayarlar';gorunumAyarlar()");
+    // Kurulum Ayarlar › Ders programı'nda bırakır; sıfırlama Genel bölümünde durur.
+    const ayar = a.run("EK.sekme='ayarlar';EK.ayarBolum='genel';gorunumAyarlar()");
     assert.match(ayar, /<h2>Verileri sıfırla<\/h2><div class="arac">[^]*?id="testSifirla"[^]*?<\/div>/, 'in the Verileri sıfırla card');
     assert.equal(ayar.match(/id="testSifirla"/g).length, 1);
     assert.doesNotMatch(ayar, /Baştan başlamak için/, 'no pointer text; the button sits in Verileri sıfırla');
@@ -387,7 +388,7 @@ async function check(name, fn) {
     }
     const t = kapat(await kur(sunucu()));                        // the test account itself still can
     assert.equal(t.run('testSifirlamaIzinli()'), true);
-    assert.match(t.run("EK.sekme='ayarlar';gorunumAyarlar()"), /id="testSifirla"/);
+    assert.match(t.run("EK.sekme='ayarlar';EK.ayarBolum='genel';gorunumAyarlar()"), /id="testSifirla"/);
   });
 
   await check('kaydol-form-removes-spaces-and-validates-before-creating-an-account', async kapat => {

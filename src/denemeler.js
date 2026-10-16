@@ -407,6 +407,12 @@ function denemeYolVerisi(si) {
   const hedef=secim.hedefYok?null:denemeHedefOku(o,secim.anahtar),degerler=noktalar.map(n=>n.v);
   return {o,bas,son,secim,noktalar,once,baslangic:baslangic?.r,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
 }
+// "Hedef" yazısı çizginin solunda durur; orada deneme noktası varsa sağa, YKS çizgisinin yanına geçer.
+function denemeHedefYazisi(hedef,noktalar,sol,sag,yH,r1,yksAlt) {
+  const metin='Hedef '+denemeSayi(hedef),gen=metin.length*7+8,carpar=(a,b)=>noktalar.some(([px,py])=>px>=a-6 && px<=b+6 && py>=yH-22 && py<=yH+6);
+  const sagda=carpar(sol,sol+gen) && !carpar(sag-gen,sag) && yH-18>yksAlt;   // sağ üstte "★ YKS" yazısı var
+  return '<text class="yg-hedef-yazi" x="'+r1(sagda?sag-6:sol+6)+'" y="'+r1(yH-5)+'"'+(sagda?' text-anchor="end"':'')+'>'+metin+'</text>';
+}
 // W×H, kartta kalan alanın kendisidir (ölçek s ile); yazılar böylece her ekranda aynı boyda
 // kalır, büyük ekranda biraz irileşir. Ölçü yoksa (test, yazdırma) 480×270 çizilir.
 function denemeYolSvg(v,H=270,W=480) {
@@ -424,7 +430,7 @@ function denemeYolSvg(v,H=270,W=480) {
     // "Bugün" yazısı eksenin hemen başındaysa y etiketlerinin üstüne binmesin diye sola yaslanır.
     (bugun>bas && bugun<son?'<line class="yg-bugun" x1="'+r1(x(bugun))+'" x2="'+r1(x(bugun))+'" y1="'+T+'" y2="'+r1(H-B)+'"/><text class="yg-bugun-yazi" x="'+r1(x(bugun)+(x(bugun)-L<28?4:0))+'" y="'+(T+10)+'" text-anchor="'+(x(bugun)-L<28?'start':'middle')+'">Bugün</text>':'')+
     '<line class="yg-yks" x1="'+r1(x(son))+'" x2="'+r1(x(son))+'" y1="'+T+'" y2="'+r1(H-B)+'"/><text class="yg-yks-yazi" x="'+r1(x(son)-4)+'" y="'+(T+10)+'" text-anchor="end">★ YKS</text>'+
-    (hedef===null?'':'<line class="yg-hedef" x1="'+L+'" x2="'+r1(x(son))+'" y1="'+r1(y(hedef))+'" y2="'+r1(y(hedef))+'"/><text class="yg-hedef-yazi" x="'+(L+6)+'" y="'+r1(y(hedef)-5)+'">Hedef '+denemeSayi(hedef)+'</text>');
+    (hedef===null?'':'<line class="yg-hedef" x1="'+L+'" x2="'+r1(x(son))+'" y1="'+r1(y(hedef))+'" y2="'+r1(y(hedef))+'"/>'+denemeHedefYazisi(hedef,noktalar.map(n=>[x(n.g),y(n.v)]),L,x(son),y(hedef),r1,T+14));
   const sinif='yg-'+(secim.tur==='BRANS'?'BRANS':secim.tur);
   if(noktalar.length>1)svg+='<polyline class="yg-cizgi '+sinif+'" points="'+noktalar.map(n=>r1(x(n.g))+','+r1(y(n.v))).join(' ')+'"/>';
   svg+=noktalar.map(n=>{const etiket=secim.ad+' · '+n.r.ad+(n.r.genel?' ('+n.r.genel+' denemesinden)':'')+' · '+n.r.tarih+(n.erken?' (dönem başından önce; grafiğin başında)':'')+' · '+denemeSayi(n.v)+' net';
@@ -435,12 +441,13 @@ function denemeYolSvg(v,H=270,W=480) {
 // Grafik kartı haritayla aynı boydadır; çizim, kartta kalan alanın ölçüsüne göre yeniden kurulur.
 let DENEME_YOL_ZAMAN=null;
 function denemeYolSigdir() {
-  const alan=document.querySelector && document.querySelector('.dn-yol .yg-alan');
-  if(!alan || !alan.clientWidth || !alan.clientHeight)return;
-  const s=Math.max(1,Math.min(1.35,alan.clientWidth/520)),W=Math.round(Math.max(300,alan.clientWidth/s)),H=Math.round(Math.max(200,Math.min(700,alan.clientHeight*W/alan.clientWidth)));
-  if(Math.abs(W-Number(alan.dataset.w))<4 && Math.abs(H-Number(alan.dataset.h))<4)return;
-  const v=alan.dataset.ort?denemeOrtalamaVerisi():denemeYolVerisi(Number(alan.dataset.si));if(!v)return;
-  alan.dataset.w=String(W);alan.dataset.h=String(H);alan.innerHTML=denemeYolSvg(v,H,W);
+  (document.querySelectorAll ? Array.from(document.querySelectorAll('.dn-yol .yg-alan')) : []).forEach(alan=>{
+    if(!alan || !alan.clientWidth || !alan.clientHeight)return;
+    const s=Math.max(1,Math.min(1.35,alan.clientWidth/520)),W=Math.round(Math.max(300,alan.clientWidth/s)),H=Math.round(Math.max(200,Math.min(700,alan.clientHeight*W/alan.clientWidth)));
+    if(Math.abs(W-Number(alan.dataset.w))<4 && Math.abs(H-Number(alan.dataset.h))<4)return;
+    const v=alan.dataset.ort?denemeOrtalamaVerisi():denemeYolVerisi(Number(alan.dataset.si));if(!v)return;
+    alan.dataset.w=String(W);alan.dataset.h=String(H);alan.innerHTML=denemeYolSvg(v,H,W);
+  });
 }
 function denemeYolSigdirPlanla() {
   if(typeof window==='undefined' || !window.requestAnimationFrame)return;
@@ -464,37 +471,69 @@ function denemeYolGrafigi(si=EK.ogr) {
       ? '<p class="mini yg-lejant"><span class="yg-BRANS">branş denemesi</span> <span class="yg-genel">'+secim.oturum+' denemesinden</span></p>' : '')+
     (ogrenciMi() && !secim.hedefYok?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" data-anahtar="'+secim.anahtar+'" min="0" max="'+hedefUst+'" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="'+kacis(secim.ad)+' hedef net (0–'+hedefUst+')"> net <small>'+kacis(secim.ad)+'</small></label>':'')+'</section>';
 }
-// Öğretmen ana sayfası: okul denemelerinin (PDF’den aktarılan) ortalaması, öğrencinin gelişim
-// grafiğiyle aynı çizimle. Her nokta bir sınavdır: o sınava giren öğrencilerin ortalama neti.
-// AYT, seçilen alandaki öğrencilerin ortalamasıdır; şube seçilirse yalnızca o şube.
+// Öğretmen ana sayfası ve Denemeler: okul denemelerinin (PDF’den aktarılan) ortalaması, öğrencinin
+// gelişim grafiğiyle aynı çizimle. Her nokta bir sınavdır: o sınava giren öğrencilerin ortalama neti.
+// AYT, seçilen alandaki öğrencilerin ortalamasıdır; şube seçilirse yalnızca o şube. Grup seçilirse
+// üst ya da alt %20/40/60: her denemede o denemenin sıralamasıyla ya da bütün denemelerin
+// ortalamasıyla belirlenen sabit grup. Hedef çizgisi yalnızca öğretmenindir (D.denemeOrtHedef).
 function denemeOrtalamaSecimi() {
   if(EK.anaDenemeTur!=='AYT')return {tur:'TYT',anahtar:'TYT',ust:DENEME_YOL_UST.TYT,ad:'TYT',hedefYok:true};
   const alan=DENEME_ALAN[EK.anaDenemeAlan]?EK.anaDenemeAlan:'SAY';
   return {tur:'AYT',anahtar:'AYT',ust:DENEME_YOL_UST.AYT,ad:'AYT '+alan,alan,hedefYok:true};
 }
 const denemeOrtalamaSubeleri=()=>[...new Set(canliOgrenciler().map(si=>D.ogr[si].sube).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
+const DENEME_ORT_GRUPLAR=[['','Tüm öğrenciler'],['ust20','Üst %20'],['ust40','Üst %40'],['ust60','Üst %60'],['alt60','Alt %60'],['alt40','Alt %40'],['alt20','Alt %20']];
+function denemeOrtalamaGrubu() {
+  const g=DENEME_ORT_GRUPLAR.find(x=>x[0] && x[0]===EK.anaGrup);
+  return g?{kod:g[0],yon:g[0].slice(0,3),oran:Number(g[0].slice(3))/100,ad:g[1],genel:EK.anaGrupMod==='genel'}:null;
+}
+// Grubun öğrencileri: değerlerin sırasında üstten ya da alttan oranın yukarı yuvarlanmış kadarı.
+function denemeOrtGrubunuAl(degerler,grup) {
+  const s=[...degerler].sort((a,b)=>b.v-a.v||a.si-b.si),n=Math.max(1,Math.ceil(s.length*grup.oran));
+  return grup.yon==='ust'?s.slice(0,n):s.slice(-n);
+}
+const denemeOrtHedefAnahtari=secim=>secim.tur==='AYT'?'AYT:'+secim.alan:'TYT';
+// Okulun hedefi ve şubenin kendi hedefi; şubenin yoksa okulunki geçerlidir.
+function denemeOrtHedefi(secim,sube) {
+  const h=((D.denemeOrtHedef || {})[denemeOrtHedefAnahtari(secim)]) || {},sayi=v=>Number.isFinite(v)?v:null;
+  const okul=sayi(h['']),kendi=sube?sayi(h[sube]):okul;
+  return {okul,kendi,deger:kendi ?? okul};
+}
 function denemeOrtalamaVerisi() {
   const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
   if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return null;
-  const secim=denemeOrtalamaSecimi(),sube=denemeOrtalamaSubeleri().includes(EK.anaSube)?EK.anaSube:'',gruplar=new Map();
+  const secim=denemeOrtalamaSecimi(),sube=denemeOrtalamaSubeleri().includes(EK.anaSube)?EK.anaSube:'',grup=denemeOrtalamaGrubu(),sinavlar=new Map();
   canliOgrenciler().forEach(si=>{
     const o=D.ogr[si];
     if(sube && o.sube!==sube || secim.tur==='AYT' && o.alan!==secim.alan)return;
     (o.denemeOkul || []).filter(r=>!r.silindi && r.tur===secim.tur).forEach(r=>{
-      const k=denemeKimligi(r),g=gruplar.get(k) || {r:{id:'o:'+secim.tur+':'+k,ad:r.ad,tarih:r.tarih,tur:r.tur},t:0,n:0};
-      g.t+=denemeToplam(r,secim.alan);g.n++;gruplar.set(k,g);
+      const k=denemeKimligi(r),x=sinavlar.get(k) || {r:{id:'o:'+secim.tur+':'+k,ad:r.ad,tarih:r.tarih,tur:r.tur},g:gunNo(r.tarih),degerler:[]};
+      x.degerler.push({si,v:denemeToplam(r,secim.alan)});sinavlar.set(k,x);
     });
   });
-  let noktalar=Array.from(gruplar.values(),g=>({r:{...g.r,ad:g.r.ad+' · '+g.n+' öğrenci ortalaması'},g:gunNo(g.r.tarih),v:Math.round(g.t/g.n*100)/100}));
-  const sira=(a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id),eskiler=noktalar.filter(n=>n.g<bas).sort(sira),baslangic=eskiler.at(-1);
-  noktalar=noktalar.filter(n=>n.g>=bas && n.g<=son).sort(sira);
-  if(baslangic)noktalar.unshift({...baslangic,g:bas,erken:true});
-  const degerler=noktalar.map(n=>n.v);
-  return {bas,son,secim,sube,noktalar,hedef:null,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(0,...degerler))};
+  const sira=(a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id);
+  let liste=Array.from(sinavlar.values());
+  const eskiler=liste.filter(x=>x.g<bas).sort(sira),baslangic=eskiler.at(-1);
+  liste=liste.filter(x=>x.g>=bas && x.g<=son).sort(sira);
+  if(baslangic)liste.unshift({...baslangic,g:bas,erken:true});
+  // Genel ortalamaya göre: öğrenciler gösterilen denemelerdeki ortalamalarıyla bir kez sıralanır.
+  let sabit=null;
+  if(grup && grup.genel){
+    const ort=new Map();liste.forEach(x=>x.degerler.forEach(d=>{const a=ort.get(d.si) || {t:0,n:0};a.t+=d.v;a.n++;ort.set(d.si,a);}));
+    sabit=new Set(denemeOrtGrubunuAl(Array.from(ort,([si,a])=>({si,v:a.t/a.n})),grup).map(d=>d.si));
+  }
+  const noktalar=liste.map(x=>{
+    const d=sabit?x.degerler.filter(y=>sabit.has(y.si)):grup?denemeOrtGrubunuAl(x.degerler,grup):x.degerler;
+    if(!d.length)return null;
+    return {r:{...x.r,ad:x.r.ad+' · '+d.length+' öğrenci ortalaması'+(grup?' ('+grup.ad+')':'')},g:x.g,...(x.erken?{erken:true}:{}),
+      v:Math.round(d.reduce((t,y)=>t+y.v,0)/d.length*100)/100};
+  }).filter(Boolean);
+  const hedef=denemeOrtHedefi(secim,sube).deger,degerler=noktalar.map(n=>n.v);
+  return {bas,son,secim,sube,grup,noktalar,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
 }
 function denemeOrtalamaGrafigi() {
   const v=denemeOrtalamaVerisi();if(!v)return '';
-  const {secim,sube}=v,subeler=denemeOrtalamaSubeleri();
+  const {secim,sube,grup}=v,subeler=denemeOrtalamaSubeleri(),h=denemeOrtHedefi(secim,sube);
   denemeYolSigdirPlanla();
   return '<section class="kart dn-yol" aria-label="Deneme ortalaması"><div class="dn-yol-bas"><div class="yg-secim" role="group" aria-label="Grafikte göster">'+
     ['TYT','AYT'].map(k=>'<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-ort-tur="'+k+'">'+k+'</button>').join('')+'</div>'+
@@ -502,7 +541,12 @@ function denemeOrtalamaGrafigi() {
       '<button type="button" class="'+(secim.alan===a?'secili':'')+'" aria-pressed="'+(secim.alan===a)+'" data-dn-ort-alan="'+a+'">'+a+'</button>').join('')+'</div>':'')+
     (subeler.length>1?'<label class="yg-brans">Şube <select id="dnOrtSube"><option value="">Tümü</option>'+subeler.map(su=>
       '<option value="'+kacis(su)+'"'+(su===sube?' selected':'')+'>'+kacis(su)+'</option>').join('')+'</select></label>':'')+
-    '</div><div class="yg-alan" data-ort="1" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div></section>';
+    '<label class="yg-brans">Grup <select id="dnOrtGrup">'+DENEME_ORT_GRUPLAR.map(([k,ad])=>'<option value="'+k+'"'+((grup?grup.kod:'')===k?' selected':'')+'>'+ad+'</option>').join('')+'</select></label>'+
+    (grup?'<div class="yg-secim" role="group" aria-label="Grup nasıl seçilsin">'+[['deneme','Her denemede'],['genel','Genel ortalamaya göre']].map(([k,ad])=>
+      '<button type="button" class="'+((grup.genel?'genel':'deneme')===k?'secili':'')+'" aria-pressed="'+((grup.genel?'genel':'deneme')===k)+'" data-dn-ort-mod="'+k+'">'+ad+'</button>').join('')+'</div>':'')+
+    '</div><div class="yg-alan" data-ort="1" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div>'+
+    (yalnizcaGoruntuleme()?'':'<label class="yg-hedef-sec">Hedef <input type="number" id="dnOrtHedef" min="0" max="'+secim.ust+'" step="1" inputmode="numeric" value="'+(h.kendi===null?'':h.kendi)+'" placeholder="'+(sube && h.okul!==null?h.okul:'—')+'" aria-label="'+kacis(secim.ad+' '+(sube?sube+' şubesi':'okul')+' hedef net (0–'+secim.ust+')')+'"> net <small>'+kacis(secim.ad)+' · '+kacis(sube || 'okul')+'</small></label>')+
+    '</section>';
 }
 function denemeFormHtml() {
   const f=DENEME_FORM;if(!f || f.si!==EK.ogr)return '';
@@ -536,6 +580,7 @@ function gorunumDenemeler() {
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan)),birim=hizOzet?' net/dk':' net';
   return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+ogrAdDugmesi(EK.ogr)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
     '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
+    (rehberMi()?'<h2 class="dn-ort-baslik">Deneme ortalaması</h2>'+denemeOrtalamaGrafigi()+'<h2 class="dn-ort-baslik">'+ogrAdDugmesi(EK.ogr)+'</h2>':'')+
     '<div class="dn-tabs" role="group" aria-label="Deneme türü">'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'<button class="dugme birincil dn-ekle" id="dnEkle">+ Deneme ekle</button></div>'+
     '<div class="arac dn-filters" role="group" aria-label="Grafik ve geçmiş filtresi">'+(tur==='BRANS'?'<label>Oturum<select id="dnFiltreOturum"><option'+(oturum==='TYT'?' selected':'')+'>TYT</option><option'+(oturum==='AYT'?' selected':'')+'>AYT</option></select></label><label>Branş<select id="dnFiltreBrans">'+DENEME_DERSLER[oturum].map(d=>'<option value="'+d[0]+'"'+(brans===d[0]?' selected':'')+'>'+d[1]+'</option>').join('')+'</select></label>':'')+(tur==='AYT'?'<label>Alan<select id="dnFiltreAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+(alan===a?' selected':'')+'>'+a+'</option>').join('')+'</select></label>':'')+
     (tur==='BRANS'?'<label>TYT/AYT bölümleri<span class="dn-genel-sec"><input type="checkbox" id="dnGenel"'+(genelAcik?' checked':'')+'> Göster</span></label>':'')+
@@ -626,6 +671,7 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.dnYol){denemeYolAc(el.dataset.dnYol);return;}
   if(el.dataset.dnYolSec){EK.denemeYol=el.dataset.dnYolSec;ciz();document.querySelector('[data-dn-yol-sec="'+EK.denemeYol+'"]')?.focus();return;}
   if(el.dataset.dnOrtTur){EK.anaDenemeTur=el.dataset.dnOrtTur;ciz();document.querySelector('[data-dn-ort-tur="'+EK.anaDenemeTur+'"]')?.focus();return;}
+  if(el.dataset.dnOrtMod){EK.anaGrupMod=el.dataset.dnOrtMod==='genel'?'genel':'deneme';ciz();document.querySelector('[data-dn-ort-mod="'+EK.anaGrupMod+'"]')?.focus();return;}
   if(el.dataset.dnOrtAlan && DENEME_ALAN[el.dataset.dnOrtAlan]){EK.anaDenemeAlan=el.dataset.dnOrtAlan;ciz();document.querySelector('[data-dn-ort-alan="'+EK.anaDenemeAlan+'"]')?.focus();return;}
   if(el.dataset.dnYolAlan && DENEME_ALAN[el.dataset.dnYolAlan]){EK.denemeAlan=el.dataset.dnYolAlan;ciz();document.querySelector('[data-dn-yol-alan="'+EK.denemeAlan+'"]')?.focus();return;}
   if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
@@ -712,6 +758,19 @@ document.addEventListener('change',async ev=>{
   if(id==='dnGenel'){EK.denemeGenel=el.checked;ciz();return;}
   if(id==='dnYolBrans'){EK.denemeYolBrans=el.value;ciz();document.getElementById('dnYolBrans')?.focus();return;}
   if(id==='dnOrtSube'){EK.anaSube=el.value;ciz();document.getElementById('dnOrtSube')?.focus();return;}
+  if(id==='dnOrtGrup'){EK.anaGrup=el.value;ciz();document.getElementById('dnOrtGrup')?.focus();return;}
+  if(id==='dnOrtHedef' && rehberMi() && !yalnizcaGoruntuleme()){
+    const v=denemeOrtalamaVerisi();if(!v)return;
+    const ust=v.secim.ust,metin=el.value.trim(),hedef=metin===''?null:Math.round(Number(metin));
+    if(hedef!==null && !(hedef>=0 && hedef<=ust)){alert('Hedef 0 ile '+ust+' net arasında olmalı.');ciz();return;}
+    const eski=D.denemeOrtHedef,k=denemeOrtHedefAnahtari(v.secim),yeni=JSON.parse(JSON.stringify(eski || {}));
+    yeni[k]=yeni[k] || {};
+    if(hedef===null)delete yeni[k][v.sube];else yeni[k][v.sube]=hedef;
+    if(!Object.keys(yeni[k]).length)delete yeni[k];
+    if(Object.keys(yeni).length)D.denemeOrtHedef=yeni;else delete D.denemeOrtHedef;
+    if(!await kaydet(true)){if(eski===undefined)delete D.denemeOrtHedef;else D.denemeOrtHedef=eski;}
+    ciz();document.getElementById('dnOrtHedef')?.focus();return;
+  }
   if(id==='dnHedef' && ogrenciMi()){
     const o=D.ogr[EK.ogr],k=el.dataset.anahtar,ust=Number(el.max),v=el.value.trim(),hedef=v===''?null:Math.round(Number(v));
     if(!/^(TYT|AYT)(:[a-z0-9]+)?$/.test(k || ''))return;
