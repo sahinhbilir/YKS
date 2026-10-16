@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 // Teacher top menu and main screen: menu groups (same pattern as the student's), this week's
-// numbers per class (plan given, PDF requested, last week's result, weeks awaiting a decision)
-// and the class average of school mock exams. Synthetic data only.
+// plan-given students (PDF requested and last week's result as small numbers) and the class
+// average of school mock exams. Synthetic data only.
 const fs = require('fs'), vm = require('vm');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
@@ -20,13 +20,14 @@ sandbox.window.document = sandbox.document; vm.createContext(sandbox); new vm.Sc
 const assert = require('node:assert/strict');
 const run = code => vm.runInContext(code, sandbox);
 let passed = 0;
-function check(name, fn) {
+const checks = [];
+function check(name, fn) { checks.push([name, fn]); }
+function reset() {
   run(`D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-14';EK={sekme:'ana',ogr:0,hafta:null,kirli:false,son:'',girisAcik:{}};
     D.ogr=[{ad:'Synthetic Ada',no:1,sube:'12-A',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,ilkAktif:gunNo('2026-10-05')},
       {ad:'Synthetic Bora',no:2,sube:'12-A',sinif:12,alan:'EA',kap:6,off:[6],aktif:true,ilkAktif:gunNo('2026-10-05')},
       {ad:'Synthetic Cem',no:3,sube:'12-B',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,ilkAktif:gunNo('2026-10-05')},
       {ad:'Synthetic Silinen',no:4,sube:'12-B',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,silindi:true}];`);
-  try { fn(); passed++; console.log('PASS', name); } catch (e) { console.error('FAIL', name, e); process.exitCode = 1; }
 }
 const sekmeler = h => [...h.matchAll(/data-sekme="([^"]+)"/g)].map(m => m[1]);
 const liste = (h, id) => { const m = h.match(new RegExp('id="' + id + '">(.*?)</div>')); return m ? sekmeler(m[1]) : null; };
@@ -36,69 +37,120 @@ check('teacher menu is on top, grouped like the student menu', () => {
   const h = nodes.ray.innerHTML;
   assert.equal(nodes.ray.className, 'ray ust rehber');
   assert.match(h, /^<button class="marka" data-sekme="ana"/, 'the brand opens the main screen');
-  // Groups: Haftalık plan ▾ · Öğrenciler ▾ · Konular ▾ · Denemeler ▾; then Ayarlar on the right.
-  assert.deepEqual([...h.matchAll(/<div class="menu-grup[^"]*"><button data-sekme="([^"]+)"/g)].map(m => m[1]), ['plan', 'ogrenciler', 'konular', 'denemeler']);
-  assert.deepEqual(liste(h, 'planMenusu'), ['giris', 'harita', 'rapor', 'kurtarma', 'anlasma']);
+  // Groups: Haftalık plan ▾ · Öğrenciler ▾ · Denemeler ▾; Müfredat and Ayarlar on the right.
+  assert.deepEqual([...h.matchAll(/<div class="menu-grup[^"]*"><button data-sekme="([^"]+)"/g)].map(m => m[1]), ['plan', 'ogrenciler', 'denemeler']);
+  assert.deepEqual(liste(h, 'planMenusu'), ['giris', 'harita']);
   assert.deepEqual(liste(h, 'ogrencilerMenusu'), ['takip']);
-  assert.deepEqual(liste(h, 'konularMenusu'), ['konuplani', 'mufredat']);
   assert.deepEqual(liste(h, 'denemelerMenusu'), ['siralamalar']);
-  assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['ayarlar'], 'only Ayarlar on the right');
-  const hepsi = sekmeler(h), beklenen = run('SEKME_REHBER.map(s=>s[0])');
-  assert.deepEqual([...new Set(hepsi.filter(x => x !== 'ana'))].sort(), [...beklenen].sort(), 'every teacher page is reachable exactly once');
+  assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['mufredat', 'ayarlar'], 'Müfredat and Ayarlar on the right');
+  // Konular and the class curricula open from Müfredat; past-plan recovery from a red week on the map.
+  const hepsi = sekmeler(h), beklenen = run('SEKME_REHBER.map(s=>s[0])').filter(x => !['konular', 'konuplani', 'kurtarma'].includes(x));
+  assert.deepEqual([...new Set(hepsi.filter(x => x !== 'ana'))].sort(), [...beklenen].sort(), 'every menu page is reachable exactly once');
   assert.equal(hepsi.length, new Set(hepsi).size);
-  // A page inside a group marks its group.
+  for (const gone of ['rapor', 'anlasma']) assert(!run('SEKME_REHBER.map(s=>s[0])').includes(gone), gone + ' is removed');
+  // A page inside a group marks its group; pages outside the menu mark where they open from.
   run("EK.sekme='siralamalar';rayCiz()");
   assert.match(nodes.ray.innerHTML, /<div class="menu-grup alt-secili"><button data-sekme="denemeler">/);
   assert.match(nodes.ray.innerHTML, /data-sekme="siralamalar" aria-current="page"/);
+  run("EK.sekme='konuplani';rayCiz()"); assert.match(nodes.ray.innerHTML, /data-sekme="mufredat" aria-current="page"/);
+  run("EK.sekme='kurtarma';rayCiz()"); assert.match(nodes.ray.innerHTML, /<div class="menu-grup alt-secili"><button data-sekme="plan">/);
 });
 
 check('student menu keeps its layout', () => {
   run("D.rol='ogrenci';D.ogr=[D.ogr[0]];D.ogr[0].sinavTuru='YKS';rayCiz()");
   const h = nodes.ray.innerHTML;
   assert.equal(nodes.ray.className, 'ray ust');
-  assert.deepEqual(liste(h, 'planMenusu'), ['harita', 'giris', 'rapor', 'kurtarma']);
+  assert.deepEqual(liste(h, 'planMenusu'), ['harita', 'giris'], 'no Karnem, no Geçmiş plan kurtar (red weeks open it)');
   assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['mufredat', 'ayarlar']);
   assert.match(h, /aria-label="Planla ilgili diğer sayfalar"/);
 });
 
-check('this week per class: plan given, PDF requested, last week\'s result, weeks awaiting a decision', () => {
+check('this week: names of students given the plan; PDF requested and last week\'s result small below', () => {
   const ozet = JSON.parse(run(`(() => {
     const hb = buHafta(0), onceki = oncekiHafta(0, hb), ts = Date.parse('2026-10-14T09:00:00+03:00');
     D.ogr[0].cikti = bugunNo();                 // Ada: plan given this week
-    D.ogr[1].cikti = onceki;                    // Bora: plan given last week only, no result → awaiting a decision
+    D.ogr[2].cikti = bugunNo();                 // Cem: plan given this week
+    D.ogr[1].cikti = onceki;                    // Bora: plan given last week only
+    D.ogr[3].cikti = bugunNo();                 // deleted student: ignored
     D.ogr[0].etkinlik = {v:1,baslangic:ts,kayit:[{tur:'pdf',hafta:hb,sonucHafta:onceki,ilk:ts,son:ts}]};
     D.log.push([onceki + 2, 0, 0, 9, 12, 1, ts]);   // Ada: a result in last week's plan
     D.log.push([onceki + 1, 3, 0, 9, 12, 1, ts]);   // deleted student: ignored
-    return JSON.stringify(rehberHaftaOzeti().map(r => [r.o.ad, r.plan, r.pdf, r.sonuc, r.karar]));
+    return JSON.stringify(rehberHaftaOzeti().map(r => [r.o.ad, r.plan, r.pdf, r.sonuc]));
   })()`));
-  assert.deepEqual(ozet, [['Synthetic Ada', true, true, true, 0], ['Synthetic Bora', false, false, false, 1], ['Synthetic Cem', false, false, false, 0]]);
+  assert.deepEqual(ozet, [['Synthetic Ada', true, true, true], ['Synthetic Bora', false, false, false], ['Synthetic Cem', true, false, false]]);
   const kart = run('rehberHaftaKarti()');
   assert.match(kart, /12\.10\.2026 – 18\.10\.2026/);
-  assert.match(kart, /<h2>3 öğrenci <span>2 şube<\/span><\/h2>/);
-  const sayilar = [...kart.matchAll(/<div class="rh-sayi[^"]*"><strong>(.*?)<\/strong><span>(.*?)<\/span>/g)].map(m => m[2] + ' ' + m[1].replace(/<[^>]+>/g, ''));
-  assert.deepEqual(sayilar, ['Plan verildi 1/3', 'PDF istedi 1/3', 'Geçen haftanın sonucu 1/3', 'Karar bekleyen 1']);
-  assert.match(kart, /<div class="rh-sayi uyari"><strong>1<\/strong><span>Karar bekleyen/);
-  const satirlar = [...kart.matchAll(/data-ra-sube="([^"]*)"[^>]*>([^<]*)<small>(\d+) öğrenci<\/small><\/button><\/th>(.*?)<\/tr>/g)]
-    .map(m => [m[1], m[3], [...m[4].matchAll(/<td[^>]*>(.*?)<\/td>/g)].map(x => x[1].replace(/<[^>]+>/g, ''))]);
-  assert.deepEqual(satirlar, [['12-A', '2', ['1/2', '1/2', '1/2', '1']], ['12-B', '1', ['0/1', '0/1', '0/1', '0']]]);
-  // The name opens Bora's own view; the number opens the weeks map to decide.
-  assert.match(kart, /<span class="rh-ad"><button type="button" class="ogr-ad" data-ogr-gor="1" title="Öğrenci gözüyle gör">Synthetic Bora<\/button><button type="button" data-ra-harita="1"[^>]*>1<\/button><\/span>/);
-  assert.doesNotMatch(kart, /Silinen/);
+  assert.match(kart, /<h2 class="rh-plan">2<small>\/3<\/small> <span>Plan verildi<\/span><\/h2>/);
+  // Only the names of students given this week's plan; each opens that student's own view.
+  assert.deepEqual([...kart.matchAll(/<li><button type="button" class="ogr-ad" data-ogr-gor="(\d+)"[^>]*>([^<]*)<\/button><\/li>/g)].map(m => [m[1], m[2]]),
+    [['0', 'Synthetic Ada'], ['2', 'Synthetic Cem']]);
+  const kucuk = [...kart.matchAll(/<div class="rh-sayi"><strong>(.*?)<\/strong><span>(.*?)<\/span>/g)].map(m => m[2] + ' ' + m[1].replace(/<[^>]+>/g, ''));
+  assert.deepEqual(kucuk, ['PDF istedi 1/3', 'Geçen haftanın sonucu 1/3']);
+  assert.ok(kart.indexOf('rh-adlar') < kart.indexOf('rh-ikincil'), 'the small numbers come after the names');
+  for (const gone of [/Karar bekleyen/, /şube/i, /data-ra-/, /Silinen/]) assert.doesNotMatch(kart, gone);
+  // Nobody given a plan yet: no list, just 0/n.
+  run('D.ogr.forEach(o => { delete o.cikti; })');
+  const bos = run('rehberHaftaKarti()');
+  assert.match(bos, /<h2 class="rh-plan">0<small>\/3<\/small>/); assert.doesNotMatch(bos, /rh-adlar/);
 });
 
-check('the fast per-student count matches the weeks map on a large notebook', () => {
+check('the fast per-student result count matches haftaSonucSayisi on a large notebook', () => {
   const fark = run(`(() => {
     let tohum = 7; const rastgele = n => (tohum = (tohum * 48271) % 2147483647) % n;
     D.ayar.testTarih = '2027-03-10'; const bas = gunNo('2026-08-24');
     D.ogr = Array.from({length: 40}, (_, i) => ({ad: 'S' + i, no: i, sube: '12-' + 'ABC'[i % 3], sinif: 12, alan: 'SAY', kap: 6, off: [6], aktif: true,
       ilkAktif: bas + 7 * rastgele(10), cikti: bas + rastgele(200), silindi: i === 39}));
     D.log = Array.from({length: 3000}, () => [bas + rastgele(200), rastgele(40), 0, 9, 12, 1, 1]);
-    D.haftaDurum = {['3|' + (bas + 14)]: {neden: 'onemsiz', konu: 0}};
-    return rehberHaftaOzeti().filter(r => r.karar !== atlananHaftalar(r.si).length ||
-      r.sonuc !== haftaSonucSayisi(r.si, oncekiHafta(r.si, buHafta(r.si))) > 0).map(r => r.si);
+    D.elle = {}; for (let i = 0; i < 40; i++) for (let w = 0; w < 28; w++) if (!rastgele(3)) D.elle[i + '|' + (bas + 7 * w)] = {sabit: bas + 7 * w};
+    return rehberHaftaOzeti().filter(r => r.sonuc !== haftaSonucSayisi(r.si, oncekiHafta(r.si, buHafta(r.si))) > 0).map(r => r.si);
   })()`);
   assert.deepEqual(Array.from(fark), []);
-  assert(run('rehberHaftaOzeti().reduce((t, r) => t + r.karar, 0)') > 0, 'the sample has weeks awaiting a decision');
+  assert(run('rehberHaftaOzeti().some(r => r.sonuc) && rehberHaftaOzeti().some(r => !r.sonuc)'), 'the sample has both');
+});
+
+check('weeks map: printed without result is grey (Nasıl geçti?), not printed is red (Planı kurtar)', () => {
+  const r = JSON.parse(run(`(() => {
+    const ilk = gunNo('2026-09-21'); D.ogr[0].ilkAktif = ilk; D.ogr[0].cikti = bugunNo();
+    D.elle = {['0|' + ilk]: {ek: [], sil: [], yer: {}, soru: {}, degisim: {}, konuSlot: {}, sabit: ilk}};
+    D.log.push([ilk + 7 + 1, 0, 0, 9, 12, 1, 1]);
+    const d = h => haftaHaritaDurumu(0, h, haftaBaslangici(D.ogr[0]), buHafta(0)).durum;
+    EK.ogr = 0;
+    return JSON.stringify({durum: [d(ilk), d(ilk + 7), d(ilk + 14), d(ilk - 7)], harita: gorunumHaritasi(), karar: atlananHaftalar(0)});
+  })()`));
+  assert.deepEqual(r.durum, ['atlandi', 'tamam', 'kayitsiz', 'gelecek'], 'printed+no result, result, not printed, before joining');
+  assert.match(r.harita, /haritaHucre atlandi"[^]*?data-haritaAc="\d+">Nasıl geçti\?/);
+  assert.match(r.harita, /haritaHucre kayitsiz"[^]*?plan verilmedi[^]*?data-harita-kurtar="\d+">Planı kurtar/);
+  assert.equal(r.karar.length, 1, 'only the grey week awaits a decision');
+});
+
+check('Müfredat: designed curricula per class, design your own, MEB tab; the class page is its custom curriculum', async () => {
+  run("D.konuPlani={'12-A':sinifaGoreKonuPlani(12,'SAY')};EK.mufredatGorunum=undefined;EK.mufredatTasarla=false;kaydet=async()=>true");
+  let h = run('gorunumMufredat()');
+  assert.match(h, /<h1>Müfredat<\/h1>/);
+  assert.match(h, /aria-pressed="true" data-mufredat-gor="tasarim">Tasarlanmış müfredatlar/);
+  assert.deepEqual([...h.matchAll(/data-mufredat-sube="([^"]+)"/g)].map(m => m[1]), ['12-A', '12-B']);
+  assert.match(h, /data-mufredat-sube="12-A"><b>12-A<\/b><span>12\. sınıf · SAY, EA · 2 öğrenci<\/span><span class="mini">\d+ ders · \d+ konu<\/span>/);
+  assert.match(h, /data-mufredat-sube="12-B">[^]*?müfredat yok/);
+  assert.match(h, /id="mufredatTasarlaAc">\+ Kendi müfredatını tasarla/);
+  run("EK.mufredatGorunum='meb'"); assert.match(run('gorunumMufredat()'), /id="mufredatSinif"/);
+  run("D.rol='ogrenci'"); assert.match(run('gorunumMufredat()'), /<h1>Müfredat ve kaynaklar<\/h1>/, 'students keep the MEB page'); run("D.rol='rehber'");
+  // Design: from the MEB suggestion for a class without students, or as a copy of another class.
+  assert.equal(await run("mufredatOlustur('305',11,'SAY','')"), '305');
+  assert.deepEqual(JSON.parse(run('JSON.stringify([Array.isArray(D.konuPlani["305"]),D.mufredatSinif,subeSinifi("305")])')), [true, {'305': 11}, 11]);
+  assert.equal(await run("mufredatOlustur('12-B',12,'SAY','12-A')"), '12-B');
+  assert.equal(run('JSON.stringify(D.konuPlani["12-B"])===JSON.stringify(D.konuPlani["12-A"])&&D.konuPlani["12-B"]!==D.konuPlani["12-A"]'), true, 'a separate copy');
+  assert.equal(run('D.mufredatSinif["12-B"]'), undefined, 'a class with students takes its grade from them');
+  await assert.rejects(run("mufredatOlustur('305',11,'SAY','')"), /zaten var/);
+  await assert.rejects(run("mufredatOlustur('',11,'SAY','')"), /1–40/);
+  run("kaydet=async()=>false"); await assert.rejects(run("mufredatOlustur('306',10,'SAY','')"), /kaydedilemedi/);
+  assert.equal(run('"306" in D.konuPlani'), false, 'a failed save changes nothing'); run("kaydet=async()=>true");
+  run("YG=yalnizcaGoruntuleme;yalnizcaGoruntuleme=()=>true");
+  try { await assert.rejects(run("mufredatOlustur('307',10,'SAY','')"), /görüntüleme/); assert.doesNotMatch(run('gorunumMufredat()'), /mufredatTasarlaAc/); }
+  finally { run('yalnizcaGoruntuleme=YG'); }
+  run("EK.sekme='konuplani';EK.sube='305'"); h = run('gorunumKonuPlani()');
+  assert.match(h, /<h1>Özel tasarlanmış müfredat<\/h1><p>305<\/p>/);
+  assert.match(h, /data-sekme="konular">Konular ve işleniş tarihleri/);
+  assert.match(h, /<option selected>305<\/option>/, 'a designed class is in the class list');
 });
 
 check('main screen: titles link to their pages, e-mail requests stay reachable', () => {
@@ -157,7 +209,7 @@ check('mock exam average per exam, per class and per field', () => {
   assert.match(h, /data-dn-ort-tur="AYT"/); assert.match(h, /aria-pressed="true" data-dn-ort-alan="EA"/);
   assert.match(h, /<select id="dnOrtSube"><option value="">Tümü<\/option><option value="12-A">12-A<\/option><option value="12-B">12-B<\/option><\/select>/);
   assert.match(h, /data-dn-yol="o:AYT:[^"]+"[^>]*aria-label="AYT EA · Deneme 2 · 1 öğrenci ortalaması · 2026-10-04 · 10 net\. Denemeler’de aç"/);
-  assert.doesNotMatch(h, /Hedef/, 'no target line for a class average');
+  assert.doesNotMatch(h, /class="yg-hedef"/, 'no target line until the teacher sets one');
   // A point opens Denemeler with that exam type (and field).
   run("ciz=()=>{};denemeYolAc('o:AYT:x')");
   assert.deepEqual(JSON.parse(run('JSON.stringify([EK.sekme,EK.denemeTur,EK.denemeAlan])')), ['denemeler', 'AYT', 'EA']);
@@ -165,4 +217,60 @@ check('mock exam average per exam, per class and per field', () => {
   assert.match(run('denemeOrtalamaGrafigi()'), /Henüz TYT denemesi yok/);
 });
 
-console.log('teacher home regression: ' + passed + ' checks passed');
+check('class average: top/bottom groups per exam or by overall average, teacher target with class override', () => {
+  run(`(() => {
+    const ders = n => DENEME_DERSLER.TYT.map(d => ({kod:d[0],soru:d[2],dogru:d[0]==='turkce'?n:0,yanlis:0}));
+    const k = (id, tarih, n) => ({id,ad:'Deneme '+tarih,tarih,tur:'TYT',oturum:'TYT',brans:'',alan:'SAY',dersler:ders(n),sure:null,puan:null,ts:1});
+    // Ten students in two classes, two exams. Exam 1 nets 10..19 (student i: 10+i); exam 2 reverses the order.
+    D.ogr = Array.from({length:10}, (_, i) => ({ad:'S'+i, no:i+1, sube:i<5?'12-A':'12-B', sinif:12, alan:'SAY', kap:6, off:[6], aktif:true,
+      denemeOkul:[k('p:'+i+'a','2026-09-20',10+i), k('p:'+i+'b','2026-10-04',30-i)]}));
+    EK.anaDenemeTur='TYT'; EK.anaSube=''; EK.anaGrup=''; EK.anaGrupMod='deneme';
+  })()`);
+  const v = () => JSON.parse(run('JSON.stringify(denemeOrtalamaVerisi().noktalar.map(n=>n.v))'));
+  assert.deepEqual(v(), [14.5, 25.5], 'everyone');
+  // Per exam: each exam's own top 20% (2 of 10) and bottom 40% (4 of 10).
+  run("EK.anaGrup='ust20'"); assert.deepEqual(v(), [18.5, 29.5]);
+  run("EK.anaGrup='alt40'"); assert.deepEqual(v(), [11.5, 22.5]);
+  run("EK.anaGrup='ust60'"); assert.deepEqual(v(), [16.5, 27.5], '6 of 10');
+  // By overall average: everyone averages 20, ties break by order, so the group is fixed (S0, S1 for top 20%).
+  run("EK.anaGrup='ust20';EK.anaGrupMod='genel'"); assert.deepEqual(v(), [10.5, 29.5], 'the same two students in both exams');
+  assert.match(run('denemeOrtalamaVerisi().noktalar[0].r.ad'), /2 öğrenci ortalaması \(Üst %20\)/);
+  run("EK.anaGrup='bilinmeyen'"); assert.deepEqual(v(), [14.5, 25.5], 'an unknown group is everyone');
+  let h = run('denemeOrtalamaGrafigi()');
+  assert.deepEqual([...h.match(/<select id="dnOrtGrup">(.*?)<\/select>/)[1].matchAll(/>([^<]+)<\/option>/g)].map(m => m[1]),
+    ['Tüm öğrenciler', 'Üst %20', 'Üst %40', 'Üst %60', 'Alt %60', 'Alt %40', 'Alt %20']);
+  assert.doesNotMatch(h, /data-dn-ort-mod/, 'the mode appears with a group');
+  run("EK.anaGrup='alt20'"); h = run('denemeOrtalamaGrafigi()');
+  assert.match(h, /aria-pressed="true" data-dn-ort-mod="genel">Genel ortalamaya göre/);
+  // Target: the school's line, a class may override it; only the teacher sees and edits it.
+  run("EK.anaGrup='';D.denemeOrtHedef={TYT:{'':24,'12-B':28}}");
+  assert.equal(run('denemeOrtalamaVerisi().hedef'), 24);
+  run("EK.anaSube='12-A'"); assert.equal(run('denemeOrtalamaVerisi().hedef'), 24, '12-A uses the school target');
+  h = run('denemeOrtalamaGrafigi()');
+  assert.match(h, /id="dnOrtHedef"[^>]*value=""[^>]*placeholder="24"/, '12-A has no target of its own');
+  run("EK.anaSube='12-B'"); assert.equal(run('denemeOrtalamaVerisi().hedef'), 28, '12-B overrides');
+  h = run('denemeOrtalamaGrafigi()');
+  assert.match(h, /class="yg-hedef"/); assert.match(h, /Hedef 28/); assert.match(h, /id="dnOrtHedef"[^>]*value="28"/);
+  run("EK.anaDenemeTur='AYT'"); assert.equal(run('denemeOrtalamaVerisi().hedef'), null, 'AYT SAY has its own target');
+  // Kept through a backup; bad values are dropped on load.
+  run("D.denemeOrtHedef={TYT:{'':24,'x':-3},'AYT:SAY':{'':'40'},bad:{'':5}};veriyiHazirla(D)");
+  assert.deepEqual(JSON.parse(run('JSON.stringify(D.denemeOrtHedef)')), {TYT:{'':24}});
+  // View-only teachers see the line but not the input.
+  run("EK.anaDenemeTur='TYT';EK.anaSube='';IZLEME={sahipUid:'a',izleyiciUid:'b'}");
+  h = run('denemeOrtalamaGrafigi()'); assert.match(h, /Hedef 24/); assert.doesNotMatch(h, /dnOrtHedef/);
+  run('IZLEME=null');
+  // The student's package does not carry the teacher's targets.
+  assert.equal(run('JSON.stringify(ogrenciPaketi(0)).includes("denemeOrtHedef")'), false);
+  // The teacher's Denemeler page shows the class average above the student's exams.
+  run("EK.sekme='denemeler';EK.ogr=0");
+  const sayfa = run('gorunumDenemeler()');
+  assert(sayfa.indexOf('aria-label="Deneme ortalaması"') > 0 && sayfa.indexOf('aria-label="Deneme ortalaması"') < sayfa.indexOf('data-dn-tur="TYT"'));
+});
+
+(async () => {
+  for (const [name, fn] of checks) {
+    reset();
+    try { await fn(); passed++; console.log('PASS', name); } catch (e) { console.error('FAIL', name, e); process.exitCode = 1; }
+  }
+  console.log('teacher home regression: ' + passed + ' checks passed');
+})();

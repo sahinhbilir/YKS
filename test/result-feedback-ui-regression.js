@@ -62,8 +62,9 @@ const checks=[]; const check=(name, ok, msg)=>checks.push({name,ok,error:ok?'':m
   await click(saveTarget);
   check('save-failure-preserves-other-drafts', failA.buttons[1].classList._s && !failB.buttons.some(b=>b.classList._s), 'drafts lost after failed save');
   run('kaydet=async()=>true');
-  const mixedReport = run('D.log=[[' + day + ',0,0,6,12,3],[' + (day + 1) + ',0,1,null,null,4]]; gorunumRapor()');
-  check('mixed-aggregate-ignores-rating-as-zero', mixedReport.includes('%50') && !mixedReport.includes('NaN') && !mixedReport.includes('%5000'), 'mixed aggregate formatting');
+  // A rating-only result (no percentage) is left out of averages, not counted as 0.
+  const mixedAverage = run('D.log=[[' + day + ',0,0,6,12,3],[' + (day + 1) + ',0,1,null,null,4]]; sonucOrtalamasi(D.log)');
+  check('mixed-aggregate-ignores-rating-as-zero', mixedAverage === 50, 'mixed aggregate: ' + mixedAverage);
   const modal=node(), opener=node(); modal.focus=()=>{modal.focused=true}; opener.focus=()=>{opener.focused=true};
   nodes.sonucBilgiModal=modal; sandbox.document.getElementById=id=>id==='sonucBilgiModal'?modal:id==='sonucBilgiAc'?opener:null;
   await click({id:'sonucBilgiAc',dataset:{},classList:{contains(){return false}},closest(){return null}});

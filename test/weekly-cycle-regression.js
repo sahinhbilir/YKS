@@ -55,19 +55,24 @@ const out=vm.runInContext(`(()=>{
   reset();ogrenciHaftaGunuAyarla(2);work(0,mon);const html=yazdirSayfa(0,mon);
   a(html.includes('08.09.2026'),'ends Tuesday');a(!html.includes('ÇARŞAMBA'),'no extra day columns');
  });
- test('pdf-gate-checks-previous-personal-cycle',()=>{
+ test('results-reminder-checks-previous-personal-cycle',()=>{
   reset('2026-09-09');ogrenciHaftaGunuAyarla(2);work(0,wed);const p=planHesapla(0,wed);ogrenciHaftayiSakla(0,wed,p);
   const blocked=sonrakiHaftaYazdirmaEngeli(0,wed+7);a(blocked&&blocked.hb===wed,'previous Wednesday cycle required');
   sonucIsle(0,[{ki:0,gun:wed,not:3,dogru:null,soru:null}]);a(!sonrakiHaftaYazdirmaEngeli(0,wed+7),'rating unlocks next cycle');
  });
- test('reporting-day-waits-for-prior-results-before-freezing-current-plan',()=>{
+ test('reporting-day-freezes-current-plan-and-keeps-reminding-for-prior-results',()=>{
   reset('2026-09-09');ogrenciHaftaGunuAyarla(2);work(0,wed);ogrenciOtomasyonHazirla();
-  D.ayar.testTarih='2026-09-16';ogrenciOtomasyonHazirla();
-  a(!elleAl(0,wed+7).sabit,'current preview must await previous results');
-  const gate=sonrakiHaftaYazdirmaEngeli(0,wed+7);a(gate&&gate.hb===wed,'current PDF requires prior cycle');
-  sonucIsle(0,[{ki:0,gun:wed,not:3,dogru:null,soru:null}]);work(1,wed+7);ogrenciOtomasyonHazirla();
-  a(!sonrakiHaftaYazdirmaEngeli(0,wed+7),'reported results unlock current PDF');
-  a(elleAl(0,wed+7).sabit,'new plan freezes with updated results');
+  D.ayar.testTarih='2026-09-16';work(1,wed+7);ogrenciOtomasyonHazirla();
+  a(elleAl(0,wed+7).sabit,'missing results count as İyi: the current plan is saved without waiting');
+  a(!planYazdirmaEngeli(0,wed+7),'current PDF is not blocked');
+  const gate=sonrakiHaftaYazdirmaEngeli(0,wed+7);a(gate&&gate.hb===wed,'Sonuç gir still points to the prior cycle');
+  a((D.kart['0:0'].vg||[]).includes(wed)&&!D.log.length,'the prior test counts as İyi without a stored result');
+  const saved=JSON.stringify(elleAl(0,wed+7));
+  sonucIsle(0,[{ki:0,gun:wed,not:1,dogru:null,soru:null}]);ogrenciOtomasyonHazirla();
+  a(!sonrakiHaftaYazdirmaEngeli(0,wed+7),'reported results clear the reminder');
+  // The topic is also in the saved new week (its first İyi interval was short); only that later test is still assumed.
+  a(!(D.kart['0:0'].vg||[]).includes(wed)&&D.log.length===1,'the real result replaces the assumption for its day');
+  eq(JSON.stringify(elleAl(0,wed+7)),saved,'the saved week does not change');
  });
  test('reset-and-results-roundtrip-with-non-monday-anchor',()=>{
   reset('2026-09-09');ogrenciHaftaGunuAyarla(2);work(0,wed);konuAnlatilmadi(0,0,wed);const pk=sonucPaketi(),backup=JSON.parse(JSON.stringify(D));

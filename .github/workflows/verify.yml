@@ -35,10 +35,16 @@ jobs:
         run: node test/ortak-ogretmen-regression.cjs
       - name: Teacher top menu and main screen
         run: node test/teacher-home-regression.cjs
+      - name: Bulk student import from a pasted school list
+        run: node test/toplu-ogrenci-regression.cjs
       - name: Automatic student workflow and eight-week simulation
         run: node test/student-automation-regression.js
       - name: Optional student reporting cycles
         run: node test/weekly-cycle-regression.js
+      - name: Missing results of given tests count as İyi
+        run: node test/assumed-good-regression.cjs
+      - name: School holidays, learned first review, alt konu and Ayarlar sections
+        run: node test/okul-takvimi-regression.cjs
       - name: Mobile backups and print recovery
         run: node test/mobile-export-regression.js
       - name: Background return preserves the current screen
@@ -110,6 +116,10 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/personal-plan-browser.cjs
       - name: Teacher top menu and main screen on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/teacher-home-browser.cjs
+      - name: Ayarlar sections, holidays, chart target and alt konu on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/ayarlar-takvim-browser.cjs
+      - name: Bulk student import on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/toplu-ogrenci-browser.cjs
       - name: Sıralamalar ranking, exam date and the student's view on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/student-view-browser.cjs
       - name: Keep synthetic review screenshots

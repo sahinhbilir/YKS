@@ -156,6 +156,12 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     // ln((120 − 76.75 + 1) / (120 − 84.25 + 1)) > ln((120 − 63.5 + 1) / (120 − 72 + 1)): closing the gap near the top counts more.
     assert.deepEqual(sira('TYT', 'fark').map(r => r[0]), ['1003', '1001', '1002', '1004', '1005']);
     assert.deepEqual(sira('SAY', 'net').map(r => [r[0], r[2], r[3]]), [['1003', 46, 51.75], ['1005', null, 32.25], ['1004', 13.5, 11.5]], 'AYT SAY: only students who took both tests');
+    // Each course ranks on its own net; the gap closed uses the course's question count (Matematik 30).
+    assert.deepEqual(sira('TYT:MAT', 'fark').map(r => [r[0], r[2], r[3], r[6]]), [['1003', 19, 21.5, 0.234], ['1001', 11, 13, 0.105], ['1002', 7, 7, 0], ['1004', 8, 6.5, -0.063], ['1005', null, 13.75, null]]);
+    assert.deepEqual(sira('AYT:EDB', 'net').map(r => [r[0], r[2], r[3]]), [['1001', 15, 17.5], ['1002', null, 11]], 'an AYT course counts only where its test was answered');
+    // Averages: the school, then each class; the change is the current average minus the same students' earlier one.
+    put('O', get("(()=>{const t=SIRALAMA.siraSatirlari(M.cur,M.prev,'TYT','net');return [SIRALAMA.siraOrtalama('Okul',t,120),SIRALAMA.siraOrtalama('301-A',t.filter(r=>r.s.cls==='301 12/A'),120)]})()"));
+    assert.deepEqual(sandbox.O.map(o => [o.ad, o.n, +o.simdi.toFixed(2), +o.once.toFixed(4), o.artis]), [['Okul', 5, 59.05, 54.8125, 4.24], ['301-A', 2, 57.25, 53.125, 4.13]]);
     // Equal values share a rank; % needs a positive earlier net.
     put('R', [{s:{name:'A'},simdi:5,artis:2},{s:{name:'B'},simdi:4,artis:2},{s:{name:'C'},simdi:3,artis:1},{s:{name:'D'},simdi:2,artis:null}]);
     assert.deepEqual(get("SIRALAMA.siraNumarala(R,'artis').map(r=>r.sira)"), [1, 1, 3, null]);
@@ -167,9 +173,15 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(page, /<th scope="col" class="k-fark secili">Kapanan fark \(log\)<\/th>/);
     assert.match(page, /Sentetik Deneme 1 → Sentetik Deneme 2 · 2 öğrenci/);
     run("EK.srSiraSube='';EK.srSiraOlcut='net'"); page = run('gorunumSiralamalar()');
+    assert.deepEqual([...page.matchAll(/<tr class="sr-ort[^"]*"><td><\/td><td><b>([^<]+) ortalaması<\/b> <span class="mini">(\d+) öğrenci/g)].map(m => m[1] + ':' + m[2]),
+      ['Okul:5', '301-A:2', '201-B:2', '205-C:1'], 'school and class averages open the table');
     assert.match(page, /<span class="mini">1001<\/span> <button type="button" class="ogr-ad" data-ogr-gor="0" title="Öğrenci gözüyle gör">SENTETİK ADA<\/button>/);
     assert.match(page, /<span class="mini">1002<\/span> SENTETİK BORA<\/td>/, 'not in the notebook: plain text');
-    run("EK.srSiraTur='AYT';EK.srSiraAlan='Toplam'"); assert.match(run('gorunumSiralamalar()'), /aria-pressed="true" data-sr-sira-alan="Toplam"/);
+    // One "Net" list: TYT total or a TYT course; for AYT a field, the AYT total or an AYT course.
+    run("EK.srSiraTur='AYT';EK.srSiraNet='Toplam'"); page = run('gorunumSiralamalar()');
+    assert.match(page, /<select id="srSiraNet"><optgroup label="Alan"><option value="SAY">SAY<\/option><option value="EA">EA<\/option><option value="SÖZ">SÖZ<\/option><option value="Toplam" selected>AYT toplam<\/option><\/optgroup><optgroup label="Ders"><option value="AYT:EDB">Edebiyat<\/option>/);
+    run("EK.srSiraTur='TYT'"); page = run('gorunumSiralamalar()');
+    assert.match(page, /<option value="TYT" selected>TYT toplam<\/option><optgroup label="Ders"><option value="TYT:TÜR">Türkçe/, 'an AYT choice falls back to TYT total');
   });
   await check('exam date correction: kept apart from the lists, orders the exams, moves students\' school results', async () => {
     await loadAll();

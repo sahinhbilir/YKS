@@ -124,8 +124,9 @@ Students and teachers both get a top bar (`.ray.ust`), built by `ustMenu` from
 
 - **YKS Tekrar Defteri** (the brand) is a button that opens the home page (`'ana'`).
   On phones (≤480 px) it shortens to "YKS".
-- **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Haftalar haritası,
-  Sonuç gir, Karnem and Geçmiş plan kurtar (`PLAN_ALT_SEKMELER`). Hovering opens it
+- **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Haftalar haritası
+  and Sonuç gir (`PLAN_ALT_SEKMELER`). Geçmiş plan kurtar opens from a red week on the
+  map; there is no Karnem (its FSRS course calibration moved to Ayarlar). Hovering opens it
   with a mouse (`@media (hover:hover)`), a click toggles it on touch screens, and it
   opens on keyboard focus. Esc or a click elsewhere closes it, and so does choosing
   a page. The group is highlighted while one of its pages is open.
@@ -167,12 +168,14 @@ turn blue, are underlined and show "→".
 The teacher bar (`.ray.ust.rehber`) uses the same groups and dropdowns as the
 student's: the group name opens its page, the arrow opens the related pages.
 
-- **Haftalık plan ▾**: Sonuç girişi, Haftalar haritası, Karne, Geçmiş plan kurtar,
-  Anlaşma ve rutin.
+- **Haftalık plan ▾**: Sonuç girişi, Haftalar haritası.
 - **Öğrenciler ▾**: Haftalık öğrenci takibi.
-- **Konular ▾**: Konu planı, Müfredat.
 - **Denemeler ▾**: Sıralamalar.
-- **Ayarlar** on the right, then "Kaydet ve çıkış yap" and the two-line status.
+- **Müfredat** and **Ayarlar** on the right, then "Kaydet ve çıkış yap" and the
+  two-line status. On phones (≤520 px) the logout button reads "Çıkış" (its
+  accessible name stays "Kaydet ve çıkış yap").
+- Pages outside the menu mark where they open from (`MENU_BAGLI`): a class's
+  curriculum and Konular mark Müfredat; Geçmiş plan kurtar marks Haftalar haritası.
 - Below 1250 px the brand shortens to "YKS" and the gaps narrow. Below 1060 px the
   status moves to its own line under the menu. On phones the bar is two rows plus the
   status line. A dropdown near the right edge opens leftwards (`menuSigdir`), so it
@@ -182,23 +185,78 @@ After login, after opening a cloud notebook (own, view-only or co-teacher) and o
 the brand, teachers land on the home page (`gorunumRehberAna`, tab `'ana'`). Like
 the student home, it has two cards with linked headings:
 
-- **Bu hafta** (opens Haftalık öğrenci takibi). It shows the calendar week, the
-  number of students and classes, then four numbers: Plan verildi (`o.cikti` this
-  week), PDF istedi (this week's activity), Geçen haftanın sonucu (a result in the
-  student's previous plan week) and Karar bekleyen (weeks marked "sonuç yok" on the
-  weeks map, the same check as `atlananHaftalar`). The same four columns repeat per
-  class. A class name opens that class's weekly plan. Under "Karar bekleyen" each
-  name opens the student's view and the number beside it opens that student's weeks
-  map. The card refreshes live as student
-  activity arrives. "E-posta talepleri (n)" sits beside the heading while requests
-  wait.
+- **Bu hafta** (opens Haftalık öğrenci takibi). It shows the calendar week and
+  **n/N Plan verildi** (this week's plan was saved, or a plan was printed this week;
+  `planVerildiMi`), then only the names of the students given this week's plan, A–Z,
+  in columns. Haftalık öğrenci takibi counts "Plan verildi" the same way (first card,
+  a column and a filter), and the heading opens it on this week with no filter. A name opens the student's view. There
+  are no classes and no "Karar bekleyen". Below the names, in small grey text: PDF
+  istedi (this week's activity) and Geçen haftanın sonucu (a result in the student's
+  previous plan week). The card refreshes live as student activity arrives.
+  "E-posta talepleri (n)" sits beside the heading while requests wait.
 - **Deneme ortalaması** (opens Denemeler). It is drawn the same way as the student's
   progress chart, and each point is one school exam (imported from PDF), averaged
   over the students who took it. TYT · AYT picks the exam type. AYT adds SAY · EA ·
   SÖZ and averages only the students of that field. "Şube" narrows it to one class.
-  A point opens Denemeler with that exam type. There is no target line.
+  **Grup** draws the average of the top or bottom 20, 40 or 60 % instead of everyone:
+  *Her denemede* ranks the students within each exam; *Genel ortalamaya göre* ranks
+  them once by their average over the shown exams and keeps that group. **Hedef**
+  sets the teacher's target line (only teachers see it; `D.denemeOrtHedef`, per exam
+  type, with a class override that otherwise shows the school's target). A point
+  opens Denemeler with that exam type. The same chart opens the teacher's Denemeler
+  page, above the selected student's exams.
 - In a single column (≤1100 px) the week card comes first, then the chart.
 
 A student's name anywhere in the teacher pages opens that student's own screens in an
-isolated frame ("Öğrenci gözüyle"); under "Karar bekleyen" the name opens the student's
-view and the number beside it opens the weeks map. See docs/ogrenci-gozuyle.md.
+isolated frame ("Öğrenci gözüyle"). See docs/ogrenci-gozuyle.md.
+
+## Ayarlar
+
+Three sections, as a segmented control under the title (`ayarBolumu`):
+
+- **Genel**: the settings table, save, backups and cloud. "İlk tekrar gecikmesi" says
+  under it which students still use it (see docs/student-flow.md).
+- **Ders programı** (when there is a class): AI ile aktar (no coloured outline), the
+  weekly timetable, **Tatiller** (the school holidays; add and remove) and **Haftalık
+  konular**, one button per class to its Özel tasarlanmış müfredat.
+- **Öğrenci kalibrasyonu**: the course profiles (FSRS calibration per student and
+  course), with "Önerilir" where a course has enough results, and the student's
+  first-review delay.
+
+Leaving Genel with unsaved changes asks first. See docs/okul-takvimi.md for holidays.
+
+The menu's Ayarlar always opens at Genel (students: Gelişmiş ayarlar folded). The old
+`program` page name opens Ders programı; a student who sets up without a ready class
+timetable lands there, inside the opened Gelişmiş ayarlar. Ders programı and Konu planı
+step through school weeks (Monday), not the student's own week. On a phone the section
+buttons wrap their labels instead of widening the page.
+
+## Müfredat (teacher)
+
+One page at the top right, with two tabs:
+
+- **Tasarlanmış müfredatlar**: one row per class (from students, timetables and
+  existing plans): class, grade, fields, students, and the size of its curriculum.
+  A row opens that class's curriculum, titled **Özel tasarlanmış müfredat** (the
+  former Konu planı: topics per course and week, add / delete / move / extend). It
+  links back to Müfredat and to **Konular ve işleniş tarihleri** (the former Konular
+  page). **+ Kendi müfredatını tasarla** creates a curriculum for a class code from
+  the MEB suggestion for a grade and field, or as a copy of another class's; a class
+  without students keeps the chosen grade (`D.mufredatSinif`). A view-only teacher
+  sees the list without the button.
+- **MEB müfredatı**: the official programme per grade (what students see as Müfredat).
+
+## Weeks map colours (teacher)
+
+The same rule as the student map: a past week whose plan was saved (printed or
+downloaded; `elle.sabit`) but has no result is **grey** and offers **Nasıl geçti?**; a
+past week with no plan at all is **red** ("plan verilmedi") and offers **Planı
+kurtar**, which opens past-plan recovery for that student and week. A grey week's tests still count
+as İyi for the schedule (see docs/student-flow.md, "Missing results count as İyi").
+
+## Printed agreement and routine
+
+The weekly agreement ("Haftalık çalışma anlaşması") and the three routine boxes are
+filled in by hand on the printout: fixed headings and empty lines on the screen
+preview and on paper. There is no page to type them; text typed in older notebooks is
+not printed.

@@ -30,7 +30,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    // 1) Ranking in the page: Net, Net artışı, % artış, Kapanan fark (log); TYT/AYT; class filter.
    await page.locator('#srPdf').setInputFiles(Object.keys(listeler).map(dosya));
    await page.waitForFunction(()=>/Kaydedildi/.test(document.getElementById('srDurum')?.textContent||''));
-   const satirlar=page.locator('.sr-sira-tablo tbody tr'),adlar=async()=>(await satirlar.locator('td:nth-child(2)').allInnerTexts()).map(s=>s.split(' ')[0]);
+   const satirlar=page.locator('.sr-sira-tablo tbody tr:not(.sr-ort)'),adlar=async()=>(await satirlar.locator('td:nth-child(2)').allInnerTexts()).map(s=>s.split(' ')[0]);
    assert.deepEqual(await adlar(),['1003','1001','1005','1002','1004'],'by net');
    assert.deepEqual(await satirlar.first().locator('td').allInnerTexts(),['1','1003 SENTETİK CEMRE UZUNADLI İKİNCİ','201-B','76.75','84.25','+7.50','+9.8%','+0.186']);
    await page.locator('[data-sr-sira-olcut="artis"]').click();assert.deepEqual(await adlar(),['1001','1003','1002','1004','1005']);
@@ -40,7 +40,16 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.locator('#srSiraSube').selectOption('201 12/B');assert.deepEqual(await adlar(),['1003','1004']);
    await page.locator('#srSiraSube').selectOption('');
    await page.locator('[data-sr-sira-tur="AYT"]').click();assert.deepEqual(await adlar(),['1003','1004','1005'],'AYT SAY by default');
-   await page.locator('[data-sr-sira-alan="Toplam"]').click();assert.equal(await satirlar.count(),5);
+   await page.locator('#srSiraNet').selectOption('Toplam');assert.equal(await satirlar.count(),5);
+   // School and class averages open the table; any single TYT or AYT course can be ranked.
+   await page.locator('[data-sr-sira-tur="TYT"]').click();await page.locator('#srSiraSube').selectOption('');
+   assert.deepEqual((await page.locator('.sr-sira-tablo tr.sr-ort td:nth-child(2)').allInnerTexts()).map(t=>t.replace(/\s+/g,' ')),
+     ['Okul ortalaması 5 öğrenci','301-A ortalaması 2 öğrenci','201-B ortalaması 2 öğrenci','205-C ortalaması 1 öğrenci']);
+   await page.locator('#srSiraNet').selectOption('TYT:MAT');await page.locator('[data-sr-sira-olcut="fark"]').click();
+   assert.deepEqual(await adlar(),['1003','1001','1002','1004','1005'],'TYT Matematik by gap closed');
+   assert.equal(await page.locator('.sr-sira-tablo tr.sr-ort').first().locator('td.k-simdi').innerText(),'12.35');
+   await page.locator('[data-sr-sira-tur="AYT"]').click();await page.locator('#srSiraNet').selectOption('AYT:EDB');
+   assert.deepEqual(await adlar(),['1001','1002'],'AYT Edebiyat: only students who answered TDE-SB1');
    await page.locator('.sr-siralama').screenshot({path:path.join(out,'ranking-'+width+'.png')});
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'the table scrolls inside its card');
    await page.locator('[data-sr-sira-tur="TYT"]').click();
@@ -78,13 +87,11 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
     // The same from every page that names a student.
     const ac=async(sekme,secici,ad)=>{await page.evaluate(s=>{EK.sekme=s;ciz()},sekme);await gozuyle(()=>page.locator(secici).first().click(),ad);
      await page.keyboard.press('Escape');assert.equal(await page.locator('#ogrGor').count(),0,'Esc closes ('+sekme+')');};
-    await ac('ana','#rehberHafta .rh-ad [data-ogr-gor]','SENTETİK ADA');
-    await page.locator('#rehberHafta [data-ra-harita="0"]').click();assert.equal(await page.evaluate(()=>EK.sekme),'harita','the number still opens the weeks map');
+    await ac('ana','#rehberHafta .rh-adlar [data-ogr-gor]','SENTETİK ADA');
     await ac('takip','.etkinlik-satir [data-ogr-gor="1"]','SENTETİK BORA');
     await ac('plan','.sayfa-ust .isim [data-ogr-gor]','SENTETİK ADA');
     await ac('ogrenciler','.ogr-gor-dugme[data-ogr-gor="1"]','SENTETİK BORA');
     await ac('denemeler','.baslik [data-ogr-gor]','SENTETİK ADA');
-    await ac('rapor','.baslik [data-ogr-gor]','SENTETİK ADA');
     await ac('harita','.baslik [data-ogr-gor]','SENTETİK ADA');
    }
    assert.equal(await page.evaluate(()=>localStorage.getItem('yks_veri')),defter,'nothing done in the student view reached the teacher notebook');

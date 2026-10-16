@@ -47,7 +47,14 @@ let browser;
  assert.equal(await page.evaluate(()=>EK.hafta),week);assert.match(await page.locator('#ana').innerText(),/8\/10/);
  const weekText=await page.locator('#ana').innerText();assert.equal((weekText.match(/Karışık Paragraf/g)||[]).length,1);assert.equal((weekText.match(/Karışık Problem/g)||[]).length,1);
  assert.match(weekText,/✓ Tamamlandı/);assert.match(weekText,/Süre tutarak hız çalışması/);
- await page.locator('[aria-controls="planMenusu"]').click();await page.getByRole('button',{name:'Geçmiş plan kurtar',exact:true}).click();
+ // Past-plan recovery is not in the menu: a red week (no plan given) on the weeks map opens it for that week.
+ await page.evaluate(()=>{D.ogr[0].ilkAktif=gunNo('2026-08-24');ciz();});   // joined at the start of term
+ await page.locator('[aria-controls="planMenusu"]').click();await page.getByRole('button',{name:'Haftalar haritası',exact:true}).click();
+ const kirmizi=await page.evaluate(()=>gunNo('2026-08-31'));
+ assert.equal(await page.locator('.haritaHucre.kayitsiz [data-harita-kurtar="'+kirmizi+'"]').count(),1,'a week without a plan is red with Planı kurtar');
+ assert.equal(await page.locator('.haritaHucre.tamam [data-harita-plan="'+week+'"]').count(),1,'the recovered week has results');
+ await page.locator('[data-harita-kurtar="'+kirmizi+'"]').click();
+ assert.equal(await page.evaluate(()=>EK.sekme),'kurtarma');assert.equal(await page.locator('#gpHafta').inputValue(),'2026-08-31');
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(out,'photo-recovery-mobile.png'),fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'mobile overflow');
  await page.locator('#gpSatirEkle').click();assert.equal(await page.locator('.gpSatir').count(),7);

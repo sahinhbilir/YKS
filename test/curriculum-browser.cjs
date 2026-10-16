@@ -18,9 +18,14 @@ fs.mkdirSync(out,{recursive:true});
    await page.waitForFunction(()=>D.ogr.length===1&&D.ogr[0].sinif===11);
    assert.equal(await page.evaluate(()=>D.konuPlani.benim[0].Matematik[0].startsWith('11. sınıf')),true);
    // A real schedule upload must fill the Grade 11 course and separate TYT cells.
+   // Setup lands on Ayarlar › Ders programı inside the open advanced settings.
+   assert.equal(await page.locator('[data-ayar-bolum="program"]').getAttribute('aria-pressed'),'true');
+   await page.locator('#dpCiktiYapistir').waitFor();
    const openAdvanced=async()=>{
     const details=page.locator('details').filter({has:page.getByText('Gelişmiş ayarlar',{exact:true})});
     if(await details.getAttribute('open')===null)await details.locator('summary').click();
+    const tab=page.locator('[data-ayar-bolum="program"]');
+    if(await tab.getAttribute('aria-pressed')!=='true')await tab.click();
    };
    if(await page.locator('[aria-controls="hesapMenusu"]').isVisible())await page.locator('[aria-controls="hesapMenusu"]').click();
    await page.locator('[data-sekme="ayarlar"]').first().click();await openAdvanced();
@@ -114,7 +119,9 @@ fs.mkdirSync(out,{recursive:true});
    assert.equal(await page.evaluate(()=>D.ogr[1].sinif),11);
    assert.equal(await page.evaluate(()=>JSON.stringify(D.konuPlani['12-A'])===window.oldPlan),true);
    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[1].sinif),11);
-   await page.locator('[aria-controls="konularMenusu"]').click();await page.locator('#konularMenusu [data-sekme="konuplani"]').click();await page.locator('#subeSec').selectOption('12-A');
+   // A class's curriculum opens from Müfredat (top right) → Tasarlanmış müfredatlar.
+   await page.locator('#ray > [data-sekme="mufredat"]').click();await page.locator('[data-mufredat-sube="12-A"]').click();
+   assert.equal(await page.locator('#subeSec').inputValue(),'12-A');
    await page.locator('#yksEksikleriEkle').click();await page.waitForFunction(()=>yksPlanEksikleri('12-A').length===0,null,{timeout:5000});
    assert.deepEqual(errors,[]);await context.close();
   }

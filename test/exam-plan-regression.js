@@ -166,9 +166,8 @@ async function check(name, fn) { await fn(app()); checks.push(name); }
     h = a.run("EK.sekme='plan';gorunumPlan()");
     assert.match(h, /ALES’e giden yol/); assert.doesNotMatch(h, /YKS’ye giden yol/);
     assert.match(a.run('ogrenciYksYolu(true)'), /Ayarlardaki ALES tarihi/);
-    assert.match(a.run("EK.sekme='rapor';gorunumRapor()"), /ALES’e \d+ gün/);
     assert.deepEqual(JSON.parse(a.run('JSON.stringify(SEKMELER().map(s=>s[0]))')),
-      ['plan', 'giris', 'harita', 'kurtarma', 'rapor', 'ayarlar'], 'no Müfredat, no Denemelerim');
+      ['plan', 'giris', 'harita', 'kurtarma', 'ayarlar'], 'no Müfredat, no Denemelerim, no Karnem');
     const b = app(); await kurulum(b, 'KPSS'); kur(b); b.run('ciz()');
     assert.match(b.run("EK.sekme='plan';gorunumPlan()"), /KPSS’ye giden yol/);
   });
