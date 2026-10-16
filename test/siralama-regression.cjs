@@ -146,6 +146,72 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(run('gorunumSiralamalar()'), /rehber öğretmen içindir/);
     await assert.rejects(run('siralamaKaydet(L)'), /rehber öğretmen/);
   });
+  await check('in-site ranking: net, net increase, % increase and gap closed (log), per session, field and class', async () => {
+    await loadAll(); run('M=SIRALAMA.secim(SIRALAMA.modeller(SIRALAMA.oku().veri))');
+    const sira = (alan, olcut) => get(`SIRALAMA.siraSatirlari(M.cur,M.prev,'${alan}','${olcut}').map(r=>[r.s.no,r.sira,r.once,r.simdi,r.artis,r.yuzde===null?null:+r.yuzde.toFixed(1),r.fark===null?null:+r.fark.toFixed(3)])`);
+    assert.deepEqual(sira('TYT', 'net'), [['1003', 1, 76.75, 84.25, 7.5, 9.8, 0.186], ['1001', 2, 63.5, 72, 8.5, 13.4, 0.16], ['1005', 3, null, 63.25, null, null, null],
+      ['1002', 4, 42.75, 42.5, -0.25, -0.6, -0.003], ['1004', 5, 36.25, 33.25, -3, -8.3, -0.035]]);
+    assert.deepEqual(sira('TYT', 'artis').map(r => [r[0], r[1]]), [['1001', 1], ['1003', 2], ['1002', 3], ['1004', 4], ['1005', null]], 'no earlier exam: last, unranked');
+    assert.deepEqual(sira('TYT', 'yuzde').map(r => r[0]), ['1001', '1003', '1002', '1004', '1005']);
+    // ln((120 − 76.75 + 1) / (120 − 84.25 + 1)) > ln((120 − 63.5 + 1) / (120 − 72 + 1)): closing the gap near the top counts more.
+    assert.deepEqual(sira('TYT', 'fark').map(r => r[0]), ['1003', '1001', '1002', '1004', '1005']);
+    assert.deepEqual(sira('SAY', 'net').map(r => [r[0], r[2], r[3]]), [['1003', 46, 51.75], ['1005', null, 32.25], ['1004', 13.5, 11.5]], 'AYT SAY: only students who took both tests');
+    // Equal values share a rank; % needs a positive earlier net.
+    put('R', [{s:{name:'A'},simdi:5,artis:2},{s:{name:'B'},simdi:4,artis:2},{s:{name:'C'},simdi:3,artis:1},{s:{name:'D'},simdi:2,artis:null}]);
+    assert.deepEqual(get("SIRALAMA.siraNumarala(R,'artis').map(r=>r.sira)"), [1, 1, 3, null]);
+    put('C', {tyt:{students:{'1':{no:'1',name:'A',cls:'',net:{'TÜR':10},dy:{}}}}}); put('P', {tyt:{students:{'1':{no:'1',name:'A',cls:'',net:{'TÜR':0},dy:{}}}}});
+    assert.deepEqual(get("SIRALAMA.siraSatirlari(C,P,'TYT','yuzde').map(r=>[r.artis,r.yuzde,r.sira])"), [[10, null, null]]);
+    // The page: controls, the chosen column, class filter, and names of notebook students open their view.
+    run("EK.srSiraOlcut='fark';EK.srSiraSube='201 12/B'"); let page = run('gorunumSiralamalar()');
+    assert.match(page, /aria-pressed="true" data-sr-sira-olcut="fark">Kapanan fark \(log\)/);
+    assert.match(page, /<th scope="col" class="k-fark secili">Kapanan fark \(log\)<\/th>/);
+    assert.match(page, /Sentetik Deneme 1 → Sentetik Deneme 2 · 2 öğrenci/);
+    run("EK.srSiraSube='';EK.srSiraOlcut='net'"); page = run('gorunumSiralamalar()');
+    assert.match(page, /<span class="mini">1001<\/span> <button type="button" class="ogr-ad" data-ogr-gor="0" title="Öğrenci gözüyle gör">SENTETİK ADA<\/button>/);
+    assert.match(page, /<span class="mini">1002<\/span> SENTETİK BORA<\/td>/, 'not in the notebook: plain text');
+    run("EK.srSiraTur='AYT';EK.srSiraAlan='Toplam'"); assert.match(run('gorunumSiralamalar()'), /aria-pressed="true" data-sr-sira-alan="Toplam"/);
+  });
+  await check('exam date correction: kept apart from the lists, orders the exams, moves students\' school results', async () => {
+    await loadAll();
+    const id = get("SIRALAMA.oku().veri.sinavlar.find(s=>s.ad==='Sentetik Deneme 2').id");
+    assert.match(run('gorunumSiralamalar()'), /data-sr-tarih="[^"]+" value="2026-10-02"/);
+    await assert.rejects(run(`SIRALAMA.tarihDegistir(${JSON.stringify(id)},'2026-09-01')`), /Tarih geçersiz/);
+    assert.deepEqual(JSON.parse(JSON.stringify(await run(`SIRALAMA.tarihDegistir(${JSON.stringify(id)},'01.09.2026')`))), {ad: 'Sentetik Deneme 2', eski: ['02.10.2026', '09.10.2026']});
+    const m = get("SIRALAMA.modeller(SIRALAMA.oku().veri).map(e=>[e.name,e.dates,e.pdfDates])");
+    assert.deepEqual(m, [['Sentetik Deneme 2', ['01.09.2026'], ['02.10.2026', '09.10.2026']], ['Sentetik Deneme 1', ['18.09.2026'], ['18.09.2026']]], 'the corrected date orders the exams');
+    assert.equal(run('SIRALAMA.secim(SIRALAMA.modeller(SIRALAMA.oku().veri)).cur.name'), 'Sentetik Deneme 1');
+    assert.match(run('gorunumSiralamalar()'), /value="2026-09-01"[^>]*><div class="mini">PDF’de: 02\.10\.2026 · 09\.10\.2026<\/div>/);
+    put('L', [list('sonra', 'T')]); await run('siralamaKaydet(L)');
+    assert.equal(run('SIRALAMA.oku().veri.sinavlar.find(s=>s.ad==="Sentetik Deneme 2").tarih'), '01.09.2026', 'adding the PDF again keeps the correction');
+    put('bad', {...get('SIRALAMA.oku().veri'), sinavlar: get('SIRALAMA.oku().veri.sinavlar').map(s => ({...s, tarih: '2026-09-01'}))});
+    assert.throws(() => run('SIRALAMA.dogrula(bad)'), /sınav tarihi/);
+    run("YG=yalnizcaGoruntuleme;yalnizcaGoruntuleme=()=>true");
+    try { await assert.rejects(run(`SIRALAMA.tarihDegistir(${JSON.stringify(id)},'02.09.2026')`), /rehber öğretmen/);
+      assert.doesNotMatch(run('gorunumSiralamalar()'), /data-sr-tarih/, 'a viewing teacher sees the date as text'); }
+    finally { run('yalnizcaGoruntuleme=YG'); }
+  });
+  await check('moving an exam\'s results to the corrected date: PDF rows get the new id, manual rows keep theirs', async () => {
+    run(`(()=>{const ders=n=>DENEME_DERSLER.TYT.map(d=>({kod:d[0],soru:d[2],dogru:d[0]==='turkce'?n:0,yanlis:0}));
+      const k=(id,ad,tarih,n)=>({id,ad,tarih,tur:'TYT',oturum:'TYT',brans:'',alan:'SAY',dersler:ders(n),sure:null,puan:null,ts:5});
+      const pid=t=>'p:'+encodeURIComponent([denemeAdAnahtari('Hazırbulunuşluk'),t,'TYT'].join('|'));
+      D.ogr=[{no:1,ad:'A',sube:'12-A',alan:'SAY',sinif:12,kap:6,off:[6],aktif:true,denemeOkul:[k(pid('2026-09-13'),'Hazırbulunuşluk','2026-09-13',30),k('p:x','Başka','2026-09-13',5)],
+          denemeler:[k('m:own','Hazırbulunuşluk','2026-09-13',30)]},
+        {no:2,ad:'B',sube:'12-A',alan:'SAY',sinif:12,kap:6,off:[6],aktif:true,denemeOkul:[k('p:manual-1','hazırbulunuşluk ','2026-09-13',20)]},
+        {no:3,ad:'C',sube:'12-A',alan:'SAY',sinif:12,kap:6,off:[6],aktif:true,silindi:true,denemeOkul:[k(pid('2026-09-13'),'Hazırbulunuşluk','2026-09-13',10)]}];})()`);
+    assert.equal(await run("denemeOkulTarihTasi('HAZIRBULUNUŞLUK',['2026-09-13'],'2026-08-18')"), 2);
+    const a = get("D.ogr[0].denemeOkul.map(r=>[decodeURIComponent(r.id),r.tarih,!!r.silindi])");
+    assert.deepEqual(a, [['p:HAZIRBULUNUŞLUK|2026-08-18|TYT', '2026-08-18', false], ['p:HAZIRBULUNUŞLUK|2026-09-13|TYT', '2026-09-13', true], ['p:x', '2026-09-13', false]]);
+    assert.deepEqual(get("D.ogr[1].denemeOkul.map(r=>[r.id,r.tarih,!!r.silindi])"), [['p:manual-1', '2026-08-18', false]]);
+    assert.deepEqual(get("D.ogr.map(o=>!!o.denemeYayinBekliyor)"), [true, true, false]);
+    assert.equal(run("D.ogr[0].denemeler[0].tarih"), '2026-09-13', "the student's own entry is theirs");
+    assert.equal(run("D.ogr[2].denemeOkul[0].tarih"), '2026-09-13', 'deleted students are left alone');
+    assert.deepEqual(get("denemeListe(0).map(r=>[r.ad,r.tarih])"), [['Hazırbulunuşluk', '2026-08-18'], ['Başka', '2026-09-13']], 'the own duplicate stays hidden');
+    assert.equal(await run("denemeOkulTarihTasi('Hazırbulunuşluk',['2026-09-13'],'2026-08-18')"), 0, 'nothing left to move');
+    run("D.ogr[1].denemeOkul[0].tarih='2026-09-13';kaydet=async()=>false"); const once = run('JSON.stringify(D.ogr)');
+    await assert.rejects(run("denemeOkulTarihTasi('Hazırbulunuşluk',['2026-09-13'],'2026-08-18')"), /kaydedilemedi/);
+    assert.equal(run('JSON.stringify(D.ogr)'), once, 'a failed save changes nothing');
+    await assert.rejects(run("denemeOkulTarihTasi('Hazırbulunuşluk',['2026-09-13'],'2026-02-30')"), /Tarih geçersiz/);
+  });
   await check('PDF downloads are binary: no text charset and no copy-text fallback', () => {
     assert.equal(run("dosyaTuru('pdf')"), 'application/pdf'); assert.equal(run("dosyaTuru('csv')"), 'text/csv;charset=utf-8');
   });

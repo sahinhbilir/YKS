@@ -51,7 +51,9 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    const sayilar=await page.locator('#rehberHafta .rh-sayi').allInnerTexts();
    assert.deepEqual(sayilar.map(s=>s.replace(/\s+/g,' ').trim()),['1/3 Plan verildi','0/3 PDF istedi','0/3 Geçen haftanın sonucu','2 Karar bekleyen']);
    // Ada and Bora were given last week's plan and entered nothing for it.
-   assert.deepEqual(await page.locator('[data-ra-harita]').allInnerTexts(),['SENTETİK ADA 1','SENTETİK BORA 1']);
+   // The name opens the student's view; the number beside it opens the weeks map.
+   assert.deepEqual(await page.locator('.rh-ad .ogr-ad').allInnerTexts(),['SENTETİK ADA','SENTETİK BORA']);
+   assert.deepEqual(await page.locator('.rh-ad [data-ra-harita]').allInnerTexts(),['1','1']);
    assert.deepEqual(await page.locator('#rehberHafta tbody th').allInnerTexts().then(l=>l.map(s=>s.replace(/\s+/g,' ').trim())),['12-A 2 öğrenci','12-B 1 öğrenci']);
    if(width<1100){const a=await page.locator('#rehberHafta').boundingBox(),b=await page.locator('.rehber-pano>.dn-yol').boundingBox();assert(a.y<b.y,'one column: the week first, then the chart');}
    await page.screenshot({path:path.join(out,'teacher-home-'+width+'-'+scheme+'.png'),fullPage:true});

@@ -369,7 +369,27 @@ tr.pasif td:first-child{opacity:1}
 .rh-sube{border:0;background:none;padding:2px 0;font:inherit;font-weight:700;color:var(--marka-koyu);cursor:pointer;text-align:left}
 .rh-sube small{display:block;font-weight:400;font-size:11.5px;color:var(--soluk);white-space:nowrap}
 .rh-sube:hover,.rh-sube:focus-visible{color:var(--vurgu);text-decoration:underline;text-underline-offset:3px}
-.rh-adlar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.rh-adlar b{color:var(--uyari);margin-left:4px}
+.rh-adlar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+/* Karar bekleyen: the name opens the student's view, the number the weeks map to decide. */
+.rh-ad{display:inline-flex;align-items:stretch;border:1px solid var(--cizgi);border-radius:7px;background:var(--kagit);overflow:hidden}
+.rh-ad .ogr-ad{padding:7px 10px}
+.rh-ad [data-ra-harita]{border:0;border-left:1px solid var(--cizgi);background:color-mix(in srgb,var(--uyari) 10%,var(--kagit));color:var(--uyari);font-weight:700;padding:0 10px;cursor:pointer}
+.rh-ad [data-ra-harita]:hover{background:color-mix(in srgb,var(--uyari) 22%,var(--kagit))}
+/* A student's name opens what that student sees (öğrenci gözüyle). */
+.ogr-ad{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer;text-align:inherit}
+.ogr-ad:hover,.ogr-ad:focus-visible{color:var(--vurgu);text-decoration:underline;text-underline-offset:3px}
+.ad-gor{display:flex;align-items:center;gap:4px}
+.ogr-gor-dugme{flex:0 0 auto;border:1px solid var(--cizgi);background:var(--kagit);border-radius:7px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;color:var(--soluk)}
+.ogr-gor-dugme:hover{color:var(--vurgu);border-color:var(--vurgu)}
+.ogr-gor-dugme svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ogr-gor{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;background:var(--zemin)}
+.ogr-gor-ust{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;padding:8px 16px;background:var(--kagit);border-bottom:2px solid var(--vurgu)}
+.ogr-gor-rozet{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--kagit);background:var(--vurgu);border-radius:999px;padding:3px 10px}
+.ogr-gor-ust b{font-size:15px}.ogr-gor-ust #ogrGorKapat{margin-left:auto}
+.ogr-gor iframe{flex:1 1 auto;width:100%;border:0;background:var(--zemin)}
+body.ogr-gor-acik{overflow:hidden}
+@media (max-width:480px){.ogr-gor-ust{padding:8px 12px;gap:6px 8px}.ogr-gor-ust .mini{display:none}.ogr-gor-ust b{font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+@media print{.ogr-gor{display:none}}
 /* Tek sütunda sıra: haftanın özeti, sonra deneme ortalaması. */
 @media (max-width:1100px){.ana-pano.rehber-pano>.pano-sol-bas{order:0}.ana-pano.rehber-pano>.rehber-hafta{order:1}
   .ana-pano.rehber-pano>.pano-sag-bas{order:2;margin-top:28px}.ana-pano.rehber-pano>.dn-yol{order:3;margin-bottom:0}}
@@ -732,6 +752,25 @@ main:has(.sr-panel){min-width:0}
 }
 @media (max-width:640px){.sr-panel{padding:14px}.sr-secim{flex-direction:column;align-items:stretch}.sr-secim select{max-width:100%;width:100%}.sr-ok{display:none}}
 @media print{.sr-panel{box-shadow:none}}
+/* Exam date: corrected in place; the printed date stays visible under it. */
+.sr-tarih{font-size:13px;padding:5px 7px;max-width:100%}
+/* In-site ranking: the chosen measure's column is highlighted; rises green, falls red. */
+.sr-sira-secim{gap:10px 14px;align-items:center;margin-bottom:12px}
+.sr-sira-secim label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--soluk)}
+.sr-sira-secim .yg-secim{flex-wrap:wrap;border-radius:18px}.sr-sira-secim .yg-secim button{padding:6px 12px;font-size:13px;white-space:nowrap}
+.sr-sira-tablo{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.sr-sira-tablo th,.sr-sira-tablo td{padding:7px 8px;border-bottom:1px solid var(--cizgi);text-align:right;white-space:nowrap;font-size:13.5px}
+.sr-sira-tablo th:nth-child(-n+3),.sr-sira-tablo td:nth-child(-n+3){text-align:left}
+.sr-sira-tablo thead th{font-size:11px;font-weight:600;color:var(--soluk);text-transform:uppercase;letter-spacing:.03em}
+.sr-sira-tablo th.secili{color:var(--vurgu)}.sr-sira-tablo td.secili{background:var(--vurgu-yumusak)}
+.sr-sira-tablo td:first-child{color:var(--soluk);font-weight:600}
+.sr-sira-tablo td.sr-art{color:var(--iyi);font-weight:600}.sr-sira-tablo td.sr-azal{color:var(--kritik);font-weight:600}
+.sr-sira-tablo tbody tr:hover{background:var(--vurgu-yumusak)}
+@media (max-width:640px){
+  .sr-sira-tablo .k-sube,.sr-sira-tablo .k-once,.sr-sira-tablo .k-artis:not(.secili),.sr-sira-tablo .k-yuzde:not(.secili),.sr-sira-tablo .k-fark:not(.secili){display:none}
+  .sr-sira-tablo.olcut-net .k-artis{display:table-cell}
+  .sr-sira-tablo th,.sr-sira-tablo td{padding:7px 5px}.sr-sira-tablo td:nth-child(2),.sr-sira-tablo th{white-space:normal}
+}
 /* END SIRALAMALAR */
 
 </style>
@@ -1127,6 +1166,9 @@ const GELISTIRME_MODU = (() => {
   try { return new URLSearchParams(location.search).get('dev') === '1'; }
   catch (e) { return false; }
 })();
+// Öğrenci gözüyle: öğretmenin açtığı yalıtılmış çerçevedeki öğrenci kopyası (bkz. ogrenciGozuyleAc).
+// Depolama bellektedir, bulut yoktur; burada yapılan hiçbir şey bir yere kaydedilmez.
+const ONIZLEME_MODU = typeof window !== 'undefined' && window.YKS_ONIZLEME === true;
 
 const VARSAYILAN_KONU_PLANI = {SAY:[{"Fizik":["Fizik Bilimine Giriş","Madde ve Özellikleri"],"Kimya":["Kimya Bilimi","Atom Modelleri, Atomun Temel Tanecikleri"],"Biyoloji":["Canlıların Ortak Özellikleri","Canlıların Temel Bileşenleri"],"Geometri":["Temel Kavramlar ve Düzlemde Açılar","Üçgende Açılar"],"Matematik TYT":["Temel Kavramlar, Tek-Çift ve Negatif-Pozitif Sayılar","Asal Sayılar, Ardışık Sayılar, Faktöriyel","Basamak Kavramı, Asal Çarpanlara Ayırma"],"Matematik AYT":["Fonksiyon Kavramı - Tanım ve Görüntü Kümesi","Fonksiyon Çeşitleri"],"Türkçe":["Sözcükte Anlam","Söz Öbeklerinde Anlam"]},{"Fizik":["Basınç","Vektörler ve Kuvvet"],"Kimya":["Atomun Kuantum Modeli"],"Biyoloji":["Nükleik Asitlerin Yapısı ve Çeşitleri","DNA Replikasyonu"],"Geometri":["Üçgende Eşlik","Üçgende Benzerlik"],"Matematik TYT":["Bölme ve Bölünebilme","EBOB-EKOK ve Periyodik Tekrar Eden Durumların Problemleri"],"Matematik AYT":["Fonksiyonlarda İşlemler","Parçalı ve Mutlak Değer Fonksiyonu"],"Türkçe":["Sözcükte Yapı","Cümlede Anlam ve Anlatım"]},{"Fizik":["Tork ve Tork Dengesi","Kesişen Kuvvetlerin Dengesi"],"Kimya":["Periyodik Sistem ve Periyodik Özellikler","Redoks Tepkimelerinin Denkleştirilmesi / Aktiflik"],"Biyoloji":["Genden Proteine (Protein Sentezi)","Genden Proteine (Genetik Mühendisliği ve Biyoteknoloji)"],"Geometri":["Dik Üçgen","İkizkenar Üçgen"],"Matematik TYT":["Rasyonel Sayılar","Birinci Dereceden Denklemler","Basit Eşitsizlikler"],"Matematik AYT":["Grafik Yorumlama","Bir Fonksiyonun Tersi"],"Türkçe":["Anlatımın Temel Nitelikleri ve Anlamla İlgili Anlatım Bozuklukları","Ses Bilgisi"]},{"Fizik":["Kütle ve Ağırlık Merkezi","Basit Makineler"],"Kimya":["Piller"],"Biyoloji":["Hücre","Canlı Çeşitliliği ve Sınıflandırılması"],"Geometri":["Eşkenar Üçgen","Üçgende Açıortay"],"Matematik TYT":["Mutlak Değer","Çarpanlara Ayırma"],"Matematik AYT":["Bileşke Fonksiyon ve Özellikleri","Bileşke ve Ters Fonksiyon"],"Türkçe":["Yazım Kuralları","Noktalama İşaretleri"]},{"Fizik":["Kaldırma Kuvveti","Isı ve Sıcaklık"],"Kimya":["Elektroliz / Korozyon","Kimyanın Temel Kanunları"],"Biyoloji":["Canlı Âlemleri ve Virüsler","Canlılık ve Enerji (Fotosentez - Kemosentez - Hücresel Solunum - Fermantasyon)"],"Geometri":["Üçgende Kenarortay","Üçgende Açı-Kenar Bağıntıları"],"Matematik TYT":["Üslü İfadeler","Köklü İfadeler","Oran-Orantı"],"Matematik AYT":["Periyodik Fonksiyon","Artan - Azalan Fonksiyon"],"Türkçe":["Paragrafta Anlatım","Paragrafta Yapı"]},{"Fizik":["Aydınlanma","Tam ve Yarı Gölge"],"Kimya":["Mol Kavramı"],"Biyoloji":["Ekosistem Ekolojisi","Komünite Ekolojisi"],"Geometri":["Üçgende Alan","Çokgenler"],"Matematik TYT":["Sayı Problemleri","Kesir Problemleri"],"Matematik AYT":["Ortalama Değişim Hızı","Dönüşüm - Ötelenme - Simetri"],"Türkçe":["Paragrafta Anlam","Adlar (İsimler)"]},{"Fizik":["Yansıma","Küresel Aynalar"],"Kimya":["Kimyasal Tepkimeler ve Denklemler","Kimyasal Hesaplamalar"],"Biyoloji":["Popülasyon Ekolojisi","Hücre Bölünmeleri ve Üreme"],"Geometri":["Dörtgenler","Yamuk"],"Matematik TYT":["Yaş Problemleri","Yüzde Problemleri","Kâr-Zarar Problemleri"],"Matematik AYT":["Üstel Fonksiyon ve Tersi","Logaritma Fonksiyonu ve Grafiği"],"Türkçe":["Ön Adlar (Sıfatlar)","Adıllar (Zamirler)"]},{"Fizik":["Çembersel Hareket","Basit Harmonik Hareket"],"Kimya":["Kimyasal Türler / Türler Arası Etkileşimlerin Sınıflandırılması"],"Biyoloji":["Kalıtım ve Biyolojik Çeşitlilik","Canlılar ve Çevre"],"Geometri":["Paralelkenar","Eşkenar Dörtgen"],"Matematik TYT":["Karışım Problemleri","Hareket Problemleri"],"Matematik AYT":["Logaritma Fonksiyonunun Özellikleri","Üstel-Logaritmik Denklem ve Eşitsizlikler"],"Türkçe":["Zarflar (Belirteçler)","Edat (İlgeç) - Bağlaç - Ünlem"]},{"Fizik":["Dalga Mekaniği (su dalgalarında kırınım ve girişim)","Kırılma"],"Kimya":["Güçlü ve Zayıf Etkileşimler","Fiziksel ve Kimyasal Değişimler"],"Biyoloji":["Bitkilerin Yapısı","Bitkilerde Madde Taşınması"],"Geometri":["Deltoid","Dikdörtgen"],"Matematik TYT":["İşçi Problemleri","Grafik Problemleri","Polinomlar"],"Matematik AYT":["Gerçek Hayat Durumları İle İlgili Üstel ve Logaritmik Fonksiyon Problemleri","Dizi ve Fonksiyon Kavramı Arasındaki İlişki"],"Türkçe":["Fiiller (Eylemler)","Fiilimsiler (Eylemsiler)"]},{"Fizik":["Prizmalar","Renk"],"Kimya":["Karbon Kimyasına Giriş"],"Biyoloji":["Bitkilerde Eşeyli Üreme","Sinir Sistemi"],"Geometri":["Kare","Noktanın Analitiği"],"Matematik TYT":["Veri Analizi","Mantık"],"Matematik AYT":["Genel Terimi ve İndirgenme Bağıntısı Verilen Bir Dizinin Terimleri","Aritmetik Dizi"],"Türkçe":["Fiilimsiler (Eylemsiler) - devamı","Cümlenin Ögeleri"]},{"Fizik":["Mercekler","Dalgalar (dalgaların temel özellikleri ve yay dalgaları)"],"Kimya":["Alkanlar","Alkenler"],"Biyoloji":["Endokrin Sistem","Duyu Organları"],"Geometri":["Doğrunun Analitiği","Dönüşüm Geometrisi"],"Matematik TYT":["Kümeler","Permütasyon","Kombinasyon"],"Matematik AYT":["Geometrik Dizi","Diskriminant Kavramı ve Denklemlerin Kökleri"],"Türkçe":["Fiilde (Eylemde) Çatı","Kelime Grupları (Sözcük Öbekleri)"]},{"Fizik":["Işık Teorileri","Elektromanyetik Dalgalar"],"Kimya":["Alkinler"],"Biyoloji":["Dolaşım Sistemi","Lenf ve Bağışıklık Sistemi"],"Geometri":["Genel Tekrar","Çemberde Temel Elemanlar"],"Matematik TYT":["Binom Açılımı","Olasılık"],"Matematik AYT":["Karmaşık Sayılar","Kök-Katsayı Bağıntıları"],"Türkçe":["Cümle Türleri","Dil Bilgisiyle İlgili Anlatım Bozuklukları"]},{"Fizik":["Bağıl Hareket","Newton\u0027un Hareket Yasaları"],"Kimya":["Aromatik Bileşikler","Maddenin Hâlleri"],"Biyoloji":["Sindirim Sistemi","Destek ve Hareket Sistemi"],"Geometri":["Çemberde Açı","Çemberde Uzunluk"],"Matematik AYT":["Tepe Noktası ve Simetri Ekseni","En Büyük - En Küçük Değer"],"Türkçe":["İletişim, Dil ve Kültür"]},{"Fizik":["Dalgalar (su dalgaları, ses dalgaları ve deprem dalgaları)","Elektrostatik"],"Kimya":["Karışımlar"],"Biyoloji":["Solunum Sistemi","Üriner Sistem"],"Geometri":["Dairenin Çevresi ve Alanı","Katı Cisimler"],"Matematik AYT":["Parabol Denklemini Yazma","Parabol ve Doğrunun Birbirlerine Göre Durumları"]},{"Fizik":["Elektrik Akımı","Üreteçler"],"Kimya":["Asitler, Bazlar ve Tuzlar","Alkoller ve Eterler"],"Biyoloji":["Üreme Sistemi ve Embriyonik Gelişim"],"Geometri":["Çemberin Analitiği"],"Matematik AYT":["İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler","Eşitsizlik Sistemleri"]},{"Fizik":["Elektriksel Enerji ve Güç","Lambalar"],"Kimya":["Aldehitler ve Ketonlar"],"Matematik AYT":["Açı Ölçü Birimleri","Esas Ölçü"]},{"Fizik":["Atom Modelleri","Büyük Patlama ve Evrenin Oluşumu"],"Kimya":["Karboksilik Asitler ve Esterler","Gazlar"],"Matematik AYT":["Birim Çemberde Trigonometrik Oranlar","Trigonometrik Özdeşlikler"]},{"Fizik":["Radyoaktivite","Modern Fizik"],"Kimya":["Doğa ve Kimya"],"Matematik AYT":["Sıralama ve İşaret İncelemesi","Trigonometrik Dönüşümler"]},{"Fizik":["Elektriksel Kuvvet","Elektrik Alan"],"Kimya":["Kimya Her Yerde","Sıvı Çözeltiler ve Çözünürlük"],"Matematik AYT":["Periyot ve Grafik","Ters Trigonometrik Fonksiyonlar"]},{"Fizik":["Elektrik Potansiyel Enerjisi ve Elektrik Potansiyeli","Düzgün Elektrik Alan"],"Kimya":["Kimyasal Tepkimelerde Enerji"],"Matematik AYT":["Sinüs ve Cosinüs Teoremi","Toplam-Fark ve Yarım Açı"]},{"Fizik":["Sığaçlar","Atışlar"],"Kimya":["Kimyasal Tepkimelerde Hız","Kimyasal Tepkimelerde Denge"],"Matematik AYT":["Trigonometrik Denklemler","Bir Fonksiyonun Sağdan ve Soldan Limit Kavramı"]},{"Fizik":["İş-Güç-Enerji","Mıknatıslar"],"Kimya":["Sulu Ortamlarda Asit-Baz Dengesi"],"Matematik AYT":["Limitin Özellikleri ve Uygulamaları","Parçalı Fonksiyonların Limiti"]},{"Fizik":["Manyetik Alan","Manyetik Kuvvet"],"Kimya":["Tuzların Çözünürlük Dengesi","Enerji Kaynakları ve Bilimsel Gelişmeler"],"Matematik AYT":["Belirsizlik Durumu","Limit Uygulamaları"]},{"Fizik":["Elektromanyetik İndüklenme","Alternatif Akım"],"Matematik AYT":["Süreklilik Kavramı","Anlık Değişim Hızı - Ortalama Değişim Hızı"]},{"Fizik":["Transformatör","İtme ve Momentum"],"Matematik AYT":["Soldan ve Sağdan Türev","Türev Alma Kuralları"]},{"Fizik":["Görüntüleme Teknikleri","Yarı İletken Teknolojisi"],"Matematik AYT":["Bileşke Fonksiyonun Türevi","Zincir Kuralı"]},{"Fizik":["Nanoteknoloji","Lazer"],"Matematik AYT":["İkinci Mertebeden Türev ve Türevin Limit Uygulamaları","Birinci Türevin Geometrik Yorumu"]},{"Matematik AYT":["Artan ve Azalan Fonksiyonlar","Yerel Ekstremum Noktaları"]},{"Matematik AYT":["Polinom Fonksiyonlarının Grafikleri","Maksimum - Minimum Problemleri"]},{"Matematik AYT":["Belirsiz İntegral ve İntegral Alma Kuralları","Değişken Değiştirme Metodu"]},{"Matematik AYT":["Riemann Toplamı","Belirli İntegral ve Özellikleri"]},{"Matematik AYT":["Belirli İntegral ve Alan Hesabı"]}],EA:[{"Türk Dili ve Edebiyatı":["Sanat ve Edebiyat","Türk Dilinin ve Edebiyatının Tarihî Dönemleri"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Mustafa Kemal\u0027in Hayatı","XX. Yüzyıl Başlarında Osmanlı Devleti"],"Coğrafya":["Doğa ve İnsan Etkileşimi (TYT)","Coğrafyanın Konusu, Bölümleri ve Gelişimi (TYT)"],"Türkçe":["Sözcükte Anlam","Söz Öbeklerinde Anlam"],"Felsefe (+ Felsefe Grubu)":["Felsefeyi Tanıma"],"Geometri":["Temel Kavramlar ve Düzlemde Açılar","Üçgende Açılar"],"Matematik TYT":["Temel Kavramlar, Tek-Çift ve Negatif-Pozitif Sayılar","Asal Sayılar, Ardışık Sayılar, Faktöriyel"],"Matematik AYT":["Fonksiyon Kavramı - Tanım ve Görüntü Kümesi","Fonksiyon Çeşitleri","Fonksiyonlarda İşlemler"]},{"Türk Dili ve Edebiyatı":["Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["I. Dünya Savaşı ve Sonrası Gelişmeler"],"Coğrafya":["Dünya\u0027nın Şekli ve Hareketleri (TYT)","Ekosistemlerin Özellikleri ve İşleyişi (AYT)"],"Türkçe":["Sözcükte Yapı","Cümlede Anlam ve Anlatım"],"Felsefe (+ Felsefe Grubu)":["Felsefe ile Düşünme"],"Geometri":["Üçgende Eşlik","Üçgende Benzerlik"],"Matematik TYT":["Basamak Kavramı, Asal Çarpanlara Ayırma"],"Matematik AYT":["Parçalı ve Mutlak Değer Fonksiyonu","Grafik Yorumlama"]},{"Türk Dili ve Edebiyatı":["Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)","Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Millî Mücadele\u0027nin Hazırlık Çalışmaları","Büyük Millet Meclisi\u0027nin Açılması"],"Coğrafya":["Ekstrem Doğa Olayları - Küresel İklim Değişimi (AYT)","Koordinat Sistemi ve Coğrafi Konum (TYT)"],"Türkçe":["Anlatımın Temel Nitelikleri ve Anlamla İlgili Anlatım Bozuklukları","Ses Bilgisi"],"Felsefe (+ Felsefe Grubu)":["Psikoloji Bilimini Tanıyalım"],"Geometri":["Dik Üçgen","İkizkenar Üçgen"],"Matematik TYT":["Bölme ve Bölünebilme","EBOB-EKOK ve Periyodik Tekrar Eden Durumların Problemleri"],"Matematik AYT":["Bir Fonksiyonun Tersi","Bileşke Fonksiyon ve Özellikleri","Bileşke ve Ters Fonksiyon"]},{"Türk Dili ve Edebiyatı":["Tarihsel Süreç İçinde Şiir (Halk Edebiyatı / Divan Edebiyatı)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Sevr Antlaşması"],"Coğrafya":["Harita Bilgisi (TYT)","Ekonomik Faaliyetlerin Sosyal ve Kültürel Etkileri (AYT)"],"Türkçe":["Yazım Kuralları","Noktalama İşaretleri"],"Felsefe (+ Felsefe Grubu)":["Psikolojinin Temel Süreçleri"],"Geometri":["Eşkenar Üçgen","Üçgende Açıortay"],"Matematik TYT":["Rasyonel Sayılar"],"Matematik AYT":["Periyodik Fonksiyon","Artan - Azalan Fonksiyon"]},{"Türk Dili ve Edebiyatı":["Şiirde Edebî Akımlar","Batı Etkisindeki Türk Şiiri (Tanzimat, Servetifünun, Fecriati Dönemlerinde Şiir)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Doğu ve Güney Cephesi","Batı Cephesi"],"Coğrafya":["Geçmişten Geleceğe Şehir ve Ekonomi (AYT)","Türkiye\u0027nin İşlevsel Bölgeleri ve Kalkınma Projeleri (AYT)"],"Türkçe":["Paragrafta Anlatım","Paragrafta Yapı"],"Felsefe (+ Felsefe Grubu)":["Felsefenin Temel Konuları ve Problemleri"],"Geometri":["Üçgende Kenarortay","Üçgende Açı-Kenar Bağıntıları"],"Matematik TYT":["Birinci Dereceden Denklemler","Basit Eşitsizlikler"],"Matematik AYT":["Ortalama Değişim Hızı","Dönüşüm - Ötelenme - Simetri","Üstel Fonksiyon ve Tersi"]},{"Türk Dili ve Edebiyatı":["Millî Edebiyat Dönemi\u0027nde Şiir"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Lozan Barış Antlaşması"],"Coğrafya":["Türkiye\u0027de Ulaşım, Enerji Güzergâhları ve Etkileri (AYT)","Küresel Ticaret ve Türkiye\u0027de Ticaret (AYT)"],"Türkçe":["Paragrafta Anlam","Adlar (İsimler)"],"Felsefe (+ Felsefe Grubu)":["Psikolojinin Temel Süreçleri (devamı)"],"Geometri":["Üçgende Alan","Çokgenler"],"Matematik TYT":["Mutlak Değer"],"Matematik AYT":["Logaritma Fonksiyonu ve Grafiği","Logaritma Fonksiyonunun Özellikleri"]},{"Türk Dili ve Edebiyatı":["Cumhuriyet Dönemi\u0027nde Şiir","Anlatmaya Bağlı Metin Türleri"],"T.C. İnkılap Tarihi ve Atatürkçülük":["Atatürkçülük ve Türk İnkılabı","İki Savaş Arasındaki Dönemde Türkiye ve Dünya"],"Coğrafya":["Atmosfer ve Özellikleri (TYT)","Dünyada ve Türkiye\u0027de İklim Elemanları (TYT)"],"Türkçe":["Ön Adlar (Sıfatlar)","Adıllar (Zamirler)"],"Felsefe (+ Felsefe Grubu)":["Öğrenme, Bellek, Düşünme"],"Geometri":["Dörtgenler","Yamuk"],"Matematik TYT":["Çarpanlara Ayırma","Üslü İfadeler"],"Matematik AYT":["Üstel-Logaritmik Denklem ve Eşitsizlikler","Gerçek Hayat Durumları İle İlgili Üstel ve Logaritmik Fonksiyon Problemleri","Dizi ve Fonksiyon Kavramı Arasındaki İlişki"]},{"Türk Dili ve Edebiyatı":["Anlatmaya Bağlı Metinlerde Edebî Akımlar"],"T.C. İnkılap Tarihi ve Atatürkçülük":["II. Dünya Savaşı Sürecinde Türkiye ve Dünya"],"Coğrafya":["Nüfus Politikaları (AYT)","Şehirler ve Etki Alanları - Türkiye\u0027de Yerleşmeler (AYT)"],"Türkçe":["Zarflar (Belirteçler)","Edat (İlgeç) - Bağlaç - Ünlem"],"Felsefe (+ Felsefe Grubu)":["Felsefenin Temel Konuları ve Problemleri (devamı)"],"Geometri":["Paralelkenar","Eşkenar Dörtgen"],"Matematik TYT":["Köklü İfadeler"],"Matematik AYT":["Genel Terimi ve İndirgenme Bağıntısı Verilen Bir Dizinin Terimleri","Aritmetik Dizi"]},{"Türk Dili ve Edebiyatı":["Anlatmaya Bağlı Metinlerde Unsurlar ve Teknikler","Anlatmaya Bağlı Metinler (Tanzimat, Servetifünun, Millî Edebiyat Dönemlerinde Hikâye ve Roman)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["II. Dünya Savaşı Sonrasında Türkiye ve Dünya","Toplumsal Devrim Çağında Dünya ve Türkiye"],"Coğrafya":["Ekonomik Faaliyetler (Üretim-Dağıtım-Tüketim) ve Doğal Kaynaklar (AYT)","İklim Tipleri ve Bitki Örtüsü (TYT)"],"Türkçe":["Fiiller (Eylemler)","Fiilimsiler (Eylemsiler)"],"Felsefe (+ Felsefe Grubu)":["Öğrenme, Bellek, Düşünme (devamı)"],"Geometri":["Deltoid","Dikdörtgen"],"Matematik TYT":["Oran-Orantı","Sayı Problemleri"],"Matematik AYT":["Geometrik Dizi","Diskriminant Kavramı ve Denklemlerin Kökleri","Karmaşık Sayılar"]},{"Türk Dili ve Edebiyatı":["Anlatmaya Bağlı Metinler (Cumhuriyet Dönemi\u0027nde Hikâye ve Roman)"],"T.C. İnkılap Tarihi ve Atatürkçülük":["XXI. Yüzyılın Eşiğinde Türkiye ve Dünya"],"Coğrafya":["Türkiye\u0027de İklim Tipleri (TYT)","Dünya\u0027nın Yapısı ve Oluşum Süreci (TYT)"],"Türkçe":["Fiilimsiler (Eylemsiler) - devamı","Cümlenin Ögeleri"],"Felsefe (+ Felsefe Grubu)":["Ruh Sağlığının Temelleri"],"Geometri":["Kare","Noktanın Analitiği"],"Matematik TYT":["Kesir Problemleri"],"Matematik AYT":["Kök-Katsayı Bağıntıları","Tepe Noktası ve Simetri Ekseni"]},{"Türk Dili ve Edebiyatı":["Göstermeye Bağlı Metinler (Tiyatro / Tiyatronun Özellikleri, Unsurları)","Göstermeye Bağlı Metinler (Geleneksel Türk Tiyatrosu / Tanzimat, Millî Edebiyat, Cumhuriyet Dönemlerinde Tiyatro)"],"Coğrafya":["Dünyada ve Türkiye\u0027de İç Kuvvetler (TYT)","Türkiye\u0027nin Ekonomi Politikaları ve Ekonominin Sektörel Dağılımı (AYT)"],"Türkçe":["Fiilde (Eylemde) Çatı","Kelime Grupları (Sözcük Öbekleri)"],"Felsefe (+ Felsefe Grubu)":["Felsefenin Temel Konuları ve Problemleri (devamı)"],"Geometri":["Doğrunun Analitiği","Dönüşüm Geometrisi"],"Matematik TYT":["Yaş Problemleri","Yüzde Problemleri"],"Matematik AYT":["En Büyük - En Küçük Değer","Parabol Denklemini Yazma","Parabol ve Doğrunun Birbirlerine Göre Durumları"]},{"Türk Dili ve Edebiyatı":["Öğretici Metinler"],"Coğrafya":["Türkiye\u0027de Tarım, Ormancılık ve Hayvancılık (AYT)","Türkiye\u0027de Madenler ve Enerji Kaynakları (AYT)"],"Türkçe":["Cümle Türleri","Dil Bilgisiyle İlgili Anlatım Bozuklukları"],"Felsefe (+ Felsefe Grubu)":["Felsefi Okuma ve Yazma"],"Geometri":["Genel Tekrar","Çemberde Temel Elemanlar"],"Matematik TYT":["Kâr-Zarar Problemleri"],"Matematik AYT":["İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler","Eşitsizlik Sistemleri"]},{"Türk Dili ve Edebiyatı":["Sözlü Anlatım Türleri"],"Coğrafya":["Türkiye\u0027de Sanayi (AYT)","Dünyada ve Türkiye\u0027de Topraklar (TYT)"],"Türkçe":["İletişim, Dil ve Kültür"],"Felsefe (+ Felsefe Grubu)":["MÖ 6. Yüzyıl - MS 2. Yüzyıl Felsefesi"],"Geometri":["Çemberde Açı","Çemberde Uzunluk"],"Matematik TYT":["Karışım Problemleri","Hareket Problemleri"],"Matematik AYT":["Açı Ölçü Birimleri","Esas Ölçü","Birim Çemberde Trigonometrik Oranlar"]},{"Coğrafya":["Dünyada ve Türkiye\u0027de Su Kaynakları (TYT)","Dünyada ve Türkiye\u0027de Dış Kuvvetler (TYT)"],"Felsefe (+ Felsefe Grubu)":["MS 2. Yüzyıl - 15. Yüzyıl Felsefesi"],"Geometri":["Dairenin Çevresi ve Alanı","Katı Cisimler"],"Matematik TYT":["İşçi Problemleri"],"Matematik AYT":["Trigonometrik Özdeşlikler","Sıralama ve İşaret İncelemesi"]},{"Coğrafya":["Küresel Ticaret - Hammadde-Üretim-Pazar (AYT)","Dünyada ve Türkiye\u0027de Turizm (AYT)"],"Felsefe (+ Felsefe Grubu)":["Ruh Sağlığının Temelleri (devamı)"],"Geometri":["Çemberin Analitiği"],"Matematik TYT":["Grafik Problemleri","Polinomlar"],"Matematik AYT":["Trigonometrik Dönüşümler","Periyot ve Grafik","Ters Trigonometrik Fonksiyonlar"]},{"Coğrafya":["İlk Kültür Merkezleri ve Kültür Bölgeleri (AYT)","Türk Kültürü ve Özellikleri (AYT)"],"Felsefe (+ Felsefe Grubu)":["Sosyolojiye Giriş"],"Matematik TYT":["Veri Analizi"],"Matematik AYT":["Sinüs ve Cosinüs Teoremi","Toplam-Fark ve Yarım Açı"]},{"Coğrafya":["Jeopolitik Konum (AYT)","Dünya\u0027da ve Türkiye\u0027de Nüfusun Özellikleri, Değişim ve Dağılışı (TYT)"],"Felsefe (+ Felsefe Grubu)":["Birey ve Toplum"],"Matematik TYT":["Mantık","Kümeler"],"Matematik AYT":["Trigonometrik Denklemler","Bir Fonksiyonun Sağdan ve Soldan Limit Kavramı","Limitin Özellikleri ve Uygulamaları"]},{"Coğrafya":["Nüfus Piramitleri (TYT)","Dünyada ve Türkiye\u0027de Göçler (TYT)"],"Felsefe (+ Felsefe Grubu)":["Toplumsal Yapı"],"Matematik TYT":["Permütasyon"],"Matematik AYT":["Parçalı Fonksiyonların Limiti","Belirsizlik Durumu"]},{"Coğrafya":["Ekonomik Faaliyetler (TYT)","Yerleşmeler (TYT)"],"Felsefe (+ Felsefe Grubu)":["MS 2. Yüzyıl - 15. Yüzyıl Felsefesi (devamı)"],"Matematik TYT":["Kombinasyon","Binom Açılımı"],"Matematik AYT":["Limit Uygulamaları","Süreklilik Kavramı","Anlık Değişim Hızı - Ortalama Değişim Hızı"]},{"Coğrafya":["Bölgeler ve Ülkeler (TYT)","Uluslararası Ulaşım Hatları (TYT)"],"Felsefe (+ Felsefe Grubu)":["15. Yüzyıl - 17. Yüzyıl Felsefesi"],"Matematik TYT":["Olasılık"],"Matematik AYT":["Soldan ve Sağdan Türev","Türev Alma Kuralları"]},{"Coğrafya":["Afetler (TYT)","İnsanların Doğal Ortamı Kullanma Şekilleri (TYT)"],"Felsefe (+ Felsefe Grubu)":["Toplumsal Değişme ve Gelişme"],"Matematik AYT":["Bileşke Fonksiyonun Türevi","Zincir Kuralı","İkinci Mertebeden Türev ve Türevin Limit Uygulamaları"]},{"Coğrafya":["Teknolojik Gelişmelerin Kültürel ve Ekonomik Etkileri (AYT)","Ülkelerin Gelişmesinde Etkili Olan Faktörler (AYT)"],"Felsefe (+ Felsefe Grubu)":["Toplum ve Kültür"],"Matematik AYT":["Birinci Türevin Geometrik Yorumu","Artan ve Azalan Fonksiyonlar"]},{"Coğrafya":["Sıcak Çatışma Bölgeleri ve Ülkeler (AYT)","Küresel Bölgeler ve Örgütler (AYT)"],"Felsefe (+ Felsefe Grubu)":["Toplumsal Kurumlar"],"Matematik AYT":["Yerel Ekstremum Noktaları","Polinom Fonksiyonlarının Grafikleri","Maksimum - Minimum Problemleri"]},{"Coğrafya":["Çevre Sorunları ve Türleri (AYT)","Çevre Sorunlarının Çözümüne Yönelik Yaklaşımlar (AYT)"],"Felsefe (+ Felsefe Grubu)":["18. Yüzyıl - 19. Yüzyıl Felsefesi"],"Matematik AYT":["Belirsiz İntegral ve İntegral Alma Kuralları","Değişken Değiştirme Metodu"]},{"Felsefe (+ Felsefe Grubu)":["20. Yüzyıl Felsefesi"],"Matematik AYT":["Riemann Toplamı","Belirli İntegral ve Özellikleri","Belirli İntegral ve Alan Hesabı"]},{"Felsefe (+ Felsefe Grubu)":["Mantığa Giriş"]},{"Felsefe (+ Felsefe Grubu)":["Klasik Mantık"]},{"Felsefe (+ Felsefe Grubu)":["Mantık ve Dil"]},{"Felsefe (+ Felsefe Grubu)":["Sembolik Mantık"]}]};
 const GUN_AD = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
@@ -1652,7 +1694,7 @@ function veriyiHazirla(y) {
 
 async function durumuYukle() {
   const adaylar = [];
-  try {
+  if (!ONIZLEME_MODU) try {
     const r = await fetch('data/veri.json', { cache: 'no-store' });
     if (r.ok) adaylar.push({ kaynak: 'sunucu', veri: await r.json() });
   } catch (e) { /* dosya yok */ }
@@ -1733,7 +1775,7 @@ function tutarlilikUyarilari() {
   return uyari;
 }
 
-function tamBelge(veri) {
+function tamBelge(veri, onYazi) {
   const stil = document.getElementById('stil').textContent;
   const kod = document.getElementById('uygulama').textContent;
   const kabuk = '<div class="kabuk"><nav class="ray" id="ray"></nav><main id="ana"></main></div>';
@@ -1743,6 +1785,7 @@ function tamBelge(veri) {
     '<title>YKS Tekrar Defteri</title>\n' +
     '<style id="stil">' + stil + '</style>\n</head>\n<body>\n' + kabuk + '\n' +
     s + ' id="veri" type="application/json">' + betikIciJson(veri || D) + k + '\n' +
+    (onYazi ? s + '>' + onYazi + k + '\n' : '') +
     s + ' id="uygulama">' + kod + k + '\n</body>\n</html>';
 }
 
@@ -3377,7 +3420,7 @@ function planTablosu(si, hb, p, tumu, salt) {
   p = gunlukEkliPlan(si, hb, p);
   const enCok = Math.max(salt ? 1 : 8, ...p.gunler.map(g => g.length));
   let h = '<div class="sayfa' + (tumu ? ' tumu-sayfa' : '') + '"><div class="sayfa-ust">' +
-    '<div class="isim">' + kacis(D.ogr[si].ad) + '</div>' +
+    '<div class="isim">' + ogrAdDugmesi(si) + '</div>' +
     '<div class="tarihler">' + ggyy(hb) + ' – ' + ggyy(planHaftaSonu(si, hb)) + '</div></div>' +
     '<div class="sarma"><table class="plan"><thead><tr><th style="width:34px">Sıra</th>';
   for (let g = 0; g <= planHaftaSonu(si, hb) - hb; g++) {
@@ -4900,7 +4943,8 @@ function gorunumOgrenciler() {
       (o.aktif !== false ? ' checked' : '') + ' title="Programı aldı ve kullanıyor"></td>' +
       '<td><input class="oNo" data-i="' + i + '" type="number" min="1" max="9999" value="' + (o.no || '') +
         '" style="width:80px"></td>' +
-      '<td><input class="oAd" data-i="' + i + '" value="' + kacis(o.ad) + '" style="min-width:190px;width:100%"></td>' +
+      '<td><div class="ad-gor"><input class="oAd" data-i="' + i + '" value="' + kacis(o.ad) + '" style="min-width:190px;width:100%">' +
+        '<button type="button" class="ogr-gor-dugme" data-ogr-gor="' + i + '" title="Öğrenci gözüyle gör" aria-label="' + kacis(o.ad) + ': öğrenci gözüyle gör">' + GOR_SVG + '</button></div></td>' +
       '<td><input class="oSube" data-i="' + i + '" value="' + kacis(o.sube) + '" style="width:72px"></td>' +
       '<td>' + ogrenciSinifi(o) + '. sınıf</td>' +
       '<td><select class="oAlan" data-i="' + i + '">' + ['SAY', 'EA', 'SÖZ', 'DİL'].map(a =>
@@ -4952,7 +4996,7 @@ function gorunumRapor() {
              unut: kd.filter(l => l[5] === 1).length, takip: kartlar.filter(x => konuAl(x.ki)[0] === di).length };
   }).filter(x => x.n || x.takip);
   const kutu = (ad, deger) => '<div class="kart kutu"><div class="ad">' + ad + '</div><div class="sayi">' + deger + '</div></div>';
-  let h = '<div class="baslik"><h1>Karne</h1><p>' + kacis(o.ad) + ' · ' + sinavYonelme(ogrenciSinavi(o)) + ' ' + (gunNo(D.ayar.sinav) - bugunNo()) + ' gün</p></div>' +
+  let h = '<div class="baslik"><h1>Karne</h1><p>' + ogrAdDugmesi(si) + ' · ' + sinavYonelme(ogrenciSinavi(o)) + ' ' + (gunNo(D.ayar.sinav) - bugunNo()) + ' gün</p></div>' +
     '<div class="arac">' + ogrSecici() + '</div>' +
     '<div class="kutular">' + kutu('Çözülen test', kayit.length) +
     kutu('Ortalama başarı', ort === null ? '—' : '%' + Math.round(ort)) +
@@ -5218,7 +5262,7 @@ function gorunumHaritasi() {
   const sinavHb = pazartesi(sinavG);
   const bugunHb = buHafta();
   const baslangicHb = haftaBaslangici(o);
-  let h = '<div class="baslik"><h1>Haftalar Haritası</h1><p>' + kacis(o.ad) + '</p></div>' +
+  let h = '<div class="baslik"><h1>Haftalar Haritası</h1><p>' + ogrAdDugmesi(si) + '</p></div>' +
     (ogrenciMi() ? '' : '<div class="arac" style="margin-bottom:12px">' + ogrSecici() + '</div>');
   if (donemHb > sinavHb) return h + '<div class="kart">Dönem başı ' + ogrenciSinavi(o) + ' tarihinden sonra görünüyor, Ayarlar’dan kontrol edin.</div>';
   h += '<div class="haritaIzgara">';
@@ -9635,7 +9679,7 @@ function gorunumEtkinlik() {
       const canli=ETKINLIK_CANLI.get(r.o.syncId), bas=r.o.etkinlik?.baslangic;
       const durum=!r.o.syncId?'Öğretmen bağlantısı yok':canli?.durum==='tamam'?'Sunucudan alındı · '+etkinlikZamani(canli.ts):
         canli?.durum==='hata'?'Bağlantı doğrulanamadı':canli?.durum==='eski'?'Yeni sürümden etkinlik bekleniyor':'Canlı bağlantı bekleniyor';
-      return '<div class="etkinlik-satir" role="row"><div role="cell"><b>'+kacis(r.o.ad)+'</b><br>'+kacis(r.o.sube)+' · '+kacis(r.o.no||'')+
+      return '<div class="etkinlik-satir" role="row"><div role="cell"><b>'+ogrAdDugmesi(r.si)+'</b><br>'+kacis(r.o.sube)+' · '+kacis(r.o.no||'')+
         '</div>'+
         ['acildi','kaydedildi','pdf'].map((k,i)=>'<div role="cell"><span class="etkinlik-mobil">'+['Sonuç gir','Sonuç kaydı','PDF isteği'][i]+': </span>'+hucre(r,k)+'</div>').join('')+
         '<div role="cell" class="mini">'+kacis(durum)+(bas?'<br>Takip başlangıcı: '+kacis(etkinlikZamani(bas)):'<br>Henüz etkinlik verisi yok')+'</div></div>';
@@ -9678,7 +9722,8 @@ function rehberHaftaKarti() {
         REHBER_ANA_SUTUN.map(([k, ad]) => '<td data-ad="' + ad + '"' + (k === 'karar' && say(l, k) ? ' class="uyari"' : '') + '>' + oran(l, k) + '</td>').join('') + '</tr>'; }).join('') +
     '</tbody></table>' +
     (kararli.length ? '<div class="rh-karar"><div class="etiket">Karar bekleyen</div><div class="rh-adlar">' + kararli.map(r =>
-      '<button type="button" class="dugme" data-ra-harita="' + r.si + '" title="Haftalar haritasında aç">' + kacis(r.o.ad) + ' <b>' + r.karar + '</b></button>').join('') + '</div></div>' : '') +
+      '<span class="rh-ad">' + ogrAdDugmesi(r.si) + '<button type="button" data-ra-harita="' + r.si + '" title="Haftalar haritasında karar ver" aria-label="' +
+      kacis(r.o.ad) + ': ' + r.karar + ' hafta, haftalar haritasında aç">' + r.karar + '</button></span>').join('') + '</div></div>' : '') +
     '</section>';
 }
 function gorunumRehberAna() {
@@ -9687,6 +9732,53 @@ function gorunumRehberAna() {
     (talep ? '<button class="dugme birincil" id="talepAc">E-posta talepleri (' + talep + ')</button>' : '') + '</div>' +
     '<div class="baslik pano-sag-bas"><h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler" title="Denemeler’i aç">Deneme ortalaması</button></h2></div>' +
     rehberHaftaKarti() + denemeOrtalamaGrafigi() + '</div>';
+}
+// ---------------------------------------------------------------- öğrenci gözüyle
+// Öğretmen bir öğrencinin adına basınca o öğrencinin uygulamada gördüğü ekran açılır. Öğretmen
+// defterinden öğrencinin paketi kurulur (ogrenciPaketi → paketiYukle, öğrenciye dosyayla verilen
+// paketin aynısı) ve uygulama öğrenci kipinde, kökeni olmayan bir çerçevede çalışır (sandbox,
+// allow-same-origin yok): bu sayfanın depolamasına, oturumuna ve buluta erişemez. Çerçevenin
+// depolaması bellektedir; içinde yapılan hiçbir şey kaydedilmez, kapatınca kaybolur.
+const GOR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+function ogrAdDugmesi(si, metin) {
+  const o = D && D.ogr && D.ogr[si];
+  if (!rehberMi() || !o || o.silindi) return kacis(metin === undefined ? (o ? o.ad : '') : metin);
+  return '<button type="button" class="ogr-ad" data-ogr-gor="' + si + '" title="Öğrenci gözüyle gör">' + kacis(metin === undefined ? o.ad : metin) + '</button>';
+}
+const ONIZLEME_HAZIRLIK = '(' + function () {
+  const bellek = () => { const m = new Map(); return { getItem: k => m.has(String(k)) ? m.get(String(k)) : null,
+    setItem: (k, v) => { m.set(String(k), String(v)); }, removeItem: k => { m.delete(String(k)); }, clear: () => m.clear(),
+    key: i => Array.from(m.keys())[i] ?? null, get length() { return m.size; } }; };
+  ['localStorage', 'sessionStorage'].forEach(ad => { try { Object.defineProperty(window, ad, { configurable: true, value: bellek() }); } catch (e) { /* yok */ } });
+  window.YKS_ONIZLEME = true;
+}.toString() + ')();';
+function ogrenciGozuyleBelgesi(si) { return tamBelge(paketiYukle(ogrenciPaketi(si)), ONIZLEME_HAZIRLIK); }
+function ogrenciGozuyleAc(si) {
+  const o = D && D.ogr && D.ogr[si];
+  if (!rehberMi() || !o || o.silindi) return false;
+  let belge;
+  try { belge = ogrenciGozuyleBelgesi(si); }
+  catch (e) { bilgiVer('Öğrenci görünümü açılamadı: ' + (e.message || e)); return false; }
+  ogrenciGozuyleKapat();
+  const ortu = document.createElement('div');
+  ortu.className = 'ogr-gor'; ortu.id = 'ogrGor';
+  ortu.setAttribute('role', 'dialog'); ortu.setAttribute('aria-modal', 'true'); ortu.setAttribute('aria-label', o.ad + ' öğrenci görünümü');
+  ortu.innerHTML = '<div class="ogr-gor-ust"><span class="ogr-gor-rozet">Öğrenci gözüyle</span><b>' + kacis(o.ad) + '</b><span class="mini">' +
+    kacis([o.sube, o.no].filter(x => x !== undefined && x !== null && x !== '').join(' · ')) + '</span>' +
+    '<button type="button" class="dugme" id="ogrGorKapat">Kapat</button></div>';
+  const cerceve = document.createElement('iframe');
+  cerceve.setAttribute('sandbox', 'allow-scripts allow-modals allow-downloads');
+  cerceve.title = o.ad + ' öğrenci görünümü';
+  cerceve.srcdoc = belge;
+  ortu.appendChild(cerceve);
+  document.body.appendChild(ortu); document.body.classList.add('ogr-gor-acik');
+  document.getElementById('ogrGorKapat').focus();
+  return true;
+}
+function ogrenciGozuyleKapat() {
+  const ortu = document.getElementById('ogrGor');
+  if (ortu) ortu.remove();
+  if (document.body && document.body.classList) document.body.classList.remove('ogr-gor-acik');
 }
 // ---------------------------------------------------------------- çizim + olaylar
 const SEKME_REHBER = [['takip', 'Haftalık öğrenci takibi'], ['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
@@ -9724,7 +9816,7 @@ function rayCiz() {
   // Marka yazısı ana sayfaya götürür: öğrencide harita + deneme gelişimi, öğretmende haftanın özeti.
   ray.innerHTML = '<button class="marka" data-sekme="ana" title="Ana sayfa">YKS<span class="marka-uzun"> Tekrar Defteri</span><small>' +
     (D && D.kurum ? kacis(D.kurum) : 'Aralıklı tekrar') + '</small></button>' +
-    ustMenu(SEKMELER(), ust ? MENU_OGRENCI : MENU_REHBER) +(D?.rol?'<button id="oturumKapat" title="'+(yalnizcaGoruntuleme()?'Oturumu kapatır ve defterin bu cihazdaki kopyasını siler':'Önce sunucuya kaydeder, onaydan sonra bu uygulamanın cihazdaki verisini temizler')+'"'+(CIKIS_DURUMU?' disabled':'')+'>'+(yalnizcaGoruntuleme()?'Çıkış yap':'Kaydet ve çıkış yap')+'</button>':'')+'<div class="durum" role="status" aria-live="polite">' +
+    ustMenu(SEKMELER(), ust ? MENU_OGRENCI : MENU_REHBER) +(D?.rol&&!ONIZLEME_MODU?'<button id="oturumKapat" title="'+(yalnizcaGoruntuleme()?'Oturumu kapatır ve defterin bu cihazdaki kopyasını siler':'Önce sunucuya kaydeder, onaydan sonra bu uygulamanın cihazdaki verisini temizler')+'"'+(CIKIS_DURUMU?' disabled':'')+'>'+(yalnizcaGoruntuleme()?'Çıkış yap':'Kaydet ve çıkış yap')+'</button>':'')+'<div class="durum" role="status" aria-live="polite">' +
     (EK.kirli ? '<b>kaydedilmemiş değişiklik</b>' : kacis(ogrenciMi() ? (EK.ogrSyncDurum || EK.son || 'Planın hazır') : (EK.son || 'hazır'))) +
     (rehberMi() ? '<br><span class="durum-ayrac"> · </span>' + kacis(IZLEME ? (EK.izlemeDurum || 'paylaşılan defter') : KILIT.durum === 'baskasinda' ? (KILIT.ad || 'diğer öğretmen') + ' düzenliyor' : EK.bulutYedekHata || EK.ogretmenSyncDurum || (EK.bulutYedekTs ? 'Sunucuya kaydedildi' : 'Bulut yedeği henüz onaylanmadı')) : '') +
     (testHesabiMi() && D.ogr.length ? (ust ? ' · ' : '<br>') + kacis(EK.bulutYedekHata || (EK.bulutYedekTs ? 'Buluta kaydedildi' : 'Bulut kaydı bekliyor')) : '') + '</div>';
@@ -12559,7 +12651,7 @@ function gorunumDenemeler() {
   const son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son,genelSayi=liste.filter(r=>r.genel).length;
   // With the net/dk chart selected the summary follows it, over exams that have a time.
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan)),birim=hizOzet?' net/dk':' net';
-  return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+kacis(D.ogr[EK.ogr].ad)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
+  return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+ogrAdDugmesi(EK.ogr)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
     '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
     '<div class="dn-tabs" role="group" aria-label="Deneme türü">'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'<button class="dugme birincil dn-ekle" id="dnEkle">+ Deneme ekle</button></div>'+
     '<div class="arac dn-filters" role="group" aria-label="Grafik ve geçmiş filtresi">'+(tur==='BRANS'?'<label>Oturum<select id="dnFiltreOturum"><option'+(oturum==='TYT'?' selected':'')+'>TYT</option><option'+(oturum==='AYT'?' selected':'')+'>AYT</option></select></label><label>Branş<select id="dnFiltreBrans">'+DENEME_DERSLER[oturum].map(d=>'<option value="'+d[0]+'"'+(brans===d[0]?' selected':'')+'>'+d[1]+'</option>').join('')+'</select></label>':'')+(tur==='AYT'?'<label>Alan<select id="dnFiltreAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+(alan===a?' selected':'')+'>'+a+'</option>').join('')+'</select></label>':'')+
@@ -12576,6 +12668,32 @@ function denemeFormOku() {
 async function denemeYerelKaydet(si,alan,yeni) {
   const o=D.ogr[si],eski=o[alan];o[alan]=yeni;
   if(!await kaydet(true)){o[alan]=eski;throw new Error('Cihaza kaydedilemedi. Değişiklik uygulanmadı; yeniden deneyin.');}
+}
+// Publishes every student whose school results wait for publishing; a failed one stays queued.
+async function denemeBekleyenleriYayinla(ilerleme=()=>{}) {
+  const defter=D,bekleyen=D.ogr.map((o,i)=>({o,i})).filter(x=>!x.o.silindi && x.o.denemeYayinBekliyor);let tamam=0;const errors=[];
+  for(const {o,i} of bekleyen){if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');ilerleme('Yayınlanıyor: '+(tamam+errors.length+1)+' / '+bekleyen.length);try{await denemeOkulYayinla(i);tamam++;}catch(e){errors.push(o.ad+': '+e.message);}}
+  if(!await kaydet(true))throw new Error('Yayın durumu cihaza kaydedilemedi; tekrar deneyin.');
+  return tamam+' öğrenciye yayınlandı.'+(errors.length?' '+errors.length+' öğrenci cihazda kayıtlı, yayın bekliyor. '+errors.join(' · '):' Öğrenciler sonuçlarını otomatik görecek.');
+}
+// Moves a school exam to its corrected date for every student (Sıralamalar → Tarih). A record
+// imported from PDF has the date in its id, so it is replaced: the old id becomes a deleted row
+// and the same result is added under the new date's id; publishing moves it on student devices too.
+async function denemeOkulTarihTasi(ad,eskiTarihler,yeniTarih) {
+  if(!rehberMi() || yalnizcaGoruntuleme())throw new Error('Yalnızca rehber öğretmen değiştirebilir.');
+  if(!isoTarihGecerli(yeniTarih))throw new Error('Tarih geçersiz.');
+  const anahtar=denemeAdAnahtari(ad),once=JSON.stringify(D.ogr),ts=Date.now(),pdfId=(t,ot)=>'p:'+encodeURIComponent([anahtar,t,ot].join('|'));
+  let sayi=0;
+  D.ogr.forEach(o=>{
+    if(!o || o.silindi)return;
+    const tasinan=(o.denemeOkul || []).filter(r=>!r.silindi && denemeAdAnahtari(r.ad)===anahtar && eskiTarihler.includes(r.tarih) && r.tarih!==yeniTarih);
+    if(!tasinan.length)return;
+    const yeni=tasinan.flatMap(r=>{const z=Math.max(ts,r.ts+1);
+      return r.id===pdfId(r.tarih,r.oturum)?[{...r,silindi:true,ts:z},{...r,id:pdfId(yeniTarih,r.oturum),tarih:yeniTarih,ts:z}]:[{...r,tarih:yeniTarih,ts:z}];});
+    o.denemeOkul=denemeBirlestir(o.denemeOkul,yeni);o.denemeYayinBekliyor=true;sayi++;
+  });
+  if(sayi && !await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kaydedilemedi; öğrenci sonuçları taşınmadı.');}
+  return sayi;
 }
 function denemeDurum(m) { EK.denemeDurum=m;const el=document.getElementById('dnDurum');if(el)el.textContent=m; }
 // Call after the change is saved on this device: a failed publish leaves it queued, not lost.
@@ -12688,10 +12806,7 @@ document.addEventListener('click',async ev=>{
         if(!await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kayıt başarısız; aktarım uygulanmadı.');}
         DENEME_IMPORT=null;
       }
-      const bekleyen=D.ogr.map((o,i)=>({o,i})).filter(x=>!x.o.silindi && x.o.denemeYayinBekliyor);let tamam=0;const errors=[];
-      for(const {o,i} of bekleyen){if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');denemeDurum('Yayınlanıyor: '+(tamam+errors.length+1)+' / '+bekleyen.length);try{await denemeOkulYayinla(i);tamam++;}catch(e){errors.push(o.ad+': '+e.message);}}
-      if(!await kaydet(true))throw new Error('Yayın durumu cihaza kaydedilemedi; tekrar deneyin.');
-      denemeDurum(tamam+' öğrenciye yayınlandı.'+(errors.length?' '+errors.length+' öğrenci cihazda kayıtlı, yayın bekliyor. '+errors.join(' · '):' Öğrenciler sonuçlarını otomatik görecek.')+srNot);ciz();
+      denemeDurum(await denemeBekleyenleriYayinla(denemeDurum)+srNot);ciz();
     }catch(e){denemeDurum(e.message+srNot);}finally{DENEME_ISLEM=false;el.disabled=false;}return;
   }
 });
@@ -12769,6 +12884,13 @@ function menuSigdir(grup) {
   const grup = ev.target.closest && ev.target.closest('.menu-acilir') && ev.target.closest('.menu-grup');
   if (grup) menuSigdir(grup);
 }));
+// Öğrenci adı: o öğrencinin gözüyle aç (bkz. ogrenciGozuyleAc). Diğer dinleyicilerden sonra kaydedilir.
+document.addEventListener('click', ev => {
+  const ad = ev.target.closest && ev.target.closest('[data-ogr-gor]');
+  if (ad) { ev.preventDefault(); ev.stopPropagation(); ogrenciGozuyleAc(+ad.dataset.ogrGor); return; }
+  if (ev.target.id === 'ogrGorKapat') ogrenciGozuyleKapat();
+}, true);
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && document.getElementById('ogrGor')) ogrenciGozuyleKapat(); });
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;
   document.querySelectorAll('.menu-grup.acik').forEach(g => { g.classList.remove('acik'); g.querySelector('.menu-ac')?.setAttribute('aria-expanded', 'false'); });
@@ -12890,6 +13012,7 @@ function dogrula(v){
   for(const s of v.sinavlar){
     if(!s||typeof s!=='object'||!metin(s.id,200)||!s.id||ids.has(s.id)||!metin(s.ad,120)||!s.ad.trim()||!metin(s.okul,200)||
        !Number.isSafeInteger(s.ts)||s.ts<=0||s.ts>100000000000000||(!s.T&&!s.F))hata('sınav');
+    if(s.tarih!==undefined&&!(typeof s.tarih==='string'&&/^\d{2}\.\d{2}\.\d{4}$/.test(s.tarih)))hata('sınav tarihi');
     ids.add(s.id);
     for(const tur of ['T','F']){
       const sl=s[tur];if(sl===null||sl===undefined)continue;const K=SUTUN[tur].length;
@@ -12964,6 +13087,18 @@ async function tercihKaydet(sinif,alan){
   veri.tercih[sinif]=alan;await yaz(veri,D.siralama);
 }
 
+// The teacher corrects an exam's date (e.g. a list printed with the wrong day). It is kept apart from
+// the lists, so adding the same PDF again does not bring the printed date back.
+async function tarihDegistir(id,tarih){
+  if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen değiştirebilir.');
+  if(!/^\d{2}\.\d{2}\.\d{4}$/.test(tarih))throw new Error('Tarih geçersiz.');
+  const {veri,hata}=oku();if(!veri)throw new Error(hata);
+  const s=veri.sinavlar.find(x=>x.id===id);if(!s)throw new Error('Sınav bulunamadı.');
+  const eski=[...new Set([s.tarih,s.T&&s.T.tarih,s.F&&s.F.tarih].filter(Boolean))];
+  s.tarih=tarih;s.ts=Math.max(Date.now(),s.ts+1);await yaz(veri,D.siralama);
+  return {ad:s.ad,eski};
+}
+
 /* ---------------- exam model ---------------- */
 function acSlot(sl,K){
   const row=r=>{const o={net:{},dy:{},puan:{},rank:{}};K.forEach((k,i)=>{o.net[k]=r.n[i];o.dy[k]=r.dy[i]});PUAN.forEach((k,i)=>{o.puan[k]=r.p[i];o.rank[k]=r.r?r.r[i]:''});return o};
@@ -12992,7 +13127,8 @@ function model(x){
   e.hasAYT=!!e.ayt&&Object.values(e.ayt.students).some(hasAYT);
   e.nTYT=e.tyt?Object.values(e.tyt.students).filter(hasTYT).length:0;
   e.nAYT=e.ayt?Object.values(e.ayt.students).filter(hasAYT).length:0;
-  e.dates=[...new Set([x.T&&x.T.tarih,x.F&&x.F.tarih].filter(Boolean))];
+  // A date the teacher corrected (x.tarih) wins over the dates printed on the lists.
+  e.pdfDates=[...new Set([x.T&&x.T.tarih,x.F&&x.F.tarih].filter(Boolean))];e.dates=x.tarih?[x.tarih]:e.pdfDates;
   const d=(e.dates[0]||'');e.sortKey=d.split('.').reverse().join('')+'|'+x.ad;
   return e;
 }
@@ -13052,6 +13188,38 @@ function aytSube(rows,prev){
 function aytSirala(rows,f){
   if(f==='Toplam')rows.sort((a,b)=>b.total-a.total);
   else rows.sort((a,b)=>((a.field[f].net==null)-(b.field[f].net==null))||((b.field[f].net||0)-(a.field[f].net||0))||(b.total-a.total));
+  return rows;
+}
+
+/* ---------------- in-site ranking ---------------- */
+// One row per student of the current exam: net, change, % change and the gap closed (log):
+// ln((max − önceki + 1) / (max − şimdiki + 1)). Closing the gap near full net counts more; the +1
+// keeps a full net finite. % needs a positive earlier net. Missing values sort last.
+const SIRA_OLCUT=[['net','Net'],['artis','Net artışı'],['yuzde','% artış'],['fark','Kapanan fark (log)']];
+const SIRA_UST={TYT:120,SAY:80,EA:80,'SÖZ':80,Toplam:160};
+function siraNet(s,alan){
+  if(!s)return null;
+  if(alan==='TYT')return hasTYT(s)?r2(tytTotal(s)):null;
+  if(alan==='Toplam')return hasAYT(s)?r2(aytTotal(s)):null;
+  return took(s,alan)?r2(fnet(s,alan)):null;
+}
+function siraSatirlari(cur,prev,alan,olcut){
+  const L=alan==='TYT'?cur&&cur.tyt:cur&&cur.ayt,P=prev?(alan==='TYT'?prev.tyt:prev.ayt):null,ust=SIRA_UST[alan];
+  if(!L)return [];
+  const rows=Object.values(L.students).map(s=>{
+    const simdi=siraNet(s,alan);if(simdi===null)return null;
+    const once=P?siraNet(P.students[s.no],alan):null,artis=once===null?null:r2(simdi-once);
+    return {s,simdi,once,artis,yuzde:once!==null&&once>0?artis/once*100:null,fark:once===null?null:Math.log((ust-once+1)/(ust-simdi+1))};
+  }).filter(Boolean);
+  const k=siraAnahtari(olcut);
+  rows.sort((a,b)=>((a[k]===null)-(b[k]===null))||((b[k]||0)-(a[k]||0))||(b.simdi-a.simdi)||a.s.name.localeCompare(b.s.name,'tr'));
+  return siraNumarala(rows,olcut);
+}
+const siraAnahtari=olcut=>SIRA_OLCUT.some(o=>o[0]===olcut)&&olcut!=='net'?olcut:'simdi';
+// Equal values share a rank (1, 2, 2, 4); rows without a value have none.
+function siraNumarala(rows,olcut){
+  const k=siraAnahtari(olcut);
+  rows.forEach((r,i)=>{const v=r[k];r.sira=v===null?null:i&&rows[i-1][k]!==null&&Math.abs(rows[i-1][k]-v)<1e-9?rows[i-1].sira:i+1});
   return rows;
 }
 
@@ -13260,6 +13428,45 @@ async function hepsiBaytlari(){
 /* ---------------- view ---------------- */
 let DURUM='',ISLEM=false,ONIZLEME=null,ONIZLEME_IS=0;
 function durum(m){DURUM=m;const el=document.getElementById('srDurum');if(el)el.textContent=m}
+const isoTarih=t=>{const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t||'');return m?m[3]+'-'+m[2]+'-'+m[1]:''};
+function tarihHucresi(e,salt){
+  const d=e.dates[0]||'',duzeltildi=e.pdfDates.length&&e.pdfDates.join()!==e.dates.join();
+  const not=duzeltildi?'<div class="mini">PDF’de: '+kacis(e.pdfDates.join(' · '))+'</div>':'';
+  if(salt)return kacis(e.dates.join(' · '))+not;
+  return '<input type="date" class="sr-tarih" data-sr-tarih="'+kacis(e.id)+'" value="'+isoTarih(d)+'" max="'+isoDan(etkinlikBugun())+'" aria-label="'+kacis(e.name+' tarihi')+'">'+not;
+}
+// Notebook student for a list row (same number and name), so the name opens the student's view.
+function defterOgrencisi(){
+  const m=new Map();(D.ogr||[]).forEach((o,i)=>{if(o&&!o.silindi&&o.no)m.set(Number(o.no)+'|'+denemeAdAnahtari(o.ad),i)});
+  return s=>m.get(Number(s.no)+'|'+denemeAdAnahtari(s.name));
+}
+const fIsaret=(x,n=2,ek='')=>x===null?'—':(x>0?'+':'')+(n===2?f2(x):x.toFixed(n))+ek;
+function siraBolumu(cur,prev){
+  if(!cur)return '';
+  const tur=EK.srSiraTur==='AYT'&&cur.ayt?'AYT':'TYT',aytOgr=cur.ayt?Object.values(cur.ayt.students).filter(hasAYT):[];
+  const alan=tur==='TYT'?'TYT':SIRALA.includes(EK.srSiraAlan)?EK.srSiraAlan:defaultSort(aytOgr);
+  const olcut=prev&&SIRA_OLCUT.some(o=>o[0]===EK.srSiraOlcut)?EK.srSiraOlcut:'net';
+  const tum=siraSatirlari(cur,prev,alan,olcut),siniflar=classGroups(tum.map(r=>r.s)).map(c=>c[0]);
+  const sube=siniflar.includes(EK.srSiraSube)?EK.srSiraSube:'',rows=sube?siraNumarala(tum.filter(r=>(r.s.cls||'—')===sube),olcut):tum;
+  const sec=(ad,ozn,liste,secili)=>'<div class="yg-secim" role="group" aria-label="'+ad+'">'+liste.map(([k,etiket])=>'<button type="button" class="'+(k===secili?'secili':'')+'" aria-pressed="'+(k===secili)+'" data-'+ozn+'="'+kacis(k)+'">'+kacis(etiket)+'</button>').join('')+'</div>';
+  const kim=defterOgrencisi(),secili=siraAnahtari(olcut),kolon=prev?['once','simdi','artis','yuzde','fark']:['simdi'];
+  const bas={once:'Önceki',simdi:prev?'Şimdiki':'Net',artis:'Net artışı',yuzde:'% artış',fark:'Kapanan fark (log)'};
+  const hucre=(r,k)=>{const v=r[k],renk=k==='artis'||k==='yuzde'||k==='fark'?(v>0?' sr-art':v<0?' sr-azal':''):'';
+    const yazi=k==='simdi'?'<b>'+f2(v)+'</b>':k==='once'?(v===null?'—':f2(v)):k==='artis'?fIsaret(v):k==='yuzde'?fIsaret(v,1,'%'):fIsaret(v,3);
+    return '<td class="k-'+k+(k===secili?' secili':'')+renk+'">'+yazi+'</td>'};
+  // On a phone the table keeps #, name, current net and the chosen change (CSS hides the rest).
+  return '<section class="kart sr-panel sr-siralama" aria-labelledby="srSiraBaslik"><div class="sr-onizleme-bas"><h2 id="srSiraBaslik">Sıralama</h2><span class="mini">'+
+      kacis((prev?prev.name+' → ':'')+cur.name)+' · '+rows.length+' öğrenci</span></div>'+
+    '<div class="arac sr-sira-secim">'+sec('Oturum','sr-sira-tur',[['TYT','TYT']].concat(cur.hasAYT?[['AYT','AYT']]:[]),tur)+
+      (tur==='AYT'?sec('Alan','sr-sira-alan',SIRALA.map(f=>[f,f]),alan):'')+
+      (prev?sec('Sırala','sr-sira-olcut',SIRA_OLCUT,olcut):'')+
+      (siniflar.length>1?'<label>Şube <select id="srSiraSube"><option value="">Tümü</option>'+siniflar.map(c=>'<option value="'+kacis(c)+'"'+(c===sube?' selected':'')+'>'+kacis(clsShort(c))+'</option>').join('')+'</select></label>':'')+'</div>'+
+    (rows.length?'<div class="dn-scroll"><table class="sr-sira-tablo olcut-'+olcut+'"><thead><tr><th scope="col">#</th><th scope="col">Öğrenci</th><th scope="col" class="k-sube">Şube</th>'+
+      kolon.map(k=>'<th scope="col" class="k-'+k+(k===secili?' secili':'')+'">'+bas[k]+'</th>').join('')+'</tr></thead><tbody>'+
+      rows.map(r=>{const si=kim(r.s);return '<tr><td>'+(r.sira===null?'—':r.sira)+'</td><td><span class="mini">'+kacis(r.s.no)+'</span> '+
+        (si===undefined?kacis(r.s.name):ogrAdDugmesi(si,r.s.name))+'</td><td class="k-sube">'+kacis(clsShort(r.s.cls))+'</td>'+kolon.map(k=>hucre(r,k)).join('')+'</tr>'}).join('')+
+      '</tbody></table></div>':'<p class="mini">Bu seçimde öğrenci yok.</p>')+'</section>';
+}
 function gorunum(){
   const bas='<div class="baslik"><h1>Sıralamalar</h1><p>Okul sonuç listeleri, bir önceki sınava göre değişim kutularıyla</p></div>';
   if(!rehberMi())return bas+'<p>Bu sayfa rehber öğretmen içindir.</p>';
@@ -13267,7 +13474,7 @@ function gorunum(){
   const salt=izleme();
   const tablo=!veri?'<p class="sr-uyari">'+kacis(hata)+'</p>':!ms.length?'<div class="sr-bos"><b>Henüz sonuç listesi yok</b>'+(salt?'':'<p>Denemeler’de “PDF’den toplu aktar” ile aktardığınız okul listeleri burada da saklanır. Daha önceki sınavlar için “PDF ekle”yi kullanın.</p>')+'</div>':
     '<div class="dn-scroll"><table class="sr-sinavlar"><thead><tr><th>Sınav</th><th>Tarih</th><th>Listeler</th><th>Öğrenci</th><th></th></tr></thead><tbody>'+
-    ms.slice().reverse().map(e=>'<tr><td><b>'+kacis(e.name)+'</b>'+(e.school?'<div class="mini">'+kacis(e.school)+'</div>':'')+'</td><td>'+kacis(e.dates.join(' · '))+'</td><td>'+
+    ms.slice().reverse().map(e=>'<tr><td><b>'+kacis(e.name)+'</b>'+(e.school?'<div class="mini">'+kacis(e.school)+'</div>':'')+'</td><td>'+tarihHucresi(e,salt)+'</td><td>'+
       [e.T?'TYT · Net Sayısı Sıralı':'',e.F?'TYT + AYT · Öğrenci Adı Sıralı':''].filter(Boolean).map(kacis).join('<br>')+'</td><td>TYT '+e.nTYT+(e.F?' · AYT '+e.nAYT:'')+' öğrenci</td><td>'+(salt?'':'<button class="dugme mini" data-sr-sil="'+kacis(e.id)+'" aria-label="'+kacis(e.name+' listelerini sil')+'">Sil</button>')+'</td></tr>').join('')+'</tbody></table></div>';
   const opt=sel=>ms.slice().reverse().map(e=>'<option value="'+kacis(e.id)+'"'+(sel&&e.id===sel.id?' selected':'')+'>'+kacis(e.name+(e.dates[0]?' · '+e.dates[0]:''))+'</option>').join('');
   const raporlar=RAPORLAR.map(R=>{
@@ -13283,6 +13490,7 @@ function gorunum(){
     '<section class="kart sr-panel"><h2>Sınavlar</h2>'+tablo+'</section>'+
     (ms.length?'<section class="kart sr-panel"><h2>Karşılaştır</h2><div class="arac sr-secim"><label>Önceki sınav<select id="srOnceki"'+(ms.length<2?' disabled':'')+'>'+(ms.length<2?'<option>İkinci sınavı ekleyin</option>':opt(prev))+'</select></label><span class="sr-ok" aria-hidden="true">→</span><label>Şimdiki sınav<select id="srSimdiki">'+opt(cur)+'</select></label></div>'+
       '<div class="sr-raporlar">'+raporlar+'</div><div class="arac sr-hepsi"><button class="dugme" id="srHepsi"'+(herhangi?'':' disabled')+'>Hepsini tek PDF’te indir</button></div></section>'+
+      siraBolumu(cur,prev)+
       '<section class="kart sr-panel sr-onizleme" aria-labelledby="srOnizlemeBaslik"><div class="sr-onizleme-bas"><h2 id="srOnizlemeBaslik">Önizleme</h2><span class="mini" id="srOnizlemeAlt">Bir raporda “Önizle”ye basın.</span></div><div id="srSayfalar" class="sr-sayfalar"></div></section>':'');
 }
 async function onizle(id){
@@ -13325,6 +13533,9 @@ async function pdfEkle(files){
 document.addEventListener('click',async ev=>{
   const el=ev.target.closest?.('button');if(!el||EK.sekme!=='siralamalar'||!rehberMi())return;
   if(el.dataset.srOnizle){onizle(el.dataset.srOnizle);return}
+  if(el.dataset.srSiraTur||el.dataset.srSiraAlan||el.dataset.srSiraOlcut){
+    const [k,v]=el.dataset.srSiraTur?['srSiraTur',el.dataset.srSiraTur]:el.dataset.srSiraAlan?['srSiraAlan',el.dataset.srSiraAlan]:['srSiraOlcut',el.dataset.srSiraOlcut];
+    EK[k]=v;yenidenCiz();document.querySelector('[data-'+k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())+'="'+v+'"]')?.focus();return}
   if(ISLEM||!(el.dataset.srIndir||el.dataset.srSil||el.id==='srHepsi'))return;
   ISLEM=true;el.disabled=true;
   try{
@@ -13344,13 +13555,29 @@ document.addEventListener('change',async ev=>{
     ISLEM=true;try{durum(await pdfEkle(files))}catch(e){durum('PDF eklenemedi: '+e.message)}finally{ISLEM=false}
     yenidenCiz();return;
   }
+  if(el.id==='srSiraSube'){EK.srSiraSube=el.value;yenidenCiz();document.getElementById('srSiraSube')?.focus();return}
+  if(el.dataset&&el.dataset.srTarih!==undefined){
+    const {veri}=oku(),s=veri&&veri.sinavlar.find(x=>x.id===el.dataset.srTarih),m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(el.value||'');
+    if(!s||!m||ISLEM||izleme()){yenidenCiz();return}
+    const yeni=m[3]+'.'+m[2]+'.'+m[1];
+    if(!confirm(s.ad+' sınavının tarihi '+yeni+' olsun mu? Öğrencilerin bu sınavdaki sonuçları da bu tarihe taşınır.')){yenidenCiz();return}
+    ISLEM=true;
+    try{
+      const r=await tarihDegistir(s.id,yeni);let mesaj=r.ad+' tarihi '+yeni+' oldu.';
+      const n=await denemeOkulTarihTasi(r.ad,r.eski.map(isoTarih),el.value);
+      if(n){durum(mesaj+' '+n+' öğrencinin sonucu taşındı; yayınlanıyor…');mesaj+=' '+n+' öğrencinin sonucu taşındı. '+await denemeBekleyenleriYayinla(durum)}
+      durum(mesaj);
+    }catch(e){durum('Tarih değiştirilemedi: '+e.message)}
+    finally{ISLEM=false}
+    yenidenCiz();return;
+  }
   if(el.id==='srOnceki'||el.id==='srSimdiki'){EK[el.id==='srOnceki'?'srOnceki':'srSimdiki']=el.value;if(el.id==='srSimdiki'&&EK.srOnceki===el.value)EK.srOnceki=null;yenidenCiz();return}
   if(el.dataset&&el.dataset.srSinif!==undefined){
     const id=el.id;try{await tercihKaydet(el.dataset.srSinif,el.value)}catch(e){durum(e.message)}
     yenidenCiz();document.getElementById(id)?.focus();
   }
 });
-return {pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,tercihKaydet,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
+return {pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
   get onbellek(){return ONBELLEK}};
 })();
 function siralamaPdfCoz(sayfalar,boylar){return SIRALAMA.pdfCoz(sayfalar,boylar)}
