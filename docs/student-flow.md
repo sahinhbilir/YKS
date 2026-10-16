@@ -34,6 +34,14 @@ Not assumed: a test marked “Yapmadım”, a topic marked “Bu konu daha anlat
 
 Code: `varsayimIyiGunleri` (which tests count), `kartHesapla` / `kartiYenidenHesapla` (cards from real and assumed reviews), `varsayimKartlariniGuncelle` (keeps cards in step; run on every render, skipped when the notebook has not changed, and per student after saving a week, a result, “Yapmadım”, a reset or a week decision). On the first load after this change, a postponement an older version wrote onto a card is kept as `D.ertele`. Tests: `test/assumed-good-regression.cjs`.
 
+## First-review delay
+
+The first test after a topic is taught comes "İlk tekrar gecikmesi" days later (Ayarlar → Genel) only while the app knows too little about the student. Once a student has at least 8 first measurements spread over at least 4 weeks, the delay is learned from them (`ilkTekrarOgrenilen`): the FSRS forgetting curve's most likely stability after a lesson, smoothed with 4 virtual results at the set delay, and the first test is placed when recall would drop to the student's target retention (1–14 days). Only real results count. Ayarlar → Genel says under the setting how many students still use it and the learned range; Öğrenci kalibrasyonu shows the student's own value.
+
+## Alt konu
+
+Every test row in Sonuç gir has a folded **Alt konulara ayır** box (open for broad topics, those with at least "Geniş konu eşiği" kazanım codes). It lists the topic's parts that the app knows: the parts of a compound topic name ("Asal Sayılar, Ardışık Sayılar, Faktöriyel"; "Şiir ve deneme: edebî dil, imge ve sembol"), the 11th-grade outcome codes, and otherwise the catalogue's kazanım codes. A click splits that part into its own topic for this student; a "write your own" field covers anything else. Split parts show as "✓". A teacher's split stays with that student (`D.ogrIslenis`), and the same name reuses the topic. The app has no MEB kazanım texts for YKS topics, only codes.
+
 ## Recall feedback and lessons not yet taught
 
 Students primarily choose Tekrar, Zor, İyi or Kolay. Tekrar means unsuccessful recall; Zor means successful recall with substantial difficulty. İyi means normal recall effort and Kolay means immediate, easy recall. A first-use explanation introduces these choices and can be reopened. Numeric correct/total entry remains an alternative. Rating-only results contain no invented question counts or percentages.

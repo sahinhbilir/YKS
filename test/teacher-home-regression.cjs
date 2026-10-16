@@ -209,12 +209,62 @@ check('mock exam average per exam, per class and per field', () => {
   assert.match(h, /data-dn-ort-tur="AYT"/); assert.match(h, /aria-pressed="true" data-dn-ort-alan="EA"/);
   assert.match(h, /<select id="dnOrtSube"><option value="">Tümü<\/option><option value="12-A">12-A<\/option><option value="12-B">12-B<\/option><\/select>/);
   assert.match(h, /data-dn-yol="o:AYT:[^"]+"[^>]*aria-label="AYT EA · Deneme 2 · 1 öğrenci ortalaması · 2026-10-04 · 10 net\. Denemeler’de aç"/);
-  assert.doesNotMatch(h, /Hedef/, 'no target line for a class average');
+  assert.doesNotMatch(h, /class="yg-hedef"/, 'no target line until the teacher sets one');
   // A point opens Denemeler with that exam type (and field).
   run("ciz=()=>{};denemeYolAc('o:AYT:x')");
   assert.deepEqual(JSON.parse(run('JSON.stringify([EK.sekme,EK.denemeTur,EK.denemeAlan])')), ['denemeler', 'AYT', 'EA']);
   run("D.ogr.forEach(o=>{o.denemeOkul=[]});EK.anaDenemeTur='TYT'");
   assert.match(run('denemeOrtalamaGrafigi()'), /Henüz TYT denemesi yok/);
+});
+
+check('class average: top/bottom groups per exam or by overall average, teacher target with class override', () => {
+  run(`(() => {
+    const ders = n => DENEME_DERSLER.TYT.map(d => ({kod:d[0],soru:d[2],dogru:d[0]==='turkce'?n:0,yanlis:0}));
+    const k = (id, tarih, n) => ({id,ad:'Deneme '+tarih,tarih,tur:'TYT',oturum:'TYT',brans:'',alan:'SAY',dersler:ders(n),sure:null,puan:null,ts:1});
+    // Ten students in two classes, two exams. Exam 1 nets 10..19 (student i: 10+i); exam 2 reverses the order.
+    D.ogr = Array.from({length:10}, (_, i) => ({ad:'S'+i, no:i+1, sube:i<5?'12-A':'12-B', sinif:12, alan:'SAY', kap:6, off:[6], aktif:true,
+      denemeOkul:[k('p:'+i+'a','2026-09-20',10+i), k('p:'+i+'b','2026-10-04',30-i)]}));
+    EK.anaDenemeTur='TYT'; EK.anaSube=''; EK.anaGrup=''; EK.anaGrupMod='deneme';
+  })()`);
+  const v = () => JSON.parse(run('JSON.stringify(denemeOrtalamaVerisi().noktalar.map(n=>n.v))'));
+  assert.deepEqual(v(), [14.5, 25.5], 'everyone');
+  // Per exam: each exam's own top 20% (2 of 10) and bottom 40% (4 of 10).
+  run("EK.anaGrup='ust20'"); assert.deepEqual(v(), [18.5, 29.5]);
+  run("EK.anaGrup='alt40'"); assert.deepEqual(v(), [11.5, 22.5]);
+  run("EK.anaGrup='ust60'"); assert.deepEqual(v(), [16.5, 27.5], '6 of 10');
+  // By overall average: everyone averages 20, ties break by order, so the group is fixed (S0, S1 for top 20%).
+  run("EK.anaGrup='ust20';EK.anaGrupMod='genel'"); assert.deepEqual(v(), [10.5, 29.5], 'the same two students in both exams');
+  assert.match(run('denemeOrtalamaVerisi().noktalar[0].r.ad'), /2 öğrenci ortalaması \(Üst %20\)/);
+  run("EK.anaGrup='bilinmeyen'"); assert.deepEqual(v(), [14.5, 25.5], 'an unknown group is everyone');
+  let h = run('denemeOrtalamaGrafigi()');
+  assert.deepEqual([...h.match(/<select id="dnOrtGrup">(.*?)<\/select>/)[1].matchAll(/>([^<]+)<\/option>/g)].map(m => m[1]),
+    ['Tüm öğrenciler', 'Üst %20', 'Üst %40', 'Üst %60', 'Alt %60', 'Alt %40', 'Alt %20']);
+  assert.doesNotMatch(h, /data-dn-ort-mod/, 'the mode appears with a group');
+  run("EK.anaGrup='alt20'"); h = run('denemeOrtalamaGrafigi()');
+  assert.match(h, /aria-pressed="true" data-dn-ort-mod="genel">Genel ortalamaya göre/);
+  // Target: the school's line, a class may override it; only the teacher sees and edits it.
+  run("EK.anaGrup='';D.denemeOrtHedef={TYT:{'':24,'12-B':28}}");
+  assert.equal(run('denemeOrtalamaVerisi().hedef'), 24);
+  run("EK.anaSube='12-A'"); assert.equal(run('denemeOrtalamaVerisi().hedef'), 24, '12-A uses the school target');
+  h = run('denemeOrtalamaGrafigi()');
+  assert.match(h, /id="dnOrtHedef"[^>]*value=""[^>]*placeholder="24"/, '12-A has no target of its own');
+  run("EK.anaSube='12-B'"); assert.equal(run('denemeOrtalamaVerisi().hedef'), 28, '12-B overrides');
+  h = run('denemeOrtalamaGrafigi()');
+  assert.match(h, /class="yg-hedef"/); assert.match(h, /Hedef 28/); assert.match(h, /id="dnOrtHedef"[^>]*value="28"/);
+  run("EK.anaDenemeTur='AYT'"); assert.equal(run('denemeOrtalamaVerisi().hedef'), null, 'AYT SAY has its own target');
+  // Kept through a backup; bad values are dropped on load.
+  run("D.denemeOrtHedef={TYT:{'':24,'x':-3},'AYT:SAY':{'':'40'},bad:{'':5}};veriyiHazirla(D)");
+  assert.deepEqual(JSON.parse(run('JSON.stringify(D.denemeOrtHedef)')), {TYT:{'':24}});
+  // View-only teachers see the line but not the input.
+  run("EK.anaDenemeTur='TYT';EK.anaSube='';IZLEME={sahipUid:'a',izleyiciUid:'b'}");
+  h = run('denemeOrtalamaGrafigi()'); assert.match(h, /Hedef 24/); assert.doesNotMatch(h, /dnOrtHedef/);
+  run('IZLEME=null');
+  // The student's package does not carry the teacher's targets.
+  assert.equal(run('JSON.stringify(ogrenciPaketi(0)).includes("denemeOrtHedef")'), false);
+  // The teacher's Denemeler page shows the class average above the student's exams.
+  run("EK.sekme='denemeler';EK.ogr=0");
+  const sayfa = run('gorunumDenemeler()');
+  assert(sayfa.indexOf('aria-label="Deneme ortalaması"') > 0 && sayfa.indexOf('aria-label="Deneme ortalaması"') < sayfa.indexOf('data-dn-tur="TYT"'));
 });
 
 (async () => {

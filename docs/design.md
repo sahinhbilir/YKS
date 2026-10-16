@@ -158,8 +158,10 @@ the brand, teachers land on the home page (`gorunumRehberAna`, tab `'ana'`). Lik
 the student home, it has two cards with linked headings:
 
 - **Bu hafta** (opens Haftalık öğrenci takibi). It shows the calendar week and
-  **n/N Plan verildi** (`o.cikti` this week), then only the names of the students
-  given this week's plan, A–Z, in columns. A name opens the student's view. There
+  **n/N Plan verildi** (this week's plan was saved, or a plan was printed this week;
+  `planVerildiMi`), then only the names of the students given this week's plan, A–Z,
+  in columns. Haftalık öğrenci takibi counts "Plan verildi" the same way (first card,
+  a column and a filter), and the heading opens it on this week with no filter. A name opens the student's view. There
   are no classes and no "Karar bekleyen". Below the names, in small grey text: PDF
   istedi (this week's activity) and Geçen haftanın sonucu (a result in the student's
   previous plan week). The card refreshes live as student activity arrives.
@@ -168,11 +170,38 @@ the student home, it has two cards with linked headings:
   progress chart, and each point is one school exam (imported from PDF), averaged
   over the students who took it. TYT · AYT picks the exam type. AYT adds SAY · EA ·
   SÖZ and averages only the students of that field. "Şube" narrows it to one class.
-  A point opens Denemeler with that exam type. There is no target line.
+  **Grup** draws the average of the top or bottom 20, 40 or 60 % instead of everyone:
+  *Her denemede* ranks the students within each exam; *Genel ortalamaya göre* ranks
+  them once by their average over the shown exams and keeps that group. **Hedef**
+  sets the teacher's target line (only teachers see it; `D.denemeOrtHedef`, per exam
+  type, with a class override that otherwise shows the school's target). A point
+  opens Denemeler with that exam type. The same chart opens the teacher's Denemeler
+  page, above the selected student's exams.
 - In a single column (≤1100 px) the week card comes first, then the chart.
 
 A student's name anywhere in the teacher pages opens that student's own screens in an
 isolated frame ("Öğrenci gözüyle"). See docs/ogrenci-gozuyle.md.
+
+## Ayarlar
+
+Three sections, as a segmented control under the title (`ayarBolumu`):
+
+- **Genel**: the settings table, save, backups and cloud. "İlk tekrar gecikmesi" says
+  under it which students still use it (see docs/student-flow.md).
+- **Ders programı** (when there is a class): AI ile aktar (no coloured outline), the
+  weekly timetable, **Tatiller** (the school holidays; add and remove) and **Haftalık
+  konular**, one button per class to its Özel tasarlanmış müfredat.
+- **Öğrenci kalibrasyonu**: the course profiles (FSRS calibration per student and
+  course), with "Önerilir" where a course has enough results, and the student's
+  first-review delay.
+
+Leaving Genel with unsaved changes asks first. See docs/okul-takvimi.md for holidays.
+
+The menu's Ayarlar always opens at Genel (students: Gelişmiş ayarlar folded). The old
+`program` page name opens Ders programı; a student who sets up without a ready class
+timetable lands there, inside the opened Gelişmiş ayarlar. Ders programı and Konu planı
+step through school weeks (Monday), not the student's own week. On a phone the section
+buttons wrap their labels instead of widening the page.
 
 ## Müfredat (teacher)
 

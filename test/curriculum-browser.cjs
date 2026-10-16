@@ -18,9 +18,14 @@ fs.mkdirSync(out,{recursive:true});
    await page.waitForFunction(()=>D.ogr.length===1&&D.ogr[0].sinif===11);
    assert.equal(await page.evaluate(()=>D.konuPlani.benim[0].Matematik[0].startsWith('11. sınıf')),true);
    // A real schedule upload must fill the Grade 11 course and separate TYT cells.
+   // Setup lands on Ayarlar › Ders programı inside the open advanced settings.
+   assert.equal(await page.locator('[data-ayar-bolum="program"]').getAttribute('aria-pressed'),'true');
+   await page.locator('#dpCiktiYapistir').waitFor();
    const openAdvanced=async()=>{
     const details=page.locator('details').filter({has:page.getByText('Gelişmiş ayarlar',{exact:true})});
     if(await details.getAttribute('open')===null)await details.locator('summary').click();
+    const tab=page.locator('[data-ayar-bolum="program"]');
+    if(await tab.getAttribute('aria-pressed')!=='true')await tab.click();
    };
    await page.locator('[data-sekme="ayarlar"]').first().click();await openAdvanced();
    await page.locator('#dpCiktiYapistir').fill(JSON.stringify({saatler:['09:00','10:00'],
