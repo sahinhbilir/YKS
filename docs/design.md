@@ -194,7 +194,8 @@ One page at the top right, with two tabs:
 The same rule as the student map: a past week whose plan was saved (printed or
 downloaded; `elle.sabit`) but has no result is **grey** and offers **Nasıl geçti?**; a
 past week with no plan at all is **red** ("plan verilmedi") and offers **Planı
-kurtar**, which opens past-plan recovery for that student and week.
+kurtar**, which opens past-plan recovery for that student and week. A grey week's tests still count
+as İyi for the schedule (see docs/student-flow.md, "Missing results count as İyi").
 
 ## Printed agreement and routine
 

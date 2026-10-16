@@ -219,7 +219,11 @@ test('explicit rebuild uses current topics, is repeatable, and preserves other w
   assert(!plan.flat().some(x=>x.includes('Web Tabanlı')),'future curriculum topic leaves current week');
   assert(plan.slice(0,4).every(g=>g.length===0),'do not invent completed work earlier this week');
   assert(plan.flat().some(x=>x.includes('İki Nicel Değişkenli')));
-  assert.equal(a.run('JSON.stringify([D.log,D.kart,D.elle["0|"+(buHafta()-7)]])'),records);
+  // Results, the existing card and the old week stay; the only new cards are the rebuilt week's
+  // tests counted as İyi (vg, nothing in D.log).
+  assert.equal(a.run('JSON.stringify([D.log,D.kart["0:0"],D.elle["0|"+(buHafta()-7)]])'),
+    JSON.stringify((([log,kart,elle])=>[log,kart['0:0'],elle])(JSON.parse(records))));
+  assert(a.run('Object.keys(D.kart).filter(k=>k!=="0:0").every(k=>Array.isArray(D.kart[k].vg)&&D.kart[k].n===D.kart[k].vg.length)'));
   assert.equal(a.run('ogrenciProgramYenileOnizleme(0,buHafta())'),null);
 });
 

@@ -1280,8 +1280,9 @@ function hafizaSeviyesiniUygula(si, seviye) {
   return true;
 }
 function hafizaKartlariniYenile(si) {
-  // Rebuild only cards backed by actual results; keep untested subtopic seeds.
-  new Set((D.log||[]).filter(l=>l[1]===si).map(l=>l[2])).forEach(ki=>kartiYenidenHesapla(si,ki));
+  // Rebuild only cards backed by actual results or assumed İyi; keep untested subtopic seeds.
+  const varsayim=varsayimIyiGunleri(si);
+  new Set((D.log||[]).filter(l=>l[1]===si).map(l=>l[2]).concat(Array.from(varsayim.keys()))).forEach(ki=>kartiYenidenHesapla(si,ki,varsayim));
   Object.keys(D.ogrTaslak||{}).forEach(k=>{if(+k.split('|')[0]===si)delete D.ogrTaslak[k];});
 }
 function hafizaSecici(si) {
@@ -2195,7 +2196,9 @@ function testiYapilmadiIsaretle(si, ki, gun) {
   D.yapilmadi = D.yapilmadi || {};
   D.yapilmadi[yapilmadiAnahtari(si, ki, gun)] = Date.now();
   const ert = erteleAl(si, ki);
-  return Number.isInteger(+ert) && +ert >= hedef ? +ert : konuyuErtele(si, ki, hedef);
+  const sonuc = Number.isInteger(+ert) && +ert >= hedef ? +ert : konuyuErtele(si, ki, hedef);
+  varsayimKartlariniGuncelle(si);     // yapılmayan test "İyi" sayılmaz
+  return sonuc;
 }
 const haftaYapilanTestler = si => new Set((D.log || []).filter(l => l[1] === si).map(l => l[2] + ':' + l[0]));
 // Haftada verilen testlerden kaçı gerçekten çözüldü. "Bu konu daha anlatılmadı" öğrencinin
@@ -2269,7 +2272,8 @@ function konuAnlatilmadi(si, ki, gun, formHafta) {
         (D.log || []).some(l => l[1] === si && l[2] === otherKi && !sonucDevreDisiMi(si, otherKi, l[0]))) return;
     const t = Number(aday[otherKi]);
     if (!Number.isInteger(t) || t < basGun) return;
-    if (otherKi !== +ki && D.kart[si + ':' + otherKi]) return;
+    // Yalnızca "İyi" varsayılan (gerçek sonucu olmayan) bir kart öğrenildi sayılmaz.
+    if (otherKi !== +ki && gercekKartMi(D.kart[si + ':' + otherKi])) return;
     const kaydirilmisTarih = Math.max(t + 7, hb + 7);
     if (otherKi !== +ki && overrides[otherKi] === undefined && kaydirilmisTarih < gunNo(D.ayar.sinav)) {
       // Haftalar önce işlenmiş görünen ama hiç öğrenilmemiş bir sıra öğesinde t+7 hâlâ
@@ -2285,6 +2289,7 @@ function konuAnlatilmadi(si, ki, gun, formHafta) {
     ilkTekrarGunu: ilkTekrarGunu, overrides: overrides };
   D.konuAnlatilmadi.push(olay);
   kartiYenidenHesapla(si, +ki);
+  varsayimKartlariniGuncelle(si);     // kaydırılan konuların o tarihe kadarki varsayımları da kalkar
   return { kaydirilan: kaydirilan, ilkTekrarGunu: ilkTekrarGunu };
 }
 
@@ -2428,6 +2433,12 @@ const HAFTA_NEDEN_ACIKLAMA = {
 function haftayiTelafiEt(si, hb, neden) {
   const hs = hb + 6;
   const o = D.ogr[si];
+  D.haftaDurum = D.haftaDurum || {};
+  if (VARSAYIM_YOK_NEDEN.includes(neden)) {
+    // Testler yapılmadı: o haftanın varsayılan "İyi"leri kalkar, vadeler o haftaya geri döner.
+    D.haftaDurum[si + '|' + hb] = { neden: neden, tarih: bugunNo(), test: 0, konu: 0 };
+    varsayimKartlariniGuncelle(si);
+  }
   D.subeIslenis = D.subeIslenis || {};
   D.ogrIslenis = D.ogrIslenis || {};
   D.ogrIslenis[si] = D.ogrIslenis[si] || {};
@@ -2449,7 +2460,8 @@ function haftayiTelafiEt(si, hb, neden) {
     if (t === undefined) continue;
     const kart = D.kart[si + ':' + ki];
     if (t >= hb && t <= hs && !kart) { ilkBuHafta.push(ki); continue; }        // bu hafta ilk kez işlenmiş, henüz test yazılmamış
-    const due = kart ? kart.due : t + ilkTekrarAraligi(si,ki,t);
+    const ert = erteleAl(si, ki);
+    const due = Math.max(kart ? kart.due : t + ilkTekrarAraligi(si,ki,t), ert === undefined ? -Infinity : ert);
     if (t < hb && due >= hb && due <= hs) devirBuHafta.push({ ki: ki, kart: kart, due: due });  // önceki haftalardan devreden tekrar
   }
   const yukTakip = {};
@@ -2459,7 +2471,7 @@ function haftayiTelafiEt(si, hb, neden) {
     devirBuHafta.forEach(x => {
       const agirlik = !x.kart || (x.kart.y === null ? x.kart.not !== 4 : x.kart.y < D.ayar.esik[1]) ? 2 : 1;
       const hedef = telafiGunBul(si, hb + 7, yukTakip, agirlik);
-      if (x.kart) x.kart.due = hedef; else konuyuErtele(si, x.ki, hedef);
+      konuyuErtele(si, x.ki, hedef);
       testErtelenen++;
     });
   }
@@ -2494,8 +2506,8 @@ function haftayiTelafiEt(si, hb, neden) {
     // dondurmak yeterli.
     Object.keys(etkilenenHaftalar).map(Number).forEach(hb2 => dondur(si, hb2, planHesapla(si, hb2)));
   }
-  D.haftaDurum = D.haftaDurum || {};
   D.haftaDurum[si + '|' + hb] = { neden: neden, tarih: bugunNo(), test: testErtelenen, konu: konuKaydirilan };
+  varsayimKartlariniGuncelle(si);
   return { testErtelenen: testErtelenen, konuKaydirilan: konuKaydirilan };
 }
 
@@ -2553,7 +2565,7 @@ function planHesapla(si, hb, derinlik, ham) {
     const pinli = !!(ov.yer && ov.yer[ki] !== undefined);
     if (!kk || (kk[6] && !pinli)) continue;
     if (!pinli && !alanUygun(si, ki)) continue;
-    const kart = D.kart[si + ':' + ki];
+    const kart = planKarti(si, ki, hb);
     if (!pinli && !kart && (o.otoTelafiHaric || []).indexOf(ki) >= 0) continue;
     // bu hafta zaten dondurulmuşsa (yer atanmışsa) konu, güncel vadesi ne olursa olsun
     // burada görünmeye devam eder — dondurulmuş bir hafta verilmiş kâğıdın tıpatıp aynısı kalmalı
@@ -2594,7 +2606,7 @@ function planHesapla(si, hb, derinlik, ham) {
   let ogeler = liste.filter(x => (ov.sil || []).indexOf(x.ki) < 0);
   (ov.ek || []).forEach(ki => {
     if ((!sabitli || (ov.yer && ov.yer[ki] !== undefined)) && !ogeler.some(x => x.ki === ki))
-      ogeler.push({ ki: ki, due: hb, ders: konuAl(ki)[0], kart: D.kart[si + ':' + ki], ek: true });
+      ogeler.push({ ki: ki, due: hb, ders: konuAl(ki)[0], kart: planKarti(si, ki, hb), ek: true });
   });
   // Bir test hücresinin konusu değiştirildiyse hücrenin kimliği (slotKi) aynı kalır;
   // yalnızca o hücrede çözülecek gerçek konu (ki) değişir. Aynı konu farklı hücrelerde
@@ -2604,7 +2616,7 @@ function planHesapla(si, hb, derinlik, ham) {
     const hedef = Number(degisim[x.ki]);
     if (!Number.isInteger(hedef) || !konuAl(hedef) || konuAl(hedef)[6] || hedef === x.ki) return x;
     return Object.assign({}, x, { slotKi: x.ki, ki: hedef, ders: konuAl(hedef)[0],
-      kart: D.kart[si + ':' + hedef], degisim: true });
+      kart: planKarti(si, hedef, hb), degisim: true });
   });
   // Kendi TYT planının bu haftaya düşen yeni konuları. ov burada yerel kopyadır; hafta
   // verildiğinde p.elle ile kalıcı olur, sonraki hesaplar da kâğıttakini görür.
@@ -2612,7 +2624,7 @@ function planHesapla(si, hb, derinlik, ham) {
     if (x.anlatim) { ov.anlatim = ov.anlatim || {}; if (!ov.anlatim[x.ki]) ov.anlatim[x.ki] = { kaynak: kendiPlanEtiketi(o.kendiPlan.tur) }; return; }
     ov.kendiTest = ov.kendiTest || {}; ov.kendiTest[x.ki] = true;
     if (!ogeler.some(y => y.ki === x.ki))
-      ogeler.push({ ki: x.ki, due: hb, ders: konuAl(x.ki)[0], kart: D.kart[si + ':' + x.ki], kendi: true });
+      ogeler.push({ ki: x.ki, due: hb, ders: konuAl(x.ki)[0], kart: planKarti(si, x.ki, hb), kendi: true });
   });
   // Fotoğrafta açıkça yapılmadığı belirtilen anlatımlar ilk boş haftaya döner.
   // Salt planlanan dersler tamamlanmış sayılmaz; sonraki gerçek sonuç/işleniş bunu kapatır.
@@ -2620,7 +2632,7 @@ function planHesapla(si, hb, derinlik, ham) {
     Object.values(gecmisPlanCalismalari(si,'anlatim')).forEach(r=>{
       if (r.durum!=='yapilmadi' || digerHaftaAnlatimKi[r.ki] || !alanUygun(si,r.ki) ||
           (ogIsl[r.ki]!==undefined && ogIsl[r.ki]>=r.gun && ogIsl[r.ki]<=bugunNo()) ||
-          (D.kart[si+':'+r.ki]?.son>=r.gun)) return;
+          (planKarti(si,r.ki,hb)?.son>=r.gun)) return;
       ov.anlatim=ov.anlatim||{};ov.anlatim[r.ki]=ov.anlatim[r.ki]||{kaynak:'Geçmiş plandan telafi'};
     });
   }
@@ -2641,7 +2653,7 @@ function planHesapla(si, hb, derinlik, ham) {
     if (sabitli && (!ov.yer || ov.yer[id] === undefined)) return;
     const ki = Number((konuSlot[id] || {}).ki);
     if (!Number.isInteger(ki) || !konuAl(ki) || konuAl(ki)[6]) return;
-    ogeler.push({ ki: ki, slotKi: id, due: hb, ders: konuAl(ki)[0], kart: D.kart[si + ':' + ki],
+    ogeler.push({ ki: ki, slotKi: id, due: hb, ders: konuAl(ki)[0], kart: planKarti(si, ki, hb),
       ek: true, slotEk: true, anlatim: konuSlot[id].anlatim === true });
   });
   ogeler.forEach(x => {
@@ -2816,6 +2828,7 @@ function haftayiSabitle(si, hb, hazirPlan) {
   const ov = elleAl(si, hb, true);
   ov.sabit = bugunNo();
   planAnliginiKaydet(si, hb, p);
+  varsayimKartlariniGuncelle(si);
   return p.toplam;
 }
 
@@ -2928,11 +2941,117 @@ function sonucKaydiDogrula(si, r) {
   return { ki: ki, gun: gun, dogru: dogru, soru: soru, not: not, guncellemeTs: guncellemeTs };
 }
 
-function kartiYenidenHesapla(si, ki) {
+// ---------------------------------------------------------------- sonucu girilmemiş test: "İyi" varsayımı
+// Verilmiş (sabit) bir haftadaki testin sonucu girilmediyse plan, öğrenci o testi "İyi" seçmiş gibi
+// ilerler: kart bu varsayımla hesaplanır, sonraki tekrarın aralığı açılır. Varsayım D.log'a yazılmaz;
+// haftalar haritası, Sonuç gir, sayımlar ve kalibrasyon yalnızca gerçek sonuçları görür. Gerçek sonuç
+// girilince varsayımın yerini alır ve kart yeniden hesaplanır; verilmiş haftaların kâğıdı değişmez.
+// Varsayılmayanlar: "Yapmadım", "Bu konu daha anlatılmadı" (reset), "Nasıl geçti?"de testlerin
+// yapılmadığı söylenen haftalar ve geçmiş plan kurtarmada "yapılmadı" satırları.
+const VARSAYIM_YOK_NEDEN = ['geldi_cozmedi', 'gelmedi_cozmedi'];
+const VARSAYIM_NOT = 3;
+// Sabit bir haftanın bir hücresinde çözülecek konu; test değilse null.
+function sabitHucreKonusu(ov, slot) {
+  slot = String(slot);
+  if ((ov.anlatim || {})[slot] || (ov.serbest || {})[slot]) return null;
+  const ks = (ov.konuSlot || {})[slot];
+  if (ks) {
+    if (ks.anlatim) return null;
+    if (/^KURT_\d+$/.test(slot)) {
+      const r = ((ov.kurtarma || {}).satirlar || [])[+slot.slice(5)];
+      if (!r || r.tur !== 'test' || r.durum === 'yapilmadi') return null;
+    }
+    return Number.isInteger(+ks.ki) ? +ks.ki : null;
+  }
+  if ((ov.degisim || {})[slot] !== undefined) return Number.isInteger(+ov.degisim[slot]) ? +ov.degisim[slot] : null;
+  const n = Number(slot);
+  return Number.isInteger(n) && n >= 0 && String(n) === slot ? n : null;
+}
+// Sabit haftanın testleri: [{ ki, gun }]. Yeni kayıtlar günlük hücre listesini (plan.slotlar),
+// eski kayıtlar yalnızca hücre konumlarını (yer) taşır. Sonuç haftanın kaydıyla önbellekte tutulur;
+// hücre ekleme/değiştirme planı ya da yer'i yeniler veya imzayı değiştirir.
+const SABIT_TEST_ONBELLEK = new WeakMap();
+function sabitHaftaTestleri(ov, hb) {
+  const plan = ov.plan, slotlar = plan && Array.isArray(plan.slotlar) ? plan.slotlar : null;
+  const imza = hb + '|' + (slotlar ? slotlar.map(l => Array.isArray(l) ? l.length : 0).join(',') : Object.keys(ov.yer || {}).length) + '|' +
+    JSON.stringify(ov.degisim || null) + JSON.stringify(ov.konuSlot || null) + Object.keys(ov.anlatim || {}).join() + '|' + Object.keys(ov.serbest || {}).join();
+  const c = SABIT_TEST_ONBELLEK.get(ov);
+  if (c && c.plan === plan && c.yer === ov.yer && c.imza === imza) return c.liste;
+  const liste = sabitHaftaTestleriHesapla(ov, hb);
+  SABIT_TEST_ONBELLEK.set(ov, { plan, yer: ov.yer, imza, liste });
+  return liste;
+}
+function sabitHaftaTestleriHesapla(ov, hb) {
+  const liste = [];
+  if (ov.plan && Array.isArray(ov.plan.slotlar)) ov.plan.slotlar.forEach((gunluk, g) => (Array.isArray(gunluk) ? gunluk : []).forEach(slot => {
+    const ki = sabitHucreKonusu(ov, slot);
+    if (ki !== null) liste.push({ ki, gun: hb + g });
+  }));
+  else Object.keys(ov.yer || {}).forEach(slot => {
+    const ki = sabitHucreKonusu(ov, slot), g = Array.isArray(ov.yer[slot]) ? +ov.yer[slot][0] : NaN;
+    if (ki !== null && Number.isInteger(g) && g >= 0 && g <= 6) liste.push({ ki, gun: hb + g });
+  });
+  return liste;
+}
+// Varsayım hesabının girdileri: öğrenci öğrenci sabit haftalar ve konu konu gerçek sonuç satırları.
+function varsayimDizini(yalnizSi) {
+  const elle = new Map(), log = new Map(), tek = yalnizSi !== undefined;
+  Object.keys(D.elle || {}).forEach(a => {
+    const i = a.indexOf('|'), si = +a.slice(0, i);
+    if (tek && si !== yalnizSi) return;
+    const ov = D.elle[a];
+    if (!ov || !ov.sabit) return;
+    if (!elle.has(si)) elle.set(si, []);
+    elle.get(si).push([+a.slice(i + 1), ov]);
+  });
+  (D.log || []).forEach(l => {
+    if (tek && l[1] !== yalnizSi) return;
+    let m = log.get(l[1]); if (!m) log.set(l[1], m = new Map());
+    let g = m.get(l[2]); if (!g) m.set(l[2], g = []);
+    g.push(l);
+  });
+  return { elle, log };
+}
+// Öğrencinin "İyi" varsayılan testleri: Map ki → artan günler.
+function varsayimIyiGunleri(si, dizin) {
+  const sonuc = new Map(), o = (D.ogr || [])[si];
+  if (!o || o.silindi) return sonuc;
+  dizin = dizin || varsayimDizini(si);
+  const sinav = gunNo(D.ayar.sinav), gercek = dizin.log.get(si) || new Map(), yapilmadi = D.yapilmadi || {}, durum = D.haftaDurum || {};
+  // Reset denetimleri yalnızca bu öğrencinin bir "anlatılmadı" olayına giren konular için gerekir.
+  const resetli = new Set(), yapilmadiVar = Object.keys(yapilmadi).length > 0;
+  (D.konuAnlatilmadi || []).forEach(e => { if (e && e.si === si) { resetli.add(+e.ki); Object.keys(e.overrides || {}).forEach(k => resetli.add(+k)); } });
+  (dizin.elle.get(si) || []).forEach(([hb, ov]) => {
+    if (VARSAYIM_YOK_NEDEN.includes((durum[si + '|' + hb] || {}).neden)) return;
+    sabitHaftaTestleri(ov, hb).forEach(({ ki, gun }) => {
+      if (gun >= sinav || !konuAl(ki) || (yapilmadiVar && yapilmadi[yapilmadiAnahtari(si, ki, gun)])) return;
+      // Sonuç gir sonucu testin kendi gününe yazar; o günün gerçek sonucu varsa sonuç odur.
+      const gg = gercek.get(ki); if (gg && gg.some(l => l[0] === gun)) return;
+      if (resetli.has(ki) && (sonucDevreDisiMi(si, ki, gun) || konuResetMuafMi(si, ki, gun))) return;
+      let g = sonuc.get(ki); if (!g) sonuc.set(ki, g = []);
+      g.push(gun);
+    });
+  });
+  sonuc.forEach((g, ki) => { g.sort((a, b) => a - b); sonuc.set(ki, g.filter((x, i) => i === 0 || x !== g[i - 1])); });
+  return sonuc;
+}
+// Kart, gerçek sonuçlar ve varsayılan "İyi"lerle hesaplanır. varsayim: varsayimIyiGunleri(si)
+// sonucu (döngülerde bir kez hesaplanıp verilir). Kart varsayılan günleri vg'de taşır; tekrar
+// etiketi bunları kâğıttaki sırayla sayar.
+function kartiYenidenHesapla(si, ki, varsayim, satirlar) {
   const anahtar = si + ':' + ki;
   if (!D.ogr[si] || !konuAl(ki)) { delete D.kart[anahtar]; return null; }
+  const kart = kartHesapla(si, ki, (varsayim || varsayimIyiGunleri(si)).get(+ki) || [], satirlar);
+  if (kart) D.kart[anahtar] = kart; else delete D.kart[anahtar];
+  return kart;
+}
+// Kartı saklamadan hesaplar; varsayimGunleri: o konunun "İyi" varsayılan günleri. satirlar: o
+// öğrencinin o konudaki sonuç satırları (verilmezse D.log taranır).
+function kartHesapla(si, ki, varsayimGunleri, satirlar) {
   const o = D.ogr[si], dr = o.hedef || D.ayar.hedef, sinavG = gunNo(D.ayar.sinav);
-  const kayitlar = aktifSonucKayitlari(si, ki).sort((a, b) => a[0] - b[0] || (+a[6] || 0) - (+b[6] || 0));
+  const varsayilan = varsayimGunleri.map(g => [g, si, +ki, null, null, VARSAYIM_NOT, 0, true]);
+  const gercek = satirlar ? satirlar.filter(l => !sonucDevreDisiMi(si, ki, l[0])) : aktifSonucKayitlari(si, ki);
+  const kayitlar = gercek.concat(varsayilan).sort((a, b) => a[0] - b[0] || (+a[6] || 0) - (+b[6] || 0));
   let kart = null;
   kayitlar.forEach(l => {
     const yuzde = sonucYuzdesi(l), not = sonucNotu(l);
@@ -2942,8 +3061,69 @@ function kartiYenidenHesapla(si, ki) {
     kart = { s: y.s, d: y.d, son: l[0], due: Math.min(l[0] + y.ivl, sinavG - 1),
              n: (kart ? kart.n : 0) + 1, y: yuzde === null ? null : Math.round(yuzde), not: not };
   });
-  if (kart) D.kart[anahtar] = kart; else delete D.kart[anahtar];
+  if (kart && varsayilan.length) kart.vg = varsayilan.map(l => l[0]);
   return kart;
+}
+// Bir hafta kartları kendinden önceki hâliyle görür: kendi gününden ya da daha sonraki sabit
+// haftalardan gelen varsayımlar sayılmaz. Canlı hesapta haftanın kendi testleri "çözülmüş" sayılıp
+// plandan düşmez; sabit haftada ilk ölçüm hücresi ilk ölçüm kalır. Sonuç kart nesnesine bağlı
+// önbellektedir (kart yeniden hesaplanınca nesne değişir).
+const KART_ONCESI = new WeakMap();
+function planKarti(si, ki, hb) {
+  const kart = D.kart[si + ':' + ki];
+  if (!kart || !Array.isArray(kart.vg) || !kart.vg.some(g => g >= hb)) return kart;
+  let m = KART_ONCESI.get(kart);
+  if (!m) KART_ONCESI.set(kart, m = new Map());
+  if (!m.has(hb)) m.set(hb, kartHesapla(si, ki, kart.vg.filter(g => g < hb)) || undefined);
+  return m.get(hb);
+}
+// Gerçek sonuçla kurulmuş kart mı (yalnızca "İyi" varsayımından oluşmamış)?
+const gercekKartMi = k => !!k && !(Array.isArray(k.vg) && k.n === k.vg.length);
+// Kartları varsayım kümesiyle uyumlu tutar: bir haftanın sabitlenmesi, "Yapmadım", reset ya da
+// hafta kararı varsayım kümesini değiştirir. Küme değişmeyen öğrenciye dokunulmaz. Bir defter ilk
+// kez görülünce (yükleme) varsayım kümesindeki ve önceden varsayım taşıyan (vg) kartlar kurulur;
+// yalnızca gerçek sonuçlu, varsayımsız kartlar eskisi gibi kalır.
+const VARSAYIM_IMZA = new WeakMap(), VARSAYIM_PARMAK = new WeakMap();
+// Ekran her çizildiğinde bütün defteri taramamak için: kayıt sayacı ve girdilerin boyları aynıysa
+// (yalnızca gezinme) geçiş atlanır. Hafta sabitleme, sonuç, "Yapmadım", reset ve hafta kararı
+// kendi öğrencisini zaten doğrudan günceller.
+function varsayimParmakIzi() {
+  return [D.rev, D.ts, (D.log || []).length, Object.keys(D.elle || {}).length, Object.keys(D.yapilmadi || {}).length,
+    Object.keys(D.haftaDurum || {}).length, (D.konuAnlatilmadi || []).length, D.ogr.length, D.ayar && D.ayar.sinav].join('|');
+}
+function varsayimKartlariniGuncelle(yalnizSi) {
+  if (!D || !Array.isArray(D.ogr) || !D.kart) return false;
+  let imzalar = VARSAYIM_IMZA.get(D);
+  if (!imzalar) VARSAYIM_IMZA.set(D, imzalar = new Map());
+  const parmak = yalnizSi === undefined ? varsayimParmakIzi() : null;
+  if (parmak !== null && VARSAYIM_PARMAK.get(D) === parmak) return false;
+  const dizin = varsayimDizini(yalnizSi), bugun = bugunNo();
+  let degisti = false;
+  (yalnizSi === undefined ? D.ogr.map((_, i) => i) : [yalnizSi]).forEach(si => {
+    if (!D.ogr[si]) return;
+    const v = varsayimIyiGunleri(si, dizin);
+    const imza = Array.from(v, ([ki, g]) => ki + ':' + g.join(',')).sort().join(';'), eski = imzalar.get(si);
+    if (eski && eski.imza === imza) return;
+    const kiler = new Set(v.keys());
+    if (eski) eski.kiler.forEach(k => kiler.add(k));
+    else Object.keys(D.kart).forEach(a => { const i = a.indexOf(':'); if (+a.slice(0, i) === si && D.kart[a] && D.kart[a].vg) kiler.add(+a.slice(i + 1)); });
+    kiler.forEach(ki => {
+      const a = si + ':' + ki, onceki = D.kart[a], once = JSON.stringify(onceki || null);
+      if (!eski && onceki && !onceki.vg && Number.isFinite(onceki.due) && onceki.due > bugun) {
+        // Eski "Nasıl geçti?" kararları ertelemeyi kartın vadesine yazardı; yeniden hesapta kaybolmasın.
+        const gercek = kartHesapla(si, ki, [], (dizin.log.get(si) || new Map()).get(ki) || []);
+        if (gercek && gercek.son === onceki.son && onceki.due > gercek.due) {
+          D.ertele = D.ertele || {};
+          if (!(D.ertele[a] >= onceki.due)) D.ertele[a] = onceki.due;
+        }
+      }
+      kartiYenidenHesapla(si, ki, v, (dizin.log.get(si) || new Map()).get(ki) || []);
+      if (JSON.stringify(D.kart[a] || null) !== once) degisti = true;
+    });
+    imzalar.set(si, { imza, kiler: new Set(v.keys()) });
+  });
+  if (parmak !== null) VARSAYIM_PARMAK.set(D, varsayimParmakIzi());
+  return degisti;
 }
 
 function sonucIsle(si, kayitlar) {
@@ -2962,7 +3142,8 @@ function sonucIsle(si, kayitlar) {
     erteleSil(si, r.ki);
     if (D.yapilmadi) delete D.yapilmadi[yapilmadiAnahtari(si, r.ki, r.gun)];
   });
-  degisen.forEach(ki => kartiYenidenHesapla(si, ki));
+  const varsayim = varsayimIyiGunleri(si);
+  degisen.forEach(ki => kartiYenidenHesapla(si, ki, varsayim));
   return yeni.length;
 }
 
@@ -3211,18 +3392,15 @@ function ipucunuKapat() {
   EK.kurtarmaIpucu = null; EK.sonucIpucu = null;
   ['kurtarIpucu', 'sonucIpucu'].forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
 }
-// Haritadaki gri haftadan ya da engellenen plan indirmeden gelen öğrenciye neden burada olduğunu söyler.
+// Haritadaki gri haftadan gelen öğrenciye neden burada olduğunu söyler.
 function sonucIpucuHtml(hb) {
   const ip = EK.sonucIpucu;
   if (!ip || ip.hb !== hb || !ogrenciMi()) return '';
-  const indir = ip.neden === 'indir';
   const testli = (planHesapla(EK.ogr, hb).gunler || []).some(l => (l || []).some(x => !x.serbest && !x.anlatim));
   return '<div class="ortu" id="sonucIpucu"><div class="pencere kurtar-ipucu" role="dialog" aria-modal="true" aria-labelledby="sonucIpucuBaslik">' +
-    '<div class="p-ust"><b id="sonucIpucuBaslik">' + (indir ? 'Önce ' + ggyy(hb) + ' haftasının sonuçları' : ggyy(hb) + ' haftasının sonuçları girilmedi') + '</b>' +
+    '<div class="p-ust"><b id="sonucIpucuBaslik">' + ggyy(hb) + ' haftasının sonuçları girilmedi</b>' +
     '<button type="button" class="kapat" id="sonucIpucuKapat" aria-label="Kapat">×</button></div>' +
-    '<div class="kurtar-ipucu-govde"><p>' + (indir
-      ? 'Planını indirmeden önce bu haftanın sonuçlarını girmen gerekiyor. Sonuçlarını buradan gir; sonra planını indirebilirsin.'
-      : 'Bu haftanın sonuçlarını girmeyi unuttun. Sonuçlarını buradan girebilirsin.') + '</p>' +
+    '<div class="kurtar-ipucu-govde"><p>Bu haftanın sonuçlarını girmeyi unuttun. Sonuçlarını buradan girebilirsin.</p>' +
     (testli ? '<p class="mini">Yapmadığın testleri “Yapmadım” diye işaretleyebilirsin; onlar sonraki haftaya aktarılır.</p>' : '') +
     '<div class="arac"><button type="button" class="dugme birincil" id="sonucIpucuTamam">Anladım</button></div></div></div></div>';
 }
@@ -3309,13 +3487,16 @@ const haftaSecici = () => {
 function tekrarBilgisi(si, x, gun) {
   if (x.anlatim) return { etiket: 'Konu anlatımı', aciklama: x.kaynak || '', tur: 'diger' };
   if (x.serbest) return { etiket: x.kopya ? 'Ek çözüm' : 'Günlük çalışma', aciklama: 'Tekrar takibinin dışında', tur: 'diger' };
-  const kayitlar = tarihtekiAktifSonucKayitlari(si, x.ki, gun).filter(l => l[0] < gun)
+  // Sonucu girilmeyip "İyi" varsayılan önceki testler de bir tekrar sayılır.
+  const e = tarihtekiOgrenmeEpochu(si, +x.ki, gun), bas = e ? e.ilkTekrarGunu : -Infinity;
+  const varsayilan = (((D.kart || {})[si + ':' + x.ki] || {}).vg || []).filter(g => g >= bas && g < gun).map(g => [g, si, +x.ki, null, null, VARSAYIM_NOT, 0, true]);
+  const kayitlar = tarihtekiAktifSonucKayitlari(si, x.ki, gun).filter(l => l[0] < gun).concat(varsayilan)
     .sort((a, b) => a[0] - b[0]);
   const onceki = kayitlar[kayitlar.length - 1];
   const kart = !onceki && x.kart && x.kart.son < gun ? x.kart : null;
   const n = onceki ? kayitlar.length + 1 : kart ? kart.n + 1 : 1;
   const son = onceki ? onceki[0] : kart ? kart.son : null;
-  const yuzde = onceki ? (sonucYuzdesi(onceki) === null ? NOT_AD[sonucNotu(onceki)] : Math.round(sonucYuzdesi(onceki))) : kart ? kart.y : null;
+  const yuzde = onceki ? (onceki[7] ? 'sonuç girilmedi' : sonucYuzdesi(onceki) === null ? NOT_AD[sonucNotu(onceki)] : Math.round(sonucYuzdesi(onceki))) : kart ? kart.y : null;
   const cevap = (D.log || []).find(l => l[1] === si && l[2] === x.ki && l[0] === gun);
   const acik = son === null ? 'İlk ölçüm' : 'Son çözüm ' + gg(son) + ' · ' + (typeof yuzde === 'number' ? '%' + yuzde : (yuzde || ''));
   return { n, tur: n === 1 ? 'ilk' : 'tekrar', etiket: n + '. tekrar', aciklama: acik,
@@ -4573,9 +4754,9 @@ function ogrenciProgramKapsami(si, hb) {
     }).join('') + (eksik.length ? '<p role="status"><b>Konu planı eksik:</b> ' + eksik.map(kacis).join(', ') +
       '. Bu dersler için kitap konularını Konu Planı’na ekleyin.</p><button class="dugme" data-sekme="konuplani">Konu Planı’nı aç</button>' : '') + '</details>';
 }
-// Gelecek haftaların önizlemesi: bu haftadan başlayarak sonucu girilmemiş her test "İyi"
-// seçilmiş varsayılır. Hesap defterin bir kopyasında yapılır; gerçek sonuçlar, kartlar,
-// taslaklar ve indirilen planlar değişmez.
+// Gelecek haftaların önizlemesi: verilmiş haftalardaki testler zaten "İyi" varsayılır
+// (varsayimIyiGunleri); önizleme, henüz verilmemiş ara haftaların testlerini de öyle sayar.
+// Ara haftaların hesabı defterin bir kopyasında yapılır; gerçek sonuçlar ve kartlar değişmez.
 function varsayimliPlan(si, hb) {
   const bu = buHafta(si);
   if (!ogrenciMi() || hb <= bu || elleAl(si, hb).sabit) return planHesapla(si, hb);
@@ -4591,7 +4772,8 @@ function varsayimliPlan(si, hb) {
             yapilmadiMi(si, x.ki, gun) || konuAnlatilmadiDurumu(si, x.ki, gun)) return;
         D.log.push([gun, si, x.ki, null, null, 3, ts++]); degisen.add(x.ki);
       }));
-      degisen.forEach(ki => kartiYenidenHesapla(si, ki));
+      const varsayim = varsayimIyiGunleri(si);
+      degisen.forEach(ki => kartiYenidenHesapla(si, ki, varsayim));
     }
     return planHesapla(si, hb);
   } finally { D = gercek; }
@@ -4602,7 +4784,7 @@ function gorunumOgrenciPlan() {
   const gelecek = hb > buHafta(), gecmis = hb < buHafta();
   return '<div class="ogrenci-plan">' + ogrenciYksYolu(false) +
     '<div class="baslik"><h1>' + (gelecek ? 'Gelecek haftan' : gecmis ? 'Geçmiş haftan' : 'Haftalık planın') + '</h1>' +
-    (gelecek ? '<p>Önizleme' + (hb > sonrakiHafta(si, buHafta(si)) ? ' · indirmek için önce önceki haftanın sonuçlarını gir' : '') + '</p>' : '') + '</div>' +
+    (gelecek ? '<p>Önizleme</p>' : '') + '</div>' +
     ogrenciHaftaSecici() + kazanimPlaniUyarisi(D.ogr[si]?.sube) + ogrenciProgramYenileUyarisi(si, hb) + ogrenciProgramKapsami(si, hb) +
     (EK.ogrOtoHata ? '<p role="alert">' + kacis(EK.ogrOtoHata) + '</p>' : '') +
     '<div class="arac"><button class="dugme birincil" data-sekme="giris">Sonuç gir</button>' +
@@ -4973,6 +5155,179 @@ function gorunumKonuPlani() {
   return h;
 }
 
+// ---------------------------------------------------------------- toplu öğrenci ekleme
+// Okulun öğrenci listesi yapıştırılır: Myexamy "Öğrenciler" sayfasının metni (her hücre ayrı
+// satırda) ya da Excel/CSV satırları (sekme veya ; ile). Başlık satırı varsa sütunlar
+// adından bulunur; yoksa "numara + ad soyad" ile başlayan her kayıt okunur. Önizlemeden
+// sonra listede olmayanlar tek kayıtla eklenir; aynı numara ya da ad atlanır.
+const TOPLU_OGR_ALAN = { SAY: 'SAY', SAYISAL: 'SAY', MF: 'SAY', EA: 'EA', 'EŞİT AĞIRLIK': 'EA', TM: 'EA',
+  SÖZ: 'SÖZ', SOZ: 'SÖZ', SÖZEL: 'SÖZ', TS: 'SÖZ', DİL: 'DİL', DIL: 'DİL' };
+const topluAdAnahtari = ad => String(ad == null ? '' : ad).normalize('NFKC').toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
+const topluHucre = x => String(x == null ? '' : x).replace(/\s+/g, ' ').trim();
+function topluAdGibi(t) {
+  if (!t || t.length > 120 || /\d/.test(t) || !/^[\p{L}'’.\- ]+$/u.test(t)) return false;
+  if (t.split(' ').filter(Boolean).length < 2) return false;
+  return !/(kayıt|lise|okul|kolej|sınıf|personel|soyad|kurum)/.test(t.toLocaleLowerCase('tr-TR'));
+}
+function topluSinif(t) {
+  const m = /^(9|10|11|12)\s*\.?\s*(sınıf)?$/u.exec(topluHucre(t).toLocaleLowerCase('tr-TR'));
+  return m ? +m[1] : null;
+}
+function topluAlan(t) { return TOPLU_OGR_ALAN[topluHucre(t).toLocaleUpperCase('tr-TR')] || null; }
+function topluSube(t) {
+  const s = topluHucre(t).toLocaleUpperCase('tr-TR');
+  let m = /^(\d{2,4}) (9|10|11|12) ?[\/\-.]? ?(\p{Lu})$/u.exec(s);           // Myexamy: "201 12/B"
+  if (m) return { sube: m[1], sinif: +m[2] };
+  m = /^(9|10|11|12) ?[\/\-. ]? ?(\p{Lu})$/u.exec(s);                          // "12/B", "12-B"
+  if (m) return { sube: m[1] + '/' + m[2], sinif: +m[1] };
+  return null;
+}
+function topluSatirTamamla(r) {
+  if (!r.sinif && r.subeSinif) r.sinif = r.subeSinif;
+  return r;
+}
+function topluTokenSatirlari(metin) {
+  const tk = String(metin || '').split(/\r?\n/).flatMap(l => l.split(/[\t;]/)).map(topluHucre).filter(Boolean);
+  const basla = i => /^\d{1,4}$/.test(tk[i]) && topluAdGibi(tk[i + 1] || '');
+  const satirlar = [];
+  for (let i = 0; i < tk.length; i++) {
+    if (!basla(i)) continue;
+    const r = { no: +tk[i], ad: tk[i + 1] };
+    let j = i + 2;
+    for (; j < tk.length && j < i + 14 && !basla(j); j++) {
+      const t = tk[j], sn = topluSinif(t), al = topluAlan(t), su = topluSube(t);
+      if (sn && !r.sinif) r.sinif = sn;
+      else if (al && !r.alan) r.alan = al;
+      else if (su && !r.sube) { r.sube = su.sube; r.subeSinif = su.sinif; }
+    }
+    satirlar.push(topluSatirTamamla(r));
+    i = j - 1;
+  }
+  return satirlar;
+}
+function topluBaslikSatirlari(metin) {
+  const satirlar = String(metin || '').split(/\r?\n/).map(l => l.split(/[\t;]/).map(topluHucre));
+  const ad = c => c.toLocaleLowerCase('tr-TR').replace(/[^\p{L} ]/gu, '').replace(/\s+/g, ' ').trim();
+  const bul = (bas, adlar) => bas.findIndex(c => adlar.includes(c));
+  for (let hi = 0; hi < satirlar.length; hi++) {
+    const bas = satirlar[hi].map(ad);
+    const no = bul(bas, ['no', 'numara', 'okul no', 'okul numarası', 'öğrenci no', 'öğrenci numarası', 'okulno']);
+    const tam = bul(bas, ['adı soyadı', 'ad soyad', 'adı soyad', 'ad soyadı', 'adsoyad', 'adı ve soyadı', 'öğrenci', 'öğrenci adı', 'öğrenci adı soyadı', 'isim']);
+    const adi = bul(bas, ['adı', 'ad']), soyadi = bul(bas, ['soyadı', 'soyad']);
+    if (no < 0 || (tam < 0 && (adi < 0 || soyadi < 0))) continue;
+    const sinif = bul(bas, ['sınıf', 'kademe', 'sınıf düzeyi', 'seviye']);
+    const sube = bul(bas, ['şube', 'sınıf şube', 'sınıfşube', 'şubesi']);
+    const alan = bul(bas, ['alan', 'alanı']);
+    return satirlar.slice(hi + 1).map(c => {
+      const adSoyad = tam >= 0 ? c[tam] : [c[adi], c[soyadi]].filter(Boolean).join(' ');
+      if (!c[no] && !adSoyad) return null;
+      const r = { no: /^\d{1,4}$/.test(c[no] || '') ? +c[no] : null, ad: topluHucre(adSoyad) };
+      if (sinif >= 0) r.sinif = topluSinif(c[sinif]) || (topluSube(c[sinif]) || {}).sinif || null;
+      if (sube >= 0 && c[sube]) {
+        const su = topluSube(c[sube]);
+        r.sube = su ? su.sube : c[sube]; if (su) r.subeSinif = su.sinif;
+      } else if (sinif >= 0 && topluSube(c[sinif])) {
+        const su = topluSube(c[sinif]); r.sube = su.sube; r.subeSinif = su.sinif;
+      }
+      if (alan >= 0) r.alan = topluAlan(c[alan]);
+      return topluSatirTamamla(r);
+    }).filter(Boolean);
+  }
+  return [];
+}
+// Başlıklı okuma ve kayıt taraması ayrı ayrı denenir; daha çok tam satır bulan kullanılır.
+function topluOgrenciAyristir(metin) {
+  const tam = rs => rs.filter(r => r.no && r.ad && r.sinif && r.sube).length;
+  const a = topluBaslikSatirlari(metin), b = topluTokenSatirlari(metin);
+  return tam(a) >= tam(b) && a.length ? a : b;
+}
+// Her satıra durum verir: 'ekle' ya da 'atla' + neden. Defteri değiştirmez.
+function topluOgrenciPlani(satirlar, bas) {
+  const canli = (D.ogr || []).filter(o => !o.silindi);
+  const noda = new Map(canli.map(o => [String(o.no), o]));
+  const adda = new Map(canli.map(o => [topluAdAnahtari(o.ad), o]));
+  const subeler = {};
+  canli.forEach(o => { if (!subeler[o.sube]) subeler[o.sube] = { sinif: ogrenciSinifi(o), alan: o.alan, bas: o.mufredatBaslangic, yeni: false }; });
+  const gorulen = new Set();
+  return satirlar.map(r => {
+    const s = { ...r, durum: 'atla' };
+    const atla = neden => Object.assign(s, { neden });
+    if (!Number.isInteger(s.no) || s.no < 1 || s.no > 9999) return atla('Numara yok');
+    if (!s.ad || s.ad.length > 120) return atla('Ad soyad yok');
+    if (!s.sinif) return atla('Sınıf okunamadı');
+    if (s.subeSinif && s.subeSinif !== s.sinif) return atla('Sınıf ile şube uyuşmuyor');
+    if (!s.sube || s.sube.length > 40) return atla('Şube okunamadı');
+    if (gorulen.has(String(s.no))) return atla('Listede iki kez var');
+    gorulen.add(String(s.no));
+    const ayniNo = noda.get(String(s.no)), ayniAd = adda.get(topluAdAnahtari(s.ad));
+    if (ayniNo) return atla(topluAdAnahtari(ayniNo.ad) === topluAdAnahtari(s.ad) ? 'Zaten listede' : 'Bu numara ' + ayniNo.ad + ' adına kayıtlı');
+    if (ayniAd) return atla('Aynı adla kayıtlı (No ' + ayniAd.no + ')');
+    const su = subeler[s.sube];
+    const msinif = D.mufredatSinif && D.mufredatSinif[s.sube];
+    const beklenen = su ? su.sinif : [9, 10, 11, 12].includes(msinif) ? msinif : null;
+    if (beklenen && beklenen !== s.sinif) return atla(s.sube + ' şubesi ' + beklenen + '. sınıf');
+    if (s.sinif !== 12 && OKUL_SUBE_PROGRAMLARI[s.sube]) return atla(s.sube + ' hazır 12. sınıf şubesi');
+    const alan = s.alan || (su && su.alan) || (OKUL_SUBE_PROGRAMLARI[s.sube] || {}).alan || (s.sinif <= 10 ? 'SAY' : '');
+    if (!Object.hasOwn(ALAN_DERS, alan)) return atla('Alan yok');
+    s.alan = alan;
+    if (!su) subeler[s.sube] = { sinif: s.sinif, alan, bas: s.sinif < 12 ? bas : undefined, yeni: true };
+    if (s.sinif < 12) s.mufredatBaslangic = subeler[s.sube].bas || bas;
+    s.yeniSube = subeler[s.sube].yeni;
+    noda.set(String(s.no), s); adda.set(topluAdAnahtari(s.ad), s);
+    return Object.assign(s, { durum: 'ekle', neden: '' });
+  });
+}
+// 'ekle' satırlarını defterin listesine yazar; bulut yedeği sınırını aşacaksa hiçbirini eklemez.
+function topluOgrenciUygula(plan, kap) {
+  if (!rehberMi() || yalnizcaGoruntuleme()) throw new Error('Yalnızca görüntüleme.');
+  const eklenecek = plan.filter(s => s.durum === 'ekle');
+  const onceki = D.ogr.length, yeniPlanlar = [];
+  eklenecek.forEach(s => {
+    D.ogr.push({
+      no: s.no, ad: s.ad, alan: s.alan, sube: s.sube, sinif: s.sinif, ...(s.sinif < 12 ? { mufredatBaslangic: s.mufredatBaslangic } : {}),
+      kap: kap, off: [6], hedef: null, aktif: false, cikti: null,
+      maddeler: [], rutin: { once: '', ara: '', sonra: '' }
+    });
+    const r = varsayilanKonuPlaniniHazirla(s.sube, s.alan, s.sinif);
+    if (r && r.olustu) yeniPlanlar.push(s.sube);
+  });
+  const boyut = baytBoyu(JSON.stringify(D));
+  if (boyut > BULUT_YEDEK_UST_SINIR) {
+    D.ogr.length = onceki;
+    yeniPlanlar.forEach(su => { delete D.konuPlani[su]; });
+    throw new Error('Bu kadar öğrenciyle defter bulut sınırını aşıyor (' + Math.round(boyut / 1024) + ' KB). Listeyi bölerek ekleyin.');
+  }
+  return eklenecek.length;
+}
+function topluOgrenciKarti() {
+  if (yalnizcaGoruntuleme()) return '';
+  const d = EK.topluOgr;
+  let h = '<details class="kart" id="topluOgrKart" style="padding:14px 16px;margin-bottom:12px"' + (d ? ' open' : '') + '>' +
+    '<summary><b>Toplu öğrenci ekle</b></summary>' +
+    '<textarea id="topluOgrMetin" rows="6" style="width:100%;margin-top:10px;box-sizing:border-box" ' +
+    'placeholder="Myexamy öğrenci listesini ya da Excel satırlarını (No, Ad Soyad, Sınıf, Şube, Alan) buraya yapıştırın">' +
+    kacis(d && d.metin || '') + '</textarea>' +
+    '<div class="arac" style="margin-top:8px"><button class="dugme" id="topluOgrOnizle">Önizle</button></div>';
+  if (d && d.onizle) {
+    const plan = topluOgrenciPlani(topluOgrenciAyristir(d.metin), d.bas);
+    const ekle = plan.filter(s => s.durum === 'ekle'), atla = plan.length - ekle.length;
+    if (!plan.length) return h + '<p class="mini">Öğrenci satırı bulunamadı.</p></details>';
+    const sb = {};
+    ekle.forEach(s => { const x = sb[s.sube] = sb[s.sube] || { sinif: s.sinif, n: 0, yeni: s.yeniSube, bas: s.mufredatBaslangic }; x.n++; });
+    h += '<p><b>' + plan.length + '</b> satır · <b>' + ekle.length + '</b> eklenecek' + (atla ? ' · <b>' + atla + '</b> atlanacak' : '') + '</p>' +
+      (ekle.length ? '<p class="mini">' + Object.keys(sb).sort().map(k => kacis(k) + ' · ' + sb[k].sinif + '. sınıf · ' + sb[k].n + ' öğrenci' +
+        (sb[k].yeni ? ' · yeni şube' : '') + (sb[k].sinif < 12 && sb[k].bas ? ' · plan ' + ggyy(gunNo(sb[k].bas)) : '')).join('<br>') + '</p>' : '') +
+      '<div class="sarma" style="max-height:340px;overflow:auto"><table><thead><tr><th>Durum</th><th>No</th><th>Ad Soyad</th><th>Sınıf</th><th>Şube</th><th>Alan</th></tr></thead><tbody>' +
+      plan.map(s => '<tr' + (s.durum === 'ekle' ? '' : ' class="pasif"') + '><td>' +
+        (s.durum === 'ekle' ? '<span class="rozet">eklenecek</span>' : '<span class="rozet kritik">' + kacis(s.neden) + '</span>') + '</td>' +
+        '<td>' + (s.no || '—') + '</td><td>' + kacis(s.ad || '—') + '</td><td>' + (s.sinif ? s.sinif + '.' : '—') + '</td>' +
+        '<td>' + kacis(s.sube || '—') + '</td><td>' + kacis(s.alan || '—') + '</td></tr>').join('') +
+      '</tbody></table></div>' +
+      (ekle.length ? '<div class="arac" style="margin-top:10px"><button class="dugme birincil" id="topluOgrEkle">' + ekle.length + ' öğrenciyi ekle</button></div>' : '');
+  }
+  return h + '</details>';
+}
+
 function gorunumOgrenciler() {
   let h = '<div class="baslik"><h1>Öğrenciler</h1><p><b>' + kullananlar().length + '</b> öğrenci programı kullanıyor · listede <b>' +
     canliOgrenciler().length + '</b> öğrenci var.</p></div>' +
@@ -4991,6 +5346,7 @@ function gorunumOgrenciler() {
     '<span class="mini">günde</span><input id="yKap" type="number" min="1" max="12" value="6" style="width:64px">' +
     '<span class="mini">test</span>' +
     '<button class="dugme birincil" id="ogrEkle">Öğrenci ekle</button></div>' +
+    topluOgrenciKarti() +
     '<div class="kart sarma"><table><thead><tr><th>Kullanıyor</th><th>No</th><th>Ad Soyad</th><th>Şube</th><th>Sınıf</th><th>Alan</th>' +
     '<th>Günde kaç test</th><th>İzinli günler (tıkla)</th><th>Hedef tutma</th><th>Başlangıç hafızası</th><th>Çalışma ağırlığı</th><th title="Telafide bir güne en fazla kaç konu anlatımı eklenir">Telafi/gün</th><th class="sayisal">Çözülen</th>' +
     '<th class="sayisal">Ortalama</th><th class="sayisal">Bu hafta</th><th>Son çıktı</th><th></th></tr></thead><tbody>';
@@ -5178,6 +5534,7 @@ function ogrenciHaftayiSakla(si, hb, p) {
   const o = D.ogr[si];
   o.aktif = true; o.cikti = Math.max(o.cikti || 0, hb);
   if (!o.ilkAktif) o.ilkAktif = bugunNo();
+  varsayimKartlariniGuncelle(si);
 }
 function ogrenciTaslakOzeti(p) {
   return { elle: JSON.parse(JSON.stringify(p.elle || {})), gunler: p.gunler.map(l => l.map(x => ({ ki: x.ki,
@@ -5243,15 +5600,14 @@ function ogrenciOtomasyonUygula() {
     D.otoDagitimGun = bugunNo(); degisti = true;
   }
   D.ogrTaslak = D.ogrTaslak || {};
-  const raporBekliyor = !!sonrakiHaftaYazdirmaEngeli(si, hb);
   Object.keys(D.ogrTaslak).forEach(k => {
     const par = k.split('|'), h = +par[1], p = D.ogrTaslak[k];
     if (+par[0] !== si || h > hb || h >= sinav || ogrenciHaftaBasi(si, h) !== h) return;
-    if (!raporBekliyor && !elleAl(si, h).sabit && p && Array.isArray(p.gunler) && p.gunler.length === 7)
+    if (!elleAl(si, h).sabit && p && Array.isArray(p.gunler) && p.gunler.length === 7)
       ogrenciHaftayiSakla(si, h, p);
     delete D.ogrTaslak[k]; degisti = true;
   });
-  if (!raporBekliyor && !elleAl(si, hb).sabit) {
+  if (!elleAl(si, hb).sabit) {
     const p = planHesapla(si, hb);
     if (p.toplam) { ogrenciHaftayiSakla(si, hb, p); degisti = true; }
   }
@@ -6313,7 +6669,7 @@ function sonucPaketiUygula(pk, hedefSi) {
     });
   }
   if (yeni.length) sonucIsle(si, yeni);
-  resetKonular.forEach(ki => kartiYenidenHesapla(si, ki));
+  if (resetKonular.size) { const varsayim = varsayimIyiGunleri(si); resetKonular.forEach(ki => kartiYenidenHesapla(si, ki, varsayim)); }
   if (pk.calisma) ogrenciCalismasiniUygula(pk.calisma, si);
   if (pk.etkinlik) D.ogr[si].etkinlik = etkinlikBirlestir(D.ogr[si].etkinlik, pk.etkinlik);
   if (birlesenDenemeler) D.ogr[si].denemeler = birlesenDenemeler;
@@ -9028,7 +9384,7 @@ function dagitimiGeriAl(hb, sube) {
       const sonucVar = (D.log || []).some(l => l[2] === ki && D.ogr[l[1]] && D.ogr[l[1]].sube === su) ||
                        Object.keys(D.kart).some(k => {
                          const par = k.split(':');
-                         return +par[1] === ki && D.ogr[+par[0]] && D.ogr[+par[0]].sube === su;
+                         return +par[1] === ki && D.ogr[+par[0]] && D.ogr[+par[0]].sube === su && gercekKartMi(D.kart[k]);
                        });
       if (sonucVar) { korunan++; return; }
       delete m[ki];
@@ -9383,36 +9739,22 @@ function oncekiHaftaEksikTestSayisi(si, hb, p) {
   }));
   return eksik;
 }
+// Sonuç gir açılınca öğrenci, sonucu eksik kalan önceki haftaya götürülür. İndirmeyi engellemez:
+// sonucu girilmemiş testler "İyi" varsayılır (bkz. varsayimIyiGunleri).
 function sonrakiHaftaYazdirmaEngeli(si, hb) {
   if (!ogrenciMi() || (hb !== sonrakiHafta(si, buHafta(si)) && !(ozelHaftaEtkin(si) && hb === buHafta(si)))) return null;
   return oncekiHaftaSonucEngeli(si, hb);
 }
-// Öğrenci bir haftanın planını, önceki haftanın her testi sonuçlanmadan (sonuç, "Yapmadım"
-// ya da "anlatılmadı") indiremez. Sonraki haftadan ötesinin önceki haftası henüz yaşanmadığı
-// için onlar yalnızca önizlemedir. Otomatik plan kaydı sonrakiHaftaYazdirmaEngeli'ni kullanır.
+// Bu hafta ve sonraki hafta her zaman indirilebilir. Ondan sonrakilerin önceki haftası henüz
+// başlamadığı için onlar yalnızca önizlemedir.
 function planYazdirmaEngeli(si, hb) {
   if (!ogrenciMi()) return null;
-  const bu = buHafta(si), sonraki = sonrakiHafta(si, bu);
-  if (hb > sonraki) return { onizleme: true };
-  if (hb !== bu && hb !== sonraki) return null;
-  const engel = oncekiHaftaSonucEngeli(si, hb);
-  // Öğrenci o haftayı hiç kullanmadıysa (planını indirmedi, o hafta uygulamada bir şey yapmadı)
-  // aradan geçen zamanda sonuçları hatırlayamaz; indirme bunun için engellenmez.
-  return engel && haftaKullanildiMi(si, engel.hb) ? engel : null;
-}
-// O haftanın planı indirildiyse ya da o hafta içinde sonuç açıldı/kaydedildi/plan indirildiyse true.
-function haftaKullanildiMi(si, hb) {
-  const son = planHaftaSonu(si, hb), iceride = ts => Number.isSafeInteger(+ts) && +ts > 0 && (g => g >= hb && g <= son)(etkinlikGunu(+ts));
-  const kayit = (D.ogr[si] && D.ogr[si].etkinlik && D.ogr[si].etkinlik.kayit) || [];
-  if (kayit.some(r => (r.tur === 'pdf' && r.hafta === hb) || iceride(r.ilk) || iceride(r.son))) return true;
-  return (D.log || []).some(l => l[1] === si && +l[6] > 100000000000 && iceride(l[6]));
+  return hb > sonrakiHafta(si, buHafta(si)) ? { onizleme: true } : null;
 }
 function planYazdirmaEngeliniGoster(si, hb) {
   const engel = planYazdirmaEngeli(si, hb);
   if (!engel) return false;
-  if (engel.onizleme) disariAktarmaAc('<p>Bu hafta yalnızca önizleme: sonucu girilmemiş testler İyi seçilmiş varsayılarak hesaplandı. ' +
-    'Planı, önceki haftanın sonuçlarını girdikten sonra indirebilir veya yazdırabilirsin.</p>', 'Önizleme');
-  else sonucGirisineGotur(engel.hb, 'indir');
+  disariAktarmaAc('<p>Bu hafta yalnızca önizleme. Planı, bir önceki hafta başlayınca indirebilir veya yazdırabilirsin.</p>', 'Önizleme');
   return true;
 }
 // Öğrenciyi bir haftanın sonuç girişine, nedenini anlatan kısa bir pencereyle götürür.
@@ -9927,7 +10269,9 @@ function gorunumKurulum() {
 // kurtarma ekranı gösterip yedek indirmeyi ya da Ayarlar'a dönmeyi teklif et.
 function ciz() {
   if (CIKIS_DURUMU) return;
-  try { const etkinlikDegisti = etkinlikHazirla(); const okulDegisti = okulProgramlariniGuncelle(); if (ogrenciOtomasyonHazirla() || okulDegisti || etkinlikDegisti) kaydet(true); cizIc(); }
+  try { const etkinlikDegisti = etkinlikHazirla(); const okulDegisti = okulProgramlariniGuncelle(); const varsayimDegisti = varsayimKartlariniGuncelle();
+    const otoDegisti = ogrenciOtomasyonHazirla(); if (otoDegisti) varsayimKartlariniGuncelle();
+    if (otoDegisti || okulDegisti || etkinlikDegisti || varsayimDegisti) kaydet(true); cizIc(); }
   catch (e) { hataEkraniGoster(e); }
 }
 function hataEkraniGoster(e) {
@@ -11032,7 +11376,7 @@ document.addEventListener('click', async ev => {
     }
     return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#yksEksikleriEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-harita-kurtar],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#topluOgrOnizle,#topluOgrEkle,#yksEksikleriEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-harita-kurtar],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     const taslak = sonucTaslaklariniAl();
@@ -11269,6 +11613,32 @@ document.addEventListener('click', async ev => {
     varsayilanKonuPlaniniHazirla(sube, alan, sinif);
     await kaydet(true); ciz();
     bilgiVer(ad + ' listeye eklendi (' + sube + '). Çıktı verdiğinizde “kullanıyor” olarak işaretlenecek.');
+    return;
+  }
+  if (t.id === 'topluOgrOnizle') {
+    const metin = (document.getElementById('topluOgrMetin') || {}).value || '';
+    if (!metin.trim()) { alert('Önce öğrenci listesini yapıştırın.'); return; }
+    const basGiris = (document.getElementById('yMufredatBaslangic') || {}).value;
+    const bas = isoTarihGecerli(basGiris) ? basGiris : isoDan(pazartesi(bugunNo()));
+    const kap = Math.max(1, Math.min(12, Math.round(+(document.getElementById('yKap') || {}).value || 6)));
+    EK.topluOgr = { metin, onizle: true, bas, kap };
+    ciz();
+    return;
+  }
+  if (t.id === 'topluOgrEkle') {
+    const d = EK.topluOgr;
+    if (!d || !d.onizle) { alert('Liste değişti; önce yeniden önizleyin.'); return; }
+    if (yalnizcaGoruntuleme()) { alert('Yalnızca görüntüleme: değişiklik kaydedilmez.'); return; }
+    const plan = topluOgrenciPlani(topluOgrenciAyristir(d.metin), d.bas);
+    const n = plan.filter(s => s.durum === 'ekle').length, atlanan = plan.length - n;
+    if (!n) { alert('Eklenecek yeni öğrenci yok.'); return; }
+    if (!confirm(n + ' öğrenci listeye eklenecek. Devam?')) return;
+    try { topluOgrenciUygula(plan, d.kap || 6); }
+    catch (e) { alert(e.message || String(e)); return; }
+    EK.topluOgr = null;
+    const tamam = await kaydet(true); ciz();
+    bilgiVer(tamam ? n + ' öğrenci listeye eklendi' + (atlanan ? ', ' + atlanan + ' satır atlandı' : '') + '. Çıktı verdiğinizde “kullanıyor” olarak işaretlenecekler.'
+      : 'Öğrenciler eklendi fakat kalıcı kayıt başarısız. Yedek indirin.');
     return;
   }
   if (t.id === 'topluSil') { EK.toplu = !EK.toplu; ciz(); return; }
@@ -11643,6 +12013,12 @@ document.addEventListener('keydown', ev => {
 });
 document.addEventListener('input', ev => {
   if (ev.target.id === 'pAra' && PENCERE) { PENCERE.arama = ev.target.value; pencereCiz(); }
+  // Yapıştırılan liste ekranda kalır; değişince eski önizlemeyle eklenmesin.
+  if (ev.target.id === 'topluOgrMetin') {
+    EK.topluOgr = { ...(EK.topluOgr || {}), metin: ev.target.value, onizle: false };
+    const dugme = document.getElementById('topluOgrEkle');
+    if (dugme) { dugme.disabled = true; dugme.title = 'Liste değişti; önce yeniden önizleyin.'; }
+  }
   // Kullanıcı adındaki boşluklar silinir; yazarken nasıl kaydedileceği gösterilir.
   if (ev.target.id === 'kaydolAd') {
     const durum = document.getElementById('kaydolDurum'), v = ev.target.value;

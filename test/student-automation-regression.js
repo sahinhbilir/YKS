@@ -262,7 +262,8 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  check('manual-add-works-on-issued-week',getPlan(run('buHafta()')).gunler.flat().filter(x=>x.ad==='Kendi çalışma <notu>').length===2);
  check('manual-add-keeps-existing-rows-and-questions',layout({gunler:getPlan(run('buHafta()')).gunler.map(l=>l.filter(x=>x.ad!=='Kendi çalışma <notu>'))})===protectedLayout);
  check('manual-text-is-escaped',run('gorunumPlan()').includes('Kendi çalışma &lt;notu&gt;'));
- check('manual-free-work-does-not-fabricate-results',run('D.log.length===0&&Object.keys(D.kart).length===0'));
+ // Free work writes no result; the only cards are the issued week's tests counted as İyi (vg), nothing in D.log.
+ check('manual-free-work-does-not-fabricate-results',run('D.log.length===0&&Object.values(D.kart).every(k=>Array.isArray(k.vg)&&k.n===k.vg.length)'));
  const manualSlot=run('Object.keys(elleAl(0,buHafta()).ogrEk)[0]');sandbox.manualSlot=manualSlot;
  check('student-can-remove-own-addition',run('ogrenciElleKaldir(manualSlot)'));
  check('student-cannot-remove-scheduled-work-through-extra-controls',!run('ogrenciElleKaldir(Object.keys(elleAl(0,buHafta()).yer).find(k=>!k.startsWith("OGREK")))'));
@@ -277,7 +278,7 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  check('manual-future-addition-keeps-week-as-draft',!run('elleAl(0,haftaBasi()).sabit'));
  run('D.ayar.testTarih="2026-09-20"');await draw();
  check('manual-future-addition-survives-week-transition',getPlan(run('buHafta()')).gunler[0].some(x=>x.ad==='Next-week addition'&&x.soru===15));
- // The next-week PDF gate reads only the preceding frozen snapshot and never mutates it.
+ // Sonuç gir's reminder reads only the preceding frozen snapshot and never mutates it; it no longer blocks downloads.
  init('2026-09-09');
  run(`D.elle={};D.ogrTaslak={};D.log=[];D.kart={};D.ertele={};D.konuAnlatilmadi=[];D.haftaDurum={};
    D.islenis={0:buHafta()-3};D.subeIslenis={};D.ogrIslenis={0:{}};
@@ -286,8 +287,8 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  const assigned=run(`(()=>{const p=planHesapla(0,buHafta());for(let g=0;g<7;g++)for(const x of p.gunler[g])
    if(!x.serbest&&!x.anlatim)return {ki:x.ki,gun:buHafta()+g};return null;})()`);
  sandbox.assigned=assigned;
- check('next-week-incomplete-snapshot-is-blocked',!!assigned&&run('sonrakiHaftaYazdirmaEngeli(0,buHafta()+7).adet')===1);
- check('gate-check-does-not-freeze-or-change-fsrs',gateBefore===run('JSON.stringify([D.log,D.kart,D.elle,D.ertele,D.konuAnlatilmadi])'));
+ check('next-week-missing-results-are-reported',!!assigned&&run('sonrakiHaftaYazdirmaEngeli(0,buHafta()+7).adet')===1);
+ check('reminder-check-does-not-freeze-or-change-fsrs',gateBefore===run('JSON.stringify([D.log,D.kart,D.elle,D.ertele,D.konuAnlatilmadi])'));
  const mixed={gunler:[[{ki:assigned.ki},{ki:'free',serbest:true},{ki:assigned.ki,anlatim:true}],[],[],[],[],[],[]]};sandbox.mixed=mixed;
  check('free-and-lesson-rows-are-ignored',run('oncekiHaftaEksikTestSayisi(0,assigned.gun,mixed)')===1);
  run('D.log=[[assigned.gun,0,assigned.ki,9,12,null,1]]');
@@ -307,22 +308,22 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  run(`D.rol='ogrenci';D.elle={};D.log=[];D.ertele={};D.konuAnlatilmadi=[];
    D.islenis={0:buHafta()-3};const _p2=planHesapla(0,buHafta());ogrenciHaftayiSakla(0,buHafta(),_p2);EK.hafta=buHafta()+7;`);
  let printCalls=0;sandbox.window.print=()=>{printCalls++;};
- // A student who never used this week (did not download its plan or do anything in it) is not
- // held to results they cannot remember.
- check('unused-week-does-not-block-download',!run('planYazdirmaEngeli(0,buHafta()+7)')&&!run('haftaKullanildiMi(0,buHafta())'));
+ // Missing results count as İyi, so the next week's plan is always downloadable; only weeks after
+ // that stay preview-only. The reminders to enter results stay.
  run('etkinlikKaydet("pdf",buHafta());EK.sekme="plan";EK.hafta=buHafta()+7');   // the student downloaded this week's plan
- check('central-guard-prevents-print-side-effect',!(await run('planYazdir(null)'))&&printCalls===0);
+ check('next-week-download-is-not-blocked-by-missing-results',!run('planYazdirmaEngeli(0,buHafta()+7)')&&(await run('planYazdir(null)'))&&printCalls===1&&run('EK.sekme')==='plan');
+ check('weeks-after-next-stay-preview-only',run('planYazdirmaEngeli(0,buHafta()+14).onizleme')===true);
+ run('EK.sekme="plan";EK.hafta=buHafta()+14');
+ check('preview-week-print-is-stopped',!(await run('planYazdir(null)'))&&printCalls===1&&run('EK.sekme')==='plan');
+ run('disariAktarmayiKapat();EK.sekme="plan";EK.hafta=buHafta()');
+ const sekmeGiris=Object.assign(element(),{dataset:{sekme:'giris'},closest(s){return s.includes('[data-sekme]')?this:null;}});
+ for(const fn of listeners.click||[])await fn({target:sekmeGiris});
  const missingHb=run('buHafta()');
- check('blocked-download-opens-the-missing-week-results',run('EK.sekme')==='giris'&&run('EK.hafta')===missingHb);
- check('blocked-download-explains-why',run('gorunumGiris()').includes('Planını indirmeden önce bu haftanın sonuçlarını girmen gerekiyor'));
+ check('sonuc-gir-opens-the-week-missing-results',run('EK.sekme')==='giris'&&run('EK.hafta')===missingHb);
+ run('sonucGirisineGotur(buHafta(),"harita")');
+ check('grey-week-note-asks-for-results',run('gorunumGiris()').includes('Bu haftanın sonuçlarını girmeyi unuttun'));
  await click('sonucIpucuTamam');
  check('results-note-can-be-dismissed',run('EK.sonucIpucu')===null&&!run('gorunumGiris()').includes('id="sonucIpucu"'));
- run('D.log=[[assigned.gun,0,assigned.ki,null,null,3,4]];EK.sekme="plan";EK.hafta=buHafta()+7');
- check('complete-next-week-print-proceeds',(await run('planYazdir(null)'))&&printCalls===1);
- run('D.log=[]');
- const previewPrint=Object.assign(element(),{id:'ciktiYazdir',closest(s){return s.includes('#ciktiYazdir')?this:null;}});
- for(const fn of listeners.click||[])await fn({target:previewPrint});
- check('preview-print-rechecks-central-guard',printCalls===1&&run('EK.sekme')==='giris'&&run('EK.sonucIpucu.neden')==='indir');
  init();await draw();run('EK.hafta=buHafta()+7');
  // Optional private fixture: inspect a supplied backup locally; never include it in git or upload it.
  if(process.env.YKS_BACKUP){
@@ -354,7 +355,8 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  check('returning-student-is-not-blocked-by-an-unused-week',!run('planYazdirmaEngeli(0,buHafta())'));
  run('etkinlikKaydet("pdf",'+prevWeek+')');   // the student had last week's plan
  check('map-previous-week-was-issued',!!run('elleAl(0,'+prevWeek+').sabit')&&!!run('elleAl(0,'+curWeek+').sabit')&&prevTests.length>=3);
- check('current-week-print-needs-last-week-results',run('planYazdirmaEngeli(0,buHafta()).hb')===prevWeek&&!run('sonrakiHaftaYazdirmaEngeli(0,buHafta())'));
+ check('current-week-print-is-not-blocked-by-last-week-results',run('planYazdirmaEngeli(0,buHafta())')===null&&!run('sonrakiHaftaYazdirmaEngeli(0,buHafta())'));
+ check('next-week-reminder-names-the-week-missing-results',run('sonrakiHaftaYazdirmaEngeli(0,sonrakiHafta(0,buHafta()))')===null||run('sonrakiHaftaYazdirmaEngeli(0,sonrakiHafta(0,buHafta())).hb')===curWeek);
  check('weeks-beyond-next-are-preview-only',!!run('planYazdirmaEngeli(0,buHafta()+14).onizleme')&&!run('planYazdirmaEngeli(0,buHafta()+14).hb'));
  check('teacher-print-is-not-gated',run('(()=>{D.rol="rehber";const r=planYazdirmaEngeli(0,buHafta());D.rol="ogrenci";return r;})()')===null);
  check('map-issued-week-without-results-is-grey',mapClass(prevWeek)[1].includes('gri')&&!mapClass(prevWeek)[1].includes('kirmizi'));
@@ -401,9 +403,9 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  check('week-stats-count-done-and-skipped',partial.toplam===prevTests.length&&partial.yapilan===doneN&&partial.yapilmadi===1);
  const partialMap=mapClass(prevWeek);
  check('map-partial-week-is-green-by-share',partialMap[1].includes('yesil')&&+partialMap[2]===+(doneN/prevTests.length).toFixed(2));
- check('blank-tests-still-block-printing',(run('planYazdirmaEngeli(0,buHafta())')||{adet:0}).adet===sandbox.blank.length);
+ check('blank-tests-are-still-reported-but-do-not-block',(run('oncekiHaftaSonucEngeli(0,buHafta())')||{adet:0}).adet===sandbox.blank.length&&!run('planYazdirmaEngeli(0,buHafta())'));
  run('blank.forEach(x=>testiYapilmadiIsaretle(0,x.ki,x.gun))');
- check('yapmadim-settles-the-print-gate',!run('planYazdirmaEngeli(0,buHafta())'));
+ check('yapmadim-settles-the-reminder',!run('oncekiHaftaSonucEngeli(0,buHafta())'));
  run('sonucIsle(0,[{ki:skipped.ki,gun:skipped.gun,not:4,dogru:null,soru:null}])');
  check('real-result-replaces-yapmadim',!run('yapilmadiMi(0,skipped.ki,skipped.gun)')&&run('erteleAl(0,skipped.ki)')===undefined);
  run('D.log=D.log.filter(l=>l[0]<'+prevWeek+'||l[0]>'+(prevWeek+6)+');D.yapilmadi={};sonucIsle(0,'+JSON.stringify(prevTests.map(x=>({ki:x.ki,gun:x.gun,not:3,dogru:null,soru:null}))).replace(/"/g,"'")+')');
@@ -413,11 +415,13 @@ function fillPlan(p,h,week=0,limit=Infinity) {
  const beforePreview=run('JSON.stringify(D)');
  const realFuture=run('planHesapla(0,'+nextWeek+')'), previewFuture=run('varsayimliPlan(0,'+nextWeek+')');
  check('preview-does-not-change-the-notebook',run('JSON.stringify(D)')===beforePreview);
- // A topic still unanswered this week is reviewed "İyi" in the preview, so its next review moves
- // past next week, while the real plan (which has no such result) still shows it next week.
- const curPending=weekTests(curWeek).filter(x=>!run('D.log.some(l=>l[2]==='+x.ki+'&&l[0]==='+x.gun+')')).map(x=>x.ki);
+ // A test of the issued current week with no result yet already counts as İyi in the real plan
+ // (its card carries that day in vg, D.log does not), so the preview and the real next week agree.
+ const curPending=weekTests(curWeek).filter(x=>!run('D.log.some(l=>l[2]==='+x.ki+'&&l[0]==='+x.gun+')'));
  const realIds=realFuture.gunler.flat().map(x=>x.ki), previewIds=previewFuture.gunler.flat().map(x=>x.ki);
- check('preview-assumes-iyi-for-pending-tests',realIds.some(ki=>curPending.includes(ki)&&!previewIds.includes(ki)));
+ check('real-plan-assumes-iyi-for-pending-tests',curPending.length>0&&curPending.every(x=>run('((D.kart["0:'+x.ki+'"]||{}).vg||[]).includes('+x.gun+')')&&
+   !run('D.log.some(l=>l[2]==='+x.ki+'&&l[0]==='+x.gun+')')));
+ check('preview-matches-the-real-next-week',JSON.stringify(realIds)===JSON.stringify(previewIds));
  run('EK.sekme="plan";EK.hafta='+(nextWeek+7));
  check('student-future-week-says-preview',run('gorunumOgrenciPlan()').includes('<h1>Gelecek haftan</h1><p>Önizleme'));
  console.log(JSON.stringify({passed:checks.length,checks,weeks,totalResults:weeks.reduce((s,w)=>s+w.results,0)},null,2));
