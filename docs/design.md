@@ -4,6 +4,11 @@ The look follows the "YKS 2027 · Hedefine bir adım daha yaklaş" image: white 
 navy headlines, royal blue as the one accent, light blue surfaces, and bold, plain
 sans-serif type. Keep new screens inside these rules.
 
+The weeks map and the exam chart deliberately show the entire journey to YKS.
+Empty future weeks and the space ahead of the early exam results tell that story.
+Preserve their full horizon, prominence, ordering and existing layout; do not crop
+the chart to recent results or collapse the map to make room for other content.
+
 ## Tokens
 
 All colours are CSS variables on `:root` in `index.html`. The dark theme redefines
@@ -14,6 +19,8 @@ them in two places: under `prefers-color-scheme: dark` and under
 |---|---|---|---|
 | `--marka-koyu` | `#0B2A6B` navy | `#A9C1FF` | headings, brand, headline |
 | `--marka` / `--vurgu` | `#1F4FC8` royal blue | `#4D7BEA` / `#7EA4FF` | primary buttons, links, active tab, focus ring |
+| `--vurgu-uzeri` | `#FFFFFF` | `#0F141A` | text on filled accent buttons and selected controls |
+| `--alan-cizgi` | `#8290A8` | `#647796` | identifiable input boundaries, separate from decorative card borders |
 | `--marka-acik` / `--vurgu-yumusak` | `#DCE6FB` / `#E8EFFC` | `#17254A` | selected rows, soft buttons, highlights |
 | `--zemin` / `--kagit` | `#F4F7FD` / `#FFFFFF` | `#0A1226` / `#111B33` | page / cards |
 | `--murekkep` / `--soluk` / `--cizgi` | `#0F1E3D` / `#55627A` / `#DCE3F0` | `#E6ECF8` / `#9AA8C4` / `#25314F` | text / secondary text / borders |
@@ -22,6 +29,18 @@ them in two places: under `prefers-color-scheme: dark` and under
 
 On white, `--vurgu` and white-on-`--vurgu` both reach about 7:1 contrast.
 `--soluk` reaches about 6:1.
+
+Use `--vurgu-uzeri` for every filled accent selection, including result ratings and
+the plan editor's type/scope controls. Do not override text colors with selectors
+that behave differently for system and explicit themes. Placeholders use `--soluk`.
+
+The login screen and Settings offer System / Light / Dark (`Sistem / Açık / Koyu`).
+The preference is stored only on the device (`yks_gorunum`); it is not part of the
+student notebook or cloud payload. Switching themes updates the root without
+redrawing the page or losing unfinished inputs. System mode removes the override
+and follows subsequent OS changes. The existing full device-data cleanup also
+clears this preference. Ordinary buttons use flat surfaces, with a brief border
+transition disabled for reduced-motion users.
 
 ## Type
 
@@ -37,19 +56,20 @@ On white, `--vurgu` and white-on-`--vurgu` both reach about 7:1 contrast.
 `gorunumKurulum()` draws, top to bottom:
 
 1. **YKS {year}**. The year comes from the YKS date in the settings.
-2. "Hedefine bir adım daha yaklaş".
+2. "Hedefine bir adım daha yaklaş", followed by the short product promise
+   "Tekrarlarını planla, çalışmanı kaydet, gelişimini gör."
 3. The student login, open by default. One form serves both kinds of student: a
    Kaydol account (user name + password) and a school student (name + school
    number). See docs/kaydol.md.
 4. Under the login button, "Rehber öğretmeniyim" on its own row, then "Kaydol" and
-   "Test hesabı aç" side by side. The three do not fit one 340 px row.
+   "Test hesabı aç" side by side. Teacher access uses a quieter, unfilled treatment.
 5. The cap-and-books drawing.
 6. One folded "Yedekten geri yükle" link. It opens the file picker and the paste
    option.
 
-The login card is compact: 340 px wide, with two inputs whose labels are visually
-hidden. The placeholders show instead: "Kullanıcı adı - Ad soyad" and "Şifre - Okul
-numarası". Screen readers still read the labels.
+The login card is at most 400 px wide, with persistent visible labels and 16 px
+input text. Inputs are at least 46 px high and buttons at least 44 px. The sign-up
+card follows the same rules. Placeholders remain as examples without replacing labels.
 
 - The second input is a password field (no number spinner). An eye button inside it
   on the right shows or hides the text (`sifreKutusu`, `data-sifre-goster`, with
@@ -69,15 +89,16 @@ the tip of the cap, so the visible gap is the spacer itself.
 When the column is shorter than the screen, the space above and below is equal. When it is taller (short laptops, phones), it scrolls from a
 small top margin that still clears the corner bands.
 
-The screen carries no hint sentences. The status line under "Giriş yap" stays empty
-until there is an error or progress message.
+The product promise is the only introductory sentence. The status line under
+"Giriş yap" stays empty until there is an error or progress message.
 
 ## No explanatory text
 
-The design explains itself: no page subtitles that describe the page, no "how it
+Working screens stay concise: no page subtitles that describe the page, no "how it
 works" paragraphs, no colour legends and no hints under fields. What stays:
 
 - data (counts, dates, names, totals), labels and headings;
+- the short product promise on the login screen for first-time visitors;
 - status and error messages, and a short line where a choice has a consequence (for
   example, "Buluttakini aç" discards unsaved changes on this device);
 - one-line steps a feature cannot be used without (the AI timetable and paper-plan
@@ -111,8 +132,15 @@ Students and teachers both get a top bar (`.ray.ust`), built by `ustMenu` from
 - **Denemelerim** follows Planım. **Müfredat** and **Ayarlar** sit on the right.
   A thin divider separates them from "Kaydet ve çıkış yap", and the save status
   follows on one line (cut short with an ellipsis rather than wrapping).
-- On narrow screens the bar wraps rather than scrolling sideways, so the dropdown is
-  never clipped.
+- At ≤820 px, **Diğer** groups Müfredat, Ayarlar and logout in a right-aligned
+  dropdown; desktop keeps them visible. Primary destinations remain on the top
+  bar, with save status on a compact second line. The bar can wrap on very narrow
+  screens rather than overflow, and the account dropdown stays within the viewport.
+
+Result-entry rating buttons have 44 px targets. The save action remains reachable
+in a sticky footer inside the results card, and secondary mobile actions also have
+44 px targets. Help links and SVG week arrows use the same visual language as the
+other controls; week arrows have explicit accessible names.
 
 After login, students land on the home page (`gorunumAnaSayfa`, tab `'ana'`). It
 shows the weeks map, and for a YKS student the **Deneme gelişimi** chart beside it.

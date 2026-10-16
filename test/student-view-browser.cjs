@@ -67,6 +67,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    };
    let cerceve=await gozuyle(()=>page.locator('.sr-sira-tablo [data-ogr-gor="0"]').click(),'SENTETİK ADA');
    if(width===1280)await page.screenshot({path:path.join(out,'student-view-'+width+'.png')});
+   if(await cerceve.locator('[aria-controls="hesapMenusu"]').isVisible())await cerceve.locator('[aria-controls="hesapMenusu"]').click();
    await cerceve.locator('#ray [data-sekme="ayarlar"]').first().click();
    const icerde=page.frames().find(f=>f!==page.mainFrame());
    assert.notEqual(await icerde.evaluate(()=>localStorage.getItem('yks_veri')),defter,'the frame has its own memory storage');
