@@ -5155,6 +5155,179 @@ function gorunumKonuPlani() {
   return h;
 }
 
+// ---------------------------------------------------------------- toplu öğrenci ekleme
+// Okulun öğrenci listesi yapıştırılır: Myexamy "Öğrenciler" sayfasının metni (her hücre ayrı
+// satırda) ya da Excel/CSV satırları (sekme veya ; ile). Başlık satırı varsa sütunlar
+// adından bulunur; yoksa "numara + ad soyad" ile başlayan her kayıt okunur. Önizlemeden
+// sonra listede olmayanlar tek kayıtla eklenir; aynı numara ya da ad atlanır.
+const TOPLU_OGR_ALAN = { SAY: 'SAY', SAYISAL: 'SAY', MF: 'SAY', EA: 'EA', 'EŞİT AĞIRLIK': 'EA', TM: 'EA',
+  SÖZ: 'SÖZ', SOZ: 'SÖZ', SÖZEL: 'SÖZ', TS: 'SÖZ', DİL: 'DİL', DIL: 'DİL' };
+const topluAdAnahtari = ad => String(ad == null ? '' : ad).normalize('NFKC').toLocaleLowerCase('tr-TR').replace(/\s+/g, ' ').trim();
+const topluHucre = x => String(x == null ? '' : x).replace(/\s+/g, ' ').trim();
+function topluAdGibi(t) {
+  if (!t || t.length > 120 || /\d/.test(t) || !/^[\p{L}'’.\- ]+$/u.test(t)) return false;
+  if (t.split(' ').filter(Boolean).length < 2) return false;
+  return !/(kayıt|lise|okul|kolej|sınıf|personel|soyad|kurum)/.test(t.toLocaleLowerCase('tr-TR'));
+}
+function topluSinif(t) {
+  const m = /^(9|10|11|12)\s*\.?\s*(sınıf)?$/u.exec(topluHucre(t).toLocaleLowerCase('tr-TR'));
+  return m ? +m[1] : null;
+}
+function topluAlan(t) { return TOPLU_OGR_ALAN[topluHucre(t).toLocaleUpperCase('tr-TR')] || null; }
+function topluSube(t) {
+  const s = topluHucre(t).toLocaleUpperCase('tr-TR');
+  let m = /^(\d{2,4}) (9|10|11|12) ?[\/\-.]? ?(\p{Lu})$/u.exec(s);           // Myexamy: "201 12/B"
+  if (m) return { sube: m[1], sinif: +m[2] };
+  m = /^(9|10|11|12) ?[\/\-. ]? ?(\p{Lu})$/u.exec(s);                          // "12/B", "12-B"
+  if (m) return { sube: m[1] + '/' + m[2], sinif: +m[1] };
+  return null;
+}
+function topluSatirTamamla(r) {
+  if (!r.sinif && r.subeSinif) r.sinif = r.subeSinif;
+  return r;
+}
+function topluTokenSatirlari(metin) {
+  const tk = String(metin || '').split(/\r?\n/).flatMap(l => l.split(/[\t;]/)).map(topluHucre).filter(Boolean);
+  const basla = i => /^\d{1,4}$/.test(tk[i]) && topluAdGibi(tk[i + 1] || '');
+  const satirlar = [];
+  for (let i = 0; i < tk.length; i++) {
+    if (!basla(i)) continue;
+    const r = { no: +tk[i], ad: tk[i + 1] };
+    let j = i + 2;
+    for (; j < tk.length && j < i + 14 && !basla(j); j++) {
+      const t = tk[j], sn = topluSinif(t), al = topluAlan(t), su = topluSube(t);
+      if (sn && !r.sinif) r.sinif = sn;
+      else if (al && !r.alan) r.alan = al;
+      else if (su && !r.sube) { r.sube = su.sube; r.subeSinif = su.sinif; }
+    }
+    satirlar.push(topluSatirTamamla(r));
+    i = j - 1;
+  }
+  return satirlar;
+}
+function topluBaslikSatirlari(metin) {
+  const satirlar = String(metin || '').split(/\r?\n/).map(l => l.split(/[\t;]/).map(topluHucre));
+  const ad = c => c.toLocaleLowerCase('tr-TR').replace(/[^\p{L} ]/gu, '').replace(/\s+/g, ' ').trim();
+  const bul = (bas, adlar) => bas.findIndex(c => adlar.includes(c));
+  for (let hi = 0; hi < satirlar.length; hi++) {
+    const bas = satirlar[hi].map(ad);
+    const no = bul(bas, ['no', 'numara', 'okul no', 'okul numarası', 'öğrenci no', 'öğrenci numarası', 'okulno']);
+    const tam = bul(bas, ['adı soyadı', 'ad soyad', 'adı soyad', 'ad soyadı', 'adsoyad', 'adı ve soyadı', 'öğrenci', 'öğrenci adı', 'öğrenci adı soyadı', 'isim']);
+    const adi = bul(bas, ['adı', 'ad']), soyadi = bul(bas, ['soyadı', 'soyad']);
+    if (no < 0 || (tam < 0 && (adi < 0 || soyadi < 0))) continue;
+    const sinif = bul(bas, ['sınıf', 'kademe', 'sınıf düzeyi', 'seviye']);
+    const sube = bul(bas, ['şube', 'sınıf şube', 'sınıfşube', 'şubesi']);
+    const alan = bul(bas, ['alan', 'alanı']);
+    return satirlar.slice(hi + 1).map(c => {
+      const adSoyad = tam >= 0 ? c[tam] : [c[adi], c[soyadi]].filter(Boolean).join(' ');
+      if (!c[no] && !adSoyad) return null;
+      const r = { no: /^\d{1,4}$/.test(c[no] || '') ? +c[no] : null, ad: topluHucre(adSoyad) };
+      if (sinif >= 0) r.sinif = topluSinif(c[sinif]) || (topluSube(c[sinif]) || {}).sinif || null;
+      if (sube >= 0 && c[sube]) {
+        const su = topluSube(c[sube]);
+        r.sube = su ? su.sube : c[sube]; if (su) r.subeSinif = su.sinif;
+      } else if (sinif >= 0 && topluSube(c[sinif])) {
+        const su = topluSube(c[sinif]); r.sube = su.sube; r.subeSinif = su.sinif;
+      }
+      if (alan >= 0) r.alan = topluAlan(c[alan]);
+      return topluSatirTamamla(r);
+    }).filter(Boolean);
+  }
+  return [];
+}
+// Başlıklı okuma ve kayıt taraması ayrı ayrı denenir; daha çok tam satır bulan kullanılır.
+function topluOgrenciAyristir(metin) {
+  const tam = rs => rs.filter(r => r.no && r.ad && r.sinif && r.sube).length;
+  const a = topluBaslikSatirlari(metin), b = topluTokenSatirlari(metin);
+  return tam(a) >= tam(b) && a.length ? a : b;
+}
+// Her satıra durum verir: 'ekle' ya da 'atla' + neden. Defteri değiştirmez.
+function topluOgrenciPlani(satirlar, bas) {
+  const canli = (D.ogr || []).filter(o => !o.silindi);
+  const noda = new Map(canli.map(o => [String(o.no), o]));
+  const adda = new Map(canli.map(o => [topluAdAnahtari(o.ad), o]));
+  const subeler = {};
+  canli.forEach(o => { if (!subeler[o.sube]) subeler[o.sube] = { sinif: ogrenciSinifi(o), alan: o.alan, bas: o.mufredatBaslangic, yeni: false }; });
+  const gorulen = new Set();
+  return satirlar.map(r => {
+    const s = { ...r, durum: 'atla' };
+    const atla = neden => Object.assign(s, { neden });
+    if (!Number.isInteger(s.no) || s.no < 1 || s.no > 9999) return atla('Numara yok');
+    if (!s.ad || s.ad.length > 120) return atla('Ad soyad yok');
+    if (!s.sinif) return atla('Sınıf okunamadı');
+    if (s.subeSinif && s.subeSinif !== s.sinif) return atla('Sınıf ile şube uyuşmuyor');
+    if (!s.sube || s.sube.length > 40) return atla('Şube okunamadı');
+    if (gorulen.has(String(s.no))) return atla('Listede iki kez var');
+    gorulen.add(String(s.no));
+    const ayniNo = noda.get(String(s.no)), ayniAd = adda.get(topluAdAnahtari(s.ad));
+    if (ayniNo) return atla(topluAdAnahtari(ayniNo.ad) === topluAdAnahtari(s.ad) ? 'Zaten listede' : 'Bu numara ' + ayniNo.ad + ' adına kayıtlı');
+    if (ayniAd) return atla('Aynı adla kayıtlı (No ' + ayniAd.no + ')');
+    const su = subeler[s.sube];
+    const msinif = D.mufredatSinif && D.mufredatSinif[s.sube];
+    const beklenen = su ? su.sinif : [9, 10, 11, 12].includes(msinif) ? msinif : null;
+    if (beklenen && beklenen !== s.sinif) return atla(s.sube + ' şubesi ' + beklenen + '. sınıf');
+    if (s.sinif !== 12 && OKUL_SUBE_PROGRAMLARI[s.sube]) return atla(s.sube + ' hazır 12. sınıf şubesi');
+    const alan = s.alan || (su && su.alan) || (OKUL_SUBE_PROGRAMLARI[s.sube] || {}).alan || (s.sinif <= 10 ? 'SAY' : '');
+    if (!Object.hasOwn(ALAN_DERS, alan)) return atla('Alan yok');
+    s.alan = alan;
+    if (!su) subeler[s.sube] = { sinif: s.sinif, alan, bas: s.sinif < 12 ? bas : undefined, yeni: true };
+    if (s.sinif < 12) s.mufredatBaslangic = subeler[s.sube].bas || bas;
+    s.yeniSube = subeler[s.sube].yeni;
+    noda.set(String(s.no), s); adda.set(topluAdAnahtari(s.ad), s);
+    return Object.assign(s, { durum: 'ekle', neden: '' });
+  });
+}
+// 'ekle' satırlarını defterin listesine yazar; bulut yedeği sınırını aşacaksa hiçbirini eklemez.
+function topluOgrenciUygula(plan, kap) {
+  if (!rehberMi() || yalnizcaGoruntuleme()) throw new Error('Yalnızca görüntüleme.');
+  const eklenecek = plan.filter(s => s.durum === 'ekle');
+  const onceki = D.ogr.length, yeniPlanlar = [];
+  eklenecek.forEach(s => {
+    D.ogr.push({
+      no: s.no, ad: s.ad, alan: s.alan, sube: s.sube, sinif: s.sinif, ...(s.sinif < 12 ? { mufredatBaslangic: s.mufredatBaslangic } : {}),
+      kap: kap, off: [6], hedef: null, aktif: false, cikti: null,
+      maddeler: [], rutin: { once: '', ara: '', sonra: '' }
+    });
+    const r = varsayilanKonuPlaniniHazirla(s.sube, s.alan, s.sinif);
+    if (r && r.olustu) yeniPlanlar.push(s.sube);
+  });
+  const boyut = baytBoyu(JSON.stringify(D));
+  if (boyut > BULUT_YEDEK_UST_SINIR) {
+    D.ogr.length = onceki;
+    yeniPlanlar.forEach(su => { delete D.konuPlani[su]; });
+    throw new Error('Bu kadar öğrenciyle defter bulut sınırını aşıyor (' + Math.round(boyut / 1024) + ' KB). Listeyi bölerek ekleyin.');
+  }
+  return eklenecek.length;
+}
+function topluOgrenciKarti() {
+  if (yalnizcaGoruntuleme()) return '';
+  const d = EK.topluOgr;
+  let h = '<details class="kart" id="topluOgrKart" style="padding:14px 16px;margin-bottom:12px"' + (d ? ' open' : '') + '>' +
+    '<summary><b>Toplu öğrenci ekle</b></summary>' +
+    '<textarea id="topluOgrMetin" rows="6" style="width:100%;margin-top:10px;box-sizing:border-box" ' +
+    'placeholder="Myexamy öğrenci listesini ya da Excel satırlarını (No, Ad Soyad, Sınıf, Şube, Alan) buraya yapıştırın">' +
+    kacis(d && d.metin || '') + '</textarea>' +
+    '<div class="arac" style="margin-top:8px"><button class="dugme" id="topluOgrOnizle">Önizle</button></div>';
+  if (d && d.onizle) {
+    const plan = topluOgrenciPlani(topluOgrenciAyristir(d.metin), d.bas);
+    const ekle = plan.filter(s => s.durum === 'ekle'), atla = plan.length - ekle.length;
+    if (!plan.length) return h + '<p class="mini">Öğrenci satırı bulunamadı.</p></details>';
+    const sb = {};
+    ekle.forEach(s => { const x = sb[s.sube] = sb[s.sube] || { sinif: s.sinif, n: 0, yeni: s.yeniSube, bas: s.mufredatBaslangic }; x.n++; });
+    h += '<p><b>' + plan.length + '</b> satır · <b>' + ekle.length + '</b> eklenecek' + (atla ? ' · <b>' + atla + '</b> atlanacak' : '') + '</p>' +
+      (ekle.length ? '<p class="mini">' + Object.keys(sb).sort().map(k => kacis(k) + ' · ' + sb[k].sinif + '. sınıf · ' + sb[k].n + ' öğrenci' +
+        (sb[k].yeni ? ' · yeni şube' : '') + (sb[k].sinif < 12 && sb[k].bas ? ' · plan ' + ggyy(gunNo(sb[k].bas)) : '')).join('<br>') + '</p>' : '') +
+      '<div class="sarma" style="max-height:340px;overflow:auto"><table><thead><tr><th>Durum</th><th>No</th><th>Ad Soyad</th><th>Sınıf</th><th>Şube</th><th>Alan</th></tr></thead><tbody>' +
+      plan.map(s => '<tr' + (s.durum === 'ekle' ? '' : ' class="pasif"') + '><td>' +
+        (s.durum === 'ekle' ? '<span class="rozet">eklenecek</span>' : '<span class="rozet kritik">' + kacis(s.neden) + '</span>') + '</td>' +
+        '<td>' + (s.no || '—') + '</td><td>' + kacis(s.ad || '—') + '</td><td>' + (s.sinif ? s.sinif + '.' : '—') + '</td>' +
+        '<td>' + kacis(s.sube || '—') + '</td><td>' + kacis(s.alan || '—') + '</td></tr>').join('') +
+      '</tbody></table></div>' +
+      (ekle.length ? '<div class="arac" style="margin-top:10px"><button class="dugme birincil" id="topluOgrEkle">' + ekle.length + ' öğrenciyi ekle</button></div>' : '');
+  }
+  return h + '</details>';
+}
+
 function gorunumOgrenciler() {
   let h = '<div class="baslik"><h1>Öğrenciler</h1><p><b>' + kullananlar().length + '</b> öğrenci programı kullanıyor · listede <b>' +
     canliOgrenciler().length + '</b> öğrenci var.</p></div>' +
@@ -5173,6 +5346,7 @@ function gorunumOgrenciler() {
     '<span class="mini">günde</span><input id="yKap" type="number" min="1" max="12" value="6" style="width:64px">' +
     '<span class="mini">test</span>' +
     '<button class="dugme birincil" id="ogrEkle">Öğrenci ekle</button></div>' +
+    topluOgrenciKarti() +
     '<div class="kart sarma"><table><thead><tr><th>Kullanıyor</th><th>No</th><th>Ad Soyad</th><th>Şube</th><th>Sınıf</th><th>Alan</th>' +
     '<th>Günde kaç test</th><th>İzinli günler (tıkla)</th><th>Hedef tutma</th><th>Başlangıç hafızası</th><th>Çalışma ağırlığı</th><th title="Telafide bir güne en fazla kaç konu anlatımı eklenir">Telafi/gün</th><th class="sayisal">Çözülen</th>' +
     '<th class="sayisal">Ortalama</th><th class="sayisal">Bu hafta</th><th>Son çıktı</th><th></th></tr></thead><tbody>';
@@ -11202,7 +11376,7 @@ document.addEventListener('click', async ev => {
     }
     return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#yksEksikleriEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-harita-kurtar],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#topluOgrOnizle,#topluOgrEkle,#yksEksikleriEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-harita-kurtar],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     const taslak = sonucTaslaklariniAl();
@@ -11439,6 +11613,32 @@ document.addEventListener('click', async ev => {
     varsayilanKonuPlaniniHazirla(sube, alan, sinif);
     await kaydet(true); ciz();
     bilgiVer(ad + ' listeye eklendi (' + sube + '). Çıktı verdiğinizde “kullanıyor” olarak işaretlenecek.');
+    return;
+  }
+  if (t.id === 'topluOgrOnizle') {
+    const metin = (document.getElementById('topluOgrMetin') || {}).value || '';
+    if (!metin.trim()) { alert('Önce öğrenci listesini yapıştırın.'); return; }
+    const basGiris = (document.getElementById('yMufredatBaslangic') || {}).value;
+    const bas = isoTarihGecerli(basGiris) ? basGiris : isoDan(pazartesi(bugunNo()));
+    const kap = Math.max(1, Math.min(12, Math.round(+(document.getElementById('yKap') || {}).value || 6)));
+    EK.topluOgr = { metin, onizle: true, bas, kap };
+    ciz();
+    return;
+  }
+  if (t.id === 'topluOgrEkle') {
+    const d = EK.topluOgr;
+    if (!d || !d.onizle) { alert('Liste değişti; önce yeniden önizleyin.'); return; }
+    if (yalnizcaGoruntuleme()) { alert('Yalnızca görüntüleme: değişiklik kaydedilmez.'); return; }
+    const plan = topluOgrenciPlani(topluOgrenciAyristir(d.metin), d.bas);
+    const n = plan.filter(s => s.durum === 'ekle').length, atlanan = plan.length - n;
+    if (!n) { alert('Eklenecek yeni öğrenci yok.'); return; }
+    if (!confirm(n + ' öğrenci listeye eklenecek. Devam?')) return;
+    try { topluOgrenciUygula(plan, d.kap || 6); }
+    catch (e) { alert(e.message || String(e)); return; }
+    EK.topluOgr = null;
+    const tamam = await kaydet(true); ciz();
+    bilgiVer(tamam ? n + ' öğrenci listeye eklendi' + (atlanan ? ', ' + atlanan + ' satır atlandı' : '') + '. Çıktı verdiğinizde “kullanıyor” olarak işaretlenecekler.'
+      : 'Öğrenciler eklendi fakat kalıcı kayıt başarısız. Yedek indirin.');
     return;
   }
   if (t.id === 'topluSil') { EK.toplu = !EK.toplu; ciz(); return; }
@@ -11813,6 +12013,12 @@ document.addEventListener('keydown', ev => {
 });
 document.addEventListener('input', ev => {
   if (ev.target.id === 'pAra' && PENCERE) { PENCERE.arama = ev.target.value; pencereCiz(); }
+  // Yapıştırılan liste ekranda kalır; değişince eski önizlemeyle eklenmesin.
+  if (ev.target.id === 'topluOgrMetin') {
+    EK.topluOgr = { ...(EK.topluOgr || {}), metin: ev.target.value, onizle: false };
+    const dugme = document.getElementById('topluOgrEkle');
+    if (dugme) { dugme.disabled = true; dugme.title = 'Liste değişti; önce yeniden önizleyin.'; }
+  }
   // Kullanıcı adındaki boşluklar silinir; yazarken nasıl kaydedileceği gösterilir.
   if (ev.target.id === 'kaydolAd') {
     const durum = document.getElementById('kaydolDurum'), v = ev.target.value;
