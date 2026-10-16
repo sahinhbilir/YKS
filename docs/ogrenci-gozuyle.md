@@ -4,7 +4,7 @@ Rehber öğretmen bir öğrencinin adına basınca, o öğrencinin uygulamada g�
 
 ## Nerede
 
-Ad düğmesi (`ogrAdDugmesi`) şu yerlerde: ana sayfadaki “Karar bekleyen” adları (yanındaki sayı haftalar haritasını açar), Haftalık öğrenci takibi satırları, haftalık plan kartının başlığı, Denemeler ve Haftalar haritası başlıkları, Sıralamalar’daki sıralama tablosu (defterdeki öğrenciyle numara ve ad eşleşirse). Öğrenciler sayfasında ad düzenlenebilir bir kutu olduğu için yanında göz düğmesi vardır. Öğrenci kendi uygulamasında adları düz yazı olarak görür.
+Ad düğmesi (`ogrAdDugmesi`) şu yerlerde: ana sayfada bu hafta planı verilenlerin adları, Haftalık öğrenci takibi satırları, haftalık plan kartının başlığı, Denemeler ve Haftalar haritası başlıkları, Sıralamalar’daki sıralama tablosu (defterdeki öğrenciyle numara ve ad eşleşirse). Öğrenciler sayfasında ad düzenlenebilir bir kutu olduğu için yanında göz düğmesi vardır. Öğrenci kendi uygulamasında adları düz yazı olarak görür.
 
 ## Nasıl çalışır
 
