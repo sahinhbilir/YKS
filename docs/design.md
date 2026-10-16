@@ -98,10 +98,11 @@ and the start screen spans the full width (`.kabuk:has(>.ray:empty)`).
 
 ## Student navigation and home
 
-Students get a top bar (`.ray.ust`). Teachers keep the side menu.
+Students and teachers both get a top bar (`.ray.ust`), built by `ustMenu` from
+`MENU_OGRENCI` / `MENU_REHBER`. The teacher layout is described in the next section.
 
 - **YKS Tekrar Defteri** (the brand) is a button that opens the home page (`'ana'`).
-  For a teacher it opens Öğrenci takibi. On phones (≤480 px) it shortens to "YKS".
+  On phones (≤480 px) it shortens to "YKS".
 - **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Haftalar haritası,
   Sonuç gir, Karnem and Geçmiş plan kurtar (`PLAN_ALT_SEKMELER`). Hovering opens it
   with a mouse (`@media (hover:hover)`), a click toggles it on touch screens, and it
@@ -132,3 +133,39 @@ turn blue, are underlined and show "→".
   and the headings grow.
 - In a single column (≤1100 px) the chart moves above the map and keeps a 480:300
   shape.
+
+## Teacher navigation and home
+
+The teacher bar (`.ray.ust.rehber`) uses the same groups and dropdowns as the
+student's: the group name opens its page, the arrow opens the related pages.
+
+- **Haftalık plan ▾**: Sonuç girişi, Haftalar haritası, Karne, Geçmiş plan kurtar,
+  Anlaşma ve rutin.
+- **Öğrenciler ▾**: Haftalık öğrenci takibi.
+- **Konular ▾**: Konu planı, Müfredat.
+- **Denemeler ▾**: Sıralamalar.
+- **Ayarlar** on the right, then "Kaydet ve çıkış yap" and the two-line status.
+- Below 1250 px the brand shortens to "YKS" and the gaps narrow. Below 1060 px the
+  status moves to its own line under the menu. On phones the bar is two rows plus the
+  status line. A dropdown near the right edge opens leftwards (`menuSigdir`), so it
+  stays on screen.
+
+After login, after opening a cloud notebook (own, view-only or co-teacher) and on
+the brand, teachers land on the home page (`gorunumRehberAna`, tab `'ana'`). Like
+the student home, it has two cards with linked headings:
+
+- **Bu hafta** (opens Haftalık öğrenci takibi). It shows the calendar week, the
+  number of students and classes, then four numbers: Plan verildi (`o.cikti` this
+  week), PDF istedi (this week's activity), Geçen haftanın sonucu (a result in the
+  student's previous plan week) and Karar bekleyen (weeks marked "sonuç yok" on the
+  weeks map, the same check as `atlananHaftalar`). The same four columns repeat per
+  class. A class name opens that class's weekly plan, and each name under "Karar
+  bekleyen" opens that student's weeks map. The card refreshes live as student
+  activity arrives. "E-posta talepleri (n)" sits beside the heading while requests
+  wait.
+- **Deneme ortalaması** (opens Denemeler). It is drawn the same way as the student's
+  progress chart, and each point is one school exam (imported from PDF), averaged
+  over the students who took it. TYT · AYT picks the exam type. AYT adds SAY · EA ·
+  SÖZ and averages only the students of that field. "Şube" narrows it to one class.
+  A point opens Denemeler with that exam type. There is no target line.
+- In a single column (≤1100 px) the week card comes first, then the chart.

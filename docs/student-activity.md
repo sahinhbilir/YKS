@@ -1,6 +1,8 @@
 # Weekly student activity
 
-Teacher entry opens **Haftalık öğrenci takibi**, defaulting to **İşlem haftası**
+Teachers land on the home page, whose **Bu hafta** card sums up this week per class
+(see docs/design.md). Its heading, and Öğrenciler ▾ in the menu, open **Haftalık öğrenci
+takibi**, defaulting to **İşlem haftası**
 and the current Monday–Sunday week in Europe/Istanbul. Actions are grouped by when
 they happened. For example, entering September 21 results on Monday September 28
 and requesting the September 28 plan appears in the September 28 activity week.
