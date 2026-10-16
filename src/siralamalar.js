@@ -297,14 +297,31 @@ function aytSirala(rows,f){
 // keeps a full net finite. % needs a positive earlier net. Missing values sort last.
 const SIRA_OLCUT=[['net','Net'],['artis','Net artışı'],['yuzde','% artış'],['fark','Kapanan fark (log)']];
 const SIRA_UST={TYT:120,SAY:80,EA:80,'SÖZ':80,Toplam:160};
+// Ders ders sıralama ("TYT:MAT", "AYT:EDB"): o dersin neti; tam net dersin soru sayısıdır.
+const SIRA_DERS={TYT:[['TÜR','Türkçe',40],['TAR','Tarih',5],['COĞ','Coğrafya',5],['FEL','Felsefe',5],['DİN','Din Kültürü',5],['MAT','Matematik',30],['GEO','Geometri',10],['FİZ','Fizik',7],['KİM','Kimya',7],['BİY','Biyoloji',6]],
+  AYT:[['EDB','Edebiyat',24],['TAR1','Tarih-1',10],['COĞ1','Coğrafya-1',6],['TAR2','Tarih-2',11],['COĞ2','Coğrafya-2',11],['FELGR','Felsefe Grubu',12],['DİN2','Din Kültürü',6],['AMAT','Matematik',30],['AGEO','Geometri',10],['AFİZ','Fizik',14],['AKİM','Kimya',13],['ABİY','Biyoloji',13]]};
+const siraDersi=alan=>{const [o,k]=String(alan).split(':');return k&&SIRA_DERS[o]?SIRA_DERS[o].find(d=>d[0]===k)||null:null};
+const siraTyt=alan=>alan==='TYT'||String(alan).startsWith('TYT:');
+const siraUst=alan=>{const d=siraDersi(alan);return d?d[2]:SIRA_UST[alan]};
+const siraGecerli=(alan,tur)=>tur==='TYT'?alan==='TYT'||!!(siraTyt(alan)&&siraDersi(alan)):SIRALA.includes(alan)||!!(String(alan).startsWith('AYT:')&&siraDersi(alan));
 function siraNet(s,alan){
   if(!s)return null;
+  const d=siraDersi(alan);
+  // A TYT course counts when the student took TYT; an AYT course when its test was answered.
+  if(d)return siraTyt(alan)?(hasTYT(s)&&s.net[d[0]]!=null?r2(s.net[d[0]]):null):(hasAYT(s)&&attempted(s,TEST_OF[d[0]])&&s.net[d[0]]!=null?r2(s.net[d[0]]):null);
   if(alan==='TYT')return hasTYT(s)?r2(tytTotal(s)):null;
   if(alan==='Toplam')return hasAYT(s)?r2(aytTotal(s)):null;
   return took(s,alan)?r2(fnet(s,alan)):null;
 }
+// Average rows: school and each class. As in the reports' Şube box, the change is the current
+// average minus the same students' earlier average.
+function siraOrtalama(ad,rows,ust){
+  if(!rows.length)return null;
+  const simdi=mean(rows.map(r=>r.simdi)),oncekiler=rows.filter(r=>r.once!==null),once=oncekiler.length?mean(oncekiler.map(r=>r.once)):null,artis=once===null?null:r2(simdi-once);
+  return {ad,n:rows.length,simdi,once,artis,yuzde:once!==null&&once>0?artis/once*100:null,fark:once===null?null:Math.log((ust-once+1)/(ust-simdi+1))};
+}
 function siraSatirlari(cur,prev,alan,olcut){
-  const L=alan==='TYT'?cur&&cur.tyt:cur&&cur.ayt,P=prev?(alan==='TYT'?prev.tyt:prev.ayt):null,ust=SIRA_UST[alan];
+  const tyt=siraTyt(alan),L=tyt?cur&&cur.tyt:cur&&cur.ayt,P=prev?(tyt?prev.tyt:prev.ayt):null,ust=siraUst(alan);
   if(!L)return [];
   const rows=Object.values(L.students).map(s=>{
     const simdi=siraNet(s,alan);if(simdi===null)return null;
@@ -544,10 +561,14 @@ const fIsaret=(x,n=2,ek='')=>x===null?'—':(x>0?'+':'')+(n===2?f2(x):x.toFixed(
 function siraBolumu(cur,prev){
   if(!cur)return '';
   const tur=EK.srSiraTur==='AYT'&&cur.ayt?'AYT':'TYT',aytOgr=cur.ayt?Object.values(cur.ayt.students).filter(hasAYT):[];
-  const alan=tur==='TYT'?'TYT':SIRALA.includes(EK.srSiraAlan)?EK.srSiraAlan:defaultSort(aytOgr);
+  const alan=siraGecerli(EK.srSiraNet,tur)?EK.srSiraNet:tur==='TYT'?'TYT':defaultSort(aytOgr);
   const olcut=prev&&SIRA_OLCUT.some(o=>o[0]===EK.srSiraOlcut)?EK.srSiraOlcut:'net';
   const tum=siraSatirlari(cur,prev,alan,olcut),siniflar=classGroups(tum.map(r=>r.s)).map(c=>c[0]);
   const sube=siniflar.includes(EK.srSiraSube)?EK.srSiraSube:'',rows=sube?siraNumarala(tum.filter(r=>(r.s.cls||'—')===sube),olcut):tum;
+  const ust=siraUst(alan),ortalamalar=[siraOrtalama('Okul',tum,ust),...siniflar.filter(c=>!sube||c===sube).map(c=>siraOrtalama(clsShort(c),tum.filter(r=>(r.s.cls||'—')===c),ust))].filter(Boolean);
+  const netSecenek=(k,ad)=>'<option value="'+kacis(k)+'"'+(k===alan?' selected':'')+'>'+kacis(ad)+'</option>';
+  const netSec='<label>Net <select id="srSiraNet">'+(tur==='TYT'?netSecenek('TYT','TYT toplam'):'<optgroup label="Alan">'+SIRALA.map(f=>netSecenek(f,f==='Toplam'?'AYT toplam':f)).join('')+'</optgroup>')+
+    '<optgroup label="Ders">'+SIRA_DERS[tur].map(d=>netSecenek(tur+':'+d[0],d[1])).join('')+'</optgroup></select></label>';
   const sec=(ad,ozn,liste,secili)=>'<div class="yg-secim" role="group" aria-label="'+ad+'">'+liste.map(([k,etiket])=>'<button type="button" class="'+(k===secili?'secili':'')+'" aria-pressed="'+(k===secili)+'" data-'+ozn+'="'+kacis(k)+'">'+kacis(etiket)+'</button>').join('')+'</div>';
   const kim=defterOgrencisi(),secili=siraAnahtari(olcut),kolon=prev?['once','simdi','artis','yuzde','fark']:['simdi'];
   const bas={once:'Önceki',simdi:prev?'Şimdiki':'Net',artis:'Net artışı',yuzde:'% artış',fark:'Kapanan fark (log)'};
@@ -558,11 +579,13 @@ function siraBolumu(cur,prev){
   return '<section class="kart sr-panel sr-siralama" aria-labelledby="srSiraBaslik"><div class="sr-onizleme-bas"><h2 id="srSiraBaslik">Sıralama</h2><span class="mini">'+
       kacis((prev?prev.name+' → ':'')+cur.name)+' · '+rows.length+' öğrenci</span></div>'+
     '<div class="arac sr-sira-secim">'+sec('Oturum','sr-sira-tur',[['TYT','TYT']].concat(cur.hasAYT?[['AYT','AYT']]:[]),tur)+
-      (tur==='AYT'?sec('Alan','sr-sira-alan',SIRALA.map(f=>[f,f]),alan):'')+
+      netSec+
       (prev?sec('Sırala','sr-sira-olcut',SIRA_OLCUT,olcut):'')+
       (siniflar.length>1?'<label>Şube <select id="srSiraSube"><option value="">Tümü</option>'+siniflar.map(c=>'<option value="'+kacis(c)+'"'+(c===sube?' selected':'')+'>'+kacis(clsShort(c))+'</option>').join('')+'</select></label>':'')+'</div>'+
     (rows.length?'<div class="dn-scroll"><table class="sr-sira-tablo olcut-'+olcut+'"><thead><tr><th scope="col">#</th><th scope="col">Öğrenci</th><th scope="col" class="k-sube">Şube</th>'+
       kolon.map(k=>'<th scope="col" class="k-'+k+(k===secili?' secili':'')+'">'+bas[k]+'</th>').join('')+'</tr></thead><tbody>'+
+      ortalamalar.map((o,i)=>'<tr class="sr-ort'+(i===ortalamalar.length-1?' son':'')+'"><td></td><td><b>'+kacis(o.ad)+' ortalaması</b> <span class="mini">'+o.n+' öğrenci</span></td><td class="k-sube"></td>'+
+        kolon.map(k=>hucre(o,k)).join('')+'</tr>').join('')+
       rows.map(r=>{const si=kim(r.s);return '<tr><td>'+(r.sira===null?'—':r.sira)+'</td><td><span class="mini">'+kacis(r.s.no)+'</span> '+
         (si===undefined?kacis(r.s.name):ogrAdDugmesi(si,r.s.name))+'</td><td class="k-sube">'+kacis(clsShort(r.s.cls))+'</td>'+kolon.map(k=>hucre(r,k)).join('')+'</tr>'}).join('')+
       '</tbody></table></div>':'<p class="mini">Bu seçimde öğrenci yok.</p>')+'</section>';
@@ -633,8 +656,8 @@ async function pdfEkle(files){
 document.addEventListener('click',async ev=>{
   const el=ev.target.closest?.('button');if(!el||EK.sekme!=='siralamalar'||!rehberMi())return;
   if(el.dataset.srOnizle){onizle(el.dataset.srOnizle);return}
-  if(el.dataset.srSiraTur||el.dataset.srSiraAlan||el.dataset.srSiraOlcut){
-    const [k,v]=el.dataset.srSiraTur?['srSiraTur',el.dataset.srSiraTur]:el.dataset.srSiraAlan?['srSiraAlan',el.dataset.srSiraAlan]:['srSiraOlcut',el.dataset.srSiraOlcut];
+  if(el.dataset.srSiraTur||el.dataset.srSiraOlcut){
+    const [k,v]=el.dataset.srSiraTur?['srSiraTur',el.dataset.srSiraTur]:['srSiraOlcut',el.dataset.srSiraOlcut];
     EK[k]=v;yenidenCiz();document.querySelector('[data-'+k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())+'="'+v+'"]')?.focus();return}
   if(ISLEM||!(el.dataset.srIndir||el.dataset.srSil||el.id==='srHepsi'))return;
   ISLEM=true;el.disabled=true;
@@ -655,7 +678,7 @@ document.addEventListener('change',async ev=>{
     ISLEM=true;try{durum(await pdfEkle(files))}catch(e){durum('PDF eklenemedi: '+e.message)}finally{ISLEM=false}
     yenidenCiz();return;
   }
-  if(el.id==='srSiraSube'){EK.srSiraSube=el.value;yenidenCiz();document.getElementById('srSiraSube')?.focus();return}
+  if(el.id==='srSiraSube'||el.id==='srSiraNet'){EK[el.id]=el.value;yenidenCiz();document.getElementById(el.id)?.focus();return}
   if(el.dataset&&el.dataset.srTarih!==undefined){
     const {veri}=oku(),s=veri&&veri.sinavlar.find(x=>x.id===el.dataset.srTarih),m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(el.value||'');
     if(!s||!m||ISLEM||izleme()){yenidenCiz();return}
@@ -677,7 +700,7 @@ document.addEventListener('change',async ev=>{
     yenidenCiz();document.getElementById(id)?.focus();
   }
 });
-return {pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
+return {pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
   get onbellek(){return ONBELLEK}};
 })();
 function siralamaPdfCoz(sayfalar,boylar){return SIRALAMA.pdfCoz(sayfalar,boylar)}

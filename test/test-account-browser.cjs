@@ -133,7 +133,7 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    const menu=page.locator('#planMenusu'),ok=page.locator('#ray .menu-ac');
    assert.equal(await menu.isVisible(),false,'menu folded');
    await ok.hover();assert.equal(await menu.isVisible(),true,'hovering the arrow opens it');
-   assert.deepEqual(await menu.locator('button').allTextContents(),['Haftalar haritası','Sonuç gir','Karnem','Geçmiş plan kurtar']);
+   assert.deepEqual(await menu.locator('button').allTextContents(),['Haftalar haritası','Sonuç gir']);
    await page.mouse.move(width-20,780);assert.equal(await menu.isVisible(),false,'leaving closes it');
    await ok.click();await page.mouse.move(width-20,780);
    assert.equal(await menu.isVisible(),true,'a click keeps it open');assert.equal(await ok.getAttribute('aria-expanded'),'true');

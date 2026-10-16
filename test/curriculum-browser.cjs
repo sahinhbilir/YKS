@@ -112,7 +112,9 @@ fs.mkdirSync(out,{recursive:true});
    assert.equal(await page.evaluate(()=>D.ogr[1].sinif),11);
    assert.equal(await page.evaluate(()=>JSON.stringify(D.konuPlani['12-A'])===window.oldPlan),true);
    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[1].sinif),11);
-   await page.locator('[aria-controls="konularMenusu"]').click();await page.locator('#konularMenusu [data-sekme="konuplani"]').click();await page.locator('#subeSec').selectOption('12-A');
+   // A class's curriculum opens from Müfredat (top right) → Tasarlanmış müfredatlar.
+   await page.locator('#ray > [data-sekme="mufredat"]').click();await page.locator('[data-mufredat-sube="12-A"]').click();
+   assert.equal(await page.locator('#subeSec').inputValue(),'12-A');
    await page.locator('#yksEksikleriEkle').click();await page.waitForFunction(()=>yksPlanEksikleri('12-A').length===0,null,{timeout:5000});
    assert.deepEqual(errors,[]);await context.close();
   }

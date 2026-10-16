@@ -60,35 +60,22 @@ function studentState(extra) {
   studentState();
   const roleView = run(`(() => {
     EK.sekme = 'anlasma'; cizIc();
-    return { tabs: SEKMELER(), section: document.getElementById('ana').innerHTML, selected: EK.sekme };
+    return { tabs: SEKMELER().map(x => x[0]), selected: EK.sekme, ayarlar: gorunumAyarlar() };
   })()`);
-  assert(roleView.tabs.some(x => x[0] === 'harita') && !roleView.tabs.some(x => x[0] === 'anlasma') && run('gorunumAyarlar()').includes('data-sekme="anlasma"'), 'Haftalar haritası görünür, kişisel anlaşma gelişmiş ayarlardan erişilebilir olmalı.');
-  assert(roleView.selected === 'anlasma', 'Öğrenci anlaşma sekmesinden plana yönlendirildi.');
-  assert(roleView.section.includes('id="oMaddeler"') && roleView.section.includes('class="oRutin"'),
-    'Öğrencinin kişisel madde/rutin alanları yok.');
-  assert(!roleView.section.includes('id="aBaslik"') && !roleView.section.includes('id="aGiris"') &&
-    !roleView.section.includes('id="aMaddeler"'), 'Sınıfın ortak alanları öğrenciye açıldı.');
-
-  run(`D.anlasma.baslik='Öğretmen başlığı'; D.anlasma.giris='Ortak giriş'; D.anlasma.maddeler=['Ortak madde'];`);
-  nodes.aAktif = Object.assign(element(), { id: 'aAktif', checked: false });
-  nodes.oMaddeler = Object.assign(element(), { id: 'oMaddeler', value: 'Kendi sözüm\n\nİkinci söz' });
-  nodes.__routines = [
-    Object.assign(element(), { dataset: { alan:'once' }, value:'Masayı hazırla' }),
-    Object.assign(element(), { dataset: { alan:'ara' }, value:'Su iç' }),
-    Object.assign(element(), { dataset: { alan:'sonra' }, value:'Özet çıkar' })
-  ];
-  const saveTarget = Object.assign(element(), {
-    id: 'anlasmaKaydet',
-    closest(selector) { return selector.indexOf('#anlasmaKaydet') >= 0 ? this : null; }
-  });
-  await listeners.click[0]({ target: saveTarget });
-  const savedAgreement = run(`({ a:JSON.parse(JSON.stringify(D.anlasma)), o:JSON.parse(JSON.stringify(D.ogr[0])) })`);
-  assert(savedAgreement.a.baslik === 'Öğretmen başlığı' && savedAgreement.a.giris === 'Ortak giriş' &&
-    savedAgreement.a.maddeler.join('|') === 'Ortak madde', 'Öğrenci sınıfın ortak anlaşmasını değiştirdi.');
-  assert(savedAgreement.a.aktif === false, 'Öğrencinin çıktı bölümü tercihi kaydedilmedi.');
-  assert(savedAgreement.o.maddeler.join('|') === 'Kendi sözüm|İkinci söz' &&
-    savedAgreement.o.rutin.once === 'Masayı hazırla' && savedAgreement.o.rutin.ara === 'Su iç' &&
-    savedAgreement.o.rutin.sonra === 'Özet çıkar', 'Öğrencinin kişisel anlaşma/rutini kaydedilmedi.');
+  // The agreement and routine are handwritten on the printout only: no page, no Ayarlar link.
+  assert(roleView.tabs.includes('harita') && !roleView.tabs.includes('anlasma') && !roleView.tabs.includes('rapor') &&
+    !roleView.ayarlar.includes('data-sekme="anlasma"'), 'Haftalar haritası görünür; anlaşma ve karne sayfası yok.');
+  assert(roleView.selected === 'ana', 'A removed page falls back to the main screen.');
+  const blank = run(`(() => {
+    D.anlasma.aktif = false; D.anlasma.maddeler = ['Ortak madde']; D.anlasma.baslik = 'Eski başlık';
+    D.ogr[0].maddeler = ['Kendi sözüm']; D.ogr[0].rutin = { once: 'Masayı hazırla', ara: 'Su iç', sonra: 'Özet çıkar' };
+    const hb = buHafta(0), p = planHesapla(0, hb);
+    return { ekran: planTablosu(0, hb, p, false, false), kagit: yazdirSayfa(0, hb) };
+  })()`);
+  for (const [ad, html] of Object.entries(blank)) {
+    assert(html.includes('HAFTALIK ÇALIŞMA ANLAŞMASI') && html.includes('Ders çalışmadan önce') && html.includes('İmza'), ad + ': agreement box missing');
+    assert(!/Ortak madde|Kendi sözüm|Masayı hazırla|Su iç|Özet çıkar|Eski başlık/.test(html), ad + ': typed agreement text must not print');
+  }
 
   studentState(`
     const hb0 = gunNo('2026-09-07');

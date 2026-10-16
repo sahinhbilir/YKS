@@ -22,7 +22,8 @@ Sınavlar tablosundaki **Tarih** alanından bir sınavın tarihi düzeltilir (ö
 
 **Sıralama** kartı, Karşılaştır’da seçilen iki sınavın öğrencilerini sayfada sıralar (PDF gerekmez):
 
-- **TYT** ya da **AYT**; AYT’de **SAY · EA · SÖZ · Toplam** (varsayılan, en çok öğrencinin girdiği alan). Alan neti, alanın iki testi de cevaplanmışsa sayılır (raporlardaki kural).
+- **TYT** ya da **AYT** ve **Net** listesi: TYT’de TYT toplamı ya da tek bir ders (Türkçe, Tarih, Coğrafya, Felsefe, Din Kültürü, Matematik, Geometri, Fizik, Kimya, Biyoloji); AYT’de **SAY · EA · SÖZ · AYT toplam** (varsayılan, en çok öğrencinin girdiği alan) ya da tek bir ders (Edebiyat, Tarih-1, Coğrafya-1, Tarih-2, Coğrafya-2, Felsefe Grubu, Din Kültürü, Matematik, Geometri, Fizik, Kimya, Biyoloji). Alan neti, alanın iki testi de cevaplanmışsa sayılır (raporlardaki kural); AYT dersi, o dersin testi cevaplanmışsa sayılır. Ders sıralamasında tam net dersin soru sayısıdır (ör. TYT Matematik 30).
+- Tablonun başında **ortalama** satırları: okul (listedeki bütün öğrenciler), sonra her şube (şube seçiliyse yalnızca o şube). Değişim, raporlardaki Şube kutusu gibi şimdiki ortalama − aynı öğrencilerin önceki ortalamasıdır.
 - **Sırala:** **Net** (şimdiki net), **Net artışı** (şimdiki − önceki), **% artış** ((şimdiki − önceki) / önceki; önceki net 0 ya da altındaysa yok), **Kapanan fark (log)**: `ln((tam − önceki + 1) / (tam − şimdiki + 1))`. Tam net TYT’de 120, alanlarda 80, AYT toplamda 160’tır. Tam nete yakın artış daha değerlidir; +1 tam nette sonucu sonlu tutar. % artış ile kapanan fark aynı sırayı vermez: 40→50 %25 artış ama küçük bir kapanan fark, 100→110 %10 artış ama büyük bir kapanan farktır.
 - Eşit değerler aynı sırayı alır (1, 2, 2, 4); önceki sınavda sonucu olmayanlar artış ölçütlerinde sonda ve sırasızdır.
 - **Şube** seçilirse sıra yalnızca o şubede verilir.

@@ -103,8 +103,9 @@ Students and teachers both get a top bar (`.ray.ust`), built by `ustMenu` from
 
 - **YKS Tekrar Defteri** (the brand) is a button that opens the home page (`'ana'`).
   On phones (≤480 px) it shortens to "YKS".
-- **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Haftalar haritası,
-  Sonuç gir, Karnem and Geçmiş plan kurtar (`PLAN_ALT_SEKMELER`). Hovering opens it
+- **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Haftalar haritası
+  and Sonuç gir (`PLAN_ALT_SEKMELER`). Geçmiş plan kurtar opens from a red week on the
+  map; there is no Karnem (its FSRS course calibration moved to Ayarlar). Hovering opens it
   with a mouse (`@media (hover:hover)`), a click toggles it on touch screens, and it
   opens on keyboard focus. Esc or a click elsewhere closes it, and so does choosing
   a page. The group is highlighted while one of its pages is open.
@@ -139,12 +140,14 @@ turn blue, are underlined and show "→".
 The teacher bar (`.ray.ust.rehber`) uses the same groups and dropdowns as the
 student's: the group name opens its page, the arrow opens the related pages.
 
-- **Haftalık plan ▾**: Sonuç girişi, Haftalar haritası, Karne, Geçmiş plan kurtar,
-  Anlaşma ve rutin.
+- **Haftalık plan ▾**: Sonuç girişi, Haftalar haritası.
 - **Öğrenciler ▾**: Haftalık öğrenci takibi.
-- **Konular ▾**: Konu planı, Müfredat.
 - **Denemeler ▾**: Sıralamalar.
-- **Ayarlar** on the right, then "Kaydet ve çıkış yap" and the two-line status.
+- **Müfredat** and **Ayarlar** on the right, then "Kaydet ve çıkış yap" and the
+  two-line status. On phones (≤520 px) the logout button reads "Çıkış" (its
+  accessible name stays "Kaydet ve çıkış yap").
+- Pages outside the menu mark where they open from (`MENU_BAGLI`): a class's
+  curriculum and Konular mark Müfredat; Geçmiş plan kurtar marks Haftalar haritası.
 - Below 1250 px the brand shortens to "YKS" and the gaps narrow. Below 1060 px the
   status moves to its own line under the menu. On phones the bar is two rows plus the
   status line. A dropdown near the right edge opens leftwards (`menuSigdir`), so it
@@ -174,3 +177,33 @@ the student home, it has two cards with linked headings:
 A student's name anywhere in the teacher pages opens that student's own screens in an
 isolated frame ("Öğrenci gözüyle"); under "Karar bekleyen" the name opens the student's
 view and the number beside it opens the weeks map. See docs/ogrenci-gozuyle.md.
+
+## Müfredat (teacher)
+
+One page at the top right, with two tabs:
+
+- **Tasarlanmış müfredatlar**: one row per class (from students, timetables and
+  existing plans): class, grade, fields, students, and the size of its curriculum.
+  A row opens that class's curriculum, titled **Özel tasarlanmış müfredat** (the
+  former Konu planı: topics per course and week, add / delete / move / extend). It
+  links back to Müfredat and to **Konular ve işleniş tarihleri** (the former Konular
+  page). **+ Kendi müfredatını tasarla** creates a curriculum for a class code from
+  the MEB suggestion for a grade and field, or as a copy of another class's; a class
+  without students keeps the chosen grade (`D.mufredatSinif`). A view-only teacher
+  sees the list without the button.
+- **MEB müfredatı**: the official programme per grade (what students see as Müfredat).
+
+## Weeks map colours (teacher)
+
+The same rule as the student map: a past week whose plan was saved (printed or
+downloaded; `elle.sabit`) but has no result is **grey** and offers **Nasıl geçti?**; a
+past week with no plan at all is **red** ("plan verilmedi") and offers **Planı
+kurtar**, which opens past-plan recovery for that student and week. Only grey weeks
+count as "Karar bekleyen".
+
+## Printed agreement and routine
+
+The weekly agreement ("Haftalık çalışma anlaşması") and the three routine boxes are
+filled in by hand on the printout: fixed headings and empty lines on the screen
+preview and on paper. There is no page to type them; text typed in older notebooks is
+not printed.
