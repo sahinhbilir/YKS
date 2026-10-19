@@ -197,12 +197,16 @@ the student home, it has two cards with linked headings:
 - **Deneme ortalaması** (opens Denemeler). It is drawn the same way as the student's
   progress chart, and each point is one school exam (imported from PDF), averaged
   over the students who took it. TYT · AYT picks the exam type. AYT adds SAY · EA ·
-  SÖZ and averages only the students of that field. "Şube" narrows it to one class.
+  SÖZ and averages only the students of that field. Grades never mix: the chart shows
+  one grade at a time (12 by default); "Sınıf" appears when more than one grade has
+  school exams. A student's grade is `sinif`, else the class name ("11/A"), else 12.
+  "Şube" narrows it to one class of that grade.
   **Grup** draws the average of the top or bottom 20, 40 or 60 % instead of everyone:
   *Her denemede* ranks the students within each exam; *Genel ortalamaya göre* ranks
   them once by their average over the shown exams and keeps that group. **Hedef**
   sets the teacher's target line (only teachers see it; `D.denemeOrtHedef`, per exam
-  type, with a class override that otherwise shows the school's target). A point
+  type and grade: `TYT`, `AYT:SAY` for grade 12, `11:TYT` for others; a class override
+  otherwise shows its grade's target). A point
   opens Denemeler with that exam type. The same chart opens the teacher's Denemeler
   page, above the selected student's exams.
 - In a single column (≤1100 px) the week card comes first, then the chart.

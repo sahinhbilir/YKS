@@ -43,6 +43,18 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.locator('#ana section[aria-label="Deneme ortalaması"]').waitFor();
    assert.equal(await page.locator('#ana section[aria-label="Deneme ortalaması"] .yg-hedef').count(),1,'same chart, same target on Denemeler');
    assert(await genis(),'Denemeler fits at '+width);
+   // Grades never mix: an 11th grader's exam is under "11. sınıf" only; 12 stays the default.
+   await page.evaluate(()=>{const o=D.ogr[0];D.ogr.push({...o,ad:'SENTETİK ON BİR',no:99,sube:'11-A',sinif:11,cikti:null,
+     denemeOkul:o.denemeOkul.map(r=>({...r,id:r.id+'-11',dersler:r.dersler.map(d=>({...d,dogru:d.kod==='turkce'?2:0}))}))});EK.anaSube='';ciz();});
+   const ort=()=>page.evaluate(()=>denemeOrtalamaVerisi().noktalar.map(n=>n.v));
+   const ilk=await ort();
+   await page.locator('#ana #dnOrtSinif').selectOption('11');
+   assert.deepEqual(await ort(),[2,2],'the 11th grade alone');
+   assert.equal(await page.locator('#ana #dnOrtSinif').inputValue(),'11');
+   await page.locator('#ana #dnOrtSinif').selectOption('12');
+   assert.deepEqual(await ort(),ilk,'the 12th grade is unchanged by the 11th grader');
+   assert(await genis(),'grade selector fits at '+width);
+   await page.evaluate(()=>{D.ogr.pop();delete EK.anaSinif;ciz();});
    // 2) Weekly tracking counts "Plan verildi" like the main screen.
    await page.locator('#ray button.marka').click();
    await page.getByRole('heading',{name:'Bu hafta'}).getByRole('button').click();

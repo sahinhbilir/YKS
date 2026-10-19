@@ -267,6 +267,38 @@ check('class average: top/bottom groups per exam or by overall average, teacher 
   assert(sayfa.indexOf('aria-label="Deneme ortalaması"') > 0 && sayfa.indexOf('aria-label="Deneme ortalaması"') < sayfa.indexOf('data-dn-tur="TYT"'));
 });
 
+check('class average never mixes grades: one grade at a time, 12 by default, each with its own target', () => {
+  run(`(() => {
+    const ders = n => DENEME_DERSLER.TYT.map(d => ({kod:d[0],soru:d[2],dogru:d[0]==='turkce'?n:0,yanlis:0}));
+    const k = (id, n) => ({id,ad:'Deneme 1',tarih:'2026-10-04',tur:'TYT',oturum:'TYT',brans:'',alan:'SAY',dersler:ders(n),sure:null,puan:null,ts:1});
+    const o = (i, sube, sinif, n) => ({ad:'S'+i, no:i+1, sube, ...(sinif ? {sinif} : {}), alan:'SAY', kap:6, off:[6], aktif:true, denemeOkul:[k('p:'+i, n)]});
+    // The same exam name and date in both grades. One 12th grader has no grade on record (an older
+    // notebook: counts as 12); one 11th grader has it only in the class name "11/B".
+    D.ogr = [o(0,'12-A',12,30), o(1,'201',0,20), o(2,'11-A',11,10), o(3,'11/B',0,6),
+      {ad:'S4', no:5, sube:'10-A', sinif:10, alan:'SAY', kap:6, off:[6], aktif:true}];   // no exams: no 10th-grade option
+    EK.anaDenemeTur='TYT'; EK.anaSube=''; EK.anaGrup=''; delete EK.anaSinif;
+    D.denemeOrtHedef={TYT:{'':24},'11:TYT':{'':12}};
+  })()`);
+  const veri = () => JSON.parse(run('JSON.stringify((v => ({sinif:v.sinif, siniflar:v.siniflar, sube:v.sube, hedef:v.hedef, n:v.noktalar.map(n => [n.v, n.r.ad])}))(denemeOrtalamaVerisi()))'));
+  assert.deepEqual(veri(), {sinif:12, siniflar:[12, 11], sube:'', hedef:24, n:[[25, 'Deneme 1 · 2 öğrenci ortalaması']]}, '12th grade only, not (30+20+10+6)/4');
+  let h = run('denemeOrtalamaGrafigi()');
+  assert.match(h, /<select id="dnOrtSinif"><option value="12" selected>12\. sınıf<\/option><option value="11">11\. sınıf<\/option><\/select>/);
+  assert.deepEqual([...h.match(/<select id="dnOrtSube">(.*?)<\/select>/)[1].matchAll(/value="([^"]*)"/g)].map(m => m[1]), ['', '12-A', '201'], "12th grade's classes only");
+  assert.match(h, /<small>TYT · 12\. sınıf<\/small>/);
+  run("EK.anaSinif=11");
+  assert.deepEqual(veri(), {sinif:11, siniflar:[12, 11], sube:'', hedef:12, n:[[8, 'Deneme 1 · 2 öğrenci ortalaması']]}, "11th grade with its own target");
+  run("EK.anaSube='12-A'"); assert.equal(veri().sube, '', "another grade's class is ignored");
+  run("EK.anaSube='11/B'"); assert.deepEqual(veri().n.map(x => x[0]), [6]);
+  run("EK.anaSube='';EK.anaSinif=9"); assert.equal(veri().sinif, 12, 'a grade without exams falls back to the top grade');
+  // A target saved for the 11th grade is kept through a load; an unknown grade prefix is dropped.
+  run("D.denemeOrtHedef={TYT:{'':24},'11:TYT':{'':12,'11-A':14},'13:TYT':{'':5}};veriyiHazirla(D)");
+  assert.deepEqual(JSON.parse(run('JSON.stringify(D.denemeOrtHedef)')), {TYT:{'':24}, '11:TYT':{'':12,'11-A':14}});
+  // One grade only: no grade selector, and the label stays "okul".
+  run("D.ogr.forEach(o => { o.sinif = 12; }); delete EK.anaSinif");
+  h = run('denemeOrtalamaGrafigi()');
+  assert.doesNotMatch(h, /dnOrtSinif/); assert.match(h, /<small>TYT · okul<\/small>/);
+});
+
 (async () => {
   for (const [name, fn] of checks) {
     reset();

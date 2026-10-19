@@ -1976,11 +1976,12 @@ function veriyiHazirla(y) {
   // Görünümde "undefined" üretmek yerine alanları burada tek seferde normalleştir;
   // bilinmeyen alanları geriye uyum için koru.
   if (D.mufredatSinif !== undefined && (!D.mufredatSinif || typeof D.mufredatSinif !== 'object' || Array.isArray(D.mufredatSinif))) delete D.mufredatSinif;
-  // Öğretmenin deneme ortalaması hedefleri: {"TYT"|"AYT:SAY"…: {"": okul, şube: şube}}; bozuk değer atılır.
+  // Öğretmenin deneme ortalaması hedefleri: {"TYT"|"AYT:SAY"… (12. sınıf) ya da "11:TYT"… (diğer sınıflar):
+  // {"": sınıf, şube: şube}}; bozuk değer atılır.
   if (D.denemeOrtHedef !== undefined) {
     const h = D.denemeOrtHedef, temiz = {};
     if (h && typeof h === 'object' && !Array.isArray(h)) Object.keys(h).forEach(k => {
-      if (!/^(TYT|AYT:(SAY|EA|SÖZ))$/.test(k) || !h[k] || typeof h[k] !== 'object' || Array.isArray(h[k])) return;
+      if (!/^((9|10|11):)?(TYT|AYT:(SAY|EA|SÖZ))$/.test(k) || !h[k] || typeof h[k] !== 'object' || Array.isArray(h[k])) return;
       Object.keys(h[k]).forEach(su => { const v = h[k][su]; if (Number.isFinite(v) && v >= 0 && v <= 120) (temiz[k] = temiz[k] || {})[su] = v; });
     });
     if (Object.keys(temiz).length) D.denemeOrtHedef = temiz; else delete D.denemeOrtHedef;
@@ -13414,12 +13415,21 @@ function denemeYolGrafigi(si=EK.ogr) {
 // AYT, seçilen alandaki öğrencilerin ortalamasıdır; şube seçilirse yalnızca o şube. Grup seçilirse
 // üst ya da alt %20/40/60: her denemede o denemenin sıralamasıyla ya da bütün denemelerin
 // ortalamasıyla belirlenen sabit grup. Hedef çizgisi yalnızca öğretmenindir (D.denemeOrtHedef).
+// Sınıf düzeyleri karışmaz: grafik bir seferde tek sınıfı (varsayılan en üst sınıf) gösterir.
 function denemeOrtalamaSecimi() {
   if(EK.anaDenemeTur!=='AYT')return {tur:'TYT',anahtar:'TYT',ust:DENEME_YOL_UST.TYT,ad:'TYT',hedefYok:true};
   const alan=DENEME_ALAN[EK.anaDenemeAlan]?EK.anaDenemeAlan:'SAY';
   return {tur:'AYT',anahtar:'AYT',ust:DENEME_YOL_UST.AYT,ad:'AYT '+alan,alan,hedefYok:true};
 }
-const denemeOrtalamaSubeleri=()=>[...new Set(canliOgrenciler().map(si=>D.ogr[si].sube).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
+// Öğrencinin sınıf düzeyi: kayıttaki sınıf; yoksa şube adından ("11/A", "301 11/A"), o da yoksa 12.
+function denemeOrtSinifi(o) {
+  const s=Number(o.sinif);
+  return [9,10,11,12].includes(s)?s:(topluSube(o.sube || '') || {}).sinif || 12;
+}
+// Okul denemesi olan sınıf düzeyleri, büyükten küçüğe.
+const denemeOrtSiniflari=()=>[...new Set(canliOgrenciler().filter(si=>(D.ogr[si].denemeOkul || []).some(r=>!r.silindi)).map(si=>denemeOrtSinifi(D.ogr[si])))].sort((a,b)=>b-a);
+function denemeOrtalamaSinifi() { const l=denemeOrtSiniflari();return l.includes(EK.anaSinif)?EK.anaSinif:(l[0] || 12); }
+const denemeOrtalamaSubeleri=(sinif=denemeOrtalamaSinifi())=>[...new Set(canliOgrenciler().filter(si=>denemeOrtSinifi(D.ogr[si])===sinif).map(si=>D.ogr[si].sube).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
 const DENEME_ORT_GRUPLAR=[['','Tüm öğrenciler'],['ust20','Üst %20'],['ust40','Üst %40'],['ust60','Üst %60'],['alt60','Alt %60'],['alt40','Alt %40'],['alt20','Alt %20']];
 function denemeOrtalamaGrubu() {
   const g=DENEME_ORT_GRUPLAR.find(x=>x[0] && x[0]===EK.anaGrup);
@@ -13430,20 +13440,22 @@ function denemeOrtGrubunuAl(degerler,grup) {
   const s=[...degerler].sort((a,b)=>b.v-a.v||a.si-b.si),n=Math.max(1,Math.ceil(s.length*grup.oran));
   return grup.yon==='ust'?s.slice(0,n):s.slice(-n);
 }
-const denemeOrtHedefAnahtari=secim=>secim.tur==='AYT'?'AYT:'+secim.alan:'TYT';
-// Okulun hedefi ve şubenin kendi hedefi; şubenin yoksa okulunki geçerlidir.
-function denemeOrtHedefi(secim,sube) {
-  const h=((D.denemeOrtHedef || {})[denemeOrtHedefAnahtari(secim)]) || {},sayi=v=>Number.isFinite(v)?v:null;
+// 12. sınıfın hedefi "TYT" / "AYT:SAY" anahtarında kalır; diğer sınıflarınki "11:TYT" gibi ayrıdır.
+const denemeOrtHedefAnahtari=(secim,sinif=12)=>(sinif===12?'':sinif+':')+(secim.tur==='AYT'?'AYT:'+secim.alan:'TYT');
+// Sınıfın (okulun) hedefi ve şubenin kendi hedefi; şubenin yoksa sınıfınki geçerlidir.
+function denemeOrtHedefi(secim,sube,sinif=12) {
+  const h=((D.denemeOrtHedef || {})[denemeOrtHedefAnahtari(secim,sinif)]) || {},sayi=v=>Number.isFinite(v)?v:null;
   const okul=sayi(h['']),kendi=sube?sayi(h[sube]):okul;
   return {okul,kendi,deger:kendi ?? okul};
 }
 function denemeOrtalamaVerisi() {
   const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
   if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return null;
-  const secim=denemeOrtalamaSecimi(),sube=denemeOrtalamaSubeleri().includes(EK.anaSube)?EK.anaSube:'',grup=denemeOrtalamaGrubu(),sinavlar=new Map();
+  const secim=denemeOrtalamaSecimi(),siniflar=denemeOrtSiniflari(),sinif=denemeOrtalamaSinifi();
+  const sube=denemeOrtalamaSubeleri(sinif).includes(EK.anaSube)?EK.anaSube:'',grup=denemeOrtalamaGrubu(),sinavlar=new Map();
   canliOgrenciler().forEach(si=>{
     const o=D.ogr[si];
-    if(sube && o.sube!==sube || secim.tur==='AYT' && o.alan!==secim.alan)return;
+    if(denemeOrtSinifi(o)!==sinif || sube && o.sube!==sube || secim.tur==='AYT' && o.alan!==secim.alan)return;
     (o.denemeOkul || []).filter(r=>!r.silindi && r.tur===secim.tur).forEach(r=>{
       const k=denemeKimligi(r),x=sinavlar.get(k) || {r:{id:'o:'+secim.tur+':'+k,ad:r.ad,tarih:r.tarih,tur:r.tur},g:gunNo(r.tarih),degerler:[]};
       x.degerler.push({si,v:denemeToplam(r,secim.alan)});sinavlar.set(k,x);
@@ -13466,24 +13478,27 @@ function denemeOrtalamaVerisi() {
     return {r:{...x.r,ad:x.r.ad+' · '+d.length+' öğrenci ortalaması'+(grup?' ('+grup.ad+')':'')},g:x.g,...(x.erken?{erken:true}:{}),
       v:Math.round(d.reduce((t,y)=>t+y.v,0)/d.length*100)/100};
   }).filter(Boolean);
-  const hedef=denemeOrtHedefi(secim,sube).deger,degerler=noktalar.map(n=>n.v);
-  return {bas,son,secim,sube,grup,noktalar,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
+  const hedef=denemeOrtHedefi(secim,sube,sinif).deger,degerler=noktalar.map(n=>n.v);
+  return {bas,son,secim,sinif,siniflar,sube,grup,noktalar,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
 }
 function denemeOrtalamaGrafigi() {
   const v=denemeOrtalamaVerisi();if(!v)return '';
-  const {secim,sube,grup}=v,subeler=denemeOrtalamaSubeleri(),h=denemeOrtHedefi(secim,sube);
+  const {secim,sinif,siniflar,sube,grup}=v,subeler=denemeOrtalamaSubeleri(sinif),h=denemeOrtHedefi(secim,sube,sinif);
+  const kapsam=sube || (siniflar.length>1?sinif+'. sınıf':'okul');
   denemeYolSigdirPlanla();
   return '<section class="kart dn-yol" aria-label="Deneme ortalaması"><div class="dn-yol-bas"><div class="yg-secim" role="group" aria-label="Grafikte göster">'+
     ['TYT','AYT'].map(k=>'<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-ort-tur="'+k+'">'+k+'</button>').join('')+'</div>'+
     (secim.tur==='AYT'?'<div class="yg-secim" role="group" aria-label="Alan">'+Object.keys(DENEME_ALAN).map(a=>
       '<button type="button" class="'+(secim.alan===a?'secili':'')+'" aria-pressed="'+(secim.alan===a)+'" data-dn-ort-alan="'+a+'">'+a+'</button>').join('')+'</div>':'')+
+    (siniflar.length>1?'<label class="yg-brans">Sınıf <select id="dnOrtSinif">'+siniflar.map(s=>
+      '<option value="'+s+'"'+(s===sinif?' selected':'')+'>'+s+'. sınıf</option>').join('')+'</select></label>':'')+
     (subeler.length>1?'<label class="yg-brans">Şube <select id="dnOrtSube"><option value="">Tümü</option>'+subeler.map(su=>
       '<option value="'+kacis(su)+'"'+(su===sube?' selected':'')+'>'+kacis(su)+'</option>').join('')+'</select></label>':'')+
     '<label class="yg-brans">Grup <select id="dnOrtGrup">'+DENEME_ORT_GRUPLAR.map(([k,ad])=>'<option value="'+k+'"'+((grup?grup.kod:'')===k?' selected':'')+'>'+ad+'</option>').join('')+'</select></label>'+
     (grup?'<div class="yg-secim" role="group" aria-label="Grup nasıl seçilsin">'+[['deneme','Her denemede'],['genel','Genel ortalamaya göre']].map(([k,ad])=>
       '<button type="button" class="'+((grup.genel?'genel':'deneme')===k?'secili':'')+'" aria-pressed="'+((grup.genel?'genel':'deneme')===k)+'" data-dn-ort-mod="'+k+'">'+ad+'</button>').join('')+'</div>':'')+
     '</div><div class="yg-alan" data-ort="1" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div>'+
-    (yalnizcaGoruntuleme()?'':'<label class="yg-hedef-sec">Hedef <input type="number" id="dnOrtHedef" min="0" max="'+secim.ust+'" step="1" inputmode="numeric" value="'+(h.kendi===null?'':h.kendi)+'" placeholder="'+(sube && h.okul!==null?h.okul:'—')+'" aria-label="'+kacis(secim.ad+' '+(sube?sube+' şubesi':'okul')+' hedef net (0–'+secim.ust+')')+'"> net <small>'+kacis(secim.ad)+' · '+kacis(sube || 'okul')+'</small></label>')+
+    (yalnizcaGoruntuleme()?'':'<label class="yg-hedef-sec">Hedef <input type="number" id="dnOrtHedef" min="0" max="'+secim.ust+'" step="1" inputmode="numeric" value="'+(h.kendi===null?'':h.kendi)+'" placeholder="'+(sube && h.okul!==null?h.okul:'—')+'" aria-label="'+kacis(secim.ad+' '+(sube?sube+' şubesi':kapsam)+' hedef net (0–'+secim.ust+')')+'"> net <small>'+kacis(secim.ad)+' · '+kacis(kapsam)+'</small></label>')+
     '</section>';
 }
 function denemeFormHtml() {
@@ -13695,13 +13710,14 @@ document.addEventListener('change',async ev=>{
   if(el.dataset?.dnRapor!==undefined){DENEME_IMPORT[Number(el.dataset.dnRapor)][el.dataset.alan]=el.value;return;}
   if(id==='dnGenel'){EK.denemeGenel=el.checked;ciz();return;}
   if(id==='dnYolBrans'){EK.denemeYolBrans=el.value;ciz();document.getElementById('dnYolBrans')?.focus();return;}
+  if(id==='dnOrtSinif'){EK.anaSinif=Number(el.value);EK.anaSube='';ciz();document.getElementById('dnOrtSinif')?.focus();return;}
   if(id==='dnOrtSube'){EK.anaSube=el.value;ciz();document.getElementById('dnOrtSube')?.focus();return;}
   if(id==='dnOrtGrup'){EK.anaGrup=el.value;ciz();document.getElementById('dnOrtGrup')?.focus();return;}
   if(id==='dnOrtHedef' && rehberMi() && !yalnizcaGoruntuleme()){
     const v=denemeOrtalamaVerisi();if(!v)return;
     const ust=v.secim.ust,metin=el.value.trim(),hedef=metin===''?null:Math.round(Number(metin));
     if(hedef!==null && !(hedef>=0 && hedef<=ust)){alert('Hedef 0 ile '+ust+' net arasında olmalı.');ciz();return;}
-    const eski=D.denemeOrtHedef,k=denemeOrtHedefAnahtari(v.secim),yeni=JSON.parse(JSON.stringify(eski || {}));
+    const eski=D.denemeOrtHedef,k=denemeOrtHedefAnahtari(v.secim,v.sinif),yeni=JSON.parse(JSON.stringify(eski || {}));
     yeni[k]=yeni[k] || {};
     if(hedef===null)delete yeni[k][v.sube];else yeni[k][v.sube]=hedef;
     if(!Object.keys(yeni[k]).length)delete yeni[k];
