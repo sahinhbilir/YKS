@@ -262,7 +262,7 @@ check('class average: top/bottom groups per exam or by overall average, teacher 
   // The student's package does not carry the teacher's targets.
   assert.equal(run('JSON.stringify(ogrenciPaketi(0)).includes("denemeOrtHedef")'), false);
   // The teacher's Denemeler page shows the class average above the student's exams.
-  run("EK.sekme='denemeler';EK.ogr=0");
+  run("EK.sekme='denemeler';EK.ogr=0;EK.denemeKlasik=true");
   const sayfa = run('gorunumDenemeler()');
   assert(sayfa.indexOf('aria-label="Deneme ortalaması"') > 0 && sayfa.indexOf('aria-label="Deneme ortalaması"') < sayfa.indexOf('data-dn-tur="TYT"'));
 });
