@@ -582,6 +582,8 @@ function denemeImportHtml() {
     '<div class="arac"><button class="dugme birincil" id="dnImportKaydet">Seçilen sonuçları kaydet ve yayınla</button><button class="dugme" id="dnImportIptal">Vazgeç</button></div></section>';
 }
 function gorunumDenemeler() {
+  // The teacher opens the Deneme panosu (src/denemepano.js); this per-student page is one click away.
+  if(rehberMi() && !EK.denemeKlasik && typeof gorunumDenemePanosu==='function')return gorunumDenemePanosu();
   const tur=EK.denemeTur || 'TYT',oturum=EK.denemeOturum || 'TYT',brans=EK.denemeBrans || DENEME_DERSLER[oturum][0][0],alan=denemeAlan(),tum=denemeListe();
   const metrik=denemeMetrik(),genelAcik=tur==='BRANS' && EK.denemeGenel!==false,genelVar=genelAcik && metrik==='net';
   let liste=tum.filter(r=>r.tur===tur && (tur!=='BRANS'||r.oturum===oturum && r.brans===brans));
@@ -592,7 +594,7 @@ function gorunumDenemeler() {
   const son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son,genelSayi=liste.filter(r=>r.genel).length;
   // With the net/dk chart selected the summary follows it, over exams that have a time.
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan)),birim=hizOzet?' net/dk':' net';
-  return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+ogrAdDugmesi(EK.ogr)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
+  return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+ogrAdDugmesi(EK.ogr)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+(typeof gorunumDenemePanosu==='function'?'<button class="dugme" id="dpPanoya">← Deneme panosu</button>':'')+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
     '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
     (rehberMi()?'<h2 class="dn-ort-baslik">Deneme ortalaması</h2>'+denemeOrtalamaGrafigi()+'<h2 class="dn-ort-baslik">'+ogrAdDugmesi(EK.ogr)+'</h2>':'')+
     '<div class="dn-tabs" role="group" aria-label="Deneme türü">'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'<button class="dugme birincil dn-ekle" id="dnEkle">+ Deneme ekle</button></div>'+

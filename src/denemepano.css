@@ -1,0 +1,23 @@
+/* Deneme panosu: the Etütler look (tokens and components in etutler.css) plus the few parts only
+   exam results need: the middle-50% band, the net histogram and the per-subject bars. */
+#dpKok #dnDurum{overflow-wrap:anywhere;font-size:.8125rem;margin:0;color:var(--e-fg2)}#dpKok #dnDurum:empty{display:none}
+#dpKok .kart.dn-panel{margin:0}
+.dp-bant50{fill:var(--e-c1);opacity:.13;stroke:none}.dp-bant50.soluk{opacity:.07}
+.et-renk.dp-renk-bant{opacity:.35;height:10px}
+.et-ort.kesik{stroke-dasharray:4 4}
+.dp-kutu{fill:var(--e-c1);opacity:.85}
+.dp-once{fill:none;stroke:var(--e-fg2);stroke-width:1.5;stroke-linejoin:round}
+.dp-dersler{display:flex;flex-direction:column;gap:6px}
+.dp-ders{display:grid;grid-template-columns:minmax(6.5rem,auto) minmax(0,1fr) 3.6rem 3.8rem;align-items:center;gap:8px;font-size:.75rem}
+.dp-ders>span:first-child{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dp-iz{position:relative;height:8px;border-radius:4px;background:color-mix(in srgb,var(--e-fg) 6%,transparent)}
+.dp-iz i{display:block;height:100%;border-radius:4px}
+.dp-iz em{position:absolute;top:-3px;width:2px;height:14px;margin-left:-1px;background:var(--e-fg);border-radius:1px}
+.dp-ders b{text-align:right;font-weight:500;font-variant-numeric:tabular-nums}.dp-ders b small{color:var(--e-muted);font-weight:400}
+.dp-ders .et-hap{justify-self:end}
+.dp-not{display:inline-flex;align-items:center;gap:6px}.dp-cizik{display:inline-block;width:2px;height:12px;background:var(--e-fg);border-radius:1px}
+#dpKok .et-seg select{border:0;background:transparent;color:var(--e-fg);font-size:.75rem;font-weight:500;padding:4px 8px;border-radius:999px;cursor:pointer}
+@media (max-width:640px){.dp-ders{grid-template-columns:minmax(5.5rem,auto) minmax(0,1fr) 3.2rem 3.4rem;gap:6px}}
+#dpKok .et-seg{flex-wrap:wrap;max-width:100%;border-radius:16px}
+@media (max-width:640px){#dpTablo .et-tablo td:first-child{white-space:normal;min-width:7.5em}#dpKok .et-seg button{padding:4px 9px}}
+#dpKisi .et-kisi-sayilar .mini{overflow-wrap:anywhere}

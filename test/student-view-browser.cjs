@@ -91,7 +91,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
     await ac('takip','.etkinlik-satir [data-ogr-gor="1"]','SENTETİK BORA');
     await ac('plan','.sayfa-ust .isim [data-ogr-gor]','SENTETİK ADA');
     await ac('ogrenciler','.ogr-gor-dugme[data-ogr-gor="1"]','SENTETİK BORA');
-    await ac('denemeler','.baslik [data-ogr-gor]','SENTETİK ADA');
+    await page.evaluate(()=>{EK.denemeKlasik=true});await ac('denemeler','.baslik [data-ogr-gor]','SENTETİK ADA');await page.evaluate(()=>{EK.denemeKlasik=false});
     await ac('harita','.baslik [data-ogr-gor]','SENTETİK ADA');
    }
    assert.equal(await page.evaluate(()=>localStorage.getItem('yks_veri')),defter,'nothing done in the student view reached the teacher notebook');
