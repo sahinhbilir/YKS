@@ -1,8 +1,8 @@
 // Etüt planı on desktop (light) and phone (dark): the page in the teacher menu, filling a weekday
 // from the etüt report, the teacher view (adding, branş filled from the report, copying a day,
-// deleting, empty rows dropped), writing students and the twice-written mark, all days, printing
-// (only the sheets, one portrait page per day, from the button or Ctrl+P) and clearing the
-// students. Synthetic names only.
+// deleting, empty rows dropped, a pasted list), writing students and the twice-written mark, all
+// days, printing (only the sheets, one portrait page per day, from the button or Ctrl+P) and
+// clearing the students. Synthetic names only.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const {etutRaporu,GUNLER}=require('./fixtures/etut-pdf.cjs');
@@ -89,6 +89,15 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    // The browser's own print command (Ctrl+P) prints the sheets the same way.
    assert.deepEqual(await page.evaluate(()=>{document.getElementById('epBaski').innerHTML='';window.dispatchEvent(new Event('beforeprint'));
      const r=[document.body.classList.contains('ep-yazdir'),document.querySelectorAll('#epBaski .ep-sayfa').length];window.dispatchEvent(new Event('afterprint'));return r.concat(document.body.classList.contains('ep-yazdir'))}),[true,2,false]);
+   // A pasted list fills other days at once; the box empties after use.
+   await page.locator('[data-ep-mod="ogretmen"]').click();await page.locator('.ep-yapistir summary').click();
+   await page.locator('#epListe').fill('ÇARŞAMBA\nMatematik: Sentetik Mat Bir, Sentetik Mat Sekiz\nPERŞEMBE\nFizik: Sentetik Öğretmen Üç');
+   await page.locator('#epListeUygula').click();
+   await page.waitForFunction(()=>D.etutPlani.gunler[2].length===2&&D.etutPlani.gunler[3].length===1);
+   assert.match(await page.locator('#epDurum').innerText(),/Yapıştırıldı: Çarşamba 2 · Perşembe 1 öğretmen/);
+   assert.equal(await page.locator('.ep-yapistir[open]').count(),0);
+   await page.locator('[data-ep-mod="ogrenci"]').click();
+   assert.match(await page.locator('.ep-kagit').nth(3).innerText(),/PERŞEMBE — ETÜT PLANI[\s\S]*FİZİK\s+Sentetik Öğretmen Üç/);
    // Clearing the students keeps the teachers.
    await page.locator('#epTemizle').click();
    await page.waitForFunction(()=>D.etutPlani.gunler.every(g=>g.every(s=>s[2].every(a=>a===''))));

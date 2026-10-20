@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 // Etüt planı: the paper sheet per weekday, branş grouping in the paper's order, students written
-// twice, filling from the etüt report, storage checks and failed saves, the viewing teacher,
-// printing and privacy. Synthetic names only.
+// twice, filling from the etüt report or a pasted list, storage checks and failed saves, the viewing
+// teacher, printing and privacy. Synthetic names only.
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
 const { etutRaporu, GUNLER } = require('./fixtures/etut-pdf.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
@@ -19,7 +19,7 @@ const run = code => vm.runInContext(code, sandbox);
 const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
 sandbox.__yg = run('yalnizcaGoruntuleme');
-const reset = () => run(`yalnizcaGoruntuleme=__yg;D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-21';
+const reset = () => run(`yalnizcaGoruntuleme=__yg;confirm=()=>true;D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-21';
   D.ogr=[{no:1001,ad:'Sentetik Ada',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='etutplani';
   EK.epGun=undefined;EK.epMod=undefined;KAYIT=0;kaydet=async()=>{KAYIT++;return true};ETUT.onbellek.ts=null;`);
 const satir = (b, o, ogr = []) => [b, o, [0, 1, 2, 3].map(i => ogr[i] || '')];
@@ -83,6 +83,29 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(h, /<datalist id="epOgrenciler"><option value="Sentetik Ada" label="12-A"><\/option>/);
     assert(h.includes('<option value="Sentetik Bora" label="12/B">') && h.includes('<option value="Sentetik Öğretmen Dört">'));
     assert.equal((h.match(/<datalist id="epOgrenciler">[\s\S]*?<\/datalist>/)[0].match(/value="Sentetik Ada"/g) || []).length, 1, 'one entry per name');
+  });
+  await check('a pasted list sets the week: weekday lines start a day, teachers keep their students, bad lines are named', async () => {
+    await yaz([[satir('Matematik', 'Sentetik Mat Bir', ['Sentetik Ada']), satir('Fizik', 'Sentetik Eski Fizikçi', ['Sentetik Bora'])], [], [], [], []]);
+    run("EK.epGun='hepsi';KAYIT=0");
+    put('L', 'Pazartesi — Etüt planı\nMatematik: Sentetik Mat Bir, Sentetik Mat İki\nGeometri: Sentetik Geo\n\nsali\nEdebiyat: Sentetik Ede Bir; Sentetik Ede İki\nCARSAMBA:\nİngilizce\tSentetik İng');
+    assert.match(await run('ETUTPLANI.listeUygula(L)'), /Yapıştırıldı: Pazartesi 3 · Salı 2 · Çarşamba 1 öğretmen/);
+    assert.deepEqual(get('D.etutPlani.gunler[0]'), [satir('Matematik', 'Sentetik Mat Bir', ['Sentetik Ada']), satir('Matematik', 'Sentetik Mat İki'), satir('Geometri', 'Sentetik Geo')],
+      'a teacher who stays keeps their students; one left out goes');
+    assert.deepEqual(get('D.etutPlani.gunler[1].map(s=>s[0]+"|"+s[1])'), ['Edebiyat|Sentetik Ede Bir', 'Edebiyat|Sentetik Ede İki']);
+    assert.deepEqual(get('D.etutPlani.gunler[2]'), [satir('İngilizce', 'Sentetik İng')]); assert.deepEqual(get('D.etutPlani.gunler[3]'), []);
+    assert.equal(run('KAYIT'), 1, 'one save for the whole paste');
+    run('EK.epGun=4'); put('L', 'Kimya: Sentetik Kimyacı'); await run('ETUTPLANI.listeUygula(L)');
+    assert.deepEqual(get('D.etutPlani.gunler[4]'), [satir('Kimya', 'Sentetik Kimyacı')], 'no weekday line: the day on screen');
+    const once = JSON.stringify(get('D.etutPlani.gunler'));
+    put('L', 'PERŞEMBE\nMatematik Sentetik İkinoktasız\nFizik:\nKimya: Sentetik Tamam');
+    await assert.rejects(run('ETUTPLANI.listeUygula(L)'), /Okunamayan satırlar: 2, 3\./);
+    run("EK.epGun='hepsi'"); put('L', 'Matematik: Sentetik Günsüz');
+    await assert.rejects(run('ETUTPLANI.listeUygula(L)'), /Okunamayan satır: 1\./, 'all days on screen: a weekday line is needed');
+    put('L', 'SALI\n'); await assert.rejects(run('ETUTPLANI.listeUygula(L)'), /öğretmen yok/);
+    run('confirm=()=>false'); put('L', 'Pazartesi\nTarih: Sentetik Tarihçi'); assert.equal(await run('ETUTPLANI.listeUygula(L)'), '');
+    run('confirm=()=>true'); assert.equal(JSON.stringify(get('D.etutPlani.gunler')), once, 'refused or declined pastes change nothing');
+    run("EK.epMod='ogretmen'"); assert(run('ETUTPLANI.icerik()').includes('id="epListe"'));
+    run("EK.epMod='ogrenci'"); assert(!run('ETUTPLANI.icerik()').includes('id="epListe"'), 'the box is in the teacher view only');
   });
   await check('the teacher view edits branş and öğretmen; leaving it drops empty rows', async () => {
     await yaz([[satir('Matematik', 'Sentetik Mat Bir', ['Sentetik Ada']), satir('', ''), satir('Fizik', '')], [satir('', '')], [], [], []]);
