@@ -124,6 +124,22 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.waitForFunction(()=>D.etut&&D.etut.satir.length===36);
    assert.match(await page.locator('#etDurum').innerText(),/Geri getirildi: 36 etüt \(19 Eki 2026 yedeğinden\)/);
    await page.waitForFunction(()=>document.querySelectorAll('.et-grafik svg').length===5);
+   // Sınıf: one grade at a time. 12. sınıflar have no Friday etüt days from 14 Eyl; 11. sınıflar keep them.
+   const cuma=etutRaporu([{tarih:'25.09.2026',satirlar:[['Türkçe','SENTETİK ÖĞRETMEN BEŞ','SENTETİK DENİZ','302 11/A','101','15:00','20 Dk.']]}],{bas:'25.09.2026',bit:'25.09.2026'});
+   await page.evaluate(async p=>{await ETUT.raporEkle([ETUT.pdfCoz(p)]);ciz()},cuma.pages);
+   await page.waitForFunction(()=>document.querySelectorAll('.et-grafik svg').length===5);
+   await page.locator('[data-et-tur="gun"]').click();await page.waitForFunction(()=>document.querySelectorAll('.et-grafik svg').length===5);
+   const gunler=()=>page.evaluate(()=>ETUT.CIZIMLER.get('genel').olc.donem.map(g=>isoDan(g)));
+   assert((await gunler()).includes('2026-09-25'));
+   await page.locator('#etKademe').selectOption('12');await page.waitForFunction(()=>/^12\. sınıflar ·/.test(document.querySelector('.et-cumle')?.textContent||''));
+   await page.waitForFunction(()=>document.querySelectorAll('.et-grafik svg').length===5);
+   assert(!(await gunler()).includes('2026-09-25'),'no Friday for 12. sınıflar after 14 Eyl');
+   assert.match(await page.locator('#etTablo').innerText(),/4 öğrenci/);
+   await page.locator('#etKademe').selectOption('11');await page.waitForFunction(()=>/^11\. sınıflar ·/.test(document.querySelector('.et-cumle')?.textContent||''));
+   await page.waitForFunction(()=>document.querySelectorAll('.et-grafik svg').length===5);
+   assert((await gunler()).includes('2026-09-25'),'11. sınıflar keep their Fridays');
+   await page.locator('#etKademe').selectOption('');await page.waitForFunction(()=>!/sınıflar ·/.test(document.querySelector('.et-cumle')?.textContent||''));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal scroll with Sınıf at '+width);
    assert.deepEqual(errors,[]);
    await context.close();
   }
