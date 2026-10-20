@@ -204,6 +204,8 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     let h = run('DPANO.icerik()');
     for (const ad of ['Sentetik Deneme 1', 'Sentetik Tarama 1', 'Sentetik Deneme 2']) assert(h.includes('data-sr-tarih="' + idOf(ad) + '"'), ad);
     assert(h.includes('id="srDurum"'));
+    // PDF ekle (lists only) and Sil, Sıralamalar's own, sit in the same table.
+    assert(h.includes('<input type="file" id="srPdf"')); assert.equal((h.match(/data-sr-sil="/g) || []).length, 3);
     const rap = h.slice(h.indexOf('<section class="et-panel" id="dpRaporlar"'));
     assert(rap.startsWith('<section class="et-panel" id="dpRaporlar" data-sr-simdi="' + idOf('Sentetik Deneme 2') + '" data-sr-onceki="' + idOf('Sentetik Tarama 1') + '">'), 'the last two exams');
     assert.equal((rap.match(/data-sr-indir="/g) || []).length, 4); assert(rap.includes('id="srHepsi"') && rap.includes('id="srSayfalar"'));
@@ -214,6 +216,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(h, /<span class="mini">Sentetik Deneme 1 → Sentetik Deneme 2<\/span><\/div><div class="dp-raporlar">/);
     run('yalnizcaGoruntuleme=()=>true'); h = run('DPANO.icerik()');
     assert(!h.includes('data-sr-tarih=') && h.includes('data-sr-indir='), 'a viewing teacher reads dates and still downloads reports');
+    assert(!h.includes('id="srPdf"') && !h.includes('data-sr-sil='), 'nor adds or deletes lists');
     run('yalnizcaGoruntuleme=__yg');
   });
   console.log(passed + ' Deneme panosu checks passed');

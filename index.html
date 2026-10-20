@@ -15644,14 +15644,17 @@ function kisiKarti(st,es){
     '<span class="mini dp-not"><em class="dp-cizik"></em> çizgi: '+kacis(st.K.ad)+' ortalaması</span>';
 }
 // The teacher sets an exam's type (genel or tarama) and corrects its date here, with Sıralamalar's own
-// date field: the change also moves the students' results of that exam (src/siralamalar.js). A
-// viewing teacher only reads both.
+// date field: the change also moves the students' results of that exam (src/siralamalar.js). "PDF ekle"
+// stores a school list without sending results to students, "Sil" removes an exam's lists (both
+// Sıralamalar's own). A viewing teacher only reads.
 function sinavTablosu(st,salt){
   const m=st.m,tur=s=>salt?turAdi(s.tur):'<select class="dp-tur-sec" data-dp-sinav-tur="'+kacis(s.id)+'" aria-label="'+kacis(s.ad+' türü')+'">'+
     SIRALAMA.SINAV_TURLERI.map(t=>'<option value="'+t+'"'+(t===s.tur?' selected':'')+'>'+turAdi(t)+'</option>').join('')+'</select>';
-  return '<section class="et-panel" id="dpSinavlar"><div class="et-kart-bas"><h2>Denemeler · '+kacis(m.O.ad)+'</h2><button type="button" class="et-dugme" data-sekme="siralamalar">Sıralamalar ve raporlar</button></div>'+
-    '<div class="et-kaydir"><table class="et-kaynak"><thead><tr><th>Deneme</th><th>Tür</th><th>Tarih</th><th>Öğrenci</th><th>Ortalama</th><th>Medyan</th><th>En yüksek</th></tr></thead><tbody>'+
-    m.sinavlar.slice().reverse().map(s=>'<tr><td>'+kacis(s.ad)+'</td><td>'+tur(s)+'</td><td>'+SIRALAMA.tarihHucresi({id:s.id,name:s.ad,dates:s.dates||[],pdfDates:s.pdfDates||[]},salt)+'</td><td>'+fi(s.n)+'</td><td>'+f1(s.ort)+'</td><td>'+f1(s.medyan)+'</td><td>'+f2(s.max)+'</td></tr>').join('')+'</tbody></table></div><p id="srDurum" role="status" aria-live="polite">'+kacis(SIRALAMA.durumYazisi||'')+'</p></section>';
+  return '<section class="et-panel" id="dpSinavlar"><div class="et-kart-bas"><h2>Denemeler · '+kacis(m.O.ad)+'</h2><div class="et-arac">'+
+      (salt?'':'<label class="et-dugme" title="Yalnızca okul listesi; sonuçlar öğrencilere aktarılmaz">PDF ekle<input type="file" id="srPdf" accept="application/pdf,.pdf" multiple hidden></label>')+
+      '<button type="button" class="et-dugme" data-sekme="siralamalar">Sıralamalar ve raporlar</button></div></div>'+
+    '<div class="et-kaydir"><table class="et-kaynak"><thead><tr><th>Deneme</th><th>Tür</th><th>Tarih</th><th>Öğrenci</th><th>Ortalama</th><th>Medyan</th><th>En yüksek</th>'+(salt?'':'<th></th>')+'</tr></thead><tbody>'+
+    m.sinavlar.slice().reverse().map(s=>'<tr><td>'+kacis(s.ad)+'</td><td>'+tur(s)+'</td><td>'+SIRALAMA.tarihHucresi({id:s.id,name:s.ad,dates:s.dates||[],pdfDates:s.pdfDates||[]},salt)+'</td><td>'+fi(s.n)+'</td><td>'+f1(s.ort)+'</td><td>'+f1(s.medyan)+'</td><td>'+f2(s.max)+'</td>'+(salt?'':'<td><button type="button" class="et-dugme" data-sr-sil="'+kacis(s.id)+'" aria-label="'+kacis(s.ad+' listelerini sil')+'">Sil</button></td>')+'</tr>').join('')+'</tbody></table></div><p id="srDurum" role="status" aria-live="polite">'+kacis(SIRALAMA.durumYazisi||'')+'</p></section>';
 }
 // Sıralamalar's PDF reports for the board's Önceki → Şimdiki pair (data-sr-simdi / data-sr-onceki);
 // the buttons and the preview are handled by src/siralamalar.js.

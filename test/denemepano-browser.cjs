@@ -137,6 +137,12 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    await tarih.fill('2026-09-26');
    await page.waitForFunction(()=>D.siralama.sinavlar.find(s=>s.ad==='Sentetik Tarama 1').tarih==='26.09.2026');
    await page.waitForFunction(()=>/Sentetik Tarama 1 tarihi 26\.09\.2026 oldu/.test(document.getElementById('srDurum')?.textContent||''));
+   // Sil removes an exam's lists (students' results stay); PDF ekle brings a list back without importing results.
+   await page.locator('#dpSinavlar [data-sr-sil]').nth(1).click();
+   await page.waitForFunction(()=>!D.siralama.sinavlar.some(s=>s.ad==='Sentetik Tarama 1'));
+   await page.evaluate(l=>{denemePdfSayfalari=async f=>structuredClone(l[f.name])},{'tarama-tyt.pdf':taramaListeleri[0],'tarama-ayt.pdf':taramaListeleri[1]});
+   await page.locator('#srPdf').setInputFiles(['tarama-tyt.pdf','tarama-ayt.pdf'].map(name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')})));
+   await page.waitForFunction(()=>D.siralama.sinavlar.some(s=>s.ad==='Sentetik Tarama 1')&&/Kaydedildi/.test(document.getElementById('srDurum')?.textContent||''));
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'new controls fit at '+width);
    await page.locator('#dpOgrCizgi').scrollIntoViewIfNeeded();
    await page.screenshot({path:path.join(out,'denemepano-ek-'+width+'-'+tema+'.png'),fullPage:true});
