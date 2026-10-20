@@ -9,6 +9,12 @@ const SURUM=1, UST_SINIR=300000, EN_COK_SATIR=15000, EN_COK_KAYNAK=60, ARALIKLAR
 // A teacher's places on each of their etüt days: the Etüt planı's four students.
 const GUNLUK_YER=4;
 const GUN_ADI=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+// School rules on who may stay for etüts: 12. sınıflar have none on Fridays from 14 Eylül 2026
+// (gun: 0 = Pazartesi … 4 = Cuma). In a grade's view those days are not etüt days.
+const KISITLAR=[{duzey:12,gun:4,bas:'2026-09-14'}];
+// The grade of a class ("12/A" → 12), or null.
+const sinifDuzeyi=c=>{const m=/^(\d{1,2})\s*\//.exec(String(c||'').trim());return m?Number(m[1]):null};
+const kademeAdi=d=>d+'. sınıflar';
 const AY=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 // Report branches ("MATEMATİK TYT", "FİZİK 1", "Kimya"…) are grouped into one subject each.
 const DERSLER=[[/^MATEMAT/u,'Matematik'],[/^GEOMETR/u,'Geometri'],[/^FİZİK/u,'Fizik'],[/^KİMYA/u,'Kimya'],[/^BİYOLOJ/u,'Biyoloji'],
@@ -203,14 +209,20 @@ async function yedektenGetir(){
 // ends before Friday. Windows compare the last 1, 2 or 4 full weeks with as many weeks before.
 // sec = {a,b}: the two full weeks chosen on the chart (Karşılaştır: Seç), compared week to week.
 // plan: each teacher's weekdays from the Etüt planı (Map of anahtar(ad) → Set of 0 = Pazartesi … 4 = Cuma).
-function model(v,sec,plan){
-  const rows=ac(v).map(r=>({...r,hafta:pazartesi(r.g),ders:dersAdi(r.brans),kim:anahtar(r.ad)+'|'+r.sinif,hoca:anahtar(r.ogretmen)})).sort((a,b)=>a.g-b.g||(a.saat??-1)-(b.saat??-1));
+// kademe: one grade (12 = 12. sınıflar) or null for every student. A grade's page counts its own
+// students' etüts; its days are the report's etüt days that the grade may stay for (KISITLAR).
+function model(v,sec,plan,kademe){
+  const hepsi=ac(v).map(r=>({...r,hafta:pazartesi(r.g),ders:dersAdi(r.brans),kim:anahtar(r.ad)+'|'+r.sinif,hoca:anahtar(r.ogretmen),duzey:sinifDuzeyi(r.sinif)})).sort((a,b)=>a.g-b.g||(a.saat??-1)-(b.saat??-1));
+  const rows=kademe?hepsi.filter(r=>r.duzey===kademe):hepsi;
   if(!rows.length)return null;
-  const bit=Math.max(rows[rows.length-1].g,...v.kaynak.map(k=>k.bit));
+  const bit=Math.max(hepsi[hepsi.length-1].g,...v.kaynak.map(k=>k.bit));
   const haftalar=[];for(let h=rows[0].hafta;h<=pazartesi(bit);h+=7)haftalar.push(h);
   const kismiHafta=haftaGunu(bit)<4?pazartesi(bit):null;
+  const yasak=(g,gun)=>!!kademe&&KISITLAR.some(k=>k.duzey===kademe&&k.gun===gun&&g>=gunNo(k.bas));
+  // Days with an etüt of the grade always stay, so no etüt is ever hidden.
+  const gunler=[...new Set(hepsi.map(r=>r.g).filter(g=>g>=haftalar[0]&&!yasak(g,haftaGunu(g))).concat(rows.map(r=>r.g)))].sort((a,b)=>a-b);
   const donem=(tur)=>{
-    const anahtarlar=tur==='hafta'?haftalar:[...new Set(rows.map(r=>r.g))];
+    const anahtarlar=tur==='hafta'?haftalar:gunler;
     const grup=new Map(anahtarlar.map(p=>[p,[]]));for(const r of rows)grup.get(tur==='hafta'?r.hafta:r.g).push(r);
     const gorulen=new Set(),sayilar=[];
     return anahtarlar.map(p=>{
@@ -252,14 +264,18 @@ function model(v,sec,plan){
     const ders=Object.entries(sayac).sort((a,b)=>b[1]-a[1]||dersSira.indexOf(a[0])-dersSira.indexOf(b[0]))[0][0];
     const o={hoca,ad:l[0].ogretmen,ders,renk:dersRengi(ders),toplam:l.length,ogrenci:kisi.size,hafta:haftalar.map(h=>l.filter(r=>r.hafta===h).length),
       gun:gun.map(x=>x.satir.filter(r=>r.hoca===hoca).length),kisiler:[...kisi.values()].sort((a,b)=>b.n-a.n||b.son-a.son||a.ad.localeCompare(b.ad,'tr')),k:{}};
-    // Etüt days: the weekdays the Etüt planı lists the teacher on, else the weekdays of their etüts in the
-    // report's last four weeks (or of all their etüts). Every day of the report with any etüt that falls
-    // on one of them gives GUNLUK_YER places, as does any day they held etüts on. Other days are not
-    // the teacher's: the chart leaves them out (null) and doluluk is etüts ÷ places.
-    const pg=plan&&plan.get(hoca),kendi=new Set(l.map(r=>r.g)),gunleri=new Set(pg||l.filter(r=>r.g>bit-28).map(r=>haftaGunu(r.g)));
-    if(!gunleri.size)for(const r of l)gunleri.add(haftaGunu(r.g));
-    const acik=g=>gunleri.has(haftaGunu(g))||kendi.has(g);
-    o.gunleri=[...gunleri].sort((a,b)=>a-b);o.kaynak=pg?'plan':'rapor';
+    // Etüt days follow the teacher's schedule as it changes over the term. A day of the report is theirs
+    // when they held etüts on it, on the same weekday the week before or after it, or (in the
+    // report's last four weeks) on a weekday the Etüt planı lists them on. Each such day gives
+    // GUNLUK_YER places. Other days are not the teacher's: the chart passes over them (null) instead of
+    // dropping to 0, and doluluk is etüts ÷ places. A grade's page takes the days from all the
+    // teacher's etüts, less the days the grade may not stay. gunleri are the days named on the page: the
+    // plan's, else the weekdays of their etüts in the last four weeks (or of all their etüts).
+    const tum=hepsi.filter(r=>r.hoca===hoca),pg=plan&&plan.get(hoca),kendi=new Set(tum.map(r=>r.g)),iz=new Map();
+    for(const g of kendi){const w=haftaGunu(g);if(!iz.has(w))iz.set(w,[]);iz.get(w).push(g)}
+    const acik=g=>kendi.has(g)||(iz.get(haftaGunu(g))||[]).some(d=>Math.abs(d-g)<=7)||!!pg&&pg.has(haftaGunu(g))&&g>bit-28;
+    const gunleri=new Set(pg||tum.filter(r=>r.g>bit-28).map(r=>haftaGunu(r.g)));if(!gunleri.size)for(const r of tum)gunleri.add(haftaGunu(r.g));
+    o.gunleri=[...gunleri].filter(g=>!yasak(bit,g)).sort((a,b)=>a-b);o.kaynak=pg?'plan':'rapor';
     o.kapGun=gun.map(x=>acik(x.p)?GUNLUK_YER:0);o.kapHafta=haftalar.map(h=>gun.filter(x=>x.p>=h&&x.p<h+7&&acik(x.p)).length*GUNLUK_YER);
     o.haftaG=o.hafta.map((v,i)=>o.kapHafta[i]||v?v:null);o.gunG=o.gun.map((v,i)=>o.kapGun[i]||v?v:null);
     o.kap=o.kapHafta.reduce((a,b)=>a+b,0);o.doluluk=o.kap?o.toplam/o.kap:null;
@@ -284,7 +300,7 @@ function model(v,sec,plan){
       ogrOnce:ko,ogrSon:ks,ogrFark:ks-ko,yeni:[...ilkHafta.values()].filter(h=>h>=w.son[0]&&h<=w.son[1]).length,
       artan:kisiler.filter(k=>k.k[s].fark>0).length,azalan:kisiler.filter(k=>k.k[s].fark<0).length};
   }
-  return {rows,bit,ilk:rows[0].g,haftalar,hafta,gun,pencere,dersler,ogretmenler,kisiler,ozet,kismiHafta};
+  return {rows,bit,ilk:rows[0].g,haftalar,hafta,gun,pencere,dersler,ogretmenler,kisiler,ozet,kismiHafta,kademe:kademe||null};
 }
 // Each teacher's weekdays in the Etüt planı (src/etutplani.js), or null without a plan.
 function planGunleri(){
@@ -292,9 +308,12 @@ function planGunleri(){
   const m=new Map();plan.gunler.forEach((satirlar,g)=>{for(const s of satirlar){const k=anahtar(s[1]);if(!k)continue;if(!m.has(k))m.set(k,new Set());m.get(k).add(g)}});
   return m.size?m:null;
 }
-function modelAl(v){
-  const k=v.ts+'|'+v.satir.length+'|'+EK.etSecA+'|'+EK.etSecB+'|'+(D.etutPlani&&D.etutPlani.ts);
-  if(ONBELLEK.ts!==k||!ONBELLEK.m){ONBELLEK.m=model(v,{a:EK.etSecA,b:EK.etSecB},planGunleri());ONBELLEK.ts=k}return ONBELLEK.m;
+// The grades in the report, highest first, and the one the page shows (Sınıf; null = all).
+const kademeler=v=>[...new Set(v.ogrenci.map(o=>sinifDuzeyi(o[1])).filter(d=>d!==null))].sort((a,b)=>b-a);
+const kademeAl=v=>{const d=Number(EK.etKademe);return kademeler(v).includes(d)?d:null};
+function modelAl(v,kademe=kademeAl(v)){
+  const k=v.ts+'|'+v.satir.length+'|'+EK.etSecA+'|'+EK.etSecB+'|'+(D.etutPlani&&D.etutPlani.ts)+'|'+kademe;
+  if(ONBELLEK.ts!==k||!ONBELLEK.m){ONBELLEK.m=model(v,{a:EK.etSecA,b:EK.etSecB},planGunleri(),kademe);ONBELLEK.ts=k}return ONBELLEK.m;
 }
 function durumAl(m){
   const s=EK.etAralik==='sec'&&m.pencere.sec?'sec':ARALIKLAR.includes(EK.etAralik)&&m.pencere[EK.etAralik]?EK.etAralik:m.pencere[2]?2:ARALIKLAR.filter(x=>m.pencere[x]).pop()||null;
@@ -548,13 +567,14 @@ function ozetKartlari(m,st){
     kart('En yoğun hafta',sayi(ets.etut),'<span class="mini">'+gunAy(ets.p)+' haftası</span>')+'</div>';
 }
 function cumle(m,st){
-  const o=m.ozet[st.s],w=m.pencere[st.s];if(!o)return 'Karşılaştırma için en az iki tam hafta gerekir.';
+  const kapsam=m.kademe?kademeAdi(m.kademe)+' · ':'';
+  const o=m.ozet[st.s],w=m.pencere[st.s];if(!o)return kapsam+'Karşılaştırma için en az iki tam hafta gerekir.';
   const en=m.dersler.slice().sort((a,b)=>Math.abs(b.k[st.s].fark)-Math.abs(a.k[st.s].fark))[0];
   const b=t=>'<b>'+t+'</b>';
   const onceki=st.s==='sec'?gunAy(w.once[0])+' haftasına':st.s===1?'önceki haftaya':'önceki '+st.s+' haftaya';
   const degisim=o.etutFark===0?b('aynı'):o.etutOran===null?b(isaretli(o.etutFark)):b(yuzde(o.etutOran)+' '+(o.etutFark<0?'az':'fazla'));
   const bas=st.s==='sec'?gunAy(w.son[0])+' haftası':(st.s===1?'Geçen hafta':'Son '+st.s+' hafta')+' ('+aralikYazi(w.son[0],w.son[1]+6)+')';
-  return bas+': '+b(sayi(o.etutSon))+' etüt, '+onceki+' göre '+degisim+(st.s==='sec'?' ('+sayi(o.etutOnce)+' → '+sayi(o.etutSon)+')':'')+'. En büyük değişim: '+kacis(en.ders)+' '+b(isaretli(en.k[st.s].fark))+'. '+
+  return kapsam+bas+': '+b(sayi(o.etutSon))+' etüt, '+onceki+' göre '+degisim+(st.s==='sec'?' ('+sayi(o.etutOnce)+' → '+sayi(o.etutSon)+')':'')+'. En büyük değişim: '+kacis(en.ders)+' '+b(isaretli(en.k[st.s].fark))+'. '+
     b(sayi(o.azalan))+' öğrenci daha az, '+b(sayi(o.artan))+' öğrenci daha çok etüt alıyor.';
 }
 function dersKartlari(m,st){
@@ -643,6 +663,12 @@ function kaynaklar(v,salt){
     '<div class="et-kaydir"><table class="et-kaynak"><thead><tr><th>Tarih aralığı</th><th>Etüt</th><th>Eklendi</th></tr></thead><tbody>'+
     ks.map(k=>'<tr><td>'+tarihUzun(k.bas)+' – '+tarihUzun(k.bit)+'</td><td>'+sayi(k.n)+'</td><td>'+new Date(k.ts).toLocaleDateString('tr-TR')+'</td></tr>').join('')+'</tbody></table></div></section>';
 }
+// Sınıf: every student or one grade, when the report has more than one.
+function kademeSecimi(v,m){
+  const l=kademeler(v);if(l.length<2)return '';
+  return '<label class="et-seg"><span class="et-seg-label">Sınıf</span><select id="etKademe" aria-label="Sınıf"><option value="">Tüm sınıflar</option>'+
+    l.map(d=>'<option value="'+d+'"'+(d===m.kademe?' selected':'')+'>'+kademeAdi(d)+'</option>').join('')+'</select></label>';
+}
 // Seç: Önceki and Şimdiki from the full weeks, newest first; the chart's lines move with them.
 function ikiHafta(m){
   const w=m.pencere.sec,tam=m.hafta.filter(h=>!h.kismi).map(h=>h.p);
@@ -661,7 +687,7 @@ function icerik(){
   const st=durumAl(m),es=defterEslesme(),per=st.tur==='hafta'?'haftalık':'günlük';
   cizimPlanla();
   return '<header class="et-bas"><h1 class="et-baslik">Etütler</h1><p class="et-cumle">'+cumle(m,st)+'</p></header>'+
-    '<div class="et-arac">'+ekle+secim('aralik',st.s,ARALIKLAR.map(s=>[s,haftaYazi(s),!m.pencere[s]]).concat([['sec','Seç',!m.pencere.sec]]),'Karşılaştır')+(st.s==='sec'?ikiHafta(m):'')+
+    '<div class="et-arac">'+ekle+secim('aralik',st.s,ARALIKLAR.map(s=>[s,haftaYazi(s),!m.pencere[s]]).concat([['sec','Seç',!m.pencere.sec]]),'Karşılaştır')+(st.s==='sec'?ikiHafta(m):'')+kademeSecimi(veri,m)+
       secim('tur',st.tur,[['hafta','Haftalık'],['gun','Günlük']],'Grafik')+secim('cizgi',GRAFIK_CIZGI.tur(),GRAFIK_CIZGI.SECENEKLER,'Çizgi')+'</div>'+durumSatiri+
     ozetKartlari(m,st)+
     '<section class="et-panel" id="etGenel"><div class="et-kart-bas"><h2>Tüm etütler · '+per+'</h2><div class="et-lejant"><span><i class="et-renk cizgi" style="background:var(--e-c1)"></i>Etüt</span>'+
@@ -683,7 +709,7 @@ function icerik(){
 // Etüt planı (src/etutplani.js) offers, for each weekday, the teachers who held etüts on it in the
 // report's last four weeks, and the report's teacher and student names for its lists.
 function planIcin(){
-  const {veri}=oku(),m=veri?modelAl(veri):null;if(!m)return null;
+  const {veri}=oku(),m=veri?modelAl(veri,null):null;if(!m)return null;
   const sinir=m.bit-27,hb=new Map(m.ogretmenler.map(o=>[o.hoca,{brans:o.ders,ogretmen:kisiAdi(o.ad)}]));
   return {gunler:[0,1,2,3,4].map(g=>[...new Set(m.rows.filter(r=>r.hoca&&r.g>=sinir&&haftaGunu(r.g)===g).map(r=>r.hoca))].map(h=>hb.get(h))),
     ogretmenler:[...hb.values()],ogrenciler:m.kisiler.map(k=>({ad:kisiAdi(k.ad),sinif:k.sinif}))};
@@ -744,6 +770,7 @@ document.addEventListener('change',async ev=>{
     yenidenCiz();return;
   }
   if(el.id==='etSinif'){EK.etSinif=el.value;filtrele()}
+  if(el.id==='etKademe'){EK.etKademe=el.value?Number(el.value):null;EK.etSinif='';yenidenCiz('#etKademe');return}
   if(el.id==='etSecA'||el.id==='etSecB'){const {veri}=oku();if(!veri)return;const w=modelAl(veri).pencere.sec;
     EK.etSecA=el.id==='etSecA'?Number(el.value):w.once[0];EK.etSecB=el.id==='etSecB'?Number(el.value):w.son[0];yenidenCiz('#'+el.id)}
 });

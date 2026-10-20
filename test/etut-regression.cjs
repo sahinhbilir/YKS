@@ -19,7 +19,7 @@ const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
 sandbox.__yg = run('yalnizcaGoruntuleme'); sandbox.__bg = run('bulutYedekGecmisi'); sandbox.__bga = run('buluttanGunAl');
 const reset = () => run(`yalnizcaGoruntuleme=__yg;bulutYedekGecmisi=__bg;buluttanGunAl=__bga;confirm=()=>true;delete window.bulut;D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'Sentetik Ada',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='etutler';
-  EK.etAralik=undefined;EK.etTur=undefined;EK.etDers=undefined;EK.etHoca=undefined;EK.etSecA=undefined;EK.etSecB=undefined;EK.etOgr=undefined;EK.etSira=undefined;EK.etAra='';EK.etSinif='';KAYIT=0;kaydet=async()=>{KAYIT++;return true};ETUT.onbellek.ts=null;`);
+  EK.etAralik=undefined;EK.etTur=undefined;EK.etDers=undefined;EK.etHoca=undefined;EK.etSecA=undefined;EK.etSecB=undefined;EK.etOgr=undefined;EK.etSira=undefined;EK.etKademe=undefined;EK.etAra='';EK.etSinif='';KAYIT=0;kaydet=async()=>{KAYIT++;return true};ETUT.onbellek.ts=null;`);
 const rapor = (gunler = GUNLER, aralik) => { put('pages', etutRaporu(gunler, aralik).pages); return get('ETUT.pdfCoz(pages)'); };
 const iso = g => run('isoDan(' + g + ')');
 const ekle = async r => { put('R', r); await run('ETUT.raporEkle([R])'); };
@@ -171,10 +171,10 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const g = get(`ETUT.GRAFIKLER.hoca(ETUT.model(ETUT.oku().veri),{s:2,tur:'gun',ders:null,hoca:null,kim:null},720)`);
     const p = g.ipucu[0].satir; assert.equal(p.length, 10); assert.deepEqual(p[9].slice(1), ['+3 öğretmen', '3']);
   });
-  await check('teachers\' etüt days: from the report or the Etüt planı; days that are not theirs are left out and doluluk ranks them', async () => {
+  await check('teachers\' etüt days: from the report as the schedule changes, or the Etüt planı; other days are passed over and doluluk ranks them', async () => {
     await ekle(rapor());
     let m = model();
-    const kim = ad => m.ogretmenler.find(o => o.ad === 'SENTETİK ÖĞRETMEN ' + ad), bir = kim('BİR'), bes = kim('BEŞ'), dort = kim('DÖRT');
+    const kim = ad => m.ogretmenler.find(o => o.ad === 'SENTETİK ÖĞRETMEN ' + ad), bir = kim('BİR'), bes = kim('BEŞ'), dort = kim('DÖRT'), alti = kim('ALTI');
     // No plan: the weekdays of their etüts in the last four weeks (BİR: Monday 19 Eki and Tuesdays).
     assert.deepEqual([bir.gunleri, bir.kaynak, bes.gunleri], [[0, 1], 'rapor', [1]]);
     assert.deepEqual(bir.kapHafta, [4, 4, 4, 4, 4, 4, 4], 'four places on each of their days that had etüts');
@@ -182,7 +182,10 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     // BEŞ gives etüts on Tuesdays only: Thursday 24 Eyl and Monday 19 Eki are not theirs.
     const gun = m.gun.map(x => iso(x.p)), i24 = gun.indexOf('2026-09-24'), i19 = gun.indexOf('2026-10-19');
     assert.deepEqual([bes.gunG[i24], bes.gunG[i19], bes.gun[i24]], [null, null, 0]); assert.equal(bes.haftaG[6], null, 'the partial week has no Tuesday yet');
-    assert.deepEqual(m.ogretmenler.map(o => [o.k[2].sonSira, o.k[2].siraFark]), [[1, 0], [2, 0], [2, 0], [4, 1], [4, -2], [6, 0]], 'places by doluluk');
+    // Days follow the schedule: a weekday is theirs only next to a week they held etüts on it.
+    assert.deepEqual(dort.haftaG, [null, 0, 1, 1, 1, 1, null], 'DÖRT starts on 22 Eyl: 7 Eyl is not theirs, 14 Eyl is an empty Tuesday');
+    assert.deepEqual(alti.haftaG, [null, null, 1, null, 0, 1, null], 'ALTI: Thursday 24 Eyl, Tuesdays 6 and 13 Eki');
+    assert.deepEqual(m.ogretmenler.map(o => [o.k[2].sonSira, o.k[2].siraFark]), [[1, 0], [2, 0], [2, 0], [4, 2], [4, -2], [6, -4]], 'places by doluluk');
     assert.deepEqual([dort.k[2].onceSira, dort.k[2].sonSira], [2, 4]);
     let h = run('ETUT.icerik()');
     assert.match(h, /data-et-hoca="SENTETİK ÖĞRETMEN BİR"[\s\S]*?<span class="mini">%75 dolu<\/span><span class="mini">1\. sıra<\/span>/);
@@ -201,6 +204,32 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.deepEqual([p.gunleri, p.kaynak, p.kapHafta[2], p.k[2].kapOnce, p.k[2].dolOnce], [[1, 3], 'plan', 8, 12, 0.25]);
     assert.equal(m.ogretmenler.find(o => o.ad === 'SENTETİK ÖĞRETMEN BEŞ').kaynak, 'rapor', 'teachers not in the plan keep the report');
     assert.match(run('ETUT.icerik()'), /Etüt günleri: Salı, Perşembe · Etüt planından/);
+  });
+  await check('Sınıf: one grade at a time; 12. sınıflar have no Friday etüt days from 14 Eyl, other grades keep them', async () => {
+    const cuma = (tarih, ...kisiler) => ({tarih, satirlar:kisiler.map(([ad, sube], i) => ['Türkçe', 'SENTETİK ÖĞRETMEN BEŞ', ad, sube, '101', (15 + i) + ':00', '20 Dk.'])});
+    // Friday 11 Eyl (before the rule) for 12/A, Friday 25 Eyl for 11/A only, Friday 2 Eki for 12/A (a row against the rule stays).
+    await ekle(rapor(GUNLER.concat([cuma('11.09.2026', ['SENTETİK ADA', '301 12/A']), cuma('25.09.2026', ['SENTETİK DENİZ', '302 11/A']), cuma('02.10.2026', ['SENTETİK ADA', '301 12/A'])])));
+    run("D.etutPlani={surum:1,ts:3,gunler:[[],[['Türkçe','Sentetik Öğretmen Beş',['','','','']]],[],[],[['Türkçe','Sentetik Öğretmen Beş',['','','','']]]]}");
+    const gunler = () => get('ETUT.icerik()&&ETUT.onbellek.m.gun.map(x=>x.p)').map(iso);
+    assert(gunler().includes('2026-09-25') && gunler().includes('2026-09-11'), 'all grades: every etüt day');
+    let h = run('ETUT.icerik()');
+    assert.match(h, /<select id="etKademe" aria-label="Sınıf"><option value="">Tüm sınıflar<\/option><option value="12">12\. sınıflar<\/option><option value="11">11\. sınıflar<\/option><option value="10">10\. sınıflar<\/option><\/select>/);
+    run('EK.etKademe=12');
+    const g12 = gunler();
+    assert(!g12.includes('2026-09-25'), 'no Friday after 14 Eyl for 12. sınıflar');
+    assert(g12.includes('2026-09-11') && g12.includes('2026-10-02'), 'Friday 11 Eyl (before the rule) and a 12/A etüt on a Friday stay');
+    assert(g12.includes('2026-10-13'), 'days with other grades\' etüts stay');
+    const m = get('ETUT.onbellek.m');
+    assert(m.kisiler.every(k => /^12\//.test(k.sinif)) && m.kisiler.length === 4); assert.equal(m.kademe, 12);
+    const bes = m.ogretmenler.find(o => o.ad === 'SENTETİK ÖĞRETMEN BEŞ'), w = m.haftalar.indexOf(get('gunNo("2026-09-21")'));
+    assert.deepEqual([bes.gunleri, bes.kapHafta[w]], [[1], 4], 'BEŞ\'s Friday is not a 12. sınıf day');
+    h = run('ETUT.icerik()');
+    assert.match(h, /<p class="et-cumle">12\. sınıflar · Son 2 hafta/); assert.match(h, /<option value="12" selected>/);
+    run('EK.etKademe=11'); assert(gunler().includes('2026-09-25'), '11. sınıflar keep Fridays');
+    const m11 = get('ETUT.onbellek.m'), bes11 = m11.ogretmenler.find(o => o.ad === 'SENTETİK ÖĞRETMEN BEŞ');
+    assert.deepEqual([bes11.gunleri, bes11.kapHafta[m11.haftalar.indexOf(get('gunNo("2026-09-21")'))]], [[1, 4], 8]);
+    run('EK.etKademe=9'); assert.equal(get('ETUT.icerik()&&ETUT.onbellek.m.kademe'), null, 'a grade not in the report shows everyone');
+    run('EK.etKademe=12'); assert.equal(get('ETUT.planIcin()').ogrenciler.length, 6, 'Etüt planı still gets every student');
   });
   await check('drag to measure: every time chart and weekly mini graph says what it measures; Çizgi is on the page', async () => {
     await ekle(rapor());
