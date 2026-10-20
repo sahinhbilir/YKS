@@ -27,13 +27,14 @@
 - Defterle birlikte cihaza ve öğretmenin bulut yedeğine yazılır. Öğrenci paketleri alan listesiyle kurulduğu için öğrencilere gitmez.
 - Okuma ve yazmada `dogrula` yapıyı denetler. Okunamayan veri sayfada uyarıyla gösterilir ve üzerine yazılmaz.
 - Sınırlar: en çok 15 000 etüt ve 300 KB. Defteri bulut yedeği sınırının (900 KB) üstüne çıkaracak ekleme yapılmaz. **Etüt verisini sil** bütün kayıtları kaldırır.
+- **Yedekten geri getir:** Defter etüt verisi olmadan açıldıysa (başka bir cihazdan ya da etüt verisi olmayan bir bulut kopyasından), Google hesabıyla bağlı öğretmen boş Etütler sayfasından etüt kayıtlarını geri alabilir. Bulut yedek geçmişindeki günlük kopyalar yeniden eskiye taranır (en çok 30), etüt verisi okunabilen ilk kopya gösterilir ve onaylanınca yalnızca `D.etut` yazılır; defterin geri kalanı değişmez. Kopyalarda etüt verisi yoksa son rapor “PDF ekle” ile eklenir; okulun raporu dönem başından bugüne olduğu için tek PDF yeter.
 - İzleyici öğretmen grafikleri görür; rapor ekleyemez ve silemez.
 
 ## Kod ve testler
 
 - `src/etutler.js`, `src/etutler.css` → `node scripts/embed-etutler.cjs` ile `index.html` içine gömülür (`--check` yalnızca denetler).
 - PDF metni Denemeler’deki `denemePdfSayfalari` (`pdfjs-dist@5.6.205`) ile okunur.
-- `test/etut-regression.cjs`: rapor okuma, saklama ve birleştirme, haftalık model, durumlar, öğretmenler, Etüt planı önerileri, sayfa, sınırlar, gizlilik.
-- `test/etut-browser.cjs`: masaüstü (açık tema) ve 390 px (koyu tema); PDF ekle, grafikler, ipucu ve klavye, pencere ve dönem seçimi, ders ve öğretmen seçimi, öğrenci seçimi, arama, sıralama, silme.
+- `test/etut-regression.cjs`: rapor okuma, saklama ve birleştirme, haftalık model, durumlar, öğretmenler, Etüt planı önerileri, sayfa, yedekten geri getirme, sınırlar, gizlilik.
+- `test/etut-browser.cjs`: masaüstü (açık tema) ve 390 px (koyu tema); PDF ekle, grafikler, ipucu ve klavye, pencere ve dönem seçimi, ders ve öğretmen seçimi, öğrenci seçimi, arama, sıralama, silme, yedekten geri getirme.
 - Etüt planı (docs/etut-plani.md) her hafta günü için raporun son dört haftasında o gün etüt veren öğretmenleri `ETUT.planIcin()` ile alır.
 - `test/fixtures/etut-pdf.cjs`: okulun düzeninde sentetik PDF metin öğeleri; gerçek öğrenci verisi yoktur.

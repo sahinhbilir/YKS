@@ -161,6 +161,34 @@ async function sil(){
   if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen silebilir.');
   await yaz(null);
 }
+// A notebook opened without its etüt rows (from another device or an older cloud copy) can take them
+// back from the newest daily cloud copy that has them. Only D.etut is written; the rest stays.
+const EN_COK_YEDEK=30;
+function bulutHazir(){
+  const b=typeof window!=='undefined'&&window.bulut,u=b&&b.yapilandirilmis&&typeof b.mevcutKullanici==='function'?b.mevcutKullanici():null;
+  return !!(u&&!u.isAnonymous);
+}
+async function yedekteBul(ilerleme){
+  const g=await bulutYedekGecmisi();if(g.tur!=='tamam')throw new Error(g.mesaj||'Bulut yedeğine bağlanılamadı.');
+  for(const y of g.liste.slice(0,EN_COK_YEDEK)){
+    if(ilerleme)ilerleme(y.gun);
+    const r=await buluttanGunAl(y.gun);if(r.tur!=='tamam'||!r.yedek||r.yedek.etut===undefined)continue;
+    try{const v=dogrula(JSON.parse(JSON.stringify(r.yedek.etut)));if(v.satir.length)return {gun:y.gun,veri:v}}catch(e){/* unreadable copy: try an older one */}
+  }
+  return null;
+}
+async function yedektenGetir(){
+  if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen geri getirebilir.');
+  if(D.etut!==undefined)throw new Error('Defterde zaten etüt verisi var.');
+  const defter=D,b=await yedekteBul(gun=>durum('Bulut yedekleri aranıyor: '+tarihUzun(gunNo(gun))+'…'));
+  if(D!==defter||!rehberMi())throw new Error('Oturum değişti.');
+  if(!b)return 'Bulut yedeklerinde etüt verisi yok. Son etüt raporunu “PDF ekle” ile ekleyin.';
+  const v=b.veri,gun=tarihUzun(gunNo(b.gun));
+  if(!confirm(gun+' yedeğinde '+sayi(v.satir.length)+' etüt var ('+tarihUzun(v.satir[0][0])+' – '+tarihUzun(v.satir[v.satir.length-1][0])+'). Geri getirilsin mi? Defterin geri kalanı değişmez.'))return 'Geri getirilmedi.';
+  if(D!==defter||D.etut!==undefined)throw new Error('Defter bu arada değişti; geri getirilmedi.');
+  await yaz(v);
+  return 'Geri getirildi: '+sayi(v.satir.length)+' etüt ('+gun+' yedeğinden).';
+}
 
 /* ---------------- model ---------------- */
 // Weeks start on Monday and run from the first etüt's week to the report's last day; weeks with
@@ -501,7 +529,8 @@ function icerik(){
   const durumSatiri='<p id="etDurum" role="status" aria-live="polite">'+kacis(DURUM_YAZI)+'</p>';
   if(hata)return '<header class="et-bas"><h1 class="et-baslik">Etütler</h1></header><p class="et-uyari">'+kacis(hata)+'</p>'+durumSatiri;
   const m=veri?modelAl(veri):null;
-  if(!m)return '<header class="et-bas"><h1 class="et-baslik">Etütler</h1><p class="et-cumle">Okulun etüt raporundan haftalık etüt grafikleri</p></header><div class="et-arac">'+ekle+'</div>'+durumSatiri+
+  const geri=!salt&&!veri&&bulutHazir()?'<button type="button" class="et-dugme" id="etGeriGetir">Yedekten geri getir</button>':'';
+  if(!m)return '<header class="et-bas"><h1 class="et-baslik">Etütler</h1><p class="et-cumle">Okulun etüt raporundan haftalık etüt grafikleri</p></header><div class="et-arac">'+ekle+geri+'</div>'+durumSatiri+
     '<section class="et-panel et-bos"><b>Henüz etüt raporu yok</b>'+(salt?'':'<p>Okulun “Tarih Bazlı Etüt Raporu” PDF’ini “PDF ekle” ile ekleyin. Yeni rapor, kapsadığı tarihlerdeki kayıtların yerine geçer.</p>')+'</section>';
   const st=durumAl(m),es=defterEslesme(),per=st.tur==='hafta'?'haftalık':'günlük';
   cizimPlanla();
@@ -556,7 +585,12 @@ async function pdfEkle(files){
 const etkin=()=>EK.sekme==='etutler'&&rehberMi();
 document.addEventListener('click',async ev=>{
   if(!etkin())return;
-  const el=ev.target.closest?.('[data-et-aralik],[data-et-tur],[data-et-ders],[data-et-hoca],[data-et-ogr],[data-et-sira],#etSil');if(!el||el.disabled)return;
+  const el=ev.target.closest?.('[data-et-aralik],[data-et-tur],[data-et-ders],[data-et-hoca],[data-et-ogr],[data-et-sira],#etSil,#etGeriGetir');if(!el||el.disabled)return;
+  if(el.id==='etGeriGetir'){
+    if(ISLEM||izleme())return;
+    ISLEM=true;try{durum(await yedektenGetir())}catch(e){durum('Geri getirilemedi: '+e.message)}finally{ISLEM=false}
+    yenidenCiz();return;
+  }
   if(el.dataset.etAralik){EK.etAralik=Number(el.dataset.etAralik);yenidenCiz('[data-et-aralik="'+EK.etAralik+'"]');return}
   if(el.dataset.etTur){EK.etTur=el.dataset.etTur;yenidenCiz('[data-et-tur="'+EK.etTur+'"]');return}
   if(el.dataset.etDers!==undefined){const d=el.dataset.etDers;EK.etDers=d&&EK.etDers!==d?d:null;yenidenCiz(d?'[data-et-ders="'+CSS.escape(d)+'"].et-ders':null);return}
@@ -599,7 +633,7 @@ document.addEventListener('keydown',ev=>{
   ipucuGoster(kutu,ev.key==='Home'?0:ev.key==='End'?g.xs.length-1:Math.max(0,Math.min(g.xs.length-1,i+(ev.key==='ArrowLeft'?-1:1))));
 });
 document.addEventListener('focusout',ev=>{const kutu=ev.target.closest?.('.et-grafik[data-et-grafik]');if(kutu)ipucuGizle(kutu)});
-return {pdfCoz,dogrula,oku,ac,paketle,birlestir,raporEkle,sil,model,dersAdi,gorunum,icerik,grafikleriCiz,GRAFIKLER,planIcin,UST_SINIR,EN_COK_SATIR,DURUM,
+return {pdfCoz,dogrula,oku,ac,paketle,birlestir,raporEkle,sil,yedekteBul,yedektenGetir,model,dersAdi,gorunum,icerik,grafikleriCiz,GRAFIKLER,planIcin,UST_SINIR,EN_COK_SATIR,DURUM,
   get onbellek(){return ONBELLEK}};
 })();
 function gorunumEtutler(){return ETUT.gorunum()}

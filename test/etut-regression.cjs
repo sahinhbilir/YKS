@@ -17,8 +17,8 @@ sandbox.window.document = sandbox.document; vm.createContext(sandbox); new vm.Sc
 const run = code => vm.runInContext(code, sandbox);
 const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
-sandbox.__yg = run('yalnizcaGoruntuleme');
-const reset = () => run(`yalnizcaGoruntuleme=__yg;D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'Sentetik Ada',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='etutler';
+sandbox.__yg = run('yalnizcaGoruntuleme'); sandbox.__bg = run('bulutYedekGecmisi'); sandbox.__bga = run('buluttanGunAl');
+const reset = () => run(`yalnizcaGoruntuleme=__yg;bulutYedekGecmisi=__bg;buluttanGunAl=__bga;confirm=()=>true;delete window.bulut;D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'Sentetik Ada',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='etutler';
   EK.etAralik=undefined;EK.etTur=undefined;EK.etDers=undefined;EK.etHoca=undefined;EK.etOgr=undefined;EK.etSira=undefined;EK.etAra='';EK.etSinif='';KAYIT=0;kaydet=async()=>{KAYIT++;return true};ETUT.onbellek.ts=null;`);
 const rapor = (gunler = GUNLER, aralik) => { put('pages', etutRaporu(gunler, aralik).pages); return get('ETUT.pdfCoz(pages)'); };
 const iso = g => run('isoDan(' + g + ')');
@@ -133,6 +133,25 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.deepEqual(p.gunler[1].map(o => o.ogretmen.replace('Sentetik ', '')), ['Öğretmen Bir', 'Öğretmen Üç', 'Öğretmen Beş', 'Öğretmen Dört', 'Uzunadlı Öğretmen İki', 'Öğretmen Altı']);
     assert.deepEqual(p.gunler[3].map(o => o.brans), ['Biyoloji', 'Fizik']); assert.deepEqual([p.gunler[2], p.gunler[4]], [[], []]);
     assert.equal(p.ogretmenler.length, 6); assert(p.ogrenciler.some(o => o.ad === 'Sentetik Ada' && o.sinif === '12/A'));
+  });
+  await check('an empty notebook takes its etüt rows back from the newest cloud copy that has them; nothing else changes', async () => {
+    await ekle(rapor()); const etut = get('D.etut'); run("delete D.etut;KAYIT=0;ETUT.onbellek.ts=null;D.ogr[0].ad='Değişmeyen Ada'");
+    assert(!run('ETUT.icerik()').includes('etGeriGetir'), 'not signed in to the cloud: no button');
+    run("window.bulut={yapilandirilmis:true,mevcutKullanici:()=>({uid:'u1',isAnonymous:false})}");
+    assert(run('ETUT.icerik()').includes('id="etGeriGetir"'));
+    put('YEDEK', { ogr: [], ayar: {}, etut });
+    run(`__okunan=[];bulutYedekGecmisi=async()=>({tur:'tamam',liste:['2026-10-20','2026-10-19','2026-10-18','2026-10-17'].map(gun=>({gun}))});
+      buluttanGunAl=async gun=>{__okunan.push(gun);return {tur:'tamam',yedek:gun==='2026-10-20'?{ogr:[],ayar:{}}:gun==='2026-10-19'?{ogr:[],ayar:{},etut:{surum:9}}:YEDEK}}`);
+    assert.match(await run('ETUT.yedektenGetir()'), /Geri getirildi: 36 etüt \(18 Eki 2026 yedeğinden\)/);
+    assert.deepEqual(get('__okunan'), ['2026-10-20', '2026-10-19', '2026-10-18'], 'newest first, past copies without or with unreadable rows');
+    assert.equal(JSON.stringify(get('D.etut.satir')), JSON.stringify(etut.satir)); assert.equal(run('D.ogr[0].ad'), 'Değişmeyen Ada'); assert.equal(run('KAYIT'), 1);
+    assert(!run('ETUT.icerik()').includes('etGeriGetir')); await assert.rejects(run('ETUT.yedektenGetir()'), /zaten etüt verisi/);
+    run("delete D.etut;ETUT.onbellek.ts=null;buluttanGunAl=async()=>({tur:'tamam',yedek:{ogr:[],ayar:{}}})");
+    assert.match(await run('ETUT.yedektenGetir()'), /Bulut yedeklerinde etüt verisi yok/); assert.equal(run('D.etut'), undefined);
+    run('buluttanGunAl=async()=>({tur:"tamam",yedek:YEDEK});confirm=()=>false'); assert.match(await run('ETUT.yedektenGetir()'), /Geri getirilmedi/); assert.equal(run('D.etut'), undefined);
+    run("bulutYedekGecmisi=async()=>({tur:'hata',mesaj:'izin yok'})"); await assert.rejects(run('ETUT.yedektenGetir()'), /izin yok/);
+    run('confirm=()=>true;yalnizcaGoruntuleme=()=>true'); assert(!run('ETUT.icerik()').includes('etGeriGetir')); await assert.rejects(run('ETUT.yedektenGetir()'), /Yalnızca rehber/);
+    assert.equal(run('KAYIT'), 1, 'only the restore saved');
   });
   await check('a viewing teacher sees the board without import or delete; nothing is saved', async () => {
     await ekle(rapor()); run('KAYIT=0;yalnizcaGoruntuleme=()=>true');

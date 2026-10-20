@@ -1,7 +1,7 @@
 // Etütler on desktop and mobile: the tab in the teacher menu, "PDF ekle" with a synthetic report,
 // the five charts and their hover/keyboard readouts, window and period switches, subject and
-// teacher focus, student selection, search, sorting and delete. Synthetic data only; the PDF read
-// itself is pdf.js, so its text items are stubbed with test/fixtures/etut-pdf.cjs.
+// teacher focus, student selection, search, sorting, delete and the cloud restore. Synthetic data
+// only; the PDF read itself is pdf.js, so its text items are stubbed with test/fixtures/etut-pdf.cjs.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const {etutRaporu,GUNLER}=require('./fixtures/etut-pdf.cjs');
@@ -88,8 +88,17 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.evaluate(()=>window.scrollTo(0,0));
    await page.screenshot({path:path.join(out,'etutler-'+width+'-'+tema+'.png'),fullPage:true});
    // Delete removes the stored rows; the empty page comes back.
+   await page.evaluate(()=>{window.__etut=JSON.parse(JSON.stringify(D.etut))});
    await page.locator('#etSil').click();await page.waitForFunction(()=>D.etut===undefined);
    assert.match(await page.locator('#etKok').innerText(),/Henüz etüt raporu yok/);
+   // Signed in to the cloud, the empty page brings the rows back from the newest copy that has them.
+   await page.evaluate(()=>{window.bulut={yapilandirilmis:true,mevcutKullanici:()=>({uid:'synthetic',isAnonymous:false})};
+     bulutYedekGecmisi=async()=>({tur:'tamam',liste:[{gun:'2026-10-20'},{gun:'2026-10-19'}]});
+     buluttanGunAl=async gun=>({tur:'tamam',yedek:gun==='2026-10-20'?{ogr:[],ayar:{}}:{ogr:[],ayar:{},etut:window.__etut}});ciz();delete window.bulut});
+   await page.locator('#etGeriGetir').click();
+   await page.waitForFunction(()=>D.etut&&D.etut.satir.length===36);
+   assert.match(await page.locator('#etDurum').innerText(),/Geri getirildi: 36 etüt \(19 Eki 2026 yedeğinden\)/);
+   await page.waitForFunction(()=>document.querySelectorAll('.et-grafik svg').length===5);
    assert.deepEqual(errors,[]);
    await context.close();
   }

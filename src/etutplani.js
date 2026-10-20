@@ -79,8 +79,40 @@ function gunSec(){
 }
 const baslik=g=>buyuk(GUNLER[g])+' — ETÜT PLANI';
 
+/* ---------------- pasted teacher list ---------------- */
+// One paste sets the week: a weekday on its own line ("PAZARTESİ", "Salı — ETÜT PLANI") starts a day
+// and "Branş: Ad Soyad, Ad Soyad" lines follow. Lines before any weekday go to the day on screen.
+const sade=s=>anahtar(s).replace(/[İI]/g,'I').replace(/Ş/g,'S').replace(/Ç/g,'C').replace(/Ğ/g,'G').replace(/Ö/g,'O').replace(/Ü/g,'U');
+function listeCoz(metin,gun){
+  const gunler=new Map(),hatalar=[];let g=Number.isInteger(gun)?gun:null;
+  String(metin||'').split(/\r?\n/).forEach((ham,i)=>{
+    const satir=String(ham).trim().slice(0,500);if(!satir)return;
+    const bas=sade(satir).replace(/\s*[—–-]*\s*ETUT PLANI\s*$/,'').replace(/[\s:.]+$/,''),gi=GUNLER.findIndex(d=>sade(d)===bas);
+    if(gi>=0){g=gi;if(!gunler.has(g))gunler.set(g,[]);return}
+    const m=/^([^:\t]+?)\s*[:\t]\s*(.+)$/.exec(satir),adlar=m?m[2].split(/\s*[,;\t]\s*/).map(a=>kisa(a,60)).filter(Boolean):[];
+    if(g===null||!m||!kisa(m[1],40)||!adlar.length){hatalar.push(i+1);return}
+    if(!gunler.has(g))gunler.set(g,[]);
+    for(const a of adlar)gunler.get(g).push([kisa(m[1],40),a]);
+  });
+  return {gunler,hatalar};
+}
+// Each pasted day's teachers replace that day's list; a teacher who stays keeps their students.
+async function listeUygula(metin){
+  const g0=gunSec(),{gunler,hatalar}=listeCoz(metin,g0==='hepsi'?null:g0);
+  if(hatalar.length)throw new Error((hatalar.length>1?'Okunamayan satırlar: ':'Okunamayan satır: ')+hatalar.slice(0,6).join(', ')+'. Gün adı kendi satırında, öğretmenler “Branş: Ad Soyad, Ad Soyad” biçiminde.');
+  const dolu=[...gunler].filter(([,l])=>l.length).sort((a,b)=>a[0]-b[0]);
+  if(!dolu.length)throw new Error('Yapıştırılan listede öğretmen yok.');
+  for(const [g,l] of dolu)if(l.length>EN_COK_SATIR)throw new Error(GUNLER[g]+': bir günde en fazla '+EN_COK_SATIR+' satır olur.');
+  const {plan}=oku(),degisen=plan?dolu.filter(([g])=>plan.gunler[g].length).map(([g])=>GUNLER[g]):[];
+  if(degisen.length&&!confirm(degisen.join(', ')+' öğretmen listesi yapıştırılanla değişsin mi? Kalan öğretmenlerin öğrencileri korunur.'))return '';
+  await degistir(p=>{for(const [g,l] of dolu){
+    const eski=new Map();for(const s of p.gunler[g])if(s[1]&&!eski.has(anahtar(s[1])))eski.set(anahtar(s[1]),s[2]);
+    p.gunler[g]=l.map(([b,o])=>{const k=anahtar(o),ogr=eski.get(k);eski.delete(k);return [b,o,ogr?ogr.slice():Array(OGRENCI).fill('')]})}});
+  return 'Yapıştırıldı: '+dolu.map(([g,l])=>GUNLER[g]+' '+sayi(l.length)).join(' · ')+' öğretmen.';
+}
+
 /* ---------------- page ---------------- */
-let DURUM_YAZI='';
+let DURUM_YAZI='',LISTE='';
 function durum(t){DURUM_YAZI=t||'';const el=document.getElementById('epDurum');if(el)el.textContent=DURUM_YAZI}
 const sutunlar='<colgroup><col class="ep-k-brans"><col class="ep-k-hoca">'+'<col class="ep-k-ogr">'.repeat(OGRENCI)+'</colgroup>';
 const basSatiri='<thead><tr><th scope="col">BRANŞ</th><th scope="col">ÖĞRETMEN</th>'+Array.from({length:OGRENCI},(_,k)=>'<th scope="col">ÖĞRENCİ '+(k+1)+'</th>').join('')+'</tr></thead>';
@@ -127,6 +159,8 @@ function icerik(){
   const gunSecimi=seg('gun',g,GUNLER.map((ad,j)=>[j,'<span class="ep-tam">'+ad+'</span><span class="ep-kisa" aria-hidden="true">'+KISA[j]+'</span>',ad]).concat([['hepsi','Tümü']]),'Gün','ep-gun-sec');
   return bas+'<div class="et-arac"><button type="button" class="et-dugme birincil" id="epYazdir">Yazdır</button>'+gunSecimi+
     (salt?'':seg('mod',mod,[['ogrenci','Öğrenciler'],['ogretmen','Öğretmenler']],'Düzenle')+'<button type="button" class="et-dugme" id="epTemizle"'+(ogrVar?'':' disabled')+'>Öğrencileri sil</button>')+'</div>'+durumSatiri+
+    (mod==='ogretmen'?'<details class="ep-yapistir"'+(LISTE?' open':'')+'><summary>Listeyi yapıştır</summary><textarea id="epListe" rows="9" spellcheck="false" aria-label="Öğretmen listesi" '+
+      'placeholder="PAZARTESİ&#10;Matematik: Ad Soyad, Ad Soyad&#10;Geometri: Ad Soyad&#10;SALI&#10;Matematik: Ad Soyad">'+kacis(LISTE)+'</textarea><button type="button" class="et-dugme birincil" id="epListeUygula">Uygula</button></details>':'')+
     '<div class="ep-gunler">'+gunler.map(j=>mod==='ogretmen'?duzenKagidi(plan,j,r):kagit(plan,j,r,salt)).join('')+'</div>'+listeler(plan,r)+'<div id="epBaski"></div>';
 }
 function gorunum(){
@@ -191,9 +225,10 @@ async function bosSatirlariAt(){
 }
 document.addEventListener('click',async ev=>{
   if(!etkin())return;
-  const el=ev.target.closest?.('[data-ep-gun],[data-ep-mod],[data-ep-ekle],[data-ep-rapor],[data-ep-sil],#epYazdir,#epTemizle');if(!el||el.disabled)return;
+  const el=ev.target.closest?.('[data-ep-gun],[data-ep-mod],[data-ep-ekle],[data-ep-rapor],[data-ep-sil],#epYazdir,#epTemizle,#epListeUygula');if(!el||el.disabled)return;
   try{
     if(el.id==='epYazdir'){yazdir();return}
+    if(el.id==='epListeUygula'){const t=document.getElementById('epListe'),m=await listeUygula(t?t.value:LISTE);if(m){LISTE='';durum(m)}yenidenCiz();return}
     if(el.dataset.epGun!==undefined){const v=el.dataset.epGun;EK.epGun=v==='hepsi'?v:Number(v);durum('');yenidenCiz('[data-ep-gun="'+v+'"]');return}
     if(el.dataset.epMod){const v=el.dataset.epMod;if(v!=='ogretmen'&&EK.epMod==='ogretmen')await bosSatirlariAt();EK.epMod=v;durum('');yenidenCiz('[data-ep-mod="'+v+'"]');return}
     if(el.dataset.epEkle!==undefined){const g=Number(el.dataset.epEkle);
@@ -208,7 +243,7 @@ document.addEventListener('click',async ev=>{
       await degistir(p=>{for(const j of gunler)for(const s of p.gunler[j])s[2]=s[2].map(()=>'')});durum('Öğrenci adları silindi.');yenidenCiz();return}
   }catch(e){durum(e.message);yenidenCiz()}
 });
-document.addEventListener('input',ev=>{if(etkin()&&ev.target.dataset?.epK!==undefined)ciftIsaretle(ev.target.dataset.epG)});
+document.addEventListener('input',ev=>{if(!etkin())return;if(ev.target.id==='epListe')LISTE=ev.target.value;else if(ev.target.dataset?.epK!==undefined)ciftIsaretle(ev.target.dataset.epG)});
 document.addEventListener('change',async ev=>{
   if(!etkin())return;const el=ev.target;
   try{
@@ -225,6 +260,6 @@ document.addEventListener('change',async ev=>{
     if(k!==undefined)ciftIsaretle(g);
   }catch(e){durum(e.message);yenidenCiz()}
 });
-return {dogrula,oku,degistir,gruplar,ciftler,eksikler,bransBul,ekle,bosSatirlariAt,gunSec,baskiHtml,yazdir,icerik,gorunum,GUNLER,OGRENCI,EN_COK_SATIR,BRANS_SIRA};
+return {dogrula,oku,degistir,gruplar,ciftler,eksikler,bransBul,ekle,listeCoz,listeUygula,bosSatirlariAt,gunSec,baskiHtml,yazdir,icerik,gorunum,GUNLER,OGRENCI,EN_COK_SATIR,BRANS_SIRA};
 })();
 function gorunumEtutPlani(){return ETUTPLANI.gorunum()}
