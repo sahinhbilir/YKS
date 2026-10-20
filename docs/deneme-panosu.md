@@ -1,6 +1,6 @@
 # Deneme panosu (rehber öğretmen)
 
-Rehber öğretmenin **Denemeler** sayfası artık bir panodur: okulun deneme sonuç listeleri borsa grafiği gibi gösterilir. Görünüş Etütler’le aynıdır (renkler ve parçalar `src/etutler.css` içinde `#etKok` ve `#dpKok` için ortaktır). Öğrencinin kendi **Denemelerim** sayfası değişmez.
+Rehber öğretmenin **Denemeler** sayfası artık bir panodur: okulun deneme sonuç listeleri borsa grafiği gibi gösterilir. Görünüş Etütler’le aynıdır (renkler ve parçalar `src/etutler.css` içinde `#etKok`, `#dpKok` ve Etüt planının `#epKok` kökü için ortaktır). Öğrencinin kendi **Denemelerim** sayfası değişmez.
 
 ## Veri nereden gelir
 

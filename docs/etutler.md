@@ -15,9 +15,10 @@
 - **Grafik: Haftalık / Günlük.** Haftalıkta etüt olmayan hafta 0’dır; günlükte yalnızca etüt olan günler gösterilir ve 5 günlük ortalama çizilir.
 - **Tüm etütler:** etüt sayısı çizgisi, son tam dönemin değeri sağdaki etikette. Alttaki çubuklar etüt alan farklı öğrenci sayısıdır: bir önceki döneme göre artış yeşil, azalış kırmızı.
 - **Dersler:** branşlar derse toplanır (MATEMATİK TYT + MATEMATİK AYT + Matematik → Matematik; FİZİK 1 → Fizik; Türkçe ve Türk Dili ve Edebiyatı → Türkçe; T.C. İnkılap Tarihi → Tarih). Her ders kartı son penceredeki etüt sayısını, değişimini ve haftalık küçük grafiği gösterir; karta basınca ders grafiği yalnızca o derse geçer.
+- **Öğretmenler:** her öğretmen ayrı bir kartta, en çok etüt verdiği dersin renginde ve dersler sırasıyla: son penceredeki etüt sayısı, değişimi, toplamı ve haftalık küçük grafik. Öğretmen seçili değilken grafik her öğretmenin çizgisini gösterir; üzerine gelince o dönemin en çok etüt veren on öğretmeni yazar, kalanlar “+N öğretmen” olarak toplanır. Karta basınca grafik yalnızca o öğretmene geçer ve yanında öğretmenin öğrencileri (etüt sayısı ve son etüt günüyle) listelenir; listeden bir öğrenci seçilince öğrenci kartı açılır. Aynı ada sahip satırlar (büyük/küçük harf farkı olsa da) tek öğretmendir.
 - **Farklı öğrenci sayısı:** ilk kez gelen ve tekrar gelen öğrenciler.
 - **En çok değişenler** ve **Tüm öğrenciler:** öğrencinin önceki ve son penceredeki etüt sayısı ve durumu: **Artıyor**, **Azalıyor**, **Bıraktı** (son pencerede hiç yok), **Yeni** (ilk etüdü son pencerede), **Döndü** (önceki pencerede yoktu, daha önce vardı), **Aynı**, **Etüt yok**. Tablo aranır, şubeye göre süzülür ve sütun başlığıyla sıralanır.
-- Seçilen öğrencinin kartı haftalık etütlerini derslere göre yığılmış çubuklarla gösterir. Defterdeki bir öğrenciyle adı eşleşirse ad, o öğrencinin gözüyle açılır (docs/ogrenci-gozuyle.md).
+- Seçilen öğrencinin kartı haftalık etütlerini derslere göre yığılmış çubuklarla gösterir; altında derslere ve öğretmenlere göre etüt sayıları vardır. Defterdeki bir öğrenciyle adı eşleşirse ad, o öğrencinin gözüyle açılır (docs/ogrenci-gozuyle.md).
 - Grafiklerin üzerine gelince ya da grafik seçiliyken ←/→ ile o dönemin sayıları görünür.
 
 ## Saklama ve gizlilik
@@ -32,6 +33,7 @@
 
 - `src/etutler.js`, `src/etutler.css` → `node scripts/embed-etutler.cjs` ile `index.html` içine gömülür (`--check` yalnızca denetler).
 - PDF metni Denemeler’deki `denemePdfSayfalari` (`pdfjs-dist@5.6.205`) ile okunur.
-- `test/etut-regression.cjs`: rapor okuma, saklama ve birleştirme, haftalık model, durumlar, sayfa, sınırlar, gizlilik.
-- `test/etut-browser.cjs`: masaüstü (açık tema) ve 390 px (koyu tema); PDF ekle, grafikler, ipucu ve klavye, pencere ve dönem seçimi, ders seçimi, öğrenci seçimi, arama, sıralama, silme.
+- `test/etut-regression.cjs`: rapor okuma, saklama ve birleştirme, haftalık model, durumlar, öğretmenler, Etüt planı önerileri, sayfa, sınırlar, gizlilik.
+- `test/etut-browser.cjs`: masaüstü (açık tema) ve 390 px (koyu tema); PDF ekle, grafikler, ipucu ve klavye, pencere ve dönem seçimi, ders ve öğretmen seçimi, öğrenci seçimi, arama, sıralama, silme.
+- Etüt planı (docs/etut-plani.md) her hafta günü için raporun son dört haftasında o gün etüt veren öğretmenleri `ETUT.planIcin()` ile alır.
 - `test/fixtures/etut-pdf.cjs`: okulun düzeninde sentetik PDF metin öğeleri; gerçek öğrenci verisi yoktur.

@@ -167,7 +167,7 @@ async function sil(){
 // no etüt count as 0. The last week is partial (dashed, left out of comparisons) when the report
 // ends before Friday. Windows compare the last 1, 2 or 4 full weeks with as many weeks before.
 function model(v){
-  const rows=ac(v).map(r=>({...r,hafta:pazartesi(r.g),ders:dersAdi(r.brans),kim:anahtar(r.ad)+'|'+r.sinif})).sort((a,b)=>a.g-b.g||(a.saat??-1)-(b.saat??-1));
+  const rows=ac(v).map(r=>({...r,hafta:pazartesi(r.g),ders:dersAdi(r.brans),kim:anahtar(r.ad)+'|'+r.sinif,hoca:anahtar(r.ogretmen)})).sort((a,b)=>a.g-b.g||(a.saat??-1)-(b.saat??-1));
   if(!rows.length)return null;
   const bit=Math.max(rows[rows.length-1].g,...v.kaynak.map(k=>k.bit));
   const haftalar=[];for(let h=rows[0].hafta;h<=pazartesi(bit);h+=7)haftalar.push(h);
@@ -199,11 +199,21 @@ function model(v){
     const l=rows.filter(r=>r.kim===kim),o={kim,ad:l[0].ad,sinif:l[0].sinif,toplam:l.length,ilk:l[0].g,son:l[l.length-1].g,
       hafta:haftalar.map(h=>l.filter(r=>r.hafta===h).length),dersler:{},k:{}};
     for(const r of l)o.dersler[r.ders]=(o.dersler[r.ders]||0)+1;
+    o.ogretmenler={};for(const r of l)if(r.hoca)o.ogretmenler[r.hoca]=(o.ogretmenler[r.hoca]||0)+1;
     for(const s of ARALIKLAR){const c=karsilastir(l,s);if(!c)continue;const w=pencere[s];
       c.durum=c.son>0&&c.once===0&&ilkHafta.get(kim)>=w.son[0]?'New':c.son>0&&c.once===0?'Returned':c.son===0&&c.once>0?'Stopped':c.son>c.once?'Rising':c.son<c.once?'Falling':c.son>0?'Steady':'Quiet';
       o.k[s]=c}
     return o;
   }).sort((a,b)=>b.toplam-a.toplam||a.ad.localeCompare(b.ad,'tr'));
+  // Teachers, each under the subject they give most etüts in; grouped in subject order.
+  const ogretmenler=[...new Set(rows.filter(r=>r.hoca).map(r=>r.hoca))].map(hoca=>{
+    const l=rows.filter(r=>r.hoca===hoca),sayac={},kisi=new Map();
+    for(const r of l){sayac[r.ders]=(sayac[r.ders]||0)+1;const k=kisi.get(r.kim);if(k){k.n++;k.son=r.g}else kisi.set(r.kim,{kim:r.kim,ad:r.ad,sinif:r.sinif,n:1,son:r.g})}
+    const ders=Object.entries(sayac).sort((a,b)=>b[1]-a[1]||dersSira.indexOf(a[0])-dersSira.indexOf(b[0]))[0][0];
+    const o={hoca,ad:l[0].ogretmen,ders,renk:dersRengi(ders),toplam:l.length,ogrenci:kisi.size,hafta:haftalar.map(h=>l.filter(r=>r.hafta===h).length),
+      gun:gun.map(x=>x.satir.filter(r=>r.hoca===hoca).length),kisiler:[...kisi.values()].sort((a,b)=>b.n-a.n||b.son-a.son||a.ad.localeCompare(b.ad,'tr')),k:{}};
+    for(const s of ARALIKLAR)o.k[s]=karsilastir(l,s);return o;
+  }).sort((a,b)=>dersSira.indexOf(a.ders)-dersSira.indexOf(b.ders)||b.toplam-a.toplam||a.ad.localeCompare(b.ad,'tr'));
   const ozet={};
   for(const s of ARALIKLAR){const w=pencere[s];if(!w)continue;
     const once=rows.filter(r=>icinde(r,w.once)),son=rows.filter(r=>icinde(r,w.son));
@@ -212,12 +222,13 @@ function model(v){
       ogrOnce:ko,ogrSon:ks,ogrFark:ks-ko,yeni:[...ilkHafta.values()].filter(h=>h>=w.son[0]&&h<=w.son[1]).length,
       artan:kisiler.filter(k=>k.k[s].fark>0).length,azalan:kisiler.filter(k=>k.k[s].fark<0).length};
   }
-  return {rows,bit,ilk:rows[0].g,haftalar,hafta,gun,pencere,dersler,kisiler,ozet,kismiHafta};
+  return {rows,bit,ilk:rows[0].g,haftalar,hafta,gun,pencere,dersler,ogretmenler,kisiler,ozet,kismiHafta};
 }
 function modelAl(v){const k=v.ts+'|'+v.satir.length;if(ONBELLEK.ts!==k||!ONBELLEK.m){ONBELLEK.m=model(v);ONBELLEK.ts=k}return ONBELLEK.m}
 function durumAl(m){
   const s=ARALIKLAR.includes(EK.etAralik)&&m.pencere[EK.etAralik]?EK.etAralik:m.pencere[2]?2:ARALIKLAR.filter(x=>m.pencere[x]).pop()||null;
   return {s,tur:EK.etTur==='gun'?'gun':'hafta',ders:m.dersler.some(d=>d.ders===EK.etDers)?EK.etDers:null,
+    hoca:m.ogretmenler.some(o=>o.hoca===EK.etHoca)?EK.etHoca:null,
     kim:m.kisiler.some(k=>k.kim===EK.etOgr)?EK.etOgr:(m.kisiler[0]||{}).kim};
 }
 
@@ -280,21 +291,29 @@ function grafikGenel(m,st,W){
 }
 function donemBasligi(r,tur){return tur==='hafta'?gunAy(r.p)+' haftası'+(r.kismi?' · devam ediyor':''):new Date(r.p*864e5).toLocaleDateString('tr-TR',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})}
 
-function grafikDers(m,st,W){
-  const H=300,d=m[st.tur],ps=d.map(r=>r.p),seri=m.dersler.map(x=>({ad:x.ders,renk:x.renk,v:x[st.tur]}));
-  const gorunen=st.ders?seri.filter(s=>s.ad===st.ders):seri,yMax=Math.max(1,...gorunen.flatMap(s=>s.v)),tik=tikler(yMax,5);
+// One line per subject or per teacher; a chosen one is drawn alone with its area. enCok keeps the
+// readout to the busiest series when many lines share the chart.
+function grafikCoklu(m,st,W,seri,secili,egimId,enCok){
+  const H=300,d=m[st.tur],ps=d.map(r=>r.p);
+  const gorunen=secili?seri.filter(s=>s.k===secili):seri,yMax=Math.max(1,...gorunen.flatMap(s=>s.v)),tik=tikler(yMax,5);
   const R=W-(yaziGen(sayi(tik[tik.length-1]))+22),L=2,ust=26,alt=H-26,step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>alt-v/tik[tik.length-1]*(alt-ust);
   const nTam=d.findIndex(r=>r.kismi)<0?d.length:d.findIndex(r=>r.kismi);
   let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" aria-hidden="true">';
   svg+=bantlar(ps,x,step,m.pencere[st.s],st.s,4,alt,true,st.tur)+eksenY(tik,y,L,R)+'<line class="et-eksen" x1="'+L+'" x2="'+R+'" y1="'+alt+'" y2="'+alt+'"/>';
   const ciz=(s,kalin)=>{const pts=s.v.map((v,i)=>[x(i),y(v)]),c=' style="stroke:'+s.renk+'"';
     return '<path class="et-cizgi'+(kalin?' kalin':' ince')+'"'+c+' d="'+yol(pts.slice(0,nTam))+'"/>'+(nTam<pts.length&&nTam>0?'<path class="et-cizgi kesik'+(kalin?' kalin':' ince')+'"'+c+' d="'+yol(pts.slice(nTam-1))+'"/>':'')};
-  if(st.ders){const s=gorunen[0];svg+=egim('etEgimDers',s.renk)+'<path d="'+yol(s.v.slice(0,nTam).map((v,i)=>[x(i),y(v)]))+'L'+r1(x(nTam-1))+','+alt+'L'+r1(x(0))+','+alt+'Z" style="fill:url(#etEgimDers)"/>'+ciz(s,true)}
+  if(secili){const s=gorunen[0];svg+=egim(egimId,s.renk)+'<path d="'+yol(s.v.slice(0,nTam).map((v,i)=>[x(i),y(v)]))+'L'+r1(x(nTam-1))+','+alt+'L'+r1(x(0))+','+alt+'Z" style="fill:url(#'+egimId+')"/>'+ciz(s,true)}
   else for(const s of seri.slice().reverse())svg+=ciz(s,false);
   svg+=eksenX(ps,x,step,W,H-6)+imlec(ust-6,alt)+'</svg>';
-  const ipucu=d.map((r,i)=>({bas:donemBasligi(r,st.tur),satir:gorunen.map(s=>[s.renk,s.ad,s.v[i]]).sort((a,b)=>b[2]-a[2]).map(([c,a,v])=>[c,a,sayi(v),'cizgi'])}));
-  return {svg,xs:d.map((_,i)=>x(i)),ys:d.map((_,i)=>st.ders?y(gorunen[0].v[i]):ust+40),noktalar:d.map((_,i)=>gorunen.map(s=>[y(s.v[i]),s.renk])),ipucu};
+  const ipucu=d.map((r,i)=>{let l=gorunen.map(s=>[s.renk,s.ad,s.v[i]]).sort((a,b)=>b[2]-a[2]),geri=[];
+    if(enCok&&!secili){l=l.filter(z=>z[2]>0);if(l.length>enCok)geri=l.splice(enCok-1)}
+    const satir=l.map(([c,a,v])=>[c,a,sayi(v),'cizgi']);
+    if(geri.length)satir.push([null,'+'+sayi(geri.length)+' öğretmen',sayi(geri.reduce((a,z)=>a+z[2],0))]);
+    return {bas:donemBasligi(r,st.tur),satir:satir.length?satir:[[null,'Etüt','0']]}});
+  return {svg,xs:d.map((_,i)=>x(i)),ys:d.map((_,i)=>secili?y(gorunen[0].v[i]):ust+40),noktalar:d.map((_,i)=>gorunen.filter(s=>!enCok||secili||s.v[i]>0).map(s=>[y(s.v[i]),s.renk])),ipucu};
 }
+const grafikDers=(m,st,W)=>grafikCoklu(m,st,W,m.dersler.map(x=>({k:x.ders,ad:x.ders,renk:x.renk,v:x[st.tur]})),st.ders,'etEgimDers');
+const grafikHoca=(m,st,W)=>grafikCoklu(m,st,W,m.ogretmenler.map(x=>({k:x.hoca,ad:kisiAdi(x.ad),renk:x.renk,v:x[st.tur]})),st.hoca,'etEgimHoca',10);
 function grafikOgrenci(m,st,W){
   const H=240,d=m[st.tur],ps=d.map(r=>r.p),tik=tikler(Math.max(1,...d.map(r=>r.ogrenci)),4);
   const R=W-(yaziGen(sayi(tik[tik.length-1]))+22),L=2,ust=26,alt=H-26,step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>alt-v/tik[tik.length-1]*(alt-ust),bw=Math.max(2,Math.min(32,step*.7));
@@ -319,14 +338,14 @@ function grafikKisi(m,st,W){
   const ipucu=hs.map((h,i)=>({bas:donemBasligi(h,'hafta'),satir:[[null,'Etüt',sayi(k.hafta[i])],...kat[i].map(([d,v])=>[dersRengi(d),d,sayi(v)])]}));
   return {svg,xs:hs.map((_,i)=>x(i)),ys:hs.map((_,i)=>y(k.hafta[i])),noktalar:hs.map(()=>[]),bant:step,ipucu};
 }
-const GRAFIKLER={genel:grafikGenel,ders:grafikDers,ogrenci:grafikOgrenci,kisi:grafikKisi};
+const GRAFIKLER={genel:grafikGenel,ders:grafikDers,hoca:grafikHoca,ogrenci:grafikOgrenci,kisi:grafikKisi};
 let ZAMAN=null;
 function grafikleriCiz(){
   if(EK.sekme!=='etutler'||!rehberMi())return;
   const {veri}=oku();if(!veri)return;const m=modelAl(veri);if(!m)return;const st=durumAl(m);
   document.querySelectorAll('.et-grafik[data-et-grafik]').forEach(kutu=>{
     const W=Math.round(kutu.clientWidth);if(W<120)return;
-    const imza=W+'|'+st.s+'|'+st.tur+'|'+st.ders+'|'+st.kim+'|'+veri.ts;if(kutu.dataset.imza===imza)return;
+    const imza=W+'|'+st.s+'|'+st.tur+'|'+st.ders+'|'+st.hoca+'|'+st.kim+'|'+veri.ts;if(kutu.dataset.imza===imza)return;
     const g=GRAFIKLER[kutu.dataset.etGrafik](m,st,Math.max(260,W));if(!g)return;
     kutu.dataset.imza=imza;kutu.innerHTML=g.svg+'<div class="et-ipucu" hidden></div>';CIZIMLER.set(kutu.dataset.etGrafik,g);
   });
@@ -407,6 +426,24 @@ function dersKartlari(m,st){
       (k?'<strong>'+sayi(k.son)+'</strong><span class="et-ders-alt">'+hap(f,oranYazi(f,k.oran))+'<span class="mini">önceki: '+sayi(k.once)+'</span></span>':'<strong>'+sayi(d.toplam)+'</strong>')+
       '<span class="et-kucuk-kutu">'+kucukCizgi(d.hafta,kismi,egilimRengi(f),son,160,38,'etSg'+di)+'</span></button>'}).join('')+'</div>';
 }
+// Teacher cards read like the subject cards; the dot is the teacher's subject colour.
+function hocaKartlari(m,st){
+  const kismi=m.hafta.findIndex(h=>h.kismi),w=m.pencere[st.s],son=w?[m.haftalar.indexOf(w.son[0]),m.haftalar.indexOf(w.son[1])]:null;
+  return '<div class="et-dersler">'+m.ogretmenler.map((o,oi)=>{const k=o.k[st.s],f=k?k.fark:0,ad=kisiAdi(o.ad);
+    return '<button type="button" class="et-ders et-hoca-kart" data-et-hoca="'+kacis(o.hoca)+'" aria-pressed="'+(st.hoca===o.hoca)+'" title="'+kacis(ad)+'"><span class="et-ders-ust"><i class="et-renk nokta" style="background:'+o.renk+'"></i><b>'+kacis(ad)+'</b></span>'+
+      '<span class="mini et-hoca-ders">'+kacis(o.ders)+' · '+sayi(o.toplam)+' toplam</span>'+
+      (k?'<strong>'+sayi(k.son)+'</strong><span class="et-ders-alt">'+hap(f,oranYazi(f,k.oran))+'<span class="mini">önceki: '+sayi(k.once)+'</span></span>':'<strong>'+sayi(o.toplam)+'</strong>')+
+      '<span class="et-kucuk-kutu">'+kucukCizgi(o.hafta,kismi,egilimRengi(f),son,160,38,'etHg'+oi)+'</span></button>'}).join('')+'</div>';
+}
+function hocaPaneli(m,st,per){
+  const o=m.ogretmenler.find(x=>x.hoca===st.hoca),ad=o?kisiAdi(o.ad):'';
+  const grafik='<section class="et-panel"><div class="et-kart-bas"><h2>'+(o?kacis(ad)+' etütleri':'Öğretmenlere göre etüt')+' · '+per+'</h2>'+(o?'<button type="button" class="et-dugme" data-et-hoca="">Tüm öğretmenler</button>':'')+'</div>'+
+    '<div class="et-grafik" data-et-grafik="hoca" tabindex="0" role="img" aria-label="'+kacis((ad||'Öğretmen')+' etüt sayısı ('+per+')')+'"></div></section>';
+  if(!o)return '<div id="etHoca">'+grafik+'</div>';
+  return '<div class="et-bolunmus" id="etHoca">'+grafik+'<section class="et-panel"><div class="et-kart-bas"><h2>Öğrencileri</h2><span class="mini">'+sayi(o.ogrenci)+' öğrenci</span></div>'+
+    '<div class="et-hoca-liste">'+o.kisiler.map(k=>'<button type="button" class="et-hareket-satir" data-et-ogr="'+kacis(k.kim)+'" aria-pressed="'+(st.kim===k.kim)+'"><span class="et-kim"><span>'+kacis(kisiAdi(k.ad))+'</span><span class="mini">'+kacis(k.sinif)+'</span></span>'+
+      '<span class="mini">son: '+gunAy(k.son)+'</span><b>'+sayi(k.n)+'</b></button>').join('')+'</div></section></div>';
+}
 function hareketliler(m,st,es){
   const s=st.s;if(!m.pencere[s])return '<p class="mini">Karşılaştırma için en az iki tam hafta gerekir.</p>';
   const art=m.kisiler.filter(k=>k.k[s].fark>0).sort((a,b)=>b.k[s].fark-a.k[s].fark||b.k[s].son-a.k[s].son).slice(0,6);
@@ -443,11 +480,14 @@ function kisiKarti(m,st,es){
   const k=m.kisiler.find(x=>x.kim===st.kim);if(!k)return '';
   const c=k.k[st.s],si=es(k.ad),ad=kisiAdi(k.ad);
   const dersler=Object.entries(k.dersler).sort((a,b)=>b[1]-a[1]),mx=Math.max(1,...dersler.map(x=>x[1]));
+  const hb=new Map(m.ogretmenler.map(o=>[o.hoca,o])),hocalar=Object.entries(k.ogretmenler||{}).filter(([h])=>hb.has(h)).sort((a,b)=>b[1]-a[1]),hx=Math.max(1,...hocalar.map(x=>x[1]));
   return '<div class="et-kisi-bas"><h3>'+(si===undefined?kacis(ad):ogrAdDugmesi(si,ad))+'</h3><span class="mini">'+kacis(k.sinif)+' · ilk etüt '+gunAy(k.ilk)+' · son etüt '+gunAy(k.son)+'</span></div>'+
     '<div class="et-kisi-sayilar"><div><span class="mini">Toplam</span><strong>'+sayi(k.toplam)+'</strong></div>'+
     (c?'<div><span class="mini">Son '+st.s+'H</span><strong>'+sayi(c.son)+'</strong><span class="mini">önceki: '+sayi(c.once)+'</span></div><div><span class="mini">Değişim</span>'+hap(c.fark,sayi(Math.abs(c.fark)))+'<span class="et-durum '+c.durum+'">'+DURUM[c.durum]+'</span></div>':'')+'</div>'+
     '<div class="et-grafik kucuk" data-et-grafik="kisi" tabindex="0" role="img" aria-label="'+kacis(ad+': haftalık etüt sayısı, derslere göre')+'"></div>'+
-    '<span class="mini">Derslere göre</span><div class="et-cubuklar">'+dersler.map(([d,v])=>'<div class="et-cubuk"><span><i class="et-renk nokta" style="background:'+dersRengi(d)+'"></i>'+kacis(d)+'</span><span class="et-cubuk-iz"><i style="width:'+r1(v/mx*100)+'%;background:'+dersRengi(d)+'"></i></span><b>'+sayi(v)+'</b></div>').join('')+'</div>';
+    '<span class="mini">Derslere göre</span><div class="et-cubuklar">'+dersler.map(([d,v])=>'<div class="et-cubuk"><span><i class="et-renk nokta" style="background:'+dersRengi(d)+'"></i>'+kacis(d)+'</span><span class="et-cubuk-iz"><i style="width:'+r1(v/mx*100)+'%;background:'+dersRengi(d)+'"></i></span><b>'+sayi(v)+'</b></div>').join('')+'</div>'+
+    (hocalar.length?'<span class="mini">Öğretmenlere göre</span><div class="et-cubuklar hoca">'+hocalar.map(([h,v])=>{const o=hb.get(h),ad=kisiAdi(o.ad);
+      return '<div class="et-cubuk"><span title="'+kacis(ad+' · '+o.ders)+'"><i class="et-renk nokta" style="background:'+o.renk+'"></i><span>'+kacis(ad)+'</span></span><span class="et-cubuk-iz"><i style="width:'+r1(v/hx*100)+'%;background:'+o.renk+'"></i></span><b>'+sayi(v)+'</b></div>'}).join('')+'</div>':'');
 }
 function kaynaklar(v,salt){
   const ks=v.kaynak.slice().reverse();
@@ -475,6 +515,7 @@ function icerik(){
     '<h2 class="et-bolum" id="etDersler">Dersler</h2>'+dersKartlari(m,st)+
     '<section class="et-panel"><div class="et-kart-bas"><h2>'+(st.ders?kacis(st.ders)+' etütleri':'Derslere göre etüt')+' · '+per+'</h2>'+(st.ders?'<button type="button" class="et-dugme" data-et-ders="">Tüm dersler</button>':'')+'</div>'+
       '<div class="et-grafik" data-et-grafik="ders" tabindex="0" role="img" aria-label="'+kacis((st.ders||'Ders')+' etüt sayısı ('+per+')')+'"></div></section>'+
+    (m.ogretmenler.length?'<h2 class="et-bolum" id="etOgretmenler">Öğretmenler</h2>'+hocaKartlari(m,st)+hocaPaneli(m,st,per):'')+
     '<h2 class="et-bolum" id="etOgrenciler">Öğrenciler</h2>'+
     '<div class="et-iki"><section class="et-panel"><div class="et-kart-bas"><h2>Farklı öğrenci sayısı · '+per+'</h2><div class="et-lejant"><span><i class="et-renk" style="background:var(--e-c1)"></i>İlk kez gelen</span><span><i class="et-renk" style="background:var(--e-chart-muted)"></i>Tekrar gelen</span></div></div>'+
       '<div class="et-grafik orta" data-et-grafik="ogrenci" tabindex="0" role="img" aria-label="'+kacis('Etüt alan farklı öğrenci sayısı ('+per+')')+'"></div></section>'+
@@ -482,6 +523,14 @@ function icerik(){
     '<div class="et-bolunmus"><section class="et-panel" id="etTablo"><div class="et-kart-bas"><h2>Tüm öğrenciler</h2></div>'+tablo(m,st)+'</section>'+
     '<section class="et-panel et-kisi" id="etKisi">'+kisiKarti(m,st,es)+'</section></div>'+
     kaynaklar(veri,salt);
+}
+// Etüt planı (src/etutplani.js) offers, for each weekday, the teachers who held etüts on it in the
+// report's last four weeks, and the report's teacher and student names for its lists.
+function planIcin(){
+  const {veri}=oku(),m=veri?modelAl(veri):null;if(!m)return null;
+  const sinir=m.bit-27,hb=new Map(m.ogretmenler.map(o=>[o.hoca,{brans:o.ders,ogretmen:kisiAdi(o.ad)}]));
+  return {gunler:[0,1,2,3,4].map(g=>[...new Set(m.rows.filter(r=>r.hoca&&r.g>=sinir&&haftaGunu(r.g)===g).map(r=>r.hoca))].map(h=>hb.get(h))),
+    ogretmenler:[...hb.values()],ogrenciler:m.kisiler.map(k=>({ad:kisiAdi(k.ad),sinif:k.sinif}))};
 }
 function gorunum(){
   if(!rehberMi())return '<div class="baslik"><h1>Etütler</h1></div><p>Bu sayfa rehber öğretmen içindir.</p>';
@@ -507,14 +556,15 @@ async function pdfEkle(files){
 const etkin=()=>EK.sekme==='etutler'&&rehberMi();
 document.addEventListener('click',async ev=>{
   if(!etkin())return;
-  const el=ev.target.closest?.('[data-et-aralik],[data-et-tur],[data-et-ders],[data-et-ogr],[data-et-sira],#etSil');if(!el||el.disabled)return;
+  const el=ev.target.closest?.('[data-et-aralik],[data-et-tur],[data-et-ders],[data-et-hoca],[data-et-ogr],[data-et-sira],#etSil');if(!el||el.disabled)return;
   if(el.dataset.etAralik){EK.etAralik=Number(el.dataset.etAralik);yenidenCiz('[data-et-aralik="'+EK.etAralik+'"]');return}
   if(el.dataset.etTur){EK.etTur=el.dataset.etTur;yenidenCiz('[data-et-tur="'+EK.etTur+'"]');return}
   if(el.dataset.etDers!==undefined){const d=el.dataset.etDers;EK.etDers=d&&EK.etDers!==d?d:null;yenidenCiz(d?'[data-et-ders="'+CSS.escape(d)+'"].et-ders':null);return}
+  if(el.dataset.etHoca!==undefined){const h=el.dataset.etHoca;EK.etHoca=h&&EK.etHoca!==h?h:null;yenidenCiz(h?'[data-et-hoca="'+CSS.escape(h)+'"].et-ders':null);return}
   if(el.dataset.etSira){const k=el.dataset.etSira;if(EK.etSira===k)EK.etSiraYon=EK.etSiraYon==='artan'?'azalan':'artan';else{EK.etSira=k;EK.etSiraYon=['ad','sinif','durum'].includes(k)?'artan':'azalan'}
     yenidenCiz('[data-et-sira="'+k+'"]');return}
-  if(el.dataset.etOgr){EK.etOgr=el.dataset.etOgr;yenidenCiz();const kart=document.getElementById('etKisi');
-    if(kart&&getComputedStyle(kart).position!=='sticky')kart.scrollIntoView({block:'nearest',behavior:'smooth'});return}
+  if(el.dataset.etOgr){const uzak=!!el.closest('#etHoca');EK.etOgr=el.dataset.etOgr;yenidenCiz();const kart=document.getElementById('etKisi');
+    if(kart&&(uzak||getComputedStyle(kart).position!=='sticky'))kart.scrollIntoView({block:'nearest',behavior:'smooth'});return}
   if(el.id==='etSil'){
     if(ISLEM||izleme())return;
     if(!confirm('Kayıtlı bütün etüt verisi silinsin mi? Raporları yeniden ekleyebilirsiniz.'))return;
@@ -549,7 +599,7 @@ document.addEventListener('keydown',ev=>{
   ipucuGoster(kutu,ev.key==='Home'?0:ev.key==='End'?g.xs.length-1:Math.max(0,Math.min(g.xs.length-1,i+(ev.key==='ArrowLeft'?-1:1))));
 });
 document.addEventListener('focusout',ev=>{const kutu=ev.target.closest?.('.et-grafik[data-et-grafik]');if(kutu)ipucuGizle(kutu)});
-return {pdfCoz,dogrula,oku,ac,paketle,birlestir,raporEkle,sil,model,dersAdi,gorunum,icerik,grafikleriCiz,GRAFIKLER,UST_SINIR,EN_COK_SATIR,DURUM,
+return {pdfCoz,dogrula,oku,ac,paketle,birlestir,raporEkle,sil,model,dersAdi,gorunum,icerik,grafikleriCiz,GRAFIKLER,planIcin,UST_SINIR,EN_COK_SATIR,DURUM,
   get onbellek(){return ONBELLEK}};
 })();
 function gorunumEtutler(){return ETUT.gorunum()}
