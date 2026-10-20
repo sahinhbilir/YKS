@@ -113,6 +113,7 @@ function dogrula(v){
     if(!s||typeof s!=='object'||!metin(s.id,200)||!s.id||ids.has(s.id)||!metin(s.ad,120)||!s.ad.trim()||!metin(s.okul,200)||
        !Number.isSafeInteger(s.ts)||s.ts<=0||s.ts>100000000000000||(!s.T&&!s.F))hata('sınav');
     if(s.tarih!==undefined&&!(typeof s.tarih==='string'&&/^\d{2}\.\d{2}\.\d{4}$/.test(s.tarih)))hata('sınav tarihi');
+    if(s.tur!==undefined&&!SINAV_TURLERI.includes(s.tur))hata('sınav türü');
     ids.add(s.id);
     for(const tur of ['T','F']){
       const sl=s[tur];if(sl===null||sl===undefined)continue;const K=SUTUN[tur].length;
@@ -198,6 +199,18 @@ async function tarihDegistir(id,tarih){
   s.tarih=tarih;s.ts=Math.max(Date.now(),s.ts+1);await yaz(veri,D.siralama);
   return {ad:s.ad,eski};
 }
+// Genel or tarama: an exam whose name says "tarama" is a tarama, any other a genel deneme. The
+// teacher can set it by hand; like the date it stays apart from the lists, and '' returns to the name.
+const SINAV_TURLERI=['genel','tarama'];
+const addanTur=ad=>/tarama/.test(String(ad||'').toLocaleLowerCase('tr-TR'))?'tarama':'genel';
+async function turDegistir(id,tur){
+  if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen değiştirebilir.');
+  if(tur!==''&&!SINAV_TURLERI.includes(tur))throw new Error('Sınav türü geçersiz.');
+  const {veri,hata}=oku();if(!veri)throw new Error(hata);
+  const s=veri.sinavlar.find(x=>x.id===id);if(!s)throw new Error('Sınav bulunamadı.');
+  if(!tur||tur===addanTur(s.ad))delete s.tur;else s.tur=tur;
+  await yaz(veri,D.siralama);
+}
 
 /* ---------------- exam model ---------------- */
 function acSlot(sl,K){
@@ -218,7 +231,7 @@ function dyMean(rows,k){const P=rows.map(r=>dyParts(r.dy[k])).filter(Boolean);re
 // The TYT view of an exam is its "Net Sayısı Sıralı" list when there is one, else the TYT part
 // of "Öğrenci Adı Sıralı"; AYT always comes from "Öğrenci Adı Sıralı".
 function model(x){
-  const T=x.T?acSlot(x.T,SUTUN.T):null,F=x.F?acSlot(x.F,SUTUN.F):null,e={id:x.id,ts:x.ts,name:x.ad,school:x.okul,T:!!T,F:!!F};
+  const T=x.T?acSlot(x.T,SUTUN.T):null,F=x.F?acSlot(x.F,SUTUN.F):null,e={id:x.id,ts:x.ts,name:x.ad,school:x.okul,T:!!T,F:!!F,tur:x.tur||addanTur(x.ad),turElle:!!x.tur};
   if(T){e.tyt=T;if(F)for(const no in T.students){const s=T.students[no],g=F.students[no];if(g&&!/\//.test(s.cls||'')&&/\//.test(g.cls||''))s.cls=g.cls}}
   else if(F){const m=F.meta;e.tyt={students:F.students,kurum:F.kurum,meta:{date:m.date,toplam:part(m.toplam,'TYT'),kampus:part(m.kampus,'TYT'),kurum:part(m.kurum,'TYT')}}}
   else e.tyt=null;
@@ -700,7 +713,7 @@ document.addEventListener('change',async ev=>{
     yenidenCiz();document.getElementById(id)?.focus();
   }
 });
-return {hasTYT,hasAYT,took,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
+return {turDegistir,addanTur,SINAV_TURLERI,hasTYT,hasAYT,took,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
   get onbellek(){return ONBELLEK}};
 })();
 function siralamaPdfCoz(sayfalar,boylar){return SIRALAMA.pdfCoz(sayfalar,boylar)}
