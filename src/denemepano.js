@@ -33,7 +33,7 @@ const izleme=()=>typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme();
 // Every stored list, as exams with their students by school number; a student's class is the
 // last one any list printed for that number.
 function temel(veri){
-  const sinavlar=SIRALAMA.modeller(veri).map(e=>({id:e.id,ad:e.name,tarih:e.dates[0]||'',g:gunDan(e.dates[0]),tur:e.tur,turElle:e.turElle,
+  const sinavlar=SIRALAMA.modeller(veri).map(e=>({id:e.id,ad:e.name,tarih:e.dates[0]||'',g:gunDan(e.dates[0]),dates:e.dates,pdfDates:e.pdfDates,tur:e.tur,turElle:e.turElle,
     tyt:e.tyt?e.tyt.students:{},ayt:e.ayt?e.ayt.students:{},listeler:[e.T?'Net Sayısı Sıralı':'',e.F?'Öğrenci Adı Sıralı':''].filter(Boolean)}));
   const kisi=new Map();
   for(const s of sinavlar)for(const o of [...Object.values(s.tyt),...Object.values(s.ayt)]){
@@ -77,7 +77,7 @@ function gorunumModeli(t,O,K,sec){
     if(!satir.length)continue;
     const vs=satir.map(r=>r.v).sort((a,b)=>a-b),en=satir.reduce((a,b)=>b.v>a.v?b:a);
     const sira=new Map();satir.slice().sort((a,b)=>b.v-a.v).forEach((r,i,l)=>sira.set(r.no,i&&l[i-1].v===r.v?sira.get(l[i-1].no):i+1));
-    sinavlar.push({id:s.id,ad:s.ad,tarih:s.tarih,g:s.g,tur:s.tur,turElle:s.turElle,n:satir.length,ort:ort(vs),medyan:yuzdelik(vs,.5),p25:yuzdelik(vs,.25),p75:yuzdelik(vs,.75),max:en.v,enIyi:en.no,
+    sinavlar.push({id:s.id,ad:s.ad,tarih:s.tarih,g:s.g,dates:s.dates,pdfDates:s.pdfDates,tur:s.tur,turElle:s.turElle,n:satir.length,ort:ort(vs),medyan:yuzdelik(vs,.5),p25:yuzdelik(vs,.25),p75:yuzdelik(vs,.75),max:en.v,enIyi:en.no,
       ders:O.dersler.map(d=>ort(satir.map(r=>r.o.net[d.kod]??0))),deger:new Map(satir.map(r=>[r.no,r])),sira});
   }
   const n=sinavlar.length,pencere={};
@@ -396,7 +396,8 @@ function hareketliler(st){
     '<span class="mini">'+f1(o.k[s].once)+' → '+f1(o.k[s].son)+'</span>'+hap(o.k[s].fark,f2(Math.abs(o.k[s].fark)))+'</button>').join(''):'<p class="mini">Bu aralıkta kimse yok.</p>')+'</div>';
   return '<div class="et-hareketler">'+sutun('En çok yükselenler',art)+sutun('En çok düşenler',az)+'</div>';
 }
-const SUTUNLAR=[['ad','Öğrenci'],['sinif','Şube'],['son','Son'],['once','Önceki'],['fark','Değişim'],['yuzde','% artış'],['logFark','Kapanan fark'],['seri','Denemeler'],['sira','Sıra'],['durum','Durum']];
+// As in Sıralamalar's table: the earlier and current net and the three measures of change side by side.
+const SUTUNLAR=[['ad','Öğrenci'],['sinif','Şube'],['son','Son'],['once','Önceki'],['fark','Net artışı'],['yuzde','% artış'],['logFark','Kapanan fark (log)'],['seri','Denemeler'],['sira','Sıra'],['durum','Durum']];
 const yuzdeYazi=v=>v===null?'—':(v>0?'+':v<0?'−':'')+'%'+f1(Math.abs(v));
 const logYazi=v=>v===null?'—':(v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleString('tr-TR',{minimumFractionDigits:3,maximumFractionDigits:3});
 // Average rows above the students, as in Sıralamalar: the scope and, for a grade, each class. The
@@ -412,13 +413,14 @@ function ortalamaSatirlari(st){
 }
 function tablo(st){
   const m=st.mo,s=st.s,w=s?m.pencere[s]:null,son=w?w.son:null;
-  const kol=SUTUNLAR.filter(([k])=>(w||!['once','fark','durum','yuzde','logFark'].includes(k))&&(k!=='yuzde'||st.olcut==='yuzde')&&(k!=='logFark'||st.olcut==='fark'));
+  const kol=SUTUNLAR.filter(([k])=>w||!['once','fark','durum','yuzde','logFark'].includes(k)),secKol=OLCUT_ALAN[st.olcut]||null;
   const sira=kol.some(([k])=>k===EK.dpSira)&&EK.dpSira!=='seri'?EK.dpSira:'son',yonu=EK.dpSiraYon==='artan'?1:-1;
   const deger=(o,c)=>c==='ad'?kisiAdi(o.ad):c==='sinif'?o.sinif:c==='no'?Number(o.no):c==='enIyi'?o.enIyi:c==='sira'?(o.sira===null?1e9:o.sira):c==='son'?(w?o.k[s].son:o.sonNet):c==='durum'?(w?o.k[s].durum:''):(w?o.k[s][c]:null);
   const liste=m.ogrenciler.slice().sort((a,b)=>{const x=deger(a,sira),y=deger(b,sira);if(x===null&&y===null)return 0;if(x===null)return 1;if(y===null)return -1;
     const f=typeof x==='number'?x-y:String(x).localeCompare(String(y),'tr');return f*yonu||String(a.ad).localeCompare(b.ad,'tr')});
   const ara=anahtar(EK.dpAra||''),gor=o=>!ara||anahtar(o.ad).includes(ara)||String(o.no).includes(ara);
-  const gizli=k=>['sinif','once','seri'].includes(k)?' class="et-dar-gizle"':'';
+  // On a phone the table keeps the name, current net, net artışı, the measure it is ranked by, rank and status.
+  const dar=k=>['sinif','once','seri'].includes(k)||(k==='yuzde'||k==='logFark')&&k!==secKol,gizli=k=>dar(k)||k===secKol?' class="'+[dar(k)?'et-dar-gizle':'',k===secKol?'dp-secili':''].filter(Boolean).join(' ')+'"':'';
   const bas=kol.map(([k,ad])=>{const yazi=k==='son'?(s==='sec'?'Şimdiki':s>1&&w?'Son '+s+' ort.':'Son'):k==='once'?(s>1?'Önceki '+s+' ort.':'Önceki'):ad;
     return k==='seri'?'<th scope="col"'+gizli(k)+'>'+yazi+'</th>':'<th scope="col"'+gizli(k)+' aria-sort="'+(sira===k?(yonu>0?'ascending':'descending'):'none')+'"><button type="button" data-dp-sira="'+k+'">'+yazi+'</button></th>'}).join('');
   const sayi=v=>v===null||v===undefined?'—':f2(v);
@@ -426,7 +428,7 @@ function tablo(st){
     sinif:o=>'<td class="et-dar-gizle">'+kacis(o.sinif||'')+'</td>',
     son:o=>'<td class="sayi">'+sayi(o.son)+'</td>',once:o=>'<td class="sayi et-dar-gizle">'+sayi(o.once)+'</td>',
     fark:o=>'<td class="sayi et-'+yon(o.fark||0)+'">'+(o.fark===null?'—':isaret(o.fark,f2))+'</td>',
-    yuzde:o=>'<td class="sayi et-'+yon(o.yuzde||0)+'">'+yuzdeYazi(o.yuzde)+'</td>',logFark:o=>'<td class="sayi et-'+yon(o.logFark||0)+'">'+logYazi(o.logFark)+'</td>',
+    yuzde:o=>'<td class="sayi et-'+yon(o.yuzde||0)+(dar('yuzde')?' et-dar-gizle':'')+'">'+yuzdeYazi(o.yuzde)+'</td>',logFark:o=>'<td class="sayi et-'+yon(o.logFark||0)+(dar('logFark')?' et-dar-gizle':'')+'">'+logYazi(o.logFark)+'</td>',
     seri:o=>'<td class="et-dar-gizle et-trend">'+kucukCizgi(o.seri,egilimRengi(o.fark||0),son,84,26)+'</td>'};
   const ortSatir=g=>'<tr class="dp-ort">'+kol.map(([k])=>k==='ad'?'<td><b>'+kacis(g.ad)+' ortalaması</b> <span class="mini">'+fi(g.n)+' öğrenci</span></td>':
     hucre[k]?hucre[k]({...g,sinif:''}):'<td></td>').join('')+'</tr>';
@@ -456,13 +458,38 @@ function kisiKarti(st,es){
       return '<div class="dp-ders"><span><i class="et-renk nokta" style="background:'+d.renk+'"></i>'+kacis(d.ad)+'</span><span class="dp-iz" title="Okul ortalaması '+f1(d.okul)+'"><i style="width:'+r1(yz)+'%;background:'+d.renk+'"></i><em style="left:'+r1(ok_)+'%"></em></span><b>'+f2(d.net)+'<small>/'+fi(d.soru)+'</small></b>'+(fark===null?'<span></span>':hap(fark,f2(Math.abs(fark))))+'</div>'}).join('')+'</div>'+
     '<span class="mini dp-not"><em class="dp-cizik"></em> çizgi: '+kacis(st.K.ad)+' ortalaması</span>';
 }
-// The teacher sets an exam's type here (genel or tarama); a viewing teacher only reads it.
+// The teacher sets an exam's type (genel or tarama) and corrects its date here, with Sıralamalar's own
+// date field: the change also moves the students' results of that exam (src/siralamalar.js). "PDF ekle"
+// stores a school list without sending results to students, "Sil" removes an exam's lists (both
+// Sıralamalar's own). A viewing teacher only reads.
 function sinavTablosu(st,salt){
   const m=st.m,tur=s=>salt?turAdi(s.tur):'<select class="dp-tur-sec" data-dp-sinav-tur="'+kacis(s.id)+'" aria-label="'+kacis(s.ad+' türü')+'">'+
     SIRALAMA.SINAV_TURLERI.map(t=>'<option value="'+t+'"'+(t===s.tur?' selected':'')+'>'+turAdi(t)+'</option>').join('')+'</select>';
-  return '<section class="et-panel" id="dpSinavlar"><div class="et-kart-bas"><h2>Denemeler · '+kacis(m.O.ad)+'</h2><button type="button" class="et-dugme" data-sekme="siralamalar">Sıralamalar ve raporlar</button></div>'+
-    '<div class="et-kaydir"><table class="et-kaynak"><thead><tr><th>Deneme</th><th>Tür</th><th>Tarih</th><th>Öğrenci</th><th>Ortalama</th><th>Medyan</th><th>En yüksek</th></tr></thead><tbody>'+
-    m.sinavlar.slice().reverse().map(s=>'<tr><td>'+kacis(s.ad)+'</td><td>'+tur(s)+'</td><td>'+kacis(s.tarih)+'</td><td>'+fi(s.n)+'</td><td>'+f1(s.ort)+'</td><td>'+f1(s.medyan)+'</td><td>'+f2(s.max)+'</td></tr>').join('')+'</tbody></table></div></section>';
+  return '<section class="et-panel" id="dpSinavlar"><div class="et-kart-bas"><h2>Denemeler · '+kacis(m.O.ad)+'</h2><div class="et-arac">'+
+      (salt?'':'<label class="et-dugme" title="Yalnızca okul listesi; sonuçlar öğrencilere aktarılmaz">PDF ekle<input type="file" id="srPdf" accept="application/pdf,.pdf" multiple hidden></label>')+
+      '<button type="button" class="et-dugme" data-sekme="siralamalar">Sıralamalar ve raporlar</button></div></div>'+
+    '<div class="et-kaydir"><table class="et-kaynak"><thead><tr><th>Deneme</th><th>Tür</th><th>Tarih</th><th>Öğrenci</th><th>Ortalama</th><th>Medyan</th><th>En yüksek</th>'+(salt?'':'<th></th>')+'</tr></thead><tbody>'+
+    m.sinavlar.slice().reverse().map(s=>'<tr><td>'+kacis(s.ad)+'</td><td>'+tur(s)+'</td><td>'+SIRALAMA.tarihHucresi({id:s.id,name:s.ad,dates:s.dates||[],pdfDates:s.pdfDates||[]},salt)+'</td><td>'+fi(s.n)+'</td><td>'+f1(s.ort)+'</td><td>'+f1(s.medyan)+'</td><td>'+f2(s.max)+'</td>'+(salt?'':'<td><button type="button" class="et-dugme" data-sr-sil="'+kacis(s.id)+'" aria-label="'+kacis(s.ad+' listelerini sil')+'">Sil</button></td>')+'</tr>').join('')+'</tbody></table></div><p id="srDurum" role="status" aria-live="polite">'+kacis(SIRALAMA.durumYazisi||'')+'</p></section>';
+}
+// Sıralamalar's PDF reports for the board's Önceki → Şimdiki pair (data-sr-simdi / data-sr-onceki);
+// the buttons and the preview are handled by src/siralamalar.js.
+function raporlar(st){
+  const {veri}=SIRALAMA.oku();if(!veri)return '';
+  const m=st.m,S=m.sinavlar[m.simdi],P=m.onceki===null?null:m.sinavlar[m.onceki];
+  const {cur,prev}=SIRALAMA.secim(SIRALAMA.modeller(veri),{simdi:S&&S.id,onceki:P&&P.id});if(!cur)return '';
+  const satir=R=>{const why=SIRALAMA.neden(R,cur,prev);let sirala='';
+    if(R.sirala&&!why)sirala='<div class="dp-rapor-sirala" role="group" aria-label="AYT şube sıralaması">'+SIRALAMA.classGroups(Object.values(cur.ayt.students).filter(SIRALAMA.hasAYT)).map(([c,ss],i)=>{
+      const v=SIRALAMA.SIRALA.includes(veri.tercih[c])?veri.tercih[c]:SIRALAMA.defaultSort(ss),ad=SIRALAMA.clsShort(c);
+      return '<label class="et-seg"><span class="et-seg-label">'+kacis(ad)+'</span><select data-sr-sinif="'+kacis(c)+'" id="srSinif'+i+'" aria-label="'+kacis(ad+' sıralaması')+'">'+
+        SIRALAMA.SIRALA.map(o=>'<option value="'+o+'"'+(o===v?' selected':'')+'>'+(o==='Toplam'?'AYT toplam':o+' net')+'</option>').join('')+'</select></label>'}).join('')+'</div>';
+    return '<div class="sr-rapor dp-rapor"><div class="dp-rapor-ad"><b>'+kacis(R.ad)+'</b><span class="mini">'+kacis(why||R.aciklama)+'</span></div><div class="dp-rapor-dugmeler">'+
+      '<button type="button" class="et-dugme" data-sr-onizle="'+R.id+'"'+(why?' disabled':'')+'>Önizle</button><button type="button" class="et-dugme birincil" data-sr-indir="'+R.id+'"'+(why?' disabled':'')+'>PDF indir</button></div>'+sirala+'</div>'};
+  const herhangi=SIRALAMA.RAPORLAR.some(R=>!SIRALAMA.neden(R,cur,prev));
+  return '<section class="et-panel" id="dpRaporlar" data-sr-simdi="'+kacis(cur.id)+'" data-sr-onceki="'+kacis(prev?prev.id:'')+'"><div class="et-kart-bas"><h2>Raporlar</h2><span class="mini">'+
+      (prev?kacis(prev.name)+' → '+kacis(cur.name):kacis(cur.name))+'</span></div>'+
+    '<div class="dp-raporlar">'+SIRALAMA.RAPORLAR.map(satir).join('')+'</div>'+
+    '<div class="et-arac"><button type="button" class="et-dugme" id="srHepsi"'+(herhangi?'':' disabled')+'>Hepsini tek PDF’te indir</button></div>'+
+    '<div class="dp-onizleme"><div class="et-kart-bas"><h3 id="srOnizlemeBaslik">Önizleme</h3><span class="mini" id="srOnizlemeAlt">Bir raporda “Önizle”ye basın.</span></div><div id="srSayfalar" class="sr-sayfalar"></div></div></section>';
 }
 function araclar(salt){
   const bekleyen=!salt&&(D.ogr||[]).some(o=>o&&!o.silindi&&o.denemeYayinBekliyor);
@@ -503,8 +530,7 @@ function icerik(){
       '<div class="et-grafik" data-dp-grafik="ders" tabindex="0" role="img" aria-label="'+kacis(odak?odak.ad+' ortalama net':'Derslerin başarı yüzdesi, deneme deneme')+'"></div></section>'+
     '<div class="dp-bolum-bas"><h2 class="et-bolum" id="dpOgrenciler">Öğrenciler</h2><div class="et-arac">'+
       '<label class="et-seg"><span class="et-seg-label">Net</span><select id="dpOgrNet" aria-label="Öğrencilerde gösterilen net"><option value="">'+kacis(toplamAdi(m.O))+'</option>'+
-        m.dersler.map(d=>'<option value="'+kacis(d.kod)+'"'+(st.ogrDers&&st.ogrDers.kod===d.kod?' selected':'')+'>'+kacis(d.ad)+'</option>').join('')+'</select></label>'+
-      (st.s?secim('olcut',st.olcut,OLCUTLER,'Sırala'):'')+'</div></div>'+
+        m.dersler.map(d=>'<option value="'+kacis(d.kod)+'"'+(st.ogrDers&&st.ogrDers.kod===d.kod?' selected':'')+'>'+kacis(d.ad)+'</option>').join('')+'</select></label></div></div>'+
     '<section class="et-panel" id="dpOgrCizgi"><div class="et-kart-bas"><h2>Öğrencilere göre · '+kacis(netAdi)+'</h2><div class="et-lejant">'+
       subeRenkleri(mo).map(([c,r])=>'<span><i class="et-renk cizgi" style="background:'+r+'"></i>'+kacis(c)+'</span>').join('')+'<span><i class="et-renk cizgi" style="background:var(--e-muted)"></i>Ortalama</span></div></div>'+
       '<div class="et-grafik" data-dp-grafik="ogrenci" tabindex="0" role="img" aria-label="'+kacis('Her öğrencinin '+netAdi+' neti, deneme deneme. Yukarı ve aşağı oklarla öğrenci, Enter ile öğrenci kartı')+'"></div></section>'+
@@ -512,8 +538,8 @@ function icerik(){
       (P?'<span><i class="et-renk cizgi" style="background:var(--e-fg2)"></i>Önceki deneme</span>':'')+'</div></div>'+
       '<div class="et-grafik orta" data-dp-grafik="dagilim" tabindex="0" role="img" aria-label="'+kacis('Net dağılımı, '+S.ad+(P?', önceki denemeyle':''))+'"></div></section>'+
     '<section class="et-panel"><div class="et-kart-bas"><h2>En çok değişenler</h2><span class="mini">'+(st.s==='sec'?kacis(P.ad)+' → '+kacis(S.ad):st.s?(st.s===1?'Son deneme, öncekine göre':'Son '+st.s+' deneme ortalaması, önceki '+st.s+' denemeye göre'):'')+'</span></div>'+hareketliler(st)+'</section></div>'+
-    '<div class="et-bolunmus"><section class="et-panel" id="dpTablo"><div class="et-kart-bas"><h2>Tüm öğrenciler</h2></div>'+tablo(st)+'</section>'+
-    '<section class="et-panel et-kisi" id="dpKisi">'+kisiKarti(st,es)+'</section></div>'+sinavTablosu(st,salt);
+    '<div class="et-bolunmus"><section class="et-panel" id="dpTablo"><div class="et-kart-bas"><h2>Tüm öğrenciler</h2>'+(st.s?secim('olcut',st.olcut,OLCUTLER,'Sırala'):'')+'</div>'+tablo(st)+'</section>'+
+    '<section class="et-panel et-kisi" id="dpKisi">'+kisiKarti(st,es)+'</section></div>'+sinavTablosu(st,salt)+raporlar(st);
 }
 function gorunum(){return '<div id="dpKok">'+icerik()+'</div>'}
 function yenidenCiz(odak){
