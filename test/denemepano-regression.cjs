@@ -66,7 +66,8 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const h = run('DPANO.icerik()');
     assert.match(h, /12\. sınıflar · Son deneme \(Sentetik Deneme 2, \d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]+\): TYT ortalaması <b>[\d,]+<\/b> net, önceki denemeye göre <b>[+−][\d,]+<\/b>\./);
     for (const g of ['genel', 'ders', 'dagilim', 'kisi']) assert(h.includes('data-dp-grafik="' + g + '"'), g);
-    assert.equal((h.match(/class="et-ders"/g) || []).length, 10, 'ten TYT subjects');
+    assert.equal((h.match(/class="et-ders"/g) || []).length, 10, 'ten TYT lessons'); assert.equal((h.match(/class="et-ders et-grup-kart"/g) || []).length, 3, 'and three tests');
+    for (const k of ['G-SOS', 'G-MAT', 'G-FEN']) assert(h.includes('data-dp-ders="' + k + '"'), k);
     assert.match(h, /data-dp-aralik="2"[^>]* disabled/); assert(h.includes('id="dpKlasik"')); assert(h.includes('data-sekme="siralamalar"'));
     assert(!/<img/i.test(h)); assert(/&lt;img src=x&gt;/i.test(h));
     assert(h.includes('data-ogr-gor="0"'), 'a notebook student opens in student view');
@@ -135,6 +136,10 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(h, /<select id="dpOnceki" aria-label="Önceki deneme">.*<option value="[^"]+" selected>Sentetik Deneme 1 · \d+ \S+ · Genel<\/option><\/select>/);
     assert.match(h, /<option value="[^"]+">Sentetik Tarama 1 · \d+ \S+ · Tarama<\/option>/);
     assert.match(h, /Ortalama net · şimdiki deneme/); assert.match(h, /<button type="button" data-dp-sira="son">Şimdiki<\/button>/);
+    // The main chart draws the pair as two lines with handles; their band labels give way to the handles.
+    const g = get('(()=>{const {t}=DPANO.veriAl();const g=DPANO.GRAFIKLER.genel(DPANO.durumAl(t),720);return {svg:g.svg,tutamak:g.tutamak,ids:g.ids}})()');
+    assert(g.tutamak && /data-tutamak="once"/.test(g.svg) && /data-tutamak="son"/.test(g.svg)); assert(!/class="et-bant-yazi"/.test(g.svg));
+    assert.deepEqual(g.ids, [idOf('Sentetik Deneme 1'), idOf('Sentetik Tarama 1'), idOf('Sentetik Deneme 2')], 'lines snap to these exams');
     // The same exam on both sides falls back to the one before Şimdiki.
     run(`EK.dpOnceki=EK.dpSimdiki`); assert.deepEqual(st('st=>[st.m.simdi,st.m.onceki]'), [2, 1]);
     // Şimdiki earlier than Önceki still compares the two.
@@ -176,6 +181,34 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(h, /TYT ortalaması/); assert(h.includes('<h2>Öğrencilere göre · TYT Matematik</h2>'));
     assert.match(h, /<select id="dpOgrNet"[^>]*><option value="">TYT toplam<\/option>.*<option value="MAT" selected>Matematik<\/option>/);
     run("EK.dpOlcu='AYT:SAY'"); assert.equal(st('st=>st.ogrDers'), null, 'a subject of another session falls back to the total');
+  });
+  await check('tests next to the lessons, places moved since the önceki exam, and lessons from easiest to hardest', async () => {
+    await loadAll(); run("EK.dpOgrNet='G-FEN'");
+    const net = (o, i) => { const p = o.dy[i]; return p ? p[0] - p[1] / 4 : 0; }, fen = o => net(o, 8) + net(o, 9) + net(o, 10), r2 = v => Math.round(v * 100) / 100;
+    const s = st(`st=>({ust:st.mo.O.ust,ad:st.ogrDers.ad,seri:st.mo.ogrenciler.find(o=>o.no==="1001").seri,ogr:st.m.ogrenciler.map(o=>({sira:o.sira,siraOnce:o.siraOnce,siraFark:o.siraFark})),
+      dersler:st.m.dersler.map(d=>({kod:d.kod,ad:d.ad,soru:d.soru,seri:d.seri,uyeler:d.uyeler||null}))})`);
+    assert.equal(s.ust, 20); assert.equal(s.ad, 'Fen Bilimleri');
+    assert.deepEqual(s.seri.map(r2), [fen(SINAVLAR.once.T.ogr[0]), fen(SINAVLAR.sonra.T.ogr[0])].map(r2), 'a test is the sum of its lessons');
+    const d = k => s.dersler.find(x => x.kod === k);
+    assert.deepEqual(['G-SOS', 'G-MAT', 'G-FEN'].map(k => d(k).soru), [20, 40, 20]);
+    assert.equal(r2(d('G-MAT').seri[1]), r2(d('MAT').seri[1] + d('GEO').seri[1]), 'the Matematik + Geometri card adds both averages');
+    assert(s.ogr.filter(o => o.sira !== null && o.siraOnce !== null).every(o => o.siraFark === o.siraOnce - o.sira));
+    assert.deepEqual(s.ogr.map(o => o.siraFark), [0, 0, null, -1, -1], 'a newcomer in third place moves the two below down one place');
+    let h = run('DPANO.icerik()');
+    assert.match(h, /<optgroup label="Toplam"><option value="G-SOS">Sosyal Bilimler<\/option><option value="G-MAT">Matematik \+ Geometri<\/option><option value="G-FEN" selected>Fen Bilimleri<\/option>/);
+    assert.match(h, /Sırası yükselen · son deneme<\/span><strong>0<\/strong><div class="et-ozet-alt"><span class="mini">düşen: 2 · aynı: 2<\/span>/); assert.match(h, /class="et-sira-ok (yukari|asagi|esit)" role="img" aria-label="(\d+ sıra (yükseldi|düştü)|sıra aynı)"/);
+    // Kolaydan zora: the lessons only, by the class's success in the şimdiki exam.
+    const zor = h.match(/<section class="et-panel" id="dpZorluk">[\s\S]*?<\/section>/)[0], sira = [...zor.matchAll(/data-dp-ders="([^"]+)"/g)].map(x => x[1]);
+    const ders = s.dersler.filter(x => !x.uyeler), oran = x => x.seri[1] / x.soru;
+    assert.deepEqual(sira, ders.slice().sort((a, b) => oran(b) - oran(a) || a.ad.localeCompare(b.ad, 'tr')).map(x => x.kod));
+    assert.match(zor, new RegExp('En kolay ' + ders.find(x => x.kod === sira[0]).ad + ' · en zor ' + ders.find(x => x.kod === sira.at(-1)).ad));
+    assert.match(zor, /puan<\/span>/, 'the change since the önceki exam in points');
+    run("EK.dpDers='G-MAT'"); h = run('DPANO.icerik()'); assert.match(h, /<h2>Matematik \+ Geometri · ortalama net<\/h2>/);
+    const c = get('(()=>{const {t}=DPANO.veriAl();const g=DPANO.GRAFIKLER.ders(DPANO.durumAl(t),720);return {svg:g.svg,ipucu:g.ipucu}})()');
+    assert(!/NaN|undefined/.test(c.svg)); assert.equal(c.ipucu[1].satir[0][1], 'Matematik + Geometri');
+    run("EK.dpDers=null"); const hepsi = get('(()=>{const {t}=DPANO.veriAl();return DPANO.GRAFIKLER.ders(DPANO.durumAl(t),720).seriler.map(x=>x.ad)})()');
+    assert.equal(hepsi.length, 10, 'the all-subjects chart draws the lessons only');
+    run("EK.dpOlcut='artis'"); assert(st('st=>st.mo.ogrenciler.every(o=>o.siraFark===null)'), 'ranked by a change, places moved are not shown');
   });
   await check('every student as a line: one per student, coloured by class, readable on hover', async () => {
     await loadAll();

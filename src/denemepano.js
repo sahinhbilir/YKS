@@ -42,15 +42,23 @@ function temel(veri){
   }
   return {sinavlar,kisi};
 }
+// A session's subjects are its lessons, then its tests (Matematik + Geometri, Fen Bilimleri…: "uyeler"
+// holds their lessons, coloured as the first one). Tests are cards, Net choices and card rows; the
+// all-subjects chart, the sentence and Kolaydan zora use the lessons only.
 function olcu(key){
-  const S=SIRALAMA,renkli=list=>{const sira=list.slice().sort((a,b)=>ONCELIK.indexOf(a[1])-ONCELIK.indexOf(b[1]));return list.map(d=>({kod:d[0],ad:d[1],soru:d[2],renk:PALET[sira.indexOf(d)]||'var(--e-muted)'}))};
-  if(key==='TYT')return {key,ad:'TYT',oturum:'tyt',ust:S.SIRA_UST.TYT,deger:s=>S.hasTYT(s)?S.tytTotal(s):null,dersler:renkli(S.SIRA_DERS.TYT)};
+  const S=SIRALAMA,renkli=(list,gruplar)=>{const sira=list.slice().sort((a,b)=>ONCELIK.indexOf(a[1])-ONCELIK.indexOf(b[1]));
+    const l=list.map(d=>({kod:d[0],ad:d[1],soru:d[2],renk:PALET[sira.indexOf(d)]||'var(--e-muted)'}));
+    return l.concat(gruplar.map(g=>({kod:g[0],ad:g[1],soru:g[2],uyeler:g[3],renk:(l.find(d=>d.kod===g[3][0])||{renk:'var(--e-muted)'}).renk})))};
+  if(key==='TYT')return {key,ad:'TYT',oturum:'tyt',ust:S.SIRA_UST.TYT,deger:s=>S.hasTYT(s)?S.tytTotal(s):null,dersler:renkli(S.SIRA_DERS.TYT,S.SIRA_GRUP.TYT)};
   const f=key.split(':')[1];
-  if(f==='Toplam')return {key,ad:'AYT toplam',oturum:'ayt',ust:S.SIRA_UST.Toplam,deger:s=>S.hasAYT(s)?S.aytTotal(s):null,dersler:renkli(S.SIRA_DERS.AYT)};
-  return {key,ad:'AYT '+f,oturum:'ayt',ust:S.SIRA_UST[f],deger:s=>S.took(s,f)?S.fnet(s,f):null,dersler:renkli(S.SIRA_DERS.AYT.filter(d=>S.FCOLS[f].includes(d[0])))};
+  if(f==='Toplam')return {key,ad:'AYT toplam',oturum:'ayt',ust:S.SIRA_UST.Toplam,deger:s=>S.hasAYT(s)?S.aytTotal(s):null,dersler:renkli(S.SIRA_DERS.AYT,S.SIRA_GRUP.AYT)};
+  return {key,ad:'AYT '+f,oturum:'ayt',ust:S.SIRA_UST[f],deger:s=>S.took(s,f)?S.fnet(s,f):null,
+    dersler:renkli(S.SIRA_DERS.AYT.filter(d=>S.FCOLS[f].includes(d[0])),S.SIRA_GRUP.AYT.filter(g=>g[3].every(k=>S.FCOLS[f].includes(k))))};
 }
+const dersNeti=(o,d)=>d.uyeler?d.uyeler.reduce((t,k)=>t+(o.net[k]??0),0):(o.net[d.kod]??0);
+const derslerYalniz=l=>l.filter(d=>!d.uyeler);
 // One subject's net (as Sıralamalar ranks by a ders): every student who has the session counts.
-const dersOlcusu=(O,d)=>({key:O.key+'|'+d.kod,ad:d.ad,oturum:O.oturum,ust:d.soru,deger:s=>O.deger(s)===null?null:(s.net[d.kod]??0),dersler:[d]});
+const dersOlcusu=(O,d)=>({key:O.key+'|'+d.kod,ad:d.ad,oturum:O.oturum,ust:d.soru,deger:s=>O.deger(s)===null?null:dersNeti(s,d),dersler:[d]});
 const toplamAdi=O=>O.key==='TYT'?'TYT toplam':O.ad;
 const turAdi=t=>t==='tarama'?'Tarama':'Genel';
 // Who the board looks at: one grade (never mixed), one class, or everyone when lists print no class.
@@ -78,7 +86,7 @@ function gorunumModeli(t,O,K,sec){
     const vs=satir.map(r=>r.v).sort((a,b)=>a-b),en=satir.reduce((a,b)=>b.v>a.v?b:a);
     const sira=new Map();satir.slice().sort((a,b)=>b.v-a.v).forEach((r,i,l)=>sira.set(r.no,i&&l[i-1].v===r.v?sira.get(l[i-1].no):i+1));
     sinavlar.push({id:s.id,ad:s.ad,tarih:s.tarih,g:s.g,dates:s.dates,pdfDates:s.pdfDates,tur:s.tur,turElle:s.turElle,n:satir.length,ort:ort(vs),medyan:yuzdelik(vs,.5),p25:yuzdelik(vs,.25),p75:yuzdelik(vs,.75),max:en.v,enIyi:en.no,
-      ders:O.dersler.map(d=>ort(satir.map(r=>r.o.net[d.kod]??0))),deger:new Map(satir.map(r=>[r.no,r])),sira});
+      ders:O.dersler.map(d=>ort(satir.map(r=>dersNeti(r.o,d)))),deger:new Map(satir.map(r=>[r.no,r])),sira});
   }
   const n=sinavlar.length,pencere={};
   for(const k of ARALIKLAR)if(n>=2*k)pencere[k]={once:[n-2*k,n-k-1],son:[n-k,n-1]};
@@ -114,8 +122,9 @@ function veriAl(){
 function odakla(m,s){
   const n=m.sinavlar.length,w=s==='sec'?m.pencere.sec:null;
   m.simdi=w?w.son[0]:n-1;m.onceki=w?w.once[0]:n>1?n-2:null;
-  const S=m.sinavlar[m.simdi];
-  for(const o of m.ogrenciler)o.sira=S?S.sira.get(o.no)??null:null;
+  const S=m.sinavlar[m.simdi],P=m.onceki===null?null:m.sinavlar[m.onceki];
+  // Places moved since the önceki exam (positive: up), for students ranked in both.
+  for(const o of m.ogrenciler){o.sira=S?S.sira.get(o.no)??null:null;o.siraOnce=P?P.sira.get(o.no)??null:null;o.siraFark=o.sira!==null&&o.siraOnce!==null?o.siraOnce-o.sira:null}
   m.ogrenciler.sort((a,b)=>(b.seri[m.simdi]??-999)-(a.seri[m.simdi]??-999)||a.ad.localeCompare(b.ad,'tr'));
 }
 // Sıralamalar's measures of change: net artışı, % artış (needs a positive earlier net) and the closed
@@ -130,7 +139,7 @@ function olcutUygula(m,s,olcut){
     c.logFark=c.fark!==null?Math.log((m.O.ust-c.once+1)/(m.O.ust-c.son+1)):null}
   const k=OLCUT_ALAN[olcut];if(!k)return;
   const l=m.ogrenciler.filter(o=>o.k[s][k]!==null).sort((a,b)=>b.k[s][k]-a.k[s][k]);
-  for(const o of m.ogrenciler)o.sira=null;
+  for(const o of m.ogrenciler){o.sira=null;o.siraFark=null}
   l.forEach((o,i)=>{o.sira=i&&Math.abs(l[i-1].k[s][k]-o.k[s][k])<1e-9?l[i-1].sira:i+1});
 }
 function durumAl(t){
@@ -167,12 +176,12 @@ function eksenX(m,x,step,W,y0){
     if(xx-w/2<0){xx=0;a='start'}else if(xx+w/2>W){xx=W;a='end'}out+='<text class="et-tik" x="'+r1(xx)+'" y="'+y0+'" text-anchor="'+a+'">'+t+'</text>'});
   return out;
 }
-function bantlar(m,x,step,k,ust,alt){
+function bantlar(m,x,step,k,ust,alt,yazi=true){
   const w=m.pencere[k];if(!w)return '';let out='';
   for(const [sinif,[a,b],etiket] of [['once',w.once,k===1||k==='sec'?'Önceki':'Önceki '+k],['son',w.son,k==='sec'?'Şimdiki':k===1?'Son':'Son '+k]]){
     const xa=x(a)-step/2,xb=x(b)+step/2;
-    out+='<rect class="et-bant '+sinif+'" x="'+r1(xa)+'" y="'+ust+'" width="'+r1(xb-xa)+'" height="'+(alt-ust)+'"/>';
-    if(xb-xa>58)out+='<text class="et-bant-yazi" x="'+r1(xa+6)+'" y="'+(ust+13)+'">'+etiket+'</text>';
+    out+='<rect class="et-bant '+sinif+'" data-bant="'+sinif+'" x="'+r1(xa)+'" y="'+ust+'" width="'+r1(xb-xa)+'" height="'+(alt-ust)+'"/>';
+    if(yazi&&xb-xa>58)out+='<text class="et-bant-yazi" x="'+r1(xa+6)+'" y="'+(ust+13)+'">'+etiket+'</text>';
   }
   return out;
 }
@@ -184,7 +193,8 @@ function grafikGenel(st,W){
   const step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>fiyatAlt-(v-tik[0])/(tik[tik.length-1]-tik[0])*(fiyatAlt-ust);
   const nMax=Math.max(...d.map(s=>s.n)),yv=v=>alt-v/nMax*hacimH;
   let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" aria-hidden="true">'+egim('dpEgimGenel','var(--e-c1)');
-  svg+=bantlar(m,x,step,st.s,4,alt)+eksenY(tik,y,L,R,f1)+'<line class="et-eksen" x1="'+L+'" x2="'+R+'" y1="'+alt+'" y2="'+alt+'"/>';
+  const w=st.s==='sec'?m.pencere.sec:null;
+  svg+=bantlar(m,x,step,st.s,4,alt,!w)+eksenY(tik,y,L,R,f1)+'<line class="et-eksen" x1="'+L+'" x2="'+R+'" y1="'+alt+'" y2="'+alt+'"/>';
   const bw=Math.max(2,Math.min(22,step*.45));
   d.forEach((s,i)=>{const o=i?d[i-1].n:null,c=o===null||s.n===o?'esit':s.n>o?'yukari':'asagi';
     svg+='<rect class="et-hacim '+c+'" x="'+r1(x(i)-bw/2)+'" y="'+r1(yv(s.n))+'" width="'+r1(bw)+'" height="'+r1(alt-yv(s.n))+'" rx="'+r1(Math.min(3,bw/2))+'"/>'});
@@ -195,13 +205,22 @@ function grafikGenel(st,W){
   svg+='<path class="et-cizgi" d="'+yol(pts)+'"/>'+pts.map(p=>'<circle class="et-nokta" cx="'+r1(p[0])+'" cy="'+r1(p[1])+'" r="3"/>').join('');
   const [lx,ly]=pts[pts.length-1],deger=f1(d[d.length-1].ort),tw=yaziGen(deger)+12;
   svg+='<line class="et-ref" x1="'+r1(lx)+'" x2="'+R+'" y1="'+r1(ly)+'" y2="'+r1(ly)+'"/><rect class="et-etiket" x="'+(R+3)+'" y="'+r1(ly-9)+'" width="'+tw+'" height="18" rx="4"/><text class="et-etiket-yazi" x="'+r1(R+3+tw/2)+'" y="'+r1(ly)+'" dy="0.32em" text-anchor="middle">'+deger+'</text>';
-  svg+=eksenX(m,x,step,W,H-6)+imlec(ust-6,alt)+'</svg>';
+  // Seç: Önceki and Şimdiki are vertical lines with a handle, dragged to any exam (as in Etütler).
+  // Close lines put their handles side by side, the left one's to the left.
+  let tutamak='';
+  if(w){const ia=w.once[0],ib=w.son[0],yakin=Math.abs(x(ib)-x(ia))<60,sol=ia<ib?'once':'son';
+    tutamak=[['once','Önceki',ia],['son','Şimdiki',ib]].map(([ad,yazi,i])=>{const dx=yakin?(ad===sol?-54:0):-27;
+      return '<g class="et-tutamak" data-tutamak="'+ad+'" transform="translate('+r1(x(i))+',0)"><rect class="et-tutamak-alan" x="-11" y="2" width="22" height="'+(alt-2)+'"/>'+
+        '<line class="et-tutamak-cizgi" x1="0" x2="0" y1="20" y2="'+alt+'"/><rect class="et-tutamak-tut" x="'+dx+'" y="2" width="54" height="18" rx="9"/>'+
+        '<text class="et-tutamak-yazi" x="'+(dx+27)+'" y="11" dy="0.32em" text-anchor="middle">'+yazi+'</text></g>'}).join('')}
+  svg+=eksenX(m,x,step,W,H-6)+imlec(ust-6,alt)+tutamak+'</svg>';
   const ipucu=d.map(s=>({bas:sinavBasligi(s,m),satir:[['var(--e-c1)','Ortalama',f1(s.ort)+' net','cizgi'],[null,'Medyan',f1(s.medyan)],['var(--e-c1)','Ortadaki %50',f1(s.p25)+' – '+f1(s.p75),'bant'],
     [null,'En yüksek',f2(s.max)],[null,'Katılım',fi(s.n)+' öğrenci']]}));
-  return {svg,xs:d.map((_,i)=>x(i)),ys:pts.map(p=>p[1]),noktalar:pts.map(p=>[[p[1],'var(--e-c1)']]),ipucu};
+  return {svg,xs:d.map((_,i)=>x(i)),ys:pts.map(p=>p[1]),noktalar:pts.map(p=>[[p[1],'var(--e-c1)']]),ipucu,step,
+    ...(w?{tutamak:true,deger:d.map(s=>s.ort),ids:d.map(s=>s.id),g:d.map(s=>s.g),yil:m.yil}:{})};
 }
 function grafikDers(st,W){
-  const m=st.m,d=m.sinavlar,H=300,odak=st.ders?m.dersler.find(x=>x.kod===st.ders):null,seri=odak?[odak]:m.dersler;
+  const m=st.m,d=m.sinavlar,H=300,odak=st.ders?m.dersler.find(x=>x.kod===st.ders):null,seri=odak?[odak]:derslerYalniz(m.dersler);
   const deger=(x,i)=>odak?x.seri[i]:x.seri[i]/x.soru*100,fmt=odak?f1:(v=>(v<0?'−':'')+'%'+fi(Math.abs(Math.round(v))));
   const vals=seri.flatMap(x=>d.map((_,i)=>deger(x,i))),tik=tikler(Math.min(0,...vals),Math.max(...vals,odak?1:10),5);
   const R=W-(Math.max(...tik.map(t=>yaziGen(fmt(t))))+22),L=2,ust=26,alt=H-26,step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>alt-(v-tik[0])/(tik[tik.length-1]-tik[0])*(alt-ust);
@@ -341,6 +360,8 @@ function enYakin(kutu,clientX){
 const secim=(ad,deger,secenekler,etiket)=>'<div class="et-seg" role="group" aria-label="'+etiket+'"><span class="et-seg-label">'+etiket+'</span>'+
   secenekler.map(([v,yazi,kapali])=>'<button type="button" data-dp-'+ad+'="'+kacis(v)+'" aria-pressed="'+(String(v)===String(deger))+'"'+(kapali?' disabled':'')+'>'+kacis(yazi)+'</button>').join('')+'</div>';
 const hap=(v,yazi)=>'<span class="et-hap '+yon(v)+'">'+(ok(v)?'<span aria-hidden="true">'+ok(v)+'</span>':'')+yazi+'</span>';
+// ▲3 / ▼2 / =: places moved; nothing when there is no earlier place.
+const siraOk=f=>f===null||f===undefined?'':'<span class="et-sira-ok '+yon(f)+'" role="img" aria-label="'+(f>0?fi(f)+' sıra yükseldi':f<0?fi(-f)+' sıra düştü':'sıra aynı')+'">'+(f>0?'▲'+fi(f):f<0?'▼'+fi(-f):'=')+'</span>';
 function kucukCizgi(vals,renk,son,G,Y,id){
   const n=vals.length,var_=vals.filter(v=>v!==null),mx=Math.max(...var_),mn=Math.min(...var_),x=i=>2+(G-6)*(n>1?i/(n-1):.5),y=v=>Y-3-(mx===mn?.5:(v-mn)/(mx-mn))*(Y-7);
   const pts=vals.map((v,i)=>v===null?null:[x(i),y(v)]).filter(Boolean);
@@ -362,7 +383,7 @@ function cumle(st){
   const m=st.m,o=m.ozet[st.s],son=m.sinavlar[m.simdi],b=t=>'<b>'+t+'</b>';
   const kapsam=turOnEki(st)+(st.K.key==='hepsi'?'':kacis(st.K.ad)+' · ');
   if(!o)return kapsam+'Tek deneme var: '+kacis(son.ad)+' ('+gunAy(son.g,m.yil)+'), '+kacis(m.O.ad)+' ortalaması '+b(f1(son.ort))+' net. Karşılaştırma için ikinci deneme gerekir.';
-  const en=m.dersler.slice().sort((a,c)=>Math.abs(c.k[st.s].fark)-Math.abs(a.k[st.s].fark))[0];
+  const en=derslerYalniz(m.dersler).sort((a,c)=>Math.abs(c.k[st.s].fark)-Math.abs(a.k[st.s].fark))[0];
   const bas=st.s==='sec'?kacis(m.sinavlar[m.onceki].ad)+' → '+kacis(son.ad)+' ('+gunAy(son.g,m.yil)+'): ':st.s===1?'Son deneme ('+kacis(son.ad)+', '+gunAy(son.g,m.yil)+'): ':'Son '+st.s+' deneme: ';
   return kapsam+bas+kacis(m.O.ad)+' ortalaması '+b(f1(o.son))+' net, '+
     (st.s==='sec'?'öncekine':st.s===1?'önceki denemeye':'önceki '+st.s+' denemeye')+' göre '+b(isaret(o.fark))+'. En çok değişen ders: '+kacis(en.ad)+' '+b(isaret(en.k[st.s].fark))+'. '+
@@ -378,14 +399,33 @@ function ozetKartlari(st){
     kart('Ortadaki %50 · '+sa,f1(son.p25)+'–'+f1(son.p75),'<span class="mini">medyan '+f1(son.medyan)+' net</span>')+
     kart('En yüksek net · '+sa,f2(son.max),'<span class="mini">'+kacis(enIyi?kisiAdi(enIyi.ad):'')+'</span>')+
     (o?kart('Yükselen öğrenci · '+pencereAdi(st.s),fi(o.artan),'<span class="mini">düşen: '+fi(o.azalan)+' · en az '+ESIK+' net</span>'):'')+
+    (once?kart('Sırası yükselen · '+sa,fi(m.ogrenciler.filter(x=>x.siraFark>0).length),'<span class="mini">düşen: '+fi(m.ogrenciler.filter(x=>x.siraFark<0).length)+' · aynı: '+fi(m.ogrenciler.filter(x=>x.siraFark===0).length)+'</span>'):'')+
     kart('Katılım · '+sa,fi(son.n),once?hap(son.n-once.n,fi(Math.abs(son.n-once.n)))+'<span class="mini">önceki: '+fi(once.n)+'</span>':'<span class="mini">öğrenci</span>')+'</div>';
 }
 function dersKartlari(st){
   const m=st.m,w=m.pencere[st.s],son=w?w.son:null;
   return '<div class="et-dersler">'+m.dersler.map((d,di)=>{const k=d.k[st.s],f=k?k.fark:0,deger=k?k.son:d.seri[d.seri.length-1];
-    return '<button type="button" class="et-ders" data-dp-ders="'+kacis(d.kod)+'" aria-pressed="'+(st.ders===d.kod)+'"><span class="et-ders-ust"><i class="et-renk nokta" style="background:'+d.renk+'"></i><b>'+kacis(d.ad)+'</b><span class="mini">'+fi(d.soru)+' soru</span></span>'+
+    return '<button type="button" class="et-ders'+(d.uyeler?' et-grup-kart':'')+'" data-dp-ders="'+kacis(d.kod)+'" aria-pressed="'+(st.ders===d.kod)+'"><span class="et-ders-ust"><i class="et-renk nokta" style="background:'+d.renk+'"></i><b>'+kacis(d.ad)+'</b><span class="mini">'+fi(d.soru)+' soru</span></span>'+
       '<strong>'+f1(deger)+'</strong>'+(k?'<span class="et-ders-alt">'+hap(f,isaret(f).replace(/^[+−]/,''))+'<span class="mini">önceki: '+f1(k.once)+'</span></span>':'<span class="et-ders-alt"><span class="mini">%'+fi(Math.round(deger/d.soru*100))+' başarı</span></span>')+
       '<span class="et-kucuk-kutu">'+kucukCizgi(d.seri,egilimRengi(f),son,160,38,'dpSg'+di)+'</span></button>'}).join('')+'</div>';
+}
+// Kolaydan zora: the lessons by the class's success (average net ÷ questions) in the şimdiki exam, with
+// the change since the önceki exam in points and places, and the success over every exam. A row
+// focuses the subject chart on that lesson.
+function zorluk(st){
+  const m=st.m,l=derslerYalniz(m.dersler);if(!l.length)return '';
+  const yuzde=(d,i)=>d.seri[i]/d.soru*100;
+  const sirala=i=>{const r=l.map(d=>[d,yuzde(d,i)]).sort((a,b)=>b[1]-a[1]||a[0].ad.localeCompare(b[0].ad,'tr')),yer=new Map();
+    r.forEach(([d,v],j)=>yer.set(d.kod,j&&Math.abs(r[j-1][1]-v)<1e-9?yer.get(r[j-1][0].kod):j+1));return {r,yer}};
+  const S=sirala(m.simdi),P=m.onceki===null?null:sirala(m.onceki),son=m.sinavlar[m.simdi];
+  const satir=([d,v])=>{const sf=P?P.yer.get(d.kod)-S.yer.get(d.kod):null,pf=P?v-yuzde(d,m.onceki):null;
+    return '<button type="button" class="dp-zor-satir" data-dp-ders="'+kacis(d.kod)+'" aria-pressed="'+(st.ders===d.kod)+'"><span class="dp-zor-sira">'+fi(S.yer.get(d.kod))+'</span>'+
+      '<span class="dp-zor-ad"><i class="et-renk nokta" style="background:'+d.renk+'"></i>'+kacis(d.ad)+'</span><b>%'+fi(Math.round(v))+'</b>'+
+      (pf===null?'<span></span>':hap(pf,f1(Math.abs(pf))+' puan'))+'<span>'+siraOk(sf)+'</span>'+
+      '<span class="dp-zor-iz">'+kucukCizgi(m.sinavlar.map((_,i)=>yuzde(d,i)),d.renk,null,84,24)+'</span></button>'};
+  const ilk=S.r[0][0],sonD=S.r[S.r.length-1][0];
+  return '<section class="et-panel" id="dpZorluk"><div class="et-kart-bas"><h2>Kolaydan zora · '+kacis(son.ad)+'</h2><span class="mini">En kolay '+kacis(ilk.ad)+' · en zor '+kacis(sonD.ad)+
+      (P?' · '+kacis(m.sinavlar[m.onceki].ad)+' denemesine göre':'')+'</span></div><div class="dp-zor">'+S.r.map(satir).join('')+'</div></section>';
 }
 function hareketliler(st){
   const s=st.s,m=st.mo;if(!m.pencere[s])return '<p class="mini">Karşılaştırma için en az iki deneme gerekir.</p>';
@@ -435,7 +475,7 @@ function tablo(st){
   const satir=o=>{const c=w?o.k[s]:null,v={sinif:o.sinif||'—',son:c?c.son:o.sonNet,once:c?c.once:null,fark:c?c.fark:null,yuzde:c?c.yuzde:null,logFark:c?c.logFark:null,seri:o.seri};
     return '<tr data-dp-ogr="'+kacis(o.no)+'" data-ara="'+kacis(anahtar(o.ad)+' '+o.no)+'"'+(st.ogr&&st.ogr.no===o.no?' class="secili"':'')+(gor(o)?'':' hidden')+'>'+kol.map(([k])=>
       k==='ad'?'<td><button type="button" class="et-ad" data-dp-ogr="'+kacis(o.no)+'">'+kacis(kisiAdi(o.ad))+'</button></td>':
-      k==='sira'?'<td class="sayi">'+(o.sira===null?'—':fi(o.sira))+'</td>':k==='durum'?'<td><span class="et-durum '+DURUM[c.durum]+'">'+c.durum+'</span></td>':hucre[k](v)).join('')+'</tr>'};
+      k==='sira'?'<td class="sayi">'+(o.sira===null?'—':fi(o.sira))+siraOk(o.siraFark)+'</td>':k==='durum'?'<td><span class="et-durum '+DURUM[c.durum]+'">'+c.durum+'</span></td>':hucre[k](v)).join('')+'</tr>'};
   const gorunen=m.ogrenciler.filter(gor).length;
   return '<div class="et-filtre"><input type="search" id="dpAra" placeholder="Öğrenci ya da numara ara" aria-label="Öğrenci ara" value="'+kacis(EK.dpAra||'')+'">'+
     '<span class="mini" id="dpSayac">'+(gorunen===m.ogrenciler.length?fi(m.ogrenciler.length)+' öğrenci':fi(gorunen)+' / '+fi(m.ogrenciler.length)+' öğrenci')+'</span></div>'+
@@ -446,16 +486,16 @@ function kisiKarti(st,es){
   const si=es(o.no,o.ad),ad=kisiAdi(o.ad),c=m.pencere[st.s]?o.k[st.s]:null,son=m.sinavlar[o.sonSinav],S=m.sinavlar[m.simdi],sira=S.sira.get(o.no)??null;
   const onceI=o.seri.slice(0,o.sonSinav).map((v,i)=>v===null?-1:i).filter(i=>i>=0).pop(),onceS=onceI===undefined?null:m.sinavlar[onceI];
   const r=son.deger.get(o.no).o,ro=onceS?onceS.deger.get(o.no).o:null;
-  const dersler=m.dersler.map((d,i)=>({...d,net:r.net[d.kod]??0,once:ro?(ro.net[d.kod]??0):null,okul:son.ders[i]}));
+  const dersler=m.dersler.map((d,i)=>({...d,net:dersNeti(r,d),once:ro?dersNeti(ro,d):null,okul:son.ders[i]}));
   return '<div class="et-kisi-bas"><h3>'+(si===undefined?kacis(ad):ogrAdDugmesi(si,ad))+'</h3><span class="mini">No '+kacis(o.no)+' · '+kacis(o.sinif||'şube yok')+' · '+fi(o.deneme)+' deneme</span></div>'+
     '<div class="et-kisi-sayilar"><div><span class="mini">Son net</span><strong>'+f2(o.sonNet)+'</strong><span class="mini">'+kacis(son.ad)+'</span></div>'+
-    '<div><span class="mini">Sıra · '+simdiAdi(st)+'</span><strong>'+(sira===null?'—':fi(sira))+'</strong><span class="mini">'+(sira===null?'girmedi':'/ '+fi(S.n))+'</span></div>'+
+    '<div><span class="mini">Sıra · '+simdiAdi(st)+'</span><strong>'+(sira===null?'—':fi(sira))+'</strong><span class="mini">'+(sira===null?'girmedi':'/ '+fi(S.n))+(o.siraOnce!==null&&sira!==null?' · önceki '+fi(o.siraOnce):'')+'</span>'+siraOk(o.siraFark)+'</div>'+
     (c&&c.fark!==null?'<div><span class="mini">Değişim · '+pencereAdi(st.s)+'</span>'+hap(c.fark,f2(Math.abs(c.fark)))+'<span class="et-durum '+DURUM[c.durum]+'">'+c.durum+'</span></div>'
       :'<div><span class="mini">En iyi</span><strong>'+f2(o.enIyi)+'</strong></div>')+'</div>'+
     '<div class="et-grafik kucuk" data-dp-grafik="kisi" tabindex="0" role="img" aria-label="'+kacis(ad+': denemelerdeki net, okul ortalamasıyla')+'"></div>'+
     '<div class="et-lejant"><span><i class="et-renk cizgi" style="background:var(--e-c1)"></i>'+kacis(ad)+'</span><span><i class="et-renk cizgi" style="background:var(--e-muted)"></i>Ortalama</span><span><i class="et-renk dp-renk-bant" style="background:var(--e-c1)"></i>Ortadaki %50</span></div>'+
     '<span class="mini">'+kacis(son.ad)+' · derslere göre'+(onceS?', önceki denemeye göre değişim':'')+'</span><div class="dp-dersler">'+dersler.map(d=>{const fark=d.once===null?null:d.net-d.once,yz=Math.max(0,Math.min(100,d.net/d.soru*100)),ok_=Math.max(0,Math.min(100,d.okul/d.soru*100));
-      return '<div class="dp-ders"><span><i class="et-renk nokta" style="background:'+d.renk+'"></i>'+kacis(d.ad)+'</span><span class="dp-iz" title="Okul ortalaması '+f1(d.okul)+'"><i style="width:'+r1(yz)+'%;background:'+d.renk+'"></i><em style="left:'+r1(ok_)+'%"></em></span><b>'+f2(d.net)+'<small>/'+fi(d.soru)+'</small></b>'+(fark===null?'<span></span>':hap(fark,f2(Math.abs(fark))))+'</div>'}).join('')+'</div>'+
+      return '<div class="dp-ders'+(d.uyeler?' dp-grup':'')+'"><span><i class="et-renk nokta" style="background:'+d.renk+'"></i>'+kacis(d.ad)+'</span><span class="dp-iz" title="Okul ortalaması '+f1(d.okul)+'"><i style="width:'+r1(yz)+'%;background:'+d.renk+'"></i><em style="left:'+r1(ok_)+'%"></em></span><b>'+f2(d.net)+'<small>/'+fi(d.soru)+'</small></b>'+(fark===null?'<span></span>':hap(fark,f2(Math.abs(fark))))+'</div>'}).join('')+'</div>'+
     '<span class="mini dp-not"><em class="dp-cizik"></em> çizgi: '+kacis(st.K.ad)+' ortalaması</span>';
 }
 // The teacher sets an exam's type (genel or tarama) and corrects its date here, with Sıralamalar's own
@@ -527,10 +567,11 @@ function icerik(){
       '<div class="et-grafik" data-dp-grafik="genel" tabindex="0" role="img" aria-label="'+kacis(m.O.ad+' ortalama net, ortadaki yüzde elli ve katılım, deneme deneme')+'"></div></section>'+
     '<h2 class="et-bolum" id="dpDersler">Dersler</h2>'+dersKartlari(st)+
     '<section class="et-panel"><div class="et-kart-bas"><h2>'+(odak?kacis(odak.ad)+' · ortalama net':'Derslere göre başarı (%)')+'</h2>'+(odak?'<button type="button" class="et-dugme" data-dp-ders="">Tüm dersler</button>':'')+'</div>'+
-      '<div class="et-grafik" data-dp-grafik="ders" tabindex="0" role="img" aria-label="'+kacis(odak?odak.ad+' ortalama net':'Derslerin başarı yüzdesi, deneme deneme')+'"></div></section>'+
+      '<div class="et-grafik" data-dp-grafik="ders" tabindex="0" role="img" aria-label="'+kacis(odak?odak.ad+' ortalama net':'Derslerin başarı yüzdesi, deneme deneme')+'"></div></section>'+zorluk(st)+
     '<div class="dp-bolum-bas"><h2 class="et-bolum" id="dpOgrenciler">Öğrenciler</h2><div class="et-arac">'+
       '<label class="et-seg"><span class="et-seg-label">Net</span><select id="dpOgrNet" aria-label="Öğrencilerde gösterilen net"><option value="">'+kacis(toplamAdi(m.O))+'</option>'+
-        m.dersler.map(d=>'<option value="'+kacis(d.kod)+'"'+(st.ogrDers&&st.ogrDers.kod===d.kod?' selected':'')+'>'+kacis(d.ad)+'</option>').join('')+'</select></label></div></div>'+
+        [['Dersler',derslerYalniz(m.dersler)],['Toplam',m.dersler.filter(d=>d.uyeler)]].filter(([,l])=>l.length).map(([ad,l])=>'<optgroup label="'+ad+'">'+
+          l.map(d=>'<option value="'+kacis(d.kod)+'"'+(st.ogrDers&&st.ogrDers.kod===d.kod?' selected':'')+'>'+kacis(d.ad)+'</option>').join('')+'</optgroup>').join('')+'</select></label></div></div>'+
     '<section class="et-panel" id="dpOgrCizgi"><div class="et-kart-bas"><h2>Öğrencilere göre · '+kacis(netAdi)+'</h2><div class="et-lejant">'+
       subeRenkleri(mo).map(([c,r])=>'<span><i class="et-renk cizgi" style="background:'+r+'"></i>'+kacis(c)+'</span>').join('')+'<span><i class="et-renk cizgi" style="background:var(--e-muted)"></i>Ortalama</span></div></div>'+
       '<div class="et-grafik" data-dp-grafik="ogrenci" tabindex="0" role="img" aria-label="'+kacis('Her öğrencinin '+netAdi+' neti, deneme deneme. Yukarı ve aşağı oklarla öğrenci, Enter ile öğrenci kartı')+'"></div></section>'+
@@ -560,7 +601,8 @@ document.addEventListener('click',ev=>{
   // Ranking by a change measure orders the table by that rank; Net returns to the default order.
   if(el.dataset.dpOlcut){EK.dpOlcut=el.dataset.dpOlcut;if(EK.dpOlcut==='net'){EK.dpSira='son';EK.dpSiraYon='azalan'}else{EK.dpSira='sira';EK.dpSiraYon='artan'}
     yenidenCiz('[data-dp-olcut="'+EK.dpOlcut+'"]');return}
-  if(el.dataset.dpDers!==undefined){const d=el.dataset.dpDers;EK.dpDers=d&&EK.dpDers!==d?d:null;yenidenCiz(d?'.et-ders[data-dp-ders="'+q(d)+'"]':null);return}
+  if(el.dataset.dpDers!==undefined){const d=el.dataset.dpDers,satir=el.classList.contains('dp-zor-satir');EK.dpDers=d&&EK.dpDers!==d?d:null;
+    yenidenCiz(d?(satir?'.dp-zor-satir':'.et-ders')+'[data-dp-ders="'+q(d)+'"]':null);return}
   if(el.dataset.dpSira){const k=el.dataset.dpSira;if(EK.dpSira===k)EK.dpSiraYon=EK.dpSiraYon==='artan'?'azalan':'artan';else{EK.dpSira=k;EK.dpSiraYon=['ad','sinif','no','sira','durum'].includes(k)?'artan':'azalan'}
     yenidenCiz('[data-dp-sira="'+k+'"]');return}
   if(el.dataset.dpOgr){EK.dpOgr=el.dataset.dpOgr;yenidenCiz();const kart=document.getElementById('dpKisi');
@@ -613,6 +655,34 @@ document.addEventListener('keydown',ev=>{
   ipucuGoster(kutu,ev.key==='Home'?0:ev.key==='End'?g.xs.length-1:Math.max(0,Math.min(g.xs.length-1,i+(ev.key==='ArrowLeft'?-1:1))));
 });
 document.addEventListener('focusout',ev=>{const kutu=ev.target.closest?.('.et-grafik[data-dp-grafik]');if(kutu)ipucuGizle(kutu)});
+// Seç: a line is dragged to any exam but the other line's; the tooltip and an "Önceki → Şimdiki"
+// readout follow it; on release the board compares the two exams (EK.dpOnceki / EK.dpSimdiki).
+let SURUKLE=null;
+function surukleYaz(){
+  const {kutu,g}=SURUKLE,a=g.deger[SURUKLE.once],b=g.deger[SURUKLE.son];
+  let el=kutu.querySelector('.et-surukle');if(!el){el=document.createElement('div');el.className='et-surukle';kutu.appendChild(el)}
+  el.innerHTML=gunAy(g.g[SURUKLE.once],g.yil)+' → '+gunAy(g.g[SURUKLE.son],g.yil)+': <b>'+f1(a)+' → '+f1(b)+'</b> net '+hap(b-a,f1(Math.abs(b-a)));
+}
+document.addEventListener('pointerdown',ev=>{
+  if(!etkin())return;const t=ev.target.closest?.('.et-grafik[data-dp-grafik="genel"] [data-tutamak]');if(!t)return;
+  const kutu=t.closest('.et-grafik'),g=CIZIMLER.get('genel'),svg=kutu.querySelector('svg');if(!g||!g.tutamak||!svg)return;
+  const yer=ad=>{const v=/translate\(([\d.-]+)/.exec(svg.querySelector('[data-tutamak="'+ad+'"]').getAttribute('transform'));return g.xs.reduce((en,x,i)=>Math.abs(x-v[1])<Math.abs(g.xs[en]-v[1])?i:en,0)};
+  ev.preventDefault();SURUKLE={kutu,g,svg,hangi:t.dataset.tutamak,once:yer('once'),son:yer('son')};
+  try{kutu.setPointerCapture(ev.pointerId)}catch(e){}
+  kutu.classList.add('suruklen');surukleYaz();
+});
+document.addEventListener('pointermove',ev=>{
+  if(!SURUKLE)return;const {kutu,g,svg,hangi}=SURUKLE,i=enYakin(kutu,ev.clientX);
+  if(i<0||i===SURUKLE[hangi==='once'?'son':'once'])return;
+  SURUKLE[hangi]=i;svg.querySelector('[data-tutamak="'+hangi+'"]').setAttribute('transform','translate('+r1(g.xs[i])+',0)');
+  const bant=svg.querySelector('[data-bant="'+hangi+'"]');if(bant){bant.setAttribute('x',r1(g.xs[i]-g.step/2));bant.setAttribute('width',r1(g.step))}
+  surukleYaz();ipucuGoster(kutu,i);
+});
+function birak(){
+  if(!SURUKLE)return;const {g}=SURUKLE;EK.dpOnceki=g.ids[SURUKLE.once];EK.dpSimdiki=g.ids[SURUKLE.son];SURUKLE=null;
+  yenidenCiz();
+}
+document.addEventListener('pointerup',birak);document.addEventListener('pointercancel',birak);
 return {temel,olcu,kapsamlar,gorunumModeli,veriAl,durumAl,icerik,gorunum,grafikleriCiz,GRAFIKLER,ESIK};
 })();
 function gorunumDenemePanosu(){return DPANO.gorunum()}

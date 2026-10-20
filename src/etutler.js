@@ -5,7 +5,7 @@
 // the teacher notebook as D.etut, so it travels with the teacher's cloud backup; student packets
 // are built from a field whitelist and never carry it. Nothing is uploaded. See docs/etutler.md.
 const ETUT = (() => {
-const SURUM=1, UST_SINIR=300000, EN_COK_SATIR=15000, EN_COK_KAYNAK=60, ARALIKLAR=[1,2,4];
+const SURUM=1, UST_SINIR=300000, EN_COK_SATIR=15000, EN_COK_KAYNAK=60, ARALIKLAR=[1,2,4], PENCERELER=[...ARALIKLAR,'sec'];
 const AY=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 // Report branches ("MATEMATİK TYT", "FİZİK 1", "Kimya"…) are grouped into one subject each.
 const DERSLER=[[/^MATEMAT/u,'Matematik'],[/^GEOMETR/u,'Geometri'],[/^FİZİK/u,'Fizik'],[/^KİMYA/u,'Kimya'],[/^BİYOLOJ/u,'Biyoloji'],
@@ -33,6 +33,10 @@ function aralikYazi(a,b){
   return A.getUTCMonth()===B.getUTCMonth()?A.getUTCDate()+'–'+gunAy(b):gunAy(a)+' – '+gunAy(b);
 }
 const haftaYazi=s=>s+' hafta';
+// The two sides of a comparison: "Önceki 2H" / "Son 2H", or the chosen weeks in Seç.
+const oncekiAdi=(m,s)=>s==='sec'?gunAy(m.pencere.sec.once[0])+' haftası':'Önceki '+s+'H';
+const sonAdi=(m,s)=>s==='sec'?gunAy(m.pencere.sec.son[0])+' haftası':'Son '+s+'H';
+const karsiYazi=(m,s)=>s==='sec'?gunAy(m.pencere.sec.once[0])+' haftası → '+gunAy(m.pencere.sec.son[0])+' haftası':s===1?'Geçen hafta, önceki haftaya göre':'Son '+s+' hafta, önceki '+s+' haftaya göre';
 const yon=v=>v>0?'yukari':v<0?'asagi':'esit';
 const ok=v=>v>0?'▲':v<0?'▼':'';
 const r1=x=>Math.round(x*10)/10;
@@ -194,7 +198,8 @@ async function yedektenGetir(){
 // Weeks start on Monday and run from the first etüt's week to the report's last day; weeks with
 // no etüt count as 0. The last week is partial (dashed, left out of comparisons) when the report
 // ends before Friday. Windows compare the last 1, 2 or 4 full weeks with as many weeks before.
-function model(v){
+// sec = {a,b}: the two full weeks chosen on the chart (Karşılaştır: Seç), compared week to week.
+function model(v,sec){
   const rows=ac(v).map(r=>({...r,hafta:pazartesi(r.g),ders:dersAdi(r.brans),kim:anahtar(r.ad)+'|'+r.sinif,hoca:anahtar(r.ogretmen)})).sort((a,b)=>a.g-b.g||(a.saat??-1)-(b.saat??-1));
   if(!rows.length)return null;
   const bit=Math.max(rows[rows.length-1].g,...v.kaynak.map(k=>k.bit));
@@ -216,20 +221,23 @@ function model(v){
   const tam=hafta.filter(h=>!h.kismi).map(h=>h.p),n=tam.length;
   const pencere={};
   for(const s of ARALIKLAR)if(n>=2*s)pencere[s]={once:[tam[n-2*s],tam[n-s-1]],son:[tam[n-s],tam[n-1]]};
+  // Seç: Önceki and Şimdiki are any two full weeks; by default the last full week and four weeks before it.
+  if(n>=2){let a=sec&&tam.includes(sec.a)?sec.a:tam[Math.max(0,n-5)],b=sec&&tam.includes(sec.b)?sec.b:tam[n-1];
+    if(a>b)[a,b]=[b,a];if(a===b){a=tam[Math.max(0,n-5)];b=tam[n-1]}pencere.sec={once:[a,a],son:[b,b]}}
   const icinde=(r,[a,b])=>r.hafta>=a&&r.hafta<=b;
   const dersSira=[...new Set(rows.map(r=>r.ders))].map(d=>[d,rows.filter(r=>r.ders===d).length]).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'tr')).map(x=>x[0]);
   const ilkHafta=new Map();for(const r of rows)if(!ilkHafta.has(r.kim))ilkHafta.set(r.kim,r.hafta);
   const karsilastir=(liste,s)=>{const w=pencere[s];if(!w)return null;const once=liste.filter(r=>icinde(r,w.once)).length,son=liste.filter(r=>icinde(r,w.son)).length;
     return {once,son,fark:son-once,oran:once?(son-once)/once:null}};
   const dersler=dersSira.map(d=>{const l=rows.filter(r=>r.ders===d),o={ders:d,toplam:l.length,renk:dersRengi(d),hafta:haftalar.map(h=>l.filter(r=>r.hafta===h).length),gun:gun.map(x=>x.satir.filter(r=>r.ders===d).length),k:{}};
-    for(const s of ARALIKLAR)o.k[s]=karsilastir(l,s);return o});
+    for(const s of PENCERELER)o.k[s]=karsilastir(l,s);return o});
   const kisiler=[...new Set(rows.map(r=>r.kim))].map(kim=>{
     const l=rows.filter(r=>r.kim===kim),o={kim,ad:l[0].ad,sinif:l[0].sinif,toplam:l.length,ilk:l[0].g,son:l[l.length-1].g,
       hafta:haftalar.map(h=>l.filter(r=>r.hafta===h).length),dersler:{},k:{}};
     for(const r of l)o.dersler[r.ders]=(o.dersler[r.ders]||0)+1;
     o.ogretmenler={};for(const r of l)if(r.hoca)o.ogretmenler[r.hoca]=(o.ogretmenler[r.hoca]||0)+1;
-    for(const s of ARALIKLAR){const c=karsilastir(l,s);if(!c)continue;const w=pencere[s];
-      c.durum=c.son>0&&c.once===0&&ilkHafta.get(kim)>=w.son[0]?'New':c.son>0&&c.once===0?'Returned':c.son===0&&c.once>0?'Stopped':c.son>c.once?'Rising':c.son<c.once?'Falling':c.son>0?'Steady':'Quiet';
+    for(const s of PENCERELER){const c=karsilastir(l,s);if(!c)continue;const w=pencere[s];
+      c.durum=c.son>0&&c.once===0&&ilkHafta.get(kim)>w.once[1]?'New':c.son>0&&c.once===0?'Returned':c.son===0&&c.once>0?'Stopped':c.son>c.once?'Rising':c.son<c.once?'Falling':c.son>0?'Steady':'Quiet';
       o.k[s]=c}
     return o;
   }).sort((a,b)=>b.toplam-a.toplam||a.ad.localeCompare(b.ad,'tr'));
@@ -240,10 +248,18 @@ function model(v){
     const ders=Object.entries(sayac).sort((a,b)=>b[1]-a[1]||dersSira.indexOf(a[0])-dersSira.indexOf(b[0]))[0][0];
     const o={hoca,ad:l[0].ogretmen,ders,renk:dersRengi(ders),toplam:l.length,ogrenci:kisi.size,hafta:haftalar.map(h=>l.filter(r=>r.hafta===h).length),
       gun:gun.map(x=>x.satir.filter(r=>r.hoca===hoca).length),kisiler:[...kisi.values()].sort((a,b)=>b.n-a.n||b.son-a.son||a.ad.localeCompare(b.ad,'tr')),k:{}};
-    for(const s of ARALIKLAR)o.k[s]=karsilastir(l,s);return o;
+    for(const s of PENCERELER)o.k[s]=karsilastir(l,s);return o;
   }).sort((a,b)=>dersSira.indexOf(a.ders)-dersSira.indexOf(b.ders)||b.toplam-a.toplam||a.ad.localeCompare(b.ad,'tr'));
+  // Places by etüt count in each window (1 = most, equal counts share a place; none without etüt);
+  // siraFark is the önceki place minus the son place, so a climb is positive.
+  const yerler=(liste,s)=>{
+    for(const alan of ['once','son']){const l=liste.filter(o=>o.k[s]&&o.k[s][alan]>0).sort((a,b)=>b.k[s][alan]-a.k[s][alan]);
+      l.forEach((o,i)=>{o.k[s][alan+'Sira']=i&&l[i-1].k[s][alan]===o.k[s][alan]?l[i-1].k[s][alan+'Sira']:i+1})}
+    for(const o of liste){const c=o.k[s];if(!c)continue;c.onceSira=c.onceSira??null;c.sonSira=c.sonSira??null;c.siraFark=c.onceSira!==null&&c.sonSira!==null?c.onceSira-c.sonSira:null}
+  };
+  for(const s of PENCERELER)if(pencere[s]){yerler(kisiler,s);yerler(ogretmenler,s)}
   const ozet={};
-  for(const s of ARALIKLAR){const w=pencere[s];if(!w)continue;
+  for(const s of PENCERELER){const w=pencere[s];if(!w)continue;
     const once=rows.filter(r=>icinde(r,w.once)),son=rows.filter(r=>icinde(r,w.son));
     const ko=new Set(once.map(r=>r.kim)).size,ks=new Set(son.map(r=>r.kim)).size;
     ozet[s]={etutOnce:once.length,etutSon:son.length,etutFark:son.length-once.length,etutOran:once.length?(son.length-once.length)/once.length:null,
@@ -252,9 +268,9 @@ function model(v){
   }
   return {rows,bit,ilk:rows[0].g,haftalar,hafta,gun,pencere,dersler,ogretmenler,kisiler,ozet,kismiHafta};
 }
-function modelAl(v){const k=v.ts+'|'+v.satir.length;if(ONBELLEK.ts!==k||!ONBELLEK.m){ONBELLEK.m=model(v);ONBELLEK.ts=k}return ONBELLEK.m}
+function modelAl(v){const k=v.ts+'|'+v.satir.length+'|'+EK.etSecA+'|'+EK.etSecB;if(ONBELLEK.ts!==k||!ONBELLEK.m){ONBELLEK.m=model(v,{a:EK.etSecA,b:EK.etSecB});ONBELLEK.ts=k}return ONBELLEK.m}
 function durumAl(m){
-  const s=ARALIKLAR.includes(EK.etAralik)&&m.pencere[EK.etAralik]?EK.etAralik:m.pencere[2]?2:ARALIKLAR.filter(x=>m.pencere[x]).pop()||null;
+  const s=EK.etAralik==='sec'&&m.pencere.sec?'sec':ARALIKLAR.includes(EK.etAralik)&&m.pencere[EK.etAralik]?EK.etAralik:m.pencere[2]?2:ARALIKLAR.filter(x=>m.pencere[x]).pop()||null;
   return {s,tur:EK.etTur==='gun'?'gun':'hafta',ders:m.dersler.some(d=>d.ders===EK.etDers)?EK.etDers:null,
     hoca:m.ogretmenler.some(o=>o.hoca===EK.etHoca)?EK.etHoca:null,
     kim:m.kisiler.some(k=>k.kim===EK.etOgr)?EK.etOgr:(m.kisiler[0]||{}).kim};
@@ -280,10 +296,10 @@ function eksenX(ps,x,step,W,y0){
 }
 function bantlar(ps,x,step,w,s,ust,alt,yazi,tur){
   if(!w)return '';let out='';
-  for(const [sinif,[a,b],etiket] of [['once',w.once,'Önceki '+s+'H'],['son',w.son,'Son '+s+'H']]){
+  for(const [sinif,[a,b],etiket] of [['once',w.once,s==='sec'?'Önceki':'Önceki '+s+'H'],['son',w.son,s==='sec'?'Şimdiki':'Son '+s+'H']]){
     const bitis=b+6,ic=ps.map((p,i)=>[p,i]).filter(([p])=>p>=a&&p<=bitis);if(!ic.length)continue;
     const xa=x(ic[0][1])-step/2,xb=x(ic[ic.length-1][1])+step/2;
-    out+='<rect class="et-bant '+sinif+'" x="'+r1(xa)+'" y="'+ust+'" width="'+r1(Math.max(0,xb-xa))+'" height="'+(alt-ust)+'"/>';
+    out+='<rect class="et-bant '+sinif+'" data-bant="'+sinif+'" x="'+r1(xa)+'" y="'+ust+'" width="'+r1(Math.max(0,xb-xa))+'" height="'+(alt-ust)+'"/>';
     if(yazi&&xb-xa>58)out+='<text class="et-bant-yazi" x="'+r1(xa+6)+'" y="'+(ust+13)+'">'+etiket+'</text>';
   }
   return out;
@@ -298,7 +314,7 @@ function grafikGenel(m,st,W){
   const step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>fiyatAlt-v/tik[tik.length-1]*(fiyatAlt-ust);
   const sMax=Math.max(1,...d.map(r=>r.ogrenci)),yv=v=>altTaban-v/sMax*hacimH;
   let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" aria-hidden="true">'+egim('etEgimGenel','var(--e-c1)');
-  svg+=bantlar(ps,x,step,m.pencere[st.s],st.s,4,altTaban,true,st.tur)+eksenY(tik,y,L,R);
+  svg+=bantlar(ps,x,step,m.pencere[st.s],st.s,4,altTaban,!(st.s==='sec'&&st.tur==='hafta'),st.tur)+eksenY(tik,y,L,R);
   svg+='<line class="et-eksen" x1="'+L+'" x2="'+R+'" y1="'+altTaban+'" y2="'+altTaban+'"/>';
   const bw=Math.max(2,Math.min(18,step*.55));
   d.forEach((r,i)=>{const o=i?d[i-1].ogrenci:null,c=o===null||r.ogrenci===o?'esit':r.ogrenci>o?'yukari':'asagi';
@@ -312,10 +328,17 @@ function grafikGenel(m,st,W){
   if(pts.length){const [lx,ly]=pts[pts.length-1],deger=sayi(tamlar[tamlar.length-1][0].etut),tw=yaziGen(deger)+12;
     svg+='<line class="et-ref" x1="'+r1(lx)+'" x2="'+R+'" y1="'+r1(ly)+'" y2="'+r1(ly)+'"/><circle class="et-nokta" cx="'+r1(lx)+'" cy="'+r1(ly)+'" r="3.5"/>'+
       '<rect class="et-etiket" x="'+(R+3)+'" y="'+r1(ly-9)+'" width="'+tw+'" height="18" rx="4"/><text class="et-etiket-yazi" x="'+r1(R+3+tw/2)+'" y="'+r1(ly)+'" dy="0.32em" text-anchor="middle">'+deger+'</text>'}
-  svg+=eksenX(ps,x,step,W,H-6)+imlec(ust-6,altTaban)+'</svg>';
+  // Seç on the weekly chart: Önceki and Şimdiki are vertical lines with a handle, dragged to any full week.
+  // Close lines put their handles side by side (Önceki to the left, Şimdiki to the right).
+  const w=m.pencere[st.s],ia=w?ps.indexOf(w.once[0]):-1,ib=w?ps.indexOf(w.son[0]):-1,yakin=Math.abs(x(ib)-x(ia))<60;
+  const tutamak=st.s==='sec'&&st.tur==='hafta'&&ia>=0&&ib>=0?[['once','Önceki',ia,yakin?-54:-27],['son','Şimdiki',ib,yakin?0:-27]].map(([ad,yazi,i,dx])=>
+    '<g class="et-tutamak" data-tutamak="'+ad+'" transform="translate('+r1(x(i))+',0)"><rect class="et-tutamak-alan" x="-11" y="2" width="22" height="'+(altTaban-2)+'"/>'+
+      '<line class="et-tutamak-cizgi" x1="0" x2="0" y1="20" y2="'+altTaban+'"/><rect class="et-tutamak-tut" x="'+dx+'" y="2" width="54" height="18" rx="9"/>'+
+      '<text class="et-tutamak-yazi" x="'+(dx+27)+'" y="11" dy="0.32em" text-anchor="middle">'+yazi+'</text></g>').join(''):'';
+  svg+=eksenX(ps,x,step,W,H-6)+imlec(ust-6,altTaban)+tutamak+'</svg>';
   const ipucu=d.map(r=>({bas:donemBasligi(r,st.tur),satir:[['var(--e-c1)','Etüt',sayi(r.etut),'cizgi'],[null,'Öğrenci',sayi(r.ogrenci)],[null,'İlk kez gelen',sayi(r.yeni)],
     st.tur==='hafta'?[null,'Etüt olan gün',sayi(r.gun)]:['var(--e-muted)','5 günlük ortalama',r.ort5.toLocaleString('tr-TR',{maximumFractionDigits:1}),'cizgi']]}));
-  return {svg,xs:d.map((_,i)=>x(i)),ys:d.map(r=>y(r.etut)),noktalar:d.map(r=>[[y(r.etut),'var(--e-c1)']]),ipucu};
+  return {svg,xs:d.map((_,i)=>x(i)),ys:d.map(r=>y(r.etut)),noktalar:d.map(r=>[[y(r.etut),'var(--e-c1)']]),ipucu,step,ps,tam:d.map(r=>!r.kismi),deger:d.map(r=>r.etut),...(tutamak?{tutamak:true}:{})};
 }
 function donemBasligi(r,tur){return tur==='hafta'?gunAy(r.p)+' haftası'+(r.kismi?' · devam ediyor':''):new Date(r.p*864e5).toLocaleDateString('tr-TR',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})}
 
@@ -328,17 +351,22 @@ function grafikCoklu(m,st,W,seri,secili,egimId,enCok){
   const nTam=d.findIndex(r=>r.kismi)<0?d.length:d.findIndex(r=>r.kismi);
   let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" aria-hidden="true">';
   svg+=bantlar(ps,x,step,m.pencere[st.s],st.s,4,alt,true,st.tur)+eksenY(tik,y,L,R)+'<line class="et-eksen" x1="'+L+'" x2="'+R+'" y1="'+alt+'" y2="'+alt+'"/>';
-  const ciz=(s,kalin)=>{const pts=s.v.map((v,i)=>[x(i),y(v)]),c=' style="stroke:'+s.renk+'"';
+  // With every line drawn, the one under the pointer takes the stage (data-seri, see seriVurgula).
+  const coklu=!secili&&seri.length>1;
+  const ciz=(s,kalin,k)=>{const pts=s.v.map((v,i)=>[x(i),y(v)]),c=(coklu?' data-seri="'+k+'"':'')+' style="stroke:'+s.renk+'"';
     return '<path class="et-cizgi'+(kalin?' kalin':' ince')+'"'+c+' d="'+yol(pts.slice(0,nTam))+'"/>'+(nTam<pts.length&&nTam>0?'<path class="et-cizgi kesik'+(kalin?' kalin':' ince')+'"'+c+' d="'+yol(pts.slice(nTam-1))+'"/>':'')};
   if(secili){const s=gorunen[0];svg+=egim(egimId,s.renk)+'<path d="'+yol(s.v.slice(0,nTam).map((v,i)=>[x(i),y(v)]))+'L'+r1(x(nTam-1))+','+alt+'L'+r1(x(0))+','+alt+'Z" style="fill:url(#'+egimId+')"/>'+ciz(s,true)}
-  else for(const s of seri.slice().reverse())svg+=ciz(s,false);
+  else for(let k=seri.length-1;k>=0;k--)svg+=ciz(seri[k],false,k);
   svg+=eksenX(ps,x,step,W,H-6)+imlec(ust-6,alt)+'</svg>';
   const ipucu=d.map((r,i)=>{let l=gorunen.map(s=>[s.renk,s.ad,s.v[i]]).sort((a,b)=>b[2]-a[2]),geri=[];
     if(enCok&&!secili){l=l.filter(z=>z[2]>0);if(l.length>enCok)geri=l.splice(enCok-1)}
     const satir=l.map(([c,a,v])=>[c,a,sayi(v),'cizgi']);
     if(geri.length)satir.push([null,'+'+sayi(geri.length)+' öğretmen',sayi(geri.reduce((a,z)=>a+z[2],0))]);
     return {bas:donemBasligi(r,st.tur),satir:satir.length?satir:[[null,'Etüt','0']]}});
-  return {svg,xs:d.map((_,i)=>x(i)),ys:d.map((_,i)=>secili?y(gorunen[0].v[i]):ust+40),noktalar:d.map((_,i)=>gorunen.filter(s=>!enCok||secili||s.v[i]>0).map(s=>[y(s.v[i]),s.renk])),ipucu};
+  // A line under the pointer: its point, and the readout led by it.
+  const tekli=coklu?{seriler:seri.map(s=>({k:s.k,ad:s.ad,pts:d.map((_,i)=>[x(i),y(s.v[i])])})),seriNokta:(k,i)=>[[y(seri[k].v[i]),seri[k].renk]],
+    seriIpucu:(k,i)=>({bas:ipucu[i].bas,satir:[[seri[k].renk,seri[k].ad,sayi(seri[k].v[i]),'cizgi',true]].concat(ipucu[i].satir.filter(r=>r[1]!==seri[k].ad)).slice(0,enCok||99)})}:{};
+  return {svg,xs:d.map((_,i)=>x(i)),ys:d.map((_,i)=>secili?y(gorunen[0].v[i]):ust+40),noktalar:d.map((_,i)=>gorunen.filter(s=>!enCok||secili||s.v[i]>0).map(s=>[y(s.v[i]),s.renk])),ipucu,...tekli};
 }
 const grafikDers=(m,st,W)=>grafikCoklu(m,st,W,m.dersler.map(x=>({k:x.ders,ad:x.ders,renk:x.renk,v:x[st.tur]})),st.ders,'etEgimDers');
 const grafikHoca=(m,st,W)=>grafikCoklu(m,st,W,m.ogretmenler.map(x=>({k:x.hoca,ad:kisiAdi(x.ad),renk:x.renk,v:x[st.tur]})),st.hoca,'etEgimHoca',10);
@@ -373,7 +401,7 @@ function grafikleriCiz(){
   const {veri}=oku();if(!veri)return;const m=modelAl(veri);if(!m)return;const st=durumAl(m);
   document.querySelectorAll('.et-grafik[data-et-grafik]').forEach(kutu=>{
     const W=Math.round(kutu.clientWidth);if(W<120)return;
-    const imza=W+'|'+st.s+'|'+st.tur+'|'+st.ders+'|'+st.hoca+'|'+st.kim+'|'+veri.ts;if(kutu.dataset.imza===imza)return;
+    const sw=m.pencere.sec,imza=W+'|'+st.s+'|'+(sw?sw.once[0]+'-'+sw.son[0]:'')+'|'+st.tur+'|'+st.ders+'|'+st.hoca+'|'+st.kim+'|'+veri.ts;if(kutu.dataset.imza===imza)return;
     const g=GRAFIKLER[kutu.dataset.etGrafik](m,st,Math.max(260,W));if(!g)return;
     kutu.dataset.imza=imza;kutu.innerHTML=g.svg+'<div class="et-ipucu" hidden></div>';CIZIMLER.set(kutu.dataset.etGrafik,g);
   });
@@ -389,15 +417,43 @@ function ipucuGoster(kutu,i){
     if(!hl){hl=document.createElementNS('http://www.w3.org/2000/svg','rect');hl.setAttribute('class','et-vurgu-bant');svg.insertBefore(hl,svg.firstChild)}
     hl.setAttribute('x',r1(cx-g.bant/2));hl.setAttribute('width',r1(g.bant));hl.setAttribute('y','20');hl.setAttribute('height',String(Number(kural.getAttribute('y2'))-20));hl.setAttribute('visibility','visible')}
   else{kural.setAttribute('x1',r1(cx));kural.setAttribute('x2',r1(cx));kural.setAttribute('visibility','visible')}
-  svg.querySelector('.et-imlecler').innerHTML=g.noktalar[i].map(([yy,c])=>'<circle cx="'+r1(cx)+'" cy="'+r1(yy)+'" r="4.5" class="et-imlec" style="fill:'+c+'"/>').join('');
-  const p=g.ipucu[i];
-  tip.innerHTML='<div class="et-ipucu-bas">'+kacis(p.bas)+'</div>'+p.satir.map(([c,ad,v,tur])=>'<div class="et-ipucu-satir">'+(c?'<i class="et-renk'+(tur?' '+tur:'')+'" style="background:'+c+'"></i>':'')+'<span>'+kacis(ad)+'</span><b>'+kacis(v)+'</b></div>').join('');
+  const k=kutu.dataset.seri===undefined||!g.seriler?null:Number(kutu.dataset.seri);
+  svg.querySelector('.et-imlecler').innerHTML=(k===null?g.noktalar[i]:g.seriNokta(k,i)).map(([yy,c])=>'<circle cx="'+r1(cx)+'" cy="'+r1(yy)+'" r="4.5" class="et-imlec" style="fill:'+c+'"/>').join('');
+  const p=k===null?g.ipucu[i]:g.seriIpucu(k,i);
+  tip.innerHTML='<div class="et-ipucu-bas">'+kacis(p.bas)+'</div>'+p.satir.map(([c,ad,v,tur,vurgu])=>'<div class="et-ipucu-satir'+(vurgu?' dp-vurgu':'')+'">'+(c?'<i class="et-renk'+(tur?' '+tur:'')+'" style="background:'+c+'"></i>':'')+'<span>'+kacis(ad)+'</span><b>'+kacis(v)+'</b></div>').join('');
   tip.hidden=false;
   const olcek=kutu.clientWidth/Number(svg.viewBox.baseVal.width||kutu.clientWidth),px=cx*olcek,py=g.ys[i]*olcek,bw=kutu.clientWidth,tw=tip.offsetWidth,th=tip.offsetHeight;
   let sol=px+14;if(sol+tw>bw)sol=px-tw-14;sol=Math.max(0,Math.min(sol,bw-tw));
   tip.style.left=sol+'px';tip.style.top=Math.max(0,Math.min(py-th/2,kutu.clientHeight-th))+'px';
 }
+// One line takes the stage: the others lose their colour and fade (CSS: svg.odakli), and the line
+// is drawn last so nothing crosses it. k null clears. As on the Deneme panosu.
+function seriVurgula(kutu,k){
+  const svg=kutu.querySelector('svg');if(!svg)return;
+  if(k===null||k===undefined||k<0){svg.classList.remove('odakli');svg.querySelectorAll('[data-seri].aktif').forEach(e=>e.classList.remove('aktif'));delete kutu.dataset.seri;return}
+  if(kutu.dataset.seri===String(k))return;
+  svg.querySelectorAll('[data-seri].aktif').forEach(e=>e.classList.remove('aktif'));
+  svg.querySelectorAll('[data-seri="'+k+'"]').forEach(e=>{e.classList.add('aktif');e.parentNode.appendChild(e)});
+  svg.classList.add('odakli');kutu.dataset.seri=String(k);
+}
+// The line nearest the pointer, if one passes within a few pixels of it.
+function enYakinSeri(kutu,clientX,clientY){
+  const g=CIZIMLER.get(kutu.dataset.etGrafik),svg=kutu.querySelector('svg');if(!g||!g.seriler||!svg)return null;
+  const r=svg.getBoundingClientRect(),o=(Number(svg.viewBox.baseVal.width)||r.width)/(r.width||1),px=(clientX-r.left)*o,py=(clientY-r.top)*o;
+  const uzak=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((px-a[0])*dx+(py-a[1])*dy)/l)):0;return Math.hypot(a[0]+t*dx-px,a[1]+t*dy-py)};
+  let en=null,ed=14*o;
+  g.seriler.forEach((s,k)=>{s.pts.forEach((p,i)=>{const q=s.pts[i+1];const dd=q?uzak(p,q):Math.hypot(p[0]-px,p[1]-py);if(dd<ed){ed=dd;en=k}})});
+  return en;
+}
+// A click or Enter on a line opens that subject's or teacher's own chart, as its card does.
+function seriSec(kutu){
+  const g=CIZIMLER.get(kutu.dataset.etGrafik);if(!g||!g.seriler||kutu.dataset.seri===undefined)return;
+  const k=g.seriler[Number(kutu.dataset.seri)].k;
+  if(kutu.dataset.etGrafik==='ders'){EK.etDers=k;yenidenCiz('[data-et-ders="'+CSS.escape(k)+'"].et-ders')}
+  else if(kutu.dataset.etGrafik==='hoca'){EK.etHoca=k;yenidenCiz('[data-et-hoca="'+CSS.escape(k)+'"].et-ders')}
+}
 function ipucuGizle(kutu){
+  seriVurgula(kutu,null);
   const tip=kutu.querySelector('.et-ipucu'),svg=kutu.querySelector('svg');if(tip)tip.hidden=true;delete kutu.dataset.i;
   if(svg){svg.querySelector('.et-kural')?.setAttribute('visibility','hidden');svg.querySelector('.et-vurgu-bant')?.setAttribute('visibility','hidden');const im=svg.querySelector('.et-imlecler');if(im)im.innerHTML=''}
 }
@@ -413,6 +469,9 @@ function durum(t){DURUM_YAZI=t||'';const el=document.getElementById('etDurum');i
 const secim=(ad,deger,secenekler,etiket)=>'<div class="et-seg" role="group" aria-label="'+etiket+'"><span class="et-seg-label">'+etiket+'</span>'+
   secenekler.map(([v,yazi,kapali])=>'<button type="button" data-et-'+ad+'="'+v+'" aria-pressed="'+(String(v)===String(deger))+'"'+(kapali?' disabled':'')+'>'+yazi+'</button>').join('')+'</div>';
 const hap=(v,yazi)=>'<span class="et-hap '+yon(v)+'">'+(ok(v)?'<span aria-hidden="true">'+ok(v)+'</span>':'')+yazi+'</span>';
+// ▲3 / ▼2 / =: places moved between the windows; nothing without an earlier place.
+const siraOk=f=>f===null||f===undefined?'':'<span class="et-sira-ok '+yon(f)+'" role="img" aria-label="'+(f>0?sayi(f)+' sıra yükseldi':f<0?sayi(-f)+' sıra düştü':'sıra aynı')+'">'+(f>0?'▲'+sayi(f):f<0?'▼'+sayi(-f):'=')+'</span>';
+const siraYazi=c=>c&&c.sonSira!==null?'<span class="mini">'+sayi(c.sonSira)+'. sıra</span>'+siraOk(c.siraFark):'';
 const oranYazi=(fark,oran)=>sayi(Math.abs(fark))+(oran===null?'':' · '+yuzde(oran));
 function kucukCizgi(vals,kismi,renk,son,G,Y,id){
   const n=vals.length,mx=Math.max(1,...vals),x=i=>2+(G-6)*(n>1?i/(n-1):.5),y=v=>Y-3-v/mx*(Y-7),tam=kismi<0?n:kismi,pts=vals.slice(0,tam).map((v,i)=>[x(i),y(v)]);
@@ -429,7 +488,7 @@ function defterEslesme(){
   return ad=>{const i=m.get(anahtar(ad));return i===undefined||i<0?undefined:i};
 }
 function ozetKartlari(m,st){
-  const o=m.ozet[st.s],son=m.pencere[st.s],ets=m.hafta.reduce((a,b)=>b.etut>a.etut?b:a,m.hafta[0]),et='son '+haftaYazi(st.s);
+  const o=m.ozet[st.s],son=m.pencere[st.s],ets=m.hafta.reduce((a,b)=>b.etut>a.etut?b:a,m.hafta[0]),et=st.s==='sec'?sonAdi(m,'sec'):'son '+haftaYazi(st.s);
   const kart=(baslik,buyuk,alt)=>'<div class="et-ozet-kart"><span class="mini">'+baslik+'</span><strong>'+buyuk+'</strong><div class="et-ozet-alt">'+alt+'</div></div>';
   return '<div class="et-ozet">'+
     kart('Toplam etüt',sayi(m.rows.length),'<span class="mini">'+sayi(m.kisiler.length)+' öğrenci · '+gunAy(m.ilk)+' – '+gunAy(m.bit)+'</span>')+
@@ -442,9 +501,10 @@ function cumle(m,st){
   const o=m.ozet[st.s],w=m.pencere[st.s];if(!o)return 'Karşılaştırma için en az iki tam hafta gerekir.';
   const en=m.dersler.slice().sort((a,b)=>Math.abs(b.k[st.s].fark)-Math.abs(a.k[st.s].fark))[0];
   const b=t=>'<b>'+t+'</b>';
-  const onceki=st.s===1?'önceki haftaya':'önceki '+st.s+' haftaya';
+  const onceki=st.s==='sec'?gunAy(w.once[0])+' haftasına':st.s===1?'önceki haftaya':'önceki '+st.s+' haftaya';
   const degisim=o.etutFark===0?b('aynı'):o.etutOran===null?b(isaretli(o.etutFark)):b(yuzde(o.etutOran)+' '+(o.etutFark<0?'az':'fazla'));
-  return (st.s===1?'Geçen hafta':'Son '+st.s+' hafta')+' ('+aralikYazi(w.son[0],w.son[1]+6)+'): '+b(sayi(o.etutSon))+' etüt, '+onceki+' göre '+degisim+'. En büyük değişim: '+kacis(en.ders)+' '+b(isaretli(en.k[st.s].fark))+'. '+
+  const bas=st.s==='sec'?gunAy(w.son[0])+' haftası':(st.s===1?'Geçen hafta':'Son '+st.s+' hafta')+' ('+aralikYazi(w.son[0],w.son[1]+6)+')';
+  return bas+': '+b(sayi(o.etutSon))+' etüt, '+onceki+' göre '+degisim+(st.s==='sec'?' ('+sayi(o.etutOnce)+' → '+sayi(o.etutSon)+')':'')+'. En büyük değişim: '+kacis(en.ders)+' '+b(isaretli(en.k[st.s].fark))+'. '+
     b(sayi(o.azalan))+' öğrenci daha az, '+b(sayi(o.artan))+' öğrenci daha çok etüt alıyor.';
 }
 function dersKartlari(m,st){
@@ -460,14 +520,20 @@ function hocaKartlari(m,st){
   return '<div class="et-dersler">'+m.ogretmenler.map((o,oi)=>{const k=o.k[st.s],f=k?k.fark:0,ad=kisiAdi(o.ad);
     return '<button type="button" class="et-ders et-hoca-kart" data-et-hoca="'+kacis(o.hoca)+'" aria-pressed="'+(st.hoca===o.hoca)+'" title="'+kacis(ad)+'"><span class="et-ders-ust"><i class="et-renk nokta" style="background:'+o.renk+'"></i><b>'+kacis(ad)+'</b></span>'+
       '<span class="mini et-hoca-ders">'+kacis(o.ders)+' · '+sayi(o.toplam)+' toplam</span>'+
-      (k?'<strong>'+sayi(k.son)+'</strong><span class="et-ders-alt">'+hap(f,oranYazi(f,k.oran))+'<span class="mini">önceki: '+sayi(k.once)+'</span></span>':'<strong>'+sayi(o.toplam)+'</strong>')+
+      (k?'<strong>'+sayi(k.son)+'</strong><span class="et-ders-alt">'+hap(f,oranYazi(f,k.oran))+'<span class="mini">önceki: '+sayi(k.once)+'</span>'+siraYazi(k)+'</span>':'<strong>'+sayi(o.toplam)+'</strong>')+
       '<span class="et-kucuk-kutu">'+kucukCizgi(o.hafta,kismi,egilimRengi(f),son,160,38,'etHg'+oi)+'</span></button>'}).join('')+'</div>';
 }
 function hocaPaneli(m,st,per){
   const o=m.ogretmenler.find(x=>x.hoca===st.hoca),ad=o?kisiAdi(o.ad):'';
   const grafik='<section class="et-panel"><div class="et-kart-bas"><h2>'+(o?kacis(ad)+' etütleri':'Öğretmenlere göre etüt')+' · '+per+'</h2>'+(o?'<button type="button" class="et-dugme" data-et-hoca="">Tüm öğretmenler</button>':'')+'</div>'+
     '<div class="et-grafik" data-et-grafik="hoca" tabindex="0" role="img" aria-label="'+kacis((ad||'Öğretmen')+' etüt sayısı ('+per+')')+'"></div></section>';
-  if(!o)return '<div id="etHoca">'+grafik+'</div>';
+  if(!o){
+    const w=m.pencere[st.s];if(!w)return '<div id="etHoca">'+grafik+'</div>';
+    const l=m.ogretmenler.slice().sort((a,b)=>(a.k[st.s].sonSira??1e9)-(b.k[st.s].sonSira??1e9)||b.k[st.s].once-a.k[st.s].once||a.ad.localeCompare(b.ad,'tr'));
+    return '<div class="et-bolunmus" id="etHoca">'+grafik+'<section class="et-panel"><div class="et-kart-bas"><h2>Sıralama</h2><span class="mini">'+karsiYazi(m,st.s)+'</span></div>'+
+      '<div class="et-hoca-liste">'+l.map(h=>{const c=h.k[st.s];return '<button type="button" class="et-hareket-satir et-sira-satir" data-et-hoca="'+kacis(h.hoca)+'"><span class="et-sira-no">'+(c.sonSira===null?'—':sayi(c.sonSira))+'</span>'+
+        '<span class="et-kim"><span><i class="et-renk nokta" style="background:'+h.renk+'"></i> '+kacis(kisiAdi(h.ad))+'</span><span class="mini">'+kacis(h.ders)+' · önceki: '+sayi(c.once)+'</span></span><b>'+sayi(c.son)+'</b>'+(siraOk(c.siraFark)||'<span></span>')+'</button>'}).join('')+'</div></section></div>';
+  }
   return '<div class="et-bolunmus" id="etHoca">'+grafik+'<section class="et-panel"><div class="et-kart-bas"><h2>Öğrencileri</h2><span class="mini">'+sayi(o.ogrenci)+' öğrenci</span></div>'+
     '<div class="et-hoca-liste">'+o.kisiler.map(k=>'<button type="button" class="et-hareket-satir" data-et-ogr="'+kacis(k.kim)+'" aria-pressed="'+(st.kim===k.kim)+'"><span class="et-kim"><span>'+kacis(kisiAdi(k.ad))+'</span><span class="mini">'+kacis(k.sinif)+'</span></span>'+
       '<span class="mini">son: '+gunAy(k.son)+'</span><b>'+sayi(k.n)+'</b></button>').join('')+'</div></section></div>';
@@ -481,23 +547,23 @@ function hareketliler(m,st,es){
     '<span class="mini">'+sayi(k.k[s].once)+' → '+sayi(k.k[s].son)+'</span>'+hap(k.k[s].fark,sayi(Math.abs(k.k[s].fark)))+'</button>').join(''):'<p class="mini">Bu aralıkta kimse yok.</p>')+'</div>';
   return '<div class="et-hareketler">'+sutun('Daha çok alanlar',m.ozet[s].artan,art)+sutun('Daha az alanlar',m.ozet[s].azalan,az)+'</div>';
 }
-const SUTUNLAR=[['ad','Öğrenci'],['sinif','Şube'],['toplam','Toplam'],['trend','Haftalık'],['once','Önceki'],['son','Son'],['fark','Değişim'],['durum','Durum']];
+const SUTUNLAR=[['ad','Öğrenci'],['sinif','Şube'],['toplam','Toplam'],['trend','Haftalık'],['once','Önceki'],['son','Son'],['fark','Değişim'],['sira','Sıra'],['durum','Durum']];
 function tablo(m,st){
   const s=st.s,kismi=m.hafta.findIndex(h=>h.kismi),w=m.pencere[s],son=w?[m.haftalar.indexOf(w.son[0]),m.haftalar.indexOf(w.son[1])]:null;
-  const kol=SUTUNLAR.filter(([k])=>w||!['once','son','fark','durum'].includes(k));
+  const kol=SUTUNLAR.filter(([k])=>w||!['once','son','fark','sira','durum'].includes(k));
   const sira=kol.some(([k])=>k===EK.etSira)&&EK.etSira!=='trend'?EK.etSira:'toplam',yonu=EK.etSiraYon==='artan'?1:-1;
-  const deger=(k,c)=>c==='ad'?kisiAdi(k.ad):c==='sinif'?k.sinif:c==='toplam'?k.toplam:c==='durum'?DURUM[k.k[s].durum]:k.k[s][c];
+  const deger=(k,c)=>c==='ad'?kisiAdi(k.ad):c==='sinif'?k.sinif:c==='toplam'?k.toplam:c==='durum'?DURUM[k.k[s].durum]:c==='sira'?(k.k[s].sonSira??1e9):k.k[s][c];
   const liste=m.kisiler.slice().sort((a,b)=>{const x=deger(a,sira),y=deger(b,sira);const f=typeof x==='number'?x-y:String(x).localeCompare(String(y),'tr');return f*yonu||b.toplam-a.toplam});
   const siniflar=[...new Set(m.kisiler.map(k=>k.sinif))].sort((a,b)=>parseInt(b,10)-parseInt(a,10)||a.localeCompare(b,'tr'));
   const ara=anahtar(EK.etAra||''),sinif=siniflar.includes(EK.etSinif)?EK.etSinif:'';
   const gor=k=>(!ara||anahtar(k.ad).includes(ara))&&(!sinif||k.sinif===sinif);
-  const bas=kol.map(([k,ad])=>{const yazi=['once','son'].includes(k)?ad+' '+s+'H':ad,gizli=['sinif','toplam','trend','once'].includes(k)?' class="et-dar-gizle"':'';
+  const bas=kol.map(([k,ad])=>{const yazi=k==='once'?oncekiAdi(m,s):k==='son'?sonAdi(m,s):ad,gizli=['sinif','toplam','trend','once'].includes(k)?' class="et-dar-gizle"':'';
     return k==='trend'?'<th scope="col"'+gizli+'>'+yazi+'</th>':'<th scope="col"'+gizli+' aria-sort="'+(sira===k?(yonu>0?'ascending':'descending'):'none')+'"><button type="button" data-et-sira="'+k+'">'+yazi+'</button></th>'}).join('');
   const satir=k=>{const c=k.k[s],f=c?c.fark:0;
     return '<tr data-et-ogr="'+kacis(k.kim)+'" data-ara="'+kacis(anahtar(k.ad))+'" data-sinif="'+kacis(k.sinif)+'"'+(st.kim===k.kim?' class="secili"':'')+(gor(k)?'':' hidden')+'>'+
       '<td><button type="button" class="et-ad" data-et-ogr="'+kacis(k.kim)+'">'+kacis(kisiAdi(k.ad))+'</button></td><td class="et-dar-gizle">'+kacis(k.sinif)+'</td><td class="sayi et-dar-gizle">'+sayi(k.toplam)+'</td>'+
       '<td class="et-dar-gizle et-trend">'+kucukCizgi(k.hafta,kismi,egilimRengi(f),son,84,26)+'</td>'+
-      (c?'<td class="sayi et-dar-gizle">'+sayi(c.once)+'</td><td class="sayi">'+sayi(c.son)+'</td><td class="sayi et-'+yon(f)+'">'+isaretli(f)+'</td><td><span class="et-durum '+c.durum+'">'+DURUM[c.durum]+'</span></td>':'')+'</tr>'};
+      (c?'<td class="sayi et-dar-gizle">'+sayi(c.once)+'</td><td class="sayi">'+sayi(c.son)+'</td><td class="sayi et-'+yon(f)+'">'+isaretli(f)+'</td><td class="sayi">'+(c.sonSira===null?'—':sayi(c.sonSira))+siraOk(c.siraFark)+'</td><td><span class="et-durum '+c.durum+'">'+DURUM[c.durum]+'</span></td>':'')+'</tr>'};
   const gorunen=m.kisiler.filter(gor).length;
   return '<div class="et-filtre"><input type="search" id="etAra" placeholder="Öğrenci ara" aria-label="Öğrenci ara" value="'+kacis(EK.etAra||'')+'">'+
     '<select id="etSinif" aria-label="Şube"><option value="">Tüm şubeler</option>'+siniflar.map(c=>'<option value="'+kacis(c)+'"'+(c===sinif?' selected':'')+'>'+kacis(c)+'</option>').join('')+'</select>'+
@@ -511,7 +577,7 @@ function kisiKarti(m,st,es){
   const hb=new Map(m.ogretmenler.map(o=>[o.hoca,o])),hocalar=Object.entries(k.ogretmenler||{}).filter(([h])=>hb.has(h)).sort((a,b)=>b[1]-a[1]),hx=Math.max(1,...hocalar.map(x=>x[1]));
   return '<div class="et-kisi-bas"><h3>'+(si===undefined?kacis(ad):ogrAdDugmesi(si,ad))+'</h3><span class="mini">'+kacis(k.sinif)+' · ilk etüt '+gunAy(k.ilk)+' · son etüt '+gunAy(k.son)+'</span></div>'+
     '<div class="et-kisi-sayilar"><div><span class="mini">Toplam</span><strong>'+sayi(k.toplam)+'</strong></div>'+
-    (c?'<div><span class="mini">Son '+st.s+'H</span><strong>'+sayi(c.son)+'</strong><span class="mini">önceki: '+sayi(c.once)+'</span></div><div><span class="mini">Değişim</span>'+hap(c.fark,sayi(Math.abs(c.fark)))+'<span class="et-durum '+c.durum+'">'+DURUM[c.durum]+'</span></div>':'')+'</div>'+
+    (c?'<div><span class="mini">'+sonAdi(m,st.s)+'</span><strong>'+sayi(c.son)+'</strong><span class="mini">önceki: '+sayi(c.once)+'</span>'+(c.sonSira!==null?'<span class="mini">'+sayi(c.sonSira)+'. sıra'+siraOk(c.siraFark)+'</span>':'')+'</div><div><span class="mini">Değişim</span>'+hap(c.fark,sayi(Math.abs(c.fark)))+'<span class="et-durum '+c.durum+'">'+DURUM[c.durum]+'</span></div>':'')+'</div>'+
     '<div class="et-grafik kucuk" data-et-grafik="kisi" tabindex="0" role="img" aria-label="'+kacis(ad+': haftalık etüt sayısı, derslere göre')+'"></div>'+
     '<span class="mini">Derslere göre</span><div class="et-cubuklar">'+dersler.map(([d,v])=>'<div class="et-cubuk"><span><i class="et-renk nokta" style="background:'+dersRengi(d)+'"></i>'+kacis(d)+'</span><span class="et-cubuk-iz"><i style="width:'+r1(v/mx*100)+'%;background:'+dersRengi(d)+'"></i></span><b>'+sayi(v)+'</b></div>').join('')+'</div>'+
     (hocalar.length?'<span class="mini">Öğretmenlere göre</span><div class="et-cubuklar hoca">'+hocalar.map(([h,v])=>{const o=hb.get(h),ad=kisiAdi(o.ad);
@@ -522,6 +588,12 @@ function kaynaklar(v,salt){
   return '<section class="et-panel" id="etRaporlar"><div class="et-kart-bas"><h2>Eklenen raporlar</h2>'+(salt?'':'<button type="button" class="et-dugme" id="etSil">Etüt verisini sil</button>')+'</div>'+
     '<div class="et-kaydir"><table class="et-kaynak"><thead><tr><th>Tarih aralığı</th><th>Etüt</th><th>Eklendi</th></tr></thead><tbody>'+
     ks.map(k=>'<tr><td>'+tarihUzun(k.bas)+' – '+tarihUzun(k.bit)+'</td><td>'+sayi(k.n)+'</td><td>'+new Date(k.ts).toLocaleDateString('tr-TR')+'</td></tr>').join('')+'</tbody></table></div></section>';
+}
+// Seç: Önceki and Şimdiki from the full weeks, newest first; the chart's lines move with them.
+function ikiHafta(m){
+  const w=m.pencere.sec,tam=m.hafta.filter(h=>!h.kismi).map(h=>h.p);
+  const sec=(id,ad,h)=>'<label class="et-seg"><span class="et-seg-label">'+ad+'</span><select id="'+id+'" aria-label="'+ad+' hafta">'+tam.slice().reverse().map(p=>'<option value="'+p+'"'+(p===h?' selected':'')+'>'+gunAy(p)+' haftası</option>').join('')+'</select></label>';
+  return sec('etSecA','Önceki',w.once[0])+sec('etSecB','Şimdiki',w.son[0]);
 }
 function icerik(){
   const salt=izleme(),{veri,hata}=oku();
@@ -535,7 +607,8 @@ function icerik(){
   const st=durumAl(m),es=defterEslesme(),per=st.tur==='hafta'?'haftalık':'günlük';
   cizimPlanla();
   return '<header class="et-bas"><h1 class="et-baslik">Etütler</h1><p class="et-cumle">'+cumle(m,st)+'</p></header>'+
-    '<div class="et-arac">'+ekle+secim('aralik',st.s,ARALIKLAR.map(s=>[s,haftaYazi(s),!m.pencere[s]]),'Karşılaştır')+secim('tur',st.tur,[['hafta','Haftalık'],['gun','Günlük']],'Grafik')+'</div>'+durumSatiri+
+    '<div class="et-arac">'+ekle+secim('aralik',st.s,ARALIKLAR.map(s=>[s,haftaYazi(s),!m.pencere[s]]).concat([['sec','Seç',!m.pencere.sec]]),'Karşılaştır')+(st.s==='sec'?ikiHafta(m):'')+
+      secim('tur',st.tur,[['hafta','Haftalık'],['gun','Günlük']],'Grafik')+'</div>'+durumSatiri+
     ozetKartlari(m,st)+
     '<section class="et-panel" id="etGenel"><div class="et-kart-bas"><h2>Tüm etütler · '+per+'</h2><div class="et-lejant"><span><i class="et-renk cizgi" style="background:var(--e-c1)"></i>Etüt</span>'+
       (st.tur==='gun'?'<span><i class="et-renk cizgi" style="background:var(--e-muted)"></i>5 günlük ortalama</span>':'')+
@@ -548,7 +621,7 @@ function icerik(){
     '<h2 class="et-bolum" id="etOgrenciler">Öğrenciler</h2>'+
     '<div class="et-iki"><section class="et-panel"><div class="et-kart-bas"><h2>Farklı öğrenci sayısı · '+per+'</h2><div class="et-lejant"><span><i class="et-renk" style="background:var(--e-c1)"></i>İlk kez gelen</span><span><i class="et-renk" style="background:var(--e-chart-muted)"></i>Tekrar gelen</span></div></div>'+
       '<div class="et-grafik orta" data-et-grafik="ogrenci" tabindex="0" role="img" aria-label="'+kacis('Etüt alan farklı öğrenci sayısı ('+per+')')+'"></div></section>'+
-    '<section class="et-panel"><div class="et-kart-bas"><h2>En çok değişenler</h2><span class="mini">'+(st.s===1?'Geçen hafta, önceki haftaya göre':'Son '+st.s+' hafta, önceki '+st.s+' haftaya göre')+'</span></div>'+hareketliler(m,st,es)+'</section></div>'+
+    '<section class="et-panel"><div class="et-kart-bas"><h2>En çok değişenler</h2><span class="mini">'+karsiYazi(m,st.s)+'</span></div>'+hareketliler(m,st,es)+'</section></div>'+
     '<div class="et-bolunmus"><section class="et-panel" id="etTablo"><div class="et-kart-bas"><h2>Tüm öğrenciler</h2></div>'+tablo(m,st)+'</section>'+
     '<section class="et-panel et-kisi" id="etKisi">'+kisiKarti(m,st,es)+'</section></div>'+
     kaynaklar(veri,salt);
@@ -591,11 +664,11 @@ document.addEventListener('click',async ev=>{
     ISLEM=true;try{durum(await yedektenGetir())}catch(e){durum('Geri getirilemedi: '+e.message)}finally{ISLEM=false}
     yenidenCiz();return;
   }
-  if(el.dataset.etAralik){EK.etAralik=Number(el.dataset.etAralik);yenidenCiz('[data-et-aralik="'+EK.etAralik+'"]');return}
+  if(el.dataset.etAralik){EK.etAralik=el.dataset.etAralik==='sec'?'sec':Number(el.dataset.etAralik);yenidenCiz('[data-et-aralik="'+EK.etAralik+'"]');return}
   if(el.dataset.etTur){EK.etTur=el.dataset.etTur;yenidenCiz('[data-et-tur="'+EK.etTur+'"]');return}
   if(el.dataset.etDers!==undefined){const d=el.dataset.etDers;EK.etDers=d&&EK.etDers!==d?d:null;yenidenCiz(d?'[data-et-ders="'+CSS.escape(d)+'"].et-ders':null);return}
   if(el.dataset.etHoca!==undefined){const h=el.dataset.etHoca;EK.etHoca=h&&EK.etHoca!==h?h:null;yenidenCiz(h?'[data-et-hoca="'+CSS.escape(h)+'"].et-ders':null);return}
-  if(el.dataset.etSira){const k=el.dataset.etSira;if(EK.etSira===k)EK.etSiraYon=EK.etSiraYon==='artan'?'azalan':'artan';else{EK.etSira=k;EK.etSiraYon=['ad','sinif','durum'].includes(k)?'artan':'azalan'}
+  if(el.dataset.etSira){const k=el.dataset.etSira;if(EK.etSira===k)EK.etSiraYon=EK.etSiraYon==='artan'?'azalan':'artan';else{EK.etSira=k;EK.etSiraYon=['ad','sinif','durum','sira'].includes(k)?'artan':'azalan'}
     yenidenCiz('[data-et-sira="'+k+'"]');return}
   if(el.dataset.etOgr){const uzak=!!el.closest('#etHoca');EK.etOgr=el.dataset.etOgr;yenidenCiz();const kart=document.getElementById('etKisi');
     if(kart&&(uzak||getComputedStyle(kart).position!=='sticky'))kart.scrollIntoView({block:'nearest',behavior:'smooth'});return}
@@ -615,6 +688,8 @@ document.addEventListener('change',async ev=>{
     yenidenCiz();return;
   }
   if(el.id==='etSinif'){EK.etSinif=el.value;filtrele()}
+  if(el.id==='etSecA'||el.id==='etSecB'){const {veri}=oku();if(!veri)return;const w=modelAl(veri).pencere.sec;
+    EK.etSecA=el.id==='etSecA'?Number(el.value):w.once[0];EK.etSecB=el.id==='etSecB'?Number(el.value):w.son[0];yenidenCiz('#'+el.id)}
 });
 document.addEventListener('input',ev=>{if(etkin()&&ev.target.id==='etAra'){EK.etAra=ev.target.value;filtrele()}});
 function filtrele(){
@@ -622,17 +697,62 @@ function filtrele(){
   document.querySelectorAll('.et-tablo tbody tr').forEach(tr=>{t++;const g=(!ara||tr.dataset.ara.includes(ara))&&(!sinif||tr.dataset.sinif===sinif);tr.hidden=!g;if(g)n++});
   const s=document.getElementById('etSayac');if(s)s.textContent=n===t?sayi(t)+' öğrenci':sayi(n)+' / '+sayi(t)+' öğrenci';
 }
-document.addEventListener('pointermove',ev=>{if(!etkin())return;const kutu=ev.target.closest?.('.et-grafik[data-et-grafik]');if(kutu)ipucuGoster(kutu,enYakin(kutu,ev.clientX))});
-document.addEventListener('pointerdown',ev=>{if(!etkin())return;const kutu=ev.target.closest?.('.et-grafik[data-et-grafik]');if(kutu)ipucuGoster(kutu,enYakin(kutu,ev.clientX))});
+function imlecGoster(ev){
+  if(!etkin())return;const kutu=ev.target.closest?.('.et-grafik[data-et-grafik]');if(!kutu)return;
+  if(CIZIMLER.get(kutu.dataset.etGrafik)?.seriler)seriVurgula(kutu,enYakinSeri(kutu,ev.clientX,ev.clientY));
+  ipucuGoster(kutu,enYakin(kutu,ev.clientX));
+}
+document.addEventListener('pointermove',imlecGoster);
+document.addEventListener('pointerdown',imlecGoster);
+document.addEventListener('click',ev=>{if(!etkin())return;const kutu=ev.target.closest?.('.et-grafik[data-et-grafik="ders"],.et-grafik[data-et-grafik="hoca"]');if(kutu)seriSec(kutu)});
 document.addEventListener('pointerout',ev=>{if(!etkin())return;const kutu=ev.target.closest?.('.et-grafik[data-et-grafik]');if(kutu&&!kutu.contains(ev.relatedTarget)&&document.activeElement!==kutu)ipucuGizle(kutu)});
 document.addEventListener('keydown',ev=>{
-  if(!etkin())return;const kutu=ev.target.closest?.('.et-grafik[data-et-grafik]');if(!kutu||!['ArrowLeft','ArrowRight','Home','End','Escape'].includes(ev.key))return;
-  const g=CIZIMLER.get(kutu.dataset.etGrafik);if(!g)return;ev.preventDefault();
+  if(!etkin())return;const kutu=ev.target.closest?.('.et-grafik[data-et-grafik]');if(!kutu||!['ArrowLeft','ArrowRight','Home','End','Escape','ArrowUp','ArrowDown','Enter'].includes(ev.key))return;
+  const g=CIZIMLER.get(kutu.dataset.etGrafik);if(!g)return;
+  if(['ArrowUp','ArrowDown','Enter'].includes(ev.key)&&!g.seriler)return;
+  ev.preventDefault();
   if(ev.key==='Escape'){ipucuGizle(kutu);return}
   const i=kutu.dataset.i===undefined?g.xs.length-1:Number(kutu.dataset.i);
+  if(ev.key==='Enter'){seriSec(kutu);return}
+  // ↑/↓ walk the lines from top to bottom at the current week or day.
+  if(ev.key==='ArrowUp'||ev.key==='ArrowDown'){
+    const sira=g.seriler.map((s,k)=>[k,s.pts[i]]).filter(x=>x[1]).sort((a,b)=>a[1][1]-b[1][1]).map(x=>x[0]);if(!sira.length)return;
+    const j=sira.indexOf(Number(kutu.dataset.seri)),yeni=j<0?(ev.key==='ArrowDown'?0:sira.length-1):Math.max(0,Math.min(sira.length-1,j+(ev.key==='ArrowDown'?1:-1)));
+    seriVurgula(kutu,sira[yeni]);ipucuGoster(kutu,i);return;
+  }
   ipucuGoster(kutu,ev.key==='Home'?0:ev.key==='End'?g.xs.length-1:Math.max(0,Math.min(g.xs.length-1,i+(ev.key==='ArrowLeft'?-1:1))));
 });
 document.addEventListener('focusout',ev=>{const kutu=ev.target.closest?.('.et-grafik[data-et-grafik]');if(kutu)ipucuGizle(kutu)});
+// Seç: a line is dragged to any full week, never onto or past the other one. The tooltip and an
+// "Önceki → Şimdiki" readout follow it; on release the page compares the two weeks.
+let SURUKLE=null;
+function surukleYaz(){
+  const {kutu,g}=SURUKLE,a=g.deger[SURUKLE.once],b=g.deger[SURUKLE.son];
+  let el=kutu.querySelector('.et-surukle');if(!el){el=document.createElement('div');el.className='et-surukle';kutu.appendChild(el)}
+  el.innerHTML=gunAy(g.ps[SURUKLE.once])+' → '+gunAy(g.ps[SURUKLE.son])+': <b>'+sayi(a)+' → '+sayi(b)+'</b> etüt '+hap(b-a,oranYazi(b-a,a?(b-a)/a:null));
+}
+document.addEventListener('pointerdown',ev=>{
+  if(!etkin())return;const t=ev.target.closest?.('.et-grafik[data-et-grafik="genel"] [data-tutamak]');if(!t)return;
+  const kutu=t.closest('.et-grafik'),g=CIZIMLER.get('genel'),svg=kutu.querySelector('svg');if(!g||!g.tutamak||!svg)return;
+  const tx=ad=>{const e=svg.querySelector('[data-tutamak="'+ad+'"]'),v=/translate\(([\d.-]+)/.exec(e.getAttribute('transform'));return g.xs.reduce((en,x,i)=>Math.abs(x-v[1])<Math.abs(g.xs[en]-v[1])?i:en,0)};
+  ev.preventDefault();SURUKLE={kutu,g,svg,hangi:t.dataset.tutamak,once:tx('once'),son:tx('son')};
+  try{kutu.setPointerCapture(ev.pointerId)}catch(e){}
+  kutu.classList.add('suruklen');surukleYaz();
+});
+document.addEventListener('pointermove',ev=>{
+  if(!SURUKLE)return;const {kutu,g,svg,hangi}=SURUKLE;
+  let i=enYakin(kutu,ev.clientX);while(i>0&&!g.tam[i])i--;
+  i=hangi==='once'?Math.min(i,SURUKLE.son-1):Math.max(i,SURUKLE.once+1);
+  if(i<0||i>=g.xs.length||!g.tam[i])return;
+  SURUKLE[hangi]=i;svg.querySelector('[data-tutamak="'+hangi+'"]').setAttribute('transform','translate('+r1(g.xs[i])+',0)');
+  const bant=svg.querySelector('[data-bant="'+hangi+'"]');if(bant){bant.setAttribute('x',r1(g.xs[i]-g.step/2));bant.setAttribute('width',r1(g.step))}
+  surukleYaz();ipucuGoster(kutu,i);
+});
+function birak(){
+  if(!SURUKLE)return;const {g}=SURUKLE;EK.etSecA=g.ps[SURUKLE.once];EK.etSecB=g.ps[SURUKLE.son];SURUKLE=null;
+  yenidenCiz();
+}
+document.addEventListener('pointerup',birak);document.addEventListener('pointercancel',birak);
 return {pdfCoz,dogrula,oku,ac,paketle,birlestir,raporEkle,sil,yedekteBul,yedektenGetir,model,dersAdi,gorunum,icerik,grafikleriCiz,GRAFIKLER,planIcin,UST_SINIR,EN_COK_SATIR,DURUM,
   get onbellek(){return ONBELLEK}};
 })();

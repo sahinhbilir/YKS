@@ -190,6 +190,46 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert.deepEqual(ids('AYT','kimya'),['p:ayt'],'an answered course outside the field still counts');
   assert.deepEqual(ids('AYT','mat'),['p:ayt','m:ayt-say'],'a student entry uses its own field');
  });
+ await check('the exams\' tests (Fen, Matematik + Geometri, Sosyal…) sum their counted lessons wherever a lesson is picked',async()=>{
+  // The harness student is EA. Ek Felsefe answered: Din does not count.
+  const dy=(kod,dogru=0,yanlis=0)=>({kod,dogru,yanlis,soru:null});
+  put('okul',[sample({id:'p:tyt',dersler:[dy('turkce',30,4),dy('mat',20,4),dy('geo',6,2),dy('fizik',4,1),dy('kimya',3,2),dy('biyoloji',5,0),dy('tarih',4,0),dy('cografya',3,1),dy('felsefe',2,0),dy('din'),dy('sf',4,0)]}),
+    sample({id:'p:ayt',tur:'AYT',oturum:'AYT',dersler:[dy('edebiyat',10,2),dy('tarih1',5,1),dy('cografya1',3,0),dy('mat',10,2),dy('fizik'),dy('kimya',2,1)]})]);
+  run('D.ogr[0].denemeOkul=okul;D.ogr[0].denemeler=[]');
+  const b=(o,k)=>JSON.parse(run("JSON.stringify(denemeGenelBolumleri(denemeListe(),'"+o+"','"+k+"'))")),dys=r=>[r.dersler[0].dogru,r.dersler[0].yanlis,r.dersler[0].soru];
+  const fen=b('TYT','fen')[0];
+  assert.deepEqual(dys(fen),[12,3,20]);assert.deepEqual(fen.uyeler.map(x=>x.kod),['fizik','kimya','biyoloji']);
+  assert.equal(run("denemeNet(denemeGenelBolumleri(denemeListe(),'TYT','fen')[0].dersler[0])"),12-3/4,'net = Σ doğru − Σ yanlış / 4');
+  assert.deepEqual(dys(b('TYT','sosyal')[0]),[13,1,20],'Tarih, Coğrafya, Felsefe and the answered Ek Felsefe: 20 questions');
+  assert.deepEqual(dys(b('TYT','matgeo')[0]),[26,6,40]);
+  assert.deepEqual(dys(b('AYT','edsos1')[0]),[18,3,40],'the field\'s own test');
+  assert.deepEqual(dys(b('AYT','fen')[0]),[2,1,13],'outside EA only the answered Kimya counts');
+  assert.throws(()=>run("denemeDogrula(denemeGenelBolumleri(denemeListe(),'TYT','fen'))"),/Geçersiz deneme/,'a test can never be stored');
+  // The exam's detail lists its tests after its lessons; each opens the test's chart.
+  const detay=run("denemeDetay(denemeBul('p:tyt'))");
+  assert.match(detay,/<button type="button" class="dn-grup" data-dn-brans-git="TYT:fen" data-dn-kaynak-id="p:tyt"[^>]*><span>Fen Bilimleri<\/span><b>11,25<\/b>/);
+  assert(detay.indexOf('TYT:biyoloji')<detay.indexOf('TYT:sosyal'),'tests after the lessons');assert(detay.includes('Toplam gelişimi →'));
+  run("ciz=()=>{};EK.denemeMetrik='sure';EK.denemeGenel=false");
+  const click=listeners.click.find(f=>String(f).includes('dnBransGit'));
+  await click({target:{closest:()=>({dataset:{dnBransGit:'TYT:fen',dnKaynakId:'p:tyt'}})}});
+  assert.deepEqual(JSON.parse(run('JSON.stringify([EK.denemeTur,EK.denemeOturum,EK.denemeBrans,EK.denemeSecili])')),['BRANS','TYT','fen','g:p:tyt|fen']);
+  run("EK.denemeMetrik='sure';EK.denemeGenel=false");
+  let page=run('gorunumDenemeler()');
+  assert.match(page,/<optgroup label="Toplam"><option value="sosyal">Sosyal Bilimler<\/option><option value="matgeo">Matematik \+ Geometri<\/option><option value="fen" selected>Fen Bilimleri<\/option><\/optgroup>/);
+  assert(!page.includes('id="dnGenel"'),'a test is made of TYT/AYT sections only: no toggle');
+  assert.match(page,/<select id="dnMetrik"><option value="net" selected>Net<\/option><\/select>/,'and is charted by net');
+  assert.equal((page.match(/class="dn-dot[ "]/g)||[]).length,1);assert(page.includes('Fizik 3,75 · Kimya 2,5 · Biyoloji 5'),'the detail names its lessons');
+  // A new branch exam is one lesson: with a test chosen it starts on the test's first lesson.
+  run("globalThis.crypto=globalThis.crypto||{randomUUID:()=>'00000000-0000-4000-8000-000000000000'}");
+  await click({target:{closest:()=>({id:'dnEkle',dataset:{}})}});
+  assert.equal(run('DENEME_FORM.kayit.brans'),'fizik');run('DENEME_FORM=null');
+  // The home chart offers the TYT tests and the student's own AYT tests, out of their questions.
+  run("EK.denemeYol='BRANS';EK.denemeYolBrans='TYT:fen';D.ayar.donemBasi='2026-08-31';D.ayar.sinav='2027-06-19'");
+  const yol=run('denemeYolGrafigi(0)');
+  assert.match(yol,/<option value="TYT:fen" selected>Fen Bilimleri<\/option>/);assert(yol.includes('max="20"'),'a 20-question test');
+  assert(yol.includes('value="AYT:edsos1"') && yol.includes('value="AYT:matgeo"') && !yol.includes('value="AYT:fen"') && !yol.includes('value="AYT:sosyal2"'),'EA: Edebiyat–Sosyal 1 and Matematik + Geometri');
+  run("EK.denemeTur='TYT';EK.denemeSecili=null;delete EK.denemeYol;delete EK.denemeYolBrans;EK.denemeBrans=undefined;EK.denemeMetrik='net'");
+ });
  await check('home progress chart keeps a fixed axis from term start to YKS',async()=>{
   // The axis is drawn before any exam and never stretches: new exams land at their date.
   run("D.ayar.donemBasi='2026-08-31';D.ayar.sinav='2027-06-19';D.ogr[0].denemeler=[];D.ogr[0].denemeOkul=[];delete EK.denemeYol;delete EK.denemeYolBrans;");
@@ -268,7 +308,7 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   run('D.ogr[0].denemeler=[...kendi,...brans]');h=run('denemeYolGrafigi(0)');
   assert.match(h,/<select id="dnYolBrans"><optgroup label="TYT">[\s\S]*<option value="TYT:turkce" selected>Türkçe<\/option>[\s\S]*<optgroup label="AYT">/);
   const aytDersleri=[...h.split('<optgroup label="AYT">')[1].matchAll(/value="AYT:(\w+)"/g)].map(m=>m[1]);
-  assert.deepEqual(aytDersleri,['edebiyat','tarih1','cografya1','mat','geo'],'AYT courses of the EA field');
+  assert.deepEqual(aytDersleri,['edebiyat','tarih1','cografya1','mat','geo','edsos1','matgeo'],'AYT courses of the EA field, then its tests');
   assert(!h.includes('value="TYT:sf"'),'Ek Felsefe is not a course choice');
   assert.match(h,/class="yg-nokta yg-BRANS"[^>]*data-dn-yol="m:b1"/);
   assert.match(h,/class="yg-nokta yg-BRANS genel"[^>]*data-dn-yol="g:m:t1\|turkce"/,'a TYT exam section is a hollow point');

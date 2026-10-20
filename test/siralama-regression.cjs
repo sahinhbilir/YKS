@@ -159,6 +159,11 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     // Each course ranks on its own net; the gap closed uses the course's question count (Matematik 30).
     assert.deepEqual(sira('TYT:MAT', 'fark').map(r => [r[0], r[2], r[3], r[6]]), [['1003', 19, 21.5, 0.234], ['1001', 11, 13, 0.105], ['1002', 7, 7, 0], ['1004', 8, 6.5, -0.063], ['1005', null, 13.75, null]]);
     assert.deepEqual(sira('AYT:EDB', 'net').map(r => [r[0], r[2], r[3]]), [['1001', 15, 17.5], ['1002', null, 11]], 'an AYT course counts only where its test was answered');
+    // A test ranks on the sum of its lessons: Matematik + Geometri out of 40, Edebiyat–Sosyal 1 where it was answered.
+    const mg = sira('TYT:G-MAT', 'net'), mat = sira('TYT:MAT', 'net'), geo = sira('TYT:GEO', 'net'), deger = (l, no) => l.find(r => r[0] === no)[3];
+    assert.equal(mg.length, 5); for (const r of mg) assert(Math.abs(r[3] - deger(mat, r[0]) - deger(geo, r[0])) < 0.011, r[0]);
+    assert.deepEqual(mg.map(r => r[1]), [1, 2, 3, 4, 5]);
+    assert.deepEqual(sira('AYT:G-TDE', 'net').map(r => r[0]), sira('AYT:EDB', 'net').map(r => r[0]), 'the same students as Edebiyat');
     // Averages: the school, then each class; the change is the current average minus the same students' earlier one.
     put('O', get("(()=>{const t=SIRALAMA.siraSatirlari(M.cur,M.prev,'TYT','net');return [SIRALAMA.siraOrtalama('Okul',t,120),SIRALAMA.siraOrtalama('301-A',t.filter(r=>r.s.cls==='301 12/A'),120)]})()"));
     assert.deepEqual(sandbox.O.map(o => [o.ad, o.n, +o.simdi.toFixed(2), +o.once.toFixed(4), o.artis]), [['Okul', 5, 59.05, 54.8125, 4.24], ['301-A', 2, 57.25, 53.125, 4.13]]);
@@ -182,6 +187,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(page, /<select id="srSiraNet"><optgroup label="Alan"><option value="SAY">SAY<\/option><option value="EA">EA<\/option><option value="SÖZ">SÖZ<\/option><option value="Toplam" selected>AYT toplam<\/option><\/optgroup><optgroup label="Ders"><option value="AYT:EDB">Edebiyat<\/option>/);
     run("EK.srSiraTur='TYT'"); page = run('gorunumSiralamalar()');
     assert.match(page, /<option value="TYT" selected>TYT toplam<\/option><optgroup label="Ders"><option value="TYT:TÜR">Türkçe/, 'an AYT choice falls back to TYT total');
+    assert.match(page, /<\/optgroup><optgroup label="Toplam"><option value="TYT:G-SOS">Sosyal Bilimler<\/option><option value="TYT:G-MAT">Matematik \+ Geometri<\/option><option value="TYT:G-FEN">Fen Bilimleri<\/option><\/optgroup><\/select>/);
   });
   await check('exam date correction: kept apart from the lists, orders the exams, moves students\' school results', async () => {
     await loadAll();
