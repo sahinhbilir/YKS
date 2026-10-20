@@ -89,9 +89,25 @@ main:has(#etKok,#dpKok,#epKok){min-width:0}
 .et-yeni{fill:var(--e-c1)}.et-tekrar{fill:var(--e-chart-muted)}
 .et-grafik rect.kismi{opacity:.3}
 .et-imlec{stroke:var(--e-panel);stroke-width:2;pointer-events:none}
+/* Seç: the two comparison weeks as lines with handles; drag a handle to another week. */
+.et-tutamak{cursor:ew-resize;touch-action:none}
+.et-tutamak-alan{fill:transparent}
+.et-tutamak-cizgi{stroke:var(--e-fg);stroke-width:1.5}
+.et-tutamak-tut{fill:var(--e-fg)}
+.et-grafik text.et-tutamak-yazi{fill:var(--e-bg);font-size:.6875rem;font-weight:600;pointer-events:none}
+.et-grafik.suruklen,.et-grafik.suruklen *{cursor:ew-resize}
+.et-surukle{position:absolute;z-index:4;left:8px;top:24px;pointer-events:none;display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--e-fg2);background:var(--e-pop);border:1px solid var(--e-line);border-radius:var(--e-r);box-shadow:var(--e-shadow);padding:4px 10px;white-space:nowrap}
+.et-surukle b{color:var(--e-fg);font-weight:500;font-variant-numeric:tabular-nums}
 .et-ipucu{position:absolute;z-index:3;pointer-events:none;min-width:9rem;white-space:nowrap;background:var(--e-pop);border:1px solid var(--e-line);border-radius:var(--e-r);box-shadow:var(--e-shadow);padding:6px 10px;font-size:.75rem;display:flex;flex-direction:column;gap:2px}
 .et-ipucu[hidden]{display:none}
 .et-ipucu-bas{color:var(--e-fg2)}
+/* Charts with many lines (here and on the Deneme panosu): the line under the pointer, or chosen with
+   ↑/↓, takes the stage; the others lose their colour and fade. */
+.et-grafik svg [data-seri]{transition:opacity .12s,stroke .12s,fill .12s}
+.et-grafik svg.odakli path[data-seri]:not(.aktif){stroke:var(--e-chart-muted)!important;opacity:.3}
+.et-grafik svg.odakli circle[data-seri]:not(.aktif){fill:var(--e-chart-muted)!important;opacity:.3}
+.et-grafik svg.odakli path[data-seri].aktif{stroke-width:3}
+.et-ipucu-satir.dp-vurgu{color:var(--e-fg);font-weight:600}
 .et-ipucu-satir{display:flex;align-items:center;gap:6px}.et-ipucu-satir b{margin-left:auto;padding-left:14px;font-weight:500;font-variant-numeric:tabular-nums}
 /* Subject watchlist: each card's mini line turns green or red with its change. */
 .et-dersler{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,10.5rem),1fr));gap:12px}
@@ -111,11 +127,15 @@ main:has(#etKok,#dpKok,#epKok){min-width:0}
 .et-hareket-satir:hover,.et-hareket-satir[aria-pressed="true"]{background:color-mix(in srgb,var(--e-fg) 6%,transparent)}
 .et-kim{display:flex;flex-direction:column;min-width:0}.et-kim span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Teachers: the subject cards' look; a chosen teacher's chart sits beside their students. */
-.et-hoca-kart .et-ders-ust{align-items:flex-start}.et-hoca-kart .et-ders-ust .et-renk{margin-top:.35em}
-.et-hoca-kart .et-ders-ust b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+/* Long names (teachers, the Deneme panosu's tests) wrap to two lines on their cards. */
+:is(.et-hoca-kart,.et-grup-kart) .et-ders-ust{align-items:flex-start}:is(.et-hoca-kart,.et-grup-kart) .et-ders-ust .et-renk{margin-top:.35em}
+:is(.et-hoca-kart,.et-grup-kart) .et-ders-ust b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
 .et-hoca-ders{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .et-hoca-liste{display:flex;flex-direction:column;max-height:22rem;overflow:auto}
 .et-hoca-liste b{min-width:1.5rem;text-align:right;font-weight:500;font-variant-numeric:tabular-nums}
+.et-sira-satir{grid-template-columns:1.6rem minmax(0,1fr) auto 2.6rem}.et-sira-satir .et-sira-ok{margin-left:0;justify-self:end}
+.et-sira-no{color:var(--e-muted);font-size:.75rem;text-align:right;font-variant-numeric:tabular-nums}
+.et-sira-satir b{font-weight:500;font-variant-numeric:tabular-nums}
 .et-cubuklar.hoca .et-cubuk{grid-template-columns:minmax(0,9.5rem) minmax(0,1fr) 2.2rem}
 .et-cubuklar.hoca .et-cubuk>span:first-child{min-width:0}.et-cubuklar.hoca .et-cubuk>span:first-child>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .et-bolunmus{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:12px;align-items:start}
@@ -138,6 +158,10 @@ main:has(#etKok,#dpKok,#epKok){min-width:0}
 .et-tablo td.et-trend{width:90px;padding-block:2px}.et-tablo td.et-trend svg{width:84px}
 .et-ad{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
 td.et-yukari{color:var(--e-ok)}td.et-asagi{color:var(--e-bad)}
+/* Places moved between the two windows (Etütler) or exams (Deneme panosu), next to a rank. */
+.et-sira-ok{display:inline-block;margin-left:6px;font-size:.75rem;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.et-sira-ok.yukari{color:var(--e-ok)}.et-sira-ok.asagi{color:var(--e-bad)}.et-sira-ok.esit{color:var(--e-muted)}
+.et-kisi-sayilar .et-sira-ok{margin-left:0}
 .et-durum{display:inline-block;width:fit-content;padding:1px 8px;border-radius:999px;font-size:.75rem;font-weight:500}
 .et-durum.Rising,.et-durum.New,.et-durum.Returned{color:var(--e-ok);background:color-mix(in srgb,var(--e-ok) 14%,transparent)}
 .et-durum.Falling,.et-durum.Stopped{color:var(--e-bad);background:color-mix(in srgb,var(--e-bad) 14%,transparent)}

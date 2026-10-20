@@ -40,7 +40,8 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    await page.evaluate(()=>{EK.sekme='denemeler';ciz()});
    await page.waitForFunction(()=>document.querySelectorAll('#dpKok .et-grafik svg').length===5);
    assert.match(await page.locator('#dpKok .et-cumle').innerText(),/12\. sınıflar · Son deneme \(Sentetik Deneme 2, .+\): TYT ortalaması [\d,]+ net, önceki denemeye göre [+−][\d,]+\./);
-   assert.equal(await page.locator('#dpKok .et-ders').count(),10);
+   assert.equal(await page.locator('#dpKok .et-ders').count(),13,'ten lessons and three tests');
+   assert.equal(await page.locator('#dpZorluk .dp-zor-satir').count(),10,'Kolaydan zora ranks the lessons');
    // Hover and keys on the main chart.
    const genel=page.locator('[data-dp-grafik="genel"]');await genel.scrollIntoViewIfNeeded();const kutu=await genel.boundingBox();
    await page.mouse.move(kutu.x+kutu.width*0.7,kutu.y+120);
@@ -51,7 +52,7 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    // Oturum, Öğrenciler and subject focus redraw in place.
    await page.locator('[data-dp-olcu="AYT:Toplam"]').click();
    await page.waitForFunction(()=>/AYT toplam ortalaması/.test(document.querySelector('#dpKok .et-cumle').textContent));
-   assert.equal(await page.locator('#dpKok .et-ders').count(),12);
+   assert.equal(await page.locator('#dpKok .et-ders').count(),16,'twelve AYT lessons and four tests');
    await page.locator('[data-dp-olcu="TYT"]').click();
    await page.locator('#dpKapsam').selectOption('12/A');
    await page.waitForFunction(()=>/^12\/A · /.test(document.querySelector('#dpKok .et-cumle').textContent));
@@ -110,6 +111,17 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    await page.waitForFunction(()=>/^Tarama denemeleri · /.test(document.querySelector('#dpKok .et-cumle').textContent));
    await page.locator('[data-dp-tur=""]').click();
    await page.locator('[data-dp-aralik="sec"]').click();await page.locator('#dpOnceki').waitFor();
+   await page.locator('#dpOnceki').selectOption({label:(await page.locator('#dpOnceki option',{hasText:'Sentetik Deneme 1'}).innerText())});
+   await page.waitForFunction(()=>/Sentetik Deneme 1 → Sentetik Deneme 2/.test(document.querySelector('#dpKok .et-cumle').textContent));
+   // The pair is two lines on the main chart: dragging Önceki onto the tarama in between compares it with Deneme 2.
+   const pg=page.locator('[data-dp-grafik="genel"]');await pg.scrollIntoViewIfNeeded();
+   await page.waitForFunction(()=>document.querySelector('[data-dp-grafik="genel"] [data-tutamak="once"]'));
+   const pt=await page.locator('[data-dp-grafik="genel"] [data-tutamak="once"] .et-tutamak-tut').boundingBox(),pk=await pg.boundingBox();
+   await page.mouse.move(pt.x+pt.width/2,pt.y+pt.height/2);await page.mouse.down();await page.mouse.move(pk.x+pk.width*0.45,pt.y+40,{steps:6});
+   assert.match(await pg.locator('.et-surukle').innerText(),/→/);
+   await page.mouse.up();
+   await page.waitForFunction(()=>/Sentetik Tarama 1 → Sentetik Deneme 2/.test(document.querySelector('#dpKok .et-cumle').textContent));
+   assert.match(await page.locator('#dpOnceki option:checked').innerText(),/Sentetik Tarama 1/);
    await page.locator('#dpOnceki').selectOption({label:(await page.locator('#dpOnceki option',{hasText:'Sentetik Deneme 1'}).innerText())});
    await page.waitForFunction(()=>/Sentetik Deneme 1 → Sentetik Deneme 2/.test(document.querySelector('#dpKok .et-cumle').textContent));
    await page.locator('#dpSinavlar select[aria-label="Sentetik Tarama 1 türü"]').selectOption('genel');

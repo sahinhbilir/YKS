@@ -1,7 +1,8 @@
 // Etütler on desktop and mobile: the tab in the teacher menu, "PDF ekle" with a synthetic report,
 // the five charts and their hover/keyboard readouts, window and period switches, subject and
-// teacher focus, student selection, search, sorting, delete and the cloud restore. Synthetic data
-// only; the PDF read itself is pdf.js, so its text items are stubbed with test/fixtures/etut-pdf.cjs.
+// teacher focus, Seç with draggable week lines, line hover, student selection, search, sorting,
+// delete and the cloud restore. Synthetic data only; the PDF read itself is pdf.js, so its text
+// items are stubbed with test/fixtures/etut-pdf.cjs.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const {etutRaporu,GUNLER}=require('./fixtures/etut-pdf.cjs');
@@ -50,6 +51,29 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.locator('[data-et-tur="gun"]').click();await page.waitForFunction(()=>document.querySelectorAll('.et-grafik svg').length===5);
    assert.match(await page.locator('#etGenel h2').innerText(),/günlük/);assert.equal(await page.locator('#etGenel .et-ort').count(),1);
    await page.locator('[data-et-tur="hafta"]').click();await page.locator('[data-et-aralik="2"]').click();
+   // Seç: the two weeks are lines on the chart; dragging Önceki to 7 Eyl compares 7 Eyl with 12 Eki.
+   await page.locator('[data-et-aralik="sec"]').click();
+   await page.waitForFunction(()=>document.querySelector('[data-et-grafik="genel"] [data-tutamak="son"]'));
+   assert.match(await page.locator('.et-cumle').innerText(),/12 Eki haftası: 11 etüt, 14 Eyl haftasına göre %450 fazla \(2 → 11\)/);
+   await genel.scrollIntoViewIfNeeded();
+   const tut=await page.locator('[data-tutamak="once"] .et-tutamak-tut').boundingBox(),gk=await genel.boundingBox();
+   await page.mouse.move(tut.x+tut.width/2,tut.y+tut.height/2);await page.mouse.down();await page.mouse.move(gk.x+8,tut.y+40,{steps:6});
+   assert.match(await genel.locator('.et-surukle').innerText(),/7 Eyl → 12 Eki:\s*3 → 11\s*etüt/);
+   await page.mouse.up();
+   await page.waitForFunction(()=>/7 Eyl haftasına göre/.test(document.querySelector('.et-cumle').textContent));
+   assert.equal(await page.locator('#etSecA').inputValue(),await page.evaluate(()=>String(gunNo('2026-09-07'))));
+   await page.locator('#etSecB').selectOption({label:'5 Eki haftası'});
+   await page.waitForFunction(()=>/^5 Eki haftası: 6 etüt, 7 Eyl haftasına göre/.test(document.querySelector('.et-cumle').textContent));
+   await page.locator('[data-et-aralik="2"]').click();
+   // Many lines: the one under the pointer takes the stage, the others fade.
+   const ders=page.locator('[data-et-grafik="ders"]');await ders.scrollIntoViewIfNeeded();
+   const nokta=await page.evaluate(()=>{const p=document.querySelector('[data-et-grafik="ders"] svg path[data-seri="0"]'),q=p.getPointAtLength(p.getTotalLength()*.5),m=p.getScreenCTM();return {x:q.x*m.a+m.e,y:q.y*m.d+m.f}});
+   await page.mouse.move(nokta.x,nokta.y);
+   await page.waitForFunction(()=>document.querySelector('[data-et-grafik="ders"] svg').classList.contains('odakli'));
+   assert.match(await ders.locator('.et-ipucu-satir.dp-vurgu').innerText(),/Matematik/);
+   await page.mouse.click(nokta.x,nokta.y);
+   assert.match(await page.locator('[data-et-grafik="ders"]').locator('..').locator('h2').innerText(),/Matematik etütleri/,'a click on a line opens that subject');
+   await page.locator('[data-et-ders=""]').click();
    // A subject card focuses the subject chart; pressing it again shows every subject.
    await page.locator('.et-ders[data-et-ders="Kimya"]').click();
    assert.match(await page.locator('.et-ders[data-et-ders="Kimya"]').getAttribute('aria-pressed'),/true/);
@@ -67,7 +91,8 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.locator('#etHoca .et-hareket-satir[data-et-ogr^="SENTETİK DENİZ"]').click();
    assert.match(await page.locator('#etKisi').innerText(),/Sentetik Deniz[\s\S]*Öğretmenlere göre[\s\S]*Sentetik Öğretmen Bir/);
    await page.locator('#etHoca [data-et-hoca=""]').click();
-   assert.match(await page.locator('#etHoca h2').innerText(),/Öğretmenlere göre etüt/);assert.equal(await page.locator('.et-hoca-kart[aria-pressed="true"]').count(),0);
+   assert.match(await page.locator('#etHoca h2').first().innerText(),/Öğretmenlere göre etüt/);
+   assert.match(await page.locator('#etHoca').innerText(),/Sıralama[\s\S]*Sentetik Öğretmen Bir/,'the teachers ranked beside the chart');assert.equal(await page.locator('.et-hoca-kart[aria-pressed="true"]').count(),0);
    // Movers and the table select a student for the detail card.
    assert.match(await page.locator('.et-hareketler').innerText(),/Daha çok alanlar \(3\)[\s\S]*Sentetik Ada[\s\S]*Daha az alanlar \(2\)[\s\S]*Sentetik Bora/);
    await page.locator('.et-tablo tbody tr[data-et-ogr^="SENTETİK CEM"] .et-ad').click();

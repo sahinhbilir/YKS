@@ -19,7 +19,7 @@ const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
 sandbox.__yg = run('yalnizcaGoruntuleme'); sandbox.__bg = run('bulutYedekGecmisi'); sandbox.__bga = run('buluttanGunAl');
 const reset = () => run(`yalnizcaGoruntuleme=__yg;bulutYedekGecmisi=__bg;buluttanGunAl=__bga;confirm=()=>true;delete window.bulut;D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'Sentetik Ada',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='etutler';
-  EK.etAralik=undefined;EK.etTur=undefined;EK.etDers=undefined;EK.etHoca=undefined;EK.etOgr=undefined;EK.etSira=undefined;EK.etAra='';EK.etSinif='';KAYIT=0;kaydet=async()=>{KAYIT++;return true};ETUT.onbellek.ts=null;`);
+  EK.etAralik=undefined;EK.etTur=undefined;EK.etDers=undefined;EK.etHoca=undefined;EK.etSecA=undefined;EK.etSecB=undefined;EK.etOgr=undefined;EK.etSira=undefined;EK.etAra='';EK.etSinif='';KAYIT=0;kaydet=async()=>{KAYIT++;return true};ETUT.onbellek.ts=null;`);
 const rapor = (gunler = GUNLER, aralik) => { put('pages', etutRaporu(gunler, aralik).pages); return get('ETUT.pdfCoz(pages)'); };
 const iso = g => run('isoDan(' + g + ')');
 const ekle = async r => { put('R', r); await run('ETUT.raporEkle([R])'); };
@@ -118,6 +118,52 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const hep = run(`ETUT.GRAFIKLER.hoca(${mm},{s:2,tur:'gun',ders:null,hoca:null,kim:null},720)`);
     assert(!/NaN|undefined/.test(hep.svg)); assert.equal(hep.xs.length, hep.ipucu.length);
     assert(hep.ipucu.every(p => p.satir.every(r => r[2] !== '0')), 'the readout leaves out teachers with no etüt that day');
+  });
+  await check('places by etüt count in each window: shared places, climbs and falls; the table, cards and teachers\' ranking', async () => {
+    await ekle(rapor());
+    const m = model(), yer = Object.fromEntries(m.kisiler.map(k => [k.ad.split(' ').pop(), [k.k[2].onceSira, k.k[2].sonSira, k.k[2].siraFark]]));
+    assert.deepEqual(yer, { ADA: [3, 1, 2], BORA: [1, 4, -3], CEM: [2, null, null], DENİZ: [null, 2, null], EGE: [3, 3, 0], İKİNCİ: [null, 4, null] });
+    assert(m.ogretmenler.every(o => o.k[2].siraFark === (o.k[2].onceSira !== null && o.k[2].sonSira !== null ? o.k[2].onceSira - o.k[2].sonSira : null)));
+    assert.equal(m.ogretmenler[0].k[2].sonSira, 1, 'Sentetik Öğretmen Bir gives the most etüts in the last two weeks');
+    let h = run('ETUT.icerik()');
+    assert(h.includes('<h2>Sıralama</h2>'), 'with no teacher chosen, the teachers ranked beside the chart');
+    const liste = h.match(/<h2>Sıralama<\/h2>[\s\S]*?<\/section>/)[0], sira = [...liste.matchAll(/class="et-sira-no">([^<]+)</g)].map(x => x[1]);
+    assert.deepEqual(sira, sira.slice().sort((a, b) => (a === '—' ? 1e9 : +a) - (b === '—' ? 1e9 : +b)), 'in place order');
+    assert(h.includes('data-et-sira="sira"'), 'the table has a Sıra column');
+    assert.match(h, /data-et-ogr="SENTETİK ADA\|12\/A"[\s\S]*?<td class="sayi">1<span class="et-sira-ok yukari" role="img" aria-label="2 sıra yükseldi">▲2<\/span><\/td>/);
+    assert.match(h, /data-et-ogr="SENTETİK BORA\|12\/B"[\s\S]*?<td class="sayi">4<span class="et-sira-ok asagi" role="img" aria-label="3 sıra düştü">▼3<\/span><\/td>/);
+    assert.match(h, /class="et-ders et-hoca-kart"[\s\S]*?<span class="mini">1\. sıra<\/span>/, 'teacher cards carry their place');
+    run("EK.etSira='sira';EK.etSiraYon='artan'"); h = run('ETUT.icerik()');
+    assert.deepEqual([...h.matchAll(/<tr data-et-ogr="SENTETİK ([^ |]+)/g)].map(x => x[1]).slice(0, 3), ['ADA', 'DENİZ', 'EGE'], 'sorting by place');
+  });
+  await check('Seç: any two full weeks compared week to week, with lines on the chart and lists of weeks', async () => {
+    await ekle(rapor()); run("EK.etAralik='sec'");
+    const gun = t => run('gunNo("' + t + '")'), m = () => get('ETUT.model(ETUT.oku().veri,{a:EK.etSecA,b:EK.etSecB})');
+    let w = m().pencere.sec; assert.deepEqual([w.once.map(iso), w.son.map(iso)], [['2026-09-14', '2026-09-14'], ['2026-10-12', '2026-10-12']], 'by default the last full week and four weeks before it');
+    let h = run('ETUT.icerik()');
+    assert.match(h, /data-et-aralik="sec" aria-pressed="true"/);
+    assert.match(h, /12 Eki haftası: <b>11<\/b> etüt, 14 Eyl haftasına göre <b>%450 fazla<\/b> \(2 → 11\)\./);
+    assert(h.includes('<select id="etSecA"') && h.includes('<select id="etSecB"')); assert.match(h, /<option value="\d+" selected>14 Eyl haftası<\/option>/);
+    assert(!/<option[^>]*>19 Eki haftası/.test(h), 'the partial week cannot be chosen');
+    assert(h.includes('<th scope="col" aria-sort="none"><button type="button" data-et-sira="son">12 Eki haftası</button></th>'));
+    // The chosen weeks: a student's change and status follow them; the order of the two does not matter.
+    run(`EK.etSecA=${gun('2026-10-12')};EK.etSecB=${gun('2026-09-07')};ETUT.onbellek.ts=null`);
+    w = m().pencere.sec; assert.deepEqual([iso(w.once[0]), iso(w.son[0])], ['2026-09-07', '2026-10-12']);
+    const ada = m().kisiler.find(k => k.ad === 'SENTETİK ADA').k.sec; assert.deepEqual([ada.once, ada.son, ada.durum], [0, 4, 'New'], 'her first etüt came after the Önceki week');
+    const g = run(`(()=>{const v=ETUT.oku().veri,mm=ETUT.model(v,{a:EK.etSecA,b:EK.etSecB});return ETUT.GRAFIKLER.genel(mm,{s:'sec',tur:'hafta',ders:null,hoca:null,kim:null},720)})()`);
+    assert(g.tutamak && /data-tutamak="once"/.test(g.svg) && /data-tutamak="son"/.test(g.svg), 'two lines with handles');
+    assert(!/<text class="et-bant-yazi"/.test(g.svg), 'the handles name the weeks');
+    const gg = run(`(()=>{const v=ETUT.oku().veri,mm=ETUT.model(v,{a:EK.etSecA,b:EK.etSecB});return ETUT.GRAFIKLER.genel(mm,{s:'sec',tur:'gun',ders:null,hoca:null,kim:null},720)})()`);
+    assert(!gg.tutamak, 'the daily chart shows the weeks as bands; the lists choose them');
+  });
+  await check('charts with many lines: each line can take the stage; a chosen subject or teacher is one line', async () => {
+    await ekle(rapor());
+    const mm = 'ETUT.model(ETUT.oku().veri)', st = x => `{s:2,tur:'hafta',ders:${x.ders || null},hoca:${x.hoca || null},kim:null}`;
+    const d = run(`ETUT.GRAFIKLER.ders(${mm},${st({})},720)`);
+    assert.equal(d.seriler.length, 6); assert.equal((d.svg.match(/data-seri="0"/g) || []).length, 2, 'a line and its dashed partial week');
+    assert.equal(d.seriIpucu(0, 1).satir[0][4], true, 'the readout leads with that line'); assert.equal(d.seriNokta(0, 1).length, 1);
+    assert.equal(run(`ETUT.GRAFIKLER.ders(${mm},${st({ders:"'Kimya'"})},720).seriler`), undefined);
+    const hoca = run(`ETUT.GRAFIKLER.hoca(${mm},${st({})},720)`);assert.equal(hoca.seriler.length, 6); assert(hoca.seriler.every(x => x.k.startsWith('SENTETİK')));
   });
   await check('many teachers on one day: the readout lists the busiest and counts the rest', async () => {
     const satirlar = Array.from({ length: 12 }, (_, i) => ['Matematik', 'SENTETİK HOCA ' + String(i + 1).padStart(2, '0'), 'SENTETİK EGE', '101 10/A', '101', '15:00', '20 Dk.']);
