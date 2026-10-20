@@ -18,6 +18,10 @@ Sınavlar tablosundaki **Tarih** alanından bir sınavın tarihi düzeltilir (ö
 - Öğrencilerin bu sınavdaki okul sonuçları (Denemeler, `denemeOkul`) da yeni tarihe taşınır: aynı sınav adı ve eski tarihli satırlar. PDF’den gelen satırın kimliği tarihi taşıdığı için eski satır silinmiş olarak işaretlenir ve aynı sonuç yeni tarihin kimliğiyle eklenir; elle girilen satırın yalnızca tarihi değişir. Öğrencinin kendi girdiği deneme değişmez. Taşınan öğrenciler yayın kuyruğuna alınır ve hemen yayınlanır; yayınlanamayan cihazda kayıtlı kalır (“Bekleyen sonuçları yayınla”).
 - İzleyici öğretmen tarihi yalnızca görür.
 
+## Deneme türü
+
+Bir sınav genel deneme ya da taramadır. Adında “tarama” geçen sınav taramadır, diğerleri genel denemedir. Öğretmen Deneme panosundaki deneme tablosundan türü değiştirebilir (`SIRALAMA.turDegistir`); seçim, tarih düzeltmesi gibi sınavın kendisinde (`sinavlar[].tur`: `genel` ya da `tarama`) yalnızca adın söylediğinden farklıysa saklanır ve aynı PDF yeniden eklenince korunur. Pano bu türe göre süzer (docs/deneme-panosu.md).
+
 ## Sıralama (sayfada)
 
 **Sıralama** kartı, Karşılaştır’da seçilen iki sınavın öğrencilerini sayfada sıralar (PDF gerekmez):
@@ -51,7 +55,7 @@ Kurallar:
 
 ## Saklama ve gizlilik
 
-- Listeler öğretmen defterinde `D.siralama` alanında, sıkıştırılmış olarak durur: `{surum:1, sinavlar:[{id, ad, okul, ts, T, F}], tercih:{şube: alan}}`. `T` Net Sayısı Sıralı, `F` Öğrenci Adı Sıralı listedir: `{tarih, katilim:[toplam,kampüs,kurum], kurum:{n,dy,p}, ogr:[{no, ad, snf, n, dy, p, r}]}`; `n` netler, `dy` D/Y yazıları, `p` dört puan, `r` dört sıralama yazısıdır. Dizi sırası `T` için 11 TYT dersi, `F` için 11 TYT + 13 AYT dersidir.
+- Listeler öğretmen defterinde `D.siralama` alanında, sıkıştırılmış olarak durur: `{surum:1, sinavlar:[{id, ad, okul, ts, tarih?, tur?, T, F}], tercih:{şube: alan}}`. `T` Net Sayısı Sıralı, `F` Öğrenci Adı Sıralı listedir: `{tarih, katilim:[toplam,kampüs,kurum], kurum:{n,dy,p}, ogr:[{no, ad, snf, n, dy, p, r}]}`; `n` netler, `dy` D/Y yazıları, `p` dört puan, `r` dört sıralama yazısıdır. Dizi sırası `T` için 11 TYT dersi, `F` için 11 TYT + 13 AYT dersidir.
 - Defterle birlikte cihaza ve öğretmenin bulut yedeğine yazılır; çıkışta cihazdan silinir, Google ile yeniden girişte buluttan gelir. Öğrenci paketleri alan listesiyle kurulduğu için öğrencilere gitmez.
 - Okuma ve yazmada `dogrula` yapıyı denetler. Okunamayan (bozuk ya da daha yeni sürümün yazdığı) veri sayfada uyarıyla gösterilir ve üzerine yazılmaz; defterin geri kalanı etkilenmez.
 - Sınırlar: en çok 40 sınav ve 350 KB. Defteri bulut yedeği sınırının (900 KB) üstüne çıkaracak ekleme yapılmaz; eski sınavlar **Sil** ile kaldırılır. Silmek öğrencilerin deneme sonuçlarını değiştirmez.

@@ -21,3 +21,15 @@
 #dpKok .et-seg{flex-wrap:wrap;max-width:100%;border-radius:16px}
 @media (max-width:640px){#dpTablo .et-tablo td:first-child{white-space:normal;min-width:7.5em}#dpKok .et-seg button{padding:4px 9px}}
 #dpKisi .et-kisi-sayilar .mini{overflow-wrap:anywhere}
+/* A line takes the stage (hover or ↑/↓): the others lose their colour and fade. */
+.et-grafik svg [data-seri]{transition:opacity .12s,stroke .12s,fill .12s}
+.et-grafik svg.odakli path[data-seri]:not(.aktif){stroke:var(--e-chart-muted)!important;opacity:.3}
+.et-grafik svg.odakli circle[data-seri]:not(.aktif){fill:var(--e-chart-muted)!important;opacity:.3}
+.et-grafik svg.odakli path[data-seri].aktif{stroke-width:3}
+.dp-seriler .et-cizgi.ince{stroke-width:1.5}
+.et-grafik[data-dp-grafik="ogrenci"]{min-height:320px;cursor:pointer}
+.et-ipucu-satir.dp-vurgu{color:var(--e-fg);font-weight:600}
+.dp-bolum-bas{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
+.et-tablo tbody tr.dp-ort{cursor:default}.et-tablo tbody tr.dp-ort td:first-child{white-space:normal}.et-tablo tbody tr.dp-ort td{background:color-mix(in srgb,var(--e-fg) 3%,transparent)}
+.et-tablo tbody tr.dp-ort:hover td{background:color-mix(in srgb,var(--e-fg) 3%,transparent)}
+.dp-tur-sec{border:1px solid var(--e-line);background:var(--e-panel);color:var(--e-fg);border-radius:999px;font-size:.75rem;padding:2px 8px}
