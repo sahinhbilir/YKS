@@ -1,0 +1,18 @@
+/* Measuring on a chart (src/grafik.js): the range between the markers is tinted, the plot outside it fades
+   under the panel colour, and the readout sits at the top of the chart. Other charts and mini graphs of the
+   page shade the same dates. Colours are the Etütler tokens (src/etutler.css), so both themes follow. */
+.et-grafik{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.et-grafik.olcuyor,.et-grafik.olcuyor *{cursor:ew-resize}
+.olc-ortu{pointer-events:none}
+.olc-ortu .olc-solgun{fill:var(--e-panel);opacity:.62}
+.olc-ortu .olc-alan{fill:var(--e-fg);opacity:.05}
+.olc-ortu.yukari .olc-alan{fill:var(--e-ok);opacity:.08}.olc-ortu.asagi .olc-alan{fill:var(--e-bad);opacity:.08}
+.olc-cizgi{stroke:var(--e-fg2);stroke-width:1}
+.olc-nokta{fill:var(--e-c1);stroke:var(--e-panel);stroke-width:2}
+.olc-yazi{position:absolute;z-index:4;top:0;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 8px);box-sizing:border-box;pointer-events:none;
+  font-size:.75rem;line-height:1.7;color:var(--e-fg2);text-align:center;font-variant-numeric:tabular-nums;
+  background:var(--e-pop);border:1px solid var(--e-line);border-radius:var(--e-r);box-shadow:var(--e-shadow);padding:3px 10px}
+.olc-yazi b,.olc-ad{color:var(--e-fg);font-weight:500}
+.olc-yazi .et-hap{vertical-align:1px}
+.et-kucuk-kutu{position:relative}
+.olc-mini{position:absolute;top:-4px;right:0;pointer-events:none;border-radius:999px;background:var(--e-panel)}

@@ -232,6 +232,27 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
       }
     }
   });
+  await check('drag to measure: each time chart says what it measures, in net; mini graphs carry their exams; Çizgi is on the board', async () => {
+    await loadAll();
+    const g = (ad, alan = 'olc') => get(`(()=>{const {t}=DPANO.veriAl();const g=DPANO.GRAFIKLER.${ad}(DPANO.durumAl(t),720);return g&&g.${alan}||null})()`);
+    const st = state(), ort = st.m.sinavlar.map(x => x.ort);
+    const genel = g('genel');
+    assert.deepEqual([genel.donem, genel.etiket, genel.birim, genel.ana.v], [[0, 1], ['18 Eyl', '2 Eki'], 'net', ort]);
+    const ders = g('ders');
+    assert.equal(ders.ana.ad, 'TYT toplam ortalaması'); assert.deepEqual(ders.ana.v, ort); assert.equal(ders.ana.y, null, 'not drawn: no dots');
+    assert.deepEqual(ders.seriler.map(x => x.ad), g('ders', 'seriler').map(x => x.ad), 'one per line, in the lines\' order');
+    assert(ders.seriler.every(x => x.v.length === 2 && x.y.length === 2), 'lessons measured in net, drawn at their %');
+    run("EK.dpDers='MAT'"); assert.deepEqual([g('ders').ana.ad, g('ders').seriler], ['Matematik', null]);
+    run('EK.dpDers=null');
+    const ogr = g('ogrenci'); assert.equal(ogr.seriler.length, 5); assert.equal(ogr.ana.ad, 'Ortalama');
+    assert(ogr.seriler.some(x => x.v.includes(null)), 'a missed exam has no point');
+    assert.equal(g('dagilim'), null, 'the distribution has no time axis');
+    assert.equal(g('kisi').ana.v.length, 2);
+    const h = run('DPANO.icerik()');
+    assert(h.includes('data-olc-donem="0,1" data-olc-uzunluk="1" data-olc-v="'), 'card and table mini graphs');
+    assert.match(h, /data-dp-cizgi="kose" aria-pressed="true"/);
+    run("GRAFIK_CIZGI.sec('yumusak')"); assert.match(run('DPANO.icerik()'), /data-dp-cizgi="yumusak" aria-pressed="true"/); run("GRAFIK_CIZGI.sec('kose')");
+  });
   await check('the exam table corrects dates with Sıralamalar’s field; Raporlar at the bottom follow the board’s pair', async () => {
     await loadUc();
     let h = run('DPANO.icerik()');

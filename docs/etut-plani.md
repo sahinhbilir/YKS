@@ -22,6 +22,7 @@
 - Plan öğretmen defterinde `D.etutPlani` alanındadır: `{surum:1, ts, gunler:[Pazartesi … Cuma: [[branş, öğretmen, [öğrenci 1 … 4]]]]}`. Satırlar yazıldıkları sırada saklanır; gruplama yalnızca görünüştedir.
 - Defterle birlikte cihaza ve öğretmenin bulut yedeğine yazılır. Öğrenci paketleri alan listesiyle kurulduğu için öğrencilere gitmez.
 - Her yazmada `dogrula` yapıyı denetler: beş gün, günde en çok 40 satır, satırda dört öğrenci; branş 40, ad 60 karakter. Kaydedilemeyen değişiklik geri alınır ve sayfa eski planı gösterir; okunamayan kayıtlı plan uyarıyla gösterilir ve üzerine yazılmaz. Defteri bulut yedeği sınırının üstüne çıkaracak değişiklik yapılmaz.
+- Etütler, öğretmenlerin etüt günlerini ve doluluğunu bu plandan alır: öğretmenin yazılı olduğu günler onun etüt günleridir (docs/etutler.md).
 - İzleyici öğretmen planı görür ve yazdırır; değiştiremez.
 - Depoda gerçek öğretmen ya da öğrenci adı yoktur; adları rehber öğretmen uygulamada yazar.
 

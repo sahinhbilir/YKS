@@ -124,10 +124,10 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const m = model(), yer = Object.fromEntries(m.kisiler.map(k => [k.ad.split(' ').pop(), [k.k[2].onceSira, k.k[2].sonSira, k.k[2].siraFark]]));
     assert.deepEqual(yer, { ADA: [3, 1, 2], BORA: [1, 4, -3], CEM: [2, null, null], DENİZ: [null, 2, null], EGE: [3, 3, 0], İKİNCİ: [null, 4, null] });
     assert(m.ogretmenler.every(o => o.k[2].siraFark === (o.k[2].onceSira !== null && o.k[2].sonSira !== null ? o.k[2].onceSira - o.k[2].sonSira : null)));
-    assert.equal(m.ogretmenler[0].k[2].sonSira, 1, 'Sentetik Öğretmen Bir gives the most etüts in the last two weeks');
+    assert.equal(m.ogretmenler[0].k[2].sonSira, 1, 'Sentetik Öğretmen Bir is the fullest in the last two weeks');
     let h = run('ETUT.icerik()');
-    assert(h.includes('<h2>Sıralama</h2>'), 'with no teacher chosen, the teachers ranked beside the chart');
-    const liste = h.match(/<h2>Sıralama<\/h2>[\s\S]*?<\/section>/)[0], sira = [...liste.matchAll(/class="et-sira-no">([^<]+)</g)].map(x => x[1]);
+    assert(h.includes('<h2>Sıralama · doluluk</h2>'), 'with no teacher chosen, the teachers ranked beside the chart');
+    const liste = h.match(/<h2>Sıralama · doluluk<\/h2>[\s\S]*?<\/section>/)[0], sira = [...liste.matchAll(/class="et-sira-no">([^<]+)</g)].map(x => x[1]);
     assert.deepEqual(sira, sira.slice().sort((a, b) => (a === '—' ? 1e9 : +a) - (b === '—' ? 1e9 : +b)), 'in place order');
     assert(h.includes('data-et-sira="sira"'), 'the table has a Sıra column');
     assert.match(h, /data-et-ogr="SENTETİK ADA\|12\/A"[\s\S]*?<td class="sayi">1<span class="et-sira-ok yukari" role="img" aria-label="2 sıra yükseldi">▲2<\/span><\/td>/);
@@ -170,6 +170,54 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     await ekle(rapor([{ tarih: '13.10.2026', satirlar }], { bas: '13.10.2026', bit: '13.10.2026' }));
     const g = get(`ETUT.GRAFIKLER.hoca(ETUT.model(ETUT.oku().veri),{s:2,tur:'gun',ders:null,hoca:null,kim:null},720)`);
     const p = g.ipucu[0].satir; assert.equal(p.length, 10); assert.deepEqual(p[9].slice(1), ['+3 öğretmen', '3']);
+  });
+  await check('teachers\' etüt days: from the report or the Etüt planı; days that are not theirs are left out and doluluk ranks them', async () => {
+    await ekle(rapor());
+    let m = model();
+    const kim = ad => m.ogretmenler.find(o => o.ad === 'SENTETİK ÖĞRETMEN ' + ad), bir = kim('BİR'), bes = kim('BEŞ'), dort = kim('DÖRT');
+    // No plan: the weekdays of their etüts in the last four weeks (BİR: Monday 19 Eki and Tuesdays).
+    assert.deepEqual([bir.gunleri, bir.kaynak, bes.gunleri], [[0, 1], 'rapor', [1]]);
+    assert.deepEqual(bir.kapHafta, [4, 4, 4, 4, 4, 4, 4], 'four places on each of their days that had etüts');
+    assert.deepEqual([bir.k[2].kapOnce, bir.k[2].kapSon, bir.k[2].dolOnce, bir.k[2].dolSon], [8, 8, 0.375, 0.75]);
+    // BEŞ gives etüts on Tuesdays only: Thursday 24 Eyl and Monday 19 Eki are not theirs.
+    const gun = m.gun.map(x => iso(x.p)), i24 = gun.indexOf('2026-09-24'), i19 = gun.indexOf('2026-10-19');
+    assert.deepEqual([bes.gunG[i24], bes.gunG[i19], bes.gun[i24]], [null, null, 0]); assert.equal(bes.haftaG[6], null, 'the partial week has no Tuesday yet');
+    assert.deepEqual(m.ogretmenler.map(o => [o.k[2].sonSira, o.k[2].siraFark]), [[1, 0], [2, 0], [2, 0], [4, 1], [4, -2], [6, 0]], 'places by doluluk');
+    assert.deepEqual([dort.k[2].onceSira, dort.k[2].sonSira], [2, 4]);
+    let h = run('ETUT.icerik()');
+    assert.match(h, /data-et-hoca="SENTETİK ÖĞRETMEN BİR"[\s\S]*?<span class="mini">%75 dolu<\/span><span class="mini">1\. sıra<\/span>/);
+    const liste = h.match(/<h2>Sıralama · doluluk<\/h2>[\s\S]*?<\/section>/)[0];
+    assert.match(liste, /Sentetik Öğretmen Bir<\/span><span class="mini">Matematik · 6\/8 etüt · önceki: %38<\/span><\/span><b>%75<\/b>/);
+    const st = (hoca, tur) => `{s:2,tur:'${tur}',ders:null,hoca:${JSON.stringify(hoca)},kim:null}`, mm = 'ETUT.model(ETUT.oku().veri)';
+    const tek = get(`ETUT.GRAFIKLER.hoca(${mm},${st(bes.hoca, 'gun')},720)`);
+    assert(!/NaN|undefined/.test(tek.svg)); assert.deepEqual(tek.ipucu[i24].satir, [[null, 'Etüt günü değil', '']]);
+    assert.deepEqual(tek.ipucu[gun.indexOf('2026-10-13')].satir.slice(-1), [[null, 'Doluluk', '%50 · 2/4']]);
+    const hep = get(`ETUT.GRAFIKLER.hoca(${mm},${st(null, 'gun')},720)`);
+    assert(!/NaN|undefined/.test(hep.svg)); assert.equal(hep.seriler[m.ogretmenler.indexOf(bes)].pts[i24], null, 'no point on a day that is not theirs');
+    run(`EK.etHoca=${JSON.stringify(bir.hoca)}`); assert.match(run('ETUT.icerik()'), /id="etHocaGun">Etüt günleri: Pazartesi, Salı · etüt raporundan</);
+    // The Etüt planı puts BİR on Tuesdays and Thursdays: Thursday 24 Eyl adds four places.
+    run("D.etutPlani={surum:1,ts:7,gunler:[[],[['Matematik','Sentetik Öğretmen Bir',['','','','']]],[],[['Matematik','sentetik öğretmen bir',['','','','']]],[]]}");
+    m = get('ETUT.icerik()&&ETUT.onbellek.m'); const p = m.ogretmenler.find(o => o.ad === 'SENTETİK ÖĞRETMEN BİR');
+    assert.deepEqual([p.gunleri, p.kaynak, p.kapHafta[2], p.k[2].kapOnce, p.k[2].dolOnce], [[1, 3], 'plan', 8, 12, 0.25]);
+    assert.equal(m.ogretmenler.find(o => o.ad === 'SENTETİK ÖĞRETMEN BEŞ').kaynak, 'rapor', 'teachers not in the plan keep the report');
+    assert.match(run('ETUT.icerik()'), /Etüt günleri: Salı, Perşembe · Etüt planından/);
+  });
+  await check('drag to measure: every time chart and weekly mini graph says what it measures; Çizgi is on the page', async () => {
+    await ekle(rapor());
+    const mm = 'ETUT.model(ETUT.oku().veri)', st = (tur, ders = null, hoca = null) => `{s:2,tur:'${tur}',ders:${JSON.stringify(ders)},hoca:${JSON.stringify(hoca)},kim:'SENTETİK ADA|12/A'}`;
+    const m = model(), olc = (g, s) => get(`ETUT.GRAFIKLER.${g}(${mm},${s},720).olc`);
+    const genel = olc('genel', st('hafta'));
+    assert.deepEqual([genel.donem, genel.uzunluk, genel.birim, genel.ana.v], [m.haftalar, 7, 'etüt', m.hafta.map(h => h.etut)]);
+    assert.deepEqual([olc('genel', st('gun')).uzunluk, olc('genel', st('gun')).donem], [1, m.gun.map(x => x.p)]);
+    const ders = olc('ders', st('hafta'));
+    assert.equal(ders.seriler.length, m.dersler.length); assert.equal(ders.ana.ad, 'Tüm dersler'); assert.deepEqual(ders.ana.v, m.hafta.map(h => h.etut));
+    assert.deepEqual(olc('ders', st('hafta', 'Fizik')).ana.v, m.dersler.find(d => d.ders === 'Fizik').hafta, 'a chosen subject is its own line');
+    assert.equal(olc('hoca', st('hafta')).ana.ad, 'Tüm öğretmenler');
+    assert.deepEqual([olc('ogrenci', st('hafta')).birim, olc('kisi', st('gun')).uzunluk], ['öğrenci', 7], 'the student card stays weekly');
+    const h = run('ETUT.icerik()'), hafta = m.haftalar.join(',');
+    assert.equal((h.match(new RegExp('data-olc-donem="' + hafta + '" data-olc-uzunluk="7"', 'g')) || []).length, m.dersler.length + m.ogretmenler.length + m.kisiler.length, 'cards and the table');
+    assert.match(h, /data-et-cizgi="kose" aria-pressed="true"/); assert.match(h, /data-et-cizgi="yumusak" aria-pressed="false"/);
+    run("GRAFIK_CIZGI.sec('yumusak')"); assert.match(run(`ETUT.GRAFIKLER.genel(${mm},${st('hafta')},720).svg`), /class="et-cizgi" d="M[^"]*C/); run("GRAFIK_CIZGI.sec('kose')");
   });
   await check('Etüt planı gets each weekday\'s teachers of the last four weeks and the report\'s names', async () => {
     run('ETUT.onbellek.ts=null'); assert.equal(run('ETUT.planIcin()'), null);

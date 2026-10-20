@@ -27,6 +27,8 @@ jobs:
         run: node scripts/embed-denemeler.cjs --check && node test/mock-exam-regression.cjs
       - name: Sıralamalar comparison reports, storage and embedding
         run: node scripts/embed-siralamalar.cjs --check && node test/siralama-regression.cjs
+      - name: Shared charts (lines, measuring) and embedding
+        run: node scripts/embed-grafik.cjs --check && node test/grafik-regression.cjs
       - name: Etütler report import, storage and embedding
         run: node scripts/embed-etutler.cjs --check && node test/etut-regression.cjs
       - name: Etüt planı sheets, storage, print and embedding
@@ -120,6 +122,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/etutplani-browser.cjs
       - name: Deneme panosu on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/denemepano-browser.cjs
+      - name: Drag to measure and line shape on Etütler and Deneme panosu
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/grafik-browser.cjs
       - name: Test account button, nickname setup, first cloud save and reset
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/test-account-browser.cjs
       - name: Light and dark contrast, theme preference and mobile navigation
