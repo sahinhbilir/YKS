@@ -531,32 +531,35 @@ function neden(R,cur,prev){
   else{if(!cur.hasAYT)return 'Şimdiki sınavın Öğrenci Adı Sıralı (TYT + AYT) listesini ekleyin.';if(!prev.hasAYT)return 'Önceki sınavın Öğrenci Adı Sıralı (TYT + AYT) listesini ekleyin.';}
   return '';
 }
-// Previous defaults to the latest exam before the current one.
-function secim(ms){
-  const ids=ms.map(m=>m.id),cur=ids.includes(EK.srSimdiki)?EK.srSimdiki:ids.at(-1);
-  let prev=ids.includes(EK.srOnceki)&&EK.srOnceki!==cur?EK.srOnceki:null;
+// Previous defaults to the latest exam before the current one. The Deneme panosu passes its own
+// pair (cift: {simdi, onceki} exam ids) so its reports compare the exams it shows.
+function secim(ms,cift){
+  const ids=ms.map(m=>m.id),istek=cift||{simdi:EK.srSimdiki,onceki:EK.srOnceki},cur=ids.includes(istek.simdi)?istek.simdi:ids.at(-1);
+  let prev=ids.includes(istek.onceki)&&istek.onceki!==cur?istek.onceki:null;
   if(!prev&&cur){const i=ids.indexOf(cur);prev=i>0?ids[i-1]:(ids[i+1]||null)}
   return {cur:ms.find(m=>m.id===cur)||null,prev:ms.find(m=>m.id===prev)||null};
 }
-async function raporBaytlari(id){
+async function raporBaytlari(id,cift){
   const {veri,hata}=oku();if(!veri)throw new Error(hata);
-  const {cur,prev}=secim(modeller(veri)),R=RAPORLAR.find(r=>r.id===id),neden_=R&&neden(R,cur,prev);
+  const {cur,prev}=secim(modeller(veri),cift),R=RAPORLAR.find(r=>r.id===id),neden_=R&&neden(R,cur,prev);
   if(!R||neden_)throw new Error(neden_||'Rapor bulunamadı.');
   // Exam timestamps change with every stored list, so a notebook replaced from the cloud never reuses an old PDF.
   const anahtar=[R.id,prev.id,prev.ts,cur.id,cur.ts,R.sirala?JSON.stringify(veri.tercih):''].join('|');
   if(!ONBELLEK.has(anahtar)){const L=await kutuphane();ONBELLEK.set(anahtar,await R.yap(L,cur,prev,veri.tercih))}
   return {R,cur,prev,bytes:ONBELLEK.get(anahtar)};
 }
-async function hepsiBaytlari(){
-  const {veri}=oku(),{cur,prev}=secim(modeller(veri||{sinavlar:[]})),hazir=RAPORLAR.filter(R=>!neden(R,cur,prev));
+async function hepsiBaytlari(cift){
+  const {veri}=oku(),{cur,prev}=secim(modeller(veri||{sinavlar:[]}),cift),hazir=RAPORLAR.filter(R=>!neden(R,cur,prev));
   if(!hazir.length)throw new Error('Karşılaştırmak için iki sınav gerekir.');
   const L=await kutuphane(),out=await L.PDFLib.PDFDocument.create();
-  for(const R of hazir){const {bytes}=await raporBaytlari(R.id),src=await L.PDFLib.PDFDocument.load(bytes);for(const p of await out.copyPages(src,src.getPageIndices()))out.addPage(p)}
+  for(const R of hazir){const {bytes}=await raporBaytlari(R.id,cift),src=await L.PDFLib.PDFDocument.load(bytes);for(const p of await out.copyPages(src,src.getPageIndices()))out.addPage(p)}
   return {cur,bytes:await out.save()};
 }
 
 /* ---------------- view ---------------- */
-let DURUM='',ISLEM=false,ONIZLEME=null,ONIZLEME_IS=0;
+let DURUM='',ISLEM=false,ONIZLEME=null,ONIZLEME_CIFT=null,ONIZLEME_IS=0;
+// Reports, preview and the date fields also work on the teacher's Deneme panosu (Denemeler).
+const sayfada=()=>rehberMi()&&(EK.sekme==='siralamalar'||EK.sekme==='denemeler'&&!!document.getElementById('dpKok'));
 function durum(m){DURUM=m;const el=document.getElementById('srDurum');if(el)el.textContent=m}
 const isoTarih=t=>{const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t||'');return m?m[3]+'-'+m[2]+'-'+m[1]:''};
 function tarihHucresi(e,salt){
@@ -629,12 +632,13 @@ function gorunum(){
       siraBolumu(cur,prev)+
       '<section class="kart sr-panel sr-onizleme" aria-labelledby="srOnizlemeBaslik"><div class="sr-onizleme-bas"><h2 id="srOnizlemeBaslik">Önizleme</h2><span class="mini" id="srOnizlemeAlt">Bir raporda “Önizle”ye basın.</span></div><div id="srSayfalar" class="sr-sayfalar"></div></section>':'');
 }
-async function onizle(id){
-  const is=++ONIZLEME_IS;ONIZLEME=id;
+async function onizle(id,cift){
+  const is=++ONIZLEME_IS;ONIZLEME=id;ONIZLEME_CIFT=cift||null;
   document.querySelectorAll('.sr-rapor').forEach(el=>el.classList.toggle('secili',!!el.querySelector('[data-sr-onizle="'+id+'"]')));
-  durum('Rapor hazırlanıyor…');
+  // A message already shown (e.g. a corrected date) comes back once the preview is drawn.
+  const onceki=DURUM==='Rapor hazırlanıyor…'?'':DURUM;durum('Rapor hazırlanıyor…');
   try{
-    const {R,cur,prev,bytes}=await raporBaytlari(id),pdfjs=await denemePdfjs();
+    const {R,cur,prev,bytes}=await raporBaytlari(id,cift),pdfjs=await denemePdfjs();
     const task=pdfjs.getDocument({data:bytes.slice(0),isEvalSupported:false});
     try{
       const pdf=await task.promise,host=document.getElementById('srSayfalar');if(is!==ONIZLEME_IS||!host)return;
@@ -648,10 +652,10 @@ async function onizle(id){
         if(is!==ONIZLEME_IS)return;host.appendChild(cv);await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;page.cleanup();
       }
     }finally{await task.destroy()}
-    if(is===ONIZLEME_IS)durum('');
+    if(is===ONIZLEME_IS)durum(onceki);
   }catch(e){if(is===ONIZLEME_IS)durum('Rapor hazırlanamadı: '+e.message)}
 }
-function yenidenCiz(){ciz();if(ONIZLEME&&document.querySelector('[data-sr-onizle="'+ONIZLEME+'"]:not([disabled])'))onizle(ONIZLEME);else ONIZLEME=null}
+function yenidenCiz(){ciz();if(ONIZLEME&&document.querySelector('[data-sr-onizle="'+ONIZLEME+'"]:not([disabled])'))onizle(ONIZLEME,ONIZLEME_CIFT);else ONIZLEME=null}
 async function kaydetVeIndir(ad,bytes){
   const tamam=await indir(dosyaAdi(ad),bytes,'pdf');
   durum(tamam?'İndirildi: '+dosyaAdi(ad):'');
@@ -667,16 +671,17 @@ async function pdfEkle(files){
   return (eklenen.length?'Kaydedildi: '+eklenen.join(', ')+'.':'Liste eklenmedi.')+(hatalar.length?' Okunamayan: '+hatalar.join(' · '):'');
 }
 document.addEventListener('click',async ev=>{
-  const el=ev.target.closest?.('button');if(!el||EK.sekme!=='siralamalar'||!rehberMi())return;
-  if(el.dataset.srOnizle){onizle(el.dataset.srOnizle);return}
+  const el=ev.target.closest?.('button');if(!el||!sayfada())return;
+  const kutu=el.closest('[data-sr-simdi]'),cift=kutu?{simdi:kutu.dataset.srSimdi,onceki:kutu.dataset.srOnceki}:undefined;
+  if(el.dataset.srOnizle){onizle(el.dataset.srOnizle,cift);return}
   if(el.dataset.srSiraTur||el.dataset.srSiraOlcut){
     const [k,v]=el.dataset.srSiraTur?['srSiraTur',el.dataset.srSiraTur]:['srSiraOlcut',el.dataset.srSiraOlcut];
     EK[k]=v;yenidenCiz();document.querySelector('[data-'+k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())+'="'+v+'"]')?.focus();return}
   if(ISLEM||!(el.dataset.srIndir||el.dataset.srSil||el.id==='srHepsi'))return;
   ISLEM=true;el.disabled=true;
   try{
-    if(el.dataset.srIndir){durum('Rapor hazırlanıyor…');const {R,cur,bytes}=await raporBaytlari(el.dataset.srIndir);await kaydetVeIndir(R.dosya(cur),bytes.slice(0))}
-    else if(el.id==='srHepsi'){durum('Raporlar hazırlanıyor…');const {cur,bytes}=await hepsiBaytlari();await kaydetVeIndir(cur.name+'_Sıralamalar.pdf',bytes)}
+    if(el.dataset.srIndir){durum('Rapor hazırlanıyor…');const {R,cur,bytes}=await raporBaytlari(el.dataset.srIndir,cift);await kaydetVeIndir(R.dosya(cur),bytes.slice(0))}
+    else if(el.id==='srHepsi'){durum('Raporlar hazırlanıyor…');const {cur,bytes}=await hepsiBaytlari(cift);await kaydetVeIndir(cur.name+'_Sıralamalar.pdf',bytes)}
     else{const {veri}=oku(),s=veri&&veri.sinavlar.find(x=>x.id===el.dataset.srSil);if(!s)return;
       if(!confirm(s.ad+' sınavının sıralama listeleri silinsin mi? Öğrencilerin deneme sonuçları değişmez.'))return;
       await sil(s.id);durum(s.ad+' silindi.');yenidenCiz()}
@@ -684,7 +689,7 @@ document.addEventListener('click',async ev=>{
   finally{ISLEM=false;el.disabled=false}
 });
 document.addEventListener('change',async ev=>{
-  const el=ev.target;if(EK.sekme!=='siralamalar'||!rehberMi())return;
+  const el=ev.target;if(!sayfada())return;
   if(el.id==='srPdf'){
     const files=Array.from(el.files||[]);el.value='';if(!files.length||ISLEM)return;
     if(files.length>10){durum('Bir defada en fazla 10 PDF seçin.');return}
@@ -713,8 +718,8 @@ document.addEventListener('change',async ev=>{
     yenidenCiz();document.getElementById(id)?.focus();
   }
 });
-return {turDegistir,addanTur,SINAV_TURLERI,hasTYT,hasAYT,took,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
-  get onbellek(){return ONBELLEK}};
+return {tarihHucresi,SIRALA,clsShort,turDegistir,addanTur,SINAV_TURLERI,hasTYT,hasAYT,took,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
+  get onbellek(){return ONBELLEK},get durumYazisi(){return DURUM}};
 })();
 function siralamaPdfCoz(sayfalar,boylar){return SIRALAMA.pdfCoz(sayfalar,boylar)}
 function siralamaKaydet(listeler){return SIRALAMA.kaydetListeler(listeler)}

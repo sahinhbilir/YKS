@@ -5,6 +5,15 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const {okulListesi,SINAVLAR}=require('./fixtures/siralama-pdf.cjs');
+// Reports use pdf-lib and pdf.js: the pinned CDN files come from local npm copies on NODE_PATH, as in siralama-browser.
+const paket=ad=>{for(const d of [...(process.env.NODE_PATH||'').split(path.delimiter),path.join(__dirname,'..','node_modules')].filter(Boolean)){const p=path.join(d,ad);if(fs.existsSync(path.join(p,'package.json')))return p}throw new Error(ad+' bulunamadı (NODE_PATH)')};
+const CDN={
+ 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/legacy/build/pdf.min.mjs':[paket('pdfjs-dist'),'legacy/build/pdf.min.mjs','text/javascript'],
+ 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/legacy/build/pdf.worker.min.mjs':[paket('pdfjs-dist'),'legacy/build/pdf.worker.min.mjs','text/javascript'],
+ 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js':[paket('pdf-lib'),'dist/pdf-lib.min.js','text/javascript'],
+ 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js':[paket('@pdf-lib/fontkit'),'dist/fontkit.umd.min.js','text/javascript'],
+ 'https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Regular.woff':[paket('roboto-fontface'),'fonts/roboto/Roboto-Regular.woff','font/woff'],
+ 'https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Medium.woff':[paket('roboto-fontface'),'fonts/roboto/Roboto-Medium.woff','font/woff']};
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
 const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-denemepano-'));fs.mkdirSync(out,{recursive:true});
 const listeler=['once','sonra'].flatMap(e=>['T','F'].map(t=>okulListesi(SINAVLAR[e][t])));
@@ -13,10 +22,13 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage'],...(process.env.YKS_CHROMIUM?{executablePath:process.env.YKS_CHROMIUM}:{})});
  try{
   for(const [width,tema] of [[1280,'light'],[390,'dark']]){
-   const context=await browser.newContext({viewport:{width,height:950},colorScheme:tema}),page=await context.newPage(),errors=[];
+   const context=await browser.newContext({viewport:{width,height:950},colorScheme:tema,acceptDownloads:true}),page=await context.newPage(),errors=[];
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
    await page.clock.setFixedTime(new Date('2026-10-19T18:00:00+03:00'));
-   await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
+   await context.route('**/*',r=>{const u=r.request().url();
+    if(u.startsWith('http://localhost/'))return r.fulfill({status:200,contentType:'text/html',body:html});
+    if(CDN[u])return r.fulfill({status:200,path:path.join(CDN[u][0],CDN[u][1]),contentType:CDN[u][2],headers:{'access-control-allow-origin':'*'}});
+    return r.abort()});
    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
    await page.evaluate(async l=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-19';
@@ -107,6 +119,24 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    assert.equal(await page.locator('#dpTablo tr.dp-ort').count(),4,'grade and class averages');
    await page.locator('#dpOgrNet').selectOption('MAT');
    await page.waitForFunction(()=>/Öğrencilere göre · TYT Matematik/.test(document.querySelector('#dpOgrCizgi h2').textContent));
+   // Tüm öğrenciler carries Sıralamalar's three measures; Sırala sits in its header.
+   assert.deepEqual(await page.locator('#dpTablo thead [data-dp-sira]').evaluateAll(l=>l.map(b=>b.textContent)),['Öğrenci','Şube','Şimdiki','Önceki','Net artışı','% artış','Kapanan fark (log)','Sıra','Durum']);
+   // On a phone the measure it is not ranked by folds away; the ranked one (Net artışı) stays.
+   if(width<700)assert.deepEqual(await page.locator('#dpTablo thead th:visible').evaluateAll(l=>l.map(t=>t.textContent)),['Öğrenci','Şimdiki','Net artışı','Sıra','Durum']);
+   assert.equal(await page.locator('#dpTablo .et-kart-bas [data-dp-olcut="artis"][aria-pressed="true"]').count(),1);
+   // Raporlar at the bottom: Sıralamalar's reports for the board's pair, downloaded and previewed here.
+   const rap=page.locator('#dpRaporlar');await rap.scrollIntoViewIfNeeded();
+   assert.equal(await rap.locator('[data-sr-indir]:not([disabled])').count(),4);
+   const [indirilen]=await Promise.all([page.waitForEvent('download'),rap.locator('[data-sr-indir="tyt-toplu"]').click()]);
+   assert.equal(indirilen.suggestedFilename(),'Sentetik Deneme 2_Toplu.pdf');
+   await rap.locator('[data-sr-onizle="tyt-sinif"]').click();
+   await page.waitForFunction(()=>document.querySelectorAll('#dpRaporlar #srSayfalar canvas').length>0);
+   assert.match(await page.locator('#srOnizlemeAlt').innerText(),/Sentetik Deneme 1 → Sentetik Deneme 2/);
+   // The exam table corrects a date with Sıralamalar's field (and its confirmation).
+   const tarih=page.locator('#dpSinavlar input[data-sr-tarih]').nth(1);await tarih.scrollIntoViewIfNeeded();
+   await tarih.fill('2026-09-26');
+   await page.waitForFunction(()=>D.siralama.sinavlar.find(s=>s.ad==='Sentetik Tarama 1').tarih==='26.09.2026');
+   await page.waitForFunction(()=>/Sentetik Tarama 1 tarihi 26\.09\.2026 oldu/.test(document.getElementById('srDurum')?.textContent||''));
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'new controls fit at '+width);
    await page.locator('#dpOgrCizgi').scrollIntoViewIfNeeded();
    await page.screenshot({path:path.join(out,'denemepano-ek-'+width+'-'+tema+'.png'),fullPage:true});

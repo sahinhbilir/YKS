@@ -33,3 +33,15 @@
 .et-tablo tbody tr.dp-ort{cursor:default}.et-tablo tbody tr.dp-ort td:first-child{white-space:normal}.et-tablo tbody tr.dp-ort td{background:color-mix(in srgb,var(--e-fg) 3%,transparent)}
 .et-tablo tbody tr.dp-ort:hover td{background:color-mix(in srgb,var(--e-fg) 3%,transparent)}
 .dp-tur-sec{border:1px solid var(--e-line);background:var(--e-panel);color:var(--e-fg);border-radius:999px;font-size:.75rem;padding:2px 8px}
+/* Tüm öğrenciler: the column it is ranked by stands out. */
+#dpTablo .et-tablo th.dp-secili{color:var(--e-fg)}
+/* Raporlar (Sıralamalar's reports, in the board's look). */
+#dpKok #srDurum{overflow-wrap:anywhere;font-size:.8125rem;margin:8px 0 0;color:var(--e-fg2)}#dpKok #srDurum:empty{display:none}
+.dp-raporlar{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px}
+#dpKok .sr-rapor.dp-rapor{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;padding:12px 14px;border:1px solid var(--e-line);border-radius:var(--e-r);background:var(--e-panel);min-width:0}
+#dpKok .sr-rapor.dp-rapor.secili{border-color:var(--e-fg)}
+.dp-rapor-ad{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 180px}
+.dp-rapor-dugmeler{display:flex;gap:8px;flex-wrap:wrap}.dp-rapor-dugmeler .et-dugme:disabled{opacity:.4;cursor:default}
+.dp-rapor-sirala{flex-basis:100%;display:flex;flex-wrap:wrap;gap:8px}
+.dp-onizleme{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+#dpKok .sr-tarih{border:1px solid var(--e-line);background:var(--e-panel);color:var(--e-fg);border-radius:999px;font-size:.75rem;padding:2px 8px}

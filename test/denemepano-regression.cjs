@@ -153,7 +153,12 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert(Math.abs(ada.yuzde - ada.fark / ada.once * 100) < 1e-9);
     assert(Math.abs(ada.logFark - Math.log((u - ada.once + 1) / (u - ada.son + 1))) < 1e-9);
     run("EK.dpOlcut='yuzde';EK.dpSira='sira';EK.dpSiraYon='artan'"); let h = run('DPANO.icerik()');
-    assert(h.includes('>% artış</button>')); assert(h.includes('<th scope="col" aria-sort="ascending"><button type="button" data-dp-sira="sira">Sıra</button>')); assert(!h.includes('>Kapanan fark</button>'));
+    // All three measures are columns of Tüm öğrenciler, as in Sıralamalar; the ranked one stays on a phone.
+    for (const b of ['Net artışı', '% artış', 'Kapanan fark (log)']) assert(h.includes('data-dp-sira="' + {'Net artışı': 'fark', '% artış': 'yuzde', 'Kapanan fark (log)': 'logFark'}[b] + '">' + b + '</button>'), b);
+    assert(h.includes('<th scope="col" class="dp-secili" aria-sort="none"><button type="button" data-dp-sira="yuzde">% artış</button>'));
+    assert(h.includes('<th scope="col" class="et-dar-gizle" aria-sort="none"><button type="button" data-dp-sira="logFark">Kapanan fark (log)</button>'));
+    assert(h.includes('<th scope="col" aria-sort="ascending"><button type="button" data-dp-sira="sira">Sıra</button>'));
+    assert(h.indexOf('data-dp-olcut="yuzde"') > h.indexOf('<h2>Tüm öğrenciler</h2>') && h.indexOf('data-dp-olcut="yuzde"') < h.indexOf('id="dpAra"'), 'Sırala sits in Tüm öğrenciler');
     assert.match(h, /<tr class="dp-ort"><td><b>12\. sınıflar ortalaması<\/b> <span class="mini">5 öğrenci<\/span><\/td>/);
     for (const c of ['12/A', '12/B', '12/C']) assert(h.includes('<b>' + c + ' ortalaması</b>'), c);
     run("EK.dpKapsam='12/A'"); h = run('DPANO.icerik()');
@@ -193,6 +198,23 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
         assert(x && !/NaN|undefined|Infinity/.test(x.svg), g + ' ' + olcu + ' ' + net);
       }
     }
+  });
+  await check('the exam table corrects dates with Sıralamalar’s field; Raporlar at the bottom follow the board’s pair', async () => {
+    await loadUc();
+    let h = run('DPANO.icerik()');
+    for (const ad of ['Sentetik Deneme 1', 'Sentetik Tarama 1', 'Sentetik Deneme 2']) assert(h.includes('data-sr-tarih="' + idOf(ad) + '"'), ad);
+    assert(h.includes('id="srDurum"'));
+    const rap = h.slice(h.indexOf('<section class="et-panel" id="dpRaporlar"'));
+    assert(rap.startsWith('<section class="et-panel" id="dpRaporlar" data-sr-simdi="' + idOf('Sentetik Deneme 2') + '" data-sr-onceki="' + idOf('Sentetik Tarama 1') + '">'), 'the last two exams');
+    assert.equal((rap.match(/data-sr-indir="/g) || []).length, 4); assert(rap.includes('id="srHepsi"') && rap.includes('id="srSayfalar"'));
+    assert(rap.includes('data-sr-sinif="301 12/A"'), 'AYT Sınıf keeps its per-class sort');
+    assert(h.lastIndexOf('id="dpRaporlar"') > h.lastIndexOf('id="dpSinavlar"'), 'reports come last');
+    run(`EK.dpAralik='sec';EK.dpOnceki=${JSON.stringify(idOf('Sentetik Deneme 1'))}`); h = run('DPANO.icerik()');
+    assert(h.includes('data-sr-onceki="' + idOf('Sentetik Deneme 1') + '"'), 'Seç moves the reports too');
+    assert.match(h, /<span class="mini">Sentetik Deneme 1 → Sentetik Deneme 2<\/span><\/div><div class="dp-raporlar">/);
+    run('yalnizcaGoruntuleme=()=>true'); h = run('DPANO.icerik()');
+    assert(!h.includes('data-sr-tarih=') && h.includes('data-sr-indir='), 'a viewing teacher reads dates and still downloads reports');
+    run('yalnizcaGoruntuleme=__yg');
   });
   console.log(passed + ' Deneme panosu checks passed');
 })();
