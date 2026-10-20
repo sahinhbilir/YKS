@@ -29,6 +29,8 @@ jobs:
         run: node scripts/embed-siralamalar.cjs --check && node test/siralama-regression.cjs
       - name: Etütler report import, storage and embedding
         run: node scripts/embed-etutler.cjs --check && node test/etut-regression.cjs
+      - name: Etüt planı sheets, storage, print and embedding
+        run: node scripts/embed-etutplani.cjs --check && node test/etutplani-regression.cjs
       - name: Deneme panosu figures, scopes, charts and embedding
         run: node scripts/embed-denemepano.cjs --check && node test/denemepano-regression.cjs
       - name: Role regression
@@ -114,6 +116,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/siralama-browser.cjs
       - name: Etütler charts on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/etut-browser.cjs
+      - name: Etüt planı on desktop and phone, filling, printing
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/etutplani-browser.cjs
       - name: Deneme panosu on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/denemepano-browser.cjs
       - name: Test account button, nickname setup, first cloud save and reset

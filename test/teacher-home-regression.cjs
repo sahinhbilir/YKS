@@ -40,7 +40,7 @@ check('teacher menu is on top, grouped like the student menu', () => {
   // Groups: Haftalık plan ▾ · Öğrenciler ▾ · Denemeler ▾; Müfredat and Ayarlar on the right.
   assert.deepEqual([...h.matchAll(/<div class="menu-grup[^"]*"><button data-sekme="([^"]+)"/g)].map(m => m[1]), ['plan', 'ogrenciler', 'denemeler']);
   assert.deepEqual(liste(h, 'planMenusu'), ['giris', 'harita']);
-  assert.deepEqual(liste(h, 'ogrencilerMenusu'), ['takip', 'etutler']);
+  assert.deepEqual(liste(h, 'ogrencilerMenusu'), ['takip', 'etutler', 'etutplani']);
   assert.deepEqual(liste(h, 'denemelerMenusu'), ['siralamalar']);
   assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['mufredat', 'ayarlar'], 'Müfredat and Ayarlar on the right');
   // Konular and the class curricula open from Müfredat; past-plan recovery from a red week on the map.
