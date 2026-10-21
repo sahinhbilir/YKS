@@ -96,13 +96,14 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    // A click on a line opens that student's card; ↓ and Enter do the same from the keyboard.
    const bora=await sira('1002');n=await seriNoktasi('ogrenci',bora);await page.mouse.click(n.x,n.y);
    await page.waitForFunction(()=>/Sentetik Bora/.test(document.querySelector('#dpKisi h3').textContent));
+   // Opening a card redraws the page; its charts are drawn a frame later, so the svg can be missing for a moment.
    await page.locator('[data-dp-grafik="ogrenci"]').focus();await page.keyboard.press('ArrowDown');
-   await page.waitForFunction(()=>document.querySelector('[data-dp-grafik="ogrenci"] svg').classList.contains('odakli'));
+   await page.waitForFunction(()=>document.querySelector('[data-dp-grafik="ogrenci"] svg')?.classList.contains('odakli'));
    const ust=await page.evaluate(()=>{const {t}=DPANO.veriAl(),st=DPANO.durumAl(t),i=st.mo.sinavlar.length-1;return st.mo.ogrenciler.filter(o=>o.seri[i]!==null).sort((a,b)=>b.seri[i]-a.seri[i])[0].ad});
    await page.keyboard.press('Enter');await page.waitForFunction(ad=>document.querySelector('#dpKisi h3').textContent.toLocaleLowerCase('tr-TR')===ad.toLocaleLowerCase('tr-TR'),ust);
    // The same on Derslere göre başarı.
    const ders=page.locator('[data-dp-grafik="ders"]');await ders.scrollIntoViewIfNeeded();n=await seriNoktasi('ders',0);await page.mouse.move(n.x,n.y);
-   await page.waitForFunction(()=>document.querySelector('[data-dp-grafik="ders"] svg').classList.contains('odakli'));
+   await page.waitForFunction(()=>document.querySelector('[data-dp-grafik="ders"] svg')?.classList.contains('odakli'));
    assert.equal(await ders.locator('.et-ipucu .dp-vurgu').count(),1,'its subject is marked in the readout');
    await page.mouse.move(1,1);
    // Genel / tarama, Seç and the Sıralamalar measures.
