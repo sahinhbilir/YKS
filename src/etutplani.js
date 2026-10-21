@@ -152,6 +152,9 @@ function programCoz(sayfalar){
 const DERS_AILE=[[/^(TEMEL |İLERİ |SEÇMELİ )?MATEMATİK/u,'Matematik'],[/GEOMETRİ/u,'Geometri'],[/EDEBİYAT/u,'Edebiyat'],[/^TÜRKÇE/u,'Türkçe'],[/FİZİK/u,'Fizik'],[/KİMYA/u,'Kimya'],
   [/BİYOLOJİ/u,'Biyoloji'],[/(TARİH|İNKILAP)/u,'Tarih'],[/COĞRAFYA/u,'Coğrafya'],[/^(FELSEFE|MANTIK|PSİKOLOJİ|SOSYOLOJİ)/u,'Felsefe'],[/^DİN/u,'Din Kültürü'],[/^(İNGİLİZCE|YABANCI DİL)/u,'İngilizce']];
 const dersAilesi=d=>{const b=anahtar(d);for(const [re,ad] of DERS_AILE)if(re.test(b))return ad;return null};
+// Lessons whose hours are the teacher's own lesson's: a chemistry teacher's Fen Bilimleri Uygulamaları is Kimya.
+const ARA_DERS=/ADAB|MUA[ŞS]ERET|REHBERL[İI]K|FEN B[İI]L[İI]M\S* UYGULAMA|UYGULAMALI DENEY/u;
+const araDers=d=>ARA_DERS.test(anahtar(d));
 // The timetable's teacher for a name on the etüt sheet: the same name, or the same surname with the
 // first names or their initials matching ("A. YILMAZ" is "AHMET YILMAZ"); never a guess
 // between two.
@@ -173,14 +176,27 @@ function hocaEsle(ad,adlar){
 function programDagit(p,gunler,siniflar){
   const programli=siniflar.filter(c=>p.programlar&&p.programlar[c]),adlar=new Set();
   for(const c of programli)for(const x of p.programlar[c].dersler)if(x[3])adlar.add(anahtar(x[3]));
-  const yerler=new Map(),eslesme=new Map(),aileler=new Set();
+  const eslesme=new Map(),hoca=ad=>{const k=anahtar(ad);if(!eslesme.has(k))eslesme.set(k,hocaEsle(ad,adlar));return eslesme.get(k)};
+  const yerler=new Map(),aileler=new Set();
   for(const {g,w} of gunler)for(const grup of gruplar(p.gunler[w]))for(const i of grup.satir){const s=p.gunler[w][i];if(!s[1])continue;
     const a=dersAilesi(s[0]);if(a)aileler.add(a);
-    const k=anahtar(s[1]);if(!eslesme.has(k))eslesme.set(k,hocaEsle(s[1],adlar));const t=eslesme.get(k);if(!t)continue;
+    const t=hoca(s[1]);if(!t)continue;
     if(!yerler.has(t))yerler.set(t,[]);yerler.get(t).push({y:g+':'+i,aile:a})}
+  // A teacher's own lesson: their branş on the sheet, else the lesson they teach most hours in the timetables.
+  const ana=new Map(),saat=new Map();
+  for(const gun of p.gunler)for(const s of gun){const t=s[0]&&s[1]&&hoca(s[1]);if(t&&!ana.has(t))ana.set(t,s[0])}
+  for(const c of Object.keys(p.programlar).sort(sinifSirala))for(const [,,ders,h] of p.programlar[c].dersler)if(h&&!araDers(ders)){
+    const t=anahtar(h);if(!saat.has(t))saat.set(t,new Map());const m=saat.get(t);m.set(ders,(m.get(ders)||0)+1)}
+  for(const [t,m] of saat)if(!ana.has(t)){let en=null;for(const [d,n] of m)if(!en||n>en[1])en=[d,n];ana.set(t,en[0])}
   const ciftler_=[];
-  programli.forEach((c,ci)=>{const m=new Map();for(const [,,ders,hoca] of p.programlar[c].dersler){if(!hoca)continue;const t=anahtar(hoca),k=t+'|'+anahtar(ders);
-    if(!m.has(k))m.set(k,{c,ci,t,ders,aile:dersAilesi(ders),h:0,n:0});m.get(k).h++}
+  programli.forEach((c,ci)=>{const m=new Map(),l=p.programlar[c].dersler.filter(x=>x[3]);
+    const ekle=(t,ders)=>{const k=t+'|'+anahtar(ders);if(!m.has(k))m.set(k,{c,ci,t,ders,aile:dersAilesi(ders),h:0,n:0});m.get(k).h++};
+    for(const [,,ders,h] of l)if(!araDers(ders)||!ana.has(anahtar(h)))ekle(anahtar(h),ders);
+    // Rehberlik, Adab-ı Muaşeret, Fen Bilimleri Uygulamaları, Uygulamalı Deney: hours of the teacher's own lesson,
+    // under its name in this timetable when the teacher teaches it to the class.
+    for(const [,,ders,h] of l){const t=anahtar(h);if(!araDers(ders)||!ana.has(t))continue;const a=ana.get(t),af=dersAilesi(a);
+      const ayni=[...m.values()].filter(x=>x.t===t&&(anahtar(x.ders)===anahtar(a)||af&&x.aile===af)).sort((x,y)=>y.h-x.h)[0];
+      ekle(t,ayni?ayni.ders:buyuk(a))}
     ciftler_.push(...m.values())});
   const etkin=ciftler_.filter(x=>yerler.has(x.t)),kalan=new Map([...yerler].map(([t,l])=>[t,l.length]));
   // Subjects: the pairs of a class's subject together, with all their weekly hours.
@@ -521,7 +537,7 @@ document.addEventListener('change',async ev=>{
   }catch(e){durum(e.message);yenidenCiz()}
 });
 return {dogrula,oku,degistir,gruplar,ciftler,eksikler,bransBul,ekle,listeCoz,listeUygula,bosSatirlariAt,gunSec,baskiHtml,yazdir,icerik,gorunum,dagit,varsayilanDonem,sinifOnerisi,sinifYaz,sayfala,
-  programCoz,programEkle,hocaEsle,dersAilesi,
+  programCoz,programEkle,hocaEsle,dersAilesi,araDers,
   GUNLER,OGRENCI,EN_COK_SATIR,BRANS_SIRA,RESMI_YOK};
 })();
 function gorunumEtutPlani(){return ETUTPLANI.gorunum()}

@@ -181,6 +181,26 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     for (const bad of ['{"11-A":{"kod":"","ts":1,"saatler":["09.00"],"dersler":[]}}', '{"11/A":{"kod":"","ts":1,"saatler":["09.00"],"dersler":[[7,"09.00","X",""]]}}', '{"11/A":{"kod":"","ts":1,"saatler":["09.00"],"dersler":[[0,"10.00","X",""]]}}'])
       assert.throws(() => run('ETUTPLANI.dogrula({...D.etutPlani,programlar:' + bad + '})'), /ders programı/);
   });
+  await check('Rehberlik, Adab-ı Muaşeret, Fen Bilimleri Uygulamaları and Uygulamalı Deney count as the teacher\'s own lesson', async () => {
+    for (const d of ['ADAB-I MUAŞERET', 'Adabı Muaşeret', 'REHBERLİK VE YÖNLENDİRME', 'FEN BİLİMLERİ UYGULAMALARI', 'Fen Bilimi Uygulamaları', 'UYGULAMALI DENEY']) assert(get('ETUTPLANI.araDers(' + JSON.stringify(d) + ')'), d);
+    for (const d of ['FİZİK', 'BEDEN EĞİTİMİ', 'TÜRK DİLİ VE EDEBİYATI', 'MATEMATİK TYT']) assert(!get('ETUTPLANI.araDers(' + JSON.stringify(d) + ')'), d);
+    const MAT = 'Sentetik Matçı', KIM = 'Sentetik Kimyacı', FIZ = 'Sentetik Fizikçi', TAR = 'Sentetik Tarihçi';
+    const pr = (kod, sinif, dersler) => { const h = []; let i = 0; for (const [d, hoca, n] of dersler) for (let k = 0; k < n; k++, i++) h.push([i % 5, Math.floor(i / 5), d, hoca]); return dersProgrami({kod, sinif, hucreler: h}); };
+    // 10/A: the chemistry teacher's Fen Bilimleri Uygulamaları, the physics teacher's Rehberlik (no Fizik in 10/A), the
+    // mathematician's Uygulamalı Deney and Adab-ı Muaşeret from a history teacher who has no etüts (Tarih in 10/B).
+    put('P', [pr('201', '10/A', [['MATEMATİK', MAT, 4], ['KİMYA', KIM, 2], ['FEN BİLİMLERİ UYGULAMALARI', KIM, 2], ['REHBERLİK VE YÖNLENDİRME', FIZ, 1], ['UYGULAMALI DENEY', MAT, 1], ['ADAB-I MUAŞERET', TAR, 1]]),
+      pr('202', '10/B', [['TARİH', TAR, 3], ['MATEMATİK', MAT, 2]])]);
+    await yaz([0, 1, 2, 3, 4].map(() => [satir('Matematik', MAT), satir('Kimya', KIM), satir('Fizik', FIZ), satir('Tarih', 'Sentetik Tarih İki')]));
+    await run("ETUTPLANI.degistir(p=>{p.programlar={};for(const s of P){const r=ETUTPLANI.programCoz(s);p.programlar[r.sinif]={kod:r.kod,ts:1,saatler:r.saatler,dersler:r.dersler}};p.donem={bas:'2026-10-26',bit:'2026-11-06',siniflar:['10/A','10/B'],yok:[]}})");
+    const d = get('(()=>{const d=ETUTPLANI.dagit(D.etutPlani);return {sinif:[...d.sinif],tablo:d.tablo}})()');
+    const l = d.tablo.find(t => t.sinif === '10/A').dersler, saat = Object.fromEntries(l.map(x => [x.ders, x.saat]));
+    assert.deepEqual(saat, {'MATEMATİK': 5, 'KİMYA': 4, 'FİZİK': 1, 'TARİH': 1}, 'hours of the teachers\' own lessons; the history teacher\'s from their timetable');
+    assert.deepEqual(l.map(x => [x.ders, x.hoca]).filter(x => !x[1]), [['TARİH', false]], 'the history teacher gives no etüts');
+    assert.equal(l.find(x => x.ders === 'FİZİK').etut, 1, 'one hour: one etüt');
+    for (const a of l) for (const b of l) if (a.hoca && b.hoca && a.saat < b.saat) assert(a.etut / a.saat <= b.etut / b.saat + 1e-9 || a.etut === 1, a.ders + ' over ' + b.ders);
+    const yazilan = d.sinif.map(([, v]) => v);
+    assert(yazilan.includes('10/A') && yazilan.every(v => /^10\/[AB]$/.test(v)), 'no lesson beside the class: ' + [...new Set(yazilan)]);
+  });
   await check('a student written twice on one day is marked on both cells', async () => {
     await yaz([[satir('Matematik', 'Sentetik Mat Bir', ['Sentetik Ada', 'Sentetik Bora']), satir('Fizik', 'Sentetik Fizikçi', ['sentetik  ada'])], [satir('Fizik', 'Sentetik Fizikçi', ['Sentetik Ada'])], [], [], []]);
     run('EK.epGun=0'); const h = run('ETUTPLANI.icerik()');
