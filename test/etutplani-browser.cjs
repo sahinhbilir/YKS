@@ -116,8 +116,10 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    const dagitim=page.locator('#epDagitim');if(!await dagitim.evaluate(e=>e.open))await dagitim.locator('summary').click();
    await page.locator('#epDonemBas').fill('2026-10-22');await page.locator('#epDonemBit').fill('2026-11-06');
    await page.locator('#epSiniflar').fill('9/A, 9-b, 10/A, 12/A');await page.locator('#epYok').fill('28.10.2026, 29.10.2026');
+   assert.equal(await page.locator('#epDersler').inputValue(),'Matematik, Fizik, Kimya, Biyoloji, Türkçe','the lessons by default');
    await page.locator('#epDagit').click();await page.waitForFunction(()=>D.etutPlani.donem);
-   assert.deepEqual(await page.evaluate(()=>D.etutPlani.donem),{bas:'2026-10-22',bit:'2026-11-06',siniflar:['9/A','9/B','10/A'],yok:['2026-10-28','2026-10-29']});
+   assert.deepEqual(await page.evaluate(()=>D.etutPlani.donem),{bas:'2026-10-22',bit:'2026-11-06',siniflar:['9/A','9/B','10/A'],yok:['2026-10-28','2026-10-29'],
+     dersler:['Matematik','Fizik','Kimya','Biyoloji','Türkçe']});
    assert.match(await page.locator('#epDurum').innerText(),/Dağıtıldı: 22 Eki – 6 Kas · 10 gün · 3 sınıf \(12\. sınıflar alınmadı\)/);
    assert.equal(await page.locator('#epTarih').inputValue(),String(await page.evaluate(()=>gunNo('2026-10-22'))),'the next date opens');
    assert.match(await kagit.first().innerText(),/PERŞEMBE 22 EKİM — ETÜT PLANI[\s\S]*FİZİK\s+SENTETİK ÖĞRETMEN ÜÇ\s+9\/B/);
@@ -156,12 +158,20 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.locator('#epDonemBas').fill('2026-10-26');await page.locator('#epDonemBit').fill('2026-11-06');await page.locator('#epYok').fill('');
    await page.locator('#epDagit').click();await page.waitForFunction(()=>D.etutPlani.donem);
    assert.match(await page.locator('#epDagitim summary').innerText(),/ders programına göre/);
+   // Only the chosen lessons: by default Geometri has no etüts.
+   await page.locator('#epTarih').selectOption('hepsi');await page.waitForFunction(()=>document.querySelectorAll('.ep-kagit').length===10);
+   assert.deepEqual([...new Set(await page.locator('.ep-kagit td.ep-sinif').allInnerTexts())].filter(Boolean),['11/A']);
+   if(!await dagitim.evaluate(e=>e.open))await dagitim.locator('summary').click();
+   await page.locator('#epDersler').fill('Matematik; Geometri, matematik');await page.locator('#epDagit').click();
+   await page.waitForFunction(()=>D.etutPlani.donem.dersler.length===2);
+   assert.deepEqual(await page.evaluate(()=>D.etutPlani.donem.dersler),['Matematik','Geometri'],'one of each');
    await page.locator('#epTarih').selectOption('hepsi');await page.waitForFunction(()=>document.querySelectorAll('.ep-kagit').length===10);
    const siniflar=await page.locator('.ep-kagit td.ep-sinif').allInnerTexts();
    assert(siniflar.includes('11/A (GEOMETRİ)'),'Geometri beside the class: '+siniflar.join(','));
    assert(siniflar.filter(Boolean).every(c=>/^11\/A( \(GEOMETRİ\))?$/.test(c)),'only 11/A, with its own teachers');
-   // Geometri (3 hours) gets one etüt while Matematik (6 hours) has four: never more per hour.
-   assert.equal(siniflar.filter(c=>c==='11/A (GEOMETRİ)').length,1);assert.equal(siniflar.filter(c=>c==='11/A').length>=4,true);
+   // Geometri (3 hours) never has more etüts per hour than Matematik (6 hours).
+   const geo=siniflar.filter(c=>c==='11/A (GEOMETRİ)').length,mat=siniflar.filter(c=>c==='11/A').length;
+   assert(geo>=1&&geo/3<=mat/6,'Geometri '+geo+', Matematik '+mat);
    await page.screenshot({path:path.join(out,'etutplani-program-'+width+'-'+tema+'.png'),fullPage:true});
    assert.equal(await page.locator('#epTemizle').isDisabled(),true);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal scroll at '+width);
