@@ -148,7 +148,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     await yaz([0, 1, 2, 3, 4].map(() => [satir('Matematik', MAT.toLocaleUpperCase('tr-TR')), satir('Matematik', 'S. TYTCİ'), satir('Edebiyat', EDB), satir('Fizik', FIZ), satir('İngilizce', ING), satir('Matematik', ON2)]));
     await run("ETUTPLANI.degistir(p=>{p.programlar={};for(const s of P){const r=ETUTPLANI.programCoz(s);p.programlar[r.sinif]={kod:r.kod,ts:1,saatler:r.saatler,dersler:r.dersler}}})");
     assert.deepEqual(get('ETUTPLANI.sinifOnerisi()'), ['11/A', '11/B'], 'the classes with a timetable, 12th grade left out');
-    await run("ETUTPLANI.degistir(p=>{p.donem={bas:'2026-10-26',bit:'2026-11-06',siniflar:['11/A','11/B','10/C'],yok:[]}})");
+    await run("ETUTPLANI.degistir(p=>{p.donem={bas:'2026-10-26',bit:'2026-11-06',siniflar:['11/A','11/B','10/C'],yok:[],dersler:[]}})");
     const d = get('(()=>{const d=ETUTPLANI.dagit(D.etutPlani);return {mod:d.mod,gunler:d.gunler.length,sinif:[...d.sinif],tablo:d.tablo,programsiz:d.programsiz,eksik:d.eksik}})()');
     assert.equal(d.mod, 'program'); assert.equal(d.gunler, 10); assert.deepEqual(d.programsiz, ['10/C']);
     const ders = c => Object.fromEntries(d.tablo.find(t => t.sinif === c).dersler.map(x => [x.ders, x.etut]));
@@ -191,7 +191,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     put('P', [pr('201', '10/A', [['MATEMATİK', MAT, 4], ['KİMYA', KIM, 2], ['FEN BİLİMLERİ UYGULAMALARI', KIM, 2], ['REHBERLİK VE YÖNLENDİRME', FIZ, 1], ['UYGULAMALI DENEY', MAT, 1], ['ADAB-I MUAŞERET', TAR, 1]]),
       pr('202', '10/B', [['TARİH', TAR, 3], ['MATEMATİK', MAT, 2]])]);
     await yaz([0, 1, 2, 3, 4].map(() => [satir('Matematik', MAT), satir('Kimya', KIM), satir('Fizik', FIZ), satir('Tarih', 'Sentetik Tarih İki')]));
-    await run("ETUTPLANI.degistir(p=>{p.programlar={};for(const s of P){const r=ETUTPLANI.programCoz(s);p.programlar[r.sinif]={kod:r.kod,ts:1,saatler:r.saatler,dersler:r.dersler}};p.donem={bas:'2026-10-26',bit:'2026-11-06',siniflar:['10/A','10/B'],yok:[]}})");
+    await run("ETUTPLANI.degistir(p=>{p.programlar={};for(const s of P){const r=ETUTPLANI.programCoz(s);p.programlar[r.sinif]={kod:r.kod,ts:1,saatler:r.saatler,dersler:r.dersler}};p.donem={bas:'2026-10-26',bit:'2026-11-06',siniflar:['10/A','10/B'],yok:[],dersler:[]}})");
     const d = get('(()=>{const d=ETUTPLANI.dagit(D.etutPlani);return {sinif:[...d.sinif],tablo:d.tablo}})()');
     const l = d.tablo.find(t => t.sinif === '10/A').dersler, saat = Object.fromEntries(l.map(x => [x.ders, x.saat]));
     assert.deepEqual(saat, {'MATEMATİK': 5, 'KİMYA': 4, 'FİZİK': 1, 'TARİH': 1}, 'hours of the teachers\' own lessons; the history teacher\'s from their timetable');
@@ -200,6 +200,38 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     for (const a of l) for (const b of l) if (a.hoca && b.hoca && a.saat < b.saat) assert(a.etut / a.saat <= b.etut / b.saat + 1e-9 || a.etut === 1, a.ders + ' over ' + b.ders);
     const yazilan = d.sinif.map(([, v]) => v);
     assert(yazilan.includes('10/A') && yazilan.every(v => /^10\/[AB]$/.test(v)), 'no lesson beside the class: ' + [...new Set(yazilan)]);
+  });
+  await check('Sınıf dağıtımı only in the chosen lessons: Matematik, Fizik, Kimya, Biyoloji and Türkçe by default', async () => {
+    const MAT = 'Sentetik Matçı', GEO = 'Sentetik Geometrici', EDB = 'Sentetik Edebiyatçı', FIZ = 'Sentetik Fizikçi', COG = 'Sentetik Coğrafyacı';
+    const pr = (kod, sinif, dersler) => { const h = []; let i = 0; for (const [d, hoca, n] of dersler) for (let k = 0; k < n; k++, i++) h.push([i % 5, Math.floor(i / 5), d, hoca]); return dersProgrami({kod, sinif, hucreler: h}); };
+    // 11/A has Türkçe and Türk Dili ve Edebiyatı; 10/A has only Türk Dili ve Edebiyatı, its Türkçe.
+    put('P', [pr('302', '11/A', [['MATEMATİK', MAT, 6], ['GEOMETRİ', GEO, 3], ['TÜRKÇE', EDB, 4], ['TÜRK DİLİ VE EDEBİYATI', EDB, 5], ['FİZİK', FIZ, 4], ['COĞRAFYA', COG, 2]]),
+      pr('201', '10/A', [['MATEMATİK', MAT, 5], ['TÜRK DİLİ VE EDEBİYATI', EDB, 5], ['COĞRAFYA', COG, 2]])]);
+    await yaz([0, 1, 2, 3, 4].map(() => [satir('Matematik', MAT), satir('Matematik', GEO), satir('Edebiyat', EDB), satir('Fizik', FIZ), satir('Coğrafya', COG)]));
+    await run("ETUTPLANI.degistir(p=>{p.programlar={};for(const s of P){const r=ETUTPLANI.programCoz(s);p.programlar[r.sinif]={kod:r.kod,ts:1,saatler:r.saatler,dersler:r.dersler}};p.donem={bas:'2026-11-02',bit:'2026-11-06',siniflar:['10/A','11/A'],yok:[]}})");
+    const dagilim = () => get('(()=>{const d=ETUTPLANI.dagit(D.etutPlani);return {gunler:d.gunler.length,sinif:[...d.sinif],tablo:d.tablo,eksik:d.eksik}})()');
+    let d = dagilim();
+    assert.equal(d.gunler, 5, 'the first week of November');
+    const dersler = c => d.tablo.find(t => t.sinif === c).dersler.map(x => x.ders).sort();
+    assert.deepEqual(dersler('11/A'), ['FİZİK', 'MATEMATİK', 'TÜRKÇE'], 'no Geometri, Coğrafya or Türk Dili ve Edebiyatı where there is Türkçe');
+    assert.deepEqual(dersler('10/A'), ['MATEMATİK', 'TÜRK DİLİ VE EDEBİYATI'], 'Türk Dili ve Edebiyatı is the Türkçe of a class without Türkçe');
+    assert.equal(d.eksik, 0);
+    const satirSiniflari = i => d.sinif.filter(([k]) => k.endsWith(':' + i)).map(([, v]) => v);
+    assert.equal(satirSiniflari(1).length + satirSiniflari(4).length, 0, 'the Geometri and Coğrafya teachers\' rows stay empty');
+    assert(satirSiniflari(2).includes('11/A (TÜRKÇE)') && satirSiniflari(2).includes('10/A'), 'Edebiyat row: ' + satirSiniflari(2));
+    assert.match(run('ETUTPLANI.icerik()'), /<input type="text" id="epDersler" value="Matematik, Fizik, Kimya, Biyoloji, Türkçe" placeholder="Tüm dersler"/);
+    // Chosen by family or name; an empty list is every lesson.
+    await run("ETUTPLANI.degistir(p=>{p.donem.dersler=['geometri','Coğrafya']})"); d = dagilim();
+    assert.deepEqual(dersler('11/A'), ['COĞRAFYA', 'GEOMETRİ']);
+    await run("ETUTPLANI.degistir(p=>{p.donem.dersler=[]})"); d = dagilim();
+    assert.deepEqual(dersler('11/A'), ['COĞRAFYA', 'FİZİK', 'GEOMETRİ', 'MATEMATİK', 'TÜRK DİLİ VE EDEBİYATI', 'TÜRKÇE']);
+    assert.match(run('ETUTPLANI.icerik()'), /id="epDersler" value=""/);
+    // Without timetables the sheet's branşes are chosen the same way: Edebiyat stands for Türkçe when no branş is Türkçe.
+    await run("ETUTPLANI.degistir(p=>{delete p.programlar;p.donem.dersler=['Matematik','Türkçe']})");
+    const sira = get('(()=>{const d=ETUTPLANI.dagit(D.etutPlani);return d.kapsam.map(x=>x.brans)})()');
+    assert.deepEqual(sira, ['Matematik', 'Edebiyat']);
+    for (const bad of ['"Matematik"', '[""]', '[' + Array(21).fill('"X"').join(',') + ']', '["' + 'x'.repeat(41) + '"]'])
+      assert.throws(() => run("ETUTPLANI.dogrula({...D.etutPlani,donem:{...D.etutPlani.donem,dersler:" + bad + "}})"), /sınıf dağıtımı/);
   });
   await check('a student written twice on one day is marked on both cells', async () => {
     await yaz([[satir('Matematik', 'Sentetik Mat Bir', ['Sentetik Ada', 'Sentetik Bora']), satir('Fizik', 'Sentetik Fizikçi', ['sentetik  ada'])], [satir('Fizik', 'Sentetik Fizikçi', ['Sentetik Ada'])], [], [], []]);

@@ -16578,7 +16578,9 @@ function gorunumDenemePanosu(){return DPANO.gorunum()}
 const ETUTPLANI = (() => {
 const SURUM=1, GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma'], KISA=['Pzt','Sal','Çar','Per','Cum'], OGRENCI=4, EN_COK_SATIR=40;
 const AYLAR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-const EN_COK_SINIF=60, EN_COK_DONEM=70, EN_COK_PROGRAM=40;
+const EN_COK_SINIF=60, EN_COK_DONEM=70, EN_COK_PROGRAM=40, EN_COK_DERS=20;
+// The lessons of a Sınıf dağıtımı that names none; an empty list is every lesson.
+const VARSAYILAN_DERSLER=['Matematik','Fizik','Kimya','Biyoloji','Türkçe'];
 const PROGRAM_GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 // Days without etüts that the school's holidays (Ayarlar) do not list: national holidays on school
 // days, and the afternoon off before Cumhuriyet Bayramı (etüts are after lessons).
@@ -16593,7 +16595,7 @@ const sayi=n=>Number(n).toLocaleString('tr-TR');
 
 /* ---------------- notebook storage ---------------- */
 // D.etutPlani = {surum, ts, gunler:[Pazartesi … Cuma: [[branş, öğretmen, [öğrenci 1 … 4]]]],
-//   donem?:{bas, bit, siniflar:['9/A', …], yok:[iso günler]},
+//   donem?:{bas, bit, siniflar:['9/A', …], yok:[iso günler], dersler?:['Matematik', …]},
 //   programlar?:{'11/A':{kod, ts, saatler:['09.00', …], dersler:[[gün 0–6, saat, ders, öğretmen]]}}}.
 // Rows keep the order they were written in; the sheet groups them by branş. donem is the Sınıf
 // dağıtımı (see dagit), programlar the classes' timetables (see programCoz).
@@ -16610,7 +16612,8 @@ function dogrula(v){
   }
   if(v.donem!==undefined){const d=v.donem,iso=x=>typeof x==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&isoTarihGecerli(x);
     if(!d||typeof d!=='object'||Array.isArray(d)||!iso(d.bas)||!iso(d.bit)||d.bas>d.bit||gunNo(d.bit)-gunNo(d.bas)>EN_COK_DONEM||
-      !Array.isArray(d.siniflar)||!d.siniflar.length||d.siniflar.length>EN_COK_SINIF||!d.siniflar.every(x=>metin(x,12)&&x)||!Array.isArray(d.yok)||d.yok.length>EN_COK_DONEM||!d.yok.every(iso))hata('sınıf dağıtımı')}
+      !Array.isArray(d.siniflar)||!d.siniflar.length||d.siniflar.length>EN_COK_SINIF||!d.siniflar.every(x=>metin(x,12)&&x)||!Array.isArray(d.yok)||d.yok.length>EN_COK_DONEM||!d.yok.every(iso)||
+      d.dersler!==undefined&&(!Array.isArray(d.dersler)||d.dersler.length>EN_COK_DERS||!d.dersler.every(x=>metin(x,40)&&x)))hata('sınıf dağıtımı')}
   if(v.programlar!==undefined){const P=v.programlar;if(!P||typeof P!=='object'||Array.isArray(P)||Object.keys(P).length>EN_COK_PROGRAM)hata('ders programları');
     for(const [c,x] of Object.entries(P))if(sinifYaz(c)!==c||!x||typeof x!=='object'||Array.isArray(x)||!metin(x.kod,8)||!Number.isSafeInteger(x.ts)||x.ts<0||
       !Array.isArray(x.saatler)||x.saatler.length>16||!x.saatler.every(t=>metin(t,5)&&t)||!Array.isArray(x.dersler)||x.dersler.length>120||
@@ -16673,10 +16676,10 @@ function dagit(p){
   const d=p&&p.donem;if(!d)return null;
   const tatil=typeof tatilGunleri==='function'?tatilGunleri():new Set(),yok=new Set(d.yok.map(gunNo)),gunler=[];
   for(let g=gunNo(d.bas);g<=gunNo(d.bit);g++){const w=haftaGunu(g);if(w<GUNLER.length&&!tatil.has(g)&&!yok.has(g))gunler.push({g,w})}
-  if(d.siniflar.some(c=>p.programlar&&p.programlar[c]))return programDagit(p,gunler,d.siniflar);
-  const dersler=new Map();
+  if(d.siniflar.some(c=>p.programlar&&p.programlar[c]))return programDagit(p,gunler,d.siniflar,donemDersleri(d));
+  const secili=dersSecici(donemDersleri(d),gunler.some(({w})=>p.gunler[w].some(s=>s[1]&&dersAilesi(s[0])==='Türkçe'))),dersler=new Map();
   for(const {g,w} of gunler)for(const grup of gruplar(p.gunler[w]))for(const i of grup.satir){
-    if(!grup.k||!p.gunler[w][i][1])continue;if(!dersler.has(grup.k))dersler.set(grup.k,{brans:grup.brans,k:grup.k,yer:[]});dersler.get(grup.k).yer.push(g+':'+i)}
+    if(!grup.k||!p.gunler[w][i][1]||!secili(grup.brans))continue;if(!dersler.has(grup.k))dersler.set(grup.k,{brans:grup.brans,k:grup.k,yer:[]});dersler.get(grup.k).yer.push(g+':'+i)}
   const siniflar=d.siniflar,n=siniflar.length,sinif=new Map(),kapsam=[];
   [...dersler.values()].sort((a,b)=>bransSirasi(a.k)-bransSirasi(b.k)||a.brans.localeCompare(b.brans,'tr')).forEach((o,j)=>{
     const alan=new Set();o.yer.forEach((y,t)=>{const c=siniflar[(j+t)%n];sinif.set(y,c);alan.add(c)});
@@ -16722,6 +16725,15 @@ const dersAilesi=d=>{const b=anahtar(d);for(const [re,ad] of DERS_AILE)if(re.tes
 // Lessons whose hours are the teacher's own lesson's: a chemistry teacher's Fen Bilimleri Uygulamaları is Kimya.
 const ARA_DERS=/ADAB|MUA[ŞS]ERET|REHBERL[İI]K|FEN B[İI]L[İI]M\S* UYGULAMA|UYGULAMALI DENEY/u;
 const araDers=d=>ARA_DERS.test(anahtar(d));
+const donemDersleri=d=>d&&Array.isArray(d.dersler)?d.dersler:VARSAYILAN_DERSLER;
+// Whether a lesson (or branş) is one of the chosen ones: by family (Matematik takes Matematik TYT …), else
+// by name. Türkçe takes Türk Dili ve Edebiyatı where there is no Türkçe lesson (turkce: whether there is).
+function dersSecici(dersler,turkce){
+  if(!dersler.length)return ()=>true;
+  const aile=new Set(),ad=new Set();for(const e of dersler){const f=dersAilesi(e);if(f)aile.add(f);else ad.add(anahtar(e))}
+  if(aile.has('Türkçe')&&!turkce)aile.add('Edebiyat');
+  return x=>{const f=dersAilesi(x);return f?aile.has(f):ad.has(anahtar(x))};
+}
 // The timetable's teacher for a name on the etüt sheet: the same name, or the same surname with the
 // first names or their initials matching ("A. YILMAZ" is "AHMET YILMAZ"); never a guess
 // between two.
@@ -16733,14 +16745,14 @@ function hocaEsle(ad,adlar){
   return uyan.length===1?uyan[0]:null;
 }
 // Sınıf dağıtımı with timetables. Every class's etüts go to its own teachers: a class, a lesson and its
-// teacher make a pair. A class's subject (Matematik with Matematik TYT and AYT, …) weighs its weekly
+// teacher make a pair; only the chosen lessons' pairs take part. A class's subject (Matematik with Matematik TYT and AYT, …) weighs its weekly
 // hours. A teacher's etüts in the dates go to their pairs, the class's subject with the lowest
 // (etüts + 1) ÷ hours first: every pair has one before any has two, and subjects with more hours get
 // more. A subject never gets more etüts per weekly hour than one of the class's subjects with more
 // hours (nor more etüts than one with as many), unless it is the pair's first; etüts left over stay
 // empty, for students to write in. Each teacher's etüts are then spread over their dates. Öğrenci 1 shows the
 // lesson beside the class when it is not the sheet's branş: "11/A (GEOMETRİ)".
-function programDagit(p,gunler,siniflar){
+function programDagit(p,gunler,siniflar,dersler){
   const programli=siniflar.filter(c=>p.programlar&&p.programlar[c]),adlar=new Set();
   for(const c of programli)for(const x of p.programlar[c].dersler)if(x[3])adlar.add(anahtar(x[3]));
   const eslesme=new Map(),hoca=ad=>{const k=anahtar(ad);if(!eslesme.has(k))eslesme.set(k,hocaEsle(ad,adlar));return eslesme.get(k)};
@@ -16764,15 +16776,17 @@ function programDagit(p,gunler,siniflar){
     for(const [,,ders,h] of l){const t=anahtar(h);if(!araDers(ders)||!ana.has(t))continue;const a=ana.get(t),af=dersAilesi(a);
       const ayni=[...m.values()].filter(x=>x.t===t&&(anahtar(x.ders)===anahtar(a)||af&&x.aile===af)).sort((x,y)=>y.h-x.h)[0];
       ekle(t,ayni?ayni.ders:buyuk(a))}
+    // Only the chosen lessons have etüts.
+    const sec=dersSecici(dersler,[...m.values()].some(x=>x.aile==='Türkçe'));for(const x of m.values())x.sec=sec(x.ders);
     ciftler_.push(...m.values())});
-  const etkin=ciftler_.filter(x=>yerler.has(x.t)),kalan=new Map([...yerler].map(([t,l])=>[t,l.length]));
+  const etkin=ciftler_.filter(x=>x.sec&&yerler.has(x.t)),kalan=new Map([...yerler].map(([t,l])=>[t,l.length]));
   // Subjects: the pairs of a class's subject together, with all their weekly hours.
   const konu=new Map();for(const x of ciftler_){const k=x.c+'|'+(x.aile||anahtar(x.ders));if(!konu.has(k))konu.set(k,{c:x.c,h:0,n:0,etkin:false});x.k=konu.get(k);x.k.h+=x.h}
   for(const x of etkin)x.k.etkin=true;
   const konular=[...konu.values()].filter(k=>k.etkin);
   const once=(x,y)=>x.ci-y.ci||y.k.h-x.k.h||y.h-x.h||x.ders.localeCompare(y.ders,'tr');
   const izin=x=>x.n===0||konular.every(q=>q===x.k||q.c!==x.c||(q.h>x.k.h?(x.k.n+1)*q.h<=q.n*x.k.h:q.h===x.k.h?x.k.n<=q.n:true));
-  const az=(x,y)=>{const a=(x.k.n+1)*y.k.h-(y.k.n+1)*x.k.h;return a||(x.n+1)*y.h-(y.n+1)*x.h||once(x,y)};
+  const az=(x,y)=>{const a=(x.k.n+1)*y.k.h-(y.k.n+1)*x.k.h;return (x.n>0)-(y.n>0)||a||(x.n+1)*y.h-(y.n+1)*x.h||once(x,y)};
   for(;;){let en=null;
     for(const x of etkin){if(!kalan.get(x.t)||!izin(x))continue;if(!en||az(x,en)<0)en=x}
     if(!en)break;en.n++;en.k.n++;kalan.set(en.t,kalan.get(en.t)-1)}
@@ -16785,7 +16799,7 @@ function programDagit(p,gunler,siniflar){
     l.forEach((y,k)=>{const x=sira[k].x;if(x)sinif.set(y.y,x.c+(x.aile&&x.aile===y.aile?'':' ('+buyuk(x.aile||x.ders)+')'))});
   }
   // Per class: its lessons with etüt teachers, and the lessons of the sheet's branşes it gets none of.
-  const tablo=programli.map(c=>{const l=ciftler_.filter(x=>x.c===c&&(yerler.has(x.t)||x.aile&&aileler.has(x.aile))).sort((a,b)=>b.h-a.h||a.ders.localeCompare(b.ders,'tr'));
+  const tablo=programli.map(c=>{const l=ciftler_.filter(x=>x.c===c&&x.sec&&(yerler.has(x.t)||x.aile&&aileler.has(x.aile))).sort((a,b)=>b.h-a.h||a.ders.localeCompare(b.ders,'tr'));
     return {sinif:c,dersler:l.map(x=>({ders:x.ders,saat:x.h,etut:x.n,hoca:yerler.has(x.t)}))}});
   const programsiz=siniflar.filter(c=>!programli.includes(c)),eksik=tablo.reduce((t,x)=>t+x.dersler.filter(d=>!d.etut).length,0);
   return {gunler,sinif,siniflar:programli,programsiz,tablo,eksik,kapsam:[],mod:'program'};
@@ -16916,6 +16930,7 @@ function dagitimPaneli(p,dg){
   return '<details class="ep-yapistir ep-dagitim" id="epDagitim"'+(EK.epDagitimAcik||!dg?' open':'')+'><summary>Sınıf dağıtımı'+kacis(ozet)+'</summary>'+
     '<div class="ep-dagitim-alan"><label>Başlangıç<input type="date" id="epDonemBas" value="'+d.bas+'"></label><label>Bitiş<input type="date" id="epDonemBit" value="'+d.bit+'"></label>'+
     '<label class="ep-genis">Sınıflar (12. sınıflar hariç)<input type="text" id="epSiniflar" value="'+kacis(d.siniflar.join(', '))+'" placeholder="9/A, 9/B, 10/A" spellcheck="false"></label>'+
+    '<label class="ep-genis">Dersler<input type="text" id="epDersler" value="'+kacis(donemDersleri(d).join(', '))+'" placeholder="Tüm dersler" spellcheck="false"></label>'+
     '<label class="ep-genis">Etüt olmayan günler<input type="text" id="epYok" value="'+kacis(d.yok.map(tarihYaz).join(', '))+'" placeholder="29.10.2026" spellcheck="false"></label></div>'+
     '<div class="ep-duzen-arac"><button type="button" class="et-dugme birincil" id="epDagit">'+(dg?'Güncelle':'Dağıt')+'</button>'+(dg?'<button type="button" class="et-dugme" id="epDagitimKaldir">Kaldır</button>':'')+'</div>'+kapsam+'</details>';
 }
@@ -17037,7 +17052,9 @@ function donemOku(){
   const yok=[];
   for(const t of deger('epYok').split(/[,;\s]+/).filter(Boolean)){const m=/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(t),iso=m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):t;
     if(!isoTarihGecerli(iso))throw new Error('Okunamayan gün: '+t+'. Günleri “29.10.2026” gibi yazın.');if(!yok.includes(iso))yok.push(iso)}
-  return {donem:{bas,bit,siniflar:siniflar.sort(sinifSirala),yok:yok.filter(t=>t>=bas&&t<=bit).sort().slice(0,EN_COK_DONEM)},on2};
+  const dersler=[];for(const t of deger('epDersler').split(/[,;]+/)){const x=kisa(t,40);if(x&&!dersler.some(y=>anahtar(y)===anahtar(x)))dersler.push(x)}
+  if(dersler.length>EN_COK_DERS)throw new Error('En fazla '+EN_COK_DERS+' ders yazılır.');
+  return {donem:{bas,bit,siniflar:siniflar.sort(sinifSirala),yok:yok.filter(t=>t>=bas&&t<=bit).sort().slice(0,EN_COK_DONEM),dersler},on2};
 }
 document.addEventListener('click',async ev=>{
   if(!etkin())return;
@@ -17046,8 +17063,9 @@ document.addEventListener('click',async ev=>{
     if(el.id==='epYazdir'){yazdir();return}
     if(el.id==='epListeUygula'){const t=document.getElementById('epListe'),m=await listeUygula(t?t.value:LISTE);if(m){LISTE='';durum(m)}yenidenCiz();return}
     if(el.id==='epDagit'){const {donem,on2}=donemOku();await degistir(p=>{p.donem=donem});EK.epTarih=undefined;EK.epMod='ogrenci';
-      const dg=dagit(oku().plan),eksik=dg.kapsam.filter(x=>x.eksik.length).length;
-      durum('Dağıtıldı: '+aralikAdi(donem)+' · '+sayi(dg.gunler.length)+' gün · '+sayi(donem.siniflar.length)+' sınıf'+(on2?' (12. sınıflar alınmadı)':'')+'. '+(eksik?sayi(eksik)+' derste her sınıfa yer yok.':'Her sınıf her dersten en az bir etüt alıyor.'));
+      const dg=dagit(oku().plan),prog=dg.mod==='program',eksik=prog?dg.eksik:dg.kapsam.filter(x=>x.eksik.length).length;
+      durum('Dağıtıldı: '+aralikAdi(donem)+' · '+sayi(dg.gunler.length)+' gün · '+sayi(donem.siniflar.length)+' sınıf'+(on2?' (12. sınıflar alınmadı)':'')+'. '+
+        (eksik?sayi(eksik)+(prog?' derste etüt yok.':' derste her sınıfa yer yok.'):'Her sınıf '+(prog?'seçilen ':'')+'her dersten en az bir etüt alıyor.'));
       yenidenCiz('#epDagit');return}
     if(el.dataset.epProgram!==undefined){const c=el.dataset.epProgram;EK.epProgram=EK.epProgram===c?null:c;yenidenCiz('[data-ep-program="'+c+'"]');return}
     if(el.dataset.epProgramSil!==undefined){const c=el.dataset.epProgramSil;if(!confirm(c+' ders programı silinsin mi?'))return;
