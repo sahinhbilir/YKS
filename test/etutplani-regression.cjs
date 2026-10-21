@@ -206,7 +206,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const pr = (kod, sinif, dersler) => { const h = []; let i = 0; for (const [d, hoca, n] of dersler) for (let k = 0; k < n; k++, i++) h.push([i % 5, Math.floor(i / 5), d, hoca]); return dersProgrami({kod, sinif, hucreler: h}); };
     // 11/A has Türkçe and Türk Dili ve Edebiyatı; 10/A has only Türk Dili ve Edebiyatı, its Türkçe.
     put('P', [pr('302', '11/A', [['MATEMATİK', MAT, 6], ['GEOMETRİ', GEO, 3], ['TÜRKÇE', EDB, 4], ['TÜRK DİLİ VE EDEBİYATI', EDB, 5], ['FİZİK', FIZ, 4], ['COĞRAFYA', COG, 2]]),
-      pr('201', '10/A', [['MATEMATİK', MAT, 5], ['TÜRK DİLİ VE EDEBİYATI', EDB, 5], ['COĞRAFYA', COG, 2]])]);
+      pr('201', '10/A', [['MATEMATİK', MAT, 5], ['MATEMATİK UYGULAMALARI', MAT, 1], ['TÜRK DİLİ VE EDEBİYATI', EDB, 5], ['COĞRAFYA', COG, 2]])]);
     await yaz([0, 1, 2, 3, 4].map(() => [satir('Matematik', MAT), satir('Matematik', GEO), satir('Edebiyat', EDB), satir('Fizik', FIZ), satir('Coğrafya', COG)]));
     await run("ETUTPLANI.degistir(p=>{p.programlar={};for(const s of P){const r=ETUTPLANI.programCoz(s);p.programlar[r.sinif]={kod:r.kod,ts:1,saatler:r.saatler,dersler:r.dersler}};p.donem={bas:'2026-11-02',bit:'2026-11-06',siniflar:['10/A','11/A'],yok:[]}})");
     const dagilim = () => get('(()=>{const d=ETUTPLANI.dagit(D.etutPlani);return {gunler:d.gunler.length,sinif:[...d.sinif],tablo:d.tablo,eksik:d.eksik}})()');
@@ -215,6 +215,8 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const dersler = c => d.tablo.find(t => t.sinif === c).dersler.map(x => x.ders).sort();
     assert.deepEqual(dersler('11/A'), ['FİZİK', 'MATEMATİK', 'TÜRKÇE'], 'no Geometri, Coğrafya or Türk Dili ve Edebiyatı where there is Türkçe');
     assert.deepEqual(dersler('10/A'), ['MATEMATİK', 'TÜRK DİLİ VE EDEBİYATI'], 'Türk Dili ve Edebiyatı is the Türkçe of a class without Türkçe');
+    assert.equal(d.tablo.find(t => t.sinif === '10/A').dersler.find(x => x.ders === 'MATEMATİK').saat, 6, 'the teacher\'s Matematik Uygulamaları is their Matematik');
+    assert.equal(get('ETUTPLANI.dersAilesi("SEÇMELİ İNGİLİZCE")'), 'İngilizce');
     assert.equal(d.eksik, 0);
     const satirSiniflari = i => d.sinif.filter(([k]) => k.endsWith(':' + i)).map(([, v]) => v);
     assert.equal(satirSiniflari(1).length + satirSiniflari(4).length, 0, 'the Geometri and Coğrafya teachers\' rows stay empty');

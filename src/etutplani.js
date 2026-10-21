@@ -153,7 +153,7 @@ function programCoz(sayfalar){
 // A lesson's branş on the etüt sheet (Matematik TYT is Matematik, Türk Dili ve Edebiyatı is Edebiyat …),
 // or null for lessons without etüts (Beden Eğitimi, Görsel Sanatlar …).
 const DERS_AILE=[[/^(TEMEL |İLERİ |SEÇMELİ )?MATEMATİK/u,'Matematik'],[/GEOMETRİ/u,'Geometri'],[/EDEBİYAT/u,'Edebiyat'],[/^TÜRKÇE/u,'Türkçe'],[/FİZİK/u,'Fizik'],[/KİMYA/u,'Kimya'],
-  [/BİYOLOJİ/u,'Biyoloji'],[/(TARİH|İNKILAP)/u,'Tarih'],[/COĞRAFYA/u,'Coğrafya'],[/^(FELSEFE|MANTIK|PSİKOLOJİ|SOSYOLOJİ)/u,'Felsefe'],[/^DİN/u,'Din Kültürü'],[/^(İNGİLİZCE|YABANCI DİL)/u,'İngilizce']];
+  [/BİYOLOJİ/u,'Biyoloji'],[/(TARİH|İNKILAP)/u,'Tarih'],[/COĞRAFYA/u,'Coğrafya'],[/^(FELSEFE|MANTIK|PSİKOLOJİ|SOSYOLOJİ)/u,'Felsefe'],[/^DİN/u,'Din Kültürü'],[/^(SEÇMELİ )?(İNGİLİZCE|YABANCI DİL)/u,'İngilizce']];
 const dersAilesi=d=>{const b=anahtar(d);for(const [re,ad] of DERS_AILE)if(re.test(b))return ad;return null};
 // Lessons whose hours are the teacher's own lesson's: a chemistry teacher's Fen Bilimleri Uygulamaları is Kimya.
 const ARA_DERS=/ADAB|MUA[ŞS]ERET|REHBERL[İI]K|FEN B[İI]L[İI]M\S* UYGULAMA|UYGULAMALI DENEY/u;
@@ -202,13 +202,13 @@ function programDagit(p,gunler,siniflar,dersler){
   for(const [t,m] of saat)if(!ana.has(t)){let en=null;for(const [d,n] of m)if(!en||n>en[1])en=[d,n];ana.set(t,en[0])}
   const ciftler_=[];
   programli.forEach((c,ci)=>{const m=new Map(),l=p.programlar[c].dersler.filter(x=>x[3]);
-    const ekle=(t,ders)=>{const k=t+'|'+anahtar(ders);if(!m.has(k))m.set(k,{c,ci,t,ders,aile:dersAilesi(ders),h:0,n:0});m.get(k).h++};
+    // A teacher's lessons of one family in the class are one pair (Matematik with Matematik Uygulamaları),
+    // named after the one with the most hours.
+    const ekle=(t,ders)=>{const aile=dersAilesi(ders),k=t+'|'+(aile||anahtar(ders));if(!m.has(k))m.set(k,{c,ci,t,ders,aile,h:0,n:0,adlar:new Map()});
+      const x=m.get(k);x.h++;x.adlar.set(ders,(x.adlar.get(ders)||0)+1);if(x.adlar.get(ders)>x.adlar.get(x.ders))x.ders=ders};
     for(const [,,ders,h] of l)if(!araDers(ders)||!ana.has(anahtar(h)))ekle(anahtar(h),ders);
-    // Rehberlik, Adab-ı Muaşeret, Fen Bilimleri Uygulamaları, Uygulamalı Deney: hours of the teacher's own lesson,
-    // under its name in this timetable when the teacher teaches it to the class.
-    for(const [,,ders,h] of l){const t=anahtar(h);if(!araDers(ders)||!ana.has(t))continue;const a=ana.get(t),af=dersAilesi(a);
-      const ayni=[...m.values()].filter(x=>x.t===t&&(anahtar(x.ders)===anahtar(a)||af&&x.aile===af)).sort((x,y)=>y.h-x.h)[0];
-      ekle(t,ayni?ayni.ders:buyuk(a))}
+    // Rehberlik, Adab-ı Muaşeret, Fen Bilimleri Uygulamaları, Uygulamalı Deney: hours of the teacher's own lesson.
+    for(const [,,ders,h] of l){const t=anahtar(h);if(araDers(ders)&&ana.has(t))ekle(t,buyuk(ana.get(t)))}
     // Only the chosen lessons have etüts.
     const sec=dersSecici(dersler,[...m.values()].some(x=>x.aile==='Türkçe'));for(const x of m.values())x.sec=sec(x.ders);
     ciftler_.push(...m.values())});
