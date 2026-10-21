@@ -225,7 +225,8 @@ async function denemePdfSayfalari(file) {
     for(let n=1;n<=pdf.numPages;n++) {
       const page=await pdf.getPage(n), text=await page.getTextContent();
       boylar.push(page.getViewport({scale:1}).height);
-      pages.push(text.items.filter(x=>x.str?.trim()).map(x=>({s:x.str.trim(),x:x.transform[4],y:x.transform[5],w:x.width,h:x.height,z:Math.hypot(x.transform[0],x.transform[1])})));
+      // f is the run's font: the Etüt planı's timetables tell lessons (bold) from teachers by it.
+      pages.push(text.items.filter(x=>x.str?.trim()).map(x=>({s:x.str.trim(),x:x.transform[4],y:x.transform[5],w:x.width,h:x.height,z:Math.hypot(x.transform[0],x.transform[1]),f:x.fontName})));
       page.cleanup();
     }
     return {pages,boylar};

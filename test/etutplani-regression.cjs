@@ -2,10 +2,12 @@
 'use strict';
 // Etüt planı: the sheet per weekday in the school's Excel layout, branş grouping in the paper's order,
 // students written twice, filling from the etüt report or a pasted list, Sınıf dağıtımı (dated sheets,
-// a class in Öğrenci 1, every class in every subject), storage checks and failed saves, the viewing
+// a class in Öğrenci 1, every class in every subject; with the classes' timetables each class's etüts
+// go to its own teachers, weighted by weekly hours), storage checks and failed saves, the viewing
 // teacher, landscape printing two days to a page, and privacy. Synthetic names only.
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
 const { etutRaporu, GUNLER } = require('./fixtures/etut-pdf.cjs');
+const { dersProgrami } = require('./fixtures/ders-programi-pdf.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
 const boot = html.indexOf('// ---------------------------------------------------------------- başlangıç', start);
@@ -109,6 +111,75 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
       put('X', bad); assert.throws(() => run('ETUTPLANI.dogrula({...D.etutPlani,donem:X})'), /sınıf dağıtımı/);
     }
     run('yalnizcaGoruntuleme=()=>true'); h = run('ETUTPLANI.icerik()'); assert(!h.includes('id="epDagitim"') && h.includes('id="epTarih"'));
+  });
+  await check('Ders programları: the school\'s timetable PDF read cell by cell (lesson bold, teacher plain); stored and shown', async () => {
+    const H = [[0, 0, 'TARİH', 'SENTETİK TARİHÇİ'], [0, 1, 'TARİH', 'SENTETİK TARİHÇİ'], [1, 2, 'TÜRK DİLİ VE EDEBİYATI', 'SENTETİK EDEBİYATÇI'], [2, 5, 'GÖRSEL SANATLAR', 'SENTETİK UZUN RESSAM ADI SOYADI'],
+      [2, 6, 'GÖRSEL SANATLAR', 'SENTETİK UZUN RESSAM ADI SOYADI'], [3, 1, 'DİN KÜLTÜRÜ VE AHLAK BİLGİSİ', 'SENTETİK DİNCİ'], [4, 4, 'TÜRKÇE', ''], [4, 8, 'MATEMATİK TYT', 'SENTETİK MATÇI']];
+    put('S', dersProgrami({kod: '302', sinif: '11/A', hucreler: H}));
+    // The double Görsel Sanatlar sits closer than a cell apart in the school's PDF: a bold line after a plain one starts the next cell.
+    run("S[0].filter(i=>i.y<500&&i.y>460).forEach(i=>i.y+=3);S2=S");
+    const p = get('ETUTPLANI.programCoz(S)');
+    assert.deepEqual([p.sinif, p.kod, p.saatler], ['11/A', '302', ['09.00', '09.55', '10.45', '11.35', '12.25', '13.00', '13.50', '14.40', '15.30']]);
+    assert.deepEqual(p.dersler, [[0, '09.00', 'TARİH', 'SENTETİK TARİHÇİ'], [0, '09.55', 'TARİH', 'SENTETİK TARİHÇİ'], [1, '10.45', 'TÜRK DİLİ VE EDEBİYATI', 'SENTETİK EDEBİYATÇI'],
+      [2, '13.00', 'GÖRSEL SANATLAR', 'SENTETİK UZUN RESSAM ADI SOYADI'], [2, '13.50', 'GÖRSEL SANATLAR', 'SENTETİK UZUN RESSAM ADI SOYADI'], [3, '09.55', 'DİN KÜLTÜRÜ VE AHLAK BİLGİSİ', 'SENTETİK DİNCİ'],
+      [4, '12.25', 'TÜRKÇE', ''], [4, '15.30', 'MATEMATİK TYT', 'SENTETİK MATÇI']]);
+    put('S', [[{s:'Merhaba', x:10, y:500, w:30, z:9, f:'D'}]]); assert.throws(() => run('ETUTPLANI.programCoz(S)'), /Haftalık Ders Programı/);
+    // Lessons and their branş on the sheet; a teacher matched by name or by initials and surname, never by a guess.
+    assert.deepEqual(['MATEMATİK TYT', 'Matematik AYT', 'GEOMETRİ', 'TÜRK DİLİ VE EDEBİYATI', 'TÜRKÇE', 'T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK', 'BEDEN EĞİTİMİ'].map(d => run('ETUTPLANI.dersAilesi(' + JSON.stringify(d) + ')')),
+      ['Matematik', 'Matematik', 'Geometri', 'Edebiyat', 'Türkçe', 'Tarih', null]);
+    const esle = (a, l) => run('ETUTPLANI.hocaEsle(' + JSON.stringify(a) + ',new Set(' + JSON.stringify(l) + '))');
+    assert.equal(esle('Sentetik Bir', ['SENTETİK BİR']), 'SENTETİK BİR');
+    assert.equal(esle('S. Yılmazoğlu', ['SENTETİK YILMAZOĞLU', 'BAŞKA ADI']), 'SENTETİK YILMAZOĞLU');
+    assert.equal(esle('Ayşe Sentetik', ['AYŞE ORTA SENTETİK']), 'AYŞE ORTA SENTETİK', 'a middle name');
+    assert.equal(esle('Ahmet Sentetik', ['MEHMET SENTETİK']), null); assert.equal(esle('A. Sentetik', ['AHMET SENTETİK', 'ALİ SENTETİK']), null, 'two candidates');
+    // Stored with the plan, checked like it, and shown as the class's weekly grid.
+    await run("ETUTPLANI.degistir(p=>{const r=ETUTPLANI.programCoz(S2);p.programlar={[r.sinif]:{kod:r.kod,ts:1,saatler:r.saatler,dersler:r.dersler}}})");
+    assert.deepEqual(get('Object.keys(D.etutPlani.programlar)'), ['11/A']); assert.equal(get('D.etutPlani.programlar["11/A"].dersler').length, 8);
+    run("EK.epProgram='11/A'"); const h = run('ETUTPLANI.icerik()');
+    assert.match(h, /<td><b>DİN KÜLTÜRÜ VE AHLAK BİLGİSİ<\/b><span>SENTETİK DİNCİ<\/span><\/td>/); assert.match(h, /data-ep-program-sil="11\/A"/);
+    run('yalnizcaGoruntuleme=()=>true'); const salt = run('ETUTPLANI.icerik()'); assert(!salt.includes('id="epProgramPdf"') && !salt.includes('data-ep-program-sil'), 'a viewing teacher only reads');
+  });
+  await check('Sınıf dağıtımı with timetables: own teachers only, the lesson beside the class, more for lessons with more hours, never more for fewer', async () => {
+    const MAT = 'Sentetik Matçı', TYT = 'Sentetik Tytci', GEO = 'Sentetik Geometrici', EDB = 'Sentetik Edebiyatçı', FIZ = 'Sentetik Fizikçi', ING = 'Sentetik İngilizceci', ON2 = 'Sentetik Onikici';
+    const pr = (kod, sinif, dersler) => { const h = []; let i = 0; for (const [d, hoca, n] of dersler) for (let k = 0; k < n; k++, i++) h.push([i % 5, Math.floor(i / 5), d, hoca]); return dersProgrami({kod, sinif, hucreler: h}); };
+    put('P', [pr('302', '11/A', [['MATEMATİK', MAT, 6], ['GEOMETRİ', TYT, 3], ['TÜRKÇE', EDB, 4], ['İNGİLİZCE', ING, 2], ['BEDEN EĞİTİMİ', 'Sentetik Sporcu', 2]]),
+      pr('303', '11/B', [['MATEMATİK', MAT, 6], ['FİZİK', FIZ, 5], ['İNGİLİZCE', ING, 3]]), pr('301', '12/A', [['MATEMATİK AYT', ON2, 6]])]);
+    // The weekly plan: every teacher every day; the 12th grade teacher has no 9–11 class.
+    await yaz([0, 1, 2, 3, 4].map(() => [satir('Matematik', MAT.toLocaleUpperCase('tr-TR')), satir('Matematik', 'S. TYTCİ'), satir('Edebiyat', EDB), satir('Fizik', FIZ), satir('İngilizce', ING), satir('Matematik', ON2)]));
+    await run("ETUTPLANI.degistir(p=>{p.programlar={};for(const s of P){const r=ETUTPLANI.programCoz(s);p.programlar[r.sinif]={kod:r.kod,ts:1,saatler:r.saatler,dersler:r.dersler}}})");
+    assert.deepEqual(get('ETUTPLANI.sinifOnerisi()'), ['11/A', '11/B'], 'the classes with a timetable, 12th grade left out');
+    await run("ETUTPLANI.degistir(p=>{p.donem={bas:'2026-10-26',bit:'2026-11-06',siniflar:['11/A','11/B','10/C'],yok:[]}})");
+    const d = get('(()=>{const d=ETUTPLANI.dagit(D.etutPlani);return {mod:d.mod,gunler:d.gunler.length,sinif:[...d.sinif],tablo:d.tablo,programsiz:d.programsiz,eksik:d.eksik}})()');
+    assert.equal(d.mod, 'program'); assert.equal(d.gunler, 10); assert.deepEqual(d.programsiz, ['10/C']);
+    const ders = c => Object.fromEntries(d.tablo.find(t => t.sinif === c).dersler.map(x => [x.ders, x.etut]));
+    // 11/A: Matematik 6 h, Türkçe 4, Geometri 3, İngilizce 2 (Beden Eğitimi has no etüt teacher); 11/B: Matematik 6, Fizik 5, İngilizce 3.
+    assert.deepEqual(ders('11/A'), {'MATEMATİK': 5, 'TÜRKÇE': 3, 'GEOMETRİ': 2, 'İNGİLİZCE': 1}, 'per weekly hour never above Matematik (5 of 6)');
+    assert.deepEqual(ders('11/B'), {'MATEMATİK': 5, 'FİZİK': 4, 'İNGİLİZCE': 2});
+    for (const c of ['11/A', '11/B']) { const l = d.tablo.find(t => t.sinif === c).dersler; for (const a of l) for (const b of l) if (a.saat < b.saat) assert(a.etut / a.saat <= b.etut / b.saat + 1e-9 || a.etut === 1, c + ': ' + a.ders + ' over ' + b.ders); }
+    assert.equal(d.eksik, 0, 'every lesson of every class has an etüt');
+    // Each teacher's own classes only, the lesson beside the class when it is not the sheet's branş; the 12th grade teacher's rows stay empty.
+    const yazilan = new Map(d.sinif), satirlar = get('D.etutPlani.gunler[0]');
+    const sutun = i => [...yazilan].filter(([k]) => k.endsWith(':' + i)).map(([, v]) => v);
+    assert(sutun(0).every(v => /^11\/[AB]$/.test(v)), 'Matematik: 11/A and 11/B');
+    assert(sutun(1).every(v => v === '11/A (GEOMETRİ)'), 'a mathematician who teaches Geometri: ' + sutun(1));
+    assert(sutun(2).every(v => v === '11/A (TÜRKÇE)'));
+    assert(sutun(3).every(v => v === '11/B') && sutun(4).every(v => /^11\/[AB]$/.test(v)));
+    assert.equal(sutun(5).length, 0, 'no 9–11 class: the row stays empty');
+    assert.equal(sutun(3).length, 4, 'Fizik takes 4 of its 10 places: no more per hour than Matematik; the rest stay for students');
+    // The panel lists each class's lessons; a class without a timetable is named.
+    const h = run('ETUTPLANI.icerik()');
+    assert.match(h, /<summary>Sınıf dağıtımı · 26 Eki – 6 Kas · 2 sınıf · ders programına göre · tamam<\/summary>/);
+    assert.match(h, /<li><b>11\/A<\/b> <span class="ep-tamam" title="Haftada 6 saat">MATEMATİK 5<\/span>/);
+    assert.match(h, /Ders programı olmayan: 10\/C/);
+    assert.match(h, /<td class="ep-hoca">SENTETİK MATÇI<\/td><td class="ep-ogr ep-sinif">11\/[AB]<\/td>/);
+    // The weekly grid of a class.
+    run("EK.epProgram='11/A'"); const g = run('ETUTPLANI.icerik()');
+    assert.match(g, /<summary>Ders programları · 11\/A, 11\/B, 12\/A<\/summary>/);
+    assert.match(g, /<table class="ep-program"><caption>11\/A <span class="mini">\(302\)<\/span><\/caption><thead><tr><th scope="col"><\/th><th scope="col">Pazartesi<\/th>/);
+    assert.match(g, /<tr><th scope="row">09\.00<\/th><td><b>MATEMATİK<\/b><span>Sentetik Matçı<\/span><\/td>/);
+    // Checked on every write.
+    for (const bad of ['{"11-A":{"kod":"","ts":1,"saatler":["09.00"],"dersler":[]}}', '{"11/A":{"kod":"","ts":1,"saatler":["09.00"],"dersler":[[7,"09.00","X",""]]}}', '{"11/A":{"kod":"","ts":1,"saatler":["09.00"],"dersler":[[0,"10.00","X",""]]}}'])
+      assert.throws(() => run('ETUTPLANI.dogrula({...D.etutPlani,programlar:' + bad + '})'), /ders programı/);
   });
   await check('a student written twice on one day is marked on both cells', async () => {
     await yaz([[satir('Matematik', 'Sentetik Mat Bir', ['Sentetik Ada', 'Sentetik Bora']), satir('Fizik', 'Sentetik Fizikçi', ['sentetik  ada'])], [satir('Fizik', 'Sentetik Fizikçi', ['Sentetik Ada'])], [], [], []]);

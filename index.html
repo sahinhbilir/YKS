@@ -1180,6 +1180,19 @@ td.et-yukari{color:var(--e-ok)}td.et-asagi{color:var(--e-bad)}
   .ep-sayfa th.ep-brans{background:#D9E2F3;font-weight:700}
   .ep-sayfa td.ep-ogr{background:#FFF2CC}
 }
+/* Ders programları: the weekly grid of one class, lesson over teacher. */
+.ep-programlar .ep-duzen-arac{margin-bottom:8px}
+.ep-program{width:100%;min-width:40rem;border-collapse:collapse;table-layout:fixed;font-size:.75rem}
+.ep-program caption{text-align:left;font-weight:600;padding:4px 0 8px}
+.ep-program :is(th,td),.ep-program tbody tr:last-child td{border:1px solid var(--e-line);padding:4px 6px;text-align:center;vertical-align:middle}
+.ep-program thead th{background:color-mix(in srgb,var(--e-fg) 6%,var(--e-panel));font-weight:600}
+.ep-program tbody th{width:4.5rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--e-fg2)}
+.ep-program td b{display:block;font-weight:600;line-height:1.25}
+.ep-program td span{display:block;color:var(--e-muted);line-height:1.25}
+.ep-sinif-kapsam li{display:block;grid-column:1 / -1}
+.ep-sinif-kapsam li::before{content:none!important}
+.ep-sinif-kapsam span{display:inline-block;margin:0 8px 2px 0;white-space:nowrap}
+.ep-sinif-kapsam span.ep-tamam{color:var(--e-fg2)}.ep-sinif-kapsam span.ep-eksik{color:var(--e-bad)}
 /* END ETUTPLANI */
 
 /* BEGIN GRAFIK */
@@ -13368,7 +13381,8 @@ async function denemePdfSayfalari(file) {
     for(let n=1;n<=pdf.numPages;n++) {
       const page=await pdf.getPage(n), text=await page.getTextContent();
       boylar.push(page.getViewport({scale:1}).height);
-      pages.push(text.items.filter(x=>x.str?.trim()).map(x=>({s:x.str.trim(),x:x.transform[4],y:x.transform[5],w:x.width,h:x.height,z:Math.hypot(x.transform[0],x.transform[1])})));
+      // f is the run's font: the Etüt planı's timetables tell lessons (bold) from teachers by it.
+      pages.push(text.items.filter(x=>x.str?.trim()).map(x=>({s:x.str.trim(),x:x.transform[4],y:x.transform[5],w:x.width,h:x.height,z:Math.hypot(x.transform[0],x.transform[1]),f:x.fontName})));
       page.cleanup();
     }
     return {pages,boylar};
@@ -16556,13 +16570,16 @@ function gorunumDenemePanosu(){return DPANO.gorunum()}
 // Excel file. The teacher keeps each weekday's teachers (branş, öğretmen), writes up to four students
 // beside each and prints the sheets landscape, two days to a page. Sınıf dağıtımı turns the weekdays
 // into dated sheets for a few weeks and writes a class (not 12th grade) in each teacher's Öğrenci 1,
-// rotating per subject so every class gets every subject. Kept in the teacher notebook as
+// rotating per subject so every class gets every subject; with the classes' timetables (Ders
+// programları, read from the school's PDFs) each class's etüts go to its own teachers, more for the
+// lessons with more weekly hours. Kept in the teacher notebook as
 // D.etutPlani, so it travels with the teacher's cloud backup; student packets are built from a field
 // whitelist and never carry it. Nothing is uploaded. See docs/etut-plani.md.
 const ETUTPLANI = (() => {
 const SURUM=1, GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma'], KISA=['Pzt','Sal','Çar','Per','Cum'], OGRENCI=4, EN_COK_SATIR=40;
 const AYLAR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-const EN_COK_SINIF=60, EN_COK_DONEM=70;
+const EN_COK_SINIF=60, EN_COK_DONEM=70, EN_COK_PROGRAM=40;
+const PROGRAM_GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 // Days without etüts that the school's holidays (Ayarlar) do not list: national holidays on school
 // days, and the afternoon off before Cumhuriyet Bayramı (etüts are after lessons).
 const RESMI_YOK=['2026-10-28','2026-10-29','2027-01-01','2027-04-23'];
@@ -16576,8 +16593,10 @@ const sayi=n=>Number(n).toLocaleString('tr-TR');
 
 /* ---------------- notebook storage ---------------- */
 // D.etutPlani = {surum, ts, gunler:[Pazartesi … Cuma: [[branş, öğretmen, [öğrenci 1 … 4]]]],
-//   donem?:{bas, bit, siniflar:['9/A', …], yok:[iso günler]}}. Rows keep the order they were written
-// in; the sheet groups them by branş. donem is the Sınıf dağıtımı (see dagit).
+//   donem?:{bas, bit, siniflar:['9/A', …], yok:[iso günler]},
+//   programlar?:{'11/A':{kod, ts, saatler:['09.00', …], dersler:[[gün 0–6, saat, ders, öğretmen]]}}}.
+// Rows keep the order they were written in; the sheet groups them by branş. donem is the Sınıf
+// dağıtımı (see dagit), programlar the classes' timetables (see programCoz).
 const bos=()=>({surum:SURUM,ts:0,gunler:GUNLER.map(()=>[])});
 const yeniSatir=(b='',o='')=>[b,o,Array(OGRENCI).fill('')];
 function dogrula(v){
@@ -16592,6 +16611,10 @@ function dogrula(v){
   if(v.donem!==undefined){const d=v.donem,iso=x=>typeof x==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&isoTarihGecerli(x);
     if(!d||typeof d!=='object'||Array.isArray(d)||!iso(d.bas)||!iso(d.bit)||d.bas>d.bit||gunNo(d.bit)-gunNo(d.bas)>EN_COK_DONEM||
       !Array.isArray(d.siniflar)||!d.siniflar.length||d.siniflar.length>EN_COK_SINIF||!d.siniflar.every(x=>metin(x,12)&&x)||!Array.isArray(d.yok)||d.yok.length>EN_COK_DONEM||!d.yok.every(iso))hata('sınıf dağıtımı')}
+  if(v.programlar!==undefined){const P=v.programlar;if(!P||typeof P!=='object'||Array.isArray(P)||Object.keys(P).length>EN_COK_PROGRAM)hata('ders programları');
+    for(const [c,x] of Object.entries(P))if(sinifYaz(c)!==c||!x||typeof x!=='object'||Array.isArray(x)||!metin(x.kod,8)||!Number.isSafeInteger(x.ts)||x.ts<0||
+      !Array.isArray(x.saatler)||x.saatler.length>16||!x.saatler.every(t=>metin(t,5)&&t)||!Array.isArray(x.dersler)||x.dersler.length>120||
+      !x.dersler.every(d=>Array.isArray(d)&&d.length===4&&Number.isInteger(d[0])&&d[0]>=0&&d[0]<7&&x.saatler.includes(d[1])&&metin(d[2],80)&&d[2]&&metin(d[3],80)))hata('ders programı')}
   return v;
 }
 function oku(){
@@ -16633,8 +16656,10 @@ function ciftler(satirlar,ilk=0){
 // classes every class has an etüt in every subject. 12th grade classes are never written.
 const sinifYaz=c=>{const m=/^(\d{1,2})\s*[\/\-. ]?\s*([A-Za-zÇĞİÖŞÜçğıöşü]{1,3})$/u.exec(String(c||'').trim());return m&&+m[1]>=5&&+m[1]<=12?+m[1]+'/'+buyuk(m[2]):null};
 const sinifSirala=(a,b)=>parseInt(a,10)-parseInt(b,10)||a.localeCompare(b,'tr');
-// The classes of the etüt report and of the notebook's students, without the 12th grade.
+// The classes with a timetable, else those of the etüt report and of the notebook's students; never
+// the 12th grade.
 function sinifOnerisi(){
+  const {plan}=oku(),P=Object.keys((plan&&plan.programlar)||{}).filter(c=>parseInt(c,10)!==12);if(P.length)return P.sort(sinifSirala);
   const r=rapor(),l=(r?r.ogrenciler.map(o=>o.sinif):[]).concat((D.ogr||[]).filter(o=>o&&!o.silindi).map(o=>o.sube));
   return [...new Set(l.map(sinifYaz).filter(c=>c&&parseInt(c,10)!==12))].sort(sinifSirala);
 }
@@ -16648,6 +16673,7 @@ function dagit(p){
   const d=p&&p.donem;if(!d)return null;
   const tatil=typeof tatilGunleri==='function'?tatilGunleri():new Set(),yok=new Set(d.yok.map(gunNo)),gunler=[];
   for(let g=gunNo(d.bas);g<=gunNo(d.bit);g++){const w=haftaGunu(g);if(w<GUNLER.length&&!tatil.has(g)&&!yok.has(g))gunler.push({g,w})}
+  if(d.siniflar.some(c=>p.programlar&&p.programlar[c]))return programDagit(p,gunler,d.siniflar);
   const dersler=new Map();
   for(const {g,w} of gunler)for(const grup of gruplar(p.gunler[w]))for(const i of grup.satir){
     if(!grup.k||!p.gunler[w][i][1])continue;if(!dersler.has(grup.k))dersler.set(grup.k,{brans:grup.brans,k:grup.k,yer:[]});dersler.get(grup.k).yer.push(g+':'+i)}
@@ -16655,7 +16681,98 @@ function dagit(p){
   [...dersler.values()].sort((a,b)=>bransSirasi(a.k)-bransSirasi(b.k)||a.brans.localeCompare(b.brans,'tr')).forEach((o,j)=>{
     const alan=new Set();o.yer.forEach((y,t)=>{const c=siniflar[(j+t)%n];sinif.set(y,c);alan.add(c)});
     kapsam.push({brans:o.brans,yer:o.yer.length,eksik:siniflar.filter(c=>!alan.has(c))})});
-  return {gunler,sinif,kapsam,siniflar};
+  return {gunler,sinif,kapsam,siniflar,mod:'sira'};
+}
+
+/* ---------------- Ders programları ---------------- */
+// A class's "<kod> <sınıf> Haftalık Ders Programı" PDF: days across, lesson times down, in each cell
+// the lesson in bold (the header's font) and the teacher in plain type, both wrapping. Items are
+// pdf.js text runs {s,x,y,w,z,f} (y from the page bottom, f the font). A cell's lines sit a line
+// apart; a bold line after a plain one starts the next cell; a cell's row is the time nearest its
+// middle.
+function programCoz(sayfalar){
+  const it=(sayfalar[0]||[]).filter(i=>i&&typeof i.s==='string'&&i.s.trim()&&Number.isFinite(i.x)&&Number.isFinite(i.y)).map(i=>({...i,s:i.s.trim().replace(/\s+/g,' '),w:Number.isFinite(i.w)?i.w:0}));
+  const ad=it.map(i=>/(?:(\d{1,4})\s+)?(\d{1,2})\s*\/\s*([A-Za-zÇĞİÖŞÜçğıöşü]{1,3})\s+Haftalık Ders Programı/u.exec(i.s)).find(Boolean),sinif=ad&&sinifYaz(ad[2]+'/'+ad[3]);
+  if(!sinif)throw new Error('Bu PDF bir sınıfın “Haftalık Ders Programı” gibi görünmüyor.');
+  const gun=PROGRAM_GUNLER.map((g,k)=>{const i=it.find(x=>x.s===g);return i?{k,x:i.x+i.w/2,y:i.y,f:i.f}:null}).filter(Boolean);
+  if(gun.length<5)throw new Error(sinif+': gün başlıkları bulunamadı.');
+  const kalin=gun[0].f,ust=Math.min(...gun.map(g=>g.y)),sol=Math.min(...gun.map(g=>g.x))-40;
+  const saat=[];for(const t of it.filter(i=>/^\d{1,2}[.:]\d{2}$/.test(i.s)&&i.x<sol&&i.y<ust).sort((a,b)=>b.y-a.y||a.x-b.x)){
+    const r=saat.find(x=>Math.abs(x.y-t.y)<3);if(!r)saat.push({y:t.y,x:t.x,bas:t.s.replace(':','.').padStart(5,'0')});else if(t.x<r.x){r.x=t.x;r.bas=t.s.replace(':','.').padStart(5,'0')}}
+  if(!saat.length)throw new Error(sinif+': ders saatleri bulunamadı.');
+  const alt=Math.min(...saat.map(r=>r.y))-30,hucre=it.filter(i=>i.y<ust-4&&i.y>alt&&i.x+i.w/2>sol+20),dersler=[];
+  const sutun=i=>{const c=i.x+i.w/2;return gun.reduce((m,g)=>Math.abs(g.x-c)<Math.abs(m.x-c)?g:m,gun[0]).k};
+  for(const g of gun){
+    const bloklar=[];
+    for(const i of hucre.filter(x=>sutun(x)===g.k).sort((a,b)=>b.y-a.y||a.x-b.x)){
+      const b=bloklar[bloklar.length-1],son=b&&b.l[b.l.length-1];
+      if(b&&b.alt-i.y<(i.z||7)*1.7&&!(i.f===kalin&&son.f!==kalin)){b.l.push(i);b.alt=i.y}else bloklar.push({ust:i.y,alt:i.y,l:[i]})}
+    for(const b of bloklar){const orta=(b.ust+b.alt)/2,r=saat.reduce((m,x)=>Math.abs(x.y-orta)<Math.abs(m.y-orta)?x:m,saat[0]);
+      const ders=kisa(b.l.filter(i=>i.f===kalin).map(i=>i.s).join(' '),80),hoca=kisa(b.l.filter(i=>i.f!==kalin).map(i=>i.s).join(' '),80);
+      if(ders&&!dersler.some(x=>x[0]===g.k&&x[1]===r.bas))dersler.push([g.k,r.bas,ders,hoca])}
+  }
+  if(!dersler.length)throw new Error(sinif+': ders bulunamadı.');
+  return {sinif,kod:kisa(ad[1]||'',8),saatler:saat.map(r=>r.bas),dersler:dersler.sort((a,b)=>a[0]-b[0]||a[1].localeCompare(b[1]))};
+}
+// A lesson's branş on the etüt sheet (Matematik TYT is Matematik, Türk Dili ve Edebiyatı is Edebiyat …),
+// or null for lessons without etüts (Beden Eğitimi, Görsel Sanatlar …).
+const DERS_AILE=[[/^(TEMEL |İLERİ |SEÇMELİ )?MATEMATİK/u,'Matematik'],[/GEOMETRİ/u,'Geometri'],[/EDEBİYAT/u,'Edebiyat'],[/^TÜRKÇE/u,'Türkçe'],[/FİZİK/u,'Fizik'],[/KİMYA/u,'Kimya'],
+  [/BİYOLOJİ/u,'Biyoloji'],[/(TARİH|İNKILAP)/u,'Tarih'],[/COĞRAFYA/u,'Coğrafya'],[/^(FELSEFE|MANTIK|PSİKOLOJİ|SOSYOLOJİ)/u,'Felsefe'],[/^DİN/u,'Din Kültürü'],[/^(İNGİLİZCE|YABANCI DİL)/u,'İngilizce']];
+const dersAilesi=d=>{const b=anahtar(d);for(const [re,ad] of DERS_AILE)if(re.test(b))return ad;return null};
+// The timetable's teacher for a name on the etüt sheet: the same name, or the same surname with the
+// first names or their initials matching ("A. YILMAZ" is "AHMET YILMAZ"); never a guess
+// between two.
+function hocaEsle(ad,adlar){
+  const k=anahtar(ad);if(adlar.has(k))return k;
+  const p=k.replace(/\./g,' ').split(' ').filter(Boolean);if(p.length<2)return null;
+  const uyan=[...adlar].filter(a=>{const q=a.replace(/\./g,' ').split(' ').filter(Boolean);if(q.length<2||q[q.length-1]!==p[p.length-1])return false;
+    const [az,cok]=p.length<=q.length?[p,q]:[q,p];return az.slice(0,-1).every((t,i)=>cok[i].startsWith(t))});
+  return uyan.length===1?uyan[0]:null;
+}
+// Sınıf dağıtımı with timetables. Every class's etüts go to its own teachers: a class, a lesson and its
+// teacher make a pair. A class's subject (Matematik with Matematik TYT and AYT, …) weighs its weekly
+// hours. A teacher's etüts in the dates go to their pairs, the class's subject with the lowest
+// (etüts + 1) ÷ hours first: every pair has one before any has two, and subjects with more hours get
+// more. A subject never gets more etüts per weekly hour than one of the class's subjects with more
+// hours (nor more etüts than one with as many), unless it is the pair's first; etüts left over stay
+// empty, for students to write in. Each teacher's etüts are then spread over their dates. Öğrenci 1 shows the
+// lesson beside the class when it is not the sheet's branş: "11/A (GEOMETRİ)".
+function programDagit(p,gunler,siniflar){
+  const programli=siniflar.filter(c=>p.programlar&&p.programlar[c]),adlar=new Set();
+  for(const c of programli)for(const x of p.programlar[c].dersler)if(x[3])adlar.add(anahtar(x[3]));
+  const yerler=new Map(),eslesme=new Map(),aileler=new Set();
+  for(const {g,w} of gunler)for(const grup of gruplar(p.gunler[w]))for(const i of grup.satir){const s=p.gunler[w][i];if(!s[1])continue;
+    const a=dersAilesi(s[0]);if(a)aileler.add(a);
+    const k=anahtar(s[1]);if(!eslesme.has(k))eslesme.set(k,hocaEsle(s[1],adlar));const t=eslesme.get(k);if(!t)continue;
+    if(!yerler.has(t))yerler.set(t,[]);yerler.get(t).push({y:g+':'+i,aile:a})}
+  const ciftler_=[];
+  programli.forEach((c,ci)=>{const m=new Map();for(const [,,ders,hoca] of p.programlar[c].dersler){if(!hoca)continue;const t=anahtar(hoca),k=t+'|'+anahtar(ders);
+    if(!m.has(k))m.set(k,{c,ci,t,ders,aile:dersAilesi(ders),h:0,n:0});m.get(k).h++}
+    ciftler_.push(...m.values())});
+  const etkin=ciftler_.filter(x=>yerler.has(x.t)),kalan=new Map([...yerler].map(([t,l])=>[t,l.length]));
+  // Subjects: the pairs of a class's subject together, with all their weekly hours.
+  const konu=new Map();for(const x of ciftler_){const k=x.c+'|'+(x.aile||anahtar(x.ders));if(!konu.has(k))konu.set(k,{c:x.c,h:0,n:0,etkin:false});x.k=konu.get(k);x.k.h+=x.h}
+  for(const x of etkin)x.k.etkin=true;
+  const konular=[...konu.values()].filter(k=>k.etkin);
+  const once=(x,y)=>x.ci-y.ci||y.k.h-x.k.h||y.h-x.h||x.ders.localeCompare(y.ders,'tr');
+  const izin=x=>x.n===0||konular.every(q=>q===x.k||q.c!==x.c||(q.h>x.k.h?(x.k.n+1)*q.h<=q.n*x.k.h:q.h===x.k.h?x.k.n<=q.n:true));
+  const az=(x,y)=>{const a=(x.k.n+1)*y.k.h-(y.k.n+1)*x.k.h;return a||(x.n+1)*y.h-(y.n+1)*x.h||once(x,y)};
+  for(;;){let en=null;
+    for(const x of etkin){if(!kalan.get(x.t)||!izin(x))continue;if(!en||az(x,en)<0)en=x}
+    if(!en)break;en.n++;en.k.n++;kalan.set(en.t,kalan.get(en.t)-1)}
+  const sinif=new Map();
+  for(const [t,l] of yerler){
+    const sira=[],benim=etkin.filter(x=>x.t===t&&x.n),bos=l.length-benim.reduce((a,x)=>a+x.n,0);
+    for(const x of benim)for(let j=0;j<x.n;j++)sira.push({x,o:(j+.5)/x.n});
+    for(let j=0;j<bos;j++)sira.push({x:null,o:(j+.5)/bos});
+    sira.sort((a,b)=>a.o-b.o||(!a.x)-(!b.x)||(a.x&&b.x?once(a.x,b.x):0));
+    l.forEach((y,k)=>{const x=sira[k].x;if(x)sinif.set(y.y,x.c+(x.aile&&x.aile===y.aile?'':' ('+buyuk(x.aile||x.ders)+')'))});
+  }
+  // Per class: its lessons with etüt teachers, and the lessons of the sheet's branşes it gets none of.
+  const tablo=programli.map(c=>{const l=ciftler_.filter(x=>x.c===c&&(yerler.has(x.t)||x.aile&&aileler.has(x.aile))).sort((a,b)=>b.h-a.h||a.ders.localeCompare(b.ders,'tr'));
+    return {sinif:c,dersler:l.map(x=>({ders:x.ders,saat:x.h,etut:x.n,hoca:yerler.has(x.t)}))}});
+  const programsiz=siniflar.filter(c=>!programli.includes(c)),eksik=tablo.reduce((t,x)=>t+x.dersler.filter(d=>!d.etut).length,0);
+  return {gunler,sinif,siniflar:programli,programsiz,tablo,eksik,kapsam:[],mod:'program'};
 }
 const tarihAdi=g=>{const t=new Date(g*864e5);return t.getUTCDate()+' '+AYLAR[t.getUTCMonth()]};
 const kisaTarih=g=>{const t=new Date(g*864e5);return t.getUTCDate()+' '+AYLAR[t.getUTCMonth()].slice(0,3)};
@@ -16770,17 +16887,37 @@ const seg=(ad,deger,secenekler,etiket,ek)=>'<div class="et-seg'+(ek?' '+ek:'')+'
   secenekler.map(([v,yazi,uzun])=>'<button type="button" data-ep-'+ad+'="'+v+'" aria-pressed="'+(String(v)===String(deger))+'"'+(uzun?' aria-label="'+uzun+'"':'')+'>'+yazi+'</button>').join('')+'</div>';
 const aralikAdi=d=>kisaTarih(gunNo(d.bas))+' – '+kisaTarih(gunNo(d.bit));
 const tarihYaz=iso=>{const [y,a,g]=iso.split('-');return g+'.'+a+'.'+y};
-// Sınıf dağıtımı: dates, classes and days without etüt; below them what every subject covers.
+// Sınıf dağıtımı: dates, classes and days without etüt; below them what every subject (or, with the
+// timetables, every class's lesson) gets.
 function dagitimPaneli(p,dg){
-  const d=p.donem||varsayilanDonem(),eksik=dg?dg.kapsam.filter(x=>x.eksik.length):[];
-  const ozet=dg?' · '+aralikAdi(d)+' · '+sayi(dg.siniflar.length)+' sınıf'+(eksik.length?' · '+sayi(eksik.length)+' derste eksik':' · tamam'):'';
-  const kapsam=dg?'<ul class="ep-kapsam">'+dg.kapsam.map(x=>'<li class="'+(x.eksik.length?'ep-eksik':'ep-tamam')+'"><b>'+kacis(buyuk(x.brans))+'</b> '+sayi(x.yer)+' etüt'+
-      (x.eksik.length?' · alamayan: '+kacis(x.eksik.join(', ')):'')+'</li>').join('')+'</ul>':'';
+  const d=p.donem||varsayilanDonem(),eksik=dg?dg.mod==='program'?dg.eksik:dg.kapsam.filter(x=>x.eksik.length).length:0;
+  const ozet=dg?' · '+aralikAdi(d)+' · '+sayi(dg.siniflar.length)+' sınıf'+(dg.mod==='program'?' · ders programına göre':'')+(eksik?' · '+sayi(eksik)+' derste eksik':' · tamam'):'';
+  const kapsam=!dg?'':dg.mod==='program'?'<ul class="ep-kapsam ep-sinif-kapsam">'+dg.tablo.map(x=>'<li><b>'+kacis(x.sinif)+'</b> '+x.dersler.map(y=>'<span class="'+(y.etut?'ep-tamam':'ep-eksik')+'" title="'+
+        kacis(y.hoca?'Haftada '+y.saat+' saat':'Öğretmeni etüt planında yok')+'">'+kacis(buyuk(y.ders))+' '+sayi(y.etut)+'</span>').join(' ')+'</li>').join('')+
+      (dg.programsiz.length?'<li class="ep-eksik">Ders programı olmayan: '+kacis(dg.programsiz.join(', '))+'</li>':'')+'</ul>':
+    '<ul class="ep-kapsam">'+dg.kapsam.map(x=>'<li class="'+(x.eksik.length?'ep-eksik':'ep-tamam')+'"><b>'+kacis(buyuk(x.brans))+'</b> '+sayi(x.yer)+' etüt'+
+      (x.eksik.length?' · alamayan: '+kacis(x.eksik.join(', ')):'')+'</li>').join('')+'</ul>';
   return '<details class="ep-yapistir ep-dagitim" id="epDagitim"'+(EK.epDagitimAcik||!dg?' open':'')+'><summary>Sınıf dağıtımı'+kacis(ozet)+'</summary>'+
     '<div class="ep-dagitim-alan"><label>Başlangıç<input type="date" id="epDonemBas" value="'+d.bas+'"></label><label>Bitiş<input type="date" id="epDonemBit" value="'+d.bit+'"></label>'+
     '<label class="ep-genis">Sınıflar (12. sınıflar hariç)<input type="text" id="epSiniflar" value="'+kacis(d.siniflar.join(', '))+'" placeholder="9/A, 9/B, 10/A" spellcheck="false"></label>'+
     '<label class="ep-genis">Etüt olmayan günler<input type="text" id="epYok" value="'+kacis(d.yok.map(tarihYaz).join(', '))+'" placeholder="29.10.2026" spellcheck="false"></label></div>'+
     '<div class="ep-duzen-arac"><button type="button" class="et-dugme birincil" id="epDagit">'+(dg?'Güncelle':'Dağıt')+'</button>'+(dg?'<button type="button" class="et-dugme" id="epDagitimKaldir">Kaldır</button>':'')+'</div>'+kapsam+'</details>';
+}
+// Ders programları: the classes' timetables from the school's PDFs; one is shown as its weekly grid.
+function programPaneli(p,salt){
+  const P=p.programlar||{},l=Object.keys(P).sort(sinifSirala),sec=l.includes(EK.epProgram)?EK.epProgram:null;
+  return '<details class="ep-yapistir ep-programlar" id="epProgramlar"'+(EK.epProgramAcik?' open':'')+'><summary>Ders programları'+(l.length?' · '+kacis(l.join(', ')):'')+'</summary>'+
+    '<div class="ep-duzen-arac">'+(salt?'':'<label class="et-dugme">PDF ekle<input type="file" id="epProgramPdf" accept="application/pdf,.pdf" multiple hidden></label>')+
+      l.map(c=>'<button type="button" class="et-dugme" data-ep-program="'+kacis(c)+'" aria-pressed="'+(c===sec)+'">'+kacis(c)+' <span class="mini">'+sayi(P[c].dersler.length)+' saat</span></button>').join('')+'</div>'+
+    (sec?programTablosu(sec,P[sec],salt):'')+'</details>';
+}
+function programTablosu(c,x,salt){
+  const gunler=PROGRAM_GUNLER.map((_,g)=>g).filter(g=>g<5||x.dersler.some(d=>d[0]===g));
+  return '<div class="ep-kaydir"><table class="ep-program"><caption>'+kacis(c)+(x.kod?' <span class="mini">('+kacis(x.kod)+')</span>':'')+'</caption><thead><tr><th scope="col"></th>'+
+      gunler.map(g=>'<th scope="col">'+PROGRAM_GUNLER[g]+'</th>').join('')+'</tr></thead><tbody>'+
+    x.saatler.map(t=>'<tr><th scope="row">'+kacis(t)+'</th>'+gunler.map(g=>{const d=x.dersler.find(y=>y[0]===g&&y[1]===t);
+      return '<td>'+(d?'<b>'+kacis(d[2])+'</b>'+(d[3]?'<span>'+kacis(d[3])+'</span>':''):'')+'</td>'}).join('')+'</tr>').join('')+'</tbody></table></div>'+
+    (salt?'':'<div class="ep-duzen-arac"><button type="button" class="et-dugme" data-ep-program-sil="'+kacis(c)+'">'+kacis(c)+' programını sil</button></div>');
 }
 function icerik(){
   const {plan,hata}=oku(),salt=izleme();
@@ -16793,8 +16930,8 @@ function icerik(){
     seg('gun',gunSec(),GUNLER.map((ad,j)=>[j,'<span class="ep-tam">'+ad+'</span><span class="ep-kisa" aria-hidden="true">'+KISA[j]+'</span>',ad]).concat([['hepsi','Tümü']]),'Gün','ep-gun-sec');
   return bas+'<div class="et-arac"><button type="button" class="et-dugme birincil" id="epYazdir">Yazdır</button>'+secim+
     (salt?'':seg('mod',mod,[['ogrenci','Öğrenciler'],['ogretmen','Öğretmenler']],'Düzenle')+'<button type="button" class="et-dugme" id="epTemizle"'+(ogrVar?'':' disabled')+'>Öğrencileri sil</button>')+'</div>'+durumSatiri+
-    (salt?'':dagitimPaneli(plan,dg))+
-    (mod==='ogretmen'?'<details class="ep-yapistir"'+(LISTE?' open':'')+'><summary>Listeyi yapıştır</summary><textarea id="epListe" rows="9" spellcheck="false" aria-label="Öğretmen listesi" '+
+    (salt?'':dagitimPaneli(plan,dg))+programPaneli(plan,salt)+
+    (mod==='ogretmen'?'<details class="ep-yapistir" id="epYapistir"'+(LISTE?' open':'')+'><summary>Listeyi yapıştır</summary><textarea id="epListe" rows="9" spellcheck="false" aria-label="Öğretmen listesi" '+
       'placeholder="PAZARTESİ&#10;Matematik: Ad Soyad, Ad Soyad&#10;Geometri: Ad Soyad&#10;SALI&#10;Matematik: Ad Soyad">'+kacis(LISTE)+'</textarea><button type="button" class="et-dugme birincil" id="epListeUygula">Uygula</button></details>':'')+
     '<div class="ep-gunler">'+liste.map(k=>mod==='ogretmen'?duzenKagidi(plan,k.w,r):kagit(plan,k,r,salt,dg)).join('')+'</div>'+listeler(plan,r)+'<div id="epBaski"></div>';
 }
@@ -16888,7 +17025,7 @@ function donemOku(){
 }
 document.addEventListener('click',async ev=>{
   if(!etkin())return;
-  const el=ev.target.closest?.('[data-ep-gun],[data-ep-mod],[data-ep-ekle],[data-ep-rapor],[data-ep-sil],#epYazdir,#epTemizle,#epListeUygula,#epDagit,#epDagitimKaldir');if(!el||el.disabled)return;
+  const el=ev.target.closest?.('[data-ep-gun],[data-ep-mod],[data-ep-ekle],[data-ep-rapor],[data-ep-sil],[data-ep-program],[data-ep-program-sil],#epYazdir,#epTemizle,#epListeUygula,#epDagit,#epDagitimKaldir');if(!el||el.disabled)return;
   try{
     if(el.id==='epYazdir'){yazdir();return}
     if(el.id==='epListeUygula'){const t=document.getElementById('epListe'),m=await listeUygula(t?t.value:LISTE);if(m){LISTE='';durum(m)}yenidenCiz();return}
@@ -16896,6 +17033,9 @@ document.addEventListener('click',async ev=>{
       const dg=dagit(oku().plan),eksik=dg.kapsam.filter(x=>x.eksik.length).length;
       durum('Dağıtıldı: '+aralikAdi(donem)+' · '+sayi(dg.gunler.length)+' gün · '+sayi(donem.siniflar.length)+' sınıf'+(on2?' (12. sınıflar alınmadı)':'')+'. '+(eksik?sayi(eksik)+' derste her sınıfa yer yok.':'Her sınıf her dersten en az bir etüt alıyor.'));
       yenidenCiz('#epDagit');return}
+    if(el.dataset.epProgram!==undefined){const c=el.dataset.epProgram;EK.epProgram=EK.epProgram===c?null:c;yenidenCiz('[data-ep-program="'+c+'"]');return}
+    if(el.dataset.epProgramSil!==undefined){const c=el.dataset.epProgramSil;if(!confirm(c+' ders programı silinsin mi?'))return;
+      await degistir(p=>{if(p.programlar){delete p.programlar[c];if(!Object.keys(p.programlar).length)delete p.programlar}});EK.epProgram=null;durum(c+' ders programı silindi.');yenidenCiz();return}
     if(el.id==='epDagitimKaldir'){if(!confirm('Sınıf dağıtımı kaldırılsın mı? Haftalık plan kalır.'))return;
       await degistir(p=>{delete p.donem});durum('Sınıf dağıtımı kaldırıldı.');yenidenCiz();return}
     if(el.dataset.epGun!==undefined){const v=el.dataset.epGun;EK.epGun=v==='hepsi'?v:Number(v);durum('');yenidenCiz('[data-ep-gun="'+v+'"]');return}
@@ -16912,11 +17052,25 @@ document.addEventListener('click',async ev=>{
       await degistir(p=>{for(const j of gunler)for(const s of p.gunler[j])s[2]=s[2].map(()=>'')});durum('Öğrenci adları silindi.');yenidenCiz();return}
   }catch(e){durum(e.message);yenidenCiz()}
 });
-document.addEventListener('toggle',ev=>{if(etkin()&&ev.target.id==='epDagitim')EK.epDagitimAcik=ev.target.open},true);
+document.addEventListener('toggle',ev=>{if(!etkin())return;if(ev.target.id==='epDagitim')EK.epDagitimAcik=ev.target.open;if(ev.target.id==='epProgramlar')EK.epProgramAcik=ev.target.open},true);
+// The timetable PDFs: each read in the browser; a class read again replaces its timetable.
+async function programEkle(files){
+  const okunan=[],hatalar=[],defter=D;
+  for(const f of files){durum('PDF okunuyor: '+f.name);
+    try{const {pages}=await denemePdfSayfalari(f);okunan.push(programCoz(pages))}catch(e){hatalar.push(f.name+': '+e.message)}}
+  if(D!==defter||!rehberMi())throw new Error('Oturum değişti.');
+  if(okunan.length)await degistir(p=>{p.programlar=p.programlar||{};const ts=Date.now();
+    for(const r of okunan)p.programlar[r.sinif]={kod:r.kod,ts,saatler:r.saatler,dersler:r.dersler};
+    if(Object.keys(p.programlar).length>EN_COK_PROGRAM)throw new Error('En fazla '+EN_COK_PROGRAM+' sınıfın programı saklanır.')});
+  if(okunan.length){EK.epProgram=okunan[0].sinif;EK.epProgramAcik=true}
+  return (okunan.length?'Ders programı eklendi: '+okunan.map(r=>r.sinif+' ('+sayi(r.dersler.length)+' saat)').join(', ')+'.':'Ders programı eklenmedi.')+(hatalar.length?' Okunamayan: '+hatalar.join(' · '):'');
+}
 document.addEventListener('input',ev=>{if(!etkin())return;if(ev.target.id==='epListe')LISTE=ev.target.value;else if(ev.target.dataset?.epK!==undefined)ciftIsaretle(ev.target.closest('.ep-kagit'))});
 document.addEventListener('change',async ev=>{
   if(!etkin())return;const el=ev.target;
   try{
+    if(el.id==='epProgramPdf'){const files=Array.from(el.files||[]);el.value='';if(!files.length)return;if(files.length>40){durum('Bir defada en fazla 40 PDF seçin.');return}
+      durum(await programEkle(files));yenidenCiz();return}
     if(el.id==='epTarih'){EK.epTarih=el.value==='hepsi'?'hepsi':Number(el.value);durum('');yenidenCiz('#epTarih');return}
     if(el.dataset?.epKopya!==undefined){const g=Number(el.dataset.epKopya),j=Number(el.value);if(el.value===''||!(j>=0&&j<GUNLER.length))return;
       const {plan}=oku();await ekle(g,plan.gunler[j].map(s=>({brans:s[0],ogretmen:s[1]})).filter(o=>o.ogretmen),GUNLER[j]+' gününden');yenidenCiz();return}
@@ -16934,6 +17088,7 @@ document.addEventListener('change',async ev=>{
   }catch(e){durum(e.message);yenidenCiz()}
 });
 return {dogrula,oku,degistir,gruplar,ciftler,eksikler,bransBul,ekle,listeCoz,listeUygula,bosSatirlariAt,gunSec,baskiHtml,yazdir,icerik,gorunum,dagit,varsayilanDonem,sinifOnerisi,sinifYaz,sayfala,
+  programCoz,programEkle,hocaEsle,dersAilesi,
   GUNLER,OGRENCI,EN_COK_SATIR,BRANS_SIRA,RESMI_YOK};
 })();
 function gorunumEtutPlani(){return ETUTPLANI.gorunum()}

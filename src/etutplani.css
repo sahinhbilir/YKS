@@ -89,3 +89,16 @@
   .ep-sayfa th.ep-brans{background:#D9E2F3;font-weight:700}
   .ep-sayfa td.ep-ogr{background:#FFF2CC}
 }
+/* Ders programları: the weekly grid of one class, lesson over teacher. */
+.ep-programlar .ep-duzen-arac{margin-bottom:8px}
+.ep-program{width:100%;min-width:40rem;border-collapse:collapse;table-layout:fixed;font-size:.75rem}
+.ep-program caption{text-align:left;font-weight:600;padding:4px 0 8px}
+.ep-program :is(th,td),.ep-program tbody tr:last-child td{border:1px solid var(--e-line);padding:4px 6px;text-align:center;vertical-align:middle}
+.ep-program thead th{background:color-mix(in srgb,var(--e-fg) 6%,var(--e-panel));font-weight:600}
+.ep-program tbody th{width:4.5rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--e-fg2)}
+.ep-program td b{display:block;font-weight:600;line-height:1.25}
+.ep-program td span{display:block;color:var(--e-muted);line-height:1.25}
+.ep-sinif-kapsam li{display:block;grid-column:1 / -1}
+.ep-sinif-kapsam li::before{content:none!important}
+.ep-sinif-kapsam span{display:inline-block;margin:0 8px 2px 0;white-space:nowrap}
+.ep-sinif-kapsam span.ep-tamam{color:var(--e-fg2)}.ep-sinif-kapsam span.ep-eksik{color:var(--e-bad)}
