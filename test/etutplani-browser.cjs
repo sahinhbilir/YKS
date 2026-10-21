@@ -3,10 +3,15 @@
 // deleting, empty rows dropped, a pasted list), writing students and the twice-written mark, all
 // days, the sheet in the school's Excel colours, printing (only the sheets, A4 landscape with two days
 // to a page, from the button or Ctrl+P), Sınıf dağıtımı (dated sheets, a class in Öğrenci 1, printed
-// per week) and clearing the students. Synthetic names only.
+// per week), the classes' timetables (Ders programları: read, shown, used to give each class's etüts
+// to its own teachers) and clearing the students. Synthetic names only.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const {etutRaporu,GUNLER}=require('./fixtures/etut-pdf.cjs');
+const {dersProgrami}=require('./fixtures/ders-programi-pdf.cjs');
+const ders=(l)=>{const h=[];let i=0;for(const [d,hoca,n] of l)for(let k=0;k<n;k++,i++)h.push([i%5,Math.floor(i/5),d,hoca]);return h};
+const PROGRAMLAR={'11A.pdf':dersProgrami({kod:'302',sinif:'11/A',hucreler:ders([['MATEMATİK','SENTETİK ÖĞRETMEN BİR',6],['GEOMETRİ','SENTETİK MAT SEKİZ',3],['FİZİK','SENTETİK ÖĞRETMEN ÜÇ',4],['KİMYA','SENTETİK ÖĞRETMEN DÖRT',3]])}),
+  '12A.pdf':dersProgrami({kod:'301',sinif:'12/A',hucreler:ders([['MATEMATİK AYT','SENTETİK MAT SEKİZ',6]])})};
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
 const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-etutplani-'));fs.mkdirSync(out,{recursive:true});
 (async()=>{
@@ -99,12 +104,12 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    assert.deepEqual(await page.evaluate(()=>{document.getElementById('epBaski').innerHTML='';window.dispatchEvent(new Event('beforeprint'));
      const r=[document.body.classList.contains('ep-yazdir'),document.querySelectorAll('#epBaski .ep-sayfa').length];window.dispatchEvent(new Event('afterprint'));return r.concat(document.body.classList.contains('ep-yazdir'))}),[true,1,false]);
    // A pasted list fills other days at once; the box empties after use.
-   await page.locator('[data-ep-mod="ogretmen"]').click();await page.locator('.ep-yapistir:not(.ep-dagitim) summary').click();
+   await page.locator('[data-ep-mod="ogretmen"]').click();await page.locator('#epYapistir summary').click();
    await page.locator('#epListe').fill('ÇARŞAMBA\nMatematik: Sentetik Mat Bir, Sentetik Mat Sekiz\nPERŞEMBE\nFizik: Sentetik Öğretmen Üç');
    await page.locator('#epListeUygula').click();
    await page.waitForFunction(()=>D.etutPlani.gunler[2].length===2&&D.etutPlani.gunler[3].length===1);
    assert.match(await page.locator('#epDurum').innerText(),/Yapıştırıldı: Çarşamba 2 · Perşembe 1 öğretmen/);
-   assert.equal(await page.locator('.ep-yapistir:not(.ep-dagitim)[open]').count(),0);
+   assert.equal(await page.locator('#epYapistir[open]').count(),0);
    await page.locator('[data-ep-mod="ogrenci"]').click();
    assert.match(await page.locator('.ep-kagit').nth(3).innerText(),/PERŞEMBE — ETÜT PLANI[\s\S]*FİZİK\s+SENTETİK ÖĞRETMEN ÜÇ/);
    // Sınıf dağıtımı: 22 Eki – 6 Kas, a class (never 12th grade) in every teacher's Öğrenci 1.
@@ -137,6 +142,27 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    if(!await dagitim.evaluate(e=>e.open))await dagitim.locator('summary').click();
    await page.locator('#epDagitimKaldir').click();await page.waitForFunction(()=>!D.etutPlani.donem);
    assert.equal(await page.locator('#epTarih').count(),0);assert.equal(await page.locator('[data-ep-gun="hepsi"]').count(),1);
+   // Ders programları: the school's timetable PDFs (a file that is not one is named); the class's week is shown.
+   await page.evaluate(dp=>{denemePdfSayfalari=async f=>{if(!dp[f.name])throw new Error('bilinmeyen dosya');return {pages:structuredClone(dp[f.name]),boylar:[842]}}},PROGRAMLAR);
+   const prog=page.locator('#epProgramlar');if(!await prog.evaluate(e=>e.open))await prog.locator('summary').click();
+   await page.locator('#epProgramPdf').setInputFiles(['11A.pdf','12A.pdf','notlar.pdf'].map(name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')})));
+   await page.waitForFunction(()=>D.etutPlani.programlar&&Object.keys(D.etutPlani.programlar).length===2);
+   assert.match(await page.locator('#epDurum').innerText(),/Ders programı eklendi: 11\/A \(16 saat\), 12\/A \(6 saat\)\. Okunamayan: notlar\.pdf: bilinmeyen dosya/);
+   assert.match(await page.locator('.ep-program caption').innerText(),/11\/A/);
+   assert.match(await page.locator('.ep-program tbody tr').first().innerText(),/09\.00\s+MATEMATİK\s+SENTETİK ÖĞRETMEN BİR/);
+   // With the timetables the class's etüts go to its own teachers; a mathematician teaching it Geometri is written beside it.
+   if(!await dagitim.evaluate(e=>e.open))await dagitim.locator('summary').click();
+   assert.equal(await page.locator('#epSiniflar').inputValue(),'11/A','the classes with a timetable, without the 12th grade');
+   await page.locator('#epDonemBas').fill('2026-10-26');await page.locator('#epDonemBit').fill('2026-11-06');await page.locator('#epYok').fill('');
+   await page.locator('#epDagit').click();await page.waitForFunction(()=>D.etutPlani.donem);
+   assert.match(await page.locator('#epDagitim summary').innerText(),/ders programına göre/);
+   await page.locator('#epTarih').selectOption('hepsi');await page.waitForFunction(()=>document.querySelectorAll('.ep-kagit').length===10);
+   const siniflar=await page.locator('.ep-kagit td.ep-sinif').allInnerTexts();
+   assert(siniflar.includes('11/A (GEOMETRİ)'),'Geometri beside the class: '+siniflar.join(','));
+   assert(siniflar.filter(Boolean).every(c=>/^11\/A( \(GEOMETRİ\))?$/.test(c)),'only 11/A, with its own teachers');
+   // Geometri (3 hours) gets one etüt while Matematik (6 hours) has four: never more per hour.
+   assert.equal(siniflar.filter(c=>c==='11/A (GEOMETRİ)').length,1);assert.equal(siniflar.filter(c=>c==='11/A').length>=4,true);
+   await page.screenshot({path:path.join(out,'etutplani-program-'+width+'-'+tema+'.png'),fullPage:true});
    assert.equal(await page.locator('#epTemizle').isDisabled(),true);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal scroll at '+width);
    assert.deepEqual(errors,[]);
