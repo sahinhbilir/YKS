@@ -1,8 +1,9 @@
 // Etüt planı on desktop (light) and phone (dark): the page in the teacher menu, filling a weekday
 // from the etüt report, the teacher view (adding, branş filled from the report, copying a day,
 // deleting, empty rows dropped, a pasted list), writing students and the twice-written mark, all
-// days, printing (only the sheets, one portrait page per day, from the button or Ctrl+P) and
-// clearing the students. Synthetic names only.
+// days, the sheet in the school's Excel colours, printing (only the sheets, A4 landscape with two days
+// to a page, from the button or Ctrl+P), Sınıf dağıtımı (dated sheets, a class in Öğrenci 1, printed
+// per week) and clearing the students. Synthetic names only.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const {etutRaporu,GUNLER}=require('./fixtures/etut-pdf.cjs');
@@ -32,7 +33,13 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.locator('[data-ep-rapor="0"]').click();
    await page.waitForFunction(()=>D.etutPlani&&D.etutPlani.gunler[0].length===2);
    assert.match(await page.locator('#epDurum').innerText(),/Etüt raporundan: 2 öğretmen eklendi/);
-   assert.match(await kagit.innerText(),/MATEMATİK\s+Sentetik Öğretmen Bir[\s\S]*FİZİK\s+Sentetik Öğretmen Üç/);
+   assert.match(await kagit.innerText(),/MATEMATİK\s+SENTETİK ÖĞRETMEN BİR[\s\S]*FİZİK\s+SENTETİK ÖĞRETMEN ÜÇ/);
+   // The sheet is the Excel page: navy title, blue header, light blue branş, light yellow student cells.
+   const renk=(sel)=>page.locator(sel).first().evaluate(e=>[getComputedStyle(e).backgroundColor,getComputedStyle(e).color]);
+   assert.deepEqual(await renk('.ep-kagit thead th'),['rgb(47, 85, 151)','rgb(255, 255, 255)']);
+   assert.deepEqual((await renk('.ep-kagit th.ep-brans'))[0],'rgb(217, 226, 243)');
+   assert.deepEqual((await renk('.ep-kagit td.ep-ogr'))[0],'rgb(255, 242, 204)');
+   assert.equal(await page.locator('.ep-kagit .ep-baslik').evaluate(e=>getComputedStyle(e).color),'rgb(31, 56, 100)');
    // Teacher view: a new row gets its branş from the report; an empty row is dropped on leaving.
    await page.locator('[data-ep-mod="ogretmen"]').click();
    await page.locator('[data-ep-ekle="0"]').click();
@@ -42,7 +49,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    assert.equal(await page.locator('input[data-ep-r="2"][data-ep-alan="0"]').inputValue(),'Kimya');
    await page.locator('[data-ep-ekle="0"]').click();await page.waitForFunction(()=>D.etutPlani.gunler[0].length===4);
    await page.locator('[data-ep-mod="ogrenci"]').click();await page.waitForFunction(()=>D.etutPlani.gunler[0].length===3);
-   assert.match(await kagit.innerText(),/MATEMATİK[\s\S]*FİZİK[\s\S]*KİMYA\s+Sentetik Öğretmen Dört/);
+   assert.match(await kagit.innerText(),/MATEMATİK[\s\S]*FİZİK[\s\S]*KİMYA\s+SENTETİK ÖĞRETMEN DÖRT/);
    // Students: typed or picked from the list; a name written twice on the day turns red on both.
    assert.equal(await page.locator('#epOgrenciler option[value="Sentetik Ada"]').count(),1);
    await page.locator('input[data-ep-r="0"][data-ep-k="0"]').fill('Sentetik Ada');
@@ -64,23 +71,25 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    assert.match(await page.locator('#epDurum').innerText(),/Pazartesi gününden: 3 öğretmen eklendi/);
    assert.deepEqual(await page.evaluate(()=>D.etutPlani.gunler[1].map(s=>s[1]+':'+s[2].join(''))),['Sentetik Öğretmen Bir:','Sentetik Öğretmen Üç:','Sentetik Öğretmen Dört:']);
    await page.locator('[data-ep-sil="1:1"]').click();await page.waitForFunction(()=>D.etutPlani.gunler[1].length===2);
-   // Every day, then print: only the sheets, one portrait page per day with teachers.
+   // Every day, then print: only the sheets, A4 landscape, Pazartesi and Salı on one page.
    await page.locator('[data-ep-gun="hepsi"]').click();await page.locator('[data-ep-mod="ogrenci"]').click();
    assert.equal(await kagit.count(),5);
    await page.evaluate(()=>{window.__baski=[];window.print=()=>window.__baski.push({sinif:document.body.classList.contains('ep-yazdir'),
      sayfa:document.querySelectorAll('#epBaski .ep-sayfa').length,stil:(document.getElementById('epSayfaStili')||{}).textContent})});
    await page.locator('#epYazdir').click();
    const baski=await page.evaluate(()=>window.__baski);
-   assert.equal(baski.length,1);assert.equal(baski[0].sinif,true);assert.equal(baski[0].sayfa,2);assert.match(baski[0].stil,/A4 portrait/);
+   assert.equal(baski.length,1);assert.equal(baski[0].sinif,true);assert.equal(baski[0].sayfa,1);assert.match(baski[0].stil,/A4 landscape/);
    await page.emulateMedia({media:'print'});
    const gorunen=await page.evaluate(()=>['#epBaski','.ep-gunler','#ray','.et-arac'].map(s=>{const e=document.querySelector(s);return !!e&&e.getClientRects().length>0}));
    assert.deepEqual(gorunen,[true,false,false,false],'print shows the sheets only');
-   assert.match(await page.locator('#epBaski').innerText(),/PAZARTESİ — ETÜT PLANI[\s\S]*BRANŞ\s+ÖĞRETMEN\s+ÖĞRENCİ 1[\s\S]*MATEMATİK\s+Sentetik Öğretmen Bir\s+Sentetik Ada\s+Sentetik Bora[\s\S]*SALI — ETÜT PLANI/);
-   assert.equal(await page.locator('#epBaski thead th').first().evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(0, 0, 0)');
-   assert.equal(await page.locator('#epBaski tbody th').first().evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(217, 217, 217)');
+   assert.match(await page.locator('#epBaski').innerText(),/PAZARTESİ — ETÜT PLANI[\s\S]*BRANŞ\s+ÖĞRETMEN\s+ÖĞRENCİ 1[\s\S]*MATEMATİK\s+SENTETİK ÖĞRETMEN BİR\s+SENTETİK ADA\s+SENTETİK BORA[\s\S]*SALI — ETÜT PLANI/);
+   assert.equal(await page.locator('#epBaski thead th').first().evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(47, 85, 151)');
+   assert.equal(await page.locator('#epBaski tbody th').first().evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(217, 226, 243)');
+   assert.equal(await page.locator('#epBaski td.ep-ogr').first().evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 242, 204)');
    if(width>500){
     const pdf=await page.pdf({preferCSSPageSize:true});fs.writeFileSync(path.join(out,'etutplani.pdf'),pdf);
-    assert.equal((pdf.toString('latin1').match(/\/Type\s*\/Page\b(?!s)/g)||[]).length,2,'two days, two pages');
+    assert.equal((pdf.toString('latin1').match(/\/Type\s*\/Page\b(?!s)/g)||[]).length,1,'Pazartesi and Salı on one page');
+    assert.match(pdf.toString('latin1'),/\/MediaBox\s*\[\s*0 0 84[12](\.\d+)? 59[45](\.\d+)?\s*\]/,'A4 landscape');
    }
    await page.screenshot({path:path.join(out,'etutplani-baski-'+width+'.png'),fullPage:true});
    await page.emulateMedia({media:'screen'});
@@ -88,20 +97,46 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    assert.deepEqual(await page.evaluate(()=>[document.body.classList.contains('ep-yazdir'),!!document.getElementById('epSayfaStili')]),[false,false]);
    // The browser's own print command (Ctrl+P) prints the sheets the same way.
    assert.deepEqual(await page.evaluate(()=>{document.getElementById('epBaski').innerHTML='';window.dispatchEvent(new Event('beforeprint'));
-     const r=[document.body.classList.contains('ep-yazdir'),document.querySelectorAll('#epBaski .ep-sayfa').length];window.dispatchEvent(new Event('afterprint'));return r.concat(document.body.classList.contains('ep-yazdir'))}),[true,2,false]);
+     const r=[document.body.classList.contains('ep-yazdir'),document.querySelectorAll('#epBaski .ep-sayfa').length];window.dispatchEvent(new Event('afterprint'));return r.concat(document.body.classList.contains('ep-yazdir'))}),[true,1,false]);
    // A pasted list fills other days at once; the box empties after use.
-   await page.locator('[data-ep-mod="ogretmen"]').click();await page.locator('.ep-yapistir summary').click();
+   await page.locator('[data-ep-mod="ogretmen"]').click();await page.locator('.ep-yapistir:not(.ep-dagitim) summary').click();
    await page.locator('#epListe').fill('ÇARŞAMBA\nMatematik: Sentetik Mat Bir, Sentetik Mat Sekiz\nPERŞEMBE\nFizik: Sentetik Öğretmen Üç');
    await page.locator('#epListeUygula').click();
    await page.waitForFunction(()=>D.etutPlani.gunler[2].length===2&&D.etutPlani.gunler[3].length===1);
    assert.match(await page.locator('#epDurum').innerText(),/Yapıştırıldı: Çarşamba 2 · Perşembe 1 öğretmen/);
-   assert.equal(await page.locator('.ep-yapistir[open]').count(),0);
+   assert.equal(await page.locator('.ep-yapistir:not(.ep-dagitim)[open]').count(),0);
    await page.locator('[data-ep-mod="ogrenci"]').click();
-   assert.match(await page.locator('.ep-kagit').nth(3).innerText(),/PERŞEMBE — ETÜT PLANI[\s\S]*FİZİK\s+Sentetik Öğretmen Üç/);
+   assert.match(await page.locator('.ep-kagit').nth(3).innerText(),/PERŞEMBE — ETÜT PLANI[\s\S]*FİZİK\s+SENTETİK ÖĞRETMEN ÜÇ/);
+   // Sınıf dağıtımı: 22 Eki – 6 Kas, a class (never 12th grade) in every teacher's Öğrenci 1.
+   const dagitim=page.locator('#epDagitim');if(!await dagitim.evaluate(e=>e.open))await dagitim.locator('summary').click();
+   await page.locator('#epDonemBas').fill('2026-10-22');await page.locator('#epDonemBit').fill('2026-11-06');
+   await page.locator('#epSiniflar').fill('9/A, 9-b, 10/A, 12/A');await page.locator('#epYok').fill('28.10.2026, 29.10.2026');
+   await page.locator('#epDagit').click();await page.waitForFunction(()=>D.etutPlani.donem);
+   assert.deepEqual(await page.evaluate(()=>D.etutPlani.donem),{bas:'2026-10-22',bit:'2026-11-06',siniflar:['9/A','9/B','10/A'],yok:['2026-10-28','2026-10-29']});
+   assert.match(await page.locator('#epDurum').innerText(),/Dağıtıldı: 22 Eki – 6 Kas · 10 gün · 3 sınıf \(12\. sınıflar alınmadı\)/);
+   assert.equal(await page.locator('#epTarih').inputValue(),String(await page.evaluate(()=>gunNo('2026-10-22'))),'the next date opens');
+   assert.match(await kagit.first().innerText(),/PERŞEMBE 22 EKİM — ETÜT PLANI[\s\S]*FİZİK\s+SENTETİK ÖĞRETMEN ÜÇ\s+9\/B/);
+   await page.locator('#epTarih').selectOption('hepsi');await page.waitForFunction(()=>document.querySelectorAll('.ep-kagit').length===10);
+   // A name written on one Pazartesi shows on the other Pazartesi too.
+   await page.locator('.ep-kagit[data-ep-tarih="'+await page.evaluate(()=>gunNo('2026-10-26'))+'"] input[data-ep-r="0"][data-ep-k="1"]').fill('Sentetik Ege');await page.keyboard.press('Tab');
+   await page.waitForFunction(()=>D.etutPlani.gunler[0][0][2][1]==='Sentetik Ege');
+   assert.equal(await page.locator('.ep-kagit[data-ep-tarih="'+await page.evaluate(()=>gunNo('2026-11-02'))+'"] input[data-ep-r="0"][data-ep-k="1"]').inputValue(),'Sentetik Ege');
+   await page.screenshot({path:path.join(out,'etutplani-dagitim-'+width+'-'+tema+'.png'),fullPage:true});
+   await page.locator('#epYazdir').click();
+   const sayfalar=await page.evaluate(()=>[...document.querySelectorAll('#epBaski .ep-sayfa')].map(s=>[...s.querySelectorAll('h1')].map(h=>h.textContent.replace(' — ETÜT PLANI',''))));
+   assert.deepEqual(sayfalar,[['PERŞEMBE 22 EKİM'],['PAZARTESİ 26 EKİM','SALI 27 EKİM'],['PAZARTESİ 2 KASIM','SALI 3 KASIM'],['ÇARŞAMBA 4 KASIM','PERŞEMBE 5 KASIM']],'two days to a page, per week; days off and days without teachers left out');
+   if(width>500){await page.emulateMedia({media:'print'});const pdf=await page.pdf({preferCSSPageSize:true});fs.writeFileSync(path.join(out,'etutplani-dagitim.pdf'),pdf);
+    assert.equal((pdf.toString('latin1').match(/\/Type\s*\/Page\b(?!s)/g)||[]).length,4);await page.emulateMedia({media:'screen'})}
+   await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));
+   assert.equal(await page.locator('#epBaski .ep-sayfa').first().locator('td.ep-sinif').first().textContent(),'9/B','the class is printed in Öğrenci 1');
    // Clearing the students keeps the teachers.
    await page.locator('#epTemizle').click();
    await page.waitForFunction(()=>D.etutPlani.gunler.every(g=>g.every(s=>s[2].every(a=>a===''))));
    assert.equal(await page.evaluate(()=>D.etutPlani.gunler[0].length+D.etutPlani.gunler[1].length),5);
+   // Kaldır returns to the weekly sheets.
+   if(!await dagitim.evaluate(e=>e.open))await dagitim.locator('summary').click();
+   await page.locator('#epDagitimKaldir').click();await page.waitForFunction(()=>!D.etutPlani.donem);
+   assert.equal(await page.locator('#epTarih').count(),0);assert.equal(await page.locator('[data-ep-gun="hepsi"]').count(),1);
    assert.equal(await page.locator('#epTemizle').isDisabled(),true);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal scroll at '+width);
    assert.deepEqual(errors,[]);

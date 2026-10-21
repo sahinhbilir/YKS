@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 'use strict';
-// Etüt planı: the paper sheet per weekday, branş grouping in the paper's order, students written
-// twice, filling from the etüt report or a pasted list, storage checks and failed saves, the viewing
-// teacher, printing and privacy. Synthetic names only.
+// Etüt planı: the sheet per weekday in the school's Excel layout, branş grouping in the paper's order,
+// students written twice, filling from the etüt report or a pasted list, Sınıf dağıtımı (dated sheets,
+// a class in Öğrenci 1, every class in every subject), storage checks and failed saves, the viewing
+// teacher, landscape printing two days to a page, and privacy. Synthetic names only.
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
 const { etutRaporu, GUNLER } = require('./fixtures/etut-pdf.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
@@ -49,12 +50,65 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run('EK.epGun=0'); const h = run('ETUTPLANI.icerik()');
     const sira = ['>MATEMATİK<', 'Sentetik Mat Bir', 'Sentetik Mat İki', '>GEOMETRİ<', '>FİZİK<', '>İNGİLİZCE<', '>ROBOTİK<'].map(t => h.indexOf(t));
     assert(sira.every((x, i) => x > 0 && (i === 0 || x > sira[i - 1])), 'grouped in the paper order: ' + sira);
-    assert.match(h, /<th scope="row" class="ep-brans" rowspan="2">MATEMATİK<\/th>/);
+    assert.match(h, /<th scope="row" class="ep-brans">MATEMATİK<\/th><td class="ep-hoca">SENTETİK MAT BİR<\/td>/, 'the branş on its first row, as in the Excel file');
+    assert.match(h, /<tr><td class="ep-brans-bos"><\/td><td class="ep-hoca">SENTETİK MAT İKİ<\/td>/, 'the cell below it left empty');
     assert.match(h, /data-ep-r="3" data-ep-k="1" value="Sentetik Bora"/, 'cells keep the row they were written in');
-    const b = run('ETUTPLANI.baskiHtml(D.etutPlani,[0,1,2,3,4])');
-    assert.equal((b.match(/<section class="ep-sayfa">/g) || []).length, 1, 'days without teachers are not printed');
-    assert.match(b, /<h1>PAZARTESİ — ETÜT PLANI<\/h1>/); assert.match(b, /<th scope="row" rowspan="2">MATEMATİK<\/th><td>Sentetik Mat Bir<\/td><td>Sentetik Ada<\/td><td><\/td><td><\/td><td><\/td><\/tr><tr><td>Sentetik Mat İki<\/td><td><\/td><td>Sentetik Bora<\/td>/);
+    let b = run('ETUTPLANI.baskiHtml(D.etutPlani,[0,1,2,3,4])');
+    assert.equal((b.match(/<section class="ep-sayfa"/g) || []).length, 1, 'days without teachers are not printed');
+    assert.match(b, /<section class="ep-sayfa" style="--o:0\.82"><div class="ep-gun"><h1>PAZARTESİ — ETÜT PLANI<\/h1>/, 'at the Excel file\'s 82%');
+    assert.match(b, /<th scope="row" class="ep-brans">MATEMATİK<\/th><td class="ep-hoca">SENTETİK MAT BİR<\/td><td class="ep-ogr">SENTETİK ADA<\/td><td class="ep-ogr"><\/td><td class="ep-ogr"><\/td><td class="ep-ogr"><\/td><\/tr><tr><td class="ep-brans-bos"><\/td><td class="ep-hoca">SENTETİK MAT İKİ<\/td><td class="ep-ogr"><\/td><td class="ep-ogr">SENTETİK BORA<\/td>/);
     assert(!b.includes('<input'), 'the printed sheet is plain text');
+    // Two days to a landscape page, as the Excel file prints: Pazartesi–Salı, Çarşamba–Perşembe, Cuma.
+    await yaz([0, 1, 2, 3, 4].map(g => [satir('Matematik', 'Sentetik Mat ' + g)]));
+    b = run('ETUTPLANI.baskiHtml(D.etutPlani,[0,1,2,3,4])');
+    assert.deepEqual(b.split('<section').slice(1).map(x => (x.match(/<h1>([^<]+)<\/h1>/g) || []).map(h => h.slice(4, -5).split(' ')[0])), [['PAZARTESİ', 'SALI'], ['ÇARŞAMBA', 'PERŞEMBE'], ['CUMA']]);
+    assert.equal((b.match(/<div class="ep-ara"><\/div>/g) || []).length, 2);
+    // A day too long for the page prints smaller, as Excel's fit to page does.
+    await yaz([Array.from({length: 40}, (_, i) => satir('Matematik', 'Sentetik Uzun ' + i)), [], [], [], []]);
+    assert.match(run('ETUTPLANI.baskiHtml(D.etutPlani,[0])'), /style="--o:0\.548"/);
+  });
+  await check('Sınıf dağıtımı: dated sheets from 22 Eki to 6 Kas, a class in every Öğrenci 1, each subject reaching every class', async () => {
+    // The default: tomorrow to the Friday of the week after next, Cumhuriyet Bayramı and the afternoon before it off.
+    assert.deepEqual(get('ETUTPLANI.varsayilanDonem()'), {bas:'2026-10-22', bit:'2026-11-06', siniflar:[], yok:['2026-10-28', '2026-10-29']});
+    put('pages', etutRaporu(GUNLER).pages); await run('ETUT.raporEkle([ETUT.pdfCoz(pages)])'); run('ETUT.onbellek.ts=null');
+    assert.deepEqual(get('ETUTPLANI.sinifOnerisi()'), ['10/A', '11/A'], 'the report\'s classes and the notebook\'s, without the 12th grade');
+    assert.deepEqual(['10-a', '9 B', ' 11/c ', '12/A', 'abc', '10/'].map(c => run('ETUTPLANI.sinifYaz(' + JSON.stringify(c) + ')')), ['10/A', '9/B', '11/C', '12/A', null, null]);
+    await yaz([[satir('Matematik', 'Sentetik Mat Bir'), satir('Fizik', 'Sentetik Fizikçi'), satir('Matematik', 'Sentetik Mat İki', ['Sentetik Ada', 'Sentetik Bora'])],
+      [satir('Matematik', 'Sentetik Mat Bir')], [satir('Fizik', 'Sentetik Fizikçi'), satir('Biyoloji', 'Sentetik Biyolog')],
+      [satir('Matematik', 'Sentetik Mat İki'), satir('Fizik', 'Sentetik Fizikçi')], [satir('Matematik', 'Sentetik Mat Bir')]]);
+    run("D.ayar.tatiller=[{bas:'2026-11-03',bit:'2026-11-03',ad:'Sentetik tatil'}]");
+    await run("ETUTPLANI.degistir(p=>{p.donem={bas:'2026-10-22',bit:'2026-11-06',siniflar:['9/A','9/B','10/A','11/A'],yok:['2026-10-28','2026-10-29']}})");
+    const dg = () => get('(()=>{const d=ETUTPLANI.dagit(D.etutPlani);return {gunler:d.gunler.map(x=>isoDan(x.g)),sinif:Object.fromEntries([...d.sinif].map(([k,v])=>[isoDan(+k.split(":")[0])+":"+k.split(":")[1],v])),kapsam:d.kapsam}})()');
+    const d = dg();
+    assert.deepEqual(d.gunler, ['2026-10-22', '2026-10-23', '2026-10-26', '2026-10-27', '2026-10-30', '2026-11-02', '2026-11-04', '2026-11-05', '2026-11-06'], 'school days, less the yok days and the school\'s holidays');
+    // Matematik takes the classes in turn from 9/A, Fizik from 9/B; same-day teachers of a subject get different classes.
+    assert.deepEqual([d.sinif['2026-10-22:0'], d.sinif['2026-10-22:1'], d.sinif['2026-10-23:0'], d.sinif['2026-10-26:0'], d.sinif['2026-10-26:2'], d.sinif['2026-10-26:1']], ['9/A', '9/B', '9/B', '10/A', '11/A', '10/A']);
+    assert.deepEqual(d.kapsam.map(x => [x.brans, x.yer, x.eksik]), [['Matematik', 10, []], ['Fizik', 5, []], ['Biyoloji', 1, ['9/A', '9/B', '11/A']]], 'every class in every subject, or which classes miss it');
+    assert(Object.values(d.sinif).every(c => !c.startsWith('12/')));
+    // The page: dated sheets (today 21 Eki opens 22 Eki), Öğrenci 1 holds the class, the other cells the weekday's names.
+    let h = run('ETUTPLANI.icerik()');
+    assert.match(h, /<select id="epTarih" aria-label="Tarih"><option value="hepsi">Tümü \(22 Eki – 6 Kas\)<\/option>/);
+    assert.match(h, /<h2 class="ep-baslik">PERŞEMBE 22 EKİM — ETÜT PLANI<\/h2>/); assert.equal((h.match(/class="et-panel ep-kagit"/g) || []).length, 1);
+    assert.match(h, /<td class="ep-hoca">SENTETİK MAT İKİ<\/td><td class="ep-ogr ep-sinif">9\/A<\/td><td class="ep-ogr"><input type="text" data-ep-g="3" data-ep-r="0" data-ep-k="1"/);
+    assert.match(h, /<summary>Sınıf dağıtımı · 22 Eki – 6 Kas · 4 sınıf · 1 derste eksik<\/summary>/);
+    assert.match(h, /<li class="ep-eksik"><b>BİYOLOJİ<\/b> 1 etüt · alamayan: 9\/A, 9\/B, 11\/A<\/li>/);
+    run("EK.epTarih='hepsi'"); h = run('ETUTPLANI.icerik()');
+    assert.equal((h.match(/class="et-panel ep-kagit"/g) || []).length, 9);
+    assert.match(h, /PAZARTESİ 26 EKİM — ETÜT PLANI[\s\S]*?<td class="ep-hoca">SENTETİK MAT İKİ<\/td><td class="ep-ogr ep-sinif">11\/A<\/td><td class="ep-ogr"><input[^>]*value="Sentetik Bora"/);
+    // The teacher view edits the weekdays.
+    run("EK.epMod='ogretmen'"); h = run('ETUTPLANI.icerik()'); assert(h.includes('data-ep-gun="hepsi"') && !h.includes('id="epTarih"'));
+    // Printed per week, two days to a page.
+    run("EK.epMod='ogrenci'");
+    const b = run('(()=>{const p=D.etutPlani,d=ETUTPLANI.dagit(p);return ETUTPLANI.baskiHtml(p,d.gunler.map(({g,w})=>({g,w})),d)})()');
+    assert.deepEqual(b.split('<section').slice(1).map(x => (x.match(/<h1>([^<]+)<\/h1>/g) || []).map(t => t.slice(4, -18))),
+      [['PERŞEMBE 22 EKİM'], ['CUMA 23 EKİM'], ['PAZARTESİ 26 EKİM', 'SALI 27 EKİM'], ['CUMA 30 EKİM'], ['PAZARTESİ 2 KASIM'], ['ÇARŞAMBA 4 KASIM', 'PERŞEMBE 5 KASIM'], ['CUMA 6 KASIM']]);
+    assert.match(b, /<td class="ep-hoca">SENTETİK MAT İKİ<\/td><td class="ep-ogr ep-sinif">9\/A<\/td><td class="ep-ogr"><\/td>/);
+    // Stored with the plan and checked like it; a viewing teacher sees the sheets without the settings.
+    for (const bad of [{bas:'2026-11-06', bit:'2026-10-22', siniflar:['9/A'], yok:[]}, {bas:'2026-10-22', bit:'2027-03-01', siniflar:['9/A'], yok:[]},
+      {bas:'2026-10-22', bit:'2026-11-06', siniflar:[], yok:[]}, {bas:'2026-10-22', bit:'2026-11-06', siniflar:['9/A'], yok:['29.10.2026']}]) {
+      put('X', bad); assert.throws(() => run('ETUTPLANI.dogrula({...D.etutPlani,donem:X})'), /sınıf dağıtımı/);
+    }
+    run('yalnizcaGoruntuleme=()=>true'); h = run('ETUTPLANI.icerik()'); assert(!h.includes('id="epDagitim"') && h.includes('id="epTarih"'));
   });
   await check('a student written twice on one day is marked on both cells', async () => {
     await yaz([[satir('Matematik', 'Sentetik Mat Bir', ['Sentetik Ada', 'Sentetik Bora']), satir('Fizik', 'Sentetik Fizikçi', ['sentetik  ada'])], [satir('Fizik', 'Sentetik Fizikçi', ['Sentetik Ada'])], [], [], []]);

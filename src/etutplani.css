@@ -1,24 +1,39 @@
-/* Etüt planı: the Etütler look (tokens and components in etutler.css) around the school's paper
-   sheet. On screen the sheet follows the theme; printed, it is black and white like the paper. */
+/* Etüt planı: the Etütler look (tokens and components in etutler.css) around the school's sheets. The
+   sheet itself is the school's Excel page, on screen and on paper, in either theme: navy title, blue
+   header row, the branş in light blue on its group's first row, light yellow student cells, grey
+   borders, Arial. */
 #epDurum{overflow-wrap:anywhere;font-size:.8125rem;margin:0;color:var(--e-fg2)}#epDurum:empty{display:none}
 #epKok .et-dugme:disabled{opacity:.4;cursor:default;background:var(--e-panel)}
 .ep-gun-sec .ep-kisa{display:none}
 .ep-gunler{display:flex;flex-direction:column;gap:20px}
-#epKok .ep-baslik{text-align:center;font-size:1rem;font-weight:600;letter-spacing:.04em}
 .ep-kaydir{overflow-x:auto}
-.ep-tablo{width:100%;min-width:44rem;border-collapse:collapse;table-layout:fixed}
-.ep-tablo col.ep-k-brans{width:15%}.ep-tablo col.ep-k-hoca{width:21%}.ep-tablo col.ep-k-ogr{width:16%}
-.ep-tablo th,.ep-tablo td,.ep-tablo tbody tr:last-child td{border:1px solid var(--e-axis);padding:0;height:2.5rem;text-align:left}
-.ep-tablo thead th{background:var(--e-fg);color:var(--e-bg);border-color:var(--e-fg);font-size:.75rem;font-weight:600;letter-spacing:.04em;padding:8px;text-align:center;height:auto}
-.ep-tablo th.ep-brans{background:color-mix(in srgb,var(--e-fg) 12%,var(--e-panel));font-size:.8125rem;font-weight:600;text-align:center;padding:6px 8px;overflow-wrap:anywhere}
-.ep-tablo td.ep-hoca{padding:6px 10px;font-weight:500;overflow-wrap:anywhere}
-#epKok .ep-tablo input,#epKok .ep-duzen-arac select{width:100%;min-width:0;height:100%;min-height:2.5rem;border:0;border-radius:0;background:transparent;color:var(--e-fg);font:inherit;padding:6px 10px}
-#epKok .ep-tablo input:focus-visible{outline:2px solid var(--e-c1);outline-offset:-2px}
-#epKok .ep-tablo input[readonly]{cursor:default}
-#epKok .ep-tablo input.ep-cift{color:var(--e-bad);text-decoration:underline wavy var(--e-bad);text-underline-offset:4px}
-.ep-tablo.duzen{min-width:0}.ep-tablo.duzen col.ep-k-hoca2{width:55%}.ep-tablo.duzen col.ep-k-sil{width:2.75rem}
-.ep-tablo td.ep-bos{padding:18px;text-align:center}
-.ep-bos{color:var(--e-muted)}.ep-bos .et-dugme{margin:4px}
+/* The sheet */
+#epKok .ep-kagit{background:#fff;color:#000;border-color:#d0d7e5;gap:6px}
+#epKok .ep-kagit .ep-baslik{margin:0;font:700 1.15rem/1.4 Arial,Helvetica,sans-serif;color:#1F3864;letter-spacing:0;text-align:left}
+.ep-kagit .ep-tablo{width:100%;min-width:52rem;border-collapse:collapse;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;font-size:.8125rem;color:#000}
+.ep-kagit .ep-tablo col.ep-k-brans{width:10.96%}.ep-kagit .ep-tablo col.ep-k-hoca,.ep-kagit .ep-tablo col.ep-k-ogr{width:17.81%}
+.ep-kagit .ep-tablo :is(th,td){border:1px solid #B7B7B7;height:26px;padding:0 5px;background:#fff;color:#000;text-align:left;vertical-align:middle;font-size:.8125rem;letter-spacing:0;
+  text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ep-kagit .ep-tablo tbody tr:last-child td{border-bottom:1px solid #B7B7B7}
+.ep-kagit .ep-tablo thead th{height:29px;background:#2F5597;color:#fff;font-weight:700;text-align:center;letter-spacing:0}
+.ep-kagit .ep-tablo th.ep-brans{background:#D9E2F3;font-weight:700}
+.ep-kagit .ep-tablo td.ep-ogr{background:#FFF2CC;padding:0}
+.ep-kagit .ep-tablo td.ep-sinif{padding:0 5px}
+#epKok .ep-kagit .ep-tablo input{display:block;width:100%;min-width:0;height:26px;border:0;border-radius:0;background:transparent;color:#000;font:inherit;text-transform:uppercase;padding:0 5px}
+#epKok .ep-kagit .ep-tablo input:focus-visible{outline:2px solid #2F5597;outline-offset:-2px}
+#epKok .ep-kagit .ep-tablo input[readonly]{cursor:default}
+#epKok .ep-kagit .ep-tablo input::placeholder{color:transparent}
+#epKok .ep-kagit .ep-tablo input.ep-cift{color:#C00000;text-decoration:underline wavy #C00000;text-underline-offset:4px}
+.ep-kagit .ep-tablo td.ep-bos{height:auto;padding:18px;text-align:center;color:#595959;text-transform:none;white-space:normal}
+.ep-bos .et-dugme{margin:4px}
+/* The teacher view keeps the board's look. */
+#epKok .ep-duzen .ep-baslik{text-align:center;font-size:1rem;font-weight:600;letter-spacing:.04em}
+.ep-tablo.duzen{width:100%;border-collapse:collapse;table-layout:fixed}
+.ep-tablo.duzen col.ep-k-hoca2{width:55%}.ep-tablo.duzen col.ep-k-sil{width:2.75rem}
+.ep-tablo.duzen :is(th,td),.ep-tablo.duzen tbody tr:last-child td{border:1px solid var(--e-axis);padding:0;height:2.5rem;text-align:left}
+.ep-tablo.duzen thead th{background:var(--e-fg);color:var(--e-bg);border-color:var(--e-fg);font-size:.75rem;font-weight:600;letter-spacing:.04em;padding:8px;text-align:center;height:auto}
+#epKok .ep-tablo.duzen input,#epKok .ep-duzen-arac select{width:100%;min-width:0;height:100%;min-height:2.5rem;border:0;border-radius:0;background:transparent;color:var(--e-fg);font:inherit;padding:6px 10px}
+#epKok .ep-tablo.duzen input:focus-visible{outline:2px solid var(--e-c1);outline-offset:-2px}
 .ep-x{width:100%;height:100%;min-height:2.5rem;border:0;background:none;color:var(--e-muted);font-size:1.15rem;line-height:1;cursor:pointer}
 .ep-x:hover{color:var(--e-bad)}
 .ep-gizli{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -28,34 +43,49 @@
 .ep-yapistir summary{cursor:pointer;font-weight:500}.ep-yapistir[open] summary{margin-bottom:10px}
 #epKok .ep-yapistir textarea{display:block;width:100%;min-height:11rem;resize:vertical;margin:0 0 10px;font:inherit;font-size:.8125rem;line-height:1.5;color:var(--e-fg);background:var(--e-bg);border:1px solid var(--e-line);border-radius:var(--e-r);padding:8px 10px}
 #epKok .ep-yapistir textarea::placeholder{color:var(--e-muted)}
+/* Sınıf dağıtımı */
+.ep-dagitim-alan{display:flex;flex-wrap:wrap;gap:10px 14px;margin-bottom:10px}
+.ep-dagitim-alan label{display:flex;flex-direction:column;gap:4px;font-size:.75rem;color:var(--e-muted)}
+.ep-dagitim-alan label.ep-genis{flex:1 1 18rem}
+#epKok .ep-dagitim-alan input{font:inherit;font-size:.8125rem;color:var(--e-fg);background:var(--e-bg);border:1px solid var(--e-line);border-radius:var(--e-r);padding:6px 10px;min-width:0}
+.ep-kapsam{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr));gap:4px 16px;font-size:.75rem;color:var(--e-fg2)}
+.ep-kapsam b{font-weight:600;color:var(--e-fg)}
+.ep-kapsam li.ep-tamam::before{content:"✓ ";color:var(--e-ok)}
+.ep-kapsam li.ep-eksik{color:var(--e-bad)}.ep-kapsam li.ep-eksik::before{content:"! ";font-weight:700}
 #epBaski{display:none}
-#epKok .ep-tablo input::placeholder{color:transparent}
 /* Phone: each teacher becomes a block with the four students in two columns; the branş heads its group. */
 @media (max-width:640px){
   .ep-gun-sec .ep-tam{display:none}.ep-gun-sec .ep-kisa{display:inline}
-  .ep-tablo:not(.duzen){display:block;min-width:0;border-top:1px solid var(--e-axis)}
-  .ep-tablo:not(.duzen) colgroup,.ep-tablo:not(.duzen) thead{display:none}
-  .ep-tablo:not(.duzen) tbody{display:block}
-  .ep-tablo:not(.duzen) tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .ep-tablo:not(.duzen) :is(th,td),.ep-tablo:not(.duzen) tbody tr:last-child td{height:auto;border:0;border-bottom:1px solid var(--e-grid)}
-  .ep-tablo:not(.duzen) th.ep-brans{grid-column:1 / -1;text-align:left;padding:8px 10px;border-bottom-color:var(--e-axis)}
-  .ep-tablo:not(.duzen) td.ep-hoca{grid-column:1 / -1;padding:8px 10px 4px;border-bottom:0}
-  .ep-tablo:not(.duzen) td.ep-ogr:nth-of-type(even){border-right:1px solid var(--e-grid)}
-  .ep-tablo:not(.duzen) td.ep-bos{grid-column:1 / -1}
-  #epKok .ep-tablo input::placeholder{color:var(--e-muted)}
+  .ep-kagit .ep-tablo{display:block;min-width:0;border-top:1px solid #B7B7B7}
+  .ep-kagit .ep-tablo colgroup,.ep-kagit .ep-tablo thead{display:none}
+  .ep-kagit .ep-tablo tbody{display:block}
+  .ep-kagit .ep-tablo tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .ep-kagit .ep-tablo :is(th,td),.ep-kagit .ep-tablo tbody tr:last-child td{height:auto;min-height:30px;border-width:0 0 1px 1px;border-style:solid;border-color:#B7B7B7}
+  .ep-kagit .ep-tablo th.ep-brans{grid-column:1 / -1;padding:6px 8px}
+  .ep-kagit .ep-tablo td.ep-brans-bos{display:none}
+  .ep-kagit .ep-tablo td.ep-hoca{grid-column:1 / -1;padding:6px 8px;font-weight:700}
+  .ep-kagit .ep-tablo td.ep-sinif{display:flex;align-items:center}
+  .ep-kagit .ep-tablo td.ep-bos{grid-column:1 / -1}
+  #epKok .ep-kagit .ep-tablo input{height:30px}
+  #epKok .ep-kagit .ep-tablo input::placeholder{color:#8a8a8a;text-transform:none}
 }
-/* Print: only the sheets, one weekday per portrait page (the page size is set when printing). */
+/* Print: only the sheets, A4 landscape (the page is set when printing), sized as the Excel prints them
+   at 82% (--o, smaller when a page's rows would not fit). */
 @media print{
   body.ep-yazdir>:not(.kabuk),body.ep-yazdir .kabuk>:not(main),body.ep-yazdir #ana>:not(#epKok),body.ep-yazdir #epKok>:not(#epBaski){display:none!important}
   body.ep-yazdir,body.ep-yazdir main{background:#fff!important;padding:0!important;margin:0!important;max-width:none!important}
   body.ep-yazdir #epKok{display:block;border:0;border-radius:0;padding:0;margin:0;background:#fff;color:#000}
   body.ep-yazdir #epBaski{display:block}
-  .ep-sayfa{break-after:page;page-break-after:always;color:#000;font-family:Arial,Helvetica,sans-serif}
+  .ep-sayfa{--o:.82;break-after:page;page-break-after:always;color:#000;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .ep-sayfa:last-child{break-after:auto;page-break-after:auto}
-  #epKok .ep-sayfa h1{margin:0 0 6mm;font:700 17pt/1.2 Arial,Helvetica,sans-serif;text-align:center;letter-spacing:.02em;color:#000}
-  .ep-sayfa table{width:100%;border-collapse:collapse;table-layout:fixed;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .ep-sayfa col.ep-k-brans{width:15%}.ep-sayfa col.ep-k-hoca{width:21%}.ep-sayfa col.ep-k-ogr{width:16%}
-  .ep-sayfa th,.ep-sayfa td,.ep-sayfa tbody tr:last-child td{border:1px solid #000;height:11mm;padding:1.5mm 2.5mm;font-size:10pt;line-height:1.25;vertical-align:middle;overflow-wrap:break-word;color:#000;background:#fff}
-  .ep-sayfa thead th{height:auto;padding:2.5mm;background:#000;color:#fff;font-weight:700;text-align:center;letter-spacing:.02em}
-  .ep-sayfa tbody th{background:#d9d9d9;font-size:9.5pt;font-weight:700;text-align:center}
+  #epKok .ep-sayfa h1{margin:0;height:calc(var(--o)*21.75pt);font:700 calc(var(--o)*14pt)/calc(var(--o)*21.75pt) Arial,Helvetica,sans-serif;color:#1F3864;text-align:left;letter-spacing:0;white-space:nowrap}
+  .ep-sayfa .ep-ara{height:calc(var(--o)*30pt)}
+  .ep-sayfa table{width:calc(var(--o)*1052px);border-collapse:collapse;table-layout:fixed}
+  .ep-sayfa col.ep-k-brans{width:10.96%}.ep-sayfa col.ep-k-hoca,.ep-sayfa col.ep-k-ogr{width:17.81%}
+  .ep-sayfa :is(th,td){height:calc(var(--o)*19.5pt);padding:0 calc(var(--o)*3pt);border:.75pt solid #B7B7B7;background:#fff;color:#000;
+    font-size:calc(var(--o)*10pt);line-height:1.1;text-align:left;vertical-align:middle;white-space:nowrap;overflow:hidden}
+  .ep-sayfa tbody tr:last-child td{border-bottom:.75pt solid #B7B7B7}
+  .ep-sayfa thead th{height:calc(var(--o)*21.75pt);background:#2F5597;color:#fff;font-weight:700;text-align:center}
+  .ep-sayfa th.ep-brans{background:#D9E2F3;font-weight:700}
+  .ep-sayfa td.ep-ogr{background:#FFF2CC}
 }
