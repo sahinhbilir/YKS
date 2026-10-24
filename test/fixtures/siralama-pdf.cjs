@@ -102,4 +102,85 @@ const SINAVLAR = {
       ] }
   }
 };
-module.exports = { okulListesi, SINAVLAR, H };
+// Each grade's own list (the 9. and 10. sınıf lists use larger type, print only the lessons their
+// exam has and only the TYT score; a long school name wraps onto a second line).
+// liste: {ad, tarih, okul, katilim, dersler:[labels], buyuk:bool, okulIkiSatir:bool, puan:n,
+//   kurum:{n,dy,p}|null, ogr:[{no, ad, sinif:['102','9/A'], dy:[[d,y]|null...], p:[n], r:[n]}]}
+function sinifListesi(liste) {
+  const items = [], n = liste.dersler.length, B = liste.buyuk;
+  const z = B ? { net: 7, dy: 6, n: 5.5, bas: 7, ders: 5.5, rank: 5.5 } : { net: 5, dy: 4, n: 4.5, bas: 6, ders: 4.5, rank: 4.5 };
+  const sag = 829.74, puanW = B ? 29.94 : 24.6, toplamX = sag - liste.puan * puanW - (B ? 30.4 : 14.6);
+  const ilkX = B ? 163.5 : 135.9, adim = (toplamX - (B ? 52 : 23) - ilkX) / (n - 1);
+  const kolon = [...Array.from({ length: n }, (_, i) => ilkX + i * adim), toplamX];
+  const puan = Array.from({ length: liste.puan }, (_, i) => sag - (liste.puan - i - 0.5) * puanW);
+  const ust = (B ? 75.5 : 75.6) + (liste.okulIkiSatir ? 10.5 : 0), nY = ust + (B ? 9.5 : 9.6), satirH = B ? 20.7 : 16.02, kurumY = ust + (B ? 27.9 : 28.6), ilk = ust + (B ? 46.1 : 44.4);
+  yazi(items, 'DENEME SINAVI TOPLU SONUÇ LİSTESİ Öğrenci Adı Sıralı', 420, 18.2, 10);
+  const meta = (cy, cells) => cells.forEach(([etiket, deger, x, dy = 0]) => { yazi(items, etiket, x, cy + dy, 9, 'l'); if (deger) yazi(items, deger, x + etiket.length * 4.5 + 2.5, cy + dy, 9, 'l'); });
+  if (liste.okulIkiSatir) {
+    const [a, b] = liste.okul.split('|');
+    meta(33.6, [['Okul:', a, 28]]); yazi(items, b, 90.7, 44.1, 9, 'l');
+    meta(38.8, [['Sınav Adı:', liste.ad, 292], ['Sınav Tarihi:', liste.tarih, 608]]);
+    meta(59, [['Toplam Katılımcı:', liste.katilim[0], 62], ['Kampüs Katılımcı:', liste.katilim[1], 296], ['Kurum Katılımcı:', liste.katilim[2], 616]]);
+  } else {
+    meta(33.6, [['Okul:', liste.okul, 18.6], ['Sınav Adı:', liste.ad, 321.6], ['Sınav Tarihi:', liste.tarih, 630]]);
+    meta(48.4, [['Toplam Katılımcı:', liste.katilim[0], 66.8], ['Kampüs Katılımcı:', liste.katilim[1], 322.7], ['Kurum Katılımcı:', liste.katilim[2], 638.9]]);
+  }
+  // The group row above the lesson labels (TÜR, SOS BİL…) must not be read as a label.
+  yazi(items, 'SOS BİL', kolon[2], ust - 12.5, z.ders);
+  yazi(items, 'Sıra', 16.3, ust, z.bas, 'l'); yazi(items, 'NO/İsim', 32.6, ust, z.bas, 'l'); yazi(items, 'Snf', 107.7, ust, z.bas, 'l');
+  liste.dersler.forEach((e, i) => yazi(items, e, kolon[i], ust, z.ders));
+  yazi(items, 'Toplam', kolon[n], ust + 1, z.bas);
+  kolon.forEach(x => { yazi(items, 'N', x, nY, z.n); yazi(items, 'D/Y', x, nY + 6.4, z.n); });
+  puan.forEach(x => { yazi(items, 'Puan', x, nY, z.bas); yazi(items, 'Şb. Kr. Km. Gn.', x, nY + 6.9, z.n); });
+  if (liste.kurum) {
+    yazi(items, 'Kurum Ortalamaları', 37.2, kurumY, z.bas, 'l');
+    liste.kurum.n.forEach((v, i) => { yazi(items, v === null ? '-' : f2(v), kolon[i], kurumY - 3.5, z.net); yazi(items, liste.kurum.dy[i], kolon[i], kurumY + 4, z.dy); });
+    yazi(items, '-', kolon[n], kurumY - 3.5, z.net); yazi(items, '-/-', kolon[n], kurumY + 4, z.dy);
+    liste.kurum.p.forEach((v, i) => yazi(items, v === null ? '-' : f2(v), puan[i], kurumY, z.net));
+  }
+  liste.ogr.forEach((o, sira) => {
+    const cy = ilk + sira * satirH, d = B ? 4.1 : 2.93;
+    yazi(items, String(sira + 1), 22.3, cy, z.net);
+    const ad = o.no + ' / ' + o.ad;
+    if (ad.length > 24) { const k = ad.lastIndexOf(' ', 24); yazi(items, ad.slice(0, k), 32.6, cy - d, z.net, 'l'); yazi(items, ad.slice(k + 1), 32.6, cy + d, z.net, 'l'); }
+    else yazi(items, ad, 32.6, cy, z.net, 'l');
+    yazi(items, o.sinif[0], 112.9, cy - d, z.net); yazi(items, o.sinif[1], 112.9, cy + d, z.net);
+    let toplam = 0, dSum = 0, ySum = 0;
+    o.dy.forEach((p, i) => {
+      if (p) { toplam += net(p); dSum += p[0]; ySum += p[1]; }
+      yazi(items, p ? f2(net(p)) : '-', kolon[i], cy - 3.5, z.net);
+      yazi(items, p ? p[0] + '/' + p[1] : '-/-', kolon[i], cy + 3.7, z.dy);
+    });
+    yazi(items, f2(toplam), kolon[n], cy - 3.5, z.net); yazi(items, dSum + '/' + ySum, kolon[n], cy + 3.7, z.dy);
+    o.p.forEach((v, i) => { yazi(items, v === null ? '-' : f2(v), puan[i], cy - 3.3, z.net); yazi(items, o.r[i], puan[i], cy + 3.5, z.rank); });
+  });
+  return { pages: [items], boylar: [H] };
+}
+
+// Invented lists of the lower grades. 9. sınıf: 8 lessons (Tarih has 7 questions); 10. sınıf adds
+// Felsefe and wraps the school name; 11. sınıf is TYT + AYT without S.F.
+const D9 = ['TÜR', 'TAR', 'COĞ', 'DİN KÜL', 'MAT', 'FİZ', 'KİM', 'BİY'];
+const D10 = ['TÜR', 'TAR', 'COĞ', 'FEL', 'DİN KÜL', 'MAT', 'FİZ', 'KİM', 'BİY'];
+const D11 = [...TYT, 'EDB', 'TAR', 'COĞ', 'TAR', 'COĞ', 'FEL GR.', 'DİN KÜL', 'MAT', 'GEO', 'FİZ', 'KİM', 'BİY'];
+const ogr9 = (no, ad, sube, dy, p, r) => ({ no, ad, sinif: [sube === 'A' ? '102' : '103', '9/' + sube], dy, p: [p], r: [r] });
+const SINIFLAR = {
+  dokuz1: { ad: 'Sentetik 9 Deneme 1', tarih: '25.09.2026', okul: 'SENTETİK ANADOLU LİSESİ', katilim: ['3', '3', '3'], dersler: D9, buyuk: true, puan: 1,
+    kurum: { n: [8, 4, 3.5, 3, 4, 4, 4.5, 2], dy: ['10.0/8.0', '5.0/4.0', '4.0/2.0', '3.5/2.0', '5.0/4.0', '5.0/4.0', '5.0/2.0', '3.0/4.0'], p: [240.5] },
+    ogr: [ogr9('2001', 'SENTETİK ECE', 'A', [[12, 4], [5, 2], [4, 2], [3, 0], [6, 4], [5, 2], [5, 2], [3, 2]], 250, '1 1 1 -'),
+      ogr9('2002', 'SENTETİK FIRAT', 'A', [[9, 7], [4, 3], [3, 2], [3, 2], [4, 4], [4, 3], [5, 2], [3, 3]], 220, '2 2 2 -'),
+      ogr9('2003', 'SENTETİK GÜL UZUNADLI İKİNCİ', 'B', [[10, 6], [6, 1], [5, 2], [4, 2], [5, 4], [5, 2], [5, 2], [3, 3]], 235, '1 3 3 -')] },
+  dokuz2: { ad: 'Sentetik 9 Deneme 2', tarih: '23.10.2026', okul: 'SENTETİK ANADOLU LİSESİ', katilim: ['3', '3', '3'], dersler: D9, buyuk: true, puan: 1,
+    kurum: { n: [10, 5, 4, 3.5, 5, 4.5, 5, 2.5], dy: ['12.0/8.0', '6.0/4.0', '5.0/4.0', '4.0/2.0', '6.0/4.0', '5.0/2.0', '5.5/2.0', '3.0/2.0'], p: [255.25] },
+    ogr: [ogr9('2001', 'SENTETİK ECE', 'A', [[15, 4], [7, 0], [6, 1], [4, 0], [8, 4], [6, 1], [6, 1], [4, 1]], 280.5, '1 1 1 -'),
+      ogr9('2002', 'SENTETİK FIRAT', 'A', [[10, 8], [5, 2], [4, 3], [3, 3], [0, 4], [4, 3], [5, 2], [2, 4]], 210, '3 2 3 -'),
+      ogr9('2003', 'SENTETİK GÜL UZUNADLI İKİNCİ', 'B', [[13, 4], [6, 1], [5, 2], [5, 1], [6, 4], [5, 2], [6, 1], [3, 2]], 260, '1 2 2 -')] },
+  on: { ad: 'Sentetik 10 Deneme 1', tarih: '23.10.2026', okul: 'SENTETİK ANADOLU|LİSESİ', katilim: ['2', '2', '2'], dersler: D10, buyuk: true, okulIkiSatir: true, puan: 1,
+    kurum: { n: [12, 2, 2.5, 2.5, 2, 6, 2, 2.5, 1.75], dy: ['14.0/8.0', '2.5/2.0', '3.0/2.0', '3.0/2.0', '2.5/2.0', '7.0/4.0', '2.5/2.0', '3.0/2.0', '2.0/1.0'], p: [230] },
+    ogr: [{ no: '3001', ad: 'SENTETİK HALE', sinif: ['101', '10/A'], dy: [[20, 8], [4, 1], [3, 2], [5, 0], [3, 1], [11, 6], [4, 1], [5, 2], [4, 1]], p: [300.25], r: ['1 1 1 -'] },
+      { no: '3002', ad: 'SENTETİK İLKER', sinif: ['105', '10/B'], dy: [[8, 6], [1, 4], [3, 2], [1, 4], [2, 3], [3, 6], [1, 4], [1, 4], [0, 2]], p: [180], r: ['1 2 2 -'] }] },
+  onbir: { ad: 'Sentetik 11 Deneme 1', tarih: '23.10.2026', okul: 'SENTETİK ANADOLU LİSESİ', katilim: ['TYT: 900 | AYT: 880', 'TYT: 2 | AYT: 2', 'TYT: 2 | AYT: 2'], dersler: D11, puan: 4,
+    kurum: { n: [20, 2, 2, 1, 2, 0, 6, 1, 3, 2, 3, 6, 1.5, 1, 1.5, 1.5, 1, 1.5, 14, 4.5, 2.5, 3, 3.5], dy: ['22.0/8.0', '2.5/2.0', '2.5/2.0', '1.5/2.0', '2.5/2.0', '0.0/0.0', '7.0/4.0', '1.5/2.0', '3.5/2.0', '2.5/2.0', '3.5/2.0', '7.0/4.0', '2.0/2.0', '1.5/2.0', '2.0/2.0', '2.0/2.0', '1.5/2.0', '2.0/2.0', '15.0/4.0', '5.0/2.0', '3.0/2.0', '3.5/2.0', '4.0/2.0'], p: [240, 240, 245, 200] },
+    ogr: [{ no: '4001', ad: 'SENTETİK JALE', sinif: ['302 11/', 'A'], dy: [[30, 6], [3, 1], [3, 1], [2, 2], [3, 1], Z, [10, 4], [2, 2], [4, 2], [3, 1], [4, 0], [16, 4], [6, 2], [3, 1], [5, 2], [6, 2], [4, 4], [5, 1], [20, 4], [6, 2], Z, Z, Z], p: [260, 240, 270, 255], r: ['1 1 5 900', '1 1 9 2000', '1 1 4 800', '1 1 3 700'] },
+      { no: '4002', ad: 'SENTETİK LALE', sinif: ['303 11/', 'B'], dy: [[22, 10], [2, 2], [2, 2], [1, 3], [2, 2], Z, [8, 6], [1, 3], [3, 2], [2, 2], [3, 1], Z, Z, Z, Z, Z, Z, Z, [12, 6], [4, 2], [6, 2], [5, 2], [6, 1]], p: [220, 230, 215, 160], r: ['1 2 40 5000', '1 2 50 9000', '1 2 45 6000', '1 2 44 6100'] }] }
+};
+module.exports = { okulListesi, sinifListesi, SINAVLAR, SINIFLAR, H };

@@ -7,7 +7,19 @@
 - **Denemeler → PDF’den toplu aktar:** “Seçilen sonuçları kaydet ve yayınla”ya basıldığında okunan PDF’lerin tam okul listesi Sıralamalar’a da eklenir. Öğrenci satırı seçilmese de liste eklenir; durum satırı bunu yazar. Liste eklenemezse öğrenci aktarımı yine yapılır.
 - **Sıralamalar → PDF ekle:** daha önceki sınavlar için. Bu yol öğrencilere sonuç yayınlamaz.
 
-İki liste türü okunur: **Net Sayısı Sıralı** (TYT) ve **Öğrenci Adı Sıralı** (TYT + AYT). Aynı sınavın (aynı sınav adı) listeleri birleşir. Aynı listenin yeniden eklenmesi öğrenci numarasına göre satırları yeniler; listede olmayan öğrenciler kalır, böylece şube listeleri okul listesine eklenebilir. TYT raporu varsa Net Sayısı Sıralı listeyi, yoksa Öğrenci Adı Sıralı listenin TYT bölümünü kullanır; AYT raporu Öğrenci Adı Sıralı listeyi ister.
+İki liste türü okunur: **Net Sayısı Sıralı** (TYT) ve **Öğrenci Adı Sıralı** (TYT + AYT).
+
+### Her sınıf düzeyinin kendi listesi
+
+Her sınıf düzeyinin listesi kendi derslerini ve kendi yazı boyutunu kullanır: 9. sınıf Türkçe, Tarih, Coğrafya, Din Kültürü, Matematik, Fizik, Kimya ve Biyoloji (Felsefe, S.F ve Geometri yok), 10. sınıf bunlara Felsefe ekler, 11. sınıf TYT’nin bütün derslerini ve S.F’siz AYT’yi basar. 9. ve 10. sınıf listeleri yalnızca TYT puanını yazar; uzun okul adı iki satıra bölünebilir. Bu yüzden:
+
+- Bir ders sütunu “N”nin üstündeki başlıktan bulunur (TÜR, TAR, COĞ, FEL, DİN KÜL, S.F, MAT, GEO, FİZ, KİM, BİY; AYT EDB ile başlar, ilk TAR/COĞ TDE-SB1’in, ikincisi SB2’nindir), son sütun Toplam’dır. Başlıklar okulun sırasında değilse liste eklenmez.
+- Hücre içeriğinden okunur: üstte net, altta D/Y; satır aralığı ve yazı boyutu listeye göre ölçeklenir. Okul, sınav adı ve katılım bilgisi başlığının sağından, bir sonraki başlığa kadar okunur.
+- Liste 12. sınıf sütun sırasıyla saklanır; basılmayan dersler boştur (`null`). Bir listenin dersleri, satırlarından birinde D/Y’si olan derslerdir.
+- Sınavlar tablosu sınıf düzeyini (“9. sınıf · TYT 17 öğrenci”) ve listeyi yazar: 12. sınıf düzeninde okulun adıyla (“TYT · Net Sayısı Sıralı”), değilse ders sayısıyla (“TYT · 8 ders”, “TYT + AYT · 23 ders”).
+- Bir sınavın sınıf düzeyi, öğrencilerinin çoğunun şubesinden okunur (“102 9/A” → 9).
+
+Aynı sınavın (aynı sınav adı) listeleri birleşir. Aynı listenin yeniden eklenmesi öğrenci numarasına göre satırları yeniler; listede olmayan öğrenciler kalır, böylece şube listeleri okul listesine eklenebilir. TYT raporu varsa Net Sayısı Sıralı listeyi, yoksa Öğrenci Adı Sıralı listenin TYT bölümünü kullanır; AYT raporu Öğrenci Adı Sıralı listeyi ister.
 
 ## Sınav tarihi
 
@@ -26,7 +38,7 @@ Bir sınav genel deneme ya da taramadır. Adında “tarama” geçen sınav tar
 
 **Sıralama** kartı, Karşılaştır’da seçilen iki sınavın öğrencilerini sayfada sıralar (PDF gerekmez):
 
-- **TYT** ya da **AYT** ve **Net** listesi: TYT’de TYT toplamı ya da tek bir ders (Türkçe, Tarih, Coğrafya, Felsefe, Din Kültürü, Matematik, Geometri, Fizik, Kimya, Biyoloji); AYT’de **SAY · EA · SÖZ · AYT toplam** (varsayılan, en çok öğrencinin girdiği alan) ya da tek bir ders (Edebiyat, Tarih-1, Coğrafya-1, Tarih-2, Coğrafya-2, Felsefe Grubu, Din Kültürü, Matematik, Geometri, Fizik, Kimya, Biyoloji). Alan neti, alanın iki testi de cevaplanmışsa sayılır (raporlardaki kural); AYT dersi, o dersin testi cevaplanmışsa sayılır. Ders sıralamasında tam net dersin soru sayısıdır (ör. TYT Matematik 30). Listenin **Toplam** bölümü testleri sıralar: TYT’de Sosyal Bilimler (20), Matematik + Geometri (40) ve Fen Bilimleri (20); AYT’de Edebiyat–Sosyal 1, Sosyal 2, Matematik + Geometri ve Fen Bilimleri (40’ar). Testin neti derslerinin toplamıdır; AYT testi cevaplanmışsa sayılır.
+- **TYT** ya da **AYT** ve **Net** listesi: TYT’de TYT toplamı ya da tek bir ders (Türkçe, Tarih, Coğrafya, Felsefe, Din Kültürü, Matematik, Geometri, Fizik, Kimya, Biyoloji); AYT’de **SAY · EA · SÖZ · AYT toplam** (varsayılan, en çok öğrencinin girdiği alan) ya da tek bir ders (Edebiyat, Tarih-1, Coğrafya-1, Tarih-2, Coğrafya-2, Felsefe Grubu, Din Kültürü, Matematik, Geometri, Fizik, Kimya, Biyoloji). Alan neti, alanın iki testi de cevaplanmışsa sayılır (raporlardaki kural); AYT dersi, o dersin testi cevaplanmışsa sayılır. Ders sıralamasında tam net dersin soru sayısıdır (ör. TYT Matematik 30); bir sınıfın kendi sınavında bir ders daha çok soru sorduysa (ör. 9. sınıf Tarih 7) tam net en yüksek nettir, böylece kapanan fark tanımlı kalır. Liste yalnızca şimdiki sınavın basılmış derslerini ve en az iki dersi basılmış testleri sunar. Listenin **Toplam** bölümü testleri sıralar: TYT’de Sosyal Bilimler (20), Matematik + Geometri (40) ve Fen Bilimleri (20); AYT’de Edebiyat–Sosyal 1, Sosyal 2, Matematik + Geometri ve Fen Bilimleri (40’ar). Testin neti derslerinin toplamıdır; AYT testi cevaplanmışsa sayılır.
 - Tablonun başında **ortalama** satırları: okul (listedeki bütün öğrenciler), sonra her şube (şube seçiliyse yalnızca o şube). Değişim, raporlardaki Şube kutusu gibi şimdiki ortalama − aynı öğrencilerin önceki ortalamasıdır.
 - **Sırala:** **Net** (şimdiki net), **Net artışı** (şimdiki − önceki), **% artış** ((şimdiki − önceki) / önceki; önceki net 0 ya da altındaysa yok), **Kapanan fark (log)**: `ln((tam − önceki + 1) / (tam − şimdiki + 1))`. Tam net TYT’de 120, alanlarda 80, AYT toplamda 160’tır. Tam nete yakın artış daha değerlidir; +1 tam nette sonucu sonlu tutar. % artış ile kapanan fark aynı sırayı vermez: 40→50 %25 artış ama küçük bir kapanan fark, 100→110 %10 artış ama büyük bir kapanan farktır.
 - Eşit değerler aynı sırayı alır (1, 2, 2, 4); önceki sınavda sonucu olmayanlar artış ölçütlerinde sonda ve sırasızdır.
@@ -36,7 +48,9 @@ Bir sınav genel deneme ya da taramadır. Adında “tarama” geçen sınav tar
 
 ## Raporlar
 
-Önceki ve şimdiki sınav seçilir (önceki, şimdikinden hemen önceki sınavdır). Her rapor **Önizle** ile sayfada görülür, **PDF indir** ile kaydedilir; **Hepsini tek PDF’te indir** dört raporu tek dosyada verir.
+Önceki ve şimdiki sınav seçilir. Sınıf düzeyleri birbiriyle karşılaştırılmaz: önceki sınav şimdikiyle aynı sınıf düzeyinden seçilir (varsayılan, ondan hemen önceki o düzeydeki sınav) ve listede yalnızca bu sınavlar çıkar. O düzeyin ikinci sınavı yoksa raporlar “Karşılaştırmak için 9. sınıfların ikinci bir sınavı gerekir.” der; AYT’si olmayan 9. ve 10. sınıf sınavlarında AYT raporları “Bu sınavda AYT yok.” der.
+
+Raporlar listenin kendi düzenini izler: yalnızca basılan dersler çizilir (boşalan genişliği kalan dersler paylaşır), puan sütunlarından TYT ile öğrencilerden birinin puanı olanlar çıkar; tek dersi kalan test başlığı (9. sınıfta TEM MAT) o derse oturur. Bir ders yalnızca iki listede de basılmışsa karşılaştırılır; Kurum ve Şube alan değerleri listenin dersleriyle toplanır (11. sınıfta SÖZ, S.F olmadan). Her rapor **Önizle** ile sayfada görülür, **PDF indir** ile kaydedilir; **Hepsini tek PDF’te indir** dört raporu tek dosyada verir.
 
 | Rapor | İçerik | Dosya |
 | --- | --- | --- |
@@ -55,7 +69,7 @@ Kurallar:
 
 ## Saklama ve gizlilik
 
-- Listeler öğretmen defterinde `D.siralama` alanında, sıkıştırılmış olarak durur: `{surum:1, sinavlar:[{id, ad, okul, ts, tarih?, tur?, T, F}], tercih:{şube: alan}}`. `T` Net Sayısı Sıralı, `F` Öğrenci Adı Sıralı listedir: `{tarih, katilim:[toplam,kampüs,kurum], kurum:{n,dy,p}, ogr:[{no, ad, snf, n, dy, p, r}]}`; `n` netler, `dy` D/Y yazıları, `p` dört puan, `r` dört sıralama yazısıdır. Dizi sırası `T` için 11 TYT dersi, `F` için 11 TYT + 13 AYT dersidir.
+- Listeler öğretmen defterinde `D.siralama` alanında, sıkıştırılmış olarak durur: `{surum:1, sinavlar:[{id, ad, okul, ts, tarih?, tur?, T, F}], tercih:{şube: alan}}`. `T` Net Sayısı Sıralı, `F` Öğrenci Adı Sıralı listedir: `{tarih, katilim:[toplam,kampüs,kurum], kurum:{n,dy,p}, ogr:[{no, ad, snf, n, dy, p, r}]}`; `n` netler, `dy` D/Y yazıları, `p` dört puan, `r` dört sıralama yazısıdır. Dizi sırası `T` için 11 TYT dersi, `F` için 11 TYT + 13 AYT dersidir; listenin basmadığı dersler `null`’dır.
 - Defterle birlikte cihaza ve öğretmenin bulut yedeğine yazılır; çıkışta cihazdan silinir, Google ile yeniden girişte buluttan gelir. Öğrenci paketleri alan listesiyle kurulduğu için öğrencilere gitmez.
 - Okuma ve yazmada `dogrula` yapıyı denetler. Okunamayan (bozuk ya da daha yeni sürümün yazdığı) veri sayfada uyarıyla gösterilir ve üzerine yazılmaz; defterin geri kalanı etkilenmez.
 - Sınırlar: en çok 40 sınav ve 350 KB. Defteri bulut yedeği sınırının (900 KB) üstüne çıkaracak ekleme yapılmaz; eski sınavlar **Sil** ile kaldırılır. Silmek öğrencilerin deneme sonuçlarını değiştirmez.
@@ -71,4 +85,4 @@ Raporlar ilk kez çizilirken jsDelivr’dan sabit sürümler yüklenir: `pdf-lib
 - `src/denemeler.js`: `denemePdfSayfalari` sayfa yüksekliğini ve yazı boyutunu da verir; `denemePdfOku` listeyi `rapor.siralama` olarak ekler.
 - `test/siralama-regression.cjs`: liste okuma, birleştirme, kutular, alan toplamları, sınırlar, gizlilik.
 - `test/siralama-browser.cjs`: masaüstü ve 390 px; içe aktarma, PDF ekle, dört rapor, önizleme, şube sıralaması, silme. Kütüphaneler `NODE_PATH` üzerindeki npm kopyalarından verilir.
-- `test/fixtures/siralama-pdf.cjs`: okul düzeninde sentetik PDF metin öğeleri; gerçek öğrenci verisi yoktur.
+- `test/fixtures/siralama-pdf.cjs`: okul düzeninde sentetik PDF metin öğeleri (`okulListesi`: 12. sınıf; `sinifListesi`: 9., 10. ve 11. sınıf düzenleri); gerçek öğrenci verisi yoktur.

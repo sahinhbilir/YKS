@@ -16,11 +16,4 @@ function attendance(){
  const q=[item('1. Ders',176,730,32),...Array.from({length:7},(_,i)=>item((i+2)+'. Ders',221+45*i,730,32)),item('SENTETİK ADA',34,700),item('23/10/2026',114,700,46)];
  ['Gecikti','Geldi','','','','','',''].forEach((s,i)=>{if(s)q.push(item(s,192+i*45-s.length*2,700));});return {pages:[p,q],boylar:[842,842]};
 }
-function grade9(){
- const p=[item('DENEME SINAVI TOPLU SONUÇ LİSTESİ',250,570),item('Okul:',10,555),item('SENTETİK OKUL',35,555),item('Sınav Adı:',300,555),item('TYT-901',345,555),item('Sınav Tarihi:',600,555),item('23.10.2026',660,555),item('NO/İsim',32,520),item('Snf',108,520)];
- const labels=['TÜR','TAR','COĞ','DİN KÜL','MAT','FİZ','KİM','BİY','Toplam'],xs=[163,244,325,406,487,568,649,730,782],dy=[[8,4],[4,0],[3,0],[2,0],[0,4],[4,0],[3,0],[2,0]];
- labels.forEach((s,i)=>{p.push(item(s,xs[i]-s.length*2,520),item('D/Y',xs[i]-6,502,12));});
- p.push(item('1',20,450),item('2001 / SENTETİK',32,454),item('ECE',32,446),item('102',105,454),item('9/A',105,446));let total=0;
- dy.forEach(([d,y],i)=>{const n=d-y/4;total+=n;p.push(item(n.toFixed(2),xs[i]-10,455,20),item(d+'/'+y,xs[i]-6,447,12));});p.push(item(total.toFixed(2),772,455,20));return {pages:[p],boylar:[595]};
-}
-module.exports={homework,attendance,grade9};
+module.exports={homework,attendance};
