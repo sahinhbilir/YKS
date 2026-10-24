@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8'),a=html.indexOf('<script id="uygulama">')+23,b=html.indexOf('// ---------------------------------------------------------------- başlangıç',a),source=html.slice(a,b);
-const {okulListesi,SINAVLAR}=require('./fixtures/siralama-pdf.cjs'),{etutRaporu,GUNLER}=require('./fixtures/etut-pdf.cjs'),{homework,attendance,grade9}=require('./fixtures/ogrencirapor-pdf.cjs');
+const {okulListesi,SINAVLAR}=require('./fixtures/siralama-pdf.cjs'),{etutRaporu,GUNLER}=require('./fixtures/etut-pdf.cjs'),{homework,attendance,grade9}=require('./fixtures/ogrencirapor-pdf.cjs'),{ornekRapor}=require('./fixtures/yoklama-pdf.cjs');
 const ctx={console,Date,Math,Intl,JSON,URL,URLSearchParams,setTimeout,clearTimeout,TextEncoder,Blob,location:{search:'?dev=1'},localStorage:{getItem:()=>null},sessionStorage:{getItem:()=>null},navigator:{},window:{addEventListener(){}},document:{addEventListener(){},getElementById:()=>null,querySelectorAll:()=>[],createElement:()=>({style:{},setAttribute(){},getClientRects:()=>[]})}};
 vm.createContext(ctx);vm.runInContext(source+';this.R=OGRENCI_RAPOR;',ctx);const R=ctx.R,plain=x=>JSON.parse(JSON.stringify(x));let passed=0;
 const parse=p=>R.parse(p.pages,p.boylar),check=(name,f)=>{try{f();passed++;console.log('PASS',name)}catch(e){console.error('FAIL',name,e);process.exitCode=1}};
@@ -19,7 +19,7 @@ check('re-imports replace instead of duplicating; sources match by name, number 
 check('same names in different classes never share attendance or sessions; ambiguous matches are flagged',()=>{const a={no:'1',name:'AYNI AD',cls:'12/A'},b={no:'2',name:'AYNI AD',cls:'12/B'},r={students:[a,b],attendance:[{name:'AYNI AD',cls:'12/B',date:'2026-10-23',statuses:['Geldi']}]};const m=R.merge([r]);assert.equal(m.students.length,1);assert.equal(m.students[0].no,'2');r.students[0].cls='12/B';assert.equal(R.merge([r]).warnings.length,1)});
 check('SVG escapes text, keeps historical dates, and has no ranking or advice',()=>{const r=parse(okulListesi(SINAVLAR.sonra.F)),m=R.merge([r,parse(homework()),parse(attendance()),parse(etutRaporu(GUNLER))]),s=m.students.find(s=>s.no==='1001');s.name='<script>alert(1)</script>';const svg=R.svgReport(s,'2026-10-24');assert(svg.includes('&lt;script&gt;'));assert(!svg.includes('<script>'));assert(svg.includes('Ödev tarihi: belirtilmemiş'));assert(svg.includes('AYT · tüm derslerin neti'));assert(!/Şube sırası|Ortalama|Sıradaki|Tekrar et|öneri/i.test(svg));assert(!/NaN|Infinity/.test(svg))});
 check('teacher-only menu, empty roster page, imports do not mutate notebook and clear on notebook switch',()=>{
- vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='ogrencirapor';",ctx);assert(R.view().includes('Rapor PDF’lerini ekle'));const before=JSON.stringify(ctx.D);R.model();assert.equal(JSON.stringify(ctx.D),before);
+ vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='ogrencirapor';",ctx);assert(R.view().includes('Ödev raporu ekle'));const before=JSON.stringify(ctx.D);R.model();assert.equal(JSON.stringify(ctx.D),before);
  vm.runInContext("D=varsayilan();D.rol='ogrenci';",ctx);assert.equal(R.view(),'');assert.throws(()=>R.model(),/rehber/);assert(!vm.runInContext('JSON.stringify(SEKME_OGRENCI)',ctx).includes('ogrencirapor'));
 });
 check('existing website exams and etut feed reports without re-importing PDFs or saving notebook',()=>{
@@ -27,6 +27,25 @@ check('existing website exams and etut feed reports without re-importing PDFs or
  vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'SENTETİK ADA',sube:'12-A',denemeler:[{id:'m:1',ad:'Elle deneme',tarih:'2026-10-20',tur:'TYT',oturum:'TYT',dersler:[{kod:'turkce',dogru:20,yanlis:4}]}]}];D.siralama=SIRALAMA.oku().veri;SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(exam.pages,exam.boylar));D.etut=ETUT.birlestir(null,ETUT.pdfCoz(etut.pages));",ctx);
  const before=vm.runInContext('JSON.stringify(D)',ctx),s=R.model().students.find(s=>s.no==='1001');assert.equal(s.school,'SENTETİK ANADOLU LİSESİ');assert(s.sessions.length>0);assert(s.exams.some(e=>e.exam==='Elle deneme'&&e.nets.turkce===19));assert(s.exams.some(e=>e.session==='AYT'&&e.nets.edebiyat===17.5));assert.equal(vm.runInContext('JSON.stringify(D)',ctx),before);
  vm.runInContext("D.siralama.sinavlar[0].tarih='03.10.2026';",ctx);assert.equal(R.model().students.find(s=>s.no==='1001').exams.find(e=>e.session==='AYT').date,'2026-10-03');
+});
+check('Etütler and Yoklama feed the report: lesson codes as statuses, students without an exam appear, sources and their pages are shown',()=>{
+ ctx.etut=etutRaporu(GUNLER);ctx.yk=ornekRapor();
+ vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'SENTETİK ADA',sube:'12-A'}];D.etut=ETUT.birlestir(null,ETUT.pdfCoz(etut.pages));D.yoklama=YOKLAMA.birlestir(null,YOKLAMA.pdfCoz(yk.pages));EK.sekme='ogrencirapor';",ctx);
+ const before=vm.runInContext('JSON.stringify(D)',ctx),m=R.model(),ada=m.students.find(s=>s.no==='1001');
+ assert.deepEqual(plain(ada.attendance.find(a=>a.date==='2026-09-29').statuses.slice(0,3)),['Gecikti','Geldi','Geldi'],'G is Gecikti, P is Geldi');
+ assert.deepEqual(plain(ada.attendance.find(a=>a.date==='2026-09-22').statuses),Array(8).fill('Gelmedi'));
+ assert.equal(ada.daily.full,1,'22 Eyl');assert.equal(ada.daily.half,1,'8 Eki: four lessons missed');
+ const feride=m.students.find(s=>s.name==='SENTETİK UZUNADLI FERİDE İKİNCİ');assert.deepEqual(plain(feride.attendance.find(a=>a.date==='2026-09-16').statuses),Array(6).fill('Mazeretli'),'R is Mazeretli');
+ assert(m.students.some(s=>s.name==='SENTETİK CEM'&&s.cls==='11/B'&&s.attendance.length&&!s.exams.length),'a student only in Yoklama has a report');
+ const etutAdlari=[...new Set(vm.runInContext('ETUT.ac(D.etut).map(r=>r.ad)',ctx))];assert(etutAdlari.length>1);
+ for(const ad of etutAdlari)assert(m.students.some(s=>s.name===ad&&s.sessions.length),'a student only in Etütler has a report: '+ad);
+ assert.equal(m.sources.yoklama.students.length,7);assert.equal(m.sources.etut.sessions.length,vm.runInContext('ETUT.ac(D.etut).length',ctx));
+ const h=R.view();assert.match(h,/<b>Yoklama<\/b><span>7 öğrenci · 14\.09\.2026 – 16\.10\.2026<\/span><button type="button" class="dugme" data-sekme="yoklama">/);
+ assert(h.includes('data-sekme="etutler"')&&h.includes('data-sekme="siralamalar"')&&h.includes('Öğrenci Ev Ödev Durum Raporu eklenmedi'));
+ assert.equal(vm.runInContext('JSON.stringify(D)',ctx),before,'nothing is written to the notebook');
+ // A class written another way still finds the one student of that name in the grade; two such students stay apart.
+ const r=R.merge([{students:[{no:'1',name:'TEK AD',cls:'12/A'}],exams:[]},{kind:'attendance',students:[{name:'TEK AD',no:'',cls:'12 A'}],attendance:[{name:'TEK AD',no:'',cls:'12 A',date:'2026-10-01',statuses:['Geldi']}]}]);
+ assert.equal(r.students.length,1);assert.equal(r.students[0].attendance.length,1);
 });
 check('source embedding is current and idempotent',()=>{require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs','--check']);const before=fs.readFileSync('index.html','utf8');require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs']);assert.equal(fs.readFileSync('index.html','utf8'),before)});
 console.log(passed+' student report checks passed');

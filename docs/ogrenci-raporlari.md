@@ -1,8 +1,13 @@
 # Öğrenci raporları
 
 Rehber öğretmen menüsünde **Öğrenciler → Öğrenci raporları** bölümünü açın.
-Sitedeki deneme ve etüt kayıtları otomatik kullanılır. **Rapor PDF’lerini ekle** ile
-deneme, tarih bazlı etüt, yoklama ve öğrenci ev ödev durum raporlarını birlikte seçin.
+Sitedeki kayıtlar kendiliğinden kullanılır: denemeler **Sıralamalar**’dan ve öğrencilerin
+girdiği sonuçlardan, etütler **Etütler**’den, devam **Yoklama**’dan gelir. Sayfanın üstünde
+dört kaynak, kaç kayıt geldiği ve tarih aralığı yazar; düğmesi o sayfayı açar. Bu sayfada
+yalnızca **Ödev raporu ekle** ile Öğrenci Ev Ödev Durum Raporu eklenir (Sıralamalar’ın
+okumadığı 9. sınıf 8 dersli deneme listeleri de burada eklenebilir). Etüt ya da yoklama
+raporu veya Sıralamalar’ın okuduğu deneme listesi seçilirse eklenmez; hangi sayfadan
+ekleneceği yazılır.
 Sınıfı ve öğrenciyi seçip **Öğrenci PDF** veya **Sınıf / tümü PDF** düğmesine basın.
 Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi kullanır.
 
@@ -13,7 +18,8 @@ Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi k
   sırasıyla eşit aralıkta gösterilir. AYT toplamı kaynakta bulunan tüm AYT derslerinin
   netidir; SAY/EA/SÖZ puanı değildir. Eksik oturum sıfır sonuç olarak çizilmez.
 - Öğrenci yalnızca kendi sonuçlarını görür. Sıralama, sınıf ortalaması ve öneri yoktur.
-- Devam yüzdesi gün bazındadır. En az 3 dersin kaydı bulunan ve kayıtlı derslerin
+- Devam, Yoklama sayfasındaki kayıtlardan hesaplanır: her dersin kodu Geldi, Gecikti,
+  Gelmedi ya da Mazeretli (Raporlu ve Diğer) olarak okunur. Devam yüzdesi gün bazındadır. En az 3 dersin kaydı bulunan ve kayıtlı derslerin
   tamamında gelmeyen öğrenci tam gün yok sayılır. Diğer günlerde en az 3 ders yoksa
   yarım gün; 0–2 ders yoksa okulda sayılır. Mazeretli kayıtlar da yok kabul edilir.
   Boş hücreler yok sayılmaz. Tümü boş günler yüzdeye dahil edilmez.
@@ -27,15 +33,18 @@ Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi k
 
 ## Kaynaklar ve saklama
 
-PDF’ler tarayıcıda okunur; sunucuya veya öğrenci defterine yazılmaz. İçe aktarılan
-raporlar sayfa yenilenince, temizlenince veya başka defter açılınca kaldırılır.
-Sitedeki mevcut kayıtlar etkilenmez. Aynı dosya adı tekrar eklenirse önceki içe
+PDF’ler tarayıcıda okunur; sunucuya veya öğrenci defterine yazılmaz. Bu sayfada eklenen
+ödev raporları sayfa yenilenince, temizlenince veya başka defter açılınca kaldırılır.
+Sitedeki mevcut kayıtlar etkilenmez; Sıralamalar, Etütler ve Yoklama’ya eklenen raporlar
+defterde kalır ve raporlarda hep görünür. Aynı dosya adı tekrar eklenirse önceki içe
 aktarımın yerini alır. Aynı sınav adı/tarih/oturum tekrar sayılmaz. Etüt raporu kendi
 tarih aralığındaki önceki etüt kayıtlarının yerini alır.
 
 Öğrenci numarası ve adıyla eşleştirme yapılır; yalnızca adı bulunan yoklama/etüt
-kayıtlarında ad ve sınıfın tek bir öğrenciyle eşleşmesi gerekir. Belirsiz eşleşmeler
-bildirilir. Okunamayan veya net toplamı doğrulanamayan dosya eklenmez; hata diğer
+kayıtlarında ad ve sınıfın tek bir öğrenciyle eşleşmesi gerekir. Aynı ad farklı şubede iki
+ayrı öğrencidir. Şube başka biçimde yazılmışsa (“12 A”), aynı sınıf düzeyinde o adda tek
+öğrenci varsa onunla eşleşir. Yalnızca Etütler’de ya da Yoklama’da adı geçen öğrencinin de
+raporu çıkar. Belirsiz eşleşmeler bildirilir. Okunamayan veya net toplamı doğrulanamayan dosya eklenmez; hata diğer
 dosyaların başarıyla eklenmesini engellemez.
 
 Desteklenen deneme tabloları: 8 dersli TYT (9. sınıf), 11 dersli TYT ve 24 dersli
