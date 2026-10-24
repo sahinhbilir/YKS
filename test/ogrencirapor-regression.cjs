@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8'),a=html.indexOf('<script id="uygulama">')+23,b=html.indexOf('// ---------------------------------------------------------------- başlangıç',a),source=html.slice(a,b);
-const {okulListesi,sinifListesi,SINAVLAR,SINIFLAR}=require('./fixtures/siralama-pdf.cjs'),{etutRaporu,GUNLER}=require('./fixtures/etut-pdf.cjs'),{homework,attendance}=require('./fixtures/ogrencirapor-pdf.cjs'),{ornekRapor}=require('./fixtures/yoklama-pdf.cjs');
+const {okulListesi,sinifListesi,SINAVLAR,SINIFLAR}=require('./fixtures/siralama-pdf.cjs'),{etutRaporu,GUNLER}=require('./fixtures/etut-pdf.cjs'),{homework,attendance}=require('./fixtures/ogrencirapor-pdf.cjs'),{ornekRapor,yoklamaRaporu}=require('./fixtures/yoklama-pdf.cjs');
 const ctx={console,Date,Math,Intl,JSON,URL,URLSearchParams,setTimeout,clearTimeout,TextEncoder,Blob,location:{search:'?dev=1'},localStorage:{getItem:()=>null},sessionStorage:{getItem:()=>null},navigator:{},window:{addEventListener(){}},document:{addEventListener(){},getElementById:()=>null,querySelectorAll:()=>[],createElement:()=>({style:{},setAttribute(){},getClientRects:()=>[]})}};
 vm.createContext(ctx);vm.runInContext(source+';this.R=OGRENCI_RAPOR;',ctx);const R=ctx.R,plain=x=>JSON.parse(JSON.stringify(x));let passed=0;
 const parse=p=>R.parse(p.pages,p.boylar),check=(name,f)=>{try{f();passed++;console.log('PASS',name)}catch(e){console.error('FAIL',name,e);process.exitCode=1}};
@@ -18,6 +18,17 @@ check('attendance wrapped name, continuation, half day and excused absences',()=
 check('1–2 missed lessons means present; blank cells are not absence; unknown stays unknown',()=>{const a=R.attendanceSummary([{statuses:['Gelmedi','Geldi','']},{statuses:['Gelmedi','Gelmedi','']},{statuses:['','','']}]);assert.equal(a.present,2);assert.equal(a.unknown,1);assert.equal(a.percent,100);assert.equal(R.attendanceSummary([{statuses:['']}]).percent,null)});
 check('etut source parser and complete weekly/course reconciliation including zero weeks',()=>{const r=parse(etutRaporu(GUNLER)),w=R.weekly(r.sessions,r.start,r.end);assert.equal(w.reduce((n,x)=>n+x.count,0),r.sessions.length);assert(w.some(x=>x.count===0));assert(w.every(x=>Object.values(x.courses).reduce((a,b)=>a+b,0)===x.count))});
 check('re-imports replace instead of duplicating; sources match by name, number and class',()=>{const ex={kind:'exam',students:[{no:'1001',name:'SENTETİK ADA',cls:'12/A'}],exams:[{no:'1001',name:'SENTETİK ADA',cls:'12/A',exam:'Sentetik Deneme 2',date:'2026-10-09',session:'TYT',nets:{turkce:32}}]},hw=parse(homework()),att=parse(attendance()),et=parse(etutRaporu(GUNLER));const one=R.merge([ex,hw,att,et]),two=R.merge([ex,hw,att,et,ex,hw,att,et]);assert.deepEqual(plain(two),plain(one));const s=one.students.find(s=>s.no==='1001');assert.equal(s.homework.length,3);assert.equal(s.exams.length,1);assert.equal(s.attendance.length,4);assert(s.sessions.length)});
+check('a classroom code in the notebook (302) and the class in Yoklama and the lists (11/A) are one class',()=>{
+ // The notebook keeps Myexamy's code as şube; the 11. sınıf list prints "302 11/A", Yoklama "11/A".
+ ctx.l=sinifListesi(SINIFLAR.onbir);ctx.y=yoklamaRaporu([{no:'302',sinif:'11/A',ogrenciler:[{ad:'SENTETİK JALE',gunler:[['22/09/2026','PPPPPPPP']]},{ad:'SENTETİK SONAT',gunler:[['22/09/2026','AAAAAAAA']]}]}]);
+ vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:4001,ad:'SENTETİK JALE',sube:'302',sinif:11},{no:4003,ad:'SENTETİK SONAT',sube:'302',sinif:11}];D.siralama=SIRALAMA.oku().veri;SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(l.pages,l.boylar));D.yoklama=YOKLAMA.birlestir(null,YOKLAMA.pdfCoz(y.pages));",ctx);
+ const m=R.model(),ad=n=>m.students.filter(s=>s.name===n);
+ assert.deepEqual(plain([...new Set(m.students.map(s=>s.cls))].sort()),['11/A','11/B']);
+ assert.equal(ad('SENTETİK JALE').length,1);assert(ad('SENTETİK JALE')[0].exams.length&&ad('SENTETİK JALE')[0].attendance.length);
+ // SONAT is in no deneme list: the code the list taught still makes the class 11/A, one student with the yoklama.
+ assert.equal(ad('SENTETİK SONAT').length,1);assert.equal(ad('SENTETİK SONAT')[0].cls,'11/A');assert(ad('SENTETİK SONAT')[0].attendance.length);
+ assert.deepEqual(plain(parse(homework()).derslikler),['301 12/A']);
+});
 check('homework: every status is drawn; homework the report has not marked counts as not given',()=>{
  const s=R.merge([parse(homework())]).students.find(s=>s.no==='1001'),svg=R.svgReport(s,'2026-10-24');
  // Toplam 11 printed: Tamamladı 6, Eksik 1, Yapmadı 2, Gelmedi 1 and one not marked, which is left out.
