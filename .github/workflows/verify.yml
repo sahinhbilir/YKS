@@ -27,6 +27,8 @@ jobs:
         run: node scripts/embed-denemeler.cjs --check && node test/mock-exam-regression.cjs
       - name: Sıralamalar comparison reports, storage and embedding
         run: node scripts/embed-siralamalar.cjs --check && node test/siralama-regression.cjs
+      - name: Individual student visual reports and source validation
+        run: node scripts/embed-ogrencirapor.cjs --check && node test/ogrencirapor-regression.cjs
       - name: Shared charts (lines, measuring) and embedding
         run: node scripts/embed-grafik.cjs --check && node test/grafik-regression.cjs
       - name: Etütler report import, storage and embedding
@@ -116,6 +118,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/mock-exam-browser.cjs
       - name: Sıralamalar reports on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/siralama-browser.cjs
+      - name: Individual student PDF downloads on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/ogrencirapor-browser.cjs
       - name: Etütler charts on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/etut-browser.cjs
       - name: Etüt planı on desktop and phone, filling, printing
