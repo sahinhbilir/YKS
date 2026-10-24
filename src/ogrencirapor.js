@@ -86,10 +86,16 @@ function weekly(rows,start,end){
  for(let d=first;d<=last;d+=7){const r=rows.filter(s=>day(s.date)>=d&&day(s.date)<d+7),courses={};r.forEach(s=>courses[s.course]=(courses[s.course]||0)+1);weeks.push({date:iso(d),count:r.length,courses})}return weeks;
 }
 function merge(reports,roster=[]){
- const map=new Map(),loose=[],warnings=[];
+ const map=new Map(),alias=new Map(),loose=[],warnings=[];
  const yazili=c=>/^\d{1,2}\/[A-ZÇĞİÖŞÜ]+$/u.test(cls(c));
+ // A numbered record whose number the notebook does not have (no number, or another one) is the one
+ // student of that name in that class; a different number is reported so the notebook can be fixed.
+ const ikiz=s=>{const a=[...map.values()].filter(x=>x.cls&&s.cls&&nameKey(x.name)===nameKey(s.name)&&cls(x.cls)===cls(s.cls));return a.length===1?a[0]:null};
  // A class written as grade/şube wins over a classroom code no list explained.
- const ensure=s=>{const id=key(s);if(!map.has(id))map.set(id,{...s,id,exams:[],homework:[],attendance:[],sessions:[]});else{const o=map.get(id);if(s.cls&&(!o.cls||!yazili(o.cls)&&yazili(s.cls)))o.cls=cls(s.cls)}return map.get(id)};
+ const ensure=s=>{const id=key(s);let o=map.get(id)||alias.get(id);
+  if(!o&&s.no&&(o=ikiz(s))){alias.set(id,o);if(!o.no)o.no=s.no;else if(o.no!==s.no)warnings.push(o.name+': numarası defterde '+o.no+', raporda '+s.no+'; aynı öğrenci sayıldı.')}
+  if(!o)map.set(id,o={...s,id,exams:[],homework:[],attendance:[],sessions:[]});else if(s.cls&&(!o.cls||!yazili(o.cls)&&yazili(s.cls)))o.cls=cls(s.cls);
+  return o};
  roster.forEach(ensure);
  reports.forEach(r=>(r.students||[]).forEach(s=>{if(s.no)ensure(s);else loose.push(s)}));
  // Records without a number match by name and class; a class written another way ("12 A") still matches
@@ -99,7 +105,7 @@ function merge(reports,roster=[]){
   const b=[...map.values()].filter(x=>nameKey(x.name)===nameKey(s.name));
   return b.length===1&&(!b[0].cls||!s.cls||!(yazili(b[0].cls)&&yazili(s.cls))&&grade(b[0].cls)===grade(s.cls))?b:[]};
  for(const s of loose)if(!named(s).length)ensure(s);
- const find=s=>{if(s.no)return map.get(key(s));const a=named(s);if(a.length>1)warnings.push(s.name+': ad/şube birden fazla öğrenciye ait; kaydı eşleştirilmedi.');return a.length===1?a[0]:null};
+ const find=s=>{if(s.no)return map.get(key(s))||alias.get(key(s));const a=named(s);if(a.length>1)warnings.push(s.name+': ad/şube birden fazla öğrenciye ait; kaydı eşleştirilmedi.');return a.length===1?a[0]:null};
  for(const r of reports){
   for(const e of r.exams||[]){const s=find(e);if(s){const id=nameKey(e.exam)+'|'+e.date+'|'+e.session;const n=s.exams.findIndex(x=>nameKey(x.exam)+'|'+x.date+'|'+x.session===id);if(n<0)s.exams.push(e);else s.exams[n]=e}}
   const grouped=new Map();for(const h of r.homework||[]){const s=find(h);if(s){if(!grouped.has(s))grouped.set(s,[]);grouped.get(s).push(h)}}

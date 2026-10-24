@@ -51,7 +51,11 @@ ayrı öğrencidir. Şube başka biçimde yazılmışsa (“12 A”), aynı sın
 (toplu öğrenci ekle Myexamy kodunu saklar), Etütler’de ve Yoklama’da “11/A” yazar; deneme
 listeleri ve ödev raporu ikisini birlikte basar (“302 11/A”) ve kod sınıfa çevrilir, böylece bir
 sınıf ikiye bölünmez. Hiçbir listenin açıklamadığı bir kod, öğrencinin başka bir kaynakta
-“11/A” biçiminde yazan şubesine yerini bırakır. Yalnızca Etütler’de ya da Yoklama’da adı geçen öğrencinin de
+“11/A” biçiminde yazan şubesine yerini bırakır. Numaralı bir kaydın numarası defterde yoksa
+(öğrencinin numarası boş ya da başka) kayıt, o sınıfta o adı taşıyan tek öğrenciye bağlanır; ad
+büyük-küçük harf farkıyla yazılmış olabilir (“Ad Soyad” / “AD SOYAD”). Numaralar farklıysa
+durum satırı bunu yazar (“numarası defterde 99, raporda 1005”), defterdeki numara düzeltilebilir.
+Yalnızca Etütler’de ya da Yoklama’da adı geçen öğrencinin de
 raporu çıkar. Belirsiz eşleşmeler bildirilir. Okunamayan veya net toplamı doğrulanamayan dosya eklenmez; hata diğer
 dosyaların başarıyla eklenmesini engellemez.
 

@@ -29,6 +29,17 @@ check('a classroom code in the notebook (302) and the class in Yoklama and the l
  assert.equal(ad('SENTETİK SONAT').length,1);assert.equal(ad('SENTETİK SONAT')[0].cls,'11/A');assert(ad('SENTETİK SONAT')[0].attendance.length);
  assert.deepEqual(plain(parse(homework()).derslikler),['301 12/A']);
 });
+check('a notebook student whose number is missing or different is the one student of that name in the class',()=>{
+ // The notebook writes the name its own way and keeps the classroom code; the list has the school number.
+ ctx.l=okulListesi(SINAVLAR.sonra.F);ctx.y=yoklamaRaporu([{no:'205',sinif:'12/C',ogrenciler:[{ad:'SENTETİK EGE',gunler:[['22/09/2026','PPPPPPPP']]}]}]);
+ for(const [no,uyari] of [['',false],[99,true]]){
+  ctx.no=no;vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no,ad:'Sentetik Ege',sube:'205',sinif:12}];D.siralama=SIRALAMA.oku().veri;SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(l.pages,l.boylar));D.yoklama=YOKLAMA.birlestir(null,YOKLAMA.pdfCoz(y.pages));",ctx);
+  const m=R.model(),ege=m.students.filter(s=>s.cls==='12/C');
+  assert.equal(ege.length,1,String(no));assert.equal(ege[0].name,'Sentetik Ege');assert(ege[0].exams.length&&ege[0].attendance.length);
+  assert(!m.warnings.some(w=>/birden fazla/.test(w)));assert.equal(m.warnings.some(w=>w.includes('numarası defterde 99, raporda 1005')),uyari);
+  if(!uyari)assert.equal(ege[0].no,'1005');
+ }
+});
 check('homework: every status is drawn; homework the report has not marked counts as not given',()=>{
  const s=R.merge([parse(homework())]).students.find(s=>s.no==='1001'),svg=R.svgReport(s,'2026-10-24');
  // Toplam 11 printed: Tamamladı 6, Eksik 1, Yapmadı 2, Gelmedi 1 and one not marked, which is left out.
