@@ -7,7 +7,8 @@ const AYT=[['edebiyat','Edebiyat'],['tarih1','Tarih 1'],['cografya1','Coğrafya 
 const SHORT=[TYT[0],TYT[1],TYT[2],TYT[4],TYT[6],TYT[8],TYT[9],TYT[10]];
 const clean=s=>String(s??'').replace(/\s+/g,' ').trim(),nameKey=s=>clean(s).normalize('NFKC').toLocaleUpperCase('tr-TR');
 const cls=s=>{const m=nameKey(s).match(/(\d{1,2})\s*[-/]\s*([A-ZÇĞİÖŞÜ]+)/u);return m?m[1]+'/'+m[2]:clean(s)};
-const key=s=>String(s.no||'')+'|'+nameKey(s.name),cx=o=>o.x+o.w/2;
+// A student without a school number is told apart by name and class: same names in two classes are two students.
+const key=s=>s.no?String(s.no)+'|'+nameKey(s.name):'|'+nameKey(s.name)+'|'+cls(s.cls),cx=o=>o.x+o.w/2;
 function date(s){const m=clean(s).match(/^(\d{2})[./](\d{2})[./](\d{4})$/);const iso=m?m[3]+'-'+m[2]+'-'+m[1]:s;if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')||new Date(iso+'T00:00:00Z').toISOString().slice(0,10)!==iso)throw new Error('Geçersiz tarih: '+s);return iso}
 const day=s=>Math.floor(Date.parse(date(s)+'T00:00:00Z')/86400000),iso=g=>new Date(g*86400000).toISOString().slice(0,10),display=s=>s?date(s).split('-').reverse().join('.'):'Tarih yok';
 const normItems=p=>p.filter(o=>clean(o.s)).map(o=>({...o,s:clean(o.s)}));
@@ -100,7 +101,7 @@ function parse(pages,boylar){
  if(/Öğrenci Ev Ödev Durum Raporu/.test(text))return homeworkPdf(pages);
  if(/Yoklama Raporu/.test(text))return attendancePdf(pages);
  if(/Tarih Bazlı Etüt Raporu/.test(text)){const r=ETUT.pdfCoz(pages);if(r.atlanan)throw new Error(r.atlanan+' etüt satırı okunamadı; eksik rapor eklenmedi.');return {kind:'sessions',students:[],sessions:r.satirlar.map(s=>({name:s.ad,cls:cls(s.sinif),date:iso(s.g),course:s.brans,teacher:s.ogretmen,time:s.saat,minutes:s.sure})),start:iso(r.bas),end:iso(r.bit)}}
- throw new Error('Sınav, ödev, yoklama veya etüt raporu seçin.');
+ throw new Error('Öğrenci Ev Ödev Durum Raporu seçin.');
 }
 function attendanceSummary(rows){
  const out={present:0,half:0,full:0,unknown:0,days:rows.length,percent:null};
@@ -121,8 +122,14 @@ function merge(reports,roster=[]){
  const ensure=s=>{const id=key(s);if(!map.has(id))map.set(id,{...s,id,exams:[],homework:[],attendance:[],sessions:[]});else if(!map.get(id).cls&&s.cls)map.get(id).cls=s.cls;return map.get(id)};
  roster.forEach(ensure);
  reports.forEach(r=>(r.students||[]).forEach(s=>{if(s.no)ensure(s);else loose.push(s)}));
- for(const s of loose){const matches=[...map.values()].filter(x=>nameKey(x.name)===nameKey(s.name)&&cls(x.cls)===cls(s.cls));if(!matches.length)ensure(s)}
- const find=s=>{if(s.no)return map.get(key(s));const a=[...map.values()].filter(x=>nameKey(x.name)===nameKey(s.name)&&cls(x.cls)===cls(s.cls));if(a.length>1)warnings.push(s.name+': ad/şube birden fazla öğrenciye ait; kaydı eşleştirilmedi.');return a.length===1?a[0]:null};
+ // Records without a number match by name and class; a class written another way ("12 A") still matches
+ // the one student of that name in the same grade.
+ const grade=c=>parseInt(cls(c),10),yazili=c=>/^\d{1,2}\/[A-ZÇĞİÖŞÜ]+$/u.test(cls(c));
+ const named=s=>{const a=[...map.values()].filter(x=>nameKey(x.name)===nameKey(s.name)&&cls(x.cls)===cls(s.cls));if(a.length)return a;
+  const b=[...map.values()].filter(x=>nameKey(x.name)===nameKey(s.name));
+  return b.length===1&&(!b[0].cls||!s.cls||!(yazili(b[0].cls)&&yazili(s.cls))&&grade(b[0].cls)===grade(s.cls))?b:[]};
+ for(const s of loose)if(!named(s).length)ensure(s);
+ const find=s=>{if(s.no)return map.get(key(s));const a=named(s);if(a.length>1)warnings.push(s.name+': ad/şube birden fazla öğrenciye ait; kaydı eşleştirilmedi.');return a.length===1?a[0]:null};
  for(const r of reports){
   for(const e of r.exams||[]){const s=find(e);if(s){const id=nameKey(e.exam)+'|'+e.date+'|'+e.session;const n=s.exams.findIndex(x=>nameKey(x.exam)+'|'+x.date+'|'+x.session===id);if(n<0)s.exams.push(e);else s.exams[n]=e}}
   const grouped=new Map();for(const h of r.homework||[]){const s=find(h);if(s){if(!grouped.has(s))grouped.set(s,[]);grouped.get(s).push(h)}}
@@ -206,6 +213,7 @@ let OWNER=null,FILES=new Map(),BUSY=false,STATUS='',FILTER='',SELECTED='',GEN=0;
 function allowed(){return typeof rehberMi==='function'&&rehberMi()&&!(typeof CIKIS_DURUMU!=='undefined'&&CIKIS_DURUMU)}
 function reset(){FILES=new Map();BUSY=false;STATUS='';FILTER='';SELECTED='';GEN++;OWNER=typeof D==='undefined'?null:D}
 function guard(){if(!allowed()){reset();throw new Error('Öğrenci raporları yalnızca rehber öğretmen içindir.')}if(OWNER!==D)reset()}
+const unique=rows=>[...new Map(rows.map(r=>[nameKey(r.name)+'|'+r.cls,{name:r.name,no:'',cls:r.cls}])).values()];
 function siteReports(){
  const reports=[],roster=(D.ogr||[]).filter(o=>!o.silindi).map(o=>({no:String(o.no||''),name:o.ad,cls:cls(o.sube||'')}));
  const {veri,hata}=SIRALAMA.oku();if(hata)throw new Error(hata);
@@ -218,10 +226,20 @@ function siteReports(){
  const manual=[];(D.ogr||[]).forEach((o,i)=>{if(o.silindi)return;for(const r of denemeListe(i)){if(!['TYT','AYT'].includes(r.tur))continue;manual.push({no:String(o.no||''),name:o.ad,cls:cls(o.sube||''),exam:r.ad,date:r.tarih,session:r.oturum,nets:Object.fromEntries(r.dersler.map(d=>[d.kod,denemeNet(d)]))})}});
  // Published/manual records are added first; the full source list wins on an identical identity.
  reports.unshift({kind:'exam',students:roster,exams:manual});
- const et=ETUT.oku();if(et.hata)throw new Error(et.hata);if(et.veri){const rows=ETUT.ac(et.veri);if(rows.length)reports.push({kind:'sessions',students:[],start:iso(Math.min(...et.veri.kaynak.map(k=>k.bas),...rows.map(r=>r.g))),end:iso(Math.max(...et.veri.kaynak.map(k=>k.bit),...rows.map(r=>r.g))),sessions:rows.map(r=>({name:r.ad,cls:cls(r.sinif),date:iso(r.g),course:r.brans,teacher:r.ogretmen,minutes:r.sure,time:r.saat}))})}
- return {reports,roster};
+ // Etütler: every student of the etüt records, also those without an exam or a notebook entry.
+ const et=ETUT.oku();if(et.hata)throw new Error(et.hata);let etut=null;
+ if(et.veri){const rows=ETUT.ac(et.veri);if(rows.length){const sessions=rows.map(r=>({name:r.ad,cls:cls(r.sinif),date:iso(r.g),course:r.brans,teacher:r.ogretmen,minutes:r.sure,time:r.saat}));
+  etut={kind:'sessions',students:unique(sessions),start:iso(Math.min(...et.veri.kaynak.map(k=>k.bas),...rows.map(r=>r.g))),end:iso(Math.max(...et.veri.kaynak.map(k=>k.bit),...rows.map(r=>r.g))),sessions};reports.push(etut)}}
+ // Yoklama: the page's lesson codes as the report's statuses (P Geldi, G Gecikti, A Gelmedi, M/R Mazeretli).
+ let yoklama=null;
+ if(typeof YOKLAMA!=='undefined'){const yk=YOKLAMA.oku();if(yk.hata)throw new Error(yk.hata);
+  if(yk.veri){const DURUM={P:'Geldi',G:'Gecikti',A:'Gelmedi',M:'Mazeretli',R:'Mazeretli'},attendance=[];
+   for(const o of YOKLAMA.ac(yk.veri))for(const [g,k] of o.gun)attendance.push({name:o.ad,no:'',cls:cls(o.sinif),date:iso(g),statuses:[...k].map(c=>DURUM[c]||'')});
+   if(attendance.length){yoklama={kind:'attendance',students:unique(attendance),attendance,start:iso(yk.veri.gunler[0]),end:iso(yk.veri.gunler.at(-1))};reports.push(yoklama)}}}
+ const exams=new Set(reports.flatMap(r=>r.exams||[]).map(e=>nameKey(e.exam)+'|'+e.date));
+ return {reports,roster,sources:{exams:exams.size,etut,yoklama}};
 }
-function model(){guard();const site=siteReports();return merge(site.reports.concat([...FILES.values()]),site.roster)}
+function model(){guard();const site=siteReports();return {...merge(site.reports.concat([...FILES.values()]),site.roster),sources:site.sources}}
 function selectedModel(){const m=model();return {...m,students:m.students.filter(s=>!FILTER||s.cls===FILTER)}}
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
 function refresh(){if(EK.sekme==='ogrencirapor'&&allowed())ciz()}
@@ -230,18 +248,30 @@ function view(){
  const classes=[...new Set(m.students.map(s=>s.cls))].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true}));if(FILTER&&!classes.includes(FILTER))FILTER='';
  const list=m.students.filter(s=>!FILTER||s.cls===FILTER);if(!list.some(s=>s.id===SELECTED))SELECTED=list[0]?.id||'';const selected=list.find(s=>s.id===SELECTED);
  const disable=BUSY?' disabled':'';
+ const src=m.sources,aralik=r=>r?' · '+display(r.start)+' – '+display(r.end):'',git=(sekme,ad)=>'<button type="button" class="dugme" data-sekme="'+sekme+'">'+ad+' →</button>';
+ const kaynak=(ad,metin,dugme)=>'<li><b>'+ad+'</b><span>'+metin+'</span>'+dugme+'</li>',dosyalar=k=>[...FILES].filter(([,r])=>r.kind===k).map(([n])=>n);
  return '<div class="baslik"><h1>Öğrenci raporları</h1><p>Her öğrenciye tek sayfa: TYT, AYT, dersler, haftalık etüt, devam ve ödev.</p></div><section class="or-workspace">'+
- '<div class="arac"><label class="dugme">Rapor PDF’lerini ekle<input id="orFiles" type="file" accept="application/pdf,.pdf" multiple hidden'+disable+'></label><button class="dugme" id="orClear"'+disable+'>Eklenen dosyaları temizle</button></div>'+
- '<p>Sitedeki deneme ve etüt kayıtları kullanılır. Eklediğiniz dosyalar sayfa yenilenene kadar bu oturumda tutulur.</p>'+
- '<details class="or-sources"><summary>Kaynaklar ve hesaplama</summary><p>Sınav, tarih bazlı etüt, yoklama ve öğrenci ev ödev durum PDF’lerini birlikte seçebilirsiniz. Ödev raporunda görev/teslim tarihi yoksa rapor tarihi ayrı gösterilir.</p><p>En az 3 ders kayıtlı ve hepsinde yok: tam gün. Diğer günlerde en az 3 ders yok: yarım gün. 0–2 ders yok: okulda. Mazeretli kayıtlar dahil, boş hücreler hariç. Devam yüzdesi = (okulda + yarım gün / 2) / durumu bilinen gün.</p><p>Grafiklerde her öğrencinin kendi sonuçları yer alır. AYT grafiği kaynakta bulunan tüm AYT derslerinin toplam netini gösterir. Etüt sayıları rapor kayıtlarıdır. Haftalar pazartesi başlar.</p><ul>'+[...FILES.entries()].map(([n,r])=>'<li>'+esc(n)+' <button type="button" class="dugme" data-or-remove="'+esc(n)+'"'+disable+'>Kaldır</button></li>').join('')+'</ul></details>'+
+ '<ul class="or-kaynaklar">'+
+  kaynak('Denemeler',(src.exams?esc(fmt(src.exams))+' sınav':'Sınav yok')+(dosyalar('exam').length?esc(' · bu oturumda: '+dosyalar('exam').join(', ')):''),git('siralamalar','Sıralamalar'))+
+  kaynak('Etütler',src.etut?esc(fmt(src.etut.sessions.length))+' etüt'+esc(aralik(src.etut)):'Etüt raporu yok',git('etutler','Etütler'))+
+  kaynak('Yoklama',src.yoklama?esc(fmt(src.yoklama.students.length))+' öğrenci'+esc(aralik(src.yoklama)):'Yoklama raporu yok',git('yoklama','Yoklama'))+
+  kaynak('Ödev takibi',dosyalar('homework').length?esc(dosyalar('homework').join(', ')):'Öğrenci Ev Ödev Durum Raporu eklenmedi',
+   '<label class="dugme">Ödev raporu ekle<input id="orFiles" type="file" accept="application/pdf,.pdf" multiple hidden'+disable+'></label>'+(FILES.size?'<button class="dugme" id="orClear"'+disable+'>Temizle</button>':''))+
+ '</ul>'+
+ '<details class="or-sources"><summary>Kaynaklar ve hesaplama</summary><p>Denemeler Sıralamalar’dan ve öğrencilerin sonuçlarından, etütler Etütler’den, devam Yoklama’dan gelir; bu sayfalara eklenen raporlar burada kendiliğinden görünür. Ödev raporu (ve Sıralamalar’ın okumadığı 9. sınıf deneme listeleri) bu sayfada eklenir ve sayfa yenilenene kadar tutulur. Ödev raporunda görev/teslim tarihi yoksa rapor tarihi ayrı gösterilir.</p><p>En az 3 ders kayıtlı ve hepsinde yok: tam gün. Diğer günlerde en az 3 ders yok: yarım gün. 0–2 ders yok: okulda. Mazeretli kayıtlar dahil, boş hücreler hariç. Devam yüzdesi = (okulda + yarım gün / 2) / durumu bilinen gün.</p><p>Grafiklerde her öğrencinin kendi sonuçları yer alır. AYT grafiği kaynakta bulunan tüm AYT derslerinin toplam netini gösterir. Etüt sayıları rapor kayıtlarıdır. Haftalar pazartesi başlar.</p><ul>'+[...FILES.entries()].map(([n,r])=>'<li>'+esc(n)+' <button type="button" class="dugme" data-or-remove="'+esc(n)+'"'+disable+'>Kaldır</button></li>').join('')+'</ul></details>'+
  '<div class="arac"><label>Sınıf <select id="orClass"'+disable+'><option value="">Tüm sınıflar</option>'+classes.map(c=>'<option value="'+esc(c)+'"'+(c===FILTER?' selected':'')+'>'+esc(c||'Şube belirtilmemiş')+'</option>').join('')+'</select></label><label>Öğrenci <select id="orStudent"'+disable+'>'+list.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===SELECTED?' selected':'')+'>'+esc(s.name+' · '+s.cls)+'</option>').join('')+'</select></label></div>'+
  '<div class="arac"><button class="dugme birincil" id="orOne"'+(BUSY||!selected?' disabled':'')+'>Öğrenci PDF</button><button class="dugme" id="orAll"'+(BUSY||!list.length?' disabled':'')+'>Sınıf / tümü PDF ('+list.length+')</button></div>'+
  '<p id="orStatus" role="status" aria-live="polite">'+esc([STATUS,...m.warnings].filter(Boolean).join(' '))+'</p>'+
- (selected?'<div class="or-preview" aria-label="PDF önizlemesi">'+svgReport(selected,today())+'</div>':'<p>Sitede kayıt yok. Raporları ekleyerek başlayın.</p>')+'</section>';
+ (selected?'<div class="or-preview" aria-label="PDF önizlemesi">'+svgReport(selected,today())+'</div>':'<p>Sitede kayıt yok. Denemeleri Sıralamalar’a, etüt raporunu Etütler’e, yoklama raporunu Yoklama’ya ekleyin.</p>')+'</section>';
 }
+// Only the homework report is added here, and deneme lists Sıralamalar cannot read (9. sınıf, 8 ders);
+// the others have their pages and come from there.
+const siralamaOkur=p=>{try{SIRALAMA.pdfCoz(p.pages,p.boylar);return true}catch(e){return false}};
+const YER={exam:'deneme sonuç listesi; Sıralamalar sayfasından ekleyin.',sessions:'etüt raporu; Etütler sayfasından ekleyin.',attendance:'yoklama raporu; Yoklama sayfasından ekleyin.'};
 async function addFiles(files){
  guard();if(BUSY)return;if(files.length>30)throw new Error('Bir seferde en fazla 30 PDF seçin.');const owner=D,gen=GEN;BUSY=true;STATUS='PDF’ler okunuyor…';refresh();const results=[],errors=[];
- try{for(const f of files){try{const p=await denemePdfSayfalari(f);if(owner!==D||gen!==GEN||!allowed())return;results.push([f.name,parse(p.pages,p.boylar)])}catch(e){errors.push(f.name+': '+e.message)}}
+ try{for(const f of files){try{const p=await denemePdfSayfalari(f);if(owner!==D||gen!==GEN||!allowed())return;const r=parse(p.pages,p.boylar);
+    if(r.kind==='sessions'||r.kind==='attendance'||r.kind==='exam'&&siralamaOkur(p))throw new Error(YER[r.kind]);results.push([f.name,r])}catch(e){errors.push(f.name+': '+e.message)}}
   if(owner!==D||gen!==GEN||!allowed())return;for(const [name,r] of results)FILES.set(name,r);STATUS=results.length+' dosya eklendi.'+(errors.length?' '+errors.join(' '):'');
  }finally{if(owner===D&&gen===GEN){BUSY=false;refresh()}}
 }
