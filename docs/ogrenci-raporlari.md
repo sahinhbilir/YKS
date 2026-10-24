@@ -47,7 +47,11 @@ tarih aralığındaki önceki etüt kayıtlarının yerini alır.
 Öğrenci numarası ve adıyla eşleştirme yapılır; yalnızca adı bulunan yoklama/etüt
 kayıtlarında ad ve sınıfın tek bir öğrenciyle eşleşmesi gerekir. Aynı ad farklı şubede iki
 ayrı öğrencidir. Şube başka biçimde yazılmışsa (“12 A”), aynı sınıf düzeyinde o adda tek
-öğrenci varsa onunla eşleşir. Yalnızca Etütler’de ya da Yoklama’da adı geçen öğrencinin de
+öğrenci varsa onunla eşleşir. Derslik kodu şubeyle aynı sınıftır: defterde şube “302”
+(toplu öğrenci ekle Myexamy kodunu saklar), Etütler’de ve Yoklama’da “11/A” yazar; deneme
+listeleri ve ödev raporu ikisini birlikte basar (“302 11/A”) ve kod sınıfa çevrilir, böylece bir
+sınıf ikiye bölünmez. Hiçbir listenin açıklamadığı bir kod, öğrencinin başka bir kaynakta
+“11/A” biçiminde yazan şubesine yerini bırakır. Yalnızca Etütler’de ya da Yoklama’da adı geçen öğrencinin de
 raporu çıkar. Belirsiz eşleşmeler bildirilir. Okunamayan veya net toplamı doğrulanamayan dosya eklenmez; hata diğer
 dosyaların başarıyla eklenmesini engellemez.
 

@@ -17364,7 +17364,12 @@ const OGRENCI_RAPOR = (() => {
 const TYT=[['turkce','Türkçe'],['tarih','Tarih'],['cografya','Coğrafya'],['felsefe','Felsefe'],['din','Din kültürü'],['sf','Ek felsefe'],['mat','Matematik'],['geo','Geometri'],['fizik','Fizik'],['kimya','Kimya'],['biyoloji','Biyoloji']];
 const AYT=[['edebiyat','Edebiyat'],['tarih1','Tarih 1'],['cografya1','Coğrafya 1'],['tarih2','Tarih 2'],['cografya2','Coğrafya 2'],['felsefe','Felsefe grubu'],['din','Din kültürü'],['sf','Ek felsefe'],['mat','Matematik'],['geo','Geometri'],['fizik','Fizik'],['kimya','Kimya'],['biyoloji','Biyoloji']];
 const clean=s=>String(s??'').replace(/\s+/g,' ').trim(),nameKey=s=>clean(s).normalize('NFKC').toLocaleUpperCase('tr-TR');
-const cls=s=>{const m=nameKey(s).match(/(\d{1,2})\s*[-/]\s*([A-ZÇĞİÖŞÜ]+)/u);return m?m[1]+'/'+m[2]:clean(s)};
+// A classroom code ("302") stands for its class ("11/A"): the notebook keeps the code as şube (toplu
+// öğrenci ekle stores Myexamy's "302"), Etütler and Yoklama write the class. Lists that print both
+// ("302 11/A") teach the pairs, so a class is never split in two.
+const DERSLIK=new Map();
+const dersligiOgren=s=>{const m=nameKey(s).match(/^(\d{3})\s+(\d{1,2})\s*[-/]\s*([A-ZÇĞİÖŞÜ]+)$/u);if(m)DERSLIK.set(m[1],m[2]+'/'+m[3])};
+const cls=s=>{const m=nameKey(s).match(/(\d{1,2})\s*[-/]\s*([A-ZÇĞİÖŞÜ]+)/u);return m?m[1]+'/'+m[2]:DERSLIK.get(clean(s))||clean(s)};
 // A student without a school number is told apart by name and class: same names in two classes are two students.
 const key=s=>s.no?String(s.no)+'|'+nameKey(s.name):'|'+nameKey(s.name)+'|'+cls(s.cls),cx=o=>o.x+o.w/2;
 function date(s){const m=clean(s).match(/^(\d{2})[./](\d{2})[./](\d{4})$/);const iso=m?m[3]+'-'+m[2]+'-'+m[1]:s;if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')||new Date(iso+'T00:00:00Z').toISOString().slice(0,10)!==iso)throw new Error('Geçersiz tarih: '+s);return iso}
@@ -17376,11 +17381,11 @@ function printedDate(pages){
  for(const page of pages){const m=join(page.filter(o=>o.y<40)).match(/(\d{1,2})\s+(Oca|Şub|Mar|Nis|May|Haz|Tem|Ağu|Eyl|Eki|Kas|Ara)\s+(\d{4})/u);if(m)return date(m[3]+'-'+months[m[2]]+'-'+m[1].padStart(2,'0'))}return null;
 }
 function homeworkPdf(pages){
- const students=[],homework=[],reportDate=printedDate(pages);let current=null,columns=null;
+ const students=[],homework=[],reportDate=printedDate(pages),derslikler=new Set();let current=null,columns=null;
  for(const raw of pages){const p=normItems(raw),heads=p.filter(o=>o.s==='Öğrenci Adı Soyadı').sort((a,b)=>b.y-a.y);
   const people=heads.map(h=>{const n=join(p.filter(o=>Math.abs(o.y-h.y)<1&&o.x>h.x+h.w+2)).replace(/^:\s*/,''),sh=p.find(o=>o.s==='Şube / No.'&&o.y<h.y&&h.y-o.y<22);
    const cl=sh&&join(p.filter(o=>Math.abs(o.y-sh.y)<1&&o.x>sh.x+sh.w+2)).replace(/^:\s*/,'');const m=cl&&cl.match(/^(.*?)\s*\/\s*(\d+)$/);
-   if(!n||!m)throw new Error('Ödev öğrenci kimliği okunamadı.');const s={no:m[2],name:n,cls:cls(m[1])};students.push(s);return {y:h.y,s};});
+   if(!n||!m)throw new Error('Ödev öğrenci kimliği okunamadı.');dersligiOgren(m[1]);derslikler.add(m[1]);const s={no:m[2],name:n,cls:cls(m[1])};students.push(s);return {y:h.y,s};});
   const header=p.find(o=>o.s==='Toplam');if(header)columns=['Toplam','Tamamladı','Eksik','Getirmedi','Geç Getirdi','Yapmadı','Gelmedi'].map(t=>{const h=p.find(o=>o.s===t&&Math.abs(o.y-header.y)<1);if(!h)throw new Error('Ödev sütunu eksik: '+t);return cx(h)});
   if(!columns)throw new Error('Ödev sütunları okunamadı.');
   const anchors=p.filter(o=>o.x<45&&o.y>35&&/^\d+$/.test(o.s)).sort((a,b)=>b.y-a.y);
@@ -17395,7 +17400,7 @@ function homeworkPdf(pages){
   if(people.length)current=people.at(-1).s;
  }
  if(!homework.length)throw new Error('Ödev satırı bulunamadı.');
- return {kind:'homework',students,homework,reportDate};
+ return {kind:'homework',students,homework,reportDate,derslikler:[...derslikler]};
 }
 function attendancePdf(pages){
  const students=[],attendance=[];let currentClass='',currentName='';
@@ -17441,12 +17446,14 @@ function weekly(rows,start,end){
 }
 function merge(reports,roster=[]){
  const map=new Map(),loose=[],warnings=[];
- const ensure=s=>{const id=key(s);if(!map.has(id))map.set(id,{...s,id,exams:[],homework:[],attendance:[],sessions:[]});else if(!map.get(id).cls&&s.cls)map.get(id).cls=s.cls;return map.get(id)};
+ const yazili=c=>/^\d{1,2}\/[A-ZÇĞİÖŞÜ]+$/u.test(cls(c));
+ // A class written as grade/şube wins over a classroom code no list explained.
+ const ensure=s=>{const id=key(s);if(!map.has(id))map.set(id,{...s,id,exams:[],homework:[],attendance:[],sessions:[]});else{const o=map.get(id);if(s.cls&&(!o.cls||!yazili(o.cls)&&yazili(s.cls)))o.cls=cls(s.cls)}return map.get(id)};
  roster.forEach(ensure);
  reports.forEach(r=>(r.students||[]).forEach(s=>{if(s.no)ensure(s);else loose.push(s)}));
  // Records without a number match by name and class; a class written another way ("12 A") still matches
  // the one student of that name in the same grade.
- const grade=c=>parseInt(cls(c),10),yazili=c=>/^\d{1,2}\/[A-ZÇĞİÖŞÜ]+$/u.test(cls(c));
+ const grade=c=>parseInt(cls(c),10);
  const named=s=>{const a=[...map.values()].filter(x=>nameKey(x.name)===nameKey(s.name)&&cls(x.cls)===cls(s.cls));if(a.length)return a;
   const b=[...map.values()].filter(x=>nameKey(x.name)===nameKey(s.name));
   return b.length===1&&(!b[0].cls||!s.cls||!(yazili(b[0].cls)&&yazili(s.cls))&&grade(b[0].cls)===grade(s.cls))?b:[]};
@@ -17549,6 +17556,10 @@ function reset(){FILES=new Map();BUSY=false;STATUS='';FILTER='';SELECTED='';GEN+
 function guard(){if(!allowed()){reset();throw new Error('Öğrenci raporları yalnızca rehber öğretmen içindir.')}if(OWNER!==D)reset()}
 const unique=rows=>[...new Map(rows.map(r=>[nameKey(r.name)+'|'+r.cls,{name:r.name,no:'',cls:r.cls}])).values()];
 function siteReports(){
+ // Classroom codes are learnt first, from the stored deneme lists and the added homework reports.
+ DERSLIK.clear();const sr=SIRALAMA.oku().veri;
+ for(const x of sr?sr.sinavlar:[])for(const sl of [x.T,x.F])for(const o of sl?sl.ogr:[])dersligiOgren(o.snf);
+ for(const r of FILES.values())(r.derslikler||[]).forEach(dersligiOgren);
  const reports=[],roster=(D.ogr||[]).filter(o=>!o.silindi).map(o=>({no:String(o.no||''),name:o.ad,cls:cls(o.sube||'')}));
  const {veri,hata}=SIRALAMA.oku();if(hata)throw new Error(hata);
  if(veri){const exams=[],students=[];let school='';const keys={TYT:['TÜR','TAR','COĞ','FEL','DİN','S.F','MAT','GEO','FİZ','KİM','BİY'],AYT:['EDB','TAR1','COĞ1','TAR2','COĞ2','FELGR','DİN2','S.F2','AMAT','AGEO','AFİZ','AKİM','ABİY']};
