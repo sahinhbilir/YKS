@@ -77,12 +77,26 @@ function varsayilanKapsam(t,ks){
   const say=new Map();for(const o of Object.values(son.tyt).concat(Object.values(son.ayt))){const d=parseInt((t.kisi.get(o.no)||{}).sinif,10);if(d)say.set(d,(say.get(d)||0)+1)}
   const d=[...say].sort((a,b)=>b[1]-a[1])[0];return (d&&ks.find(k=>k.key==='g'+d[0]))||ks[0];
 }
+// A grade's own exam has fewer lessons (9. sınıf: no Felsefe or Geometri) and its own question
+// counts: lessons no list of the view printed are left out, and counts come from the most questions
+// a student answered (denemeSoruTahmini). The 12. sınıf lessons keep their counts.
+function dersleriAyarla(O,rows){
+  const var_=k=>rows.some(r=>r.o.dy[k]!=null),tek=O.dersler.filter(d=>!d.uyeler);
+  if(!tek.some(d=>!/^S\.F/.test(d.kod)&&!var_(d.kod)))return O;
+  const enCok=k=>Math.max(0,...rows.map(r=>{const p=String(r.o.dy[k]||'').split('/').map(Number);return p.length===2&&p.every(Number.isFinite)?p[0]+p[1]:0}));
+  // A test with one printed lesson is that lesson (9. sınıf Matematik + Geometri is Matematik).
+  const dersler=O.dersler.filter(d=>(d.uyeler||[d.kod]).filter(var_).length>(d.uyeler?1:0)).map(d=>({...d,soru:(d.uyeler||[d.kod]).filter(var_).reduce((a,k)=>a+denemeSoruTahmini(DENEME_SIRA_KODU[k],enCok(k)),0)}));
+  return {...O,dersler,ust:dersler.filter(d=>!d.uyeler).reduce((a,d)=>a+d.soru,0)};
+}
 function gorunumModeli(t,O,K,sec){
-  const sinavlar=[];
+  const sinavlar=[],satirlar=[];
   for(const s of t.sinavlar){
     const satir=[];
     for(const o of Object.values(O.oturum==='tyt'?s.tyt:s.ayt)){if(!K.uyar(t.kisi.get(o.no)))continue;const v=O.deger(o);if(v!==null)satir.push({no:o.no,v,o})}
-    if(!satir.length)continue;
+    if(satir.length)satirlar.push([s,satir]);
+  }
+  O=dersleriAyarla(O,satirlar.flatMap(x=>x[1]));
+  for(const [s,satir] of satirlar){
     const vs=satir.map(r=>r.v).sort((a,b)=>a-b),en=satir.reduce((a,b)=>b.v>a.v?b:a);
     const sira=new Map();satir.slice().sort((a,b)=>b.v-a.v).forEach((r,i,l)=>sira.set(r.no,i&&l[i-1].v===r.v?sira.get(l[i-1].no):i+1));
     sinavlar.push({id:s.id,ad:s.ad,tarih:s.tarih,g:s.g,dates:s.dates,pdfDates:s.pdfDates,tur:s.tur,turElle:s.turElle,n:satir.length,ort:ort(vs),medyan:yuzdelik(vs,.5),p25:yuzdelik(vs,.25),p75:yuzdelik(vs,.75),max:en.v,enIyi:en.no,

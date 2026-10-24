@@ -4,9 +4,8 @@ Rehber öğretmen menüsünde **Öğrenciler → Öğrenci raporları** bölüm�
 Sitedeki kayıtlar kendiliğinden kullanılır: denemeler **Sıralamalar**’dan ve öğrencilerin
 girdiği sonuçlardan, etütler **Etütler**’den, devam **Yoklama**’dan gelir. Sayfanın üstünde
 dört kaynak, kaç kayıt geldiği ve tarih aralığı yazar; düğmesi o sayfayı açar. Bu sayfada
-yalnızca **Ödev raporu ekle** ile Öğrenci Ev Ödev Durum Raporu eklenir (Sıralamalar’ın
-okumadığı 9. sınıf 8 dersli deneme listeleri de burada eklenebilir). Etüt ya da yoklama
-raporu veya Sıralamalar’ın okuduğu deneme listesi seçilirse eklenmez; hangi sayfadan
+yalnızca **Ödev raporu ekle** ile Öğrenci Ev Ödev Durum Raporu eklenir. Etüt ya da yoklama
+raporu veya deneme listesi (her sınıf düzeyininki) seçilirse eklenmez; hangi sayfadan
 ekleneceği yazılır.
 Sınıfı ve öğrenciyi seçip **Öğrenci PDF** veya **Sınıf / tümü PDF** düğmesine basın.
 Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi kullanır.
@@ -24,7 +23,12 @@ Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi k
   yarım gün; 0–2 ders yoksa okulda sayılır. Mazeretli kayıtlar da yok kabul edilir.
   Boş hücreler yok sayılmaz. Tümü boş günler yüzdeye dahil edilmez.
   Yüzde = 100 × (okulda gün + yarım gün / 2) / durumu bilinen gün.
-- Ödev çubukları her ders için tamamlanan/toplam sayısını gösterir. Desteklenen
+- Ödev çubukları her dersin bütün durumlarını gösterir: tamamladı, eksik, getirmedi, geç
+  getirdi, yapmadı, gelmedi (raporun sütun sırasıyla, ayrı renklerle). Raporun Toplam’ı
+  durumların toplamından büyükse aradaki ödevlerin durumu henüz yazılmamıştır; bunlar
+  verilmemiş sayılır: toplam, durumların toplamıdır ve hiçbir ödevi işaretlenmemiş ders
+  gösterilmez. Sayılar tamamlanan / toplamdır. Ders adları raporun yazdığı gibi,
+  cümle düzeninde gösterilir; aynı ders iki kez geçerse (FİZİK ve Fizik) toplanır. Desteklenen
   toplu ödev raporu görev veya teslim tarihi içermediğinden **rapor tarihi** açıkça
   ayrılır; ödev tarihi uydurulmaz. Aynı öğrenci için en yeni ödev özeti kullanılır.
 - Etüt sütunları pazartesi başlayan haftalardaki kayıt sayısıdır. Altındaki ders/hafta
@@ -47,8 +51,9 @@ ayrı öğrencidir. Şube başka biçimde yazılmışsa (“12 A”), aynı sın
 raporu çıkar. Belirsiz eşleşmeler bildirilir. Okunamayan veya net toplamı doğrulanamayan dosya eklenmez; hata diğer
 dosyaların başarıyla eklenmesini engellemez.
 
-Desteklenen deneme tabloları: 8 dersli TYT (9. sınıf), 11 dersli TYT ve 24 dersli
-birleşik TYT/AYT. PDF metin içermelidir; taranmış görüntülere OCR uygulanmaz.
+Deneme listelerini Sıralamalar okur; her sınıf düzeyinin listesi kendi dersleriyle gelir
+(ör. 9. sınıfta Felsefe ve Geometri yoktur) ve raporun ders grafikleri yalnızca bu dersleri
+çizer. PDF metin içermelidir; taranmış görüntülere OCR uygulanmaz.
 Her seçimde en fazla 30 kaynak dosya, her indirmede en fazla 300 öğrenci desteklenir.
 PDF çizimleri yüksek çözünürlüklü görsel olarak yerleştirilir; metin araması içermez.
 İlk PDF indirmesinde mevcut Sıralamalar modülünün bütünlüğü doğrulanmış PDF

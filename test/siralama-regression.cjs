@@ -2,7 +2,7 @@
 'use strict';
 // Sıralamalar: list parsing, notebook storage, change boxes and privacy. Synthetic data only.
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
-const { okulListesi, SINAVLAR } = require('./fixtures/siralama-pdf.cjs');
+const { okulListesi, sinifListesi, SINAVLAR, SINIFLAR } = require('./fixtures/siralama-pdf.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
 const boot = html.indexOf('// ---------------------------------------------------------------- başlangıç', start);
@@ -19,6 +19,7 @@ const get = code => JSON.parse(JSON.stringify(run(code)));
 const reset = () => run(`D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'SENTETİK ADA',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='siralamalar';
   EK.srOnceki=undefined;EK.srSimdiki=undefined;KAYIT=0;kaydet=async()=>{KAYIT++;return true};SIRALAMA.onbellek.clear();`);
 const list = (exam, tur) => { const {pages, boylar} = okulListesi(SINAVLAR[exam][tur]); put('pages', pages); put('boylar', boylar); return get('siralamaPdfCoz(pages,boylar)'); };
+const sinif = k => { const {pages, boylar} = sinifListesi(SINIFLAR[k]); put('pages', pages); put('boylar', boylar); return get('siralamaPdfCoz(pages,boylar)'); };
 const loadAll = async () => { put('L', ['once', 'sonra'].flatMap(e => ['T', 'F'].map(t => list(e, t)))); await run('siralamaKaydet(L)'); };
 const model = () => run(`(()=>{const v=SIRALAMA.oku().veri,s=SIRALAMA.secim(SIRALAMA.modeller(v));return s})()`);
 const box = d => run('SIRALAMA.deltaStyle')(d).s;
@@ -112,6 +113,72 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.equal(run('SIRALAMA.neden(SIRALAMA.RAPORLAR[0],MM.cur,MM.prev)'), '');
     assert.match(run('SIRALAMA.neden(SIRALAMA.RAPORLAR[2],MM.cur,MM.prev)'), /Şimdiki sınavın Öğrenci Adı Sıralı/);
     run("EK.srSimdiki='SENTETİK DENEME 1'"); m = model(); assert.equal(m.cur.name, 'Sentetik Deneme 1'); assert.equal(m.prev.name, 'Sentetik Deneme 2');
+  });
+  await check("each grade's own list: 9. sınıf (8 lessons, large type, one score), 10. sınıf (wrapped school name), 11. sınıf (AYT without S.F)", () => {
+    const d = sinif('dokuz2'), ece = d.ogr.find(o => o.no === '2001');
+    assert.equal(d.tur, 'T'); assert.equal(d.ad, 'Sentetik 9 Deneme 2'); assert.equal(d.tarih, '23.10.2026'); assert.equal(d.ogr.length, 3);
+    // Stored in the 12. sınıf column order; Felsefe, S.F and Geometri were not printed.
+    assert.deepEqual(ece.n, [14, 7, 5.75, null, 4, null, 7, null, 5.75, 5.75, 3.75]);
+    assert.deepEqual(ece.dy, ['15/4', '7/0', '6/1', null, '4/0', null, '8/4', null, '6/1', '6/1', '4/1']);
+    assert.equal(ece.snf, '102 9/A'); assert.deepEqual(ece.p, [280.5, null, null, null]); assert.equal(ece.r[0], '1 1 1 -');
+    assert.equal(d.ogr.find(o => o.no === '2003').ad, 'SENTETİK GÜL UZUNADLI İKİNCİ'); assert.deepEqual(d.kurum.p, [255.25, null, null, null]);
+    const on = sinif('on');
+    assert.equal(on.okul, 'SENTETİK ANADOLU LİSESİ'); assert.deepEqual(on.katilim, ['2', '2', '2']);
+    assert.deepEqual([on.ogr[0].n[3], on.ogr[0].n[5], on.ogr[0].n[7]], [5, null, null]);
+    const onbir = sinif('onbir'), jale = onbir.ogr.find(o => o.no === '4001');
+    assert.equal(onbir.tur, 'F'); assert.equal(onbir.katilim[1], 'TYT: 2 | AYT: 2'); assert.equal(jale.snf, '302 11/A');
+    assert.deepEqual([jale.n[11], jale.n[17], jale.n[18], jale.n[19]], [15, 4.75, null, 19]); assert.deepEqual(jale.r, ['1 1 5 900', '1 1 9 2000', '1 1 4 800', '1 1 3 700']);
+    // Denemeler reads the same lists; a grade's own exam gets its question counts from the answers.
+    put('pages', sinifListesi(SINIFLAR.dokuz2).pages); const r = get('denemePdfCoz(pages)');
+    assert.equal(r.satirlar.length, 3);
+    assert.deepEqual(r.satirlar[0].dersler.map(x => x.kod + '/' + x.soru), ['turkce/20', 'tarih/7', 'cografya/7', 'din/6', 'mat/20', 'fizik/7', 'kimya/7', 'biyoloji/6']);
+    put('R', r); run('for(const row of R.satirlar)denemePdfKaydi(R,row)');
+    put('pages', sinifListesi(SINIFLAR.onbir).pages); const r11 = get('denemePdfCoz(pages)');
+    assert.deepEqual(r11.satirlar.map(x => x.oturum), ['TYT', 'AYT', 'TYT', 'AYT']); assert(r11.satirlar.every(x => x.dersler.every(d => d.soru === null)));
+    assert.equal(r11.satirlar[1].dersler.length, 12); assert(!r11.satirlar[1].dersler.some(d => d.kod === 'sf'));
+    // A lesson is bounded by its test, the test by its size.
+    const kayit = dersler => ({id:'p:x', ad:'X', tarih:'2026-10-23', tur:'TYT', oturum:'TYT', brans:'', alan:'SAY', dersler, sure:null, puan:null, ts:1});
+    put('k', [kayit([{kod:'tarih', dogru:7, yanlis:0, soru:7}, {kod:'cografya', dogru:6, yanlis:1, soru:7}])]); run('denemeDogrula(k)');
+    put('k', [kayit([{kod:'tarih', dogru:7, yanlis:0, soru:null}, {kod:'cografya', dogru:7, yanlis:0, soru:null}, {kod:'din', dogru:7, yanlis:0, soru:null}])]);
+    assert.throws(() => run('denemeDogrula(k)'), /toplam soru/);
+  });
+  await check('reordered lesson headers and a net that does not match its D/Y are refused', () => {
+    const p = sinifListesi(SINIFLAR.dokuz1); p.pages[0].find(o => o.s === 'TAR').s = 'FİZ'; put('pages', p.pages); put('boylar', p.boylar);
+    assert.throws(() => run('siralamaPdfCoz(pages,boylar)'), /ders sütunları okunamadı/); assert.throws(() => run('denemePdfCoz(pages)'), /sütun düzeni desteklenmiyor/);
+    const q = sinifListesi(SINIFLAR.dokuz1); q.pages[0].find(o => o.s === '11.00').s = '11.50'; put('pages', q.pages);
+    assert.throws(() => run('denemePdfCoz(pages)'), /neti ile doğru\/yanlış/);
+  });
+  await check('grades are compared only with their own; lists keep their own lessons in reports and rankings', async () => {
+    put('L', [list('once', 'T'), list('sonra', 'T'), sinif('dokuz1'), sinif('dokuz2'), sinif('on'), sinif('onbir')]); await run('siralamaKaydet(L)');
+    const ms = 'SIRALAMA.modeller(SIRALAMA.oku().veri)';
+    assert.deepEqual(get(`${ms}.map(e=>[e.name,e.sinif])`), [['Sentetik Deneme 1', 12], ['Sentetik 9 Deneme 1', 9], ['Sentetik Deneme 2', 12], ['Sentetik 10 Deneme 1', 10], ['Sentetik 11 Deneme 1', 11], ['Sentetik 9 Deneme 2', 9]]);
+    assert.deepEqual(get(`${ms}.map(SIRALAMA.listeAdlari)`), [['TYT · Net Sayısı Sıralı'], ['TYT · 8 ders'], ['TYT · Net Sayısı Sıralı'], ['TYT · 9 ders'], ['TYT + AYT · 23 ders'], ['TYT · 8 ders']]);
+    assert.deepEqual(get(`${ms}.at(-1).tyt.dersler`), ['TÜR', 'TAR', 'COĞ', 'DİN', 'MAT', 'FİZ', 'KİM', 'BİY']);
+    assert.deepEqual(get(`${ms}.at(-2).ayt.dersler`), ['EDB', 'TAR1', 'COĞ1', 'TAR2', 'COĞ2', 'FELGR', 'DİN2', 'AMAT', 'AGEO', 'AFİZ', 'AKİM', 'ABİY']);
+    // The newest exam (9. sınıf) compares with the 9. sınıf one, not the 12. sınıf exam between them,
+    // even when another grade's exam was chosen before.
+    let m = model(); assert.equal(m.cur.name, 'Sentetik 9 Deneme 2'); assert.equal(m.prev.name, 'Sentetik 9 Deneme 1');
+    run("EK.srOnceki='SENTETİK DENEME 2'"); m = model(); assert.equal(m.prev.name, 'Sentetik 9 Deneme 1');
+    const sayfa = run('gorunumSiralamalar()'), onceki = sayfa.slice(sayfa.indexOf('id="srOnceki"'), sayfa.indexOf('</select>', sayfa.indexOf('id="srOnceki"')));
+    assert.equal((onceki.match(/<option/g) || []).length, 1); assert(onceki.includes('Sentetik 9 Deneme 1 · 9. sınıf'));
+    assert(sayfa.includes('9. sınıf · TYT 3 öğrenci') && sayfa.includes('TYT · 8 ders'));
+    run('M=SIRALAMA.secim(SIRALAMA.modeller(SIRALAMA.oku().veri))');
+    assert.equal(run('SIRALAMA.neden(SIRALAMA.RAPORLAR[0],M.cur,M.prev)'), ''); assert.equal(run('SIRALAMA.neden(SIRALAMA.RAPORLAR[2],M.cur,M.prev)'), 'Bu sınavda AYT yok.');
+    // Changes: only lessons both lists printed; Felsefe was not printed, so it has none.
+    run('R=SIRALAMA.tytRows(M.cur.tyt,M.prev.tyt,Object.values(M.cur.tyt.students))');
+    const ece = run("R.find(r=>r.s.no==='2001')"); assert.equal(box(ece.delta['TÜR']), '+3.00'); assert.equal(box(ece.delta['TAR']), '+2.50'); assert.equal(ece.delta['FEL'], null);
+    const kur = run("SIRALAMA.tytAvg(M.cur.tyt,M.prev.tyt,'Kurum Ortalamaları',null)"); assert.equal(box(kur.delta['TÜR']), '+2.00'); assert.equal(kur.delta['GEO'], null);
+    const sube = run("SIRALAMA.tytAvg(M.cur.tyt,M.prev.tyt,'Şube Ortalamaları',R)"); assert.equal(sube.delta['GEO'], null); assert.notEqual(sube.delta['DİN'], null);
+    // Tarih has 7 questions in this exam: the gap closed stays defined with a full net of 7, not 5.
+    const tar = get("SIRALAMA.siraSatirlari(M.cur,M.prev,'TYT:TAR','fark')"); assert(tar.every(r => Number.isFinite(r.fark)));
+    assert.equal(tar.find(r => r.s.no === '2001').fark.toFixed(4), Math.log((7 - 4.5 + 1) / (7 - 7 + 1)).toFixed(4));
+    run("EK.srSiraTur='TYT';EK.srSiraNet='TYT:GEO'"); const sira = run('SIRALAMA.siraBolumu(M.cur,M.prev)');
+    assert(!sira.includes('value="TYT:GEO"') && !sira.includes('value="TYT:FEL"') && sira.includes('value="TYT:DİN"') && sira.includes('value="TYT:G-SOS"') && !sira.includes('value="TYT:G-MAT"'));
+    assert(sira.includes('value="TYT" selected'));
+    // The 10. sınıf exam has no exam of its grade to compare with; the 11. sınıf AYT fields add up without S.F.
+    run("EK.srSimdiki='SENTETİK 10 DENEME 1';EK.srOnceki=null"); m = model(); assert.equal(m.prev, null);
+    assert.equal(run('(()=>{const s=SIRALAMA.secim(SIRALAMA.modeller(SIRALAMA.oku().veri));return SIRALAMA.neden(SIRALAMA.RAPORLAR[0],s.cur,s.prev)})()'), 'Karşılaştırmak için 10. sınıfların ikinci bir sınavı gerekir.');
+    const k11 = run(`SIRALAMA.aytKurum(${ms}.at(-2).ayt,null)`); assert.equal(k11.field['SÖZ'].net, 6 + 1.5 + 1 + 1.5 + 1.5 + 1 + 1.5); assert.equal(k11.field['SÖZ'].dy, '18.0/16.0');
   });
   await check('size limits: the lists and the cloud backup stay under their limits, and a refused write changes nothing', async () => {
     await loadAll(); const before = run('JSON.stringify(D.siralama)'), saves = run('KAYIT');

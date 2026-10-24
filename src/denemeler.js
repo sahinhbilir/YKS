@@ -54,8 +54,10 @@ function denemeDogrula(liste) {
     ids.add(r.id);
     const kodlar = new Set();
     for (const d of r.dersler) {
-      const ders = DENEME_DERSLER[r.oturum].find(x=>x[0]===d.kod);
-      const max = r.tur === 'BRANS' ? 200 : ['mat','geo'].includes(d.kod) ? 40 : ders?.[2];
+      // A grade's own exam splits a test differently (a 9. sınıf Tarih can have 7 questions), so a
+      // lesson is bounded by its test; the test totals are checked below.
+      const ders = DENEME_DERSLER[r.oturum].find(x=>x[0]===d.kod), grup = DENEME_GRUPLAR[r.oturum].find(g=>g[3].includes(d.kod));
+      const max = r.tur === 'BRANS' ? 200 : grup ? grup[2] : ders?.[2];
       if (!ders || kodlar.has(d.kod) || !Number.isInteger(d.dogru) || !Number.isInteger(d.yanlis) || d.dogru < 0 || d.yanlis < 0 || d.dogru+d.yanlis > max ||
           (d.soru !== null && (!Number.isInteger(d.soru) || d.soru < 0 || d.soru > max || d.soru < d.dogru+d.yanlis)))
         throw new Error('Denemenin doğru/yanlış/soru sayıları geçersiz.');
@@ -64,8 +66,7 @@ function denemeDogrula(liste) {
     if (r.tur === 'BRANS' && (r.dersler.length !== 1 || r.brans !== r.dersler[0].kod || !r.dersler[0].soru)) throw new Error('Branş denemesinde ders ve soru sayısı gerekli.');
     if (r.tur !== 'BRANS') {
       const toplam = kodlar => r.dersler.filter(d=>kodlar.includes(d.kod)).reduce((s,d)=>s+d.dogru+d.yanlis,0);
-      if (toplam(['mat','geo']) > 40 || (r.oturum==='TYT' && toplam(['tarih','cografya','felsefe','din','sf'])>20) ||
-          (r.oturum==='AYT' && toplam(['tarih2','cografya2','felsefe','din','sf'])>40)) throw new Error('Testteki toplam soru sınırı aşıldı.');
+      if (DENEME_GRUPLAR[r.oturum].some(g=>toplam(g[3])>g[2])) throw new Error('Testteki toplam soru sınırı aşıldı.');
     }
   }
   return liste;
@@ -146,6 +147,11 @@ function denemeOkulGuvenliUygula(si, veri) {
   catch(e) { EK.denemeDurum=(rehberMi() && D.ogr[si] ? D.ogr[si].ad+': ' : '')+'Okul deneme sonuçları alınamadı: '+(e.message || e); return false; }
 }
 
+const DENEME_SIRA_KODU = {'TÜR':'turkce','TAR':'tarih','COĞ':'cografya','FEL':'felsefe','DİN':'din','S.F':'sf','MAT':'mat','GEO':'geo','FİZ':'fizik','KİM':'kimya','BİY':'biyoloji',
+  'EDB':'edebiyat','TAR1':'tarih1','COĞ1':'cografya1','TAR2':'tarih2','COĞ2':'cografya2','FELGR':'felsefe','DİN2':'din','S.F2':'sf','AMAT':'mat','AGEO':'geo','AFİZ':'fizik','AKİM':'kimya','ABİY':'biyoloji'};
+// Question counts of a grade's own exam, from the most questions a student answered in a lesson;
+// Türkçe and Matematik tests come in tens (a 9. sınıf Matematik answered up to 17 is a 20).
+const denemeSoruTahmini = (kod, enCok) => ['turkce','mat'].includes(kod) ? Math.max(10,Math.ceil(enCok/10)*10) : Math.max(1,enCok);
 // Parse by PDF coordinates, never by a flattened token sequence: absent AYT nets
 // must not shift TYT values, totals or YKS points into another subject.
 function denemePdfCoz(sayfalar) {
@@ -161,15 +167,17 @@ function denemePdfCoz(sayfalar) {
     const iso=m[3]+'-'+m[2]+'-'+m[1];
     if (!isoTarihGecerli(iso) || rapor.ad && (rapor.ad!==ad || rapor.tarih!==iso)) throw new Error('PDF sayfalarında sınav bilgisi tutarsız.');
     rapor.ad=ad;rapor.tarih=iso;
-    const dy=items.filter(x=>x.s==='D/Y').sort((a,b)=>a.x-b.x), birlesik=dy.length===25;
-    if (![12,25].includes(dy.length)) throw new Error('Bu PDF sütun düzeni desteklenmiyor (TYT veya TYT+AYT toplu sonuç listesi bekleniyor).');
+    const dy=items.filter(x=>x.s==='D/Y').sort((a,b)=>a.x-b.x);
     const isim=items.find(x=>x.s==='NO/İsim'), sinif=items.find(x=>x.s==='Snf');
     if(!isim || !sinif)throw new Error('Öğrenci kimlik sütunları okunamadı.');
-    const sutunlar=[...DENEME_DERSLER.TYT,...(birlesik?DENEME_DERSLER.AYT:[])];
-    const beklenen=['TÜR','TAR','COĞ','FEL','DİN KÜL','S.F','MAT','GEO','FİZ','KİM','BİY',...(birlesik?['EDB','TAR','COĞ','TAR','COĞ','FEL GR.','DİN KÜL','S.F','MAT','GEO','FİZ','KİM','BİY']:[])];
-    dy.slice(0,-1).forEach((t,i)=>{
-      if(!items.some(x=>x.s===beklenen[i] && Math.abs(merkez(x)-merkez(t))<3 && x.y>t.y && x.y<t.y+26))throw new Error('PDF ders başlıkları beklenen sırada değil.');
-    });
+    // Each grade's list prints its own lessons (9. sınıf has no Felsefe or Geometri): a column is
+    // the lesson labelled above its D/Y (and N), read as Sıralamalar reads it; the last is the total.
+    const etiket=dy.slice(0,-1).map(t=>items.filter(x=>x.s!=='N' && Math.abs(merkez(x)-merkez(t))<4 && x.y>t.y && x.y<t.y+26).sort((a,b)=>a.y-b.y)[0]?.s);
+    const anahtar=etiket.every(Boolean) ? SIRALAMA.dersAnahtarlari(etiket) : null;
+    if (!anahtar) throw new Error('Bu PDF sütun düzeni desteklenmiyor (TYT veya TYT+AYT toplu sonuç listesi bekleniyor).');
+    const sutunlar=anahtar.map(k=>{const oturum=SIRALAMA.AYT_KEYS.includes(k)?'AYT':'TYT',d=DENEME_DERSLER[oturum].find(x=>x[0]===DENEME_SIRA_KODU[k]);return [d[0],d[1],oturum]}), birlesik=sutunlar.some(d=>d[2]==='AYT');
+    if (rapor.sutunlar && rapor.sutunlar!==anahtar.join()) throw new Error('PDF sayfalarının sütun düzeni farklı.');
+    rapor.sutunlar=anahtar.join();
     const ranks=items.filter(x=>x.x<isim.x && x.y<dy[0].y && /^\d+$/.test(x.s)).sort((a,b)=>b.y-a.y);
     if(!ranks.length)throw new Error('PDF’de öğrenci satırı bulunamadı.');
     for(let ri=0;ri<ranks.length;ri++) {
@@ -190,7 +198,7 @@ function denemePdfCoz(sayfalar) {
       const total=cell(dy.length-1).find(x=>/^-?\d+[.,]\d+$/.test(x.s));
       if(!total || Math.abs(Number(total.s.replace(',','.'))-dersler.reduce((s,d)=>s+denemeNet(d),0))>0.011)throw new Error('PDF toplam net kontrolü başarısız; hiçbir sonuç aktarılmadı.');
       for(const oturum of birlesik?['TYT','AYT']:['TYT']) {
-        const bolum=oturum==='TYT'?dersler.slice(0,11):dersler.slice(11);
+        const bolum=dersler.filter((d,i)=>sutunlar[i][2]===oturum);
         if(bolum.some(x=>x.yok)){
           if(bolum.every(x=>x.yok))continue;
           throw new Error('Sayfa '+(pi+1)+', sıra '+rank.s+': '+oturum+' satırında boş (-/-) ve dolu dersler karışık; hiçbir sonuç aktarılmadı.');
@@ -204,6 +212,14 @@ function denemePdfCoz(sayfalar) {
     }
   }
   if (!rapor.satirlar.length) throw new Error('PDF’de aktarılabilir sonuç yok.');
+  // A grade's own exam (a TYT without some 12. sınıf lesson) has its own question counts.
+  const tyt=rapor.satirlar.filter(r=>r.oturum==='TYT'), kodlar=new Set(tyt.flatMap(r=>r.dersler.map(d=>d.kod)));
+  if (tyt.length && DENEME_DERSLER.TYT.some(d=>d[0]!=='sf' && !kodlar.has(d[0])))
+    for (const kod of kodlar) {
+      const soru=denemeSoruTahmini(kod,Math.max(...tyt.flatMap(r=>r.dersler.filter(d=>d.kod===kod).map(d=>d.dogru+d.yanlis))));
+      for (const r of tyt) for (const d of r.dersler) if (d.kod===kod) d.soru=soru;
+    }
+  delete rapor.sutunlar;
   return rapor;
 }
 let DENEME_PDF_MODUL;

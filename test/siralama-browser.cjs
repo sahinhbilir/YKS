@@ -4,7 +4,7 @@
 // pdfjs-dist@5.6.205, roboto-fontface@0.10.0) found on NODE_PATH; nothing else leaves the page.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const {okulListesi,SINAVLAR}=require('./fixtures/siralama-pdf.cjs');
+const {okulListesi,sinifListesi,SINAVLAR,SINIFLAR}=require('./fixtures/siralama-pdf.cjs');
 const paket=ad=>{for(const d of [...(process.env.NODE_PATH||'').split(path.delimiter),path.join(__dirname,'..','node_modules')].filter(Boolean)){const p=path.join(d,ad);if(fs.existsSync(path.join(p,'package.json')))return p}throw new Error('Install '+ad+' (see .github/workflows/verify.yml)')};
 const CDN={
  'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/legacy/build/pdf.min.mjs':[paket('pdfjs-dist'),'legacy/build/pdf.min.mjs','text/javascript'],
@@ -15,7 +15,7 @@ const CDN={
  'https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Medium.woff':[paket('roboto-fontface'),'fonts/roboto/Roboto-Medium.woff','font/woff']};
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
 const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-siralama-'));fs.mkdirSync(out,{recursive:true});
-const listeler={'sonra-tyt.pdf':okulListesi(SINAVLAR.sonra.T),'sonra-ayt.pdf':okulListesi(SINAVLAR.sonra.F),'once-tyt.pdf':okulListesi(SINAVLAR.once.T),'once-ayt.pdf':okulListesi(SINAVLAR.once.F)};
+const listeler={'sonra-tyt.pdf':okulListesi(SINAVLAR.sonra.T),'sonra-ayt.pdf':okulListesi(SINAVLAR.sonra.F),'once-tyt.pdf':okulListesi(SINAVLAR.once.T),'once-ayt.pdf':okulListesi(SINAVLAR.once.F),'dokuz1.pdf':sinifListesi(SINIFLAR.dokuz1),'dokuz2.pdf':sinifListesi(SINIFLAR.dokuz2)};
 const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage'],...(process.env.YKS_CHROMIUM?{executablePath:process.env.YKS_CHROMIUM}:{})});
@@ -86,6 +86,16 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.waitForFunction(()=>D.siralama.sinavlar.length===1);
    assert.equal(await page.evaluate(()=>D.ogr[0].denemeOkul.length),2);
    assert.equal(await page.locator('[data-sr-indir]:not([disabled])').count(),0);
+   // 6) A 9. sınıf list: its own 8 lessons and TYT score, compared only with the 9. sınıf exam.
+   await page.locator('#srPdf').setInputFiles([dosya('dokuz1.pdf'),dosya('dokuz2.pdf')]);
+   await page.waitForFunction(()=>D.siralama.sinavlar.length===3);
+   assert.equal(await page.locator('#srSimdiki').inputValue(),'SENTETİK 9 DENEME 2');assert.equal(await page.locator('#srOnceki').inputValue(),'SENTETİK 9 DENEME 1');
+   assert.equal(await page.locator('#srOnceki option').count(),1);assert((await page.locator('.sr-sinavlar').innerText()).includes('TYT · 8 ders'));
+   assert.equal(await page.locator('[data-sr-indir]:not([disabled])').count(),2);assert((await page.locator('.sr-raporlar').innerText()).includes('Bu sınavda AYT yok.'));
+   const [d9]=await Promise.all([page.waitForEvent('download'),page.locator('[data-sr-indir="tyt-toplu"]').click()]);
+   const f9=path.join(out,'dokuz-'+width+'.pdf');await d9.saveAs(f9);const t9=(await metin(fs.readFileSync(f9)))[0];
+   assert(t9.includes('DİN KÜL')&&t9.includes('TEM MAT')&&t9.includes('2001 / SENTETİK ECE')&&t9.includes('+3.00'));
+   assert(!t9.includes('GEO')&&!t9.includes('|FEL|')&&!t9.includes('YKS-SAY'),'only the lessons and score the 9. sınıf list printed');
    assert.deepEqual(errors,[]);console.log('PASS Sıralamalar browser',width);await context.close();
   }
  }finally{await browser.close()}

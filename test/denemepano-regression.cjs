@@ -4,7 +4,7 @@
 // comparison windows, statuses, class scopes, every chart, view-only teachers, the classic page
 // and privacy. Synthetic data only (test/fixtures/siralama-pdf.cjs).
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
-const { okulListesi, SINAVLAR } = require('./fixtures/siralama-pdf.cjs');
+const { okulListesi, sinifListesi, SINAVLAR, SINIFLAR } = require('./fixtures/siralama-pdf.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
 const boot = html.indexOf('// ---------------------------------------------------------------- başlangıç', start);
@@ -209,6 +209,21 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run("EK.dpDers=null"); const hepsi = get('(()=>{const {t}=DPANO.veriAl();return DPANO.GRAFIKLER.ders(DPANO.durumAl(t),720).seriler.map(x=>x.ad)})()');
     assert.equal(hepsi.length, 10, 'the all-subjects chart draws the lessons only');
     run("EK.dpOlcut='artis'"); assert(st('st=>st.mo.ogrenciler.every(o=>o.siraFark===null)'), 'ranked by a change, places moved are not shown');
+  });
+  await check("a grade's own exams: only the lessons its lists print, with their question counts", async () => {
+    const sinif = k => { const {pages, boylar} = sinifListesi(SINIFLAR[k]); put('pages', pages); put('boylar', boylar); return get('siralamaPdfCoz(pages,boylar)'); };
+    put('L', [list('once', 'T'), list('sonra', 'T'), sinif('dokuz1'), sinif('dokuz2')]); await run('siralamaKaydet(L)');
+    run("EK.dpKapsam='g9'");
+    const dersler = () => get('(()=>{const {t}=DPANO.veriAl(),s=DPANO.durumAl(t);return {ust:s.m.O.ust,d:s.m.dersler.map(d=>d.kod+"/"+d.soru),n:s.m.sinavlar.map(x=>x.ad)}})()');
+    let m = dersler();
+    assert.deepEqual(m.n, ['Sentetik 9 Deneme 1', 'Sentetik 9 Deneme 2']);
+    assert.deepEqual(m.d, ['TÜR/20', 'TAR/7', 'COĞ/7', 'DİN/6', 'MAT/20', 'FİZ/7', 'KİM/7', 'BİY/6', 'G-SOS/20', 'G-FEN/20']); assert.equal(m.ust, 80);
+    const h = run('gorunumDenemeler()'); assert(h.includes('20 soru')); assert(!/Felsefe|Geometri/.test(h));
+    // A lesson net of a 9. sınıf exam is ranked against its own count.
+    run("EK.dpOgrNet='TAR'"); assert(Number.isFinite(run('(()=>{const {t}=DPANO.veriAl();return DPANO.durumAl(t).mo.O.ust})()')));
+    // The 12. sınıf board keeps the TYT lessons and counts.
+    run("EK.dpKapsam='g12';EK.dpOgrNet=undefined"); m = dersler();
+    assert.equal(m.ust, 120); assert(m.d.includes('TÜR/40') && m.d.includes('GEO/10') && m.d.includes('G-MAT/40'));
   });
   await check('every student as a line: one per student, coloured by class, readable on hover', async () => {
     await loadAll();

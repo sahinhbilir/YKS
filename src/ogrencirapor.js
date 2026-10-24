@@ -4,7 +4,6 @@ const OGRENCI_RAPOR = (() => {
 'use strict';
 const TYT=[['turkce','Türkçe'],['tarih','Tarih'],['cografya','Coğrafya'],['felsefe','Felsefe'],['din','Din kültürü'],['sf','Ek felsefe'],['mat','Matematik'],['geo','Geometri'],['fizik','Fizik'],['kimya','Kimya'],['biyoloji','Biyoloji']];
 const AYT=[['edebiyat','Edebiyat'],['tarih1','Tarih 1'],['cografya1','Coğrafya 1'],['tarih2','Tarih 2'],['cografya2','Coğrafya 2'],['felsefe','Felsefe grubu'],['din','Din kültürü'],['sf','Ek felsefe'],['mat','Matematik'],['geo','Geometri'],['fizik','Fizik'],['kimya','Kimya'],['biyoloji','Biyoloji']];
-const SHORT=[TYT[0],TYT[1],TYT[2],TYT[4],TYT[6],TYT[8],TYT[9],TYT[10]];
 const clean=s=>String(s??'').replace(/\s+/g,' ').trim(),nameKey=s=>clean(s).normalize('NFKC').toLocaleUpperCase('tr-TR');
 const cls=s=>{const m=nameKey(s).match(/(\d{1,2})\s*[-/]\s*([A-ZÇĞİÖŞÜ]+)/u);return m?m[1]+'/'+m[2]:clean(s)};
 // A student without a school number is told apart by name and class: same names in two classes are two students.
@@ -13,46 +12,9 @@ function date(s){const m=clean(s).match(/^(\d{2})[./](\d{2})[./](\d{4})$/);const
 const day=s=>Math.floor(Date.parse(date(s)+'T00:00:00Z')/86400000),iso=g=>new Date(g*86400000).toISOString().slice(0,10),display=s=>s?date(s).split('-').reverse().join('.'):'Tarih yok';
 const normItems=p=>p.filter(o=>clean(o.s)).map(o=>({...o,s:clean(o.s)}));
 function join(items){return items.slice().sort((a,b)=>Math.abs(a.y-b.y)>2?b.y-a.y:a.x-b.x).map(o=>o.s).join(' ').replace(/\s+/g,' ').trim()}
-function rightOf(items,label){const h=items.find(o=>o.s===label);return h?join(items.filter(o=>Math.abs(o.y-h.y)<1&&o.x>h.x+h.w+1).sort((a,b)=>a.x-b.x).slice(0,1)):''}
 function printedDate(pages){
  const months={Oca:'01',Şub:'02',Mar:'03',Nis:'04',May:'05',Haz:'06',Tem:'07',Ağu:'08',Eyl:'09',Eki:'10',Kas:'11',Ara:'12'};
  for(const page of pages){const m=join(page.filter(o=>o.y<40)).match(/(\d{1,2})\s+(Oca|Şub|Mar|Nis|May|Haz|Tem|Ağu|Eyl|Eki|Kas|Ara)\s+(\d{4})/u);if(m)return date(m[3]+'-'+months[m[2]]+'-'+m[1].padStart(2,'0'))}return null;
-}
-function examsPdf(pages){
- const students=[],exams=[];let school='';
- for(const raw of pages){const p=normItems(raw),name=rightOf(p,'Sınav Adı:'),d=date(rightOf(p,'Sınav Tarihi:'));school=school||rightOf(p,'Okul:');
-  if(!name)throw new Error('Sınav adı okunamadı.');
-  const cols=p.filter(o=>o.s==='D/Y').sort((a,b)=>a.x-b.x),full=cols.length===25,subjects=cols.length===9?SHORT:full?TYT.concat(AYT):TYT;
-  if(![9,12,25].includes(cols.length))throw new Error('Desteklenmeyen deneme sütunları.');
-  const expected=cols.length===9?['TÜR','TAR','COĞ','DİN KÜL','MAT','FİZ','KİM','BİY']:['TÜR','TAR','COĞ','FEL','DİN KÜL','S.F','MAT','GEO','FİZ','KİM','BİY',...(full?['EDB','TAR','COĞ','TAR','COĞ','FEL GR.','DİN KÜL','S.F','MAT','GEO','FİZ','KİM','BİY']:[])];
-  expected.forEach((label,j)=>{if(!p.some(o=>o.s===label&&Math.abs(cx(o)-cx(cols[j]))<4&&o.y>cols[j].y&&o.y<cols[j].y+28))throw new Error('Deneme ders başlıkları beklenen sırada değil.');});
-  const nh=p.find(o=>o.s==='NO/İsim'),ch=p.find(o=>o.s==='Snf');if(!nh||!ch)throw new Error('Öğrenci sütunları bulunamadı.');
-  const anchors=p.filter(o=>o.x<nh.x&&o.y<cols[0].y&&/^\d+$/.test(o.s)).sort((a,b)=>b.y-a.y);
-  if(!anchors.length)throw new Error('Denemede öğrenci satırı yok.');
-  anchors.forEach((a,i)=>{
-   const upper=i?(anchors[i-1].y+a.y)/2:a.y+12,lower=i+1<anchors.length?(a.y+anchors[i+1].y)/2:a.y-12;
-   const band=p.filter(o=>o.y<upper&&o.y>lower),nm=join(band.filter(o=>o.x>=nh.x-1&&o.x<ch.x-12)).match(/^(\d+)\s*\/\s*(.+)$/);
-   if(!nm)throw new Error('Öğrenci adı/numarası okunamadı.');
-   const s={no:nm[1],name:nm[2],cls:cls(join(band.filter(o=>o.x>=ch.x-12&&cx(o)<cx(cols[0])-15)))};students.push(s);
-   const cell=j=>band.filter(o=>Math.abs(cx(o)-cx(cols[j]))<Math.min(12,(j?cx(cols[j])-cx(cols[j-1]):30)/3));
-   const parts=subjects.map(([code],j)=>{
-    const c=cell(j),pairs=c.filter(o=>/^\d+\s*\/\s*\d+$/.test(o.s)),nets=c.filter(o=>/^-?\d+[.,]\d+$/.test(o.s));
-    if(!pairs.length&&c.some(o=>/^-\s*\/\s*-$/.test(o.s)))return [code,null];
-    if(pairs.length!==1||nets.length!==1)throw new Error(name+': ders hücresi okunamadı.');
-    const [correct,wrong]=pairs[0].s.split('/').map(Number),net=Number(nets[0].s.replace(',','.'));
-    if(Math.abs(net-correct+wrong/4)>.011)throw new Error(name+': net kontrolü başarısız.');return [code,net];
-   });
-   const total=cell(cols.length-1).find(o=>/^-?\d+[.,]\d+$/.test(o.s));
-   if(!total||Math.abs(parts.reduce((sum,v)=>sum+(v[1]||0),0)-Number(total.s.replace(',','.')))>.011)throw new Error(name+': toplam net uyuşmuyor.');
-   for(const session of full?['TYT','AYT']:['TYT']){
-    const part=session==='TYT'?parts.slice(0,full?11:parts.length):parts.slice(11);
-    if(part.every(v=>v[1]===null))continue;
-    if(part.some(v=>v[1]===null))throw new Error(name+': kısmi oturum hücreleri.');
-    exams.push({...s,name: s.name,exam:name,date:d,session,nets:Object.fromEntries(part)});
-   }
-  });
- }
- return {kind:'exam',students,exams,school};
 }
 function homeworkPdf(pages){
  const students=[],homework=[],reportDate=printedDate(pages);let current=null,columns=null;
@@ -68,7 +30,8 @@ function homeworkPdf(pages){
    const top=Math.min(a.y+10,i?(anchors[i-1].y+a.y)/2:Infinity),bottom=Math.max(a.y-10,i+1<anchors.length?(a.y+anchors[i+1].y)/2:-Infinity),band=p.filter(o=>o.y<=top&&o.y>=bottom);
    const course=join(band.filter(o=>o.x>=48&&cx(o)<columns[0]-35)),values=columns.map(x=>{const n=band.filter(o=>Math.abs(cx(o)-x)<20&&/^\d+$/.test(o.s));if(n.length!==1)throw new Error('Ödev sayısı okunamadı.');return Number(n[0].s)});
    if(!course||values[0]<values.slice(1).reduce((a,b)=>a+b,0))throw new Error('Ödev toplamı uyuşmuyor.');
-   homework.push({...current,course,values,reportDate,assignmentDate:null,row:a.s});
+   // Homework the report has not marked yet (Toplam above its statuses) counts as not given.
+   const verilen=values.slice(1).reduce((x,y)=>x+y,0);if(verilen)homework.push({...current,course,values:[verilen,...values.slice(1)],reportDate,assignmentDate:null,row:a.s});
   });
   if(people.length)current=people.at(-1).s;
  }
@@ -97,7 +60,7 @@ function attendancePdf(pages){
 }
 function parse(pages,boylar){
  const text=pages[0].map(o=>o.s).join(' ');
- if(/DENEME SINAVI TOPLU SONUÇ/.test(text))return examsPdf(pages);
+ if(/DENEME SINAVI TOPLU SONUÇ/.test(text))return {kind:'exam'};
  if(/Öğrenci Ev Ödev Durum Raporu/.test(text))return homeworkPdf(pages);
  if(/Yoklama Raporu/.test(text))return attendancePdf(pages);
  if(/Tarih Bazlı Etüt Raporu/.test(text)){const r=ETUT.pdfCoz(pages);if(r.atlanan)throw new Error(r.atlanan+' etüt satırı okunamadı; eksik rapor eklenmedi.');return {kind:'sessions',students:[],sessions:r.satirlar.map(s=>({name:s.ad,cls:cls(s.sinif),date:iso(s.g),course:s.brans,teacher:s.ogretmen,time:s.saat,minutes:s.sure})),start:iso(r.bas),end:iso(r.bit)}}
@@ -143,6 +106,11 @@ function merge(reports,roster=[]){
  students.sort((a,b)=>a.cls.localeCompare(b.cls,'tr',{numeric:true})||a.name.localeCompare(b.name,'tr'));return {students,warnings:[...new Set(warnings)]};
 }
 /* ---------------- visual, one-page report (shared by preview and export) ---------------- */
+// The homework report's statuses after Toplam, in its column order, with their colours.
+const ODEV_DURUM=[['Tamamladı','#168d7d'],['Eksik','#e5a044'],['Getirmedi','#d27c4c'],['Geç getirdi','#6799c5'],['Yapmadı','#bf6951'],['Gelmedi','#657878']];
+// Lesson names as the report prints them, in sentence case ("KİMYA TYT" → "Kimya TYT").
+const dersAdi=c=>{const k=nameKey(c).replace('T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK','İNKILAP TARİHİ').replace('DİN KÜLTÜRÜ VE AHLAK BİLGİSİ','DİN KÜLTÜRÜ').toLocaleLowerCase('tr-TR').replace(/\b(tyt|ayt)\b/g,x=>x.toUpperCase());
+ return k.charAt(0).toLocaleUpperCase('tr-TR')+k.slice(1)};
 const C={ink:'#213d40',muted:'#657878',green:'#168d7d',amber:'#e5a044',red:'#bf6951',blue:'#6799c5',gray:'#d9dfdc',bg:'#f6f5f0',pale:'#e6f2ec'},W=1190.55,H=841.89;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n===null||n===undefined?'—':Number(n).toLocaleString('tr-TR',{maximumFractionDigits:2});
@@ -188,11 +156,18 @@ function svgReport(s,reportDate){
  // Homework rows remain attached to their source report date. No due date is invented.
  rect(284,508,382,308);text(301,535,'Ödevler · derslere göre',17,C.ink,true);
  if(s.homework.length){const rd=s.homework[0].reportDate;text(301,556,'Rapor: '+display(rd)+' · Ödev tarihi: belirtilmemiş',11,C.muted);
-  const totals=s.homework.reduce((a,h)=>a.map((v,i)=>v+h.values[i]),[0,0,0,0,0,0,0]);text(648,535,totals[1]+' / '+totals[0],14,C.green,true,'end');
+  // Every status the report prints is drawn, in its column order.
+  const totals=s.homework.reduce((a,h)=>a.map((v,i)=>v+h.values[i]),[0,0,0,0,0,0,0]);
+  text(648,535,totals[1]+' / '+totals[0],14,C.green,true,'end');
   const courses=new Map();s.homework.forEach(h=>{const k=nameKey(h.course),o=courses.get(k)||{course:h.course,values:[0,0,0,0,0,0,0]};o.values=o.values.map((v,i)=>v+h.values[i]);courses.set(k,o)});
-  const rh=Math.min(16,225/courses.size);
-  [...courses.values()].forEach((h,i)=>{const y=576+i*rh,label=h.course.replace('TÜRK DİLİ VE EDEBİYATI','Türk dili ve edebiyatı').replace('T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK','İnkılap tarihi').replace('DİN KÜLTÜRÜ VE AHLAK BİLGİSİ','Din kültürü');
-   out.push('<g><title>'+esc(h.course)+'</title>');text(301,y+9,label.length>24?label.slice(0,23)+'…':label,10.5,C.muted);rect(471,y,124,8,C.gray,4);rect(471,y,124*(h.values[0]?h.values[1]/h.values[0]:0),8,C.green,4);text(648,y+9,h.values[1]+'/'+h.values[0],11,C.ink,true,'end');out.push('</g>');
+  let lx=301,ly=567;ODEV_DURUM.forEach(([ad,renk],i)=>{const n=totals[i+1];if(!n&&i)return;const t=ad+' '+n,w=t.length*5.3+18;
+   if(lx+w>660){lx=301;ly+=13}rect(lx,ly,7,7,renk,2);text(lx+10,ly+7,t,9.5,C.muted);lx+=w});
+  const top=ly+17,rh=Math.min(16,(806-top)/courses.size);
+  [...courses.values()].forEach((h,i)=>{const y=top+i*rh,label=dersAdi(h.course),v=h.values;
+   out.push('<g><title>'+esc(h.course+' · Toplam '+v[0]+ODEV_DURUM.map(([ad],j)=>v[j+1]?' · '+ad+' '+v[j+1]:'').join(''))+'</title>');
+   text(301,y+9,label.length>24?label.slice(0,23)+'…':label,10.5,C.muted);rect(471,y,124,8,C.gray,4);
+   let x=471;ODEV_DURUM.forEach(([,renk],j)=>{const w=v[0]?124*v[j+1]/v[0]:0;if(w)rect(x,y,w,8,renk,w<8?0:4);x+=w});
+   text(648,y+9,v[1]+'/'+v[0],11,C.ink,true,'end');out.push('</g>');
   });
  }else text(475,650,'Ödev kaydı yok',15,C.muted,false,'middle');
  // Weekly chart plus course/weekly heatmap: every session contributes exactly once.
@@ -252,26 +227,24 @@ function view(){
  const kaynak=(ad,metin,dugme)=>'<li><b>'+ad+'</b><span>'+metin+'</span>'+dugme+'</li>',dosyalar=k=>[...FILES].filter(([,r])=>r.kind===k).map(([n])=>n);
  return '<div class="baslik"><h1>Öğrenci raporları</h1><p>Her öğrenciye tek sayfa: TYT, AYT, dersler, haftalık etüt, devam ve ödev.</p></div><section class="or-workspace">'+
  '<ul class="or-kaynaklar">'+
-  kaynak('Denemeler',(src.exams?esc(fmt(src.exams))+' sınav':'Sınav yok')+(dosyalar('exam').length?esc(' · bu oturumda: '+dosyalar('exam').join(', ')):''),git('siralamalar','Sıralamalar'))+
+  kaynak('Denemeler',src.exams?esc(fmt(src.exams))+' sınav':'Sınav yok',git('siralamalar','Sıralamalar'))+
   kaynak('Etütler',src.etut?esc(fmt(src.etut.sessions.length))+' etüt'+esc(aralik(src.etut)):'Etüt raporu yok',git('etutler','Etütler'))+
   kaynak('Yoklama',src.yoklama?esc(fmt(src.yoklama.students.length))+' öğrenci'+esc(aralik(src.yoklama)):'Yoklama raporu yok',git('yoklama','Yoklama'))+
   kaynak('Ödev takibi',dosyalar('homework').length?esc(dosyalar('homework').join(', ')):'Öğrenci Ev Ödev Durum Raporu eklenmedi',
    '<label class="dugme">Ödev raporu ekle<input id="orFiles" type="file" accept="application/pdf,.pdf" multiple hidden'+disable+'></label>'+(FILES.size?'<button class="dugme" id="orClear"'+disable+'>Temizle</button>':''))+
  '</ul>'+
- '<details class="or-sources"><summary>Kaynaklar ve hesaplama</summary><p>Denemeler Sıralamalar’dan ve öğrencilerin sonuçlarından, etütler Etütler’den, devam Yoklama’dan gelir; bu sayfalara eklenen raporlar burada kendiliğinden görünür. Ödev raporu (ve Sıralamalar’ın okumadığı 9. sınıf deneme listeleri) bu sayfada eklenir ve sayfa yenilenene kadar tutulur. Ödev raporunda görev/teslim tarihi yoksa rapor tarihi ayrı gösterilir.</p><p>En az 3 ders kayıtlı ve hepsinde yok: tam gün. Diğer günlerde en az 3 ders yok: yarım gün. 0–2 ders yok: okulda. Mazeretli kayıtlar dahil, boş hücreler hariç. Devam yüzdesi = (okulda + yarım gün / 2) / durumu bilinen gün.</p><p>Grafiklerde her öğrencinin kendi sonuçları yer alır. AYT grafiği kaynakta bulunan tüm AYT derslerinin toplam netini gösterir. Etüt sayıları rapor kayıtlarıdır. Haftalar pazartesi başlar.</p><ul>'+[...FILES.entries()].map(([n,r])=>'<li>'+esc(n)+' <button type="button" class="dugme" data-or-remove="'+esc(n)+'"'+disable+'>Kaldır</button></li>').join('')+'</ul></details>'+
+ '<details class="or-sources"><summary>Kaynaklar ve hesaplama</summary><p>Denemeler Sıralamalar’dan ve öğrencilerin sonuçlarından, etütler Etütler’den, devam Yoklama’dan gelir; bu sayfalara eklenen raporlar burada kendiliğinden görünür. Ödev raporu bu sayfada eklenir ve sayfa yenilenene kadar tutulur. Ödev raporunda görev/teslim tarihi yoksa rapor tarihi ayrı gösterilir. Ödevlerde her durum (tamamladı, eksik, getirmedi, geç getirdi, yapmadı, gelmedi) ayrı renktedir. Raporun henüz durum yazmadığı ödevler verilmemiş sayılır: toplam, durumların toplamıdır.</p><p>En az 3 ders kayıtlı ve hepsinde yok: tam gün. Diğer günlerde en az 3 ders yok: yarım gün. 0–2 ders yok: okulda. Mazeretli kayıtlar dahil, boş hücreler hariç. Devam yüzdesi = (okulda + yarım gün / 2) / durumu bilinen gün.</p><p>Grafiklerde her öğrencinin kendi sonuçları yer alır. AYT grafiği kaynakta bulunan tüm AYT derslerinin toplam netini gösterir. Etüt sayıları rapor kayıtlarıdır. Haftalar pazartesi başlar.</p><ul>'+[...FILES.entries()].map(([n,r])=>'<li>'+esc(n)+' <button type="button" class="dugme" data-or-remove="'+esc(n)+'"'+disable+'>Kaldır</button></li>').join('')+'</ul></details>'+
  '<div class="arac"><label>Sınıf <select id="orClass"'+disable+'><option value="">Tüm sınıflar</option>'+classes.map(c=>'<option value="'+esc(c)+'"'+(c===FILTER?' selected':'')+'>'+esc(c||'Şube belirtilmemiş')+'</option>').join('')+'</select></label><label>Öğrenci <select id="orStudent"'+disable+'>'+list.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===SELECTED?' selected':'')+'>'+esc(s.name+' · '+s.cls)+'</option>').join('')+'</select></label></div>'+
  '<div class="arac"><button class="dugme birincil" id="orOne"'+(BUSY||!selected?' disabled':'')+'>Öğrenci PDF</button><button class="dugme" id="orAll"'+(BUSY||!list.length?' disabled':'')+'>Sınıf / tümü PDF ('+list.length+')</button></div>'+
  '<p id="orStatus" role="status" aria-live="polite">'+esc([STATUS,...m.warnings].filter(Boolean).join(' '))+'</p>'+
  (selected?'<div class="or-preview" aria-label="PDF önizlemesi">'+svgReport(selected,today())+'</div>':'<p>Sitede kayıt yok. Denemeleri Sıralamalar’a, etüt raporunu Etütler’e, yoklama raporunu Yoklama’ya ekleyin.</p>')+'</section>';
 }
-// Only the homework report is added here, and deneme lists Sıralamalar cannot read (9. sınıf, 8 ders);
-// the others have their pages and come from there.
-const siralamaOkur=p=>{try{SIRALAMA.pdfCoz(p.pages,p.boylar);return true}catch(e){return false}};
+// Only the homework report is added here; the others have their pages and come from there.
 const YER={exam:'deneme sonuç listesi; Sıralamalar sayfasından ekleyin.',sessions:'etüt raporu; Etütler sayfasından ekleyin.',attendance:'yoklama raporu; Yoklama sayfasından ekleyin.'};
 async function addFiles(files){
  guard();if(BUSY)return;if(files.length>30)throw new Error('Bir seferde en fazla 30 PDF seçin.');const owner=D,gen=GEN;BUSY=true;STATUS='PDF’ler okunuyor…';refresh();const results=[],errors=[];
  try{for(const f of files){try{const p=await denemePdfSayfalari(f);if(owner!==D||gen!==GEN||!allowed())return;const r=parse(p.pages,p.boylar);
-    if(r.kind==='sessions'||r.kind==='attendance'||r.kind==='exam'&&siralamaOkur(p))throw new Error(YER[r.kind]);results.push([f.name,r])}catch(e){errors.push(f.name+': '+e.message)}}
+    if(r.kind!=='homework')throw new Error(YER[r.kind]);results.push([f.name,r])}catch(e){errors.push(f.name+': '+e.message)}}
   if(owner!==D||gen!==GEN||!allowed())return;for(const [name,r] of results)FILES.set(name,r);STATUS=results.length+' dosya eklendi.'+(errors.length?' '+errors.join(' '):'');
  }finally{if(owner===D&&gen===GEN){BUSY=false;refresh()}}
 }
@@ -302,6 +275,6 @@ if(typeof document!=='undefined'&&document.addEventListener){
   if(el.id==='orOne'||el.id==='orAll')await download(el.id==='orAll');else if(el.id==='orClear'){reset();refresh()}else if(el.hasAttribute('data-or-remove')){FILES.delete(el.getAttribute('data-or-remove'));refresh()}
  });
 }
-return {parse,examsPdf,homeworkPdf,attendancePdf,attendanceSummary,weekly,merge,svgReport,view,model,addFiles,pdfBytes,reset};
+return {parse,homeworkPdf,attendancePdf,attendanceSummary,weekly,merge,svgReport,view,model,addFiles,pdfBytes,reset};
 })();
 function gorunumOgrenciRapor(){return OGRENCI_RAPOR.view()}
