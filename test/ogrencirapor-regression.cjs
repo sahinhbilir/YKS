@@ -101,5 +101,17 @@ check('Etütler and Yoklama feed the report: lesson codes as statuses, students 
  const r=R.merge([{students:[{no:'1',name:'TEK AD',cls:'12/A'}],exams:[]},{kind:'attendance',students:[{name:'TEK AD',no:'',cls:'12 A'}],attendance:[{name:'TEK AD',no:'',cls:'12 A',date:'2026-10-01',statuses:['Geldi']}]}]);
  assert.equal(r.students.length,1);assert.equal(r.students[0].attendance.length,1);
 });
+check('grades 9 and 10 use the full width for TYT with no AYT panel; grades 11 and 12 retain both sessions',()=>{
+ const base=R.merge([{students:[{no:'9',name:'SENTETİK İPEK',cls:'9/A'}],exams:['TYT','AYT'].map(session=>({no:'9',name:'SENTETİK İPEK',cls:'9/A',exam:'Deneme',date:'2026-10-20',session,nets:{mat:10}}))}]).students[0];
+ for(const cls of ['9/A','10-B','102 9/A','10 B']){const s={...base,cls},before=JSON.stringify(s),svg=R.svgReport(s,'2026-10-25');assert(!svg.includes('AYT'),cls);assert(svg.includes('x="26" y="96" width="1138"'));assert.equal(JSON.stringify(s),before)}
+ for(const cls of ['11/A','12/C'])assert(R.svgReport({...base,cls},'2026-10-25').includes('AYT · tüm derslerin neti'));
+ ctx.exams=base.exams;vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'9',ad:'SENTETİK İPEK',sube:'102',sinif:9,denemeler:[{id:'m:9',ad:'Deneme',tarih:'2026-10-20',tur:'TYT',oturum:'TYT',dersler:[{kod:'mat',dogru:10,yanlis:0}]}]}];",ctx);
+ const s=R.model().students[0];assert.equal(s.grade,9);assert(!R.svgReport(s,'2026-10-25').includes('AYT'),'notebook grade works even without a classroom-code mapping');
+});
+check('no etut uses the requested message both with and without a source date range',()=>{
+ const s=R.merge([parse(homework())]).students[0];
+ for(const weeks of [[],R.weekly([],'2026-10-01','2026-10-25')]){const svg=R.svgReport({...s,weeks,sessionStart:'2026-10-01',sessionEnd:'2026-10-25'},'2026-10-25');assert(svg.includes('Öğrencinin Etüt Talebi Olmamıştır'));assert(!svg.includes('Etüt kaydı yok'));assert(!svg.includes('01.10.2026'))}
+ const withEtut=R.merge([parse(homework()),parse(etutRaporu(GUNLER))]).students.find(s=>s.no==='1001');assert(withEtut.sessions.length);assert(!R.svgReport(withEtut,'2026-10-25').includes('Öğrencinin Etüt Talebi Olmamıştır'));
+});
 check('source embedding is current and idempotent',()=>{require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs','--check']);const before=fs.readFileSync('index.html','utf8');require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs']);assert.equal(fs.readFileSync('index.html','utf8'),before)});
 console.log(passed+' student report checks passed');

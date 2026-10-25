@@ -54,6 +54,9 @@ const upload=name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
   await page.locator('#orClass').selectOption('9/A');assert.equal(await page.locator('#orStudent option').count(),3,'the 9. sınıf list and a student from Yoklama');
   await page.locator('#orStudent').selectOption({label:'SENTETİK ECE · 9/A'});const ece=await page.locator('.or-preview').innerText();
   assert(ece.includes('Sentetik 9 Deneme 2')&&ece.includes('Din kültürü')&&!ece.includes('Geometri')&&!ece.includes('Felsefe'));
+  assert(!ece.includes('AYT'));assert(ece.includes('Öğrencinin Etüt Talebi Olmamıştır'));
+  assert.equal(await page.locator('.or-preview rect[x="26"][y="96"]').getAttribute('width'),'1138');
+  await page.locator('.or-preview svg').screenshot({path:path.join(out,'ogrenci-grade9-'+width+'.png')});await download('#orOne',1,'grade9');
   await page.locator('#orClear').click();await page.locator('#orClass').selectOption('9/A');assert.equal(await page.locator('#orStudent option').count(),3,'site data stays');assert.equal(await page.evaluate(()=>JSON.stringify(D)),before);
   await page.locator('#orFiles').setInputFiles([upload('9a.pdf')]);await page.waitForFunction(()=>document.querySelector('#orStatus')?.textContent.includes('9a.pdf: deneme sonuç listesi'));assert.equal(await page.locator('#orStudent option').count(),3);
   await page.evaluate(()=>{D=varsayilan();D.rol='rehber';ciz()});assert.equal(await page.locator('#orStudent option').count(),0,'notebook switch clears imports');
