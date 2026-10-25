@@ -17,14 +17,19 @@ Matematik kayıtlarına oturum atanmaz. Türkçe ve Edebiyat ayrı derslerdir (E
 Etüt grafiklerinin altında öğretmen başına toplam etüt sayısı gösterilir.
 **Öğretmenler** bölümü, **Etüt planı → Ders programları** içindeki sınıf programının
 bütün öğretmenlerini ve derslerini gösterir. Bu bölümde etüt sayısı bulunmaz.
-Bir öğretmenin birden fazla dersi varsa hepsi yazılır. Etüt kayıtlarından ders
-öğretmeni tahmin edilmez; programı eklenmemiş sınıfta bu durum belirtilir.
+Aynı branşın dersleri kısa adla tek kez yazılır: Beden, Din, İngilizce, Biyoloji,
+Fizik, Kimya, Matematik, Edebiyat, Tarih ve Görsel sanatlar. Fen bilimi uygulamaları
+ve uygulamalı deney dersleri, programlardaki öğretmenin branşına göre Fizik veya
+Kimya olarak gösterilir; sağlık ve trafik dersi Biyoloji olarak yazılır. Rehberlik,
+öğretmenin branşında birleştirilir. Öğretmen listesi yalnızca sınıf programından
+gelir; programı eklenmemiş sınıfta bu durum belirtilir.
 Öğretmen başına etüt toplamları yalnızca **Etüt Talepleri** kutusunda yer alır.
 Etüt toplamları azalan sıradadır; en çok etüt talep edilen öğretmen ilk tam genişlikli
 satırda, diğer öğretmenler eşleşen sayı rozetleriyle alt satırlarda gösterilir.
 Haftalık ders çizelgesinin sayıları hücre içinde yatay ve dikey ortalanır.
 **Öğretmenler** listesinde ad ve ders ayrı sütunlarda, tutarlı yazı büyüklüğüyle yazılır;
-uzun metinler sıkıştırılmaz, kutuyu aşmadan kısaltılır ve tam metin ipucunda korunur.
+iki sütunda eşit kenar boşlukları ve hizalı satırlar kullanılır. Uzun adlar
+sıkıştırılmadan ve üç noktayla kesilmeden alt satıra geçer; kaynak ders adları ipucunda korunur.
 Diğer bölüm başlıkları **Yoklama**, **Ödevler**, **İngilizce Sınav Puanları** ve
 **TYT Toplam Net** olarak gösterilir.
 Deneme adının altında Sıralamalar’da seçili **Tarama / Genel** türü gösterilir.
