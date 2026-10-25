@@ -44,7 +44,7 @@ check('homework: every status is drawn; homework the report has not marked count
  const s=R.merge([parse(homework())]).students.find(s=>s.no==='1001'),svg=R.svgReport(s,'2026-10-24');
  // Toplam 11 printed: Tamamladı 6, Eksik 1, Yapmadı 2, Gelmedi 1 and one not marked, which is left out.
  assert.deepEqual(plain(s.homework.map(h=>h.values[0])),[4,2,4]);
- for(const t of ['6 / 10','Tamamladı 6','Eksik 1','Yapmadı 2','Gelmedi 1','Matematik TYT','İnkılap tarihi','Kimya TYT','MATEMATİK TYT · Toplam 4 · Tamamladı 3 · Eksik 1'])assert(svg.includes(t),t);
+ for(const t of ['6 / 10','Tamamladı 6','Eksik 1','Yapmadı 2','Gelmedi 1','Matematik','İnkılap tarihi','Kimya','Matematik · Toplam 4 · Tamamladı 3 · Eksik 1'])assert(svg.includes(t),t);
  assert(!/Getirmedi 0|6 \/ 11|şaretlenmemiş/.test(svg));
  // The same lesson printed twice (FİZİK and Fizik) is one row; a lesson with nothing marked is not shown.
  const h=(course,values)=>({no:'7',name:'SENTETİK EFE',cls:'10/B',course,values,reportDate:'2026-10-24',assignmentDate:null});
@@ -52,6 +52,23 @@ check('homework: every status is drawn; homework the report has not marked count
  const ev=R.svgReport(R.merge([r]).students[0],'2026-10-24');assert.equal((ev.match(/>Fizik</g)||[]).length,1);assert(ev.includes('>8/8<')&&ev.includes('8 / 8'));
  const q=homework();for(const pg of q.pages)for(const o of pg)if(/^[0-9]$/.test(o.s)&&o.x>300)o.s='0';
  assert.throws(()=>parse(q),/Ödev satırı bulunamadı/);
+});
+check('homework and weekly etut group subject variants, preserve all statuses and totals, and leave exam subjects intact',()=>{
+ const person={no:'8',name:'SENTETİK DENİZ',cls:'12/A'},courses=['KİMYA TYT','Kimya AYT','FİZİK','FİZİK 1','Fizik 2','GEOMETRİ','GEOMETRİ SORU ÇÖZÜMÜ','TYT MATEMATİK','MATEMATİK AYT','BİYOLOJİ TYT','BİYOLOJİ AYT','TARİH 1','TARİH 2','TÜRKÇE','TÜRK DİLİ VE EDEBİYATI'];
+ const r={students:[person],homework:courses.map(course=>({...person,course,values:[21,1,2,3,4,5,6],reportDate:'2026-10-25'})),
+  sessions:courses.map(course=>({...person,course,date:'2026-10-19'})),start:'2026-10-19',end:'2026-11-01',
+  exams:['TYT','AYT'].map(session=>({...person,session,exam:'Sentetik Deneme',date:'2026-10-20',nets:{mat:12,geo:4,fizik:5,kimya:3}}))};
+ const before=JSON.stringify(r),s=R.merge([r]).students[0],svg=R.svgReport(s,'2026-10-25'),hw=svg.slice(svg.indexOf('Ödevler · derslere göre'),svg.indexOf('Etüt · hafta ve ders'));
+ assert.deepEqual(plain(s.weeks[0].courses),{Kimya:2,Fizik:3,Geometri:2,Matematik:2,Biyoloji:2,Tarih:2,Türkçe:1,Edebiyat:1});assert.equal(s.weeks[1].count,0);
+ assert(hw.includes('Fizik · Toplam 63 · Tamamladı 3 · Eksik 6 · Getirmedi 9 · Geç getirdi 12 · Yapmadı 15 · Gelmedi 18'));
+ for(const label of ['Kimya','Fizik','Geometri','Matematik','Biyoloji','Tarih'])assert.equal((hw.match(new RegExp('>'+label+'<','g'))||[]).length,1,label);
+ assert(hw.includes('15 / 315'));assert(!/Kimya TYT|Fizik 1|Geometri soru/.test(svg));assert.deepEqual(plain(s.exams),r.exams);assert.equal(JSON.stringify(r),before);
+});
+check('exam labels honor saved Tarama/Genel overrides in both sessions; manual exams use the existing name rule',()=>{
+ ctx.l=okulListesi(SINAVLAR.sonra.F);
+ vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'SENTETİK ADA',sube:'12-A',denemeler:[{id:'m:t',ad:'Konu Tarama',tarih:'2026-10-20',tur:'TYT',oturum:'TYT',dersler:[{kod:'mat',dogru:8,yanlis:0}]}]}];D.siralama=SIRALAMA.oku().veri;SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(l.pages,l.boylar));D.siralama.sinavlar[0].tur='tarama';",ctx);
+ let s=R.model().students.find(s=>s.no==='1001');assert(s.exams.every(e=>e.examType==='tarama'));assert.equal((R.svgReport(s,'2026-10-25').match(/>Tarama</g)||[]).length,3);
+ vm.runInContext("D.siralama.sinavlar[0].tur='genel';",ctx);s=R.model().students.find(s=>s.no==='1001');const svg=R.svgReport(s,'2026-10-25');assert.equal((svg.match(/>Genel</g)||[]).length,2);assert.equal((svg.match(/>Tarama</g)||[]).length,1);
 });
 check('same names in different classes never share attendance or sessions; ambiguous matches are flagged',()=>{const a={no:'1',name:'AYNI AD',cls:'12/A'},b={no:'2',name:'AYNI AD',cls:'12/B'},r={students:[a,b],attendance:[{name:'AYNI AD',cls:'12/B',date:'2026-10-23',statuses:['Geldi']}]};const m=R.merge([r]);assert.equal(m.students.length,1);assert.equal(m.students[0].no,'2');r.students[0].cls='12/B';assert.equal(R.merge([r]).warnings.length,1)});
 check('SVG escapes text, keeps historical dates, and has no ranking or advice',()=>{const r=parse(okulListesi(SINAVLAR.sonra.F)),m=R.merge([r,parse(homework()),parse(attendance()),parse(etutRaporu(GUNLER))]),s=m.students.find(s=>s.no==='1001');s.name='<script>alert(1)</script>';const svg=R.svgReport(s,'2026-10-24');assert(svg.includes('&lt;script&gt;'));assert(!svg.includes('<script>'));assert(svg.includes('Ödev tarihi: belirtilmemiş'));assert(svg.includes('AYT · tüm derslerin neti'));assert(!/Şube sırası|Ortalama|Sıradaki|Tekrar et|öneri/i.test(svg));assert(!/NaN|Infinity/.test(svg))});

@@ -27,7 +27,7 @@ const upload=name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
   assert(await page.locator('#orOne').isDisabled());
   // Denemeler, etütler and yoklama come from Sıralamalar, Etütler and Yoklama; nothing is uploaded here for them.
   await page.evaluate(([f,yk])=>{D.siralama=SIRALAMA.oku().veri;for(const k of ['tyt-ayt.pdf','eski.pdf','9a.pdf'])SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(f[k].pages,f[k].boylar));
-   D.etut=ETUT.birlestir(null,ETUT.pdfCoz(f['etut.pdf'].pages));D.yoklama=YOKLAMA.birlestir(null,YOKLAMA.pdfCoz(yk.pages));ciz()},[files,ornekRapor()]);
+   D.siralama.sinavlar[0].tur='tarama';D.etut=ETUT.birlestir(null,ETUT.pdfCoz(f['etut.pdf'].pages));D.yoklama=YOKLAMA.birlestir(null,YOKLAMA.pdfCoz(yk.pages));ciz()},[files,ornekRapor()]);
   const kaynaklar=await page.locator('.or-kaynaklar').innerText();for(const t of ['3 sınav','Etütler','7 öğrenci · 14.09.2026 – 16.10.2026','Öğrenci Ev Ödev Durum Raporu eklenmedi'])assert(kaynaklar.includes(t),t);
   assert.equal(await page.locator('.or-kaynaklar [data-sekme="yoklama"]').count(),1);
   const before=await page.evaluate(()=>JSON.stringify(D)),siteCount=await page.locator('#orStudent option').count();assert(siteCount>2,'site data alone gives reports');
@@ -41,6 +41,8 @@ const upload=name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
   await page.locator('#orClass').selectOption('12/A');await page.locator('#orStudent').selectOption({label:'SENTETİK ADA · 12/A'});
   const preview=await page.locator('.or-preview').innerText();for(const expected of ['27.05.2024','AYT','24.10.2026','Ödev tarihi: belirtilmemiş','%94','Etüt'])assert(preview.includes(expected),expected);
   assert(!/Şube sırası|Ortalama|Tekrar et/.test(preview));
+  assert(preview.includes('Tarama')&&preview.includes('Genel'));assert(!preview.includes('Kimya TYT')&&!preview.includes('Matematik TYT'));
+  await page.locator('.or-preview svg').screenshot({path:path.join(out,'ogrenci-grouped-'+width+'.png')});
   // A failed dependency fetch must unlock the buttons and allow a successful retry.
   await page.locator('#orOne').click();await page.waitForFunction(()=>!document.querySelector('#orOne').disabled);assert(!(await page.locator('#orStatus').innerText()).includes('PDF hazır.'));blockLibrary=false;
   async function download(id,count,label){const [d]=await Promise.all([page.waitForEvent('download',{timeout:90000}),page.locator(id).click()]);const file=path.join(out,'ogrenci-'+label+'-'+width+'.pdf');await d.saveAs(file);const pdf=await PDFDocument.load(fs.readFileSync(file));assert.equal(pdf.getPageCount(),count);for(const p of pdf.getPages()){assert(Math.abs(p.getWidth()-1190.55)<.01);assert(Math.abs(p.getHeight()-841.89)<.01)}await page.waitForFunction(()=>document.querySelector('#orStatus')?.textContent==='PDF hazır.');return file}

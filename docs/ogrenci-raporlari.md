@@ -1,5 +1,10 @@
 # Öğrenci raporları
 
+Ödev ve etüt grafiklerinde aynı dersin TYT/AYT, numaralı ve soru çözümü kayıtları
+birleştirilir (ör. Fizik 1 + Fizik 2 + Fizik → Fizik). Ödevlerin tüm durumları ve
+haftalık etüt adetleri toplanır; kaynak kayıtlar ve deneme dersleri değişmez.
+Deneme adının altında Sıralamalar’da seçili **Tarama / Genel** türü gösterilir.
+
 Rehber öğretmen menüsünde **Öğrenciler → Öğrenci raporları** bölümünü açın.
 Sitedeki kayıtlar kendiliğinden kullanılır: denemeler **Sıralamalar**’dan ve öğrencilerin
 girdiği sonuçlardan, etütler **Etütler**’den, devam **Yoklama**’dan gelir. Sayfanın üstünde
