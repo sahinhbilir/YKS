@@ -17454,6 +17454,10 @@ function weekly(rows,start,end){
  if(last-first>3660)throw new Error('Etüt tarih aralığı 10 yıldan uzun.');
  for(let d=first;d<=last;d+=7){const r=rows.filter(s=>day(s.date)>=d&&day(s.date)<d+7),courses={};r.forEach(s=>{const c=courseName(s.course);courses[c]=(courses[c]||0)+1});weeks.push({date:iso(d),count:r.length,courses})}return weeks;
 }
+function homeworkCourseName(course){
+ const name=courseName(course),sessions=[...new Set(nameKey(course).match(/\b(?:TYT|AYT)\b/g)||[])];
+ return name==='Matematik'&&sessions.length?name+' '+sessions.join(' / '):name;
+}
 function merge(reports,roster=[]){
  const map=new Map(),alias=new Map(),loose=[],warnings=[];
  const yazili=c=>/^\d{1,2}\/[A-ZÇĞİÖŞÜ]+$/u.test(cls(c));
@@ -17541,7 +17545,7 @@ function svgReport(s,reportDate){
   // Every status the report prints is drawn, in its column order.
   const totals=s.homework.reduce((a,h)=>a.map((v,i)=>v+h.values[i]),[0,0,0,0,0,0,0]);
   text(648,535,totals[1]+' / '+totals[0],14,C.green,true,'end');
-  const courses=new Map();s.homework.forEach(h=>{const k=courseName(h.course),o=courses.get(k)||{course:k,values:[0,0,0,0,0,0,0]};o.values=o.values.map((v,i)=>v+h.values[i]);courses.set(k,o)});
+  const courses=new Map();s.homework.forEach(h=>{const k=homeworkCourseName(h.course),o=courses.get(k)||{course:k,values:[0,0,0,0,0,0,0]};o.values=o.values.map((v,i)=>v+h.values[i]);courses.set(k,o)});
   let lx=301,ly=567;ODEV_DURUM.forEach(([ad,renk],i)=>{const n=totals[i+1];if(!n&&i)return;const t=ad+' '+n,w=t.length*5.3+18;
    if(lx+w>660){lx=301;ly+=13}rect(lx,ly,7,7,renk,2);text(lx+10,ly+7,t,9.5,C.muted);lx+=w});
   const top=ly+17,rh=Math.min(16,(806-top)/courses.size);
@@ -17558,8 +17562,17 @@ function svgReport(s,reportDate){
   const n=s.weeks.length,left=800,cw=345/n,max=Math.max(1,...s.weeks.map(w=>w.count));
   s.weeks.forEach((w,i)=>{const x=left+(i+.5)*cw,height=42*w.count/max;rect(x-cw*.3,619-height,cw*.6,height,C.green,3);if(n<=20||i%Math.ceil(n/10)===0)text(x,611-height,w.count,10,C.green,true,'middle');if(i%Math.max(1,Math.ceil(n/10))===0)text(x,636,display(w.date).slice(0,5),10,C.muted,false,'middle')});
   const courses=[...new Set(s.sessions.map(e=>courseName(e.course)))].sort((a,b)=>a.localeCompare(b,'tr'));
-  const rh=Math.min(20,156/Math.max(1,courses.length));courses.forEach((c,j)=>{const yy=653+j*rh;out.push('<g><title>'+esc(c)+'</title>');text(697,yy+11,c.length>15?c.slice(0,14)+'…':c,10,C.muted);
-   s.weeks.forEach((w,i)=>{const v=w.courses[c]||0,x=left+i*cw;rect(x+1,yy,cw-2,rh-3,v?'#c7e5d7':'#f0f3f0',3);if(v&&n<=20)text(x+cw/2,yy+11,v,10,C.green,true,'middle')});out.push('</g>');
+  const teachers=new Map();s.sessions.forEach(e=>{const name=clean(e.teacher)||'Öğretmen belirtilmemiş',k=nameKey(name),t=teachers.get(k)||{name,count:0};t.count++;teachers.set(k,t)});
+  const totals=[...teachers.values()].sort((a,b)=>a.name.localeCompare(b.name,'tr')),columns=totals.length>8?3:2,teacherRh=columns===3?12:14,rows=Math.ceil(totals.length/columns);
+  const rh=Math.min(18,(156-20-rows*teacherRh)/Math.max(1,courses.length)),font=Math.min(10,rh-2),baseline=Math.min(11,rh-1);
+  courses.forEach((c,j)=>{const yy=653+j*rh;out.push('<g><title>'+esc(c)+'</title>');text(697,yy+baseline,c.length>15?c.slice(0,14)+'…':c,font,C.muted);
+   s.weeks.forEach((w,i)=>{const v=w.courses[c]||0,x=left+i*cw;rect(x+1,yy,cw-2,rh-3,v?'#c7e5d7':'#f0f3f0',3);if(v&&n<=20)text(x+cw/2,yy+baseline,v,font,C.green,true,'middle')});out.push('</g>');
+  });
+  const ty=653+courses.length*rh+14,tw=450/columns;text(697,ty,'Öğretmen · toplam etüt',11,C.ink,true);
+  totals.forEach((t,i)=>{const x=697+(i%columns)*tw,y=ty+16+Math.floor(i/columns)*teacherRh,label=t.name,fs=columns===3?9:10,maxWidth=tw-35;
+   out.push('<g aria-label="'+esc(label+' · '+t.count+' etüt')+'"><title>'+esc(label+' · '+t.count+' etüt')+'</title>');
+   out.push('<text x="'+x+'" y="'+y+'" font-size="'+fs+'" fill="'+C.muted+'"'+(label.length*fs*.6>maxWidth?' textLength="'+maxWidth+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+esc(label)+'</text>');
+   text(x+tw-10,y,t.count,11,C.green,true,'end');out.push('</g>');
   });
  }else text(922,650,'Öğrencinin Etüt Talebi Olmamıştır',15,C.muted,false,'middle');
  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.name+' bireysel raporu')+'" font-family="Arial, sans-serif">'+out.join('')+'</svg>';

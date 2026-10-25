@@ -7,6 +7,9 @@ Olmamıştır” yazılır.
 Ödev ve etüt grafiklerinde aynı dersin TYT/AYT, numaralı ve soru çözümü kayıtları
 birleştirilir (ör. Fizik 1 + Fizik 2 + Fizik → Fizik). Ödevlerin tüm durumları ve
 haftalık etüt adetleri toplanır; kaynak kayıtlar ve deneme dersleri değişmez.
+Ödevlerde Matematik TYT ve Matematik AYT ayrı tutulur; oturumu yazılmamış
+Matematik kayıtlarına oturum atanmaz. Türkçe ve Edebiyat ayrı derslerdir (EA dahil).
+Etüt grafiklerinin altında öğretmen başına toplam etüt sayısı gösterilir.
 Deneme adının altında Sıralamalar’da seçili **Tarama / Genel** türü gösterilir.
 
 Rehber öğretmen menüsünde **Öğrenciler → Öğrenci raporları** bölümünü açın.
