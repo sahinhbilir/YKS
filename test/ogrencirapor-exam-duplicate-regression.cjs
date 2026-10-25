@@ -22,7 +22,7 @@ check('identical nets more than a week apart, or another session, are not merged
 check('the AYT box shows SAY, EA and SÖZ nets, not publisher points',()=>{
  const nets={mat:20,geo:5,fizik:10,kimya:9,biyoloji:8,edebiyat:15,tarih1:6,cografya1:4,tarih2:7,cografya2:8,felsefe:9,din:3};
  const s=R.merge([{kind:'exam',students:[who],exams:[{...who,exam:'AYT Deneme',date:'2026-10-09',session:'AYT',nets,scores:{SAY:350,EA:321.5,'SÖZ':290}}]}]).students[0],svg=R.svgReport(s,'2026-10-25');
- assert(svg.includes('Son AYT netleri')&&!svg.includes('puan'));
+ assert(svg.includes('Son AYT Netleri')&&!svg.includes('puan'));
  for(const [f,v] of [['SAY','52'],['EA','50'],['SÖZ','52']])assert(svg.includes('aria-label="'+f+' neti · '+v+'"'),f);
  const none=R.svgReport(R.merge([{kind:'exam',students:[who],exams:[{...who,exam:'AYT Deneme',date:'2026-10-09',session:'AYT',nets:{},scores:{}}]}]).students[0],'2026-10-25');
  assert(none.includes('SAY neti · —'));

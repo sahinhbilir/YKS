@@ -2,8 +2,10 @@
 
 9. ve 10. sınıflarda TYT'nin yanında AYT yerine İngilizce sınav puanları gösterilir.
 Fly Higher Placement, A1+ Starter ve A2 Starter PDF'leri **İngilizce PDF ekle** ile
-bu sayfaya eklenir. Placement puanı 100 ile çarpılır (0,55 → 55); Starter puanları
-aynen kullanılır. Kaynaktaki puan, net ve doğru/yanlış değerleri ayrıca korunur.
+bu sayfaya eklenir. 60 soruluk Fly Higher Placement sonucu **net / 60 × 100** ile
+100 üzerinden gösterilir (60 net → 100; 30 net → 50). PDF'nin yuvarlanmış 0,60 gibi
+puanı yüzdeye çevirmek için kullanılmaz. Starter puanları aynen kullanılır.
+Kaynaktaki puan, net ve doğru/yanlış değerleri ayrıca korunur.
 Etüt kaydı olmayan öğrencilerde “Öğrencinin Etüt Talebi
 Olmamıştır” yazılır.
 
@@ -13,12 +15,13 @@ haftalık etüt adetleri toplanır; kaynak kayıtlar ve deneme dersleri değişm
 Ödevlerde Matematik TYT ve Matematik AYT ayrı tutulur; oturumu yazılmamış
 Matematik kayıtlarına oturum atanmaz. Türkçe ve Edebiyat ayrı derslerdir (EA dahil).
 Etüt grafiklerinin altında öğretmen başına toplam etüt sayısı gösterilir.
-Alttaki öğretmenler bölümüne, **Etüt planı → Ders programları** içinde kayıtlı sınıf
-programının bütün öğretmenleri ve dersleri gelir; etüt kaydı olmayan öğretmenler de
-0 ile görünür. Bir öğretmenin birden fazla dersi varsa hepsi yazılır. Ders programında
-bulunmayan fakat öğrencinin etüt aldığı öğretmenler **Etüt** etiketiyle eklenir.
-Programı eklenmemiş sınıfta bu durum açıkça belirtilir; etüt kayıtlarından ders
-öğretmeni tahmin edilmez.
+**Öğretmenler** bölümü, **Etüt planı → Ders programları** içindeki sınıf programının
+bütün öğretmenlerini ve derslerini gösterir. Bu bölümde etüt sayısı bulunmaz.
+Bir öğretmenin birden fazla dersi varsa hepsi yazılır. Etüt kayıtlarından ders
+öğretmeni tahmin edilmez; programı eklenmemiş sınıfta bu durum belirtilir.
+Öğretmen başına etüt toplamları yalnızca **Etüt Talepleri** kutusunda yer alır.
+Diğer bölüm başlıkları **Yoklama**, **Ödevler**, **İngilizce Sınav Puanları** ve
+**TYT Toplam Net** olarak gösterilir.
 Deneme adının altında Sıralamalar’da seçili **Tarama / Genel** türü gösterilir.
 
 Rehber öğretmen menüsünde **Öğrenciler → Öğrenci raporları** bölümünü açın.
