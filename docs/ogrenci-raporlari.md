@@ -29,7 +29,8 @@ satırda, diğer öğretmenler eşleşen sayı rozetleriyle alt satırlarda gös
 Haftalık ders çizelgesinin sayıları hücre içinde yatay ve dikey ortalanır.
 **Öğretmenler** listesinde ad ve ders ayrı sütunlarda, tutarlı yazı büyüklüğüyle yazılır;
 iki sütunda eşit kenar boşlukları ve hizalı satırlar kullanılır. Uzun adlar
-sıkıştırılmadan ve üç noktayla kesilmeden alt satıra geçer; kaynak ders adları ipucunda korunur.
+sıkıştırılmadan ve üç noktayla kesilmeden alt satıra geçer; kaynak ders adları ipucunda korunur. Adab-ı Muaşeret bu listede gösterilmez;
+aynı öğretmenin diğer dersleri korunur.
 Diğer bölüm başlıkları **Yoklama**, **Ödevler**, **İngilizce Sınav Puanları** ve
 **TYT Toplam Net** olarak gösterilir.
 Deneme adının altında Sıralamalar’da seçili **Tarama / Genel** türü gösterilir.
@@ -63,11 +64,12 @@ kaplar; kutular ayrı görseller olarak birleştirilmez. Yazıcının kendi kena
   neti yeni sınavın yerine kullanılmaz. Yayınevi puanları bu kutuda gösterilmez.
 - Öğrenci yalnızca kendi sonuçlarını görür. Sıralama, sınıf ortalaması ve öneri yoktur.
 - Devam, Yoklama sayfasındaki kayıtlardan hesaplanır: her dersin kodu Geldi, Gecikti,
-  Gelmedi ya da Mazeretli (Raporlu ve Diğer) olarak okunur. Devam yüzdesi gün bazındadır. En az 3 dersin kaydı bulunan ve kayıtlı derslerin
-  tamamında gelmeyen öğrenci tam gün yok sayılır. Diğer günlerde en az 3 ders yoksa
-  yarım gün; 0–2 ders yoksa okulda sayılır. Mazeretli kayıtlar da yok kabul edilir.
-  Boş hücreler yok sayılmaz. Tümü boş günler yüzdeye dahil edilmez.
-  Yüzde = 100 × (okulda gün + yarım gün / 2) / durumu bilinen gün.
+  Gelmedi, Mazeretli veya Raporlu olarak okunur. Bir günde en az 3 ders yoksa
+  **Kaçırdığı günler** toplamına eklenir; mazeretli ve raporlu günler dahildir.
+  0–2 ders yoksa **Okulda** sayılır. Yarım gün ayrı gösterilmez.
+  Boş hücreler devamsızlık sayılmaz; tamamen boş günler yüzdeye katılmaz.
+  Yüzde = 100 × okulda gün / durumu bilinen gün. Dairedeki yüzde, iç alana
+  sığacak büyüklükte ortalanır; iki gün toplamı dairenin yanında yer alır.
 - Ödev çubukları her dersin bütün durumlarını gösterir: tamamladı, eksik, getirmedi, geç
   getirdi, yapmadı, gelmedi (raporun sütun sırasıyla, ayrı renklerle). Raporun Toplam’ı
   durumların toplamından büyükse aradaki ödevlerin durumu henüz yazılmamıştır; bunlar
