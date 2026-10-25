@@ -2,8 +2,10 @@
 
 9. ve 10. sınıflarda TYT'nin yanında AYT yerine İngilizce sınav puanları gösterilir.
 Fly Higher Placement, A1+ Starter ve A2 Starter PDF'leri **İngilizce PDF ekle** ile
-bu sayfaya eklenir. Placement puanı 100 ile çarpılır (0,55 → 55); Starter puanları
-aynen kullanılır. Kaynaktaki puan, net ve doğru/yanlış değerleri ayrıca korunur.
+bu sayfaya eklenir. 60 soruluk Fly Higher Placement sonucu **net / 60 × 100** ile
+100 üzerinden gösterilir (60 net → 100; 30 net → 50). PDF'nin yuvarlanmış 0,60 gibi
+puanı yüzdeye çevirmek için kullanılmaz. Starter puanları aynen kullanılır.
+Kaynaktaki puan, net ve doğru/yanlış değerleri ayrıca korunur.
 Etüt kaydı olmayan öğrencilerde “Öğrencinin Etüt Talebi
 Olmamıştır” yazılır.
 
