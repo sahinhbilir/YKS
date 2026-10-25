@@ -58,7 +58,7 @@ check('homework and weekly etut group subject variants, preserve all statuses an
  const r={students:[person],homework:courses.map(course=>({...person,course,values:[21,1,2,3,4,5,6],reportDate:'2026-10-25'})),
   sessions:courses.map(course=>({...person,course,date:'2026-10-19'})),start:'2026-10-19',end:'2026-11-01',
   exams:['TYT','AYT'].map(session=>({...person,session,exam:'Sentetik Deneme',date:'2026-10-20',nets:{mat:12,geo:4,fizik:5,kimya:3}}))};
- const before=JSON.stringify(r),s=R.merge([r]).students[0],svg=R.svgReport(s,'2026-10-25'),hw=svg.slice(svg.indexOf('Ödevler · derslere göre'),svg.indexOf('Etüt · hafta ve ders'));
+ const before=JSON.stringify(r),s=R.merge([r]).students[0],svg=R.svgReport(s,'2026-10-25'),hw=svg.slice(svg.indexOf('Ödevler'),svg.indexOf('Etüt Talepleri'));
  assert.deepEqual(plain(s.weeks[0].courses),{Kimya:2,Fizik:3,Geometri:2,Matematik:2,Biyoloji:2,Tarih:2,Türkçe:1,Edebiyat:1});assert.equal(s.weeks[1].count,0);
  assert(hw.includes('Fizik · Toplam 63 · Tamamladı 3 · Eksik 6 · Getirmedi 9 · Geç getirdi 12 · Yapmadı 15 · Gelmedi 18'));
  for(const label of ['Kimya','Fizik','Geometri','Matematik TYT','Matematik AYT','Biyoloji','Tarih','Türkçe','Edebiyat'])assert.equal((hw.match(new RegExp('>'+label+'<','g'))||[]).length,1,label);
@@ -73,7 +73,7 @@ check('only homework mathematics keeps TYT and AYT separate; Turkish and literat
 check('teacher totals count every etut once across lessons, merge spacing/case, and preserve missing teachers',()=>{
  const person={no:'21',name:'SENTETİK ÖĞRENCİ',cls:'12/A'},teachers=['SENTETİK IŞIK','  sentetik   ışık  ','SENTETİK IŞIK','SENTETİK İPEK',''],source={students:[person],start:'2026-10-01',end:'2026-10-25',sessions:teachers.map((teacher,i)=>({...person,teacher,course:i%2?'FİZİK 2':'FİZİK 1',date:'2026-10-'+(20+i)}))};
  const before=JSON.stringify(source),s=R.merge([source]).students[0],svg=R.svgReport(s,'2026-10-25');
- assert(svg.includes('Öğretmenlerim · dersler · etüt sayısı'));for(const t of ['SENTETİK IŞIK · 3 etüt','SENTETİK İPEK · 1 etüt','Öğretmen belirtilmemiş · 1 etüt'])assert(svg.includes('aria-label="'+t+'"'),t);
+ assert(svg.includes('Öğretmenler'));for(const t of ['SENTETİK IŞIK · 3 etüt','SENTETİK İPEK · 1 etüt','Öğretmen belirtilmemiş · 1 etüt'])assert(svg.includes('aria-label="'+t+'"'),t);
  assert.equal([...svg.matchAll(/aria-label="[^"]* · (\d+) etüt"/g)].reduce((n,m)=>n+Number(m[1]),0),s.sessions.length);assert.equal(s.weeks.reduce((n,w)=>n+w.count,0),5);assert.equal(JSON.stringify(source),before);
  const safe=R.svgReport({...s,sessions:[{...s.sessions[0],teacher:'<script>&"'}]},'2026-10-25');assert(safe.includes('&lt;script&gt;&amp;&quot;'));assert(!safe.includes('<script>'));
 });
@@ -84,7 +84,7 @@ check('exam labels honor saved Tarama/Genel overrides in both sessions; manual e
  vm.runInContext("D.siralama.sinavlar[0].tur='genel';",ctx);s=R.model().students.find(s=>s.no==='1001');const svg=R.svgReport(s,'2026-10-25');assert.equal((svg.match(/>Genel</g)||[]).length,2);assert.equal((svg.match(/>Tarama</g)||[]).length,1);
 });
 check('same names in different classes never share attendance or sessions; ambiguous matches are flagged',()=>{const a={no:'1',name:'AYNI AD',cls:'12/A'},b={no:'2',name:'AYNI AD',cls:'12/B'},r={students:[a,b],attendance:[{name:'AYNI AD',cls:'12/B',date:'2026-10-23',statuses:['Geldi']}]};const m=R.merge([r]);assert.equal(m.students.length,1);assert.equal(m.students[0].no,'2');r.students[0].cls='12/B';assert.equal(R.merge([r]).warnings.length,1)});
-check('SVG escapes text, keeps historical dates, and has no ranking or advice',()=>{const r=parse(okulListesi(SINAVLAR.sonra.F)),m=R.merge([r,parse(homework()),parse(attendance()),parse(etutRaporu(GUNLER))]),s=m.students.find(s=>s.no==='1001');s.name='<script>alert(1)</script>';const svg=R.svgReport(s,'2026-10-24');assert(svg.includes('&lt;script&gt;'));assert(!svg.includes('<script>'));assert(svg.includes('Ödev tarihi: belirtilmemiş'));assert(svg.includes('AYT · EA neti'));assert(!/Şube sırası|Ortalama|Sıradaki|Tekrar et|öneri/i.test(svg));assert(!/NaN|Infinity/.test(svg))});
+check('SVG escapes text, keeps historical dates, and has no ranking or advice',()=>{const r=parse(okulListesi(SINAVLAR.sonra.F)),m=R.merge([r,parse(homework()),parse(attendance()),parse(etutRaporu(GUNLER))]),s=m.students.find(s=>s.no==='1001');s.name='<script>alert(1)</script>';const svg=R.svgReport(s,'2026-10-24');assert(svg.includes('&lt;script&gt;'));assert(!svg.includes('<script>'));assert(svg.includes('Ödev tarihi: belirtilmemiş'));assert(svg.includes('AYT EA Neti'));assert(!/Şube sırası|Ortalama|Sıradaki|Tekrar et|öneri/i.test(svg));assert(!/NaN|Infinity/.test(svg))});
 check('teacher-only menu, empty roster page, imports do not mutate notebook and clear on notebook switch',()=>{
  vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='ogrencirapor';",ctx);assert(R.view().includes('Ödev raporu ekle'));const before=JSON.stringify(ctx.D);R.model();assert.equal(JSON.stringify(ctx.D),before);
  vm.runInContext("D=varsayilan();D.rol='ogrenci';",ctx);assert.equal(R.view(),'');assert.throws(()=>R.model(),/rehber/);assert(!vm.runInContext('JSON.stringify(SEKME_OGRENCI)',ctx).includes('ogrencirapor'));
@@ -117,7 +117,7 @@ check('Etütler and Yoklama feed the report: lesson codes as statuses, students 
 check('grades 9 and 10 show English instead of AYT; grades 11 and 12 retain both sessions',()=>{
  const base=R.merge([{students:[{no:'9',name:'SENTETİK İPEK',cls:'9/A'}],exams:['TYT','AYT'].map(session=>({no:'9',name:'SENTETİK İPEK',cls:'9/A',exam:'Deneme',date:'2026-10-20',session,nets:{mat:10}}))}]).students[0];
  for(const cls of ['9/A','10-B','102 9/A','10 B']){const s={...base,cls},before=JSON.stringify(s),svg=R.svgReport(s,'2026-10-25');assert(!svg.includes('AYT'),cls);assert(svg.includes('x="26" y="96" width="558"'));assert(svg.includes('İngilizce puan grafiği'));assert.equal(JSON.stringify(s),before)}
- for(const [cls,track] of [['11/A','EA'],['12/C','SAY']])assert(R.svgReport({...base,cls},'2026-10-25').includes('AYT · '+track+' neti'));
+ for(const [cls,track] of [['11/A','EA'],['12/C','SAY']])assert(R.svgReport({...base,cls},'2026-10-25').includes('AYT '+track+' Neti'));
  ctx.exams=base.exams;vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'9',ad:'SENTETİK İPEK',sube:'102',sinif:9,denemeler:[{id:'m:9',ad:'Deneme',tarih:'2026-10-20',tur:'TYT',oturum:'TYT',dersler:[{kod:'mat',dogru:10,yanlis:0}]}]}];",ctx);
  const s=R.model().students[0];assert.equal(s.grade,9);assert(!R.svgReport(s,'2026-10-25').includes('AYT'),'notebook grade works even without a classroom-code mapping');
 });
@@ -129,12 +129,12 @@ check('no etut uses the requested message both with and without a source date ra
 check('AYT class tracks use only their own net lessons and groups stay in the requested vertical order',()=>{
  const person={no:'31',name:'SENTETİK ALAN',cls:'12/A'},exam={...person,exam:'Alan denemesi',date:'2026-10-23',session:'AYT',nets:{mat:20,geo:5,fizik:10,kimya:9,biyoloji:8,edebiyat:15,tarih1:6,cografya1:4,tarih2:7,cografya2:8,felsefe:9,din:3,sf:1.25},scores:{SAY:350.25,EA:321.5,'SÖZ':290.75}},s=R.merge([{students:[person],exams:[exam]}]).students[0],before=JSON.stringify(s);
  for(const [cls,track,net] of [['11/A','EA',50],['12/A','EA',50],['11 A','EA',50],['12-A','EA',50],['301 12/A','EA',50],['11A','EA',50],['11/B','SAY',52],['12/C','SAY',52],['12/AA','SAY',52]]){
-  const svg=R.svgReport({...s,cls},'2026-10-25'),start=svg.indexOf('aria-label="AYT '+track+' net grafiği"'),main=svg.slice(start,svg.indexOf('Son AYT netleri'));
+  const svg=R.svgReport({...s,cls},'2026-10-25'),start=svg.indexOf('aria-label="AYT '+track+' net grafiği"'),main=svg.slice(start,svg.indexOf('Son AYT Netleri'));
   assert(start>=0,cls);assert(main.includes(' · '+net+' net</title>'),cls);assert(!main.includes('105,25 net'));for(const [k,v] of [['SAY','52'],['EA','50'],['SÖZ','53,25']])assert(svg.includes('aria-label="'+k+' neti · '+v+'"'));assert(!svg.includes('puanı'));
   const positions=['AYT Matematik','AYT Fen','AYT Türk Dili ve Edebiyatı · Sosyal 1','AYT Sosyal 2'].map(label=>svg.indexOf('aria-label="'+label+'"'));assert(positions.every((v,i)=>v>=0&&(!i||v>positions[i-1])));
  }
- assert(R.svgReport({...s,cls:'A',grade:11},'2026-10-25').includes('AYT · EA neti'));assert.equal(JSON.stringify(s),before);
- const missing=R.svgReport({...s,cls:'12/B',exams:[{...exam,nets:{edebiyat:12}}]},'2026-10-25');assert(!missing.slice(missing.indexOf('AYT SAY net grafiği'),missing.indexOf('Son AYT netleri')).includes('net</title>'));
+ assert(R.svgReport({...s,cls:'A',grade:11},'2026-10-25').includes('AYT EA Neti'));assert.equal(JSON.stringify(s),before);
+ const missing=R.svgReport({...s,cls:'12/B',exams:[{...exam,nets:{edebiyat:12}}]},'2026-10-25');assert(!missing.slice(missing.indexOf('AYT SAY net grafiği'),missing.indexOf('Son AYT Netleri')).includes('net</title>'));
  const zero=R.svgReport({...s,exams:[{...exam,nets:{mat:0}}]},'2026-10-25');assert(zero.includes(' · 0 net</title>'));
 });
 check('AYT scores come from the result list and latest exam, with no invented or stale score',()=>{
@@ -156,7 +156,13 @@ check('the weekly timetable supplies every teacher and lesson for the matching c
  const {dersProgrami}=require('./fixtures/ders-programi-pdf.cjs');ctx.program=vm.runInContext('ETUTPLANI.programCoz',ctx)(dersProgrami({kod:'102',sinif:'9/A',hucreler:[[0,0,'MATEMATİK','SENTETİK HOCA'],[1,0,'MATEMATİK','SENTETİK HOCA'],[2,0,'REHBERLİK','SENTETİK HOCA'],[3,0,'BEDEN EĞİTİMİ','SENTETİK SPOR'],[4,0,'İNGİLİZCE','SENTETİK DİL']]}));
  vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'91',ad:'SENTETİK DOKUZ',sube:'102',sinif:9,denemeler:[{id:'m:91',ad:'Deneme',tarih:'2026-10-20',tur:'TYT',oturum:'TYT',dersler:[{kod:'mat',dogru:10,yanlis:0}]}]}];D.etutPlani={surum:1,ts:1,gunler:[[],[],[],[],[]],programlar:{'9/A':{...program,ts:1},'10/B':{...program,kod:'105',ts:1,dersler:[[0,program.saatler[0],'KİMYA','BAŞKA SINIF HOCASI']]}}};",ctx);
  const before=vm.runInContext('JSON.stringify(D)',ctx),m=R.model(),s=m.students[0];assert.equal(s.cls,'9/A');assert(s.hasTimetable);assert.equal(s.teachers.length,3);assert.deepEqual(plain(s.teachers.find(t=>t.teacher==='SENTETİK HOCA').courses),['MATEMATİK','REHBERLİK']);
- const svg=R.svgReport(s,'2026-10-25');for(const name of ['SENTETİK HOCA','SENTETİK SPOR','SENTETİK DİL'])assert(svg.includes(name+' · 0 etüt'));assert(svg.includes('Beden eğitimi'));assert(!svg.includes('BAŞKA SINIF HOCASI'));assert(!svg.includes('Haftalık ders programı eklenmemiş'));assert.equal(vm.runInContext('JSON.stringify(D)',ctx),before);assert.equal(m.sources.programs,2);
+ const svg=R.svgReport(s,'2026-10-25');for(const name of ['SENTETİK HOCA','SENTETİK SPOR','SENTETİK DİL'])assert(svg.includes('aria-label="Ders öğretmeni · '+name+'"'));assert(svg.includes('Beden eğitimi'));assert(!svg.includes('BAŞKA SINIF HOCASI'));assert(!svg.includes('Haftalık ders programı eklenmemiş'));assert.equal(vm.runInContext('JSON.stringify(D)',ctx),before);assert.equal(m.sources.programs,2);
+});
+check('class teachers and etut requests are separate sections, with plain capitalized headings',()=>{
+ const person={no:'71',name:'SENTETİK AYRI',cls:'9/A'},r={students:[person],start:'2026-10-01',end:'2026-10-25',sessions:[{...person,teacher:'YALNIZ ETÜT HOCASI',course:'FİZİK',date:'2026-10-20'}]},s=R.merge([r]).students[0];s.teachers=[{teacher:'YALNIZ SINIF HOCASI',courses:['BEDEN EĞİTİMİ']}];s.hasTimetable=true;
+ const svg=R.svgReport(s,'2026-10-25'),etut=svg.slice(svg.indexOf('aria-label="Etüt Talepleri"'),svg.indexOf('aria-label="Öğretmenler"')),teachers=svg.slice(svg.indexOf('aria-label="Öğretmenler"'));
+ assert(etut.includes('YALNIZ ETÜT HOCASI · 1 etüt'));assert(!etut.includes('YALNIZ SINIF HOCASI'));assert(teachers.includes('YALNIZ SINIF HOCASI')&&teachers.includes('Beden eğitimi'));assert(!teachers.includes('YALNIZ ETÜT HOCASI'));assert(!teachers.includes('etüt'));
+ for(const heading of ['Yoklama','Ödevler','Öğretmenler','Etüt Talepleri','İngilizce Sınav Puanları','TYT Toplam Net'])assert(svg.includes('>'+heading+'</text>'));assert(!/Öğretmenlerim|derslere göre|Gün bazında devam/.test(svg));
 });
 check('a full 60-question placement result is 100/100; half is 50, independent of the cohort maximum',()=>{
  const {englishResults}=require('./fixtures/english-pdf.cjs'),person={no:'61',name:'SENTETİK TAM',cls:'9/A',code:'102'},input=englishResults({name:'FLY HIGHER PLACEMENT TEST',students:[{...person,net:60,score:.60,correct:60,wrong:0},{...person,no:'62',name:'SENTETİK YARIM',net:30,score:.30,correct:35,wrong:15}]}),before=JSON.stringify(input),r=parse(input);

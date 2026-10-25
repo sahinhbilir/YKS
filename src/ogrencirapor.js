@@ -201,13 +201,13 @@ function svgReport(s,reportDate){
  }
  function lessonCharts(session,x,w){
   const exams=s.exams.filter(e=>e.session===session),lessons=(session==='TYT'?TYT:AYT).filter(([k])=>exams.some(e=>e.nets[k]!==undefined)&&(k!=='sf'||exams.some(e=>(e.nets[k]||0)!==0)));
-  text(x,260,session+' · ders netleri',13,C.muted,true);
+  text(x,260,session+' Ders Netleri',13,C.muted,true);
   if(!lessons.length){rect(x,272,w,190);text(x+w/2,370,'Bu oturumda ders sonucu yok',15,C.muted,false,'middle');return}
   const columns=lessons.length>10?4:5,rows=Math.ceil(lessons.length/columns),cw=(w-(columns-1)*8)/columns,ch=(190-(rows-1)*8)/rows;
   lessons.forEach(([code,label],i)=>{const bx=x+(i%columns)*(cw+8),by=272+Math.floor(i/columns)*(ch+8);rect(bx,by,cw,ch);text(bx+9,by+17,label,11,C.ink,true);graph(exams,exams.map(e=>e.nets[code]??null),bx+10,by+36,cw-20,ch-48)});
  }
  function aytLessons(exams,x,w){
-  text(x,260,'AYT · ders netleri',13,C.muted,true);
+  text(x,260,'AYT Ders Netleri',13,C.muted,true);
   AYT_GROUPS.forEach((group,i)=>{const y=272+i*49;out.push('<g aria-label="AYT '+esc(group.label.join(' · '))+'">');rect(x,y,w,43);
    group.label.forEach((label,j)=>text(x+12,y+(group.label.length===1?25:18)+j*13,label,10.5,C.ink,true));
    const lessons=group.keys.filter(k=>exams.some(e=>e.nets[k]!=null)&&(k!=='sf'||exams.some(e=>(e.nets[k]||0)!==0))),left=x+136,cw=(w-148)/Math.max(1,lessons.length);
@@ -220,24 +220,24 @@ function svgReport(s,reportDate){
  }
  rect(0,0,W,H,C.bg,0);text(28,28,s.school||'ÖĞRENCİ RAPORU',11,C.muted,true);text(28,59,s.name,27,C.ink,true);text(28,80,[s.cls,s.no].filter(Boolean).join(' / '),12,C.muted);text(W-28,47,display(reportDate),12,C.muted,false,'end');
  for(const [session,x,w] of showAYT?[['TYT',26,558],['AYT',600,564]]:[['TYT',26,558]]){
-  rect(x,96,w,144);text(x+18,121,session+(session==='AYT'?' · '+track+' neti':' · toplam net'),17,C.ink,true);
+  rect(x,96,w,144);text(x+18,121,session+(session==='AYT'?' '+track+' Neti':' Toplam Net'),17,C.ink,true);
   const ex=s.exams.filter(e=>e.session===session),values=ex.map(e=>{const keys=session==='AYT'?DENEME_ALAN[track]:Object.keys(e.nets),nets=keys.map(k=>e.nets[k]).filter(Number.isFinite);return nets.length?nets.reduce((a,b)=>a+b,0):null});
   out.push('<g aria-label="'+session+(session==='AYT'?' '+track:'')+' net grafiği">');graph(ex,values,x+42,140,w-(session==='AYT'?230:78),42,true);out.push('</g>');
   if(session==='AYT'){
-   const last=ex.at(-1),sx=x+w-136;line(sx-10,112,sx-10,229);text(sx+2,121,'Son AYT netleri',11,C.muted,true);if(last)text(sx+2,136,display(last.date),10,C.muted);
+   const last=ex.at(-1),sx=x+w-136;line(sx-10,112,sx-10,229);text(sx+2,121,'Son AYT Netleri',11,C.muted,true);if(last)text(sx+2,136,display(last.date),10,C.muted);
    ['SAY','EA','SÖZ'].forEach((field,i)=>{const y=145+i*28,value=last?fieldNet(last,field):null;out.push('<g aria-label="'+esc(field+' neti · '+fmt(value))+'">');if(field===track)rect(sx-4,y-2,126,26,C.pale,7);text(sx+3,y+17,field,11,C.muted,true);text(x+w-18,y+18,fmt(value),20,field===track?C.green:C.ink,true,'end');out.push('</g>')});
    aytLessons(ex,x,w);
   }else lessonCharts(session,x,w);
  }
- if(!showAYT){rect(600,96,564,366);text(618,121,'İngilizce · sınav puanları',17,C.ink,true);const ex=s.exams.filter(e=>e.session==='ENGLISH');out.push('<g aria-label="İngilizce puan grafiği">');graph(ex,ex.map(e=>e.scores.ENGLISH),642,157,486,235,true,true,'puan',false,100);out.push('</g>')}
+ if(!showAYT){rect(600,96,564,366);text(618,121,'İngilizce Sınav Puanları',17,C.ink,true);const ex=s.exams.filter(e=>e.session==='ENGLISH');out.push('<g aria-label="İngilizce puan grafiği">');graph(ex,ex.map(e=>e.scores.ENGLISH),642,157,486,235,true,true,'puan',false,100);out.push('</g>')}
  // Attendance percentage is based on the same day classifications shown below it.
- rect(26,478,244,230);text(44,505,'Gün bazında devam',17,C.ink,true);
+ rect(26,478,244,230);text(44,505,'Yoklama',17,C.ink,true);
  if(s.attendance.length){text(44,526,display(s.attendance[0].date)+' - '+display(s.attendance.at(-1).date),11,C.muted);ring(148,592,43,s.daily.percent);text(148,599,s.daily.percent===null?'—':'%'+fmt(Math.round(s.daily.percent*10)/10),25,C.green,true,'middle');
   const entries=[['Okulda',s.daily.present,C.green],['Yarım gün',s.daily.half,C.amber],['Tam gün yok',s.daily.full,C.red]];
   entries.forEach(([label,n,color],i)=>{const x=69+i*78;text(x,674,n,23,color,true,'middle');text(x,696,label,11,C.muted,false,'middle')});
  }else text(148,600,'Yoklama kaydı yok',15,C.muted,false,'middle');
  // Homework rows remain attached to their source report date. No due date is invented.
- rect(284,478,382,230);text(301,505,'Ödevler · derslere göre',17,C.ink,true);
+ rect(284,478,382,230);text(301,505,'Ödevler',17,C.ink,true);
  if(s.homework.length){const rd=s.homework[0].reportDate;text(301,526,'Rapor: '+display(rd)+' · Ödev tarihi: belirtilmemiş',11,C.muted);
   // Every status the report prints is drawn, in its column order.
   const totals=s.homework.reduce((a,h)=>a.map((v,i)=>v+h.values[i]),[0,0,0,0,0,0,0]);
@@ -254,7 +254,7 @@ function svgReport(s,reportDate){
   });
  }else text(475,600,'Ödev kaydı yok',15,C.muted,false,'middle');
  // Weekly chart plus course/weekly heatmap: every session contributes exactly once.
- rect(680,478,484,230);text(697,505,'Etüt · hafta ve ders',17,C.ink,true);text(1146,505,s.sessions.length+' etüt',15,C.green,true,'end');
+ out.push('<g aria-label="Etüt Talepleri">');rect(680,478,484,338);text(697,505,'Etüt Talepleri',17,C.ink,true);text(1146,505,s.sessions.length+' etüt',15,C.green,true,'end');
  if(s.sessions.length&&s.weeks.length){text(697,526,display(s.sessionStart||s.weeks[0].date)+' - '+display(s.sessionEnd||iso(day(s.weeks.at(-1).date)+6)),11,C.muted);
   const n=s.weeks.length,left=800,cw=345/n,max=Math.max(1,...s.weeks.map(w=>w.count));
   s.weeks.forEach((w,i)=>{const x=left+(i+.5)*cw,height=32*w.count/max;rect(x-cw*.3,589-height,cw*.6,height,C.green,3);if(n<=20||i%Math.ceil(n/10)===0)text(x,581-height,w.count,10,C.green,true,'middle');if(i%Math.max(1,Math.ceil(n/10))===0)text(x,606,display(w.date).slice(0,5),10,C.muted,false,'middle')});
@@ -264,16 +264,21 @@ function svgReport(s,reportDate){
    s.weeks.forEach((w,i)=>{const v=w.courses[c]||0,x=left+i*cw;rect(x+1,yy,cw-2,rh-3,v?'#c7e5d7':'#f0f3f0',3);if(v&&n<=20)text(x+cw/2,yy+baseline,v,font,C.green,true,'middle')});out.push('</g>');
   });
  }else text(922,600,'Öğrencinin Etüt Talebi Olmamıştır',15,C.muted,false,'middle');
- // All timetable teachers, including lessons without etuts. Additional etut teachers are marked explicitly.
- rect(26,720,1138,96);text(44,742,'Öğretmenlerim · dersler · etüt sayısı',16,C.ink,true);
- if(!s.hasTimetable)text(1146,742,'Haftalık ders programı eklenmemiş',11,C.muted,false,'end');
- const teachers=new Map();for(const t of s.teachers||[])teachers.set(nameKey(t.teacher),{name:t.teacher,courses:[...t.courses],count:0,scheduled:true});
- for(const e of s.sessions){const name=clean(e.teacher)||'Öğretmen belirtilmemiş',k=nameKey(name),t=teachers.get(k)||{name,courses:[],count:0,scheduled:false};t.count++;if(!t.scheduled&&!t.courses.includes(courseName(e.course)))t.courses.push(courseName(e.course));teachers.set(k,t)}
- const teacherRows=[...teachers.values()].sort((a,b)=>a.name.localeCompare(b.name,'tr')),columns=teacherRows.length>15?4:3,tw=1102/columns,rh=Math.min(12,54/Math.max(1,Math.ceil(teacherRows.length/columns)));
- teacherRows.forEach((t,i)=>{const x=44+(i%columns)*tw,y=762+Math.floor(i/columns)*rh,label=(t.scheduled?'':'Etüt · ')+t.name+' · '+t.courses.map(dersAdi).join(', '),fs=Math.min(10,rh-1),maxWidth=tw-36;
-  out.push('<g aria-label="'+esc(t.name+' · '+t.count+' etüt')+'"><title>'+esc(label+' · '+t.count+' etüt')+'</title>');
-  out.push('<text x="'+x+'" y="'+y+'" font-size="'+fs+'" fill="'+C.muted+'"'+(label.length*fs*.55>maxWidth?' textLength="'+maxWidth+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+esc(label)+'</text>');text(x+tw-14,y,t.count,11,C.green,true,'end');out.push('</g>');
- });
+ // Etut totals belong only to this section; timetable teachers are a separate list below.
+ const etutTeachers=new Map();for(const e of s.sessions){const name=clean(e.teacher)||'Öğretmen belirtilmemiş',k=nameKey(name),t=etutTeachers.get(k)||{name,count:0};t.count++;etutTeachers.set(k,t)}
+ const totals=[...etutTeachers.values()].sort((a,b)=>a.name.localeCompare(b.name,'tr')),etCols=totals.length>12?3:2,etWidth=450/etCols,etRh=Math.min(14,66/Math.max(1,Math.ceil(totals.length/etCols)));
+ if(totals.length)text(697,727,'Öğretmen',11,C.ink,true);
+ totals.forEach((t,i)=>{const x=697+(i%etCols)*etWidth,y=744+Math.floor(i/etCols)*etRh,fs=Math.min(10,etRh-1),maxWidth=etWidth-32;
+  out.push('<g aria-label="'+esc(t.name+' · '+t.count+' etüt')+'"><title>'+esc(t.name+' · '+t.count+' etüt')+'</title>');
+  out.push('<text x="'+x+'" y="'+y+'" font-size="'+fs+'" fill="'+C.muted+'"'+(t.name.length*fs*.6>maxWidth?' textLength="'+maxWidth+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+esc(t.name)+'</text>');text(x+etWidth-10,y,t.count,11,C.green,true,'end');out.push('</g>');
+ });out.push('</g>');
+ // Only the actual weekly timetable supplies this list; there are no etut counts here.
+ out.push('<g aria-label="Öğretmenler">');rect(26,720,640,96);text(44,742,'Öğretmenler',16,C.ink,true);
+ const teachers=(s.teachers||[]).slice().sort((a,b)=>a.teacher.localeCompare(b.teacher,'tr')),columns=teachers.length>12?3:2,tw=604/columns,rh=Math.min(13,52/Math.max(1,Math.ceil(teachers.length/columns)-1));
+ if(!teachers.length)text(346,780,s.hasTimetable?'Programda öğretmen kaydı yok':'Haftalık ders programı eklenmemiş',13,C.muted,false,'middle');
+ teachers.forEach((t,i)=>{const x=44+(i%columns)*tw,y=759+Math.floor(i/columns)*rh,label=t.teacher+' · '+t.courses.map(dersAdi).join(', '),fs=Math.min(10,rh-1),maxWidth=tw-16;
+  out.push('<g aria-label="Ders öğretmeni · '+esc(t.teacher)+'"><title>'+esc(label)+'</title><text x="'+x+'" y="'+y+'" font-size="'+fs+'" fill="'+C.muted+'"'+(label.length*fs*.55>maxWidth?' textLength="'+maxWidth+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+esc(label)+'</text></g>');
+ });out.push('</g>');
  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.name+' bireysel raporu')+'" font-family="Arial, sans-serif">'+out.join('')+'</svg>';
 }
 /* ---------------- teacher workspace and download ---------------- */
