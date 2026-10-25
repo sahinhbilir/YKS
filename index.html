@@ -17530,6 +17530,16 @@ const ODEV_DURUM=[['Tamamladı','#168d7d'],['Eksik','#e5a044'],['Getirmedi','#d2
 // Lesson names as the report prints them, in sentence case ("KİMYA TYT" → "Kimya TYT").
 const dersAdi=c=>{const k=nameKey(c).replace('T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK','İNKILAP TARİHİ').replace('DİN KÜLTÜRÜ VE AHLAK BİLGİSİ','DİN KÜLTÜRÜ').toLocaleLowerCase('tr-TR').replace(/\b(tyt|ayt)\b/g,x=>x.toUpperCase());
  return k.charAt(0).toLocaleUpperCase('tr-TR')+k.slice(1)};
+// Short subject labels for Öğretmenler only. Practical/support lessons use that teacher's own subject.
+function teacherSubject(course){
+ const k=nameKey(course).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'I');
+ const names=[[/BEDEN/,'Beden'],[/GORSEL.*SANAT/,'Görsel sanatlar'],[/TEMEL DIN|^DIN/,'Din'],[/SAGLIK.*TRAFIK/,'Biyoloji'],[/MATEMATIK/,'Matematik'],[/GEOMETRI/,'Geometri'],[/EDEBIYAT/,'Edebiyat'],[/TURKCE/,'Türkçe'],[/FIZIK/,'Fizik'],[/KIMYA/,'Kimya'],[/BIYOLOJI/,'Biyoloji'],[/TARIH|INKILAP/,'Tarih'],[/COGRAFYA/,'Coğrafya'],[/FELSEFE|MANTIK|PSIKOLOJI|SOSYOLOJI/,'Felsefe'],[/INGILIZCE|YABANCI DIL/,'İngilizce']];
+ return names.find(([re])=>re.test(k))?.[1]||'';
+}
+function teacherLabels(t){
+ const labels=[...new Set(t.courses.map(c=>teacherSubject(c)||(/REHBERLİK|FEN BİLİM|UYGULAMALI DENEY/i.test(nameKey(c))&&t.mainSubject)||dersAdi(c)))];
+ return labels.filter(c=>c!=='Rehberlik'||labels.length===1).join(', ');
+}
 const C={ink:'#213d40',muted:'#657878',green:'#168d7d',amber:'#e5a044',red:'#bf6951',blue:'#6799c5',gray:'#d9dfdc',bg:'#f6f5f0',pale:'#e6f2ec'},W=1190.55,H=841.89;
 const PAGE_W=841.89,PAGE_H=595.28,RASTER_SCALE=3; // A4 landscape; one opaque image at about 300 dpi.
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -17544,6 +17554,10 @@ function svgReport(s,reportDate){
  const measure=typeof document!=='undefined'?document.createElement('canvas').getContext?.('2d'):null;
  const width=(label,size)=>{if(measure){measure.font=size+'px Arial';return measure.measureText(label).width}return [...label].length*size*.6};
  const fit=(value,maxWidth,size)=>{const label=String(value);if(width(label,size)<=maxWidth)return label;const chars=[...label];let lo=0,hi=chars.length;while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(width(chars.slice(0,mid).join('')+'…',size)<=maxWidth)lo=mid;else hi=mid-1}return chars.slice(0,lo).join('').trimEnd()+'…'};
+ const wrap=(value,maxWidth,size)=>{const lines=[];let line='';for(const word of String(value).trim().split(/\s+/)){const next=line?line+' '+word:word;if(width(next,size)<=maxWidth){line=next;continue}if(line){lines.push(line);line=''}for(const char of word){if(line&&width(line+char,size)>maxWidth){lines.push(line);line=''}line+=char}}if(line)lines.push(line);return lines.length?lines:['']};
+ const staff=(s.teachers||[]).slice().sort((a,b)=>a.teacher.localeCompare(b.teacher,'tr')),staffPad=18,staffGap=24,staffSubjectGap=16,staffCols=2,staffWidth=(640-staffPad*2-staffGap)/staffCols,subjectWidth=88,staffNameWidth=staffWidth-staffSubjectGap-subjectWidth,staffFont=11,staffLine=13;
+ const staffRows=[];for(let i=0;i<staff.length;i+=staffCols){const cells=staff.slice(i,i+staffCols).map(t=>({t,names:wrap(t.teacher,staffNameWidth,staffFont),subjects:wrap(teacherLabels(t),subjectWidth,staffFont)}));staffRows.push({cells,height:Math.max(...cells.map(c=>Math.max(c.names.length,c.subjects.length)))*staffLine})}
+ const staffHeight=staffPad*2+20+6+(staffRows.length?staffRows.reduce((n,r)=>n+r.height,0):staffLine),staffTop=816-staffHeight,leftBottom=staffTop-12,leftHeight=leftBottom-478,countY=leftBottom-32,ringBottom=countY-31,ringY=(536+ringBottom)/2,ringRadius=Math.min(43,Math.max(8,(ringBottom-536)/2));
  const rect=(x,y,w,h,fill='#fff',r=12)=>out.push('<rect x="'+x+'" y="'+y+'" width="'+Math.max(0,w)+'" height="'+Math.max(0,h)+'" rx="'+Math.min(r,h/2,w/2)+'" fill="'+fill+'"/>');
  const line=(x1,y1,x2,y2,color=C.gray,width=1)=>out.push('<path d="M'+x1+','+y1+' L'+x2+','+y2+'" fill="none" stroke="'+color+'" stroke-width="'+width+'"/>');
  const dot=(x,y,r=3,color=C.green)=>out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#fff" stroke="'+color+'" stroke-width="1.7"/>');
@@ -17594,13 +17608,13 @@ function svgReport(s,reportDate){
  }
  if(!showAYT){rect(600,96,564,366);text(618,121,'İngilizce Sınav Puanları',17,C.ink,true);const ex=s.exams.filter(e=>e.session==='ENGLISH');out.push('<g aria-label="İngilizce puan grafiği">');graph(ex,ex.map(e=>e.scores.ENGLISH),642,157,486,235,true,true,'puan',false,100);out.push('</g>')}
  // Attendance percentage is based on the same day classifications shown below it.
- rect(26,478,244,214);text(44,505,'Yoklama',17,C.ink,true);
- if(s.attendance.length){text(44,526,display(s.attendance[0].date)+' - '+display(s.attendance.at(-1).date),11,C.muted);ring(148,586,43,s.daily.percent);text(148,593,s.daily.percent===null?'—':'%'+fmt(Math.round(s.daily.percent*10)/10),25,C.green,true,'middle');
+ rect(26,478,244,leftHeight);text(44,505,'Yoklama',17,C.ink,true);
+ if(s.attendance.length){text(44,526,display(s.attendance[0].date)+' - '+display(s.attendance.at(-1).date),11,C.muted);ring(148,ringY,ringRadius,s.daily.percent);text(148,ringY+7,s.daily.percent===null?'—':'%'+fmt(Math.round(s.daily.percent*10)/10),25,C.green,true,'middle');
   const entries=[['Okulda',s.daily.present,C.green],['Yarım gün',s.daily.half,C.amber],['Tam gün yok',s.daily.full,C.red]];
-  entries.forEach(([label,n,color],i)=>{const x=69+i*78;text(x,660,n,23,color,true,'middle');text(x,682,label,11,C.muted,false,'middle')});
+  entries.forEach(([label,n,color],i)=>{const x=69+i*78;text(x,countY,n,23,color,true,'middle');text(x,leftBottom-10,label,11,C.muted,false,'middle')});
  }else text(148,600,'Yoklama kaydı yok',15,C.muted,false,'middle');
  // Homework rows remain attached to their source report date. No due date is invented.
- rect(284,478,382,214);text(301,505,'Ödevler',17,C.ink,true);
+ rect(284,478,382,leftHeight);text(301,505,'Ödevler',17,C.ink,true);
  if(s.homework.length){const rd=s.homework[0].reportDate;text(301,526,'Rapor: '+display(rd)+' · Ödev tarihi: belirtilmemiş',11,C.muted);
   // Every status the report prints is drawn, in its column order.
   const totals=s.homework.reduce((a,h)=>a.map((v,i)=>v+h.values[i]),[0,0,0,0,0,0,0]);
@@ -17608,7 +17622,7 @@ function svgReport(s,reportDate){
   const courses=new Map();s.homework.forEach(h=>{const k=homeworkCourseName(h.course),o=courses.get(k)||{course:k,values:[0,0,0,0,0,0,0]};o.values=o.values.map((v,i)=>v+h.values[i]);courses.set(k,o)});
   let lx=301,ly=537;ODEV_DURUM.forEach(([ad,renk],i)=>{const n=totals[i+1];if(!n&&i)return;const t=ad+' '+n,w=t.length*5.3+18;
    if(lx+w>660){lx=301;ly+=13}rect(lx,ly,7,7,renk,2);text(lx+10,ly+7,t,9.5,C.muted);lx+=w});
-  const top=ly+17,rh=Math.min(16,(682-top)/courses.size);
+  const top=ly+17,rh=Math.min(16,(leftBottom-10-top)/courses.size);
   [...courses.values()].forEach((h,i)=>{const y=top+i*rh,label=dersAdi(h.course),v=h.values;
    out.push('<g><title>'+esc(h.course+' · Toplam '+v[0]+ODEV_DURUM.map(([ad],j)=>v[j+1]?' · '+ad+' '+v[j+1]:'').join(''))+'</title>');
    text(301,y+9,label.length>24?label.slice(0,23)+'…':label,10.5,C.muted);rect(471,y,124,8,C.gray,4);
@@ -17636,12 +17650,12 @@ function svgReport(s,reportDate){
   rect(x,y,w-8,etRh-2,first?C.pale:'#f3f5f2',3);text(x+6,cy,fit(t.name,maxWidth,fs),fs,C.ink,false,'start',true);rect(x+w-35,y+1,23,etRh-4,'#fff',3);text(x+w-23.5,cy,t.count,11,C.green,true,'middle',true);out.push('</g>');
  });out.push('</g>');
  // Only the actual weekly timetable supplies this list; there are no etut counts here.
- out.push('<g aria-label="Öğretmenler">');rect(26,704,640,112);text(44,727,'Öğretmenler',17,C.ink,true);
- const teachers=(s.teachers||[]).slice().sort((a,b)=>a.teacher.localeCompare(b.teacher,'tr')),columns=teachers.length>12?3:2,tw=604/columns,rh=Math.min(13,65/Math.max(1,Math.ceil(teachers.length/columns)-1)),fs=11,courseWidth=Math.min(100,tw*.34),nameWidth=tw-courseWidth-22;
- if(!teachers.length)text(346,780,s.hasTimetable?'Programda öğretmen kaydı yok':'Haftalık ders programı eklenmemiş',13,C.muted,false,'middle');
- teachers.forEach((t,i)=>{const x=44+(i%columns)*tw,y=747+Math.floor(i/columns)*rh,courses=t.courses.map(dersAdi).join(', '),label=t.teacher+' · '+courses;
-  out.push('<g aria-label="Ders öğretmeni · '+esc(t.teacher)+'"><title>'+esc(label)+'</title>');text(x,y,fit(t.teacher,nameWidth,fs),fs,C.ink);text(x+tw-courseWidth-12,y,fit(courses,courseWidth,fs),fs,C.muted);out.push('</g>');
- });out.push('</g>');
+ out.push('<g aria-label="Öğretmenler">');rect(26,staffTop,640,staffHeight);text(26+staffPad,staffTop+staffPad+15,'Öğretmenler',17,C.ink,true);
+ let staffY=staffTop+staffPad+20+6+10;
+ if(!staff.length)text(26+staffPad,staffY,s.hasTimetable?'Programda öğretmen kaydı yok':'Haftalık ders programı eklenmemiş',staffFont,C.muted);
+ for(const row of staffRows){row.cells.forEach(({t,names,subjects},col)=>{const x=26+staffPad+col*(staffWidth+staffGap),subjectX=x+staffNameWidth+staffSubjectGap;
+  out.push('<g aria-label="Ders öğretmeni · '+esc(t.teacher)+'"><title>'+esc(t.teacher+' · '+t.courses.map(dersAdi).join(', '))+'</title>');names.forEach((label,i)=>text(x,staffY+i*staffLine,label,staffFont,C.ink));subjects.forEach((label,i)=>text(subjectX,staffY+i*staffLine,label,staffFont,C.muted));out.push('</g>');
+ });staffY+=row.height}out.push('</g>');
  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.name+' bireysel raporu')+'" font-family="Arial, sans-serif">'+out.join('')+'</svg>';
 }
 /* ---------------- teacher workspace and download ---------------- */
@@ -17678,11 +17692,15 @@ function siteReports(){
    for(const o of YOKLAMA.ac(yk.veri))for(const [g,k] of o.gun)attendance.push({name:o.ad,no:'',cls:cls(o.sinif),date:iso(g),statuses:[...k].map(c=>DURUM[c]||'')});
    if(attendance.length){yoklama={kind:'attendance',students:unique(attendance),attendance,start:iso(yk.veri.gunler[0]),end:iso(yk.veri.gunler.at(-1))};reports.push(yoklama)}}}
  const exams=new Set(reports.flatMap(r=>r.exams||[]).map(e=>nameKey(e.exam)+'|'+e.date));
- return {reports,roster,programs,sources:{exams:exams.size,etut,yoklama,programs:Object.keys(programs).length}};
+ return {reports,roster,programs,staffBranches:ep.plan.gunler.flat().map(([course,teacher])=>({course,teacher})),sources:{exams:exams.size,etut,yoklama,programs:Object.keys(programs).length}};
 }
 function model(){guard();const site=siteReports(),m=merge(site.reports.concat([...FILES.values()]),site.roster);
+ const known=new Map(),learn=(teacher,course)=>{const subject=teacherSubject(course);if(!clean(teacher)||!subject)return;const k=nameKey(teacher),votes=known.get(k)||new Map();votes.set(subject,(votes.get(subject)||0)+1);known.set(k,votes)};
+ for(const p of Object.values(site.programs))for(const [,,course,teacher] of p.dersler)learn(teacher,course);
+ const main=new Map([...known].map(([k,v])=>[k,[...v].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'tr'))[0][0]]));
+ for(const r of site.staffBranches.concat(site.reports.flatMap(r=>r.sessions||[])))if(!main.has(nameKey(r.teacher))){const subject=teacherSubject(r.course);if(subject)main.set(nameKey(r.teacher),subject)}
  for(const s of m.students){const p=Object.entries(site.programs).find(([c])=>cls(c)===cls(s.cls))?.[1],teachers=new Map();
-  for(const [,,course,teacher] of p?.dersler||[]){const name=clean(teacher)||'Öğretmen belirtilmemiş',k=nameKey(name),t=teachers.get(k)||{teacher:name,courses:[]};if(!t.courses.some(c=>nameKey(c)===nameKey(course)))t.courses.push(course);teachers.set(k,t)}s.teachers=[...teachers.values()];s.hasTimetable=!!p;
+  for(const [,,course,teacher] of p?.dersler||[]){const name=clean(teacher)||'Öğretmen belirtilmemiş',k=nameKey(name),t=teachers.get(k)||{teacher:name,courses:[],mainSubject:main.get(k)||''};if(!t.courses.some(c=>nameKey(c)===nameKey(course)))t.courses.push(course);teachers.set(k,t)}s.teachers=[...teachers.values()];s.hasTimetable=!!p;
  }return {...m,sources:site.sources}}
 function selectedModel(){const m=model();return {...m,students:m.students.filter(s=>!FILTER||s.cls===FILTER)}}
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
