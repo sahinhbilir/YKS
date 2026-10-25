@@ -23,7 +23,7 @@ Bir öğretmenin birden fazla dersi varsa hepsi yazılır. Etüt kayıtlarından
 Etüt toplamları azalan sıradadır; en çok etüt talep edilen öğretmen ilk tam genişlikli
 satırda, diğer öğretmenler eşleşen sayı rozetleriyle alt satırlarda gösterilir.
 Haftalık ders çizelgesinin sayıları hücre içinde yatay ve dikey ortalanır.
-**Öğretmenler** listesinde ad ve ders ayrı sütunlarda, sabit 11 puntoyla yazılır;
+**Öğretmenler** listesinde ad ve ders ayrı sütunlarda, tutarlı yazı büyüklüğüyle yazılır;
 uzun metinler sıkıştırılmaz, kutuyu aşmadan kısaltılır ve tam metin ipucunda korunur.
 Diğer bölüm başlıkları **Yoklama**, **Ödevler**, **İngilizce Sınav Puanları** ve
 **TYT Toplam Net** olarak gösterilir.
@@ -38,7 +38,9 @@ dört kaynak, kaç kayıt geldiği ve tarih aralığı yazar; düğmesi o sayfay
 raporu veya deneme listesi (her sınıf düzeyininki) seçilirse eklenmez; hangi sayfadan
 ekleneceği yazılır.
 Sınıfı ve öğrenciyi seçip **Öğrenci PDF** veya **Sınıf / tümü PDF** düğmesine basın.
-Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi kullanır.
+Her öğrenci A4 yatay (297 × 210 mm) tek sayfadır; önizleme ve indirilen PDF aynı
+çizimi kullanır. Yaklaşık 300 dpi çözünürlükte tek, opak bir görsel sayfanın tamamını
+kaplar; kutular ayrı görseller olarak birleştirilmez. Yazıcının kendi kenar boşluğu kalabilir.
 
 ## İçerik ve tarihler
 
