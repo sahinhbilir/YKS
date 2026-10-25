@@ -17486,7 +17486,12 @@ function merge(reports,roster=[]){
  for(const s of loose)if(!named(s).length)ensure(s);
  const find=s=>{if(s.no)return map.get(key(s))||alias.get(key(s));const a=named(s);if(a.length>1)warnings.push(s.name+': ad/şube birden fazla öğrenciye ait; kaydı eşleştirilmedi.');return a.length===1?a[0]:null};
  for(const r of reports){
-  for(const e of r.exams||[]){const s=find(e);if(s){const id=nameKey(e.exam)+'|'+e.date+'|'+e.session;const n=s.exams.findIndex(x=>nameKey(x.exam)+'|'+x.date+'|'+x.session===id);if(n<0)s.exams.push(e);else s.exams[n]=e}}
+  // The same exam and session can arrive from two sources (the student's imported results and the stored
+  // Sıralamalar lists) under different dates: a combined TYT+AYT list prints the AYT day for its TYT part.
+  // Identical nets within a week are one result, kept on the earlier (real) date; the later source wins otherwise.
+  const sameNets=(a,b)=>[...new Set([...Object.keys(a.nets||{}),...Object.keys(b.nets||{})])].every(k=>Math.abs(((a.nets||{})[k]??0)-((b.nets||{})[k]??0))<0.011);
+  for(const e of r.exams||[]){const s=find(e);if(s){const n=s.exams.findIndex(x=>x.session===e.session&&nameKey(x.exam)===nameKey(e.exam)&&(x.date===e.date||sameNets(x,e)&&Math.abs(day(x.date)-day(e.date))<=7));
+   if(n<0)s.exams.push(e);else{const old=s.exams[n];s.exams[n]={...e,date:old.date<e.date?old.date:e.date}}}}
   const grouped=new Map();for(const h of r.homework||[]){const s=find(h);if(s){if(!grouped.has(s))grouped.set(s,[]);grouped.get(s).push(h)}}
   for(const [s,rows] of grouped){if(!s.homework.length||(r.reportDate||'')>=(s.homework[0].reportDate||''))s.homework=rows}
   for(const a of r.attendance||[]){const s=find(a);if(s){const n=s.attendance.findIndex(x=>x.date===a.date);if(n<0)s.attendance.push(a);else s.attendance[n]=a}}
