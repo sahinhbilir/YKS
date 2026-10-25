@@ -5,8 +5,8 @@ const OGRENCI_RAPOR = (() => {
 const TYT=[['turkce','Türkçe'],['tarih','Tarih'],['cografya','Coğrafya'],['felsefe','Felsefe'],['din','Din kültürü'],['sf','Ek felsefe'],['mat','Matematik'],['geo','Geometri'],['fizik','Fizik'],['kimya','Kimya'],['biyoloji','Biyoloji']];
 const AYT=[['edebiyat','Edebiyat'],['tarih1','Tarih 1'],['cografya1','Coğrafya 1'],['tarih2','Tarih 2'],['cografya2','Coğrafya 2'],['felsefe','Felsefe grubu'],['din','Din kültürü'],['sf','Ek felsefe'],['mat','Matematik'],['geo','Geometri'],['fizik','Fizik'],['kimya','Kimya'],['biyoloji','Biyoloji']];
 const AYT_GROUPS=[
- {label:['Matematik'],keys:['mat','geo']},
  {label:['Fen'],keys:['fizik','kimya','biyoloji']},
+ {label:['Matematik'],keys:['mat','geo']},
  {label:['Türk Dili ve Edebiyatı','Sosyal 1'],keys:['edebiyat','tarih1','cografya1']},
  {label:['Sosyal 2'],keys:['tarih2','cografya2','felsefe','din','sf']}
 ];
@@ -172,6 +172,7 @@ const ODEV_DURUM=[['Tamamladı','#168d7d'],['Eksik','#e5a044'],['Getirmedi','#d2
 const dersAdi=c=>{const k=nameKey(c).replace('T.C. İNKILAP TARİHİ VE ATATÜRKÇÜLÜK','İNKILAP TARİHİ').replace('DİN KÜLTÜRÜ VE AHLAK BİLGİSİ','DİN KÜLTÜRÜ').toLocaleLowerCase('tr-TR').replace(/\b(tyt|ayt)\b/g,x=>x.toUpperCase());
  return k.charAt(0).toLocaleUpperCase('tr-TR')+k.slice(1)};
 const C={ink:'#213d40',muted:'#657878',green:'#168d7d',amber:'#e5a044',red:'#bf6951',blue:'#6799c5',gray:'#d9dfdc',bg:'#f6f5f0',pale:'#e6f2ec'},W=1190.55,H=841.89;
+const PAGE_W=841.89,PAGE_H=595.28,RASTER_SCALE=3; // A4 landscape; one opaque image at about 300 dpi.
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n===null||n===undefined?'—':Number(n).toLocaleString('tr-TR',{maximumFractionDigits:2});
 // Net of an AYT field (SAY / EA / SÖZ) in one exam record: the sum of the field's lessons, as the school's list adds
@@ -180,7 +181,10 @@ const fieldNet=(e,f)=>{if(e.fields&&f in e.fields)return e.fields[f];
  const n=DENEME_ALAN[f].map(k=>e.nets[k]).filter(Number.isFinite);return n.length?n.reduce((a,b)=>a+b,0):null};
 function svgReport(s,reportDate){
  const out=[],grade=Number(s.grade)||parseInt(cls(s.cls),10),showAYT=![9,10].includes(grade),section=nameKey(cls(s.cls)).replace(/\s+/g,''),track=/^(11|12)[/-]?A$/.test(section)||[11,12].includes(grade)&&section==='A'?'EA':'SAY';
- const text=(x,y,t,size=12,color=C.ink,bold=false,anchor='start')=>out.push('<text x="'+x+'" y="'+y+'" font-size="'+size+'" fill="'+color+'" font-weight="'+(bold?700:400)+'" text-anchor="'+anchor+'">'+esc(t)+'</text>');
+ const text=(x,y,t,size=12,color=C.ink,bold=false,anchor='start',center=false)=>out.push('<text x="'+x+'" y="'+y+'" font-size="'+size+'" fill="'+color+'" font-weight="'+(bold?700:400)+'" text-anchor="'+anchor+'"'+(center?' dominant-baseline="central"':'')+'>'+esc(t)+'</text>');
+ const measure=typeof document!=='undefined'?document.createElement('canvas').getContext?.('2d'):null;
+ const width=(label,size)=>{if(measure){measure.font=size+'px Arial';return measure.measureText(label).width}return [...label].length*size*.6};
+ const fit=(value,maxWidth,size)=>{const label=String(value);if(width(label,size)<=maxWidth)return label;const chars=[...label];let lo=0,hi=chars.length;while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(width(chars.slice(0,mid).join('')+'…',size)<=maxWidth)lo=mid;else hi=mid-1}return chars.slice(0,lo).join('').trimEnd()+'…'};
  const rect=(x,y,w,h,fill='#fff',r=12)=>out.push('<rect x="'+x+'" y="'+y+'" width="'+Math.max(0,w)+'" height="'+Math.max(0,h)+'" rx="'+Math.min(r,h/2,w/2)+'" fill="'+fill+'"/>');
  const line=(x1,y1,x2,y2,color=C.gray,width=1)=>out.push('<path d="M'+x1+','+y1+' L'+x2+','+y2+'" fill="none" stroke="'+color+'" stroke-width="'+width+'"/>');
  const dot=(x,y,r=3,color=C.green)=>out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#fff" stroke="'+color+'" stroke-width="1.7"/>');
@@ -225,19 +229,19 @@ function svgReport(s,reportDate){
   out.push('<g aria-label="'+session+(session==='AYT'?' '+track:'')+' net grafiği">');graph(ex,values,x+42,140,w-(session==='AYT'?230:78),42,true);out.push('</g>');
   if(session==='AYT'){
    const last=ex.at(-1),sx=x+w-136;line(sx-10,112,sx-10,229);text(sx+2,121,'Son AYT Netleri',11,C.muted,true);if(last)text(sx+2,136,display(last.date),10,C.muted);
-   ['SAY','EA','SÖZ'].forEach((field,i)=>{const y=145+i*28,value=last?fieldNet(last,field):null;out.push('<g aria-label="'+esc(field+' neti · '+fmt(value))+'">');if(field===track)rect(sx-4,y-2,126,26,C.pale,7);text(sx+3,y+17,field,11,C.muted,true);text(x+w-18,y+18,fmt(value),20,field===track?C.green:C.ink,true,'end');out.push('</g>')});
+   (track==='EA'?['EA','SAY','SÖZ']:['SAY','EA','SÖZ']).forEach((field,i)=>{const y=145+i*28,value=last?fieldNet(last,field):null;out.push('<g aria-label="'+esc(field+' neti · '+fmt(value))+'">');if(field===track)rect(sx-4,y-2,126,26,C.pale,7);text(sx+3,y+17,field,11,C.muted,true);text(x+w-18,y+18,fmt(value),20,field===track?C.green:C.ink,true,'end');out.push('</g>')});
    aytLessons(ex,x,w);
   }else lessonCharts(session,x,w);
  }
  if(!showAYT){rect(600,96,564,366);text(618,121,'İngilizce Sınav Puanları',17,C.ink,true);const ex=s.exams.filter(e=>e.session==='ENGLISH');out.push('<g aria-label="İngilizce puan grafiği">');graph(ex,ex.map(e=>e.scores.ENGLISH),642,157,486,235,true,true,'puan',false,100);out.push('</g>')}
  // Attendance percentage is based on the same day classifications shown below it.
- rect(26,478,244,230);text(44,505,'Yoklama',17,C.ink,true);
- if(s.attendance.length){text(44,526,display(s.attendance[0].date)+' - '+display(s.attendance.at(-1).date),11,C.muted);ring(148,592,43,s.daily.percent);text(148,599,s.daily.percent===null?'—':'%'+fmt(Math.round(s.daily.percent*10)/10),25,C.green,true,'middle');
+ rect(26,478,244,214);text(44,505,'Yoklama',17,C.ink,true);
+ if(s.attendance.length){text(44,526,display(s.attendance[0].date)+' - '+display(s.attendance.at(-1).date),11,C.muted);ring(148,586,43,s.daily.percent);text(148,593,s.daily.percent===null?'—':'%'+fmt(Math.round(s.daily.percent*10)/10),25,C.green,true,'middle');
   const entries=[['Okulda',s.daily.present,C.green],['Yarım gün',s.daily.half,C.amber],['Tam gün yok',s.daily.full,C.red]];
-  entries.forEach(([label,n,color],i)=>{const x=69+i*78;text(x,674,n,23,color,true,'middle');text(x,696,label,11,C.muted,false,'middle')});
+  entries.forEach(([label,n,color],i)=>{const x=69+i*78;text(x,660,n,23,color,true,'middle');text(x,682,label,11,C.muted,false,'middle')});
  }else text(148,600,'Yoklama kaydı yok',15,C.muted,false,'middle');
  // Homework rows remain attached to their source report date. No due date is invented.
- rect(284,478,382,230);text(301,505,'Ödevler',17,C.ink,true);
+ rect(284,478,382,214);text(301,505,'Ödevler',17,C.ink,true);
  if(s.homework.length){const rd=s.homework[0].reportDate;text(301,526,'Rapor: '+display(rd)+' · Ödev tarihi: belirtilmemiş',11,C.muted);
   // Every status the report prints is drawn, in its column order.
   const totals=s.homework.reduce((a,h)=>a.map((v,i)=>v+h.values[i]),[0,0,0,0,0,0,0]);
@@ -245,7 +249,7 @@ function svgReport(s,reportDate){
   const courses=new Map();s.homework.forEach(h=>{const k=homeworkCourseName(h.course),o=courses.get(k)||{course:k,values:[0,0,0,0,0,0,0]};o.values=o.values.map((v,i)=>v+h.values[i]);courses.set(k,o)});
   let lx=301,ly=537;ODEV_DURUM.forEach(([ad,renk],i)=>{const n=totals[i+1];if(!n&&i)return;const t=ad+' '+n,w=t.length*5.3+18;
    if(lx+w>660){lx=301;ly+=13}rect(lx,ly,7,7,renk,2);text(lx+10,ly+7,t,9.5,C.muted);lx+=w});
-  const top=ly+17,rh=Math.min(16,(698-top)/courses.size);
+  const top=ly+17,rh=Math.min(16,(682-top)/courses.size);
   [...courses.values()].forEach((h,i)=>{const y=top+i*rh,label=dersAdi(h.course),v=h.values;
    out.push('<g><title>'+esc(h.course+' · Toplam '+v[0]+ODEV_DURUM.map(([ad],j)=>v[j+1]?' · '+ad+' '+v[j+1]:'').join(''))+'</title>');
    text(301,y+9,label.length>24?label.slice(0,23)+'…':label,10.5,C.muted);rect(471,y,124,8,C.gray,4);
@@ -259,25 +263,25 @@ function svgReport(s,reportDate){
   const n=s.weeks.length,left=800,cw=345/n,max=Math.max(1,...s.weeks.map(w=>w.count));
   s.weeks.forEach((w,i)=>{const x=left+(i+.5)*cw,height=32*w.count/max;rect(x-cw*.3,589-height,cw*.6,height,C.green,3);if(n<=20||i%Math.ceil(n/10)===0)text(x,581-height,w.count,10,C.green,true,'middle');if(i%Math.max(1,Math.ceil(n/10))===0)text(x,606,display(w.date).slice(0,5),10,C.muted,false,'middle')});
   const courses=[...new Set(s.sessions.map(e=>courseName(e.course)))].sort((a,b)=>a.localeCompare(b,'tr'));
-  const rh=Math.min(18,85/Math.max(1,courses.length)),font=Math.min(10,rh-2),baseline=Math.min(11,rh-1);
-  courses.forEach((c,j)=>{const yy=619+j*rh;out.push('<g><title>'+esc(c)+'</title>');text(697,yy+baseline,c.length>15?c.slice(0,14)+'…':c,font,C.muted);
-   s.weeks.forEach((w,i)=>{const v=w.courses[c]||0,x=left+i*cw;rect(x+1,yy,cw-2,rh-3,v?'#c7e5d7':'#f0f3f0',3);if(v&&n<=20)text(x+cw/2,yy+baseline,v,font,C.green,true,'middle')});out.push('</g>');
+  const rh=Math.min(18,98/Math.max(1,courses.length)),font=Math.min(10.5,rh-3),cellHeight=rh-2;
+  courses.forEach((c,j)=>{const yy=619+j*rh;out.push('<g><title>'+esc(c)+'</title>');text(697,yy+cellHeight/2,c.length>15?c.slice(0,14)+'…':c,font,C.muted,false,'start',true);
+   s.weeks.forEach((w,i)=>{const v=w.courses[c]||0,x=left+i*cw;out.push('<g aria-label="Etüt Hücresi · '+esc(c+' · '+w.date+' · '+v)+'">');rect(x+1,yy,cw-2,cellHeight,v?'#c7e5d7':'#f0f3f0',3);if(v&&n<=20)text(x+cw/2,yy+cellHeight/2,v,font,C.green,true,'middle',true);out.push('</g>')});out.push('</g>');
   });
  }else text(922,600,'Öğrencinin Etüt Talebi Olmamıştır',15,C.muted,false,'middle');
  // Etut totals belong only to this section; timetable teachers are a separate list below.
  const etutTeachers=new Map();for(const e of s.sessions){const name=clean(e.teacher)||'Öğretmen belirtilmemiş',k=nameKey(name),t=etutTeachers.get(k)||{name,count:0};t.count++;etutTeachers.set(k,t)}
- const totals=[...etutTeachers.values()].sort((a,b)=>a.name.localeCompare(b.name,'tr')),etCols=totals.length>12?3:2,etWidth=450/etCols,etRh=Math.min(14,66/Math.max(1,Math.ceil(totals.length/etCols)));
+ const totals=[...etutTeachers.values()].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'tr')),etCols=totals.length>11?3:2,etWidth=450/etCols,etRows=totals.length?1+Math.ceil((totals.length-1)/etCols):0,etRh=Math.min(17,78/Math.max(1,etRows));
  if(totals.length)text(697,727,'Öğretmen',11,C.ink,true);
- totals.forEach((t,i)=>{const x=697+(i%etCols)*etWidth,y=744+Math.floor(i/etCols)*etRh,fs=Math.min(10,etRh-1),maxWidth=etWidth-32;
+ totals.forEach((t,i)=>{const first=i===0,x=697+(first?0:(i-1)%etCols)*etWidth,y=735+(first?0:1+Math.floor((i-1)/etCols))*etRh,w=first?450:etWidth,fs=11,maxWidth=w-50,cy=y+(etRh-2)/2;
   out.push('<g aria-label="'+esc(t.name+' · '+t.count+' etüt')+'"><title>'+esc(t.name+' · '+t.count+' etüt')+'</title>');
-  out.push('<text x="'+x+'" y="'+y+'" font-size="'+fs+'" fill="'+C.muted+'"'+(t.name.length*fs*.6>maxWidth?' textLength="'+maxWidth+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+esc(t.name)+'</text>');text(x+etWidth-10,y,t.count,11,C.green,true,'end');out.push('</g>');
+  rect(x,y,w-8,etRh-2,first?C.pale:'#f3f5f2',3);text(x+6,cy,fit(t.name,maxWidth,fs),fs,C.ink,false,'start',true);rect(x+w-35,y+1,23,etRh-4,'#fff',3);text(x+w-23.5,cy,t.count,11,C.green,true,'middle',true);out.push('</g>');
  });out.push('</g>');
  // Only the actual weekly timetable supplies this list; there are no etut counts here.
- out.push('<g aria-label="Öğretmenler">');rect(26,720,640,96);text(44,742,'Öğretmenler',16,C.ink,true);
- const teachers=(s.teachers||[]).slice().sort((a,b)=>a.teacher.localeCompare(b.teacher,'tr')),columns=teachers.length>12?3:2,tw=604/columns,rh=Math.min(13,52/Math.max(1,Math.ceil(teachers.length/columns)-1));
+ out.push('<g aria-label="Öğretmenler">');rect(26,704,640,112);text(44,727,'Öğretmenler',17,C.ink,true);
+ const teachers=(s.teachers||[]).slice().sort((a,b)=>a.teacher.localeCompare(b.teacher,'tr')),columns=teachers.length>12?3:2,tw=604/columns,rh=Math.min(13,65/Math.max(1,Math.ceil(teachers.length/columns)-1)),fs=11,courseWidth=Math.min(100,tw*.34),nameWidth=tw-courseWidth-22;
  if(!teachers.length)text(346,780,s.hasTimetable?'Programda öğretmen kaydı yok':'Haftalık ders programı eklenmemiş',13,C.muted,false,'middle');
- teachers.forEach((t,i)=>{const x=44+(i%columns)*tw,y=759+Math.floor(i/columns)*rh,label=t.teacher+' · '+t.courses.map(dersAdi).join(', '),fs=Math.min(10,rh-1),maxWidth=tw-16;
-  out.push('<g aria-label="Ders öğretmeni · '+esc(t.teacher)+'"><title>'+esc(label)+'</title><text x="'+x+'" y="'+y+'" font-size="'+fs+'" fill="'+C.muted+'"'+(label.length*fs*.55>maxWidth?' textLength="'+maxWidth+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+esc(label)+'</text></g>');
+ teachers.forEach((t,i)=>{const x=44+(i%columns)*tw,y=747+Math.floor(i/columns)*rh,courses=t.courses.map(dersAdi).join(', '),label=t.teacher+' · '+courses;
+  out.push('<g aria-label="Ders öğretmeni · '+esc(t.teacher)+'"><title>'+esc(label)+'</title>');text(x,y,fit(t.teacher,nameWidth,fs),fs,C.ink);text(x+tw-courseWidth-12,y,fit(courses,courseWidth,fs),fs,C.muted);out.push('</g>');
  });out.push('</g>');
  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.name+' bireysel raporu')+'" font-family="Arial, sans-serif">'+out.join('')+'</svg>';
 }
@@ -359,14 +363,14 @@ async function addFiles(files){
 async function raster(svg){
  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
  try{const img=new Image();await new Promise((ok,bad)=>{img.onload=ok;img.onerror=()=>bad(new Error('Rapor görseli oluşturulamadı.'));img.src=url});
-  const cv=document.createElement('canvas');cv.width=Math.round(W*2);cv.height=Math.round(H*2);const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.drawImage(img,0,0,cv.width,cv.height);
+  const cv=document.createElement('canvas');cv.width=Math.round(W*RASTER_SCALE);cv.height=Math.round(H*RASTER_SCALE);const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.drawImage(img,0,0,cv.width,cv.height);
   return await new Promise((ok,bad)=>cv.toBlob(async b=>{if(!b){bad(new Error('PDF görseli hazırlanamadı.'));return}ok(new Uint8Array(await b.arrayBuffer()))},'image/png'));
  }finally{URL.revokeObjectURL(url)}
 }
 async function pdfBytes(students,valid=()=>true){
  if(!students.length)throw new Error('Öğrenci seçilmedi.');if(students.length>300)throw new Error('Bir PDF en fazla 300 öğrenci içerebilir. Sınıf seçerek indirin.');
  const L=await SIRALAMA.kutuphane(),doc=await L.PDFLib.PDFDocument.create();doc.setTitle('Bireysel öğrenci raporları');const d=today();
- for(const s of students){if(!valid())throw new Error('Oturum değişti.');const bytes=await raster(svgReport(s,d));if(!valid())throw new Error('Oturum değişti.');const img=await doc.embedPng(bytes),p=doc.addPage([W,H]);p.drawImage(img,{x:0,y:0,width:W,height:H})}
+ for(const s of students){if(!valid())throw new Error('Oturum değişti.');const bytes=await raster(svgReport(s,d));if(!valid())throw new Error('Oturum değişti.');const img=await doc.embedPng(bytes),p=doc.addPage([PAGE_W,PAGE_H]);p.drawImage(img,{x:0,y:0,width:PAGE_W,height:PAGE_H})}
  return doc.save();
 }
 async function download(all){
