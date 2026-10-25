@@ -24,10 +24,17 @@ Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi k
 
 ## İçerik ve tarihler
 
-- TYT ve AYT toplam net grafikleri yan yana, ders grafikleri altında yer alır.
+- TYT ve AYT alan net grafikleri yan yana, ders grafikleri altında yer alır.
   Kaynaktaki bütün sınav tarihleri, önceki yıllar dahil, korunur. Sınavlar tarih
-  sırasıyla eşit aralıkta gösterilir. AYT toplamı kaynakta bulunan tüm AYT derslerinin
-  netidir; SAY/EA/SÖZ puanı değildir. Eksik oturum sıfır sonuç olarak çizilmez.
+  sırasıyla eşit aralıkta gösterilir. 11/A ve 12/A için AYT grafiği EA netini
+  (Matematik + Geometri + Edebiyat + Tarih 1 + Coğrafya 1), diğer 11. ve 12. sınıflarda
+  SAY netini (Matematik + Geometri + Fizik + Kimya + Biyoloji) gösterir.
+  AYT dersleri alt alta Matematik, Fen, Türk Dili ve Edebiyatı–Sosyal 1, Sosyal 2
+  gruplarında yer alır. Eksik sonuç sıfır olarak çizilmez; kayıtlı sıfır net korunur.
+- AYT grafiğinin yanında son AYT sınavının tarihi ve kaynaktaki SAY, EA, SÖZ puanları
+  gösterilir. Eksik puan “—” olarak kalır; netlerden puan hesaplanmaz ve önceki
+  sınavın puanı yeni sınavın yerine kullanılmaz. Elle girilen puan yalnızca kaydın
+  belirtilen alanına aittir.
 - Öğrenci yalnızca kendi sonuçlarını görür. Sıralama, sınıf ortalaması ve öneri yoktur.
 - Devam, Yoklama sayfasındaki kayıtlardan hesaplanır: her dersin kodu Geldi, Gecikti,
   Gelmedi ya da Mazeretli (Raporlu ve Diğer) olarak okunur. Devam yüzdesi gün bazındadır. En az 3 dersin kaydı bulunan ve kayıtlı derslerin

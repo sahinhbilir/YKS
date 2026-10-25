@@ -84,7 +84,7 @@ check('exam labels honor saved Tarama/Genel overrides in both sessions; manual e
  vm.runInContext("D.siralama.sinavlar[0].tur='genel';",ctx);s=R.model().students.find(s=>s.no==='1001');const svg=R.svgReport(s,'2026-10-25');assert.equal((svg.match(/>Genel</g)||[]).length,2);assert.equal((svg.match(/>Tarama</g)||[]).length,1);
 });
 check('same names in different classes never share attendance or sessions; ambiguous matches are flagged',()=>{const a={no:'1',name:'AYNI AD',cls:'12/A'},b={no:'2',name:'AYNI AD',cls:'12/B'},r={students:[a,b],attendance:[{name:'AYNI AD',cls:'12/B',date:'2026-10-23',statuses:['Geldi']}]};const m=R.merge([r]);assert.equal(m.students.length,1);assert.equal(m.students[0].no,'2');r.students[0].cls='12/B';assert.equal(R.merge([r]).warnings.length,1)});
-check('SVG escapes text, keeps historical dates, and has no ranking or advice',()=>{const r=parse(okulListesi(SINAVLAR.sonra.F)),m=R.merge([r,parse(homework()),parse(attendance()),parse(etutRaporu(GUNLER))]),s=m.students.find(s=>s.no==='1001');s.name='<script>alert(1)</script>';const svg=R.svgReport(s,'2026-10-24');assert(svg.includes('&lt;script&gt;'));assert(!svg.includes('<script>'));assert(svg.includes('Ödev tarihi: belirtilmemiş'));assert(svg.includes('AYT · tüm derslerin neti'));assert(!/Şube sırası|Ortalama|Sıradaki|Tekrar et|öneri/i.test(svg));assert(!/NaN|Infinity/.test(svg))});
+check('SVG escapes text, keeps historical dates, and has no ranking or advice',()=>{const r=parse(okulListesi(SINAVLAR.sonra.F)),m=R.merge([r,parse(homework()),parse(attendance()),parse(etutRaporu(GUNLER))]),s=m.students.find(s=>s.no==='1001');s.name='<script>alert(1)</script>';const svg=R.svgReport(s,'2026-10-24');assert(svg.includes('&lt;script&gt;'));assert(!svg.includes('<script>'));assert(svg.includes('Ödev tarihi: belirtilmemiş'));assert(svg.includes('AYT · EA neti'));assert(!/Şube sırası|Ortalama|Sıradaki|Tekrar et|öneri/i.test(svg));assert(!/NaN|Infinity/.test(svg))});
 check('teacher-only menu, empty roster page, imports do not mutate notebook and clear on notebook switch',()=>{
  vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='ogrencirapor';",ctx);assert(R.view().includes('Ödev raporu ekle'));const before=JSON.stringify(ctx.D);R.model();assert.equal(JSON.stringify(ctx.D),before);
  vm.runInContext("D=varsayilan();D.rol='ogrenci';",ctx);assert.equal(R.view(),'');assert.throws(()=>R.model(),/rehber/);assert(!vm.runInContext('JSON.stringify(SEKME_OGRENCI)',ctx).includes('ogrencirapor'));
@@ -117,7 +117,7 @@ check('Etütler and Yoklama feed the report: lesson codes as statuses, students 
 check('grades 9 and 10 use the full width for TYT with no AYT panel; grades 11 and 12 retain both sessions',()=>{
  const base=R.merge([{students:[{no:'9',name:'SENTETİK İPEK',cls:'9/A'}],exams:['TYT','AYT'].map(session=>({no:'9',name:'SENTETİK İPEK',cls:'9/A',exam:'Deneme',date:'2026-10-20',session,nets:{mat:10}}))}]).students[0];
  for(const cls of ['9/A','10-B','102 9/A','10 B']){const s={...base,cls},before=JSON.stringify(s),svg=R.svgReport(s,'2026-10-25');assert(!svg.includes('AYT'),cls);assert(svg.includes('x="26" y="96" width="1138"'));assert.equal(JSON.stringify(s),before)}
- for(const cls of ['11/A','12/C'])assert(R.svgReport({...base,cls},'2026-10-25').includes('AYT · tüm derslerin neti'));
+ for(const [cls,track] of [['11/A','EA'],['12/C','SAY']])assert(R.svgReport({...base,cls},'2026-10-25').includes('AYT · '+track+' neti'));
  ctx.exams=base.exams;vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'9',ad:'SENTETİK İPEK',sube:'102',sinif:9,denemeler:[{id:'m:9',ad:'Deneme',tarih:'2026-10-20',tur:'TYT',oturum:'TYT',dersler:[{kod:'mat',dogru:10,yanlis:0}]}]}];",ctx);
  const s=R.model().students[0];assert.equal(s.grade,9);assert(!R.svgReport(s,'2026-10-25').includes('AYT'),'notebook grade works even without a classroom-code mapping');
 });
@@ -125,6 +125,25 @@ check('no etut uses the requested message both with and without a source date ra
  const s=R.merge([parse(homework())]).students[0];
  for(const weeks of [[],R.weekly([],'2026-10-01','2026-10-25')]){const svg=R.svgReport({...s,weeks,sessionStart:'2026-10-01',sessionEnd:'2026-10-25'},'2026-10-25');assert(svg.includes('Öğrencinin Etüt Talebi Olmamıştır'));assert(!svg.includes('Etüt kaydı yok'));assert(!svg.includes('01.10.2026'))}
  const withEtut=R.merge([parse(homework()),parse(etutRaporu(GUNLER))]).students.find(s=>s.no==='1001');assert(withEtut.sessions.length);assert(!R.svgReport(withEtut,'2026-10-25').includes('Öğrencinin Etüt Talebi Olmamıştır'));
+});
+check('AYT class tracks use only their own net lessons and groups stay in the requested vertical order',()=>{
+ const person={no:'31',name:'SENTETİK ALAN',cls:'12/A'},exam={...person,exam:'Alan denemesi',date:'2026-10-23',session:'AYT',nets:{mat:20,geo:5,fizik:10,kimya:9,biyoloji:8,edebiyat:15,tarih1:6,cografya1:4,tarih2:7,cografya2:8,felsefe:9,din:3,sf:1.25},scores:{SAY:350.25,EA:321.5,'SÖZ':290.75}},s=R.merge([{students:[person],exams:[exam]}]).students[0],before=JSON.stringify(s);
+ for(const [cls,track,net] of [['11/A','EA',50],['12/A','EA',50],['11 A','EA',50],['12-A','EA',50],['301 12/A','EA',50],['11A','EA',50],['11/B','SAY',52],['12/C','SAY',52],['12/AA','SAY',52]]){
+  const svg=R.svgReport({...s,cls},'2026-10-25'),start=svg.indexOf('aria-label="AYT '+track+' net grafiği"'),main=svg.slice(start,svg.indexOf('Son AYT puanları'));
+  assert(start>=0,cls);assert(main.includes(' · '+net+' net</title>'),cls);assert(!main.includes('105,25 net'));for(const [k,v] of [['SAY','350,25'],['EA','321,5'],['SÖZ','290,75']])assert(svg.includes('aria-label="'+k+' puanı · '+v+'"'));
+  const positions=['AYT Matematik','AYT Fen','AYT Türk Dili ve Edebiyatı · Sosyal 1','AYT Sosyal 2'].map(label=>svg.indexOf('aria-label="'+label+'"'));assert(positions.every((v,i)=>v>=0&&(!i||v>positions[i-1])));
+ }
+ assert(R.svgReport({...s,cls:'A',grade:11},'2026-10-25').includes('AYT · EA neti'));assert.equal(JSON.stringify(s),before);
+ const missing=R.svgReport({...s,cls:'12/B',exams:[{...exam,nets:{edebiyat:12}}]},'2026-10-25');assert(!missing.slice(missing.indexOf('AYT SAY net grafiği'),missing.indexOf('Son AYT puanları')).includes('net</title>'));
+ const zero=R.svgReport({...s,exams:[{...exam,nets:{mat:0}}]},'2026-10-25');assert(zero.includes(' · 0 net</title>'));
+});
+check('AYT scores come from the result list and latest exam, with no invented or stale score',()=>{
+ ctx.exam=okulListesi(SINAVLAR.sonra.F);vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[];D.siralama=SIRALAMA.oku().veri;SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(exam.pages,exam.boylar));",ctx);
+ const before=vm.runInContext('JSON.stringify(D)',ctx),s=R.model().students.find(s=>s.no==='1001'),ex=s.exams.find(e=>e.session==='AYT');assert.deepEqual(plain(ex.scores),{SAY:300,EA:330,'SÖZ':290});assert.equal(vm.runInContext('JSON.stringify(D)',ctx),before);
+ const latest={...ex,exam:'Yeni sınav',date:'2026-10-24',scores:{EA:0}},svg=R.svgReport({...s,exams:[...s.exams,latest]},'2026-10-25');
+ for(const label of ['SAY puanı · —','EA puanı · 0','SÖZ puanı · —'])assert(svg.includes('aria-label="'+label+'"'));assert(!svg.includes('SAY puanı · 300'));assert(svg.includes('24.10.2026'));
+ vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'1',ad:'SENTETİK ELLE',sube:'12/A',sinif:12,denemeler:[{id:'m:alan',ad:'Elle AYT',tarih:'2026-10-24',tur:'AYT',oturum:'AYT',alan:'EA',puan:345.75,dersler:[{kod:'mat',dogru:10,yanlis:0}]}]}];",ctx);
+ const manual=R.model().students[0];assert.deepEqual(plain(manual.exams[0].scores),{EA:345.75});assert(R.svgReport(manual,'2026-10-25').includes('EA puanı · 345,75'));
 });
 check('source embedding is current and idempotent',()=>{require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs','--check']);const before=fs.readFileSync('index.html','utf8');require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs']);assert.equal(fs.readFileSync('index.html','utf8'),before)});
 console.log(passed+' student report checks passed');
