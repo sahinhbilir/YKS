@@ -73,7 +73,7 @@ check('only homework mathematics keeps TYT and AYT separate; Turkish and literat
 check('teacher totals count every etut once across lessons, merge spacing/case, and preserve missing teachers',()=>{
  const person={no:'21',name:'SENTETİK ÖĞRENCİ',cls:'12/A'},teachers=['SENTETİK IŞIK','  sentetik   ışık  ','SENTETİK IŞIK','SENTETİK İPEK',''],source={students:[person],start:'2026-10-01',end:'2026-10-25',sessions:teachers.map((teacher,i)=>({...person,teacher,course:i%2?'FİZİK 2':'FİZİK 1',date:'2026-10-'+(20+i)}))};
  const before=JSON.stringify(source),s=R.merge([source]).students[0],svg=R.svgReport(s,'2026-10-25');
- assert(svg.includes('Öğretmen · toplam etüt'));for(const t of ['SENTETİK IŞIK · 3 etüt','SENTETİK İPEK · 1 etüt','Öğretmen belirtilmemiş · 1 etüt'])assert(svg.includes('aria-label="'+t+'"'),t);
+ assert(svg.includes('Öğretmenlerim · dersler · etüt sayısı'));for(const t of ['SENTETİK IŞIK · 3 etüt','SENTETİK İPEK · 1 etüt','Öğretmen belirtilmemiş · 1 etüt'])assert(svg.includes('aria-label="'+t+'"'),t);
  assert.equal([...svg.matchAll(/aria-label="[^"]* · (\d+) etüt"/g)].reduce((n,m)=>n+Number(m[1]),0),s.sessions.length);assert.equal(s.weeks.reduce((n,w)=>n+w.count,0),5);assert.equal(JSON.stringify(source),before);
  const safe=R.svgReport({...s,sessions:[{...s.sessions[0],teacher:'<script>&"'}]},'2026-10-25');assert(safe.includes('&lt;script&gt;&amp;&quot;'));assert(!safe.includes('<script>'));
 });
@@ -114,9 +114,9 @@ check('Etütler and Yoklama feed the report: lesson codes as statuses, students 
  const r=R.merge([{students:[{no:'1',name:'TEK AD',cls:'12/A'}],exams:[]},{kind:'attendance',students:[{name:'TEK AD',no:'',cls:'12 A'}],attendance:[{name:'TEK AD',no:'',cls:'12 A',date:'2026-10-01',statuses:['Geldi']}]}]);
  assert.equal(r.students.length,1);assert.equal(r.students[0].attendance.length,1);
 });
-check('grades 9 and 10 use the full width for TYT with no AYT panel; grades 11 and 12 retain both sessions',()=>{
+check('grades 9 and 10 show English instead of AYT; grades 11 and 12 retain both sessions',()=>{
  const base=R.merge([{students:[{no:'9',name:'SENTETİK İPEK',cls:'9/A'}],exams:['TYT','AYT'].map(session=>({no:'9',name:'SENTETİK İPEK',cls:'9/A',exam:'Deneme',date:'2026-10-20',session,nets:{mat:10}}))}]).students[0];
- for(const cls of ['9/A','10-B','102 9/A','10 B']){const s={...base,cls},before=JSON.stringify(s),svg=R.svgReport(s,'2026-10-25');assert(!svg.includes('AYT'),cls);assert(svg.includes('x="26" y="96" width="1138"'));assert.equal(JSON.stringify(s),before)}
+ for(const cls of ['9/A','10-B','102 9/A','10 B']){const s={...base,cls},before=JSON.stringify(s),svg=R.svgReport(s,'2026-10-25');assert(!svg.includes('AYT'),cls);assert(svg.includes('x="26" y="96" width="558"'));assert(svg.includes('İngilizce puan grafiği'));assert.equal(JSON.stringify(s),before)}
  for(const [cls,track] of [['11/A','EA'],['12/C','SAY']])assert(R.svgReport({...base,cls},'2026-10-25').includes('AYT · '+track+' neti'));
  ctx.exams=base.exams;vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'9',ad:'SENTETİK İPEK',sube:'102',sinif:9,denemeler:[{id:'m:9',ad:'Deneme',tarih:'2026-10-20',tur:'TYT',oturum:'TYT',dersler:[{kod:'mat',dogru:10,yanlis:0}]}]}];",ctx);
  const s=R.model().students[0];assert.equal(s.grade,9);assert(!R.svgReport(s,'2026-10-25').includes('AYT'),'notebook grade works even without a classroom-code mapping');
@@ -144,6 +144,19 @@ check('AYT scores come from the result list and latest exam, with no invented or
  for(const label of ['SAY neti · 20,5','EA neti · 47,5','SÖZ neti · 27'])assert(svg.includes('aria-label="'+label+'"'));assert(!svg.includes('puanı'));assert(svg.includes('24.10.2026'));
  vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'1',ad:'SENTETİK ELLE',sube:'12/A',sinif:12,denemeler:[{id:'m:alan',ad:'Elle AYT',tarih:'2026-10-24',tur:'AYT',oturum:'AYT',alan:'EA',puan:345.75,dersler:[{kod:'mat',dogru:10,yanlis:0}]}]}];",ctx);
  const manual=R.model().students[0];assert.deepEqual(plain(manual.exams[0].scores),{EA:345.75});assert(R.svgReport(manual,'2026-10-25').includes('EA neti · 10'));
+});
+check('English PDFs preserve all participants and dates, convert placement scores, and keep original printed data',()=>{
+ const {englishResults}=require('./fixtures/english-pdf.cjs'),starter=englishResults({perPage:1}),r=parse(starter);assert.equal(r.kind,'english');assert.equal(r.exams.length,2);assert(r.exams.every(e=>e.session==='ENGLISH'&&e.date==='2026-10-05'));assert.equal(r.exams[0].scores.ENGLISH,85);assert.equal(r.exams[1].name,'SENTETİK UZUNADLI FIRAT İKİNCİ');
+ const placement=englishResults({name:'FLY HIGHER PLACEMENT TEST',date:'02.09.2026',students:[{no:'2001',name:'SENTETİK ECE',cls:'9/A',code:'102',net:54.67,score:.55,correct:56,wrong:4},{no:'3001',name:'SENTETİK ON',cls:'10/B',code:'105',net:0,score:0,correct:12,wrong:36}]}),p=parse(placement);assert.equal(p.exams[0].scores.ENGLISH,55);assert.equal(p.exams[0].printedScore,.55);assert.equal(p.exams[0].scoreScale,100);assert.equal(p.exams[0].nets.english,54.67);assert.equal(p.exams[1].scores.ENGLISH,0);
+ const before=JSON.stringify([r,p]),m=R.merge([r,p,r]),s=m.students.find(s=>s.no==='2001');assert.equal(s.exams.length,2);assert.equal(s.exams[0].date,'2026-09-02');assert(R.svgReport(s,'2026-10-25').includes('55 puan</title>'));assert(!R.svgReport(s,'2026-10-25').includes('AYT'));assert.equal(JSON.stringify([r,p]),before);
+ const truncated=structuredClone(starter);truncated.pages.pop();assert.throws(()=>parse(truncated),/katılımcı sayısı/);
+ const changedName={...r,students:r.students.map(s=>s.no==='2001'?{...s,name:'SENTETİK E C E'}:s),exams:r.exams.map(e=>e.no==='2001'?{...e,name:'SENTETİK E C E'}:e)};assert.equal(R.merge([r,changedName]).students.length,2,'English matches a unique number and class despite a name layout difference');
+});
+check('the weekly timetable supplies every teacher and lesson for the matching class, including zero-etut lessons',()=>{
+ const {dersProgrami}=require('./fixtures/ders-programi-pdf.cjs');ctx.program=vm.runInContext('ETUTPLANI.programCoz',ctx)(dersProgrami({kod:'102',sinif:'9/A',hucreler:[[0,0,'MATEMATİK','SENTETİK HOCA'],[1,0,'MATEMATİK','SENTETİK HOCA'],[2,0,'REHBERLİK','SENTETİK HOCA'],[3,0,'BEDEN EĞİTİMİ','SENTETİK SPOR'],[4,0,'İNGİLİZCE','SENTETİK DİL']]}));
+ vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'91',ad:'SENTETİK DOKUZ',sube:'102',sinif:9,denemeler:[{id:'m:91',ad:'Deneme',tarih:'2026-10-20',tur:'TYT',oturum:'TYT',dersler:[{kod:'mat',dogru:10,yanlis:0}]}]}];D.etutPlani={surum:1,ts:1,gunler:[[],[],[],[],[]],programlar:{'9/A':{...program,ts:1},'10/B':{...program,kod:'105',ts:1,dersler:[[0,program.saatler[0],'KİMYA','BAŞKA SINIF HOCASI']]}}};",ctx);
+ const before=vm.runInContext('JSON.stringify(D)',ctx),m=R.model(),s=m.students[0];assert.equal(s.cls,'9/A');assert(s.hasTimetable);assert.equal(s.teachers.length,3);assert.deepEqual(plain(s.teachers.find(t=>t.teacher==='SENTETİK HOCA').courses),['MATEMATİK','REHBERLİK']);
+ const svg=R.svgReport(s,'2026-10-25');for(const name of ['SENTETİK HOCA','SENTETİK SPOR','SENTETİK DİL'])assert(svg.includes(name+' · 0 etüt'));assert(svg.includes('Beden eğitimi'));assert(!svg.includes('BAŞKA SINIF HOCASI'));assert(!svg.includes('Haftalık ders programı eklenmemiş'));assert.equal(vm.runInContext('JSON.stringify(D)',ctx),before);assert.equal(m.sources.programs,2);
 });
 check('source embedding is current and idempotent',()=>{require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs','--check']);const before=fs.readFileSync('index.html','utf8');require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs']);assert.equal(fs.readFileSync('index.html','utf8'),before)});
 console.log(passed+' student report checks passed');
