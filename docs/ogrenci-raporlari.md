@@ -1,7 +1,10 @@
 # Öğrenci raporları
 
-9. ve 10. sınıflarda yalnızca TYT ve TYT ders grafikleri tam genişlikte gösterilir;
-AYT bölümü yer almaz. Etüt kaydı olmayan öğrencilerde “Öğrencinin Etüt Talebi
+9. ve 10. sınıflarda TYT'nin yanında AYT yerine İngilizce sınav puanları gösterilir.
+Fly Higher Placement, A1+ Starter ve A2 Starter PDF'leri **İngilizce PDF ekle** ile
+bu sayfaya eklenir. Placement puanı 100 ile çarpılır (0,55 → 55); Starter puanları
+aynen kullanılır. Kaynaktaki puan, net ve doğru/yanlış değerleri ayrıca korunur.
+Etüt kaydı olmayan öğrencilerde “Öğrencinin Etüt Talebi
 Olmamıştır” yazılır.
 
 Ödev ve etüt grafiklerinde aynı dersin TYT/AYT, numaralı ve soru çözümü kayıtları
@@ -10,13 +13,20 @@ haftalık etüt adetleri toplanır; kaynak kayıtlar ve deneme dersleri değişm
 Ödevlerde Matematik TYT ve Matematik AYT ayrı tutulur; oturumu yazılmamış
 Matematik kayıtlarına oturum atanmaz. Türkçe ve Edebiyat ayrı derslerdir (EA dahil).
 Etüt grafiklerinin altında öğretmen başına toplam etüt sayısı gösterilir.
+Alttaki öğretmenler bölümüne, **Etüt planı → Ders programları** içinde kayıtlı sınıf
+programının bütün öğretmenleri ve dersleri gelir; etüt kaydı olmayan öğretmenler de
+0 ile görünür. Bir öğretmenin birden fazla dersi varsa hepsi yazılır. Ders programında
+bulunmayan fakat öğrencinin etüt aldığı öğretmenler **Etüt** etiketiyle eklenir.
+Programı eklenmemiş sınıfta bu durum açıkça belirtilir; etüt kayıtlarından ders
+öğretmeni tahmin edilmez.
 Deneme adının altında Sıralamalar’da seçili **Tarama / Genel** türü gösterilir.
 
 Rehber öğretmen menüsünde **Öğrenciler → Öğrenci raporları** bölümünü açın.
 Sitedeki kayıtlar kendiliğinden kullanılır: denemeler **Sıralamalar**’dan ve öğrencilerin
 girdiği sonuçlardan, etütler **Etütler**’den, devam **Yoklama**’dan gelir. Sayfanın üstünde
 dört kaynak, kaç kayıt geldiği ve tarih aralığı yazar; düğmesi o sayfayı açar. Bu sayfada
-yalnızca **Ödev raporu ekle** ile Öğrenci Ev Ödev Durum Raporu eklenir. Etüt ya da yoklama
+**Ödev raporu ekle** ile Öğrenci Ev Ödev Durum Raporu ve **İngilizce PDF ekle** ile
+İngilizce sonuç listeleri eklenir. Etüt ya da yoklama
 raporu veya deneme listesi (her sınıf düzeyininki) seçilirse eklenmez; hangi sayfadan
 ekleneceği yazılır.
 Sınıfı ve öğrenciyi seçip **Öğrenci PDF** veya **Sınıf / tümü PDF** düğmesine basın.
@@ -57,7 +67,7 @@ Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi k
 ## Kaynaklar ve saklama
 
 PDF’ler tarayıcıda okunur; sunucuya veya öğrenci defterine yazılmaz. Bu sayfada eklenen
-ödev raporları sayfa yenilenince, temizlenince veya başka defter açılınca kaldırılır.
+ödev ve İngilizce raporları sayfa yenilenince, temizlenince veya başka defter açılınca kaldırılır.
 Sitedeki mevcut kayıtlar etkilenmez; Sıralamalar, Etütler ve Yoklama’ya eklenen raporlar
 defterde kalır ve raporlarda hep görünür. Aynı dosya adı tekrar eklenirse önceki içe
 aktarımın yerini alır. Aynı sınav adı/tarih/oturum tekrar sayılmaz. Etüt raporu kendi
