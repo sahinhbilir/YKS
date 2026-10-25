@@ -17497,7 +17497,7 @@ const C={ink:'#213d40',muted:'#657878',green:'#168d7d',amber:'#e5a044',red:'#bf6
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n===null||n===undefined?'—':Number(n).toLocaleString('tr-TR',{maximumFractionDigits:2});
 function svgReport(s,reportDate){
- const out=[];
+ const out=[],grade=Number(s.grade)||parseInt(cls(s.cls),10),showAYT=![9,10].includes(grade);
  const text=(x,y,t,size=12,color=C.ink,bold=false,anchor='start')=>out.push('<text x="'+x+'" y="'+y+'" font-size="'+size+'" fill="'+color+'" font-weight="'+(bold?700:400)+'" text-anchor="'+anchor+'">'+esc(t)+'</text>');
  const rect=(x,y,w,h,fill='#fff',r=12)=>out.push('<rect x="'+x+'" y="'+y+'" width="'+Math.max(0,w)+'" height="'+Math.max(0,h)+'" rx="'+Math.min(r,h/2,w/2)+'" fill="'+fill+'"/>');
  const line=(x1,y1,x2,y2,color=C.gray,width=1)=>out.push('<path d="M'+x1+','+y1+' L'+x2+','+y2+'" fill="none" stroke="'+color+'" stroke-width="'+width+'"/>');
@@ -17525,7 +17525,7 @@ function svgReport(s,reportDate){
   lessons.forEach(([code,label],i)=>{const bx=x+(i%columns)*(cw+8),by=302+Math.floor(i/columns)*(ch+8);rect(bx,by,cw,ch);text(bx+9,by+17,label,11,C.ink,true);graph(exams,exams.map(e=>e.nets[code]??null),bx+10,by+36,cw-20,ch-48)});
  }
  rect(0,0,W,H,C.bg,0);text(28,28,s.school||'ÖĞRENCİ RAPORU',11,C.muted,true);text(28,59,s.name,27,C.ink,true);text(28,80,[s.cls,s.no].filter(Boolean).join(' / '),12,C.muted);text(W-28,47,display(reportDate),12,C.muted,false,'end');
- for(const [session,x,w] of [['TYT',26,558],['AYT',600,564]]){
+ for(const [session,x,w] of showAYT?[['TYT',26,558],['AYT',600,564]]:[['TYT',26,1138]]){
   rect(x,96,w,174);text(x+18,121,session+(session==='AYT'?' · tüm derslerin neti':' · toplam net'),17,C.ink,true);
   const ex=s.exams.filter(e=>e.session===session);graph(ex,ex.map(e=>Object.values(e.nets).reduce((a,b)=>a+(b||0),0)),x+42,144,w-78,65,true);lessonCharts(session,x,w);
  }
@@ -17554,15 +17554,14 @@ function svgReport(s,reportDate){
  }else text(475,650,'Ödev kaydı yok',15,C.muted,false,'middle');
  // Weekly chart plus course/weekly heatmap: every session contributes exactly once.
  rect(680,508,484,308);text(697,535,'Etüt · hafta ve ders',17,C.ink,true);text(1146,535,s.sessions.length+' etüt',15,C.green,true,'end');
- if(s.weeks.length){text(697,556,display(s.sessionStart||s.weeks[0].date)+' - '+display(s.sessionEnd||iso(day(s.weeks.at(-1).date)+6)),11,C.muted);
+ if(s.sessions.length&&s.weeks.length){text(697,556,display(s.sessionStart||s.weeks[0].date)+' - '+display(s.sessionEnd||iso(day(s.weeks.at(-1).date)+6)),11,C.muted);
   const n=s.weeks.length,left=800,cw=345/n,max=Math.max(1,...s.weeks.map(w=>w.count));
   s.weeks.forEach((w,i)=>{const x=left+(i+.5)*cw,height=42*w.count/max;rect(x-cw*.3,619-height,cw*.6,height,C.green,3);if(n<=20||i%Math.ceil(n/10)===0)text(x,611-height,w.count,10,C.green,true,'middle');if(i%Math.max(1,Math.ceil(n/10))===0)text(x,636,display(w.date).slice(0,5),10,C.muted,false,'middle')});
   const courses=[...new Set(s.sessions.map(e=>courseName(e.course)))].sort((a,b)=>a.localeCompare(b,'tr'));
-  if(!courses.length)text(922,710,'Etüt kaydı yok',15,C.muted,false,'middle');
   const rh=Math.min(20,156/Math.max(1,courses.length));courses.forEach((c,j)=>{const yy=653+j*rh;out.push('<g><title>'+esc(c)+'</title>');text(697,yy+11,c.length>15?c.slice(0,14)+'…':c,10,C.muted);
    s.weeks.forEach((w,i)=>{const v=w.courses[c]||0,x=left+i*cw;rect(x+1,yy,cw-2,rh-3,v?'#c7e5d7':'#f0f3f0',3);if(v&&n<=20)text(x+cw/2,yy+11,v,10,C.green,true,'middle')});out.push('</g>');
   });
- }else text(922,650,'Etüt kaydı yok',15,C.muted,false,'middle');
+ }else text(922,650,'Öğrencinin Etüt Talebi Olmamıştır',15,C.muted,false,'middle');
  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.name+' bireysel raporu')+'" font-family="Arial, sans-serif">'+out.join('')+'</svg>';
 }
 /* ---------------- teacher workspace and download ---------------- */
@@ -17576,7 +17575,7 @@ function siteReports(){
  DERSLIK.clear();const sr=SIRALAMA.oku().veri;
  for(const x of sr?sr.sinavlar:[])for(const sl of [x.T,x.F])for(const o of sl?sl.ogr:[])dersligiOgren(o.snf);
  for(const r of FILES.values())(r.derslikler||[]).forEach(dersligiOgren);
- const reports=[],roster=(D.ogr||[]).filter(o=>!o.silindi).map(o=>({no:String(o.no||''),name:o.ad,cls:cls(o.sube||'')}));
+ const reports=[],roster=(D.ogr||[]).filter(o=>!o.silindi).map(o=>({no:String(o.no||''),name:o.ad,cls:cls(o.sube||''),grade:o.sinif}));
  const {veri,hata}=SIRALAMA.oku();if(hata)throw new Error(hata);
  if(veri){const exams=[],students=[];let school='';const keys={TYT:['TÜR','TAR','COĞ','FEL','DİN','S.F','MAT','GEO','FİZ','KİM','BİY'],AYT:['EDB','TAR1','COĞ1','TAR2','COĞ2','FELGR','DİN2','S.F2','AMAT','AGEO','AFİZ','AKİM','ABİY']};
   for(const e of SIRALAMA.modeller(veri))for(const session of ['TYT','AYT']){const data=e[session.toLowerCase()];if(!data)continue;

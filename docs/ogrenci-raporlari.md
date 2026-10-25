@@ -1,5 +1,9 @@
 # Öğrenci raporları
 
+9. ve 10. sınıflarda yalnızca TYT ve TYT ders grafikleri tam genişlikte gösterilir;
+AYT bölümü yer almaz. Etüt kaydı olmayan öğrencilerde “Öğrencinin Etüt Talebi
+Olmamıştır” yazılır.
+
 Ödev ve etüt grafiklerinde aynı dersin TYT/AYT, numaralı ve soru çözümü kayıtları
 birleştirilir (ör. Fizik 1 + Fizik 2 + Fizik → Fizik). Ödevlerin tüm durumları ve
 haftalık etüt adetleri toplanır; kaynak kayıtlar ve deneme dersleri değişmez.
