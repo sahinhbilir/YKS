@@ -31,10 +31,10 @@ Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi k
   SAY netini (Matematik + Geometri + Fizik + Kimya + Biyoloji) gösterir.
   AYT dersleri alt alta Matematik, Fen, Türk Dili ve Edebiyatı–Sosyal 1, Sosyal 2
   gruplarında yer alır. Eksik sonuç sıfır olarak çizilmez; kayıtlı sıfır net korunur.
-- AYT grafiğinin yanında son AYT sınavının tarihi ve kaynaktaki SAY, EA, SÖZ puanları
-  gösterilir. Eksik puan “—” olarak kalır; netlerden puan hesaplanmaz ve önceki
-  sınavın puanı yeni sınavın yerine kullanılmaz. Elle girilen puan yalnızca kaydın
-  belirtilen alanına aittir.
+- AYT grafiğinin yanında son AYT sınavının tarihi ve SAY, EA, SÖZ netleri gösterilir.
+  Her alanın neti, o alanın derslerinin netlerinin toplamıdır (okul listesindeki gibi;
+  çözülmeyen ders 0 sayılır). Hiç ders sonucu yoksa “—” olarak kalır ve önceki sınavın
+  neti yeni sınavın yerine kullanılmaz. Yayınevi puanları bu kutuda gösterilmez.
 - Öğrenci yalnızca kendi sonuçlarını görür. Sıralama, sınıf ortalaması ve öneri yoktur.
 - Devam, Yoklama sayfasındaki kayıtlardan hesaplanır: her dersin kodu Geldi, Gecikti,
   Gelmedi ya da Mazeretli (Raporlu ve Diğer) olarak okunur. Devam yüzdesi gün bazındadır. En az 3 dersin kaydı bulunan ve kayıtlı derslerin

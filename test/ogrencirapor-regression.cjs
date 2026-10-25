@@ -129,21 +129,21 @@ check('no etut uses the requested message both with and without a source date ra
 check('AYT class tracks use only their own net lessons and groups stay in the requested vertical order',()=>{
  const person={no:'31',name:'SENTETİK ALAN',cls:'12/A'},exam={...person,exam:'Alan denemesi',date:'2026-10-23',session:'AYT',nets:{mat:20,geo:5,fizik:10,kimya:9,biyoloji:8,edebiyat:15,tarih1:6,cografya1:4,tarih2:7,cografya2:8,felsefe:9,din:3,sf:1.25},scores:{SAY:350.25,EA:321.5,'SÖZ':290.75}},s=R.merge([{students:[person],exams:[exam]}]).students[0],before=JSON.stringify(s);
  for(const [cls,track,net] of [['11/A','EA',50],['12/A','EA',50],['11 A','EA',50],['12-A','EA',50],['301 12/A','EA',50],['11A','EA',50],['11/B','SAY',52],['12/C','SAY',52],['12/AA','SAY',52]]){
-  const svg=R.svgReport({...s,cls},'2026-10-25'),start=svg.indexOf('aria-label="AYT '+track+' net grafiği"'),main=svg.slice(start,svg.indexOf('Son AYT puanları'));
-  assert(start>=0,cls);assert(main.includes(' · '+net+' net</title>'),cls);assert(!main.includes('105,25 net'));for(const [k,v] of [['SAY','350,25'],['EA','321,5'],['SÖZ','290,75']])assert(svg.includes('aria-label="'+k+' puanı · '+v+'"'));
+  const svg=R.svgReport({...s,cls},'2026-10-25'),start=svg.indexOf('aria-label="AYT '+track+' net grafiği"'),main=svg.slice(start,svg.indexOf('Son AYT netleri'));
+  assert(start>=0,cls);assert(main.includes(' · '+net+' net</title>'),cls);assert(!main.includes('105,25 net'));for(const [k,v] of [['SAY','52'],['EA','50'],['SÖZ','53,25']])assert(svg.includes('aria-label="'+k+' neti · '+v+'"'));assert(!svg.includes('puanı'));
   const positions=['AYT Matematik','AYT Fen','AYT Türk Dili ve Edebiyatı · Sosyal 1','AYT Sosyal 2'].map(label=>svg.indexOf('aria-label="'+label+'"'));assert(positions.every((v,i)=>v>=0&&(!i||v>positions[i-1])));
  }
  assert(R.svgReport({...s,cls:'A',grade:11},'2026-10-25').includes('AYT · EA neti'));assert.equal(JSON.stringify(s),before);
- const missing=R.svgReport({...s,cls:'12/B',exams:[{...exam,nets:{edebiyat:12}}]},'2026-10-25');assert(!missing.slice(missing.indexOf('AYT SAY net grafiği'),missing.indexOf('Son AYT puanları')).includes('net</title>'));
+ const missing=R.svgReport({...s,cls:'12/B',exams:[{...exam,nets:{edebiyat:12}}]},'2026-10-25');assert(!missing.slice(missing.indexOf('AYT SAY net grafiği'),missing.indexOf('Son AYT netleri')).includes('net</title>'));
  const zero=R.svgReport({...s,exams:[{...exam,nets:{mat:0}}]},'2026-10-25');assert(zero.includes(' · 0 net</title>'));
 });
 check('AYT scores come from the result list and latest exam, with no invented or stale score',()=>{
  ctx.exam=okulListesi(SINAVLAR.sonra.F);vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[];D.siralama=SIRALAMA.oku().veri;SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(exam.pages,exam.boylar));",ctx);
- const before=vm.runInContext('JSON.stringify(D)',ctx),s=R.model().students.find(s=>s.no==='1001'),ex=s.exams.find(e=>e.session==='AYT');assert.deepEqual(plain(ex.scores),{SAY:300,EA:330,'SÖZ':290});assert.equal(vm.runInContext('JSON.stringify(D)',ctx),before);
+ const before=vm.runInContext('JSON.stringify(D)',ctx),s=R.model().students.find(s=>s.no==='1001'),ex=s.exams.find(e=>e.session==='AYT');assert.deepEqual(plain(ex.scores),{SAY:300,EA:330,'SÖZ':290});assert.deepEqual(plain(ex.fields),{SAY:20.5,EA:47.5,'SÖZ':27});assert.equal(vm.runInContext('JSON.stringify(D)',ctx),before);
  const latest={...ex,exam:'Yeni sınav',date:'2026-10-24',scores:{EA:0}},svg=R.svgReport({...s,exams:[...s.exams,latest]},'2026-10-25');
- for(const label of ['SAY puanı · —','EA puanı · 0','SÖZ puanı · —'])assert(svg.includes('aria-label="'+label+'"'));assert(!svg.includes('SAY puanı · 300'));assert(svg.includes('24.10.2026'));
+ for(const label of ['SAY neti · 20,5','EA neti · 47,5','SÖZ neti · 27'])assert(svg.includes('aria-label="'+label+'"'));assert(!svg.includes('puanı'));assert(svg.includes('24.10.2026'));
  vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'1',ad:'SENTETİK ELLE',sube:'12/A',sinif:12,denemeler:[{id:'m:alan',ad:'Elle AYT',tarih:'2026-10-24',tur:'AYT',oturum:'AYT',alan:'EA',puan:345.75,dersler:[{kod:'mat',dogru:10,yanlis:0}]}]}];",ctx);
- const manual=R.model().students[0];assert.deepEqual(plain(manual.exams[0].scores),{EA:345.75});assert(R.svgReport(manual,'2026-10-25').includes('EA puanı · 345,75'));
+ const manual=R.model().students[0];assert.deepEqual(plain(manual.exams[0].scores),{EA:345.75});assert(R.svgReport(manual,'2026-10-25').includes('EA neti · 10'));
 });
 check('source embedding is current and idempotent',()=>{require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs','--check']);const before=fs.readFileSync('index.html','utf8');require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs']);assert.equal(fs.readFileSync('index.html','utf8'),before)});
 console.log(passed+' student report checks passed');
