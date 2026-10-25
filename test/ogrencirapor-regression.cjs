@@ -44,7 +44,7 @@ check('homework: every status is drawn; homework the report has not marked count
  const s=R.merge([parse(homework())]).students.find(s=>s.no==='1001'),svg=R.svgReport(s,'2026-10-24');
  // Toplam 11 printed: Tamamladı 6, Eksik 1, Yapmadı 2, Gelmedi 1 and one not marked, which is left out.
  assert.deepEqual(plain(s.homework.map(h=>h.values[0])),[4,2,4]);
- for(const t of ['6 / 10','Tamamladı 6','Eksik 1','Yapmadı 2','Gelmedi 1','Matematik','İnkılap tarihi','Kimya','Matematik · Toplam 4 · Tamamladı 3 · Eksik 1'])assert(svg.includes(t),t);
+ for(const t of ['6 / 10','Tamamladı 6','Eksik 1','Yapmadı 2','Gelmedi 1','Matematik TYT','İnkılap tarihi','Kimya','Matematik TYT · Toplam 4 · Tamamladı 3 · Eksik 1'])assert(svg.includes(t),t);
  assert(!/Getirmedi 0|6 \/ 11|şaretlenmemiş/.test(svg));
  // The same lesson printed twice (FİZİK and Fizik) is one row; a lesson with nothing marked is not shown.
  const h=(course,values)=>({no:'7',name:'SENTETİK EFE',cls:'10/B',course,values,reportDate:'2026-10-24',assignmentDate:null});
@@ -61,8 +61,21 @@ check('homework and weekly etut group subject variants, preserve all statuses an
  const before=JSON.stringify(r),s=R.merge([r]).students[0],svg=R.svgReport(s,'2026-10-25'),hw=svg.slice(svg.indexOf('Ödevler · derslere göre'),svg.indexOf('Etüt · hafta ve ders'));
  assert.deepEqual(plain(s.weeks[0].courses),{Kimya:2,Fizik:3,Geometri:2,Matematik:2,Biyoloji:2,Tarih:2,Türkçe:1,Edebiyat:1});assert.equal(s.weeks[1].count,0);
  assert(hw.includes('Fizik · Toplam 63 · Tamamladı 3 · Eksik 6 · Getirmedi 9 · Geç getirdi 12 · Yapmadı 15 · Gelmedi 18'));
- for(const label of ['Kimya','Fizik','Geometri','Matematik','Biyoloji','Tarih'])assert.equal((hw.match(new RegExp('>'+label+'<','g'))||[]).length,1,label);
+ for(const label of ['Kimya','Fizik','Geometri','Matematik TYT','Matematik AYT','Biyoloji','Tarih','Türkçe','Edebiyat'])assert.equal((hw.match(new RegExp('>'+label+'<','g'))||[]).length,1,label);
  assert(hw.includes('15 / 315'));assert(!/Kimya TYT|Fizik 1|Geometri soru/.test(svg));assert.deepEqual(plain(s.exams),r.exams);assert.equal(JSON.stringify(r),before);
+});
+check('only homework mathematics keeps TYT and AYT separate; Turkish and literature stay distinct for EA',()=>{
+ const person={no:'20',name:'SENTETİK EA',cls:'12/EA'},courses=['TYT MATEMATİK','MATEMATİK TYT SORU ÇÖZÜMÜ','AYT MATEMATİK','MATEMATİK AYT 2','MATEMATİK','TÜRKÇE TYT','TÜRKÇE SORU ÇÖZÜMÜ','EDEBİYAT AYT','TÜRK DİLİ VE EDEBİYATI'];
+ const source={students:[person],homework:courses.map(course=>({...person,course,values:[6,1,1,1,1,1,1],reportDate:'2026-10-25'}))},before=JSON.stringify(source),s=R.merge([source]).students[0],svg=R.svgReport(s,'2026-10-25');
+ for(const label of ['Matematik TYT','Matematik AYT','Türkçe','Edebiyat'])assert(svg.includes(label+' · Toplam 12 · Tamamladı 2 · Eksik 2 · Getirmedi 2 · Geç getirdi 2 · Yapmadı 2 · Gelmedi 2'),label);
+ assert(svg.includes('Matematik · Toplam 6'));assert(svg.includes('9 / 54'));assert.equal(JSON.stringify(source),before);
+});
+check('teacher totals count every etut once across lessons, merge spacing/case, and preserve missing teachers',()=>{
+ const person={no:'21',name:'SENTETİK ÖĞRENCİ',cls:'12/A'},teachers=['SENTETİK IŞIK','  sentetik   ışık  ','SENTETİK IŞIK','SENTETİK İPEK',''],source={students:[person],start:'2026-10-01',end:'2026-10-25',sessions:teachers.map((teacher,i)=>({...person,teacher,course:i%2?'FİZİK 2':'FİZİK 1',date:'2026-10-'+(20+i)}))};
+ const before=JSON.stringify(source),s=R.merge([source]).students[0],svg=R.svgReport(s,'2026-10-25');
+ assert(svg.includes('Öğretmen · toplam etüt'));for(const t of ['SENTETİK IŞIK · 3 etüt','SENTETİK İPEK · 1 etüt','Öğretmen belirtilmemiş · 1 etüt'])assert(svg.includes('aria-label="'+t+'"'),t);
+ assert.equal([...svg.matchAll(/aria-label="[^"]* · (\d+) etüt"/g)].reduce((n,m)=>n+Number(m[1]),0),s.sessions.length);assert.equal(s.weeks.reduce((n,w)=>n+w.count,0),5);assert.equal(JSON.stringify(source),before);
+ const safe=R.svgReport({...s,sessions:[{...s.sessions[0],teacher:'<script>&"'}]},'2026-10-25');assert(safe.includes('&lt;script&gt;&amp;&quot;'));assert(!safe.includes('<script>'));
 });
 check('exam labels honor saved Tarama/Genel overrides in both sessions; manual exams use the existing name rule',()=>{
  ctx.l=okulListesi(SINAVLAR.sonra.F);
