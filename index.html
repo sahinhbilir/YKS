@@ -17422,7 +17422,7 @@ function attendancePdf(pages){
    for(const d of block){const statuses=headers.map((h,j)=>{const half=j?Math.abs(cx(h)-cx(headers[j-1]))/2:22;
      const cell=p.filter(o=>Math.abs(cx(o)-cx(h))<half&&Math.abs(o.y-d.y)<10),text=join(cell);
      if(!text)return '';
-     if(/Mazeretli/.test(text))return 'Mazeretli';if(/Gelmedi/.test(text))return 'Gelmedi';if(/Gecikti/.test(text))return 'Gecikti';if(/Geldi/.test(text))return 'Geldi';throw new Error('Yoklama durumu okunamadı: '+text);
+     if(/Raporlu/.test(text))return 'Raporlu';if(/Mazeretli/.test(text))return 'Mazeretli';if(/Gelmedi/.test(text))return 'Gelmedi';if(/Gecikti/.test(text))return 'Gecikti';if(/Geldi/.test(text))return 'Geldi';throw new Error('Yoklama durumu okunamadı: '+text);
     });attendance.push({...s,date:date(d.s),statuses});}
   });
  }
@@ -17458,11 +17458,11 @@ function parse(pages,boylar){
  throw new Error('Ödev veya İngilizce sonuç raporu seçin.');
 }
 function attendanceSummary(rows){
- const out={present:0,half:0,full:0,unknown:0,days:rows.length,percent:null};
- for(const r of rows){const recorded=r.statuses.filter(Boolean),missed=recorded.filter(v=>v==='Gelmedi'||v.startsWith('Mazeretli')).length;
+ const out={present:0,half:0,full:0,missed:0,unknown:0,days:rows.length,percent:null};
+ for(const r of rows){const recorded=r.statuses.filter(Boolean),missed=recorded.filter(v=>v==='Gelmedi'||v.startsWith('Mazeretli')||v==='Raporlu').length;
   if(!recorded.length)out.unknown++;else if(missed===recorded.length&&missed>=3)out.full++;else if(missed>=3)out.half++;else out.present++;
  }
- const known=out.days-out.unknown;out.percent=known?100*(out.present+out.half/2)/known:null;return out;
+ out.missed=out.full+out.half;const known=out.days-out.unknown;out.percent=known?100*out.present/known:null;return out;
 }
 // Report-only grouping: keep the original sources and all deneme subject keys intact.
 function courseName(course){
@@ -17536,8 +17536,9 @@ function teacherSubject(course){
  const names=[[/BEDEN/,'Beden'],[/GORSEL.*SANAT/,'Görsel sanatlar'],[/TEMEL DIN|^DIN/,'Din'],[/SAGLIK.*TRAFIK/,'Biyoloji'],[/MATEMATIK/,'Matematik'],[/GEOMETRI/,'Geometri'],[/EDEBIYAT/,'Edebiyat'],[/TURKCE/,'Türkçe'],[/FIZIK/,'Fizik'],[/KIMYA/,'Kimya'],[/BIYOLOJI/,'Biyoloji'],[/TARIH|INKILAP/,'Tarih'],[/COGRAFYA/,'Coğrafya'],[/FELSEFE|MANTIK|PSIKOLOJI|SOSYOLOJI/,'Felsefe'],[/INGILIZCE|YABANCI DIL/,'İngilizce']];
  return names.find(([re])=>re.test(k))?.[1]||'';
 }
+const teacherCourseVisible=c=>!/ADAB.*MUASERET/.test(nameKey(c).normalize('NFD').replace(/[\u0300-\u036f]/g,''));
 function teacherLabels(t){
- const labels=[...new Set(t.courses.map(c=>teacherSubject(c)||(/REHBERLİK|FEN BİLİM|UYGULAMALI DENEY/i.test(nameKey(c))&&t.mainSubject)||dersAdi(c)))];
+ const labels=[...new Set(t.courses.filter(teacherCourseVisible).map(c=>teacherSubject(c)||(/REHBERLİK|FEN BİLİM|UYGULAMALI DENEY/i.test(nameKey(c))&&t.mainSubject)||dersAdi(c)))];
  return labels.filter(c=>c!=='Rehberlik'||labels.length===1).join(', ');
 }
 const C={ink:'#213d40',muted:'#657878',green:'#168d7d',amber:'#e5a044',red:'#bf6951',blue:'#6799c5',gray:'#d9dfdc',bg:'#f6f5f0',pale:'#e6f2ec'},W=1190.55,H=841.89;
@@ -17555,9 +17556,9 @@ function svgReport(s,reportDate){
  const width=(label,size)=>{if(measure){measure.font=size+'px Arial';return measure.measureText(label).width}return [...label].length*size*.6};
  const fit=(value,maxWidth,size)=>{const label=String(value);if(width(label,size)<=maxWidth)return label;const chars=[...label];let lo=0,hi=chars.length;while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(width(chars.slice(0,mid).join('')+'…',size)<=maxWidth)lo=mid;else hi=mid-1}return chars.slice(0,lo).join('').trimEnd()+'…'};
  const wrap=(value,maxWidth,size)=>{const lines=[];let line='';for(const word of String(value).trim().split(/\s+/)){const next=line?line+' '+word:word;if(width(next,size)<=maxWidth){line=next;continue}if(line){lines.push(line);line=''}for(const char of word){if(line&&width(line+char,size)>maxWidth){lines.push(line);line=''}line+=char}}if(line)lines.push(line);return lines.length?lines:['']};
- const staff=(s.teachers||[]).slice().sort((a,b)=>a.teacher.localeCompare(b.teacher,'tr')),staffPad=18,staffGap=24,staffSubjectGap=16,staffCols=2,staffWidth=(640-staffPad*2-staffGap)/staffCols,subjectWidth=88,staffNameWidth=staffWidth-staffSubjectGap-subjectWidth,staffFont=11,staffLine=13;
+ const staff=(s.teachers||[]).map(t=>({...t,courses:t.courses.filter(teacherCourseVisible)})).filter(t=>t.courses.length).sort((a,b)=>a.teacher.localeCompare(b.teacher,'tr')),staffPad=18,staffGap=24,staffSubjectGap=16,staffCols=2,staffWidth=(640-staffPad*2-staffGap)/staffCols,subjectWidth=88,staffNameWidth=staffWidth-staffSubjectGap-subjectWidth,staffFont=11,staffLine=13;
  const staffRows=[];for(let i=0;i<staff.length;i+=staffCols){const cells=staff.slice(i,i+staffCols).map(t=>({t,names:wrap(t.teacher,staffNameWidth,staffFont),subjects:wrap(teacherLabels(t),subjectWidth,staffFont)}));staffRows.push({cells,height:Math.max(...cells.map(c=>Math.max(c.names.length,c.subjects.length)))*staffLine})}
- const staffHeight=staffPad*2+20+6+(staffRows.length?staffRows.reduce((n,r)=>n+r.height,0):staffLine),staffTop=816-staffHeight,leftBottom=staffTop-12,leftHeight=leftBottom-478,countY=leftBottom-32,ringBottom=countY-31,ringY=(536+ringBottom)/2,ringRadius=Math.min(43,Math.max(8,(ringBottom-536)/2));
+ const staffHeight=staffPad*2+20+6+(staffRows.length?staffRows.reduce((n,r)=>n+r.height,0):staffLine),staffTop=816-staffHeight,leftBottom=staffTop-12,leftHeight=leftBottom-478,attendanceTop=540,attendanceBottom=leftBottom-18,ringY=(attendanceTop+attendanceBottom)/2,ringRadius=Math.min(38,Math.max(18,(attendanceBottom-attendanceTop-13)/2));
  const rect=(x,y,w,h,fill='#fff',r=12)=>out.push('<rect x="'+x+'" y="'+y+'" width="'+Math.max(0,w)+'" height="'+Math.max(0,h)+'" rx="'+Math.min(r,h/2,w/2)+'" fill="'+fill+'"/>');
  const line=(x1,y1,x2,y2,color=C.gray,width=1)=>out.push('<path d="M'+x1+','+y1+' L'+x2+','+y2+'" fill="none" stroke="'+color+'" stroke-width="'+width+'"/>');
  const dot=(x,y,r=3,color=C.green)=>out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#fff" stroke="'+color+'" stroke-width="1.7"/>');
@@ -17608,11 +17609,12 @@ function svgReport(s,reportDate){
  }
  if(!showAYT){rect(600,96,564,366);text(618,121,'İngilizce Sınav Puanları',17,C.ink,true);const ex=s.exams.filter(e=>e.session==='ENGLISH');out.push('<g aria-label="İngilizce puan grafiği">');graph(ex,ex.map(e=>e.scores.ENGLISH),642,157,486,235,true,true,'puan',false,100);out.push('</g>')}
  // Attendance percentage is based on the same day classifications shown below it.
- rect(26,478,244,leftHeight);text(44,505,'Yoklama',17,C.ink,true);
- if(s.attendance.length){text(44,526,display(s.attendance[0].date)+' - '+display(s.attendance.at(-1).date),11,C.muted);ring(148,ringY,ringRadius,s.daily.percent);text(148,ringY+7,s.daily.percent===null?'—':'%'+fmt(Math.round(s.daily.percent*10)/10),25,C.green,true,'middle');
-  const entries=[['Okulda',s.daily.present,C.green],['Yarım gün',s.daily.half,C.amber],['Tam gün yok',s.daily.full,C.red]];
-  entries.forEach(([label,n,color],i)=>{const x=69+i*78;text(x,countY,n,23,color,true,'middle');text(x,leftBottom-10,label,11,C.muted,false,'middle')});
- }else text(148,600,'Yoklama kaydı yok',15,C.muted,false,'middle');
+ out.push('<g aria-label="Yoklama">');rect(26,478,244,leftHeight);text(44,505,'Yoklama',17,C.ink,true);
+ if(s.attendance.length){text(44,526,display(s.attendance[0].date)+' - '+display(s.attendance.at(-1).date),11,C.muted);const percent=s.daily.percent===null?'—':'%'+fmt(Math.round(s.daily.percent*10)/10),percentSize=Math.min(23,23*(ringRadius*2-13)*.88/width(percent,23));
+  out.push('<g aria-label="Devam yüzdesi · '+esc(percent)+'">');ring(96,ringY,ringRadius,s.daily.percent);text(96,ringY,percent,percentSize,C.green,true,'middle',true);out.push('</g>');
+  const entries=[['Okulda',s.daily.present,C.green],['Kaçırdığı günler',s.daily.missed,C.red]],step=Math.min(48,(attendanceBottom-attendanceTop)/2);
+  entries.forEach(([label,n,color],i)=>{const y=ringY+(i-.5)*step;out.push('<g aria-label="'+esc(label+' · '+n)+'">');text(202,y-2,n,23,color,true,'middle');text(202,y+13,label,10.5,C.muted,false,'middle');out.push('</g>')});
+ }else text(148,ringY,'Yoklama kaydı yok',15,C.muted,false,'middle');out.push('</g>');
  // Homework rows remain attached to their source report date. No due date is invented.
  rect(284,478,382,leftHeight);text(301,505,'Ödevler',17,C.ink,true);
  if(s.homework.length){const rd=s.homework[0].reportDate;text(301,526,'Rapor: '+display(rd)+' · Ödev tarihi: belirtilmemiş',11,C.muted);
@@ -17685,10 +17687,10 @@ function siteReports(){
  const et=ETUT.oku();if(et.hata)throw new Error(et.hata);let etut=null;
  if(et.veri){const rows=ETUT.ac(et.veri);if(rows.length){const sessions=rows.map(r=>({name:r.ad,cls:cls(r.sinif),date:iso(r.g),course:r.brans,teacher:r.ogretmen,minutes:r.sure,time:r.saat}));
   etut={kind:'sessions',students:unique(sessions),start:iso(Math.min(...et.veri.kaynak.map(k=>k.bas),...rows.map(r=>r.g))),end:iso(Math.max(...et.veri.kaynak.map(k=>k.bit),...rows.map(r=>r.g))),sessions};reports.push(etut)}}
- // Yoklama: the page's lesson codes as the report's statuses (P Geldi, G Gecikti, A Gelmedi, M/R Mazeretli).
+ // Yoklama: the page's lesson codes as the report's statuses, including excused and medically reported absences.
  let yoklama=null;
  if(typeof YOKLAMA!=='undefined'){const yk=YOKLAMA.oku();if(yk.hata)throw new Error(yk.hata);
-  if(yk.veri){const DURUM={P:'Geldi',G:'Gecikti',A:'Gelmedi',M:'Mazeretli',R:'Mazeretli'},attendance=[];
+  if(yk.veri){const DURUM={P:'Geldi',G:'Gecikti',A:'Gelmedi',M:'Mazeretli',R:'Raporlu'},attendance=[];
    for(const o of YOKLAMA.ac(yk.veri))for(const [g,k] of o.gun)attendance.push({name:o.ad,no:'',cls:cls(o.sinif),date:iso(g),statuses:[...k].map(c=>DURUM[c]||'')});
    if(attendance.length){yoklama={kind:'attendance',students:unique(attendance),attendance,start:iso(yk.veri.gunler[0]),end:iso(yk.veri.gunler.at(-1))};reports.push(yoklama)}}}
  const exams=new Set(reports.flatMap(r=>r.exams||[]).map(e=>nameKey(e.exam)+'|'+e.date));
@@ -17722,7 +17724,7 @@ function view(){
   kaynak('İngilizce',dosyalar('english').length?esc(dosyalar('english').join(', ')):'İngilizce sınavı eklenmedi','<label class="dugme">İngilizce PDF ekle<input id="orEnglishFiles" type="file" accept="application/pdf,.pdf" multiple hidden'+disable+'></label>')+
   kaynak('Ders programları',src.programs?esc(src.programs)+' sınıfın öğretmenleri ve dersleri':'Haftalık ders programı eklenmedi',git('etutplani','Ders programları'))+
  '</ul>'+
- '<details class="or-sources"><summary>Kaynaklar ve hesaplama</summary><p>Denemeler Sıralamalar’dan ve öğrencilerin sonuçlarından, etütler Etütler’den, devam Yoklama’dan gelir; bu sayfalara eklenen raporlar burada kendiliğinden görünür. Ödev ve İngilizce raporları bu sayfada eklenir ve sayfa yenilenene kadar tutulur. 60 soruluk Fly Higher Placement neti 100 üzerinden gösterilir: net / 60 × 100 (60 net → 100). Starter puanları aynen kullanılır. Öğretmenler sınıfın Etüt planı içindeki haftalık ders programından gelir. Ödev raporunda görev/teslim tarihi yoksa rapor tarihi ayrı gösterilir. Ödevlerde her durum (tamamladı, eksik, getirmedi, geç getirdi, yapmadı, gelmedi) ayrı renktedir. Raporun henüz durum yazmadığı ödevler verilmemiş sayılır: toplam, durumların toplamıdır.</p><p>En az 3 ders kayıtlı ve hepsinde yok: tam gün. Diğer günlerde en az 3 ders yok: yarım gün. 0–2 ders yok: okulda. Mazeretli kayıtlar dahil, boş hücreler hariç. Devam yüzdesi = (okulda + yarım gün / 2) / durumu bilinen gün.</p><p>Grafiklerde her öğrencinin kendi sonuçları yer alır. AYT grafiği 11/A ve 12/A için EA, diğer 11. ve 12. sınıflarda SAY netini gösterir. Yandaki SAY, EA ve SÖZ değerleri son AYT sınavının alan netleridir. Etüt sayıları rapor kayıtlarıdır. Haftalar pazartesi başlar.</p><ul>'+[...FILES.entries()].map(([n,r])=>'<li>'+esc(n)+' <button type="button" class="dugme" data-or-remove="'+esc(n)+'"'+disable+'>Kaldır</button></li>').join('')+'</ul></details>'+
+ '<details class="or-sources"><summary>Kaynaklar ve hesaplama</summary><p>Denemeler Sıralamalar’dan ve öğrencilerin sonuçlarından, etütler Etütler’den, devam Yoklama’dan gelir; bu sayfalara eklenen raporlar burada kendiliğinden görünür. Ödev ve İngilizce raporları bu sayfada eklenir ve sayfa yenilenene kadar tutulur. 60 soruluk Fly Higher Placement neti 100 üzerinden gösterilir: net / 60 × 100 (60 net → 100). Starter puanları aynen kullanılır. Öğretmenler sınıfın Etüt planı içindeki haftalık ders programından gelir. Ödev raporunda görev/teslim tarihi yoksa rapor tarihi ayrı gösterilir. Ödevlerde her durum (tamamladı, eksik, getirmedi, geç getirdi, yapmadı, gelmedi) ayrı renktedir. Raporun henüz durum yazmadığı ödevler verilmemiş sayılır: toplam, durumların toplamıdır.</p><p>Bir günde en az 3 ders yoksa kaçırdığı günlere eklenir; mazeretli ve raporlu kayıtlar dahildir. 0–2 ders yoksa okulda sayılır. Boş hücreler devamsızlık sayılmaz; tamamen boş günler yüzdeye katılmaz. Devam yüzdesi = okulda gün / durumu bilinen gün.</p><p>Grafiklerde her öğrencinin kendi sonuçları yer alır. AYT grafiği 11/A ve 12/A için EA, diğer 11. ve 12. sınıflarda SAY netini gösterir. Yandaki SAY, EA ve SÖZ değerleri son AYT sınavının alan netleridir. Etüt sayıları rapor kayıtlarıdır. Haftalar pazartesi başlar.</p><ul>'+[...FILES.entries()].map(([n,r])=>'<li>'+esc(n)+' <button type="button" class="dugme" data-or-remove="'+esc(n)+'"'+disable+'>Kaldır</button></li>').join('')+'</ul></details>'+
  '<div class="arac"><label>Sınıf <select id="orClass"'+disable+'><option value="">Tüm sınıflar</option>'+classes.map(c=>'<option value="'+esc(c)+'"'+(c===FILTER?' selected':'')+'>'+esc(c||'Şube belirtilmemiş')+'</option>').join('')+'</select></label><label>Öğrenci <select id="orStudent"'+disable+'>'+list.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===SELECTED?' selected':'')+'>'+esc(s.name+' · '+s.cls)+'</option>').join('')+'</select></label></div>'+
  '<div class="arac"><button class="dugme birincil" id="orOne"'+(BUSY||!selected?' disabled':'')+'>Öğrenci PDF</button><button class="dugme" id="orAll"'+(BUSY||!list.length?' disabled':'')+'>Sınıf / tümü PDF ('+list.length+')</button></div>'+
  '<p id="orStatus" role="status" aria-live="polite">'+esc([STATUS,...m.warnings].filter(Boolean).join(' '))+'</p>'+
