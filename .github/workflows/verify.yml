@@ -28,7 +28,7 @@ jobs:
       - name: Sıralamalar comparison reports, storage and embedding
         run: node scripts/embed-siralamalar.cjs --check && node test/siralama-regression.cjs
       - name: Individual student visual reports and source validation
-        run: node scripts/embed-ogrencirapor.cjs --check && node test/ogrencirapor-regression.cjs
+        run: node scripts/embed-ogrencirapor.cjs --check && node test/ogrencirapor-regression.cjs && node test/ogrencirapor-exam-duplicate-regression.cjs
       - name: Shared charts (lines, measuring) and embedding
         run: node scripts/embed-grafik.cjs --check && node test/grafik-regression.cjs
       - name: Etütler report import, storage and embedding
