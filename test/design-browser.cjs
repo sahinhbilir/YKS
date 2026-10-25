@@ -42,6 +42,8 @@ const seed = () => {
         ? r.fulfill({status:200,contentType:'text/html',body:html}) : r.abort());
       const page = await context.newPage(), errors = [];
       page.on('pageerror', e => errors.push(e.message));
+      // The fixture needs a school day with results; real Sundays have no planned work.
+      await page.clock.setFixedTime(new Date('2026-10-16T12:00:00+03:00'));
       await page.goto('http://localhost/');
       await page.locator('#ogrenciGirisAd').waitFor();
       await readable(page, '#ogrenciBulutGiris');
