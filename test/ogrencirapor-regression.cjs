@@ -131,7 +131,7 @@ check('AYT class tracks use only their own net lessons and groups stay in the re
  for(const [cls,track,net] of [['11/A','EA',50],['12/A','EA',50],['11 A','EA',50],['12-A','EA',50],['301 12/A','EA',50],['11A','EA',50],['11/B','SAY',52],['12/C','SAY',52],['12/AA','SAY',52]]){
   const svg=R.svgReport({...s,cls},'2026-10-25'),start=svg.indexOf('aria-label="AYT '+track+' net grafiği"'),main=svg.slice(start,svg.indexOf('Son AYT Netleri'));
   assert(start>=0,cls);assert(main.includes(' · '+net+' net</title>'),cls);assert(!main.includes('105,25 net'));for(const [k,v] of [['SAY','52'],['EA','50'],['SÖZ','53,25']])assert(svg.includes('aria-label="'+k+' neti · '+v+'"'));assert(!svg.includes('puanı'));
-  const positions=['AYT Matematik','AYT Fen','AYT Türk Dili ve Edebiyatı · Sosyal 1','AYT Sosyal 2'].map(label=>svg.indexOf('aria-label="'+label+'"'));assert(positions.every((v,i)=>v>=0&&(!i||v>positions[i-1])));
+  const positions=['AYT Fen','AYT Matematik','AYT Türk Dili ve Edebiyatı · Sosyal 1','AYT Sosyal 2'].map(label=>svg.indexOf('aria-label="'+label+'"'));assert(positions.every((v,i)=>v>=0&&(!i||v>positions[i-1])));
  }
  assert(R.svgReport({...s,cls:'A',grade:11},'2026-10-25').includes('AYT EA Neti'));assert.equal(JSON.stringify(s),before);
  const missing=R.svgReport({...s,cls:'12/B',exams:[{...exam,nets:{edebiyat:12}}]},'2026-10-25');assert(!missing.slice(missing.indexOf('AYT SAY net grafiği'),missing.indexOf('Son AYT Netleri')).includes('net</title>'));

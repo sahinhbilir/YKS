@@ -20,6 +20,11 @@ bütün öğretmenlerini ve derslerini gösterir. Bu bölümde etüt sayısı bu
 Bir öğretmenin birden fazla dersi varsa hepsi yazılır. Etüt kayıtlarından ders
 öğretmeni tahmin edilmez; programı eklenmemiş sınıfta bu durum belirtilir.
 Öğretmen başına etüt toplamları yalnızca **Etüt Talepleri** kutusunda yer alır.
+Etüt toplamları azalan sıradadır; en çok etüt talep edilen öğretmen ilk tam genişlikli
+satırda, diğer öğretmenler eşleşen sayı rozetleriyle alt satırlarda gösterilir.
+Haftalık ders çizelgesinin sayıları hücre içinde yatay ve dikey ortalanır.
+**Öğretmenler** listesinde ad ve ders ayrı sütunlarda, sabit 11 puntoyla yazılır;
+uzun metinler sıkıştırılmaz, kutuyu aşmadan kısaltılır ve tam metin ipucunda korunur.
 Diğer bölüm başlıkları **Yoklama**, **Ödevler**, **İngilizce Sınav Puanları** ve
 **TYT Toplam Net** olarak gösterilir.
 Deneme adının altında Sıralamalar’da seçili **Tarama / Genel** türü gösterilir.
@@ -42,9 +47,10 @@ Her öğrenci A3 yatay tek sayfadır; önizleme ve indirilen PDF aynı çizimi k
   sırasıyla eşit aralıkta gösterilir. 11/A ve 12/A için AYT grafiği EA netini
   (Matematik + Geometri + Edebiyat + Tarih 1 + Coğrafya 1), diğer 11. ve 12. sınıflarda
   SAY netini (Matematik + Geometri + Fizik + Kimya + Biyoloji) gösterir.
-  AYT dersleri alt alta Matematik, Fen, Türk Dili ve Edebiyatı–Sosyal 1, Sosyal 2
+  AYT dersleri alt alta Fen, Matematik, Türk Dili ve Edebiyatı–Sosyal 1, Sosyal 2
   gruplarında yer alır. Eksik sonuç sıfır olarak çizilmez; kayıtlı sıfır net korunur.
 - AYT grafiğinin yanında son AYT sınavının tarihi ve SAY, EA, SÖZ netleri gösterilir.
+  EA sınıflarında EA, SAY, SÖZ; diğer sınıflarda SAY, EA, SÖZ sırası kullanılır.
   Her alanın neti, o alanın derslerinin netlerinin toplamıdır (okul listesindeki gibi;
   çözülmeyen ders 0 sayılır). Hiç ders sonucu yoksa “—” olarak kalır ve önceki sınavın
   neti yeni sınavın yerine kullanılmaz. Yayınevi puanları bu kutuda gösterilmez.
