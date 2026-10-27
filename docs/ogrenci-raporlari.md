@@ -57,6 +57,15 @@ kaplar; kutular ayrı görseller olarak birleştirilmez. Yazıcının kendi kena
   SAY netini (Matematik + Geometri + Fizik + Kimya + Biyoloji) gösterir.
   AYT dersleri alt alta Fen, Matematik, Türk Dili ve Edebiyatı–Sosyal 1, Sosyal 2
   gruplarında yer alır. Eksik sonuç sıfır olarak çizilmez; kayıtlı sıfır net korunur.
+- 9. ve 10. sınıfta tek sınav olduğundan TYT sonucu çizgi yerine halkalarla gösterilir,
+  Yoklama’daki devam halkası gibi: **doğru mavi, yanlış kırmızı, boş gri**. Üstte son TYT
+  sınavının toplamı (ortasında net, yanında doğru / yanlış / boş sayıları), altında her dersin
+  kendi halkası ve sayıları vardır. Doğru ve yanlış okul listesindeki D/Y’den (elle girilen
+  denemede girilenden) gelir. Boş = soru sayısı − doğru − yanlış; listeler soru sayısını yazmadığı
+  için bir sınıfın kendi sınavında soru sayısı en çok cevaplanan soru sayısıdır (Türkçe ve
+  Matematik onluğa yuvarlanır, Deneme panosundaki gibi; 9. sınıfta 80 soru). 12. sınıf
+  derslerinin tamamını basan listede standart soru sayıları kullanılır. Doğru/yanlışı olmayan
+  bir sonuç ve 11.–12. sınıf çizgi grafiğini korur.
 - AYT grafiğinin yanında son AYT sınavının tarihi ve SAY, EA, SÖZ netleri gösterilir.
   EA sınıflarında EA, SAY, SÖZ; diğer sınıflarda SAY, EA, SÖZ sırası kullanılır.
   Her alanın neti, o alanın derslerinin netlerinin toplamıdır (okul listesindeki gibi;

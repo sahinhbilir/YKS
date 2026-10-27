@@ -204,6 +204,12 @@ function svgReport(s,reportDate){
  const line=(x1,y1,x2,y2,color=C.gray,width=1)=>out.push('<path d="M'+x1+','+y1+' L'+x2+','+y2+'" fill="none" stroke="'+color+'" stroke-width="'+width+'"/>');
  const dot=(x,y,r=3,color=C.green)=>out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#fff" stroke="'+color+'" stroke-width="1.7"/>');
  const ring=(x,y,r,percent)=>{out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="none" stroke="'+C.gray+'" stroke-width="13"/>');if(percent!==null){const circumference=2*Math.PI*r;out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="none" stroke="'+C.green+'" stroke-width="13" stroke-dasharray="'+circumference*percent/100+' '+circumference+'" transform="rotate(-90 '+x+' '+y+')"/>')}};
+ // Doğru (blue), yanlış (red) and boş (grey) of one result as a ring, like the attendance ring.
+ const DYB=[['Doğru',C.blue],['Yanlış',C.red],['Boş',C.gray]];
+ const donut=(cx,cy,r,stroke,d,y,total)=>{out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+C.gray+'" stroke-width="'+stroke+'"/>');const c=2*Math.PI*r;let start=0;
+  for(const [n,color] of [[d,C.blue],[y,C.red]]){if(n>0&&total>0){out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-dasharray="'+c*n/total+' '+c+'" stroke-dashoffset="'+(-c*start/total)+'" transform="rotate(-90 '+cx+' '+cy+')"/>')}start+=n}};
+ const counts=(e,k)=>{const v=e.dy?.[k];if(!v)return null;const q=Math.max(e.q?.[k]??0,v[0]+v[1]);return {d:v[0],y:v[1],b:q-v[0]-v[1],q}};
+ const ringLessons=e=>TYT.filter(([k])=>{const c=counts(e,k);return c&&(k!=='sf'||c.d+c.y>0)});
  function graph(exams,values,x,y,w,h,large=false,pointLabels=true,unit='net',examKinds=true,fixedMax=null){
   const valid=values.filter(v=>v!==null&&v!==undefined);
   if(!valid.length){text(x+w/2,y+h/2,'Sonuç yok',large?16:11,C.muted,false,'middle');return}
@@ -225,6 +231,24 @@ function svgReport(s,reportDate){
   const columns=lessons.length>10?4:5,rows=Math.ceil(lessons.length/columns),cw=(w-(columns-1)*8)/columns,ch=(190-(rows-1)*8)/rows;
   lessons.forEach(([code,label],i)=>{const bx=x+(i%columns)*(cw+8),by=272+Math.floor(i/columns)*(ch+8);rect(bx,by,cw,ch);text(bx+9,by+17,label,11,C.ink,true);graph(exams,exams.map(e=>e.nets[code]??null),bx+10,by+36,cw-20,ch-48)});
  }
+ // 9. and 10. sınıf have one exam, so the TYT result is rings: the total, then each lesson.
+ function examRing(e,x,w){
+  const rows=ringLessons(e).map(([k,label])=>({label,...counts(e,k),net:e.nets[k]})),sum=f=>rows.reduce((a,r)=>a+r[f],0),d=sum('d'),y=sum('y'),b=sum('b'),net=rows.reduce((a,r)=>a+(Number.isFinite(r.net)?r.net:0),0),cx=x+88,cy=186,r=34;
+  out.push('<g aria-label="TYT toplam · doğru '+d+', yanlış '+y+', boş '+b+'"><title>'+esc(e.exam+' · '+display(e.date)+' · net '+fmt(net))+'</title>');
+  text(x+18,139,e.exam+' · '+display(e.date),11,C.muted);donut(cx,cy,r,14,d,y,d+y+b);
+  const label=fmt(net);text(cx,cy-4,label,Math.min(20,20*(r*2-14)*.88/width(label,20)),C.ink,true,'middle',true);text(cx,cy+12,'net',9,C.muted,false,'middle');
+  DYB.forEach(([name,color],i)=>{const n=[d,y,b][i],px=x+230+i*100;text(px,cy-2,n,23,i===2?C.muted:color,true,'middle');text(px,cy+14,name,10.5,C.muted,false,'middle')});out.push('</g>');
+ }
+ function lessonRings(e,x,w){
+  const lessons=ringLessons(e);text(x,260,'TYT Ders Netleri',13,C.muted,true);
+  let lx=x+w-DYB.reduce((a,[name])=>a+24+width(name,10.5),0);DYB.forEach(([name,color])=>{rect(lx,252,8,8,color,4);text(lx+13,260,name,10.5,C.muted);lx+=24+width(name,10.5)});
+  const columns=lessons.length>10?4:5,rows=Math.ceil(lessons.length/columns),cw=(w-(columns-1)*8)/columns,ch=(190-(rows-1)*8)/rows,r=Math.min(26,(ch-22)/2-12);
+  lessons.forEach(([k,label],i)=>{const bx=x+(i%columns)*(cw+8),by=272+Math.floor(i/columns)*(ch+8),c=counts(e,k),cx=bx+10+r+4,cy=by+22+(ch-22)/2,net=fmt(e.nets[k]);
+   out.push('<g aria-label="TYT ders · '+esc(label)+' · doğru '+c.d+', yanlış '+c.y+', boş '+c.b+'"><title>'+esc(label+' · net '+net)+'</title>');rect(bx,by,cw,ch);text(bx+9,by+17,label,11,C.ink,true);
+   donut(cx,cy,r,8,c.d,c.y,c.d+c.y+c.b);text(cx,cy,net,Math.min(11,11*(r*2-8)*.88/width(net,11)),C.ink,true,'middle',true);
+   [c.d,c.y,c.b].forEach((n,j)=>{const ry=cy+(j-1)*15;out.push('<circle cx="'+(bx+cw-34)+'" cy="'+ry+'" r="3.5" fill="'+DYB[j][1]+'"/>');text(bx+cw-26,ry,n,11,C.ink,true,'start',true)});out.push('</g>');
+  });
+ }
  function aytLessons(exams,x,w){
   text(x,260,'AYT Ders Netleri',13,C.muted,true);
   AYT_GROUPS.forEach((group,i)=>{const y=272+i*49;out.push('<g aria-label="AYT '+esc(group.label.join(' · '))+'">');rect(x,y,w,43);
@@ -239,8 +263,10 @@ function svgReport(s,reportDate){
  }
  rect(0,0,W,H,C.bg,0);text(28,28,s.school||'ÖĞRENCİ RAPORU',11,C.muted,true);text(28,59,s.name,27,C.ink,true);text(28,80,[s.cls,s.no].filter(Boolean).join(' / '),12,C.muted);text(W-28,47,display(reportDate),12,C.muted,false,'end');
  for(const [session,x,w] of showAYT?[['TYT',26,558],['AYT',600,564]]:[['TYT',26,558]]){
-  rect(x,96,w,144);text(x+18,121,session+(session==='AYT'?' '+track+' Neti':' Toplam Net'),17,C.ink,true);
-  const ex=s.exams.filter(e=>e.session===session),values=ex.map(e=>{const keys=session==='AYT'?DENEME_ALAN[track]:Object.keys(e.nets),nets=keys.map(k=>e.nets[k]).filter(Number.isFinite);return nets.length?nets.reduce((a,b)=>a+b,0):null});
+  const ex=s.exams.filter(e=>e.session===session),rings=!showAYT&&session==='TYT'&&ex.length&&ringLessons(ex.at(-1)).length?ex.at(-1):null;
+  rect(x,96,w,144);text(x+18,121,rings?'TYT Doğru · Yanlış · Boş':session+(session==='AYT'?' '+track+' Neti':' Toplam Net'),17,C.ink,true);
+  if(rings){examRing(rings,x,w);lessonRings(rings,x,w);continue}
+  const values=ex.map(e=>{const keys=session==='AYT'?DENEME_ALAN[track]:Object.keys(e.nets),nets=keys.map(k=>e.nets[k]).filter(Number.isFinite);return nets.length?nets.reduce((a,b)=>a+b,0):null});
   out.push('<g aria-label="'+session+(session==='AYT'?' '+track:'')+' net grafiği">');graph(ex,values,x+42,140,w-(session==='AYT'?230:78),42,true);out.push('</g>');
   if(session==='AYT'){
    const last=ex.at(-1),sx=x+w-136;line(sx-10,112,sx-10,229);text(sx+2,121,'Son AYT Netleri',11,C.muted,true);if(last)text(sx+2,136,display(last.date),10,C.muted);
@@ -316,12 +342,17 @@ function siteReports(){
  const reports=[],roster=(D.ogr||[]).filter(o=>!o.silindi).map(o=>({no:String(o.no||''),name:o.ad,cls:cls(o.sube||''),grade:o.sinif}));
  const {veri,hata}=SIRALAMA.oku();if(hata)throw new Error(hata);
  if(veri){const exams=[],students=[];let school='';const keys={TYT:['TÜR','TAR','COĞ','FEL','DİN','S.F','MAT','GEO','FİZ','KİM','BİY'],AYT:['EDB','TAR1','COĞ1','TAR2','COĞ2','FELGR','DİN2','S.F2','AMAT','AGEO','AFİZ','AKİM','ABİY']};
+  // Doğru/yanlış of a TYT lesson from the list's "D/Y" text, and the question counts of the list: the standard ones,
+  // or, for a grade's own exam with fewer lessons (9. sınıf), the most any student answered (as the deneme board does).
+  const dyOf=(p,k)=>{const m=/^(\d+)\s*\/\s*(\d+)$/.exec(p.dy[k]||'');return m?[+m[1],+m[2]]:null};
+  const questionsOf=data=>{const rows=Object.values(data.students),own=DENEME_DERSLER.TYT.some(d=>d[0]!=='sf'&&!keys.TYT.some((k,i)=>TYT[i][0]===d[0]&&rows.some(p=>dyOf(p,k))));
+   return Object.fromEntries(keys.TYT.map((k,i)=>[k,i]).filter(([k])=>rows.some(p=>dyOf(p,k))).map(([k,i])=>{const code=TYT[i][0],std=DENEME_DERSLER.TYT.find(d=>d[0]===code)[2],most=Math.max(0,...rows.map(p=>{const v=dyOf(p,k);return v?v[0]+v[1]:0}));return [code,own?denemeSoruTahmini(code,most):std]}))};
   for(const e of SIRALAMA.modeller(veri))for(const session of ['TYT','AYT']){const data=e[session.toLowerCase()];if(!data)continue;
-   school=school||e.school;const corrected=e.dates.join()!==e.pdfDates.join();
-   for(const p of Object.values(data.students)){const nets={};keys[session].forEach((k,i)=>{if(p.net[k]!==null&&p.net[k]!==undefined)nets[(session==='TYT'?TYT:AYT)[i][0]]=p.net[k]});if(!Object.keys(nets).length)continue;const s={no:p.no,name:p.name,cls:cls(p.cls)},scores=Object.fromEntries((session==='AYT'?['SAY','EA','SÖZ']:['TYT']).map(k=>[k,Number.isFinite(p.puan[k])?p.puan[k]:null]));students.push(s);exams.push({...s,exam:e.name,examType:e.tur,date:date(corrected?e.dates[0]:data.meta.date),session,nets,scores,...(session==='AYT'?{fields:Object.fromEntries(['SAY','EA','SÖZ'].map(f=>[f,SIRALAMA.hasAYT(p)?Math.round(SIRALAMA.fnet(p,f)*100)/100:null]))}:{})})}
+   school=school||e.school;const corrected=e.dates.join()!==e.pdfDates.join(),q=session==='TYT'?questionsOf(data):null;
+   for(const p of Object.values(data.students)){const nets={};keys[session].forEach((k,i)=>{if(p.net[k]!==null&&p.net[k]!==undefined)nets[(session==='TYT'?TYT:AYT)[i][0]]=p.net[k]});if(!Object.keys(nets).length)continue;const s={no:p.no,name:p.name,cls:cls(p.cls)},scores=Object.fromEntries((session==='AYT'?['SAY','EA','SÖZ']:['TYT']).map(k=>[k,Number.isFinite(p.puan[k])?p.puan[k]:null]));students.push(s);exams.push({...s,exam:e.name,examType:e.tur,date:date(corrected?e.dates[0]:data.meta.date),session,nets,scores,...(q?{dy:Object.fromEntries(keys.TYT.map((k,i)=>[TYT[i][0],dyOf(p,k)]).filter(([,v])=>v)),q}:{}),...(session==='AYT'?{fields:Object.fromEntries(['SAY','EA','SÖZ'].map(f=>[f,SIRALAMA.hasAYT(p)?Math.round(SIRALAMA.fnet(p,f)*100)/100:null]))}:{})})}
   }reports.push({kind:'exam',students,exams,school});
  }
- const manual=[];(D.ogr||[]).forEach((o,i)=>{if(o.silindi)return;for(const r of denemeListe(i)){if(!['TYT','AYT'].includes(r.tur))continue;const field=r.oturum==='TYT'?'TYT':r.alan,scores=Number.isFinite(r.puan)&&['TYT','SAY','EA','SÖZ'].includes(field)?{[field]:r.puan}:{};manual.push({no:String(o.no||''),name:o.ad,cls:cls(o.sube||''),exam:r.ad,examType:SIRALAMA.addanTur(r.ad),date:r.tarih,session:r.oturum,nets:Object.fromEntries(r.dersler.map(d=>[d.kod,denemeNet(d)])),scores})}});
+ const manual=[];(D.ogr||[]).forEach((o,i)=>{if(o.silindi)return;for(const r of denemeListe(i)){if(!['TYT','AYT'].includes(r.tur))continue;const field=r.oturum==='TYT'?'TYT':r.alan,scores=Number.isFinite(r.puan)&&['TYT','SAY','EA','SÖZ'].includes(field)?{[field]:r.puan}:{};manual.push({no:String(o.no||''),name:o.ad,cls:cls(o.sube||''),exam:r.ad,examType:SIRALAMA.addanTur(r.ad),date:r.tarih,session:r.oturum,nets:Object.fromEntries(r.dersler.map(d=>[d.kod,denemeNet(d)])),scores,...(r.oturum==='TYT'?{dy:Object.fromEntries(r.dersler.map(d=>[d.kod,[d.dogru,d.yanlis]])),q:Object.fromEntries(r.dersler.map(d=>[d.kod,d.soru??DENEME_DERSLER.TYT.find(x=>x[0]===d.kod)?.[2]??d.dogru+d.yanlis]))}:{})})}});
  // Published/manual records are added first; the full source list wins on an identical identity.
  reports.unshift({kind:'exam',students:roster,exams:manual});
  // Etütler: every student of the etüt records, also those without an exam or a notebook entry.
