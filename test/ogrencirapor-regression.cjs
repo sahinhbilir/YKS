@@ -47,6 +47,24 @@ check('a notebook student whose number is missing or different is the one studen
   if(!uyari)assert.equal(ege[0].no,'1005');
  }
 });
+check('9. and 10. sınıf: the TYT result is doğru / yanlış / boş rings, in total and per lesson; other grades keep their charts',()=>{
+ ctx.l=sinifListesi(SINIFLAR.dokuz2);ctx.l10=sinifListesi(SINIFLAR.on);
+ vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[];D.siralama=SIRALAMA.oku().veri;SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(l.pages,l.boylar));SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(l10.pages,l10.boylar));",ctx);
+ const m=R.model(),ece=m.students.find(s=>s.no==='2001'),svg=R.svgReport(ece,'2026-10-27');
+ // 8 lessons, 80 questions (Türkçe and Matematik 20, Tarih and Coğrafya 7, Din 6, Fizik and Kimya 7, Biyoloji 6): 56 D, 12 Y.
+ assert.deepEqual(plain(ece.exams[0].q),{turkce:20,tarih:7,cografya:7,din:6,mat:20,fizik:7,kimya:7,biyoloji:6});
+ assert(svg.includes('aria-label="TYT toplam · doğru 56, yanlış 12, boş 12"'));
+ assert(svg.includes('aria-label="TYT ders · Matematik · doğru 8, yanlış 4, boş 8"')&&svg.includes('aria-label="TYT ders · Tarih · doğru 7, yanlış 0, boş 0"'));
+ assert.equal((svg.match(/aria-label="TYT ders ·/g)||[]).length,8);assert(!/Geometri|Felsefe/.test(svg));
+ assert(svg.includes('TYT Doğru · Yanlış · Boş')&&svg.includes('fill="none" stroke="#6799c5"')&&svg.includes('fill="none" stroke="#bf6951"')&&!svg.includes('TYT net grafiği'));
+ assert.equal((R.svgReport(m.students.find(s=>s.no==='3001'),'2026-10-27').match(/aria-label="TYT ders ·/g)||[]).length,9);
+ // A result without doğru/yanlış (other source) and the 12. sınıf keep the line charts.
+ const bare={...ece,exams:ece.exams.map(({dy,q,...e})=>e)};assert(R.svgReport(bare,'2026-10-27').includes('TYT net grafiği'));
+ const g12=R.svgReport({...ece,cls:'12/A',grade:12},'2026-10-27');assert(g12.includes('TYT net grafiği')&&!g12.includes('TYT toplam ·'));
+ // A hand-entered exam brings its own question counts; an unanswered lesson is all boş.
+ vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[{no:'5',ad:'SENTETİK GÖKÇE',sube:'9/A',sinif:9,denemeler:[{id:'m:9',ad:'Elle 9',tarih:'2026-10-20',tur:'TYT',oturum:'TYT',alan:'SAY',dersler:[{kod:'turkce',dogru:10,yanlis:4,soru:20},{kod:'tarih',dogru:0,yanlis:0,soru:7}]}]}];",ctx);
+ const el=R.svgReport(R.model().students[0],'2026-10-27');assert(el.includes('aria-label="TYT toplam · doğru 10, yanlış 4, boş 13"')&&el.includes('aria-label="TYT ders · Tarih · doğru 0, yanlış 0, boş 7"'));
+});
 check('homework: every status is drawn; homework the report has not marked counts as not given',()=>{
  const s=R.merge([parse(homework())]).students.find(s=>s.no==='1001'),svg=R.svgReport(s,'2026-10-24');
  // Toplam 11 printed: Tamamladı 6, Eksik 1, Yapmadı 2, Gelmedi 1 and one not marked, which is left out.

@@ -78,6 +78,11 @@ const upload=name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
   await page.locator('#orClass').selectOption('9/A');assert.equal(await page.locator('#orStudent option').count(),3,'the 9. sınıf list and a student from Yoklama');
   await page.locator('#orStudent').selectOption({label:'SENTETİK ECE · 9/A'});const ece=await page.locator('.or-preview').innerText();
   assert(ece.includes('Sentetik 9 Deneme 2')&&ece.includes('Din kültürü')&&!ece.includes('Geometri')&&!ece.includes('Felsefe'));
+  // The 9. sınıf result is rings (doğru blue, yanlış red, boş grey) that fit their cards; a 12. sınıf student keeps the chart.
+  assert.equal(await page.locator('.or-preview g[aria-label^="TYT ders ·"]').count(),8);assert.equal(await page.locator('.or-preview g[aria-label="TYT toplam · doğru 56, yanlış 12, boş 12"]').count(),1);
+  assert(await page.evaluate(()=>[...document.querySelectorAll('.or-preview g[aria-label^="TYT ders ·"]')].every(g=>{const b=g.getBBox();return b.x>=26&&b.x+b.width<=584&&b.y>=272&&b.y+b.height<=462})),'lesson rings fit their cards');
+  assert(await page.locator('.or-preview svg').evaluate(e=>e.querySelectorAll('circle[stroke="#6799c5"]').length>=9&&e.querySelectorAll('circle[stroke="#bf6951"]').length>=7));
+  await page.locator('.or-preview svg').screenshot({path:path.join(out,'ogrenci-9-halkalar-'+width+'.png')});
   assert(!ece.includes('AYT'));assert(ece.includes('Öğrencinin Etüt Talebi Olmamıştır'));
   const englishGraph=await page.locator('.or-preview g[aria-label="İngilizce puan grafiği"]').textContent();assert(ece.includes('İngilizce Sınav Puanları')&&englishGraph.includes('91,12 puan')&&englishGraph.includes('85 puan'),englishGraph);assert(ece.includes('SENTETİK DİL HOCASI')&&ece.includes('Beden'));
   assert.equal(await page.locator('.or-preview rect[x="26"][y="96"]').getAttribute('width'),'558');
