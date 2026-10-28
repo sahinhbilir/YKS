@@ -2,8 +2,8 @@
 'use strict';
 // Cross-page contract: the cases where pages used to disagree, run on one synthetic fixture through Deneme panosu,
 // Etüt etkisi, Öğrenci raporları, Yoklama and Etütler. A participant mean is not the same students' change; one
-// missed-day rule on both attendance pages; same-titled exams stay apart; six students are not twelve; an empty last
-// pair keeps the history; the analysis base survives an unreadable Etüt planı and carries no attendance.
+// missed-day rule on both attendance pages; same-titled exams stay apart; six students are six rows; an etüt only
+// before the second exam still shows; the analysis base survives an unreadable Etüt planı and carries no attendance.
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
 const { etutRaporu, GUNLER } = require('./fixtures/etut-pdf.cjs'), { ornekRapor } = require('./fixtures/yoklama-pdf.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
@@ -21,7 +21,7 @@ const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
 sandbox.__yg = run('yalnizcaGoruntuleme'); sandbox.__rapor = run('OGRENCI_RAPOR.temelOgrenciler'); sandbox.__ep = run('ETUTPLANI.oku');
 const reset = () => run(`yalnizcaGoruntuleme=__yg;OGRENCI_RAPOR.temelOgrenciler=__rapor;ETUTPLANI.oku=__ep;OGRENCI_RAPOR.reset();D=varsayilan();D.rol='rehber';D.ogr=[];
-  for(const k of ['eeDuzey','eeOturum','eeDers','eeSimdi','eeOnceki','eePencere','eeHoca'])EK[k]=undefined;`);
+  for(const k of ['eeDuzey','eeOturum','eeDers','eeDonem','eeHoca'])EK[k]=undefined;`);
 let passed = 0;
 function check(name, fn) { reset(); try { fn(); passed++; console.log('PASS', name); } catch (e) { console.error('FAIL', name, e); process.exitCode = 1; } }
 
@@ -63,16 +63,19 @@ check('attendance: Yoklama and Öğrenci raporları call the same days missed (t
   assert(m.k.length > 0); for (const [a, b] of m.k) assert.equal(a, b);
 });
 
-check('Etüt etkisi: same-titled exams stay apart, six students are six (twelve observations), an empty last pair keeps the history', () => {
+check('Etüt etkisi: same-titled exams stay apart, six students are six rows, an etüt only before the second exam still draws the chart and the teacher', () => {
   const m = etki(ogrenciler());
   assert.equal(m.sinavlar.length, 3); assert.deepEqual(m.sinavlar.map(e => e.key), [0, 1, 2].map(KEY));
-  // The whole run: 1–3 rose 4 with etüts, 4–6 rose 2 without; the adjusted difference has no overlap in starting net to use.
-  assert.equal(m.hepsi.alan.n, 3); assert.equal(m.hepsi.kontrol.n, 3); assert.equal(m.hepsi.fark, 2);
-  const a = m.seri.satirlar.find(r => r.ad === 'Sentetik Öğretmen A');
-  assert.equal(a.gozlem, 6, 'two intervals × three students'); assert.equal(a.farkli, 3); assert.equal(a.donem.fark, 2, 'first → last for the same three');
-  // Etüts only before the second exam: the last pair has none, the run's table still shows teacher A.
-  const b = etki(ogrenciler(['2026-10-09']), { onceki: KEY(1), simdi: KEY(2) });
-  assert.equal(b.durum, 'tamam'); assert.equal(b.hepsi.alan.n, 0); assert(b.seri.satirlar.some(r => r.ad === 'Sentetik Öğretmen A'));
+  // Six students are six rows (a student is never counted once per pair of exams).
+  assert.equal(m.ogrenciler.length, 6); assert.equal(m.disarida.length, 0); assert.equal(m.sinif.n, 6);
+  // 1–3 gain 2 per exam with two etüts each, 4–6 gain 1 per exam with none.
+  const g = Object.fromEntries(m.gruplar.map(x => [x.ad, x]));
+  assert.deepEqual([g['1–2 etüt'].n, g['1–2 etüt'].egim, g['Etüt yok'].n, g['Etüt yok'].egim], [3, 2, 3, 1]); assert.equal(g['3–5 etüt'].n + g['6+ etüt'].n, 0);
+  assert.equal(m.ogrenciler.filter(r => r.n === 2).length, 3); assert.equal(m.hocalar.length, 1); assert.equal(m.hocalar[0].n, 3);
+  // Etüts only before the second exam: the groups and the teacher are still there, and so is the chart section.
+  put('__tS', ogrenciler(['2026-10-09'])); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:__tS,warnings:[],etutKapsam:null})');
+  const h = run('ETUT_ETKI.icerik()'); assert.match(h, /id="eeGrafik"/); assert.match(h, /Sentetik Öğretmen A/);
+  const b = etki(ogrenciler(['2026-10-09'])); assert.equal(b.durum, 'tamam'); assert.deepEqual(b.hocalar.map(x => x.n), [3]); assert.equal(b.gruplar.find(x => x.ad === '1–2 etüt').n, 3);
 });
 
 check('analysis base: an unreadable Etüt planı stops the report but not Etüt etkisi; no attendance is carried; the etüts match Etütler', () => {

@@ -1,23 +1,53 @@
 /* Etüt etkisi (#eeKok) wears the Etütler look: tokens and shared parts live in src/etutler.css. */
 #eeKok .et-seg select{border:0;background:transparent;color:var(--e-fg);font:inherit;font-size:.8125rem;font-weight:500;padding:3px 8px;border-radius:999px;min-width:0;max-width:18rem;cursor:pointer}
-.ee-ikili{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}.ee-ok{color:var(--e-muted)}
+#eeKok .et-baslik+.et-cumle{margin-top:2px}
+#eeKok .et-cumle{max-width:80ch;color:var(--e-fg2)}
+#eeKok #eeSinir{margin:2px 0 0}
 /* A teacher's name opens that teacher's students. */
 #eeKok .ee-ad{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--e-line);text-underline-offset:3px}
 #eeKok .ee-ad:hover,#eeKok .ee-ad[aria-pressed="true"]{text-decoration-color:var(--e-fg)}
-#eeKok .et-tablo td.tg-ad{white-space:nowrap}
-#eeKok .ee-hepsi td{font-weight:600;border-bottom:1px solid var(--e-line)}
-/* The difference as a bar either side of zero. */
-.ee-fark{display:inline-grid;grid-template-columns:1fr 1fr;width:5rem;margin-left:8px;vertical-align:middle}
-.ee-fark>span{display:flex;height:7px;background:color-mix(in srgb,var(--e-fg) 7%,transparent)}
-.ee-fark .eksi{justify-content:flex-end;border-radius:4px 0 0 4px}.ee-fark .arti{border-radius:0 4px 4px 0}
-.ee-fark i{display:block;height:100%}.ee-fark .eksi i{background:var(--e-bad);border-radius:4px 0 0 4px}.ee-fark .arti i{background:var(--e-ok);border-radius:0 4px 4px 0}
-/* Differences of groups with too few students are drawn faint. */
-#eeKok .ee-az{opacity:.55}
-.ee-not ul{margin:0;padding-left:1.1rem;display:flex;flex-direction:column;gap:6px;color:var(--e-fg2);max-width:78ch}
-.ee-not h2{font-size:.9375rem;font-weight:500}
+/* Tables: fixed widths so the rows line up; numbers (th and td alike) are right-aligned; only the name column is flexible. */
+#eeKok .et-tablo-kutu{min-height:0;max-height:none}
+#eeKok .ee-ogr{min-width:44rem}#eeKok .et-tablo-kutu:has(.ee-ogr){max-height:34rem}
+#eeKok .ee-tablo{table-layout:fixed;min-width:42rem}#eeKok #eeHocalar .ee-tablo{min-width:34rem}
+#eeKok .ee-tablo th{white-space:normal;vertical-align:bottom;line-height:1.3}
+#eeKok .ee-tablo td.tg-ad{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#eeKok .ee-tablo td{vertical-align:middle}
+#eeKok .ee-tablo col.s1{width:4.5rem}#eeKok .ee-tablo col.s2{width:5rem}#eeKok .ee-tablo col.s3{width:6rem}#eeKok .ee-tablo col.s4{width:6.5rem}#eeKok .ee-tablo col.s5{width:4.5rem}#eeKok .ee-tablo col.s6{width:6.5rem}
+#eeKok .ee-tablo td .mini{display:block;white-space:normal}
+#eeKok #eeHocalar td.tg-ad{white-space:normal;overflow:visible}
+#eeKok .ee-tablo td.tg-ad .et-renk{margin-right:4px;vertical-align:baseline}
+#eeKok #eeGruplar td.tg-ad .mini{display:inline}
+#eeKok .ee-tablo tbody tr{cursor:default}
+#eeKok .ee-tablo td.et-trend{padding-block:2px;line-height:0}
+/* Groups with too few students are drawn faint. */
+#eeKok tr.ee-az td{opacity:.55}
+#eeKok .ee-tablo td:first-child,#eeKok .ee-tablo th:first-child{position:sticky;left:0;background:var(--e-panel)}
+#eeKok .ee-tablo th:first-child{z-index:3}#eeKok .ee-tablo td:first-child{z-index:1}
+#eeKok .ee-tablo tbody tr:hover td:first-child{background:color-mix(in srgb,var(--e-fg) 4%,var(--e-panel))}
+#eeKok details{border-top:1px solid var(--e-line);padding-top:12px}
+#eeKok summary{cursor:pointer;color:var(--e-fg2);font-weight:500}
+#eeKok details ul{margin:8px 0 0;padding-left:1.1rem;display:flex;flex-direction:column;gap:2px;color:var(--e-fg2)}
+/* Chart: drawn at the box's own width, so the type below is real pixels. */
+#eeKok .ee-grafik{min-height:340px}
+#eeKok .ee-grafik text{font-size:12px}
+#eeKok .ee-grafik .ee-ad{fill:var(--e-fg);font-weight:500;text-decoration:none;cursor:default}
+#eeKok .ee-grafik .ee-baslik{fill:var(--e-fg2);font-weight:500}
+.ee-cizgi{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.ee-cizgi.kesik{stroke-width:2;stroke-dasharray:5 4;stroke-linecap:butt}
+.ee-cizgi.az{opacity:.4}.ee-nokta.az{opacity:.45}.ee-etiket.az{opacity:.65}
+.ee-sinav{stroke-dasharray:2 3}
+.ee-bag{stroke-width:1;opacity:.6}
+.ee-cubuk{fill:var(--e-muted);opacity:.6}
 @media (max-width:640px){
   #eeKok .et-seg select{max-width:11rem}
   /* A pill with several choices wraps instead of widening the page. */
   #eeKok .et-seg{flex-wrap:wrap;max-width:100%;border-radius:14px}
-  .ee-fark{display:none}
+  #eeKok .ee-grafik{min-height:320px}
+  #eeKok .ee-tablo,#eeKok #eeHocalar .ee-tablo,#eeKok .ee-ogr{min-width:0}
+  /* Non-essential columns are hidden (et-dar-gizle) so nothing scrolls sideways; the remaining ones fill the width. */
+  #eeKok .ee-tablo td.tg-ad{white-space:normal;overflow:visible}
+  #eeKok .ee-tablo td:first-child,#eeKok .ee-tablo th:first-child{position:static}
+  #eeKok .ee-tablo col.s1{width:3.4rem}#eeKok .ee-tablo col.s4{width:4.6rem}#eeKok .ee-tablo col.s6{width:5.5rem}
+  #eeKok .ee-tablo td.et-trend{padding-inline:2px}#eeKok .ee-tablo td.et-trend svg{max-width:100%;height:auto}
 }
