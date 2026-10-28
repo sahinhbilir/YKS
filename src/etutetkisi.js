@@ -163,7 +163,12 @@ function model(ogr,sec={},kapsam){
     const l=satir.filter(r=>r.hoca[key]);
     return {key,ad,n:l.length,etut:r2(l.reduce((t,r)=>t+r.hoca[key],0)/l.length),egim:ortR(l.map(r=>r.ham.egim)),
       fark:sinifEgim===null?null:r2(ort(l.map(r=>r.ham.egim))-sinifEgim),ortak:l.filter(r=>Object.keys(r.hoca).length>1).length};
-  }).sort((a,b)=>b.n-a.n||a.ad.localeCompare(b.ad,'tr'));
+  });
+  // Ranked by the difference from the class, largest first; ties share a rank (1, 1, 3). A teacher with fewer than EN_AZ
+  // counted students has no rank and comes after the ranked ones.
+  const farkSayi=h=>h.fark===null?-Infinity:h.fark;
+  hocalar.sort((a,b)=>(a.n<EN_AZ)-(b.n<EN_AZ)||farkSayi(b)-farkSayi(a)||b.n-a.n||a.ad.localeCompare(b.ad,'tr'));
+  hocalar.forEach((h,i)=>{h.az=h.n<EN_AZ;h.sira=h.az?null:i>0&&!hocalar[i-1].az&&hocalar[i-1].fark===h.fark?hocalar[i-1].sira:i+1});
   const ogrenciler=satir.map(({ham,...r})=>({...r,egim:r2(ham.egim),toplam:r2(ham.toplam),_egim:ham.egim}));
   return {...taban,ders,ogrenciler,disarida,toplamOgrenci:ogrD.length,
     sinif:{n:satir.length,egim:sinifEgim===null?null:r2(sinifEgim),toplam:ortR(satir.map(r=>r.ham.toplam)),seri:seriOrt(satir)},
@@ -286,11 +291,11 @@ function grupTablosu(m){
     '<tbody>'+g.map(satir).join('')+'</tbody></table></div></section>';
 }
 function hocaTablosu(m,secili){
-  const satir=h=>'<tr'+(secili===h.key?' class="secili"':'')+'><td class="tg-ad"><button type="button" class="ee-ad" data-ee-hoca="'+kacis(h.key)+'" aria-pressed="'+(secili===h.key)+'">'+kacis(h.ad)+'</button>'+
+  const satir=h=>'<tr'+(secili===h.key?' class="secili'+(h.az?' ee-az':'')+'"':h.az?' class="ee-az"':'')+'><td class="sayi ee-sira">'+(h.sira===null?'—':fi(h.sira))+'</td><td class="tg-ad"><button type="button" class="ee-ad" data-ee-hoca="'+kacis(h.key)+'" aria-pressed="'+(secili===h.key)+'">'+kacis(h.ad)+'</button>'+
     (h.ortak?'<div class="mini">'+kacis(sahip(h.ortak))+' başka öğretmenden de aldı</div>':'')+'</td><td class="sayi">'+fi(h.n)+'</td><td class="sayi et-dar-gizle">'+f2(h.etut)+'</td><td class="sayi'+yonlu(h.egim)+'">'+ok(h.egim)+'</td><td class="sayi'+yonlu(h.fark)+'">'+ok(h.fark)+'</td></tr>';
-  return '<section class="et-panel" id="eeHocalar"><div class="et-kart-bas"><h2>Öğretmenlere göre</h2><span class="mini">bir öğretmene basınca öğrenciler aşağıda o öğretmenin etüt verdikleriyle sınırlanır</span></div><div class="et-tablo-kutu"><table class="et-tablo ee-tablo">'+sutunlar(['ad','s1','s2 et-dar-gizle','s4','s4'])+
-    baslikSatiri([['Öğretmen'],['Öğrenci','sayi'],['Etüt / öğrenci','sayi et-dar-gizle'],['Deneme başına artış (net)','sayi'],['Sınıftan fazla / az (net)','sayi']])+
-    '<tbody>'+(m.hocalar.length?m.hocalar.map(satir).join(''):'<tr><td colspan="5" class="mini">Bu dönemde etüt alan sayılan öğrenci yok.</td></tr>')+'</tbody></table></div></section>';
+  return '<section class="et-panel" id="eeHocalar"><div class="et-kart-bas"><h2>Öğretmenlere göre</h2><span class="mini">bir öğretmene basınca öğrenciler aşağıda o öğretmenin etüt verdikleriyle sınırlanır</span></div><div class="et-tablo-kutu"><table class="et-tablo ee-tablo">'+sutunlar(['sira','ad','s1','s2 et-dar-gizle','s4','s4'])+
+    baslikSatiri([['Sıra','sayi ee-sira'],['Öğretmen'],['Öğrenci','sayi'],['Etüt / öğrenci','sayi et-dar-gizle'],['Deneme başına artış (net)','sayi'],['Sınıftan fazla / az (net)','sayi']])+
+    '<tbody>'+(m.hocalar.length?m.hocalar.map(satir).join(''):'<tr><td colspan="6" class="mini">Bu dönemde etüt alan sayılan öğrenci yok.</td></tr>')+'</tbody></table></div></section>';
 }
 // A student's nets over the exams of the period as a small line, green when rising and red when falling.
 function kucukCizgi(r){

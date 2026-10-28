@@ -67,6 +67,11 @@ Kurallar:
 - SAY = MAT + FEN, EA = TDE-SB1 + MAT, SÖZ = TDE-SB1 + SB2. Alan neti, iki test de şimdiki sınavda cevaplanmışsa yazılır. **Alan kutusu, alanın ders kutularının toplamıdır** (`N/A` olanlar katılmaz). Kurum ve Şube alan değerleri de basılı ders değerlerinin toplamıdır.
 - AYT · Sınıf’ta her şubenin sıralaması seçilebilir (SAY net, EA net, SÖZ net, AYT toplam). Varsayılan, şubede en çok öğrencinin girdiği alandır. Seçim deftere kaydedilir.
 
+## Öğrencilere yayınlanmış sonuçlar
+
+- Bir sınav **Sil** ile silinirken ikinci bir soru, öğrencilerin Denemelerim sayfasına yayınlanmış kopyaların da kaldırılıp kaldırılmayacağını sorar (İptal: sonuçlar öğrencilerde kalır, yalnızca listeler silinir; yer açmak için). Kaldırılırsa: her canlı öğrencide, sınav adı anahtarı (`denemeAdAnahtari`) ve sınavın tarihlerinden biri (düzeltilmiş tarih ve PDF’lerdeki tarihler) tutan `p:` kayıtları `silindi:true` olur (`denemeOkulSil`, src/denemeler.js), öğrenci yayın bekleyenlere yazılır, defter kaydedilir ve `denemeBekleyenleriYayinla` ile yayınlanır. Kayıt başarısız olursa öğrenci kayıtları geri alınır; yayın başarısız olursa yerel silme kalır ve durum satırında “yayın bekliyor” yazar. Başka sınavlara ve başka tarihlere dokunulmaz.
+- **Öğrencilere yayınlanmış sonuçlar** bölümü (`#srYayin`) yayınlanmış okul sonuçlarını sınav adı + tarih + oturuma göre listeler (sınav, tarih, oturum, öğrenci sayısı). Hiçbir güncel sınavın adı + tarihlerine uymayan grup *Listede yok* diye işaretlenir ve **Öğrencilerden kaldır** düğmesi olur (onay, sonra aynı silme ve yayın yolu, yalnızca o grup için). Listede yok grup yoksa bölüm gösterilmez; izleyici öğretmen bölümü görmez. Sınavı silip farklı tarih ya da yazımla yeniden ekleyince ana sayfadaki Deneme ortalaması grafiğinde iki nokta görünmesinin nedeni eski kopyalardı; bu bölüm onları temizler.
+
 ## Saklama ve gizlilik
 
 - Listeler öğretmen defterinde `D.siralama` alanında, sıkıştırılmış olarak durur: `{surum:1, sinavlar:[{id, ad, okul, ts, tarih?, tur?, T, F}], tercih:{şube: alan}}`. `T` Net Sayısı Sıralı, `F` Öğrenci Adı Sıralı listedir: `{tarih, katilim:[toplam,kampüs,kurum], kurum:{n,dy,p}, ogr:[{no, ad, snf, n, dy, p, r}]}`; `n` netler, `dy` D/Y yazıları, `p` dört puan, `r` dört sıralama yazısıdır. Dizi sırası `T` için 11 TYT dersi, `F` için 11 TYT + 13 AYT dersidir; listenin basmadığı dersler `null`’dır.

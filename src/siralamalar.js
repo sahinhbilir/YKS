@@ -202,10 +202,40 @@ async function kaydetListeler(listeler){
   await yaz(veri,once);
   return listeler.map(l=>l.ad+' ('+(l.tur==='F'?'TYT + AYT':'TYT')+')');
 }
-async function sil(id){
-  if(!rehberMi())return;
+// Every date an exam carries: the corrected one and the ones printed on its lists (ISO).
+const sinavTarihleri=s=>[...new Set([s.tarih,s.T&&s.T.tarih,s.F&&s.F.tarih].filter(Boolean).map(t=>isoTarih(t)))].filter(Boolean);
+// Deleting an exam also deletes its published copies in the students' Denemelerim unless kopyalar is false (the
+// teacher may keep the results and only free the lists' room). Copies are queued for publishing: the caller
+// publishes with denemeBekleyenleriYayinla. Returns how many students lost the copies.
+async function sil(id,kopyalar=true){
+  if(!rehberMi())return 0;
+  if(izleme())throw new Error('Yalnızca rehber öğretmen silebilir.');
   const {veri,hata}=oku();if(!veri)throw new Error(hata);
-  veri.sinavlar=veri.sinavlar.filter(s=>s.id!==id);await yaz(veri,D.siralama);
+  const s=veri.sinavlar.find(x=>x.id===id);
+  veri.sinavlar=veri.sinavlar.filter(x=>x.id!==id);await yaz(veri,D.siralama);
+  if(!s||!kopyalar)return 0;
+  try{return await denemeOkulSil(s.ad,sinavTarihleri(s))}
+  catch(e){throw new Error('Sınav silindi, ancak öğrencilerin kopyaları kaldırılamadı: '+e.message+' “Öğrencilere yayınlanmış sonuçlar” bölümünden kaldırabilirsiniz.')}
+}
+// The school results already published to students, grouped by exam name, date and session; a group is "yok" when no
+// exam in the list has its name and one of its dates (a deleted exam, or one re-added under another date or spelling).
+function yayinlanmisGruplar(veri){
+  const liste=veri?veri.sinavlar.map(s=>({anahtar:kimlik(s.ad),tarihler:sinavTarihleri(s)})):[],gruplar=new Map();
+  (D.ogr||[]).forEach((o,si)=>{
+    if(!o||o.silindi)return;
+    for(const r of o.denemeOkul||[]){
+      if(r.silindi||!String(r.id).startsWith('p:'))continue;
+      const anahtar=denemeAdAnahtari(r.ad),k=[anahtar,r.tarih,r.oturum].join('|'),g=gruplar.get(k)||{anahtar,ad:r.ad,tarih:r.tarih,oturum:r.oturum,ogrenciler:new Set()};
+      g.ogrenciler.add(si);gruplar.set(k,g);
+    }
+  });
+  return [...gruplar.values()].map(g=>({anahtar:g.anahtar,ad:g.ad,tarih:g.tarih,oturum:g.oturum,n:g.ogrenciler.size,yok:!!veri&&!liste.some(x=>x.anahtar===g.anahtar&&x.tarihler.includes(g.tarih))}))
+    .sort((a,b)=>b.tarih.localeCompare(a.tarih)||a.ad.localeCompare(b.ad,'tr')||a.oturum.localeCompare(b.oturum));
+}
+// One group removed from the students (the same tombstones as a deleted exam).
+async function yayindanKaldir(anahtar,tarih,oturum){
+  if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen kaldırabilir.');
+  return denemeOkulSil(anahtar,[tarih],oturum);
 }
 async function tercihKaydet(sinif,alan){
   if(!SIRALA.includes(alan)||String(sinif).length>40)return;
@@ -622,6 +652,7 @@ let DURUM='',ISLEM=false,ONIZLEME=null,ONIZLEME_CIFT=null,ONIZLEME_IS=0;
 // Reports, preview and the date fields also work on the teacher's Deneme panosu (Denemeler).
 const sayfada=()=>rehberMi()&&(EK.sekme==='siralamalar'||EK.sekme==='denemeler'&&!!document.getElementById('dpKok'));
 function durum(m){DURUM=m;const el=document.getElementById('srDurum');if(el)el.textContent=m}
+const isoTarihYaz=t=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(t||'');return m?m[3]+'.'+m[2]+'.'+m[1]:(t||'')};
 const isoTarih=t=>{const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t||'');return m?m[3]+'-'+m[2]+'-'+m[1]:''};
 function tarihHucresi(e,salt){
   const d=e.dates[0]||'',duzeltildi=e.pdfDates.length&&e.pdfDates.join()!==e.dates.join();
@@ -678,6 +709,9 @@ function gorunum(){
     '<div class="dn-scroll"><table class="sr-sinavlar"><thead><tr><th>Sınav</th><th>Tarih</th><th>Listeler</th><th>Öğrenci</th><th></th></tr></thead><tbody>'+
     ms.slice().reverse().map(e=>'<tr><td><b>'+kacis(e.name)+'</b>'+(e.school?'<div class="mini">'+kacis(e.school)+'</div>':'')+'</td><td>'+tarihHucresi(e,salt)+'</td><td>'+
       listeAdlari(e).map(kacis).join('<br>')+'</td><td>'+(e.sinif?e.sinif+'. sınıf · ':'')+'TYT '+e.nTYT+(e.F?' · AYT '+e.nAYT:'')+' öğrenci</td><td>'+(salt?'':'<button class="dugme mini" data-sr-sil="'+kacis(e.id)+'" aria-label="'+kacis(e.name+' listelerini sil')+'">Sil</button>')+'</td></tr>').join('')+'</tbody></table></div>';
+  const yayinlar=veri&&!salt?yayinlanmisGruplar(veri):[],yayinBolumu=yayinlar.some(g=>g.yok)?'<section class="kart sr-panel" id="srYayin"><h2>Öğrencilere yayınlanmış sonuçlar</h2><div class="dn-scroll"><table class="sr-sinavlar sr-yayin"><thead><tr><th>Sınav</th><th>Tarih</th><th>Oturum</th><th>Öğrenci</th><th></th></tr></thead><tbody>'+
+    yayinlar.map(g=>'<tr'+(g.yok?' class="sr-yok"':'')+'><td><b>'+kacis(g.ad)+'</b></td><td>'+kacis(isoTarihYaz(g.tarih))+'</td><td>'+g.oturum+'</td><td>'+g.n+' öğrenci</td><td>'+
+      (g.yok?'<span class="sr-yok-etiket">Listede yok</span> <button class="dugme mini" data-sr-yayin-kaldir="'+kacis([g.anahtar,g.tarih,g.oturum].join('|'))+'" aria-label="'+kacis(g.ad+' '+isoTarihYaz(g.tarih)+' '+g.oturum+' sonuçlarını öğrencilerden kaldır')+'">Öğrencilerden kaldır</button>':'<span class="mini">Listede</span>')+'</td></tr>').join('')+'</tbody></table></div></section>':'';
   const duzeyler=new Set(ms.map(e=>e.sinif)).size>1,oncekiler=ayniDuzey(ms,cur);
   const opt=(sel,l=ms)=>l.slice().reverse().map(e=>'<option value="'+kacis(e.id)+'"'+(sel&&e.id===sel.id?' selected':'')+'>'+kacis(e.name+(duzeyler&&e.sinif?' · '+e.sinif+'. sınıf':'')+(e.dates[0]?' · '+e.dates[0]:''))+'</option>').join('');
   const raporlar=RAPORLAR.map(R=>{
@@ -690,7 +724,7 @@ function gorunum(){
   const herhangi=RAPORLAR.some(R=>!neden(R,cur,prev));
   return bas+(salt?'':'<div class="arac"><label class="dugme">PDF ekle<input type="file" id="srPdf" accept="application/pdf,.pdf" multiple hidden></label></div>')+
     '<p id="srDurum" role="status" aria-live="polite">'+kacis(DURUM)+'</p>'+
-    '<section class="kart sr-panel"><h2>Sınavlar</h2>'+tablo+'</section>'+
+    '<section class="kart sr-panel"><h2>Sınavlar</h2>'+tablo+'</section>'+yayinBolumu+
     (ms.length?'<section class="kart sr-panel"><h2>Karşılaştır</h2><div class="arac sr-secim"><label>Önceki sınav<select id="srOnceki"'+(oncekiler.length?'':' disabled')+'>'+(oncekiler.length?opt(prev,oncekiler):'<option>İkinci sınavı ekleyin</option>')+'</select></label><span class="sr-ok" aria-hidden="true">→</span><label>Şimdiki sınav<select id="srSimdiki">'+opt(cur)+'</select></label></div>'+
       '<div class="sr-raporlar">'+raporlar+'</div><div class="arac sr-hepsi"><button class="dugme" id="srHepsi"'+(herhangi?'':' disabled')+'>Hepsini tek PDF’te indir</button></div></section>'+
       siraBolumu(cur,prev)+
@@ -741,14 +775,29 @@ document.addEventListener('click',async ev=>{
   if(el.dataset.srSiraTur||el.dataset.srSiraOlcut){
     const [k,v]=el.dataset.srSiraTur?['srSiraTur',el.dataset.srSiraTur]:['srSiraOlcut',el.dataset.srSiraOlcut];
     EK[k]=v;yenidenCiz();document.querySelector('[data-'+k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())+'="'+v+'"]')?.focus();return}
-  if(ISLEM||!(el.dataset.srIndir||el.dataset.srSil||el.id==='srHepsi'))return;
+  if(ISLEM||!(el.dataset.srIndir||el.dataset.srSil||el.dataset.srYayinKaldir||el.id==='srHepsi'))return;
   ISLEM=true;el.disabled=true;
   try{
     if(el.dataset.srIndir){durum('Rapor hazırlanıyor…');const {R,cur,bytes}=await raporBaytlari(el.dataset.srIndir,cift);await kaydetVeIndir(R.dosya(cur),bytes.slice(0))}
     else if(el.id==='srHepsi'){durum('Raporlar hazırlanıyor…');const {cur,bytes}=await hepsiBaytlari(cift);await kaydetVeIndir(cur.name+'_Sıralamalar.pdf',bytes)}
+    else if(el.dataset.srYayinKaldir){
+      const {veri}=oku(),g=yayinlanmisGruplar(veri).find(x=>x.yok&&[x.anahtar,x.tarih,x.oturum].join('|')===el.dataset.srYayinKaldir);if(!g)return;
+      if(!confirm(g.ad+' ('+isoTarihYaz(g.tarih)+', '+g.oturum+') sonuçları '+g.n+' öğrencinin Denemelerim sayfasından kaldırılsın mı?'))return;
+      const n=await yayindanKaldir(g.anahtar,g.tarih,g.oturum);
+      durum(g.ad+' sonuçları '+n+' öğrenciden kaldırıldı; yayınlanıyor…');yenidenCiz();
+      let mesaj=g.ad+' sonuçları '+n+' öğrenciden kaldırıldı.';
+      try{mesaj+=' '+await denemeBekleyenleriYayinla(durum)}catch(e){mesaj+=' Yayınlanamadı, cihazda kayıtlı ve yayın bekliyor: '+e.message}
+      durum(mesaj);yenidenCiz()}
     else{const {veri}=oku(),s=veri&&veri.sinavlar.find(x=>x.id===el.dataset.srSil);if(!s)return;
-      if(!confirm(s.ad+' sınavının sıralama listeleri silinsin mi? Öğrencilerin deneme sonuçları değişmez.'))return;
-      await sil(s.id);durum(s.ad+' silindi.');yenidenCiz()}
+      if(!confirm(s.ad+' sınavının sıralama listeleri silinsin mi?'))return;
+      const kopyalar=confirm('Öğrencilerin Denemelerim sayfasındaki '+s.ad+' sonuçları da kaldırılsın mı?\n\nTamam: kaldır · İptal: sonuçlar öğrencilerde kalsın');
+      let mesaj=s.ad+' silindi.'+(kopyalar?'':' Öğrencilerdeki sonuçlar korundu.');
+      try{
+        const n=await sil(s.id,kopyalar);
+        if(n){durum(mesaj+' '+n+' öğrencinin sonucu kaldırıldı; yayınlanıyor…');yenidenCiz();mesaj+=' '+n+' öğrencinin sonucu kaldırıldı.';
+          try{mesaj+=' '+await denemeBekleyenleriYayinla(durum)}catch(e){mesaj+=' Yayınlanamadı, cihazda kayıtlı ve yayın bekliyor: '+e.message}}
+      }catch(e){mesaj=e.message}
+      durum(mesaj);yenidenCiz()}
   }catch(e){durum(e.message)}
   finally{ISLEM=false;el.disabled=false}
 });
@@ -782,7 +831,7 @@ document.addEventListener('change',async ev=>{
     yenidenCiz();document.getElementById(id)?.focus();
   }
 });
-return {kutuphane,tarihHucresi,listeAdlari,ayniDuzey,dersAnahtarlari,TYT_KEYS,AYT_KEYS,SIRALA,clsShort,turDegistir,addanTur,SINAV_TURLERI,hasTYT,hasAYT,took,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_GRUP,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
+return {kutuphane,tarihHucresi,listeAdlari,ayniDuzey,dersAnahtarlari,TYT_KEYS,AYT_KEYS,SIRALA,clsShort,turDegistir,addanTur,SINAV_TURLERI,hasTYT,hasAYT,took,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_GRUP,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,yayinlanmisGruplar,yayindanKaldir,sinavTarihleri,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
   get onbellek(){return ONBELLEK},get durumYazisi(){return DURUM}};
 })();
 function siralamaPdfCoz(sayfalar,boylar){return SIRALAMA.pdfCoz(sayfalar,boylar)}

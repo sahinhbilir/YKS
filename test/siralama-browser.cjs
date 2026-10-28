@@ -81,11 +81,32 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    assert.equal(await page.locator('select[data-sr-sinif="301 12/A"]').inputValue(),'Toplam');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'overflow at '+width);
    await page.screenshot({path:path.join(out,'siralamalar-'+width+'.png'),fullPage:true});
-   // 5) Deleting an exam keeps the students' imported results.
+   // 5) Deleting an exam that was never published to students changes none of their results.
    await page.locator('[data-sr-sil="SENTETİK DENEME 1"]').click();
    await page.waitForFunction(()=>D.siralama.sinavlar.length===1);
    assert.equal(await page.evaluate(()=>D.ogr[0].denemeOkul.length),2);
    assert.equal(await page.locator('[data-sr-indir]:not([disabled])').count(),0);
+   // 5b) The school's list was deleted and added again under another date and spelling: the copies published earlier are
+   // listed apart as "Listede yok" (the exam that is still listed has no button) and removed from the students on request.
+   await page.evaluate(()=>{
+    const anahtar=denemeAdAnahtari('Sentetik Deneme 2');
+    D.ogr.forEach(o=>{const r=(o.denemeOkul||[]).find(x=>!x.silindi&&x.oturum==='TYT');if(!r)return;
+     o.denemeOkul=denemeBirlestir(o.denemeOkul,[{...r,id:'p:'+encodeURIComponent([anahtar,'2026-10-16','TYT'].join('|')),ad:'Sentetik  Deneme 2',tarih:'2026-10-16',ts:r.ts+1}])});
+    ciz();
+   });
+   const sinirli=async ad=>assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&[...document.querySelectorAll('#srYayin,#srYayin td,#srYayin button')].every(e=>e.getBoundingClientRect().right<=innerWidth+1)),true,ad+' at '+width);
+   assert.equal(await page.locator('#srYayin h2').innerText(),'Öğrencilere yayınlanmış sonuçlar');
+   const gruplar=await page.locator('#srYayin tbody tr').evaluateAll(l=>l.map(r=>({yok:r.classList.contains('sr-yok'),dugme:r.querySelectorAll('button[data-sr-yayin-kaldir]').length,yazi:r.innerText.replace(/\s+/g,' ').trim()})));
+   assert(gruplar.length>=2&&gruplar.filter(g=>g.yok).length===1&&gruplar.filter(g=>g.dugme).length===1,JSON.stringify(gruplar));
+   const yok=gruplar.find(g=>g.yok);assert(/Sentetik Deneme 2 16\.10\.2026 TYT \d+ öğrenci Listede yok Öğrencilerden kaldır/.test(yok.yazi),yok.yazi);
+   assert(gruplar.filter(g=>!g.yok).every(g=>/\d\d\.\d\d\.\d{4} (TYT|AYT) \d+ öğrenci Listede$/.test(g.yazi)&&!g.dugme),JSON.stringify(gruplar));
+   await sinirli('published results');
+   await page.locator('#srYayin').screenshot({path:path.join(out,'siralamalar-yayin-'+width+'.png')});
+   await page.locator('[data-sr-yayin-kaldir]').click();
+   await page.waitForFunction(()=>/öğrenciden kaldırıldı\./.test(document.getElementById('srDurum')?.textContent||'')&&!document.getElementById('srYayin'));
+   const kaldirma=await page.locator('#srDurum').innerText();assert(/yayın bekliyor/.test(kaldirma),'the publish error is shown but the local deletion stays: '+kaldirma);
+   assert.equal(await page.evaluate(()=>D.ogr.every(o=>!(o.denemeOkul||[]).some(r=>!r.silindi&&r.tarih==='2026-10-16')&&(!(o.denemeOkul||[]).length||(o.denemeOkul.some(r=>r.silindi&&r.tarih==='2026-10-16')&&o.denemeYayinBekliyor)))),true);
+   assert.equal(await page.evaluate(()=>D.ogr[0].denemeOkul.filter(r=>!r.silindi&&r.tarih!=='2026-10-16').length),2,'the listed exam keeps its copies');
    // 6) A 9. sınıf list: its own 8 lessons and TYT score, compared only with the 9. sınıf exam.
    await page.locator('#srPdf').setInputFiles([dosya('dokuz1.pdf'),dosya('dokuz2.pdf')]);
    await page.waitForFunction(()=>D.siralama.sinavlar.length===3);
@@ -96,6 +117,12 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    const f9=path.join(out,'dokuz-'+width+'.pdf');await d9.saveAs(f9);const t9=(await metin(fs.readFileSync(f9)))[0];
    assert(t9.includes('DİN KÜL')&&t9.includes('TEM MAT')&&t9.includes('2001 / SENTETİK ECE')&&t9.includes('+3.00'));
    assert(!t9.includes('GEO')&&!t9.includes('|FEL|')&&!t9.includes('YKS-SAY'),'only the lessons and score the 9. sınıf list printed');
+   // 7) Deleting an exam also removes its published copies from the students (queued; the publish error stays in the status).
+   await page.locator('[data-sr-sil="SENTETİK DENEME 2"]').click();
+   await page.waitForFunction(()=>D.siralama.sinavlar.length===2&&/öğrencinin sonucu kaldırıldı/.test(document.getElementById('srDurum')?.textContent||''));
+   assert.equal(await page.evaluate(()=>D.ogr[0].denemeOkul.every(r=>r.silindi)&&D.ogr[0].denemeYayinBekliyor),true);
+   assert.match(await page.locator('#srDurum').innerText(),/Sentetik Deneme 2 silindi\. \d+ öğrencinin sonucu kaldırıldı\..*yayın bekliyor/);
+   assert.equal(await page.locator('#srYayin').count(),0);
    assert.deepEqual(errors,[]);console.log('PASS Sıralamalar browser',width);await context.close();
   }
  }finally{await browser.close()}

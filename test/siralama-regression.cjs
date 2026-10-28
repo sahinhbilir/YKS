@@ -297,6 +297,87 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.equal(run('JSON.stringify(D.ogr)'), once, 'a failed save changes nothing');
     await assert.rejects(run("denemeOkulTarihTasi('Hazırbulunuşluk',['2026-09-13'],'2026-02-30')"), /Tarih geçersiz/);
   });
+  // ---- published copies: deleting an exam in Sıralamalar and the "Öğrencilere yayınlanmış sonuçlar" clean-up ----
+  // Students S1 and S2 (and a deleted S3) hold published copies of: Deneme 1 (18 Sep), Deneme 2 on both its PDF dates (TYT 2 Oct, AYT 9 Oct),
+  // a later re-import of Deneme 2 under another date and spelling (16 Oct) and an exam no list has (Eski Deneme, S1 only).
+  const yayinKur = async () => {
+    await loadAll();
+    run(`(()=>{const ders=n=>DENEME_DERSLER.TYT.map(d=>({kod:d[0],soru:d[2],dogru:d[0]==='turkce'?n:0,yanlis:0}));
+      const ayt=n=>DENEME_DERSLER.AYT.map(d=>({kod:d[0],soru:d[2],dogru:d[0]==='mat'?n:0,yanlis:0}));
+      const k=(ad,tarih,oturum,n,ek)=>({id:'p:'+encodeURIComponent([denemeAdAnahtari(ad),tarih,oturum].join('|')),ad,tarih,tur:oturum,oturum,brans:'',alan:'SAY',dersler:oturum==='TYT'?ders(n):ayt(n),sure:null,puan:null,ts:1000,...(ek||{})});
+      const ogr=(no,ad,n)=>({no,ad,sube:'12-A',alan:'SAY',sinif:12,kap:6,off:[6],aktif:true,denemeOkul:[k('Sentetik Deneme 1','2026-09-18','TYT',n),k('Sentetik Deneme 2','2026-10-02','TYT',n+4),k('Sentetik Deneme 2','2026-10-09','AYT',n),k('Sentetik  Deneme 2','2026-10-16','TYT',n+4)]});
+      D.ayar.donemBasi='2026-09-01';D.ayar.sinav='2027-06-20';
+      D.ogr=[ogr(1,'SENTETİK ADA',20),ogr(2,'SENTETİK BORA',16),{...ogr(3,'SENTETİK CEM',10),silindi:true}];
+      D.ogr[0].denemeOkul.push(k('Eski Deneme','2026-09-25','TYT',12));
+      D.ogr[0].denemeler=[{...k('Sentetik Deneme 2','2026-10-02','TYT',30),id:'m:own'}];
+      EK.anaDenemeTur='TYT';})()`);
+  };
+  const kayitlar = (i) => get(`D.ogr[${i}].denemeOkul.map(r=>[r.ad,r.tarih,r.oturum,!!r.silindi])`);
+  const noktalar = () => get('denemeOrtalamaVerisi().noktalar.map(n=>n.r.tarih)');
+  const gruplar = () => get('SIRALAMA.yayinlanmisGruplar(SIRALAMA.oku().veri).map(g=>[g.ad,g.tarih,g.oturum,g.n,g.yok])');
+  await check('deleting only the lists keeps the students’ copies when the teacher chooses so', async () => {
+    await yayinKur();
+    const id = get("SIRALAMA.oku().veri.sinavlar.find(s=>s.ad==='Sentetik Deneme 2').id"), once = get('D.ogr');
+    assert.equal(await run(`SIRALAMA.sil(${JSON.stringify(id)},false)`), 0, 'no student changed');
+    assert.equal(run('D.siralama.sinavlar.length'), 1, 'the lists are gone');
+    assert.deepEqual(get('D.ogr'), once, 'every published copy and the publishing queue stay as they were');
+  });
+  await check('deleting an exam also deletes its published copies: only that exam and its dates, queued for publishing', async () => {
+    await yayinKur();
+    const id = get("SIRALAMA.oku().veri.sinavlar.find(s=>s.ad==='Sentetik Deneme 2').id");
+    assert.deepEqual(noktalar(), ['2026-09-18', '2026-09-25', '2026-10-02', '2026-10-16'], 'two dots (2 and 16 Oct) for one exam before the clean-up');
+    assert.equal(await run(`SIRALAMA.sil(${JSON.stringify(id)})`), 2, 'two live students changed; the deleted student is left alone');
+    assert.equal(run('D.siralama.sinavlar.length'), 1);
+    for (const i of [0, 1]) assert.deepEqual(kayitlar(i).filter(r => r[3]).map(r => [r[1], r[2]]), [['2026-10-02', 'TYT'], ['2026-10-09', 'AYT']], 'both PDF dates of the exam are deleted');
+    assert.deepEqual(kayitlar(0).filter(r => !r[3]).map(r => r[0] + ' ' + r[1]).sort(), ['Eski Deneme 2026-09-25', 'Sentetik  Deneme 2 2026-10-16', 'Sentetik Deneme 1 2026-09-18'].sort(), 'other exams and other dates stay');
+    assert.deepEqual(kayitlar(2).filter(r => r[3]), [], 'a deleted student is untouched');
+    assert.deepEqual(get('D.ogr.map(o=>!!o.denemeYayinBekliyor)'), [true, true, false], 'queued for publishing');
+    assert(run('D.ogr[0].denemeOkul.filter(r=>r.silindi).every(r=>r.ts>1000)'), 'the tombstone is newer than the copy');
+    assert.equal(run('D.ogr[0].denemeler.length'), 1, 'the student’s own entries are theirs');
+    run("yayinlanan=[];denemeOkulYayinla=async si=>{yayinlanan.push(si);D.ogr[si].denemeYayinBekliyor=false}");
+    assert.equal(await run('denemeBekleyenleriYayinla()'), '2 öğrenciye yayınlandı. Öğrenciler sonuçlarını otomatik görecek.'); assert.deepEqual(get('yayinlanan'), [0, 1]);
+    assert.deepEqual(noktalar(), ['2026-09-18', '2026-09-25', '2026-10-16'], 'the chart ignores deleted copies');
+  });
+  await check('deleting published copies: a failed save puts every student back; a viewing teacher cannot', async () => {
+    await yayinKur(); const once = run('JSON.stringify(D.ogr)');
+    run('kaydet=async()=>false'); await assert.rejects(run("denemeOkulSil('Sentetik Deneme 2',['2026-10-02','2026-10-09'])"), /kaydedilemedi/);
+    assert.equal(run('JSON.stringify(D.ogr)'), once, 'a failed save changes nothing');
+    // The list is deleted first; when the copies then fail to save the page says so and the copies remain as "Listede yok".
+    run('KP=0;kaydet=async()=>++KP===1'); const id = get("SIRALAMA.oku().veri.sinavlar.find(s=>s.ad==='Sentetik Deneme 2').id");
+    await assert.rejects(run(`SIRALAMA.sil(${JSON.stringify(id)})`), /Sınav silindi, ancak öğrencilerin kopyaları kaldırılamadı: Cihaza kaydedilemedi/);
+    assert.equal(run('JSON.stringify(D.ogr)'), once); assert.equal(run('D.siralama.sinavlar.length'), 1);
+    assert.deepEqual(gruplar().filter(g => g[4]).map(g => g[1]), ['2026-10-16', '2026-10-09', '2026-10-02', '2026-09-25']);
+    run('kaydet=async()=>true;YG=yalnizcaGoruntuleme;yalnizcaGoruntuleme=()=>true');
+    try { await assert.rejects(run("denemeOkulSil('Sentetik Deneme 1',['2026-09-18'])"), /rehber öğretmen/); await assert.rejects(run("SIRALAMA.yayindanKaldir('SENTETİK DENEME 1','2026-09-18','TYT')"), /rehber öğretmen/); await assert.rejects(run("SIRALAMA.sil('SENTETİK DENEME 1')"), /rehber öğretmen/) }
+    finally { run('yalnizcaGoruntuleme=YG') }
+    assert.equal(run('JSON.stringify(D.ogr)'), once);
+  });
+  await check('published results no list backs: the re-added duplicate is found, removing it leaves one dot, listed exams have no button', async () => {
+    await yayinKur();
+    assert.deepEqual(gruplar(), [['Sentetik  Deneme 2', '2026-10-16', 'TYT', 2, true], ['Sentetik Deneme 2', '2026-10-09', 'AYT', 2, false], ['Sentetik Deneme 2', '2026-10-02', 'TYT', 2, false],
+      ['Eski Deneme', '2026-09-25', 'TYT', 1, true], ['Sentetik Deneme 1', '2026-09-18', 'TYT', 2, false]], 'newest first; the deleted student is not counted; the same name in another date is not listed');
+    let p = run('gorunumSiralamalar()');
+    assert.match(p, /<section class="kart sr-panel" id="srYayin"><h2>Öğrencilere yayınlanmış sonuçlar<\/h2>/);
+    assert.equal((p.match(/data-sr-yayin-kaldir="/g) || []).length, 2, 'a button only for the two groups no list backs'); assert.equal((p.match(/Listede yok<\/span>/g) || []).length, 2);
+    assert.match(p, /<td><b>Sentetik  Deneme 2<\/b><\/td><td>16\.10\.2026<\/td><td>TYT<\/td><td>2 öğrenci<\/td><td><span class="sr-yok-etiket">Listede yok<\/span> <button class="dugme mini" data-sr-yayin-kaldir="[^"]+" aria-label="[^"]+">Öğrencilerden kaldır<\/button>/);
+    assert.match(p, /<td><b>Sentetik Deneme 1<\/b><\/td><td>18\.09\.2026<\/td><td>TYT<\/td><td>2 öğrenci<\/td><td><span class="mini">Listede<\/span><\/td>/);
+    // Only that group goes, for the live students; the date of the exam itself stays.
+    assert.equal(await run("SIRALAMA.yayindanKaldir('SENTETİK DENEME 2','2026-10-16','TYT')"), 2);
+    assert.deepEqual(noktalar(), ['2026-09-18', '2026-09-25', '2026-10-02'], 'one dot for the exam');
+    assert.deepEqual(kayitlar(0).filter(r => r[3]).map(r => [r[0], r[1], r[2]]), [['Sentetik  Deneme 2', '2026-10-16', 'TYT']]);
+    assert.deepEqual(gruplar().filter(g => g[4]).map(g => g[0] + ' ' + g[1]), ['Eski Deneme 2026-09-25']);
+    assert.deepEqual(get('D.ogr.map(o=>!!o.denemeYayinBekliyor)'), [true, true, false]);
+    await run("SIRALAMA.yayindanKaldir('Eski Deneme','2026-09-25','TYT')");
+    assert(!run('gorunumSiralamalar()').includes('srYayin'), 'with no orphans the section is not shown'); assert.deepEqual(noktalar(), ['2026-09-18', '2026-10-02']);
+    assert.deepEqual(gruplar().map(g => g[4]), [false, false, false]);
+  });
+  await check('a viewing teacher sees no clean-up section and no button; unreadable lists never flag anything', async () => {
+    await yayinKur(); let p;
+    run('YG=yalnizcaGoruntuleme;yalnizcaGoruntuleme=()=>true');
+    try { p = run('gorunumSiralamalar()'); assert(!p.includes('srYayin') && !p.includes('data-sr-yayin-kaldir')); } finally { run('yalnizcaGoruntuleme=YG') }
+    assert.match(run('gorunumSiralamalar()'), /data-sr-yayin-kaldir/);
+    run("D.siralama={surum:2,sinavlar:[]}"); assert(!run('gorunumSiralamalar()').includes('data-sr-yayin-kaldir'), 'unreadable lists never flag anything');
+  });
   await check('PDF downloads are binary: no text charset and no copy-text fallback', () => {
     assert.equal(run("dosyaTuru('pdf')"), 'application/pdf'); assert.equal(run("dosyaTuru('csv')"), 'text/csv;charset=utf-8');
   });

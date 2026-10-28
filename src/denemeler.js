@@ -677,6 +677,26 @@ async function denemeOkulTarihTasi(ad,eskiTarihler,yeniTarih) {
   if(sayi && !await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kaydedilemedi; öğrenci sonuçları taşınmadı.');}
   return sayi;
 }
+// Deletes the published school copies of one exam for every student (Sıralamalar → Sil, or "Öğrencilerden kaldır"):
+// the records with this name and one of these dates (ISO; and this session when given) become deleted rows, queued
+// for publishing so the student's Denemelerim and the teacher home chart lose them. Other exams and dates stay.
+// Returns how many students changed; a failed save puts every student back.
+async function denemeOkulSil(ad,tarihler,oturum) {
+  if(!rehberMi() || yalnizcaGoruntuleme())throw new Error('Yalnızca rehber öğretmen silebilir.');
+  const anahtar=denemeAdAnahtari(ad),once=JSON.stringify(D.ogr),ts=Date.now();
+  let sayi=0;
+  try{
+    D.ogr.forEach(o=>{
+      if(!o || o.silindi)return;
+      const silinecek=(o.denemeOkul || []).filter(r=>!r.silindi && r.id.startsWith('p:') && denemeAdAnahtari(r.ad)===anahtar && tarihler.includes(r.tarih) && (!oturum || r.oturum===oturum));
+      if(!silinecek.length)return;
+      o.denemeOkul=denemeBirlestir(o.denemeOkul,silinecek.map(r=>({...r,silindi:true,ts:Math.max(ts,r.ts+1)})));
+      o.denemeYayinBekliyor=true;sayi++;
+    });
+    if(sayi && !await kaydet(true))throw new Error('Cihaza kaydedilemedi; öğrenci sonuçları kaldırılmadı.');
+  }catch(e){D.ogr=JSON.parse(once);throw e;}
+  return sayi;
+}
 function denemeDurum(m) { EK.denemeDurum=m;const el=document.getElementById('dnDurum');if(el)el.textContent=m; }
 // Call after the change is saved on this device: a failed publish leaves it queued, not lost.
 async function denemeYayinlaVeyaBeklet(si) {
