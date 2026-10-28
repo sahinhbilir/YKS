@@ -152,7 +152,7 @@ main:has(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok){min-width:0}
 .et-tablo th:not(:has(button)){padding:8px}
 .et-tablo th[aria-sort="ascending"] button::after{content:" ▲";font-size:.75em}.et-tablo th[aria-sort="descending"] button::after{content:" ▼";font-size:.75em}
 .et-tablo td{padding:6px 8px;border-bottom:1px solid var(--e-grid);white-space:nowrap}
-.et-tablo td.sayi{text-align:right}
+.et-tablo td.sayi,.et-tablo th.sayi{text-align:right}
 .et-tablo tbody tr{cursor:pointer}.et-tablo tbody tr:hover td{background:color-mix(in srgb,var(--e-fg) 4%,transparent)}
 .et-tablo tbody tr.secili td{background:color-mix(in srgb,var(--e-fg) 8%,transparent)}
 .et-tablo td.et-trend{width:90px;padding-block:2px}.et-tablo td.et-trend svg{width:84px}
@@ -187,6 +187,6 @@ td.et-yukari{color:var(--e-ok)}td.et-asagi{color:var(--e-bad)}
   .et-panel{padding:14px}.et-ozet{gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}.et-ozet-kart{padding:10px 12px}.et-ozet-kart strong{font-size:1.6rem}
   .et-ozet-kart:last-child:nth-child(odd){grid-column:1 / -1}
   .et-dersler{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.et-ders{padding:10px}
-  .et-tablo .et-dar-gizle{display:none}.et-tablo td,.et-tablo th button{padding:6px 5px}.et-tablo td:first-child{white-space:normal;min-width:7.5em}
+  .et-tablo .et-dar-gizle{display:none}.et-tablo td,.et-tablo th button{padding:6px 5px}.et-tablo th:not(:has(button)){padding:8px 5px}.et-tablo td:first-child{white-space:normal;min-width:7.5em}
 }
 @media print{.et-ipucu{display:none}}
