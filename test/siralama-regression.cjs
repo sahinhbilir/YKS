@@ -185,7 +185,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const big = list('sonra', 'F'); big.ad = 'Sentetik Büyük'; big.ogr = Array.from({length: 600}, (_, i) => ({...big.ogr[i % 5], no: String(5000 + i), ad: 'SENTETİK '.repeat(13) + i}));
     put('L', [big, {...big, ad: 'Sentetik Büyük 2'}]); await assert.rejects(run('siralamaKaydet(L)'), /KB sınırını aşıyor/);
     assert.equal(run('JSON.stringify(D.siralama)'), before); assert.equal(run('KAYIT'), saves);
-    run("D.ekKonular=[{ad:'x'.repeat(BULUT_YEDEK_UST_SINIR-baytBoyu(JSON.stringify(D))-500)}]"); put('L', [{...list('sonra', 'F'), ad: 'Sentetik Ek'}]);
+    run("D.ekKonular=[{ad:'x'.repeat(DEFTER_HAM_UST_SINIR-baytBoyu(JSON.stringify(D))-500)}]"); put('L', [{...list('sonra', 'F'), ad: 'Sentetik Ek'}]);
     await assert.rejects(run('siralamaKaydet(L)'), /bulut yedeği sınırının/); assert.equal(run('JSON.stringify(D.siralama)'), before);
     // Deleting never grows the notebook, so it is allowed even when the notebook is too big.
     await run("SIRALAMA.sil('SENTETİK DENEME 1')"); assert.equal(run('D.siralama.sinavlar.length'), 1);

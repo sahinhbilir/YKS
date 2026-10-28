@@ -125,7 +125,9 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    await page.waitForFunction(()=>D.ogr.length===1&&D.testHesap&&D.testHesap.uid==='google-1');
    assert.equal((await page.evaluate(()=>bulutaYedekle())).tur,'tamam');
    const bulut=await page.evaluate(()=>window.__bulut);
-   assert.equal(JSON.parse(bulut['testDefter/google-1'].veri).ogr[0].ad,'Kuzey');
+   // Real Chromium compresses: the stored copy is gz1 and the app's own reader decodes it back.
+   assert(bulut['testDefter/google-1'].veri.startsWith('gz1:'),'the test notebook is stored compressed');
+   assert.equal(await page.evaluate(async()=>JSON.parse(await bulutVeriCoz(window.__bulut['testDefter/google-1'].veri)).ogr[0].ad),'Kuzey');
    assert(bulut['testDefter/google-1/gecmis/2'],'Wednesday history slot');
    // Student top menu: "Planım" opens the weekly plan; its arrow (hover or click) lists the other plan pages.
    assert.equal(await page.locator('#ray').getAttribute('class'),'ray ust');

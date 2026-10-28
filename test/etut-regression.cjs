@@ -2,7 +2,8 @@
 'use strict';
 // Etütler: report parsing, notebook storage and merging, weekly model, statuses, teachers, view
 // and privacy. Synthetic data only (test/fixtures/etut-pdf.cjs).
-const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
+const fs = require('fs'), vm = require('vm'), zlib = require('zlib'), assert = require('node:assert/strict');
+const gzKodla = json => 'gz1:' + zlib.gzipSync(Buffer.from(json, 'utf8')).toString('base64');
 const { etutRaporu, GUNLER } = require('./fixtures/etut-pdf.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
@@ -11,7 +12,7 @@ const source = html.slice(start, boot);
 const dinleyiciler = {};
 const node = () => ({innerHTML:'',textContent:'',style:{},hidden:false,setAttribute(){},appendChild(){},remove(){},click(){},focus(){},getClientRects(){return [1]}});
 const nodes = {ray:node(),ana:node(),stil:{textContent:'body{}'},uygulama:{textContent:source},veri:{textContent:'null'}};
-const sandbox = {console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,TextEncoder,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),
+const sandbox = {console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,TextEncoder,TextDecoder,atob,btoa,CompressionStream,DecompressionStream,Response,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),
   localStorage:{getItem(){return null},setItem(){}},sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},navigator:{},window:{scrollTo(){},open(){return null},addEventListener(){}},
   document:{activeElement:null,addEventListener(tur,f){(dinleyiciler[tur]=dinleyiciler[tur]||[]).push(f)},contains(){return true},getElementById(id){return nodes[id]||null},querySelector(){return null},querySelectorAll(){return []},createElement(){return node()},body:{appendChild(){},insertAdjacentHTML(){}}}};
 sandbox.window.document = sandbox.document; vm.createContext(sandbox); new vm.Script(source).runInContext(sandbox);
@@ -344,6 +345,23 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run('confirm=()=>true;yalnizcaGoruntuleme=()=>true'); assert(!run('ETUT.icerik()').includes('etGeriGetir')); await assert.rejects(run('ETUT.yedektenGetir()'), /Yalnızca rehber/);
     assert.equal(run('KAYIT'), 1, 'only the restore saved');
   });
+  await check('the real daily-copy readers hand yedekteBul decoded notebooks: gz1 and legacy plain copies both restore the etüt rows', async () => {
+    await ekle(rapor()); const etut = get('D.etut'); run("delete D.etut;KAYIT=0;ETUT.onbellek.ts=null");
+    const bos = JSON.stringify({ ogr: [], ayar: {} }), dolu = JSON.stringify({ ogr: [], ayar: {}, etut });
+    for (const [ad, kayit] of [['gz1', gzKodla(dolu)], ['legacy plain', dolu]]) {
+      const gunler = { '2026-10-20': { veri: gzKodla(bos), ts: 1 }, '2026-10-19': { veri: kayit, ts: 2 } };
+      sandbox.__gunler = gunler;
+      run(`window.bulut={yapilandirilmis:true,mevcutKullanici:()=>({uid:'u1',isAnonymous:false}),doc:(db,...y)=>y.join('/'),collection:(db,...y)=>y.join('/'),
+        getDocs:async()=>({forEach:fn=>Object.keys(__gunler).forEach(id=>fn({id,data:()=>__gunler[id]}))}),
+        getDoc:async ref=>{const d=__gunler[String(ref).split('/').pop()];return {exists:()=>!!d,data:()=>d}}};delete D.etut;ETUT.onbellek.ts=null`);
+      assert.match(await run('ETUT.yedektenGetir()'), /Geri getirildi: 36 etüt/, ad);
+      assert.equal(JSON.stringify(get('D.etut.satir')), JSON.stringify(etut.satir), ad);
+    }
+    // An undecodable copy is skipped as unreadable, never treated as a notebook.
+    sandbox.__gunler = { '2026-10-20': { veri: 'gz1:AAAA', ts: 1 } };
+    run("delete D.etut;ETUT.onbellek.ts=null");
+    assert.match(await run('ETUT.yedektenGetir()'), /etüt verisi yok|okunamad/i); assert.equal(run('D.etut'), undefined);
+  });
   await check('a viewing teacher sees the board without import or delete; nothing is saved', async () => {
     await ekle(rapor()); run('KAYIT=0;yalnizcaGoruntuleme=()=>true');
     const h = run('ETUT.icerik()'); assert(!h.includes('id="etPdf"') && !h.includes('id="etSil"'));
@@ -354,7 +372,9 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run("D.etut={surum:9}"); assert.match(run('ETUT.icerik()'), /Kayıtlı etüt verisi okunamadı/);
     put('R', rapor()); await assert.rejects(run('ETUT.raporEkle([R])'), /okunamadı/); assert.deepEqual(get('D.etut'), {surum:9});
     run('delete D.etut;kaydet=async()=>false'); await assert.rejects(run('ETUT.raporEkle([R])'), /Cihaza kaydedilemedi/); assert.equal(run('D.etut'), undefined);
-    run("kaydet=async()=>true;D.dolgu='x'.repeat(BULUT_YEDEK_UST_SINIR)"); await assert.rejects(run('ETUT.raporEkle([R])'), /bulut yedeği/); assert.equal(run('D.etut'), undefined);
+    run("kaydet=async()=>true;D.dolgu='x'.repeat(DEFTER_HAM_UST_SINIR)"); await assert.rejects(run('ETUT.raporEkle([R])'), /bulut yedeği.*Ayarlar → Defter boyutu/); assert.equal(run('D.etut'), undefined);
+    // The old 900 KB whole-notebook guard is gone: the cloud copy is compressed, so the raw limit is DEFTER_HAM_UST_SINIR (2.500 KB).
+    assert.equal(run('DEFTER_HAM_UST_SINIR'), 2500000); run("D.dolgu='x'.repeat(1500000)"); await ekle(rapor()); assert.equal(run('D.etut.satir.length'), 36);
     run('delete D.dolgu'); await run('ETUT.raporEkle([R])'); await run('ETUT.sil()'); assert.equal(run('D.etut'), undefined);
   });
   await check('etüt rows never reach a student packet', async () => {

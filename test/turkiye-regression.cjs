@@ -120,7 +120,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
   });
   await check('limits: the notebook cloud backup, a failed save and the list count leave the data as it was', async () => {
     await ekle(liste(1)); const once = run('JSON.stringify(D.turkiye)');
-    run('D.buyuk="x".repeat(BULUT_YEDEK_UST_SINIR)');
+    run('D.buyuk="x".repeat(DEFTER_HAM_UST_SINIR)');
     await assert.rejects(() => ekle(liste(2)), /bulut yedeği sınırının üstüne/); assert.equal(run('JSON.stringify(D.turkiye)'), once);
     run('delete D.buyuk;kaydet=async()=>false');
     await assert.rejects(() => ekle(liste(2)), /Cihaza kaydedilemedi/); assert.equal(run('JSON.stringify(D.turkiye)'), once);

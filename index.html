@@ -6174,10 +6174,10 @@ function topluOgrenciUygula(plan, kap) {
     if (r && r.olustu) yeniPlanlar.push(s.sube);
   });
   const boyut = baytBoyu(JSON.stringify(D));
-  if (boyut > BULUT_YEDEK_UST_SINIR) {
+  if (boyut > DEFTER_HAM_UST_SINIR) {
     D.ogr.length = onceki;
     yeniPlanlar.forEach(su => { delete D.konuPlani[su]; });
-    throw new Error('Bu kadar öğrenciyle defter bulut sınırını aşıyor (' + Math.round(boyut / 1024) + ' KB). Listeyi bölerek ekleyin.');
+    throw new Error('Bu kadar öğrenciyle defter boyut sınırını aşıyor (' + kbMetni(boyut) + ' / ' + kbMetni(DEFTER_HAM_UST_SINIR) + '). Listeyi bölerek ekleyin. Ayarlar → Defter boyutu bölümüne bakın.');
   }
   return eklenecek.length;
 }
@@ -6936,7 +6936,7 @@ function gorunumAyarlar(gelismis) {
             EK.bulutGecmis.map(y => '<tr><td>' + kacis(ggyy(gunNo(y.gun))) + '</td>' +
               '<td class="sayisal">' + y.ogrenciSayisi + '</td>' +
               '<td class="sayisal">' + y.sonucSayisi + '</td>' +
-              '<td class="sayisal">' + Math.round(y.boyut / 1024) + ' KB</td>' +
+              '<td class="sayisal">' + kbMetni(y.boyut) + '</td>' +
               '<td><button class="dugme bulutGunYukle" data-gun="' + kacis(y.gun) +
               '" style="padding:3px 9px">geri yükle</button></td></tr>').join('') +
             '</tbody></table></div>'
@@ -6957,6 +6957,7 @@ function gorunumAyarlar(gelismis) {
         (EK.bulutYedekHata ? ' <b style="color:var(--kritik)">· son deneme başarısız: ' +
           kacis(EK.bulutYedekHata) + '</b>' : '') + '</div>'
       : '') +
+    (rehberMi() ? defterBoyutuKarti() : '') +
     '<div class="mini" style="margin-top:14px;max-width:70ch">Kayıt: ' + D.log.length + ' test sonucu · ' +
     Object.keys(D.kart).length + ' kart · ' + Object.keys(D.islenis).length + ' işlenmiş konu</div>' +
     '<div class="mini" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--cizgi)">Şahin Bilir · sahinbilir.rehberlik@gmail.com</div>';
@@ -7700,12 +7701,95 @@ function ogrenciCalismasiniUygula(calisma, si) {
   Object.assign(D, kopya);
 }
 
+// ------------------------------------------------------ defter boyutu (Ayarlar → Genel)
+// Bölümlerin JSON bayt boyutu; "Diğer" kalanıdır (öğrenci dışı ayarlar, kartlar, sonuç günlüğü vb.).
+function defterBoyutlari() {
+  const olc = v => { if (v === undefined) return 0; try { return baytBoyu(JSON.stringify(v)); } catch (e) { return 0; } };
+  const satirlar = [['Sıralamalar', 'siralama'], ['Etütler', 'etut'], ['Yoklama', 'yoklama'], ['Türkiye geneli', 'turkiye'],
+    ['Konu Takibi', 'konutakibi'], ['Etüt planı', 'etutPlani'], ['Öğrenciler', 'ogr']].map(([ad, k]) => [ad, olc(D[k])]);
+  const toplam = olc(D);
+  satirlar.push(['Diğer', Math.max(0, toplam - satirlar.reduce((t, s) => t + s[1], 0))]);
+  return { satirlar, toplam };
+}
+function defterBoyutuKarti() {
+  const { satirlar, toplam } = defterBoyutlari();
+  const dolu = toplam > DEFTER_HAM_UST_SINIR * 0.9, bulutta = EK.bulutYedekBoyut;
+  return '<div id="defterBoyutu" class="defter-boyutu" style="margin-top:18px;max-width:460px">' +
+    '<div class="mini"><b>Defter boyutu</b></div>' +
+    '<table style="margin-top:6px"><thead><tr><th>Bölüm</th><th class="sayisal">Boyut</th></tr></thead><tbody>' +
+    satirlar.map(([ad, bayt]) => '<tr><td>' + kacis(ad) + '</td><td class="sayisal">' + kbMetni(bayt) + '</td></tr>').join('') +
+    '</tbody><tfoot><tr><td><b>Toplam</b></td><td class="sayisal"' + (dolu ? ' style="color:var(--kritik)"' : '') + '><b>' + kbMetni(toplam) + '</b></td></tr>' +
+    '<tr><td>Sınır</td><td class="sayisal">' + kbMetni(DEFTER_HAM_UST_SINIR) + '</td></tr></tfoot></table>' +
+    '<div class="mini" style="margin-top:8px">Bulutta: <b>' + (bulutta ? kbMetni(bulutta) : '—') + ' / ' + kbMetni(BULUT_YEDEK_UST_SINIR) + '</b>' +
+    (bulutta ? '' : ' (bu oturumda henüz kaydedilmedi)') + '</div>' +
+    '<p class="mini" style="margin-top:4px;max-width:60ch">Bulut kopyası sıkıştırılarak saklanır; 900 KB sınırı sıkıştırılmış boyuta uygulanır. ' +
+    'Defter sıkıştırılmamış hâliyle ' + kbMetni(DEFTER_HAM_UST_SINIR) + '’ı geçemez.</p></div>';
+}
+
 // ------------------------------------------------------ öğretmenin kendi bulut yedeği
 // Öğretmenin defterinin TAMAMI (yedek JSON'u) kendi UID'si altında saklanır; böylece yeni
 // bir cihazda "Rehber öğretmenim" deyip Google hesabıyla girince defter kendiliğinden geri
 // gelir. Veri, iç içe dizi barındırdığı için (D.log satırları) Firestore'a NESNE olarak
 // değil, tek bir JSON DİZESİ olarak yazılır — Firestore iç içe diziyi kabul etmez.
-const BULUT_YEDEK_UST_SINIR = 900000;      // Firestore belge sınırı 1 MiB; güvenli pay
+const BULUT_YEDEK_UST_SINIR = 900000;      // Firestore belge sınırı 1 MiB; güvenli pay (SAKLANAN dize için)
+// Defterin kendisi (JSON, sıkıştırılmamış) için üst sınır. Bulut kopyası gzip'lenip base64'lendiği için
+// saklanan dize yine BULUT_YEDEK_UST_SINIR'ın altında kalır; ham sınır cihaz belleğini/localStorage'ı korur.
+const DEFTER_HAM_UST_SINIR = 2500000;
+// Bulut kopyası: 'gz1:' + base64(gzip(utf8 JSON)). Eski kopyalar düz JSON ('{' ile başlar) olarak
+// okunmaya devam eder; tarayıcıda CompressionStream yoksa yazı eskisi gibi düz JSON olur.
+const BULUT_SIKISTIRMA_ONEKI = 'gz1:';
+function bulutSikistirmaVarMi() {
+  return typeof CompressionStream === 'function' && typeof Response === 'function' &&
+    typeof TextEncoder === 'function' && typeof btoa === 'function';
+}
+function bulutBaytlariBase64(baytlar) {
+  let metin = '';
+  for (let i = 0; i < baytlar.length; i += 0x8000)
+    metin += String.fromCharCode.apply(null, baytlar.subarray(i, i + 0x8000));
+  return btoa(metin);
+}
+async function bulutAkisiniOku(akis, baytlar) {
+  const yazici = akis.writable.getWriter();
+  const yazildi = yazici.write(baytlar).then(() => yazici.close());
+  yazildi.catch(() => { /* hata okuma tarafında görünür */ });
+  const sonuc = new Uint8Array(await new Response(akis.readable).arrayBuffer());
+  await yazildi;
+  return sonuc;
+}
+async function bulutVeriCoz(veri) {
+  if (typeof veri !== 'string' || !veri) throw new Error('Buluttaki defter beklenen biçimde değil.');
+  if (!veri.startsWith(BULUT_SIKISTIRMA_ONEKI)) return veri;
+  if (typeof DecompressionStream !== 'function' || typeof Response !== 'function' || typeof atob !== 'function' ||
+      typeof TextDecoder !== 'function')
+    throw new Error('Buluttaki defter sıkıştırılmış kaydedilmiş; bu tarayıcı onu açamıyor. Tarayıcıyı güncelleyin. Bulut kopyasına dokunulmadı.');
+  try {
+    const ikili = atob(veri.slice(BULUT_SIKISTIRMA_ONEKI.length));
+    const baytlar = new Uint8Array(ikili.length);
+    for (let i = 0; i < ikili.length; i++) baytlar[i] = ikili.charCodeAt(i);
+    const acik = await bulutAkisiniOku(new DecompressionStream('gzip'), baytlar);
+    const json = new TextDecoder('utf-8', { fatal: true }).decode(acik);
+    if (!json) throw new Error('boş');
+    return json;
+  } catch (e) {
+    throw new Error('Buluttaki sıkıştırılmış defter açılamadı (kayıt bozuk olabilir). Bulut kopyasına dokunulmadı.');
+  }
+}
+// Sıkıştırma mümkün değilse ya da herhangi bir adım başarısız olursa DÜZ JSON döner (eski davranış);
+// geri açılıp birebir aynı çıkmayan hiçbir sıkıştırılmış kayıt yazılmaz.
+async function bulutVeriKodla(json) {
+  if (typeof json !== 'string' || !bulutSikistirmaVarMi()) return json;
+  try {
+    const sikisik = await bulutAkisiniOku(new CompressionStream('gzip'), new TextEncoder().encode(json));
+    const kayit = BULUT_SIKISTIRMA_ONEKI + bulutBaytlariBase64(sikisik);
+    return await bulutVeriCoz(kayit) === json ? kayit : json;
+  } catch (e) { return json; }
+}
+// Ayarlar → Defter boyutu tablosu ve iletiler 1 KB = 1000 bayt sayar (sınırlar 900 KB / 2.500 KB okunur).
+const kbMetni = bayt => Math.round(bayt / 1000).toLocaleString('tr-TR') + ' KB';
+// Saklanan dizenin sınırı aşıldığında kullanıcıya gösterilen ortak ileti.
+const bulutBoyutMesaji = (bayt, sikisik, onek) => (onek || 'Defter bulut yedeği için çok büyük') +
+  ' (' + kbMetni(bayt) + (sikisik ? ', sıkıştırılmış' : '') + '). ' +
+  'Ayarlar → Defter boyutu bölümünde hangi bölümün yer kapladığına bakın; "Yedek indir" ile dosya yedeği alın.';
 // Firestore'un belge sınırı BAYT cinsindendir. Türkçe harfler (ı ş ğ ü ö ç) UTF-8'de iki
 // bayt tuttuğu için karakter sayısı gerçek boyutu OLDUĞUNDAN KÜÇÜK gösterir: karakterle
 // ölçen bir denetimden geçen bir yazı sunucuda yine de reddedilebilir. Bu yüzden sunucuya
@@ -7763,10 +7847,11 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
   let json;
   try { json = JSON.stringify(D); }
   catch (e) { return { tur: 'hata', mesaj: 'Veri JSON’a çevrilemedi.' }; }
-  const yedekBayt = baytBoyu(json);
+  // Bulut kopyası sıkıştırılır; sınır SAKLANAN dizeye uygulanır (kurallar `veri` dizesini sınırlar).
+  const kayit = await bulutVeriKodla(json);
+  const yedekBayt = baytBoyu(kayit);
   if (yedekBayt > BULUT_YEDEK_UST_SINIR)
-    return { tur: 'hata', mesaj: 'Defter bulut yedeği için çok büyük (' +
-      Math.round(yedekBayt / 1024) + ' KB). "Yedek indir" ile dosya yedeği alın.' };
+    return { tur: 'hata', mesaj: bulutBoyutMesaji(yedekBayt, kayit !== json) };
   try {
     const ts = Number.isSafeInteger(+D.ts) && +D.ts > 0 ? +D.ts : Date.now();
     const temel = bulutYedekTemelleri[sahipUid];
@@ -7783,31 +7868,32 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
         const mevcut = window.bulut.mevcutKullanici();
         if (!etkin || !mevcut || mevcut.uid !== kullanici.uid) throw new Error('Bulut yedekleme oturumu değişti; işlem durduruldu.');
         if (eski) {
-          const ayni = eski.veri === json;
-          const onayli = typeof onaylananVeri === 'string' && onaylananVeri === eski.veri;
-          let eskiDefter;
-          try { eskiDefter = JSON.parse(eski.veri); yedekDogrula(eskiDefter); }
+          // Karşılaştırmalar SIKIŞTIRMASIZ JSON üzerinde yapılır: düz eski kopya ile gz1 kopya aynı defteri
+          // aynı sayar. Çözülemeyen kopya asla "boş" sayılmaz; işlem durur ve bulut değişmez.
+          let eskiJson, eskiDefter;
+          try { eskiJson = await bulutVeriCoz(eski.veri); eskiDefter = JSON.parse(eskiJson); yedekDogrula(eskiDefter); }
           catch (e) { throw new Error('Buluttaki defter doğrulanamadı; üzerine yazılmadı. Bulut yedek geçmişini kontrol edin.'); }
+          const ayni = eskiJson === json;
+          const onayli = typeof onaylananVeri === 'string' && onaylananVeri === eskiJson;
           const bosaliyor = yedekOgrenciSayisi(eskiDefter) > 0 && yedekOgrenciSayisi(yerel) === 0 ||
             (eskiDefter.log || []).length > 0 && !(yerel.log || []).length;
-          if (!ayni && !onayli && (bosaliyor || !temel || temel !== await bulutYedekImzasi(eski.veri)))
+          if (!ayni && !onayli && (bosaliyor || !temel || temel !== await bulutYedekImzasi(eskiJson)))
             throw Object.assign(new Error(BULUT_DEFTER_CAKISMA), { code: 'yks-defter-cakisma' });
           if (!etkin) throw new Error('Bulut yedeği sunucudan zamanında onay alamadı.');
-          if (!ayni && !gunKopyasi.exists()) tx.set(gunRef, bulutKorumaBelgesi(eski.veri, korumaTs,
+          if (!ayni && !gunKopyasi.exists()) tx.set(gunRef, await bulutKorumaBelgesi(eski.veri, korumaTs,
             'Gün başlangıcı · ' + bulutGercekGun()));
           // Kullanıcı farklı yerel defteri seçtiğinde buluttaki eski kopya da aynı
           // atomik işlemde korunur; günlük kopyanın üzerine yazılması onu silemez.
           if (onayli && !ayni) tx.set(window.bulut.doc(window.bulut.db, 'ogretmenYedek', sahipUid, 'geriNoktalari', korumaId),
-            { veri: eski.veri, ts: korumaTs, surum: VERI_SURUMU, boyut: eski.veri.length,
-              ogrenciSayisi: yedekOgrenciSayisi(eskiDefter), sonucSayisi: (eskiDefter.log || []).length,
-              kaynak: 'Yerel defter yüklenmeden önce buluttaki defter' });
+            await bulutKorumaBelgesi(eski.veri, korumaTs, 'Yerel defter yüklenmeden önce buluttaki defter'));
         }
         // Son yedek zaten boş olsa bile bugünün geçmiş kopyası dolu olabilir.
         // Boş defteri yeniden yazmak elde kalan o kurtarma kopyasını silmemeli.
         if (!yerel.ogr.length && !yerel.log.length && typeof onaylananVeri !== 'string') {
           throw new Error('Bu cihazdaki defter boş; buluta yazılmadı. Önce bulut yedek geçmişini kontrol edin.');
         }
-        tx.set(ref, { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length });
+        if (!etkin) throw new Error('Bulut yedeği sunucudan zamanında onay alamadı.');
+        tx.set(ref, { veri: kayit, ts: ts, surum: VERI_SURUMU, boyut: kayit.length });
       }), BULUT_YAZMA_ZAMAN_ASIMI, 'Bulut yedeği sunucudan zamanında onay alamadı.');
     } finally { etkin = false; }
     await bulutYedekTemeliniHatirla(sahipUid, json);
@@ -7818,13 +7904,13 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
       await sureSinirli(
         window.bulut.setDoc(
           window.bulut.doc(window.bulut.db, 'ogretmenYedek', sahipUid, 'gecmis', isoDan(bugunNo())),
-          { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length,
+          { veri: kayit, ts: ts, surum: VERI_SURUMU, boyut: kayit.length,
             ogrenciSayisi: yedekOgrenciSayisi(yerel),
             sonucSayisi: (yerel.log || []).length }),
         BULUT_YAZMA_ZAMAN_ASIMI, 'Günlük bulut kopyası sunucudan zamanında onay alamadı.');
     } catch (e) { /* günlük kopya yazılamazsa asıl yedek yine geçerlidir */ }
-    EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = '';
-    return { tur: 'tamam', boyut: json.length };
+    EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = ''; EK.bulutYedekBoyut = kayit.length;
+    return { tur: 'tamam', boyut: kayit.length, hamBoyut: json.length };
   } catch (e) {
     // Sıra başkasına geçmiş olabilir (kilit): durum tazelenir, bant görünür.
     if (izinHatasiMi(e) && KILIT.durum) kilitDenetle();
@@ -7884,10 +7970,11 @@ async function buluttanYedekAl() {
     const veri = anlik.data() || {};
     if (typeof veri.veri !== 'string' || !veri.veri)
       return { tur: 'hata', mesaj: 'Buluttaki yedek beklenen biçimde değil.' };
-    let y;
-    try { y = JSON.parse(veri.veri); yedekDogrula(y); }
+    // `veri` çağıranlara SIKIŞTIRMASIZ JSON olarak döner (bulutaYedekle'nin onaylananVeri'si ve temel imzası bununla karşılaştırılır).
+    let y, json;
+    try { json = await bulutVeriCoz(veri.veri); y = JSON.parse(json); yedekDogrula(y); }
     catch (e) { return { tur: 'hata', mesaj: 'Buluttaki yedek okunamadı veya doğrulanamadı: ' + (e.message || e) }; }
-    return { tur: 'tamam', yedek: y, veri: veri.veri, uid: defterUid(kullanici),
+    return { tur: 'tamam', yedek: y, veri: json, uid: defterUid(kullanici),
       ts: Number.isSafeInteger(+veri.ts) ? +veri.ts : 0 };
   } catch (e) { return izinHatasiMi(e) ? { tur: 'izinYok' } : { tur: 'hata', mesaj: e.message || String(e) }; }
 }
@@ -7948,10 +8035,10 @@ async function bulutDefteriniAc(kullanici) {
 // Uygulama da bu modda hiçbir şey kaydetmez: kaydet() yazmaz, bulut yedeği gönderilmez ve
 // Firebase modülü yazan çağrıları sunucuya göndermeden reddeder. İzleyicinin kendi defteri
 // cihazda olduğu gibi kalır; görüntüleme bitince o açılır. Bkz. docs/izleyici-ogretmen.md.
-let IZLEME = null, IZLEME_JSON = '', IZLEME_DINLEYICI = null;
+let IZLEME = null, IZLEME_JSON = '', IZLEME_DINLEYICI = null, IZLEME_SIRA = 0;
 // Ortak öğretmen ve düzenleme kilidi: bkz. "ortak öğretmen ve düzenleme kilidi" bölümü.
 let ORTAK = null;
-let KILIT = { durum: '', ad: '', uid: '', ts: 0 }, KILIT_IS = null, KILIT_KAPALI = false, KILIT_DINLEYICI = null, KILIT_SON_DENEME = 0;
+let KILIT = { durum: '', ad: '', uid: '', ts: 0 }, KILIT_IS = null, KILIT_KAPALI = false, KILIT_DINLEYICI = null, KILIT_SON_DENEME = 0, KILIT_SIRA = 0;
 let SON_ETKINLIK = Date.now();
 const IZLEME_UID = /^[A-Za-z0-9_-]{1,128}$/;
 // Görüntüleme ya da defteri başka biri düzenlerken: hiçbir şey kaydedilmez, veri yazan çağrılar reddedilir.
@@ -7979,14 +8066,16 @@ async function izlemeHedefiOku(kullanici) {
   } catch (e) { if (izinHatasiMi(e)) return null; throw e; }
   return anlik && anlik.exists() ? izlemeHedefi(anlik.data() || {}, kullanici.uid) : null;
 }
-function izlemeDefteriniCoz(anlik) {
+// Sıkıştırılmış ya da düz kopyayı çözer ve SIKIŞTIRMASIZ JSON döner. Çözülemezse fırlatır (asla boş döndürmez).
+async function izlemeDefteriniCoz(anlik) {
   if (!anlik || !anlik.exists()) throw new Error('Paylaşılan defter bulutta bulunamadı.');
   const veri = anlik.data() || {};
   if (typeof veri.veri !== 'string' || !veri.veri) throw new Error('Paylaşılan defter beklenen biçimde değil.');
-  const y = JSON.parse(veri.veri);
+  const json = await bulutVeriCoz(veri.veri);
+  const y = JSON.parse(json);
   yedekDogrula(y);
   if (y.rol && y.rol !== 'rehber') throw new Error('Paylaşılan defter bir rehber öğretmen defteri değil.');
-  return veri.veri;
+  return json;
 }
 // Defter bellekte açılır. Cihazdaki tek kopya hızlı açılış içindir; çıkışta ve izin kalkınca silinir.
 function izlemeDefteriniYerlestir(json, hedef) {
@@ -8004,7 +8093,7 @@ async function izlemeyiBaslat(hedef) {
     anlik = await sureSinirli(b.getDocFromServer(b.doc(b.db, 'ogretmenYedek', hedef.sahipUid)),
       BULUT_YAZMA_ZAMAN_ASIMI, 'Paylaşılan defter sunucudan zamanında alınamadı.');
   } catch (e) { throw izinHatasiMi(e) ? new Error('Bu defteri görüntüleme izniniz yok.') : e; }
-  const json = izlemeDefteriniCoz(anlik), mevcut = b.mevcutKullanici();
+  const json = await izlemeDefteriniCoz(anlik), mevcut = b.mevcutKullanici();
   if (!mevcut || mevcut.uid !== hedef.izleyiciUid) throw new Error('Google hesabı değişti; yeniden bağlanın.');
   izlemeDinlemeyiDurdur();
   izlemeDefteriniYerlestir(json, hedef);
@@ -8036,15 +8125,18 @@ function izlemeDinlemeyiBaslat() {
   const hedef = IZLEME;
   IZLEME_DINLEYICI = b.onSnapshot(b.doc(b.db, 'ogretmenYedek', hedef.sahipUid), anlik => {
     if (IZLEME !== hedef || CIKIS_DURUMU || anlik.metadata?.fromCache) return;
-    try {
-      const json = izlemeDefteriniCoz(anlik);
+    // Çözme asenkron: daha yeni bir anlık görüntü geldiyse eskisi sonucu uygulamaz.
+    const sira = ++IZLEME_SIRA, gecerli = () => IZLEME === hedef && !CIKIS_DURUMU && sira === IZLEME_SIRA;
+    (async () => {
+      const json = await izlemeDefteriniCoz(anlik);
+      if (!gecerli()) return;
       EK.izlemeDurum = 'güncel · ' + new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
       if (json === IZLEME_JSON) { rayCiz(); return; }
       izlemeDefteriniYerlestir(json, hedef);
       const odak = document.activeElement;
       if (!PENCERE && !DISARI_AKTAR && !DENEME_FORM && !DENEME_IMPORT && !/^(INPUT|TEXTAREA|SELECT)$/.test(odak && odak.tagName || '')) ciz();
       else rayCiz();
-    } catch (e) { EK.izlemeDurum = 'paylaşılan defter okunamadı: ' + (e.message || e); rayCiz(); }
+    })().catch(e => { if (!gecerli()) return; EK.izlemeDurum = 'paylaşılan defter okunamadı: ' + (e.message || e); rayCiz(); });
   }, e => {
     IZLEME_DINLEYICI = null;
     if (IZLEME !== hedef) return;
@@ -8130,7 +8222,7 @@ async function buluttakiYeniDefteriAl() {
   const anlik = await sureSinirli(b.getDocFromServer(b.doc(b.db, 'ogretmenYedek', uid)),
     BULUT_YAZMA_ZAMAN_ASIMI, 'Bulut defteri sunucudan zamanında alınamadı.');
   if (!anlik || !anlik.exists()) return;
-  const json = izlemeDefteriniCoz(anlik);
+  const json = await izlemeDefteriniCoz(anlik);
   if (json === JSON.stringify(D)) { await bulutYedekTemeliniHatirla(uid, json); return; }
   if (KILIT.durum === 'bende' && await yerelIsBulutta(uid, true)) await defteriBuluttanYerlestir(json, uid);
 }
@@ -8187,14 +8279,17 @@ function kilitTakibiniBaslat() {
   const uid = defterUid(u);
   KILIT_DINLEYICI = b.onSnapshot(b.doc(b.db, 'ogretmenYedek', uid), anlik => {
     if (KILIT.durum !== 'baskasinda' || CIKIS_DURUMU || anlik.metadata?.fromCache || !anlik.exists()) return;
+    // Çözme asenkron: daha yeni anlık görüntü geldiyse ya da sıra değiştiyse bu sonuç uygulanmaz.
+    const sira = ++KILIT_SIRA, gecerli = () => sira === KILIT_SIRA && KILIT.durum === 'baskasinda' && !CIKIS_DURUMU;
     (async () => {
-      const json = izlemeDefteriniCoz(anlik);
+      const json = await izlemeDefteriniCoz(anlik);
+      if (!gecerli()) return;
       EK.kilitGuncel = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
       if (json === JSON.stringify(D)) { rayCiz(); return; }
       // Bu cihazda buluta gitmemiş iş varsa üzerine yazılmaz; sıra gelince çakışma akışı devralır.
-      if (!(await yerelIsBulutta(uid, false))) { EK.kilitNot = 'bu cihazda buluta gitmemiş değişiklik var'; rayCiz(); return; }
-      if (KILIT.durum === 'baskasinda') await defteriBuluttanYerlestir(json, uid);
-    })().catch(e => { EK.kilitNot = 'defter güncellenemedi: ' + (e.message || e); rayCiz(); });
+      if (!(await yerelIsBulutta(uid, false))) { if (gecerli()) { EK.kilitNot = 'bu cihazda buluta gitmemiş değişiklik var'; rayCiz(); } return; }
+      if (gecerli()) await defteriBuluttanYerlestir(json, uid);
+    })().catch(e => { if (sira !== KILIT_SIRA) return; EK.kilitNot = 'defter güncellenemedi: ' + (e.message || e); rayCiz(); });
   }, () => { KILIT_DINLEYICI = null; });
 }
 function kilitTakibiniDurdur() { if (typeof KILIT_DINLEYICI === 'function') KILIT_DINLEYICI(); KILIT_DINLEYICI = null; }
@@ -8223,7 +8318,7 @@ async function ortakDefteriAc(hedef, kullanici) {
     anlik = await sureSinirli(b.getDocFromServer(b.doc(b.db, 'ogretmenYedek', hedef.sahipUid)),
       BULUT_YAZMA_ZAMAN_ASIMI, 'Ortak defter sunucudan zamanında alınamadı.');
   } catch (e) { throw izinHatasiMi(e) ? new Error('Bu defteri açma izniniz yok.') : e; }
-  const json = izlemeDefteriniCoz(anlik), mevcut = b.mevcutKullanici();
+  const json = await izlemeDefteriniCoz(anlik), mevcut = b.mevcutKullanici();
   if (!mevcut || mevcut.uid !== kullanici.uid) throw new Error('Google hesabı değişti; yeniden bağlanın.');
   const onceki = D;
   try { veriyiHazirla(JSON.parse(json)); D.rol = 'rehber'; }
@@ -8279,17 +8374,19 @@ const TEST_CAKISMA = 'Test defterin başka bir cihazda da değişti; üzerine ya
   'Ayarlar → Test hesabın bölümünden hangisiyle devam edeceğini seç.';
 let TEST_DENETIM_IS = null, TEST_ACILIS_JSON = null;
 function testDefterRef(uid, ...yol) { return window.bulut.doc(window.bulut.db, 'testDefter', uid, ...yol); }
-function testDefteriniCoz(json, uid) {
-  if (typeof json !== 'string' || !json) throw new Error('Buluttaki test defteri beklenen biçimde değil.');
+async function testDefteriniCoz(veri, uid) {
+  if (typeof veri !== 'string' || !veri) throw new Error('Buluttaki test defteri beklenen biçimde değil.');
   let y;
-  try { y = JSON.parse(json); yedekDogrula(y); }
+  try { y = JSON.parse(await bulutVeriCoz(veri)); yedekDogrula(y); }
   catch (e) { throw new Error('Buluttaki test defteri okunamadı: ' + (e.message || e)); }
   if (y.rol !== 'ogrenci' || !y.testHesap || y.testHesap.uid !== uid)
     throw new Error('Buluttaki defter bu test hesabına ait değil.');
   return y;
 }
-async function testDefteriniYerlestir(json, uid) {
-  const y = testDefteriniCoz(json, uid), onceki = D;
+// `veri` bulutta saklanan dize (gz1 ya da düz) ya da düz JSON olabilir; baytlar önce çözülür.
+async function testDefteriniYerlestir(veri, uid) {
+  const json = await bulutVeriCoz(veri);
+  const y = await testDefteriniCoz(json, uid), onceki = D;     // çözme/doğrulama bitince, uygulamadan hemen önce alınır
   try {
     veriyiHazirla(y);
     if (!(await kaydet(true))) throw new Error('Defter bu cihaza kaydedilemedi.');
@@ -8467,7 +8564,7 @@ async function uyeHesabiniAc(kullaniciAdi, sifre) {
   if (anlik.exists()) {
     const veri = (anlik.data() || {}).veri;
     // Kullanıcı adı değiştiyse eski adla girilmez (hesap aynı olsa da).
-    let kayitliAd = null; try { kayitliAd = ((JSON.parse(veri) || {}).testHesap || {}).ad || null; } catch (e) {}
+    let kayitliAd = null; try { kayitliAd = ((JSON.parse(await bulutVeriCoz(veri)) || {}).testHesap || {}).ad || null; } catch (e) {}
     if (kayitliAd && kayitliAd !== ad) {
       try { await b.oturumuKapat(); } catch (e) {}
       throw Object.assign(new Error('Giriş bilgileri eşleşmedi.'), { code: 'auth/invalid-credential' });
@@ -8484,7 +8581,7 @@ async function uyeHesabiniAc(kullaniciAdi, sifre) {
     if (!eski.exists() && yon.kokUid)
       eski = await sureSinirli(b.getDocFromServer(testDefterRef(yon.kokUid)), BULUT_YAZMA_ZAMAN_ASIMI, 'Eski defterin sunucudan zamanında alınamadı.');
     if (eski.exists()) {
-      const y = JSON.parse((eski.data() || {}).veri);
+      const y = JSON.parse(await bulutVeriCoz((eski.data() || {}).veri));
       y.testHesap = { ...(y.testHesap || {}), uid: kullanici.uid, ad: ad };
       await testDefteriniYerlestir(JSON.stringify(y), kullanici.uid);
       bulutYedekTemeliniUnut(kullanici.uid);       // bulutta bu hesabın defteri henüz yok
@@ -8511,23 +8608,28 @@ async function testDefterineYedekle(onaylananVeri) {
   let json;
   try { json = JSON.stringify(D); }
   catch (e) { return { tur: 'hata', mesaj: 'Veri JSON’a çevrilemedi.' }; }
-  const bayt = baytBoyu(json);
+  const kayit = await bulutVeriKodla(json);
+  const bayt = baytBoyu(kayit);
   if (bayt > BULUT_YEDEK_UST_SINIR)
-    return { tur: 'hata', mesaj: 'Defter bulut için çok büyük (' + Math.round(bayt / 1024) + ' KB). "Yedek indir" ile dosya yedeği alın.' };
+    return { tur: 'hata', mesaj: bulutBoyutMesaji(bayt, kayit !== json, 'Defter bulut için çok büyük') };
   const ts = Date.now(), gun = isoDan(bugunNo()), temel = bulutYedekTemelleri[uid];
   const belge = veri => ({ veri, ts, surum: VERI_SURUMU, boyut: veri.length });
   try {
     await sureSinirli(b.runTransaction(b.db, async tx => {
       const ref = testDefterRef(uid), anlik = await tx.get(ref);
       if (anlik.exists()) {
+        // Karşılaştırma sıkıştırmasız JSON üzerinde; çözülemeyen kopya ezilmez (hata fırlar).
         const eski = (anlik.data() || {}).veri;
-        const onayli = typeof onaylananVeri === 'string' && onaylananVeri === eski;
-        if (eski !== json && !onayli && (!temel || temel !== await bulutYedekImzasi(String(eski))))
+        let eskiJson;
+        try { eskiJson = await bulutVeriCoz(eski); }
+        catch (e) { throw new Error('Buluttaki test defteri doğrulanamadı; üzerine yazılmadı. ' + (e.message || e)); }
+        const onayli = typeof onaylananVeri === 'string' && onaylananVeri === eskiJson;
+        if (eskiJson !== json && !onayli && (!temel || temel !== await bulutYedekImzasi(eskiJson)))
           throw Object.assign(new Error(TEST_CAKISMA), { code: 'yks-defter-cakisma' });
-        if (onayli && eski !== json) tx.set(testDefterRef(uid, 'gecmis', 'cakisma'), { ...belge(eski), gun });
+        if (onayli && eskiJson !== json) tx.set(testDefterRef(uid, 'gecmis', 'cakisma'), { ...belge(eski), gun });
       }
-      tx.set(ref, belge(json));
-      tx.set(testDefterRef(uid, 'gecmis', String(haftaGunu(bugunNo()))), { ...belge(json), gun });
+      tx.set(ref, belge(kayit));
+      tx.set(testDefterRef(uid, 'gecmis', String(haftaGunu(bugunNo()))), { ...belge(kayit), gun });
     }), BULUT_YAZMA_ZAMAN_ASIMI, 'Test defteri sunucudan zamanında onay alamadı.');
   } catch (e) {
     if (e.code === 'yks-defter-cakisma') { EK.testCakisma = true; return { tur: 'hata', mesaj: TEST_CAKISMA, cakisma: true }; }
@@ -8536,8 +8638,8 @@ async function testDefterineYedekle(onaylananVeri) {
       : { tur: 'hata', mesaj: e.message || String(e) };
   }
   await bulutYedekTemeliniHatirla(uid, json);
-  EK.testCakisma = false; EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = '';
-  return { tur: 'tamam', boyut: json.length };
+  EK.testCakisma = false; EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = ''; EK.bulutYedekBoyut = kayit.length;
+  return { tur: 'tamam', boyut: kayit.length, hamBoyut: json.length };
 }
 // Açılışta, oturum değişince ve sekmeye dönünce: başka cihaz daha yeni bir defter
 // yazdıysa ve bu cihazda buluta gitmemiş değişiklik yoksa onu sessizce aç. İki taraf da
@@ -8562,8 +8664,11 @@ async function testDefteriniDenetleGercek() {
   const anlik = await sureSinirli(b.getDocFromServer(testDefterRef(uid)),
     BULUT_YAZMA_ZAMAN_ASIMI, 'Test defteri sunucudan zamanında alınamadı.');
   if (D !== defter || !anlik.exists()) return;
-  const bulutJson = (anlik.data() || {}).veri, temel = bulutYedekTemelleri[uid];
-  if (typeof bulutJson !== 'string' || await bulutYedekImzasi(bulutJson) === temel) return;
+  const bulutHam = (anlik.data() || {}).veri, temel = bulutYedekTemelleri[uid];
+  if (typeof bulutHam !== 'string') return;
+  const bulutJson = await bulutVeriCoz(bulutHam);     // çözülemezse fırlar: hiçbir şey ezilmez
+  if (D !== defter) return;
+  if (await bulutYedekImzasi(bulutJson) === temel) return;
   const yerelJson = JSON.stringify(D), acilis = TEST_ACILIS_JSON;
   if (bulutJson === yerelJson) { await bulutYedekTemeliniHatirla(uid, bulutJson); return; }
   // Açılıştaki otomatik plan hazırlığı defteri değiştirmiş olabilir; kullanıcı henüz
@@ -8714,8 +8819,11 @@ async function buluttanGunAl(gun) {
     const veri = anlik.data() || {};
     if (typeof veri.veri !== 'string' || !veri.veri)
       return { tur: 'hata', mesaj: 'Bu günün yedeği beklenen biçimde değil.' };
+    let json;
+    try { json = await bulutVeriCoz(veri.veri); }
+    catch (e) { return { tur: 'hata', mesaj: 'Bu günün yedeği okunamadı: ' + (e.message || e) }; }
     let y;
-    try { y = JSON.parse(veri.veri); }
+    try { y = JSON.parse(json); }
     catch (e) { return { tur: 'hata', mesaj: 'Bu günün yedeği okunamadı (bozuk JSON).' }; }
     return { tur: 'tamam', yedek: y, ts: +veri.ts || 0 };
   } catch (e) {
@@ -8750,10 +8858,10 @@ async function geriYuklemeNoktasiOlustur(kaynak) {
   let json;
   try { yedekDogrula(D); json = JSON.stringify(D); }
   catch (e) { return { tur: 'hata', mesaj: 'Mevcut defter geri dönüş noktası için doğrulanamadı: ' + (e.message || e) }; }
-  const noktaBayt = baytBoyu(json);
+  const kayit = json ? await bulutVeriKodla(json) : '';
+  const noktaBayt = baytBoyu(kayit);
   if (!json || noktaBayt > BULUT_YEDEK_UST_SINIR)
-    return { tur: 'hata', mesaj: 'Mevcut defter geri dönüş noktası için çok büyük (' +
-      Math.round(noktaBayt / 1024) + ' KB). Önce “Yedek indir” ile dosya yedeği alın.' };
+    return { tur: 'hata', mesaj: bulutBoyutMesaji(noktaBayt, kayit !== json, 'Mevcut defter geri dönüş noktası için çok büyük') };
   const ts = Date.now();
   const id = geriYuklemeNoktasiKimligi(ts);
   const kaynakMetni = String(kaynak || 'bilinmeyen').slice(0, 100);
@@ -8761,12 +8869,12 @@ async function geriYuklemeNoktasiOlustur(kaynak) {
     await sureSinirli(
       window.bulut.setDoc(
         window.bulut.doc(window.bulut.db, 'ogretmenYedek', defterUid(kullanici), 'geriNoktalari', id),
-        { veri: json, ts: ts, surum: VERI_SURUMU, boyut: json.length,
+        { veri: kayit, ts: ts, surum: VERI_SURUMU, boyut: kayit.length,
           ogrenciSayisi: (D.ogr || []).filter(o => o && !o.silindi).length,
           sonucSayisi: (D.log || []).length, kaynak: kaynakMetni }),
       BULUT_YAZMA_ZAMAN_ASIMI,
       'Geri yükleme koruma noktası sunucudan zamanında onay alamadı. Mevcut defter değiştirilmedi.');
-    return { tur: 'tamam', id: id, ts: ts, boyut: json.length };
+    return { tur: 'tamam', id: id, ts: ts, boyut: kayit.length };
   } catch (e) {
     return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA }
       : { tur: 'hata', mesaj: e.message || String(e) };
@@ -8807,8 +8915,11 @@ async function buluttanGeriYuklemeNoktasiAl(id) {
     const veri = anlik.data() || {};
     if (typeof veri.veri !== 'string' || !veri.veri)
       return { tur: 'hata', mesaj: 'Geri dönüş noktası beklenen biçimde değil.' };
+    let json;
+    try { json = await bulutVeriCoz(veri.veri); }
+    catch (e) { return { tur: 'hata', mesaj: 'Geri dönüş noktası okunamadı: ' + (e.message || e) }; }
     let y;
-    try { y = JSON.parse(veri.veri); }
+    try { y = JSON.parse(json); }
     catch (e) { return { tur: 'hata', mesaj: 'Geri dönüş noktası okunamadı (bozuk JSON).' }; }
     return { tur: 'tamam', yedek: y, ts: +veri.ts || 0, kaynak: String(veri.kaynak || '') };
   } catch (e) {
@@ -9336,7 +9447,8 @@ async function kaydedipCikisYapGercek() {
     const r=await bulutaYedekle();
     if(r?.tur!=='tamam')throw new Error(r?.mesaj||(test?'Test defteri':'Öğretmen defteri')+' sunucuya kaydedilemedi.');
     const a=await sureSinirli(b.getDocFromServer(test?testDefterRef(kullanici.uid):b.doc(b.db,'ogretmenYedek',defterUid(kullanici))),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki son yedek doğrulanamadı.');
-    if(!a.exists()||a.data().veri!==onayliImza)throw new Error('Sunucudaki yedek bu cihazın son kaydıyla eşleşmiyor.');
+    // Sunucudaki kopya (gz1 ya da düz) çözülür; çözülemezse çıkış durur ve cihaz temizlenmez.
+    if(!a.exists()||await bulutVeriCoz(a.data().veri)!==onayliImza)throw new Error('Sunucudaki yedek bu cihazın son kaydıyla eşleşmiyor.');
   }
   const veriAyni=()=>D===defter&&(ogr?ogrenciEsitlemeImzasi():JSON.stringify(D))===onayliImza;
   if(!oturumAyni()||!veriAyni())throw new Error('Kayıt sırasında oturum veya çalışma değişti; cihaz temizlenmedi.');
@@ -9389,10 +9501,13 @@ async function tarayiciVerileriniSifirla() {
 // Gerçek Türkiye tarihi; geliştirme ekranındaki tarih denemesi yedek adını değiştirmez.
 function bulutGercekGun() { return new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Istanbul'}); }
 function bulutGunBaslangiciKimligi() { return 'gun-baslangici-'+bulutGercekGun(); }
-function bulutKorumaBelgesi(json,ts,kaynak) {
-  const y=JSON.parse(json);yedekDogrula(y);
-  if(baytBoyu(json)>BULUT_YEDEK_UST_SINIR)throw new Error('Koruma yedeği çok büyük; işlem durduruldu.');
-  return {veri:json,ts,surum:VERI_SURUMU,boyut:json.length,ogrenciSayisi:yedekOgrenciSayisi(y),
+// `veri`: düz JSON ya da bulutta saklanan gz1 dizesi. Sıkıştırılmış kopya aynen korunur (bayt bayt aynı);
+// düz JSON sıkıştırılarak saklanır. Boyut sınırı SAKLANAN dizeye uygulanır.
+async function bulutKorumaBelgesi(veri,ts,kaynak) {
+  const json=await bulutVeriCoz(veri),y=JSON.parse(json);yedekDogrula(y);
+  const kayit=veri.startsWith(BULUT_SIKISTIRMA_ONEKI)?veri:await bulutVeriKodla(json);
+  if(baytBoyu(kayit)>BULUT_YEDEK_UST_SINIR)throw new Error('Koruma yedeği çok büyük; işlem durduruldu. Ayarlar → Defter boyutu bölümüne bakın.');
+  return {veri:kayit,ts,surum:VERI_SURUMU,boyut:kayit.length,ogrenciSayisi:yedekOgrenciSayisi(y),
     sonucSayisi:(y.log||[]).length,kaynak:String(kaynak).slice(0,100)};
 }
 async function bulutSifirlamaSecenekleriniAc() {
@@ -9403,7 +9518,9 @@ async function bulutSifirlamaSecenekleriniAc() {
   if(D!==defter||b.mevcutKullanici()?.uid!==u.uid)throw new Error('Oturum değişti; yedekleri yeniden açın.');
   if(gunler.tur!=='tamam'||noktalar.tur!=='tamam')throw new Error(gunler.mesaj||noktalar.mesaj||'Yedek geçmişi okunamadı.');
   if(!son.exists()||typeof son.data().veri!=='string')throw new Error('Bulutta öğretmen defteri bulunamadı.');
-  EK.bulutSifirlama={uid:u.uid,mevcut:son.data().veri,liste:[
+  const mevcutJson=await bulutVeriCoz(son.data().veri);     // sıkıştırmasız JSON; çözülemezse fırlar
+  if(D!==defter||b.mevcutKullanici()?.uid!==u.uid)throw new Error('Oturum değişti; yedekleri yeniden açın.');
+  EK.bulutSifirlama={uid:u.uid,mevcut:mevcutJson,liste:[
     ...gunler.liste.map(y=>({...y,tur:'gun',id:y.gun,ad:ggyy(gunNo(y.gun))+' · günlük son kayıt'})),
     ...noktalar.liste.map(y=>({...y,tur:'nokta',ad:y.kaynak+' · '+new Date(y.ts).toLocaleString('tr-TR')}))
   ].sort((a,b)=>b.ts-a.ts)};
@@ -9424,7 +9541,7 @@ async function bulutSurumuneDon(yedek,kaynak,secim) {
       if(navigator.onLine===false)throw new Error('Buluttaki değişikliği geri almak için internet bağlantısı gerekiyor.');
       await sureSinirli(Promise.all([KAYIT_ZINCIRI,OGRENCI_SYNC_IS,bulutYedekIsi]),3*BULUT_YAZMA_ZAMAN_ASIMI,'Devam eden kayıt bitmedi.');
       const oncekiJson=JSON.stringify(D),ts=Date.now();
-      const yerelKoruma=bulutKorumaBelgesi(oncekiJson,ts,'Bulut geri alma öncesi cihazdaki defter');
+      const yerelKoruma=await bulutKorumaBelgesi(oncekiJson,ts,'Bulut geri alma öncesi cihazdaki defter');
       let hedef;
       try {
         veriyiHazirla(JSON.parse(JSON.stringify(yedek)));D.rol='rehber';
@@ -9433,7 +9550,7 @@ async function bulutSurumuneDon(yedek,kaynak,secim) {
         hedef=D;
       } finally { D=defter; }
       const json=JSON.stringify(hedef);
-      const hedefBelge=bulutKorumaBelgesi(json,ts,kaynak);
+      const hedefBelge=await bulutKorumaBelgesi(json,ts,kaynak);
       // Yerel güvenlik kopyaları ağ işlemi başlamadan yazılır; kota hatası bulutu değiştirmez.
       localStorage.setItem('yks_bulut_geri_alma_oncesi',oncekiJson);
       localStorage.setItem('yks_bulut_geri_alma_hedefi',json);
@@ -9445,16 +9562,17 @@ async function bulutSurumuneDon(yedek,kaynak,secim) {
           const anlik=await tx.get(ref);
           if(!etkin||D!==defter||JSON.stringify(D)!==oncekiJson||b.mevcutKullanici()?.uid!==u.uid)
             throw new Error('İşlem sırasında oturum veya defter değişti.');
-          if(!anlik.exists()||anlik.data().veri!==secim.mevcut)
+          // Karşılaştırma sıkıştırmasız JSON üzerinde; çözülemeyen kopya üzerine yazılmaz (hata fırlar).
+          if(!anlik.exists()||await bulutVeriCoz(anlik.data().veri)!==secim.mevcut)
             throw new Error('Buluttaki defter değişmiş. Yedek listesini yeniden açıp kontrol edin.');
-          const uzakKoruma=bulutKorumaBelgesi(anlik.data().veri,ts,'Bulut geri alma öncesi sunucudaki defter');
+          const uzakKoruma=await bulutKorumaBelgesi(anlik.data().veri,ts,'Bulut geri alma öncesi sunucudaki defter');
           tx.set(b.doc(b.db,'ogretmenYedek',defterUid(u),'geriNoktalari',id+'-yerel'),yerelKoruma);
           tx.set(b.doc(b.db,'ogretmenYedek',defterUid(u),'geriNoktalari',id+'-bulut'),uzakKoruma);
-          tx.set(ref,{veri:json,ts,surum:VERI_SURUMU,boyut:hedefBelge.boyut});
+          tx.set(ref,{veri:hedefBelge.veri,ts,surum:VERI_SURUMU,boyut:hedefBelge.boyut});
         }),BULUT_YAZMA_ZAMAN_ASIMI,'Geri alma sunucudan zamanında onay alamadı. “Buluttaki defteri aç” ile son durumu kontrol edin.');
       } finally { etkin=false; }
       const son=await sureSinirli(b.getDocFromServer(ref),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki geri alma doğrulanamadı. “Buluttaki defteri aç” ile kontrol edin.');
-      if(D!==defter||JSON.stringify(D)!==oncekiJson||b.mevcutKullanici()?.uid!==u.uid||!son.exists()||son.data().veri!==json)
+      if(D!==defter||JSON.stringify(D)!==oncekiJson||b.mevcutKullanici()?.uid!==u.uid||!son.exists()||await bulutVeriCoz(son.data().veri)!==json)
         throw new Error('Sunucudaki yedek veya oturum değişti; cihazdaki defter korundu.');
       localStorage.setItem('yks_veri',json);
       D=hedef;PENCERE=null;disariAktarmayiKapat();
@@ -11687,7 +11805,8 @@ document.addEventListener('click', async ev => {
       const b = window.bulut;
       if (bulutYedekIsi) await bulutYedekIsi;
       const anlik = await sureSinirli(b.getDocFromServer(testDefterRef(D.testHesap.uid)), BULUT_YAZMA_ZAMAN_ASIMI, 'Test defteri sunucudan zamanında alınamadı.');
-      const r = await bulutaYedekle(anlik.exists() ? (anlik.data() || {}).veri : undefined);
+      // Çözülemeyen bulut kopyası "onay" sayılmaz: bulutVeriCoz fırlatır, yazma yapılmaz.
+      const r = await bulutaYedekle(anlik.exists() ? await bulutVeriCoz((anlik.data() || {}).veri) : undefined);
       if (r.tur !== 'tamam') throw new Error(r.mesaj || 'Buluta yazılamadı.');
       ciz(); bilgiVer('Bu cihazdaki defter buluta yazıldı.');
     } catch (e) { alert('Buluta yazılamadı: ' + (e.message || e)); }
@@ -12939,7 +13058,7 @@ document.addEventListener('click', async ev => {
         return;
       }
     }
-    if (r.tur === 'tamam') { ciz(); bilgiVer('Defteriniz buluta yedeklendi (' + Math.round(r.boyut / 1024) + ' KB).'); }
+    if (r.tur === 'tamam') { ciz(); bilgiVer('Defteriniz buluta yedeklendi (' + kbMetni(r.boyut) + ').'); }
     else if (r.tur === 'baglanilmadi') alert('Önce “Buluta bağlan”a tıklayıp Google hesabınızla girin.');
     else if (r.tur === 'hata') alert('Buluta yedeklenemedi: ' + r.mesaj);
     else alert('Bulut yedeği yalnızca öğretmen görünümünde ve bulut yapılandırılmışken alınabilir.');
@@ -14596,7 +14715,7 @@ async function yaz(veri,once){
   const eski=D.siralama,geri=()=>{if(eski===undefined)delete D.siralama;else D.siralama=eski};
   D.siralama=veri;
   // The lists ride in the teacher's cloud backup; they must not push it over its limit.
-  if(baytBoyu(JSON.stringify(D))>BULUT_YEDEK_UST_SINIR&&bayt>(once===undefined?0:baytBoyu(JSON.stringify(once)))){geri();throw new Error('Bu listeler defteri bulut yedeği sınırının üstüne çıkarır. Eski sınavları silip yeniden deneyin.')}
+  if(baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(once===undefined?0:baytBoyu(JSON.stringify(once)))){geri();throw new Error('Bu listeler defteri bulut yedeği sınırının üstüne çıkarır. Eski sınavları silip yeniden deneyin. Ayarlar → Defter boyutu bölümüne bakın.')}
   if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; listeler değişmedi.')}
   ONBELLEK.clear();
 }
@@ -15547,7 +15666,7 @@ async function yaz(veri){
   const eski=D.etut,geri=()=>{if(eski===undefined)delete D.etut;else D.etut=eski};
   if(veri)D.etut=veri;else delete D.etut;
   // The rows ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>BULUT_YEDEK_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır.')}
+  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
   if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; etüt verisi değişmedi.')}
   ONBELLEK.ts=null;
 }
@@ -17054,7 +17173,7 @@ async function degistir(fn){
   plan.ts=Math.max(Date.now(),plan.ts+1);dogrula(plan);
   const eski=D.etutPlani,defter=D,geri=()=>{if(defter.etutPlani!==plan)return;if(eski===undefined)delete defter.etutPlani;else defter.etutPlani=eski};
   D.etutPlani=plan;
-  if(baytBoyu(JSON.stringify(D))>BULUT_YEDEK_UST_SINIR&&baytBoyu(JSON.stringify(plan))>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Defter bulut yedeği sınırında; plan kaydedilmedi.')}
+  if(baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&baytBoyu(JSON.stringify(plan))>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Defter bulut yedeği sınırında; plan kaydedilmedi. Ayarlar → Defter boyutu bölümüne bakın.')}
   if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; plan değişmedi.')}
   return sonuc;
 }
@@ -18231,7 +18350,7 @@ async function yaz(veri){
   const eski=D.yoklama,geri=()=>{if(eski===undefined)delete D.yoklama;else D.yoklama=eski};
   if(veri)D.yoklama=veri;else delete D.yoklama;
   // The days ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>BULUT_YEDEK_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır.')}
+  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
   if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; yoklama verisi değişmedi.')}
   ONBELLEK.k=null;
 }
@@ -18888,7 +19007,7 @@ async function yaz(veri){
   const eski=D.turkiye,geri=()=>{if(eski===undefined)delete D.turkiye;else D.turkiye=eski};
   if(veri)D.turkiye=veri;else delete D.turkiye;
   // The lists ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>BULUT_YEDEK_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu liste defteri bulut yedeği sınırının üstüne çıkarır.')}
+  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu liste defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
   if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; Türkiye geneli verisi değişmedi.')}
 }
 const yazabilir=()=>{if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen değiştirebilir.')};
@@ -20195,7 +20314,7 @@ function canWrite(){if(!rehberMi()||readonly())throw new Error('Yalnızca düzen
 let saving=false;
 async function write(v,owner=D,previous=D.konutakibi){
   canWrite();if(saving||D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti. İşlemi yeniden deneyin.');dogrula(v);
-  const next={...D,konutakibi:v};if(baytBoyu(JSON.stringify(next))>BULUT_YEDEK_UST_SINIR&&baytBoyu(JSON.stringify(next))>baytBoyu(JSON.stringify(D)))throw new Error('Defterin bulut yedeği sınırı doldu.');
+  const next={...D,konutakibi:v};if(baytBoyu(JSON.stringify(next))>DEFTER_HAM_UST_SINIR&&baytBoyu(JSON.stringify(next))>baytBoyu(JSON.stringify(D)))throw new Error('Defterin bulut yedeği sınırı doldu. Ayarlar → Defter boyutu bölümüne bakın.');
   saving=true;D.konutakibi=v;
   try{if(!await kaydet(true))throw new Error('Kaydedilemedi; önceki kayıt korundu.')}
   catch(e){if(owner.konutakibi===v){if(previous===undefined)delete owner.konutakibi;else owner.konutakibi=previous}throw e}

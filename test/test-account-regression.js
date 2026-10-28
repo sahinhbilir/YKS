@@ -2,7 +2,10 @@
 // "Test hesabı aç": a Google user's own notebook in testDefter/{uid}. vm-based and
 // dependency-free; one in-memory Firestore double is shared by several "devices".
 const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
-const { webcrypto } = require('node:crypto');
+const { webcrypto } = require('node:crypto'), zlib = require('node:zlib');
+// The cloud copy is 'gz1:' + base64(gzip(JSON)); the test decodes it independently of the app.
+const gzCoz = v => (typeof v === 'string' && v.startsWith('gz1:')) ? zlib.gunzipSync(Buffer.from(v.slice(4), 'base64')).toString('utf8') : v;
+const gzKodla = json => 'gz1:' + zlib.gzipSync(Buffer.from(json, 'utf8')).toString('base64');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8'), marker = '<script id="uygulama">';
 const start = html.indexOf(marker) + marker.length;
 const source = html.slice(start, html.indexOf('// ---------------------------------------------------------------- başlangıç', start));
@@ -37,7 +40,7 @@ function cihaz(s, kullanici = GOOGLE, oturumAcik = false) {
     getDocFromServer: async ref => snap(s.belgeler[ref]),
     setDoc: async (ref, data) => yaz(ref, data),
     async oturumuKapat() { events.push('signout'); user = null; } };
-  const sandbox = { console, JSON, Date, Math, Intl, TextEncoder, Blob, URL, URLSearchParams, crypto: webcrypto, structuredClone,
+  const sandbox = { console, JSON, Date, Math, Intl, TextEncoder, TextDecoder, atob, btoa, CompressionStream, DecompressionStream, Response, Blob, URL, URLSearchParams, crypto: webcrypto, structuredClone,
     location: { search: '?dev=1' }, navigator: { onLine: true, locks: { request: async (_n, _o, fn) => fn({}) } },
     localStorage: storage(store), sessionStorage: storage(session), fetch: async () => ({ ok: false }),
     alert: m => events.push('alert:' + m), confirm: () => true, prompt: () => { events.push('prompt'); return istem; },
@@ -110,7 +113,7 @@ async function girisYap(a, ad, sifre) {
   await a.tikla('ogrenciBulutGiris');
   return a.nodes.ogrenciGirisDurum.textContent;
 }
-const bulutDefteri = (s, uid = GOOGLE.uid) => JSON.parse(s.belgeler['testDefter/' + uid].veri);
+const bulutDefteri = (s, uid = GOOGLE.uid) => JSON.parse(gzCoz(s.belgeler['testDefter/' + uid].veri));
 
 const checks = [];
 async function check(name, fn) {
@@ -162,7 +165,9 @@ async function check(name, fn) {
     assert.equal((await yukle(a)).tur, 'tamam');
     const ana = s.belgeler['testDefter/' + GOOGLE.uid];
     assert.deepEqual(Object.keys(ana).sort(), ['boyut', 'surum', 'ts', 'veri']);
-    assert.equal(ana.veri, a.run('JSON.stringify(D)'));
+    assert(ana.veri.startsWith('gz1:'), 'the test notebook is stored compressed too');
+    assert.equal(gzCoz(ana.veri), a.run('JSON.stringify(D)'));
+    assert.equal(ana.boyut, ana.veri.length);
     const yuva = a.run('String(haftaGunu(bugunNo()))');
     assert.equal(yuva, '6', '2026-09-20 is a Sunday');
     assert.equal(s.belgeler['testDefter/' + GOOGLE.uid + '/gecmis/' + yuva].veri, ana.veri);
@@ -240,6 +245,24 @@ async function check(name, fn) {
     assert.equal(a.run('EK.testCakisma'), true);
     const ayar = a.run("EK.sekme='ayarlar';gorunumAyarlar()");
     assert.match(ayar, /id="testBulutuAc"/); assert.match(ayar, /id="testYereliYaz"/);
+  });
+
+  await check('plain-legacy-and-gz1-cloud-copies-of-the-same-notebook-never-conflict; an undecodable copy is never overwritten', async kapat => {
+    const s = sunucu(), a = kapat(await kur(s));
+    assert.equal((await yukle(a)).tur, 'tamam');
+    const yol = 'testDefter/' + GOOGLE.uid, json = a.run('JSON.stringify(D)');
+    s.belgeler[yol] = { ...s.belgeler[yol], veri: json, boyut: json.length };          // the same notebook as an old (plain) save
+    const r = await yukle(a); assert.equal(r.tur, 'tamam', JSON.stringify(r)); assert(!r.cakisma);
+    assert(s.belgeler[yol].veri.startsWith('gz1:'), 'the next save rewrites it as gz1');
+    const b = kapat(cihaz(s)); s.belgeler[yol] = { ...s.belgeler[yol], veri: json, boyut: json.length };
+    await b.tikla('testHesapAc'); assert.equal(b.run('D.ogr[0].ad'), 'Kuzey', 'a legacy plain copy still opens');
+    // Undecodable copy: the upload refuses, even with a remembered baseline, and the cloud is untouched.
+    s.belgeler[yol] = { ...s.belgeler[yol], veri: 'gz1:AAAA', boyut: 8 };
+    a.run('sonucIsle(0,[{ki:0,gun:bugunNo(),not:3}])'); await a.run('kaydet(true)');
+    const k = await yukle(a); assert.equal(k.tur, 'hata');
+    assert.equal(s.belgeler[yol].veri, 'gz1:AAAA', 'nothing was written over the undecodable copy');
+    await a.run('testDefteriniDenetle()'); assert.equal(s.belgeler[yol].veri, 'gz1:AAAA');
+    assert.equal(a.run('D.log.length'), 1, 'the device notebook is kept');
   });
 
   await check('conflict-keep-this-device-saves-replaced-cloud-copy', async kapat => {

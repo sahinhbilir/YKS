@@ -162,9 +162,9 @@ check('apply refuses view-only and rolls back when the notebook would pass the c
   assert.throws(() => run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 6)`), /görüntüleme/);
   assert.equal(run('topluOgrenciKarti()'), '', 'view-only hides the card');
   run('IZLEME = null');
-  run(`D.dolgu = 'x'.repeat(BULUT_YEDEK_UST_SINIR - JSON.stringify(D).length - 200)`);
+  run(`D.dolgu = 'x'.repeat(DEFTER_HAM_UST_SINIR - JSON.stringify(D).length - 200)`);
   const once = run('JSON.stringify([D.ogr, D.konuPlani])');
-  assert.throws(() => run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 6)`), /bulut sınırını/);
+  assert.throws(() => run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 6)`), /boyut sınırını/);
   assert.equal(run('JSON.stringify([D.ogr, D.konuPlani])'), once, 'nothing is left half-added');
   run('delete D.dolgu');
 });

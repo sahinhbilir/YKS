@@ -52,7 +52,7 @@ Birleşik raporun TYT tekrarları, başka tarihe sahip olsalar bile aynı sınav
 - `ogr[].denemeSure`: öğrencinin kendi tamamlama süreleri; öğretmen sonucunun D/Y değerlerini değiştirmez.
 - Kayıtlar öğrenciye aittir; eşleşme yayınlanırken kalıcı bulut kimliğiyle tekrar denetlenir. Yuva rotasyonu öğretmen sonuçlarını taşır.
 - Tam yedekler ve öğrenci dosya paketleri denemeleri içerir. JSON kopyaları ve sonuç kanalları aynı veriyi çalışma yedeğinde gereksiz yere çoğaltmaz.
-- En fazla 1500 kayıt/kanal ve 3000 süre; okul deneme alanı 300 KB ile, toplam bulut yazısı mevcut 900 KB sınırıyla kontrol edilir. Öğrenci yazısı, aynı belgede duran okul deneme alanıyla birlikte ölçülür. Öğretmen silme veya süre düzeltmesi yayınlanamazsa cihazda kalır ve “yayın bekliyor” olarak gösterilir. Eski kayıtlar sessizce atılmaz.
+- En fazla 1500 kayıt/kanal ve 3000 süre; okul deneme alanı 300 KB ile, toplam öğrenci bulut yazısı (ayrı kanal) mevcut 900 KB sınırıyla kontrol edilir; öğretmen defterinin kendisi bundan etkilenmez (bkz. docs/cloud-notebook-recovery.md). Öğrenci yazısı, aynı belgede duran okul deneme alanıyla birlikte ölçülür. Öğretmen silme veya süre düzeltmesi yayınlanamazsa cihazda kalır ve “yayın bekliyor” olarak gösterilir. Eski kayıtlar sessizce atılmaz.
 
 **Dağıtım sırası:** önce bu dalın `firestore.rules` dosyasını mevcut Firebase projesine `firebase deploy --only firestore:rules --project <mevcut-proje>` ile yayınlayın; sonra `index.html` değişikliğini siteye alın. Kurallar yayınlanmadan öğretmen aktarımı cihazda kalır ve yayınlama hatası gösterilir. Bu PR üretim verisini değiştirmez veya ekli PDF’leri otomatik olarak üretime aktarmaz.
 

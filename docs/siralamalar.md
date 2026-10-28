@@ -72,7 +72,7 @@ Kurallar:
 - Listeler öğretmen defterinde `D.siralama` alanında, sıkıştırılmış olarak durur: `{surum:1, sinavlar:[{id, ad, okul, ts, tarih?, tur?, T, F}], tercih:{şube: alan}}`. `T` Net Sayısı Sıralı, `F` Öğrenci Adı Sıralı listedir: `{tarih, katilim:[toplam,kampüs,kurum], kurum:{n,dy,p}, ogr:[{no, ad, snf, n, dy, p, r}]}`; `n` netler, `dy` D/Y yazıları, `p` dört puan, `r` dört sıralama yazısıdır. Dizi sırası `T` için 11 TYT dersi, `F` için 11 TYT + 13 AYT dersidir; listenin basmadığı dersler `null`’dır.
 - Defterle birlikte cihaza ve öğretmenin bulut yedeğine yazılır; çıkışta cihazdan silinir, Google ile yeniden girişte buluttan gelir. Öğrenci paketleri alan listesiyle kurulduğu için öğrencilere gitmez.
 - Okuma ve yazmada `dogrula` yapıyı denetler. Okunamayan (bozuk ya da daha yeni sürümün yazdığı) veri sayfada uyarıyla gösterilir ve üzerine yazılmaz; defterin geri kalanı etkilenmez.
-- Sınırlar: en çok 40 sınav ve 350 KB. Defteri bulut yedeği sınırının (900 KB) üstüne çıkaracak ekleme yapılmaz; eski sınavlar **Sil** ile kaldırılır. Silmek öğrencilerin deneme sonuçlarını değiştirmez.
+- Sınırlar: en çok 40 sınav ve 350 KB. Defteri sıkıştırılmamış JSON olarak 2 500 KB sınırının (`DEFTER_HAM_UST_SINIR`; bulut kopyası sıkıştırılır, bkz. docs/cloud-notebook-recovery.md) üstüne çıkaracak ekleme yapılmaz (Ayarlar → Defter boyutu); eski sınavlar **Sil** ile kaldırılır. Silmek öğrencilerin deneme sonuçlarını değiştirmez.
 - PDF’ler tarayıcıda okunur ve raporlar tarayıcıda çizilir; hiçbir şey yüklenmez.
 
 ## Kütüphaneler

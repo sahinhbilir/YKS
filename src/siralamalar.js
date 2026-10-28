@@ -190,7 +190,7 @@ async function yaz(veri,once){
   const eski=D.siralama,geri=()=>{if(eski===undefined)delete D.siralama;else D.siralama=eski};
   D.siralama=veri;
   // The lists ride in the teacher's cloud backup; they must not push it over its limit.
-  if(baytBoyu(JSON.stringify(D))>BULUT_YEDEK_UST_SINIR&&bayt>(once===undefined?0:baytBoyu(JSON.stringify(once)))){geri();throw new Error('Bu listeler defteri bulut yedeği sınırının üstüne çıkarır. Eski sınavları silip yeniden deneyin.')}
+  if(baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(once===undefined?0:baytBoyu(JSON.stringify(once)))){geri();throw new Error('Bu listeler defteri bulut yedeği sınırının üstüne çıkarır. Eski sınavları silip yeniden deneyin. Ayarlar → Defter boyutu bölümüne bakın.')}
   if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; listeler değişmedi.')}
   ONBELLEK.clear();
 }

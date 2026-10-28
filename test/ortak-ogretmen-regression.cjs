@@ -5,7 +5,10 @@
 // only one person edits at a time (defterKilidi); the other follows the cloud copy read-only and takes
 // over when the lock is released or goes stale; removing the grant deletes the device copy.
 // Firebase is an in-memory stand-in that applies the same lock rule as firestore.rules. Synthetic data only.
-const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
+const fs = require('fs'), vm = require('vm'), zlib = require('zlib'), assert = require('node:assert/strict');
+// The cloud copy is 'gz1:' + base64(gzip(JSON)); the tests encode/decode it independently of the app.
+const gzKodla = json => 'gz1:' + zlib.gzipSync(Buffer.from(json, 'utf8')).toString('base64');
+const gzCoz = v => (typeof v === 'string' && v.startsWith('gz1:')) ? zlib.gunzipSync(Buffer.from(v.slice(4), 'base64')).toString('utf8') : v;
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
 const source = html.slice(start, html.indexOf('// ---------------------------------------------------------------- başlangıç', start));
@@ -56,7 +59,7 @@ function cihaz(srv, { uid, kendiDefter = null, izin } = {}) {
     defterKilidiBirak: async sahip => { const k = srv.belgeler.get('defterKilidi/' + sahip); if (k && k.uid === ben()) { srv.belgeler.delete('defterKilidi/' + sahip); srv.olaylar.push([ben(), 'birak', sahip]); } } };
   const node = () => ({ innerHTML: '', textContent: '', style: {}, hidden: false, dataset: {}, classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, appendChild() {}, remove() {}, click() {}, focus() {}, getClientRects() { return [1]; } });
   const nodes = { ray: node(), ana: node(), stil: { textContent: 'body{}' }, uygulama: { textContent: source }, veri: { textContent: 'null' } };
-  const sandbox = { console, setTimeout, clearTimeout, Blob, URL, URLSearchParams, TextEncoder, crypto, location: { search: '?dev=1' }, Date, Math, JSON, Intl,
+  const sandbox = { console, setTimeout, clearTimeout, Blob, URL, URLSearchParams, TextEncoder, TextDecoder, atob, btoa, CompressionStream, DecompressionStream, Response, crypto, location: { search: '?dev=1' }, Date, Math, JSON, Intl,
     alert() {}, confirm() { return true; }, prompt() { return ''; }, fetch: async () => ({ ok: false }), localStorage: depo(yerel), sessionStorage: depo(oturum), navigator: { onLine: true },
     window: { scrollTo() {}, open() { return null; }, addEventListener() {}, bulut, location: { reload() { durum.yenilendi++; } } },
     document: { activeElement: null, visibilityState: 'visible', addEventListener() {}, contains() { return true; }, getElementById(id) { return nodes[id] || null; }, querySelector() { return null; }, querySelectorAll() { return []; },
@@ -70,11 +73,17 @@ function sahipDefteri(srv) {
   const c = cihaz(srv, { uid: SAHIP });
   c.run(`D=varsayilan();D.rol='rehber';D.kurum='SENTETİK LİSE';D.ogr=[{no:1001,ad:'SENTETİK ADA',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true,syncId:'sync-1',ogrenciBulutId:'bulut-1'}];`);
   const json = c.run('JSON.stringify(D)');
-  srv.belgeler.set('ogretmenYedek/' + SAHIP, { veri: json, ts: 1, surum: 1, boyut: json.length });
+  const kayit = gzKodla(json);
+  srv.belgeler.set('ogretmenYedek/' + SAHIP, { veri: kayit, ts: 1, surum: 1, boyut: kayit.length });
   return json;
 }
+// The owner's cloud notebook as plain JSON, whatever format it was stored in.
+const bulutJson = srv => gzCoz(srv.belgeler.get('ogretmenYedek/' + SAHIP).veri);
+
 const GRANT = { sahipUid: SAHIP, ad: 'Sentetik Sahip', yetki: 'ortak' };
 const bekle = (ms = 5) => new Promise(r => setTimeout(r, ms));
+// Cloud copies are decoded asynchronously: wait (bounded) for the observable effect.
+const bekleKosul = async (kosul, ms = 5000) => { const son = Date.now() + ms; while (Date.now() < son) { if (kosul()) return true; await bekle(2); } return kosul(); };
 // A clean co-teacher device ("Rehber öğretmeniyim" on a device with no notebook), connected.
 async function ortakBagla(srv) {
   const c = cihaz(srv, { uid: ORTAK, izin: GRANT });
@@ -106,7 +115,7 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     c.run("D.ogr[0].ad='SENTETİK ADA (ORTAK)'");
     assert.equal(await c.run('kaydet(true)'), true);
     const r = await c.run('bulutaYedekle()'); assert.equal(r.tur, 'tamam', JSON.stringify(r));
-    assert.match(srv.belgeler.get('ogretmenYedek/' + SAHIP).veri, /SENTETİK ADA \(ORTAK\)/);
+    assert(srv.belgeler.get('ogretmenYedek/' + SAHIP).veri.startsWith('gz1:'), 'saved compressed'); assert.match(bulutJson(srv), /SENTETİK ADA \(ORTAK\)/);
     assert(srv.belgeler.has('ogretmenYedek/' + SAHIP + '/gecmis/' + c.run('isoDan(bugunNo())')), 'the daily copy goes to the owner too');
     assert.equal([...srv.belgeler.keys()].some(k => k.startsWith('ogretmenYedek/' + ORTAK)), false, 'nothing under the co-teacher’s own uid');
   });
@@ -141,20 +150,20 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     assert.equal(s.yerel.get('yks_veri'), json);
     // The co-teacher's save reaches the owner's screen and device copy.
     c.run("D.ogr[0].ad='ORTAKTAN GELEN'"); await c.run('kaydet(true)'); assert.equal((await c.run('bulutaYedekle()')).tur, 'tamam');
-    await bekle(20);
+    await bekleKosul(() => s.run('D.ogr[0].ad') === 'ORTAKTAN GELEN');
     assert.equal(s.run('D.ogr[0].ad'), 'ORTAKTAN GELEN'); assert.match(s.yerel.get('yks_veri'), /ORTAKTAN GELEN/);
     // Even an old app on the owner's side cannot overwrite while the co-teacher holds the lock.
     await assert.rejects(s.bulut.setDoc('ogretmenYedek/' + SAHIP, { veri: '{}' }), /permission/i);
     // The co-teacher logs out: the lock is released at once and the owner takes over.
     assert.equal(await c.run('kaydedipCikisYapGercek()'), true);
     assert.equal(srv.belgeler.has('defterKilidi/' + SAHIP), false, 'released on logout');
-    await s.run('kilitDenetle(true)'); await bekle(20);
+    await s.run('kilitDenetle(true)'); await bekleKosul(() => s.durum.bilgi.some(t => /Düzenleme sırası sizde/.test(t)));
     assert.equal(s.run('KILIT.durum'), 'bende'); assert.equal(s.run('yalnizcaGoruntuleme()'), false);
     assert(!s.nodes.ana.innerHTML.includes('düzenliyor'));
     assert(s.durum.bilgi.some(t => /Düzenleme sırası sizde/.test(t)));
     s.run("D.ogr[0].ad='SAHİP DÜZENLEDİ'"); assert.equal(await s.run('kaydet(true)'), true);
     assert.equal((await s.run('bulutaYedekle()')).tur, 'tamam');
-    assert.match(srv.belgeler.get('ogretmenYedek/' + SAHIP).veri, /SAHİP DÜZENLEDİ/);
+    assert.match(bulutJson(srv), /SAHİP DÜZENLEDİ/);
   });
   await check('a startup auto-save does not stop the waiting device from following; a real unsaved edit is never overwritten', async () => {
     const srv = sunucu(); const json = sahipDefteri(srv);
@@ -163,15 +172,35 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     s.run("TEST_ACILIS_JSON=localStorage.getItem('yks_veri');D.ogr[0].kap=7");      // e.g. upcoming weeks filled at startup
     assert.equal(await s.run('kaydet(true)'), true); s.run('ACILIS_KAYIT=KAYIT_SAYAC');
     await s.run('kilitDenetle(true)'); assert.equal(s.run('KILIT.durum'), 'baskasinda');
-    c.run("D.ogr[0].ad='ORTAKTAN'"); await c.run('kaydet(true)'); assert.equal((await c.run('bulutaYedekle()')).tur, 'tamam'); await bekle(20);
+    c.run("D.ogr[0].ad='ORTAKTAN'"); await c.run('kaydet(true)'); assert.equal((await c.run('bulutaYedekle()')).tur, 'tamam');
+    await bekleKosul(() => s.run('D.ogr[0].ad') === 'ORTAKTAN');
     assert.equal(s.run('D.ogr[0].ad'), 'ORTAKTAN', 'startup-only change: follows the cloud');
-    const t = await sahipCihazi(srv, srv.belgeler.get('ogretmenYedek/' + SAHIP).veri);
+    const t = await sahipCihazi(srv, bulutJson(srv));
     t.run("TEST_ACILIS_JSON=localStorage.getItem('yks_veri');ACILIS_KAYIT=KAYIT_SAYAC;D.ogr[0].ad='ÇEVRİMDIŞI DÜZENLEME'");
     assert.equal(await t.run('kaydet(true)'), true);                                // saved on the device, not in the cloud
     await t.run('kilitDenetle(true)'); assert.equal(t.run('KILIT.durum'), 'baskasinda');
-    c.run("D.ogr[0].ad='ORTAKTAN 2'"); await c.run('kaydet(true)'); await c.run('bulutaYedekle()'); await bekle(20);
+    c.run("D.ogr[0].ad='ORTAKTAN 2'"); await c.run('kaydet(true)'); await c.run('bulutaYedekle()'); await bekleKosul(() => /buluta gitmemiş/.test(t.run('EK.kilitNot')));
     assert.equal(t.run('D.ogr[0].ad'), 'ÇEVRİMDIŞI DÜZENLEME'); assert.match(t.run('EK.kilitNot'), /buluta gitmemiş/);
     assert.match(t.yerel.get('yks_veri'), /ÇEVRİMDIŞI DÜZENLEME/);
+  });
+  await check('the lock follower applies the newest of two quickly arriving cloud copies; an undecodable copy changes nothing', async () => {
+    const srv = sunucu(); const json = sahipDefteri(srv);
+    const c = await ortakBagla(srv);
+    const s = await sahipCihazi(srv, json);
+    await s.run('kilitDenetle(true)'); assert.equal(s.run('KILIT.durum'), 'baskasinda');
+    const dinleyici = [...srv.dinleyiciler].find(([d]) => d.yol === 'ogretmenYedek/' + SAHIP)[1];
+    const anlik = veri => ({ exists: () => true, data: () => ({ veri }), metadata: { fromCache: false } });
+    const surum = kurum => JSON.stringify({ ...JSON.parse(json), kurum });
+    // The older copy is compressed (slower to decode) and arrives first; the newer plain copy must win.
+    // (The older one is padded with incompressible text so it certainly finishes decoding last.)
+    const dolgu = require('crypto').randomBytes(1500000).toString('base64');
+    dinleyici(anlik(gzKodla(surum('ESKİ ANLIK ' + dolgu)))); dinleyici(anlik(surum('YENİ ANLIK')));
+    await bekleKosul(() => s.run('D.kurum') === 'YENİ ANLIK'); await bekle(150);
+    assert.equal(s.run('D.kurum'), 'YENİ ANLIK', 'the stale snapshot does not replace the newer one');
+    // A corrupt copy is reported and the notebook on screen and on the device stays as it was.
+    const onceki = s.yerel.get('yks_veri');
+    dinleyici(anlik('gz1:AAAA')); await bekleKosul(() => /güncellenemedi/.test(s.run('EK.kilitNot')));
+    assert.match(s.run('EK.kilitNot'), /güncellenemedi/); assert.equal(s.run('D.kurum'), 'YENİ ANLIK'); assert.equal(s.yerel.get('yks_veri'), onceki);
   });
   await check('a stale lock passes to the person who is working; an idle tab does not take a free lock', async () => {
     const srv = sunucu(); const json = sahipDefteri(srv);

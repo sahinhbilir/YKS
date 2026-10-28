@@ -31,7 +31,7 @@
 - Veri öğretmen defterinde `D.etut` alanında, sözlüklerle sıkıştırılmış olarak durur: `{surum:1, ts, kaynak:[{bas,bit,n,ts}], brans:[], ogretmen:[], ogrenci:[[ad,şube]], satir:[[gün,branş,öğretmen,öğrenci,saat,süre]]}`. Gün, uygulamanın gün numarasıdır; saat ve süre dakikadır. Derslik saklanmaz.
 - Defterle birlikte cihaza ve öğretmenin bulut yedeğine yazılır. Öğrenci paketleri alan listesiyle kurulduğu için öğrencilere gitmez.
 - Okuma ve yazmada `dogrula` yapıyı denetler. Okunamayan veri sayfada uyarıyla gösterilir ve üzerine yazılmaz.
-- Sınırlar: en çok 15 000 etüt ve 300 KB. Defteri bulut yedeği sınırının (900 KB) üstüne çıkaracak ekleme yapılmaz. **Etüt verisini sil** bütün kayıtları kaldırır.
+- Sınırlar: en çok 15 000 etüt ve 300 KB. Defteri sıkıştırılmamış JSON olarak 2 500 KB sınırının (`DEFTER_HAM_UST_SINIR`; bulut kopyası sıkıştırılır, bkz. docs/cloud-notebook-recovery.md) üstüne çıkaracak ekleme yapılmaz; Ayarlar → Defter boyutu neyin yer kapladığını gösterir. **Etüt verisini sil** bütün kayıtları kaldırır.
 - **Yedekten geri getir:** Defter etüt verisi olmadan açıldıysa (başka bir cihazdan ya da etüt verisi olmayan bir bulut kopyasından), Google hesabıyla bağlı öğretmen boş Etütler sayfasından etüt kayıtlarını geri alabilir. Bulut yedek geçmişindeki günlük kopyalar yeniden eskiye taranır (en çok 30), etüt verisi okunabilen ilk kopya gösterilir ve onaylanınca yalnızca `D.etut` yazılır; defterin geri kalanı değişmez. Kopyalarda etüt verisi yoksa son rapor “PDF ekle” ile eklenir; okulun raporu dönem başından bugüne olduğu için tek PDF yeter.
 - İzleyici öğretmen grafikleri görür; rapor ekleyemez ve silemez.
 

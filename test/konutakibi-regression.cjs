@@ -91,7 +91,8 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   const r=copy(F.reports[1]);r.blocks[0].student.name='BAŞKA ÖĞRENCİ';assert.throws(()=>K.merge(stored(),[r]),/farklı adlarla/);
  });
  await test('notebook limit is enforced before mutation',async()=>{
-  run("D.__syntheticPadding='x'.repeat(BULUT_YEDEK_UST_SINIR)");await assert.rejects(K.ekle([F.reports[0]]),/bulut yedeği sınırı/);assert.equal(run('D.konutakibi'),undefined);
+  run("D.__syntheticPadding='x'.repeat(DEFTER_HAM_UST_SINIR)");await assert.rejects(K.ekle([F.reports[0]]),/bulut yedeği sınırı.*Ayarlar → Defter boyutu/);assert.equal(run('D.konutakibi'),undefined);
+  run("D.__syntheticPadding='x'.repeat(1500000)");await K.ekle([F.reports[0]]);assert(run('D.konutakibi'),'a notebook over the old 900 KB guard but under the raw limit still takes the write');
  });
  await test('escaped untrusted text; empty and viewing teacher are usable',()=>{
   assert(K.gorunum().includes('Kazanım Haritası Yükle'));const r=copy(F.reports[0]);r.blocks[0].rows[0].name='<img src=x onerror=alert(1)>';put('__r',r);run('D.konutakibi=KONU_TAKIBI.merge(KONU_TAKIBI.blank(),[__r])');const html=K.gorunum();assert(!html.includes('<img'));assert(html.includes('&lt;img'));
