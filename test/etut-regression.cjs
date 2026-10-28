@@ -296,7 +296,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
   });
   await check('the teacher menu lists Etütler and Etüt planı under Öğrenciler', () => {
     assert(get('SEKME_REHBER').some(([id, ad]) => id === 'etutler' && ad === 'Etütler'));
-    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='ogrenciler')[1]"), ['takip', 'etutler', 'etutplani', 'yoklama', 'ogrencirapor']);
+    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='ogrenciler')[1]"), ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor']);
     assert.match(run('gorunumEtutler()'), /Henüz etüt raporu yok/);
   });
   console.log(passed + ' Etütler checks passed');
