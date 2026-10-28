@@ -66,7 +66,7 @@ async function degistir(fn){
   plan.ts=Math.max(Date.now(),plan.ts+1);dogrula(plan);
   const eski=D.etutPlani,defter=D,geri=()=>{if(defter.etutPlani!==plan)return;if(eski===undefined)delete defter.etutPlani;else defter.etutPlani=eski};
   D.etutPlani=plan;
-  if(baytBoyu(JSON.stringify(D))>BULUT_YEDEK_UST_SINIR&&baytBoyu(JSON.stringify(plan))>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Defter bulut yedeği sınırında; plan kaydedilmedi.')}
+  if(baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&baytBoyu(JSON.stringify(plan))>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Defter bulut yedeği sınırında; plan kaydedilmedi. Ayarlar → Defter boyutu bölümüne bakın.')}
   if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; plan değişmedi.')}
   return sonuc;
 }

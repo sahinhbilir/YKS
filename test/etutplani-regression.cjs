@@ -314,7 +314,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
       ['41 rows', "for(let i=0;i<41;i++)p.gunler[1].push(['','',['','','','']])"], ['six days', 'p.gunler.push([])']])
       await assert.rejects(run(`ETUTPLANI.degistir(p=>{${kod}})`), /etüt planı okunamadı/, neden);
     assert.equal(JSON.stringify(get('D.etutPlani')), once, 'rejected writes leave the stored plan');
-    run("D.dolgu='x'.repeat(BULUT_YEDEK_UST_SINIR)"); await assert.rejects(run("ETUTPLANI.degistir(p=>{p.gunler[2].push(['Kimya','Sentetik Kimyacı',['','','','']])})"), /bulut yedeği/);
+    run("D.dolgu='x'.repeat(DEFTER_HAM_UST_SINIR)"); await assert.rejects(run("ETUTPLANI.degistir(p=>{p.gunler[2].push(['Kimya','Sentetik Kimyacı',['','','','']])})"), /bulut yedeği/);
     assert.equal(JSON.stringify(get('D.etutPlani')), once); run('delete D.dolgu');
     run('D.etutPlani={surum:9}'); assert.match(run('ETUTPLANI.icerik()'), /Kayıtlı etüt planı okunamadı \(yapı\)/);
     await assert.rejects(run("ETUTPLANI.degistir(p=>{})"), /okunamadı/); assert.deepEqual(get('D.etutPlani'), { surum: 9 });

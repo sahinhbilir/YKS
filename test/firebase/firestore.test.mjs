@@ -6,6 +6,9 @@
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
 import { isDeepStrictEqual } from 'node:util';
+import { gzipSync } from 'node:zlib';
+import { createRequire } from 'node:module';
+const { hedefeBuyut } = createRequire(import.meta.url)('../fixtures/buyuk-defter.cjs');
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, runTransaction, collection, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 let pass = 0, fail = 0;
@@ -430,6 +433,32 @@ await check('backup-rejects-oversized-payload', async () => {
   await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
     Object.assign(yedekVeri(), { veri: 'x'.repeat(900001) })));
 });
+// The app stores the cloud copy as 'gz1:' + base64(gzip(JSON)). It is still one string of at most 900000
+// characters, so the rules need no change: a ~2 MB raw notebook is accepted, only the STORED size is capped.
+await check('gz1-compressed-notebook-is-accepted-as-main-daily-and-restore-point-and-the-stored-size-cap-still-binds', async () => {
+  const defter = { rol: 'rehber', ogr: [{ ad: 'SENTETİK ÖĞRENCİ 0001' }] };
+  hedefeBuyut(defter, 2000000);
+  const ham = JSON.stringify(defter), kayit = 'gz1:' + gzipSync(Buffer.from(ham, 'utf8')).toString('base64');
+  if (Buffer.byteLength(ham) < 1900000) throw new Error('fixture should be about 2 MB raw');
+  if (kayit.length > 900000) throw new Error('compressed fixture must fit the rules cap: ' + kayit.length);
+  const belge = { veri: kayit, ts: 1750000000000, surum: 10, boyut: kayit.length };
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID), belge));
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-10-20'),
+    { ...belge, ogrenciSayisi: 1, sonucSayisi: 0 }));
+  await assertSucceeds(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'gz1-nokta-000001'),
+    { ...belge, ogrenciSayisi: 1, sonucSayisi: 0, kaynak: 'gz1 sınaması' }));
+  const okunan = (await assertSucceeds(getDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID)))).data();
+  if (okunan.veri !== kayit) throw new Error('stored string changed');
+  // The cap is on the stored string: a gz1 string over 900000 characters is refused like any other.
+  await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
+    { ...belge, veri: 'gz1:' + 'A'.repeat(900000), boyut: 900004 }));
+  // Leave no extra history behind: later checks count the daily copies and restore points.
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await deleteDoc(doc(db, 'ogretmenYedek', OGRETMEN_UID, 'gecmis', '2026-10-20'));
+    await deleteDoc(doc(db, 'ogretmenYedek', OGRETMEN_UID, 'geriNoktalari', 'gz1-nokta-000001'));
+  });
+});
 await check('backup-rejects-unknown-fields-and-bad-types', async () => {
   await assertFails(setDoc(doc(ogretmenDb, 'ogretmenYedek', OGRETMEN_UID),
     Object.assign(yedekVeri(), { fazladan: 'sızma' })));
@@ -775,6 +804,11 @@ const testciSifreDb = testEnv.authenticatedContext(TESTCI_UID, sifreToken).fires
 const testDefter = (over) => Object.assign({ veri: '{"rol":"ogrenci"}', ts: 1750000000000, surum: 20, boyut: 17 }, over || {});
 const testRef = (db, ...yol) => doc(db, 'testDefter', TESTCI_UID, ...yol);
 
+await check('test-account-notebook-accepts-a-gz1-compressed-string', async () => {
+  const kayit = 'gz1:' + gzipSync(Buffer.from('{"rol":"ogrenci","v":3}', 'utf8')).toString('base64');
+  await assertSucceeds(setDoc(testRef(testciDb), testDefter({ veri: kayit, boyut: kayit.length })));
+  await assertSucceeds(setDoc(testRef(testciDb, 'gecmis', '0'), testDefter({ veri: kayit, boyut: kayit.length, gun: '2026-10-20' })));
+});
 await check('test-account-owner-can-create-read-and-update-own-notebook', async () => {
   await assertSucceeds(setDoc(testRef(testciDb), testDefter()));
   await assertSucceeds(getDoc(testRef(testciDb)));

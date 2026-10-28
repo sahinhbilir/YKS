@@ -68,8 +68,8 @@ Editing the text after a preview turns the add button off until the next preview
    existing şube plans are not touched;
 3. saves once. The cloud backup follows as after any save.
 
-If the notebook would pass the cloud backup limit (`BULUT_YEDEK_UST_SINIR`, 900 000
-bytes), nothing is added and the card asks to split the list. A 98-student school list with
+If the notebook would pass the whole-notebook limit (`DEFTER_HAM_UST_SINIR`, 2 500 000
+bytes of JSON; the cloud copy is compressed, see docs/cloud-notebook-recovery.md), nothing is added and the card asks to split the list. A 98-student school list with
 six new şubeler adds about 130 KB.
 
 The card is hidden in view-only mode, and the add step refuses there.

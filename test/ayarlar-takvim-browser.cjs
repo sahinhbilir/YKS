@@ -2,6 +2,7 @@
 // tracking "Plan verildi" count and the alt konu picker, on desktop and a phone. Synthetic data only.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
+const {hedefeBuyut}=require('./fixtures/buyuk-defter.cjs');
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
 const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-ayarlar-'));fs.mkdirSync(out,{recursive:true});
 (async()=>{
@@ -66,6 +67,36 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.evaluate(()=>{EK.sekme='ayarlar';ciz();});
    assert.deepEqual(await page.locator('[data-ayar-bolum]').allInnerTexts(),['Genel','Ders programı','Öğrenci kalibrasyonu']);
    assert.equal(await page.locator('#ayarKaydet').count(),1);
+   // Defter boyutu: what fills the notebook, in KB, next to the cloud backup status. Synthetic ~1.6 MB notebook.
+   {
+    const parca={};hedefeBuyut(parca,1600000);
+    await page.evaluate(p=>{window.__onceki={};Object.keys(p).forEach(k=>{window.__onceki[k]=D[k];});Object.assign(D,p);EK.bulutYedekBoyut=undefined;ciz();},parca);
+    const tablo=page.locator('#defterBoyutu');await tablo.scrollIntoViewIfNeeded();
+    assert.equal(await tablo.locator('thead th').count(),2);
+    assert.deepEqual(await tablo.locator('tbody tr td:first-child').allInnerTexts(),['Sıralamalar','Etütler','Yoklama','Türkiye geneli','Konu Takibi','Etüt planı','Öğrenciler','Diğer']);
+    const kb=t=>+t.replace(/[^\d]/g,'');
+    const toplam=kb(await tablo.locator('tfoot tr').first().locator('td').nth(1).innerText());
+    assert(toplam>1500&&toplam<1700,'total '+toplam);
+    assert.equal(await tablo.locator('tfoot tr').nth(1).innerText().then(t=>t.replace(/\s+/g,' ')),'Sınır 2.500 KB');
+    const bolumler=(await tablo.locator('tbody tr td:nth-child(2)').allInnerTexts()).map(kb);
+    assert(Math.abs(bolumler.reduce((a,b)=>a+b,0)-toplam)<=8,'the rows add up to the total (rounding only)');
+    assert.equal(await tablo.locator('tbody tr').nth(5).locator('td').nth(1).innerText(),'0 KB','a part that is absent is 0 KB');
+    assert.match((await tablo.innerText()).replace(/\s+/g,' '),/Bulutta: — \/ 900 KB \(bu oturumda henüz kaydedilmedi\)/);
+    await page.evaluate(()=>{EK.bulutYedekBoyut=312345;ciz();});
+    assert.match((await page.locator('#defterBoyutu').innerText()).replace(/\s+/g,' '),/Bulutta: 312 KB \/ 900 KB/);
+    // Numbers sit right-aligned under a right-aligned header and the table never scrolls the page sideways.
+    const hiza=await page.evaluate(()=>{const t=document.querySelector('#defterBoyutu table'),th=t.querySelector('thead th:nth-child(2)'),
+      sagKenar=e=>{const r=document.createRange();r.selectNodeContents(e);return Math.round(r.getBoundingClientRect().right)},
+      sag=[...t.querySelectorAll('tbody td:nth-child(2), tfoot td:nth-child(2)')].map(sagKenar);
+      return {baslik:getComputedStyle(th).textAlign,hucre:getComputedStyle(t.querySelector('tbody td:nth-child(2)')).textAlign,hizali:new Set([...sag,sagKenar(th)]).size,
+        genislik:t.getBoundingClientRect().width,pencere:innerWidth};});
+    assert.equal(hiza.baslik,'right');assert.equal(hiza.hucre,'right');assert.equal(hiza.hizali,1,'every number and the header end on the same right edge');
+    assert(hiza.genislik<=hiza.pencere,'the table fits the window: '+JSON.stringify(hiza));
+    assert(await genis(),'Defter boyutu fits at '+width);
+    await page.locator('#defterBoyutu').screenshot({path:path.join(out,'defter-boyutu-'+width+'-'+scheme+'.png')});
+    await page.screenshot({path:path.join(out,'ayarlar-genel-defter-boyutu-'+width+'-'+scheme+'.png'),fullPage:true});
+    await page.evaluate(()=>{Object.entries(window.__onceki).forEach(([k,v])=>{if(v===undefined)delete D[k];else D[k]=v;});EK.bulutYedekBoyut=undefined;ciz();});
+   }
    await page.locator('#aSoru').fill('15');
    await page.locator('[data-ayar-bolum="program"]').click();
    assert.match(dialogs.at(-1),/Kaydedilmemiş ayar değişiklikleri/);

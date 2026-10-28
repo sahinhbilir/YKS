@@ -59,7 +59,7 @@ Exams differ in difficulty, so an increase is read against the Türkiye average'
 ## Storage and privacy
 
 - The data is kept in the teacher notebook as `D.turkiye = {surum:1, ts, okul, adlar:[…], sinavlar:[{ad, liste, yaz, ts, duzey?, dersler:[[kod, soru, genel, satırlar]]}]}`; `duzey` is present only when the teacher set the grade (0 for Diğer). `adlar` is the school-name dictionary and `genel` is the Türkiye average in hundredths. `satırlar` is the list in printed order as `name:net` pairs in base 36 (the name's index in `adlar`, the net in hundredths), with a third part only when the printed place differs from the row's position. `yaz` is the print day.
-- One exam's Kolej list takes about 15 KB. Limits: 40 lists, 250 KB in total, and no addition that would push the notebook over the cloud backup limit. A failed save leaves the data unchanged. `dogrula` checks the structure on every read and write; unreadable data is shown as a warning and never overwritten.
+- One exam's Kolej list takes about 15 KB. Limits: 40 lists, 250 KB in total, and no addition that would push the notebook over the whole-notebook limit (`DEFTER_HAM_UST_SINIR`, 2 500 000 bytes of JSON; the cloud copy is compressed, see docs/cloud-notebook-recovery.md). A failed save leaves the data unchanged. `dogrula` checks the structure on every read and write; unreadable data is shown as a warning and never overwritten.
 - The data travels with the teacher's cloud backup. Student packets are built from a field whitelist and never carry it, and students never see the page.
 
 ## Code and tests

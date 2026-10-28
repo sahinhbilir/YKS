@@ -5,8 +5,13 @@ import { doc, getDoc, getDocFromServer, setDoc, updateDoc, runTransaction, onSna
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
+import { gunzipSync } from 'node:zlib';
+import { createRequire } from 'node:module';
+const { hedefeBuyut } = createRequire(import.meta.url)('../fixtures/buyuk-defter.cjs');
 import assert from 'node:assert/strict';
 
+// The cloud copy is 'gz1:' + base64(gzip(JSON)) when the browser can compress; completeness checks decode it first.
+const veriCoz = v => typeof v === 'string' && v.startsWith('gz1:') ? gunzipSync(Buffer.from(v.slice(4), 'base64')).toString('utf8') : v;
 const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
 const marker = '<script id="uygulama">';
 const start = html.indexOf(marker) + marker.length;
@@ -25,7 +30,7 @@ function app(db,user) {
   const listeners={},store={},timers=new Set(),windowEvents={},messages=[];
   const nodes={ray:element(),ana:element(),stil:{textContent:''},veri:{textContent:'null'},uygulama:{textContent:source}};
   let rows=[];
-  const s={console,JSON,Date,Math,Intl,TextEncoder,crypto:webcrypto,URL,URLSearchParams,Blob,
+  const s={console,JSON,Date,Math,Intl,TextEncoder,TextDecoder,atob,btoa,CompressionStream,DecompressionStream,Response,crypto:webcrypto,URL,URLSearchParams,Blob,
     location:{search:'?dev=1'},navigator:{onLine:true,locks:{request:async(_name,_options,fn)=>fn({})}},fetch:async()=>({ok:false}),
     setTimeout(fn,ms){const timer=setTimeout(()=>{timers.delete(timer);fn();},ms);timers.add(timer);return timer;},
     clearTimeout(timer){clearTimeout(timer);timers.delete(timer);},
@@ -97,7 +102,7 @@ try {
   const studentRef=doc(studentDb,'ogrenciler',slot),teacherRef=doc(teacherDb,'ogretmenYedek',teacherUid);
   await eventually(async()=>((await getDocFromServer(studentRef)).data()?.paket?.kayit?.length||0)===1,'result upload');
   await eventually(()=>teacher.run('D.log.length')===1,'automatic teacher receipt');
-  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).log.length===1;},'teacher backup');
+  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(veriCoz(d.data().veri)).log.length===1;},'teacher backup');
   check('result-click-reaches-student-slot-teacher-view-and-teacher-backup',()=>assert.equal(teacher.run('D.log[0][3]'),8));
   check('lesson-completion-reaches-teacher-without-a-result-row',()=>assert.equal(teacher.run('D.ogrIslenis[0][1]'),student.run('bugunNo()')));
   check('server-keeps-the-issued-week',()=>assert.ok(teacher.run("D.elle['0|'+buHafta()].sabit")));
@@ -162,7 +167,7 @@ try {
   const beforeTeacherPrint=teacher.run('JSON.stringify(D.ogr[0].etkinlik)');
   teacher.run("D.kurum='Teacher print saved';");teacher.s.window.print=()=>{};
   await teacher.click('yazdir');
-  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).kurum==='Teacher print saved';},'teacher print backup without the ten-second fallback',5000);
+  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(veriCoz(d.data().veri)).kurum==='Teacher print saved';},'teacher print backup without the ten-second fallback',5000);
   check('teacher-print-also-flushes-the-complete-server-backup',()=>assert.equal(teacher.run('D.log.length'),2));
   check('teacher-print-does-not-add-student-activity',()=>assert.equal(teacher.run('JSON.stringify(D.ogr[0].etkinlik)'),beforeTeacherPrint));
   teacher.run(`gecmisPlaniKaydet(0,'2026-09-07',[{tarih:'2026-09-08',ki:0,tur:'test',durum:'tamamlandi',soru:10,dogru:7,not:null,dahil:true}],true)`);
@@ -175,7 +180,7 @@ try {
     assert.equal(recovered.run("D.elle['0|'+gunNo('2026-09-07')].kurtarma.satirlar[0].gun"),recovered.run("gunNo('2026-09-08')"));
     assert.equal(recovered.run("D.log.find(l=>l[0]===gunNo('2026-09-08'))[3]"),7);
   });
-  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).log.length===3;},'recovered teacher history backup',5000);
+  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(veriCoz(d.data().veri)).log.length===3;},'recovered teacher history backup',5000);
   check('photo-recovery-is-in-the-teacher-server-backup',()=>assert.equal(teacher.run('D.log.length'),3));
   recovered.run(`gecmisPlaniKaydet(0,'2026-08-31',[{tarih:'2026-09-01',ki:0,tur:'test',durum:'tamamlandi',soru:10,dogru:6,not:null,dahil:true}],false)`);
   await recovered.run('kaydet(true)');await recovered.run('ogrenciEsitlemeBosalt()');
@@ -184,7 +189,7 @@ try {
     assert.ok(teacher.run("D.elle['0|'+gunNo('2026-08-31')].kurtarma"));
     assert.equal(teacher.run("D.log.find(l=>l[0]===gunNo('2026-09-01'))[3]"),6);
   });
-  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(d.data().veri).log.length===4;},'student recovered history teacher backup',5000);
+  await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(veriCoz(d.data().veri)).log.length===4;},'student recovered history teacher backup',5000);
   check('student-photo-recovery-is-in-the-teacher-server-backup',()=>assert.equal(teacher.run('D.log.length'),4));
   recovered.run("hafizaSeviyesiniUygula(0,'cok-guclu');DISARI_AKTAR=null;EK.sekme='plan';");
   assert.equal(await recovered.run('kaydedipCikisYap()'),true);
@@ -207,23 +212,42 @@ try {
   assert.equal((await getDocFromServer(dayRef)).data().veri,dayBefore);
   await teacher.run('bulutSifirlamaSecenekleriniAc()');
   assert.equal(await teacher.run('bulutSurumuneDon(rollbackTarget,"emulator rollback",EK.bulutSifirlama)'),true);
-  const rolledBack=JSON.parse((await getDocFromServer(teacherRef)).data().veri);
+  const rolledBack=JSON.parse(veriCoz((await getDocFromServer(teacherRef)).data().veri));
   check('cloud-rollback-archives-and-restores-using-existing-firestore-rules',()=>{
     assert.equal(rolledBack.kurum,teacher.s.rollbackTarget.kurum);assert.equal(rolledBack.log.length,4);
     assert.ok(rolledBack.bulutGeriAlma);assert.equal(JSON.parse(teacher.store.yks_veri).kurum,rolledBack.kurum);
   });
   const points=await getDocs(collection(teacherDb,'ogretmenYedek',teacherUid,'geriNoktalari'));
   check('cloud-rollback-keeps-the-overwritten-notebook-for-undo',()=>{
-    assert(points.docs.some(d=>d.id.endsWith('-bulut')&&JSON.parse(d.data().veri).kurum==='Change to undo'));
-    assert(points.docs.some(d=>d.id.endsWith('-yerel')&&JSON.parse(d.data().veri).kurum==='Change to undo'));
+    assert(points.docs.some(d=>d.id.endsWith('-bulut')&&JSON.parse(veriCoz(d.data().veri)).kurum==='Change to undo'));
+    assert(points.docs.some(d=>d.id.endsWith('-yerel')&&JSON.parse(veriCoz(d.data().veri)).kurum==='Change to undo'));
   });
   teacher.run("DISARI_AKTAR=null;EK.sekme='plan';D.kurum='Saved on logout'");
   assert.equal(await teacher.run('kaydedipCikisYap()'),true);
-  const savedTeacher=JSON.parse((await getDocFromServer(teacherRef)).data().veri);
+  const savedTeacher=JSON.parse(veriCoz((await getDocFromServer(teacherRef)).data().veri));
   check('teacher-logout-persists-complete-notebook-before-clearing-device',()=>{
     assert.equal(teacher.store.yks_veri,undefined);assert.equal(savedTeacher.kurum,'Saved on logout');
     assert.equal(savedTeacher.log.length,4);assert.equal(savedTeacher.ogr[0].hafizaSeviyesi,'cok-guclu');
   });
+  // A 2 MB (raw JSON) synthetic notebook backs up through the real rules: stored compressed, under 900000.
+  const bigUid='teacher-big-notebook';
+  await env.withSecurityRulesDisabled(async ctx=>{await setDoc(doc(ctx.firestore(),'ogretmenler',bigUid),{});});
+  const big=app(env.authenticatedContext(bigUid,{firebase:{sign_in_provider:'google.com'}}).firestore(),{uid:bigUid,isAnonymous:false,email:'big@example.test'});
+  big.run("D.rol='rehber';D.kurum='Big School';D.ogr=[{no:7,ad:'SENTETİK ÖĞRENCİ 0007',alan:'SAY',sube:'12A',kap:6,off:[6],aktif:true}];");
+  const parts={};hedefeBuyut(parts,2000000);big.s.__parts=parts;big.run('Object.assign(D,__parts)');
+  const bigJson=big.run('JSON.stringify(D)'),bigBytes=Buffer.byteLength(bigJson);
+  assert.ok(bigBytes>1900000,'fixture is about 2 MB raw: '+bigBytes);
+  const bigResult=await big.run('bulutaYedekle()');
+  assert.equal(bigResult.tur,'tamam',JSON.stringify(bigResult));
+  const bigRef=doc(env.authenticatedContext(bigUid,{firebase:{sign_in_provider:'google.com'}}).firestore(),'ogretmenYedek',bigUid);
+  const bigDoc=(await getDocFromServer(bigRef)).data();
+  check('a-2mb-raw-notebook-backs-up-compressed-under-the-rules-limit',()=>{
+    assert.ok(bigDoc.veri.startsWith('gz1:'));assert.ok(bigDoc.veri.length<=900000,'stored '+bigDoc.veri.length);
+    assert.equal(bigDoc.boyut,bigDoc.veri.length);assert.equal(veriCoz(bigDoc.veri),bigJson);
+    console.log('  raw',bigBytes,'B -> stored',bigDoc.veri.length,'B ('+(bigBytes/bigDoc.veri.length).toFixed(2)+'x)');
+  });
+  const bigDay=await getDocs(collection(env.authenticatedContext(bigUid,{firebase:{sign_in_provider:'google.com'}}).firestore(),'ogretmenYedek',bigUid,'gecmis'));
+  check('the-daily-copy-of-the-big-notebook-is-compressed-too',()=>{assert.equal(bigDay.docs.length,1);assert.equal(veriCoz(bigDay.docs[0].data().veri),bigJson);});
   console.log(`SAVE/PRINT DELIVERY: ${passed} checks passed`);
 } finally {
   apps.forEach(a=>a.close());

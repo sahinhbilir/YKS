@@ -93,7 +93,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run('kaydet=async()=>false');
     await assert.rejects(async () => { put('R', coz()); await run('YOKLAMA.raporEkle([R])'); }, /Cihaza kaydedilemedi/);
     assert.equal(run('D.yoklama'), undefined);
-    run('kaydet=async()=>true;D.dolgu="x".repeat(BULUT_YEDEK_UST_SINIR)');
+    run('kaydet=async()=>true;D.dolgu="x".repeat(DEFTER_HAM_UST_SINIR)');
     await assert.rejects(async () => { put('R', coz()); await run('YOKLAMA.raporEkle([R])'); }, /bulut yedeği sınırının/);
     assert.equal(run('D.yoklama'), undefined);
   });

@@ -1,6 +1,9 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const {webcrypto}=require('node:crypto');
+const {webcrypto}=require('node:crypto'),zlib=require('node:zlib');
+// The cloud copy is 'gz1:'+base64(gzip(JSON)); tests encode/decode it independently of the app.
+const gzKodla=json=>'gz1:'+zlib.gzipSync(Buffer.from(json,'utf8')).toString('base64');
+const gzCoz=v=>typeof v==='string'&&v.startsWith('gz1:')?zlib.gunzipSync(Buffer.from(v.slice(4),'base64')).toString('utf8'):v;
 const html=fs.readFileSync('index.html','utf8'),marker='<script id="uygulama">',start=html.indexOf(marker)+marker.length;
 const source=html.slice(start,html.indexOf('// ---------------------------------------------------------------- başlangıç',start));
 function app(role='rehber',options={}) {
@@ -18,9 +21,9 @@ function app(role='rehber',options={}) {
     setDoc:async(ref,data)=>{cloud[ref]=JSON.parse(JSON.stringify(data));},
     async getDocFromServer(ref){events.push('readback');if(options.readFailure)throw Error('read rejected');
       if(options.onRead)options.onRead(a);
-      return snap(options.mismatch?{veri:'{}'}:cloud[ref]);},
+      return snap(options.mismatch?{veri:'{}'}:options.corrupt?{veri:'gz1:AAAA'}:cloud[ref]);},
     async oturumuKapat(){events.push('signout');if(options.signoutFailure)throw Error('auth rejected');user=null;}};
-  const sandbox={console,JSON,Date,Math,Intl,TextEncoder,Blob,URL,URLSearchParams,crypto:webcrypto,
+  const sandbox={console,JSON,Date,Math,Intl,TextEncoder,TextDecoder,atob,btoa,CompressionStream,DecompressionStream,Response,Blob,URL,URLSearchParams,crypto:webcrypto,
     location:{search:'?dev=1'},navigator:{onLine:true,locks:{request:async(_name,opts,fn)=>fn(opts.mode==='exclusive'&&options.otherTab?null:{})}},
     localStorage:storage(store,'local'),sessionStorage:storage(session,'session'),fetch:async()=>({ok:false}),alert(){},confirm:()=>true,
     setTimeout(fn,ms){const t=setTimeout(()=>{timers.delete(t);fn();},ms);t.unref();timers.add(t);return t;},clearTimeout(t){clearTimeout(t);timers.delete(t);},
@@ -38,13 +41,13 @@ function app(role='rehber',options={}) {
 const checks=[];
 async function check(name,fn,role='rehber',options={}) {const a=app(role,options);try{await fn(a);checks.push(name);}finally{a.close();}}
 const retained=a=>{assert(a.store.yks_veri);assert(a.run('D.ogr.length')===1);assert(!a.events.some(e=>e.startsWith('local:remove:')));};
-module.exports={app};
+module.exports={app,gzCoz,gzKodla};
 if(require.main===module)(async()=>{
   for(const role of ['rehber','ogrenci'])await check(role+'-logout-verifies-server-before-clearing-only-app-data',async a=>{
     a.run("sonucIsle(0,[{ki:0,gun:bugunNo(),not:4}]);hafizaSeviyesiniUygula(0,'guclu');");
     if(role==='ogrenci')a.run("etkinlikKaydet('kaydedildi',buHafta())");
     assert.equal(await a.run('kaydedipCikisYap()'),true,a.nodes.cikisDurum.innerHTML);
-    const data=role==='rehber'?JSON.parse(a.cloud['ogretmenYedek/teacher'].veri):JSON.parse(a.cloud['ogrenciler/slot'].paket.calisma.veri);
+    const data=role==='rehber'?JSON.parse(gzCoz(a.cloud['ogretmenYedek/teacher'].veri)):JSON.parse(a.cloud['ogrenciler/slot'].paket.calisma.veri);
     assert.equal(data.log.length,1);assert.equal(data.ogr[0].hafizaSeviyesi,'guclu');
     if(role==='ogrenci')assert.equal(a.cloud['ogrenciler/slot'].paket.etkinlik.kayit[0].tur,'kaydedildi');
     assert.equal(a.store.yks_veri,undefined);assert.equal(a.store.yks_plan_kurtarma_oncesi,undefined);assert.equal(a.session.yks_ek,undefined);
@@ -89,7 +92,7 @@ if(require.main===module)(async()=>{
   await check('an-older-in-flight-backup-is-followed-by-a-fresh-save',async a=>{
     let finish;a.sandbox.pending=new Promise(r=>{finish=r;});a.run('bulutYedekIsi=pending');const p=a.run('kaydedipCikisYap()');
     await new Promise(r=>setImmediate(r));assert(!a.events.includes('signout'));
-    a.run("D.kurum='latest';bulutYedekIsi=null");finish({tur:'tamam'});assert.equal(await p,true);assert.equal(JSON.parse(a.cloud['ogretmenYedek/teacher'].veri).kurum,'latest');
+    a.run("D.kurum='latest';bulutYedekIsi=null");finish({tur:'tamam'});assert.equal(await p,true);assert.equal(JSON.parse(gzCoz(a.cloud['ogretmenYedek/teacher'].veri)).kurum,'latest');
   });
   await check('unfinished-photo-recovery-remains-visible-and-local',async a=>{
     a.run("EK.sekme='kurtarma';gecmisPlanDurumu().metin='unreviewed photo'");assert.equal(await a.run('kaydedipCikisYap()'),false);retained(a);assert(!a.events.includes('write'));

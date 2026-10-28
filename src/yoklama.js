@@ -224,7 +224,7 @@ async function yaz(veri){
   const eski=D.yoklama,geri=()=>{if(eski===undefined)delete D.yoklama;else D.yoklama=eski};
   if(veri)D.yoklama=veri;else delete D.yoklama;
   // The days ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>BULUT_YEDEK_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır.')}
+  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
   if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; yoklama verisi değişmedi.')}
   ONBELLEK.k=null;
 }

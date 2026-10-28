@@ -3,7 +3,11 @@
 // Viewing teacher (izleyici öğretmen): opens the owner's notebook read-only, follows its updates
 // and the owner's student slots, never writes, and leaves the viewer's own notebook untouched.
 // Firebase is an in-memory stand-in; the matching security rules are in test/firebase. Synthetic data only.
-const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
+const fs = require('fs'), vm = require('vm'), zlib = require('zlib'), assert = require('node:assert/strict');
+// The owner's app stores the cloud copy as 'gz1:' + base64(gzip(JSON)); the stand-in encodes it independently of the app.
+const gzKodla = json => 'gz1:' + zlib.gzipSync(Buffer.from(json, 'utf8')).toString('base64');
+// Decoding is asynchronous: wait (bounded) for an observable effect instead of sleeping a fixed time.
+const bekle = async (kosul, ms = 5000) => { const son = Date.now() + ms; while (Date.now() < son) { if (kosul()) return true; await new Promise(r => setTimeout(r, 2)); } return kosul(); };
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
 const source = html.slice(start, html.indexOf('// ---------------------------------------------------------------- başlangıç', start));
@@ -24,7 +28,7 @@ function uygulama({ izin = { sahipUid: SAHIP, ad: 'Sentetik Öğretmen' }, kendi
     setDoc: yaz('setDoc'), updateDoc: yaz('updateDoc'), runTransaction: yaz('runTransaction'), sifreTalepleriAl: async () => { yazilar.push(['sifreTalepleriAl']); return []; } };
   const node = () => ({ innerHTML: '', textContent: '', style: {}, hidden: false, dataset: {}, classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, appendChild() {}, remove() {}, click() {}, focus() {}, getClientRects() { return [1]; } });
   const nodes = { ray: node(), ana: node(), stil: { textContent: 'body{}' }, uygulama: { textContent: source }, veri: { textContent: 'null' } };
-  const sandbox = { console, setTimeout, clearTimeout, Blob, URL, URLSearchParams, TextEncoder, location: { search: '?dev=1' }, Date, Math, JSON, Intl,
+  const sandbox = { console, setTimeout, clearTimeout, Blob, URL, URLSearchParams, TextEncoder, TextDecoder, atob, btoa, CompressionStream, DecompressionStream, Response, location: { search: '?dev=1' }, Date, Math, JSON, Intl,
     alert() {}, confirm() { return true; }, prompt() { return ''; }, fetch: async () => ({ ok: false }), localStorage: depo(yerel), sessionStorage: depo(oturum), navigator: { onLine: true },
     window: { scrollTo() {}, open() { return null; }, addEventListener() {}, bulut, location: { reload() { durum.yenilendi++; } } },
     document: { activeElement: null, addEventListener() {}, contains() { return true; }, getElementById(id) { return nodes[id] || null; }, querySelector() { return null; }, querySelectorAll() { return []; },
@@ -34,7 +38,7 @@ function uygulama({ izin = { sahipUid: SAHIP, ad: 'Sentetik Öğretmen' }, kendi
   // The owner's notebook as the owner's app would back it up.
   run(`D=varsayilan();D.rol='rehber';D.kurum='SENTETİK LİSE';D.ogr=[{no:1001,ad:'SENTETİK ADA',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true,syncId:'sync-1',ogrenciBulutId:'bulut-1'}];
     SAHIP_DEFTERI=JSON.stringify(D);D=varsayilan();EK.sekme='plan';`);
-  belgeler.set('ogretmenYedek/' + SAHIP, { veri: run('SAHIP_DEFTERI'), ts: 1, surum: 1, boyut: 1 });
+  belgeler.set('ogretmenYedek/' + SAHIP, { veri: gzKodla(run('SAHIP_DEFTERI')), ts: 1, surum: 1, boyut: 1 });
   belgeler.set('ogretmenYedek/' + BASKA, { veri: run('SAHIP_DEFTERI'), ts: 1, surum: 1, boyut: 1 });
   return { run, yerel, oturum, belgeler, dinleyiciler, yazilar, durum, nodes, bulut };
 }
@@ -56,6 +60,7 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
   });
   await check('with a permission, the owner’s notebook opens read-only and the viewer’s own notebook stays', async () => {
     const a = uygulama();
+    assert(a.belgeler.get('ogretmenYedek/' + SAHIP).veri.startsWith('gz1:'), 'the owner’s copy is compressed');
     assert.equal(await ac(a), true);
     assert.equal(a.run('yalnizcaGoruntuleme()'), true); assert.equal(a.run('D.ogr[0].ad'), 'SENTETİK ADA'); assert.equal(a.run('D.rol'), 'rehber');
     assert.equal(a.run('EK.sekme'), 'ana'); assert.equal(a.yerel.get('yks_veri'), '{"kendi":true}');
@@ -88,14 +93,26 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
   await check('a new backup by the owner replaces the view; an unchanged one does not', async () => {
     const a = uygulama(); await ac(a);
     const izle = a.dinleyiciler.get('ogretmenYedek/' + SAHIP);
-    a.run("D.ogr[0].ad='YEREL DEĞİŞİKLİK'"); izle.cb({ exists: () => true, data: () => ({ veri: a.run('SAHIP_DEFTERI') }), metadata: {} });
-    assert.equal(a.run('D.ogr[0].ad'), 'YEREL DEĞİŞİKLİK', 'same backup: no redraw');
+    const gonder = async (veri, kosul) => { a.run("EK.izlemeDurum=''"); izle.cb({ exists: () => true, data: () => ({ veri }), metadata: {} }); await bekle(kosul || (() => a.run('EK.izlemeDurum') !== '')); };
+    a.run("D.ogr[0].ad='YEREL DEĞİŞİKLİK'");
+    await gonder(gzKodla(a.run('SAHIP_DEFTERI')));
+    assert.match(a.run('EK.izlemeDurum'), /^güncel/); assert.equal(a.run('D.ogr[0].ad'), 'YEREL DEĞİŞİKLİK', 'same backup (compressed): no redraw');
+    await gonder(a.run('SAHIP_DEFTERI'));
+    assert.equal(a.run('D.ogr[0].ad'), 'YEREL DEĞİŞİKLİK', 'same backup (legacy plain JSON): no redraw');
     const yeni = JSON.parse(a.run('SAHIP_DEFTERI')); yeni.ogr.push({ ...yeni.ogr[0], no: 1002, ad: 'SENTETİK BORA', syncId: 'sync-2', ogrenciBulutId: 'bulut-2' });
-    izle.cb({ exists: () => true, data: () => ({ veri: JSON.stringify(yeni) }), metadata: {} });
+    await gonder(gzKodla(JSON.stringify(yeni)), () => a.run('D.ogr.length') === 2);
     assert.equal(a.run('D.ogr.length'), 2); assert.equal(a.run('D.ogr[0].ad'), 'SENTETİK ADA');
     assert.equal(JSON.parse(a.yerel.get('yks_izleme_veri')).ogr.length, 2);
-    izle.cb({ exists: () => true, data: () => ({ veri: '{"rol":"ogrenci","ayar":{},"ogr":[]}' }), metadata: {} });
+    await gonder(gzKodla('{"rol":"ogrenci","ayar":{},"ogr":[]}'));
     assert.equal(a.run('D.ogr.length'), 2, 'a student notebook is never shown'); assert.match(a.run('EK.izlemeDurum'), /okunamadı/);
+    await gonder('gz1:AAAA');
+    assert.equal(a.run('D.ogr.length'), 2, 'an undecodable copy is never shown as an empty notebook'); assert.match(a.run('EK.izlemeDurum'), /okunamadı/);
+    // Two snapshots in a row: the older decode must not win over the newer one.
+    const eski = JSON.parse(a.run('SAHIP_DEFTERI')); eski.kurum = 'ESKİ ANLIK'; const yeniden = JSON.parse(a.run('SAHIP_DEFTERI')); yeniden.kurum = 'YENİ ANLIK';
+    a.run("EK.izlemeDurum=''"); izle.cb({ exists: () => true, data: () => ({ veri: gzKodla(JSON.stringify(eski)) }), metadata: {} });
+    izle.cb({ exists: () => true, data: () => ({ veri: JSON.stringify(yeniden) }), metadata: {} });
+    await bekle(() => a.run('D.kurum') === 'YENİ ANLIK'); await new Promise(r => setTimeout(r, 100));
+    assert.equal(a.run('D.kurum'), 'YENİ ANLIK', 'a stale snapshot is discarded');
   });
   await check('when the permission is removed, the device copy is deleted and the viewer’s own notebook returns', async () => {
     const a = uygulama(); await ac(a);
