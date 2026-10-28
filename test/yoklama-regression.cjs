@@ -173,7 +173,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run('yalnizcaGoruntuleme=__yg');
     const paket = JSON.stringify(run('ogrenciPaketi(0)'));
     assert(!paket.includes('SENTETİK') && !paket.includes('"yoklama"'));
-    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='ogrenciler')[1]"), ['takip', 'etutler', 'etutplani', 'yoklama', 'ogrencirapor']);
+    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='ogrenciler')[1]"), ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor']);
     run("D.rol='ogrenci'"); assert.match(run('YOKLAMA.gorunum()'), /rehber öğretmen içindir/);
     run("D.rol='rehber'"); await run('YOKLAMA.sil()'); assert.equal(run('D.yoklama'), undefined);
   });

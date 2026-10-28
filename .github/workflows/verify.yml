@@ -41,6 +41,8 @@ jobs:
         run: node scripts/embed-yoklama.cjs --check && node test/yoklama-regression.cjs
       - name: Türkiye geneli lists, storage, charts and embedding
         run: node scripts/embed-turkiye.cjs --check && node test/turkiye-regression.cjs
+      - name: Etüt etkisi groups, windows, page and embedding
+        run: node scripts/embed-etutetkisi.cjs --check && node test/etutetkisi-regression.cjs
       - name: Role regression
         run: node test/role-regression.js
       - name: Viewing teacher opens a shared notebook read-only
@@ -134,6 +136,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/yoklama-browser.cjs
       - name: Türkiye geneli on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/turkiye-browser.cjs
+      - name: Etüt etkisi on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/etutetkisi-browser.cjs
       - name: Drag to measure and line shape on Etütler and Deneme panosu
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/grafik-browser.cjs
       - name: Test account button, nickname setup, first cloud save and reset

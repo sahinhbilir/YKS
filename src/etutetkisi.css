@@ -1,0 +1,23 @@
+/* Etüt etkisi (#eeKok) wears the Etütler look: tokens and shared parts live in src/etutler.css. */
+#eeKok .et-seg select{border:0;background:transparent;color:var(--e-fg);font:inherit;font-size:.8125rem;font-weight:500;padding:3px 8px;border-radius:999px;min-width:0;max-width:18rem;cursor:pointer}
+.ee-ikili{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}.ee-ok{color:var(--e-muted)}
+/* A teacher's name opens that teacher's students. */
+#eeKok .ee-ad{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--e-line);text-underline-offset:3px}
+#eeKok .ee-ad:hover,#eeKok .ee-ad[aria-pressed="true"]{text-decoration-color:var(--e-fg)}
+#eeKok .et-tablo td.tg-ad{white-space:nowrap}
+#eeKok .ee-hepsi td{font-weight:600;border-bottom:1px solid var(--e-line)}
+/* The difference as a bar either side of zero. */
+.ee-fark{display:inline-grid;grid-template-columns:1fr 1fr;width:5rem;margin-left:8px;vertical-align:middle}
+.ee-fark>span{display:flex;height:7px;background:color-mix(in srgb,var(--e-fg) 7%,transparent)}
+.ee-fark .eksi{justify-content:flex-end;border-radius:4px 0 0 4px}.ee-fark .arti{border-radius:0 4px 4px 0}
+.ee-fark i{display:block;height:100%}.ee-fark .eksi i{background:var(--e-bad);border-radius:4px 0 0 4px}.ee-fark .arti i{background:var(--e-ok);border-radius:0 4px 4px 0}
+/* Differences of groups with too few students are drawn faint. */
+#eeKok .ee-az{opacity:.55}
+.ee-not ul{margin:0;padding-left:1.1rem;display:flex;flex-direction:column;gap:6px;color:var(--e-fg2);max-width:78ch}
+.ee-not h2{font-size:.9375rem;font-weight:500}
+@media (max-width:640px){
+  #eeKok .et-seg select{max-width:11rem}
+  /* A pill with several choices wraps instead of widening the page. */
+  #eeKok .et-seg{flex-wrap:wrap;max-width:100%;border-radius:14px}
+  .ee-fark{display:none}
+}

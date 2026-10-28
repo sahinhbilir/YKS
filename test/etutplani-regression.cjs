@@ -332,7 +332,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
   await check('the teacher menu lists Etüt planı under Öğrenciler; it is for the teacher only', () => {
     assert(get('SEKME_REHBER').some(([id, ad]) => id === 'etutplani' && ad === 'Etüt planı'));
     assert(!get('SEKME_OGRENCI').some(([id]) => id === 'etutplani'));
-    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='ogrenciler')[1]"), ['takip', 'etutler', 'etutplani', 'yoklama', 'ogrencirapor']);
+    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='ogrenciler')[1]"), ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor']);
     assert.match(run('gorunumEtutPlani()'), /<div id="epKok"><header class="et-bas"><h1 class="et-baslik">Etüt planı<\/h1>/);
     run("D.rol='ogrenci'"); assert.match(run('gorunumEtutPlani()'), /Bu sayfa rehber öğretmen içindir/);
   });
