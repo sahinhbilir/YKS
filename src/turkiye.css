@@ -17,7 +17,8 @@
 .tg-renk-disi{width:9px;height:9px;border-radius:50%;border:2px solid var(--e-fg2);box-sizing:border-box}
 .tg-ders-geri{display:flex;justify-content:flex-end}
 .tg-ikili{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}.tg-ok{color:var(--e-muted)}
-.tg-toplam td{font-weight:600;border-top:1px solid var(--e-line)}
+.tg-matris .tg-ad{white-space:nowrap}.tg-matris td:first-child,.tg-matris th:first-child{position:sticky;left:0;background:var(--e-panel);z-index:1}
+.tg-matris .tg-kalin{font-weight:600}.tg-toplam td{font-weight:600;border-bottom:1px solid var(--e-line)}
 .tg-artis-satir b.yukari{color:var(--e-ok)}.tg-artis-satir b.asagi{color:var(--e-bad)}
 .tg-cevre-panel .tg-artis-satir{grid-template-columns:2.6rem minmax(0,1fr) auto minmax(0,7.5rem)}
 /* Türkiye ortalamasına göre: one row per subject, the bar grows left (below) or right (above) from 0. */
