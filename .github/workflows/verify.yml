@@ -43,6 +43,8 @@ jobs:
         run: node scripts/embed-turkiye.cjs --check && node test/turkiye-regression.cjs
       - name: Etüt etkisi groups, windows, page and embedding
         run: node scripts/embed-etutetkisi.cjs --check && node test/etutetkisi-regression.cjs
+      - name: Cross-page consistency
+        run: node test/tutarlilik-regression.cjs
       - name: Role regression
         run: node test/role-regression.js
       - name: Viewing teacher opens a shared notebook read-only

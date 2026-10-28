@@ -5,7 +5,7 @@
 ## Rapor ekleme
 
 - **PDF ekle** ile bir ya da birkaç rapor seçilir (en çok 10). PDF tarayıcıda okunur; hiçbir şey yüklenmez.
-- Rapor, başlığındaki tarih aralığının (ör. `16.08.2026 / 19.10.2026 Tarihleri Arasında`) yerine geçer: bu aralıktaki eski kayıtlar silinir, raporun satırları eklenir; aralık dışındaki kayıtlar kalır. Okulun her seferinde dönem başından bugüne aldığı birikimli rapor eklendikçe veri yenilenir; aynı rapor ikinci kez eklenince satırlar değişmez.
+- Rapor, başlığındaki tarih aralığının (ör. `16.08.2026 / 19.10.2026 Tarihleri Arasında`) yerine geçer: bu aralıktaki eski kayıtlar silinir, raporun satırları eklenir; aralık dışındaki kayıtlar kalır. Rapor aralıktaki şubelerin yalnızca bir kısmını içeriyorsa (ör. tek şubenin raporu) yalnızca o şubelerin kayıtları değişir, diğer şubeler kalır (Yoklama’daki gibi). Okulun her seferinde dönem başından bugüne aldığı birikimli rapor eklendikçe veri yenilenir; aynı rapor ikinci kez eklenince satırlar değişmez.
 - Her günün sayfası tarihle başlar; sonraki sayfaya taşan satırlar o günde kalır. İki satıra bölünen uzun öğretmen ve öğrenci adları birleştirilir.
 - Okunamayan satır atlanır ve durum satırında sayısı yazar. Rapora benzemeyen PDF eklenmez.
 

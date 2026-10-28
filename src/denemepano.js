@@ -121,7 +121,9 @@ function gorunumModeli(t,O,K,sec){
     for(const kk in pencere){const once=dilim(seri,pencere[kk].once),son=dilim(seri,pencere[kk].son);o.k[kk]={once,son,fark:son-once}}return o});
   const ozet={};
   for(const kk in pencere){const w=pencere[kk],once=dilim(genel,w.once),son=dilim(genel,w.son);
-    ozet[kk]={once,son,fark:son-once,artan:ogrenciler.filter(o=>o.k[kk].durum==='Yükseliyor').length,azalan:ogrenciler.filter(o=>o.k[kk].durum==='Düşüyor').length}}
+    // The participants' mean moves when different students take part; the same students' own changes do not.
+    const ayni=ogrenciler.map(o=>o.k[kk].fark).filter(v=>v!==null);
+    ozet[kk]={once,son,fark:son-once,ayni:ayni.length?ayni.reduce((a,b)=>a+b,0)/ayni.length:null,ayniN:ayni.length,artan:ogrenciler.filter(o=>o.k[kk].durum==='Yükseliyor').length,azalan:ogrenciler.filter(o=>o.k[kk].durum==='Düşüyor').length}}
   return {O,K,sinavlar,pencere,ogrenciler,dersler,ozet,yil:sinavlar.length?new Date(sinavlar[n-1].g*864e5).getUTCFullYear():null};
 }
 let ONBELLEK={imza:null,t:null};
@@ -422,7 +424,8 @@ function cumle(st){
   const en=derslerYalniz(m.dersler).sort((a,c)=>Math.abs(c.k[st.s].fark)-Math.abs(a.k[st.s].fark))[0];
   const bas=st.s==='sec'?kacis(m.sinavlar[m.onceki].ad)+' → '+kacis(son.ad)+' ('+gunAy(son.g,m.yil)+'): ':st.s===1?'Son deneme ('+kacis(son.ad)+', '+gunAy(son.g,m.yil)+'): ':'Son '+st.s+' deneme: ';
   return kapsam+bas+kacis(m.O.ad)+' ortalaması '+b(f1(o.son))+' net, '+
-    (st.s==='sec'?'öncekine':st.s===1?'önceki denemeye':'önceki '+st.s+' denemeye')+' göre '+b(isaret(o.fark))+'. En çok değişen ders: '+kacis(en.ad)+' '+b(isaret(en.k[st.s].fark))+'. '+
+    (st.s==='sec'?'öncekine':st.s===1?'önceki denemeye':'önceki '+st.s+' denemeye')+' göre '+b(isaret(o.fark))+
+    (o.ayni===null?'':' (iki dönemde de giren '+fi(o.ayniN)+' öğrencinin kendi değişimi '+b(isaret(o.ayni))+')')+'. En çok değişen ders: '+kacis(en.ad)+' '+b(isaret(en.k[st.s].fark))+'. '+
     b(fi(o.artan))+' öğrenci en az '+ESIK+' net yükseldi, '+b(fi(o.azalan))+' öğrenci düştü.';
 }
 function ozetKartlari(st){
@@ -430,8 +433,9 @@ function ozetKartlari(st){
   const kart=(baslik,buyuk,alt)=>'<div class="et-ozet-kart"><span class="mini">'+baslik+'</span><strong>'+buyuk+'</strong><div class="et-ozet-alt">'+alt+'</div></div>';
   const enIyi=m.ogrenciler.find(x=>x.no===son.enIyi);
   return '<div class="et-ozet">'+
-    (o?kart('Ortalama net · '+pencereAdi(st.s),f1(o.son),hap(o.fark,isaret(o.fark).replace(/^[+−]/,''))+'<span class="mini">önceki: '+f1(o.once)+'</span>')
-      :kart('Ortalama net · '+sa,f1(son.ort),'<span class="mini">'+kacis(son.ad)+'</span>'))+
+    (o?kart('Katılımcı ortalaması · '+pencereAdi(st.s),f1(o.son),hap(o.fark,isaret(o.fark).replace(/^[+−]/,''))+'<span class="mini">önceki: '+f1(o.once)+'</span>')+
+      kart('Aynı öğrencilerin değişimi',o.ayni===null?'—':isaret(o.ayni),'<span class="mini">'+fi(o.ayniN)+' öğrenci iki dönemde de girdi</span>')
+      :kart('Katılımcı ortalaması · '+sa,f1(son.ort),'<span class="mini">'+kacis(son.ad)+'</span>'))+
     kart('Ortadaki %50 · '+sa,f1(son.p25)+'–'+f1(son.p75),'<span class="mini">medyan '+f1(son.medyan)+' net</span>')+
     kart('En yüksek net · '+sa,f2(son.max),'<span class="mini">'+kacis(enIyi?kisiAdi(enIyi.ad):'')+'</span>')+
     (o?kart('Yükselen öğrenci · '+pencereAdi(st.s),fi(o.artan),'<span class="mini">düşen: '+fi(o.azalan)+' · en az '+ESIK+' net</span>'):'')+

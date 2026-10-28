@@ -39,7 +39,7 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    // The teacher's Denemeler opens the board.
    await page.evaluate(()=>{EK.sekme='denemeler';ciz()});
    await page.waitForFunction(()=>document.querySelectorAll('#dpKok .et-grafik svg').length===5);
-   assert.match(await page.locator('#dpKok .et-cumle').innerText(),/12\. sınıflar · Son deneme \(Sentetik Deneme 2, .+\): TYT ortalaması [\d,]+ net, önceki denemeye göre [+−][\d,]+\./);
+   assert.match(await page.locator('#dpKok .et-cumle').innerText(),/12\. sınıflar · Son deneme \(Sentetik Deneme 2, .+\): TYT ortalaması [\d,]+ net, önceki denemeye göre [+−][\d,]+ \(iki dönemde de giren \d+ öğrencinin kendi değişimi [+−]?[\d,]+\)\./);
    assert.equal(await page.locator('#dpKok .et-ders').count(),13,'ten lessons and three tests');
    assert.equal(await page.locator('#dpZorluk .dp-zor-satir').count(),10,'Kolaydan zora ranks the lessons');
    // Hover and keys on the main chart.

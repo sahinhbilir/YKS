@@ -25,7 +25,7 @@ const ogrenciler=CHG.map((chg,k)=>{const i=k+1,once=10+i*0.3,nets=[once-1,once,o
    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
    await page.evaluate(s=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-28';D.ogr=[];EK.sekme='ana';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
-    OGRENCI_RAPOR.model=()=>({students:structuredClone(s),warnings:[]});ciz();
+    OGRENCI_RAPOR.temelOgrenciler=()=>({students:structuredClone(s),warnings:[],etutKapsam:[[gunNo('2026-10-01'),gunNo('2026-10-31')]]});ciz();
    },ogrenciler);
    // The page sits under Öğrenciler, after Etütler.
    assert.equal(await page.locator('#ray #ogrencilerMenusu [data-sekme="etutetki"]').count(),1);
@@ -33,37 +33,41 @@ const ogrenciler=CHG.map((chg,k)=>{const i=k+1,once=10+i*0.3,nets=[once-1,once,o
    await page.evaluate(()=>{EK.sekme='etutetki';ciz()});
    await page.waitForSelector('#eeKok #eeHocalar');
    const cumle=()=>page.locator('#eeKok .et-cumle').innerText();
-   assert.match(await cumle(),/^27-YKS-1202 → 27-YKS-1203 \(14 Eki → 21 Eki\) · Matematik · son 7 günde etüt alan 16 öğrencinin neti ▲\d+,\d\d \(önceki \d+,\d\d\), almayan 8 öğrencinin neti ▲\d+,\d\d \(önceki \d+,\d\d\): fark \+\d+,\d\d net\.$/);
-   assert.equal(await page.locator('#eeKok .et-ozet-kart').count(),4);
+   // By default the whole run: the first exam against the latest, every etüt between.
+   assert.match(await cumle(),/^27-YKS-1201 → 27-YKS-1203 \(7 Eki → 21 Eki\) · Matematik · iki deneme arasında etüt alan 16 öğrencinin neti ▲\d+,\d\d \(başta \d+,\d\d\), almayan 8 öğrencinin ▲\d+,\d\d \(başta \d+,\d\d\)\. Başlangıç netine göre fark [+−]?[\d,—]+ net \(ham \+\d+,\d\d\)\.$/);
+   assert.equal(await page.locator('#eeKok .et-ozet-kart').count(),4);assert.equal(await page.locator('#eeKapsam').count(),0);
    // Teachers: a row for any etüt and one each; their students.
    assert.equal(await page.locator('#eeHocalar tbody tr').count(),3);
    assert.deepEqual(await page.locator('#eeHocalar .ee-ad').allInnerTexts(),['Sentetik Öğretmen A','Sentetik Öğretmen B']);
    assert.equal(await page.locator('#eeOgrenciler tbody tr').count(),16);
    assert.equal(await page.locator('#eeDoz tbody tr').count(),4);assert.equal(await page.locator('#eeSeri tbody tr').count(),2);
+   assert.match(await page.locator('#eeSeri thead').innerText(),/İlk → son[\s\S]*Aralık ortalaması/);
    await page.locator('#eeHocalar .ee-ad',{hasText:'Öğretmen B'}).click();
    await page.waitForFunction(()=>document.querySelectorAll('#eeOgrenciler tbody tr').length===6);
    assert.match(await page.locator('#eeOgrenciler h2').innerText(),/Etüt alan öğrenciler · Matematik · Sentetik Öğretmen B/);
    assert.equal(await page.locator('#eeHocalar tr.secili').count(),1);
    await page.locator('#eeOgrenciler [data-ee-hoca=""]').click();
    await page.waitForFunction(()=>document.querySelectorAll('#eeOgrenciler tbody tr').length===16);
-   // The window: all the days between the exams.
+   // The window: the last 7 days, then back to the whole interval.
+   await page.locator('[data-ee-pencere="7"]').click();
+   await page.waitForFunction(()=>/son 7 günde/.test(document.querySelector('#eeKok .et-cumle').textContent));
+   assert.equal(await page.locator('[data-ee-pencere="7"]').getAttribute('aria-pressed'),'true');
    await page.locator('[data-ee-pencere="0"]').click();
    await page.waitForFunction(()=>/iki deneme arasında/.test(document.querySelector('#eeKok .et-cumle').textContent));
-   assert.equal(await page.locator('[data-ee-pencere="0"]').getAttribute('aria-pressed'),'true');
-   await page.locator('[data-ee-pencere="7"]').click();
-   // A lesson and an earlier exam pair.
+   // A lesson and another exam pair.
    await page.locator('#eeDers').selectOption('Fizik');
    await page.waitForFunction(()=>/Öğretmenlere göre · Fizik/.test(document.querySelector('#eeHocalar h2').textContent));
    assert.deepEqual(await page.locator('#eeHocalar .ee-ad').allInnerTexts(),['Sentetik Öğretmen F']);
    await page.locator('#eeDers').selectOption('Matematik');
-   await page.locator('#eeOnceki').selectOption('27-YKS-1201');
-   await page.waitForFunction(()=>/^27-YKS-1201 → 27-YKS-1203/.test(document.querySelector('#eeKok .et-cumle').textContent));
-   assert.equal(await page.locator('#eeSimdi').inputValue(),'27-YKS-1203');
-   await page.locator('#eeSimdi').selectOption('27-YKS-1202');
-   await page.waitForFunction(()=>document.querySelector('#eeKok .et-bos'));
-   assert.match(await page.locator('#eeKok .et-bos').innerText(),/Bu iki deneme arasında etüt kaydı yok[\s\S]*27-YKS-1201 → 27-YKS-1202/);
-   await page.locator('#eeSimdi').selectOption('27-YKS-1203');
-   await page.waitForFunction(()=>document.querySelector('#eeHocalar'));
+   await page.locator('#eeOnceki').selectOption('27-YKS-1202|2026-10-14');
+   await page.waitForFunction(()=>/^27-YKS-1202 → 27-YKS-1203/.test(document.querySelector('#eeKok .et-cumle').textContent));
+   assert.equal(await page.locator('#eeSimdi').inputValue(),'27-YKS-1203|2026-10-21');
+   // A pair with no etüt between keeps the run's history.
+   await page.locator('#eeSimdi').selectOption('27-YKS-1202|2026-10-14');
+   await page.waitForFunction(()=>/^27-YKS-1201 → 27-YKS-1202[\s\S]*etüt alan öğrenci yok/.test(document.querySelector('#eeKok .et-cumle').textContent));
+   assert.equal(await page.locator('#eeSeri tbody tr').count(),2);
+   await page.locator('#eeSimdi').selectOption('27-YKS-1203|2026-10-21');
+   await page.waitForFunction(()=>document.querySelectorAll('#eeOgrenciler tbody tr').length===16);
    // No page scrolls sideways (wide tables scroll in their own box).
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no sideways scrolling');
    await page.screenshot({path:path.join(out,'etutetkisi-'+width+'.png'),fullPage:true});

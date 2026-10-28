@@ -52,6 +52,12 @@ function baskiGunu(s){
 // geldi when a lesson is marked Gecikti or a Gelmedi comes before the first lesson there, else Geldi
 // (leaving early and missing a lesson in between count as Geldi). A day with no lesson at school is
 // Gelmedi when unexcused lessons outnumber excused ones, else Raporlu or Diğer, whichever has more.
+// The missed-day rule shared with the student report: a day with at least three missed lessons (Gelmedi,
+// Mazeretli or Raporlu) is a missed day, 'tam' when no lesson was attended, else 'yarim'; otherwise null.
+function kacirma(kod){
+  const k=String(kod||'').replace(/[^PGAMR]/g,''),n=(k.match(/[AMR]/g)||[]).length;
+  return n<3?null:n===k.length?'tam':'yarim';
+}
 function gunDurumu(kod){
   const k=String(kod||'').replace(/\./g,'');if(!k)return null;
   const i=k.search(/[PG]/);
@@ -260,7 +266,7 @@ function model(v,{bas,bit,kapsam}={}){
     if(!liste.length)continue;
     const toplam=liste.length,kim=anahtar(o.ad)+'|'+o.sinif;
     const sonu=d=>{const l=liste.filter(x=>x.d===d);return l.length?l[l.length-1].g:null};
-    kisiler.push({kim,ad:o.ad,sinif:o.sinif,duzey:sinifDuzeyi(o.sinif),liste,say,toplam,oran:(say.geldi+say.gec)/toplam,
+    kisiler.push({kim,ad:o.ad,sinif:o.sinif,duzey:sinifDuzeyi(o.sinif),liste,say,toplam,oran:(say.geldi+say.gec)/toplam,kacirilan:liste.filter(x=>kacirma(x.kod)).length,
       sonGelmedi:sonu('gelmedi'),sonGec:sonu('gec'),tum:once,gunu:new Map(liste.map(x=>[x.g,x]))});
   }
   kisiler.sort((x,y)=>sinifSira(x.sinif,y.sinif)||x.ad.localeCompare(y.ad,'tr'));
@@ -275,7 +281,7 @@ function model(v,{bas,bit,kapsam}={}){
       const toplam=Object.values(say).reduce((x,y)=>x+y,0);
       return {p,say,toplam,gun,kismi:tur==='hafta'?p===kismiHafta||gunler.some(g=>pazartesi(g)===p&&kismi.has(g)):kismi.has(p)}})};
   const grupOzeti=(ad,liste)=>{const say=bos();for(const o of liste)for(const k in say)say[k]+=o.say[k];const toplam=Object.values(say).reduce((x,y)=>x+y,0);
-    return {ad,ogrenci:liste.length,say,toplam,oran:toplam?(say.geldi+say.gec)/toplam:0,gelmeyen:liste.filter(o=>o.say.gelmedi).length,gecikan:liste.filter(o=>o.say.gec).length}};
+    return {ad,ogrenci:liste.length,say,toplam,oran:toplam?(say.geldi+say.gec)/toplam:0,kacirilan:liste.reduce((t,o)=>t+o.kacirilan,0),kacirilanOgr:liste.filter(o=>o.kacirilan).length,gelmeyen:liste.filter(o=>o.say.gelmedi).length,gecikan:liste.filter(o=>o.say.gec).length}};
   const subeler=[...new Set(kisiler.map(o=>o.sinif))].sort(sinifSira);
   const duzeyler=[...new Set(kisiler.map(o=>o.duzey).filter(d=>d!==null))].sort((x,y)=>y-x);
   const ozet=grupOzeti(kapsamAdi(kapsam),kisiler);
@@ -432,7 +438,7 @@ function cumle(m){
 }
 function ozetKartlari(m){
   const o=m.ozet,kart=(k,baslik,buyuk,alt)=>'<div class="et-ozet-kart yk-kart'+(k?' '+k:'')+'"><span class="mini">'+(k?nokta(k):'')+baslik+'</span><strong>'+buyuk+'</strong><div class="et-ozet-alt"><span class="mini">'+alt+'</span></div></div>';
-  return '<div class="et-ozet">'+kart('','Gelme oranı',yuzde(o.oran),sayi(o.say.geldi+o.say.gec)+' / '+sayi(o.toplam)+' öğrenci günü')+
+  return '<div class="et-ozet">'+kart('','Gelme oranı',yuzde(o.oran),sayi(o.say.geldi+o.say.gec)+' / '+sayi(o.toplam)+' öğrenci günü · 3+ ders kaçırılan: '+sayi(o.kacirilan)+' gün ('+sayi(o.kacirilanOgr)+' öğrenci)')+
     kart('gelmedi','Gelmedi',sayi(o.say.gelmedi),sayi(o.gelmeyen)+' öğrenci')+kart('gec','Geç geldi',sayi(o.say.gec),sayi(o.gecikan)+' öğrenci')+
     kart('raporlu','Raporlu',sayi(o.say.raporlu),sayi(m.kisiler.filter(k=>k.say.raporlu).length)+' öğrenci')+
     kart('diger','Diğer',sayi(o.say.diger),sayi(m.kisiler.filter(k=>k.say.diger).length)+' öğrenci')+'</div>';
@@ -526,7 +532,7 @@ function tablo(m,st){
 function kisiKarti(m,st,es){
   const o=m.kisiler.find(x=>x.kim===st.kim);if(!o)return '<p class="mini">Bir öğrenci seçin.</p>';
   const si=es(o.ad),ad=kisiAdi(o.ad);
-  const sayilar='<div class="yk-kisi-sayilar"><div><span class="mini">Gelme oranı</span><strong>'+yuzde(o.oran)+'</strong><span class="mini">'+sayi(o.say.geldi+o.say.gec)+' / '+sayi(o.toplam)+' gün</span></div>'+
+  const sayilar='<div class="yk-kisi-sayilar"><div><span class="mini">Gelme oranı</span><strong>'+yuzde(o.oran)+'</strong><span class="mini">'+sayi(o.say.geldi+o.say.gec)+' / '+sayi(o.toplam)+' gün · 3+ ders kaçırılan: '+sayi(o.kacirilan)+'</span></div>'+
     DURUMLAR.slice(1).map(([k,a])=>'<div class="'+k+'"><span class="mini">'+nokta(k)+a+'</span><strong>'+sayi(o.say[k])+'</strong></div>').join('')+'</div>';
   const haftalar=[...new Set(o.liste.map(x=>pazartesi(x.g)))];
   const takvim='<div class="yk-takvim" role="table" aria-label="Takvim"><div class="yk-tk-satir yk-tk-bas"><span></span>'+GUN_KISA.slice(0,5).map(g=>'<span>'+g+'</span>').join('')+'</div>'+
@@ -639,7 +645,7 @@ document.addEventListener('keydown',ev=>{
   ipucuGoster(kutu,ev.key==='Home'?0:ev.key==='End'?g.xs.length-1:Math.max(0,Math.min(g.xs.length-1,i+(ev.key==='ArrowLeft'?-1:1))));
 });
 document.addEventListener('focusout',ev=>{const kutu=ev.target.closest?.('.et-grafik[data-yk-grafik]');if(kutu)ipucuGizle(kutu)});
-return {pdfCoz,gunDurumu,dersOzeti,dogrula,oku,ac,paketle,birlestir,raporEkle,sil,model,gunDetayi,cubukGrafik,gorunum,icerik,grafikleriCiz,CIZIMLER,UST_SINIR,ILK_GUN_ISO,
+return {pdfCoz,gunDurumu,kacirma,dersOzeti,dogrula,oku,ac,paketle,birlestir,raporEkle,sil,model,gunDetayi,cubukGrafik,gorunum,icerik,grafikleriCiz,CIZIMLER,UST_SINIR,ILK_GUN_ISO,
   get onbellek(){return ONBELLEK}};
 })();
 function gorunumYoklama(){return YOKLAMA.gorunum()}

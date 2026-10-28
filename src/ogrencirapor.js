@@ -98,10 +98,13 @@ function parse(pages,boylar){
  if(/Tarih Bazlı Etüt Raporu/.test(text)){const r=ETUT.pdfCoz(pages);if(r.atlanan)throw new Error(r.atlanan+' etüt satırı okunamadı; eksik rapor eklenmedi.');return {kind:'sessions',students:[],sessions:r.satirlar.map(s=>({name:s.ad,cls:cls(s.sinif),date:iso(s.g),course:s.brans,teacher:s.ogretmen,time:s.saat,minutes:s.sure})),start:iso(r.bas),end:iso(r.bit)}}
  throw new Error('Ödev veya İngilizce sonuç raporu seçin.');
 }
+// A day's statuses as Yoklama's lesson codes, so both pages use one missed-day rule (YOKLAMA.kacirma).
+const KOD={Geldi:'P',Gecikti:'G',Gelmedi:'A',Raporlu:'R'};
+const yoklamaKodu=statuses=>statuses.filter(Boolean).map(v=>KOD[v]||(v.startsWith('Mazeretli')?'M':'')).join('');
 function attendanceSummary(rows){
  const out={present:0,half:0,full:0,missed:0,unknown:0,days:rows.length,percent:null};
- for(const r of rows){const recorded=r.statuses.filter(Boolean),missed=recorded.filter(v=>v==='Gelmedi'||v.startsWith('Mazeretli')||v==='Raporlu').length;
-  if(!recorded.length)out.unknown++;else if(missed===recorded.length&&missed>=3)out.full++;else if(missed>=3)out.half++;else out.present++;
+ for(const r of rows){const k=yoklamaKodu(r.statuses),d=YOKLAMA.kacirma(k);
+  if(!k)out.unknown++;else if(d==='tam')out.full++;else if(d==='yarim')out.half++;else out.present++;
  }
  out.missed=out.full+out.half;const known=out.days-out.unknown;out.percent=known?100*out.present/known:null;return out;
 }
@@ -333,12 +336,14 @@ function allowed(){return typeof rehberMi==='function'&&rehberMi()&&!(typeof CIK
 function reset(){FILES=new Map();BUSY=false;STATUS='';FILTER='';SELECTED='';GEN++;OWNER=typeof D==='undefined'?null:D}
 function guard(){if(!allowed()){reset();throw new Error('Öğrenci raporları yalnızca rehber öğretmen içindir.')}if(OWNER!==D)reset()}
 const unique=rows=>[...new Map(rows.map(r=>[nameKey(r.name)+'|'+r.cls,{name:r.name,no:'',cls:r.cls}])).values()];
-function siteReports(){
+// temel: exams and etüt sessions only, for analysis pages (Etüt etkisi). An unreadable Etüt planı then only
+// loses its classroom codes, and attendance and the session-only homework/English files are left out.
+function siteReports(temel=false){
  // Classroom codes are learnt first, from the stored deneme lists and the added homework reports.
- DERSLIK.clear();const sr=SIRALAMA.oku().veri,ep=ETUTPLANI.oku();if(ep.hata)throw new Error(ep.hata);const programs=ep.plan.programlar||{};
+ DERSLIK.clear();const sr=SIRALAMA.oku().veri,ep=ETUTPLANI.oku();if(ep.hata&&!temel)throw new Error(ep.hata);const programs=ep.hata?{}:ep.plan.programlar||{};
  for(const [c,p] of Object.entries(programs))if(p.kod)dersligiOgren(p.kod+' '+c);
  for(const x of sr?sr.sinavlar:[])for(const sl of [x.T,x.F])for(const o of sl?sl.ogr:[])dersligiOgren(o.snf);
- for(const r of FILES.values())(r.derslikler||[]).forEach(dersligiOgren);
+ if(!temel)for(const r of FILES.values())(r.derslikler||[]).forEach(dersligiOgren);
  const reports=[],roster=(D.ogr||[]).filter(o=>!o.silindi).map(o=>({no:String(o.no||''),name:o.ad,cls:cls(o.sube||''),grade:o.sinif}));
  const {veri,hata}=SIRALAMA.oku();if(hata)throw new Error(hata);
  if(veri){const exams=[],students=[];let school='';const keys={TYT:['TÜR','TAR','COĞ','FEL','DİN','S.F','MAT','GEO','FİZ','KİM','BİY'],AYT:['EDB','TAR1','COĞ1','TAR2','COĞ2','FELGR','DİN2','S.F2','AMAT','AGEO','AFİZ','AKİM','ABİY']};
@@ -361,12 +366,12 @@ function siteReports(){
   etut={kind:'sessions',students:unique(sessions),start:iso(Math.min(...et.veri.kaynak.map(k=>k.bas),...rows.map(r=>r.g))),end:iso(Math.max(...et.veri.kaynak.map(k=>k.bit),...rows.map(r=>r.g))),sessions};reports.push(etut)}}
  // Yoklama: the page's lesson codes as the report's statuses, including excused and medically reported absences.
  let yoklama=null;
- if(typeof YOKLAMA!=='undefined'){const yk=YOKLAMA.oku();if(yk.hata)throw new Error(yk.hata);
+ if(!temel&&typeof YOKLAMA!=='undefined'){const yk=YOKLAMA.oku();if(yk.hata)throw new Error(yk.hata);
   if(yk.veri){const DURUM={P:'Geldi',G:'Gecikti',A:'Gelmedi',M:'Mazeretli',R:'Raporlu'},attendance=[];
    for(const o of YOKLAMA.ac(yk.veri))for(const [g,k] of o.gun)attendance.push({name:o.ad,no:'',cls:cls(o.sinif),date:iso(g),statuses:[...k].map(c=>DURUM[c]||'')});
    if(attendance.length){yoklama={kind:'attendance',students:unique(attendance),attendance,start:iso(yk.veri.gunler[0]),end:iso(yk.veri.gunler.at(-1))};reports.push(yoklama)}}}
  const exams=new Set(reports.flatMap(r=>r.exams||[]).map(e=>nameKey(e.exam)+'|'+e.date));
- return {reports,roster,programs,staffBranches:ep.plan.gunler.flat().map(([course,teacher])=>({course,teacher})),sources:{exams:exams.size,etut,yoklama,programs:Object.keys(programs).length}};
+ return {reports,roster,programs,staffBranches:ep.hata?[]:ep.plan.gunler.flat().map(([course,teacher])=>({course,teacher})),sources:{exams:exams.size,etut,yoklama,programs:Object.keys(programs).length}};
 }
 function model(){guard();const site=siteReports(),m=merge(site.reports.concat([...FILES.values()]),site.roster);
  const known=new Map(),learn=(teacher,course)=>{const subject=teacherSubject(course);if(!clean(teacher)||!subject)return;const k=nameKey(teacher),votes=known.get(k)||new Map();votes.set(subject,(votes.get(subject)||0)+1);known.set(k,votes)};
@@ -376,6 +381,10 @@ function model(){guard();const site=siteReports(),m=merge(site.reports.concat([.
  for(const s of m.students){const p=Object.entries(site.programs).find(([c])=>cls(c)===cls(s.cls))?.[1],teachers=new Map();
   for(const [,,course,teacher] of p?.dersler||[]){const name=clean(teacher)||'Öğretmen belirtilmemiş',k=nameKey(name),t=teachers.get(k)||{teacher:name,courses:[],mainSubject:main.get(k)||''};if(!t.courses.some(c=>nameKey(c)===nameKey(course)))t.courses.push(course);teachers.set(k,t)}s.teachers=[...teachers.values()];s.hasTimetable=!!p;
  }return {...m,sources:site.sources}}
+// The students with their exams and etüt sessions only (no attendance, homework or timetables), with the
+// matching warnings: the shared base for analysis pages, so a problem in an unrelated source does not stop them.
+function temelOgrenciler(){guard();const site=siteReports(true),m=merge(site.reports,site.roster);
+ const et=site.sources.etut;return {students:m.students,warnings:m.warnings,etutKapsam:et?ETUT.oku().veri.kaynak.map(k=>[k.bas,k.bit]):[]}}
 function selectedModel(){const m=model();return {...m,students:m.students.filter(s=>!FILTER||s.cls===FILTER)}}
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
 function refresh(){if(EK.sekme==='ogrencirapor'&&allowed())ciz()}
@@ -438,6 +447,6 @@ if(typeof document!=='undefined'&&document.addEventListener){
   if(el.id==='orOne'||el.id==='orAll')await download(el.id==='orAll');else if(el.id==='orClear'){reset();refresh()}else if(el.hasAttribute('data-or-remove')){FILES.delete(el.getAttribute('data-or-remove'));refresh()}
  });
 }
-return {parse,englishPdf,homeworkPdf,attendancePdf,attendanceSummary,weekly,merge,svgReport,view,model,addFiles,pdfBytes,reset};
+return {parse,englishPdf,homeworkPdf,attendancePdf,attendanceSummary,weekly,merge,svgReport,view,model,temelOgrenciler,addFiles,pdfBytes,reset};
 })();
 function gorunumOgrenciRapor(){return OGRENCI_RAPOR.view()}
