@@ -93,6 +93,33 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.locator('#etHoca [data-et-hoca=""]').click();
    assert.match(await page.locator('#etHoca h2').first().innerText(),/Öğretmenlere göre etüt/);
    assert.match(await page.locator('#etHoca').innerText(),/Sıralama[\s\S]*Sentetik Öğretmen Bir/,'the teachers ranked beside the chart');assert.equal(await page.locator('.et-hoca-kart[aria-pressed="true"]').count(),0);
+   // Göster: Doluluk redraws the teachers' chart in percent (axis, readout); Etüt brings the counts back.
+   const yuzdeler=()=>page.locator('[data-et-grafik="hoca"] svg .et-tik').evaluateAll(l=>l.map(e=>e.textContent).filter(t=>t.includes('%')));
+   await page.locator('#etHoca').scrollIntoViewIfNeeded();
+   assert.equal(await page.locator('[data-et-olcu="etut"]').getAttribute('aria-pressed'),'true');assert.deepEqual(await yuzdeler(),[]);
+   await page.locator('[data-et-olcu="doluluk"]').click();
+   await page.waitForFunction(()=>document.querySelector('[data-et-grafik="hoca"] svg'));
+   assert.equal(await page.evaluate(()=>EK.etOlcu),'doluluk');assert.equal(await page.locator('[data-et-olcu="doluluk"]').getAttribute('aria-pressed'),'true');
+   assert.match(await page.locator('#etHoca h2').first().innerText(),/Öğretmenlere göre doluluk · haftalık/);
+   assert.deepEqual(await yuzdeler(),['%0','%25','%50','%75','%100']);
+   assert.match(await page.locator('#etHoca h2').nth(1).innerText(),/Sıralama · doluluk/,'the ranking list stays');
+   await page.locator('[data-et-grafik="hoca"]').focus();await page.keyboard.press('End');
+   assert.match(await page.locator('[data-et-grafik="hoca"] .et-ipucu').innerText(),/19 Eki haftası · devam ediyor[\s\S]*Sentetik Öğretmen Bir\s*%\d+ · \d+\/\d+/);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no horizontal scroll in Doluluk at '+width);
+   await page.locator('#etHoca > .et-panel').first().screenshot({path:path.join(out,'etut-doluluk-'+width+'.png')});
+   // One teacher keeps the mode: a single line with area, in percent.
+   await page.locator('.et-hoca-kart').first().click();
+   assert.match(await page.locator('#etHoca h2').first().innerText(),/Sentetik Öğretmen Bir doluluk · haftalık/);assert.deepEqual((await yuzdeler()).slice(0,1),['%0']);
+   await page.locator('[data-et-grafik="hoca"]').focus();await page.keyboard.press('End');
+   assert.match(await page.locator('[data-et-grafik="hoca"] .et-ipucu').innerText(),/%\d+ · \d+\/\d+/);
+   await page.locator('#etHoca > .et-panel').first().screenshot({path:path.join(out,'etut-doluluk-hoca-'+width+'.png')});
+   await page.locator('#etHoca [data-et-hoca=""]').click();
+   await page.locator('[data-et-olcu="etut"]').click();
+   await page.waitForFunction(()=>document.querySelector('[data-et-grafik="hoca"] svg'));
+   assert.equal(await page.evaluate(()=>EK.etOlcu),'etut');assert.deepEqual(await yuzdeler(),[]);
+   assert.match(await page.locator('#etHoca h2').first().innerText(),/Öğretmenlere göre etüt · haftalık/);
+   await page.locator('[data-et-grafik="hoca"]').focus();await page.keyboard.press('End');
+   assert.doesNotMatch(await page.locator('[data-et-grafik="hoca"] .et-ipucu').innerText(),/%/);
    // Movers and the table select a student for the detail card.
    assert.match(await page.locator('.et-hareketler').innerText(),/Daha çok alanlar \(3\)[\s\S]*Sentetik Ada[\s\S]*Daha az alanlar \(2\)[\s\S]*Sentetik Bora/);
    await page.locator('.et-tablo tbody tr[data-et-ogr^="SENTETİK CEM"] .et-ad').click();

@@ -1031,6 +1031,7 @@ td.et-yukari{color:var(--e-ok)}td.et-asagi{color:var(--e-bad)}
   .et-tablo .et-dar-gizle{display:none}.et-tablo td,.et-tablo th button{padding:6px 5px}.et-tablo th:not(:has(button)){padding:8px 5px}.et-tablo td:first-child{white-space:normal;min-width:7.5em}
 }
 @media print{.et-ipucu{display:none}}
+.et-kart-arac{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 /* END ETUTLER */
 
 /* BEGIN DENEMEPANO */
@@ -15705,7 +15706,7 @@ function modelAl(v,kademe=kademeAl(v)){
 }
 function durumAl(m){
   const s=EK.etAralik==='sec'&&m.pencere.sec?'sec':ARALIKLAR.includes(EK.etAralik)&&m.pencere[EK.etAralik]?EK.etAralik:m.pencere[2]?2:ARALIKLAR.filter(x=>m.pencere[x]).pop()||null;
-  return {s,tur:EK.etTur==='gun'?'gun':'hafta',ders:m.dersler.some(d=>d.ders===EK.etDers)?EK.etDers:null,
+  return {s,tur:EK.etTur==='gun'?'gun':'hafta',olcu:EK.etOlcu==='doluluk'?'doluluk':'etut',ders:m.dersler.some(d=>d.ders===EK.etDers)?EK.etDers:null,
     hoca:m.ogretmenler.some(o=>o.hoca===EK.etHoca)?EK.etHoca:null,
     kim:m.kisiler.some(k=>k.kim===EK.etOgr)?EK.etOgr:(m.kisiler[0]||{}).kim};
 }
@@ -15718,9 +15719,11 @@ function tikler(max,n){
   for(let v=0;v<max;v+=adim)out.push(v);out.push(out[out.length-1]+adim);return out;
 }
 const yaziGen=s=>String(s).length*7;
-function eksenY(tik,y,L,R){
-  return tik.map(t=>'<line class="et-izgara" x1="'+L+'" x2="'+R+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text class="et-tik" x="'+(R+8)+'" y="'+r1(y(t))+'" dy="0.32em">'+sayi(t)+'</text>').join('');
+function eksenY(tik,y,L,R,bicim=sayi){
+  return tik.map(t=>'<line class="et-izgara" x1="'+L+'" x2="'+R+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text class="et-tik" x="'+(R+8)+'" y="'+r1(y(t))+'" dy="0.32em">'+bicim(t)+'</text>').join('');
 }
+// Ticks of a 0–1 doluluk axis: quarters up to 100 %, more steps when a day is over-full.
+const yuzdeTikleri=max=>max<=1+1e-9?[0,.25,.5,.75,1]:tikler(max*100,5).map(t=>t/100);
 function eksenX(ps,x,step,W,y0){
   const her=Math.max(1,Math.ceil(52/step)),n=ps.length;let out='';
   ps.forEach((p,i)=>{if((n-1-i)%her)return;const t=gunAy(p),w=yaziGen(t);let xx=x(i),a='middle';
@@ -15781,13 +15784,16 @@ function donemBasligi(r,tur){return tur==='hafta'?gunAy(r.p)+' haftası'+(r.kism
 // One line per subject or per teacher; a chosen one is drawn alone with its area. enCok keeps the
 // readout to the busiest series when many lines share the chart. A null value is a day or week that is
 // not the teacher's (no etüt days): the line skips it. s.kap adds the doluluk to the readout.
-function grafikCoklu(m,st,W,seri,secili,egimId,enCok){
+// doluluk (the teachers' Doluluk mode): s.v are 0–1 shares (s.say ÷ s.kap), the axis and readout are
+// percents ("%63 · 10/16"), the busiest lines are ranked by the share, and measuring is off (its
+// readout is in counts, src/grafik.js).
+function grafikCoklu(m,st,W,seri,secili,egimId,enCok,doluluk){
   const H=300,d=m[st.tur],ps=d.map(r=>r.p),var_=v=>v!==null&&v!==undefined;
-  const gorunen=secili?seri.filter(s=>s.k===secili):seri,yMax=Math.max(1,...gorunen.flatMap(s=>s.v.filter(var_))),tik=tikler(yMax,5);
-  const R=W-(yaziGen(sayi(tik[tik.length-1]))+22),L=2,ust=26,alt=H-26,step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>alt-v/tik[tik.length-1]*(alt-ust);
+  const gorunen=secili?seri.filter(s=>s.k===secili):seri,yMax=Math.max(1,...gorunen.flatMap(s=>s.v.filter(var_))),tik=doluluk?yuzdeTikleri(yMax):tikler(yMax,5),yaz=doluluk?yuzde:sayi;
+  const R=W-(yaziGen(yaz(tik[tik.length-1]))+22),L=2,ust=26,alt=H-26,step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>alt-v/tik[tik.length-1]*(alt-ust);
   const nTam=d.findIndex(r=>r.kismi)<0?d.length:d.findIndex(r=>r.kismi);
   let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" aria-hidden="true">';
-  svg+=bantlar(ps,x,step,m.pencere[st.s],st.s,4,alt,true,st.tur)+eksenY(tik,y,L,R)+'<line class="et-eksen" x1="'+L+'" x2="'+R+'" y1="'+alt+'" y2="'+alt+'"/>';
+  svg+=bantlar(ps,x,step,m.pencere[st.s],st.s,4,alt,true,st.tur)+eksenY(tik,y,L,R,yaz)+'<line class="et-eksen" x1="'+L+'" x2="'+R+'" y1="'+alt+'" y2="'+alt+'"/>';
   // With every line drawn, the one under the pointer takes the stage (data-seri, see seriVurgula).
   const coklu=!secili&&seri.length>1,noktasi=s=>s.v.map((v,i)=>var_(v)?[x(i),y(v),i]:null).filter(Boolean);
   const ciz=(s,kalin,k)=>{const pts=noktasi(s),tam=pts.filter(p=>p[2]<nTam),c=(coklu?' data-seri="'+k+'"':'')+' style="stroke:'+s.renk+'"',sinif=kalin?' kalin':' ince';
@@ -15797,25 +15803,37 @@ function grafikCoklu(m,st,W,seri,secili,egimId,enCok){
     if(tam.length)svg+=egim(egimId,s.renk)+'<path d="'+yol(tam)+'L'+r1(tam[tam.length-1][0])+','+alt+'L'+r1(tam[0][0])+','+alt+'Z" style="fill:url(#'+egimId+')"/>';svg+=ciz(s,true)}
   else for(let k=seri.length-1;k>=0;k--)svg+=ciz(seri[k],false,k);
   svg+=eksenX(ps,x,step,W,H-6)+imlec(ust-6,alt)+'</svg>';
-  const dolu=(s,i)=>s.kap&&s.kap[i]?[null,'Doluluk',yuzde(s.v[i]/s.kap[i])+' · '+sayi(s.v[i])+'/'+sayi(s.kap[i])]:null;
-  const ipucu=d.map((r,i)=>{let l=gorunen.filter(s=>var_(s.v[i])).map(s=>[s.renk,s.ad,s.v[i]]).sort((a,b)=>b[2]-a[2]),geri=[];
+  const dolu=(s,i)=>!doluluk&&s.kap&&s.kap[i]?[null,'Doluluk',yuzde(s.v[i]/s.kap[i])+' · '+sayi(s.v[i])+'/'+sayi(s.kap[i])]:null;
+  // "%63 · 10/16" in Doluluk, the count otherwise.
+  const yazi=(s,i)=>doluluk?yuzde(s.v[i])+' · '+sayi(s.say[i])+'/'+sayi(s.kap[i]):sayi(s.v[i]);
+  const ipucu=d.map((r,i)=>{let l=gorunen.filter(s=>var_(s.v[i])).map(s=>[s.renk,s.ad,s.v[i],s]).sort((a,b)=>b[2]-a[2]),geri=[];
     if(enCok&&!secili){l=l.filter(z=>z[2]>0);if(l.length>enCok)geri=l.splice(enCok-1)}
-    const satir=l.map(([c,a,v])=>[c,a,sayi(v),'cizgi']);
-    if(geri.length)satir.push([null,'+'+sayi(geri.length)+' öğretmen',sayi(geri.reduce((a,z)=>a+z[2],0))]);
+    const satir=l.map(([c,a,v,s])=>[c,a,yazi(s,i),'cizgi']);
+    if(geri.length){const toplam=f=>geri.reduce((a,z)=>a+f(z),0);
+      satir.push([null,'+'+sayi(geri.length)+' öğretmen',doluluk?yuzde(toplam(z=>z[3].say[i])/toplam(z=>z[3].kap[i]))+' · '+sayi(toplam(z=>z[3].say[i]))+'/'+sayi(toplam(z=>z[3].kap[i])):sayi(toplam(z=>z[2]))])}
     if(secili&&dolu(gorunen[0],i))satir.push(dolu(gorunen[0],i));
-    return {bas:donemBasligi(r,st.tur),satir:satir.length?satir:[[null,secili&&!var_(gorunen[0].v[i])?'Etüt günü değil':'Etüt',secili&&!var_(gorunen[0].v[i])?'':'0']]}});
+    const yok=secili&&!var_(gorunen[0].v[i]);
+    return {bas:donemBasligi(r,st.tur),satir:satir.length?satir:[[null,yok?'Etüt günü değil':doluluk?'Doluluk':'Etüt',yok?'':doluluk?yuzde(0):'0']]}});
   // A line under the pointer: its point, and the readout led by it.
   const tekli=coklu?{seriler:seri.map(s=>({k:s.k,ad:s.ad,pts:d.map((_,i)=>var_(s.v[i])?[x(i),y(s.v[i])]:null)})),seriNokta:(k,i)=>var_(seri[k].v[i])?[[y(seri[k].v[i]),seri[k].renk]]:[],
-    seriIpucu:(k,i)=>({bas:ipucu[i].bas,satir:[[seri[k].renk,seri[k].ad,var_(seri[k].v[i])?sayi(seri[k].v[i]):'—','cizgi',true]].concat(dolu(seri[k],i)?[dolu(seri[k],i)]:[],
+    seriIpucu:(k,i)=>({bas:ipucu[i].bas,satir:[[seri[k].renk,seri[k].ad,var_(seri[k].v[i])?yazi(seri[k],i):'—','cizgi',true]].concat(dolu(seri[k],i)?[dolu(seri[k],i)]:[],
       ipucu[i].satir.filter(r=>r[1]!==seri[k].ad)).slice(0,enCok||99)})}:{};
   // Measuring (src/grafik.js): a highlighted line, the chosen one, or all of them together.
   const olcSeri=s=>({ad:s.ad,v:s.v,y:s.v.map(v=>var_(v)?y(v):null),renk:s.renk});
   const olc={donem:ps,uzunluk:st.tur==='hafta'?7:1,birim:'etüt',seriler:coklu?seri.map(olcSeri):null,
     ana:secili?olcSeri(gorunen[0]):{ad:enCok?'Tüm öğretmenler':'Tüm dersler',v:d.map((_,i)=>seri.reduce((t,s)=>t+(s.v[i]||0),0)),y:null}};
-  return {svg,xs:d.map((_,i)=>x(i)),ys:d.map((_,i)=>secili?y(gorunen[0].v[i]??0):ust+40),noktalar:d.map((_,i)=>gorunen.filter(s=>var_(s.v[i])&&(!enCok||secili||s.v[i]>0)).map(s=>[y(s.v[i]),s.renk])),ipucu,olc,...tekli};
+  return {svg,xs:d.map((_,i)=>x(i)),ys:d.map((_,i)=>secili?y(gorunen[0].v[i]??0):ust+40),noktalar:d.map((_,i)=>gorunen.filter(s=>var_(s.v[i])&&(!enCok||secili||s.v[i]>0)).map(s=>[y(s.v[i]),s.renk])),ipucu,...(doluluk?{}:{olc}),...tekli};
 }
 const grafikDers=(m,st,W)=>grafikCoklu(m,st,W,m.dersler.map(x=>({k:x.ders,ad:x.ders,renk:x.renk,v:x[st.tur]})),st.ders,'etEgimDers');
-const grafikHoca=(m,st,W)=>grafikCoklu(m,st,W,m.ogretmenler.map(x=>({k:x.hoca,ad:kisiAdi(x.ad),renk:x.renk,v:x[st.tur==='hafta'?'haftaG':'gunG'],kap:x[st.tur==='hafta'?'kapHafta':'kapGun']})),st.hoca,'etEgimHoca',10);
+// The teachers' lines. Etüt: the counts (null on days that are not theirs). Doluluk (st.olcu): etüts ÷
+// places, and null wherever there are no places, so the line passes over those weeks or days instead
+// of dropping to 0 %. say are the counts, kap the places.
+function hocaSeri(m,st){
+  const hafta=st.tur==='hafta',dol=st.olcu==='doluluk';
+  return m.ogretmenler.map(x=>{const say=x[hafta?'haftaG':'gunG'],kap=x[hafta?'kapHafta':'kapGun'];
+    return {k:x.hoca,ad:kisiAdi(x.ad),renk:x.renk,v:dol?say.map((c,i)=>kap[i]>0?c/kap[i]:null):say,say,kap}});
+}
+const grafikHoca=(m,st,W)=>grafikCoklu(m,st,W,hocaSeri(m,st),st.hoca,'etEgimHoca',10,st.olcu==='doluluk');
 function grafikOgrenci(m,st,W){
   const H=240,d=m[st.tur],ps=d.map(r=>r.p),tik=tikler(Math.max(1,...d.map(r=>r.ogrenci)),4);
   const R=W-(yaziGen(sayi(tik[tik.length-1]))+22),L=2,ust=26,alt=H-26,step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>alt-v/tik[tik.length-1]*(alt-ust),bw=Math.max(2,Math.min(32,step*.7));
@@ -15849,7 +15867,7 @@ function grafikleriCiz(){
   const {veri}=oku();if(!veri)return;const m=modelAl(veri);if(!m)return;const st=durumAl(m);
   document.querySelectorAll('.et-grafik[data-et-grafik]').forEach(kutu=>{
     const W=Math.round(kutu.clientWidth);if(W<120)return;
-    const sw=m.pencere.sec,imza=W+'|'+st.s+'|'+(sw?sw.once[0]+'-'+sw.son[0]:'')+'|'+st.tur+'|'+st.ders+'|'+st.hoca+'|'+st.kim+'|'+veri.ts;if(kutu.dataset.imza===imza)return;
+    const sw=m.pencere.sec,imza=W+'|'+st.s+'|'+(sw?sw.once[0]+'-'+sw.son[0]:'')+'|'+st.tur+'|'+st.olcu+'|'+st.ders+'|'+st.hoca+'|'+st.kim+'|'+veri.ts;if(kutu.dataset.imza===imza)return;
     const g=GRAFIKLER[kutu.dataset.etGrafik](m,st,Math.max(260,W));if(!g)return;
     kutu.dataset.imza=imza;kutu.innerHTML=g.svg+'<div class="et-ipucu" hidden></div>';CIZIMLER.set(kutu.dataset.etGrafik,g);
   });
@@ -15984,10 +16002,12 @@ function hocaKartlari(m,st){
       '<span class="et-kucuk-kutu">'+kucukCizgi(o.hafta,kismi,egilimRengi(f),son,160,38,'etHg'+oi,m.haftalar)+'</span></button>'}).join('')+'</div>';
 }
 function hocaPaneli(m,st,per){
-  const o=m.ogretmenler.find(x=>x.hoca===st.hoca),ad=o?kisiAdi(o.ad):'';
+  const o=m.ogretmenler.find(x=>x.hoca===st.hoca),ad=o?kisiAdi(o.ad):'',dol=st.olcu==='doluluk';
   const gunler=o?'<span class="mini" id="etHocaGun">Etüt günleri: '+o.gunleri.map(g=>GUN_ADI[g]).join(', ')+' · '+(o.kaynak==='plan'?'Etüt planından':'etüt raporundan')+'</span>':'';
-  const grafik='<section class="et-panel"><div class="et-kart-bas"><h2>'+(o?kacis(ad)+' etütleri':'Öğretmenlere göre etüt')+' · '+per+'</h2>'+(o?'<button type="button" class="et-dugme" data-et-hoca="">Tüm öğretmenler</button>':'')+'</div>'+gunler+
-    '<div class="et-grafik" data-et-grafik="hoca" tabindex="0" role="img" aria-label="'+kacis((ad||'Öğretmen')+' etüt sayısı ('+per+')')+'"></div></section>';
+  const not=dol?'<span class="mini" id="etHocaDol">Doluluk = etüt ÷ öğretmenin etüt günlerindeki yer. Etüt günü olmayan haftalar atlanır, çizgi üzerinden geçer.</span>':'';
+  const grafik='<section class="et-panel"><div class="et-kart-bas"><h2>'+(o?kacis(ad)+(dol?' doluluk':' etütleri'):dol?'Öğretmenlere göre doluluk':'Öğretmenlere göre etüt')+' · '+per+'</h2>'+
+    '<div class="et-kart-arac">'+secim('olcu',st.olcu,[['etut','Etüt'],['doluluk','Doluluk']],'Göster')+(o?'<button type="button" class="et-dugme" data-et-hoca="">Tüm öğretmenler</button>':'')+'</div></div>'+gunler+not+
+    '<div class="et-grafik" data-et-grafik="hoca" tabindex="0" role="img" aria-label="'+kacis((ad||'Öğretmen')+(dol?' doluluk yüzdesi (':' etüt sayısı (')+per+')')+'"></div></section>';
   if(!o){
     const w=m.pencere[st.s];if(!w)return '<div id="etHoca">'+grafik+'</div>';
     const l=m.ogretmenler.slice().sort((a,b)=>(a.k[st.s].sonSira??1e9)-(b.k[st.s].sonSira??1e9)||(b.k[st.s].dolOnce??-1)-(a.k[st.s].dolOnce??-1)||a.ad.localeCompare(b.ad,'tr'));
@@ -16127,7 +16147,7 @@ const etkin=()=>EK.sekme==='etutler'&&rehberMi();
 GRAFIK_OLCUM.kur({secici:'.et-grafik[data-et-grafik]',kok:'#etKok',etkin,bilgi:olcBilgi,yakin:enYakin,ipucuGizle:ipucuSakla,hap,fmt:sayi});
 document.addEventListener('click',async ev=>{
   if(!etkin())return;
-  const el=ev.target.closest?.('[data-et-aralik],[data-et-tur],[data-et-cizgi],[data-et-ders],[data-et-hoca],[data-et-ogr],[data-et-sira],#etSil,#etGeriGetir');if(!el||el.disabled)return;
+  const el=ev.target.closest?.('[data-et-aralik],[data-et-tur],[data-et-olcu],[data-et-cizgi],[data-et-ders],[data-et-hoca],[data-et-ogr],[data-et-sira],#etSil,#etGeriGetir');if(!el||el.disabled)return;
   if(el.id==='etGeriGetir'){
     if(ISLEM||izleme())return;
     ISLEM=true;try{durum(await yedektenGetir())}catch(e){durum('Geri getirilemedi: '+e.message)}finally{ISLEM=false}
@@ -16135,6 +16155,7 @@ document.addEventListener('click',async ev=>{
   }
   if(el.dataset.etAralik){EK.etAralik=el.dataset.etAralik==='sec'?'sec':Number(el.dataset.etAralik);yenidenCiz('[data-et-aralik="'+EK.etAralik+'"]');return}
   if(el.dataset.etTur){EK.etTur=el.dataset.etTur;yenidenCiz('[data-et-tur="'+EK.etTur+'"]');return}
+  if(el.dataset.etOlcu){EK.etOlcu=el.dataset.etOlcu==='doluluk'?'doluluk':'etut';yenidenCiz('[data-et-olcu="'+EK.etOlcu+'"]');return}
   if(el.dataset.etCizgi){GRAFIK_CIZGI.sec(el.dataset.etCizgi);yenidenCiz('[data-et-cizgi="'+GRAFIK_CIZGI.tur()+'"]');return}
   if(el.dataset.etDers!==undefined){const d=el.dataset.etDers;EK.etDers=d&&EK.etDers!==d?d:null;yenidenCiz(d?'[data-et-ders="'+CSS.escape(d)+'"].et-ders':null);return}
   if(el.dataset.etHoca!==undefined){const h=el.dataset.etHoca;EK.etHoca=h&&EK.etHoca!==h?h:null;yenidenCiz(h?'[data-et-hoca="'+CSS.escape(h)+'"].et-ders':null);return}
@@ -16224,7 +16245,7 @@ function birak(){
   yenidenCiz();
 }
 document.addEventListener('pointerup',birak);document.addEventListener('pointercancel',birak);
-return {pdfCoz,dogrula,oku,ac,paketle,birlestir,raporEkle,sil,yedekteBul,yedektenGetir,model,dersAdi,gorunum,icerik,grafikleriCiz,GRAFIKLER,CIZIMLER,planIcin,UST_SINIR,EN_COK_SATIR,DURUM,
+return {pdfCoz,dogrula,oku,ac,paketle,birlestir,raporEkle,sil,yedekteBul,yedektenGetir,model,dersAdi,gorunum,icerik,grafikleriCiz,GRAFIKLER,CIZIMLER,planIcin,hocaSeri,UST_SINIR,EN_COK_SATIR,DURUM,
   get onbellek(){return ONBELLEK}};
 })();
 function gorunumEtutler(){return ETUT.gorunum()}

@@ -190,3 +190,4 @@ td.et-yukari{color:var(--e-ok)}td.et-asagi{color:var(--e-bad)}
   .et-tablo .et-dar-gizle{display:none}.et-tablo td,.et-tablo th button{padding:6px 5px}.et-tablo th:not(:has(button)){padding:8px 5px}.et-tablo td:first-child{white-space:normal;min-width:7.5em}
 }
 @media print{.et-ipucu{display:none}}
+.et-kart-arac{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
