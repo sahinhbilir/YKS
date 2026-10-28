@@ -24,6 +24,34 @@ These are publisher outcome occurrences. A physical question may map to more
 than one outcome, so totals can exceed the exam's physical question count.
 This page does not call the percentages net scores or mastery probabilities.
 
+## Reading the page
+
+- **Sırala** orders topics (and the outcomes inside an expanded topic): *En çok soru*
+  (default), *Düşenler* / *Yükselenler* (cumulative change, topics without a change
+  last), *Son denemede iyi* (the topic's latest dated exam's own rate, ties by that
+  exam's question count; each row then shows e.g. "Son deneme %83 · 5/6") and *Ada göre*.
+- **Matematik + Geometri** (first in the subject list when both exist for the session)
+  merges the two subjects' topics. A topic name present in both is one topic with
+  counts summed per exam. TYT Temel Matematik is 30 Matematik + 10 Geometri questions.
+- The line under the list title gives the subject totals over the pupil's exams
+  (blocks' row sums; the topic summary when one exists, because publisher outcome rows
+  can map one question to several outcomes), then the exams the pupil has in that
+  session ("TYT: 27-YKS-1203"). With one exam only, it suggests uploading other exams.
+- **Öğrenci** starts with "Tüm şube (N öğrenci)" (the default) and "Tüm 12. sınıflar
+  (N öğrenci)" (every class of the same grade, read from the class text; grades are
+  never mixed). In these views counts are summed over the included pupils and exams
+  (each pupil's exam once per topic), the history has one point per exam date for all
+  pupils who took it, and sessions/subjects are the union over the pupils. The summary
+  reads "Tüm 12. sınıflar · 26 öğrenci · 3 deneme · 1.040 soru · 412 doğru (%40)" and
+  the exam line gives pupil counts: "TYT: 27-YKS-1203 (9), 27-TYT SIFIR POZİTİF (7)".
+  Only totals are shown; there are no per-pupil lists or rankings.
+- A session with a single kind (e.g. only TYT) is shown as plain text, not a choice.
+- The page opens on the class with the most loaded exams (then most pupils), so
+  a class with TYT and AYT exams is preferred over one with a single TYT exam.
+- After an upload the status reads e.g. "3 PDF kaydedildi · 1 sınav (27-YKS-1203) ·
+  27 öğrenci": several class files of one exam are one exam. **Kaynaklar** lists each
+  exam with its session, classes and pupil count.
+
 ## Import and topic association
 
 Parsing uses the shared browser PDF.js reader, including its 15 MB/file and
