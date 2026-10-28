@@ -8,18 +8,19 @@ const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
 const boot = html.indexOf('// ---------------------------------------------------------------- başlangıç', start);
 const source = html.slice(start, boot);
+const dinleyiciler = {};
 const node = () => ({innerHTML:'',textContent:'',style:{},hidden:false,setAttribute(){},appendChild(){},remove(){},click(){},focus(){},getClientRects(){return [1]}});
 const nodes = {ray:node(),ana:node(),stil:{textContent:'body{}'},uygulama:{textContent:source},veri:{textContent:'null'}};
 const sandbox = {console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,TextEncoder,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),
   localStorage:{getItem(){return null},setItem(){}},sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},navigator:{},window:{scrollTo(){},open(){return null},addEventListener(){}},
-  document:{activeElement:null,addEventListener(){},contains(){return true},getElementById(id){return nodes[id]||null},querySelector(){return null},querySelectorAll(){return []},createElement(){return node()},body:{appendChild(){},insertAdjacentHTML(){}}}};
+  document:{activeElement:null,addEventListener(tur,f){(dinleyiciler[tur]=dinleyiciler[tur]||[]).push(f)},contains(){return true},getElementById(id){return nodes[id]||null},querySelector(){return null},querySelectorAll(){return []},createElement(){return node()},body:{appendChild(){},insertAdjacentHTML(){}}}};
 sandbox.window.document = sandbox.document; vm.createContext(sandbox); new vm.Script(source).runInContext(sandbox);
 const run = code => vm.runInContext(code, sandbox);
 const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
 sandbox.__yg = run('yalnizcaGoruntuleme'); sandbox.__bg = run('bulutYedekGecmisi'); sandbox.__bga = run('buluttanGunAl');
 const reset = () => run(`yalnizcaGoruntuleme=__yg;bulutYedekGecmisi=__bg;buluttanGunAl=__bga;confirm=()=>true;delete window.bulut;D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'Sentetik Ada',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='etutler';
-  EK.etAralik=undefined;EK.etTur=undefined;EK.etDers=undefined;EK.etHoca=undefined;EK.etSecA=undefined;EK.etSecB=undefined;EK.etOgr=undefined;EK.etSira=undefined;EK.etKademe=undefined;EK.etAra='';EK.etSinif='';KAYIT=0;kaydet=async()=>{KAYIT++;return true};ETUT.onbellek.ts=null;`);
+  EK.etAralik=undefined;EK.etTur=undefined;EK.etDers=undefined;EK.etHoca=undefined;EK.etSecA=undefined;EK.etSecB=undefined;EK.etOlcu=undefined;EK.etOgr=undefined;EK.etSira=undefined;EK.etKademe=undefined;EK.etAra='';EK.etSinif='';KAYIT=0;kaydet=async()=>{KAYIT++;return true};ETUT.onbellek.ts=null;`);
 const rapor = (gunler = GUNLER, aralik) => { put('pages', etutRaporu(gunler, aralik).pages); return get('ETUT.pdfCoz(pages)'); };
 const iso = g => run('isoDan(' + g + ')');
 const ekle = async r => { put('R', r); await run('ETUT.raporEkle([R])'); };
@@ -253,6 +254,67 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.equal((h.match(new RegExp('data-olc-donem="' + hafta + '" data-olc-uzunluk="7"', 'g')) || []).length, m.dersler.length + m.ogretmenler.length + m.kisiler.length, 'cards and the table');
     assert.match(h, /data-et-cizgi="kose" aria-pressed="true"/); assert.match(h, /data-et-cizgi="yumusak" aria-pressed="false"/);
     run("GRAFIK_CIZGI.sec('yumusak')"); assert.match(run(`ETUT.GRAFIKLER.genel(${mm},${st('hafta')},720).svg`), /class="et-cizgi" d="M[^"]*C/); run("GRAFIK_CIZGI.sec('kose')");
+  });
+  await check('Etüt / Doluluk on the teachers\' chart: doluluk = etüts ÷ places, null (the line passes over) where there are no places; the toggle, titles and axis', async () => {
+    // Seven full weeks from Mon 31 Ağu. A is at school every weekday (one etüt a day, two on Mondays: 6 of 20 places a week).
+    // B gives etüts on Tuesdays of the 1st, 2nd, 6th and 7th weeks only: the 3rd and 5th weeks' Tuesdays are next to a
+    // Tuesday with etüts (open, empty), the 4th week's is not (no places).
+    const tarih = (hafta, gun) => { const d = new Date(Date.UTC(2026, 7, 31 + hafta * 7 + gun)); return String(d.getUTCDate()).padStart(2, '0') + '.' + String(d.getUTCMonth() + 1).padStart(2, '0') + '.' + d.getUTCFullYear(); };
+    let n = 0; const sat = (hoca, brans) => ['' + brans, 'SENTETİK ÖĞRETMEN ' + hoca, 'SENTETİK ÖĞRENCİ ' + (++n), (100 + n) + ' 10/A', '101', '15:00', '20 Dk.'];
+    const bEtut = [1, 2, 0, 0, 0, 3, 5], gunler = [];
+    for (let w = 0; w < 7; w++) for (let g = 0; g < 5; g++) {
+      const satirlar = [sat('A', 'Türkçe')]; if (g === 0) satirlar.push(sat('A', 'Türkçe'));
+      if (g === 1) for (let k = 0; k < bEtut[w]; k++) satirlar.push(sat('B', 'Tarih'));
+      gunler.push({ tarih: tarih(w, g), satirlar });
+    }
+    await ekle(rapor(gunler, { bas: '31.08.2026', bit: '16.10.2026' }));
+    const m = model(), A = m.ogretmenler.find(o => o.ad.endsWith(' A')), B = m.ogretmenler.find(o => o.ad.endsWith(' B'));
+    assert.deepEqual(A.kapHafta, [20, 20, 20, 20, 20, 20, 20]); assert.deepEqual(B.kapHafta, [4, 4, 4, 0, 4, 4, 4], 'B: no places in the 4th week');
+    const mm = 'ETUT.model(ETUT.oku().veri)', st = (olcu, tur = 'hafta', hoca = null) => `{s:2,tur:'${tur}',olcu:${JSON.stringify(olcu)},ders:null,hoca:${JSON.stringify(hoca)},kim:null}`;
+    const seri = (olcu, tur) => get(`ETUT.hocaSeri(${mm},${st(olcu, tur)})`), bul = (l, o) => l[m.ogretmenler.indexOf(o)];
+    // Doluluk by week: count ÷ places where there are places, null where there are none (not 0).
+    const hd = seri('doluluk', 'hafta');
+    assert.deepEqual(bul(hd, A).v, [6, 6, 6, 6, 6, 6, 6].map(x => x / 20));
+    assert.deepEqual(bul(hd, B).v, [0.25, 0.5, 0, null, 0, 0.75, 1.25], 'null in the week with no places, 0 in an open empty week; over 100 % is kept');
+    assert.deepEqual(bul(hd, B).say, B.haftaG); assert.deepEqual(bul(hd, B).kap, B.kapHafta);
+    // By day: etüts ÷ places on the days that are theirs, null on the others.
+    const gd = bul(seri('doluluk', 'gun'), B);
+    gd.v.forEach((v, i) => assert.equal(v, B.kapGun[i] > 0 ? B.gunG[i] / B.kapGun[i] : null)); assert(gd.v.includes(null) && gd.v.some(v => v === 1.25));
+    // The count mode is what it was.
+    assert.deepEqual(bul(seri('etut', 'hafta'), B).v, B.haftaG); assert.deepEqual(bul(get(`ETUT.hocaSeri(${mm},{s:2,tur:'gun',ders:null,hoca:null,kim:null})`), B).v, B.gunG);
+    // The chart: percent ticks, readout "%63 · 10/16" style, ranked by the share, measuring off; counts keep measuring.
+    const ciz = (olcu, tur = 'hafta', hoca = null) => run(`ETUT.GRAFIKLER.hoca(${mm},${st(olcu, tur, hoca)},720)`);
+    const g = ciz('doluluk'), say = ciz('etut');
+    const tikler = s => [...s.matchAll(/class="et-tik"[^>]*dy="0.32em">([^<]*)</g)].map(x => x[1]);
+    assert.deepEqual(tikler(g.svg), ['%0', '%50', '%100', '%150'], 'over 100 % extends the axis'); assert(!/NaN|undefined/.test(g.svg));
+    assert(!tikler(say.svg).some(t => t.includes('%'))); assert(say.olc && !g.olc, 'measuring is off in doluluk mode only');
+    const bi = m.ogretmenler.indexOf(B), ai = m.ogretmenler.indexOf(A), yolB = g.svg.match(new RegExp('data-seri="' + bi + '" style="[^"]*" d="([^"]*)"'))[1];
+    assert.equal((yolB.match(/M/g) || []).length, 1, 'B\'s line is one piece: it passes over the week with no places'); assert.equal(g.seriler[bi].pts[3], null); assert.equal(g.seriler[ai].pts[3] === null, false);
+    const duz = x => JSON.parse(JSON.stringify(x)), satir = i => g.ipucu[i].satir.map(r => r.slice(1, 3).join('=')), adB = 'Sentetik Öğretmen B', adA = 'Sentetik Öğretmen A';
+    assert.deepEqual(duz(satir(6)), [adB + '=%125 · 5/4', adA + '=%30 · 6/20'], 'ranked by the shown value');
+    assert.deepEqual(duz(satir(3)), [adA + '=%30 · 6/20'], 'B is not in the readout in a week with no places'); assert.deepEqual(duz(satir(1)), [adB + '=%50 · 2/4', adA + '=%30 · 6/20']);
+    assert.deepEqual(duz(g.seriIpucu(bi, 5).satir[0].slice(1, 3)), [adB, '%75 · 3/4']); assert.deepEqual(duz(g.seriIpucu(bi, 3).satir[0].slice(1, 3)), [adB, '—']);
+    assert.deepEqual(duz(say.ipucu[6].satir.map(r => r.slice(1, 3).join('='))), [adA + '=6', adB + '=5'], 'counts are unchanged');
+    // One teacher: a single line with area, in percent; the day that is not theirs says so.
+    const tek = ciz('doluluk', 'hafta', B.hoca); assert.deepEqual(tikler(tek.svg), ['%0', '%50', '%100', '%150']);
+    assert.deepEqual(duz(tek.ipucu[6].satir.map(r => r.slice(1, 3).join('='))), [adB + '=%125 · 5/4']); assert.deepEqual(duz(tek.ipucu[3].satir), [[null, 'Etüt günü değil', '']]);
+    assert.deepEqual(duz(ciz('doluluk', 'hafta', A.hoca).ipucu[0].satir.map(r => r.slice(1, 3).join('='))), [adA + '=%30 · 6/20']);
+    // The toggle: the click handler stores EK.etOlcu and the view follows (title, aria-label, pressed button).
+    nodes.etKok = node(); const tikla = async dugme => { const el = { dataset: { etOlcu: dugme }, disabled: false, closest: () => null }; for (const f of dinleyiciler.click) await f({ target: { closest: q => /data-et-olcu/.test(q) ? el : null } }); };
+    assert.equal(run('EK.etOlcu'), undefined); let h = run('ETUT.icerik()');
+    assert(h.includes('Öğretmenlere göre etüt · haftalık') && !h.includes('doluluk yüzdesi') && !h.includes('id="etHocaDol"'));
+    assert(h.includes('data-et-olcu="etut" aria-pressed="true"') && h.includes('data-et-olcu="doluluk" aria-pressed="false"') && h.includes('<span class="et-seg-label">Göster</span>'));
+    await tikla('doluluk'); assert.equal(run('EK.etOlcu'), 'doluluk'); h = nodes.etKok.innerHTML;
+    assert(h.includes('<h2>Öğretmenlere göre doluluk · haftalık</h2>') && h.includes('aria-label="Öğretmen doluluk yüzdesi (haftalık)"') && h.includes('data-et-olcu="doluluk" aria-pressed="true"'));
+    assert.match(h, /id="etHocaDol">Doluluk = etüt ÷ öğretmenin etüt günlerindeki yer/); assert(h.includes('<h2>Sıralama · doluluk</h2>'), 'the ranking list is as it was');
+    await tikla('doluluk'); assert.equal(run('EK.etOlcu'), 'doluluk', 'pressing the chosen button keeps it');
+    run('EK.etTur="gun"'); assert(run('ETUT.icerik()').includes('<h2>Öğretmenlere göre doluluk · günlük</h2>')); run('EK.etTur=undefined');
+    run(`EK.etHoca=${JSON.stringify(B.hoca)}`); h = run('ETUT.icerik()');
+    assert(h.includes('<h2>Sentetik Öğretmen B doluluk · haftalık</h2>') && h.includes('data-et-hoca=""') && h.includes('aria-label="Sentetik Öğretmen B doluluk yüzdesi (haftalık)"'));
+    await tikla('etut'); assert.equal(run('EK.etOlcu'), 'etut'); h = nodes.etKok.innerHTML;
+    assert(h.includes('<h2>Sentetik Öğretmen B etütleri · haftalık</h2>') && h.includes('etüt sayısı (haftalık)') && !h.includes('doluluk yüzdesi'));
+    await tikla('bozuk'); assert.equal(run('EK.etOlcu'), 'etut', 'an unknown value falls back to Etüt');
+    delete nodes.etKok;
   });
   await check('Etüt planı gets each weekday\'s teachers of the last four weeks and the report\'s names', async () => {
     run('ETUT.onbellek.ts=null'); assert.equal(run('ETUT.planIcin()'), null);
