@@ -59,6 +59,13 @@ const ad=e=>'27-YKS-120'+e+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf';
    await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="sira"] svg'));
    assert.match(await cumle(),/^27-YKS-1203 \(21 Eki\)/);assert.match(await cumle(),/ilk 100’de 3 \/ 3 ders/);
    assert.equal(await page.locator('#tgSimdi').inputValue(),'27-YKS-1203|kolej');
+   // Artış reads the whole run by default (first exam → latest, with the steps between), without choosing Önceki.
+   await page.locator('[data-tg-mod="artis"]').click();
+   await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="toplam"] svg'));
+   assert.match(await cumle(),/^27-YKS-1201 → 27-YKS-1203 \(3 deneme\) · /);
+   assert.equal(await page.locator('#tgAdimlar tbody tr').count(),4);assert.match(await page.locator('#tgAdimlar').innerText(),/Toplam[\s\S]*Deneme başına ortalama/);
+   await page.locator('[data-tg-mod="sira"]').click();
+   await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="sira"] svg'));
    // Hover reads the exam; the keyboard walks exams and lines; Enter opens the highlighted subject.
    const sira=page.locator('[data-tg-grafik="sira"]');await sira.scrollIntoViewIfNeeded();
    const kutu=await sira.boundingBox();
@@ -110,7 +117,7 @@ const ad=e=>'27-YKS-120'+e+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf';
    // Back to Artış: 1201 → 1203 has the TYT total; the chart reads it exam by exam.
    await page.locator('[data-tg-mod="artis"]').click();
    await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="toplam"] svg'));
-   assert.match(await cumle(),/^27-YKS-1201 → 27-YKS-1203 · Kolej listesi · Sentetik Kartal Anadolu Lisesi · TYT toplam: Türkiye’ye göre/);
+   assert.match(await cumle(),/^27-YKS-1201 → 27-YKS-1203 \(3 deneme\) · Kolej listesi · Sentetik Kartal Anadolu Lisesi · TYT toplam: Türkiye’ye göre toplam/);
    assert.equal(await page.locator('#tgArtisSira .tg-biz').count(),1);
    const top=page.locator('[data-tg-grafik="toplam"]');await top.focus();await page.keyboard.press('End');
    assert.match(await top.locator('.et-ipucu').innerText(),/^27-YKS-1203 · 21 Eki[\s\S]*Sentetik Kartal Anadolu Lisesi[\s\S]*Türkiye ortalaması[\s\S]*Türkiye’ye göre/);

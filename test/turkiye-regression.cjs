@@ -241,7 +241,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const net = (e, kod, ad) => { const r = L[e].dersler.find(d => d.kod === kod).satir.find(x => x[0] === ad); return r ? r[1] : null; };
     const genel = (e, kod) => L[e].dersler.find(d => d.kod === kod).genel;
     const toplam = (e, ad) => { const v = tyt.map(k => ad === null ? genel(e, k) : net(e, k, ad)); return v.includes(null) ? null : r2(v.reduce((t, x) => t + x, 0)); };
-    // 1202 → 1203 (the default pair). FİZİK-T has the school only in 1203, so the TYT total of 1202 is missing.
+    // 1202 → 1203 (the pair Sıra compares by default). FİZİK-T has the school only in 1203, so the TYT total of 1202 is missing.
     let m = run('TURKIYE.model(D.turkiye,{})'), T = m.toplam;
     assert.equal(T.key, 'TYT'); assert.deepEqual([...T.kodlar], tyt);
     assert.deepEqual(JSON.parse(JSON.stringify(T.seri)), [0, 1, 2].map(e => ({ okul: toplam(e, BIZ), genel: toplam(e, null) })));
@@ -257,22 +257,37 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     m = run('TURKIYE.model(D.turkiye,{onceki:"27-YKS-1201|kolej"})'); T = m.toplam;
     assert.equal(m.onceki, 0); assert.equal(T.artis.fark, r2(toplam(2, BIZ) - toplam(0, BIZ))); assert.equal(T.artis.goreli, r2(T.artis.fark - (toplam(2, null) - toplam(0, null))));
     assert.equal(run('TURKIYE.model(D.turkiye,{onceki:"27-YKS-1203|kolej"}).onceki'), 1, 'Önceki is always before Şimdiki');
+    // Artış reads the whole run by default: the first exam against the latest, the average over the steps between.
+    const J = x => JSON.parse(JSON.stringify(x));
+    m = run('TURKIYE.model(D.turkiye,{mod:"artis"})'); T = m.toplam;
+    assert.equal(m.onceki, 0); assert.equal(m.simdi, 2); assert.equal(T.artis.adim, 2); assert.equal(T.artis.adimlar.length, 2);
+    assert.equal(T.artis.fark, r2(toplam(2, BIZ) - toplam(0, BIZ))); assert.equal(T.artis.ort, r2(T.artis.fark / 2));
+    assert.equal(T.artis.genelOrt, r2(T.artis.genelFark / 2)); assert.equal(T.artis.goreliOrt, r2(T.artis.goreli / 2));
+    assert.deepEqual(J(T.artis.adimlar.map(x => x.fark)), [null, null], 'the school has no TYT total in 1202');
+    const turkce = m.dersler.find(d => d.ad === 'Türkçe').artis;
+    assert.equal(turkce.adim, 2); assert.deepEqual(J(turkce.adimlar.map(x => [x.onceki, x.ad])), [['27-YKS-1201', '27-YKS-1202'], ['27-YKS-1202', '27-YKS-1203']]);
+    assert(turkce.adimlar.every(x => x.fark !== null) && Math.abs(turkce.adimlar.reduce((t, x) => t + x.fark, 0) - turkce.fark) < 0.011, 'the steps add up to the total');
+    assert.equal(turkce.ort, r2(turkce.fark / 2));
     // AYT: one total per field.
     m = run('TURKIYE.model(D.turkiye,{oturum:"AYT"})'); assert.equal(m.toplamlar.length, 0, 'the fixture has no complete field');
-    put('EKS', { tgOnceki: '27-YKS-1201|kolej' }); run('Object.assign(EK,EKS)');
     let h = run('TURKIYE.icerik()');
     const cumle = /<p class="et-cumle">(.*?)<\/p>/.exec(h)[1].replace(/<[^>]+>/g, '');
-    assert.match(cumle, /^27-YKS-1201 → 27-YKS-1203 · Kolej listesi · Sentetik Kartal Anadolu Lisesi · TYT toplam: Türkiye’ye göre [+−]\d+,\d\d net \(okul \d+,\d\d → \d+,\d\d, [▲▼]\d+,\d\d; Türkiye ortalaması [▲▼]\d+,\d\d\)\. Artış sırası \d+\. \/ \d+ kurum\.$/);
+    assert.match(cumle, /^27-YKS-1201 → 27-YKS-1203 \(3 deneme\) · Kolej listesi · Sentetik Kartal Anadolu Lisesi · TYT toplam: Türkiye’ye göre toplam [+−]\d+,\d\d net, deneme başına [+−]\d+,\d\d net \(okul \d+,\d\d → \d+,\d\d, [▲▼]\d+,\d\d; Türkiye ortalaması [▲▼]\d+,\d\d\)\. Artış sırası \d+\. \/ \d+ kurum\.$/);
     assert.match(h, /data-tg-mod="artis" aria-pressed="true"/); assert.match(h, /data-tg-grafik="toplam"/); assert.match(h, /id="tgArtisSira"/);
     assert.match(h, /Artış sıralaması · TYT toplam/); assert.match(h, /class="tg-cevre-satir tg-artis-satir tg-biz"/); assert.match(h, /Türkiye’ye göre artış · 27-YKS-1201 → 27-YKS-1203/);
     assert.match(h, /Dersler · 27-YKS-1201 → 27-YKS-1203/); assert.match(h, /<option value="27-YKS-1201\|kolej" selected>27-YKS-1201<\/option>/);
     assert.equal((h.match(/class="et-ders"/g) || []).length, 3);
+    // The steps between the exams, the total and the average per exam; the school has no TYT total in 1202, so its steps are empty.
+    assert.match(h, /id="tgAdimlar"/); assert.match(h, /Denemeler arası artış · TYT toplam/); assert.match(h, /<td class="tg-ad">27-YKS-1201 → 27-YKS-1202<\/td>/);
+    assert.equal((h.match(/class="tg-toplam"/g) || []).length, 2); assert.match(h, /Deneme başına ortalama<\/td>/); assert.match(h, /Okul bir denemede listede yoksa net basılmaz/);
+    assert.match(h, /<span class="et-seg-label">İlk deneme<\/span>/); assert.match(h, /<span class="et-seg-label">Son deneme<\/span>/); assert.match(h, /Deneme başına<\/th>/);
     const g = run('TURKIYE.grafikToplam(TURKIYE.durumAl(D.turkiye),700)');
     assert.match(g.svg, /class="tg-genel"/); assert.match(g.svg, /class="et-cizgi kalin kesik tg-bosluk"/, "the missing 1202 total is bridged"); assert(!g.svg.includes('NaN'));
     assert.deepEqual(JSON.parse(JSON.stringify(g.ipucu[2].satir.map(r => r[1]))), ['Sentetik Kartal Anadolu Lisesi', 'Türkiye ortalaması', 'Türkiye’ye göre']);
     // A subject: its net chart and its own ranking.
     run('EK.tgDers="TÜRKÇE-T"'); h = run('TURKIYE.icerik()');
     assert.match(h, /data-tg-grafik="net"/); assert.match(h, /Artış sıralaması · Türkçe/); assert.match(h, /data-tg-ders="">Tüm dersler/);
+    assert.match(h, /Denemeler arası artış · Türkçe/); assert(!h.includes('Okul bir denemede listede yoksa'), 'both steps have the school');
     // One exam only: no increase yet.
     reset(); await ekle(liste(1)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')');
     assert.match(run('TURKIYE.icerik()'), /artışı görmek için ikinci bir deneme ekleyin/);
