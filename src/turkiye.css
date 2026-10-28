@@ -2,6 +2,7 @@
 #tgKok .et-seg select{border:0;background:transparent;color:var(--e-fg);font:inherit;font-size:.8125rem;font-weight:500;padding:3px 8px;border-radius:999px;min-width:0;max-width:22rem;cursor:pointer}
 #tgKok .tg-okul{max-width:100%}
 #tgKok .tg-okul select{text-overflow:ellipsis}
+#tgDurum{overflow-wrap:anywhere;font-size:.8125rem;margin:0;color:var(--e-fg2)}#tgDurum:empty{display:none}
 #tgKok .tg-bolu{font-size:.6em;color:var(--e-muted)}
 /* Charts: the average place is the bold line; a school outside the list sits on the dotted lane. */
 .tg-ort{fill:none;stroke:var(--e-fg);stroke-width:2.75;stroke-linecap:round;stroke-linejoin:round}
@@ -15,6 +16,9 @@
 .tg-renk-bant{opacity:.35;height:10px}
 .tg-renk-disi{width:9px;height:9px;border-radius:50%;border:2px solid var(--e-fg2);box-sizing:border-box}
 .tg-ders-geri{display:flex;justify-content:flex-end}
+.tg-ikili{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}.tg-ok{color:var(--e-muted)}
+.tg-artis-satir b.yukari{color:var(--e-ok)}.tg-artis-satir b.asagi{color:var(--e-bad)}
+.tg-cevre-panel .tg-artis-satir{grid-template-columns:2.6rem minmax(0,1fr) auto minmax(0,7.5rem)}
 /* Türkiye ortalamasına göre: one row per subject, the bar grows left (below) or right (above) from 0. */
 .tg-fark{display:flex;flex-direction:column}
 .tg-fark-satir{width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer;border:0;background:none;border-radius:var(--e-r);padding:6px 8px;
@@ -41,10 +45,16 @@
 .et-tablo td.tg-ilk{max-width:16rem;overflow:hidden;text-overflow:ellipsis}
 .et-tablo td .et-renk{vertical-align:baseline}
 #tgKaynak td.tg-ad{white-space:nowrap}
+#tgKaynak .tg-sinif{font:inherit;font-size:.8125rem;color:var(--e-fg);background:var(--e-bg);border:1px solid var(--e-line);border-radius:var(--e-r);padding:3px 6px}
+/* Lists kept but not in this chart: one button each shows it. */
+.tg-diger{margin:0;color:var(--e-fg2);font-size:.8125rem;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.tg-git{font:inherit;font-size:.75rem;font-weight:500;color:var(--e-fg);background:var(--e-panel);border:1px solid var(--e-line);border-radius:999px;padding:2px 10px;cursor:pointer}
+.tg-git:hover{background:color-mix(in srgb,var(--e-fg) 6%,var(--e-panel))}
 @media (max-width:640px){
   .tg-fark-satir{grid-template-columns:minmax(5.5rem,7rem) minmax(0,1fr) minmax(0,1fr) 4.6rem;padding:6px 4px}
   .tg-fark-net{display:none}
   .tg-cevre-satir{grid-template-columns:2.2rem minmax(0,1fr) auto 3.2rem;padding:5px 4px}
+  .tg-cevre-panel .tg-artis-satir{grid-template-columns:2.2rem minmax(0,1fr) auto}.tg-artis-satir .mini{display:none}
   #tgKok .et-seg select{max-width:14rem}
   #tgKaynak .tg-dar-gizle{display:none}
 }

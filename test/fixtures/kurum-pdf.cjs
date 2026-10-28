@@ -11,8 +11,8 @@ const UZUN = 'SENTETİK KOLEJİ DOĞU KAMPÜSÜ (YAMAÇ) FEN/ANADOLU LİSESİ';
 const okul = i => i === 7 ? UZUN : 'SENTETİK KOLEJ ' + String(i + 1).padStart(3, '0') + ' ANADOLU LİSESİ';
 const KURS = ['SENTETİK İLERİ KURS 001', 'SENTETİK İLERİ KURS 002'];
 const DERSLER = [['TÜRKÇE-T', 40], ['MATEMATİK-T', 30], ['FİZİK-T', 7], ['S.FELSEFE-T', 5], ['TÜRK DİLİ VE EDB-A', 24], ['MATEMATİK-A', 30]];
-// The followed school's nets by exam (1, 2, 3). FİZİK-T in exam 2 is too low for the list; S.FELSEFE-T in
-// exam 1 ties with five other schools.
+// The followed school's nets by exam (1, 2, 3). FİZİK-T in exam 2 is too low for the list; MATEMATİK-T in
+// exam 1 ties with five other schools. S.FELSEFE-T (Ek Felsefe) is printed but never kept.
 const BIZIM = {
   'TÜRKÇE-T': [24.1, 25.3, 26], 'MATEMATİK-T': [12, 11.2, 14.5], 'FİZİK-T': [2.1, 0.2, 2.9], 'S.FELSEFE-T': [3, 3.1, 3.3],
   'TÜRK DİLİ VE EDB-A': [13.2, 12.1, 14], 'MATEMATİK-A': [10, 12.5, 13]
@@ -26,7 +26,7 @@ function kurumListesi(e, { ad = '27-YKS-120' + e, liste = 'kolej', dersler = DER
       const rows = [];
       for (let i = 0; i < okulSayisi; i++) {
         let net = Math.round((soru * (0.82 - 0.0055 * i) + 0.15 * e + ((i * 13 + e * 7 + soru) % 9 - 4) * 0.01) * 100) / 100;
-        if (kod === 'S.FELSEFE-T' && e === 1 && i >= 60 && i <= 64) net = 3;
+        if (kod === 'MATEMATİK-T' && e === 1 && i >= 60 && i <= 64) net = 12;
         rows.push([okul(i), net, i]);
       }
       rows.push([BIZ, BIZIM[kod] ? BIZIM[kod][e - 1] : soru * 0.3, 1000]);
