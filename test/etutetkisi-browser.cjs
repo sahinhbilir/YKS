@@ -77,7 +77,13 @@ for(let i=1;i<=6;i++)ogrenciler.push({id:'k'+i,name:'SENTETİK KÜÇÜK '+i,cls:
    }
    assert.equal(await page.locator('#eeGruplar tbody tr').count(),4);
    assert.deepEqual(await page.locator('#eeGruplar thead th').allTextContents(),['Grup','Öğrenci','Etüt / öğrenci','İlk denemelerde net','Son denemelerde net','Deneme başına artış (net)','Toplam artış (net)']);
-   assert.deepEqual(await page.locator('#eeHocalar .ee-ad').allInnerTexts(),['Sentetik Öğretmen A','Sentetik Öğretmen B']);
+   assert.deepEqual((await page.locator('#eeHocalar .ee-ad').allInnerTexts()).sort(),['Sentetik Öğretmen A','Sentetik Öğretmen B']);
+   // Teachers are ranked by "Sınıftan fazla / az" (largest first): the first row is rank 1 and the column is right-aligned like the other numbers.
+   assert.deepEqual(await page.locator('#eeHocalar thead th').first().evaluate(th=>[th.textContent,th.classList.contains('sayi'),getComputedStyle(th).textAlign,th.getBoundingClientRect().width>0]),['Sıra',true,'right',true]);
+   const hocaSatirlari=await page.locator('#eeHocalar tbody tr').evaluateAll(l=>l.map(r=>({sira:r.children[0].textContent,az:r.classList.contains('ee-az'),fark:parseFloat(r.children[r.children.length-1].textContent.replace(/[▲▼]/g,'').replace(',','.'))*(r.children[r.children.length-1].textContent.includes('▼')?-1:1),sag:r.children[0].getBoundingClientRect().right,thSag:document.querySelector('#eeHocalar thead th').getBoundingClientRect().right})));
+   assert.equal(hocaSatirlari[0].sira,'1');assert(Math.abs(hocaSatirlari[0].sag-hocaSatirlari[0].thSag)<=2,'rank sits under its header');
+   for(let i=1;i<hocaSatirlari.length;i++){const a=hocaSatirlari[i-1],b=hocaSatirlari[i];assert(a.az<=b.az,'small groups last');if(a.az===b.az)assert(a.fark>=b.fark,'largest difference first')}
+   for(const r of hocaSatirlari)assert.equal(r.sira==='—',r.az,'only small groups lose their rank');
    assert.deepEqual(await page.locator('#eeOgrenciler thead th').allTextContents(),['Öğrenci','Şube','Etüt sayısı','Deneme sayısı','Deneme başına artış (net)','Toplam artış (net)','Netler']);
    const hepsi=await page.locator('#eeOgrenciler tbody tr').count();assert.equal(hepsi,30);
    assert.match(await page.locator('#eeDisarida summary').innerText(),/^Dışarıda kalan 2 öğrenci$/);
@@ -101,7 +107,7 @@ for(let i=1;i<=6;i++)ogrenciler.push({id:'k'+i,name:'SENTETİK KÜÇÜK '+i,cls:
    // Ders: another lesson, another page.
    await page.locator('#eeDers').selectOption('Fizik');
    await page.waitForFunction(()=>/· Fizik ·/.test(document.querySelector('#eeCumle').textContent));
-   assert.deepEqual(await page.locator('#eeHocalar .ee-ad').allInnerTexts(),['Sentetik Öğretmen F']);
+   assert.deepEqual(await page.locator('#eeHocalar .ee-ad').allInnerTexts(),['Sentetik Öğretmen F']);assert.equal(await page.locator('#eeHocalar tbody tr td').first().innerText(),'—','one teacher with 3 students is unranked');
    await page.waitForSelector('#eeGrafik svg path.ee-cizgi');
    await page.locator('#eeDers').selectOption('Matematik');
    await page.waitForFunction(()=>/· Matematik ·/.test(document.querySelector('#eeCumle').textContent));
@@ -120,7 +126,7 @@ for(let i=1;i<=6;i++)ogrenciler.push({id:'k'+i,name:'SENTETİK KÜÇÜK '+i,cls:
      tasma:(k=>k.scrollWidth-k.clientWidth)(document.querySelector('#'+id+' .et-tablo-kutu')),tablo:(t=>t.scrollWidth-t.clientWidth)(document.querySelector('#'+id+' table')),
      kesik:[...document.querySelectorAll('#'+id+' td,#'+id+' th')].filter(c=>c.getBoundingClientRect().width>0&&c.scrollWidth>c.clientWidth+1).map(c=>c.textContent+':'+c.scrollWidth+'/'+c.clientWidth)}])));
     assert.deepEqual(kolonlar.eeGruplar.gorunen,['Grup','Öğrenci','Deneme başına artış (net)','Toplam artış (net)']);
-    assert.deepEqual(kolonlar.eeHocalar.gorunen,['Öğretmen','Öğrenci','Deneme başına artış (net)','Sınıftan fazla / az (net)']);
+    assert.deepEqual(kolonlar.eeHocalar.gorunen,['Sıra','Öğretmen','Öğrenci','Deneme başına artış (net)','Sınıftan fazla / az (net)']);
     assert.deepEqual(kolonlar.eeOgrenciler.gorunen,['Öğrenci','Etüt sayısı','Deneme başına artış (net)','Netler']);
     for(const [id,k] of Object.entries(kolonlar)){assert(k.tasma<=1,id+' scrolls sideways by '+k.tasma);assert(k.tablo<=1,id+' table wider than its box by '+k.tablo);assert.deepEqual(k.kesik,[],id+' has cut-off cells')}
     assert.equal(await page.locator('#eeHocalar td .mini').first().evaluate(e=>getComputedStyle(e).textOverflow),'clip');

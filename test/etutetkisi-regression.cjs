@@ -112,11 +112,24 @@ const yasak = /Nasıl okunur|Gözlem|±|\bham\b|eğim|aralık|\(%95\)/i;
     const h = model(OGR).hocalar;
     assert.deepEqual(h.map(x => x.ad), ['Sentetik Öğretmen A', 'Sentetik Öğretmen B']);
     // A: G1–G5, H1–H3, K1, K2 (10 students, 30 etüts, slopes 9 + 7.5 + 6 = 22.5). B: G5, H2, K2 (3 students, 1 each, slopes 2 + 3.5 + 2).
-    assert.deepEqual(h[0], { key: U(A), ad: 'Sentetik Öğretmen A', n: 10, etut: 3, egim: 2.25, fark: r2(2.25 - 31 / 17), ortak: 3 });
-    assert.deepEqual(h[1], { key: U(B), ad: 'Sentetik Öğretmen B', n: 3, etut: 1, egim: 2.5, fark: r2(2.5 - 31 / 17), ortak: 3 });
+    assert.deepEqual(h[0], { key: U(A), ad: 'Sentetik Öğretmen A', n: 10, etut: 3, egim: 2.25, fark: r2(2.25 - 31 / 17), ortak: 3, az: false, sira: 1 });
+    assert.deepEqual(h[1], { key: U(B), ad: 'Sentetik Öğretmen B', n: 3, etut: 1, egim: 2.5, fark: r2(2.5 - 31 / 17), ortak: 3, az: true, sira: null }, 'B has the larger difference but only 3 students: unranked, after A');
     assert.equal(h[0].fark, 0.43); assert.equal(h[1].fark, 0.68);
     const f = model(OGR, { ders: 'Fizik' }); assert.equal(f.ders, 'Fizik'); assert.deepEqual(f.hocalar.map(x => [x.ad, x.n]), [['Sentetik Öğretmen F', 1]]);
     assert.equal(f.sinif.n, 18, 'X2 has Fizik nets in all three exams'); assert.equal(f.sinif.egim, r2(17 / 18), '17 students rise 1 per exam, X2 stays at 6'); assert.deepEqual(f.disarida.map(d => d.neden), ['yalnızca 1 denemeye girdi']);
+  });
+  await check('teacher ranking: by the difference from the class, ties share a rank, teachers under 5 students are unranked and last', () => {
+    // P and Q: 5 students each at +2 per exam (tie); R: 5 students flat; T: 2 students at +6 per exam (largest, but too few).
+    const T = (t, k, nets) => S(t[t.length - 1] + k, nets, et(MAT, t, '2026-10-15'));
+    const P = 'SENTETİK ÖĞRETMEN P', Q = 'SENTETİK ÖĞRETMEN Q', R = 'SENTETİK ÖĞRETMEN R', Tt = 'SENTETİK ÖĞRETMEN T';
+    const L = [...[1, 2, 3, 4, 5].map(k => T(P, k, [10, 12, 14])), ...[1, 2, 3, 4, 5].map(k => T(Q, k, [8, 10, 12])), ...[1, 2, 3, 4, 5].map(k => T(R, k, [10, 10, 10])), ...[1, 2].map(k => T(Tt, k, [10, 16, 22]))];
+    const m = model(L), h = m.hocalar;
+    assert.deepEqual(h.map(x => [x.ad, x.sira, x.az]), [['Sentetik Öğretmen P', 1, false], ['Sentetik Öğretmen Q', 1, false], ['Sentetik Öğretmen R', 3, false], ['Sentetik Öğretmen T', null, true]]);
+    assert(h[0].fark > 0 && h[2].fark < 0 && h[3].fark > h[0].fark, 'T has the biggest difference yet comes last');
+    merged(L); const html_ = run('ETUT_ETKI.icerik()'), tbody = /<section class="et-panel" id="eeHocalar">[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/.exec(html_)[1];
+    const rows = tbody.split('</tr>').filter(x => x.includes('<tr')).map(r => [/<td class="sayi ee-sira">(.*?)<\/td>/.exec(r)[1], /class="ee-ad"[^>]*>(.*?)<\/button>/.exec(r)[1], r.includes('class="ee-az"')]);
+    assert.deepEqual(rows, [['1', 'Sentetik Öğretmen P', false], ['1', 'Sentetik Öğretmen Q', false], ['3', 'Sentetik Öğretmen R', false], ['—', 'Sentetik Öğretmen T', true]]);
+    assert.match(html_, /<th class="sayi ee-sira">Sıra<\/th><th>Öğretmen<\/th>/);
   });
   await check('the weekly etüts of the lesson (Monday first) cover the span of the exams and count the whole grade', () => {
     const w = model(OGR).haftalik;
@@ -173,16 +186,16 @@ const yasak = /Nasıl okunur|Gözlem|±|\bham\b|eğim|aralık|\(%95\)/i;
     assert.match(h, /data-ee-donem="tum" aria-pressed="true">Tümü/); assert.match(h, /data-ee-donem="son4" aria-pressed="false">Son 4 deneme/);
     assert(!/eeOnceki|eeSimdi|data-ee-pencere|eeSeri|eeDoz|eeNot\b/.test(h), 'the old pair pickers, window and tables are gone');
     assert(!yasak.test(h.replace(/<[^>]+>/g, ' ')), 'no method words: ' + (yasak.exec(h.replace(/<[^>]+>/g, ' ')) || [])[0]);
-    for (const b of ['Grup', 'Öğrenci', 'Etüt / öğrenci', 'İlk denemelerde net', 'Son denemelerde net', 'Deneme başına artış (net)', 'Toplam artış (net)', 'Öğretmen', 'Sınıftan fazla / az (net)', 'Etüt sayısı', 'Deneme sayısı'])
+    for (const b of ['Grup', 'Öğrenci', 'Etüt / öğrenci', 'İlk denemelerde net', 'Son denemelerde net', 'Deneme başına artış (net)', 'Toplam artış (net)', 'Sıra', 'Öğretmen', 'Sınıftan fazla / az (net)', 'Etüt sayısı', 'Deneme sayısı'])
       assert(h.includes('>' + b + '</th>'), b);
-    assert.match(h, /<th class="sayi">Öğrenci<\/th>/); assert.equal((h.match(/<th class="sayi[ "]/g) || []).length, 6 + 4 + 4, 'every numeric header is a .sayi header');
+    assert.match(h, /<th class="sayi">Öğrenci<\/th>/); assert.equal((h.match(/<th class="sayi[ "]/g) || []).length, 6 + 5 + 4, 'every numeric header is a .sayi header');
     assert.match(h, /3’ü başka öğretmenden de aldı/);
     assert.equal((h.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 17, 'one row per counted student');
     assert.match(h, /<details id="eeDisarida"><summary>Dışarıda kalan 2 öğrenci<\/summary>[\s\S]*Sentetik Öğrenci X1 · 12\/A · yalnızca 1 denemeye girdi[\s\S]*Sentetik Öğrenci X2 · 12\/A · bu dersin neti yok/);
     assert(!h.includes('NaN') && !h.includes('undefined'));
     // A teacher’s students; the left-out list stays whole.
     run("EK.eeHoca='SENTETİK ÖĞRETMEN B'"); h = run('ETUT_ETKI.icerik()');
-    assert.equal((h.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 3); assert.match(h, /<h2>Öğrenciler · Sentetik Öğretmen B<\/h2>/); assert.match(h, /<tr class="secili">/); assert.match(h, /data-ee-hoca="">Tüm öğretmenler/); assert.match(h, /Dışarıda kalan 2 öğrenci/);
+    assert.equal((h.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 3); assert.match(h, /<h2>Öğrenciler · Sentetik Öğretmen B<\/h2>/); assert.match(h, /<tr class="secili ee-az">/); assert.match(h, /data-ee-hoca="">Tüm öğretmenler/); assert.match(h, /Dışarıda kalan 2 öğrenci/);
     // Controls change the page.
     run("EK.eeHoca=undefined;EK.eeDers='Fizik'"); h = run('ETUT_ETKI.icerik()'); assert.match(h, /· Fizik · 3 deneme/); assert.match(h, /Sentetik Öğretmen F/);
     run("EK.eeDers=undefined;EK.eeDonem='son4'"); h = run('ETUT_ETKI.icerik()'); assert.match(h, /data-ee-donem="son4" aria-pressed="true"/);

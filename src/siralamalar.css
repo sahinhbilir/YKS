@@ -55,3 +55,7 @@ main:has(.sr-panel){min-width:0}
   .sr-sira-tablo.olcut-net .k-artis{display:table-cell}
   .sr-sira-tablo th,.sr-sira-tablo td{padding:7px 5px}.sr-sira-tablo td:nth-child(2),.sr-sira-tablo th{white-space:normal}
 }
+/* Results already published to students: the ones no list backs are marked "Listede yok" and can be removed. */
+.sr-yayin .sr-yok-etiket{color:var(--kritik);font-weight:600;font-size:12.5px;margin-right:6px}
+.sr-yayin tr:not(.sr-yok) td{color:var(--soluk)}
+@media (max-width:640px){.sr-yayin .sr-yok-etiket{display:block;margin:0 0 4px;text-align:right}.sr-yayin td:last-child{text-align:right}}
