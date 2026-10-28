@@ -333,7 +333,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
   });
   await check('menu, the viewing teacher and privacy: the page sits under Denemeler; students never get it or its data', async () => {
     await ekle(liste(1)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')');
-    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='denemeler')[1]"), ['siralamalar', 'turkiye']);
+    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='denemeler')[1]"), ['siralamalar', 'turkiye', 'konutakibi']);
     assert.equal(get("SEKME_REHBER.find(s=>s[0]==='turkiye')[1]"), 'Türkiye geneli');
     run('cizIc()'); assert.match(nodes.ana.innerHTML, /<div id="tgKok">/);
     run('yalnizcaGoruntuleme=()=>true');
