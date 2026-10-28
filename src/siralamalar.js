@@ -204,15 +204,16 @@ async function kaydetListeler(listeler){
 }
 // Every date an exam carries: the corrected one and the ones printed on its lists (ISO).
 const sinavTarihleri=s=>[...new Set([s.tarih,s.T&&s.T.tarih,s.F&&s.F.tarih].filter(Boolean).map(t=>isoTarih(t)))].filter(Boolean);
-// Deleting an exam also deletes its published copies in the students' Denemelerim (queued for publishing: the caller
-// publishes with denemeBekleyenleriYayinla). Returns how many students lost the copies.
-async function sil(id){
+// Deleting an exam also deletes its published copies in the students' Denemelerim unless kopyalar is false (the
+// teacher may keep the results and only free the lists' room). Copies are queued for publishing: the caller
+// publishes with denemeBekleyenleriYayinla. Returns how many students lost the copies.
+async function sil(id,kopyalar=true){
   if(!rehberMi())return 0;
   if(izleme())throw new Error('Yalnızca rehber öğretmen silebilir.');
   const {veri,hata}=oku();if(!veri)throw new Error(hata);
   const s=veri.sinavlar.find(x=>x.id===id);
   veri.sinavlar=veri.sinavlar.filter(x=>x.id!==id);await yaz(veri,D.siralama);
-  if(!s)return 0;
+  if(!s||!kopyalar)return 0;
   try{return await denemeOkulSil(s.ad,sinavTarihleri(s))}
   catch(e){throw new Error('Sınav silindi, ancak öğrencilerin kopyaları kaldırılamadı: '+e.message+' “Öğrencilere yayınlanmış sonuçlar” bölümünden kaldırabilirsiniz.')}
 }
@@ -788,10 +789,11 @@ document.addEventListener('click',async ev=>{
       try{mesaj+=' '+await denemeBekleyenleriYayinla(durum)}catch(e){mesaj+=' Yayınlanamadı, cihazda kayıtlı ve yayın bekliyor: '+e.message}
       durum(mesaj);yenidenCiz()}
     else{const {veri}=oku(),s=veri&&veri.sinavlar.find(x=>x.id===el.dataset.srSil);if(!s)return;
-      if(!confirm(s.ad+' sınavının sıralama listeleri silinsin mi? Öğrencilerin Denemelerim sayfasındaki bu sınavın sonuçları da kaldırılır.'))return;
-      let mesaj=s.ad+' silindi.';
+      if(!confirm(s.ad+' sınavının sıralama listeleri silinsin mi?'))return;
+      const kopyalar=confirm('Öğrencilerin Denemelerim sayfasındaki '+s.ad+' sonuçları da kaldırılsın mı?\n\nTamam: kaldır · İptal: sonuçlar öğrencilerde kalsın');
+      let mesaj=s.ad+' silindi.'+(kopyalar?'':' Öğrencilerdeki sonuçlar korundu.');
       try{
-        const n=await sil(s.id);
+        const n=await sil(s.id,kopyalar);
         if(n){durum(mesaj+' '+n+' öğrencinin sonucu kaldırıldı; yayınlanıyor…');yenidenCiz();mesaj+=' '+n+' öğrencinin sonucu kaldırıldı.';
           try{mesaj+=' '+await denemeBekleyenleriYayinla(durum)}catch(e){mesaj+=' Yayınlanamadı, cihazda kayıtlı ve yayın bekliyor: '+e.message}}
       }catch(e){mesaj=e.message}

@@ -315,6 +315,13 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
   const kayitlar = (i) => get(`D.ogr[${i}].denemeOkul.map(r=>[r.ad,r.tarih,r.oturum,!!r.silindi])`);
   const noktalar = () => get('denemeOrtalamaVerisi().noktalar.map(n=>n.r.tarih)');
   const gruplar = () => get('SIRALAMA.yayinlanmisGruplar(SIRALAMA.oku().veri).map(g=>[g.ad,g.tarih,g.oturum,g.n,g.yok])');
+  await check('deleting only the lists keeps the students’ copies when the teacher chooses so', async () => {
+    await yayinKur();
+    const id = get("SIRALAMA.oku().veri.sinavlar.find(s=>s.ad==='Sentetik Deneme 2').id"), once = get('D.ogr');
+    assert.equal(await run(`SIRALAMA.sil(${JSON.stringify(id)},false)`), 0, 'no student changed');
+    assert.equal(run('D.siralama.sinavlar.length'), 1, 'the lists are gone');
+    assert.deepEqual(get('D.ogr'), once, 'every published copy and the publishing queue stay as they were');
+  });
   await check('deleting an exam also deletes its published copies: only that exam and its dates, queued for publishing', async () => {
     await yayinKur();
     const id = get("SIRALAMA.oku().veri.sinavlar.find(s=>s.ad==='Sentetik Deneme 2').id");
