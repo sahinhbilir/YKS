@@ -50,9 +50,15 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert(run('baytBoyu(JSON.stringify(D.etut))') < 6000);
     // The same cumulative report again changes nothing but the source list.
     const once = JSON.stringify(v.satir); await ekle(rapor()); assert.equal(JSON.stringify(get('D.etut.satir')), once); assert.equal(get('D.etut.kaynak').length, 2);
-    // A one-day report for 13 Eki replaces that day only.
+    // A one-day report for 13 Eki holding one class (10/A) replaces that class's etüts of that day only.
+    const gun = model().rows.filter(r => iso(r.g) === '2026-10-13'), sinifin = gun.filter(r => r.sinif === '10/A').length;
+    assert(gun.length > sinifin, 'other classes have etüts that day');
     await ekle(rapor([{tarih:'13.10.2026',satirlar:[['Türkçe','SENTETİK ÖĞRETMEN BEŞ','SENTETİK EGE','101 10/A','101','15:00','20 Dk.']]}], {bas:'13.10.2026',bit:'13.10.2026'}));
-    const s = model(); assert.equal(s.rows.length, 36 - 11 + 1); assert.equal(s.rows.filter(r => iso(r.g) === '2026-10-13').length, 1);
+    let s = model(); assert.equal(s.rows.length, 36 - sinifin + 1); assert.equal(s.rows.filter(r => iso(r.g) === '2026-10-13').length, gun.length - sinifin + 1);
+    // A report with every class of the day replaces the whole day.
+    const siniflar = [...new Set(gun.map(r => r.sinif))];
+    await ekle(rapor([{tarih:'13.10.2026',satirlar:siniflar.map(c => ['Türkçe','SENTETİK ÖĞRETMEN BEŞ','SENTETİK EGE','101 '+c,'101','15:00','20 Dk.'])}], {bas:'13.10.2026',bit:'13.10.2026'}));
+    s = model(); assert.equal(s.rows.filter(r => iso(r.g) === '2026-10-13').length, siniflar.length); assert.equal(s.rows.length, 36 - gun.length + siniflar.length);
   });
   await check('weekly model: zero weeks, the partial last week, windows, subjects and statuses', async () => {
     await ekle(rapor());

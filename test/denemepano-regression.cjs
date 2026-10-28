@@ -64,7 +64,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
   await check('the page: sentence, controls, subject cards, table and the student card; names are escaped', async () => {
     put('L', ['once', 'sonra'].flatMap(e => ['T', 'F'].map(t => list(e, t)))); sandbox.L[3].ogr.find(o => o.no !== '1001').ad = 'SENTETİK <img src=x>'; await run('siralamaKaydet(L)'); run("EK.dpOgr='1001'");
     const h = run('DPANO.icerik()');
-    assert.match(h, /12\. sınıflar · Son deneme \(Sentetik Deneme 2, \d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]+\): TYT ortalaması <b>[\d,]+<\/b> net, önceki denemeye göre <b>[+−][\d,]+<\/b>\./);
+    assert.match(h, /12\. sınıflar · Son deneme \(Sentetik Deneme 2, \d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]+\): TYT ortalaması <b>[\d,]+<\/b> net, önceki denemeye göre <b>[+−][\d,]+<\/b> \(iki dönemde de giren \d+ öğrencinin kendi değişimi <b>[+−]?[\d,]+<\/b>\)\./);
     for (const g of ['genel', 'ders', 'dagilim', 'kisi']) assert(h.includes('data-dp-grafik="' + g + '"'), g);
     assert.equal((h.match(/class="et-ders"/g) || []).length, 10, 'ten TYT lessons'); assert.equal((h.match(/class="et-ders et-grup-kart"/g) || []).length, 3, 'and three tests');
     for (const k of ['G-SOS', 'G-MAT', 'G-FEN']) assert(h.includes('data-dp-ders="' + k + '"'), k);
@@ -135,7 +135,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(h, /12\. sınıflar · Sentetik Deneme 1 → Sentetik Deneme 2 \(\d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]+\): TYT ortalaması <b>[\d,]+<\/b> net, öncekine göre <b>[+−][\d,]+<\/b>/);
     assert.match(h, /<select id="dpOnceki" aria-label="Önceki deneme">.*<option value="[^"]+" selected>Sentetik Deneme 1 · \d+ \S+ · Genel<\/option><\/select>/);
     assert.match(h, /<option value="[^"]+">Sentetik Tarama 1 · \d+ \S+ · Tarama<\/option>/);
-    assert.match(h, /Ortalama net · şimdiki deneme/); assert.match(h, /<button type="button" data-dp-sira="son">Şimdiki<\/button>/);
+    assert.match(h, /Katılımcı ortalaması · şimdiki deneme/); assert.match(h, /<button type="button" data-dp-sira="son">Şimdiki<\/button>/);
     // The main chart draws the pair as two lines with handles; their band labels give way to the handles.
     const g = get('(()=>{const {t}=DPANO.veriAl();const g=DPANO.GRAFIKLER.genel(DPANO.durumAl(t),720);return {svg:g.svg,tutamak:g.tutamak,ids:g.ids}})()');
     assert(g.tutamak && /data-tutamak="once"/.test(g.svg) && /data-tutamak="son"/.test(g.svg)); assert(!/class="et-bant-yazi"/.test(g.svg));

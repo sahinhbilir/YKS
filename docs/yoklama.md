@@ -23,7 +23,10 @@ Her öğrencinin her günü tek bir renk alır:
 | Raporlu | mavi | Hiçbir derse gelmedi; mazeretli dersler mazeretsizlerden az değil, Raporlu olanlar Diğer’den az değil. |
 | Diğer | yeşil | Hiçbir derse gelmedi; mazeretli dersler mazeretsizlerden az değil, çoğu Mazeretli (Diğer). |
 
-**Gelme oranı** = (Geldi + Geç geldi) ÷ bütün günler. Hiçbir sayı işaretli (+/−) yazılmaz; renkler yalnızca durumu gösterir.
+**Gelme oranı** = (Geldi + Geç geldi) ÷ bütün günler.
+
+**3+ ders kaçırılan** gün: en az üç dersi Gelmedi, Mazeretli ya da Raporlu olan gün (okula gelip dört dersi kaçırmak da). **Öğrenci raporları** devamsız günü aynı kuralla sayar (`YOKLAMA.kacirma`: hiç derse gelmediyse tam, geldiyse yarım gün). Gelme oranı kartının altında aralıktaki bu günlerin ve öğrencilerin sayısı, öğrenci kartında öğrencinin sayısı yazar; günün rengi yukarıdaki tablodaki durumdur.
+ Hiçbir sayı işaretli (+/−) yazılmaz; renkler yalnızca durumu gösterir.
 
 ## Sayfa
 

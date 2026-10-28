@@ -143,7 +143,11 @@ function paketle(satirlar,kaynak,ts){
     satir:sirali.map(r=>[r.g,bi.get(r.brans),oi.get(r.ogretmen),ki.get(JSON.stringify([r.ad,r.sinif])),r.saat,r.sure])};
 }
 function birlestir(veri,rapor){
-  const kalan=ac(veri).filter(r=>r.g<rapor.bas||r.g>rapor.bit);
+  // A report replaces its date range. When it holds only some of the classes seen in that range (one class's
+  // report), only those classes are replaced, so the other classes' etüts stay.
+  const eski=ac(veri),icinde=r=>r.g>=rapor.bas&&r.g<=rapor.bit,yeni=new Set(rapor.satirlar.map(r=>r.sinif));
+  const tumu=eski.filter(icinde).every(r=>yeni.has(r.sinif));
+  const kalan=eski.filter(r=>!icinde(r)||!tumu&&!yeni.has(r.sinif));
   const ts=Math.max(Date.now(),veri?veri.ts+1:0);
   const kaynak=[...(veri?veri.kaynak:[]),{bas:rapor.bas,bit:rapor.bit,n:rapor.satirlar.length,ts}].slice(-EN_COK_KAYNAK);
   const tum=kalan.concat(rapor.satirlar);
