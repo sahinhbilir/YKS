@@ -234,31 +234,81 @@ function history(records){
   const missing=records.filter(r=>!r.date&&r.c[0]>0).length;
   return {total,rate:percent(total),points,missing,delta:!missing&&points.length>1?points.at(-1).rate-points[0].rate:null};
 }
+const MG='MATEMATİK+GEOMETRİ';
+const gradeOf=c=>{const m=/(?:^|[^\d])(9|1[012])\s*[/\-]\s*[A-ZÇĞİÖŞÜ]/u.exec(c||'');return m?+m[1]:null};
+const SIRA=[['soru','En çok soru'],['dusen','Düşenler'],['yukselen','Yükselenler'],['son','Son denemede iyi'],['ad','Ada göre (A–Z)']];
+const lastPoint=t=>t.points.at(-1)||null;
+// Missing values (null) always sort last, whatever the direction.
+const by=(get,dir)=>(a,b)=>{const x=get(a),y=get(b);return x===null||x===undefined?(y===null||y===undefined?0:1):y===null||y===undefined?-1:dir*(x-y)};
+const ORDER={
+  soru:[by(t=>t.total[0],-1)],
+  dusen:[by(t=>t.delta,1)],
+  yukselen:[by(t=>t.delta,-1)],
+  son:[by(t=>lastPoint(t)?.examRate,-1),by(t=>lastPoint(t)?.c[0],-1)],
+  ad:[]
+};
+const order=(list,sira)=>[...list].sort((a,b)=>{for(const f of ORDER[sira]||ORDER.soru){const r=f(a,b);if(r)return r}return a.name.localeCompare(b.name,'tr')});
 function model(v,selection={},school=[]){
   const students=[...new Map(v.exams.flatMap(e=>e.blocks.map(b=>[studentKey(b.student),b.student]))).entries()].map(([id,s])=>({...s,id})).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
   const classes=[...new Set(students.map(s=>s.cls))].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true}));
-  const cls=classes.includes(selection.cls)?selection.cls:classes[0],ss=students.filter(s=>s.cls===cls),student=ss.find(s=>s.id===selection.student)||ss[0];
-  const blocks=v.exams.flatMap(e=>e.blocks.filter(b=>studentKey(b.student)===student?.id).map(b=>({...b,ad:e.ad,date:examDate(e,school)})));
+  // Open on the class with the most loaded exams (a TYT and an AYT exam are two), then the most pupils, then name.
+  const examCount=c=>new Set(v.exams.flatMap(e=>e.blocks.filter(b=>b.student.cls===c).map(b=>JSON.stringify([e.ad,b.course.slice(-2)])))).size;
+  const richest=[...classes].sort((a,b)=>examCount(b)-examCount(a)||students.filter(s=>s.cls===b).length-students.filter(s=>s.cls===a).length)[0];
+  const cls=classes.includes(selection.cls)?selection.cls:richest,ss=students.filter(s=>s.cls===cls);
+  // Views: one pupil, the whole class (default) or every class of the same grade. Never mixes grades.
+  const grade=gradeOf(cls),gradeStudents=grade?students.filter(s=>gradeOf(s.cls)===grade):[],one=ss.find(s=>s.id===selection.student);
+  const scope=one?'student':selection.student==='*sinif'&&grade?'grade':'class',student=one||null;
+  const ids=new Set((scope==='student'?[one]:scope==='grade'?gradeStudents:ss).map(s=>s.id));
+  const blocks=v.exams.flatMap(e=>e.blocks.filter(b=>ids.has(studentKey(b.student))).map(b=>({...b,ad:e.ad,date:examDate(e,school)})));
+  const index=new Map();for(const b of blocks){const k=JSON.stringify([ek(b.ad),b.course]);if(!index.has(k))index.set(k,[]);index.get(k).push(b)}
+  const blocksOf=(e,part)=>index.get(JSON.stringify([ek(e.ad),part]))||[];
   const courses=[...new Set(blocks.map(b=>b.course))].sort((a,b)=>a.localeCompare(b,'tr'));
   const sessions=['TYT','AYT'].filter(s=>courses.some(c=>c.endsWith(s==='TYT'?'-T':'-A'))),session=sessions.includes(selection.session)?selection.session:sessions[0];
-  const cs=courses.filter(c=>c.endsWith(session==='TYT'?'-T':'-A')),course=cs.includes(selection.course)?selection.course:cs[0];
+  const sfx=session==='TYT'?'-T':'-A',cs=courses.filter(c=>c.endsWith(sfx)),pick=n=>cs.find(c=>key(c)===key(n+sfx));
+  // "Matematik + Geometri" is offered only when both subjects exist for this session; the separate ones stay.
+  const merged=pick('MATEMATİK')&&pick('GEOMETRİ')?MG+sfx:null,options=merged?[merged,...cs]:cs;
+  const course=options.includes(selection.course)?selection.course:options[0],parts=course===merged?[pick('MATEMATİK'),pick('GEOMETRİ')]:[course];
+  // Exams in this session and how many included pupils have each (one pupil = no count shown).
+  const sessionExams=v.exams.map(e=>({ad:e.ad,n:new Set(blocks.filter(b=>ek(b.ad)===ek(e.ad)&&b.course.endsWith(sfx)).map(b=>studentKey(b.student))).size})).filter(x=>x.n);
+  const sira=SIRA.some(s=>s[0]===selection.sira)?selection.sira:'soru';
   const topics=new Map(),unknown=new Map();
   for(const e of v.exams){
-    const bs=blocks.filter(b=>ek(b.ad)===ek(e.ad)&&b.course===course),detail=bs.find(b=>b.kind==='outcome'),summary=bs.find(b=>b.kind==='topic'),groups=new Map();
-    const get=n=>{const id=key(n);if(!groups.has(id))groups.set(id,{name:topicName(n),detail:[],summary:null});return groups.get(id)};
-    if(summary)for(const r of summary.rows)get(v.labels[r[0]][1]).summary=r.slice(1);
-    if(detail)for(const r of detail.rows){const [code,name]=v.labels[r[0]],topic=topicFor(course,code,v.maps);if(!topic){unknown.set(code,{code,name,course});continue}get(topic).detail.push({code,name,c:r.slice(1)})}
-    for(const [id,g] of groups){
-      const dc=g.detail.reduce((a,r)=>sum(a,r.c),zero()),c=g.summary||dc;if(!c[0])continue;
+    const combined=new Map();
+    // Per pupil and subject the summary/detail rule applies once; only then are pupils and subjects added up.
+    for(const sid of ids)for(const part of parts){
+      const bs=blocksOf(e,part).filter(b=>studentKey(b.student)===sid),detail=bs.find(b=>b.kind==='outcome'),summary=bs.find(b=>b.kind==='topic'),groups=new Map();
+      const get=n=>{const id=key(n);if(!groups.has(id))groups.set(id,{name:topicName(n),detail:[],summary:null});return groups.get(id)};
+      if(summary)for(const r of summary.rows)get(v.labels[r[0]][1]).summary=r.slice(1);
+      if(detail)for(const r of detail.rows){const [code,name]=v.labels[r[0]],topic=topicFor(part,code,v.maps);if(!topic){unknown.set(part+'|'+code,{code,name,course:part});continue}get(topic).detail.push({code,name,c:r.slice(1)})}
+      for(const [id,g] of groups){
+        const dc=g.detail.reduce((a,r)=>sum(a,r.c),zero()),c=g.summary||dc;if(!c[0])continue;
+        // The same topic name in both subjects is one topic: one record per exam, counts summed once.
+        let x=combined.get(id);if(!x){x={name:g.name,c:zero(),detail:new Map(),mismatch:false};combined.set(id,x)}
+        x.c=sum(x.c,c);if(!!g.summary&&!!g.detail.length&&!same(dc,g.summary))x.mismatch=true;
+        for(const r of g.detail){const o=x.detail.get(r.code);x.detail.set(r.code,o?{...o,c:sum(o.c,r.c)}:{code:r.code,name:r.name,c:r.c})}
+      }
+    }
+    for(const [id,g] of combined){
       let t=topics.get(id);if(!t){t={id,name:g.name,records:[],outcomes:new Map(),conflicts:0};topics.set(id,t)}
-      const date=examDate(e,school);t.records.push({ad:e.ad,date,c});
-      const mismatch=!!g.summary&&!!g.detail.length&&!same(dc,g.summary);if(mismatch)t.conflicts++;
+      const date=examDate(e,school);t.records.push({ad:e.ad,date,c:g.c});if(g.mismatch)t.conflicts++;
       // Keep detailed evidence visible even if its scope differs, but label that scope explicitly.
-      for(const r of g.detail){let o=t.outcomes.get(r.code);if(!o){o={code:r.code,name:r.name,records:[]};t.outcomes.set(r.code,o)}o.records.push({ad:e.ad,date,c:r.c})}
+      for(const r of g.detail.values()){let o=t.outcomes.get(r.code);if(!o){o={code:r.code,name:r.name,records:[]};t.outcomes.set(r.code,o)}o.records.push({ad:e.ad,date,c:r.c})}
     }
   }
-  return {classes,students:ss,student,cls,sessions,session,courses:cs,course,unknown:[...unknown.values()],
-    topics:[...topics.values()].map(t=>{const outcomes=[...t.outcomes.values()].map(o=>({...o,...history(o.records)}));const rates=outcomes.map(o=>o.rate).filter(x=>x!==null);return {...t,...history(t.records),outcomes,range:rates.length>1?[Math.min(...rates),Math.max(...rates)]:null}}).sort((a,b)=>a.name.localeCompare(b.name,'tr'))};
+  /* Subject line: counts come from the subject blocks, not from the topic list. Publisher outcome rows can map one
+     question to several outcomes, so the topic-summary block is used when present; otherwise the detail rows, whose
+     printed subject total equals their row sum (checked by pdfCoz). */
+  let ozetC=zero(),ozetN=0;const ozetS=new Set();
+  for(const e of v.exams){
+    let any=false;
+    for(const sid of ids)for(const part of parts){
+      const bs=blocksOf(e,part).filter(b=>studentKey(b.student)===sid),src=bs.find(b=>b.kind==='topic')||bs.find(b=>b.kind==='outcome');
+      if(src){ozetC=src.rows.reduce((a,r)=>sum(a,r.slice(1)),ozetC);any=true;ozetS.add(sid)}
+    }
+    if(any)ozetN++;
+  }
+  return {classes,students:ss,student,scope,grade,gradeCount:gradeStudents.length,view:scope==='student'?student.id:scope==='grade'?'*sinif':'*sube',cls,sessions,session,courses:options,course,parts,sira,sessionExams,unknown:[...unknown.values()],summary:ozetN?{exams:ozetN,students:ozetS.size,c:ozetC}:null,
+    topics:order([...topics.values()].map(t=>{const outcomes=order([...t.outcomes.values()].map(o=>({...o,...history(o.records)})),sira);const rates=outcomes.map(o=>o.rate).filter(x=>x!==null);return {...t,...history(t.records),outcomes,range:rates.length>1?[Math.min(...rates),Math.max(...rates)]:null}}),sira)};
 }
 
 /* One pupil at a time, no ranks or peer comparisons. Same evidence and scale in every drilldown. */
@@ -288,20 +338,32 @@ function historyHTML(t){
   return (t.missing?'<p class="kt-warning">Tarihi eksik '+t.missing+' sınav toplama dahil; grafikte yer almıyor.</p>':'')+legend+graph(t,t.name)+table;
 }
 function rateBar(t){return '<span class="kt-bar" aria-hidden="true"><i style="width:'+Math.max(0,Math.min(100,t.rate||0))+'%"></i></span>'}
-function topicHTML(t){
-  return '<details class="kt-topic"><summary><span class="kt-topic-name">'+h(t.name)+'<span class="kt-muted">'+t.total[1]+' / '+t.total[0]+' doğru · '+t.records.length+' deneme</span></span>'+rateBar(t)+'<strong>'+pct(t.rate)+'</strong><span class="kt-change">'+diff(t.delta)+'</span></summary><div class="kt-detail">'+
+// Shown on every row while "Son denemede iyi" is active, so the order can be checked by eye.
+function lastLabel(t,sira){if(sira!=='son')return '';const p=lastPoint(t);return '<span class="kt-muted kt-last">'+(p?'Son deneme '+pct(p.examRate)+' · '+p.c[1]+'/'+p.c[0]:'Son deneme · tarihli kayıt yok')+'</span>'}
+function topicHTML(t,sira){
+  return '<details class="kt-topic"><summary><span class="kt-topic-name">'+h(t.name)+'<span class="kt-muted">'+t.total[1]+' / '+t.total[0]+' doğru · '+t.records.length+' deneme</span>'+lastLabel(t,sira)+'</span>'+rateBar(t)+'<strong>'+pct(t.rate)+'</strong><span class="kt-change">'+diff(t.delta)+'</span></summary><div class="kt-detail">'+
     '<div class="kt-section-title"><h2>Kümülatif Değişim</h2><span class="kt-muted">İlk kayıttan bugüne '+diff(t.delta)+'</span></div>'+
     historyHTML(t)+
     '<div class="kt-section-title"><h2>Kazanımlar</h2>'+(t.range?'<span class="kt-range">'+pct(t.range[0])+' – '+pct(t.range[1])+'</span>':'')+'</div>'+
     (t.conflicts?'<p class="kt-warning">'+t.conflicts+' sınavda konu özeti ile kazanım toplamı farklı. Konu oranı özet PDF’den; kazanımlar kendi kayıtlarından hesaplandı.</p>':'')+
-    (t.outcomes.length?t.outcomes.map(o=>'<details class="kt-outcome"><summary><span>'+h(o.name)+'<span class="kt-muted">'+h(o.code)+' · '+o.total[1]+' / '+o.total[0]+' doğru</span></span>'+rateBar(o)+'<strong>'+pct(o.rate)+'</strong></summary><div class="kt-detail">'+historyHTML(o)+'</div></details>').join(''):'<p class="kt-muted">Bu konu için kazanım ayrıntısı yüklenmedi.</p>')+'</div></details>';
+    (t.outcomes.length?t.outcomes.map(o=>'<details class="kt-outcome"><summary><span>'+h(o.name)+'<span class="kt-muted">'+h(o.code)+' · '+o.total[1]+' / '+o.total[0]+' doğru</span>'+lastLabel(o,sira)+'</span>'+rateBar(o)+'<strong>'+pct(o.rate)+'</strong></summary><div class="kt-detail">'+historyHTML(o)+'</div></details>').join(''):'<p class="kt-muted">Bu konu için kazanım ayrıntısı yüklenmedi.</p>')+'</div></details>';
 }
 function sources(v,school){
   if(!v.exams.length)return '';
   return '<details class="kt-sources"'+(v.exams.some(e=>!examDate(e,school))?' open':'')+'><summary>Kaynaklar · '+v.exams.length+' Deneme</summary><div class="kt-source-list">'+v.exams.map(e=>{
-    const date=examDate(e,school),students=new Set(e.blocks.map(b=>studentKey(b.student))).size,kind=[...new Set(e.blocks.map(b=>b.kind))].map(k=>k==='topic'?'Konu özeti':'Kazanım ayrıntısı').join(' + ');
-    return '<div class="kt-source"><div><b>'+h(e.ad)+'</b><span class="kt-muted">'+students+' öğrenci · '+kind+'</span></div><label>Sınav Tarihi'+(readonly()?'<b>'+dateLabel(date)+'</b>':'<input type="date" data-kt-date="'+h(ek(e.ad))+'" value="'+h(date||'')+'" aria-label="'+h(e.ad+' sınav tarihi')+'"'+(busy?' disabled':'')+'>')+'</label>'+(!readonly()?'<button type="button" class="et-dugme" data-kt-delete="'+h(ek(e.ad))+'"'+(busy?' disabled':'')+'>Kaldır</button>':'')+'</div>';
+    const date=examDate(e,school),students=new Set(e.blocks.map(b=>studentKey(b.student))).size,kind=[...new Set(e.blocks.map(b=>b.kind))].map(k=>k==='topic'?'Konu özeti':'Kazanım ayrıntısı').join(' + '),
+      sessions=['TYT','AYT'].filter(x=>e.blocks.some(b=>b.course.endsWith(x==='TYT'?'-T':'-A'))).join(' + '),classes=[...new Set(e.blocks.map(b=>classOf(b.student.cls)))].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true})).join(', ');
+    return '<div class="kt-source"><div><b>'+h(e.ad)+'</b><span class="kt-muted">'+sessions+' · '+h(classes)+' · '+students+' öğrenci · '+kind+'</span></div><label>Sınav Tarihi'+(readonly()?'<b>'+dateLabel(date)+'</b>':'<input type="date" data-kt-date="'+h(ek(e.ad))+'" value="'+h(date||'')+'" aria-label="'+h(e.ad+' sınav tarihi')+'"'+(busy?' disabled':'')+'>')+'</label>'+(!readonly()?'<button type="button" class="et-dugme" data-kt-delete="'+h(ek(e.ad))+'"'+(busy?' disabled':'')+'>Kaldır</button>':'')+'</div>';
   }).join('')+'</div></details>';
+}
+const classOf=c=>/(?:9|1[012])\s*[/\-]\s*[A-ZÇĞİÖŞÜ]\S*/u.exec(c)?.[0]||c;
+const examsText=m=>m.sessionExams.length?m.session+': '+m.sessionExams.slice(0,6).map(x=>m.scope==='student'?x.ad:x.ad+' ('+x.n+')').join(', ')+(m.sessionExams.length>6?' +'+(m.sessionExams.length-6):''):'';
+const nf=n=>n.toLocaleString('tr-TR');
+const courseLabel=c=>c&&c.startsWith(MG)?'Matematik + Geometri':title((c||'').replace(/-[TA]$/u,''));
+function summaryText(m){
+  const s=m.summary;if(!s)return '';
+  const lead=m.scope==='student'?courseLabel(m.course):(m.scope==='grade'?'Tüm '+m.grade+'. sınıflar':'Tüm şube')+' · '+s.students+' öğrenci';
+  return lead+' · '+s.exams+' deneme · '+nf(s.c[0])+' soru · '+nf(s.c[1])+' doğru ('+pct(percent(s.c))+')'+(s.exams===1&&!readonly()?' · geçmiş için başka denemelerin haritalarını yükleyin':'');
 }
 function select(label,field,options,value){return '<label class="kt-select">'+label+'<select data-kt-filter="'+field+'">'+options.map(([id,n])=>'<option value="'+h(id)+'"'+(id===value?' selected':'')+'>'+h(n)+'</option>').join('')+'</select></label>'}
 function content(){
@@ -309,27 +371,34 @@ function content(){
   const top='<div class="kt-header"><div class="et-bas"><h1 class="et-baslik">Konu Takibi</h1><p class="kt-muted">Denemeler boyunca biriken doğru cevap yüzdesi</p></div>'+(!readonly()&&!hata?'<label class="et-dugme birincil">'+(busy?'PDF Okunuyor…':'Kazanım Haritası Yükle')+'<input id="ktPdf" type="file" accept="application/pdf,.pdf" multiple class="kt-file"'+(busy?' disabled':'')+'></label>':'')+'</div><p id="ktStatus" role="status" aria-live="polite">'+h(message)+'</p>';
   if(hata)return top+'<p class="kt-warning">'+h(hata)+'</p>';
   if(!v.exams.length)return top+'<div class="et-panel et-bos"><h2>Konuların gelişimini görün</h2><p>Tek bir denemenin kazanım haritasını yükleyin. Yeni denemeler eklendikçe konu ve kazanım grafikleri büyür.</p></div>';
-  const m=model(v,EK.ktSelection||{},school);EK.ktSelection={cls:m.cls,student:m.student?.id,session:m.session,course:m.course};
-  const filters='<div class="kt-filters">'+select('Şube','cls',m.classes.map(c=>[c,c]),m.cls)+select('Öğrenci','student',m.students.map(s=>[s.id,title(s.name)+' · '+s.no]),m.student?.id)+select('Oturum','session',m.sessions.map(s=>[s,s]),m.session)+select('Ders','course',m.courses.map(c=>[c,title(c.replace(/-[TA]$/u,''))]),m.course)+'</div>';
+  const m=model(v,{...EK.ktSelection,sira:EK.ktSira},school);EK.ktSelection={cls:m.cls,student:m.view,session:m.session,course:m.course};EK.ktSira=m.sira;
+  const filters='<div class="kt-filters">'+select('Şube','cls',m.classes.map(c=>[c,c]),m.cls)+select('Öğrenci','student',[['*sube','Tüm şube ('+m.students.length+' öğrenci)'],...(m.grade?[['*sinif','Tüm '+m.grade+'. sınıflar ('+m.gradeCount+' öğrenci)']]:[]),...m.students.map(s=>[s.id,title(s.name)+' · '+s.no])],m.view)+(m.sessions.length>1?select('Oturum','session',m.sessions.map(s=>[s,s]),m.session):'<div class="kt-select">Oturum<b class="kt-fixed">'+h(m.session||'')+'</b></div>')+select('Ders','course',m.courses.map(c=>[c,courseLabel(c)]),m.course)+'</div>';
   const unknown=m.unknown.length?'<details class="kt-sources"><summary>'+m.unknown.length+' Kazanımın Konusu Eşleştirilmeli</summary><p class="kt-muted">Bu kazanımlar konu başlıklarına bağlanmadı. Konu özeti varsa toplamları kullanılmaya devam eder.</p>'+m.unknown.map((u,i)=>'<form class="kt-mapping" data-kt-code="'+h(u.code)+'" data-kt-course="'+h(u.course)+'"><label for="ktMap'+i+'">'+h(u.name)+'<span class="kt-muted">'+h(u.code)+'</span></label>'+(!readonly()?'<input id="ktMap'+i+'" name="topic" required maxlength="240" placeholder="Konu adı" list="ktTopics"><button class="et-dugme"'+(busy?' disabled':'')+'>Eşleştir</button>':'')+'</form>').join('')+'<datalist id="ktTopics">'+m.topics.map(t=>'<option value="'+h(t.name)+'"></option>').join('')+'</datalist></details>':'';
-  return top+filters+'<div class="kt-list-head"><h2>'+h(title(m.course?.replace(/-[TA]$/u,'')||''))+' · '+m.topics.length+' Konu</h2><span class="kt-muted">Kümülatif doğru oranı · İlk kayıttan değişim</span></div>'+unknown+
-    (m.topics.length?'<div class="kt-topics">'+m.topics.map(topicHTML).join('')+'</div>':'<p class="kt-muted">Bu seçim için eşleştirilmiş konu yok.</p>')+sources(v,school)+
+  const sort='<label class="kt-select kt-sort">Sırala<select data-kt-sort>'+SIRA.map(([id,n])=>'<option value="'+id+'"'+(id===m.sira?' selected':'')+'>'+h(n)+'</option>').join('')+'</select></label>';
+  return top+filters+'<div class="kt-list-head"><div class="kt-head-text"><h2>'+h(courseLabel(m.course))+' · '+m.topics.length+' Konu</h2>'+(m.summary?'<p class="kt-muted kt-summary">'+h(summaryText(m))+'</p>':'')+(m.sessionExams.length?'<p class="kt-muted kt-exams">'+h(examsText(m))+'</p>':'')+'<p class="kt-muted">Kümülatif doğru oranı · İlk kayıttan değişim</p></div>'+(m.topics.length?sort:'')+'</div>'+unknown+
+    (m.topics.length?'<div class="kt-topics">'+m.topics.map(t=>topicHTML(t,m.sira)).join('')+'</div>':'<p class="kt-muted">Bu seçim için eşleştirilmiş konu yok.</p>')+sources(v,school)+
     '<details class="kt-sources"><summary>Hesaplama</summary><p>Kümülatif oran = tüm yüklü denemelerdeki doğru toplamı / doğru, yanlış ve boş toplamı. Değişimler yüzde puanıdır. Konunun sorulmadığı deneme sıfır sayılmaz. Aynı tarihteki sınavlar grafikte tek adımda birleşir.</p><p>Yayıncının konu ve kazanım kayıtları kullanılır; bir soru birden fazla kazanımda yer alabilir. Aynı sınavın konu özeti ve kazanım ayrıntısı iki kez sayılmaz.</p></details>';
 }
 function gorunum(){if(!rehberMi())return '<p>Bu sayfa rehber öğretmen içindir.</p>';planDraw();return '<div id="ktKok">'+content()+'</div>'}
 const active=()=>EK.sekme==='konutakibi'&&rehberMi()&&!!document.getElementById('ktKok');
 function render(focus){const root=document.getElementById('ktKok');if(!active()||!root)return;root.innerHTML=content();planDraw();if(focus)root.querySelector(focus)?.focus()}
+function uploadMessage(reports,errors=[]){
+  if(!reports.length)return errors.join(' ');
+  const exams=new Map(reports.map(r=>[ek(r.ad),r.ad])),pupils=new Set(reports.flatMap(r=>r.blocks.map(b=>studentKey(b.student))));
+  return reports.length+' PDF kaydedildi · '+exams.size+' sınav'+(exams.size<=3?' ('+[...exams.values()].join(', ')+')':'')+' · '+pupils.size+' öğrenci. Aynı sınavın tekrarları güncellendi. '+errors.join(' ');
+}
 async function pdfEkle(files){
   canWrite();if(files.length>10)throw new Error('Bir defada en fazla 10 PDF seçin.');
   const owner=D,previous=D.konutakibi,reports=[],errors=[];
   for(const file of files){try{const {pages}=await denemePdfSayfalari(file);reports.push(pdfCoz(pages))}catch(e){errors.push(file.name+': '+e.message)}}
   if(D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti; PDF’ler kaydedilmedi. Yeniden deneyin.');
   if(reports.length)await ekle(reports,owner,previous);
-  return (reports.length?reports.length+' PDF kaydedildi. Aynı sınavın tekrarları güncellendi. ':'')+errors.join(' ');
+  return uploadMessage(reports,errors);
 }
 async function act(fn){if(busy)return;busy=true;message='';render();try{message=await fn()||'Kaydedildi.'}catch(e){message=e.message}finally{busy=false;render()}}
 document.addEventListener('change',ev=>{
   if(!active())return;const el=ev.target;
+  if(el.matches?.('[data-kt-sort]')){EK.ktSira=SIRA.some(s=>s[0]===el.value)?el.value:'soru';render('[data-kt-sort]');return}
   if(el.dataset.ktFilter){const field=el.dataset.ktFilter;if(!['cls','student','session','course'].includes(field))return;EK.ktSelection={...EK.ktSelection,[field]:el.value};render('[data-kt-filter="'+field+'"]');return}
   if(readonly()||busy)return;
   if(el.id==='ktPdf'){const files=Array.from(el.files||[]);el.value='';if(files.length)act(()=>pdfEkle(files))}
@@ -337,6 +406,6 @@ document.addEventListener('change',ev=>{
 });
 document.addEventListener('click',ev=>{if(!active()||readonly()||busy)return;const el=ev.target.closest?.('[data-kt-delete]');if(el&&confirm('Bu sınavın Konu Takibi kayıtları kaldırılsın mı? PDF yeniden yüklenebilir.')){const ad=el.dataset.ktDelete;act(()=>sinavSil(ad))}});
 document.addEventListener('submit',ev=>{const form=ev.target;if(!active()||!form.matches?.('.kt-mapping'))return;ev.preventDefault();if(readonly()||busy)return;const {ktCourse,ktCode}=form.dataset,name=form.elements.topic.value;act(()=>esle(ktCourse,ktCode,name))});
-return {pdfCoz,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,oku,merge,compact,examDate,history,model,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
+return {pdfCoz,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,oku,merge,compact,examDate,history,model,examsText,order,summaryText,uploadMessage,SIRA,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
 })();
 function gorunumKonuTakibi(){return KONU_TAKIBI.gorunum()}
