@@ -43,6 +43,8 @@ jobs:
         run: node scripts/embed-turkiye.cjs --check && node test/turkiye-regression.cjs
       - name: Etüt etkisi groups, windows, page and embedding
         run: node scripts/embed-etutetkisi.cjs --check && node test/etutetkisi-regression.cjs
+      - name: Öğrenci kartı series against the Türkiye average, etüt, absences, weak topics, cache and embedding
+        run: node scripts/embed-analiz.cjs --check && node test/analiz-regression.cjs
       - name: Konu Takibi cumulative evidence, import and embedding
         run: node scripts/embed-konutakibi.cjs --check && node test/konutakibi-regression.cjs
       - name: Gemini reading of other files, checks, fallback and embedding
@@ -144,6 +146,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/turkiye-browser.cjs
       - name: Etüt etkisi on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/etutetkisi-browser.cjs
+      - name: Öğrenci kartı on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/analiz-browser.cjs
       - name: Konu Takibi upload and drilldown on desktop and phone
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/konutakibi-browser.cjs
       - name: Drag to measure and line shape on Etütler and Deneme panosu

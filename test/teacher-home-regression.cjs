@@ -44,7 +44,7 @@ check('teacher menu is on top, grouped like the student menu', () => {
   assert.deepEqual(liste(h, 'denemelerMenusu'), ['siralamalar', 'turkiye', 'konutakibi']);
   assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['mufredat', 'ayarlar'], 'Müfredat and Ayarlar on the right');
   // Konular and the class curricula open from Müfredat; past-plan recovery from a red week on the map.
-  const hepsi = sekmeler(h), beklenen = run('SEKME_REHBER.map(s=>s[0])').filter(x => !['konular', 'konuplani', 'kurtarma'].includes(x));
+  const hepsi = sekmeler(h), beklenen = run('SEKME_REHBER.map(s=>s[0])').filter(x => !['konular', 'konuplani', 'kurtarma', 'ogrencikarti'].includes(x));
   assert.deepEqual([...new Set(hepsi.filter(x => x !== 'ana'))].sort(), [...beklenen].sort(), 'every menu page is reachable exactly once');
   assert.equal(hepsi.length, new Set(hepsi).size);
   for (const gone of ['rapor', 'anlasma']) assert(!run('SEKME_REHBER.map(s=>s[0])').includes(gone), gone + ' is removed');
@@ -52,6 +52,7 @@ check('teacher menu is on top, grouped like the student menu', () => {
   run("EK.sekme='siralamalar';rayCiz()");
   assert.match(nodes.ray.innerHTML, /<div class="menu-grup alt-secili"><button data-sekme="denemeler">/);
   assert.match(nodes.ray.innerHTML, /data-sekme="siralamalar" aria-current="page"/);
+  run("EK.sekme='ogrencikarti';rayCiz()"); assert.match(nodes.ray.innerHTML, /<div class="menu-grup[^"]*"><button data-sekme="ogrenciler" aria-current="page">/, 'Öğrenci kartı opens from names and marks Öğrenciler');
   run("EK.sekme='konuplani';rayCiz()"); assert.match(nodes.ray.innerHTML, /data-sekme="mufredat" aria-current="page"/);
   run("EK.sekme='kurtarma';rayCiz()"); assert.match(nodes.ray.innerHTML, /<div class="menu-grup alt-secili"><button data-sekme="plan">/);
 });

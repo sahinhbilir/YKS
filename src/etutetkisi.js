@@ -149,7 +149,7 @@ function model(ogr,sec={},kapsam){
     for(const k of Object.keys(e.hoca))if(!adlar.has(k)){
       const x=(s.sessions||[]).find(y=>(U(y.teacher)||'?')===k);adlar.set(k,kisiAdi(x&&x.teacher)||'Öğretmen belirtilmemiş');
     }
-    satir.push({id:s.id,ad:s.name,sinif:s.cls,n:e.n,hoca:e.hoca,deneme:g.deneme,netler:g.netler,ilk:g.ilk,son:g.son,ham:g});
+    satir.push({id:s.id,no:s.no,ad:s.name,sinif:s.cls,n:e.n,hoca:e.hoca,deneme:g.deneme,netler:g.netler,ilk:g.ilk,son:g.son,ham:g});
   }
   const seriOrt=l=>ex.map((_,i)=>{const v=l.map(r=>r.netler[i]).filter(x=>x!==null);return v.length?{ort:r2(ort(v)),n:v.length}:null});
   const sinifEgim=ort(satir.map(r=>r.ham.egim));
@@ -309,7 +309,7 @@ function kucukCizgi(r){
 function ogrenciTablosu(m,secili){
   const hoca=new Map(m.hocalar.map(h=>[h.key,h.ad]));
   const l=m.ogrenciler.filter(r=>!secili||r.hoca[secili]).sort((a,b)=>b.n-a.n||b._egim-a._egim||a.ad.localeCompare(b.ad,'tr'));
-  const satir=r=>'<tr><td class="tg-ad">'+kacis(kisiAdi(r.ad))+'</td><td class="et-dar-gizle">'+kacis(r.sinif||'—')+'</td><td class="sayi">'+fi(r.n)+'</td><td class="sayi et-dar-gizle">'+fi(r.deneme)+'</td>'+
+  const satir=r=>'<tr><td class="tg-ad">'+(r.no?ANALIZ.adDugmesi(r.no,kisiAdi(r.ad)):kacis(kisiAdi(r.ad)))+'</td><td class="et-dar-gizle">'+kacis(r.sinif||'—')+'</td><td class="sayi">'+fi(r.n)+'</td><td class="sayi et-dar-gizle">'+fi(r.deneme)+'</td>'+
     '<td class="sayi'+yonlu(r.egim)+'">'+ok(r.egim)+'</td><td class="sayi et-dar-gizle'+yonlu(r.toplam)+'">'+ok(r.toplam)+'</td><td class="et-trend">'+kucukCizgi(r)+'</td></tr>';
   const disarida=m.disarida.length?'<details id="eeDisarida"><summary>Dışarıda kalan '+fi(m.disarida.length)+' öğrenci</summary><ul>'+
     m.disarida.slice().sort((a,b)=>a.ad.localeCompare(b.ad,'tr')).map(d=>'<li>'+kacis(kisiAdi(d.ad))+' · '+kacis(d.sinif||'—')+' · '+kacis(d.neden)+'</li>').join('')+'</ul></details>':'';
