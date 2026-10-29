@@ -6,7 +6,7 @@ Rehber öğretmenin **Denemeler** sayfası artık bir panodur: okulun deneme son
 
 Pano yeni bir şey saklamaz. Denemeler ve Sıralamalar’ın zaten tuttuğu okul listelerini (`D.siralama`, docs/siralamalar.md) okur.
 
-- **PDF’den toplu aktar** bilinen aktarımdır: önizleme, öğrenci eşleştirme, “Seçilen sonuçları kaydet ve yayınla” ve listelerin Sıralamalar’a eklenmesi aynen çalışır. Önizleme panonun içinde açılır.
+- **Dosyadan toplu aktar** bilinen aktarımdır: önizleme, öğrenci eşleştirme, “Seçilen sonuçları kaydet ve yayınla” ve listelerin Sıralamalar’a eklenmesi aynen çalışır. Önizleme panonun içinde açılır.
 - Daha önceki sınavlar, tarih düzeltme ve PDF raporları için **Sıralamalar ve raporlar** düğmesi Sıralamalar’ı açar.
 - **Öğrenci bazında** eski öğrenci sayfasını açar (öğrenci seçimi, elle deneme ekleme, deneme ortalaması ve hedefi). Oradaki **← Deneme panosu** panoya döner.
 

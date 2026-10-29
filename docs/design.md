@@ -220,7 +220,8 @@ Three sections, as a segmented control under the title (`ayarBolumu`):
 
 - **Genel**: the settings table, save, backups and cloud. "İlk tekrar gecikmesi" says
   under it which students still use it (see docs/student-flow.md).
-- **Ders programı** (when there is a class): AI ile aktar (no coloured outline), the
+- **Ders programı** (when there is a class): AI ile aktar (no coloured outline; with Gemini
+  available it starts with **Fotoğraf / PDF’ten oku**, see docs/yapay-zeka.md), the
   weekly timetable, **Tatiller** (the school holidays; add and remove) and **Haftalık
   konular**, one button per class to its Özel tasarlanmış müfredat.
 - **Öğrenci kalibrasyonu**: the course profiles (FSRS calibration per student and
