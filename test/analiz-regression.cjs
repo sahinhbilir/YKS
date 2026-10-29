@@ -22,6 +22,7 @@ const get = code => JSON.parse(JSON.stringify(run(code)));
 sandbox.__yg = run('yalnizcaGoruntuleme');
 const reset = () => run(`yalnizcaGoruntuleme=__yg;D=varsayilan();D.rol='rehber';D.ogr=[];D.ayar.testTarih='2026-10-29';EK.sekme='ogrencikarti';EK.okKim=undefined;EK.okOturum=undefined;EK.okGeri=undefined;kaydet=async()=>true`);
 const near = (a, b, msg) => assert(Math.abs(a - b) < 1e-5, (msg || '') + ' ' + a + ' != ' + b);
+const nearPx = (a, b, msg) => assert(Math.abs(a - b) <= 0.11, (msg || '') + ' ' + a + ' != ' + b);
 const gun = iso => run('gunNo("' + iso + '")');
 const BUGUN = gun('2026-10-29');
 let passed = 0;
@@ -220,8 +221,9 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     const e = kart(1005); assert.deepEqual(e.noktalar.map(p => p.hedefNet), [30, 32, 35, 37, 40]); assert.equal(e.hedefYol.fark, -1);
     // DOĞA missed two exams: k counts her own exams (0, 1, 2), not the school's: sapma -1 1 0 → gaps -1 0 1 → 29 33 37 (nets 29 34 36).
     const d = kart(1004); assert.deepEqual(d.noktalar.map(p => [p.hedefK, p.hedefGap, p.hedefNet]), [[0, -1, 29], [1, 0, 33], [2, 1, 37]]); assert.equal(d.hedefYol.fark, -1);
-    // AYT: +0,5 per exam. ADA SAY: sapma 7 7 → gaps 7 7.5, targets 43 + 7 = 50 and 46 + 7.5 = 53.5; her nets 50 and 53.
-    const a = kart(1001, 'AYT:SAY'); assert.deepEqual(a.noktalar.map(p => [p.hedefGap, p.hedefNet]), [[7, 50], [7.5, 53.5]]); assert.equal(a.hedefYol.adim, 0.5); assert.equal(a.hedefYol.fark, -0.5);
+    // AYT: +0,5 per exam, shrunk toward the maximum 80: ADA SAY sapma 7 7, the first target is 43 + 7 = 50; the second step is 0,5 × min(1, (80 − 50) / 40) =
+    // 0,5 × 0,75 = 0,375 → gap 7,375, target 46 + 7,375 = 53,375; her nets are 50 and 53.
+    const a = kart(1001, 'AYT:SAY'); assert.deepEqual(a.noktalar.map(p => [p.hedefGap, p.hedefNet]), [[7, 50], [7.375, 53.375]]); assert.equal(a.hedefYol.adim, 0.5); assert.equal(a.hedefYol.fark, -0.375); assert.equal(a.ust, 80);
     // An exam without a Türkiye list counts too (tahmini): ADA's exam 2 is 27 → sapma 4 → the path starts there if it is the first one.
     await kurTurkiye([0, 2, 3, 4]); assert.deepEqual(kart(1001).noktalar.map(p => p.hedefGap), [2, 3, 4, 5, 6]); assert.deepEqual(kart(1001).noktalar.map(p => p.hedefNet), [32, 30, 37, 39, 42]);
     // The pure step: turet with adim.
@@ -234,23 +236,92 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     h = run('EK.okKim="1002";ANALIZ.icerik()'); assert.match(h, /<span class="mini">Hedef · son deneme<\/span><strong class="ok-esit">30,00 <small>net<\/small>[\s\S]*Türkiye −1,00 · ▲0,00 net hedefin üstünde/);
     assert(!h.includes('Hedef belirlenmemiş'));
   });
-  await check('gidişat: the least-squares line of sapma against the date, projected to the YKS date; needs at least 3 exams (hand-worked)', async () => {
+  // ---- hedef yolu near the ceiling ----
+  await check('hedef yolu near the maximum: the step shrinks by min(1, (max − target) / (max / 2)), the target stays below the maximum, AYT has 80 (hand-worked)', () => {
+    const tur = (nets, tr, adim, ust) => { put('P', nets.map(n => ({ net: n, trOrt: tr, trNet: n }))); return get(`ANALIZ.turet(P,${adim},${ust})`).map(p => [p.hedefGap, p.hedefNet]); };
+    // TYT (120): below the middle the step is the full +1: 40, 41, 42 (the Türkiye average 30 → gaps 10, 11, 12).
+    assert.deepEqual(tur([40, 0, 0], 30, 1, 120), [[10, 40], [11, 41], [12, 42]]);
+    // At the middle (60) the factor is (120 − 60) / 60 = 1: still +1. Above it it shrinks: 100 → 100 + 20/60 = 100,333333 → + 19,666667/60 = 100,661111.
+    assert.deepEqual(tur([60, 0], 30, 1, 120).map(x => x[1]), [60, 61]);
+    const k = tur([100, 0, 0], 30, 1, 120); near(k[1][1], 100 + 20 / 60); near(k[2][1], 100 + 20 / 60 + (120 - 100 - 20 / 60) / 60); near(k[2][0], k[2][1] - 30);
+    // 110 → 110 + 10/60 = 110,166667 → 110,330556: closer to 120 the step is smaller.
+    const m = tur([110, 0, 0], 30, 1, 120); near(m[1][1], 110.166667); near(m[2][1], 110.330556);
+    // A net near the maximum: the target is capped at 119,5 (max − 0,5), the next step is tiny and the target stays there.
+    assert.deepEqual(tur([119.9, 0, 0], 30, 1, 120).map(x => x[1]), [119.5, 119.5, 119.5]);
+    assert.deepEqual(tur([120], 30, 1, 120).map(x => x[1]), [119.5]);
+    // The gap growth is computed on the capped net: the gap of the second exam is the capped gap (89,5) plus the step.
+    near(tur([119.9, 0], 30, 1, 120)[1][0], 89.5);
+    // AYT (80): +0,5 × (80 − 50) / 40 = 0,375; and the cap is 79,5.
+    assert.deepEqual(tur([50, 0], 43, 0.5, 80).map(x => x[1]), [50, 50.375]); assert.deepEqual(tur([79.8, 0], 70, 0.5, 80).map(x => x[1]), [79.5, 79.5]);
+    // Without a maximum (the pure step as before) nothing shrinks and nothing is capped.
+    put('P', [{ net: 119.9, trOrt: 30, trNet: 119.9 }, { net: 0, trOrt: 30, trNet: 0 }]); assert.deepEqual(get('ANALIZ.turet(P,1).map(p=>p.hedefNet)'), [119.9, 120.9]);
+    assert.equal(get('ANALIZ.kaynak(' + BUGUN + ').olcular.TYT.ust'), 120); assert.equal(get('ANALIZ.kaynak(' + BUGUN + ').olcular["AYT:SAY"].ust'), 80);
+  });
+  // ---- the cadence: one exam every 14 days per session ----
+  await check('exams to come: one every 14 days from her last exam up to the YKS date (DENEME_ARALIGI_GUN), at most 30; the hedef yolu steps once per exam to come (hand-worked)', () => {
+    assert.equal(get('ANALIZ.DENEME_ARALIGI_GUN'), 14);
+    const km = (a, b) => get(`ANALIZ.kalanSinav(${a},${b})`);
+    assert.equal(km(0, 14 * 10 + 13), 10); assert.equal(km(0, 14 * 10), 10, 'exactly ten steps'); assert.equal(km(0, 13), 0); assert.equal(km(0, 14 * 40), 30, 'capped at 30');
+    assert.equal(km(5, 5), null, 'YKS on the day of her last exam: nothing to project'); assert.equal(km(5, 3), null); assert.equal(km(null, 100), null);
+    const hy = (h, m, adim, ust) => { put('P', [{ g: 0, hedefNet: h, hedefGap: h - 30, tr: 30 }]); return get(`ANALIZ.hedefYks(P,${adim},${14 * m + 3},${ust})`); };
+    // TYT from 40, five exams: full steps → 45. From 100, three exams: 100,333333 → 100,661111 → 100,983426.
+    assert.deepEqual([hy(40, 5, 1, 120).m, hy(40, 5, 1, 120).net, hy(40, 5, 1, 120).aralik], [5, 45, 14]); near(hy(100, 3, 1, 120).net, 100.983426);
+    // AYT from 30 of 80, four exams of +0,5: 32 (factor (80 − 30) / 40 > 1 → 1).
+    assert.equal(hy(30, 4, 0.5, 80).net, 32); near(hy(118, 30, 1, 120).net, 118.792039); assert(hy(119.4, 30, 1, 120).net <= 119.5, 'never above the maximum − 0,5');
+    // CEMRE: last target 48 on 15 Eki; 19 Haziran 2027 is 247 days later → floor(247 / 14) = 17 exams: 12 full steps to 60, then 60 → 61 → 61,983333 → … → 64,836088.
+    run("D.ayar.sinav='2027-06-19'"); return kurTum().then(() => {
+      const c = kart(1003); assert.equal(c.yks - gun('2026-10-15'), 247);
+      assert.deepEqual([c.hedefYks.m, c.hedefYks.aralik], [17, 14]); near(c.hedefYks.net, 64.836088); near(c.hedefYks.gap, 64.836088 - 36);
+    });
+  });
+  await check('gidişat: a bounded, robust trend in the success-ratio logit space (hand-worked)', () => {
+    // Points with a Türkiye value 50 of a maximum 100 (logit 0): r = logit(net / 100), so the nets are 100 × sigmoid(r).
+    const sg = z => 1 / (1 + Math.exp(-z)), seri_ = (r, ust = 100, tr = 50) => r.map((z, i) => ({ g: i * 14, net: ust * sg(z), trNet: ust * sg(z), tr, trOrt: tr }));
+    const gd = (r, yksG, ust = 100) => { put('P', seri_(r, ust)); return get(`ANALIZ.gidisat(P,${yksG},${ust})`); };
+    // Rising r = 0, 0,5, 1, 1,5, 2: level = median of the last five = 1; Theil–Sen = 0,5 (MAD 0,5 → noise limit 0,5 / √5 = 0,2236 < 0,5, kept).
+    // Last exam on day 56; YKS on day 56 + 14 × 10 + 3 → m = 10; Σ 0,85^j (j = 1 … 10) = 0,85 × (1 − 0,85^10) / 0,15 = 4,551045 → r_YKS = 1 + 0,5 × 4,551045 = 3,275523; net = 100 × sigmoid(3,275523) = 96,357948.
+    let g = gd([0, .5, 1, 1.5, 2], 56 + 143); assert.equal(g.var, true); assert.equal(g.n, 5); near(g.egim, .5); assert.equal(g.dalgalanir, false); assert.equal(g.yks.m, 10); near(g.yks.r, 3.275523); near(g.yks.net, 96.357948);
+    near(g.seviye.net, 100 * sg(1)); assert.deepEqual(g.cizgi[0][0], 56); assert.equal(g.cizgi[1][0], 199);
+    // Damping: one exam to come adds 0,85 × s, two add (0,85 + 0,7225) × s = 1,5725 × s; thirty plateau at 5,623426 × s.
+    near(gd([0, .5, 1, 1.5, 2], 56 + 14).yks.r, 1 + .5 * .85); near(gd([0, .5, 1, 1.5, 2], 56 + 28).yks.r, 1 + .5 * 1.5725); near(gd([0, .5, 1, 1.5, 2], 56 + 14 * 100).yks.r, 1 + .5 * 5.623426);
+    assert.equal(gd([0, .5, 1, 1.5, 2], 56 + 14 * 100).yks.m, 30, 'at most 30 exams to come'); assert.equal(gd([0, .5, 1, 1.5, 2], 56 + 5).yks.r, 1, 'no exam left before YKS: the level');
+    // Noise: r = 1, 3, 0, 2, 1,5 → median 1,5; deviations .5 1,5 1,5 .5 0 → MAD 0,5 → limit 0,2236; the Theil–Sen slope is −0,1875 (ten pairwise slopes −3 −.5 −.5 −.5 −.5 ,125 ,3333 ,75 2 2; the median of the middle two) → inside the noise: 0.
+    g = gd([1, 3, 0, 2, 1.5], 56 + 70); near(g.hamEgim, -.1875); assert.equal(g.egim, 0); assert.equal(g.dalgalanir, true); near(g.mad, .5); near(g.yks.net, 100 * sg(1.5)); near(g.yks.net, 81.757448);
+    near(g.aralik.min, 50); near(g.aralik.max, 100 * sg(3));
+    // The edge of the gate: r = 0, 2, 1, 3, 2 → slope 0,5 against a limit of 1 / √5 = 0,4472: kept; the level is the median 2.
+    g = gd([0, 2, 1, 3, 2], 56 + 70); near(g.egim, .5); assert.equal(g.dalgalanir, false); near(g.yks.r, 2 + .5 * 3.152337); near(g.yks.net, 97.2779);
+    // Every r the same: no slope, the net stays where it is.
+    g = gd([0, 0, 0, 0, 0], 56 + 70); assert.equal(g.egim, 0); near(g.yks.net, 50);
+    // Always between 0 and the maximum, however steep: r from 2 to 3,9 (the clamp 0,98) and the other way.
+    const yuk = gd([2, 2.5, 3, 3.5, 3.9], 56 + 14 * 100); assert(yuk.yks.net < 100 && yuk.yks.net > 99, yuk.yks.net);
+    const as_ = gd([-2, -2.5, -3, -3.5, -3.9], 56 + 14 * 100); assert(as_.yks.net > 0 && as_.yks.net < 1, as_.yks.net);
+    // The ratio is clamped to 0,02 … 0,98: a net of 100 of 100 counts as 0,98.
+    put('P', [{ g: 0, net: 100, trNet: 100, tr: 50 }, { g: 14, net: 100, trNet: 100, tr: 50 }, { g: 28, net: 100, trNet: 100, tr: 50 }]); near(get('ANALIZ.gidisat(P,200,100).yks.net'), 100 * sg(Math.log(.98 / .02))); near(get('ANALIZ.gidisat(P,200,100).yks.net'), 98);
+    // Only the last five set the level; all of them the slope: six exams, the first is out of the level but in the slope.
+    g = gd([5, 0, 0, 0, 0, 0].map(x => x / 2), 5 * 14 + 14 * 3); near(g.seviye.net, 50);
+    // Needs three exams with a Türkiye value: two do not, an exam without one does not count.
+    put('P', seri_([0, 1])); assert.deepEqual(get('ANALIZ.gidisat(P,100,100)'), { var: false, n: 2, yks: null, cizgi: null });
+    put('P', seri_([0, 1, 2, 3]).map((p, i) => i === 1 ? { ...p, tr: null, trOrt: null } : p)); assert.equal(get('ANALIZ.gidisat(P,100,100).n'), 3);
+    put('P', seri_([0, 1, 2]).map((p, i) => i < 1 ? { ...p, tr: null } : p)); assert.equal(get('ANALIZ.gidisat(P,100,100).var'), false);
+    // A YKS date before her last exam, or none: the trend is there, the projection is not.
+    assert.equal(gd([0, .5, 1], 10).yks, null); assert.equal(gd([0, .5, 1], 10).var, true);
+    put('P', seri_([0, .5, 1])); assert.equal(get('ANALIZ.gidisat(P,undefined,100).yks'), null);
+  });
+  await check('gidişat on the cards: CEMRE’s swings stay inside the noise (level only); the note under the chart says so; fewer than 3 exams says it needs 3 (hand-worked)', async () => {
     await kurTum(); run("D.ayar.sinav='2027-06-19'");
-    // CEMRE: days 0 7 14 21 28 from 17 Eylül, sapma 8 -8 6 -6 10. Mean x 14, mean y 2; Sxx = 490, Sxy = -84 + 70 - 56 + 112 = 42 → slope 3/35 per day.
-    const c = kart(1003), g = c.gidisat; assert.equal(g.var, true); assert.equal(g.n, 5); near(g.egim, 42 / 490);
-    // 19 Haziran 2027 is day 275 from 17 Eylül 2026: gap 2 + 42/490 × (275 - 14) = 24.371428…; the line is the latest Türkiye average (36) plus the gap.
-    assert.equal(c.yks - gun('2026-09-17'), 275); near(g.yks.gap, 2 + 42 / 490 * 261); near(g.yks.net, 36 + 2 + 42 / 490 * 261); near(g.yks.net, 60.371429);
-    near(g.ilk.net, 36 + 2 + 42 / 490 * (0 - 14)); assert.equal(g.cizgi[0][0], gun('2026-09-17')); assert.equal(g.cizgi[1][0], c.yks);
-    // DOĞA: three exams on days 0 14 28, sapma -1 1 0 → slope 14 / 392 = 1/28; gap at day 275 = 0 + 261 / 28; net 36 + 261 / 28.
-    const d = kart(1004).gidisat; assert.equal(d.var, true); assert.equal(d.n, 3); near(d.egim, 1 / 28); near(d.yks.net, 36 + 261 / 28);
+    // CEMRE: nets 38 23 39 28 46 against 30 31 33 34 36 of 120: r = logit(net / 120) − logit(tr / 120) = 0,3295 −0,3846 0,2385 −0,2616 0,3719; level (median) 0,2385,
+    // MAD 0,1334 → limit 0,0596; Theil–Sen 0,036 → inside the noise: 0. Net at YKS = 120 × sigmoid(0,2385 + logit(36 / 120)) = 42,2804 with m = 17.
+    const c = kart(1003), g = c.gidisat; assert.equal(g.var, true); assert.equal(g.n, 5); assert.equal(g.dalgalanir, true); near(g.hamEgim, 0.036042); near(g.seviye.r, .238513); assert.equal(g.yks.m, 17); near(g.yks.net, 42.280374);
+    assert.equal(c.ust, 120); assert.deepEqual([g.aralik.min, g.aralik.max], [23, 46]);
+    // DOĞA: three exams, r = −0,0357 0,0345 … the level is the median and the projection is bounded.
+    const d = kart(1004).gidisat; assert.equal(d.var, true); assert.equal(d.n, 3); assert(d.yks.net > 0 && d.yks.net < 120);
     // Two exams: not enough.
     const b = kart(1002).gidisat; assert.equal(b.var, false); assert.equal(b.n, 2); assert.equal(b.yks, null); assert.equal(b.cizgi, null);
     assert.match(run('EK.okKim="1002";ANALIZ.icerik()'), /Gidişat için Türkiye ortalamalı en az 3 deneme gerekli/);
-    // Exams without a Türkiye average (and no estimate) do not count: only the exams of the fit.
-    put('P', [{ g: 0, sapma: 1, tr: 10 }, { g: 10, sapma: null, tr: null }, { g: 20, sapma: 3, tr: 10 }, { g: 30, sapma: 5, tr: 12 }]);
-    const p = get('ANALIZ.gidisat(P,100)'); assert.equal(p.var, true); assert.equal(p.n, 3); near(p.egim, 9 / 70); near(p.yks.gap, 3 + 9 / 70 * (100 - 50 / 3)); near(p.yks.net, 12 + 3 + 9 / 70 * (100 - 50 / 3), 'latest Türkiye value 12 + the projected gap');
-    // Points: (0, 1), (20, 3), (30, 5): mean x 50/3, mean y 3, Sxx 1400/3, Sxy 60 → slope 9/70.
-    assert.equal(get('ANALIZ.gidisat(P,25).yks'), null, 'a YKS date before the last exam gives no projection'); assert.equal(get('ANALIZ.gidisat(P,undefined).yks'), null);
+    // The lines under the chart: the value at YKS and, inside the noise, "aralığında dalgalanıyor (≈ 23–46)"; then the comparison with the hedef yolu at YKS.
+    const h = run('EK.okKim="1003";ANALIZ.icerik()'), n = h.slice(h.indexOf('id="okNotlar"'));
+    assert.match(n, /<li>Gidişat · YKS’de ~42 net<span class="mini"> · aralığında dalgalanıyor \(≈ 23–46\)<\/span><\/li><li>Gidişat hedefin 22,6 net altında<span class="mini"> · hedef yolu YKS’de 65 net<\/span><\/li>/);
+    assert.equal(c.gidisatHedef.hedef, c.hedefYks.net); near(c.gidisatHedef.fark, 42.280374 - 64.836088);
   });
   await check('with no Türkiye data at all every figure that needs it is empty and the page says so', async () => {
     put('SR', siralama()); run('D.siralama=SR');
@@ -471,7 +542,8 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
   const sinirlar = pts => [Math.min(...pts.map(p => p[0])), Math.max(...pts.map(p => p[0])), Math.min(...pts.map(p => p[1])), Math.max(...pts.map(p => p[1]))];
   await check('the chart: every line over its own points, straight reference lines, a horizontal leader from a line’s own last point, labels apart, nothing outside the box', async () => {
     await kurTum(); run(`D.denemeOrtHedef={TYT:{'':40}}`);
-    for (const tur of ['kose', 'yumusak']) {
+    for (const yks of ['2027-06-19', '2026-01-01']) for (const tur of ['kose', 'yumusak']) {
+      run(`D.ayar.sinav=${JSON.stringify(yks)}`);
       run(`GRAFIK_CIZGI.sec(${JSON.stringify(tur)})`);
       for (const [no, kurulum] of [[1001, null], [1002, null], [1003, null], [1004, [0, 1, 2, 3]], [1001, [0, 2, 3, 4]]]) {
         if (kurulum) await kurTurkiye(kurulum); else if (no === 1001 && tur === 'kose') await kurTum();
@@ -492,7 +564,9 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
             const s = seriler[m[1]], son = s.pts[s.pts.length - 1];
             assert.equal(m[3], m[5], ad + ' ' + m[1] + ': a horizontal leader'); near(Number(m[2]), son[0] + 5, ad + ' ' + m[1] + ': starts at the line’s own last point'); near(Number(m[3]), son[1], ad + ' ' + m[1]); assert(Number(m[4]) > Number(m[2]), 'runs to the label');
           }
-          if (no === 1002 && !kurulum) { assert(svg.includes('class="ok-bag" data-ok="ogr"'), ad + ': BORA sat only two exams, her label has a leader from her last point'); assert(seriler.ogr.bag.x2 - seriler.ogr.bag.x1 > 5); }
+          // With the YKS column no leader runs across it (the labels are told apart by their swatches); without it every label has one from the line's last point.
+          if (g.uzat) assert(!svg.includes('class="ok-bag"'), ad + ': no leader across the YKS column');
+          else if (no === 1002 && !kurulum) { assert(svg.includes('class="ok-bag" data-ok="ogr"'), ad + ': BORA sat only two exams, her label has a leader from her last point'); assert(seriler.ogr.bag.x2 - seriler.ogr.bag.x1 > 5); }
           for (const m of svg.matchAll(/<line([^>]*)\/>/g)) { const x1 = /x1="([\d.]+)"/.exec(m[1]), x2 = /x2="([\d.]+)"/.exec(m[1]); if (/class="(?:et-|ok-sinav)/.test(m[1]) || !x1) continue; assert.notEqual(x1[1], x2[1], ad + ': no vertical tick on the labels'); }
           // Labels: stacked in their column at least 30 px apart in the order of the lines, inside the plot's height.
           const sutunlar = new Map(); for (const s of g.seriler) if (s.etiket) { const l = sutunlar.get(s.etiket.x) || []; l.push(s); sutunlar.set(s.etiket.x, l); }
@@ -507,24 +581,45 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     }
     run('GRAFIK_CIZGI.sec("kose")');
   });
-  await check('the chart names its lines at the right edge of the data and runs to the YKS date: Öğrenci, Okul ortalaması, Türkiye ortalaması, Hedef yolu, Sınıf (şube) hedefi, Gidişat', async () => {
+  await check('the chart: the x-axis is the order of the exams (equal slots, short dates under the points), the y-axis ends at the maximum, and the YKS is one separated column with two end markers (hand-worked)', async () => {
     await kurTum(); run(`D.denemeOrtHedef={TYT:{'':40}}`); run("D.ayar.sinav='2027-06-19'");
-    const g = cz(1003, 640), svg = g.svg, ids = g.seriler.map(s => s.id);
+    const g = cz(1003, 640), svg = g.svg, ids = g.seriler.map(s => s.id), s = Object.fromEntries(g.seriler.map(q => [q.id, q]));
     assert.deepEqual(ids.sort(), ['gidis', 'hedef', 'ogr', 'okul', 'sube', 'tr']);
-    for (const t of ['Öğrenci', 'Okul ortalaması', 'Türkiye ortalaması', 'Hedef yolu', 'Sınıf hedefi', 'Gidişat', '46,00', '39,75', '36,00', '40,00', 'YKS’de ~60 net', 'YKS’de 83 net']) assert(svg.includes('>' + t + '</text>'), t);
-    // CEMRE: hedef path 48 at her last exam; five exams a week apart (7 days), 275 - 28 = 247 days to YKS → 35 more exams → gap 12 + 35 = 47 → 36 + 47 = 83
-    const hy = get('ANALIZ.kart("1003","TYT",' + BUGUN + ').hedefYks'); assert.equal(hy.aralik, 7); assert.equal(hy.m, 35, '(275 - 28) / 7 = 35.29 → 35 exams'); assert.equal(hy.gap, 47); assert.equal(hy.net, 83);
-    assert(svg.includes('>YKS’de 83 net</text>'));
-    // The axis runs to the YKS date: the lines to it end on the right edge of the plot; the dates are months.
-    const s = Object.fromEntries(g.seriler.map(s => [s.id, s])); near(s.gidis.pts[1][0], g.R); near(s.hedef.uzanti[1][0], g.R); near(s.gidis.pts[0][0], s.ogr.pts[0][0], 'the trend starts at her first exam');
-    for (const t of ['Eki', 'Kas', 'Ara', 'Oca ’27', 'Haz']) assert(svg.includes('>' + t + '</text>') || t === 'Haz', t); assert(svg.includes('>YKS · 19 Haz</text>'));
-    assert(svg.includes('data-gelecek="1"'), 'the part of the target path after her last exam is lighter');
-    // The data labels sit at the right edge of the data, inside the plot; the two that run to YKS sit beyond its edge.
-    assert(s.ogr.etiket.x < g.R && s.gidis.etiket.x > g.R && s.hedef.etiket.x > g.R, 'columns');
-    // Zoomed on a range or on a dragged range: the axis ends at her last exam, nothing runs on to YKS.
-    for (const a of ['1ay', '3ay']) { const z = cz(1001, 640, a), ad = z.seriler.map(q => q.id); assert(!ad.includes('gidis') && !z.uzat, a); assert(!z.svg.includes('Gidişat') && !z.svg.includes('YKS ·'), a); near(z.seriler.find(q => q.id === 'ogr').pts.slice(-1)[0][0], z.R, a + ': her last exam is the right edge'); }
-    // No YKS date or one in the past: no run to it, the rest unchanged.
-    run("D.ayar.sinav='2026-01-01'"); const g2 = cz(1001, 640); assert(!g2.uzat && !g2.svg.includes('Gidişat')); assert.equal(get('ANALIZ.kart("1001","TYT",' + BUGUN + ').gidisat.yks'), null);
+    for (const t of ['Öğrenci', 'Okul ortalaması', 'Türkiye ortalaması', 'Hedef yolu', 'Sınıf hedefi', 'Gidişat', '46,00', '39,75', '36,00', '40,00', 'YKS’de ~42 net', 'YKS’de 65 net', 'YKS · 19 Haz']) assert(svg.includes('>' + t + '</text>'), t);
+    // Equal slots: the five exams are a week apart, but their x are equally spaced whatever the dates; the YKS column is two slots after the last exam.
+    const xs = s.ogr.pts.map(p => p[0]), farklar = xs.slice(1).map((x, i) => x - xs[i]); nearPx(Math.max(...farklar), Math.min(...farklar), 'equal spacing');
+    for (const id of ['okul', 'tr']) assert.deepEqual(s[id].pts.map(p => p[0]), xs, id + ' on the same slots'); nearPx(g.ykX - xs[4], 2 * g.adim); nearPx(g.adim, farklar[0]);
+    // The y-axis: the top tick is the maximum (120) and nothing is drawn above it; the lowest tick is below every value.
+    assert.equal(g.tikler[g.tikler.length - 1], 120); assert.equal(g.ustDeger, 120); assert(svg.includes('>120</text>')); assert(!svg.includes('>130</text>') && !svg.includes('>125</text>'));
+    for (const q of g.seriler) for (const p of q.pts.concat(q.uzanti || [])) assert(p[1] >= g.ust - 0.06 && p[1] <= g.alt + 0.06, q.id);
+    // The dates under the points: 17 Eyl … 15 Eki, then YKS.
+    const alt = [...svg.matchAll(/<text class="et-tik ok-tarih" [^>]*>([^<]*)</g)].map(m => m[1]); assert.deepEqual(alt, ['17 Eyl', '24 Eyl', '1 Eki', '8 Eki', '15 Eki']);
+    // The YKS column: both markers at its x; each joined to its last in-data value by one short dashed segment; no line runs across it (no path reaches further than the column).
+    const gid = s.gidis, hed = s.hedef; nearPx(gid.pts[0][0], g.ykX); nearPx(hed.uzanti[1][0], g.ykX);
+    assert.deepEqual(gid.uzanti[0], s.ogr.pts[4], 'Gidişat starts at her last net'); assert.deepEqual(hed.uzanti[0], hed.pts[4], 'Hedef yolu starts at its last value');
+    assert.equal((svg.match(/<circle class="ok-yks-nokta"/g) || []).length, 2); assert.equal((svg.match(/data-gelecek="1"/g) || []).length, 2);
+    for (const y of yolEleman(svg)) for (let i = 0; i < sayilar(y.d).length; i += 2) assert(sayilar(y.d)[i] <= g.ykX + 0.06, y.id);
+    assert(svg.includes('class="ok-yks-sutun"') && svg.includes('ok-ayrac')); assert(g.ayrac > xs[4] && g.ayrac < g.ykX, 'the divider lies in the gap');
+    // The values are at the markers: Gidişat 42,28 and Hedef yolu 64,84 of 120 (y is linear in the net).
+    assert(hed.uzanti[1][1] < gid.pts[0][1], 'Hedef yolu 65 is above Gidişat 42');
+    // Labels sit in the right margin, apart; the two YKS labels have no leader.
+    assert(s.gidis.etiket.x > g.R && s.hedef.etiket.x > g.R && s.ogr.etiket.x > g.R); assert(!gid.bag && !hed.bag);
+    // The zoomed ranges that end at her last exam keep the column; a range that stops before her last exam has none.
+    for (const a of ['1ay', '3ay']) { const z = cz(1001, 640, a); assert(z.uzat && z.seriler.some(q => q.id === 'gidis'), a); nearPx(z.ykX - z.seriler.find(q => q.id === 'ogr').pts.slice(-1)[0][0], 2 * z.adim); }
+    const ids2 = get('ANALIZ.kaynak(' + BUGUN + ').olcular.TYT.sinavlar.map(s=>s.id)'), sec = cz(1001, 640, { bas: ids2[0], bit: ids2[2] }); assert.equal(sec.uzat, false); assert(!sec.seriler.some(q => q.id === 'gidis')); assert(!sec.svg.includes('ok-yks')); assert.equal(sec.olc.ids.length, 3);
+    // No YKS date or one in the past: no column, the rest unchanged; the top is still the maximum.
+    run("D.ayar.sinav='2026-01-01'"); const g2 = cz(1001, 640); assert(!g2.uzat && !g2.svg.includes('Gidişat') && !g2.svg.includes('ok-yks')); assert.equal(g2.tikler[g2.tikler.length - 1], 120); assert.equal(get('ANALIZ.kart("1001","TYT",' + BUGUN + ').gidisat.yks'), null);
+    // AYT · SAY: the top is 80.
+    run("D.ayar.sinav='2027-06-19'"); const a = cz(1001, 640, 'tumu', 'AYT:SAY'); assert.equal(a.tikler[a.tikler.length - 1], 80); assert(a.svg.includes('>80</text>') && !a.svg.includes('>90</text>'));
+    // The student’s line is straight whatever the Köşeli / Yumuşak setting.
+    run('GRAFIK_CIZGI.sec("yumusak")'); const y = cz(1003, 640); run('GRAFIK_CIZGI.sec("kose")'); assert(!/[CQSA]/.test(yolEleman(y.svg).find(q => q.id === 'ogr').d), 'no curve on the student’s line');
+  });
+  await check('the date labels under the points: every n-th when they would collide, the first and the last always; a phone shows fewer', async () => {
+    await kurTum();
+    const t = (W, no = 1001) => get(`ANALIZ.cizim(ANALIZ.kart("${no}","TYT",${BUGUN}),${W})`);
+    let g = t(640); assert.deepEqual(g.tarihler, [0, 1, 2, 3, 4], 'all five fit on a wide chart');
+    g = t(300); assert(g.tarihler[0] === 0 && g.tarihler[g.tarihler.length - 1] === 4, 'first and last stay: ' + g.tarihler); assert(g.tarihler.length < 5, 'some are left out on a narrow chart');
+    const gap = g.tarihler.slice(1).map((i, k) => (i - g.tarihler[k]) * g.adim); assert(gap.every(d => d >= 40), 'labels are apart: ' + gap);
   });
   await check('the chart with an exam without a Türkiye list: the estimated point is hollow and the segment to it lighter; the right edge has no spike', async () => {
     put('SR', siralama()); run('D.siralama=SR'); await kurTurkiye([0, 1, 2, 3]);   // the latest exam has no list: its Türkiye average is the estimate 39.25
@@ -542,6 +637,41 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     // One exam, no Türkiye data at all: the chart still draws (the student and the school mean).
     run('delete D.turkiye'); const t = cz(1001, 640); assert(!/NaN|undefined/.test(t.svg)); assert.deepEqual(t.seriler.map(q => q.id).sort(), ['ogr', 'okul']);
     put('V1', siralama()); sandbox.V1.sinavlar = sandbox.V1.sinavlar.slice(0, 1); run('D.siralama=V1'); const b = cz(1001, 640); assert(!/NaN|undefined/.test(b.svg)); assert.equal(b.seriler.find(q => q.id === 'ogr').pts.length, 1);
+  });
+  await check('a real-like card: TYT nets 100, 97, 109, 82, 106,75 with the last two exams four days apart and a tahmini last Türkiye value — the projection stays near her level, below 120, the axis ends at 120, no spike at the last exam (hand-worked)', async () => {
+    const SORU = { 'TÜR': 40, TAR: 5, 'COĞ': 5, FEL: 5, 'DİN': 5, MAT: 30, GEO: 10, 'FİZ': 7, 'KİM': 7, 'BİY': 6 };
+    const KOD = { 'TÜR': 'TÜRKÇE-T', TAR: 'TARİH-T', 'COĞ': 'COĞRAFYA-T', FEL: 'FELSEFE-T', 'DİN': 'DİN KÜLTÜRÜ-T', MAT: 'MATEMATİK-T', GEO: 'GEOMETRİ-T', 'FİZ': 'FİZİK-T', 'KİM': 'KİMYA-T', 'BİY': 'BİYOLOJİ-T' };
+    const NETLER = [100, 97, 109, 82, 106.75], TRLER = [42, 45, 50, 55], TAR = ['18.08.2026', '08.09.2026', '29.09.2026', '19.10.2026', '23.10.2026'];
+    const AD2 = ['27-GER-01', '27-GER-02', '27-GER-03', '27-GER-04', '27-GER-05'], anahtar = run('denemeAdAnahtari');
+    let kalan = 0; const dagit = t => { kalan = t; return Object.fromEntries(Object.keys(SORU).map(k => { const v = Math.min(SORU[k], kalan); kalan -= v; return [k, v]; })); };   // greedy: Türkçe 40, Matematik 30, … so every subject net is a plain number
+    put('SR', { surum: 1, sinavlar: AD2.map((ad, e) => ({ id: anahtar(ad), ad, okul: 'SENTETİK ANADOLU LİSESİ', ts: 2000 + e, T: { tarih: TAR[e], katilim: ['1', '1', '1'], kurum: null, ogr: [(() => {
+      const v = dagit(NETLER[e]); return { no: '2001', ad: 'SENTETİK GERÇEKÇİ', snf: '301 12/A', n: KEYS.map(k => v[k] ?? null), dy: KEYS.map(k => v[k] ? Math.ceil(v[k]) + '/0' : null), p: [0, 0, 0, 0], r: ['', '', '', ''] };
+    })()] } })) });
+    run('D.siralama=SR'); run('delete D.turkiye'); await new Promise(r => setTimeout(r, 3));
+    put('R', [0, 1, 2, 3].map(e => { const v = dagit(TRLER[e]); return { ad: AD2[e], liste: 'kolej', yaz: null, dersler: Object.keys(SORU).map(k => ({ kod: KOD[k], soru: SORU[k], genel: v[k], satir: [{ sira: 1, ad: 'SENTETİK OKUL', net: Math.min(SORU[k], v[k] + 2) }, { sira: 2, ad: 'SENTETİK KOLEJ', net: v[k] }] })) }; }));
+    await run('TURKIYE.raporEkle(R)'); run("D.ayar.sinav='2027-06-19'");
+    const c = kart(2001), n = c.noktalar || assert.fail(JSON.stringify(c).slice(0, 300));
+    // The last Türkiye value is the estimate: the school mean (her own net, 106,75) minus the median gap of the exams that have a list: 58 52 59 27 → (52 + 58) / 2 = 55 → 51,75.
+    assert.deepEqual(n.map(p => p.net), NETLER); assert.deepEqual(n.map(p => p.tr), [42, 45, 50, 55, 51.75]); assert.deepEqual(n.map(p => p.tahmini), [false, false, false, false, true]);
+    assert.equal(c.ust, 120); assert.equal(c.yks - gun('2026-10-23'), 239); assert.equal(c.gidisat.yks.m, 17, 'floor(239 / 14) exams to come');
+    // r = logit(net / 120) − logit(tr / 120) = 2,2285 1,9500 2,6299 0,9362 2,3632; level = median of the five = 2,2285; MAD 0,2784 → limit 0,1245; Theil–Sen −0,0498 → noise: 0.
+    const g = c.gidisat; assert.equal(g.var, true); assert.equal(g.dalgalanir, true); near(g.seviye.r, 2.228477); near(g.hamEgim, -0.049824); near(g.mad, 0.278435);
+    // Net at YKS = 120 × sigmoid(2,2285 + logit(51,75 / 120)) = 105,0761 — inside her last-five range 82 … 109 ± 5, below 120.
+    near(g.yks.net, 105.076142); assert(g.yks.net >= 82 - 5 && g.yks.net <= 109 + 5 && g.yks.net <= 120, String(g.yks.net)); assert.deepEqual([g.aralik.min, g.aralik.max], [82, 109]);
+    // The hedef yolu: the first target is her own net (g0 = sapma), +1 per exam while the target is below 60 and smaller steps above: it ends below 119,5.
+    assert.deepEqual(n.map(p => p.hedefK), [0, 1, 2, 3, 4]); assert(n.every(p => p.hedefNet <= 119.5)); assert(c.hedefYks.net <= 119.5 && c.hedefYks.net > c.hedefYol.net);
+    // The note under the chart.
+    const h = run('EK.okKim="2001";ANALIZ.icerik()'); assert.match(h, /<li>Gidişat · YKS’de ~105 net<span class="mini"> · aralığında dalgalanıyor \(≈ 82–109\)<\/span><\/li>/);
+    // The chart: the top tick is 120, five equal slots although the last two exams are four days apart, the YKS column after a gap.
+    const z = cz(2001, 640), s = Object.fromEntries(z.seriler.map(q => [q.id, q])), xs = s.ogr.pts.map(p => p[0]), d = xs.slice(1).map((x, i) => x - xs[i]);
+    assert.equal(z.tikler[z.tikler.length - 1], 120); assert(z.svg.includes('>120</text>')); nearPx(Math.max(...d), Math.min(...d), 'consecutive exams equally apart (the 4-day pair too)'); assert(d.every(v => v > 40));
+    assert.deepEqual([...z.svg.matchAll(/<text class="et-tik ok-tarih" [^>]*>([^<]*)</g)].map(m => m[1]), ['18 Ağu', '8 Eyl', '29 Eyl', '19 Eki', '23 Eki']);
+    // No vertical jump at the last exam: no segment of the Türkiye, school or student lines is steeper than the slot allows, each spans a full slot in x; the estimated point is one hollow marker.
+    for (const y of yolEleman(z.svg).filter(y => ['tr', 'okul', 'ogr'].includes(y.id))) { const p = sayilar(y.d); for (let i = 0; i + 3 < p.length; i += 4) nearPx(p[i + 2] - p[i], z.adim, y.id + ' segment spans one slot'); }
+    assert.equal((z.svg.match(/<circle class="ok-nokta bos"/g) || []).length, 1); assert.equal((z.svg.match(/<circle class="ok-nokta" data-ok="ogr"/g) || []).length, 5);
+    assert.equal(s.tr.tahmini[4], true); nearPx(s.tr.pts[4][0], s.ogr.pts[4][0], 'the hollow point sits at the last exam’s x, once');
+    // The phone: the same, narrower.
+    const m = cz(2001, 390); assert.equal(m.tikler[m.tikler.length - 1], 120); assert(m.tarihler[0] === 0 && m.tarihler.includes(4)); assert(!/NaN|undefined/.test(m.svg));
   });
   await check('drag to measure: the chart gives GRAFIK_OLCUM its exams, the student’s net at each and the dates; the other pages’ helper is registered for the card', async () => {
     await kurTum();

@@ -18,11 +18,15 @@
 // - istikrar: the standard deviation of sapma over the student's last up to 6 exams that have one (at least 3):
 //   below 3 net Çok istikrarlı, below 6 İstikrarlı, below 10 Dalgalı, otherwise Çok dalgalı.
 // - hedef yolu: the personal target. g0 is the student's sapma at her first exam with a Türkiye average (real or tahmini);
-//   at her k-th later exam the target gap is g0 + k × adım (adım +1 net for TYT, +0,5 for every AYT measure) and the target net is the
-//   exam's Türkiye average plus that gap.
-// - gidişat: the least-squares line of sapma against the date (days) over her exams with a Türkiye average (at least 3),
-//   projected to the YKS date (D.ayar.sinav); the projected net there is the latest Türkiye average plus the projected gap.
-//   The hedef yolu is projected to the YKS date with one exam every average interval of her past exams.
+//   the target net is the exam's Türkiye average plus the target gap, capped just below the measure's maximum (ust: TYT 120,
+//   AYT 80). At her k-th later exam the gap is the previous (capped) gap plus the step: adım (+1 net for TYT, +0,5 for every AYT
+//   measure) × min(1, (ust − previous target net) / (ust / 2)), so the effort shows more the closer the target gets to the maximum.
+// - gidişat: a bounded, robust trend in the success-ratio logit space. r = logit(clamp(net / ust)) − logit(clamp(Türkiye / ust)),
+//   clamp to 0.02 … 0.98. Level L = median of r over her last up to 5 exams; slope s = Theil–Sen (median of the pairwise slopes of r
+//   over the exam index) over all her exams with a Türkiye value, 0 when |s| ≤ MAD(r) / √n (noise: "aralığında dalgalanıyor"). To the
+//   YKS date (D.ayar.sinav): m = floor(days left / DENEME_ARALIGI_GUN) at most 30 (the school holds TYT and AYT in alternate weeks, so each session has an exam every 14 days); r_YKS = L + s × Σ 0.85^j (j = 1 … m);
+//   the net there = ust × sigmoid(r_YKS + logit(clamp(latest Türkiye / ust))), always between 0 and ust. At least 3 exams.
+//   The hedef yolu is projected to the YKS date with the same m, each future exam adding its (shrinking) step.
 // - aralık: Son 1 ay / Son 3 ay (the earliest of her exams within that many months of her latest → the latest), Tümü, or two
 //   exams picked by dragging on the chart; it drives the change card and the Dersler table.
 // - etüt and devamsızlık: the last 30 days (today and the 29 days before). A missed day is Yoklama's rule (3+ lessons).
@@ -31,7 +35,7 @@
 const ANALIZ = (() => {
 // measure key, name, Türkiye total
 const OLCULER=[['TYT','TYT','TYT'],['AYT:SAY','AYT · SAY','SAY'],['AYT:EA','AYT · EA','EA'],['AYT:SÖZ','AYT · SÖZ','SÖZ']];
-const HEDEF_ADIM_TYT=1, HEDEF_ADIM_AYT=.5, GIDISAT_EN_AZ=3;
+const HEDEF_ADIM_TYT=1, HEDEF_ADIM_AYT=.5, HEDEF_TAVAN=.5, GIDISAT_EN_AZ=3, GIDISAT_SEVIYE=5, GIDISAT_SONUM=.85, GIDISAT_EN_COK_SINAV=30, DENEME_ARALIGI_GUN=14, ORAN_ALT=.02, ORAN_UST=.98, UST_VARSAYILAN=120;
 const BEKLENEN_PENCERE=5, BEKLENEN_EN_AZ=2, ISTIKRAR_PENCERE=6, ISTIKRAR_EN_AZ=3, GUN=30, ZAYIF_ESIK=-1, ZAYIF_EN_COK=5;
 const ISTIKRAR_ETIKETLERI=[[3,'Çok istikrarlı'],[6,'İstikrarlı'],[10,'Dalgalı'],[Infinity,'Çok dalgalı']];
 const AY=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
@@ -50,6 +54,10 @@ const r1=x=>Math.round(x*10)/10;
 const ort=l=>l.length?l.reduce((a,b)=>a+b,0)/l.length:null;
 const medyan=l=>{if(!l.length)return null;const s=l.slice().sort((a,b)=>a-b),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
 const hedefAdimi=key=>key==='TYT'?HEDEF_ADIM_TYT:HEDEF_ADIM_AYT;
+const logit=p=>Math.log(p/(1-p)),sigmoid=z=>1/(1+Math.exp(-z));
+const oranLogit=(v,ust)=>logit(Math.min(ORAN_UST,Math.max(ORAN_ALT,v/ust)));
+// Theil–Sen: the median of the slopes between every pair of points (y against the index).
+const theilSen=y=>{const e=[];for(let i=0;i<y.length;i++)for(let j=i+1;j<y.length;j++)e.push((y[j]-y[i])/(j-i));return medyan(e)};
 const std=l=>{const m=ort(l);return Math.sqrt(ort(l.map(x=>(x-m)**2)))};
 const f2=x=>Number(x).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const f1=x=>Number(x).toLocaleString('tr-TR',{minimumFractionDigits:1,maximumFractionDigits:1});
@@ -64,9 +72,11 @@ const izleme=()=>typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme();
 // noktalar: a student's exams in time order, [{net, trOrt, trNet, tr, tahmini}] (trOrt: the exam's real Türkiye average, null when
 // the exam has none; tr: the average the figures use, trOrt or the tahmini one, defaulting to trOrt; trNet: the student's net over
 // the Türkiye total's subjects). Adds sapma, beklenen and beklenenden; with adim (the target's step per exam) also the personal
-// target path: hedefK (her exams with a Türkiye average counted from the first, 0), hedefGap and hedefNet.
-function turet(noktalar,adim=null){
-  const gecmis=[];let g0=null,k=-1;
+// target path: hedefK (her exams with a Türkiye average counted from the first, 0), hedefGap and hedefNet. With ust (the measure's
+// maximum net) the target net stays below it and the step shrinks toward it (hedefAdimi); without ust the step is constant.
+const hedefCarpan=(net,ust)=>ust?Math.min(1,Math.max(0,(ust-net)/(ust/2))):1;
+function turet(noktalar,adim=null,ust=null){
+  const gecmis=[];let g0=null,k=-1,once=null;
   return noktalar.map(p=>{
     const tr=p.tr!==undefined?p.tr:p.trOrt;
     const sapma=tr!==null&&tr!==undefined&&Number.isFinite(p.trNet)?y6(p.trNet-tr):null,pencere=gecmis.slice(-BEKLENEN_PENCERE);
@@ -74,7 +84,11 @@ function turet(noktalar,adim=null){
     if(sapma!==null&&pencere.length>=BEKLENEN_EN_AZ){const m=ort(pencere);beklenen=y6(tr+m);beklenenden=y6(sapma-m)}
     if(sapma!==null){
       if(g0===null)g0=sapma;k++;
-      if(adim!==null){hedefK=k;hedefGap=y6(g0+k*adim);hedefNet=y6(tr+hedefGap)}
+      if(adim!==null){
+        let gap=k===0?g0:once.gap+adim*hedefCarpan(once.net,ust),net=tr+gap;
+        if(ust&&net>ust-HEDEF_TAVAN){net=ust-HEDEF_TAVAN;gap=net-tr}
+        hedefK=k;hedefGap=y6(gap);hedefNet=y6(net);once={gap:hedefGap,net:hedefNet};
+      }
       gecmis.push(sapma);
     }
     return {...p,sapma,beklenen,beklenenden,hedefK,hedefGap,hedefNet};
@@ -106,7 +120,7 @@ function okulSurprizleri(sinavlar){
 function seriler(t,trFn){
   const out={};
   for(const [key,ad,toplamKey] of OLCULER){
-    const O=DPANO.olcu(key),alan=O.oturum==='tyt'?'tyt':'ayt',sinavlar=[],satirlar=[],ogr=new Map(),adim=hedefAdimi(key);
+    const O=DPANO.olcu(key),alan=O.oturum==='tyt'?'tyt':'ayt',sinavlar=[],satirlar=[],ogr=new Map(),adim=hedefAdimi(key),ust=Number.isFinite(O.ust)&&O.ust>0?O.ust:UST_VARSAYILAN;
     for(const s of t.sinavlar){
       const rows=[];for(const o of Object.values(s[alan]||{})){const v=O.deger(o);if(v!==null)rows.push({o,v:y6(v)})}
       if(!rows.length)continue;
@@ -125,8 +139,8 @@ function seriler(t,trFn){
         if(!ogr.has(o.no))ogr.set(o.no,[]);ogr.get(o.no).push(p);
       }
     }
-    for(const [no,l] of ogr){const d=turet(l,adim);d.forEach((p,i)=>Object.defineProperty(p,'ham',{value:l[i].ham,enumerable:false}));ogr.set(no,d)}
-    out[key]={key,ad,toplam:toplamKey,sinavlar,ogr,okulFarki,okul:okulSurprizleri(sinavlar),adim};
+    for(const [no,l] of ogr){const d=turet(l,adim,ust);d.forEach((p,i)=>Object.defineProperty(p,'ham',{value:l[i].ham,enumerable:false}));ogr.set(no,d)}
+    out[key]={key,ad,toplam:toplamKey,sinavlar,ogr,okulFarki,okul:okulSurprizleri(sinavlar),adim,ust};
   }
   return out;
 }
@@ -292,27 +306,43 @@ function aralikSec(noktalar,istek){
   }
   return {...sec,n:sec.j-sec.i+1,uygun:{'1ay':!!hazir['1ay'],'3ay':!!hazir['3ay']}};
 }
-// Gidişat: the least-squares line of sapma against the date over her exams that have a Türkiye average and a date (at least 3),
-// projected to the YKS date (yksG). The drawn line is the latest Türkiye average plus the projected gap, from her first exam of the
-// fit to the YKS date. egim: net per day; yks: {g, gap, net} (null without a later YKS date).
-function gidisat(noktalar,yksG){
-  const d=noktalar.filter(p=>p.sapma!==null&&p.sapma!==undefined&&Number.isFinite(p.g));
-  if(d.length<GIDISAT_EN_AZ)return {var:false,n:d.length,yks:null,cizgi:null};
-  const mx=ort(d.map(p=>p.g)),my=ort(d.map(p=>p.sapma)),sxx=d.reduce((a,p)=>a+(p.g-mx)**2,0);
-  if(!(sxx>0))return {var:false,n:d.length,yks:null,cizgi:null};
-  const egim=d.reduce((a,p)=>a+(p.g-mx)*(p.sapma-my),0)/sxx,kesim=my-egim*mx,bosluk=g=>kesim+egim*g,trSon=d[d.length-1].tr;
-  const yks=Number.isFinite(yksG)&&yksG>d[d.length-1].g?{g:yksG,gap:y6(bosluk(yksG)),net:y6(trSon+bosluk(yksG))}:null;
-  return {var:true,n:d.length,egim,kesim,trSon,ilk:{g:d[0].g,gap:y6(bosluk(d[0].g)),net:y6(trSon+bosluk(d[0].g))},yks,cizgi:yks?[[d[0].g,y6(trSon+bosluk(d[0].g))],[yksG,yks.net]]:null};
+// Exams still to come before the YKS date: one every DENEME_ARALIGI_GUN days (each session is held every second week), counted from
+// her last exam; at most GIDISAT_EN_COK_SINAV. 0 when the YKS date is not after her last exam; null without a date.
+function kalanSinav(sonG,yksG){
+  if(!Number.isFinite(sonG)||!Number.isFinite(yksG)||!(yksG>sonG))return null;
+  return Math.min(GIDISAT_EN_COK_SINAV,Math.floor((yksG-sonG)/DENEME_ARALIGI_GUN));
 }
-// The hedef yolu at the YKS date: one exam every average interval of her past exams (first to last, over the number of gaps) from her
-// last exam on, each adding adim to the target gap. {aralik: days, m: exams to come, gap, net}.
-function hedefYks(noktalar,adim,yksG){
+const netDegeri=p=>Number.isFinite(p.trNet)?p.trNet:p.net;
+// Gidişat (see the top): the level is the median of r over her last 5 exams, the slope the Theil–Sen slope of r over the exam index
+// (0 inside the noise), damped (0.85 per exam to come) up to the YKS date (yksG). ust: the measure's maximum net. egim: r per exam;
+// yks: {g, m, r, gap, net} (null without a later YKS date); cizgi: from her last exam's net to the YKS value.
+function gidisat(noktalar,yksG,ust=null){
+  const U=ust||UST_VARSAYILAN,d=noktalar.filter(p=>Number.isFinite(p.tr)&&Number.isFinite(netDegeri(p)));
+  if(d.length<GIDISAT_EN_AZ)return {var:false,n:d.length,yks:null,cizgi:null};
+  const r=d.map(p=>oranLogit(netDegeri(p),U)-oranLogit(p.tr,U)),n=r.length,L=medyan(r.slice(-GIDISAT_SEVIYE)),orta=medyan(r),mad=medyan(r.map(v=>Math.abs(v-orta)));
+  let egim=theilSen(r);const ham=egim;if(Math.abs(egim)<=mad/Math.sqrt(n))egim=0;
+  const son=d[d.length-1],trZ=oranLogit(son.tr,U),son5=d.slice(-GIDISAT_SEVIYE).map(netDegeri),sonNet=netDegeri(son);
+  const git=z=>y6(U*sigmoid(z+trZ)),sonG=noktalar.filter(p=>Number.isFinite(p.g)).map(p=>p.g).pop();
+  const m=kalanSinav(sonG,yksG);
+  let yks=null;
+  if(m!==null){
+    let toplam=0;for(let j=1;j<=m;j++)toplam+=GIDISAT_SONUM**j;
+    const rY=L+egim*toplam,net=git(rY);
+    yks={g:yksG,m,r:y6(rY),gap:y6(net-son.tr),net};
+  }
+  return {var:true,n,egim,hamEgim:ham,mad,seviye:{r:y6(L),net:git(L)},dalgalanir:egim===0,aralik:{min:Math.min(...son5),max:Math.max(...son5)},trSon:son.tr,yks,
+    cizgi:yks?[[sonG,sonNet],[yksG,yks.net]]:null};
+}
+// The hedef yolu at the YKS date: from her last target net on, one exam every DENEME_ARALIGI_GUN days up to the YKS date, each adding
+// adim × the shrink factor (hedefCarpan), the net kept below ust - HEDEF_TAVAN. {aralik: days, m: exams to come, gap, net}.
+function hedefYks(noktalar,adim,yksG,ust=null){
   const gunlu=noktalar.filter(p=>Number.isFinite(p.g)),h=noktalar.filter(p=>p.hedefNet!==null&&p.hedefNet!==undefined);
-  if(gunlu.length<2||!h.length||!Number.isFinite(yksG))return null;
-  const son=h[h.length-1],aralik=(gunlu[gunlu.length-1].g-gunlu[0].g)/(gunlu.length-1);
-  if(!(aralik>0)||!(yksG>gunlu[gunlu.length-1].g))return null;
-  const m=Math.floor((yksG-gunlu[gunlu.length-1].g)/aralik),gap=y6(son.hedefGap+m*adim);
-  return {aralik,m,gap,net:y6(son.tr+gap),g:yksG,ilk:{g:son.g,net:son.hedefNet}};
+  if(!gunlu.length||!h.length)return null;
+  const m=kalanSinav(gunlu[gunlu.length-1].g,yksG);if(m===null)return null;
+  const son=h[h.length-1];let net=son.hedefNet;
+  for(let j=0;j<m;j++){net=net+adim*hedefCarpan(net,ust);if(ust&&net>ust-HEDEF_TAVAN)net=ust-HEDEF_TAVAN}
+  net=y6(net);
+  return {aralik:DENEME_ARALIGI_GUN,m,gap:y6(net-son.tr),net,g:yksG,ilk:{g:son.g,net:son.hedefNet}};
 }
 // The card of one student for one measure. oturum: a measure key; the first the student has when none or unknown. aralik: '1ay',
 // '3ay', 'tumu' (the default) or {bas, bit} exam ids.
@@ -335,7 +365,7 @@ function kart(key,oturum,bugun=bugunNo(),aralik='tumu'){
   const hp=noktalar.filter(p=>p.hedefNet!==null),hs=hp.length?hp[hp.length-1]:null;
   const hedefYol=hs?{net:hs.hedefNet,gap:hs.hedefGap,k:hs.hedefK,adim:O.adim,tr:hs.tr,tahmini:hs.tahmini,ad:hs.ad,sonMu:hs===son,fark:y6(hs.net-hs.hedefNet),
     ilkAd:noktalar.find(p=>p.sapma!==null).ad}:null;
-  const gid=gidisat(noktalar,yks),hy=hs?hedefYks(noktalar,O.adim,yks):null;
+  const gid=gidisat(noktalar,yks,O.ust),hy=hs?hedefYks(noktalar,O.adim,yks,O.ust):null;
   const gidisatHedef={gidisat:gid.yks?gid.yks.net:null,hedef:hy?hy.net:null,fark:gid.yks&&hy?y6(gid.yks.net-hy.net):null};
   // Etüt, Yoklama and Konu Takibi: "var: false" when the source is not there.
   const E=etutKaynagi(k),es=E.var?E.ogr.get(kisi.no):null,etut={var:E.var,son:E.son,...etutOzeti(es?es.sessions:[],bugun)};
@@ -343,16 +373,17 @@ function kart(key,oturum,bugun=bugunNo(),aralik='tumu'){
   let zayif;try{zayif=zayifKonular(konuKaynagi(k),kisi.no,sinavlarOkul())}catch(e){zayif={var:false,zorluk:false,liste:[]}}
   const okul=O.okul.filter(x=>x.surpriz!==null).pop()||null;
   return {durum:'tamam',kisi:{...kisi,alan:alanAl(k,kisi)},oturumlar:mevcut,oturum:sec,noktalar,tum:O.sinavlar,son,once,
-    trVar:!!k.trFn,neden,trSayi:trMevcut,istikrar:istikrar(noktalar),hedef,hedefYol,aralik:ar,degisim,gidisat:gid,hedefYks:hy,gidisatHedef,yks,okul,
+    ust:O.ust,trVar:!!k.trFn,neden,trSayi:trMevcut,istikrar:istikrar(noktalar),hedef,hedefYol,aralik:ar,degisim,gidisat:gid,hedefYks:hy,gidisatHedef,yks,okul,
     dersler:dersSatirlari(k,sec.key,noktalar,ar.i,ar.j),etut,yoklama,zayif,bugun};
 }
 const liste=(bugun)=>kaynak(bugun).liste;
 
 /* ---------------- chart ---------------- */
+// Ticks from the top (the measure's maximum, always a tick) down to the first one at or below lo.
 function tikler(lo,hi,n){
-  const ham=(hi-lo||1)/n,us=10**Math.floor(Math.log10(ham)),adim=[1,2,2.5,5,10].map(k=>k*us).find(a=>a>=ham)||10*us,l=[];
-  for(let v=Math.floor(lo/adim)*adim;v<hi+adim*.999;v+=adim){l.push(Math.round(v*1e6)/1e6);if(l.length>12)break}
-  return l;
+  const ham=(hi-lo||1)/n,adim=[.5,1,2,5,10,20,50,100].find(a=>a>=ham)||100,l=[];
+  for(let v=hi;l.length<14;v-=adim){l.push(Math.round(v*1e6)/1e6);if(v-adim<lo-1e-9)break}
+  return l.reverse();
 }
 const yaziGen=t=>String(t).length*6.8+4;
 // Straight segments through the points: the reference lines never follow the Köşeli / Yumuşak setting (a curve would overshoot).
@@ -364,74 +395,71 @@ function ayir(ideal,adim,lo,hi){
   if(p.length&&p[p.length-1]>hi){p[p.length-1]=hi;for(let i=p.length-2;i>=0;i--)p[i]=Math.min(p[i],p[i+1]-adim)}
   return p;
 }
-const AY_YAZI=(g,yil)=>{const t=new Date(g*864e5);return AY[t.getUTCMonth()]+(yil?' ’'+String(t.getUTCFullYear()).slice(2):'')};
 const LABEL_H=30;
-// The chart of one student and one measure, on the real spacing of the exam dates. Every series is drawn over its own points only:
-// the student (solid, follows Köşeli / Yumuşak), the school mean (dotted), the Türkiye average (dashed; the estimated points hollow
-// and the segments to them lighter), the personal target path (orange dashed) and the şube target (thin), all with straight
-// segments. Tümü extends the axis to the YKS date and draws the gidişat and the target path to it; Son 1 ay, Son 3 ay and a dragged
-// range zoom on that range. Each line is named at the right edge of its data at its last value: a short horizontal leader from
-// the line's last point only, the labels nudged apart vertically. W is the box's real width in pixels, so the type is real pixels.
-// Returns {svg, olc, seriler} (olc is what drag-to-measure needs, seriler describes what is drawn, for the tests).
+// The chart of one student and one measure. The x-axis is the order of the exams: every exam of the measure in the range has one
+// slot of the same width, labelled under its point with its short date (every n-th when they would collide, the first and the last
+// always). Every series is drawn over its own points only, with straight segments: the student (solid), the school mean (dotted),
+// the Türkiye average (dashed; estimated points hollow and the segments to them lighter), the personal target path (orange dashed)
+// and the şube target (thin). The y-axis ends at the measure's maximum (c.ust). When the range ends at her last exam and there is a
+// YKS date, one separated column "YKS" stands after a gap: the Gidişat and the Hedef yolu values at YKS, each joined to its last
+// value by a short dashed segment; nothing runs across the months in between. Each line is named in the right margin, a horizontal
+// leader from the line's last point, the labels nudged apart vertically. W is the box's real width in pixels.
+// Returns {svg, olc, seriler, ...} (olc is what drag-to-measure needs, seriler describes what is drawn, for the tests).
 function cizim(c,W){
-  const ar=c.aralik,yakin=ar.tur!=='tumu',dar=W<520,N=c.noktalar,tum=c.tum;
-  const gunlu=N.every(p=>Number.isFinite(p.g))&&tum.every(s=>Number.isFinite(s.g)),yer=new Map(tum.map((s,i)=>[s.id,i]));
-  const pos=(id,g)=>gunlu?g:yer.get(id),nb=N[ar.i],nt=N[ar.j],lo_=pos(nb.exam,nb.g),hi_=pos(nt.exam,nt.g);
-  const gor=tum.filter(s=>{const q=pos(s.id,s.g);return !yakin||q>=lo_&&q<=hi_}),nok=N.slice(ar.i,ar.j+1);
-  const P=s=>pos(s.id,s.g),uzat=gunlu&&!yakin&&Number.isFinite(c.yks)&&!!(c.gidisat.cizgi||c.hedefYks);
+  const ar=c.aralik,yakin=ar.tur!=='tumu',dar=W<520,N=c.noktalar,tum=c.tum,UST=Number.isFinite(c.ust)&&c.ust>0?c.ust:UST_VARSAYILAN;
+  const gunlu=N.every(p=>Number.isFinite(p.g))&&tum.every(s=>Number.isFinite(s.g)),sira=new Map(tum.map((s,i)=>[s.id,i]));
+  const lo_=sira.get(N[ar.i].exam),hi_=sira.get(N[ar.j].exam);
+  const gor=tum.filter((s,i)=>!yakin||i>=lo_&&i<=hi_),nok=N.slice(ar.i,ar.j+1),G=gor.length;
+  const yer=new Map(gor.map((s,i)=>[s.id,i])),P=s=>yer.get(s.id);
+  const ykG=Number.isFinite(c.yks)&&ar.j===N.length-1?c.yks:null,gid=ykG!==null&&c.gidisat&&c.gidisat.yks?c.gidisat.yks:null,hy=ykG!==null&&c.hedefYks?c.hedefYks:null,uzat=!!(gid||hy);
+  const YKS_YER=G+1;   // slot index of the YKS column: one empty slot after the last exam
   const sade=(id,ad,renk,stil,pts,ek={})=>({id,ad,renk,stil,pts,...ek});
   let S=[];
-  if(c.hedef&&gor.length)S.push(sade('sube',c.hedef.kaynak==='sube'?'Şube hedefi':'Sınıf hedefi','var(--e-c4)','ince',[[P(gor[0]),c.hedef.deger],[P(gor[gor.length-1]),c.hedef.deger]],{yazi:f2(c.hedef.deger)}));
+  if(c.hedef&&gor.length)S.push(sade('sube',c.hedef.kaynak==='sube'?'Şube hedefi':'Sınıf hedefi','var(--e-c4)','ince',[[0,c.hedef.deger],[G-1,c.hedef.deger]],{yazi:f2(c.hedef.deger)}));
   S.push(sade('okul',dar?'Okul':'Okul ortalaması','var(--e-ref)','nokta',gor.map(s=>[P(s),s.okulOrt])));
   S.push(sade('tr',dar?'Türkiye':'Türkiye ortalaması','var(--e-muted)','kesik',gor.filter(s=>s.tr!==null&&s.tr!==undefined).map(s=>[P(s),s.tr,s.tahmini,s])));
+  const ogrPts=nok.map(p=>[yer.get(p.exam),p.net]),ogrSon=ogrPts[ogrPts.length-1];
   const hp=nok.filter(p=>p.hedefNet!==null&&p.hedefNet!==undefined);
   if(hp.length){
-    const pts=hp.map(p=>[pos(p.exam,p.g),p.hedefNet]),ek=uzat&&c.hedefYks?[c.yks,c.hedefYks.net]:null;
-    S.push(sade('hedef','Hedef yolu','var(--e-c2)','kesik',pts,{uzanti:ek,yazi:ek?'YKS’de '+fi(Math.round(ek[1]))+(dar?'':' net'):f2(pts[pts.length-1][1]),sonDeger:ek?ek[1]:pts[pts.length-1][1],sonX:ek?ek[0]:pts[pts.length-1][0],bitis:!!ek}));
+    const pts=hp.map(p=>[yer.get(p.exam),p.hedefNet]),ek=hy?[YKS_YER,hy.net]:null;
+    S.push(sade('hedef','Hedef yolu','var(--e-c2)','kesik',pts,{uzanti:ek,uzantiBas:pts[pts.length-1],yazi:ek?(dar?'':'YKS’de ')+fi(Math.round(ek[1]))+(dar?'':' net'):f2(pts[pts.length-1][1]),sonDeger:ek?ek[1]:pts[pts.length-1][1],sonX:ek?ek[0]:pts[pts.length-1][0],bitis:!!ek}));
   }
-  if(uzat&&c.gidisat.cizgi)S.push(sade('gidis','Gidişat','var(--e-c1)','gidis',c.gidisat.cizgi.map(q=>[q[0],q[1]]),{yazi:'YKS’de ~'+fi(Math.round(c.gidisat.yks.net))+(dar?'':' net'),bitis:true}));
-  S.push(sade('ogr','Öğrenci','var(--e-c1)','duz',nok.map(p=>[pos(p.exam,p.g),p.net]),{oge:nok,nokta:true,yazi:f2(nok[nok.length-1].net)}));
+  if(gid)S.push(sade('gidis','Gidişat','var(--e-c1)','gidis',[[YKS_YER,gid.net]],{uzanti:[YKS_YER,gid.net],uzantiBas:ogrSon,yazi:(dar?'':'YKS’de ')+'~'+fi(Math.round(gid.net))+(dar?'':' net'),bitis:true}));
+  S.push(sade('ogr','Öğrenci','var(--e-c1)','duz',ogrPts,{oge:nok,nokta:true,yazi:f2(nok[nok.length-1].net)}));
   S=S.filter(x=>x.pts.length);
   for(const x of S){
     const l=x.pts[x.pts.length-1];x.sonX=x.sonX!==undefined?x.sonX:l[0];x.sonDeger=x.sonDeger!==undefined?x.sonDeger:l[1];
     if(x.yazi===undefined)x.yazi=f2(x.sonDeger)+(x.id==='tr'&&l[2]?' tahmini':'');
   }
-  // Y scale over everything drawn.
-  const degerler=S.flatMap(x=>x.pts.map(q=>q[1]).concat(x.uzanti?[x.uzanti[1]]:[]));
-  const lo0=Math.min(...degerler),hi0=Math.max(...degerler),pay=Math.max(.5,(hi0-lo0)*.12),tik=tikler(lo0-pay,hi0+pay,dar?4:5),lo=tik[0],hi=tik[tik.length-1];
+  // Y scale: the top is the maximum of the measure (always a tick), the bottom just under the lowest value drawn.
+  const degerler=S.flatMap(x=>x.pts.map(q=>q[1]).concat(x.uzanti?[x.uzanti[1]]:[])),lo0=Math.min(...degerler),pay=Math.max(.5,(UST-lo0)*.08);
+  const tik=tikler(Math.min(lo0-pay,UST-1),UST,dar?4:5),lo=tik[0],hi=UST;
   const tikYazi=t=>Number.isInteger(t)?fi(t):String(t).replace('.',',');
   const L=Math.max(...tik.map(t=>yaziGen(tikYazi(t))))+8,ust=14,ph=dar?200:240,alt=ust+ph,H=alt+30;
   const genis=x=>Math.max(yaziGen(x.ad),yaziGen(x.yazi));
-  // Labels: the lines that end at the YKS date are named at the plot's right edge; the others at the right edge of the data.
-  const sagda=S.filter(x=>x.bitis),icerde=S.filter(x=>!x.bitis);
-  const kenar=uzat&&sagda.length?sagda:S,marj=Math.max(...kenar.map(genis))+(uzat?28:24);
-  const R=Math.max(L+110,W-marj);
-  const xA=Math.min(...gor.map(P)),xSon=Math.max(...gor.map(P)),xB=uzat?c.yks:xSon;
-  const ic=10,x=g=>L+ic+(xB===xA?.5:(g-xA)/(xB-xA))*(R-L-ic),y=v=>alt-(v-lo)/(hi-lo)*ph;
-  const xe=x(xSon);
+  const marj=Math.max(...S.map(genis))+24,R=Math.max(L+110,W-marj);
+  // x of a slot: the exams, then (with the YKS column) an empty slot and the YKS slot; all slots equally wide.
+  const xA=L+(dar?12:20),xB=R-(uzat?(dar?10:14):(dar?8:10)),araSayi=G-1+(uzat?2:0),adim=araSayi>0?(xB-xA)/araSayi:0;
+  const x=k=>araSayi>0?xA+k*adim:(xA+xB)/2,y=v=>alt-(Math.min(Math.max(v,lo),hi)-lo)/(hi-lo)*ph;
   for(const q of S)q.px=q.pts.map(t=>[x(t[0]),y(t[1])]);
-  const xa=s=>x(P(s));
+  const xa=s=>x(P(s)),xSon=x(G-1),xYks=x(YKS_YER),xAyrac=uzat?x(G):null;
   let svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" aria-label="Denemelere göre öğrencinin neti, okul ve Türkiye ortalaması, hedef yolu ve gidişat">';
+  if(uzat)svg+='<rect class="ok-yks-sutun" x="'+r1(xAyrac)+'" y="'+ust+'" width="'+r1(R-xAyrac)+'" height="'+ph+'"/>';
   svg+=tik.map(t=>'<line class="et-izgara" x1="'+r1(L)+'" x2="'+r1(R)+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text class="et-tik" x="'+r1(L-6)+'" y="'+r1(y(t))+'" dy="0.32em" text-anchor="end">'+tikYazi(t)+'</text>').join('');
   svg+='<line class="et-kural" x1="0" x2="0" y1="'+ust+'" y2="'+alt+'" visibility="hidden"/>';
   svg+=gor.map(e=>'<line class="et-izgara ok-sinav" x1="'+r1(xa(e))+'" x2="'+r1(xa(e))+'" y1="'+ust+'" y2="'+alt+'"/>').join('');
   svg+='<line class="et-eksen" x1="'+r1(L)+'" x2="'+r1(R)+'" y1="'+alt+'" y2="'+alt+'"/>';
-  // The date axis: the exams' dates, or month by month once the axis runs on to the YKS date.
-  if(uzat){
-    const bas=new Date(xA*864e5),aylar=[];
-    for(let a=new Date(Date.UTC(bas.getUTCFullYear(),bas.getUTCMonth()+1,1));a.getTime()/864e5<c.yks;a=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth()+1,1)))aylar.push(a);
-    const px=aylar.length>1?(x(aylar[1].getTime()/864e5)-x(aylar[0].getTime()/864e5)):99,her=Math.max(1,Math.ceil(36/px));
-    aylar.forEach((a,i)=>{
-      if(i%her)return;const g=a.getTime()/864e5,cx=x(g);if(cx>R-(dar?30:90))return;
-      svg+='<path class="et-eksen" d="M'+r1(cx)+','+alt+'v4"/><text class="et-tik" x="'+r1(cx)+'" y="'+(alt+17)+'" text-anchor="middle">'+kacis(AY_YAZI(g,a.getUTCMonth()===0))+'</text>';
-    });
-    svg+='<text class="et-tik ok-yks" x="'+r1(R)+'" y="'+(alt+17)+'" text-anchor="end">'+(dar?'YKS':'YKS · '+kacis(gunAy(c.yks)))+'</text><line class="et-izgara ok-sinav" x1="'+r1(R)+'" x2="'+r1(R)+'" y1="'+ust+'" y2="'+alt+'"/>';
-  }else{
-    let sonX=-99;const yazilan=[];
-    gor.forEach((e,i)=>{const cx=xa(e);if(cx-sonX>=48){yazilan.push(e);sonX=cx}else if(i===gor.length-1){yazilan.pop();yazilan.push(e);sonX=cx}});
-    svg+=yazilan.map(e=>'<text class="et-tik" x="'+r1(xa(e))+'" y="'+(alt+17)+'" text-anchor="middle">'+kacis(gunlu?gunAy(e.g):String(e.ad).slice(0,8))+'</text>').join('');
-  }
-  // Lines. Reference lines: straight segments over their own points; the student's follows the Köşeli / Yumuşak setting.
+  if(uzat)svg+='<line class="et-eksen ok-ayrac" x1="'+r1(xAyrac)+'" x2="'+r1(xAyrac)+'" y1="'+ust+'" y2="'+alt+'"/>';
+  // The exams' short dates under their points: every n-th when they would collide, the first and the last always.
+  const etiketler=gor.map(e=>gunlu?gunAy(e.g):String(e.ad).slice(0,8)),yksYazi=dar?'YKS':'YKS · '+kacis(gunAy(ykG||0)),yksYari=uzat?yaziGen(yksYazi)/2:0;
+  const bosluk=Math.max(...etiketler.map(yaziGen),0)+10,hepsi=gor.map((_,i)=>i),n=adim>0?Math.max(1,Math.ceil(bosluk/adim)):1;
+  let goster=hepsi.filter(i=>i%n===0);
+  if(G>1&&!goster.includes(G-1)){const son=goster[goster.length-1];if((G-1-son)*adim<bosluk&&son!==0)goster.pop();goster.push(G-1)}
+  svg+=goster.map(i=>'<text class="et-tik ok-tarih" x="'+r1(x(i))+'" y="'+(alt+17)+'" text-anchor="middle">'+kacis(etiketler[i])+'</text>').join('');
+  // The YKS label is centred under its column; when that would touch the last exam's date it starts at the column instead.
+  if(uzat){const yakin_=xYks-xSon<yksYari+yaziGen(etiketler[G-1])/2+6&&goster.includes(G-1);
+    svg+='<text class="et-tik ok-yks" x="'+r1(yakin_?xYks-4:xYks)+'" y="'+(alt+17)+'" text-anchor="'+(yakin_?'start':'middle')+'">'+yksYazi+'</text>'}
+  // Lines: straight segments over their own points (the student's too: the Köşeli / Yumuşak setting does not apply on this chart).
   const yolEl=(id,renk,sinif,d,ek='')=>d?'<path class="ok-cizgi '+sinif+'" data-ok="'+id+'" style="stroke:'+renk+'" d="'+d+'"'+ek+'/>':'';
   for(const q of S){
     if(q.id==='ogr')continue;
@@ -442,30 +470,32 @@ function cizim(c,W){
       svg+=q.pts.map((t,i)=>t[2]?'<circle class="ok-nokta bos" data-ok="tr" cx="'+r1(q.px[i][0])+'" cy="'+r1(q.px[i][1])+'" r="3.5" style="stroke:'+q.renk+'"><title>'+kacis(t[3].ad+' · tahmini Türkiye ortalaması (okul ortalamasından) '+f2(t[1])+' net')+'</title></circle>':'').join('');
       continue;
     }
-    svg+=yolEl(q.id,q.renk,q.stil,dogru(q.px));
-    if(q.uzanti){q.uzantiPx=[q.px[q.px.length-1],[x(q.uzanti[0]),y(q.uzanti[1])]];svg+=yolEl(q.id,q.renk,q.stil+' soluk',dogru(q.uzantiPx),' data-gelecek="1"')}
+    if(q.id!=='gidis')svg+=yolEl(q.id,q.renk,q.stil,dogru(q.px));
+    if(q.uzanti){
+      const bas=q.id==='gidis'?[x(q.uzantiBas[0]),y(q.uzantiBas[1])]:q.px[q.px.length-1];
+      q.uzantiPx=[bas,[x(q.uzanti[0]),y(q.uzanti[1])]];svg+=yolEl(q.id,q.renk,q.id==='gidis'?q.stil:q.stil+' soluk',dogru(q.uzantiPx),' data-gelecek="1"');
+    }
   }
   const ogr=S.find(q=>q.id==='ogr');
-  svg+=yolEl('ogr',ogr.renk,'duz',ogr.px.length>1?GRAFIK_CIZGI.yol(ogr.px):'');
+  svg+=yolEl('ogr',ogr.renk,'duz',dogru(ogr.px));
   svg+=ogr.px.map((q,i)=>'<circle class="ok-nokta" data-ok="ogr" cx="'+r1(q[0])+'" cy="'+r1(q[1])+'" r="4" style="fill:'+ogr.renk+'"><title>'+kacis(ogr.oge[i].ad+' · '+f2(ogr.pts[i][1])+' net · okulda '+fi(ogr.oge[i].sira)+'. / '+fi(ogr.oge[i].n)+(ogr.oge[i].tahmini?' · tahmini Türkiye ortalaması':''))+'</title></circle>').join('');
-  // Direct labels: name above, value below, at the right edge. A horizontal leader runs from a line's last point to its label.
-  const yaz=(grup,sx)=>{if(!grup.length)return;
-    const blok=grup.map(q=>({q,ideal:y(q.sonDeger)})).sort((a,b)=>a.ideal-b.ideal),yy=ayir(blok.map(b=>b.ideal),LABEL_H,ust+LABEL_H/2,alt-LABEL_H/2-2);
-    blok.forEach((b,i)=>{
-      const q=b.q,cy=yy[i],lx=x(q.sonX),bx=sx+9;
-      q.etiket={x:r1(sx+22),y:r1(cy),ideal:r1(b.ideal)};
-      if(bx-lx>6&&!q.bitis){q.bag={x1:r1(lx+5),x2:r1(bx-2),y:r1(b.ideal)};svg+='<line class="ok-bag" data-ok="'+q.id+'" style="stroke:'+q.renk+'" x1="'+q.bag.x1+'" y1="'+q.bag.y+'" x2="'+q.bag.x2+'" y2="'+q.bag.y+'"/>'}
-      svg+='<g class="ok-etiket" data-ok="'+q.id+'"><line x1="'+r1(sx+9)+'" x2="'+r1(sx+19)+'" y1="'+r1(cy)+'" y2="'+r1(cy)+'" style="stroke:'+q.renk+';stroke-width:2.5'+(q.stil==='kesik'||q.stil==='gidis'?';stroke-dasharray:3 2':q.stil==='nokta'?';stroke-dasharray:1 3;stroke-linecap:round':'')+'"/>'+
-        '<text class="ok-ad" x="'+r1(sx+24)+'" y="'+r1(cy-7)+'" dy="0.32em">'+kacis(q.ad)+'</text><text class="et-tik" x="'+r1(sx+24)+'" y="'+r1(cy+7)+'" dy="0.32em">'+kacis(q.yazi)+'</text></g>';
-    });
-  };
-  if(uzat){yaz(sagda,R);yaz(icerde,xe)}else yaz(S,R);
+  // The YKS end markers, one per line.
+  for(const q of S)if(q.bitis)svg+='<circle class="ok-yks-nokta" data-ok="'+q.id+'" cx="'+r1(x(q.uzanti[0]))+'" cy="'+r1(y(q.uzanti[1]))+'" r="5" style="fill:'+q.renk+'"><title>'+kacis(q.ad+' · '+q.yazi)+'</title></circle>';
+  // Direct labels in the right margin: name above, value below. A horizontal leader runs from a line's last point to its label.
+  const blok=S.map(q=>({q,ideal:y(q.sonDeger)})).sort((a,b)=>a.ideal-b.ideal),yy=ayir(blok.map(b=>b.ideal),LABEL_H,ust+LABEL_H/2,alt-LABEL_H/2-2),sx=R;
+  blok.forEach((b,i)=>{
+    const q=b.q,cy=yy[i],lx=x(q.sonX),bx=sx+9;
+    q.etiket={x:r1(sx+22),y:r1(cy),ideal:r1(b.ideal)};
+    if(bx-lx>6&&!q.bitis&&!uzat){q.bag={x1:r1(lx+5),x2:r1(bx-2),y:r1(b.ideal)};svg+='<line class="ok-bag" data-ok="'+q.id+'" style="stroke:'+q.renk+'" x1="'+q.bag.x1+'" y1="'+q.bag.y+'" x2="'+q.bag.x2+'" y2="'+q.bag.y+'"/>'}
+    svg+='<g class="ok-etiket" data-ok="'+q.id+'"><line x1="'+r1(sx+9)+'" x2="'+r1(sx+19)+'" y1="'+r1(cy)+'" y2="'+r1(cy)+'" style="stroke:'+q.renk+';stroke-width:2.5'+(q.stil==='kesik'||q.stil==='gidis'?';stroke-dasharray:3 2':q.stil==='nokta'?';stroke-dasharray:1 3;stroke-linecap:round':'')+'"/>'+
+      '<text class="ok-ad" x="'+r1(sx+24)+'" y="'+r1(cy-7)+'" dy="0.32em">'+kacis(q.ad)+'</text><text class="et-tik" x="'+r1(sx+24)+'" y="'+r1(cy+7)+'" dy="0.32em">'+kacis(q.yazi)+'</text></g>';
+  });
   svg+='</svg>';
   // What drag-to-measure needs: the exams on the chart, the student's net at each (null: she did not sit it).
   const ogrYer=new Map(nok.map((p,i)=>[p.exam,i]));
   const olc={ids:gor.map(e=>e.id),xs:gor.map(xa),deger:gor.map(e=>ogrYer.has(e.id)?nok[ogrYer.get(e.id)].net:null),ys:gor.map(e=>ogrYer.has(e.id)?r1(ogr.px[ogrYer.get(e.id)][1]):null),
-    donem:gor.map(P),etiket:gor.map(e=>gunlu?gunAy(e.g):String(e.ad).slice(0,8))};
-  return {svg,olc,W,H,L,R,ust,alt,uzat,seriler:S.map(q=>({id:q.id,ad:q.ad,yazi:q.yazi,pts:q.px.map(t=>[r1(t[0]),r1(t[1])]),uzanti:q.uzantiPx?q.uzantiPx.map(t=>[r1(t[0]),r1(t[1])]):null,etiket:q.etiket||null,bag:q.bag||null,tahmini:q.id==='tr'?q.pts.map(t=>!!t[2]):null}))};
+    donem:gor.map((e,i)=>gunlu?e.g:i),etiket:etiketler};
+  return {svg,olc,W,H,L,R,ust,alt,uzat,adim,ustDeger:UST,tikler:tik,tarihler:goster,ykX:uzat?xYks:null,ayrac:xAyrac,seriler:S.map(q=>({id:q.id,ad:q.ad,yazi:q.yazi,pts:q.px.map(t=>[r1(t[0]),r1(t[1])]),uzanti:q.uzantiPx?q.uzantiPx.map(t=>[r1(t[0]),r1(t[1])]):null,etiket:q.etiket||null,bag:q.bag||null,tahmini:q.id==='tr'?q.pts.map(t=>!!t[2]):null}))};
 }
 const grafikSvg=(c,W)=>cizim(c,W).svg;
 let ZAMAN=null;
@@ -554,9 +584,9 @@ function kartlar(c){
 function notlar(c){
   const l=[],g=c.gidisat,gh=c.gidisatHedef,yks=v=>'YKS’de ~'+fi(Math.round(v))+' net';
   if(g.yks){
+    l.push('Gidişat · '+yks(g.yks.net)+(g.dalgalanir?'<span class="mini"> · aralığında dalgalanıyor (≈ '+fi(Math.round(g.aralik.min))+'–'+fi(Math.round(g.aralik.max))+')</span>':''));
     if(gh.fark!==null)l.push((Math.abs(gh.fark)<.05?'Gidişat hedefle aynı yerde':'Gidişat hedefin '+f1(Math.abs(gh.fark))+' net '+(gh.fark<0?'altında':'üstünde'))+
-      '<span class="mini"> · gidişat '+yks(gh.gidisat)+', hedef yolu YKS’de '+fi(Math.round(gh.hedef))+' net</span>');
-    else l.push('Gidişat '+yks(g.yks.net));
+      '<span class="mini"> · hedef yolu YKS’de '+fi(Math.round(gh.hedef))+' net</span>');
   }else if(!g.var&&c.trSayi>0)l.push('Gidişat için Türkiye ortalamalı en az '+GIDISAT_EN_AZ+' deneme gerekli');
   if(c.okul)l.push(okulSurprizYazisi(c.okul));
   return l.length?'<ul class="ok-notlar" id="okNotlar">'+l.map(t=>'<li>'+t+'</li>').join('')+'</ul>':'';
@@ -663,7 +693,7 @@ if(typeof document!=='undefined'&&document.addEventListener){
     setTimeout(()=>{if(etkin()){EK.okAralik={bas,bit};yenidenCiz()}},0);
   },true);
 }
-return {OLCULER,ISTIKRAR_ETIKETLERI,turet,istikrar,seriler,karsilastirmaNeti,etutOzeti,devamsizlik,zayifKonular,hedefAl,kaynak,kart,liste,icerik,gorunum,ac,adDugmesi,grafikSvg,cizim,grafikleriCiz,imzaAl,okulSurprizleri,okulSurprizi,okulSurprizYazisi,gidisat,hedefYks,aralikSec,dersSatirlari,medyan,yksGunu,
+return {OLCULER,ISTIKRAR_ETIKETLERI,turet,istikrar,seriler,karsilastirmaNeti,etutOzeti,devamsizlik,zayifKonular,hedefAl,kaynak,kart,liste,icerik,gorunum,ac,adDugmesi,grafikSvg,cizim,grafikleriCiz,imzaAl,okulSurprizleri,okulSurprizi,okulSurprizYazisi,gidisat,hedefYks,kalanSinav,DENEME_ARALIGI_GUN,aralikSec,dersSatirlari,medyan,yksGunu,
   get onbellek(){return ONBELLEK}};
 })();
 function gorunumOgrenciKarti(){return ANALIZ.gorunum()}

@@ -156,8 +156,27 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    assert.deepEqual(await page.locator('[data-ok-aralik]').allInnerTexts(),['Son 1 ay','Son 3 ay','Tümü']);
    assert.equal(await page.locator('[data-ok-aralik="tumu"]').getAttribute('aria-pressed'),'true','Tümü is the default');
    let gr=await grafikDenetle('Tümü');assert(gr.etiket.includes('Gidişat'),'the trend runs to the YKS date');
-   assert.match(await page.locator('#okGrafik .et-tik.ok-yks').textContent(),/^YKS/);
-   assert.match(await page.locator('#okNotlar').innerText(),/^Gidişat hedefin [\d,]+ net (altında|üstünde)[\s\S]*Okul ortalaması 27-YKS-1205 denemesinde Türkiye’ye göre her zamankinden [▲▼][\d,]+ net (iyi|kötü)$/);
+   assert.match(await page.locator('#okGrafik .et-tik.ok-yks').textContent(),width<520?/^YKS$/:/^YKS · 19 Haz$/);
+   assert.match(await page.locator('#okNotlar').innerText(),/^Gidişat · YKS’de ~\d+ net[\s\S]*\nGidişat hedefin [\d,]+ net (altında|üstünde) · hedef yolu YKS’de \d+ net\nOkul ortalaması 27-YKS-1205 denemesinde Türkiye’ye göre her zamankinden [▲▼][\d,]+ net (iyi|kötü)$/);
+   // The x-axis is the order of the exams: the six exams (a week apart) are equally spaced, each dated under its point; the YKS is one separate column after a gap.
+   const geo=await page.evaluate(()=>{
+    const svg=document.querySelector('#okGrafik .et-grafik svg'),c=e=>{const b=e.getBoundingClientRect();return b.left+b.width/2},sr=svg.getBoundingClientRect();
+    const ogr=[...svg.querySelectorAll('circle.ok-nokta[data-ok="ogr"]')].map(c),yks=[...svg.querySelectorAll('circle.ok-yks-nokta')].map(c);
+    const axis=[...svg.querySelectorAll('line.et-eksen:not(.ok-ayrac)')],R=Math.max(...axis.map(a=>a.getBoundingClientRect().right));
+    const ticks=[...svg.querySelectorAll('text.et-tik:not(.ok-tarih):not(.ok-yks)')].filter(t=>/^\d+$/.test(t.textContent)&&t.getAttribute('text-anchor')==='end').map(t=>({t:Number(t.textContent),y:t.getBoundingClientRect().top}));
+    const gridTop=Math.min(...[...svg.querySelectorAll('line.et-izgara:not(.ok-sinav)')].map(l=>l.getBoundingClientRect().top)),son=ogr[ogr.length-1];
+    // Past her last exam only the YKS column may hold anything but the margin labels: lines over data end at her last exam.
+    const veri=[...svg.querySelectorAll('path.ok-cizgi:not([data-gelecek]),circle.ok-nokta')].map(e=>e.getBoundingClientRect().right);
+    const dates=[...svg.querySelectorAll('text.ok-tarih')].map(t=>t.textContent);
+    return {ogr,yks,R,ticks,top:Math.max(...ticks.map(t=>t.t)),topY:Math.min(...ticks.map(t=>t.y)),gridTop,veriSag:Math.max(...veri),son,dates,ayrac:svg.querySelector('line.ok-ayrac')?.getBoundingClientRect().left,sutun:!!svg.querySelector('rect.ok-yks-sutun'),sr:sr.right};
+   });
+   assert.equal(geo.ogr.length,6);const fark=geo.ogr.slice(1).map((x,i)=>x-geo.ogr[i]);assert(Math.max(...fark)-Math.min(...fark)<=0.5,'equally spaced exams: '+fark);
+   assert.equal(geo.yks.length,2,'two end markers in the YKS column');assert(geo.yks.every(x=>Math.abs(x-geo.yks[0])<=0.5),'both at the same x');
+   assert(Math.abs(geo.yks[0]-geo.son-2*fark[0])<=1,'the YKS column is two slots after the last exam');assert(geo.ayrac>geo.son&&geo.ayrac<geo.yks[0],'a divider in the gap');assert(geo.sutun);
+   assert(geo.veriSag<=geo.son+6,'no data line runs past her last exam (only the two short dashed segments do)');assert(geo.yks[0]<=geo.R,'the column is inside the plot');
+   assert.equal(geo.top,120,'the top tick is the maximum');assert(Math.abs(geo.topY-geo.gridTop)<=8,'and it is at the top of the plot');
+   assert.deepEqual(geo.dates.slice(-1),['29 Eki'],'the last exam is always dated: '+geo.dates);if(width>=1280)assert.deepEqual(geo.dates,['24 Eyl','1 Eki','8 Eki','15 Eki','22 Eki','29 Eki']);
+   assert.equal(await page.locator('#okGrafik svg path.ok-cizgi[data-gelecek]').count(),2,'one short dashed segment per end marker');
    // Son 1 ay: the earliest exam within a month of the latest (1 Ekim) → the latest; the lesson table and the change card follow.
    await page.locator('[data-ok-aralik="1ay"]').click();await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});
    assert.equal(await page.locator('[data-ok-aralik="1ay"]').getAttribute('aria-pressed'),'true');
@@ -165,7 +184,7 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    assert.match(await page.locator('#okDersler .et-kart-bas .mini').innerText(),/^ders neti · 1 Eki → 29 Eki · 5 deneme$/);
    const hucreler=()=>page.evaluate(()=>[...document.querySelector('#okDersler tbody tr').children].filter(c=>getComputedStyle(c).display!=='none').map(c=>c.textContent));
    assert.deepEqual(await hucreler(),width<640?['Türkçe','26,00','31,00','▲5,00','—']:['Türkçe','26,00','31,00','▲5,00','▲1,25','—'],'Başta, Sonda, Değişim, Deneme başına (not on a phone), Türkiye’ye göre (son)');
-   gr=await grafikDenetle('Son 1 ay');assert(!gr.etiket.includes('Gidişat'),'zoomed on the range: no run to the YKS date');
+   gr=await grafikDenetle('Son 1 ay');assert(gr.etiket.includes('Gidişat'),'a range that ends at her last exam keeps the YKS column');
    await page.locator('#okGrafik').screenshot({path:path.join(out,'ogrencikarti-grafik-1ay-'+width+'.png')});
    await page.locator('[data-ok-aralik="3ay"]').click();await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});
    assert.match(await page.locator('#okKartlar .et-ozet-kart').nth(5).innerText(),/^Aralıkta değişim · 24 Eyl → 29 Eki[\s\S]*6 deneme/);
