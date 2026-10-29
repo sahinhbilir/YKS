@@ -45,6 +45,8 @@ jobs:
         run: node scripts/embed-etutetkisi.cjs --check && node test/etutetkisi-regression.cjs
       - name: Konu Takibi cumulative evidence, import and embedding
         run: node scripts/embed-konutakibi.cjs --check && node test/konutakibi-regression.cjs
+      - name: Gemini reading of other files, checks, fallback and embedding
+        run: node scripts/embed-yapayzeka.cjs --check && node test/yapayzeka-regression.cjs
       - name: Cross-page consistency
         run: node test/tutarlilik-regression.cjs
       - name: Role regression
@@ -160,6 +162,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/toplu-ogrenci-browser.cjs
       - name: Sıralamalar ranking, exam date and the student's view on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/student-view-browser.cjs
+      - name: Gemini reading of timetables, results and paper plans on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/yapayzeka-browser.cjs
       - name: Keep synthetic review screenshots
         if: always()
         uses: actions/upload-artifact@v4
