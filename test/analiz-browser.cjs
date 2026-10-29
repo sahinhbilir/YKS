@@ -48,8 +48,8 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    await page.clock.setFixedTime(new Date('2026-11-05T18:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
-   // The stored lists are built in the page from plain values.
-   const veri={sir:siralama(s=>String(s||'').normalize('NFKC').toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim()),raporlar:ADLAR.map((_,e)=>rapor(e)),etut:etutSatir,yoklama,konu:konuRapor,
+   // The stored lists are built in the page from plain values. The latest exam (29 Ekim) has no Türkiye list.
+   const veri={sir:siralama(s=>String(s||'').normalize('NFKC').toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim()),raporlar:ADLAR.slice(0,5).map((_,e)=>rapor(e)),etut:etutSatir,yoklama,konu:konuRapor,
      zo:zpart('ozet',konuRapor.ad),zm:zpart('madde',konuRapor.ad)};
    await page.evaluate(async d=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-11-05';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};kaydet=async()=>true;
@@ -72,13 +72,17 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    assert.equal(await page.locator('#okAd').innerText(),'Sentetik Ada');
    assert.match(await page.locator('#okKimlik').innerText(),/^12\/A · Alan: SAY · No 1001 · 6 TYT denemesi$/);
    assert.equal(await page.locator('#ray .menu-grup button[data-sekme="ogrenciler"][aria-current="page"]').count(),1,'Öğrenciler marks where the card opens from');
-   // The five figure cards, each with a label that explains its number.
+   // The figure cards, each with a label that explains its number.
    const kartlar=await page.locator('#okKartlar .et-ozet-kart').evaluateAll(l=>l.map(k=>({ad:k.querySelector('.mini').textContent,deger:k.querySelector('strong').textContent,alt:k.querySelector('.et-ozet-alt').textContent})));
-   assert.deepEqual(kartlar.map(k=>k.ad),['Son TYT neti','Türkiye’ye göre','Beklenenden','İstikrar','Şube hedefi · 12-A']);
+   assert.deepEqual(kartlar.map(k=>k.ad),['Son TYT neti','Türkiye’ye göre','Beklenenden','İstikrar','Hedef · son deneme','Aralıkta değişim · 24 Eyl → 29 Eki','Şube hedefi · 12-A']);
    assert.match(kartlar[0].deger,/^\d+,\d\d$/);assert.match(kartlar[0].alt,/^Okulda \d+\. \/ \d+ öğrenci$/);
-   assert.match(kartlar[1].deger,/^[▲▼]\d+,\d\d net$/);assert.match(kartlar[1].alt,/^Türkiye ortalaması \d+,\d\d net$/);
-   assert.match(kartlar[2].deger,/^[▲▼]\d+,\d\d net$/);assert.equal(kartlar[2].alt,'Türkiye ortalamasına göre her zamanki yerinden');
-   assert.match(kartlar[3].alt,/^± \d+,\d\d net · son 6 deneme$/);assert.match(kartlar[4].deger,/^75,00 net$/);assert.match(kartlar[4].alt,/^Son net hedefin \d+,\d\d net (altında|üstünde)$/);
+   // The latest exam has no Türkiye list: the cards use the tahmini Türkiye ortalaması and say so.
+   assert.match(kartlar[1].deger,/^[▲▼]\d+,\d\d net$/);assert.match(kartlar[1].alt,/^tahmini Türkiye ortalaması \(okul ortalamasından\) \d+,\d\d net$/);
+   assert.match(kartlar[2].deger,/^[▲▼]\d+,\d\d net$/);assert.equal(kartlar[2].alt,'tahmini Türkiye ortalamasına göre her zamanki yerinden');
+   assert.match(kartlar[3].alt,/^± \d+,\d\d net · son 6 deneme$/);
+   assert.match(kartlar[4].deger,/^\d+,\d\d net$/);assert.match(kartlar[4].alt,/^tahmini Türkiye [+−]\d+,\d\d · [▲▼]\d+,\d\d net hedefin (altında|üstünde)$/);
+   assert.match(kartlar[5].deger,/^[▲▼]\d+,\d\d net$/);assert.match(kartlar[5].alt,/^6 deneme · deneme başına [▲▼]\d+,\d\d$/);
+   assert.match(kartlar[6].deger,/^75,00 net$/);assert.match(kartlar[6].alt,/^Son net hedefin \d+,\d\d net (altında|üstünde)$/);
    const yazi=await page.locator('#okKok').innerText();assert(!/Nasıl okunur|Gözlem|\bham\b|\(%95\)/i.test(yazi),'no manual words');
    // The sections, in order.
    const sira=await page.evaluate(()=>['okAd','okKartlar','okGrafik','okDersler','okZayif','okEtut','okDevam'].map(id=>document.getElementById(id).getBoundingClientRect().top+scrollY));
@@ -86,14 +90,15 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    // The chart is drawn at the box's real width; lines are named at their right ends, none overlaps, nothing leaves the box.
    const g=await page.evaluate(()=>{
     const kutu=document.querySelector('#okGrafik .et-grafik'),svg=kutu.querySelector('svg'),s=svg.getBoundingClientRect(),k=kutu.getBoundingClientRect();
-    const yazilar=[...svg.querySelectorAll('text.ok-ad')].map(t=>{const r=t.getBoundingClientRect();return {t:t.textContent,top:r.top,bottom:r.bottom,right:r.right,font:parseFloat(getComputedStyle(t).fontSize)}});
+    const yazilar=[...svg.querySelectorAll('text.ok-ad')].map(t=>{const r=t.getBoundingClientRect();return {t:t.textContent,top:r.top,bottom:r.bottom,left:r.left,right:r.right,font:parseFloat(getComputedStyle(t).fontSize)}});
     const tum=[...svg.querySelectorAll('text')].map(t=>parseFloat(getComputedStyle(t).fontSize));
-    return {w:s.width,attr:Number(svg.getAttribute('width')),kw:kutu.clientWidth,kutuSag:k.right,yollar:svg.querySelectorAll('path.ok-cizgi').length,noktalar:svg.querySelectorAll('circle.ok-nokta').length,yazilar,enKucuk:Math.min(...tum)};
+    return {w:s.width,attr:Number(svg.getAttribute('width')),kw:kutu.clientWidth,kutuSag:k.right,yollar:svg.querySelectorAll('path.ok-cizgi').length,noktalar:svg.querySelectorAll('circle.ok-nokta:not(.bos)').length,bos:svg.querySelectorAll('circle.ok-nokta.bos').length,yazilar,enKucuk:Math.min(...tum)};
    });
    assert(Math.abs(g.w-g.kw)<=1&&g.attr===g.kw,'drawn at the real width '+JSON.stringify([g.w,g.attr,g.kw]));
-   assert.equal(g.yollar,4,'student, school mean, Türkiye average, target');assert.equal(g.noktalar,6);assert(g.enKucuk>=12,'type is real pixels: '+g.enKucuk);
-   assert.deepEqual(g.yazilar.map(y=>y.t).sort(),['Hedef','Okul ortalaması','Türkiye ortalaması','Öğrenci'].sort());
-   const srl=[...g.yazilar].sort((a,b)=>a.top-b.top);for(let i=1;i<srl.length;i++)assert(srl[i].top>=srl[i-1].top+12,'labels overlap: '+srl.map(y=>y.t+':'+y.top));
+   assert.equal(g.noktalar,6);assert.equal(g.bos,1,'the one estimated Türkiye point is hollow');assert(g.enKucuk>=12,'type is real pixels: '+g.enKucuk);
+   assert.deepEqual(g.yazilar.map(y=>y.t).sort(),(width<520?['Gidişat','Hedef yolu','Okul','Türkiye','Öğrenci','Şube hedefi']:['Gidişat','Hedef yolu','Okul ortalaması','Türkiye ortalaması','Öğrenci','Şube hedefi']).sort());
+   // Labels in one column (the YKS end, the end of the data) stand apart; a label's block is its name and value, 28 px.
+   for(const x of new Set(g.yazilar.map(y=>Math.round(y.left)))){const srl=g.yazilar.filter(y=>Math.round(y.left)===x).sort((a,b)=>a.top-b.top);for(let i=1;i<srl.length;i++)assert(srl[i].top>=srl[i-1].top+27,'labels overlap: '+srl.map(y=>y.t+':'+y.top))}
    assert(g.yazilar.every(y=>y.right<=g.kutuSag+1),'labels stay inside the box: '+g.yazilar.map(y=>y.right)+' / '+g.kutuSag);
    // Tables: every numeric header ends where its numbers end.
    for(const id of ['okDersler','okZayif','okEtut']){
@@ -104,7 +109,7 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
     assert(sonuc.every(c=>c.n),id+' header and row have the same columns');assert(sonuc.filter(c=>c.sayi).length>=1,id+' has numeric columns');
     for(const c of sonuc.filter(c=>c.sayi)){assert(Math.abs(c.thSag-c.tdSag)<=2,id+' · '+c.ad+': header right '+c.thSag+' vs numbers '+c.tdSag);assert.equal(c.thAlign,'right');assert.equal(c.tdAlign,'right')}
    }
-   assert.deepEqual(await page.locator('#okDersler thead th').allTextContents(),['Ders','Son net','Önceki net','Değişim (net)','Türkiye’ye göre (net)']);
+   assert.deepEqual(await page.locator('#okDersler thead th').allTextContents(),['Ders','Başta','Sonda','Değişim','Deneme başına','Türkiye’ye göre (son)']);
    assert.equal(await page.locator('#okDersler tbody tr').count(),10);
    assert.deepEqual(await page.locator('#okZayif thead th').allTextContents(),['Konu','Zorluğa göre (soru)','Son deneme (%)']);
    const zayif=await page.locator('#okZayif tbody tr .ok-konu').allInnerTexts();assert(zayif.length>=2&&zayif.length<=5&&zayif.some(t=>/Üslü İfadeler/.test(t)),zayif.join('|'));
@@ -127,9 +132,60 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    await page.waitForFunction(()=>/Son AYT · SAY neti/.test(document.getElementById('okKartlar').textContent));
    await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});
    assert.equal(await page.locator('[data-ok-oturum="AYT:SAY"]').getAttribute('aria-pressed'),'true');
-   assert.equal(await page.locator('#okGrafik svg circle.ok-nokta').count(),3);
+   assert.equal(await page.locator('#okGrafik svg circle.ok-nokta:not(.bos)').count(),3);
    await page.locator('[data-ok-oturum="TYT"]').click();
    await page.waitForFunction(()=>/Son TYT neti/.test(document.getElementById('okKartlar').textContent));
+   await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});
+   // The chart: nothing outside the box, every leader horizontal and no vertical tick, and every line over its own points only.
+   const grafikDenetle=async ad=>{
+    const r=await page.evaluate(()=>{
+     const kutu=document.querySelector('#okGrafik .et-grafik'),svg=kutu.querySelector('svg'),sr=svg.getBoundingClientRect(),kr=kutu.getBoundingClientRect();
+     const disarida=[...svg.querySelectorAll('*')].filter(e=>!e.closest('defs')&&!e.matches('line.et-kural')).filter(e=>{const b=e.getBoundingClientRect();return b.width+b.height>0&&(b.left<sr.left-1||b.right>sr.right+1||b.top<sr.top-1||b.bottom>sr.bottom+1)}).map(e=>e.tagName+'.'+e.getAttribute('class'));
+     const bag=[...svg.querySelectorAll('line.ok-bag')].map(l=>[l.getAttribute('y1')===l.getAttribute('y2'),l.getAttribute('x1')!==l.getAttribute('x2')]);
+     const dikey=[...svg.querySelectorAll('.ok-etiket line,line.ok-bag')].filter(l=>l.getAttribute('x1')===l.getAttribute('x2')).length;
+     const yazilar=[...svg.querySelectorAll('text')].map(t=>t.getBoundingClientRect().right);
+     const cx=[...svg.querySelectorAll('circle.ok-nokta:not(.bos)')].map(c=>c.getBoundingClientRect().left+c.getBoundingClientRect().width/2);
+     const kutuAra=id=>{const l=[...svg.querySelectorAll('path[data-ok="'+id+'"]:not([data-gelecek]):not([data-tahmini])')].map(p=>p.getBoundingClientRect());return l.length?[Math.min(...l.map(b=>b.left)),Math.max(...l.map(b=>b.right))]:null};
+     return {disarida,bag,dikey,sag:Math.max(...yazilar)<=kr.right+1,cx:[Math.min(...cx),Math.max(...cx)],okul:kutuAra('okul'),ogr:kutuAra('ogr'),tr:kutuAra('tr'),hedef:kutuAra('hedef'),
+      etiket:[...svg.querySelectorAll('text.ok-ad')].map(t=>t.textContent)};
+    });
+    assert.deepEqual(r.disarida,[],ad+': nothing outside the chart box');assert(r.bag.every(([a,b])=>a&&b),ad+': leaders are horizontal');assert.equal(r.dikey,0,ad+': no vertical ticks on the labels');assert(r.sag,ad+': labels stay inside the box');
+    for(const k of ['okul','ogr','hedef'])assert(r[k]&&r[k][0]>=r.cx[0]-3&&r[k][1]<=r.cx[1]+3,ad+': '+k+' is drawn over its own points only '+JSON.stringify([r[k],r.cx]));
+    return r;
+   };
+   assert.deepEqual(await page.locator('[data-ok-aralik]').allInnerTexts(),['Son 1 ay','Son 3 ay','Tümü']);
+   assert.equal(await page.locator('[data-ok-aralik="tumu"]').getAttribute('aria-pressed'),'true','Tümü is the default');
+   let gr=await grafikDenetle('Tümü');assert(gr.etiket.includes('Gidişat'),'the trend runs to the YKS date');
+   assert.match(await page.locator('#okGrafik .et-tik.ok-yks').textContent(),/^YKS/);
+   assert.match(await page.locator('#okNotlar').innerText(),/^Gidişat hedefin [\d,]+ net (altında|üstünde)[\s\S]*Okul ortalaması 27-YKS-1205 denemesinde Türkiye’ye göre her zamankinden [▲▼][\d,]+ net (iyi|kötü)$/);
+   // Son 1 ay: the earliest exam within a month of the latest (1 Ekim) → the latest; the lesson table and the change card follow.
+   await page.locator('[data-ok-aralik="1ay"]').click();await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});
+   assert.equal(await page.locator('[data-ok-aralik="1ay"]').getAttribute('aria-pressed'),'true');
+   assert.match(await page.locator('#okKartlar .et-ozet-kart').nth(5).innerText(),/^Aralıkta değişim · 1 Eki → 29 Eki\n[▲▼]\d+,\d\d net\n5 deneme · deneme başına [▲▼]\d+,\d\d$/);
+   assert.match(await page.locator('#okDersler .et-kart-bas .mini').innerText(),/^ders neti · 1 Eki → 29 Eki · 5 deneme$/);
+   const hucreler=()=>page.evaluate(()=>[...document.querySelector('#okDersler tbody tr').children].filter(c=>getComputedStyle(c).display!=='none').map(c=>c.textContent));
+   assert.deepEqual(await hucreler(),width<640?['Türkçe','26,00','31,00','▲5,00','—']:['Türkçe','26,00','31,00','▲5,00','▲1,25','—'],'Başta, Sonda, Değişim, Deneme başına (not on a phone), Türkiye’ye göre (son)');
+   gr=await grafikDenetle('Son 1 ay');assert(!gr.etiket.includes('Gidişat'),'zoomed on the range: no run to the YKS date');
+   await page.locator('#okGrafik').screenshot({path:path.join(out,'ogrencikarti-grafik-1ay-'+width+'.png')});
+   await page.locator('[data-ok-aralik="3ay"]').click();await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});
+   assert.match(await page.locator('#okKartlar .et-ozet-kart').nth(5).innerText(),/^Aralıkta değişim · 24 Eyl → 29 Eki[\s\S]*6 deneme/);
+   // Dragging on the chart measures and, on release, becomes the range: 1 Ekim → 15 Ekim (the second to the fourth exam).
+   await page.locator('[data-ok-aralik="tumu"]').click();await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});
+   const nokta=i=>page.evaluate(i=>{const c=document.querySelectorAll('#okGrafik svg circle.ok-nokta:not(.bos)')[i].getBoundingClientRect();return {x:c.left+c.width/2,y:c.top+c.height/2}},i);
+   await page.locator('#okGrafik').scrollIntoViewIfNeeded();
+   const a=await nokta(1),b=await nokta(3);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});
+   assert.match((await page.locator('#okGrafik .olc-yazi').innerText()).replace(/\s+/g,' '),/^Öğrenci · 1 Eki → 15 Eki · [\d,]+ → [\d,]+ net [▲▼]/);
+   assert.equal(await page.locator('#okGrafik .olc-ortu').count(),1,'the range is shaded while measuring');
+   await page.mouse.up();
+   await page.waitForFunction(()=>/1 Eki → 15 Eki/.test(document.getElementById('okKartlar').textContent));
+   assert.equal(await page.locator('[data-ok-aralik][aria-pressed="true"]').count(),1);assert.equal(await page.locator('[data-ok-aralik="sec"]').innerText(),'1 Eki → 15 Eki');
+   assert.match(await page.locator('#okKartlar .et-ozet-kart').nth(5).innerText(),/^Aralıkta değişim · 1 Eki → 15 Eki[\s\S]*3 deneme · deneme başına/);
+   assert.deepEqual((await hucreler()).slice(0,4),['Türkçe','26,00','28,00','▲2,00']);
+   await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});gr=await grafikDenetle('dragged range');assert(!gr.etiket.includes('Gidişat'));
+   assert.equal(await page.locator('#okGrafik .olc-ortu').count(),0,'nothing left over from measuring');
+   // Another student: the dragged range is dropped, the presets stay.
+   await page.locator('[data-ok-aralik="tumu"]').click();await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});
+   assert.equal(await page.locator('[data-ok-aralik="sec"]').count(),0);
    await page.waitForSelector('#okGrafik svg path.ok-cizgi',{state:'attached'});
    // No page scrolls sideways; no panel overflows; tables fit their boxes.
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no sideways scrolling');
@@ -139,6 +195,7 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    // A resize redraws the chart at the new width.
    if(width===1280){await page.setViewportSize({width:900,height:950});await page.waitForFunction(()=>{const k=document.querySelector('#okGrafik .et-grafik');return Number(k.querySelector('svg').getAttribute('width'))===k.clientWidth});await page.setViewportSize({width:1280,height:950});await page.waitForFunction(()=>{const k=document.querySelector('#okGrafik .et-grafik');return Number(k.querySelector('svg').getAttribute('width'))===k.clientWidth})}
    await page.evaluate(()=>scrollTo(0,0));
+   await page.locator('#okGrafik').screenshot({path:path.join(out,'ogrencikarti-grafik-'+width+'.png')});
    await page.screenshot({path:path.join(out,'ogrencikarti-'+width+'.png'),fullPage:true});
    // The way back.
    await page.locator('[data-sekme="denemeler"]',{hasText:'← Denemeler'}).click();

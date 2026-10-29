@@ -39,6 +39,10 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    // The teacher's Denemeler opens the board.
    await page.evaluate(()=>{EK.sekme='denemeler';ciz()});
    await page.waitForFunction(()=>document.querySelectorAll('#dpKok .et-grafik svg').length===5);
+   // The default comparison is the whole period: the first exam against the latest, named with its dates.
+   assert.match(await page.locator('#dpKok .et-cumle').innerText(),/^12\. sınıflar · Tüm dönem \(18 Eyl → 2 Eki\): TYT ortalaması [\d,]+ net, başlangıçtaki denemeye göre [+−][\d,]+ /);
+   assert.equal(await page.locator('[data-dp-aralik="tum"]').getAttribute('aria-pressed'),'true');
+   await page.locator('[data-dp-aralik="1"]').click();await page.waitForFunction(()=>/Son deneme \(/.test(document.querySelector('#dpKok .et-cumle').textContent));
    assert.match(await page.locator('#dpKok .et-cumle').innerText(),/12\. sınıflar · Son deneme \(Sentetik Deneme 2, .+\): TYT ortalaması [\d,]+ net, önceki denemeye göre [+−][\d,]+ \(iki dönemde de giren \d+ öğrencinin kendi değişimi [+−]?[\d,]+\)\./);
    assert.equal(await page.locator('#dpKok .et-ders').count(),13,'ten lessons and three tests');
    assert.equal(await page.locator('#dpZorluk .dp-zor-satir').count(),10,'Kolaydan zora ranks the lessons');
@@ -203,5 +207,38 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    await context.close();
   }
   console.log('Deneme panosu browser checks passed; screenshots in '+out);
+ }finally{}
+ // Tüm dönem / Son 1 ay / Son 3 ay: four exams (10 Haz, 5 Ağu, 18 Eyl, 2 Eki); the default compares the first with the latest.
+ try{
+   const eski=(ad,tarih)=>['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad,tarih}));
+   const dort=[...eski('Sentetik Tarama 0','10.06.2026'),...eski('Sentetik Tarama 00','05.08.2026'),...listeler];
+   const context=await browser.newContext({viewport:{width:1280,height:950},colorScheme:'light'}),page=await context.newPage(),errors=[];
+   page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+   await page.clock.setFixedTime(new Date('2026-10-19T18:00:00+03:00'));
+   await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.evaluate(async l=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-19';D.ogr=[];EK.ogr=0;EK.sekme='denemeler';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
+     await siralamaKaydet(l.map(x=>siralamaPdfCoz(x.pages,x.boylar)));ciz()},dort);
+   await page.waitForFunction(()=>document.querySelectorAll('#dpKok .et-grafik svg').length===5);
+   const aralik=()=>page.locator('[data-dp-aralik]').evaluateAll(l=>l.map(b=>[b.dataset.dpAralik,b.textContent,b.getAttribute('aria-pressed'),b.disabled]));
+   assert.deepEqual(await aralik(),[['tum','Tüm dönem','true',false],['1ay','Son 1 ay','false',false],['3ay','Son 3 ay','false',false],['1','Son deneme','false',false],['2','Son 2 deneme','false',false],['3','Son 3 deneme','false',true],['sec','Seç','false',false]]);
+   const cumle=()=>page.locator('#dpKok .et-cumle').innerText();
+   assert.match(await cumle(),/^12\. sınıflar · Tüm dönem \(10 Haz → 2 Eki\): TYT ortalaması [\d,]+ net, başlangıçtaki denemeye göre [+−][\d,]+ /);
+   assert.match(await page.locator('#dpKaynak .et-kart-bas .mini').innerText(),/^Tüm dönem: 10 Haz → 2 Eki \(Sentetik Tarama 0 → Sentetik Deneme 2\) · TYT$/);
+   assert.deepEqual(await page.locator('#dpGenel .et-bant-yazi').evaluateAll(l=>l.map(t=>t.textContent)),['Başta','Sonda']);
+   await page.locator('[data-dp-aralik="1ay"]').click();await page.waitForFunction(()=>/Son 1 ay \(18 Eyl → 2 Eki\)/.test(document.querySelector('#dpKok .et-cumle').textContent));
+   await page.locator('[data-dp-aralik="3ay"]').click();await page.waitForFunction(()=>/Son 3 ay \(5 Ağu → 2 Eki\)/.test(document.querySelector('#dpKok .et-cumle').textContent));
+   assert.equal(await page.locator('[data-dp-aralik="3ay"]').getAttribute('aria-pressed'),'true');
+   assert.match(await page.locator('#dpTablo thead').innerText(),/Başta[\s\S]*Sonda|Sonda[\s\S]*Başta/);
+   assert.match(await page.locator('#dpRaporlar .et-kart-bas .mini').first().innerText(),/^Sentetik Tarama 00 → Sentetik Deneme 2$/);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no sideways scrolling');
+   await page.evaluate(()=>scrollTo(0,0));
+   await page.screenshot({path:path.join(out,'denemepano-aralik-1280.png')});
+   // Seç still works next to them.
+   await page.locator('[data-dp-aralik="sec"]').click();await page.locator('#dpOnceki').waitFor();
+   assert.equal(await page.locator('#dpGenel [data-tutamak]').count(),2,'the Seç lines are there');
+   assert.deepEqual(errors,[]);await context.close();
+   console.log('PASS Deneme panosu ranges at 1280 px');
  }finally{await browser.close()}
+
 })().catch(e=>{console.error(e);process.exit(1)});
