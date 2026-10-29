@@ -1,0 +1,10 @@
+.yz-tablo{overflow-x:auto;margin:8px 0 4px;border:1px solid var(--cizgi);border-radius:8px}
+.yz-tablo table{border-collapse:collapse;font-size:11.5px;min-width:100%}
+.yz-tablo th,.yz-tablo td{padding:4px 6px;border-bottom:1px solid var(--cizgi);text-align:left;white-space:nowrap}
+.yz-tablo thead th{color:var(--soluk);font-weight:600}
+.yz-tablo tbody tr:last-child>*{border-bottom:0}
+.yz-durum{margin:6px 0 0;font-size:12.5px;color:var(--soluk)}
+.yz-durum.hata{color:var(--kritik)}
+.yz-rozet{display:inline-block;margin:0 0 6px;padding:2px 8px;border:1px solid currentColor;border-radius:20px;font-size:12px;color:var(--uyari)}
+.yz-uyarilar{margin:4px 0 8px;padding-left:18px;font-size:12.5px;color:var(--uyari)}
+#dpKok .yz-rozet,#dpKok .yz-uyarilar{color:var(--e-fg2)}

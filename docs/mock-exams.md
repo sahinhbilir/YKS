@@ -35,7 +35,7 @@ Deneme adı, tarih, derslerin doğru/yanlış/soru sayıları girilir. Net doğr
 
 ## Öğretmen aktarımı
 
-1. **PDF’den toplu aktar** ile bir veya birkaç metin içeren toplu sonuç PDF’si seçin.
+1. **Dosyadan toplu aktar** ile bir veya birkaç metin içeren toplu sonuç PDF’si seçin.
 2. Önizlemede sınav adı, tarih ve öğrenci eşleşmelerini kontrol edin. Numara **ve** ad tam eşleşirse otomatik seçilir; sınıf/şube eşleşmede kullanılmaz. Eşleşmeyen veya belirsiz satırları doğru öğrenciye elle atayın; hedef öğrenci değiştirildiğinde tekrar/silinmiş sonuç denetimi o öğrenci için yeniden yapılır. Öğrenci hesabı otomatik oluşturulmaz.
 3. **Seçilen sonuçları kaydet ve yayınla** sonuçları yerel deftere ve öğrencilerin korumalı bulut kayıtlarına aktarır. Öğrenci açık oturumunda veya sonraki girişinde alır; kendi giriş yapması gerekmez.
    Okunan PDF’lerin tam okul listesi **Sıralamalar** sekmesine de eklenir ([siralamalar.md](siralamalar.md)).
