@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright'),F=require('./konutakibi-fixtures.cjs');
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
-const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-konutakibi-'));fs.mkdirSync(out,{recursive:true});
+const out_dir=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-konutakibi-'));fs.mkdirSync(out_dir,{recursive:true});
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.YKS_CHROMIUM?{executablePath:process.env.YKS_CHROMIUM}:{})});
  try{for(const [width,theme] of [[1280,'light'],[390,'dark']]){
@@ -60,10 +60,10 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
   await page.locator('[data-kt-filter="course"]').selectOption({label:'Türkçe'});
   await page.locator('[data-kt-sort]').selectOption('son');
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no sideways scroll, latest-exam sort');
-  await page.screenshot({path:path.join(out,'konutakibi-sirala-'+width+'.png'),fullPage:true});
+  await page.screenshot({path:path.join(out_dir,'konutakibi-sirala-'+width+'.png'),fullPage:true});
   const layout=await page.evaluate(()=>({page:document.documentElement.scrollWidth,screen:innerWidth,fonts:[...document.querySelectorAll('#ktKok svg text')].map(n=>parseFloat(getComputedStyle(n).fontSize)),spills:[...document.querySelectorAll('#ktKok summary')].filter(n=>n.scrollWidth>n.clientWidth+1).length}));
   assert(layout.page<=layout.screen+1,'no page overflow '+JSON.stringify(layout));assert(layout.fonts.every(f=>f>=12));assert.equal(layout.spills,0);
-  await page.screenshot({path:path.join(out,'konutakibi-'+width+'.png'),fullPage:true});
+  await page.screenshot({path:path.join(out_dir,'konutakibi-'+width+'.png'),fullPage:true});
   // Whole class / whole grade (synthetic pupils in three classes, two grades).
   await page.evaluate(()=>{
     const P=(cls,no)=>({name:'SENTETİK '+no,no,cls}),A=[P('301 12/A','1'),P('301 12/A','2'),P('301 12/A','3')],B=[P('205 12/B','4'),P('205 12/B','5')],C=[P('101 11/A','6')];
@@ -80,11 +80,52 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
   await page.locator('.kt-topic').first().locator(':scope > summary').click();
   await page.waitForFunction(()=>[...document.querySelectorAll('.kt-chart svg')].some(s=>s.querySelectorAll('circle').length===4));
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no sideways scroll, grade view');
-  await page.screenshot({path:path.join(out,'konutakibi-sinif-'+width+'.png'),fullPage:true});
+  await page.screenshot({path:path.join(out_dir,'konutakibi-sinif-'+width+'.png'),fullPage:true});
+  // Zorluğa göre: Sınav özeti (.xlsx, read by the real ZIP/DOMParser code) + Madde Analizi (synthetic page items) + karne.
+  const ZAD='SENTETİK-1203',MADDE=[{course:'TÜRKÇE-T',rows:[[25,2,0],[22,5,0],[24,3,0],[26,1,0],[3,24,0],[2,25,0]]}];
+  const ozetQ=[['TÜRKÇE-T','T.12.1.1'],['TÜRKÇE-T','T.12.1.1'],['TÜRKÇE-T','T.12.1.1'],['TÜRKÇE-T','T.12.1.1'],['TÜRKÇE-T','T.12.3.1'],['TÜRKÇE-T','T.12.3.1']];
+  await page.evaluate(pg=>{delete D.konutakibi;EK.ktSelection=undefined;EK.ktSira='soru';window.__pages=pg;denemePdfSayfalari=async f=>({pages:window.__pages[f.name]});ciz()},{'karne.pdf':F.pages({ad:ZAD}),'madde.pdf':F.maddePages({ad:ZAD,courses:MADDE})});
+  const XLSX='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  await page.locator('#ktPdf').setInputFiles([
+   {name:'karne.pdf',mimeType:'application/pdf',buffer:Buffer.from('x')},
+   {name:'madde.pdf',mimeType:'application/pdf',buffer:Buffer.from('x')},
+   {name:'ozet.xlsx',mimeType:XLSX,buffer:F.ozetXlsx(ozetQ,{title:ZAD+' - TYT'})},
+   {name:'cevap.xlsx',mimeType:XLSX,buffer:F.cevapXlsx()}]);
+  await page.waitForFunction(()=>D.konutakibi?.zorluk&&Object.values(D.konutakibi.zorluk)[0].ozet&&Object.values(D.konutakibi.zorluk)[0].madde);
+  await page.waitForFunction(()=>document.querySelector('#ktStatus').textContent.includes('cevap raporu'));
+  const status=await page.locator('#ktStatus').innerText();
+  assert.match(status,/Madde Analizi kaydedildi · SENTETİK-1203 \(TYT\) · 1 ders · 6 soru/);assert.match(status,/Sınav özeti kaydedildi · SENTETİK-1203 \(TYT\) · 1 ders · 6 soru/);
+  assert.match(status,/cevap\.xlsx: Bu dosya öğrenci cevap raporu; kişisel bilgi \(TC kimlik\) içerdiği için yüklenmez\. Sınav özeti ve Madde Analizi yeterli\./);
+  const stored=await page.evaluate(()=>JSON.stringify(D.konutakibi));assert(!stored.includes('GİZLİ')&&!stored.includes('00000000000'),'nothing of the answer report is stored');
+  await page.locator('[data-kt-date]').fill('2026-10-07');await page.locator('[data-kt-date]').press('Tab');await page.waitForFunction(()=>D.konutakibi.exams[0].date==='2026-10-07');
+  assert.match(await page.locator('.kt-summary').innerText(),/zorluğa göre [+-][\d,]+ soru \(beklenen [\d,]+\)/);
+  const zt=page.locator('.kt-topic').filter({has:page.locator(':scope > summary .kt-topic-name',{hasText:'Sözcükte Anlam'})});
+  assert.match(await zt.locator(':scope > summary .kt-zcell').innerText(),/^Zorluğa göre -1,6 soru/);assert.equal(await zt.locator(':scope > summary .kt-z-down').count(),1);
+  const ct=page.locator('.kt-topic').filter({has:page.locator(':scope > summary .kt-topic-name',{hasText:'Cümlede Anlam'})});
+  assert.match(await ct.locator(':scope > summary .kt-zcell').innerText(),/^Zorluğa göre \+0,8 soru/);assert.equal(await ct.locator(':scope > summary .kt-z-up').count(),1);
+  await page.locator('[data-kt-sort]').selectOption('zayif');
+  assert.equal(await page.locator('.kt-topics > .kt-topic > summary .kt-topic-name').first().evaluate(n=>n.firstChild.textContent),'Sözcükte Anlam');
+  await page.locator('[data-kt-sort]').selectOption('guclu');
+  assert.equal(await page.locator('.kt-topics > .kt-topic > summary .kt-topic-name').first().evaluate(n=>n.firstChild.textContent),'Cümlede Anlam');
+  assert.equal(await page.locator('[data-kt-sort] option:checked').innerText(),'Zorluğa göre güçlü');
+  await page.locator('[data-kt-sort]').selectOption('zayif');
+  await page.locator('.kt-topic').first().locator(':scope > summary').click();
+  await page.locator('.kt-topic[open] .kt-outcome').first().locator('summary').click();
+  const oc=page.locator('.kt-topic[open] .kt-outcome[open]');
+  assert.deepEqual(await oc.locator('.kt-chip').allInnerTexts(),['S1 %93','S2 %81','S3 %89','S4 %96']);
+  assert.match(await page.locator('.kt-topic[open] .kt-table-wrap thead').first().innerText(),/Beklenen doğru\s+Zorluğa göre/);
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no sideways scroll with difficulty data');
+  assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#ktKok summary')].filter(n=>n.scrollWidth>n.clientWidth+1).length),0);
+  await page.locator('.kt-sources > summary',{hasText:'Kaynaklar'}).click();
+  assert.match(await page.locator('#ktKok').innerText(),/Zorluk: özet ✓ · madde analizi ✓/);
+  await page.screenshot({path:path.join(out_dir,'konutakibi-zorluk-'+width+'.png'),fullPage:true});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no sideways scroll, sources');
+  await page.locator('[data-kt-zdelete]').click();await page.waitForFunction(()=>!D.konutakibi.zorluk);
+  assert.equal(await page.locator('.kt-has-z').count(),0);assert.equal(await page.locator('[data-kt-zdelete]').count(),0);await page.locator('.kt-sources > summary',{hasText:'Kaynaklar'}).click();assert.match(await page.locator('#ktKok').innerText(),/Zorluk: özet yok · madde analizi yok/);
   // Repeated import updates rather than doubles; read-only users can expand and filter but cannot edit.
   await page.evaluate(()=>{yalnizcaGoruntuleme=()=>true;ciz()});assert.equal(await page.locator('#ktPdf').count(),0);assert.equal(await page.locator('[data-kt-delete]').count(),0);assert.equal(await page.locator('[data-kt-filter]').count(),3);
   await page.evaluate(()=>{D.rol='ogrenci';EK.sekme='konutakibi';ciz()});assert.equal(await page.locator('#ktKok').count(),0);assert.equal(await page.locator('#ray [data-sekme="konutakibi"]').count(),0);
   assert.deepEqual(errors,[]);await context.close();console.log('PASS Konu Takibi '+width+' '+theme);
  }}finally{await browser.close()}
- console.log('Screenshots: '+out);
+ console.log('Screenshots: '+out_dir);
 })().catch(e=>{console.error(e);process.exitCode=1});

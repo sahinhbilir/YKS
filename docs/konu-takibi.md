@@ -1,6 +1,6 @@
 # Konu Takibi
 
-Teacher page under **Denemeler → Konu Takibi**. Upload a publisher's single-exam
+Teacher page under **Denemeler → Konu Takibi**. Upload (button *Dosya Yükle*) a publisher's single-exam
 `KAZANIM KARNESİ` (coded outcomes) or `KAZANIM KARNESİ-KONU` (topic summary) PDF.
 Choose a class, student, TYT/AYT and subject. Topic rows show a cumulative correct
 rate and change from the first recorded exam. Expand a topic for its history and
@@ -51,6 +51,37 @@ This page does not call the percentages net scores or mastery probabilities.
 - After an upload the status reads e.g. "3 PDF kaydedildi · 1 sınav (27-YKS-1203) ·
   27 öğrenci": several class files of one exam are one exam. **Kaynaklar** lists each
   exam with its session, classes and pupil count.
+
+## Zorluğa göre (difficulty-adjusted points)
+
+Each question's difficulty is the school's own success rate p (share of pupils who
+answered it correctly). A correct answer earns 1 − p and a wrong or blank one costs p,
+which sums to `fark = doğru − beklenen` with `beklenen = Σ p` over the questions.
+Missing a question only 7 % got right costs 0,07; missing one 93 % got right costs 0,93.
+The unit is questions ("soru"). A kazanım row uses the questions carrying its code
+(its Toplam must equal that count, otherwise the row has no difficulty and is counted
+in "Zorluk eşleşmedi"). A topic sums its kazanım rows; a topic with only a topic summary
+uses the questions that map to it (each once) against the summary's doğru. Cumulative
+figures add only exams that have difficulty ("zorluk verisi 1/2 denemede" says so);
+class and grade views sum over pupils and also show "öğrenci başına". Sırala has
+*Zorluğa göre zayıf* / *güçlü* (topics without difficulty last).
+
+Two files per exam supply p, both uploaded through **Dosya Yükle**: the **Sınav özeti**
+(.xlsx, sheet "Sınav Özeti": question order within each Ders with its kazanım codes) and
+the **Madde Analizi** (.pdf, rotated pages; p = Doğru / Öğrenci Sayısı, which must agree
+with the printed Başarı within 0,1). Either may come first; the difficulty is used only
+when both exist and every course has the same question count ("Zorluk verisi uyuşmuyor:
+<ders>" otherwise). Uploading an exam's file again replaces that part. Kaynaklar shows
+"Zorluk: özet ✓ · madde analizi ✓" per exam with a button to remove it (editing teacher only).
+The xlsx is read in the browser by a minimal ZIP reader, `DecompressionStream` and `DOMParser`; no library.
+
+**Privacy:** the publisher's *sınav cevap raporu* (xlsx with Öğrenci No, Ad Soyad, TC Kimlik
+No, Kitapçık) is refused before anything is read further or stored. Only Ders, kazanım codes
+and per-question counts are kept, never names or numbers.
+
+Storage: optional `zorluk: {[examKey]: {ad, oturum, ogrenci, ts, ozet, madde}}` in
+`D.konutakibi` (≤ 60 exams, ≤ 200 questions per course, p in [0, 1]); it shares the 350 KB limit.
+Removing an exam in Kaynaklar leaves its difficulty data until that is removed too.
 
 ## Import and topic association
 
