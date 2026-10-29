@@ -248,15 +248,32 @@ async function denemePdfSayfalari(file) {
     return {pages,boylar};
   } finally { await task.destroy(); }
 }
-async function denemePdfOku(file) {
-  const {pages,boylar}=await denemePdfSayfalari(file),rapor={...denemePdfCoz(pages),dosya:file.name};
-  // The whole school list is kept for Sıralamalar; a list it cannot read never blocks this import.
-  try { rapor.siralama=siralamaPdfCoz(pages,boylar); } catch(e) { rapor.siralama=null; }
-  return rapor;
+// The school's own list is read by coordinates. Any other file (another publisher's list, a photo,
+// a scan, a spreadsheet) is read by Gemini when it is available (src/yapayzeka.js); its rows are
+// then checked against the totals printed in the file before any of them is pre-selected.
+async function denemePdfOku(file,durum=()=>{}) {
+  const yz=typeof YZ==='object' && YZ.hazir(),tur=typeof YZ==='object'?YZ.tur(file):'pdf';
+  if(tur!=='pdf'){
+    if(!yz)throw new Error('Bu dosya yalnızca yapay zekâ ile okunabilir; şu an bulut bağlantısı yok. Okulun PDF’sini seçin.');
+    durum(file.name+': yapay zekâ ile okunuyor…');return YZ.denemeOku(file);
+  }
+  try {
+    const {pages,boylar}=await denemePdfSayfalari(file),rapor={...denemePdfCoz(pages),dosya:file.name};
+    // The whole school list is kept for Sıralamalar; a list it cannot read never blocks this import.
+    try { rapor.siralama=siralamaPdfCoz(pages,boylar); } catch(e) { rapor.siralama=null; }
+    return rapor;
+  } catch(e) {
+    if(!yz)throw e;
+    durum(file.name+': okulun liste düzeni değil; yapay zekâ ile okunuyor…');
+    try { return await YZ.denemeOku(file); }
+    catch(e2) { throw new Error(e.message+' Yapay zekâ ile de okunamadı: '+e2.message); }
+  }
 }
 const denemeHedefKimligi = o => o ? [o.ogrenciBulutId || '',o.no,denemeAdAnahtari(o.ad),o.sube].join('|') : '';
+// A list without school numbers (another publisher's) is matched by a name only one student has.
 function denemeOgrenciEsle(row) {
-  const aday=D.ogr.map((o,i)=>({o,i})).filter(({o})=>!o.silindi && Number(o.no)===row.no && denemeAdAnahtari(o.ad)===denemeAdAnahtari(row.ad));
+  const adlar=D.ogr.map((o,i)=>({o,i})).filter(({o})=>!o.silindi && denemeAdAnahtari(o.ad)===denemeAdAnahtari(row.ad));
+  const aday=row.no===null?adlar:adlar.filter(({o})=>Number(o.no)===row.no);
   return aday.length===1?aday[0].i:-1;
 }
 function denemePdfKaydi(rapor,row) {
@@ -276,8 +293,11 @@ function denemeImportSatiri(rapor,row,oncekiSatirlar=[]) {
   const ayni=[...mevcut.filter(x=>!x.silindi),...oncekiSatirlar].find(eslesir), silinen=!ayni && mevcut.some(x=>x.silindi && eslesir(x));
   row.hedefKimlik=denemeHedefKimligi(D.ogr[row.si]);
   row.uyari=ayni ? (denemeAyniSonuc(ayni,r)?'Tekrar sonuç; varsayılan olarak atlanır ('+ayni.tarih+').':'Mevcut sonuç değişecek; kontrol edip seçin.') :
-    silinen ? 'Bu sonuç daha önce silindi; yeniden eklemek için seçin.' : row.si<0?'Numara + ad eşleşmedi; öğrenci seçin.':'';
+    silinen ? 'Bu sonuç daha önce silindi; yeniden eklemek için seçin.' : row.si<0?(row.no===null?'Ad eşleşmedi; öğrenci seçin.':'Numara + ad eşleşmedi; öğrenci seçin.'):
+    row.no===null?'Dosyada numara yok; adla eşleşti, kontrol edin.':'';
   row.secili=row.si>=0 && !ayni && !silinen;
+  // A row read by AI whose total net the file does not confirm waits for the teacher's tick.
+  if(row.yzUyari){row.uyari=row.yzUyari+(row.uyari?' '+row.uyari:'');row.secili=false;}
   return r;
 }
 function denemeImportHazirla(raporlar) {
@@ -614,7 +634,7 @@ function denemeFormHtml() {
 function denemeImportHtml() {
   if(!DENEME_IMPORT || !rehberMi())return '';
   return '<section class="kart dn-panel"><h2>Aktarmadan önce kontrol et</h2>'+
-    DENEME_IMPORT.map((p,pi)=>'<div class="dn-import"><b>'+kacis(p.dosya || p.ad)+'</b><div class="arac"><label>Sınav adı <input data-dn-rapor="'+pi+'" data-alan="ad" maxlength="120" value="'+kacis(p.ad)+'"></label><label>Tarih <input type="date" data-dn-rapor="'+pi+'" data-alan="tarih" value="'+p.tarih+'"></label></div><div class="dn-scroll"><table><thead><tr><th>Aktar</th><th>PDF öğrencisi</th><th>Hedef öğrenci</th><th>Oturum</th><th>Net</th><th>Kontrol</th></tr></thead><tbody>'+p.satirlar.map((r,ri)=>'<tr><td><input type="checkbox" aria-label="'+kacis(r.ad+' '+r.oturum+' aktar')+'" data-dn-import="'+pi+':'+ri+'"'+(r.secili?' checked':'')+'></td><td>'+r.no+' · '+kacis(r.ad)+'</td><td><select aria-label="Hedef öğrenci" data-dn-match="'+pi+':'+ri+'"><option value="-1">Eşleşmedi</option>'+canliOgrenciler().map(si=>'<option value="'+si+'"'+(si===r.si?' selected':'')+'>'+kacis(D.ogr[si].no+' · '+D.ogr[si].ad)+'</option>').join('')+'</select></td><td>'+r.oturum+'</td><td>'+denemeSayi(denemeToplam(denemePdfKaydi(p,r),D.ogr[r.si]?.alan || 'SAY'))+'</td><td>'+kacis(r.uyari || 'Hazır')+'</td></tr>').join('')+'</tbody></table></div></div>').join('')+
+    DENEME_IMPORT.map((p,pi)=>'<div class="dn-import"><b>'+kacis(p.dosya || p.ad)+'</b>'+(p.yz?'<br><span class="yz-rozet">Yapay zekâ ile okundu · değerleri dosyayla karşılaştırın</span>':'')+(p.uyarilar?.length?'<ul class="yz-uyarilar">'+p.uyarilar.map(u=>'<li>'+kacis(u)+'</li>').join('')+'</ul>':'')+'<div class="arac"><label>Sınav adı <input data-dn-rapor="'+pi+'" data-alan="ad" maxlength="120" value="'+kacis(p.ad)+'"></label><label>Tarih <input type="date" data-dn-rapor="'+pi+'" data-alan="tarih" value="'+p.tarih+'"></label></div><div class="dn-scroll"><table><thead><tr><th>Aktar</th><th>Dosyadaki öğrenci</th><th>Hedef öğrenci</th><th>Oturum</th><th>Net</th><th>Kontrol</th></tr></thead><tbody>'+p.satirlar.map((r,ri)=>'<tr><td><input type="checkbox" aria-label="'+kacis(r.ad+' '+r.oturum+' aktar')+'" data-dn-import="'+pi+':'+ri+'"'+(r.secili?' checked':'')+'></td><td>'+(r.no??'—')+' · '+kacis(r.ad)+'</td><td><select aria-label="Hedef öğrenci" data-dn-match="'+pi+':'+ri+'"><option value="-1">Eşleşmedi</option>'+canliOgrenciler().map(si=>'<option value="'+si+'"'+(si===r.si?' selected':'')+'>'+kacis(D.ogr[si].no+' · '+D.ogr[si].ad)+'</option>').join('')+'</select></td><td>'+r.oturum+'</td><td>'+denemeSayi(denemeToplam(denemePdfKaydi(p,r),D.ogr[r.si]?.alan || 'SAY'))+'</td><td>'+kacis(r.uyari || 'Hazır')+'</td></tr>').join('')+'</tbody></table></div></div>').join('')+
     '<div class="arac"><button class="dugme birincil" id="dnImportKaydet">Seçilen sonuçları kaydet ve yayınla</button><button class="dugme" id="dnImportIptal">Vazgeç</button></div></section>';
 }
 function gorunumDenemeler() {
@@ -631,7 +651,7 @@ function gorunumDenemeler() {
   const son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son,genelSayi=liste.filter(r=>r.genel).length;
   // With the net/dk chart selected the summary follows it, over exams that have a time.
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan)),birim=hizOzet?' net/dk':' net';
-  return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+ogrAdDugmesi(EK.ogr)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+(typeof gorunumDenemePanosu==='function'?'<button class="dugme" id="dpPanoya">← Deneme panosu</button>':'')+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
+  return '<div class="baslik"><h1>Denemeler</h1>'+(rehberMi()?'<p>'+ogrAdDugmesi(EK.ogr)+'</p>':'')+'</div>'+(rehberMi()?'<div class="arac">'+(typeof gorunumDenemePanosu==='function'?'<button class="dugme" id="dpPanoya">← Deneme panosu</button>':'')+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">Dosyadan toplu aktar<input type="file" id="dnPdf" accept="'+yzDosyaKabul()+'" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
     '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
     (rehberMi()?'<h2 class="dn-ort-baslik">Deneme ortalaması</h2>'+denemeOrtalamaGrafigi()+'<h2 class="dn-ort-baslik">'+ogrAdDugmesi(EK.ogr)+'</h2>':'')+
     '<div class="dn-tabs" role="group" aria-label="Deneme türü">'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'<button class="dugme birincil dn-ekle" id="dnEkle">+ Deneme ekle</button></div>'+
@@ -817,10 +837,10 @@ document.addEventListener('change',async ev=>{
   const el=ev.target,id=el.id;
   if(id==='dnPdf'){
     if(!rehberMi() || DENEME_ISLEM)return;const files=Array.from(el.files||[]);if(!files.length)return;
-    if(files.length>10){denemeDurum('Bir defada en fazla 10 PDF seçin.');return;}
+    if(files.length>10){denemeDurum('Bir defada en fazla 10 dosya seçin.');return;}
     DENEME_ISLEM=true;el.disabled=true;const defter=D;
-    try{const raporlar=[];for(const file of files){denemeDurum('PDF okunuyor: '+file.name);raporlar.push(await denemePdfOku(file));}if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');DENEME_IMPORT=denemeImportHazirla(raporlar);denemeDurum('Önizleme hazır; henüz sonuç kaydedilmedi.');ciz();}
-    catch(e){denemeDurum('PDF aktarılamadı: '+e.message);}finally{DENEME_ISLEM=false;el.disabled=false;el.value='';}return;
+    try{const raporlar=[];for(const file of files){denemeDurum('Okunuyor: '+file.name);raporlar.push(await denemePdfOku(file,denemeDurum));}if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');DENEME_IMPORT=denemeImportHazirla(raporlar);denemeDurum('Önizleme hazır; henüz sonuç kaydedilmedi.');ciz();}
+    catch(e){denemeDurum('Dosya aktarılamadı: '+e.message);}finally{DENEME_ISLEM=false;el.disabled=false;el.value='';}return;
   }
   if((el.dataset?.dnImport || el.dataset?.dnMatch) && DENEME_IMPORT){
     const [p,r]=(el.dataset.dnImport||el.dataset.dnMatch).split(':').map(Number),row=DENEME_IMPORT[p]?.satirlar[r];if(!row)return;
