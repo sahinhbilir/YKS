@@ -4,7 +4,7 @@
 
 ## Listeler nereden gelir
 
-- **Denemeler → PDF’den toplu aktar:** “Seçilen sonuçları kaydet ve yayınla”ya basıldığında okunan PDF’lerin tam okul listesi Sıralamalar’a da eklenir. Öğrenci satırı seçilmese de liste eklenir; durum satırı bunu yazar. Liste eklenemezse öğrenci aktarımı yine yapılır.
+- **Denemeler → Dosyadan toplu aktar:** “Seçilen sonuçları kaydet ve yayınla”ya basıldığında okunan PDF’lerin tam okul listesi Sıralamalar’a da eklenir. Öğrenci satırı seçilmese de liste eklenir; durum satırı bunu yazar. Liste eklenemezse öğrenci aktarımı yine yapılır.
 - **Sıralamalar → PDF ekle:** daha önceki sınavlar için. Bu yol öğrencilere sonuç yayınlamaz.
 
 İki liste türü okunur: **Net Sayısı Sıralı** (TYT) ve **Öğrenci Adı Sıralı** (TYT + AYT).

@@ -705,7 +705,7 @@ function gorunum(){
   if(!rehberMi())return bas+'<p>Bu sayfa rehber öğretmen içindir.</p>';
   const {veri,hata}=oku(),ms=veri?modeller(veri):[],{cur,prev}=secim(ms);
   const salt=izleme();
-  const tablo=!veri?'<p class="sr-uyari">'+kacis(hata)+'</p>':!ms.length?'<div class="sr-bos"><b>Henüz sonuç listesi yok</b>'+(salt?'':'<p>Denemeler’de “PDF’den toplu aktar” ile aktardığınız okul listeleri burada da saklanır. Daha önceki sınavlar için “PDF ekle”yi kullanın.</p>')+'</div>':
+  const tablo=!veri?'<p class="sr-uyari">'+kacis(hata)+'</p>':!ms.length?'<div class="sr-bos"><b>Henüz sonuç listesi yok</b>'+(salt?'':'<p>Denemeler’de “Dosyadan toplu aktar” ile aktardığınız okul listeleri burada da saklanır. Daha önceki sınavlar için “PDF ekle”yi kullanın.</p>')+'</div>':
     '<div class="dn-scroll"><table class="sr-sinavlar"><thead><tr><th>Sınav</th><th>Tarih</th><th>Listeler</th><th>Öğrenci</th><th></th></tr></thead><tbody>'+
     ms.slice().reverse().map(e=>'<tr><td><b>'+kacis(e.name)+'</b>'+(e.school?'<div class="mini">'+kacis(e.school)+'</div>':'')+'</td><td>'+tarihHucresi(e,salt)+'</td><td>'+
       listeAdlari(e).map(kacis).join('<br>')+'</td><td>'+(e.sinif?e.sinif+'. sınıf · ':'')+'TYT '+e.nTYT+(e.F?' · AYT '+e.nAYT:'')+' öğrenci</td><td>'+(salt?'':'<button class="dugme mini" data-sr-sil="'+kacis(e.id)+'" aria-label="'+kacis(e.name+' listelerini sil')+'">Sil</button>')+'</td></tr>').join('')+'</tbody></table></div>';
@@ -722,7 +722,7 @@ function gorunum(){
       '<div class="sr-rapor-dugmeler"><button class="dugme" data-sr-onizle="'+R.id+'"'+(why?' disabled':'')+'>Önizle</button><button class="dugme birincil" data-sr-indir="'+R.id+'"'+(why?' disabled':'')+'>PDF indir</button></div>'+sirala+'</div>';
   }).join('');
   const herhangi=RAPORLAR.some(R=>!neden(R,cur,prev));
-  return bas+(salt?'':'<div class="arac"><label class="dugme">PDF ekle<input type="file" id="srPdf" accept="application/pdf,.pdf" multiple hidden></label></div>')+
+  return bas+(salt?'':'<div class="arac"><label class="dugme">PDF ekle<input type="file" id="srPdf" accept="'+yzDosyaKabul()+'" multiple hidden></label></div>')+
     '<p id="srDurum" role="status" aria-live="polite">'+kacis(DURUM)+'</p>'+
     '<section class="kart sr-panel"><h2>Sınavlar</h2>'+tablo+'</section>'+yayinBolumu+
     (ms.length?'<section class="kart sr-panel"><h2>Karşılaştır</h2><div class="arac sr-secim"><label>Önceki sınav<select id="srOnceki"'+(oncekiler.length?'':' disabled')+'>'+(oncekiler.length?opt(prev,oncekiler):'<option>İkinci sınavı ekleyin</option>')+'</select></label><span class="sr-ok" aria-hidden="true">→</span><label>Şimdiki sınav<select id="srSimdiki">'+opt(cur)+'</select></label></div>'+
@@ -758,11 +758,23 @@ async function kaydetVeIndir(ad,bytes){
   const tamam=await indir(dosyaAdi(ad),bytes,'pdf');
   durum(tamam?'İndirildi: '+dosyaAdi(ad):'');
 }
+// The school's lists by coordinates; any other file through Gemini when it is available. A list
+// saved here gets no preview, so an AI list is taken only when the file confirms every row's net.
+async function listeOku(file){
+  const yz=typeof YZ==='object'&&YZ.hazir(),tur=typeof YZ==='object'?YZ.tur(file):'pdf';
+  if(tur!=='pdf'){if(!yz)throw new Error('bu dosya yalnızca yapay zekâ ile okunabilir; şu an bulut bağlantısı yok.');durum(file.name+': yapay zekâ ile okunuyor…');return YZ.siralamaOku(file)}
+  try{const {pages,boylar}=await denemePdfSayfalari(file);return pdfCoz(pages,boylar)}
+  catch(e){
+    if(!yz)throw e;
+    durum(file.name+': okulun liste düzeni değil; yapay zekâ ile okunuyor…');
+    try{return await YZ.siralamaOku(file)}catch(e2){throw new Error(e.message+' Yapay zekâ ile: '+e2.message)}
+  }
+}
 async function pdfEkle(files){
   const okunan=[],hatalar=[],defter=D;
   for(const file of files){
-    durum('PDF okunuyor: '+file.name);
-    try{const {pages,boylar}=await denemePdfSayfalari(file);okunan.push(pdfCoz(pages,boylar))}catch(e){hatalar.push(file.name+': '+e.message)}
+    durum('Okunuyor: '+file.name);
+    try{okunan.push(await listeOku(file))}catch(e){hatalar.push(file.name+': '+e.message)}
   }
   if(D!==defter||!rehberMi())throw new Error('Oturum değişti.');
   const eklenen=okunan.length?await kaydetListeler(okunan):[];

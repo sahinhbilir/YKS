@@ -1,7 +1,7 @@
 // Embedded in index.html by scripts/embed-denemepano.cjs. No student data belongs here.
 // Deneme panosu (teacher only): the teacher's Denemeler page as a stock-style board, drawn from
 // the school's own result lists that Denemeler and Sıralamalar already keep in D.siralama. It
-// adds no storage of its own: "PDF’den toplu aktar" is the existing import, and the classic
+// adds no storage of its own: "Dosyadan toplu aktar" is the existing import, and the classic
 // per-student page stays one click away. Looks like Etütler (shared tokens in etutler.css).
 // See docs/deneme-panosu.md.
 const DPANO = (() => {
@@ -546,7 +546,7 @@ function sinavTablosu(st,salt){
   const m=st.m,tur=s=>salt?turAdi(s.tur):'<select class="dp-tur-sec" data-dp-sinav-tur="'+kacis(s.id)+'" aria-label="'+kacis(s.ad+' türü')+'">'+
     SIRALAMA.SINAV_TURLERI.map(t=>'<option value="'+t+'"'+(t===s.tur?' selected':'')+'>'+turAdi(t)+'</option>').join('')+'</select>';
   return '<section class="et-panel" id="dpSinavlar"><div class="et-kart-bas"><h2>Denemeler · '+kacis(m.O.ad)+'</h2><div class="et-arac">'+
-      (salt?'':'<label class="et-dugme" title="Yalnızca okul listesi; sonuçlar öğrencilere aktarılmaz">PDF ekle<input type="file" id="srPdf" accept="application/pdf,.pdf" multiple hidden></label>')+
+      (salt?'':'<label class="et-dugme" title="Yalnızca okul listesi; sonuçlar öğrencilere aktarılmaz">PDF ekle<input type="file" id="srPdf" accept="'+yzDosyaKabul()+'" multiple hidden></label>')+
       '<button type="button" class="et-dugme" data-sekme="siralamalar">Sıralamalar ve raporlar</button></div></div>'+
     '<div class="et-kaydir"><table class="et-kaynak"><thead><tr><th>Deneme</th><th>Tür</th><th>Tarih</th><th>Öğrenci</th><th>Ortalama</th><th>Medyan</th><th>En yüksek</th>'+(salt?'':'<th></th>')+'</tr></thead><tbody>'+
     m.sinavlar.slice().reverse().map(s=>'<tr><td>'+kacis(s.ad)+'</td><td>'+tur(s)+'</td><td>'+SIRALAMA.tarihHucresi({id:s.id,name:s.ad,dates:s.dates||[],pdfDates:s.pdfDates||[]},salt)+'</td><td>'+fi(s.n)+'</td><td>'+f1(s.ort)+'</td><td>'+f1(s.medyan)+'</td><td>'+f2(s.max)+'</td>'+(salt?'':'<td><button type="button" class="et-dugme" data-sr-sil="'+kacis(s.id)+'" aria-label="'+kacis(s.ad+' listelerini sil')+'">Sil</button></td>')+'</tr>').join('')+'</tbody></table></div><p id="srDurum" role="status" aria-live="polite">'+kacis(SIRALAMA.durumYazisi||'')+'</p></section>';
@@ -573,7 +573,7 @@ function raporlar(st){
 }
 function araclar(salt){
   const bekleyen=!salt&&(D.ogr||[]).some(o=>o&&!o.silindi&&o.denemeYayinBekliyor);
-  return (salt?'':'<label class="et-dugme birincil">PDF’den toplu aktar<input type="file" id="dnPdf" accept="application/pdf,.pdf" multiple hidden></label>')+
+  return (salt?'':'<label class="et-dugme birincil">Dosyadan toplu aktar<input type="file" id="dnPdf" accept="'+yzDosyaKabul()+'" multiple hidden></label>')+
     (bekleyen?'<button type="button" class="et-dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>':'')+
     '<button type="button" class="et-dugme" id="dpKlasik">Öğrenci bazında</button>';
 }
@@ -590,7 +590,7 @@ function icerik(){
   if(hata)return '<header class="et-bas"><h1 class="et-baslik">Denemeler</h1></header><p class="et-uyari">'+kacis(hata)+'</p><div class="et-arac">'+araclar(salt)+'</div>'+durumSatiri;
   const st=t?durumAl(t):null;
   if(!st||!st.m.sinavlar.length)return '<header class="et-bas"><h1 class="et-baslik">Denemeler</h1><p class="et-cumle">Okulun deneme sonuç listelerinden deneme panosu</p></header><div class="et-arac">'+araclar(salt)+'</div>'+durumSatiri+
-    '<section class="et-panel et-bos"><b>Henüz deneme listesi yok</b>'+(salt?'':'<p>Okulun “Öğrenci Adı Sıralı” ya da “Net Sayısı Sıralı” sonuç listesini “PDF’den toplu aktar” ile ekleyin.</p>')+'</section>';
+    '<section class="et-panel et-bos"><b>Henüz deneme listesi yok</b>'+(salt?'':'<p>Okulun “Öğrenci Adı Sıralı” ya da “Net Sayısı Sıralı” sonuç listesini “Dosyadan toplu aktar” ile ekleyin.</p>')+'</section>';
   const m=st.m,mo=st.mo,es=defterEslesme(),odak=st.ders?m.dersler.find(d=>d.kod===st.ders):null;
   const netAdi=st.ogrDers?(m.O.oturum==='tyt'?'TYT ':'AYT ')+st.ogrDers.ad:toplamAdi(m.O),S=mo.sinavlar[mo.simdi],P=mo.onceki===null?null:mo.sinavlar[mo.onceki];
   cizimPlanla();
