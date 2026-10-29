@@ -25,10 +25,12 @@ const satir=(i,e,tur)=>{
   return {no:String(no),ad:i===1?'SENTETİK ADA':'SENTETİK ÖĞRENCİ '+String(i).padStart(2,'0'),snf:(i%2?'301 12/A':'201 12/B'),n:keys.map(k=>all[k]??null),dy:keys.map(k=>all[k]?all[k]+'/0':null),p:[0,0,0,0],r:['','','','']};
 };
 const katilim=['30','30','30'];
-const siralama=(anahtar)=>({surum:1,sinavlar:ADLAR.map((ad,e)=>{
+// Lists of the 9th grade on the same days (three students each): they must never be on a 12th grader's chart.
+const dokuzSatir=(i,e)=>{const v={'TÜR':10+i+e,MAT:5+i,TAR:2,'COĞ':2},keys=KEYS;return {no:String(2000+i),ad:'SENTETİK DOKUZUNCU '+i,snf:'301 9/A',n:keys.map(k=>v[k]??null),dy:keys.map(k=>v[k]?v[k]+'/0':null),p:[0,0,0,0],r:['','','','']}};
+const siralama=(anahtar)=>({surum:1,sinavlar:ADLAR.map((ad,e)=>({id:anahtar('27-DOK-'+ad),ad:'27-DOK-'+ad,okul:'SENTETİK ANADOLU LİSESİ',ts:500+e,T:{tarih:TARIH[e],katilim:['3','3','3'],kurum:null,ogr:[1,2,3].map(i=>dokuzSatir(i,e))}})).concat(ADLAR.map((ad,e)=>{
   const slot=tur=>({tarih:TARIH[e],katilim,kurum:null,ogr:Array.from({length:30},(_,k)=>k+1).filter(i=>!(i===2&&e===3)&&!(i===3&&e<2)&&!(tur==='F'&&i>12)).map(i=>satir(i,e,tur))});
   return {id:anahtar(ad),ad,okul:'SENTETİK ANADOLU LİSESİ',ts:100+e,T:slot('T'),...(e>=3?{F:slot('F')}:{})};
-})});
+}))});
 const rapor=e=>({ad:ADLAR[e],liste:'kolej',yaz:null,dersler:[...Object.entries(KOD).map(([k,kod])=>[kod,SORU[k],Math.round((SORU[k]*(.42+e*.012))*100)/100]),...(e>=3?Object.entries(AKOD).map(([k,kod])=>[kod,30,Math.round((12+e*.5+Object.keys(AKOD).indexOf(k))*100)/100]):[])]
   .map(([kod,soru,genel])=>({kod,soru,genel,satir:[{sira:1,ad:'SENTETİK OKUL',net:Math.min(soru,genel+4)},{sira:2,ad:'SENTETİK KOLEJ',net:genel}]}))});
 // Etüt, Yoklama and Konu Takibi for ADA (1001): inside the last 30 days of 5 Kasım.
@@ -170,7 +172,8 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
     const dates=[...svg.querySelectorAll('text.ok-tarih')].map(t=>t.textContent);
     return {ogr,yks,R,ticks,top:Math.max(...ticks.map(t=>t.t)),topY:Math.min(...ticks.map(t=>t.y)),gridTop,veriSag:Math.max(...veri),son,dates,ayrac:svg.querySelector('line.ok-ayrac')?.getBoundingClientRect().left,sutun:!!svg.querySelector('rect.ok-yks-sutun'),sr:sr.right};
    });
-   assert.equal(geo.ogr.length,6);const fark=geo.ogr.slice(1).map((x,i)=>x-geo.ogr[i]);assert(Math.max(...fark)-Math.min(...fark)<=0.5,'equally spaced exams: '+fark);
+   assert.equal(geo.ogr.length,6);assert.equal(new Set(geo.dates).size,geo.dates.length,'no repeated date slot: '+geo.dates);
+   assert.equal(await page.evaluate(()=>document.querySelectorAll('#okGrafik svg line.et-izgara.ok-sinav').length),6,'one slot per exam of her grade (the 9th grade’s lists of the same days are not on her axis)');const fark=geo.ogr.slice(1).map((x,i)=>x-geo.ogr[i]);assert(Math.max(...fark)-Math.min(...fark)<=0.5,'equally spaced exams: '+fark);
    assert.equal(geo.yks.length,2,'two end markers in the YKS column');assert(geo.yks.every(x=>Math.abs(x-geo.yks[0])<=0.5),'both at the same x');
    assert(Math.abs(geo.yks[0]-geo.son-2*fark[0])<=1,'the YKS column is two slots after the last exam');assert(geo.ayrac>geo.son&&geo.ayrac<geo.yks[0],'a divider in the gap');assert(geo.sutun);
    assert(geo.veriSag<=geo.son+6,'no data line runs past her last exam (only the two short dashed segments do)');assert(geo.yks[0]<=geo.R,'the column is inside the plot');
