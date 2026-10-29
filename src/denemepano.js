@@ -514,7 +514,7 @@ function tablo(st){
     hucre[k]?hucre[k]({...g,sinif:''}):'<td></td>').join('')+'</tr>';
   const satir=o=>{const c=w?o.k[s]:null,v={sinif:o.sinif||'—',son:c?c.son:o.sonNet,once:c?c.once:null,fark:c?c.fark:null,yuzde:c?c.yuzde:null,logFark:c?c.logFark:null,seri:o.seri};
     return '<tr data-dp-ogr="'+kacis(o.no)+'" data-ara="'+kacis(anahtar(o.ad)+' '+o.no)+'"'+(st.ogr&&st.ogr.no===o.no?' class="secili"':'')+(gor(o)?'':' hidden')+'>'+kol.map(([k])=>
-      k==='ad'?'<td><button type="button" class="et-ad" data-dp-ogr="'+kacis(o.no)+'">'+kacis(kisiAdi(o.ad))+'</button></td>':
+      k==='ad'?'<td>'+ANALIZ.adDugmesi(o.no,kisiAdi(o.ad))+'</td>':
       k==='sira'?'<td class="sayi">'+(o.sira===null?'—':fi(o.sira))+siraOk(o.siraFark)+'</td>':k==='durum'?'<td><span class="et-durum '+DURUM[c.durum]+'">'+c.durum+'</span></td>':hucre[k](v)).join('')+'</tr>'};
   const gorunen=m.ogrenciler.filter(gor).length;
   return '<div class="et-filtre"><input type="search" id="dpAra" placeholder="Öğrenci ya da numara ara" aria-label="Öğrenci ara" value="'+kacis(EK.dpAra||'')+'">'+
@@ -630,7 +630,7 @@ function yenidenCiz(odak){
   if(odak){const el=document.querySelector(odak);if(el)el.focus()}
 }
 document.addEventListener('click',ev=>{
-  if(EK.sekme!=='denemeler'||!rehberMi())return;
+  if(EK.sekme!=='denemeler'||!rehberMi()||ev.target.closest?.('[data-ogrenci-karti]'))return;
   const el=ev.target.closest?.('[data-dp-olcu],[data-dp-tur],[data-dp-aralik],[data-dp-cizgi],[data-dp-olcut],[data-dp-ders],[data-dp-ogr],[data-dp-sira],#dpKlasik,#dpPanoya');if(!el||el.disabled)return;
   if(el.id==='dpKlasik'){EK.denemeKlasik=true;ciz();return}
   if(el.id==='dpPanoya'){EK.denemeKlasik=false;ciz();return}

@@ -371,6 +371,31 @@ function siraFarki(d,m){
   return yer(q)-yer(p);
 }
 
+// The Türkiye average of the exams that Sıralamalar lists too (Öğrenci kartı, src/analiz.js). An exam is matched by its
+// name, the same match that dates a Türkiye list from Sıralamalar (sinavGunu); the Kolej list comes first when an exam
+// has several lists. Returns ad => null (no list) or {ad, liste, kodlar, genel(kod), toplam(oturum)}; genel(kod) is the
+// subject's Türkiye average (null when the list lacks it); toplam('TYT' | 'SAY' | 'EA' | 'SÖZ') is {genel, kodlar}:
+// the sum of the total's subjects and which they are, null when the list lacks one of them (TYT sums every TYT subject
+// the list has).
+function ortalamalar(v){
+  const sira=LISTELER.map(l=>l[0]),harita=new Map();
+  for(const s of ac(v).sinavlar){const k=anahtar(s.ad),eski=harita.get(k);if(!eski||sira.indexOf(s.liste)<sira.indexOf(eski.liste))harita.set(k,s)}
+  const r2=x=>Math.round(x*100)/100;
+  return ad=>{
+    const s=harita.get(anahtar(ad));if(!s)return null;
+    const genel=new Map(s.dersler.map(d=>[anahtar(d.kod),d]));
+    const al=kod=>genel.has(anahtar(kod))?genel.get(anahtar(kod)).genel:null;
+    const toplam=oturum=>{
+      let kodlar;
+      if(oturum==='TYT')kodlar=s.dersler.filter(d=>dersBilgi(d.kod).oturum==='TYT').map(d=>d.kod);
+      else{const t=TOPLAMLAR.AYT.find(x=>x[0]===oturum);kodlar=t?t[2]:[]}
+      if(!kodlar.length||kodlar.some(k=>al(k)===null))return null;
+      return {genel:r2(kodlar.reduce((t,k)=>t+al(k),0)),kodlar};
+    };
+    return {ad:s.ad,liste:s.liste,kodlar:s.dersler.map(d=>d.kod),genel:al,toplam};
+  };
+}
+
 /* ---------------- charts (SVG strings, sized to their box) ---------------- */
 const CIZIMLER=new Map();
 function tikler(lo,hi,n){
@@ -954,7 +979,7 @@ document.addEventListener('keydown',ev=>{
   ipucuGoster(kutu,ev.key==='Home'?0:ev.key==='End'?g.xs.length-1:Math.max(0,Math.min(g.xs.length-1,i+(ev.key==='ArrowLeft'?-1:1))));
 });
 document.addEventListener('focusout',ev=>{const kutu=ev.target.closest?.('.et-grafik[data-tg-grafik]');if(kutu&&etkin())ipucuGizle(kutu)});
-return {grafikToplam,pdfCoz,listeTuru,dersBilgi,sinifDuzeyi,adDuzeyi,okulAdi,kisaAdlar,dogrula,oku,ac,paketle,birlestir,raporEkle,okulKaydet,duzeyKaydet,sinavSil,sil,model,durumAl,
+return {ortalamalar,grafikToplam,pdfCoz,listeTuru,dersBilgi,sinifDuzeyi,adDuzeyi,okulAdi,kisaAdlar,dogrula,oku,ac,paketle,birlestir,raporEkle,okulKaydet,duzeyKaydet,sinavSil,sil,model,durumAl,
   grafikSira,grafikNet,grafikleriCiz,icerik,gorunum,CIZIMLER,UST_SINIR,EN_COK_SINAV,DERSLER};
 })();
 function gorunumTurkiye(){return TURKIYE.gorunum()}

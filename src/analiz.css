@@ -1,0 +1,37 @@
+/* Öğrenci kartı (#okKok) wears the Etütler look: tokens and shared parts live in src/etutler.css. */
+#okKok .et-baslik+.et-cumle{margin-top:2px}
+#okKok .ok-secici{flex:1 1 16rem;min-width:0}
+#okKok .ok-secici input{flex:1 1 auto;width:100%;max-width:26rem}
+#okKok .et-arac{align-items:center}
+#okKok .et-ozet-kart strong small{font-family:var(--e-sans);font-size:.75rem;color:var(--e-muted);font-weight:400}
+#okKok .et-ozet-kart strong.ok-yukari{color:var(--e-ok)}#okKok .et-ozet-kart strong.ok-asagi{color:var(--e-bad)}
+#okKok .et-ozet-kart strong{overflow-wrap:anywhere}
+/* Tables: numbers (th and td alike) are right-aligned; only the name column is flexible. */
+#okKok .et-tablo-kutu{min-height:0;max-height:none}
+#okKok .ok-tablo th{white-space:normal;vertical-align:bottom;line-height:1.3}
+#okKok .ok-tablo td{vertical-align:middle}
+#okKok .ok-tablo td.sayi{white-space:nowrap}
+#okKok .ok-tablo td.ok-konu,#okKok .ok-tablo td.ok-hoca,#okKok .ok-tablo td.ok-ad{white-space:normal}
+#okKok .ok-tablo tbody tr{cursor:default}
+#okKok .ok-tablo td.ok-konu .mini{white-space:nowrap}
+#okKok .ok-gunler{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 18px}
+#okKok .ok-gunler li{white-space:nowrap}
+/* Chart: drawn at the box's own width, so the type below is real pixels. */
+#okKok .ok-grafik{min-height:284px}
+#okKok .ok-grafik text{font-size:12px}
+#okKok .ok-grafik .ok-ad{fill:var(--e-fg);font-weight:500}
+.ok-cizgi{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.ok-cizgi.kesik{stroke-width:2;stroke-dasharray:5 4;stroke-linecap:butt}
+.ok-cizgi.nokta{stroke-width:2;stroke-dasharray:1 4;stroke-linecap:round}
+.ok-sinav{stroke-dasharray:2 3}
+.ok-bag{stroke-width:1;opacity:.6}
+@media (max-width:640px){
+  #okKok .ok-secici input{max-width:none}
+  #okKok .ok-grafik{min-height:244px}
+  #okKok .et-ozet{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #okKok .ok-tablo th,#okKok .ok-tablo td{padding-inline:4px}
+}
+/* A student's name in another page's table opens that student's card. */
+[data-ogrenci-karti]{cursor:pointer}
+[data-ogrenci-karti]:hover,[data-ogrenci-karti]:focus-visible{text-decoration:underline;text-underline-offset:3px}
+button.sr-ad{border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left}

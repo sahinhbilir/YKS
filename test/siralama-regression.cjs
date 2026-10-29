@@ -248,7 +248,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.deepEqual([...page.matchAll(/<tr class="sr-ort[^"]*"><td><\/td><td><b>([^<]+) ortalaması<\/b> <span class="mini">(\d+) öğrenci/g)].map(m => m[1] + ':' + m[2]),
       ['Okul:5', '301-A:2', '201-B:2', '205-C:1'], 'school and class averages open the table');
     assert.match(page, /<span class="mini">1001<\/span> <button type="button" class="ogr-ad" data-ogr-gor="0" title="Öğrenci gözüyle gör">SENTETİK ADA<\/button>/);
-    assert.match(page, /<span class="mini">1002<\/span> SENTETİK BORA<\/td>/, 'not in the notebook: plain text');
+    assert.match(page, /<span class="mini">1002<\/span> <button type="button" class="sr-ad" data-ogrenci-karti="1002">SENTETİK BORA<\/button><\/td>/, 'not in the notebook: a name that opens the student card');
     // One "Net" list: TYT total or a TYT course; for AYT a field, the AYT total or an AYT course.
     run("EK.srSiraTur='AYT';EK.srSiraNet='Toplam'"); page = run('gorunumSiralamalar()');
     assert.match(page, /<select id="srSiraNet"><optgroup label="Alan"><option value="SAY">SAY<\/option><option value="EA">EA<\/option><option value="SÖZ">SÖZ<\/option><option value="Toplam" selected>AYT toplam<\/option><\/optgroup><optgroup label="Ders"><option value="AYT:EDB">Edebiyat<\/option>/);

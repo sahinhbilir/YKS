@@ -63,10 +63,12 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    await page.locator('.et-ders[data-dp-ders="MAT"]').click();
    assert.match(await page.locator('[data-dp-grafik="ders"]').locator('..').locator('h2').innerText(),/Derslere göre başarı/);
    // Students: table selection, search and sort.
-   await page.locator('#dpTablo tbody tr[data-dp-ogr="1002"] .et-ad').click();
+   // A row selects the student (a click on its numbers); the name itself opens Öğrenci kartı (test/analiz-browser.cjs).
+   assert.equal(await page.locator('#dpTablo tbody tr[data-dp-ogr="1002"] .et-ad').getAttribute('data-ogrenci-karti'),'1002');
+   await page.locator('#dpTablo tbody tr[data-dp-ogr="1002"] td.sayi').first().click();
    assert.match(await page.locator('#dpKisi').innerText(),/Sentetik Bora[\s\S]*No 1002/);
    await page.waitForFunction(()=>document.querySelector('[data-dp-grafik="kisi"] svg'));
-   await page.locator('#dpTablo tbody tr[data-dp-ogr="1001"] .et-ad').click();
+   await page.locator('#dpTablo tbody tr[data-dp-ogr="1001"] td.sayi').first().click();
    assert.equal(await page.locator('#dpKisi [data-ogr-gor="0"]').count(),1,'a notebook student opens in student view');
    await page.locator('#dpAra').fill('bora');assert.equal(await page.locator('#dpTablo tbody tr[data-dp-ogr]:not([hidden])').count(),1);
    await page.locator('#dpAra').fill('');

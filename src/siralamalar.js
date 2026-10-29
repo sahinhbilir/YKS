@@ -697,7 +697,7 @@ function siraBolumu(cur,prev){
       ortalamalar.map((o,i)=>'<tr class="sr-ort'+(i===ortalamalar.length-1?' son':'')+'"><td></td><td><b>'+kacis(o.ad)+' ortalaması</b> <span class="mini">'+o.n+' öğrenci</span></td><td class="k-sube"></td>'+
         kolon.map(k=>hucre(o,k)).join('')+'</tr>').join('')+
       rows.map(r=>{const si=kim(r.s);return '<tr><td>'+(r.sira===null?'—':r.sira)+'</td><td><span class="mini">'+kacis(r.s.no)+'</span> '+
-        (si===undefined?kacis(r.s.name):ogrAdDugmesi(si,r.s.name))+'</td><td class="k-sube">'+kacis(clsShort(r.s.cls))+'</td>'+kolon.map(k=>hucre(r,k)).join('')+'</tr>'}).join('')+
+        (si===undefined?(typeof ANALIZ!=='undefined'?ANALIZ.adDugmesi(r.s.no,r.s.name,'sr-ad'):kacis(r.s.name)):ogrAdDugmesi(si,r.s.name))+'</td><td class="k-sube">'+kacis(clsShort(r.s.cls))+'</td>'+kolon.map(k=>hucre(r,k)).join('')+'</tr>'}).join('')+
       '</tbody></table></div>':'<p class="mini">Bu seçimde öğrenci yok.</p>')+'</section>';
 }
 function gorunum(){
