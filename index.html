@@ -21323,12 +21323,14 @@ function gorunumKonuTakibi(){return KONU_TAKIBI.gorunum()}
 //   the target net is the exam's Türkiye average plus the target gap, capped just below the measure's maximum (ust: TYT 120,
 //   AYT 80). At her k-th later exam the gap is the previous (capped) gap plus the step: adım (+1 net for TYT, +0,5 for every AYT
 //   measure) × min(1, (ust − previous target net) / (ust / 2)), so the effort shows more the closer the target gets to the maximum.
-// - gidişat: a bounded, robust trend in the success-ratio logit space. r = logit(clamp(net / ust)) − logit(clamp(Türkiye / ust)),
-//   clamp to 0.02 … 0.98. Level L = median of r over her last up to 5 exams; slope s = Theil–Sen (median of the pairwise slopes of r
-//   over the exam index) over all her exams with a Türkiye value, 0 when |s| ≤ MAD(r) / √n (noise: "aralığında dalgalanıyor"). To the
-//   YKS date (D.ayar.sinav): m = floor(days left / DENEME_ARALIGI_GUN) at most 30 (the school holds TYT and AYT in alternate weeks, so each session has an exam every 14 days); r_YKS = L + s × Σ 0.85^j (j = 1 … m);
-//   the net there = ust × sigmoid(r_YKS + logit(clamp(latest Türkiye / ust))), always between 0 and ust. At least 3 exams.
-//   The hedef yolu is projected to the YKS date with the same m, each future exam adding its (shrinking) step.
+// - gidişat: a bounded, recency-weighted trend in the success-ratio logit space. r = logit(clamp(net / ust)) − logit(clamp(Türkiye / ust)),
+//   clamp 0.02 … 0.98. Weights 0.5^age (the latest exam 1). Level L = weighted mean of r; slope = weighted least squares of r over the exam
+//   index, shrunk by n / (n + 4), 0 when ≤ the weighted SD of the residuals / √n (noise: "aralığında dalgalanıyor"). To the YKS date
+//   (D.ayar.sinav): m = floor(days left / DENEME_ARALIGI_GUN) at most 30 (the school holds TYT and AYT in alternate weeks, so each session
+//   has an exam every 14 days); r_YKS = L + slope × Σ 0.7^j (j = 1 … m), the term kept within ± the weighted SD of r; the net there = ust × sigmoid(r_YKS + logit(clamp(Türkiye of her
+//   latest exam / ust))), always between 0 and ust. At least 3 exams with a Türkiye value. The hedef yolu is projected with the same m.
+// - grades are never mixed: a student's series, the school mean of an exam, the tahmini Türkiye, the okul sürprizi, the chart's axis, the
+//   hedef yolu and the gidişat use only the exams of her own grade (the grade of her class, by the students of each list).
 // - aralık: Son 1 ay / Son 3 ay (the earliest of her exams within that many months of her latest → the latest), Tümü, or two
 //   exams picked by dragging on the chart; it drives the change card and the Dersler table.
 // - etüt and devamsızlık: the last 30 days (today and the 29 days before). A missed day is Yoklama's rule (3+ lessons).
@@ -21337,7 +21339,7 @@ function gorunumKonuTakibi(){return KONU_TAKIBI.gorunum()}
 const ANALIZ = (() => {
 // measure key, name, Türkiye total
 const OLCULER=[['TYT','TYT','TYT'],['AYT:SAY','AYT · SAY','SAY'],['AYT:EA','AYT · EA','EA'],['AYT:SÖZ','AYT · SÖZ','SÖZ']];
-const HEDEF_ADIM_TYT=1, HEDEF_ADIM_AYT=.5, HEDEF_TAVAN=.5, GIDISAT_EN_AZ=3, GIDISAT_SEVIYE=5, GIDISAT_SONUM=.85, GIDISAT_EN_COK_SINAV=30, DENEME_ARALIGI_GUN=14, ORAN_ALT=.02, ORAN_UST=.98, UST_VARSAYILAN=120;
+const HEDEF_ADIM_TYT=1, HEDEF_ADIM_AYT=.5, HEDEF_TAVAN=.5, GIDISAT_EN_AZ=3, GIDISAT_AGIRLIK=.5, GIDISAT_KUCULT=4, GIDISAT_SONUM=.7, GIDISAT_EN_COK_SINAV=30, DENEME_ARALIGI_GUN=14, ORAN_ALT=.02, ORAN_UST=.98, UST_VARSAYILAN=120;
 const BEKLENEN_PENCERE=5, BEKLENEN_EN_AZ=2, ISTIKRAR_PENCERE=6, ISTIKRAR_EN_AZ=3, GUN=30, ZAYIF_ESIK=-1, ZAYIF_EN_COK=5;
 const ISTIKRAR_ETIKETLERI=[[3,'Çok istikrarlı'],[6,'İstikrarlı'],[10,'Dalgalı'],[Infinity,'Çok dalgalı']];
 const AY=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
@@ -21416,33 +21418,50 @@ function okulSurprizleri(sinavlar){
   return l.map(({e,fark})=>{const olagan=medyan(l.filter(x=>x.e!==e).map(x=>x.fark));
     return {id:e.id,ad:e.ad,g:e.g,fark,olagan:olagan===null?null:y6(olagan),surpriz:olagan===null?null:y6(fark-olagan)}});
 }
+// The grade of a student: the number of her class in the school lists ("301 12/A" → 12), null when the lists print none.
+const sinifDuzeyi=kisi=>{const d=parseInt(kisi&&kisi.sinif,10);return Number.isFinite(d)?d:null};
 // For every measure (TYT, AYT · SAY, EA, SÖZ): the exams with their school mean and Türkiye average, and every student's
-// series. t: DPANO.temel(veri); trFn: TURKIYE.ortalamalar(veri) or null. An exam without a Türkiye list gets trTahmini (see the
-// top) when another exam of the measure has one; tr is the average the figures use (trOrt, else trTahmini) and tahmini says which.
+// series. Grades are never mixed: an exam belongs to one grade (the grade most of its students are in, by their class), the school mean
+// (okulOrt) and the rank are those of that grade's students, and the tahmini Türkiye ortalaması and the okul sürprizi use the exams of the
+// grade only. A student's series is in her own grade's exams. out[key].duzeyler is Map(grade → {duzey, sinavlar, okulFarki, okul});
+// out[key].ogrDuzey is Map(no → grade); out[key].ana is the grade with most rows; out[key].sinavlar (as before: every exam once, by
+// id) lists the exams of all grades; okulFarki and okul are those of the main grade.
+// t: DPANO.temel(veri); trFn: TURKIYE.ortalamalar(veri) or null. An exam without a Türkiye list gets trTahmini (see the
+// top) when another exam of the measure (of the same grade) has one; tr is the average the figures use (trOrt, else trTahmini) and tahmini says which.
 function seriler(t,trFn){
   const out={};
   for(const [key,ad,toplamKey] of OLCULER){
-    const O=DPANO.olcu(key),alan=O.oturum==='tyt'?'tyt':'ayt',sinavlar=[],satirlar=[],ogr=new Map(),adim=hedefAdimi(key),ust=Number.isFinite(O.ust)&&O.ust>0?O.ust:UST_VARSAYILAN;
+    const O=DPANO.olcu(key),alan=O.oturum==='tyt'?'tyt':'ayt',gruplar=new Map(),ogr=new Map(),ogrDuzey=new Map(),adim=hedefAdimi(key),ust=Number.isFinite(O.ust)&&O.ust>0?O.ust:UST_VARSAYILAN;
+    const sinifGrubu=gr=>{if(!gruplar.has(gr))gruplar.set(gr,{duzey:gr,sinavlar:[],satirlar:[],say:0});return gruplar.get(gr)};
+    const ayriSinavlar=[];
     for(const s of t.sinavlar){
-      const rows=[];for(const o of Object.values(s[alan]||{})){const v=O.deger(o);if(v!==null)rows.push({o,v:y6(v)})}
-      if(!rows.length)continue;
-      const tr=trFn?trFn(s.ad):null,top=tr?tr.toplam(toplamKey):null,sirali=rows.map(r=>r.v).sort((a,b)=>b-a);
-      const okulOrt=y6(ort(rows.map(r=>r.v)));
-      const e={id:s.id,ad:s.ad,tarih:s.tarih,g:s.g,n:rows.length,okulOrt,trOrt:top?top.genel:null,trVar:!!top,trTahmini:null,tr:top?top.genel:null,tahmini:false};
-      sinavlar.push(e);satirlar.push({s,e,rows,top,sirali});
+      const by=new Map();
+      for(const o of Object.values(s[alan]||{})){const v=O.deger(o);if(v===null)continue;const d=sinifDuzeyi(t.kisi.get(o.no));if(!by.has(d))by.set(d,[]);by.get(d).push({o,v:y6(v)})}
+      if(!by.size)continue;
+      // An exam belongs to one grade: the grade most of its students are in (the higher on a tie), as Sıralamalar says it; the rows of the
+      // few students of another grade in that list are not part of it.
+      const [d,rows]=[...by].sort((a,b)=>b[1].length-a[1].length||(b[0]||0)-(a[0]||0))[0];
+      const tr=trFn?trFn(s.ad):null,top=tr?tr.toplam(toplamKey):null,G=sinifGrubu(d),sirali=rows.map(r=>r.v).sort((a,b)=>b-a),okulOrt=y6(ort(rows.map(r=>r.v)));
+      const e={id:s.id,ad:s.ad,tarih:s.tarih,g:s.g,n:rows.length,okulOrt,trOrt:top?top.genel:null,trVar:!!top,trTahmini:null,tr:top?top.genel:null,tahmini:false,duzey:d};
+      G.sinavlar.push(e);G.satirlar.push({s,e,rows,top,sirali});G.say+=rows.length;ayriSinavlar.push(e);
     }
-    const okulFarki=medyan(sinavlar.filter(e=>e.trVar).map(e=>y6(e.okulOrt-e.trOrt)));
-    if(okulFarki!==null)for(const e of sinavlar)if(!e.trVar){e.trTahmini=y6(e.okulOrt-okulFarki);e.tr=e.trTahmini;e.tahmini=true}
-    for(const {s,e,rows,top,sirali} of satirlar){
-      for(const {o,v} of rows){
-        const p={exam:s.id,ad:s.ad,tarih:s.tarih,g:s.g,net:v,okulOrt:e.okulOrt,n:rows.length,sira:1+sirali.filter(x=>x>v+1e-9).length,trOrt:e.trOrt,tr:e.tr,tahmini:e.tahmini,
-          trNet:top?karsilastirmaNeti(o,key,top.kodlar):e.tahmini?v:null};
-        Object.defineProperty(p,'ham',{value:o,enumerable:false});
-        if(!ogr.has(o.no))ogr.set(o.no,[]);ogr.get(o.no).push(p);
+    for(const G of gruplar.values()){
+      G.okulFarki=medyan(G.sinavlar.filter(e=>e.trVar).map(e=>y6(e.okulOrt-e.trOrt)));
+      if(G.okulFarki!==null)for(const e of G.sinavlar)if(!e.trVar){e.trTahmini=y6(e.okulOrt-G.okulFarki);e.tr=e.trTahmini;e.tahmini=true}
+      for(const {s,e,rows,top,sirali} of G.satirlar){
+        for(const {o,v} of rows){
+          const p={exam:s.id,ad:s.ad,tarih:s.tarih,g:s.g,net:v,okulOrt:e.okulOrt,n:rows.length,sira:1+sirali.filter(x=>x>v+1e-9).length,trOrt:e.trOrt,tr:e.tr,tahmini:e.tahmini,
+            trNet:top?karsilastirmaNeti(o,key,top.kodlar):e.tahmini?v:null};
+          Object.defineProperty(p,'ham',{value:o,enumerable:false});
+          if(!ogr.has(o.no))ogr.set(o.no,[]);ogr.get(o.no).push(p);ogrDuzey.set(o.no,G.duzey);
+        }
       }
+      G.okul=okulSurprizleri(G.sinavlar);delete G.satirlar;
     }
     for(const [no,l] of ogr){const d=turet(l,adim,ust);d.forEach((p,i)=>Object.defineProperty(p,'ham',{value:l[i].ham,enumerable:false}));ogr.set(no,d)}
-    out[key]={key,ad,toplam:toplamKey,sinavlar,ogr,okulFarki,okul:okulSurprizleri(sinavlar),adim,ust};
+    const ana=[...gruplar.values()].sort((a,b)=>b.say-a.say||(b.duzey||0)-(a.duzey||0))[0],A=ana||{duzey:null,sinavlar:[],okulFarki:null,okul:[]};
+    // The exams of the main grade are the same objects as in out[key].sinavlar when it is the exam's main grade.
+    out[key]={key,ad,toplam:toplamKey,sinavlar:ayriSinavlar,ogr,okulFarki:A.okulFarki,okul:A.okul,adim,ust,duzeyler:gruplar,ogrDuzey,ana:A.duzey};
   }
   return out;
 }
@@ -21615,24 +21634,37 @@ function kalanSinav(sonG,yksG){
   return Math.min(GIDISAT_EN_COK_SINAV,Math.floor((yksG-sonG)/DENEME_ARALIGI_GUN));
 }
 const netDegeri=p=>Number.isFinite(p.trNet)?p.trNet:p.net;
-// Gidişat (see the top): the level is the median of r over her last 5 exams, the slope the Theil–Sen slope of r over the exam index
-// (0 inside the noise), damped (0.85 per exam to come) up to the YKS date (yksG). ust: the measure's maximum net. egim: r per exam;
-// yks: {g, m, r, gap, net} (null without a later YKS date); cizgi: from her last exam's net to the YKS value.
+// Gidişat (see the top). r of her exams with a Türkiye value, the latest weighing most: w = 0,5^age (age 0 = the latest exam).
+// Level L = the weighted mean of r. Slope = the weighted least-squares slope of r over the exam index, shrunk by n / (n + 4); it is
+// 0 when it is not larger than the weighted standard deviation of the residuals / √n (noise). Damped (0,7 per exam to come) up to the
+// YKS date (yksG): r_YKS = L + slope × Σ 0,7^j, the term kept within ± the weighted SD of r (her usual swing): r_YKS ∈ [L − sd, L + sd]. ust: the measure's maximum net. egim: the slope used (r per exam); yks: {g, m, r, gap, net}
+// (null without a later YKS date); cizgi: from her last exam's net to the YKS value. Türkiye of the net at YKS is that of HER latest exam
+// with a value. seviye: {r, net, fark} is the level as a net at that Türkiye value and its distance from it.
 function gidisat(noktalar,yksG,ust=null){
   const U=ust||UST_VARSAYILAN,d=noktalar.filter(p=>Number.isFinite(p.tr)&&Number.isFinite(netDegeri(p)));
   if(d.length<GIDISAT_EN_AZ)return {var:false,n:d.length,yks:null,cizgi:null};
-  const r=d.map(p=>oranLogit(netDegeri(p),U)-oranLogit(p.tr,U)),n=r.length,L=medyan(r.slice(-GIDISAT_SEVIYE)),orta=medyan(r),mad=medyan(r.map(v=>Math.abs(v-orta)));
-  let egim=theilSen(r);const ham=egim;if(Math.abs(egim)<=mad/Math.sqrt(n))egim=0;
-  const son=d[d.length-1],trZ=oranLogit(son.tr,U),son5=d.slice(-GIDISAT_SEVIYE).map(netDegeri),sonNet=netDegeri(son);
+  const r=d.map(p=>oranLogit(netDegeri(p),U)-oranLogit(p.tr,U)),n=r.length,w=r.map((_,i)=>GIDISAT_AGIRLIK**(n-1-i)),W=w.reduce((a,b)=>a+b,0);
+  const agOrt=l=>l.reduce((a,v,i)=>a+w[i]*v,0)/W,L=agOrt(r),xo=agOrt(r.map((_,i)=>i));
+  const sxx=r.reduce((a,_,i)=>a+w[i]*(i-xo)**2,0),ham=r.reduce((a,v,i)=>a+w[i]*(i-xo)*(v-L),0)/sxx,kucuk=ham*n/(n+GIDISAT_KUCULT);
+  const sd=Math.sqrt(r.reduce((a,v,i)=>a+w[i]*(v-(L+ham*(i-xo)))**2,0)/W);
+  const egim=Math.abs(kucuk)<=sd/Math.sqrt(n)?0:kucuk;
+  // Her usual swing: the weighted SD of r around the level. The slope never moves the projection further than that from the level.
+  const sdR=Math.sqrt(r.reduce((a,v,i)=>a+w[i]*(v-L)**2,0)/W);
+  const son=d[d.length-1],trZ=oranLogit(son.tr,U),son5=d.slice(-5).map(netDegeri),sonNet=netDegeri(son);
   const git=z=>y6(U*sigmoid(z+trZ)),sonG=noktalar.filter(p=>Number.isFinite(p.g)).map(p=>p.g).pop();
   const m=kalanSinav(sonG,yksG);
   let yks=null;
   if(m!==null){
     let toplam=0;for(let j=1;j<=m;j++)toplam+=GIDISAT_SONUM**j;
-    const rY=L+egim*toplam,net=git(rY);
+    // A fresh dip (her latest exam is her lowest while the one before was still at or above her earlier median) is already in the
+    // level with the largest weight: it does not also pull the trend down. A steady decline is not a dip and keeps its slope.
+    const once=r.slice(0,-1),med=[...once].sort((x,y)=>x-y)[Math.floor((once.length-1)/2)];
+    const dip=r[n-1]<=Math.min(...once)&&r[n-2]>=med;
+    const etki=dip&&egim<0?0:Math.max(-sdR,Math.min(sdR,egim*toplam)),rY=L+etki,net=git(rY);
     yks={g:yksG,m,r:y6(rY),gap:y6(net-son.tr),net};
   }
-  return {var:true,n,egim,hamEgim:ham,mad,seviye:{r:y6(L),net:git(L)},dalgalanir:egim===0,aralik:{min:Math.min(...son5),max:Math.max(...son5)},trSon:son.tr,yks,
+  const sNet=git(L);
+  return {var:true,n,agirlik:w,egim,hamEgim:ham,kucultulmusEgim:kucuk,sd,sdR,seviye:{r:y6(L),net:sNet,fark:y6(sNet-son.tr)},dalgalanir:egim===0,aralik:{min:Math.min(...son5),max:Math.max(...son5)},trSon:son.tr,yks,
     cizgi:yks?[[sonG,sonNet],[yksG,yks.net]]:null};
 }
 // The hedef yolu at the YKS date: from her last target net on, one exam every DENEME_ARALIGI_GUN days up to the YKS date, each adding
@@ -21656,6 +21688,8 @@ function kart(key,oturum,bugun=bugunNo(),aralik='tumu'){
   if(!kisi)return {durum:'secim',liste:k.liste};
   const mevcut=OLCULER.filter(([ok_])=>k.olcular[ok_].ogr.has(kisi.no)).map(([ok_,ad])=>({key:ok_,ad,n:k.olcular[ok_].ogr.get(kisi.no).length}));
   const sec=mevcut.find(m=>m.key===oturum)||mevcut.find(m=>m.key==='TYT')||mevcut[0],O=k.olcular[sec.key],noktalar=O.ogr.get(kisi.no);
+  // Her grade's exams of this measure (never another grade's): the chart's axis, the school mean, tahmini Türkiye and okul sürprizi.
+  const DG=O.duzeyler.get(O.ogrDuzey.get(kisi.no));
   const son=noktalar[noktalar.length-1],once=noktalar.length>1?noktalar[noktalar.length-2]:null;
   const trMevcut=noktalar.filter(p=>p.sapma!==null).length;
   // Why there is no beklenenden: the exam has no Türkiye average, or fewer than two earlier exams have one.
@@ -21673,8 +21707,8 @@ function kart(key,oturum,bugun=bugunNo(),aralik='tumu'){
   const E=etutKaynagi(k),es=E.var?E.ogr.get(kisi.no):null,etut={var:E.var,son:E.son,...etutOzeti(es?es.sessions:[],bugun)};
   const Y=yoklamaKaynagi(k),yg=Y.ad.get(kisi.key),yoklama={var:!!yg,son:Y.son,...devamsizlik(yg?[...yg]:[],bugun)};
   let zayif;try{zayif=zayifKonular(konuKaynagi(k),kisi.no,sinavlarOkul())}catch(e){zayif={var:false,zorluk:false,liste:[]}}
-  const okul=O.okul.filter(x=>x.surpriz!==null).pop()||null;
-  return {durum:'tamam',kisi:{...kisi,alan:alanAl(k,kisi)},oturumlar:mevcut,oturum:sec,noktalar,tum:O.sinavlar,son,once,
+  const okul=DG.okul.filter(x=>x.surpriz!==null).pop()||null;
+  return {durum:'tamam',kisi:{...kisi,alan:alanAl(k,kisi)},oturumlar:mevcut,oturum:sec,noktalar,tum:DG.sinavlar,duzey:DG.duzey,son,once,
     ust:O.ust,trVar:!!k.trFn,neden,trSayi:trMevcut,istikrar:istikrar(noktalar),hedef,hedefYol,aralik:ar,degisim,gidisat:gid,hedefYks:hy,gidisatHedef,yks,okul,
     dersler:dersSatirlari(k,sec.key,noktalar,ar.i,ar.j),etut,yoklama,zayif,bugun};
 }
@@ -21853,10 +21887,11 @@ function okulSurprizYazisi(x){
 }
 // How the school's gap to Türkiye on each exam with a Türkiye list differs from its usual gap, for Deneme panosu and other pages:
 // {olcu, sinavlar: [{id, ad, g, fark, olagan, surpriz}], son: the latest exam with a surpriz}.
-function okulSurprizi(olcuKey='TYT',bugun=bugunNo()){
+function okulSurprizi(olcuKey='TYT',bugun=bugunNo(),duzey=undefined){
   const k=kaynak(bugun),O=k.olcular&&k.olcular[olcuKey];
   if(!O)return {olcu:olcuKey,sinavlar:[],son:null};
-  return {olcu:olcuKey,sinavlar:O.okul,son:O.okul.filter(x=>x.surpriz!==null).pop()||null};
+  const G=duzey===undefined?null:O.duzeyler.get(duzey),okul=G?G.okul:duzey===undefined?O.okul:[];
+  return {olcu:olcuKey,duzey:G?G.duzey:duzey===undefined?O.ana:duzey,sinavlar:okul,son:okul.filter(x=>x.surpriz!==null).pop()||null};
 }
 function kartlar(c){
   const s=c.son,ozet=(baslik,deger,alt,yonDeger)=>'<div class="et-ozet-kart"><span class="mini">'+baslik+'</span><strong class="'+(yonDeger===undefined?'':'ok-'+yon(yonDeger))+'">'+deger+'</strong><div class="et-ozet-alt">'+alt+'</div></div>';
@@ -21886,7 +21921,8 @@ function kartlar(c){
 function notlar(c){
   const l=[],g=c.gidisat,gh=c.gidisatHedef,yks=v=>'YKS’de ~'+fi(Math.round(v))+' net';
   if(g.yks){
-    l.push('Gidişat · '+yks(g.yks.net)+(g.dalgalanir?'<span class="mini"> · aralığında dalgalanıyor (≈ '+fi(Math.round(g.aralik.min))+'–'+fi(Math.round(g.aralik.max))+')</span>':''));
+    const fark=g.seviye.fark,sev=Math.abs(fark)<.5?'Türkiye ortalamasında':'Türkiye’nin ~'+(fark>0?'+':'−')+fi(Math.round(Math.abs(fark)))+' net '+(fark>0?'üstünde':'altında');
+    l.push('Gidişat · '+yks(g.yks.net)+'<span class="mini"> · son denemeler ağırlıklı, '+sev+'</span>'+(g.dalgalanir?'<span class="mini"> · aralığında dalgalanıyor (≈ '+fi(Math.round(g.aralik.min))+'–'+fi(Math.round(g.aralik.max))+')</span>':''));
     if(gh.fark!==null)l.push((Math.abs(gh.fark)<.05?'Gidişat hedefle aynı yerde':'Gidişat hedefin '+f1(Math.abs(gh.fark))+' net '+(gh.fark<0?'altında':'üstünde'))+
       '<span class="mini"> · hedef yolu YKS’de '+fi(Math.round(gh.hedef))+' net</span>');
   }else if(!g.var&&c.trSayi>0)l.push('Gidişat için Türkiye ortalamalı en az '+GIDISAT_EN_AZ+' deneme gerekli');
