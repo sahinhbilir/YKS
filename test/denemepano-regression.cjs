@@ -11,7 +11,7 @@ const boot = html.indexOf('// --------------------------------------------------
 const source = html.slice(start, boot);
 const node = () => ({innerHTML:'',textContent:'',style:{},hidden:false,setAttribute(){},appendChild(){},remove(){},click(){},focus(){},getClientRects(){return [1]}});
 const nodes = {ray:node(),ana:node(),stil:{textContent:'body{}'},uygulama:{textContent:source},veri:{textContent:'null'}};
-const sandbox = {console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,TextEncoder,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),
+const sandbox = {console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,TextEncoder,TextDecoder,DecompressionStream,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),
   localStorage:{getItem(){return null},setItem(){}},sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},navigator:{},window:{scrollTo(){},open(){return null},addEventListener(){}},
   document:{activeElement:null,addEventListener(){},contains(){return true},getElementById(id){return nodes[id]||null},querySelector(){return null},querySelectorAll(){return []},createElement(){return node()},body:{appendChild(){},insertAdjacentHTML(){}}}};
 sandbox.window.document = sandbox.document; vm.createContext(sandbox); new vm.Script(source).runInContext(sandbox);
@@ -162,10 +162,13 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert(Math.abs(ada.logFark - Math.log((u - ada.once + 1) / (u - ada.son + 1))) < 1e-9);
     run("EK.dpOlcut='yuzde';EK.dpSira='sira';EK.dpSiraYon='artan'"); let h = run('DPANO.icerik()');
     // All three measures are columns of Tüm öğrenciler, as in Sıralamalar; the ranked one stays on a phone.
-    for (const b of ['Net artışı', '% artış', 'Kapanan fark (log)']) assert(h.includes('data-dp-sira="' + {'Net artışı': 'fark', '% artış': 'yuzde', 'Kapanan fark (log)': 'logFark'}[b] + '">' + b + '</button>'), b);
-    assert(h.includes('<th scope="col" class="dp-secili" aria-sort="none"><button type="button" data-dp-sira="yuzde">% artış</button>'));
-    assert(h.includes('<th scope="col" class="et-dar-gizle" aria-sort="none"><button type="button" data-dp-sira="logFark">Kapanan fark (log)</button>'));
-    assert(h.includes('<th scope="col" aria-sort="ascending"><button type="button" data-dp-sira="sira">Sıra</button>'));
+    for (const b of ['Net artışı', 'Türkiye’ye göre', '% artış', 'Kapanan fark (log)']) assert(h.includes('data-dp-sira="' + {'Net artışı': 'fark', 'Türkiye’ye göre': 'trFark', '% artış': 'yuzde', 'Kapanan fark (log)': 'logFark'}[b] + '">' + b + '</button>'), b);
+    assert(h.includes('<th scope="col" class="sayi dp-secili" aria-sort="none"><button type="button" data-dp-sira="yuzde">% artış</button>'));
+    assert(h.includes('<th scope="col" class="sayi et-dar-gizle" aria-sort="none"><button type="button" data-dp-sira="logFark">Kapanan fark (log)</button>'));
+    assert(h.includes('<th scope="col" class="sayi" aria-sort="ascending"><button type="button" data-dp-sira="sira">Sıra</button>'));
+    assert.deepEqual([...h.matchAll(/data-dp-olcut="(\w+)"/g)].map(x => x[1]), ['net', 'artis', 'trfark', 'yuzde', 'fark'], 'Türkiye’ye göre is the Sırala pill after Net artışı');
+    assert.match(h, /data-dp-olcut="trfark" aria-pressed="false" disabled/, 'no Türkiye list: the pill is off');
+    assert(h.includes('id="dpTrSatir">Bu aralıkta Türkiye ortalaması yok</p>') && !/class="sayi et-(yukari|asagi|esit)"[^>]*>[▲▼]/.test(h.slice(h.indexOf('id="dpTablo"'))), 'no Türkiye list: the line says so and the column is empty');
     assert(h.indexOf('data-dp-olcut="yuzde"') > h.indexOf('<h2>Tüm öğrenciler</h2>') && h.indexOf('data-dp-olcut="yuzde"') < h.indexOf('id="dpAra"'), 'Sırala sits in Tüm öğrenciler');
     assert.match(h, /<tr class="dp-ort"><td><b>12\. sınıflar ortalaması<\/b> <span class="mini">5 öğrenci<\/span><\/td>/);
     for (const c of ['12/A', '12/B', '12/C']) assert(h.includes('<b>' + c + ' ortalaması</b>'), c);
@@ -481,6 +484,162 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     reset(); put('L', [...eski('Sentetik Tarama 0', '10.06.2026'), list('sonra', 'T'), list('sonra', 'F')]); await run('siralamaKaydet(L)');
     run("EK.dpAralik='3ay'"); h = run('DPANO.icerik()');
     assert.match(h, /data-dp-aralik="1ay" aria-pressed="false" disabled/); assert.match(h, /data-dp-aralik="3ay" aria-pressed="false" disabled/); assert.match(h, /data-dp-aralik="tum" aria-pressed="true"/, 'falls back to Tüm dönem');
+  });
+  // ---- Türkiye’ye göre: the change net of the Türkiye average's change over the same window (hand-worked, synthetic) ----
+  // Six weekly 12. sınıf exams, TYT = Türkçe + Matematik + Geometri (Geometri 1 for everybody). Totals of the students and of Türkiye:
+  //   1001 ADA  12/A  37 36 35 34 33 32      1002 BORA 12/A  31 30 27 26 23 21      1003 CEMRE 12/B  26 27 28 29 30 31      1004 DOĞA 12/B  16 (the last exam only)
+  //   Türkiye         31 30 28 27 25 24
+  const TRADLAR = ['27-YKS-1201', '27-YKS-1202', '27-YKS-1203', '27-YKS-1204', '27-YKS-1205', '27-YKS-1206'];
+  const TRTARIH = ['03.09.2026', '10.09.2026', '17.09.2026', '24.09.2026', '01.10.2026', '08.10.2026'];
+  const TRTUR = { 1001: [24, 24, 23, 23, 22, 22], 1002: [20, 19, 17, 17, 15, 14], 1003: [17, 18, 18, 19, 20, 20], 1004: [null, null, null, null, null, 10] };
+  const TRMAT = { 1001: [12, 11, 11, 10, 10, 9], 1002: [10, 10, 9, 8, 7, 6], 1003: [8, 8, 9, 9, 9, 10], 1004: [null, null, null, null, null, 5] };
+  const TRAD = { 1001: 'SENTETİK ADA', 1002: 'SENTETİK BORA', 1003: 'SENTETİK CEMRE', 1004: 'SENTETİK DOĞA' }, TRSUBE = { 1001: '301 12/A', 1002: '301 12/A', 1003: '201 12/B', 1004: '201 12/B' };
+  // AYT SAY in the last three exams for ADA (50 49 48) and CEMRE (25 26 27).
+  const TRAYT = { 1001: [18, 19, 20].reverse().map(m => ({ AMAT: m, AGEO: 8, AFİZ: 10, AKİM: 6, ABİY: 6 })), 1003: [10, 11, 12].map(m => ({ AMAT: m, AGEO: 4, AFİZ: 5, AKİM: 3, ABİY: 3 })) };
+  const TYTK = ['TÜR', 'TAR', 'COĞ', 'FEL', 'DİN', 'S.F', 'MAT', 'GEO', 'FİZ', 'KİM', 'BİY'], AYTK = ['EDB', 'TAR1', 'COĞ1', 'TAR2', 'COĞ2', 'FELGR', 'DİN2', 'S.F2', 'AMAT', 'AGEO', 'AFİZ', 'AKİM', 'ABİY'];
+  const trSatir = (no, e, tur) => {
+    if (TRTUR[no][e] === null) return null;
+    const all = { 'TÜR': TRTUR[no][e], MAT: TRMAT[no][e], GEO: 1, ...(tur === 'F' && e >= 3 && TRAYT[no] ? TRAYT[no][e - 3] : {}) }, keys = tur === 'F' ? [...TYTK, ...AYTK] : TYTK;
+    return { no: String(no), ad: TRAD[no], snf: TRSUBE[no], n: keys.map(k => all[k] ?? null), dy: keys.map(k => all[k] ? all[k] + '/0' : null), p: [0, 0, 0, 0], r: ['', '', '', ''] };
+  };
+  const trOkul = () => ({ surum: 1, sinavlar: TRADLAR.map((ad, e) => {
+    const slot = tur => ({ tarih: TRTARIH[e], katilim: ['4', '4', '4'], kurum: null, ogr: [1001, 1002, 1003, 1004].map(no => trSatir(no, e, tur)).filter(Boolean) });
+    return { id: run('denemeAdAnahtari')(ad), ad, okul: 'SENTETİK ANADOLU LİSESİ', ts: 2000 + e, T: slot('T'), ...(e >= 3 ? { F: slot('F') } : {}) };
+  }) });
+  // The Türkiye lists: Türkçe 20 19 18 17 16 15, Matematik 10 10 9 9 8 8, Geometri 1; AYT (last three exams) Matematik 18 17 15 + Geometri 6, Fizik 9, Kimya 5, Biyoloji 5 (SAY 43 42 40).
+  const trRapor = (e, dersler = null) => {
+    const TUR = [20, 19, 18, 17, 16, 15], MAT = [10, 10, 9, 9, 8, 8], AMAT = [18, 17, 15];
+    const d = dersler || [['TÜRKÇE-T', 40, TUR[e]], ['MATEMATİK-T', 30, MAT[e]], ['GEOMETRİ-T', 10, 1], ...(e >= 3 ? [['MATEMATİK-A', 30, AMAT[e - 3]], ['GEOMETRİ-A', 10, 6], ['FİZİK-A', 14, 9], ['KİMYA-A', 13, 5], ['BİYOLOJİ-A', 13, 5]] : [])];
+    return { ad: TRADLAR[e], liste: 'kolej', yaz: null, dersler: d.map(([kod, soru, genel]) => ({ kod, soru, genel, satir: [{ sira: 1, ad: 'SENTETİK OKUL', net: Math.min(soru, genel + 5) }, { sira: 2, ad: 'SENTETİK KOLEJ', net: genel }] })) };
+  };
+  const trKur = async raporlar => { run('delete D.turkiye'); await new Promise(r => setTimeout(r, 3)); if (!raporlar.length) return; put('R', raporlar); await run('TURKIYE.raporEkle(R)'); };
+  const trYukle = async aralik => { put('SR', trOkul()); run('D.siralama=SR'); await trKur(aralik.map(e => trRapor(e))); };
+  const trSatiriMetni = () => { const m = /<p class="mini dp-tr-satir" id="dpTrSatir">([\s\S]*?)<\/p>/.exec(run('DPANO.icerik()')); return m ? m[1].replace(/<[^>]+>/g, '') : null; };
+  // The Türkiye’ye göre cell (attributes and text) of every student row (by number) and average row (by name) of Tüm öğrenciler.
+  const trHucreler = () => {
+    const h = run('DPANO.icerik()'), tablo = h.slice(h.indexOf('id="dpTablo"'), h.indexOf('id="dpKisi"')), out = {};
+    for (const m of tablo.matchAll(/<tr(?: data-dp-ogr="(\d+)"[^>]*| class="dp-ort")>([\s\S]*?)<\/tr>/g)) {
+      const tds = [...m[2].matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/g)].map(x => ({ attr: x[1], yazi: x[2].replace(/<[^>]+>/g, '') }));
+      out[m[1] || tds[0].yazi.replace(/ ortalaması.*/, '')] = tds[5];   // Öğrenci Şube Şimdiki Önceki Net artışı Türkiye’ye göre …
+    }
+    return out;
+  };
+  const yk = (a, b, mesaj) => assert(Math.abs(a - b) < 1e-5, (mesaj || '') + ' ' + a + ' ≠ ' + b);
+  const yazilar = (c, nolar = [1001, 1002, 1003]) => nolar.map(n => c[n].yazi);
+  const pencere = (a, ek = '') => run(`EK.dpAralik=${JSON.stringify(a)};${ek}`);
+  await check('Türkiye’ye göre: the change minus the Türkiye average’s change over each window; students, group rows and the line above the table (hand-worked)', async () => {
+    await trYukle([0, 1, 2, 3, 4, 5]);
+    assert.equal(st('st=>st.tr.var'), true); assert.deepEqual(st('st=>st.m.sinavlar.map(s=>s.ad)'), TRADLAR);
+    // [window, Türkiye change, line, ADA, BORA, CEMRE]. Own changes: tum −5 −10 +5; 1ay (10 Eyl → 8 Eki) −4 −9 +4; Son deneme −1 −2 +1; Son 2 deneme −2 −4,5 +2; Son 3 deneme −3 −6 +3.
+    const beklenen = [
+      ['tum', -7, 'Türkiye ortalaması bu aralıkta ▼7,0 net (27-YKS-1201 → 27-YKS-1206)', ['▲2', '▼3', '▲12']],
+      ['3ay', -7, 'Türkiye ortalaması bu aralıkta ▼7,0 net (27-YKS-1201 → 27-YKS-1206)', ['▲2', '▼3', '▲12']],
+      ['1ay', -6, 'Türkiye ortalaması bu aralıkta ▼6,0 net (27-YKS-1202 → 27-YKS-1206)', ['▲2', '▼3', '▲10']],
+      [1, -1, 'Türkiye ortalaması bu aralıkta ▼1,0 net (27-YKS-1205 → 27-YKS-1206)', ['0', '▼1', '▲2']],
+      // Son 2 deneme: the mean of the two exams on each side, as the students’ own: Türkiye (28+27)/2 = 27,5 → (25+24)/2 = 24,5.
+      [2, -3, 'Türkiye ortalaması bu aralıkta ▼3,0 net (27-YKS-1203 – 27-YKS-1204 ort. → 27-YKS-1205 – 27-YKS-1206 ort.)', ['▲1', '▼1,5', '▲5']],
+      // Son 3 deneme: (31+30+28)/3 = 29,667 → (27+25+24)/3 = 25,333, −4,333; ADA −3 + 4,333 = 1,333, BORA −6 + 4,333, CEMRE +3 + 4,333.
+      [3, -13 / 3, 'Türkiye ortalaması bu aralıkta ▼4,3 net (27-YKS-1201 – 27-YKS-1203 ort. → 27-YKS-1204 – 27-YKS-1206 ort.)', ['▲1,33', '▼1,67', '▲7,33']]];
+    for (const [a, tr, satir, hucre] of beklenen) {
+      pencere(a); yk(st('st=>st.tr.fark'), tr, String(a)); assert.equal(trSatiriMetni(), satir, String(a));
+      const c = trHucreler(); assert.deepEqual(yazilar(c), hucre, String(a)); assert(c[1001].attr.includes('class="sayi '), 'a numeric cell');
+      assert(c[1001].attr.includes(hucre[0].startsWith('▲') ? 'et-yukari' : hucre[0] === '0' ? 'et-esit' : 'et-asagi') && c[1002].attr.includes('et-asagi') && c[1003].attr.includes('et-yukari'), 'coloured by direction ' + a);
+      assert.equal(c[1004].yazi, '—', 'a student without a change has no Türkiye’ye göre'); assert(!c[1001].attr.includes('title='), 'real averages carry no mark');
+    }
+    pencere('tum'); const k = st('st=>Object.fromEntries(st.mo.ogrenciler.map(o=>[o.no,o.k.tum.trFark]))'); yk(k[1001], 2); yk(k[1002], -3); yk(k[1003], 12); assert.equal(k[1004], null);
+    // Group rows: their mean change minus the Türkiye change. 12/A (−5, −10) −7,5 → ▼0,5; 12/B 23,5 − 26 = −2,5 → ▲4,5; the grade 25 − 31,333 = −6,333 → ▲0,67.
+    const g = trHucreler(); assert.deepEqual([g['12. sınıflar'], g['12/A'], g['12/B']].map(x => x.yazi), ['▲0,67', '▼0,5', '▲4,5']);
+    assert(g['12/A'].attr.includes('et-asagi') && g['12/B'].attr.includes('et-yukari'));
+    pencere(2); assert.equal(trHucreler()['12/A'].yazi, '▼0,25', '12/A: 30,5 → 27,25 is −3,25 against −3');
+    // The status badge stays net-based: ADA fell 5 net although she beat Türkiye by 2.
+    pencere('tum'); const h = run('DPANO.icerik()'), satir = h.match(/<tr data-dp-ogr="1001"[\s\S]*?<\/tr>/)[0]; assert(satir.includes('et-durum Falling') && satir.includes('>Düşüyor<'));
+    assert(h.includes('<th scope="col" class="sayi" aria-sort="none"><button type="button" data-dp-sira="trFark">Türkiye’ye göre</button>'));
+    assert(h.indexOf('data-dp-sira="fark"') < h.indexOf('data-dp-sira="trFark"') && h.indexOf('data-dp-sira="trFark"') < h.indexOf('data-dp-sira="yuzde"'), 'the column follows Net artışı');
+    // The line sits above the table, below the title and the Sırala pills.
+    assert(h.indexOf('data-dp-olcut="trfark"') < h.indexOf('id="dpTrSatir"') && h.indexOf('id="dpTrSatir"') < h.indexOf('id="dpAra"'));
+  });
+  await check('Türkiye’ye göre: sorting by the column and by the Sırala pill, ranks, students without a value last', async () => {
+    await trYukle([0, 1, 2, 3, 4, 5]); pencere('tum');
+    const sira = () => [...run('DPANO.icerik()').matchAll(/<tr data-dp-ogr="(\d+)"/g)].map(x => x[1]);
+    run("EK.dpSira='trFark';EK.dpSiraYon='azalan'"); assert.deepEqual(sira(), ['1003', '1001', '1002', '1004'], 'largest first, DOĞA (no value) last');
+    run("EK.dpSiraYon='artan'"); assert.deepEqual(sira(), ['1002', '1001', '1003', '1004'], 'smallest first, still without a value last');
+    assert(run('DPANO.icerik()').includes('aria-sort="ascending"><button type="button" data-dp-sira="trFark">'));
+    // The Sırala pill ranks the students by it and numbers them again (Sıra).
+    run("EK.dpOlcut='trfark';EK.dpSira='sira';EK.dpSiraYon='artan'");
+    assert.equal(st('st=>st.olcut'), 'trfark'); assert.deepEqual(sira(), ['1003', '1001', '1002', '1004']);
+    assert.deepEqual(st('st=>Object.fromEntries(st.mo.ogrenciler.map(o=>[o.no,o.sira]))'), { 1001: 2, 1002: 3, 1003: 1, 1004: null });
+    let h = run('DPANO.icerik()');
+    assert.match(h, /data-dp-olcut="trfark" aria-pressed="true"/); assert(h.includes('<th scope="col" class="sayi dp-secili" aria-sort="none"><button type="button" data-dp-sira="trFark">Türkiye’ye göre</button>'));
+    assert(!/<th scope="col" class="[^"]*et-dar-gizle[^"]*"[^>]*><button type="button" data-dp-sira="trFark"/.test(h), 'never folded away on a phone');
+    assert(h.includes('<th scope="col" class="sayi et-dar-gizle" aria-sort="none"><button type="button" data-dp-sira="yuzde">'), '% artış folds away on a phone');
+    pencere(1); assert.deepEqual(st('st=>Object.fromEntries(st.mo.ogrenciler.map(o=>[o.no,o.sira]))'), { 1001: 2, 1002: 3, 1003: 1, 1004: null }, 'Son deneme: 0, −1, +2');
+    // Net returns to the default order (the şimdiki net, largest first: 32 31 21 16).
+    run("EK.dpOlcut='net';EK.dpSira='son';EK.dpSiraYon='azalan'"); pencere('tum'); assert.deepEqual(sira(), ['1001', '1003', '1002', '1004']); assert.equal(st('st=>st.olcut'), 'net');
+  });
+  await check('Türkiye’ye göre: an exam without a Türkiye list uses the tahmini average, marked with ~ and a title; real averages carry no mark', async () => {
+    // Lists for the first five exams only: the sixth is its school mean 25 (DOĞA sits it too: 32 21 31 16) minus the usual gap 2 (median of 0,333 1 2 2,667 3,667) = 23.
+    await trYukle([0, 1, 2, 3, 4]); pencere('tum');
+    assert.equal(st('st=>st.tr.tahmini'), true); yk(st('st=>st.tr.fark'), -8);   // 31 → 23
+    assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ▼8,0~ net (27-YKS-1201 → 27-YKS-1206)');
+    let h = run('DPANO.icerik()'); assert(h.includes('<b title="tahmini Türkiye ortalaması">▼8,0~</b>'));
+    let c = trHucreler(); assert.deepEqual(yazilar(c), ['▲3~', '▼2~', '▲13~']); assert(c[1002].attr.includes('title="tahmini Türkiye ortalaması"'));
+    assert.equal(c[1004].yazi, '—'); assert(!c[1004].attr.includes('title='), 'no value, no mark');
+    // Son deneme (the estimated exam against the real one before it): Türkiye 25 → 23 = −2; Son 2 deneme: 27,5 → (25+23)/2 = 24, −3,5.
+    pencere(1); yk(st('st=>st.tr.fark'), -2); assert.equal(st('st=>st.tr.tahmini'), true); assert.deepEqual(yazilar(trHucreler()), ['▲1~', '0~', '▲3~']);
+    pencere(2); yk(st('st=>st.tr.fark'), -3.5); assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ▼3,5~ net (27-YKS-1203 – 27-YKS-1204 ort. → 27-YKS-1205 – 27-YKS-1206 ort.)');
+    assert.deepEqual(yazilar(trHucreler()), ['▲1,5~', '▼1~', '▲5,5~']);
+    // A window on real averages only is not marked: Seç 1201 → 1205 (31 → 25).
+    run(`EK.dpAralik='sec';EK.dpOnceki=${JSON.stringify(idOf(TRADLAR[0]))};EK.dpSimdiki=${JSON.stringify(idOf(TRADLAR[4]))}`);
+    assert.equal(st('st=>st.tr.tahmini'), false); yk(st('st=>st.tr.fark'), -6); h = run('DPANO.icerik()'); assert(!h.includes('~') && !h.includes('tahmini Türkiye ortalaması'));
+    assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ▼6,0 net (27-YKS-1201 → 27-YKS-1205)');
+    // Own changes −4, −8, +4 against −6.
+    assert.deepEqual(yazilar(trHucreler()), ['▲2', '▼2', '▲10']);
+  });
+  await check('Türkiye’ye göre: no Türkiye data for the window shows a dash, a line saying so, a disabled pill and falls back to Net', async () => {
+    await trYukle([]); pencere('tum');
+    assert.equal(st('st=>st.tr.var'), false); assert.equal(trSatiriMetni(), 'Bu aralıkta Türkiye ortalaması yok');
+    assert.deepEqual(yazilar(trHucreler(), [1001, 1002, 1003, 1004, '12. sınıflar']), ['—', '—', '—', '—', '—']);
+    assert.match(run('DPANO.icerik()'), /data-dp-olcut="trfark" aria-pressed="false" disabled/);
+    run("EK.dpOlcut='trfark';EK.dpSira='sira';EK.dpSiraYon='artan'"); assert.equal(st('st=>st.olcut'), 'net', 'cannot rank by what is not there'); assert(!/NaN|undefined/.test(run('DPANO.icerik()')));
+    // Lists exist, but none of the board's exams has one.
+    await trKur([{ ...trRapor(0), ad: '27-YKS-9999' }]); assert.equal(st('st=>st.tr.var'), false); assert.equal(trSatiriMetni(), 'Bu aralıkta Türkiye ortalaması yok');
+    // AYT Toplam has no Türkiye total to compare with.
+    await trYukle([0, 1, 2, 3, 4, 5]); run("EK.dpOlcu='AYT:Toplam'"); assert.equal(st('st=>st.sec.key'), 'AYT:Toplam'); assert.equal(st('st=>st.tr.var'), false);
+    assert.equal(trSatiriMetni(), 'Bu aralıkta Türkiye ortalaması yok'); assert.deepEqual([...new Set(Object.values(trHucreler()).map(x => x.yazi))], ['—']);
+  });
+  await check('Türkiye’ye göre: AYT measures use their own Türkiye total (SAY)', async () => {
+    await trYukle([0, 1, 2, 3, 4, 5]); run("EK.dpOlcu='AYT:SAY'"); pencere('tum');
+    assert.equal(st('st=>st.sec.key'), 'AYT:SAY'); assert.deepEqual(st('st=>st.m.sinavlar.map(s=>s.ad)'), TRADLAR.slice(3));
+    // ADA 50 → 48 (−2), CEMRE 25 → 27 (+2); Türkiye 43 → 40 (−3) → ▲1 and ▲5.
+    yk(st('st=>st.tr.fark'), -3); assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ▼3,0 net (27-YKS-1204 → 27-YKS-1206)');
+    assert.deepEqual(yazilar(trHucreler(), [1001, 1003]), ['▲1', '▲5']);
+  });
+  await check('Türkiye’ye göre: a single lesson’s net follows that lesson’s Türkiye average per exam; tests add their lessons; missing lists show a dash', async () => {
+    await trYukle([0, 1, 2, 3, 4, 5]); run("EK.dpOgrNet='MAT'"); pencere('tum');
+    assert.equal(st('st=>st.ogrDers.kod'), 'MAT'); assert.equal(st('st=>st.tr.tahmini'), false, 'a lesson has no tahmini average');
+    // Matematik: Türkiye 10 → 8 (−2); ADA 12 → 9 (−3) → ▼1; BORA 10 → 6 (−4) → ▼2; CEMRE 8 → 10 (+2) → ▲4.
+    yk(st('st=>st.tr.fark'), -2); assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ▼2,0 net (27-YKS-1201 → 27-YKS-1206)');
+    assert.deepEqual(yazilar(trHucreler()), ['▼1', '▼2', '▲4']);
+    // Son 3 deneme: Türkiye (10+10+9)/3 → (9+8+8)/3 = −1,333; ADA 34/3 → 29/3 = −1,667 → ▼0,33.
+    pencere(3); yk(st('st=>st.tr.fark'), -4 / 3); assert.equal(trHucreler()[1001].yazi, '▼0,33');
+    // Türkçe: 20 → 15 (−5); ADA 24 → 22 (−2) → ▲3.
+    run("EK.dpOgrNet='TÜR'"); pencere('tum'); yk(st('st=>st.tr.fark'), -5); assert.equal(trHucreler()[1001].yazi, '▲3');
+    // Matematik + Geometri adds both lessons’ averages (11 → 9 = −2): ADA 13 → 10 = −3 → ▼1.
+    run("EK.dpOgrNet='G-MAT'"); yk(st('st=>st.tr.fark'), -2); assert.equal(trHucreler()[1001].yazi, '▼1');
+    // A list that lacks the lesson: no Matematik in any of them.
+    await trKur([0, 1, 2, 3, 4, 5].map(e => trRapor(e, [['TÜRKÇE-T', 40, 20 - e], ['GEOMETRİ-T', 10, 1]])));
+    run("EK.dpOgrNet='MAT'"); assert.equal(st('st=>st.tr.var'), false); assert.equal(trSatiriMetni(), 'Bu aralıkta Türkiye ortalaması yok'); assert.equal(trHucreler()[1001].yazi, '—');
+    run("EK.dpOgrNet='G-MAT'"); assert.equal(st('st=>st.tr.var'), false, 'a test needs every lesson’s average');
+    // Lists for the first five exams only: the window ends on an exam without a lesson average, so the change cannot be worked out.
+    await trYukle([0, 1, 2, 3, 4]); run("EK.dpOgrNet='MAT'"); pencere('tum');
+    assert.equal(st('st=>st.tr.var'), true); assert.equal(st('st=>st.tr.fark'), null); assert.match(trSatiriMetni(), /^Bu aralıkta Türkiye ortalaması eksik/); assert.equal(trHucreler()[1001].yazi, '—');
+    assert.match(run('DPANO.icerik()'), /data-dp-olcut="trfark" aria-pressed="false" disabled/);
+    // Seç inside the covered exams works: 1201 → 1205 Matematik 10 → 8 (−2); ADA 12 → 10 (−2) → 0.
+    run(`EK.dpAralik='sec';EK.dpOnceki=${JSON.stringify(idOf(TRADLAR[0]))};EK.dpSimdiki=${JSON.stringify(idOf(TRADLAR[4]))}`); yk(st('st=>st.tr.fark'), -2); assert.equal(trHucreler()[1001].yazi, '0');
+  });
+  await check('Türkiye’ye göre: reading it writes nothing and a view-only teacher sees it', async () => {
+    await trYukle([0, 1, 2, 3, 4, 5]); const once = JSON.stringify(get('D')); run('DPANO.icerik()'); assert.equal(JSON.stringify(get('D')), once);
+    run('yalnizcaGoruntuleme=()=>true'); assert(run('DPANO.icerik()').includes('data-dp-sira="trFark"'));
   });
   console.log(passed + ' Deneme panosu checks passed');
 })();

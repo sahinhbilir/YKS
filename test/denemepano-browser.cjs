@@ -142,9 +142,9 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    await page.locator('#dpOgrNet').selectOption('MAT');
    await page.waitForFunction(()=>/Öğrencilere göre · TYT Matematik/.test(document.querySelector('#dpOgrCizgi h2').textContent));
    // Tüm öğrenciler carries Sıralamalar's three measures; Sırala sits in its header.
-   assert.deepEqual(await page.locator('#dpTablo thead [data-dp-sira]').evaluateAll(l=>l.map(b=>b.textContent)),['Öğrenci','Şube','Şimdiki','Önceki','Net artışı','% artış','Kapanan fark (log)','Sıra','Durum']);
+   assert.deepEqual(await page.locator('#dpTablo thead [data-dp-sira]').evaluateAll(l=>l.map(b=>b.textContent)),['Öğrenci','Şube','Şimdiki','Önceki','Net artışı','Türkiye’ye göre','% artış','Kapanan fark (log)','Sıra','Durum']);
    // On a phone the measure it is not ranked by folds away; the ranked one (Net artışı) stays.
-   if(width<700)assert.deepEqual(await page.locator('#dpTablo thead th:visible').evaluateAll(l=>l.map(t=>t.textContent)),['Öğrenci','Şimdiki','Net artışı','Sıra','Durum']);
+   if(width<700)assert.deepEqual(await page.locator('#dpTablo thead th:visible').evaluateAll(l=>l.map(t=>t.textContent)),['Öğrenci','Şimdiki','Net artışı','Türkiye’ye göre','Sıra','Durum']);
    assert.equal(await page.locator('#dpTablo .et-kart-bas [data-dp-olcut="artis"][aria-pressed="true"]').count(),1);
    // Raporlar at the bottom: Sıralamalar's reports for the board's pair, downloaded and previewed here.
    const rap=page.locator('#dpRaporlar');await rap.scrollIntoViewIfNeeded();
@@ -208,6 +208,61 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
   }
   console.log('Deneme panosu browser checks passed; screenshots in '+out);
  }finally{}
+ // Türkiye’ye göre: the Türkiye average of the two exams (50 → 46 net, a harder second exam) next to the students' own change.
+ try{
+   const dersler=[['TÜRKÇE-T',40],['TARİH-T',5],['COĞRAFYA-T',5],['FELSEFE-T',5],['DİN KÜLTÜRÜ-T',5],['MATEMATİK-T',30],['GEOMETRİ-T',10],['FİZİK-T',7],['KİMYA-T',7],['BİYOLOJİ-T',6]];
+   const ortalama={'Sentetik Deneme 1':[18,2,2.5,2.5,2.5,10,3,3,3,3.5],'Sentetik Deneme 2':[17,2,2,2.5,2,9,3,3,2.5,3]};
+   const raporlar=Object.entries(ortalama).map(([ad,v])=>({ad,liste:'kolej',yaz:null,dersler:dersler.map(([kod,soru],i)=>({kod,soru,genel:v[i],satir:[{sira:1,ad:'SENTETİK OKUL',net:Math.min(soru,v[i]+3)},{sira:2,ad:'SENTETİK KOLEJ',net:v[i]}]}))}));
+   for(const [width,tema] of [[1280,'light'],[390,'dark']]){
+    const context=await browser.newContext({viewport:{width,height:950},colorScheme:tema}),page=await context.newPage(),errors=[];
+    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+    await page.clock.setFixedTime(new Date('2026-10-19T18:00:00+03:00'));
+    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
+    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+    await page.evaluate(async ([l,R])=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-19';D.ogr=[];EK.ogr=0;EK.sekme='denemeler';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
+      await siralamaKaydet(l.map(x=>siralamaPdfCoz(x.pages,x.boylar)));await TURKIYE.raporEkle(R);ciz()},[listeler,raporlar]);
+    await page.waitForFunction(()=>document.querySelectorAll('#dpKok .et-grafik svg').length===5);
+    const tablo=page.locator('#dpTablo');await tablo.scrollIntoViewIfNeeded();
+    // The line above the table: Türkiye 50 → 46 over the whole period.
+    assert.equal((await tablo.locator('#dpTrSatir').innerText()).trim(),'Türkiye ortalaması bu aralıkta ▼4,0 net (Sentetik Deneme 1 → Sentetik Deneme 2)');
+    const basliklar=await tablo.locator('thead [data-dp-sira]').evaluateAll(l=>l.map(b=>b.textContent));
+    assert.deepEqual(basliklar,['Öğrenci','Şube','Sonda','Başta','Net artışı','Türkiye’ye göre','% artış','Kapanan fark (log)','Sıra','Durum']);
+    if(width<700)assert.deepEqual(await tablo.locator('thead th:visible').evaluateAll(l=>l.map(t=>t.textContent)),['Öğrenci','Sonda','Net artışı','Türkiye’ye göre','Sıra','Durum']);
+    // Students: ADA +8,5 → ▲12,5; BORA −0,25 (fell, Türkiye fell more) → ▲3,75; CEMRE +7,5 → ▲11,5; DOĞA −3 → ▲1. Class rows: the mean change minus −4.
+    const hucre=async(no,i)=>(await tablo.locator('tbody tr[data-dp-ogr="'+no+'"] td').nth(i).innerText()).trim();   // 4: Net artışı, 5: Türkiye’ye göre
+    assert.deepEqual(await Promise.all(['1001','1002','1003','1004'].map(n=>hucre(n,5))),['▲12,5','▲3,75','▲11,5','▲1']);
+    assert.equal(await hucre('1002',4),'−0,25','BORA fell 0,25 net (Net artışı) …');
+    assert.equal(await tablo.locator('tbody tr[data-dp-ogr="1002"] td').nth(5).getAttribute('class').then(c=>/et-yukari/.test(c)),true,'… and beat Türkiye, in green');
+    assert.equal(await hucre('1005',5),'—','a student without a change has no value');
+    // Right-aligned numeric columns whose cells line up under their heads.
+    const sayilar=await tablo.locator('thead th.sayi, tbody td.sayi').evaluateAll(l=>l.map(e=>getComputedStyle(e).textAlign));assert(sayilar.length>0&&sayilar.every(x=>x==='right'),'numeric columns right-aligned');
+    const hiza=await page.evaluate(()=>{const th=[...document.querySelectorAll('#dpTablo thead th')],i=th.findIndex(t=>t.textContent==='Türkiye’ye göre'),sag=e=>e.getBoundingClientRect().right;
+      return [...document.querySelectorAll('#dpTablo tbody tr[data-dp-ogr]')].map(tr=>Math.abs(sag(tr.children[i])-sag(th[i])))});
+    assert(hiza.length>=4&&hiza.every(d=>d<1.5),'cells line up under their head');
+    const ortalar=await tablo.locator('tr.dp-ort').evaluateAll(l=>l.map(t=>t.children[5].textContent.trim()));
+    assert.equal(ortalar.length,4);assert(/^[▲▼]\d/.test(ortalar[0])&&ortalar.filter(x=>/^[▲▼]\d/.test(x)).length>=3,'average rows: '+ortalar);   // the class only the newcomer sits in has no change
+    // Sorting: the column head, then the Sırala pill.
+    await tablo.locator('[data-dp-sira="trFark"]').click();
+    await page.waitForFunction(()=>document.querySelector('#dpTablo th[aria-sort="descending"] [data-dp-sira="trFark"]'));
+    const sira=()=>tablo.locator('tbody tr[data-dp-ogr]').evaluateAll(l=>l.map(t=>t.dataset.dpOgr));
+    assert.deepEqual(await sira(),['1001','1003','1002','1004','1005'],'largest first, the student without a value last');
+    await tablo.locator('[data-dp-olcut="trfark"]').click();
+    await page.waitForFunction(()=>document.querySelector('#dpTablo th[aria-sort="ascending"] [data-dp-sira="sira"]'));
+    assert.equal(await tablo.locator('[data-dp-olcut="trfark"]').getAttribute('aria-pressed'),'true');
+    assert.equal((await sira())[0],'1001');assert.equal(await tablo.locator('tbody tr[data-dp-ogr="1001"] td.sayi').last().innerText().then(t=>t.trim()),'1');
+    assert.equal(await tablo.locator('th.dp-secili').innerText(),'Türkiye’ye göre');
+    // A single lesson follows that lesson's Türkiye average: Matematik 10 → 9 (−1); ADA's Matematik change is shown against it.
+    await page.locator('#dpOgrNet').selectOption('MAT');await page.waitForFunction(()=>/▼1,0 net/.test(document.querySelector('#dpTrSatir').textContent));
+    assert.match(await tablo.locator('#dpTrSatir').innerText(),/^Türkiye ortalaması bu aralıkta ▼1,0 net \(Sentetik Deneme 1 → Sentetik Deneme 2\)$/);
+    await page.locator('#dpOgrNet').selectOption('');await page.waitForFunction(()=>/▼4,0 net/.test(document.querySelector('#dpTrSatir').textContent));
+    await page.locator('[data-dp-olcut="net"]').click();await page.waitForFunction(()=>document.querySelector('#dpTablo [data-dp-olcut="net"][aria-pressed="true"]'));
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no sideways page scroll at '+width);
+    await tablo.scrollIntoViewIfNeeded();
+    await tablo.screenshot({path:path.join(out,'denemepano-tr-'+width+'.png')});
+    assert.deepEqual(errors,[]);await context.close();
+   }
+   console.log('PASS Türkiye’ye göre at 1280 light and 390 dark');
+ }catch(e){await browser.close();throw e}
  // Tüm dönem / Son 1 ay / Son 3 ay: four exams (10 Haz, 5 Ağu, 18 Eyl, 2 Eki); the default compares the first with the latest.
  try{
    const eski=(ad,tarih)=>['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad,tarih}));
