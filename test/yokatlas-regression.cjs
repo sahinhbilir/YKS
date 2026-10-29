@@ -1,0 +1,26 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const values={tr:30,sos:15,mat:25,fen:12,amat:20,fiz:9,kim:8,bio:7};
+const program={id:'123456789',field:'SAY',city:34,type:'DEVLET',university:'Test Üniversitesi',program:'Test',nets:{coefficient:.12,values}};
+const catalogue={schema:1,catalogYear:2026,referenceYear:2025,programs:[program]};
+let fetches=0;
+const sandbox={console,Intl,JSON,Math,Number,Object,Array,Set,Error,Promise,fetch:async()=>{fetches++;return {ok:true,text:async()=>JSON.stringify(catalogue)}},document:{addEventListener(){}},D:{ogr:[{alan:'SAY'}]},EK:{ogr:0},ogrenciMi:()=>true,yalnizcaGoruntuleme:()=>false,ogrenciSinavi:()=> 'YKS',kaydet:async()=>true,denemeNet:d=>d.dogru-d.yanlis/4,denemeBolumSayilir:(r,k)=>{const d=r.dersler.find(x=>x.kod===k);return !!d&&(k!=='sf'||d.dogru+d.yanlis>0)},DENEME_DERSLER:{TYT:[],AYT:[]}};
+vm.createContext(sandbox);vm.runInContext(fs.readFileSync('src/yokatlas.js','utf8')+'\nglobalThis.api=YOKATLAS;',sandbox);const a=sandbox.api;
+const d=(kod,soru,dogru)=>({kod,soru,dogru,yanlis:0});
+const t={tur:'TYT',oturum:'TYT',dersler:[d('turkce',40,30),d('tarih',5,3),d('cografya',5,3),d('felsefe',5,3),d('din',5,3),d('mat',30,20),d('geo',10,5),d('fizik',7,4),d('kimya',7,4),d('biyoloji',6,4)]};
+const y={tur:'AYT',oturum:'AYT',dersler:[d('mat',30,15),d('geo',10,5),d('fizik',14,9),d('kimya',13,8),d('biyoloji',13,7)]};
+(async()=>{
+ assert.equal(a.hedefDogrula({surum:1,id:program.id,yil:2025,alan:'SAY'}),true);assert.throws(()=>a.hedefDogrula({surum:1,id:'x',yil:2025,alan:'SAY'}));
+ assert.equal(a.katalogDogrula(catalogue),catalogue);assert.throws(()=>a.katalogDogrula({...catalogue,programs:[{...program,type:'VAKIF',scholarship:50}]}));
+ const loaded=await a.yukle();assert.equal(await a.yukle(),loaded);assert.equal(fetches,1);
+ const tp=a.profil(t,'TYT','SAY'),ap=a.profil(y,'AYT','SAY');assert.equal(tp.sos,12);assert.equal(tp.mat,25);assert.equal(ap.amat,20);
+ assert.equal(a.profil({...t,dersler:t.dersler.filter(x=>x.kod!=='geo')},'TYT','SAY'),null);assert.equal(a.profil({...y,silindi:true},'AYT','SAY'),null);
+ const diff=a.fark(program,{...tp,...ap});assert.equal(diff.missing,3);assert.equal(diff.tyt,3);assert.equal(diff.ayt,0);
+ const goals=a.netHedef(program);assert.equal(goals.TYT,82);assert.equal(goals.AYT,44);assert.equal(goals['TYT:matgeo'],25);assert.equal(goals['AYT:fen'],24);assert.equal(a.netHedef({...program,nets:{...program.nets,values:{...values,tr:-2}}})['TYT:turkce'],0);
+ const student=sandbox.D.ogr[0];await a.hedefSec(program.id);assert.equal(student.universiteHedef.id,program.id);assert.equal(student.denemeHedef.TYT,82);
+ await a.hedefSec(null);assert.equal(student.universiteHedef,null);assert.equal(student.denemeHedef.TYT,82);
+ sandbox.kaydet=async()=>false;await assert.rejects(a.hedefSec(program.id));assert.equal(student.universiteHedef,null);assert.equal(student.denemeHedef.TYT,82);
+ sandbox.yalnizcaGoruntuleme=()=>true;await assert.rejects(a.hedefSec(program.id));sandbox.yalnizcaGoruntuleme=()=>false;
+ await assert.rejects(a.hedefSec(program.id,{},student));await assert.rejects(a.hedefSec(program.id,sandbox.D,{}));
+ console.log('PASS YÖK Atlas profiles, validation, loading, targets and rollback');
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -41,7 +41,7 @@ check('teacher menu is on top, grouped like the student menu', () => {
   assert.deepEqual([...h.matchAll(/<div class="menu-grup[^"]*"><button data-sekme="([^"]+)"/g)].map(m => m[1]), ['plan', 'ogrenciler', 'denemeler']);
   assert.deepEqual(liste(h, 'planMenusu'), ['giris', 'harita']);
   assert.deepEqual(liste(h, 'ogrencilerMenusu'), ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor']);
-  assert.deepEqual(liste(h, 'denemelerMenusu'), ['siralamalar', 'turkiye', 'konutakibi']);
+  assert.deepEqual(liste(h, 'denemelerMenusu'), ['siralamalar', 'turkiye', 'konutakibi', 'universite']);
   assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['mufredat', 'ayarlar'], 'Müfredat and Ayarlar on the right');
   // Konular and the class curricula open from Müfredat; past-plan recovery from a red week on the map.
   const hepsi = sekmeler(h), beklenen = run('SEKME_REHBER.map(s=>s[0])').filter(x => !['konular', 'konuplani', 'kurtarma', 'ogrencikarti'].includes(x));

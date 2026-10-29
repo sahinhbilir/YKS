@@ -131,8 +131,10 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert(bulut['testDefter/google-1/gecmis/2'],'Wednesday history slot');
    // Student top menu: "Planım" opens the weekly plan; its arrow (hover or click) lists the other plan pages.
    assert.equal(await page.locator('#ray').getAttribute('class'),'ray ust');
-   // The brand (YKS Tekrar Defteri) is the home button; then Planım ▾, Denemelerim, Müfredat, Ayarlar.
-   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','denemeler']);
+   // The brand is home; Planım and Denemelerim each have their own submenu.
+   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana']);
+   assert.deepEqual(await page.locator('#ray > .menu-grup > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['plan','denemeler']);
+   assert.deepEqual(await page.locator('#denemelerMenusu [data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['universite']);
    assert.equal(await page.locator('#ray > button.marka').isVisible(),true,'the brand stays visible at '+width);
    const menu=page.locator('#planMenusu'),ok=page.locator('#ray [aria-controls="planMenusu"]');
    assert.equal(await menu.isVisible(),false,'menu folded');

@@ -25,6 +25,8 @@ jobs:
         run: node --test test/grade11-timetable-regression.cjs
       - name: Mock exams, import validation and embedding
         run: node scripts/embed-denemeler.cjs --check && node test/mock-exam-regression.cjs
+      - name: University catalogue scope, net comparisons, targets and synchronization
+        run: python3 test/yokatlas-build-test.py && node scripts/embed-yokatlas.cjs --check && node test/yokatlas-regression.cjs && node test/yokatlas-sync-regression.cjs && node test/tarama-propagation-regression.cjs
       - name: Sıralamalar comparison reports, storage and embedding
         run: node scripts/embed-siralamalar.cjs --check && node test/siralama-regression.cjs
       - name: Individual student visual reports and source validation
@@ -130,6 +132,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/student-activity-browser.cjs
       - name: Mock exam entry, charts and teacher imports
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/mock-exam-browser.cjs
+      - name: University picker, net comparison and target selection on desktop and phone
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/yokatlas-browser.cjs
       - name: Sıralamalar reports on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/siralama-browser.cjs
       - name: Individual student PDF downloads on desktop and mobile

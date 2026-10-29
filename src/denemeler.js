@@ -47,6 +47,7 @@ function denemeDogrula(liste) {
         (r.tur !== 'BRANS' && r.tur !== r.oturum) || !Object.hasOwn(DENEME_ALAN,r.alan) ||
         !Number.isSafeInteger(r.ts) || r.ts <= 0 || r.ts > 100000000000000 ||
         (r.silindi !== undefined && typeof r.silindi !== 'boolean') ||
+        (r.sinavTuru !== undefined && !['tarama','genel'].includes(r.sinavTuru)) ||
         (r.sure !== null && (!Number.isFinite(r.sure) || r.sure <= 0 || r.sure > 600)) ||
         (r.puan !== null && (!Number.isFinite(r.puan) || r.puan < 0 || r.puan > 600)) ||
         !Array.isArray(r.dersler) || !r.dersler.length || r.dersler.length > 13)
@@ -276,8 +277,17 @@ function denemeOgrenciEsle(row) {
   const aday=row.no===null?adlar:adlar.filter(({o})=>Number(o.no)===row.no);
   return aday.length===1?aday[0].i:-1;
 }
+function denemePdfSinavTuru(rapor) {
+  const varsayilan = /tarama/.test(String(rapor.ad || '').toLocaleLowerCase('tr-TR')) ? 'tarama' : 'genel';
+  if (typeof SIRALAMA === 'undefined') return varsayilan;
+  const veri = SIRALAMA.oku().veri;
+  const aday = (veri?.sinavlar || []).filter(s => denemeAdAnahtari(s.ad) === denemeAdAnahtari(rapor.ad));
+  const tarihler = s => [s.tarih,s.T?.tarih,s.F?.tarih].filter(Boolean).map(t => { const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t); return m ? m[3]+'-'+m[2]+'-'+m[1] : t; });
+  const eslesen = aday.filter(s => tarihler(s).includes(rapor.tarih));
+  return eslesen.length === 1 ? (eslesen[0].tur || varsayilan) : varsayilan;
+}
 function denemePdfKaydi(rapor,row) {
-  const r={id:'p:'+encodeURIComponent([denemeAdAnahtari(rapor.ad),rapor.tarih,row.oturum].join('|')),ad:rapor.ad,tarih:rapor.tarih,tur:row.oturum,oturum:row.oturum,brans:'',alan:'SAY',dersler:row.dersler,sure:null,puan:row.puan,ts:Date.now()};
+  const r={sinavTuru:denemePdfSinavTuru(rapor),id:'p:'+encodeURIComponent([denemeAdAnahtari(rapor.ad),rapor.tarih,row.oturum].join('|')),ad:rapor.ad,tarih:rapor.tarih,tur:row.oturum,oturum:row.oturum,brans:'',alan:'SAY',dersler:row.dersler,sure:null,puan:row.puan,ts:Date.now()};
   denemeDogrula([r]);return r;
 }
 function denemeAyniSonuc(a,b) {
@@ -337,6 +347,11 @@ async function denemeOkulYayinla(si) {
     if(D!==defter || !rehberMi() || b.mevcutKullanici()?.uid!==u.uid || o.syncId!==syncId)throw new Error('Oturum değişti.');
     if(!v || v.durum!=='aktif' || v.ogretmenUid!==defterUid(u) || v.ogrenciBulutId!==o.ogrenciBulutId)throw new Error('Öğrenci bağlantısı eşleşmedi.');
     birlesen=denemeBirlestir(v.denemeOkul?JSON.parse(v.denemeOkul):[],o.denemeOkul || []);
+    // Enrich legacy rows only when this student's results are explicitly published.
+    // Work on the merged copy so a failed transaction never mutates local results.
+    birlesen=birlesen.map(r=>!r.silindi && r.id.startsWith('p:') && r.sinavTuru===undefined
+      ? {...r,sinavTuru:denemePdfSinavTuru(r),ts:Math.max(Date.now(),r.ts+1)} : r);
+    denemeDogrula(birlesen);
     const veri=JSON.stringify(birlesen);
     if(baytBoyu(veri)>300000 || baytBoyu(JSON.stringify({...v,denemeOkul:veri}))>BULUT_YEDEK_UST_SINIR)throw new Error('Deneme geçmişi sunucu sınırını aşıyor.');
     tx.update(ref,{denemeOkul:veri});
@@ -360,7 +375,7 @@ function denemeDinlemeyiBaslat() {
       // Receiving teacher data is not a student edit. Advancing ogrCalismaTs here
       // would let an idle device overwrite another device's newer working plan.
       localStorage.setItem('yks_veri',JSON.stringify(D));
-      if(EK.sekme==='denemeler' && !DENEME_FORM)ciz();
+      if((EK.sekme==='denemeler' && !DENEME_FORM)||EK.sekme==='universite')ciz();
     } }
     catch(e){EK.denemeDurum='Okul sonuçları alınamadı: '+e.message;}
   },e=>{denemeDinlemeyiDurdur();EK.denemeDurum='Okul sonuçları alınamadı; bağlantı yenilendiğinde tekrar denenecek. '+(e.message||e);});

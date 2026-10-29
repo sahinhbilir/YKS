@@ -187,7 +187,7 @@ async function yaz(veri,once){
   dogrula(veri);
   const json=JSON.stringify(veri),bayt=baytBoyu(json);
   if(bayt>UST_SINIR)throw new Error('Sıralama listeleri '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.');
-  const eski=D.siralama,geri=()=>{if(eski===undefined)delete D.siralama;else D.siralama=eski};
+  const owner=D,eski=D.siralama,geri=()=>{if(owner.siralama!==veri)return;if(eski===undefined)delete owner.siralama;else owner.siralama=eski};
   D.siralama=veri;
   // The lists ride in the teacher's cloud backup; they must not push it over its limit.
   if(baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(once===undefined?0:baytBoyu(JSON.stringify(once)))){geri();throw new Error('Bu listeler defteri bulut yedeği sınırının üstüne çıkarır. Eski sınavları silip yeniden deneyin. Ayarlar → Defter boyutu bölümüne bakın.')}
@@ -265,7 +265,25 @@ async function turDegistir(id,tur){
   const {veri,hata}=oku();if(!veri)throw new Error(hata);
   const s=veri.sinavlar.find(x=>x.id===id);if(!s)throw new Error('Sınav bulunamadı.');
   if(!tur||tur===addanTur(s.ad))delete s.tur;else s.tur=tur;
-  await yaz(veri,D.siralama);
+  // Update the same dated school results in the same local save as the classification.
+  // Publication remains queued for the existing publish flow.
+  const changed=[], anahtar=denemeAdAnahtari(s.ad), yeniTur=s.tur||addanTur(s.ad);
+  const tarihler=[s.tarih,s.T?.tarih,s.F?.tarih].filter(Boolean).map(t=>{const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t);return m?m[3]+'-'+m[2]+'-'+m[1]:t});
+  try {
+    for(const o of D.ogr || []) {
+      if(!o || o.silindi)continue;
+      const degisen=(o.denemeOkul || []).filter(r=>!r.silindi && r.id.startsWith('p:') && denemeAdAnahtari(r.ad)===anahtar && tarihler.includes(r.tarih) && r.sinavTuru!==yeniTur);
+      if(!degisen.length)continue;
+      const before=o.denemeOkul,queued=o.denemeYayinBekliyor;
+      o.denemeOkul=denemeBirlestir(o.denemeOkul,degisen.map(r=>({...r,sinavTuru:yeniTur,ts:Math.max(Date.now(),r.ts+1)})));
+      changed.push({o,before,queued,next:o.denemeOkul});
+      o.denemeYayinBekliyor=true;
+    }
+    await yaz(veri,D.siralama);
+  } catch(e) {
+    for(const {o,before,queued,next} of changed)if(o.denemeOkul===next){o.denemeOkul=before;if(queued===undefined)delete o.denemeYayinBekliyor;else o.denemeYayinBekliyor=queued}
+    throw e;
+  }
 }
 
 /* ---------------- exam model ---------------- */
