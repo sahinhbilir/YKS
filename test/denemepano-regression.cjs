@@ -40,7 +40,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
   await check('model: averages, middle half, participation, ranks and the comparison window match the lists', async () => {
     await loadAll();
     const s = state();
-    assert.equal(s.olcu, 'TYT'); assert.equal(s.s, 1); assert.equal(s.K, 'g12'); assert.equal(s.ks[0], 'g12'); assert(['12/A', '12/B'].every(k => s.ks.includes(k)));
+    assert.equal(s.olcu, 'TYT'); assert.equal(s.s, 'tum', 'the default comparison is the whole period'); assert.equal(s.K, 'g12'); assert.equal(s.ks[0], 'g12'); assert(['12/A', '12/B'].every(k => s.ks.includes(k)));
     const exp = e => SINAVLAR[e].T.ogr.map(tytNet);
     assert.deepEqual(s.m.sinavlar.map(x => x.ad), ['Sentetik Deneme 1', 'Sentetik Deneme 2']);
     s.m.sinavlar.forEach((x, i) => { const v = exp(['once', 'sonra'][i]); assert.equal(x.n, v.length); assert(Math.abs(x.ort - v.reduce((a, b) => a + b, 0) / v.length) < 1e-9); assert.equal(x.max, Math.max(...v)); });
@@ -62,6 +62,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run("EK.dpOlcu='AYT:SÖZ'"); const z = state(); assert(['AYT:SÖZ', 'TYT'].includes(z.olcu), 'a field nobody took falls back to a field with data');
   });
   await check('the page: sentence, controls, subject cards, table and the student card; names are escaped', async () => {
+    run('EK.dpAralik=1');   // these checks are about the exam-to-exam window; Tüm dönem is the default (see the range checks)
     put('L', ['once', 'sonra'].flatMap(e => ['T', 'F'].map(t => list(e, t)))); sandbox.L[3].ogr.find(o => o.no !== '1001').ad = 'SENTETİK <img src=x>'; await run('siralamaKaydet(L)'); run("EK.dpOgr='1001'");
     const h = run('DPANO.icerik()');
     assert.match(h, /12\. sınıflar · Son deneme \(Sentetik Deneme 2, \d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]+\): TYT ortalaması <b>[\d,]+<\/b> net, önceki denemeye göre <b>[+−][\d,]+<\/b> \(iki dönemde de giren \d+ öğrencinin kendi değişimi <b>[+−]?[\d,]+<\/b>\)\./);
@@ -124,6 +125,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(run('DPANO.icerik()'), /<select class="dp-tur-sec" data-dp-sinav-tur="[^"]+" aria-label="Sentetik Tarama 1 türü"><option value="genel">Genel<\/option><option value="tarama" selected>Tarama<\/option><\/select>/);
   });
   await check('Seç compares any two exams; cards, ranks and texts follow the chosen pair', async () => {
+    run('EK.dpAralik=1');   // these checks are about the exam-to-exam window; Tüm dönem is the default (see the range checks)
     await loadUc();
     const varsayilan = st('st=>[st.m.pencere.sec,st.m.simdi,st.m.onceki]');
     assert.deepEqual(varsayilan, [{once: [1, 1], son: [2, 2]}, 2, 1], 'without Seç the last two');
@@ -147,6 +149,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.deepEqual(st('st=>[st.m.simdi,st.m.onceki]'), [0, 2]);
   });
   await check('Sıralamalar measures: net artışı, % artış and the closed gap rank the students; şube averages head the table', async () => {
+    run('EK.dpAralik=1');   // these checks are about the exam-to-exam window; Tüm dönem is the default (see the range checks)
     await loadAll();
     const rows = () => st('st=>st.mo.ogrenciler.map(o=>({no:o.no,sira:o.sira,c:o.k[1]}))');
     for (const [olcut, alan] of [['artis', 'fark'], ['yuzde', 'yuzde'], ['fark', 'logFark']]) {
@@ -183,6 +186,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run("EK.dpOlcu='AYT:SAY'"); assert.equal(st('st=>st.ogrDers'), null, 'a subject of another session falls back to the total');
   });
   await check('tests next to the lessons, places moved since the önceki exam, and lessons from easiest to hardest', async () => {
+    run('EK.dpAralik=1');   // these checks are about the exam-to-exam window; Tüm dönem is the default (see the range checks)
     await loadAll(); run("EK.dpOgrNet='G-FEN'");
     const net = (o, i) => { const p = o.dy[i]; return p ? p[0] - p[1] / 4 : 0; }, fen = o => net(o, 8) + net(o, 9) + net(o, 10), r2 = v => Math.round(v * 100) / 100;
     const s = st(`st=>({ust:st.mo.O.ust,ad:st.ogrDers.ad,seri:st.mo.ogrenciler.find(o=>o.no==="1001").seri,ogr:st.m.ogrenciler.map(o=>({sira:o.sira,siraOnce:o.siraOnce,siraFark:o.siraFark})),
@@ -269,6 +273,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run("GRAFIK_CIZGI.sec('yumusak')"); assert.match(run('DPANO.icerik()'), /data-dp-cizgi="yumusak" aria-pressed="true"/); run("GRAFIK_CIZGI.sec('kose')");
   });
   await check('the exam table corrects dates with Sıralamalar’s field; Raporlar at the bottom follow the board’s pair', async () => {
+    run('EK.dpAralik=1');   // these checks are about the exam-to-exam window; Tüm dönem is the default (see the range checks)
     await loadUc();
     let h = run('DPANO.icerik()');
     for (const ad of ['Sentetik Deneme 1', 'Sentetik Tarama 1', 'Sentetik Deneme 2']) assert(h.includes('data-sr-tarih="' + idOf(ad) + '"'), ad);
@@ -291,12 +296,12 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
   // ---- Değişimin kaynağı and Isı haritası: hand-computed synthetic exams (no lists) ----
   // exams: [[name, {no: [A, B, C(, Z)]}]], people: {no: [name, şube]}. A = Matematik, B = Fizik, C = Türkçe; Z is
   // a net no printed lesson covers (it counts in the total only). Returns the model of the 12th grade or one şube.
-  const elle = (sinavlar, kisiler, kapsam = 'g12', secim = null) => {
-    put('ELLE', {sinavlar, kisiler, kapsam, secim});
+  const elle = (sinavlar, kisiler, kapsam = 'g12', secim = null, gunler = null) => {
+    put('ELLE', {sinavlar, kisiler, kapsam, secim, gunler});
     run(`globalThis.__m=(()=>{const E=ELLE,L=[['A','Matematik','var(--e-c1)'],['B','Fizik','var(--e-c2)'],['C','Türkçe','var(--e-c3)']].map(([kod,ad,renk])=>({kod,ad,soru:40,renk}));
       const O={key:'X',ad:'Elle',oturum:'tyt',ust:120,deger:o=>Object.values(o.net).reduce((a,b)=>a+b,0),dersler:L};
       const kisi=new Map(Object.entries(E.kisiler).map(([no,[ad,sinif]])=>[no,{no,ad,sinif}]));
-      const t={kisi,sinavlar:E.sinavlar.map(([ad,satirlar],i)=>({id:'e'+i,ad,tarih:'',g:i+1,dates:[],pdfDates:[],tur:'genel',ayt:{},
+      const t={kisi,sinavlar:E.sinavlar.map(([ad,satirlar],i)=>({id:'e'+i,ad,tarih:'',g:E.gunler?E.gunler[i]:i+1,dates:[],pdfDates:[],tur:'genel',ayt:{},
         tyt:Object.fromEntries(Object.entries(satirlar).map(([no,v])=>[no,{no,name:E.kisiler[no][0],cls:'',net:Object.fromEntries(v.map((x,j)=>['ABCZ'[j],x])),dy:{A:'1/0',B:'1/0',C:'1/0'}}]))}))};
       const K=E.kapsam==='g12'?{key:'g12',ad:'12. sınıflar',uyar:k=>!!k&&parseInt(k.sinif,10)===12}:{key:E.kapsam,ad:E.kapsam,uyar:k=>!!k&&k.sinif===E.kapsam};
       const m=DPANO.gorunumModeli(t,O,K,E.secim);const n=m.sinavlar.length;m.simdi=m.pencere.sec?m.pencere.sec.son[0]:n-1;m.onceki=m.pencere.sec?m.pencere.sec.once[0]:n-2;return m})()`);
@@ -410,6 +415,72 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     reset(); put('L', [list('once', 'T'), list('once', 'F')]); await run('siralamaKaydet(L)');
     run("EK.dpKapsam=undefined"); const bir = run('DPANO.icerik()'); assert(!bir.includes('id="dpKaynak"') && !bir.includes('id="dpIsi"'), 'one exam hides both');
     run('D.siralama=null'); const bos = run('DPANO.icerik()'); assert(!bos.includes('id="dpKaynak"') && !bos.includes('id="dpIsi"'), 'no lists hide both');
+  });
+  // ---- Karşılaştır by date: Tüm dönem, Son 1 ay, Son 3 ay ----
+  const gun = iso => run('gunNo("' + iso + '")');
+  await check('ayGeri: the same date k months earlier, clamped to the end of a shorter month, across the year', () => {
+    const geri = (iso, k) => get(`new Date(DPANO.ayGeri(gunNo("${iso}"),${k})*864e5).toISOString().slice(0,10)`);
+    assert.equal(geri('2026-10-30', 1), '2026-09-30'); assert.equal(geri('2026-03-31', 1), '2026-02-28'); assert.equal(geri('2026-05-31', 3), '2026-02-28');
+    assert.equal(geri('2026-01-15', 3), '2025-10-15'); assert.equal(geri('2028-03-31', 1), '2028-02-29', 'leap year'); assert.equal(geri('2026-08-31', 3), '2026-05-31');
+  });
+  await check('Tüm dönem, Son 1 ay, Son 3 ay compare the earliest exam of the range with the latest (hand-worked); Tüm dönem is the default', () => {
+    // Six exams; 1001 and 1003 sit all of them. Total nets (A + B + C): 1001 18 19 20 21 22 24, 1003 13 14 15 16 17 18 → means 15.5 16.5 17.5 18.5 19.5 21.
+    const adlar = ['E1', 'E2', 'E3', 'E4', 'E5', 'E6'], tarih = ['2026-07-02', '2026-08-20', '2026-09-18', '2026-10-02', '2026-10-16', '2026-10-30'];
+    const a = [[10, 5, 3], [11, 5, 3], [12, 5, 3], [13, 5, 3], [14, 5, 3], [15, 6, 3]], c = [[6, 6, 1], [7, 6, 1], [8, 6, 1], [9, 6, 1], [10, 6, 1], [11, 6, 1]];
+    const sinavlar = adlar.map((ad, i) => ['Sentetik ' + ad, { 1001: a[i], 1003: c[i] }]);
+    elle(sinavlar, kisiler, 'g12', null, tarih.map(gun));
+    // 30 Ekim − 1 ay = 30 Eylül → the first exam on or after it is 2 Ekim (4th); − 3 ay = 30 Temmuz → 20 Ağustos (2nd).
+    assert.deepEqual(get('__m.pencere.tum'), { once: [0, 0], son: [5, 5] }); assert.deepEqual(get('__m.pencere["1ay"]'), { once: [3, 3], son: [5, 5] }); assert.deepEqual(get('__m.pencere["3ay"]'), { once: [1, 1], son: [5, 5] });
+    assert.deepEqual(get('Object.keys(__m.pencere).filter(k=>__m.pencere[k].once[0]===__m.pencere[k].once[1]).sort()'), ['1', '1ay', '3ay', 'sec', 'tum'], 'Son deneme is exam-to-exam too, the others compare means of several exams');
+    const yakinOzet = (k, once, son, fark) => { const o = get(`__m.ozet[${JSON.stringify(k)}]`); yakin(o.once, once); yakin(o.son, son); yakin(o.fark, fark); };
+    yakinOzet('tum', 15.5, 21, 5.5); yakinOzet('3ay', 16.5, 21, 4.5); yakinOzet('1ay', 18.5, 21, 2.5);
+    // The same students' own changes: 1001 +6 / +5 / +3, 1003 +5 / +4 / +2 → means 5.5, 4.5, 2.5.
+    for (const [k, f1001, f1003] of [['tum', 6, 5], ['3ay', 5, 4], ['1ay', 3, 2]]) {
+      const o = get(`__m.ogrenciler.map(o=>[o.no,o.k[${JSON.stringify(k)}].fark])`); assert.deepEqual(Object.fromEntries(o), { 1001: f1001, 1003: f1003 });
+    }
+    // Değişimin kaynağı splits the range exactly: Matematik (+5 / +4 / +2), Fizik (+0.5 / +0.5 / +0.5), Türkçe 0.
+    for (const [k, mat, fiz] of [['tum', 5, .5], ['3ay', 4, .5], ['1ay', 2, .5]]) { const d = kaynak(k); assert.deepEqual(d.parcalar.map(p => [p.kod, p.katki]), [['A', mat], ['B', fiz], ['C', 0]], k); yakin(d.toplam, mat + fiz); }
+    // Fewer than two exams in the range: the option is not there (a window needs two exams); Tüm dönem needs two exams in all.
+    elle(sinavlar.slice(0, 2), kisiler, 'g12', null, ['2026-07-02', '2026-12-20'].map(gun));
+    assert.deepEqual(get('Object.keys(__m.pencere).sort()'), ['1', 'sec', 'tum'], 'the only other exam is more than 3 months back');
+    elle(sinavlar.slice(0, 1), kisiler, 'g12', null, [gun('2026-07-02')]); assert.deepEqual(get('Object.keys(__m.pencere)'), []);
+  });
+  await check('the board with Tüm dönem / Son 1 ay / Son 3 ay: default, buttons, sentence, cards, table, Değişimin kaynağı, Isı haritası, raporlar', async () => {
+    // Four exams: two taramas on 10 Haz and 5 Ağu, then the two denemeler of 18 Eyl and 2 Eki.
+    const eski = (ad, tarih) => ['T', 'F'].map(t => listOf({ ...SINAVLAR.once[t], ad, tarih }));
+    put('L', [...eski('Sentetik Tarama 0', '10.06.2026'), ...eski('Sentetik Tarama 00', '05.08.2026'), list('once', 'T'), list('once', 'F'), list('sonra', 'T'), list('sonra', 'F')]); await run('siralamaKaydet(L)');
+    assert.deepEqual(st('st=>st.m.sinavlar.map(s=>s.ad)'), ['Sentetik Tarama 0', 'Sentetik Tarama 00', 'Sentetik Deneme 1', 'Sentetik Deneme 2']);
+    assert.deepEqual(st('st=>[st.s,st.m.pencere.tum,st.m.pencere["1ay"],st.m.pencere["3ay"]]'), ['tum', { once: [0, 0], son: [3, 3] }, { once: [2, 2], son: [3, 3] }, { once: [1, 1], son: [3, 3] }], '2 Eki − 1 ay = 2 Eyl, − 3 ay = 2 Tem');
+    const ids = st('st=>st.m.sinavlar.map(s=>s.id)'), ort = st('st=>st.m.sinavlar.map(s=>s.ort)');
+    let h = run('DPANO.icerik()');
+    // Buttons: the three date ranges first, then the exam windows; the default one is pressed.
+    const dugme = h.match(/aria-label="Karşılaştır">[\s\S]*?<\/div>/)[0], adlar = [...dugme.matchAll(/data-dp-aralik="([^"]+)" aria-pressed="(\w+)"[^>]*>([^<]+)</g)].map(x => [x[1], x[2], x[3]]);
+    assert.deepEqual(adlar, [['tum', 'true', 'Tüm dönem'], ['1ay', 'false', 'Son 1 ay'], ['3ay', 'false', 'Son 3 ay'], ['1', 'false', 'Son deneme'], ['2', 'false', 'Son 2 deneme'], ['3', 'false', 'Son 3 deneme'], ['sec', 'false', 'Seç']]);
+    for (const [k, ad, bas, onceI] of [['tum', 'Tüm dönem', '10 Haz', 0], ['1ay', 'Son 1 ay', '18 Eyl', 2], ['3ay', 'Son 3 ay', '5 Ağu', 1]]) {
+      run(`EK.dpAralik=${JSON.stringify(k)}`); h = run('DPANO.icerik()');
+      assert.match(h, new RegExp('<p class="et-cumle">12\\. sınıflar · ' + ad + ' \\(' + bas + ' → 2 Eki\\): TYT ortalaması <b>[\\d,]+</b> net, başlangıçtaki denemeye göre <b>[+−][\\d,]+</b>'), k);
+      assert(h.includes('data-dp-aralik="' + k + '" aria-pressed="true"'), k);
+      const o = st(`st=>[st.m.onceki,st.m.simdi,st.m.ozet[${JSON.stringify(k)}].fark]`); assert.deepEqual(o.slice(0, 2), [onceI, 3]); yakin(o[2], ort[3] - ort[onceI], k + ': the latest mean minus the first exam of the range');
+      assert(h.includes('<span class="mini">Katılımcı ortalaması · ' + ad.toLocaleLowerCase('tr-TR') + '</span>'), 'the card names the range'); assert.match(h, /<span class="mini">başta: [\d,]+<\/span>/);
+      assert(h.includes('Sırası yükselen · başlangıca göre'));
+      // Değişimin kaynağı and Isı haritası say which range; their numbers are the same students' change from the range's first exam.
+      assert(h.includes('<span class="mini">' + ad + ': ' + bas + ' → 2 Eki (' + st(`st=>st.m.sinavlar[${onceI}].ad`) + ' → Sentetik Deneme 2) · TYT</span>'), 'Değişimin kaynağı names the window');
+      assert(h.includes('Öğrenciler · ' + ad + ': ') || h.includes('Şubeler · ' + ad + ': '), 'Isı haritası names the window');
+      const k2 = st(`st=>{const k=DPANO.degisimKaynagi(st.m,st.s);return {t:k.toplam,a:st.m.ozet[st.s].ayni,p:k.parcalar.reduce((a,p)=>a+p.katki,0),s:k.subeler.reduce((a,p)=>a+p.katki,0)}}`);
+      yakin(k2.t, k2.a); yakin(k2.p, k2.t); yakin(k2.s, k2.t);
+      // The table: Başta and Sonda, the rank change since the first exam of the range; the reports compare the same pair.
+      assert(h.includes('<button type="button" data-dp-sira="son">Sonda</button>') && h.includes('<button type="button" data-dp-sira="once">Başta</button>'), 'table headers');
+      assert(h.includes('data-sr-onceki="' + ids[onceI] + '"') && h.includes('data-sr-simdi="' + ids[3] + '"'), 'Raporlar compare the range’s first exam with the latest');
+      assert.match(h, new RegExp('<h2>En çok değişenler</h2><span class="mini">' + ad + ': ' + bas + ' → 2 Eki</span>'));
+    }
+    // Seç keeps working next to them, and an old numeric choice too.
+    run(`EK.dpAralik='sec';EK.dpOnceki=${JSON.stringify(ids[0])};EK.dpSimdiki=${JSON.stringify(ids[3])}`); assert.deepEqual(st('st=>[st.s,st.m.onceki,st.m.simdi]'), ['sec', 0, 3]); assert(get('(()=>{const {t}=DPANO.veriAl();return DPANO.GRAFIKLER.genel(DPANO.durumAl(t),720).svg})()').includes('data-tutamak="once"'), 'the Seç lines are still there');
+    run('EK.dpAralik=2'); assert.deepEqual(st('st=>[st.s,st.m.onceki,st.m.simdi]'), [2, 2, 3]);
+    assert(!get('(()=>{const {t}=DPANO.veriAl();return DPANO.GRAFIKLER.genel(DPANO.durumAl(t),720).svg})()').includes('data-tutamak='), 'the other windows have no handles');
+    // A range with a single exam is off; an unavailable choice falls back to the default.
+    reset(); put('L', [...eski('Sentetik Tarama 0', '10.06.2026'), list('sonra', 'T'), list('sonra', 'F')]); await run('siralamaKaydet(L)');
+    run("EK.dpAralik='3ay'"); h = run('DPANO.icerik()');
+    assert.match(h, /data-dp-aralik="1ay" aria-pressed="false" disabled/); assert.match(h, /data-dp-aralik="3ay" aria-pressed="false" disabled/); assert.match(h, /data-dp-aralik="tum" aria-pressed="true"/, 'falls back to Tüm dönem');
   });
   console.log(passed + ' Deneme panosu checks passed');
 })();
