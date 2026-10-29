@@ -1,0 +1,31 @@
+/* Uses the application's existing page, ink and accent tokens in both themes. */
+#yaKok{max-width:1160px;margin:auto;display:flex;flex-direction:column;gap:20px;color:var(--murekkep);line-height:1.5}
+#yaKok h1,#yaKok h2,#yaKok h3,#yaKok h4,#yaKok p{margin:0}
+#yaKok h1{font-size:1.65rem}#yaKok h2{font-size:1.15rem}#yaKok h3{font-size:1.05rem;line-height:1.4}#yaKok h4{margin:20px 0 12px}
+#yaKok .ya-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+#yaKok .ya-muted,#yaKok .ya-meta,#yaKok .ya-source{color:var(--soluk);font-size:.85rem}
+#yaKok a{color:var(--vurgu);text-underline-offset:3px}
+#yaKok .ya-panel,#yaKok .ya-program{background:var(--kagit);border:1px solid var(--cizgi);border-radius:14px}
+#yaKok .ya-panel{padding:20px}#yaKok .ya-exams{display:grid;grid-template-columns:140px 1fr 1fr;gap:16px;margin-bottom:14px}
+#yaKok label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:600;min-width:0}
+#yaKok select,#yaKok input{width:100%;min-width:0;max-width:100%;font:inherit;padding:10px;color:var(--murekkep);background:var(--kagit);border:1px solid var(--cizgi);border-radius:8px;box-sizing:border-box}
+#yaKok .ya-student{min-width:220px}#yaKok .ya-filters{display:grid;grid-template-columns:90px 150px 190px 1fr;gap:14px;align-items:end}
+#yaKok .ya-results,#yaKok .ya-selected{display:flex;flex-direction:column;gap:14px}
+#yaKok .ya-selected>.ya-program{border-color:var(--vurgu)}
+#yaKok .ya-program summary{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 24px;cursor:pointer;list-style:none}
+#yaKok .ya-program summary::-webkit-details-marker{display:none}
+#yaKok .ya-program summary>div:first-child{min-width:0;overflow-wrap:anywhere;display:flex;flex-direction:column;gap:5px}
+#yaKok .ya-gap{min-width:100px;flex-shrink:0;text-align:right;display:flex;flex-direction:column;font-size:.8rem;color:var(--soluk)}
+#yaKok .ya-gap:after{content:'Ayrıntılar ⌄';margin-top:4px;color:var(--vurgu)}#yaKok details[open]>summary .ya-gap:after{content:'Ayrıntılar ⌃'}
+#yaKok .ya-gap strong{font-size:1.65rem;color:var(--murekkep);font-variant-numeric:tabular-nums}
+#yaKok .ya-detail{border-top:1px solid var(--cizgi);padding:24px}
+#yaKok .ya-legend{display:flex;gap:24px;font-size:.85rem}#yaKok .ya-legend span:first-child{color:var(--vurgu)}
+#yaKok .ya-bars{display:grid;gap:14px}#yaKok .ya-bar-row{display:grid;grid-template-columns:125px 1fr 115px;gap:16px;align-items:center;font-size:.9rem}
+#yaKok .ya-bar-row>span:last-child{text-align:right;font-variant-numeric:tabular-nums}#yaKok small{font-size:inherit;color:var(--soluk)}
+#yaKok .ya-track{position:relative;height:10px;background:var(--vurgu-yumusak);border-radius:10px}
+#yaKok .ya-track i{display:block;height:100%;background:var(--vurgu);border-radius:10px}#yaKok .ya-track b{position:absolute;top:-4px;bottom:-4px;border-left:3px solid var(--murekkep);transform:translateX(-1px)}
+#yaKok .ya-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;border-top:1px solid var(--cizgi);margin:24px 0;padding-top:18px;font-size:.85rem;color:var(--soluk)}#yaKok .ya-facts b{color:var(--murekkep);font-size:1rem}
+#yaKok .ya-actions,#yaKok .ya-pagination{display:flex;align-items:center;gap:16px;flex-wrap:wrap}#yaKok .ya-actions{margin-bottom:12px}#yaKok .ya-pagination{justify-content:center}
+@media(max-width:760px){#yaKok .ya-exams,#yaKok .ya-filters{grid-template-columns:1fr 1fr}#yaKok .ya-exams label:first-child,#yaKok .ya-search{grid-column:1/-1}#yaKok .ya-program summary{padding:18px;gap:12px}#yaKok .ya-gap{min-width:70px;max-width:90px}#yaKok .ya-detail{padding:18px}#yaKok .ya-bar-row{grid-template-columns:94px 1fr 88px;gap:8px;font-size:.8rem}#yaKok .ya-facts{gap:10px;font-size:.75rem}#yaKok .ya-facts b{font-size:.9rem}}
+@media print{#yaKok .ya-filters,#yaKok .ya-pagination,#yaKok .ya-actions{display:none}#yaKok .ya-program{break-inside:avoid}}
+@media(max-width:520px){#yaKok .ya-exams{grid-template-columns:1fr}}
