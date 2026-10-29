@@ -164,6 +164,41 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'new controls fit at '+width);
    await page.locator('#dpOgrCizgi').scrollIntoViewIfNeeded();
    await page.screenshot({path:path.join(out,'denemepano-ek-'+width+'-'+tema+'.png'),fullPage:true});
+   // Değişimin kaynağı and Isı haritası: the same students' change split into lessons and şubeler.
+   const kaynak=page.locator('#dpKaynak'),isi=page.locator('#dpIsi');await kaynak.scrollIntoViewIfNeeded();
+   assert.match(await kaynak.locator('.dp-kaynak-cumle').innerText(),/^12\. sınıflar [▲▼][\d,]+ net \(aynı \d+ öğrenci\): /);
+   assert.match(await kaynak.locator('.dp-toplam-yazi').first().innerText(),/^Toplam [▲▼][\d,]+ net = /);
+   assert.equal(await kaynak.locator('h3').count(),2,'by lesson and by şube');
+   assert.equal(await kaynak.locator('.dp-kaynak-tablo').first().locator('tbody tr').count(),10,'ten TYT lessons');
+   assert(await kaynak.locator('.dp-cubuk').first().evaluate(e=>e.getBoundingClientRect().width>0),'bars are drawn');
+   const sayiHiza=async sel=>page.locator(sel).evaluateAll(l=>l.map(e=>getComputedStyle(e).textAlign));
+   for(const sel of ['#dpKaynak td.sayi','#dpKaynak th.sayi','#dpIsi td.sayi','#dpIsi th.sayi']){const h=await sayiHiza(sel);assert(h.length>0&&h.every(x=>x==='right'),sel+' right-aligned')}
+   assert.equal(await page.locator('#dpKaynak td.sayi:not(.dp-isi-hucre)').evaluateAll(l=>l.every(e=>/^[+−\d]|^—$/.test(e.textContent.trim()))),true,'numbers carry a sign');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'Değişimin kaynağı fits at '+width);
+   await kaynak.screenshot({path:path.join(out,'denemepano-kaynak-'+width+'.png')});
+   await isi.scrollIntoViewIfNeeded();
+   assert.match(await isi.locator('.et-lejant').innerText(),/renk: değişim \(net\)/);
+   assert.equal(await isi.locator('thead th').count(),12,'Şube, ten lessons and Toplam');assert.equal(await isi.locator('thead th').first().innerText(),'Şube');
+   assert.equal(await isi.locator('thead th').last().innerText(),'Toplam');
+   assert.equal(await isi.locator('tbody tr').count(),4,'the grade’s mean and its three şubeler');
+   const boyali=await isi.locator('td.dp-isi-hucre').evaluateAll(l=>l.filter(e=>getComputedStyle(e).backgroundColor!=='rgba(0, 0, 0, 0)'&&/color-mix/.test(e.getAttribute('style')||'')).length);
+   assert(boyali>=10,'cells are coloured by change ('+boyali+')');
+   const renkler=await isi.locator('td.dp-isi-hucre').evaluateAll(l=>l.map(e=>[e.textContent.trim(),getComputedStyle(e).backgroundColor]));
+   assert(new Set(renkler.map(x=>x[1])).size>3,'a scale, not one colour');
+   // The first column stays while the table scrolls inside its own box; the page itself does not move sideways.
+   const isiKutu=isi.locator('.dp-isi-kutu'),tasma=await isiKutu.evaluate(e=>e.scrollWidth>e.clientWidth);
+   if(width<700)assert(tasma,'the table scrolls inside its box on a phone');
+   assert.equal(await isi.locator('tbody th.dp-isi-ad').first().evaluate(e=>getComputedStyle(e).position),'sticky');
+   if(tasma){const once=await isi.locator('tbody th.dp-isi-ad').first().evaluate(e=>e.getBoundingClientRect().left);
+     await isiKutu.evaluate(e=>{e.scrollLeft=e.scrollWidth});const sonra=await isi.locator('tbody th.dp-isi-ad').first().evaluate(e=>e.getBoundingClientRect().left);
+     assert(Math.abs(once-sonra)<2,'the first column is sticky');await isiKutu.evaluate(e=>{e.scrollLeft=0})}
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'Isı haritası fits at '+width);
+   await isi.screenshot({path:path.join(out,'denemepano-isi-'+width+'.png')});
+   // One şube: its students are the rows and their names open Öğrenci kartı.
+   await page.locator('#dpKapsam').selectOption('12/A');await page.waitForFunction(()=>document.querySelectorAll('#dpIsi tbody tr').length===3);
+   assert.equal(await page.locator('#dpKaynak h3').count(),1,'no şube split inside one şube');
+   assert.equal(await page.locator('#dpIsi tbody th .et-ad[data-ogrenci-karti]').count(),2);
+   await page.locator('#dpKapsam').selectOption('g12');await page.waitForFunction(()=>document.querySelectorAll('#dpIsi tbody tr').length===4);
    assert.deepEqual(errors,[]);
    await context.close();
   }

@@ -49,4 +49,36 @@
 .dp-zor-ad{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dp-zor-satir b{font-weight:500;text-align:right}.dp-zor-satir .et-hap{justify-self:start}.dp-zor-satir .et-sira-ok{margin-left:0}
 .dp-zor-iz svg{display:block}
+/* Değişimin kaynağı: diverging bars from the middle, one row per lesson or şube. */
+.dp-kaynak-cumle{margin:0;color:var(--e-muted);line-height:1.5}
+.dp-kaynak-iki{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));gap:16px 24px}
+.dp-kaynak-blok{min-width:0;display:flex;flex-direction:column;gap:6px}
+.dp-kaynak-blok h3{margin:0;font-size:.875rem;font-weight:500}
+.dp-toplam-yazi{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.dp-kaynak-tablo tbody tr,.dp-isi tbody tr{cursor:default}
+.dp-kaynak-tablo th[scope="row"]{position:static;font-size:.8125rem;font-weight:400;color:var(--e-fg);text-align:left;border-bottom:1px solid var(--e-grid);padding:6px 8px;white-space:nowrap}
+.dp-kaynak-tablo th[scope="row"] .et-renk{margin-right:6px}
+.dp-kaynak-tablo tfoot th,.dp-kaynak-tablo tfoot td{font-weight:500;border-top:1px solid var(--e-line);padding:6px 8px}
+.dp-kaynak-tablo thead th{white-space:normal;vertical-align:bottom;padding:6px 8px}
+.dp-kaynak-tablo .dp-cubuk-hucre{width:100%;min-width:4.5rem;padding-block:4px}
+.dp-eksen{position:relative;display:block;height:14px}
+.dp-eksen::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--e-line)}
+.dp-cubuk{position:absolute;top:2px;bottom:2px;border-radius:3px;background:var(--e-muted)}
+.dp-cubuk.yukari{left:50%;width:calc(var(--g)/2);background:var(--e-ok)}
+.dp-cubuk.asagi{right:50%;width:calc(var(--g)/2);background:var(--e-bad)}
+/* Isı haritası: sticky first column, cells coloured inline by isiRengi (scrolls inside its own box). */
+.dp-isi-kutu{max-height:34rem;min-height:0}
+.dp-isi{width:auto;min-width:100%}
+.dp-isi th.sayi{padding:8px 10px}
+.dp-isi td.dp-isi-hucre{min-width:4.25rem;padding:8px 10px;border-left:1px solid var(--e-panel);border-bottom:1px solid var(--e-panel);color:var(--e-fg)}
+.dp-isi td.dp-isi-hucre.bos{background:color-mix(in srgb,var(--e-fg) 3%,transparent)}
+.dp-isi .dp-isi-toplam{border-left:1px solid var(--e-line);font-weight:500}
+.dp-isi thead th:first-child,.dp-isi tbody th.dp-isi-ad{position:sticky;left:0;z-index:2;background:var(--e-panel);text-align:left;white-space:normal;min-width:7rem;max-width:11rem}
+.dp-isi thead th:first-child{z-index:3}
+.dp-isi tbody th.dp-isi-ad{top:auto;font-size:.8125rem;font-weight:400;color:var(--e-fg);border-bottom:1px solid var(--e-grid);padding:6px 8px;box-shadow:1px 0 0 var(--e-line)}
+.dp-isi tr.dp-isi-ort th.dp-isi-ad{font-weight:500}
+.dp-isi tbody th.dp-isi-ad .mini{display:block}
+.dp-isi-renk{display:inline-block;width:14px;height:10px;border-radius:3px;border:1px solid var(--e-line);background:var(--e-panel)}
+@media (max-width:640px){.dp-isi td.dp-isi-hucre{min-width:3.6rem;padding:8px 6px}.dp-isi th.sayi{padding:8px 6px}.dp-isi thead th:first-child,.dp-isi tbody th.dp-isi-ad{min-width:6.5rem;max-width:8rem}
+  .dp-kaynak-tablo :is(thead,tbody,tfoot) :is(th,td){padding-inline:5px}.dp-kaynak-tablo .dp-cubuk-hucre{min-width:2.5rem}}
 @media (max-width:640px){.dp-zor-satir{grid-template-columns:1.4rem minmax(0,1fr) 2.6rem auto 2.6rem;gap:6px}.dp-zor-iz{display:none}}
