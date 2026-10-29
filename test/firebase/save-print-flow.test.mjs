@@ -146,7 +146,9 @@ try {
   await eventually(()=>teacher.run('D.ogr[0].denemeler[0].silindi')===true,'mock exam tombstone delivery');
   check('stale-device-cannot-resurrect-deleted-exam',()=>assert.equal(examDevice.run("denemeListe().filter(r=>r.id==='m:emulator').length"),0));
   const workTsBeforeImport=reopened.run('D.ogrCalismaTs');
-  teacher.run('D.ogr[0].denemeOkul[0].dersler[0].dogru=31;D.ogr[0].denemeOkul[0].ts=104;');
+  // Publication can enrich a legacy result with classification metadata. A later
+  // score correction must advance that record's version, just like a real edit.
+  teacher.run('D.ogr[0].denemeOkul[0].dersler[0].dogru=31;D.ogr[0].denemeOkul[0].ts=Math.max(Date.now(),D.ogr[0].denemeOkul[0].ts+1);');
   await teacher.run('denemeOkulYayinla(0)');
   await eventually(()=>reopened.run('D.ogr[0].denemeOkul[0].dersler[0].dogru')===31,'corrected school score');
   check('corrected-import-keeps-student-completion-time',()=>assert.equal(reopened.run("denemeListe().find(r=>r.id==='p:emulator').sure"),155));
