@@ -82,3 +82,8 @@
 @media (max-width:640px){.dp-isi td.dp-isi-hucre{min-width:3.6rem;padding:8px 6px}.dp-isi th.sayi{padding:8px 6px}.dp-isi thead th:first-child,.dp-isi tbody th.dp-isi-ad{min-width:6.5rem;max-width:8rem}
   .dp-kaynak-tablo :is(thead,tbody,tfoot) :is(th,td){padding-inline:5px}.dp-kaynak-tablo .dp-cubuk-hucre{min-width:2.5rem}}
 @media (max-width:640px){.dp-zor-satir{grid-template-columns:1.4rem minmax(0,1fr) 2.6rem auto 2.6rem;gap:6px}.dp-zor-iz{display:none}}
+/* Tüm öğrenciler: how the Türkiye average moved over the window (Türkiye’ye göre column). */
+#dpTablo .dp-tr-satir{margin:0 0 8px;overflow-wrap:anywhere}#dpTablo .dp-tr-satir b{font-weight:500;color:var(--e-fg);font-variant-numeric:tabular-nums}
+/* On a phone the heads wrap and the cells tighten so Net artışı and Türkiye’ye göre stay in view (the table scrolls inside its own box). */
+@media (max-width:640px){#dpTablo .et-tablo{font-size:.75rem}#dpTablo .et-tablo th{white-space:normal;vertical-align:bottom;font-size:.6875rem}#dpTablo .et-tablo td:first-child{min-width:5.5em}
+  #dpTablo .et-tablo td,#dpTablo .et-tablo th button{padding-inline:4px}#dpTablo .et-tablo .et-durum{padding:1px 6px;font-size:.6875rem}}
