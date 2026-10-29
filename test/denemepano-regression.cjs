@@ -288,5 +288,128 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert(!h.includes('id="srPdf"') && !h.includes('data-sr-sil='), 'nor adds or deletes lists');
     run('yalnizcaGoruntuleme=__yg');
   });
+  // ---- Değişimin kaynağı and Isı haritası: hand-computed synthetic exams (no lists) ----
+  // exams: [[name, {no: [A, B, C(, Z)]}]], people: {no: [name, şube]}. A = Matematik, B = Fizik, C = Türkçe; Z is
+  // a net no printed lesson covers (it counts in the total only). Returns the model of the 12th grade or one şube.
+  const elle = (sinavlar, kisiler, kapsam = 'g12', secim = null) => {
+    put('ELLE', {sinavlar, kisiler, kapsam, secim});
+    run(`globalThis.__m=(()=>{const E=ELLE,L=[['A','Matematik','var(--e-c1)'],['B','Fizik','var(--e-c2)'],['C','Türkçe','var(--e-c3)']].map(([kod,ad,renk])=>({kod,ad,soru:40,renk}));
+      const O={key:'X',ad:'Elle',oturum:'tyt',ust:120,deger:o=>Object.values(o.net).reduce((a,b)=>a+b,0),dersler:L};
+      const kisi=new Map(Object.entries(E.kisiler).map(([no,[ad,sinif]])=>[no,{no,ad,sinif}]));
+      const t={kisi,sinavlar:E.sinavlar.map(([ad,satirlar],i)=>({id:'e'+i,ad,tarih:'',g:i+1,dates:[],pdfDates:[],tur:'genel',ayt:{},
+        tyt:Object.fromEntries(Object.entries(satirlar).map(([no,v])=>[no,{no,name:E.kisiler[no][0],cls:'',net:Object.fromEntries(v.map((x,j)=>['ABCZ'[j],x])),dy:{A:'1/0',B:'1/0',C:'1/0'}}]))}))};
+      const K=E.kapsam==='g12'?{key:'g12',ad:'12. sınıflar',uyar:k=>!!k&&parseInt(k.sinif,10)===12}:{key:E.kapsam,ad:E.kapsam,uyar:k=>!!k&&k.sinif===E.kapsam};
+      const m=DPANO.gorunumModeli(t,O,K,E.secim);const n=m.sinavlar.length;m.simdi=m.pencere.sec?m.pencere.sec.son[0]:n-1;m.onceki=m.pencere.sec?m.pencere.sec.once[0]:n-2;return m})()`);
+  };
+  const kaynak = s => get(`DPANO.degisimKaynagi(__m,${JSON.stringify(s)})`);
+  const topla = l => l.reduce((a, b) => a + b, 0), yakin = (a, b, mesaj) => assert(Math.abs(a - b) < 1e-9, (mesaj || '') + ' ' + a + ' ≠ ' + b);
+  const kisiler = {1001: ['SENTETİK ADA', '12/A'], 1002: ['SENTETİK BORA', '12/A'], 1003: ['SENTETİK CEMRE', '12/B'], 1004: ['SENTETİK DOĞA', '12/B'], 1005: ['SENTETİK EGE', '12/B'], 1007: ['SENTETİK GÜL', '12/C'], 1008: ['SENTETİK HAKAN', '12/D']};
+  // 1004 sits the later exam out, 1005 and 1008 join only in it: none has a change. Changes (Matematik, Fizik, Türkçe | total):
+  // 1001 +3 −1 +4 | +6, 1002 +3 0 +1 | +4, 1003 +1 −2 +1 | 0, 1007 +1 +1 0 | +2.
+  const iki = [['Sentetik Deneme 1', {1001: [10, 5, 3], 1002: [8, 2, 2], 1003: [6, 6, 1], 1004: [9, 3, 3], 1007: [4, 1, 0]}],
+    ['Sentetik Deneme 2', {1001: [13, 4, 7], 1002: [11, 2, 3], 1003: [7, 4, 2], 1005: [12, 6, 6], 1007: [5, 2, 0], 1008: [3, 3, 3]}]];
+  await check('Değişimin kaynağı: the same students’ change splits exactly into lessons and into şubeler', async () => {
+    elle(iki, kisiler); const k = kaynak(1);
+    assert.equal(k.n, 4, 'only the students with a value in both exams'); assert.deepEqual(k.aynilar.map(r => r.no).sort(), ['1001', '1002', '1003', '1007']);
+    assert.deepEqual(k.parcalar.map(p => [p.ad, p.katki]), [['Matematik', 2], ['Fizik', -0.5], ['Türkçe', 1.5]], 'mean change of each lesson');
+    yakin(k.toplam, 3); yakin(topla(k.parcalar.map(p => p.katki)), k.toplam, 'lessons add to the total');
+    assert.deepEqual(k.subeler.map(x => [x.ad, x.n, x.ort, x.katki]), [['12/A', 2, 5, 2.5], ['12/B', 1, 0, 0], ['12/C', 1, 2, 0.5], ['12/D', 0, null, 0]]);
+    yakin(topla(k.subeler.map(x => x.katki)), k.toplam, 'şubeler add to the total');
+    yakin(k.toplam, get('__m.ozet[1].ayni'), 'the same number as the Aynı öğrencilerin değişimi card'); assert.equal(get('__m.ozet[1].ayniN'), 4);
+    // The students of 12/A: their own lesson changes.
+    assert.deepEqual(k.aynilar.find(r => r.no === '1001').ders, [3, -1, 4]);
+    assert(!k.parcalar.some(p => p.diger), 'the lessons cover the whole net');
+  });
+  await check('Değişimin kaynağı: windows of several exams use each student’s own mean; what no lesson covers is Diğer dersler', async () => {
+    // 1001 misses the second exam; Z is a net no printed lesson covers. Önceki 2 = exams 1–2, Son 2 = exams 3–4.
+    const dort = [['E1', {1001: [2, 2, 0, 1], 1003: [1, 1, 1]}], ['E2', {1003: [1, 1, 1]}], ['E3', {1001: [6, 4, 0, 3], 1003: [1, 1, 1]}], ['E4', {1001: [8, 2, 0, 5], 1003: [3, 1, 1]}]];
+    elle(dort, kisiler);
+    let k = kaynak(2); assert.equal(k.n, 2);
+    assert.deepEqual(k.aynilar.map(r => [r.no, r.toplam]).sort(), [['1001', 9], ['1003', 1]]);
+    assert.deepEqual(k.parcalar.map(p => [p.kod, p.katki]), [['A', 3], ['B', 0.5], ['C', 0], ['diger', 1.5]]); yakin(k.toplam, 5); yakin(k.toplam, get('__m.ozet[2].ayni'));
+    assert.deepEqual(k.subeler.map(x => [x.ad, x.katki]), [['12/A', 4.5], ['12/B', 0.5]]); yakin(topla(k.subeler.map(x => x.katki)), 5);
+    k = kaynak(1); assert.deepEqual(k.parcalar.map(p => [p.kod, p.katki]), [['A', 2], ['B', -1], ['C', 0], ['diger', 1]]); yakin(k.toplam, 2);
+    // Seç: any two exams (first and last).
+    elle(dort, kisiler, 'g12', {onceki: 'e0', simdi: 'e3'}); k = kaynak('sec');
+    assert.deepEqual(k.parcalar.map(p => [p.kod, p.katki]), [['A', 4], ['B', 0], ['C', 0], ['diger', 2]]); yakin(k.toplam, 6); yakin(topla(k.parcalar.map(p => p.katki)), k.toplam);
+    // No window, no students in both: nothing to show.
+    assert.equal(kaynak(3), null);
+    elle([['E1', {1001: [1, 1, 1]}], ['E2', {1003: [1, 1, 1]}]], kisiler); assert.equal(kaynak(1), null, 'nobody in both exams');
+    assert.equal(run('DPANO.kaynakBolumleri({m:__m,s:1,K:__m.K})'), '');
+  });
+  await check('Değişimin kaynağı: the sentence names the biggest lesson and şube and what pulled down', async () => {
+    elle(iki, kisiler);
+    assert.equal(run('DPANO.kaynakCumlesi(DPANO.degisimKaynagi(__m,1),__m.K)'), '12. sınıflar ▲3,0 net (aynı 4 öğrenci): en çok Matematik ▲2,0 ve 12/A ▲2,5 katkı verdi; Fizik ▼0,5 düşürdü.');
+    elle(iki, kisiler, '12/A');
+    assert.equal(run('DPANO.kaynakCumlesi(DPANO.degisimKaynagi(__m,1),__m.K)'), '12/A ▲5,0 net (aynı 2 öğrenci): en çok Matematik ▲3,0 katkı verdi; Fizik ▼0,5 düşürdü.', 'a single şube has no şube part');
+    // A fall: the same students the other way round.
+    elle([iki[1], iki[0]], kisiler);
+    assert.equal(run('DPANO.kaynakCumlesi(DPANO.degisimKaynagi(__m,1),__m.K)'), '12. sınıflar ▼3,0 net (aynı 4 öğrenci): en çok Fizik ▲0,5 katkı verdi; Matematik ▼2,0 ve 12/A ▼2,5 düşürdü.');
+  });
+  await check('Değişimin kaynağı section: bars sorted by size, the total from the parts, numbers right-aligned; şube table for a grade', async () => {
+    elle(iki, kisiler);
+    const h = run('DPANO.kaynakBolumleri({m:__m,s:1,K:__m.K})'), kaynakH = h.slice(h.indexOf('id="dpKaynak"'), h.indexOf('id="dpIsi"'));
+    assert.match(kaynakH, /<h2>Değişimin kaynağı<\/h2><span class="mini">Sentetik Deneme 1 → Sentetik Deneme 2 · Elle<\/span>/);
+    assert(kaynakH.includes('<p class="dp-kaynak-cumle">12. sınıflar ▲3,0 net (aynı 4 öğrenci): en çok Matematik ▲2,0 ve 12/A ▲2,5 katkı verdi; Fizik ▼0,5 düşürdü.</p>'));
+    assert(kaynakH.includes('Toplam ▲3,00 net = 2,00 + 1,50 − 0,50'), 'the total is the sum of the printed parts');
+    const sira = ['Matematik', 'Türkçe', 'Fizik'].map(a => kaynakH.indexOf('</i>' + a + '</th>')); assert(sira.every(i => i > 0) && sira[0] < sira[1] && sira[1] < sira[2], 'by size of the contribution');
+    assert(kaynakH.includes('<td class="sayi et-yukari">+2,00</td>') && kaynakH.includes('<td class="sayi et-asagi">−0,50</td>'));
+    assert(kaynakH.includes('<span class="dp-cubuk yukari" style="--g:100%">') && kaynakH.includes('<span class="dp-cubuk asagi" style="--g:25%">'), 'bars grow from the middle, scaled to the largest part');
+    assert(kaynakH.includes('<tfoot><tr><th scope="row">Toplam</th><td></td><td class="sayi et-yukari">+3,00</td></tr></tfoot>'));
+    const sube = kaynakH.slice(kaynakH.indexOf('<h3>Şubelere göre</h3>'));
+    assert(sube.includes('Toplam ▲3,00 net = 2,50 + 0,00 + 0,50 + 0,00'));
+    assert(sube.includes('<th scope="col" class="sayi">Öğrenci</th><th scope="col" class="sayi">Ortalama değişim</th>'));
+    assert(sube.includes('<tr><th scope="row">12/A</th><td class="sayi">2</td><td class="sayi et-yukari">+5,00</td>') && sube.includes('<td class="sayi et-yukari">+2,50</td></tr>'), 'şube, n, mean change, contribution');
+    assert(sube.includes('<tr><th scope="row">12/D</th><td class="sayi">0</td><td class="sayi et-esit">—</td>'), 'a şube without a pair has no change');
+    assert(sube.includes('<tfoot><tr><th scope="row">12. sınıflar</th><td class="sayi">4</td>'));
+    // Every number cell is right-aligned (class sayi), also in the headers above them.
+    assert(!/<td class="(?!sayi|dp-cubuk-hucre)[^"]*">[+−\d]/.test(kaynakH), 'no left-aligned number cell');
+    // One şube: lessons only.
+    elle(iki, kisiler, '12/A'); const t = run('DPANO.kaynakBolumleri({m:__m,s:1,K:__m.K})'); assert(!t.includes('Şubelere göre') && t.includes('Derslere göre'));
+  });
+  await check('Isı haritası: şubeler of a grade, the students of one şube, empty cells, a colour scale capped at the 90th percentile', async () => {
+    elle(iki, kisiler);
+    let h = get('DPANO.isiHaritasi(DPANO.degisimKaynagi(__m,1),__m.K)');
+    assert.deepEqual(h.kolonlar.map(c => c.ad), ['Matematik', 'Fizik', 'Türkçe', 'Toplam']);
+    assert.deepEqual(h.satirlar.map(r => [r.ad, r.n, r.v]), [['12. sınıflar ortalaması', 4, [2, -0.5, 1.5, 3]], ['12/A', 2, [3, -0.5, 2.5, 5]], ['12/B', 1, [1, -2, 1, 0]], ['12/C', 1, [1, 1, 0, 2]], ['12/D', 0, [null, null, null, null]]]);
+    // 16 values, 0 0 .5 .5 1 1 1 1 1.5 2 2 2 2.5 3 3 5: their 90th percentile is 3.
+    assert.equal(h.cap, 3);
+    const renk = v => run(`DPANO.isiRengi(${v},3)`);
+    assert.equal(renk(5), renk(3), 'beyond the cap the colour stays'); assert.equal(renk(3), 'background:color-mix(in srgb,var(--e-ok) 55%,var(--e-panel))');
+    assert.equal(renk(-5), 'background:color-mix(in srgb,var(--e-bad) 55%,var(--e-panel))'); assert.equal(renk(-3), renk(-5));
+    assert.equal(renk(1.5), 'background:color-mix(in srgb,var(--e-ok) 28%,var(--e-panel))', 'half the cap, half the colour'); assert.equal(renk(-1.5), 'background:color-mix(in srgb,var(--e-bad) 28%,var(--e-panel))');
+    assert.equal(renk(0), ''); assert.equal(renk('null'), ''); assert.equal(run('DPANO.isiRengi(2,0)'), '', 'all zero: no colour');
+    assert.equal(get('DPANO.isiRengi(0.5,3)'), 'background:color-mix(in srgb,var(--e-ok) 9%,var(--e-panel))');
+    const s = run('DPANO.kaynakBolumleri({m:__m,s:1,K:__m.K})'), isi = s.slice(s.indexOf('id="dpIsi"'));
+    assert(isi.includes('<th scope="col">Şube</th><th scope="col" class="sayi">Matematik</th><th scope="col" class="sayi">Fizik</th><th scope="col" class="sayi">Türkçe</th><th scope="col" class="sayi dp-isi-toplam">Toplam</th>'));
+    assert(isi.includes('<span>renk: değişim (net)</span>') && isi.includes('−3,0 ve altı') && isi.includes('+3,0 ve üstü'));
+    assert(isi.includes('<th scope="row" class="dp-isi-ad">12/A <span class="mini">2 öğrenci</span></th><td class="sayi dp-isi-hucre" style="background:color-mix(in srgb,var(--e-ok) 55%,var(--e-panel))" title="12/A · Matematik: +3,00 net">+3,0</td>'));
+    assert(isi.includes('<td class="sayi dp-isi-hucre" style="background:color-mix(in srgb,var(--e-bad) 37%,var(--e-panel))" title="12/B · Fizik: −2,00 net">−2,0</td>'), '2 of a cap of 3');
+    assert(isi.includes('<td class="sayi dp-isi-hucre dp-isi-toplam" style="" title="12/B · Toplam: 0,00 net">0,0</td>'), 'no change, no colour');
+    assert.equal((isi.match(/<td class="sayi dp-isi-hucre bos"><\/td>/g) || []).length, 4, 'a şube without a pair has empty cells');
+    // One şube: its students, the biggest rise first.
+    elle(iki, kisiler, '12/A'); h = get('DPANO.isiHaritasi(DPANO.degisimKaynagi(__m,1),__m.K)');
+    assert.deepEqual(h.satirlar.map(r => [r.ad, r.no ?? null, r.v]), [['12/A ortalaması', null, [3, -0.5, 2.5, 5]], ['Sentetik Ada', '1001', [3, -1, 4, 6]], ['Sentetik Bora', '1002', [3, 0, 1, 4]]]);
+    const t = run('DPANO.kaynakBolumleri({m:__m,s:1,K:__m.K})'), isi2 = t.slice(t.indexOf('id="dpIsi"'));
+    assert(isi2.includes('<th scope="col">Öğrenci</th>') && isi2.includes('Öğrenciler · Sentetik Deneme 1 → Sentetik Deneme 2'));
+    assert(isi2.includes('data-ogrenci-karti="1001">Sentetik Ada</button>') && isi2.indexOf('Sentetik Ada') < isi2.indexOf('Sentetik Bora'), 'names open Öğrenci kartı');
+  });
+  await check('Değişimin kaynağı and Isı haritası on the board: after Kolaydan zora, for windows and Seç; hidden with one exam', async () => {
+    await loadAll();
+    for (const aralik of [1, 'sec']) {
+      run(`EK.dpAralik=${JSON.stringify(aralik)}`);
+      const h = run('DPANO.icerik()');
+      assert(h.indexOf('id="dpZorluk"') < h.indexOf('id="dpKaynak"') && h.indexOf('id="dpKaynak"') < h.indexOf('id="dpIsi"') && h.indexOf('id="dpIsi"') < h.indexOf('id="dpOgrenciler"'), 'between the lessons and the students');
+      const k = st(`st=>{const k=DPANO.degisimKaynagi(st.m,st.s);return {toplam:k.toplam,ayni:st.m.ozet[st.s].ayni,n:k.n,ayniN:st.m.ozet[st.s].ayniN,parcalar:k.parcalar.map(p=>p.katki),subeler:k.subeler.map(x=>x.katki)}}`);
+      yakin(k.toplam, k.ayni, 'the same students’ mean change'); assert.equal(k.n, k.ayniN); yakin(topla(k.parcalar), k.toplam); yakin(topla(k.subeler), k.toplam);
+      assert(h.includes('(aynı ' + k.n + ' öğrenci)'));
+    }
+    run("EK.dpAralik=undefined;EK.dpKapsam='12/A'");
+    const a = run('DPANO.icerik()'); assert(a.includes('id="dpKaynak"') && !a.includes('Şubelere göre')); assert.match(a.slice(a.indexOf('id="dpIsi"')), /<th scope="col">Öğrenci<\/th>/);
+    // One exam: no comparison, nothing to split.
+    reset(); put('L', [list('once', 'T'), list('once', 'F')]); await run('siralamaKaydet(L)');
+    run("EK.dpKapsam=undefined"); const bir = run('DPANO.icerik()'); assert(!bir.includes('id="dpKaynak"') && !bir.includes('id="dpIsi"'), 'one exam hides both');
+    run('D.siralama=null'); const bos = run('DPANO.icerik()'); assert(!bos.includes('id="dpKaynak"') && !bos.includes('id="dpIsi"'), 'no lists hide both');
+  });
   console.log(passed + ' Deneme panosu checks passed');
 })();
