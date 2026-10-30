@@ -49,6 +49,8 @@ jobs:
         run: node scripts/embed-analiz.cjs --check && node test/analiz-regression.cjs
       - name: Konu Takibi cumulative evidence, import and embedding
         run: node scripts/embed-konutakibi.cjs --check && node test/konutakibi-regression.cjs
+      - name: Yanlışlar defteri booklet cut-outs, cevap raporu without TC, A and B numbers and embedding
+        run: node scripts/embed-yanlislar.cjs --check && node test/yanlislar-regression.cjs
       - name: Gemini reading of other files, checks, fallback and embedding
         run: node scripts/embed-yapayzeka.cjs --check && node test/yapayzeka-regression.cjs
       - name: Cross-page consistency
@@ -156,6 +158,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/analiz-browser.cjs
       - name: Konu Takibi upload and drilldown on desktop and phone
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/konutakibi-browser.cjs
+      - name: Yanlışlar defteri cut-outs, filters and printing on desktop and phone
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/yanlislar-browser.cjs
       - name: Drag to measure and line shape on Etütler and Deneme panosu
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/grafik-browser.cjs
       - name: Test account button, nickname setup, first cloud save and reset

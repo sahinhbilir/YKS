@@ -1,0 +1,57 @@
+/* Yanlışlar defteri: the Etütler look (tokens and components in etutler.css) around white pages that look the same on screen and on paper. */
+#ydKok .yd-dosyalar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+#ydKok .yd-dosya{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+#ydKok .yd-file{position:absolute;width:1px;height:1px;opacity:0}#ydKok .et-dugme{position:relative;min-height:38px}
+#ydKok .yd-durum{font-size:.8125rem;color:var(--e-fg2);min-height:1.2em;overflow-wrap:anywhere}
+#ydKok .yd-hata{font-size:.8125rem;color:var(--e-bad);overflow-wrap:anywhere}
+#ydKok .yd-filtre{display:grid;grid-template-columns:1fr 2fr;gap:16px}
+#ydKok .yd-sec{display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--e-fg2);min-width:0}
+#ydKok select{font:inherit;min-height:40px;max-width:100%;min-width:0;color:var(--e-fg);background:var(--e-panel);border:1px solid var(--e-line);border-radius:6px;padding:8px 10px}
+#ydKok .yd-dersler{display:flex;flex-wrap:wrap;gap:8px 18px}
+#ydKok .yd-dersler label{display:flex;align-items:center;gap:6px;min-height:28px;cursor:pointer}
+#ydKok .yd-arac{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+#ydKok .yd-ozet{font-size:.8125rem;color:var(--e-fg2)}#ydKok .yd-ozet:empty{display:none}
+#ydKok .et-dugme:disabled{opacity:.4;cursor:default}
+#ydKok .yd-baski{display:flex;flex-direction:column;gap:20px;min-width:0}
+#ydKok .yd-ogr{background:#fff;color:#000;border:1px solid var(--e-line);border-radius:var(--e-r);padding:20px;font-family:Arial,Helvetica,sans-serif;min-width:0;display:flex;flex-direction:column;gap:14px}
+#ydKok .yd-ogr :is(h2,h3){color:#000;font-family:inherit}
+#ydKok .yd-ust{display:flex;flex-direction:column;gap:2px;border-bottom:2px solid #000;padding-bottom:8px}
+#ydKok .yd-ust h2{font-size:1.25rem;font-weight:700;overflow-wrap:anywhere}
+#ydKok .yd-kimlik,#ydKok .yd-say,#ydKok .yd-not{margin:0;font-size:.875rem;overflow-wrap:anywhere}
+#ydKok .yd-say{font-size:1rem}
+#ydKok .yd-not{font-weight:600}
+#ydKok .yd-ders h3{font-size:1rem;font-weight:700;border-bottom:1px solid #999;padding-bottom:3px;margin-bottom:8px}
+#ydKok .yd-ders h3 span{font-weight:400;color:#444;margin-left:4px}
+#ydKok .yd-sorular{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+#ydKok .yd-soru{margin:0;break-inside:avoid;min-width:0}
+#ydKok .yd-soru figcaption,#ydKok .yd-satir{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:.8125rem;padding-bottom:4px}
+#ydKok .yd-soru img{display:block;width:100%;max-width:576px;height:auto;border:1px solid #ccc}
+#ydKok .yd-genis img{max-width:none}
+#ydKok .yd-soru img[data-bekle]{min-height:140px;background:#f0f0f0}
+#ydKok .yd-isaret{font-weight:600}#ydKok .yd-b{color:#444}
+#ydKok .yd-liste{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 18px}
+#ydKok .yd-satir{border-bottom:1px solid #ddd;break-inside:avoid}
+#ydKok .yd-anahtar{border-top:2px dashed #999;padding-top:12px;display:flex;flex-direction:column;gap:8px}
+#ydKok .yd-anahtar h2{font-size:1.125rem}
+#ydKok .yd-ak{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:.875rem}
+#ydKok .yd-ak>b{min-width:7.5em}
+#ydKok .yd-harfler{display:flex;flex-wrap:wrap;gap:4px 10px}
+#ydKok .yd-harfler span{border:1px solid #999;border-radius:4px;padding:1px 7px;font-weight:700}#ydKok .yd-harfler i{font-style:normal;font-weight:400;color:#444;margin-right:3px}
+@media(max-width:700px){
+  #ydKok .yd-dosyalar,#ydKok .yd-filtre{grid-template-columns:minmax(0,1fr)}
+  #ydKok .yd-ogr{padding:12px}
+}
+@media print{
+  body.yd-yazdir>:not(.kabuk),body.yd-yazdir .kabuk>:not(main),body.yd-yazdir #ana>:not(#ydKok),body.yd-yazdir #ydKok>:not(#ydBaski){display:none!important}
+  body.yd-yazdir,body.yd-yazdir main{background:#fff!important;padding:0!important;margin:0!important;max-width:none!important}
+  body.yd-yazdir #ydKok{display:block;border:0;border-radius:0;padding:0;margin:0;background:#fff;color:#000}
+  #ydKok .yd-baski{display:block}
+  #ydKok .yd-ogr{break-before:page;page-break-before:always;border:0;border-radius:0;padding:0;gap:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #ydKok .yd-ogr.yd-yok{display:none}
+  #ydKok .yd-sorular{grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm 5mm}
+  #ydKok .yd-genis{grid-column:1/-1}
+  #ydKok .yd-soru,#ydKok .yd-ders h3,#ydKok .yd-ak{break-inside:avoid}
+  #ydKok .yd-ders h3{break-after:avoid}
+  #ydKok .yd-soru img{max-width:none}
+  #ydKok .yd-anahtar{break-before:page;page-break-before:always;border-top:0;padding-top:0}
+}
