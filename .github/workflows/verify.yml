@@ -107,6 +107,8 @@ jobs:
         run: node test/minute-budget-regression.js
       - name: Self-paced TYT track next to the school plan
         run: node test/personal-plan-regression.js
+      - name: Genel tekrar before topics and "Zaten yaptım" on the personal plan
+        run: node test/genel-tekrar-regression.js
       - name: LGS, KPSS, ALES, DGS and AGS topic lists and plans
         run: node scripts/embed-sinavlar.cjs --check && node test/exam-plan-regression.js
 

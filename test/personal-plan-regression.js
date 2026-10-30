@@ -38,7 +38,11 @@ function ogrenci(a, { sinif = 12, tarih = '2026-09-23', dakika = { hi: 200, hs: 
     ${sinif < 12 ? "D.konuPlani.benim=sinifaGoreKonuPlani(11,'SAY');" : ''}
     EK={ogr:0,sekme:'plan',hafta:null,girisAcik:{}};`);
 }
-const kur = (a, seviye = {}, hedef = '2027-04-23') => a.run(`kendiPlanKur(0,${JSON.stringify(seviye)},'${hedef}')`);
+const kur = (a, seviye = {}, hedef = '2027-04-23', genelTekrar = true) => {
+  const n = a.run(`kendiPlanKur(0,${JSON.stringify(seviye)},'${hedef}')`);
+  if (genelTekrar) a.run('(()=>{const g=D.ogr[0].kendiPlan.genelTekrar;if(g)g.sira.forEach(k=>{g.tamam[k]=0;});})()');   // these checks are about topics: skip the genel tekrar phase
+  return n;
+};
 const haftaKendi = (a, h) => a.run(`(()=>{const p=planHesapla(0,${h});return JSON.parse(JSON.stringify(
   p.gunler.flat().filter(x=>x.anlatim?(p.elle.anlatim[x.ki]||{}).kaynak===KENDI_PLAN_KAYNAK:(p.elle.kendiTest||{})[x.ki])
   .map(x=>({ki:x.ki,anlatim:!!x.anlatim,soru:x.soru,test:x.test}))))})()`);
