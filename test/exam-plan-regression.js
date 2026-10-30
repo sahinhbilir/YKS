@@ -37,7 +37,11 @@ async function kurulum(a, sinavTuru, sinav = '2027-07-11', alan = 'SAY') {
     kOgrOkul: a.el({ value: 'evet' }), kOgrAlan: a.el({ value: alan }), kOgrSinav: a.el({ value: sinav }) });
   await a.tikla('kOgrBaslat');
 }
-const kur = (a, seviye = {}, hedef = '2027-05-28') => a.run(`kendiPlanKur(0,${JSON.stringify(seviye)},'${hedef}')`);
+const kur = (a, seviye = {}, hedef = '2027-05-28', genelTekrar = true) => {
+  const n = a.run(`kendiPlanKur(0,${JSON.stringify(seviye)},'${hedef}')`);
+  if (genelTekrar) a.run('(()=>{const g=D.ogr[0].kendiPlan.genelTekrar;if(g)g.sira.forEach(k=>{g.tamam[k]=0;});})()');   // these checks are about topics: skip the genel tekrar phase
+  return n;
+};
 async function tamamla(a, ki, bu) {
   const gun = a.run(`(()=>{const p=planHesapla(0,${bu});const g=p.gunler.findIndex(l=>l.some(x=>x.anlatim&&x.ki===${ki}));return ${bu}+g;})()`);
   if (gun > a.run('bugunNo()')) a.run(`D.ayar.testTarih=isoDan(${gun})`);

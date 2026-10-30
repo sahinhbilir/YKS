@@ -11,9 +11,14 @@ plans do not change mid-week. **Test sayısıyla planla** switches back.
 |---|---|
 | One test question | 50 s (a 12-question test is 10 min; a two-test topic is 20 min) |
 | Konu anlatımı row | 20 min |
+| Genel tekrar row (personal plan, one per subject) | 120 min |
 | Free task in minutes ("Daha fazla" with dakika) | its own minutes |
 | Daily mixed practice (paragraf / problem / geometri) | 50 s per question, taken from that day first |
 | Saturday school mock | 180 min, counted in the weekly total, shown as a row |
+
+Genel tekrar is placed before lessons and tests, at most one a day and only on a day whose budget
+still holds 120 minutes; if no day of the week can, one goes onto an empty day over budget
+(see [personal-tyt-plan.md](personal-tyt-plan.md)).
 
 ## Settings and the weekly cap
 

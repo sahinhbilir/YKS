@@ -59,6 +59,22 @@ test('student package preserves a sparse custom-topic weekly plan and its score'
   assert.equal(run('konuAl(D.log[0][2])[3]'), 'Assigned topic');
 });
 
+test('genel tekrar state is validated and survives a notebook round trip', () => {
+  const { run } = app();
+  run(`D.ogr[0].alan='SAY'; D.ogr[0].okul=false; kendiPlanKur(0,{},'2027-04-23'); haftayiSabitle(0,buHafta());
+    D.ogr[0].kendiPlan.genelTekrar.tamam['TYT|Fizik']=buHafta()-1;
+    globalThis.before = JSON.parse(JSON.stringify([D.ogr[0].kendiPlan.genelTekrar, elleAl(0,buHafta()).serbest]));
+    globalThis.kopya = JSON.parse(JSON.stringify(D));`);
+  assert(Object.keys(plain(run('before'))[1]).length > 0, 'the issued week carries genel tekrar rows');
+  run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
+  run('veriyiHazirla(JSON.parse(JSON.stringify(kopya)))');
+  assert.deepEqual(plain(run('[D.ogr[0].kendiPlan.genelTekrar, elleAl(0,buHafta()).serbest]')), plain(run('before')));
+  for (const kotu of ['"x"', '[]', '{sira:"x",tamam:{}}', '{sira:[],tamam:[]}', "{sira:[],tamam:{a:'dün'}}", '{sira:[7],tamam:{}}'])
+    assert.throws(() => run(`(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].kendiPlan.genelTekrar=${kotu};yedekDogrula(y);})()`), /kendi TYT planı/, kotu);
+  // A plan saved before this field existed stays valid.
+  run('(()=>{const y=JSON.parse(JSON.stringify(D));delete y.ogr[0].kendiPlan.genelTekrar;yedekDogrula(y);})()');
+});
+
 test('manual-only custom topics and replacement slots survive student-package import', () => {
   const { run } = app();
   run(`D.ekKonular = Array.from({length:4},(_,i)=>[1,12,'Test','Topic '+i,0,'']);
