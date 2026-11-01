@@ -7,6 +7,11 @@ const TYT_WEEKLY = (() => {
   const ORDER = ['tr', 'mat', ...SOCIAL, ...SCIENCE, 'geo'];
   const MOCKS = [0, 1, 3, 4, 5];
   const grammar = x => TYT_METOT.grammar(x);
+  const turkceOrder=x=>{
+    const s=x.ad.toLocaleLowerCase('tr');
+    const order=[/ses bilg/,/sözcükte yapı|sözcük yap/,/adlar \(isim|isim/,/ön ad|sıfat/,/zamir/,/zarf/,/edat|bağlaç|ünlem/,/fiilimsi/,/fiil/,/çatı/,/cümlenin [öo][ğg]e/,/cümle tür|cümle bilg/,/yazım/,/noktalama/,/anlatım bozuk/,/sözcükte anlam/,/söz öbek/,/cümlede anlam/,/paragraf/];
+    const rank=order.findIndex(r=>r.test(s));return grammar(x)?(rank<0?14:rank):(rank<0?30:20+rank);
+  };
   const info = c => TYT_METOT.info?.[c] || [({tr:'Türkçe',mat:'Matematik',tar:'Tarih',cog:'Coğrafya',fel:'Felsefe',din:'Din Kültürü',fiz:'Fizik',kim:'Kimya',bio:'Biyoloji',geo:'Geometri'})[c] || c, c==='mat'?30:c==='tr'||c==='geo'?25:SOCIAL.includes(c)?15:20];
   function ledger(si) {
     const kp = D.ogr[si].kendiPlan, m = kp.metot, today = bugunNo(), first=gunNo(m.baslangic);
@@ -110,37 +115,51 @@ const TYT_WEEKLY = (() => {
       if(v+3<start)blocked.push({...r,metotGecikti:true});else if(!locked.has(v+3))put(v+3,r);
     }
     const fraction=(xs,day)=>xs.length?xs.filter(x=>real.recalls.has(x.ki)||watched.has(x.ki)&&watched.get(x.ki)<=day).length/xs.length:1;
+    const starts=m.baslangiclar||{},origin=gunNo(m.baslangic);
+    const firstDay=c=>starts[c]?gunNo(starts[c]):origin+({tr:0,mat:0,tar:1,cog:1,fel:2,din:2,fiz:7,kim:7,bio:7,geo:14}[c]||0);
     const gates=day=>{
-      const soc=fraction(tyt.filter(x=>x.c==='tr'&&grammar(x)),day)>=.8;
-      const sci=soc&&fraction(tyt.filter(x=>SOCIAL.includes(x.c)),day)>=.5;
+      const sci=fraction(tyt.filter(x=>SOCIAL.includes(x.c)),day)>=.5;
       const geo=sci&&fraction(tyt.filter(x=>SCIENCE.includes(x.c)),day)>=.4;
-      return c=>aytOpen||c==='tr'||c==='mat'||SOCIAL.includes(c)&&soc||SCIENCE.includes(c)&&sci||c==='geo'&&geo;
+      return c=>aytOpen||day>=firstDay(c)&&(!!starts[c]||c==='tr'||c==='mat'||SOCIAL.includes(c)||SCIENCE.includes(c)&&sci||c==='geo'&&geo);
     };
     const courses=[...ORDER,...new Set(pool.map(x=>x.c||x.ders))].filter((c,i,a)=>a.indexOf(c)===i);
     let finalStart=null;
     for(let day=start;day<=end;day++) {
       if(locked.has(day)||!budget(day))continue;
-      // Repeated rounds deliberately allow several topics per lesson per day.
+      // Overview days establish a starting point. They do not also start that
+      // lesson's topic campaign, and leave room rather than filling every minute.
+      const eligible=courses.filter(c=>gates(day)(c));
+      let overviews=rows(day).filter(x=>x.metotTur==='overview').length;
+      for(const c of eligible.slice().sort((a,b)=>Number(!starts[a])-Number(!starts[b])||firstDay(a)-firstDay(b)||courses.indexOf(a)-courses.indexOf(b))) {
+        const xs=pool.filter(x=>(x.c||x.ders)===c),id='g|'+session+'|'+c;
+        if(!xs.some(x=>!watched.has(x.ki)&&!real.recalls.has(x.ki))||intros.has(id))continue;
+        if(overviews>=2&&!starts[c])continue;
+        if(rows(day).length>=rowCap||used(day)+120>budget(day))continue;
+        if(c==='tr'&&session==='TYT'&&(day+3>=exam||locked.has(day+3)||rows(day+3).length>=rowCap||used(day+3)+40>budget(day+3)))continue;
+        put(day,extra(id,(info(c)[0]||xs[0].ders)+' · genel son tekrar','overview',120,0,{dersAd:xs[0].ders,metotKaynak:session==='TYT'?info(c)[2]:undefined}));
+        intros.set(id,day);overviews++;
+        if(c==='tr'&&session==='TYT')put(day+3,extra('gr','Dil bilgisi genel tekrar testi · 5 dk hatırla, notsuz çöz','overviewRecall',40,25,{dersAd:'Türkçe',metotVideoGun:day,due:day+3,metotKosullu:true}));
+      }
+      const weight=c=>c==='mat'?2:c==='tr'||c==='cog'?1:.65;
+      const progress=c=>pool.filter(x=>(x.c||x.ders)===c&&watched.has(x.ki)).length/weight(c);
+      const todayVideos=c=>rows(day).filter(x=>x.metotTur==='video'&&(topicByKi.get(x.ki)?.c||x.dersAd)===c).length;
+      const videoLimit=c=>overviews>=2?0:overviews===1?1:c==='mat'?2:1;
+      // Choose the least-served lesson each round, not the first lesson in a
+      // fixed list. Mathematics receives two topic blocks per Türkçe block.
       let changed=true;
       while(changed) {
         changed=false;
-        for(const c of courses) {
+        for(const c of courses.slice().sort((a,b)=>progress(a)-progress(b)||courses.indexOf(a)-courses.indexOf(b))) {
           if(!gates(day)(c))continue;
           const xs=pool.filter(x=>(x.c||x.ders)===c);
-          if(c==='tr')xs.sort((a,b)=>Number(!grammar(a))-Number(!grammar(b)));
+          if(c==='tr')xs.sort((a,b)=>turkceOrder(a)-turkceOrder(b));
           const x=xs.find(x=>!watched.has(x.ki)&&!real.recalls.has(x.ki));
           if(!x)continue;
           const id='g|'+session+'|'+c;
-          if(!intros.has(id)) {
-            if(rows(day).length>=rowCap||used(day)+120>budget(day))continue;
-            if(c==='tr'&&session==='TYT'&&(day+3>=exam||locked.has(day+3)||rows(day+3).length>=rowCap||used(day+3)+40>budget(day+3)))continue;
-            put(day,extra(id,(info(c)[0]||x.ders)+' · genel son tekrar','overview',120,0,{dersAd:x.ders,metotKaynak:session==='TYT'?info(c)[2]:undefined}));
-            intros.set(id,day);changed=true;
-            if(c==='tr'&&session==='TYT')put(day+3,extra('gr','Dil bilgisi genel tekrar testi · 5 dk hatırla, notsuz çöz','overviewRecall',40,25,{dersAd:'Türkçe',metotVideoGun:day,due:day+3,metotKosullu:true}));
-            continue;
-          }
-          if(intros.get(id)>day||day+3>=exam||locked.has(day+3)||rows(day).length>=rowCap||rows(day+3).length>=rowCap||used(day)+60>budget(day)||used(day+3)+45>budget(day+3))continue;
-          put(day,video(x,day));watched.set(x.ki,day);reserve(x,day);changed=true;
+          if(!intros.has(id)||intros.get(id)>=day||todayVideos(c)>=videoLimit(c)||
+            overviews===1&&rows(day).filter(x=>x.metotTur==='video').length>=1||
+            day+3>=exam||locked.has(day+3)||rows(day).length>=rowCap||rows(day+3).length>=rowCap||used(day)+60>budget(day)||used(day+3)+45>budget(day+3))continue;
+          put(day,video(x,day));watched.set(x.ki,day);reserve(x,day);changed=true;break;
         }
       }
       const finished=xs=>xs.length>0&&xs.every(x=>tested.has(x.ki)&&tested.get(x.ki)<day);
