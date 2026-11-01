@@ -16,9 +16,9 @@ const INFO={
 const eligible=()=>ogrenciMi()&&D?.ogr?.length===1&&D.ogr[0].okul===false&&ogrenciSinavi(D.ogr[0])==='YKS';
 const active=()=>eligible()&&D.ogr[0].kendiPlan?.metot?.surum===1;
 const key=x=>encodeURIComponent(x.ders+'|'+x.ad);
-const grammar=x=>!/(anlam|paragraf|iletişim|okuma)/i.test(x.ad.toLocaleLowerCase('tr'));
+const grammar=x=>/dil bilg|ses bilg|sözcükte yapı|sözcük yap|sözcük tür|isim|sıfat|zamir|zarf|edat|bağlaç|ünlem|fiil|çatı|cümlenin [öo][ğg]e|cümle tür|cümle bilg|yazım|noktalama|anlatım bozuk/.test(x.ad.toLocaleLowerCase('tr'));
 function course(s){s=s.toLocaleLowerCase('tr');return /geometri/.test(s)?'geo':/matematik/.test(s)?'mat':/türkçe/.test(s)?'tr':/tarih/.test(s)?'tar':/coğraf/.test(s)?'cog':/felsefe/.test(s)?'fel':/din/.test(s)?'din':/fizik/.test(s)?'fiz':/kimya/.test(s)?'kim':/biyoloji/.test(s)?'bio':null}
-function topics(){return D.ogr[0].kendiPlan.sira.map(ki=>({ki,ders:konuDersAdi(ki),ad:konuAl(ki)[3]})).map(x=>({...x,c:course(x.ders),tyt:konuSinavTuru(x.ki)==='AYT'?false:tytPlanKonusuMu(x.ders,x.ad),key:key(x)})).sort((a,b)=>a.c==='tr'&&b.c==='tr'?Number(!grammar(a))-Number(!grammar(b)):0)}
+function topics(si=0){return D.ogr[si].kendiPlan.sira.map(ki=>({ki,ders:konuDersAdi(ki),ad:konuAl(ki)[3]})).map(x=>({...x,c:course(x.ders),tyt:konuSinavTuru(x.ki)==='AYT'?false:tytPlanKonusuMu(x.ders,x.ad),key:key(x)})).sort((a,b)=>a.c==='tr'&&b.c==='tr'?Number(!grammar(a))-Number(!grammar(b)):0)}
 function validate(m){
  if(!m||m.surum!==1||!isoTarihGecerli(m.baslangic)||!Number.isInteger(m.dakika)||m.dakika<120||m.dakika>600||!m.tamam||typeof m.tamam!=='object'||Array.isArray(m.tamam)||Object.keys(m.tamam).length>10000||Object.entries(m.tamam).some(([k,v])=>k.length>1600||!isoTarihGecerli(v)||v<m.baslangic))throw new Error('TYT çalışma yöntemi kaydı geçersiz.');
  for(const [id,date] of Object.entries(m.tamam)){
@@ -41,10 +41,17 @@ async function write(fn){
 }
 async function start(){
  if(!eligible()||!D.ogr[0].kendiPlan)throw new Error('Önce kendi YKS planını oluştur.');
- const input=document.getElementById('tmButce'),minutes=Number(input?.value||480);
- await write(kp=>{if(kp.metot)return;kp.metot={surum:1,baslangic:isoDan(bugunNo()),dakika:minutes,tamam:{}};
-  // This explicitly starts a new track; old plans/results remain intact, never inferred complete.
- });
+ const input=document.getElementById('tmButce'),minutes=Number(input?.value||480),hb=buHafta(0),ov=elleAl(0,hb);
+ // A blank automatically frozen placeholder has never delivered work. Release only that
+ // current-week placeholder; a paper containing any rows or results stays untouched.
+ const blank=!D.ogr[0].kendiPlan.metot&&ov.sabit&&ov.ogrenciOtomatik&&!ov.metotPlan&&
+  Array.isArray(ov.plan?.slotlar)&&ov.plan.slotlar.length===7&&ov.plan.slotlar.every(a=>Array.isArray(a)&&a.length===0)&&
+  !Object.keys(ov.yer||{}).length&&!Object.keys(ov.anlatim||{}).length&&!Object.keys(ov.serbest||{}).length&&
+  !Object.keys(ov.konuSlot||{}).length&&!haftaSonucSayisi(0,hb);
+ const owner=D,old=blank?JSON.parse(JSON.stringify(ov)):null;
+ if(blank){delete ov.sabit;delete ov.plan;delete ov.ogrenciOtomatik;}
+ try{await write(kp=>{if(kp.metot)return;kp.metot={surum:1,baslangic:isoDan(bugunNo()),dakika:minutes,tamam:{}};});}
+ catch(e){if(old&&D===owner)D.elle['0|'+hb]=old;throw e;}
 }
 function model(day=bugunNo()){
  const m=D.ogr[0].kendiPlan.metot,date=isoDan(day),done=Object.fromEntries(Object.entries(m.tamam).filter(([,d])=>d<=date)),all=topics(),tyt=all.filter(x=>x.tyt&&x.c),ayt=all.filter(x=>!x.tyt);
@@ -129,5 +136,5 @@ document.addEventListener('click',async e=>{
 });
 function settings(){return '<section class="kart" style="padding:20px"><h2>TYT önce çalışma yöntemi</h2><label>Günlük dakika <input id="tmButce" type="number" min="120" max="600" value="'+D.ogr[0].kendiPlan.metot.dakika+'"></label><button class="dugme" id="tmBudget">Bütçeyi kaydet</button><button class="dugme" data-sekme="plan">Çalışma planımı aç</button></section>'}
 document.addEventListener('click',async e=>{if(e.target.id!=='tmBudget'||!active())return;try{await write(kp=>{kp.metot.dakika=Number(document.getElementById('tmButce').value)})}catch(err){bilgiVer(err.message)}});
-return {eligible,active,validate,start,model,view,intro,topics,settings};
+return {info:INFO,grammar,eligible,active,validate,start,model,view,intro,topics,settings};
 })();
