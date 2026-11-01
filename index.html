@@ -5614,7 +5614,7 @@ function yaptimPencereHtml() {
     '<button type="button" class="dugme" id="yaptimVazgec">Vazgeç</button></div></div></div></div>';
 }
 function kendiPlanKarti(si) {
-  if (TYT_METOT.eligible() && D.ogr[0].kendiPlan) return TYT_METOT.active() ? TYT_METOT.settings() : TYT_METOT.intro();
+  if (TYT_METOT.active()) return TYT_METOT.settings();
   const o = D.ogr[si], kp = o.kendiPlan, tur = kendiPlanTuru(o), dersler = kendiPlanDersleri(o.alan, tur);
   const seviye = d => ((kp && kp.seviye) || {})[d] || 'hic';
   const sec = d => '<label class="etiket kp-ders">' + kacis(kendiDersAdi(d)) + '<br><select class="kpSeviye" data-ders="' + kacis(d) + '">' +
@@ -5622,7 +5622,7 @@ function kendiPlanKarti(si) {
     '</select></label>';
   const durum = kp ? kendiPlanHaftalikSayi(si) : null;
   const sinav = (SINAV_KONULARI.sinavlar || {})[tur];
-  return '<div class="kart" style="padding:20px;margin-bottom:18px">' + (sinav
+  return (TYT_METOT.eligible() && kp ? TYT_METOT.intro() : '') + '<div class="kart" style="padding:20px;margin-bottom:18px">' + (sinav
     ? '<h2>' + kacis(kendiPlanEtiketi(tur)) + '</h2>' +
       '<details class="mini"><summary>Kapsam ve kaynaklar</summary><p><b>' + kacis(sinav.uzunAd) + '</b> · ' + kacis(sinav.kapsam) + '</p><p>' +
       sinav.kaynaklar.map(u => '<a href="' + kacis(u) + '" target="_blank" rel="noopener">' + kacis(u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</a>').join(' · ') +
