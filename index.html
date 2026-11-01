@@ -2614,6 +2614,7 @@ function yedekDogrula(y) {
       throw new Error('Geçersiz çalışma süresi: ' + (i + 1) + '. satır.');
     if (o.kendiPlan !== undefined) {
       const kp = o.kendiPlan, konu = k => Number.isInteger(+k) && +k >= 0 && +k < konuAdedi;
+      if (kp && kp.metot !== undefined) TYT_METOT.validate(kp.metot);
       if (!kp || typeof kp !== 'object' || Array.isArray(kp) || !['TYT', 'YKS'].concat(DIGER_SINAVLAR).includes(kp.tur) || !isoTarihGecerli(kp.hedef) ||
           !Array.isArray(kp.sira) || kp.sira.length > 2000 || !kp.sira.every(k => Number.isInteger(k) && konu(k)) ||
           !kp.seviye || typeof kp.seviye !== 'object' || Array.isArray(kp.seviye) ||
@@ -5613,6 +5614,7 @@ function yaptimPencereHtml() {
     '<button type="button" class="dugme" id="yaptimVazgec">Vazgeç</button></div></div></div></div>';
 }
 function kendiPlanKarti(si) {
+  if (TYT_METOT.eligible() && D.ogr[0].kendiPlan) return TYT_METOT.active() ? TYT_METOT.settings() : TYT_METOT.intro();
   const o = D.ogr[si], kp = o.kendiPlan, tur = kendiPlanTuru(o), dersler = kendiPlanDersleri(o.alan, tur);
   const seviye = d => ((kp && kp.seviye) || {})[d] || 'hic';
   const sec = d => '<label class="etiket kp-ders">' + kacis(kendiDersAdi(d)) + '<br><select class="kpSeviye" data-ders="' + kacis(d) + '">' +
@@ -6211,6 +6213,7 @@ function gorunumOgrenciPlan() {
       planTablosu(si, hb, p, false, true)) + ogrenciPlanEkleri(si, hb, p) + yaptimPencereHtml() + '</div>';
 }
 function gorunumPlan() {
+  if (TYT_METOT.active()) return TYT_METOT.view();
   if (ogrenciMi() && !EK.ogrenciDetay && !duzenlemeKaydi()) return gorunumOgrenciPlan();
   const si = EK.ogr, hb = haftaBasi(), p = planHesapla(si, hb);
   const o = D.ogr[si];
@@ -7033,6 +7036,7 @@ function ogrenciTelafiyiGeriAl(si) {
   });
 }
 function ogrenciOtomasyonHazirla() {
+  if (TYT_METOT.active()) return;
   if (!ogrenciMi() || D.ogr.length !== 1 || D.ogr[0].silindi || duzenlemeKaydi()) return false;
   let once;
   try {
@@ -7050,6 +7054,7 @@ function ogrenciOtomasyonHazirla() {
   }
 }
 function ogrenciOtomasyonUygula() {
+  if (TYT_METOT.active()) return;
   const si = 0, o = D.ogr[si], hb = buHafta(), sinav = gunNo(D.ayar.sinav);
   if (bugunNo() >= sinav) return false;
   let degisti = false;
@@ -7107,6 +7112,7 @@ function haritaPlaniniAc(h) {
 // Öğrencinin ana sayfası (girişten sonra, marka yazısıyla): haftalar haritası ve yanında deneme
 // gelişimi (yalnızca YKS). Başlıklar kendi sayfalarına götürür: Haftalar haritası, Denemelerim.
 function gorunumAnaSayfa() {
+  if (TYT_METOT.active()) return TYT_METOT.view();
   const grafik = ogrenciSinavi(D.ogr[EK.ogr]) === 'YKS' ? denemeYolGrafigi(EK.ogr) : '';
   const baslik = '<div class="baslik pano-sol-bas"><h1><button class="baslik-link" data-sekme="harita" title="Haftalar haritasını aç">Haftalar haritası</button></h1></div>';
   return grafik ? '<div class="ana-pano">' + baslik + '<div class="baslik pano-sag-bas"><h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler" title="Denemelerim’i aç">Deneme gelişimi</button></h2></div>' +
@@ -12987,6 +12993,7 @@ document.addEventListener('click', async ev => {
     document.querySelectorAll('.kpSeviye').forEach(s => { if (KENDI_SEVIYE.some(([v]) => v === s.value)) seviye[s.dataset.ders] = s.value; });
     // Sayılar, bu hafta verilip konular kâğıda geçmeden önce alınır.
     const buSabit = !!elleAl(0, buHafta(0)).sabit, sayi = kendiPlanKur(0, seviye, hedef), d = kendiPlanHaftalikSayi(0);
+    if (TYT_METOT.eligible()) { await TYT_METOT.start(); EK.sekme='plan'; ciz(); return; }
     await kaydet(true); ciz();
     bilgiVer(kendiPlanEtiketi(D.ogr[0].kendiPlan.tur) + ' başladı: ' + d.kalan + ' konu' +
       (sayi > d.kalan ? ' (' + (sayi - d.kalan) + ' konu okulda ya da önceden başladığı için dışarıda)' : '') +
@@ -23500,6 +23507,140 @@ return {kitapcikCoz,raporCoz,esle,cozumEtiketleri,haritaKur,defterKur,soruKirp,y
 })();
 function gorunumYanlislar(){return YANLISLAR.gorunum()}
 // END YANLISLAR
+
+// BEGIN TYT_METOT
+// Rolling, completion-driven study track for YKS students without school.
+const TYT_METOT=(()=>{
+'use strict';
+const INFO={
+ tr:['Türkçe',25,'https://www.youtube.com/watch?v=yQAQoIk9GzI','https://www.youtube.com/playlist?list=PLVsjxq1KrcgxND0PpnzXxr5gYRTaKEKWC'],
+ mat:['Matematik',30,'https://www.youtube.com/watch?v=taQxSST2haM','https://www.youtube.com/playlist?list=PLVoSZ0D0CB3oqLwG6l_p6CceuLyagc5yM'],
+ tar:['Tarih',15,'https://www.youtube.com/watch?v=0Us1bLOTR6o','https://www.youtube.com/playlist?list=PLRbyTgiOSh9nqSw97n5L-ywijENKVkvgs'],
+ cog:['Coğrafya',15,'https://www.youtube.com/watch?v=6gd_HQhY14c','https://www.youtube.com/playlist?list=PLnBnugScc-7LUk8uedC4Vwx2iumUJ3LO5'],
+ fel:['Felsefe',15,'https://www.youtube.com/watch?v=5kcLcw2-fFo','https://www.youtube.com/playlist?list=PL4P7Q5QUoe-i6-grEhF-xFieFIrh-TepB'],
+ din:['Din Kültürü',15,'https://www.youtube.com/watch?v=90psHEJxloU','https://www.youtube.com/playlist?list=PLBbyBioVuslkT9hAgj7hFdaToR9fEuDlt'],
+ fiz:['Fizik',20,'https://www.youtube.com/watch?v=yv07PXQ5b64','https://www.youtube.com/playlist?list=PLhhV4F6NB0-uEPdZncMf_qb0tSKyBM-Lf'],
+ kim:['Kimya',20,'https://www.youtube.com/watch?v=aa6YNGqGdQo','https://www.youtube.com/watch?v=PSWtyR8C7h4'],
+ bio:['Biyoloji',20,'https://www.youtube.com/watch?v=nSjznSFDMQs','https://www.youtube.com/playlist?list=PLLFjYcKh-t8Qg7GpZmjxPJI1kYr7P9W52'],
+ geo:['Geometri',25,'https://www.youtube.com/watch?v=tgQfoNXtYc0','https://www.youtube.com/playlist?list=PLVoSZ0D0CB3ovGqsyyKyl129FIZEXQm60']
+};
+const eligible=()=>ogrenciMi()&&D?.ogr?.length===1&&D.ogr[0].okul===false&&ogrenciSinavi(D.ogr[0])==='YKS';
+const active=()=>eligible()&&D.ogr[0].kendiPlan?.metot?.surum===1;
+const key=x=>encodeURIComponent(x.ders+'|'+x.ad);
+const grammar=x=>!/(anlam|paragraf|iletişim|okuma)/i.test(x.ad.toLocaleLowerCase('tr'));
+function course(s){s=s.toLocaleLowerCase('tr');return /geometri/.test(s)?'geo':/matematik/.test(s)?'mat':/türkçe/.test(s)?'tr':/tarih/.test(s)?'tar':/coğraf/.test(s)?'cog':/felsefe/.test(s)?'fel':/din/.test(s)?'din':/fizik/.test(s)?'fiz':/kimya/.test(s)?'kim':/biyoloji/.test(s)?'bio':null}
+function topics(){return D.ogr[0].kendiPlan.sira.map(ki=>({ki,ders:konuDersAdi(ki),ad:konuAl(ki)[3]})).map(x=>({...x,c:course(x.ders),tyt:konuSinavTuru(x.ki)==='AYT'?false:tytPlanKonusuMu(x.ders,x.ad),key:key(x)})).sort((a,b)=>a.c==='tr'&&b.c==='tr'?Number(!grammar(a))-Number(!grammar(b)):0)}
+function validate(m){
+ if(!m||m.surum!==1||!isoTarihGecerli(m.baslangic)||!Number.isInteger(m.dakika)||m.dakika<120||m.dakika>600||!m.tamam||typeof m.tamam!=='object'||Array.isArray(m.tamam)||Object.keys(m.tamam).length>10000||Object.entries(m.tamam).some(([k,v])=>k.length>1600||!isoTarihGecerli(v)||v<m.baslangic))throw new Error('TYT çalışma yöntemi kaydı geçersiz.');
+ for(const [id,date] of Object.entries(m.tamam)){
+  if(!/^(?:[vrgpbw]\|.+|weak\|.+|d\|[01345]|gr)$/.test(id))throw new Error('Çalışma kimliği geçersiz.');
+  try{decodeURIComponent(id)}catch(e){throw new Error('Çalışma kimliği kodlaması geçersiz.')}
+  if(id.startsWith('r|')&&(!m.tamam['v|'+id.slice(2)]||gunNo(date)<gunNo(m.tamam['v|'+id.slice(2)])+3))throw new Error('Hatırlama testi video gününden en az üç gün sonra olmalı.');
+ }
+ const mocks=[0,1,3,4,5];
+ for(let i=1;i<mocks.length;i++)if(m.tamam['d|'+mocks[i]]&&(!m.tamam['d|'+mocks[i-1]]||gunNo(m.tamam['d|'+mocks[i]])<gunNo(m.tamam['d|'+mocks[i-1]])+(i===2?2:1)))throw new Error('Genel deneme sırası veya dinlenme günü geçersiz.');
+ return true;
+}
+let saving=false;
+async function write(fn){
+ if(!eligible()||yalnizcaGoruntuleme()||saving)throw new Error('Çalışma planı şu anda değiştirilemiyor.');
+ const owner=D,o=D.ogr[0],old=o.kendiPlan;saving=true;
+ const next=JSON.parse(JSON.stringify(old));o.kendiPlan=next;
+ try{fn(o.kendiPlan);validate(o.kendiPlan.metot);if(!await kaydet(true))throw new Error('Plan kaydedilemedi. Yeniden deneyin.')}
+ catch(e){if(o.kendiPlan===next)o.kendiPlan=old;throw e}finally{saving=false}
+ if(D===owner)ciz();
+}
+async function start(){
+ if(!eligible()||!D.ogr[0].kendiPlan)throw new Error('Önce kendi YKS planını oluştur.');
+ const input=document.getElementById('tmButce'),minutes=Number(input?.value||480);
+ await write(kp=>{if(kp.metot)return;kp.metot={surum:1,baslangic:isoDan(bugunNo()),dakika:minutes,tamam:{}};
+  // This explicitly starts a new track; old plans/results remain intact, never inferred complete.
+ });
+}
+function model(day=bugunNo()){
+ const m=D.ogr[0].kendiPlan.metot,date=isoDan(day),done=Object.fromEntries(Object.entries(m.tamam).filter(([,d])=>d<=date)),all=topics(),tyt=all.filter(x=>x.tyt&&x.c),ayt=all.filter(x=>!x.tyt);
+ const watched=x=>!!done['v|'+x.key],tested=x=>!!done['r|'+x.key];
+ const finished=xs=>xs.length>0&&xs.every(tested),fraction=xs=>xs.length?xs.filter(watched).length/xs.length:1;
+ const grammarTopics=tyt.filter(x=>x.c==='tr'&&grammar(x));
+ const social=['tar','cog','fel','din'],science=['fiz','kim','bio'];
+ const tytDone=finished(tyt),lastRecall=tytDone?Math.max(...tyt.map(x=>gunNo(done['r|'+x.key]))):null;
+ const offsets=[0,1,3,4,5],weekDone=tytDone&&offsets.every(n=>done['d|'+n]);
+ const phase=!tytDone?'TYT':!weekDone?'TYT deneme haftası':'AYT';
+ const pool=phase==='AYT'?ayt:tyt,ot=phase==='AYT'?'AYT':'TYT';
+ let tasks=[];
+ const add=t=>tasks.push(t);
+ const task=(id,title,kind,minutes,extra={})=>({id,title,kind,minutes,...extra});
+ // Recall dates are derived exclusively from the recorded video day, across week/month boundaries.
+ for(const x of all){const v=done['v|'+x.key];if((x.tyt||phase==='AYT')&&v&&!tested(x)&&gunNo(v)+3<=day)add(task('r|'+x.key,x.ad,'Hatırlama testi',45,{course:INFO[x.c]?.[0]||x.ders,questions:INFO[x.c]?.[1]||25,due:gunNo(v)+3,video:gunNo(v),x}))}
+ // The document's exceptional grammar overview recall, separate from topic recalls.
+ if(done['g|TYT|tr']&&!done['gr']&&gunNo(done['g|TYT|tr'])+3<=day)add(task('gr','Dil bilgisi genel tekrarı','Hatırlama testi',40,{questions:25,due:gunNo(done['g|TYT|tr'])+3}));
+ const habits=[task('p|'+date,'Paragraf','Günlük alışkanlık',30,{questions:20})];
+ for(let g=gunNo(m.baslangic)+6;g<=day&&g<gunNo(m.baslangic)+730;g+=7)if(!done['w|'+isoDan(g)])habits.push(task('w|'+isoDan(g),'Haftanın bütün yanlış sorularını yeniden çöz','Haftalık tekrar',60));
+ tasks.push(...habits);
+ if(phase==='TYT deneme haftası'){
+  const next=offsets.find(n=>!done['d|'+n]);
+  const ix=offsets.indexOf(next),previous=ix>0?done['d|'+offsets[ix-1]]:null,earliest=Math.max(lastRecall+1+next,previous?gunNo(previous)+(ix===2?2:1):0);
+  if(day>=earliest){
+   // A delayed mock never causes two general mocks to be squeezed into the same day.
+   if(!offsets.some(n=>done['d|'+n]===date))add(task('d|'+next,'TYT genel denemesi · netler ve zayıf konuların analizi','Deneme + analiz',225,{questions:120}));
+  }else add(task('weak|'+date,'Branş denemeleri ve zayıf konulara dönüş','Zayıf konu çalışması',120));
+ }
+ const gates={tr:true,mat:true,tar:fraction(grammarTopics)>=.8,cog:fraction(grammarTopics)>=.8,fel:fraction(grammarTopics)>=.8,din:fraction(grammarTopics)>=.8,fiz:fraction(tyt.filter(x=>social.includes(x.c)))>=.8,kim:fraction(tyt.filter(x=>social.includes(x.c)))>=.8,bio:fraction(tyt.filter(x=>social.includes(x.c)))>=.8,geo:fraction(tyt.filter(x=>science.includes(x.c)))>=.8};
+ // Group branches replace their individual lessons once every constituent has finished recall.
+ const socialDone=social.every(c=>finished(tyt.filter(x=>x.c===c))),scienceDone=science.every(c=>finished(tyt.filter(x=>x.c===c)));
+ const branches=[];
+ if(phase==='TYT')for(const c of Object.keys(INFO)){
+  if((socialDone&&social.includes(c))||(scienceDone&&science.includes(c)))continue;
+  if(finished(tyt.filter(x=>x.c===c)))branches.push([c,INFO[c][0],INFO[c][1]]);
+ }
+ if(socialDone&&phase==='TYT')branches.push(['sos','Sosyal',20]);if(scienceDone&&phase==='TYT')branches.push(['fen','Fen',20]);
+ if((day-gunNo(m.baslangic))%3===0)for(const [c,name,q] of branches)add(task('b|'+c+'|'+date,name+' branş denemesi','Branş denemesi',45,{questions:q}));
+ const todayDone=Object.entries(done).filter(([,v])=>v===date),completedMinutes=todayDone.reduce((n,[id])=>n+(id.startsWith('g|')||id.startsWith('weak|')?120:id.startsWith('v|')?60:id.startsWith('r|')||id.startsWith('b|')?45:id==='gr'?40:id.startsWith('p|')?30:id.startsWith('d|')?225:60),0);
+ let used=completedMinutes;
+ tasks=tasks.filter(t=>!done[t.id]);for(const t of tasks)used+=t.minutes;
+ if(phase!=='TYT deneme haftası'){
+  const groups=[...new Set(pool.map(x=>x.c||x.ders))];
+  for(const c of groups){
+   if(phase==='TYT'&&!gates[c])continue;
+   const xs=pool.filter(x=>(x.c||x.ders)===c),next=xs.find(x=>!watched(x));if(!next)continue;
+   // One topic video per lesson/day; Türkçe and mathematics can progress in parallel.
+   if(xs.some(x=>done['v|'+x.key]===date))continue;
+   const g='g|'+ot+'|'+c,overview=!done[g],minutes=overview?120:60;
+   const futureLoad=all.filter(x=>done['v|'+x.key]===date&&!tested(x)).length*45+45+30;
+   if(used+minutes>m.dakika||(!overview&&futureLoad>m.dakika))continue;
+   const resource=ot==='TYT'?(c==='tr'&&!overview&&grammar(next)?'https://www.youtube.com/channel/UCyohoF5P2JFvc3KLLZRwDug/videos':INFO[c]?.[overview?2:3]):null;
+   add(task(overview?g:'v|'+next.key,overview?(INFO[c]?.[0]||next.ders)+' · genel son tekrar':next.ad,overview?'Genel son tekrar':'Konu videosu',minutes,{resource,course:INFO[c]?.[0]||next.ders,x:overview?null:next}));used+=minutes;
+  }
+ }
+ return {phase,tasks,tyt,ayt,done,completedMinutes,used,budget:m.dakika,over:used>m.dakika,complete:weekDone&&ayt.length===0,progress:tyt.filter(tested).length,total:tyt.length};
+}
+function intro(){return '<section class="kart" style="padding:20px;margin-bottom:18px"><h2>TYT önce · 3 gün sonra hatırlama</h2><p>Türkçe ve Matematik birlikte başlar. Dil bilgisi ilerleyince Sosyal, ardından Fen ve Geometri açılır. AYT, TYT ve deneme haftasından sonra gelir.</p><label>Günlük çalışma bütçesi <input id="tmButce" type="number" min="120" max="600" step="30" value="480"> dakika</label><p class="mini">Başlangıç bugündür. Önceki plan ve sonuçların korunur. Video süreleri planlama tahminidir.</p><button class="dugme birincil" id="tmStart">Bu yöntemle çalışmaya başla</button></section>'}
+function view(){
+ const v=model(),date=isoDan(bugunNo()),m=D.ogr[0].kendiPlan.metot;
+ return '<div id="tmKok"><div class="baslik"><h1>'+v.phase+' çalışma planım</h1><p>'+ggyy(bugunNo())+' · '+v.progress+'/'+v.total+' TYT konusu hatırlandı</p></div><progress max="'+v.total+'" value="'+v.progress+'" style="width:100%"></progress><div class="kart" style="padding:20px;margin:16px 0"><b>'+v.completedMinutes+' / '+v.budget+' dakika tamamlandı</b><p>Video günü: notlar ve öğretmenin örnekleri. Konu testi: gerçek izleme tarihinden tam 3 gün sonra.</p><p class="mini">Hatırlama testi: 5 dakika boş kâğıda hatırla → notsuz soruları çöz → yanlışların ilgili video bölümüne dön. Tahmini süreler kullanılır.</p>'+(v.over?'<p role="status">Bekleyen testler bütçeyi aşıyor. Yeni videolar açılmadı; geciken testlerin asıl tarihleri aşağıda.</p>':'')+'</div>'+v.tasks.map(t=>'<section class="kart tm-task" style="padding:18px;margin-bottom:12px"><span class="mini">'+kacis(t.kind)+(t.course?' · '+kacis(t.course):'')+'</span><h2>'+kacis(t.title)+'</h2><p>'+t.minutes+' dk'+(t.questions?' · '+t.questions+' soru':'')+(t.due!==undefined?' · Test tarihi '+ggyy(t.due)+(t.due<bugunNo()?' · Gecikti':''):'')+(t.video!==undefined?' · Video '+ggyy(t.video):'')+'</p><div class="arac">'+(t.resource?'<a class="dugme" href="'+t.resource+'" target="_blank" rel="noopener">Video kaynağı</a>':'')+'<button class="dugme birincil" data-tm-done="'+kacis(t.id)+'">Tamamladım</button></div></section>').join('')+'<details class="kart" style="padding:18px"><summary>Yaklaşan hatırlama testleri ve bugünkü kayıtlar</summary>'+topics().filter(x=>m.tamam['v|'+x.key]&&!m.tamam['r|'+x.key]&&gunNo(m.tamam['v|'+x.key])+3>bugunNo()).map(x=>'<p>'+ggyy(gunNo(m.tamam['v|'+x.key])+3)+' · '+kacis(x.ad)+'</p>').join('')+Object.entries(m.tamam).filter(([,d])=>d===date).map(([id])=>'<p>'+kacis(decodeURIComponent(id.replace(/^[^|]+\|/,'')))+' <button class="dugme" data-tm-undo="'+kacis(id)+'">Geri al</button></p>').join('')+'</details><p class="mini">Genel tekrarlar konu testlerine ek bir test üretmez; ilk dil bilgisi tekrarı istisnadır. Genel denemeler: 165 dk sınav + 60 dk aynı gün analiz.</p><button class="dugme" data-sekme="denemeler">Deneme sonuçlarımı gir</button></div>';
+}
+document.addEventListener('click',async e=>{
+ const b=e.target.closest?.('#tmStart,[data-tm-done],[data-tm-undo]');if(!b)return;
+ try{
+  if(b.id==='tmStart'){await start();return}
+  const id=b.dataset.tmDone||b.dataset.tmUndo;
+  if(!active())return;
+  await write(kp=>{
+   if(b.dataset.tmUndo){
+    const r=id.startsWith('v|')?'r|'+id.slice(2):null;
+    if(r&&kp.metot.tamam[r])throw new Error('Önce bu konunun hatırlama testini geri al.');
+    delete kp.metot.tamam[id];return;
+   }
+   if(!model().tasks.some(t=>t.id===id))throw new Error('Plan değişti. Güncel çalışmayı seç.');
+   kp.metot.tamam[id]=isoDan(bugunNo());
+  });
+ }catch(err){bilgiVer(err.message)}
+});
+function settings(){return '<section class="kart" style="padding:20px"><h2>TYT önce çalışma yöntemi</h2><label>Günlük dakika <input id="tmButce" type="number" min="120" max="600" value="'+D.ogr[0].kendiPlan.metot.dakika+'"></label><button class="dugme" id="tmBudget">Bütçeyi kaydet</button><button class="dugme" data-sekme="plan">Çalışma planımı aç</button></section>'}
+document.addEventListener('click',async e=>{if(e.target.id!=='tmBudget'||!active())return;try{await write(kp=>{kp.metot.dakika=Number(document.getElementById('tmButce').value)})}catch(err){bilgiVer(err.message)}});
+return {eligible,active,validate,start,model,view,intro,topics,settings};
+})();
+// END TYT_METOT
 
 // ---------------------------------------------------------------- başlangıç
 (async function () {

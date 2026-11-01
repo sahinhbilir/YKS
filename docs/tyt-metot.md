@@ -1,0 +1,7 @@
+# TYT-first study method
+
+This optional, dedicated daily study page is for a YKS student who is not attending school. School students and other exams continue using the existing planner and FSRS workflow. Starting the method creates a fresh track; it preserves prior plans and result records without treating them as completed method tasks.
+
+The schedule rolls forward from the actual start date and recorded completions; the historical dates in the source context are not fixed appointments. Türkçe and mathematics begin together. Social lessons open when 80% of grammar topic videos are recorded as watched; science opens at 80% of social videos, and geometry at 80% of science videos. These thresholds interpret “nearly finished” as video progress, while branch exams require completed recall tests. A topic recall is due three calendar days after its video; an overdue test retains its original due date.
+
+TYT topics and their recalls precede a TYT mock week and AYT. The mock week requires five general exams and a rest/review day between the second and third; delayed completions shift the schedule. Each general exam is budgeted at 165 minutes plus 60 minutes of same-day analysis. Overview videos, topic videos and recall tests use planning estimates of 120, 60 and 45 minutes respectively. Mandatory pending work is shown even if it exceeds the daily budget, and no new video is added while the budget is overloaded.
