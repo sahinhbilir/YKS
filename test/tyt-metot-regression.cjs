@@ -58,6 +58,18 @@ const data=expr=>JSON.parse(run('JSON.stringify('+expr+')'));const m=day=>data(`
  for(const t of topics.filter(x=>x.tyt)){assert(completed['v|'+t.key]);assert(completed['r|'+t.key]);}
  const mockDates=[0,1,3,4,5].map(n=>completed['d|'+n]);assert(mockDates.every(Boolean));
  const days=mockDates.map(d=>run(`gunNo('${d}')`));for(let i=1;i<days.length;i++)assert(days[i]-days[i-1]>=(i===2?2:1),'mock dates require distinct days and a rest day');
+ // A student work packet remaps numeric topic IDs but retains stable URI method keys.
+ run(`D.ogr[0].ogrenciBulutId='d70ec14d-ab10-43e5-b63f-0dd990c3626b';D.ogrCalismaTs=2000;
+ D.ogr[0].kendiPlan.metot={surum:1,baslangic:'2026-10-30',dakika:480,tamam:{}};
+ D.ogr[0].kendiPlan.metot.tamam[${JSON.stringify('v|'+tr.key)}]='2026-10-30';
+ studentPacket=ogrenciCalismaPaketi();sourceIds=D.ogr[0].kendiPlan.sira.slice();student=JSON.parse(JSON.stringify(D.ogr[0]));
+ D=varsayilan();D.rol='rehber';D.ogr=[student];delete D.ogr[0].kendiPlan;D.ogr[0].ogrCalismaTs=100;
+ kullaniciKonusuTam(1,'Synthetic unrelated first topic','Matematik TYT',12);
+ ogrenciCalismasiniUygula(studentPacket,0);`);
+ assert.equal(run(`D.ogr[0].kendiPlan.metot.tamam[${JSON.stringify('v|'+tr.key)}]`),'2026-10-30');
+ assert.notEqual(run('D.ogr[0].kendiPlan.sira[0]'),run('sourceIds[0]'),'teacher topic IDs are remapped');
+ run(`bad=JSON.parse(studentPacket.veri);bad.ogr[0].kendiPlan.metot.tamam['r|missing']='2026-11-01';badPacket={ts:3000,veri:JSON.stringify(bad)};beforeTeacher=JSON.stringify(D)`);
+ assert.throws(()=>run('ogrenciCalismasiniUygula(badPacket,0)'));assert.equal(run('JSON.stringify(D)'),run('beforeTeacher'));
  console.log('PASS TYT method eligibility, recall dates, gates, budget and rollback');
 })().catch(e=>{console.error(e);process.exitCode=1});
 

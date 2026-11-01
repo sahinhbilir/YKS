@@ -23602,7 +23602,9 @@ function model(day=bugunNo()){
   const groups=[...new Set(pool.map(x=>x.c||x.ders))];
   for(const c of groups){
    if(phase==='TYT'&&!gates[c])continue;
-   const xs=pool.filter(x=>(x.c||x.ders)===c),next=xs.find(x=>!watched(x));if(!next)continue;
+   const xs=pool.filter(x=>(x.c||x.ders)===c);
+   if(c==='tr')xs.sort((a,b)=>Number(!grammar(a))-Number(!grammar(b)));
+   const next=xs.find(x=>!watched(x));if(!next)continue;
    // One topic video per lesson/day; Türkçe and mathematics can progress in parallel.
    if(xs.some(x=>done['v|'+x.key]===date))continue;
    const g='g|'+ot+'|'+c,overview=!done[g],minutes=overview?120:60;
