@@ -1,0 +1,26 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict');
+let fixture=fs.readFileSync('test/tyt-metot-regression.cjs','utf8').split('(async()=>{')[0];
+fixture=fixture.replace('const listeners={},nodes={}',"source=source.slice(0,source.indexOf('// BEGIN TYT_WEEKLY'))+require('node:fs').readFileSync('src/tyt-weekly.js','utf8')+source.slice(source.indexOf('// END TYT_WEEKLY')+'// END TYT_WEEKLY'.length);\nconst listeners={},nodes={}");
+const {run,data,nodes}=new Function('require',fixture+'\nreturn {run,data,nodes};')(require);
+run(`D.ayar.testTarih='2026-11-01';D.ogr[0].kendiPlan.metot.baslangic='2026-11-01';D.ogr[0].kendiPlan.metot.tamam={};hb=buHafta(0);p=planHesapla(0,hb);ovRow=p.gunler.flat().find(x=>x.metotTur==='overview'&&x.metotId==='g|TYT|tr');`);
+assert(run('!!ovRow'),'Türkçe overview exists');
+run('haftayiSabitle(0,hb,p);frozen=JSON.stringify(planHesapla(0,hb).gunler)');
+assert.match(run('yaptimDugmesi(0,hb,ovRow,0,p)'),/data-yaptim="metotGt"/);
+const invoke=()=>run("yaptimBasla({yaptim:'metotGt',ki:ovRow.metotId,hb:String(hb),slot:String(planSlotAnahtari(ovRow))})");
+(async()=>{
+ await invoke();assert.match(run('yaptimPencereHtml()'),/id="yaptimMetotTarih"/);
+ nodes.yaptimOrtu={querySelector(){return null}};nodes.yaptimMetotTarih={value:'2026-10-31'};
+ run('kaydet=async()=>false;before=JSON.stringify(D.ogr[0].kendiPlan.metot)');await run('yaptimKaydet()');assert.equal(run('JSON.stringify(D.ogr[0].kendiPlan.metot)'),run('before'),'failed save restores ledger');
+ run('kaydet=async()=>true');await run('yaptimKaydet()');assert.equal(run("D.ogr[0].kendiPlan.metot.tamam['g|TYT|tr']"),'2026-10-31');
+ assert.equal(run('JSON.stringify(planHesapla(0,hb).gunler)'),run('frozen'),'printed week remains unchanged');
+ assert.equal(run("TYT_WEEKLY.ledger(0).intros.get('g|TYT|tr')"),run("gunNo('2026-10-31')"));
+ assert.equal(run('yaptimDugmesi(0,hb,ovRow,0,p)'),'');assert.match(run('planCalismaEtiketi(0,hb,ovRow,hb)'),/Önceden izlendi/);
+ const f=data("(()=>{const f=TYT_WEEKLY.forecast(0,gunNo('2026-11-07'));return [...f.days]})()");
+ assert(f.some(([day,rows])=>day===run("gunNo('2026-11-03')")&&rows.some(x=>x.metotId==='gr')),'grammar recall is actual overview day + 3');
+ assert.equal(run('Object.keys(D.ogrIslenis[0]||{}).length'),0,'overview creates no topic completion');
+ run(`m=D.ogr[0].kendiPlan.metot`);assert(run('TYT_METOT.validate(m)'));assert.throws(()=>run("TYT_METOT.validate({...m,tamam:{'v|topic':'2026-10-31'}})"));
+ assert(run("TYT_METOT.validate({...m,tamam:{'g|AYT|Türk Dili ve Edebiyatı':'2026-10-31'}})"));
+ assert.throws(()=>run("TYT_METOT.validate({...m,tamam:{'g|TYT|Türk Dili ve Edebiyatı':'2026-10-31'}})"));
+ console.log('PASS method overview already-watched date, rollback, validation and recall');
+})().catch(e=>{console.error(e);process.exitCode=1});

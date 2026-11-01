@@ -14,7 +14,7 @@ const cozum={name:'cozum.pdf',mimeType:'application/pdf',buffer:Y.pdfYaz(Y.cozum
 const rapor={name:'cevap-raporu.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Y.raporXlsx({shared:true,method:8})};
 const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g)||[]).length;
 (async()=>{
- const browser=await chromium.launch();
+ const browser=await chromium.launch({headless:true,...(process.env.YKS_CHROMIUM?{executablePath:process.env.YKS_CHROMIUM}:{})});
  try{for(const [width,theme] of [[1280,'light'],[390,'dark']]){
   const context=await browser.newContext({viewport:{width,height:950},colorScheme:theme}),page=await context.newPage(),errors=[],outside=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
@@ -114,6 +114,30 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
    assert.equal(await page.evaluate(()=>document.body.classList.contains('yd-yazdir')),false);
    await page.emulateMedia({media:'screen'});await page.setViewportSize({width:1280,height:950});
   }
+  // Reuse the already imported public Konu Takibi madde analysis, without re-uploading it.
+  await page.evaluate(()=>{
+   const s=YANLISLAR.durumu(),madde={};
+   for(const b of s.es.bolumler)madde[b.ad]=Array.from({length:b.n},(_,i)=>{
+    const p=YANLISLAR.key(b.ders)==='TURKCE'&&i>=2?.2:.8;return [p,p===.8?4:1,p===.8?1:4,0,p===.8?'Kolay':'Zor'];
+   });
+   D.konutakibi=KONU_TAKIBI.blank();D.konutakibi.zorluk={sentetik:{ad:s.rapor.ad,oturum:'TYT',ogrenci:5,ts:Date.now(),ozet:null,madde}};ciz();
+  });
+  await secOgr('SENTETİK ÖĞRENCİ 1 · 9001');
+  const publicBefore=await page.evaluate(()=>JSON.stringify(D));
+  await page.locator('[data-yd-f="difficulty"]').selectOption('kolay');await page.locator('[data-yd-f="status"]').selectOption('bos');await hazir();
+  assert.deepEqual(await page.locator('.yd-soru figcaption b').allInnerTexts(),['Soru 4'],'only easy unanswered questions');
+  assert.match(await page.locator('.yd-ust').innerText(),/Kolay · Yalnızca boş/);
+  assert.match(await page.locator('.yd-say').innerText(),/0 yanlış · 1 boş/);
+  await noScroll('difficulty filters');
+  if(process.env.YKS_UI_ARTIFACTS)await page.screenshot({path:path.join(out_dir,'yanlislar-kolay-bos-'+width+'.png'),fullPage:true});
+  await page.locator('[data-yd-f="status"]').selectOption('yanlis');await hazir();
+  assert.deepEqual(await page.locator('.yd-soru figcaption b').allInnerTexts(),['Soru 2']);
+  await page.locator('[data-yd-f="difficulty"]').selectOption('zor');await page.locator('[data-yd-f="status"]').selectOption('bos');await hazir();
+  assert.deepEqual(await page.locator('.yd-soru figcaption b').allInnerTexts(),['Soru 3']);
+  assert.equal(await page.evaluate(()=>JSON.stringify(D)),publicBefore,'filters do not modify the notebook or question data');
+  await page.evaluate(()=>{D.konutakibi.zorluk.sentetik.ad='Başka sınav';ciz()});await hazir();
+  assert.equal(await page.locator('.yd-soru').count(),0,'unknown difficulty is never guessed');
+  assert.equal(await page.locator('[data-yd-yazdir]').isDisabled(),true);
   assert.deepEqual(errors,[]);
   await context.close();
  }}finally{await browser.close()}

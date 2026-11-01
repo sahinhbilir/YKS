@@ -6,7 +6,7 @@ cut out of the A booklet as pictures, so the student can solve them again.
 
 ## Files
 
-Three inputs, each with a short ✓ status once read. Nothing is stored: not in localStorage, not in the notebook
+Three inputs, each with a short ✓ status once read. None of these files or the generated notebooks are stored: not in localStorage, not in the notebook
 (`D`), not in Firestore, and nothing is sent anywhere. The files stay in the page's memory; reloading or logging out
 clears them, and uploading again is how the teacher reprints.
 
@@ -38,6 +38,16 @@ Filters: **Şube**, **Öğrenci** (one student), and a checkbox per ders (for se
 filtered set. On screen the questions are one column; on paper A4 portrait, two per row when they fit (a question with a
 full-width passage takes a row), never split across pages.
 
+**Soru durumu** selects wrong, blank, or both. **Zorluk** selects easy, medium, hard, unknown, or all.
+For example, **Kolay + Yalnızca boş** prints only easy questions the student left unanswered.
+Difficulty reads the existing exam's **Madde Analizi** in Konu Takibi without changing it or requiring another upload.
+It is the school's correct-answer rate: easy ≥75%, medium ≥25% and <75%, hard <25%.
+Exam name, session, course and question counts must match. Automatic selection requires a unique matching exam;
+the teacher can also select the source explicitly. Question numbers join through the A booklet; B students require
+the validated B→A mapping. Missing or mismatched data stays **Zorluk bilinmiyor**, never guessed.
+The selected filters appear in each printed notebook's heading; zero matching questions disables printing.
+Filter choices and answer-file data remain in page memory only.
+
 - Each student starts on a new page: name, Öğrenci No, şube, exam name, "12 yanlış · 5 boş"; questions grouped by ders in
   booklet order, each with "Soru 12" and "Senin cevabın: C" or "Boş". A student without wrong or empty questions is shown
   on screen but not printed.
@@ -50,6 +60,6 @@ full-width passage takes a row), never split across pages.
 
 ## Tests
 
-`node scripts/embed-yanlislar.cjs --check && node test/yanlislar-regression.cjs` (parsing, TC, selection, mapping, map
+`node scripts/embed-yanlislar.cjs --check && node test/yanlislar-regression.cjs && node test/yanlislar-difficulty-regression.cjs` (parsing, TC, selection, difficulty boundaries, mapping, map
 validation, markup) and `node test/yanlislar-browser.cjs` (real pdf.js on a generated booklet, crops, filters, print
 to PDF, 1280 and 390 widths). Source: `src/yanlislar.js`, `src/yanlislar.css`.

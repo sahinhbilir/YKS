@@ -1,0 +1,37 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const fixture=fs.readFileSync('test/yanlislar-regression.cjs','utf8').split('(async () => {')[0];
+const T=new Function('require',fixture+'\nreturn T;')(require);
+const ps=[0,.249,.25,.749,.75,1];
+const rapor={ad:'Sentetik TYT'},es={testler:[6],bolumler:[{ad:'TÜRKÇE-T',ders:'Türkçe',test:0,n:6,off:0}]};
+const source={ad:'Sentetik TYT',oturum:'TYT',madde:{'TÜRKÇE-T':ps.map(p=>[p,0,0,0,''])}};
+const originals=JSON.stringify([rapor,es,source]),idx=T.difficultyIndex(rapor,es,source);
+assert.equal(idx.map.size,6);assert.equal(idx.issues.length,0);
+assert.deepEqual(ps.map((_,i)=>idx.map.get('0:'+(i+1)).level),['zor','zor','orta','orta','kolay','kolay']);
+assert.deepEqual(ps.map((_,i)=>idx.map.get('0:'+(i+1)).p),ps);assert.equal(JSON.stringify([rapor,es,source]),originals);
+const d={bolumler:[{ad:'Türkçe',sorular:[{test:0,a:5,no:1,durum:'bos'},{test:0,a:2,no:5,durum:'yanlis'},{test:0,a:null,no:6,durum:'bos'},{test:0,a:6,no:2,durum:'yanlis'}]}],yanlis:2,bos:2};
+const before=JSON.stringify(d),pick=(o,index=idx)=>T.filterDefter(d,o,index),flat=v=>v.bolumler.flatMap(b=>b.sorular);
+const easy=pick({status:'bos',difficulty:'kolay'});assert.equal(flat(easy).length,1);assert.equal(flat(easy)[0].a,5);assert.equal(flat(easy)[0].p,.75);
+const wrong=pick({status:'yanlis',difficulty:'all'});assert.equal(flat(wrong).length,2);assert(flat(wrong).every(x=>x.durum==='yanlis'));
+assert.equal(flat(wrong)[0].p,.249,'B booklet question uses its mapped A number, not its own printed number');
+const unknown=pick({status:'all',difficulty:'bilinmeyen'});assert.equal(flat(unknown).length,1);assert.equal(flat(unknown)[0].a,null);assert.equal(flat(unknown)[0].p,null);
+assert.equal(JSON.stringify(d),before,'filter leaves student input unchanged');
+for(const bad of [{...source,ad:'Başka TYT'},{...source,oturum:'AYT'},{...source,madde:{'TÜRKÇE-T':source.madde['TÜRKÇE-T'].slice(0,5)}}]){
+ const rejected=T.difficultyIndex(rapor,es,bad);assert.equal(rejected.map.size,0);assert(rejected.issues.length>0);
+ assert.equal(flat(pick({status:'all',difficulty:'bilinmeyen'},rejected)).length,4);
+}
+const mathR={ad:'Sentetik TYT'},mathEs={testler:[40],bolumler:[{ad:'MATEMATİK-T',ders:'Matematik',test:0,n:30,off:0},{ad:'GEOMETRİ-T',ders:'Geometri',test:0,n:10,off:30}]};
+const matValues=Array.from({length:40},(_,i)=>[i<30?.8:.2,0,0,0,'']),mathS={ad:'Sentetik TYT',oturum:'TYT',madde:{'MATEMATİK-T':matValues}};
+const math=T.difficultyIndex(mathR,mathEs,mathS);assert.equal(math.map.size,40);assert.equal(math.map.get('0:30').level,'kolay');assert.equal(math.map.get('0:31').level,'zor');assert.equal(math.map.get('0:40').p,.2);
+const mismatched={...mathS,madde:{'MATEMATİK-T':matValues.slice(0,39)}};const fail=T.difficultyIndex(mathR,mathEs,mismatched);assert.equal(fail.map.size,0);assert(fail.issues.length);
+const mixedEs={testler:[6,6],bolumler:[es.bolumler[0],{...es.bolumler[0],test:1,ad:'TÜRKÇE-A'}]};
+const mixed=T.difficultyIndex({ad:'Sentetik'},mixedEs,{...source,ad:'Sentetik'});
+assert.equal(mixed.map.size,6);assert(!mixed.map.has('1:1'),'TYT difficulty must not be joined to an AYT section');
+assert.equal(T.difficultyIndex(rapor,es,{...source,madde:{'TÜRKÇE-A':ps.map(p=>[p])}}).map.size,0,'source course session must match');
+assert.equal(T.difficultyIndex(rapor,es,{...source,madde:{'TÜRKÇE-T':null}}).map.size,0,'malformed source cannot become question difficulty');
+const combinedSource={ad:'Sentetik',oturum:'TYT + AYT',madde:{'TÜRKÇE-T':ps.map(p=>[p]),'TÜRKÇE-A':ps.map(()=>[.9])}};
+const combined=T.difficultyIndex({ad:'Sentetik'},mixedEs,combinedSource);
+assert.equal(combined.map.size,12);assert.equal(combined.map.get('0:1').p,0);assert.equal(combined.map.get('1:1').p,.9,'combined source keeps each session separate');
+assert.equal(T.difficultyIndex(rapor,es,{...combinedSource,ad:rapor.ad}).map.size,6,'TYT report can reuse combined TYT + AYT upload');
+assert.equal(T.difficultyIndex(rapor,es,{...combinedSource,ad:rapor.ad,madde:{'TÜRKÇE-A':ps.map(p=>[p])}}).map.size,0,'combined metadata alone cannot imply TYT madde rows exist');
+console.log('PASS difficulty thresholds, booklet mapping, filters and matching');

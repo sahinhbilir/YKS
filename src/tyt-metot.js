@@ -21,7 +21,7 @@ function course(s){s=s.toLocaleLowerCase('tr');return /geometri/.test(s)?'geo':/
 function topics(si=0){return D.ogr[si].kendiPlan.sira.map(ki=>({ki,ders:konuDersAdi(ki),ad:konuAl(ki)[3]})).map(x=>({...x,c:course(x.ders),tyt:konuSinavTuru(x.ki)==='AYT'?false:tytPlanKonusuMu(x.ders,x.ad),key:key(x)})).sort((a,b)=>a.c==='tr'&&b.c==='tr'?Number(!grammar(a))-Number(!grammar(b)):0)}
 function validate(m){
  if(m?.baslangiclar!==undefined&&(!m.baslangiclar||typeof m.baslangiclar!=='object'||Array.isArray(m.baslangiclar)||Object.entries(m.baslangiclar).some(([c,d])=>!Object.hasOwn(INFO,c)||!isoTarihGecerli(d)||d<m.baslangic)))throw new Error('Ders başlangıç günleri geçersiz.');
- if(!m||m.surum!==1||!isoTarihGecerli(m.baslangic)||!Number.isInteger(m.dakika)||m.dakika<120||m.dakika>600||!m.tamam||typeof m.tamam!=='object'||Array.isArray(m.tamam)||Object.keys(m.tamam).length>10000||Object.entries(m.tamam).some(([k,v])=>k.length>1600||!isoTarihGecerli(v)||v<m.baslangic))throw new Error('TYT çalışma yöntemi kaydı geçersiz.');
+ if(!m||m.surum!==1||!isoTarihGecerli(m.baslangic)||!Number.isInteger(m.dakika)||m.dakika<120||m.dakika>600||!m.tamam||typeof m.tamam!=='object'||Array.isArray(m.tamam)||Object.keys(m.tamam).length>10000||Object.entries(m.tamam).some(([k,v])=>k.length>1600||!isoTarihGecerli(v)||v<'2020-01-01'||(v<m.baslangic&&!/^g\|(?:(?:TYT|AYT)\|(?:tr|mat|tar|cog|fel|din|fiz|kim|bio|geo)|AYT\|Türk Dili ve Edebiyatı)$/.test(k))))throw new Error('TYT çalışma yöntemi kaydı geçersiz.');
  for(const [id,date] of Object.entries(m.tamam)){
   if(!/^(?:[vrgpbw]\|.+|weak\|.+|d\|[01345]|gr)$/.test(id))throw new Error('Çalışma kimliği geçersiz.');
   try{decodeURIComponent(id)}catch(e){throw new Error('Çalışma kimliği kodlaması geçersiz.')}

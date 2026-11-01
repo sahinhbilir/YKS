@@ -50,7 +50,7 @@ jobs:
       - name: Konu Takibi cumulative evidence, import and embedding
         run: node scripts/embed-konutakibi.cjs --check && node test/konutakibi-regression.cjs
       - name: Yanlışlar defteri booklet cut-outs, cevap raporu without TC, A and B numbers and embedding
-        run: node scripts/embed-yanlislar.cjs --check && node test/yanlislar-regression.cjs
+        run: node scripts/embed-yanlislar.cjs --check && node test/yanlislar-regression.cjs && node test/yanlislar-difficulty-regression.cjs
       - name: Gemini reading of other files, checks, fallback and embedding
         run: node scripts/embed-yapayzeka.cjs --check && node test/yapayzeka-regression.cjs
       - name: Cross-page consistency
@@ -110,7 +110,7 @@ jobs:
       - name: Self-paced TYT track next to the school plan
         run: node test/personal-plan-regression.js
       - name: TYT-first rolling study method for students without school
-        run: node scripts/embed-tyt-metot.cjs --check && node scripts/embed-tyt-weekly.cjs --check && node test/tyt-metot-regression.cjs && node test/tyt-weekly-core-regression.cjs && node test/tyt-parallel-regression.cjs
+        run: node scripts/embed-tyt-metot.cjs --check && node scripts/embed-tyt-weekly.cjs --check && node test/tyt-metot-regression.cjs && node test/tyt-weekly-core-regression.cjs && node test/tyt-parallel-regression.cjs && node test/genel-metot-yaptim-regression.cjs
       - name: Genel tekrar before topics and "Zaten yaptım" on the personal plan
         run: node test/genel-tekrar-regression.js
       - name: LGS, KPSS, ALES, DGS and AGS topic lists and plans

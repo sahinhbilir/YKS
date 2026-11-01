@@ -291,9 +291,58 @@ function defterKur(rapor,es,harita,ogr,acik){
   });
   return {ogr,yanlis,bos,bolumler,gorsel:ogr.kit==='A'||!!harita};
 }
+/* Read the existing Konu Takibi madde analysis; A-booklet question numbers are the join key.
+   Never infer an individual answer from aggregate kazanım counts, nor a difficulty from missing data. */
+const level=p=>p>=.75?'kolay':p<.25?'zor':'orta';
+const levelName={kolay:'Kolay',orta:'Orta',zor:'Zor',bilinmeyen:'Zorluk bilinmiyor'};
+function courseKey(s){
+  const k=key(clean(s).replace(/-[TA]$/iu,'').replace(/\b(?:TYT|AYT)\b/giu,''));
+  const aliases={TUR:'TURKCE',TURK:'TURKCE',TEMELMATEMATIK:'MATEMATIK',COG:'COGRAFYA',TAR:'TARIH',FIZ:'FIZIK',KIM:'KIMYA',BIO:'BIYOLOJI',DIN:'DINKULTURU',DINKULTURUVEAHLAKBILGISI:'DINKULTURU',SFELSEFE:'EKFELSEFE',SOSYALFELSEFE:'EKFELSEFE',TURKDILIVEEDEBIYATI:'EDEBIYAT'};
+  return aliases[k]||k;
+}
+function difficultyIndex(rapor,es,source){
+  const map=new Map(),issues=[];
+  if(!source?.madde)return {map,issues:['Konu Takibi’nde bu sınavın Madde Analizi bulunamadı.']};
+  if(!rapor.ad||key(rapor.ad)!==key(source.ad))return {map,issues:['Madde Analizi ile cevap raporunun sınav adları eşleşmiyor.']};
+  const named=['TYT','AYT'].filter(s=>new RegExp('\\b'+s+'\\b','iu').test(rapor.ad)),session=named.length===1?named[0]:null;
+  const sessions=new Set(String(source.oturum||'').split('+').map(s=>s.trim())),suffix=c=>/-T$/u.test(c)?'TYT':/-A$/u.test(c)?'AYT':null;
+  if(session&&!sessions.has(session))return {map,issues:['Madde Analizi ile cevap raporunun oturumları eşleşmiyor.']};
+  const sole=sessions.size===1?[...sessions][0]:null;
+  const entries=Object.entries(source.madde).map(([c,q])=>({c,k:courseKey(c),session:suffix(c)||sole,q}));
+  const valid=e=>Array.isArray(e.q)&&e.q.every(q=>Array.isArray(q)&&typeof q[0]==='number'&&Number.isFinite(q[0])&&q[0]>=0&&q[0]<=1)&&(!source.ozet?.[e.c]||source.ozet[e.c].length===e.q.length);
+  for(const [test,N] of es.testler.entries()){
+    const bs=es.bolumler.filter(b=>b.test===test),ks=bs.map(b=>courseKey(b.ders));
+    const group=ks.every(k=>['MATEMATIK','GEOMETRI'].includes(k))?'MATEMATIK':ks.every(k=>['FIZIK','KIMYA','BIYOLOJI'].includes(k))?'FEN':ks.every(k=>['TARIH','COGRAFYA','FELSEFE','DINKULTURU','EKFELSEFE'].includes(k))?'SOSYAL':null;
+    const groupAliases={MATEMATIK:['MATEMATIK','MATEMATIKGEOMETRI'],FEN:['FEN','FENBILIMLERI'],SOSYAL:['SOSYAL','SOSYALBILIMLER','SOSYALBILIMLERI']};
+    for(const b of bs){
+      const bsess=suffix(b.ad)||session||sole;
+      if(!bsess||!sessions.has(bsess)||(session&&session!==bsess)){issues.push(b.ders+': oturum eşleşmedi.');continue}
+      const compatible=entries.filter(e=>e.session===bsess);
+      const full=group?compatible.filter(e=>groupAliases[group].includes(e.k)&&valid(e)&&e.q.length===N):[];
+      const direct=compatible.filter(e=>e.k===courseKey(b.ders)&&valid(e)&&e.q.length===b.n);
+      const candidates=direct.length?direct:full;
+      if(candidates.length!==1){issues.push(b.ders+': soru numaraları veya soru sayısı eşleşmedi.');continue}
+      const e=candidates[0],whole=!direct.length;
+      for(let n=0;n<b.n;n++){const p=e.q[whole?b.off+n:n][0];map.set(test+':'+(b.off+n+1),{p,level:level(p)})}
+    }
+  }
+  return {map,issues:[...new Set(issues)]};
+}
+function filterDefter(d,options={},index={map:new Map()}){
+  let yanlis=0,bos=0,unknown=0;
+  const bolumler=d.bolumler.map(b=>({...b,sorular:b.sorular.flatMap(s=>{
+    if(options.status&&options.status!=='all'&&s.durum!==options.status)return [];
+    const z=s.a===null?null:index.map.get(s.test+':'+s.a),difficulty=z?.level||'bilinmeyen';
+    if(!z)unknown++;
+    if(options.difficulty&&options.difficulty!=='all'&&options.difficulty!==difficulty)return [];
+    if(s.durum==='yanlis')yanlis++;else bos++;
+    return [{...s,difficulty,p:z?.p??null}];
+  })})).filter(b=>b.sorular.length);
+  return {...d,bolumler,yanlis,bos,unknown,filterText:[options.difficulty&&options.difficulty!=='all'?levelName[options.difficulty]:null,options.status==='bos'?'Yalnızca boş':options.status==='yanlis'?'Yalnızca yanlış':null].filter(Boolean).join(' · ')};
+}
 /* ---------------------------------------------------------------- Screen and print. State lives only in this page's memory. */
 const OLCEK=2,BOSLUK=8;
-const S={kit:null,rapor:null,es:null,pairs:null,harita:null,durum:{kit:'',rapor:'',coz:''},hata:{kit:'',rapor:'',coz:''},sube:'',ogr:'',kapali:new Set(),mesgul:'',crops:new Map(),jeton:0,hazir:Promise.resolve(),ilerleme:''};
+const S={kit:null,rapor:null,es:null,pairs:null,harita:null,durum:{kit:'',rapor:'',coz:''},hata:{kit:'',rapor:'',coz:''},sube:'',ogr:'',status:'all',difficulty:'all',zexam:'',kapali:new Set(),mesgul:'',crops:new Map(),jeton:0,hazir:Promise.resolve(),ilerleme:''};
 const h=s=>kacis(String(s??''));
 const rehber=()=>typeof rehberMi==='function'&&rehberMi();
 const etkin=()=>EK.sekme==='yanlislar'&&rehber()&&!!document.getElementById('ydKok');
@@ -332,7 +381,7 @@ async function yukle(tur,file){
       if(file.size>15*1024*1024)throw new Error('Excel dosyası en fazla 15 MB olabilir.');
       const rapor=await raporCoz(new Uint8Array(await file.arrayBuffer()));
       let es=null;if(S.kit){try{es=esle(rapor,S.kit)}catch(e){throw new Error(e.message+' Cevap raporu eklenmedi.')}}
-      S.rapor=rapor;S.es=es;S.sube='';S.ogr='';S.kapali=new Set();S.durum.rapor='✓ '+rapor.ogrenciler.length+' öğrenci'+(rapor.ad?' · '+rapor.ad:'');
+      S.rapor=rapor;S.es=es;S.sube='';S.ogr='';S.zexam='';S.kapali=new Set();S.durum.rapor='✓ '+rapor.ogrenciler.length+' öğrenci'+(rapor.ad?' · '+rapor.ad:'');
       yenidenDogrula();
     }else{
       if(!S.kit||!S.rapor||!S.es)throw new Error('Önce soru kitapçığını ve cevap raporunu yükleyin.');
@@ -348,7 +397,10 @@ function yenidenDogrula(){
   if(!S.harita){S.pairs=null;S.durum.coz=''}
 }
 const ogrenciler=()=>S.rapor.ogrenciler.filter(o=>(!S.sube||o.sube===S.sube)&&(!S.ogr||String(o.id)===S.ogr)).sort((a,b)=>a.sube.localeCompare(b.sube,'tr',{numeric:true})||a.ad.localeCompare(b.ad,'tr'));
-const defterler=()=>ogrenciler().map(o=>defterKur(S.rapor,S.es,S.harita,o,new Set(S.es.bolumler.map((b,i)=>i).filter(i=>!S.kapali.has(i)))));
+const difficultySources=()=>Object.entries(D?.konutakibi?.zorluk||{}).filter(([,e])=>e?.madde);
+function selectedDifficulty(){const all=difficultySources();if(S.zexam)return all.find(([k])=>k===S.zexam)?.[1]||null;const matches=all.filter(([,e])=>key(e.ad)===key(S.rapor?.ad));return matches.length===1?matches[0][1]:null}
+const difficultyContext=()=>difficultyIndex(S.rapor,S.es,selectedDifficulty());
+const defterler=()=>{const index=difficultyContext();return ogrenciler().map(o=>filterDefter(defterKur(S.rapor,S.es,S.harita,o,new Set(S.es.bolumler.map((b,i)=>i).filter(i=>!S.kapali.has(i)))),{status:S.status,difficulty:S.difficulty},index))};
 
 /* Cropping: each page is rendered once at OLCEK and every question is copied out of it. */
 async function sayfaCiz(kit,n){
@@ -415,8 +467,8 @@ function ogrHTML(d){
   const o=d.ogr,toplam=d.bolumler.reduce((a,b)=>a+b.sorular.length,0),gorsel=d.gorsel&&!!S.kit;
   const kimlik='Öğrenci No <b>'+h(o.no)+'</b> · '+h(o.sube)+(S.rapor.ad?' · '+h(S.rapor.ad):'');
   const sayi='<b>'+d.yanlis+'</b> yanlış · <b>'+d.bos+'</b> boş';
-  const ust='<header class="yd-ust"><h2>'+h(o.ad)+'</h2><p class="yd-kimlik">'+kimlik+'</p><p class="yd-say">'+sayi+'</p></header>';
-  if(!toplam)return '<article class="yd-ogr yd-yok" data-yd-ogr="'+o.id+'">'+ust+'<p class="yd-not">Yanlış veya boş soru yok.</p></article>';
+  const ust='<header class="yd-ust"><h2>'+h(o.ad)+'</h2><p class="yd-kimlik">'+kimlik+'</p><p class="yd-say">'+sayi+'</p>'+(d.filterText?'<p class="yd-kimlik">'+h(d.filterText)+'</p>':'')+'</header>';
+  if(!toplam)return '<article class="yd-ogr yd-yok" data-yd-ogr="'+o.id+'">'+ust+'<p class="yd-not">'+(d.filterText?'Seçilen filtrelerde soru yok.':'Yanlış veya boş soru yok.')+'</p></article>';
   const dersler=d.bolumler.map(b=>'<section class="yd-ders"><h3>'+h(b.ders)+' <span>'+b.sorular.length+'</span></h3>'+(gorsel?'<div class="yd-sorular">'+b.sorular.map(s=>soruHTML(s,true)).join('')+'</div>':'<ul class="yd-liste">'+b.sorular.map(s=>soruHTML(s,false)).join('')+'</ul>')+'</section>').join('');
   const not=gorsel?'':'<p class="yd-not">'+o.kit+' kitapçığı: sorular kendi kitapçığından çözülecek</p>';
   const anahtar='<section class="yd-anahtar"><h2>Doğru cevaplar</h2><p class="yd-kimlik">'+h(o.ad)+' · '+kimlik+'</p>'+d.bolumler.map(b=>'<div class="yd-ak"><b>'+h(b.ders)+'</b><span class="yd-harfler">'+b.sorular.map(s=>'<span><i>'+s.own+'</i> '+s.dogru+'</span>').join('')+'</span></div>').join('')+'</section>';
@@ -431,10 +483,14 @@ function content(){
   const opt=(v,t,sec)=>'<option value="'+h(v)+'"'+(sec?' selected':'')+'>'+h(t)+'</option>';
   const sel=(label,f,opts)=>'<label class="yd-sec">'+label+'<select data-yd-f="'+f+'">'+opts+'</select></label>';
   const list=defterler(),soru=list.reduce((a,d)=>a+d.bolumler.reduce((x,b)=>x+b.sorular.length,0),0);
-  const filtre='<div class="yd-filtre">'+sel('Şube','sube',opt('','Tüm şubeler',!S.sube)+subeler.map(s=>opt(s,s,s===S.sube)).join(''))+sel('Öğrenci','ogr',opt('','Tüm öğrenciler ('+inSube.length+')',!S.ogr)+inSube.map(o=>opt(o.id,o.ad+' · '+o.no,String(o.id)===S.ogr)).join(''))+'</div>';
+  const filtre='<div class="yd-filtre">'+sel('Şube','sube',opt('','Tüm şubeler',!S.sube)+subeler.map(s=>opt(s,s,s===S.sube)).join(''))+sel('Öğrenci','ogr',opt('','Tüm öğrenciler ('+inSube.length+')',!S.ogr)+inSube.map(o=>opt(o.id,o.ad+' · '+o.no,String(o.id)===S.ogr)).join(''))+
+    sel('Soru durumu','status',[['all','Yanlış ve boş'],['yanlis','Yalnızca yanlış'],['bos','Yalnızca boş']].map(([v,l])=>opt(v,l,S.status===v)).join(''))+
+    sel('Zorluk','difficulty',[['all','Tüm zorluklar'],['kolay','Kolay · en az %75 doğru'],['orta','Orta · %25–75 arası (%75 hariç)'],['zor','Zor · %25’ten az doğru'],['bilinmeyen','Zorluk bilinmiyor']].map(([v,l])=>opt(v,l,S.difficulty===v)).join(''))+
+    sel('Madde Analizi · Konu Takibi','zexam',opt('','Aynı sınavı otomatik eşleştir',!S.zexam)+difficultySources().map(([k,e])=>opt(k,e.ad+' · '+e.oturum,S.zexam===k)).join(''))+'</div>';
+  const zctx=difficultyContext(),unknown=list.reduce((n,d)=>n+d.unknown,0),zinfo=(S.difficulty!=='all'?'<p class="yd-not">'+h(zctx.issues.join(' '))+(unknown?' '+unknown+' yanlış/boş sorunun zorluğu bilinmiyor.':'')+' Zorluk, Konu Takibi’ndeki okul doğru oranıdır. B kitapçığında A soru eşleşmesi gerekir.</p>':'');
   const dersler='<div class="yd-dersler" role="group" aria-label="Dersler">'+S.es.bolumler.map((b,i)=>'<label><input type="checkbox" data-yd-ders="'+i+'"'+(S.kapali.has(i)?'':' checked')+'>'+h(b.ders)+'</label>').join('')+'</div>';
   const arac='<div class="yd-arac"><button type="button" class="et-dugme birincil" data-yd-yazdir'+(soru?'':' disabled')+'>Yazdır</button><span class="yd-ozet">'+list.length+' öğrenci · '+soru+' soru</span><span id="ydIlerleme" class="yd-ozet" role="status">'+h(S.ilerleme)+'</span></div>';
-  return top+filtre+dersler+arac+'<div class="yd-baski" id="ydBaski">'+list.map(ogrHTML).join('')+'</div>';
+  return top+filtre+dersler+zinfo+arac+'<div class="yd-baski" id="ydBaski">'+list.map(ogrHTML).join('')+'</div>';
 }
 function gorunum(){
   if(!rehber())return '<p>Bu sayfa rehber öğretmen içindir.</p>';
@@ -477,10 +533,11 @@ document.addEventListener('change',ev=>{
   if(dosya){const f=el.files&&el.files[0];el.value='';if(f)dosyaYukle(dosya,f);return}
   if(el.dataset?.ydF==='sube'){S.sube=el.value;if(S.ogr&&S.rapor.ogrenciler.find(o=>String(o.id)===S.ogr)?.sube!==S.sube&&S.sube)S.ogr='';render('[data-yd-f="sube"]');return}
   if(el.dataset?.ydF==='ogr'){S.ogr=el.value;render('[data-yd-f="ogr"]');return}
+  if(['status','difficulty','zexam'].includes(el.dataset?.ydF)){const k=el.dataset.ydF,allowed={status:['all','yanlis','bos'],difficulty:['all','kolay','orta','zor','bilinmeyen'],zexam:['',...difficultySources().map(([id])=>id)]};if(allowed[k].includes(el.value))S[k]=el.value;render('[data-yd-f="'+k+'"]');return}
   if(el.dataset?.ydDers!==undefined){const i=+el.dataset.ydDers;if(el.checked)S.kapali.delete(i);else S.kapali.add(i);render('[data-yd-ders="'+i+'"]')}
 });
 document.addEventListener('click',ev=>{if(!etkin())return;if(ev.target.closest?.('[data-yd-yazdir]'))yazdir()});
 const durumu=()=>S;
-return {kitapcikCoz,raporCoz,esle,cozumEtiketleri,haritaKur,defterKur,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
+return {kitapcikCoz,raporCoz,esle,cozumEtiketleri,haritaKur,defterKur,difficultyIndex,filterDefter,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
 })();
 function gorunumYanlislar(){return YANLISLAR.gorunum()}

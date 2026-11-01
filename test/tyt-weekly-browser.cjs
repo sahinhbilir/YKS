@@ -26,6 +26,12 @@ const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[
   assert.equal(plan.length,7);assert(plan.flat().some(x=>x.anlatim),'weekly plan includes video instruction');
   assert(plan.flat().some(x=>!x.anlatim&&!x.serbest),'weekly plan includes recall test');
   assert(/ANLATIM/i.test(printed.text),'A4 contains video instruction');assert(/soru/i.test(printed.text),'A4 contains recall questions');
+  await page.evaluate(()=>{haftayiSabitle(0,buHafta(0));ciz()});
+  const already=page.locator('[data-yaptim="metotGt"][data-ki="g|TYT|tr"]:visible').first();
+  await already.click();await page.locator('#yaptimMetotTarih').fill('2026-10-25');await page.locator('#yaptimKaydet').click();
+  await page.waitForFunction(()=>D.ogr[0].kendiPlan.metot.tamam['g|TYT|tr']==='2026-10-25');
+  assert.equal(await page.locator('[data-yaptim="metotGt"][data-ki="g|TYT|tr"]:visible').count(),0,'completed overview no longer offers the button');
+  assert.match(await page.locator('table.plan').innerText(),/Önceden izlendi/);
   await page.evaluate(()=>{EK.sekme='ayarlar';ciz()});
   await page.getByText('Ders başlangıç günleri',{exact:true}).click();
   await page.locator('#tmFenStart').fill('2026-10-27');await page.locator('[data-tm-group="fiz,kim,bio"]').click();
