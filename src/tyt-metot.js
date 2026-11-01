@@ -20,6 +20,7 @@ const grammar=x=>/dil bilg|ses bilg|sözcükte yapı|sözcük yap|sözcük tür|
 function course(s){s=s.toLocaleLowerCase('tr');return /geometri/.test(s)?'geo':/matematik/.test(s)?'mat':/türkçe/.test(s)?'tr':/tarih/.test(s)?'tar':/coğraf/.test(s)?'cog':/felsefe/.test(s)?'fel':/din/.test(s)?'din':/fizik/.test(s)?'fiz':/kimya/.test(s)?'kim':/biyoloji/.test(s)?'bio':null}
 function topics(si=0){return D.ogr[si].kendiPlan.sira.map(ki=>({ki,ders:konuDersAdi(ki),ad:konuAl(ki)[3]})).map(x=>({...x,c:course(x.ders),tyt:konuSinavTuru(x.ki)==='AYT'?false:tytPlanKonusuMu(x.ders,x.ad),key:key(x)})).sort((a,b)=>a.c==='tr'&&b.c==='tr'?Number(!grammar(a))-Number(!grammar(b)):0)}
 function validate(m){
+ if(m?.baslangiclar!==undefined&&(!m.baslangiclar||typeof m.baslangiclar!=='object'||Array.isArray(m.baslangiclar)||Object.entries(m.baslangiclar).some(([c,d])=>!Object.hasOwn(INFO,c)||!isoTarihGecerli(d)||d<m.baslangic)))throw new Error('Ders başlangıç günleri geçersiz.');
  if(!m||m.surum!==1||!isoTarihGecerli(m.baslangic)||!Number.isInteger(m.dakika)||m.dakika<120||m.dakika>600||!m.tamam||typeof m.tamam!=='object'||Array.isArray(m.tamam)||Object.keys(m.tamam).length>10000||Object.entries(m.tamam).some(([k,v])=>k.length>1600||!isoTarihGecerli(v)||v<m.baslangic))throw new Error('TYT çalışma yöntemi kaydı geçersiz.');
  for(const [id,date] of Object.entries(m.tamam)){
   if(!/^(?:[vrgpbw]\|.+|weak\|.+|d\|[01345]|gr)$/.test(id))throw new Error('Çalışma kimliği geçersiz.');
@@ -134,7 +135,30 @@ document.addEventListener('click',async e=>{
   });
  }catch(err){bilgiVer(err.message)}
 });
-function settings(){return '<section class="kart" style="padding:20px"><h2>TYT önce çalışma yöntemi</h2><label>Günlük dakika <input id="tmButce" type="number" min="120" max="600" value="'+D.ogr[0].kendiPlan.metot.dakika+'"></label><button class="dugme" id="tmBudget">Bütçeyi kaydet</button><button class="dugme" data-sekme="plan">Çalışma planımı aç</button></section>'}
+function settings(si=0){
+ const m=D.ogr[si]?.kendiPlan?.metot;if(!m)return '';
+ return '<details style="margin-top:14px"><summary>Ders başlangıç günleri</summary><p class="mini">Boş tarih otomatik planlanır. Genel tekrar gününde o dersin konu videosu verilmez. Tamamlanmış veya çıktısı alınmış haftalar korunur.</p><div class="arac"><label>Fen başlangıcı <input type="date" id="tmFenStart" min="'+m.baslangic+'"></label><button type="button" class="dugme" data-tm-group="fiz,kim,bio" data-input="tmFenStart">Fen derslerine uygula</button><label>Sosyal başlangıcı <input type="date" id="tmSosStart" min="'+m.baslangic+'"></label><button type="button" class="dugme" data-tm-group="tar,cog,fel,din" data-input="tmSosStart">Sosyal derslerine uygula</button></div><div class="kp-dersler">'+Object.entries(INFO).map(([c,a])=>'<label class="etiket">'+a[0]+'<br><input type="date" class="tmStartDate" data-course="'+c+'" min="'+m.baslangic+'" value="'+(m.baslangiclar?.[c]||'')+'"></label>').join('')+'</div><button type="button" class="dugme" id="tmStartsSave">Başlangıçları kaydet</button></details>';
+}
+async function setStarts(dates){
+ if(!active()||saving||yalnizcaGoruntuleme())throw new Error('Çalışma başlangıçları şu anda değiştirilemiyor.');
+ const owner=D,o=D.ogr[0],oldElle={...(D.elle||{})},oldDraft=D.ogrTaslak,removed=[];
+ // Only automatic, unused, unprinted method sheets may be rebuilt by this explicit edit.
+ for(const [key,ov] of Object.entries(D.elle||{})){
+  const [si,hb]=key.split('|').map(Number);if(si!==0||hb<buHafta(0)||!ov.ogrenciOtomatik||!ov.metotPlan)continue;
+  const hs=planHaftaSonu(0,hb),inWeek=g=>g>=hb&&g<=hs;
+  const printed=ov.metotBaski||(o.etkinlik?.kayit||[]).some(r=>r.tur==='pdf'&&r.hafta===hb);
+  const completed=(D.log||[]).some(l=>l[1]===0&&inWeek(l[0]))||Object.values(D.ogrIslenis?.[0]||{}).some(inWeek)||Object.values(o.kendiPlan.metot.tamam||{}).some(d=>inWeek(gunNo(d)));
+  if(!printed&&!completed){removed.push(key);delete D.elle[key]}
+ }
+ D.ogrTaslak={...(D.ogrTaslak||{})};for(const key of Object.keys(D.ogrTaslak))if(+key.split('|')[0]===0&&+key.split('|')[1]>=buHafta(0))delete D.ogrTaslak[key];
+ try{await write(kp=>{kp.metot.baslangiclar={...dates}})}
+ catch(e){if(D===owner){for(const key of removed)D.elle[key]=oldElle[key];D.ogrTaslak=oldDraft}throw e}
+}
+document.addEventListener('click',async e=>{
+ const group=e.target.closest?.('[data-tm-group]');if(group){const value=document.getElementById(group.dataset.input)?.value||'';document.querySelectorAll('.tmStartDate').forEach(el=>{if(group.dataset.tmGroup.split(',').includes(el.dataset.course))el.value=value});return}
+ if(e.target.id!=='tmStartsSave')return;
+ try{const dates={};document.querySelectorAll('.tmStartDate').forEach(el=>{if(el.value)dates[el.dataset.course]=el.value});await setStarts(dates);bilgiVer('Başlangıç günleri kaydedildi. Kullanılmamış haftalar yeniden hazırlandı.')}catch(err){bilgiVer(err.message)}
+});
 document.addEventListener('click',async e=>{if(e.target.id!=='tmBudget'||!active())return;try{await write(kp=>{kp.metot.dakika=Number(document.getElementById('tmButce').value)})}catch(err){bilgiVer(err.message)}});
-return {info:INFO,grammar,eligible,active,validate,start,model,view,intro,topics,settings};
+return {info:INFO,grammar,eligible,active,validate,start,model,view,intro,topics,settings,setStarts};
 })();

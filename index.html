@@ -5634,7 +5634,7 @@ function kendiPlanKarti(si) {
     (durum ? '<p role="status"><b>' + durum.kalan + ' konu kaldı</b> · hedef ' + ggyy(gunNo(kp.hedef)) +
       (durum.kalan ? ' · haftada yaklaşık ' + durum.haftalik + ' yeni konu' : ' · bütün konular başladı') + '</p>' +
       (durum.genelTekrar ? '<p role="status"><b>Önce genel tekrar:</b> ' + durum.genelTekrar + ' ders · ~' + durum.genelTekrarSaat + ' saat</p>' : '') : '') +
-    '<div class="kp-dersler">' + dersler.map(sec).join('') + '</div>' +
+    '<div class="kp-dersler">' + dersler.map(sec).join('') + '</div>' + (kp?.metot ? TYT_METOT.settings(si) : '') +
     '<label class="etiket" style="display:block;margin-top:12px">Hedef bitiş tarihi <input type="date" id="kpHedef" value="' +
       (kp ? kp.hedef : kendiPlanVarsayilanHedef()) + '"></label>' +
     '<div class="arac">' + (kp ? '<button class="dugme" id="kpKapat">Kendi planımı durdur</button>'
@@ -9907,6 +9907,11 @@ function sunucuKaydiniBaslat() {
 }
 function baskiIcinKaydet() {
   if (CIKIS_DURUMU) return Promise.resolve(false);
+  if(D?.ogr?.[EK.ogr]?.kendiPlan?.metot&&!yalnizcaGoruntuleme()){
+    const hb=haftaBasi();let printWeek=elleAl(EK.ogr,hb,false);
+    if(!printWeek.metotPlan){const p=planHesapla(EK.ogr,hb);if(p.metot&&p.toplam){haftayiSabitle(EK.ogr,hb,p);printWeek=elleAl(EK.ogr,hb,true)}}
+    if(printWeek.metotPlan)printWeek.metotBaski=true;
+  }
   const defter = D;
   // Yazdır penceresi JS işlerini durdurabilir. Yerel kopyayı pencere açılmadan
   // önce yaz; ağ onayı ayrı görünür ve bağlantı yoksa sonraki açılışta yeniden denenir.
@@ -23559,6 +23564,7 @@ const grammar=x=>/dil bilg|ses bilg|sözcükte yapı|sözcük yap|sözcük tür|
 function course(s){s=s.toLocaleLowerCase('tr');return /geometri/.test(s)?'geo':/matematik/.test(s)?'mat':/türkçe/.test(s)?'tr':/tarih/.test(s)?'tar':/coğraf/.test(s)?'cog':/felsefe/.test(s)?'fel':/din/.test(s)?'din':/fizik/.test(s)?'fiz':/kimya/.test(s)?'kim':/biyoloji/.test(s)?'bio':null}
 function topics(si=0){return D.ogr[si].kendiPlan.sira.map(ki=>({ki,ders:konuDersAdi(ki),ad:konuAl(ki)[3]})).map(x=>({...x,c:course(x.ders),tyt:konuSinavTuru(x.ki)==='AYT'?false:tytPlanKonusuMu(x.ders,x.ad),key:key(x)})).sort((a,b)=>a.c==='tr'&&b.c==='tr'?Number(!grammar(a))-Number(!grammar(b)):0)}
 function validate(m){
+ if(m?.baslangiclar!==undefined&&(!m.baslangiclar||typeof m.baslangiclar!=='object'||Array.isArray(m.baslangiclar)||Object.entries(m.baslangiclar).some(([c,d])=>!Object.hasOwn(INFO,c)||!isoTarihGecerli(d)||d<m.baslangic)))throw new Error('Ders başlangıç günleri geçersiz.');
  if(!m||m.surum!==1||!isoTarihGecerli(m.baslangic)||!Number.isInteger(m.dakika)||m.dakika<120||m.dakika>600||!m.tamam||typeof m.tamam!=='object'||Array.isArray(m.tamam)||Object.keys(m.tamam).length>10000||Object.entries(m.tamam).some(([k,v])=>k.length>1600||!isoTarihGecerli(v)||v<m.baslangic))throw new Error('TYT çalışma yöntemi kaydı geçersiz.');
  for(const [id,date] of Object.entries(m.tamam)){
   if(!/^(?:[vrgpbw]\|.+|weak\|.+|d\|[01345]|gr)$/.test(id))throw new Error('Çalışma kimliği geçersiz.');
@@ -23673,9 +23679,32 @@ document.addEventListener('click',async e=>{
   });
  }catch(err){bilgiVer(err.message)}
 });
-function settings(){return '<section class="kart" style="padding:20px"><h2>TYT önce çalışma yöntemi</h2><label>Günlük dakika <input id="tmButce" type="number" min="120" max="600" value="'+D.ogr[0].kendiPlan.metot.dakika+'"></label><button class="dugme" id="tmBudget">Bütçeyi kaydet</button><button class="dugme" data-sekme="plan">Çalışma planımı aç</button></section>'}
+function settings(si=0){
+ const m=D.ogr[si]?.kendiPlan?.metot;if(!m)return '';
+ return '<details style="margin-top:14px"><summary>Ders başlangıç günleri</summary><p class="mini">Boş tarih otomatik planlanır. Genel tekrar gününde o dersin konu videosu verilmez. Tamamlanmış veya çıktısı alınmış haftalar korunur.</p><div class="arac"><label>Fen başlangıcı <input type="date" id="tmFenStart" min="'+m.baslangic+'"></label><button type="button" class="dugme" data-tm-group="fiz,kim,bio" data-input="tmFenStart">Fen derslerine uygula</button><label>Sosyal başlangıcı <input type="date" id="tmSosStart" min="'+m.baslangic+'"></label><button type="button" class="dugme" data-tm-group="tar,cog,fel,din" data-input="tmSosStart">Sosyal derslerine uygula</button></div><div class="kp-dersler">'+Object.entries(INFO).map(([c,a])=>'<label class="etiket">'+a[0]+'<br><input type="date" class="tmStartDate" data-course="'+c+'" min="'+m.baslangic+'" value="'+(m.baslangiclar?.[c]||'')+'"></label>').join('')+'</div><button type="button" class="dugme" id="tmStartsSave">Başlangıçları kaydet</button></details>';
+}
+async function setStarts(dates){
+ if(!active()||saving||yalnizcaGoruntuleme())throw new Error('Çalışma başlangıçları şu anda değiştirilemiyor.');
+ const owner=D,o=D.ogr[0],oldElle={...(D.elle||{})},oldDraft=D.ogrTaslak,removed=[];
+ // Only automatic, unused, unprinted method sheets may be rebuilt by this explicit edit.
+ for(const [key,ov] of Object.entries(D.elle||{})){
+  const [si,hb]=key.split('|').map(Number);if(si!==0||hb<buHafta(0)||!ov.ogrenciOtomatik||!ov.metotPlan)continue;
+  const hs=planHaftaSonu(0,hb),inWeek=g=>g>=hb&&g<=hs;
+  const printed=ov.metotBaski||(o.etkinlik?.kayit||[]).some(r=>r.tur==='pdf'&&r.hafta===hb);
+  const completed=(D.log||[]).some(l=>l[1]===0&&inWeek(l[0]))||Object.values(D.ogrIslenis?.[0]||{}).some(inWeek)||Object.values(o.kendiPlan.metot.tamam||{}).some(d=>inWeek(gunNo(d)));
+  if(!printed&&!completed){removed.push(key);delete D.elle[key]}
+ }
+ D.ogrTaslak={...(D.ogrTaslak||{})};for(const key of Object.keys(D.ogrTaslak))if(+key.split('|')[0]===0&&+key.split('|')[1]>=buHafta(0))delete D.ogrTaslak[key];
+ try{await write(kp=>{kp.metot.baslangiclar={...dates}})}
+ catch(e){if(D===owner){for(const key of removed)D.elle[key]=oldElle[key];D.ogrTaslak=oldDraft}throw e}
+}
+document.addEventListener('click',async e=>{
+ const group=e.target.closest?.('[data-tm-group]');if(group){const value=document.getElementById(group.dataset.input)?.value||'';document.querySelectorAll('.tmStartDate').forEach(el=>{if(group.dataset.tmGroup.split(',').includes(el.dataset.course))el.value=value});return}
+ if(e.target.id!=='tmStartsSave')return;
+ try{const dates={};document.querySelectorAll('.tmStartDate').forEach(el=>{if(el.value)dates[el.dataset.course]=el.value});await setStarts(dates);bilgiVer('Başlangıç günleri kaydedildi. Kullanılmamış haftalar yeniden hazırlandı.')}catch(err){bilgiVer(err.message)}
+});
 document.addEventListener('click',async e=>{if(e.target.id!=='tmBudget'||!active())return;try{await write(kp=>{kp.metot.dakika=Number(document.getElementById('tmButce').value)})}catch(err){bilgiVer(err.message)}});
-return {info:INFO,grammar,eligible,active,validate,start,model,view,intro,topics,settings};
+return {info:INFO,grammar,eligible,active,validate,start,model,view,intro,topics,settings,setStarts};
 })();
 // END TYT_METOT
 
@@ -23689,6 +23718,11 @@ const TYT_WEEKLY = (() => {
   const ORDER = ['tr', 'mat', ...SOCIAL, ...SCIENCE, 'geo'];
   const MOCKS = [0, 1, 3, 4, 5];
   const grammar = x => TYT_METOT.grammar(x);
+  const turkceOrder=x=>{
+    const s=x.ad.toLocaleLowerCase('tr');
+    const order=[/ses bilg/,/sözcükte yapı|sözcük yap/,/adlar \(isim|isim/,/ön ad|sıfat/,/zamir/,/zarf/,/edat|bağlaç|ünlem/,/fiilimsi/,/fiil/,/çatı/,/cümlenin [öo][ğg]e/,/cümle tür|cümle bilg/,/yazım/,/noktalama/,/anlatım bozuk/,/sözcükte anlam/,/söz öbek/,/cümlede anlam/,/paragraf/];
+    const rank=order.findIndex(r=>r.test(s));return grammar(x)?(rank<0?14:rank):(rank<0?30:20+rank);
+  };
   const info = c => TYT_METOT.info?.[c] || [({tr:'Türkçe',mat:'Matematik',tar:'Tarih',cog:'Coğrafya',fel:'Felsefe',din:'Din Kültürü',fiz:'Fizik',kim:'Kimya',bio:'Biyoloji',geo:'Geometri'})[c] || c, c==='mat'?30:c==='tr'||c==='geo'?25:SOCIAL.includes(c)?15:20];
   function ledger(si) {
     const kp = D.ogr[si].kendiPlan, m = kp.metot, today = bugunNo(), first=gunNo(m.baslangic);
@@ -23792,37 +23826,51 @@ const TYT_WEEKLY = (() => {
       if(v+3<start)blocked.push({...r,metotGecikti:true});else if(!locked.has(v+3))put(v+3,r);
     }
     const fraction=(xs,day)=>xs.length?xs.filter(x=>real.recalls.has(x.ki)||watched.has(x.ki)&&watched.get(x.ki)<=day).length/xs.length:1;
+    const starts=m.baslangiclar||{},origin=gunNo(m.baslangic);
+    const firstDay=c=>starts[c]?gunNo(starts[c]):origin+({tr:0,mat:0,tar:1,cog:1,fel:2,din:2,fiz:7,kim:7,bio:7,geo:14}[c]||0);
     const gates=day=>{
-      const soc=fraction(tyt.filter(x=>x.c==='tr'&&grammar(x)),day)>=.8;
-      const sci=soc&&fraction(tyt.filter(x=>SOCIAL.includes(x.c)),day)>=.5;
+      const sci=fraction(tyt.filter(x=>SOCIAL.includes(x.c)),day)>=.5;
       const geo=sci&&fraction(tyt.filter(x=>SCIENCE.includes(x.c)),day)>=.4;
-      return c=>aytOpen||c==='tr'||c==='mat'||SOCIAL.includes(c)&&soc||SCIENCE.includes(c)&&sci||c==='geo'&&geo;
+      return c=>aytOpen||day>=firstDay(c)&&(!!starts[c]||c==='tr'||c==='mat'||SOCIAL.includes(c)||SCIENCE.includes(c)&&sci||c==='geo'&&geo);
     };
     const courses=[...ORDER,...new Set(pool.map(x=>x.c||x.ders))].filter((c,i,a)=>a.indexOf(c)===i);
     let finalStart=null;
     for(let day=start;day<=end;day++) {
       if(locked.has(day)||!budget(day))continue;
-      // Repeated rounds deliberately allow several topics per lesson per day.
+      // Overview days establish a starting point. They do not also start that
+      // lesson's topic campaign, and leave room rather than filling every minute.
+      const eligible=courses.filter(c=>gates(day)(c));
+      let overviews=rows(day).filter(x=>x.metotTur==='overview').length;
+      for(const c of eligible.slice().sort((a,b)=>Number(!starts[a])-Number(!starts[b])||firstDay(a)-firstDay(b)||courses.indexOf(a)-courses.indexOf(b))) {
+        const xs=pool.filter(x=>(x.c||x.ders)===c),id='g|'+session+'|'+c;
+        if(!xs.some(x=>!watched.has(x.ki)&&!real.recalls.has(x.ki))||intros.has(id))continue;
+        if(overviews>=2&&!starts[c])continue;
+        if(rows(day).length>=rowCap||used(day)+120>budget(day))continue;
+        if(c==='tr'&&session==='TYT'&&(day+3>=exam||locked.has(day+3)||rows(day+3).length>=rowCap||used(day+3)+40>budget(day+3)))continue;
+        put(day,extra(id,(info(c)[0]||xs[0].ders)+' · genel son tekrar','overview',120,0,{dersAd:xs[0].ders,metotKaynak:session==='TYT'?info(c)[2]:undefined}));
+        intros.set(id,day);overviews++;
+        if(c==='tr'&&session==='TYT')put(day+3,extra('gr','Dil bilgisi genel tekrar testi · 5 dk hatırla, notsuz çöz','overviewRecall',40,25,{dersAd:'Türkçe',metotVideoGun:day,due:day+3,metotKosullu:true}));
+      }
+      const weight=c=>c==='mat'?2:c==='tr'||c==='cog'?1:.65;
+      const progress=c=>pool.filter(x=>(x.c||x.ders)===c&&watched.has(x.ki)).length/weight(c);
+      const todayVideos=c=>rows(day).filter(x=>x.metotTur==='video'&&(topicByKi.get(x.ki)?.c||x.dersAd)===c).length;
+      const videoLimit=c=>overviews>=2?0:overviews===1?1:c==='mat'?2:1;
+      // Choose the least-served lesson each round, not the first lesson in a
+      // fixed list. Mathematics receives two topic blocks per Türkçe block.
       let changed=true;
       while(changed) {
         changed=false;
-        for(const c of courses) {
+        for(const c of courses.slice().sort((a,b)=>progress(a)-progress(b)||courses.indexOf(a)-courses.indexOf(b))) {
           if(!gates(day)(c))continue;
           const xs=pool.filter(x=>(x.c||x.ders)===c);
-          if(c==='tr')xs.sort((a,b)=>Number(!grammar(a))-Number(!grammar(b)));
+          if(c==='tr')xs.sort((a,b)=>turkceOrder(a)-turkceOrder(b));
           const x=xs.find(x=>!watched.has(x.ki)&&!real.recalls.has(x.ki));
           if(!x)continue;
           const id='g|'+session+'|'+c;
-          if(!intros.has(id)) {
-            if(rows(day).length>=rowCap||used(day)+120>budget(day))continue;
-            if(c==='tr'&&session==='TYT'&&(day+3>=exam||locked.has(day+3)||rows(day+3).length>=rowCap||used(day+3)+40>budget(day+3)))continue;
-            put(day,extra(id,(info(c)[0]||x.ders)+' · genel son tekrar','overview',120,0,{dersAd:x.ders,metotKaynak:session==='TYT'?info(c)[2]:undefined}));
-            intros.set(id,day);changed=true;
-            if(c==='tr'&&session==='TYT')put(day+3,extra('gr','Dil bilgisi genel tekrar testi · 5 dk hatırla, notsuz çöz','overviewRecall',40,25,{dersAd:'Türkçe',metotVideoGun:day,due:day+3,metotKosullu:true}));
-            continue;
-          }
-          if(intros.get(id)>day||day+3>=exam||locked.has(day+3)||rows(day).length>=rowCap||rows(day+3).length>=rowCap||used(day)+60>budget(day)||used(day+3)+45>budget(day+3))continue;
-          put(day,video(x,day));watched.set(x.ki,day);reserve(x,day);changed=true;
+          if(!intros.has(id)||intros.get(id)>=day||todayVideos(c)>=videoLimit(c)||
+            overviews===1&&rows(day).filter(x=>x.metotTur==='video').length>=1||
+            day+3>=exam||locked.has(day+3)||rows(day).length>=rowCap||rows(day+3).length>=rowCap||used(day)+60>budget(day)||used(day+3)+45>budget(day+3))continue;
+          put(day,video(x,day));watched.set(x.ki,day);reserve(x,day);changed=true;break;
         }
       }
       const finished=xs=>xs.length>0&&xs.every(x=>tested.has(x.ki)&&tested.get(x.ki)<day);

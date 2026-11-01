@@ -26,6 +26,14 @@ const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[
   assert.equal(plan.length,7);assert(plan.flat().some(x=>x.anlatim),'weekly plan includes video instruction');
   assert(plan.flat().some(x=>!x.anlatim&&!x.serbest),'weekly plan includes recall test');
   assert(/ANLATIM/i.test(printed.text),'A4 contains video instruction');assert(/soru/i.test(printed.text),'A4 contains recall questions');
+  await page.evaluate(()=>{EK.sekme='ayarlar';ciz()});
+  await page.getByText('Ders başlangıç günleri',{exact:true}).click();
+  await page.locator('#tmFenStart').fill('2026-10-27');await page.locator('[data-tm-group="fiz,kim,bio"]').click();
+  await page.locator('.tmStartDate[data-course="tar"]').fill('2026-10-28');await page.locator('#tmStartsSave').click();
+  assert.equal(await page.evaluate(()=>D.ogr[0].kendiPlan.metot.baslangiclar.fiz),'2026-10-27');
+  assert.equal(await page.evaluate(()=>D.ogr[0].kendiPlan.metot.baslangiclar.kim),'2026-10-27');
+  assert.equal(await page.evaluate(()=>D.ogr[0].kendiPlan.metot.baslangiclar.bio),'2026-10-27');
+  assert.equal(await page.evaluate(()=>D.ogr[0].kendiPlan.metot.baslangiclar.tar),'2026-10-28');
   assert.deepEqual(errors,[]);console.log('PASS restored weekly plan and A4 print');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

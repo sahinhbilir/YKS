@@ -11,10 +11,10 @@ const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[
   await page.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
   await page.goto('http://localhost/?dev=1');
   const sample=await page.evaluate(()=>{
-   D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-10-30';D.ayar.planBasi='2026-08-31';D.ayar.donemBasi='2026-08-31';D.ayar.donemElle=true;
+   D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-10-26';D.ayar.planBasi='2026-08-31';D.ayar.donemBasi='2026-08-31';D.ayar.donemElle=true;
    D.ogr=[{no:1,ad:'Sentetik Öğrenci',sube:'benim',alan:'SAY',sinif:12,kap:6,off:[],aktif:true,okul:false,ilkAktif:gunNo('2026-08-31'),maddeler:[],rutin:{},dakika:{hi:480,hs:480,deneme:false}}];
    EK={ogr:0,sekme:'plan',hafta:null,girisAcik:{}};kendiPlanKur(0,{},'2027-04-01');
-   D.ogr[0].kendiPlan.metot={surum:1,baslangic:'2026-10-30',dakika:480,tamam:{}};
+   D.ogr[0].kendiPlan.metot={surum:1,baslangic:'2026-10-26',dakika:480,tamam:{}};
    const hb=buHafta(0), original=planHesapla, p=original(0,hb);
    if(!p.gunler.flat().some(x=>x.anlatim))throw Error('Integration has no video row in weekly plan');
    const normal=yazdirBelgesi([0],hb), title='Sentetik uzun video başlığı: Temel kavramların ayrıntılı anlatımı ve örnek çözümler';
