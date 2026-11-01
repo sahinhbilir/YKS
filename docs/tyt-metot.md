@@ -11,3 +11,5 @@ An overview day never also contains that lesson's topic video. Days with multipl
 Paragraph, weekly wrong-question review, lesson/group branches and five mocks (offsets 0, 1, 3, 4, 5) appear in the same programme. Existing daily budgets and rest days apply. Planning estimates: overview 120 minutes, video 60, recall 45, general mock 165 plus 60 analysis.
 
 Issued weeks retain full row payloads in elle.metotPlan. Numeric topic references remap through existing work-package import. Legacy issued sheets remain intact; unused empty automatic placeholders can be released at method activation. Actual watch dates are recorded through the normal results form. Frozen dates remain historical assignments, and premature/mismatched recalls cannot be completed.
+
+General-repeat rows also offer **Zaten yaptım**. The student enters the actual watch date, including a date before programme activation. It records only the overview completion; it does not invent topic completions or rewrite an issued sheet. Future planning and the grammar overview's three-day recall use that actual date. Failed saves roll back the completion.
