@@ -2699,6 +2699,7 @@ function yedekDogrula(y) {
       throw new Error('Geçersiz konu anlatılmadı tarih eşleştirmesi: ' + (i + 1) + '. satır.');
   });
   Object.entries(y.elle || {}).forEach(([anahtar, ov]) => {
+    if (ov?.metotPlan !== undefined) TYT_WEEKLY.validateSnapshot(ov.metotPlan, konuAdedi);
     if (!ov?.kurtarma) return;
     const [si,hb] = anahtar.split('|').map(Number);
     if (!y.ogr[si]) throw new Error('Geçmiş planın öğrencisi bulunamadı.');
@@ -3479,6 +3480,7 @@ function dakikaModu(si) {
 }
 function soruDakikasi(soru) { return (+soru || 0) * SORU_SANIYE / 60; }
 function isDakikasi(x) {
+  if (Number.isFinite(x.metotDakika) && x.metotDakika >= 0 && x.metotDakika <= 600) return x.metotDakika;
   if (x.anlatim) return ANLATIM_DAKIKA;
   if (x.serbest && x.birim === 'dakika') return +x.soru || 0;
   return soruDakikasi(x.soru);
@@ -3642,6 +3644,8 @@ function planHesapla(si, hb, derinlik, ham) {
   // yeniden yazma. Öğretmen açıkça düzenleme kipini açarsa eski veriyi onarmak için canlı
   // hesap yine kullanılabilir; normal görüntüleme ise "kayıt yok" olarak kalır.
   if (hb < buHafta(si) && !ov.sabit && !duzenlemeAcik(hb, si)) return bosHaftaPlani(si, ov, true);
+  const metotPlan = TYT_WEEKLY.weekly(si, hb, hs, ov);
+  if (metotPlan) return metotPlan;
   // gelecek haftaya bakılıyorsa: önceki haftada yer bulamamış konular buraya devreder
   let devir = [];
   if (!ham && hb > buHafta(si) && derinlik < 4) {
@@ -4687,7 +4691,7 @@ function gunlukEkAyarla(tur, soru) {
 // Decorate views only: it must not enter frozen slots or consume the scheduler's capacity.
 function gunlukEkliPlan(si, hb, p) {
   // A recovered sheet already contains the actual daily activities for that week.
-  if (p.gunlukEkli || elleAl(si,hb).kurtarma) return p;
+  if (p.gunlukEkli || p.elle?.metotPlan || elleAl(si,hb).kurtarma) return p;
   const gunler = p.gunler.map((liste, g) => {
     const yeni = liste.slice(), gun = hb + g;
     if (gun > planHaftaSonu(si, hb) || gun >= gunNo(D.ayar.sinav)) return yeni;
@@ -5614,7 +5618,6 @@ function yaptimPencereHtml() {
     '<button type="button" class="dugme" id="yaptimVazgec">Vazgeç</button></div></div></div></div>';
 }
 function kendiPlanKarti(si) {
-  if (TYT_METOT.active()) return TYT_METOT.settings();
   const o = D.ogr[si], kp = o.kendiPlan, tur = kendiPlanTuru(o), dersler = kendiPlanDersleri(o.alan, tur);
   const seviye = d => ((kp && kp.seviye) || {})[d] || 'hic';
   const sec = d => '<label class="etiket kp-ders">' + kacis(kendiDersAdi(d)) + '<br><select class="kpSeviye" data-ders="' + kacis(d) + '">' +
@@ -5622,7 +5625,7 @@ function kendiPlanKarti(si) {
     '</select></label>';
   const durum = kp ? kendiPlanHaftalikSayi(si) : null;
   const sinav = (SINAV_KONULARI.sinavlar || {})[tur];
-  return (TYT_METOT.eligible() && kp ? TYT_METOT.intro() : '') + '<div class="kart" style="padding:20px;margin-bottom:18px">' + (sinav
+  return (TYT_METOT.eligible() && kp && !kp.metot ? TYT_METOT.intro() : '') + '<div class="kart" style="padding:20px;margin-bottom:18px">' + (sinav
     ? '<h2>' + kacis(kendiPlanEtiketi(tur)) + '</h2>' +
       '<details class="mini"><summary>Kapsam ve kaynaklar</summary><p><b>' + kacis(sinav.uzunAd) + '</b> · ' + kacis(sinav.kapsam) + '</p><p>' +
       sinav.kaynaklar.map(u => '<a href="' + kacis(u) + '" target="_blank" rel="noopener">' + kacis(u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</a>').join(' · ') +
@@ -5978,7 +5981,7 @@ function anlatimEkle(si, hb, ki, kaynak, g, s) {
   return ki;
 }
 // anlatım yapıldı: o öğrenci için konu o gün işlenmiş sayılır, ilk test ayardaki gün sonra gelir
-function anlatimTamam(si, ki, gun) {
+function anlatimTamam(si, ki, gun, formHb, atanmisGun) {
   D.ogrIslenis = D.ogrIslenis || {};
   D.ogrIslenis[si] = D.ogrIslenis[si] || {};
   D.ogrIslenis[si][ki] = gun;
@@ -5988,7 +5991,7 @@ function anlatimTamam(si, ki, gun) {
     const ov = D.elle[a];
     if (ov.anlatim && ov.anlatim[ki] !== undefined) {
       if (ov.sabit) {
-        if (ov.yer?.[ki] && +par[1]+ov.yer[ki][0]===gun) ov.anlatim[ki].tamamGun=gun;
+        if (ov.yer?.[ki] && +par[1]+ov.yer[ki][0]===gun || +par[1]===formHb && Object.entries(ov.konuSlot||{}).some(([slot,v])=>v.anlatim && v.ki===ki && ov.yer?.[slot] && +par[1]+ov.yer[slot][0]===atanmisGun)) ov.anlatim[ki].tamamGun=gun;
       } else { delete ov.anlatim[ki]; if (ov.yer) delete ov.yer[ki]; }
     }
     (ov.kurtarma?.satirlar||[]).forEach(r=>{if(r.tur==='anlatim'&&r.ki===ki&&r.gun===gun)r.durum='tamamlandi';});
@@ -6193,7 +6196,7 @@ function varsayimliPlan(si, hb) {
   } finally { D = gercek; }
 }
 function gorunumOgrenciPlan() {
-  const si = EK.ogr, hb = haftaBasi(), p = hb > buHafta(si) && !elleAl(si, hb).sabit ? varsayimliPlan(si, hb) : planHesapla(si, hb);
+  const si = EK.ogr, hb = haftaBasi(), p = hb > buHafta(si) && !elleAl(si, hb).sabit && !D.ogr[si]?.kendiPlan?.metot ? varsayimliPlan(si, hb) : planHesapla(si, hb);
   const gorunen = gunlukEkliPlan(si, hb, p);
   const gelecek = hb > buHafta(), gecmis = hb < buHafta();
   return '<div class="ogrenci-plan">' + ogrenciYksYolu(false) +
@@ -6213,7 +6216,6 @@ function gorunumOgrenciPlan() {
       planTablosu(si, hb, p, false, true)) + ogrenciPlanEkleri(si, hb, p) + yaptimPencereHtml() + '</div>';
 }
 function gorunumPlan() {
-  if (TYT_METOT.active()) return TYT_METOT.view();
   if (ogrenciMi() && !EK.ogrenciDetay && !duzenlemeKaydi()) return gorunumOgrenciPlan();
   const si = EK.ogr, hb = haftaBasi(), p = planHesapla(si, hb);
   const o = D.ogr[si];
@@ -6506,6 +6508,9 @@ function gorunumGiris() {
   if (bek.length) {
     h += '<div class="gun-basi">Önceki haftalardan — sonucu girilmedi</div>';
     bek.forEach(x => {
+      if (x.metotVideoGun !== undefined && !TYT_WEEKLY.actionable(si,{...x,metotTur:'recall'},x.due)) {
+        h+='<div class="giris-satir"><span>'+konuHtml(konuAl(x.ki)[3])+'</span><span class="mini">Video izleme tarihi ve üç günlük süre bekleniyor.</span></div>';return;
+      }
       const extra = '<span class="mini">· ' + ggyy(x.due) + ' tarihli çıktıda</span>' + altKonuKutusu(si, x.ki);
       h += sonucSatiriHtml({si, ki: x.ki, gun: x.due, konu: konuAl(x.ki), ders: konuDersAdi(x.ki), soru: D.ayar.soru, gunEtiketi: konuDersAdi(x.ki), extra});
     });
@@ -6515,6 +6520,10 @@ function gorunumGiris() {
     if (!p.gunler[g].length) continue;
     h += '<div class="gun-basi">' + GUN_AD[haftaGunu(hb + g)] + ' ' + gg(hb + g) + '</div>';
     p.gunler[g].forEach(x => {
+      if (x.metotId && x.serbest) {
+        const gun=hb+g, done=D.ogr[si]?.kendiPlan?.metot?.tamam?.[x.metotId], tarih=gun<bugunNo()?bugunNo():gun, izin=gun<=bugunNo()&&TYT_WEEKLY.actionable(si,x,tarih);
+        h+='<div class="giris-satir"><span class="gun">'+kacis(dersKisaAd(x.dersAd))+'</span><span>'+konuHtml(x.ad)+'</span><label><input type="checkbox" class="gMetotEk" data-id="'+kacis(x.metotId)+'" data-gun="'+gun+'"'+(done?' checked disabled':!izin?' disabled':'')+'> '+(done?'Tamamlandı':izin?'Tamamladım':'Ön koşullar bekleniyor')+'</label>'+(done||!izin?'':'<label>Çalışma tarihi <input class="gMetotEkTarih" type="date" data-id="'+kacis(x.metotId)+'" min="'+D.ogr[si].kendiPlan.metot.baslangic+'" max="'+isoDan(bugunNo())+'" value="'+isoDan(tarih)+'"></label>')+'</div>';return;
+      }
       if (x.genelTekrar) {
         const gun = hb + g, gelecek = gun > bugunNo(), bitti = genelTekrarTamamMi(p, x, gun);
         h += '<div class="giris-satir"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span><span>' + konuHtml(x.ad) +
@@ -6528,8 +6537,17 @@ function gorunumGiris() {
       if (x.anlatim) {
         const anlatimGelecek = gun > bugunNo();
         const anlatimBitti = anlatimTamamMi(p, x.ki, gun);
+        if (x.metotId) {
+          const watched=D.ogrIslenis?.[si]?.[x.ki], done=Number.isInteger(watched)&&watched>=gunNo(D.ogr[si].kendiPlan.metot.baslangic);
+          h+='<div class="giris-satir"><span class="gun">'+kacis(dersKisaAd(x.dersAd))+'</span><span>'+konuHtml(x.ad)+' · konu videosu</span><label><input type="checkbox" class="gAnlatim" data-ki="'+x.ki+'" data-gun="'+gun+'" data-metot="'+kacis(x.metotId)+'"'+(done?' checked disabled':anlatimGelecek?' disabled':'')+'> '+(done?'İzlendi':'İzledim')+'</label>'+(done||anlatimGelecek?'':'<label>İzleme tarihi <input class="gMetotTarih" type="date" data-metot="'+kacis(x.metotId)+'" min="'+D.ogr[si].kendiPlan.metot.baslangic+'" max="'+isoDan(bugunNo())+'" value="'+isoDan(gun<bugunNo()?bugunNo():gun)+'"></label>')+'</div>';return;
+        }
         h += '<div class="giris-satir"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span><span>' + konuHtml(x.ad) + ' <span class="mini">· konu anlatımı' + (x.kaynak ? ' (' + kacis(x.kaynak) + ')' : '') + '</span></span><label class="mini" style="grid-column:span 2;display:flex;align-items:center;gap:7px"><input type="checkbox" class="gAnlatim" data-ki="' + x.ki + '" data-gun="' + gun + '"' + (anlatimBitti?' checked disabled':anlatimGelecek ? ' disabled' : '') + '>' + (anlatimBitti?'Anlatım tamamlandı':anlatimGelecek ? 'bu gün henüz gelmedi' : 'anlatıldı / izledi — ilk test ' + D.ayar.ilk + ' gün sonra gelsin') + '</label></div>';
         return;
+      }
+      if (x.metotVideoGun !== undefined) {
+        if (!TYT_WEEKLY.actionable(si,x,gun)) {
+          h+='<div class="giris-satir giris-kilitli"><span class="gun">'+kacis(dersKisaAd(x.dersAd))+'</span><span>'+konuHtml(x.ad)+'</span><span class="mini">Video izleme tarihi kaydedilince test tarihi güncellenir.</span></div>';return;
+        }
       }
       if (oncedenMi(p, planSlotAnahtari(x)) && !(D.log || []).some(l => l[1] === si && l[2] === x.ki && l[0] === gun)) {
         h += '<div class="giris-satir giris-kilitli"><span class="gun">' + kacis(dersKisaAd(x.dersAd)) + '</span><span>' + konuHtml(x.ad) +
@@ -7036,7 +7054,6 @@ function ogrenciTelafiyiGeriAl(si) {
   });
 }
 function ogrenciOtomasyonHazirla() {
-  if (TYT_METOT.active()) return;
   if (!ogrenciMi() || D.ogr.length !== 1 || D.ogr[0].silindi || duzenlemeKaydi()) return false;
   let once;
   try {
@@ -7054,7 +7071,6 @@ function ogrenciOtomasyonHazirla() {
   }
 }
 function ogrenciOtomasyonUygula() {
-  if (TYT_METOT.active()) return;
   const si = 0, o = D.ogr[si], hb = buHafta(), sinav = gunNo(D.ayar.sinav);
   if (bugunNo() >= sinav) return false;
   let degisti = false;
@@ -7112,7 +7128,6 @@ function haritaPlaniniAc(h) {
 // Öğrencinin ana sayfası (girişten sonra, marka yazısıyla): haftalar haritası ve yanında deneme
 // gelişimi (yalnızca YKS). Başlıklar kendi sayfalarına götürür: Haftalar haritası, Denemelerim.
 function gorunumAnaSayfa() {
-  if (TYT_METOT.active()) return TYT_METOT.view();
   const grafik = ogrenciSinavi(D.ogr[EK.ogr]) === 'YKS' ? denemeYolGrafigi(EK.ogr) : '';
   const baslik = '<div class="baslik pano-sol-bas"><h1><button class="baslik-link" data-sekme="harita" title="Haftalar haritasını aç">Haftalar haritası</button></h1></div>';
   return grafik ? '<div class="ana-pano">' + baslik + '<div class="baslik pano-sag-bas"><h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler" title="Denemelerim’i aç">Deneme gelişimi</button></h2></div>' +
@@ -7602,6 +7617,7 @@ function paketPlanKonulariniCevir(plan, cev) {
     if (ov.plan.slotlar) ov.plan.slotlar = ov.plan.slotlar.map(gun => gun.map(slot));
     if (ov.plan.tasan) ov.plan.tasan = ov.plan.tasan.map(cev);
   }
+  if (ov.metotPlan) ov.metotPlan.gunler = ov.metotPlan.gunler.map(rows => rows.map(r => r.serbest ? r : Object.assign({}, r, {ki:cev(r.ki)})));
   if (ov.kurtarma) ov.kurtarma.satirlar = ov.kurtarma.satirlar.map(r =>
     Object.assign({}, r, {ki:r.ki === null ? null : cev(r.ki)}));
   return ov;
@@ -13417,7 +13433,7 @@ document.addEventListener('click', async ev => {
     }
     const sonucDefter = D, sonucKimlik = D.ogr[formSi].ogrenciBulutId;
     const girisTaslagi = sonucTaslaklariniAl();
-    const kayitlar = [], anlatimlar = [], genelTekrarlar = [], ertelenenler = [], tamamlananSlotlar = [], yapilmayanlar = [];
+    const kayitlar = [], anlatimlar = [], genelTekrarlar = [], metotEkler = [], ertelenenler = [], tamamlananSlotlar = [], yapilmayanlar = [];
     try {
       for (const row of document.querySelectorAll('[data-sonuc-row]')) {
         if (row.dataset.sade === '1') continue;                 // “Zaten yaptım” penceresinin satırı bu formun parçası değil
@@ -13451,18 +13467,25 @@ document.addEventListener('click', async ev => {
           temiz = sonucKaydiDogrula(formSi, { ki, gun, not, dogru: null, soru: null });
         }
         if (!temiz) continue;
+        if (D.ogr[formSi]?.kendiPlan?.metot) {
+          const source=EK.sonucFormu?.plan;
+          const task=source?.gunler?.[gun-formHb]?.find(x=>x.ki===ki&&x.metotTur==='recall') || source?.bekleyen?.find(x=>x.ki===ki&&x.due===gun&&x.metotVideoGun!==undefined);
+          if(task&&!TYT_WEEKLY.actionable(formSi,{...task,metotTur:'recall'},gun))throw new Error('Test, gerçek video izleme tarihinden üç gün sonra çözülebilir.');
+        }
         kayitlar.push(temiz);
         if (row.dataset.slot !== undefined) tamamlananSlotlar.push({ slot: row.dataset.slot, gun: temiz.gun });
       }
       for (const el of document.querySelectorAll('.gAnlatim:checked')) {
         if (el.disabled) continue;
-        const ki = +el.dataset.ki, gun = +el.dataset.gun;
+        const ki = +el.dataset.ki; let gun = +el.dataset.gun;
+        if (el.dataset.metot) { const box=Array.from(document.querySelectorAll('.gMetotTarih')).find(x=>x.dataset.metot===el.dataset.metot); if(!box||!isoTarihGecerli(box.value)||box.value<D.ogr[formSi].kendiPlan.metot.baslangic)throw new Error('İzleme tarihi geçersiz.');gun=gunNo(box.value); }
         if (!Number.isInteger(ki) || ki < 0 || ki >= konuSayisi() || !konuAl(ki))
           throw new Error('Konu anlatımında geçersiz konu numarası var.');
         if (!Number.isInteger(gun) || gun > bugunNo() || gun >= gunNo(D.ayar.sinav))
           throw new Error('Konu anlatımı yalnızca bugün veya geçmiş geçerli bir gün için işaretlenebilir.');
-        anlatimlar.push({ ki: ki, gun: gun });
+        anlatimlar.push({ ki: ki, gun: gun, atanmisGun: +el.dataset.gun });
       }
+      for(const el of document.querySelectorAll('.gMetotEk:checked')) { if(el.disabled)continue; const assigned=+el.dataset.gun,id=el.dataset.id,plan=EK.sonucFormu?.plan,row=plan?.gunler?.[assigned-formHb]?.find(x=>x.serbest&&x.metotId===id),box=Array.from(document.querySelectorAll('.gMetotEkTarih')).find(x=>x.dataset.id===id); if(!row||!box||!isoTarihGecerli(box.value)||box.value<D.ogr[formSi].kendiPlan.metot.baslangic)throw new Error('Çalışma kaydı geçersiz.');const gun=gunNo(box.value);if(gun>bugunNo()||!TYT_WEEKLY.actionable(formSi,row,gun))throw new Error('Çalışmanın ön koşulları veya tarihi geçersiz.');metotEkler.push({id,gun}); }
       for (const el of document.querySelectorAll('.gGenelTekrar:checked')) {
         if (el.disabled) continue;
         const gun = +el.dataset.gun;
@@ -13471,10 +13494,10 @@ document.addEventListener('click', async ev => {
         genelTekrarlar.push({ id: el.dataset.ki, gun: gun });
       }
     } catch (e) { alert(e.message || e); return; }
-    if (!kayitlar.length && !anlatimlar.length && !genelTekrarlar.length && !ertelenenler.length && !yapilmayanlar.length) { alert('Henüz bir sonuç seçilmedi.'); return; }
+    if (!kayitlar.length && !anlatimlar.length && !genelTekrarlar.length && !metotEkler.length && !ertelenenler.length && !yapilmayanlar.length) { alert('Henüz bir sonuç seçilmedi.'); return; }
     // Görünen plan hücresine sonuç girilmesi, bu planın gerçekten kullanıldığının
     // kesin kanıtıdır. FSRS kartları değişmeden önce haftayı anlık görüntü olarak sakla.
-    if (tamamlananSlotlar.length || anlatimlar.length || genelTekrarlar.length) {
+    if (tamamlananSlotlar.length || anlatimlar.length || genelTekrarlar.length || metotEkler.length) {
       const ov = elleAl(formSi, formHb, false);
       const bagliPlan = EK.sonucFormu && EK.sonucFormu.si === formSi && EK.sonucFormu.hb === formHb
         ? EK.sonucFormu.plan : null;
@@ -13492,7 +13515,10 @@ document.addEventListener('click', async ev => {
     try { yapilmayanlar.forEach(x => testiYapilmadiIsaretle(formSi, x.ki, x.gun)); }
     catch (e) { alert(e.message || e); return; }
     tamamlananSlotlar.forEach(x => planSlotSonuclandi(formSi, formHb, x.slot));
-    anlatimlar.forEach(x => anlatimTamam(formSi, x.ki, x.gun));
+    anlatimlar.forEach(x => anlatimTamam(formSi, x.ki, x.gun, formHb, x.atanmisGun));
+    const metotEski=metotEkler.length?Object.assign({},D.ogr[formSi].kendiPlan.metot.tamam):null;
+    if(metotEkler.length)metotEkler.forEach(x=>{D.ogr[formSi].kendiPlan.metot.tamam[x.id]=isoDan(x.gun)});
+    const metotGeriAl=()=>{if(metotEski && D===sonucDefter && D.ogr[formSi]?.ogrenciBulutId===sonucKimlik)D.ogr[formSi].kendiPlan.metot.tamam=metotEski};
     try { genelTekrarlar.forEach(x => genelTekrarTamam(formSi, formHb, x.id, x.gun)); }
     catch (e) { alert(e.message || e); return; }
     const anlSay = anlatimlar.length, gtSay = genelTekrarlar.length, ertSay = ertelenenler.length, yapSay = yapilmayanlar.length, kaydedilenHb = formHb, kaydedilenOgr = formSi;
@@ -13500,6 +13526,7 @@ document.addEventListener('click', async ev => {
     if (!kayitlar.length) {
       const yerelTamam = await kaydet(true);
       if (!yerelTamam) {
+        metotGeriAl();
         ciz(); sonucTaslaklariniUygula(girisTaslagi);
         bilgiVer('Konu anlatımı kalıcı olarak kaydedilemedi.' + otomatikBulutMesaji({ tur: 'yerelHata' }));
         return;
@@ -13524,6 +13551,7 @@ document.addEventListener('click', async ev => {
       EK.sekme = 'plan';
     }
     if (!yerelTamam) {
+      metotGeriAl();
       ciz(); sonucTaslaklariniUygula(girisTaslagi);
       bilgiVer('Sonuçlar kalıcı olarak kaydedilemedi.' + otomatikBulutMesaji({ tur: 'yerelHata' }));
       return;
@@ -23527,9 +23555,9 @@ const INFO={
 const eligible=()=>ogrenciMi()&&D?.ogr?.length===1&&D.ogr[0].okul===false&&ogrenciSinavi(D.ogr[0])==='YKS';
 const active=()=>eligible()&&D.ogr[0].kendiPlan?.metot?.surum===1;
 const key=x=>encodeURIComponent(x.ders+'|'+x.ad);
-const grammar=x=>!/(anlam|paragraf|iletişim|okuma)/i.test(x.ad.toLocaleLowerCase('tr'));
+const grammar=x=>/dil bilg|ses bilg|sözcükte yapı|sözcük yap|sözcük tür|isim|sıfat|zamir|zarf|edat|bağlaç|ünlem|fiil|çatı|cümlenin [öo][ğg]e|cümle tür|cümle bilg|yazım|noktalama|anlatım bozuk/.test(x.ad.toLocaleLowerCase('tr'));
 function course(s){s=s.toLocaleLowerCase('tr');return /geometri/.test(s)?'geo':/matematik/.test(s)?'mat':/türkçe/.test(s)?'tr':/tarih/.test(s)?'tar':/coğraf/.test(s)?'cog':/felsefe/.test(s)?'fel':/din/.test(s)?'din':/fizik/.test(s)?'fiz':/kimya/.test(s)?'kim':/biyoloji/.test(s)?'bio':null}
-function topics(){return D.ogr[0].kendiPlan.sira.map(ki=>({ki,ders:konuDersAdi(ki),ad:konuAl(ki)[3]})).map(x=>({...x,c:course(x.ders),tyt:konuSinavTuru(x.ki)==='AYT'?false:tytPlanKonusuMu(x.ders,x.ad),key:key(x)})).sort((a,b)=>a.c==='tr'&&b.c==='tr'?Number(!grammar(a))-Number(!grammar(b)):0)}
+function topics(si=0){return D.ogr[si].kendiPlan.sira.map(ki=>({ki,ders:konuDersAdi(ki),ad:konuAl(ki)[3]})).map(x=>({...x,c:course(x.ders),tyt:konuSinavTuru(x.ki)==='AYT'?false:tytPlanKonusuMu(x.ders,x.ad),key:key(x)})).sort((a,b)=>a.c==='tr'&&b.c==='tr'?Number(!grammar(a))-Number(!grammar(b)):0)}
 function validate(m){
  if(!m||m.surum!==1||!isoTarihGecerli(m.baslangic)||!Number.isInteger(m.dakika)||m.dakika<120||m.dakika>600||!m.tamam||typeof m.tamam!=='object'||Array.isArray(m.tamam)||Object.keys(m.tamam).length>10000||Object.entries(m.tamam).some(([k,v])=>k.length>1600||!isoTarihGecerli(v)||v<m.baslangic))throw new Error('TYT çalışma yöntemi kaydı geçersiz.');
  for(const [id,date] of Object.entries(m.tamam)){
@@ -23552,10 +23580,17 @@ async function write(fn){
 }
 async function start(){
  if(!eligible()||!D.ogr[0].kendiPlan)throw new Error('Önce kendi YKS planını oluştur.');
- const input=document.getElementById('tmButce'),minutes=Number(input?.value||480);
- await write(kp=>{if(kp.metot)return;kp.metot={surum:1,baslangic:isoDan(bugunNo()),dakika:minutes,tamam:{}};
-  // This explicitly starts a new track; old plans/results remain intact, never inferred complete.
- });
+ const input=document.getElementById('tmButce'),minutes=Number(input?.value||480),hb=buHafta(0),ov=elleAl(0,hb);
+ // A blank automatically frozen placeholder has never delivered work. Release only that
+ // current-week placeholder; a paper containing any rows or results stays untouched.
+ const blank=!D.ogr[0].kendiPlan.metot&&ov.sabit&&ov.ogrenciOtomatik&&!ov.metotPlan&&
+  Array.isArray(ov.plan?.slotlar)&&ov.plan.slotlar.length===7&&ov.plan.slotlar.every(a=>Array.isArray(a)&&a.length===0)&&
+  !Object.keys(ov.yer||{}).length&&!Object.keys(ov.anlatim||{}).length&&!Object.keys(ov.serbest||{}).length&&
+  !Object.keys(ov.konuSlot||{}).length&&!haftaSonucSayisi(0,hb);
+ const owner=D,old=blank?JSON.parse(JSON.stringify(ov)):null;
+ if(blank){delete ov.sabit;delete ov.plan;delete ov.ogrenciOtomatik;}
+ try{await write(kp=>{if(kp.metot)return;kp.metot={surum:1,baslangic:isoDan(bugunNo()),dakika:minutes,tamam:{}};});}
+ catch(e){if(old&&D===owner)D.elle['0|'+hb]=old;throw e;}
 }
 function model(day=bugunNo()){
  const m=D.ogr[0].kendiPlan.metot,date=isoDan(day),done=Object.fromEntries(Object.entries(m.tamam).filter(([,d])=>d<=date)),all=topics(),tyt=all.filter(x=>x.tyt&&x.c),ayt=all.filter(x=>!x.tyt);
@@ -23640,9 +23675,230 @@ document.addEventListener('click',async e=>{
 });
 function settings(){return '<section class="kart" style="padding:20px"><h2>TYT önce çalışma yöntemi</h2><label>Günlük dakika <input id="tmButce" type="number" min="120" max="600" value="'+D.ogr[0].kendiPlan.metot.dakika+'"></label><button class="dugme" id="tmBudget">Bütçeyi kaydet</button><button class="dugme" data-sekme="plan">Çalışma planımı aç</button></section>'}
 document.addEventListener('click',async e=>{if(e.target.id!=='tmBudget'||!active())return;try{await write(kp=>{kp.metot.dakika=Number(document.getElementById('tmButce').value)})}catch(err){bilgiVer(err.message)}});
-return {eligible,active,validate,start,model,view,intro,topics,settings};
+return {info:INFO,grammar,eligible,active,validate,start,model,view,intro,topics,settings};
 })();
 // END TYT_METOT
+
+// BEGIN TYT_WEEKLY
+// Pure forecasting adapter for the existing seven-day plan and printed sheet.
+// A reservation is never a completion: only ledger() reads real study records.
+const TYT_WEEKLY = (() => {
+  'use strict';
+  const copy = x => JSON.parse(JSON.stringify(x));
+  const SOCIAL = ['tar', 'cog', 'fel', 'din'], SCIENCE = ['fiz', 'kim', 'bio'];
+  const ORDER = ['tr', 'mat', ...SOCIAL, ...SCIENCE, 'geo'];
+  const MOCKS = [0, 1, 3, 4, 5];
+  const grammar = x => TYT_METOT.grammar(x);
+  const info = c => TYT_METOT.info?.[c] || [({tr:'Türkçe',mat:'Matematik',tar:'Tarih',cog:'Coğrafya',fel:'Felsefe',din:'Din Kültürü',fiz:'Fizik',kim:'Kimya',bio:'Biyoloji',geo:'Geometri'})[c] || c, c==='mat'?30:c==='tr'||c==='geo'?25:SOCIAL.includes(c)?15:20];
+  function ledger(si) {
+    const kp = D.ogr[si].kendiPlan, m = kp.metot, today = bugunNo(), first=gunNo(m.baslangic);
+    const videos = new Map(), recalls = new Map(), intros = new Map(), extras = new Map();
+    for (const [id,date] of Object.entries(m.tamam || {})) {
+      const day = gunNo(date); if (day <= today) extras.set(id, day);
+    }
+    for (const x of TYT_METOT.topics(si)) {
+      const v = D.ogrIslenis?.[si]?.[x.ki];
+      if (Number.isInteger(v) && v >= first && v <= today) videos.set(x.ki, v);
+      else if (extras.has('v|'+x.key)) videos.set(x.ki, extras.get('v|'+x.key));
+      const results = (D.log || []).filter(l => l[1] === si && l[2] === x.ki && l[0] <= today &&
+        videos.has(x.ki) && l[0] >= videos.get(x.ki)+3);
+      if (results.length) recalls.set(x.ki, Math.min(...results.map(l=>l[0])));
+      else if (extras.has('r|'+x.key)) recalls.set(x.ki, extras.get('r|'+x.key));
+      const id = 'g|'+(x.tyt?'TYT':'AYT')+'|'+(x.c||x.ders);
+      const g = kp.genelTekrar?.tamam?.[(x.tyt?'TYT':'AYT')+'|'+x.ders];
+      if (Number.isInteger(g) && g >= first && g <= today) intros.set(id,g);
+      else if (extras.has(id)) intros.set(id,extras.get(id));
+    }
+    return {videos,recalls,intros,extras};
+  }
+  function validateSnapshot(s,konuAdedi=konuSayisi()) {
+    if (!s || s.surum !== 1 || !Array.isArray(s.gunler) || s.gunler.length !== 7 ||
+        !Array.isArray(s.dakikaButce) || s.dakikaButce.length !== 7 ||
+        s.dakikaButce.some(n=>!Number.isFinite(n)||n<0||n>600) ||
+        !Array.isArray(s.off) || s.off.some(n=>!Number.isInteger(n)||n<0||n>6) ||
+        !Number.isFinite(s.kap) || s.kap<1 || s.kap>12)
+      throw new Error('Haftalık TYT plan kaydı geçersiz.');
+    for (const day of s.gunler) {
+      if (!Array.isArray(day) || day.length > 100) throw new Error('Haftalık TYT satırları geçersiz.');
+      for (const x of day) if (!x || typeof x.ad !== 'string' || x.ad.length>1000 || typeof x.metotId !== 'string' ||
+          !Number.isFinite(x.soru)||x.soru<0||x.soru>600||!Number.isFinite(x.test)||x.test<0||x.test>30||
+          (x.slotKi!==undefined&&(typeof x.slotKi!=='string'||x.slotKi.length>1800))||
+          x.metotId.length>1800 || !Number.isFinite(x.metotDakika) || x.metotDakika<0 || x.metotDakika>600 ||
+          (!x.serbest && (!Number.isInteger(x.ki)||x.ki<0||x.ki>=konuAdedi)) ||
+          (x.serbest && typeof x.ki !== 'string') ||
+          (x.metotVideoGun!==undefined&&!Number.isInteger(x.metotVideoGun)))
+        throw new Error('Haftalık TYT çalışması geçersiz.');
+    }
+    return true;
+  }
+  function forecast(si, until) {
+    const o=D.ogr[si], kp=o.kendiPlan, m=kp.metot, real=ledger(si);
+    const all=TYT_METOT.topics(si), tyt=all.filter(x=>x.tyt&&x.c), ayt=all.filter(x=>!x.tyt);
+    const realTYT=tyt.length>0&&tyt.every(x=>real.recalls.has(x.ki));
+    const aytOpen=realTYT&&MOCKS.every(n=>real.extras.has('d|'+n));
+    const pool=aytOpen?ayt:tyt, session=aytOpen?'AYT':'TYT';
+    const start=Math.max(gunNo(m.baslangic),bugunNo()), exam=gunNo(D.ayar.sinav);
+    const end=Math.min(exam-1,Math.max(until+3,gunNo(kp.hedef)+21,start+120));
+    const days=new Map(), locked=new Set(), watched=new Map(real.videos), tested=new Map(real.recalls), intros=new Map(real.intros);
+    const blocked=[], over=new Set(), topicByKi=new Map(all.map(x=>[x.ki,x]));
+    // The unchanged A4 programme is a workload limit, not a reason to shrink type.
+    // Reserve a row for the recall as well as the video before assigning either.
+    const rowCap=Math.min(8,Math.max(1,o.kap||6)+2);
+    const budget=day=>(o.off||[]).includes(haftaGunu(day))?0:
+      o.dakika ? (haftaGunu(day)>=CUMARTESI?o.dakika.hs:o.dakika.hi) : m.dakika;
+    const rows=day=>{if(!days.has(day))days.set(day,[]);return days.get(day);};
+    const used=day=>rows(day).reduce((n,x)=>n+x.metotDakika,0);
+    const put=(day,x)=>{if(day>=start&&day<exam&&!rows(day).some(y=>y.metotId===x.metotId))rows(day).push(x);};
+    const extra=(id,ad,tur,min,q=0,extra={})=>({ki:'TM_'+id,serbest:true,ders:-1,dersAd:'Çalışma',ad,soru:q||min,birim:q?'':'dakika',test:1,mod:'serbest',metotId:id,metotTur:tur,metotDakika:min,...extra});
+    const video=(x,day)=>({ki:x.ki,ders:konuAl(x.ki)[0],dersAd:x.ders,ad:x.ad,anlatim:true,test:1,soru:0,mod:'anlatim',R:null,
+      kaynak:'Video',metotId:'v|'+x.key,metotTur:'video',metotDakika:60,
+      metotKaynak:session==='TYT'?(x.c==='tr'&&grammar(x)?'https://www.youtube.com/channel/UCyohoF5P2JFvc3KLLZRwDug/videos':info(x.c)[3]):undefined});
+    const recall=(x,day)=>({ki:x.ki,slotKi:'TMR_'+x.key,ders:konuAl(x.ki)[0],dersAd:x.ders,ad:x.ad,test:1,soru:info(x.c)[1],mod:'ilk',R:null,
+      due:day+3,metotId:'r|'+x.key,metotTur:'recall',metotDakika:45,metotVideoGun:day,metotKosullu:!real.videos.has(x.ki)});
+    // Issued rows are immutable and also reserve their future recall capacity.
+    for(const [key,ov] of Object.entries(D.elle||{})) {
+      const [owner,h]=key.split('|').map(Number);if(owner!==si||!ov.sabit)continue;
+      for(let g=0;g<7;g++) {
+        const day=h+g;if(day<start||day>end)continue;
+        locked.add(day);
+        for(const x of ov.metotPlan?.gunler?.[g]||[])put(day,copy(x));
+      }
+      for(let g=0;g<7;g++)for(const row of ov.metotPlan?.gunler?.[g]||[]) {
+        const day=h+g, x=topicByKi.get(row.ki);
+        if(row.metotTur==='video'&&x&&day>=start&&!real.videos.has(x.ki))watched.set(x.ki,day);
+        if(row.metotTur==='overview'&&day>=start&&!intros.has(row.metotId))intros.set(row.metotId,day);
+      }
+    }
+    // Daily habits are real rows in the same plan, not an extra rendering layer.
+    for(let day=start;day<=end;day++)if(!locked.has(day)&&budget(day)>0) {
+      put(day,extra('p|'+isoDan(day),'Paragraf · 20 soru','paragraph',30,20,{dersAd:'Türkçe'}));
+      if(day===planHaftaSonu(si,ogrenciHaftaBasi(si,day)))
+        put(day,extra('w|'+isoDan(day),'Haftanın bütün yanlış sorularını yeniden çöz','review',60));
+    }
+    function reserve(x,day) {
+      if(tested.has(x.ki))return;
+      const due=day+3,row=recall(x,day);
+      if(due<start){blocked.push({...row,metotGecikti:true});return;}
+      if(locked.has(due)&&!rows(due).some(y=>y.metotId===row.metotId&&y.metotVideoGun===day)) {
+        blocked.push({...row,metotCakisma:true});return;
+      }
+      put(due,row);tested.set(x.ki,due);
+      if(used(due)>budget(due))over.add(due);
+    }
+    pool.forEach(x=>{if(watched.has(x.ki))reserve(x,watched.get(x.ki));});
+    const trIntro='g|TYT|tr';
+    if(intros.has(trIntro)&&!real.extras.has('gr')) {
+      const v=intros.get(trIntro),r=extra('gr','Dil bilgisi genel tekrar testi · 5 dk hatırla, notsuz çöz','overviewRecall',40,25,{dersAd:'Türkçe',metotVideoGun:v,due:v+3});
+      if(v+3<start)blocked.push({...r,metotGecikti:true});else if(!locked.has(v+3))put(v+3,r);
+    }
+    const fraction=(xs,day)=>xs.length?xs.filter(x=>real.recalls.has(x.ki)||watched.has(x.ki)&&watched.get(x.ki)<=day).length/xs.length:1;
+    const gates=day=>{
+      const soc=fraction(tyt.filter(x=>x.c==='tr'&&grammar(x)),day)>=.8;
+      const sci=soc&&fraction(tyt.filter(x=>SOCIAL.includes(x.c)),day)>=.5;
+      const geo=sci&&fraction(tyt.filter(x=>SCIENCE.includes(x.c)),day)>=.4;
+      return c=>aytOpen||c==='tr'||c==='mat'||SOCIAL.includes(c)&&soc||SCIENCE.includes(c)&&sci||c==='geo'&&geo;
+    };
+    const courses=[...ORDER,...new Set(pool.map(x=>x.c||x.ders))].filter((c,i,a)=>a.indexOf(c)===i);
+    let finalStart=null;
+    for(let day=start;day<=end;day++) {
+      if(locked.has(day)||!budget(day))continue;
+      // Repeated rounds deliberately allow several topics per lesson per day.
+      let changed=true;
+      while(changed) {
+        changed=false;
+        for(const c of courses) {
+          if(!gates(day)(c))continue;
+          const xs=pool.filter(x=>(x.c||x.ders)===c);
+          if(c==='tr')xs.sort((a,b)=>Number(!grammar(a))-Number(!grammar(b)));
+          const x=xs.find(x=>!watched.has(x.ki)&&!real.recalls.has(x.ki));
+          if(!x)continue;
+          const id='g|'+session+'|'+c;
+          if(!intros.has(id)) {
+            if(rows(day).length>=rowCap||used(day)+120>budget(day))continue;
+            if(c==='tr'&&session==='TYT'&&(day+3>=exam||locked.has(day+3)||rows(day+3).length>=rowCap||used(day+3)+40>budget(day+3)))continue;
+            put(day,extra(id,(info(c)[0]||x.ders)+' · genel son tekrar','overview',120,0,{dersAd:x.ders,metotKaynak:session==='TYT'?info(c)[2]:undefined}));
+            intros.set(id,day);changed=true;
+            if(c==='tr'&&session==='TYT')put(day+3,extra('gr','Dil bilgisi genel tekrar testi · 5 dk hatırla, notsuz çöz','overviewRecall',40,25,{dersAd:'Türkçe',metotVideoGun:day,due:day+3,metotKosullu:true}));
+            continue;
+          }
+          if(intros.get(id)>day||day+3>=exam||locked.has(day+3)||rows(day).length>=rowCap||rows(day+3).length>=rowCap||used(day)+60>budget(day)||used(day+3)+45>budget(day+3))continue;
+          put(day,video(x,day));watched.set(x.ki,day);reserve(x,day);changed=true;
+        }
+      }
+      const finished=xs=>xs.length>0&&xs.every(x=>tested.has(x.ki)&&tested.get(x.ki)<day);
+      const allFinished=tyt.length>0&&finished(tyt);
+      if(!aytOpen&&allFinished&&finalStart===null) {
+        const earliest=Math.max(start,...tyt.map(x=>tested.get(x.ki)+1));
+        let candidate=earliest;
+        while(candidate<=end&&MOCKS.some(n=>candidate+n>=exam||locked.has(candidate+n)||used(candidate+n)+225>budget(candidate+n)))candidate++;
+        if(candidate<=end)finalStart=candidate;
+      }
+      if(!aytOpen&&finalStart!==null&&day>=finalStart) {
+        const offset=day-finalStart;
+        if(MOCKS.includes(offset)&&!real.extras.has('d|'+offset))put(day,extra('d|'+offset,'TYT genel denemesi · 165 dk + aynı gün 60 dk net ve zayıf konu analizi','mock',225,120,{dersAd:'TYT',metotKosullu:!realTYT}));
+        else if(!MOCKS.includes(offset)&&used(day)+120<=budget(day))put(day,extra('weak|'+isoDan(day),'Branş denemeleri ve zayıf konulara dönüş','weak',120,0,{dersAd:'TYT',metotKosullu:!realTYT}));
+        continue;
+      }
+      const socialDone=finished(tyt.filter(x=>SOCIAL.includes(x.c))),scienceDone=finished(tyt.filter(x=>SCIENCE.includes(x.c)));
+      const branches=[];
+      for(const c of ORDER)if(!(socialDone&&SOCIAL.includes(c))&&!(scienceDone&&SCIENCE.includes(c))) {
+        const xs=tyt.filter(x=>x.c===c);if(finished(xs))branches.push([c,info(c)[0],info(c)[1],xs]);
+      }
+      if(socialDone)branches.push(['sos','Sosyal',20,tyt.filter(x=>SOCIAL.includes(x.c))]);
+      if(scienceDone)branches.push(['fen','Fen',20,tyt.filter(x=>SCIENCE.includes(x.c))]);
+      if((day-gunNo(m.baslangic))%3===0)for(const [c,name,q,xs] of branches)if(rows(day).length<rowCap&&used(day)+45<=budget(day))
+        put(day,extra('b|'+c+'|'+isoDan(day),name+' branş denemesi','branch',45,q,{dersAd:name,metotDers:c,metotKosullu:!xs.every(x=>real.recalls.has(x.ki))}));
+    }
+    return {days,budget,blocked,over,real,finalStart,phase:aytOpen?'AYT':realTYT?'TYT deneme haftası':'TYT'};
+  }
+  function shape(si,hb,hs,ov,s,blocked=[]) {
+    const gunler=copy(s.gunler).map((l,g)=>hb+g<=hs?l:[]);
+    const gunYuk=gunler.map(l=>l.reduce((n,x)=>n+(x.test||1),0));
+    return {gunler,devreden:0,tasan:[],toplam:gunler.reduce((n,l)=>n+l.length,0),bekleyen:blocked.filter(x=>!x.serbest).map(x=>({ki:x.ki,due:x.due,metotId:x.metotId,metotVideoGun:x.metotVideoGun})),
+      testToplam:gunYuk.reduce((a,b)=>a+b,0),gunYuk,kap:s.kap,off:s.off.slice(),elle:ov,
+      gunDakika:gunler.map(l=>l.reduce((n,x)=>n+x.metotDakika,0)),dakikaButce:s.dakikaButce.slice(),metot:true,metotBekleyen:blocked};
+  }
+  function weekly(si,hb,hs,sourceOv) {
+    const o=D.ogr[si];if(o?.okul!==false||ogrenciSinavi(o)!=='YKS'||o.kendiPlan?.metot?.surum!==1)return null;
+    const ov=copy(sourceOv||elleAl(si,hb));
+    if(ov.sabit) {
+      if(!ov.metotPlan)return null;
+      validateSnapshot(ov.metotPlan);return shape(si,hb,hs,ov,ov.metotPlan);
+    }
+    const f=forecast(si,hs),gunler=Array.from({length:7},(_,g)=>copy(f.days.get(hb+g)||[]));
+    ov.anlatim=ov.anlatim||{};ov.konuSlot=ov.konuSlot||{};ov.serbest=ov.serbest||{};
+    gunler.flat().forEach(x=>{
+      if(x.anlatim)ov.anlatim[x.ki]={...(ov.anlatim[x.ki]||{}),kaynak:x.kaynak,metotId:x.metotId};
+      else if(x.serbest)ov.serbest[x.ki]={ad:x.ad,ders:x.dersAd,soru:x.soru,birim:x.birim,metotId:x.metotId,metotTur:x.metotTur};
+      else ov.konuSlot[x.slotKi]={ki:x.ki,metotId:x.metotId};
+    });
+    const s={surum:1,gunler,dakikaButce:Array.from({length:7},(_,g)=>f.budget(hb+g)),off:(o.off||[]).slice(),kap:o.kap||6};
+    ov.metotPlan=s;
+    return shape(si,hb,hs,ov,s,f.blocked);
+  }
+  function actionable(si,x,gun) {
+    if(!Number.isInteger(gun)||gun>bugunNo())return false;
+    const real=ledger(si),topics=TYT_METOT.topics(si).filter(t=>t.tyt&&t.c);
+    if(x.metotTur==='recall')return real.videos.has(x.ki)&&real.videos.get(x.ki)+3===gun;
+    if(x.metotTur==='overviewRecall')return real.intros.has('g|TYT|tr')&&real.intros.get('g|TYT|tr')+3===gun;
+    if(x.metotTur==='branch') {
+      const group=x.metotDers==='sos'?SOCIAL:x.metotDers==='fen'?SCIENCE:[x.metotDers];
+      const xs=topics.filter(t=>group.includes(t.c));
+      return xs.length>0&&xs.every(t=>real.recalls.has(t.ki)&&real.recalls.get(t.ki)<gun);
+    }
+    if(x.metotTur==='mock'||x.metotTur==='weak') {
+      if(!topics.length||!topics.every(t=>real.recalls.has(t.ki)&&real.recalls.get(t.ki)<gun))return false;
+      if(x.metotTur==='weak')return true;
+      const offset=Number(x.metotId.split('|')[1]),i=MOCKS.indexOf(offset);
+      if(i<0)return false;
+      if(i&&(!real.extras.has('d|'+MOCKS[i-1])||gun<real.extras.get('d|'+MOCKS[i-1])+(i===2?2:1)))return false;
+      return !MOCKS.some(n=>n!==offset&&real.extras.get('d|'+n)===gun);
+    }
+    return true;
+  }
+  return {weekly,forecast,ledger,validateSnapshot,actionable};
+})();
+// END TYT_WEEKLY
 
 // ---------------------------------------------------------------- başlangıç
 (async function () {

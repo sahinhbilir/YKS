@@ -1,7 +1,9 @@
-# TYT-first study method
+# TYT method in the original weekly programme
 
-This optional, dedicated daily study page is for a YKS student who is not attending school. School students and other exams continue using the existing planner and FSRS workflow. Starting the method creates a fresh track; it preserves prior plans and result records without treating them as completed method tasks.
+The method supplies ordinary rows to planHesapla. The original seven-day table, result controls, saved-week lifecycle and A4 print CSS remain in use.
 
-The schedule rolls forward from the actual start date and recorded completions; the historical dates in the source context are not fixed appointments. Türkçe and mathematics begin together. Social lessons open when 80% of grammar topic videos are recorded as watched; science opens at 80% of social videos, and geometry at 80% of science videos. These thresholds interpret “nearly finished” as video progress, while branch exams require completed recall tests. A topic recall is due three calendar days after its video; an overdue test retains its original due date.
+The pure forecast in src/tyt-weekly.js accepts multiple videos per subject per day and reserves each recall on video day + 3, including across weeks. Türkçe grammar and mathematics begin together. Other subjects overlap after 80% grammar, 50% social and 40% science video progress. Forecast reservations never count as real completion or unlock actual AYT.
 
-TYT topics and their recalls precede a TYT mock week and AYT. The mock week requires five general exams and a rest/review day between the second and third; delayed completions shift the schedule. Each general exam is budgeted at 165 minutes plus 60 minutes of same-day analysis. Overview videos, topic videos and recall tests use planning estimates of 120, 60 and 45 minutes respectively. Mandatory pending work is shown even if it exceeds the daily budget, and no new video is added while the budget is overloaded.
+Paragraph, weekly wrong-question review, lesson/group branches and five mocks (offsets 0, 1, 3, 4, 5) appear in the same programme. Existing daily budgets and rest days apply. Planning estimates: overview 120 minutes, video 60, recall 45, general mock 165 plus 60 analysis.
+
+Issued weeks retain full row payloads in elle.metotPlan. Numeric topic references remap through existing work-package import. Legacy issued sheets remain intact; unused empty automatic placeholders can be released at method activation. Actual watch dates are recorded through the normal results form. Frozen dates remain historical assignments, and premature/mismatched recalls cannot be completed.

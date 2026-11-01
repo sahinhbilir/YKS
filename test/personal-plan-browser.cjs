@@ -75,12 +75,13 @@ const ogrenci=(kur)=>{
    await page.locator('.kpSeviye[data-ders="Türkçe"]').selectOption('biraz');
    await page.locator('#kpBaslat').click();
    await page.waitForFunction(()=>D.ogr[0].kendiPlan&&D.ogr[0].kendiPlan.tur==='YKS');
-   await page.locator('#tmKok').waitFor();
+   await page.locator('table.plan').waitFor({state:'attached'});
+   assert.equal(await page.locator('#tmKok').count(),0,'the original weekly design remains visible');
    assert.equal(await page.evaluate(()=>TYT_METOT.active()),true,'new no-school start uses the TYT-first method');
-   assert(!(await page.locator('#tmKok').innerText()).includes('AYT Türk Dili ve Edebiyatı'),'AYT stays locked');
+   assert(!(await page.locator('table.plan').innerText()).includes('AYT Türk Dili ve Edebiyatı'),'AYT stays locked');
    // Existing pre-method plans retain their legacy rows and completion controls.
    // The new method has its own desktop/mobile end-to-end test.
-   await page.evaluate(()=>{delete D.ogr[0].kendiPlan.metot;});
+   await page.evaluate(()=>{delete D.ogr[0].kendiPlan.metot;D.elle={};D.ogrTaslak={};});
    await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});
    // 3a. Genel tekrar comes first: one 2-hour row per subject, no topic yet.
    const ilkMetin=await page.locator('#ana').innerText();

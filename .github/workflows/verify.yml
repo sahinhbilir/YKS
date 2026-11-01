@@ -110,7 +110,7 @@ jobs:
       - name: Self-paced TYT track next to the school plan
         run: node test/personal-plan-regression.js
       - name: TYT-first rolling study method for students without school
-        run: node scripts/embed-tyt-metot.cjs --check && node test/tyt-metot-regression.cjs
+        run: node scripts/embed-tyt-metot.cjs --check && node scripts/embed-tyt-weekly.cjs --check && node test/tyt-metot-regression.cjs && node test/tyt-weekly-core-regression.cjs
       - name: Genel tekrar before topics and "Zaten yaptım" on the personal plan
         run: node test/genel-tekrar-regression.js
       - name: LGS, KPSS, ALES, DGS and AGS topic lists and plans
@@ -171,7 +171,7 @@ jobs:
       - name: Personal TYT plan, no-school YKS plan and another exam's plan
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/personal-plan-browser.cjs
       - name: No-school TYT method and three-day recall on desktop and phone
-        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/tyt-metot-browser.cjs
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/tyt-weekly-browser.cjs && NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/tyt-weekly-print.cjs
       - name: Teacher top menu and main screen on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/teacher-home-browser.cjs
       - name: Ayarlar sections, holidays, chart target and alt konu on desktop and mobile
