@@ -74,7 +74,7 @@ function englishPdf(pages){
  const exam=join(first.filter(o=>Math.abs(o.y-nameHead.y)<2&&o.x>nameHead.x+nameHead.w&&o.x<dateHead.x)),examDate=date(join(first.filter(o=>Math.abs(o.y-dateHead.y)<2&&o.x>dateHead.x+dateHead.w)));
  if(!exam)throw new Error('İngilizce sınav adı okunamadı.');
  const countHead=meta('Toplam Katılımcı:'),declared=Number(join(first.filter(o=>Math.abs(o.y-countHead.y)<2&&o.x>countHead.x+countHead.w&&o.x<160))),schoolHead=meta('Okul:');
- const school=join(first.filter(o=>o!==schoolHead&&o.x<160&&o.y<=schoolHead.y+2&&o.y>countHead.y+3)),students=[],exams=[],derslikler=new Set(),maxNet=/\bFLY HIGHER PLACEMENT TEST\b/i.test(exam)?60:null;
+ const school=join(first.filter(o=>o!==schoolHead&&o.x<160&&o.y<=schoolHead.y+2&&o.y>countHead.y+3)),students=[],exams=[],derslikler=new Set(),maxNet=/\bFLY HIGHER PLACEMENT TEST\b/i.test(exam)?60:null,questionCount=maxNet||(/\bSTARTER TEST\b/i.test(exam)?20:null);
  for(const raw of pages){const p=normItems(raw).flatMap(o=>{const m=o.x<31&&o.s.match(/^(\d+)\s+(\d+\s*\/\s*.+)$/);return m?[{...o,s:m[1],w:10},{...o,s:m[2],x:32.6,w:Math.max(0,o.w-15)}]:[o]}),header=p.find(o=>o.s.includes('NO/İsim')),netHead=p.find(o=>o.s==='İNG'),scoreHead=p.find(o=>o.s==='Puan');if(!header||!netHead||!scoreHead)throw new Error('İngilizce sonuç sütunları okunamadı.');
   const anchors=p.filter(o=>o.x<32&&/^\d+$/.test(o.s)&&o.y<header.y-15).sort((a,b)=>b.y-a.y);
   anchors.forEach((a,i)=>{const limit=Math.max(12,(a.z||8)*1.6),top=i?(anchors[i-1].y+a.y)/2:a.y+limit,bottom=i+1<anchors.length?(a.y+anchors[i+1].y)/2:a.y-limit,band=p.filter(o=>o.y<top&&o.y>bottom);
@@ -83,7 +83,7 @@ function englishPdf(pages){
    const readAt=head=>{const v=band.filter(o=>Math.abs(cx(o)-cx(head))<22&&/^-?\d+(?:[.,]\d+)?$/.test(o.s)).sort((a,b)=>b.y-a.y);if(v.length!==1)throw new Error('İngilizce sonuç sayısı okunamadı.');return Number(v[0].s.replace(',','.'))},net=readAt(netHead),printedScore=readAt(scoreHead),dy=band.find(o=>Math.abs(cx(o)-cx(netHead))<25&&/^\d+\/\d+$/.test(o.s));
    const score=maxNet?Math.round(net/maxNet*10000)/100:printedScore;
    if(!dy||!Number.isFinite(net)||!Number.isFinite(printedScore)||printedScore<0||!Number.isFinite(score)||score<0||score>100.01)throw new Error('İngilizce puanı geçersiz.');
-   const [correct,wrong]=dy.s.split('/').map(Number),s={no:m[1],name:m[2],cls:c[2]+'/'+c[3]};if(maxNet&&correct+wrong>maxNet)throw new Error('Placement soru sayısı 60 ile uyuşmuyor.');students.push(s);exams.push({...s,exam,date:examDate,session:'ENGLISH',nets:{english:net},scores:{ENGLISH:score},printedScore,scoreBasis:maxNet?'net':'printed',maxNet,correct,wrong});
+   const [correct,wrong]=dy.s.split('/').map(Number),totalQuestions=questionCount??correct+wrong,s={no:m[1],name:m[2],cls:c[2]+'/'+c[3]};if(correct+wrong>totalQuestions)throw new Error('İngilizce doğru/yanlış sayısı soru sayısını aşıyor.');students.push(s);exams.push({...s,exam,date:examDate,session:'ENGLISH',nets:{english:net},scores:{ENGLISH:score},printedScore,scoreBasis:maxNet?'net':'printed',maxNet,questionCount:totalQuestions,correct,wrong});
   });
  }
  if(!exams.length||!Number.isInteger(declared)||exams.length!==declared||new Set(students.map(key)).size!==exams.length)throw new Error('İngilizce katılımcı sayısı uyuşmuyor; eksik liste eklenmedi.');
@@ -207,11 +207,12 @@ function svgReport(s,reportDate){
  const line=(x1,y1,x2,y2,color=C.gray,width=1)=>out.push('<path d="M'+x1+','+y1+' L'+x2+','+y2+'" fill="none" stroke="'+color+'" stroke-width="'+width+'"/>');
  const dot=(x,y,r=3,color=C.green)=>out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#fff" stroke="'+color+'" stroke-width="1.7"/>');
  const ring=(x,y,r,percent)=>{out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="none" stroke="'+C.gray+'" stroke-width="13"/>');if(percent!==null){const circumference=2*Math.PI*r;out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="none" stroke="'+C.green+'" stroke-width="13" stroke-dasharray="'+circumference*percent/100+' '+circumference+'" transform="rotate(-90 '+x+' '+y+')"/>')}};
- // Doğru (blue), yanlış (red) and boş (grey) of one result as a ring, like the attendance ring.
- const DYB=[['Doğru',C.blue],['Yanlış',C.red],['Boş',C.gray]];
+ // Doğru (green), yanlış (red) and boş (grey) match the Yoklama and mock-exam rings.
+ const DYB=[['Doğru',C.green],['Yanlış',C.red],['Boş',C.gray]];
  const donut=(cx,cy,r,stroke,d,y,total)=>{out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+C.gray+'" stroke-width="'+stroke+'"/>');const c=2*Math.PI*r;let start=0;
-  for(const [n,color] of [[d,C.blue],[y,C.red]]){if(n>0&&total>0){out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-dasharray="'+c*n/total+' '+c+'" stroke-dashoffset="'+(-c*start/total)+'" transform="rotate(-90 '+cx+' '+cy+')"/>')}start+=n}};
+  for(const [n,color] of [[d,C.green],[y,C.red]]){if(n>0&&total>0){out.push('<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-dasharray="'+c*n/total+' '+c+'" stroke-dashoffset="'+(-c*start/total)+'" transform="rotate(-90 '+cx+' '+cy+')"/>')}start+=n}};
  const counts=(e,k)=>{const v=e.dy?.[k];if(!v)return null;const q=Math.max(e.q?.[k]??0,v[0]+v[1]);return {d:v[0],y:v[1],b:q-v[0]-v[1],q}};
+ const englishCounts=e=>{const d=Number(e.correct)||0,y=Number(e.wrong)||0,q=Math.max(d+y,Number(e.questionCount)||Number(e.maxNet)||d+y);return {d,y,b:q-d-y,q}};
  const ringLessons=e=>TYT.filter(([k])=>{const c=counts(e,k);return c&&(k!=='sf'||c.d+c.y>0)});
  function graph(exams,values,x,y,w,h,large=false,pointLabels=true,unit='net',examKinds=true,fixedMax=null){
   const valid=values.filter(v=>v!==null&&v!==undefined);
@@ -241,6 +242,13 @@ function svgReport(s,reportDate){
   text(x+18,139,e.exam+' · '+display(e.date),11,C.muted);donut(cx,cy,r,14,d,y,d+y+b);
   const label=fmt(net);text(cx,cy-4,label,Math.min(20,20*(r*2-14)*.88/width(label,20)),C.ink,true,'middle',true);text(cx,cy+12,'net',9,C.muted,false,'middle');
   DYB.forEach(([name,color],i)=>{const n=[d,y,b][i],px=x+230+i*100;text(px,cy-2,n,23,i===2?C.muted:color,true,'middle');text(px,cy+14,name,10.5,C.muted,false,'middle')});out.push('</g>');
+ }
+ function englishRing(e,x,w){
+  const c=englishCounts(e),score=fmt(e.scores?.ENGLISH),cx=x+154,cy=286,r=70,values=[c.d,c.y,c.b];
+  text(x+18,158,e.exam+' · '+display(e.date),11,C.muted);
+  out.push('<g aria-label="İngilizce toplam · doğru '+c.d+', yanlış '+c.y+', boş '+c.b+'"><title>'+esc(e.exam+' · '+display(e.date)+' · '+score+' puan')+'</title>');
+  donut(cx,cy,r,18,c.d,c.y,c.q);text(cx,cy-5,score,Math.min(24,24*(r*2-18)*.88/width(score,24)),C.ink,true,'middle',true);text(cx,cy+14,'puan',10,C.muted,false,'middle');
+  DYB.forEach(([name,color],i)=>{const y=cy-43+i*43;rect(x+294,y-6,10,10,color,5);text(x+314,y+4,values[i],22,i===2?C.muted:color,true);text(x+362,y+4,name,12,C.muted)});out.push('</g>');
  }
  function lessonRings(e,x,w){
   const lessons=ringLessons(e);text(x,260,'TYT Ders Netleri',13,C.muted,true);
@@ -277,7 +285,7 @@ function svgReport(s,reportDate){
    aytLessons(ex,x,w);
   }else lessonCharts(session,x,w);
  }
- if(!showAYT){rect(600,96,564,366);text(618,121,'İngilizce Sınav Puanları',17,C.ink,true);const ex=s.exams.filter(e=>e.session==='ENGLISH');out.push('<g aria-label="İngilizce puan grafiği">');graph(ex,ex.map(e=>e.scores.ENGLISH),642,157,486,235,true,true,'puan',false,100);out.push('</g>')}
+ if(!showAYT){rect(600,96,564,366);text(618,121,'İngilizce Sınav Puanları',17,C.ink,true);const ex=s.exams.filter(e=>e.session==='ENGLISH');out.push('<g aria-label="İngilizce puan grafiği">');if(ex.length===1&&Number.isFinite(ex[0].correct)&&Number.isFinite(ex[0].wrong))englishRing(ex[0],600,564);else graph(ex,ex.map(e=>e.scores.ENGLISH),642,157,486,235,true,true,'puan',false,100);out.push('</g>')}
  // Attendance percentage is based on the same day classifications shown below it.
  out.push('<g aria-label="Yoklama">');rect(26,478,244,leftHeight);text(44,505,'Yoklama',17,C.ink,true);
  if(s.attendance.length){text(44,526,display(s.attendance[0].date)+' - '+display(s.attendance.at(-1).date),11,C.muted);const percent=s.daily.percent===null?'—':'%'+fmt(Math.round(s.daily.percent*10)/10),percentSize=Math.min(23,23*(ringRadius*2-13)*.88/width(percent,23));
