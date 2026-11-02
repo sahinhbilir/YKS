@@ -5,7 +5,11 @@ Fly Higher Placement, A1+ Starter ve A2 Starter PDF'leri **İngilizce PDF ekle**
 bu sayfaya eklenir. 60 soruluk Fly Higher Placement sonucu **net / 60 × 100** ile
 100 üzerinden gösterilir (60 net → 100; 30 net → 50). PDF'nin yuvarlanmış 0,60 gibi
 puanı yüzdeye çevirmek için kullanılmaz. Starter puanları aynen kullanılır.
-Kaynaktaki puan, net ve doğru/yanlış değerleri ayrıca korunur.
+Kaynaktaki puan, net ve doğru/yanlış değerleri ayrıca korunur. 9. ve 10. sınıfta
+tek İngilizce sınav sonucu varsa puan ortada, doğru/yanlış/boş sayıları yanında olacak
+şekilde TYT deneme halkalarıyla aynı daire grafiği gösterilir; birden fazla İngilizce
+sonucu varsa puan gelişim çizgisi korunur. A1+ ve A2 Starter sınavları 20, Placement
+sınavı 60 soru kabul edilir; cevaplanmayan sorular gri kalır.
 Etüt kaydı olmayan öğrencilerde “Öğrencinin Etüt Talebi
 Olmamıştır” yazılır.
 
@@ -58,7 +62,7 @@ kaplar; kutular ayrı görseller olarak birleştirilmez. Yazıcının kendi kena
   AYT dersleri alt alta Fen, Matematik, Türk Dili ve Edebiyatı–Sosyal 1, Sosyal 2
   gruplarında yer alır. Eksik sonuç sıfır olarak çizilmez; kayıtlı sıfır net korunur.
 - 9. ve 10. sınıfta tek sınav olduğundan TYT sonucu çizgi yerine halkalarla gösterilir,
-  Yoklama’daki devam halkası gibi: **doğru mavi, yanlış kırmızı, boş gri**. Üstte son TYT
+  Yoklama’daki devam halkası gibi: **doğru yeşil, yanlış kırmızı, boş gri**. Üstte son TYT
   sınavının toplamı (ortasında net, yanında doğru / yanlış / boş sayıları), altında her dersin
   kendi halkası ve sayıları vardır. Doğru ve yanlış okul listesindeki D/Y’den (elle girilen
   denemede girilenden) gelir. Boş = soru sayısı − doğru − yanlış; listeler soru sayısını yazmadığı
