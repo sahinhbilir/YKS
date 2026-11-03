@@ -73,6 +73,43 @@ const student=sandbox.D.ogr[0];
  let d=a.alanDurumlari(student,'sec',{ayt:'m:5'});assert.equal(d.SAY.ok,true);assert.equal(d.EA.ok,false);assert.match(d.EA.neden,/eksik:/);
  d=a.alanDurumlari(student,'sec',{ayt:'m:6'});assert.equal(d.EA.ok,true);assert.equal(d.SAY.ok,false);
  assert.equal(a.merkezBul(student,'sec','EA',{ayt:'m:6'}).ayt.id,'m:6');
+ // --- school lists are the primary source (Denemeler table / Öğrenci kartı), student copies only fill the gaps ---
+ {
+  const eskiListe=student.denemeler,AYTK=['EDB','TAR1','COĞ1','TAR2','COĞ2','FELGR','DİN2','S.F2','AMAT','AGEO','AFİZ','AKİM','ABİY'],TYTK=['TÜR','TAR','COĞ','FEL','DİN','S.F','MAT','GEO','FİZ','KİM','BİY'];
+  const FC={SAY:['AMAT','AGEO','AFİZ','AKİM','ABİY'],EA:['EDB','TAR1','COĞ1','AMAT','AGEO'],'SÖZ':['EDB','TAR1','COĞ1','TAR2','COĞ2','FELGR','DİN2','S.F2']};
+  // Minimal stand-ins for the real SIRALAMA helpers (the browser test runs the real modules).
+  sandbox.SIRALAMA={hasTYT:o=>TYTK.some(k=>o.net[k]!=null),hasAYT:o=>AYTK.some(k=>o.net[k]!=null),took:(o,f)=>FC[f].every(k=>o.net[k]!=null),FCOLS:FC,SIRA_DERS:{AYT:[['AFİZ','Fizik'],['AKİM','Kimya'],['ABİY','Biyoloji'],['EDB','Edebiyat'],['AMAT','Matematik'],['AGEO','Geometri']]}};
+  const tytNet={'TÜR':30,'TAR':3,'COĞ':3,'FEL':3,'DİN':3,'MAT':20,'GEO':5,'FİZ':4,'KİM':4,'BİY':4},aytNet={AMAT:20,AGEO:5,'AFİZ':10,'AKİM':9,'ABİY':8};
+  const sin=(id,ad,tarih,ogr)=>({id,ad,tarih,tyt:Object.fromEntries(Object.entries(ogr).map(([no,o])=>[no,{no,net:o.tyt||{}}])),ayt:Object.fromEntries(Object.entries(ogr).filter(([,o])=>o.ayt).map(([no,o])=>[no,{no,net:{...(o.tyt||{}),...o.ayt}}]))});
+  sandbox.DPANO={veriAl:()=>({t:{sinavlar:[
+   sin('A','27-YKS-1203','23.10.2026',{1:{tyt:tytNet,ayt:aytNet},2:{tyt:tytNet}}),
+   sin('B','27-YKS-1202','09.10.2026',{1:{tyt:tytNet}}),                                // a school list only: no per-student copy
+   sin('C','Fen eksik','01.10.2026',{1:{tyt:{...tytNet,'FİZ':null,'KİM':null,'BİY':null}}}),
+   sin('D','Başka öğrenci','15.10.2026',{2:{tyt:tytNet}})                                // student 1 did not sit it
+  ]}})};
+  // Student copies: the same exam as A under another date (a duplicate), and one only the student has.
+  student.denemeler=[exam('d:1','27-YKS-1203','2026-10-30','TYT',{oran:.6}),exam('d:2','27-yks-1203  ','2026-10-23','AYT',{oran:.6}),exam('d:3','Kendi Deneme','2026-10-12','TYT'),exam('d:4','27-yks-1202','2026-09-01','TYT',{oran:.3})];
+  const l=a.sinavSecenekleri('SAY');
+  same(l.tyt.map(x=>x.etiket),['23.10.2026 · 27-YKS-1203','2026-10-12'.split('-').reverse().join('.')+' · Kendi Deneme (öğrenci girdi)','09.10.2026 · 27-YKS-1202','01.10.2026 · Fen eksik'],'school exams (their own dates), the student-only entry, newest first; copies and absent exams are not listed');
+  assert.equal(l.tyt.filter(x=>/1203/.test(x.etiket)).length,1,'a student copy with another date is not a second 1203');
+  assert.equal(l.tyt.filter(x=>/1202/.test(x.etiket)).length,1);assert(!l.tyt.some(x=>/Başka öğrenci/.test(x.etiket)));
+  assert.equal(l.tyt[2].kaynak,'okul');assert.equal(l.tyt[2].uygun,true,'a school-list-only exam is usable');
+  assert.equal(l.tyt[3].uygun,false);same(l.tyt[3].eksik,['Fen Bilimleri']);assert.match(a.merkezBul(student,'sec','SAY',{tyt:l.tyt[3].id}).tytNeden,/eksik: Fen Bilimleri/);
+  assert.equal(l.tyt[1].kaynak,'ogrenci');assert.equal(l.tyt[1].uygun,true);assert(!l.tyt[0].etiket.includes('öğrenci girdi'));
+  same(l.ayt.map(x=>x.etiket),['23.10.2026 · 27-YKS-1203'],'the AYT copy matches by name and session despite case and spacing');assert.equal(l.ayt[0].uygun,true);
+  // nets come from the school list, not from the student's copy
+  let mm=a.merkezBul(student,'son','SAY');
+  assert.equal(mm.tyt.id,l.tyt[0].id);near(mm.tyt.net,79,1e-9,'TYT total from the school list (the copy would give 72)');near(mm.ayt.net,52,1e-9,'AYT total from the school list');assert.equal(mm.tyt.tarih,'2026-10-23');
+  mm=a.merkezBul(student,'sec','SAY',{tyt:l.tyt[2].id});near(mm.tyt.net,79,1e-9,'1202 comes from the school list, not the 30 % copy');
+  mm=a.merkezBul(student,'sec','SAY',{tyt:l.tyt[1].id});near(mm.tyt.net,72,1e-9,'a student-only exam keeps its own nets');
+  // another alan: the school AYT lacks its tests
+  const e=a.sinavSecenekleri('EA').ayt[0];assert.equal(e.uygun,false);assert.match(e.eksik.join(),/Edebiyat/);
+  // a student that is not on the lists falls back to their own entries
+  sandbox.D.ogr[0].no=99;same(a.sinavSecenekleri('SAY').tyt.map(x=>x.kaynak),['ogrenci','ogrenci','ogrenci']);sandbox.D.ogr[0].no=1;
+  // broken or missing lists never break the page
+  sandbox.DPANO={veriAl:()=>{throw new Error('x')}};assert.equal(a.sinavSecenekleri('SAY').tyt.length,3);
+  delete sandbox.DPANO;delete sandbox.SIRALAMA;student.denemeler=eskiListe;
+ }
  // --- Gidişat: the Öğrenci kartı projection at the YKS date (totals), through ANALIZ.kart ---
  const cagrilar=[];
  sandbox.ANALIZ={kart:(no,key)=>{cagrilar.push([no,key]);return {durum:'tamam',oturum:{key},gidisat:{var:true,yks:{net:key==='TYT'?91.5:key==='AYT:SAY'?52.25:70}}}}};

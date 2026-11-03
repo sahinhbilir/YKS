@@ -26,6 +26,11 @@ fs.mkdirSync(out,{recursive:true});
    const kayit=(ot,ad,tarih,tur,oran,atla=[])=>({id:'p:'+ad,ad,tarih,tur:ot,oturum:ot,sinavTuru:tur,alan:'SAY',sure:null,puan:300,ts:1,
     dersler:DENEME_DERSLER[ot].filter(d=>!atla.includes(d[0])&&(ot==='TYT'||DENEME_ALAN.SAY.includes(d[0]))).map(([kod,,soru])=>({kod,soru,dogru:kod==='sf'?0:Math.floor(soru*oran),yanlis:0}))});
    D.ogr[0].denemeOkul=[kayit('TYT','Tarama TYT 1','2026-10-02','tarama',.5),kayit('AYT','Tarama AYT 1','2026-10-09','tarama',.45),kayit('TYT','Genel TYT 2','2026-10-16','genel',.7),kayit('AYT','Genel AYT 2','2026-10-23','genel',.6),kayit('TYT','Eksik TYT 3','2026-10-30','tarama',.8,['fizik'])];
+   // The teacher's school lists (Denemeler table): one exam only here ("PDF ekle" sends nothing to students), one that is also a
+   // teacher copy under another date, and a student-entered exam the lists do not have.
+   const liste=(ad,tarih,n)=>({id:denemeAdAnahtari(ad),ad,okul:'Sentetik Okul',ts:1,T:{tarih,katilim:['10','10','10'],kurum:null,ogr:[{no:'1',ad:'SENTETİK ADA',snf:'205 12/C',n,dy:n.map(v=>v===null?null:Math.round(v)+'/0'),p:[300,300,300,300],r:['1','1','1','1']}]},F:null});
+   D.siralama={surum:1,tercih:{},sinavlar:[liste('Okul Listesi TYT','20.10.2026',[30,3,3,3,3,null,20,5,4,4,4]),liste('Tarama TYT 1','05.10.2026',[20,2,2,2,2,null,15,5,3,3,3])]};
+   D.ogr[0].denemeler=[kayit('TYT','Sadece Ogrenci','2026-10-05','genel',.5)];
    ciz();
   });
   // 0) Students have no Üniversite Hedefi: not in the menu, and a restored/typed route lands on the plan.
@@ -59,16 +64,22 @@ fs.mkdirSync(out,{recursive:true});
   // 1) Centre: every exam, Genel and Tarama, unusable ones disabled with the reason
   await page.locator('#yaMerkez').selectOption('sec');
   const tytSecenek=await page.locator('#yaTYT option').evaluateAll(l=>l.map(o=>[o.textContent,o.disabled]));
-  assert.equal(tytSecenek.length,3);assert(tytSecenek.some(([t])=>/Genel TYT 2/.test(t))&&tytSecenek.some(([t])=>/Tarama TYT 1/.test(t)));
+  assert.equal(tytSecenek.length,5,'3 teacher copies (Tarama TYT 1 also in the lists, once) + the school-list-only exam + the student-only one');
+  assert.deepEqual(tytSecenek.map(([t])=>t.split(' · ')[0]+' · '+t.split(' · ')[1]),['30.10.2026 · Eksik TYT 3','20.10.2026 · Okul Listesi TYT','16.10.2026 · Genel TYT 2','05.10.2026 · Tarama TYT 1','05.10.2026 · Sadece Ogrenci (öğrenci girdi)'].map(t=>t.replace(/ · eksik.*/,'')));
+  assert(tytSecenek.every(([t])=>(t.match(/Tarama TYT 1/g)||[]).length<=1)&&tytSecenek.filter(([t])=>/02\.10\.2026/.test(t)).length===0,'the teacher copy of a school exam (another date) is not listed twice');
+  assert(tytSecenek.some(([t,d])=>!d&&/Okul Listesi TYT/.test(t)),'a school-list-only exam is usable');
+  assert(tytSecenek.some(([t])=>/Genel TYT 2/.test(t))&&tytSecenek.some(([t])=>/Tarama TYT 1/.test(t)));
   assert(tytSecenek.some(([t,d])=>d&&/Eksik TYT 3 · eksik: Fizik/.test(t)),'an exam with a missing test is shown, disabled');
   const once=await page.locator('.ya-tahmin').innerText();
-  await page.locator('#yaTYT').selectOption('p:Tarama TYT 1');await page.locator('#yaAYT').selectOption('p:Tarama AYT 1');
+  await page.locator('#yaTYT').selectOption('s:TYT:TARAMA TYT 1');await page.locator('#yaAYT').selectOption('p:Tarama AYT 1');
   assert.notEqual(await page.locator('.ya-tahmin').innerText(),once,'an earlier exam moves the estimate');
+  assert.equal(await page.evaluate(()=>YOKATLAS.merkezBul(D.ogr[0],'sec','SAY',{tyt:'s:TYT:'+denemeAdAnahtari('Tarama TYT 1')}).tyt.net),57,'nets come from the school list (the teacher copy would give another total)');
+  assert.equal(await page.evaluate(()=>YOKATLAS.merkezBul(D.ogr[0],'son','SAY').tyt.net),79,'Son deneme is the newest usable exam, here a school-list-only one');
   assert.equal(await page.locator('.ya-liste .ya-row').count(),48);
   // Gidişat (the Öğrenci kartı projection) is offered when the model can compute it
   await page.locator('#yaMerkez').selectOption('son');
-  assert.equal(await page.locator('#yaMerkez option[value="gidisat"]').evaluate(o=>o.disabled),true,'no school lists: Gidişat is disabled with its reason');
-  assert.match(await page.locator('#yaMerkez option[value="gidisat"]').innerText(),/sıralama/);
+  assert.equal(await page.locator('#yaMerkez option[value="gidisat"]').evaluate(o=>o.disabled),true,'fewer than 3 school exams: Gidişat is disabled with its reason');
+  assert.match(await page.locator('#yaMerkez option[value="gidisat"]').innerText(),/en az 3 deneme/);
   await page.evaluate(()=>{D.ayar.sinav='2027-06-20';ANALIZ.kart=(no,key)=>({durum:'tamam',oturum:{key},gidisat:{var:true,yks:{net:key==='TYT'?100:60}}})});
   await page.locator('#yaSearch').fill('x');await page.locator('#yaSearch').fill('');
   await page.locator('#yaMerkez').selectOption('gidisat');
