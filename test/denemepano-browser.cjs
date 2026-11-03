@@ -294,6 +294,57 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    assert.equal(await page.locator('#dpGenel [data-tutamak]').count(),2,'the Seç lines are there');
    assert.deepEqual(errors,[]);await context.close();
    console.log('PASS Deneme panosu ranges at 1280 px');
+ // ---- Kademeler: students × ders from the notebooks' school results (made-up students), per-ders header, filters, sort, trend, Denemelerim chips
+ const Yf=require('./yanlislar-fixtures.cjs'),kademeOgr=Yf.kademeOgrencileri({N:30,seed:77});
+ for(const [width,tema] of [[1280,'light'],[390,'dark']]){
+  const context=await browser.newContext({viewport:{width,height:950},colorScheme:tema}),page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+  await page.clock.setFixedTime(new Date('2026-10-26T18:00:00+03:00'));
+  await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
+  await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
+  await page.evaluate(async ({l,o})=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-26';D.ogr=o;EK.ogr=0;EK.sekme='denemeler';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
+    await siralamaKaydet(l.map(x=>siralamaPdfCoz(x.pages,x.boylar)));ciz()},{l:listeler,o:kademeOgr});
+  await page.locator('#kdKok').waitFor();
+  assert.equal(await page.locator('#kdKok h2').first().innerText(),'Kademeler');
+  const hucre=()=>page.locator('#kdKok .kd-hucre button').allInnerTexts();
+  const hucreler=await hucre();assert(hucreler.length>=30*5,'cells: '+hucreler.length);assert(hucreler.every(t=>/^[1-6]\??$/.test(t)),[...new Set(hucreler)].join());
+  // per ders header: the tier count and the separation reliability; a ders without enough data says so
+  const basliklar=await page.locator('#kdKok thead .kd-ders').allInnerTexts();
+  assert(basliklar.some(t=>/Matematik\s+\d kademe · 0,\d\d/.test(t)),basliklar.join('|'));
+  assert.deepEqual(await page.locator('#kdKok thead .kd-ders b').allInnerTexts(),['Türkçe','Tarih','Coğrafya','Felsefe','Din Kültürü','Matematik','Geometri','Fizik','Kimya','Biyoloji']);
+  // colour-coded with the palette tokens
+  assert((await page.locator('#kdKok .kd-hucre').evaluateAll(l=>l.map(c=>c.getAttribute('style')||''))).some(s=>/color-mix\(in srgb,var\(--e-(ok|bad)\)/.test(s)));
+  // şube filter
+  const satir=()=>page.locator('#kdKok tbody tr').count();assert.equal(await satir(),30);
+  await page.locator('#kdKok [data-kd-sube]').selectOption('12-A');assert.equal(await satir(),15);
+  await page.locator('#kdKok [data-kd-sube]').selectOption('');
+  // sort by a ders: tiers do not increase down the column
+  await page.locator('#kdKok [data-kd-sira="TYT:mat"]').click();
+  const mi=(await page.locator('#kdKok thead .kd-ders b').allInnerTexts()).indexOf('Matematik'),sutun=await page.locator('#kdKok tbody tr').evaluateAll((l,i)=>l.map(r=>r.children[i+1].textContent.trim()),mi);
+  const sayilar=sutun.map(t=>parseInt(t,10)).filter(n=>!isNaN(n));assert(sayilar.every((n,i)=>!i||sayilar[i-1]<=n),sayilar.join());
+  assert.equal(await page.locator('#kdKok [data-kd-sira="TYT:mat"]').getAttribute('aria-pressed'),'true');
+  // click a cell: the student's ability trend for that ders
+  await page.locator('#kdKok .kd-hucre button').first().click();
+  await page.locator('#kdKok .kd-detay svg.kd-iz').waitFor();
+  assert.equal(await page.locator('#kdKok .kd-detay .kd-nokta').count(),4,'four TYT exams');
+  assert.match(await page.locator('#kdKok .kd-detay-ust').innerText(),/SENTETİK ÖĞRENCİ \d+\s+Türkçe · \d\??\. kademe \/ \d/);
+  // TYT / AYT
+  await page.locator('#kdKok [data-kd-oturum="AYT"]').click();
+  assert((await page.locator('#kdKok thead .kd-ders b').allInnerTexts()).join()==='Matematik,Geometri,Fizik,Kimya,Biyoloji');
+  assert((await hucre()).every(t=>/^[1-6]\??$/.test(t)));
+  await page.locator('#kdKok [data-kd-oturum="TYT"]').click();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no sideways page scroll at '+width);
+  if(width===390)assert(await page.locator('#kdKok .et-kaydir').evaluate(e=>e.scrollWidth>e.clientWidth),'the table scrolls inside its own container');
+  await page.locator('#kdKok').scrollIntoViewIfNeeded();
+  if(process.env.YKS_UI_ARTIFACTS)await page.locator('#kdKok').screenshot({path:path.join(out,'kademeler-'+width+'.png')});
+  // the student's own Denemelerim: a row of chips
+  await page.evaluate(()=>{EK.denemeKlasik=true;EK.ogr=0;ciz()});
+  const hap=await page.locator('#kdHaplar .kd-hap').allInnerTexts();assert(hap.length>=5,hap.join('|'));
+  assert(hap.every(t=>/^(AYT )?[\p{L} ]+ · \d\??\. kademe \/ \d$/u.test(t)),hap.join('|'));assert(hap.some(t=>/^Matematik · /.test(t)));
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'chips: no sideways scroll at '+width);
+  assert.deepEqual(errors,[]);await context.close();
+ }
+ console.log('PASS Kademeler view and tier chips at 1280 and 390 px');
  }finally{await browser.close()}
 
 })().catch(e=>{console.error(e);process.exit(1)});

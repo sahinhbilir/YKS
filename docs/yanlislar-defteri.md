@@ -17,9 +17,11 @@ clears them, and uploading again is how the teacher reprints.
    ("35 - 36. soruları aşağıdaki parçaya göre …") is added in front of each question it covers; a passage with tables across
    both columns is cut across the page. Each page is rendered once at scale 2 and the pictures are copied out of it.
    If the found count differs from the declared one the file is refused with the test and the missing number.
-2. **Cevap raporu**, `.xlsx`. Read by header text, not column letters (shared or inline strings). Sections (TÜRKÇE-T, …)
+2. **Cevap raporu**, `.xlsx`. Read by header text, not column letters (shared or inline strings). Every sheet with the header row is one
+   session: the real workbook has **TYT** and **AYT** sheets (sections end in -T / -A). Students are joined by Öğrenci No; a student's
+   booklet (A or B) is per session. Sections (TÜRKÇE-T, …)
    are filled into the booklet tests in order by their question counts; if they do not fit, a Turkish error is shown.
-3. **Çözüm kitapçığı**, PDF with "A-n / B-m" labels. Needed only for B students. It is accepted only after the other two
+3. **Çözüm kitapçığı**, PDF with "A-n / B-m" labels. Needed only for B students; it goes to the session whose question count it matches, and may exist for TYT only (AYT B students then get the numbers-only list). It is accepted only after the other two
    are loaded, and refused as a whole unless every test's A and B numbers are permutations of 1..N, every pair stays in
    one section, and `keyA[a] = keyB[b]` for every pair. If a later booklet or report no longer fits it, it is dropped.
 
@@ -38,20 +40,16 @@ Filters: **Şube**, **Öğrenci** (one student), and a checkbox per ders (for se
 filtered set. On screen the questions are one column; on paper A4 portrait, two per row when they fit (a question with a
 full-width passage takes a row), never split across pages.
 
-**Soru durumu** selects wrong, blank, or both. **Zorluk** selects easy, medium, hard, unknown, or all.
-For example, **Kolay + Yalnızca boş** prints only easy questions the student left unanswered.
-Difficulty reads the existing exam's **Madde Analizi** in Konu Takibi without changing it or requiring another upload.
-It is the school's correct-answer rate: easy ≥75%, medium ≥25% and <75%, hard <25%.
-Exam name, session, course and question counts must match. Automatic selection requires a unique matching exam;
-the teacher can also select the source explicitly. Question numbers join through the A booklet; B students require
-the validated B→A mapping. Missing or mismatched data stays **Zorluk bilinmiyor**, never guessed.
+**Soru durumu** selects wrong, blank, or both. **Zorluk** is a row of chips (Çok kolay · Kolay · Orta · Zor · Çok zor, plus
+**Kendi seviyesi**); all five bands are selected by default. Printing and the counts in the header use the same selection.
 The selected filters appear in each printed notebook's heading; zero matching questions disables printing.
-Filter choices and answer-file data remain in page memory only.
+Filter choices and answer-file data remain in page memory only. Difficulty is computed from the cevap raporu itself (see
+"Zorluk ve kademeler"); the school's Madde Analizi in Konu Takibi is now only a validity check (one rank correlation).
 
 - Each student starts on a new page: name, Öğrenci No, şube, exam name, "12 yanlış · 5 boş"; questions grouped by ders in
-  booklet order, each with "Soru 12" and "Senin cevabın: C" or "Boş". A student without wrong or empty questions is shown
+  booklet order, each with "Soru 12" and a small difficulty chip ("Zor", or "Zor?" when the band is not certain). A student without wrong or empty questions is shown
   on screen but not printed.
-- **Doğru cevaplar** are on a separate last page of that student's defter, so the student tries first.
+- The last page of each defter is a table per ders: **soru · senin cevabın (or Boş) · doğru cevap**, so the student tries first.
 - **Din Kültürü / S.Felsefe**: if a student left one of them entirely blank and answered at least one question of the
   other, the blank one is skipped. Other untaken sections are not guessed; untick them.
 - **B booklet students** get the A pictures labelled "Soru 12 (B kitapçığında 7)" and their answer key in their own B
@@ -63,3 +61,69 @@ Filter choices and answer-file data remain in page memory only.
 `node scripts/embed-yanlislar.cjs --check && node test/yanlislar-regression.cjs && node test/yanlislar-difficulty-regression.cjs` (parsing, TC, selection, difficulty boundaries, mapping, map
 validation, markup) and `node test/yanlislar-browser.cjs` (real pdf.js on a generated booklet, crops, filters, print
 to PDF, 1280 and 390 widths). Source: `src/yanlislar.js`, `src/yanlislar.css`.
+
+## Zorluk ve kademeler
+
+Everything below is computed in the browser, in memory; nothing is stored or sent. Code: `src/zorluk.js` (item analysis), `src/kademe.js` (tiers).
+
+### Soru zorluğu (from the cevap raporu)
+
+Per session and per ders section, from all students in the report. Correct = 1, wrong or blank = 0 (wrong and blank rates are kept).
+A student who left the whole section blank did not take it and is not counted (Din vs S.Felsefe, an AYT section outside the field).
+A cancelled question (key not A-E) is left out of the totals. With a valid A↔B map the A and B students are pooled on A numbering;
+without it each booklet is analysed separately on its own numbers (smaller n, which the reliability line shows).
+
+Per item: `p` with its **Wilson (1927) 95% interval**; the **corrected point-biserial** `r_it` (item against the rest of the section
+score); the **Rasch (1PL) difficulty** `b` by JMLE (own implementation, items centred at 0, Wright's bias correction (L−1)/L on b, θ and SE;
+extreme persons and items are left out of the fit and counted as extreme; SE = 1/√ΣP(1−P)); infit and outfit mean squares.
+Per section: **KR-20** (Kuder & Richardson 1937, population variance) and SEM = SD·√(1−KR-20), n takers, item count, and the Rasch item
+separation G = SD_true/RMSE (SD_true² = SD_obs² − mean SE²) with reliability G²/(1+G²).
+
+**Five bands** from `b − μθ` (logits, relative to the mean person ability of the section): ≤ −2 Çok kolay · (−2, −0.75] Kolay ·
+(−0.75, 0.75) Orta · [0.75, 2) Zor · ≥ 2 Çok zor. Reasons: ±0.75 logit is P ≈ .32 / .68 for an average student, a band where
+an item neither separates nobody nor everybody; ±2 logits is P ≈ .12 / .88, where an item is nearly always missed or nearly always
+answered. If `b ± 1.96·SE` reaches more than one band the label carries "?" ("Zor?"); the chip Zor still includes Zor? items.
+An item everybody got right (or nobody) has no `b`; it is labelled Çok kolay? / Çok zor? and reported as extreme.
+
+**Flags** (kept next to, never instead of, the label; thresholds of Ebel & Frisbie 1991 for r_it, 0.5–1.5 for the Rasch mean squares,
+Wright & Masters 1982): `r_it < 0` "Ayırt etmiyor: anahtarı kontrol edin", `0 ≤ r_it < 0.20` "Zayıf ayırt edicilik", infit or outfit
+outside 0.5–1.5 "Uyumsuz". They are shown in the on-screen **Madde kalitesi** tables (soru, p, b relative to μθ, r_it, flag), not printed.
+The section line reads "Türkçe · 27 öğrenci · KR-20 0,82 · 2 madde işaretli"; with fewer than 15 takers or KR-20 < 0.50 it adds
+"Güvenilirlik düşük" and every label gets "?". If Konu Takibi holds the Madde Analizi of the same exam, the Spearman correlation between our `p` and
+the school's `p` is added as "okul verisi ρ 0,71".
+
+### Kademeler (from all exams in the notebook)
+
+Source: `denemeListe` of every student (school results and own entries): D, Y and question count per ders. A ders counts as in
+`denemeBolumSayilir` (a blank TYT ders is a real zero; an AYT ders outside the field only if answered). Per exam and ders the cohort is
+every student who sat it (at least 5, otherwise the exam is skipped). With `m_e` = the cohort mean of (D+0.5)/(n+1):
+
+- relative ability `a_se = logit((D+0.5)/(n+1)) − logit(m_e)`; an exam that is harder for everybody moves `m_e` with it, so nobody's ability falls;
+- `a_s = Σ w a / Σ w`, `w` = precision `n p (1−p)` times recency `0.5^age`, age = the exam's index from the latest exam of that ders (as in `analiz.js`);
+- SE by the delta method, `var(logit p) ≈ 1/(n p (1−p))`.
+
+Person separation `G = SD_true/RMSE`; tiers `H = floor((4G+1)/3)` (Wright & Masters 1982 strata) clamped to 2..6. With `SD_true² ≤ 0` or fewer
+than 8 students the ders has no tiers ("Veri yetersiz"). Edges are equal width between the 5th and 95th percentile of the abilities;
+tier 1 is the strongest; a student's tier shows "?" when `a ± 1.96·SE` crosses an edge. The Deneme panosu shows **Kademeler** (students ×
+ders, şube and TYT/AYT filters, sort by a ders, click a cell for the ability trend); Denemelerim shows the chips "Matematik · 2. kademe / 4".
+
+**Kendi seviyesi** keeps, per student and ders, the wrong or empty questions with `0.35 ≤ P ≤ 0.80`, `P = σ(a_s − (b − μθ))`:
+learnable, neither trivial nor hopeless. Report sections are matched to Deneme ders codes by name (TÜRKÇE-T → TYT turkce, TARİH.1-A →
+AYT tarih1, …; the student by Öğrenci No). A student (or ders) without tiers falls back to the Orta band.
+
+### Known limits
+
+- **Small n.** A school sample of 15–60 students gives `b` standard errors of 0.3–0.5 logits for mid-range items, so most labels are
+  uncertain ("?"). Items near the cut points move bands with a handful of students; the labels rank questions, they do not measure them.
+  Five-question sections (Tarih, Coğrafya, Felsefe, Din) have KR-20 near or below 0.5 and are flagged "Güvenilirlik düşük".
+- Without the A↔B map the two booklets are separate small groups; AYT fields leave 4–13 takers per section.
+- Rasch assumes equal discrimination; misfit flags item types that break this (guessing, key errors).
+- Wrong and blank both count as 0, so a skipped hard item and a missed one look alike; the blank rate is kept for reading.
+- Ability uses only a student's own sampling error (not exam-to-exam instability); tiers are coarse by design.
+- A student's own Denemelerim only shows tier chips when the notebook holds the cohort (teacher view); nothing is published to students.
+
+References: Wilson (1927) JASA 22; Kuder & Richardson (1937) Psychometrika 2; Ebel & Frisbie (1991) *Essentials of Educational Measurement*;
+Wright & Masters (1982) *Rating Scale Analysis* (separation, strata, fit mean squares).
+
+Tests: `node test/zorluk-regression.cjs` (Wilson, r_it, KR-20, seeded JMLE recovery, bands and "?", strata, equating, Veri yetersiz, Kendi
+seviyesi, two-sheet parsing, TC) and the browser tests `test/yanlislar-browser.cjs`, `test/denemepano-browser.cjs`.

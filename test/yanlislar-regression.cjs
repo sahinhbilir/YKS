@@ -162,7 +162,7 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
   // ---- markup ----
   const show = async o => {
     const {rapor, k, es} = await kur(), S = T.durumu();
-    Object.assign(S, {kit: k, rapor, es, pairs: null, harita: o.harita ? T.haritaKur(Y.HARITA, es, rapor) : null, sube: '', ogr: '', kapali: new Set(), crops: new Map(), hata: {kit: '', rapor: '', coz: ''}});
+    Object.assign(S, {kitlar: {TYT: k}, rapor, es, pairs: {}, cozum: {}, zOnbellek: null, bantlar: null, kendi: false, status: 'all', harita: o.harita ? T.haritaKur(Y.HARITA, es, rapor) : null, sube: '', ogr: '', kapali: new Set(), crops: new Map(), hata: {kit: '', rapor: '', coz: ''}});
     k.testler.forEach((t, ti) => t.sorular.forEach(q => S.crops.set(ti + ':' + q.no, {url: 'blob:sentetik-' + ti + '-' + q.no, w: 10, h: 10, genis: false})));
     run("D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='yanlislar'");
     return T.gorunum();
@@ -172,20 +172,21 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert.equal(pages.length, 3);
     const a = pages[0];
     assert.match(a, /<h2>SENTETİK ÖĞRENCİ 1<\/h2>/); assert.match(a, /Öğrenci No <b>9001<\/b> · 205 12\/A · SENTETİK-1203/); assert.match(a, /<b>1<\/b> yanlış · <b>2<\/b> boş/);
-    assert.match(a, /<b>Soru 2<\/b><\/span><span class="yd-isaret yd-y">Senin cevabın: C<\/span>/); assert.match(a, /yd-isaret yd-b">Boş</);
+    assert.match(a, /<b>Soru 2<\/b><\/span><\/figcaption>/, 'no answer text next to the question'); assert.doesNotMatch(a, /Senin cevabın: /); assert.doesNotMatch(a, /yd-isaret/);
     assert.match(a, /src="blob:sentetik-0-2"/);
-    assert(a.indexOf('class="yd-anahtar"') > a.lastIndexOf('<img'), 'answer key comes after all questions');
-    assert.match(a.slice(a.indexOf('yd-anahtar')), /<b>Türkçe<\/b>.*<i>2<\/i> B.*<i>3<\/i> C/);
+    assert(a.indexOf('class="yd-anahtar"') > a.lastIndexOf('<img'), 'answer table comes after all questions');
+    // last page: soru · senin cevabın (or Boş) · doğru cevap, per ders
+    assert.match(a.slice(a.indexOf('yd-anahtar')), /<caption>Türkçe<\/caption><thead><tr><th scope="col">Soru<\/th><th scope="col">Senin cevabın<\/th><th scope="col">Doğru cevap<\/th><\/tr><\/thead><tbody><tr><td>2<\/td><td>C<\/td><td>B<\/td><\/tr><tr><td>3<\/td><td>Boş<\/td><td>C<\/td><\/tr>/);
     assert.match(pages[2], /yd-yok/); assert.match(pages[2], /Yanlış veya boş soru yok/);
   });
   await test('page: B student with the map gets A cut-outs labelled with the B number, and a B-numbered key; without it numbers only and a note', async () => {
     let out = await show({harita: true}), b = out.split('<article class="yd-ogr').slice(1)[1];
-    assert.match(b, /<b>Soru 3<\/b> \(B kitapçığında 4\)/); assert.match(b, /<b>Soru 5<\/b> \(B kitapçığında 6\)/); assert.match(b, /Senin cevabın: A/);
-    assert.match(b.slice(b.indexOf('yd-anahtar')), /<i>4<\/i> C/); assert.match(b.slice(b.indexOf('yd-anahtar')), /<i>6<\/i> E/);
+    assert.match(b, /<b>Soru 3<\/b> \(B kitapçığında 4\)/); assert.match(b, /<b>Soru 5<\/b> \(B kitapçığında 6\)/); assert.doesNotMatch(b, /Senin cevabın: /);
+    assert.match(b.slice(b.indexOf('yd-anahtar')), /<td>4<\/td><td>Boş<\/td><td>C<\/td>/); assert.match(b.slice(b.indexOf('yd-anahtar')), /<td>6<\/td><td>A<\/td><td>E<\/td>/);
     assert.doesNotMatch(b, /kendi kitapçığından/);
     out = await show({harita: false}); b = out.split('<article class="yd-ogr').slice(1)[1];
     assert.doesNotMatch(b, /<img/); assert.match(b, /B kitapçığı: sorular kendi kitapçığından çözülecek/); assert.match(b, /<b>Soru 4<\/b>/); assert.doesNotMatch(b, /B kitapçığında/);
-    assert.match(b.slice(b.indexOf('yd-anahtar')), /<i>6<\/i> E/);
+    assert.match(b.slice(b.indexOf('yd-anahtar')), /<td>6<\/td><td>A<\/td><td>E<\/td>/);
   });
   await test('page: nothing about the files is kept anywhere (no storage, no notebook field)', async () => {
     await show({harita: true});

@@ -4,7 +4,11 @@
 #ydKok .yd-file{position:absolute;width:1px;height:1px;opacity:0}#ydKok .et-dugme{position:relative;min-height:38px}
 #ydKok .yd-durum{font-size:.8125rem;color:var(--e-fg2);min-height:1.2em;overflow-wrap:anywhere}
 #ydKok .yd-hata{font-size:.8125rem;color:var(--e-bad);overflow-wrap:anywhere}
-#ydKok .yd-filtre{display:grid;grid-template-columns:1fr 2fr;gap:16px}
+#ydKok .yd-filtre{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+#ydKok .yd-zsec{grid-column:1/-1}
+#ydKok .yd-chips{display:flex;flex-wrap:wrap;gap:8px}
+#ydKok .yd-chip{font:inherit;font-size:.8125rem;min-height:36px;padding:4px 14px;border-radius:999px;border:1px solid var(--e-line);background:var(--e-panel);color:var(--e-fg2);cursor:pointer}
+#ydKok .yd-chip[aria-pressed="true"]{background:var(--e-fg);color:var(--e-panel);border-color:var(--e-fg)}
 #ydKok .yd-sec{display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--e-fg2);min-width:0}
 #ydKok select{font:inherit;min-height:40px;max-width:100%;min-width:0;color:var(--e-fg);background:var(--e-panel);border:1px solid var(--e-line);border-radius:6px;padding:8px 10px}
 #ydKok .yd-dersler{display:flex;flex-wrap:wrap;gap:8px 18px}
@@ -28,15 +32,24 @@
 #ydKok .yd-soru img{display:block;width:100%;max-width:576px;height:auto;border:1px solid #ccc}
 #ydKok .yd-genis img{max-width:none}
 #ydKok .yd-soru img[data-bekle]{min-height:140px;background:#f0f0f0}
-#ydKok .yd-isaret{font-weight:600}#ydKok .yd-b{color:#444}
+#ydKok .yd-zorluk{display:inline-block;font-weight:600;font-size:.75rem;line-height:1;padding:3px 9px;border-radius:999px;border:1px solid #666;color:#000;background:#fff;white-space:nowrap}
+#ydKok .yd-z-cok-kolay{background:#e6e6e6;border-color:#bbb}#ydKok .yd-z-kolay{background:#f1f1f1;border-color:#aaa}#ydKok .yd-z-orta{background:#fff;border-color:#888}#ydKok .yd-z-zor{background:#fff;border:2px solid #444}#ydKok .yd-z-cok-zor{background:#000;color:#fff;border-color:#000}
+#ydKok .yd-belirsiz{border-style:dashed}
 #ydKok .yd-liste{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 18px}
 #ydKok .yd-satir{border-bottom:1px solid #ddd;break-inside:avoid}
 #ydKok .yd-anahtar{border-top:2px dashed #999;padding-top:12px;display:flex;flex-direction:column;gap:8px}
 #ydKok .yd-anahtar h2{font-size:1.125rem}
-#ydKok .yd-ak{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:.875rem}
-#ydKok .yd-ak>b{min-width:7.5em}
-#ydKok .yd-harfler{display:flex;flex-wrap:wrap;gap:4px 10px}
-#ydKok .yd-harfler span{border:1px solid #999;border-radius:4px;padding:1px 7px;font-weight:700}#ydKok .yd-harfler i{font-style:normal;font-weight:400;color:#444;margin-right:3px}
+#ydKok .yd-cevaplar{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px 18px}
+#ydKok .yd-cevap{border-collapse:collapse;font-size:.8125rem;break-inside:avoid;width:100%}
+#ydKok .yd-cevap caption{text-align:left;font-weight:700;padding-bottom:3px}
+#ydKok .yd-cevap th,#ydKok .yd-cevap td{border-bottom:1px solid #ccc;padding:2px 6px;text-align:left}
+#ydKok .yd-cevap th{font-weight:600;color:#444}
+#ydKok .yd-cevap td:first-child{font-weight:700}
+#ydKok .yd-analiz{display:flex;flex-direction:column;gap:6px}
+#ydKok .yd-analiz h2{font-size:1rem}
+#ydKok .yd-kalite summary{cursor:pointer;font-size:.8125rem;padding:6px 0}
+#ydKok .yd-kalite td,#ydKok .yd-kalite th{white-space:nowrap}
+#ydKok .yd-isaretli td{color:var(--e-bad)}
 @media(max-width:700px){
   #ydKok .yd-dosyalar,#ydKok .yd-filtre{grid-template-columns:minmax(0,1fr)}
   #ydKok .yd-ogr{padding:12px}
@@ -50,7 +63,8 @@
   #ydKok .yd-ogr.yd-yok{display:none}
   #ydKok .yd-sorular{grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm 5mm}
   #ydKok .yd-genis{grid-column:1/-1}
-  #ydKok .yd-soru,#ydKok .yd-ders h3,#ydKok .yd-ak{break-inside:avoid}
+  #ydKok .yd-soru,#ydKok .yd-ders h3,#ydKok .yd-cevap{break-inside:avoid}
+  #ydKok .yd-zorluk{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #ydKok .yd-ders h3{break-after:avoid}
   #ydKok .yd-soru img{max-width:none}
   #ydKok .yd-anahtar{break-before:page;page-break-before:always;border-top:0;padding-top:0}

@@ -9,16 +9,24 @@ const originals=JSON.stringify([rapor,es,source]),idx=T.difficultyIndex(rapor,es
 assert.equal(idx.map.size,6);assert.equal(idx.issues.length,0);
 assert.deepEqual(ps.map((_,i)=>idx.map.get('0:'+(i+1)).level),['zor','zor','orta','orta','kolay','kolay']);
 assert.deepEqual(ps.map((_,i)=>idx.map.get('0:'+(i+1)).p),ps);assert.equal(JSON.stringify([rapor,es,source]),originals);
-const d={bolumler:[{ad:'Türkçe',sorular:[{test:0,a:5,no:1,durum:'bos'},{test:0,a:2,no:5,durum:'yanlis'},{test:0,a:null,no:6,durum:'bos'},{test:0,a:6,no:2,durum:'yanlis'}]}],yanlis:2,bos:2};
-const before=JSON.stringify(d),pick=(o,index=idx)=>T.filterDefter(d,o,index),flat=v=>v.bolumler.flatMap(b=>b.sorular);
-const easy=pick({status:'bos',difficulty:'kolay'});assert.equal(flat(easy).length,1);assert.equal(flat(easy)[0].a,5);assert.equal(flat(easy)[0].p,.75);
-const wrong=pick({status:'yanlis',difficulty:'all'});assert.equal(flat(wrong).length,2);assert(flat(wrong).every(x=>x.durum==='yanlis'));
-assert.equal(flat(wrong)[0].p,.249,'B booklet question uses its mapped A number, not its own printed number');
-const unknown=pick({status:'all',difficulty:'bilinmeyen'});assert.equal(flat(unknown).length,1);assert.equal(flat(unknown)[0].a,null);assert.equal(flat(unknown)[0].p,null);
+// filterDefter: the chips (bands from our own Rasch analysis), Kendi seviyesi and the status; the school's Madde Analizi is only a validity check now.
+const mk=(a,bant,belirsiz=false)=>[a,{bant,belirsiz}];
+const zi={map:new Map([['0:A:5',{bant:'kolay',belirsiz:false,rel:-1}],['0:A:2',{bant:'orta',belirsiz:true,rel:0}],['0:A:6',{bant:'zor',belirsiz:false,rel:1}]])};
+const d={ogr:{no:'1'},bolumler:[{i:0,ri:0,ders:'Türkçe',sorular:[{test:0,i:0,k:4,ak:4,a:5,own:5,durum:'bos'},{test:0,i:0,k:1,ak:1,a:2,own:2,durum:'yanlis'},{test:0,i:0,k:5,ak:null,a:null,own:6,durum:'bos'},{test:0,i:0,k:5,ak:5,a:6,own:6,durum:'yanlis'}]}],yanlis:2,bos:2};
+const before=JSON.stringify(d),pick=o=>T.filterDefter(d,o,zi),flat=v=>v.bolumler.flatMap(b=>b.sorular);
+assert.equal(flat(pick({})).length,4,'default: all five bands, nothing dropped (also the unlabelled question)');
+assert.equal(pick({}).unknown,1);assert.equal(pick({}).filterText,'');
+assert.equal(flat(pick({bantlar:new Set(['kolay','orta','zor','cok-kolay','cok-zor'])})).length,4,'all five chips selected = all');
+const easy=pick({bantlar:new Set(['kolay']),status:'bos'});assert.equal(flat(easy).length,1);assert.equal(flat(easy)[0].a,5);assert.equal(flat(easy)[0].z.bant,'kolay');
+assert.equal(easy.filterText,'Kolay · Yalnızca boş');assert.equal(easy.bos,1);assert.equal(easy.yanlis,0);
+assert.deepEqual(flat(pick({bantlar:new Set(['orta'])})).map(x=>x.a),[2],'an uncertain Orta? question is still included by the Orta chip');
+assert.deepEqual(flat(pick({bantlar:new Set(['zor','cok-zor'])})).map(x=>x.a),[6]);assert.equal(pick({bantlar:new Set(['zor','cok-zor'])}).filterText,'Zor · Çok zor');
+assert.equal(flat(pick({bantlar:new Set()})).length,0,'no chip selected: nothing, and the unlabelled question is never guessed');
+assert.deepEqual(flat(pick({bantlar:new Set(['kolay','orta','zor']),kendi:(o,b,z)=>z.rel<=0})).map(x=>x.a),[5,2]);assert.match(pick({kendi:()=>true}).filterText,/Kendi seviyesi/);
+assert.deepEqual(flat(pick({status:'yanlis'})).map(x=>x.a),[2,6]);
 assert.equal(JSON.stringify(d),before,'filter leaves student input unchanged');
 for(const bad of [{...source,ad:'Başka TYT'},{...source,oturum:'AYT'},{...source,madde:{'TÜRKÇE-T':source.madde['TÜRKÇE-T'].slice(0,5)}}]){
  const rejected=T.difficultyIndex(rapor,es,bad);assert.equal(rejected.map.size,0);assert(rejected.issues.length>0);
- assert.equal(flat(pick({status:'all',difficulty:'bilinmeyen'},rejected)).length,4);
 }
 const mathR={ad:'Sentetik TYT'},mathEs={testler:[40],bolumler:[{ad:'MATEMATİK-T',ders:'Matematik',test:0,n:30,off:0},{ad:'GEOMETRİ-T',ders:'Geometri',test:0,n:10,off:30}]};
 const matValues=Array.from({length:40},(_,i)=>[i<30?.8:.2,0,0,0,'']),mathS={ad:'Sentetik TYT',oturum:'TYT',madde:{'MATEMATİK-T':matValues}};
@@ -34,4 +42,4 @@ const combined=T.difficultyIndex({ad:'Sentetik'},mixedEs,combinedSource);
 assert.equal(combined.map.size,12);assert.equal(combined.map.get('0:1').p,0);assert.equal(combined.map.get('1:1').p,.9,'combined source keeps each session separate');
 assert.equal(T.difficultyIndex(rapor,es,{...combinedSource,ad:rapor.ad}).map.size,6,'TYT report can reuse combined TYT + AYT upload');
 assert.equal(T.difficultyIndex(rapor,es,{...combinedSource,ad:rapor.ad,madde:{'TÜRKÇE-A':ps.map(p=>[p])}}).map.size,0,'combined metadata alone cannot imply TYT madde rows exist');
-console.log('PASS difficulty thresholds, booklet mapping, filters and matching');
+console.log('PASS school Madde Analizi index (validity source) and the difficulty chips filter');

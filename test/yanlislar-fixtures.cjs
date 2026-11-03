@@ -69,11 +69,11 @@ const OGRENCILER=[
  {no:'9001',ad:'SENTETİK ÖĞRENCİ 1',sube:'205 12/A',kit:'A',cev:['A','C','','D','A','B','C','','','']},
  {no:'9002',ad:'SENTETİK ÖĞRENCİ 2',sube:'205 12/A',kit:'B',cev:['B','D','A','','B','','','','A','A']},
  {no:'9003',ad:'SENTETİK ÖĞRENCİ 3',sube:'205 12/B',kit:'A',cev:KEY_A.slice()}];
-function raporSatirlari({tcBaslik='TC Kimlik No',ogrenciler=OGRENCILER,anahtarA=KEY_A,anahtarB=KEY_B}={}){
-  const pad=(a,n=20)=>{const o=a.slice();while(o.length<n)o.push('');return o};
-  const sec=Array(20).fill('');sec[6]='Toplam';let c=10;for(const [ad,k] of SECTIONS){sec[c]=ad;c+=k}
-  const bas=['Sıra','Öğrenci No','Ad Soyad',tcBaslik,'Şube','Kitapçık','D','Y','B','Net'];for(const [,k] of SECTIONS)for(let i=1;i<=k;i++)bas.push('S'+i);
-  return [['SINAV CEVAP RAPORU'],['Rapor Tarihi: 01.01.2000   |   Sinav: SENTETİK-1203   |   Form: TYT'],[],sec,bas,
+function raporSatirlari({tcBaslik='TC Kimlik No',ogrenciler=OGRENCILER,anahtarA=KEY_A,anahtarB=KEY_B,bolumler=SECTIONS,sinav='SENTETİK-1203'}={}){
+  const T=bolumler.reduce((a,[,k])=>a+k,0),pad=(a,n=10+T)=>{const o=a.slice();while(o.length<n)o.push('');return o};
+  const sec=Array(10+T).fill('');sec[6]='Toplam';let c=10;for(const [ad,k] of bolumler){sec[c]=ad;c+=k}
+  const bas=['Sıra','Öğrenci No','Ad Soyad',tcBaslik,'Şube','Kitapçık','D','Y','B','Net'];for(const [,k] of bolumler)for(let i=1;i<=k;i++)bas.push('S'+i);
+  return [['SINAV CEVAP RAPORU'],['Rapor Tarihi: 01.01.2000   |   Sinav: '+sinav+'   |   Form: TYT'],[],sec,bas,
     pad(['','','Cevap Anahtarı - A','','','A','','','','',...anahtarA]),pad(['','','Cevap Anahtarı - B','','','B','','','','',...anahtarB]),
     ...ogrenciler.map((o,i)=>pad([String(i+1),o.no,o.ad,SENTETIK_TC[i%3],o.sube,o.kit,'1','1','0','0.5',...o.cev]))];
 }
@@ -90,4 +90,116 @@ function cozumSpec(pairs=HARITA,perPage=5){
   }
   return sp;
 }
-module.exports={W,H,kitapcikSpec,kitapcikSayfalari,pdfYaz,itemlere,SECTIONS,KEY_A,KEY_B,OGRENCILER,raporSatirlari,raporXlsx,HARITA,cozumSpec,SENTETIK_TC};
+/* ---- AYT session: a second booklet (header 2026-27-AYT/EDB-1203) and the AYT sheet of the same workbook ---- */
+function kitapcikSpecAyt(sinav='1203'){
+  const EDB='2026-27-AYT/EDB-'+sinav,MAT='2026-27-AYT/MAT-'+sinav;
+  const kapak={texts:[[259,785,'YUKSEKOGRETIM KURUMLARI SINAVI',9],[44,270,'1.',9],[62,270,'Adayin dikkatine',9]],rects:[],w:W,h:H};
+  const p2=sayfa(EDB,2,[{t:[[200,808,'EDEBIYAT TESTI',10],[46.5,773,'1. Bu testte 5 soru vardir.',9]]},soru(Lx,719,1,['Sentetik edebiyat sorusu bir']),soru(Rx,719,2,['Sentetik edebiyat sorusu iki'])]);
+  const p3=sayfa(EDB,3,[soru(Lx,TOP,3,['Sentetik edebiyat sorusu uc']),soru(Rx,TOP,4,['Sentetik edebiyat sorusu dort'])]);
+  const p4=sayfa(EDB,4,[soru(Lx,TOP,5,['Sentetik tarih sorusu bes'])]);
+  const p5=sayfa(MAT,5,[{t:[[200,808,'MATEMATIK TESTI',10],[46.5,773,'1. Bu testte 3 soru vardir.',9]]},soru(Lx,719,1,['Sentetik matematik sorusu bir']),soru(Rx,719,2,['Sentetik matematik sorusu iki'])]);
+  const p6=sayfa(MAT,6,[soru(Lx,TOP,3,['Sentetik matematik sorusu uc'])]);
+  return [kapak,p2,p3,p4,p5,p6];
+}
+const kitapcikSayfalariAyt=sinav=>itemlere(kitapcikSpecAyt(sinav));
+const AYT_SECTIONS=[['TÜRK DİLİ VE EDB-A',3],['TARİH.1-A',2],['MATEMATİK-A',3]];
+const AYT_KEY_A=['A','B','C','D','E','A','B','C'],AYT_KEY_B=['C','A','B','E','D','B','C','A'];
+const AYT_HARITA=[[1,2],[2,3],[3,1],[4,5],[5,4],[1,3],[2,1],[3,2]];
+// AYT answers in the order of the student's own booklet; 9004 sat only the AYT.
+const AYT_OGRENCILER=[
+ {no:'9001',ad:'SENTETİK ÖĞRENCİ 1',sube:'205 12/A',kit:'A',cev:['A','C','','D','','A','B','']},
+ {no:'9002',ad:'SENTETİK ÖĞRENCİ 2',sube:'205 12/A',kit:'B',cev:['C','','B','','D','B','A','A']},
+ {no:'9003',ad:'SENTETİK ÖĞRENCİ 3',sube:'205 12/B',kit:'A',cev:AYT_KEY_A.slice()},
+ {no:'9004',ad:'SENTETİK ÖĞRENCİ 4',sube:'205 12/B',kit:'A',cev:['E','B','C','A','E','A','','C']}];
+function raporSatirlariAyt({ogrenciler=AYT_OGRENCILER,anahtarA=AYT_KEY_A,anahtarB=AYT_KEY_B,sinav='SENTETİK-1203'}={}){
+  const pad=(a,n=18)=>{const o=a.slice();while(o.length<n)o.push('');return o};
+  const sec=Array(18).fill('');sec[6]='Toplam';let c=10;for(const [ad,k] of AYT_SECTIONS){sec[c]=ad;c+=k}
+  const bas=['Sıra','Öğrenci No','Ad Soyad','TC Kimlik No','Şube','Kitapçık','D','Y','B','Net'];for(const [,k] of AYT_SECTIONS)for(let i=1;i<=k;i++)bas.push('S'+i);
+  return [['SINAV CEVAP RAPORU'],['Rapor Tarihi: 01.01.2000   |   Sinav: '+sinav+'   |   Form: AYT'],[],sec,bas,
+    pad(['','','Cevap Anahtarı - A','','','A','','','','',...anahtarA]),pad(['','','Cevap Anahtarı - B','','','B','','','','',...anahtarB]),
+    ...ogrenciler.map((o,i)=>pad([String(i+1),o.no,o.ad,SENTETIK_TC[i%3],o.sube,o.kit,'1','1','0','0.5',...o.cev]))];
+}
+// One workbook with several sheets. sayfalar: [{ad, rows, shared}]; shared strings of the sheets that ask for them live in one part, the others are inline.
+const kolon=i=>{let s='';for(i++;i>0;i=Math.floor((i-1)/26))s=String.fromCharCode(65+(i-1)%26)+s;return s};
+function cokSayfaXlsx(sayfalar,{method=8}={}){
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),sst=[],idx=new Map();
+  const files=[{name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/></Types>',method}];
+  const sheets=sayfalar.map((sy,n)=>{
+    const cell=(r,c,v)=>{
+      if(v===''||v===null||v===undefined)return '';
+      const ref=kolon(c)+(r+1);
+      if(sy.shared){if(!idx.has(v)){idx.set(v,sst.length);sst.push(v)}return '<c r="'+ref+'" t="s"><v>'+idx.get(v)+'</v></c>'}
+      return '<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+esc(v)+'</t></is></c>';
+    };
+    files.push({name:'xl/worksheets/sheet'+(n+1)+'.xml',data:'<?xml version="1.0" encoding="UTF-8"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+sy.rows.map((row,r)=>'<row r="'+(r+1)+'">'+row.map((v,c)=>cell(r,c,v)).join('')+'</row>').join('')+'</sheetData></worksheet>',method});
+    return '<sheet name="'+esc(sy.ad)+'" sheetId="'+(n+1)+'" r:id="rId'+(n+3)+'"/>';
+  });
+  files.push({name:'xl/workbook.xml',data:'<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sheets.join('')+'</sheets></workbook>',method});
+  files.push({name:'xl/_rels/workbook.xml.rels',data:'<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sayfalar.map((_,n)=>'<Relationship Id="rId'+(n+3)+'" Target="worksheets/sheet'+(n+1)+'.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"/>').join('')+'</Relationships>',method});
+  if(sst.length)files.push({name:'xl/sharedStrings.xml',data:'<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="'+sst.length+'" uniqueCount="'+sst.length+'">'+sst.map(t=>'<si><t xml:space="preserve">'+esc(t)+'</t></si>').join('')+'</sst>',method});
+  return F.zip(files);
+}
+// The real workbook: sheet "TYT" and sheet "AYT" (the AYT sheet with inline strings, t="inlineStr").
+const raporXlsx2=(o={})=>cokSayfaXlsx([{ad:'TYT',rows:raporSatirlari(o),shared:o.shared??true},{ad:'AYT',rows:raporSatirlariAyt(o.ayt||{}),shared:false}],{method:o.method??8});
+
+/* ---- a larger one-session exam for statistics: tests of N questions each, two questions per half page column ---- */
+function kitapcikSpecBuyuk(testler=[['TUR',20],['MAT',20]],sinav='1203',oturum='TYT'){
+  const sp=[{texts:[[259,785,'YUKSEKOGRETIM KURUMLARI SINAVI',9],[44,270,'1.',9],[62,270,'Adayin dikkatine',9]],rects:[],w:W,h:H}];let sayfaNo=2;
+  for(const [kod,N] of testler){
+    const KODU='2026-27-'+oturum+'/'+kod+'-'+sinav,ilk=[719,590,461,332,203],sonra=[776,647,518,389,260];
+    for(let q=1,p=0;q<=N;p++){
+      const y=p===0?ilk:sonra,parts=p===0?[{t:[[200,808,kod+' TESTI',10],[46.5,773,'1. Bu testte '+N+' soru vardir.',9]]}]:[];
+      for(const x of [Lx,Rx])for(let k=0;k<5&&q<=N;k++,q++)parts.push(soru(x,y[k],q,['Sentetik '+kod+' sorusu '+q]));
+      sp.push(sayfa(KODU,sayfaNo++,parts));
+    }
+  }
+  return sp;
+}
+
+/* ---- statistics fixtures: a seeded Rasch simulation of one TYT exam (two tests of 20 questions, a third of the students on booklet B) ---- */
+const rng=seed=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const normal=r=>()=>Math.sqrt(-2*Math.log(r()+1e-12))*Math.cos(2*Math.PI*r());
+const sig=z=>1/(1+Math.exp(-z));
+const BUYUK_BOLUMLER=[['TÜRKÇE-T',20],['MATEMATİK-T',20]];
+const HARF='ABCDE';
+function simule({N=60,seed=4242,bolumN=[20,20]}={}){
+  const r=rng(seed),nrm=normal(r),keyA=[],keyB=[],bTrue=[],pairs=[];
+  const perm=bolumN.map(n=>{const p=Array.from({length:n},(_,i)=>i+1);for(let i=n-1;i>0;i--){const j=Math.floor(r()*(i+1));[p[i],p[j]]=[p[j],p[i]]}return p});  // perm[t][a-1] = b
+  bolumN.forEach((n,t)=>{
+    const ka=Array.from({length:n},()=>HARF[Math.floor(r()*5)]),kb=Array(n);
+    for(let a=1;a<=n;a++){kb[perm[t][a-1]-1]=ka[a-1];pairs.push([a,perm[t][a-1]])}
+    keyA.push(...ka);keyB.push(...kb);
+    for(let a=0;a<n;a++)bTrue.push(-2.4+4.8*((a*7+t*3)%n)/(n-1));
+  });
+  const ogr=Array.from({length:N},(_,i)=>{
+    const th=nrm(),kit=i%3===2?'B':'A',cev=[];
+    bolumN.forEach((n,t)=>{
+      const off=bolumN.slice(0,t).reduce((x,y)=>x+y,0),own=Array(n).fill('');
+      for(let a=0;a<n;a++){
+        const b=kit==='A'?a:perm[t][a]-1,key=(kit==='A'?keyA:keyB)[off+b],dogru=r()<sig(th-bTrue[off+a]);
+        own[b]=dogru?key:r()<0.25?'':HARF.replace(key,'')[Math.floor(r()*4)];
+      }
+      cev.push(...own);
+    });
+    return {no:String(9300+i),ad:'SENTETİK ÖĞRENCİ '+(i+1),sube:i%2?'205 12/B':'205 12/A',kit,cev};
+  });
+  return {ogr,keyA,keyB,bTrue,pairs,bolumN,perm};
+}
+// The big exam as a workbook (sheet TYT), optionally with the small AYT sheet whose student 9302 also sat the TYT (booklet B in both).
+function raporBuyuk(sim,{ayt=true}={}){
+  const sayfalar=[{ad:'TYT',rows:raporSatirlari({ogrenciler:sim.ogr,anahtarA:sim.keyA,anahtarB:sim.keyB,bolumler:BUYUK_BOLUMLER}),shared:true}];
+  if(ayt){const o=AYT_OGRENCILER.map((x,i)=>i===1?{...x,no:'9302',ad:'SENTETİK ÖĞRENCİ 3',sube:'205 12/A'}:x);sayfalar.push({ad:'AYT',rows:raporSatirlariAyt({ogrenciler:o}),shared:false})}
+  return cokSayfaXlsx(sayfalar,{method:8});
+}
+// Notebooks for the Kademeler view: N students of two şubeler with four TYT and two AYT school results (denemeOkul rows), made up.
+function kademeOgrencileri({N=30,seed=77}={}){
+  const r=rng(seed),nrm=normal(r),tyt=[['turkce',40],['tarih',5],['cografya',5],['felsefe',5],['din',5],['mat',30],['geo',10],['fizik',7],['kimya',7],['biyoloji',6]],ayt=[['mat',30],['geo',10],['fizik',14],['kimya',13],['biyoloji',13]];
+  const sinavlar=[['Sentetik Deneme 1','2026-09-10','TYT',0.3],['Sentetik Deneme 2','2026-09-24','TYT',-0.3],['Sentetik Deneme 3','2026-10-01','AYT',-0.2],['Sentetik Deneme 4','2026-10-08','TYT',0.1],['Sentetik Deneme 5','2026-10-15','AYT',0.2],['Sentetik Deneme 6','2026-10-22','TYT',0]];
+  return Array.from({length:N},(_,i)=>{
+    const th=nrm()*1.1,ders=Object.fromEntries([...tyt,...ayt].map(([k])=>[k,0.6*nrm()]));
+    const rows=sinavlar.map(([ad,tarih,tur,kolay],k)=>({id:'p:k'+k+'-'+i,ad,tarih,tur,oturum:tur,alan:'SAY',sure:null,puan:null,ts:1000+k,
+      dersler:(tur==='TYT'?tyt:ayt).map(([kod,n])=>{const d=Math.max(0,Math.min(n,Math.round(n*sig(th+ders[kod]+kolay+0.25*nrm()))));return {kod,dogru:d,yanlis:Math.max(0,n-d-(i%3)),soru:n}})}));
+    return {ad:'SENTETİK ÖĞRENCİ '+(i+1),no:String(9400+i),sube:i%2?'12-B':'12-A',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,denemeOkul:rows};
+  });
+}
+module.exports={rng,normal,sig,simule,raporBuyuk,kademeOgrencileri,BUYUK_BOLUMLER,kitapcikSpecBuyuk,AYT_SECTIONS,AYT_KEY_A,AYT_KEY_B,AYT_HARITA,AYT_OGRENCILER,kitapcikSpecAyt,kitapcikSayfalariAyt,raporSatirlariAyt,cokSayfaXlsx,raporXlsx2,W,H,kitapcikSpec,kitapcikSayfalari,pdfYaz,itemlere,SECTIONS,KEY_A,KEY_B,OGRENCILER,raporSatirlari,raporXlsx,HARITA,cozumSpec,SENTETIK_TC};
