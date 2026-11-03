@@ -5,6 +5,16 @@ const YANLISLAR = (() => {
 const clean=s=>String(s??'').replace(/\s+/gu,' ').trim();
 // Upper case without Turkish marks, letters and digits only: "TC Kimlik No" and "T.C. KİMLİK NO" both give TCKIMLIKNO.
 const key=s=>clean(s).toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/[^A-Z0-9]/gu,'');
+/* Proper ders names for the report's section names ("TÜRK DİLİ VE EDB-A" -> "Türk Dili ve Edebiyatı", "TARİH.1-A" -> "Tarih-1"). Unknown names are only title-cased. */
+const DERS_ADLARI={TURKCE:'Türkçe',TURKDILIVEEDB:'Türk Dili ve Edebiyatı',TURKDILIVEEDEBIYATI:'Türk Dili ve Edebiyatı',EDEBIYAT:'Türk Dili ve Edebiyatı',TARIH:'Tarih',TARIH1:'Tarih-1',TARIH2:'Tarih-2',COGRAFYA:'Coğrafya',COGRAFYA1:'Coğrafya-1',COGRAFYA2:'Coğrafya-2',
+  FELSEFE:'Felsefe',FELSEFEGR:'Felsefe Grubu',FELSEFEGRUBU:'Felsefe Grubu',DINKULTURU:'Din Kültürü',DINKULTURUVEAHLAKBILGISI:'Din Kültürü',SFELSEFE:'Ek Felsefe',EKFELSEFE:'Ek Felsefe',SOSYALFELSEFE:'Ek Felsefe',
+  MATEMATIK:'Matematik',GEOMETRI:'Geometri',FIZIK:'Fizik',KIMYA:'Kimya',BIYOLOJI:'Biyoloji'};
+const dersAdi=ad=>{const t=clean(ad).replace(/-[TA]$/u,'');return DERS_ADLARI[key(t)]||title(t).replace(/\.\p{L}/gu,m=>m.toLocaleUpperCase('tr-TR'))};
+function dersOnek(bolumler){
+  const say=new Map();for(const b of bolumler){if(!say.has(b.ders))say.set(b.ders,new Set());say.get(b.ders).add(b.oturum)}
+  for(const b of bolumler)if(say.get(b.ders).size>1)b.ders=b.oturum+' '+b.ders;
+  return bolumler;
+}
 const title=s=>clean(s).toLocaleLowerCase('tr-TR').replace(/(^|[\s(])\p{L}/gu,m=>m.toLocaleUpperCase('tr-TR'));
 const harfOK=s=>/^[A-E]$/u.test(s);
 
@@ -192,7 +202,7 @@ async function raporCoz(bytes){
       if(key(s.ad)==='TOPLAM')return;
       const son=sec[i+1]?sec[i+1].c:Infinity,qs=qcols.filter(q=>colNo(q.c)>=s.c&&colNo(q.c)<son);
       if(!qs.length||qs.some((q,k)=>q.n!==k+1))fail(s.ad+' bölümünün soru sütunları (S1, S2, …) okunamadı.');
-      bolumler.push({ad:s.ad,ders:title(s.ad.replace(/-[TA]$/u,'')).replace(/\.\p{L}/gu,m=>m.toLocaleUpperCase('tr-TR')),n:qs.length,bas});bas+=qs.length;sutunlar.push(...qs.map(q=>q.c));
+      bolumler.push({ad:s.ad,ders:dersAdi(s.ad),n:qs.length,bas});bas+=qs.length;sutunlar.push(...qs.map(q=>q.c));
     });
     if(!bolumler.length)fail('Soru bölümü bulunamadı.');
     const sonekler=new Set(bolumler.map(b=>/-A$/u.test(b.ad)?'AYT':'TYT'));
@@ -240,6 +250,8 @@ async function raporCoz(bytes){
     }
     ofset+=p.T;
   }
+  // The same ders name in both sessions ("Matematik") is prefixed with its session; otherwise no prefix.
+  dersOnek(bolumler);
   const ad=adlar[0]||'';
   return {ad,sinavNo:sayiOf(ad)||'',oturumlar:parcalar.map(p=>p.oturum),bolumler,T:toplam,anahtar,ogrenciler};
 }
@@ -382,7 +394,7 @@ function zorlukAnaliz(rapor,es,harita,dis){
 const level=p=>p>=.75?'kolay':p<.25?'zor':'orta';
 function courseKey(s){
   const k=key(clean(s).replace(/-[TA]$/iu,'').replace(/\b(?:TYT|AYT)\b/giu,''));
-  const aliases={TUR:'TURKCE',TURK:'TURKCE',TEMELMATEMATIK:'MATEMATIK',COG:'COGRAFYA',TAR:'TARIH',FIZ:'FIZIK',KIM:'KIMYA',BIO:'BIYOLOJI',DIN:'DINKULTURU',DINKULTURUVEAHLAKBILGISI:'DINKULTURU',SFELSEFE:'EKFELSEFE',SOSYALFELSEFE:'EKFELSEFE',TURKDILIVEEDEBIYATI:'EDEBIYAT',TURKDILIVEEDB:'EDEBIYAT',FELSEFEGR:'FELSEFE'};
+  const aliases={TUR:'TURKCE',TURK:'TURKCE',TEMELMATEMATIK:'MATEMATIK',COG:'COGRAFYA',TAR:'TARIH',FIZ:'FIZIK',KIM:'KIMYA',BIO:'BIYOLOJI',DIN:'DINKULTURU',DINKULTURUVEAHLAKBILGISI:'DINKULTURU',SFELSEFE:'EKFELSEFE',SOSYALFELSEFE:'EKFELSEFE',TURKDILIVEEDEBIYATI:'EDEBIYAT',TURKDILIVEEDB:'EDEBIYAT',FELSEFEGR:'FELSEFE',FELSEFEGRUBU:'FELSEFE'};
   return aliases[k]||k;
 }
 function difficultyIndex(rapor,es,source){
@@ -590,7 +602,7 @@ function hazirla(){
 
 /* Markup */
 // A small label next to the question: "Zor", or "Zor?" where the band is not certain. A question without a label shows nothing.
-const zHap=z=>z&&z.bant?'<span class="yd-zorluk yd-z-'+z.bant+(z.belirsiz?' yd-belirsiz':'')+'">'+h(ZORLUK.etiketYazi(z.bant,z.belirsiz))+'</span>':'';
+const zHap=z=>z&&z.bant?'<span class="yd-zorluk yd-z-'+z.bant+(z.belirsiz?' yd-belirsiz':'')+(z.dusuk?' yd-dusuk':'')+'"'+(z.dusuk?' title="Güvenilirlik düşük"':'')+'>'+h(ZORLUK.etiketYazi(z.bant,z.belirsiz))+'</span>':'';
 function soruHTML(s,gorsel){
   const etiket='Soru '+(s.a??s.own),ek=s.b!==null&&s.a!==null?' (B kitapçığında '+s.b+')':'',hap=zHap(s.z);
   if(!gorsel)return '<li class="yd-satir"><b>Soru '+s.own+'</b>'+hap+'</li>';
@@ -695,6 +707,6 @@ document.addEventListener('click',ev=>{
   }
 });
 const durumu=()=>S;
-return {kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
+return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
 })();
 function gorunumYanlislar(){return YANLISLAR.gorunum()}

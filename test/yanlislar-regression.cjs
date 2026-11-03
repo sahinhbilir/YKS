@@ -53,7 +53,7 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
   await test('cevap raporu: students, sections and keys from header text (shared strings, stored entries)', async () => {
     const r = await T.raporCoz(bytes(Y.raporXlsx()));
     assert.equal(r.ad, 'SENTETİK-1203'); assert.equal(r.T, 10);
-    assert.deepEqual(copy(r.bolumler.map(b => [b.ad, b.ders, b.n, b.bas])), [['TÜRKÇE-T', 'Türkçe', 4, 0], ['TARİH-T', 'Tarih', 2, 4], ['DİN KÜLTÜRÜ-T', 'Din Kültürü', 2, 6], ['S.FELSEFE-T', 'S.Felsefe', 2, 8]]);
+    assert.deepEqual(copy(r.bolumler.map(b => [b.ad, b.ders, b.n, b.bas])), [['TÜRKÇE-T', 'Türkçe', 4, 0], ['TARİH-T', 'Tarih', 2, 4], ['DİN KÜLTÜRÜ-T', 'Din Kültürü', 2, 6], ['S.FELSEFE-T', 'Ek Felsefe', 2, 8]]);
     assert.deepEqual(copy(r.anahtar), {A: Y.KEY_A, B: Y.KEY_B});
     assert.deepEqual(copy(r.ogrenciler.map(o => [o.no, o.ad, o.sube, o.kit])), [['9001', 'SENTETİK ÖĞRENCİ 1', '205 12/A', 'A'], ['9002', 'SENTETİK ÖĞRENCİ 2', '205 12/A', 'B'], ['9003', 'SENTETİK ÖĞRENCİ 3', '205 12/B', 'A']]);
     assert.deepEqual(copy(r.ogrenciler[1].cev), Y.OGRENCILER[1].cev);
@@ -99,7 +99,7 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
   });
   await test('sections fill the booklet tests in order; counts that do not fit give a Turkish error', async () => {
     const {es} = await kur();
-    assert.deepEqual(copy(es.bolumler.map(b => [b.ders, b.test, b.off])), [['Türkçe', 0, 0], ['Tarih', 1, 0], ['Din Kültürü', 1, 2], ['S.Felsefe', 1, 4]]);
+    assert.deepEqual(copy(es.bolumler.map(b => [b.ders, b.test, b.off])), [['Türkçe', 0, 0], ['Tarih', 1, 0], ['Din Kültürü', 1, 2], ['Ek Felsefe', 1, 4]]);
     assert.deepEqual(copy(es.cift), [2, 3]); assert.deepEqual(copy(es.testler), [4, 6]);
     const rapor = await T.raporCoz(bytes(Y.raporXlsx()));
     const k = kit();k.testler[1].soru = 7;
@@ -142,22 +142,22 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     // ders toggle
     const acik = new Set([0]);assert.deepEqual(copy(T.defterKur(rapor, es, null, rapor.ogrenciler[0], acik).bolumler.map(b => b.ders)), ['Türkçe']);
   });
-  await test('Din / S.Felsefe: a fully blank one is skipped only when the other has an answer', async () => {
+  await test('Din / Ek Felsefe: a fully blank one is skipped only when the other has an answer', async () => {
     const {rapor, es} = await kur(), blank = ['', ''], dersler = o => copy(T.defterKur(rapor, es, null, o, null).bolumler.map(b => b.ders));
     const mk = (din, sf) => ({...rapor.ogrenciler[0], cev: ['A', 'B', 'C', 'D', 'A', 'B', ...din, ...sf]});
-    assert.deepEqual(dersler(mk(blank, ['A', 'A'])), ['S.Felsefe'], 'Din blank, S.Felsefe answered: Din skipped');
-    assert.deepEqual(dersler(mk(['A', ''], blank)), ['Din Kültürü'], 'S.Felsefe blank, Din answered: S.Felsefe skipped');
-    assert.deepEqual(dersler(mk(blank, blank)), ['Din Kültürü', 'S.Felsefe'], 'both blank: nothing answered, both shown');
+    assert.deepEqual(dersler(mk(blank, ['A', 'A'])), ['Ek Felsefe'], 'Din blank, Ek Felsefe answered: Din skipped');
+    assert.deepEqual(dersler(mk(['A', ''], blank)), ['Din Kültürü'], 'Ek Felsefe blank, Din answered: S.Felsefe skipped');
+    assert.deepEqual(dersler(mk(blank, blank)), ['Din Kültürü', 'Ek Felsefe'], 'both blank: nothing answered, both shown');
     assert.deepEqual(dersler(mk(['', 'D'], ['E', 'A'])), ['Din Kültürü'], 'both answered: only the one with a wrong or empty question is listed');
   });
   await test('B student without the çözüm file: numbers only, B numbers, a note; with the map: A images, A numbers, B numbers', async () => {
     const {rapor, es} = await kur(), b = rapor.ogrenciler[1];
     const d0 = T.defterKur(rapor, es, null, b, null);
     assert.equal(d0.gorsel, false);
-    assert.deepEqual(copy(d0.bolumler.map(x => [x.ders, x.sorular.map(s => [s.a, s.b, s.own, s.isaret, s.dogru, s.durum])])), [['Türkçe', [[null, 4, 4, '', 'C', 'bos']]], ['Tarih', [[null, 2, 2, '', 'A', 'bos']]], ['S.Felsefe', [[null, 6, 6, 'A', 'E', 'yanlis']]]]);
+    assert.deepEqual(copy(d0.bolumler.map(x => [x.ders, x.sorular.map(s => [s.a, s.b, s.own, s.isaret, s.dogru, s.durum])])), [['Türkçe', [[null, 4, 4, '', 'C', 'bos']]], ['Tarih', [[null, 2, 2, '', 'A', 'bos']]], ['Ek Felsefe', [[null, 6, 6, 'A', 'E', 'yanlis']]]]);
     const h = T.haritaKur(Y.HARITA, es, rapor), d1 = T.defterKur(rapor, es, h, b, null);
     assert.equal(d1.gorsel, true);
-    assert.deepEqual(copy(d1.bolumler.map(x => [x.ders, x.sorular.map(s => [s.test, s.a, s.b, s.isaret, s.dogru])])), [['Türkçe', [[0, 3, 4, '', 'C']]], ['Tarih', [[1, 1, 2, '', 'A']]], ['S.Felsefe', [[1, 5, 6, 'A', 'E']]]]);
+    assert.deepEqual(copy(d1.bolumler.map(x => [x.ders, x.sorular.map(s => [s.test, s.a, s.b, s.isaret, s.dogru])])), [['Türkçe', [[0, 3, 4, '', 'C']]], ['Tarih', [[1, 1, 2, '', 'A']]], ['Ek Felsefe', [[1, 5, 6, 'A', 'E']]]]);
   });
   // ---- markup ----
   const show = async o => {

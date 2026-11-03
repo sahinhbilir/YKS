@@ -74,17 +74,27 @@ const sig = z => 1 / (1 + Math.exp(-z));
     const kesin = Z.bantla(1.2, 0.2), kenar = Z.bantla(0.9, 0.05), belirsiz = Z.bantla(0.8, 0.3), iki = Z.bantla(-0.76, 0.5);
     assert.deepEqual([kesin.bant, kesin.belirsiz], ['zor', false]);
     assert.deepEqual([kenar.bant, kenar.belirsiz], ['zor', false], '0.9 ± 0.098 stays above 0.75');
-    assert.deepEqual([belirsiz.bant, belirsiz.belirsiz], ['zor', true], '0.8 ± 0.588 reaches Orta');
-    assert.deepEqual([iki.bant, iki.belirsiz], ['kolay', true]);
+    assert.deepEqual([belirsiz.bant, belirsiz.belirsiz], ['zor', false], '0.8 ± 0.588 reaches Orta: one neighbour band is tolerated');
+    assert.deepEqual([iki.bant, iki.belirsiz], ['kolay', false], 'Kolay..Orta only');
+    const uc = Z.bantla(0, 0.8), bes = Z.bantla(0.5, 0.9), sinir = Z.bantla(0, 0.7);
+    assert.deepEqual([uc.bant, uc.belirsiz], ['orta', true], '0 ± 1.57 spans Kolay, Orta, Zor');
+    assert.deepEqual([bes.bant, bes.belirsiz], ['orta', true], 'spans four bands');
+    assert.equal(Z.bantla(0, 0.35).belirsiz, false, '0 ± 0.69 stays inside Orta'); assert.equal(sinir.belirsiz, true, '0 ± 1.37 also spans Kolay, Orta, Zor');
     assert.equal(Z.etiketYazi('zor', true), 'Zor?'); assert.equal(Z.etiketYazi('cok-kolay', false), 'Çok kolay');
     // the cut points are P ≈ .32 / .68 and .12 / .88 for an average student
     near(Z.sig(-0.75), 0.32, 0.005); near(Z.sig(0.75), 0.68, 0.005); near(Z.sig(-2), 0.12, 0.005); near(Z.sig(2), 0.88, 0.005);
-    // fewer than 15 takers (or KR-20 < .5) → "Güvenilirlik düşük" and every label gets "?"
+    // fewer than 15 takers (or KR-20 < .5) → "Güvenilirlik düşük"; the labels get no "?" for it, only the muted chip (m.dusuk)
     const r = rng(7), nrm = normal(r), mat = (N, L) => Array.from({length: N}, () => { const th = nrm(); return Array.from({length: L}, (_, i) => r() < sig(th - (-2 + 4 * i / (L - 1))) ? 1 : -(r() < 0.3 ? 1 : 0)) });
     const kucuk = Z.bolum(mat(12, 20)), buyuk = Z.bolum(mat(60, 20));
     assert.equal(kucuk.dusuk, true); assert.equal(buyuk.dusuk, false);
-    assert(kucuk.maddeler.filter(m => m.bant).every(m => m.belirsiz), 'small group: all labels uncertain');
-    assert(buyuk.maddeler.filter(m => m.bant && !m.belirsiz).length >= 1, 'with 60 takers some labels are certain');
+    assert(kucuk.maddeler.filter(m => m.bant).every(m => m.dusuk === true) && buyuk.maddeler.filter(m => m.bant).every(m => m.dusuk === false), 'low reliability marks the items, not their "?"');
+    assert(kucuk.maddeler.filter(m => m.bant && !m.uc).some(m => !m.belirsiz), 'a small group does not turn every label into "?"');
+    assert(buyuk.maddeler.filter(m => m.bant && !m.uc).every(m => m.belirsiz === (Math.abs(Z.bantNo(m.rel + 1.96 * m.se) - Z.bantNo(m.rel - 1.96 * m.se)) >= 2)));
+    // extreme items keep their band; "?" only below 15 takers
+    const ucRows = N => Array.from({length: N}, (_, i) => [1, i % 2, i % 3 ? 1 : 0, 0]);
+    const e15 = Z.bolum(ucRows(15)).maddeler, e14 = Z.bolum(ucRows(14)).maddeler;
+    assert.deepEqual([e15[0].bant, e15[0].belirsiz, e15[3].bant, e15[3].belirsiz], ['cok-kolay', false, 'cok-zor', false]);
+    assert.deepEqual([e14[0].bant, e14[0].belirsiz, e14[3].bant, e14[3].belirsiz], ['cok-kolay', true, 'cok-zor', true]);
     assert.match(Z.bolumSatiri('Türkçe', kucuk), /^Türkçe · 12 öğrenci · KR-20 [\d,]+ · .*Güvenilirlik düşük$/);
     assert.doesNotMatch(Z.bolumSatiri('Türkçe', buyuk), /Güvenilirlik düşük/);
     assert.equal(Z.bolumSatiri('Türkçe', {n: 27, kr20: 0.82, isaretli: 2, dusuk: false}), 'Türkçe · 27 öğrenci · KR-20 0,82 · 2 madde işaretli');
@@ -148,8 +158,9 @@ const sig = z => 1 / (1 + Math.exp(-z));
     // the strongest student is in tier 1, the weakest in tier H; tiers do not increase with ability
     const t = i => x.ogrenciler.get('s' + i).kademe; assert.equal(t(11), 1); assert.equal(t(0), x.H);
     for (let i = 1; i < 12; i++) assert(t(i) <= t(i - 1));
-    // "?" when ability ± 1.96 SE crosses an edge
-    for (const o of x.ogrenciler.values()) assert.equal(o.belirsiz, x.kenarlar.some(e => e >= o.a - 1.96 * o.se && e <= o.a + 1.96 * o.se));
+    // "?" only when ability ± 1.96 SE spans three or more tiers (two adjacent tiers are tolerated)
+    const tier = v => x.H - x.kenarlar.filter(e => e <= v).length;
+    for (const o of x.ogrenciler.values()) assert.equal(o.belirsiz, Math.abs(tier(o.a - 1.96 * o.se) - tier(o.a + 1.96 * o.se)) >= 2);
     assert(x.ogrenciler.get('s5').belirsiz !== undefined);
   });
   await test('tiers are hidden when the data is insufficient ("Veri yetersiz")', () => {
@@ -249,6 +260,20 @@ const sig = z => 1 / (1 + Math.exp(-z));
     const r = await T.raporCoz(bytes(Y.cokSayfaXlsx([{ad: 'TYT', rows: Y.raporSatirlari(), shared: true}, {ad: 'AYT', rows: ayt, shared: false}]))); assert.doesNotMatch(JSON.stringify(r), /\d{11}/);
   });
 
+  /* ---------------- ders names ---------------- */
+  await test('ders names: the real TYT and AYT section names map to proper names; a name present in both sessions gets the session', () => {
+    const tyt = ['TÜRKÇE-T', 'TARİH-T', 'COĞRAFYA-T', 'FELSEFE-T', 'DİN KÜLTÜRÜ-T', 'S.FELSEFE-T', 'MATEMATİK-T', 'GEOMETRİ-T', 'FİZİK-T', 'KİMYA-T', 'BİYOLOJİ-T'];
+    const ayt = ['TÜRK DİLİ VE EDB-A', 'TARİH.1-A', 'COĞRAFYA.1-A', 'TARİH.2-A', 'COĞRAFYA.2-A', 'FELSEFE GR.-A', 'DİN KÜLTÜRÜ-A', 'S.FELSEFE-A', 'MATEMATİK-A', 'GEOMETRİ-A', 'FİZİK-A', 'KİMYA-A', 'BİYOLOJİ-A'];
+    assert.deepEqual(copy(tyt.map(T.dersAdi)), ['Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'Din Kültürü', 'Ek Felsefe', 'Matematik', 'Geometri', 'Fizik', 'Kimya', 'Biyoloji']);
+    assert.deepEqual(copy(ayt.map(T.dersAdi)), ['Türk Dili ve Edebiyatı', 'Tarih-1', 'Coğrafya-1', 'Tarih-2', 'Coğrafya-2', 'Felsefe Grubu', 'Din Kültürü', 'Ek Felsefe', 'Matematik', 'Geometri', 'Fizik', 'Kimya', 'Biyoloji']);
+    assert.equal(T.dersAdi('YENİ DERS-A'), 'Yeni Ders', 'an unknown name is only title-cased');
+    const hepsi = T.dersOnek([...tyt.map(ad => ({ad, oturum: 'TYT', ders: T.dersAdi(ad)})), ...ayt.map(ad => ({ad, oturum: 'AYT', ders: T.dersAdi(ad)}))]).map(b => b.ders);
+    assert.deepEqual(copy(hepsi), ['Türkçe', 'Tarih', 'Coğrafya', 'Felsefe', 'TYT Din Kültürü', 'TYT Ek Felsefe', 'TYT Matematik', 'TYT Geometri', 'TYT Fizik', 'TYT Kimya', 'TYT Biyoloji',
+      'Türk Dili ve Edebiyatı', 'Tarih-1', 'Coğrafya-1', 'Tarih-2', 'Coğrafya-2', 'Felsefe Grubu', 'AYT Din Kültürü', 'AYT Ek Felsefe', 'AYT Matematik', 'AYT Geometri', 'AYT Fizik', 'AYT Kimya', 'AYT Biyoloji']);
+    assert.equal(new Set(hepsi).size, hepsi.length, 'no two identical labels');
+    assert.deepEqual(copy(T.dersOnek([{oturum: 'TYT', ders: 'Matematik'}, {oturum: 'TYT', ders: 'Fizik'}]).map(b => b.ders)), ['Matematik', 'Fizik'], 'one session: no prefix');
+  });
+
   /* ---------------- booklets per session ---------------- */
   const kitTyt = () => T.kitapcikCoz(Y.kitapcikSayfalari()), kitAyt = sinav => T.kitapcikCoz(Y.kitapcikSayfalariAyt(sinav));
   await test('one A booklet per session: header code gives session and exam number; a booklet of another exam is refused in Turkish', async () => {
@@ -257,7 +282,7 @@ const sig = z => 1 / (1 + Math.exp(-z));
     assert.deepEqual(copy(a.testler.map(x => [x.kod, x.soru])), [['EDB', 5], ['MAT', 3]]);
     const r = await T.raporCoz(bytes(Y.raporXlsx2())), es = T.esle(r, {TYT: t, AYT: a});
     assert.deepEqual(copy(es.oturumlar), ['TYT', 'AYT']); assert.deepEqual(copy(es.testler), [4, 6, 5, 3]); assert.deepEqual(copy(es.aralik), {TYT: [0, 2], AYT: [2, 4]});
-    assert.deepEqual(copy(es.bolumler.map(b => [b.oturum, b.ders, b.test, b.off, b.ri])), [['TYT', 'Türkçe', 0, 0, 0], ['TYT', 'Tarih', 1, 0, 1], ['TYT', 'Din Kültürü', 1, 2, 2], ['TYT', 'S.Felsefe', 1, 4, 3], ['AYT', 'Türk Dili Ve Edb', 2, 0, 4], ['AYT', 'Tarih.1', 2, 3, 5], ['AYT', 'Matematik', 3, 0, 6]]);
+    assert.deepEqual(copy(es.bolumler.map(b => [b.oturum, b.ders, b.test, b.off, b.ri])), [['TYT', 'Türkçe', 0, 0, 0], ['TYT', 'Tarih', 1, 0, 1], ['TYT', 'Din Kültürü', 1, 2, 2], ['TYT', 'Ek Felsefe', 1, 4, 3], ['AYT', 'Türk Dili ve Edebiyatı', 2, 0, 4], ['AYT', 'Tarih-1', 2, 3, 5], ['AYT', 'Matematik', 3, 0, 6]]);
     assert.deepEqual(copy(es.ciftler), [[2, 3]]);
     // only the TYT booklet: the AYT sections have no cut-outs and are left out of the defter
     const yalniz = T.esle(r, {TYT: t}); assert.deepEqual(copy(yalniz.bolumler.map(b => b.oturum)), ['TYT', 'TYT', 'TYT', 'TYT']);
@@ -426,7 +451,8 @@ const sig = z => 1 / (1 + Math.exp(-z));
     assert(source.includes('#ydKok>:not(#ydBaski)') || html.includes('body.yd-yazdir #ydKok>:not(#ydBaski){display:none!important}'), 'the print rule hides everything but the defter');
     // a small group says so
     const kucuk = simulate({N: 12, seed: 3}); await show(kucuk, {harita: false}); const k = T.gorunum(); assert.match(k, /Güvenilirlik düşük/);
-    assert(!/yd-z-[a-z-]+(?!.*yd-belirsiz)/.test('') && [...k.matchAll(/class="yd-zorluk[^"]*"/g)].every(m => /yd-belirsiz/.test(m[0])), 'low reliability: every chip carries a "?"');
+    const kc = [...k.matchAll(/<span class="yd-zorluk[^"]*"[^>]*>([^<]+)<\/span>/g)];
+    assert(kc.length && kc.every(m => /yd-dusuk/.test(m[0])), 'low reliability: every chip is muted');
   });
   await test('nothing from the files is kept: no storage, no notebook field, no network in the module', () => {
     const modul = source.slice(source.indexOf('const YANLISLAR'), source.indexOf('// END YANLISLAR')) + source.slice(source.indexOf('const ZORLUK'), source.indexOf('// END ZORLUK'));

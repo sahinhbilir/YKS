@@ -63,7 +63,7 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   assert.equal(await page.locator('.yd-ogr img').count(),0);
   assert.match(await page.locator('.yd-not').innerText(),/^B kitapçığı: sorular kendi kitapçığından çözülecek$/);
   assert.deepEqual(await page.locator('.yd-satir b').allInnerTexts(),['Soru 4','Soru 2','Soru 6']);
-  assert.deepEqual(await tablo(),[['Türkçe','4 Boş C'],['Tarih','2 Boş A'],['S.Felsefe','6 A E']]);
+  assert.deepEqual(await tablo(),[['Türkçe','4 Boş C'],['Tarih','2 Boş A'],['Ek Felsefe','6 A E']]);
   await noScroll('B student without the map');
   // ---- çözüm file: B student gets the A cut-outs labelled with the B number
   await page.locator('#ydCoz').setInputFiles(cozum);
@@ -73,7 +73,7 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   assert.deepEqual(await page.locator('.yd-soru figcaption > span:first-child').allInnerTexts(),['Soru 3 (B kitapçığında 4)','Soru 1 (B kitapçığında 2)','Soru 5 (B kitapçığında 6)']);
   assert.equal(await page.locator('.yd-ogr img').count(),3);
   assert.equal(await page.locator('.yd-not').count(),0);
-  assert.deepEqual(await tablo(),[['Türkçe','4 Boş C'],['Tarih','2 Boş A'],['S.Felsefe','6 A E']],'last page uses the B numbers');
+  assert.deepEqual(await tablo(),[['Türkçe','4 Boş C'],['Tarih','2 Boş A'],['Ek Felsefe','6 A E']],'last page uses the B numbers');
   // the shared passage (5 - 6) is part of the picture: question 5's cut-out is taller than question 1's
   const hs=await page.evaluate(()=>Object.fromEntries([...document.querySelectorAll('#ydBaski img')].map(i=>[i.alt,i.naturalHeight])));
   assert(hs['Soru 5']>hs['Soru 1']*1.8,JSON.stringify(hs));

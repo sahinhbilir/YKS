@@ -96,9 +96,10 @@ function rasch(X) {
 const BANTLAR = [['cok-kolay', 'Çok kolay'], ['kolay', 'Kolay'], ['orta', 'Orta'], ['zor', 'Zor'], ['cok-zor', 'Çok zor']];
 const BANT_AD = Object.fromEntries(BANTLAR);
 const bantNo = r => r <= -2 ? 0 : r <= -0.75 ? 1 : r < 0.75 ? 2 : r < 2 ? 3 : 4;
-// The label is uncertain when b ± 1.96·SE reaches into more than one band.
+// The band is the point estimate. "?" only when b ± 1.96·SE spans three or more bands (we cannot even say "this one or a neighbour"):
+// at school sizes SE ≈ 0.45–0.6 logits, so the interval (≈ ±1 logit) usually touches one neighbour band, which the band already tolerates.
 function bantla(rel, se) {
-  const i = bantNo(rel), belirsiz = se !== null && se !== undefined && bantNo(rel - Z * se) !== bantNo(rel + Z * se);
+  const i = bantNo(rel), belirsiz = se !== null && se !== undefined && Math.abs(bantNo(rel + Z * se) - bantNo(rel - Z * se)) >= 2;
   return {bant: BANTLAR[i][0], belirsiz};
 }
 const etiketYazi = (bant, belirsiz) => BANT_AD[bant] + (belirsiz ? '?' : '');
@@ -133,9 +134,9 @@ function bolum(rows, opt = {}) {
     Object.assign(m, {n, dogru, yanlis, bos, p: n ? dogru / n : null, aralik: wilson(dogru, n), yanlisOran: n ? yanlis / n : null, bosOran: n ? bos / n : null, rit});
     if (R && R.uygun) { m.b = R.b[j]; m.se = R.se[j]; m.infit = R.infit[j]; m.outfit = R.outfit[j]; m.uc = R.uc[j] } else { m.b = null; m.se = null; m.infit = null; m.outfit = null; m.uc = true }
     if (!m.uc) { m.rel = m.b - R.mu; Object.assign(m, bantla(m.rel, m.se)) }
-    else if (n && (dogru === n || dogru === 0)) { m.bant = dogru === n ? 'cok-kolay' : 'cok-zor'; m.belirsiz = true; m.rel = null }
+    else if (n && (dogru === n || dogru === 0)) { m.bant = dogru === n ? 'cok-kolay' : 'cok-zor'; m.belirsiz = n < EN_AZ_OGRENCI; m.rel = null }
     else { m.bant = null; m.belirsiz = false; m.rel = null }
-    if (m.bant && dusuk) m.belirsiz = true;
+    m.dusuk = dusuk;
     m.bayrak = bayraklar(m.rit, m.infit, m.outfit);
   });
   return {n, k: canli.length, kr20: kr ? kr.kr20 : null, sem: kr ? kr.sem : null, sd: kr ? kr.sd : null, ortSkor: kr ? kr.ort : null, dusuk,

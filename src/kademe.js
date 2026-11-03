@@ -67,8 +67,10 @@ function hesapla(kayitlar) {
     const kenarlar = Array.from({length: H - 1}, (_, i) => lo + (i + 1) * (hi - lo) / H);
     Object.assign(d, {yetersiz: false, G, H, guvenirlik: G * G / (1 + G * G), kenarlar, alt: lo, ust: hi});
     for (const o of ogrenciler) {
-      o.kademe = H - kenarlar.filter(e => e <= o.a).length;
-      o.belirsiz = kenarlar.some(e => e >= o.a - Z * o.se && e <= o.a + Z * o.se);
+      const t = x => H - kenarlar.filter(e => e <= x).length;
+      o.kademe = t(o.a);
+      // "?" only when a ± 1.96·SE spans three or more tiers; two adjacent tiers are within what the tier already tolerates.
+      o.belirsiz = Math.abs(t(o.a - Z * o.se) - t(o.a + Z * o.se)) >= 2;
     }
   }
   return dersler;
@@ -110,10 +112,13 @@ const yetenek = (no, oturum, kod) => { const d = model().dersler.get(anahtarDers
 const KD = {oturum: 'TYT', sube: '', sira: '', secili: null};
 const dersAdi = (oturum, kod) => (DENEME_DERSLER[oturum].find(d => d[0] === kod) || [kod, kod])[1];
 const kademeYazi = (o, belirsiz) => o.kademe + (belirsiz ?? o.belirsiz ? '?' : '');
-function hucreRengi(t, H) {
-  if (H < 2) return '';
-  const f = (t - 1) / (H - 1), pay = Math.round(Math.abs(f - 0.5) * 2 * 55);
-  return pay ? 'background:color-mix(in srgb,var(--e-' + (f < 0.5 ? 'ok' : 'bad') + ') ' + pay + '%,var(--e-panel))' : '';
+// One sequential hue: tier 1 (strongest) gets the deepest fill, the weakest tier the lightest, scaled by the ders's tier count H.
+// Light text goes on the deep half (class kd-g), see kademe.css for the base colour and the contrast it was checked at.
+const KD_DOLGU = [88, 12], KD_ACIK_ESIK = 67;
+function hucreDolgu(t, H) {
+  if (!(H >= 2)) return {pay: KD_DOLGU[1], acik: false};
+  const pay = Math.round(KD_DOLGU[0] - (t - 1) / (H - 1) * (KD_DOLGU[0] - KD_DOLGU[1]));
+  return {pay, acik: pay >= KD_ACIK_ESIK};
 }
 function sparkline(o, d) {
   const s = o.seri.slice().sort((a, b) => String(a.tarih).localeCompare(String(b.tarih)));
@@ -140,14 +145,15 @@ function panelIc() {
   const sira = dl.find(d => d.key === KD.sira);
   const ad = (a, b) => a.sube.localeCompare(b.sube, 'tr', {numeric: true}) || String(a.ad).localeCompare(String(b.ad), 'tr');
   ogr.sort((a, b) => sira ? (deger(a, sira) ?? 99) - (deger(b, sira) ?? 99) || (sira.ogrenciler.get(b.id)?.a ?? -99) - (sira.ogrenciler.get(a.id)?.a ?? -99) || ad(a, b) : ad(a, b));
-  const bas = dl.map(d => '<th scope="col" class="kd-ders"><button type="button" data-kd-sira="' + d.key + '" aria-pressed="' + (KD.sira === d.key) + '" aria-label="' + esc(dersAdi(d.oturum, d.kod) + ' derse göre sırala') + '"><b>' + esc(dersAdi(d.oturum, d.kod)) + '</b>' +
+  const bas = dl.map(d => '<th scope="col" class="kd-ders"><button type="button" data-kd-sira="' + d.key + '" aria-pressed="' + (KD.sira === d.key) + '" aria-label="' + esc(dersAdi(d.oturum, d.kod) + ' derse göre sırala') + '"' + (d.yetersiz ? '' : ' title="' + esc(d.H + ' kademe · güvenilirlik ' + f2(d.guvenirlik)) + '"') + '><b>' + esc(dersAdi(d.oturum, d.kod)) + '</b>' +
     (d.yetersiz ? '<span class="mini">Veri yetersiz</span>' : '<span class="mini">' + d.H + ' kademe · ' + f2(d.guvenirlik) + '</span>') + '</button></th>').join('');
   const sec = KD.secili && m.kimlik.has(KD.secili.id) ? KD.secili : null;
   const govde = ogr.map(k => '<tr><th scope="row">' + esc(k.ad) + ' <span class="mini">' + esc(k.sube) + '</span></th>' + dl.map(d => {
     const o = d.ogrenciler.get(k.id);
     if (!o || d.yetersiz) return '<td class="kd-hucre bos">—</td>';
     const on = sec && sec.id === k.id && sec.key === d.key;
-    return '<td class="kd-hucre" style="' + hucreRengi(o.kademe, d.H) + '"><button type="button" data-kd-hucre="' + esc(k.id) + '|' + d.key + '" aria-pressed="' + on + '" aria-label="' + esc(k.ad + ', ' + dersAdi(d.oturum, d.kod) + ': ' + o.kademe + '. kademe' + (o.belirsiz ? ', belirsiz' : '')) + '">' + kademeYazi(o) + '</button></td>';
+    const dl = hucreDolgu(o.kademe, d.H);
+    return '<td class="kd-hucre' + (dl.acik ? ' kd-g' : '') + (o.belirsiz ? ' kd-bel' : '') + '" style="--kd:' + dl.pay + '%"><button type="button" data-kd-hucre="' + esc(k.id) + '|' + d.key + '" aria-pressed="' + on + '" aria-label="' + esc(k.ad + ', ' + dersAdi(d.oturum, d.kod) + ': ' + o.kademe + '. kademe' + (o.belirsiz ? ', belirsiz' : '')) + '">' + kademeYazi(o) + '</button></td>';
   }).join('') + '</tr>').join('');
   let detay = '';
   if (sec) {

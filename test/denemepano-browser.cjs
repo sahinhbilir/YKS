@@ -313,7 +313,16 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
   assert(basliklar.some(t=>/Matematik\s+\d kademe · 0,\d\d/.test(t)),basliklar.join('|'));
   assert.deepEqual(await page.locator('#kdKok thead .kd-ders b').allInnerTexts(),['Türkçe','Tarih','Coğrafya','Felsefe','Din Kültürü','Matematik','Geometri','Fizik','Kimya','Biyoloji']);
   // colour-coded with the palette tokens
-  assert((await page.locator('#kdKok .kd-hucre').evaluateAll(l=>l.map(c=>c.getAttribute('style')||''))).some(s=>/color-mix\(in srgb,var\(--e-(ok|bad)\)/.test(s)));
+  // one sequential blue scale: no red or green, tier 1 the deepest fill, every cell readable (contrast >= 4.5), a "?" cell hatched not recoloured
+  const kdHuc=await page.locator('#kdKok td.kd-hucre:not(.bos)').evaluateAll(l=>{
+    const rgb=c=>{const v=c.match(/[\d.]+/g).slice(0,3).map(Number);return /^color\(/.test(c)?v.map(x=>x*255):v},lum=c=>{const f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4};return .2126*f(c[0])+.7152*f(c[1])+.0722*f(c[2])};
+    return l.map(td=>{const b=td.querySelector('button'),bg=rgb(getComputedStyle(td).backgroundColor),fg=rgb(getComputedStyle(b).color),a=lum(bg),z=lum(fg);
+      return {t:parseInt(b.textContent,10),bel:td.classList.contains('kd-bel'),bg,L:a,cr:(Math.max(a,z)+.05)/(Math.min(a,z)+.05),hatch:getComputedStyle(b).backgroundImage!=='none'}})});
+  assert(kdHuc.length>10&&kdHuc.every(c=>c.cr>=4.5),'contrast: '+Math.min(...kdHuc.map(c=>c.cr)));
+  assert(kdHuc.every(c=>c.bg[2]>=c.bg[0]&&c.bg[2]>=c.bg[1]-1),'blue scale, no red or green');
+  assert(kdHuc.every(c=>c.bel===c.hatch),'a "?" cell is hatched');
+  const t1=kdHuc.filter(c=>c.t===1).map(c=>c.bg.join()),rest=kdHuc.filter(c=>c.t>1).map(c=>c.bg.join());assert(t1.length&&new Set(t1).size===1&&rest.every(x=>x!==t1[0]),'tier 1 has its own, strongest fill in every ders');
+  assert(await page.locator('#kdKok .kd-tablo tbody th[scope="row"]').first().evaluate(e=>getComputedStyle(e).position==='sticky'),'student column is sticky');
   // şube filter
   const satir=()=>page.locator('#kdKok tbody tr').count();assert.equal(await satir(),30);
   await page.locator('#kdKok [data-kd-sube]').selectOption('12-A');assert.equal(await satir(),15);
@@ -337,6 +346,14 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
   if(width===390)assert(await page.locator('#kdKok .et-kaydir').evaluate(e=>e.scrollWidth>e.clientWidth),'the table scrolls inside its own container');
   await page.locator('#kdKok').scrollIntoViewIfNeeded();
   if(process.env.YKS_UI_ARTIFACTS)await page.locator('#kdKok').screenshot({path:path.join(out,'kademeler-'+width+'.png')});
+  if(width===1280){ // dark theme: the same readable scale
+    await page.emulateMedia({colorScheme:'dark'});
+    const koyu=await page.locator('#kdKok td.kd-hucre:not(.bos)').evaluateAll(l=>{const rgb=c=>{const v=c.match(/[\d.]+/g).slice(0,3).map(Number);return /^color\(/.test(c)?v.map(x=>x*255):v},lum=c=>{const f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4};return .2126*f(c[0])+.7152*f(c[1])+.0722*f(c[2])};
+      return l.map(td=>{const a=lum(rgb(getComputedStyle(td).backgroundColor)),z=lum(rgb(getComputedStyle(td.querySelector('button')).color));return (Math.max(a,z)+.05)/(Math.min(a,z)+.05)})});
+    assert(koyu.length>10&&Math.min(...koyu)>=4.5,'dark contrast '+Math.min(...koyu));
+    if(process.env.YKS_UI_ARTIFACTS)await page.locator('#kdKok').screenshot({path:path.join(out,'kademeler-dark-1280.png')});
+    await page.emulateMedia({colorScheme:'light'});
+  }
   // the student's own Denemelerim: a row of chips
   await page.evaluate(()=>{EK.denemeKlasik=true;EK.ogr=0;ciz()});
   const hap=await page.locator('#kdHaplar .kd-hap').allInnerTexts();assert(hap.length>=5,hap.join('|'));

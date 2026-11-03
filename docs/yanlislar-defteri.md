@@ -50,7 +50,7 @@ Filter choices and answer-file data remain in page memory only. Difficulty is co
   booklet order, each with "Soru 12" and a small difficulty chip ("Zor", or "Zor?" when the band is not certain). A student without wrong or empty questions is shown
   on screen but not printed.
 - The last page of each defter is a table per ders: **soru · senin cevabın (or Boş) · doğru cevap**, so the student tries first.
-- **Din Kültürü / S.Felsefe**: if a student left one of them entirely blank and answered at least one question of the
+- **Din Kültürü / Ek Felsefe** (report: S.FELSEFE): if a student left one of them entirely blank and answered at least one question of the
   other, the blank one is skipped. Other untaken sections are not guessed; untick them.
 - **B booklet students** get the A pictures labelled "Soru 12 (B kitapçığında 7)" and their answer key in their own B
   numbers. Without the çözüm file they get a numbers-only list by B number per ders and the line "B kitapçığı: sorular
@@ -66,10 +66,16 @@ to PDF, 1280 and 390 widths). Source: `src/yanlislar.js`, `src/yanlislar.css`.
 
 Everything below is computed in the browser, in memory; nothing is stored or sent. Code: `src/zorluk.js` (item analysis), `src/kademe.js` (tiers).
 
+### Ders names
+
+Report sections are shown under proper names (checkboxes, defter headings, answer tables, Madde kalitesi): TÜRKÇE → Türkçe, TÜRK DİLİ VE EDB → Türk Dili ve Edebiyatı,
+TARİH.1 → Tarih-1, COĞRAFYA.2 → Coğrafya-2, FELSEFE GR. → Felsefe Grubu, S.FELSEFE → Ek Felsefe, the rest by their plain names (Matematik, Geometri, Fizik, Kimya, Biyoloji, Din Kültürü). A name that exists in
+both sessions gets the session ("TYT Matematik", "AYT Matematik"); otherwise there is no prefix. An unknown section is only title-cased.
+
 ### Soru zorluğu (from the cevap raporu)
 
 Per session and per ders section, from all students in the report. Correct = 1, wrong or blank = 0 (wrong and blank rates are kept).
-A student who left the whole section blank did not take it and is not counted (Din vs S.Felsefe, an AYT section outside the field).
+A student who left the whole section blank did not take it and is not counted (Din vs Ek Felsefe, an AYT section outside the field).
 A cancelled question (key not A-E) is left out of the totals. With a valid A↔B map the A and B students are pooled on A numbering;
 without it each booklet is analysed separately on its own numbers (smaller n, which the reliability line shows).
 
@@ -82,14 +88,17 @@ separation G = SD_true/RMSE (SD_true² = SD_obs² − mean SE²) with reliabilit
 **Five bands** from `b − μθ` (logits, relative to the mean person ability of the section): ≤ −2 Çok kolay · (−2, −0.75] Kolay ·
 (−0.75, 0.75) Orta · [0.75, 2) Zor · ≥ 2 Çok zor. Reasons: ±0.75 logit is P ≈ .32 / .68 for an average student, a band where
 an item neither separates nobody nor everybody; ±2 logits is P ≈ .12 / .88, where an item is nearly always missed or nearly always
-answered. If `b ± 1.96·SE` reaches more than one band the label carries "?" ("Zor?"); the chip Zor still includes Zor? items.
-An item everybody got right (or nobody) has no `b`; it is labelled Çok kolay? / Çok zor? and reported as extreme.
+answered. The band is the point estimate. The label carries "?" ("Zor?") only when `b ± 1.96·SE` spans **three or more** bands, i.e. when we cannot even say
+"this band or a neighbour"; the chip Zor still includes Zor? items. Reason: at n ≈ 27 the SE is about 0.45–0.6 logits, so a 95% interval is about ±1 logit,
+wider than one band (0.75–1.25 logits), and it touches a neighbouring band for almost every item; a "?" on every chip would carry no information. The band is the
+best estimate and is reliable to within one neighbour band. An item everybody got right (or nobody) has no `b`; it keeps Çok kolay / Çok zor and is reported as extreme,
+with "?" only when fewer than 15 students took the section.
 
 **Flags** (kept next to, never instead of, the label; thresholds of Ebel & Frisbie 1991 for r_it, 0.5–1.5 for the Rasch mean squares,
 Wright & Masters 1982): `r_it < 0` "Ayırt etmiyor: anahtarı kontrol edin", `0 ≤ r_it < 0.20` "Zayıf ayırt edicilik", infit or outfit
 outside 0.5–1.5 "Uyumsuz". They are shown in the on-screen **Madde kalitesi** tables (soru, p, b relative to μθ, r_it, flag), not printed.
 The section line reads "Türkçe · 27 öğrenci · KR-20 0,82 · 2 madde işaretli"; with fewer than 15 takers or KR-20 < 0.50 it adds
-"Güvenilirlik düşük" and every label gets "?". If Konu Takibi holds the Madde Analizi of the same exam, the Spearman correlation between our `p` and
+"Güvenilirlik düşük"; that line is where low reliability is said, the labels get no "?" for it and their chips are shown muted instead. If Konu Takibi holds the Madde Analizi of the same exam, the Spearman correlation between our `p` and
 the school's `p` is added as "okul verisi ρ 0,71".
 
 ### Kademeler (from all exams in the notebook)
@@ -104,8 +113,8 @@ every student who sat it (at least 5, otherwise the exam is skipped). With `m_e`
 
 Person separation `G = SD_true/RMSE`; tiers `H = floor((4G+1)/3)` (Wright & Masters 1982 strata) clamped to 2..6. With `SD_true² ≤ 0` or fewer
 than 8 students the ders has no tiers ("Veri yetersiz"). Edges are equal width between the 5th and 95th percentile of the abilities;
-tier 1 is the strongest; a student's tier shows "?" when `a ± 1.96·SE` crosses an edge. The Deneme panosu shows **Kademeler** (students ×
-ders, şube and TYT/AYT filters, sort by a ders, click a cell for the ability trend); Denemelerim shows the chips "Matematik · 2. kademe / 4".
+tier 1 is the strongest; a student's tier is the point estimate and shows "?" only when `a ± 1.96·SE` spans three or more tiers (same rule and reason as the item bands). The Deneme panosu shows **Kademeler** (students ×
+ders, şube and TYT/AYT filters, sort by a ders, click a cell for the ability trend); the cells use one blue scale (tier 1 the deepest fill, the weakest tier the lightest, scaled by the ders's tier count, so 1/2 and 1/6 differ; light text on the deep half, contrast ≥ 4.5 in light and dark themes) and a "?" cell is hatched with a dashed inner outline, never another colour. The header reads "6 kademe · 0,95" (title: "6 kademe · güvenilirlik 0,95"); the table scrolls inside its card and keeps the student column fixed. Denemelerim shows the chips "Matematik · 2. kademe / 4".
 
 **Kendi seviyesi** keeps, per student and ders, the wrong or empty questions with `0.35 ≤ P ≤ 0.80`, `P = σ(a_s − (b − μθ))`:
 learnable, neither trivial nor hopeless. Report sections are matched to Deneme ders codes by name (TÜRKÇE-T → TYT turkce, TARİH.1-A →
@@ -113,8 +122,7 @@ AYT tarih1, …; the student by Öğrenci No). A student (or ders) without tiers
 
 ### Known limits
 
-- **Small n.** A school sample of 15–60 students gives `b` standard errors of 0.3–0.5 logits for mid-range items, so most labels are
-  uncertain ("?"). Items near the cut points move bands with a handful of students; the labels rank questions, they do not measure them.
+- **Small n.** A school sample of 15–60 students gives `b` standard errors of 0.3–0.5 logits for mid-range items, so a band is reliable to within one neighbour band only. Items near the cut points move bands with a handful of students; the labels rank questions, they do not measure them.
   Five-question sections (Tarih, Coğrafya, Felsefe, Din) have KR-20 near or below 0.5 and are flagged "Güvenilirlik düşük".
 - Without the A↔B map the two booklets are separate small groups; AYT fields leave 4–13 takers per section.
 - Rasch assumes equal discrimination; misfit flags item types that break this (guessing, key errors).

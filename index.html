@@ -1729,6 +1729,7 @@ button.sr-ad{border:0;background:none;padding:0;font:inherit;color:inherit;text-
 #ydKok .yd-zorluk{display:inline-block;font-weight:600;font-size:.75rem;line-height:1;padding:3px 9px;border-radius:999px;border:1px solid #666;color:#000;background:#fff;white-space:nowrap}
 #ydKok .yd-z-cok-kolay{background:#e6e6e6;border-color:#bbb}#ydKok .yd-z-kolay{background:#f1f1f1;border-color:#aaa}#ydKok .yd-z-orta{background:#fff;border-color:#888}#ydKok .yd-z-zor{background:#fff;border:2px solid #444}#ydKok .yd-z-cok-zor{background:#000;color:#fff;border-color:#000}
 #ydKok .yd-belirsiz{border-style:dashed}
+#ydKok .yd-dusuk{opacity:.55}
 #ydKok .yd-liste{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 18px}
 #ydKok .yd-satir{border-bottom:1px solid #ddd;break-inside:avoid}
 #ydKok .yd-anahtar{border-top:2px dashed #999;padding-top:12px;display:flex;flex-direction:column;gap:8px}
@@ -1766,7 +1767,7 @@ button.sr-ad{border:0;background:none;padding:0;font:inherit;color:inherit;text-
 /* END YANLISLAR */
 
 /* BEGIN KADEME */
-/* Kademeler (Deneme panosu) and the tier chips of Denemelerim. Tokens come from #dpKok (etutler.css); the chips fall back to the site's tokens. */
+/* Kademeler (Deneme panosu) and the tier chips of Denemelerim. Tokens come from #dpKok (etutler.css); the chips fall back to the site's tokens. */ Fill = --kd-ton mixed with the panel at 12–88%; white text from 67% (contrast >= 4.8 on every step for H = 2..6, light and dark).
 #kdKok{display:flex;flex-direction:column;gap:12px;min-width:0}
 #kdKok .et-seg select{border:0;background:transparent;color:var(--e-fg);font-size:.75rem;font-weight:500;padding:4px 8px;border-radius:999px;cursor:pointer;max-width:100%}
 #kdKok .kd-tablo th:first-child,#kdKok .kd-tablo td:first-child{text-align:left;white-space:nowrap}
@@ -1775,9 +1776,18 @@ button.sr-ad{border:0;background:none;padding:0;font:inherit;color:inherit;text-
 #kdKok .kd-ders button[aria-pressed="true"] b{text-decoration:underline}
 #kdKok .kd-ders .mini{white-space:nowrap}
 #kdKok .kd-hucre{text-align:center;padding:0;min-width:3.4rem}
-#kdKok .kd-hucre.bos{color:var(--e-muted)}
+#kdKok{--kd-ton:#0a3573;--kd-beyaz:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #kdKok{--kd-ton:#2a63b8}}
+:root[data-theme="dark"] #kdKok{--kd-ton:#2a63b8}
+#kdKok .kd-hucre{background:color-mix(in srgb,var(--kd-ton) var(--kd,0%),var(--e-panel))}
+#kdKok .kd-hucre.kd-g button{color:var(--kd-beyaz)}
+/* a "?" cell keeps its colour and is hatched with a dashed inner outline */
+#kdKok .kd-hucre.kd-bel button{background-image:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,currentColor 20%,transparent) 5px 6px);outline:1px dashed currentColor;outline-offset:-3px}
+#kdKok .kd-hucre.kd-bel button[aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
+#kdKok .kd-hucre.bos{background:none;color:var(--e-muted)}
+#kdKok .kd-tablo thead th:first-child{left:0;z-index:3;position:sticky;background:var(--e-panel)}
 #kdKok .kd-hucre button{display:block;width:100%;min-height:34px;background:none;border:0;color:var(--e-fg);font:inherit;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}
-#kdKok .kd-hucre button[aria-pressed="true"]{outline:2px solid var(--e-fg);outline-offset:-2px}
+#kdKok .kd-hucre button[aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px;box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--e-panel) 45%,transparent)}
 #kdKok .kd-detay{border:1px solid var(--e-line);border-radius:var(--e-r);padding:12px;display:flex;flex-direction:column;gap:6px;background:var(--e-panel)}
 #kdKok .kd-detay-ust{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
 #kdKok .kd-iz{width:100%;max-width:520px;height:auto}
@@ -23448,6 +23458,16 @@ const YANLISLAR = (() => {
 const clean=s=>String(s??'').replace(/\s+/gu,' ').trim();
 // Upper case without Turkish marks, letters and digits only: "TC Kimlik No" and "T.C. KİMLİK NO" both give TCKIMLIKNO.
 const key=s=>clean(s).toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/[^A-Z0-9]/gu,'');
+/* Proper ders names for the report's section names ("TÜRK DİLİ VE EDB-A" -> "Türk Dili ve Edebiyatı", "TARİH.1-A" -> "Tarih-1"). Unknown names are only title-cased. */
+const DERS_ADLARI={TURKCE:'Türkçe',TURKDILIVEEDB:'Türk Dili ve Edebiyatı',TURKDILIVEEDEBIYATI:'Türk Dili ve Edebiyatı',EDEBIYAT:'Türk Dili ve Edebiyatı',TARIH:'Tarih',TARIH1:'Tarih-1',TARIH2:'Tarih-2',COGRAFYA:'Coğrafya',COGRAFYA1:'Coğrafya-1',COGRAFYA2:'Coğrafya-2',
+  FELSEFE:'Felsefe',FELSEFEGR:'Felsefe Grubu',FELSEFEGRUBU:'Felsefe Grubu',DINKULTURU:'Din Kültürü',DINKULTURUVEAHLAKBILGISI:'Din Kültürü',SFELSEFE:'Ek Felsefe',EKFELSEFE:'Ek Felsefe',SOSYALFELSEFE:'Ek Felsefe',
+  MATEMATIK:'Matematik',GEOMETRI:'Geometri',FIZIK:'Fizik',KIMYA:'Kimya',BIYOLOJI:'Biyoloji'};
+const dersAdi=ad=>{const t=clean(ad).replace(/-[TA]$/u,'');return DERS_ADLARI[key(t)]||title(t).replace(/\.\p{L}/gu,m=>m.toLocaleUpperCase('tr-TR'))};
+function dersOnek(bolumler){
+  const say=new Map();for(const b of bolumler){if(!say.has(b.ders))say.set(b.ders,new Set());say.get(b.ders).add(b.oturum)}
+  for(const b of bolumler)if(say.get(b.ders).size>1)b.ders=b.oturum+' '+b.ders;
+  return bolumler;
+}
 const title=s=>clean(s).toLocaleLowerCase('tr-TR').replace(/(^|[\s(])\p{L}/gu,m=>m.toLocaleUpperCase('tr-TR'));
 const harfOK=s=>/^[A-E]$/u.test(s);
 
@@ -23635,7 +23655,7 @@ async function raporCoz(bytes){
       if(key(s.ad)==='TOPLAM')return;
       const son=sec[i+1]?sec[i+1].c:Infinity,qs=qcols.filter(q=>colNo(q.c)>=s.c&&colNo(q.c)<son);
       if(!qs.length||qs.some((q,k)=>q.n!==k+1))fail(s.ad+' bölümünün soru sütunları (S1, S2, …) okunamadı.');
-      bolumler.push({ad:s.ad,ders:title(s.ad.replace(/-[TA]$/u,'')).replace(/\.\p{L}/gu,m=>m.toLocaleUpperCase('tr-TR')),n:qs.length,bas});bas+=qs.length;sutunlar.push(...qs.map(q=>q.c));
+      bolumler.push({ad:s.ad,ders:dersAdi(s.ad),n:qs.length,bas});bas+=qs.length;sutunlar.push(...qs.map(q=>q.c));
     });
     if(!bolumler.length)fail('Soru bölümü bulunamadı.');
     const sonekler=new Set(bolumler.map(b=>/-A$/u.test(b.ad)?'AYT':'TYT'));
@@ -23683,6 +23703,8 @@ async function raporCoz(bytes){
     }
     ofset+=p.T;
   }
+  // The same ders name in both sessions ("Matematik") is prefixed with its session; otherwise no prefix.
+  dersOnek(bolumler);
   const ad=adlar[0]||'';
   return {ad,sinavNo:sayiOf(ad)||'',oturumlar:parcalar.map(p=>p.oturum),bolumler,T:toplam,anahtar,ogrenciler};
 }
@@ -23825,7 +23847,7 @@ function zorlukAnaliz(rapor,es,harita,dis){
 const level=p=>p>=.75?'kolay':p<.25?'zor':'orta';
 function courseKey(s){
   const k=key(clean(s).replace(/-[TA]$/iu,'').replace(/\b(?:TYT|AYT)\b/giu,''));
-  const aliases={TUR:'TURKCE',TURK:'TURKCE',TEMELMATEMATIK:'MATEMATIK',COG:'COGRAFYA',TAR:'TARIH',FIZ:'FIZIK',KIM:'KIMYA',BIO:'BIYOLOJI',DIN:'DINKULTURU',DINKULTURUVEAHLAKBILGISI:'DINKULTURU',SFELSEFE:'EKFELSEFE',SOSYALFELSEFE:'EKFELSEFE',TURKDILIVEEDEBIYATI:'EDEBIYAT',TURKDILIVEEDB:'EDEBIYAT',FELSEFEGR:'FELSEFE'};
+  const aliases={TUR:'TURKCE',TURK:'TURKCE',TEMELMATEMATIK:'MATEMATIK',COG:'COGRAFYA',TAR:'TARIH',FIZ:'FIZIK',KIM:'KIMYA',BIO:'BIYOLOJI',DIN:'DINKULTURU',DINKULTURUVEAHLAKBILGISI:'DINKULTURU',SFELSEFE:'EKFELSEFE',SOSYALFELSEFE:'EKFELSEFE',TURKDILIVEEDEBIYATI:'EDEBIYAT',TURKDILIVEEDB:'EDEBIYAT',FELSEFEGR:'FELSEFE',FELSEFEGRUBU:'FELSEFE'};
   return aliases[k]||k;
 }
 function difficultyIndex(rapor,es,source){
@@ -24033,7 +24055,7 @@ function hazirla(){
 
 /* Markup */
 // A small label next to the question: "Zor", or "Zor?" where the band is not certain. A question without a label shows nothing.
-const zHap=z=>z&&z.bant?'<span class="yd-zorluk yd-z-'+z.bant+(z.belirsiz?' yd-belirsiz':'')+'">'+h(ZORLUK.etiketYazi(z.bant,z.belirsiz))+'</span>':'';
+const zHap=z=>z&&z.bant?'<span class="yd-zorluk yd-z-'+z.bant+(z.belirsiz?' yd-belirsiz':'')+(z.dusuk?' yd-dusuk':'')+'"'+(z.dusuk?' title="Güvenilirlik düşük"':'')+'>'+h(ZORLUK.etiketYazi(z.bant,z.belirsiz))+'</span>':'';
 function soruHTML(s,gorsel){
   const etiket='Soru '+(s.a??s.own),ek=s.b!==null&&s.a!==null?' (B kitapçığında '+s.b+')':'',hap=zHap(s.z);
   if(!gorsel)return '<li class="yd-satir"><b>Soru '+s.own+'</b>'+hap+'</li>';
@@ -24138,7 +24160,7 @@ document.addEventListener('click',ev=>{
   }
 });
 const durumu=()=>S;
-return {kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
+return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
 })();
 function gorunumYanlislar(){return YANLISLAR.gorunum()}
 // END YANLISLAR
@@ -24759,9 +24781,10 @@ function rasch(X) {
 const BANTLAR = [['cok-kolay', 'Çok kolay'], ['kolay', 'Kolay'], ['orta', 'Orta'], ['zor', 'Zor'], ['cok-zor', 'Çok zor']];
 const BANT_AD = Object.fromEntries(BANTLAR);
 const bantNo = r => r <= -2 ? 0 : r <= -0.75 ? 1 : r < 0.75 ? 2 : r < 2 ? 3 : 4;
-// The label is uncertain when b ± 1.96·SE reaches into more than one band.
+// The band is the point estimate. "?" only when b ± 1.96·SE spans three or more bands (we cannot even say "this one or a neighbour"):
+// at school sizes SE ≈ 0.45–0.6 logits, so the interval (≈ ±1 logit) usually touches one neighbour band, which the band already tolerates.
 function bantla(rel, se) {
-  const i = bantNo(rel), belirsiz = se !== null && se !== undefined && bantNo(rel - Z * se) !== bantNo(rel + Z * se);
+  const i = bantNo(rel), belirsiz = se !== null && se !== undefined && Math.abs(bantNo(rel + Z * se) - bantNo(rel - Z * se)) >= 2;
   return {bant: BANTLAR[i][0], belirsiz};
 }
 const etiketYazi = (bant, belirsiz) => BANT_AD[bant] + (belirsiz ? '?' : '');
@@ -24796,9 +24819,9 @@ function bolum(rows, opt = {}) {
     Object.assign(m, {n, dogru, yanlis, bos, p: n ? dogru / n : null, aralik: wilson(dogru, n), yanlisOran: n ? yanlis / n : null, bosOran: n ? bos / n : null, rit});
     if (R && R.uygun) { m.b = R.b[j]; m.se = R.se[j]; m.infit = R.infit[j]; m.outfit = R.outfit[j]; m.uc = R.uc[j] } else { m.b = null; m.se = null; m.infit = null; m.outfit = null; m.uc = true }
     if (!m.uc) { m.rel = m.b - R.mu; Object.assign(m, bantla(m.rel, m.se)) }
-    else if (n && (dogru === n || dogru === 0)) { m.bant = dogru === n ? 'cok-kolay' : 'cok-zor'; m.belirsiz = true; m.rel = null }
+    else if (n && (dogru === n || dogru === 0)) { m.bant = dogru === n ? 'cok-kolay' : 'cok-zor'; m.belirsiz = n < EN_AZ_OGRENCI; m.rel = null }
     else { m.bant = null; m.belirsiz = false; m.rel = null }
-    if (m.bant && dusuk) m.belirsiz = true;
+    m.dusuk = dusuk;
     m.bayrak = bayraklar(m.rit, m.infit, m.outfit);
   });
   return {n, k: canli.length, kr20: kr ? kr.kr20 : null, sem: kr ? kr.sem : null, sd: kr ? kr.sd : null, ortSkor: kr ? kr.ort : null, dusuk,
@@ -24893,8 +24916,10 @@ function hesapla(kayitlar) {
     const kenarlar = Array.from({length: H - 1}, (_, i) => lo + (i + 1) * (hi - lo) / H);
     Object.assign(d, {yetersiz: false, G, H, guvenirlik: G * G / (1 + G * G), kenarlar, alt: lo, ust: hi});
     for (const o of ogrenciler) {
-      o.kademe = H - kenarlar.filter(e => e <= o.a).length;
-      o.belirsiz = kenarlar.some(e => e >= o.a - Z * o.se && e <= o.a + Z * o.se);
+      const t = x => H - kenarlar.filter(e => e <= x).length;
+      o.kademe = t(o.a);
+      // "?" only when a ± 1.96·SE spans three or more tiers; two adjacent tiers are within what the tier already tolerates.
+      o.belirsiz = Math.abs(t(o.a - Z * o.se) - t(o.a + Z * o.se)) >= 2;
     }
   }
   return dersler;
@@ -24936,10 +24961,13 @@ const yetenek = (no, oturum, kod) => { const d = model().dersler.get(anahtarDers
 const KD = {oturum: 'TYT', sube: '', sira: '', secili: null};
 const dersAdi = (oturum, kod) => (DENEME_DERSLER[oturum].find(d => d[0] === kod) || [kod, kod])[1];
 const kademeYazi = (o, belirsiz) => o.kademe + (belirsiz ?? o.belirsiz ? '?' : '');
-function hucreRengi(t, H) {
-  if (H < 2) return '';
-  const f = (t - 1) / (H - 1), pay = Math.round(Math.abs(f - 0.5) * 2 * 55);
-  return pay ? 'background:color-mix(in srgb,var(--e-' + (f < 0.5 ? 'ok' : 'bad') + ') ' + pay + '%,var(--e-panel))' : '';
+// One sequential hue: tier 1 (strongest) gets the deepest fill, the weakest tier the lightest, scaled by the ders's tier count H.
+// Light text goes on the deep half (class kd-g), see kademe.css for the base colour and the contrast it was checked at.
+const KD_DOLGU = [88, 12], KD_ACIK_ESIK = 67;
+function hucreDolgu(t, H) {
+  if (!(H >= 2)) return {pay: KD_DOLGU[1], acik: false};
+  const pay = Math.round(KD_DOLGU[0] - (t - 1) / (H - 1) * (KD_DOLGU[0] - KD_DOLGU[1]));
+  return {pay, acik: pay >= KD_ACIK_ESIK};
 }
 function sparkline(o, d) {
   const s = o.seri.slice().sort((a, b) => String(a.tarih).localeCompare(String(b.tarih)));
@@ -24966,14 +24994,15 @@ function panelIc() {
   const sira = dl.find(d => d.key === KD.sira);
   const ad = (a, b) => a.sube.localeCompare(b.sube, 'tr', {numeric: true}) || String(a.ad).localeCompare(String(b.ad), 'tr');
   ogr.sort((a, b) => sira ? (deger(a, sira) ?? 99) - (deger(b, sira) ?? 99) || (sira.ogrenciler.get(b.id)?.a ?? -99) - (sira.ogrenciler.get(a.id)?.a ?? -99) || ad(a, b) : ad(a, b));
-  const bas = dl.map(d => '<th scope="col" class="kd-ders"><button type="button" data-kd-sira="' + d.key + '" aria-pressed="' + (KD.sira === d.key) + '" aria-label="' + esc(dersAdi(d.oturum, d.kod) + ' derse göre sırala') + '"><b>' + esc(dersAdi(d.oturum, d.kod)) + '</b>' +
+  const bas = dl.map(d => '<th scope="col" class="kd-ders"><button type="button" data-kd-sira="' + d.key + '" aria-pressed="' + (KD.sira === d.key) + '" aria-label="' + esc(dersAdi(d.oturum, d.kod) + ' derse göre sırala') + '"' + (d.yetersiz ? '' : ' title="' + esc(d.H + ' kademe · güvenilirlik ' + f2(d.guvenirlik)) + '"') + '><b>' + esc(dersAdi(d.oturum, d.kod)) + '</b>' +
     (d.yetersiz ? '<span class="mini">Veri yetersiz</span>' : '<span class="mini">' + d.H + ' kademe · ' + f2(d.guvenirlik) + '</span>') + '</button></th>').join('');
   const sec = KD.secili && m.kimlik.has(KD.secili.id) ? KD.secili : null;
   const govde = ogr.map(k => '<tr><th scope="row">' + esc(k.ad) + ' <span class="mini">' + esc(k.sube) + '</span></th>' + dl.map(d => {
     const o = d.ogrenciler.get(k.id);
     if (!o || d.yetersiz) return '<td class="kd-hucre bos">—</td>';
     const on = sec && sec.id === k.id && sec.key === d.key;
-    return '<td class="kd-hucre" style="' + hucreRengi(o.kademe, d.H) + '"><button type="button" data-kd-hucre="' + esc(k.id) + '|' + d.key + '" aria-pressed="' + on + '" aria-label="' + esc(k.ad + ', ' + dersAdi(d.oturum, d.kod) + ': ' + o.kademe + '. kademe' + (o.belirsiz ? ', belirsiz' : '')) + '">' + kademeYazi(o) + '</button></td>';
+    const dl = hucreDolgu(o.kademe, d.H);
+    return '<td class="kd-hucre' + (dl.acik ? ' kd-g' : '') + (o.belirsiz ? ' kd-bel' : '') + '" style="--kd:' + dl.pay + '%"><button type="button" data-kd-hucre="' + esc(k.id) + '|' + d.key + '" aria-pressed="' + on + '" aria-label="' + esc(k.ad + ', ' + dersAdi(d.oturum, d.kod) + ': ' + o.kademe + '. kademe' + (o.belirsiz ? ', belirsiz' : '')) + '">' + kademeYazi(o) + '</button></td>';
   }).join('') + '</tr>').join('');
   let detay = '';
   if (sec) {
