@@ -291,6 +291,7 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    await page.screenshot({path:path.join(out,'denemepano-aralik-1280.png')});
    // Seç still works next to them.
    await page.locator('[data-dp-aralik="sec"]').click();await page.locator('#dpOnceki').waitFor();
+   await page.waitForFunction(()=>document.querySelectorAll('#dpGenel [data-tutamak]').length===2);
    assert.equal(await page.locator('#dpGenel [data-tutamak]').count(),2,'the Seç lines are there');
    assert.deepEqual(errors,[]);await context.close();
    console.log('PASS Deneme panosu ranges at 1280 px');

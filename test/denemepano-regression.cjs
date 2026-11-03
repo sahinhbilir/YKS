@@ -35,7 +35,10 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(h, /<div id="dpKok">/); assert.match(h, /Henüz deneme listesi yok/); assert(h.includes('id="dnPdf"'), 'the import stays on the board');
     run('EK.denemeKlasik=true'); h = run('gorunumDenemeler()');
     assert(!h.includes('id="dpKok"')); assert(h.includes('id="dpPanoya"')); assert(h.includes('id="dnPdf"'));
-    run("D.rol='ogrenci';EK.denemeKlasik=undefined"); assert(!run('gorunumDenemeler()').includes('dpKok'), 'students keep Denemelerim');
+    run("D.rol='ogrenci';EK.denemeKlasik=undefined"); h = run('gorunumDenemeler()');
+    assert.match(h, /<div id="dpKok" class="dn-kisisel">/, 'students get the personal board');
+    assert(h.includes('id="dnEkle"'), 'personal entry remains available');
+    assert(!h.includes('id="dnPdf"') && !h.includes('id="dpKapsam"') && !h.includes('id="dpTablo"'), 'teacher import and student-list controls are absent');
   });
   await check('model: averages, middle half, participation, ranks and the comparison window match the lists', async () => {
     await loadAll();

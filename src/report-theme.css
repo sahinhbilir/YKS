@@ -1,0 +1,182 @@
+/* The screen follows Öğrenci Raporları. Keep this entire layer screen-only:
+   report SVGs and the existing A4/Excel print styles are separate artifacts. */
+@media screen {
+  :root {
+    --baslik-font:Arial,"Segoe UI",system-ui,sans-serif;
+    --zemin:#f6f5f0;--kagit:#ffffff;--murekkep:#213d40;--soluk:#586e70;--cizgi:#d9e2de;
+    --vurgu:#11766a;--vurgu-yumusak:#e6f2ec;--vurgu-koyu:#235b55;--vurgu-uzeri:#ffffff;
+    --alan-cizgi:#7d9390;--marka:#168d7d;--marka-koyu:#213d40;--marka-acik:#e6f2ec;
+    --il-koyu:#235b55;--il-mavi:#168d7d;
+    --iyi:#11766a;--uyari:#946016;--kritik:#ae4e3d;
+    --golge:0 2px 12px rgba(33,61,64,.025);
+    --rapport-radius:20px;--rapport-gap:20px;--rapport-chart:#168d7d;
+    --rapport-blue:#487ba7;--rapport-orange:#bb632c;--rapport-purple:#78629f;
+    --rapport-pink:#ad507a;--rapport-green:#447944;--rapport-red:#bf6951;
+    --rapport-axis:#91a8a1;--rapport-grid:#e4ebe7;--rapport-muted-chart:#b7c9c2;
+    --rapport-heat-ink:#0b0b0b;
+    --rapport-pop-shadow:0 12px 36px rgba(33,61,64,.13);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark) {
+    :root:not([data-theme="light"]) {
+      --zemin:#101e20;--kagit:#1a2d30;--murekkep:#e8f1ed;--soluk:#afc3bd;--cizgi:#344c4b;
+      --vurgu:#76cfb9;--vurgu-yumusak:#213f3b;--vurgu-koyu:#b0e1d2;--vurgu-uzeri:#102c28;
+      --alan-cizgi:#7e9c96;--marka:#76cfb9;--marka-koyu:#e8f1ed;--marka-acik:#213f3b;
+      --il-koyu:#b0e1d2;--il-mavi:#76cfb9;
+      --iyi:#76cfb9;--uyari:#ebbb70;--kritik:#f1a18e;
+      --golge:none;--rapport-chart:#76cfb9;--rapport-blue:#8cb8df;--rapport-orange:#eaaa79;
+      --rapport-purple:#b5a3df;--rapport-pink:#e5a1c0;--rapport-green:#9acb91;--rapport-red:#f1a18e;
+      --rapport-axis:#76938a;--rapport-grid:#304744;--rapport-muted-chart:#607e75;
+      --rapport-heat-ink:#f0efec;
+      --rapport-pop-shadow:0 12px 36px rgba(0,0,0,.3);color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --zemin:#101e20;--kagit:#1a2d30;--murekkep:#e8f1ed;--soluk:#afc3bd;--cizgi:#344c4b;
+    --vurgu:#76cfb9;--vurgu-yumusak:#213f3b;--vurgu-koyu:#b0e1d2;--vurgu-uzeri:#102c28;
+    --alan-cizgi:#7e9c96;--marka:#76cfb9;--marka-koyu:#e8f1ed;--marka-acik:#213f3b;
+    --il-koyu:#b0e1d2;--il-mavi:#76cfb9;
+    --iyi:#76cfb9;--uyari:#ebbb70;--kritik:#f1a18e;
+    --golge:none;--rapport-chart:#76cfb9;--rapport-blue:#8cb8df;--rapport-orange:#eaaa79;
+    --rapport-purple:#b5a3df;--rapport-pink:#e5a1c0;--rapport-green:#9acb91;--rapport-red:#f1a18e;
+    --rapport-axis:#76938a;--rapport-grid:#304744;--rapport-muted-chart:#607e75;
+    --rapport-heat-ink:#f0efec;
+    --rapport-pop-shadow:0 12px 36px rgba(0,0,0,.3);color-scheme:dark;
+  }
+
+  body {font-family:Arial,"Segoe UI",system-ui,sans-serif;line-height:1.5}
+  h1,h2,h3 {letter-spacing:0}
+  .baslik h1,.pano-baslik {font-size:26px;line-height:1.25}
+  .baslik {margin-bottom:22px;gap:12px}
+  .kart,.sayfa {border-radius:var(--rapport-radius);box-shadow:var(--golge)}
+  .kutu {padding:20px 22px}
+  .kutular {gap:16px}
+  .kutu .sayi {font-family:var(--baslik-font);font-size:30px;font-weight:700;color:var(--vurgu)}
+  .kutu .ad,.etiket {text-transform:none;letter-spacing:0;font-size:12px}
+  .sayisal,table.plan td.sira {font-family:var(--baslik-font)}
+  .et-kisi-sayilar strong,.yk-kisi-sayilar strong,#yaKok .ya-tahmin strong {
+    font-family:var(--baslik-font);font-weight:700;font-variant-numeric:tabular-nums;
+  }
+  .rozet {padding:3px 9px;line-height:1.4}
+  th,.dn-scroll th {text-transform:none;letter-spacing:0;font-size:12px}
+  .dugme {border-radius:10px;padding:9px 15px;font-weight:600}
+  .dugme.mini {border-radius:8px}
+  select,input[type=date],input[type=number],input[type=text],input[type=password],input[type=email],textarea {
+    border-radius:10px;
+  }
+  input[type=checkbox],input[type=radio] {accent-color:var(--vurgu)}
+  .menu-liste {border-radius:14px;padding:8px;box-shadow:var(--rapport-pop-shadow)}
+  .ray.ust {padding:12px 24px;gap:6px 14px}
+  .ray button {border-radius:10px}
+  .ray.ust .menu-grup>button[data-sekme] {border-radius:10px 0 0 10px}
+  .ray.ust .menu-ac {border-radius:0 10px 10px 0}
+  .ray.ust button.marka {letter-spacing:0}
+  .ana-pano {column-gap:24px}
+  .ana-pano>.dn-yol,.rehber-hafta,.yks-yolu {border-top:1px solid var(--cizgi);padding:22px 24px}
+  .ana-pano>.dn-yol,.rehber-hafta {border-radius:var(--rapport-radius)}
+  .yol-hafta {border-radius:8px}
+  .giris-kart {border-radius:24px;padding:26px;box-shadow:var(--golge)}
+  .giris-baslik {letter-spacing:-.025em}
+  .giris-cizim .c-sayfa {fill:var(--kagit)}
+  .giris-cizim .c-cizgi,.giris-cizim .c-ip {stroke:var(--cizgi)}
+  .giris-cizim .c-dugum {fill:var(--kagit)}
+  .pencere {border-radius:22px;box-shadow:var(--rapport-pop-shadow)}
+  .or-sources,.or-kaynaklar {border-radius:16px;padding:20px}
+  .or-preview {border-radius:var(--rapport-radius)}
+  .dn-panel {padding:24px}
+  .dn-stats>div {border-radius:16px;padding:18px 20px}
+  .dn-stats strong {color:var(--vurgu);font-weight:700}
+  #dpKok.dn-kisisel .dn-stats>div {padding:20px 22px}
+  #dpKok.dn-kisisel .dn-stats strong {font-family:var(--baslik-font);font-weight:700;font-size:30px}
+  #yaKok .ya-panel {border-radius:var(--rapport-radius);padding:24px}
+  #yaKok .ya-row {border-radius:14px}
+  #yaKok :is(select,input) {border-color:var(--alan-cizgi);border-radius:10px}
+  /* Mid-tone tier cells need stronger ink than ordinary text on white cards. */
+  #kdKok .kd-hucre:not(.kd-g) button {color:var(--rapport-heat-ink)}
+
+  /* The screen's hierarchy is headings, controls, figures and charts. These are
+     repeated narratives or secondary annotations, not field labels, dates,
+     empty states, interactive help, or errors. Never hide .mini globally. */
+  :is(#etKok,#dpKok,#ykKok,#tgKok) .et-bas>.et-cumle,
+  #eeCumle,#eeSayim,#eeSinir,
+  #ktKok .kt-header .et-bas>p:first-of-type,
+  #ktKok .kt-head-text>.kt-summary,
+  #ktKok .kt-head-text>p:last-child:not(.kt-exams):not(.kt-warning),
+  #dpKok .dp-kaynak-blok>.dp-toplam-yazi,
+  #dpZorluk .et-kart-bas>.mini,
+  #etHocaDol,
+  #eeHocalar .et-kart-bas>.mini,
+  #tgAdimlar>p.mini,
+  .tg-cevre-not,
+  #okNotlar,
+  #okZayif .et-kart-bas>.mini,
+  .giris-vaat,
+  .marka small,
+  .baslik:has(+.arac #yazdir)>p,
+  .yks-yolu>p.mini {display:none}
+  :is(#dpKok,#tgKok,#ykKok) .et-ozet-alt>.mini,
+  :is(#dpKok,#etKok) .et-ders-alt>.mini {display:none}
+  :is(#dpKok,#tgKok,#ykKok) .et-ozet-alt:not(:has(.et-hap,button,a,input,select)),
+  :is(#dpKok,#etKok) .et-ders-alt:not(:has(.et-hap,button,a,input,select)) {display:none}
+
+  /* Bridge existing dashboard tokens to the same report palette in every theme.
+     Deliberately match legacy theme specificity instead of forcing SVG colours. */
+  :root :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok),
+  :root[data-theme] :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok),
+  :root:not([data-theme]) :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) {
+    --e-bg:var(--zemin);--e-panel:var(--kagit);--e-pop:var(--kagit);
+    --e-fg:var(--murekkep);--e-fg2:var(--soluk);--e-muted:var(--soluk);--e-line:var(--cizgi);
+    --e-grid:var(--rapport-grid);--e-axis:var(--rapport-axis);--e-ref:var(--soluk);--e-chart-muted:var(--rapport-muted-chart);
+    --e-ok:var(--iyi);--e-bad:var(--kritik);--e-shadow:var(--rapport-pop-shadow);
+    --e-c1:var(--rapport-chart);--e-c2:var(--rapport-orange);--e-c3:var(--rapport-blue);--e-c4:var(--uyari);
+    --e-c5:var(--rapport-pink);--e-c6:var(--rapport-green);--e-c7:var(--rapport-purple);--e-c8:var(--rapport-red);
+    --e-sans:Arial,"Segoe UI",system-ui,sans-serif;--e-serif:var(--e-sans);--e-r:18px;
+    border:0;border-radius:0;padding:0;gap:var(--rapport-gap);color-scheme:inherit;
+  }
+  :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) .et-baslik {
+    font-family:var(--e-sans);font-size:26px;font-weight:700;
+  }
+  :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) .et-bolum {
+    font-family:var(--e-sans);font-size:21px;font-weight:700;
+  }
+  :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) .et-panel h2 {font-size:17px;font-weight:700}
+  .et-panel {padding:24px;gap:16px}
+  .et-ozet,.et-dersler,.et-iki,.et-hareketler,.et-bolunmus {gap:16px}
+  @media (min-width:981px) {
+    .et-ozet:has(> :nth-child(7):last-child) {grid-template-columns:repeat(12,minmax(0,1fr))}
+    .et-ozet:has(> :nth-child(7):last-child)>* {grid-column:span 3}
+    .et-ozet:has(> :nth-child(7):last-child)>:nth-child(n+5) {grid-column:span 4}
+  }
+  .et-ozet-kart {padding:20px 22px;gap:7px}
+  .et-ozet-kart strong {font-family:var(--e-sans);font-size:30px;font-weight:700;color:var(--vurgu)}
+  .et-ders {padding:16px 18px;gap:7px}
+  .et-ders strong {font-family:var(--e-sans);font-weight:700;font-size:23px}
+  .et-ders[aria-pressed="true"] {border-color:var(--vurgu);box-shadow:inset 0 0 0 1px var(--vurgu)}
+  .et-seg {border-radius:12px}
+  .et-seg button {border-radius:9px;padding:6px 12px;font-weight:600}
+  .et-seg button[aria-pressed="true"] {background:var(--vurgu);color:var(--vurgu-uzeri)}
+  .et-dugme {border-radius:10px;padding:8px 14px;font-weight:600}
+  .et-dugme.birincil {background:var(--vurgu);border-color:var(--vurgu);color:var(--vurgu-uzeri)}
+  .et-dugme.birincil:hover {background:color-mix(in srgb,var(--vurgu) 88%,var(--murekkep))}
+  :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) .et-filtre :is(input,select) {
+    background:var(--kagit);border-color:var(--alan-cizgi);border-radius:10px;padding:8px 10px;
+  }
+  .et-grafik {border-radius:10px}
+  .et-cizgi {stroke-width:2.5}
+  .et-tablo th {font-weight:600}
+  .et-tablo td {padding-block:9px}
+  .et-ipucu,.et-surukle {border-radius:10px}
+  :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) :focus-visible {outline-color:var(--vurgu)}
+  @media (max-width:820px) {
+    .ray.ust {padding:10px 12px;gap:4px 8px}
+    .ana-pano {column-gap:20px}
+  }
+  @media (max-width:600px) {
+    .baslik h1,.pano-baslik,
+    :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) .et-baslik {font-size:24px}
+    .et-panel,.dn-panel,.ana-pano>.dn-yol,.rehber-hafta,.yks-yolu,#yaKok .ya-panel {padding:18px}
+    .et-ozet-kart,.kutu {padding:16px 18px}
+    .et-ders {padding:14px}
+    .giris-kart {padding:22px}
+  }
+}

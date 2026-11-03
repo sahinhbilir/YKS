@@ -19,6 +19,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Screen theme scope and backend integrity
+        run: node scripts/embed-report-theme.cjs --check && node test/report-theme-integrity.cjs
       - name: Current grade curricula and legacy preservation
         run: node test/curriculum-regression.js
       - name: Grade 11 timetable topics and TYT mathematics separation
@@ -172,6 +174,10 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/grafik-browser.cjs
       - name: Test account button, nickname setup, first cloud save and reset
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/test-account-browser.cjs
+      - name: Personal student exam dashboard on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/student-deneme-board-browser.cjs
+      - name: Student report theme on desktop and mobile
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/report-theme-browser.cjs
       - name: Light and dark contrast, theme preference and mobile navigation
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/design-browser.cjs
       - name: Personal TYT plan, no-school YKS plan and another exam's plan
