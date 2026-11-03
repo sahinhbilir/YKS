@@ -121,6 +121,7 @@
 
   /* Bridge existing dashboard tokens to the same report palette in every theme.
      Deliberately match legacy theme specificity instead of forcing SVG colours. */
+  :root,
   :root :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok),
   :root[data-theme] :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok),
   :root:not([data-theme]) :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) {
@@ -131,6 +132,8 @@
     --e-c1:var(--rapport-chart);--e-c2:var(--rapport-orange);--e-c3:var(--rapport-blue);--e-c4:var(--uyari);
     --e-c5:var(--rapport-pink);--e-c6:var(--rapport-green);--e-c7:var(--rapport-purple);--e-c8:var(--rapport-red);
     --e-sans:Arial,"Segoe UI",system-ui,sans-serif;--e-serif:var(--e-sans);--e-r:18px;
+  }
+  :root :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) {
     border:0;border-radius:0;padding:0;gap:var(--rapport-gap);color-scheme:inherit;
   }
   :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) .et-baslik {

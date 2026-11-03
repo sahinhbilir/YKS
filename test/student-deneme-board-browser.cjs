@@ -15,5 +15,10 @@ await page.locator('#dnBas').fill('2026-09-02');assert((await page.locator('.et-
 assert.equal(await page.locator('.dn-dot').count(),2);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
 const number=await page.locator('.et-ozet-kart strong').first().evaluate(e=>{const s=getComputedStyle(e);return {font:s.fontFamily,weight:s.fontWeight}});
 assert(number.font.startsWith('Arial')&&Number(number.weight)>=700,'report number typography');
-await page.screenshot({path:path.join(out,'student-deneme-'+width+'.png'),fullPage:true});assert.deepEqual(errors,[]);await page.close();console.log('PASS personal board privacy and typography',width);
+await page.screenshot({path:path.join(out,'student-deneme-'+width+'.png'),fullPage:true});
+// Shared cards also work in the teacher's per-student view, outside the board root.
+await page.evaluate(()=>{D.rol='rehber';EK.denemeKlasik=true;ciz()});
+const panel=await page.locator('.dn-panel').first().evaluate(e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,font:s.fontFamily}});
+assert.equal(panel.bg,'rgb(255, 255, 255)','teacher personal cards keep a white surface');assert(panel.font.startsWith('Arial'));
+assert.deepEqual(errors,[]);await page.close();console.log('PASS personal board privacy and typography',width);
 }}finally{await browser.close()}})().catch(e=>{console.error(e);process.exitCode=1});
