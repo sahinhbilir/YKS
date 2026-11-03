@@ -51,6 +51,8 @@ jobs:
         run: node scripts/embed-konutakibi.cjs --check && node test/konutakibi-regression.cjs
       - name: Yanlışlar defteri booklet cut-outs, cevap raporu without TC, A and B numbers and embedding
         run: node scripts/embed-yanlislar.cjs --check && node test/yanlislar-regression.cjs && node test/yanlislar-difficulty-regression.cjs
+      - name: Soru zorluğu, madde kalitesi, kademeler, two-session cevap raporu and embedding
+        run: node scripts/embed-zorluk.cjs --check && node test/zorluk-regression.cjs
       - name: Gemini reading of other files, checks, fallback and embedding
         run: node scripts/embed-yapayzeka.cjs --check && node test/yapayzeka-regression.cjs
       - name: Cross-page consistency
