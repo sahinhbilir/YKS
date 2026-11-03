@@ -37,7 +37,7 @@ for(let i=1;i<=6;i++)ogrenciler.push({id:'k'+i,name:'SENTETİK KÜÇÜK '+i,cls:
    },ogrenciler);
    // The page sits under Öğrenciler, after Etütler.
    assert.equal(await page.locator('#ray #ogrencilerMenusu [data-sekme="etutetki"]').count(),1);
-   assert.deepEqual(await page.locator('#ray #ogrencilerMenusu [data-sekme]').evaluateAll(l=>l.map(x=>x.dataset.sekme)),['takip','etutler','etutetki','etutplani','yoklama','ogrencirapor']);
+   assert.deepEqual(await page.locator('#ray #ogrencilerMenusu [data-sekme]').evaluateAll(l=>l.map(x=>x.dataset.sekme)),['takip','etutler','etutetki','etutplani','yoklama','ogrencirapor','gunlukrapor']);
    await page.evaluate(()=>{EK.sekme='etutetki';ciz()});
    await page.waitForSelector('#eeKok #eeGrafik svg path.ee-cizgi');
    const cumle=()=>page.locator('#eeCumle').innerText();

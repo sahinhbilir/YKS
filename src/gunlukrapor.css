@@ -1,0 +1,39 @@
+/* Günlük rapor (#grKok): white cards on the cream canvas of Öğrenci Raporları, student form and teacher list. */
+#grKok{max-width:760px}
+.gr-kart{background:var(--kagit);border:1px solid var(--cizgi);border-radius:var(--rapport-radius,14px);padding:18px 20px;box-shadow:var(--golge);margin-bottom:16px;min-width:0}
+.gr-form{display:flex;flex-direction:column;gap:14px}
+.gr-etiket{font-size:15px;font-weight:600}
+#grKok textarea{width:100%;box-sizing:border-box;min-height:140px;resize:vertical;border:1px solid var(--alan-cizgi);background:var(--kagit);color:var(--murekkep);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px;line-height:1.5}
+.gr-satir{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.gr-dosya{cursor:pointer}
+.gr-pasif{opacity:.45;pointer-events:none}
+.gr-tercih .dugme{flex:1 1 150px;min-height:44px;font-weight:600}
+.gr-tercih .dugme[aria-pressed="true"]{background:var(--vurgu);border-color:var(--vurgu);color:var(--vurgu-uzeri)}
+#grGonder{min-height:44px;min-width:140px}
+.gr-fotolar{display:flex;flex-wrap:wrap;gap:10px}
+.gr-fotolar:empty{display:none}
+.gr-kucuk{position:relative;display:inline-block;padding:0;border:1px solid var(--cizgi);border-radius:10px;background:var(--kagit);overflow:hidden;line-height:0;cursor:default}
+button.gr-kucuk{cursor:zoom-in}
+.gr-kucuk img{display:block;width:96px;height:96px;object-fit:cover}
+.gr-x{position:absolute;top:4px;right:4px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:18px;line-height:28px;padding:0;cursor:pointer}
+.gr-durum{margin:0;min-height:1.2em;font-size:13.5px;color:var(--uyari);overflow-wrap:anywhere}
+.gr-durum:empty{display:none}
+.gr-not{margin:0}
+.gr-metin{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}
+.gr-yanit h2{font-size:17px;margin:0 8px 0 0;display:inline-block}
+.gr-rozet{display:inline-block;padding:3px 9px;border-radius:999px;background:var(--vurgu-yumusak);color:var(--vurgu-koyu);font-size:12px;font-weight:600;white-space:nowrap}
+.gr-onemli{background:var(--kritik);color:#fff}
+.gr-onemli-oge{border-color:var(--kritik)}
+.gr-ust{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.gr-ust>div{min-width:0}
+.gr-etiketler{display:flex;gap:6px;flex-wrap:wrap}
+.gr-yz{margin-top:12px;padding-top:10px;border-top:1px solid var(--cizgi)}
+.gr-yz .gr-metin{margin-top:2px}
+.gr-oge .gr-fotolar{margin-top:10px}
+.gr-oge .gr-satir{margin-top:12px}
+.gr-uyari{margin:0 0 16px;padding:12px 14px;border:1px solid var(--uyari);border-radius:10px;background:var(--kagit);color:var(--uyari);overflow-wrap:anywhere}
+.gr-bos{text-align:center}
+.gr-sayi{display:inline-block;min-width:18px;padding:0 6px;margin-left:4px;border-radius:999px;background:var(--kritik);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.gr-ortu{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}
+.gr-ortu img{max-width:100%;max-height:calc(100vh - 90px);object-fit:contain;border-radius:8px}
+@media (max-width:520px){.gr-kart{padding:14px 14px}.gr-kucuk img{width:84px;height:84px}}
