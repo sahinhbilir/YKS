@@ -22,7 +22,7 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
    if(u.startsWith('http://localhost/'))return r.fulfill({status:200,contentType:'text/html',body:html});
    if(CDN[u])return r.fulfill({status:200,path:path.join(CDN[u][0],CDN[u][1]),contentType:CDN[u][2],headers:{'access-control-allow-origin':'*'}});
    outside.push(u);return r.abort()});
-  await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+  await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
   await page.evaluate(()=>{D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='yanlislar';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};kaydet=async()=>true;ciz()});
   assert.equal(await page.locator('#denemelerMenusu [data-sekme="yanlislar"]').count(),1,'menu entry next to Konu takibi');
   assert.equal(await page.locator('#denemelerMenusu button').allInnerTexts().then(t=>t.includes('Yanlışlar defteri')),true);

@@ -116,7 +116,9 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     assert.equal(await c.run('kaydet(true)'), true);
     const r = await c.run('bulutaYedekle()'); assert.equal(r.tur, 'tamam', JSON.stringify(r));
     assert(srv.belgeler.get('ogretmenYedek/' + SAHIP).veri.startsWith('gz1:'), 'saved compressed'); assert.match(bulutJson(srv), /SENTETİK ADA \(ORTAK\)/);
-    assert(srv.belgeler.has('ogretmenYedek/' + SAHIP + '/gecmis/' + c.run('isoDan(bugunNo())')), 'the daily copy goes to the owner too');
+    const index = JSON.parse(srv.belgeler.get('ogretmenYedek/' + SAHIP + '/gecmis/_v2-index').veri);
+    const day = index.entries.find(e => e.kind === 'day' && e.gun === c.run('isoDan(bugunNo())'));
+    assert(day && srv.belgeler.has('ogretmenYedek/' + SAHIP + '/gecmis/' + day.slot), 'the daily copy goes to the owner too');
     assert.equal([...srv.belgeler.keys()].some(k => k.startsWith('ogretmenYedek/' + ORTAK)), false, 'nothing under the co-teacher’s own uid');
   });
   await check('student slots are created with the owner’s uid and the owner’s slots are followed', async () => {

@@ -22,7 +22,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
    await page.clock.setFixedTime(new Date('2026-10-19T18:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(async pages=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-19';
     D.ogr=[{ad:'Sentetik Ada',no:1001,sube:'12-A',sinif:12,alan:'EA',kap:6,off:[6],aktif:true,ogrenciBulutId:'synthetic-1'}];
@@ -37,7 +37,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    assert.match(await kagit.locator('.ep-baslik').innerText(),/PAZARTESİ — ETÜT PLANI/);
    await page.locator('[data-ep-rapor="0"]').click();
    await page.waitForFunction(()=>D.etutPlani&&D.etutPlani.gunler[0].length===2);
-   assert.match(await page.locator('#epDurum').innerText(),/Etüt raporundan: 2 öğretmen eklendi/);
+   await page.waitForFunction(re=>new RegExp(re).test(document.querySelector('#epDurum')?.textContent||''), /Etüt raporundan: 2 öğretmen eklendi/.source);
    assert.match(await kagit.innerText(),/MATEMATİK\s+SENTETİK ÖĞRETMEN BİR[\s\S]*FİZİK\s+SENTETİK ÖĞRETMEN ÜÇ/);
    // The sheet is the Excel page: navy title, blue header, light blue branş, light yellow student cells.
    const renk=(sel)=>page.locator(sel).first().evaluate(e=>[getComputedStyle(e).backgroundColor,getComputedStyle(e).color]);
@@ -48,7 +48,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    // Teacher view: a new row gets its branş from the report; an empty row is dropped on leaving.
    await page.locator('[data-ep-mod="ogretmen"]').click();
    await page.locator('[data-ep-ekle="0"]').click();
-   assert.equal(await page.evaluate(()=>document.activeElement.dataset.epR+':'+document.activeElement.dataset.epAlan),'2:0','the new row is ready to type in');
+   await page.waitForFunction(()=>document.activeElement.dataset.epR+':'+document.activeElement.dataset.epAlan==='2:0');
    await page.locator('input[data-ep-r="2"][data-ep-alan="1"]').fill('Sentetik Öğretmen Dört');await page.keyboard.press('Tab');
    await page.waitForFunction(()=>D.etutPlani.gunler[0][2][0]==='Kimya');
    assert.equal(await page.locator('input[data-ep-r="2"][data-ep-alan="0"]').inputValue(),'Kimya');
@@ -73,7 +73,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.locator('[data-ep-gun="1"]').click();await page.locator('[data-ep-mod="ogretmen"]').click();
    await page.locator('select[data-ep-kopya="1"]').selectOption('0');
    await page.waitForFunction(()=>D.etutPlani.gunler[1].length===3);
-   assert.match(await page.locator('#epDurum').innerText(),/Pazartesi gününden: 3 öğretmen eklendi/);
+   await page.waitForFunction(re=>new RegExp(re).test(document.querySelector('#epDurum')?.textContent||''), /Pazartesi gününden: 3 öğretmen eklendi/.source);
    assert.deepEqual(await page.evaluate(()=>D.etutPlani.gunler[1].map(s=>s[1]+':'+s[2].join(''))),['Sentetik Öğretmen Bir:','Sentetik Öğretmen Üç:','Sentetik Öğretmen Dört:']);
    await page.locator('[data-ep-sil="1:1"]').click();await page.waitForFunction(()=>D.etutPlani.gunler[1].length===2);
    // Every day, then print: only the sheets, A4 landscape, Pazartesi and Salı on one page.
@@ -108,7 +108,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.locator('#epListe').fill('ÇARŞAMBA\nMatematik: Sentetik Mat Bir, Sentetik Mat Sekiz\nPERŞEMBE\nFizik: Sentetik Öğretmen Üç');
    await page.locator('#epListeUygula').click();
    await page.waitForFunction(()=>D.etutPlani.gunler[2].length===2&&D.etutPlani.gunler[3].length===1);
-   assert.match(await page.locator('#epDurum').innerText(),/Yapıştırıldı: Çarşamba 2 · Perşembe 1 öğretmen/);
+   await page.waitForFunction(()=>/Yapıştırıldı: Çarşamba 2 · Perşembe 1 öğretmen/.test(document.querySelector('#epDurum')?.textContent||''));
    assert.equal(await page.locator('#epYapistir[open]').count(),0);
    await page.locator('[data-ep-mod="ogrenci"]').click();
    assert.match(await page.locator('.ep-kagit').nth(3).innerText(),/PERŞEMBE — ETÜT PLANI[\s\S]*FİZİK\s+SENTETİK ÖĞRETMEN ÜÇ/);
@@ -120,7 +120,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.locator('#epDagit').click();await page.waitForFunction(()=>D.etutPlani.donem);
    assert.deepEqual(await page.evaluate(()=>D.etutPlani.donem),{bas:'2026-10-22',bit:'2026-11-06',siniflar:['9/A','9/B','10/A'],yok:['2026-10-28','2026-10-29'],
      dersler:['Matematik','Fizik','Kimya','Biyoloji','Türkçe']});
-   assert.match(await page.locator('#epDurum').innerText(),/Dağıtıldı: 22 Eki – 6 Kas · 10 gün · 3 sınıf \(12\. sınıflar alınmadı\)/);
+   await page.waitForFunction(re=>new RegExp(re).test(document.querySelector('#epDurum')?.textContent||''), /Dağıtıldı: 22 Eki – 6 Kas · 10 gün · 3 sınıf \(12\. sınıflar alınmadı\)/.source);
    assert.equal(await page.locator('#epTarih').inputValue(),String(await page.evaluate(()=>gunNo('2026-10-22'))),'the next date opens');
    assert.match(await kagit.first().innerText(),/PERŞEMBE 22 EKİM — ETÜT PLANI[\s\S]*FİZİK\s+SENTETİK ÖĞRETMEN ÜÇ\s+9\/B/);
    await page.locator('#epTarih').selectOption('hepsi');await page.waitForFunction(()=>document.querySelectorAll('.ep-kagit').length===10);
@@ -149,7 +149,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    const prog=page.locator('#epProgramlar');if(!await prog.evaluate(e=>e.open))await prog.locator('summary').click();
    await page.locator('#epProgramPdf').setInputFiles(['11A.pdf','12A.pdf','notlar.pdf'].map(name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')})));
    await page.waitForFunction(()=>D.etutPlani.programlar&&Object.keys(D.etutPlani.programlar).length===2);
-   assert.match(await page.locator('#epDurum').innerText(),/Ders programı eklendi: 11\/A \(16 saat\), 12\/A \(6 saat\)\. Okunamayan: notlar\.pdf: bilinmeyen dosya/);
+   await page.waitForFunction(re=>new RegExp(re).test(document.querySelector('#epDurum')?.textContent||''), /Ders programı eklendi: 11\/A \(16 saat\), 12\/A \(6 saat\)\. Okunamayan: notlar\.pdf: bilinmeyen dosya/.source);
    assert.match(await page.locator('.ep-program caption').innerText(),/11\/A/);
    assert.match(await page.locator('.ep-program tbody tr').first().innerText(),/09\.00\s+MATEMATİK\s+SENTETİK ÖĞRETMEN BİR/);
    // With the timetables the class's etüts go to its own teachers; a mathematician teaching it Geometri is written beside it.

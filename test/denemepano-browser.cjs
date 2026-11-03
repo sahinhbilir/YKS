@@ -29,7 +29,7 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
     if(u.startsWith('http://localhost/'))return r.fulfill({status:200,contentType:'text/html',body:html});
     if(CDN[u])return r.fulfill({status:200,path:path.join(CDN[u][0],CDN[u][1]),contentType:CDN[u][2],headers:{'access-control-allow-origin':'*'}});
     return r.abort()});
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(async l=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-19';
     D.ogr=[{ad:'SENTETİK ADA',no:1001,sube:'12-A',sinif:12,alan:'EA',kap:6,off:[6],aktif:true,ogrenciBulutId:'synthetic-1'}];
@@ -218,7 +218,7 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
     page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
     await page.clock.setFixedTime(new Date('2026-10-19T18:00:00+03:00'));
     await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
     await page.evaluate(async ([l,R])=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-19';D.ogr=[];EK.ogr=0;EK.sekme='denemeler';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
       await siralamaKaydet(l.map(x=>siralamaPdfCoz(x.pages,x.boylar)));await TURKIYE.raporEkle(R);ciz()},[listeler,raporlar]);
     await page.waitForFunction(()=>document.querySelectorAll('#dpKok .et-grafik svg').length===5);
@@ -271,7 +271,7 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
    await page.clock.setFixedTime(new Date('2026-10-19T18:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(async l=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-19';D.ogr=[];EK.ogr=0;EK.sekme='denemeler';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
      await siralamaKaydet(l.map(x=>siralamaPdfCoz(x.pages,x.boylar)));ciz()},dort);
    await page.waitForFunction(()=>document.querySelectorAll('#dpKok .et-grafik svg').length===5);

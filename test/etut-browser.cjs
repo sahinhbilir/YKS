@@ -17,7 +17,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
    await page.clock.setFixedTime(new Date('2026-10-19T18:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(rapor=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-19';
     D.ogr=[{ad:'Sentetik Ada',no:1001,sube:'12-A',sinif:12,alan:'EA',kap:6,off:[6],aktif:true,ogrenciBulutId:'synthetic-1'}];
@@ -67,6 +67,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.locator('[data-et-aralik="2"]').click();
    // Many lines: the one under the pointer takes the stage, the others fade.
    const ders=page.locator('[data-et-grafik="ders"]');await ders.scrollIntoViewIfNeeded();
+   await ders.locator('svg path[data-seri="0"]').first().waitFor({state:'attached'});
    const nokta=await page.evaluate(()=>{const p=document.querySelector('[data-et-grafik="ders"] svg path[data-seri="0"]'),q=p.getPointAtLength(p.getTotalLength()*.5),m=p.getScreenCTM();return {x:q.x*m.a+m.e,y:q.y*m.d+m.f}});
    await page.mouse.move(nokta.x,nokta.y);
    await page.waitForFunction(()=>document.querySelector('[data-et-grafik="ders"] svg').classList.contains('odakli'));

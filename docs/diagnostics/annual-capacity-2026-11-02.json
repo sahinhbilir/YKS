@@ -1,0 +1,500 @@
+{
+  "commit": "a11cbfc064a8a3546c7e93abb649c15218d76754",
+  "assumptions": {
+    "weeks": 36,
+    "schoolDays": 180,
+    "attendance": "Seeded approximately 90% whole-day present, 4% absent, 2% excused, 4% mixed",
+    "study": "Two sessions per student per week, plus labelled four-session sensitivity",
+    "exams": "One TYT list weekly; additionally a combined TYT+AYT list every other week",
+    "studentResults": "Only the examined subset receives one school TYT record weekly and AYT every other week, matching list D/Y; remaining students have no exam data, so this is a lower bound",
+    "monthlySensitivity": "Optional: the other 68 students take TYT every fourth week, no AYT",
+    "simulation": "Actual local app write paths use synthetic reports, no Firebase; projections bypass local caps and may violate schema limits",
+    "gzip": "Actual app bulutVeriKodla using Node CompressionStream, verified by bulutVeriCoz; Chrome output may differ"
+  },
+  "limits": {
+    "attendance": 250000,
+    "study": 300000,
+    "studyRows": 15000,
+    "ranking": 350000,
+    "teacherRaw": 2500000,
+    "cloudString": 900000
+  },
+  "scenarios": [
+    {
+      "students": 99,
+      "examinedStudents": 31,
+      "monthlyOtherStudents": false,
+      "studySessionsPerStudentPerWeek": 2,
+      "actualAcceptance": {
+        "attendance": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 65251,
+          "lastAcceptedRecords": 17820,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "study": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 163199,
+          "lastAcceptedRecords": 7128,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "ranking": {
+          "lastAcceptedWeek": 22,
+          "firstRejectedWeek": 23,
+          "lastAcceptedBytes": 332580,
+          "lastAcceptedRecords": 22,
+          "attemptedBytes": 354081,
+          "reason": "Sıralama listeleri 350 KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.",
+          "previousDataUnchanged": true
+        }
+      },
+      "projectedUnconstrained": {
+        "attendance": {
+          "rawBytes": 65251,
+          "gzipBytes": 5024,
+          "gz1Base64Bytes": 6704,
+          "students": 99,
+          "days": 180,
+          "schemaValid": true
+        },
+        "study": {
+          "rawBytes": 163199,
+          "gzipBytes": 24204,
+          "gz1Base64Bytes": 32276,
+          "records": 7128,
+          "schemaValid": true
+        },
+        "ranking": {
+          "rawBytes": 544545,
+          "gzipBytes": 106107,
+          "gz1Base64Bytes": 141480,
+          "exams": 36,
+          "schemaValid": true
+        },
+        "notebook": {
+          "rawBytes": 1975337,
+          "gzipBytes": 219615,
+          "gz1Base64Bytes": 292824,
+          "schoolResults": 1674,
+          "appStoredBytes": 292824,
+          "appCompression": "gz1",
+          "appRoundTrip": true
+        }
+      }
+    },
+    {
+      "students": 99,
+      "examinedStudents": 31,
+      "monthlyOtherStudents": true,
+      "studySessionsPerStudentPerWeek": 2,
+      "actualAcceptance": {
+        "attendance": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 65251,
+          "lastAcceptedRecords": 17820,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "study": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 163199,
+          "lastAcceptedRecords": 7128,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "ranking": {
+          "lastAcceptedWeek": 16,
+          "firstRejectedWeek": 17,
+          "lastAcceptedBytes": 317403,
+          "lastAcceptedRecords": 16,
+          "attemptedBytes": 357682,
+          "reason": "Sıralama listeleri 350 KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.",
+          "previousDataUnchanged": true
+        }
+      },
+      "projectedUnconstrained": {
+        "attendance": {
+          "rawBytes": 65251,
+          "gzipBytes": 5024,
+          "gz1Base64Bytes": 6704,
+          "students": 99,
+          "days": 180,
+          "schemaValid": true
+        },
+        "study": {
+          "rawBytes": 163199,
+          "gzipBytes": 24204,
+          "gz1Base64Bytes": 32276,
+          "records": 7128,
+          "schemaValid": true
+        },
+        "ranking": {
+          "rawBytes": 714362,
+          "gzipBytes": 156060,
+          "gz1Base64Bytes": 208084,
+          "exams": 36,
+          "schemaValid": true
+        },
+        "notebook": {
+          "rawBytes": 2558863,
+          "gzipBytes": 287274,
+          "gz1Base64Bytes": 383036,
+          "schoolResults": 2286,
+          "appStoredBytes": 383036,
+          "appCompression": "gz1",
+          "appRoundTrip": true
+        }
+      }
+    },
+    {
+      "students": 99,
+      "examinedStudents": 31,
+      "monthlyOtherStudents": false,
+      "studySessionsPerStudentPerWeek": 4,
+      "actualAcceptance": {
+        "attendance": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 65251,
+          "lastAcceptedRecords": 17820,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "study": {
+          "lastAcceptedWeek": 33,
+          "firstRejectedWeek": 34,
+          "lastAcceptedBytes": 294083,
+          "lastAcceptedRecords": 13068,
+          "attemptedBytes": 302879,
+          "reason": "Etüt verisi 300 KB sınırını aşıyor.",
+          "previousDataUnchanged": true
+        },
+        "ranking": {
+          "lastAcceptedWeek": 22,
+          "firstRejectedWeek": 23,
+          "lastAcceptedBytes": 332580,
+          "lastAcceptedRecords": 22,
+          "attemptedBytes": 354081,
+          "reason": "Sıralama listeleri 350 KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.",
+          "previousDataUnchanged": true
+        }
+      },
+      "projectedUnconstrained": {
+        "attendance": {
+          "rawBytes": 65251,
+          "gzipBytes": 5024,
+          "gz1Base64Bytes": 6704,
+          "students": 99,
+          "days": 180,
+          "schemaValid": true
+        },
+        "study": {
+          "rawBytes": 320459,
+          "gzipBytes": 42071,
+          "gz1Base64Bytes": 56100,
+          "records": 14256,
+          "schemaValid": true
+        },
+        "ranking": {
+          "rawBytes": 544545,
+          "gzipBytes": 106107,
+          "gz1Base64Bytes": 141480,
+          "exams": 36,
+          "schemaValid": true
+        },
+        "notebook": {
+          "rawBytes": 2132597,
+          "gzipBytes": 237769,
+          "gz1Base64Bytes": 317032,
+          "schoolResults": 1674,
+          "appStoredBytes": 317032,
+          "appCompression": "gz1",
+          "appRoundTrip": true
+        }
+      }
+    },
+    {
+      "students": 99,
+      "examinedStudents": 99,
+      "monthlyOtherStudents": false,
+      "studySessionsPerStudentPerWeek": 2,
+      "actualAcceptance": {
+        "attendance": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 65251,
+          "lastAcceptedRecords": 17820,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "study": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 163199,
+          "lastAcceptedRecords": 7128,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "ranking": {
+          "lastAcceptedWeek": 6,
+          "firstRejectedWeek": 7,
+          "lastAcceptedBytes": 287508,
+          "lastAcceptedRecords": 6,
+          "attemptedBytes": 355801,
+          "reason": "Sıralama listeleri 350 KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.",
+          "previousDataUnchanged": true
+        }
+      },
+      "projectedUnconstrained": {
+        "attendance": {
+          "rawBytes": 65251,
+          "gzipBytes": 5024,
+          "gz1Base64Bytes": 6704,
+          "students": 99,
+          "days": 180,
+          "schemaValid": true
+        },
+        "study": {
+          "rawBytes": 163199,
+          "gzipBytes": 24204,
+          "gz1Base64Bytes": 32276,
+          "records": 7128,
+          "schemaValid": true
+        },
+        "ranking": {
+          "rawBytes": 1725058,
+          "gzipBytes": 430130,
+          "gz1Base64Bytes": 573512,
+          "exams": 36,
+          "schemaValid": true
+        },
+        "notebook": {
+          "rawBytes": 5766857,
+          "gzipBytes": 717852,
+          "gz1Base64Bytes": 957140,
+          "schoolResults": 5346,
+          "appStoredBytes": 957140,
+          "appCompression": "gz1",
+          "appRoundTrip": true
+        }
+      }
+    },
+    {
+      "students": 150,
+      "examinedStudents": 150,
+      "monthlyOtherStudents": false,
+      "studySessionsPerStudentPerWeek": 2,
+      "actualAcceptance": {
+        "attendance": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 97018,
+          "lastAcceptedRecords": 27000,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "study": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 250089,
+          "lastAcceptedRecords": 10800,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "ranking": {
+          "lastAcceptedWeek": 4,
+          "firstRejectedWeek": 5,
+          "lastAcceptedBytes": 290626,
+          "lastAcceptedRecords": 4,
+          "attemptedBytes": 393871,
+          "reason": "Sıralama listeleri 350 KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.",
+          "previousDataUnchanged": true
+        }
+      },
+      "projectedUnconstrained": {
+        "attendance": {
+          "rawBytes": 97018,
+          "gzipBytes": 7017,
+          "gz1Base64Bytes": 9360,
+          "students": 150,
+          "days": 180,
+          "schemaValid": true
+        },
+        "study": {
+          "rawBytes": 250089,
+          "gzipBytes": 36653,
+          "gz1Base64Bytes": 48876,
+          "records": 10800,
+          "schemaValid": true
+        },
+        "ranking": {
+          "rawBytes": 2613916,
+          "gzipBytes": 751843,
+          "gz1Base64Bytes": 1002464,
+          "exams": 36,
+          "schemaValid": true
+        },
+        "notebook": {
+          "rawBytes": 8738388,
+          "gzipBytes": 1186000,
+          "gz1Base64Bytes": 1581340,
+          "schoolResults": 8100,
+          "appStoredBytes": 1581340,
+          "appCompression": "gz1",
+          "appRoundTrip": true
+        }
+      }
+    },
+    {
+      "students": 300,
+      "examinedStudents": 300,
+      "monthlyOtherStudents": false,
+      "studySessionsPerStudentPerWeek": 2,
+      "actualAcceptance": {
+        "attendance": {
+          "lastAcceptedWeek": 36,
+          "firstRejectedWeek": null,
+          "lastAcceptedBytes": 190318,
+          "lastAcceptedRecords": 54000,
+          "attemptedBytes": null,
+          "reason": null,
+          "previousDataUnchanged": true
+        },
+        "study": {
+          "lastAcceptedWeek": 21,
+          "firstRejectedWeek": 22,
+          "lastAcceptedBytes": 299885,
+          "lastAcceptedRecords": 12600,
+          "attemptedBytes": 313624,
+          "reason": "Etüt verisi 300 KB sınırını aşıyor.",
+          "previousDataUnchanged": true
+        },
+        "ranking": {
+          "lastAcceptedWeek": 2,
+          "firstRejectedWeek": 3,
+          "lastAcceptedBytes": 290376,
+          "lastAcceptedRecords": 2,
+          "attemptedBytes": 497563,
+          "reason": "Sıralama listeleri 350 KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.",
+          "previousDataUnchanged": true
+        }
+      },
+      "projectedUnconstrained": {
+        "attendance": {
+          "rawBytes": 190318,
+          "gzipBytes": 12844,
+          "gz1Base64Bytes": 17132,
+          "students": 300,
+          "days": 180,
+          "schemaValid": true
+        },
+        "study": {
+          "rawBytes": 505899,
+          "gzipBytes": 71526,
+          "gz1Base64Bytes": 95372,
+          "records": 21600,
+          "schemaValid": false
+        },
+        "ranking": {
+          "rawBytes": 5226512,
+          "gzipBytes": 1492877,
+          "gz1Base64Bytes": 1990508,
+          "exams": 36,
+          "schemaValid": true
+        },
+        "notebook": {
+          "rawBytes": 17476375,
+          "gzipBytes": 2354780,
+          "gz1Base64Bytes": 3139712,
+          "schoolResults": 16200,
+          "appStoredBytes": 3139712,
+          "appCompression": "gz1",
+          "appRoundTrip": true
+        }
+      }
+    },
+    {
+      "students": 600,
+      "examinedStudents": 600,
+      "monthlyOtherStudents": false,
+      "studySessionsPerStudentPerWeek": 2,
+      "actualAcceptance": {
+        "attendance": {
+          "lastAcceptedWeek": 23,
+          "firstRejectedWeek": 24,
+          "lastAcceptedBytes": 249076,
+          "lastAcceptedRecords": 69000,
+          "attemptedBytes": 258808,
+          "reason": "Yoklama verisi 250 KB sınırını aşıyor.",
+          "previousDataUnchanged": true
+        },
+        "study": {
+          "lastAcceptedWeek": 10,
+          "firstRejectedWeek": 11,
+          "lastAcceptedBytes": 298965,
+          "lastAcceptedRecords": 12000,
+          "attemptedBytes": 326612,
+          "reason": "Etüt verisi 300 KB sınırını aşıyor.",
+          "previousDataUnchanged": true
+        },
+        "ranking": {
+          "lastAcceptedWeek": 0,
+          "firstRejectedWeek": 1,
+          "lastAcceptedBytes": 0,
+          "lastAcceptedRecords": 0,
+          "attemptedBytes": 413662,
+          "reason": "Sıralama listeleri 350 KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.",
+          "previousDataUnchanged": true
+        }
+      },
+      "projectedUnconstrained": {
+        "attendance": {
+          "rawBytes": 376882,
+          "gzipBytes": 24190,
+          "gz1Base64Bytes": 32260,
+          "students": 600,
+          "days": 180,
+          "schemaValid": true
+        },
+        "study": {
+          "rawBytes": 1017499,
+          "gzipBytes": 141593,
+          "gz1Base64Bytes": 188796,
+          "records": 43200,
+          "schemaValid": false
+        },
+        "ranking": {
+          "rawBytes": 10453488,
+          "gzipBytes": 2973552,
+          "gz1Base64Bytes": 3964740,
+          "exams": 36,
+          "schemaValid": true
+        },
+        "notebook": {
+          "rawBytes": 34954050,
+          "gzipBytes": 4691204,
+          "gz1Base64Bytes": 6254944,
+          "schoolResults": 32400,
+          "appStoredBytes": 6254944,
+          "appCompression": "gz1",
+          "appRoundTrip": true
+        }
+      }
+    }
+  ]
+}

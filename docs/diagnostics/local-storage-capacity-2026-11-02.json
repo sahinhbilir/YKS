@@ -1,0 +1,41 @@
+{
+  "origin": "http://synthetic-capacity.local",
+  "snapshotUtf8Bytes": 2499916,
+  "snapshotCharacters": 2499916,
+  "rows": [
+    {
+      "copy": 1,
+      "ok": true
+    },
+    {
+      "copy": 2,
+      "ok": true
+    },
+    {
+      "copy": 3,
+      "ok": false,
+      "error": "QuotaExceededError"
+    }
+  ],
+  "firstSnapshotPreserved": true,
+  "projectedYear": {
+    "rawBytes": 1975337,
+    "storedBytes": 292824,
+    "codecRoundTrip": true,
+    "rows": [
+      {
+        "key": "yks_veri",
+        "ok": true
+      },
+      {
+        "key": "synthetic-before-import",
+        "ok": true
+      },
+      {
+        "key": "synthetic-before-restore",
+        "ok": false,
+        "error": "QuotaExceededError"
+      }
+    ]
+  }
+}

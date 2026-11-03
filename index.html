@@ -2519,6 +2519,7 @@ const bugunNo = () => {
 const pazartesi = g => g - haftaGunu(g);
 
 // ---------------------------------------------------------------- durum
+let LOCAL_EMBEDDED_READONLY = false;
 let D = null, EK = { sekme: 'plan', ogr: 0, hafta: null, kirli: false, son: '', girisAcik: {}, haritaAcik: null,
   haritaOnay: null, bulutGeriNoktalar: null };
 const ROL = () => (D && D.rol) || '';
@@ -2815,16 +2816,15 @@ function veriyiHazirla(y) {
   return tutarlilikUyarilari();
 }
 
-async function durumuYukle() {
+async function durumuYukle(cihazJson) {
   const adaylar = [];
   if (!ONIZLEME_MODU) try {
     const r = await fetch('data/veri.json', { cache: 'no-store' });
     if (r.ok) adaylar.push({ kaynak: 'sunucu', veri: await r.json() });
   } catch (e) { /* dosya yok */ }
-  try {
-    const y = localStorage.getItem('yks_veri');
-    if (y) adaylar.push({ kaynak: 'cihaz', veri: JSON.parse(y) });
-  } catch (e) { /* depolama kapalı */ }
+  if (cihazJson === undefined) cihazJson = await LOCAL_STORE.get('yks_veri');
+  try { if (cihazJson) adaylar.push({ kaynak: 'cihaz', veri: JSON.parse(cihazJson) }); }
+  catch (e) { adaylar.push({ kaynak: 'cihaz', veri: null }); }
   try {
     const g = document.getElementById('veri').textContent.trim();
     if (g && g !== 'null') adaylar.push({ kaynak: 'gömülü', veri: JSON.parse(g) });
@@ -2939,7 +2939,7 @@ function kaydet(sessiz, cikisIcin) {
 
 async function kaydetGercek(sessiz) {
   // Yalnızca görüntüleme: paylaşılan defter ne bu cihazda ne sunucuda değiştirilir.
-  if (IZLEME) { EK.kirli = false; EK.son = 'yalnızca görüntüleme · değişiklik kaydedilmez'; rayCiz(); if (!sessiz) ciz(); return false; }
+  if (IZLEME || LOCAL_EMBEDDED_READONLY) { EK.kirli = false; EK.son = 'yalnızca görüntüleme · değişiklik kaydedilmez'; rayCiz(); if (!sessiz) ciz(); return false; }
   // Defteri başkası düzenliyor: bu cihaz yalnızca izler, buluttaki defter sıra gelince alınır.
   if (KILIT.durum === 'baskasinda') { EK.kirli = false; EK.son = (KILIT.ad || 'diğer öğretmen') + ' düzenliyor · değişiklik kaydedilmez'; rayCiz(); if (!sessiz) ciz(); return false; }
   KAYIT_SAYAC++;
@@ -2954,7 +2954,7 @@ async function kaydetGercek(sessiz) {
   }
 
   let yerelBasarili = false, bulutBasarili = false, yerelHata = null, bulutHata = null;
-  try { localStorage.setItem('yks_veri', json); yerelBasarili = true; }
+  try { await LOCAL_STORE.set('yks_veri', json); yerelBasarili = true; }
   catch (e) { yerelHata = e; }
 
   const a = await yetenek('artifact');
@@ -4483,15 +4483,22 @@ function gecmisPlanHazirla(si, hafta, satirlar, degistir) {
     return {si,hb,yeni,rapor,satir:temiz.length,degistirme:!!cakisma.length};
   } finally {D=onceki;}
 }
-function gecmisPlaniKaydet(si, hafta, satirlar, degistir) {
+async function gecmisPlaniKaydet(si, hafta, satirlar, degistir) {
   const p=gecmisPlanHazirla(si,hafta,satirlar,degistir);
   if(p.tekrar)return p;
+  const once=D, oncekiJson=JSON.stringify(D);
   // Tamamı doğrulandıktan sonra iki kalıcı kopya: işlem öncesi geri dönüş ve yeni defter.
   // Kota/disk hatasında bellekteki defter de değiştirilmez.
   try {
-    localStorage.setItem('yks_plan_kurtarma_oncesi',JSON.stringify(D));
-    localStorage.setItem('yks_veri',JSON.stringify(p.yeni));
+    await LOCAL_STORE.set('yks_plan_kurtarma_oncesi',oncekiJson);
+    if(D!==once || JSON.stringify(D)!==oncekiJson) throw new Error('Defter değişti; kurtarmayı yeniden gözden geçirin.');
+    await LOCAL_STORE.set('yks_veri',JSON.stringify(p.yeni),null,()=>D===once && JSON.stringify(D)===oncekiJson);
+    if(D!==once || JSON.stringify(D)!==oncekiJson) {
+      if (D===once) await LOCAL_STORE.set('yks_veri',JSON.stringify(D));
+      throw new Error('Defter değişti; kurtarmayı yeniden gözden geçirin.');
+    }
   } catch(e) {
+    if (/^Defter değişti;/.test(e.message || '')) throw e;
     // Tarayıcının ham kota hatası (QuotaExceededError) kullanıcıya hiçbir şey anlatmaz.
     // Ne olduğunu ve ne yapacağını söyle; asıl hata ayıklama için sebep olarak taşınır.
     // Yeniden denemek işe yaramaz: yer açmak için eski kurtarma yedeği silinse bile
@@ -4946,7 +4953,7 @@ function kazanimPlaniOnizleme(sube) {
 function kazanimPlaniUyarisi(sube) {
   const r = kazanimPlaniOnizleme(sube);
   let yedek = false;
-  try { yedek = !!localStorage.getItem('yks_kazanim_plani_oncesi'); } catch (e) { /* optional download */ }
+  try { yedek = !!LOCAL_STORE.getSync('yks_kazanim_plani_oncesi'); } catch (e) { /* optional download */ }
   const yedekHtml = yedek ? '<p><button class="dugme" id="kazanimPlaniYedek">Kazanım planından önceki yedeği indir</button></p>' : '';
   if (!r) return subeSinifi(sube) === 11 ? yedekHtml : '';
   return '<section class="uyari-serit" aria-label="Haftalık kazanım planı"><b>Ana konu aynı kalsın, her hafta alt konusu değişsin.</b>' +
@@ -4985,11 +4992,11 @@ function kazanimEskiIslenisleriAyikla(sube, dersler) {
     ogrenciler.forEach(si => { if (D.ogrIslenis?.[si]) delete D.ogrIslenis[si][ki]; });
   }
 }
-function kazanimPlaniniUygula(sube, dersler) {
+async function kazanimPlaniniUygula(sube, dersler) {
   const r = kazanimPlaniOnizleme(sube);
   const secilen = r?.degisimler.filter(x => dersler.includes(x.ders)) || [];
   if (!secilen.length) return null;
-  const once = D;
+  const once = D, oncekiJson = JSON.stringify(D);
   let aday;
   try {
     D = JSON.parse(JSON.stringify(once));
@@ -5015,7 +5022,8 @@ function kazanimPlaniniUygula(sube, dersler) {
     aday = D;
   } finally { D = once; }
   // A quota/storage error aborts before the first live mutation.
-  localStorage.setItem('yks_kazanim_plani_oncesi', JSON.stringify(once));
+  await LOCAL_STORE.set('yks_kazanim_plani_oncesi', oncekiJson);
+  if (D !== once || JSON.stringify(D) !== oncekiJson) throw new Error('Defter değişti; kazanım planını yeniden gözden geçirin.');
   D = aday;
   return { dersler: secilen.map(x => x.ders) };
 }
@@ -6144,18 +6152,20 @@ function ogrenciProgramYenileOnizleme(si, hb, yenidenDagit = true) {
       cikarilan: eski.gunler.flat().filter(x => !yeniIds.has(x.ki)) };
   } finally { D = once; }
 }
-function ogrenciPrograminiYenile(si, hb) {
+async function ogrenciPrograminiYenile(si, hb) {
   const r = ogrenciProgramYenileOnizleme(si, hb);
   if (!r) return null;
   // Retain a complete local recovery copy before changing the current plan.
-  localStorage.setItem('yks_program_yenile_oncesi', JSON.stringify(D));
+  const once = D, oncekiJson = JSON.stringify(D);
+  await LOCAL_STORE.set('yks_program_yenile_oncesi', oncekiJson);
+  if (D !== once || JSON.stringify(D) !== oncekiJson) throw new Error('Defter değişti; programı yeniden gözden geçirin.');
   D = r.veri;
   ogrenciHaftayiSakla(si, hb, r.plan);
   ogrenciOtomasyonUygula();
   return { toplam: r.plan.toplam, eklenen: r.eklenen.length };
 }
 function programYenileYedegiVar() {
-  try { return !!localStorage.getItem('yks_program_yenile_oncesi'); } catch (e) { return false; }
+  try { return !!LOCAL_STORE.getSync('yks_program_yenile_oncesi'); } catch (e) { return false; }
 }
 function ogrenciProgramYenileUyarisi(si, hb) {
   const r = ogrenciProgramYenileOnizleme(si, hb);
@@ -6786,25 +6796,24 @@ function topluOgrenciPlani(satirlar, bas) {
   });
 }
 // 'ekle' satırlarını defterin listesine yazar; bulut yedeği sınırını aşacaksa hiçbirini eklemez.
-function topluOgrenciUygula(plan, kap) {
+async function topluOgrenciUygula(plan, kap) {
   if (!rehberMi() || yalnizcaGoruntuleme()) throw new Error('Yalnızca görüntüleme.');
-  const eklenecek = plan.filter(s => s.durum === 'ekle');
-  const onceki = D.ogr.length, yeniPlanlar = [];
-  eklenecek.forEach(s => {
-    D.ogr.push({
-      no: s.no, ad: s.ad, alan: s.alan, sube: s.sube, sinif: s.sinif, ...(s.sinif < 12 ? { mufredatBaslangic: s.mufredatBaslangic } : {}),
-      kap: kap, off: [6], hedef: null, aktif: false, cikti: null,
-      maddeler: [], rutin: { once: '', ara: '', sonra: '' }
+  const eklenecek = plan.filter(s => s.durum === 'ekle'), owner=D, aday=JSON.parse(JSON.stringify(D));
+  if (!eklenecek.length) return 0;
+  try {
+    D=aday;
+    eklenecek.forEach(s => {
+      D.ogr.push({
+        no: s.no, ad: s.ad, alan: s.alan, sube: s.sube, sinif: s.sinif, ...(s.sinif < 12 ? { mufredatBaslangic: s.mufredatBaslangic } : {}),
+        kap: kap, off: [6], hedef: null, aktif: false, cikti: null,
+        maddeler: [], rutin: { once: '', ara: '', sonra: '' }
+      });
+      varsayilanKonuPlaniniHazirla(s.sube, s.alan, s.sinif);
     });
-    const r = varsayilanKonuPlaniniHazirla(s.sube, s.alan, s.sinif);
-    if (r && r.olustu) yeniPlanlar.push(s.sube);
-  });
-  const boyut = baytBoyu(JSON.stringify(D));
-  if (boyut > DEFTER_HAM_UST_SINIR) {
-    D.ogr.length = onceki;
-    yeniPlanlar.forEach(su => { delete D.konuPlani[su]; });
-    throw new Error('Bu kadar öğrenciyle defter boyut sınırını aşıyor (' + kbMetni(boyut) + ' / ' + kbMetni(DEFTER_HAM_UST_SINIR) + '). Listeyi bölerek ekleyin. Ayarlar → Defter boyutu bölümüne bakın.');
-  }
+  } finally { D=owner; }
+  await defterAdayiniDogrula(aday,{previous:owner});
+  if (D!==owner || !rehberMi() || yalnizcaGoruntuleme()) throw new Error('Oturum değişti; öğrenci listesi eklenmedi.');
+  owner.ogr=aday.ogr; owner.konuPlani=aday.konuPlani;
   return eklenecek.length;
 }
 function topluOgrenciKarti() {
@@ -7565,16 +7574,16 @@ function gorunumAyarlar(gelismis) {
     '<div class="arac" style="margin-top:8px"><button class="dugme birincil" id="yapistirYukle">Yapıştırılanı yükle</button></div></div>' +
     (rehberMi() && window.bulut && window.bulut.yapilandirilmis
       ? '<div class="arac" style="margin-top:10px"><button class="dugme" id="bulutGecmisAc">' +
-        (EK.bulutGecmis ? 'Bulut yedek geçmişini yenile' : 'Bulut yedek geçmişini göster') + '</button></div>' +
+        (EK.bulutGecmis ? 'Bulut yedek geçmişini yenile' : 'Bulut yedek geçmişini göster') + '</button><button class="dugme" id="bulutEskiGecmisAc">Eski yedekleri göster</button></div>' +
         (EK.bulutGecmis && EK.bulutGecmis.length
           ? '<div class="kaydir" style="margin-top:8px"><table class="plan"><thead><tr><th>Gün</th>' +
             '<th class="sayisal">Öğrenci</th><th class="sayisal">Sonuç</th><th class="sayisal">Boyut</th>' +
             '<th></th></tr></thead><tbody>' +
-            EK.bulutGecmis.map(y => '<tr><td>' + kacis(ggyy(gunNo(y.gun))) + '</td>' +
+            EK.bulutGecmis.map(y => '<tr><td>' + kacis(ggyy(gunNo(y.gun))) + (y.kind==='month'?' · aylık':'') + '</td>' +
               '<td class="sayisal">' + y.ogrenciSayisi + '</td>' +
               '<td class="sayisal">' + y.sonucSayisi + '</td>' +
               '<td class="sayisal">' + kbMetni(y.boyut) + '</td>' +
-              '<td><button class="dugme bulutGunYukle" data-gun="' + kacis(y.gun) +
+              '<td><button class="dugme bulutGunYukle" data-gun="' + kacis(y.gun) + '" data-id="' + kacis(y.id || y.gun) +
               '" style="padding:3px 9px">geri yükle</button></td></tr>').join('') +
             '</tbody></table></div>'
           : (EK.bulutGecmis ? '<div class="mini" style="margin-top:8px">Bulutta henüz günlük kopya yok.</div>' : '')) +
@@ -7833,7 +7842,7 @@ async function ogrenciHesabindanYukle(ad, no, hazirKullanici) {
   const ayniOgrenci = ogrenciMi() && D.ogr[0] && D.ogr[0].ogrenciBulutId === o.ogrenciBulutId;
   const yerelPaket = ayniOgrenci ? sonucPaketi() : null;
   if (ogrenciMi() && D.ogr.length) {
-    try { localStorage.setItem('yks_ogrenci_kurtarma', JSON.stringify(D)); }
+    try { await LOCAL_STORE.set('yks_ogrenci_kurtarma', JSON.stringify(D)); }
     catch (e) { throw new Error('Önceki öğrenci çalışması korunamadı. Giriş yapılmadı; önce yedek indirin.'); }
   }
   let birlesme;
@@ -8361,7 +8370,8 @@ function defterBoyutuKarti() {
     '<div class="mini" style="margin-top:8px">Bulutta: <b>' + (bulutta ? kbMetni(bulutta) : '—') + ' / ' + kbMetni(BULUT_YEDEK_UST_SINIR) + '</b>' +
     (bulutta ? '' : ' (bu oturumda henüz kaydedilmedi)') + '</div>' +
     '<p class="mini" style="margin-top:4px;max-width:60ch">Bulut kopyası sıkıştırılarak saklanır; 900 KB sınırı sıkıştırılmış boyuta uygulanır. ' +
-    'Defter sıkıştırılmamış hâliyle ' + kbMetni(DEFTER_HAM_UST_SINIR) + '’ı geçemez.</p></div>';
+    'Yeni raporlar için cihaz bütçesi ' + kbMetni(DEFTER_HAM_UST_SINIR) + '. Kaydetmeden önce sıkıştırılmış bulut boyutu da kontrol edilir.</p>' +
+    (bulutta>=BULUT_KAPASITE_UYARI?'<p role="status" class="mini">Bulut kopyası 700 KB planlama eşiğine ulaştı. Yeni dönem verileri için kapasiteyi gözden geçirin; mevcut kayıtlar korundu.</p>':'')+'</div>';
 }
 
 // ------------------------------------------------------ öğretmenin kendi bulut yedeği
@@ -8372,7 +8382,21 @@ function defterBoyutuKarti() {
 const BULUT_YEDEK_UST_SINIR = 900000;      // Firestore belge sınırı 1 MiB; güvenli pay (SAKLANAN dize için)
 // Defterin kendisi (JSON, sıkıştırılmamış) için üst sınır. Bulut kopyası gzip'lenip base64'lendiği için
 // saklanan dize yine BULUT_YEDEK_UST_SINIR'ın altında kalır; ham sınır cihaz belleğini/localStorage'ı korur.
-const DEFTER_HAM_UST_SINIR = 2500000;
+const DEFTER_HAM_UST_SINIR = 5000000;
+const BULUT_KAPASITE_UYARI = 700000;
+// Import admission is separate from ordinary local edits: measure the actual stored
+// snapshot before publishing a growing report. Existing oversized data may be reduced.
+async function defterAdayiniDogrula(aday, {previous} = {}) {
+  const onceki=previous?JSON.stringify(previous):null,json=JSON.stringify(aday),hamBayt=baytBoyu(json),eskiHam=onceki?baytBoyu(onceki):0;
+  if(hamBayt>DEFTER_HAM_UST_SINIR&&hamBayt>=eskiHam)throw new Error('Defter 5.000 KB cihaz bütçesini aşıyor. Yeni rapor eklenmedi; mevcut veriler korundu.');
+  const encoded=await bulutVeriKodla(json),bulutBayt=baytBoyu(encoded);
+  if(bulutBayt>BULUT_YEDEK_UST_SINIR){
+    const eskiBulut=onceki?baytBoyu(await bulutVeriKodla(onceki)):0;
+    if(bulutBayt>=eskiBulut)throw new Error(bulutBoyutMesaji(bulutBayt,encoded!==json,'Bu rapor bulut kopyası sınırını aşıyor; rapor eklenmedi'));
+  }
+  if(previous&&(D!==previous||JSON.stringify(previous)!==onceki))throw new Error('Kontrol sırasında defter değişti. Raporu yeniden ekleyin; mevcut veriler korundu.');
+  return {hamBayt,bulutBayt,uyari:bulutBayt>=BULUT_KAPASITE_UYARI};
+}
 // Bulut kopyası: 'gz1:' + base64(gzip(utf8 JSON)). Eski kopyalar düz JSON ('{' ile başlar) olarak
 // okunmaya devam eder; tarayıcıda CompressionStream yoksa yazı eskisi gibi düz JSON olur.
 const BULUT_SIKISTIRMA_ONEKI = 'gz1:';
@@ -8468,12 +8492,30 @@ const BULUT_DEFTER_CAKISMA = 'Bulutta bu cihazın henüz açmadığı farklı bi
   'Üzerine yazılmadı. Ayarlar → “Buluttaki defteri aç” ile kontrol edin. ' +
   'Bu cihazdaki defteri göndermek istiyorsanız “Defteri buluta yedekle”yi kullanın.';
 
+function bulutAnlamJson(json) { const y=JSON.parse(json);delete y.ts;delete y.rev;return JSON.stringify(y); }
+const bulutGecmisRef=(b,uid,id)=>b.doc(b.db,'ogretmenYedek',uid,'gecmis',id);
+async function bulutGecmisDizini(b,uid,tx) {
+  const ref=bulutGecmisRef(b,uid,BACKUP_HISTORY.INDEX),s=await (tx?tx.get(ref):(b.getDocFromServer||b.getDoc)(ref));
+  return {index:BACKUP_HISTORY.parse(s.exists()?s.data():null),exists:s.exists()};
+}
+async function bulutGecmisIstegi(veri,kind,kaynak,gun=bulutGercekGun()) {
+  const json=await bulutVeriCoz(veri),y=JSON.parse(json);yedekDogrula(y);
+  const kayit=veri.startsWith(BULUT_SIKISTIRMA_ONEKI)?veri:await bulutVeriKodla(json),boyut=baytBoyu(kayit);
+  if(boyut>BULUT_YEDEK_UST_SINIR)throw new Error(bulutBoyutMesaji(boyut,kayit!==json));
+  return {kind,gun,kaynak:String(kaynak).slice(0,100),veri:kayit,boyut,sha:await bulutYedekImzasi(json),ogrenciSayisi:yedekOgrenciSayisi(y),sonucSayisi:(y.log||[]).length};
+}
+function bulutGecmisPlaniniYaz(b,uid,tx,plan) {
+  for(const w of plan.writes)tx.set(bulutGecmisRef(b,uid,w.entry.slot),w.document);
+  tx.set(bulutGecmisRef(b,uid,BACKUP_HISTORY.INDEX),BACKUP_HISTORY.indexDocument(plan.index));
+}
+
 function bulutaYedekle(onaylananVeri, onaylananUid) {
   if (bulutDefterIslemi) return Promise.resolve({ tur: 'hata', mesaj: 'Bulut defteri kontrol ediliyor; yedekleme bekletildi.' });
   if (!bulutYedekIsi) bulutYedekIsi = bulutaYedekleGercek(onaylananVeri, onaylananUid).finally(() => { bulutYedekIsi = null; });
   return bulutYedekIsi;
 }
 async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
+  const defter=D;
   if (!window.bulut || !window.bulut.yapilandirilmis || IZLEME || KILIT.durum === 'baskasinda') return { tur: 'yok' };
   if (testHesabiMi()) return testDefterineYedekle(onaylananVeri);
   if (!rehberMi()) return { tur: 'yok' };
@@ -8495,16 +8537,16 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
     const temel = bulutYedekTemelleri[sahipUid];
     const ref = window.bulut.doc(window.bulut.db, 'ogretmenYedek', sahipUid);
     const yerel = JSON.parse(json);
-    const korumaTs = Date.now(), korumaId = geriYuklemeNoktasiKimligi(korumaTs);
-    const gunRef = window.bulut.doc(window.bulut.db, 'ogretmenYedek', sahipUid, 'geriNoktalari', bulutGunBaslangiciKimligi());
+    const korumaTs = Date.now(),gun=bulutGercekGun();
+    const gunIstegi=await bulutGecmisIstegi(kayit,'day','Günlük son kayıt',gun);
+    let onaylananJson=json,gercekBoyut=yedekBayt,degismedi=false;
     let etkin = true;
     try {
       await sureSinirli(window.bulut.runTransaction(window.bulut.db, async tx => {
         const anlik = await tx.get(ref);
         const eski = anlik.exists() ? anlik.data() : null;
-        const gunKopyasi = eski ? await tx.get(gunRef) : null;
         const mevcut = window.bulut.mevcutKullanici();
-        if (!etkin || !mevcut || mevcut.uid !== kullanici.uid) throw new Error('Bulut yedekleme oturumu değişti; işlem durduruldu.');
+        if (!etkin || D!==defter || !mevcut || mevcut.uid !== kullanici.uid || defterUid(mevcut)!==sahipUid) throw new Error('Bulut yedekleme oturumu değişti; işlem durduruldu.');
         if (eski) {
           // Karşılaştırmalar SIKIŞTIRMASIZ JSON üzerinde yapılır: düz eski kopya ile gz1 kopya aynı defteri
           // aynı sayar. Çözülemeyen kopya asla "boş" sayılmaz; işlem durur ve bulut değişmez.
@@ -8515,40 +8557,31 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
           const onayli = typeof onaylananVeri === 'string' && onaylananVeri === eskiJson;
           const bosaliyor = yedekOgrenciSayisi(eskiDefter) > 0 && yedekOgrenciSayisi(yerel) === 0 ||
             (eskiDefter.log || []).length > 0 && !(yerel.log || []).length;
+          if(bulutAnlamJson(eskiJson)===bulutAnlamJson(json)){
+            onaylananJson=eskiJson;gercekBoyut=baytBoyu(eski.veri);degismedi=true;return;
+          }
           if (!ayni && !onayli && (bosaliyor || !temel || temel !== await bulutYedekImzasi(eskiJson)))
             throw Object.assign(new Error(BULUT_DEFTER_CAKISMA), { code: 'yks-defter-cakisma' });
           if (!etkin) throw new Error('Bulut yedeği sunucudan zamanında onay alamadı.');
-          if (!ayni && !gunKopyasi.exists()) tx.set(gunRef, await bulutKorumaBelgesi(eski.veri, korumaTs,
-            'Gün başlangıcı · ' + bulutGercekGun()));
-          // Kullanıcı farklı yerel defteri seçtiğinde buluttaki eski kopya da aynı
-          // atomik işlemde korunur; günlük kopyanın üzerine yazılması onu silemez.
-          if (onayli && !ayni) tx.set(window.bulut.doc(window.bulut.db, 'ogretmenYedek', sahipUid, 'geriNoktalari', korumaId),
-            await bulutKorumaBelgesi(eski.veri, korumaTs, 'Yerel defter yüklenmeden önce buluttaki defter'));
         }
+        const {index}=await bulutGecmisDizini(window.bulut,sahipUid,tx),istekler=[];
+        if(eski&&!index.entries.some(e=>e.kind==='start'&&e.gun===gun))istekler.push(await bulutGecmisIstegi(eski.veri,'start','Gün başlangıcı · '+gun,gun));
+        if(eski&&typeof onaylananVeri==='string')istekler.push(await bulutGecmisIstegi(eski.veri,'operation','Yerel defter yüklenmeden önce buluttaki defter',gun));
+        istekler.push(gunIstegi,{...gunIstegi,kind:'month',kaynak:'Aylık son kayıt'});
+        const plan=BACKUP_HISTORY.plan(index,istekler,korumaTs);
         // Son yedek zaten boş olsa bile bugünün geçmiş kopyası dolu olabilir.
         // Boş defteri yeniden yazmak elde kalan o kurtarma kopyasını silmemeli.
         if (!yerel.ogr.length && !yerel.log.length && typeof onaylananVeri !== 'string') {
           throw new Error('Bu cihazdaki defter boş; buluta yazılmadı. Önce bulut yedek geçmişini kontrol edin.');
         }
         if (!etkin) throw new Error('Bulut yedeği sunucudan zamanında onay alamadı.');
-        tx.set(ref, { veri: kayit, ts: ts, surum: VERI_SURUMU, boyut: kayit.length });
+        bulutGecmisPlaniniYaz(window.bulut,sahipUid,tx,plan);
+        tx.set(ref, { veri: kayit, ts: ts, surum: VERI_SURUMU, boyut: yedekBayt });
       }), BULUT_YAZMA_ZAMAN_ASIMI, 'Bulut yedeği sunucudan zamanında onay alamadı.');
     } finally { etkin = false; }
-    await bulutYedekTemeliniHatirla(sahipUid, json);
-    // Günlük anlık görüntü: aynı gün içinde üzerine yazılır, günler birikir. Böylece yanlış
-    // girilmiş ya da bozulmuş bir sonuç fark edildiğinde önceki bir güne dönülebilir —
-    // tek bir "son yedek" bunu yapamaz, çünkü hatalı hâli de o tek kopyaya yazılır.
-    try {
-      await sureSinirli(
-        window.bulut.setDoc(
-          window.bulut.doc(window.bulut.db, 'ogretmenYedek', sahipUid, 'gecmis', isoDan(bugunNo())),
-          { veri: kayit, ts: ts, surum: VERI_SURUMU, boyut: kayit.length,
-            ogrenciSayisi: yedekOgrenciSayisi(yerel),
-            sonucSayisi: (yerel.log || []).length }),
-        BULUT_YAZMA_ZAMAN_ASIMI, 'Günlük bulut kopyası sunucudan zamanında onay alamadı.');
-    } catch (e) { /* günlük kopya yazılamazsa asıl yedek yine geçerlidir */ }
-    EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = ''; EK.bulutYedekBoyut = kayit.length;
-    return { tur: 'tamam', boyut: kayit.length, hamBoyut: json.length };
+    await bulutYedekTemeliniHatirla(sahipUid, onaylananJson);
+    EK.bulutYedekTs = Date.now(); EK.bulutYedekHata = ''; EK.bulutYedekBoyut = gercekBoyut;
+    return { tur: 'tamam', boyut: gercekBoyut, hamBoyut: baytBoyu(json),degismedi };
   } catch (e) {
     // Sıra başkasına geçmiş olabilir (kilit): durum tazelenir, bant görünür.
     if (izinHatasiMi(e) && KILIT.durum) kilitDenetle();
@@ -8621,7 +8654,7 @@ async function buluttanYedekAl() {
 async function bulutDefteriniAc(kullanici) {
   const izle = await izlemeHedefiOku(kullanici);
   if (izle && izle.yetki === 'ortak') return ortakDefteriAc(izle, kullanici);
-  if (ORTAK) { ortakBitir('Ortak defter izniniz kaldırıldı; bu cihazdaki kopya silindi.'); return false; }
+  if (ORTAK) { await ortakBitir('Ortak defter izniniz kaldırıldı; bu cihazdaki kopya silindi.'); return false; }
   if (izle) return izlemeyiBaslat(izle);
   bulutYedekTemeliniUnut(kullanici.uid);
   const r = await buluttanYedekAl();
@@ -8680,7 +8713,7 @@ let KILIT = { durum: '', ad: '', uid: '', ts: 0 }, KILIT_IS = null, KILIT_KAPALI
 let SON_ETKINLIK = Date.now();
 const IZLEME_UID = /^[A-Za-z0-9_-]{1,128}$/;
 // Görüntüleme ya da defteri başka biri düzenlerken: hiçbir şey kaydedilmez, veri yazan çağrılar reddedilir.
-function yalnizcaGoruntuleme() { return !!IZLEME || KILIT.durum === 'baskasinda'; }
+function yalnizcaGoruntuleme() { return LOCAL_EMBEDDED_READONLY || !!IZLEME || KILIT.durum === 'baskasinda'; }
 window.yalnizcaGoruntuleme = yalnizcaGoruntuleme;
 function izlemeHedefi(v, izleyiciUid) {
   return v && IZLEME_UID.test(v.sahipUid || '') && IZLEME_UID.test(izleyiciUid || '') && v.sahipUid !== izleyiciUid
@@ -8690,8 +8723,9 @@ function izlemeKaydi() {
   try { const v = JSON.parse(localStorage.getItem('yks_izleme') || 'null'); return izlemeHedefi(v, v && v.izleyiciUid); }
   catch (e) { return null; }
 }
-function izlemeKayitlariniSil() {
-  for (const k of ['yks_izleme_veri', 'yks_izleme']) { try { localStorage.removeItem(k); } catch (e) { /* depolama kapalı */ } }
+async function izlemeKayitlariniSil() {
+  await LOCAL_STORE.remove('yks_izleme_veri');
+  localStorage.removeItem('yks_izleme');
 }
 // İzin yoksa (belge yok ya da kurallar henüz yayınlanmamış) null döner; öğretmen kendi defterini açar.
 async function izlemeHedefiOku(kullanici) {
@@ -8716,12 +8750,12 @@ async function izlemeDefteriniCoz(anlik) {
   return json;
 }
 // Defter bellekte açılır. Cihazdaki tek kopya hızlı açılış içindir; çıkışta ve izin kalkınca silinir.
-function izlemeDefteriniYerlestir(json, hedef) {
+async function izlemeDefteriniYerlestir(json, hedef) {
   const onceki = D;
   try { veriyiHazirla(JSON.parse(json)); D.rol = 'rehber'; }
   catch (e) { D = onceki; throw e; }
   IZLEME = hedef; IZLEME_JSON = json; EK.kirli = false; EK.son = 'yalnızca görüntüleme';
-  try { localStorage.setItem('yks_izleme', JSON.stringify(hedef)); localStorage.setItem('yks_izleme_veri', json); }
+  try { await LOCAL_STORE.set('yks_izleme_veri', json, 'viewer:'+hedef.izleyiciUid+':'+hedef.sahipUid); localStorage.setItem('yks_izleme', JSON.stringify(hedef)); }
   catch (e) { /* önbellek yazılamazsa her açılışta sunucudan alınır */ }
 }
 async function izlemeyiBaslat(hedef) {
@@ -8734,7 +8768,7 @@ async function izlemeyiBaslat(hedef) {
   const json = await izlemeDefteriniCoz(anlik), mevcut = b.mevcutKullanici();
   if (!mevcut || mevcut.uid !== hedef.izleyiciUid) throw new Error('Google hesabı değişti; yeniden bağlanın.');
   izlemeDinlemeyiDurdur();
-  izlemeDefteriniYerlestir(json, hedef);
+  await izlemeDefteriniYerlestir(json, hedef);
   EK.sekme = 'ana'; EK.takipHafta = null; EK.takipOlcut = 'islem'; EK.ogr = 0; EK.hafta = null;
   EK.bulutYedekHata = ''; EK.izlemeDurum = '';
   izlemeDinlemeyiBaslat(); ciz();
@@ -8745,8 +8779,8 @@ async function izlemeyiBaslat(hedef) {
 }
 function izlemeDinlemeyiDurdur() { if (typeof IZLEME_DINLEYICI === 'function') IZLEME_DINLEYICI(); IZLEME_DINLEYICI = null; }
 // İzin kaldırılınca cihazdaki kopya silinir ve izleyicinin kendi defterine dönülür.
-function izlemeyiBitir(mesaj) {
-  izlemeDinlemeyiDurdur(); ogretmenDinlemeyiDurdur(); izlemeKayitlariniSil(); IZLEME = null; IZLEME_JSON = '';
+async function izlemeyiBitir(mesaj) {
+  izlemeDinlemeyiDurdur(); ogretmenDinlemeyiDurdur(); await izlemeKayitlariniSil(); IZLEME = null; IZLEME_JSON = '';
   try { if (mesaj) sessionStorage.setItem('yks_izleme_mesaj', mesaj); } catch (e) { /* mesaj gösterilmeden açılır */ }
   if (typeof window.location?.reload === 'function') window.location.reload();
 }
@@ -8770,7 +8804,7 @@ function izlemeDinlemeyiBaslat() {
       if (!gecerli()) return;
       EK.izlemeDurum = 'güncel · ' + new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
       if (json === IZLEME_JSON) { rayCiz(); return; }
-      izlemeDefteriniYerlestir(json, hedef);
+      await izlemeDefteriniYerlestir(json, hedef);
       const odak = document.activeElement;
       if (!PENCERE && !DISARI_AKTAR && !DENEME_FORM && !DENEME_IMPORT && !/^(INPUT|TEXTAREA|SELECT)$/.test(odak && odak.tagName || '')) ciz();
       else rayCiz();
@@ -8778,22 +8812,22 @@ function izlemeDinlemeyiBaslat() {
   }, e => {
     IZLEME_DINLEYICI = null;
     if (IZLEME !== hedef) return;
-    if (izinHatasiMi(e)) { izlemeyiBitir('Bu defteri görüntüleme izniniz kaldırıldı; cihazdaki kopyası silindi.'); return; }
+    if (izinHatasiMi(e)) { izlemeyiBitir('Bu defteri görüntüleme izniniz kaldırıldı; cihazdaki kopyası silindi.').catch(err=>{ EK.izlemeDurum='Cihazdaki kopya silinemedi: '+(err.message||err); rayCiz(); }); return; }
     EK.izlemeDurum = 'paylaşılan defter güncellenemiyor: ' + (e.message || e); rayCiz();
   });
 }
 // Açılış: önceki görüntüleme cihazdaki kopyayla hemen açılır, oturum hazır olunca sunucudan tazelenir.
-function izlemeAcilisi() {
+async function izlemeAcilisi() {
   const hedef = izlemeKaydi();
-  if (!hedef) { izlemeKayitlariniSil(); return false; }
+  if (!hedef) { await izlemeKayitlariniSil(); return false; }
   try {
-    const json = localStorage.getItem('yks_izleme_veri'), y = JSON.parse(json);
+    const json = await LOCAL_STORE.get('yks_izleme_veri'), y = JSON.parse(json);
     yedekDogrula(y);
     if (y.rol && y.rol !== 'rehber') throw new Error('rol');
-    izlemeDefteriniYerlestir(json, hedef);
+    await izlemeDefteriniYerlestir(json, hedef);
     EK.izlemeDurum = 'sunucudan tazeleniyor…';
     return true;
-  } catch (e) { izlemeKayitlariniSil(); IZLEME = null; IZLEME_JSON = ''; return false; }
+  } catch (e) { await izlemeKayitlariniSil(); IZLEME = null; IZLEME_JSON = ''; return false; }
 }
 function izlemeBandi() {
   if (KILIT.durum === 'baskasinda') return '<div class="izleme-bant" role="note"><b>' + kacis((KILIT.ad || 'Diğer öğretmen') + ' düzenliyor') + '</b><span>' +
@@ -8836,7 +8870,7 @@ async function yerelIsBulutta(uid, bellek) {
   const temel = bulutYedekTemelleri[uid];
   if (!temel) return false;
   let yerel;
-  try { yerel = localStorage.getItem('yks_veri'); } catch (e) { return false; }
+  try { yerel = await LOCAL_STORE.get('yks_veri'); } catch (e) { return false; }
   if (!yerel) return false;
   if (temel !== await bulutYedekImzasi(yerel) &&
       !(KAYIT_SAYAC === ACILIS_KAYIT && TEST_ACILIS_JSON && temel === await bulutYedekImzasi(TEST_ACILIS_JSON))) return false;
@@ -8846,7 +8880,7 @@ async function defteriBuluttanYerlestir(json, uid) {
   const onceki = D;
   try { veriyiHazirla(JSON.parse(json)); D.rol = 'rehber'; }
   catch (e) { D = onceki; throw e; }
-  try { localStorage.setItem('yks_veri', json); } catch (e) { /* bellekte açık kalır */ }
+  try { await LOCAL_STORE.set('yks_veri', json); } catch (e) { /* bellekte açık kalır */ }
   await bulutYedekTemeliniHatirla(uid, json);
   EK.kirli = false;
   const odak = typeof document !== 'undefined' ? document.activeElement : null;
@@ -8962,7 +8996,7 @@ async function ortakDefteriAc(hedef, kullanici) {
   try { veriyiHazirla(JSON.parse(json)); D.rol = 'rehber'; }
   catch (e) { D = onceki; throw e; }
   ORTAK = { sahipUid: hedef.sahipUid, ortakUid: kullanici.uid, ad: hedef.ad || '' };
-  try { localStorage.setItem('yks_ortak', JSON.stringify(ORTAK)); localStorage.setItem('yks_veri', json); }
+  try { await LOCAL_STORE.set('yks_veri', json); localStorage.setItem('yks_ortak', JSON.stringify(ORTAK)); }
   catch (e) { /* bellekte açık kalır; çıkışta zaten silinir */ }
   await bulutYedekTemeliniHatirla(hedef.sahipUid, json);
   KILIT_KAPALI = false;
@@ -8979,12 +9013,12 @@ async function ortakIzniniDenetle(u) {
   let hedef;
   try { hedef = await izlemeHedefiOku(u); } catch (e) { return; }   // ağ: sonra yeniden denenir
   if (!ORTAK || hedef && hedef.yetki === 'ortak' && hedef.sahipUid === ORTAK.sahipUid) return;
-  ortakBitir(hedef ? 'Ortak defter izniniz değişti; bu cihazdaki kopya silindi.' : 'Ortak defter izniniz kaldırıldı; bu cihazdaki kopya silindi.');
+  await ortakBitir(hedef ? 'Ortak defter izniniz değişti; bu cihazdaki kopya silindi.' : 'Ortak defter izniniz kaldırıldı; bu cihazdaki kopya silindi.');
 }
-function ortakBitir(mesaj) {
+async function ortakBitir(mesaj) {
   if (CIKIS_DURUMU) return;
   CIKIS_DURUMU = 'temizlik'; kilitTakibiniDurdur(); cikisArkaPlaniDurdur();
-  try { cikisYerelVerisiniTemizle(); } catch (e) { /* sayfa yenilenince yeniden denenir */ }
+  try { await cikisYerelVerisiniTemizle(); } catch (e) { CIKIS_DURUMU=''; throw e; }
   ORTAK = null;
   try { if (mesaj) sessionStorage.setItem('yks_izleme_mesaj', mesaj); } catch (e) { /* mesaj gösterilmeden açılır */ }
   if (typeof window.location?.reload === 'function') window.location.reload();
@@ -9424,15 +9458,17 @@ const BULUT_IZIN_ACIKLAMA =
 // Bulutta duran günlük anlık görüntüleri listeler (en yeni önce). Belge içeriğini indirmez
 // gibi davranamayız — Firestore tüm alanları getirir — ama liste yılda birkaç yüz kayıt
 // mertebesinde kaldığı için bu kabul edilebilir; yine de yalnızca istendiğinde çağrılır.
-async function bulutYedekGecmisi() {
+async function bulutYedekGecmisi(eski = false) {
   if (!window.bulut || !window.bulut.yapilandirilmis) return { tur: 'yok' };
   const kullanici = window.bulut.mevcutKullanici();
   if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
   try {
+    if(!eski){const {index,exists}=await bulutGecmisDizini(window.bulut,defterUid(kullanici));if(exists)return {tur:'tamam',liste:index.entries.filter(e=>e.kind==='day'||e.kind==='month').map(e=>({...e,id:BACKUP_HISTORY.token(e),kaynak:e.kind==='month'?'Aylık son kayıt':'Günlük son kayıt'})).sort((a,b)=>b.ts-a.ts)};}
     const anlik = await window.bulut.getDocs(
       window.bulut.collection(window.bulut.db, 'ogretmenYedek', defterUid(kullanici), 'gecmis'));
     const liste = [];
     anlik.forEach(b => {
+      if(BACKUP_HISTORY.reserved(b.id))return;
       const v = b.data() || {};
       liste.push({ gun: b.id, ts: +v.ts || 0, boyut: +v.boyut || 0,
         ogrenciSayisi: +v.ogrenciSayisi || 0, sonucSayisi: +v.sonucSayisi || 0 });
@@ -9448,6 +9484,7 @@ async function bulutYedekGecmisi() {
 // geleceğini gösterip onay almalı, çünkü bu işlem mevcut defterin YERİNE geçer.
 async function buluttanGunAl(gun) {
   if (!window.bulut) return { tur: 'yok' };
+  if(BACKUP_HISTORY.reserved(gun))return bulutV2YedekAl(gun);
   const kullanici = window.bulut.mevcutKullanici();
   if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
   try {
@@ -9501,29 +9538,27 @@ async function geriYuklemeNoktasiOlustur(kaynak) {
   if (!json || noktaBayt > BULUT_YEDEK_UST_SINIR)
     return { tur: 'hata', mesaj: bulutBoyutMesaji(noktaBayt, kayit !== json, 'Mevcut defter geri dönüş noktası için çok büyük') };
   const ts = Date.now();
-  const id = geriYuklemeNoktasiKimligi(ts);
   const kaynakMetni = String(kaynak || 'bilinmeyen').slice(0, 100);
   try {
-    await sureSinirli(
-      window.bulut.setDoc(
-        window.bulut.doc(window.bulut.db, 'ogretmenYedek', defterUid(kullanici), 'geriNoktalari', id),
-        { veri: kayit, ts: ts, surum: VERI_SURUMU, boyut: kayit.length,
-          ogrenciSayisi: (D.ogr || []).filter(o => o && !o.silindi).length,
-          sonucSayisi: (D.log || []).length, kaynak: kaynakMetni }),
-      BULUT_YAZMA_ZAMAN_ASIMI,
-      'Geri yükleme koruma noktası sunucudan zamanında onay alamadı. Mevcut defter değiştirilmedi.');
-    return { tur: 'tamam', id: id, ts: ts, boyut: kayit.length };
+    const b=window.bulut,uid=defterUid(kullanici),istek=await bulutGecmisIstegi(kayit,'operation',kaynakMetni);let entry,etkin=true;
+    try{await sureSinirli(b.runTransaction(b.db,async tx=>{
+      const {index}=await bulutGecmisDizini(b,uid,tx);
+      if(!etkin||b.mevcutKullanici()?.uid!==kullanici.uid)throw new Error('Oturum değişti; koruma kopyası yazılmadı.');
+      const plan=BACKUP_HISTORY.plan(index,[istek],ts);entry=plan.writes[0].entry;bulutGecmisPlaniniYaz(b,uid,tx,plan);
+    }),BULUT_YAZMA_ZAMAN_ASIMI,'Geri yükleme koruma noktası sunucudan zamanında onay alamadı. Mevcut defter değiştirilmedi.');}finally{etkin=false;}
+    return { tur: 'tamam', id: BACKUP_HISTORY.token(entry), ts: entry.ts, boyut: kayit.length };
   } catch (e) {
     return izinHatasiMi(e) ? { tur: 'hata', mesaj: BULUT_IZIN_ACIKLAMA }
       : { tur: 'hata', mesaj: e.message || String(e) };
   }
 }
 
-async function bulutGeriYuklemeNoktalari() {
+async function bulutGeriYuklemeNoktalari(eski = false) {
   if (!window.bulut || !window.bulut.yapilandirilmis) return { tur: 'yok' };
   const kullanici = window.bulut.mevcutKullanici();
   if (!kullanici || kullanici.isAnonymous) return { tur: 'baglanilmadi' };
   try {
+    if(!eski){const {index,exists}=await bulutGecmisDizini(window.bulut,defterUid(kullanici));if(exists)return {tur:'tamam',liste:index.entries.filter(e=>e.kind==='operation'||e.kind==='start').map(e=>({...e,id:BACKUP_HISTORY.token(e)})).sort((a,b)=>b.ts-a.ts)};}
     const anlik = await window.bulut.getDocs(
       window.bulut.collection(window.bulut.db, 'ogretmenYedek', defterUid(kullanici), 'geriNoktalari'));
     const liste = [];
@@ -9542,6 +9577,7 @@ async function bulutGeriYuklemeNoktalari() {
 
 async function buluttanGeriYuklemeNoktasiAl(id) {
   if (!window.bulut) return { tur: 'yok' };
+  if(BACKUP_HISTORY.reserved(id))return bulutV2YedekAl(id);
   if (typeof id !== 'string' || !/^[a-z0-9-]{10,100}$/i.test(id))
     return { tur: 'hata', mesaj: 'Geri dönüş noktası kimliği geçersiz.' };
   const kullanici = window.bulut.mevcutKullanici();
@@ -9566,6 +9602,21 @@ async function buluttanGeriYuklemeNoktasiAl(id) {
   }
 }
 
+async function bulutV2YedekAl(id) {
+  const b=window.bulut,u=b?.mevcutKullanici();if(!u||u.isAnonymous)return {tur:'baglanilmadi'};
+  try{
+    const uid=defterUid(u),{index}=await bulutGecmisDizini(b,uid),entry=BACKUP_HISTORY.lookup(index,id);
+    if(!entry)throw new Error('Bu yedek sürümü artık listede yok. Listeyi yenileyip yeniden seçin.');
+    const s=await (b.getDocFromServer||b.getDoc)(bulutGecmisRef(b,uid,entry.slot)),v=s.exists()?s.data():null;
+    if(!v||v.ts!==entry.ts||baytBoyu(v.veri)!==entry.boyut)throw new Error('Seçilen yedek sürümü değişmiş. Listeyi yenileyin.');
+    const json=await bulutVeriCoz(v.veri);
+    if(await bulutYedekImzasi(json)!==entry.sha)throw new Error('Yedek içeriği dizinle eşleşmiyor; işlem durduruldu.');
+    const yedek=JSON.parse(json);yedekDogrula(yedek);
+    if(b.mevcutKullanici()?.uid!==u.uid)throw new Error('Oturum değişti.');
+    return {tur:'tamam',yedek,ts:entry.ts,kaynak:entry.kaynak};
+  }catch(e){return {tur:'hata',mesaj:e.message||String(e)};}
+}
+
 // Kaynak yedeği önce doğrular, sonra mevcut defteri ayrı ve değiştirilemez bir noktaya
 // yazar. Koruma yazısı tamamlanmadan D'ye dokunulmaz. Yerel kayıt da başarısız olursa
 // ekrandaki defter eski hâline döner; buluttaki koruma noktası güvenlik ağı olarak kalır.
@@ -9584,14 +9635,16 @@ async function guvenliGeriYukle(yedek, kaynak) {
     bulutGecmis: EK.bulutGecmis,
     bulutGeriNoktalar: EK.bulutGeriNoktalar
   };
+  let uygulanan=null;
   try {
     veriyiHazirla(yedek);
+    uygulanan=D;
     EK.ogr = 0; EK.hafta = null; EK.bulutGecmis = null; EK.bulutGeriNoktalar = null;
     if (!(await kaydet(true))) throw new Error('Geri yüklenen defter cihaza kaydedilemedi.');
+    if(D!==uygulanan)throw new Error('Kayıt sırasında defter değişti; yeni çalışma korundu.');
     return { tur: 'tamam', korumaId: koruma.id };
   } catch (e) {
-    D = onceki;
-    Object.assign(EK, oncekiEk);
+    if(D===uygulanan){D = onceki;Object.assign(EK, oncekiEk);}
     return { tur: 'hata', mesaj: e.message || String(e), korumaId: koruma.id };
   }
 }
@@ -9897,7 +9950,7 @@ async function ogrenciEsitlemeyiDene(cikisIcin) {
       denemeDinlemeyiBaslat();
       ogrenciOtomasyonHazirla();
       D.ogrSonEsitlenen = imza; OGRENCI_SYNC_DENEME = 0;
-      localStorage.setItem('yks_veri', JSON.stringify(D));
+      await LOCAL_STORE.set('yks_veri', JSON.stringify(D));
       EK.ogrSyncHata = '';
       EK.ogrSyncDurum = 'Sunucuya kaydedildi · ' + new Date().toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
       if (imza !== ogrenciEsitlemeImzasi()) ogrenciEsitlemePlanla();
@@ -9933,15 +9986,13 @@ function baskiIcinKaydet() {
     if(printWeek.metotPlan)printWeek.metotBaski=true;
   }
   const defter = D;
-  // Yazdır penceresi JS işlerini durdurabilir. Yerel kopyayı pencere açılmadan
-  // önce yaz; ağ onayı ayrı görünür ve bağlantı yoksa sonraki açılışta yeniden denenir.
-  try { localStorage.setItem('yks_veri', JSON.stringify(D)); }
-  catch (e) { EK.kirli = true; }
+  // Yazdırma başlamadan önce kalıcı cihaz kaydı beklenir.
   return kaydet(true).then(tamam => {
-    if (D !== defter) return;
+    if (D !== defter) return false;
     if (tamam) sunucuKaydiniBaslat();
     else bilgiVer('Yazdırılan plan cihaza kaydedilemedi. Sayfayı kapatmadan yedek indirin.');
-  }).catch(e => { EK.bulutYedekHata = e.message || String(e); rayCiz(); });
+    return tamam;
+  }).catch(e => { EK.bulutYedekHata = e.message || String(e); rayCiz(); return false; });
 }
 
 // Çıkış: önce güncel defterin sunucu onayı, sonra Auth çıkışı, en son yerel temizlik.
@@ -10002,15 +10053,17 @@ function cikisDurumunuGoster(metin, bekliyor, tekrar = true) {
   const kabuk=document.querySelector('.kabuk');if(kabuk)kabuk.inert=!!bekliyor;
   const dugme=document.getElementById('oturumKapat');if(dugme)dugme.disabled=!!bekliyor;
 }
-function cikisYerelVerisiniTemizle() {
+async function cikisYerelVerisiniTemizle() {
   // Yalnızca bu uygulamanın kayıtları; aynı origin'deki başka uygulamalar korunur.
   // Asıl defter en son silinir: önceki silmelerden biri engellenirse hâlâ cihazdadır.
   for(const depo of [sessionStorage,localStorage]) {
     const anahtarlar=[];
-    for(let i=0;i<depo.length;i++){const k=depo.key(i);if(k?.startsWith('yks_'))anahtarlar.push(k);}
+    for(let i=0;i<depo.length;i++){const k=depo.key(i);if(k?.startsWith('yks_') && k!=='yks_idb_migrated' && (depo!==localStorage || !LOCAL_STORE.isManaged(k)))anahtarlar.push(k);}
     anahtarlar.sort((a,b)=>(a==='yks_veri')-(b==='yks_veri'));
     for(const k of anahtarlar){depo.removeItem(k);if(depo.getItem(k)!==null)throw new Error('Tarayıcıdaki kayıt silinemedi.');}
   }
+  await LOCAL_STORE.clear();
+  localStorage.removeItem('yks_idb_migrated');
 }
 function kaydedipCikisYap() {
   if(CIKIS_IS)return CIKIS_IS;
@@ -10035,7 +10088,7 @@ async function kaydedipCikisYapGercek() {
     CIKIS_DURUMU='temizlik';cikisArkaPlaniDurdur();izlemeDinlemeyiDurdur();
     cikisDurumunuGoster('Oturum kapatılıyor; paylaşılan defterin bu cihazdaki kopyası siliniyor…',true);
     await sureSinirli(b.oturumuKapat(),BULUT_YAZMA_ZAMAN_ASIMI,'Oturum kapatma tamamlanmadı.');
-    izlemeKayitlariniSil();IZLEME=null;IZLEME_JSON='';
+    await izlemeKayitlariniSil();IZLEME=null;IZLEME_JSON='';
     CIKIS_DURUMU='tamam';cikisDurumunuGoster('Çıkış yapıldı; paylaşılan defterin bu cihazdaki kopyası silindi.',false);
     if(typeof window.location?.reload==='function')window.location.reload();
     return true;
@@ -10091,7 +10144,9 @@ async function kaydedipCikisYapGercek() {
     if(r?.tur!=='tamam')throw new Error(r?.mesaj||(test?'Test defteri':'Öğretmen defteri')+' sunucuya kaydedilemedi.');
     const a=await sureSinirli(b.getDocFromServer(test?testDefterRef(kullanici.uid):b.doc(b.db,'ogretmenYedek',defterUid(kullanici))),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki son yedek doğrulanamadı.');
     // Sunucudaki kopya (gz1 ya da düz) çözülür; çözülemezse çıkış durur ve cihaz temizlenmez.
-    if(!a.exists()||await bulutVeriCoz(a.data().veri)!==onayliImza)throw new Error('Sunucudaki yedek bu cihazın son kaydıyla eşleşmiyor.');
+    if(!a.exists())throw new Error('Sunucudaki yedek bu cihazın son kaydıyla eşleşmiyor.');
+    const uzakJson=await bulutVeriCoz(a.data().veri);
+    if(test?uzakJson!==onayliImza:bulutAnlamJson(uzakJson)!==bulutAnlamJson(onayliImza))throw new Error('Sunucudaki yedek bu cihazın son kaydıyla eşleşmiyor.');
   }
   const veriAyni=()=>D===defter&&(ogr?ogrenciEsitlemeImzasi():JSON.stringify(D))===onayliImza;
   if(!oturumAyni()||!veriAyni())throw new Error('Kayıt sırasında oturum veya çalışma değişti; cihaz temizlenmedi.');
@@ -10103,8 +10158,8 @@ async function kaydedipCikisYapGercek() {
   if(b.mevcutKullanici()||!veriAyni())throw new Error('Çıkış sırasında oturum veya veri değişti; cihaz temizlenmedi.');
   return yerelOturumuBitir('Sunucuya kaydedildi. Çıkış yapıldı ve bu uygulamanın cihazdaki kayıtları temizlendi.');
 }
-function yerelOturumuBitir(mesaj) {
-  cikisYerelVerisiniTemizle();
+async function yerelOturumuBitir(mesaj) {
+  await cikisYerelVerisiniTemizle();
   if(GECMIS_PLAN?.foto)URL.revokeObjectURL(GECMIS_PLAN.foto);GECMIS_PLAN=null;
   D=varsayilan();D.rol='';EK={sekme:'plan',ogr:0,hafta:null,kirli:false,son:'',girisAcik:{}};
   const gomulu=document.getElementById('veri');if(gomulu)gomulu.textContent='null';
@@ -10150,7 +10205,7 @@ async function bulutKorumaBelgesi(veri,ts,kaynak) {
   const json=await bulutVeriCoz(veri),y=JSON.parse(json);yedekDogrula(y);
   const kayit=veri.startsWith(BULUT_SIKISTIRMA_ONEKI)?veri:await bulutVeriKodla(json);
   if(baytBoyu(kayit)>BULUT_YEDEK_UST_SINIR)throw new Error('Koruma yedeği çok büyük; işlem durduruldu. Ayarlar → Defter boyutu bölümüne bakın.');
-  return {veri:kayit,ts,surum:VERI_SURUMU,boyut:kayit.length,ogrenciSayisi:yedekOgrenciSayisi(y),
+  return {veri:kayit,ts,surum:VERI_SURUMU,boyut:baytBoyu(kayit),ogrenciSayisi:yedekOgrenciSayisi(y),
     sonucSayisi:(y.log||[]).length,kaynak:String(kaynak).slice(0,100)};
 }
 async function bulutSifirlamaSecenekleriniAc() {
@@ -10164,7 +10219,7 @@ async function bulutSifirlamaSecenekleriniAc() {
   const mevcutJson=await bulutVeriCoz(son.data().veri);     // sıkıştırmasız JSON; çözülemezse fırlar
   if(D!==defter||b.mevcutKullanici()?.uid!==u.uid)throw new Error('Oturum değişti; yedekleri yeniden açın.');
   EK.bulutSifirlama={uid:u.uid,mevcut:mevcutJson,liste:[
-    ...gunler.liste.map(y=>({...y,tur:'gun',id:y.gun,ad:ggyy(gunNo(y.gun))+' · günlük son kayıt'})),
+    ...gunler.liste.map(y=>({...y,tur:'gun',id:y.id||y.gun,ad:ggyy(gunNo(y.gun))+' · '+(y.kaynak||'Günlük son kayıt')})),
     ...noktalar.liste.map(y=>({...y,tur:'nokta',ad:y.kaynak+' · '+new Date(y.ts).toLocaleString('tr-TR')}))
   ].sort((a,b)=>b.ts-a.ts)};
   ciz();
@@ -10195,9 +10250,9 @@ async function bulutSurumuneDon(yedek,kaynak,secim) {
       const json=JSON.stringify(hedef);
       const hedefBelge=await bulutKorumaBelgesi(json,ts,kaynak);
       // Yerel güvenlik kopyaları ağ işlemi başlamadan yazılır; kota hatası bulutu değiştirmez.
-      localStorage.setItem('yks_bulut_geri_alma_oncesi',oncekiJson);
-      localStorage.setItem('yks_bulut_geri_alma_hedefi',json);
-      const ref=b.doc(b.db,'ogretmenYedek',defterUid(u)),id=geriYuklemeNoktasiKimligi(ts);
+      await LOCAL_STORE.set('yks_bulut_geri_alma_oncesi',oncekiJson);
+      await LOCAL_STORE.set('yks_bulut_geri_alma_hedefi',json);
+      const ref=b.doc(b.db,'ogretmenYedek',defterUid(u));
       let etkin=true;
       try {
         yazmaBasladi=true;
@@ -10209,15 +10264,18 @@ async function bulutSurumuneDon(yedek,kaynak,secim) {
           if(!anlik.exists()||await bulutVeriCoz(anlik.data().veri)!==secim.mevcut)
             throw new Error('Buluttaki defter değişmiş. Yedek listesini yeniden açıp kontrol edin.');
           const uzakKoruma=await bulutKorumaBelgesi(anlik.data().veri,ts,'Bulut geri alma öncesi sunucudaki defter');
-          tx.set(b.doc(b.db,'ogretmenYedek',defterUid(u),'geriNoktalari',id+'-yerel'),yerelKoruma);
-          tx.set(b.doc(b.db,'ogretmenYedek',defterUid(u),'geriNoktalari',id+'-bulut'),uzakKoruma);
+          const {index}=await bulutGecmisDizini(b,defterUid(u),tx),requests=[
+            await bulutGecmisIstegi(yerelKoruma.veri,'operation','Bulut geri alma öncesi cihazdaki defter'),
+            await bulutGecmisIstegi(uzakKoruma.veri,'operation','Bulut geri alma öncesi sunucudaki defter')];
+          if(!etkin||D!==defter||JSON.stringify(D)!==oncekiJson||b.mevcutKullanici()?.uid!==u.uid)throw new Error('İşlem sırasında oturum veya defter değişti.');
+          bulutGecmisPlaniniYaz(b,defterUid(u),tx,BACKUP_HISTORY.plan(index,requests,ts));
           tx.set(ref,{veri:hedefBelge.veri,ts,surum:VERI_SURUMU,boyut:hedefBelge.boyut});
         }),BULUT_YAZMA_ZAMAN_ASIMI,'Geri alma sunucudan zamanında onay alamadı. “Buluttaki defteri aç” ile son durumu kontrol edin.');
       } finally { etkin=false; }
       const son=await sureSinirli(b.getDocFromServer(ref),BULUT_YAZMA_ZAMAN_ASIMI,'Sunucudaki geri alma doğrulanamadı. “Buluttaki defteri aç” ile kontrol edin.');
       if(D!==defter||JSON.stringify(D)!==oncekiJson||b.mevcutKullanici()?.uid!==u.uid||!son.exists()||await bulutVeriCoz(son.data().veri)!==json)
         throw new Error('Sunucudaki yedek veya oturum değişti; cihazdaki defter korundu.');
-      localStorage.setItem('yks_veri',json);
+      await LOCAL_STORE.set('yks_veri',json);
       D=hedef;PENCERE=null;disariAktarmayiKapat();
       EK.ogr=0;EK.hafta=null;EK.bulutSifirlama=null;EK.bulutGecmis=null;EK.bulutGeriNoktalar=null;
       await bulutYedekTemeliniHatirla(defterUid(u),json);
@@ -10294,15 +10352,15 @@ function ogretmenDinlemeyiBaslat(zorla) {
   });
 }
 window.bulutDegisti = () => {
-  if (!D || CIKIS_DURUMU) return;
+  if (!D || CIKIS_DURUMU || LOCAL_EMBEDDED_READONLY) return;
   if (IZLEME) izlemeDinlemeyiBaslat();
   denemeDinlemeyiDurdur(); denemeDinlemeyiBaslat();
   if (rehberMi()) { KILIT_KAPALI = false; kilitDenetle(true); ogretmenDinlemeyiBaslat(true); bulutYedekPlanla(); sifreTalepleriniDenetle(); }
   else { ogretmenDinlemeyiDurdur(); if (ogrenciMi()) ogrenciEsitlemePlanla(0, true); }
   if (testHesabiMi()) testDefteriniDenetle().then(() => { if (D && testHesabiMi()) bulutYedekPlanla(); });
 };
-window.addEventListener('online', () => { if (rehberMi()) ogretmenDinlemeyiBaslat(true); });
-window.addEventListener('pagehide', () => { bulutYedekBosalt(); ogrenciEsitlemeBosalt(); kilidiBirak(); });
+window.addEventListener('online', () => { if (!LOCAL_EMBEDDED_READONLY && rehberMi()) ogretmenDinlemeyiBaslat(true); });
+window.addEventListener('pagehide', () => { if (!LOCAL_EMBEDDED_READONLY) { bulutYedekBosalt(); ogrenciEsitlemeBosalt(); kilidiBirak(); } });
 // Öğretmen tarafı: kendi listesindeki her syncId için yuvayı okur. bulutYuvasiCoz()
 // sabit ogrenciBulutId'yi doğruladıktan sonra aynı yerel öğrenci indeksini içe aktarıcıya
 // açıkça geçirir; değişebilen numara/ad/şube ile ikinci kez öğrenci aramaz.
@@ -11442,12 +11500,18 @@ function planBaskiStili() {
   return stil.replace(/(^|\})([^{}]+)\{/g, (_, son, seciciler) => son +
     seciciler.split(',').map(s => s.trim() === 'body' ? '#planBaski' : '#planBaski ' + s.trim()).join(',') + '{');
 }
-function planBaskiyiBaslat() {
+let PLAN_BASKI_KAYDI=null;
+async function planBaskiyiBaslat() {
   if (planYazdirmaEngeliniGoster(EK.ogr, haftaBasi())) return false;
-  baskiIcinKaydet();
+  const hazir=PLAN_BASKI_KAYDI&&PLAN_BASKI_KAYDI.defter===D&&PLAN_BASKI_KAYDI.json===JSON.stringify(D)&&PLAN_BASKI_KAYDI.hb===haftaBasi();
+  if(!yalnizcaGoruntuleme()&&!hazir){
+    const owner=D;if(!await baskiIcinKaydet()||D!==owner)return false;
+    PLAN_BASKI_KAYDI={defter:D,json:JSON.stringify(D),hb:haftaBasi()};
+  }
   try {
     if (typeof window.print !== 'function') throw new Error('print unavailable');
-    window.print(); // Same document and the current tap: no popup, iframe or delayed load handler.
+    // A retry of an unchanged durable preview reaches print synchronously in its tap.
+    window.print();
     return true;
   } catch (e) {
     const durum = document.getElementById('ciktiDurum');
@@ -11528,12 +11592,12 @@ async function metindenYukle(metin) {
           (e.message || e) + ')');
     return null;
   }
-  const onceki = D;
+  const onceki = D, eskiSecim = {ogr:EK.ogr,sekme:EK.sekme,hafta:EK.hafta};
   try {
     if (y && y.tur === 'yks-ogrenci-paketi') {
       veriyiHazirla(paketiYukle(y));
       EK.ogr = 0; EK.sekme = 'plan'; EK.hafta = null;
-      await kaydet(true); ciz();
+      if (!await kaydet(true)) throw new Error('Yüklenen veri kalıcı olarak kaydedilemedi; önceki defter korundu.'); ciz();
       return 'Hoş geldin ' + D.ogr[0].ad + ' — planın hazır.';
     }
     if (y && y.ayar && y.ogr) {
@@ -11546,7 +11610,7 @@ async function metindenYukle(metin) {
         if (n > 0 && Object.keys(D.konuPlani || {}).length && Object.keys(D.dersProgrami || {}).length)
           ek = ileriDagit(ileriDagitBaslangic(), null, n).eklenen;
       } catch (e) { /* dolduramazsa yedek yine de yüklensin */ }
-      await kaydet(true); ciz();
+      if (!await kaydet(true)) throw new Error('Yüklenen veri kalıcı olarak kaydedilemedi; önceki defter korundu.'); ciz();
       return 'Yedek yüklendi: ' + D.ogr.length + ' öğrenci, ' +
              Object.keys(D.konuPlani || {}).length + ' konu planı' +
              (ek ? ' · gelecek haftalara ' + ek + ' konu yerleştirildi' : '') + '.';
@@ -11554,7 +11618,7 @@ async function metindenYukle(metin) {
     alert('Bu dosya tanındı ama içinde öğrenci verisi yok. Doğru yedeği seçtiğinizden emin olun.');
     return null;
   } catch (e) {
-    D = onceki;
+    D = onceki; Object.assign(EK,eskiSecim);
     alert('Yükleme sırasında hata: ' + (e.message || e));
     return null;
   }
@@ -11562,6 +11626,7 @@ async function metindenYukle(metin) {
 
 async function planYazdir(kapsam) {
   const hb = haftaBasi();
+  const owner=D;
   let liste, etiket;
   if (kapsam === 'hepsi') { liste = kullananlar(); etiket = 'tum-sinif'; }
   else if (kapsam && kapsam.sube !== undefined) {
@@ -11570,7 +11635,9 @@ async function planYazdir(kapsam) {
   } else { liste = [EK.ogr]; etiket = dosyaAdiParcasi(D.ogr[EK.ogr].ad, 'ogrenci').toLocaleLowerCase('tr'); }
   if (!liste.length) { alert('Bu kapsamda çıktı alacak öğrenci yok.'); return false; }
   if (planYazdirmaEngeliniGoster(EK.ogr, hb)) return false;
-  baskiIcinKaydet();
+  if (!yalnizcaGoruntuleme() && !await baskiIcinKaydet()) return false;
+  if(D!==owner)return false;
+  PLAN_BASKI_KAYDI={defter:D,json:JSON.stringify(D),hb};
   if (!window.claude || typeof window.claude.use !== 'function') return planOnizlemeAc(liste, hb);
   const belge = yazdirBelgesi(liste, hb);
   const d = await yetenek('downloads');
@@ -11660,8 +11727,7 @@ function etkinlikKaydet(tur, hb, si = EK.ogr) {
       if (kaynak) sonucHafta = kaynak.hafta;
     }
     o.etkinlik = etkinlikBirlestir(o.etkinlik, {v:1, baslangic:ts, kayit:[{tur,hafta:hb,sonucHafta,ilk:ts,son:ts}]});
-    // Persist before window.print can suspend JavaScript; network stays asynchronous.
-    try { localStorage.setItem('yks_veri', JSON.stringify(D)); } catch (_) { EK.kirli = true; }
+    // The print flow awaits the queued durable save before opening the dialog.
     kaydet(true).catch(() => {});
     ogrenciEsitlemePlanla(0);
     const olay = [ETKINLIK_TURLERI[tur], {student_key:o.ogrenciBulutId,
@@ -12012,6 +12078,7 @@ function gorunumKurulum() {
 // kurtarma ekranı gösterip yedek indirmeyi ya da Ayarlar'a dönmeyi teklif et.
 function ciz() {
   if (CIKIS_DURUMU) return;
+  if (LOCAL_EMBEDDED_READONLY) { try { cizIc(); } catch(e) { hataEkraniGoster(e); } return; }
   try { const etkinlikDegisti = etkinlikHazirla(); const okulDegisti = okulProgramlariniGuncelle() | tatilleriHazirla(); const varsayimDegisti = varsayimKartlariniGuncelle();
     const otoDegisti = ogrenciOtomasyonHazirla(); if (otoDegisti) varsayimKartlariniGuncelle();
     if (otoDegisti || okulDegisti || etkinlikDegisti || varsayimDegisti) kaydet(true); cizIc(); }
@@ -12034,8 +12101,7 @@ function hataEkraniGoster(e) {
   window.scrollTo(0, 0);
 }
 function cizIc() {
-  denemeDinlemeyiBaslat();
-  if (rehberMi()) ogretmenDinlemeyiBaslat();
+  if (!LOCAL_EMBEDDED_READONLY) { denemeDinlemeyiBaslat(); if (rehberMi()) ogretmenDinlemeyiBaslat(); }
   if (D && !D.rol) { document.getElementById('ray').innerHTML = '';
     document.getElementById('ana').innerHTML = gorunumKurulum(); window.scrollTo(0, 0); return; }
   if (ogrenciMi() && ['takip','konular','ogrenciler','etutler','etutetki','etutplani','yoklama','ogrencirapor','ogrencikarti','turkiye','konutakibi','yanlislar'].indexOf(EK.sekme) >= 0) EK.sekme = 'plan';
@@ -12112,7 +12178,7 @@ document.addEventListener('click', async ev => {
     const secilen = Array.from(document.querySelectorAll('.kazanimDersSec:checked')).map(x => x.dataset.ders);
     const sube = ogrenciMi() ? D.ogr[EK.ogr]?.sube : EK.sube;
     try {
-      const r = kazanimPlaniniUygula(sube, secilen);
+      const r = await kazanimPlaniniUygula(sube, secilen);
       if (!r) { bilgiVer('Güncellenecek bir ders seçin.'); return; }
       const tamam = await kaydet(true); ciz();
       bilgiVer(tamam ? 'Haftalık kazanım alt başlıkları eklendi.' : 'Plan güncellendi fakat kalıcı kayıt başarısız. Yedek indirin.');
@@ -12120,13 +12186,13 @@ document.addEventListener('click', async ev => {
     return;
   }
   if (cikisId === 'kazanimPlaniYedek') {
-    const json = localStorage.getItem('yks_kazanim_plani_oncesi');
+    const json = await LOCAL_STORE.get('yks_kazanim_plani_oncesi');
     if (json) await indir('kazanim-plani-oncesi.json', json, 'application/json');
     return;
   }
   if (cikisId === 'ogrProgramYenile') {
     try {
-      const r = ogrenciPrograminiYenile(EK.ogr, haftaBasi());
+      const r = await ogrenciPrograminiYenile(EK.ogr, haftaBasi());
       if (!r) { bilgiVer('Bu hafta yenilenemiyor. Sonuç girilmiş veya plan zaten güncel.'); return; }
       const tamam = await kaydet(true); ciz();
       bilgiVer(tamam ? 'Bu haftanın planı güncellendi: ' + r.toplam + ' çalışma.' : 'Plan güncellendi fakat kalıcı kayıt başarısız. Yedek indirin.');
@@ -12134,7 +12200,7 @@ document.addEventListener('click', async ev => {
     return;
   }
   if (cikisId === 'ogrProgramYedek' && ogrenciMi()) {
-    const json = localStorage.getItem('yks_program_yenile_oncesi');
+    const json = await LOCAL_STORE.get('yks_program_yenile_oncesi');
     if (json) await indir('program-yenileme-oncesi.json', json, 'application/json');
     return;
   }
@@ -12743,7 +12809,7 @@ document.addEventListener('click', async ev => {
   const bgy = ev.target.closest('.bulutGunYukle');
   if (bgy) {
     const gun = bgy.dataset.gun;
-    const r = await buluttanGunAl(gun);
+    const r = await buluttanGunAl(bgy.dataset.id || gun);
     if (r.tur !== 'tamam') {
       alert(r.tur === 'yok' ? 'Bu güne ait yedek bulunamadı.'
         : r.tur === 'baglanilmadi' ? 'Önce “Buluta bağlan”a tıklayın.'
@@ -13140,7 +13206,7 @@ document.addEventListener('click', async ev => {
     }
     return;
   }
-  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#topluOgrOnizle,#topluOgrEkle,#yksEksikleriEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-harita-kurtar],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
+  const t = ev.target.closest('[data-sekme],[data-hafta],[data-girisduzenle],#yazdir,#yazdirOnizle,#planiSabitle,#csv,#tumYazdir,#sonucKaydet,#hepsiIyi,#bugunIsle,#ayarKaydet,#testTarihSifirla,#yedekIndir,#sifirla,#hepsiIzin,#topluSil,#topluUygula,#topluHepsi,#topluYariya,#yeniKonu,#elleSifirla,#ogrEkle,#topluOgrOnizle,#topluOgrEkle,#yksEksikleriEkle,#sonucGonder,#bulutGonder,#bulutBaglan,#bulutDefterAl,#bulutCek,#bulutYedekle,#bulutGecmisAc,#bulutEskiGecmisAc,#ogrenciHesapYayinla,#programSahiplen,#programSahiplenHepsi,#kurYapistirAc,#yapistirYukle,#bekleyeniAl,#bekleyeniErtele,#duzenleAc,#duzenleBitir,#duzenleVazgec,#duzenleneneDon,#dagitimGeriAl,.erteleDug,[data-yazdirSube],[data-kaydirTakvim],[data-haritaAc],[data-harita-kurtar],[data-haritaKapat],[data-haritaOnayVazgec],[data-haritaGit],.haritaNeden,.haritaOnayla');
   if (!t) return;
   if (t.dataset.girisduzenle !== undefined) {
     const taslak = sonucTaslaklariniAl();
@@ -13400,7 +13466,7 @@ document.addEventListener('click', async ev => {
     const n = plan.filter(s => s.durum === 'ekle').length, atlanan = plan.length - n;
     if (!n) { alert('Eklenecek yeni öğrenci yok.'); return; }
     if (!confirm(n + ' öğrenci listeye eklenecek. Devam?')) return;
-    try { topluOgrenciUygula(plan, d.kap || 6); }
+    try { await topluOgrenciUygula(plan, d.kap || 6); }
     catch (e) { alert(e.message || String(e)); return; }
     EK.topluOgr = null;
     const tamam = await kaydet(true); ciz();
@@ -13706,8 +13772,9 @@ document.addEventListener('click', async ev => {
     }
     return;
   }
-  if (t.id === 'bulutGecmisAc') {
-    const [r, gn] = await Promise.all([bulutYedekGecmisi(), bulutGeriYuklemeNoktalari()]);
+  if (t.id === 'bulutGecmisAc' || t.id === 'bulutEskiGecmisAc') {
+    const eski=t.id==='bulutEskiGecmisAc';
+    const [r, gn] = await Promise.all([bulutYedekGecmisi(eski), bulutGeriYuklemeNoktalari(eski)]);
     if (r.tur === 'tamam') {
       EK.bulutGecmis = r.liste;
       EK.bulutGeriNoktalar = gn.tur === 'tamam' ? gn.liste : [];
@@ -14227,7 +14294,7 @@ document.addEventListener('click',async ev=>{
     }
     if(id==='gpKaydet'){
       if(!s.hazir||!s.kimlik)throw new Error('Önizlemeyi açıp öğrenci, tarih ve çalışma bilgilerini doğrulayın.');
-      const p=gecmisPlaniKaydet(s.si,s.hafta,s.satirlar,s.degistir);s.defter=D;s.sonuc={si:s.si,hb:p.hb};s.hazir=false;
+      const p=await gecmisPlaniKaydet(s.si,s.hafta,s.satirlar,s.degistir);s.defter=D;s.sonuc={si:s.si,hb:p.hb};s.hazir=false;
       s.ozet=p.tekrar?'Bu plan zaten kayıtlı.':'Geçmiş plan cihazda kaydedildi ve tekrar tarihleri hesaplandı. İşlem öncesi yedeğiniz de saklandı.';
       if(!p.tekrar){await kaydet(true);sunucuKaydiniBaslat();}ciz();return;
     }
@@ -14241,7 +14308,7 @@ document.addEventListener('click',async ev=>{
       finally {b.disabled=false;}ciz();return;
     }
     if(id==='gpOncekiYedek'){
-      const json=localStorage.getItem('yks_plan_kurtarma_oncesi');if(!json)throw new Error('Henüz geçmiş plan kurtarma işlemi yapılmadı.');
+      const json=await LOCAL_STORE.get('yks_plan_kurtarma_oncesi');if(!json)throw new Error('Henüz geçmiş plan kurtarma işlemi yapılmadı.');
       await indir('plan-kurtarma-oncesi.json',json,'application/json');return;
     }
   } catch(e){s.ozet=e.message||String(e);s.hazir=false;const o=document.getElementById('gpOzet');if(o)o.textContent=s.ozet;const b=document.getElementById('gpKaydet');if(b)b.disabled=true;}
@@ -14635,13 +14702,16 @@ function denemeDinlemeyiBaslat() {
   const key=u.uid+'|'+o.syncId;
   if(DENEME_DINLEME_ANAHTAR===key && DENEME_DINLEME_DEFTER===D)return;
   denemeDinlemeyiDurdur();DENEME_DINLEME_ANAHTAR=key;DENEME_DINLEME_DEFTER=D;const defter=D;
-  DENEME_DINLEYICI=b.onSnapshot(b.doc(b.db,'ogrenciler',o.syncId),s=>{
+  DENEME_DINLEYICI=b.onSnapshot(b.doc(b.db,'ogrenciler',o.syncId),async s=>{
     if(D!==defter || !ogrenciMi() || CIKIS_DURUMU || b.mevcutKullanici()?.uid!==u.uid || !s.exists() || s.metadata?.hasPendingWrites)return;
     const v=s.data();if(v.durum!=='aktif' || v.bagliUid!==u.uid || v.ogrenciBulutId!==o.ogrenciBulutId)return;
+    const once=JSON.stringify(o.denemeOkul || []);
     try { if(denemeOkulUygula(0,v.denemeOkul)){
       // Receiving teacher data is not a student edit. Advancing ogrCalismaTs here
       // would let an idle device overwrite another device's newer working plan.
-      localStorage.setItem('yks_veri',JSON.stringify(D));
+      const sonra=JSON.stringify(o.denemeOkul || []);
+      try { await LOCAL_STORE.set('yks_veri',JSON.stringify(D)); }
+      catch(e) { if(D===defter && JSON.stringify(o.denemeOkul || [])===sonra)o.denemeOkul=JSON.parse(once); throw e; }
       if((EK.sekme==='denemeler' && !DENEME_FORM)||EK.sekme==='universite')ciz();
     } }
     catch(e){EK.denemeDurum='Okul sonuçları alınamadı: '+e.message;}
@@ -14950,8 +15020,22 @@ function denemeFormOku() {
   return {...r,ad:get('dnAd').trim(),tarih:get('dnTarih'),sure:get('dnSure')===''?null:Number(get('dnSure')),puan:get('dnPuan')===''?null:Number(get('dnPuan')),dersler:Array.from(document.querySelectorAll('[data-dn-ders]')).map(el=>({kod:el.dataset.dnDers,...Object.fromEntries(Array.from(el.querySelectorAll('input')).map(x=>[x.dataset.dnValue,Number(x.value)]))}))};
 }
 async function denemeYerelKaydet(si,alan,yeni) {
-  const o=D.ogr[si],eski=o[alan];o[alan]=yeni;
-  if(!await kaydet(true)){o[alan]=eski;throw new Error('Cihaza kaydedilemedi. Değişiklik uygulanmadı; yeniden deneyin.');}
+  const owner=D,o=D.ogr[si],eski=o[alan];
+  if(rehberMi())await defterAdayiniDogrula({...owner,ogr:owner.ogr.map((x,i)=>i===si?{...x,[alan]:yeni}:x)},{previous:owner});
+  if(D!==owner||D.ogr[si]!==o)throw new Error('Defter değişti; sonuç eklenmedi.');
+  o[alan]=yeni;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi. Değişiklik uygulanmadı; yeniden deneyin.');}
+  catch(e){if(D===owner&&o[alan]===yeni){if(eski===undefined)delete o[alan];else o[alan]=eski;}throw e;}
+}
+async function denemeTopluYerelKaydet(staged) {
+  if(!rehberMi()||yalnizcaGoruntuleme())throw new Error('Yalnızca rehber öğretmen aktarabilir.');
+  const owner=D,once=[...staged].map(([si,list])=>{denemeDogrula(list);const o=owner.ogr[si];if(!o||o.silindi)throw new Error('Öğrenci listesi değişti.');return {o,si,list,eski:o.denemeOkul,bekleyen:o.denemeYayinBekliyor};});
+  const ogr=owner.ogr.map((o,i)=>staged.has(i)?{...o,denemeOkul:staged.get(i),denemeYayinBekliyor:true}:o);
+  await defterAdayiniDogrula({...owner,ogr},{previous:owner});
+  if(D!==owner||once.some(x=>owner.ogr[x.si]!==x.o))throw new Error('Öğrenci listesi değişti; aktarım uygulanmadı.');
+  for(const x of once){x.o.denemeOkul=x.list;x.o.denemeYayinBekliyor=true;}
+  try{if(!await kaydet(true))throw new Error('Cihaza kayıt başarısız; aktarım uygulanmadı.');}
+  catch(e){if(D===owner)for(const x of once)if(x.o.denemeOkul===x.list){if(x.eski===undefined)delete x.o.denemeOkul;else x.o.denemeOkul=x.eski;if(x.bekleyen===undefined)delete x.o.denemeYayinBekliyor;else x.o.denemeYayinBekliyor=x.bekleyen;}throw e;}
 }
 // Publishes every student whose school results wait for publishing; a failed one stays queued.
 async function denemeBekleyenleriYayinla(ilerleme=()=>{}) {
@@ -15106,9 +15190,7 @@ document.addEventListener('click',async ev=>{
           if(same)r.ts=Math.max(r.ts,same.ts+1);staged.set(row.si,denemeBirlestir(old,[r]));
         }
         if(!staged.size)throw new Error('Aktarılacak sonuç seçilmedi.');
-        const once=JSON.stringify(D.ogr);
-        for(const [si,list] of staged){D.ogr[si].denemeOkul=list;D.ogr[si].denemeYayinBekliyor=true;}
-        if(!await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kayıt başarısız; aktarım uygulanmadı.');}
+        await denemeTopluYerelKaydet(staged);
         DENEME_IMPORT=null;
       }
       denemeDurum(await denemeBekleyenleriYayinla(denemeDurum)+srNot);ciz();
@@ -15284,7 +15366,7 @@ const FIELDS={'SAY':['MAT','FEN'],'EA':['TDE-SB1','MAT'],'SÖZ':['TDE-SB1','SB2'
 const FCOLS={};for(const f in FIELDS)FCOLS[f]=FIELDS[f].flatMap(t=>TESTS[t]);
 // Stored column order: T = "Net Sayısı Sıralı" (TYT), F = "Öğrenci Adı Sıralı" (TYT + AYT).
 const SUTUN={T:TYT_KEYS,F:[...TYT_KEYS,...AYT_KEYS]};
-const SURUM=1, UST_SINIR=350000, EN_COK_SINAV=40, SIRALA=['SAY','EA','SÖZ','Toplam'];
+const SURUM=1, UST_SINIR=1250000, EN_COK_SINAV=100, SIRALA=['SAY','EA','SÖZ','Toplam'];
 
 /* ---------------- numbers ---------------- */
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
@@ -15455,12 +15537,14 @@ const ONBELLEK=new Map();
 async function yaz(veri,once){
   dogrula(veri);
   const json=JSON.stringify(veri),bayt=baytBoyu(json);
-  if(bayt>UST_SINIR)throw new Error('Sıralama listeleri '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.');
-  const owner=D,eski=D.siralama,geri=()=>{if(owner.siralama!==veri)return;if(eski===undefined)delete owner.siralama;else owner.siralama=eski};
-  D.siralama=veri;
-  // The lists ride in the teacher's cloud backup; they must not push it over its limit.
-  if(baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(once===undefined?0:baytBoyu(JSON.stringify(once)))){geri();throw new Error('Bu listeler defteri bulut yedeği sınırının üstüne çıkarır. Eski sınavları silip yeniden deneyin. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; listeler değişmedi.')}
+  if(bayt>UST_SINIR && bayt>baytBoyu(JSON.stringify(D.siralama??null)))throw new Error('Sıralama listeleri '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.');
+  const owner=D,eski=owner.siralama;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula({...owner,siralama:veri},{previous:owner});
+  if(D!==owner||owner.siralama!==eski||JSON.stringify(D)!==oncekiDefter||eski!==once)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(owner.siralama!==veri)return;if(eski===undefined)delete owner.siralama;else owner.siralama=eski};
+  owner.siralama=veri;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; listeler değişmedi.')}catch(e){geri();throw e}
   ONBELLEK.clear();
 }
 async function kaydetListeler(listeler){
@@ -16332,7 +16416,7 @@ return {kur,olcuyor,iptal:bitir,aralik,yer,get durum(){return O?{i0:O.i0,i1:O.i1
 // the teacher notebook as D.etut, so it travels with the teacher's cloud backup; student packets
 // are built from a field whitelist and never carry it. Nothing is uploaded. See docs/etutler.md.
 const ETUT = (() => {
-const SURUM=1, UST_SINIR=300000, EN_COK_SATIR=15000, EN_COK_KAYNAK=60, ARALIKLAR=[1,2,4], PENCERELER=[...ARALIKLAR,'sec'];
+const SURUM=1, UST_SINIR=750000, EN_COK_SATIR=20000, EN_COK_KAYNAK=60, ARALIKLAR=[1,2,4], PENCERELER=[...ARALIKLAR,'sec'];
 // A teacher's places on each of their etüt days: the Etüt planı's four students.
 const GUNLUK_YER=4;
 const GUN_ADI=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
@@ -16485,12 +16569,15 @@ const ONBELLEK={ts:null,m:null};
 async function yaz(veri){
   if(veri)dogrula(veri);
   const json=veri?JSON.stringify(veri):'',bayt=baytBoyu(json);
-  if(bayt>UST_SINIR)throw new Error('Etüt verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor.');
-  const eski=D.etut,geri=()=>{if(eski===undefined)delete D.etut;else D.etut=eski};
-  if(veri)D.etut=veri;else delete D.etut;
-  // The rows ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; etüt verisi değişmedi.')}
+  if(bayt>UST_SINIR && bayt>baytBoyu(JSON.stringify(D.etut??null)))throw new Error('Etüt verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor.');
+  const owner=D,eski=owner.etut,aday={...owner};
+  if(veri)aday.etut=veri;else delete aday.etut;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula(aday,{previous:owner});
+  if(D!==owner||owner.etut!==eski||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(owner.etut!==veri && !(veri===null&&owner.etut===undefined))return;if(eski===undefined)delete owner.etut;else owner.etut=eski};
+  if(veri)owner.etut=veri;else delete owner.etut;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; etüt verisi değişmedi.')}catch(e){geri();throw e}
   ONBELLEK.ts=null;
 }
 async function raporEkle(raporlar){
@@ -16516,7 +16603,7 @@ async function yedekteBul(ilerleme){
   const g=await bulutYedekGecmisi();if(g.tur!=='tamam')throw new Error(g.mesaj||'Bulut yedeğine bağlanılamadı.');
   for(const y of g.liste.slice(0,EN_COK_YEDEK)){
     if(ilerleme)ilerleme(y.gun);
-    const r=await buluttanGunAl(y.gun);if(r.tur!=='tamam'||!r.yedek||r.yedek.etut===undefined)continue;
+    const r=await buluttanGunAl(y.id||y.gun);if(r.tur!=='tamam'||!r.yedek||r.yedek.etut===undefined)continue;
     try{const v=dogrula(JSON.parse(JSON.stringify(r.yedek.etut)));if(v.satir.length)return {gun:y.gun,veri:v}}catch(e){/* unreadable copy: try an older one */}
   }
   return null;
@@ -18139,16 +18226,27 @@ function oku(){
 }
 // Every change goes through here: a copy is changed, checked and saved; a save that fails puts the
 // previous plan back, so the page never shows what the notebook does not hold.
-async function degistir(fn){
+let degistirZinciri=Promise.resolve();
+function degistir(fn){
+  const owner=D;
+  const calistir=async()=>{
+  if(D!==owner)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
   if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen değiştirebilir.');
   const {plan,hata}=oku();if(hata)throw new Error(hata);
   const sonuc=fn(plan);
   plan.ts=Math.max(Date.now(),plan.ts+1);dogrula(plan);
-  const eski=D.etutPlani,defter=D,geri=()=>{if(defter.etutPlani!==plan)return;if(eski===undefined)delete defter.etutPlani;else defter.etutPlani=eski};
-  D.etutPlani=plan;
-  if(baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&baytBoyu(JSON.stringify(plan))>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Defter bulut yedeği sınırında; plan kaydedilmedi. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; plan değişmedi.')}
+  const defter=D,eski=defter.etutPlani;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula({...defter,etutPlani:plan},{previous:defter});
+  if(D!==defter||defter.etutPlani!==eski||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(defter.etutPlani!==plan)return;if(eski===undefined)delete defter.etutPlani;else defter.etutPlani=eski};
+  defter.etutPlani=plan;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; plan değişmedi.')}catch(e){geri();throw e}
   return sonuc;
+  };
+  const islem=degistirZinciri.then(calistir,calistir);
+  degistirZinciri=islem.catch(()=>{});
+  return islem;
 }
 
 /* ---------------- sheet model ---------------- */
@@ -19327,12 +19425,15 @@ const ONBELLEK={k:null,m:null};
 async function yaz(veri){
   if(veri)dogrula(veri);
   const json=veri?JSON.stringify(veri):'',bayt=baytBoyu(json);
-  if(bayt>UST_SINIR)throw new Error('Yoklama verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor.');
-  const eski=D.yoklama,geri=()=>{if(eski===undefined)delete D.yoklama;else D.yoklama=eski};
-  if(veri)D.yoklama=veri;else delete D.yoklama;
-  // The days ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; yoklama verisi değişmedi.')}
+  if(bayt>UST_SINIR && bayt>baytBoyu(JSON.stringify(D.yoklama??null)))throw new Error('Yoklama verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor.');
+  const owner=D,eski=owner.yoklama,aday={...owner};
+  if(veri)aday.yoklama=veri;else delete aday.yoklama;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula(aday,{previous:owner});
+  if(D!==owner||owner.yoklama!==eski||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(owner.yoklama!==veri && !(veri===null&&owner.yoklama===undefined))return;if(eski===undefined)delete owner.yoklama;else owner.yoklama=eski};
+  if(veri)owner.yoklama=veri;else delete owner.yoklama;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; yoklama verisi değişmedi.')}catch(e){geri();throw e}
   ONBELLEK.k=null;
 }
 async function raporEkle(raporlar){
@@ -19984,12 +20085,15 @@ function birlestir(a,r){
 async function yaz(veri){
   if(veri)dogrula(veri);
   const json=veri?JSON.stringify(veri):'',bayt=baytBoyu(json);
-  if(bayt>UST_SINIR)throw new Error('Türkiye geneli verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor; Denemeler tablosundan eski listeleri silin.');
-  const eski=D.turkiye,geri=()=>{if(eski===undefined)delete D.turkiye;else D.turkiye=eski};
-  if(veri)D.turkiye=veri;else delete D.turkiye;
-  // The lists ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu liste defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; Türkiye geneli verisi değişmedi.')}
+  if(bayt>UST_SINIR && bayt>baytBoyu(JSON.stringify(D.turkiye??null)))throw new Error('Türkiye geneli verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor; Denemeler tablosundan eski listeleri silin.');
+  const owner=D,eski=owner.turkiye,aday={...owner};
+  if(veri)aday.turkiye=veri;else delete aday.turkiye;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula(aday,{previous:owner});
+  if(D!==owner||owner.turkiye!==eski||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(owner.turkiye!==veri && !(veri===null&&owner.turkiye===undefined))return;if(eski===undefined)delete owner.turkiye;else owner.turkiye=eski};
+  if(veri)owner.turkiye=veri;else delete owner.turkiye;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; Türkiye geneli verisi değişmedi.')}catch(e){geri();throw e}
 }
 const yazabilir=()=>{if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen değiştirebilir.')};
 const sonraki=veri=>Math.max(Date.now(),veri?veri.ts+1:0);
@@ -21539,8 +21643,11 @@ function canWrite(){if(!rehberMi()||readonly())throw new Error('Yalnızca düzen
 let saving=false;
 async function write(v,owner=D,previous=D.konutakibi){
   canWrite();if(saving||D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti. İşlemi yeniden deneyin.');dogrula(v);
-  const next={...D,konutakibi:v};if(baytBoyu(JSON.stringify(next))>DEFTER_HAM_UST_SINIR&&baytBoyu(JSON.stringify(next))>baytBoyu(JSON.stringify(D)))throw new Error('Defterin bulut yedeği sınırı doldu. Ayarlar → Defter boyutu bölümüne bakın.');
-  saving=true;D.konutakibi=v;
+  const next={...owner,konutakibi:v};
+  saving=true;
+  const oncekiDefter=JSON.stringify(D);
+  try{await defterAdayiniDogrula(next,{previous:owner});if(D!==owner||owner.konutakibi!==previous||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.')}catch(e){saving=false;throw e}
+  D.konutakibi=v;
   try{if(!await kaydet(true))throw new Error('Kaydedilemedi; önceki kayıt korundu.')}
   catch(e){if(owner.konutakibi===v){if(previous===undefined)delete owner.konutakibi;else owner.konutakibi=previous}throw e}
   finally{saving=false}
@@ -24033,11 +24140,134 @@ const TYT_WEEKLY = (() => {
 })();
 // END TYT_WEEKLY
 
+// BEGIN LOCAL_STORE
+// Durable notebook and recovery copies; small UI preferences remain in localStorage.
+const LOCAL_STORE=(()=>{
+ 'use strict';
+ const keys=['yks_veri','yks_plan_kurtarma_oncesi','yks_kazanim_plani_oncesi','yks_program_yenile_oncesi','yks_ogrenci_kurtarma','yks_bulut_geri_alma_oncesi','yks_bulut_geri_alma_hedefi','yks_izleme_veri'];
+ const allowed=new Set(keys),recovery=new Set(keys.filter(k=>k!=='yks_veri')),cache=new Map();let db=null,opening=null,mode='pending',chain=Promise.resolve();
+ const request=r=>new Promise((resolve,reject)=>{r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('Cihaz depolaması okunamadı.'));});
+ const done=t=>new Promise((resolve,reject)=>{t.oncomplete=resolve;t.onabort=t.onerror=()=>reject(t.error||new Error('Cihaz depolaması yazılamadı.'));});
+ const check=k=>{if(!allowed.has(k))throw new Error('Geçersiz cihaz kayıt anahtarı.');};
+ async function read(k){const tx=db.transaction('records','readonly'),v=await request(tx.objectStore('records').get(k));return v===undefined?null:v;}
+ async function initialize(){
+  // The teacher's student-preview iframe is a temporary sandbox, even though its
+  // srcdoc inherits the site's origin. It must never open the parent's database.
+  if(typeof ONIZLEME_MODU!=='undefined'&&ONIZLEME_MODU){mode='memory';return;}
+  if(typeof indexedDB==='undefined'){let migrated=false;try{migrated=localStorage.getItem('yks_idb_migrated')==='1'}catch(_){}if(migrated)throw new Error('Cihazdaki IndexedDB açılamadı; kayıtlı defter korunuyor.');mode='localStorage';return;}
+  try{db=await new Promise((resolve,reject)=>{const r=indexedDB.open('yks-local-store',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('records'))r.result.createObjectStore('records')};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('Cihaz depolaması başka sekmede açık.'));});}
+  catch(e){let migrated=false;try{migrated=localStorage.getItem('yks_idb_migrated')==='1'}catch(_){}if(migrated)throw new Error('Cihazdaki IndexedDB açılamadı; kayıtlı defter korunuyor.');mode='localStorage';return;}
+  try{
+   let previouslyMigrated=false;try{previouslyMigrated=localStorage.getItem('yks_idb_migrated')==='1'}catch(_){}
+   if(previouslyMigrated&&await read('__schema__')!=='1')throw new Error('Cihazdaki IndexedDB kaydı eksik; otomatik boş başlangıç durduruldu.');
+   const existing=new Map();for(const k of keys)existing.set(k,await read(k));
+   // Marked IDB copies win; before marking, legacy values remain authoritative.
+   const migrate=[];for(const k of keys){let v=null;try{v=localStorage.getItem(k)}catch(_){}if(!previouslyMigrated&&v!==null)migrate.push([k,v]);}
+   if(migrate.length){const tx=db.transaction('records','readwrite'),s=tx.objectStore('records');for(const [k,v] of migrate)s.put(v,k);await done(tx);for(const [k,v] of migrate)if(await read(k)!==v)throw new Error('Cihaz kopyası doğrulanamadı.');}
+   for(const k of keys){const v=await read(k);if(v!==null)cache.set(k,v);}
+   // A durable marker prevents silently opening an empty fallback if IDB later fails.
+   {const tx=db.transaction('records','readwrite');tx.objectStore('records').put('1','__schema__');await done(tx);if(await read('__schema__')!=='1')throw new Error('Cihaz depolaması doğrulanamadı.');}
+   let marked=previouslyMigrated;if(!marked)try{localStorage.setItem('yks_idb_migrated','1');marked=localStorage.getItem('yks_idb_migrated')==='1'}catch(_){}
+   // Without a durable marker, future startups cannot distinguish a current IDB copy
+   // from an interrupted migration, so keep using the authoritative legacy store.
+   if(!marked){db.close();db=null;cache.clear();mode='localStorage';return;}
+   // Remove only verified identical copies after marking; leave any changed source.
+   for(const [k,v] of migrate)try{if(cache.get(k)===v&&localStorage.getItem(k)===v)localStorage.removeItem(k)}catch(_){}
+   mode='indexedDB';
+  }catch(e){try{db.close()}catch(_){}db=null;cache.clear();throw e;}
+ }
+ function ready(){return opening||(opening=typeof ONIZLEME_MODU!=='undefined'&&ONIZLEME_MODU?initialize():typeof navigator!=='undefined'&&navigator.locks?.request?navigator.locks.request('yks-local-migration',{mode:'exclusive'},initialize):initialize());}
+ function identity(data,k,legacy){
+  try {
+   if(k==='yks_izleme_veri') {const v=JSON.parse(localStorage.getItem('yks_izleme')||'null');return v?.sahipUid&&v?.izleyiciUid?'viewer:'+v.izleyiciUid+':'+v.sahipUid:null;}
+   if(!data||typeof data!=='object')return null;
+   if(data.testHesap?.uid)return 'test:'+data.testHesap.uid;
+   if(data.rol==='ogrenci'&&data.ogr?.[0]?.ogrenciBulutId)return 'student:'+data.ogr[0].ogrenciBulutId;
+   if(data.rol==='rehber'&&!legacy){const u=window.bulut?.mevcutKullanici?.();if(u&&!u.isAnonymous&&u.uid){const owner=typeof defterUid==='function'?defterUid(u):u.uid;return owner?'teacher:'+owner:null;}}
+  }catch(_){}return null;
+ }
+ function value(k,v){if(v===null)return null;let owner=null,raw=v;if(typeof v==='string'){if(recovery.has(k))try{const parsed=JSON.parse(v);if(parsed?.format==='yks-local-envelope-v1'&&typeof parsed.value==='string'){owner=parsed.owner;raw=parsed.value}else owner=identity(parsed,k,true)}catch(_){}}else{if(!v||v.schema!==1||typeof v.value!=='string')throw new Error('Cihaz kaydı biçimi geçersiz.');owner=v.owner;raw=v.value;}let current=null;try{current=identity(typeof D==='undefined'?null:D,k)}catch(_){}return owner&&current&&owner!==current?null:raw;}
+ function getSync(k){check(k);if(mode==='indexedDB'||mode==='memory')return value(k,cache.has(k)?cache.get(k):null);return value(k,localStorage.getItem(k));}
+ async function get(k){check(k);await ready();await chain;if(mode!=='indexedDB')return getSync(k);const v=await read(k);if(v===null)cache.delete(k);else cache.set(k,v);return value(k,v);}
+ function serialize(fn){const p=chain.then(fn,fn);chain=p.catch(()=>{});return p;}
+ function set(k,v,ownerOverride,guard){check(k);if(typeof v!=='string')throw new Error('Cihaz kaydı metin olmalı.');let owner=ownerOverride||null;if(recovery.has(k)&&!owner){try{owner=identity(JSON.parse(v),k)}catch(_){}}const record=recovery.has(k)?{format:'yks-local-envelope-v1',schema:1,owner:owner||null,value:v}:v;return serialize(async()=>{await ready();if(guard&&!guard())throw new Error('Defter değişti; kayıt durduruldu.');if(mode==='memory'){cache.set(k,record);return;}if(mode!=='indexedDB'){const stored=recovery.has(k)?JSON.stringify(record):v;localStorage.setItem(k,stored);if(localStorage.getItem(k)!==stored)throw new Error('Cihaz kaydı doğrulanamadı.');return;}const tx=db.transaction('records','readwrite'),put=tx.objectStore('records').put(record,k);if(guard)put.onsuccess=()=>{if(!guard())tx.abort()};await done(tx);const saved=await read(k);if(JSON.stringify(saved)!==JSON.stringify(record))throw new Error('Cihaz kaydı doğrulanamadı.');cache.set(k,record);});}
+ function remove(k){check(k);return serialize(async()=>{await ready();if(mode==='memory'){cache.delete(k);return;}if(mode!=='indexedDB'){localStorage.removeItem(k);if(localStorage.getItem(k)!==null)throw new Error('Cihaz kaydı silinemedi.');return;}const tx=db.transaction('records','readwrite');tx.objectStore('records').delete(k);await done(tx);if(await read(k)!==null)throw new Error('Cihaz kaydı silinemedi.');cache.delete(k);});}
+ function clear(){return serialize(async()=>{await ready();if(mode==='memory'){cache.clear();return;}if(mode!=='indexedDB'){
+  // An interrupted migration can leave an unmarked IDB copy even while legacy is authoritative.
+  // Delete it before local data so a failed cleanup cannot report success or lose the only copy.
+  if(typeof indexedDB!=='undefined'){
+   const orphan=await new Promise((resolve,reject)=>{const r=indexedDB.open('yks-local-store',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('records'))r.result.createObjectStore('records')};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('Cihaz depolaması temizlenemedi.'));r.onblocked=()=>reject(new Error('Cihaz depolaması başka sekmede açık.'));});
+   try{const tx=orphan.transaction('records','readwrite'),s=tx.objectStore('records');for(const k of keys)s.delete(k);await done(tx);for(const k of keys){const t=orphan.transaction('records','readonly');if(await request(t.objectStore('records').get(k))!==undefined)throw new Error('Cihaz kaydı silinemedi.');}}finally{orphan.close();}
+  }
+  for(const k of [...keys.filter(k=>k!=='yks_veri'),'yks_veri']){localStorage.removeItem(k);if(localStorage.getItem(k)!==null)throw new Error('Cihaz kaydı silinemedi.');}return;}
+  // Legacy copies can remain after an interrupted cleanup. Remove them before the
+  // atomic IDB delete, so a legacy failure keeps the authoritative IDB intact.
+  for(const k of [...keys.filter(k=>k!=='yks_veri'),'yks_veri']){localStorage.removeItem(k);if(localStorage.getItem(k)!==null)throw new Error('Cihaz kaydı silinemedi.');}
+  const tx=db.transaction('records','readwrite'),s=tx.objectStore('records');for(const k of keys)s.delete(k);await done(tx);for(const k of keys)if(await read(k)!==null)throw new Error('Cihaz kaydı silinemedi.');cache.clear();});}
+ return {ready,get,getSync,set,remove,clear,isManaged:k=>allowed.has(k),mode:()=>mode};
+})();
+// END LOCAL_STORE
+
+// BEGIN BACKUP_HISTORY
+// Bounded, self-contained snapshot slots; uses the existing owner-protected history collection.
+const BACKUP_HISTORY=(()=>{
+ 'use strict';
+ const INDEX='_v2-index',caps={day:30,month:12,operation:10,start:1};
+ const blank=()=>({version:2,seq:0,entries:[]});
+ const slot=(kind,n)=>'_v2-'+({day:'d',month:'m',operation:'r',start:'s'}[kind])+String(n).padStart(2,'0');
+ const known=new Set(Object.entries(caps).flatMap(([k,n])=>Array.from({length:n},(_,i)=>slot(k,i))));
+ const iso=x=>typeof x==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&!Number.isNaN(Date.parse(x+'T00:00:00Z'))&&new Date(x+'T00:00:00Z').toISOString().slice(0,10)===x;
+ function validate(v){
+  const fail=()=>{throw new Error('Bulut yedek dizini doğrulanamadı; mevcut yedeklerin üzerine yazılmadı.');};
+  if(!v||v.version!==2||!Number.isSafeInteger(v.seq)||v.seq<0||!Array.isArray(v.entries)||v.entries.length>53)fail();
+  const ids=new Set();
+  for(const e of v.entries){
+   if(!e||!Object.hasOwn(caps,e.kind)||!known.has(e.slot)||!Array.from({length:caps[e.kind]},(_,i)=>slot(e.kind,i)).includes(e.slot)||ids.has(e.slot)||!iso(e.gun)||!Number.isSafeInteger(e.ts)||e.ts<1||e.ts>v.seq||!Number.isSafeInteger(e.boyut)||e.boyut<1||e.boyut>900000||typeof e.sha!=='string'||!/^[a-f0-9]{64}$/.test(e.sha)||typeof e.kaynak!=='string'||e.kaynak.length>100||!Number.isSafeInteger(e.ogrenciSayisi)||e.ogrenciSayisi<0||!Number.isSafeInteger(e.sonucSayisi)||e.sonucSayisi<0)fail();
+   ids.add(e.slot);
+  }
+  return v;
+ }
+ function parse(doc){if(!doc)return blank();try{return validate(JSON.parse(doc.veri))}catch(e){throw new Error('Bulut yedek dizini okunamadı; mevcut yedeklerin üzerine yazılmadı.')}}
+ function plan(input,requests,now){
+  validate(input);const out=JSON.parse(JSON.stringify(input)),writes=[];
+  for(const request of requests){
+   const {kind}=request;if(!Object.hasOwn(caps,kind))throw new Error('Yedek türü geçersiz.');
+   const choices=Array.from({length:caps[kind]},(_,i)=>slot(kind,i)),same=out.entries.find(e=>e.kind===kind&&(kind==='day'?e.gun===request.gun:kind==='month'?e.gun.slice(0,7)===request.gun.slice(0,7):kind==='start'?true:false));
+   const target=same?.slot||choices.find(id=>!out.entries.some(e=>e.slot===id))||out.entries.filter(e=>e.kind===kind).sort((a,b)=>a.ts-b.ts)[0].slot;
+   const ts=Math.max(now,out.seq+1),entry={kind,slot:target,gun:request.gun,ts,boyut:request.boyut,sha:request.sha,kaynak:request.kaynak,ogrenciSayisi:request.ogrenciSayisi,sonucSayisi:request.sonucSayisi};
+   out.entries=out.entries.filter(e=>e.slot!==target);out.entries.push(entry);out.seq=ts;
+   writes.push({entry,document:{veri:request.veri,ts,surum:1,boyut:request.boyut,ogrenciSayisi:request.ogrenciSayisi,sonucSayisi:request.sonucSayisi}});
+  }
+  validate(out);return {index:out,writes};
+ }
+ const token=e=>e.slot+'~'+e.ts+'~'+e.sha;
+ function lookup(v,id){validate(v);return v.entries.find(e=>token(e)===id)||null;}
+ const indexDocument=v=>({veri:JSON.stringify(validate(v)),ts:v.seq,surum:1,boyut:new TextEncoder().encode(JSON.stringify(v)).length,ogrenciSayisi:0,sonucSayisi:0});
+ const reserved=id=>typeof id==='string'&&id.startsWith('_v2-');
+ return {INDEX,caps,blank,validate,parse,plan,token,lookup,indexDocument,reserved};
+})();
+// END BACKUP_HISTORY
+
 // ---------------------------------------------------------------- başlangıç
+function dosyaGomuluYalnizcaOku() {
+  if (typeof location === 'undefined' || location.protocol !== 'file:') return false;
+  const onceki=D;
+  try {
+    const y=JSON.parse(document.getElementById('veri').textContent.trim());
+    if (!y || !y.rol) return false;
+    yedekDogrula(y); veriyiHazirla(y); LOCAL_EMBEDDED_READONLY=true;
+    EK.sekme='ayarlar'; EK.ogr=0; EK.hafta=null; ciz();
+    const ana=document.getElementById('ana');
+    if(ana)ana.insertAdjacentHTML('afterbegin','<div role="alert"><p>Cihaz depolaması kullanılamıyor. Bu dosyadaki defter yalnızca görüntülenir; değişiklikler kaydedilmez.</p><button class="dugme" id="hataYedekIndir">Yedek indir (JSON)</button></div>');
+    return true;
+  } catch(e) { D=onceki; LOCAL_EMBEDDED_READONLY=false; return false; }
+}
 (async function () {
   // Hold a shared tab lock before reading or changing the notebook. Logout can
   // clear origin storage only while no other updated tab is using it.
   try { await oturumSekmesiniKaydet(); } catch(e) { /* The notebook stays usable; logout will report the lock failure. */ }
+  try { await LOCAL_STORE.ready(); }
+  catch (e) { if(dosyaGomuluYalnizcaOku())return; const ana=document.getElementById('ana'); if(ana) ana.textContent='Cihazdaki kayıt açılamadı; veriler korunuyor. Tarayıcı depolamasını kontrol edip yeniden deneyin. '+(e.message||e); return; }
   let sekmeGeriYuklendi = false;
   try {
     const s = sessionStorage.getItem('yks_ek');
@@ -24045,9 +24275,10 @@ const TYT_WEEKLY = (() => {
   } catch (e) { /* yok */ }
   EK.hafta = null;                     // uygulama her zaman içinde bulunulan haftayla açılır
   // Test hesabı: açılış hazırlığı defteri değiştirmeden önceki hâli (bkz. testDefteriniDenetle).
-  try { TEST_ACILIS_JSON = localStorage.getItem('yks_veri'); } catch (e) { TEST_ACILIS_JSON = null; }
+  try { TEST_ACILIS_JSON = await LOCAL_STORE.get('yks_veri'); }
+  catch (e) { if(dosyaGomuluYalnizcaOku())return; const ana=document.getElementById('ana'); if(ana) ana.textContent='Cihazdaki kayıt okunamadı; veriler korunuyor. Tarayıcı depolamasını kontrol edip yeniden deneyin. '+(e.message||e); return; }
   let acilisUyarilari = [];
-  try { acilisUyarilari = await durumuYukle(); }
+  try { acilisUyarilari = await durumuYukle(TEST_ACILIS_JSON); }
   catch (e) {
     console.error('[YKS Tekrar Defteri] Veri yüklenemedi; temiz başlangıca dönüldü.', e);
     D = null;
@@ -24055,7 +24286,7 @@ const TYT_WEEKLY = (() => {
     catch (e2) { D = varsayilan(); }
     acilisUyarilari = ['Kayıtlı veri yüklenemedi; hiçbir bozuk veya yarım veri kullanılmadı. Yedeğinizi Ayarlar’dan yeniden yükleyin.'];
   }
-  if (izlemeAcilisi()) acilisUyarilari = [];
+  if (await izlemeAcilisi()) acilisUyarilari = [];
   ortakAcilisi();
   let izlemeMesaji = '';
   try { izlemeMesaji = sessionStorage.getItem('yks_izleme_mesaj') || ''; sessionStorage.removeItem('yks_izleme_mesaj'); } catch (e) { /* yok */ }

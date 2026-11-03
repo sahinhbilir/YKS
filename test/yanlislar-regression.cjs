@@ -190,7 +190,7 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
   await test('page: nothing about the files is kept anywhere (no storage, no notebook field)', async () => {
     await show({harita: true});
     assert.equal(run('Object.keys(D).filter(k=>/yanlis|defter|kitap|rapor/i.test(k)).length'), 0);
-    assert.doesNotMatch(source.slice(source.indexOf('const YANLISLAR')), /localStorage|sessionStorage|indexedDB|firebase|\bfetch\(|XMLHttpRequest|sendBeacon/);
+    assert.doesNotMatch(source.slice(source.indexOf('const YANLISLAR'),source.indexOf('// END YANLISLAR')), /localStorage|sessionStorage|indexedDB|firebase|\bfetch\(|XMLHttpRequest|sendBeacon/);
   });
   await test('page: students only see nothing of it; the menu entry is a teacher page', () => {
     run("D=varsayilan();D.rol='ogrenci';D.ogr=[]");

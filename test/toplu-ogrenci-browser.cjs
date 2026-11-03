@@ -17,7 +17,7 @@ const liste=['Fotoğraf','No','Adı Soyadı','Kurum Adı','Kademe','Alan','Şube
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>{dialogs.push(d.message());d.accept();});
    await page.clock.setFixedTime(new Date('2026-10-14T12:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(()=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-14';
     D.ogr=[{ad:'SENTETİK MEVCUT',no:7,sube:'201',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,ilkAktif:gunNo('2026-10-05'),maddeler:[],rutin:{once:'',ara:'',sonra:''}}];

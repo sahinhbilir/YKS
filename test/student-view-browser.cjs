@@ -16,7 +16,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>{dialogs.push(d.message());d.accept()});
    await page.clock.setFixedTime(new Date('2026-10-14T12:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(l=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-14';
     const ders=n=>DENEME_DERSLER.TYT.map(d=>({kod:d[0],soru:d[2],dogru:d[0]==='turkce'?n:0,yanlis:0}));
@@ -64,7 +64,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
     assert.match(await page.locator('.sr-sinavlar tbody tr').last().innerText(),/PDF’de: 18\.09\.2026/);
    }
    // 3) A name opens the student's own view in an isolated frame; the teacher's notebook is untouched.
-   const defter=await page.evaluate(()=>{localStorage.setItem('yks_veri',JSON.stringify(D));return localStorage.getItem('yks_veri')});
+   const defter=await page.evaluate(async()=>{await LOCAL_STORE.set('yks_veri',JSON.stringify(D));return LOCAL_STORE.get('yks_veri')});
    const gozuyle=async(tikla,ad)=>{
     await tikla();const ortu=page.locator('#ogrGor');await ortu.waitFor();
     assert.equal(await ortu.locator('.ogr-gor-ust b').innerText(),ad);
@@ -79,7 +79,8 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    if(await cerceve.locator('[aria-controls="hesapMenusu"]').isVisible())await cerceve.locator('[aria-controls="hesapMenusu"]').click();
    await cerceve.locator('#ray [data-sekme="ayarlar"]').first().click();
    const icerde=page.frames().find(f=>f!==page.mainFrame());
-   assert.notEqual(await icerde.evaluate(()=>localStorage.getItem('yks_veri')),defter,'the frame has its own memory storage');
+   assert.equal(await icerde.evaluate(()=>LOCAL_STORE.mode()),'memory','the sandbox never opens persistent storage');
+   assert.notEqual(await icerde.evaluate(()=>LOCAL_STORE.get('yks_veri')),defter,'the frame has its own memory storage');
    assert.equal(await icerde.evaluate(()=>D.rol+':'+D.ogr.length+':'+D.ogr[0].ad),'ogrenci:1:SENTETİK ADA');
    await page.locator('#ogrGorKapat').click();assert.equal(await page.locator('#ogrGor').count(),0);
    assert.equal(await page.evaluate(()=>document.body.classList.contains('ogr-gor-acik')),false);
@@ -94,7 +95,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
     await page.evaluate(()=>{EK.denemeKlasik=true});await ac('denemeler','.baslik [data-ogr-gor]','SENTETİK ADA');await page.evaluate(()=>{EK.denemeKlasik=false});
     await ac('harita','.baslik [data-ogr-gor]','SENTETİK ADA');
    }
-   assert.equal(await page.evaluate(()=>localStorage.getItem('yks_veri')),defter,'nothing done in the student view reached the teacher notebook');
+   assert.equal(await page.evaluate(()=>LOCAL_STORE.get('yks_veri')),defter,'nothing done in the student view reached the teacher notebook');
    assert.deepEqual(errors,[]);console.log('PASS ranking, date correction and student view',width);await context.close();
   }
   console.log('Screenshots: '+out);

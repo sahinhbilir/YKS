@@ -5,7 +5,7 @@
 // the teacher notebook as D.etut, so it travels with the teacher's cloud backup; student packets
 // are built from a field whitelist and never carry it. Nothing is uploaded. See docs/etutler.md.
 const ETUT = (() => {
-const SURUM=1, UST_SINIR=300000, EN_COK_SATIR=15000, EN_COK_KAYNAK=60, ARALIKLAR=[1,2,4], PENCERELER=[...ARALIKLAR,'sec'];
+const SURUM=1, UST_SINIR=750000, EN_COK_SATIR=20000, EN_COK_KAYNAK=60, ARALIKLAR=[1,2,4], PENCERELER=[...ARALIKLAR,'sec'];
 // A teacher's places on each of their etüt days: the Etüt planı's four students.
 const GUNLUK_YER=4;
 const GUN_ADI=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
@@ -158,12 +158,15 @@ const ONBELLEK={ts:null,m:null};
 async function yaz(veri){
   if(veri)dogrula(veri);
   const json=veri?JSON.stringify(veri):'',bayt=baytBoyu(json);
-  if(bayt>UST_SINIR)throw new Error('Etüt verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor.');
-  const eski=D.etut,geri=()=>{if(eski===undefined)delete D.etut;else D.etut=eski};
-  if(veri)D.etut=veri;else delete D.etut;
-  // The rows ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; etüt verisi değişmedi.')}
+  if(bayt>UST_SINIR && bayt>baytBoyu(JSON.stringify(D.etut??null)))throw new Error('Etüt verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor.');
+  const owner=D,eski=owner.etut,aday={...owner};
+  if(veri)aday.etut=veri;else delete aday.etut;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula(aday,{previous:owner});
+  if(D!==owner||owner.etut!==eski||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(owner.etut!==veri && !(veri===null&&owner.etut===undefined))return;if(eski===undefined)delete owner.etut;else owner.etut=eski};
+  if(veri)owner.etut=veri;else delete owner.etut;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; etüt verisi değişmedi.')}catch(e){geri();throw e}
   ONBELLEK.ts=null;
 }
 async function raporEkle(raporlar){
@@ -189,7 +192,7 @@ async function yedekteBul(ilerleme){
   const g=await bulutYedekGecmisi();if(g.tur!=='tamam')throw new Error(g.mesaj||'Bulut yedeğine bağlanılamadı.');
   for(const y of g.liste.slice(0,EN_COK_YEDEK)){
     if(ilerleme)ilerleme(y.gun);
-    const r=await buluttanGunAl(y.gun);if(r.tur!=='tamam'||!r.yedek||r.yedek.etut===undefined)continue;
+    const r=await buluttanGunAl(y.id||y.gun);if(r.tur!=='tamam'||!r.yedek||r.yedek.etut===undefined)continue;
     try{const v=dogrula(JSON.parse(JSON.stringify(r.yedek.etut)));if(v.satir.length)return {gun:y.gun,veri:v}}catch(e){/* unreadable copy: try an older one */}
   }
   return null;

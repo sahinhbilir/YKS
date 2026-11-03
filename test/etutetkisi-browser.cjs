@@ -30,7 +30,7 @@ for(let i=1;i<=6;i++)ogrenciler.push({id:'k'+i,name:'SENTETİK KÜÇÜK '+i,cls:
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
    await page.clock.setFixedTime(new Date('2026-11-05T18:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(s=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-11-05';D.ogr=[];EK.sekme='ana';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
     OGRENCI_RAPOR.temelOgrenciler=()=>({students:structuredClone(s),warnings:[],etutKapsam:[[gunNo('2026-10-01'),gunNo('2026-11-30')]]});ciz();

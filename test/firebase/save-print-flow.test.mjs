@@ -111,7 +111,7 @@ try {
   check('offline-results-remain-in-local-storage',()=>assert.equal(JSON.parse(student.store.yks_veri).log.length,2));
   await student.run('ogrenciHesabindanYukle("Delivery Student",42)');
   check('relogin-keeps-unsent-local-work-and-a-recovery-copy',()=>{
-    assert.equal(student.run('D.log.length'),2);assert.equal(JSON.parse(student.store.yks_ogrenci_kurtarma).log.length,2);
+    assert.equal(student.run('D.log.length'),2);assert.equal(JSON.parse(JSON.parse(student.store.yks_ogrenci_kurtarma).value).log.length,2);
   });
   student.s.navigator.onLine=true;await student.run('ogrenciEsitlemeBosalt()');
   await eventually(()=>teacher.run('D.log.length')===2,'retry delivery');
@@ -172,7 +172,7 @@ try {
   await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(veriCoz(d.data().veri)).kurum==='Teacher print saved';},'teacher print backup without the ten-second fallback',5000);
   check('teacher-print-also-flushes-the-complete-server-backup',()=>assert.equal(teacher.run('D.log.length'),2));
   check('teacher-print-does-not-add-student-activity',()=>assert.equal(teacher.run('JSON.stringify(D.ogr[0].etkinlik)'),beforeTeacherPrint));
-  teacher.run(`gecmisPlaniKaydet(0,'2026-09-07',[{tarih:'2026-09-08',ki:0,tur:'test',durum:'tamamlandi',soru:10,dogru:7,not:null,dahil:true}],true)`);
+  await teacher.run(`gecmisPlaniKaydet(0,'2026-09-07',[{tarih:'2026-09-08',ki:0,tur:'test',durum:'tamamlandi',soru:10,dogru:7,not:null,dahil:true}],true)`);
   await teacher.run('kaydet(true)');teacher.run('sunucuKaydiniBaslat()');
   await teacher.run('gecmisPlaniOgrenciyeYayinla(0)');
   const recovered=app(studentDb,{uid:studentUid,isAnonymous:false,email:'ogr-delivery@student.ykstekrar.app'});
@@ -184,7 +184,7 @@ try {
   });
   await eventually(async()=>{const d=await getDocFromServer(teacherRef);return d.exists()&&JSON.parse(veriCoz(d.data().veri)).log.length===3;},'recovered teacher history backup',5000);
   check('photo-recovery-is-in-the-teacher-server-backup',()=>assert.equal(teacher.run('D.log.length'),3));
-  recovered.run(`gecmisPlaniKaydet(0,'2026-08-31',[{tarih:'2026-09-01',ki:0,tur:'test',durum:'tamamlandi',soru:10,dogru:6,not:null,dahil:true}],false)`);
+  await recovered.run(`gecmisPlaniKaydet(0,'2026-08-31',[{tarih:'2026-09-01',ki:0,tur:'test',durum:'tamamlandi',soru:10,dogru:6,not:null,dahil:true}],false)`);
   await recovered.run('kaydet(true)');await recovered.run('ogrenciEsitlemeBosalt()');
   await eventually(()=>teacher.run('D.log.length')===4,'student photo recovery delivery');
   check('student-photo-recovery-delivers-the-original-week-and-result-to-teacher',()=>{
@@ -206,7 +206,7 @@ try {
     assert.ok(afterLogout.run("D.elle['0|'+gunNo('2026-08-31')].kurtarma"));
   });
   await teacher.run('KAYIT_ZINCIRI');await teacher.run('bulutYedekIsi');
-  const dayRef=doc(teacherDb,'ogretmenYedek',teacherUid,'geriNoktalari',teacher.run('bulutGunBaslangiciKimligi()'));
+  const dayRef=doc(teacherDb,'ogretmenYedek',teacherUid,'gecmis','_v2-s00');
   const dayBefore=(await getDocFromServer(dayRef)).data().veri;
   teacher.s.rollbackTarget=JSON.parse(teacher.run('JSON.stringify(D)'));
   teacher.run("D.kurum='Change to undo';");await teacher.run('kaydet(true)');await teacher.run('bulutaYedekle()');
@@ -219,10 +219,12 @@ try {
     assert.equal(rolledBack.kurum,teacher.s.rollbackTarget.kurum);assert.equal(rolledBack.log.length,4);
     assert.ok(rolledBack.bulutGeriAlma);assert.equal(JSON.parse(teacher.store.yks_veri).kurum,rolledBack.kurum);
   });
-  const points=await getDocs(collection(teacherDb,'ogretmenYedek',teacherUid,'geriNoktalari'));
+  const points=await getDocs(collection(teacherDb,'ogretmenYedek',teacherUid,'gecmis'));
+  const pointIndex=JSON.parse(points.docs.find(d=>d.id==='_v2-index').data().veri);
+  const operationSlots=pointIndex.entries.filter(e=>e.kind==='operation').map(e=>e.slot);
   check('cloud-rollback-keeps-the-overwritten-notebook-for-undo',()=>{
-    assert(points.docs.some(d=>d.id.endsWith('-bulut')&&JSON.parse(veriCoz(d.data().veri)).kurum==='Change to undo'));
-    assert(points.docs.some(d=>d.id.endsWith('-yerel')&&JSON.parse(veriCoz(d.data().veri)).kurum==='Change to undo'));
+    const protectedCopies=points.docs.filter(d=>operationSlots.includes(d.id)&&JSON.parse(veriCoz(d.data().veri)).kurum==='Change to undo');
+    assert(protectedCopies.length>=2, 'both local and cloud notebooks must remain recoverable');
   });
   teacher.run("DISARI_AKTAR=null;EK.sekme='plan';D.kurum='Saved on logout'");
   assert.equal(await teacher.run('kaydedipCikisYap()'),true);
@@ -249,7 +251,7 @@ try {
     console.log('  raw',bigBytes,'B -> stored',bigDoc.veri.length,'B ('+(bigBytes/bigDoc.veri.length).toFixed(2)+'x)');
   });
   const bigDay=await getDocs(collection(env.authenticatedContext(bigUid,{firebase:{sign_in_provider:'google.com'}}).firestore(),'ogretmenYedek',bigUid,'gecmis'));
-  check('the-daily-copy-of-the-big-notebook-is-compressed-too',()=>{assert.equal(bigDay.docs.length,1);assert.equal(veriCoz(bigDay.docs[0].data().veri),bigJson);});
+  check('the-daily-copy-of-the-big-notebook-is-compressed-too',()=>{const index=JSON.parse(bigDay.docs.find(d=>d.id==='_v2-index').data().veri);const day=index.entries.find(e=>e.kind==='day');assert(day);assert.equal(veriCoz(bigDay.docs.find(d=>d.id===day.slot).data().veri),bigJson);});
   console.log(`SAVE/PRINT DELIVERY: ${passed} checks passed`);
 } finally {
   apps.forEach(a=>a.close());

@@ -87,6 +87,8 @@ jobs:
         run: node test/data-integrity-regression.js
       - name: Cloud-sync resilience
         run: node test/cloud-sync-resilience.js
+      - name: Durable local storage and bounded cloud history
+        run: node scripts/embed-local-store.cjs --check && node scripts/embed-backup-history.cjs --check && node test/local-store-app-regression.cjs && node test/backup-history-regression.cjs
       - name: Weekly student activity and named teacher dashboard
         run: node test/student-activity-regression.cjs
       - name: Firebase Analytics isolation and production-only collection
@@ -132,6 +134,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/past-plan-recovery-browser.cjs
       - name: Logout failure, retry, multiple tabs and memory settings
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/logout-memory-browser.cjs
+      - name: IndexedDB migration, quota failure and full school-year persistence
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" node test/local-store-browser.cjs && NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" node test/annual-storage-browser.cjs
       - name: Grade enrollment on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/curriculum-browser.cjs
       - name: Weekly student activity on desktop and mobile
@@ -212,4 +216,4 @@ jobs:
       - name: Run Firestore security-rule checks
         run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/firestore.test.mjs"
       - name: Verify save and print delivery with a fresh emulator
-        run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/save-print-flow.test.mjs"
+        run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/save-print-flow.test.mjs && node test/firebase/history-v2.test.mjs"

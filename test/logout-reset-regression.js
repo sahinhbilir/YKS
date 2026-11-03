@@ -56,14 +56,14 @@ const restore=a=>a.run('bulutSurumuneDon(past,"previous",selection)');
   });
   await check('day-start-keeps-original-cloud-copy-across-multiple-saves',async a=>{
     const before=await seed(a);a.run("D.kurum='save one'");assert.equal((await a.run('bulutaYedekle()')).tur,'tamam');
-    const ref='ogretmenYedek/teacher/geriNoktalari/'+a.run('bulutGunBaslangiciKimligi()');assert.equal(gzCoz(a.cloud[ref].veri),before);
+    const ref='ogretmenYedek/teacher/gecmis/_v2-s00';assert.equal(gzCoz(a.cloud[ref].veri),before);
     a.run("D.kurum='save two'");assert.equal((await a.run('bulutaYedekle()')).tur,'tamam');assert.equal(gzCoz(a.cloud[ref].veri),before);
     assert.equal(JSON.parse(gzCoz(a.cloud['ogretmenYedek/teacher'].veri)).kurum,'save two');
   });
   await check('day-start-protection-failure-prevents-main-overwrite',async a=>{
     const before=await seed(a);a.run("D.kurum='new'");
     a.b.runTransaction=async(_db,fn)=>{const writes=[];await fn({get:async ref=>({exists:()=>!!a.cloud[ref],data:()=>a.cloud[ref]}),set:(ref,data)=>writes.push({ref,data})});
-      if(writes.some(x=>x.ref.includes('gun-baslangici')))throw Error('archive denied');throw Error('expected day-start protection');};
+      if(writes.some(x=>x.ref.includes('/gecmis/_v2-s00')))throw Error('archive denied');throw Error('expected day-start protection');};
     assert.equal((await a.run('bulutaYedekle()')).tur,'hata');assert.equal(gzCoz(a.cloud['ogretmenYedek/teacher'].veri),before);
   });
   await check('cloud-rollback-restores-both-copies-and-archives-exact-previous-states',async a=>{
@@ -72,8 +72,8 @@ const restore=a=>a.run('bulutSurumuneDon(past,"previous",selection)');
     const restored=JSON.parse(gzCoz(a.cloud['ogretmenYedek/teacher'].veri));
     assert.equal(restored.kurum,'previous');assert.equal(restored.log.length,1);assert(restored.bulutGeriAlma);
     assert.equal(JSON.parse(a.store.yks_veri).kurum,'previous');
-    const history=Object.entries(a.cloud).filter(([ref])=>ref.includes('/geriNoktalari/')).map(([,x])=>gzCoz(x.veri));
-    assert(history.includes(local));assert(history.includes(before));assert.equal(a.store.yks_bulut_geri_alma_oncesi,local);
+    const history=Object.entries(a.cloud).filter(([ref])=>/\/gecmis\/_v2-[drms]\d\d$/.test(ref)).map(([,x])=>gzCoz(x.veri));
+    assert(history.includes(local));assert(history.includes(before));assert.equal(JSON.parse(a.store.yks_bulut_geri_alma_oncesi).value,local);
     assert(a.events.includes('readback'));assert(!a.events.includes('signout'));
     let subscribed=0;a.b.onSnapshot=()=>{subscribed++;return()=>{};};a.run('ogretmenDinlemeyiBaslat(true)');assert.equal(subscribed,0);
     a.run('veriyiHazirla(JSON.parse(localStorage.getItem("yks_veri")))');a.run('ogretmenDinlemeyiBaslat(true)');assert.equal(subscribed,0);
@@ -108,8 +108,8 @@ const restore=a=>a.run('bulutSurumuneDon(past,"previous",selection)');
     const before=await seed(a);a.run("D.kurum='unsent local'");const local=raw(a);
     assert.equal(await restore(a),true,a.nodes.cikisDurum.innerHTML);
     assert(a.cloud['ogretmenYedek/teacher'].veri.startsWith('gz1:'));
-    const arsiv=Object.entries(a.cloud).filter(([ref])=>ref.includes('/geriNoktalari/'));
-    assert(arsiv.length>=2&&arsiv.every(([,x])=>x.veri.startsWith('gz1:')&&x.boyut===x.veri.length&&Object.keys(x).sort().join()==='boyut,kaynak,ogrenciSayisi,sonucSayisi,surum,ts,veri'));
+    const arsiv=Object.entries(a.cloud).filter(([ref])=>/\/gecmis\/_v2-[drms]\d\d$/.test(ref));
+    assert(arsiv.length>=2&&arsiv.every(([,x])=>x.veri.startsWith('gz1:')&&x.boyut===x.veri.length&&Object.keys(x).sort().join()==='boyut,ogrenciSayisi,sonucSayisi,surum,ts,veri'));
     assert.deepEqual(arsiv.map(([,x])=>gzCoz(x.veri)).sort(),[before,local].sort());
     const main=a.cloud['ogretmenYedek/teacher'];assert.equal(main.boyut,main.veri.length);
   });

@@ -9,7 +9,7 @@ const node = () => ({innerHTML:'',textContent:'',style:{},hidden:false,setAttrib
 const listeners={};
 const nodes={ray:node(),ana:node(),stil:{textContent:'body{}'},uygulama:{textContent:source},veri:{textContent:'null'}};
 const sandbox={console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),localStorage:{getItem(){return null},setItem(){}},sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},navigator:{},window:{scrollTo(){},open(){return null},addEventListener(){}},document:{activeElement:null,addEventListener(t,f){(listeners[t]=listeners[t]||[]).push(f)},contains(){return true},getElementById(id){return nodes[id]||null},querySelector(){return null},querySelectorAll(){return []},createElement(){return node()},body:{appendChild(){},insertAdjacentHTML(){}}}};
-sandbox.window.document=sandbox.document; vm.createContext(sandbox); new vm.Script(source).runInContext(sandbox);
+sandbox.TextEncoder=TextEncoder;sandbox.window.document=sandbox.document; vm.createContext(sandbox); new vm.Script(source).runInContext(sandbox);
 
 
 const assert=require('node:assert/strict');
@@ -102,6 +102,13 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   await click({target:{closest:()=>({dataset:{dnSil:'p:one'}})}});
   assert.equal(run('denemeListe().length'),0);assert.equal(run('D.ogr[0].denemeYayinBekliyor'),true);
   assert.match(run('EK.denemeDurum'),/Cihazda kayıtlı; yayın bekliyor/);assert.equal(run('cizSayisi'),1);
+ });
+ await check('bulk school results are admitted before mutation and roll back failed storage',async()=>{
+  put('next',[sample({id:'p:new'})]);run("D.rol='rehber';before=JSON.stringify(D.ogr);oldAdmission=defterAdayiniDogrula;defterAdayiniDogrula=async()=>{throw Error('encoded limit')}");
+  try{await assert.rejects(run('denemeTopluYerelKaydet(new Map([[0,next]]))'),/encoded limit/);assert.equal(run('JSON.stringify(D.ogr)'),run('before'));}
+  finally{run('defterAdayiniDogrula=oldAdmission');}
+  run('kaydet=async()=>false');await assert.rejects(run('denemeTopluYerelKaydet(new Map([[0,next]]))'),/kayıt başarısız/);assert.equal(run('JSON.stringify(D.ogr)'),run('before'));
+  run('kaydet=async()=>true');await run('denemeTopluYerelKaydet(new Map([[0,next]]))');assert.equal(run('D.ogr[0].denemeOkul[0].id'),'p:new');assert.equal(run('D.ogr[0].denemeYayinBekliyor'),true);
  });
  await check('net per minute (branş only) uses D − Y/4 over completion time and scales the chart',()=>{
   const brans=o=>sample({tur:'BRANS',brans:'turkce',dersler:[{kod:'turkce',dogru:10,yanlis:4,soru:20}],...o});

@@ -421,8 +421,11 @@ function canWrite(){if(!rehberMi()||readonly())throw new Error('Yalnızca düzen
 let saving=false;
 async function write(v,owner=D,previous=D.konutakibi){
   canWrite();if(saving||D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti. İşlemi yeniden deneyin.');dogrula(v);
-  const next={...D,konutakibi:v};if(baytBoyu(JSON.stringify(next))>DEFTER_HAM_UST_SINIR&&baytBoyu(JSON.stringify(next))>baytBoyu(JSON.stringify(D)))throw new Error('Defterin bulut yedeği sınırı doldu. Ayarlar → Defter boyutu bölümüne bakın.');
-  saving=true;D.konutakibi=v;
+  const next={...owner,konutakibi:v};
+  saving=true;
+  const oncekiDefter=JSON.stringify(D);
+  try{await defterAdayiniDogrula(next,{previous:owner});if(D!==owner||owner.konutakibi!==previous||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.')}catch(e){saving=false;throw e}
+  D.konutakibi=v;
   try{if(!await kaydet(true))throw new Error('Kaydedilemedi; önceki kayıt korundu.')}
   catch(e){if(owner.konutakibi===v){if(previous===undefined)delete owner.konutakibi;else owner.konutakibi=previous}throw e}
   finally{saving=false}

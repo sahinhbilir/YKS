@@ -35,11 +35,11 @@ fs.mkdirSync(out,{recursive:true});
    await page.locator('#yazdirOnizle').click();
    assert.deepEqual(await page.evaluate(()=>window.analyticsTest.map(x=>x.name)),['student_results_opened','student_results_saved','student_pdf_requested']);
    assert.equal(await page.evaluate(()=>D.ogr[0].etkinlik.kayit.find(r=>r.tur==='pdf').sonucHafta),await page.evaluate(()=>gunNo('2026-09-21')));
-   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[0].etkinlik.kayit.length),3);
-   await page.evaluate(()=>{
+   assert.equal(await page.evaluate(async()=>JSON.parse(await LOCAL_STORE.get('yks_veri')).ogr[0].etkinlik.kayit.length),3);
+   await page.evaluate(async()=>{
     disariAktarmayiKapat();D.rol='rehber';
     D.ogr.push({ad:'Synthetic Ece',no:43,sube:'11-B',sinif:11,alan:'EA',kap:6,off:[6],aktif:true});
-    localStorage.setItem('yks_veri',JSON.stringify(D));
+    await LOCAL_STORE.set('yks_veri',JSON.stringify(D));
    });
    // The teacher lands on the main screen; its "Bu hafta" title opens the weekly tracking page.
    await page.reload();await page.getByRole('heading',{name:'Bu hafta'}).waitFor();

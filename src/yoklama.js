@@ -220,12 +220,15 @@ const ONBELLEK={k:null,m:null};
 async function yaz(veri){
   if(veri)dogrula(veri);
   const json=veri?JSON.stringify(veri):'',bayt=baytBoyu(json);
-  if(bayt>UST_SINIR)throw new Error('Yoklama verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor.');
-  const eski=D.yoklama,geri=()=>{if(eski===undefined)delete D.yoklama;else D.yoklama=eski};
-  if(veri)D.yoklama=veri;else delete D.yoklama;
-  // The days ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu rapor defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; yoklama verisi değişmedi.')}
+  if(bayt>UST_SINIR && bayt>baytBoyu(JSON.stringify(D.yoklama??null)))throw new Error('Yoklama verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor.');
+  const owner=D,eski=owner.yoklama,aday={...owner};
+  if(veri)aday.yoklama=veri;else delete aday.yoklama;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula(aday,{previous:owner});
+  if(D!==owner||owner.yoklama!==eski||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(owner.yoklama!==veri && !(veri===null&&owner.yoklama===undefined))return;if(eski===undefined)delete owner.yoklama;else owner.yoklama=eski};
+  if(veri)owner.yoklama=veri;else delete owner.yoklama;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; yoklama verisi değişmedi.')}catch(e){geri();throw e}
   ONBELLEK.k=null;
 }
 async function raporEkle(raporlar){

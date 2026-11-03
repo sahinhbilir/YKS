@@ -37,7 +37,7 @@ let browser;
  await page.screenshot({path:path.join(out,'photo-recovery-desktop.png'),fullPage:true});
  await page.locator('#gpKimlik').check();await page.locator('#gpKaydet').click();
  await page.waitForFunction(()=>D.log.length===1);assert.equal(await page.evaluate(()=>Object.keys(D.elle).length),1);
- assert.ok(await page.evaluate(()=>localStorage.getItem('yks_plan_kurtarma_oncesi')));
+ assert.ok(await page.evaluate(()=>LOCAL_STORE.get('yks_plan_kurtarma_oncesi')));
  await page.evaluate(()=>{D.ogr[0].gunlukEk={paragraf:[{gun:gunNo('2026-08-01'),soru:40}],problem:[{gun:gunNo('2026-08-01'),soru:40}]};});
  await page.locator('#gpHaftayiAc').click();assert.ok(await page.evaluate(()=>!!elleAl(0,gunNo('2026-09-07')).sabit));
  // Teacher top menu: the plan pages sit under Haftalık plan ▾.

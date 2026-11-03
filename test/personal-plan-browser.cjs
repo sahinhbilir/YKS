@@ -97,6 +97,7 @@ const ogrenci=(kur)=>{
    beklenenOnay=1;
    await page.locator('button[data-yaptim="gt"]:visible').first().click();
    await page.waitForFunction(n=>Object.keys(D.ogr[0].kendiPlan.genelTekrar.tamam).length===n,1);
+   await page.waitForFunction(n=>[...document.querySelectorAll('button[data-yaptim="gt"]')].filter(e=>e.getClientRects().length).length===n,once-1);
    assert.equal(await page.evaluate(()=>Object.values(D.ogr[0].kendiPlan.genelTekrar.tamam)[0]===buHafta(0)-1),true,'dated the last day of the previous week');
    assert.equal(await page.locator('button[data-yaptim="gt"]:visible').count(),once-1,'the pressed row has no button any more');
    assert(/✓ Önceden yapıldı/.test(await page.locator('#ana').innerText()));
@@ -113,6 +114,7 @@ const ogrenci=(kur)=>{
    beklenenOnay=1;
    await page.locator('button[data-yaptim="anlatim"][data-ki="'+ders.ki+'"]:visible').first().click();
    await page.waitForFunction(ki=>D.ogrIslenis[0][ki]===buHafta(0)-1,ders.ki);
+   await page.waitForFunction(ki=>document.querySelectorAll('button[data-yaptim="anlatim"][data-ki="'+ki+'"]').length===0,ders.ki);
    assert.equal(await page.locator('button[data-yaptim="anlatim"][data-ki="'+ders.ki+'"]').count(),0,'the lesson row has no button after it');
    assert.equal(await page.evaluate(ki=>anlatimTamamMi(planHesapla(0,buHafta(0)),ki,buHafta(0)+planHesapla(0,buHafta(0)).gunler.findIndex(l=>l.some(x=>x.ki===ki&&x.anlatim))),ders.ki),true);
    // 3c. Zaten yaptım on a test (the “Biraz” Türkçe checks): popup, İyi, saved at the last day of the previous week.
