@@ -104,21 +104,39 @@ the school's `p` is added as "okul verisi ρ 0,71".
 ### Kademeler (from all exams in the notebook)
 
 Source: `denemeListe` of every student (school results and own entries): D, Y and question count per ders. A ders counts as in
-`denemeBolumSayilir` (a blank TYT ders is a real zero; an AYT ders outside the field only if answered). Per exam and ders the cohort is
-every student who sat it (at least 5, otherwise the exam is skipped). With `m_e` = the cohort mean of (D+0.5)/(n+1):
+`denemeBolumSayilir` (a blank TYT ders is a real zero; an AYT ders outside the field only if answered). Everything is computed **per grade** (the student's `sinif`, otherwise the grade in the şube name, otherwise 12: `denemeOrtSinifi`, as in the Deneme ortalamaları): a 9th grader is never ranked against 12th graders. Per exam and ders the cohort is
+every student of that grade who sat it (at least 5, otherwise the exam is skipped). With `m_e` = the cohort mean of (D+0.5)/(n+1):
 
 - relative ability `a_se = logit((D+0.5)/(n+1)) − logit(m_e)`; an exam that is harder for everybody moves `m_e` with it, so nobody's ability falls;
-- `a_s = Σ w a / Σ w`, `w` = precision `n p (1−p)` times recency `0.5^age`, age = the exam's index from the latest exam of that ders (as in `analiz.js`);
+- `a_s = Σ w a / Σ w`, `w` = precision `n p (1−p)` times recency `0.8^age` (`AGIRLIK_KADEME`), age = the exam's index from the latest exam of that ders (see "Why 0.8" below);
 - SE by the delta method, `var(logit p) ≈ 1/(n p (1−p))`.
 
-Person separation `G = SD_true/RMSE`; tiers `H = floor((4G+1)/3)` (Wright & Masters 1982 strata) clamped to 2..6. With `SD_true² ≤ 0` or fewer
-than 8 students the ders has no tiers ("Veri yetersiz"). Edges are equal width between the 5th and 95th percentile of the abilities;
-tier 1 is the strongest; a student's tier is the point estimate and shows "?" only when `a ± 1.96·SE` spans three or more tiers (same rule and reason as the item bands). The Deneme panosu shows **Kademeler** (students ×
-ders, şube and TYT/AYT filters, sort by a ders, click a cell for the ability trend); the cells use one blue scale (tier 1 the deepest fill, the weakest tier the lightest, scaled by the ders's tier count, so 1/2 and 1/6 differ; light text on the deep half, contrast ≥ 4.5 in light and dark themes) and a "?" cell is hatched with a dashed inner outline, never another colour. The header reads "6 kademe · 0,95" (title: "6 kademe · güvenilirlik 0,95"); the table scrolls inside its card and keeps the student column fixed. Denemelerim shows the chips "Matematik · 2. kademe / 4".
+**Why 0.8, not 0.5.** `analiz.js` weighs the gidişat projection by `0.5^age` because a projection needs recency; that keeps an effective n of about 3 exams.
+Tiers classify a fairly stable ability and need precision: a 5-question ders (Tarih, Coğrafya, Felsefe, Din) has SE of 0.7-1 logit per student per exam, and with
+n_eff ≈ 3 `SD_obs²` falls below `mean(SE²)`, so the ders used to be dropped. `0.8^age` has a half-life of about 3 exams and an effective n of about 7 over 10 exams. `analiz.js` is unchanged.
 
-**Kendi seviyesi** keeps, per student and ders, the wrong or empty questions with `0.35 ≤ P ≤ 0.80`, `P = σ(a_s − (b − μθ))`:
-learnable, neither trivial nor hopeless. Report sections are matched to Deneme ders codes by name (TÜRKÇE-T → TYT turkce, TARİH.1-A →
-AYT tarih1, …; the student by Öğrenci No). A student (or ders) without tiers falls back to the Orta band.
+Person separation `G = SD_true/RMSE` (G = 0 when `SD_true² ≤ 0`), reliability `G²/(1+G²)`; the tier count `H = floor((4G+1)/3)` (Wright & Masters 1982 strata) is clamped to **3..6**.
+A blank counts like a wrong answer (the ability uses D out of n, so an empty question is not a separate case).
+
+**Tiers are norm-referenced within the grade, cut at natural breaks.** The teacher's purpose is relative grouping for question selection, with the boundaries where the cohort
+actually separates. Per (grade, oturum, ders) the abilities are sorted and split into `H` contiguous groups by the exact **Fisher (1958) / Jenks (1977) optimal partition**
+(*On grouping for maximum homogeneity*, JASA 53; Jenks, *Optimal data classification for choropleth maps*): the partition that minimises the total within-group sum of squared deviations,
+by dynamic programming in O(H·n²). Objective: minimise **SDCM**, the sum of squared deviations from the class means (**SDAM** is the sum of squared deviations from the overall mean).
+Trying every combination of breaks guarantees the optimum ([Jenks natural breaks optimization](https://en.wikipedia.org/wiki/Jenks_natural_breaks_optimization)); Fisher's exact dynamic programme finds that same optimum efficiently, so nothing is approximated. Chosen at the teacher's request instead of fixed counts per tier: a far-away student forms a tier alone, and a boundary never falls inside a dense bunch.
+Tier 1 is the strongest group. The boundary between two tiers is the midpoint of the gap between the last student of one and the first of the next; the "?" rule uses these boundaries.
+**Ties:** equal abilities are never split: the DP runs on the distinct values with their multiplicities, and with fewer distinct values than `H`, `H` is that number (at least 1; a ders with one ability value is a single tier).
+**Number of classes:** the method itself gives no rule (Jenks aimed for fewer than 7); ours is `H` from the Wright & Masters strata, kept within 3-6.
+**Fit:** the goodness of variance fit `GVF = (SDAM − SDCM) / SDAM`, in 0..1 (1 when there is no variance) is kept per ders and shown in the header tooltip next to the reliability ("… güvenilirlik 0,82 · ayrışma uyumu 0,91").
+A ders is **never dropped for low separation**: with `SD_true² ≤ 0` it still gets tiers, reliability 0 and `dusuk`. Natural breaks are "not recommended for data that have low variance" (the page above), which is why a ders whose separation reliability is < 0.5 is marked `dusuk` (no GVF threshold is used):
+the header reads "<H> kademe · güvenilirlik düşük", its cells and chips are muted (opacity .55, as the low-reliability item chips) and get no "?".
+"Veri yetersiz" only when fewer than 8 students of that grade have data for the ders, or no exam can be equated.
+Tier 1 is the strongest; a student's tier is the point estimate and shows "?" only when `a ± 1.96·SE` spans three or more tiers (same rule and reason as the item bands). The Deneme panosu shows **Kademeler** (students ×
+ders, Sınıf selector (9/10/11/12, only grades with data, default the highest), şube list of that grade, TYT/AYT filter, sort by a ders, click a cell for the ability trend); the cells use one blue scale (tier 1 the deepest fill, the weakest tier the lightest, scaled by the ders's tier count, so 1/2 and 1/6 differ; light text on the deep half, contrast ≥ 4.5 in light and dark themes) and a "?" cell is hatched with a dashed inner outline, never another colour. The header reads "6 kademe · 0,95" (title: "6 kademe · güvenilirlik 0,95"); the table scrolls inside its card and keeps the student column fixed. Denemelerim shows the chips "Matematik · 2. kademe / 4".
+
+**Kendi seviyesi** maps the student's tier to a window of difficulty bands (0 Çok kolay, 1 Kolay, 2 Orta, 3 Zor, 4 Çok zor) and keeps the wrong or empty questions in it,
+listed **easiest first** (Rasch b ascending) within each ders. Five windows from the top: W0 = {Zor, Çok zor}, W1 = {Orta, Zor}, W2 = {Orta}, W3 = {Kolay, Orta}, W4 = {Çok kolay, Kolay};
+tier k of H gets `W[round((k−1)·4/(H−1))]` (a ders with a single tier gets W2): H = 3 → {3,4}, {2}, {0,1}; H = 4 → {3,4}, {2,3}, {1,2}, {0,1}; H = 5, 6 as the formula gives. Report sections are matched to Deneme ders codes by name (TÜRKÇE-T → TYT turkce, TARİH.1-A →
+AYT tarih1, …; the student by Öğrenci No). The tier is the student's own grade's, and exists for low-reliability ders too. A student (or ders) without tiers (Veri yetersiz) falls back to the Orta window (W2).
 
 ### Known limits
 
@@ -131,7 +149,7 @@ AYT tarih1, …; the student by Öğrenci No). A student (or ders) without tiers
 - A student's own Denemelerim only shows tier chips when the notebook holds the cohort (teacher view); nothing is published to students.
 
 References: Wilson (1927) JASA 22; Kuder & Richardson (1937) Psychometrika 2; Ebel & Frisbie (1991) *Essentials of Educational Measurement*;
-Wright & Masters (1982) *Rating Scale Analysis* (separation, strata, fit mean squares).
+Wright & Masters (1982) *Rating Scale Analysis* (separation, strata, fit mean squares); Fisher (1958) JASA 53, 789-798; Jenks (1977), Optimal data classification for choropleth maps; en.wikipedia.org/wiki/Jenks_natural_breaks_optimization.
 
 Tests: `node test/zorluk-regression.cjs` (Wilson, r_it, KR-20, seeded JMLE recovery, bands and "?", strata, equating, Veri yetersiz, Kendi
 seviyesi, two-sheet parsing, TC) and the browser tests `test/yanlislar-browser.cjs`, `test/denemepano-browser.cjs`.

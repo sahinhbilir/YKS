@@ -24,6 +24,10 @@ assert.deepEqual(flat(pick({bantlar:new Set(['zor','cok-zor'])})).map(x=>x.a),[6
 assert.equal(flat(pick({bantlar:new Set()})).length,0,'no chip selected: nothing, and the unlabelled question is never guessed');
 assert.deepEqual(flat(pick({bantlar:new Set(['kolay','orta','zor']),kendi:(o,b,z)=>z.rel<=0})).map(x=>x.a),[5,2]);assert.match(pick({kendi:()=>true}).filterText,/Kendi seviyesi/);
 assert.deepEqual(flat(pick({status:'yanlis'})).map(x=>x.a),[2,6]);
+// Kendi seviyesi lists the kept questions easiest first (Rasch b ascending) inside each ders, whatever their order in the booklet
+const ters={...d,bolumler:[{...d.bolumler[0],sorular:d.bolumler[0].sorular.slice().reverse()}]};
+assert.deepEqual(flat(T.filterDefter(ters,{kendi:(o,b,z)=>!!z&&z.rel<=1},zi)).map(x=>x.a),[5,2,6],'easiest first');
+assert.deepEqual(flat(T.filterDefter(ters,{},zi)).map(x=>x.a),[6,null,2,5],'without Kendi seviyesi the booklet order is kept');
 assert.equal(JSON.stringify(d),before,'filter leaves student input unchanged');
 for(const bad of [{...source,ad:'Başka TYT'},{...source,oturum:'AYT'},{...source,madde:{'TÜRKÇE-T':source.madde['TÜRKÇE-T'].slice(0,5)}}]){
  const rejected=T.difficultyIndex(rapor,es,bad);assert.equal(rejected.map.size,0);assert(rejected.issues.length>0);

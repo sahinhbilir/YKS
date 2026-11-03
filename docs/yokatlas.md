@@ -26,7 +26,7 @@ The page places the student between the programmes by an estimated YKS puan: the
 | EA | 1025 | 127.63 | 1.246 | 2.866 | 0.121 | 2.3 puan |
 | SÖZ | 460 | 131.00 | 1.244 | 2.830 | 0.110 | 4.8 puan |
 
-The page shows the SD as "± x puan". The student's OBP is the optional **Diploma notu** (50-100, `diplomaNotu` on the student, set by the teacher, validated in `yedekDogrula`) × 5; empty counts as 80 and the page says so. `test/yokatlas-regression.cjs` asserts these coefficients within tolerance.
+The page shows the SD as "± x puan". The student's OBP is the optional **Diploma notu** (50-100, `diplomaNotu` on the student, set by the teacher, validated in `yedekDogrula`) × 5; empty counts as 95 (OBP 475), since all students are at a private school, and the page says so. `test/yokatlas-regression.cjs` asserts these coefficients within tolerance.
 
 **Başarı sırası.** A monotone fit of the catalogue's taban `points` to `rank` per alan (pool-adjacent-violators on `-log(rank)`, linear between block means, clamped to the best and worst taban rank), rounded to 500 above 10.000, 100 above 1.000, 10 above 100. A higher puan never gives a worse rank (tested).
 

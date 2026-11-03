@@ -295,7 +295,7 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    assert.deepEqual(errors,[]);await context.close();
    console.log('PASS Deneme panosu ranges at 1280 px');
  // ---- Kademeler: students × ders from the notebooks' school results (made-up students), per-ders header, filters, sort, trend, Denemelerim chips
- const Yf=require('./yanlislar-fixtures.cjs'),kademeOgr=Yf.kademeOgrencileri({N:30,seed:77});
+ const Yf=require('./yanlislar-fixtures.cjs'),kademeOgr=Yf.kademeOgrencileri({N:30,seed:77}),kademe9=Yf.kademeOgrencileri({N:20,seed:5,sinif:9,kayma:-1.5,noBaz:9100,duz:true});
  for(const [width,tema] of [[1280,'light'],[390,'dark']]){
   const context=await browser.newContext({viewport:{width,height:950},colorScheme:tema}),page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
@@ -303,7 +303,7 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
   await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
   await page.evaluate(async ({l,o})=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-26';D.ogr=o;EK.ogr=0;EK.sekme='denemeler';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
-    await siralamaKaydet(l.map(x=>siralamaPdfCoz(x.pages,x.boylar)));ciz()},{l:listeler,o:kademeOgr});
+    await siralamaKaydet(l.map(x=>siralamaPdfCoz(x.pages,x.boylar)));ciz()},{l:listeler,o:kademeOgr.concat(kademe9)});
   await page.locator('#kdKok').waitFor();
   assert.equal(await page.locator('#kdKok h2').first().innerText(),'Kademeler');
   const hucre=()=>page.locator('#kdKok .kd-hucre button').allInnerTexts();
@@ -323,15 +323,32 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
   assert(kdHuc.every(c=>c.bel===c.hatch),'a "?" cell is hatched');
   const t1=kdHuc.filter(c=>c.t===1).map(c=>c.bg.join()),rest=kdHuc.filter(c=>c.t>1).map(c=>c.bg.join());assert(t1.length&&new Set(t1).size===1&&rest.every(x=>x!==t1[0]),'tier 1 has its own, strongest fill in every ders');
   assert(await page.locator('#kdKok .kd-tablo tbody th[scope="row"]').first().evaluate(e=>getComputedStyle(e).position==='sticky'),'student column is sticky');
+  // Sınıf selector: only grades with data (9 and 12), defaulting to the highest; the şube list and the rows follow the grade
+  const siniflar=()=>page.locator('#kdKok [data-kd-sinif]').evaluateAll(l=>l.map(b=>b.textContent+':'+b.getAttribute('aria-pressed')));
+  assert.deepEqual(await siniflar(),['9:false','12:true']);
+  const subeSecenek=()=>page.locator('#kdKok [data-kd-sube] option').allInnerTexts();
+  assert.deepEqual(await subeSecenek(),['Tüm şubeler','12-A','12-B']);
   // şube filter
   const satir=()=>page.locator('#kdKok tbody tr').count();assert.equal(await satir(),30);
   await page.locator('#kdKok [data-kd-sube]').selectOption('12-A');assert.equal(await satir(),15);
   await page.locator('#kdKok [data-kd-sube]').selectOption('');
   // sort by a ders: tiers do not increase down the column
-  await page.locator('#kdKok [data-kd-sira="TYT:mat"]').click();
+  await page.locator('#kdKok [data-kd-sira="TYT:mat@12"]').click();
   const mi=(await page.locator('#kdKok thead .kd-ders b').allInnerTexts()).indexOf('Matematik'),sutun=await page.locator('#kdKok tbody tr').evaluateAll((l,i)=>l.map(r=>r.children[i+1].textContent.trim()),mi);
   const sayilar=sutun.map(t=>parseInt(t,10)).filter(n=>!isNaN(n));assert(sayilar.every((n,i)=>!i||sayilar[i-1]<=n),sayilar.join());
-  assert.equal(await page.locator('#kdKok [data-kd-sira="TYT:mat"]').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('#kdKok [data-kd-sira="TYT:mat@12"]').getAttribute('aria-pressed'),'true');
+  // the 9th grade: its own cohort (20 students), its own şubeler, the flat Din is not dropped but muted with a low-reliability header and no "?"
+  await page.locator('#kdKok [data-kd-sinif="9"]').click();
+  assert.deepEqual(await siniflar(),['9:true','12:false']);assert.deepEqual(await subeSecenek(),['Tüm şubeler','9-A','9-B']);assert.equal(await satir(),20);
+  assert.match(await page.locator('#kdKok tbody th[scope="row"]').first().innerText(),/9-[AB]/);
+  const dinBas=(await page.locator('#kdKok thead .kd-ders').allInnerTexts()).find(t=>/^Din Kültürü/.test(t));assert.match(dinBas,/1 kademe · güvenilirlik düşük/,dinBas);
+  const dinIdx=(await page.locator('#kdKok thead .kd-ders b').allInnerTexts()).indexOf('Din Kültürü');
+  const dinHuc=await page.locator('#kdKok tbody tr').evaluateAll((l,i)=>l.map(r=>({t:r.children[i+1].textContent.trim(),dusuk:r.children[i+1].classList.contains('kd-dusuk'),op:getComputedStyle(r.children[i+1].querySelector('button')).opacity})),dinIdx);
+  assert(dinHuc.every(c=>c.t==='1'&&c.dusuk&&c.op==='0.55'),JSON.stringify(dinHuc));
+  const hepsi9=await hucre();assert(hepsi9.every(t=>/^[1-6]\??$/.test(t))&&!hepsi9.some(t=>t==='—'),[...new Set(hepsi9)].join());
+  // a strong 9th grader is judged against 9th graders: the cohort of 9 has its own tier 1
+  assert((await hucre()).some(t=>t==='1'),'tier 1 exists in grade 9 although the grade is weaker');
+  await page.locator('#kdKok [data-kd-sinif="12"]').click();assert.equal(await satir(),30);
   // click a cell: the student's ability trend for that ders
   await page.locator('#kdKok .kd-hucre button').first().click();
   await page.locator('#kdKok .kd-detay svg.kd-iz').waitFor();

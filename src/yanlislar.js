@@ -432,6 +432,8 @@ const BANT_ANAHTAR=()=>ZORLUK.BANTLAR.map(x=>x[0]);
 function filterDefter(d,options={},index={map:new Map()}){
   let yanlis=0,bos=0,unknown=0;
   const tum=!options.bantlar||BANT_ANAHTAR().every(k=>options.bantlar.has(k));
+  // Kendi seviyesi lists the kept questions easiest first (Rasch b ascending; an extreme item without b sits at its end of the scale).
+  const kolaylik=s=>s.z&&Number.isFinite(s.z.rel)?s.z.rel:(s.z&&s.z.bant==="cok-kolay"?-1e9:s.z&&s.z.bant==='cok-zor'?1e9:0);
   const bolumler=d.bolumler.map(b=>({...b,sorular:b.sorular.flatMap(s=>{
     if(options.status&&options.status!=='all'&&s.durum!==options.status)return [];
     const z=index.map.get(zAnahtar(s))||null;
@@ -440,7 +442,7 @@ function filterDefter(d,options={},index={map:new Map()}){
     if(options.kendi&&!options.kendi(d.ogr,b,z))return [];
     if(s.durum==='yanlis')yanlis++;else bos++;
     return [{...s,z}];
-  })})).filter(b=>b.sorular.length);
+  }).map((s,i)=>[s,i]).sort((x,y)=>options.kendi?kolaylik(x[0])-kolaylik(y[0])||x[1]-y[1]:0).map(x=>x[0])})).filter(b=>b.sorular.length);
   const adlar=tum?[]:ZORLUK.BANTLAR.filter(([k])=>options.bantlar.has(k)).map(x=>x[1]);
   return {...d,bolumler,yanlis,bos,unknown,gorsel:bolumler.every(b=>b.gorsel),
     filterText:[...adlar,options.kendi?'Kendi seviyesi':null,options.status==='bos'?'Yalnızca boş':options.status==='yanlis'?'Yalnızca yanlış':null].filter(Boolean).join(' · ')};
@@ -537,10 +539,10 @@ function zorlukBilgi(){
   const dis=S.es&&kaynak?difficultyIndex(S.rapor,S.es,kaynak):null;
   const v=zorlukAnaliz(S.rapor,S.es,S.harita,dis&&dis.map.size?dis:null);S.zOnbellek={rapor:S.rapor,es:S.es,harita:S.harita,kaynak,v};return v;
 }
-// Kendi seviyesi: the student's predicted success P = σ(a − (b − μθ)) is between .35 and .80; without an ability for the ders, the Orta band.
+// Kendi seviyesi: the student's tier in the ders (within the grade) picks a window of difficulty bands (ZORLUK.kademePenceresi); without a tier, the Orta band.
 function kendiSeviyesi(ogr,b,z){
-  const kd=typeof KADEME!=='undefined'?KADEME.kodDers(S.rapor.bolumler[b.ri].ad):null,a=kd?KADEME.yetenek(ogr.no,kd.oturum,kd.kod):null;
-  return ZORLUK.kendiSeviyesi(a,z?.rel,z?.bant);
+  const kd=typeof KADEME!=='undefined'?KADEME.kodDers(S.rapor.bolumler[b.ri].ad):null,t=kd?KADEME.kademeBilgi(ogr.no,kd.oturum,kd.kod):null;
+  return ZORLUK.kendiSeviyesi(t?t.kademe:null,t?t.H:null,z?.bant);
 }
 const defterler=()=>{
   const za=zorlukBilgi(),acik=new Set(S.es.bolumler.map((b,i)=>i).filter(i=>!S.kapali.has(i)));
