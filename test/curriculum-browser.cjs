@@ -94,6 +94,8 @@ fs.mkdirSync(out,{recursive:true});
    assert((await page.locator('#ana').innerText()).includes('İstatistiksel Araştırma Süreci — Veriyi hazırlama'));
    await page.locator('#kazanimPlaniUygula').click();
    await page.waitForFunction(()=>D.konuPlani['11-X'][1].Matematik[0].includes('Veriyi hazırlama'));
+   // The notebook changes before the page redraws; wait for the redraw instead of reading the old button.
+   await page.locator('#kazanimPlaniUygula').waitFor({state:'detached'});
    assert.equal(await page.locator('#kazanimPlaniUygula').count(),0);
    assert(await page.locator('#kazanimPlaniYedek').isVisible());
    assert.equal(await page.evaluate(()=>new Set(D.konuPlani['11-X'].slice(0,4).flatMap(w=>w.Matematik)).size),4);

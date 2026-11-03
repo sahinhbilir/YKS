@@ -5,11 +5,11 @@
 //   Everything is per grade (sınıf): the equating cohort of an exam is that exam's takers of the same grade; edges, H and reliability are per (grade, oturum, ders).
 //   SE   = √(Σ prec · r²) / Σ prec · r            (delta method, var(logit p) ≈ 1 / (n p (1 − p)))
 //   G = SD_true / RMSE, SD_true² = SD_obs² − mean(SE²) (G = 0 when ≤ 0); H = floor((4G + 1) / 3) clamped to 3..6 (Wright & Masters 1982); reliability G²/(1+G²) < 0.5 -> dusuk
-//   Tiers are norm-referenced within the grade cohort: tier 1 = the top ceil(10%) by ability, tier H = the bottom ceil(10%), the middle split into H − 2 tiers of near-equal size by rank.
+//   Tiers = Fisher–Jenks natural breaks of the abilities in the grade cohort (optimal 1-D partition into H groups, equal abilities never split; fewer distinct values than H -> fewer tiers). GVF = 1 − SDCM/SDAM.
 //   A blank counts like a wrong answer (d is the number correct out of n).
 const KADEME = (() => {
 const logit = p => Math.log(p / (1 - p)), sig = z => 1 / (1 + Math.exp(-z));
-const Z = 1.96, EN_AZ_OGRENCI = 8, EN_AZ_KOHORT = 5, AGIRLIK_KADEME = 0.8, GUVENIRLIK_ESIK = 0.5, H_ALT = 3, ONDA = 0.10, H_UST = 6;
+const Z = 1.96, EN_AZ_OGRENCI = 8, EN_AZ_KOHORT = 5, AGIRLIK_KADEME = 0.8, GUVENIRLIK_ESIK = 0.5, H_ALT = 3, H_UST = 6;
 const ort = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
 const yuzdelik = (s, p) => { const i = (s.length - 1) * p, a = Math.floor(i), b = Math.ceil(i); return s[a] + (s[b] - s[a]) * (i - a) };
 const hK = s => String(s ?? '').toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu, '').replace(/[^A-Z0-9]/gu, '');
@@ -31,29 +31,27 @@ const anahtarDers = (oturum, kod, sinif) => oturum + ':' + kod + (sinif ? '@' + 
 // Number of statistically distinct strata from the person separation G (Wright & Masters 1982), kept within 3..6.
 const katman = G => Math.max(H_ALT, Math.min(H_UST, Math.floor((4 * G + 1) / 3)));
 
-// Tiers by rank in a cohort sorted by ability, strongest first: the top and the bottom ceil(10%) are tiers 1 and H, the middle is split into H − 2 near-equal tiers.
-// Equal abilities share one tier (the one nearest the middle). Returns the tier per student and the H − 1 edges between tiers in ability units (the midpoint of the last student of one and the first of the next).
+// Tiers by natural breaks: the exact Fisher (1958) / Jenks (1977) optimal partition of the sorted abilities into H contiguous groups that minimises the within-group sum of squares
+// (dynamic programming, O(H·n²)). Run on the distinct values with multiplicities, so equal abilities are never split; with fewer distinct values than H, H is that number (at least 1).
+// Tier 1 = the strongest group. kenarlar = the H − 1 boundaries, descending, each the midpoint of the gap between the last student of one group and the first of the next.
+// SDCM = sum of squared deviations from the class means (minimised; evaluating every break combination gives the same optimum), SDAM = from the overall mean; gvf = (SDAM − SDCM) / SDAM in 0..1 (1 when there is no variance).
 function kademeAta(A, H) {
-  const n = A.length, sira = A.map((a, i) => i).sort((x, y) => A[y] - A[x]), uc = Math.max(1, Math.ceil(ONDA * n)), orta = n - 2 * uc, k = H - 2, t = new Array(n);
-  sira.forEach((i, r) => {
-    if (r < uc) { t[i] = 1; return }
-    if (r >= n - uc) { t[i] = H; return }
-    let q = r - uc, j = 0; for (; j < k; j++) { const boy = Math.floor(orta / k) + (j < orta % k ? 1 : 0); if (q < boy) break; q -= boy }
-    t[i] = 2 + Math.min(j, k - 1);
-  });
-  const mid = (H + 1) / 2;
-  for (let r = 0; r < n;) {
-    let e = r; while (e + 1 < n && Math.abs(A[sira[e + 1]] - A[sira[r]]) <= 1e-9) e++;
-    if (e > r) { let en = t[sira[r]]; for (let q = r; q <= e; q++) { const c = t[sira[q]]; if (Math.abs(c - mid) < Math.abs(en - mid)) en = c } for (let q = r; q <= e; q++) t[sira[q]] = en }
-    r = e + 1;
-  }
-  const EPS = 1e-9, kenarlar = [];
-  for (let b = 1; b < H; b++) {
-    let alt = null, ust = null;   // lowest ability of tiers <= b, highest of tiers > b
-    A.forEach((a, i) => { if (t[i] <= b) alt = alt === null ? a : Math.min(alt, a); else ust = ust === null ? a : Math.max(ust, a) });
-    kenarlar.push(alt !== null && ust !== null ? (alt + ust) / 2 : alt === null ? ust + EPS : alt - EPS);
-  }
-  return {t, kenarlar};
+  const n = A.length, sira = A.map((a, i) => i).sort((x, y) => A[x] - A[y]), v = [], w = [], grup = new Array(n);
+  sira.forEach(i => { if (v.length && Math.abs(A[i] - v[v.length - 1]) <= 1e-9) w[w.length - 1]++; else { v.push(A[i]); w.push(1) } grup[i] = v.length - 1 });
+  const m = v.length, h = Math.max(1, Math.min(H, m)), W = [0], S = [0], Q = [0];
+  for (let i = 0; i < m; i++) { W.push(W[i] + w[i]); S.push(S[i] + w[i] * v[i]); Q.push(Q[i] + w[i] * v[i] * v[i]) }
+  const ssd = (i, j) => { const ww = W[j + 1] - W[i], ss = S[j + 1] - S[i]; return Math.max(0, Q[j + 1] - Q[i] - ss * ss / ww) };   // values i..j
+  const D = [], P = [];
+  for (let k = 0; k < h; k++) { D.push(new Array(m).fill(Infinity)); P.push(new Array(m).fill(0)) }
+  for (let j = 0; j < m; j++) D[0][j] = ssd(0, j);
+  for (let k = 1; k < h; k++) for (let j = k; j < m; j++) for (let i = k; i <= j; i++) { const c = D[k - 1][i - 1] + ssd(i, j); if (c < D[k][j]) { D[k][j] = c; P[k][j] = i } }
+  const baslangic = new Array(h); let j = m - 1;
+  for (let k = h - 1; k >= 0; k--) { baslangic[k] = k ? P[k][j] : 0; j = baslangic[k] - 1 }   // group k covers distinct values baslangic[k] .. next start − 1
+  const gIdx = new Array(m); for (let k = 0; k < h; k++) for (let q = baslangic[k]; q < (k + 1 < h ? baslangic[k + 1] : m); q++) gIdx[q] = k;
+  const t = grup.map(g => h - gIdx[g]);
+  const kenarlar = []; for (let k = h - 1; k >= 1; k--) kenarlar.push((v[baslangic[k] - 1] + v[baslangic[k]]) / 2);
+  const sdam = ssd(0, m - 1), sdcm = D[h - 1][m - 1], gvf = sdam > 1e-12 ? Math.min(1, Math.max(0, 1 - sdcm / sdam)) : 1;
+  return {t, kenarlar, H: h, gvf};
 }
 
 /* ---- the computation ----
@@ -91,8 +89,8 @@ function hesapla(kayitlar) {
     d.sdGozlenen = Math.sqrt(vobs); d.rmse = Math.sqrt(mse);
     // Never dropped for low separation: SD_true² ≤ 0 gives G = 0, reliability 0 and H = 3; dusuk marks reliability < 0.5.
     const G = vt > 0 && mse > 0 ? Math.sqrt(vt) / Math.sqrt(mse) : 0, H = katman(G), guv = G * G / (1 + G * G);
-    const {t: kt, kenarlar} = kademeAta(A, H);
-    Object.assign(d, {yetersiz: false, dusuk: guv < GUVENIRLIK_ESIK, G, H, guvenirlik: guv, kenarlar});
+    const {t: kt, kenarlar, H: He, gvf} = kademeAta(A, H);
+    Object.assign(d, {yetersiz: false, dusuk: guv < GUVENIRLIK_ESIK, G, H: He, Hhedef: H, gvf, guvenirlik: guv, kenarlar});
     // tier of an ability value against the edges (descending): 1 + the number of edges above it
     const t = x => 1 + kenarlar.filter(e => x < e).length;
     ogrenciler.forEach((o, i) => {
@@ -183,7 +181,7 @@ function panelIc() {
   const sira = dl.find(d => d.key === KD.sira);
   const ad = (a, b) => a.sube.localeCompare(b.sube, 'tr', {numeric: true}) || String(a.ad).localeCompare(String(b.ad), 'tr');
   ogr.sort((a, b) => sira ? (deger(a, sira) ?? 99) - (deger(b, sira) ?? 99) || (sira.ogrenciler.get(b.id)?.a ?? -99) - (sira.ogrenciler.get(a.id)?.a ?? -99) || ad(a, b) : ad(a, b));
-  const bas = dl.map(d => '<th scope="col" class="kd-ders"><button type="button" data-kd-sira="' + d.key + '" aria-pressed="' + (KD.sira === d.key) + '" aria-label="' + esc(dersAdi(d.oturum, d.kod) + ' derse göre sırala') + '"' + (d.yetersiz ? '' : ' title="' + esc(d.H + ' kademe · güvenilirlik ' + f2(d.guvenirlik)) + '"') + '><b>' + esc(dersAdi(d.oturum, d.kod)) + '</b>' +
+  const bas = dl.map(d => '<th scope="col" class="kd-ders"><button type="button" data-kd-sira="' + d.key + '" aria-pressed="' + (KD.sira === d.key) + '" aria-label="' + esc(dersAdi(d.oturum, d.kod) + ' derse göre sırala') + '"' + (d.yetersiz ? '' : ' title="' + esc(d.H + ' kademe · güvenilirlik ' + f2(d.guvenirlik) + ' · ayrışma uyumu ' + f2(d.gvf)) + '"') + '><b>' + esc(dersAdi(d.oturum, d.kod)) + '</b>' +
     (d.yetersiz ? '<span class="mini">Veri yetersiz</span>' : '<span class="mini">' + d.H + ' kademe · ' + (d.dusuk ? 'güvenilirlik düşük' : f2(d.guvenirlik)) + '</span>') + '</button></th>').join('');
   const sec = KD.secili && m.kimlik.has(KD.secili.id) ? KD.secili : null;
   const govde = ogr.map(k => '<tr><th scope="row">' + esc(k.ad) + ' <span class="mini">' + esc(k.sube) + '</span></th>' + dl.map(d => {

@@ -341,10 +341,10 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
   await page.locator('#kdKok [data-kd-sinif="9"]').click();
   assert.deepEqual(await siniflar(),['9:true','12:false']);assert.deepEqual(await subeSecenek(),['Tüm şubeler','9-A','9-B']);assert.equal(await satir(),20);
   assert.match(await page.locator('#kdKok tbody th[scope="row"]').first().innerText(),/9-[AB]/);
-  const dinBas=(await page.locator('#kdKok thead .kd-ders').allInnerTexts()).find(t=>/^Din Kültürü/.test(t));assert.match(dinBas,/3 kademe · güvenilirlik düşük/,dinBas);
+  const dinBas=(await page.locator('#kdKok thead .kd-ders').allInnerTexts()).find(t=>/^Din Kültürü/.test(t));assert.match(dinBas,/1 kademe · güvenilirlik düşük/,dinBas);
   const dinIdx=(await page.locator('#kdKok thead .kd-ders b').allInnerTexts()).indexOf('Din Kültürü');
   const dinHuc=await page.locator('#kdKok tbody tr').evaluateAll((l,i)=>l.map(r=>({t:r.children[i+1].textContent.trim(),dusuk:r.children[i+1].classList.contains('kd-dusuk'),op:getComputedStyle(r.children[i+1].querySelector('button')).opacity})),dinIdx);
-  assert(dinHuc.every(c=>c.t==='2'&&c.dusuk&&c.op==='0.55'),JSON.stringify(dinHuc));
+  assert(dinHuc.every(c=>c.t==='1'&&c.dusuk&&c.op==='0.55'),JSON.stringify(dinHuc));
   const hepsi9=await hucre();assert(hepsi9.every(t=>/^[1-6]\??$/.test(t))&&!hepsi9.some(t=>t==='—'),[...new Set(hepsi9)].join());
   // a strong 9th grader is judged against 9th graders: the cohort of 9 has its own tier 1
   assert((await hucre()).some(t=>t==='1'),'tier 1 exists in grade 9 although the grade is weaker');

@@ -146,39 +146,52 @@ const sig = z => 1 / (1 + Math.exp(-z));
     // a record with impossible numbers is ignored
     assert.equal(K.hesapla([kay('o', 'X', '2026-10-01', 41, 40), kay('o', 'X', '2026-10-01', 5, 0)]).size, 0);
   });
-  await test('tiers: strata formula H = floor((4G + 1) / 3) clamped to 3..6; select few at each end, bunches in the middle', () => {
+  await test('tiers: strata formula H = floor((4G + 1) / 3) clamped to 3..6; Fisher–Jenks natural breaks', () => {
     assert.deepEqual([0, 0.5, 1, 1.25, 2, 2.5, 3, 4, 5, 6, 12].map(K.katman), [3, 3, 3, 3, 3, 3, 4, 5, 6, 6, 6]);
     const ds = Array.from({length: 30}, (_, i) => 2 + i + (i % 3)), rows = ds.map((d, i) => ({ogr: 's' + i, sinav: 'E', tarih: '2026-10-01', ad: 'E', oturum: 'TYT', ders: 'turkce', d, n: 40}));
     const x = K.hesapla(rows).get('TYT:turkce');
-    assert.equal(x.yetersiz, false); assert.equal(x.H, K.katman(x.G)); assert(x.H >= 3 && x.H <= 6); assert.equal(x.kenarlar.length, x.H - 1);
-    near(x.guvenirlik, x.G * x.G / (1 + x.G * x.G), 1e-12);
-    // a cohort of 30: 3 students in tier 1, 3 in tier H, the middle 24 split evenly over H − 2 tiers
-    const say = [...Array(x.H + 1).keys()].map(k => [...x.ogrenciler.values()].filter(o => o.kademe === k).length);
-    assert.equal(say[1], 3); assert.equal(say[x.H], 3);
-    const orta = say.slice(2, x.H); assert.equal(orta.reduce((a, b) => a + b, 0), 24); assert(Math.max(...orta) - Math.min(...orta) <= 1, orta.join());
-    // the strongest are in tier 1, the weakest in tier H; tiers do not increase with ability
-    const t = i => x.ogrenciler.get('s' + i).kademe, ord = [...Array(30).keys()].sort((a, b) => x.ogrenciler.get('s' + b).a - x.ogrenciler.get('s' + a).a);
-    ord.slice(0, 3).forEach(i => assert.equal(t(i), 1)); ord.slice(-3).forEach(i => assert.equal(t(i), x.H));
-    for (let r = 1; r < 30; r++) assert(t(ord[r]) >= t(ord[r - 1]));
-    // edges: descending, each between the last student of a tier and the first of the next
-    x.kenarlar.forEach((e, b) => { const lo = Math.min(...[...x.ogrenciler.values()].filter(o => o.kademe <= b + 1).map(o => o.a)), hi = Math.max(...[...x.ogrenciler.values()].filter(o => o.kademe > b + 1).map(o => o.a)); near(e, (lo + hi) / 2, 1e-12) });
-    // "?" only when ability ± 1.96 SE spans three or more tiers (two adjacent tiers are tolerated); not in a low-reliability ders
+    assert.equal(x.yetersiz, false); assert.equal(x.Hhedef, K.katman(x.G)); assert.equal(x.H, x.Hhedef); assert(x.H >= 3 && x.H <= 6); assert.equal(x.kenarlar.length, x.H - 1);
+    near(x.guvenirlik, x.G * x.G / (1 + x.G * x.G), 1e-12); assert(x.gvf >= 0 && x.gvf <= 1);
+    const os = [...x.ogrenciler.values()];
+    // every tier is used, tiers do not increase with ability, boundaries descend and lie between the groups
+    for (let k = 1; k <= x.H; k++) assert(os.some(o => o.kademe === k), 'tier ' + k);
+    const ord = os.slice().sort((a, b) => b.a - a.a); for (let r = 1; r < ord.length; r++) assert(ord[r].kademe >= ord[r - 1].kademe);
+    x.kenarlar.forEach((e, b) => { if (b) assert(e < x.kenarlar[b - 1]); const lo = Math.min(...os.filter(o => o.kademe <= b + 1).map(o => o.a)), hi = Math.max(...os.filter(o => o.kademe > b + 1).map(o => o.a)); near(e, (lo + hi) / 2, 1e-12) });
+    // "?" only when ability ± 1.96 SE spans three or more tiers against the midpoint boundaries; not in a low-reliability ders
     const tier = v => 1 + x.kenarlar.filter(e => v < e).length;
-    for (const o of x.ogrenciler.values()) assert.equal(o.belirsiz, !x.dusuk && Math.abs(tier(o.a - 1.96 * o.se) - tier(o.a + 1.96 * o.se)) >= 2);
-    // small cohorts: n = 8 has 1 + 6 + 1; ties share a tier (the one nearer the middle)
-    const k8 = K.kademeAta([8, 7, 6, 5, 4, 3, 2, 1], 3); assert.deepEqual(copy(k8.t), [1, 2, 2, 2, 2, 2, 2, 3]);
-    const tie = K.kademeAta([9, 5, 5, 5, 5, 5, 5, 1], 4);
-    assert.equal(new Set(tie.t.slice(1, 7)).size, 1, 'equal abilities, one tier'); assert(tie.t[1] === 2 || tie.t[1] === 3);
+    for (const o of os) { assert.equal(tier(o.a), o.kademe); assert.equal(o.belirsiz, !x.dusuk && Math.abs(tier(o.a - 1.96 * o.se) - tier(o.a + 1.96 * o.se)) >= 2) }
+  });
+  await test('Fisher–Jenks natural breaks: hand example, outlier, ties, flat, GVF', () => {
+    const J = (a, H) => { const r = K.kademeAta(a, H); return {t: copy(r.t), e: copy(r.kenarlar), H: r.H, gvf: r.gvf} };
+    // [1,2,3, 10,11,12, 30,31], H = 3: the optimal groups are {1,2,3}, {10,11,12}, {30,31}; tier 1 is the strongest
+    const a = [1, 2, 3, 10, 11, 12, 30, 31], j = J(a, 3);
+    assert.deepEqual(j.t, [3, 3, 3, 2, 2, 2, 1, 1]); assert.deepEqual(j.e, [21, 6.5]);
+    // GVF = 1 − SDCM / SDAM by hand
+    const mean = a.reduce((p, q) => p + q, 0) / 8, sdam = a.reduce((p, q) => p + (q - mean) ** 2, 0), ssd = g => { const m = g.reduce((p, q) => p + q, 0) / g.length; return g.reduce((p, q) => p + (q - m) ** 2, 0) };
+    near(j.gvf, 1 - (ssd([1, 2, 3]) + ssd([10, 11, 12]) + ssd([30, 31])) / sdam, 1e-12); assert(j.gvf > 0.97 && j.gvf <= 1);
+    // order of the input does not matter
+    assert.deepEqual(J([31, 10, 1, 12, 3, 30, 11, 2], 3).t, [1, 2, 3, 2, 3, 1, 2, 3]);
+    // an outlier: one far-top student forms tier 1 alone
+    const o = J([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 9], 3); assert.equal(o.t[9], 1); assert.equal(o.t.filter(v => v === 1).length, 1);
+    // ties are never split, even when the optimal cut would fall inside them
+    const tie = J([1, 1, 1, 1, 5, 5, 5, 5, 9, 9], 3); assert.deepEqual(tie.t, [3, 3, 3, 3, 2, 2, 2, 2, 1, 1]);
+    const tie2 = J([1, 2, 2, 2, 2, 2, 2, 3], 3); assert.equal(new Set(tie2.t.slice(1, 7)).size, 1);
+    // fewer distinct values than H: H shrinks to that number; one value = a single tier without boundaries
+    const two = J([4, 4, 7, 7, 7], 5); assert.equal(two.H, 2); assert.deepEqual(two.t, [2, 2, 1, 1, 1]); assert.equal(two.e.length, 1);
+    const flat = J([0.3, 0.3, 0.3, 0.3], 4); assert.equal(flat.H, 1); assert.deepEqual(flat.t, [1, 1, 1, 1]); assert.deepEqual(flat.e, []); assert.equal(flat.gvf, 1);
+    // GVF stays within 0..1 on random data and grows with H
+    const r = rng(3), nrm = normal(r), v = Array.from({length: 60}, () => nrm());
+    let prev = -1; for (let H = 2; H <= 6; H++) { const g = J(v, H).gvf; assert(g >= 0 && g <= 1 && g >= prev - 1e-12); prev = g }
   });
   await test('tiers are hidden when the data is insufficient ("Veri yetersiz")', () => {
     const mk = (n, f) => Array.from({length: n}, (_, i) => ({ogr: 's' + i, sinav: 'E', tarih: '2026-10-01', ad: 'E', oturum: 'TYT', ders: 'fizik', d: f(i), n: 7}));
     const few = K.hesapla(mk(7, i => i)).get('TYT:fizik');
     assert.equal(few.yetersiz, true); assert.equal(few.H, null); assert.deepEqual(copy(few.kenarlar), []); assert([...few.ogrenciler.values()].every(o => o.kademe === undefined));
     // no spread or only noise (SD_true² ≤ 0): the ders is not dropped, it gets 2 tiers, reliability 0 and dusuk
-    const flat = K.hesapla(mk(12, () => 4)).get('TYT:fizik'); assert.equal(flat.yetersiz, false); assert.equal(flat.H, 3); assert.equal(flat.dusuk, true); assert.equal(flat.guvenirlik, 0);
-    assert([...flat.ogrenciler.values()].every(o => o.kademe === 2 && o.belirsiz === false), 'equal abilities share the middle tier');
-    const noise = K.hesapla(mk(12, i => 3 + (i % 2))).get('TYT:fizik'); assert.equal(noise.yetersiz, false, 'SD_obs² below the mean SE²'); assert.equal(noise.H, 3); assert.equal(noise.dusuk, true); assert.equal(noise.guvenirlik, 0); assert.equal(noise.G, 0);
-    assert.deepEqual([...new Set([...noise.ogrenciler.values()].map(o => o.kademe))].sort(), [2], 'two ability values, ties share the middle tier');
+    const flat = K.hesapla(mk(12, () => 4)).get('TYT:fizik'); assert.equal(flat.yetersiz, false); assert.equal(flat.H, 1); assert.equal(flat.Hhedef, 3); assert.equal(flat.dusuk, true); assert.equal(flat.guvenirlik, 0);
+    assert([...flat.ogrenciler.values()].every(o => o.kademe === 1 && o.belirsiz === false), 'equal abilities: one tier');
+    const noise = K.hesapla(mk(12, i => 3 + (i % 2))).get('TYT:fizik'); assert.equal(noise.yetersiz, false, 'SD_obs² below the mean SE²'); assert.equal(noise.H, 2); assert.equal(noise.Hhedef, 3); assert.equal(noise.dusuk, true); assert.equal(noise.guvenirlik, 0); assert.equal(noise.G, 0);
+    assert.deepEqual([...new Set([...noise.ogrenciler.values()].map(o => o.kademe))].sort(), [1, 2], 'two ability values, two tiers, ties never split');
     const ramp = K.hesapla(mk(12, i => i % 7)).get('TYT:fizik'); assert.equal(ramp.yetersiz, false); assert(ramp.H >= 3);
     assert([...noise.ogrenciler.values()].every(o => o.belirsiz === false), 'no "?" flood');
     assert.equal(K.hesapla(mk(8, i => i)).get('TYT:fizik').yetersiz, false, 'eight students are enough when they differ');
@@ -265,7 +278,7 @@ const sig = z => 1 / (1 + Math.exp(-z));
     assert.equal(K.durum().sinif, 12); assert.match(p, /12-A/); assert(!/>9-A</.test(p), 'şube list of grade 12 only');
     assert.match(p, /12 öğrenci|24 öğrenci/); assert.equal((p.match(/<tr><th scope="row">/g) || []).length, 12);
     // Din (5 questions, no spread): not dropped, 2 kademe, güvenilirlik düşük, muted
-    assert.match(p, /3 kademe · güvenilirlik düşük/); assert.match(p, /kd-dusuk/);
+    assert.match(p, /1 kademe · güvenilirlik düşük/); assert.match(p, /kd-dusuk/);
     run("KADEME.durum().sinif = 9"); p = K.panel();
     assert.match(p, /data-kd-sinif="9" aria-pressed="true"/); assert.match(p, />9-A</); assert(!/>12-A</.test(p)); assert.equal((p.match(/<tr><th scope="row">/g) || []).length, 12);
     // yetenek uses the student's own grade: grade 9 (shift −1.2) and 12 (+1.2) abilities are relative to their own cohorts
