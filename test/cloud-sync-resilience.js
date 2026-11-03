@@ -1433,7 +1433,7 @@ test('backup-also-writes-a-dated-daily-snapshot', async () => {
   equal(r.tur, 'tamam');
   equal(yazilan.length, 3, 'one live backup, day slot and index; no month copy within a day');
   assert(!yazilan.some(y => /\/gecmis\/_v2-m\d\d$/.test(y.ref)), 'month slot is written only when the day rolls over');
-  const bugun = run('isoDan(bugunNo())');
+  const bugun = run('bulutGercekGun()');   // the backup day is Istanbul's calendar day, not the test machine's
   const gunluk = yazilan.find(y => /\/gecmis\/_v2-d\d\d$/.test(y.ref));
   assert(gunluk, 'a daily snapshot must be written: ' + JSON.stringify(yazilan.map(y => y.ref)));
   assert(yazilan.some(y => y.ref.endsWith('/gecmis/_v2-index') && JSON.parse(y.d.veri).entries.some(e => e.kind === 'day' && e.gun === bugun)), 'index must identify today’s snapshot');

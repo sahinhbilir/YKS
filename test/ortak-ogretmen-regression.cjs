@@ -117,7 +117,7 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     const r = await c.run('bulutaYedekle()'); assert.equal(r.tur, 'tamam', JSON.stringify(r));
     assert(srv.belgeler.get('ogretmenYedek/' + SAHIP).veri.startsWith('gz1:'), 'saved compressed'); assert.match(bulutJson(srv), /SENTETİK ADA \(ORTAK\)/);
     const index = JSON.parse(srv.belgeler.get('ogretmenYedek/' + SAHIP + '/gecmis/_v2-index').veri);
-    const day = index.entries.find(e => e.kind === 'day' && e.gun === c.run('isoDan(bugunNo())'));
+    const day = index.entries.find(e => e.kind === 'day' && e.gun === c.run('bulutGercekGun()'));   // the backup day is Istanbul's calendar day, not the test machine's
     assert(day && srv.belgeler.has('ogretmenYedek/' + SAHIP + '/gecmis/' + day.slot), 'the daily copy goes to the owner too');
     assert.equal([...srv.belgeler.keys()].some(k => k.startsWith('ogretmenYedek/' + ORTAK)), false, 'nothing under the co-teacher’s own uid');
   });
