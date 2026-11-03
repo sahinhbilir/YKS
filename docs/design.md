@@ -71,8 +71,8 @@ transition disabled for reduced-motion users.
 `gorunumKurulum()` draws, top to bottom:
 
 1. **YKS {year}**. The year comes from the YKS date in the settings.
-2. "Hedefine bir adım daha yaklaş", followed by the short product promise
-   "Tekrarlarını planla, çalışmanı kaydet, gelişimini gör."
+2. "Hedefine bir adım daha yaklaş"; the extra product-promise sentence is hidden
+   by the screen theme.
 3. The student login, open by default. One form serves both kinds of student: a
    Kaydol account (user name + password) and a school student (name + school
    number). See docs/kaydol.md.
@@ -104,16 +104,16 @@ the tip of the cap, so the visible gap is the spacer itself.
 When the column is shorter than the screen, the space above and below is equal. When it is taller (short laptops, phones), it scrolls from a
 small top margin that still clears the corner bands.
 
-The product promise is the only introductory sentence. The status line under
-"Giriş yap" stays empty until there is an error or progress message.
+The status line under "Giriş yap" stays empty until there is an error or progress
+message.
 
 ## No explanatory text
 
 Working screens stay concise: no page subtitles that describe the page, no "how it
-works" paragraphs, no colour legends and no hints under fields. What stays:
+works" paragraphs and no redundant hints under fields. What stays:
 
 - data (counts, dates, names, totals), labels and headings;
-- the short product promise on the login screen for first-time visitors;
+- chart legends that identify different series;
 - status and error messages, and a short line where a choice has a consequence (for
   example, "Buluttakini aç" discards unsaved changes on this device);
 - one-line steps a feature cannot be used without (the AI timetable and paper-plan
