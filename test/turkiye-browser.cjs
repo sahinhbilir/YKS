@@ -46,7 +46,8 @@ const ad=e=>'27-YKS-120'+e+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf';
    await page.locator('.et-ders[data-tg-ders="TÜRKÇE-T"]').click();
    await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="net"] svg'));
    assert.match(await cumle(),/· Türkçe: net [▲▼]\d+,\d\d \(okul \d+,\d\d → \d+,\d\d; Türkiye ortalaması [▲▼]\d+,\d\d\)\. Türkiye’ye göre [+−]\d+,\d\d net\. Artış sırası \d+\. \/ \d+ kurum\./);
-   assert.match(await page.locator('#tgArtisSira').innerText(),/Artış sıralaması · Türkçe[\s\S]*Sentetik Kartal Anadolu Lisesi[\s\S]*kurum iki denemede de listede/);
+   assert.match(await page.locator('#tgArtisSira').innerText(),/Artış sıralaması · Türkçe[\s\S]*Sentetik Kartal Anadolu Lisesi/);
+   assert.equal(await page.locator('#tgArtisSira .tg-cevre-not').isVisible(),false,'secondary narrative is omitted from the screen');
    await page.locator('.tg-ders-geri [data-tg-ders=""]').click();
    // The rank view.
    await page.locator('[data-tg-mod="sira"]').click();
@@ -83,7 +84,9 @@ const ad=e=>'27-YKS-120'+e+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf';
    await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="net"] svg'));
    assert.match(await page.locator('#tgSiraPanel h2').innerText(),/Sıra · Türkçe \(TYT\)/);
    assert.equal(await page.locator('.et-ders[data-tg-ders="TÜRKÇE-T"]').getAttribute('aria-pressed'),'true');
-   assert.match(await page.locator('.tg-cevre-panel').innerText(),/Sıralamada yakın · Türkçe · 27-YKS-1203[\s\S]*Türkiye ortalaması[\s\S]*1 net daha ile \d+\. sıra/);
+   assert.match(await page.locator('.tg-cevre-panel').innerText(),/Sıralamada yakın · Türkçe · 27-YKS-1203[\s\S]*Türkiye ortalaması/);
+   assert.match(await page.locator('.tg-cevre-not').textContent(),/1 net daha ile \d+\. sıra/,'calculation remains available without a prose footnote on screen');
+   assert.equal(await page.locator('.tg-cevre-not').isVisible(),false);
    assert.equal(await page.locator('.tg-cevre-satir.tg-biz').count(),1);
    // A card switches the subject; the net chart reads outside the list.
    await page.locator('.et-ders[data-tg-ders="FİZİK-T"]').click();

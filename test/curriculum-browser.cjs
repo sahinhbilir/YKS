@@ -75,6 +75,8 @@ fs.mkdirSync(out,{recursive:true});
    assert.equal(await page.evaluate(()=>planHesapla(0,buHafta()).toplam),1);
    await page.locator('#ogrProgramYenile').click();
    await page.waitForFunction(()=>planHesapla(0,buHafta()).toplam>1);
+   // The model changes before the asynchronous save completes and redraws the page.
+   await page.locator('#ogrProgramYenile').waitFor({state:'detached'});
    assert.equal(await page.locator('#ogrProgramYenile').count(),0);
    assert(await page.locator('#ogrProgramYedek').isVisible());
    assert(await page.evaluate(async()=>JSON.parse(await LOCAL_STORE.get('yks_program_yenile_oncesi')).elle['0|'+buHafta()].plan.slotlar.flat().length===1));

@@ -1,8 +1,9 @@
 # Design
 
-The look follows the "YKS 2027 · Hedefine bir adım daha yaklaş" image: white space,
-navy headlines, royal blue as the one accent, light blue surfaces, and bold, plain
-sans-serif type. Keep new screens inside these rules.
+The screen design follows **Öğrenci Raporları**: a warm cream canvas, white rounded
+cards, dark teal headings, a teal accent, clear sans-serif type and restrained
+chart grids. Student and teacher screens use this same hierarchy. Data, dates,
+totals and charts take precedence over explanatory prose and decoration.
 
 The weeks map and the exam chart deliberately show the entire journey to YKS.
 Empty future weeks and the space ahead of the early exam results tell that story.
@@ -11,24 +12,39 @@ the chart to recent results or collapse the map to make room for other content.
 
 ## Tokens
 
-All colours are CSS variables on `:root` in `index.html`. The dark theme redefines
-them in two places: under `prefers-color-scheme: dark` and under
-`:root[data-theme="dark"]`. Use the variables; do not write hex colours in new rules.
+Screen colours are CSS variables in `src/report-theme.css`, embedded **last** in
+`style#stil` by `scripts/embed-report-theme.cjs`. The entire layer is inside
+`@media screen`. The earlier base stylesheet remains for print compatibility.
+The dark theme redefines tokens under `prefers-color-scheme: dark` and under
+`:root[data-theme="dark"]`. Use variables rather than per-screen colour literals.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--marka-koyu` | `#0B2A6B` navy | `#A9C1FF` | headings, brand, headline |
-| `--marka` / `--vurgu` | `#1F4FC8` royal blue | `#4D7BEA` / `#7EA4FF` | primary buttons, links, active tab, focus ring |
-| `--vurgu-uzeri` | `#FFFFFF` | `#0F141A` | text on filled accent buttons and selected controls |
-| `--alan-cizgi` | `#8290A8` | `#647796` | identifiable input boundaries, separate from decorative card borders |
-| `--marka-acik` / `--vurgu-yumusak` | `#DCE6FB` / `#E8EFFC` | `#17254A` | selected rows, soft buttons, highlights |
-| `--zemin` / `--kagit` | `#F4F7FD` / `#FFFFFF` | `#0A1226` / `#111B33` | page / cards |
-| `--murekkep` / `--soluk` / `--cizgi` | `#0F1E3D` / `#55627A` / `#DCE3F0` | `#E6ECF8` / `#9AA8C4` / `#25314F` | text / secondary text / borders |
+| `--marka-koyu` | `#213D40` | `#E8F1ED` | headings, brand, headline |
+| `--marka` / `--vurgu` | `#168D7D` / `#11766A` | `#76CFB9` | chart accent / interactive accent |
+| `--vurgu-uzeri` | `#FFFFFF` | `#102C28` | text on filled accent buttons and selected controls |
+| `--alan-cizgi` | `#7D9390` | `#7E9C96` | identifiable input boundaries, separate from decorative card borders |
+| `--marka-acik` / `--vurgu-yumusak` | `#E6F2EC` | `#213F3B` | selected rows, soft buttons, highlights |
+| `--zemin` / `--kagit` | `#F6F5F0` / `#FFFFFF` | `#101E20` / `#1A2D30` | page / cards |
+| `--murekkep` / `--soluk` / `--cizgi` | `#213D40` / `#586E70` / `#D9E2DE` | `#E8F1ED` / `#AFC3BD` / `#344C4B` | text / secondary text / borders |
 | `--iyi` / `--uyari` / `--kritik` | green / amber / red | lighter tints | status only, never decoration |
-| `--il-koyu` / `--il-mavi` | navy / royal | light blue / royal | the cap-and-books drawing |
+| `--il-koyu` / `--il-mavi` | dark teal / teal | pale teal / teal | the cap-and-books drawing |
 
-On white, `--vurgu` and white-on-`--vurgu` both reach about 7:1 contrast.
-`--soluk` reaches about 6:1.
+The interactive accent is darker than the report's chart accent so white button
+labels meet 4.5:1 contrast. Secondary text meets 4.5:1; input boundaries meet 3:1.
+Decorative borders stay quieter. Status colours retain distinct meanings.
+
+Dashboard `--e-*` tokens bridge to these same variables, including explicit and
+system themes. Use shared `.et-panel`, `.et-ozet-kart`, `.et-seg` and `.et-dugme`
+components. Headings and figures use the same sans-serif family throughout.
+Cards use 18–20 px radii and 20–24 px padding; narrow screens use 16–18 px padding.
+Keep gaps between cards and padding at their edges consistent.
+
+Charts retain distinct series and semantic positive/negative colours. Do not
+override SVG children globally: report SVGs, multi-series charts and the school's
+Excel sheet have intentional presentation attributes. Report SVGs and generated
+PDFs keep their exact palette, fonts and A4 dimensions. The Excel sheet retains
+its original paper appearance within the themed workspace.
 
 Use `--vurgu-uzeri` for every filled accent selection, including result ratings and
 the plan editor's type/scope controls. Do not override text colors with selectors
@@ -44,10 +60,9 @@ transition disabled for reduced-motion users.
 
 ## Type
 
-- Headings, the brand and the start-screen headline use `--baslik-font`. It is a
-  system sans stack (Segoe UI, SF, Roboto…) at weight 700–800, so it needs no web
-  font and works offline. Montserrat is used when the device has it.
-- Body text stays on the existing sans stack at 15 px.
+- Headings, the brand, numbers and body use Arial / Segoe UI / system sans; no web
+  font is required. Headings and key figures use weight 700; body text stays 15 px.
+- Numbers use tabular figures without switching to a monospace typeface.
 - Printed plans keep their own black-and-white stylesheet (`yazdirCSS`). Theme
   colours never reach paper.
 
@@ -56,8 +71,8 @@ transition disabled for reduced-motion users.
 `gorunumKurulum()` draws, top to bottom:
 
 1. **YKS {year}**. The year comes from the YKS date in the settings.
-2. "Hedefine bir adım daha yaklaş", followed by the short product promise
-   "Tekrarlarını planla, çalışmanı kaydet, gelişimini gör."
+2. "Hedefine bir adım daha yaklaş"; the extra product-promise sentence is hidden
+   by the screen theme.
 3. The student login, open by default. One form serves both kinds of student: a
    Kaydol account (user name + password) and a school student (name + school
    number). See docs/kaydol.md.
@@ -89,22 +104,31 @@ the tip of the cap, so the visible gap is the spacer itself.
 When the column is shorter than the screen, the space above and below is equal. When it is taller (short laptops, phones), it scrolls from a
 small top margin that still clears the corner bands.
 
-The product promise is the only introductory sentence. The status line under
-"Giriş yap" stays empty until there is an error or progress message.
+The status line under "Giriş yap" stays empty until there is an error or progress
+message.
 
 ## No explanatory text
 
 Working screens stay concise: no page subtitles that describe the page, no "how it
-works" paragraphs, no colour legends and no hints under fields. What stays:
+works" paragraphs and no redundant hints under fields. What stays:
 
 - data (counts, dates, names, totals), labels and headings;
-- the short product promise on the login screen for first-time visitors;
+- chart legends that identify different series;
 - status and error messages, and a short line where a choice has a consequence (for
   example, "Buluttakini aç" discards unsaved changes on this device);
 - one-line steps a feature cannot be used without (the AI timetable and paper-plan
   import);
 - warnings in the confirmation dialogs of destructive actions;
 - the opt-in "Nasıl seçilir?" help in Sonuç gir.
+
+The screen theme removes the long dashboard header narratives, duplicate KPI
+footnotes, prose chart summaries and repeated equations. Headings, primary values
+and change badges provide the hierarchy. Field labels, chart legends that identify
+different series, dates, student identity, empty states and errors stay visible.
+Use specific selectors; `.mini` is also used for essential labels and actions and
+must never be hidden globally. Number displays use Arial, with bold headline
+values and tabular digits, including the plan's row numbers. Print keeps its own
+type and text rules.
 
 Background that some people still need moves into a hover title instead of text on
 the page. Examples: the teacher settings descriptions (the dotted-underlined setting
@@ -147,11 +171,10 @@ After login, students land on the home page (`gorunumAnaSayfa`, tab `'ana'`). It
 shows the weeks map, and for a YKS student the **Deneme gelişimi** chart beside it.
 Both headings are links: "Haftalar haritası" opens the map page (the map alone, also
 in the Planım menu) and "Deneme gelişimi" opens Denemelerim. On hover or focus they
-turn blue, are underlined and show "→".
+turn teal, are underlined and show "→".
 
-- The two cards have equal widths and equal heights, with a clear gap between them
-  (`clamp(32px, 3.2vw, 64px)`). The chart card has the map card's look (blue top
-  edge). Both headings sit on one row.
+- The two cards have equal widths and equal heights, with a 24 px gap on desktop
+  and the same rounded surface and quiet border. Both headings sit on one row.
 - The week boxes are more compact here. The chart redraws to the card's free area
   (`denemeYolSigdir`), so it fills the card. Its drawing follows the measured width,
   with text scaled up to 1.35× on wide cards, so labels keep a steady size from phone

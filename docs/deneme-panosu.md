@@ -1,6 +1,8 @@
 # Deneme panosu (rehber öğretmen)
 
-Rehber öğretmenin **Denemeler** sayfası artık bir panodur: okulun deneme sonuç listeleri borsa grafiği gibi gösterilir. Görünüş Etütler’le aynıdır (renkler ve parçalar `src/etutler.css` içinde `#etKok`, `#dpKok` ve Etüt planının `#epKok` kökü için ortaktır). Öğrencinin kendi **Denemelerim** sayfası değişmez.
+Rehber öğretmenin **Denemeler** sayfası bir panodur: okulun deneme sonuç listeleri grafiklerle gösterilir. Öğrencinin **Denemelerim** sayfası da kişisel **Deneme Panosu** görünümünü kullanır. Ortak kartlar, başlıklar, oturum seçimi ve özetler Öğrenci Raporları tasarımını izler (`src/etutler.css`, ekran teması `src/report-theme.css`).
+
+Öğrencinin panosu yalnız kendi yayımlanmış okul sonuçlarını, kişisel denemelerini ve sürelerini `denemeListe(EK.ogr)` üzerinden gösterir. Tarih filtresi özetleri ve ilk → son değişimini birlikte sınırlar. Deneme ekleme, düzenleme, süre girişi ve eşitleme korunur; sınıf listeleri öğrenciye açılmaz. Öğretmenin toplu aktarımda eşleştirip yayımladığı sonuçlar mevcut yayın akışıyla gelir. Yalnız Sıralamalar’a eklenen PDF, kişisel sonucu yayınlamaz; bu tasarım değişikliği veri akışını değiştirmez.
 
 ## Veri nereden gelir
 

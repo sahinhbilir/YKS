@@ -77,9 +77,11 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    // Section gaps open up on a tall screen (capped) and stay at their minimum on a short one.
    const aralik=()=>page.evaluate(()=>['.ara-kart','.ara-cizim','.ara-yedek'].map(s=>Math.round(document.querySelector(s).getBoundingClientRect().height)));
    const genis=await aralik();assert(genis[0]>30 && genis[0]<=130 && genis[1]>30 && genis[1]<=130 && genis[2]<=52,'tall screen gaps: '+genis);
-   // Symmetric around the login card: subtitle→card equals card→cap (the drawing starts at the cap).
+   // The explanatory promise is omitted; measure from the last visible heading.
+   assert.equal(await page.locator('.giris-vaat').isVisible(),false);
+   // Symmetric around the login card: heading→card equals card→cap (the drawing starts at the cap).
    const simetri=await page.evaluate(()=>{const r=s=>document.querySelector(s).getBoundingClientRect();
-     return [r('.giris-kart').top-r('.giris-vaat').bottom,r('.giris-cizim').top-r('.giris-kart').bottom];});
+     return [r('.giris-kart').top-r('.giris-alt').bottom,r('.giris-cizim').top-r('.giris-kart').bottom];});
    assert(Math.abs(simetri[0]-simetri[1])<=4,'equal gaps around the login card: '+simetri.map(Math.round));
    await page.setViewportSize({width,height:640});
    assert.deepEqual(await aralik(),[30,30,22],'short screen gaps stay at their minimum');
@@ -153,10 +155,11 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    await page.locator('.ana-pano .dn-yol').waitFor();
    assert((await page.locator('.dn-yol').innerText()).includes('Henüz TYT denemesi yok'));assert.equal(await page.locator('.dn-yol .yg-yks').count(),1);
    if(width>=1280){const [harita,grafik,b1,b2]=await Promise.all(['.ana-pano .yks-yolu','.ana-pano .dn-yol','.pano-sol-bas h1','.pano-sag-bas h2'].map(s=>page.locator(s).boundingBox()));
-     assert(grafik.x>harita.x+harita.width+30 && Math.abs(grafik.y-harita.y)<2,'the chart sits beside the map with a clear gap');
+     assert(grafik.x>=harita.x+harita.width+20 && Math.abs(grafik.y-harita.y)<2,'the chart sits beside the map with a clear gap');
      assert(Math.abs((b1.y+b1.height)-(b2.y+b2.height))<4,'"Deneme gelişimi" heading sits on the same row as "Haftalar haritası"');
      assert(Math.abs(grafik.width-harita.width)<2 && Math.abs(grafik.height-harita.height)<2,'map and chart cards are the same size');
-     assert.equal(await page.locator('.ana-pano>.dn-yol').evaluate(e=>getComputedStyle(e).borderTopWidth),'3px','the chart card has the map card style');
+     const cardStyles=await page.locator('.ana-pano>.dn-yol,.ana-pano>.yks-yolu').evaluateAll(l=>l.map(e=>{const s=getComputedStyle(e);return [s.borderTopWidth,s.borderRadius,s.backgroundColor]}));
+     assert.deepEqual(cardStyles[0],cardStyles[1],'map and chart share the report card style');
      // The drawing is rebuilt to the card's free area, so it fills the card instead of leaving bands.
      await page.waitForFunction(()=>document.querySelector('.yg-alan').dataset.h!=='270');
      const [alan,svg]=await Promise.all(['.yg-alan','.yg-alan svg'].map(s=>page.locator(s).boundingBox()));
