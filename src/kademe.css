@@ -27,3 +27,5 @@
 .kd-haplar{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:14px}
 .kd-hap{display:inline-flex;align-items:center;border:1px solid var(--e-line,var(--cizgi));border-radius:999px;padding:4px 12px;font-size:.8125rem;background:var(--e-panel,var(--kagit));white-space:nowrap}
 @media (max-width:640px){#kdKok .kd-tablo th[scope="row"]{white-space:normal;min-width:7.5em}}
+/* low reliability: the ders is muted as a whole (same 0.55 as the yd-dusuk chips) */
+#kdKok .kd-hucre.kd-dusuk button,.kd-hap.kd-dusuk{opacity:.55}

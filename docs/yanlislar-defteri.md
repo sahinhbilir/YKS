@@ -104,21 +104,34 @@ the school's `p` is added as "okul verisi ρ 0,71".
 ### Kademeler (from all exams in the notebook)
 
 Source: `denemeListe` of every student (school results and own entries): D, Y and question count per ders. A ders counts as in
-`denemeBolumSayilir` (a blank TYT ders is a real zero; an AYT ders outside the field only if answered). Per exam and ders the cohort is
-every student who sat it (at least 5, otherwise the exam is skipped). With `m_e` = the cohort mean of (D+0.5)/(n+1):
+`denemeBolumSayilir` (a blank TYT ders is a real zero; an AYT ders outside the field only if answered). Everything is computed **per grade** (the student's `sinif`, otherwise the grade in the şube name, otherwise 12: `denemeOrtSinifi`, as in the Deneme ortalamaları): a 9th grader is never ranked against 12th graders. Per exam and ders the cohort is
+every student of that grade who sat it (at least 5, otherwise the exam is skipped). With `m_e` = the cohort mean of (D+0.5)/(n+1):
 
 - relative ability `a_se = logit((D+0.5)/(n+1)) − logit(m_e)`; an exam that is harder for everybody moves `m_e` with it, so nobody's ability falls;
-- `a_s = Σ w a / Σ w`, `w` = precision `n p (1−p)` times recency `0.5^age`, age = the exam's index from the latest exam of that ders (as in `analiz.js`);
+- `a_s = Σ w a / Σ w`, `w` = precision `n p (1−p)` times recency `0.8^age` (`AGIRLIK_KADEME`), age = the exam's index from the latest exam of that ders (see "Why 0.8" below);
 - SE by the delta method, `var(logit p) ≈ 1/(n p (1−p))`.
 
-Person separation `G = SD_true/RMSE`; tiers `H = floor((4G+1)/3)` (Wright & Masters 1982 strata) clamped to 2..6. With `SD_true² ≤ 0` or fewer
-than 8 students the ders has no tiers ("Veri yetersiz"). Edges are equal width between the 5th and 95th percentile of the abilities;
-tier 1 is the strongest; a student's tier is the point estimate and shows "?" only when `a ± 1.96·SE` spans three or more tiers (same rule and reason as the item bands). The Deneme panosu shows **Kademeler** (students ×
-ders, şube and TYT/AYT filters, sort by a ders, click a cell for the ability trend); the cells use one blue scale (tier 1 the deepest fill, the weakest tier the lightest, scaled by the ders's tier count, so 1/2 and 1/6 differ; light text on the deep half, contrast ≥ 4.5 in light and dark themes) and a "?" cell is hatched with a dashed inner outline, never another colour. The header reads "6 kademe · 0,95" (title: "6 kademe · güvenilirlik 0,95"); the table scrolls inside its card and keeps the student column fixed. Denemelerim shows the chips "Matematik · 2. kademe / 4".
+**Why 0.8, not 0.5.** `analiz.js` weighs the gidişat projection by `0.5^age` because a projection needs recency; that keeps an effective n of about 3 exams.
+Tiers classify a fairly stable ability and need precision: a 5-question ders (Tarih, Coğrafya, Felsefe, Din) has SE of 0.7-1 logit per student per exam, and with
+n_eff ≈ 3 `SD_obs²` falls below `mean(SE²)`, so the ders used to be dropped. `0.8^age` has a half-life of about 3 exams and an effective n of about 7 over 10 exams. `analiz.js` is unchanged.
 
-**Kendi seviyesi** keeps, per student and ders, the wrong or empty questions with `0.35 ≤ P ≤ 0.80`, `P = σ(a_s − (b − μθ))`:
-learnable, neither trivial nor hopeless. Report sections are matched to Deneme ders codes by name (TÜRKÇE-T → TYT turkce, TARİH.1-A →
-AYT tarih1, …; the student by Öğrenci No). A student (or ders) without tiers falls back to the Orta band.
+Person separation `G = SD_true/RMSE` (G = 0 when `SD_true² ≤ 0`), reliability `G²/(1+G²)`; the tier count `H = floor((4G+1)/3)` (Wright & Masters 1982 strata) is clamped to **3..6**.
+A blank counts like a wrong answer (the ability uses D out of n, so an empty question is not a separate case).
+
+**Tiers are norm-referenced within the grade.** The teacher's purpose is relative grouping for question selection: a few students at each end, bunches in the middle.
+Per (grade, oturum, ders) the cohort is ranked by ability: tier 1 is the top `ceil(10%)` of the cohort (at least 1 student), the select few who should take on the hard questions others struggle with;
+tier H is the bottom `ceil(10%)` by the same rule, whose focus is the easiest questions first; the middle ~80% is split into H−2 tiers of near-equal size by rank (30 students: 3, then the middle 24, then 3).
+Equal abilities share a tier, the one nearest the middle. The tier edges in ability units are the midpoints between the last student of one tier and the first of the next.
+A ders is **never dropped for low separation**: with `SD_true² ≤ 0` it still gets H = 3, reliability 0 and the same rank rule. When the reliability is < 0.5 the ders is marked `dusuk`:
+the header reads "3 kademe · güvenilirlik düşük", its cells and chips are muted (opacity .55, as the low-reliability item chips) and get no "?".
+"Veri yetersiz" only when fewer than 8 students of that grade have data for the ders, or no exam can be equated.
+Tier 1 is the strongest; a student's tier is the point estimate and shows "?" only when `a ± 1.96·SE` spans three or more tiers (same rule and reason as the item bands). The Deneme panosu shows **Kademeler** (students ×
+ders, Sınıf selector (9/10/11/12, only grades with data, default the highest), şube list of that grade, TYT/AYT filter, sort by a ders, click a cell for the ability trend); the cells use one blue scale (tier 1 the deepest fill, the weakest tier the lightest, scaled by the ders's tier count, so 1/2 and 1/6 differ; light text on the deep half, contrast ≥ 4.5 in light and dark themes) and a "?" cell is hatched with a dashed inner outline, never another colour. The header reads "6 kademe · 0,95" (title: "6 kademe · güvenilirlik 0,95"); the table scrolls inside its card and keeps the student column fixed. Denemelerim shows the chips "Matematik · 2. kademe / 4".
+
+**Kendi seviyesi** maps the student's tier to a window of difficulty bands (0 Çok kolay, 1 Kolay, 2 Orta, 3 Zor, 4 Çok zor) and keeps the wrong or empty questions in it,
+listed **easiest first** (Rasch b ascending) within each ders. Five windows from the top: W0 = {Zor, Çok zor}, W1 = {Orta, Zor}, W2 = {Orta}, W3 = {Kolay, Orta}, W4 = {Çok kolay, Kolay};
+tier k of H gets `W[round((k−1)·4/(H−1))]`: H = 3 → {3,4}, {2}, {0,1}; H = 4 → {3,4}, {2,3}, {1,2}, {0,1}; H = 5, 6 as the formula gives. Report sections are matched to Deneme ders codes by name (TÜRKÇE-T → TYT turkce, TARİH.1-A →
+AYT tarih1, …; the student by Öğrenci No). The tier is the student's own grade's, and exists for low-reliability ders too. A student (or ders) without tiers (Veri yetersiz) falls back to the Orta window (W2).
 
 ### Known limits
 

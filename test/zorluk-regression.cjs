@@ -112,18 +112,18 @@ const sig = z => 1 / (1 + Math.exp(-z));
     assert(m.rit < 0); assert(m.bayrak.includes('Ayırt etmiyor: anahtarı kontrol edin')); assert(m.bant, 'a flagged item keeps its difficulty label');
     assert.equal(a.maddeler.filter(x => x.bayrak.length).length, a.isaretli); assert(a.isaretli >= 1);
   });
-  await test('Kendi seviyesi window: P = σ(a − (b − μθ)) from .35 to .80, Orta band without an ability', () => {
-    const lg = p => Math.log(p / (1 - p)), kv = Z.kendiSeviyesi;
-    assert.deepEqual(copy(Z.KENDI), [0.35, 0.8]);
-    assert.equal(kv(0, 0, 'orta'), true); assert.equal(kv(0.5, 0.5, 'zor'), true, 'P = .5');
-    assert.equal(kv(lg(0.35) + 1, 1, 'orta'), true, 'P = .35 is inside'); assert.equal(kv(lg(0.8) + 1, 1, 'orta'), true, 'P = .80 is inside');
-    assert.equal(kv(lg(0.34) + 1, 1, 'orta'), false); assert.equal(kv(lg(0.81) + 1, 1, 'orta'), false);
-    assert.equal(kv(-2, 1, 'orta'), false, 'hopeless'); assert.equal(kv(3, -1, 'kolay'), false, 'trivial');
-    assert.equal(kv(null, 3, 'orta'), true); assert.equal(kv(undefined, -3, 'orta'), true, 'no ability: the Orta band, whatever b');
-    assert.equal(kv(null, 0, 'zor'), false); assert.equal(kv(null, 0, 'kolay'), false); assert.equal(kv(null, 0, null), false);
-    assert.equal(kv(0, null, 'orta'), false, 'an extreme item has no b');
+  await test('Kendi seviyesi window: the tier picks a window of difficulty bands (W0..W4), the Orta window without a tier', () => {
+    const kv = Z.kendiSeviyesi, bantlar = ['cok-kolay', 'kolay', 'orta', 'zor', 'cok-zor'];
+    const pen = (k, H) => bantlar.map((b, i) => kv(k, H, b) ? i : -1).filter(i => i >= 0);
+    assert.deepEqual(copy(Z.PENCERELER), [[3, 4], [2, 3], [2], [1, 2], [0, 1]]);
+    assert.deepEqual([1, 2, 3].map(k => pen(k, 3)), [[3, 4], [2], [0, 1]]);
+    assert.deepEqual([1, 2, 3, 4].map(k => pen(k, 4)), [[3, 4], [2, 3], [1, 2], [0, 1]]);
+    assert.deepEqual([1, 2, 3, 4, 5].map(k => pen(k, 5)), [[3, 4], [2, 3], [2], [1, 2], [0, 1]]);
+    assert.deepEqual([1, 2, 3, 4, 5, 6].map(k => pen(k, 6)), [[3, 4], [2, 3], [2], [2], [1, 2], [0, 1]], 'H = 6: round((k − 1)·4/5)');
+    assert.deepEqual(pen(null, 4), [2]); assert.deepEqual(pen(undefined, null), [2], 'no tier: the Orta window');
+    assert.equal(kv(1, 3, null), false); assert.equal(kv(1, 3, 'orta'), false);
   });
-  await test('tiers: equating, precision and recency weights, delta-method SE', () => {
+  await test('tiers: equating, precision and recency weights (0.8^age), delta-method SE', () => {
     const kay = (ogr, sinav, tarih, d, n = 40, ders = 'mat') => ({ogr, sinav, tarih, ad: sinav, oturum: 'TYT', ders, d, n});
     const kohort = (sinav, tarih, ds, n) => ds.map((d, i) => kay('o' + i, sinav, tarih, d, n));
     const a1 = (rows, i) => K.hesapla(rows).get('TYT:mat').ogrenciler.get('o' + i).a;
@@ -135,46 +135,87 @@ const sig = z => 1 / (1 + Math.exp(-z));
     // one exam: SE = 1 / √(n p (1 − p)) with p = (D + .5) / (n + 1)
     const d1 = K.hesapla(easy).get('TYT:mat').ogrenciler.get('o0'), p = (22 + .5) / 41;
     near(d1.se, 1 / Math.sqrt(40 * p * (1 - p)), 1e-12);
-    // two exams: weights precision × .5^age, the latest exam has age 0
+    // two exams: weights precision × .8^age (AGIRLIK_KADEME), the latest exam has age 0
     const rows = [...kohort('A', '2026-09-01', [8, 10, 12, 14, 16, 18, 20], 40), ...kohort('B', '2026-10-01', [20, 18, 16, 14, 12, 10, 8], 40)];
     const q = K.hesapla(rows).get('TYT:mat').ogrenciler.get('o0'), pA = (8 + .5) / 41, pB = (20 + .5) / 41, mA = (14 + .5) / 41, mB = mA;
-    const aA = Math.log(pA / (1 - pA)) - Math.log(mA / (1 - mA)), aB = Math.log(pB / (1 - pB)) - Math.log(mB / (1 - mB)), wA = 40 * pA * (1 - pA) * 0.5, wB = 40 * pB * (1 - pB);
+    const aA = Math.log(pA / (1 - pA)) - Math.log(mA / (1 - mA)), aB = Math.log(pB / (1 - pB)) - Math.log(mB / (1 - mB)), wA = 40 * pA * (1 - pA) * K.AGIRLIK_KADEME, wB = 40 * pB * (1 - pB);
     near(q.a, (wA * aA + wB * aB) / (wA + wB), 1e-12); near(q.se, Math.sqrt(wA * wA / (40 * pA * (1 - pA)) + wB * wB / (40 * pB * (1 - pB))) / (wA + wB), 1e-12);
-    assert(q.a > 0, 'the recent exam weighs more'); assert.equal(q.seri.length, 2);
+    assert.equal(K.AGIRLIK_KADEME, 0.8); assert(q.a > 0, 'the recent exam weighs more'); assert.equal(q.seri.length, 2);
     // an exam with fewer than 5 takers cannot be equated and is ignored
     const az = K.hesapla(kohort('X', '2026-10-01', [10, 20, 30, 35], 40)); assert.equal(az.get('TYT:mat').n, 0);
     // a record with impossible numbers is ignored
     assert.equal(K.hesapla([kay('o', 'X', '2026-10-01', 41, 40), kay('o', 'X', '2026-10-01', 5, 0)]).size, 0);
   });
-  await test('tiers: strata formula H = floor((4G + 1) / 3) clamped to 2..6', () => {
-    assert.deepEqual([0, 0.5, 1, 1.25, 2, 2.5, 3, 4, 5, 6, 12].map(K.katman), [2, 2, 2, 2, 3, 3, 4, 5, 6, 6, 6]);
-    // a spread of 12 students over 40 questions
-    const ds = [4, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38], rows = ds.map((d, i) => ({ogr: 's' + i, sinav: 'E', tarih: '2026-10-01', ad: 'E', oturum: 'TYT', ders: 'turkce', d, n: 40}));
+  await test('tiers: strata formula H = floor((4G + 1) / 3) clamped to 3..6; select few at each end, bunches in the middle', () => {
+    assert.deepEqual([0, 0.5, 1, 1.25, 2, 2.5, 3, 4, 5, 6, 12].map(K.katman), [3, 3, 3, 3, 3, 3, 4, 5, 6, 6, 6]);
+    const ds = Array.from({length: 30}, (_, i) => 2 + i + (i % 3)), rows = ds.map((d, i) => ({ogr: 's' + i, sinav: 'E', tarih: '2026-10-01', ad: 'E', oturum: 'TYT', ders: 'turkce', d, n: 40}));
     const x = K.hesapla(rows).get('TYT:turkce');
-    assert.equal(x.yetersiz, false); assert.equal(x.H, K.katman(x.G)); assert(x.H >= 2 && x.H <= 6); assert.equal(x.kenarlar.length, x.H - 1);
+    assert.equal(x.yetersiz, false); assert.equal(x.H, K.katman(x.G)); assert(x.H >= 3 && x.H <= 6); assert.equal(x.kenarlar.length, x.H - 1);
     near(x.guvenirlik, x.G * x.G / (1 + x.G * x.G), 1e-12);
-    // equal-width edges between the 5th and 95th percentile
-    const w = x.kenarlar.map((e, i) => i ? e - x.kenarlar[i - 1] : x.kenarlar[0] - x.alt); w.push(x.ust - x.kenarlar.at(-1)); w.forEach(v => near(v, (x.ust - x.alt) / x.H, 1e-9));
-    // the strongest student is in tier 1, the weakest in tier H; tiers do not increase with ability
-    const t = i => x.ogrenciler.get('s' + i).kademe; assert.equal(t(11), 1); assert.equal(t(0), x.H);
-    for (let i = 1; i < 12; i++) assert(t(i) <= t(i - 1));
-    // "?" only when ability ± 1.96 SE spans three or more tiers (two adjacent tiers are tolerated)
-    const tier = v => x.H - x.kenarlar.filter(e => e <= v).length;
-    for (const o of x.ogrenciler.values()) assert.equal(o.belirsiz, Math.abs(tier(o.a - 1.96 * o.se) - tier(o.a + 1.96 * o.se)) >= 2);
-    assert(x.ogrenciler.get('s5').belirsiz !== undefined);
+    // a cohort of 30: 3 students in tier 1, 3 in tier H, the middle 24 split evenly over H − 2 tiers
+    const say = [...Array(x.H + 1).keys()].map(k => [...x.ogrenciler.values()].filter(o => o.kademe === k).length);
+    assert.equal(say[1], 3); assert.equal(say[x.H], 3);
+    const orta = say.slice(2, x.H); assert.equal(orta.reduce((a, b) => a + b, 0), 24); assert(Math.max(...orta) - Math.min(...orta) <= 1, orta.join());
+    // the strongest are in tier 1, the weakest in tier H; tiers do not increase with ability
+    const t = i => x.ogrenciler.get('s' + i).kademe, ord = [...Array(30).keys()].sort((a, b) => x.ogrenciler.get('s' + b).a - x.ogrenciler.get('s' + a).a);
+    ord.slice(0, 3).forEach(i => assert.equal(t(i), 1)); ord.slice(-3).forEach(i => assert.equal(t(i), x.H));
+    for (let r = 1; r < 30; r++) assert(t(ord[r]) >= t(ord[r - 1]));
+    // edges: descending, each between the last student of a tier and the first of the next
+    x.kenarlar.forEach((e, b) => { const lo = Math.min(...[...x.ogrenciler.values()].filter(o => o.kademe <= b + 1).map(o => o.a)), hi = Math.max(...[...x.ogrenciler.values()].filter(o => o.kademe > b + 1).map(o => o.a)); near(e, (lo + hi) / 2, 1e-12) });
+    // "?" only when ability ± 1.96 SE spans three or more tiers (two adjacent tiers are tolerated); not in a low-reliability ders
+    const tier = v => 1 + x.kenarlar.filter(e => v < e).length;
+    for (const o of x.ogrenciler.values()) assert.equal(o.belirsiz, !x.dusuk && Math.abs(tier(o.a - 1.96 * o.se) - tier(o.a + 1.96 * o.se)) >= 2);
+    // small cohorts: n = 8 has 1 + 6 + 1; ties share a tier (the one nearer the middle)
+    const k8 = K.kademeAta([8, 7, 6, 5, 4, 3, 2, 1], 3); assert.deepEqual(copy(k8.t), [1, 2, 2, 2, 2, 2, 2, 3]);
+    const tie = K.kademeAta([9, 5, 5, 5, 5, 5, 5, 1], 4);
+    assert.equal(new Set(tie.t.slice(1, 7)).size, 1, 'equal abilities, one tier'); assert(tie.t[1] === 2 || tie.t[1] === 3);
   });
   await test('tiers are hidden when the data is insufficient ("Veri yetersiz")', () => {
     const mk = (n, f) => Array.from({length: n}, (_, i) => ({ogr: 's' + i, sinav: 'E', tarih: '2026-10-01', ad: 'E', oturum: 'TYT', ders: 'fizik', d: f(i), n: 7}));
     const few = K.hesapla(mk(7, i => i)).get('TYT:fizik');
     assert.equal(few.yetersiz, true); assert.equal(few.H, null); assert.deepEqual(copy(few.kenarlar), []); assert([...few.ogrenciler.values()].every(o => o.kademe === undefined));
-    // 8 students whose spread is only noise: SD_true² ≤ 0
-    const flat = K.hesapla(mk(12, () => 4)).get('TYT:fizik'); assert.equal(flat.yetersiz, true);
-    const noise = K.hesapla(mk(12, i => 3 + (i % 2))).get('TYT:fizik'); assert.equal(noise.yetersiz, true, 'SD_obs² below the mean SE²');
+    // no spread or only noise (SD_true² ≤ 0): the ders is not dropped, it gets 2 tiers, reliability 0 and dusuk
+    const flat = K.hesapla(mk(12, () => 4)).get('TYT:fizik'); assert.equal(flat.yetersiz, false); assert.equal(flat.H, 3); assert.equal(flat.dusuk, true); assert.equal(flat.guvenirlik, 0);
+    assert([...flat.ogrenciler.values()].every(o => o.kademe === 2 && o.belirsiz === false), 'equal abilities share the middle tier');
+    const noise = K.hesapla(mk(12, i => 3 + (i % 2))).get('TYT:fizik'); assert.equal(noise.yetersiz, false, 'SD_obs² below the mean SE²'); assert.equal(noise.H, 3); assert.equal(noise.dusuk, true); assert.equal(noise.guvenirlik, 0); assert.equal(noise.G, 0);
+    assert.deepEqual([...new Set([...noise.ogrenciler.values()].map(o => o.kademe))].sort(), [2], 'two ability values, ties share the middle tier');
+    const ramp = K.hesapla(mk(12, i => i % 7)).get('TYT:fizik'); assert.equal(ramp.yetersiz, false); assert(ramp.H >= 3);
+    assert([...noise.ogrenciler.values()].every(o => o.belirsiz === false), 'no "?" flood');
     assert.equal(K.hesapla(mk(8, i => i)).get('TYT:fizik').yetersiz, false, 'eight students are enough when they differ');
-    // no ability is offered for Kendi seviyesi from a ders without tiers
+    // fewer than 8 students of the grade, or no equatable exam: Veri yetersiz; ability is null there
     run("D=varsayilan();D.rol='rehber';D.ogr=[]");
     for (let i = 0; i < 7; i++) run("D.ogr.push({ad:'SENTETİK ÖĞRENCİ " + i + "',no:'" + (9100 + i) + "',sube:'205 12/A',alan:'SAY',denemeOkul:[{id:'p:a" + i + "',ad:'Sentetik 1',tarih:'2026-10-01',tur:'TYT',oturum:'TYT',alan:'SAY',dersler:[{kod:'fizik',dogru:" + i + ",yanlis:0,soru:7}],sure:null,puan:null,ts:1000}]})");
-    assert.equal(K.yetenek('9100', 'TYT', 'fizik'), null); assert.equal(K.model().dersler.get('TYT:fizik').yetersiz, true);
+    assert.equal(K.yetenek('9100', 'TYT', 'fizik'), null); assert.equal(K.dersBul(12, 'TYT', 'fizik').yetersiz, true);
+    assert.equal(K.hesapla([]).size, 0);
+  });
+  await test('5-question dersler over 8 synthetic exams get tiers (recency 0.8)', () => {
+    const r = rng(41), nrm = normal(r), N = 40, E = 8;
+    const theta = Array.from({length: N}, () => nrm());
+    const mkRows = () => { const rows = []; theta.forEach((th, i) => { for (let e = 0; e < E; e++) rows.push({ogr: 's' + i, sinif: 12, sinav: 'E' + e, tarih: '2026-09-' + String(10 + e * 2).padStart(2, '0'), ad: 'E' + e, oturum: 'TYT', ders: 'cografya', n: 5,
+      d: Math.max(0, Math.min(5, Math.round(5 * sig(1.3 * th + 0.8 * nrm()))))}) }); return rows };
+    const x = K.hesapla(mkRows()).get('TYT:cografya@12');
+    assert.equal(x.yetersiz, false); assert(x.H >= 2); assert(Number.isFinite(x.guvenirlik) && x.guvenirlik > 0);
+    assert.equal(x.dusuk, x.guvenirlik < 0.5);
+    // effective n over 10 exams: 0.8 gives about 7, 0.5 about 3
+    const neff = w => { const a = Array.from({length: 10}, (_, i) => w ** i); return a.reduce((p, q) => p + q, 0) ** 2 / a.reduce((p, q) => p + q * q, 0) };
+    assert(neff(0.8) > 6.5 && neff(0.8) < 7.5 && neff(0.5) < 3.2);
+    // stronger students get lower tier numbers
+    const t = i => x.ogrenciler.get('s' + i).kademe, order = [...Array(N).keys()].sort((a, b) => theta[b] - theta[a]);
+    assert(t(order[0]) <= t(order[N - 1]));
+  });
+  await test('tiers are per grade: a strong 9th grader is not pulled down by 12th graders', () => {
+    const r = rng(8), nrm = normal(r), rows = [];
+    const ekle = (sinif, pre, shift, N) => { for (let i = 0; i < N; i++) { const th = nrm(); for (let e = 0; e < 4; e++) rows.push({ogr: pre + i, sinif, sinav: 'E' + e, tarih: '2026-10-0' + (e + 1), ad: 'E' + e, oturum: 'TYT', ders: 'mat', n: 30, d: Math.max(0, Math.min(30, Math.round(30 * sig(1.1 * th + shift + 0.3 * nrm()))))}) } };
+    ekle(9, 'a', -1.2, 24); ekle(12, 'b', 1.2, 24);
+    const m = K.hesapla(rows), d9 = m.get('TYT:mat@9'), d12 = m.get('TYT:mat@12');
+    assert(d9 && d12); assert.equal(d9.n, 24); assert.equal(d12.n, 24); assert.equal(d9.sinif, 9); assert.equal(d12.sinif, 12);
+    assert.notDeepEqual(copy(d9.kenarlar), copy(d12.kenarlar), 'edges are per grade');
+    // each grade is centred on its own cohort: both have students in tier 1 and in the last tier
+    for (const d of [d9, d12]) { const ts = [...d.ogrenciler.values()].map(o => o.kademe); assert(ts.includes(1) && ts.includes(d.H)); }
+    // ranked together (no grade) the 9th graders would sit in the weakest tiers
+    const toplam = K.hesapla(rows.map(({sinif, ...q}) => q)).get('TYT:mat'), mean = (d, p) => { const l = [...d.ogrenciler.values()].filter(o => o.ogr.startsWith(p)); return l.reduce((a, o) => a + o.kademe, 0) / l.length };
+    assert(mean(toplam, 'a') > mean(toplam, 'b') + 0.5, 'mixed cohort: the 9th graders look weak');
+    assert(Math.abs(mean(d9, 'a') - mean(d12, 'b')) < 1, 'per grade both are around the middle');
   });
   await test('section names map to the Deneme ders codes (TYT and AYT, both sheets)', () => {
     const e = [['TÜRKÇE-T', 'TYT', 'turkce'], ['TARİH-T', 'TYT', 'tarih'], ['COĞRAFYA-T', 'TYT', 'cografya'], ['FELSEFE-T', 'TYT', 'felsefe'], ['DİN KÜLTÜRÜ-T', 'TYT', 'din'], ['S.FELSEFE-T', 'TYT', 'sf'], ['MATEMATİK-T', 'TYT', 'mat'], ['GEOMETRİ-T', 'TYT', 'geo'],
@@ -194,7 +235,7 @@ const sig = z => 1 / (1 + Math.exp(-z));
         dersler: [['mat', 30], ['turkce', 40]].map(([kod, n]) => { const d = Math.max(0, Math.min(n, Math.round(n * sig(1.2 * th + kolay + 0.3 * nrm())))); return {kod, dogru: d, yanlis: n - d - (i % 3), soru: n} })}));
       run("D.ogr.push(" + JSON.stringify({ad: 'SENTETİK ÖĞRENCİ ' + i, no: String(9200 + i), sube: i % 2 ? '205 12/B' : '205 12/A', alan: 'SAY', denemeOkul: dm}) + ")");
     });
-    const m = K.model(), mat = m.dersler.get('TYT:mat');
+    const m = K.model(), mat = m.dersler.get('TYT:mat@12');
     assert.equal(mat.n, N); assert.equal(mat.sinavSayisi, 3); assert.equal(mat.yetersiz, false); assert(mat.H >= 2);
     assert.equal(mat.ogrenciler.get('9200').seri.length, 3);
     const order = [...Array(N).keys()].sort((a, b) => theta[b] - theta[a]);
@@ -204,13 +245,35 @@ const sig = z => 1 / (1 + Math.exp(-z));
     assert.equal(m, K.model(), 'cached while the notebook does not change');
     // a ders not answered in a TYT row is a real zero (a blank section); an AYT ders outside the field is not counted (denemeBolumSayilir)
     run("D.ogr[0].denemeOkul.push({id:'p:ayt0',ad:'Sentetik AYT',tarih:'2026-10-09',tur:'AYT',oturum:'AYT',alan:'SAY',sure:null,puan:null,ts:2000,dersler:[{kod:'mat',dogru:20,yanlis:5,soru:30},{kod:'edebiyat',dogru:0,yanlis:0,soru:24}]})");
-    const m2 = K.model(); assert.notEqual(m2, m); assert.equal(m2.dersler.get('AYT:mat').n, 0, 'one student alone is below the cohort minimum'); assert(!m2.dersler.has('AYT:edebiyat'));
+    const m2 = K.model(); assert.notEqual(m2, m); assert.equal(m2.dersler.get('AYT:mat@12').n, 0, 'one student alone is below the cohort minimum'); assert(!m2.dersler.has('AYT:edebiyat@12'));
     // chips for the student's own page
     const chips = K.ogrenciSatiri(1); assert.match(chips, /Matematik · \d\??\. kademe \/ \d/); assert.match(chips, /Türkçe · \d\??\. kademe \/ \d/);
     assert.equal(K.ogrenciSatiri(99), '');
     const panel = K.panel(); assert.match(panel, /id="kdKok"/); assert.match(panel, /data-kd-hucre=/); assert.match(panel, /Matematik/); assert.match(panel, /kademe · 0,\d\d/);
     assert.match(panel, /data-kd-oturum="AYT"/);
     run("D=varsayilan();D.rol='rehber';D.ogr=[]"); assert.match(K.panel(), /Veri yetersiz/);
+  });
+  await test('Kademeler panel: Sınıf selector (default the highest grade), şube list and rows follow the grade; yetenek uses the student\'s own grade; low-reliability ders is muted', () => {
+    run("D=varsayilan();D.rol='rehber';D.ogr=[]");
+    const r = rng(12), nrm = normal(r);
+    const ekle = (sinif, sube, i, shift, flat) => run("D.ogr.push(" + JSON.stringify({ad: 'SENTETİK ' + sube + ' ' + i, no: String(sinif * 1000 + i), sube, sinif, alan: 'SAY', denemeOkul: [0, 1, 2].map(k => ({id: 'p:g' + k + '-' + i, ad: 'Sentetik ' + k, tarih: '2026-10-0' + (k + 1), tur: 'TYT', oturum: 'TYT', alan: 'SAY', sure: null, puan: null, ts: 1000 + k,
+      dersler: [{kod: 'mat', dogru: Math.max(0, Math.min(30, Math.round(30 * sig(1.2 * ((i * 7 % 10) / 5 - 1) + shift + 0.2 * nrm())))), yanlis: 0, soru: 30}, {kod: 'din', dogru: 3, yanlis: 2, soru: 5}]}))}) + ")");
+    for (let i = 0; i < 12; i++) { ekle(9, i % 2 ? '9-B' : '9-A', i, -1.2); ekle(12, i % 2 ? '12-B' : '12-A', i, 1.2) }
+    run("D.ogr.splice(0, D.ogr.length, ...D.ogr)"); run("KADEME.durum().sinif = null; KADEME.durum().sube = ''");
+    let p = K.panel();
+    assert.match(p, /data-kd-sinif="9"/); assert.match(p, /data-kd-sinif="12" aria-pressed="true"/); assert(!/data-kd-sinif="10"/.test(p), 'only grades with data');
+    assert.equal(K.durum().sinif, 12); assert.match(p, /12-A/); assert(!/>9-A</.test(p), 'şube list of grade 12 only');
+    assert.match(p, /12 öğrenci|24 öğrenci/); assert.equal((p.match(/<tr><th scope="row">/g) || []).length, 12);
+    // Din (5 questions, no spread): not dropped, 2 kademe, güvenilirlik düşük, muted
+    assert.match(p, /3 kademe · güvenilirlik düşük/); assert.match(p, /kd-dusuk/);
+    run("KADEME.durum().sinif = 9"); p = K.panel();
+    assert.match(p, /data-kd-sinif="9" aria-pressed="true"/); assert.match(p, />9-A</); assert(!/>12-A</.test(p)); assert.equal((p.match(/<tr><th scope="row">/g) || []).length, 12);
+    // yetenek uses the student's own grade: grade 9 (shift −1.2) and 12 (+1.2) abilities are relative to their own cohorts
+    const a9 = K.yetenek('9000', 'TYT', 'mat'), a12 = K.yetenek('12000', 'TYT', 'mat');
+    assert(Number.isFinite(a9) && Number.isFinite(a12)); near(a9, K.dersBul(9, 'TYT', 'mat').ogrenciler.get('9000').a, 1e-12); near(a12, K.dersBul(12, 'TYT', 'mat').ogrenciler.get('12000').a, 1e-12);
+    assert(Number.isFinite(K.yetenek('9001', 'TYT', 'din')), 'a low-reliability ders still has an ability');
+    assert.equal(K.dersBul(9, 'TYT', 'din').dusuk, true);
+    assert.match(K.ogrenciSatiri(0), /kd-hap kd-dusuk/);
   });
 
   /* ---------------- the report with two sheets ---------------- */
@@ -431,7 +494,7 @@ const sig = z => 1 / (1 + Math.exp(-z));
         dersler: [['turkce', 40], ['mat', 30]].map(([kod, n]) => { const d = Math.max(0, Math.min(n, Math.round(n * sig(th + 0.2 * nrm())))); return {kod, dogru: d, yanlis: n - d, soru: n} })}));
       run("D.ogr.push(" + JSON.stringify({ad: o.ad, no: o.no, sube: o.sube, alan: 'SAY', denemeOkul: dm}) + ")");
     });
-    assert.equal(K.model().dersler.get('TYT:mat').yetersiz, false);
+    assert.equal(K.model().dersler.get('TYT:mat@12').yetersiz, false);
     const guclu = rapor.ogrenciler[15], zayif = rapor.ogrenciler[0];
     assert(K.yetenek(guclu.no, 'TYT', 'mat') > K.yetenek(zayif.no, 'TYT', 'mat'));
     S.ogr = String(guclu.id); const g = T.gorunum(); S.ogr = String(zayif.id); const z = T.gorunum();

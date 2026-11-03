@@ -148,14 +148,14 @@ function bolumSatiri(ad, a, rho) {
   return ad + ' · ' + a.n + ' öğrenci · KR-20 ' + sayi(a.kr20) + ' · ' + (a.isaretli ? a.isaretli + ' madde işaretli' : 'işaretli madde yok') +
     (a.dusuk ? ' · Güvenilirlik düşük' : '') + (rho !== null && rho !== undefined ? ' · okul verisi ρ ' + sayi(rho) : '');
 }
-// Weight class (Kendi seviyesi): the student's predicted success on the item, P = σ(a − (b − μθ)), is between 0.35 and 0.80.
-// A student without an ability for the ders falls back to the Orta band.
-const KENDI = [0.35, 0.80], EPS = 1e-9;
-function kendiSeviyesi(a, rel, bant) {
-  if (a === null || a === undefined) return bant === 'orta';
-  if (rel === null || rel === undefined) return false;
-  const P = sig(a - rel);
-  return P >= KENDI[0] - EPS && P <= KENDI[1] + EPS;
+// Weight class (Kendi seviyesi): the student's tier k of H (1 = strongest, norm-referenced within the grade) picks a window of difficulty bands
+// (0 Çok kolay, 1 Kolay, 2 Orta, 3 Zor, 4 Çok zor). Five windows from top to bottom; tier k gets PENCERELER[round((k − 1)·4 / (H − 1))].
+// A student without a tier for the ders gets the Orta window.
+const PENCERELER = [[3, 4], [2, 3], [2], [1, 2], [0, 1]];
+const kademePenceresi = (kademe, H) => !(H >= 2) || !(kademe >= 1) ? PENCERELER[2] : PENCERELER[Math.round((Math.min(kademe, H) - 1) * 4 / (H - 1))];
+function kendiSeviyesi(kademe, H, bant) {
+  const i = BANTLAR.findIndex(b => b[0] === bant);
+  return i >= 0 && kademePenceresi(kademe, H).includes(i);
 }
-return {wilson, pearson, ritDuzeltilmis, kr20, spearman, rasch, bantNo, bantla, etiketYazi, BANTLAR, BANT_AD, BAYRAK, bayraklar, bolum, bolumSatiri, kendiSeviyesi, KENDI, EN_AZ_OGRENCI, EN_AZ_KR20, sayi, sig};
+return {wilson, pearson, ritDuzeltilmis, kr20, spearman, rasch, bantNo, bantla, etiketYazi, BANTLAR, BANT_AD, BAYRAK, bayraklar, bolum, bolumSatiri, kendiSeviyesi, kademePenceresi, PENCERELER, EN_AZ_OGRENCI, EN_AZ_KR20, sayi, sig};
 })();

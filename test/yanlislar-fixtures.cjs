@@ -192,14 +192,15 @@ function raporBuyuk(sim,{ayt=true}={}){
   return cokSayfaXlsx(sayfalar,{method:8});
 }
 // Notebooks for the Kademeler view: N students of two şubeler with four TYT and two AYT school results (denemeOkul rows), made up.
-function kademeOgrencileri({N=30,seed=77}={}){
+// sinif / kayma / noBaz: grade, ability shift (logits) and first Öğrenci No of the cohort; duz: every student gets the same Din score (a ders with no real spread).
+function kademeOgrencileri({N=30,seed=77,sinif=12,kayma=0,noBaz=9400,duz=false}={}){
   const r=rng(seed),nrm=normal(r),tyt=[['turkce',40],['tarih',5],['cografya',5],['felsefe',5],['din',5],['mat',30],['geo',10],['fizik',7],['kimya',7],['biyoloji',6]],ayt=[['mat',30],['geo',10],['fizik',14],['kimya',13],['biyoloji',13]];
   const sinavlar=[['Sentetik Deneme 1','2026-09-10','TYT',0.3],['Sentetik Deneme 2','2026-09-24','TYT',-0.3],['Sentetik Deneme 3','2026-10-01','AYT',-0.2],['Sentetik Deneme 4','2026-10-08','TYT',0.1],['Sentetik Deneme 5','2026-10-15','AYT',0.2],['Sentetik Deneme 6','2026-10-22','TYT',0]];
   return Array.from({length:N},(_,i)=>{
-    const th=nrm()*1.1,ders=Object.fromEntries([...tyt,...ayt].map(([k])=>[k,0.6*nrm()]));
+    const th=nrm()*1.1+kayma,ders=Object.fromEntries([...tyt,...ayt].map(([k])=>[k,0.6*nrm()]));
     const rows=sinavlar.map(([ad,tarih,tur,kolay],k)=>({id:'p:k'+k+'-'+i,ad,tarih,tur,oturum:tur,alan:'SAY',sure:null,puan:null,ts:1000+k,
-      dersler:(tur==='TYT'?tyt:ayt).map(([kod,n])=>{const d=Math.max(0,Math.min(n,Math.round(n*sig(th+ders[kod]+kolay+0.25*nrm()))));return {kod,dogru:d,yanlis:Math.max(0,n-d-(i%3)),soru:n}})}));
-    return {ad:'SENTETİK ÖĞRENCİ '+(i+1),no:String(9400+i),sube:i%2?'12-B':'12-A',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,denemeOkul:rows};
+      dersler:(tur==='TYT'?tyt:ayt).map(([kod,n])=>{const d=duz&&kod==='din'?3:Math.max(0,Math.min(n,Math.round(n*sig(th+ders[kod]+kolay+0.25*nrm()))));return {kod,dogru:d,yanlis:Math.max(0,n-d-(i%3)),soru:n}})}));
+    return {ad:'SENTETİK ÖĞRENCİ '+(i+1),no:String(noBaz+i),sube:i%2?sinif+'-B':sinif+'-A',sinif,alan:'SAY',kap:6,off:[6],aktif:true,denemeOkul:rows};
   });
 }
 module.exports={rng,normal,sig,simule,raporBuyuk,kademeOgrencileri,BUYUK_BOLUMLER,kitapcikSpecBuyuk,AYT_SECTIONS,AYT_KEY_A,AYT_KEY_B,AYT_HARITA,AYT_OGRENCILER,kitapcikSpecAyt,kitapcikSayfalariAyt,raporSatirlariAyt,cokSayfaXlsx,raporXlsx2,W,H,kitapcikSpec,kitapcikSayfalari,pdfYaz,itemlere,SECTIONS,KEY_A,KEY_B,OGRENCILER,raporSatirlari,raporXlsx,HARITA,cozumSpec,SENTETIK_TC};
