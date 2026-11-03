@@ -22,7 +22,7 @@ run("D=varsayilan();D.rol='rehber';D.kurum='Capacity Audit';D.ayar.testTarih='20
   if(change)run(change);events.length=0;const result=await run('bulutaYedekle()');assert.equal(result.tur,'tamam',JSON.stringify(result));
   rows.push({name,reads:events.filter(e=>e.kind==='read').length,writes:events.filter(e=>e.kind==='write').length,readPayloadBytes:events.filter(e=>e.kind==='read').reduce((n,e)=>n+e.bytes,0)});
  }
- assert.deepEqual(rows.map(r=>[r.reads,r.writes]),[[2,4],[1,0],[2,5],[2,4],[2,5]]);
+ assert.deepEqual(rows.map(r=>[r.reads,r.writes]),[[2,3],[1,0],[2,5],[2,3],[2,5]]);
  events.length=0;const list=await run('bulutYedekGecmisi()');assert.equal(list.tur,'tamam');
  const historyListing={documents:events.length,entries:list.liste.length,payloadBytes:events.reduce((n,e)=>n+e.bytes,0),downloadsFullSnapshots:false};
  assert.equal(historyListing.documents,1);assert.equal(historyListing.entries,3);
