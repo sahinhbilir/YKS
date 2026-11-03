@@ -764,7 +764,7 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     assert.equal(run('ANALIZ.ac("1003")'), true); assert.deepEqual(get('[EK.sekme,EK.okKim,EK.okGeri,EK.okOturum]'), ['ogrencikarti', '1003', 'denemeler', null]);
     assert.equal(run('ANALIZ.ac("1004");EK.okGeri'), 'denemeler', 'opening another student keeps the first page to go back to');
     // The page is not a top-menu item; it opens from Öğrenciler.
-    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='ogrenciler')[1]"), ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor']);
+    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='ogrenciler')[1]"), ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor', 'gunlukrapor']);
     assert.equal(get("MENU_REHBER.flat(2).includes('ogrencikarti')"), false); assert.equal(get("MENU_BAGLI.ogrencikarti"), 'ogrenciler'); assert.equal(get("SEKME_REHBER.find(s=>s[0]==='ogrencikarti')[1]"), 'Öğrenci kartı');
     run("EK.sekme='ogrencikarti';rayCiz()"); assert.match(nodes.ray.innerHTML, /data-sekme="ogrenciler" aria-current="page"/);
   });

@@ -57,6 +57,8 @@ jobs:
         run: node scripts/embed-zorluk.cjs --check && node test/zorluk-regression.cjs
       - name: Gemini reading of other files, checks, fallback and embedding
         run: node scripts/embed-yapayzeka.cjs --check && node test/yapayzeka-regression.cjs
+      - name: Günlük rapor ids, payload caps, AI reply checks, failure fallback and embedding
+        run: node scripts/embed-gunlukrapor.cjs --check && node test/gunluk-rapor-regression.cjs
       - name: Cross-page consistency
         run: node test/tutarlilik-regression.cjs
       - name: Role regression
@@ -194,6 +196,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/student-view-browser.cjs
       - name: Gemini reading of timetables, results and paper plans on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/yapayzeka-browser.cjs
+      - name: Günlük rapor student form and teacher list on desktop and phone
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/gunluk-rapor-browser.cjs
       - name: Keep synthetic review screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -225,3 +229,5 @@ jobs:
         run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/firestore.test.mjs"
       - name: Verify save and print delivery with a fresh emulator
         run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/save-print-flow.test.mjs && node test/firebase/history-v2.test.mjs"
+      - name: Günlük rapor rules (student create, three a day, teacher list and delete)
+        run: test/firebase/node_modules/.bin/firebase emulators:exec --only firestore --project demo-yks-test "node test/firebase/gunluk-rapor.test.mjs"

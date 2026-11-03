@@ -633,7 +633,7 @@ function loadModuleSandbox() {
       setCustomParameters(parameters) { this.parameters = parameters; return this; }
     },
     getFirestore: () => { initOrder.push('firestore'); return {}; },
-    doc: () => {}, getDoc: () => {}, getDocFromServer: () => {}, setDoc: () => {}, updateDoc: () => {}, runTransaction: () => {},
+    doc: () => {}, getDoc: () => {}, getDocFromServer: () => {}, setDoc: () => {}, updateDoc: () => {}, deleteDoc: () => {}, runTransaction: () => {},
     collection: () => {}, getDocs: async () => ({ forEach() {} })
     , onSnapshot: () => () => {}
   };

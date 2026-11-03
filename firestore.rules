@@ -146,6 +146,70 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Günlük rapor: öğrenci o gün ne yaptığını yazar ya da fotoğraf yükler, yapay zekâ yanıtıyla birlikte
+    // tek belge olarak öğretmenin altına bırakır. Öğretmen "Gördüm" deyince belge SİLİNİR (bulutta kalmaz).
+    // - Belge kimliği <öğrenciUid>-<YYYYAAGG İstanbul>-<1..3>: öğrenci günde en çok 3 rapor yazar. Tarih
+    //   yalnızca bugün ya da dün olabilir; böylece uydurma tarihlerle sınırsız belge açılamaz.
+    // - Öğrenci YALNIZCA oluşturur: okuyamaz, listeleyemez, güncelleyemez, silemez. Aynı kimlikle ikinci kez
+    //   yazmak güncelleme sayılır ve reddedilir (istemci bunu "bu hak dolu" diye yorumlar).
+    // - Öğrenci, yalnızca kendi yuvasının bağlı olduğu öğretmenin altına yazar: ogrenciHesaplari/{uid}.syncId →
+    //   ogrenciler/{syncId} (bagliUid, durum, ogretmenUid, ogrenciBulutId) — yuva güncellemesiyle aynı bağ.
+    // - Sahip ve ortak öğretmen okur, listeler ve (düzenleme kilidine uyarak) siler; izleyici yalnızca okur/listeler.
+    match /ogretmenYedek/{uid}/gunlukRapor/{raporId} {
+      function raporGunKodu(t) {
+        return string(t.year() * 10000 + t.month() * 100 + t.day());
+      }
+      function raporKimligiGecerli() {
+        let bugun = request.time + duration.value(3, 'h');   // Europe/Istanbul = UTC+3, yaz saati yok
+        let dun = bugun - duration.value(1, 'd');
+        return raporId.matches(request.auth.uid + '-' + raporGunKodu(bugun) + '-[1-3]')
+          || raporId.matches(request.auth.uid + '-' + raporGunKodu(dun) + '-[1-3]');
+      }
+      function raporOgrenciBagi() {
+        let hesapYolu = /databases/$(database)/documents/ogrenciHesaplari/$(request.auth.uid);
+        return request.auth.token.firebase.sign_in_provider == 'password'
+          && request.auth.token.email is string
+          && request.auth.token.email.matches('ogr-[0-9a-f]{40}@student[.]ykstekrar[.]app')
+          && exists(hesapYolu)
+          && get(hesapYolu).data.aktif == true
+          && get(hesapYolu).data.syncId is string
+          && exists(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId))
+          && get(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId)).data.bagliUid == request.auth.uid
+          && get(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId)).data.durum == 'aktif'
+          && get(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId)).data.ogretmenUid == uid
+          && get(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId)).data.ogrenciBulutId
+              == request.resource.data.ogrenciBulutId;
+      }
+      function raporFotoGecerli(l, i) {
+        return l.size() <= i
+          || (l[i] is string && l[i].size() <= 300000 && l[i].matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+'));
+      }
+      function raporFotoBoyu(l, i) {
+        return l.size() > i ? l[i].size() : 0;
+      }
+      function raporGecerli() {
+        let v = request.resource.data;
+        return v.keys().hasOnly(['ogrenciUid','ogrenciBulutId','ts','metin','fotograflar','tercih','yzYanit','onemli'])
+          && v.keys().hasAll(['ogrenciUid','ogrenciBulutId','ts','metin','fotograflar','tercih','yzYanit','onemli'])
+          && v.ogrenciUid == request.auth.uid
+          && v.ogrenciBulutId is string && v.ogrenciBulutId.size() > 0 && v.ogrenciBulutId.size() <= 80
+          && v.ts is int
+          && v.metin is string && v.metin.size() <= 4000
+          && v.fotograflar is list && v.fotograflar.size() <= 3
+          && raporFotoGecerli(v.fotograflar, 0) && raporFotoGecerli(v.fotograflar, 1) && raporFotoGecerli(v.fotograflar, 2)
+          && (v.metin.size() > 0 || v.fotograflar.size() > 0)
+          && v.tercih in ['ovgu','elestiri']
+          && v.yzYanit is string && v.yzYanit.size() <= 2500
+          && v.onemli is bool
+          && v.metin.size() + v.yzYanit.size() + raporFotoBoyu(v.fotograflar, 0)
+              + raporFotoBoyu(v.fotograflar, 1) + raporFotoBoyu(v.fotograflar, 2) < 900000;
+      }
+      allow create: if request.auth != null && raporKimligiGecerli() && raporOgrenciBagi() && raporGecerli();
+      allow get, list: if defterYetkilisi(uid) || izleyici(uid);
+      allow delete: if defterYetkilisi(uid) && kilitUygun(uid);
+      allow update: if false;
+    }
+
     // Öğretmeni olmadan "Test hesabı aç" (Google) ya da "Kaydol" (kullanıcı adı + şifre) ile
     // gelen öğrencinin kendi defteri. Yalnızca sahibi okur ve yazar; allowlist gerekmez. Anonim
     // ve okul öğrencisinin ad+numara oturumları bu yolu kullanamaz. Listeleme kapalıdır; yalnızca
