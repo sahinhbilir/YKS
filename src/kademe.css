@@ -1,0 +1,29 @@
+/* Kademeler (Deneme panosu) and the tier chips of Denemelerim. Tokens come from #dpKok (etutler.css); the chips fall back to the site's tokens. */ Fill = --kd-ton mixed with the panel at 12–88%; white text from 67% (contrast >= 4.8 on every step for H = 2..6, light and dark).
+#kdKok{display:flex;flex-direction:column;gap:12px;min-width:0}
+#kdKok .et-seg select{border:0;background:transparent;color:var(--e-fg);font-size:.75rem;font-weight:500;padding:4px 8px;border-radius:999px;cursor:pointer;max-width:100%}
+#kdKok .kd-tablo th:first-child,#kdKok .kd-tablo td:first-child{text-align:left;white-space:nowrap}
+#kdKok .kd-tablo th[scope="row"]{font-weight:500;position:sticky;left:0;background:var(--e-panel);z-index:1}
+#kdKok .kd-ders button{display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:2px 4px}
+#kdKok .kd-ders button[aria-pressed="true"] b{text-decoration:underline}
+#kdKok .kd-ders .mini{white-space:nowrap}
+#kdKok .kd-hucre{text-align:center;padding:0;min-width:3.4rem}
+#kdKok{--kd-ton:#0a3573;--kd-beyaz:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #kdKok{--kd-ton:#2a63b8}}
+:root[data-theme="dark"] #kdKok{--kd-ton:#2a63b8}
+#kdKok .kd-hucre{background:color-mix(in srgb,var(--kd-ton) var(--kd,0%),var(--e-panel))}
+#kdKok .kd-hucre.kd-g button{color:var(--kd-beyaz)}
+/* a "?" cell keeps its colour and is hatched with a dashed inner outline */
+#kdKok .kd-hucre.kd-bel button{background-image:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,currentColor 20%,transparent) 5px 6px);outline:1px dashed currentColor;outline-offset:-3px}
+#kdKok .kd-hucre.kd-bel button[aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
+#kdKok .kd-hucre.bos{background:none;color:var(--e-muted)}
+#kdKok .kd-tablo thead th:first-child{left:0;z-index:3;position:sticky;background:var(--e-panel)}
+#kdKok .kd-hucre button{display:block;width:100%;min-height:34px;background:none;border:0;color:var(--e-fg);font:inherit;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}
+#kdKok .kd-hucre button[aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px;box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--e-panel) 45%,transparent)}
+#kdKok .kd-detay{border:1px solid var(--e-line);border-radius:var(--e-r);padding:12px;display:flex;flex-direction:column;gap:6px;background:var(--e-panel)}
+#kdKok .kd-detay-ust{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+#kdKok .kd-iz{width:100%;max-width:520px;height:auto}
+.kd-sifir{stroke:var(--e-axis);stroke-width:1}.kd-kenar{stroke:var(--e-grid);stroke-width:1;stroke-dasharray:3 3}
+.kd-cizgi{fill:none;stroke:var(--e-c1);stroke-width:2;stroke-linejoin:round}.kd-nokta{fill:var(--e-c1)}
+.kd-haplar{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:14px}
+.kd-hap{display:inline-flex;align-items:center;border:1px solid var(--e-line,var(--cizgi));border-radius:999px;padding:4px 12px;font-size:.8125rem;background:var(--e-panel,var(--kagit));white-space:nowrap}
+@media (max-width:640px){#kdKok .kd-tablo th[scope="row"]{white-space:normal;min-width:7.5em}}

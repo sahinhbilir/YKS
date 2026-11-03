@@ -5,6 +5,16 @@ const YANLISLAR = (() => {
 const clean=s=>String(s??'').replace(/\s+/gu,' ').trim();
 // Upper case without Turkish marks, letters and digits only: "TC Kimlik No" and "T.C. KİMLİK NO" both give TCKIMLIKNO.
 const key=s=>clean(s).toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/[^A-Z0-9]/gu,'');
+/* Proper ders names for the report's section names ("TÜRK DİLİ VE EDB-A" -> "Türk Dili ve Edebiyatı", "TARİH.1-A" -> "Tarih-1"). Unknown names are only title-cased. */
+const DERS_ADLARI={TURKCE:'Türkçe',TURKDILIVEEDB:'Türk Dili ve Edebiyatı',TURKDILIVEEDEBIYATI:'Türk Dili ve Edebiyatı',EDEBIYAT:'Türk Dili ve Edebiyatı',TARIH:'Tarih',TARIH1:'Tarih-1',TARIH2:'Tarih-2',COGRAFYA:'Coğrafya',COGRAFYA1:'Coğrafya-1',COGRAFYA2:'Coğrafya-2',
+  FELSEFE:'Felsefe',FELSEFEGR:'Felsefe Grubu',FELSEFEGRUBU:'Felsefe Grubu',DINKULTURU:'Din Kültürü',DINKULTURUVEAHLAKBILGISI:'Din Kültürü',SFELSEFE:'Ek Felsefe',EKFELSEFE:'Ek Felsefe',SOSYALFELSEFE:'Ek Felsefe',
+  MATEMATIK:'Matematik',GEOMETRI:'Geometri',FIZIK:'Fizik',KIMYA:'Kimya',BIYOLOJI:'Biyoloji'};
+const dersAdi=ad=>{const t=clean(ad).replace(/-[TA]$/u,'');return DERS_ADLARI[key(t)]||title(t).replace(/\.\p{L}/gu,m=>m.toLocaleUpperCase('tr-TR'))};
+function dersOnek(bolumler){
+  const say=new Map();for(const b of bolumler){if(!say.has(b.ders))say.set(b.ders,new Set());say.get(b.ders).add(b.oturum)}
+  for(const b of bolumler)if(say.get(b.ders).size>1)b.ders=b.oturum+' '+b.ders;
+  return bolumler;
+}
 const title=s=>clean(s).toLocaleLowerCase('tr-TR').replace(/(^|[\s(])\p{L}/gu,m=>m.toLocaleUpperCase('tr-TR'));
 const harfOK=s=>/^[A-E]$/u.test(s);
 
@@ -15,6 +25,7 @@ const harfOK=s=>/^[A-E]$/u.test(s);
    next start in the same column (or to the footer). A shared passage ("35 - 36. soruları aşağıdaki parçaya göre …") is added
    in front of each question it belongs to. */
 const KOD=/^\d{4}-\d{2}-[A-Z]+\/(.+)-\d{3,5}$/u;
+const KODTAM=/^\d{4}-\d{2}-([A-Z]+)\/.+-(\d{3,5})$/u;
 const NO=/^(\d{1,3})\.$/u;
 const GRUP=/^\(?\s*(\d{1,3})\s*[-–—]\s*(\d{1,3})\s*\.\s*soru/iu;
 const SAYIM=/(\d{1,3})\s+soru\s+vard[ıi]r/iu;
@@ -33,18 +44,21 @@ function kitapcikCoz(pages){
   // Pages of one test share the header code (2026-27-TYT/TÜR-1203); the cover has none.
   const runs=[];
   P.forEach((p,i)=>{
-    const c=p.items.find(x=>KOD.test(x.s)&&x.y>p.h-70);p.kod=c?KOD.exec(c.s)[1]:null;p.kodItem=c||null;
+    const c=p.items.find(x=>KOD.test(x.s)&&x.y>p.h-70);p.kod=c?KOD.exec(c.s)[1]:null;p.kodItem=c||null;p.tam=c?KODTAM.exec(c.s):null;
     if(!p.kod)return;const last=runs.at(-1);
     if(last&&last.kod===p.kod&&last.son===i-1)last.son=i;
     else{if(runs.some(r=>r.kod===p.kod))fail('Test sayfaları kesintili ('+p.kod+').');runs.push({kod:p.kod,ilk:i,son:i})}
   });
   if(!runs.length)fail('Bu PDF bir soru kitapçığına benzemiyor (sayfa üst bilgisi bulunamadı).');
+  // The session (TYT / AYT) and the exam number come from the header code of the pages: "2026-27-TYT/TÜR-1203".
+  const oturumlar=new Set(P.filter(p=>p.tam).map(p=>p.tam[1])),sinavlar=new Set(P.filter(p=>p.tam).map(p=>p.tam[2]));
+  if(oturumlar.size>1||sinavlar.size>1)fail('Bu PDF birden fazla oturum veya sınav içeriyor ('+[...oturumlar,...sinavlar].join(', ')+').');
   const inRun=runs.flatMap(r=>P.slice(r.ilk,r.son+1)),W=P[0].w;
   const cand=inRun.flatMap(p=>p.items.filter(i=>NO.test(i.s)&&i.y<p.h-70&&i.y>60));
   const sol=kenar(cand.filter(i=>i.x<W/2).map(i=>i.x)),sag=kenar(cand.filter(i=>i.x>=W/2).map(i=>i.x));
   if(sol===null||sag===null)fail('Soru numaraları sütun kenarında bulunamadı.');
   const bolun=sag-15,side=x=>x<bolun?0:1,EDGE=3.5;
-  const out={w:W,h:P[0].h,testler:[]};
+  const out={w:W,h:P[0].h,oturum:[...oturumlar][0]||null,sinav:[...sinavlar][0]||null,testler:[]};
   for(const run of runs){
     const pg=P.slice(run.ilk,run.son+1);
     const cols=pg.map(p=>[0,1].map(s=>({s,x0:s?sag-11:sol-12,x1:s?p.w-24:sag-19,mk:[]})));
@@ -153,8 +167,8 @@ async function raporCoz(bytes){
     const s=clean(t==='inlineStr'&&is?siMetin(is):t==='s'&&v?sst(+v.textContent):v?v.textContent:'');
     return /^\d{11}$/u.test(s)?'':s;
   };
-  // First sheet that has the report's header row.
-  let bulundu=null;
+  // Every sheet that has the report's header row is one session (TYT and AYT sheets of one workbook); other sheets are ignored.
+  const bulunanlar=[];
   for(const sh of sheets){
     const t=rels.get(sh.rid),x=t?await read(t.startsWith('/')?t.slice(1):'xl/'+t):null;if(x===null)throw bad();
     const cells=xmlEl(xmlAc(x),'c');if(cells.length>300000)throw bad();
@@ -170,59 +184,112 @@ async function raporCoz(bytes){
         else pre.set(r,row);
       }else post.set(r,row);
     }
-    if(hdr){bulundu={hdr,pre,post};break}
+    if(hdr)bulunanlar.push({hdr,pre,post});
   }
-  if(!bulundu)fail('Bu dosya bir cevap raporu değil (Öğrenci No ve Ad Soyad başlıkları bulunamadı).');
-  const {hdr,pre,post}=bulundu,H=new Map([...hdr.row].map(([c,v])=>[key(v),c]));
-  const cNo=H.get('OGRENCINO'),cAd=H.get('ADSOYAD'),cSube=H.get('SUBE'),cKit=H.get('KITAPCIK');
-  if(!cSube||!cKit)fail('Şube veya Kitapçık sütunu bulunamadı.');
-  const qcols=[...hdr.row].filter(([,v])=>/^S\d{1,3}$/u.test(key(v))).map(([c,v])=>({c,n:+key(v).slice(1)})).sort((a,b)=>colNo(a.c)-colNo(b.c));
-  // The row above the header names the sections at the first column of each.
-  let secRow=null;
-  for(let r=hdr.r-1;r>=Math.max(1,hdr.r-4);r--)if(pre.has(r)&&[...pre.get(r).values()].some(v=>/-[TA]$/u.test(v))){secRow=pre.get(r);break}
-  if(!secRow)fail('Bölüm adları (TÜRKÇE-T gibi) bulunamadı.');
-  const sec=[...secRow].map(([c,v])=>({c:colNo(c),ad:v})).sort((a,b)=>a.c-b.c),bolumler=[];let bas=0;
-  const sutunlar=[];
-  sec.forEach((s,i)=>{
-    if(key(s.ad)==='TOPLAM')return;
-    const son=sec[i+1]?sec[i+1].c:Infinity,qs=qcols.filter(q=>colNo(q.c)>=s.c&&colNo(q.c)<son);
-    if(!qs.length||qs.some((q,k)=>q.n!==k+1))fail(s.ad+' bölümünün soru sütunları (S1, S2, …) okunamadı.');
-    bolumler.push({ad:s.ad,ders:title(s.ad.replace(/-[TA]$/u,'')).replace(/\.\p{L}/gu,m=>m.toLocaleUpperCase('tr-TR')),n:qs.length,bas});bas+=qs.length;sutunlar.push(...qs.map(q=>q.c));
-  });
-  if(!bolumler.length)fail('Soru bölümü bulunamadı.');
-  const anahtar={},ogrenciler=[];
-  const dizi=row=>sutunlar.map(c=>{const v=clean(row.get(c)).toUpperCase();return harfOK(v)?v:''});
-  for(const r of [...post.keys()].sort((a,b)=>a-b)){
-    const row=post.get(r),etiket=key(row.get(cAd)||'');
-    const km=/^CEVAPANAHTARI([AB])$/u.exec(etiket);
-    if(km){anahtar[km[1]]=dizi(row);continue}
-    if(!row.get(cNo))continue;
-    const kit=clean(row.get(cKit)).toUpperCase();
-    if(kit!=='A'&&kit!=='B')fail('Kitapçık türü A veya B olmayan öğrenci satırı var.');
-    ogrenciler.push({id:ogrenciler.length,sira:clean(row.get(H.get('SIRA'))).replace(/\.0+$/u,''),no:row.get(cNo).replace(/\.0+$/u,''),ad:clean(row.get(cAd)),sube:clean(row.get(cSube)),kit,cev:dizi(row)});
+  if(!bulunanlar.length)fail('Bu dosya bir cevap raporu değil (Öğrenci No ve Ad Soyad başlıkları bulunamadı).');
+  const sayfaCoz=({hdr,pre,post})=>{
+    const H=new Map([...hdr.row].map(([c,v])=>[key(v),c]));
+    const cNo=H.get('OGRENCINO'),cAd=H.get('ADSOYAD'),cSube=H.get('SUBE'),cKit=H.get('KITAPCIK');
+    if(!cSube||!cKit)fail('Şube veya Kitapçık sütunu bulunamadı.');
+    const qcols=[...hdr.row].filter(([,v])=>/^S\d{1,3}$/u.test(key(v))).map(([c,v])=>({c,n:+key(v).slice(1)})).sort((a,b)=>colNo(a.c)-colNo(b.c));
+    // The row above the header names the sections at the first column of each.
+    let secRow=null;
+    for(let r=hdr.r-1;r>=Math.max(1,hdr.r-4);r--)if(pre.has(r)&&[...pre.get(r).values()].some(v=>/-[TA]$/u.test(v))){secRow=pre.get(r);break}
+    if(!secRow)fail('Bölüm adları (TÜRKÇE-T gibi) bulunamadı.');
+    const sec=[...secRow].map(([c,v])=>({c:colNo(c),ad:v})).sort((a,b)=>a.c-b.c),bolumler=[];let bas=0;
+    const sutunlar=[];
+    sec.forEach((s,i)=>{
+      if(key(s.ad)==='TOPLAM')return;
+      const son=sec[i+1]?sec[i+1].c:Infinity,qs=qcols.filter(q=>colNo(q.c)>=s.c&&colNo(q.c)<son);
+      if(!qs.length||qs.some((q,k)=>q.n!==k+1))fail(s.ad+' bölümünün soru sütunları (S1, S2, …) okunamadı.');
+      bolumler.push({ad:s.ad,ders:dersAdi(s.ad),n:qs.length,bas});bas+=qs.length;sutunlar.push(...qs.map(q=>q.c));
+    });
+    if(!bolumler.length)fail('Soru bölümü bulunamadı.');
+    const sonekler=new Set(bolumler.map(b=>/-A$/u.test(b.ad)?'AYT':'TYT'));
+    if(sonekler.size!==1)fail('Bir sayfada hem TYT (-T) hem AYT (-A) bölümleri var.');
+    const oturum=[...sonekler][0];
+    bolumler.forEach(b=>{b.oturum=oturum});
+    const anahtar={},ogrenciler=[];
+    const dizi=row=>sutunlar.map(c=>{const v=clean(row.get(c)).toUpperCase();return harfOK(v)?v:''});
+    for(const r of [...post.keys()].sort((a,b)=>a-b)){
+      const row=post.get(r),etiket=key(row.get(cAd)||'');
+      const km=/^CEVAPANAHTARI([AB])$/u.exec(etiket);
+      if(km){anahtar[km[1]]=dizi(row);continue}
+      if(!row.get(cNo))continue;
+      const kit=clean(row.get(cKit)).toUpperCase();
+      if(kit!=='A'&&kit!=='B')fail('Kitapçık türü A veya B olmayan öğrenci satırı var.');
+      ogrenciler.push({sira:clean(row.get(H.get('SIRA'))).replace(/\.0+$/u,''),no:row.get(cNo).replace(/\.0+$/u,''),ad:clean(row.get(cAd)),sube:clean(row.get(cSube)),kit,cev:dizi(row)});
+    }
+    if(!ogrenciler.length)fail((bulunanlar.length>1?oturum+' sayfasında öğrenci':'Öğrenci')+' satırı bulunamadı.');
+    for(const k of new Set(ogrenciler.map(o=>o.kit)))if(!anahtar[k])fail('Cevap Anahtarı - '+k+' satırı bulunamadı.');
+    let ad='';
+    for(const row of pre.values())for(const v of row.values()){const m=/S[ıi]nav\s*:\s*([^|]+)/iu.exec(v);if(m&&!ad)ad=clean(m[1])}
+    return {oturum,bolumler,T:bas,anahtar,ogrenciler,ad};
+  };
+  const parcalar=bulunanlar.map(sayfaCoz);
+  const oturumlar=parcalar.map(p=>p.oturum);
+  if(new Set(oturumlar).size!==oturumlar.length)fail('Aynı oturum (TYT veya AYT) iki sayfada var.');
+  // TYT before AYT, however the sheets are ordered; students are joined by Öğrenci No across the sheets.
+  parcalar.sort((a,b)=>(a.oturum==='AYT')-(b.oturum==='AYT'));
+  const adlar=[...new Set(parcalar.map(p=>p.ad).filter(Boolean))];
+  const sayiOf=s=>(/(\d{3,5})\s*$/u.exec(s)||[])[1]||'';
+  if(new Set(adlar.map(a=>sayiOf(a)||a)).size>1)fail('TYT ve AYT sayfaları farklı sınavlara ait ('+adlar.join(' ve ')+').');
+  const toplam=parcalar.reduce((a,p)=>a+p.T,0),anahtar={},bolumler=[],ogrenciler=[],byNo=new Map();
+  let ofset=0;
+  for(const p of parcalar){
+    for(const k of Object.keys(p.anahtar)){if(!anahtar[k])anahtar[k]=Array(toplam).fill('');anahtar[k].splice(ofset,p.T,...p.anahtar[k])}
+    bolumler.push(...p.bolumler.map(b=>({...b,bas:b.bas+ofset})));
+    for(const o of p.ogrenciler){
+      let q=byNo.get(o.no);
+      if(!q||q.oturumlar.includes(p.oturum)){
+        q={id:ogrenciler.length,sira:o.sira,no:o.no,ad:o.ad,sube:o.sube,kit:o.kit,kits:{},oturumlar:[],cev:Array(toplam).fill('')};
+        ogrenciler.push(q);if(!byNo.has(o.no))byNo.set(o.no,q);
+      }
+      if(!q.sube)q.sube=o.sube;
+      q.kits[p.oturum]=o.kit;q.oturumlar.push(p.oturum);q.cev.splice(ofset,p.T,...o.cev);
+    }
+    ofset+=p.T;
   }
-  if(!ogrenciler.length)fail('Öğrenci satırı bulunamadı.');
-  for(const k of new Set(ogrenciler.map(o=>o.kit)))if(!anahtar[k])fail('Cevap Anahtarı - '+k+' satırı bulunamadı.');
-  let ad='';
-  for(const row of pre.values())for(const v of row.values()){const m=/S[ıi]nav\s*:\s*([^|]+)/iu.exec(v);if(m&&!ad)ad=clean(m[1])}
-  return {ad,bolumler,T:bas,anahtar,ogrenciler};
+  // The same ders name in both sessions ("Matematik") is prefixed with its session; otherwise no prefix.
+  dersOnek(bolumler);
+  const ad=adlar[0]||'';
+  return {ad,sinavNo:sayiOf(ad)||'',oturumlar:parcalar.map(p=>p.oturum),bolumler,T:toplam,anahtar,ogrenciler};
 }
 
 /* ---------------------------------------------------------------- Report sections -> booklet tests
-   The report's sections run in booklet order. Each test takes consecutive sections until its question count is full. */
-function esle(rapor,kit){
+   The report's sections run in booklet order. Each test takes consecutive sections until its question count is full.
+   One A booklet per session: kitlar = {TYT: kit, AYT: kit}. A session without a booklet has no cut-outs (its sections are left out). */
+function esle(rapor,kitlar){
   const fail=m=>{throw new Error(m)};
-  const ozet='Rapor: '+rapor.bolumler.map(b=>b.ders+' '+b.n).join(', ')+'. Kitapçık: '+kit.testler.map(t=>t.ad+' '+t.soru).join(', ')+'.';
-  let ti=0,off=0;const bolumler=[];
-  for(const b of rapor.bolumler){
-    const t=kit.testler[ti];
-    if(!t||off+b.n>t.soru)fail('Cevap raporundaki bölümler soru kitapçığındaki testlerle eşleşmiyor. '+ozet);
-    bolumler.push({...b,test:ti,off});off+=b.n;if(off===t.soru){ti++;off=0}
+  const oturumlar=rapor.oturumlar||[...new Set(rapor.bolumler.map(b=>b.oturum||'TYT'))];
+  // a single booklet belongs to its own session (the one in its page header)
+  if(kitlar&&kitlar.testler)kitlar={[kitlar.oturum&&oturumlar.includes(kitlar.oturum)?kitlar.oturum:oturumlar[0]]:kitlar};
+  for(const ses of Object.keys(kitlar))if(kitlar[ses]&&!oturumlar.includes(ses))fail('Cevap raporunda '+ses+' sayfası yok, '+ses+' soru kitapçığı bu rapora eklenemez.');
+  const bolumler=[],testler=[],aralik={},ciftler=[];let t0=0;
+  for(const ses of oturumlar){
+    const kit=kitlar[ses];if(!kit)continue;
+    if(kit.sinav&&rapor.sinavNo&&kit.sinav!==rapor.sinavNo)fail(ses+' soru kitapçığı '+kit.sinav+' numaralı sınava ait, cevap raporu '+rapor.sinavNo+' numaralı sınav ('+rapor.ad+').');
+    const secs=rapor.bolumler.map((b,ri)=>({b,ri})).filter(x=>(x.b.oturum||'TYT')===ses);
+    const ozet=(oturumlar.length>1?ses+' · ':'')+'Rapor: '+secs.map(x=>x.b.ders+' '+x.b.n).join(', ')+'. Kitapçık: '+kit.testler.map(t=>t.ad+' '+t.soru).join(', ')+'.';
+    let ti=0,off=0;const yerel=[];
+    for(const {b,ri} of secs){
+      const t=kit.testler[ti];
+      if(!t||off+b.n>t.soru)fail('Cevap raporundaki bölümler soru kitapçığındaki testlerle eşleşmiyor. '+ozet);
+      yerel.push({...b,ri,test:t0+ti,off});off+=b.n;if(off===t.soru){ti++;off=0}
+    }
+    if(ti!==kit.testler.length||off!==0)fail('Cevap raporundaki bölümler soru kitapçığındaki testlerle eşleşmiyor. '+ozet);
+    // Din Kültürü and S.Felsefe are alternatives; a student sits one of them.
+    const din=yerel.findIndex(b=>key(b.ad).startsWith('DIN')),alt=yerel.findIndex(b=>/^(SFELSEFE|SOSYALFELSEFE)/u.test(key(b.ad)));
+    if(din>=0&&alt>=0)ciftler.push([bolumler.length+din,bolumler.length+alt]);
+    bolumler.push(...yerel);testler.push(...kit.testler.map(t=>t.soru));aralik[ses]=[t0,t0+kit.testler.length];t0+=kit.testler.length;
   }
-  if(ti!==kit.testler.length||off!==0)fail('Cevap raporundaki bölümler soru kitapçığındaki testlerle eşleşmiyor. '+ozet);
-  // Din Kültürü and S.Felsefe are alternatives; a student sits one of them.
-  const din=bolumler.findIndex(b=>key(b.ad).startsWith('DIN')),alt=bolumler.findIndex(b=>/^(SFELSEFE|SOSYALFELSEFE)/u.test(key(b.ad)));
-  return {bolumler,testler:kit.testler.map(t=>t.soru),cift:din>=0&&alt>=0?[din,alt]:null};
+  if(!bolumler.length)fail('Cevap raporundaki bölümler soru kitapçığındaki testlerle eşleşmiyor.');
+  return {bolumler,testler,cift:ciftler[0]||null,ciftler,aralik,oturumlar:Object.keys(aralik)};
+}
+// The part of a matched report that belongs to one session, with test numbers counted from that session's first test.
+function esOturum(es,ses){
+  const [a,b]=es.aralik[ses];
+  return {testler:es.testler.slice(a,b),bolumler:es.bolumler.filter(x=>x.test>=a&&x.test<b).map(x=>({...x,test:x.test-a}))};
 }
 
 /* ---------------------------------------------------------------- Çözüm kitapçığı: the A <-> B question map */
@@ -270,34 +337,64 @@ function haritaKur(pairs,es,rapor){
 
 /* ---------------------------------------------------------------- One student's defter */
 // Wrong or empty questions per ders, in booklet order. a = number in the A booklet, b = number in the student's own B booklet.
+// A student has one booklet per session (kits: {TYT:'A', AYT:'B'}); sections of a session the student did not sit are left out.
+// i = the section's index in the report, k = the question's position in the section (own booklet), ak = the same for the A booklet.
 function defterKur(rapor,es,harita,ogr,acik){
   const say=i=>{const b=es.bolumler[i];return ogr.cev.slice(b.bas,b.bas+b.n).filter(Boolean).length};
   const atla=new Set();
-  if(es.cift){const [d,f]=es.cift,sd=say(d),sf=say(f);if(sd===0&&sf>0)atla.add(d);if(sf===0&&sd>0)atla.add(f)}
-  const anahtar=rapor.anahtar[ogr.kit],bolumler=[];let yanlis=0,bos=0;
+  for(const [d,f] of es.ciftler||(es.cift?[es.cift]:[])){const sd=say(d),sf=say(f);if(sd===0&&sf>0)atla.add(d);if(sf===0&&sd>0)atla.add(f)}
+  const bolumler=[];let yanlis=0,bos=0;
   es.bolumler.forEach((b,i)=>{
-    if(atla.has(i)||(acik&&!acik.has(i)))return;
-    const sorular=[];
+    const ses=b.oturum||ogr.oturumlar?.[0]||'TYT';
+    if(atla.has(i)||(acik&&!acik.has(i))||(ogr.oturumlar&&!ogr.oturumlar.includes(ses)))return;
+    const kit=ogr.kits?ogr.kits[ses]:ogr.kit,anahtar=rapor.anahtar[kit],sorular=[];
     for(let k=0;k<b.n;k++){
       const g=b.bas+k,isaret=ogr.cev[g],dogru=anahtar[g];
       if(!harfOK(dogru)||isaret===dogru)continue;
-      const own=b.off+k+1,a=ogr.kit==='A'?own:(harita?harita.testler[b.test].bToA[own]:null);
-      sorular.push({test:b.test,own,a,b:ogr.kit==='B'?own:null,isaret,dogru,durum:isaret?'yanlis':'bos'});
+      const own=b.off+k+1,a=kit==='A'?own:(harita?.testler[b.test]?.bToA[own]??null);
+      sorular.push({test:b.test,i:b.ri??i,k,ak:a===null?null:a-b.off-1,own,a,b:kit==='B'?own:null,isaret,dogru,durum:isaret?'yanlis':'bos'});
     }
     if(!sorular.length)return;
     sorular.sort((x,y)=>(x.a??x.own)-(y.a??y.own));
     yanlis+=sorular.filter(s=>s.durum==='yanlis').length;bos+=sorular.filter(s=>s.durum==='bos').length;
-    bolumler.push({i,ders:b.ders,sorular});
+    bolumler.push({i,ri:b.ri??i,ders:b.ders,oturum:ses,kit,sorular,gorsel:sorular.every(s=>s.a!==null)});
   });
-  return {ogr,yanlis,bos,bolumler,gorsel:ogr.kit==='A'||!!harita};
+  return {ogr,yanlis,bos,bolumler,gorsel:bolumler.every(b=>b.gorsel)};
+}
+/* ---------------------------------------------------------------- Soru zorluğu ve madde kalitesi (src/zorluk.js)
+   Computed here, in memory, from the report's own answers: correct = 1, wrong or blank = 0. With a valid A <-> B map the A and B students are pooled on
+   A numbering; without it each booklet is analysed on its own numbers. Whoever left the whole section blank did not take it. A cancelled question
+   (a key that is not A-E) is left out of the totals. dis = the school's Madde Analizi (difficultyIndex) for the optional rank correlation. */
+function zorlukAnaliz(rapor,es,harita,dis){
+  const map=new Map(),bolumler=[];
+  rapor.bolumler.forEach((b,ri)=>{
+    const ses=b.oturum||'TYT',eb=es?es.bolumler.find(x=>x.ri===ri):null,hm=eb&&harita?.testler?.[eb.test]||null;
+    const kimler=rapor.ogrenciler.filter(o=>(o.oturumlar||[ses]).includes(ses)),kitOf=o=>o.kits?o.kits[ses]:o.kit;
+    // pos(o, k): the position in student o's own booklet of the group's k-th question
+    const grup=(kit,satirlar,pos)=>{
+      const atla=new Set();
+      for(let k=0;k<b.n;k++)if(satirlar.some(o=>!harfOK(rapor.anahtar[kitOf(o)]?.[b.bas+pos(o,k)])))atla.add(k);
+      const rows=satirlar.map(o=>Array.from({length:b.n},(_,k)=>{if(atla.has(k))return -1;const key=rapor.anahtar[kitOf(o)][b.bas+pos(o,k)],v=o.cev[b.bas+pos(o,k)];return v?(v===key?1:0):-1}));
+      const a=ZORLUK.bolum(rows,{k:b.n,atla});if(!a.n)return null;
+      let rho=null;
+      if(dis&&eb&&kit!=='B'){const x=[],y=[];a.maddeler.forEach(m=>{const q=dis.map.get(eb.test+':'+(eb.off+m.i+1));if(!m.iptal&&q&&m.p!==null){x.push(m.p);y.push(q.p)}});rho=ZORLUK.spearman(x,y)}
+      a.maddeler.forEach(m=>map.set(ri+':'+(kit==='B'?'B':'A')+':'+(m.i+1),{...m,ri,no:m.i+1,kit}));
+      return {kit,a,rho};
+    };
+    const gruplar=[];
+    if(hm){const g=grup('AB',kimler,(o,k)=>kitOf(o)==='B'?hm.aToB[eb.off+k+1]-eb.off-1:k);if(g)gruplar.push(g)}
+    else for(const kit of ['A','B']){const g=grup(kit,kimler.filter(o=>kitOf(o)===kit),(o,k)=>k);if(g)gruplar.push(g)}
+    gruplar.forEach(g=>{g.satir=ZORLUK.bolumSatiri(b.ders+(gruplar.length>1?' · '+g.kit+' kitapçığı':''),g.a,g.rho)});
+    bolumler.push({ri,ad:b.ad,ders:b.ders,oturum:ses,gruplar});
+  });
+  return {map,bolumler};
 }
 /* Read the existing Konu Takibi madde analysis; A-booklet question numbers are the join key.
    Never infer an individual answer from aggregate kazanım counts, nor a difficulty from missing data. */
 const level=p=>p>=.75?'kolay':p<.25?'zor':'orta';
-const levelName={kolay:'Kolay',orta:'Orta',zor:'Zor',bilinmeyen:'Zorluk bilinmiyor'};
 function courseKey(s){
   const k=key(clean(s).replace(/-[TA]$/iu,'').replace(/\b(?:TYT|AYT)\b/giu,''));
-  const aliases={TUR:'TURKCE',TURK:'TURKCE',TEMELMATEMATIK:'MATEMATIK',COG:'COGRAFYA',TAR:'TARIH',FIZ:'FIZIK',KIM:'KIMYA',BIO:'BIYOLOJI',DIN:'DINKULTURU',DINKULTURUVEAHLAKBILGISI:'DINKULTURU',SFELSEFE:'EKFELSEFE',SOSYALFELSEFE:'EKFELSEFE',TURKDILIVEEDEBIYATI:'EDEBIYAT'};
+  const aliases={TUR:'TURKCE',TURK:'TURKCE',TEMELMATEMATIK:'MATEMATIK',COG:'COGRAFYA',TAR:'TARIH',FIZ:'FIZIK',KIM:'KIMYA',BIO:'BIYOLOJI',DIN:'DINKULTURU',DINKULTURUVEAHLAKBILGISI:'DINKULTURU',SFELSEFE:'EKFELSEFE',SOSYALFELSEFE:'EKFELSEFE',TURKDILIVEEDEBIYATI:'EDEBIYAT',TURKDILIVEEDB:'EDEBIYAT',FELSEFEGR:'FELSEFE',FELSEFEGRUBU:'FELSEFE'};
   return aliases[k]||k;
 }
 function difficultyIndex(rapor,es,source){
@@ -328,26 +425,37 @@ function difficultyIndex(rapor,es,source){
   }
   return {map,issues:[...new Set(issues)]};
 }
+// What is kept for one student: the status, the selected difficulty chips (bantlar: a Set of band keys, null = all five) and Kendi seviyesi
+// (options.kendi(ogr, bolum, z) -> boolean). index.map holds the section analysis; a question without a label is kept only while all five bands are selected.
+const zAnahtar=s=>s.i+':'+(s.a!==null?'A:'+(s.ak+1):'B:'+(s.k+1));
+const BANT_ANAHTAR=()=>ZORLUK.BANTLAR.map(x=>x[0]);
 function filterDefter(d,options={},index={map:new Map()}){
   let yanlis=0,bos=0,unknown=0;
+  const tum=!options.bantlar||BANT_ANAHTAR().every(k=>options.bantlar.has(k));
   const bolumler=d.bolumler.map(b=>({...b,sorular:b.sorular.flatMap(s=>{
     if(options.status&&options.status!=='all'&&s.durum!==options.status)return [];
-    const z=s.a===null?null:index.map.get(s.test+':'+s.a),difficulty=z?.level||'bilinmeyen';
-    if(!z)unknown++;
-    if(options.difficulty&&options.difficulty!=='all'&&options.difficulty!==difficulty)return [];
+    const z=index.map.get(zAnahtar(s))||null;
+    if(!z||!z.bant)unknown++;
+    if(!tum&&!(z&&z.bant&&options.bantlar.has(z.bant)))return [];
+    if(options.kendi&&!options.kendi(d.ogr,b,z))return [];
     if(s.durum==='yanlis')yanlis++;else bos++;
-    return [{...s,difficulty,p:z?.p??null}];
+    return [{...s,z}];
   })})).filter(b=>b.sorular.length);
-  return {...d,bolumler,yanlis,bos,unknown,filterText:[options.difficulty&&options.difficulty!=='all'?levelName[options.difficulty]:null,options.status==='bos'?'Yalnızca boş':options.status==='yanlis'?'Yalnızca yanlış':null].filter(Boolean).join(' · ')};
+  const adlar=tum?[]:ZORLUK.BANTLAR.filter(([k])=>options.bantlar.has(k)).map(x=>x[1]);
+  return {...d,bolumler,yanlis,bos,unknown,gorsel:bolumler.every(b=>b.gorsel),
+    filterText:[...adlar,options.kendi?'Kendi seviyesi':null,options.status==='bos'?'Yalnızca boş':options.status==='yanlis'?'Yalnızca yanlış':null].filter(Boolean).join(' · ')};
 }
 /* ---------------------------------------------------------------- Screen and print. State lives only in this page's memory. */
 const OLCEK=2,BOSLUK=8;
-const S={kit:null,rapor:null,es:null,pairs:null,harita:null,durum:{kit:'',rapor:'',coz:''},hata:{kit:'',rapor:'',coz:''},sube:'',ogr:'',status:'all',difficulty:'all',zexam:'',kapali:new Set(),mesgul:'',crops:new Map(),jeton:0,hazir:Promise.resolve(),ilerleme:''};
+const S={kitlar:{},kitDurum:{},rapor:null,es:null,pairs:{},cozum:{},cozDurum:{},harita:null,durum:{kit:'',rapor:'',coz:''},hata:{kit:'',rapor:'',coz:''},sube:'',ogr:'',status:'all',bantlar:null,kendi:false,kapali:new Set(),crops:new Map(),jeton:0,hazir:Promise.resolve(),ilerleme:'',mesgul:'',zOnbellek:null};
 const h=s=>kacis(String(s??''));
 const rehber=()=>typeof rehberMi==='function'&&rehberMi();
 const etkin=()=>EK.sekme==='yanlislar'&&rehber()&&!!document.getElementById('ydKok');
 function kitapBirak(kit){if(kit?.pdf){try{kit.pdf.destroy()}catch(e){}}}
 function resimleriBirak(){for(const c of S.crops.values())try{URL.revokeObjectURL(c.url)}catch(e){}S.crops=new Map()}
+const kitVar=()=>Object.keys(S.kitlar).length>0;
+// The booklet of a (merged) test number: its session's kit and the test's number inside that kit.
+function testBul(t){for(const [ses,[a,b]] of Object.entries(S.es.aralik))if(t>=a&&t<b)return {kit:S.kitlar[ses],t:t-a,ses};return null}
 // pdf.js text per page with its size; the document stays open only for the booklet (it is rendered later).
 async function pdfOku(file,tut){
   if(file.size>60*1024*1024)throw new Error('PDF en fazla 60 MB olabilir.');
@@ -364,8 +472,17 @@ async function pdfOku(file,tut){
     ok=true;return {pages,pdf:tut?pdf:null};
   }finally{if(!(ok&&tut))await task.destroy()}
 }
-const sayfaDizi=kit=>kit.testler.map(t=>t.ad+' '+t.soru).join(', ');
 const adet=kit=>kit.testler.reduce((a,t)=>a+t.soru,0);
+const kitDurumYaz=()=>{S.durum.kit=Object.entries(S.kitlar).sort((a,b)=>(a[0]==='AYT')-(b[0]==='AYT')).map(([ses,k])=>S.kitDurum[ses]).join('\n')};
+const cozDurumYaz=()=>{S.durum.coz=Object.keys(S.cozum).sort((a,b)=>(a==='AYT')-(b==='AYT')).map(ses=>S.cozDurum[ses]).join('\n')};
+// The çözüm maps of the sessions as one table indexed by the merged test number (null where a session has none).
+function haritaBirlestir(){
+  const ks=Object.keys(S.cozum);
+  if(!ks.length||!S.es){S.harita=null;return}
+  const testler=Array(S.es.testler.length).fill(null);let adet=0;
+  for(const ses of ks){const [a]=S.es.aralik[ses];S.cozum[ses].testler.forEach((t,i)=>{testler[a+i]=t});adet+=S.cozum[ses].adet}
+  S.harita={testler,adet};
+}
 // A new file is accepted only if it fits the others; otherwise nothing changes except the message.
 async function yukle(tur,file){
   S.hata[tur]='';
@@ -374,33 +491,61 @@ async function yukle(tur,file){
       const {pages,pdf}=await pdfOku(file,true);let kit;
       try{kit=kitapcikCoz(pages)}catch(e){await pdf.destroy();throw e}
       kit.pdf=pdf;kit.onbellek=new Map();kit.sayfa=pages.length;kit.ofset=pages.map(p=>[p.ox,p.oy]);
-      let es=null;if(S.rapor){try{es=esle(S.rapor,kit)}catch(e){await pdf.destroy();throw new Error(e.message+' Soru kitapçığı eklenmedi.')}}
-      kitapBirak(S.kit);resimleriBirak();S.kit=kit;S.es=es;S.durum.kit='✓ '+kit.sayfa+' sayfa · '+adet(kit)+' soru';
+      const ses=kit.oturum||(S.rapor?.oturumlar.length===1?S.rapor.oturumlar[0]:'TYT');kit.oturum=ses;
+      const kitlar={...S.kitlar,[ses]:kit};
+      let es=null;if(S.rapor){try{es=esle(S.rapor,kitlar)}catch(e){await pdf.destroy();throw new Error(e.message+' Soru kitapçığı eklenmedi.')}}
+      kitapBirak(S.kitlar[ses]);resimleriBirak();S.kitlar=kitlar;S.es=es;S.kitDurum[ses]='✓ '+ses+' · '+kit.sayfa+' sayfa · '+adet(kit)+' soru';kitDurumYaz();
       yenidenDogrula();
     }else if(tur==='rapor'){
       if(file.size>15*1024*1024)throw new Error('Excel dosyası en fazla 15 MB olabilir.');
       const rapor=await raporCoz(new Uint8Array(await file.arrayBuffer()));
-      let es=null;if(S.kit){try{es=esle(rapor,S.kit)}catch(e){throw new Error(e.message+' Cevap raporu eklenmedi.')}}
-      S.rapor=rapor;S.es=es;S.sube='';S.ogr='';S.zexam='';S.kapali=new Set();S.durum.rapor='✓ '+rapor.ogrenciler.length+' öğrenci'+(rapor.ad?' · '+rapor.ad:'');
+      let es=null;if(kitVar()){try{es=esle(rapor,S.kitlar)}catch(e){throw new Error(e.message+' Cevap raporu eklenmedi.')}}
+      S.rapor=rapor;S.es=es;S.sube='';S.ogr='';S.kapali=new Set();S.zOnbellek=null;S.durum.rapor='✓ '+rapor.ogrenciler.length+' öğrenci'+(rapor.ad?' · '+rapor.ad:'')+(rapor.oturumlar.length>1?' · '+rapor.oturumlar.join(' + '):'');
       yenidenDogrula();
     }else{
-      if(!S.kit||!S.rapor||!S.es)throw new Error('Önce soru kitapçığını ve cevap raporunu yükleyin.');
-      const {pages}=await pdfOku(file,false),pairs=cozumEtiketleri(pages),harita=haritaKur(pairs,S.es,S.rapor);
-      S.pairs=pairs;S.harita=harita;S.durum.coz='✓ '+harita.adet+' soru eşleşmesi';
+      if(!kitVar()||!S.rapor||!S.es)throw new Error('Önce soru kitapçığını ve cevap raporunu yükleyin.');
+      const {pages}=await pdfOku(file,false),pairs=cozumEtiketleri(pages);
+      // The file belongs to the session whose question count it matches (TYT 120, AYT 160 …); the first that validates takes it.
+      const adaylar=S.es.oturumlar.filter(ses=>esOturum(S.es,ses).testler.reduce((a,b)=>a+b,0)===pairs.length);
+      let ilk=null,bulundu=null;
+      for(const ses of adaylar.length?adaylar:S.es.oturumlar.slice(0,1)){
+        try{bulundu={ses,harita:haritaKur(pairs,esOturum(S.es,ses),S.rapor)};break}catch(e){ilk=ilk||e}
+      }
+      if(!bulundu)throw ilk;
+      S.pairs[bulundu.ses]=pairs;S.cozum[bulundu.ses]=bulundu.harita;S.cozDurum[bulundu.ses]='✓ '+bulundu.ses+' · '+bulundu.harita.adet+' soru eşleşmesi';
+      haritaBirlestir();cozDurumYaz();
     }
   }catch(e){S.hata[tur]=e.message}
 }
-// The çözüm file is checked against whatever booklet and report are current; it is dropped when it no longer fits.
+// The çözüm files are checked against whatever booklets and report are current; one that no longer fits is dropped.
 function yenidenDogrula(){
-  if(!S.pairs)return;
-  try{S.harita=S.es?haritaKur(S.pairs,S.es,S.rapor):null}catch(e){S.harita=null;S.hata.coz=e.message}
-  if(!S.harita){S.pairs=null;S.durum.coz=''}
+  for(const ses of Object.keys(S.pairs)){
+    try{if(!S.es||!S.es.aralik[ses])throw new Error('');S.cozum[ses]=haritaKur(S.pairs[ses],esOturum(S.es,ses),S.rapor);S.cozDurum[ses]='✓ '+ses+' · '+S.cozum[ses].adet+' soru eşleşmesi'}
+    catch(e){if(e.message)S.hata.coz=e.message;delete S.pairs[ses];delete S.cozum[ses];delete S.cozDurum[ses]}
+  }
+  haritaBirlestir();cozDurumYaz();
 }
 const ogrenciler=()=>S.rapor.ogrenciler.filter(o=>(!S.sube||o.sube===S.sube)&&(!S.ogr||String(o.id)===S.ogr)).sort((a,b)=>a.sube.localeCompare(b.sube,'tr',{numeric:true})||a.ad.localeCompare(b.ad,'tr'));
+// The school's own per-question success rates (Konu Takibi → Madde Analizi) of the same exam, only for the rank correlation in the section line.
 const difficultySources=()=>Object.entries(D?.konutakibi?.zorluk||{}).filter(([,e])=>e?.madde);
-function selectedDifficulty(){const all=difficultySources();if(S.zexam)return all.find(([k])=>k===S.zexam)?.[1]||null;const matches=all.filter(([,e])=>key(e.ad)===key(S.rapor?.ad));return matches.length===1?matches[0][1]:null}
+function selectedDifficulty(){const matches=difficultySources().filter(([,e])=>key(e.ad)===key(S.rapor?.ad));return matches.length===1?matches[0][1]:null}
 const difficultyContext=()=>difficultyIndex(S.rapor,S.es,selectedDifficulty());
-const defterler=()=>{const index=difficultyContext();return ogrenciler().map(o=>filterDefter(defterKur(S.rapor,S.es,S.harita,o,new Set(S.es.bolumler.map((b,i)=>i).filter(i=>!S.kapali.has(i)))),{status:S.status,difficulty:S.difficulty},index))};
+function zorlukBilgi(){
+  if(!S.rapor)return null;
+  const kaynak=S.es?selectedDifficulty():null,c=S.zOnbellek;
+  if(c&&c.rapor===S.rapor&&c.es===S.es&&c.harita===S.harita&&c.kaynak===kaynak)return c.v;
+  const dis=S.es&&kaynak?difficultyIndex(S.rapor,S.es,kaynak):null;
+  const v=zorlukAnaliz(S.rapor,S.es,S.harita,dis&&dis.map.size?dis:null);S.zOnbellek={rapor:S.rapor,es:S.es,harita:S.harita,kaynak,v};return v;
+}
+// Kendi seviyesi: the student's predicted success P = σ(a − (b − μθ)) is between .35 and .80; without an ability for the ders, the Orta band.
+function kendiSeviyesi(ogr,b,z){
+  const kd=typeof KADEME!=='undefined'?KADEME.kodDers(S.rapor.bolumler[b.ri].ad):null,a=kd?KADEME.yetenek(ogr.no,kd.oturum,kd.kod):null;
+  return ZORLUK.kendiSeviyesi(a,z?.rel,z?.bant);
+}
+const defterler=()=>{
+  const za=zorlukBilgi(),acik=new Set(S.es.bolumler.map((b,i)=>i).filter(i=>!S.kapali.has(i)));
+  return ogrenciler().map(o=>filterDefter(defterKur(S.rapor,S.es,S.harita,o,acik),{status:S.status,bantlar:S.bantlar,kendi:S.kendi?kendiSeviyesi:null},za));
+};
 
 /* Cropping: each page is rendered once at OLCEK and every question is copied out of it. */
 async function sayfaCiz(kit,n){
@@ -434,11 +579,11 @@ async function soruKirp(kit,t,no){
   return {url:URL.createObjectURL(blob),w:W,h:keep,genis:q.genis};
 }
 async function calis(my,liste){
-  let n=0;const kit=S.kit;
+  let n=0;const kitlar=S.kitlar;
   for(const [t,no] of liste){
-    if(my!==S.jeton||kit!==S.kit)return;
+    if(my!==S.jeton||kitlar!==S.kitlar)return;
     const k=t+':'+no;
-    if(!S.crops.has(k)){try{S.crops.set(k,await soruKirp(kit,t,no))}catch(e){S.hata.kit='Soru '+no+' kesilemedi: '+e.message;break}}
+    if(!S.crops.has(k)){try{const f=testBul(t);S.crops.set(k,await soruKirp(f.kit,f.t,no))}catch(e){S.hata.kit='Soru '+no+' kesilemedi: '+e.message;break}}
     n++;S.ilerleme=n<liste.length?'Sorular hazırlanıyor… '+n+'/'+liste.length:'';
     if(my!==S.jeton)return;
     for(const img of document.querySelectorAll('img[data-yd="'+k+'"]')){const c=S.crops.get(k);if(c){img.src=c.url;img.removeAttribute('data-bekle')}}
@@ -446,51 +591,65 @@ async function calis(my,liste){
   }
 }
 function hazirla(){
-  if(!S.kit||!S.rapor||!S.es||typeof document==='undefined')return S.hazir;
+  if(!kitVar()||!S.rapor||!S.es||typeof document==='undefined')return S.hazir;
   const my=++S.jeton,gerek=new Map();
-  for(const d of defterler())if(d.gorsel)for(const b of d.bolumler)for(const s of b.sorular){const k=s.test+':'+s.a;if(!S.crops.has(k)&&!gerek.has(k))gerek.set(k,[s.test,s.a])}
-  const liste=[...gerek.values()].sort((x,y)=>S.kit.testler[x[0]].sorular[x[1]-1].parcalar[0].p-S.kit.testler[y[0]].sorular[y[1]-1].parcalar[0].p||x[0]-y[0]||x[1]-y[1]);
+  for(const d of defterler())for(const b of d.bolumler)if(b.gorsel)for(const s of b.sorular){const k=s.test+':'+s.a;if(!S.crops.has(k)&&!gerek.has(k))gerek.set(k,[s.test,s.a])}
+  const sayfa=x=>{const f=testBul(x[0]);return f.kit.testler[f.t].sorular[x[1]-1].parcalar[0].p};
+  const liste=[...gerek.values()].sort((x,y)=>testBul(x[0]).ses===testBul(y[0]).ses?sayfa(x)-sayfa(y)||x[0]-y[0]||x[1]-y[1]:x[0]-y[0]);
   S.hazir=S.hazir.then(()=>calis(my,liste)).catch(()=>{});
   return S.hazir;
 }
 
 /* Markup */
-const isaretYazi=s=>s.durum==='bos'?'Boş':'Senin cevabın: '+s.isaret;
+// A small label next to the question: "Zor", or "Zor?" where the band is not certain. A question without a label shows nothing.
+const zHap=z=>z&&z.bant?'<span class="yd-zorluk yd-z-'+z.bant+(z.belirsiz?' yd-belirsiz':'')+(z.dusuk?' yd-dusuk':'')+'"'+(z.dusuk?' title="Güvenilirlik düşük"':'')+'>'+h(ZORLUK.etiketYazi(z.bant,z.belirsiz))+'</span>':'';
 function soruHTML(s,gorsel){
-  const etiket='Soru '+(s.a??s.own),ek=s.b!==null&&s.a!==null?' (B kitapçığında '+s.b+')':'';
-  const isaret='<span class="yd-isaret '+(s.durum==='bos'?'yd-b':'yd-y')+'">'+h(isaretYazi(s))+'</span>';
-  if(!gorsel)return '<li class="yd-satir"><b>Soru '+s.own+'</b>'+isaret+'</li>';
-  const c=S.crops.get(s.test+':'+s.a),genis=S.kit.testler[s.test].sorular[s.a-1].genis;
-  return '<figure class="yd-soru'+(genis?' yd-genis':'')+'"><figcaption><span><b>'+etiket+'</b>'+ek+'</span>'+isaret+'</figcaption><img alt="'+etiket+'" data-yd="'+s.test+':'+s.a+'"'+(c?' src="'+c.url+'"':' data-bekle="1"')+'></figure>';
+  const etiket='Soru '+(s.a??s.own),ek=s.b!==null&&s.a!==null?' (B kitapçığında '+s.b+')':'',hap=zHap(s.z);
+  if(!gorsel)return '<li class="yd-satir"><b>Soru '+s.own+'</b>'+hap+'</li>';
+  const c=S.crops.get(s.test+':'+s.a),genis=testBul(s.test).kit.testler[testBul(s.test).t].sorular[s.a-1].genis;
+  return '<figure class="yd-soru'+(genis?' yd-genis':'')+'"><figcaption><span><b>'+etiket+'</b>'+ek+'</span>'+hap+'</figcaption><img alt="'+etiket+'" data-yd="'+s.test+':'+s.a+'"'+(c?' src="'+c.url+'"':' data-bekle="1"')+'></figure>';
 }
+// The last page: the student's own answers next to the key, one small table per ders (the student's own question numbers).
+const cevapTablosu=b=>'<table class="yd-cevap"><caption>'+h(b.ders)+'</caption><thead><tr><th scope="col">Soru</th><th scope="col">Senin cevabın</th><th scope="col">Doğru cevap</th></tr></thead><tbody>'+
+  b.sorular.map(s=>'<tr><td>'+s.own+'</td><td>'+(s.durum==='bos'?'Boş':h(s.isaret))+'</td><td>'+h(s.dogru)+'</td></tr>').join('')+'</tbody></table>';
 function ogrHTML(d){
-  const o=d.ogr,toplam=d.bolumler.reduce((a,b)=>a+b.sorular.length,0),gorsel=d.gorsel&&!!S.kit;
+  const o=d.ogr,toplam=d.bolumler.reduce((a,b)=>a+b.sorular.length,0);
   const kimlik='Öğrenci No <b>'+h(o.no)+'</b> · '+h(o.sube)+(S.rapor.ad?' · '+h(S.rapor.ad):'');
   const sayi='<b>'+d.yanlis+'</b> yanlış · <b>'+d.bos+'</b> boş';
   const ust='<header class="yd-ust"><h2>'+h(o.ad)+'</h2><p class="yd-kimlik">'+kimlik+'</p><p class="yd-say">'+sayi+'</p>'+(d.filterText?'<p class="yd-kimlik">'+h(d.filterText)+'</p>':'')+'</header>';
   if(!toplam)return '<article class="yd-ogr yd-yok" data-yd-ogr="'+o.id+'">'+ust+'<p class="yd-not">'+(d.filterText?'Seçilen filtrelerde soru yok.':'Yanlış veya boş soru yok.')+'</p></article>';
-  const dersler=d.bolumler.map(b=>'<section class="yd-ders"><h3>'+h(b.ders)+' <span>'+b.sorular.length+'</span></h3>'+(gorsel?'<div class="yd-sorular">'+b.sorular.map(s=>soruHTML(s,true)).join('')+'</div>':'<ul class="yd-liste">'+b.sorular.map(s=>soruHTML(s,false)).join('')+'</ul>')+'</section>').join('');
-  const not=gorsel?'':'<p class="yd-not">'+o.kit+' kitapçığı: sorular kendi kitapçığından çözülecek</p>';
-  const anahtar='<section class="yd-anahtar"><h2>Doğru cevaplar</h2><p class="yd-kimlik">'+h(o.ad)+' · '+kimlik+'</p>'+d.bolumler.map(b=>'<div class="yd-ak"><b>'+h(b.ders)+'</b><span class="yd-harfler">'+b.sorular.map(s=>'<span><i>'+s.own+'</i> '+s.dogru+'</span>').join('')+'</span></div>').join('')+'</section>';
-  return '<article class="yd-ogr" data-yd-ogr="'+o.id+'">'+ust+not+dersler+anahtar+'</article>';
+  const dersler=d.bolumler.map(b=>'<section class="yd-ders"><h3>'+h(b.ders)+' <span>'+b.sorular.length+'</span></h3>'+(b.gorsel?'<div class="yd-sorular">'+b.sorular.map(s=>soruHTML(s,true)).join('')+'</div>':'<ul class="yd-liste">'+b.sorular.map(s=>soruHTML(s,false)).join('')+'</ul>')+'</section>').join('');
+  const notlar=[...new Set(d.bolumler.filter(b=>!b.gorsel).map(b=>b.kit))];
+  const not=notlar.length?'<p class="yd-not">'+notlar.join(', ')+' kitapçığı: sorular kendi kitapçığından çözülecek</p>':'';
+  const cevap='<section class="yd-anahtar"><h2>Cevaplar</h2><p class="yd-kimlik">'+h(o.ad)+' · '+kimlik+'</p><div class="yd-cevaplar">'+d.bolumler.map(cevapTablosu).join('')+'</div></section>';
+  return '<article class="yd-ogr" data-yd-ogr="'+o.id+'">'+ust+not+dersler+cevap+'</article>';
 }
-const durumSatiri=(tur,ad,id)=>'<div class="yd-dosya"><label class="et-dugme'+(S.durum[tur]?'':' birincil')+'">'+ad+'<input id="'+id+'" type="file" accept="'+(tur==='rapor'?'.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/pdf,.pdf')+'" class="yd-file"'+(S.mesgul?' disabled':'')+'></label><span class="yd-durum">'+(S.mesgul===tur?'Okunuyor…':h(S.durum[tur]))+'</span>'+(S.hata[tur]?'<span class="yd-hata" role="alert">'+h(S.hata[tur])+'</span>':'')+'</div>';
+const durumSatiri=(tur,ad,id)=>'<div class="yd-dosya"><label class="et-dugme'+(S.durum[tur]?'':' birincil')+'">'+ad+'<input id="'+id+'" type="file" accept="'+(tur==='rapor'?'.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/pdf,.pdf')+'"'+(tur==='rapor'?'':' multiple')+' class="yd-file"'+(S.mesgul?' disabled':'')+'></label><span class="yd-durum">'+(S.mesgul===tur?'Okunuyor…':S.durum[tur].split('\n').map(h).join('<br>'))+'</span>'+(S.hata[tur]?'<span class="yd-hata" role="alert">'+h(S.hata[tur])+'</span>':'')+'</div>';
+const f2=v=>ZORLUK.sayi(v);
+// Madde kalitesi: on screen only (not printed). One compact table per ders and booklet group; the row of a flagged question is marked.
+function analizHTML(za){
+  const gruplar=za.bolumler.flatMap(b=>b.gruplar.map(g=>({b,g})));
+  if(!gruplar.length)return '';
+  const satir=m=>'<tr'+(m.bayrak.length?' class="yd-isaretli"':'')+'><td>'+(m.i+1)+'</td>'+(m.iptal?'<td colspan="4">İptal</td>':'<td>'+f2(m.p)+'</td><td>'+f2(m.rel)+'</td><td>'+f2(m.rit)+'</td><td>'+h(m.bayrak.join(' · '))+'</td>')+'</tr>';
+  return '<section class="yd-analiz"><h2>Madde kalitesi</h2>'+gruplar.map(({b,g})=>'<details class="yd-kalite"><summary>'+h(g.satir)+'</summary><div class="et-kaydir"><table class="et-tablo" aria-label="Madde kalitesi · '+h(b.ders)+'"><thead><tr><th scope="col">Soru</th><th scope="col">p</th><th scope="col">b</th><th scope="col">r<sub>it</sub></th><th scope="col">İşaret</th></tr></thead><tbody>'+
+    g.a.maddeler.map(satir).join('')+'</tbody></table></div></details>').join('')+'</section>';
+}
+const chipHtml=(k,ad,secili)=>'<button type="button" class="yd-chip" data-yd-z="'+k+'" aria-pressed="'+secili+'">'+h(ad)+'</button>';
 function content(){
   const top='<div class="yd-bas et-bas"><h1 class="et-baslik">Yanlışlar defteri</h1></div><div class="yd-dosyalar">'+durumSatiri('kit','Soru kitapçığı (A)','ydKit')+durumSatiri('rapor','Cevap raporu','ydRapor')+durumSatiri('coz','Çözüm kitapçığı','ydCoz')+'</div>';
-  if(!S.kit||!S.rapor||!S.es)return top;
+  if(!kitVar()||!S.rapor||!S.es)return top;
   const subeler=[...new Set(S.rapor.ogrenciler.map(o=>o.sube))].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true}));
   const inSube=S.rapor.ogrenciler.filter(o=>!S.sube||o.sube===S.sube).sort((a,b)=>a.ad.localeCompare(b.ad,'tr'));
   const opt=(v,t,sec)=>'<option value="'+h(v)+'"'+(sec?' selected':'')+'>'+h(t)+'</option>';
   const sel=(label,f,opts)=>'<label class="yd-sec">'+label+'<select data-yd-f="'+f+'">'+opts+'</select></label>';
   const list=defterler(),soru=list.reduce((a,d)=>a+d.bolumler.reduce((x,b)=>x+b.sorular.length,0),0);
+  const secili=k=>!S.bantlar||S.bantlar.has(k);
+  const chips='<div class="yd-sec yd-zsec"><span id="ydZorlukEtiket">Zorluk</span><div class="yd-chips" role="group" aria-labelledby="ydZorlukEtiket">'+ZORLUK.BANTLAR.map(([k,ad])=>chipHtml(k,ad,secili(k))).join('')+chipHtml('kendi','Kendi seviyesi',S.kendi)+'</div></div>';
   const filtre='<div class="yd-filtre">'+sel('Şube','sube',opt('','Tüm şubeler',!S.sube)+subeler.map(s=>opt(s,s,s===S.sube)).join(''))+sel('Öğrenci','ogr',opt('','Tüm öğrenciler ('+inSube.length+')',!S.ogr)+inSube.map(o=>opt(o.id,o.ad+' · '+o.no,String(o.id)===S.ogr)).join(''))+
-    sel('Soru durumu','status',[['all','Yanlış ve boş'],['yanlis','Yalnızca yanlış'],['bos','Yalnızca boş']].map(([v,l])=>opt(v,l,S.status===v)).join(''))+
-    sel('Zorluk','difficulty',[['all','Tüm zorluklar'],['kolay','Kolay · en az %75 doğru'],['orta','Orta · %25–75 arası (%75 hariç)'],['zor','Zor · %25’ten az doğru'],['bilinmeyen','Zorluk bilinmiyor']].map(([v,l])=>opt(v,l,S.difficulty===v)).join(''))+
-    sel('Madde Analizi · Konu Takibi','zexam',opt('','Aynı sınavı otomatik eşleştir',!S.zexam)+difficultySources().map(([k,e])=>opt(k,e.ad+' · '+e.oturum,S.zexam===k)).join(''))+'</div>';
-  const zctx=difficultyContext(),unknown=list.reduce((n,d)=>n+d.unknown,0),zinfo=(S.difficulty!=='all'?'<p class="yd-not">'+h(zctx.issues.join(' '))+(unknown?' '+unknown+' yanlış/boş sorunun zorluğu bilinmiyor.':'')+' Zorluk, Konu Takibi’ndeki okul doğru oranıdır. B kitapçığında A soru eşleşmesi gerekir.</p>':'');
+    sel('Soru durumu','status',[['all','Yanlış ve boş'],['yanlis','Yalnızca yanlış'],['bos','Yalnızca boş']].map(([v,l])=>opt(v,l,S.status===v)).join(''))+chips+'</div>';
   const dersler='<div class="yd-dersler" role="group" aria-label="Dersler">'+S.es.bolumler.map((b,i)=>'<label><input type="checkbox" data-yd-ders="'+i+'"'+(S.kapali.has(i)?'':' checked')+'>'+h(b.ders)+'</label>').join('')+'</div>';
   const arac='<div class="yd-arac"><button type="button" class="et-dugme birincil" data-yd-yazdir'+(soru?'':' disabled')+'>Yazdır</button><span class="yd-ozet">'+list.length+' öğrenci · '+soru+' soru</span><span id="ydIlerleme" class="yd-ozet" role="status">'+h(S.ilerleme)+'</span></div>';
-  return top+filtre+dersler+zinfo+arac+'<div class="yd-baski" id="ydBaski">'+list.map(ogrHTML).join('')+'</div>';
+  return top+filtre+dersler+arac+analizHTML(zorlukBilgi())+'<div class="yd-baski" id="ydBaski">'+list.map(ogrHTML).join('')+'</div>';
 }
 function gorunum(){
   if(!rehber())return '<p>Bu sayfa rehber öğretmen içindir.</p>';
@@ -501,9 +660,9 @@ function render(focus){
   const root=document.getElementById('ydKok');if(!etkin()||!root)return;
   root.innerHTML=content();hazirla();if(focus)root.querySelector(focus)?.focus();
 }
-async function dosyaYukle(tur,file){
+async function dosyaYukle(tur,files){
   if(S.mesgul)return;S.mesgul=tur;render();
-  try{await yukle(tur,file)}finally{S.mesgul='';render()}
+  try{for(const f of files)await yukle(tur,f)}finally{S.mesgul='';render()}
 }
 
 /* Print: only the defter pages, A4 portrait. The wait lets every crop finish first. */
@@ -530,14 +689,24 @@ if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener(
 document.addEventListener('change',ev=>{
   if(!etkin())return;const el=ev.target;
   const dosya={ydKit:'kit',ydRapor:'rapor',ydCoz:'coz'}[el.id];
-  if(dosya){const f=el.files&&el.files[0];el.value='';if(f)dosyaYukle(dosya,f);return}
+  if(dosya){const f=[...(el.files||[])];el.value='';if(f.length)dosyaYukle(dosya,f);return}
   if(el.dataset?.ydF==='sube'){S.sube=el.value;if(S.ogr&&S.rapor.ogrenciler.find(o=>String(o.id)===S.ogr)?.sube!==S.sube&&S.sube)S.ogr='';render('[data-yd-f="sube"]');return}
   if(el.dataset?.ydF==='ogr'){S.ogr=el.value;render('[data-yd-f="ogr"]');return}
-  if(['status','difficulty','zexam'].includes(el.dataset?.ydF)){const k=el.dataset.ydF,allowed={status:['all','yanlis','bos'],difficulty:['all','kolay','orta','zor','bilinmeyen'],zexam:['',...difficultySources().map(([id])=>id)]};if(allowed[k].includes(el.value))S[k]=el.value;render('[data-yd-f="'+k+'"]');return}
+  if(el.dataset?.ydF==='status'){if(['all','yanlis','bos'].includes(el.value))S.status=el.value;render('[data-yd-f="status"]');return}
   if(el.dataset?.ydDers!==undefined){const i=+el.dataset.ydDers;if(el.checked)S.kapali.delete(i);else S.kapali.add(i);render('[data-yd-ders="'+i+'"]')}
 });
-document.addEventListener('click',ev=>{if(!etkin())return;if(ev.target.closest?.('[data-yd-yazdir]'))yazdir()});
+document.addEventListener('click',ev=>{
+  if(!etkin())return;
+  if(ev.target.closest?.('[data-yd-yazdir]')){yazdir();return}
+  const chip=ev.target.closest?.('[data-yd-z]');
+  if(chip){
+    const k=chip.dataset.ydZ;
+    if(k==='kendi')S.kendi=!S.kendi;
+    else if(BANT_ANAHTAR().includes(k)){const set=new Set(S.bantlar||BANT_ANAHTAR());if(set.has(k))set.delete(k);else set.add(k);S.bantlar=set.size===5?null:set}
+    render('[data-yd-z="'+k+'"]');
+  }
+});
 const durumu=()=>S;
-return {kitapcikCoz,raporCoz,esle,cozumEtiketleri,haritaKur,defterKur,difficultyIndex,filterDefter,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
+return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
 })();
 function gorunumYanlislar(){return YANLISLAR.gorunum()}

@@ -740,7 +740,7 @@ function icerik(){
   if(hata)return '<header class="et-bas"><h1 class="et-baslik">Denemeler</h1></header><p class="et-uyari">'+kacis(hata)+'</p><div class="et-arac">'+araclar(salt)+'</div>'+durumSatiri;
   const st=t?durumAl(t):null;
   if(!st||!st.m.sinavlar.length)return '<header class="et-bas"><h1 class="et-baslik">Denemeler</h1><p class="et-cumle">Okulun deneme sonuç listelerinden deneme panosu</p></header><div class="et-arac">'+araclar(salt)+'</div>'+durumSatiri+
-    '<section class="et-panel et-bos"><b>Henüz deneme listesi yok</b>'+(salt?'':'<p>Okulun “Öğrenci Adı Sıralı” ya da “Net Sayısı Sıralı” sonuç listesini “Dosyadan toplu aktar” ile ekleyin.</p>')+'</section>';
+    '<section class="et-panel et-bos"><b>Henüz deneme listesi yok</b>'+(salt?'':'<p>Okulun “Öğrenci Adı Sıralı” ya da “Net Sayısı Sıralı” sonuç listesini “Dosyadan toplu aktar” ile ekleyin.</p>')+'</section>'+(typeof KADEME!=='undefined'?KADEME.panel():'');
   const m=st.m,mo=st.mo,es=defterEslesme(),odak=st.ders?m.dersler.find(d=>d.kod===st.ders):null;
   const netAdi=st.ogrDers?(m.O.oturum==='tyt'?'TYT ':'AYT ')+st.ogrDers.ad:toplamAdi(m.O),S=mo.sinavlar[mo.simdi],P=mo.onceki===null?null:mo.sinavlar[mo.onceki];
   cizimPlanla();
@@ -771,7 +771,7 @@ function icerik(){
       '<div class="et-grafik orta" data-dp-grafik="dagilim" tabindex="0" role="img" aria-label="'+kacis('Net dağılımı, '+S.ad+(P?', önceki denemeyle':''))+'"></div></section>'+
     '<section class="et-panel"><div class="et-kart-bas"><h2>En çok değişenler</h2><span class="mini">'+(st.s==='sec'?kacis(P.ad)+' → '+kacis(S.ad):tarihli(st.s)?tarihliYazi(st):st.s?(st.s===1?'Son deneme, öncekine göre':'Son '+st.s+' deneme ortalaması, önceki '+st.s+' denemeye göre'):'')+'</span></div>'+hareketliler(st)+'</section></div>'+
     '<div class="et-bolunmus"><section class="et-panel" id="dpTablo"><div class="et-kart-bas"><h2>Tüm öğrenciler</h2>'+(st.s?secim('olcut',st.olcut,OLCUTLER.map(([k,a])=>[k,a,k==='trfark'&&st.tr.fark===null]),'Sırala'):'')+'</div>'+trSatiri(st)+tablo(st)+'</section>'+
-    '<section class="et-panel et-kisi" id="dpKisi">'+kisiKarti(st,es)+'</section></div>'+sinavTablosu(st,salt)+raporlar(st);
+    '<section class="et-panel et-kisi" id="dpKisi">'+kisiKarti(st,es)+'</section></div>'+(typeof KADEME!=='undefined'?KADEME.panel():'')+sinavTablosu(st,salt)+raporlar(st);
 }
 function gorunum(){return '<div id="dpKok">'+icerik()+'</div>'}
 function yenidenCiz(odak){

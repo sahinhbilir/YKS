@@ -53,7 +53,7 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
   await test('cevap raporu: students, sections and keys from header text (shared strings, stored entries)', async () => {
     const r = await T.raporCoz(bytes(Y.raporXlsx()));
     assert.equal(r.ad, 'SENTETİK-1203'); assert.equal(r.T, 10);
-    assert.deepEqual(copy(r.bolumler.map(b => [b.ad, b.ders, b.n, b.bas])), [['TÜRKÇE-T', 'Türkçe', 4, 0], ['TARİH-T', 'Tarih', 2, 4], ['DİN KÜLTÜRÜ-T', 'Din Kültürü', 2, 6], ['S.FELSEFE-T', 'S.Felsefe', 2, 8]]);
+    assert.deepEqual(copy(r.bolumler.map(b => [b.ad, b.ders, b.n, b.bas])), [['TÜRKÇE-T', 'Türkçe', 4, 0], ['TARİH-T', 'Tarih', 2, 4], ['DİN KÜLTÜRÜ-T', 'Din Kültürü', 2, 6], ['S.FELSEFE-T', 'Ek Felsefe', 2, 8]]);
     assert.deepEqual(copy(r.anahtar), {A: Y.KEY_A, B: Y.KEY_B});
     assert.deepEqual(copy(r.ogrenciler.map(o => [o.no, o.ad, o.sube, o.kit])), [['9001', 'SENTETİK ÖĞRENCİ 1', '205 12/A', 'A'], ['9002', 'SENTETİK ÖĞRENCİ 2', '205 12/A', 'B'], ['9003', 'SENTETİK ÖĞRENCİ 3', '205 12/B', 'A']]);
     assert.deepEqual(copy(r.ogrenciler[1].cev), Y.OGRENCILER[1].cev);
@@ -99,7 +99,7 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
   });
   await test('sections fill the booklet tests in order; counts that do not fit give a Turkish error', async () => {
     const {es} = await kur();
-    assert.deepEqual(copy(es.bolumler.map(b => [b.ders, b.test, b.off])), [['Türkçe', 0, 0], ['Tarih', 1, 0], ['Din Kültürü', 1, 2], ['S.Felsefe', 1, 4]]);
+    assert.deepEqual(copy(es.bolumler.map(b => [b.ders, b.test, b.off])), [['Türkçe', 0, 0], ['Tarih', 1, 0], ['Din Kültürü', 1, 2], ['Ek Felsefe', 1, 4]]);
     assert.deepEqual(copy(es.cift), [2, 3]); assert.deepEqual(copy(es.testler), [4, 6]);
     const rapor = await T.raporCoz(bytes(Y.raporXlsx()));
     const k = kit();k.testler[1].soru = 7;
@@ -142,27 +142,27 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     // ders toggle
     const acik = new Set([0]);assert.deepEqual(copy(T.defterKur(rapor, es, null, rapor.ogrenciler[0], acik).bolumler.map(b => b.ders)), ['Türkçe']);
   });
-  await test('Din / S.Felsefe: a fully blank one is skipped only when the other has an answer', async () => {
+  await test('Din / Ek Felsefe: a fully blank one is skipped only when the other has an answer', async () => {
     const {rapor, es} = await kur(), blank = ['', ''], dersler = o => copy(T.defterKur(rapor, es, null, o, null).bolumler.map(b => b.ders));
     const mk = (din, sf) => ({...rapor.ogrenciler[0], cev: ['A', 'B', 'C', 'D', 'A', 'B', ...din, ...sf]});
-    assert.deepEqual(dersler(mk(blank, ['A', 'A'])), ['S.Felsefe'], 'Din blank, S.Felsefe answered: Din skipped');
-    assert.deepEqual(dersler(mk(['A', ''], blank)), ['Din Kültürü'], 'S.Felsefe blank, Din answered: S.Felsefe skipped');
-    assert.deepEqual(dersler(mk(blank, blank)), ['Din Kültürü', 'S.Felsefe'], 'both blank: nothing answered, both shown');
+    assert.deepEqual(dersler(mk(blank, ['A', 'A'])), ['Ek Felsefe'], 'Din blank, Ek Felsefe answered: Din skipped');
+    assert.deepEqual(dersler(mk(['A', ''], blank)), ['Din Kültürü'], 'Ek Felsefe blank, Din answered: S.Felsefe skipped');
+    assert.deepEqual(dersler(mk(blank, blank)), ['Din Kültürü', 'Ek Felsefe'], 'both blank: nothing answered, both shown');
     assert.deepEqual(dersler(mk(['', 'D'], ['E', 'A'])), ['Din Kültürü'], 'both answered: only the one with a wrong or empty question is listed');
   });
   await test('B student without the çözüm file: numbers only, B numbers, a note; with the map: A images, A numbers, B numbers', async () => {
     const {rapor, es} = await kur(), b = rapor.ogrenciler[1];
     const d0 = T.defterKur(rapor, es, null, b, null);
     assert.equal(d0.gorsel, false);
-    assert.deepEqual(copy(d0.bolumler.map(x => [x.ders, x.sorular.map(s => [s.a, s.b, s.own, s.isaret, s.dogru, s.durum])])), [['Türkçe', [[null, 4, 4, '', 'C', 'bos']]], ['Tarih', [[null, 2, 2, '', 'A', 'bos']]], ['S.Felsefe', [[null, 6, 6, 'A', 'E', 'yanlis']]]]);
+    assert.deepEqual(copy(d0.bolumler.map(x => [x.ders, x.sorular.map(s => [s.a, s.b, s.own, s.isaret, s.dogru, s.durum])])), [['Türkçe', [[null, 4, 4, '', 'C', 'bos']]], ['Tarih', [[null, 2, 2, '', 'A', 'bos']]], ['Ek Felsefe', [[null, 6, 6, 'A', 'E', 'yanlis']]]]);
     const h = T.haritaKur(Y.HARITA, es, rapor), d1 = T.defterKur(rapor, es, h, b, null);
     assert.equal(d1.gorsel, true);
-    assert.deepEqual(copy(d1.bolumler.map(x => [x.ders, x.sorular.map(s => [s.test, s.a, s.b, s.isaret, s.dogru])])), [['Türkçe', [[0, 3, 4, '', 'C']]], ['Tarih', [[1, 1, 2, '', 'A']]], ['S.Felsefe', [[1, 5, 6, 'A', 'E']]]]);
+    assert.deepEqual(copy(d1.bolumler.map(x => [x.ders, x.sorular.map(s => [s.test, s.a, s.b, s.isaret, s.dogru])])), [['Türkçe', [[0, 3, 4, '', 'C']]], ['Tarih', [[1, 1, 2, '', 'A']]], ['Ek Felsefe', [[1, 5, 6, 'A', 'E']]]]);
   });
   // ---- markup ----
   const show = async o => {
     const {rapor, k, es} = await kur(), S = T.durumu();
-    Object.assign(S, {kit: k, rapor, es, pairs: null, harita: o.harita ? T.haritaKur(Y.HARITA, es, rapor) : null, sube: '', ogr: '', kapali: new Set(), crops: new Map(), hata: {kit: '', rapor: '', coz: ''}});
+    Object.assign(S, {kitlar: {TYT: k}, rapor, es, pairs: {}, cozum: {}, zOnbellek: null, bantlar: null, kendi: false, status: 'all', harita: o.harita ? T.haritaKur(Y.HARITA, es, rapor) : null, sube: '', ogr: '', kapali: new Set(), crops: new Map(), hata: {kit: '', rapor: '', coz: ''}});
     k.testler.forEach((t, ti) => t.sorular.forEach(q => S.crops.set(ti + ':' + q.no, {url: 'blob:sentetik-' + ti + '-' + q.no, w: 10, h: 10, genis: false})));
     run("D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='yanlislar'");
     return T.gorunum();
@@ -172,20 +172,21 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert.equal(pages.length, 3);
     const a = pages[0];
     assert.match(a, /<h2>SENTETİK ÖĞRENCİ 1<\/h2>/); assert.match(a, /Öğrenci No <b>9001<\/b> · 205 12\/A · SENTETİK-1203/); assert.match(a, /<b>1<\/b> yanlış · <b>2<\/b> boş/);
-    assert.match(a, /<b>Soru 2<\/b><\/span><span class="yd-isaret yd-y">Senin cevabın: C<\/span>/); assert.match(a, /yd-isaret yd-b">Boş</);
+    assert.match(a, /<b>Soru 2<\/b><\/span><\/figcaption>/, 'no answer text next to the question'); assert.doesNotMatch(a, /Senin cevabın: /); assert.doesNotMatch(a, /yd-isaret/);
     assert.match(a, /src="blob:sentetik-0-2"/);
-    assert(a.indexOf('class="yd-anahtar"') > a.lastIndexOf('<img'), 'answer key comes after all questions');
-    assert.match(a.slice(a.indexOf('yd-anahtar')), /<b>Türkçe<\/b>.*<i>2<\/i> B.*<i>3<\/i> C/);
+    assert(a.indexOf('class="yd-anahtar"') > a.lastIndexOf('<img'), 'answer table comes after all questions');
+    // last page: soru · senin cevabın (or Boş) · doğru cevap, per ders
+    assert.match(a.slice(a.indexOf('yd-anahtar')), /<caption>Türkçe<\/caption><thead><tr><th scope="col">Soru<\/th><th scope="col">Senin cevabın<\/th><th scope="col">Doğru cevap<\/th><\/tr><\/thead><tbody><tr><td>2<\/td><td>C<\/td><td>B<\/td><\/tr><tr><td>3<\/td><td>Boş<\/td><td>C<\/td><\/tr>/);
     assert.match(pages[2], /yd-yok/); assert.match(pages[2], /Yanlış veya boş soru yok/);
   });
   await test('page: B student with the map gets A cut-outs labelled with the B number, and a B-numbered key; without it numbers only and a note', async () => {
     let out = await show({harita: true}), b = out.split('<article class="yd-ogr').slice(1)[1];
-    assert.match(b, /<b>Soru 3<\/b> \(B kitapçığında 4\)/); assert.match(b, /<b>Soru 5<\/b> \(B kitapçığında 6\)/); assert.match(b, /Senin cevabın: A/);
-    assert.match(b.slice(b.indexOf('yd-anahtar')), /<i>4<\/i> C/); assert.match(b.slice(b.indexOf('yd-anahtar')), /<i>6<\/i> E/);
+    assert.match(b, /<b>Soru 3<\/b> \(B kitapçığında 4\)/); assert.match(b, /<b>Soru 5<\/b> \(B kitapçığında 6\)/); assert.doesNotMatch(b, /Senin cevabın: /);
+    assert.match(b.slice(b.indexOf('yd-anahtar')), /<td>4<\/td><td>Boş<\/td><td>C<\/td>/); assert.match(b.slice(b.indexOf('yd-anahtar')), /<td>6<\/td><td>A<\/td><td>E<\/td>/);
     assert.doesNotMatch(b, /kendi kitapçığından/);
     out = await show({harita: false}); b = out.split('<article class="yd-ogr').slice(1)[1];
     assert.doesNotMatch(b, /<img/); assert.match(b, /B kitapçığı: sorular kendi kitapçığından çözülecek/); assert.match(b, /<b>Soru 4<\/b>/); assert.doesNotMatch(b, /B kitapçığında/);
-    assert.match(b.slice(b.indexOf('yd-anahtar')), /<i>6<\/i> E/);
+    assert.match(b.slice(b.indexOf('yd-anahtar')), /<td>6<\/td><td>A<\/td><td>E<\/td>/);
   });
   await test('page: nothing about the files is kept anywhere (no storage, no notebook field)', async () => {
     await show({harita: true});

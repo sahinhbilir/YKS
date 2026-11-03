@@ -64,6 +64,9 @@ check('student menu keeps its layout', () => {
   assert.deepEqual(liste(h, 'planMenusu'), ['harita', 'giris'], 'no Karnem, no Geçmiş plan kurtar (red weeks open it)');
   assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['mufredat', 'ayarlar']);
   assert.match(h, /aria-label="Planla ilgili diğer sayfalar"/);
+  assert(!h.includes('data-sekme="universite"') && !h.includes('Üniversite Hedefi'), 'no Üniversite Hedefi for students');
+  assert.equal(liste(h, 'denemelerMenusu'), null, 'Denemelerim has no submenu');
+  assert(!run('SEKMELER().map(s=>s[0])').includes('universite') && !run('MENU_OGRENCI.flatMap(m=>m[1])').includes('universite'));
 });
 
 check('this week: names of students given the plan; PDF requested and last week\'s result small below', () => {
