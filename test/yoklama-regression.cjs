@@ -94,7 +94,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     await assert.rejects(async () => { put('R', coz()); await run('YOKLAMA.raporEkle([R])'); }, /Cihaza kaydedilemedi/);
     assert.equal(run('D.yoklama'), undefined);
     run('kaydet=async()=>true;D.dolgu="x".repeat(DEFTER_HAM_UST_SINIR)');
-    await assert.rejects(async () => { put('R', coz()); await run('YOKLAMA.raporEkle([R])'); }, /bulut yedeği sınırının/);
+    await assert.rejects(async () => { put('R', coz()); await run('YOKLAMA.raporEkle([R])'); }, /5\.000 KB cihaz bütçesini/);
     assert.equal(run('D.yoklama'), undefined);
   });
   await check('model: each student’s days, the school’s totals, rankings, every-day students and weeks', async () => {

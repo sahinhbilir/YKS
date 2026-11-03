@@ -17,13 +17,13 @@ const element = (extra = {}) => Object.assign({
   getClientRects() { return [1]; }, closest() { return null; }
 }, extra);
 const nodes = { ray: element(), ana: element(), stil: { textContent: 'body{}' }, uygulama: { textContent: source }, veri: { textContent: 'null' } };
-const alerts = [];
+const alerts = [], local = {};
 const sandbox = {
   console, setTimeout, clearTimeout, Blob, URL, URLSearchParams, TextEncoder,
   location: { search: '?dev=1' }, Date, Math, JSON, Intl,
   alert(m) { alerts.push(String(m)); }, confirm() { return true; }, prompt() { return ''; },
   fetch: async () => ({ ok: false }),
-  localStorage: { getItem() { return null; }, setItem() {} },
+  localStorage: { getItem(k) { return local[k] ?? null; }, setItem(k,v) { local[k]=String(v); }, removeItem(k) { delete local[k]; } },
   sessionStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
   navigator: {},
   window: { scrollTo() {}, open() { return null; }, addEventListener() {} },
@@ -137,11 +137,11 @@ check('rows without number, grade or şube are shown with a reason, not added', 
     ['atla', 'Sınıf ile şube uyuşmuyor'], ['atla', 'Şube okunamadı']]);
 });
 
-check('apply: one push per new row, not yet "kullanıyor", topic plans only for new şubeler', () => {
+check('apply: one push per new row, not yet "kullanıyor", topic plans only for new şubeler', async () => {
   reset([{ no: 90, ad: 'Mevcut Öğrenci', sube: '201', sinif: 12, alan: 'SAY' }]);
   run(`D.konuPlani['201'] = [['dokunulmadı']];`);
   sandbox.__t = myexamy(okul);
-  const n = run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 4)`);
+  const n = await run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 4)`);
   assert.equal(n, okul.length);
   const ogr = json('D.ogr.slice(1)');
   assert.deepEqual(ogr.map(o => [o.no, o.sube, o.sinif, o.alan, o.kap, o.aktif]),
@@ -155,18 +155,31 @@ check('apply: one push per new row, not yet "kullanıyor", topic plans only for 
   assert(plan(myexamy(okul)).every(s => s.durum === 'atla'));
 });
 
-check('apply refuses view-only and rolls back when the notebook would pass the cloud limit', () => {
+check('apply refuses view-only and rolls back when the notebook would pass the cloud limit', async () => {
   reset();
   sandbox.__t = myexamy(okul);
   run(`IZLEME = {sahipUid:'a', izleyiciUid:'b'}`);
-  assert.throws(() => run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 6)`), /görüntüleme/);
+  await assert.rejects(run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 6)`), /görüntüleme/);
   assert.equal(run('topluOgrenciKarti()'), '', 'view-only hides the card');
   run('IZLEME = null');
   run(`D.dolgu = 'x'.repeat(DEFTER_HAM_UST_SINIR - JSON.stringify(D).length - 200)`);
   const once = run('JSON.stringify([D.ogr, D.konuPlani])');
-  assert.throws(() => run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 6)`), /boyut sınırını/);
+  await assert.rejects(run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 6)`), /bütçesini|sınırını/);
   assert.equal(run('JSON.stringify([D.ogr, D.konuPlani])'), once, 'nothing is left half-added');
   run('delete D.dolgu');
+});
+
+check('encoded admission rejects growth atomically and a changed notebook is never overwritten', async () => {
+  reset(); sandbox.__t = myexamy(okul); sandbox.__payload = 'x'.repeat(900100); run('D.dolgu=__payload');
+  const before=run('JSON.stringify(D)');
+  await assert.rejects(run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 6)`),/sınırını/);
+  assert.equal(run('JSON.stringify(D)'),before);
+  reset();run('oldCodec=bulutVeriKodla;bulutVeriKodla=()=>new Promise(resolve=>globalThis.releaseCodec=resolve)');
+  try {
+    const pending=run(`topluOgrenciUygula(topluOgrenciPlani(topluOgrenciAyristir(__t), '2026-10-12'), 6)`);
+    run("D.kurum='Updated during compression';releaseCodec('{}')");
+    await assert.rejects(pending,/defter değişti/i);assert.equal(run('D.kurum'),'Updated during compression');assert.equal(run('D.ogr.length'),0);
+  } finally {run('bulutVeriKodla=oldCodec')}
 });
 
 check('card: summary per şube, escaped names, add button only when something is new', () => {

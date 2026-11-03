@@ -372,9 +372,9 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run("D.etut={surum:9}"); assert.match(run('ETUT.icerik()'), /Kayıtlı etüt verisi okunamadı/);
     put('R', rapor()); await assert.rejects(run('ETUT.raporEkle([R])'), /okunamadı/); assert.deepEqual(get('D.etut'), {surum:9});
     run('delete D.etut;kaydet=async()=>false'); await assert.rejects(run('ETUT.raporEkle([R])'), /Cihaza kaydedilemedi/); assert.equal(run('D.etut'), undefined);
-    run("kaydet=async()=>true;D.dolgu='x'.repeat(DEFTER_HAM_UST_SINIR)"); await assert.rejects(run('ETUT.raporEkle([R])'), /bulut yedeği.*Ayarlar → Defter boyutu/); assert.equal(run('D.etut'), undefined);
-    // The old 900 KB whole-notebook guard is gone: the cloud copy is compressed, so the raw limit is DEFTER_HAM_UST_SINIR (2.500 KB).
-    assert.equal(run('DEFTER_HAM_UST_SINIR'), 2500000); run("D.dolgu='x'.repeat(1500000)"); await ekle(rapor()); assert.equal(run('D.etut.satir.length'), 36);
+    run("kaydet=async()=>true;D.dolgu='x'.repeat(DEFTER_HAM_UST_SINIR)"); await assert.rejects(run('ETUT.raporEkle([R])'), /5\.000 KB cihaz bütçesini/); assert.equal(run('D.etut'), undefined);
+    // The old 900 KB whole-notebook guard is gone: the cloud copy is compressed, so the raw limit is DEFTER_HAM_UST_SINIR (5.000 KB).
+    assert.equal(run('DEFTER_HAM_UST_SINIR'), 5000000); run("D.dolgu='x'.repeat(1500000)"); await ekle(rapor()); assert.equal(run('D.etut.satir.length'), 36);
     run('delete D.dolgu'); await run('ETUT.raporEkle([R])'); await run('ETUT.sil()'); assert.equal(run('D.etut'), undefined);
   });
   await check('etüt rows never reach a student packet', async () => {

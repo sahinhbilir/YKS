@@ -1,0 +1,57 @@
+{
+  "sourceCommit": "a11cbfc064a8a3546c7e93abb649c15218d76754",
+  "transport": "instrumented in-memory; not production, not a Firebase billing emulator",
+  "rows": [
+    {
+      "name": "initial",
+      "reads": 1,
+      "writes": 2,
+      "readPayloadBytes": 2
+    },
+    {
+      "name": "unchanged",
+      "reads": 2,
+      "writes": 2,
+      "readPayloadBytes": 983
+    },
+    {
+      "name": "changed-first-of-day",
+      "reads": 2,
+      "writes": 3,
+      "readPayloadBytes": 983
+    },
+    {
+      "name": "changed-again",
+      "reads": 2,
+      "writes": 2,
+      "readPayloadBytes": 2048
+    },
+    {
+      "name": "next-day",
+      "reads": 2,
+      "writes": 3,
+      "readPayloadBytes": 987
+    }
+  ],
+  "historyListing": {
+    "documents": 2,
+    "payloadBytes": 2046,
+    "downloadsFullSnapshots": true
+  },
+  "retainedDocuments": 5,
+  "projectedSnapshotBackup": {
+    "rawBytes": 1975337,
+    "storedBytes": 292824,
+    "result": "tamam",
+    "roundTrip": true,
+    "caveat": "This is the unimportable full-year projection. Backup codec/size guard passes against mock transport, not a production Firebase write."
+  },
+  "limits": {
+    "rawNotebookBytes": 2500000,
+    "storedSnapshotBytes": 900000
+  },
+  "caveats": [
+    "SDK document operations only; security-rule dependent reads, listener delivery, reconnects and transaction retries add usage.",
+    "Firestore free quotas are not enforced by this transport or by the local emulator."
+  ]
+}

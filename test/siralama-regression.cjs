@@ -181,14 +181,17 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const k11 = run(`SIRALAMA.aytKurum(${ms}.at(-2).ayt,null)`); assert.equal(k11.field['SÖZ'].net, 6 + 1.5 + 1 + 1.5 + 1.5 + 1 + 1.5); assert.equal(k11.field['SÖZ'].dy, '18.0/16.0');
   });
   await check('size limits: the lists and the cloud backup stay under their limits, and a refused write changes nothing', async () => {
-    await loadAll(); const before = run('JSON.stringify(D.siralama)'), saves = run('KAYIT');
+    await loadAll();
     const big = list('sonra', 'F'); big.ad = 'Sentetik Büyük'; big.ogr = Array.from({length: 600}, (_, i) => ({...big.ogr[i % 5], no: String(5000 + i), ad: 'SENTETİK '.repeat(13) + i}));
-    put('L', [big, {...big, ad: 'Sentetik Büyük 2'}]); await assert.rejects(run('siralamaKaydet(L)'), /KB sınırını aşıyor/);
+    put('L', [big, {...big, ad: 'Sentetik Büyük 2'}]); await run('siralamaKaydet(L)');
+    assert(run('baytBoyu(JSON.stringify(D.siralama))') > 350000, 'old 350 KB limit is lifted');
+    const before=run('JSON.stringify(D.siralama)'), saves=run('KAYIT');
+    put('L',Array.from({length:8},(_,i)=>({...big,ad:'Sentetik Çok Büyük '+i}))); await assert.rejects(run('siralamaKaydet(L)'), /1250 KB sınırını aşıyor/);
     assert.equal(run('JSON.stringify(D.siralama)'), before); assert.equal(run('KAYIT'), saves);
     run("D.ekKonular=[{ad:'x'.repeat(DEFTER_HAM_UST_SINIR-baytBoyu(JSON.stringify(D))-500)}]"); put('L', [{...list('sonra', 'F'), ad: 'Sentetik Ek'}]);
-    await assert.rejects(run('siralamaKaydet(L)'), /bulut yedeği sınırının/); assert.equal(run('JSON.stringify(D.siralama)'), before);
+    await assert.rejects(run('siralamaKaydet(L)'), /5\.000 KB cihaz bütçesini/); assert.equal(run('JSON.stringify(D.siralama)'), before);
     // Deleting never grows the notebook, so it is allowed even when the notebook is too big.
-    await run("SIRALAMA.sil('SENTETİK DENEME 1')"); assert.equal(run('D.siralama.sinavlar.length'), 1);
+    await run("SIRALAMA.sil('SENTETİK DENEME 1')"); assert.equal(run('D.siralama.sinavlar.length'), 3);
   });
   await check('damaged or newer stored lists are shown as unreadable and never overwritten', async () => {
     run("D.siralama={surum:2,sinavlar:[],gelecek:true}"); const before = run('JSON.stringify(D.siralama)');

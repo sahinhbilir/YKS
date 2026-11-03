@@ -59,16 +59,27 @@ function oku(){
 }
 // Every change goes through here: a copy is changed, checked and saved; a save that fails puts the
 // previous plan back, so the page never shows what the notebook does not hold.
-async function degistir(fn){
+let degistirZinciri=Promise.resolve();
+function degistir(fn){
+  const owner=D;
+  const calistir=async()=>{
+  if(D!==owner)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
   if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen değiştirebilir.');
   const {plan,hata}=oku();if(hata)throw new Error(hata);
   const sonuc=fn(plan);
   plan.ts=Math.max(Date.now(),plan.ts+1);dogrula(plan);
-  const eski=D.etutPlani,defter=D,geri=()=>{if(defter.etutPlani!==plan)return;if(eski===undefined)delete defter.etutPlani;else defter.etutPlani=eski};
-  D.etutPlani=plan;
-  if(baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&baytBoyu(JSON.stringify(plan))>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Defter bulut yedeği sınırında; plan kaydedilmedi. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; plan değişmedi.')}
+  const defter=D,eski=defter.etutPlani;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula({...defter,etutPlani:plan},{previous:defter});
+  if(D!==defter||defter.etutPlani!==eski||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(defter.etutPlani!==plan)return;if(eski===undefined)delete defter.etutPlani;else defter.etutPlani=eski};
+  defter.etutPlani=plan;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; plan değişmedi.')}catch(e){geri();throw e}
   return sonuc;
+  };
+  const islem=degistirZinciri.then(calistir,calistir);
+  degistirZinciri=islem.catch(()=>{});
+  return islem;
 }
 
 /* ---------------- sheet model ---------------- */

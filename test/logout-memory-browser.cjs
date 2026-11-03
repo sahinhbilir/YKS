@@ -14,12 +14,12 @@ let browser;
      route.fulfill({status:route.request().url().includes('/data/')?404:200,contentType:'text/html',body:html}):route.abort());
    await page.exposeFunction('__record',x=>records.push(x));
    await page.goto('http://localhost/?dev=1');await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
-   await page.evaluate(role=>{
+   await page.evaluate(async role=>{
      D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-09-20';D.ogr=[{ad:'Example Student',no:42,sube:'12A',alan:'EA',kap:6,off:[],syncId:'slot',hesapUid:'student',ogrenciBulutId:'identity'}];
      D.islenis={};D.ogrIslenis={};D.log=[];D.kart={};D.elle={};D.konuPlani={};D.dersProgrami={};
      sonucIsle(0,[{ki:0,gun:bugunNo(),not:4}]);if(role==='ogrenci')D=paketiYukle(ogrenciPaketi(0));
      EK.ogr=0;EK.sekme=role==='ogrenci'?'ayarlar':'ogrenciler';EK.hafta=null;ciz();
-     localStorage.setItem('yks_veri',JSON.stringify(D));localStorage.setItem('yks_plan_kurtarma_oncesi','backup');localStorage.setItem('other-app','keep');
+     await LOCAL_STORE.set('yks_veri',JSON.stringify(D));await LOCAL_STORE.set('yks_plan_kurtarma_oncesi','backup');localStorage.setItem('other-app','keep');
      window.__cloud={'ogrenciler/slot':{bagliUid:'student',ogrenciBulutId:'identity',ogretmenUid:'teacher',ogrenciNo:42,ogrenciAd:'Example Student',ogrenciSube:'12A',durum:'aktif',paket:null}};
      let user={uid:role==='ogrenci'?'student':'teacher',isAnonymous:false,email:role==='ogrenci'?'x@student.ykstekrar.app':'teacher@example.test'};
      const snap=x=>({exists:()=>!!x,data:()=>structuredClone(x)});
@@ -31,18 +31,18 @@ let browser;
        collection:(_db,...p)=>p.join('/'),getDoc:async ref=>snap(window.__cloud[ref]),
        getDocs:async ref=>({forEach(fn){Object.entries(window.__cloud).filter(([key])=>key.startsWith(ref+'/')).forEach(([key,data])=>fn({id:key.split('/').at(-1),data:()=>structuredClone(data)}));}}),
        async getDocFromServer(ref){await window.__record({event:'readback',ref});return snap(window.__cloud[ref]);},
-       async oturumuKapat(){if(!localStorage.getItem('yks_veri'))throw Error('Device data was cleared before sign-out');await window.__record({event:'signout'});user=null;}};
+       async oturumuKapat(){if(!await LOCAL_STORE.get('yks_veri'))throw Error('Device data was cleared before sign-out');await window.__record({event:'signout'});user=null;}};
    },role);
    await page.locator('.oHafiza').selectOption('cok-guclu');
-   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[0].hafizaSeviyesi==='cok-guclu');
+   await page.waitForFunction(async()=>JSON.parse(await LOCAL_STORE.get('yks_veri')).ogr[0].hafizaSeviyesi==='cok-guclu');
    assert.equal(await page.evaluate(()=>D.log.length),1);assert.equal(await page.evaluate(()=>D.kart['0:0'].s),28);
    await page.locator('.oAytOncelik').check();
-   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[0].aytOncelik===true);
+   await page.waitForFunction(async()=>JSON.parse(await LOCAL_STORE.get('yks_veri')).ogr[0].aytOncelik===true);
    assert.equal(await page.locator('.oAytOncelik').isChecked(),true);
    await page.locator('.oAytOncelik').uncheck();
-   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[0].aytOncelik===false);
+   await page.waitForFunction(async()=>JSON.parse(await LOCAL_STORE.get('yks_veri')).ogr[0].aytOncelik===false);
    await page.locator('.oAytOncelik').check();
-   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('yks_veri')).ogr[0].aytOncelik===true);
+   await page.waitForFunction(async()=>JSON.parse(await LOCAL_STORE.get('yks_veri')).ogr[0].aytOncelik===true);
    if(role==='ogrenci'){
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'student settings overflow');
      await page.screenshot({path:path.join(out,'memory-setting-mobile.png'),fullPage:true});
@@ -51,7 +51,7 @@ let browser;
    if(role==='rehber'){
      await page.getByRole('button',{name:'Ayarlar',exact:true}).click();await page.locator('#aSoru').fill('25');
      await clickLogout();await page.getByText('Değiştirdiğiniz ayarları önce Kaydet düğmesiyle kaydedin.',{exact:true}).waitFor();
-     assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await page.locator('#cikisKapat').click();await page.locator('#ayarKaydet').click();
+     assert(await page.evaluate(async()=>!!await LOCAL_STORE.get('yks_veri')));await page.locator('#cikisKapat').click();await page.locator('#ayarKaydet').click();
      // Rollback is driven through the visible two-button settings flow.
      await page.evaluate(async()=>{
        D.kurum='Before today';await kaydet(true);await bulutaYedekle();
@@ -72,18 +72,18 @@ let browser;
    await page.evaluate(()=>{duzenlemeBaslat(0,buHafta(0)+7);});
    await context.setOffline(true);await clickLogout();
    await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('İnternet bağlantısı yok'));
-   assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await context.setOffline(false);await page.locator('#cikisKapat').click();
+   assert(await page.evaluate(async()=>!!await LOCAL_STORE.get('yks_veri')));await context.setOffline(false);await page.locator('#cikisKapat').click();
    const second=await context.newPage();await second.goto('http://localhost/?dev=1');await second.waitForFunction(()=>!!D?.rol);
    assert.equal(await second.evaluate(()=>D.ogr[0].aytOncelik),true,'AYT setting survives fresh page load');
    await clickLogout();await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('başka bir sekmede'));
-   assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));await second.close();await page.locator('#cikisKapat').click();
+   assert(await page.evaluate(async()=>!!await LOCAL_STORE.get('yks_veri')));await second.close();await page.locator('#cikisKapat').click();
    await page.evaluate(()=>{window.__failWrite=true;});await clickLogout();
    await page.waitForFunction(()=>document.getElementById('cikisDurum')?.textContent.includes('sunucu kaydı reddetti'));
-   assert(await page.evaluate(()=>!!localStorage.getItem('yks_veri')));assert.equal(await page.evaluate(()=>document.querySelector('.kabuk').inert),false);
+   assert(await page.evaluate(async()=>!!await LOCAL_STORE.get('yks_veri')));assert.equal(await page.evaluate(()=>document.querySelector('.kabuk').inert),false);
    await page.screenshot({path:path.join(out,'logout-retry-'+role+'.png'),fullPage:true});
    await page.evaluate(()=>{window.__failWrite=false;});await page.locator('#cikisTekrar').click();
    await page.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
-   assert.equal(await page.evaluate(()=>localStorage.getItem('yks_veri')),null);assert.equal(await page.evaluate(()=>localStorage.getItem('yks_plan_kurtarma_oncesi')),null);
+   assert.equal(await page.evaluate(()=>LOCAL_STORE.get('yks_veri')),null);assert.equal(await page.evaluate(()=>LOCAL_STORE.get('yks_plan_kurtarma_oncesi')),null);
    assert.equal(await page.evaluate(()=>localStorage.getItem('other-app')),'keep');
    const written=records.filter(r=>r.event==='write').at(-1).data;
    const saved=JSON.parse(role==='ogrenci'?written.paket.calisma.veri:require('node:zlib').gunzipSync(Buffer.from(written.veri.replace(/^gz1:/,''),'base64')).toString('utf8'));
@@ -116,10 +116,10 @@ let browser;
    route.fulfill({status:route.request().url().includes('/data/')?404:200,contentType:'text/html',body:html}):route.abort());
  resetPage.on('dialog',d=>d.accept());await resetPage.goto('http://localhost/?dev=1');
  await resetPage.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
- await resetPage.evaluate(()=>{D=varsayilan();D.rol='rehber';D.ogr=[{ad:'Local test',no:44,sube:'12A',alan:'EA',kap:6,off:[]}];EK.sekme='ayarlar';ciz();localStorage.setItem('yks_veri',JSON.stringify(D));localStorage.setItem('other-app','keep');});
+ await resetPage.evaluate(async()=>{D=varsayilan();D.rol='rehber';D.ogr=[{ad:'Local test',no:44,sube:'12A',alan:'EA',kap:6,off:[]}];EK.sekme='ayarlar';ciz();await LOCAL_STORE.set('yks_veri',JSON.stringify(D));localStorage.setItem('other-app','keep');});
  await resetPage.getByRole('button',{name:'Tarayıcı verilerini sıfırla',exact:true}).click();
  await resetPage.getByRole('heading',{name:/^YKS \d{4}$/}).waitFor();
- assert.equal(await resetPage.evaluate(()=>localStorage.getItem('yks_veri')),null);
+ assert.equal(await resetPage.evaluate(()=>LOCAL_STORE.get('yks_veri')),null);
  assert.equal(await resetPage.evaluate(()=>localStorage.getItem('other-app')),'keep');await resetContext.close();
  console.log('Browser checks passed: teacher/student memory and persistent AYT settings, three updated timetables, offline and rejected saves, unsaved forms, real multi-tab locks, retry, server readback and clean logout.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();});

@@ -15,7 +15,7 @@ const FIELDS={'SAY':['MAT','FEN'],'EA':['TDE-SB1','MAT'],'SÖZ':['TDE-SB1','SB2'
 const FCOLS={};for(const f in FIELDS)FCOLS[f]=FIELDS[f].flatMap(t=>TESTS[t]);
 // Stored column order: T = "Net Sayısı Sıralı" (TYT), F = "Öğrenci Adı Sıralı" (TYT + AYT).
 const SUTUN={T:TYT_KEYS,F:[...TYT_KEYS,...AYT_KEYS]};
-const SURUM=1, UST_SINIR=350000, EN_COK_SINAV=40, SIRALA=['SAY','EA','SÖZ','Toplam'];
+const SURUM=1, UST_SINIR=1250000, EN_COK_SINAV=100, SIRALA=['SAY','EA','SÖZ','Toplam'];
 
 /* ---------------- numbers ---------------- */
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
@@ -186,12 +186,14 @@ const ONBELLEK=new Map();
 async function yaz(veri,once){
   dogrula(veri);
   const json=JSON.stringify(veri),bayt=baytBoyu(json);
-  if(bayt>UST_SINIR)throw new Error('Sıralama listeleri '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.');
-  const owner=D,eski=D.siralama,geri=()=>{if(owner.siralama!==veri)return;if(eski===undefined)delete owner.siralama;else owner.siralama=eski};
-  D.siralama=veri;
-  // The lists ride in the teacher's cloud backup; they must not push it over its limit.
-  if(baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(once===undefined?0:baytBoyu(JSON.stringify(once)))){geri();throw new Error('Bu listeler defteri bulut yedeği sınırının üstüne çıkarır. Eski sınavları silip yeniden deneyin. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; listeler değişmedi.')}
+  if(bayt>UST_SINIR && bayt>baytBoyu(JSON.stringify(D.siralama??null)))throw new Error('Sıralama listeleri '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor. Eski sınavları silip yeniden deneyin.');
+  const owner=D,eski=owner.siralama;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula({...owner,siralama:veri},{previous:owner});
+  if(D!==owner||owner.siralama!==eski||JSON.stringify(D)!==oncekiDefter||eski!==once)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(owner.siralama!==veri)return;if(eski===undefined)delete owner.siralama;else owner.siralama=eski};
+  owner.siralama=veri;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; listeler değişmedi.')}catch(e){geri();throw e}
   ONBELLEK.clear();
 }
 async function kaydetListeler(listeler){

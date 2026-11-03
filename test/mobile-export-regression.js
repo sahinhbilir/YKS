@@ -4,8 +4,8 @@ const vm = require('vm');
 const assert = require('assert/strict');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const source = html.split('<script id="uygulama">')[1].split('// ---------------------------------------------------------------- başlangıç')[0];
-const nodes = {}, events = {}, timers = [], shared = [], downloads = [], revoked = [];
-let printing = 0, copies = '', active = true, bridgeCalls = 0;
+const nodes = {}, events = {}, timers = [], shared = [], downloads = [], revoked = [], saved={};
+let printing = 0, copies = '', active = true, bridgeCalls = 0, requirePrintTap=false;
 const element = (id = '') => ({
   id, dataset: {}, style: {}, value: '', textContent: '', hidden: false,
   classList: { add() {}, remove() {}, contains() { return false; } },
@@ -21,14 +21,15 @@ const context = {
   console, Blob, File, Date, JSON, Math, Intl, URLSearchParams,
   URL: { createObjectURL() { return 'blob:export-' + timers.length; }, revokeObjectURL(url) { revoked.push(url); } },
   setTimeout(fn, ms) { timers.push({fn, ms}); return timers.length; }, clearTimeout() {},
-  location: { search: '?dev=1' }, localStorage: {getItem(){return null;},setItem(){}}, sessionStorage: {getItem(){return null;}},
+  location: { search: '?dev=1' }, localStorage: {getItem:k=>saved[k]??null,setItem(k,v){saved[k]=v;}}, sessionStorage: {getItem(){return null;}},
   alert() { throw Error('Unexpected blocking alert'); }, confirm() { return false; },
   navigator: { userAgent: 'iPhone', canShare: () => true, share(data) {
     assert.equal(active, true, 'native share must start synchronously inside the tap');
     shared.push(data); return Promise.resolve();
   } },
   window: { addEventListener() {}, print() {
-    assert.equal(active, true, 'native print must start synchronously inside the tap');
+    if(requirePrintTap)assert.equal(active, true, 'retry of a saved preview must start synchronously inside the tap');
+    assert.equal(saved.yks_veri,vm.runInContext('JSON.stringify(D)',context),'issued plan must be durable before native printing');
     assert.ok(nodes.planBaski, 'print document must exist before native printing'); printing++;
   }, open() { throw Error('Printing must not depend on a popup'); } },
   document: {
@@ -89,12 +90,13 @@ async function exportFile() {
     EK={ogr:0,sekme:'plan',hafta:null,girisAcik:{}};ogrenciOtomasyonHazirla();`);
   const before = run('JSON.stringify([D.log,D.elle])');
   active = true; const printResult = run('planYazdir(null)');
-  check('printing-starts-in-original-tap', printing === 1); active = false;
+  check('printing-waits-for-durable-plan-save', printing === 0); active = false;
   check('print-call-completes', await printResult);
+  check('native-print-starts-after-save',printing===1);
   check('print-preview-has-visible-retry', nodes.disariAktar.innerHTML.includes('id="ciktiYazdir"'));
   check('print-preview-retains-repetition-labels', nodes.disariAktar.innerHTML.includes('1. tekrar'));
   check('printing-does-not-change-results-or-freeze-plans', before === run('JSON.stringify([D.log,D.elle])'));
-  active = true; await click('ciktiYazdir'); check('visible-print-retry-works', printing === 2);
+  requirePrintTap=true;active = true;const retry=click('ciktiYazdir');check('saved-preview-retry-starts-in-original-tap',printing===2);active=false;await retry;
   await click('ciktiKapat'); check('print-close-restores-original-title', context.document.title === 'YKS');
   context.window.print = () => { throw Error('Print unavailable in embedded browser'); };
   check('blocked-print-not-reported-as-success', !(await run('planYazdir(null)')));

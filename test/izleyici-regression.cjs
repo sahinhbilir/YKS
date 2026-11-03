@@ -65,7 +65,7 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     assert.equal(a.run('yalnizcaGoruntuleme()'), true); assert.equal(a.run('D.ogr[0].ad'), 'SENTETİK ADA'); assert.equal(a.run('D.rol'), 'rehber');
     assert.equal(a.run('EK.sekme'), 'ana'); assert.equal(a.yerel.get('yks_veri'), '{"kendi":true}');
     assert.deepEqual(JSON.parse(a.yerel.get('yks_izleme')), { sahipUid: SAHIP, izleyiciUid: IZLEYICI, ad: 'Sentetik Öğretmen' });
-    assert.equal(a.yerel.get('yks_izleme_veri'), a.run('SAHIP_DEFTERI'));
+    assert.equal(await a.run("LOCAL_STORE.get('yks_izleme_veri')"), a.run('SAHIP_DEFTERI'));
     assert(a.nodes.ana.innerHTML.includes('Yalnızca görüntüleme')); assert(a.nodes.ray.innerHTML.includes('>Çıkış yap<'));
     assert(a.dinleyiciler.has('ogretmenYedek/' + SAHIP));
   });
@@ -75,7 +75,7 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     assert.equal(await a.run('kaydet(true)'), false); assert.equal(await a.run('kaydet()'), false);
     assert.deepEqual(JSON.parse(JSON.stringify(await a.run('bulutaYedekle()'))), { tur: 'yok' });
     await a.run('bulutYedekDene()'); a.run('window.bulutDegisti()');
-    assert.equal(a.yerel.get('yks_veri'), '{"kendi":true}'); assert.equal(a.yerel.get('yks_izleme_veri'), a.run('SAHIP_DEFTERI'));
+    assert.equal(a.yerel.get('yks_veri'), '{"kendi":true}'); assert.equal(await a.run("LOCAL_STORE.get('yks_izleme_veri')"), a.run('SAHIP_DEFTERI'));
     await assert.rejects(a.run('denemeOkulYayinla(0)'), /rehber öğretmen/);
     assert.deepEqual(a.yazilar, []);
   });
@@ -102,7 +102,7 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     const yeni = JSON.parse(a.run('SAHIP_DEFTERI')); yeni.ogr.push({ ...yeni.ogr[0], no: 1002, ad: 'SENTETİK BORA', syncId: 'sync-2', ogrenciBulutId: 'bulut-2' });
     await gonder(gzKodla(JSON.stringify(yeni)), () => a.run('D.ogr.length') === 2);
     assert.equal(a.run('D.ogr.length'), 2); assert.equal(a.run('D.ogr[0].ad'), 'SENTETİK ADA');
-    assert.equal(JSON.parse(a.yerel.get('yks_izleme_veri')).ogr.length, 2);
+    assert.equal(JSON.parse(await a.run("LOCAL_STORE.get('yks_izleme_veri')")).ogr.length, 2);
     await gonder(gzKodla('{"rol":"ogrenci","ayar":{},"ogr":[]}'));
     assert.equal(a.run('D.ogr.length'), 2, 'a student notebook is never shown'); assert.match(a.run('EK.izlemeDurum'), /okunamadı/);
     await gonder('gz1:AAAA');
@@ -117,6 +117,7 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
   await check('when the permission is removed, the device copy is deleted and the viewer’s own notebook returns', async () => {
     const a = uygulama(); await ac(a);
     a.dinleyiciler.get('ogretmenYedek/' + SAHIP).hata({ code: 'permission-denied' });
+    await bekle(()=>a.durum.yenilendi===1);
     assert.equal(a.yerel.has('yks_izleme'), false); assert.equal(a.yerel.has('yks_izleme_veri'), false);
     assert.equal(a.yerel.get('yks_veri'), '{"kendi":true}'); assert.equal(a.durum.yenilendi, 1);
     assert.match(a.oturum.get('yks_izleme_mesaj'), /izniniz kaldırıldı/); assert.equal(a.run('yalnizcaGoruntuleme()'), false);
@@ -126,14 +127,14 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
   await check('reopening uses the device copy until the server answers; a damaged copy is discarded', async () => {
     const a = uygulama(); await ac(a);
     const b = uygulama(); b.yerel.set('yks_izleme', a.yerel.get('yks_izleme')); b.yerel.set('yks_izleme_veri', a.yerel.get('yks_izleme_veri'));
-    assert.equal(b.run('izlemeAcilisi()'), true); assert.equal(b.run('D.ogr[0].ad'), 'SENTETİK ADA'); assert.equal(b.run('yalnizcaGoruntuleme()'), true);
+    assert.equal(await b.run('izlemeAcilisi()'), true); assert.equal(b.run('D.ogr[0].ad'), 'SENTETİK ADA'); assert.equal(b.run('yalnizcaGoruntuleme()'), true);
     b.run('window.bulutDegisti()'); assert(b.dinleyiciler.has('ogretmenYedek/' + SAHIP));
     b.durum.kullanici = { uid: BASKA, isAnonymous: false }; b.run('izlemeDinlemeyiDurdur();izlemeDinlemeyiBaslat()');
     assert(!b.dinleyiciler.has('ogretmenYedek/' + SAHIP), 'another account does not follow the shared notebook');
     const c = uygulama(); c.yerel.set('yks_izleme', a.yerel.get('yks_izleme')); c.yerel.set('yks_izleme_veri', '{bozuk');
-    assert.equal(c.run('izlemeAcilisi()'), false); assert.equal(c.yerel.has('yks_izleme'), false); assert.equal(c.run('yalnizcaGoruntuleme()'), false);
+    assert.equal(await c.run('izlemeAcilisi()'), false); assert.equal(c.yerel.has('yks_izleme'), false); assert.equal(c.run('yalnizcaGoruntuleme()'), false);
     const d = uygulama(); d.yerel.set('yks_izleme', JSON.stringify({ sahipUid: IZLEYICI, izleyiciUid: IZLEYICI })); d.yerel.set('yks_izleme_veri', a.yerel.get('yks_izleme_veri'));
-    assert.equal(d.run('izlemeAcilisi()'), false);
+    assert.equal(await d.run('izlemeAcilisi()'), false);
   });
   await check('logging out while viewing signs out and deletes only the shared copy', async () => {
     const a = uygulama(); await ac(a);

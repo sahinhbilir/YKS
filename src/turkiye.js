@@ -223,12 +223,15 @@ function birlestir(a,r){
 async function yaz(veri){
   if(veri)dogrula(veri);
   const json=veri?JSON.stringify(veri):'',bayt=baytBoyu(json);
-  if(bayt>UST_SINIR)throw new Error('Türkiye geneli verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor; Denemeler tablosundan eski listeleri silin.');
-  const eski=D.turkiye,geri=()=>{if(eski===undefined)delete D.turkiye;else D.turkiye=eski};
-  if(veri)D.turkiye=veri;else delete D.turkiye;
-  // The lists ride in the teacher's cloud backup; they must not push it over its limit.
-  if(veri&&baytBoyu(JSON.stringify(D))>DEFTER_HAM_UST_SINIR&&bayt>(eski===undefined?0:baytBoyu(JSON.stringify(eski)))){geri();throw new Error('Bu liste defteri bulut yedeği sınırının üstüne çıkarır. Ayarlar → Defter boyutu bölümüne bakın.')}
-  if(!await kaydet(true)){geri();throw new Error('Cihaza kaydedilemedi; Türkiye geneli verisi değişmedi.')}
+  if(bayt>UST_SINIR && bayt>baytBoyu(JSON.stringify(D.turkiye??null)))throw new Error('Türkiye geneli verisi '+Math.round(UST_SINIR/1000)+' KB sınırını aşıyor; Denemeler tablosundan eski listeleri silin.');
+  const owner=D,eski=owner.turkiye,aday={...owner};
+  if(veri)aday.turkiye=veri;else delete aday.turkiye;
+  const oncekiDefter=JSON.stringify(D);
+  await defterAdayiniDogrula(aday,{previous:owner});
+  if(D!==owner||owner.turkiye!==eski||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.');
+  const geri=()=>{if(owner.turkiye!==veri && !(veri===null&&owner.turkiye===undefined))return;if(eski===undefined)delete owner.turkiye;else owner.turkiye=eski};
+  if(veri)owner.turkiye=veri;else delete owner.turkiye;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi; Türkiye geneli verisi değişmedi.')}catch(e){geri();throw e}
 }
 const yazabilir=()=>{if(!rehberMi()||izleme())throw new Error('Yalnızca rehber öğretmen değiştirebilir.')};
 const sonraki=veri=>Math.max(Date.now(),veri?veri.ts+1:0);

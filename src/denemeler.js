@@ -368,13 +368,16 @@ function denemeDinlemeyiBaslat() {
   const key=u.uid+'|'+o.syncId;
   if(DENEME_DINLEME_ANAHTAR===key && DENEME_DINLEME_DEFTER===D)return;
   denemeDinlemeyiDurdur();DENEME_DINLEME_ANAHTAR=key;DENEME_DINLEME_DEFTER=D;const defter=D;
-  DENEME_DINLEYICI=b.onSnapshot(b.doc(b.db,'ogrenciler',o.syncId),s=>{
+  DENEME_DINLEYICI=b.onSnapshot(b.doc(b.db,'ogrenciler',o.syncId),async s=>{
     if(D!==defter || !ogrenciMi() || CIKIS_DURUMU || b.mevcutKullanici()?.uid!==u.uid || !s.exists() || s.metadata?.hasPendingWrites)return;
     const v=s.data();if(v.durum!=='aktif' || v.bagliUid!==u.uid || v.ogrenciBulutId!==o.ogrenciBulutId)return;
+    const once=JSON.stringify(o.denemeOkul || []);
     try { if(denemeOkulUygula(0,v.denemeOkul)){
       // Receiving teacher data is not a student edit. Advancing ogrCalismaTs here
       // would let an idle device overwrite another device's newer working plan.
-      localStorage.setItem('yks_veri',JSON.stringify(D));
+      const sonra=JSON.stringify(o.denemeOkul || []);
+      try { await LOCAL_STORE.set('yks_veri',JSON.stringify(D)); }
+      catch(e) { if(D===defter && JSON.stringify(o.denemeOkul || [])===sonra)o.denemeOkul=JSON.parse(once); throw e; }
       if((EK.sekme==='denemeler' && !DENEME_FORM)||EK.sekme==='universite')ciz();
     } }
     catch(e){EK.denemeDurum='Okul sonuçları alınamadı: '+e.message;}
@@ -683,8 +686,22 @@ function denemeFormOku() {
   return {...r,ad:get('dnAd').trim(),tarih:get('dnTarih'),sure:get('dnSure')===''?null:Number(get('dnSure')),puan:get('dnPuan')===''?null:Number(get('dnPuan')),dersler:Array.from(document.querySelectorAll('[data-dn-ders]')).map(el=>({kod:el.dataset.dnDers,...Object.fromEntries(Array.from(el.querySelectorAll('input')).map(x=>[x.dataset.dnValue,Number(x.value)]))}))};
 }
 async function denemeYerelKaydet(si,alan,yeni) {
-  const o=D.ogr[si],eski=o[alan];o[alan]=yeni;
-  if(!await kaydet(true)){o[alan]=eski;throw new Error('Cihaza kaydedilemedi. Değişiklik uygulanmadı; yeniden deneyin.');}
+  const owner=D,o=D.ogr[si],eski=o[alan];
+  if(rehberMi())await defterAdayiniDogrula({...owner,ogr:owner.ogr.map((x,i)=>i===si?{...x,[alan]:yeni}:x)},{previous:owner});
+  if(D!==owner||D.ogr[si]!==o)throw new Error('Defter değişti; sonuç eklenmedi.');
+  o[alan]=yeni;
+  try{if(!await kaydet(true))throw new Error('Cihaza kaydedilemedi. Değişiklik uygulanmadı; yeniden deneyin.');}
+  catch(e){if(D===owner&&o[alan]===yeni){if(eski===undefined)delete o[alan];else o[alan]=eski;}throw e;}
+}
+async function denemeTopluYerelKaydet(staged) {
+  if(!rehberMi()||yalnizcaGoruntuleme())throw new Error('Yalnızca rehber öğretmen aktarabilir.');
+  const owner=D,once=[...staged].map(([si,list])=>{denemeDogrula(list);const o=owner.ogr[si];if(!o||o.silindi)throw new Error('Öğrenci listesi değişti.');return {o,si,list,eski:o.denemeOkul,bekleyen:o.denemeYayinBekliyor};});
+  const ogr=owner.ogr.map((o,i)=>staged.has(i)?{...o,denemeOkul:staged.get(i),denemeYayinBekliyor:true}:o);
+  await defterAdayiniDogrula({...owner,ogr},{previous:owner});
+  if(D!==owner||once.some(x=>owner.ogr[x.si]!==x.o))throw new Error('Öğrenci listesi değişti; aktarım uygulanmadı.');
+  for(const x of once){x.o.denemeOkul=x.list;x.o.denemeYayinBekliyor=true;}
+  try{if(!await kaydet(true))throw new Error('Cihaza kayıt başarısız; aktarım uygulanmadı.');}
+  catch(e){if(D===owner)for(const x of once)if(x.o.denemeOkul===x.list){if(x.eski===undefined)delete x.o.denemeOkul;else x.o.denemeOkul=x.eski;if(x.bekleyen===undefined)delete x.o.denemeYayinBekliyor;else x.o.denemeYayinBekliyor=x.bekleyen;}throw e;}
 }
 // Publishes every student whose school results wait for publishing; a failed one stays queued.
 async function denemeBekleyenleriYayinla(ilerleme=()=>{}) {
@@ -839,9 +856,7 @@ document.addEventListener('click',async ev=>{
           if(same)r.ts=Math.max(r.ts,same.ts+1);staged.set(row.si,denemeBirlestir(old,[r]));
         }
         if(!staged.size)throw new Error('Aktarılacak sonuç seçilmedi.');
-        const once=JSON.stringify(D.ogr);
-        for(const [si,list] of staged){D.ogr[si].denemeOkul=list;D.ogr[si].denemeYayinBekliyor=true;}
-        if(!await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kayıt başarısız; aktarım uygulanmadı.');}
+        await denemeTopluYerelKaydet(staged);
         DENEME_IMPORT=null;
       }
       denemeDurum(await denemeBekleyenleriYayinla(denemeDurum)+srNot);ciz();

@@ -1352,8 +1352,8 @@ test('save-schedules-a-cloud-backup-that-actually-uploads', async () => {
   await new Promise(r => setImmediate(r));   // bulutYedekDene() ateşle-unut; mikrogörevler bitsin
   // canlı yedek + o günün kopyası
   equal(uploads.filter(u => u.ref.indexOf('gecmis/') < 0).length, 1, 'the scheduled timer must actually perform the upload');
-  equal(uploads.filter(u => u.ref.indexOf('gecmis/') >= 0).length, 1, 'and also record the day snapshot');
-  equal(uploads[0].ref, 'ogretmenYedek/teacher-uid', 'upload must go to the teacher own backup doc');
+  assert(uploads.some(u => /\/gecmis\/_v2-d\d\d$/.test(u.ref)), 'and also record the day snapshot');
+  equal(uploads.find(u => u.ref === 'ogretmenYedek/teacher-uid').ref, 'ogretmenYedek/teacher-uid', 'upload must go to the teacher own backup doc');
   await run('kaydet(true)');
   assert(timers.filter(Boolean).some(t => t.ms === run('BULUT_YEDEK_GECIKME')), 'a later save must schedule again');
 });
@@ -1371,11 +1371,11 @@ test('hiding-the-tab-flushes-a-pending-backup-immediately', async () => {
   await run('bulutYedekBosalt()');
   await run('bulutYedekIsi');
   await new Promise(r => setImmediate(r));
-  equal(uploads.length, 2, 'closing/hiding the tab must send the pending backup (live + day copy), not drop it');
+  equal(uploads.length, 4, 'closing/hiding the tab must send the pending backup (live + day copy), not drop it');
   // bekleyen yoksa boşaltmak boşuna yazmamalı
   await run('bulutYedekBosalt()');
   await new Promise(r => setImmediate(r));
-  equal(uploads.length, 2, 'flushing with nothing pending must not write again');
+  equal(uploads.length, 4, 'flushing with nothing pending must not write again');
 });
 
 test('manual-backup-button-uploads-and-reports', async () => {
@@ -1388,7 +1388,7 @@ test('manual-backup-button-uploads-and-reports', async () => {
     closest(sel) { return sel.indexOf('#bulutYedekle') >= 0 ? this : null; } });
   await listeners.click[0]({ target: dugme });
   equal(uploads.filter(u => u.ref.indexOf('gecmis/') < 0).length, 1, 'the manual button must upload immediately, with no waiting');
-  equal(uploads[0].ref, 'ogretmenYedek/teacher-uid');
+  equal(uploads.find(u => u.ref === 'ogretmenYedek/teacher-uid').ref, 'ogretmenYedek/teacher-uid');
   const gorunum = run("D.rol='rehber'; gorunumAyarlar()");
   assert(/id="bulutYedekle"/.test(gorunum), 'the button must be rendered for a connected teacher');
   assert(/Bulut yedeği:/.test(gorunum), 'settings must show the backup status line');
@@ -1431,24 +1431,24 @@ test('backup-also-writes-a-dated-daily-snapshot', async () => {
     setDoc: async (ref, d) => { yazilan.push({ ref, d }); } });
   const r = await run('bulutaYedekle()');
   equal(r.tur, 'tamam');
-  equal(yazilan.length, 2, 'one live backup plus one dated daily snapshot');
+  equal(yazilan.length, 4, 'one live backup, day and month slots, and index');
   const bugun = run('isoDan(bugunNo())');
-  const gunluk = yazilan.find(y => y.ref.indexOf('gecmis/') >= 0);
+  const gunluk = yazilan.find(y => /\/gecmis\/_v2-d\d\d$/.test(y.ref));
   assert(gunluk, 'a daily snapshot must be written: ' + JSON.stringify(yazilan.map(y => y.ref)));
-  equal(gunluk.ref, 'ogretmenYedek/teacher-uid/gecmis/' + bugun, 'snapshot id must be today date');
+  assert(yazilan.some(y => y.ref.endsWith('/gecmis/_v2-index') && JSON.parse(y.d.veri).entries.some(e => e.kind === 'day' && e.gun === bugun)), 'index must identify today’s snapshot');
   equal(gunluk.d.ogrenciSayisi, 2, 'snapshot must carry the student count for the listing');
   assert(Object.keys(gunluk.d).sort().join(',') === 'boyut,ogrenciSayisi,sonucSayisi,surum,ts,veri',
     'snapshot fields must match what the rules allow: ' + Object.keys(gunluk.d).join(','));
 });
 
-test('daily-snapshot-failure-does-not-fail-the-main-backup', async () => {
+test('daily-snapshot-failure-fails-the-atomic-backup', async () => {
   // Asıl yedek yazıldıysa gün kopyası yazılamadı diye başarısız sayılmamalı.
   const { sandbox, run } = loadAppSandbox();
   resetOgr(sandbox, [student({})]);
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
     doc: (db, ...yol) => yol.join('/'),
     setDoc: async (ref) => { if (ref.indexOf('gecmis/') >= 0) throw new Error('gün kopyası yazılamadı'); } });
-  equal((await run('bulutaYedekle()')).tur, 'tamam', 'the main backup must still count as done');
+  equal((await run('bulutaYedekle()')).tur, 'hata', 'a failed history write must fail the atomic backup');
 });
 
 test('stalled-teacher-backup-returns-a-timeout-status', async () => {
@@ -1696,7 +1696,7 @@ test('history-lists-newest-first-and-restores-a-chosen-day', async () => {
     getDoc: async (ref) => { const g = String(ref).split('/').pop();
       return { exists: () => !!gunler[g], data: () => gunler[g] }; },
     setDoc: async () => {} });
-  const liste = await run('bulutYedekGecmisi()');
+  const liste = await run('bulutYedekGecmisi(true)');
   equal(liste.tur, 'tamam');
   equal(liste.liste.map(x => x.gun), ['2026-09-03', '2026-09-01'], 'newest day must come first');
   // Ayarlar geçmişi göstermeli
@@ -1752,7 +1752,7 @@ test('restore-preserves-current-notebook-before-confirmed-backup-replaces-today'
   const yazilan = [];
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
     doc: (db, ...yol) => yol.join('/'),
-    getDoc: async () => ({ exists: () => true,
+    getDoc: async ref => ref.endsWith('/_v2-index') ? docSnap(false) : ({ exists: () => true,
       data: () => ({ veri: eskiDefter, ts: 1756684800000, boyut: eskiDefter.length,
         ogrenciSayisi: 1, sonucSayisi: 0 }) }),
     setDoc: async (ref, data) => { yazilan.push({ ref, data: JSON.parse(JSON.stringify(data)) }); }
@@ -1763,7 +1763,7 @@ test('restore-preserves-current-notebook-before-confirmed-backup-replaces-today'
   await listeners.click[0]({ target: dugme });
 
   equal(run('D.ogr[0].ad'), 'Eski Defter', 'the chosen old snapshot must become the active notebook');
-  const koruma = yazilan.find(y => y.ref.indexOf('/geriNoktalari/') >= 0);
+  const koruma = yazilan.find(y => /\/gecmis\/_v2-r\d\d$/.test(y.ref));
   assert(koruma, 'the current notebook must be preserved under a unique restore-point id before mutation');
   equal(gzCoz(koruma.data.veri), bugunkuJson, 'the restore point must contain the exact pre-restore notebook');
   assert(koruma.data.veri.startsWith('gz1:'), 'restore points are stored compressed too');
@@ -1772,14 +1772,15 @@ test('restore-preserves-current-notebook-before-confirmed-backup-replaces-today'
   const bekleyen = timers.filter(Boolean).filter(t => t.ms === run('BULUT_YEDEK_GECIKME'));
   equal(bekleyen.length, 1, 'restoring must still schedule the restored state as the new live backup');
 
+  const oncekiYazim = yazilan.length;
   await bekleyen[0].fn();
   await run('bulutYedekIsi');
   await new Promise(r => setImmediate(r));
-  assert(!yazilan.some(y => /\/gecmis\//.test(y.ref)), 'an unreviewed cloud copy must survive the automatic backup');
+  equal(yazilan.length, oncekiYazim, 'an unreviewed cloud copy must survive the automatic backup');
   const yedekDugmesi = Object.assign(element(), { id: 'bulutYedekle',
     closest(sel) { return sel.includes('#bulutYedekle') ? this : null; } });
   await listeners.click[0]({ target: yedekDugmesi });
-  const bugununGunlugu = yazilan.find(y => /\/gecmis\/2026-09-05$/.test(y.ref));
+  const bugununGunlugu = yazilan.find(y => /\/gecmis\/_v2-d\d\d$/.test(y.ref));
   assert(bugununGunlugu, 'an explicitly confirmed backup must update today daily snapshot');
   equal(JSON.parse(gzCoz(bugununGunlugu.data.veri)).ogr[0].ad, 'Eski Defter',
     'the test must reproduce the overwrite that previously destroyed today only good copy');
@@ -1794,9 +1795,9 @@ test('restore-aborts-before-mutation-when-protection-point-cannot-be-written', a
     k.ogr = [{no:9,ad:'Eski Defter',alan:'SAY',sube:'201',hedef:null}]; return JSON.stringify(k); })()`);
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
     doc: (db, ...yol) => yol.join('/'),
-    getDoc: async () => ({ exists: () => true,
+    getDoc: async ref => ref.endsWith('/_v2-index') ? docSnap(false) : ({ exists: () => true,
       data: () => ({ veri: eskiDefter, ts: 1, boyut: eskiDefter.length, ogrenciSayisi: 1, sonucSayisi: 0 }) }),
-    setDoc: async (ref) => { if (ref.indexOf('/geriNoktalari/') >= 0) throw new Error('koruma yazılamadı'); }
+    setDoc: async (ref) => { if (/\/gecmis\/_v2-r\d\d$/.test(ref)) throw new Error('koruma yazılamadı'); }
   });
   sandbox.confirm = () => true;
   let uyari = '';
@@ -1819,7 +1820,7 @@ test('stalled-protection-write-times-out-before-restore-mutation', async () => {
     k.ogr = [{no:9,ad:'Eski Defter',alan:'SAY',sube:'201',hedef:null}]; return JSON.stringify(k); })()`);
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true,
     doc: (db, ...yol) => yol.join('/'),
-    getDoc: async () => ({ exists: () => true,
+    getDoc: async ref => ref.endsWith('/_v2-index') ? docSnap(false) : ({ exists: () => true,
       data: () => ({ veri: eskiDefter, ts: 1, boyut: eskiDefter.length, ogrenciSayisi: 1, sonucSayisi: 0 }) }),
     setDoc: () => new Promise(() => {})
   });
@@ -1859,7 +1860,7 @@ test('restore-point-history-is-visible-and-restores-reversibly', async () => {
       return { exists: () => !!noktalar[id], data: () => noktalar[id] }; },
     setDoc: async (ref, data) => { yazilan.push({ ref, data }); }
   });
-  const liste = await run('bulutGeriYuklemeNoktalari()');
+  const liste = await run('bulutGeriYuklemeNoktalari(true)');
   equal(liste.liste.map(x => x.id), ['nokta-1757000000000-a', 'nokta-1756000000000-b'],
     'restore points must be newest first');
   run('EK.bulutGecmis = []; EK.bulutGeriNoktalar = ' + JSON.stringify(liste.liste) + ';');
@@ -1871,7 +1872,7 @@ test('restore-point-history-is-visible-and-restores-reversibly', async () => {
     closest(sel) { return sel === '.bulutGeriNoktaYukle' ? this : null; } });
   await listeners.click[0]({ target: dugme });
   equal(run('D.ogr[0].ad'), 'Korunan Defter', 'the selected protection point must be restorable');
-  const yeniKoruma = yazilan.find(y => y.ref.indexOf('/geriNoktalari/') >= 0);
+  const yeniKoruma = yazilan.find(y => /\/gecmis\/_v2-r\d\d$/.test(y.ref));
   assert(yeniKoruma && JSON.parse(gzCoz(yeniKoruma.data.veri)).ogr[0].ad === 'Su Anki Defter',
     'undoing a restore must first preserve the state it replaces, so the undo is itself reversible');
 });
@@ -1896,13 +1897,13 @@ function notebookCloud(ctx, remote) {
     getDoc: async ref => { state.reads.push(ref); return docSnap(!!docs[ref], docs[ref]); },
     getDocFromServer: async ref => { state.serverRead = true; return sandbox.window.bulut.getDoc(ref); },
     setDoc: async (ref, data) => {
-      if (state.failArchive && ref.includes('/geriNoktalari/')) throw new Error('archive failed');
+      if (state.failArchive && /\/gecmis\/_v2-r\d\d$/.test(ref)) throw new Error('archive failed');
       state.writes.push({ ref, data }); docs[ref] = JSON.parse(JSON.stringify(data));
     },
     runTransaction: async (_db, fn) => {
       const writes = [];
       await fn({ get: ref => sandbox.window.bulut.getDoc(ref), set: (ref, data) => writes.push({ ref, data }) });
-      if (state.failArchive && writes.some(w => w.ref.includes('/geriNoktalari/'))) throw new Error('archive failed');
+      if (state.failArchive && writes.some(w => /\/gecmis\/_v2-[rs]\d\d$/.test(w.ref))) throw new Error('archive failed');
       for (const w of writes) { state.writes.push(w); docs[w.ref] = JSON.parse(JSON.stringify(w.data)); }
     }
   });
@@ -1925,7 +1926,7 @@ test('settings-connect-restores-whole-cloud-notebook-without-overwriting-it', as
   equal(run('D.ogr[0].ad'), 'Cloud Student'); equal(run('D.log.length'), 1);
   equal(run('D.ekKonular[0][3]'), 'Saved custom topic');
   equal(state.docs[state.main].veri, remote, 'connecting must not replace the cloud notebook');
-  assert(!state.writes.some(w => w.ref === state.main || w.ref.includes('/gecmis/')), 'only a separate local protection point may be written');
+  assert(!state.writes.some(w => w.ref === state.main || /\/gecmis\/_v2-[dm]\d\d$/.test(w.ref)), 'only a separate local protection point and index may be written');
   assert(state.messages.some(m => /1 öğrenci, 1 sonuç/.test(m)), 'restored counts must be visible');
 });
 
@@ -1936,7 +1937,7 @@ test('latest-notebook-button-uses-current-session-and-preserves-local-copy', asy
   sandbox.window.bulut.girisOgretmen = () => { throw new Error('already signed in'); };
   await clickButton(listeners, 'bulutDefterAl');
   equal(run('D.ogr[0].ad'), 'Cloud Student');
-  assert(state.writes.some(w => w.ref.includes('/geriNoktalari/') && gzCoz(w.data.veri) === local), 'local notebook must remain recoverable');
+  assert(state.writes.some(w => /\/gecmis\/_v2-[rs]\d\d$/.test(w.ref) && gzCoz(w.data.veri) === local), 'local notebook must remain recoverable');
   assert(/id="bulutDefterAl"/.test(run('gorunumAyarlar()')), 'a signed-in teacher needs an explicit download action');
 });
 
@@ -2003,7 +2004,7 @@ test('manual-local-upload-preserves-the-previous-cloud-notebook-atomically', asy
   const local = run('JSON.stringify(D)'), remote = remoteNotebook(run), state = notebookCloud(ctx, remote);
   await clickButton(listeners, 'bulutYedekle');
   equal(gzCoz(state.docs[state.main].veri), local);
-  assert(state.writes.some(w => w.ref.includes('/geriNoktalari/') && gzCoz(w.data.veri) === remote), 'the previous server copy must remain recoverable');
+  assert(state.writes.some(w => /\/gecmis\/_v2-[rs]\d\d$/.test(w.ref) && gzCoz(w.data.veri) === remote), 'the previous server copy must remain recoverable');
 });
 
 test('failed-protection-write-leaves-latest-cloud-and-daily-backups-intact', async () => {
@@ -2075,10 +2076,11 @@ test('restoring-an-empty-latest-backup-does-not-erase-a-populated-daily-copy', a
 test('local-edits-during-restore-protection-are-not-discarded', async () => {
   const ctx = loadAppSandbox(); const { sandbox, run, listeners } = ctx;
   resetOgr(sandbox, [student()]); const state = notebookCloud(ctx, remoteNotebook(run));
-  const saveArchive = sandbox.window.bulut.setDoc;
-  sandbox.window.bulut.setDoc = async (ref, data) => {
-    await saveArchive(ref, data);
+  const saveArchive = sandbox.window.bulut.runTransaction;
+  sandbox.window.bulut.runTransaction = async (...args) => {
+    const result = await saveArchive(...args);
     run('D.kurum = "Edited while the archive was saving"');
+    return result;
   };
   await clickButton(listeners, 'bulutDefterAl');
   equal(run('D.ogr[0].ad'), 'Ada'); equal(run('D.kurum'), 'Edited while the archive was saving');
@@ -2279,17 +2281,17 @@ test('gz1-main-daily-and-restore-point-writes-decode-to-the-exact-json', async (
   // Kullanıcı kaydı: geri yükleme noktası da gz1 ve birebir.
   const nokta = await run("geriYuklemeNoktasiOlustur('sınama')");
   equal(nokta.tur, 'tamam');
-  const np = Object.keys(state.docs).find(k => k.includes('/geriNoktalari/'));
+  const np = Object.keys(state.docs).find(k => /\/gecmis\/_v2-r\d\d$/.test(k));
   assert(state.docs[np].veri.startsWith('gz1:') && gzCoz(state.docs[np].veri) === json, 'restore point is gz1 and exact');
   equal(nokta.boyut, state.docs[np].veri.length);
-  assert(Object.keys(state.docs[np]).sort().join(',') === 'boyut,kaynak,ogrenciSayisi,sonucSayisi,surum,ts,veri', 'restore point keeps the rule-approved key set');
+  assert(Object.keys(state.docs[np]).sort().join(',') === 'boyut,ogrenciSayisi,sonucSayisi,surum,ts,veri', 'restore point keeps the rule-approved key set');
   // Bulutta düz JSON varken onaylı üzerine yazma: korunan eski kopya gz1 ve eski düz JSON'a eşit.
   const ctx2 = loadAppSandbox(); resetOgr(ctx2.sandbox, [student({ ad: 'Local Student' })]);
   const remote = remoteNotebook(ctx2.run), state2 = notebookCloud(ctx2, remote);
   await clickButton(ctx2.listeners, 'bulutYedekle');
-  const koruma = state2.writes.find(w => w.ref.includes('/geriNoktalari/'));
+  const koruma = state2.writes.find(w => /\/gecmis\/_v2-[rs]\d\d$/.test(w.ref));
   assert(koruma && koruma.data.veri.startsWith('gz1:') && gzCoz(koruma.data.veri) === remote, 'protected old plain copy is stored gz1 and equals the old JSON');
-  equal(Object.keys(koruma.data).sort().join(','), 'boyut,kaynak,ogrenciSayisi,sonucSayisi,surum,ts,veri');
+  equal(Object.keys(koruma.data).sort().join(','), 'boyut,ogrenciSayisi,sonucSayisi,surum,ts,veri');
   assert(state2.docs[state2.main].veri.startsWith('gz1:'), 'the first save after the change rewrites the main copy as gz1');
 });
 
@@ -2330,7 +2332,7 @@ test('same-notebook-is-not-a-conflict-in-plain-or-gz1-and-different-content-stil
     // 1) Bulut = yerel, temel yok: sahte çakışma yok, koruma kopyası yok.
     let b = yeniBaglam(bicim); let r = await b.ctx.run('bulutaYedekle()');
     equal(r.tur, 'tamam', bicim + ' same content: ' + JSON.stringify(r)); assert(!r.cakisma);
-    assert(!b.state.writes.some(w => w.ref.includes('/geriNoktalari/')), bicim + ': an identical copy needs no protection copy');
+    assert(!b.state.writes.some(w => /\/gecmis\/_v2-[rs]\d\d$/.test(w.ref)), bicim + ': an identical copy needs no protection copy');
     // 2) İçerik farklı, temel yok: çakışma; hiçbir şey yazılmaz.
     b = yeniBaglam(bicim, farkli); r = await b.ctx.run('bulutaYedekle()');
     assert(r.cakisma, bicim + ' different content without a baseline is a conflict'); equal(b.state.writes.length, 0);
@@ -2338,7 +2340,7 @@ test('same-notebook-is-not-a-conflict-in-plain-or-gz1-and-different-content-stil
     b = yeniBaglam(bicim, farkli);
     await b.ctx.run('bulutYedekTemeliniHatirla("teacher-uid", ' + JSON.stringify(b.uzak) + ')');
     r = await b.ctx.run('bulutaYedekle()'); equal(r.tur, 'tamam', bicim + ' baseline matches the cloud JSON: ' + JSON.stringify(r));
-    const gun = b.state.writes.find(w => w.ref.includes('/geriNoktalari/gun-baslangici-'));
+    const gun = b.state.writes.find(w => /\/gecmis\/_v2-s\d\d$/.test(w.ref));
     assert(gun && gzCoz(gun.data.veri) === b.uzak && gun.data.veri.startsWith('gz1:'), bicim + ': day-start protection holds the old cloud JSON');
     // 4) Temel başka bir içeriğin imzası (başka cihaz yazmış): çakışma.
     b = yeniBaglam(bicim, farkli);
@@ -2347,7 +2349,7 @@ test('same-notebook-is-not-a-conflict-in-plain-or-gz1-and-different-content-stil
     // 5) Onaylı üzerine yazma: onaylananVeri çözülmüş JSON'dur; her iki biçimde de eşleşir.
     b = yeniBaglam(bicim, farkli);
     r = await b.ctx.run('bulutaYedekle(' + JSON.stringify(b.uzak) + ')'); equal(r.tur, 'tamam', bicim + ' confirmed overwrite: ' + JSON.stringify(r));
-    assert(b.state.writes.some(w => w.ref.includes('/geriNoktalari/') && gzCoz(w.data.veri) === b.uzak), bicim + ': the confirmed copy is archived first');
+    assert(b.state.writes.some(w => /\/gecmis\/_v2-[rs]\d\d$/.test(w.ref) && gzCoz(w.data.veri) === b.uzak), bicim + ': the confirmed copy is archived first');
     // 6) Yanlış onay (başka içerik): çakışma.
     b = yeniBaglam(bicim, farkli);
     r = await b.ctx.run('bulutaYedekle(' + JSON.stringify(b.yerel.replace('Yerel', 'Üçüncü')) + ')'); assert(r.cakisma, bicim + ' wrong confirmation is a conflict');
@@ -2394,10 +2396,10 @@ test('without-CompressionStream-the-notebook-is-written-as-plain-json-as-before'
   const state = notebookCloud(ctx);
   const r = await run('bulutaYedekle()'); equal(r.tur, 'tamam');
   const json = run('JSON.stringify(D)'), ana = state.docs[state.main];
-  equal(ana.veri, json, 'plain JSON is stored'); equal(ana.boyut, json.length);
+  equal(ana.veri, json, 'plain JSON is stored'); equal(ana.boyut, Buffer.byteLength(json,'utf8'),'stored size includes Turkish UTF-8 bytes');
   const gun = Object.keys(state.docs).find(k => k.includes('/gecmis/')); equal(state.docs[gun].veri, json);
   equal((await run('geriYuklemeNoktasiOlustur("x")')).tur, 'tamam');
-  const np = Object.keys(state.docs).find(k => k.includes('/geriNoktalari/')); equal(state.docs[np].veri, json);
+  const np = Object.keys(state.docs).find(k => /\/gecmis\/_v2-r\d\d$/.test(k)); equal(state.docs[np].veri, json);
   // Çalışma zamanında bir sıkıştırma hatası da düz JSON'a düşer (hiçbir zaman bozuk kayıt yazılmaz).
   const ctx2 = loadAppSandbox(); resetOgr(ctx2.sandbox, [student({})]);
   ctx2.sandbox.CompressionStream = function () { throw new Error('boom'); };
@@ -2445,7 +2447,7 @@ test('defter-boyutu-table-lists-the-parts-and-dashes-before-the-first-save', asy
   equal(t.satirlar.reduce((a, x) => a + x[1], 0), t.toplam, 'the rows add up to the total (Diğer is the remainder)');
   const html = run('defterBoyutuKarti()');
   assert(/Bulutta: <b>— \/ 900 KB<\/b>/.test(html), 'before a save the cloud size is a dash: ' + html);
-  assert(/Sınır<\/td><td class="sayisal">2\.500 KB/.test(html), 'the limit reads 2.500 KB');
+  assert(/Sınır<\/td><td class="sayisal">5\.000 KB/.test(html), 'the limit reads 5.000 KB');
   assert(/<th class="sayisal">Boyut<\/th>/.test(html), 'numbers sit under a right-aligned header');
   assert(/id="defterBoyutu"/.test(run("D.rol='rehber'; gorunumAyarlar()")), 'Ayarlar → Genel includes the table for a teacher');
 });
