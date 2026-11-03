@@ -24151,6 +24151,9 @@ const LOCAL_STORE=(()=>{
  const check=k=>{if(!allowed.has(k))throw new Error('Geçersiz cihaz kayıt anahtarı.');};
  async function read(k){const tx=db.transaction('records','readonly'),v=await request(tx.objectStore('records').get(k));return v===undefined?null:v;}
  async function initialize(){
+  // The teacher's student-preview iframe is a temporary sandbox, even though its
+  // srcdoc inherits the site's origin. It must never open the parent's database.
+  if(typeof ONIZLEME_MODU!=='undefined'&&ONIZLEME_MODU){mode='memory';return;}
   if(typeof indexedDB==='undefined'){let migrated=false;try{migrated=localStorage.getItem('yks_idb_migrated')==='1'}catch(_){}if(migrated)throw new Error('Cihazdaki IndexedDB açılamadı; kayıtlı defter korunuyor.');mode='localStorage';return;}
   try{db=await new Promise((resolve,reject)=>{const r=indexedDB.open('yks-local-store',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('records'))r.result.createObjectStore('records')};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('Cihaz depolaması başka sekmede açık.'));});}
   catch(e){let migrated=false;try{migrated=localStorage.getItem('yks_idb_migrated')==='1'}catch(_){}if(migrated)throw new Error('Cihazdaki IndexedDB açılamadı; kayıtlı defter korunuyor.');mode='localStorage';return;}
@@ -24173,7 +24176,7 @@ const LOCAL_STORE=(()=>{
    mode='indexedDB';
   }catch(e){try{db.close()}catch(_){}db=null;cache.clear();throw e;}
  }
- function ready(){return opening||(opening=typeof navigator!=='undefined'&&navigator.locks?.request?navigator.locks.request('yks-local-migration',{mode:'exclusive'},initialize):initialize());}
+ function ready(){return opening||(opening=typeof ONIZLEME_MODU!=='undefined'&&ONIZLEME_MODU?initialize():typeof navigator!=='undefined'&&navigator.locks?.request?navigator.locks.request('yks-local-migration',{mode:'exclusive'},initialize):initialize());}
  function identity(data,k,legacy){
   try {
    if(k==='yks_izleme_veri') {const v=JSON.parse(localStorage.getItem('yks_izleme')||'null');return v?.sahipUid&&v?.izleyiciUid?'viewer:'+v.izleyiciUid+':'+v.sahipUid:null;}
@@ -24184,12 +24187,12 @@ const LOCAL_STORE=(()=>{
   }catch(_){}return null;
  }
  function value(k,v){if(v===null)return null;let owner=null,raw=v;if(typeof v==='string'){if(recovery.has(k))try{const parsed=JSON.parse(v);if(parsed?.format==='yks-local-envelope-v1'&&typeof parsed.value==='string'){owner=parsed.owner;raw=parsed.value}else owner=identity(parsed,k,true)}catch(_){}}else{if(!v||v.schema!==1||typeof v.value!=='string')throw new Error('Cihaz kaydı biçimi geçersiz.');owner=v.owner;raw=v.value;}let current=null;try{current=identity(typeof D==='undefined'?null:D,k)}catch(_){}return owner&&current&&owner!==current?null:raw;}
- function getSync(k){check(k);if(mode==='indexedDB')return value(k,cache.has(k)?cache.get(k):null);return value(k,localStorage.getItem(k));}
+ function getSync(k){check(k);if(mode==='indexedDB'||mode==='memory')return value(k,cache.has(k)?cache.get(k):null);return value(k,localStorage.getItem(k));}
  async function get(k){check(k);await ready();await chain;if(mode!=='indexedDB')return getSync(k);const v=await read(k);if(v===null)cache.delete(k);else cache.set(k,v);return value(k,v);}
  function serialize(fn){const p=chain.then(fn,fn);chain=p.catch(()=>{});return p;}
- function set(k,v,ownerOverride,guard){check(k);if(typeof v!=='string')throw new Error('Cihaz kaydı metin olmalı.');let owner=ownerOverride||null;if(recovery.has(k)&&!owner){try{owner=identity(JSON.parse(v),k)}catch(_){}}const record=recovery.has(k)?{format:'yks-local-envelope-v1',schema:1,owner:owner||null,value:v}:v;return serialize(async()=>{await ready();if(guard&&!guard())throw new Error('Defter değişti; kayıt durduruldu.');if(mode!=='indexedDB'){const stored=recovery.has(k)?JSON.stringify(record):v;localStorage.setItem(k,stored);if(localStorage.getItem(k)!==stored)throw new Error('Cihaz kaydı doğrulanamadı.');return;}const tx=db.transaction('records','readwrite'),put=tx.objectStore('records').put(record,k);if(guard)put.onsuccess=()=>{if(!guard())tx.abort()};await done(tx);const saved=await read(k);if(JSON.stringify(saved)!==JSON.stringify(record))throw new Error('Cihaz kaydı doğrulanamadı.');cache.set(k,record);});}
- function remove(k){check(k);return serialize(async()=>{await ready();if(mode!=='indexedDB'){localStorage.removeItem(k);if(localStorage.getItem(k)!==null)throw new Error('Cihaz kaydı silinemedi.');return;}const tx=db.transaction('records','readwrite');tx.objectStore('records').delete(k);await done(tx);if(await read(k)!==null)throw new Error('Cihaz kaydı silinemedi.');cache.delete(k);});}
- function clear(){return serialize(async()=>{await ready();if(mode!=='indexedDB'){
+ function set(k,v,ownerOverride,guard){check(k);if(typeof v!=='string')throw new Error('Cihaz kaydı metin olmalı.');let owner=ownerOverride||null;if(recovery.has(k)&&!owner){try{owner=identity(JSON.parse(v),k)}catch(_){}}const record=recovery.has(k)?{format:'yks-local-envelope-v1',schema:1,owner:owner||null,value:v}:v;return serialize(async()=>{await ready();if(guard&&!guard())throw new Error('Defter değişti; kayıt durduruldu.');if(mode==='memory'){cache.set(k,record);return;}if(mode!=='indexedDB'){const stored=recovery.has(k)?JSON.stringify(record):v;localStorage.setItem(k,stored);if(localStorage.getItem(k)!==stored)throw new Error('Cihaz kaydı doğrulanamadı.');return;}const tx=db.transaction('records','readwrite'),put=tx.objectStore('records').put(record,k);if(guard)put.onsuccess=()=>{if(!guard())tx.abort()};await done(tx);const saved=await read(k);if(JSON.stringify(saved)!==JSON.stringify(record))throw new Error('Cihaz kaydı doğrulanamadı.');cache.set(k,record);});}
+ function remove(k){check(k);return serialize(async()=>{await ready();if(mode==='memory'){cache.delete(k);return;}if(mode!=='indexedDB'){localStorage.removeItem(k);if(localStorage.getItem(k)!==null)throw new Error('Cihaz kaydı silinemedi.');return;}const tx=db.transaction('records','readwrite');tx.objectStore('records').delete(k);await done(tx);if(await read(k)!==null)throw new Error('Cihaz kaydı silinemedi.');cache.delete(k);});}
+ function clear(){return serialize(async()=>{await ready();if(mode==='memory'){cache.clear();return;}if(mode!=='indexedDB'){
   // An interrupted migration can leave an unmarked IDB copy even while legacy is authoritative.
   // Delete it before local data so a failed cleanup cannot report success or lose the only copy.
   if(typeof indexedDB!=='undefined'){

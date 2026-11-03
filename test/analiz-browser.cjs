@@ -49,7 +49,7 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
    await page.clock.setFixedTime(new Date('2026-11-05T18:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    // The stored lists are built in the page from plain values. The latest exam (29 Ekim) has no Türkiye list.
    const veri={sir:siralama(s=>String(s||'').normalize('NFKC').toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim()),raporlar:ADLAR.slice(0,5).map((_,e)=>rapor(e)),etut:etutSatir,yoklama,konu:konuRapor,
      zo:zpart('ozet',konuRapor.ad),zm:zpart('madde',konuRapor.ad)};
@@ -165,7 +165,7 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
     const svg=document.querySelector('#okGrafik .et-grafik svg'),c=e=>{const b=e.getBoundingClientRect();return b.left+b.width/2},sr=svg.getBoundingClientRect();
     const ogr=[...svg.querySelectorAll('circle.ok-nokta[data-ok="ogr"]')].map(c),yks=[...svg.querySelectorAll('circle.ok-yks-nokta')].map(c);
     const axis=[...svg.querySelectorAll('line.et-eksen:not(.ok-ayrac)')],R=Math.max(...axis.map(a=>a.getBoundingClientRect().right));
-    const ticks=[...svg.querySelectorAll('text.et-tik:not(.ok-tarih):not(.ok-yks)')].filter(t=>/^\d+$/.test(t.textContent)&&t.getAttribute('text-anchor')==='end').map(t=>({t:Number(t.textContent),y:t.getBoundingClientRect().top}));
+    const ticks=[...svg.querySelectorAll('text.et-tik:not(.ok-tarih):not(.ok-yks)')].filter(t=>/^\d+$/.test(t.textContent)&&t.getAttribute('text-anchor')==='end').map(t=>{const b=t.getBoundingClientRect();return {t:Number(t.textContent),y:(b.top+b.bottom)/2}});
     const gridTop=Math.min(...[...svg.querySelectorAll('line.et-izgara:not(.ok-sinav)')].map(l=>l.getBoundingClientRect().top)),son=ogr[ogr.length-1];
     // Past her last exam only the YKS column may hold anything but the margin labels: lines over data end at her last exam.
     const veri=[...svg.querySelectorAll('path.ok-cizgi:not([data-gelecek]),circle.ok-nokta')].map(e=>e.getBoundingClientRect().right);
@@ -177,7 +177,7 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    assert.equal(geo.yks.length,2,'two end markers in the YKS column');assert(geo.yks.every(x=>Math.abs(x-geo.yks[0])<=0.5),'both at the same x');
    assert(Math.abs(geo.yks[0]-geo.son-2*fark[0])<=1,'the YKS column is two slots after the last exam');assert(geo.ayrac>geo.son&&geo.ayrac<geo.yks[0],'a divider in the gap');assert(geo.sutun);
    assert(geo.veriSag<=geo.son+6,'no data line runs past her last exam (only the two short dashed segments do)');assert(geo.yks[0]<=geo.R,'the column is inside the plot');
-   assert.equal(geo.top,120,'the top tick is the maximum');assert(Math.abs(geo.topY-geo.gridTop)<=8,'and it is at the top of the plot');
+   assert.equal(geo.top,120,'the top tick is the maximum');assert(Math.abs(geo.topY-geo.gridTop)<=8,'its label is centered on the top grid line '+JSON.stringify({topY:geo.topY,gridTop:geo.gridTop}));
    assert.deepEqual(geo.dates.slice(-1),['29 Eki'],'the last exam is always dated: '+geo.dates);if(width>=1280)assert.deepEqual(geo.dates,['24 Eyl','1 Eki','8 Eki','15 Eki','22 Eki','29 Eki']);
    assert.equal(await page.locator('#okGrafik svg path.ok-cizgi[data-gelecek]').count(),2,'one short dashed segment per end marker');
    // Son 1 ay: the earliest exam within a month of the latest (1 Ekim) → the latest; the lesson table and the change card follow.

@@ -13,7 +13,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>{dialogs.push(d.message());d.accept();});
    await page.clock.setFixedTime(new Date('2026-10-14T12:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(()=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-14';D.ayar.donemBasi='2026-09-07';D.ayar.donemElle=true;
     const ders=n=>DENEME_DERSLER.TYT.map(d=>({kod:d[0],soru:d[2],dogru:d[0]==='turkce'?n:0,yanlis:0}));
@@ -33,6 +33,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    assert.equal(await page.locator('[data-dn-ort-mod="genel"]').getAttribute('aria-pressed'),'true');
    await page.locator('#dnOrtHedef').fill('33');await page.locator('#dnOrtHedef').press('Enter');
    await page.waitForFunction(()=>D.denemeOrtHedef?.TYT?.['']===33);
+   await page.locator('.rehber-pano .yg-hedef').waitFor({state:'attached'});
    assert.equal(await page.locator('.rehber-pano .yg-hedef').count(),1,'target line drawn');
    assert.equal(await page.evaluate(()=>{const t=document.querySelector('.rehber-pano text.yg-hedef-yazi').getBoundingClientRect();
      return [...document.querySelectorAll('.rehber-pano circle.yg-nokta')].filter(c=>{const b=c.getBoundingClientRect();
@@ -77,7 +78,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
     const kb=t=>+t.replace(/[^\d]/g,'');
     const toplam=kb(await tablo.locator('tfoot tr').first().locator('td').nth(1).innerText());
     assert(toplam>1500&&toplam<1700,'total '+toplam);
-    assert.equal(await tablo.locator('tfoot tr').nth(1).innerText().then(t=>t.replace(/\s+/g,' ')),'Sınır 2.500 KB');
+    assert.equal(await tablo.locator('tfoot tr').nth(1).innerText().then(t=>t.replace(/\s+/g,' ')),'Sınır 5.000 KB');
     const bolumler=(await tablo.locator('tbody tr td:nth-child(2)').allInnerTexts()).map(kb);
     assert(Math.abs(bolumler.reduce((a,b)=>a+b,0)-toplam)<=8,'the rows add up to the total (rounding only)');
     assert.equal(await tablo.locator('tbody tr').nth(5).locator('td').nth(1).innerText(),'0 KB','a part that is absent is 0 KB');

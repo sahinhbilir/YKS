@@ -204,7 +204,11 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal(await kart.locator('#tarayiciSifirla').count(),1);
    await page.screenshot({path:path.join(out,'test-account-reset-'+width+'.png'),fullPage:true});
    assert(bulutYollari.some(k=>k.startsWith('testDefter/google-1')),'the cloud holds the notebook before');
-   const yerelSayisi=()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>String(localStorage.getItem(k)).includes('Kuzey')).length);
+   const yerelSayisi=()=>page.evaluate(async()=>{
+    const legacy=Object.keys(localStorage).filter(k=>String(localStorage.getItem(k)).includes('Kuzey')).length;
+    const values=await new Promise((resolve,reject)=>{const open=indexedDB.open('yks-local-store',1);open.onerror=()=>reject(open.error);open.onsuccess=()=>{const db=open.result,req=db.transaction('records','readonly').objectStore('records').getAll();req.onsuccess=()=>{db.close();resolve(req.result)};req.onerror=()=>{db.close();reject(req.error)}}});
+    return legacy+values.filter(v=>JSON.stringify(v).includes('Kuzey')).length;
+   });
    assert(await yerelSayisi()>0,'the device holds the notebook before');
    sifirla=true;
    await Promise.all([page.waitForEvent('load'),page.locator('#testSifirla').click()]);

@@ -18,7 +18,7 @@ const listeler=['once','sonra'].flatMap(e=>['T','F'].map(t=>okulListesi(SINAVLAR
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
    await page.clock.setFixedTime(new Date('2026-10-19T18:00:00+03:00'));
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
-   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object');
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(async([rapor,l])=>{
     D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-19';D.ogr=[];EK.sekme='etutler';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
     denemePdfSayfalari=async()=>structuredClone(rapor);await siralamaKaydet(l.map(x=>siralamaPdfCoz(x.pages,x.boylar)));ciz();

@@ -67,6 +67,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.locator('[data-et-aralik="2"]').click();
    // Many lines: the one under the pointer takes the stage, the others fade.
    const ders=page.locator('[data-et-grafik="ders"]');await ders.scrollIntoViewIfNeeded();
+   await ders.locator('svg path[data-seri="0"]').first().waitFor({state:'attached'});
    const nokta=await page.evaluate(()=>{const p=document.querySelector('[data-et-grafik="ders"] svg path[data-seri="0"]'),q=p.getPointAtLength(p.getTotalLength()*.5),m=p.getScreenCTM();return {x:q.x*m.a+m.e,y:q.y*m.d+m.f}});
    await page.mouse.move(nokta.x,nokta.y);
    await page.waitForFunction(()=>document.querySelector('[data-et-grafik="ders"] svg').classList.contains('odakli'));

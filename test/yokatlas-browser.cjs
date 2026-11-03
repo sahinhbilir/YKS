@@ -17,7 +17,7 @@ fs.mkdirSync(out,{recursive:true});
    if(u.startsWith('http://localhost/'))return r.fulfill({status:200,contentType:'text/html',body:html});
    return r.abort();
   });
-  await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof varsayilan==='function');
+  await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof varsayilan==='function'&&ACILIS_KAYIT>=0);
   await page.evaluate(()=>{
    D=varsayilan();D.rol='ogrenci';D.ogr=[{no:1,ad:'SENTETİK ADA',sube:'12-C',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true}];
    EK.ogr=0;EK.sekme='universite';kaydet=async()=>true;ogrenciEsitlemePlanla=()=>{};
