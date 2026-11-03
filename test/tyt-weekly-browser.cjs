@@ -30,6 +30,7 @@ const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[
   const already=page.locator('[data-yaptim="metotGt"][data-ki="g|TYT|tr"]:visible').first();
   await already.click();await page.locator('#yaptimMetotTarih').fill('2026-10-25');await page.locator('#yaptimKaydet').click();
   await page.waitForFunction(()=>D.ogr[0].kendiPlan.metot.tamam['g|TYT|tr']==='2026-10-25');
+  await page.locator('#yaptimOrtu').waitFor({state:'detached'});
   assert.equal(await page.locator('[data-yaptim="metotGt"][data-ki="g|TYT|tr"]:visible').count(),0,'completed overview no longer offers the button');
   assert.match(await page.locator('table.plan').innerText(),/Önceden izlendi/);
   await page.evaluate(()=>{EK.sekme='ayarlar';ciz()});
