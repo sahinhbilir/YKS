@@ -4,7 +4,7 @@ The school keeps the existing teacher-owned notebook, student synchronization do
 
 ## Device persistence
 
-`src/local-store.js` is embedded in the standalone application. Current notebooks and the existing recovery slots move to IndexedDB; small preferences remain in localStorage. Migration copies and reads back records before marking IndexedDB authoritative and removing identical legacy values. An interrupted migration keeps the legacy source; a failed authoritative IndexedDB open/read blocks startup instead of substituting an empty notebook.
+`src/local-store.js` is embedded in the standalone application. Current notebooks and the existing recovery slots move to IndexedDB; small preferences remain in localStorage. Migration copies and reads back records before marking IndexedDB authoritative and removing identical legacy values. An interrupted migration keeps the legacy source; a failed authoritative IndexedDB open/read never substitutes an empty notebook silently or touches the device copy: the app starts with a temporary in-memory notebook (`LOCAL_STORE.gecici()`), shows a persistent warning band with a retry button, and works only against the cloud notebook. Memory mode never writes, clears or deletes IndexedDB or the managed localStorage keys, and the existing empty-notebook and conflict guards stop it from overwriting the cloud copy. It also keeps the cloud conflict base in this session only: the stored base still describes the device copy, so if that copy opens again later, the cloud work done meanwhile is reported as a conflict instead of being overwritten.
 
 The app retains a single active notebook. Known student/test/teacher identities on recovery envelopes prevent another known account's recovery copy appearing as its own. Unknown legacy identities remain available rather than being guessed or discarded. Logout/reset retains the existing server-verification and tab-lock gates, then verifies cleanup of both IndexedDB and leftover managed localStorage records. Other applications' keys are untouched.
 
@@ -30,13 +30,13 @@ These are tested engineering budgets, not guarantees for every possible year. Ad
 New history uses fixed `_v2-*` addresses in the existing owner-protected `ogretmenYedek/{owner}/gecmis` collection. Existing deployed rules already allow these documents and retain their owner/co-teacher/lock restrictions. No broader deletion permission or rules migration is introduced.
 
 - 30 changed-day snapshots.
-- 12 monthly snapshots.
+- 12 monthly snapshots, written only when the day rolls over: the first backup of a new day promotes the previous cloud copy (the end of the last active day) into the month slot of that day's month. Later backups the same day do not rewrite it.
 - 10 operation recovery **snapshots**; a restore protecting different local and cloud copies uses two.
 - One current-day start snapshot.
 
 The maximum is 53 payload slots plus the primary notebook and a compact metadata index. Index/payload changes commit atomically with primary replacements. Displayed versions carry a generation timestamp and SHA-256 of the decoded snapshot. Stale/overwritten slots, corrupt indexes and hash mismatches fail without loading a different version or resetting the index.
 
-Normal history listing reads metadata only; selecting an entry retrieves its payload. “Eski yedekleri göster” reads the legacy history explicitly. Existing dated and immutable recovery documents are left intact. Old clients can still create old-style history under existing rules; the bound applies to new-client history. Backups whose only changes are top-level save timestamp/revision create zero new writes while preserving exact remote conflict bases.
+Normal history listing reads metadata only; selecting an entry retrieves its payload. “Eski yedekleri göster” reads the legacy history explicitly. Existing dated and immutable recovery documents are left intact. Old clients can still create old-style history under existing rules; the bound applies to new-client history. Backups whose only changes are top-level save timestamp/revision create zero new writes while preserving exact remote conflict bases. A changed backup writes three documents (primary notebook, day slot, index); the first changed backup of a day writes five (adds the start slot and the promoted month slot).
 
 ## Verification and rollback
 

@@ -56,6 +56,8 @@ const ad=e=>'27-YKS-120'+e+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf';
    // A third exam moves the chart on: it becomes the şimdiki exam.
    await page.locator('#tgPdf').setInputFiles([dosya(ad(3))]);
    await page.waitForFunction(()=>/1203/.test(document.getElementById('tgDurum')?.textContent||''));
+   // The previous exam's chart is still on the page until the redraw, so wait for the new sentence itself.
+   await page.waitForFunction(()=>/^27-YKS-1203 /.test(document.querySelector('#tgKok .et-cumle')?.innerText||''));
    await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="sira"] svg'));
    assert.match(await cumle(),/^27-YKS-1203 \(21 Eki\)/);assert.match(await cumle(),/ilk 100’de 3 \/ 3 ders/);
    assert.equal(await page.locator('#tgSimdi').inputValue(),'27-YKS-1203|kolej');

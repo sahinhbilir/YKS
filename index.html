@@ -2519,7 +2519,7 @@ const bugunNo = () => {
 const pazartesi = g => g - haftaGunu(g);
 
 // ---------------------------------------------------------------- durum
-let LOCAL_EMBEDDED_READONLY = false;
+let LOCAL_EMBEDDED_READONLY = false, CIHAZ_KAYIT_ACILAMADI = false;
 let D = null, EK = { sekme: 'plan', ogr: 0, hafta: null, kirli: false, son: '', girisAcik: {}, haritaAcik: null,
   haritaOnay: null, bulutGeriNoktalar: null };
 const ROL = () => (D && D.rol) || '';
@@ -8475,6 +8475,9 @@ async function bulutYedekImzasi(json) {
 }
 async function bulutYedekTemeliniHatirla(uid, json) {
   bulutYedekTemelleri[uid] = await bulutYedekImzasi(json);
+  // Geçici (bellek) modda temel yalnızca bu oturumda tutulur. Diskteki temel cihazdaki eski defteri
+  // anlatmaya devam eder; cihaz kaydı sonra açılırsa buluttaki yeni çalışma çakışma olarak yakalanır.
+  if (LOCAL_STORE.mode() === 'memory') return;
   try {
     const digerleri = JSON.parse(localStorage.getItem('yks_bulut_temelleri') || '{}') || {};
     digerleri[uid] = bulutYedekTemelleri[uid];
@@ -8483,6 +8486,7 @@ async function bulutYedekTemeliniHatirla(uid, json) {
 }
 function bulutYedekTemeliniUnut(uid) {
   delete bulutYedekTemelleri[uid];
+  if (LOCAL_STORE.mode() === 'memory') return;
   try {
     const temeller = JSON.parse(localStorage.getItem('yks_bulut_temelleri') || '{}') || {};
     delete temeller[uid]; localStorage.setItem('yks_bulut_temelleri', JSON.stringify(temeller));
@@ -8565,9 +8569,14 @@ async function bulutaYedekleGercek(onaylananVeri, onaylananUid) {
           if (!etkin) throw new Error('Bulut yedeği sunucudan zamanında onay alamadı.');
         }
         const {index}=await bulutGecmisDizini(window.bulut,sahipUid,tx),istekler=[];
-        if(eski&&!index.entries.some(e=>e.kind==='start'&&e.gun===gun))istekler.push(await bulutGecmisIstegi(eski.veri,'start','Gün başlangıcı · '+gun,gun));
+        if(eski&&!index.entries.some(e=>e.kind==='start'&&e.gun===gun)){
+          istekler.push(await bulutGecmisIstegi(eski.veri,'start','Gün başlangıcı · '+gun,gun));
+          // Gün değişti: önceki etkin günün son hâli (eski kopya) o ayın aylık kaydı olur.
+          const sonGun=index.entries.filter(e=>e.kind==='day').sort((x,y)=>y.ts-x.ts)[0];
+          if(sonGun)istekler.push(await bulutGecmisIstegi(eski.veri,'month','Aylık son kayıt',sonGun.gun));
+        }
         if(eski&&typeof onaylananVeri==='string')istekler.push(await bulutGecmisIstegi(eski.veri,'operation','Yerel defter yüklenmeden önce buluttaki defter',gun));
-        istekler.push(gunIstegi,{...gunIstegi,kind:'month',kaynak:'Aylık son kayıt'});
+        istekler.push(gunIstegi);
         const plan=BACKUP_HISTORY.plan(index,istekler,korumaTs);
         // Son yedek zaten boş olsa bile bugünün geçmiş kopyası dolu olabilir.
         // Boş defteri yeniden yazmak elde kalan o kurtarma kopyasını silmemeli.
@@ -8829,7 +8838,11 @@ async function izlemeAcilisi() {
     return true;
   } catch (e) { await izlemeKayitlariniSil(); IZLEME = null; IZLEME_JSON = ''; return false; }
 }
-function izlemeBandi() {
+function cihazKayitBandi() {
+  return CIHAZ_KAYIT_ACILAMADI ? '<div class="izleme-bant" role="alert" id="cihazKayitBandi"><b>Bu cihazdaki kayıt açılamadı; cihazdaki defter silinmedi.</b><span>Google hesabınızla girip buluttaki defterle çalışabilirsiniz; değişiklikler yalnızca buluta kaydedilir.</span><button class="dugme" id="cihazKayitYenidenDene">Yeniden dene</button></div>' : '';
+}
+function izlemeBandi() { return cihazKayitBandi() + izlemeBandiIc(); }
+function izlemeBandiIc() {
   if (KILIT.durum === 'baskasinda') return '<div class="izleme-bant" role="note"><b>' + kacis((KILIT.ad || 'Diğer öğretmen') + ' düzenliyor') + '</b><span>' +
     kacis('Yalnızca görüntüleme' + (EK.kilitGuncel ? ' · güncel ' + EK.kilitGuncel : '') + (EK.kilitNot ? ' · ' + EK.kilitNot : '')) + '</span></div>';
   if (!IZLEME) return ORTAK ? '<div class="izleme-bant ortak-bant" role="note"><b>Ortak defter</b><span>' + kacis(ORTAK.ad || '') + '</span></div>' : '';
@@ -10063,7 +10076,8 @@ async function cikisYerelVerisiniTemizle() {
     for(const k of anahtarlar){depo.removeItem(k);if(depo.getItem(k)!==null)throw new Error('Tarayıcıdaki kayıt silinemedi.');}
   }
   await LOCAL_STORE.clear();
-  localStorage.removeItem('yks_idb_migrated');
+  // Geçici (bellek) modda cihazdaki defter hiç açılmadı; işareti kalır ki sonraki açılışta boş başlangıç sanılmasın.
+  if(LOCAL_STORE.mode()!=='memory')localStorage.removeItem('yks_idb_migrated');
 }
 function kaydedipCikisYap() {
   if(CIKIS_IS)return CIKIS_IS;
@@ -12042,7 +12056,7 @@ function kaydolKarti() {
 }
 function gorunumKurulum() {
   const yil = (/^\d{4}/.exec((D && D.ayar && D.ayar.sinav) || '') || ['2027'])[0];
-  return '<div class="giris">' + GIRIS_SUSLER + '<div class="giris-tema">' + temaSecimi() + '</div><div class="giris-ic">' +
+  return '<div class="giris">' + GIRIS_SUSLER + '<div class="giris-tema">' + temaSecimi() + '</div><div class="giris-ic">' + cihazKayitBandi() +
     '<h1 class="giris-baslik">YKS ' + yil + '</h1>' +
     '<p class="giris-alt">Hedefine bir adım daha yaklaş</p>' +
     '<p class="giris-vaat">Tekrarlarını planla, çalışmanı kaydet, gelişimini gör.</p><div class="giris-ara ara-kart"></div>' +
@@ -12288,6 +12302,7 @@ document.addEventListener('click', async ev => {
     await indir('yks-tekrar-yedek-' + isoDan(bugunNo()) + '.json', JSON.stringify(D), 'json');
     return;
   }
+  if (ev.target.closest('#cihazKayitYenidenDene')) { location.reload(); return; }
   if (ev.target.closest('#hataAyarlaraGit')) { EK.sekme = 'ayarlar'; ciz(); return; }
   const kapat = ev.target.closest('#pKapat') || (ev.target.id === 'ortu' ? ev.target : null);
   if (kapat) { PENCERE = null; pencereCiz(); return; }
@@ -24204,7 +24219,9 @@ const LOCAL_STORE=(()=>{
   // atomic IDB delete, so a legacy failure keeps the authoritative IDB intact.
   for(const k of [...keys.filter(k=>k!=='yks_veri'),'yks_veri']){localStorage.removeItem(k);if(localStorage.getItem(k)!==null)throw new Error('Cihaz kaydı silinemedi.');}
   const tx=db.transaction('records','readwrite'),s=tx.objectStore('records');for(const k of keys)s.delete(k);await done(tx);for(const k of keys)if(await read(k)!==null)throw new Error('Cihaz kaydı silinemedi.');cache.clear();});}
- return {ready,get,getSync,set,remove,clear,isManaged:k=>allowed.has(k),mode:()=>mode};
+ // Failed open: continue with an empty in-memory notebook. Memory mode never touches IndexedDB or localStorage.
+ function gecici(){try{db?.close()}catch(_){}db=null;cache.clear();mode='memory';opening=Promise.resolve();return chain;}
+ return {ready,get,getSync,set,remove,clear,gecici,isManaged:k=>allowed.has(k),mode:()=>mode};
 })();
 // END LOCAL_STORE
 
@@ -24267,7 +24284,7 @@ function dosyaGomuluYalnizcaOku() {
   // clear origin storage only while no other updated tab is using it.
   try { await oturumSekmesiniKaydet(); } catch(e) { /* The notebook stays usable; logout will report the lock failure. */ }
   try { await LOCAL_STORE.ready(); }
-  catch (e) { if(dosyaGomuluYalnizcaOku())return; const ana=document.getElementById('ana'); if(ana) ana.textContent='Cihazdaki kayıt açılamadı; veriler korunuyor. Tarayıcı depolamasını kontrol edip yeniden deneyin. '+(e.message||e); return; }
+  catch (e) { if(dosyaGomuluYalnizcaOku())return; console.error('[YKS Tekrar Defteri] Cihaz kaydı açılamadı; bellekte boş defterle açılıyor.', e); await LOCAL_STORE.gecici(); CIHAZ_KAYIT_ACILAMADI = true; }
   let sekmeGeriYuklendi = false;
   try {
     const s = sessionStorage.getItem('yks_ek');
@@ -24276,7 +24293,7 @@ function dosyaGomuluYalnizcaOku() {
   EK.hafta = null;                     // uygulama her zaman içinde bulunulan haftayla açılır
   // Test hesabı: açılış hazırlığı defteri değiştirmeden önceki hâli (bkz. testDefteriniDenetle).
   try { TEST_ACILIS_JSON = await LOCAL_STORE.get('yks_veri'); }
-  catch (e) { if(dosyaGomuluYalnizcaOku())return; const ana=document.getElementById('ana'); if(ana) ana.textContent='Cihazdaki kayıt okunamadı; veriler korunuyor. Tarayıcı depolamasını kontrol edip yeniden deneyin. '+(e.message||e); return; }
+  catch (e) { if(dosyaGomuluYalnizcaOku())return; console.error('[YKS Tekrar Defteri] Cihaz kaydı okunamadı; bellekte boş defterle açılıyor.', e); await LOCAL_STORE.gecici(); CIHAZ_KAYIT_ACILAMADI = true; TEST_ACILIS_JSON = null; }
   let acilisUyarilari = [];
   try { acilisUyarilari = await durumuYukle(TEST_ACILIS_JSON); }
   catch (e) {

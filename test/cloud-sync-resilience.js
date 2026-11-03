@@ -1371,11 +1371,11 @@ test('hiding-the-tab-flushes-a-pending-backup-immediately', async () => {
   await run('bulutYedekBosalt()');
   await run('bulutYedekIsi');
   await new Promise(r => setImmediate(r));
-  equal(uploads.length, 4, 'closing/hiding the tab must send the pending backup (live + day copy), not drop it');
+  equal(uploads.length, 3, 'closing/hiding the tab must send the pending backup (live + day copy + index), not drop it');
   // bekleyen yoksa boşaltmak boşuna yazmamalı
   await run('bulutYedekBosalt()');
   await new Promise(r => setImmediate(r));
-  equal(uploads.length, 4, 'flushing with nothing pending must not write again');
+  equal(uploads.length, 3, 'flushing with nothing pending must not write again');
 });
 
 test('manual-backup-button-uploads-and-reports', async () => {
@@ -1431,7 +1431,8 @@ test('backup-also-writes-a-dated-daily-snapshot', async () => {
     setDoc: async (ref, d) => { yazilan.push({ ref, d }); } });
   const r = await run('bulutaYedekle()');
   equal(r.tur, 'tamam');
-  equal(yazilan.length, 4, 'one live backup, day and month slots, and index');
+  equal(yazilan.length, 3, 'one live backup, day slot and index; no month copy within a day');
+  assert(!yazilan.some(y => /\/gecmis\/_v2-m\d\d$/.test(y.ref)), 'month slot is written only when the day rolls over');
   const bugun = run('isoDan(bugunNo())');
   const gunluk = yazilan.find(y => /\/gecmis\/_v2-d\d\d$/.test(y.ref));
   assert(gunluk, 'a daily snapshot must be written: ' + JSON.stringify(yazilan.map(y => y.ref)));

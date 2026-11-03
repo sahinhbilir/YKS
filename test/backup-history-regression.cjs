@@ -8,10 +8,26 @@ b.getDocs=async path=>{reads.push('LIST '+path);return {forEach:fn=>Object.keys(
 const root='ogretmenYedek/teacher',indexKey=root+'/gecmis/_v2-index',getIndex=()=>JSON.parse(cloud[indexKey].veri);
 const backup=async()=>{const r=await run('bulutaYedekle()');assert.equal(r.tur,'tamam',JSON.stringify(r));return r};
 (async()=>{
- run("__day='2026-09-14';bulutGercekGun=()=>__day;");await backup();assert.equal(writes.length,4);
+ run("__day='2026-09-14';bulutGercekGun=()=>__day;");await backup();assert.equal(writes.length,3,'first-ever backup: primary, day slot and index; no start or month copy');
  writes.length=0;run('D.ts=Date.now();D.rev=100');const noop=await backup();assert(noop.degismedi);assert.equal(writes.length,0,'semantic no-op must not write a primary, index or history');
+ const months=()=>getIndex().entries.filter(e=>e.kind==='month'),monthWrites=()=>writes.filter(k=>k.startsWith(root+'/gecmis/_v2-m'));
+ // Same day: no month slot at all, only primary + day + index.
+ // The very first backup had no previous copy, so the next changed backup is the first with one (start + month); the one after is plain.
+ run("D.kurum='First changed'");await backup();writes.length=0;run("D.kurum='Same day change'");await backup();assert.equal(writes.length,3);assert.equal(monthWrites().length,0,'later changed backup on the same day must not write a month slot');assert.equal(months().length,1,'only the promoted first-change month copy exists');
+ // First backup of the next day: the month slot receives yesterday's final payload and yesterday's month.
+ const yesterdayPayload=cloud[root].veri;writes.length=0;run("__day='2026-09-15';D.kurum='Next day change'");await backup();
+ assert.equal(writes.length,5,'first changed backup of a day: primary, day, start, month, index');assert.equal(monthWrites().length,1);
+ assert.equal(months().length,1);assert.equal(months()[0].gun,'2026-09-14');assert.equal(cloud[root+'/gecmis/'+months()[0].slot].veri,yesterdayPayload);
+ writes.length=0;run("D.kurum='Same day again'");await backup();assert.equal(writes.length,3);assert.equal(monthWrites().length,0);
+ // Month change: Sep 30 -> Oct 1 -> Oct 2 keeps both months, each with its own last-day payload.
+ run("__day='2026-09-30';D.kurum='Sep 30 final'");await backup();const sep30=cloud[root].veri;
+ run("__day='2026-10-01';D.kurum='Oct 1'");await backup();
+ assert.deepEqual(months().map(e=>e.gun),['2026-09-30'],'September snapshot keeps the last September day after the roll');
+ const oct1=cloud[root].veri;run("__day='2026-10-02';D.kurum='Oct 2'");await backup();
+ assert.deepEqual(months().map(e=>e.gun).sort(),['2026-09-30','2026-10-01']);
+ assert.equal(cloud[root+'/gecmis/'+months().find(e=>e.gun==='2026-09-30').slot].veri,sep30);assert.equal(cloud[root+'/gecmis/'+months().find(e=>e.gun==='2026-10-01').slot].veri,oct1);
  const legacy=clone(cloud[root]);cloud[root+'/gecmis/2025-10-01']={...legacy,ogrenciSayisi:1,sonucSayisi:0};cloud[root+'/geriNoktalari/legacy-point-12345']={...legacy,kaynak:'legacy'};
- for(let day=0;day<400;day++){a.sandbox.nextDay=new Date(Date.UTC(2026,8,14)+day*86400000).toISOString().slice(0,10);run("__day=nextDay;D.kurum='Changed '+nextDay");await backup();}
+ for(let day=0;day<400;day++){a.sandbox.nextDay=new Date(Date.UTC(2026,9,3)+day*86400000).toISOString().slice(0,10);run("__day=nextDay;D.kurum='Changed '+nextDay");await backup();}
  for(let n=0;n<14;n++){const r=await run('geriYuklemeNoktasiOlustur("Operation test")');assert.equal(r.tur,'tamam',JSON.stringify(r));}
  const idx=getIndex();assert.equal(idx.entries.filter(e=>e.kind==='day').length,30);assert.equal(idx.entries.filter(e=>e.kind==='month').length,12);assert.equal(idx.entries.filter(e=>e.kind==='operation').length,10);assert.equal(idx.entries.filter(e=>e.kind==='start').length,1);
  assert.equal(Object.keys(cloud).filter(k=>k.startsWith(root+'/gecmis/_v2-')&&k!==indexKey).length,53,'payload footprint stays bounded');

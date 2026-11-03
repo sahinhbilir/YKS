@@ -61,5 +61,7 @@ const LOCAL_STORE=(()=>{
   // atomic IDB delete, so a legacy failure keeps the authoritative IDB intact.
   for(const k of [...keys.filter(k=>k!=='yks_veri'),'yks_veri']){localStorage.removeItem(k);if(localStorage.getItem(k)!==null)throw new Error('Cihaz kaydı silinemedi.');}
   const tx=db.transaction('records','readwrite'),s=tx.objectStore('records');for(const k of keys)s.delete(k);await done(tx);for(const k of keys)if(await read(k)!==null)throw new Error('Cihaz kaydı silinemedi.');cache.clear();});}
- return {ready,get,getSync,set,remove,clear,isManaged:k=>allowed.has(k),mode:()=>mode};
+ // Failed open: continue with an empty in-memory notebook. Memory mode never touches IndexedDB or localStorage.
+ function gecici(){try{db?.close()}catch(_){}db=null;cache.clear();mode='memory';opening=Promise.resolve();return chain;}
+ return {ready,get,getSync,set,remove,clear,gecici,isManaged:k=>allowed.has(k),mode:()=>mode};
 })();

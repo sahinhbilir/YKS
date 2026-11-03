@@ -88,7 +88,7 @@ jobs:
       - name: Cloud-sync resilience
         run: node test/cloud-sync-resilience.js
       - name: Durable local storage and bounded cloud history
-        run: node scripts/embed-local-store.cjs --check && node scripts/embed-backup-history.cjs --check && node test/local-store-app-regression.cjs && node test/backup-history-regression.cjs
+        run: node scripts/embed-local-store.cjs --check && node scripts/embed-backup-history.cjs --check && node test/local-store-app-regression.cjs && node test/backup-history-regression.cjs && node test/device-storage-fallback-regression.js
       - name: Weekly student activity and named teacher dashboard
         run: node test/student-activity-regression.cjs
       - name: Firebase Analytics isolation and production-only collection
