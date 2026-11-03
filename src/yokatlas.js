@@ -115,7 +115,7 @@ function tahmin(alan,tyt,ayt,diploma){
 
 /* ---------------- the student's exams ---------------- */
 const tarihYaz=t=>String(t||'').split('-').reverse().join('.');
-// Every TYT or AYT record of the student, newest first. Nothing is hidden by exam kind (Tarama / Genel).
+// The student's own records (teacher-sent copies and student-entered ones) of a session, oldest first. Nothing is hidden by exam kind (Tarama / Genel).
 const satirlar=(oturum,si=EK.ogr)=>denemeListe(si).filter(r=>!r.silindi&&r.tur===oturum&&r.oturum===oturum).reverse();
 const dersAdi=(oturum,kod)=>DENEME_DERSLER[oturum]?.find(x=>x[0]===kod)?.[1]||kod;
 // Compare only complete, full-length test coverage. Missing lessons are not zero nets.
@@ -138,8 +138,62 @@ function kapsam(r,oturum,field){
 }
 const profil=(r,oturum,field)=>kapsam(r,oturum,field).values;
 const eksikYazi=l=>'eksik: '+l.slice(0,2).join(', ')+(l.length>2?' +'+(l.length-2):'');
+/* The exam list. Primary source: the school's own result lists (the ones Denemeler · TYT/AYT, Sıralamalar and the Öğrenci kartı use,
+   DPANO.veriAl().t.sinavlar, each with its students' nets by school number). "PDF ekle" stores a school list without a per-student copy,
+   so such an exam is only here. The student's own denemeListe entries are added after them when no school exam has the same name and
+   session (the date is ignored: a student's copy often carries another date). */
+const SINIF_DERS={tr:['TÜR'],sos:['TAR','COĞ','FEL','DİN','S.F'],mat:['MAT','GEO'],fen:['FİZ','KİM','BİY']};
+const SINIF_AD={tr:'Türkçe',sos:'Sosyal Bilimler',mat:'Matematik',fen:'Fen Bilimleri'};
+const AYT_OKUL={amat:['AMAT','AGEO'],fiz:['AFİZ'],kim:['AKİM'],bio:['ABİY'],edb:['EDB'],tar1:['TAR1'],cog1:['COĞ1'],tar2:['TAR2'],cog2:['COĞ2'],fel:['FELGR'],din:['DİN2','S.F2']};
+const adAnahtar=s=>norm(String(s||'').normalize('NFKC').replace(/[_\s]+/g,' ').trim());
+const isoGun=t=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(t||'');return m?Math.round(Date.UTC(+m[1],+m[2]-1,+m[3])/864e5):null};
+const okulTarih=t=>{const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t||'');return m?m[3]+'-'+m[2]+'-'+m[1]:''};
+const netler=(o,keys)=>keys.reduce((n,k)=>n+(o.net[k]||0),0);
+// One school exam for the student, or null when the student did not sit that session in it.
+function okulProfil(o,oturum,field){
+ const S=SIRALAMA;
+ if(oturum==='TYT'){
+  if(!S.hasTYT(o))return null;
+  const values={},eksik=[];
+  for(const k of TYT){
+   if(SINIF_DERS[k].some(c=>o.net[c]!=null)){values[k]=netler(o,SINIF_DERS[k]);continue}
+   eksik.push(SINIF_AD[k]);
+  }
+  return {values:eksik.length?null:values,eksik};
+ }
+ if(!S.hasAYT(o))return null;
+ const adlar=Object.fromEntries(S.SIRA_DERS.AYT.map(d=>[d[0],d[1]]));
+ if(S.took(o,field)){
+  return {values:Object.fromEntries(AYT[field].map(k=>[k,netler(o,AYT_OKUL[k])])),eksik:[]};
+ }
+ const yok=S.FCOLS[field].filter(c=>o.net[c]==null).map(c=>adlar[c]||c);
+ return {values:null,eksik:yok.length?yok:['AYT']};
+}
+function okulSinavlari(oturum,alan,no){
+ let t=null;
+ try{if(typeof DPANO!=='undefined'&&no!==undefined&&no!==null)t=DPANO.veriAl().t}catch(e){t=null}
+ if(!t||typeof SIRALAMA==='undefined')return [];
+ const out=[];
+ for(const s of t.sinavlar||[]){
+  const o=(oturum==='TYT'?s.tyt:s.ayt)?.[String(no)];
+  if(!o)continue;
+  const k=okulProfil(o,oturum,alan);if(!k)continue;
+  const tarih=okulTarih(s.tarih);
+  out.push({id:'s:'+oturum+':'+s.id,kaynak:'okul',r:null,ad:s.ad,tarih,g:isoGun(tarih),etiket:(tarih?tarihYaz(tarih)+' · ':'')+s.ad,uygun:!!k.values,values:k.values,eksik:k.eksik,anahtar:adAnahtar(s.ad)});
+ }
+ return out;
+}
 function sinavSecenekleri(alan,si=EK.ogr){
- const yap=(ot)=>satirlar(ot,si).map(r=>{const k=kapsam(r,ot,alan);return {id:r.id,r,etiket:tarihYaz(r.tarih)+' · '+r.ad,uygun:!!k.values,values:k.values,eksik:k.eksik}});
+ const ogr=D.ogr?.[si],okulKopya=new Set((ogr?.denemeOkul||[]).filter(r=>!r.silindi).map(r=>r.id));
+ const yap=(ot)=>{
+  const okul=okulSinavlari(ot,alan,ogr?.no),anahtarlar=new Set(okul.map(x=>x.anahtar));
+  const kendi=satirlar(ot,si).filter(r=>!anahtarlar.has(adAnahtar(r.ad))).map(r=>{
+   const k=kapsam(r,ot,alan),girdi=!okulKopya.has(r.id);
+   return {id:r.id,kaynak:girdi?'ogrenci':'kopya',r,ad:r.ad,tarih:r.tarih,g:isoGun(r.tarih),etiket:tarihYaz(r.tarih)+' · '+r.ad+(girdi?' (öğrenci girdi)':''),uygun:!!k.values,values:k.values,eksik:k.eksik};
+  });
+  // Newest first by the exam's own date; school exams before student entries on a tie.
+  return [...okul,...kendi].map((x,i)=>({x,i})).sort((a,b)=>(b.x.g??-Infinity)-(a.x.g??-Infinity)||a.i-b.i).map(e=>e.x);
+ };
  return {tyt:yap('TYT'),ayt:yap('AYT')};
 }
 const gidisatBellek=new WeakMap();
@@ -178,7 +232,7 @@ function merkezBul(student,kip,alan,secim={},si=EK.ogr){
   return {x};
  };
  const t=bul(s.tyt,secim.tyt,'TYT'),a=bul(s.ayt,secim.ayt,'AYT');
- const yaz=(b,keys)=>b.x?{net:sum(b.x.values,keys),ad:b.x.r.ad,tarih:b.x.r.tarih,id:b.x.id}:null;
+ const yaz=(b,keys)=>b.x?{net:sum(b.x.values,keys),ad:b.x.ad,tarih:b.x.tarih,id:b.x.id}:null;
  return {kip,tyt:yaz(t,TYT),ayt:yaz(a,AYT[alan]),tytNeden:t.neden||'',aytNeden:a.neden||''};
 }
 // Which alan the centre can serve: the AYT must have that alan's tests.
