@@ -40,9 +40,9 @@ const student=sandbox.D.ogr[0];
   const tabanlar=catalogue.programs.filter(p=>p.field===f&&Number.isFinite(p.points)&&p.rank).map(p=>p.rank);
   assert(a.siraTahmin(m,900)>=Math.min(...tabanlar)-.5&&a.siraTahmin(m,0)<=Math.max(...tabanlar)+.5);
  }
- // The estimate: diploma notu × 5 as OBP, 80 when empty; totals of the last placed student reproduce the programme's own puan.
- const e0=a.tahmin('SAY',60,40,undefined),e1=a.tahmin('SAY',60,40,80),e2=a.tahmin('SAY',60,40,90);
- assert.equal(e0.diplomaGirildi,false);assert.equal(e1.diplomaGirildi,true);assert.equal(e0.puan,e1.puan);near(e2.puan-e1.puan,M.SAY.b[3]*50,1e-6,'OBP effect');assert(e2.sira<=e1.sira);
+ // The estimate: diploma notu × 5 as OBP, 95 (OBP 475) when empty; totals of the last placed student reproduce the programme's own puan.
+ const e0=a.tahmin('SAY',60,40,undefined),e1=a.tahmin('SAY',60,40,95),e2=a.tahmin('SAY',60,40,85);
+ assert.equal(e0.diplomaGirildi,false);assert.equal(e1.diplomaGirildi,true);assert.equal(e0.puan,e1.puan);near(e1.puan-e2.puan,M.SAY.b[3]*50,1e-6,'OBP effect');assert(e1.sira<=e2.sira);
  near(a.tahmin('SAY',60,40,95).obp,475,1e-9,'OBP = not × 5');
  {const p=catalogue.programs.find(x=>x.field==='EA'&&x.nets&&x.points>400),v=p.nets.values,t=v.tr+v.sos+v.mat+v.fen,y=v.amat+v.edb+v.tar1+v.cog1,e=a.tahmin('EA',t,y,p.nets.obp/5);near(e.puan,p.points,12,'a programme\'s own profile lands near its taban puan')}
  assert.equal(a.siraYaz(85123),85000);assert.equal(a.siraYaz(85260),85500);assert.equal(a.siraYaz(4321),4300);assert.equal(a.siraYaz(432),430);assert.equal(a.siraYaz(0.2),1);

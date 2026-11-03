@@ -23101,7 +23101,7 @@ const SUBJECTS = {
 const TYT=['tr','sos','mat','fen'], AYT={SAY:['amat','fiz','kim','bio'],EA:['amat','edb','tar1','cog1'],'SÖZ':['edb','tar1','cog1','tar2','cog2','fel','din']};
 const CITIES={6:'Ankara',26:'Eskişehir',34:'İstanbul',35:'İzmir',41:'Kocaeli'};
 let catalog=null,pending=null,error='',saving=false;
-const SAYFA=24,DIPLOMA_VARSAYILAN=80;
+const SAYFA=24,DIPLOMA_VARSAYILAN=95;   // all students are at a private school: OBP 475 unless the teacher enters a grade
 const taze=(owner,student)=>({owner,student,field:AYT[student?.alan]?student.alan:'SAY',city:'',kind:'',query:'',merkez:'son',tyt:null,ayt:null,more:0});
 let state=taze(null,null);
 let modelOnbellek=null;
@@ -23378,8 +23378,8 @@ function content(){
  const duzenle=!yalnizcaGoruntuleme();
  const panel='<section class="ya-panel"><div class="ya-ayar"><label>Merkez<select id="yaMerkez">'+opt('son','Son deneme',state.merkez)+opt('sec','Önceki deneme seç',state.merkez)+opt('gidisat','Gidişat (YKS günü)'+(gidOk?'':' · '+gidNeden),state.merkez,!gidOk&&state.merkez!=='gidisat')+'</select></label>'+sinavlar+
   '<label>Alan<select id="yaField">'+Object.keys(AYT).map(a=>opt(a,a+(durum[a].ok?'':' · '+durum[a].neden),alan,!durum[a].ok&&a!==alan)).join('')+'</select></label>'+
-  '<label>Diploma notu<input id="yaDiploma" type="number" min="50" max="100" step="0.01" inputmode="decimal" placeholder="80"'+(o.diplomaNotu!==undefined&&o.diplomaNotu!==null?' value="'+kacis(String(o.diplomaNotu))+'"':'')+(duzenle?'':' disabled')+'></label></div>'+
-  '<p class="ya-tahmin" aria-live="polite">'+(est?'Tahmini '+alan+' puanın ≈ <strong>'+dec(est.puan,1)+'</strong> ± '+dec(est.sd,1)+' puan · başarı sırası ≈ <strong>'+(est.sira===null?'—':num(siraYaz(est.sira)))+'</strong>'+(est.diplomaGirildi?'':' <span class="ya-soluk">(diploma notu girilmedi, '+DIPLOMA_VARSAYILAN+' sayıldı)</span>')
+  '<label>Diploma notu<input id="yaDiploma" type="number" min="50" max="100" step="0.01" inputmode="decimal" placeholder="95"'+(o.diplomaNotu!==undefined&&o.diplomaNotu!==null?' value="'+kacis(String(o.diplomaNotu))+'"':'')+(duzenle?'':' disabled')+'></label></div>'+
+  '<p class="ya-tahmin" aria-live="polite">'+(est?'Tahmini '+alan+' puanın ≈ <strong>'+dec(est.puan,1)+'</strong> ± '+dec(est.sd,1)+' puan · başarı sırası ≈ <strong>'+(est.sira===null?'—':num(siraYaz(est.sira)))+'</strong>'+(est.diplomaGirildi?'':' <span class="ya-soluk">(diploma notu girilmedi, '+DIPLOMA_VARSAYILAN+' (OBP '+DIPLOMA_VARSAYILAN*5+') sayıldı)</span>')
    :'Puan tahmini yok'+(mk.tytNeden||mk.aytNeden?' · '+kacis([mk.tytNeden&&'TYT: '+mk.tytNeden,mk.aytNeden&&'AYT: '+mk.aytNeden].filter(Boolean).join(' · ')):''))+'</p>'+
   (est?'<p class="ya-soluk ya-kaynak-net">TYT '+num(mk.tyt.net)+' net'+(mk.tyt.tarih?' · '+kacis(tarihYaz(mk.tyt.tarih)):'')+' · AYT '+num(mk.ayt.net)+' net'+(mk.ayt.tarih?' · '+kacis(tarihYaz(mk.ayt.tarih)):'')+'</p>':'')+'</section>';
  const filtre={city:state.city,kind:state.kind,query:state.query};

@@ -43,7 +43,7 @@ fs.mkdirSync(out,{recursive:true});
   const lists=()=>page.locator('.ya-liste');
   assert.equal(await page.locator('.ya-liste').nth(0).locator('.ya-row').count(),24);assert.equal(await page.locator('.ya-liste').nth(1).locator('.ya-row').count(),24);
   const tahmin=await page.locator('.ya-tahmin').innerText();
-  assert.match(tahmin,/Tahmini SAY puanın ≈ \d{3},\d ± \d,\d puan · başarı sırası ≈ [\d.]+/);assert.match(tahmin,/\(diploma notu girilmedi, 80 sayıldı\)/);
+  assert.match(tahmin,/Tahmini SAY puanın ≈ \d{3},\d ± \d,\d puan · başarı sırası ≈ [\d.]+/);assert.match(tahmin,/\(diploma notu girilmedi, 95 \(OBP 475\) sayıldı\)/);
   assert(!/NaN|undefined/.test(await page.locator('#yaKok').innerText()));
   assert.match(await page.locator('#yaKok h2').allInnerTexts().then(t=>t.join('|')),/Yükselirsen\|Düşersen \/ şu an/);
   // the latest usable exams (Genel ones) are the centre; the incomplete newest TYT is skipped
