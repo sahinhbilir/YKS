@@ -165,7 +165,7 @@ function gidisatNeti(student,key){
 // secim.tyt / secim.ayt, the latest usable when null) or 'gidisat' (the Öğrenci kartı projection at the YKS date).
 function merkezBul(student,kip,alan,secim={},si=EK.ogr){
  if(kip==='gidisat'){
-  const t=typeof ANALIZ==='undefined'?{neden:'sıralama verisi yok'}:gidisatNeti(student,'TYT'),a=typeof ANALIZ==='undefined'?{neden:'sıralama verisi yok'}:gidisatNeti(student,'AYT:'+alan);
+  const t=gidisatNeti(student,'TYT'),a=gidisatNeti(student,'AYT:'+alan);
   return {kip,tyt:t.net===undefined?null:{net:t.net,ad:'Gidişat'},ayt:a.net===undefined?null:{net:a.net,ad:'Gidişat'},tytNeden:t.neden||'',aytNeden:a.neden||''};
  }
  const s=sinavSecenekleri(alan,si);
@@ -213,39 +213,40 @@ function netHedef(p){
  if(p.field==='SÖZ')h['AYT:sosyal2']=g.tar2+g.cog2+g.fel+g.din;
  return h;
 }
-const ogrenciIslemi=(owner,student)=>!saving&&D===owner&&D.ogr[EK.ogr]===student&&ogrenciMi()&&!yalnizcaGoruntuleme()&&ogrenciSinavi(student)==='YKS';
+const ogretmenIslemi=(owner,student)=>!saving&&D===owner&&D.ogr[EK.ogr]===student&&rehberMi()&&!yalnizcaGoruntuleme()&&ogrenciSinavi(student)==='YKS';
 // Choosing a programme never touches the net goals (denemeHedef); netleriAyarla does, on an explicit request.
 async function hedefSec(id,owner=D,student=D.ogr[EK.ogr]){
- if(!ogrenciIslemi(owner,student))throw new Error('Bu hedefi öğrenci kendi hesabından seçebilir.');
+ if(!ogretmenIslemi(owner,student))throw new Error('Üniversite hedefini yalnızca öğretmen belirleyebilir.');
  const p=id===null?null:catalog?.programs.find(x=>x.id===id);
  if(id!==null&&(!p||p.field!==student.alan))throw new Error('Hedef program öğrencinin alanıyla aynı olmalı.');
  const old=student.universiteHedef;
  const next=p?{surum:1,id:p.id,yil:catalog.referenceYear,alan:p.field}:null;
  hedefDogrula(next);saving=true;
+ // Teacher-owned: student packets no longer carry it, so the student's work clock is left alone.
  student.universiteHedef=next;
  try{if(!await kaydet(true))throw new Error('Hedef kaydedilemedi. Yeniden deneyin.');}
  catch(e){if(student.universiteHedef===next){if(old===undefined)delete student.universiteHedef;else student.universiteHedef=old}throw e}
  finally{saving=false}
 }
 async function netleriAyarla(owner=D,student=D.ogr[EK.ogr]){
- if(!ogrenciIslemi(owner,student))throw new Error('Net hedeflerini öğrenci kendi hesabından ayarlayabilir.');
+ if(!ogretmenIslemi(owner,student))throw new Error('Net hedeflerini yalnızca öğretmen ayarlayabilir.');
  const p=catalog?.programs.find(x=>x.id===student.universiteHedef?.id),goals=p&&p.field===student.alan?netHedef(p):null;
  if(!goals)throw new Error('Bu program için net hedefi hesaplanamıyor.');
- if(!confirm('Net hedeflerin “'+p.program+'” son yerleşen profiline göre değişecek. Mevcut net hedeflerin silinir. Devam edilsin mi?'))return false;
- const oldNets=student.denemeHedef;saving=true;student.denemeHedef=goals;
+ if(!confirm('Öğrencinin net hedefleri “'+p.program+'” son yerleşen profiline göre değişecek. Mevcut net hedeflerin silinir. Devam edilsin mi?'))return false;
+ const oldNets=student.denemeHedef,oldTs=student.ogrCalismaTs;saving=true;student.denemeHedef=goals;student.ogrCalismaTs=Date.now();
  try{if(!await kaydet(true))throw new Error('Net hedefleri kaydedilemedi. Yeniden deneyin.');return true}
- catch(e){if(student.denemeHedef===goals){if(oldNets===undefined)delete student.denemeHedef;else student.denemeHedef=oldNets}throw e}
+ catch(e){if(student.denemeHedef===goals){if(oldNets===undefined)delete student.denemeHedef;else student.denemeHedef=oldNets;if(oldTs===undefined)delete student.ogrCalismaTs;else student.ogrCalismaTs=oldTs}throw e}
  finally{saving=false}
 }
-// Diploma notu: the student's own, or any student's for a teacher. null clears it (a tombstone the sync understands).
+// Diploma notu: teacher-owned. null clears it (a tombstone the sync understands).
 async function diplomaYaz(deger,owner=D,student=D.ogr[EK.ogr]){
- if(saving||D!==owner||D.ogr[EK.ogr]!==student||yalnizcaGoruntuleme()||!(ogrenciMi()||rehberMi()))throw new Error('Diploma notu burada değiştirilemez.');
+ if(saving||D!==owner||D.ogr[EK.ogr]!==student||yalnizcaGoruntuleme()||!rehberMi())throw new Error('Diploma notu yalnızca öğretmen tarafından değiştirilebilir.');
  const n=deger===null?null:Math.round(Number(deger)*100)/100;
  diplomaDogrula(n);
- const old=student.diplomaNotu,oldTs=student.ogrCalismaTs;
- student.diplomaNotu=n;if(rehberMi())student.ogrCalismaTs=Date.now();saving=true;
+ const old=student.diplomaNotu;
+ student.diplomaNotu=n;saving=true;
  try{if(!await kaydet(true))throw new Error('Diploma notu kaydedilemedi. Yeniden deneyin.');}
- catch(e){if(student.diplomaNotu===n){if(old===undefined)delete student.diplomaNotu;else student.diplomaNotu=old;if(oldTs===undefined)delete student.ogrCalismaTs;else student.ogrCalismaTs=oldTs}throw e}
+ catch(e){if(student.diplomaNotu===n){if(old===undefined)delete student.diplomaNotu;else student.diplomaNotu=old}throw e}
  finally{saving=false}
 }
 
@@ -259,7 +260,7 @@ const opt=(v,label,selected,disabled)=>'<option value="'+kacis(String(v))+'"'+(S
 function satirHtml(p,{puan=null,secili=false,izinli=false,baslik=''}={}){
  const yer=yerlesir(p),tyt=p.nets?sum(p.nets.values,TYT):null,ayt=p.nets?sum(p.nets.values,AYT[p.field]):null;
  const fark=yer&&Number.isFinite(puan)&&p.points>puan?'<small class="ya-fark">+'+dec(p.points-puan,1)+' puan</small>':'';
- const eylem=(izinli&&!secili?'<button class="dugme ya-sec" data-ya-target="'+kacis(p.id)+'"'+(saving?' disabled':'')+'>Hedefim olarak seç</button>':secili?'<span class="ya-etiket">Hedefin</span>':'')+
+ const eylem=(izinli&&!secili?'<button class="dugme ya-sec" data-ya-target="'+kacis(p.id)+'"'+(saving?' disabled':'')+'>Hedef olarak seç</button>':secili?'<span class="ya-etiket">Hedef</span>':'')+
   '<a href="https://yokatlas.yok.gov.tr/detay/'+kacis(p.id)+'" target="_blank" rel="noopener noreferrer">YÖK Atlas ↗</a>';
  return '<article class="ya-row'+(secili?' ya-secili':'')+(yer?'':' ya-yok')+'" data-ya-id="'+kacis(p.id)+'">'+
   '<h3 class="ya-prog">'+kacis(p.program)+'</h3><div class="ya-uni">'+kacis(p.university)+' <span>('+kacis(CITIES[p.city])+')</span></div>'+
@@ -270,9 +271,10 @@ function satirHtml(p,{puan=null,secili=false,izinli=false,baslik=''}={}){
 const baslikHtml='<div class="ya-baslik" aria-hidden="true"><span>Bölüm</span><span>Üniversite</span><span>Taban puan</span><span>Başarı sırası</span><span>TYT net</span><span>AYT net</span><span>OBP</span></div>';
 function content(){
  const o=prepare();
+ if(!rehberMi())return '<h1>Üniversite hedefi</h1><p>Bu bölüm yalnızca öğretmen içindir.</p>';
  if(!o)return '<h1>Üniversite hedefi</h1><p>Öğrenci seçin.</p>';
  if(ogrenciSinavi(o)!=='YKS')return '<h1>Üniversite hedefi</h1><p>Bu bölüm YKS öğrencileri içindir.</p>';
- const chooser=rehberMi()?'<label class="ya-student">Öğrenci<select id="yaStudent">'+canliOgrenciler().map(i=>opt(i,D.ogr[i].ad+' · '+(D.ogr[i].sube||''),EK.ogr)).join('')+'</select></label>':'';
+ const chooser='<label class="ya-student">Öğrenci<select id="yaStudent">'+canliOgrenciler().map(i=>opt(i,D.ogr[i].ad+' · '+(D.ogr[i].sube||''),EK.ogr)).join('')+'</select></label>';
  const head='<div class="ya-heading"><h1>Üniversite hedefi</h1>'+chooser+'</div>';
  if(!catalog){if(!pending&&!error)void yukle().then(draw,draw);return head+'<p role="status">'+(error?kacis(error):'YÖK Atlas kataloğu yükleniyor…')+'</p>'+(error?'<button class="dugme" data-ya-retry>Yeniden dene</button>':'')}
  const secim={tyt:state.tyt,ayt:state.ayt},alan=state.field;
@@ -283,7 +285,7 @@ function content(){
  const secenek=sinavSecenekleri(alan);
  const sinavSec=(l,id,ot)=>{const secili=id||(l.find(x=>x.uygun)?.id??'');return '<label>'+ot+' denemesi<select id="ya'+ot+'"'+(l.length?'':' disabled')+'>'+(secili?'':opt('',l.length?'Kullanılabilir deneme yok':'Deneme yok','',false))+l.map(x=>opt(x.id,x.etiket+(x.uygun?'':' · '+eksikYazi(x.eksik)),secili,!x.uygun)).join('')+'</select></label>'};
  const sinavlar=state.merkez==='sec'?sinavSec(secenek.tyt,state.tyt,'TYT')+sinavSec(secenek.ayt,state.ayt,'AYT'):'';
- const duzenle=!yalnizcaGoruntuleme()&&(ogrenciMi()||rehberMi());
+ const duzenle=!yalnizcaGoruntuleme();
  const panel='<section class="ya-panel"><div class="ya-ayar"><label>Merkez<select id="yaMerkez">'+opt('son','Son deneme',state.merkez)+opt('sec','Önceki deneme seç',state.merkez)+opt('gidisat','Gidişat (YKS günü)'+(gidOk?'':' · '+gidNeden),state.merkez,!gidOk&&state.merkez!=='gidisat')+'</select></label>'+sinavlar+
   '<label>Alan<select id="yaField">'+Object.keys(AYT).map(a=>opt(a,a+(durum[a].ok?'':' · '+durum[a].neden),alan,!durum[a].ok&&a!==alan)).join('')+'</select></label>'+
   '<label>Diploma notu<input id="yaDiploma" type="number" min="50" max="100" step="0.01" inputmode="decimal" placeholder="80"'+(o.diplomaNotu!==undefined&&o.diplomaNotu!==null?' value="'+kacis(String(o.diplomaNotu))+'"':'')+(duzenle?'':' disabled')+'></label></div>'+
@@ -292,18 +294,18 @@ function content(){
   (est?'<p class="ya-soluk ya-kaynak-net">TYT '+num(mk.tyt.net)+' net'+(mk.tyt.tarih?' · '+kacis(tarihYaz(mk.tyt.tarih)):'')+' · AYT '+num(mk.ayt.net)+' net'+(mk.ayt.tarih?' · '+kacis(tarihYaz(mk.ayt.tarih)):'')+'</p>':'')+'</section>';
  const filtre={city:state.city,kind:state.kind,query:state.query};
  const filters='<div class="ya-filters"><label>Şehir<select id="yaCity">'+opt('','Tüm şehirler',state.city)+Object.entries(CITIES).map(([k,l])=>opt(k,l,state.city)).join('')+'</select></label><label>Üniversite türü<select id="yaType">'+opt('','Tümü',state.kind)+opt('DEVLET','Devlet',state.kind)+opt('VAKIF','%100 burslu vakıf',state.kind)+'</select></label><label class="ya-search">Üniversite / bölüm ara<input id="yaSearch" type="search" maxlength="120" value="'+kacis(state.query)+'" placeholder="Örn. bilgisayar mühendisliği"></label></div>';
- const izinli=ogrenciMi()&&!yalnizcaGoruntuleme();
+ const izinli=!yalnizcaGoruntuleme();
  const secili=catalog.programs.find(p=>p.id===o.universiteHedef?.id);
  let pin='';
  if(o.universiteHedef){
   let fark='';
   if(secili){
    const e=secili.field===alan?est:(()=>{const m=merkezBul(o,state.merkez,secili.field,secim);return m.tyt&&m.ayt?tahmin(secili.field,m.tyt.net,m.ayt.net,o.diplomaNotu):null})();
-   fark=!yerlesir(secili)?'puan verisi yok':!e?'':secili.points>e.puan?'hedefine +'+dec(secili.points-e.puan,1)+' puan':'hedefin üstündesin';
+   fark=!yerlesir(secili)?'puan verisi yok':!e?'':secili.points>e.puan?'Hedefe +'+dec(secili.points-e.puan,1)+' puan':'hedefin üstünde';
   }
-  const netBtn=izinli&&secili?.nets&&secili.field===o.alan?'<button class="dugme" data-ya-netler'+(saving?' disabled':'')+'>Net hedeflerimi bu programa göre ayarla</button>':'';
-  pin='<section class="ya-hedef"><div class="ya-heading"><h2>Hedefim'+(o.universiteHedef.yil!==catalog.referenceYear?' · '+o.universiteHedef.yil:'')+'</h2>'+(fark?'<strong class="ya-hedef-fark">'+kacis(fark)+'</strong>':'')+'</div>'+
-   (secili?baslikHtml+satirHtml(secili,{puan:est?.puan??null,secili:true}):'<p>Seçtiğin program ('+kacis(o.universiteHedef.id)+') güncel katalogda yok.</p>')+
+  const netBtn=izinli&&secili?.nets&&secili.field===o.alan?'<button class="dugme" data-ya-netler'+(saving?' disabled':'')+'>Net hedeflerini bu programa göre ayarla</button>':'';
+  pin='<section class="ya-hedef"><div class="ya-heading"><h2>Hedef'+(o.universiteHedef.yil!==catalog.referenceYear?' · '+o.universiteHedef.yil:'')+'</h2>'+(fark?'<strong class="ya-hedef-fark">'+kacis(fark)+'</strong>':'')+'</div>'+
+   (secili?baslikHtml+satirHtml(secili,{puan:est?.puan??null,secili:true}):'<p>Seçilen program ('+kacis(o.universiteHedef.id)+') güncel katalogda yok.</p>')+
    '<div class="ya-actions">'+netBtn+(izinli?'<button class="dugme" data-ya-clear>Hedefi kaldır</button>':'')+'</div></section>';
  }
  const L=listele(alan,est?.puan,filtre,SAYFA*(state.more+1));
@@ -348,7 +350,7 @@ document.addEventListener('click',async e=>{
  const owner=D,student=D.ogr[EK.ogr];b.disabled=true;
  const durum=m=>{const s=document.getElementById('yaStatus');if(s)s.textContent=m};
  try{
-  if(net){const ok=await netleriAyarla(owner,student);if(D!==owner||D.ogr[EK.ogr]!==student)return;draw();durum(ok?'Net hedeflerin güncellendi.':'');if(!ok)b.disabled=false;return}
+  if(net){const ok=await netleriAyarla(owner,student);if(D!==owner||D.ogr[EK.ogr]!==student)return;draw();durum(ok?'Net hedefleri güncellendi.':'');if(!ok)b.disabled=false;return}
   await hedefSec(temizle?null:b.dataset.yaTarget,owner,student);if(D!==owner||D.ogr[EK.ogr]!==student)return;draw();durum(student.universiteHedef?'Hedef kaydedildi.':'Hedef kaldırıldı.');
  }
  catch(err){if(D!==owner||D.ogr[EK.ogr]!==student)return;durum(err.message);b.disabled=false}

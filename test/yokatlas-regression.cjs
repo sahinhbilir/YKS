@@ -8,7 +8,7 @@ const catalogue=JSON.parse(fs.readFileSync('data/yokatlas.json','utf8'));
 const app=[cut(/const DENEME_DERSLER = \{[\s\S]*?\n\};/),cut(/const DENEME_ALAN = \{[^\n]*\};/),cut(/const denemeNet = [^\n]*;/),cut(/function denemeBolumSayilir[\s\S]*?\n\}/)].join('\n');
 let fetches=0,saves=0,confirmAnswer=true;
 const sandbox={console,Intl,JSON,Math,Number,Object,Array,Set,Map,WeakMap,Error,Promise,String,fetch:async()=>{fetches++;return {ok:true,text:async()=>JSON.stringify(catalogue)}},document:{addEventListener(){}},
- D:{rol:'ogrenci',ayar:{},ogr:[{no:1,ad:'Sentetik Ada',alan:'SAY',denemeler:[]}]},EK:{ogr:0},ogrenciMi:()=>sandbox.D.rol==='ogrenci',rehberMi:()=>sandbox.D.rol==='rehber',yalnizcaGoruntuleme:()=>false,ogrenciSinavi:()=> 'YKS',
+ D:{rol:'rehber',ayar:{},ogr:[{no:1,ad:'Sentetik Ada',alan:'SAY',denemeler:[]}]},EK:{ogr:0},ogrenciMi:()=>sandbox.D.rol==='ogrenci',rehberMi:()=>sandbox.D.rol==='rehber',yalnizcaGoruntuleme:()=>false,ogrenciSinavi:()=> 'YKS',
  kaydet:async()=>{saves++;return true},confirm:()=>confirmAnswer,kacis:s=>String(s),canliOgrenciler:()=>[0],denemeListe:si=>sandbox.D.ogr[si].denemeler.filter(r=>!r.silindi).slice().sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.id.localeCompare(b.id)),
  ANALIZ:{kart:()=>({durum:'bos'})}};
 vm.createContext(sandbox);vm.runInContext(app+'\n'+fs.readFileSync('src/yokatlas.js','utf8')+'\nglobalThis.api=YOKATLAS;',sandbox);const a=sandbox.api;
@@ -108,11 +108,13 @@ const student=sandbox.D.ogr[0];
  loaded.programs.push(program);
  const goals=a.netHedef(program);assert.equal(goals.TYT,82);assert.equal(goals.AYT,44);assert.equal(goals['TYT:matgeo'],25);assert.equal(goals['AYT:fen'],24);assert.equal(a.netHedef({...program,nets:{...program.nets,values:{...values,tr:-2}}})['TYT:turkce'],0);
  student.denemeHedef={TYT:60};
- await a.hedefSec(program.id);assert.equal(student.universiteHedef.id,program.id);same(student.denemeHedef,{TYT:60},'selecting a target must not touch denemeHedef');
+ // the target is the teacher's: a student session (or a read-only teacher) can neither set nor clear it
+ sandbox.D.rol='ogrenci';await assert.rejects(a.hedefSec(program.id),/öğretmen/);await assert.rejects(a.netleriAyarla(),/öğretmen/);await assert.rejects(a.diplomaYaz(80),/öğretmen/);assert.equal(student.universiteHedef,undefined);sandbox.D.rol='rehber';
+ const t1=student.ogrCalismaTs;await a.hedefSec(program.id);assert.equal(student.universiteHedef.id,program.id);same(student.denemeHedef,{TYT:60},'selecting a target must not touch denemeHedef');assert.equal(student.ogrCalismaTs,t1,'a teacher-owned target leaves the student work clock alone');
  confirmAnswer=false;assert.equal(await a.netleriAyarla(),false);same(student.denemeHedef,{TYT:60},'a declined confirm changes nothing');
- confirmAnswer=true;assert.equal(await a.netleriAyarla(),true);assert.equal(student.denemeHedef.TYT,82);assert.equal(student.denemeHedef['AYT:fen'],24);
+ student.ogrCalismaTs=5;confirmAnswer=true;assert.equal(await a.netleriAyarla(),true);assert(student.ogrCalismaTs>5,'net goals edit advances the work clock');assert.equal(student.denemeHedef.TYT,82);assert.equal(student.denemeHedef['AYT:fen'],24);
  student.denemeHedef={TYT:60};const kaydetOnce=sandbox.kaydet;sandbox.kaydet=async()=>false;await assert.rejects(a.netleriAyarla());same(student.denemeHedef,{TYT:60});
- await a.hedefSec(null).catch(()=>{});assert.equal(student.universiteHedef.id,program.id,'a failed save rolls the target back');sandbox.kaydet=kaydetOnce;
+ student.ogrCalismaTs=7;await a.hedefSec(null).catch(()=>{});assert.equal(student.universiteHedef.id,program.id,'a failed save rolls the target back');assert.equal(student.ogrCalismaTs,7);sandbox.kaydet=kaydetOnce;
  await a.hedefSec(null);assert.equal(student.universiteHedef,null);same(student.denemeHedef,{TYT:60});
  await assert.rejects(a.netleriAyarla(),/hesaplanam/);
  await a.hedefSec(program.id);
@@ -122,13 +124,14 @@ const student=sandbox.D.ogr[0];
  // an old saved target (no diploma notu, nets already set) still validates
  a.hedefDogrula(student.universiteHedef);
 
- // --- diploma notu: student's own, teacher any, validated, rolled back ---
- await a.diplomaYaz(87.456);assert.equal(student.diplomaNotu,87.46);
+ // --- diploma notu: teacher-owned, validated, rolled back ---
+ {const ts=student.ogrCalismaTs;await a.diplomaYaz(87.456);assert.equal(student.diplomaNotu,87.46);assert.equal(student.ogrCalismaTs,ts,'teacher-owned diploma notu leaves the work clock alone');}
  await assert.rejects(a.diplomaYaz(49),/Diploma notu/);await assert.rejects(a.diplomaYaz(101));assert.equal(student.diplomaNotu,87.46);
  sandbox.kaydet=async()=>false;await assert.rejects(a.diplomaYaz(90));assert.equal(student.diplomaNotu,87.46);sandbox.kaydet=kaydetOnce;
  await a.diplomaYaz(null);assert.equal(student.diplomaNotu,null);
- sandbox.D.rol='rehber';const t0=Date.now();await a.diplomaYaz(92.5);assert.equal(student.diplomaNotu,92.5);assert(student.ogrCalismaTs>=t0,'a teacher edit advances the student\'s work clock');
  sandbox.yalnizcaGoruntuleme=()=>true;await assert.rejects(a.diplomaYaz(80));sandbox.yalnizcaGoruntuleme=()=>false;
- sandbox.D.rol='';await assert.rejects(a.diplomaYaz(80));sandbox.D.rol='ogrenci';
+ sandbox.D.rol='';await assert.rejects(a.diplomaYaz(80));sandbox.D.rol='rehber';
+ // the page itself is teacher-only
+ sandbox.D.rol='ogrenci';assert.match(a.gorunum(),/yalnızca öğretmen/);sandbox.D.rol='rehber';
  console.log('PASS YÖK Atlas model, exams, Gidişat, lists, targets and diploma notu');
 })().catch(e=>{console.error(e);process.exitCode=1});
