@@ -99,35 +99,54 @@ kaplar; kutular ayrı görseller olarak birleştirilmez. Yazıcının kendi kena
 
 Sayfanın üstündeki **Öğrenci raporu | Kurum raporu** düğmesiyle kurum raporuna geçilir.
 Kurum raporu, öğrenci raporunun okul düzeyindeki karşılığıdır: **Tüm okul** ya da tek
-bir sınıf düzeyi (12. sınıf, 11. sınıf, …) için A4 yatay tek sayfa. Öğrenci adı yazmaz;
-yalnızca toplamlar ve öğretmen adları vardır. **Kapsam** seçilir, önizleme PDF'nin kullandığı
-çizimin kendisidir. **Kurum PDF** seçilen kapsamı, **Tüm düzeyler PDF** okulu ve her sınıf
-düzeyini (bir sayfa her biri) indirir. Kaynaklar öğrenci modundakiyle aynıdır (Sıralamalar,
-Etütler, Yoklama ve bu sayfada eklenen ödev / İngilizce PDF'leri); üstteki kaynak kutusu iki
-modda da aynıdır. Öğrenci sayısı, kaynaklarda en az bir kaydı olan öğrencilerdir.
+bir sınıf düzeyi (12. sınıf, 11. sınıf, …). Öğrenci adı yazmaz; yalnızca toplamlar ve
+öğretmen adları vardır. Öğrenci raporu tek A4 sayfadır; kurum raporu ise içeriği kadar A4 yatay
+sayfadır (sayfa sınırına sığdırmak için liste kısaltılmaz, ad kesilmez). Her sayfanın başında
+okul, kapsam, rapor tarihi, kaynak tarih aralıkları ve “Sayfa 1 / 3” yazar. **Kapsam** seçilir;
+önizleme PDF'nin kullandığı sayfaların aynısını alt alta gösterir. **Kurum PDF (n sayfa)** seçilen
+kapsamı, **Tüm düzeyler PDF (n sayfa)** önce okulu, sonra her sınıf düzeyini sırayla indirir.
+Kaynaklar öğrenci modundakiyle aynıdır (Sıralamalar, Etütler, Yoklama ve bu sayfada eklenen ödev /
+İngilizce PDF'leri); üstteki kaynak kutusu iki modda da aynıdır. Öğrenci sayısı, kaynaklarda en az
+bir kaydı olan öğrencilerdir.
+
+**Sayfa düzeni.** Sınıf düzeyi seçiliyse 1. sayfada Türkiye geneli bulunur; Etütler, Ödevler ile
+Devamsızlık ve Şube karşılaştırması sonraki sayfalardadır. Şube tablosu uzunsa satırları bir sonraki
+sayfada “(devam)” başlığıyla sürer. Tüm okul'da Türkiye geneli bir satır başına sınıf düzeyi tablosudur
+ve kısa olduğu için etüt bölümüyle aynı sayfaya girebilir.
 
 - **Türkiye geneli.** Türkiye geneli sayfasının kendi modeli kullanılır, hesap yinelenmez.
-  Sınıf düzeyi için okulun TYT toplam T puanı (ve varsa SAY / EA / SÖZ toplamları) denemeden
-  denemeye çizilir; kesik çizgi Türkiye ortalamasıdır (T = 50). Her toplam için son T,
-  ΔT (ilk denemeden sonuncuya) ve sıra yazılır; tahmini sıra “≈” ile işaretlenir.
-  ΔT kuralı Türkiye geneli sayfasındakiyle aynıdır: yeşil ▲ arttı, kırmızı ▼ azaldı, gri
-  ±0,5 T içinde (değişmedi). Ders ders tablo her dersin son T'sini ve ΔT'sini verir.
-  **Tüm okul**'da sınıf düzeyi başına bir satır vardır (son TYT T, ΔT, sıra, küçük çizgi).
+  **TYT** ve **AYT** ayrı iki grafiktir (yan yana, öğrenci raporundaki TYT / AYT gibi):
+  TYT toplam T puanı; AYT'de varsa SAY, EA ve SÖZ toplamları. Kesik çizgi Türkiye ortalamasıdır
+  (T = 50). Bir toplamın değeri o seride bulunmayan bir denemede boşsa çizgi kopmaz, önceki
+  noktadan sonrakine düz bağlanır; nokta yalnızca değeri olan denemelerdedir. Her toplam için kutuda
+  son T, ΔT (**ilk denemeden son denemeye**, ikisi de değeri olan denemeler) ve sıra yazılır; tahmini
+  sıra “≈” ile işaretlenir. Her denemenin altında tarihi, adı ve türü (**Tarama** / **Genel**) görünür.
+  Her grafiğin altında, öğrenci raporundaki gibi, **ders başına bir küçük T grafiği** vardır
+  (TYT dersleri TYT grafiğinin, AYT dersleri AYT grafiğinin altında): tam ders adı, son T ve ΔT.
+  **Ders ΔT'si yalnızca tarama → tarama**dır: son Tarama denemesi ile bir önceki Tarama denemesi (arada
+  Genel deneme varsa atlanır), ör. 1202 → 1203; ders bölümünün başlığı bu çifti yazar. Çifti oluşturan iki
+  deneme ana grafikte açık yeşil sütunla ve “Ders karşılaştırması: 1202 → 1203 (tarama)” yazısıyla
+  işaretlenir. Deneme türü Sıralamalar'daki Tarama / Genel seçiminden, yoksa deneme adından
+  (adında “tarama” geçiyorsa Tarama) alınır. İki Tarama denemesi yoksa işaret görünmez ve ders ΔT'leri
+  “—” olur (“İki tarama denemesi yok”). ΔT rengi Türkiye geneli sayfasındakiyle aynıdır: yeşil ▲ arttı,
+  kırmızı ▼ azaldı, gri ±0,5 T içinde (değişmedi).
+  **Tüm okul**'da sınıf düzeyi başına bir satır vardır (son TYT T, ilk → son ΔT, sıra, küçük çizgi).
   O sınıf düzeyi için liste yoksa “Türkiye geneli listesi yok; Türkiye geneli sayfasından
   ekleyin.” yazılır ve okulun kendi denemelerinden TYT net ortalaması çizilir. Okul listede
   bulunamazsa Türkiye geneli sayfasında okulun seçilmesi istenir.
 - **Etütler.** Toplam etüt, öğrenci başına ortalama, haftalık etüt grafiği (öğrenci raporundaki
-  haftalama; renk = ders), derse göre etüt ve öğretmene göre en çok etüt.
+  haftalama; renk = ders), **her** ders ve **her** öğretmen etüt sayısıyla (azalan sırada). Renk
+  paleti biterse grafikte en küçük dersler gri birleşir; listede hepsi ayrı yazılır.
 - **Ödevler.** Toplam ödev, durumların dağılımı (Tamamladı, Eksik, Getirmedi, Geç getirdi,
-  Yapmadı, Gelmedi), tamamlama oranı (tamamlanan / verilen) ve ders başına tamamlama;
+  Yapmadı, Gelmedi), tamamlama oranı (tamamlanan / verilen) ve **her** ders için tamamlama;
   Matematik TYT ve AYT ayrı kalır.
 - **Devamsızlık.** Toplam kaçırılan gün (tam gün ve yarım gün ayrı), devam oranı ve öğrencilerin
   0 · 1–4 · 5–9 · 10+ kaçırılan gün aralıklarına dağılımı; kural öğrenci raporundakiyle (Yoklama)
   aynıdır.
 - **Şube karşılaştırması.** Her şube için öğrenci sayısı, etüt, öğrenci başına etüt, ödev
-  tamamlama, devamsız gün, devam oranı ve son denemenin ortalama TYT neti; ilk satır toplamdır.
-- Eksik kaynak, ilgili kutuda hangi sayfadan ekleneceğiyle yazılır. Üst köşede etüt, yoklama,
-  ödev raporu ve deneme tarih aralıkları görünür.
+  tamamlama, devamsız gün, devam oranı ve şubenin kendi sınıf düzeyinin son denemesindeki ortalama TYT
+  neti; ilk satır toplamdır (Tüm okul'da sınıf düzeyleri farklı sınav girdiğinden net toplamı yoktur).
+- Eksik kaynak, ilgili kutuda hangi sayfadan ekleneceğiyle yazılır.
 
 ## Kaynaklar ve saklama
 
@@ -175,8 +194,8 @@ node test/kurumrapor-browser.cjs
 ```
 
 `test/kurumrapor-regression.cjs` toplamları, şube satırlarını, devamsızlık aralıklarını, ödev oranını,
-Türkiye geneli bloğunu (listeli ve listesiz) ve rapora öğrenci adı girmediğini; `test/kurumrapor-browser.cjs`
-düğmeyi, kapsamı, önizlemeyi, PDF sayfa sayısını, taşma/çakışma denetimini ve açık/koyu temayı
+Türkiye geneli bloğunu (listeli ve listesiz; tarama → tarama seçimi, boşlukların bağlanması, ayrı TYT / AYT grafikleri), tüm öğretmen ve derslerin yazıldığını ve rapora öğrenci adı girmediğini; `test/kurumrapor-browser.cjs`
+düğmeyi, kapsamı, alt alta sayfaları, PDF sayfa sayısını, uzun bir okulun (14 öğretmen, 13 ödev dersi, 40 şube) taşma/çakışma denetimini ve açık/koyu temayı
 (1280 ve 390 px) kontrol eder.
 
 Tarayıcı testi Verify iş akışındaki Playwright ve sabit sürümlü PDF bağımlılıklarını
