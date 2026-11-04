@@ -53,14 +53,15 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.locator('.sr-siralama').screenshot({path:path.join(out,'ranking-'+width+'.png')});
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'the table scrolls inside its card');
    await page.locator('[data-sr-sira-tur="TYT"]').click();
-   // 2) The exam date is corrected in place; students' school results move with it.
+   // 2) The exam date is corrected in place; students' school results move with it. (PDF ekle published each student's rows:
+   // Deneme 1 moves with its date, Deneme 2 stays on its own TYT and AYT dates.)
    if(width===1280){
     await page.locator('[data-sr-tarih]').last().fill('2026-08-18');
     await page.waitForFunction(()=>/tarihi 18\.08\.2026 oldu/.test(document.getElementById('srDurum')?.textContent||''));
     assert.match(dialogs.at(-1),/Sentetik Deneme 1 sınavının tarihi 18\.08\.2026 olsun mu\?/);
     assert.match(await page.locator('#srDurum').innerText(),/2 öğrencinin sonucu taşındı\..*yayın bekliyor/);
-    assert.deepEqual(await page.evaluate(()=>[D.siralama.sinavlar.find(s=>s.ad==='Sentetik Deneme 1').tarih,denemeListe(0).filter(r=>!r.okulListe).map(r=>r.tarih),D.ogr.map(o=>o.denemeYayinBekliyor)]),
-     ['18.08.2026',['2026-08-18'],[true,true]]);
+    assert.deepEqual(await page.evaluate(()=>[D.siralama.sinavlar.find(s=>s.ad==='Sentetik Deneme 1').tarih,denemeListe(0).map(r=>r.tarih),D.ogr.map(o=>o.denemeYayinBekliyor)]),
+     ['18.08.2026',['2026-08-18','2026-08-18','2026-10-02','2026-10-02'],[true,true]]);
     assert.match(await page.locator('.sr-sinavlar tbody tr').last().innerText(),/PDF’de: 18\.09\.2026/);
    }
    // 3) A name opens the student's own view in an isolated frame; the teacher's notebook is untouched.

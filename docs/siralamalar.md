@@ -5,7 +5,9 @@
 ## Listeler nereden gelir
 
 - **Denemeler → Dosyadan toplu aktar:** “Seçilen sonuçları kaydet ve yayınla”ya basıldığında okunan PDF’lerin tam okul listesi Sıralamalar’a da eklenir. Öğrenci satırı seçilmese de liste eklenir; durum satırı bunu yazar. Liste eklenemezse öğrenci aktarımı yine yapılır.
-- **Sıralamalar → PDF ekle:** daha önceki sınavlar için. Bu yol öğrencilere sonuç yayınlamaz.
+- **Sıralamalar → PDF ekle** (Deneme panosunda da aynı düğme): listeleri ekler ve öğretmenin **kendi öğrencilerinin** satırlarını Denemelerim’e yayınlar. Öğrenci, listedeki okul numarası **ve** adı defterdeki öğrenciyle (Dosyadan toplu aktar ile aynı denetim) eşleşirse eşleşir; başka okulun öğrencisi ve eşleşmeyen satır yayınlanmaz. Öğrenciye yalnız kendi satırı gider: sınav adı, okul tarihi, oturum, ders başına doğru/yanlış/soru; sıra, sınıf, başka öğrencinin adı ya da neti gitmez. Kayıt kimliği (`p:` + ad|tarih|oturum) dosyadan toplu aktarımınkiyle aynıdır, bu yüzden tekrar eklemek ya da iki yoldan eklemek çoğaltmaz; öğrencinin sildiği sonuç yeniden eklenmez; aynı ad ve oturumdaki bir kayıt (başka tarihli bile) varsa yenisi eklenmez. Bulut yayını başarısız olursa kayıt cihazda bekler.
+- **Eski listeler için tek tık:** Denemeler’deki **Bekleyen sonuçları yayınla** da okul listelerinde olup öğrencide kopyası olmayan satırları bulur, ekler ve yayınlar (sonuç: “Okul listelerinden N öğrenci için M sonuç eklendi”). İkinci tıklama yeni bir şey eklemez.
+- **Boyut sınırı:** bir öğrencinin okul sonuçları alanı 300 KB, bulut kaydı 900 KB’ı geçemez. Bir TYT kopyası yaklaşık 0,75 KB, bir AYT kopyası yaklaşık 0,85 KB’dır (11 / 13 ders; yaklaşık 350 sınav). Sığmayan sonuç kesilmez: o öğrenci için atlanır ve sonuç iletisinde adıyla yazılır (“Boyut sınırı nedeniyle atlandı: …”); eski sonuçları silip yeniden yayınlayın.
 
 İki liste türü okunur: **Net Sayısı Sıralı** (TYT) ve **Öğrenci Adı Sıralı** (TYT + AYT).
 

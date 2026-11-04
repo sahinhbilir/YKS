@@ -11,7 +11,7 @@ const source = html.slice(start, boot);
 const node = () => ({innerHTML:'',textContent:'',className:'',style:{},hidden:false,setAttribute(){},appendChild(){},remove(){},click(){},focus(){},getClientRects(){return [1]}});
 const listeners = {};
 const nodes = {ray:node(),ana:node(),stil:{textContent:'body{}'},uygulama:{textContent:source},veri:{textContent:'null'}};
-const sandbox = {console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),
+const sandbox = {console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,TextEncoder,location:{search:'?dev=1'},Date,Math,JSON,Intl,alert(){},confirm(){return true},prompt(){return ''},fetch:async()=>({ok:false}),
   localStorage:{getItem(){return null},setItem(){}},sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},navigator:{},
   window:{scrollTo(){},open(){return null},addEventListener(){}},
   document:{activeElement:null,addEventListener(t,f){(listeners[t]=listeners[t]||[]).push(f)},contains(){return true},getElementById(id){return nodes[id]||null},
@@ -311,7 +311,7 @@ const listeKur = (sinavlar) => run(`(() => {
     const K = mat === null ? 11 : 24, n = Array(K).fill(null), dy = Array(K).fill(null);
     n[0] = tur; dy[0] = tur + '/0'; n[1] = 0; dy[1] = '0/0';
     if (mat !== null) { n[19] = mat; dy[19] = mat + '/0'; n[21] = 0; dy[21] = '1/0'; n[22] = 0; dy[22] = '0/0'; n[23] = 0; dy[23] = '0/0'; n[20] = 0; dy[20] = '0/0'; }
-    return {no: String(no), ad: 'SENTETIK ' + no, snf, n, dy, p: [0, 0, 0, 0], r: ['', '', '', '']};
+    return {no: String(no), ad: denemeAdAnahtari(({1: 'Synthetic Ada', 2: 'Synthetic Bora', 3: 'Synthetic Cem'})[no] || 'SENTETIK ' + no), snf, n, dy, p: [0, 0, 0, 0], r: ['', '', '', '']};
   };
   const slot = (tarih, rows, ayt) => ({tarih, katilim: ['', '', ''], kurum: null, ogr: rows.map(r => satir(r[0], r[1], r[2], ayt ? r[3] : null))});
   D.siralama = {surum: 1, tercih: {}, sinavlar: ${JSON.stringify(sinavlar)}.map((x, i) => ({id: denemeAdAnahtari(x.ad), ad: x.ad, okul: 'Sentetik Okul', ts: 1000 + i,
@@ -321,9 +321,9 @@ const listeKur = (sinavlar) => run(`(() => {
 const ortalamalar = (kapsam, olcu) => JSON.parse(run(`JSON.stringify((() => { const t = DPANO.veriAl().t, ks = DPANO.kapsamlar(t); return DPANO.gorunumModeli(t, DPANO.olcu(${JSON.stringify(olcu || 'TYT')}), ks.find(k => k.key === ${JSON.stringify(kapsam)})).sinavlar.map(s => [s.g, Math.round(s.ort * 100) / 100]); })())`));
 const SAYFALAR = [
   {ad: 'Hazırbulunuşluk', tarih: '18.08.2026', rows: [[1, '12/A', 30], [2, '12/A', 36], [3, '12/B', 24], [9, '12/B', 18], [7, '11/A', 10]]},
-  {ad: 'Deneme Eylül', tarih: '25.09.2026', rows: [[1, '12/A', 40], [2, '12/A', 44], [3, '12/B', 30], [9, '12/B', 34], [7, '11/A', 12]]},
-  {ad: 'Deneme Ekim', tarih: '23.10.2026', ayt: true, rows: [[1, '12/A', 50, 20], [2, '12/A', 54, 30], [3, '12/B', 40, 10], [9, '12/B', 44, 14]]},
-  {ad: 'Geçen Yıl', tarih: '10.01.2026', rows: [[1, '12/A', 99], [2, '12/A', 99]]}
+  {ad: 'Deneme Eylül', tarih: '25.09.2026', rows: [[1, '12/A', 38], [2, '12/A', 40], [3, '12/B', 30], [9, '12/B', 34], [7, '11/A', 12]]},
+  {ad: 'Deneme Ekim', tarih: '23.10.2026', ayt: true, rows: [[1, '12/A', 36, 20], [2, '12/A', 40, 30], [3, '12/B', 28, 10], [9, '12/B', 32, 14]]},
+  {ad: 'Geçen Yıl', tarih: '10.01.2026', rows: [[1, '12/A', 39], [2, '12/A', 39]]}
 ];
 const kopya = `(() => {
   const ders = n => DENEME_DERSLER.TYT.map(d => ({kod:d[0],soru:d[2],dogru:d[0]==='turkce'?n:0,yanlis:0}));
@@ -339,8 +339,8 @@ check('class average follows the school lists: a list-only exam appears, same nu
   const nokta = () => JSON.parse(run('JSON.stringify(denemeOrtalamaVerisi().noktalar.map(n=>[gunNo(n.r.tarih),n.v,n.r.ad]))'));
   const v = JSON.parse(run('JSON.stringify((v=>({kaynak:v.kaynak,kapsam:v.kapsam,sinif:v.sinif,siniflar:v.siniflar}))(denemeOrtalamaVerisi()))'));
   assert.deepEqual(v, {kaynak: 'liste', kapsam: 'g12', sinif: 12, siniflar: [12, 11]});
-  // 12th grade: Aug (30,36,24,18 -> 27), Sep (40,44,30,34 -> 37), Oct (50,54,40,44 -> 47.0); last year's exam excluded.
-  assert.deepEqual(nokta().map(n => n[1]), [27, 37, 47]);
+  // 12th grade: Aug (30,36,24,18 -> 27), Sep (38,40,30,34 -> 35.5), Oct (36,40,28,32 -> 34); last year's exam excluded.
+  assert.deepEqual(nokta().map(n => n[1]), [27, 35.5, 34]);
   assert.deepEqual(nokta().map(n => n[0]), ['2026-08-18', '2026-09-25', '2026-10-23'].map(d => run(`gunNo('${d}')`)), 'the exam dates, not the copy date 30 Oct');
   assert.match(nokta()[0][2], /^Hazırbulunuşluk · 4 öğrenci ortalaması$/);
   // Equal to Deneme panosu's per-exam participant average for the same grade, şube and alan.
@@ -358,7 +358,7 @@ check('class average: şube and group filters, the 18 Ağu exam keeps its own da
   const v = () => JSON.parse(run('JSON.stringify((v=>({bas:v.bas,sube:v.sube,n:v.noktalar.map(n=>[n.v,!!n.erken])}))(denemeOrtalamaVerisi()))'));
   const agu = run("gunNo('2026-08-18')"), donem = run("pazartesi(gunNo('2026-09-07'))");
   assert(v().bas <= agu && v().bas < donem, 'the axis starts at the August exam (its Monday), before the term start');
-  assert.deepEqual(v().n, [[27, false], [37, false], [47, false]], 'no point is folded onto the term start');
+  assert.deepEqual(v().n, [[27, false], [35.5, false], [34, false]], 'no point is folded onto the term start');
   const h = run('denemeOrtalamaGrafigi()');
   assert.match(h, /Hazırbulunuşluk · 4 öğrenci ortalaması · 2026-08-18 · 27 net/);
   assert.doesNotMatch(h, /dönem başından önce/);
@@ -366,13 +366,13 @@ check('class average: şube and group filters, the 18 Ağu exam keeps its own da
   assert.match(h, /<select id="dnOrtSube"><option value="">Tümü<\/option><option value="12\/A">12\/A<\/option><option value="12\/B">12\/B<\/option><\/select>/);
   assert.match(h, /data-dn-yol="o:TYT:pano"/);
   // Şube: the list's class; the notebook's "12-B" spelling is the same class.
-  run("EK.anaSube='12/A'"); assert.deepEqual(v().n.map(x => x[0]), [33, 42, 52]);
-  run("EK.anaSube='12-B'"); assert.deepEqual([v().sube, ...v().n.map(x => x[0])], ['12/B', 21, 32, 42]);
+  run("EK.anaSube='12/A'"); assert.deepEqual(v().n.map(x => x[0]), [33, 39, 38]);
+  run("EK.anaSube='12-B'"); assert.deepEqual([v().sube, ...v().n.map(x => x[0])], ['12/B', 21, 32, 30]);
   run("EK.anaSube='13/Z'"); assert.equal(v().sube, '', 'an unknown class is everyone');
   // Group: each exam's top 25% of 4 -> 1 student; fixed group by overall average; target keys with either spelling.
-  run("EK.anaSube='';EK.anaGrup='ust20'"); assert.deepEqual(v().n.map(x => x[0]), [36, 44, 54]);
-  run("EK.anaGrup='alt40'"); assert.deepEqual(v().n.map(x => x[0]), [21, 32, 42]);
-  run("EK.anaGrup='ust40';EK.anaGrupMod='genel'"); assert.deepEqual(v().n.map(x => x[0]), [33, 42, 52], 'students 1 and 2 are the top two on average');
+  run("EK.anaSube='';EK.anaGrup='ust20'"); assert.deepEqual(v().n.map(x => x[0]), [36, 40, 40]);
+  run("EK.anaGrup='alt40'"); assert.deepEqual(v().n.map(x => x[0]), [21, 32, 30]);
+  run("EK.anaGrup='ust40';EK.anaGrupMod='genel'"); assert.deepEqual(v().n.map(x => x[0]), [33, 39, 38], 'students 1 and 2 are the top two on average');
   run("EK.anaGrup='';EK.anaGrupMod='deneme';D.denemeOrtHedef={TYT:{'':40,'12-B':28}};EK.anaSube='12/B'");
   assert.equal(run('denemeOrtalamaVerisi().hedef'), 28, 'the 12-B target applies to the list class 12/B');
   run("EK.anaSube='12/A'"); assert.equal(run('denemeOrtalamaVerisi().hedef'), 40);
@@ -402,7 +402,7 @@ check('one list of a student’s exams: school-list rows (with per-ders nets) fi
       {id:'m:b',ad:'Kendi Deneme',tarih:'2026-10-01',tur:'TYT',oturum:'TYT',brans:'',alan:'SAY',dersler:ders(5),sure:null,puan:null,ts:1}];
   })()`);
   const l = () => JSON.parse(run('JSON.stringify(ogrenciDenemeKayitlari(0).map(r=>[r.tarih,r.ad,r.tur,r.id.slice(0,2),!!r.okulListe,Math.round(denemeToplam(r,"SAY")*100)/100]))'));
-  assert.deepEqual(l(), [['2026-01-10', 'Geçen Yıl', 'TYT', 'p:', true, 99], ['2026-08-18', 'Hazırbulunuşluk', 'TYT', 'p:', true, 30], ['2026-09-25', 'Deneme Eylül', 'TYT', 'p:', true, 40], ['2026-10-01', 'Kendi Deneme', 'TYT', 'm:', false, 5],
+  assert.deepEqual(l(), [['2026-01-10', 'Geçen Yıl', 'TYT', 'p:', true, 39], ['2026-08-18', 'Hazırbulunuşluk', 'TYT', 'p:', true, 30], ['2026-09-25', 'Deneme Eylül', 'TYT', 'p:', true, 38], ['2026-10-01', 'Kendi Deneme', 'TYT', 'm:', false, 5],
     ['2026-10-23', 'Deneme Ekim', 'AYT', 'p:', true, 21], ['2026-10-30', 'Deneme Ekim', 'TYT', 'p:', false, 50]].sort((a, b) => a[0].localeCompare(b[0]) || a[3].localeCompare(b[3])).map(x => x),
     'the published copy wins over the list row, and the student’s 30 Oct entry of the same name is hidden whatever its date');
   assert(run('D.ogr[0].denemeler.some(r=>r.id==="m:a")'), 'the stored entry is kept');
@@ -415,6 +415,88 @@ check('one list of a student’s exams: school-list rows (with per-ders nets) fi
   // A student session cannot read the lists: only the published copies and its own entries (deduped by name).
   run("D.rol='ogrenci';EK.ogr=0");
   assert.deepEqual(JSON.parse(run('JSON.stringify(ogrenciDenemeKayitlari(0).map(r=>[r.ad,r.id.slice(0,2)]))')), [['Kendi Deneme', 'm:'], ['Deneme Ekim', 'p:']]);
+});
+
+// ---- publishing the school lists to the students' Denemelerim ("PDF ekle", "Bekleyen sonuçları yayınla") ----
+const yayinKur = () => {
+  run(kopya); listeKur(SAYFALAR);
+  run(`(() => {
+    D.ogr[0].denemeOkul = []; D.ogr[1].denemeOkul = [];
+    D.ogr.push({ad:'Synthetic Eda', no:5, sube:'12-A', sinif:12, alan:'SAY', kap:6, off:[6], aktif:true});
+    // The list prints no 5 under another name (another school's student), and prints student 9 who is not in the notebook.
+    D.siralama.sinavlar[1].T.ogr.push({...D.siralama.sinavlar[1].T.ogr[0], no:'5', ad:'BASKA OKUL OGRENCISI', snf:'12/A'});
+    kayitlar = []; kaydet = async () => true;
+    denemeOkulYayinla = async si => { kayitlar.push([si, JSON.stringify(D.ogr[si].denemeOkul)]); D.ogr[si].denemeYayinBekliyor = false; };
+  })()`);
+};
+const kopyalar = (i) => JSON.parse(run(`JSON.stringify((D.ogr[${i}].denemeOkul || []).map(r => [r.id.slice(0, 2), r.ad, r.tarih, r.oturum, r.dersler.find(d => d.kod === 'turkce')?.dogru]))`));
+check('PDF ekle / backfill: each matched student gets only their own rows, once; other schools’ and unmatched rows are not published', async () => {
+  yayinKur();
+  const mesaj = await run('denemeBekleyenleriYayinla()');
+  assert.match(mesaj, /^3 öğrenciye yayınlandı\. Okul listelerinden 3 öğrenci için 14 sonuç eklendi\. Öğrenciler/);
+  // Student 1 (no 1): Geçen Yıl, Hazırbulunuşluk, Deneme Eylül, Deneme Ekim TYT + AYT; with the school's dates.
+  assert.deepEqual(kopyalar(0).map(r => r.slice(1)).sort(), [['Deneme Ekim', '2026-10-23', 'AYT', null], ['Deneme Ekim', '2026-10-23', 'TYT', 36], ['Deneme Eylül', '2026-09-25', 'TYT', 38],
+    ['Geçen Yıl', '2026-01-10', 'TYT', 39], ['Hazırbulunuşluk', '2026-08-18', 'TYT', 30]].sort());
+  assert.equal(kopyalar(2).length, 4, 'Synthetic Cem (no 3, 12/B) is not in the Geçen Yıl list');
+  assert.deepEqual(kopyalar(4), [], 'a student whose number is printed under another name gets nothing');
+  assert.equal(run('D.ogr[4].denemeYayinBekliyor'), undefined);
+  // Ids and kimlik are the import’s: re-importing the same file dedupes.
+  assert(run("D.ogr[0].denemeOkul.every(r => r.id === 'p:' + encodeURIComponent([denemeAdAnahtari(r.ad), r.tarih, r.oturum].join('|')))"));
+  // Privacy: what is published for a student holds that student's own numbers only.
+  const yayin = JSON.parse(run('JSON.stringify(kayitlar)'));
+  for (const [si, json] of yayin) {
+    const kayit = JSON.parse(json);
+    for (const r of kayit) {
+      assert.deepEqual(Object.keys(r).sort(), ['alan', 'ad', 'brans', 'dersler', 'id', 'oturum', 'puan', 'sinavTuru', 'sure', 'tarih', 'ts', 'tur'].sort(), 'no list fields such as rank, class or name');
+      assert(r.dersler.every(d => Object.keys(d).sort().join() === 'dogru,kod,soru,yanlis'));
+    }
+    for (const yabanci of ['SYNTHETIC', 'SENTETIK', 'BASKA', 'Bora', 'Cem', '12/']) assert(!json.includes(yabanci), 'no other student: ' + yabanci);
+  }
+  assert.equal(JSON.parse(yayin.find(x => x[0] === 0)[1]).find(r => r.ad === 'Hazırbulunuşluk').dersler.find(d => d.kod === 'turkce').dogru, 30, 'student 1’s own net, not the class’s');
+  // Backfill again: nothing new.
+  const once = run('JSON.stringify(D.ogr)'), tekrar = await run('denemeBekleyenleriYayinla()');
+  assert.equal(tekrar, '0 öğrenciye yayınlandı. Öğrenciler sonuçlarını otomatik görecek.');
+  assert.equal(run('JSON.stringify(D.ogr)'), once, 'no copy added twice');
+  // A result the student deleted stays deleted.
+  run("D.ogr[0].denemeOkul = denemeBirlestir(D.ogr[0].denemeOkul, [{...D.ogr[0].denemeOkul.find(r => r.ad === 'Hazırbulunuşluk'), silindi:true, ts:Date.now() + 5}])");
+  await run('denemeBekleyenleriYayinla()');
+  assert(!run("D.ogr[0].denemeOkul.some(r => r.ad === 'Hazırbulunuşluk' && !r.silindi)"));
+});
+
+check('publishing respects the 300 KB school-result field: what does not fit is skipped and named', async () => {
+  yayinKur();
+  run(`(() => {
+    const o = D.ogr[0], doldur = i => ({id:'p:dolgu' + i, ad:'Dolgu ' + i, tarih:'2026-09-01', tur:'TYT', oturum:'TYT', brans:'', alan:'SAY', sure:null, puan:null, ts:1, sinavTuru:'genel',
+      dersler: DENEME_DERSLER.TYT.map(d => ({kod:d[0], dogru:1, yanlis:0, soru:d[2]}))});
+    o.denemeOkul = [];
+    for (let i = 0; baytBoyu(JSON.stringify(o.denemeOkul)) < 299000 - 700; i++) o.denemeOkul.push(doldur(i));
+  })()`);
+  const mesaj = await run('denemeBekleyenleriYayinla()');
+  assert.match(mesaj, /Boyut sınırı nedeniyle atlandı: Synthetic Ada \(\d sonuç\)/);
+  assert(run("baytBoyu(JSON.stringify(D.ogr[0].denemeOkul))") <= 300000);
+  assert(run("D.ogr[0].denemeOkul.filter(r => !r.id.startsWith('p:dolgu')).length") < 5, 'some rows were left out');
+  assert.equal(kopyalar(1).length, 5, 'another student is not affected');
+});
+
+check('student session: a list-only exam shows with the school date; an own entry of the same name shows once and can be deleted', async () => {
+  yayinKur();
+  run(`(() => { D.ogr[0].denemeler = [{id:'m:own', ad:'deneme  eylül', tarih:'2026-10-30', tur:'TYT', oturum:'TYT', brans:'', alan:'SAY', sure:null, puan:null, ts:1,
+    dersler: DENEME_DERSLER.TYT.map(d => ({kod:d[0], soru:d[2], dogru:d[0] === 'turkce' ? 39 : 0, yanlis:0}))}]; })()`);
+  await run('denemeBekleyenleriYayinla()');
+  // The student's own notebook: just that student, no school lists.
+  run("(() => { const o = D.ogr[0]; D = varsayilan(); D.rol = 'ogrenci'; D.ogr = [o]; delete D.siralama; EK.ogr = 0; EK.sekme = 'denemeler'; EK.denemeTur = 'TYT'; })()");
+  const liste = JSON.parse(run('JSON.stringify(ogrenciDenemeKayitlari(0).filter(r => r.tur === "TYT").map(r => [r.tarih, r.ad]))'));
+  assert.deepEqual(liste.filter(x => /Eylül|Hazır/.test(x[1])), [['2026-08-18', 'Hazırbulunuşluk'], ['2026-09-25', 'Deneme Eylül']], 'school dates; the own 30 Oct entry is not a second exam');
+  const h = run('gorunumDenemeler()');
+  assert.equal((h.match(/Deneme Eylül/g) || []).length >= 1, true);
+  assert.match(h, /Senin girdiğin <b>deneme  eylül<\/b> \(30\.10\) okul sonucuyla birleşti\. <button class="dugme" data-dn-sil="m:own"/);
+  assert(!/<td>2026-10-30<br><b>deneme/.test(h), 'not in the history table');
+  // Sil goes through the existing delete path.
+  const el = {dataset: {dnSil: 'm:own'}, id: ''}; el.closest = () => el;
+  run("kaydet = async () => true; confirm = () => true; ciz = () => {}");
+  for (const f of listeners.click) { try { await f({target: el, preventDefault() {}}); } catch (e) { /* other modules' click handlers */ } }
+  assert(run("D.ogr[0].denemeler.find(r => r.id === 'm:own').silindi === true"), 'the own entry is deleted');
+  assert.doesNotMatch(run('gorunumDenemeler()'), /okul sonucuyla birleşti/);
 });
 
 (async () => {

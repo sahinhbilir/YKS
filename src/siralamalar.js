@@ -798,7 +798,11 @@ async function pdfEkle(files){
   }
   if(D!==defter||!rehberMi())throw new Error('Oturum değişti.');
   const eklenen=okunan.length?await kaydetListeler(okunan):[];
-  return (eklenen.length?'Kaydedildi: '+eklenen.join(', ')+'.':'Liste eklenmedi.')+(hatalar.length?' Okunamayan: '+hatalar.join(' · '):'');
+  // The teacher's own students' rows of the new lists go to their Denemelerim (matched by number and name, as the file import does);
+  // a failed publish stays queued for "Bekleyen sonuçları yayınla".
+  let yayin='';
+  if(eklenen.length){try{yayin=' '+await denemeBekleyenleriYayinla(durum)}catch(e){yayin=' Öğrencilere yayınlanamadı, cihazda kayıtlı ve yayın bekliyor: '+e.message}}
+  return (eklenen.length?'Kaydedildi: '+eklenen.join(', ')+'.':'Liste eklenmedi.')+yayin+(hatalar.length?' Okunamayan: '+hatalar.join(' · '):'');
 }
 document.addEventListener('click',async ev=>{
   const el=ev.target.closest?.('button');if(!el||!sayfada())return;
