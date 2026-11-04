@@ -24,7 +24,38 @@ In Myexamy: select the exam on **Sınavlar**, then **Raporlar → Türkiye Genel
 - **The school.** **Okul** chooses the school the page follows, and the choice is saved with the lists. Before the teacher chooses, the school named on the Sıralamalar lists is used when exactly one school in the report matches it. Otherwise the page asks the teacher to pick one. A viewing teacher's choice is kept for the visit only.
 - **The two exams compared.** In **Artış** they are **İlk deneme → Son deneme**: the first exam of the chart and the latest by default, so the page reads the whole run of mock exams, not one pair. In **Sıra** they are **Önceki → Şimdiki**: the latest and the exam just before it. The first only offers exams before the second. Adding a PDF switches the page to that exam.
 
-## Artış (the default view)
+## T ve sıra (the default view)
+
+**Görünüm: T ve sıra** is the default; Artış and Sıra stay as the other two views. It answers "how far above the average of Türkiye's schools is this school, and about where does it stand?" with a T-score and a place, exam by exam.
+
+- **Main charts:** **T puanı (okullar arası)** of the chosen total (TYT, or SAY / EA / SÖZ with **Toplam**) with a dashed 50 line, “Türkiye ortalaması (okullar)”, and beside it the place chart (1 at the top, down to about N). A subject card, table row or **Tüm dersler** switches both charts to one subject. Every subject card carries two small lines: its T and its place.
+- **Place:** a school in the list shows its **printed place** (filled marker, solid line). Only a school outside the list gets an estimate (hollow marker, dashed line, “≈ 140.”). A printed place is never replaced. A total has no ranking in the report, so its place is always an estimate.
+- **Hover:** the tooltip carries the numbers: T, net, σ, and “N ≈ 180 okul (derslerde 160–220)”, the pooled N with the spread of the subjects' own fits. “≈” and N are not repeated in the page text.
+- **A gap, not a guess:** T and the estimate need the school's own net. In the list it is the row's net. Outside it, the report prints nothing, so the page uses **Sıralamalar' school average (Kurum Ortalamaları) of the same exam and subject**, only when Sıralamalar names this school and the net is there (the tooltip says “Sıralamalar kurum ortalaması”). Otherwise the point is empty and the tooltip says why.
+- **No total:** a session whose total cannot be built (AYT without the subjects of a field) shows **Ders ortalaması T**, the mean of the subjects' T, labelled so, and no place.
+
+### Method
+
+1. **Model.** For one exam, list kind and subject the list gives the top schools' nets x_k by place k and the Türkiye average μ. The schools' mean nets are taken as Normal(μ, σ) over N schools, so x_k ≈ μ + σ·Φ⁻¹(1 − (k − 0.5)/N).
+2. **Fit.** For every N from (last printed place + 20) up to 6 000 (step 10 up to 1 000, then step 50, then step 1 around the best) σ = Σ(x − μ)q / Σq² with q = Φ⁻¹(1 − (k − 0.5)/N); the N with the least squared error wins. The fit reports σ, N and RMSE (in nets). Printed places are used, so ties keep their place.
+3. **Pooled N** per exam and list kind: the median of the subjects' N over the subjects with RMSE / σ < 0.35 (Ek Felsefe is not stored). Each subject's σ is then fitted again with that N fixed. If no subject fits, there is no N and no T for that exam. The spread of the per-subject N is shown in the tooltip.
+4. **T** = 50 + 10·(x_s − μ)/σ. **Place** outside the list = 1 + (N − 1)(1 − Φ((x_s − μ)/σ)), rounded, and never above the list's last printed place + 1.
+5. **Total.** The report has only per-subject lists, so there is no total ranking to fit. μ_total = Σμ_d and x_total = Σ x_d (every subject needed). σ_total² = Σσ_i² + 2·Σ_{i<j} R_ij σ_i σ_j, where R_ij is the between-subject correlation of school means, **corrected for range restriction**:
+   - **Why:** the lists hold only the top 100 schools, the upper tail, and correlations measured there are attenuated (on the real 27-YKS-1202 list the median observed r among TYT subjects was 0.66, SÖZ 0.34).
+   - **r_ij:** the correlation of the nets of the schools listed in both subjects (at least 30 schools; fewer is "too few").
+   - **Correction:** Thorndike (1949) Case II, R = r·u / √(1 − r² + r²u²), with u = σ_fit / s_obs, the fitted population σ over the SD of the subject's listed nets, averaged over the two subjects; R is clamped to [0, 0.98].
+   - **Fallbacks:** a pair with too few common schools takes the median R of the other pairs in the same total. If there is none, R = 0.8 and the tooltip says "varsayılan korelasyon". Otherwise it shows the median R used: "derslerarası r ≈ 0,86 (düzeltilmiş)".
+   - **Second reading:** the tooltip of a total also shows **Ders ortalaması T**, the plain mean of the subjects' T.
+   - **Assumptions:** the relation between subjects is linear and homoscedastic, and selection works on the measured nets themselves. Case II is exact for selection on one variable. Here every subject lists its own top 100, so the common schools are selected on both; with u taken from each subject's whole list the correction is approximate and tends to under-correct (in a simulation of 180 schools with ρ = 0.85 it gave 0.83 from an observed 0.72; with a smaller share listed it under-corrects more). A smaller R makes σ_total smaller and the total's T more extreme.
+
+### Limits
+
+- σ is the spread **between schools' means**, not between students. A school's net here is an average, so T = 60 means "one σ of school means above the average school", not a student-level T.
+- The method assumes normally distributed school means over N schools; the top 100 only constrain the upper tail. N is an estimate (real file: 153–221 across subjects) and so is every place beyond the list. Subjects with few questions (5-question lessons) have coarse nets and fit less tightly.
+- Sıralamalar' *Kurum Ortalamaları* may cover a different group of students than the publisher's school mean (for example all grades or a different campus grouping); T outside the list is only as good as that match.
+- A total's σ depends on the corrected correlations (above); the total's place is an estimate in every exam. The label "Türkiye ortalaması (okullar)" sits at the right end above the 50 line.
+
+## Artış
 
 Exams differ in difficulty, so an increase is read against the Türkiye average's increase between the same exams: **Türkiye’ye göre** = the school's change − the Türkiye average's change, in nets. By default the page covers the whole run, first exam → latest: the **total** is the last exam against the first, and the **average per exam** is the total over the steps between neighbouring exams (a run of 4 exams has 3 steps).
 
@@ -66,5 +97,7 @@ Exams differ in difficulty, so an increase is read against the Türkiye average'
 
 - `src/turkiye.js` and `src/turkiye.css` are embedded into `index.html` by `node scripts/embed-turkiye.cjs` (`--check` only verifies). The PDF text is read with `denemePdfSayfalari` from Denemeler, and lines are drawn with `GRAFIK_CIZGI` (`src/grafik.js`).
 - `test/turkiye-regression.cjs` covers reading (pages, two-line names, skipped rows, list kinds, refused reports), storage (encoding, replacing, printed places, damaged data, limits), Ek Felsefe left out, exams shown together (grade from the name, Sıralamalar or the teacher; grade-less exams in the main group; the note on other lists), the model (order and Sıralamalar dates, grade and kind, guessing and choosing the school, places, ties, one more net, outside the list, averages), the Artış view (totals, increases against Türkiye, the increase ranking, Önceki → Şimdiki), charts, the Sıra view, the viewing teacher and privacy.
+- `test/turkiye-regression.cjs` also covers the T method: Φ and Φ⁻¹, recovering N and σ from synthetic order statistics, the range-restriction correction on a bivariate-normal population and its fallbacks (`normal` option of the fixture), the pooled N, a hand T and place example, real place inside the list against an estimate outside it, a gap without the school's net, the total and the T view.
+- `test/turkiye-t-browser.cjs` runs the default T ve sıra view at 1280 and 390 px, light and dark, a subject's pair, and switching to Artış and Sıra.
 - `test/turkiye-browser.cjs` runs on desktop (light theme) and at 390 px (dark theme). It covers the menu, PDF ekle, choosing the school, the Artış view (a subject's increase and ranking, the TYT total chart and its readout), a third exam moving the chart, hover and keyboard, line highlight and click, a subject's net chart and nearby schools, TYT/AYT, Önceki, Çizgi, no sideways scrolling, and deleting.
 - The synthetic report is in `test/fixtures/kurum-pdf.cjs`; it holds no real school data.

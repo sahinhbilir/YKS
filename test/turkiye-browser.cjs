@@ -37,10 +37,14 @@ const ad=e=>'27-YKS-120'+e+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf';
    // No school yet: the picker asks for it, no charts.
    assert.match(await page.locator('#tgKok').innerText(),/Okulunuzu seçin/);assert.equal(await page.locator('[data-tg-grafik]').count(),0);
    await page.locator('#tgOkul').selectOption(BIZ);
-   await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="toplam"] svg'));
+   await page.waitForFunction(()=>document.querySelector('#tgKok .et-ozet'));
    assert.equal(await page.evaluate(()=>D.turkiye.okul),BIZ);
+   // T ve sıra is the default view (test/turkiye-t-browser.cjs); this test goes on in Artış.
+   assert.equal(await page.locator('[data-tg-mod="tpuan"]').getAttribute('aria-pressed'),'true');
+   await page.locator('[data-tg-mod="artis"]').click();
+   await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="toplam"] svg'));
    const cumle=()=>page.locator('#tgKok .et-cumle').innerText();
-   // Artış is the default view. Fizik is outside the list in 1202, so the TYT total cannot be compared; a subject can.
+   // Fizik is outside the list in 1202, so the TYT total cannot be compared; a subject can.
    assert.equal(await page.locator('[data-tg-mod="artis"]').getAttribute('aria-pressed'),'true');
    assert.match(await cumle(),/^27-YKS-1201 → 27-YKS-1202 · Kolej listesi · Sentetik Kartal Anadolu Lisesi: TYT toplam iki denemede de hesaplanamıyor\./);
    await page.locator('.et-ders[data-tg-ders="TÜRKÇE-T"]').click();
