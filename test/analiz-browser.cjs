@@ -63,7 +63,7 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
     D.yoklama=YOKLAMA.paketle([{ad:'SENTETİK ADA',sinif:'12/A',gun:new Map(d.yoklama.map(([iso,k])=>[g(iso),k]))}],[{bas:g('2026-10-01'),bit:g('2026-11-04'),n:1,yaz:null,ts:3}],3);
     const K=KONU_TAKIBI,v=K.merge(K.blank(),[d.konu],[d.zo,d.zm]);v.exams[0].date='2026-10-29';D.konutakibi=v;
     D.denemeOrtHedef={TYT:{'':70,'12-A':75},'AYT:SAY':{'':60}};
-    EK.sekme='denemeler';EK.denemeKlasik=undefined;ciz();
+    EK.sekme='denemeler';EK.denemeKisi=undefined;ciz();
    },veri);
    // From Deneme panosu: a student's name opens the card; the page is not in the top menu but marks Öğrenciler.
    await page.waitForSelector('#dpKok #dpTablo');

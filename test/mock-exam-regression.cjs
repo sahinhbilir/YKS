@@ -148,7 +148,7 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert.equal((page.match(/class="dn-dot[ "]/g)||[]).length,3,'branch exam and both TYT sections');
   assert.equal((page.match(/class="dn-dot \w+ genel"/g)||[]).length,2,'sections use the hollow marker');
   assert(page.includes('27-YKS-1201 · TYT denemesinden'));assert(!page.includes('İçi boş nokta'),'the hollow marker needs no explanation');
-  assert(page.includes('Deneme (TYT/AYT’den 2)'));assert(page.includes('<span class="dn-genel-rozet">TYT denemesinden</span>'));
+  assert(page.includes('TYT/AYT’den 2'));assert(page.includes('<span class="dn-genel-rozet">TYT denemesinden</span>'));
   assert.match(page,/id="dnGenel" checked/);
   assert.equal(run('JSON.stringify(D)'),once,'drawing adds nothing to the notebook');assert(!once.includes('"g:'));
   // The section detail offers the source exam, never edit/delete/time on the derived row.

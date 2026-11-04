@@ -47,7 +47,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.evaluate(()=>{const r=D.ogr[0].denemeler.find(r=>r.tur==='BRANS');D.ogr[0].denemeler.push({...r,id:'m:brans2',tarih:'2026-09-24',ad:'Türkçe branş 2',sure:25,dersler:[{kod:'turkce',dogru:16,yanlis:4,soru:20}]});ciz();});
    await page.getByRole('button',{name:'Branş denemeleri',exact:true}).click();await page.locator('#dnMetrik').selectOption('hiz');
    assert.equal(await page.locator('.dn-dot').count(),1,'only the timed branş exam is plotted');
-   assert((await page.locator('.dn-stats').innerText()).includes('Ortalama net/dk'));
+   assert((await page.locator('#dpKpi').innerText()).includes('Ortalama net/dk'));
    await page.locator('.dn-dot').focus();assert((await page.locator('#dnDetay').innerText()).includes('Net/dk: 0,6'));
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'branş overflow');
    await page.screenshot({path:path.join(out,'mock-exam-net-per-minute-'+width+'.png'),fullPage:true});

@@ -789,10 +789,6 @@ main:has(.dn-tabs){min-width:0}
 #dpKok.dn-kisisel .dn-tabs .dn-ekle{margin-left:auto}
 #dpKok.dn-kisisel .dn-filters{margin:0;align-items:end}
 #dpKok.dn-kisisel .dn-filters label{color:var(--e-muted)}
-#dpKok.dn-kisisel .dn-stats{margin:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,10.5rem),1fr))}
-#dpKok.dn-kisisel .dn-stats>div{background:var(--e-panel);border-color:var(--e-line);border-radius:var(--e-r);padding:12px 16px}
-#dpKok.dn-kisisel .dn-stats span{color:var(--e-muted)}
-#dpKok.dn-kisisel .dn-stats strong{font-family:var(--e-serif);font-size:1.85rem;font-weight:400}
 #dpKok.dn-kisisel .dn-panel{margin:0;background:var(--e-panel);border-color:var(--e-line);border-radius:var(--e-r)}
 #dpKok.dn-kisisel .dn-grid{stroke:var(--e-grid)}
 #dpKok.dn-kisisel .dn-chart text{fill:var(--e-muted)}
@@ -806,7 +802,7 @@ main:has(.dn-tabs){min-width:0}
 #dpKok.dn-kisisel .dn-dot.genel{fill:var(--e-panel);stroke:var(--e-c1)}
 #dpKok.dn-kisisel .dn-scroll th,#dpKok.dn-kisisel .dn-scroll td{border-color:var(--e-line)}
 #dpKok.dn-kisisel #dnDurum:empty{display:none}
-@media(max-width:600px){#dpKok.dn-kisisel .dn-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#dpKok.dn-kisisel .dn-tabs .dn-ekle{margin-left:0}}
+@media(max-width:600px){#dpKok.dn-kisisel .dn-tabs .dn-ekle{margin-left:0}}
 
 }
 /* END DENEMELER */
@@ -1161,6 +1157,29 @@ td.et-yukari{color:var(--e-ok)}td.et-asagi{color:var(--e-bad)}
 /* On a phone the heads wrap and the cells tighten so Net artışı and Türkiye’ye göre stay in view (the table scrolls inside its own box). */
 @media (max-width:640px){#dpTablo .et-tablo{font-size:.75rem}#dpTablo .et-tablo th{white-space:normal;vertical-align:bottom;font-size:.6875rem}#dpTablo .et-tablo td:first-child{min-width:5.5em}
   #dpTablo .et-tablo td,#dpTablo .et-tablo th button{padding-inline:4px}#dpTablo .et-tablo .et-durum{padding:1px 6px;font-size:.6875rem}}
+/* Headline strip (#dpKpi): one primary tile and three supporting ones on a 8px spacing scale. Labels are plain
+   text, not .mini, so the screen theme keeps them; the figure wears the text colour, the chip carries the trend. */
+.dp-kpi{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.dp-kpi .et-ozet-kart{padding:16px 20px;gap:8px;justify-content:flex-start}
+.dp-kpi .dp-kpi-ad{font-size:.875rem;line-height:1.3;color:var(--e-fg2)}
+.dp-kpi .et-ozet-kart strong{font-size:1.75rem;line-height:1.1;color:var(--e-fg);font-weight:700}
+.dp-kpi .et-ozet-kart strong small{margin-left:6px;font-size:.875rem;font-weight:400;color:var(--e-fg2)}
+.dp-kpi .dp-kpi-ana{padding:24px}
+.dp-kpi .dp-kpi-ana strong{font-size:3rem;line-height:1}
+.dp-kpi .dp-kpi-ana strong small{font-size:1rem}
+.dp-kpi .dp-kpi-yok{font-size:1.5rem;font-weight:400;color:var(--e-fg2)}
+.dp-kpi-alt{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:.8125rem;color:var(--e-fg2)}
+.dp-kpi-ana .dp-kpi-alt{flex-direction:column;align-items:flex-start;gap:4px}
+.dp-kpi-not{overflow-wrap:anywhere}
+@media (max-width:700px){
+  .dp-kpi{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .dp-kpi .dp-kpi-ana{grid-column:1 / -1;padding:16px}
+  .dp-kpi .dp-kpi-ana strong{font-size:2.5rem}
+  .dp-kpi .et-ozet-kart{padding:12px 16px}
+  .dp-kpi>.et-ozet-kart:last-child:nth-child(even){grid-column:1 / -1}
+  .dp-kpi>.et-ozet-kart:last-child:nth-child(odd){grid-column:auto}
+}
+.dp-kisi-pano,.kd-pano{align-self:flex-start;margin-top:8px}
 /* END DENEMEPANO */
 
 /* BEGIN ETUTPLANI */
@@ -1874,7 +1893,8 @@ button.gr-kucuk{cursor:zoom-in}
 @media screen {
   :root {
     --baslik-font:Arial,"Segoe UI",system-ui,sans-serif;
-    --zemin:#f6f5f0;--kagit:#ffffff;--murekkep:#213d40;--soluk:#586e70;--cizgi:#d9e2de;
+    --zemin:#f6f5f0;--kagit:#ffffff;--kagit-yuksek:#ffffff;--murekkep:#213d40;--soluk:#586e70;--cizgi:#d9e2de;
+    --secili-zemin:#11766a;--secili-yazi:#ffffff;--secili-cerceve:#11766a;
     --vurgu:#11766a;--vurgu-yumusak:#e6f2ec;--vurgu-koyu:#235b55;--vurgu-uzeri:#ffffff;
     --alan-cizgi:#7d9390;--marka:#168d7d;--marka-koyu:#213d40;--marka-acik:#e6f2ec;
     --il-koyu:#235b55;--il-mavi:#168d7d;
@@ -1890,29 +1910,31 @@ button.gr-kucuk{cursor:zoom-in}
   }
   @media (prefers-color-scheme:dark) {
     :root:not([data-theme="light"]) {
-      --zemin:#101e20;--kagit:#1a2d30;--murekkep:#e8f1ed;--soluk:#afc3bd;--cizgi:#344c4b;
-      --vurgu:#76cfb9;--vurgu-yumusak:#213f3b;--vurgu-koyu:#b0e1d2;--vurgu-uzeri:#102c28;
-      --alan-cizgi:#7e9c96;--marka:#76cfb9;--marka-koyu:#e8f1ed;--marka-acik:#213f3b;
-      --il-koyu:#b0e1d2;--il-mavi:#76cfb9;
-      --iyi:#76cfb9;--uyari:#ebbb70;--kritik:#f1a18e;
-      --golge:none;--rapport-chart:#76cfb9;--rapport-blue:#8cb8df;--rapport-orange:#eaaa79;
-      --rapport-purple:#b5a3df;--rapport-pink:#e5a1c0;--rapport-green:#9acb91;--rapport-red:#f1a18e;
-      --rapport-axis:#76938a;--rapport-grid:#304744;--rapport-muted-chart:#607e75;
-      --rapport-heat-ink:#f0efec;
-      --rapport-pop-shadow:0 12px 36px rgba(0,0,0,.3);color-scheme:dark;
+      --zemin:#111213;--kagit:#1a1b1d;--kagit-yuksek:#222326;--murekkep:#ececec;--soluk:#a5a7aa;--cizgi:#2c2e31;
+      --secili-zemin:#222326;--secili-yazi:#72b9ab;--secili-cerceve:#72b9ab;
+      --vurgu:#72b9ab;--vurgu-yumusak:#27282b;--vurgu-koyu:#9ccfc4;--vurgu-uzeri:#0f1112;
+      --alan-cizgi:#8b8d90;--marka:#72b9ab;--marka-koyu:#ececec;--marka-acik:#27282b;
+      --il-koyu:#9ccfc4;--il-mavi:#72b9ab;
+      --iyi:#84bf8f;--uyari:#d9b36c;--kritik:#e0907f;
+      --golge:none;--rapport-chart:#72b9ab;--rapport-blue:#86aed0;--rapport-orange:#dba37a;
+      --rapport-purple:#aa9fd0;--rapport-pink:#d49ab5;--rapport-green:#93bd8c;--rapport-red:#dc9585;
+      --rapport-axis:#808285;--rapport-grid:#2a2c2f;--rapport-muted-chart:#5f6063;
+      --rapport-heat-ink:#ececec;
+      --rapport-pop-shadow:0 12px 36px rgba(0,0,0,.45);color-scheme:dark;
     }
   }
   :root[data-theme="dark"] {
-    --zemin:#101e20;--kagit:#1a2d30;--murekkep:#e8f1ed;--soluk:#afc3bd;--cizgi:#344c4b;
-    --vurgu:#76cfb9;--vurgu-yumusak:#213f3b;--vurgu-koyu:#b0e1d2;--vurgu-uzeri:#102c28;
-    --alan-cizgi:#7e9c96;--marka:#76cfb9;--marka-koyu:#e8f1ed;--marka-acik:#213f3b;
-    --il-koyu:#b0e1d2;--il-mavi:#76cfb9;
-    --iyi:#76cfb9;--uyari:#ebbb70;--kritik:#f1a18e;
-    --golge:none;--rapport-chart:#76cfb9;--rapport-blue:#8cb8df;--rapport-orange:#eaaa79;
-    --rapport-purple:#b5a3df;--rapport-pink:#e5a1c0;--rapport-green:#9acb91;--rapport-red:#f1a18e;
-    --rapport-axis:#76938a;--rapport-grid:#304744;--rapport-muted-chart:#607e75;
-    --rapport-heat-ink:#f0efec;
-    --rapport-pop-shadow:0 12px 36px rgba(0,0,0,.3);color-scheme:dark;
+    --zemin:#111213;--kagit:#1a1b1d;--kagit-yuksek:#222326;--murekkep:#ececec;--soluk:#a5a7aa;--cizgi:#2c2e31;
+    --secili-zemin:#222326;--secili-yazi:#72b9ab;--secili-cerceve:#72b9ab;
+    --vurgu:#72b9ab;--vurgu-yumusak:#27282b;--vurgu-koyu:#9ccfc4;--vurgu-uzeri:#0f1112;
+    --alan-cizgi:#8b8d90;--marka:#72b9ab;--marka-koyu:#ececec;--marka-acik:#27282b;
+    --il-koyu:#9ccfc4;--il-mavi:#72b9ab;
+    --iyi:#84bf8f;--uyari:#d9b36c;--kritik:#e0907f;
+    --golge:none;--rapport-chart:#72b9ab;--rapport-blue:#86aed0;--rapport-orange:#dba37a;
+    --rapport-purple:#aa9fd0;--rapport-pink:#d49ab5;--rapport-green:#93bd8c;--rapport-red:#dc9585;
+    --rapport-axis:#808285;--rapport-grid:#2a2c2f;--rapport-muted-chart:#5f6063;
+    --rapport-heat-ink:#ececec;
+    --rapport-pop-shadow:0 12px 36px rgba(0,0,0,.45);color-scheme:dark;
   }
 
   body {font-family:Arial,"Segoe UI",system-ui,sans-serif;line-height:1.5}
@@ -1922,7 +1944,7 @@ button.gr-kucuk{cursor:zoom-in}
   .kart,.sayfa {border-radius:var(--rapport-radius);box-shadow:var(--golge)}
   .kutu {padding:20px 22px}
   .kutular {gap:16px}
-  .kutu .sayi {font-family:var(--baslik-font);font-size:30px;font-weight:700;color:var(--vurgu)}
+  .kutu .sayi {font-family:var(--baslik-font);font-size:30px;font-weight:700;color:var(--murekkep)}
   .kutu .ad,.etiket {text-transform:none;letter-spacing:0;font-size:12px}
   .sayisal,table.plan td.sira {font-family:var(--baslik-font)}
   .et-kisi-sayilar strong,.yk-kisi-sayilar strong,#yaKok .ya-tahmin strong {
@@ -1936,7 +1958,7 @@ button.gr-kucuk{cursor:zoom-in}
     border-radius:10px;
   }
   input[type=checkbox],input[type=radio] {accent-color:var(--vurgu)}
-  .menu-liste {border-radius:14px;padding:8px;box-shadow:var(--rapport-pop-shadow)}
+  .menu-liste {border-radius:14px;padding:8px;box-shadow:var(--rapport-pop-shadow);background:var(--kagit-yuksek)}
   .ray.ust {padding:12px 24px;gap:6px 14px}
   .ray button {border-radius:10px}
   .ray.ust .menu-grup>button[data-sekme] {border-radius:10px 0 0 10px}
@@ -1951,14 +1973,11 @@ button.gr-kucuk{cursor:zoom-in}
   .giris-cizim .c-sayfa {fill:var(--kagit)}
   .giris-cizim .c-cizgi,.giris-cizim .c-ip {stroke:var(--cizgi)}
   .giris-cizim .c-dugum {fill:var(--kagit)}
-  .pencere {border-radius:22px;box-shadow:var(--rapport-pop-shadow)}
+  .pencere {border-radius:22px;box-shadow:var(--rapport-pop-shadow);background:var(--kagit-yuksek)}
   .or-sources,.or-kaynaklar {border-radius:16px;padding:20px}
   .or-preview {border-radius:var(--rapport-radius)}
   .dn-panel {padding:24px}
-  .dn-stats>div {border-radius:16px;padding:18px 20px}
-  .dn-stats strong {color:var(--vurgu);font-weight:700}
-  #dpKok.dn-kisisel .dn-stats>div {padding:20px 22px}
-  #dpKok.dn-kisisel .dn-stats strong {font-family:var(--baslik-font);font-weight:700;font-size:30px}
+  .dn-detay-bas strong {color:var(--murekkep)}
   #yaKok .ya-panel {border-radius:var(--rapport-radius);padding:24px}
   #yaKok .ya-row {border-radius:14px}
   #yaKok :is(select,input) {border-color:var(--alan-cizgi);border-radius:10px}
@@ -1996,7 +2015,7 @@ button.gr-kucuk{cursor:zoom-in}
   :root :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok),
   :root[data-theme] :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok),
   :root:not([data-theme]) :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) {
-    --e-bg:var(--zemin);--e-panel:var(--kagit);--e-pop:var(--kagit);
+    --e-bg:var(--zemin);--e-panel:var(--kagit);--e-pop:var(--kagit-yuksek);
     --e-fg:var(--murekkep);--e-fg2:var(--soluk);--e-muted:var(--soluk);--e-line:var(--cizgi);
     --e-grid:var(--rapport-grid);--e-axis:var(--rapport-axis);--e-ref:var(--soluk);--e-chart-muted:var(--rapport-muted-chart);
     --e-ok:var(--iyi);--e-bad:var(--kritik);--e-shadow:var(--rapport-pop-shadow);
@@ -2022,13 +2041,13 @@ button.gr-kucuk{cursor:zoom-in}
     .et-ozet:has(> :nth-child(7):last-child)>:nth-child(n+5) {grid-column:span 4}
   }
   .et-ozet-kart {padding:20px 22px;gap:7px}
-  .et-ozet-kart strong {font-family:var(--e-sans);font-size:30px;font-weight:700;color:var(--vurgu)}
+  .et-ozet-kart strong {font-family:var(--e-sans);font-size:30px;font-weight:700;color:var(--murekkep)}
   .et-ders {padding:16px 18px;gap:7px}
   .et-ders strong {font-family:var(--e-sans);font-weight:700;font-size:23px}
   .et-ders[aria-pressed="true"] {border-color:var(--vurgu);box-shadow:inset 0 0 0 1px var(--vurgu)}
   .et-seg {border-radius:12px}
   .et-seg button {border-radius:9px;padding:6px 12px;font-weight:600}
-  .et-seg button[aria-pressed="true"] {background:var(--vurgu);color:var(--vurgu-uzeri)}
+  .et-seg button[aria-pressed="true"] {background:var(--secili-zemin);color:var(--secili-yazi);box-shadow:inset 0 0 0 1px var(--secili-cerceve)}
   .et-dugme {border-radius:10px;padding:8px 14px;font-weight:600}
   .et-dugme.birincil {background:var(--vurgu);border-color:var(--vurgu);color:var(--vurgu-uzeri)}
   .et-dugme.birincil:hover {background:color-mix(in srgb,var(--vurgu) 88%,var(--murekkep))}
@@ -13662,6 +13681,7 @@ document.addEventListener('click', async ev => {
   if (t.dataset.sekme) {
     EK.yaptim = null;
     EK.sekme = t.dataset.sekme;
+    if (EK.sekme === 'denemeler') EK.denemeKisi = false;   // menüden Denemeler sınıf panosundan açılır
     if (EK.sekme === 'ayarlar') { EK.ayarBolum = 'genel'; EK.gelismisAcik = false; }   // menüden Ayarlar hep Genel'den açılır
     if (t.dataset.takipSifirla !== undefined) Object.assign(EK, { takipHafta: null, takipOlcut: 'islem', takipSube: '', takipFiltre: 'hepsi', takipArama: '' });
     if (ogrenciMi()) {
@@ -15326,9 +15346,36 @@ function denemeImportHtml() {
     DENEME_IMPORT.map((p,pi)=>'<div class="dn-import"><b>'+kacis(p.dosya || p.ad)+'</b>'+(p.yz?'<br><span class="yz-rozet">Yapay zekâ ile okundu · değerleri dosyayla karşılaştırın</span>':'')+(p.uyarilar?.length?'<ul class="yz-uyarilar">'+p.uyarilar.map(u=>'<li>'+kacis(u)+'</li>').join('')+'</ul>':'')+'<div class="arac"><label>Sınav adı <input data-dn-rapor="'+pi+'" data-alan="ad" maxlength="120" value="'+kacis(p.ad)+'"></label><label>Tarih <input type="date" data-dn-rapor="'+pi+'" data-alan="tarih" value="'+p.tarih+'"></label></div><div class="dn-scroll"><table><thead><tr><th>Aktar</th><th>Dosyadaki öğrenci</th><th>Hedef öğrenci</th><th>Oturum</th><th>Net</th><th>Kontrol</th></tr></thead><tbody>'+p.satirlar.map((r,ri)=>'<tr><td><input type="checkbox" aria-label="'+kacis(r.ad+' '+r.oturum+' aktar')+'" data-dn-import="'+pi+':'+ri+'"'+(r.secili?' checked':'')+'></td><td>'+(r.no??'—')+' · '+kacis(r.ad)+'</td><td><select aria-label="Hedef öğrenci" data-dn-match="'+pi+':'+ri+'"><option value="-1">Eşleşmedi</option>'+canliOgrenciler().map(si=>'<option value="'+si+'"'+(si===r.si?' selected':'')+'>'+kacis(D.ogr[si].no+' · '+D.ogr[si].ad)+'</option>').join('')+'</select></td><td>'+r.oturum+'</td><td>'+denemeSayi(denemeToplam(denemePdfKaydi(p,r),D.ogr[r.si]?.alan || 'SAY'))+'</td><td>'+kacis(r.uyari || 'Hazır')+'</td></tr>').join('')+'</tbody></table></div></div>').join('')+
     '<div class="arac"><button class="dugme birincil" id="dnImportKaydet">Seçilen sonuçları kaydet ve yayınla</button><button class="dugme" id="dnImportIptal">Vazgeç</button></div></section>';
 }
+// Teacher: Denemeler is the class Deneme panosu (src/denemepano.js). A student opens from it (the student card, the
+// picker, Öğrenci kartı, Kademeler) into that student's own panosu below, the very page the student sees in
+// Denemelerim, with the teacher's extra controls and a way back (denemeKisiAc / #dpSinifaDon).
+function denemeDefterIndeksi(no,ad) {
+  const n=String(no ?? '').trim(),liste=(D.ogr || []).map((o,i)=>({o,i})).filter(x=>x.o && !x.o.silindi);
+  if(/^i\d+$/.test(n)){const i=Number(n.slice(1));return liste.some(x=>x.i===i)?i:-1;}
+  const ayni=liste.filter(x=>n!=='' && String(x.o.no ?? '').trim()===n);
+  if(ad && ayni.length>1){const k=denemeAdAnahtari(ad),e=ayni.find(x=>denemeAdAnahtari(x.o.ad)===k);if(e)return e.i;}
+  return ayni.length?ayni[0].i:-1;
+}
+function denemeKisiAc(si) {
+  si=Number(si);const o=D.ogr && D.ogr[si];
+  if(!rehberMi() || !o || o.silindi)return false;
+  EK.ogr=si;EK.denemeKisi=true;EK.sekme='denemeler';DENEME_FORM=null;ciz();return true;
+}
+const denemeKisiAcikMi=()=>rehberMi() && EK.denemeKisi===true && !!D.ogr?.[EK.ogr] && !D.ogr[EK.ogr].silindi;
+// A link into the student's panosu; empty when the student is not in the notebook (or for a student account).
+function denemeKisiDugmesi(si,metin,sinif) {
+  return rehberMi() && si!==undefined && si>=0 && D.ogr?.[si] && !D.ogr[si].silindi?'<button type="button" class="'+(sinif || 'et-dugme')+'" data-dn-kisi="'+si+'">'+(metin || 'Deneme panosu →')+'</button>':'';
+}
+// Class view: "Öğrenci panosu" picker (opens the student's own panosu).
+function denemeKisiSecici() {
+  const gruplar={};(typeof canliOgrenciler==='function'?canliOgrenciler():[]).forEach(i=>{(gruplar[D.ogr[i].sube] = gruplar[D.ogr[i].sube] || []).push(i);});
+  if(!Object.keys(gruplar).length)return '';
+  return '<label class="et-seg"><span class="et-seg-label">Öğrenci panosu</span><select id="dpOgrAc" aria-label="Bir öğrencinin kendi Deneme panosunu aç"><option value="">Öğrenci seç…</option>'+
+    Object.keys(gruplar).sort().map(su=>'<optgroup label="'+kacis(su)+'">'+gruplar[su].map(i=>'<option value="'+i+'">'+kacis(D.ogr[i].ad)+'</option>').join('')+'</optgroup>').join('')+'</select></label>';
+}
 function gorunumDenemeler() {
-  // The teacher opens the Deneme panosu (src/denemepano.js); this per-student page is one click away.
-  if(rehberMi() && !EK.denemeKlasik && typeof gorunumDenemePanosu==='function')return gorunumDenemePanosu();
+  const rehber=rehberMi(),kisiAcik=denemeKisiAcikMi();
+  if(rehber && !kisiAcik && typeof gorunumDenemePanosu==='function')return gorunumDenemePanosu();
   const tur=EK.denemeTur || 'TYT',oturum=EK.denemeOturum || 'TYT',brans=EK.denemeBrans || DENEME_DERSLER[oturum][0][0],alan=denemeAlan(),tum=denemeListe();
   const grupSecili=tur==='BRANS' && !!denemeGrubu(oturum,brans);
   const metrik=denemeMetrik(),genelAcik=tur==='BRANS' && (grupSecili || EK.denemeGenel!==false),genelVar=genelAcik && metrik==='net';
@@ -15339,19 +15386,29 @@ function gorunumDenemeler() {
   if(EK.denemeBas)liste=liste.filter(r=>r.tarih>=EK.denemeBas);if(EK.denemeSon)liste=liste.filter(r=>r.tarih<=EK.denemeSon);
   const son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son,genelSayi=liste.filter(r=>r.genel).length;
   // With the net/dk chart selected the summary follows it, over exams that have a time.
-  const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan)),birim=hizOzet?' net/dk':' net';
-  const kisisel=!rehberMi();
-  return (kisisel?'<div id="dpKok" class="dn-kisisel"><header class="et-bas"><h1 class="et-baslik">Deneme Panosu</h1></header>':'<div class="baslik"><h1>Denemeler</h1>')+(rehberMi()?'<p>'+ogrAdDugmesi(EK.ogr)+'</p>':'')+(kisisel?'':'</div>')+(rehberMi()?'<div class="arac">'+(typeof gorunumDenemePanosu==='function'?'<button class="dugme" id="dpPanoya">← Deneme panosu</button>':'')+ogrSecici()+(yalnizcaGoruntuleme()?'':'<label class="dugme">Dosyadan toplu aktar<input type="file" id="dnPdf" accept="'+yzDosyaKabul()+'" multiple hidden></label><button class="dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>')+'</div>':'')+
+  const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan));
+  const son_=ozet.length?ozet.at(-1):null,onc=ozet.length>1?ozet.at(-2):null,ilk=ozet.length>1?ozet[0]:null,enYuksek=ozet.length?Math.max(...ozet):null;
+  const yazi=v=>(v>0?'+':v<0?'−':'')+denemeSayi(Math.abs(v)),hap=v=>'<span class="et-hap '+(v>0?'yukari':v<0?'asagi':'esit')+'">'+(v>0?'<span aria-hidden="true">▲</span>':v<0?'<span aria-hidden="true">▼</span>':'')+denemeSayi(Math.abs(v))+'</span>',not=t=>'<span class="dp-kpi-not">'+t+'</span>';
+  const kart=(sinif,ad,buyuk,alt)=>'<div class="et-ozet-kart'+sinif+'"><span class="dp-kpi-ad">'+ad+'</span><strong>'+buyuk+'</strong><div class="dp-kpi-alt">'+alt+'</div></div>';
+  const kpi='<div class="et-ozet dp-kpi" id="dpKpi">'+
+    kart(' dp-kpi-ana',hizOzet?'Son net/dk':'Son net',son_===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(son_)+'<small>'+(hizOzet?'net/dk':'net')+'</small>',son_===null?not('Seçili aralıkta deneme yok'):onc!==null?hap(son_-onc)+not('önceki denemeye göre'):not('tek deneme'))+
+    kart('',hizOzet?'Ortalama net/dk':'Ortalama',ozet.length?denemeSayi(ozet.reduce((a,b)=>a+b,0)/ozet.length):'<span class="dp-kpi-yok">veri yok</span>',not((hizOzet?'süreli ':'')+ozet.length+' deneme'+(genelSayi && !hizOzet?' · TYT/AYT’den '+genelSayi:'')))+
+    kart('','En yüksek',enYuksek===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(enYuksek),enYuksek===null?'':son_>=enYuksek?not('son deneme en yüksek'):hap(son_-enYuksek)+not('en yükseğe göre'))+
+    kart('','İlk denemeden değişim',ilk===null?'<span class="dp-kpi-yok">veri yok</span>':yazi(son_-ilk),ilk===null?not('karşılaştırma için iki deneme gerekir'):not('ilk '+denemeSayi(ilk)+' → son '+denemeSayi(son_)))+'</div>';
+  const rehberKisi=rehber?'<header class="et-bas"><h1 class="et-baslik">Deneme Panosu · '+kacis(D.ogr[EK.ogr].ad)+'</h1><p class="et-cumle">'+kacis(D.ogr[EK.ogr].sube || '')+' · '+kacis(D.ogr[EK.ogr].alan || '')+' · yalnızca bu öğrencinin sonuçları</p></header>'+
+    '<div class="et-arac"><button type="button" class="et-dugme" id="dpSinifaDon">← Sınıf panosu</button>'+ogrSecici()+
+    (typeof ANALIZ!=='undefined' && D.ogr[EK.ogr].no?'<button type="button" class="et-dugme" data-ogrenci-karti="'+kacis(String(D.ogr[EK.ogr].no))+'">Öğrenci kartı →</button>':'')+
+    '<button type="button" class="et-dugme" data-ogr-gor="'+EK.ogr+'" title="Öğrencinin uygulamada gördüğü ekranı aç">Öğrencinin ekranı</button></div>':'<header class="et-bas"><h1 class="et-baslik">Deneme Panosu</h1></header>';
+  return '<div id="dpKok" class="dn-kisisel'+(rehber?' dn-ogretmen':'')+'">'+rehberKisi+
     '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
-    (rehberMi()?'<h2 class="dn-ort-baslik">Deneme ortalaması</h2>'+denemeOrtalamaGrafigi()+'<h2 class="dn-ort-baslik">'+ogrAdDugmesi(EK.ogr)+'</h2>':'')+
     '<div class="dn-tabs et-arac"><div class="et-seg" role="group" aria-label="Deneme türü"><span class="et-seg-label">Oturum</span>'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'</div><button class="dugme et-dugme birincil dn-ekle" id="dnEkle">+ Deneme ekle</button></div>'+
     '<div class="arac dn-filters" role="group" aria-label="Grafik ve geçmiş filtresi">'+(tur==='BRANS'?'<label>Oturum<select id="dnFiltreOturum"><option'+(oturum==='TYT'?' selected':'')+'>TYT</option><option'+(oturum==='AYT'?' selected':'')+'>AYT</option></select></label><label>Branş<select id="dnFiltreBrans"><optgroup label="Dersler">'+DENEME_DERSLER[oturum].map(d=>'<option value="'+d[0]+'"'+(brans===d[0]?' selected':'')+'>'+d[1]+'</option>').join('')+'</optgroup><optgroup label="Toplam">'+
       DENEME_GRUPLAR[oturum].map(g=>'<option value="'+g[0]+'"'+(brans===g[0]?' selected':'')+'>'+g[1]+'</option>').join('')+'</optgroup></select></label>':'')+(tur==='AYT'?'<label>Alan<select id="dnFiltreAlan">'+Object.keys(DENEME_ALAN).map(a=>'<option'+(alan===a?' selected':'')+'>'+a+'</option>').join('')+'</select></label>':'')+
     (tur==='BRANS' && !grupSecili?'<label>TYT/AYT bölümleri<span class="dn-genel-sec"><input type="checkbox" id="dnGenel"'+(genelAcik?' checked':'')+'> Göster</span></label>':'')+
     '<label>Grafikte göster<select id="dnMetrik">'+Object.entries(DENEME_METRIK).filter(([k])=>(k!=='hiz' || hizVar) && (!grupSecili || k==='net')).map(([k,v])=>'<option value="'+k+'"'+(metrik===k?' selected':'')+'>'+v.ad+'</option>').join('')+'</select></label><label>Şu tarihten<input type="date" id="dnBas" value="'+(EK.denemeBas||'')+'"></label><label>Şu tarihe kadar<input type="date" id="dnSon" value="'+(EK.denemeSon||'')+'"></label>'+(EK.denemeBas || EK.denemeSon?'<button class="dugme" id="dnFiltreTemizle">Tarihleri temizle</button>':'')+'</div>'+
-    '<div class="dn-stats et-ozet"><div class="et-ozet-kart"><span>'+(hizOzet?'Süreli deneme':'Deneme'+(genelSayi?' (TYT/AYT’den '+genelSayi+')':''))+'</span><strong>'+ozet.length+'</strong></div><div class="et-ozet-kart"><span>Son'+birim+'</span><strong>'+(ozet.length?denemeSayi(ozet.at(-1)):'—')+'</strong></div><div class="et-ozet-kart"><span>En yüksek'+birim+'</span><strong>'+(ozet.length?denemeSayi(Math.max(...ozet)):'—')+'</strong></div><div class="et-ozet-kart"><span>Ortalama'+(hizOzet?birim:'')+'</span><strong>'+(ozet.length?denemeSayi(ozet.reduce((a,b)=>a+b,0)/ozet.length):'—')+'</strong></div>'+(kisisel?'<div class="et-ozet-kart"><span>İlk → son'+birim+'</span><strong>'+(ozet.length>1?(ozet.at(-1)-ozet[0]>0?'+':'')+denemeSayi(ozet.at(-1)-ozet[0]):'—')+'</strong></div>':'')+'</div>'+
+    kpi+
     (typeof KADEME!=='undefined'?KADEME.ogrenciSatiri(EK.ogr):'')+'<section class="kart dn-panel et-panel"><div class="et-kart-bas"><h2>Deneme gelişimi</h2><span class="mini">'+kacis(DENEME_METRIK[metrik].ad)+'</span></div>'+denemeGrafik(liste)+'<div id="dnDetay" aria-live="polite">'+(selected?denemeDetay(selected):'')+'</div></section>'+
-    '<section class="kart dn-panel et-panel"><div class="et-kart-bas"><h2>Deneme geçmişi</h2><span class="mini">'+liste.length+' sonuç</span></div><div class="dn-scroll"><table class="dn-history"><thead><tr><th>Tarih / deneme</th><th>Net</th><th>Süre</th>'+(hizVar?'<th>Net/dk</th>':'')+'<th></th></tr></thead><tbody>'+liste.slice().reverse().map(r=>'<tr><td>'+r.tarih+'<br><b>'+kacis(r.ad)+'</b>'+(r.tur==='BRANS'?' · '+r.dersler[0].soru+' soru':'')+(r.genel?' <span class="dn-genel-rozet">'+r.genel+' denemesinden</span>':'')+'</td><td>'+denemeSayi(denemeToplam(r,alan))+'</td><td>'+(r.sure===null?'—':denemeSayi(r.sure)+' dk')+'</td>'+(hizVar?'<td>'+(r.sure===null?'—':denemeSayi(denemeHiz(r,alan)))+'</td>':'')+'<td><button class="dugme" data-dn-dot="'+kacis(r.id)+'">Ayrıntı</button></td></tr>').join('')+'</tbody></table></div></section>'+denemeFormHtml()+(kisisel?'</div>':'');
+    '<section class="kart dn-panel et-panel"><div class="et-kart-bas"><h2>Deneme geçmişi</h2><span class="mini">'+liste.length+' sonuç</span></div><div class="dn-scroll"><table class="dn-history"><thead><tr><th>Tarih / deneme</th><th>Net</th><th>Süre</th>'+(hizVar?'<th>Net/dk</th>':'')+'<th></th></tr></thead><tbody>'+liste.slice().reverse().map(r=>'<tr><td>'+r.tarih+'<br><b>'+kacis(r.ad)+'</b>'+(r.tur==='BRANS'?' · '+r.dersler[0].soru+' soru':'')+(r.genel?' <span class="dn-genel-rozet">'+r.genel+' denemesinden</span>':'')+'</td><td>'+denemeSayi(denemeToplam(r,alan))+'</td><td>'+(r.sure===null?'—':denemeSayi(r.sure)+' dk')+'</td>'+(hizVar?'<td>'+(r.sure===null?'—':denemeSayi(denemeHiz(r,alan)))+'</td>':'')+'<td><button class="dugme" data-dn-dot="'+kacis(r.id)+'">Ayrıntı</button></td></tr>').join('')+'</tbody></table></div></section>'+denemeFormHtml()+'</div>';
 }
 function denemeFormOku() {
   const r=DENEME_FORM.kayit,get=id=>document.getElementById(id)?.value;
@@ -15462,6 +15519,15 @@ document.addEventListener('submit',async ev=>{
     DENEME_FORM=null;EK.denemeSecili=r.id;ciz();bilgiVer('Deneme kaydedildi.');
   } catch(e){const el=document.getElementById('dnFormHata');if(el)el.textContent=e.message;else denemeDurum(e.message);}
   finally{DENEME_ISLEM=false;}
+});
+// Teacher: a student's own panosu (links from the class panosu, Öğrenci kartı and Kademeler) and the way back.
+document.addEventListener('click',ev=>{
+  const el=ev.target.closest?.('[data-dn-kisi],#dpSinifaDon');if(!el || !rehberMi())return;
+  if(el.id==='dpSinifaDon'){EK.denemeKisi=false;DENEME_FORM=null;EK.sekme='denemeler';ciz();window.scrollTo?.(0,0);return;}
+  ev.preventDefault();denemeKisiAc(el.dataset.dnKisi);
+});
+document.addEventListener('change',ev=>{
+  if(ev.target.id==='dpOgrAc' && rehberMi() && ev.target.value!=='')denemeKisiAc(ev.target.value);
 });
 document.addEventListener('click',async ev=>{
   const el=ev.target.closest?.('button,[data-dn-dot],[data-dn-yol]');if(!el)return;
@@ -18103,19 +18169,25 @@ function cumle(st){
     (o.ayni===null?'':' (iki dönemde de giren '+fi(o.ayniN)+' öğrencinin kendi değişimi '+b(isaret(o.ayni))+')')+'. En çok değişen ders: '+kacis(en.ad)+' '+b(isaret(en.k[st.s].fark))+'. '+
     b(fi(o.artan))+' öğrenci en az '+ESIK+' net yükseldi, '+b(fi(o.azalan))+' öğrenci düştü.';
 }
+// The headline strip: one primary tile (the same students' change, the most honest progress figure) and
+// three supporting ones, each with its comparison in the tile. "veri yok" stands in for a figure that
+// cannot be computed; it is never a misleading 0. Figures that were tiles before stay reachable: the
+// highest net is the first row of Tüm öğrenciler (Net), Yükselen / Düşen are the Durum column and En çok
+// değişenler, Sırası yükselen is the ▲ / ▼ beside every rank.
 function ozetKartlari(st){
   const m=st.m,son=m.sinavlar[m.simdi],once=m.onceki===null?null:m.sinavlar[m.onceki],o=m.ozet[st.s],sa=simdiAdi(st);
-  const kart=(baslik,buyuk,alt)=>'<div class="et-ozet-kart"><span class="mini">'+baslik+'</span><strong>'+buyuk+'</strong><div class="et-ozet-alt">'+alt+'</div></div>';
-  const enIyi=m.ogrenciler.find(x=>x.no===son.enIyi);
-  return '<div class="et-ozet">'+
-    (o?kart('Katılımcı ortalaması · '+pencereAdi(st.s),f1(o.son),hap(o.fark,isaret(o.fark).replace(/^[+−]/,''))+'<span class="mini">'+oncekiAdi(st)+': '+f1(o.once)+'</span>')+
-      kart('Aynı öğrencilerin değişimi',o.ayni===null?'—':isaret(o.ayni),'<span class="mini">'+fi(o.ayniN)+' öğrenci iki dönemde de girdi</span>')
-      :kart('Katılımcı ortalaması · '+sa,f1(son.ort),'<span class="mini">'+kacis(son.ad)+'</span>'))+
-    kart('Ortadaki %50 · '+sa,f1(son.p25)+'–'+f1(son.p75),'<span class="mini">medyan '+f1(son.medyan)+' net</span>')+
-    kart('En yüksek net · '+sa,f2(son.max),'<span class="mini">'+kacis(enIyi?kisiAdi(enIyi.ad):'')+'</span>')+
-    (o?kart('Yükselen öğrenci · '+pencereAdi(st.s),fi(o.artan),'<span class="mini">düşen: '+fi(o.azalan)+' · en az '+ESIK+' net</span>'):'')+
-    (once?kart('Sırası yükselen · '+(tarihli(st.s)?'başlangıca göre':sa),fi(m.ogrenciler.filter(x=>x.siraFark>0).length),'<span class="mini">düşen: '+fi(m.ogrenciler.filter(x=>x.siraFark<0).length)+' · aynı: '+fi(m.ogrenciler.filter(x=>x.siraFark===0).length)+'</span>'):'')+
-    kart('Katılım · '+sa,fi(son.n),once?hap(son.n-once.n,fi(Math.abs(son.n-once.n)))+'<span class="mini">önceki: '+fi(once.n)+'</span>':'<span class="mini">öğrenci</span>')+'</div>';
+  const kart=(sinif,ad,buyuk,alt)=>'<div class="et-ozet-kart'+sinif+'"><span class="dp-kpi-ad">'+ad+'</span><strong>'+buyuk+'</strong><div class="dp-kpi-alt">'+alt+'</div></div>';
+  const not=t=>'<span class="dp-kpi-not">'+t+'</span>';
+  const kiyas=tarihli(st.s)?'başlangıca göre':st.s==='sec'?'seçilen önceki denemeye göre':st.s===1?'önceki denemeye göre':'önceki '+st.s+' denemeye göre';
+  const ana=o
+    ?kart(' dp-kpi-ana','Aynı öğrencilerin net değişimi',o.ayni===null?'<span class="dp-kpi-yok">veri yok</span>':isaret(o.ayni)+'<small>net</small>',
+      not(o.ayni===null?'İki denemede de giren öğrenci yok':fi(o.ayniN)+' öğrenci iki denemede de girdi · '+fi(o.artan)+' yükseldi, '+fi(o.azalan)+' düştü'))
+    :kart(' dp-kpi-ana','Katılımcı ortalaması',f1(son.ort),not(kacis(son.ad))+not('Karşılaştırma için ikinci deneme gerekir'));
+  const ort=kart('','Ortalama',o?f1(o.son):f1(son.ort),o?hap(o.fark,isaret(o.fark).replace(/^[+−]/,''))+not(kiyas):not(kacis(son.ad)));
+  const yari=kart('','Ortadaki yarı',f1(son.p25)+'–'+f1(son.p75),not('medyan '+f1(son.medyan))+(once?not(oncekiAdi(st)+': '+f1(once.p25)+'–'+f1(once.p75)):''));
+  const toplam=m.ogrenciler.length,katilim=kart('','Katılım',fi(son.n)+'<small>/ '+fi(toplam)+'</small>',
+    once?(son.n===once.n?hap(0,'0'):hap(son.n-once.n,fi(Math.abs(son.n-once.n))))+not('önceki denemeye göre'):not('öğrenci, '+sa+'de'));
+  return '<div class="et-ozet dp-kpi" id="dpKpi">'+ana+ort+yari+katilim+'</div>';
 }
 function dersKartlari(st){
   const m=st.m,w=m.pencere[st.s],son=w?w.son:null,donem=olcSira(st,m.sinavlar);
@@ -18298,7 +18370,8 @@ function kisiKarti(st,es){
   const onceI=o.seri.slice(0,o.sonSinav).map((v,i)=>v===null?-1:i).filter(i=>i>=0).pop(),onceS=onceI===undefined?null:m.sinavlar[onceI];
   const r=son.deger.get(o.no).o,ro=onceS?onceS.deger.get(o.no).o:null;
   const dersler=m.dersler.map((d,i)=>({...d,net:dersNeti(r,d),once:ro?dersNeti(ro,d):null,okul:son.ders[i]}));
-  return '<div class="et-kisi-bas"><h3>'+(si===undefined?kacis(ad):ogrAdDugmesi(si,ad))+'</h3><span class="mini">No '+kacis(o.no)+' · '+kacis(o.sinif||'şube yok')+' · '+fi(o.deneme)+' deneme</span></div>'+
+  return '<div class="et-kisi-bas"><h3>'+(si===undefined?kacis(ad):ogrAdDugmesi(si,ad))+'</h3><span class="mini">No '+kacis(o.no)+' · '+kacis(o.sinif||'şube yok')+' · '+fi(o.deneme)+' deneme</span>'+
+    (typeof denemeKisiDugmesi==='function'?denemeKisiDugmesi(si,'Kişisel deneme panosu →','et-dugme dp-kisi-pano'):'')+'</div>'+
     '<div class="et-kisi-sayilar"><div><span class="mini">Son net</span><strong>'+f2(o.sonNet)+'</strong><span class="mini">'+kacis(son.ad)+'</span></div>'+
     '<div><span class="mini">Sıra · '+simdiAdi(st)+'</span><strong>'+(sira===null?'—':fi(sira))+'</strong><span class="mini">'+(sira===null?'girmedi':'/ '+fi(S.n))+(o.siraOnce!==null&&sira!==null?' · önceki '+fi(o.siraOnce):'')+'</span>'+siraOk(o.siraFark)+'</div>'+
     (c&&c.fark!==null?'<div><span class="mini">Değişim · '+pencereAdi(st.s)+'</span>'+hap(c.fark,f2(Math.abs(c.fark)))+'<span class="et-durum '+DURUM[c.durum]+'">'+c.durum+'</span></div>'
@@ -18346,7 +18419,7 @@ function araclar(salt){
   const bekleyen=!salt&&(D.ogr||[]).some(o=>o&&!o.silindi&&o.denemeYayinBekliyor);
   return (salt?'':'<label class="et-dugme birincil">Dosyadan toplu aktar<input type="file" id="dnPdf" accept="'+yzDosyaKabul()+'" multiple hidden></label>')+
     (bekleyen?'<button type="button" class="et-dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>':'')+
-    '<button type="button" class="et-dugme" id="dpKlasik">Öğrenci bazında</button>';
+    (typeof denemeKisiSecici==='function'?denemeKisiSecici():'');
 }
 // Seç: Önceki and Şimdiki from every exam of the view, newest first, as Sıralamalar lists them.
 function ikiDeneme(m){
@@ -18402,9 +18475,7 @@ function yenidenCiz(odak){
 }
 document.addEventListener('click',ev=>{
   if(EK.sekme!=='denemeler'||!rehberMi()||ev.target.closest?.('[data-ogrenci-karti]'))return;
-  const el=ev.target.closest?.('[data-dp-olcu],[data-dp-tur],[data-dp-aralik],[data-dp-cizgi],[data-dp-olcut],[data-dp-ders],[data-dp-ogr],[data-dp-sira],#dpKlasik,#dpPanoya');if(!el||el.disabled)return;
-  if(el.id==='dpKlasik'){EK.denemeKlasik=true;ciz();return}
-  if(el.id==='dpPanoya'){EK.denemeKlasik=false;ciz();return}
+  const el=ev.target.closest?.('[data-dp-olcu],[data-dp-tur],[data-dp-aralik],[data-dp-cizgi],[data-dp-olcut],[data-dp-ders],[data-dp-ogr],[data-dp-sira]');if(!el||el.disabled)return;
   if(!document.getElementById('dpKok'))return;
   const q=v=>typeof CSS!=='undefined'&&CSS.escape?CSS.escape(v):v;
   if(el.dataset.dpOlcu){EK.dpOlcu=el.dataset.dpOlcu;EK.dpDers=null;EK.dpOgrNet=null;yenidenCiz('[data-dp-olcu="'+q(EK.dpOlcu)+'"]');return}
@@ -22961,7 +23032,7 @@ function icerik(){
   SON=c;cizimPlanla();
   const k=c.kisi,liste=kaynak().liste;
   return '<header class="et-bas"><h1 class="et-baslik" id="okAd">'+kacis(kisiAdi(k.ad))+'</h1><p class="et-cumle" id="okKimlik">'+kacis(k.sinif||'Şube yok')+' · Alan: '+kacis(k.alan||'—')+' · No '+kacis(k.no)+' · '+fi(c.noktalar.length)+' '+kacis(c.oturum.ad)+' denemesi</p></header>'+
-    '<div class="et-arac">'+ust+secici(liste,k)+(c.oturumlar.length>1?seg('oturum',c.oturum.key,c.oturumlar.map(m=>[m.key,m.ad]),'Oturum'):'')+'</div>'+
+    '<div class="et-arac">'+ust+secici(liste,k)+(c.oturumlar.length>1?seg('oturum',c.oturum.key,c.oturumlar.map(m=>[m.key,m.ad]),'Oturum'):'')+(typeof denemeKisiDugmesi==='function'?denemeKisiDugmesi(denemeDefterIndeksi(k.no,k.ad),'Deneme panosu →'):'')+'</div>'+
     kartlar(c)+
     '<section class="et-panel" id="okGrafik"><div class="et-kart-bas"><h2>'+kacis('Denemelerde net · '+c.oturum.ad)+'</h2>'+aralikSeg(c)+'</div><div class="et-grafik ok-grafik" role="group" aria-label="Denemelere göre net"></div>'+notlar(c)+'</section>'+
     dersTablosu(c)+zayifPaneli(c)+etutPaneli(c)+devamPaneli(c);
@@ -25361,7 +25432,7 @@ function panelIc() {
   let detay = '';
   if (sec) {
     const d = m.dersler.get(sec.key), o = d && d.ogrenciler.get(sec.id), k = m.kimlik.get(sec.id);
-    if (o) detay = '<div class="kd-detay"><div class="kd-detay-ust"><b>' + esc(k.ad) + '</b><span>' + esc(dersAdi(d.oturum, d.kod)) + (d.yetersiz ? '' : ' · ' + kademeYazi(o) + '. kademe / ' + d.H + (d.dusuk ? ' · güvenilirlik düşük' : '')) + '</span></div>' + sparkline(o, d) + '</div>';
+    if (o) detay = '<div class="kd-detay"><div class="kd-detay-ust"><b>' + esc(k.ad) + '</b><span>' + esc(dersAdi(d.oturum, d.kod)) + (d.yetersiz ? '' : ' · ' + kademeYazi(o) + '. kademe / ' + d.H + (d.dusuk ? ' · güvenilirlik düşük' : '')) + '</span>' + (typeof denemeKisiDugmesi === 'function' ? denemeKisiDugmesi(denemeDefterIndeksi(k.id, k.ad), 'Deneme panosu →', 'et-dugme kd-pano') : '') + '</div>' + sparkline(o, d) + '</div>';
   }
   return '<div class="et-kart-bas"><h2>Kademeler</h2><span class="mini">' + ogr.length + ' öğrenci</span></div>' + araclar +
     '<div class="et-kaydir"><table class="et-tablo kd-tablo"><thead><tr><th scope="col">Öğrenci</th>' + bas + '</tr></thead><tbody>' + govde + '</tbody></table></div>' + detay;

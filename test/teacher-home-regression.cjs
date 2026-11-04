@@ -265,10 +265,11 @@ check('class average: top/bottom groups per exam or by overall average, teacher 
   run('IZLEME=null');
   // The student's package does not carry the teacher's targets.
   assert.equal(run('JSON.stringify(ogrenciPaketi(0)).includes("denemeOrtHedef")'), false);
-  // The teacher's Denemeler page shows the class average above the student's exams.
-  run("EK.sekme='denemeler';EK.ogr=0;EK.denemeKlasik=true");
+  // The class average lives on the teacher home; a student's own Deneme panosu (opened by the teacher) shows only that student.
+  assert(run('gorunumRehberAna()').includes('aria-label="Deneme ortalaması"'));
+  run("EK.sekme='denemeler';EK.ogr=0;denemeKisiAc(0)");
   const sayfa = run('gorunumDenemeler()');
-  assert(sayfa.indexOf('aria-label="Deneme ortalaması"') > 0 && sayfa.indexOf('aria-label="Deneme ortalaması"') < sayfa.indexOf('data-dn-tur="TYT"'));
+  assert(!sayfa.includes('aria-label="Deneme ortalaması"') && sayfa.includes('id="dpSinifaDon"') && sayfa.includes('data-dn-tur="TYT"'));
 });
 
 check('class average never mixes grades: one grade at a time, 12 by default, each with its own target', () => {

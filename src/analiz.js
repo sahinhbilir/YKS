@@ -677,7 +677,7 @@ function icerik(){
   SON=c;cizimPlanla();
   const k=c.kisi,liste=kaynak().liste;
   return '<header class="et-bas"><h1 class="et-baslik" id="okAd">'+kacis(kisiAdi(k.ad))+'</h1><p class="et-cumle" id="okKimlik">'+kacis(k.sinif||'Şube yok')+' · Alan: '+kacis(k.alan||'—')+' · No '+kacis(k.no)+' · '+fi(c.noktalar.length)+' '+kacis(c.oturum.ad)+' denemesi</p></header>'+
-    '<div class="et-arac">'+ust+secici(liste,k)+(c.oturumlar.length>1?seg('oturum',c.oturum.key,c.oturumlar.map(m=>[m.key,m.ad]),'Oturum'):'')+'</div>'+
+    '<div class="et-arac">'+ust+secici(liste,k)+(c.oturumlar.length>1?seg('oturum',c.oturum.key,c.oturumlar.map(m=>[m.key,m.ad]),'Oturum'):'')+(typeof denemeKisiDugmesi==='function'?denemeKisiDugmesi(denemeDefterIndeksi(k.no,k.ad),'Deneme panosu →'):'')+'</div>'+
     kartlar(c)+
     '<section class="et-panel" id="okGrafik"><div class="et-kart-bas"><h2>'+kacis('Denemelerde net · '+c.oturum.ad)+'</h2>'+aralikSeg(c)+'</div><div class="et-grafik ok-grafik" role="group" aria-label="Denemelere göre net"></div>'+notlar(c)+'</section>'+
     dersTablosu(c)+zayifPaneli(c)+etutPaneli(c)+devamPaneli(c);
