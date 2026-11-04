@@ -95,7 +95,7 @@ fs.mkdirSync(out,{recursive:true});
    await page.getByText('Hafta hafta değişiklikleri gör',{exact:true}).click();
    assert((await page.locator('#ana').innerText()).includes('İstatistiksel Araştırma Süreci — Veriyi hazırlama'));
    await page.locator('#kazanimPlaniUygula').click();
-   await page.waitForFunction(()=>D.konuPlani['11-X'][1].Matematik[0].includes('Veriyi hazırlama'));
+   await page.waitForFunction(()=>D.konuPlani['11-X']?.[1]?.Matematik?.[0]?.includes('Veriyi hazırlama'));   // mid-update states lack the course
    // The notebook changes before the page redraws; wait for the redraw instead of reading the old button.
    await page.locator('#kazanimPlaniUygula').waitFor({state:'detached'});
    assert.equal(await page.locator('#kazanimPlaniUygula').count(),0);
