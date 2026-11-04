@@ -59,7 +59,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
     await page.waitForFunction(()=>/tarihi 18\.08\.2026 oldu/.test(document.getElementById('srDurum')?.textContent||''));
     assert.match(dialogs.at(-1),/Sentetik Deneme 1 sınavının tarihi 18\.08\.2026 olsun mu\?/);
     assert.match(await page.locator('#srDurum').innerText(),/2 öğrencinin sonucu taşındı\..*yayın bekliyor/);
-    assert.deepEqual(await page.evaluate(()=>[D.siralama.sinavlar.find(s=>s.ad==='Sentetik Deneme 1').tarih,denemeListe(0).map(r=>r.tarih),D.ogr.map(o=>o.denemeYayinBekliyor)]),
+    assert.deepEqual(await page.evaluate(()=>[D.siralama.sinavlar.find(s=>s.ad==='Sentetik Deneme 1').tarih,denemeListe(0).filter(r=>!r.okulListe).map(r=>r.tarih),D.ogr.map(o=>o.denemeYayinBekliyor)]),
      ['18.08.2026',['2026-08-18'],[true,true]]);
     assert.match(await page.locator('.sr-sinavlar tbody tr').last().innerText(),/PDF’de: 18\.09\.2026/);
    }

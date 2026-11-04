@@ -115,7 +115,7 @@ function tahmin(alan,tyt,ayt,diploma){
 
 /* ---------------- the student's exams ---------------- */
 const tarihYaz=t=>String(t||'').split('-').reverse().join('.');
-// The student's own records (teacher-sent copies and student-entered ones) of a session, oldest first. Nothing is hidden by exam kind (Tarama / Genel).
+// The student's records of a session (denemeListe = ogrenciDenemeKayitlari: school-list rows in a teacher session, teacher-sent copies, student-entered ones; the merge by name lives there), oldest first. A list row (okulListe) is already an 's:' option below. Nothing is hidden by exam kind (Tarama / Genel).
 const satirlar=(oturum,si=EK.ogr)=>denemeListe(si).filter(r=>!r.silindi&&r.tur===oturum&&r.oturum===oturum).reverse();
 const dersAdi=(oturum,kod)=>DENEME_DERSLER[oturum]?.find(x=>x[0]===kod)?.[1]||kod;
 // Compare only complete, full-length test coverage. Missing lessons are not zero nets.
@@ -187,7 +187,7 @@ function sinavSecenekleri(alan,si=EK.ogr){
  const ogr=D.ogr?.[si],okulKopya=new Set((ogr?.denemeOkul||[]).filter(r=>!r.silindi).map(r=>r.id));
  const yap=(ot)=>{
   const okul=okulSinavlari(ot,alan,ogr?.no),anahtarlar=new Set(okul.map(x=>x.anahtar));
-  const kendi=satirlar(ot,si).filter(r=>!anahtarlar.has(adAnahtar(r.ad))).map(r=>{
+  const kendi=satirlar(ot,si).filter(r=>!r.okulListe&&!anahtarlar.has(adAnahtar(r.ad))).map(r=>{
    const k=kapsam(r,ot,alan),girdi=!okulKopya.has(r.id);
    return {id:r.id,kaynak:girdi?'ogrenci':'kopya',r,ad:r.ad,tarih:r.tarih,g:isoGun(r.tarih),etiket:tarihYaz(r.tarih)+' · '+r.ad+(girdi?' (öğrenci girdi)':''),uygun:!!k.values,values:k.values,eksik:k.eksik};
   });
