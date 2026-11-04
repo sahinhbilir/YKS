@@ -67,7 +67,7 @@ const seed = () => {
       await page.locator('[data-tema]').selectOption('sistem');
       await page.evaluate(seed);
       assert.equal(await page.locator('.ana-pano .yks-yolu').count(), 1);
-      assert.equal(await page.locator('.ana-pano .dn-yol .yg-yks').count(), 1, 'full exam horizon remains');
+      assert.equal(await page.locator('.ana-pano .dn-yol.dn-ana').count(), 1, 'the home card is the Denemelerim chart');
       const more = page.locator('[aria-controls="hesapMenusu"]');
       if (width < 820) {
         assert.equal(await page.locator('#hesapMenusu').isVisible(), false);

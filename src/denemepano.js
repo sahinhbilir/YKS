@@ -40,7 +40,7 @@ const izleme=()=>typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme();
 // Every stored list, as exams with their students by school number; a student's class is the
 // last one any list printed for that number.
 function temel(veri){
-  const sinavlar=SIRALAMA.modeller(veri).map(e=>({id:e.id,ad:e.name,tarih:e.dates[0]||'',g:gunDan(e.dates[0]),dates:e.dates,pdfDates:e.pdfDates,tur:e.tur,turElle:e.turElle,
+  const sinavlar=SIRALAMA.modeller(veri).map(e=>({id:e.id,ad:e.name,tarih:e.dates[0]||'',g:gunDan(e.dates[0]),dates:e.dates,pdfDates:e.pdfDates,tarihler:e.tarihler,tur:e.tur,turElle:e.turElle,
     tyt:e.tyt?e.tyt.students:{},ayt:e.ayt?e.ayt.students:{},listeler:[e.T?'Net Sayısı Sıralı':'',e.F?'Öğrenci Adı Sıralı':''].filter(Boolean)}));
   const kisi=new Map();
   for(const s of sinavlar)for(const o of [...Object.values(s.tyt),...Object.values(s.ayt)]){
@@ -141,7 +141,7 @@ function gorunumModeli(t,O,K,sec){
 let ONBELLEK={imza:null,t:null};
 function veriAl(){
   const {veri,hata}=SIRALAMA.oku();if(!veri)return {hata};
-  const imza=veri.sinavlar.map(s=>s.id+':'+s.ts+':'+(s.tarih||'')+':'+(s.tur||'')).join('|');
+  const imza=veri.sinavlar.map(s=>s.id+':'+s.ts+':'+(s.tarih||'')+':'+(s.tur||'')+':'+(s.tarihler?JSON.stringify(s.tarihler):'')).join('|');
   if(ONBELLEK.imza!==imza)ONBELLEK={imza,t:temel(veri)};
   return {t:ONBELLEK.t,veri};
 }
@@ -730,8 +730,11 @@ function raporlar(st){
 }
 function araclar(salt){
   const bekleyen=!salt&&(D.ogr||[]).some(o=>o&&!o.silindi&&o.denemeYayinBekliyor);
+  const eksik=!salt&&typeof denemeEksikSayisi==='function'?denemeEksikSayisi():0;
+  const tarihFarki=!salt&&typeof denemeTarihFarklari==='function'?denemeTarihFarklari().length:0;
   return (salt?'':'<label class="et-dugme birincil">Dosyadan toplu aktar<input type="file" id="dnPdf" accept="'+yzDosyaKabul()+'" multiple hidden></label>')+
-    (bekleyen?'<button type="button" class="et-dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>':'')+
+    (eksik?'<span class="dn-eksik" id="dnEksik" role="status">Öğrencilerin ekranında '+eksik+' deneme eksik · <button type="button" class="et-dugme" id="dnYayinla">Öğrencilere gönder</button></span>':bekleyen?'<button type="button" class="et-dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>':'')+
+    (tarihFarki?'<span class="dn-eksik" id="dnTarihFarki" role="status">'+tarihFarki+' yayınlanmış sonucun tarihi okul listesinden farklı · <button type="button" class="et-dugme" id="dnTarihOnar">Tarihleri onar</button></span>':'')+
     (typeof denemeKisiSecici==='function'?denemeKisiSecici():'');
 }
 // Seç: Önceki and Şimdiki from every exam of the view, newest first, as Sıralamalar lists them.

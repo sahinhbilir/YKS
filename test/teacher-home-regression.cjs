@@ -480,23 +480,236 @@ check('publishing respects the 300 KB school-result field: what does not fit is 
 
 check('student session: a list-only exam shows with the school date; an own entry of the same name shows once and can be deleted', async () => {
   yayinKur();
-  run(`(() => { D.ogr[0].denemeler = [{id:'m:own', ad:'deneme  eylül', tarih:'2026-10-30', tur:'TYT', oturum:'TYT', brans:'', alan:'SAY', sure:null, puan:null, ts:1,
+  run(`(() => { D.ogr[0].denemeler = [{id:'m:own', ad:'deneme  eylül', tarih:'2026-10-02', tur:'TYT', oturum:'TYT', brans:'', alan:'SAY', sure:null, puan:null, ts:1,
     dersler: DENEME_DERSLER.TYT.map(d => ({kod:d[0], soru:d[2], dogru:d[0] === 'turkce' ? 39 : 0, yanlis:0}))}]; })()`);
   await run('denemeBekleyenleriYayinla()');
   // The student's own notebook: just that student, no school lists.
   run("(() => { const o = D.ogr[0]; D = varsayilan(); D.rol = 'ogrenci'; D.ogr = [o]; delete D.siralama; EK.ogr = 0; EK.sekme = 'denemeler'; EK.denemeTur = 'TYT'; })()");
   const liste = JSON.parse(run('JSON.stringify(ogrenciDenemeKayitlari(0).filter(r => r.tur === "TYT").map(r => [r.tarih, r.ad]))'));
-  assert.deepEqual(liste.filter(x => /Eylül|Hazır/.test(x[1])), [['2026-08-18', 'Hazırbulunuşluk'], ['2026-09-25', 'Deneme Eylül']], 'school dates; the own 30 Oct entry is not a second exam');
+  assert.deepEqual(liste.filter(x => /Eylül|Hazır/.test(x[1])), [['2026-08-18', 'Hazırbulunuşluk'], ['2026-09-25', 'Deneme Eylül']], 'school dates; the own 2 Oct entry (a week from the school exam) is not a second exam');
   const h = run('gorunumDenemeler()');
   assert.equal((h.match(/Deneme Eylül/g) || []).length >= 1, true);
-  assert.match(h, /Senin girdiğin <b>deneme  eylül<\/b> \(30\.10\) okul sonucuyla birleşti\. <button class="dugme" data-dn-sil="m:own"/);
-  assert(!/<td>2026-10-30<br><b>deneme/.test(h), 'not in the history table');
+  assert.match(h, /Senin girdiğin <b>deneme  eylül<\/b> \(02\.10\) okul sonucuyla birleşti\. <button class="dugme" data-dn-sil="m:own"/);
+  assert(!/<td>2026-10-02<br><b>deneme/.test(h), 'not in the history table');
   // Sil goes through the existing delete path.
   const el = {dataset: {dnSil: 'm:own'}, id: ''}; el.closest = () => el;
   run("kaydet = async () => true; confirm = () => true; ciz = () => {}");
   for (const f of listeners.click) { try { await f({target: el, preventDefault() {}}); } catch (e) { /* other modules' click handlers */ } }
   assert(run("D.ogr[0].denemeler.find(r => r.id === 'm:own').silindi === true"), 'the own entry is deleted');
   assert.doesNotMatch(run('gorunumDenemeler()'), /okul sonucuyla birleşti/);
+});
+
+
+// ---- exam keys, per-session dates, re-imports, date repair, the lag line and the student preview ----
+const tarihKur = () => {   // Deneme Ekim: the TYT list says 23 Oct, the TYT+AYT list says 30 Oct
+  run(kopya); listeKur([{ad: 'Deneme Ekim', tarih: '23.10.2026', rows: [[1, '12/A', 36], [2, '12/A', 40]]}]);
+  const T = run('JSON.stringify(D.siralama.sinavlar[0].T)');
+  listeKur([{ad: 'Deneme Ekim', tarih: '30.10.2026', ayt: true, rows: [[1, '12/A', 36, 20], [2, '12/A', 40, 30]]}]);
+  run(`(() => { D.siralama.sinavlar[0].T = ${T}; D.siralama.sinavlar[0].ts = 2000; D.ogr[0].denemeOkul = []; D.ogr[1].denemeOkul = []; D.ogr[0].denemeler = []; kaydet = async () => true; })()`);
+};
+const J = (x) => JSON.parse(JSON.stringify(x));
+const tarihler = (i) => JSON.parse(run(`JSON.stringify(denemeListe(${i}).map(r => [r.ad, r.oturum, r.tarih, r.id.slice(0, 2)]))`));
+const kayit = (id, ad, tarih, oturum, n) => `({id:${JSON.stringify(id)},ad:${JSON.stringify(ad)},tarih:'${tarih}',tur:'${oturum}',oturum:'${oturum}',brans:'',alan:'SAY',sure:null,puan:null,ts:1,sinavTuru:'genel',dersler:DENEME_DERSLER.${oturum}.map(d=>({kod:d[0],soru:d[2],dogru:d[0]===${oturum === 'TYT' ? "'turkce'" : "'edebiyat'"}?${n}:0,yanlis:0}))})`;
+const pid = (ad, t, o) => 'p:' + encodeURIComponent([ad.toLocaleUpperCase('tr-TR'), t, o].join('|'));
+
+check('exam key: spellings of one school exam meet, different exams never do', () => {
+  const k = (a) => run(`denemeSinavAnahtari(${JSON.stringify(a)})`);
+  const ayni = ['27-YKS-1203', '27 YKS 1203', '27-yks-1203', '27_YKS_1203 (TYT)', '27-YKS-1203 TYT', '27-YKS-1203-TYT', '  27 - YKS - 1203  ', '27-YKS-1203 - 23.10.2026', '27-YKS-1203 (23.10)', 'TYT 27-YKS-1203 Denemesi'];
+  for (const a of ayni) assert.equal(k(a), '27-YKS-1203', a);
+  for (const [a, b] of [['27-YKS-1203', '27-YKS-1202'], ['27-YKS-1203', '28-YKS-1203'], ['Deneme 1', 'Deneme 12'], ['Deneme 1', 'Deneme 2'], ['Hazırbulunuşluk-1', 'Hazırbulunuşluk-2'], ['27-TYT_SIFIR_POZİTİF', '27-YKS-1201']])
+    assert.notEqual(k(a), k(b), a + ' / ' + b);
+  assert.equal(k('Hazırbulunuşluk-2'), k('HAZIRBULUNUSLUK 2 TYT'));
+  assert.equal(k('27-TYT_SIFIR_POZİTİF'), k('27 TYT SIFIR POZİTİF'));
+  const ayniSinav = (a, ta, oa, b, tb, ob) => run(`denemeAyniSinav({ad:${JSON.stringify(a)},tarih:'${ta}',oturum:'${oa}',tur:'${oa}'},{ad:${JSON.stringify(b)},tarih:'${tb}',oturum:'${ob}',tur:'${ob}'})`);
+  assert.equal(ayniSinav('27-YKS-1203', '2026-10-23', 'TYT', '27-YKS-1203', '2026-10-23', 'AYT'), false, 'another session is another exam');
+});
+
+check('student session: an own entry spelled differently is hidden next to the school copy; copies of one exam under two dates show once', () => {
+  run(kopya);
+  for (const ad of ['27 YKS 1203', '27-YKS-1203 TYT', '27_YKS_1203 (TYT)', '27-yks-1203 - 30.10.2026']) {
+    run(`(() => { D = varsayilan(); D.rol = 'ogrenci'; EK.ogr = 0; D.ogr = [{ad:'Synthetic Ada', no:1, alan:'SAY', aktif:true,
+      denemeOkul:[${kayit(pid('27-YKS-1203', '2026-10-23', 'TYT'), '27-YKS-1203', '2026-10-23', 'TYT', 36)}],
+      denemeler:[${kayit('m:own', ad, '2026-10-30', 'TYT', 36)}]}]; })()`);
+    assert.deepEqual(tarihler(0), [['27-YKS-1203', 'TYT', '2026-10-23', 'p:']], 'own entry "' + ad + '" is hidden');
+  }
+  // A different exam of the same night is not hidden.
+  run(`D.ogr[0].denemeler = [${kayit('m:own', '27-YKS-1202', '2026-10-09', 'TYT', 30)}]`);
+  assert.equal(tarihler(0).length, 2);
+  // A re-sit of another session is not hidden either.
+  run(`D.ogr[0].denemeler = [${kayit('m:ayt', '27-YKS-1203', '2026-10-30', 'AYT', 10)}]`);
+  assert.equal(tarihler(0).length, 2);
+  // The same exam published under two dates (a combined file gave both sessions one date): one row; the newest copy.
+  run(`(() => { const a = ${kayit(pid('27-YKS-1203', '2026-10-23', 'TYT'), '27-YKS-1203', '2026-10-23', 'TYT', 36)}, b = ${kayit(pid('27-YKS-1203', '2026-10-30', 'TYT'), '27-YKS-1203', '2026-10-30', 'TYT', 36)}; b.ts = 5;
+    D.ogr[0].denemeler = []; D.ogr[0].denemeOkul = [a, b]; })()`);
+  assert.deepEqual(tarihler(0), [['27-YKS-1203', 'TYT', '2026-10-30', 'p:']]);
+});
+
+check('generic names need dates within 14 days; a code matches whatever the dates', () => {
+  const m = (a, ta, b, tb, o = 'TYT') => run(`denemeAyniSinav({ad:${JSON.stringify(a)},tarih:'${ta}',oturum:'${o}',tur:'${o}'},{ad:${JSON.stringify(b)},tarih:'${tb}',oturum:'${o}',tur:'${o}'})`);
+  assert.equal(m('27-YKS-1203', '2026-10-23', '27 YKS 1203 TYT', '2026-10-30'), true, 'code: 23.10 vs 30.10 merges');
+  assert.equal(m('27-YKS-1203', '2026-10-23', '27-YKS-1203', '2026-12-30'), true, 'code: any gap');
+  assert.equal(m('TYT Deneme', '2026-10-23', 'TYT Deneme', '2026-10-30'), true, 'generic: a week apart merges');
+  assert.equal(m('TYT Deneme', '2026-10-02', 'TYT Deneme', '2026-10-16'), true, 'generic: 14 days merges');
+  assert.equal(m('TYT Deneme', '2026-10-02', 'TYT Deneme', '2026-10-30'), false, 'generic: weeks apart are two exams');
+  assert.equal(m('Hazırbulunuşluk', '2026-08-18', 'Hazırbulunuşluk', '2026-10-05'), false);
+  // Two generic exams a month apart stay two rows (copies), and an own "Deneme" is not hidden by a school "Deneme" a month away.
+  run(`(() => { D = varsayilan(); D.rol = 'ogrenci'; EK.ogr = 0; D.ogr = [{ad:'Synthetic Ada', no:1, alan:'SAY', aktif:true,
+    denemeOkul:[${kayit(pid('TYT Deneme', '2026-10-02', 'TYT'), 'TYT Deneme', '2026-10-02', 'TYT', 30)}, ${kayit(pid('TYT Deneme', '2026-10-30', 'TYT'), 'TYT Deneme', '2026-10-30', 'TYT', 34)}],
+    denemeler:[${kayit('m:own', 'Deneme', '2026-12-01', 'TYT', 20)}, ${kayit('m:own2', 'TYT Deneme', '2026-11-20', 'TYT', 22)}]}]; })()`);
+  assert.deepEqual(tarihler(0).map(r => r[2]), ['2026-10-02', '2026-10-30', '2026-11-20', '2026-12-01']);
+  // The same generic name 23.10 vs 30.10 is one exam (a combined file's other day).
+  run(`D.ogr[0].denemeOkul = [${kayit(pid('TYT Deneme', '2026-10-23', 'TYT'), 'TYT Deneme', '2026-10-23', 'TYT', 30)}, ${kayit(pid('TYT Deneme', '2026-10-30', 'TYT'), 'TYT Deneme', '2026-10-30', 'TYT', 30)}]; D.ogr[0].denemeOkul[1].ts = 5; D.ogr[0].denemeler = [${kayit('m:own', 'TYT Deneme', '2026-10-28', 'TYT', 30)}]`);
+  assert.deepEqual(tarihler(0).map(r => r[2]), ['2026-10-30'], 'one row: the newest copy, the own entry hidden');
+  // An own "Deneme" next to a school "Deneme" a month away is shown; five days away it is the same exam.
+  run(`D.ogr[0].denemeOkul = [${kayit(pid('Deneme', '2026-10-02', 'TYT'), 'Deneme', '2026-10-02', 'TYT', 30)}]; D.ogr[0].denemeler = [${kayit('m:own', 'deneme', '2026-11-02', 'TYT', 20)}]`);
+  assert.equal(tarihler(0).length, 2);
+  run(`D.ogr[0].denemeler = [${kayit('m:own', 'deneme', '2026-10-07', 'TYT', 20)}]`);
+  assert.equal(tarihler(0).length, 1);
+  // Several candidates in the window: the nearest date is the one replaced by a re-import.
+  run(`D.ogr[0].denemeOkul = [${kayit(pid('Deneme', '2026-10-02', 'TYT'), 'Deneme', '2026-10-02', 'TYT', 30)}, ${kayit(pid('Deneme', '2026-10-12', 'TYT'), 'Deneme', '2026-10-12', 'TYT', 31)}]; D.ogr[0].denemeler = []`);
+  sandbox.__y = JSON.parse(run(`JSON.stringify(${kayit(pid('Deneme', '2026-10-11', 'TYT'), 'Deneme', '2026-10-11', 'TYT', 40)})`));
+  assert.deepEqual(J(run('denemeKayitDegistir(D.ogr[0].denemeOkul, __y)').filter(r => r.silindi).map(r => r.tarih)), ['2026-10-12'], 'the nearest day is replaced');
+});
+
+check('school lists carry a date per session: TYT from the TYT list, AYT from the TYT+AYT list', () => {
+  tarihKur();
+  assert.deepEqual(tarihler(0).sort(), [['Deneme Ekim', 'AYT', '2026-10-30', 'p:'], ['Deneme Ekim', 'TYT', '2026-10-23', 'p:']]);
+  // A corrected date (the exam table's field) covers both sessions again.
+  run("D.siralama.sinavlar[0].tarih = '24.10.2026'; D.siralama.sinavlar[0].ts = 2001");
+  assert.deepEqual(tarihler(0).map(r => r[2]), ['2026-10-24', '2026-10-24']);
+});
+
+check('combined TYT+AYT file with one date: the preview asks for a day per session, prefilled from the lists; a printed day per session wins', () => {
+  tarihKur();
+  const rapor = (extra = {}) => ({ad: '27 YKS Ekim', tarih: '2026-10-30', uyarilar: [], dosya: 'x.pdf', satirlar: [], ...extra});
+  const satirlar = () => run(`[{no:1,ad:'Synthetic Ada',oturum:'TYT',puan:null,dersler:${kayit('x', 'x', '2026-10-30', 'TYT', 36)}.dersler},{no:1,ad:'Synthetic Ada',oturum:'AYT',puan:null,dersler:${kayit('x', 'x', '2026-10-30', 'AYT', 10)}.dersler}]`);
+  sandbox.__s = satirlar();
+  // A file whose name the lists do not know: both sessions start on the file's day, and both fields are there to edit.
+  let r = rapor({satirlar: JSON.parse(JSON.stringify(sandbox.__s))}); sandbox.__r = r; run('DENEME_IMPORT = denemeImportHazirla([__r])');
+  assert.equal(r.cift, true); assert.deepEqual(J(r.oturumTarihleri), {TYT: '2026-10-30', AYT: '2026-10-30'});
+  let h = run('denemeImportHtml()');
+  assert.match(h, /data-alan="tarihTYT" value="2026-10-30"/); assert.match(h, /data-alan="tarihAYT" value="2026-10-30"/); assert.doesNotMatch(h, /data-alan="tarih" /);
+  // Deneme Ekim exists on the lists (TYT 23 Oct, AYT 30 Oct): prefilled from the lists, each session its own.
+  r = rapor({ad: 'Deneme Ekim', satirlar: JSON.parse(JSON.stringify(sandbox.__s))}); sandbox.__r = r; run('DENEME_IMPORT = denemeImportHazirla([__r])');
+  assert.deepEqual(J(r.oturumTarihleri), {TYT: '2026-10-23', AYT: '2026-10-30'});
+  assert.deepEqual(JSON.parse(run('JSON.stringify(__r.satirlar.map(x => denemePdfKaydi(__r, x)).map(x => [x.oturum, x.tarih, x.id === ' + JSON.stringify(pid('Deneme Ekim', '', '')) + '.slice(0,0) + x.id]))')).map(x => x.slice(0, 2)), [['TYT', '2026-10-23'], ['AYT', '2026-10-30']]);
+  // The file prints a day for each session (AI-read): they win over the lists.
+  r = rapor({ad: 'Deneme Ekim', oturumTarihleri: {TYT: '2026-10-21', AYT: '2026-10-28'}, satirlar: JSON.parse(JSON.stringify(sandbox.__s))}); sandbox.__r = r; run('DENEME_IMPORT = denemeImportHazirla([__r])');
+  assert.deepEqual(J(r.oturumTarihleri), {TYT: '2026-10-21', AYT: '2026-10-28'});
+  // Editing a field changes that session only.
+  run("__r.oturumTarihleri = {...__r.oturumTarihleri, AYT: '2026-10-29'}");
+  assert.deepEqual(JSON.parse(run('JSON.stringify(__r.satirlar.map(x => denemePdfKaydi(__r, x).tarih))')), ['2026-10-21', '2026-10-29']);
+  // A single-session report keeps its single date field.
+  r = rapor({satirlar: JSON.parse(JSON.stringify(sandbox.__s)).slice(0, 1)}); sandbox.__r = r; run('DENEME_IMPORT = denemeImportHazirla([__r])');
+  assert.equal(r.cift, undefined); assert.match(run('denemeImportHtml()'), /data-alan="tarih" value="2026-10-30"/);
+});
+
+check('a "Rapor Tarihi" is never an exam day: the school PDF reader takes only "Sınav Tarihi"', () => {
+  const sayfa = (etiketler) => { const items = [], y0 = 700; let y = y0;
+    for (const [e, v] of etiketler) { items.push({s: e, x: 40, y, w: 60, h: 8, z: 8}, {s: v, x: 120, y, w: 60, h: 8, z: 8}); y -= 12; } return items; };
+  sandbox.__p = [sayfa([['Rapor Tarihi:', '30.10.2026'], ['Sınav Adı:', '27-YKS-1203']])];
+  assert.throws(() => run('denemePdfCoz(__p)'), /Sınav adı\/tarihi okunamadı/, 'a report date alone is no exam date');
+  sandbox.__p = [sayfa([['Rapor Tarihi:', '30.10.2026'], ['Sınav Adı:', '27-YKS-1203'], ['Sınav Tarihi:', '23.10.2026']])];
+  assert.throws(() => run('denemePdfCoz(__p)'), /Öğrenci kimlik sütunları okunamadı/, 'it got past the date check with the exam day, not the report day');
+  assert.match(html, /"Rapor Tarihi", yazdırma, çıktı, baskı ya da oluşturma tarihini ASLA sınav tarihi olarak yazma/, 'the AI prompt says so');
+});
+
+check('re-import with a corrected date replaces the record instead of adding a duplicate; the student’s time moves', () => {
+  tarihKur();
+  run(`(() => { const k = ${kayit(pid('Deneme Ekim', '2026-10-30', 'TYT'), 'Deneme Ekim', '2026-10-30', 'TYT', 36)}; k.sure = 95; D.ogr[0].denemeOkul = [k]; })()`);
+  const rapor = {ad: 'Deneme Ekim', tarih: '2026-10-23', uyarilar: [], satirlar: [{no: 1, ad: 'Synthetic Ada', oturum: 'TYT', puan: null, dersler: JSON.parse(run(`JSON.stringify(${kayit('x', 'x', '2026-10-23', 'TYT', 36)}.dersler)`))}]};
+  sandbox.__r = rapor; run('DENEME_IMPORT = denemeImportHazirla([__r])');
+  const row = rapor.satirlar[0];
+  assert.match(row.uyari, /Aynı sınav 2026-10-30 tarihiyle kayıtlı; tarihi 2026-10-23 olarak güncellenir/); assert.equal(row.secili, true);
+  run('__sonuc = denemeKayitDegistir(D.ogr[0].denemeOkul, denemePdfKaydi(__r, __r.satirlar[0]))');
+  run('D.ogr[0].denemeOkul = __sonuc');
+  assert.deepEqual(tarihler(0).filter(r => r[1] === 'TYT'), [['Deneme Ekim', 'TYT', '2026-10-23', 'p:']], 'one TYT row, on the new date');
+  assert.equal(run("D.ogr[0].denemeOkul.filter(r => !r.silindi).length"), 1);
+  assert.equal(run("D.ogr[0].denemeOkul.find(r => !r.silindi).sure"), 95);
+  assert(run("D.ogr[0].denemeOkul.some(r => r.silindi && r.tarih === '2026-10-30')"), 'the old record is a tombstone, so publishing removes it on the student’s device');
+  // The same file again on the same date is a plain duplicate: skipped.
+  sandbox.__r = JSON.parse(JSON.stringify(rapor)); delete sandbox.__r.satirlar[0].uyari; run('DENEME_IMPORT = denemeImportHazirla([__r])');
+  assert.match(sandbox.__r.satirlar[0].uyari, /Tekrar sonuç/); assert.equal(sandbox.__r.satirlar[0].secili, false);
+  // A different spelling of the name on a re-import is the same exam.
+  const r2 = JSON.parse(JSON.stringify(rapor)); r2.ad = 'DENEME EKİM TYT'; r2.tarih = '2026-10-24'; sandbox.__r = r2; run('DENEME_IMPORT = denemeImportHazirla([__r])');
+  assert.match(r2.satirlar[0].uyari, /güncellenir/);
+});
+
+check('date correction in the exam table: the published copies of the exam follow, and the student’s own entry stays hidden', async () => {
+  tarihKur();
+  run(`(() => { D.ogr[0].denemeOkul = [${kayit(pid('Deneme Ekim', '2026-10-23', 'TYT'), 'Deneme Ekim', '2026-10-23', 'TYT', 36)}, ${kayit(pid('Deneme Ekim', '2026-10-30', 'AYT'), 'Deneme Ekim', '2026-10-30', 'AYT', 10)}];
+    D.ogr[0].denemeler = [${kayit('m:own', 'deneme ekim tyt', '2026-10-27', 'TYT', 36)}]; })()`);
+  const r = await run("(async () => { const r = await SIRALAMA.tarihDegistir(D.siralama.sinavlar[0].id, '25.10.2026'); const n = await denemeOkulTarihTasi(r.ad, r.eski.map(t => t.split('.').reverse().join('-')), '2026-10-25'); return {n, eski: r.eski}; })()");
+  assert.equal(r.n, 1); assert.deepEqual([...r.eski].sort(), ['23.10.2026', '30.10.2026']);
+  assert.deepEqual(tarihler(0).sort(), [['Deneme Ekim', 'AYT', '2026-10-25', 'p:'], ['Deneme Ekim', 'TYT', '2026-10-25', 'p:']], 'both sessions followed; the own entry (another spelling, 27 Oct) is still hidden');
+  assert.equal(run("D.ogr[0].denemeYayinBekliyor"), true);
+  assert.equal(run("D.ogr[0].denemeler.length"), 1, 'the own entry is untouched');
+});
+
+check('"Tarihleri onar": copies whose date differs from the list move once; own entries and matching copies are untouched', async () => {
+  tarihKur();
+  // Student 1: TYT copy on 30 Oct (the AYT day) while the list says 23 Oct; the AYT copy is right. Student 2: both copies exist (one stale).
+  run(`(() => {
+    D.ogr[0].denemeOkul = [${kayit(pid('Deneme Ekim', '2026-10-30', 'TYT'), 'Deneme Ekim', '2026-10-30', 'TYT', 36)}, ${kayit(pid('Deneme Ekim', '2026-10-30', 'AYT'), 'Deneme Ekim', '2026-10-30', 'AYT', 10)}];
+    D.ogr[0].denemeler = [${kayit('m:own', 'Deneme Ekim', '2026-10-30', 'TYT', 36)}];
+    D.ogr[1].denemeOkul = [${kayit(pid('Deneme Ekim', '2026-10-23', 'TYT'), 'Deneme Ekim', '2026-10-23', 'TYT', 40)}, ${kayit(pid('Deneme Ekim', '2026-10-30', 'TYT'), 'Deneme Ekim', '2026-10-30', 'TYT', 40)}];
+  })()`);
+  const sahip = run('JSON.stringify(D.ogr[0].denemeler)');
+  assert.equal(run('denemeTarihFarklari().length'), 2);
+  run("EK.sekme = 'denemeler'");
+  assert.match(run('DPANO.gorunum()'), /id="dnTarihFarki"[^>]*>2 yayınlanmış sonucun tarihi okul listesinden farklı · <button type="button" class="et-dugme" id="dnTarihOnar">Tarihleri onar<\/button>/);
+  const mesaj = await run('denemeTarihleriniOnar()');
+  assert.deepEqual(J(mesaj), {kopya: 2, ogrenci: 2});
+  assert.deepEqual(tarihler(0).sort(), [['Deneme Ekim', 'AYT', '2026-10-30', 'p:'], ['Deneme Ekim', 'TYT', '2026-10-23', 'p:']]);
+  assert.deepEqual(tarihler(1).filter(r => r[1] === 'TYT'), [['Deneme Ekim', 'TYT', '2026-10-23', 'p:']], 'the stale copy next to a right one is removed');
+  assert.equal(run('D.ogr[0].denemeler.length') + run('JSON.stringify(D.ogr[0].denemeler)'), '1' + sahip, 'own entries are never touched');
+  assert.equal(run("D.ogr[0].denemeOkul.find(r => r.oturum === 'TYT' && !r.silindi).id"), pid('Deneme Ekim', '2026-10-23', 'TYT'));
+  assert(run("D.ogr[0].denemeOkul.some(r => r.silindi && r.tarih === '2026-10-30' && r.oturum === 'TYT')"), 'the old TYT copy is a tombstone to publish');
+  assert.equal(run("D.ogr[0].denemeYayinBekliyor && D.ogr[1].denemeYayinBekliyor"), true);
+  // Once: nothing left to repair, no button.
+  assert.equal(run('denemeTarihFarklari().length'), 0);
+  assert.doesNotMatch(run('DPANO.gorunum()'), /dnTarihOnar/);
+  assert.deepEqual(J(await run('denemeTarihleriniOnar()')), {kopya: 0, ogrenci: 0});
+});
+
+check('lag line: the teacher sees how many exams a student’s screen lacks, and sending clears it', async () => {
+  yayinKur();
+  const eksik = (si) => run(`denemeEksikSayisi(${si})`);
+  assert.equal(eksik(0), 5); assert.equal(eksik(1), 5); assert.equal(eksik(2), 4); assert.equal(eksik(4), 0, 'a student the lists do not print');
+  assert.equal(eksik(), 14, 'the class total is what a backfill would add');
+  assert.match(run('denemeEksikSatiri(0)'), /Bu öğrencinin ekranında 5 deneme eksik · <button type="button" class="et-dugme" id="dnEksikGonder" data-si="0">Öğrencilere gönder<\/button>/);
+  assert.equal(run('denemeEksikSatiri(4)'), '');
+  run("D.rol = 'rehber'; EK.sekme = 'denemeler'");
+  const h = run('DPANO.gorunum()');
+  assert.match(h, /id="dnEksik"[^>]*>Öğrencilerin ekranında 14 deneme eksik · <button type="button" class="et-dugme" id="dnYayinla">Öğrencilere gönder<\/button>/);
+  assert.doesNotMatch(h, /Bekleyen sonuçları yayınla/, 'one button for the same thing');
+  // Sending to one student publishes only that student.
+  const mesaj = await run('denemeBekleyenleriYayinla(() => {}, 0)');
+  assert.match(mesaj, /^1 öğrenciye yayınlandı\. Okul listelerinden 1 öğrenci için 5 sonuç eklendi/);
+  assert.equal(eksik(0), 0); assert.equal(eksik(1), 5, 'the others still wait'); assert.equal(eksik(), 9);
+  assert.equal(run('denemeEksikSatiri(0)'), '');
+  assert.equal(kopyalar(1).length, 0);
+  await run('denemeBekleyenleriYayinla()');
+  assert.equal(eksik(), 0);
+  assert.doesNotMatch(run('DPANO.gorunum()'), /deneme eksik/);
+  // A viewing teacher can not send: no line.
+  run("yalnizcaGoruntuleme = () => true"); yayinKur(); assert.equal(run('denemeEksikSatiri(0)'), ''); run("yalnizcaGoruntuleme = () => false");
+  // Pending-only: the old button stays.
+  yayinKur(); await run('denemeBekleyenleriYayinla()'); run("D.ogr[0].denemeYayinBekliyor = true");
+  assert.match(run('DPANO.gorunum()'), /id="dnYayinla">Bekleyen sonuçları yayınla</);
+});
+
+check('student preview shows what the student has: published copies and own entries, deduped; no teacher-only list rows or other students', () => {
+  yayinKur();
+  run(`(() => { D.ogr[0].denemeOkul = [${kayit(pid('Hazırbulunuşluk', '2026-08-18', 'TYT'), 'Hazırbulunuşluk', '2026-08-18', 'TYT', 30)}];
+    D.ogr[0].denemeler = [${kayit('m:own', 'hazırbulunuşluk tyt', '2026-08-20', 'TYT', 30)}, ${kayit('m:ozel', 'Kendi Deneme', '2026-09-01', 'TYT', 20)}]; })()`);
+  // The teacher sees the list rows too (5 exams for student 1); the student does not have them.
+  assert.equal(run('denemeListe(0).filter(r => r.okulListe).length'), 4);
+  const belge = run('JSON.stringify(ogrenciPaketi(0))');
+  assert(!belge.includes('siralama') && !belge.includes('SENTETIK') && !belge.includes('Synthetic Bora') && !belge.includes('Synthetic Cem'), 'the package has no list and no other student');
+  run('__yok = (() => { const y = paketiYukle(JSON.parse(JSON.stringify(ogrenciPaketi(0)))); return y; })()');
+  run("(() => { const t = D; D = __yok; D.rol = 'ogrenci'; EK.ogr = 0; __goz = JSON.stringify(denemeListe(0).map(r => [r.ad, r.tarih, r.id.slice(0, 2), !!r.okulListe])); D = t; })()");
+  assert.deepEqual(JSON.parse(sandbox.__goz), [['Hazırbulunuşluk', '2026-08-18', 'p:', false], ['Kendi Deneme', '2026-09-01', 'm:', false]], 'copies and own entries only; the own duplicate of the copy is hidden');
 });
 
 (async () => {

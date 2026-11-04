@@ -94,7 +94,36 @@ function denemeBirlestir(a=[], b=[], sure=false) {
 //  2. The published school copies (denemeOkul) win over a list row of the same exam: they carry the student's time and edits.
 //  3. The student's own entries (denemeler) are kept only when no school exam has the same name and session; the date is
 //     ignored (a student's copy often carries another date). The stored entry is untouched: it is only not shown.
-const DENEME_OKUL_ANAHTARI = r => denemeAdAnahtari(r.ad)+'|'+r.oturum+'|'+r.tur;
+// Two spellings of one school exam must meet: "27-YKS-1203", "27 YKS 1203", "27-YKS-1203 TYT", "27_YKS_1203 (TYT)" or
+// "27-YKS-1203 - 23.10.2026". The exam code (\d{2}-YKS-\d{4}) decides when a name has one; otherwise the name is compared with
+// separators and Turkish letters folded, dates dropped and a trailing session word (TYT / AYT, "TYT Denemesi") removed.
+// Different exams never meet: another code, another number ("Deneme 1" / "Deneme 12") or another session is another key.
+function denemeSinavAnahtari(ad) {
+  let s=String(ad || '').normalize('NFKC').toLocaleUpperCase('tr-TR');
+  s=s.replace(/İ/g,'I').replace(/Ş/g,'S').replace(/Ğ/g,'G').replace(/Ü/g,'U').replace(/Ö/g,'O').replace(/Ç/g,'C')
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g,' ').replace(/\b\d{1,2}[./]\d{1,2}[./]\d{2,4}\b/g,' ').replace(/[([]\s*\d{1,2}[./]\d{1,2}\s*[)\]]/g,' ');
+  const kod=/(?:^|[^0-9])(\d{2})[^A-Z0-9]*YKS[^A-Z0-9]*(\d{4})(?![0-9])/.exec(s);
+  if(kod)return kod[1]+'-YKS-'+kod[2];
+  const ham=s.replace(/[^A-Z0-9]+/g,' ').trim(),kesik=ham.replace(/ (TYT|AYT)( (DENEMESI|DENEME|SONUCU|SONUC))?$/,'').replace(/ (DENEMESI|SONUCU)$/,'');
+  return kesik || ham;
+}
+const DENEME_KOD_ANAHTARI = /^\d{2}-YKS-\d{4}$/;
+// Generic names repeat ("TYT Deneme", "Hazırbulunuşluk", a student's "Deneme"), so a name alone is not an exam. Two records are the
+// same exam when they share session and kind and: the name carries an exam code (27-YKS-1203) and the codes agree, whatever the dates;
+// or the names agree and the dates are within 14 days (a TYT/AYT gap, a print date) and not weeks apart.
+const DENEME_YAKIN_GUN = 14;
+function denemeAyniSinav(a,b) {
+  if(!a || !b || a.oturum!==b.oturum || a.tur!==b.tur)return false;
+  const k=denemeSinavAnahtari(a.ad);if(!k || k!==denemeSinavAnahtari(b.ad))return false;
+  if(DENEME_KOD_ANAHTARI.test(k))return true;
+  const x=gunNo(a.tarih),y=gunNo(b.tarih);return Number.isFinite(x) && Number.isFinite(y) && Math.abs(x-y)<=DENEME_YAKIN_GUN;
+}
+// Of several records that are the same exam as r, the one nearest in date (null when none).
+function denemeEnYakin(r,adaylar) {
+  let en=null,fark=Infinity;
+  for(const x of adaylar){if(!denemeAyniSinav(r,x))continue;const f=Math.abs(gunNo(r.tarih)-gunNo(x.tarih));if(en===null || f<fark){en=x;fark=f;}}
+  return en;
+}
 const DENEME_LISTE_ONBELLEK = new WeakMap();
 function denemeOkulListeSatirlari(no,ad) {
   if(!rehberMi() || no===undefined || no===null || typeof DPANO==='undefined' || typeof SIRALAMA==='undefined')return [];
@@ -106,9 +135,10 @@ function denemeOkulListeSatirlari(no,ad) {
   const dy=v=>{const q=/^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(v==null?'':String(v));return q?[+q[1],+q[2]]:null;};
   const cikti=[];
   for(const s of t.sinavlar || []){
-    const tarih=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(s.tarih || ''),iso=tarih?tarih[3]+'-'+tarih[2]+'-'+tarih[1]:'';
-    if(!iso)continue;
     for(const oturum of ['TYT','AYT']){
+      // The date of this session (a TYT list and a TYT+AYT list of one exam may carry different days).
+      const tarih=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec((s.tarihler && s.tarihler[oturum]) || s.tarih || ''),iso=tarih?tarih[3]+'-'+tarih[2]+'-'+tarih[1]:'';
+      if(!iso)continue;
       const kaynak=oturum==='TYT'?s.tyt:s.ayt,o=kaynak && kaynak[n];
       if(!o || denemeAdAnahtari(o.name)!==denemeAdAnahtari(ad) || !(oturum==='TYT'?SIRALAMA.hasTYT(o):SIRALAMA.hasAYT(o)))continue;
       const sutunlar=oturum==='TYT'?SIRALAMA.TYT_KEYS:SIRALAMA.AYT_KEYS,tum=Object.values(kaynak);
@@ -134,14 +164,19 @@ function denemeOkulListeSatirlari(no,ad) {
 }
 function denemeListe(si=EK.ogr) {
   // A deleted teacher row is only a tombstone; it must not hide the student's own entry.
-  const o=D.ogr[si], kopyalar=(o?.denemeOkul || []).filter(r=>!r.silindi), okulKimlik=new Set(kopyalar.map(denemeKimligi));
-  const anahtarlar=new Set(kopyalar.map(DENEME_OKUL_ANAHTARI));
-  // A list row only for an exam the student has no published copy of (same name and session), and not a deleted one.
+  const o=D.ogr[si], tumKopyalar=(o?.denemeOkul || []).filter(r=>!r.silindi);
+  // One exam is one row: copies with the same exam key (name and session) but another date are the same exam published under two
+  // dates (a combined TYT+AYT file once gave both sessions one date). The copy on the school list's date wins; without a list
+  // (the student's own screen) the newest one does. "Tarihleri onar" removes the stale copy for good.
+  const liste=denemeOkulListeSatirlari(o?.no,o?.ad),lt=x=>denemeEnYakin(x,liste)?.tarih,secilenler=[];
+  const iyi=(x,y)=>{const lx=x.tarih===lt(x),ly=y.tarih===lt(y);return lx!==ly?lx:x.ts!==y.ts?x.ts>y.ts:x.tarih!==y.tarih?x.tarih>y.tarih:x.id>y.id;};
+  for(const r of tumKopyalar){const i=secilenler.findIndex(e=>denemeAyniSinav(r,e));if(i<0)secilenler.push(r);else if(iyi(r,secilenler[i]))secilenler[i]=r;}
+  const kopyalar=tumKopyalar.filter(r=>secilenler.includes(r)), okulKimlik=new Set(tumKopyalar.map(denemeKimligi));
+  // A list row only for an exam the student has no published copy of (same exam), and not a deleted one.
   const silinenler=new Set((o?.denemeOkul || []).filter(r=>r.silindi).map(r=>r.id));
-  const listeSatirlari=denemeOkulListeSatirlari(o?.no,o?.ad).filter(r=>!anahtarlar.has(DENEME_OKUL_ANAHTARI(r)) && !silinenler.has(r.id));
-  listeSatirlari.forEach(r=>anahtarlar.add(DENEME_OKUL_ANAHTARI(r)));
+  const listeSatirlari=liste.filter(r=>!kopyalar.some(c=>denemeAyniSinav(c,r)) && !silinenler.has(r.id));
   const okul=[...kopyalar,...listeSatirlari];
-  return [...(o?.denemeler || []).filter(r=>!okulKimlik.has(denemeKimligi(r)) && !anahtarlar.has(DENEME_OKUL_ANAHTARI(r)) && !okul.some(x=>denemeAyniSonuc(x,r))),...okul].filter(r=>!r.silindi).map(r=>{
+  return [...(o?.denemeler || []).filter(r=>!okulKimlik.has(denemeKimligi(r)) && !okul.some(x=>denemeAyniSinav(x,r) || denemeAyniSonuc(x,r))),...okul].filter(r=>!r.silindi).map(r=>{
     const sure=(o.denemeSure || []).find(x=>x.id===r.id);
     // Re-imports publish school rows with sure:null, which must not hide the student's
     // time; a newer non-empty teacher correction still wins.
@@ -158,12 +193,22 @@ function denemeGizliKendi(si=EK.ogr) {
 // A student's school-list rows as copies to publish ("PDF ekle" lists have none): only the rows of this student (school number
 // and name as the import matches), with the school exam's date and the same p: id, so a re-import or the file import dedupe.
 // Skips an exam the student already has (a copy of any date under the same name and session, or a deleted one).
+// The school-list rows of a student that no published copy covers (same exam key; a deleted copy keeps it from coming back).
+function denemeEksikSatirlar(o) {
+  if(!o || o.silindi)return [];
+  const var_=(o.denemeOkul || []).filter(r=>!r.silindi),silinen=new Set((o.denemeOkul || []).filter(r=>r.silindi).map(r=>r.id));
+  return denemeOkulListeSatirlari(o.no,o.ad).filter(r=>!var_.some(c=>denemeAyniSinav(c,r)) && !silinen.has(r.id));
+}
+// How many exams of the school lists a student's own screen lacks (teacher only): one student, or every live one.
+function denemeEksikSayisi(si) {
+  if(!rehberMi())return 0;
+  if(si!==undefined)return denemeEksikSatirlar(D.ogr[si]).length;
+  return D.ogr.reduce((n,o)=>n+denemeEksikSatirlar(o).length,0);
+}
 function denemeListeKopyalari(si) {
   const o=D.ogr[si];if(!o || o.silindi)return {kopyalar:[],gecersiz:0};
-  const var_=new Set((o.denemeOkul || []).filter(r=>!r.silindi).map(DENEME_OKUL_ANAHTARI)),silinen=new Set((o.denemeOkul || []).filter(r=>r.silindi).map(r=>r.id));
   const kopyalar=[];let gecersiz=0;
-  for(const satir of denemeOkulListeSatirlari(o.no,o.ad)){
-    if(var_.has(DENEME_OKUL_ANAHTARI(satir)) || silinen.has(satir.id))continue;
+  for(const satir of denemeEksikSatirlar(o)){
     const {okulListe,...r}=satir,kopya={...r,sinavTuru:denemePdfSinavTuru({ad:r.ad,tarih:r.tarih}),ts:Date.now()};
     try{denemeDogrula([kopya]);kopyalar.push(kopya);}catch(e){gecersiz++;}
   }
@@ -177,11 +222,11 @@ function denemeBirlesenSatirlari() {
 const DENEME_OKUL_BAYT_SINIRI = 300000;
 // Puts every live student's missing list rows into denemeOkul (queued for publishing). A student whose copies would pass the
 // 300 KB school-result field or the 900 KB cloud record is skipped for the rows that do not fit; they are reported, never cut silently.
-function denemeListeKopyalariniHazirla() {
+function denemeListeKopyalariniHazirla(yalniz) {
   const sonuc={ogrenci:0,kopya:0,atlanan:[],gecersiz:0};
   if(!rehberMi() || yalnizcaGoruntuleme())return sonuc;
   D.ogr.forEach((o,si)=>{
-    if(!o || o.silindi)return;
+    if(!o || o.silindi || (yalniz!==undefined && si!==yalniz))return;
     const {kopyalar,gecersiz}=denemeListeKopyalari(si);sonuc.gecersiz+=gecersiz;
     if(!kopyalar.length)return;
     let mevcut=o.denemeOkul || [],eklenen=0,atlanan=0;
@@ -384,12 +429,24 @@ function denemePdfSinavTuru(rapor) {
   const eslesen = aday.filter(s => tarihler(s).includes(rapor.tarih));
   return eslesen.length === 1 ? (eslesen[0].tur || varsayilan) : varsayilan;
 }
+// The day of one session of a report: a combined TYT+AYT file has a day per session (denemeImportHazirla fills them);
+// any other report has its one date.
+const denemeRaporTarihi = (rapor,oturum) => rapor.oturumTarihleri?.[oturum] || rapor.tarih;
+// The date the school lists give a session of an exam (ISO), '' when no list has the exam. Used to prefill an import.
+function denemeListeSinavTarihi(ad,oturum) {
+  if(typeof DPANO==='undefined')return '';
+  let t;try{t=DPANO.veriAl().t;}catch(e){return '';}
+  const k=denemeSinavAnahtari(ad),s=(t?.sinavlar || []).find(x=>denemeSinavAnahtari(x.ad)===k && (oturum==='AYT'?Object.keys(x.ayt || {}).length:Object.keys(x.tyt || {}).length));
+  const m=s && /^(\d{2})\.(\d{2})\.(\d{4})$/.exec((s.tarihler && s.tarihler[oturum]) || s.tarih || '');
+  return m?m[3]+'-'+m[2]+'-'+m[1]:'';
+}
 function denemePdfKaydi(rapor,row) {
-  const r={sinavTuru:denemePdfSinavTuru(rapor),id:'p:'+encodeURIComponent([denemeAdAnahtari(rapor.ad),rapor.tarih,row.oturum].join('|')),ad:rapor.ad,tarih:rapor.tarih,tur:row.oturum,oturum:row.oturum,brans:'',alan:'SAY',dersler:row.dersler,sure:null,puan:row.puan,ts:Date.now()};
+  const tarih=denemeRaporTarihi(rapor,row.oturum);
+  const r={sinavTuru:denemePdfSinavTuru({ad:rapor.ad,tarih}),id:'p:'+encodeURIComponent([denemeAdAnahtari(rapor.ad),tarih,row.oturum].join('|')),ad:rapor.ad,tarih,tur:row.oturum,oturum:row.oturum,brans:'',alan:'SAY',dersler:row.dersler,sure:null,puan:row.puan,ts:Date.now()};
   denemeDogrula([r]);return r;
 }
 function denemeAyniSonuc(a,b) {
-  return denemeAdAnahtari(a.ad)===denemeAdAnahtari(b.ad) && a.oturum===b.oturum && a.tur===b.tur &&
+  return denemeAyniSinav(a,b) &&
     JSON.stringify(a.dersler.map(d=>[d.kod,d.dogru,d.yanlis]).sort())===JSON.stringify(b.dersler.map(d=>[d.kod,d.dogru,d.yanlis]).sort());
 }
 let DENEME_IMPORT=null, DENEME_FORM=null, DENEME_ISLEM=false;
@@ -397,21 +454,39 @@ let DENEME_IMPORT=null, DENEME_FORM=null, DENEME_ISLEM=false;
 // same selection. Deleted results are reported as deleted, not as duplicates, and are
 // not re-added unless the teacher selects them.
 function denemeImportSatiri(rapor,row,oncekiSatirlar=[]) {
-  const r=denemePdfKaydi(rapor,row),mevcut=D.ogr[row.si]?.denemeOkul || [],eslesir=x=>x.id===r.id || denemeAyniSonuc(x,r);
-  const ayni=[...mevcut.filter(x=>!x.silindi),...oncekiSatirlar].find(eslesir), silinen=!ayni && mevcut.some(x=>x.silindi && eslesir(x));
+  const r=denemePdfKaydi(rapor,row),mevcut=D.ogr[row.si]?.denemeOkul || [];
+  // The same exam is the same name and session whatever the date: a re-import with a corrected date replaces the record.
+  const eslesir=x=>x.id===r.id || denemeAyniSonuc(x,r) || denemeAyniSinav(x,r);
+  const adaylar=[...mevcut.filter(x=>!x.silindi),...oncekiSatirlar].filter(eslesir),ayni=adaylar.sort((x,y)=>Math.abs(gunNo(x.tarih)-gunNo(r.tarih))-Math.abs(gunNo(y.tarih)-gunNo(r.tarih)))[0], silinen=!ayni && mevcut.some(x=>x.silindi && eslesir(x));
   row.hedefKimlik=denemeHedefKimligi(D.ogr[row.si]);
-  row.uyari=ayni ? (denemeAyniSonuc(ayni,r)?'Tekrar sonuç; varsayılan olarak atlanır ('+ayni.tarih+').':'Mevcut sonuç değişecek; kontrol edip seçin.') :
+  const tarihFarki=ayni && ayni.tarih!==r.tarih && !oncekiSatirlar.includes(ayni);
+  row.uyari=ayni ? (tarihFarki?'Aynı sınav '+ayni.tarih+' tarihiyle kayıtlı; tarihi '+r.tarih+' olarak güncellenir.':denemeAyniSonuc(ayni,r)?'Tekrar sonuç; varsayılan olarak atlanır ('+ayni.tarih+').':'Mevcut sonuç değişecek; kontrol edip seçin.') :
     silinen ? 'Bu sonuç daha önce silindi; yeniden eklemek için seçin.' : row.si<0?(row.no===null?'Ad eşleşmedi; öğrenci seçin.':'Numara + ad eşleşmedi; öğrenci seçin.'):
     row.no===null?'Dosyada numara yok; adla eşleşti, kontrol edin.':'';
-  row.secili=row.si>=0 && !ayni && !silinen;
+  row.secili=row.si>=0 && (!ayni || tarihFarki && denemeAyniSonuc(ayni,r)) && !silinen;
   // A row read by AI whose total net the file does not confirm waits for the teacher's tick.
   if(row.yzUyari){row.uyari=row.yzUyari+(row.uyari?' '+row.uyari:'');row.secili=false;}
   return r;
+}
+// Adds an imported record to a student's school results. The same exam under another date (a corrected re-import) is replaced,
+// not added next to it: the old record becomes a deleted row and the student's time moves to the new one.
+function denemeKayitDegistir(old,r) {
+  const yakin=denemeEnYakin(r,old.filter(x=>!x.silindi && x.id!==r.id)),eski=yakin?[yakin]:[];
+  for(const x of eski)if(r.sure===null && x.sure!==null && x.sure!==undefined)r.sure=x.sure;
+  return denemeBirlestir(old,[...eski.map(x=>({...x,silindi:true,ts:Math.max(Date.now(),x.ts+1)})),r]);
 }
 function denemeImportHazirla(raporlar) {
   // TYT-only reports carry the actual TYT date; combined reports repeat that session.
   raporlar.sort((a,b)=>Number(a.satirlar.some(r=>r.oturum==='AYT'))-Number(b.satirlar.some(r=>r.oturum==='AYT')));
   const gorulen=new Map();
+  // One file with both sessions but one date: the preview asks for a day per session. A session already on the school lists
+  // starts on the list's day (TYT is often taken a day or a week before AYT); the print date of a report is never an exam day.
+  for(const rapor of raporlar)if(rapor.satirlar.some(r=>r.oturum==='TYT') && rapor.satirlar.some(r=>r.oturum==='AYT')) {
+    const dosya=rapor.oturumTarihleri || {};
+    // A day the file prints for a session is that session's; the lists' day only fills a session the file gives no day for.
+    rapor.oturumTarihleri={TYT:dosya.TYT || denemeListeSinavTarihi(rapor.ad,'TYT') || rapor.tarih,AYT:dosya.AYT || denemeListeSinavTarihi(rapor.ad,'AYT') || rapor.tarih};
+    rapor.cift=true;
+  }
   for(const rapor of raporlar)for(const row of rapor.satirlar) {
     row.si=denemeOgrenciEsle(row);
     const key=row.no+'|'+denemeAdAnahtari(row.ad), r=denemeImportSatiri(rapor,row,gorulen.get(key)||[]);
@@ -500,13 +575,24 @@ function denemeDetay(r) {
       return r.tur==='BRANS'?'<div>'+ic+'</div>':'<button type="button"'+(d.grup?' class="dn-grup"':'')+' data-dn-brans-git="'+r.oturum+':'+d.kod+'" data-dn-kaynak-id="'+kacis(r.id)+'" aria-label="'+kacis(ad+': '+denemeSayi(denemeNet(d))+' net, '+d.dogru+' doğru, '+d.yanlis+' yanlış. '+ad+' gelişimini Branş denemelerinde gör')+'">'+ic+'<small class="dn-git">'+(d.grup?'Toplam gelişimi →':'Ders gelişimi →')+'</small></button>';}).join('')+'</div>'+
     '<div class="arac">'+(ogrenciMi() || r.id.startsWith('p:')?'<button class="dugme" data-dn-sure="'+kacis(r.id)+'">Süreyi gir / düzelt</button>':'')+((r.id.startsWith('p:')?rehberMi():ogrenciMi())?'<button class="dugme" data-dn-edit="'+kacis(r.id)+'">Düzenle</button><button class="dugme" data-dn-sil="'+kacis(r.id)+'">Sil</button>':'')+'</div>';
 }
-function denemeGrafik(liste) {
+// The exams one chart shows: the chosen session (TYT, AYT of a field, or a lesson / test with the sections of TYT/AYT exams).
+// Used by Denemelerim and by the student's home chart, so both draw the same list.
+function denemeGrafikListesi(tum,{tur,oturum,brans,alan,genelVar}) {
+  let liste=tum.filter(r=>r.tur===tur && (tur!=='BRANS'||r.oturum===oturum && r.brans===brans));
+  if(tur==='AYT')liste=liste.filter(r=>r.id.startsWith('p:') || r.alan===alan);
+  // Süre and publisher score belong to the whole TYT/AYT exam, so sections join the net chart only.
+  if(genelVar)liste=[...liste,...denemeGenelBolumleri(tum,oturum,brans)].sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.id.localeCompare(b.id));
+  return liste;
+}
+// opt: metrik (default: Denemelerim's choice), alan, genislik (px; default follows the page), hedef (a goal line, net),
+// ac (points open Denemelerim instead of its detail strip; used on the home page).
+function denemeGrafik(liste,opt={}) {
   if(!liste.length)return '<div class="dn-bos"><b>Henüz deneme yok</b><p>İlk sonucunu eklediğinde gelişimin burada görünecek.</p></div>';
-  const alan=denemeAlan(),metrik=denemeMetrik(),m=DENEME_METRIK[metrik],val=r=>denemeDeger(r,metrik,alan);
+  const alan=opt.alan || denemeAlan(),metrik=opt.metrik || denemeMetrik(),m=DENEME_METRIK[metrik],val=r=>denemeDeger(r,metrik,alan),hedef=Number.isFinite(opt.hedef)?opt.hedef:null;
   const points=liste.filter(r=>val(r)!==null),eksik=liste.length-points.length;
   if(!points.length)return '<div class="dn-bos">'+(metrik==='puan'?'Bu grafik için yayınevi puanı gerekli. Denemeyi düzenleyip sonuç raporundaki puanı ekleyin.':'Bu grafik için tamamlama süresi gerekli. Denemenin ayrıntısında “Süreyi gir / düzelt” ile süre ekleyin.')+'</div>';
   // Net/dk values are around 0–1, so the minimum axis span follows the metric.
-  const width=Math.max(320,Math.min(900,(document.getElementById('ana')?.clientWidth||960)-56)),height=280,left=50,right=22,top=24,bottom=38,values=points.map(val),lo=Math.min(0,...values),hi=Math.max(...values,m.adim),pad=Math.max((hi-lo)*.12,m.adim),min=lo<0?lo-pad:0,max=hi+pad;
+  const width=opt.genislik?Math.max(280,Math.min(900,Math.round(opt.genislik))):Math.max(320,Math.min(900,(document.getElementById('ana')?.clientWidth||960)-56)),height=280,left=50,right=22,top=24,bottom=38,values=points.map(val),lo=Math.min(0,...values),hi=Math.max(...values,m.adim,hedef ?? 0),pad=Math.max((hi-lo)*.12,m.adim),min=lo<0?lo-pad:0,max=hi+pad;
   const dates=points.map(r=>gunNo(r.tarih)),first=Math.min(...dates),last=Math.max(...dates),x=i=>first===last?(points.length===1?width/2:left+i*(width-left-right)/(points.length-1)):left+(dates[i]-first)*(width-left-right)/(last-first),y=v=>height-bottom-(v-min)*(height-top-bottom)/(max-min);
   const coords=points.map((r,i)=>{const same=dates.map((d,j)=>d===dates[i]?j:-1).filter(j=>j>=0),offset=first===last?0:(same.indexOf(i)-(same.length-1)/2)*Math.min(8,24/Math.max(1,same.length-1));return [Math.max(left,Math.min(width-right,x(i)+offset)),y(val(r))];}),line=coords.map(p=>p.join(',')).join(' '),ticks=Array.from({length:5},(_,i)=>min+(max-min)*i/4);
   // Borsa grafiği gibi: her çizgi parçası, vardığı denemenin önceki (en fazla) 4 denemenin ortalamasına
@@ -517,20 +603,19 @@ function denemeGrafik(liste) {
   const egilim=i=>i?' · önceki denemeye göre '+fark(values[i]-values[i-1])+' · önceki '+Math.min(i,4)+' deneme ortalaması '+denemeSayi(ort4(i))+m.birim:' · ilk deneme';
   const parcalar=coords.slice(1).map((p,j)=>'<line x1="'+coords[j][0]+'" y1="'+coords[j][1]+'" x2="'+p[0]+'" y2="'+p[1]+'" class="dn-seg '+yon(values[j+1],ort4(j+1))+'"/>').join('');
   const ortCizgi=points.length>2?'<polyline points="'+coords.slice(1).map((p,j)=>p[0]+','+y(ort4(j+1))).join(' ')+'" class="dn-ort"/>':'';
+  const hedefCizgi=hedef===null?'':'<line class="dn-hedef" x1="'+left+'" x2="'+(width-right)+'" y1="'+y(hedef)+'" y2="'+y(hedef)+'"/><text class="dn-hedef-yazi" x="'+(left+6)+'" y="'+(y(hedef)-5)+'">Hedef '+denemeSayi(hedef)+'</text>';
+  // One unbroken line under the coloured segments: the series is continuous whatever the dates are.
+  const surekli=points.length>1?'<polyline points="'+line+'" class="dn-cizgi"/>':'';
+  const nokta=opt.ac?'data-dn-yol':'data-dn-dot';
   return '<div class="dn-chart"><svg viewBox="0 0 '+width+' '+height+'" role="group" aria-label="Deneme gelişim grafiği. Noktaları seçerek sonuçları inceleyin.">'+
     ticks.map(t=>'<line x1="'+left+'" y1="'+y(t)+'" x2="'+(width-right)+'" y2="'+y(t)+'" class="dn-grid"/><text x="'+(left-8)+'" y="'+(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
-    '<polygon points="'+left+','+(height-bottom)+' '+line+' '+coords.at(-1)[0]+','+(height-bottom)+'" class="dn-area"/>'+ortCizgi+parcalar+
-    points.map((r,i)=>{const kaynak=r.genel?' · '+r.genel+' denemesinden':'';return '<circle class="dn-dot '+(i?yon(values[i],values[i-1]):'esit')+(r.genel?' genel':'')+'" tabindex="0" role="button" aria-label="'+kacis(r.ad+kaynak+' '+r.tarih+' '+denemeSayi(val(r))+m.birim+egilim(i))+'" data-dn-dot="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad+kaynak+' · '+r.tarih+' · '+denemeSayi(val(r))+m.birim+egilim(i))+'</title></circle>';}).join('')+
+    '<polygon points="'+left+','+(height-bottom)+' '+line+' '+coords.at(-1)[0]+','+(height-bottom)+'" class="dn-area"/>'+hedefCizgi+ortCizgi+surekli+parcalar+
+    points.map((r,i)=>{const kaynak=r.genel?' · '+r.genel+' denemesinden':'';return '<circle class="dn-dot '+(i?yon(values[i],values[i-1]):'esit')+(r.genel?' genel':'')+'" tabindex="0" role="button" aria-label="'+kacis(r.ad+kaynak+' '+r.tarih+' '+denemeSayi(val(r))+m.birim+egilim(i))+'" '+nokta+'="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad+kaynak+' · '+r.tarih+' · '+denemeSayi(val(r))+m.birim+egilim(i))+'</title></circle>';}).join('')+
     '<text x="'+left+'" y="'+(height-10)+'">'+points[0].tarih+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?points.at(-1).tarih:'')+'</text></svg>'+
     (eksik?'<p class="mini">'+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.</p>':'')+'</div>';
 }
-// Haftalar haritasının yanındaki deneme gelişimi. Üstteki seçim TYT, AYT ya da bir branştır
-// (EK.denemeYol, EK.denemeYolBrans = "TYT:mat"). Eksenler baştan sabittir: x dönem başından
-// YKS tarihine, y 0’dan seçimin soru sayısına (TYT 120, AYT 80, branşta o dersin soruları).
-// Her yeni deneme kendi tarihine düşer, çizgi zamanla YKS’ye doğru uzar. Branşta TYT/AYT
-// denemelerinin o dersteki bölümleri içi boş noktadır. Dönem başından önceki son deneme (ör. bir
-// hazırbulunuşluk) grafiğin ilk gününde, gerçek tarihiyle etiketli başlangıç noktasıdır; daha
-// eskileri yalnızca Denemelerim’dedir. Hedef net her seçim için ayrıdır
+// Eksen yardımcıları ve branş listesi öğretmenin ortalama grafiğiyle (denemeYolSvg) ortaktır. Öğrencinin ana sayfadaki
+// grafiği Denemelerim’in grafiğidir (denemeAnaGrafigi, aşağıda). Hedef net her seçim için ayrıdır
 // (o.denemeHedef = {TYT, AYT, "TYT:mat", …}); eski tek sayı TYT hedefidir.
 const DENEME_AY = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 const DENEME_YOL_UST = {TYT:120,AYT:80};
@@ -538,20 +623,6 @@ const DENEME_YOL_UST = {TYT:120,AYT:80};
 function denemeYolBranslari(o) {
   const alan=DENEME_ALAN[o?.alan]?o.alan:'SAY';
   return [['TYT',DENEME_DERSLER.TYT.filter(d=>d[0]!=='sf').concat(DENEME_GRUPLAR.TYT)],['AYT',DENEME_DERSLER.AYT.filter(d=>d[0]!=='sf' && DENEME_ALAN[alan].includes(d[0])).concat(denemeAlanGruplari(alan))]];
-}
-// AYT toplamı seçilen alana göre (Denemelerim’in Alan seçimiyle ortak); öğrencinin alanı önceden seçilidir.
-// AYT hedefi öğrencinin kendi alanınındır; başka alana bakarken hedef gösterilmez.
-function denemeYolSecimi(o) {
-  const tur=['TYT','AYT','BRANS'].includes(EK.denemeYol)?EK.denemeYol:'TYT';
-  if(tur==='AYT'){
-    const kendi=DENEME_ALAN[o?.alan]?o.alan:'SAY',alan=DENEME_ALAN[EK.denemeAlan]?EK.denemeAlan:kendi;
-    return {tur,anahtar:'AYT',ust:DENEME_YOL_UST.AYT,ad:'AYT '+alan,alan,hedefYok:alan!==kendi};
-  }
-  if(tur!=='BRANS')return {tur,anahtar:tur,ust:DENEME_YOL_UST[tur],ad:tur};
-  const liste=denemeYolBranslari(o),[oturum,kod]=String(EK.denemeYolBrans || '').split(':');
-  const grup=liste.find(g=>g[0]===oturum),ders=grup?.[1].find(d=>d[0]===kod) || liste[0][1].find(d=>d[0]==='mat');
-  const ot=grup && grup[1].includes(ders)?oturum:'TYT';
-  return {tur,anahtar:ot+':'+ders[0],oturum:ot,kod:ders[0],ust:ders[2],ad:ot+' '+ders[1]};
 }
 function denemeHedefOku(o,anahtar) {
   const h=o?.denemeHedef,v=typeof h==='number'?(anahtar==='TYT'?h:undefined):h && typeof h==='object'?h[anahtar]:undefined;
@@ -561,23 +632,6 @@ function denemeHedefOku(o,anahtar) {
 function denemeYolEksen(ust,enAz,enCok) {
   const tepe=Math.max(ust,enCok),adim=[1,2,4,5,10,20,25,50].find(a=>tepe/a<=7) || 100;
   return {adim,ust:Math.ceil(tepe/adim)*adim,alt:Math.min(0,Math.floor(enAz/adim)*adim)};
-}
-function denemeYolVerisi(si) {
-  const o=D.ogr[si];if(!o)return null;
-  const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
-  if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return null;
-  const secim=denemeYolSecimi(o),alan=secim.alan || (DENEME_ALAN[o.alan]?o.alan:'SAY'),tum=denemeListe(si);
-  let liste;
-  if(secim.tur==='TYT')liste=tum.filter(r=>r.tur==='TYT');
-  else if(secim.tur==='AYT')liste=tum.filter(r=>r.tur==='AYT' && (r.id.startsWith('p:') || r.alan===alan));
-  else liste=[...tum.filter(r=>r.tur==='BRANS' && r.oturum===secim.oturum && r.brans===secim.kod),...denemeGenelBolumleri(tum,secim.oturum,secim.kod)];
-  let noktalar=liste.map(r=>({r,g:gunNo(r.tarih),v:denemeToplam(r,alan)}));
-  const sira=(a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id),eskiler=noktalar.filter(n=>n.g<bas).sort(sira),baslangic=eskiler.at(-1);
-  noktalar=noktalar.filter(n=>n.g>=bas && n.g<=son).sort(sira);
-  if(baslangic)noktalar.unshift({...baslangic,g:bas,erken:true});
-  const once=Math.max(0,eskiler.length-1);
-  const hedef=secim.hedefYok?null:denemeHedefOku(o,secim.anahtar),degerler=noktalar.map(n=>n.v);
-  return {o,bas,son,secim,noktalar,once,baslangic:baslangic?.r,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
 }
 // "Hedef" yazısı çizginin solunda durur; orada deneme noktası varsa sağa, YKS çizgisinin yanına geçer.
 function denemeHedefYazisi(hedef,noktalar,sol,sag,yH,r1,yksAlt) {
@@ -615,9 +669,14 @@ let DENEME_YOL_ZAMAN=null;
 function denemeYolSigdir() {
   (document.querySelectorAll ? Array.from(document.querySelectorAll('.dn-yol .yg-alan')) : []).forEach(alan=>{
     if(!alan || !alan.clientWidth || !alan.clientHeight)return;
+    // The student's home chart is Denemelerim's own chart, drawn at the card's width (text keeps its size).
+    if(alan.dataset.ana){
+      if(Math.abs(alan.clientWidth-Number(alan.dataset.w))<4)return;
+      alan.dataset.w=String(alan.clientWidth);alan.innerHTML=denemeAnaSvg(Number(alan.dataset.si),alan.clientWidth);return;
+    }
     const s=Math.max(1,Math.min(1.35,alan.clientWidth/520)),W=Math.round(Math.max(300,alan.clientWidth/s)),H=Math.round(Math.max(200,Math.min(700,alan.clientHeight*W/alan.clientWidth)));
     if(Math.abs(W-Number(alan.dataset.w))<4 && Math.abs(H-Number(alan.dataset.h))<4)return;
-    const v=alan.dataset.ort?denemeOrtalamaVerisi():denemeYolVerisi(Number(alan.dataset.si));if(!v)return;
+    const v=denemeOrtalamaVerisi();if(!v)return;
     alan.dataset.w=String(W);alan.dataset.h=String(H);alan.innerHTML=denemeYolSvg(v,H,W);
   });
 }
@@ -626,21 +685,43 @@ function denemeYolSigdirPlanla() {
   window.cancelAnimationFrame(DENEME_YOL_ZAMAN);DENEME_YOL_ZAMAN=window.requestAnimationFrame(denemeYolSigdir);
 }
 if(typeof window!=='undefined' && window.addEventListener)window.addEventListener('resize',denemeYolSigdirPlanla);
-function denemeYolGrafigi(si=EK.ogr) {
-  const v=denemeYolVerisi(si);if(!v)return '';
-  const {secim,noktalar,hedef}=v,hedefUst=secim.ust;
+// Student home: "Deneme gelişimi" is the personal Deneme panosu's chart (denemeGrafik, as in Denemelerim) over the same
+// list (denemeListe → denemeGrafikListesi), with the same TYT / AYT / Branş choice (EK.denemeTur, EK.denemeOturum,
+// EK.denemeBrans, EK.denemeAlan are shared with Denemelerim). Every exam sits on its real date in one continuous line;
+// there is no term-start folding. The goal (o.denemeHedef, per choice) is a line of the same chart.
+function denemeAnaSecimi(o) {
+  const tur=['TYT','AYT','BRANS'].includes(EK.denemeTur)?EK.denemeTur:'TYT',kendi=DENEME_ALAN[o?.alan]?o.alan:'SAY';
+  if(tur==='AYT'){
+    const alan=DENEME_ALAN[EK.denemeAlan]?EK.denemeAlan:kendi;
+    return {tur,anahtar:'AYT',ust:DENEME_YOL_UST.AYT,ad:'AYT '+alan,alan,hedefYok:alan!==kendi};
+  }
+  if(tur==='TYT')return {tur,anahtar:'TYT',ust:DENEME_YOL_UST.TYT,ad:'TYT',alan:kendi};
+  const liste=denemeYolBranslari(o),oturum=EK.denemeOturum==='AYT'?'AYT':'TYT',grup=liste.find(g=>g[0]===oturum)[1];
+  const ders=grup.find(d=>d[0]===EK.denemeBrans) || grup[0];
+  return {tur,anahtar:oturum+':'+ders[0],oturum,kod:ders[0],ust:ders[2],ad:oturum+' '+ders[1],alan:kendi};
+}
+function denemeAnaVerisi(si) {
+  const o=D.ogr[si];if(!o)return null;
+  const secim=denemeAnaSecimi(o),tum=denemeListe(si);
+  const liste=denemeGrafikListesi(tum,{tur:secim.tur,oturum:secim.oturum,brans:secim.kod,alan:secim.alan,genelVar:secim.tur==='BRANS' && (!!denemeGrubu(secim.oturum,secim.kod) || EK.denemeGenel!==false)});
+  return {o,secim,liste,hedef:secim.hedefYok?null:denemeHedefOku(o,secim.anahtar)};
+}
+function denemeAnaSvg(si,genislik) {
+  const v=denemeAnaVerisi(si);if(!v)return '';
+  return denemeGrafik(v.liste,{metrik:'net',alan:v.secim.alan,genislik,hedef:v.hedef,ac:true});
+}
+function denemeAnaGrafigi(si=EK.ogr) {
+  const v=denemeAnaVerisi(si);if(!v)return '';
+  const {secim,hedef}=v,hedefUst=secim.ust;
   denemeYolSigdirPlanla();
   const secici='<div class="yg-secim" role="group" aria-label="Grafikte göster">'+[['TYT','TYT'],['AYT','AYT'],['BRANS','Branş']].map(([k,ad])=>
-    '<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-yol-sec="'+k+'">'+ad+'</button>').join('')+'</div>'+
+    '<button type="button" class="'+(secim.tur===k?'secili':'')+'" aria-pressed="'+(secim.tur===k)+'" data-dn-ana-tur="'+k+'">'+ad+'</button>').join('')+'</div>'+
     (secim.tur==='AYT'?'<div class="yg-secim" role="group" aria-label="Alan">'+Object.keys(DENEME_ALAN).map(a=>
-      '<button type="button" class="'+(secim.alan===a?'secili':'')+'" aria-pressed="'+(secim.alan===a)+'" data-dn-yol-alan="'+a+'">'+a+'</button>').join('')+'</div>':'')+
-    (secim.tur==='BRANS'?'<label class="yg-brans">Ders <select id="dnYolBrans">'+denemeYolBranslari(v.o).map(([ot,l])=>'<optgroup label="'+ot+'">'+
+      '<button type="button" class="'+(secim.alan===a?'secili':'')+'" aria-pressed="'+(secim.alan===a)+'" data-dn-ana-alan="'+a+'">'+a+'</button>').join('')+'</div>':'')+
+    (secim.tur==='BRANS'?'<label class="yg-brans">Ders <select id="dnAnaBrans">'+denemeYolBranslari(v.o).map(([ot,l])=>'<optgroup label="'+ot+'">'+
       l.map(d=>'<option value="'+ot+':'+d[0]+'"'+(secim.anahtar===ot+':'+d[0]?' selected':'')+'>'+kacis(d[1])+'</option>').join('')+'</optgroup>').join('')+'</select></label>':'');
-  return '<section class="kart dn-yol" aria-label="Deneme gelişimi"><div class="dn-yol-bas">'+secici+'</div>'+
-    '<div class="yg-alan" data-si="'+si+'" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div>'+
-    // Açıklama yok; yalnızca Branş’ta iki nokta türü birlikte varsa küçük bir anahtar (dolu / içi boş).
-    (secim.tur==='BRANS' && noktalar.some(n=>!n.r.genel) && noktalar.some(n=>n.r.genel)
-      ? '<p class="mini yg-lejant"><span class="yg-BRANS">branş denemesi</span> <span class="yg-genel">'+secim.oturum+' denemesinden</span></p>' : '')+
+  return '<section class="kart dn-yol dn-ana" aria-label="Deneme gelişimi"><div class="dn-yol-bas">'+secici+'</div>'+
+    '<div class="yg-alan" data-ana="1" data-si="'+si+'" data-w="520">'+denemeAnaSvg(si,520)+'</div>'+
     (ogrenciMi() && !secim.hedefYok?'<label class="yg-hedef-sec">Hedef belirle <input type="number" id="dnHedef" data-anahtar="'+secim.anahtar+'" min="0" max="'+hedefUst+'" step="1" inputmode="numeric" value="'+(hedef===null?'':hedef)+'" placeholder="—" aria-label="'+kacis(secim.ad)+' hedef net (0–'+hedefUst+')"> net <small>'+kacis(secim.ad)+'</small></label>':'')+'</section>';
 }
 // Öğretmen ana sayfası ve Denemeler: okul denemelerinin (PDF’den aktarılan) ortalaması, öğrencinin
@@ -783,7 +864,9 @@ function denemeFormHtml() {
 function denemeImportHtml() {
   if(!DENEME_IMPORT || !rehberMi())return '';
   return '<section class="kart dn-panel"><h2>Aktarmadan önce kontrol et</h2>'+
-    DENEME_IMPORT.map((p,pi)=>'<div class="dn-import"><b>'+kacis(p.dosya || p.ad)+'</b>'+(p.yz?'<br><span class="yz-rozet">Yapay zekâ ile okundu · değerleri dosyayla karşılaştırın</span>':'')+(p.uyarilar?.length?'<ul class="yz-uyarilar">'+p.uyarilar.map(u=>'<li>'+kacis(u)+'</li>').join('')+'</ul>':'')+'<div class="arac"><label>Sınav adı <input data-dn-rapor="'+pi+'" data-alan="ad" maxlength="120" value="'+kacis(p.ad)+'"></label><label>Tarih <input type="date" data-dn-rapor="'+pi+'" data-alan="tarih" value="'+p.tarih+'"></label></div><div class="dn-scroll"><table><thead><tr><th>Aktar</th><th>Dosyadaki öğrenci</th><th>Hedef öğrenci</th><th>Oturum</th><th>Net</th><th>Kontrol</th></tr></thead><tbody>'+p.satirlar.map((r,ri)=>'<tr><td><input type="checkbox" aria-label="'+kacis(r.ad+' '+r.oturum+' aktar')+'" data-dn-import="'+pi+':'+ri+'"'+(r.secili?' checked':'')+'></td><td>'+(r.no??'—')+' · '+kacis(r.ad)+'</td><td><select aria-label="Hedef öğrenci" data-dn-match="'+pi+':'+ri+'"><option value="-1">Eşleşmedi</option>'+canliOgrenciler().map(si=>'<option value="'+si+'"'+(si===r.si?' selected':'')+'>'+kacis(D.ogr[si].no+' · '+D.ogr[si].ad)+'</option>').join('')+'</select></td><td>'+r.oturum+'</td><td>'+denemeSayi(denemeToplam(denemePdfKaydi(p,r),D.ogr[r.si]?.alan || 'SAY'))+'</td><td>'+kacis(r.uyari || 'Hazır')+'</td></tr>').join('')+'</tbody></table></div></div>').join('')+
+    DENEME_IMPORT.map((p,pi)=>'<div class="dn-import"><b>'+kacis(p.dosya || p.ad)+'</b>'+(p.yz?'<br><span class="yz-rozet">Yapay zekâ ile okundu · değerleri dosyayla karşılaştırın</span>':'')+(p.uyarilar?.length?'<ul class="yz-uyarilar">'+p.uyarilar.map(u=>'<li>'+kacis(u)+'</li>').join('')+'</ul>':'')+'<div class="arac"><label>Sınav adı <input data-dn-rapor="'+pi+'" data-alan="ad" maxlength="120" value="'+kacis(p.ad)+'"></label>'+(p.cift
+      ?['TYT','AYT'].map(o=>'<label>'+o+' tarihi <input type="date" data-dn-rapor="'+pi+'" data-alan="tarih'+o+'" value="'+kacis(denemeRaporTarihi(p,o))+'" aria-label="'+o+' sınav tarihi"></label>').join('')+'<span class="mini">Dosya TYT ve AYT için tek tarih veriyor; her oturumun gerçek gününü kontrol edin.</span>'
+      :'<label>Tarih <input type="date" data-dn-rapor="'+pi+'" data-alan="tarih" value="'+p.tarih+'"></label>')+'</div><div class="dn-scroll"><table><thead><tr><th>Aktar</th><th>Dosyadaki öğrenci</th><th>Hedef öğrenci</th><th>Oturum</th><th>Net</th><th>Kontrol</th></tr></thead><tbody>'+p.satirlar.map((r,ri)=>'<tr><td><input type="checkbox" aria-label="'+kacis(r.ad+' '+r.oturum+' aktar')+'" data-dn-import="'+pi+':'+ri+'"'+(r.secili?' checked':'')+'></td><td>'+(r.no??'—')+' · '+kacis(r.ad)+'</td><td><select aria-label="Hedef öğrenci" data-dn-match="'+pi+':'+ri+'"><option value="-1">Eşleşmedi</option>'+canliOgrenciler().map(si=>'<option value="'+si+'"'+(si===r.si?' selected':'')+'>'+kacis(D.ogr[si].no+' · '+D.ogr[si].ad)+'</option>').join('')+'</select></td><td>'+r.oturum+'</td><td>'+denemeSayi(denemeToplam(denemePdfKaydi(p,r),D.ogr[r.si]?.alan || 'SAY'))+'</td><td>'+kacis(r.uyari || 'Hazır')+'</td></tr>').join('')+'</tbody></table></div></div>').join('')+
     '<div class="arac"><button class="dugme birincil" id="dnImportKaydet">Seçilen sonuçları kaydet ve yayınla</button><button class="dugme" id="dnImportIptal">Vazgeç</button></div></section>';
 }
 // Teacher: Denemeler is the class Deneme panosu (src/denemepano.js). A student opens from it (the student card, the
@@ -813,16 +896,18 @@ function denemeKisiSecici() {
   return '<label class="et-seg"><span class="et-seg-label">Öğrenci panosu</span><select id="dpOgrAc" aria-label="Bir öğrencinin kendi Deneme panosunu aç"><option value="">Öğrenci seç…</option>'+
     Object.keys(gruplar).sort().map(su=>'<optgroup label="'+kacis(su)+'">'+gruplar[su].map(i=>'<option value="'+i+'">'+kacis(D.ogr[i].ad)+'</option>').join('')+'</optgroup>').join('')+'</select></label>';
 }
+// Teacher: the student's own screen lacks school-list exams nobody has published yet (no denemeOkul copy).
+function denemeEksikSatiri(si) {
+  const n=yalnizcaGoruntuleme()?0:denemeEksikSayisi(si);
+  return n?'<p class="dn-eksik" id="dnEksik" role="status">Bu öğrencinin ekranında '+n+' deneme eksik · <button type="button" class="et-dugme" id="dnEksikGonder" data-si="'+si+'">Öğrencilere gönder</button></p>':'';
+}
 function gorunumDenemeler() {
   const rehber=rehberMi(),kisiAcik=denemeKisiAcikMi();
   if(rehber && !kisiAcik && typeof gorunumDenemePanosu==='function')return gorunumDenemePanosu();
   const tur=EK.denemeTur || 'TYT',oturum=EK.denemeOturum || 'TYT',brans=EK.denemeBrans || DENEME_DERSLER[oturum][0][0],alan=denemeAlan(),tum=denemeListe();
   const grupSecili=tur==='BRANS' && !!denemeGrubu(oturum,brans);
   const metrik=denemeMetrik(),genelAcik=tur==='BRANS' && (grupSecili || EK.denemeGenel!==false),genelVar=genelAcik && metrik==='net';
-  let liste=tum.filter(r=>r.tur===tur && (tur!=='BRANS'||r.oturum===oturum && r.brans===brans));
-  if(tur==='AYT')liste=liste.filter(r=>r.id.startsWith('p:') || r.alan===alan);
-  // Süre and publisher score belong to the whole TYT/AYT exam, so sections join the net chart only.
-  if(genelVar)liste=[...liste,...denemeGenelBolumleri(tum,oturum,brans)].sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.id.localeCompare(b.id));
+  let liste=denemeGrafikListesi(tum,{tur,oturum,brans,alan,genelVar});
   if(EK.denemeBas)liste=liste.filter(r=>r.tarih>=EK.denemeBas);if(EK.denemeSon)liste=liste.filter(r=>r.tarih<=EK.denemeSon);
   const son=liste.at(-1),selected=liste.find(r=>r.id===EK.denemeSecili)||son,genelSayi=liste.filter(r=>r.genel).length;
   // With the net/dk chart selected the summary follows it, over exams that have a time.
@@ -838,7 +923,7 @@ function gorunumDenemeler() {
   const rehberKisi=rehber?'<header class="et-bas"><h1 class="et-baslik">Deneme Panosu · '+kacis(D.ogr[EK.ogr].ad)+'</h1><p class="et-cumle">'+kacis(D.ogr[EK.ogr].sube || '')+' · '+kacis(D.ogr[EK.ogr].alan || '')+' · yalnızca bu öğrencinin sonuçları</p></header>'+
     '<div class="et-arac"><button type="button" class="et-dugme" id="dpSinifaDon">← Sınıf panosu</button>'+ogrSecici()+
     (typeof ANALIZ!=='undefined' && D.ogr[EK.ogr].no?'<button type="button" class="et-dugme" data-ogrenci-karti="'+kacis(String(D.ogr[EK.ogr].no))+'">Öğrenci kartı →</button>':'')+
-    '<button type="button" class="et-dugme" data-ogr-gor="'+EK.ogr+'" title="Öğrencinin uygulamada gördüğü ekranı aç">Öğrencinin ekranı</button></div>':'<header class="et-bas"><h1 class="et-baslik">Deneme Panosu</h1></header>';
+    '<button type="button" class="et-dugme" data-ogr-gor="'+EK.ogr+'" title="Öğrencinin uygulamada gördüğü ekranı aç">Öğrencinin ekranı</button></div>'+denemeEksikSatiri(EK.ogr):'<header class="et-bas"><h1 class="et-baslik">Deneme Panosu</h1></header>';
   return '<div id="dpKok" class="dn-kisisel'+(rehber?' dn-ogretmen':'')+'">'+rehberKisi+
     '<p id="dnDurum" role="status" aria-live="polite">'+kacis(EK.denemeDurum || '')+'</p>'+denemeImportHtml()+
     '<div class="dn-tabs et-arac"><div class="et-seg" role="group" aria-label="Deneme türü"><span class="et-seg-label">Oturum</span>'+['TYT','AYT','BRANS'].map(t=>'<button class="dugme '+(tur===t?'birincil':'')+'" aria-pressed="'+(tur===t)+'" data-dn-tur="'+t+'">'+(t==='BRANS'?'Branş denemeleri':t)+'</button>').join('')+'</div><button class="dugme et-dugme birincil dn-ekle" id="dnEkle">+ Deneme ekle</button></div>'+
@@ -874,9 +959,10 @@ async function denemeTopluYerelKaydet(staged) {
 }
 // Publishes every student whose school results wait for publishing; a failed one stays queued.
 // First it also stages the school-list rows no student copy exists for yet ("PDF ekle" lists, older lists), so one click backfills.
-async function denemeBekleyenleriYayinla(ilerleme=()=>{}) {
-  const hazir=denemeListeKopyalariniHazirla();
-  const defter=D,bekleyen=D.ogr.map((o,i)=>({o,i})).filter(x=>!x.o.silindi && x.o.denemeYayinBekliyor);let tamam=0;const errors=[];
+// yalniz: a student's index publishes only that student (the "Öğrencilere gönder" line of the per-student panosu).
+async function denemeBekleyenleriYayinla(ilerleme=()=>{},yalniz) {
+  const hazir=denemeListeKopyalariniHazirla(yalniz);
+  const defter=D,bekleyen=D.ogr.map((o,i)=>({o,i})).filter(x=>!x.o.silindi && x.o.denemeYayinBekliyor && (yalniz===undefined || x.i===yalniz));let tamam=0;const errors=[];
   for(const {o,i} of bekleyen){if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');ilerleme('Yayınlanıyor: '+(tamam+errors.length+1)+' / '+bekleyen.length);try{await denemeOkulYayinla(i);tamam++;}catch(e){errors.push(o.ad+': '+e.message);}}
   if(!await kaydet(true))throw new Error('Yayın durumu cihaza kaydedilemedi; tekrar deneyin.');
   const liste=(hazir.kopya?' Okul listelerinden '+hazir.ogrenci+' öğrenci için '+hazir.kopya+' sonuç eklendi.':'')+
@@ -894,7 +980,7 @@ async function denemeOkulTarihTasi(ad,eskiTarihler,yeniTarih) {
   let sayi=0;
   D.ogr.forEach(o=>{
     if(!o || o.silindi)return;
-    const tasinan=(o.denemeOkul || []).filter(r=>!r.silindi && denemeAdAnahtari(r.ad)===anahtar && eskiTarihler.includes(r.tarih) && r.tarih!==yeniTarih);
+    const tasinan=(o.denemeOkul || []).filter(r=>!r.silindi && denemeSinavAnahtari(r.ad)===denemeSinavAnahtari(ad) && eskiTarihler.includes(r.tarih) && r.tarih!==yeniTarih);
     if(!tasinan.length)return;
     const yeni=tasinan.flatMap(r=>{const z=Math.max(ts,r.ts+1);
       return r.id===pdfId(r.tarih,r.oturum)?[{...r,silindi:true,ts:z},{...r,id:pdfId(yeniTarih,r.oturum),tarih:yeniTarih,ts:z}]:[{...r,tarih:yeniTarih,ts:z}];});
@@ -902,6 +988,38 @@ async function denemeOkulTarihTasi(ad,eskiTarihler,yeniTarih) {
   });
   if(sayi && !await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kaydedilemedi; öğrenci sonuçları taşınmadı.');}
   return sayi;
+}
+// One-time repair of published copies: a copy whose date differs from the school list's date for the same exam name and session
+// (the list row of this very student). Only copies are looked at, never a student's own entries (the dedupe hides those).
+function denemeTarihFarklari() {
+  if(!rehberMi())return [];
+  const cikti=[];
+  D.ogr.forEach((o,si)=>{
+    if(!o || o.silindi)return;
+    const satirlar=denemeOkulListeSatirlari(o.no,o.ad);
+    if(!satirlar.length)return;
+    for(const r of o.denemeOkul || []){
+      if(r.silindi || !String(r.id).startsWith('p:'))continue;
+      const satir=denemeEnYakin(r,satirlar);
+      if(satir && satir.tarih!==r.tarih)cikti.push({si,kopya:r,tarih:satir.tarih});
+    }
+  });
+  return cikti;
+}
+// Moves those copies to the list's date (a copy of the other date already there is kept and this one removed), queued for
+// publishing. Returns {kopya, ogrenci}; a failed save puts every student back.
+async function denemeTarihleriniOnar() {
+  if(!rehberMi() || yalnizcaGoruntuleme())throw new Error('Yalnızca rehber öğretmen onarabilir.');
+  const farklar=denemeTarihFarklari(),once=JSON.stringify(D.ogr),ts=Date.now(),ogrenciler=new Set();
+  const pdfId=(r,t)=>'p:'+encodeURIComponent([denemeAdAnahtari(r.ad),t,r.oturum].join('|'));
+  for(const {si,kopya:r,tarih} of farklar){
+    const o=D.ogr[si],varMi=(o.denemeOkul || []).some(x=>!x.silindi && x.id!==r.id && denemeAyniSinav(x,r) && x.tarih===tarih);
+    const z=Math.max(ts,r.ts+1);
+    const yeni=r.id===pdfId(r,r.tarih)?(varMi?[{...r,silindi:true,ts:z}]:[{...r,silindi:true,ts:z},{...r,id:pdfId(r,tarih),tarih,ts:z}]):(varMi?[{...r,silindi:true,ts:z}]:[{...r,tarih,ts:z}]);
+    o.denemeOkul=denemeBirlestir(o.denemeOkul,yeni);o.denemeYayinBekliyor=true;ogrenciler.add(si);
+  }
+  if(farklar.length && !await kaydet(true)){D.ogr=JSON.parse(once);throw new Error('Cihaza kaydedilemedi; tarihler onarılmadı.');}
+  return {kopya:farklar.length,ogrenci:ogrenciler.size};
 }
 // Deletes the published school copies of one exam for every student (Sıralamalar → Sil, or "Öğrencilerden kaldır"):
 // the records with this name and one of these dates (ISO; and this session when given) become deleted rows, queued
@@ -981,11 +1099,11 @@ document.addEventListener('click',async ev=>{
   const el=ev.target.closest?.('button,[data-dn-dot],[data-dn-yol]');if(!el)return;
   if(el.dataset.dnDot){denemeNoktaSec(el.dataset.dnDot);return;}
   if(el.dataset.dnYol){denemeYolAc(el.dataset.dnYol);return;}
-  if(el.dataset.dnYolSec){EK.denemeYol=el.dataset.dnYolSec;ciz();document.querySelector('[data-dn-yol-sec="'+EK.denemeYol+'"]')?.focus();return;}
+  if(el.dataset.dnAnaTur){EK.denemeTur=el.dataset.dnAnaTur;ciz();document.querySelector('[data-dn-ana-tur="'+EK.denemeTur+'"]')?.focus();return;}
   if(el.dataset.dnOrtTur){EK.anaDenemeTur=el.dataset.dnOrtTur;ciz();document.querySelector('[data-dn-ort-tur="'+EK.anaDenemeTur+'"]')?.focus();return;}
   if(el.dataset.dnOrtMod){EK.anaGrupMod=el.dataset.dnOrtMod==='genel'?'genel':'deneme';ciz();document.querySelector('[data-dn-ort-mod="'+EK.anaGrupMod+'"]')?.focus();return;}
   if(el.dataset.dnOrtAlan && DENEME_ALAN[el.dataset.dnOrtAlan]){EK.anaDenemeAlan=el.dataset.dnOrtAlan;ciz();document.querySelector('[data-dn-ort-alan="'+EK.anaDenemeAlan+'"]')?.focus();return;}
-  if(el.dataset.dnYolAlan && DENEME_ALAN[el.dataset.dnYolAlan]){EK.denemeAlan=el.dataset.dnYolAlan;ciz();document.querySelector('[data-dn-yol-alan="'+EK.denemeAlan+'"]')?.focus();return;}
+  if(el.dataset.dnAnaAlan && DENEME_ALAN[el.dataset.dnAnaAlan]){EK.denemeAlan=el.dataset.dnAnaAlan;ciz();document.querySelector('[data-dn-ana-alan="'+EK.denemeAlan+'"]')?.focus();return;}
   if(el.dataset.dnTur){EK.denemeTur=el.dataset.dnTur;DENEME_FORM=null;ciz();return;}
   if(el.dataset.dnKaynak){
     const r=denemeListe().find(x=>x.id===el.dataset.dnKaynak);if(!r)return;
@@ -1025,12 +1143,27 @@ document.addEventListener('click',async ev=>{
       }ciz();
     }catch(e){denemeDurum(e.message);}return;
   }
-  if(el.id==='dnImportKaydet' || el.id==='dnYayinla'){
+  if(el.id==='dnTarihOnar'){
+    if(!rehberMi() || DENEME_ISLEM)return;DENEME_ISLEM=true;el.disabled=true;
+    try{
+      const r=await denemeTarihleriniOnar();let mesaj=r.kopya+' sonucun tarihi okul listesine göre düzeltildi ('+r.ogrenci+' öğrenci).';
+      denemeDurum(mesaj+' Yayınlanıyor…');ciz();
+      try{mesaj+=' '+await denemeBekleyenleriYayinla(denemeDurum)}catch(e){mesaj+=' Yayınlanamadı, cihazda kayıtlı ve yayın bekliyor: '+e.message}
+      denemeDurum(mesaj);ciz();
+    }catch(e){denemeDurum(e.message);}finally{DENEME_ISLEM=false;el.disabled=false;}return;
+  }
+  if(el.id==='dnImportKaydet' || el.id==='dnYayinla' || el.id==='dnEksikGonder'){
     if(!rehberMi())return;DENEME_ISLEM=true;el.disabled=true;const defter=D;
     let srNot='';
     try {
       if(el.id==='dnImportKaydet'){
         // Sıralamalar keeps the school's whole list, even when no student row is selected here.
+        // The lists keep the days the teacher confirmed: one day for a plain file, a day per session for a combined one.
+        const iki=iso=>iso?iso.slice(8)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4):'';
+        for(const p of DENEME_IMPORT || [])if(p.siralama){
+          if(p.cift)p.siralama.tarihler={TYT:iki(p.oturumTarihleri.TYT),AYT:iki(p.oturumTarihleri.AYT)};
+          else if(p.tarih)p.siralama.tarih=iki(p.tarih);
+        }
         const listeler=(DENEME_IMPORT || []).map(p=>p.siralama).filter(Boolean);
         if(listeler.length){try{await siralamaKaydet(listeler);srNot=' Sıralama listesi Sıralamalar’a eklendi.';}catch(e){srNot=' Sıralama listesi eklenemedi: '+e.message;}}
         if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');
@@ -1039,13 +1172,14 @@ document.addEventListener('click',async ev=>{
           if(!D.ogr[row.si] || D.ogr[row.si].silindi)throw new Error('Seçilen her satıra hedef öğrenci atayın.');
           if(row.hedefKimlik!==denemeHedefKimligi(D.ogr[row.si]))throw new Error('Öğrenci listesi değişti. PDF’yi yeniden seçip eşleşmeleri kontrol edin.');
           const r=denemePdfKaydi(p,row),old=staged.get(row.si)||D.ogr[row.si].denemeOkul||[],same=old.find(x=>x.id===r.id);
-          if(same)r.ts=Math.max(r.ts,same.ts+1);staged.set(row.si,denemeBirlestir(old,[r]));
+          if(same)r.ts=Math.max(r.ts,same.ts+1);
+          staged.set(row.si,denemeKayitDegistir(old,r));
         }
         if(!staged.size)throw new Error('Aktarılacak sonuç seçilmedi.');
         await denemeTopluYerelKaydet(staged);
         DENEME_IMPORT=null;
       }
-      denemeDurum(await denemeBekleyenleriYayinla(denemeDurum)+srNot);ciz();
+      denemeDurum(await denemeBekleyenleriYayinla(denemeDurum,el.id==='dnEksikGonder'?Number(el.dataset.si):undefined)+srNot);ciz();
     }catch(e){denemeDurum(e.message+srNot);}finally{DENEME_ISLEM=false;el.disabled=false;}return;
   }
 });
@@ -1064,9 +1198,12 @@ document.addEventListener('change',async ev=>{
     else{try{denemeImportHedefDegistir(p,r,Number(el.value));}catch(e){row.secili=false;denemeDurum(e.message);}ciz();}
     return;
   }
-  if(el.dataset?.dnRapor!==undefined){DENEME_IMPORT[Number(el.dataset.dnRapor)][el.dataset.alan]=el.value;return;}
+  if(el.dataset?.dnRapor!==undefined){
+    const p=DENEME_IMPORT[Number(el.dataset.dnRapor)],alan=el.dataset.alan;
+    if(alan==='tarihTYT' || alan==='tarihAYT')p.oturumTarihleri={...p.oturumTarihleri,[alan.slice(5)]:el.value};else p[alan]=el.value;
+    return;}
   if(id==='dnGenel'){EK.denemeGenel=el.checked;ciz();return;}
-  if(id==='dnYolBrans'){EK.denemeYolBrans=el.value;ciz();document.getElementById('dnYolBrans')?.focus();return;}
+  if(id==='dnAnaBrans'){const [ot,kod]=el.value.split(':');if(DENEME_DERSLER[ot]){EK.denemeOturum=ot;EK.denemeBrans=kod;}ciz();document.getElementById('dnAnaBrans')?.focus();return;}
   if(id==='dnOrtSinif'){EK.anaSinif=Number(el.value);EK.anaSube='';ciz();document.getElementById('dnOrtSinif')?.focus();return;}
   if(id==='dnOrtSube'){EK.anaSube=el.value;ciz();document.getElementById('dnOrtSube')?.focus();return;}
   if(id==='dnOrtGrup'){EK.anaGrup=el.value;ciz();document.getElementById('dnOrtGrup')?.focus();return;}
