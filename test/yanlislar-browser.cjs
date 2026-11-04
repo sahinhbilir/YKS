@@ -202,6 +202,51 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   await page.locator('[data-yd-f="ogr"]').waitFor();await hazir();
   assert.equal(await page.locator('[data-yd-ders]').count(),5,'two TYT sections and three AYT ones');
   await noScroll('both sessions loaded');
+  // ---- Oturum and Alan: the booklet slot names both sessions, the selectors appear once both sessions are there
+  assert.match(await page.locator('.yd-dosya').nth(0).locator('label').innerText(),/Soru kitapçığı \(A\) · TYT ve AYT/);
+  assert.equal(await page.locator('.yd-dosya').nth(0).locator('.yd-ipucu').count(),1);
+  assert.equal(await page.locator('.yd-dosya').nth(0).locator('.yd-ipucu').innerText(),'','both booklets are there: no hint');
+  const sec=(f)=>page.locator('[data-yd-f="'+f+'"]');
+  assert.deepEqual(await sec('oturum').locator('option').allInnerTexts(),['TYT + AYT','TYT','AYT']);assert.equal(await sec('oturum').inputValue(),'TYT+AYT','default: both sessions');
+  assert.deepEqual(await sec('alan').locator('option').allInnerTexts(),['Öğrencinin alanı','SAY','EA','SÖZ','Tümü']);assert.equal(await sec('alan').inputValue(),'ogr');
+  const dersler=()=>page.locator('.yd-ders h3').allInnerTexts().then(t=>t.map(x=>x.replace(/\s+/g,' ')));
+  const tikler=()=>page.locator('[data-yd-ders]').evaluateAll(l=>l.map(c=>c.parentElement.textContent.trim()));
+  const alanSec=async v=>{await sec('alan').selectOption(v);await hazir()};
+  await secOgr('SENTETİK ÖĞRENCİ 4 · 9004');
+  assert.deepEqual(await page.locator('.yd-oturum').allInnerTexts(),['AYT','AYT'],'an AYT-only student: the AYT block, and the AYT part of the key');
+  await alanSec('SAY');assert.deepEqual(await dersler(),['AYT Matematik 1']);
+  assert.equal((await tikler()).filter(t=>/Edebiyat|Tarih-1/.test(t)).length,0,'SAY: the ticks of the other fields are hidden');
+  await alanSec('EA');assert.deepEqual(await dersler(),['Türk Dili ve Edebiyatı 1','Tarih-1 1','AYT Matematik 1']);
+  await alanSec('SÖZ');assert.deepEqual(await dersler(),['Türk Dili ve Edebiyatı 1','Tarih-1 1']);assert.equal((await tikler()).filter(t=>t==='AYT Matematik').length,0);
+  await alanSec('Tümü');assert.deepEqual(await dersler(),['Türk Dili ve Edebiyatı 1','Tarih-1 1','AYT Matematik 1']);
+  assert.equal(await page.locator('[data-yd-ders]').count(),5,'Tümü: every ders');
+  assert.match(await page.locator('.yd-say').innerText(),/2 yanlış · 1 boş/);
+  await alanSec('SÖZ');await page.locator('[data-yd-ders="'+(await page.locator('[data-yd-ders]').evaluateAll(l=>l.findIndex(c=>/Tarih-1/.test(c.parentElement.textContent))))+'"]').uncheck();await hazir();
+  assert.deepEqual(await dersler(),['Türk Dili ve Edebiyatı 1'],'the ders ticks work on top of the alan');assert.match(await page.locator('.yd-say').innerText(),/1 yanlış · 0 boş/);
+  await page.locator('[data-yd-ders]').evaluateAll(l=>l.forEach(c=>{if(!c.checked)c.click()}));await hazir();
+  // a student with both sessions: the TYT block first, then the AYT block, each with its ders headings; the key covers both
+  await alanSec('Tümü');await secOgr('SENTETİK ÖĞRENCİ 3 · 9302');
+  assert.deepEqual(await page.locator('.yd-oturum').allInnerTexts(),['TYT','AYT','TYT','AYT']);
+  const sirali=await page.evaluate(()=>[...document.querySelectorAll('.yd-ogr .yd-oturum,.yd-ogr .yd-ders h3,.yd-anahtar .yd-cevap caption')].map(e=>e.className==='yd-oturum'?'#'+e.textContent:e.textContent.replace(/\s+\d+$/,'')));
+  assert(sirali.indexOf('#TYT')<sirali.indexOf('#AYT'),'TYT before AYT: '+sirali.join('|'));
+  // Oturum: TYT only hides the alan selector and the AYT ticks; AYT only drops the TYT ones
+  await sec('oturum').selectOption('TYT');await hazir();
+  assert.equal(await sec('alan').count(),0,'no alan for TYT only');assert.deepEqual(await page.locator('.yd-oturum').allInnerTexts(),['TYT','TYT']);
+  assert.equal((await tikler()).some(t=>/Edebiyat|Tarih-1/.test(t)),false);
+  await sec('oturum').selectOption('AYT');await hazir();
+  assert.equal(await sec('alan').count(),1);assert.equal((await tikler()).some(t=>/Türkçe/.test(t)),false);assert.deepEqual(await page.locator('.yd-oturum').allInnerTexts(),['AYT','AYT']);
+  // print: session headings and the key are in the printed pages, the selectors and tiers are not
+  if(width===1280){
+   await sec('oturum').selectOption('TYT+AYT');await hazir();
+   await page.emulateMedia({media:'print'});await page.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));
+   assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.yd-ogr:not(.yd-yok) .yd-oturum')].every(e=>getComputedStyle(e).display!=='none')&&document.querySelectorAll('.yd-ogr:not(.yd-yok) .yd-oturum').length>=4),true);
+   assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.yd-filtre')).display),'none','the selectors are not printed');
+   assert.doesNotMatch(await page.evaluate(()=>document.querySelector('.yd-ogr:not(.yd-yok)').textContent),/Öğrencinin alanı|SAY|SÖZ|kademe/i);
+   const pdf=await page.pdf({preferCSSPageSize:true,printBackground:true});assert(sayfaSayisi(pdf)>=2);
+   await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));await page.emulateMedia({media:'screen'});
+  }
+  await noScroll('Oturum and Alan selectors');
+  await sec('oturum').selectOption('TYT+AYT');await sec('alan').selectOption('ogr');await secOgr('SENTETİK ÖĞRENCİ 1 · 9300');
   // ---- Madde kalitesi: one compact table per ders, on screen only; the section line says how many takers and how reliable
   const satirlar=await page.locator('.yd-kalite summary').allInnerTexts();
   assert(satirlar.length>=4,satirlar.join('|'));
@@ -277,6 +322,8 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
    await page.evaluate(()=>{
     const kap=document.querySelector('#ydBaski .yd-ogr:not(.yd-yok) .yd-sorular'),ilk=kap.querySelector('.yd-soru'),H=[170,300,520,230,760,380,210,450];
     kap.querySelectorAll('.yd-soru').forEach(f=>f.remove());
+    // only this ders is measured: the session headings and the other dersler are taken out
+    const ogr0=kap.closest('.yd-ogr');ogr0.querySelectorAll('.yd-oturum').forEach(x=>x.remove());ogr0.querySelectorAll('.yd-ders').forEach(d=>{if(d!==kap.closest('.yd-ders'))d.remove()});ogr0.querySelectorAll('.yd-anahtar .yd-cevap').forEach((t,i)=>{if(i>0)t.remove()});
     for(let i=0;i<20;i++){const f=ilk.cloneNode(true),c=document.createElement('canvas');c.width=1152;c.height=H[i%H.length];const x=c.getContext('2d');x.fillStyle='#eee';x.fillRect(0,0,c.width,c.height);x.fillStyle='#222';x.font='40px Arial';x.fillText('Sentetik soru '+(i+1),30,60);x.strokeRect(2,2,c.width-4,c.height-4);
      const im=f.querySelector('img');im.removeAttribute('data-bekle');im.src=c.toDataURL();f.querySelector('figcaption b').textContent='Soru '+(i+1);kap.appendChild(f)}
     document.querySelectorAll('#ydBaski .yd-ogr').forEach((o,i)=>{if(i>0)o.remove()});

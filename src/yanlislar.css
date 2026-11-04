@@ -3,6 +3,7 @@
 #ydKok .yd-dosya{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
 #ydKok .yd-file{position:absolute;width:1px;height:1px;opacity:0}#ydKok .et-dugme{position:relative;min-height:38px}
 #ydKok .yd-durum{font-size:.8125rem;color:var(--e-fg2);min-height:1.2em;overflow-wrap:anywhere}
+#ydKok .yd-ipucu{font-size:.75rem;color:var(--e-fg2);overflow-wrap:anywhere}#ydKok .yd-ipucu:empty{display:none}
 #ydKok .yd-hata{font-size:.8125rem;color:var(--e-bad);overflow-wrap:anywhere}
 #ydKok .yd-filtre{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 #ydKok .yd-zsec{grid-column:1/-1}
@@ -24,6 +25,7 @@
 #ydKok .yd-kimlik,#ydKok .yd-say,#ydKok .yd-not{margin:0;font-size:.875rem;overflow-wrap:anywhere}
 #ydKok .yd-say{font-size:1rem}
 #ydKok .yd-not{font-weight:600}
+#ydKok .yd-oturum{font-size:1.0625rem;font-weight:700;letter-spacing:.04em;margin:6px 0 0;padding:2px 8px;border-bottom:3px solid #000;align-self:flex-start;grid-column:1/-1}
 #ydKok .yd-ders h3{font-size:1rem;font-weight:700;border-bottom:1px solid #999;padding-bottom:3px;margin-bottom:8px}
 #ydKok .yd-ders h3 span{font-weight:400;color:#444;margin-left:4px}
 #ydKok .yd-sorular{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
@@ -73,6 +75,7 @@
   #ydKok .yd-genis img{width:82%;max-width:none}
   #ydKok .yd-soru figcaption{padding-bottom:1px;gap:6px;font-size:.7rem;line-height:1.15}
   #ydKok .yd-zorluk{padding:2px 7px;font-size:.65rem}
+  #ydKok .yd-oturum{break-after:avoid;page-break-after:avoid}
   #ydKok .yd-ders h3{margin-bottom:4px;padding-bottom:2px;break-after:avoid;page-break-after:avoid}
   #ydKok .yd-soru,#ydKok .yd-ders h3,#ydKok .yd-cevap{break-inside:avoid}
   #ydKok .yd-zorluk{-webkit-print-color-adjust:exact;print-color-adjust:exact}
