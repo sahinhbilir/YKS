@@ -6,7 +6,7 @@ cut out of the A booklet as pictures, so the student can solve them again.
 
 ## Files
 
-Three inputs, each with a short ✓ status once read. None of these files or the generated notebooks are stored: not in localStorage, not in the notebook
+Three inputs and one optional fourth, each with a short ✓ status once read. None of these files or the generated notebooks are stored: not in localStorage, not in the notebook
 (`D`), not in Firestore, and nothing is sent anywhere. The files stay in the page's memory; reloading or logging out
 clears them, and uploading again is how the teacher reprints.
 
@@ -24,6 +24,14 @@ clears them, and uploading again is how the teacher reprints.
 3. **Çözüm kitapçığı**, PDF with "A-n / B-m" labels. Needed only for B students; it goes to the session whose question count it matches, and may exist for TYT only (AYT B students then get the numbers-only list). It is accepted only after the other two
    are loaded, and refused as a whole unless every test's A and B numbers are permutations of 1..N, every pair stays in
    one section, and `keyA[a] = keyB[b]` for every pair. If a later booklet or report no longer fits it, it is dropped.
+4. **Ders ortalamaları (isteğe bağlı)**, the publisher's "Ders Ortalamaları İlk 100 Kurum" PDF (read with pdf.js, in memory, like the others; needs only the cevap raporu first).
+   One section per ders (TYT and AYT), each starting with a title line `27-YKS-1202, TÜRKÇE-T Dersi Net Sıralı Liste _40 Soru_ (İlk 100 Okul)`, then the header
+   `Sıralama · Okul Adı · Okul Net · Okul Başarı · Genel Net` and 100 school rows (a continuation page repeats the header without a title). **Only three things are read:** the exam code,
+   each ders's question count (from the title) and its **Genel Net**, the network-wide average net, constant down the column (Turkish decimal comma). The school rows are ignored: only the `Genel Net`
+   column is taken (by the nearest header), school names are never read into the model, and only `{kod, dersler:[{ad, n, genel}]}` is kept. Status: "✓ 24 ders · genel ortalama".
+   It is refused (nothing changes) when the exam code differs from the cevap raporu's ("Sınav kodları uyuşmuyor: … 27-YKS-1202 … 27-YKS-1203"), when a ders's question count differs from the report's section
+   ("Soru sayıları uyuşmuyor: …"), when no ders matches, when the Genel Net column is not one value, or when the PDF is not this report. Ders names are matched by the section names of the report (TÜRKÇE-T, TARİH.1-A, FELSEFE GR.-A, S.FELSEFE-A …);
+   report sections the file lacks stay unanchored. A new cevap raporu re-checks the file and drops it if it no longer fits.
 
 ## Privacy
 
@@ -44,7 +52,7 @@ full-width passage takes a row), never split across pages.
 **Kendi seviyesi**); all five bands are selected by default. Printing and the counts in the header use the same selection.
 The selected status appears in each printed notebook's heading; Kendi seviyesi, tiers and kademe are never printed. Zero matching questions disables printing.
 Filter choices and answer-file data remain in page memory only. Difficulty is computed from the cevap raporu itself (see
-"Zorluk ve kademeler"); the school's Madde Analizi in Konu Takibi is now only a validity check (one rank correlation).
+"Zorluk ve kademeler"; with the optional Ders ortalamaları file the band scale is anchored to the network average); the school's Madde Analizi in Konu Takibi is now only a validity check (one rank correlation).
 
 - Each student starts on a new page: name, Öğrenci No, şube, exam name, "12 yanlış · 5 boş"; questions grouped by ders in
   booklet order, each with "Soru 12" and a small difficulty chip ("Zor", or "Zor?" when the band is not certain). A student without wrong or empty questions is shown
@@ -101,6 +109,22 @@ The section line reads "Türkçe · 27 öğrenci · KR-20 0,82 · 2 madde işare
 "Güvenilirlik düşük"; that line is where low reliability is said, the labels get no "?" for it and their chips are shown muted instead. If Konu Takibi holds the Madde Analizi of the same exam, the Spearman correlation between our `p` and
 the school's `p` is added as "okul verisi ρ 0,71".
 
+### Ders ortalamalarına göre ölçek (optional anchoring)
+
+Without the fourth file the bands use `b − μθ`, the Rasch difficulty relative to **this school's** mean ability, so "Zor" means hard for this cohort. With the file, each ders that has a Genel Net is anchored to the network-wide average student:
+
+1. School mean net ratio `r_s` = mean over the takers of `(D − Y/4)/n` (D correct, Y wrong, blanks cost nothing; the same wrong-answer penalty as the publisher's net; takers as in the item analysis, a cancelled question is left out of D, Y and n).
+2. Network ratio `r_g` = Genel Net / n (n = the question count of the file, equal to the report's section).
+3. Both are clamped to [0.02, 0.98] so a perfect or zero ratio stays finite; `Δ = logit(r_s) − logit(r_g)`.
+4. The bands use `(b − μθ) + Δ`: the difficulty for the average **network** student. A school that is stronger than the network (`Δ > 0`) sees its items move harder, a weaker school (`Δ < 0`) easier. Same five edges (±0.75, ±2), same "?" rule (the SE is unchanged); extreme items keep Çok kolay / Çok zor.
+
+With two booklets analysed separately (no çözüm map) each group gets its own Δ. Per ders; a ders the file lacks keeps the school-relative band. **Without the file everything is exactly as before.**
+
+Only the **item bands** shift: the chips on screen and in print, the filter, and the new "Genele göre" column of the Madde kalitesi table (which sits next to `b`, still the school-relative value, so the two can be compared) use the anchored band; the order of questions inside a ders (Rasch b) is unchanged. **Kademe tiers and Kendi seviyesi windows are unaffected**: tiers stay relative within the grade, and the Kendi seviyesi window picks the same band numbers (it simply meets the anchored bands). The section line gains
+"· genel ort. 22,48 net · okul 27,10 net · ölçek genele göre" (only with the file). The printed student defter says nothing about anchoring (the chips just use the anchored band).
+
+**Limitation.** This is a *common-mean anchoring* (a mean/mean linking), **not equating**: it assumes that the shift of the mean net ratio on the logit scale approximates the shift of the mean ability (the net ratio is not a Rasch measure; a ratio is compressed near 0 and 1, which the clamp only partly handles), that the school's students are a sample comparable to the publisher's population of takers, and that one constant moves all items of a ders. It uses nets with the wrong-answer penalty on both sides so the comparison is like with like; a sparse sample (few takers, five-question dersler) makes `r_s`, and hence Δ, noisy. Δ moves the labels but adds no information about the items.
+
 ### Kademeler (from all exams in the notebook)
 
 Source: `denemeListe` of every student (school results and own entries): D, Y and question count per ders. A ders counts as in
@@ -151,5 +175,5 @@ AYT tarih1, …; the student by Öğrenci No). The tier is the student's own gra
 References: Wilson (1927) JASA 22; Kuder & Richardson (1937) Psychometrika 2; Ebel & Frisbie (1991) *Essentials of Educational Measurement*;
 Wright & Masters (1982) *Rating Scale Analysis* (separation, strata, fit mean squares); Fisher (1958) JASA 53, 789-798; Jenks (1977), Optimal data classification for choropleth maps; en.wikipedia.org/wiki/Jenks_natural_breaks_optimization.
 
-Tests: `node test/zorluk-regression.cjs` (Wilson, r_it, KR-20, seeded JMLE recovery, bands and "?", strata, equating, Veri yetersiz, Kendi
+Tests: `node test/zorluk-regression.cjs` (ders ortalamaları parsing on a synthetic text-item layout, refusals, Δ on a hand example, stronger/weaker school, no file = unchanged; Wilson, r_it, KR-20, seeded JMLE recovery, bands and "?", strata, equating, Veri yetersiz, Kendi
 seviyesi, two-sheet parsing, TC) and the browser tests `test/yanlislar-browser.cjs`, `test/denemepano-browser.cjs`.

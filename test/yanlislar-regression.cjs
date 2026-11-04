@@ -200,5 +200,14 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert(run("SEKME_REHBER.some(s=>s[0]==='yanlislar'&&s[1]==='Yanlışlar defteri')"));
     assert(!run("SEKME_OGRENCI.some(s=>s[0]==='yanlislar')"));
   });
+  await test('ders ortalamaları PDF: exam code, question counts and Genel Net only; wrong exam or wrong counts are refused', async () => {
+    const {rapor} = await kur(), pages = o => Y.itemlere(Y.ortalamaSpec(o)), o = T.ortalamaCoz(pages({dersler: [['TÜRKÇE-T', 4, 2.5], ['TARİH-T', 2, 1.25]]}));
+    assert.equal(o.kod, '27-YKS-1203'); assert.deepEqual(copy(o.dersler), [{ad: 'TÜRKÇE-T', n: 4, genel: 2.5}, {ad: 'TARİH-T', n: 2, genel: 1.25}]);
+    assert.doesNotMatch(JSON.stringify(o), /OKUL|SENTETİK/);
+    assert.equal(T.ortalamaDogrula(o, rapor).size, 2);
+    assert.throws(() => T.ortalamaDogrula(T.ortalamaCoz(pages({kod: '27-YKS-1202', dersler: [['TÜRKÇE-T', 4, 2.5]]})), rapor), /27-YKS-1202/);
+    assert.throws(() => T.ortalamaDogrula(T.ortalamaCoz(pages({dersler: [['TÜRKÇE-T', 5, 2.5]]})), rapor), /Soru sayıları uyuşmuyor/);
+    assert.throws(() => T.ortalamaCoz(Y.itemlere(Y.kitapcikSpec())), /eklenmedi/);
+  });
   console.log('Yanlışlar defteri: ' + passed + ' tests passed.');
 })();

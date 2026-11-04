@@ -203,4 +203,27 @@ function kademeOgrencileri({N=30,seed=77,sinif=12,kayma=0,noBaz=9400,duz=false}=
     return {ad:'SENTETİK ÖĞRENCİ '+(i+1),no:String(noBaz+i),sube:i%2?sinif+'-B':sinif+'-A',sinif,alan:'SAY',kap:6,off:[6],aktif:true,denemeOkul:rows};
   });
 }
-module.exports={rng,normal,sig,simule,raporBuyuk,kademeOgrencileri,BUYUK_BOLUMLER,kitapcikSpecBuyuk,AYT_SECTIONS,AYT_KEY_A,AYT_KEY_B,AYT_HARITA,AYT_OGRENCILER,kitapcikSpecAyt,kitapcikSayfalariAyt,raporSatirlariAyt,cokSayfaXlsx,raporXlsx2,W,H,kitapcikSpec,kitapcikSayfalari,pdfYaz,itemlere,SECTIONS,KEY_A,KEY_B,OGRENCILER,raporSatirlari,raporXlsx,HARITA,cozumSpec,SENTETIK_TC};
+
+/* ---- "Ders Ortalamaları İlk 100 Kurum" layout, synthetic: one section per ders, a title line, the header row, `satir` made-up school rows
+   (the first page of a ders holds 73 rows, the next page repeats the header without a title), Genel Net constant down its column. ---- */
+const ORT_DERSLER=[['TÜRKÇE-T',20,11.5],['MATEMATİK-T',20,8.25],['TÜRK DİLİ VE EDB-A',24,10.74],['TARİH.1-A',10,3.51],['FELSEFE GR.-A',12,3.68],['S.FELSEFE-A',6,1.84]];
+const ASCII={'İ':'I','ı':'i','Ü':'U','ü':'u','Ö':'O','ö':'o','Ç':'C','ç':'c','Ş':'S','ş':'s','Ğ':'G','ğ':'g'};
+const virgul=v=>v.toFixed(2).replace('.',',');
+function ortalamaSpec({kod='27-YKS-1203',dersler=ORT_DERSLER,satir=100,ascii=false}={}){
+  const tr=t=>ascii?t.replace(/[İıÜüÖöÇçŞşĞğ]/g,c=>ASCII[c]):t,sayfalar=[];
+  const hdr=(y)=>[[42,y,'Sıralama',9],[193,y,'Okul Adı',9],[352,y,'Okul Net',9],[415,y,'Okul Başarı',9],[489,y,'Genel Net',9]];
+  for(const [ad,n,genel] of dersler){
+    let i=1,ilk=true;
+    while(i<=satir){
+      const t=[];let y;
+      if(ilk){t.push([102,809,kod+', '+ad+' Dersi Net Sıralı Liste _'+n+' Soru_ (İlk 100 Okul)',10]);t.push(...hdr(779));y=765}
+      else{t.push(...hdr(809));y=795}
+      for(;i<=satir&&y>=45;i++,y-=10){const net=Math.min(n,genel+(satir-i)*0.1);t.push([65,y,String(i),8],[97,y,'SENTETİK OKUL '+i+' LİSESİ',8],[367,y,virgul(net),8],[437,y,virgul(net/n*100),8],[507,y,virgul(genel),8])}
+      t.push([500,26,'Sayfa '+(sayfalar.length+1),8]);
+      sayfalar.push({texts:t.map(([x,yy,s,z])=>[x,yy,tr(s),z]),rects:[],w:595,h:842});
+      ilk=false;
+    }
+  }
+  return sayfalar;
+}
+module.exports={ortalamaSpec,ORT_DERSLER,rng,normal,sig,simule,raporBuyuk,kademeOgrencileri,BUYUK_BOLUMLER,kitapcikSpecBuyuk,AYT_SECTIONS,AYT_KEY_A,AYT_KEY_B,AYT_HARITA,AYT_OGRENCILER,kitapcikSpecAyt,kitapcikSayfalariAyt,raporSatirlariAyt,cokSayfaXlsx,raporXlsx2,W,H,kitapcikSpec,kitapcikSayfalari,pdfYaz,itemlere,SECTIONS,KEY_A,KEY_B,OGRENCILER,raporSatirlari,raporXlsx,HARITA,cozumSpec,SENTETIK_TC};
