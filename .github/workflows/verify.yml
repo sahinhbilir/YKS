@@ -33,6 +33,8 @@ jobs:
         run: node scripts/embed-siralamalar.cjs --check && node test/siralama-regression.cjs
       - name: Individual student visual reports and source validation
         run: node scripts/embed-ogrencirapor.cjs --check && node test/ogrencirapor-regression.cjs && node test/ogrencirapor-exam-duplicate-regression.cjs
+      - name: Kurum raporu totals, Türkiye geneli block and privacy
+        run: node scripts/embed-ogrencirapor.cjs --check && node test/kurumrapor-regression.cjs
       - name: Shared charts (lines, measuring) and embedding
         run: node scripts/embed-grafik.cjs --check && node test/grafik-regression.cjs
       - name: Etütler report import, storage and embedding
@@ -154,6 +156,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/siralama-browser.cjs
       - name: Individual student PDF downloads on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/ogrencirapor-browser.cjs
+      - name: Kurum raporu on desktop and mobile, light and dark
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/kurumrapor-browser.cjs
       - name: Etütler charts on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/etut-browser.cjs
       - name: Etüt planı on desktop and phone, filling, printing

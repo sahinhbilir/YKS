@@ -95,6 +95,40 @@ kaplar; kutular ayrı görseller olarak birleştirilmez. Yazıcının kendi kena
   çizelgesi ders dağılımını gösterir. Tarih aralığı ve hafta başlangıçları görünür.
   Etüt kaydı, katılımın ayrıca doğrulandığı anlamına gelmez.
 
+## Kurum raporu
+
+Sayfanın üstündeki **Öğrenci raporu | Kurum raporu** düğmesiyle kurum raporuna geçilir.
+Kurum raporu, öğrenci raporunun okul düzeyindeki karşılığıdır: **Tüm okul** ya da tek
+bir sınıf düzeyi (12. sınıf, 11. sınıf, …) için A4 yatay tek sayfa. Öğrenci adı yazmaz;
+yalnızca toplamlar ve öğretmen adları vardır. **Kapsam** seçilir, önizleme PDF'nin kullandığı
+çizimin kendisidir. **Kurum PDF** seçilen kapsamı, **Tüm düzeyler PDF** okulu ve her sınıf
+düzeyini (bir sayfa her biri) indirir. Kaynaklar öğrenci modundakiyle aynıdır (Sıralamalar,
+Etütler, Yoklama ve bu sayfada eklenen ödev / İngilizce PDF'leri); üstteki kaynak kutusu iki
+modda da aynıdır. Öğrenci sayısı, kaynaklarda en az bir kaydı olan öğrencilerdir.
+
+- **Türkiye geneli.** Türkiye geneli sayfasının kendi modeli kullanılır, hesap yinelenmez.
+  Sınıf düzeyi için okulun TYT toplam T puanı (ve varsa SAY / EA / SÖZ toplamları) denemeden
+  denemeye çizilir; kesik çizgi Türkiye ortalamasıdır (T = 50). Her toplam için son T,
+  ΔT (ilk denemeden sonuncuya) ve sıra yazılır; tahmini sıra “≈” ile işaretlenir.
+  ΔT kuralı Türkiye geneli sayfasındakiyle aynıdır: yeşil ▲ arttı, kırmızı ▼ azaldı, gri
+  ±0,5 T içinde (değişmedi). Ders ders tablo her dersin son T'sini ve ΔT'sini verir.
+  **Tüm okul**'da sınıf düzeyi başına bir satır vardır (son TYT T, ΔT, sıra, küçük çizgi).
+  O sınıf düzeyi için liste yoksa “Türkiye geneli listesi yok; Türkiye geneli sayfasından
+  ekleyin.” yazılır ve okulun kendi denemelerinden TYT net ortalaması çizilir. Okul listede
+  bulunamazsa Türkiye geneli sayfasında okulun seçilmesi istenir.
+- **Etütler.** Toplam etüt, öğrenci başına ortalama, haftalık etüt grafiği (öğrenci raporundaki
+  haftalama; renk = ders), derse göre etüt ve öğretmene göre en çok etüt.
+- **Ödevler.** Toplam ödev, durumların dağılımı (Tamamladı, Eksik, Getirmedi, Geç getirdi,
+  Yapmadı, Gelmedi), tamamlama oranı (tamamlanan / verilen) ve ders başına tamamlama;
+  Matematik TYT ve AYT ayrı kalır.
+- **Devamsızlık.** Toplam kaçırılan gün (tam gün ve yarım gün ayrı), devam oranı ve öğrencilerin
+  0 · 1–4 · 5–9 · 10+ kaçırılan gün aralıklarına dağılımı; kural öğrenci raporundakiyle (Yoklama)
+  aynıdır.
+- **Şube karşılaştırması.** Her şube için öğrenci sayısı, etüt, öğrenci başına etüt, ödev
+  tamamlama, devamsız gün, devam oranı ve son denemenin ortalama TYT neti; ilk satır toplamdır.
+- Eksik kaynak, ilgili kutuda hangi sayfadan ekleneceğiyle yazılır. Üst köşede etüt, yoklama,
+  ödev raporu ve deneme tarih aralıkları görünür.
+
 ## Kaynaklar ve saklama
 
 PDF’ler tarayıcıda okunur; sunucuya veya öğrenci defterine yazılmaz. Bu sayfada eklenen
@@ -136,7 +170,14 @@ Değişikliklerden sonra `node scripts/embed-ogrencirapor.cjs` çalıştırın.
 node scripts/embed-ogrencirapor.cjs --check
 node test/ogrencirapor-regression.cjs
 node test/ogrencirapor-browser.cjs
+node test/kurumrapor-regression.cjs
+node test/kurumrapor-browser.cjs
 ```
+
+`test/kurumrapor-regression.cjs` toplamları, şube satırlarını, devamsızlık aralıklarını, ödev oranını,
+Türkiye geneli bloğunu (listeli ve listesiz) ve rapora öğrenci adı girmediğini; `test/kurumrapor-browser.cjs`
+düğmeyi, kapsamı, önizlemeyi, PDF sayfa sayısını, taşma/çakışma denetimini ve açık/koyu temayı
+(1280 ve 390 px) kontrol eder.
 
 Tarayıcı testi Verify iş akışındaki Playwright ve sabit sürümlü PDF bağımlılıklarını
 `NODE_PATH` üzerinden kullanır. Masaüstü ve telefonda içe aktarma, hatadan sonra
