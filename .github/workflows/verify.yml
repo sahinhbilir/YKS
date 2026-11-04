@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 22
       - name: Screen theme scope and backend integrity
-        run: node scripts/embed-report-theme.cjs --check && node test/report-theme-integrity.cjs
+        run: node scripts/embed-report-theme.cjs --check && node test/report-theme-integrity.cjs && node test/dark-theme-contrast.cjs
       - name: Current grade curricula and legacy preservation
         run: node test/curriculum-regression.js
       - name: Grade 11 timetable topics and TYT mathematics separation
