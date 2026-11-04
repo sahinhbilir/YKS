@@ -75,3 +75,6 @@
 .tg-okul-ad{max-width:18rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:640px){#tgKok .et-seg{max-width:100%;flex-wrap:wrap;border-radius:18px}}
 @media (max-width:640px){.tg-okul-kutu th,.tg-okul-kutu td{padding:6px 4px;font-size:.8125rem}.tg-okul-ad{max-width:8.5rem;white-space:normal}.tg-okul-kutu thead th button{white-space:nowrap}}
+/* A subject card's change over the range: the pill uses the shared status colours; "—" is grey. */
+.tg-degisim{display:block;margin-top:6px}
+.et-hap.tg-yok{font-weight:400}
