@@ -374,13 +374,16 @@ async function denemePdfjs() {
   return pdfjs;
 }
 // Text items of every page. Sıralamalar also needs each page's height and the font size (z).
-async function denemePdfSayfalari(file) {
-  if(file.size>15*1024*1024)throw new Error('PDF en fazla 15 MB olabilir.');
+// sinir: {sayfa, mb, ilerleme(n, toplam)}. Exam lists stay at 100 pages / 15 MB; the school's long
+// reports (yoklama, etüt, ödev) pass a larger limit and show the page count while they are read.
+async function denemePdfSayfalari(file,sinir={}) {
+  const enCokSayfa=sinir.sayfa||100,enCokMb=sinir.mb||15,ilerleme=typeof sinir.ilerleme==='function'?sinir.ilerleme:null;
+  if(file.size>enCokMb*1024*1024)throw new Error('PDF en fazla '+enCokMb+' MB olabilir.');
   const pdfjs=await denemePdfjs();
   const task=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false,useSystemFonts:true});
   try {
     const pdf=await task.promise;
-    if(pdf.numPages>100)throw new Error('PDF en fazla 100 sayfa olabilir.');
+    if(pdf.numPages>enCokSayfa)throw new Error('PDF en fazla '+enCokSayfa+' sayfa olabilir'+(enCokSayfa>100?'; raporu daha kısa tarih aralıklarıyla alın.':'.'));
     const pages=[],boylar=[];
     for(let n=1;n<=pdf.numPages;n++) {
       const page=await pdf.getPage(n), text=await page.getTextContent();
@@ -388,6 +391,7 @@ async function denemePdfSayfalari(file) {
       // f is the run's font: the Etüt planı's timetables tell lessons (bold) from teachers by it.
       pages.push(text.items.filter(x=>x.str?.trim()).map(x=>({s:x.str.trim(),x:x.transform[4],y:x.transform[5],w:x.width,h:x.height,z:Math.hypot(x.transform[0],x.transform[1]),f:x.fontName})));
       page.cleanup();
+      if(ilerleme&&pdf.numPages>20&&(n%10===0||n===pdf.numPages))ilerleme(n,pdf.numPages);
     }
     return {pages,boylar};
   } finally { await task.destroy(); }

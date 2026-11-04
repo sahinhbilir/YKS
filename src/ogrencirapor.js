@@ -726,7 +726,7 @@ function kurumGorunum(m,disable){
 const YER={exam:'deneme sonuç listesi; Sıralamalar sayfasından ekleyin.',sessions:'etüt raporu; Etütler sayfasından ekleyin.',attendance:'yoklama raporu; Yoklama sayfasından ekleyin.'};
 async function addFiles(files){
  guard();if(BUSY)return;if(files.length>30)throw new Error('Bir seferde en fazla 30 PDF seçin.');const owner=D,gen=GEN;BUSY=true;STATUS='PDF’ler okunuyor…';refresh();const results=[],errors=[];
- try{for(const f of files){try{const p=await denemePdfSayfalari(f);if(owner!==D||gen!==GEN||!allowed())return;const r=parse(p.pages,p.boylar);
+ try{for(const f of files){try{const p=await denemePdfSayfalari(f,{sayfa:1000,mb:60,ilerleme:(n,t)=>{STATUS=f.name+' okunuyor · '+n+' / '+t+' sayfa';const el=document.getElementById('orStatus');if(el)el.textContent=STATUS}});if(owner!==D||gen!==GEN||!allowed())return;const r=parse(p.pages,p.boylar);
     if(!['homework','english'].includes(r.kind))throw new Error(YER[r.kind]);results.push([f.name,r])}catch(e){errors.push(f.name+': '+e.message)}}
   if(owner!==D||gen!==GEN||!allowed())return;for(const [name,r] of results)FILES.set(name,r);STATUS=results.length+' dosya eklendi.'+(errors.length?' '+errors.join(' '):'');
  }finally{if(owner===D&&gen===GEN){BUSY=false;refresh()}}

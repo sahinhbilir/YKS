@@ -753,7 +753,7 @@ async function pdfEkle(files){
   const okunan=[],hatalar=[],defter=D;let atlanan=0;
   for(const file of files){
     durum('PDF okunuyor: '+file.name);
-    try{const {pages}=await denemePdfSayfalari(file);const r=pdfCoz(pages);atlanan+=r.atlanan;okunan.push(r)}catch(e){hatalar.push(file.name+': '+e.message)}
+    try{const {pages}=await denemePdfSayfalari(file,{sayfa:1000,mb:60,ilerleme:(n,t)=>durum('PDF okunuyor: '+file.name+' · '+sayi(n)+' / '+sayi(t)+' sayfa')});const r=pdfCoz(pages);atlanan+=r.atlanan;okunan.push(r)}catch(e){hatalar.push(file.name+': '+e.message)}
   }
   if(D!==defter||!rehberMi())throw new Error('Oturum değişti.');
   if(okunan.length)await raporEkle(okunan);
