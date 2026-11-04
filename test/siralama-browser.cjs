@@ -110,6 +110,8 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    // 6) A 9. sınıf list: its own 8 lessons and TYT score, compared only with the 9. sınıf exam.
    await page.locator('#srPdf').setInputFiles([dosya('dokuz1.pdf'),dosya('dokuz2.pdf')]);
    await page.waitForFunction(()=>D.siralama.sinavlar.length===3);
+   // "PDF ekle" now also publishes to students before the redraw; wait for the redrawn selection, not only the data.
+   await page.waitForFunction(()=>document.getElementById('srSimdiki')?.value==='SENTETİK 9 DENEME 2');
    assert.equal(await page.locator('#srSimdiki').inputValue(),'SENTETİK 9 DENEME 2');assert.equal(await page.locator('#srOnceki').inputValue(),'SENTETİK 9 DENEME 1');
    assert.equal(await page.locator('#srOnceki option').count(),1);assert((await page.locator('.sr-sinavlar').innerText()).includes('TYT · 8 ders'));
    assert.equal(await page.locator('[data-sr-indir]:not([disabled])').count(),2);assert((await page.locator('.sr-raporlar').innerText()).includes('Bu sınavda AYT yok.'));
