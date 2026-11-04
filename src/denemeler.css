@@ -14,6 +14,11 @@ main:has(.dn-tabs){min-width:0}
 /* Borsa görünümü: parça önceki 4 denemenin ortalamasına, nokta bir önceki denemeye göre renklenir. */
 .dn-seg{stroke-width:3;fill:none;stroke-linecap:round}
 .dn-seg.yukari{stroke:var(--iyi)}.dn-seg.asagi{stroke:var(--kritik)}.dn-seg.esit{stroke:var(--soluk)}
+.dn-cizgi{fill:none;stroke:var(--soluk);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.dn-hedef{stroke:var(--uyari);stroke-width:2;stroke-dasharray:7 5}.dn-chart text.dn-hedef-yazi{fill:var(--uyari);font-weight:700}
+/* Öğrencinin ana sayfasındaki kart: Denemelerim’in grafiği, kartın genişliğinde. */
+.dn-ana .yg-alan{flex:none;min-height:0;aspect-ratio:auto}.dn-ana .yg-alan svg{position:static;width:100%;height:auto;min-height:0}.dn-ana .dn-chart{margin:0}
+.dn-eksik{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:6px 0;font-size:13px;color:var(--soluk)}
 .dn-ort{fill:none;stroke:var(--soluk);stroke-width:1.5;stroke-dasharray:4 4;opacity:.7}
 .dn-dot{fill:var(--soluk);stroke:var(--kagit);stroke-width:2;cursor:pointer;transition:stroke-width .1s}
 .dn-dot.yukari{fill:var(--iyi)}.dn-dot.asagi{fill:var(--kritik)}

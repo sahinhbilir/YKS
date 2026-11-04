@@ -139,6 +139,7 @@ function dogrula(v){
     if(!s||typeof s!=='object'||!metin(s.id,200)||!s.id||ids.has(s.id)||!metin(s.ad,120)||!s.ad.trim()||!metin(s.okul,200)||
        !Number.isSafeInteger(s.ts)||s.ts<=0||s.ts>100000000000000||(!s.T&&!s.F))hata('sınav');
     if(s.tarih!==undefined&&!(typeof s.tarih==='string'&&/^\d{2}\.\d{2}\.\d{4}$/.test(s.tarih)))hata('sınav tarihi');
+    if(s.tarihler!==undefined&&!(s.tarihler&&typeof s.tarihler==='object'&&!Array.isArray(s.tarihler)&&Object.entries(s.tarihler).every(([k,t])=>(k==='TYT'||k==='AYT')&&typeof t==='string'&&/^\d{2}\.\d{2}\.\d{4}$/.test(t))))hata('oturum tarihleri');
     if(s.tur!==undefined&&!SINAV_TURLERI.includes(s.tur))hata('sınav türü');
     ids.add(s.id);
     for(const tur of ['T','F']){
@@ -180,6 +181,12 @@ function ekle(veri,l){
   if(!s){if(veri.sinavlar.length>=EN_COK_SINAV)throw new Error('En fazla '+EN_COK_SINAV+' sınav saklanır. Eski sınavları silip yeniden deneyin.');
     s={id,ad:l.ad,okul:l.okul,ts:Date.now(),T:null,F:null};veri.sinavlar.push(s)}
   s[l.tur]=slotBirlestir(s[l.tur],{tarih:l.tarih,katilim:l.katilim,kurum:l.kurum,ogr:l.ogr});
+  // A day the teacher confirmed for one session that the lists' own days do not give is kept apart (tarihler).
+  if(l.tarihler){
+    const liste={TYT:(s.T&&s.T.tarih)||(s.F&&s.F.tarih)||'',AYT:(s.F&&s.F.tarih)||''},t={...(s.tarihler||{})};
+    for(const o of ['TYT','AYT']){const g=l.tarihler[o];if(g&&/^\d{2}\.\d{2}\.\d{4}$/.test(g)&&g!==liste[o])t[o]=g;else delete t[o]}
+    if(Object.keys(t).length)s.tarihler=t;else delete s.tarihler;
+  }
   s.okul=l.okul||s.okul;s.ts=Math.max(Date.now(),s.ts+1);
 }
 const ONBELLEK=new Map();
@@ -205,7 +212,7 @@ async function kaydetListeler(listeler){
   return listeler.map(l=>l.ad+' ('+(l.tur==='F'?'TYT + AYT':'TYT')+')');
 }
 // Every date an exam carries: the corrected one and the ones printed on its lists (ISO).
-const sinavTarihleri=s=>[...new Set([s.tarih,s.T&&s.T.tarih,s.F&&s.F.tarih].filter(Boolean).map(t=>isoTarih(t)))].filter(Boolean);
+const sinavTarihleri=s=>[...new Set([s.tarih,s.T&&s.T.tarih,s.F&&s.F.tarih,...Object.values(s.tarihler||{})].filter(Boolean).map(t=>isoTarih(t)))].filter(Boolean);
 // Deleting an exam also deletes its published copies in the students' Denemelerim unless kopyalar is false (the
 // teacher may keep the results and only free the lists' room). Copies are queued for publishing: the caller
 // publishes with denemeBekleyenleriYayinla. Returns how many students lost the copies.
@@ -253,8 +260,8 @@ async function tarihDegistir(id,tarih){
   if(!/^\d{2}\.\d{2}\.\d{4}$/.test(tarih))throw new Error('Tarih geçersiz.');
   const {veri,hata}=oku();if(!veri)throw new Error(hata);
   const s=veri.sinavlar.find(x=>x.id===id);if(!s)throw new Error('Sınav bulunamadı.');
-  const eski=[...new Set([s.tarih,s.T&&s.T.tarih,s.F&&s.F.tarih].filter(Boolean))];
-  s.tarih=tarih;s.ts=Math.max(Date.now(),s.ts+1);await yaz(veri,D.siralama);
+  const eski=[...new Set([s.tarih,s.T&&s.T.tarih,s.F&&s.F.tarih,...Object.values(s.tarihler||{})].filter(Boolean))];
+  s.tarih=tarih;delete s.tarihler;s.ts=Math.max(Date.now(),s.ts+1);await yaz(veri,D.siralama);
   return {ad:s.ad,eski};
 }
 // Genel or tarama: an exam whose name says "tarama" is a tarama, any other a genel deneme. The
@@ -270,7 +277,7 @@ async function turDegistir(id,tur){
   // Update the same dated school results in the same local save as the classification.
   // Publication remains queued for the existing publish flow.
   const changed=[], anahtar=denemeAdAnahtari(s.ad), yeniTur=s.tur||addanTur(s.ad);
-  const tarihler=[s.tarih,s.T?.tarih,s.F?.tarih].filter(Boolean).map(t=>{const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t);return m?m[3]+'-'+m[2]+'-'+m[1]:t});
+  const tarihler=[s.tarih,s.T?.tarih,s.F?.tarih,...Object.values(s.tarihler||{})].filter(Boolean).map(t=>{const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t);return m?m[3]+'-'+m[2]+'-'+m[1]:t});
   try {
     for(const o of D.ogr || []) {
       if(!o || o.silindi)continue;
@@ -328,6 +335,10 @@ function model(x){
   e.nAYT=e.ayt?Object.values(e.ayt.students).filter(hasAYT).length:0;
   // A date the teacher corrected (x.tarih) wins over the dates printed on the lists.
   e.pdfDates=[...new Set([x.T&&x.T.tarih,x.F&&x.F.tarih].filter(Boolean))];e.dates=x.tarih?[x.tarih]:e.pdfDates;
+  // Each session has its own date: a TYT list and a TYT+AYT list of one exam may carry different days (TYT is often taken a day or
+  // a week before AYT). TYT comes from the TYT list when there is one, AYT from the TYT+AYT list; a corrected date covers both.
+  const ox=x.tarihler||{};
+  e.tarihler={TYT:ox.TYT||x.tarih||(x.T&&x.T.tarih)||(x.F&&x.F.tarih)||'',AYT:ox.AYT||x.tarih||(x.F&&x.F.tarih)||''};
   const d=(e.dates[0]||'');e.sortKey=d.split('.').reverse().join('')+'|'+x.ad;
   return e;
 }

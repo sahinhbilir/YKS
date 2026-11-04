@@ -61,7 +61,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
     assert.match(dialogs.at(-1),/Sentetik Deneme 1 sınavının tarihi 18\.08\.2026 olsun mu\?/);
     assert.match(await page.locator('#srDurum').innerText(),/2 öğrencinin sonucu taşındı\..*yayın bekliyor/);
     assert.deepEqual(await page.evaluate(()=>[D.siralama.sinavlar.find(s=>s.ad==='Sentetik Deneme 1').tarih,denemeListe(0).map(r=>r.tarih),D.ogr.map(o=>o.denemeYayinBekliyor)]),
-     ['18.08.2026',['2026-08-18','2026-08-18','2026-10-02','2026-10-02'],[true,true]]);
+     ['18.08.2026',['2026-08-18','2026-08-18','2026-10-02','2026-10-09'],[true,true]]);
     assert.match(await page.locator('.sr-sinavlar tbody tr').last().innerText(),/PDF’de: 18\.09\.2026/);
    }
    // 3) A name opens the student's own view in an isolated frame; the teacher's notebook is untouched.
@@ -97,6 +97,42 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
     await ac('harita','.baslik [data-ogr-gor]','SENTETİK ADA');
    }
    assert.equal(await page.evaluate(()=>LOCAL_STORE.get('yks_veri')),defter,'nothing done in the student view reached the teacher notebook');
+   // 4) The lag line and the preview. Student 1's published copies are gone (the lists still print them): the teacher's per-student
+   // panosu says how many exams the student's own screen lacks, the preview shows exactly what the student has (nothing yet), and
+   // "Öğrencilere gönder" clears the line. Then the same for the whole class.
+   const eksikSayi=await page.evaluate(()=>{D.ogr[0].denemeOkul=[];D.ogr[0].denemeler=[];D.ogr[0].denemeYayinBekliyor=false;D.ogr[1].denemeOkul=[];D.ogr[1].denemeYayinBekliyor=false;
+     EK.ogr=0;EK.denemeKisi=true;EK.sekme='denemeler';ciz();return [denemeEksikSayisi(0),denemeEksikSayisi(),denemeListe(0).filter(r=>r.okulListe).length]});
+   assert(eksikSayi[0]>=3 && eksikSayi[0]===eksikSayi[2],'the lists print exams for this student: '+eksikSayi);assert(eksikSayi[1]>eksikSayi[0]);
+   await page.locator('#dnEksik').waitFor();
+   assert.equal((await page.locator('#dnEksik').innerText()).replace(/\s+/g,' ').trim(),'Bu öğrencinin ekranında '+eksikSayi[0]+' deneme eksik · Öğrencilere gönder');
+   const onizle=await gozuyle(()=>page.locator('#dpKok [data-ogr-gor]').click(),'SENTETİK ADA');
+   await onizle.locator('#ray [data-sekme="denemeler"]').first().click().catch(async()=>{await onizle.locator('[aria-controls="hesapMenusu"]').click();await onizle.locator('#ray [data-sekme="denemeler"]').first().click()});
+   await onizle.locator('#dpKok').waitFor();
+   assert.equal(await page.frames().find(f=>f!==page.mainFrame()).evaluate(()=>JSON.stringify([denemeListe(0).length,denemeListe(0).filter(r=>r.okulListe).length,typeof D.siralama,D.ogr.length])),JSON.stringify([0,0,'undefined',1]),'the student has no copies and sees no teacher-only list rows');
+   assert.equal(await onizle.locator('#dpKok circle.dn-dot').count(),0,'nothing is drawn: the student has no published result yet');
+   await page.locator('#ogrGorKapat').click();
+   // Send to this student: the line goes away once the DOM has redrawn, and the preview now shows the published copies.
+   await page.locator('#dnEksikGonder').click();await page.locator('#dnEksik').waitFor({state:'detached'});
+   assert.equal(await page.evaluate(()=>denemeEksikSayisi(0)),0);
+   assert.equal(await page.evaluate(()=>denemeEksikSayisi(1)>0),true,'the other student still waits');
+   const kopya=await page.evaluate(()=>D.ogr[0].denemeOkul.filter(r=>!r.silindi).length);assert.equal(kopya,eksikSayi[0]);
+   const onizle2=await gozuyle(()=>page.locator('#dpKok [data-ogr-gor]').click(),'SENTETİK ADA');
+   await onizle2.locator('#ray [data-sekme="denemeler"]').first().click().catch(async()=>{await onizle2.locator('[aria-controls="hesapMenusu"]').click();await onizle2.locator('#ray [data-sekme="denemeler"]').first().click()});
+   await onizle2.locator('#dpKok').waitFor();
+   assert.equal(await page.frames().find(f=>f!==page.mainFrame()).evaluate(()=>denemeListe(0).filter(r=>r.okulListe).length+':'+denemeListe(0).length),'0:'+kopya,'copies only');
+   await page.locator('#ogrGorKapat').click();
+   // The class panosu: the same line with the class total, one button.
+   await page.evaluate(()=>{EK.denemeKisi=false;EK.sekme='denemeler';ciz()});
+   await page.locator('#dnEksik').waitFor();
+   assert.match(await page.locator('#dnEksik').innerText(),/^Öğrencilerin ekranında \d+ deneme eksik/);assert.equal(await page.locator('#dnYayinla').count(),1);
+   await page.locator('#dnYayinla').click();await page.locator('#dnEksik').waitFor({state:'detached'});
+   assert.equal(await page.evaluate(()=>denemeEksikSayisi()),0);
+   // "Tarihleri onar": a copy on the wrong day (the AYT day on the TYT copy) is fixed once.
+   await page.evaluate(()=>{const o=D.ogr[0],r=o.denemeOkul.find(x=>!x.silindi&&x.oturum==='TYT');const yanlis=isoDan(gunNo(r.tarih)+3);   // the other session's day, within the 14-day window of a generic name;
+     o.denemeOkul=denemeBirlestir(o.denemeOkul,[{...r,silindi:true,ts:r.ts+1},{...r,id:'p:'+encodeURIComponent([denemeAdAnahtari(r.ad),yanlis,'TYT'].join('|')),tarih:yanlis,ts:r.ts+2}]);ciz()});
+   await page.locator('#dnTarihOnar').waitFor();assert.equal(await page.locator('#dnTarihFarki').innerText().then(t=>/^1 yayınlanmış sonucun tarihi okul listesinden farklı/.test(t)),true);
+   await page.locator('#dnTarihOnar').click();await page.locator('#dnTarihOnar').waitFor({state:'detached'});
+   assert.equal(await page.evaluate(()=>denemeTarihFarklari().length),0);
    assert.deepEqual(errors,[]);console.log('PASS ranking, date correction and student view',width);await context.close();
   }
   console.log('Screenshots: '+out);

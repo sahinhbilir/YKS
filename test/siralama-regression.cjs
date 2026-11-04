@@ -293,7 +293,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.deepEqual(get("D.ogr.map(o=>!!o.denemeYayinBekliyor)"), [true, true, false]);
     assert.equal(run("D.ogr[0].denemeler[0].tarih"), '2026-09-13', "the student's own entry is theirs");
     assert.equal(run("D.ogr[2].denemeOkul[0].tarih"), '2026-09-13', 'deleted students are left alone');
-    assert.deepEqual(get("denemeListe(0).map(r=>[r.ad,r.tarih])"), [['Hazırbulunuşluk', '2026-08-18'], ['Başka', '2026-09-13']], 'the own duplicate stays hidden');
+    assert.deepEqual(get("denemeListe(0).map(r=>[r.ad,r.tarih])"), [['Hazırbulunuşluk', '2026-08-18'], ['Hazırbulunuşluk', '2026-09-13'], ['Başka', '2026-09-13']], 'a generic-named own entry 26 days from the corrected date is not hidden (14-day rule)');
     assert.equal(await run("denemeOkulTarihTasi('Hazırbulunuşluk',['2026-09-13'],'2026-08-18')"), 0, 'nothing left to move');
     run("D.ogr[1].denemeOkul[0].tarih='2026-09-13';kaydet=async()=>false"); const once = run('JSON.stringify(D.ogr)');
     await assert.rejects(run("denemeOkulTarihTasi('Hazırbulunuşluk',['2026-09-13'],'2026-08-18')"), /kaydedilemedi/);
