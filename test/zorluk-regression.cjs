@@ -495,8 +495,8 @@ const sig = z => 1 / (1 + Math.exp(-z));
   });
   await test('page: Kendi seviyesi keeps the wrong or empty questions in the student\'s weight class (Orta band without an ability)', async () => {
     const {S, rapor} = await show(SIM, {state: {}}), hepsi = soruSayisi(T.gorunum());
-    // without notebook data no student has an ability: only Orta questions
-    S.kendi = true; const orta = T.gorunum(); assert([...orta.matchAll(/yd-z-([a-z-]+)/g)].every(m => m[1] === 'orta')); assert(soruSayisi(orta) > 0 && soruSayisi(orta) < hepsi);
+    // without notebook data no student has an ability: Kendi seviyesi alone (no chips) gives only the Orta window
+    S.bantlar = new Set(); S.kendi = true; const orta = T.gorunum(); assert([...orta.matchAll(/yd-z-([a-z-]+)/g)].every(m => m[1] === 'orta')); assert(soruSayisi(orta) > 0 && soruSayisi(orta) < hepsi);
     assert.match(orta, /Kendi seviyesi/); assert.match(orta, /data-yd-z="kendi" aria-pressed="true"/);
     // with notebooks: 12 students of the report have school results (Matematik and Türkçe), ability moves the window
     run("D=varsayilan();D.rol='rehber';D.ogr=[]");
@@ -516,7 +516,9 @@ const sig = z => 1 / (1 + Math.exp(-z));
     const rank = b => ['cok-kolay', 'kolay', 'orta', 'zor', 'cok-zor'].indexOf(b), ort = l => l.map(rank).reduce((a, b) => a + b, 0) / (l.length || 1);
     assert(bantlar(g).length && bantlar(z).length); assert(ort(bantlar(g)) > ort(bantlar(z)), ort(bantlar(g)) + ' vs ' + ort(bantlar(z)));
     // the filter is applied per student and per ders: the same student's list with Kendi seviyesi off is a superset
-    S.kendi = false; S.ogr = String(guclu.id); assert(soruSayisi(T.gorunum()) >= soruSayisi(g));
+    S.kendi = false; S.bantlar = null; S.ogr = String(guclu.id); assert(soruSayisi(T.gorunum()) >= soruSayisi(g));
+    // Kendi seviyesi adds to the chips, never narrows them: all five chips plus Kendi seviyesi is still everything
+    S.kendi = true; assert.equal(soruSayisi(T.gorunum()), soruSayisi((S.kendi = false, T.gorunum())));
   });
   await test('analysis: Madde kalitesi tables per ders, on screen only, compact (soru, p, b, r_it, flag), section line', async () => {
     await show(SIM); const out = T.gorunum(), a = out.slice(out.indexOf('<section class="yd-analiz"'), out.indexOf('<div class="yd-baski"'));
