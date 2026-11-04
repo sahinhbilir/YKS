@@ -85,6 +85,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    await page.locator('[data-sr-sil="SENTETİK DENEME 1"]').click();
    await page.waitForFunction(()=>D.siralama.sinavlar.length===1);
    assert.equal(await page.evaluate(()=>D.ogr[0].denemeOkul.length),4,'PDF ekle published Deneme 1 and 2 (TYT + AYT) to the matched student');
+   await page.waitForFunction(()=>document.querySelectorAll('[data-sr-indir]:not([disabled])').length===0);   // the redraw follows the data
    assert.equal(await page.locator('[data-sr-indir]:not([disabled])').count(),0);
    // 5b) The school's list was deleted and added again under another date and spelling: the copies published earlier are
    // listed apart as "Listede yok" (the exam that is still listed has no button) and removed from the students on request.
@@ -96,6 +97,8 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    });
    const sinirli=async ad=>assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&[...document.querySelectorAll('#srYayin,#srYayin td,#srYayin button')].every(e=>e.getBoundingClientRect().right<=innerWidth+1)),true,ad+' at '+width);
    assert.equal(await page.locator('#srYayin h2').innerText(),'Öğrencilere yayınlanmış sonuçlar');
+   // Publishing to students redraws the page asynchronously; read the rows only once they are laid out.
+   await page.waitForFunction(()=>{const l=[...document.querySelectorAll('#srYayin tbody tr')];return l.length>=2&&l.every(r=>r.getClientRects().length>0&&/\s/.test(r.innerText.trim()))});
    const gruplar=await page.locator('#srYayin tbody tr').evaluateAll(l=>l.map(r=>({yok:r.classList.contains('sr-yok'),dugme:r.querySelectorAll('button[data-sr-yayin-kaldir]').length,yazi:r.innerText.replace(/\s+/g,' ').trim()})));
    assert(gruplar.length>=2&&gruplar.filter(g=>g.yok).length===1&&gruplar.filter(g=>g.dugme).length===1,JSON.stringify(gruplar));
    const yok=gruplar.find(g=>g.yok);assert(/Sentetik Deneme 2 16\.10\.2026 TYT \d+ öğrenci Listede yok Öğrencilerden kaldır/.test(yok.yazi),yok.yazi);
