@@ -5,7 +5,10 @@
 // average is stubbed for the subjects the followed school is outside of.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const {kurumListesi,kurumRaporu,BIZ}=require('./fixtures/kurum-pdf.cjs');
+const {kurumListesi,kurumRaporu,BIZ,BIZIM}=require('./fixtures/kurum-pdf.cjs');
+// The followed school's nets: Türkçe rises, Fizik stays the same distance above the average (in the list: its place and T do not move),
+// Matematik is outside the list (Sıralamalar' average, falling).
+BIZIM['TÜRKÇE-T']=[22,23,26];BIZIM['FİZİK-T']=[4.53,4.63,4.73];
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
 const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-turkiye-t-'));fs.mkdirSync(out,{recursive:true});
 const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')});
@@ -26,78 +29,106 @@ const ad=e=>'27-YKS-120'+e+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf';
     EK.ogr=0;EK.sekme='ana';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
     // Sıralamalar: the school's own average in the subjects it is outside of (Matematik, Fizik), a different figure per exam.
     SIRALAMA.oku=()=>({veri:{sinavlar:[1,2,3].map(e=>({ad:'27-YKS-120'+e,okul:'ÖZEL '+biz,T:{tarih:'0'+(e*7)+'.10.2026'}}))}});
-    SIRALAMA.model=s=>{const e=Number(s.ad.slice(-1));return {sinif:12,tyt:{kurum:{net:{MAT:11.6+e*0.9,FİZ:2.2+e*0.5,TÜR:25}}},ayt:{kurum:{net:{}}}}};
+    window.__mat1=true;SIRALAMA.model=s=>{const e=Number(s.ad.slice(-1));return {sinif:12,tyt:{kurum:{net:window.__mat1===false&&e===1?{}:{MAT:[13,12,10][e-1]}}},ayt:{kurum:{net:{}}}}};
     denemePdfSayfalari=async f=>{if(!r[f.name])throw new Error('bilinmeyen dosya');return {pages:structuredClone(r[f.name])}};ciz();
    },[raporlar,BIZ]);
    await page.evaluate(()=>{EK.sekme='turkiye';ciz()});
    await page.locator('#tgPdf').setInputFiles([dosya(ad(1)),dosya(ad(2)),dosya(ad(3))]);
    await page.waitForFunction(()=>/Eklendi/.test(document.getElementById('tgDurum')?.textContent||''));
    await page.locator('#tgOkul').selectOption(BIZ);
-   // The default view: T ve sıra, one full-width chart (the toggle picks T puanı / Sıra / Artış sırası), the KPI strip, the cards and the table.
-   await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="t"] svg'));
-   assert.equal(await page.locator('[data-tg-mod="tpuan"]').getAttribute('aria-pressed'),'true');
-   assert.equal(await page.locator('[data-tg-gor="t"]').getAttribute('aria-pressed'),'true');
-   assert.equal(await page.locator('[data-tg-grafik]').count(),1,'one chart at a time');
+   // The default view: T ve sıra. The main chart is the chosen total alone (one bold line); below it "Dersler · TYT toplam" has a line per
+   // subject; the toggle (T puanı | Sıra | Artış sırası) drives both; the cards follow, then the ranking and the table.
+   const ana=()=>page.evaluate(()=>{const k=document.querySelector('#tgTPanel [data-tg-grafik]');return {tur:k.dataset.tgGrafik,seri:k.querySelectorAll('svg path[data-seri]').length,kalin:k.querySelectorAll('svg path.tg-ort').length,d:[...k.querySelectorAll('svg path.et-cizgi')].map(e=>e.getAttribute('d')).join('|'),svg:k.querySelector('svg').innerHTML}});
+   const dersGraf=()=>page.evaluate(()=>{const k=document.querySelector('#tgDPanel [data-tg-grafik]');return {tur:k.dataset.tgGrafik,ders:new Set([...k.querySelectorAll('svg path[data-seri]')].map(e=>e.dataset.seri)).size,yollar:k.querySelectorAll('svg path.et-cizgi').length,kalin:k.querySelectorAll('svg path.tg-ort').length,soluk:k.querySelectorAll('svg path.tg-cok').length,svg:k.querySelector('svg').innerHTML}});
    const kok=page.locator('#tgKok');
-   assert.match(await kok.innerText(),/T puanı · TYT toplam ve dersler/i);
+   await page.waitForFunction(()=>document.querySelector('#tgTPanel [data-tg-grafik="t"] svg')&&document.querySelector('#tgDPanel [data-tg-grafik="dt"] svg'));
+   assert.equal(await page.locator('[data-tg-mod="tpuan"]').getAttribute('aria-pressed'),'true');assert.equal(await page.locator('[data-tg-gor="t"]').getAttribute('aria-pressed'),'true');
+   assert.equal(await page.locator('[data-tg-grafik]').count(),2,'the main chart and the Dersler chart');
+   assert.match(await page.locator('#tgTPanel h2').innerText(),/^T puanı · TYT toplam$/i);assert.match(await page.locator('#tgDersler').innerText(),/^Dersler · TYT toplam$/i);assert.match(await page.locator('#tgDPanel h2').innerText(),/^T puanı · dersler$/i);
+   assert.equal(await page.evaluate(()=>{const q=s=>document.querySelector(s),o=(a,b)=>!!(q(a).compareDocumentPosition(q(b))&Node.DOCUMENT_POSITION_FOLLOWING);return o('#tgTPanel','#tgDersler')&&o('#tgDersler','#tgDPanel')&&o('#tgDPanel','.et-dersler')&&o('.et-dersler','#tgArtisSira')&&o('#tgArtisSira','#tgOkullar')}),true,'order: main chart, Dersler chart, cards, ranking, table');
    assert.match(await page.locator('#tgKpi').innerText(),/T puanı değişimi[\s\S]*Artış sırası/);assert.match(await page.locator('#tgKpi').innerText(),/Ortalamanın üstünde[\s\S]*Okul sayısı/);
    assert.equal(await page.locator('.et-ders[data-tg-ders]').count(),3);
    assert.match(await page.locator('#tgKok .et-cumle').innerText(),/^27-YKS-1203 \(21 Eki\) · Kolej listesi · Sentetik Kartal Anadolu Lisesi · TYT toplam: T puanı \d+,\d/);
-   // All lines in one chart: a thin line per subject plus the bold total, with the 50 line and its label.
-   const cizgiler=()=>page.evaluate(()=>({ince:document.querySelectorAll('[data-tg-grafik] svg path.tg-cok').length,kalin:document.querySelectorAll('[data-tg-grafik] svg path.tg-ort').length,ders:new Set([...document.querySelectorAll('[data-tg-grafik] svg path[data-seri]')].map(e=>e.dataset.seri)).size}));
-   let c=await cizgiler();assert.equal(c.ders,3,'a line per subject');assert(c.ince>=3);assert(c.kalin>=1,'the total is the bold line');
-   assert.match(await page.locator('[data-tg-grafik="t"] svg').innerHTML(),/Türkiye ortalaması \(okullar\)/);
-   // Hover: the line under the pointer takes the stage and the tooltip lists the total and every subject (sorted).
-   const t=page.locator('[data-tg-grafik="t"]');await t.scrollIntoViewIfNeeded();
-   const g=await page.evaluate(()=>{const k=document.querySelector('[data-tg-grafik="t"]'),sv=k.querySelector('svg'),r=sv.getBoundingClientRect(),o=r.width/sv.viewBox.baseVal.width,
-     p=[...sv.querySelectorAll('path[data-seri="0"]')][0].getPointAtLength(30);return {x:r.left+p.x*o,y:r.top+p.y*o}});
-   await page.mouse.move(g.x,g.y);await page.waitForFunction(()=>!document.querySelector('[data-tg-grafik="t"] .et-ipucu').hidden);
-   if(width>600){await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="t"]').dataset.seri==='0');assert.equal(await page.evaluate(()=>document.querySelector('[data-tg-grafik="t"] svg').classList.contains('odakli')),true)}
-   const ip=await t.locator('.et-ipucu').innerText();
-   assert.match(ip,/TYT toplam · T puanı \(okullar arası\)\s*\d+,\d/);assert.match(ip,/Okullar arası σ\s*\d+,\d\d net/);assert.match(ip,/N\s*≈ \d+ okul \(derslerde \d+–\d+\)/);assert.match(ip,/Türkçe\s*\d+,\d[\s\S]*Matematik\s*\d+,\d/);
-   assert.equal((await page.locator('#tgKok .et-ozet,#tgKok .et-cumle,#tgTPanel .et-kart-bas').allInnerTexts()).join(' ').includes('N ≈'),false,'N ≈ only in the tooltip');
+   let A=await ana(),Dg=await dersGraf();
+   assert.equal(A.seri,0,'the main chart has no subject lines');assert(A.kalin>=1,'the total is the bold line');assert.match(A.svg,/Türkiye ortalaması \(okullar\)/);
+   assert.equal(Dg.ders,3,'a line per subject');assert.equal(Dg.kalin,0);assert.equal(Dg.soluk,0,'subjects are drawn at normal weight, not faded');assert.match(Dg.svg,/Türkiye ortalaması \(okullar\)/);
+   // Hover on the main chart: the total's figures only. Hover on a subject's line in the Dersler chart: that line takes the stage, the tooltip lists every subject.
+   const t=page.locator('#tgTPanel [data-tg-grafik]');await t.scrollIntoViewIfNeeded();
+   const tb=await t.boundingBox();await page.mouse.move(tb.x+tb.width*0.5,tb.y+tb.height*0.5);await page.waitForFunction(()=>!document.querySelector('#tgTPanel .et-ipucu').hidden);
+   const ip0=await t.locator('.et-ipucu').innerText();assert.match(ip0,/TYT toplam · T puanı \(okullar arası\)\s*\d+,\d/);assert.match(ip0,/Okullar arası σ\s*\d+,\d\d net/);assert.match(ip0,/N\s*≈ \d+ okul \(derslerde \d+–\d+\)/);assert(!/Matematik/.test(ip0),'no subject rows in the main tooltip');
+   const d=page.locator('#tgDPanel [data-tg-grafik]');await d.scrollIntoViewIfNeeded();
+   const g=await page.evaluate(()=>{const k=document.querySelector('#tgDPanel [data-tg-grafik]'),sv=k.querySelector('svg'),r=sv.getBoundingClientRect(),o=r.width/sv.viewBox.baseVal.width,p=[...sv.querySelectorAll('path[data-seri="0"]')][0].getPointAtLength(30);return {x:r.left+p.x*o,y:r.top+p.y*o}});
+   await page.mouse.move(g.x,g.y);await page.waitForFunction(()=>!document.querySelector('#tgDPanel .et-ipucu').hidden);
+   if(width>600){await page.waitForFunction(()=>document.querySelector('#tgDPanel [data-tg-grafik]').dataset.seri==='0');assert.equal(await page.evaluate(()=>document.querySelector('#tgDPanel svg').classList.contains('odakli')),true)}
+   const ip=await d.locator('.et-ipucu').innerText();{const v=[...ip.matchAll(/(Türkçe|Fizik|Matematik)\s*(\d+,\d)/g)].map(m=>Number(m[2].replace(',','.')));assert.equal(v.length,3);assert.deepEqual(v,v.slice().sort((x,y)=>y-x),'every subject, sorted by T');}
+   assert.equal((await page.locator('#tgKok .et-ozet,#tgKok .et-cumle,#tgTPanel .et-kart-bas,#tgDPanel .et-kart-bas').allInnerTexts()).join(' ').includes('N ≈'),false,'N ≈ only in the tooltips');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no sideways scrolling');
    await page.screenshot({path:path.join(out,'turkiye-t-'+width+(tema==='dark'?'-dark':'')+'.png'),fullPage:true});
-   // Sıra: the places of every subject, estimates hollow; Artış sırası: x is the transition.
+   // Isolating a subject (its card) changes the Dersler chart only; the main chart keeps the total.
+   const anaOnce=(await ana()).d;
+   await page.locator('.et-ders[data-tg-ders="TÜRKÇE-T"]').click();
+   await page.waitForFunction(()=>/T puanı · Türkçe/.test(document.querySelector('#tgDPanel h2')?.textContent||'')&&document.querySelector('#tgDPanel [data-tg-grafik] svg'));
+   assert.equal((await dersGraf()).ders,0,'one line only');assert.equal(await page.locator('#tgDPanel svg .tg-genel').count(),1,'with the 50 line');assert.equal(await page.locator('#tgDPanel [data-tg-ders=""]').count(),1);
+   assert.match(await page.locator('#tgTPanel h2').innerText(),/^T puanı · TYT toplam$/i);assert.equal((await ana()).d,anaOnce,'the main chart is untouched');
+   assert.equal(await page.locator('.et-ders[data-tg-ders="TÜRKÇE-T"]').getAttribute('aria-pressed'),'true');
+   // The toggle drives both charts; the subject stays isolated in the Dersler chart.
    await page.locator('[data-tg-gor="sira"]').click();
-   await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="tsira"] svg'));
-   assert.equal(await page.locator('[data-tg-grafik]').count(),1);assert.match(await kok.innerText(),/Sıra · TYT toplam ve dersler/i);
-   assert.equal(await page.locator('[data-tg-grafik="tsira"] svg .tg-disi-nokta').count()>0,true,'estimates are hollow markers');
-   c=await cizgiler();assert.equal(c.ders,3);assert(c.kalin>=1);
-   const s=page.locator('[data-tg-grafik="tsira"]');await s.focus();await page.keyboard.press('End');
+   await page.waitForFunction(()=>document.querySelector('#tgTPanel [data-tg-grafik="tsira"] svg')&&document.querySelector('#tgDPanel [data-tg-grafik="dtsira"] svg'));
+   assert.match(await page.locator('#tgTPanel h2').innerText(),/^Sıra · TYT toplam$/i);assert.match(await page.locator('#tgDPanel h2').innerText(),/^Sıra · Türkçe$/i);
+   await page.locator('#tgDPanel [data-tg-ders=""]').click();
+   await page.waitForFunction(()=>/Sıra · dersler/.test(document.querySelector('#tgDPanel h2')?.textContent||'')&&document.querySelector('#tgDPanel [data-tg-grafik="dtsira"] svg'));
+   A=await ana();Dg=await dersGraf();assert.equal(A.seri,0);assert(A.kalin>=1);assert.equal(Dg.ders,3);
+   assert.equal(await page.locator('#tgTPanel [data-tg-grafik="tsira"] svg .tg-disi-nokta').count()>0,true,'the total place is an estimate: hollow markers');
+   assert.equal(await page.locator('#tgDPanel [data-tg-grafik="dtsira"] svg .tg-disi-nokta').count()>0,true,'estimated places of a subject outside its list: hollow markers');
+   const s=page.locator('#tgTPanel [data-tg-grafik="tsira"]');await s.focus();await page.keyboard.press('End');
    assert.match(await s.locator('.et-ipucu').innerText(),/^27-YKS-1203[\s\S]*tahmini sıra\s*≈ \d+\.[\s\S]*N\s*≈ \d+ okul/);
    await page.screenshot({path:path.join(out,'turkiye-t-sira-'+width+(tema==='dark'?'-dark':'')+'.png'),fullPage:true});
-   await page.locator('[data-tg-gor="artis"]').click();
-   await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="tartis"] svg'));
-   assert.match(await kok.innerText(),/Artış sırası · TYT toplam ve dersler/i);
-   assert.match(await page.locator('[data-tg-grafik="tartis"] svg').innerHTML(),/1201→1202|→1202/);
-   c=await cizgiler();assert.equal(c.ders,3);
-   const a=page.locator('[data-tg-grafik="tartis"]');await a.focus();await page.keyboard.press('Home');
-   assert.match(await a.locator('.et-ipucu').innerText(),/artış sırası\s*(≈ )?\d+\.[\s\S]*ΔT\s*[+−]\d+,\d T/);
-   await page.screenshot({path:path.join(out,'turkiye-t-artis-'+width+(tema==='dark'?'-dark':'')+'.png'),fullPage:true});
-   await page.locator('[data-tg-gor="t"]').click();await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="t"] svg'));
-   // A subject: its own line alone; clicking its card again (or Tüm dersler) goes back to all lines.
-   await page.locator('.et-ders[data-tg-ders="TÜRKÇE-T"]').click();
-   await page.waitForFunction(()=>/T puanı · Türkçe/.test(document.querySelector('#tgTPanel h2')?.textContent||'')&&document.querySelector('[data-tg-grafik="t"] svg'));
-   assert.equal((await cizgiler()).ders,0,'one line only');assert.equal(await page.locator('[data-tg-grafik="t"] svg .tg-genel').count(),1,'with the 50 line');
-   await page.locator('[data-tg-gor="sira"]').click();await page.waitForFunction(()=>/Sıra · Türkçe/.test(document.querySelector('#tgTPanel h2')?.textContent||'')&&document.querySelector('[data-tg-grafik="tsira"] svg'));
    await page.locator('.et-ders[data-tg-ders="MATEMATİK-T"]').click();
-   await page.waitForFunction(()=>/Sıra · Matematik/.test(document.querySelector('#tgTPanel h2')?.textContent||'')&&document.querySelector('[data-tg-grafik="tsira"] .tg-disi-nokta'));
-   const s2=page.locator('[data-tg-grafik="tsira"]');await s2.focus();await page.keyboard.press('Home');
+   await page.waitForFunction(()=>/Sıra · Matematik/.test(document.querySelector('#tgDPanel h2')?.textContent||'')&&document.querySelector('#tgDPanel [data-tg-grafik="dtsira"] .tg-disi-nokta'));
+   const s2=page.locator('#tgDPanel [data-tg-grafik="dtsira"]');await s2.focus();await page.keyboard.press('Home');
    assert.match(await s2.locator('.et-ipucu').innerText(),/Matematik · tahmini sıra\s*≈ \d+\./);
-   await page.locator('[data-tg-gor="artis"]').click();await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="tartis"] svg'));
+   await page.locator('[data-tg-gor="artis"]').click();
+   await page.waitForFunction(()=>document.querySelector('#tgTPanel [data-tg-grafik="tartis"] svg')&&document.querySelector('#tgDPanel [data-tg-grafik="dtartis"] svg'));
+   assert.match(await page.locator('#tgTPanel h2').innerText(),/^Artış sırası · TYT toplam$/i);assert.match(await page.locator('#tgDPanel h2').innerText(),/^Artış sırası · Matematik$/i);
+   assert.match(await page.locator('#tgTPanel [data-tg-grafik="tartis"] svg').innerHTML(),/→1202/);
+   const a=page.locator('#tgTPanel [data-tg-grafik="tartis"]');await a.focus();await page.keyboard.press('Home');
+   assert.match(await a.locator('.et-ipucu').innerText(),/artış sırası\s*(≈ )?\d+\.[\s\S]*ΔT\s*[+−]\d+,\d T/);
    await page.screenshot({path:path.join(out,'turkiye-t-ders-'+width+(tema==='dark'?'-dark':'')+'.png'),fullPage:true});
-   await page.locator('.tg-ders-geri [data-tg-ders=""]').click();
-   await page.waitForFunction(()=>/TYT toplam/.test(document.querySelector('#tgTPanel h2')?.textContent||'')&&document.querySelector('[data-tg-grafik="tartis"] svg'));
-   assert.equal((await cizgiler()).ders,3);
-   await page.locator('[data-tg-gor="t"]').click();await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="t"] svg'));
-   // Click a line (desktop): that subject.
+   await page.locator('#tgDPanel [data-tg-ders=""]').click();
+   await page.waitForFunction(()=>/Artış sırası · dersler/.test(document.querySelector('#tgDPanel h2')?.textContent||'')&&document.querySelector('#tgDPanel [data-tg-grafik="dtartis"] svg'));
+   assert.equal((await dersGraf()).ders,3);
+   await page.locator('[data-tg-gor="t"]').click();await page.waitForFunction(()=>document.querySelector('#tgDPanel [data-tg-grafik="dt"] svg'));
+   // Click a line of the Dersler chart (desktop): that subject only.
    if(width>600){
-    const gg=await page.evaluate(()=>{const sv=document.querySelector('[data-tg-grafik="t"] svg'),r=sv.getBoundingClientRect(),o=r.width/sv.viewBox.baseVal.width,p=[...sv.querySelectorAll('path[data-seri="0"]')][0].getPointAtLength(30);return {x:r.left+p.x*o,y:r.top+p.y*o}});
-    await page.mouse.move(gg.x,gg.y);await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="t"]').dataset.seri==='0');
-    await page.mouse.click(gg.x,gg.y);await page.waitForFunction(()=>/T puanı · Türkçe/.test(document.querySelector('#tgTPanel h2')?.textContent||''));
-    await page.locator('.tg-ders-geri [data-tg-ders=""]').click();await page.waitForFunction(()=>/TYT toplam/.test(document.querySelector('#tgTPanel h2')?.textContent||''));
+    await page.locator('#tgDPanel [data-tg-grafik]').scrollIntoViewIfNeeded();await page.waitForTimeout(400);
+    const gg=await page.evaluate(()=>{const sv=document.querySelector('#tgDPanel [data-tg-grafik] svg'),r=sv.getBoundingClientRect(),o=r.width/sv.viewBox.baseVal.width,p=[...sv.querySelectorAll('path[data-seri="0"]')][0].getPointAtLength(30);return {x:r.left+p.x*o,y:r.top+p.y*o}});
+    await page.mouse.move(gg.x,gg.y);await page.waitForFunction(()=>document.querySelector('#tgDPanel [data-tg-grafik]').dataset.seri==='0');
+    await page.mouse.click(gg.x,gg.y);await page.waitForFunction(()=>/T puanı · Türkçe/.test(document.querySelector('#tgDPanel h2')?.textContent||''));
+    assert.match(await page.locator('#tgTPanel h2').innerText(),/TYT toplam/);
+    await page.locator('#tgDPanel [data-tg-ders=""]').click();await page.waitForFunction(()=>/T puanı · dersler/.test(document.querySelector('#tgDPanel h2')?.textContent||''));
    }
+   // What each card says about the range, per toggle mode: improving (green ▲ +), worsening (red ▼ −), unchanged (grey), and "—" when an end is missing.
+   const kart=k=>page.evaluate(k=>{const e=document.querySelector('.et-ders[data-tg-ders="'+k+'"] .tg-degisim');const h=e.querySelector('.et-hap');return {sinif:[...h.classList].find(c=>['yukari','asagi','esit'].includes(c)),yok:h.classList.contains('tg-yok'),yazi:h.textContent.replace(/\s+/g,' ').trim(),ipucu:e.title,renk:getComputedStyle(h).color}},k);
+   let k1=await kart('TÜRKÇE-T'),k2=await kart('MATEMATİK-T'),k3=await kart('FİZİK-T');
+   assert.equal(k1.sinif,'yukari');assert.match(k1.yazi,/^▲ ?\+\d+,\d T$/);assert.equal(k2.sinif,'asagi');assert.match(k2.yazi,/^▼ ?−\d+,\d T$/);assert.equal(k3.sinif,'esit');assert.match(k3.yazi,/^[+−]?0,\d T$/);
+   assert.notEqual(k1.renk,k2.renk);assert.notEqual(k1.renk,k3.renk);assert.notEqual(k2.renk,k3.renk);
+   await page.locator('[data-tg-gor="sira"]').click();await page.waitForFunction(()=>document.querySelector('#tgDPanel [data-tg-grafik="dtsira"] svg'));
+   k1=await kart('TÜRKÇE-T');k2=await kart('MATEMATİK-T');k3=await kart('FİZİK-T');
+   assert.equal(k1.sinif,'yukari');assert.match(k1.yazi,/^▲ ?\d+ sıra$/);assert.equal(k2.sinif,'asagi');assert.match(k2.yazi,/^▼ ?≈ \d+ sıra$/);assert.match(k2.ipucu,/≈/);assert.equal(k3.sinif,'esit');assert.match(k3.yazi,/^0 sıra$/);
+   await page.locator('[data-tg-gor="artis"]').click();await page.waitForFunction(()=>document.querySelector('#tgDPanel [data-tg-grafik="dtartis"] svg'));
+   for(const kod of ['TÜRKÇE-T','MATEMATİK-T','FİZİK-T']){const k=await kart(kod),m=/Artış (≈ )?(\d+)\. \/ (\d+)$/.exec(k.yazi);assert(m,kod+' '+k.yazi);const r=Number(m[2]),n=Number(m[3]);
+    assert.equal(k.sinif,r<=n/3?'yukari':r>2*n/3?'asagi':'esit',kod+' by position');assert.match(k.ipucu,/ilk üçte biri yeşil, son üçte biri kırmızı/)}
+   assert.equal((await kart('TÜRKÇE-T')).sinif,'yukari');assert.equal((await kart('MATEMATİK-T')).sinif,'asagi');
+   // The total's change in the KPI tile uses the same rule.
+   const kpi=await page.evaluate(()=>{const h=document.querySelector('#tgKpi .dp-kpi-ana .et-hap');return {sinif:[...h.classList].find(c=>['yukari','asagi','esit'].includes(c)),yazi:h.textContent.replace(/\s+/g,' ').trim()}});
+   const kv=Number(kpi.yazi.replace(/[▲▼ T]/g,'').replace('−','-').replace('+','').replace(',','.'));assert.equal(kpi.sinif,Math.abs(kv)<=0.5?'esit':kv>0?'yukari':'asagi');
+   // A subject without a value at the start of the range: "—", grey, in every mode.
+   await page.evaluate(()=>{window.__mat1=false});await page.locator('[data-tg-aralik="1"]').click();await page.locator('[data-tg-aralik="tum"]').click();
+   await page.waitForFunction(()=>/27-YKS-1201 → 27-YKS-1203/.test(document.querySelector('#tgKpi')?.textContent||''));
+   for(const mod of ['t','sira','artis']){await page.locator('[data-tg-gor="'+mod+'"]').click();await page.waitForFunction(m=>document.querySelector('#tgDPanel [data-tg-grafik="d'+m+'"] svg, #tgDPanel [data-tg-grafik="d'+(m==='t'?'t':m==='sira'?'tsira':'tartis')+'"] svg'),mod);
+    const k=await kart('MATEMATİK-T');assert.equal(k.yok,true,mod);assert.equal(k.yazi,'—');assert.equal(k.sinif,'esit');assert(!/▲|▼/.test(k.yazi))}
+   await page.evaluate(()=>{window.__mat1=true});await page.locator('[data-tg-aralik="1"]').click();await page.locator('[data-tg-aralik="tum"]').click();
+   await page.locator('[data-tg-gor="t"]').click();await page.waitForFunction(()=>document.querySelector('#tgDPanel [data-tg-grafik="dt"] svg'));
    // Karşılaştır: the range chips drive first → latest; Seç shows the two exam pickers.
    await page.locator('[data-tg-aralik="1"]').click();await page.waitForFunction(()=>/27-YKS-1202 → 27-YKS-1203/.test(document.querySelector('#tgKpi')?.textContent||''));
    await page.locator('[data-tg-aralik="sec"]').click();await page.waitForFunction(()=>document.getElementById('tgOnceki')&&document.getElementById('tgSimdi'));
