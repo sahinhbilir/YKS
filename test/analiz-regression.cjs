@@ -770,7 +770,7 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
   });
   await check('name links: Deneme panosu, Etüt etkisi and Sıralamalar names carry data-ogrenci-karti with the school number', async () => {
     await kurTum();
-    run('EK.sekme="denemeler";EK.denemeKlasik=undefined');
+    run('EK.sekme="denemeler";EK.denemeKisi=undefined');
     const dp = run('DPANO.icerik()');
     for (const no of [1001, 1003, 1005]) assert(dp.includes('<td><button type="button" class="et-ad" data-ogrenci-karti="' + no + '">'), 'Deneme panosu ' + no);
     assert.equal((dp.match(/<td><button type="button" class="et-ad" data-ogrenci-karti=/g) || []).length, 5, 'one name button per student of the table');

@@ -194,7 +194,7 @@ function panelIc() {
   let detay = '';
   if (sec) {
     const d = m.dersler.get(sec.key), o = d && d.ogrenciler.get(sec.id), k = m.kimlik.get(sec.id);
-    if (o) detay = '<div class="kd-detay"><div class="kd-detay-ust"><b>' + esc(k.ad) + '</b><span>' + esc(dersAdi(d.oturum, d.kod)) + (d.yetersiz ? '' : ' · ' + kademeYazi(o) + '. kademe / ' + d.H + (d.dusuk ? ' · güvenilirlik düşük' : '')) + '</span></div>' + sparkline(o, d) + '</div>';
+    if (o) detay = '<div class="kd-detay"><div class="kd-detay-ust"><b>' + esc(k.ad) + '</b><span>' + esc(dersAdi(d.oturum, d.kod)) + (d.yetersiz ? '' : ' · ' + kademeYazi(o) + '. kademe / ' + d.H + (d.dusuk ? ' · güvenilirlik düşük' : '')) + '</span>' + (typeof denemeKisiDugmesi === 'function' ? denemeKisiDugmesi(denemeDefterIndeksi(k.id, k.ad), 'Deneme panosu →', 'et-dugme kd-pano') : '') + '</div>' + sparkline(o, d) + '</div>';
   }
   return '<div class="et-kart-bas"><h2>Kademeler</h2><span class="mini">' + ogr.length + ' öğrenci</span></div>' + araclar +
     '<div class="et-kaydir"><table class="et-tablo kd-tablo"><thead><tr><th scope="col">Öğrenci</th>' + bas + '</tr></thead><tbody>' + govde + '</tbody></table></div>' + detay;

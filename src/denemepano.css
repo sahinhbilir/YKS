@@ -87,3 +87,26 @@
 /* On a phone the heads wrap and the cells tighten so Net artışı and Türkiye’ye göre stay in view (the table scrolls inside its own box). */
 @media (max-width:640px){#dpTablo .et-tablo{font-size:.75rem}#dpTablo .et-tablo th{white-space:normal;vertical-align:bottom;font-size:.6875rem}#dpTablo .et-tablo td:first-child{min-width:5.5em}
   #dpTablo .et-tablo td,#dpTablo .et-tablo th button{padding-inline:4px}#dpTablo .et-tablo .et-durum{padding:1px 6px;font-size:.6875rem}}
+/* Headline strip (#dpKpi): one primary tile and three supporting ones on a 8px spacing scale. Labels are plain
+   text, not .mini, so the screen theme keeps them; the figure wears the text colour, the chip carries the trend. */
+.dp-kpi{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.dp-kpi .et-ozet-kart{padding:16px 20px;gap:8px;justify-content:flex-start}
+.dp-kpi .dp-kpi-ad{font-size:.875rem;line-height:1.3;color:var(--e-fg2)}
+.dp-kpi .et-ozet-kart strong{font-size:1.75rem;line-height:1.1;color:var(--e-fg);font-weight:700}
+.dp-kpi .et-ozet-kart strong small{margin-left:6px;font-size:.875rem;font-weight:400;color:var(--e-fg2)}
+.dp-kpi .dp-kpi-ana{padding:24px}
+.dp-kpi .dp-kpi-ana strong{font-size:3rem;line-height:1}
+.dp-kpi .dp-kpi-ana strong small{font-size:1rem}
+.dp-kpi .dp-kpi-yok{font-size:1.5rem;font-weight:400;color:var(--e-fg2)}
+.dp-kpi-alt{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:.8125rem;color:var(--e-fg2)}
+.dp-kpi-ana .dp-kpi-alt{flex-direction:column;align-items:flex-start;gap:4px}
+.dp-kpi-not{overflow-wrap:anywhere}
+@media (max-width:700px){
+  .dp-kpi{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .dp-kpi .dp-kpi-ana{grid-column:1 / -1;padding:16px}
+  .dp-kpi .dp-kpi-ana strong{font-size:2.5rem}
+  .dp-kpi .et-ozet-kart{padding:12px 16px}
+  .dp-kpi>.et-ozet-kart:last-child:nth-child(even){grid-column:1 / -1}
+  .dp-kpi>.et-ozet-kart:last-child:nth-child(odd){grid-column:auto}
+}
+.dp-kisi-pano,.kd-pano{align-self:flex-start;margin-top:8px}

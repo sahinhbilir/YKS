@@ -41,12 +41,13 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.locator('#dnOrtSube').selectOption('12-B');
    assert.equal(await page.locator('#dnOrtHedef').getAttribute('placeholder'),'33','the class shows the school target until it sets its own');
    await page.screenshot({path:path.join(out,'ortalama-hedef-'+width+'-'+scheme+'.png'),fullPage:true});
-   // The class average with its target lives on the per-student page; the teacher's Denemeler opens the board.
-   await page.evaluate(()=>{EK.denemeKlasik=true});
+   // The class average with its target lives on the teacher home; Denemeler opens the class board, a student's own board has no class chart.
    await page.locator('#ray .menu-grup>button[data-sekme="denemeler"]').click();
-   await page.locator('#ana section[aria-label="Deneme ortalaması"]').waitFor();
-   assert.equal(await page.locator('#ana section[aria-label="Deneme ortalaması"] .yg-hedef').count(),1,'same chart, same target on Denemeler');
+   await page.locator('#dpKok').waitFor();
+   assert.equal(await page.locator('#ana section[aria-label="Deneme ortalaması"]').count(),0);
    assert(await genis(),'Denemeler fits at '+width);
+   await page.evaluate(()=>{EK.sekme='ana';ciz()});
+   await page.locator('#ana section[aria-label="Deneme ortalaması"]').waitFor();
    // Grades never mix: an 11th grader's exam is under "11. sınıf" only; 12 stays the default.
    await page.evaluate(()=>{const o=D.ogr[0];D.ogr.push({...o,ad:'SENTETİK ON BİR',no:99,sube:'11-A',sinif:11,cikti:null,
      denemeOkul:o.denemeOkul.map(r=>({...r,id:r.id+'-11',dersler:r.dersler.map(d=>({...d,dogru:d.kod==='turkce'?2:0}))}))});EK.anaSube='';ciz();});

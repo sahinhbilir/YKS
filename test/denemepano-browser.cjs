@@ -82,9 +82,23 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
    await page.evaluate(()=>window.scrollTo(0,0));
    await page.screenshot({path:path.join(out,'denemepano-'+width+'-'+tema+'.png'),fullPage:true});
    // The per-student page and back.
-   await page.locator('#dpKlasik').click();await page.waitForSelector('#dpPanoya');
-   assert.equal(await page.locator('#dpKok').count(),0);
-   await page.locator('#dpPanoya').click();await page.waitForSelector('#dpKok');
+   assert.equal(await page.locator('#dpKlasik,#dpPanoya').count(),0,'the classic page is gone');
+   assert.equal(await page.locator('#dpKpi .dp-kpi-ana').count(),1,'one primary KPI');
+   assert(await page.locator('#dpKpi>.et-ozet-kart').count()<=4,'at most four headline tiles');
+   {const w=await page.locator('#dpKpi .dp-kpi-ana strong').evaluate(e=>parseFloat(getComputedStyle(e).fontSize)),v=await page.locator('#dpKpi>.et-ozet-kart:not(.dp-kpi-ana) strong').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize));assert(w>=v*1.4,'the primary figure is visibly larger');
+    const kutular=await page.locator('#dpKpi>.et-ozet-kart').evaluateAll(l=>l.map(e=>{const r=e.getBoundingClientRect();return [Math.round(r.top),Math.round(r.left),Math.round(r.width)]}));
+    if(width>700)assert.equal(new Set(kutular.map(k=>k[0])).size,1,'one row at '+width);
+    else{assert(kutular.every(k=>k[1]>=0&&k[1]+k[2]<=width),'the strip wraps inside the screen');}
+    if(process.env.YKS_UI_ARTIFACTS)await page.locator('#dpKpi').screenshot({path:path.join(out,'denemepano-kpi-'+width+'-'+tema+'.png')});}
+   // The per-student board: opened from the student card and from the picker, with the way back.
+   await page.locator('#dpKisi [data-dn-kisi]').click();await page.waitForSelector('#dpSinifaDon');
+   assert.equal(await page.locator('#dpKok.dn-ogretmen #dpKpi').count(),1);assert.equal(await page.locator('#dpTablo').count(),0);
+   assert.match(await page.locator('#dpKok h1').innerText(),/Deneme Panosu · SENTETİK/);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'student board: no sideways scroll at '+width);
+   await page.screenshot({path:path.join(out,'denemepano-kisi-'+width+'-'+tema+'.png'),fullPage:true});
+   await page.locator('#dpSinifaDon').click();await page.waitForSelector('#dpTablo');
+   await page.locator('#dpOgrAc').selectOption({index:1});await page.waitForSelector('#dpSinifaDon');
+   await page.locator('#dpSinifaDon').click();await page.waitForSelector('#dpTablo');
    // Every student as a line: the one under the pointer takes the stage, the others lose their colour.
    const seriNoktasi=async(grafik,k)=>page.evaluate(([g,k])=>{const p=document.querySelector('[data-dp-grafik="'+g+'"] path[data-seri="'+k+'"]');
      const q=p.getPointAtLength(p.getTotalLength()*0.5),s=q.matrixTransform(p.getScreenCTM());return {x:s.x,y:s.y}},[grafik,k]);
@@ -373,7 +387,7 @@ const taramaListeleri=['T','F'].map(t=>okulListesi({...SINAVLAR.once[t],ad:'Sent
     await page.emulateMedia({colorScheme:'light'});
   }
   // the student's own Denemelerim: a row of chips
-  await page.evaluate(()=>{EK.denemeKlasik=true;EK.ogr=0;ciz()});
+  await page.evaluate(()=>{denemeKisiAc(0)});
   const hap=await page.locator('#kdHaplar .kd-hap').allInnerTexts();assert(hap.length>=5,hap.join('|'));
   assert(hap.every(t=>/^(AYT )?[\p{L} ]+ · \d\??\. kademe \/ \d$/u.test(t)),hap.join('|'));assert(hap.some(t=>/^Matematik · /.test(t)));
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'chips: no sideways scroll at '+width);

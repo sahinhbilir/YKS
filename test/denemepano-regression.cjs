@@ -20,7 +20,7 @@ const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
 sandbox.__yg = run('yalnizcaGoruntuleme');
 const reset = () => run(`yalnizcaGoruntuleme=__yg;D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'SENTETİK ADA',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='denemeler';
-  EK.denemeKlasik=undefined;EK.dpOlcu=undefined;EK.dpAralik=undefined;EK.dpKapsam=undefined;EK.dpDers=undefined;EK.dpOgr=undefined;EK.dpAra='';EK.dpTur=undefined;EK.dpOnceki=undefined;EK.dpSimdiki=undefined;EK.dpOlcut=undefined;EK.dpOgrNet=undefined;EK.dpSira=undefined;EK.dpSiraYon=undefined;KAYIT=0;kaydet=async()=>{KAYIT++;return true};SIRALAMA.onbellek.clear();`);
+  EK.denemeKisi=undefined;EK.dpOlcu=undefined;EK.dpAralik=undefined;EK.dpKapsam=undefined;EK.dpDers=undefined;EK.dpOgr=undefined;EK.dpAra='';EK.dpTur=undefined;EK.dpOnceki=undefined;EK.dpSimdiki=undefined;EK.dpOlcut=undefined;EK.dpOgrNet=undefined;EK.dpSira=undefined;EK.dpSiraYon=undefined;KAYIT=0;kaydet=async()=>{KAYIT++;return true};SIRALAMA.onbellek.clear();`);
 const list = (exam, tur) => { const {pages, boylar} = okulListesi(SINAVLAR[exam][tur]); put('pages', pages); put('boylar', boylar); return get('siralamaPdfCoz(pages,boylar)'); };
 const loadAll = async () => { put('L', ['once', 'sonra'].flatMap(e => ['T', 'F'].map(t => list(e, t)))); await run('siralamaKaydet(L)'); };
 const state = () => get('(()=>{const {t}=DPANO.veriAl();const s=DPANO.durumAl(t);return {ks:s.ks.map(k=>k.key),K:s.K.key,olcu:s.sec.key,s:s.s,m:{sinavlar:s.m.sinavlar.map(x=>({ad:x.ad,n:x.n,ort:x.ort,medyan:x.medyan,max:x.max,ders:x.ders})),ozet:s.m.ozet,ogrenciler:s.m.ogrenciler,dersler:s.m.dersler.map(d=>({k:d.k,ad:d.ad,seri:d.seri,k1:d.k[1]}))},olcular:s.olcular.map(o=>[o.key,o.m.sinavlar.length])}})()');
@@ -33,9 +33,16 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
   await check('the teacher opens the board; the per-student page is one click away and comes back', async () => {
     let h = run('gorunumDenemeler()');
     assert.match(h, /<div id="dpKok">/); assert.match(h, /Henüz deneme listesi yok/); assert(h.includes('id="dnPdf"'), 'the import stays on the board');
-    run('EK.denemeKlasik=true'); h = run('gorunumDenemeler()');
-    assert(!h.includes('id="dpKok"')); assert(h.includes('id="dpPanoya"')); assert(h.includes('id="dnPdf"'));
-    run("D.rol='ogrenci';EK.denemeKlasik=undefined"); h = run('gorunumDenemeler()');
+    assert(!h.includes('id="dpKlasik"') && !h.includes('id="dpPanoya"'), 'the classic page and its buttons are gone');
+    assert(h.includes('id="dpOgrAc"'), 'a student picker opens the personal board');
+    run('EK.denemeKlasik=true'); assert.match(run('gorunumDenemeler()'), /<div id="dpKok">/, 'an old EK.denemeKlasik changes nothing');
+    assert.equal(run('denemeKisiAc(0)'), true); h = run('gorunumDenemeler()');
+    assert.match(h, /<div id="dpKok" class="dn-kisisel dn-ogretmen">/); assert(h.includes('id="dpSinifaDon"'), 'a way back to the class board');
+    assert(h.includes('id="dnEkle"') && h.includes('data-ogr-gor="0"') && h.includes('id="dpKpi"'), 'the same personal components with the teacher controls');
+    assert(!h.includes('id="dpKapsam"') && !h.includes('id="dpTablo"') && !h.includes('Deneme ortalaması'), 'no class controls inside a student board');
+    run('EK.denemeKisi=false'); assert.match(run('gorunumDenemeler()'), /<div id="dpKok">/, 'back to the class board');
+    run('EK.denemeKisi=true;D.ogr[0].silindi=true'); assert.match(run('gorunumDenemeler()'), /<div id="dpKok">/, 'a removed student falls back to the class board'); run('D.ogr[0].silindi=false;EK.denemeKisi=false');
+    run("D.rol='ogrenci';EK.denemeKisi=true"); h = run('gorunumDenemeler()');
     assert.match(h, /<div id="dpKok" class="dn-kisisel">/, 'students get the personal board');
     assert(h.includes('id="dnEkle"'), 'personal entry remains available');
     assert(!h.includes('id="dnPdf"') && !h.includes('id="dpKapsam"') && !h.includes('id="dpTablo"'), 'teacher import and student-list controls are absent');
@@ -72,7 +79,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     for (const g of ['genel', 'ders', 'dagilim', 'kisi']) assert(h.includes('data-dp-grafik="' + g + '"'), g);
     assert.equal((h.match(/class="et-ders"/g) || []).length, 10, 'ten TYT lessons'); assert.equal((h.match(/class="et-ders et-grup-kart"/g) || []).length, 3, 'and three tests');
     for (const k of ['G-SOS', 'G-MAT', 'G-FEN']) assert(h.includes('data-dp-ders="' + k + '"'), k);
-    assert.match(h, /data-dp-aralik="2"[^>]* disabled/); assert(h.includes('id="dpKlasik"')); assert(h.includes('data-sekme="siralamalar"'));
+    assert.match(h, /data-dp-aralik="2"[^>]* disabled/); assert(h.includes('id="dpOgrAc"')); assert(h.includes('data-sekme="siralamalar"'));
     assert(!/<img/i.test(h)); assert(/&lt;img src=x&gt;/i.test(h));
     assert(h.includes('data-ogr-gor="0"'), 'a notebook student opens in student view');
   });
@@ -140,7 +147,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(h, /12\. sınıflar · Sentetik Deneme 1 → Sentetik Deneme 2 \(\d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]+\): TYT ortalaması <b>[\d,]+<\/b> net, öncekine göre <b>[+−][\d,]+<\/b>/);
     assert.match(h, /<select id="dpOnceki" aria-label="Önceki deneme">.*<option value="[^"]+" selected>Sentetik Deneme 1 · \d+ \S+ · Genel<\/option><\/select>/);
     assert.match(h, /<option value="[^"]+">Sentetik Tarama 1 · \d+ \S+ · Tarama<\/option>/);
-    assert.match(h, /Katılımcı ortalaması · şimdiki deneme/); assert.match(h, /<button type="button" data-dp-sira="son">Şimdiki<\/button>/);
+    assert.match(h, /<span class="dp-kpi-not">seçilen önceki denemeye göre<\/span>/); assert.match(h, /<button type="button" data-dp-sira="son">Şimdiki<\/button>/);
     // The main chart draws the pair as two lines with handles; their band labels give way to the handles.
     const g = get('(()=>{const {t}=DPANO.veriAl();const g=DPANO.GRAFIKLER.genel(DPANO.durumAl(t),720);return {svg:g.svg,tutamak:g.tutamak,ids:g.ids}})()');
     assert(g.tutamak && /data-tutamak="once"/.test(g.svg) && /data-tutamak="son"/.test(g.svg)); assert(!/class="et-bant-yazi"/.test(g.svg));
@@ -206,7 +213,11 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.deepEqual(s.ogr.map(o => o.siraFark), [0, 0, null, -1, -1], 'a newcomer in third place moves the two below down one place');
     let h = run('DPANO.icerik()');
     assert.match(h, /<optgroup label="Toplam"><option value="G-SOS">Sosyal Bilimler<\/option><option value="G-MAT">Matematik \+ Geometri<\/option><option value="G-FEN" selected>Fen Bilimleri<\/option>/);
-    assert.match(h, /Sırası yükselen · son deneme<\/span><strong>0<\/strong><div class="et-ozet-alt"><span class="mini">düşen: 2 · aynı: 2<\/span>/); assert.match(h, /class="et-sira-ok (yukari|asagi|esit)" role="img" aria-label="(\d+ sıra (yükseldi|düştü)|sıra aynı)"/);
+    {const i0 = h.indexOf('id="dpKpi"'), kpi = h.slice(i0, h.indexOf('<section', i0)), tiles = (kpi.match(/<div class="et-ozet-kart/g) || []).length;
+      assert(tiles >= 3 && tiles <= 4, 'three or four headline tiles'); assert.equal((kpi.match(/dp-kpi-ana/g) || []).length, 1, 'exactly one primary tile');
+      for (const gone of ['Sırası yükselen', 'Yükselen öğrenci', 'En yüksek net', 'Katılımcı ortalaması · ']) assert(!kpi.includes(gone), gone + ' is not a tile any more');
+      assert(!/<strong>0<\/strong>/.test(kpi), 'no bare zero'); }
+    assert.match(h, /class="et-sira-ok (yukari|asagi|esit)" role="img" aria-label="(\d+ sıra (yükseldi|düştü)|sıra aynı)"/);
     // Kolaydan zora: the lessons only, by the class's success in the şimdiki exam.
     const zor = h.match(/<section class="et-panel" id="dpZorluk">[\s\S]*?<\/section>/)[0], sira = [...zor.matchAll(/data-dp-ders="([^"]+)"/g)].map(x => x[1]);
     const ders = s.dersler.filter(x => !x.uyeler), oran = x => x.seri[1] / x.soru;
@@ -467,8 +478,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
       assert.match(h, new RegExp('<p class="et-cumle">12\\. sınıflar · ' + ad + ' \\(' + bas + ' → 2 Eki\\): TYT ortalaması <b>[\\d,]+</b> net, başlangıçtaki denemeye göre <b>[+−][\\d,]+</b>'), k);
       assert(h.includes('data-dp-aralik="' + k + '" aria-pressed="true"'), k);
       const o = st(`st=>[st.m.onceki,st.m.simdi,st.m.ozet[${JSON.stringify(k)}].fark]`); assert.deepEqual(o.slice(0, 2), [onceI, 3]); yakin(o[2], ort[3] - ort[onceI], k + ': the latest mean minus the first exam of the range');
-      assert(h.includes('<span class="mini">Katılımcı ortalaması · ' + ad.toLocaleLowerCase('tr-TR') + '</span>'), 'the card names the range'); assert.match(h, /<span class="mini">başta: [\d,]+<\/span>/);
-      assert(h.includes('Sırası yükselen · başlangıca göre'));
+      assert(h.includes('<span class="dp-kpi-not">başlangıca göre</span>'), 'the Ortalama tile names its comparison'); assert.match(h, /<span class="dp-kpi-not">başta: [\d,]+–[\d,]+<\/span>/);
       // Değişimin kaynağı and Isı haritası say which range; their numbers are the same students' change from the range's first exam.
       assert(h.includes('<span class="mini">' + ad + ': ' + bas + ' → 2 Eki (' + st(`st=>st.m.sinavlar[${onceI}].ad`) + ' → Sentetik Deneme 2) · TYT</span>'), 'Değişimin kaynağı names the window');
       assert(h.includes('Öğrenciler · ' + ad + ': ') || h.includes('Şubeler · ' + ad + ': '), 'Isı haritası names the window');

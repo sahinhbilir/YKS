@@ -482,19 +482,25 @@ function cumle(st){
     (o.ayni===null?'':' (iki dönemde de giren '+fi(o.ayniN)+' öğrencinin kendi değişimi '+b(isaret(o.ayni))+')')+'. En çok değişen ders: '+kacis(en.ad)+' '+b(isaret(en.k[st.s].fark))+'. '+
     b(fi(o.artan))+' öğrenci en az '+ESIK+' net yükseldi, '+b(fi(o.azalan))+' öğrenci düştü.';
 }
+// The headline strip: one primary tile (the same students' change, the most honest progress figure) and
+// three supporting ones, each with its comparison in the tile. "veri yok" stands in for a figure that
+// cannot be computed; it is never a misleading 0. Figures that were tiles before stay reachable: the
+// highest net is the first row of Tüm öğrenciler (Net), Yükselen / Düşen are the Durum column and En çok
+// değişenler, Sırası yükselen is the ▲ / ▼ beside every rank.
 function ozetKartlari(st){
   const m=st.m,son=m.sinavlar[m.simdi],once=m.onceki===null?null:m.sinavlar[m.onceki],o=m.ozet[st.s],sa=simdiAdi(st);
-  const kart=(baslik,buyuk,alt)=>'<div class="et-ozet-kart"><span class="mini">'+baslik+'</span><strong>'+buyuk+'</strong><div class="et-ozet-alt">'+alt+'</div></div>';
-  const enIyi=m.ogrenciler.find(x=>x.no===son.enIyi);
-  return '<div class="et-ozet">'+
-    (o?kart('Katılımcı ortalaması · '+pencereAdi(st.s),f1(o.son),hap(o.fark,isaret(o.fark).replace(/^[+−]/,''))+'<span class="mini">'+oncekiAdi(st)+': '+f1(o.once)+'</span>')+
-      kart('Aynı öğrencilerin değişimi',o.ayni===null?'—':isaret(o.ayni),'<span class="mini">'+fi(o.ayniN)+' öğrenci iki dönemde de girdi</span>')
-      :kart('Katılımcı ortalaması · '+sa,f1(son.ort),'<span class="mini">'+kacis(son.ad)+'</span>'))+
-    kart('Ortadaki %50 · '+sa,f1(son.p25)+'–'+f1(son.p75),'<span class="mini">medyan '+f1(son.medyan)+' net</span>')+
-    kart('En yüksek net · '+sa,f2(son.max),'<span class="mini">'+kacis(enIyi?kisiAdi(enIyi.ad):'')+'</span>')+
-    (o?kart('Yükselen öğrenci · '+pencereAdi(st.s),fi(o.artan),'<span class="mini">düşen: '+fi(o.azalan)+' · en az '+ESIK+' net</span>'):'')+
-    (once?kart('Sırası yükselen · '+(tarihli(st.s)?'başlangıca göre':sa),fi(m.ogrenciler.filter(x=>x.siraFark>0).length),'<span class="mini">düşen: '+fi(m.ogrenciler.filter(x=>x.siraFark<0).length)+' · aynı: '+fi(m.ogrenciler.filter(x=>x.siraFark===0).length)+'</span>'):'')+
-    kart('Katılım · '+sa,fi(son.n),once?hap(son.n-once.n,fi(Math.abs(son.n-once.n)))+'<span class="mini">önceki: '+fi(once.n)+'</span>':'<span class="mini">öğrenci</span>')+'</div>';
+  const kart=(sinif,ad,buyuk,alt)=>'<div class="et-ozet-kart'+sinif+'"><span class="dp-kpi-ad">'+ad+'</span><strong>'+buyuk+'</strong><div class="dp-kpi-alt">'+alt+'</div></div>';
+  const not=t=>'<span class="dp-kpi-not">'+t+'</span>';
+  const kiyas=tarihli(st.s)?'başlangıca göre':st.s==='sec'?'seçilen önceki denemeye göre':st.s===1?'önceki denemeye göre':'önceki '+st.s+' denemeye göre';
+  const ana=o
+    ?kart(' dp-kpi-ana','Aynı öğrencilerin net değişimi',o.ayni===null?'<span class="dp-kpi-yok">veri yok</span>':isaret(o.ayni)+'<small>net</small>',
+      not(o.ayni===null?'İki denemede de giren öğrenci yok':fi(o.ayniN)+' öğrenci iki denemede de girdi · '+fi(o.artan)+' yükseldi, '+fi(o.azalan)+' düştü'))
+    :kart(' dp-kpi-ana','Katılımcı ortalaması',f1(son.ort),not(kacis(son.ad))+not('Karşılaştırma için ikinci deneme gerekir'));
+  const ort=kart('','Ortalama',o?f1(o.son):f1(son.ort),o?hap(o.fark,isaret(o.fark).replace(/^[+−]/,''))+not(kiyas):not(kacis(son.ad)));
+  const yari=kart('','Ortadaki yarı',f1(son.p25)+'–'+f1(son.p75),not('medyan '+f1(son.medyan))+(once?not(oncekiAdi(st)+': '+f1(once.p25)+'–'+f1(once.p75)):''));
+  const toplam=m.ogrenciler.length,katilim=kart('','Katılım',fi(son.n)+'<small>/ '+fi(toplam)+'</small>',
+    once?(son.n===once.n?hap(0,'0'):hap(son.n-once.n,fi(Math.abs(son.n-once.n))))+not('önceki denemeye göre'):not('öğrenci, '+sa+'de'));
+  return '<div class="et-ozet dp-kpi" id="dpKpi">'+ana+ort+yari+katilim+'</div>';
 }
 function dersKartlari(st){
   const m=st.m,w=m.pencere[st.s],son=w?w.son:null,donem=olcSira(st,m.sinavlar);
@@ -677,7 +683,8 @@ function kisiKarti(st,es){
   const onceI=o.seri.slice(0,o.sonSinav).map((v,i)=>v===null?-1:i).filter(i=>i>=0).pop(),onceS=onceI===undefined?null:m.sinavlar[onceI];
   const r=son.deger.get(o.no).o,ro=onceS?onceS.deger.get(o.no).o:null;
   const dersler=m.dersler.map((d,i)=>({...d,net:dersNeti(r,d),once:ro?dersNeti(ro,d):null,okul:son.ders[i]}));
-  return '<div class="et-kisi-bas"><h3>'+(si===undefined?kacis(ad):ogrAdDugmesi(si,ad))+'</h3><span class="mini">No '+kacis(o.no)+' · '+kacis(o.sinif||'şube yok')+' · '+fi(o.deneme)+' deneme</span></div>'+
+  return '<div class="et-kisi-bas"><h3>'+(si===undefined?kacis(ad):ogrAdDugmesi(si,ad))+'</h3><span class="mini">No '+kacis(o.no)+' · '+kacis(o.sinif||'şube yok')+' · '+fi(o.deneme)+' deneme</span>'+
+    (typeof denemeKisiDugmesi==='function'?denemeKisiDugmesi(si,'Kişisel deneme panosu →','et-dugme dp-kisi-pano'):'')+'</div>'+
     '<div class="et-kisi-sayilar"><div><span class="mini">Son net</span><strong>'+f2(o.sonNet)+'</strong><span class="mini">'+kacis(son.ad)+'</span></div>'+
     '<div><span class="mini">Sıra · '+simdiAdi(st)+'</span><strong>'+(sira===null?'—':fi(sira))+'</strong><span class="mini">'+(sira===null?'girmedi':'/ '+fi(S.n))+(o.siraOnce!==null&&sira!==null?' · önceki '+fi(o.siraOnce):'')+'</span>'+siraOk(o.siraFark)+'</div>'+
     (c&&c.fark!==null?'<div><span class="mini">Değişim · '+pencereAdi(st.s)+'</span>'+hap(c.fark,f2(Math.abs(c.fark)))+'<span class="et-durum '+DURUM[c.durum]+'">'+c.durum+'</span></div>'
@@ -725,7 +732,7 @@ function araclar(salt){
   const bekleyen=!salt&&(D.ogr||[]).some(o=>o&&!o.silindi&&o.denemeYayinBekliyor);
   return (salt?'':'<label class="et-dugme birincil">Dosyadan toplu aktar<input type="file" id="dnPdf" accept="'+yzDosyaKabul()+'" multiple hidden></label>')+
     (bekleyen?'<button type="button" class="et-dugme" id="dnYayinla">Bekleyen sonuçları yayınla</button>':'')+
-    '<button type="button" class="et-dugme" id="dpKlasik">Öğrenci bazında</button>';
+    (typeof denemeKisiSecici==='function'?denemeKisiSecici():'');
 }
 // Seç: Önceki and Şimdiki from every exam of the view, newest first, as Sıralamalar lists them.
 function ikiDeneme(m){
@@ -781,9 +788,7 @@ function yenidenCiz(odak){
 }
 document.addEventListener('click',ev=>{
   if(EK.sekme!=='denemeler'||!rehberMi()||ev.target.closest?.('[data-ogrenci-karti]'))return;
-  const el=ev.target.closest?.('[data-dp-olcu],[data-dp-tur],[data-dp-aralik],[data-dp-cizgi],[data-dp-olcut],[data-dp-ders],[data-dp-ogr],[data-dp-sira],#dpKlasik,#dpPanoya');if(!el||el.disabled)return;
-  if(el.id==='dpKlasik'){EK.denemeKlasik=true;ciz();return}
-  if(el.id==='dpPanoya'){EK.denemeKlasik=false;ciz();return}
+  const el=ev.target.closest?.('[data-dp-olcu],[data-dp-tur],[data-dp-aralik],[data-dp-cizgi],[data-dp-olcut],[data-dp-ders],[data-dp-ogr],[data-dp-sira]');if(!el||el.disabled)return;
   if(!document.getElementById('dpKok'))return;
   const q=v=>typeof CSS!=='undefined'&&CSS.escape?CSS.escape(v):v;
   if(el.dataset.dpOlcu){EK.dpOlcu=el.dataset.dpOlcu;EK.dpDers=null;EK.dpOgrNet=null;yenidenCiz('[data-dp-olcu="'+q(EK.dpOlcu)+'"]');return}
