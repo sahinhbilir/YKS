@@ -361,11 +361,70 @@ function defterKur(rapor,es,harita,ogr,acik){
   });
   return {ogr,yanlis,bos,bolumler,gorsel:bolumler.every(b=>b.gorsel)};
 }
+/* ---------------------------------------------------------------- Ders ortalamaları (İlk 100 Kurum), optional
+   The publisher's "Ders Ortalamaları İlk 100 Kurum" PDF: one section per ders, title "27-YKS-1202, TÜRKÇE-T Dersi Net Sıralı Liste _40 Soru_ (İlk 100 Okul)",
+   header "Sıralama · Okul Adı · Okul Net · Okul Başarı · Genel Net", then 100 school rows. Only three things are read: the exam code, the question count of the
+   title and the Genel Net column (network-wide average net, constant down the column). The school rows are never looked at: the school name cells are not
+   in any column we read, and nothing but {kod, dersler:[{ad,n,genel}]} is kept. pages: [{items:[{s,x,y}]}]; a ders continues over pages that repeat the header without a title. */
+const ORT_BASLIK=/^(\d{1,3}-[A-Z]+-\d{3,5})\s*,\s*(.+?)\s+Dersi\s+Net\s+S[ıi]ral[ıi]\s+Liste\s*_\s*(\d{1,3})\s*Soru\s*_/iu;
+const ORT_SUTUNLAR=['SIRALAMA','OKULADI','OKULNET','OKULBASARI','GENELNET'];
+const ORT_SAYI=/^\d{1,3}(?:[.,]\d{1,2})?$/u;
+function ortalamaCoz(pages){
+  const fail=m=>{throw new Error(m+' Ders ortalamaları dosyası eklenmedi.')};
+  if(!Array.isArray(pages)||!pages.length||pages.length>200)fail('PDF sayfaları okunamadı.');
+  const dersler=[];let cur=null;
+  for(const p of pages){
+    const items=(Array.isArray(p.items)?p.items:[]).filter(i=>i&&typeof i.s==='string'&&Number.isFinite(i.x)&&Number.isFinite(i.y)).map(i=>({s:clean(i.s),x:i.x,y:i.y}));
+    // header columns of this page (the first header row per title; a continuation page repeats the header at its top)
+    const basliklar=items.filter(i=>ORT_SUTUNLAR.includes(key(i.s)));
+    for(const i of items.sort((a,b)=>b.y-a.y||a.x-b.x)){
+      const t=ORT_BASLIK.exec(i.s);
+      if(t){cur={kod:t[1].toUpperCase(),ad:clean(t[2]),n:+t[3],degerler:[]};dersler.push(cur);continue}
+      if(!cur||!ORT_SAYI.test(i.s))continue;
+      // the header row belonging to this row = the closest column-header row above it; the column is the header nearest by x
+      const ust=basliklar.filter(b=>b.y>i.y);
+      if(!ust.length)continue;
+      const y0=Math.min(...ust.map(b=>b.y)),kolonlar=ust.filter(b=>Math.abs(b.y-y0)<3);
+      let en=null;for(const b of kolonlar)if(!en||Math.abs(b.x-i.x)<Math.abs(en.x-i.x))en=b;
+      if(en&&key(en.s)==='GENELNET')cur.degerler.push(+i.s.replace(',','.'));
+    }
+  }
+  if(!dersler.length)fail('Bu PDF’de "… Dersi Net Sıralı Liste" başlıklı ders bölümü bulunamadı.');
+  if(dersler.length>40)fail('Çok fazla ders bölümü var.');
+  const kodlar=[...new Set(dersler.map(d=>d.kod))];
+  if(kodlar.length>1)fail('Bu PDF birden fazla sınav kodu içeriyor ('+kodlar.join(', ')+').');
+  const gorulen=new Set(),out=[];
+  for(const d of dersler){
+    if(gorulen.has(key(d.ad)))fail(d.ad+' dersi iki kez geçiyor.');gorulen.add(key(d.ad));
+    if(!(d.n>0))fail(d.ad+' dersinin soru sayısı okunamadı.');
+    const tek=[...new Set(d.degerler)];
+    if(!tek.length)fail(d.ad+' dersinin Genel Net değeri bulunamadı.');
+    if(tek.length>1)fail(d.ad+' dersinde Genel Net sütunu tek bir değer değil.');
+    if(!(tek[0]>=0&&tek[0]<=d.n))fail(d.ad+' dersinin Genel Net değeri soru sayısını aşıyor.');
+    out.push({ad:d.ad,n:d.n,genel:tek[0]});
+  }
+  return {kod:kodlar[0],dersler:out};
+}
+// The file must be the report's exam and its question counts must match the report's sections. Sections of the report that the file does not list simply stay unanchored.
+function ortalamaDogrula(ort,rapor){
+  const fail=m=>{throw new Error(m+' Ders ortalamaları dosyası eklenmedi.')};
+  const no=(/(\d{3,5})$/u.exec(ort.kod)||[])[1];
+  if(rapor.sinavNo&&no!==rapor.sinavNo)fail('Sınav kodları uyuşmuyor: ders ortalamaları dosyası '+ort.kod+' sınavına ait, cevap raporu '+(rapor.ad||rapor.sinavNo)+' sınavı.');
+  const map=new Map(ort.dersler.map(d=>[key(d.ad),d]));let eslesen=0;
+  for(const b of rapor.bolumler){
+    const d=map.get(key(b.ad));if(!d)continue;
+    if(d.n!==b.n)fail('Soru sayıları uyuşmuyor: '+b.ad+' için cevap raporunda '+b.n+', ders ortalamaları dosyasında ('+ort.kod+') '+d.n+' soru var.');
+    eslesen++;
+  }
+  if(!eslesen)fail('Cevap raporundaki derslerin hiçbiri dosyada ('+ort.kod+') bulunamadı.');
+  return map;
+}
 /* ---------------------------------------------------------------- Soru zorluğu ve madde kalitesi (src/zorluk.js)
    Computed here, in memory, from the report's own answers: correct = 1, wrong or blank = 0. With a valid A <-> B map the A and B students are pooled on
    A numbering; without it each booklet is analysed on its own numbers. Whoever left the whole section blank did not take it. A cancelled question
    (a key that is not A-E) is left out of the totals. dis = the school's Madde Analizi (difficultyIndex) for the optional rank correlation. */
-function zorlukAnaliz(rapor,es,harita,dis){
+function zorlukAnaliz(rapor,es,harita,dis,ort){
+  const ortMap=ort?new Map(ort.dersler.map(d=>[key(d.ad),d])):null;
   const map=new Map(),bolumler=[];
   rapor.bolumler.forEach((b,ri)=>{
     const ses=b.oturum||'TYT',eb=es?es.bolumler.find(x=>x.ri===ri):null,hm=eb&&harita?.testler?.[eb.test]||null;
@@ -378,6 +437,9 @@ function zorlukAnaliz(rapor,es,harita,dis){
       const a=ZORLUK.bolum(rows,{k:b.n,atla});if(!a.n)return null;
       let rho=null;
       if(dis&&eb&&kit!=='B'){const x=[],y=[];a.maddeler.forEach(m=>{const q=dis.map.get(eb.test+':'+(eb.off+m.i+1));if(!m.iptal&&q&&m.p!==null){x.push(m.p);y.push(q.p)}});rho=ZORLUK.spearman(x,y)}
+      // optional anchoring of the bands to the network average (ZORLUK.capala); the file is trusted only when its question count equals the section's
+      const od=ortMap?ortMap.get(key(b.ad)):null;
+      if(od&&od.n===b.n)ZORLUK.capala(a,od.genel,od.n);
       a.maddeler.forEach(m=>map.set(ri+':'+(kit==='B'?'B':'A')+':'+(m.i+1),{...m,ri,no:m.i+1,kit}));
       return {kit,a,rho};
     };
@@ -453,7 +515,7 @@ function filterDefter(d,options={},index={map:new Map()}){
 }
 /* ---------------------------------------------------------------- Screen and print. State lives only in this page's memory. */
 const OLCEK=2,BOSLUK=8;
-const S={kitlar:{},kitDurum:{},rapor:null,es:null,pairs:{},cozum:{},cozDurum:{},harita:null,durum:{kit:'',rapor:'',coz:''},hata:{kit:'',rapor:'',coz:''},sube:'',ogr:'',status:'all',bantlar:null,kendi:false,kapali:new Set(),crops:new Map(),jeton:0,hazir:Promise.resolve(),ilerleme:'',mesgul:'',zOnbellek:null};
+const S={kitlar:{},kitDurum:{},rapor:null,es:null,pairs:{},cozum:{},cozDurum:{},harita:null,ort:null,durum:{kit:'',rapor:'',coz:'',ort:''},hata:{kit:'',rapor:'',coz:'',ort:''},sube:'',ogr:'',status:'all',bantlar:null,kendi:false,kapali:new Set(),crops:new Map(),jeton:0,hazir:Promise.resolve(),ilerleme:'',mesgul:'',zOnbellek:null};
 const h=s=>kacis(String(s??''));
 const rehber=()=>typeof rehberMi==='function'&&rehberMi();
 const etkin=()=>EK.sekme==='yanlislar'&&rehber()&&!!document.getElementById('ydKok');
@@ -508,6 +570,10 @@ async function yukle(tur,file){
       let es=null;if(kitVar()){try{es=esle(rapor,S.kitlar)}catch(e){throw new Error(e.message+' Cevap raporu eklenmedi.')}}
       S.rapor=rapor;S.es=es;S.sube='';S.ogr='';S.kapali=new Set();S.zOnbellek=null;S.durum.rapor='✓ '+rapor.ogrenciler.length+' öğrenci'+(rapor.ad?' · '+rapor.ad:'')+(rapor.oturumlar.length>1?' · '+rapor.oturumlar.join(' + '):'');
       yenidenDogrula();
+    }else if(tur==='ort'){
+      if(!S.rapor)throw new Error('Önce cevap raporunu yükleyin.');
+      const ort=ortalamaCoz((await pdfOku(file,false)).pages);ortalamaDogrula(ort,S.rapor);
+      S.ort=ort;S.zOnbellek=null;S.durum.ort='✓ '+ort.dersler.length+' ders · genel ortalama';
     }else{
       if(!kitVar()||!S.rapor||!S.es)throw new Error('Önce soru kitapçığını ve cevap raporunu yükleyin.');
       const {pages}=await pdfOku(file,false),pairs=cozumEtiketleri(pages);
@@ -525,6 +591,7 @@ async function yukle(tur,file){
 }
 // The çözüm files are checked against whatever booklets and report are current; one that no longer fits is dropped.
 function yenidenDogrula(){
+  if(S.ort){try{ortalamaDogrula(S.ort,S.rapor)}catch(e){S.hata.ort=e.message;S.ort=null;S.durum.ort='';S.zOnbellek=null}}
   for(const ses of Object.keys(S.pairs)){
     try{if(!S.es||!S.es.aralik[ses])throw new Error('');S.cozum[ses]=haritaKur(S.pairs[ses],esOturum(S.es,ses),S.rapor);S.cozDurum[ses]='✓ '+ses+' · '+S.cozum[ses].adet+' soru eşleşmesi'}
     catch(e){if(e.message)S.hata.coz=e.message;delete S.pairs[ses];delete S.cozum[ses];delete S.cozDurum[ses]}
@@ -539,9 +606,9 @@ const difficultyContext=()=>difficultyIndex(S.rapor,S.es,selectedDifficulty());
 function zorlukBilgi(){
   if(!S.rapor)return null;
   const kaynak=S.es?selectedDifficulty():null,c=S.zOnbellek;
-  if(c&&c.rapor===S.rapor&&c.es===S.es&&c.harita===S.harita&&c.kaynak===kaynak)return c.v;
+  if(c&&c.rapor===S.rapor&&c.es===S.es&&c.harita===S.harita&&c.kaynak===kaynak&&c.ort===S.ort)return c.v;
   const dis=S.es&&kaynak?difficultyIndex(S.rapor,S.es,kaynak):null;
-  const v=zorlukAnaliz(S.rapor,S.es,S.harita,dis&&dis.map.size?dis:null);S.zOnbellek={rapor:S.rapor,es:S.es,harita:S.harita,kaynak,v};return v;
+  const v=zorlukAnaliz(S.rapor,S.es,S.harita,dis&&dis.map.size?dis:null,S.ort);S.zOnbellek={rapor:S.rapor,es:S.es,harita:S.harita,kaynak,ort:S.ort,v};return v;
 }
 // Kendi seviyesi: the student's tier in the ders (within the grade) picks a window of difficulty bands (ZORLUK.kademePenceresi), added to the chips; without a tier, the Orta band.
 function kendiSeviyesi(ogr,b){
@@ -630,19 +697,19 @@ function ogrHTML(d){
   const cevap='<section class="yd-anahtar"><h2>Cevaplar</h2><p class="yd-kimlik">'+h(o.ad)+' · '+kimlik+'</p><div class="yd-cevaplar">'+d.bolumler.map(cevapTablosu).join('')+'</div></section>';
   return '<article class="yd-ogr" data-yd-ogr="'+o.id+'">'+ust+not+dersler+cevap+'</article>';
 }
-const durumSatiri=(tur,ad,id)=>'<div class="yd-dosya"><label class="et-dugme'+(S.durum[tur]?'':' birincil')+'">'+ad+'<input id="'+id+'" type="file" accept="'+(tur==='rapor'?'.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/pdf,.pdf')+'"'+(tur==='rapor'?'':' multiple')+' class="yd-file"'+(S.mesgul?' disabled':'')+'></label><span class="yd-durum">'+(S.mesgul===tur?'Okunuyor…':S.durum[tur].split('\n').map(h).join('<br>'))+'</span>'+(S.hata[tur]?'<span class="yd-hata" role="alert">'+h(S.hata[tur])+'</span>':'')+'</div>';
+const durumSatiri=(tur,ad,id)=>'<div class="yd-dosya"><label class="et-dugme'+(S.durum[tur]?'':' birincil')+'">'+ad+'<input id="'+id+'" type="file" accept="'+(tur==='rapor'?'.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/pdf,.pdf')+'"'+(tur==='kit'||tur==='coz'?' multiple':'')+' class="yd-file"'+(S.mesgul?' disabled':'')+'></label><span class="yd-durum">'+(S.mesgul===tur?'Okunuyor…':S.durum[tur].split('\n').map(h).join('<br>'))+'</span>'+(S.hata[tur]?'<span class="yd-hata" role="alert">'+h(S.hata[tur])+'</span>':'')+'</div>';
 const f2=v=>ZORLUK.sayi(v);
 // Madde kalitesi: on screen only (not printed). One compact table per ders and booklet group; the row of a flagged question is marked.
 function analizHTML(za){
   const gruplar=za.bolumler.flatMap(b=>b.gruplar.map(g=>({b,g})));
   if(!gruplar.length)return '';
-  const satir=m=>'<tr'+(m.bayrak.length?' class="yd-isaretli"':'')+'><td>'+(m.i+1)+'</td>'+(m.iptal?'<td colspan="4">İptal</td>':'<td>'+f2(m.p)+'</td><td>'+f2(m.rel)+'</td><td>'+f2(m.rit)+'</td><td>'+h(m.bayrak.join(' · '))+'</td>')+'</tr>';
-  return '<section class="yd-analiz"><h2>Madde kalitesi</h2>'+gruplar.map(({b,g})=>'<details class="yd-kalite"><summary>'+h(g.satir)+'</summary><div class="et-kaydir"><table class="et-tablo" aria-label="Madde kalitesi · '+h(b.ders)+'"><thead><tr><th scope="col">Soru</th><th scope="col">p</th><th scope="col">b</th><th scope="col">r<sub>it</sub></th><th scope="col">İşaret</th></tr></thead><tbody>'+
-    g.a.maddeler.map(satir).join('')+'</tbody></table></div></details>').join('')+'</section>';
+  const satir=(m,capa)=>'<tr'+(m.bayrak.length?' class="yd-isaretli"':'')+'><td>'+(m.i+1)+'</td>'+(m.iptal?'<td colspan="'+(capa?5:4)+'">İptal</td>':'<td>'+f2(m.p)+'</td><td>'+f2(m.rel)+'</td><td>'+f2(m.rit)+'</td>'+(capa?'<td>'+(m.bant?h(ZORLUK.etiketYazi(m.bant,m.belirsiz)):'—')+'</td>':'')+'<td>'+h(m.bayrak.join(' · '))+'</td>')+'</tr>';
+  return '<section class="yd-analiz"><h2>Madde kalitesi</h2>'+gruplar.map(({b,g})=>'<details class="yd-kalite"><summary>'+h(g.satir)+'</summary><div class="et-kaydir"><table class="et-tablo" aria-label="Madde kalitesi · '+h(b.ders)+'"><thead><tr><th scope="col">Soru</th><th scope="col">p</th><th scope="col">b</th><th scope="col">r<sub>it</sub></th>'+(g.a.capa?'<th scope="col">Genele göre</th>':'')+'<th scope="col">İşaret</th></tr></thead><tbody>'+
+    g.a.maddeler.map(m=>satir(m,!!g.a.capa)).join('')+'</tbody></table></div></details>').join('')+'</section>';
 }
 const chipHtml=(k,ad,secili)=>'<button type="button" class="yd-chip" data-yd-z="'+k+'" aria-pressed="'+secili+'">'+h(ad)+'</button>';
 function content(){
-  const top='<div class="yd-bas et-bas"><h1 class="et-baslik">Yanlışlar defteri</h1></div><div class="yd-dosyalar">'+durumSatiri('kit','Soru kitapçığı (A)','ydKit')+durumSatiri('rapor','Cevap raporu','ydRapor')+durumSatiri('coz','Çözüm kitapçığı','ydCoz')+'</div>';
+  const top='<div class="yd-bas et-bas"><h1 class="et-baslik">Yanlışlar defteri</h1></div><div class="yd-dosyalar">'+durumSatiri('kit','Soru kitapçığı (A)','ydKit')+durumSatiri('rapor','Cevap raporu','ydRapor')+durumSatiri('coz','Çözüm kitapçığı','ydCoz')+durumSatiri('ort','Ders ortalamaları (isteğe bağlı)','ydOrt')+'</div>';
   if(!kitVar()||!S.rapor||!S.es)return top;
   const subeler=[...new Set(S.rapor.ogrenciler.map(o=>o.sube))].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true}));
   const inSube=S.rapor.ogrenciler.filter(o=>!S.sube||o.sube===S.sube).sort((a,b)=>a.ad.localeCompare(b.ad,'tr'));
@@ -694,7 +761,7 @@ if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener(
 
 document.addEventListener('change',ev=>{
   if(!etkin())return;const el=ev.target;
-  const dosya={ydKit:'kit',ydRapor:'rapor',ydCoz:'coz'}[el.id];
+  const dosya={ydKit:'kit',ydRapor:'rapor',ydCoz:'coz',ydOrt:'ort'}[el.id];
   if(dosya){const f=[...(el.files||[])];el.value='';if(f.length)dosyaYukle(dosya,f);return}
   if(el.dataset?.ydF==='sube'){S.sube=el.value;if(S.ogr&&S.rapor.ogrenciler.find(o=>String(o.id)===S.ogr)?.sube!==S.sube&&S.sube)S.ogr='';render('[data-yd-f="sube"]');return}
   if(el.dataset?.ydF==='ogr'){S.ogr=el.value;render('[data-yd-f="ogr"]');return}
@@ -713,6 +780,6 @@ document.addEventListener('click',ev=>{
   }
 });
 const durumu=()=>S;
-return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
+return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,soruKirp,yukle,gorunum,yazdir,hazirla,durumu,key,title};
 })();
 function gorunumYanlislar(){return YANLISLAR.gorunum()}

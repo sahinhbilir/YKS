@@ -1,5 +1,5 @@
 /* Yanlışlar defteri: the Etütler look (tokens and components in etutler.css) around white pages that look the same on screen and on paper. */
-#ydKok .yd-dosyalar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+#ydKok .yd-dosyalar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 #ydKok .yd-dosya{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
 #ydKok .yd-file{position:absolute;width:1px;height:1px;opacity:0}#ydKok .et-dugme{position:relative;min-height:38px}
 #ydKok .yd-durum{font-size:.8125rem;color:var(--e-fg2);min-height:1.2em;overflow-wrap:anywhere}
@@ -51,6 +51,7 @@
 #ydKok .yd-kalite summary{cursor:pointer;font-size:.8125rem;padding:6px 0}
 #ydKok .yd-kalite td,#ydKok .yd-kalite th{white-space:nowrap}
 #ydKok .yd-isaretli td{color:var(--e-bad)}
+@media(max-width:900px){#ydKok .yd-dosyalar{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){
   #ydKok .yd-dosyalar,#ydKok .yd-filtre{grid-template-columns:minmax(0,1fr)}
   #ydKok .yd-ogr{padding:12px}

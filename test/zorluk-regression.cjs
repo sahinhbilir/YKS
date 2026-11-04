@@ -532,6 +532,92 @@ const sig = z => 1 / (1 + Math.exp(-z));
     const kc = [...k.matchAll(/<span class="yd-zorluk[^"]*"[^>]*>([^<]+)<\/span>/g)];
     assert(kc.length && kc.every(m => /yd-dusuk/.test(m[0])), 'low reliability: every chip is muted');
   });
+  /* ---------------- Ders ortalamaları (İlk 100 Kurum): parsing, refusal, anchoring ---------------- */
+  const ortSayfa = o => Y.itemlere(Y.ortalamaSpec(o)), ortOku = o => copy(T.ortalamaCoz(ortSayfa(o)));
+  await test('ders ortalamaları: title lines and Genel Net of several ders (Turkish decimal commas); school rows are discarded', () => {
+    const o = ortOku(); assert.equal(o.kod, '27-YKS-1203'); assert.deepEqual(Object.keys(o).sort(), ['dersler', 'kod']);
+    assert.deepEqual(o.dersler, [{ad: 'TÜRKÇE-T', n: 20, genel: 11.5}, {ad: 'MATEMATİK-T', n: 20, genel: 8.25}, {ad: 'TÜRK DİLİ VE EDB-A', n: 24, genel: 10.74}, {ad: 'TARİH.1-A', n: 10, genel: 3.51}, {ad: 'FELSEFE GR.-A', n: 12, genel: 3.68}, {ad: 'S.FELSEFE-A', n: 6, genel: 1.84}]);
+    for (const d of o.dersler) assert.deepEqual(Object.keys(d).sort(), ['ad', 'genel', 'n']);
+    const json = JSON.stringify(o); assert.doesNotMatch(json, /OKUL|LİSESİ|SENTETİK/); assert(json.length < 600, 'nothing but the aggregate numbers: ' + json.length);
+    // a ders over two pages (the second without a title) still has one value; a one-page ders works too; point decimals are tolerated
+    assert.equal(Y.ortalamaSpec().length > 6, true); assert.deepEqual(ortOku({satir: 5, dersler: [['TARİH-T', 5, 2.5]]}).dersler, [{ad: 'TARİH-T', n: 5, genel: 2.5}]);
+    // the Okul Net / Okul Başarı columns are never taken for the Genel Net column, even when their numbers look alike
+    assert.equal(ortOku({satir: 3, dersler: [['FİZİK-T', 7, 3.75]]}).dersler[0].genel, 3.75);
+    // the real PDF's text is Latin-1 safe too: ASCII titles ("Siral") are read
+    assert.equal(ortOku({ascii: true, dersler: [['MATEMATİK-T', 20, 8.25]]}).dersler[0].genel, 8.25);
+  });
+  await test('ders ortalamaları: a file that is not the report, with two values in the column, or two exams is refused', () => {
+    assert.throws(() => T.ortalamaCoz(Y.itemlere(Y.kitapcikSpec())), /bulunamadı.*eklenmedi/);
+    const sayfalar = ortSayfa({satir: 20, dersler: [['TÜRKÇE-T', 20, 11.5]]}); sayfalar[0].items.find(i => i.x === 507 && i.y === 745).s = '12,00';
+    assert.throws(() => T.ortalamaCoz(sayfalar), /Türkçe|TÜRKÇE-T.*tek bir değer/);
+    const iki = [...ortSayfa({satir: 3, dersler: [['TÜRKÇE-T', 20, 11.5]]}), ...ortSayfa({kod: '27-YKS-1204', satir: 3, dersler: [['MATEMATİK-T', 20, 8.25]]})];
+    assert.throws(() => T.ortalamaCoz(iki), /birden fazla sınav kodu/);
+    assert.throws(() => T.ortalamaCoz(ortSayfa({satir: 3, dersler: [['TÜRKÇE-T', 20, 21]]})), /soru sayısını aşıyor/);
+  });
+  await test('ders ortalamaları: an exam-code mismatch and a question-count mismatch are refused in Turkish, naming both', async () => {
+    const {rapor} = await kur(SIM), ok = T.ortalamaCoz(ortSayfa({dersler: [['TÜRKÇE-T', 20, 11.5], ['MATEMATİK-T', 20, 8.25], ['FİZİK-T', 7, 3.75]]}));
+    assert.equal(T.ortalamaDogrula(ok, rapor).size, 3, 'sections of the file the report does not have are fine');
+    const baska = T.ortalamaCoz(ortSayfa({kod: '27-YKS-1202'}));
+    assert.throws(() => T.ortalamaDogrula(baska, rapor), e => /Sınav kodları uyuşmuyor/.test(e.message) && e.message.includes('27-YKS-1202') && e.message.includes(rapor.ad) && /eklenmedi/.test(e.message));
+    const sayi = T.ortalamaCoz(ortSayfa({dersler: [['TÜRKÇE-T', 20, 11.5], ['MATEMATİK-T', 25, 8.25]]}));
+    assert.throws(() => T.ortalamaDogrula(sayi, rapor), e => /Soru sayıları uyuşmuyor/.test(e.message) && e.message.includes('MATEMATİK-T') && e.message.includes('20') && e.message.includes('25'));
+    assert.throws(() => T.ortalamaDogrula(T.ortalamaCoz(ortSayfa({dersler: [['TARİH.1-A', 10, 3.5]]})), rapor), /hiçbiri/);
+  });
+  await test('anchoring: Δ = logit(r_s) − logit(r_g) on a hand example, clamped to [0.02, 0.98]', () => {
+    const logit = p => Math.log(p / (1 - p));
+    // four takers, four items; nets D − Y/4: 4, 1.75, 0.25, −0.5 -> mean 1.375, r_s = 0.34375; Genel Net 1.0 of 4 -> r_g = 0.25
+    const rows = [[1, 1, 1, 1], [1, 1, 0, -1], [1, 0, 0, 0], [0, 0, -1, -1]], a = Z.bolum(rows);
+    near(a.okulNet, 1.375, 1e-12); near(a.okulOran, 0.34375, 1e-12); assert.equal(a.n, 4);
+    const delta = logit(0.34375) - logit(0.25); near(delta, 0.451985, 1e-6);
+    const c = Z.capala(a, 1.0, 4); near(c.delta, delta, 1e-12); near(c.rg, 0.25, 1e-12); near(c.okul, 1.375, 1e-12); assert(c.delta > 0, 'school stronger than the network');
+    // a taker who left the whole section blank is not counted in the school's mean net
+    near(Z.bolum([...rows, [-1, -1, -1, -1]]).okulNet, 1.375, 1e-12);
+    // the clamp: a school at 100% against a network at 1% is logit(.98) − logit(.02), not infinite
+    near(Z.capaFarki(1, 0.01), 2 * logit(0.98), 1e-12); near(Z.capaFarki(0.5, 0.5), 0, 1e-12); near(Z.capaFarki(-0.3, 0.5), logit(0.02), 1e-12);
+    assert.equal(Z.kisitla(1.2), 0.98); assert.equal(Z.kisitla(-1), 0.02);
+    // bands shift by Δ, edges and "?" rule unchanged
+    const b = Z.bolum(Array.from({length: 40}, (_, i) => Array.from({length: 10}, (_, j) => ((i * 7 + j * 3) % 10) < 3 + j / 2 ? 1 : 0)));
+    const once = b.maddeler.map(m => [m.rel, m.se, m.bant, m.belirsiz]), cc = Z.capala(b, 5, 10);
+    b.maddeler.filter(m => m.rel !== null).forEach((m, i) => { near(m.relGenel, m.rel + cc.delta, 1e-12); const e = Z.bantla(m.rel + cc.delta, m.se); assert.equal(m.bant, e.bant); assert.equal(m.belirsiz, e.belirsiz) });
+    assert.equal(b.maddeler.filter(m => m.rel !== null).length > 0, true); assert.deepEqual(copy(b.maddeler.map(m => m.bantOkul === undefined ? null : m.bantOkul)).map(x => x === null ? undefined : x), copy(once.map(x => x[2] === undefined ? null : x[2])).map(x => x === null ? undefined : x));
+    // no usable Genel Net: nothing changes
+    assert.equal(Z.capala(Z.bolum(rows), NaN, 4), null); assert.equal(Z.capala(Z.bolum(rows), 1, 0), null);
+  });
+  await test('anchoring on the simulated exam: a stronger school (weaker network) shifts the bands harder, a weaker school easier; no file = identical output', async () => {
+    const {rapor, es, harita} = await kur(SIM), rank = ['cok-kolay', 'kolay', 'orta', 'zor', 'cok-zor'], ortRank = za => { const l = [...za.map.values()].filter(m => m.bant); return l.map(m => rank.indexOf(m.bant)).reduce((a, b) => a + b, 0) / l.length };
+    const dosya = genel => T.ortalamaCoz(ortSayfa({dersler: [['TÜRKÇE-T', 20, genel * 20], ['MATEMATİK-T', 20, genel * 20]]}));
+    const temel = T.zorlukAnaliz(rapor, es, harita), zayifAg = T.zorlukAnaliz(rapor, es, harita, null, dosya(0.15)), guclAg = T.zorlukAnaliz(rapor, es, harita, null, dosya(0.9));
+    const d = za => za.bolumler[0].gruplar[0].a.capa.delta, okul = temel.bolumler[0].gruplar[0].a.okulOran;
+    assert(d(zayifAg) > 0 && d(guclAg) < 0, 'school vs network: ' + d(zayifAg) + ' / ' + d(guclAg)); near(d(zayifAg), Z.capaFarki(okul, 0.15), 1e-12);
+    assert(ortRank(zayifAg) > ortRank(temel) && ortRank(temel) > ortRank(guclAg) - 1e-9, [ortRank(zayifAg), ortRank(temel), ortRank(guclAg)].join(' > '));
+    assert(ortRank(zayifAg) > ortRank(guclAg), 'stronger school: harder bands');
+    // two schools against one network: the stronger school (more correct) gets the larger Δ
+    const zayifOkul = copy(SIM); zayifOkul.ogr.forEach(o => { o.cev = o.cev.map((c, i) => i % 2 ? c : (c === 'A' ? 'B' : 'A')) });
+    const k2 = await kur(zayifOkul), z2 = T.zorlukAnaliz(k2.rapor, k2.es, k2.harita, null, dosya(0.5)), z1 = T.zorlukAnaliz(rapor, es, harita, null, dosya(0.5));
+    assert(z2.bolumler[0].gruplar[0].a.capa.rs < z1.bolumler[0].gruplar[0].a.capa.rs && d(z2) < d(z1), 'weaker school: smaller Δ');
+    // the school-relative band is kept; the order of the questions inside a ders (rel) is not touched
+    const m1 = zayifAg.map.get('0:A:1'), m0 = temel.map.get('0:A:1'); assert.equal(m1.bantOkul, m0.bant); near(m1.rel, m0.rel, 1e-12); near(m1.relGenel, m0.rel + d(zayifAg), 1e-12);
+    // no file (or one for other ders only, or null) = exactly the output of before
+    const same = za => JSON.stringify([...za.map], (k, v) => v), none = T.zorlukAnaliz(rapor, es, harita, null, null);
+    assert.equal(same(none), same(temel)); assert.equal(same(T.zorlukAnaliz(rapor, es, harita, null, T.ortalamaCoz(ortSayfa({dersler: [['FİZİK-T', 7, 3.75]]})))), same(temel));
+    assert.equal(temel.bolumler[0].gruplar[0].a.capa, undefined); assert.doesNotMatch(temel.bolumler[0].gruplar[0].satir, /genel ort\./); assert.equal(temel.map.get('0:A:1').genele, undefined);
+    assert.match(zayifAg.bolumler[0].gruplar[0].satir, /^Türkçe · 60 öğrenci · KR-20 0,\d\d · .* · genel ort\. 3,00 net · okul \d+,\d\d net · ölçek genele göre$/);
+    // a file whose count differs from the section is ignored by the analysis itself
+    assert.equal(T.zorlukAnaliz(rapor, es, harita, null, {kod: 'x', dersler: [{ad: 'TÜRKÇE-T', n: 25, genel: 10}]}).bolumler[0].gruplar[0].a.capa, undefined);
+  });
+  await test('anchoring in the page: chips and the table use the anchored band, Madde kalitesi shows the line and the column, the printed defter says nothing', async () => {
+    const k = await show(SIM), S = k.S, bant = out => [...out.matchAll(/yd-z-([a-z-]+)/g)].map(m => m[1]);
+    const once = T.gorunum(); assert.doesNotMatch(once, /genel ort\.|Genele göre|ölçek genele/);
+    S.ort = T.ortalamaCoz(ortSayfa({dersler: [['TÜRKÇE-T', 20, 3], ['MATEMATİK-T', 20, 3]]})); S.durum.ort = '✓ 2 ders · genel ortalama'; S.zOnbellek = null;
+    const sonra = T.gorunum(), a = sonra.slice(sonra.indexOf('<section class="yd-analiz"'), sonra.indexOf('<div class="yd-baski"')), baski = sonra.slice(sonra.indexOf('<div class="yd-baski"'));
+    assert.match(a, /<summary>Türkçe · 60 öğrenci · KR-20 0,\d\d · [^<]*genel ort\. 3,00 net · okul \d+,\d\d net · ölçek genele göre<\/summary>/);
+    assert.match(a, /<th scope="col">r<sub>it<\/sub><\/th><th scope="col">Genele göre<\/th><th scope="col">İşaret<\/th>/); assert.match(a, /<td>(Çok kolay|Kolay|Orta|Zor|Çok zor)\??<\/td>/);
+    assert.match(sonra, /Ders ortalamaları \(isteğe bağlı\)/); assert.match(sonra, /✓ 2 ders · genel ortalama/);
+    assert.doesNotMatch(baski, /genel ort|Genele göre|ölçek|ortalama|Δ/i, 'nothing about anchoring in the defter');
+    const rank = b => ['cok-kolay', 'kolay', 'orta', 'zor', 'cok-zor'].indexOf(b), ort = l => l.reduce((x, y) => x + rank(y), 0) / l.length;
+    assert(ort(bant(baski)) > ort(bant(once.slice(once.indexOf('<div class="yd-baski"')))), 'a weak network (3 of 20) makes the chips harder');
+    S.ort = null; S.zOnbellek = null; assert.equal(T.gorunum().slice(T.gorunum().indexOf('<section class="yd-analiz"')), once.slice(once.indexOf('<section class="yd-analiz"')).replace(once.match(/<span class="yd-durum">[^]*?<\/span>/)[0], ''), 'removing the file restores the page') ;
+  });
   await test('nothing from the files is kept: no storage, no notebook field, no network in the module', () => {
     const modul = source.slice(source.indexOf('const YANLISLAR'), source.indexOf('// END YANLISLAR')) + source.slice(source.indexOf('const ZORLUK'), source.indexOf('// END ZORLUK'));
     assert.doesNotMatch(modul, /localStorage|sessionStorage|indexedDB|firebase|\bfetch\(|XMLHttpRequest|sendBeacon/);

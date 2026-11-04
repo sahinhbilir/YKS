@@ -134,6 +134,35 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   assert((await page.locator('.yd-kalite summary').allInnerTexts()).some(t=>/okul verisi ρ [−\d,]+$/.test(t)),'the school correlation appears in the section line');
   assert.equal(await page.locator('.yd-soru').count(),3,'and no question was dropped');
   await noScroll('validity line');
+  // ---- optional 4th upload: Ders ortalamaları (İlk 100 Kurum), read by the real pdf.js; the exam code and question counts are checked
+  const ortPdf=o=>({name:'ders-ortalamalari.pdf',mimeType:'application/pdf',buffer:Y.pdfYaz(Y.ortalamaSpec({ascii:true,satir:12,...o}))});
+  assert.match(await page.locator('.yd-dosya').nth(3).innerText(),/Ders ortalamaları \(isteğe bağlı\)/);
+  assert.equal(await page.locator('#ydOrt').count(),1);assert.equal(await page.locator('.yd-dosyalar .yd-dosya').count(),4);
+  await page.locator('#ydOrt').setInputFiles(ortPdf({kod:'27-YKS-1202',dersler:[['TÜRKÇE-T',4,2.5],['TARİH-T',2,1.25]]}));
+  await page.waitForFunction(()=>YANLISLAR.durumu().hata.ort&&document.querySelector('.yd-hata'));
+  let hata=await page.locator('.yd-dosya').nth(3).locator('.yd-hata').innerText();
+  assert(hata.includes('27-YKS-1202')&&hata.includes('SENTETİK-1203')&&/uyuşmuyor/.test(hata),hata);
+  assert.equal(await page.locator('.yd-dosya').nth(3).locator('.yd-durum').innerText(),'');
+  await page.locator('#ydOrt').setInputFiles(ortPdf({dersler:[['TÜRKÇE-T',6,2.5],['TARİH-T',2,1.25]]}));
+  await page.waitForFunction(()=>/Soru sayıları/.test(YANLISLAR.durumu().hata.ort)&&/Soru sayıları/.test(document.querySelector('.yd-dosya:nth-child(4) .yd-hata')?.textContent||''));
+  assert.match(await page.locator('.yd-dosya').nth(3).locator('.yd-hata').innerText(),/TÜRKÇE-T.*4.*6|TÜRKÇE-T.*6/);
+  await noScroll('refused ders ortalamaları');
+  assert(!(await page.locator('.yd-kalite summary').allInnerTexts()).some(t=>/genel ort\./.test(t)),'a refused file changes nothing');
+  await page.locator('#ydOrt').setInputFiles(ortPdf({dersler:[['TÜRKÇE-T',4,2.5],['TARİH-T',2,1.25],['FİZİK-T',7,3.75]]}));
+  await page.waitForFunction(()=>YANLISLAR.durumu().durum.ort&&document.querySelector('.yd-dosya:nth-child(4) .yd-durum')?.textContent.startsWith('✓'));
+  assert.equal(await page.locator('.yd-dosya').nth(3).locator('.yd-durum').innerText(),'✓ 3 ders · genel ortalama');
+  assert.equal(await page.locator('.yd-dosya').nth(3).locator('.yd-hata').count(),0);
+  await page.waitForFunction(()=>[...document.querySelectorAll('.yd-kalite summary')].some(s=>/genel ort\. 2,50 net · okul -?\d+,\d\d net · ölçek genele göre$/.test(s.textContent.replace('−','-'))));
+  assert((await page.locator('.yd-kalite summary').allInnerTexts()).some(t=>/Tarih · .*genel ort\. 1,25 net/.test(t)));
+  await page.locator('.yd-kalite summary').first().click();
+  assert.deepEqual(await page.locator('.yd-kalite').first().locator('thead th').allInnerTexts(),['Soru','p','b','rit','Genele göre','İşaret']);
+  assert((await page.locator('.yd-kalite').first().locator('tbody tr:first-child td').nth(4).innerText()).match(/^(Çok kolay|Kolay|Orta|Zor|Çok zor)\??$/));
+  assert.doesNotMatch(await page.evaluate(()=>document.getElementById('ydBaski').textContent),/genel ort|ölçek|Genele göre/,'nothing about anchoring in the defter');
+  await noScroll('with ders ortalamaları');
+  // a new cevap raporu of another exam drops the file again
+  assert.equal(await page.evaluate(()=>YANLISLAR.durumu().ort.dersler.length),3);assert.equal(await page.evaluate(()=>JSON.stringify(YANLISLAR.durumu().ort)).then(t=>/OKUL|LISESI/.test(t)),false,'no school row is kept');
+  await page.evaluate(()=>{const s=YANLISLAR.durumu();s.ort=null;s.durum.ort='';s.zOnbellek=null;ciz()});
+  await page.waitForFunction(()=>![...document.querySelectorAll('.yd-kalite summary')].some(s=>/genel ort\./.test(s.textContent)));
   assert.deepEqual(errors,[]);
   await context.close();
  }

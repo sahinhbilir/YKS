@@ -126,6 +126,9 @@ function bolum(rows, opt = {}) {
   const tot = X.map(r => r.reduce((a, b) => a + b, 0));
   const kr = n >= 2 ? kr20(X) : null, R = n >= 3 ? rasch(X) : null;
   const dusuk = n < EN_AZ_OGRENCI || !kr || kr.kr20 < EN_AZ_KR20;
+  // Net with the wrong-answer penalty, D − Y/4, per taker (blank costs nothing); its mean and its ratio to the live item count feed the anchoring (capala).
+  const netler = al.map(r => { let d = 0, y = 0; for (const i of canli) { if (r[i] === 1) d++; else if (r[i] === 0) y++ } return d - y / 4 });
+  const okulNet = ort(netler), okulOran = okulNet !== null && canli.length ? okulNet / canli.length : null;
   const maddeler = Array.from({length: k}, (_, i) => ({i, iptal: atla.has(i)}));
   canli.forEach((i, j) => {
     const dogru = X.reduce((s, r) => s + r[j], 0), bos = al.filter(r => r[i] < 0).length, yanlis = n - dogru - bos;
@@ -139,14 +142,36 @@ function bolum(rows, opt = {}) {
     m.dusuk = dusuk;
     m.bayrak = bayraklar(m.rit, m.infit, m.outfit);
   });
-  return {n, k: canli.length, kr20: kr ? kr.kr20 : null, sem: kr ? kr.sem : null, sd: kr ? kr.sd : null, ortSkor: kr ? kr.ort : null, dusuk,
+  return {n, k: canli.length, okulNet, okulOran, kr20: kr ? kr.kr20 : null, sem: kr ? kr.sem : null, sd: kr ? kr.sd : null, ortSkor: kr ? kr.ort : null, dusuk,
     mu: R && R.uygun ? R.mu : null, ayirma: R ? R.ayirma : null, kisiUc: R ? R.kisiUc : 0, maddeUc: R ? R.maddeUc : 0, maddeler, isaretli: maddeler.filter(m => m.bayrak && m.bayrak.length).length};
+}
+/* ---- anchoring to the network average (mean/mean linking, not equating) ----
+   The bands use b − μθ, the difficulty relative to this school's mean ability. With the publisher's Genel Net of the ders:
+   r_s = the school's mean net ratio, r_g = Genel Net / n, both clamped to [0.02, 0.98]; Δ = logit(r_s) − logit(r_g) (> 0: the school is stronger than the network).
+   The bands then use (b − μθ) + Δ, the difficulty for the average network student. Same edges, same "?" rule. Only the item bands move. */
+const OLCEK_SINIR = [0.02, 0.98];
+const kisitla = r => Math.min(OLCEK_SINIR[1], Math.max(OLCEK_SINIR[0], r));
+const logit = p => Math.log(p / (1 - p));
+const capaFarki = (okulOran, genelOran) => logit(kisitla(okulOran)) - logit(kisitla(genelOran));
+// Re-bands the items of a bolum() result in place; returns the anchor (or null when it cannot be computed). The school-relative band is kept as bantOkul.
+function capala(a, genelNet, n) {
+  if (!a || !(a.n > 0) || a.okulOran === null || a.okulOran === undefined || !Number.isFinite(genelNet) || !(n > 0)) return null;
+  const delta = capaFarki(a.okulOran, genelNet / n);
+  a.maddeler.forEach(m => {
+    if (m.iptal) return;
+    m.bantOkul = m.bant; m.belirsizOkul = m.belirsiz; m.genele = true;
+    if (m.rel !== null && m.rel !== undefined) { m.relGenel = m.rel + delta; Object.assign(m, bantla(m.relGenel, m.se)) }
+  });
+  a.capa = {delta, genel: genelNet, okul: a.okulNet, rs: a.okulOran, rg: genelNet / n};
+  return a.capa;
 }
 const sayi = (v, d = 2) => v === null || v === undefined || !Number.isFinite(v) ? '—' : v.toFixed(d).replace(/^-(0[.,]?0*)$/, '$1').replace('.', ',').replace('-', '−');
 // "Türkçe · 27 öğrenci · KR-20 0,82 · 2 madde işaretli"; low reliability and the school correlation are added after it.
 function bolumSatiri(ad, a, rho) {
+  const c = a.capa;
   return ad + ' · ' + a.n + ' öğrenci · KR-20 ' + sayi(a.kr20) + ' · ' + (a.isaretli ? a.isaretli + ' madde işaretli' : 'işaretli madde yok') +
-    (a.dusuk ? ' · Güvenilirlik düşük' : '') + (rho !== null && rho !== undefined ? ' · okul verisi ρ ' + sayi(rho) : '');
+    (a.dusuk ? ' · Güvenilirlik düşük' : '') + (rho !== null && rho !== undefined ? ' · okul verisi ρ ' + sayi(rho) : '') +
+    (c ? ' · genel ort. ' + sayi(c.genel) + ' net · okul ' + sayi(c.okul) + ' net · ölçek genele göre' : '');
 }
 // Weight class (Kendi seviyesi): the student's tier k of H (1 = strongest, norm-referenced within the grade) picks a window of difficulty bands
 // (0 Çok kolay, 1 Kolay, 2 Orta, 3 Zor, 4 Çok zor). Five windows from top to bottom; tier k gets PENCERELER[round((k − 1)·4 / (H − 1))].
@@ -157,5 +182,5 @@ function kendiSeviyesi(kademe, H, bant) {
   const i = BANTLAR.findIndex(b => b[0] === bant);
   return i >= 0 && kademePenceresi(kademe, H).includes(i);
 }
-return {wilson, pearson, ritDuzeltilmis, kr20, spearman, rasch, bantNo, bantla, etiketYazi, BANTLAR, BANT_AD, BAYRAK, bayraklar, bolum, bolumSatiri, kendiSeviyesi, kademePenceresi, PENCERELER, EN_AZ_OGRENCI, EN_AZ_KR20, sayi, sig};
+return {wilson, pearson, ritDuzeltilmis, kr20, spearman, rasch, bantNo, bantla, etiketYazi, BANTLAR, BANT_AD, BAYRAK, bayraklar, bolum, bolumSatiri, capala, capaFarki, kisitla, kendiSeviyesi, kademePenceresi, PENCERELER, EN_AZ_OGRENCI, EN_AZ_KR20, sayi, sig};
 })();
