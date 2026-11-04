@@ -104,16 +104,19 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
    await page.emulateMedia({media:'print'});
    await page.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));
    assert.equal(await page.evaluate(()=>document.getElementById('ydSayfaStili').textContent),'@media print{@page{size:A4 portrait;margin:12mm}}');
-   const st=await page.evaluate(()=>{const g=s=>getComputedStyle(document.querySelector(s));return {ray:g('#ray').display,menu:g('.yd-dosyalar').display,filtre:g('.yd-filtre').display,ogr:g('.yd-ogr').breakBefore,anahtar:g('.yd-anahtar').breakBefore,soru:g('.yd-soru').breakInside,yok:g('.yd-yok').display,kolon:g('.yd-sorular').gridTemplateColumns.split(' ').length}});
-   assert.deepEqual(st,{ray:'none',menu:'none',filtre:'none',ogr:'page',anahtar:'page',soru:'avoid',yok:'none',kolon:2});
+   const st=await page.evaluate(()=>{const g=s=>getComputedStyle(document.querySelector(s));return {ray:g('#ray').display,menu:g('.yd-dosyalar').display,filtre:g('.yd-filtre').display,ogr:g('.yd-ogr').breakBefore,anahtar:g('.yd-anahtar').breakBefore,soru:g('.yd-soru').breakInside,yok:g('.yd-yok').display,kolon:g('.yd-sorular').columnCount}});
+   assert.deepEqual(st,{ray:'none',menu:'none',filtre:'none',ogr:'page',anahtar:'page',soru:'avoid',yok:'none',kolon:'2'});
    const pdf=await page.pdf({preferCSSPageSize:true,printBackground:true});
    if(process.env.YKS_UI_ARTIFACTS)fs.writeFileSync(path.join(out_dir,'yanlislar-baski.pdf'),pdf);
    assert.match(pdf.toString('latin1'),/\/MediaBox\s*\[\s*0\s+0\s+59[45](\.\d+)?\s+84[12](\.\d+)?\s*\]/,'A4 portrait');
    assert.equal(sayfaSayisi(pdf),4,'two students with questions: a page each plus a key page each; the one without questions is not printed');
-   // two questions per row when they fit (A4 content width)
+   // the printed defter never mentions Kendi seviyesi, tier or kademe (text and markup of every student)
+   const basHtml=await page.evaluate(()=>document.getElementById('ydBaski').innerHTML+' '+document.getElementById('ydBaski').textContent);
+   assert.doesNotMatch(basHtml,/Kendi seviyesi|kademe|tier/i,'printed HTML has no Kendi seviyesi, kademe or tier');
+   // column flow: the questions fill two columns top to bottom, each block half the content width
    await page.setViewportSize({width:702,height:1100});
-   const satir=await page.evaluate(()=>[...document.querySelectorAll('.yd-ogr')[0].querySelectorAll('.yd-ders:first-of-type .yd-soru')].map(f=>{const r=f.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width)]}));
-   assert.equal(satir.length,2);assert.equal(satir[0][1],satir[1][1],'same row');assert(satir[1][0]>satir[0][0]+200,'side by side');
+   const satir=await page.evaluate(()=>[...document.querySelectorAll('.yd-ogr')[0].querySelectorAll('.yd-ders:first-of-type .yd-soru')].map(f=>{const r=f.getBoundingClientRect(),k=document.querySelector('.yd-sorular').getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(k.width)]}));
+   assert(satir.length>=2);assert(satir.every(x=>x[2]<=x[3]/2+2),'each question block is one column wide');
    await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));
    assert.equal(await page.evaluate(()=>document.body.classList.contains('yd-yazdir')),false);
    await page.emulateMedia({media:'screen'});await page.setViewportSize({width:1280,height:950});
@@ -210,10 +213,14 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   // Kendi seviyesi: only the questions in the student's weight class (a student with an ability from the notebook)
   for(const k of ['cok-kolay','kolay','orta'])await page.locator('[data-yd-z="'+k+'"]').click();
   await hazir();assert.equal(await page.locator('.yd-soru').count(),tum,'back to all five');
+  for(const k of ['cok-kolay','kolay','orta','zor','cok-zor'])await page.locator('[data-yd-z="'+k+'"]').click();await hazir();
+  assert.equal(await page.locator('.yd-soru').count(),0,'no chip, no Kendi seviyesi: nothing');
   await page.locator('[data-yd-z="kendi"]').click();await hazir();
-  const kendi=await page.locator('.yd-soru').count();assert(kendi>0&&kendi<tum,'Kendi seviyesi '+kendi+' of '+tum);assert.match(await page.locator('.yd-ust').innerText(),/Kendi seviyesi/);
+  const kendi=await page.locator('.yd-soru').count();assert(kendi>0&&kendi<tum,'Kendi seviyesi '+kendi+' of '+tum);assert.doesNotMatch(await page.locator('.yd-ust').innerText(),/Kendi seviyesi|kademe/i,'the heading of the defter does not name it');
   assert.equal(await page.locator('[data-yd-z="kendi"]').getAttribute('aria-pressed'),'true');
   await page.locator('[data-yd-z="kendi"]').click();await hazir();
+  for(const k of ['cok-kolay','kolay','orta','zor','cok-zor'])await page.locator('[data-yd-z="'+k+'"]').click();await hazir();
+  assert.equal(await page.locator('.yd-soru').count(),tum,'back to all five');
   // a B student: TYT cut-outs through the map (A numbers, B number in brackets), the AYT sections as numbers only
   await secOgr('SENTETİK ÖĞRENCİ 3 · 9302');
   assert(await page.locator('.yd-soru figcaption span:first-child').allInnerTexts().then(l=>l.length>0&&l.every(t=>/^Soru \d+ \(B kitapçığında \d+\)$/.test(t))));
@@ -233,6 +240,29 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
    await page.emulateMedia({media:'print'});await page.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));
    const zorSayfa=await sayfa();
    assert(zorSayfa<hepsiSayfa,'the filtered print set is shorter: '+zorSayfa+' < '+hepsiSayfa+' pages');
+   await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));await page.emulateMedia({media:'screen'});
+  }
+  // compact print: ~20 mixed-height synthetic questions, the former row layout against the column flow
+  if(width===1280){
+   await secOgr('SENTETİK ÖĞRENCİ 1 · 9300');
+   await page.evaluate(()=>{
+    const kap=document.querySelector('#ydBaski .yd-ogr:not(.yd-yok) .yd-sorular'),ilk=kap.querySelector('.yd-soru'),H=[170,300,520,230,760,380,210,450];
+    kap.querySelectorAll('.yd-soru').forEach(f=>f.remove());
+    for(let i=0;i<20;i++){const f=ilk.cloneNode(true),c=document.createElement('canvas');c.width=1152;c.height=H[i%H.length];const x=c.getContext('2d');x.fillStyle='#eee';x.fillRect(0,0,c.width,c.height);x.fillStyle='#222';x.font='40px Arial';x.fillText('Sentetik soru '+(i+1),30,60);x.strokeRect(2,2,c.width-4,c.height-4);
+     const im=f.querySelector('img');im.removeAttribute('data-bekle');im.src=c.toDataURL();f.querySelector('figcaption b').textContent='Soru '+(i+1);kap.appendChild(f)}
+    document.querySelectorAll('#ydBaski .yd-ogr').forEach((o,i)=>{if(i>0)o.remove()});
+   });
+   await page.evaluate(()=>Promise.all([...document.querySelectorAll('#ydBaski img')].map(i=>i.decode&&i.decode().catch(()=>{}))));
+   await page.emulateMedia({media:'print'});await page.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));
+   const pdfSonra=await page.pdf({preferCSSPageSize:true,printBackground:true});
+   const eski=await page.addStyleTag({content:'@media print{#ydKok .yd-sorular{display:grid!important;column-count:auto!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm 5mm}#ydKok .yd-soru{display:block!important;width:auto!important;margin:0!important}#ydKok .yd-genis{column-span:none!important;grid-column:1/-1}#ydKok .yd-soru img{width:100%!important;max-width:576px!important;max-height:none!important;object-fit:fill!important}#ydKok .yd-soru figcaption{font-size:.8125rem!important;padding-bottom:4px!important;line-height:normal!important}#ydKok .yd-zorluk{padding:3px 9px!important;font-size:.75rem!important}#ydKok .yd-ogr{gap:10px!important}#ydKok .yd-ders h3{margin-bottom:8px!important}}'});
+   const pdfOnce=await page.pdf({preferCSSPageSize:true,printBackground:true});
+   await eski.evaluate(e=>e.remove());
+   const once=sayfaSayisi(pdfOnce),sonra=sayfaSayisi(pdfSonra);
+   console.log('print pages (20 mixed-height questions + key page): before '+once+', after '+sonra);
+   assert(sonra<once,'the column flow prints fewer pages: '+sonra+' < '+once);
+   assert.doesNotMatch(await page.evaluate(()=>document.getElementById('ydBaski').textContent),/Kendi seviyesi|kademe/i);
+   const dizin=process.env.YKS_PRINT_OUT;if(dizin){fs.mkdirSync(dizin,{recursive:true});fs.writeFileSync(path.join(dizin,'defter-once.pdf'),pdfOnce);fs.writeFileSync(path.join(dizin,'defter-sonra.pdf'),pdfSonra)}
    await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));await page.emulateMedia({media:'screen'});
   }
   const kayit=await page.evaluate(()=>JSON.stringify([localStorage,sessionStorage]));

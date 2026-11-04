@@ -426,7 +426,8 @@ function difficultyIndex(rapor,es,source){
   return {map,issues:[...new Set(issues)]};
 }
 // What is kept for one student: the status, the selected difficulty chips (bantlar: a Set of band keys, null = all five) and Kendi seviyesi
-// (options.kendi(ogr, bolum, z) -> boolean). index.map holds the section analysis; a question without a label is kept only while all five bands are selected.
+// (options.kendi(ogr, bolum) -> the band keys of the student's window in that ders). index.map holds the section analysis; a question without a label is kept only while all five bands are selected.
+// With Kendi seviyesi the included bands of a ders = the selected chips ∪ the student's window for that ders.
 const zAnahtar=s=>s.i+':'+(s.a!==null?'A:'+(s.ak+1):'B:'+(s.k+1));
 const BANT_ANAHTAR=()=>ZORLUK.BANTLAR.map(x=>x[0]);
 function filterDefter(d,options={},index={map:new Map()}){
@@ -434,18 +435,21 @@ function filterDefter(d,options={},index={map:new Map()}){
   const tum=!options.bantlar||BANT_ANAHTAR().every(k=>options.bantlar.has(k));
   // Kendi seviyesi lists the kept questions easiest first (Rasch b ascending; an extreme item without b sits at its end of the scale).
   const kolaylik=s=>s.z&&Number.isFinite(s.z.rel)?s.z.rel:(s.z&&s.z.bant==="cok-kolay"?-1e9:s.z&&s.z.bant==='cok-zor'?1e9:0);
-  const bolumler=d.bolumler.map(b=>({...b,sorular:b.sorular.flatMap(s=>{
+  const bolumler=d.bolumler.map(b=>{
+   const pencere=options.kendi?new Set(options.kendi(d.ogr,b)||[]):null;
+   return {...b,sorular:b.sorular.flatMap(s=>{
     if(options.status&&options.status!=='all'&&s.durum!==options.status)return [];
     const z=index.map.get(zAnahtar(s))||null;
     if(!z||!z.bant)unknown++;
-    if(!tum&&!(z&&z.bant&&options.bantlar.has(z.bant)))return [];
-    if(options.kendi&&!options.kendi(d.ogr,b,z))return [];
+    if(!tum&&!(z&&z.bant&&(options.bantlar.has(z.bant)||(pencere&&pencere.has(z.bant)))))return [];
     if(s.durum==='yanlis')yanlis++;else bos++;
     return [{...s,z}];
-  }).map((s,i)=>[s,i]).sort((x,y)=>options.kendi?kolaylik(x[0])-kolaylik(y[0])||x[1]-y[1]:0).map(x=>x[0])})).filter(b=>b.sorular.length);
-  const adlar=tum?[]:ZORLUK.BANTLAR.filter(([k])=>options.bantlar.has(k)).map(x=>x[1]);
+  }).map((s,i)=>[s,i]).sort((x,y)=>options.kendi?kolaylik(x[0])-kolaylik(y[0])||x[1]-y[1]:0).map(x=>x[0])}}).filter(b=>b.sorular.length);
+  // The printed header never names Kendi seviyesi or the tiers: with it on, the band names are left out too (the set is a union the student need not see).
+  const adlar=tum||options.kendi?[]:ZORLUK.BANTLAR.filter(([k])=>options.bantlar.has(k)).map(x=>x[1]);
   return {...d,bolumler,yanlis,bos,unknown,gorsel:bolumler.every(b=>b.gorsel),
-    filterText:[...adlar,options.kendi?'Kendi seviyesi':null,options.status==='bos'?'Yalnızca boş':options.status==='yanlis'?'Yalnızca yanlış':null].filter(Boolean).join(' · ')};
+    filtreli:!tum||!!options.kendi||(!!options.status&&options.status!=='all'),
+    filterText:[...adlar,options.status==='bos'?'Yalnızca boş':options.status==='yanlis'?'Yalnızca yanlış':null].filter(Boolean).join(' · ')};
 }
 /* ---------------------------------------------------------------- Screen and print. State lives only in this page's memory. */
 const OLCEK=2,BOSLUK=8;
@@ -539,10 +543,10 @@ function zorlukBilgi(){
   const dis=S.es&&kaynak?difficultyIndex(S.rapor,S.es,kaynak):null;
   const v=zorlukAnaliz(S.rapor,S.es,S.harita,dis&&dis.map.size?dis:null);S.zOnbellek={rapor:S.rapor,es:S.es,harita:S.harita,kaynak,v};return v;
 }
-// Kendi seviyesi: the student's tier in the ders (within the grade) picks a window of difficulty bands (ZORLUK.kademePenceresi); without a tier, the Orta band.
-function kendiSeviyesi(ogr,b,z){
+// Kendi seviyesi: the student's tier in the ders (within the grade) picks a window of difficulty bands (ZORLUK.kademePenceresi), added to the chips; without a tier, the Orta band.
+function kendiSeviyesi(ogr,b){
   const kd=typeof KADEME!=='undefined'?KADEME.kodDers(S.rapor.bolumler[b.ri].ad):null,t=kd?KADEME.kademeBilgi(ogr.no,kd.oturum,kd.kod):null;
-  return ZORLUK.kendiSeviyesi(t?t.kademe:null,t?t.H:null,z?.bant);
+  return ZORLUK.kademePenceresi(t?t.kademe:null,t?t.H:null).map(i=>ZORLUK.BANTLAR[i][0]);
 }
 const defterler=()=>{
   const za=zorlukBilgi(),acik=new Set(S.es.bolumler.map((b,i)=>i).filter(i=>!S.kapali.has(i)));
@@ -619,7 +623,7 @@ function ogrHTML(d){
   const kimlik='Öğrenci No <b>'+h(o.no)+'</b> · '+h(o.sube)+(S.rapor.ad?' · '+h(S.rapor.ad):'');
   const sayi='<b>'+d.yanlis+'</b> yanlış · <b>'+d.bos+'</b> boş';
   const ust='<header class="yd-ust"><h2>'+h(o.ad)+'</h2><p class="yd-kimlik">'+kimlik+'</p><p class="yd-say">'+sayi+'</p>'+(d.filterText?'<p class="yd-kimlik">'+h(d.filterText)+'</p>':'')+'</header>';
-  if(!toplam)return '<article class="yd-ogr yd-yok" data-yd-ogr="'+o.id+'">'+ust+'<p class="yd-not">'+(d.filterText?'Seçilen filtrelerde soru yok.':'Yanlış veya boş soru yok.')+'</p></article>';
+  if(!toplam)return '<article class="yd-ogr yd-yok" data-yd-ogr="'+o.id+'">'+ust+'<p class="yd-not">'+(d.filtreli?'Seçilen filtrelerde soru yok.':'Yanlış veya boş soru yok.')+'</p></article>';
   const dersler=d.bolumler.map(b=>'<section class="yd-ders"><h3>'+h(b.ders)+' <span>'+b.sorular.length+'</span></h3>'+(b.gorsel?'<div class="yd-sorular">'+b.sorular.map(s=>soruHTML(s,true)).join('')+'</div>':'<ul class="yd-liste">'+b.sorular.map(s=>soruHTML(s,false)).join('')+'</ul>')+'</section>').join('');
   const notlar=[...new Set(d.bolumler.filter(b=>!b.gorsel).map(b=>b.kit))];
   const not=notlar.length?'<p class="yd-not">'+notlar.join(', ')+' kitapçığı: sorular kendi kitapçığından çözülecek</p>':'';
