@@ -63,3 +63,15 @@
 /* T ve sıra: the 50 line's label, and a subject card's two small lines (T, sıra). */
 .tg-t-etiket{fill:var(--e-fg2)}
 .tg-ikiz{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+/* Combined chart: thin low-opacity subject lines under the bold total; the schools table pins the followed school. */
+.et-cizgi.tg-cok{stroke-width:1.5;opacity:.6}
+.et-grafik svg path[data-seri].aktif{opacity:1}
+.tg-okul-kutu{max-height:32rem;overflow:auto}
+.tg-okul-kutu thead th{position:sticky;top:0;background:var(--e-panel);z-index:2}
+.tg-okul-kutu thead th button{font:inherit;font-weight:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
+.tg-okul-kutu tfoot tr.tg-pin td{position:sticky;bottom:0;z-index:1;background:color-mix(in srgb,var(--e-c1) 14%,var(--e-panel));font-weight:600;border-top:1px solid var(--e-line)}
+.tg-okul-kutu tr.tg-biz td{background:color-mix(in srgb,var(--e-c1) 14%,transparent);font-weight:600}
+.tg-okul-kutu tr.tg-isik td{outline:2px solid var(--e-c1);outline-offset:-2px}
+.tg-okul-ad{max-width:18rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:640px){#tgKok .et-seg{max-width:100%;flex-wrap:wrap;border-radius:18px}}
+@media (max-width:640px){.tg-okul-kutu th,.tg-okul-kutu td{padding:6px 4px;font-size:.8125rem}.tg-okul-ad{max-width:8.5rem;white-space:normal}.tg-okul-kutu thead th button{white-space:nowrap}}
