@@ -17,14 +17,22 @@ const BIZIM = {
   'TÜRKÇE-T': [24.1, 25.3, 26], 'MATEMATİK-T': [12, 11.2, 14.5], 'FİZİK-T': [2.1, 0.2, 2.9], 'S.FELSEFE-T': [3, 3.1, 3.3],
   'TÜRK DİLİ VE EDB-A': [13.2, 12.1, 14], 'MATEMATİK-A': [10, 12.5, 13]
 };
+// Normal order statistics for the T-score tests: Φ by an erf series, Φ⁻¹ by bisection (independent of the page's own).
+const erf = x => { const t = 1 / (1 + 0.3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; };
+const phi = z => 0.5 * (1 + erf(z / Math.SQRT2));
+const phiTers = p => { let lo = -9, hi = 9; for (let i = 0; i < 70; i++) { const m = (lo + hi) / 2; if (phi(m) < p) lo = m; else hi = m; } return (lo + hi) / 2; };
+// The k-th (1-based) of N schools whose means are Normal(mu, sigma): mu + sigma·Φ⁻¹(1 − (k − .5)/N), to the hundredth.
+const normalNet = (k, N, mu, sigma) => Math.round((mu + sigma * phiTers(1 - (k - 0.5) / N)) * 100) / 100;
 // One exam's list: {ad, yazdirma, dersler:[{kod, soru, genel, satir:[[ad, net], …]}]}, each subject's
 // schools by net (ties keep the generated order), the first 100 kept. kurum adds two courses.
-function kurumListesi(e, { ad = '27-YKS-120' + e, liste = 'kolej', dersler = DERSLER, okulSayisi = 120, ilk = 100 } = {}) {
+// normal: {N, oran} draws every subject's schools from Normal(Türkiye average, oran × questions) over N schools.
+function kurumListesi(e, { ad = '27-YKS-120' + e, liste = 'kolej', dersler = DERSLER, okulSayisi = 120, ilk = 100, normal = null } = {}) {
   const yazdirma = String(e * 7).padStart(2, '0') + '.10.2026';
   return {
     ad, yazdirma, dersler: dersler.map(([kod, soru]) => {
-      const rows = [];
-      for (let i = 0; i < okulSayisi; i++) {
+      const rows = [], genel0 = Math.round((soru * 0.5 + e * 0.1) * 100) / 100;
+      if (normal) for (let i = 0; i < normal.N; i++) rows.push([okul(i), normalNet(i + 1, normal.N, genel0, soru * normal.oran), i]);
+      else for (let i = 0; i < okulSayisi; i++) {
         let net = Math.round((soru * (0.82 - 0.0055 * i) + 0.15 * e + ((i * 13 + e * 7 + soru) % 9 - 4) * 0.01) * 100) / 100;
         if (kod === 'MATEMATİK-T' && e === 1 && i >= 60 && i <= 64) net = 12;
         rows.push([okul(i), net, i]);
@@ -60,4 +68,4 @@ function kurumRaporu(L, { ilkSatir = 73, sonraki = 76, baslikEki = ' (İlk 100 O
   kapat();
   return { pages };
 }
-module.exports = { kurumListesi, kurumRaporu, BIZ, UZUN, KURS, DERSLER };
+module.exports = { kurumListesi, kurumRaporu, BIZ, UZUN, KURS, DERSLER, normalNet, phi, phiTers, BIZIM };

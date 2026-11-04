@@ -5,7 +5,7 @@
 // school, places, ties, outside the list), the charts, the page, the viewing teacher and privacy.
 // Synthetic data only (test/fixtures/kurum-pdf.cjs).
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
-const { kurumListesi, kurumRaporu, BIZ, UZUN, KURS } = require('./fixtures/kurum-pdf.cjs');
+const { kurumListesi, kurumRaporu, BIZ, UZUN, KURS, normalNet, phi, phiTers } = require('./fixtures/kurum-pdf.cjs');
 const { ornekRapor } = require('./fixtures/yoklama-pdf.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
 const marker = '<script id="uygulama">', start = html.indexOf(marker) + marker.length;
@@ -235,8 +235,8 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     await assert.rejects(async () => run('TURKIYE.duzeyKaydet("27-YKS-1101|kolej",7)'), /Geçersiz sınıf/);
     run('D.turkiye.sinavlar[0].duzey=8'); assert.match(run('TURKIYE.oku().hata'), /\(deneme\)/);
   });
-  await check('Artış (the default): totals and subjects against the Türkiye average, the increase ranking, Önceki → Şimdiki', async () => {
-    await ekle(liste(1), liste(2), liste(3)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')');
+  await check('Artış view: totals and subjects against the Türkiye average, the increase ranking, Önceki → Şimdiki', async () => {
+    await ekle(liste(1), liste(2), liste(3)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')'); run("EK.tgMod='artis'");
     const L = [1, 2, 3].map(e => kurumListesi(e)), tyt = ['TÜRKÇE-T', 'MATEMATİK-T', 'FİZİK-T'], r2 = x => Math.round(x * 100) / 100;
     const net = (e, kod, ad) => { const r = L[e].dersler.find(d => d.kod === kod).satir.find(x => x[0] === ad); return r ? r[1] : null; };
     const genel = (e, kod) => L[e].dersler.find(d => d.kod === kod).genel;
@@ -298,7 +298,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.match(h, /data-tg-grafik="net"/); assert.match(h, /Artış sıralaması · Türkçe/); assert.match(h, /data-tg-ders="">Tüm dersler/);
     assert.match(h, /<tr data-tg-ders="TÜRKÇE-T" class="secili">/); assert.match(h, /Denemeler arası net değişimi/);
     // One exam only: no increase yet.
-    reset(); await ekle(liste(1)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')');
+    reset(); await ekle(liste(1)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')'); run("EK.tgMod='artis'");
     assert.match(run('TURKIYE.icerik()'), /artışı görmek için ikinci bir deneme ekleyin/);
   });
   await check('Sıra view: empty state, school prompt, sentence, cards, the Türkiye comparison, the subject view and the exam table', async () => {
@@ -338,7 +338,8 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run('cizIc()'); assert.match(nodes.ana.innerHTML, /<div id="tgKok">/);
     run('yalnizcaGoruntuleme=()=>true');
     let h = run('TURKIYE.icerik()');
-    assert(!h.includes('id="tgPdf"') && !h.includes('id="tgSilHepsi"') && !h.includes('data-tg-sil')); assert(h.includes('data-tg-grafik="toplam"'));
+    assert(!h.includes('id="tgPdf"') && !h.includes('id="tgSilHepsi"') && !h.includes('data-tg-sil')); assert(h.includes('data-tg-grafik="t"'));
+    run("EK.tgMod='artis'"); assert(run('TURKIYE.icerik()').includes('data-tg-grafik="toplam"')); run("EK.tgMod=undefined");
     await assert.rejects(() => ekle(liste(2)), /Yalnızca rehber/);
     await assert.rejects(async () => run('TURKIYE.okulKaydet(null)'), /Yalnızca rehber/);
     await assert.rejects(async () => run('TURKIYE.sil()'), /Yalnızca rehber/);
@@ -351,6 +352,166 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run("D.rol='rehber'");
     await run('TURKIYE.sinavSil("27-YKS-1201|kolej")'); assert.equal(run('D.turkiye'), undefined, 'the last list takes the data with it');
     await ekle(liste(1)); await run('TURKIYE.sil()'); assert.equal(run('D.turkiye'), undefined);
+  });
+
+  // ---- T puanı (okullar arası) and tahmini sıra ----
+  const siraNetleri = (n, N, mu, sigma, gurultu = 0) => Array.from({ length: n }, (_, i) => ({ sira: i + 1, net: Math.round((normalNet(i + 1, N, mu, sigma) + gurultu * Math.sin(i * 12.9898 + N)) * 100) / 100 }));
+  const uydur = (satir, mu, n) => { put('Sa', satir); return get('TURKIYE.siraUydur(Sa,' + mu + (n === undefined ? '' : ',' + n) + ')'); };
+  await check('T: Φ and Φ⁻¹ agree with known values and each other', () => {
+    assert(Math.abs(run('TURKIYE.normCdf(1.96)') - 0.9750021) < 1e-6); assert(Math.abs(run('TURKIYE.normTers(0.975)') - 1.959964) < 1e-5);
+    assert.equal(run('TURKIYE.normCdf(0)'), 0.5); assert(Math.abs(run('TURKIYE.normTers(0.5)')) < 1e-12);
+    for (const p of [1e-6, 0.001, 0.02, 0.2, 0.5, 0.77, 0.99, 0.999999]) assert(Math.abs(run('TURKIYE.normCdf(TURKIYE.normTers(' + p + '))') - p) < 1e-8, String(p));
+    for (const z of [-3, -1.2, 0.3, 2.4]) assert(Math.abs(run('TURKIYE.normTers(' + phi(z) + ')') - z) < 1e-4, 'Φ⁻¹ against the test’s own Φ at ' + z);
+  });
+  await check('T: the fit recovers N and sigma from synthetic order statistics with known mu, sigma and N', () => {
+    for (const [mu, sigma, N] of [[20, 3.5, 180], [11.9, 4.4, 170], [3.7, 0.95, 190], [9, 2, 300], [15, 3, 140]]) {
+      const f = uydur(siraNetleri(100, N, mu, sigma), mu);
+      assert(Math.abs(f.n - N) <= Math.max(3, N * 0.03), 'exact N ' + N + ' got ' + f.n); assert(Math.abs(f.sigma / sigma - 1) < 0.02, 'sigma ' + sigma + ' got ' + f.sigma);
+      assert(f.rmse < 0.02 * sigma + 0.01, 'rmse ' + f.rmse); assert.equal(f.adet, 100);
+      // Noise of about a tenth of sigma: N within a fifth, sigma within a tenth, rmse near the noise.
+      const g = uydur(siraNetleri(100, N, mu, sigma, 0.1 * sigma), mu);
+      assert(Math.abs(g.n - N) <= N * 0.2, 'noisy N ' + N + ' got ' + g.n); assert(Math.abs(g.sigma / sigma - 1) < 0.1, 'noisy sigma ' + g.sigma);
+      assert(g.rmse > 0.03 * sigma && g.rmse < 0.15 * sigma, 'noisy rmse ' + g.rmse);
+    }
+    // sigma given N: the closed form, and the grid never goes below the list's last place + 20.
+    const f = uydur(siraNetleri(100, 180, 20, 3.5), 20, 180); assert.equal(f.n, 180); assert(Math.abs(f.sigma - 3.5) < 0.02);
+    assert(uydur(siraNetleri(100, 180, 20, 3.5), 20).n >= 120);
+    assert.equal(uydur(siraNetleri(5, 180, 20, 3.5), 20), null, 'too few rows'); assert.equal(uydur(siraNetleri(100, 180, 20, 3.5), 20, 90), null, 'N below the list');
+  });
+  await check('T: pooled N is the median over the subjects that fit well; sigma is fitted again with it', () => {
+    const mk = (kod, mu, sigma, N, gurultu = 0, bozuk = false) => ({ kod, soru: 40, genel: mu, satir: siraNetleri(100, N, mu, sigma, gurultu).map(r => bozuk ? { ...r, net: r.net + (r.sira % 2 ? 1 : -1) * 2.2 * sigma } : r) });
+    const S = { id: 'x|kolej', ts: 1, dersler: [mk('TÜRKÇE-T', 20, 3.5, 180), mk('MATEMATİK-T', 12, 4.4, 160), mk('FİZİK-T', 4, 0.9, 200), mk('KİMYA-T', 3, 1, 180), mk('TARİH-T', 2.5, 0.5, 180, 0.04), mk('COĞRAFYA-T', 1.5, 0.5, 120, 0, true)] };
+    put('S', S); const dg = get('(()=>{const d=TURKIYE.dagilimAl(S);return {n:d.n,aralik:d.aralik,adet:d.adet,dersler:[...d.dersler]}})()');
+    assert.equal(dg.adet, 5, 'the badly fitting subject is left out'); assert.equal(dg.n, 180); assert.deepEqual(dg.aralik, [160, 200]);
+    const T = dg.dersler.find(([k]) => k.startsWith('TÜRKÇE'))[1], M = dg.dersler.find(([k]) => k.startsWith('MATEMATİK'))[1];
+    assert(Math.abs(T.sigma - 3.5) < 0.05); assert.equal(T.kendiN > 170 && T.kendiN < 190, true);
+    assert(Math.abs(M.sigma / 4.4 - 1) < 0.1, 'MATEMATİK sigma at the pooled N 180 (its own fit is 160): ' + M.sigma);
+    assert.equal(dg.dersler.length, 6, 'every subject still gets a sigma at the pooled N');
+    // Even count: the middle two, rounded. No subject fits: no pooled N.
+    put('S', { ...S, id: 'y|kolej', dersler: S.dersler.slice(0, 2) }); assert.equal(get('TURKIYE.dagilimAl(S).n'), 170);
+    put('S', { ...S, id: 'z|kolej', dersler: [mk('COĞRAFYA-T', 1.5, 0.5, 120, 0, true)] }); assert.equal(get('TURKIYE.dagilimAl(S).n'), null);
+    // A pooled N feeds nothing when there is none: the points have no T.
+    assert.equal(get('TURKIYE.dagilimAl(S).dersler.size'), 0);
+  });
+  await check('T and place formulas: a hand example, the estimate, and a floor beyond the printed list', () => {
+    assert.equal(run('TURKIYE.tPuani(24,20,4)'), 60); assert.equal(run('TURKIYE.tPuani(18,20,4)'), 45); assert.equal(run('TURKIYE.tPuani(20,20,4)'), 50);
+    assert.equal(run('TURKIYE.tPuani(24,20,0)'), null); assert.equal(run('TURKIYE.tPuani(null,20,4)'), null);
+    // rank = 1 + (N − 1)(1 − Φ(z)): z = 0 → 1 + 179 / 2 = 90.5 → 91; z = 1 → 1 + 179 × 0.158655 = 29.4 → 29; z = −1 → 1 + 179 × 0.841345 = 151.6 → 152.
+    assert.equal(run('TURKIYE.tahminiSira(20,20,4,180)'), 91); assert.equal(run('TURKIYE.tahminiSira(24,20,4,180)'), 29); assert.equal(run('TURKIYE.tahminiSira(16,20,4,180)'), 152);
+    assert.equal(run('TURKIYE.tahminiSira(40,20,4,180)'), 1); assert.equal(run('TURKIYE.tahminiSira(-20,20,4,180)'), 180);
+    // Beyond the list: never above its last printed place + 1.
+    assert.equal(run('TURKIYE.tahminiSira(24,20,4,180,101)'), 101); assert.equal(run('TURKIYE.tahminiSira(-20,20,4,180,101)'), 180);
+    assert.equal(run('TURKIYE.tahminiSira(20,20,0,180)'), null); assert.equal(run('TURKIYE.tahminiSira(20,20,4,1)'), null);
+  });
+  // A synthetic report whose subjects are Normal(Türkiye average, 9 % of the questions) over 180 schools.
+  const normalListe = e => liste(e, { normal: { N: 180, oran: 0.09 } });
+  const sl = (net = {}) => run(`SIRALAMA.oku=()=>({veri:{sinavlar:[{ad:'27-YKS-1201',okul:'ÖZEL ${BIZ}',T:{tarih:'07.10.2026'}},{ad:'27-YKS-1202',okul:'ÖZEL ${BIZ}',T:{tarih:'14.10.2026'}}]}});__sm=SIRALAMA.model;SIRALAMA.model=s=>({sinif:12,tyt:{kurum:{net:${JSON.stringify(net)}}},ayt:{kurum:{net:{}}}})`);
+  await check('T on the page model: in the list the real place and the listed net; outside, an estimate; no net, a gap', async () => {
+    await ekle(normalListe(1), normalListe(2)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')');
+    let m = model(); const [tur, mat, fiz] = ['TÜRKÇE-T', 'MATEMATİK-T', 'FİZİK-T'].map(k => m.dersler.find(d => d.kod === k));
+    // Every subject's pooled N is the generated 180 (fit within a few percent); sigma is 9 % of the questions.
+    assert(Math.abs(m.sinavlar[0].dag.n - 180) <= 10, 'pooled N ' + m.sinavlar[0].dag.n); assert(Math.abs(tur.seri[0].dg.sigma / (40 * 0.09) - 1) < 0.05);
+    // Inside the list: the printed place, the listed net, no estimate. T from the hand formula with the fitted sigma.
+    const p = tur.seri[0]; assert(p.sira >= 1 && p.sira <= 100); assert.equal(p.net, 24.1); assert.equal(p.kaynak, 'liste'); assert.equal(p.tahmin, null);
+    assert(Math.abs(p.t - (50 + 10 * (24.1 - p.genel) / p.dg.sigma)) < 1e-9); assert(p.t > 55 && p.t < 70, 'T ' + p.t);
+    // Outside the list, no other source: a gap, never a guess.
+    assert.equal(mat.seri[0].sira, null); assert.equal(mat.seri[0].net, null); assert.equal(mat.seri[0].tNet, null); assert.equal(mat.seri[0].t, null); assert.equal(mat.seri[0].tahmin, null); assert.equal(mat.seri[0].kaynak, null);
+    // Outside the list, Sıralamalar' school average of the exam: T and an estimate, marked as from there.
+    sl({ MAT: 12.4, FİZ: 2.3 }); m = model(); const q = m.dersler.find(d => d.kod === 'MATEMATİK-T').seri[0], fz = m.dersler.find(d => d.kod === 'FİZİK-T').seri[0];
+    assert.equal(q.sira, null); assert.equal(q.net, null); assert.equal(q.tNet, 12.4); assert.equal(q.kaynak, 'okul');
+    assert(Math.abs(q.t - (50 + 10 * (12.4 - q.genel) / q.dg.sigma)) < 1e-9);
+    const beklenen = 1 + (q.dg.n - 1) * (1 - phi((12.4 - q.genel) / q.dg.sigma)); assert(Math.abs(q.tahmin - Math.max(101, Math.round(beklenen))) <= 1, 'estimate ' + q.tahmin + ' vs ' + beklenen);
+    assert(q.tahmin > 100 && q.tahmin <= q.dg.n, 'beyond the printed list'); assert.equal(fz.tahmin > 100, true);
+    // The printed place is never replaced, even when Sıralamalar has a figure for it.
+    sl({ TÜR: 99 }); m = model(); assert.equal(m.dersler.find(d => d.kod === 'TÜRKÇE-T').seri[0].net, 24.1); assert.equal(m.dersler.find(d => d.kod === 'TÜRKÇE-T').seri[0].kaynak, 'liste'); assert.equal(m.dersler.find(d => d.kod === 'TÜRKÇE-T').seri[0].tahmin, null);
+    // Sıralamalar about another school: not used.
+    run(`SIRALAMA.oku=()=>({veri:{sinavlar:[{ad:'27-YKS-1201',okul:'BAŞKA BİR OKUL'}]}})`); m = model(); assert.equal(m.dersler.find(d => d.kod === 'MATEMATİK-T').seri[0].tNet, null);
+    run('SIRALAMA.oku=__so;SIRALAMA.model=__sm');
+  });
+  await check('T of a total: the sum of the nets against the sum of the averages; sigma between √Σσ² and Σσ; a gap when a subject is missing', async () => {
+    assert(Math.abs(run('TURKIYE.toplamSigma([3,4],0)') - 5) < 1e-12); assert(Math.abs(run('TURKIYE.toplamSigma([3,4],1)') - 7) < 1e-12);
+    assert(Math.abs(run('TURKIYE.toplamSigma([3,4],0.8)') - Math.sqrt(0.2 * 25 + 0.8 * 49)) < 1e-12); assert.equal(run('TURKIYE.toplamSigma([3,0])'), null); assert.equal(run('TURKIYE.toplamSigma([])'), null);
+    assert.equal(run('TURKIYE.TOPLAM_KORELASYON'), 0.8, 'the default when no correlation can be measured');
+    await ekle(normalListe(1), normalListe(2)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')');
+    sl({ MAT: 12.4, FİZ: 2.3 }); const m = model(), T = m.toplam, ders = ['TÜRKÇE-T', 'MATEMATİK-T', 'FİZİK-T'].map(k => m.dersler.find(d => d.kod === k));
+    assert.equal(T.key, 'TYT');
+    const p = T.tseri[0], ps = ders.map(d => d.seri[0]), mu = ps.reduce((t, x) => t + x.genel, 0), net = ps.reduce((t, x) => t + x.tNet, 0), sg = ps.map(x => x.dg.sigma);
+    assert(Math.abs(p.genel - mu) < 1e-9); assert(Math.abs(p.net - net) < 1e-9); assert(p.sigma > Math.sqrt(sg.reduce((t, x) => t + x * x, 0)) && p.sigma <= sg.reduce((t, x) => t + x, 0));
+    assert(Math.abs(p.t - (50 + 10 * (net - mu) / p.sigma)) < 1e-9); assert.equal(p.sira, null, 'a total has no printed place'); assert.equal(p.kaynak, 'okul');
+    assert(Math.abs(p.tahmin - Math.round(1 + (p.n - 1) * (1 - phi((net - mu) / p.sigma)))) <= 1);
+    assert(Math.abs(p.ortT - ps.reduce((t, x) => t + x.t, 0) / 3) < 1e-9);
+    // Without Sıralamalar the school's net in Matematik and Fizik is unknown: the total has no T.
+    run('SIRALAMA.oku=__so;SIRALAMA.model=__sm'); const q = model().toplam.tseri[0]; assert.equal(q.t, null); assert.equal(q.tahmin, null); assert.equal(q.yok, 'net'); assert(q.genel > 0);
+    // An AYT session without the subjects of a field has no total: the chart reads the subjects' mean T, labelled so.
+    run("EK.tgOturum='AYT'"); const a = model({ oturum: 'AYT' }); assert.equal(a.toplam, null); assert.equal(a.ortT.ad, 'Ders ortalaması T');
+    assert(a.ortT.tseri.some(x => x && x.t !== null));
+  });
+  await check('T of a total: correlations corrected for range restriction (Thorndike Case II), the total sigma, the fallbacks', async () => {
+    assert(Math.abs(run('TURKIYE.duzeltilmisR(0.5,1)') - 0.5) < 1e-12, 'u = 1 changes nothing'); assert.equal(run('TURKIYE.duzeltilmisR(0.9,50)'), 0.98); assert.equal(run('TURKIYE.duzeltilmisR(-0.3,2)'), 0);
+    assert(Math.abs(run('TURKIYE.duzeltilmisR(0.6,2)') - 0.6 * 2 / Math.sqrt(1 - 0.36 + 0.36 * 4)) < 1e-12);
+    // A bivariate-normal population (rho 0.85) of 180 schools; each subject lists its own top 100 (so the schools common to both
+    // lists are selected on both), the sample the report gives. u comes from each subject's whole list, as on the page.
+    let seed = 7; const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const gauss = () => Math.sqrt(-2 * Math.log(1 - rnd())) * Math.cos(2 * Math.PI * rnd());
+    const rho = 0.85, SA = 4, SB = 2, pop = Array.from({ length: 180 }, (_, i) => { const a = gauss(), b = rho * a + Math.sqrt(1 - rho * rho) * gauss(); return { ad: 'S' + i, a: SA * a, b: SB * b }; });
+    const liste = k => pop.slice().sort((x, y) => y[k] - x[k]).slice(0, 100), la = liste('a'), lb = liste('b');
+    const sd = l => run('TURKIYE.sdAl(' + JSON.stringify(l) + ')'), Map_ = run('Map');
+    sandbox.A = { sigma: SA, sd: sd(la.map(o => o.a)), net: new Map_(la.map(o => [o.ad, o.a])) }; sandbox.B = { sigma: SB, sd: sd(lb.map(o => o.b)), net: new Map_(lb.map(o => [o.ad, o.b])) };
+    const c = get('TURKIYE.ciftKorelasyon(A,B)');
+    assert(c.n >= 30 && c.n < 100); assert(c.r < 0.75, 'the observed r is attenuated: ' + c.r); assert(c.u > 1.3, 'u ' + c.u); assert(Math.abs(c.R - rho) < 0.1, 'corrected R ' + c.R + ' vs ' + rho); assert(c.R - c.r > 0.08, 'clearly above the observed r');
+    assert.equal(get('(()=>{const a={...A,net:new Map([...A.net].slice(0,20))};return TURKIYE.ciftKorelasyon(a,B)})()'), null, 'fewer than 30 schools in common');
+    // The total sigma follows R: the corrected matrix gives a larger sigma than the observed r, and 0.8 is just a default.
+    const s1 = run('TURKIYE.toplamSigma([4,2],[[1,' + c.R + '],[' + c.R + ',1]])'), s0 = run('TURKIYE.toplamSigma([4,2],[[1,' + c.r + '],[' + c.r + ',1]])');
+    assert(Math.abs(s1 - Math.sqrt(16 + 4 + 2 * c.R * 8)) < 1e-12); assert(s1 > s0 + 0.05);
+    // Fallbacks: a pair with fewer than 30 schools in common takes the median of the other pairs; with none, 0.8 and "varsayılan".
+    const mk = (kod, adlar) => ({ kod, soru: 40, genel: 20, satir: siraNetleri(100, 180, 20, 3.5).map((r, i) => ({ ...r, ad: adlar(i) })) });
+    put('S', { id: 'k1|kolej', ts: 1, dersler: [mk('TÜRKÇE-T', i => 'a' + i), mk('MATEMATİK-T', i => i < 50 ? 'a' + i : 'b' + i), mk('FİZİK-T', i => 'c' + i)] });
+    const kk = get("(()=>{const d=TURKIYE.dagilimAl(S);const k=[...d.dersler.keys()];const t=TURKIYE.toplamKorelasyon(k,d.cift);return {R:t.R,o:t.ortanca,v:t.varsayilan,adet:t.adet,c:[...d.cift].map(([a,x])=>[a,x&&x.n])}})()");
+    assert.equal(kk.adet, 1); assert.equal(kk.v, false); assert.equal(kk.R[0][1], 0.98); assert.equal(kk.R[0][2], 0.98, 'a pair with no common schools takes the median'); assert.equal(kk.R[1][2], 0.98); assert.equal(kk.o, 0.98);
+    put('S', { id: 'k2|kolej', ts: 1, dersler: [mk('TÜRKÇE-T', i => 'a' + i), mk('MATEMATİK-T', i => 'm' + i), mk('FİZİK-T', i => 'c' + i)] });
+    const k2 = get("(()=>{const d=TURKIYE.dagilimAl(S);return TURKIYE.toplamKorelasyon([...d.dersler.keys()],d.cift)})()"); assert.equal(k2.varsayilan, true); assert.equal(k2.ortanca, 0.8); assert.equal(k2.R[0][1], 0.8);
+    assert.equal(run('TURKIYE.toplamKorelasyon(["x"],new Map()).varsayilan'), false, 'one subject needs no correlation');
+    // On the page: the schools of the fixture are in the same order in every subject, so the correlation is as high as allowed.
+    await ekle(normalListe(1), normalListe(2)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')'); sl({ MAT: 12.4, FİZ: 2.3 });
+    const m = model(), pt = m.toplam.tseri[0], sg = ['TÜRKÇE-T', 'MATEMATİK-T', 'FİZİK-T'].map(k => m.dersler.find(d => d.kod === k).seri[0].dg.sigma);
+    assert.equal(pt.rVarsayilan, false); assert.equal(pt.rOrt, 0.98); assert(Math.abs(pt.sigma - run('TURKIYE.toplamSigma(' + JSON.stringify(sg) + ',0.98)')) < 1e-9);
+    assert(pt.sigma > run('TURKIYE.toplamSigma(' + JSON.stringify(sg) + ',0.8)'), 'the corrected total sigma differs from the fixed 0.8 one');
+    sandbox.ST = run('TURKIYE.durumAl(TURKIYE.oku().veri)'); const g = run('TURKIYE.grafikT(ST,600)');
+    assert.match(g.ipucu[1].satir.map(x => x.slice(1, 3).join(' ')).join(' | '), /Derslerarası r ≈ 0,98 \(düzeltilmiş\)/);
+    assert.match(g.svg, /text-anchor="end">Türkiye ortalaması \(okullar\)/);
+    run('SIRALAMA.oku=__so;SIRALAMA.model=__sm');
+  });
+  await check('T view: default page, sentence, charts, cards and table; hover text carries ≈ and N; Artış and Sıra stay reachable', async () => {
+    await ekle(normalListe(1), normalListe(2)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')'); sl({ MAT: 12.4, FİZ: 2.3 });
+    let h = run('TURKIYE.icerik()');
+    assert.match(h, /data-tg-mod="tpuan" aria-pressed="true">T ve sıra/); assert.match(h, /data-tg-mod="artis" aria-pressed="false">Artış/); assert.match(h, /data-tg-mod="sira" aria-pressed="false">Sıra/);
+    assert.match(h, /data-tg-grafik="t"/); assert.match(h, /data-tg-grafik="tsira"/); assert(!h.includes('id="tgOnceki"'), 'one exam picker only'); assert.match(h, /id="tgSimdi"/);
+    assert.match(h, /T puanı · TYT toplam/); assert.match(h, /Tahmini sıra · TYT toplam/); assert.match(h, /T puanı \(okullar arası\)/); assert.match(h, /Türkiye ortalaması \(okullar\)/);
+    const cumle = /<p class="et-cumle">(.*?)<\/p>/.exec(h)[1].replace(/<[^>]+>/g, '');
+    assert.match(cumle, /^27-YKS-1202 \(14 Eki\) · Kolej listesi · Sentetik Kartal Anadolu Lisesi · TYT toplam: T puanı \d+,\d \(27-YKS-1201 ile: [+−]\d+,\d\) · tahmini sıra ≈ \d+\. · okullar ortalamasının (üstünde|altında)\.$/);
+    assert.equal((h.match(/class="et-ders"/g) || []).length, 3); assert.match(h, /≈ \d+\. sıra/); assert.match(h, /\d+\. sıra/);
+    assert.match(h, /<h2>Dersler · 27-YKS-1202<\/h2>/); assert.match(h, /<th class="sayi">T<\/th>/);
+    // The charts: the 50 line with its label; Turkish decimals; the estimate in the tooltip, N too; hollow markers outside the list.
+    const st = run('TURKIYE.durumAl(TURKIYE.oku().veri)'); put('ST', st); sandbox.ST = run('TURKIYE.durumAl(TURKIYE.oku().veri)');
+    const g = run('TURKIYE.grafikT(ST,600)'), r = run('TURKIYE.grafikTSira(ST,600)');
+    assert.match(g.svg, /Türkiye ortalaması \(okullar\)<\/text>/); assert(g.svg.includes('class="tg-genel"'));
+    assert.equal(g.ipucu.length, 2); const satirlar = i => g.ipucu[i].satir.map(x => x.slice(1, 3).join(' ')).join(' | ');
+    assert.match(satirlar(1), /T puanı \(okullar arası\) \d+,\d/); assert.match(satirlar(1), /Okullar arası σ \d+,\d\d net/); assert.match(satirlar(1), /N ≈ 1[6-9]\d okul \(derslerde \d+–\d+\)/);
+    assert.match(r.ipucu[1].satir.map(x => x.slice(1, 3).join(' ')).join(' | '), /tahmini sıra ≈ \d+\./); assert.match(r.svg, /tg-disi-nokta/); assert.match(r.svg, /kesik/);
+    // One subject: its own pair. A listed subject draws a solid line of filled points; Matematik is outside the list and estimated.
+    run('EK.tgDers="TÜRKÇE-T"'); sandbox.ST = run('TURKIYE.durumAl(TURKIYE.oku().veri)'); const rt = run('TURKIYE.grafikTSira(ST,600)');
+    assert.match(rt.ipucu[0].satir[0].slice(1, 3).join(' '), /^TÜRKÇE-T|Türkçe · sıra \d+\.$/); assert(!/tg-disi-nokta/.test(rt.svg), 'listed in both exams: no hollow markers');
+    run('EK.tgDers="MATEMATİK-T"'); sandbox.ST = run('TURKIYE.durumAl(TURKIYE.oku().veri)'); const rm = run('TURKIYE.grafikTSira(ST,600)');
+    assert.match(rm.svg, /tg-disi-nokta/); assert.match(rm.ipucu[0].satir[0].slice(1, 3).join(' '), /Matematik · tahmini sıra ≈ \d+\./);
+    // The y-axis of the place chart runs from 1 to about N, with 1 at the top.
+    assert.match(rm.svg, />1\.<\/text>/); assert.match(rm.svg, />200\.<\/text>|>150\.<\/text>/);
+    // Without Sıralamalar, Matematik has no T: the tooltip says why, nothing is drawn for it.
+    run('SIRALAMA.oku=__so;SIRALAMA.model=__sm'); sandbox.ST = run('TURKIYE.durumAl(TURKIYE.oku().veri)'); assert.equal(run('TURKIYE.grafikT(ST,600)'), null);
+    h = run('TURKIYE.icerik()'); assert.match(h, /T puanı hesaplanamıyor/); assert.match(h, /listede değil/);
+    // The old views are the same as before.
+    run("EK.tgDers=undefined;EK.tgMod='artis'"); h = run('TURKIYE.icerik()'); assert.match(h, /data-tg-grafik="toplam"/); assert(!h.includes('data-tg-grafik="t"'));
+    run("EK.tgMod='sira'"); h = run('TURKIYE.icerik()'); assert.match(h, /data-tg-grafik="sira"/);
+    sl({ MAT: 12.4, FİZ: 2.3 }); run("EK.tgMod='bilinmeyen'"); assert.match(run('TURKIYE.icerik()'), /data-tg-grafik="t"/, 'an unknown view falls back to T'); run('SIRALAMA.oku=__so;SIRALAMA.model=__sm');
   });
   console.log(passed + ' Türkiye geneli checks passed');
 })();

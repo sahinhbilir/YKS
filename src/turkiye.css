@@ -60,3 +60,6 @@
   #tgKok .et-seg select{max-width:14rem}
   #tgKaynak .tg-dar-gizle{display:none}
 }
+/* T ve sıra: the 50 line's label, and a subject card's two small lines (T, sıra). */
+.tg-t-etiket{fill:var(--e-fg2)}
+.tg-ikiz{display:grid;grid-template-columns:1fr 1fr;gap:6px}
