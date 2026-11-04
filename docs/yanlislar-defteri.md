@@ -42,7 +42,7 @@ full-width passage takes a row), never split across pages.
 
 **Soru durumu** selects wrong, blank, or both. **Zorluk** is a row of chips (Çok kolay · Kolay · Orta · Zor · Çok zor, plus
 **Kendi seviyesi**); all five bands are selected by default. Printing and the counts in the header use the same selection.
-The selected filters appear in each printed notebook's heading; zero matching questions disables printing.
+The selected status appears in each printed notebook's heading; Kendi seviyesi, tiers and kademe are never printed. Zero matching questions disables printing.
 Filter choices and answer-file data remain in page memory only. Difficulty is computed from the cevap raporu itself (see
 "Zorluk ve kademeler"); the school's Madde Analizi in Konu Takibi is now only a validity check (one rank correlation).
 
@@ -133,7 +133,7 @@ the header reads "<H> kademe · güvenilirlik düşük", its cells and chips are
 Tier 1 is the strongest; a student's tier is the point estimate and shows "?" only when `a ± 1.96·SE` spans three or more tiers (same rule and reason as the item bands). The Deneme panosu shows **Kademeler** (students ×
 ders, Sınıf selector (9/10/11/12, only grades with data, default the highest), şube list of that grade, TYT/AYT filter, sort by a ders, click a cell for the ability trend); the cells use one blue scale (tier 1 the deepest fill, the weakest tier the lightest, scaled by the ders's tier count, so 1/2 and 1/6 differ; light text on the deep half, contrast ≥ 4.5 in light and dark themes) and a "?" cell is hatched with a dashed inner outline, never another colour. The header reads "6 kademe · 0,95" (title: "6 kademe · güvenilirlik 0,95"); the table scrolls inside its card and keeps the student column fixed. Denemelerim shows the chips "Matematik · 2. kademe / 4".
 
-**Kendi seviyesi** maps the student's tier to a window of difficulty bands (0 Çok kolay, 1 Kolay, 2 Orta, 3 Zor, 4 Çok zor) and keeps the wrong or empty questions in it,
+**Kendi seviyesi** maps the student's tier to a window of difficulty bands (0 Çok kolay, 1 Kolay, 2 Orta, 3 Zor, 4 Çok zor) and **adds** that window to the selected band chips: for each student and each ders the included bands = chips ∪ window (Kendi seviyesi alone gives exactly the window; a tier-1 student with Orta+Zor+Çok zor gets the same set with or without it). Questions are
 listed **easiest first** (Rasch b ascending) within each ders. Five windows from the top: W0 = {Zor, Çok zor}, W1 = {Orta, Zor}, W2 = {Orta}, W3 = {Kolay, Orta}, W4 = {Çok kolay, Kolay};
 tier k of H gets `W[round((k−1)·4/(H−1))]` (a ders with a single tier gets W2): H = 3 → {3,4}, {2}, {0,1}; H = 4 → {3,4}, {2,3}, {1,2}, {0,1}; H = 5, 6 as the formula gives. Report sections are matched to Deneme ders codes by name (TÜRKÇE-T → TYT turkce, TARİH.1-A →
 AYT tarih1, …; the student by Öğrenci No). The tier is the student's own grade's, and exists for low-reliability ders too. A student (or ders) without tiers (Veri yetersiz) falls back to the Orta window (W2).

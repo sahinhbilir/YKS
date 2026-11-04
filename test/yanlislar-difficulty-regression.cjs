@@ -22,12 +22,34 @@ assert.equal(easy.filterText,'Kolay · Yalnızca boş');assert.equal(easy.bos,1)
 assert.deepEqual(flat(pick({bantlar:new Set(['orta'])})).map(x=>x.a),[2],'an uncertain Orta? question is still included by the Orta chip');
 assert.deepEqual(flat(pick({bantlar:new Set(['zor','cok-zor'])})).map(x=>x.a),[6]);assert.equal(pick({bantlar:new Set(['zor','cok-zor'])}).filterText,'Zor · Çok zor');
 assert.equal(flat(pick({bantlar:new Set()})).length,0,'no chip selected: nothing, and the unlabelled question is never guessed');
-assert.deepEqual(flat(pick({bantlar:new Set(['kolay','orta','zor']),kendi:(o,b,z)=>z.rel<=0})).map(x=>x.a),[5,2]);assert.match(pick({kendi:()=>true}).filterText,/Kendi seviyesi/);
+assert.deepEqual(flat(pick({bantlar:new Set(['kolay','orta','zor']),kendi:()=>['cok-kolay','kolay']})).map(x=>x.a),[5,2,6],'chips union window (Kolay already in chips)');assert.doesNotMatch(pick({kendi:()=>['orta'],bantlar:new Set(['zor'])}).filterText,/Kendi|kademe/i);assert.equal(pick({kendi:()=>['orta']}).filterText,'');
 assert.deepEqual(flat(pick({status:'yanlis'})).map(x=>x.a),[2,6]);
 // Kendi seviyesi lists the kept questions easiest first (Rasch b ascending) inside each ders, whatever their order in the booklet
 const ters={...d,bolumler:[{...d.bolumler[0],sorular:d.bolumler[0].sorular.slice().reverse()}]};
-assert.deepEqual(flat(T.filterDefter(ters,{kendi:(o,b,z)=>!!z&&z.rel<=1},zi)).map(x=>x.a),[5,2,6],'easiest first');
+assert.deepEqual(flat(T.filterDefter(ters,{kendi:()=>['kolay','orta','zor']},zi)).map(x=>x.a),[5,null,2,6],'easiest first (all five chips = all, the unlabelled one sits mid-scale)');
 assert.deepEqual(flat(T.filterDefter(ters,{},zi)).map(x=>x.a),[6,null,2,5],'without Kendi seviyesi the booklet order is kept');
+// Kendi seviyesi adds the ders's own window to the chips (union, per ders); alone it is exactly the window
+const B=['cok-kolay','kolay','orta','zor','cok-zor'],zz={map:new Map()},qs=[];
+B.forEach((bant,i)=>{for(let j=0;j<2;j++){const a=i*2+j+1;zz.map.set('0:A:'+a,{bant,belirsiz:false,rel:i-2+j*.1});qs.push({test:0,i:0,k:a-1,ak:a-1,a,own:a,durum:'yanlis'})}});
+const dd={ogr:{no:'7'},bolumler:[{i:0,ri:0,ders:'Matematik',sorular:qs}],yanlis:10,bos:0};
+const W={0:['zor','cok-zor'],1:['orta','zor'],2:['orta'],3:['kolay','orta'],4:['cok-kolay','kolay']};
+const bands=(o)=>[...new Set(flat(T.filterDefter(dd,o,zz)).map(x=>x.z.bant))].sort((x,y)=>B.indexOf(x)-B.indexOf(y));
+const cnt=(o)=>flat(T.filterDefter(dd,o,zz)).length,S3=new Set(['orta','zor','cok-zor']),S2=new Set(['zor','cok-zor']);
+assert.equal(cnt({bantlar:S3,kendi:()=>W[0]}),cnt({bantlar:S3}),'tier 1 (W0) with Orta+Zor+Çok zor: same count with or without');
+assert.equal(cnt({bantlar:S2,kendi:()=>W[4]}),cnt({bantlar:S2})+4,'lowest tier (W4) adds Çok kolay and Kolay questions');
+assert.deepEqual(bands({bantlar:S2,kendi:()=>W[4]}),['cok-kolay','kolay','zor','cok-zor']);
+assert.deepEqual(bands({bantlar:new Set(),kendi:()=>W[4]}),['cok-kolay','kolay']);assert(!bands({bantlar:new Set(),kendi:()=>W[4]}).some(b=>b==='zor'||b==='cok-zor'),'alone: no Zor or Çok zor for W4');
+assert.deepEqual(bands({bantlar:new Set(['kolay']),kendi:()=>W[2]}),['kolay','orta'],'middle tier with Kolay: window added');
+assert.deepEqual(bands({bantlar:new Set(['kolay']),kendi:()=>W[3]}),['kolay','orta']);
+assert.deepEqual(bands({bantlar:new Set(),kendi:()=>W[1]}),['orta','zor'],'alone = exactly the window');
+assert.deepEqual(bands({bantlar:new Set(['cok-kolay']),kendi:()=>W[1]}),['cok-kolay','orta','zor']);
+assert.equal(T.filterDefter(dd,{bantlar:S2,kendi:()=>W[4]},zz).yanlis,8,'header counts follow the union');
+const rel=flat(T.filterDefter(dd,{bantlar:new Set(),kendi:()=>W[1]},zz)).map(x=>x.z.rel);assert.deepEqual(rel,rel.slice().sort((a,b)=>a-b),'easiest first');
+assert.equal(T.filterDefter(dd,{bantlar:S2,kendi:()=>W[4]},zz).filterText,'','the printed header names neither Kendi seviyesi nor the bands');
+// per ders: each ders gets its own window
+const dd2={ogr:{no:'7'},bolumler:[{...dd.bolumler[0],ri:0},{...dd.bolumler[0],i:1,ri:1,ders:'Fizik'}],yanlis:0,bos:0};
+const per=T.filterDefter(dd2,{bantlar:new Set(),kendi:(o,b)=>b.ri===0?W[4]:W[0]},zz).bolumler.map(b=>[...new Set(b.sorular.map(x=>x.z.bant))]);
+assert.deepEqual(per,[['cok-kolay','kolay'],['zor','cok-zor']]);
 assert.equal(JSON.stringify(d),before,'filter leaves student input unchanged');
 for(const bad of [{...source,ad:'Başka TYT'},{...source,oturum:'AYT'},{...source,madde:{'TÜRKÇE-T':source.madde['TÜRKÇE-T'].slice(0,5)}}]){
  const rejected=T.difficultyIndex(rapor,es,bad);assert.equal(rejected.map.size,0);assert(rejected.issues.length>0);

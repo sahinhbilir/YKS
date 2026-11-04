@@ -62,11 +62,18 @@
   #ydKok .yd-baski{display:block}
   #ydKok .yd-ogr{break-before:page;page-break-before:always;border:0;border-radius:0;padding:0;gap:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #ydKok .yd-ogr.yd-yok{display:none}
-  #ydKok .yd-sorular{grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm 5mm}
-  #ydKok .yd-genis{grid-column:1/-1}
+  /* Compact print: the questions flow down two newspaper columns (no rows as tall as the taller question), images at about 82% of their former size.
+     A crop taller than a column is scaled down to fit (max-height, object-fit:contain) instead of being cut. Print only; the screen layout is unchanged. */
+  #ydKok .yd-ogr{gap:6px}
+  #ydKok .yd-sorular{display:block;column-count:2;column-gap:5mm}
+  #ydKok .yd-soru{display:inline-block;width:100%;margin:0 0 3mm;break-inside:avoid;page-break-inside:avoid}
+  #ydKok .yd-genis{display:block;column-span:all}
+  #ydKok .yd-soru img{width:82%;max-width:472px;max-height:225mm;object-fit:contain;object-position:left top}
+  #ydKok .yd-genis img{width:82%;max-width:none}
+  #ydKok .yd-soru figcaption{padding-bottom:1px;gap:6px;font-size:.7rem;line-height:1.15}
+  #ydKok .yd-zorluk{padding:2px 7px;font-size:.65rem}
+  #ydKok .yd-ders h3{margin-bottom:4px;padding-bottom:2px;break-after:avoid;page-break-after:avoid}
   #ydKok .yd-soru,#ydKok .yd-ders h3,#ydKok .yd-cevap{break-inside:avoid}
   #ydKok .yd-zorluk{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  #ydKok .yd-ders h3{break-after:avoid}
-  #ydKok .yd-soru img{max-width:none}
   #ydKok .yd-anahtar{break-before:page;page-break-before:always;border-top:0;padding-top:0}
 }
