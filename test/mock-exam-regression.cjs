@@ -184,7 +184,7 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
     sample({id:'p:tyt-muaf',tarih:'2026-09-19',dersler:[dy('turkce',28,4),dy('din'),dy('sf',4,0)]}),
     sample({id:'p:tyt-bos',tarih:'2026-09-20',dersler:[dy('turkce',28,4),dy('din'),dy('sf')]}),
     sample({id:'p:ayt',tur:'AYT',oturum:'AYT',dersler:[dy('edebiyat'),dy('mat',10,2),dy('fizik'),dy('kimya',2,1)]})]);
-  put('kendi',[sample({id:'m:ayt-say',tur:'AYT',oturum:'AYT',alan:'SAY',tarih:'2026-09-21',dersler:[dy('mat'),dy('fizik',5,1)]})]);
+  put('kendi',[sample({id:'m:ayt-say',ad:'Kendi AYT denemesi',tur:'AYT',oturum:'AYT',alan:'SAY',tarih:'2026-09-21',dersler:[dy('mat'),dy('fizik',5,1)]})]);
   run('D.ogr[0].denemeOkul=okul;D.ogr[0].denemeler=kendi');
   const ids=(o,k)=>JSON.parse(run("JSON.stringify(denemeGenelBolumleri(denemeListe(),'"+o+"','"+k+"').map(r=>r.kaynakId))"));
   const geo=JSON.parse(run("JSON.stringify(denemeGenelBolumleri(denemeListe(),'TYT','geo')[0])"));
@@ -256,7 +256,8 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   // The latest exam before the term start (e.g. a readiness test) is drawn on the first day of the
   // chart with its real date; older ones stay in Denemelerim only. AYT follows the student's field (EA here).
   put('okul',[t('p:eski0','2024-01-10',8),t('p:eski','2024-05-27',10),sample({id:'p:ayt',tur:'AYT',oturum:'AYT',tarih:'2026-10-03',sure:null,puan:null,dersler:[{kod:'mat',dogru:10,yanlis:0,soru:30},{kod:'fizik',dogru:9,yanlis:0,soru:14}]})]);
-  put('kendi',[...JSON.parse(JSON.stringify(run('iki'))),sample({id:'m:ayt-say',tur:'AYT',oturum:'AYT',alan:'SAY',tarih:'2026-10-04',sure:null,puan:null,dersler:[{kod:'fizik',dogru:5,yanlis:0,soru:14}]})]);
+  // The student's own entries have their own names: an own entry named like a school exam is hidden (name + session, date ignored).
+  put('kendi',[...JSON.parse(JSON.stringify(run('iki'))).map(r=>({...r,ad:'Kendi '+r.id})),sample({id:'m:ayt-say',ad:'Kendi AYT denemesi',tur:'AYT',oturum:'AYT',alan:'SAY',tarih:'2026-10-04',sure:null,puan:null,dersler:[{kod:'fizik',dogru:5,yanlis:0,soru:14}]})]);
   run('D.ogr[0].denemeOkul=okul;D.ogr[0].denemeler=kendi');h=run('denemeYolGrafigi(0)');
   assert.equal(cx(h,'p:eski'),34,'the pre-term exam sits at the start of the axis');assert(!h.includes('data-dn-yol="p:eski0"'),'only the latest pre-term exam');
   assert.match(h,/class="yg-nokta yg-TYT erken"[^>]*data-dn-yol="p:eski"/);assert(h.includes('<title>TYT · Örnek deneme · 2024-05-27 (dönem başından önce; grafiğin başında) · 10 net</title>'));

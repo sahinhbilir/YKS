@@ -87,16 +87,67 @@ function denemeBirlestir(a=[], b=[], sure=false) {
   const sonuc=Array.from(map.values()).sort((a,b)=>a.id.localeCompare(b.id));
   dogrula(sonuc); return JSON.parse(JSON.stringify(sonuc));
 }
+// One implementation of "a student's exams", used by the personal Deneme panosu (the student's own Denemelerim and the
+// teacher's per-student view), the charts and Üniversite hedefi. Order of authority:
+//  1. In a teacher session the school lists (DPANO.veriAl().t.sinavlar, per-student tyt[no] / ayt[no]) are read directly, so an
+//     exam added with "PDF ekle" (a list without student copies) is here, with per-ders nets in the usual record shape.
+//  2. The published school copies (denemeOkul) win over a list row of the same exam: they carry the student's time and edits.
+//  3. The student's own entries (denemeler) are kept only when no school exam has the same name and session; the date is
+//     ignored (a student's copy often carries another date). The stored entry is untouched: it is only not shown.
+const DENEME_OKUL_ANAHTARI = r => denemeAdAnahtari(r.ad)+'|'+r.oturum+'|'+r.tur;
+const DENEME_LISTE_ONBELLEK = new WeakMap();
+function denemeOkulListeSatirlari(no) {
+  if(!rehberMi() || no===undefined || no===null || typeof DPANO==='undefined' || typeof SIRALAMA==='undefined')return [];
+  let t;try{t=DPANO.veriAl().t;}catch(e){return [];}
+  if(!t)return [];
+  let m=DENEME_LISTE_ONBELLEK.get(t);if(!m){m=new Map();DENEME_LISTE_ONBELLEK.set(t,m);}
+  const n=String(no);if(m.has(n))return m.get(n);
+  const dy=v=>{const q=/^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(v==null?'':String(v));return q?[+q[1],+q[2]]:null;};
+  const cikti=[];
+  for(const s of t.sinavlar || []){
+    const tarih=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(s.tarih || ''),iso=tarih?tarih[3]+'-'+tarih[2]+'-'+tarih[1]:'';
+    if(!iso)continue;
+    for(const oturum of ['TYT','AYT']){
+      const kaynak=oturum==='TYT'?s.tyt:s.ayt,o=kaynak && kaynak[n];
+      if(!o || !(oturum==='TYT'?SIRALAMA.hasTYT(o):SIRALAMA.hasAYT(o)))continue;
+      const sutunlar=oturum==='TYT'?SIRALAMA.TYT_KEYS:SIRALAMA.AYT_KEYS,tum=Object.values(kaynak);
+      // The lessons this exam's list printed; a grade's own exam (a lesson missing) has its own question counts.
+      const kodlar=new Map();
+      for(const k of sutunlar){const kod=DENEME_SIRA_KODU[k];if(kod && tum.some(x=>x.net && x.net[k]!=null || dy(x.dy && x.dy[k])))kodlar.set(k,kod);}
+      const standart=DENEME_DERSLER[oturum].filter(d=>d[0]!=='sf').every(d=>[...kodlar.values()].includes(d[0]));
+      const dersler=new Map();
+      for(const [k,kod] of kodlar){
+        const p=dy(o.dy && o.dy[k]),net=o.net && o.net[k]!=null?o.net[k]:null;
+        const d=dersler.get(kod) || {kod,dogru:0,yanlis:0,soru:0};
+        if(p){d.dogru+=p[0];d.yanlis+=p[1];}else if(net!==null)d.dogru+=Math.max(0,net);
+        const enCok=Math.max(0,...tum.map(x=>{const q=dy(x.dy && x.dy[k]);return q?q[0]+q[1]:0;}));
+        const std=(DENEME_DERSLER[oturum].find(x=>x[0]===kod)||[0,0,enCok])[2];
+        d.soru=oturum==='TYT' && !standart?denemeSoruTahmini(kod,enCok):std;
+        dersler.set(kod,d);
+      }
+      cikti.push({id:'p:'+encodeURIComponent([denemeAdAnahtari(s.ad),iso,oturum].join('|')),ad:s.ad,tarih:iso,tur:oturum,oturum,brans:'',alan:'SAY',
+        dersler:[...dersler.values()],sure:null,puan:null,ts:s.ts || 1,okulListe:true});
+    }
+  }
+  m.set(n,cikti);return cikti;
+}
 function denemeListe(si=EK.ogr) {
   // A deleted teacher row is only a tombstone; it must not hide the student's own entry.
-  const o=D.ogr[si], okul=(o?.denemeOkul || []).filter(r=>!r.silindi), okulKimlik=new Set(okul.map(denemeKimligi));
-  return [...(o?.denemeler || []).filter(r=>!okulKimlik.has(denemeKimligi(r)) && !okul.some(x=>denemeAyniSonuc(x,r))),...okul].filter(r=>!r.silindi).map(r=>{
+  const o=D.ogr[si], kopyalar=(o?.denemeOkul || []).filter(r=>!r.silindi), okulKimlik=new Set(kopyalar.map(denemeKimligi));
+  const anahtarlar=new Set(kopyalar.map(DENEME_OKUL_ANAHTARI));
+  // A list row only for an exam the student has no published copy of (same name and session), and not a deleted one.
+  const silinenler=new Set((o?.denemeOkul || []).filter(r=>r.silindi).map(r=>r.id));
+  const listeSatirlari=denemeOkulListeSatirlari(o?.no).filter(r=>!anahtarlar.has(DENEME_OKUL_ANAHTARI(r)) && !silinenler.has(r.id));
+  listeSatirlari.forEach(r=>anahtarlar.add(DENEME_OKUL_ANAHTARI(r)));
+  const okul=[...kopyalar,...listeSatirlari];
+  return [...(o?.denemeler || []).filter(r=>!okulKimlik.has(denemeKimligi(r)) && !anahtarlar.has(DENEME_OKUL_ANAHTARI(r)) && !okul.some(x=>denemeAyniSonuc(x,r))),...okul].filter(r=>!r.silindi).map(r=>{
     const sure=(o.denemeSure || []).find(x=>x.id===r.id);
     // Re-imports publish school rows with sure:null, which must not hide the student's
     // time; a newer non-empty teacher correction still wins.
     return {...r,sure:sure && (sure.ts>=r.ts || r.id.startsWith('p:') && r.sure===null)?sure.sure:r.sure};
   }).sort((a,b)=>a.tarih.localeCompare(b.tarih)||a.id.localeCompare(b.id));
 }
+const ogrenciDenemeKayitlari = denemeListe;
 // Question counts are fixed, so a blank section (0 D / 0 Y) is a real 0 net. Every
 // student takes the whole TYT and the AYT tests of their field; an AYT course outside
 // the field counts only when answered. Din Kültürü and Ek Felsefe are alternatives:
@@ -561,10 +612,26 @@ function denemeOrtSinifi(o) {
   const s=Number(o.sinif);
   return [9,10,11,12].includes(s)?s:(topluSube(o.sube || '') || {}).sinif || 12;
 }
+// Kaynak: okulun sonuç listeleri, Deneme panosunun okuduğu veri (DPANO.veriAl().t; "PDF ekle" ile eklenenler dahil).
+// Liste yoksa öğrencilerin okul kopyaları (denemeOkul) kullanılır.
+function denemeOrtListe() {
+  if(typeof DPANO==='undefined')return null;
+  try{const t=DPANO.veriAl().t;return t && t.sinavlar.length?t:null;}catch(e){return null;}
+}
+const denemeOrtSubeAnahtari=su=>String(su ?? '').replace(/\s+/g,'').replace('-','/').toLocaleUpperCase('tr-TR');
+const denemeOrtSinifKapsami=k=>/^g\d+$/.test(k.key);
 // Okul denemesi olan sınıf düzeyleri, büyükten küçüğe.
-const denemeOrtSiniflari=()=>[...new Set(canliOgrenciler().filter(si=>(D.ogr[si].denemeOkul || []).some(r=>!r.silindi)).map(si=>denemeOrtSinifi(D.ogr[si])))].sort((a,b)=>b-a);
+function denemeOrtSiniflari() {
+  const t=denemeOrtListe();
+  if(t){const l=DPANO.kapsamlar(t).filter(denemeOrtSinifKapsami).map(k=>Number(k.key.slice(1)));return l.length?l:[12];}
+  return [...new Set(canliOgrenciler().filter(si=>(D.ogr[si].denemeOkul || []).some(r=>!r.silindi)).map(si=>denemeOrtSinifi(D.ogr[si])))].sort((a,b)=>b-a);
+}
 function denemeOrtalamaSinifi() { const l=denemeOrtSiniflari();return l.includes(EK.anaSinif)?EK.anaSinif:(l[0] || 12); }
-const denemeOrtalamaSubeleri=(sinif=denemeOrtalamaSinifi())=>[...new Set(canliOgrenciler().filter(si=>denemeOrtSinifi(D.ogr[si])===sinif).map(si=>D.ogr[si].sube).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
+function denemeOrtalamaSubeleri(sinif=denemeOrtalamaSinifi()) {
+  const t=denemeOrtListe();
+  if(t)return DPANO.kapsamlar(t).filter(k=>!denemeOrtSinifKapsami(k) && k.key!=='hepsi' && parseInt(k.key,10)===sinif).map(k=>k.key);
+  return [...new Set(canliOgrenciler().filter(si=>denemeOrtSinifi(D.ogr[si])===sinif).map(si=>D.ogr[si].sube).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
+}
 const DENEME_ORT_GRUPLAR=[['','Tüm öğrenciler'],['ust20','Üst %20'],['ust40','Üst %40'],['ust60','Üst %60'],['alt60','Alt %60'],['alt40','Alt %40'],['alt20','Alt %20']];
 function denemeOrtalamaGrubu() {
   const g=DENEME_ORT_GRUPLAR.find(x=>x[0] && x[0]===EK.anaGrup);
@@ -580,27 +647,44 @@ const denemeOrtHedefAnahtari=(secim,sinif=12)=>(sinif===12?'':sinif+':')+(secim.
 // Sınıfın (okulun) hedefi ve şubenin kendi hedefi; şubenin yoksa sınıfınki geçerlidir.
 function denemeOrtHedefi(secim,sube,sinif=12) {
   const h=((D.denemeOrtHedef || {})[denemeOrtHedefAnahtari(secim,sinif)]) || {},sayi=v=>Number.isFinite(v)?v:null;
-  const okul=sayi(h['']),kendi=sube?sayi(h[sube]):okul;
+  // Şube "12-A" (defter) ya da "12/A" (okul listesi) yazılmış olabilir; ikisi aynı şubedir.
+  const k=sube?Object.keys(h).find(x=>x && denemeOrtSubeAnahtari(x)===denemeOrtSubeAnahtari(sube)):undefined;
+  const okul=sayi(h['']),kendi=sube?sayi(k===undefined?undefined:h[k]):okul;
   return {okul,kendi,deger:kendi ?? okul};
 }
 function denemeOrtalamaVerisi() {
-  const bas=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
-  if(!Number.isFinite(bas) || !Number.isFinite(son) || son<=bas)return null;
+  const donemBasi=pazartesi(gunNo(D.ayar.donemBasi)),son=gunNo(D.ayar.sinav);
+  if(!Number.isFinite(donemBasi) || !Number.isFinite(son) || son<=donemBasi)return null;
   const secim=denemeOrtalamaSecimi(),siniflar=denemeOrtSiniflari(),sinif=denemeOrtalamaSinifi();
-  const sube=denemeOrtalamaSubeleri(sinif).includes(EK.anaSube)?EK.anaSube:'',grup=denemeOrtalamaGrubu(),sinavlar=new Map();
-  canliOgrenciler().forEach(si=>{
-    const o=D.ogr[si];
-    if(denemeOrtSinifi(o)!==sinif || sube && o.sube!==sube || secim.tur==='AYT' && o.alan!==secim.alan)return;
-    (o.denemeOkul || []).filter(r=>!r.silindi && r.tur===secim.tur).forEach(r=>{
-      const k=denemeKimligi(r),x=sinavlar.get(k) || {r:{id:'o:'+secim.tur+':'+k,ad:r.ad,tarih:r.tarih,tur:r.tur},g:gunNo(r.tarih),degerler:[]};
-      x.degerler.push({si,v:denemeToplam(r,secim.alan)});sinavlar.set(k,x);
+  const subeler=denemeOrtalamaSubeleri(sinif),istenen=denemeOrtSubeAnahtari(EK.anaSube);
+  const sube=EK.anaSube?(subeler.find(su=>denemeOrtSubeAnahtari(su)===istenen) || ''):'',grup=denemeOrtalamaGrubu(),t=denemeOrtListe();
+  const sinavlar=new Map();let kapsam='';
+  if(t){
+    // Deneme panosunun kendi ölçüsü ve kapsamı: aynı öğrenciler, aynı ortalama.
+    const O=DPANO.olcu(secim.tur==='TYT'?'TYT':'AYT:'+secim.alan),ks=DPANO.kapsamlar(t);
+    const K=ks.find(k=>k.key===(sube || 'g'+sinif)) || ks.find(k=>k.key==='hepsi') || ks[0];
+    kapsam=K?K.key:'';
+    const m=K?DPANO.gorunumModeli(t,O,K):{sinavlar:[]};
+    m.sinavlar.forEach(x=>{
+      if(x.g===null || x.g===undefined)return;
+      sinavlar.set(x.id,{r:{id:'o:'+secim.tur+':'+x.id,ad:x.ad,tarih:isoDan(x.g),tur:secim.tur},g:x.g,
+        degerler:Array.from(x.deger,([no,r],i)=>({si:Number.isFinite(Number(no))?Number(no):i,v:r.v}))});
     });
-  });
+  } else {
+    canliOgrenciler().forEach(si=>{
+      const o=D.ogr[si];
+      if(denemeOrtSinifi(o)!==sinif || sube && o.sube!==sube || secim.tur==='AYT' && o.alan!==secim.alan)return;
+      (o.denemeOkul || []).filter(r=>!r.silindi && r.tur===secim.tur).forEach(r=>{
+        const k=denemeKimligi(r),x=sinavlar.get(k) || {r:{id:'o:'+secim.tur+':'+k,ad:r.ad,tarih:r.tarih,tur:r.tur},g:gunNo(r.tarih),degerler:[]};
+        x.degerler.push({si,v:denemeToplam(r,secim.alan)});sinavlar.set(k,x);
+      });
+    });
+  }
   const sira=(a,b)=>a.g-b.g||a.r.id.localeCompare(b.r.id);
-  let liste=Array.from(sinavlar.values());
-  const eskiler=liste.filter(x=>x.g<bas).sort(sira),baslangic=eskiler.at(-1);
-  liste=liste.filter(x=>x.g>=bas && x.g<=son).sort(sira);
-  if(baslangic)liste.unshift({...baslangic,g:bas,erken:true});
+  // Bu okul yılı: YKS’den yaklaşık bir yıl öncesine kadar. Dönem başından önceki deneme (ör. Ağustos’taki
+  // hazırbulunuşluk) kendi tarihinde durur; eksen en erken denemenin haftasından başlar.
+  const liste=Array.from(sinavlar.values()).filter(x=>Number.isFinite(x.g) && x.g>=son-366 && x.g<=son).sort(sira);
+  const bas=liste.length?Math.min(donemBasi,pazartesi(liste[0].g)):donemBasi;
   // Genel ortalamaya göre: öğrenciler gösterilen denemelerdeki ortalamalarıyla bir kez sıralanır.
   let sabit=null;
   if(grup && grup.genel){
@@ -610,11 +694,11 @@ function denemeOrtalamaVerisi() {
   const noktalar=liste.map(x=>{
     const d=sabit?x.degerler.filter(y=>sabit.has(y.si)):grup?denemeOrtGrubunuAl(x.degerler,grup):x.degerler;
     if(!d.length)return null;
-    return {r:{...x.r,ad:x.r.ad+' · '+d.length+' öğrenci ortalaması'+(grup?' ('+grup.ad+')':'')},g:x.g,...(x.erken?{erken:true}:{}),
+    return {r:{...x.r,ad:x.r.ad+' · '+d.length+' öğrenci ortalaması'+(grup?' ('+grup.ad+')':'')},g:x.g,
       v:Math.round(d.reduce((t,y)=>t+y.v,0)/d.length*100)/100};
   }).filter(Boolean);
   const hedef=denemeOrtHedefi(secim,sube,sinif).deger,degerler=noktalar.map(n=>n.v);
-  return {bas,son,secim,sinif,siniflar,sube,grup,noktalar,hedef,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
+  return {bas,son,secim,sinif,siniflar,sube,grup,noktalar,hedef,kaynak:t?'liste':'kopya',kapsam,eksen:denemeYolEksen(secim.ust,Math.min(0,...degerler),Math.max(hedef ?? 0,...degerler))};
 }
 function denemeOrtalamaGrafigi() {
   const v=denemeOrtalamaVerisi();if(!v)return '';
@@ -632,7 +716,7 @@ function denemeOrtalamaGrafigi() {
     '<label class="yg-brans">Grup <select id="dnOrtGrup">'+DENEME_ORT_GRUPLAR.map(([k,ad])=>'<option value="'+k+'"'+((grup?grup.kod:'')===k?' selected':'')+'>'+ad+'</option>').join('')+'</select></label>'+
     (grup?'<div class="yg-secim" role="group" aria-label="Grup nasıl seçilsin">'+[['deneme','Her denemede'],['genel','Genel ortalamaya göre']].map(([k,ad])=>
       '<button type="button" class="'+((grup.genel?'genel':'deneme')===k?'secili':'')+'" aria-pressed="'+((grup.genel?'genel':'deneme')===k)+'" data-dn-ort-mod="'+k+'">'+ad+'</button>').join('')+'</div>':'')+
-    '</div><div class="yg-alan" data-ort="1" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div>'+
+    '<button type="button" class="et-dugme dn-ort-pano" data-dn-yol="o:'+secim.tur+':pano" title="Deneme panosunu bu oturum ve sınıfla aç">Deneme panosu →</button></div><div class="yg-alan" data-ort="1" data-w="480" data-h="270">'+denemeYolSvg(v)+'</div>'+
     (yalnizcaGoruntuleme()?'':'<label class="yg-hedef-sec">Hedef <input type="number" id="dnOrtHedef" min="0" max="'+secim.ust+'" step="1" inputmode="numeric" value="'+(h.kendi===null?'':h.kendi)+'" placeholder="'+(sube && h.okul!==null?h.okul:'—')+'" aria-label="'+kacis(secim.ad+' '+(sube?sube+' şubesi':kapsam)+' hedef net (0–'+secim.ust+')')+'"> net <small>'+kacis(secim.ad)+' · '+kacis(kapsam)+'</small></label>')+
     '</section>';
 }
@@ -798,8 +882,11 @@ async function denemeYayinlaVeyaBeklet(si) {
 // Branş noktası (branş denemesi ya da TYT/AYT bölümü) Branş denemelerinde o dersle açılır.
 function denemeYolAc(id) {
   // Öğretmen ana sayfasındaki ortalama noktası Denemeler’i o türle açar.
-  if(String(id).startsWith('o:')){const tur=String(id).split(':')[1];EK.sekme='denemeler';EK.denemeTur=tur;DENEME_FORM=null;
-    if(tur==='AYT' && DENEME_ALAN[EK.anaDenemeAlan])EK.denemeAlan=EK.anaDenemeAlan;ciz();return;}
+  // Okul listesinden gelen nokta Deneme panosunu aynı oturum ve sınıf (ya da şube) ile açar.
+  if(String(id).startsWith('o:')){const tur=String(id).split(':')[1],v=denemeOrtalamaVerisi();EK.sekme='denemeler';EK.denemeTur=tur;DENEME_FORM=null;
+    if(tur==='AYT' && DENEME_ALAN[EK.anaDenemeAlan])EK.denemeAlan=EK.anaDenemeAlan;
+    if(v && v.kaynak==='liste'){EK.denemeKisi=false;EK.dpOlcu=tur==='AYT'?'AYT:'+v.secim.alan:'TYT';EK.dpKapsam=v.kapsam;}
+    ciz();return;}
   const r=denemeBul(id);if(!r)return;
   EK.sekme='denemeler';EK.denemeTur=r.tur;EK.denemeSecili=r.id;DENEME_FORM=null;
   if(r.tur==='BRANS'){EK.denemeOturum=r.oturum;EK.denemeBrans=r.brans;if(r.genel){EK.denemeGenel=true;EK.denemeMetrik='net';}}
@@ -937,7 +1024,8 @@ document.addEventListener('change',async ev=>{
     if(hedef!==null && !(hedef>=0 && hedef<=ust)){alert('Hedef 0 ile '+ust+' net arasında olmalı.');ciz();return;}
     const eski=D.denemeOrtHedef,k=denemeOrtHedefAnahtari(v.secim,v.sinif),yeni=JSON.parse(JSON.stringify(eski || {}));
     yeni[k]=yeni[k] || {};
-    if(hedef===null)delete yeni[k][v.sube];else yeni[k][v.sube]=hedef;
+    const sk=Object.keys(yeni[k]).find(x=>x && v.sube && denemeOrtSubeAnahtari(x)===denemeOrtSubeAnahtari(v.sube)) ?? v.sube;
+    if(hedef===null)delete yeni[k][sk];else yeni[k][sk]=hedef;
     if(!Object.keys(yeni[k]).length)delete yeni[k];
     if(Object.keys(yeni).length)D.denemeOrtHedef=yeni;else delete D.denemeOrtHedef;
     if(!await kaydet(true)){if(eski===undefined)delete D.denemeOrtHedef;else D.denemeOrtHedef=eski;}

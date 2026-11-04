@@ -316,7 +316,9 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
       EK.anaDenemeTur='TYT';})()`);
   };
   const kayitlar = (i) => get(`D.ogr[${i}].denemeOkul.map(r=>[r.ad,r.tarih,r.oturum,!!r.silindi])`);
-  const noktalar = () => get('denemeOrtalamaVerisi().noktalar.map(n=>n.r.tarih)');
+  // These checks are about the students' published copies, which the home chart uses when there are no school lists
+  // (with lists it follows them, see teacher-home-regression.cjs): look at the copies with the lists set aside.
+  const noktalar = () => get('(()=>{const s=D.siralama;delete D.siralama;try{return denemeOrtalamaVerisi().noktalar.map(n=>n.r.tarih)}finally{D.siralama=s}})()');
   const gruplar = () => get('SIRALAMA.yayinlanmisGruplar(SIRALAMA.oku().veri).map(g=>[g.ad,g.tarih,g.oturum,g.n,g.yok])');
   await check('deleting only the lists keeps the students’ copies when the teacher chooses so', async () => {
     await yayinKur();
