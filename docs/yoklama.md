@@ -5,6 +5,7 @@ Rehber öğretmenin **Yoklama** sayfası okulun “Yoklama Raporu” PDF’ini o
 ## Rapor
 
 - **PDF ekle** bir ya da birkaç raporu ekler. PDF tarayıcıda okunur, hiçbir yere gönderilmez.
+- Bir PDF en fazla 1000 sayfa ve 60 MB olabilir (deneme listeleri için sınır 100 sayfa ve 15 MB). Uzun bir rapor okunurken durum satırı okunan sayfayı gösterir (“· 240 / 612 sayfa”). Etüt raporu ve Öğrenci raporları’ndaki ödev raporu için de aynı sınır geçerlidir.
 - Raporda her şube yeni sayfada “205 12/C Yoklama Raporu” başlığıyla başlar; her satır bir öğrencinin bir günüdür: tarih ve “1. Ders” … “8. Ders” altında Geldi, Gelmedi, Gecikti, Mazeretli (Diğer) ya da Mazeretli (Raporlu). Öğrencinin adı satırlarının ortasındadır, uzun adlar iki satırdır; satırlar sonraki sayfaya geçer.
 - **14 Eylül 2026’dan önceki günler alınmaz** (öğretim yılı o gün başlar).
 - Yeni rapor, içindeki şubelerin kendi tarih aralığındaki günlerinin yerine geçer; diğer günler ve şubeler kalır. Aynı raporu yeniden eklemek bir şey değiştirmez.

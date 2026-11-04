@@ -15100,13 +15100,16 @@ async function denemePdfjs() {
   return pdfjs;
 }
 // Text items of every page. Sıralamalar also needs each page's height and the font size (z).
-async function denemePdfSayfalari(file) {
-  if(file.size>15*1024*1024)throw new Error('PDF en fazla 15 MB olabilir.');
+// sinir: {sayfa, mb, ilerleme(n, toplam)}. Exam lists stay at 100 pages / 15 MB; the school's long
+// reports (yoklama, etüt, ödev) pass a larger limit and show the page count while they are read.
+async function denemePdfSayfalari(file,sinir={}) {
+  const enCokSayfa=sinir.sayfa||100,enCokMb=sinir.mb||15,ilerleme=typeof sinir.ilerleme==='function'?sinir.ilerleme:null;
+  if(file.size>enCokMb*1024*1024)throw new Error('PDF en fazla '+enCokMb+' MB olabilir.');
   const pdfjs=await denemePdfjs();
   const task=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false,useSystemFonts:true});
   try {
     const pdf=await task.promise;
-    if(pdf.numPages>100)throw new Error('PDF en fazla 100 sayfa olabilir.');
+    if(pdf.numPages>enCokSayfa)throw new Error('PDF en fazla '+enCokSayfa+' sayfa olabilir'+(enCokSayfa>100?'; raporu daha kısa tarih aralıklarıyla alın.':'.'));
     const pages=[],boylar=[];
     for(let n=1;n<=pdf.numPages;n++) {
       const page=await pdf.getPage(n), text=await page.getTextContent();
@@ -15114,6 +15117,7 @@ async function denemePdfSayfalari(file) {
       // f is the run's font: the Etüt planı's timetables tell lessons (bold) from teachers by it.
       pages.push(text.items.filter(x=>x.str?.trim()).map(x=>({s:x.str.trim(),x:x.transform[4],y:x.transform[5],w:x.width,h:x.height,z:Math.hypot(x.transform[0],x.transform[1]),f:x.fontName})));
       page.cleanup();
+      if(ilerleme&&pdf.numPages>20&&(n%10===0||n===pdf.numPages))ilerleme(n,pdf.numPages);
     }
     return {pages,boylar};
   } finally { await task.destroy(); }
@@ -17895,7 +17899,7 @@ async function pdfEkle(files){
   const okunan=[],hatalar=[],defter=D;let atlanan=0;
   for(const file of files){
     durum('PDF okunuyor: '+file.name);
-    try{const {pages}=await denemePdfSayfalari(file);const r=pdfCoz(pages);atlanan+=r.atlanan;okunan.push(r)}catch(e){hatalar.push(file.name+': '+e.message)}
+    try{const {pages}=await denemePdfSayfalari(file,{sayfa:1000,mb:60,ilerleme:(n,t)=>durum('PDF okunuyor: '+file.name+' · '+sayi(n)+' / '+sayi(t)+' sayfa')});const r=pdfCoz(pages);atlanan+=r.atlanan;okunan.push(r)}catch(e){hatalar.push(file.name+': '+e.message)}
   }
   if(D!==defter||!rehberMi())throw new Error('Oturum değişti.');
   if(okunan.length)await raporEkle(okunan);
@@ -20207,7 +20211,7 @@ function kurumGorunum(m,disable){
 const YER={exam:'deneme sonuç listesi; Sıralamalar sayfasından ekleyin.',sessions:'etüt raporu; Etütler sayfasından ekleyin.',attendance:'yoklama raporu; Yoklama sayfasından ekleyin.'};
 async function addFiles(files){
  guard();if(BUSY)return;if(files.length>30)throw new Error('Bir seferde en fazla 30 PDF seçin.');const owner=D,gen=GEN;BUSY=true;STATUS='PDF’ler okunuyor…';refresh();const results=[],errors=[];
- try{for(const f of files){try{const p=await denemePdfSayfalari(f);if(owner!==D||gen!==GEN||!allowed())return;const r=parse(p.pages,p.boylar);
+ try{for(const f of files){try{const p=await denemePdfSayfalari(f,{sayfa:1000,mb:60,ilerleme:(n,t)=>{STATUS=f.name+' okunuyor · '+n+' / '+t+' sayfa';const el=document.getElementById('orStatus');if(el)el.textContent=STATUS}});if(owner!==D||gen!==GEN||!allowed())return;const r=parse(p.pages,p.boylar);
     if(!['homework','english'].includes(r.kind))throw new Error(YER[r.kind]);results.push([f.name,r])}catch(e){errors.push(f.name+': '+e.message)}}
   if(owner!==D||gen!==GEN||!allowed())return;for(const [name,r] of results)FILES.set(name,r);STATUS=results.length+' dosya eklendi.'+(errors.length?' '+errors.join(' '):'');
  }finally{if(owner===D&&gen===GEN){BUSY=false;refresh()}}
@@ -20845,7 +20849,7 @@ async function pdfEkle(files){
   const okunan=[],hatalar=[],defter=D;let atlanan=0,bilinmeyen=0;
   for(const file of files){
     durum('PDF okunuyor: '+file.name);
-    try{const {pages}=await denemePdfSayfalari(file);const r=pdfCoz(pages);atlanan+=r.atlanan;bilinmeyen+=r.bilinmeyen;okunan.push(r)}catch(e){hatalar.push(file.name+': '+e.message)}
+    try{const {pages}=await denemePdfSayfalari(file,{sayfa:1000,mb:60,ilerleme:(n,t)=>durum('PDF okunuyor: '+file.name+' · '+sayi(n)+' / '+sayi(t)+' sayfa')});const r=pdfCoz(pages);atlanan+=r.atlanan;bilinmeyen+=r.bilinmeyen;okunan.push(r)}catch(e){hatalar.push(file.name+': '+e.message)}
   }
   if(D!==defter||!rehberMi())throw new Error('Oturum değişti.');
   if(okunan.length)await raporEkle(okunan);
