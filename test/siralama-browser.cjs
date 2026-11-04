@@ -81,10 +81,10 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    assert.equal(await page.locator('select[data-sr-sinif="301 12/A"]').inputValue(),'Toplam');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'overflow at '+width);
    await page.screenshot({path:path.join(out,'siralamalar-'+width+'.png'),fullPage:true});
-   // 5) Deleting an exam that was never published to students changes none of their results.
+   // 5) Deleting the lists alone (the copies PDF ekle published stay when the teacher keeps them) changes none of the students' results.
    await page.locator('[data-sr-sil="SENTETİK DENEME 1"]').click();
    await page.waitForFunction(()=>D.siralama.sinavlar.length===1);
-   assert.equal(await page.evaluate(()=>D.ogr[0].denemeOkul.length),2);
+   assert.equal(await page.evaluate(()=>D.ogr[0].denemeOkul.length),4,'PDF ekle published Deneme 1 and 2 (TYT + AYT) to the matched student');
    assert.equal(await page.locator('[data-sr-indir]:not([disabled])').count(),0);
    // 5b) The school's list was deleted and added again under another date and spelling: the copies published earlier are
    // listed apart as "Listede yok" (the exam that is still listed has no button) and removed from the students on request.
