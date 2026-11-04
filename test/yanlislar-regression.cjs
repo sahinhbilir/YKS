@@ -159,6 +159,99 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert.equal(d1.gorsel, true);
     assert.deepEqual(copy(d1.bolumler.map(x => [x.ders, x.sorular.map(s => [s.test, s.a, s.b, s.isaret, s.dogru])])), [['Türkçe', [[0, 3, 4, '', 'C']]], ['Tarih', [[1, 1, 2, '', 'A']]], ['Ek Felsefe', [[1, 5, 6, 'A', 'E']]]]);
   });
+  // ---- Oturum and Alan (TYT + AYT) ----
+  const kur2 = async ogr => {
+    const rapor = await T.raporCoz(bytes(Y.raporXlsx2(ogr ? {ayt: {ogrenciler: ogr}} : {}))), kT = kit(), kA = T.kitapcikCoz(Y.kitapcikSayfalariAyt()), es = T.esle(rapor, {TYT: kT, AYT: kA});
+    return {rapor, kT, kA, es};
+  };
+  const dersOf = (rapor, es, o, opt, alan) => { const d = T.defterKur(rapor, es, null, o, T.acikBolumler(es, o, opt, alan)); return copy(d.bolumler.map(b => b.ders)) };
+  const aytOf = (rapor, es, o, opt, alan) => dersOf(rapor, es, o, opt, alan).filter((x, i, a) => !['Türkçe', 'Tarih', 'Din Kültürü', 'Ek Felsefe'].includes(x));
+  await test('alan: SAY, EA, SÖZ and Tümü pick the AYT tests of the field; TYT is untouched', async () => {
+    const {rapor, es} = await kur2(), o = rapor.ogrenciler.find(x => x.no === '9001');
+    const ders = alan => dersOf(rapor, es, o, {alan, oturum: 'TYT+AYT'});
+    assert.deepEqual(aytOf(rapor, es, o, {alan: 'SAY'}), ['Matematik']);
+    assert.deepEqual(aytOf(rapor, es, o, {alan: 'EA'}), ['Türk Dili ve Edebiyatı', 'Tarih-1', 'Matematik']);
+    assert.deepEqual(aytOf(rapor, es, o, {alan: 'SÖZ'}), ['Türk Dili ve Edebiyatı', 'Tarih-1']);
+    assert.deepEqual(aytOf(rapor, es, o, {alan: 'Tümü'}), ['Türk Dili ve Edebiyatı', 'Tarih-1', 'Matematik']);
+    const tyt = alan => ders(alan).filter(x => ['Türkçe', 'Tarih', 'Din Kültürü', 'Ek Felsefe'].includes(x));
+    assert.deepEqual(tyt('SAY'), tyt('Tümü'));
+    assert.deepEqual(ders('SAY'), ['Türkçe', 'Din Kültürü', 'Matematik'], 'TYT first, then the AYT of the field');
+  });
+  await test('alan: tests outside the alan are not counted as boş; the header counts follow', async () => {
+    const {rapor, es} = await kur2(), o = rapor.ogrenciler.find(x => x.no === '9001'), say = (alan, oturum = 'AYT') => T.defterKur(rapor, es, null, o, T.acikBolumler(es, o, {alan, oturum}));
+    // AYT key A vs the student: edebiyat 1 wrong + 1 boş, tarih-1 1 boş, matematik 1 boş
+    assert.deepEqual([say('SAY').yanlis, say('SAY').bos], [0, 1]);
+    assert.deepEqual([say('SÖZ').yanlis, say('SÖZ').bos], [1, 2]);
+    assert.deepEqual([say('Tümü').yanlis, say('Tümü').bos], [1, 3]);
+    assert.equal(T.filterDefter(say('SAY'), {status: 'all'}).bos, 1, 'the filter sees only the chosen alan');
+  });
+  await test('alan: Öğrencinin alanı reads the notebook by school no; unknown falls back to the AYT tests answered', async () => {
+    // 9005 left Matematik completely blank, 9006 left Edebiyat and Tarih-1 blank
+    const ogr = [...Y.AYT_OGRENCILER, {no: '9005', ad: 'SENTETİK ÖĞRENCİ 5', sube: '205 12/A', kit: 'A', cev: ['A', 'B', 'C', 'D', 'E', '', '', '']}, {no: '9006', ad: 'SENTETİK ÖĞRENCİ 6', sube: '205 12/A', kit: 'A', cev: ['', '', '', '', '', 'A', 'B', 'B']}];
+    const {rapor, es} = await kur2(ogr), s = no => rapor.ogrenciler.find(x => x.no === no);
+    run("D=varsayilan();D.rol='rehber';D.ogr=[{no:'9001',alan:'SÖZ'},{no:'9002',alan:'SAY'},{no:' 9003 ',alan:'EA'},{no:'9004',alan:'Karma'},{no:'9005',alan:'SAY',silindi:true}]");
+    assert.equal(T.ogrAlani('9001'), 'SÖZ'); assert.equal(T.ogrAlani('9003'), 'EA'); assert.equal(T.ogrAlani('9004'), null, 'an invalid field is unknown'); assert.equal(T.ogrAlani('9005'), null, 'a deleted student is ignored'); assert.equal(T.ogrAlani('9999'), null);
+    const opt = {alan: 'ogr', oturum: 'AYT'};
+    assert.deepEqual(aytOf(rapor, es, s('9001'), opt), ['Türk Dili ve Edebiyatı', 'Tarih-1']);
+    assert.deepEqual(aytOf(rapor, es, s('9002'), opt), ['Matematik']);
+    assert.deepEqual(aytOf(rapor, es, s('9003'), opt), [], 'EA student 9003 answered everything correctly: nothing wrong');
+    // unknown (no notebook entry): only what was answered; 9005's blank Matematik is not boş, 9006's blank Edebiyat and Tarih-1 neither
+    assert.deepEqual(aytOf(rapor, es, s('9004'), opt), ['Türk Dili ve Edebiyatı', 'Tarih-1', 'Matematik'], 'unknown alan: the AYT tests it answered');
+    const f5 = T.defterKur(rapor, es, null, s('9005'), T.acikBolumler(es, s('9005'), opt)), f6 = T.defterKur(rapor, es, null, s('9006'), T.acikBolumler(es, s('9006'), opt));
+    assert.deepEqual(copy(f5.bolumler), [], 'all answered tests are right and the blank Matematik is not counted');
+    assert.deepEqual(copy(f6.bolumler.map(b => b.ders)), ['Matematik']); assert.equal(f6.bos, 0);
+    assert.equal(T.defterKur(rapor, es, null, s('9005'), T.acikBolumler(es, s('9005'), {alan: 'Tümü', oturum: 'AYT'})).bos, 3, 'Tümü counts the blank test');
+    assert.equal(T.defterKur(rapor, es, null, s('9005'), T.acikBolumler(es, s('9005'), {alan: 'SAY', oturum: 'AYT'})).bos, 3, 'an explicit alan counts it too');
+  });
+  await test('oturum: TYT, AYT or both; the ders ticks work on top; the key covers both sessions in order', async () => {
+    const {rapor, es} = await kur2(), o = rapor.ogrenciler.find(x => x.no === '9001');
+    assert.deepEqual([...T.oturumKume(es, 'TYT+AYT')], ['TYT', 'AYT']); assert.deepEqual([...T.oturumKume(es, 'AYT')], ['AYT']);
+    assert.deepEqual([...T.oturumKume(es, 'ZZZ')], ['TYT', 'AYT']);
+    const idx = ders => es.bolumler.findIndex(b => b.ders === ders);
+    assert.deepEqual(dersOf(rapor, es, o, {oturum: 'TYT', alan: 'Tümü'}), ['Türkçe', 'Din Kültürü']);
+    assert.deepEqual(dersOf(rapor, es, o, {oturum: 'AYT', alan: 'Tümü'}), ['Türk Dili ve Edebiyatı', 'Tarih-1', 'Matematik']);
+    assert.deepEqual(dersOf(rapor, es, o, {oturum: 'TYT+AYT', alan: 'Tümü', kapali: new Set([idx('Türkçe'), idx('Matematik')])}), ['Din Kültürü', 'Türk Dili ve Edebiyatı', 'Tarih-1']);
+    // a student who sat only the TYT has no AYT block
+    const only = rapor.ogrenciler.find(x => !x.oturumlar.includes('AYT'));
+    if (only) assert.deepEqual(dersOf(rapor, es, only, {alan: 'Tümü'}).filter(x => x === 'Matematik'), []);
+  });
+  await test('print: TYT block then AYT block with session headings; the key has both; no alan or tier text', async () => {
+    const {rapor, kT, kA, es} = await kur2(), S = T.durumu();
+    Object.assign(S, {kitlar: {TYT: kT, AYT: kA}, rapor, es, pairs: {}, cozum: {}, zOnbellek: null, bantlar: null, kendi: false, status: 'all', harita: null, sube: '', ogr: '', kapali: new Set(), crops: new Map(), oturum: 'TYT+AYT', alan: 'SÖZ'});
+    es.testler.forEach((n, ti) => { const f = ti < es.aralik.AYT[0] ? ['TYT', kT, ti] : ['AYT', kA, ti - es.aralik.AYT[0]]; for (let q = 1; q <= n; q++) S.crops.set(ti + ':' + q, {url: 'blob:s-' + ti + '-' + q, w: 10, h: 10, genis: false}) });
+    run("D=varsayilan();D.rol='rehber';D.ogr=[{no:'9001',alan:'SÖZ'}];EK.sekme='yanlislar'");
+    const out = T.gorunum(), a = out.split('<article class="yd-ogr').slice(1)[0];
+    assert(a.indexOf('<h3 class="yd-oturum">TYT</h3>') > 0 && a.indexOf('<h3 class="yd-oturum">TYT</h3>') < a.indexOf('<h3 class="yd-oturum">AYT</h3>'));
+    assert.equal((a.match(/class="yd-oturum"/g) || []).length, 4, 'two headings in the pages and two in the key');
+    assert(a.indexOf('Türk Dili ve Edebiyatı <span>') > a.indexOf('class="yd-oturum">AYT'));
+    assert.doesNotMatch(a, />Matematik <span>/, 'SÖZ: no AYT Matematik');
+    const key = a.slice(a.indexOf('class="yd-anahtar"'));
+    assert(key.indexOf('<caption>Türkçe') < key.indexOf('class="yd-oturum">AYT') && key.indexOf('class="yd-oturum">AYT') < key.indexOf('<caption>Türk Dili ve Edebiyatı'));
+    assert.doesNotMatch(a, /SÖZ|Öğrencinin alanı|kademe/i, 'nothing about the alan or tiers is printed');
+    // the selectors: Oturum and Alan are offered, with the default 'Öğrencinin alanı'
+    assert.match(out, /data-yd-f="oturum"/); assert.match(out, /<option value="ogr">Öğrencinin alanı<\/option>/); assert.match(out, /<option value="SÖZ" selected>SÖZ<\/option>/);
+    assert.doesNotMatch(out, /data-yd-ders="[0-9]+" checked>Matematik/, 'the tick for a test outside the chosen alan is hidden');
+    S.oturum = 'TYT'; assert.doesNotMatch(T.gorunum(), /data-yd-f="alan"/, 'TYT only: no alan selector');
+    Object.assign(S, {oturum: 'TYT+AYT', alan: 'ogr'});
+  });
+  await test('difficulty: an AYT section is analysed on the students who took it; anchoring and tiers use the AYT keys', async () => {
+    // 9006 left Edebiyat blank and 9004 sits it: the section n counts only takers, whatever the alan
+    const ogr = [...Y.AYT_OGRENCILER, {no: '9006', ad: 'SENTETİK ÖĞRENCİ 6', sube: '205 12/A', kit: 'A', cev: ['', '', '', '', '', 'A', 'B', 'B']}];
+    const {rapor, es} = await kur2(ogr), za = T.zorlukAnaliz(rapor, es, null, null, null);
+    const edb = za.bolumler.find(b => b.ders === 'Türk Dili ve Edebiyatı'), mat = za.bolumler.find(b => b.ders === 'Matematik');
+    assert.equal(edb.oturum, 'AYT'); assert.equal(edb.gruplar.reduce((a, g) => a + g.a.n, 0), 4); assert.equal(mat.gruplar.reduce((a, g) => a + g.a.n, 0), 5);
+    const ort = T.ortalamaCoz(Y.itemlere(Y.ortalamaSpec({dersler: [['TÜRK DİLİ VE EDB-A', 3, 1.5]]})));
+    assert.equal(T.ortalamaDogrula(ort, rapor).size, 1, 'the AYT section is matched by its report name');
+    assert(T.zorlukAnaliz(rapor, es, null, null, ort).bolumler.find(b => b.ders === 'Türk Dili ve Edebiyatı').gruplar.every(g => g.a.capa), 'anchored');
+    const kd = run("KADEME.kodDers('TÜRK DİLİ VE EDB-A')"), kd2 = run("KADEME.kodDers('TARİH.1-A')"), kd3 = run("KADEME.kodDers('MATEMATİK-A')");
+    assert.deepEqual(copy([kd, kd2, kd3]), [{oturum: 'AYT', kod: 'edebiyat'}, {oturum: 'AYT', kod: 'tarih1'}, {oturum: 'AYT', kod: 'mat'}]);
+  });
+  await test('booklet: numbers and notices handed over in pieces ("13" + ".", words in parts) are joined; a finished number is not extended', () => {
+    const pages = Y.kitapcikSayfalariAyt(), split = pages.map(p => ({...p, items: p.items.flatMap(i => /^\d{1,2}\.$/.test(i.s) ? [{...i, s: i.s.slice(0, -1), w: 5}, {...i, s: '.', x: i.x + 5, w: 2.5}] : /^Sentetik/.test(i.s) ? i.s.split(' ').map((w, k) => ({...i, s: w, x: i.x + k * 30, w: 27})) : [i])}));
+    const a = T.kitapcikCoz(pages), b = T.kitapcikCoz(split);
+    assert.deepEqual(copy(b.testler.map(t => [t.kod, t.soru, t.sorular.length])), copy(a.testler.map(t => [t.kod, t.soru, t.sorular.length])));
+    assert.deepEqual(copy(b.testler[0].sorular.map(q => q.parcalar)), copy(a.testler[0].sorular.map(q => q.parcalar)));
+  });
   // ---- markup ----
   const show = async o => {
     const {rapor, k, es} = await kur(), S = T.durumu();

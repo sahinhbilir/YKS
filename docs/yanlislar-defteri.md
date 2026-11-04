@@ -44,6 +44,15 @@ clears them, and uploading again is how the teacher reprints.
 
 ## The page
 
+**Oturum and Alan.** The booklet slot is labelled "Soru kitapçığı (A) · TYT ve AYT": the TYT and the AYT booklet are two PDFs (one A booklet each), chosen together or one after the other; each
+is recognised by its page header, the ✓ status shows one line per session and a hint names the booklet still missing. When the report and booklets cover both sessions the page offers **Oturum**
+(TYT + AYT, the default · TYT · AYT) and, while AYT is included, **Alan**: *Öğrencinin alanı* (default), SAY, EA, SÖZ, Tümü. The AYT tests of a field are the app's own `DENEME_ALAN` (SAY: Matematik + Geometri, Fizik, Kimya, Biyoloji;
+EA: Matematik + Geometri, Türk Dili ve Edebiyatı, Tarih-1, Coğrafya-1; SÖZ: Türk Dili ve Edebiyatı, Tarih-1, Coğrafya-1, Tarih-2, Coğrafya-2, Felsefe Grubu, Din Kültürü / Ek Felsefe with the Din / Ek Felsefe rule below), matched to
+the report sections by `KADEME.kodDers`. *Öğrencinin alanı* reads the field written for the student in the teacher notebook (`D.ogr`, matched by school no); when it is unknown, only the AYT tests the student answered are used.
+AYT tests outside the alan are left out of that student's defter, so their blank answers are not counted as "boş"; *Tümü* keeps all of them. TYT is never touched by Alan. The ders checkboxes work on top (with SAY, EA or SÖZ the boxes of the other fields are hidden),
+and the counts in the header follow. The difficulty of an AYT section is computed from the students who took it (a whole blank section is not taken), whatever the alan; Ders ortalamaları anchoring and Kendi seviyesi use the AYT keys of KADEME.
+In print a TYT block comes first, then the AYT block, each under its session heading ("TYT", "AYT") with its ders headings, and the key at the end covers both; neither the alan nor the tiers are printed.
+
 Filters: **Şube**, **Öğrenci** (one student), and a checkbox per ders (for sections not taken). **Yazdır** prints the
 filtered set. On screen the questions are one column; on paper A4 portrait, two per row when they fit (a question with a
 full-width passage takes a row), never split across pages.
