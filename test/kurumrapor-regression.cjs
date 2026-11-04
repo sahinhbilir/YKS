@@ -69,8 +69,15 @@ check('şube rows: öğrenci, etüt, etüt/öğrenci, ödev %, devamsız gün, d
  assert.equal(by['12/B'].hasAttendance,true);
  // Latest exam is Deneme 2 (nets 18 + 2(i+2)): 12/A holds students 0,1,2 → 22,24,26 → 24.
  assert.equal(by['12/A'].net,24);assert.equal(by['12/B'].net,(28+30)/2);assert.equal(by['11/A'].net,(32+34)/2);
- assert.equal(k.sonDeneme.ad,'Sentetik Deneme 2');
+ assert.equal(k.sonDeneme,null,'no single latest exam across grades');assert.equal(k.toplam.net,null);assert.equal(rapor('12').sonDeneme.ad,'Sentetik Deneme 2');
  assert.equal(k.toplam.n,7);assert.equal(k.toplam.etut,6);
+});
+check('TYT average per şube uses its own grade\'s latest exam; Tüm okul has no exam name and no total',()=>{
+ // 11/A took an extra, later exam (nets 40 each) that 12/x did not: it is 11/A's latest, 12/A keeps Deneme 2.
+ const extra=R.merge([{kind:'exam',students:P,exams:[...exams,...P.filter(p=>p.grade===11).map(p=>({...p,exam:'Sentetik Deneme 3',date:'2026-10-20',session:'TYT',nets:{turkce:20,mat:20}}))]}],[]).students,sc=R.kurumKapsamlari(extra)[0],k=R.kurumRapor(extra,sc,hepsiYok),by=Object.fromEntries(k.subeler.map(r=>[r.cls,r]));
+ assert.equal(by['11/A'].net,40);assert.equal(by['12/A'].net,24);assert.equal(by['12/B'].net,29);assert.equal(k.toplam.net,null);
+ const svg=R.svgKurum(k,'2026-10-25'),txt=metin(svg);assert(txt.includes('TYT ort. (son deneme)'));assert(!txt.includes('Sentetik Deneme 3 '),'no exam name in the Tüm okul header');assert(!svg.includes('…'),'no name is cut with an ellipsis');
+ const g=R.kurumRapor(extra,R.kurumKapsamlari(extra).find(x=>x.key==='11'),hepsiYok);assert.equal(g.toplam.net,40);assert.equal(g.sonDeneme.ad,'Sentetik Deneme 3');assert(metin(R.svgKurum(g,'2026-10-25')).includes('son deneme: Sentetik Deneme 3'));
 });
 check('missing sources are named on the page and never invent numbers',()=>{
  const bos=R.merge([{kind:'exam',students:P.slice(0,2),exams:exams.slice(0,2)}],[]).students,sc={key:'okul',label:'Tüm okul',grade:null,count:2};

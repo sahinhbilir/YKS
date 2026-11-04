@@ -55,6 +55,7 @@ const upload=name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
   // Whole school first: one row per grade; the grade with a Türkiye list shows T, the others say so.
   const okul=await page.locator('.or-preview').innerText();for(const t of ['Kurum raporu · Tüm okul','Türkiye geneli · sınıf düzeylerine göre','Etütler','Ödevler','Devamsızlık','Şube karşılaştırması','12. sınıf','Türkiye geneli listesi yok; Türkiye geneli sayfasından ekleyin.'])assert(okul.replace(/\s+/g,' ').includes(t),t);
   for(const n of names)assert(!okul.includes(n),'the report names '+n);
+  assert(okul.replace(/\s+/g,' ').includes('TYT ort. (son deneme)')&&!okul.includes('…'));
   assert.equal(await page.locator('.or-preview g[aria-label="Ödevler"] g[aria-label^="Ödev tamamlama"]').count(),0,'no homework report yet');
   await page.screenshot({path:path.join(out,'kurum-okul-'+width+'-'+theme+'.png'),fullPage:true});
   if(width===1280&&theme==='light')await page.locator('.or-preview svg').screenshot({path:path.join(out,'kurum-a4-okul.png')});
@@ -63,6 +64,7 @@ const upload=name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
   const p12=(await page.locator('.or-preview').innerText()).replace(/\s+/g,' ');
   for(const t of ['Kurum raporu · 12. sınıf','Türkiye geneli · T puanı','Türkiye ortalaması (T = 50)','TYT toplam','SAY toplam','EA toplam','SÖZ toplam','Ders ders T puanı','Haftalık etüt sayısı','Derse göre etüt','Öğretmene göre etüt','Ödev kaydı yok','Öğrenci sayısı, kaçırdığı güne göre','Şube karşılaştırması','12/A'])assert(p12.includes(t),t);
   for(const n of names)assert(!p12.includes(n),'the report names '+n);
+  assert(!p12.includes('…'),'no name is cut with an ellipsis');assert(p12.includes('TYT ort.'));
   assert.equal(await page.locator('.or-preview g[aria-label="T puanı grafiği"]').count(),1);assert.equal(await page.locator('.or-preview g[aria-label^="TYT toplam · T "]').count(),1);
   await page.screenshot({path:path.join(out,'kurum-'+width+'-'+theme+'.png'),fullPage:true});
   if(width===1280&&theme==='light')await page.locator('.or-preview svg').screenshot({path:path.join(out,'kurum-a4-12.png')});

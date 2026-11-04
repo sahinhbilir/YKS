@@ -19837,9 +19837,9 @@ function kurumDenemeler(list){
   const k=nameKey(e.exam),o=map.get(k)||{key:k,ad:e.exam,date:e.date,sum:0,n:0};o.sum+=nets.reduce((a,b)=>a+b,0);o.n++;if(e.date<o.date)o.date=e.date;map.set(k,o)}
  return [...map.values()].map(o=>({...o,avg:o.sum/o.n})).sort((a,b)=>a.date.localeCompare(b.date)||a.ad.localeCompare(b.ad,'tr'));
 }
-function kurumSatir(list,last){
+function kurumSatir(list,sonOf){
  const sum=(f)=>list.reduce((a,s)=>a+f(s),0),hw=list.flatMap(s=>s.homework),total=hw.reduce((a,h)=>a+h.values[0],0),done=hw.reduce((a,h)=>a+h.values[1],0),withAtt=list.filter(s=>s.attendance.length);
- const present=sum(s=>s.daily.present),known=sum(s=>s.daily.days-s.daily.unknown),nets=last?list.flatMap(s=>s.exams.filter(e=>e.session==='TYT'&&nameKey(e.exam)===last.key)).map(e=>Object.values(e.nets).filter(Number.isFinite).reduce((a,b)=>a+b,0)):[];
+ const present=sum(s=>s.daily.present),known=sum(s=>s.daily.days-s.daily.unknown),nets=sonOf?list.flatMap(s=>{const l=sonOf(s);return l?s.exams.filter(e=>e.session==='TYT'&&nameKey(e.exam)===l.key):[]}).map(e=>Object.values(e.nets).filter(Number.isFinite).reduce((a,b)=>a+b,0)):[];
  const etut=sum(s=>s.sessions.length);
  return {n:list.length,etut,perStudent:list.length?etut/list.length:null,odev:total,odevDone:done,odevRate:total?100*done/total:null,missed:sum(s=>s.daily.missed),hasAttendance:withAtt.length>0,devam:known?100*present/known:null,net:nets.length?nets.reduce((a,b)=>a+b,0)/nets.length:null};
 }
@@ -19873,7 +19873,9 @@ function kurumTurkiyeAl(grade){
  return {var:true,liste,listeAdi:LISTE_ADI[liste],okul:temel.okul,exams,series,lessons,latest:exams[Math.max(...series.map(s=>s.last))]};
 }
 function kurumRapor(students,scope,turkiye=kurumTurkiye){
- const list=scope.grade?students.filter(s=>gradeOf(s)===scope.grade):students,denemeler=kurumDenemeler(list),last=denemeler.at(-1)||null;
+ const list=scope.grade?students.filter(s=>gradeOf(s)===scope.grade):students,denemeler=kurumDenemeler(list);
+ // Each grade took its own exams: a şube's TYT average is its own grade's latest exam; across grades there is no one exam, so no total.
+ const lastOf=new Map([...new Set(list.map(gradeOf))].map(g=>[g,kurumDenemeler(list.filter(s=>gradeOf(s)===g)).at(-1)||null])),sonOf=s=>lastOf.get(gradeOf(s))||null,last=scope.grade?lastOf.get(scope.grade)||null:null;
  const sessions=list.flatMap(s=>s.sessions),start=list.find(s=>s.sessionStart)?.sessionStart||null,end=list.find(s=>s.sessionEnd)?.sessionEnd||null;
  // Etüt: weeks by course (same weekly() grouping); the busiest courses keep a colour, the rest share one.
  const byCourse=new Map(),byTeacher=new Map();
@@ -19890,11 +19892,11 @@ function kurumRapor(students,scope,turkiye=kurumTurkiye){
  const devam={students:att.length,full:sd('full'),half:sd('half'),missed:sd('full')+sd('half'),present:sd('present'),known,percent:known?100*sd('present')/known:null,start:days[0]||null,end:days.at(-1)||null,
   bands:KURUM_BANT.map(([label,lo,hi])=>({label,count:att.filter(s=>s.daily.days>s.daily.unknown&&s.daily.missed>=lo&&s.daily.missed<=hi).length}))};
  const sube=new Map();for(const s of list){const k=s.cls||'Şube belirtilmemiş';if(!sube.has(k))sube.set(k,[]);sube.get(k).push(s)}
- const subeler=[...sube].sort((a,b)=>a[0].localeCompare(b[0],'tr',{numeric:true})).map(([cls,l])=>({cls,...kurumSatir(l,last)}));
+ const subeler=[...sube].sort((a,b)=>a[0].localeCompare(b[0],'tr',{numeric:true})).map(([cls,l])=>({cls,...kurumSatir(l,sonOf)}));
  const tur=scope.grade?turkiye(scope.grade):{grades:[...new Set(list.map(gradeOf).filter(Boolean))].sort((a,b)=>b-a).map(g=>{const l=list.filter(s=>gradeOf(s)===g),d=kurumDenemeler(l);return {grade:g,count:l.length,block:turkiye(g),avgNet:d.at(-1)?{ad:d.at(-1).ad,avg:d.at(-1).avg}:null}})};
  return {scope,school:list.find(s=>s.school)?.school||'',count:list.length,subeCount:sube.size,
   sources:{etut:start?{start,end}:null,yoklama:days.length?{start:days[0],end:days.at(-1)}:null,odev:odev.date,deneme:denemeler.length?{start:denemeler[0].date,end:denemeler.at(-1).date}:null},
-  etut,odev,devam,subeler,toplam:{cls:'Toplam',...kurumSatir(list,last)},denemeler,sonDeneme:last?{ad:last.ad,date:last.date}:null,turkiye:tur};
+  etut,odev,devam,subeler,toplam:{cls:'Toplam',...kurumSatir(list,sonOf),...(scope.grade?{}:{net:null})},denemeler,sonDeneme:last?{ad:last.ad,date:last.date}:null,turkiye:tur};
 }
 
 // The one-page A4 landscape Kurum raporu (same canvas, palette and raster pipeline as the student report).
@@ -19929,7 +19931,10 @@ function boyaci(out){
  const none=(x,y,w,h,size=10)=>{rect(x,y,w,h,'#eef0ee',h/2);text(x+w/2,y+h/2+.5,'—',size,C.muted,false,'middle',true)};
  const card=(x,y,w,h,title,right,rightColor=C.green)=>{rect(x,y,w,h);text(x+18,y+26,title,17,C.ink,true);if(right)text(x+w-18,y+26,right,15,rightColor,true,'end')};
  const message=(x,y,w,h,t,size=12.5)=>{const lines=wrap(t,w-36,size),top=y+h/2-(lines.length-1)*size*.8;lines.forEach((l,i)=>text(x+w/2,top+i*size*1.6,l,size,C.muted,false,'middle',true))};
- return {text,width,fit,wrap,rect,line,dot,ring,pill,none,card,message};
+// A name is never cut: the font shrinks (down to 7 px) until it fits; only then it is clipped with an ellipsis.
+ const shrink=(t,maxW,size,bold=false)=>{let f=size;while(f>7&&width(t,f,bold)>maxW)f-=.5;return {t:width(t,f,bold)>maxW?fit(t,maxW,f,bold):String(t),f}};
+ const ftext=(x,y,t,maxW,size,color=C.ink,bold=false,anchor='start',center=false)=>{const r=shrink(t,maxW,size,bold);text(x,y,r.t,r.f,color,bold,anchor,center)};
+ return {text,ftext,width,fit,wrap,rect,line,dot,ring,pill,none,card,message};
 }
 // A small line chart in a box: series of values (null = missing, the line breaks), an optional dashed reference line.
 function kurumGrafik(P,{x,y,w,h,xs,series,lo,hi,ref,tick,unit,endLabels=true,labelFirst=true}){
@@ -19953,7 +19958,7 @@ function kurumGrafik(P,{x,y,w,h,xs,series,lo,hi,ref,tick,unit,endLabels=true,lab
  ends.forEach(e=>text(xx(e.i)+8,e.y+3.5,fmt(Math.round(e.v*10)/10),10.5,e.color,true));
 }
 function svgKurum(k,reportDate){
- const out=[],P=boyaci(out);P.out=out;const {text,rect,line,fit,wrap,ring,pill,none,card,message,width}=P,sc=k.scope;
+ const out=[],P=boyaci(out);P.out=out;const {text,ftext,rect,line,fit,wrap,ring,pill,none,card,message,width}=P,sc=k.scope;
  rect(0,0,W,H,C.bg,0);
  text(28,28,k.school||'KURUM RAPORU',11,C.muted,true);text(28,59,'Kurum raporu · '+sc.label,27,C.ink,true);
  text(28,80,k.count+' öğrenci · '+k.subeCount+' şube',12,C.muted);
@@ -19980,7 +19985,7 @@ function svgKurum(k,reportDate){
    const tyt=block.var?block.series.find(s=>s.key==='TYT'):null;
    if(!tyt){text(cols[2],cy,block.var?'TYT toplam T puanı yok':neden(block),11,C.muted,false,'start',true);
     if(avgNet)text(1146,cy,'Okul ort. TYT neti: '+fmt(Math.round(avgNet.avg*10)/10),11,C.ink,false,'end',true);}
-   else{text(cols[2],cy,fit(block.exams[tyt.last].kisa||block.exams[tyt.last].ad,150,11),11,C.muted,false,'start',true);
+   else{ftext(cols[2],cy,block.exams[tyt.last].kisa||block.exams[tyt.last].ad,150,11,C.muted,false,'start',true);
     text(cols[3],cy,f1(tyt.tLast),16,C.ink,true,'start',true);
     if(tyt.delta===null)none(cols[4],cy-9,84,18);else pill(cols[4],cy-9,84,18,tyt.delta);
     text(cols[5],cy,tyt.sira?(tyt.sira.yak?'≈ ':'')+fmt(tyt.sira.v)+'.'+(tyt.n?' / '+(tyt.tam?'':'≈ ')+fmt(tyt.n)+' okul':''):'—',11.5,C.ink,true,'start',true);
@@ -20016,11 +20021,11 @@ function svgKurum(k,reportDate){
    // Per-ders table in up to three columns: T of the latest exam and ΔT over the run.
    const items=[];for(const o of ['TYT','AYT']){const l=b.lessons.filter(d=>d.oturum===o);if(l.length){items.push({head:o+' dersleri'});items.push(...l)}}
    const cols=items.length>16?3:2,per=Math.ceil(items.length/cols),cw=(392-24)/cols,rh=Math.min(17,(H1-86)/Math.max(1,per));
-   for(let c=0;c<cols;c++){const x0=788+c*cw;text(x0,Y1+53,'Ders',9,C.muted,true);text(x0+cw-46,Y1+53,'T',9,C.muted,true,'end');text(x0+cw-42,Y1+53,'ΔT',9,C.muted,true)}
+   for(let c=0;c<cols;c++){const x0=788+c*cw;text(x0,Y1+53,'Ders',9,C.muted,true);text(x0+cw-34,Y1+53,'T',9,C.muted,true,'end');text(x0+cw-31,Y1+53,'ΔT',9,C.muted,true)}
    items.forEach((d,i)=>{const c=Math.floor(i/per),r=i%per,x0=788+c*cw,ry=Y1+60+r*rh,cy=ry+rh/2,fs=Math.min(10.5,rh-3);
     if(d.head){text(x0,cy,d.head,fs,C.ink,true,'start',true);return}
-    text(x0,cy,fit(d.ad,cw-78,fs),fs,C.ink,false,'start',true);text(x0+cw-46,cy,f1(d.t),fs,C.ink,true,'end',true);
-    if(d.delta===null)none(x0+cw-42,ry+1,38,rh-2,fs-1);else pill(x0+cw-42,ry+1,38,rh-2,d.delta,fs-2,'')});
+    ftext(x0,cy,d.ad,cw-62,fs,C.ink,false,'start',true);text(x0+cw-34,cy,f1(d.t),fs,C.ink,true,'end',true);
+    if(d.delta===null)none(x0+cw-31,ry+1,30,rh-2,fs-1);else pill(x0+cw-31,ry+1,30,rh-2,d.delta,Math.min(fs-2,8),'')});
    // Legend of the ΔT colours (for the tiles too).
    const ly=Y1+H1-12;text(790,ly,'ΔT, ilk → son deneme:',9.5,C.muted);let lx=790+width('ΔT, ilk → son deneme:',9.5)+8;
    [[1,'arttı'],[-1,'azaldı'],[0,'değişmedi (±0,5 T)']].forEach(([v,t])=>{const [bg,fg,ok]=DT_STIL[v];rect(lx,ly-9,18,11,bg,5.5);text(lx+9,ly-3,ok.trim()||'=',8.5,fg,true,'middle',true);text(lx+22,ly,t,9.5,C.muted);lx+=22+width(t,9.5)+9});
@@ -20044,11 +20049,11 @@ function svgKurum(k,reportDate){
   text(44,Y2+160,'Derse göre etüt',11.5,C.ink,true);
   const top=e.courses.slice(0,5),rest=e.courses.slice(5),rows=top.map(c=>({name:c.name,count:c.count,color:c.color}));if(rest.length)rows.push({name:'Diğer ('+rest.length+' ders)',count:rest.reduce((a,c)=>a+c.count,0),color:KURUM_DIGER});
   const cmax=Math.max(1,...rows.map(r=>r.count));
-  rows.forEach((r,i)=>{const yy=Y2+174+i*row;out.push('<g aria-label="'+esc('Ders · '+r.name+' · '+r.count+' etüt')+'">');rect(44,yy-8,8,8,r.color,2);text(58,yy,fit(r.name,88,10),10,C.ink);
+  rows.forEach((r,i)=>{const yy=Y2+174+i*row;out.push('<g aria-label="'+esc('Ders · '+r.name+' · '+r.count+' etüt')+'">');rect(44,yy-8,8,8,r.color,2);ftext(58,yy,r.name,88,10,C.ink);
    rect(150,yy-8,Math.max(2,60*r.count/cmax),8,r.color,2);text(half,yy,r.count,10,C.ink,true,'end');out.push('</g>')});
   text(284,Y2+160,'Öğretmene göre etüt (en çok 6)',11.5,C.ink,true);
   e.teachers.slice(0,6).forEach((t,i)=>{const yy=Y2+174+i*row;out.push('<g aria-label="'+esc(t.name+' · '+t.count+' etüt')+'"><title>'+esc(t.name+' · '+t.count+' etüt')+'</title>');
-   rect(284,yy-9,222-18,10,i===0?C.pale:'#f3f5f2',3);text(288,yy,fit(t.name,150,10),10,C.ink);text(490,yy,t.count,10,C.green,true,'end');out.push('</g>')});
+   rect(284,yy-9,222-18,10,i===0?C.pale:'#f3f5f2',3);ftext(288,yy,t.name,168,10,C.ink);text(490,yy,t.count,10,C.green,true,'end');out.push('</g>')});
  }
  out.push('</g>');
  /* ---- Ödevler ---- */
@@ -20061,7 +20066,7 @@ function svgKurum(k,reportDate){
   ODEV_DURUM.forEach(([ad,renk],i)=>{const v=o.statuses[i],yy=Y2+70+i*15,pc=o.total?'%'+fmt(Math.round(1000*v/o.total)/10):'';out.push('<g aria-label="'+esc(ad+' · '+v)+'">');rect(X2+118,yy-8,9,9,renk,2.5);text(X2+133,yy,ad,10.5,v?C.ink:C.muted);text(X2+260,yy,v,11,v?C.ink:C.muted,true,'end');text(X2+312,yy,pc,10,C.muted,false,'end');out.push('</g>')});
   text(X2+18,Y2+170,'Derse göre tamamlama (en çok ödev verilen 5 ders)',11,C.ink,true);
   o.courses.slice(0,5).forEach((c,i)=>{const yy=Y2+185+i*12.5,v=c.values;out.push('<g><title>'+esc(c.course+' · Toplam '+v[0]+ODEV_DURUM.map(([ad],j)=>v[j+1]?' · '+ad+' '+v[j+1]:'').join(''))+'</title>');
-   text(X2+18,yy,fit(c.course,104,10),10,C.muted);rect(X2+128,yy-8,108,8,C.gray,4);let xx=X2+128;ODEV_DURUM.forEach(([,renk],j)=>{const w=v[0]?108*v[j+1]/v[0]:0;if(w){rect(xx,yy-8,w,8,renk,w<8?0:4);xx+=w}});
+   ftext(X2+18,yy,c.course,104,10,C.muted);rect(X2+128,yy-8,108,8,C.gray,4);let xx=X2+128;ODEV_DURUM.forEach(([,renk],j)=>{const w=v[0]?108*v[j+1]/v[0]:0;if(w){rect(xx,yy-8,w,8,renk,w<8?0:4);xx+=w}});
    text(X2+312,yy,yuzde(c.rate)+' · '+v[1]+'/'+v[0],10,C.ink,true,'end');out.push('</g>')});
  }
  out.push('</g>');
@@ -20081,23 +20086,24 @@ function svgKurum(k,reportDate){
  }
  out.push('</g>');
  /* ---- Şube karşılaştırması ---- */
- const Y3=576,H3=240,sn=k.sonDeneme?k.sonDeneme.ad.replace(/^27-/,'').slice(0,16):'';
+ const Y3=576,H3=240,sn='(son deneme)';
  out.push('<g aria-label="Şube karşılaştırması">');card(26,Y3,1138,H3,'Şube karşılaştırması',k.subeler.length+' şube');
  const rowsAll=[{...k.toplam,cls:sc.key==='okul'?'Tüm okul':sc.label,toplam:true}].concat(k.subeler),twoCols=rowsAll.length>8,per=twoCols?Math.ceil(rowsAll.length/2):rowsAll.length;
- const tw=twoCols?539:1102,rh=Math.min(26,(H3-92)/per),fs=Math.max(8.5,Math.min(11.5,rh-3.5));
- const defs=[['Şube','',.13,'start'],['Öğrenci','sayısı',.09,'end'],['Etüt','toplam',.09,'end'],['Etüt','/ öğrenci',.12,'end'],['Ödev','tamamlama',.17,'end'],['Devamsız','gün',.12,'end'],['Devam','oranı',.11,'end'],['TYT ort.',sn||'net',.17,'end']];
+ const tw=twoCols?539:1102,rh=Math.min(26,(H3-100)/per),fs=Math.max(8.5,Math.min(11.5,rh-3.5));
+ const defs=[['Şube','',.13,'start'],['Öğrenci','sayısı',.09,'end'],['Etüt','toplam',.09,'end'],['Etüt','/ öğrenci',.12,'end'],['Ödev','tamamlama',.17,'end'],['Devamsız','gün',.12,'end'],['Devam','oranı',.11,'end'],['TYT ort.',sn,.17,'end']];
  for(let c=0;c<(twoCols?2:1);c++){const bx=twoCols?44+c*563:44;
   let cx=bx;const pos=defs.map(([,,f,a])=>{const w=tw*f,p={x:a==='start'?cx:cx+w-8,w,x0:cx,a};cx+=w;return p});
-  defs.forEach(([a,b],i)=>{const p=pos[i];text(p.x,Y3+46,a,9.5,C.muted,true,p.a);if(b)text(p.x,Y3+57,fit(b,p.w-10,9),9,C.muted,false,p.a)});line(bx,Y3+62,bx+tw,Y3+62);
+  defs.forEach(([a,b],i)=>{const p=pos[i];text(p.x,Y3+46,a,9.5,C.muted,true,p.a);if(b)ftext(p.x,Y3+57,b,p.w-8,9,C.muted,false,p.a)});line(bx,Y3+62,bx+tw,Y3+62);
   rowsAll.slice(c*per,(c+1)*per).forEach((r,j)=>{const ry=Y3+66+j*rh,cy=ry+rh/2;out.push('<g aria-label="'+esc((r.toplam?'Toplam':'Şube')+' · '+r.cls)+'">');
    if(r.toplam)rect(bx-6,ry,tw+12,rh-1,C.pale,4);else if(j%2)rect(bx-6,ry,tw+12,rh-1,'#f6f8f6',4);
    const b=r.toplam,col=(i,t,color=C.ink,bold=b)=>text(pos[i].x,cy,t,fs,color,bold,pos[i].a,true);
-   col(0,fit(r.cls,pos[0].w-6,fs,true),C.ink,true);col(1,fmt(r.n));col(2,fmt(r.etut));col(3,r.perStudent===null?'—':fmt(Math.round(r.perStudent*10)/10));
+   ftext(pos[0].x,cy,r.cls,pos[0].w-6,fs,C.ink,true,'start',true);col(1,fmt(r.n));col(2,fmt(r.etut));col(3,r.perStudent===null?'—':fmt(Math.round(r.perStudent*10)/10));
    if(r.odevRate===null)col(4,'—',C.muted);else{const bw=Math.max(0,pos[4].w-64);rect(pos[4].x0+6,cy-3,bw,6,C.gray,3);rect(pos[4].x0+6,cy-3,bw*r.odevRate/100,6,C.green,3);col(4,yuzde(r.odevRate))}
    if(!r.hasAttendance)col(5,'—',C.muted);else col(5,fmt(r.missed),r.missed?C.red:C.ink);
    if(r.devam===null)col(6,'—',C.muted);else col(6,yuzde(r.devam));
    col(7,r.net===null?'—':fmt(Math.round(r.net*10)/10),r.net===null?C.muted:C.ink);out.push('</g>')});}
- text(44,Y3+H3-9,'Ödev tamamlama = tamamlanan ödev / verilen ödev (yeşil çubuk) · Devamsız gün = tam gün + yarım gün · Devam oranı = okulda gün / durumu bilinen gün · TYT ort. = son denemede şubenin ortalama TYT neti',9,C.muted);
+ text(44,Y3+H3-21,'Ödev tamamlama = tamamlanan ödev / verilen ödev (yeşil çubuk) · Devamsız gün = tam gün + yarım gün · Devam oranı = okulda gün / durumu bilinen gün',9,C.muted);
+ text(44,Y3+H3-9,sc.key==='okul'?'TYT ort. = şubenin kendi sınıf düzeyinin son denemesindeki ortalama TYT neti (düzeyler farklı sınav girdiği için toplam satırında yok)':'TYT ort. = şubenin ortalama TYT neti, son deneme'+(k.sonDeneme?': '+k.sonDeneme.ad:''),9,C.muted);
  out.push('</g>');
  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc('Kurum raporu · '+sc.label)+'" font-family="Arial, sans-serif">'+out.join('')+'</svg>';
 }
