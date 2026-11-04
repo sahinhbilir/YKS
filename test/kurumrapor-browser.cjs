@@ -22,7 +22,9 @@ const files={'tyt-ayt.pdf':okulListesi(SINAVLAR.sonra.F),'eski.pdf':okulListesi(
 const DERS=[['TÜRKÇE-T',40],['TARİH-T',5],['COĞRAFYA-T',5],['FELSEFE-T',5],['DİN KÜLTÜRÜ-T',5],['MATEMATİK-T',30],['GEOMETRİ-T',10],['FİZİK-T',7],['KİMYA-T',7],['BİYOLOJİ-T',6],
  ['TÜRK DİLİ VE EDB-A',24],['TARİH.1-A',10],['COĞRAFYA.1-A',6],['TARİH.2-A',11],['COĞRAFYA.2-A',11],['FELSEFE GR.-A',12],['DİN KÜLTÜRÜ-A',6],['MATEMATİK-A',30],['GEOMETRİ-A',10],['FİZİK-A',14],['KİMYA-A',13],['BİYOLOJİ-A',13]];
 for(const [kod,soru] of DERS)BIZIM[kod]=[1,2,3,4].map(e=>Math.round((soru*.5+e*.1+(.35+.17*e+(kod.length%3)*.08)*soru*.09)*100)/100);
-const turkiye=[1,2,3,4].map(e=>kurumRaporu(kurumListesi(e,{normal:{N:180,oran:.09},dersler:DERS})).pages);
+// 1201 and 1203 are Tarama, 1202 and 1204 Genel: ΔT compares 1201 → 1203.
+const ADLAR=['27-YKS-1201 TARAMA','27-YKS-1202','27-YKS-1203 TARAMA','27-YKS-1204'];
+const turkiye=ADLAR.map((ad,i)=>kurumRaporu(kurumListesi(i+1,{ad,normal:{N:180,oran:.09},dersler:DERS})).pages);
 const upload=name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')});
 (async()=>{
  const browser=await chromium.launch({headless:true,...(process.env.YKS_CHROMIUM?{executablePath:process.env.YKS_CHROMIUM}:{})});
@@ -46,52 +48,64 @@ const upload=name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
   const sourcesStudent=await page.locator('.or-kaynaklar').innerText();
   await page.locator('[data-or-mod="kurum"]').click();
   assert.equal(await page.locator('.or-mod button[aria-pressed="true"]').innerText(),'Kurum raporu');
-  assert.equal(await page.locator('#orStudent').count(),0);assert.equal(await page.locator('#orScope').count(),1);assert.equal(await page.locator('#krOne').innerText(),'Kurum PDF');
+  assert.equal(await page.locator('#orStudent').count(),0);assert.equal(await page.locator('#orScope').count(),1);assert.match(await page.locator('#krOne').innerText(),/^Kurum PDF \(\d+ sayfa\)$/);
   assert.equal(await page.locator('.or-kaynaklar').innerText(),sourcesStudent,'the data sources block is the same in both modes');
   const options=await page.locator('#orScope option').allInnerTexts();assert(options[0].startsWith('Tüm okul'));assert(options.some(o=>o.startsWith('12. sınıf')),options.join('|'));assert(options.some(o=>o.startsWith('9. sınıf')));
-  assert((await page.locator('#krAll').innerText()).includes(options.length+' sayfa'));
+  const toplamSayfa=Number((await page.locator('#krAll').innerText()).match(/Tüm düzeyler PDF \((\d+) sayfa\)/)[1]);assert(toplamSayfa>=options.length,'every scope has at least one page');
+  const sayfa=()=>page.locator('.or-preview svg').count();assert.equal(Number((await page.locator('#krOne').innerText()).match(/\((\d+) sayfa\)/)[1]),await sayfa(),'the button counts the pages in the preview');
   // Colour of the pressed toggle differs from the other in both themes (the control works in light and dark).
   const colours=await page.evaluate(()=>[...document.querySelectorAll('.or-mod button')].map(b=>{const c=getComputedStyle(b);return [c.backgroundColor,c.color]}));assert.notDeepEqual(colours[0],colours[1]);
   // Whole school first: one row per grade; the grade with a Türkiye list shows T, the others say so.
   const okul=await page.locator('.or-preview').innerText();for(const t of ['Kurum raporu · Tüm okul','Türkiye geneli · sınıf düzeylerine göre','Etütler','Ödevler','Devamsızlık','Şube karşılaştırması','12. sınıf','Türkiye geneli listesi yok; Türkiye geneli sayfasından ekleyin.'])assert(okul.replace(/\s+/g,' ').includes(t),t);
   for(const n of names)assert(!okul.includes(n),'the report names '+n);
   assert(okul.replace(/\s+/g,' ').includes('TYT ort. (son deneme)')&&!okul.includes('…'));
-  assert.equal(await page.locator('.or-preview g[aria-label="Ödevler"] g[aria-label^="Ödev tamamlama"]').count(),0,'no homework report yet');
+  assert.equal(await page.locator('.or-preview g[aria-label^="Ödev tamamlama"]').count(),0,'no homework report yet');
   await page.screenshot({path:path.join(out,'kurum-okul-'+width+'-'+theme+'.png'),fullPage:true});
-  if(width===1280&&theme==='light')await page.locator('.or-preview svg').screenshot({path:path.join(out,'kurum-a4-okul.png')});
+  if(width===1280&&theme==='light')for(let i=0;i<await sayfa();i++)await page.locator('.or-preview svg').nth(i).screenshot({path:path.join(out,'kurum-a4-okul-s'+(i+1)+'.png')});
   // 12. sınıf: the Türkiye block with a chart, the dashed 50 line, tiles and the per-ders table.
   await page.locator('#orScope').selectOption('12');
   const p12=(await page.locator('.or-preview').innerText()).replace(/\s+/g,' ');
-  for(const t of ['Kurum raporu · 12. sınıf','Türkiye geneli · T puanı','Türkiye ortalaması (T = 50)','TYT toplam','SAY toplam','EA toplam','SÖZ toplam','Ders ders T puanı','Haftalık etüt sayısı','Derse göre etüt','Öğretmene göre etüt','Ödev kaydı yok','Öğrenci sayısı, kaçırdığı güne göre','Şube karşılaştırması','12/A'])assert(p12.includes(t),t);
+  for(const t of ['Kurum raporu · 12. sınıf','TYT toplam · T puanı','AYT toplam · T puanı','Türkiye ortalaması (T = 50)','TYT toplam','SAY toplam','EA toplam','SÖZ toplam','TYT dersleri · T puanı','AYT dersleri · T puanı','ΔT: 1201 → 1203 (tarama → tarama)','Ders karşılaştırması: 1201 → 1203 (tarama)','Sayfa 1 / ','Sayfa 2 / ','Haftalık etüt sayısı','Derse göre etüt','Öğretmene göre etüt','Ödev kaydı yok','Öğrenci sayısı, kaçırdığı güne göre','Şube karşılaştırması','12/A'])assert(p12.includes(t),t);
   for(const n of names)assert(!p12.includes(n),'the report names '+n);
   assert(!p12.includes('…'),'no name is cut with an ellipsis');assert(p12.includes('TYT ort.'));
-  assert.equal(await page.locator('.or-preview g[aria-label="T puanı grafiği"]').count(),1);assert.equal(await page.locator('.or-preview g[aria-label^="TYT toplam · T "]').count(),1);
+  assert.equal(await page.locator('.or-preview g[aria-label="TYT T puanı grafiği"]').count(),1);assert.equal(await page.locator('.or-preview g[aria-label="AYT T puanı grafiği"]').count(),1,'TYT and AYT are separate charts');assert.equal(await page.locator('.or-preview svg').first().locator('g[data-kart="Türkiye geneli"]').count(),1,'the Türkiye block is on page 1');assert.equal(await page.locator('.or-preview g[aria-label^="TYT toplam · T "]').count(),1);
   await page.screenshot({path:path.join(out,'kurum-'+width+'-'+theme+'.png'),fullPage:true});
-  if(width===1280&&theme==='light')await page.locator('.or-preview svg').screenshot({path:path.join(out,'kurum-a4-12.png')});
+  if(width===1280&&theme==='light')for(let i=0;i<await sayfa();i++)await page.locator('.or-preview svg').nth(i).screenshot({path:path.join(out,'kurum-a4-12-s'+(i+1)+'.png')});
   // Layout: no text leaves the page or its card, and no two texts overprint.
-  const layout=await page.evaluate(()=>{const svg=document.querySelector('.or-preview svg'),texts=[...svg.querySelectorAll('text')].map(t=>({t,b:t.getBBox()})),bad=[];
-   const cards={'Türkiye geneli':[26,1164,100,306],'Etütler':[26,526,316,566],'Ödevler':[538,868,316,566],'Devamsızlık':[880,1164,316,566],'Şube karşılaştırması':[26,1164,576,816]};
-   for(const {t,b} of texts){if(b.x<-.5||b.y<-.5||b.x+b.width>1190.55+.5||b.y+b.height>841.89+.5)bad.push('page:'+t.textContent);
-    const g=t.closest('g[aria-label]');while(g&&false);let grp=t.parentElement;while(grp&&grp!==svg&&!cards[grp.getAttribute?.('aria-label')])grp=grp.parentElement;
-    const c=grp&&cards[grp.getAttribute('aria-label')];if(c&&(b.x<c[0]+4||b.x+b.width>c[1]-4||b.y<c[2]||b.y+b.height>c[3]))bad.push(grp.getAttribute('aria-label')+':'+t.textContent+' '+[b.x,b.y,b.width,b.height].map(Math.round))}
-   const over=[];for(let i=0;i<texts.length;i++)for(let j=i+1;j<texts.length;j++){const a=texts[i].b,c=texts[j].b,w=Math.min(a.x+a.width,c.x+c.width)-Math.max(a.x,c.x),h=Math.min(a.y+a.height,c.y+c.height)-Math.max(a.y,c.y);if(w>1.5&&h>2.5)over.push(texts[i].t.textContent+' / '+texts[j].t.textContent)}
-   return {bad,over}});
+  const LAYOUT=(sel)=>{const res={bad:[],over:[]};for(const svg of document.querySelectorAll(sel||'.or-preview svg')){const texts=[...svg.querySelectorAll('text')].map(t=>({t,b:t.getBBox()}));
+   for(const {t,b} of texts){if(b.x<-.5||b.y<-.5||b.x+b.width>1190.55+.5||b.y+b.height>841.89+.5)res.bad.push('page:'+t.textContent);if(/…/.test(t.textContent))res.bad.push('ellipsis:'+t.textContent);
+    // Every text of a block lies inside one of the block's white cards.
+    const kart=t.closest('g[data-kart]');
+    if(kart){const cards=[...kart.querySelectorAll('rect[fill="#fff"]')].map(r=>r.getBBox());if(!cards.some(c=>b.x>=c.x-.5&&b.x+b.width<=c.x+c.width+.5&&b.y>=c.y-.5&&b.y+b.height<=c.y+c.height+.5))res.bad.push(kart.getAttribute('data-kart')+':'+t.textContent+' '+[b.x,b.y,b.width,b.height].map(Math.round))}}
+   for(let i=0;i<texts.length;i++)for(let j=i+1;j<texts.length;j++){const a=texts[i].b,c=texts[j].b,w=Math.min(a.x+a.width,c.x+c.width)-Math.max(a.x,c.x),h=Math.min(a.y+a.height,c.y+c.height)-Math.max(a.y,c.y);if(w>1.5&&h>2.5)res.over.push(texts[i].t.textContent+' / '+texts[j].t.textContent)}}
+   return res};
+  const layout=await page.evaluate(LAYOUT);
   assert.deepEqual(layout.bad,[],'text outside its card: '+layout.bad.join(' | '));assert.deepEqual(layout.over,[],'overprinted text: '+layout.over.join(' | '));
   // The ödev report added on this page counts for the kurum report too (same sources as the student mode).
   await page.locator('#orFiles').setInputFiles([upload('odev.pdf')]);await page.waitForFunction(()=>document.querySelector('#orStatus')?.textContent.includes('1 dosya eklendi.'));
   assert.equal(await page.locator('#orScope').inputValue(),'12','the scope survives adding a file');
-  assert.equal(await page.locator('.or-preview g[aria-label^="Ödev tamamlama"]').count(),1);const odev=(await page.locator('.or-preview g[aria-label="Ödevler"]').textContent()).replace(/\s+/g,' ');assert(odev.includes('Rapor: 24.10.2026')&&odev.includes('Tamamladı')&&odev.includes('Matematik'),odev);
+  assert.equal(await page.locator('.or-preview g[aria-label^="Ödev tamamlama"]').count(),1);const odev=(await page.locator('.or-preview g[data-kart="Ödevler ve devamsızlık"]').textContent()).replace(/\s+/g,' ');assert(odev.includes('Rapor: 24.10.2026')&&odev.includes('Tamamladı')&&odev.includes('Matematik'),odev);
   await page.screenshot({path:path.join(out,'kurum-odev-'+width+'-'+theme+'.png'),fullPage:true});
-  if(width===1280&&theme==='light')await page.locator('.or-preview svg').screenshot({path:path.join(out,'kurum-a4-12-odev.png')});
+  if(width===1280&&theme==='light')for(let i=0;i<await sayfa();i++)await page.locator('.or-preview svg').nth(i).screenshot({path:path.join(out,'kurum-a4-12-odev-s'+(i+1)+'.png')});
+  assert.deepEqual(await page.evaluate(LAYOUT),{bad:[],over:[]},'layout with the ödev report');
   // 9. sınıf has no Türkiye geneli list: the school's own TYT average is drawn with the plain notice.
   await page.locator('#orScope').selectOption('9');const p9=(await page.locator('.or-preview').innerText()).replace(/\s+/g,' ');assert(p9.includes('Türkiye geneli listesi yok; Türkiye geneli sayfasından ekleyin.')&&p9.includes('Okulun kendi TYT ortalaması'),p9);
   await page.screenshot({path:path.join(out,'kurum-9-'+width+'-'+theme+'.png'),fullPage:true});
-  if(width===1280&&theme==='light')await page.locator('.or-preview svg').screenshot({path:path.join(out,'kurum-a4-9.png')});
+  if(width===1280&&theme==='light')for(let i=0;i<await sayfa();i++)await page.locator('.or-preview svg').nth(i).screenshot({path:path.join(out,'kurum-a4-9-s'+(i+1)+'.png')});
+  // A long school: 14 teachers, 13 ödev dersler, 40 şubes. Every one is listed, on as many pages as needed, nothing overlaps or is cut.
+  const uzun=await page.evaluate(()=>{const R=OGRENCI_RAPOR,ppl=[],C=['MATEMATİK TYT','MATEMATİK AYT','FİZİK','KİMYA','BİYOLOJİ','TÜRKÇE','EDEBİYAT','TARİH','COĞRAFYA','FELSEFE','DİN KÜLTÜRÜ','GEOMETRİ','İNGİLİZCE'];
+   for(const g of [9,10,11,12])for(const s of 'ABCDEFGHIJ')ppl.push({no:g+s,name:'SENTETİK '+g+s,cls:g+'/'+s,grade:g});
+   const T=Array.from({length:14},(_,i)=>'SENTETİK ÖĞRETMEN NUMARA '+(i+1)+(i===13?' UZUNCA SOYADLI':'')),ses=ppl.slice(0,28).map((p,i)=>({...p,date:'2026-09-'+String(15+i%10).padStart(2,'0'),course:C[i%C.length],teacher:T[i%T.length],time:'16:00',minutes:40})),hw=ppl.slice(0,13).map((p,i)=>({...p,course:C[i],values:[4,2,1,0,0,1,0],reportDate:'2026-10-24'}));
+   const ms=R.merge([{kind:'exam',students:ppl,exams:ppl.map(p=>({...p,exam:'Sentetik Deneme',date:'2026-10-01',session:'TYT',nets:{turkce:20}})),school:'Sentetik Kartal Anadolu Lisesi'},{kind:'homework',students:ppl,homework:hw,reportDate:'2026-10-24'},{kind:'sessions',students:ppl,sessions:ses,start:'2026-09-14',end:'2026-10-16'}],[]).students;
+   const pages=R.svgKurum(R.kurumRapor(ms,R.kurumKapsamlari(ms)[0],()=>({var:false,neden:'liste'})),'2026-10-25');const box=document.createElement('div');box.className='test-sayfalar';box.id='or-uzun';box.innerHTML=pages.join('');document.body.append(box);
+   return {pages:pages.length,teachers:T,courses:C,text:box.textContent}});
+  assert(uzun.pages>=3,'a long school needs more pages: '+uzun.pages);for(const t of uzun.teachers)assert(uzun.text.includes(t),t);for(const c of uzun.courses)assert(uzun.text.toLocaleLowerCase('tr-TR').includes(c.toLocaleLowerCase('tr-TR')),c);
+  assert.deepEqual(await page.evaluate(LAYOUT,'#or-uzun svg'),{bad:[],over:[]},'the long school lays out cleanly');await page.locator('#or-uzun').evaluate(e=>e.remove());
   // PDFs: one page for the chosen scope, and one page per level plus the school.
   async function download(id,count,label){const [d]=await Promise.all([page.waitForEvent('download',{timeout:90000}),page.locator(id).click()]);const file=path.join(out,'kurum-'+label+'-'+width+'-'+theme+'.pdf');await d.saveAs(file);const pdf=await PDFDocument.load(fs.readFileSync(file));assert.equal(pdf.getPageCount(),count);for(const p of pdf.getPages()){assert(Math.abs(p.getWidth()-841.89)<.01);assert(Math.abs(p.getHeight()-595.28)<.01)}await page.waitForFunction(()=>document.querySelector('#orStatus')?.textContent==='PDF hazır.');return d.suggestedFilename()}
   await page.locator('#orScope').selectOption('12');
-  assert.match(await download('#krOne',1,'12'),/12_sinif_Kurum_Raporu\.pdf$/);
-  assert.match(await download('#krAll',options.length,'tum'),/Tum_duzeyler_Kurum_Raporu\.pdf$/);
+  assert.match(await download('#krOne',await sayfa(),'12'),/12_sinif_Kurum_Raporu\.pdf$/);
+  assert.match(await download('#krAll',toplamSayfa,'tum'),/Tum_duzeyler_Kurum_Raporu\.pdf$/);
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no sideways scrolling');
   // Back to the student mode: its controls and preview are untouched.
   await page.locator('[data-or-mod="ogrenci"]').click();assert.equal(await page.locator('#orStudent').count(),1);assert.equal(await page.locator('#orOne').innerText(),'Öğrenci PDF');assert((await page.locator('.or-preview').innerText()).includes('Yoklama'));
