@@ -20,7 +20,8 @@
 .tg-matris .tg-ad{white-space:nowrap}.tg-matris td:first-child,.tg-matris th:first-child{position:sticky;left:0;background:var(--e-panel);z-index:1}
 .tg-matris .tg-kalin{font-weight:600}.tg-toplam td{font-weight:600;border-bottom:1px solid var(--e-line)}
 .tg-artis-satir b.yukari{color:var(--e-ok)}.tg-artis-satir b.asagi{color:var(--e-bad)}
-.tg-cevre-panel .tg-artis-satir{grid-template-columns:2.6rem minmax(0,1fr) auto minmax(0,7.5rem)}
+.tg-cevre-panel .tg-artis-satir{grid-template-columns:2.6rem minmax(0,1fr) auto}
+
 /* Türkiye ortalamasına göre: one row per subject, the bar grows left (below) or right (above) from 0. */
 .tg-fark{display:flex;flex-direction:column}
 .tg-fark-satir{width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer;border:0;background:none;border-radius:var(--e-r);padding:6px 8px;
@@ -78,3 +79,10 @@
 /* A subject card's change over the range: the pill uses the shared status colours; "—" is grey. */
 .tg-degisim{display:block;margin-top:6px}
 .et-hap.tg-yok{font-weight:400}
+/* Yüzdelik dilim: the change in the first KPI tile, the note above the subject cards, the calculation note. */
+#tgKpi .tg-gecis{font-size:.62em;font-weight:600;white-space:nowrap}
+.tg-dilim-not{margin:0}
+.tg-eksen-baslik{fill:var(--e-fg2)}
+.tg-hesap{font-size:.8125rem;color:var(--e-fg2)}.tg-hesap summary{cursor:pointer;font-weight:600;color:var(--e-fg)}.tg-hesap p{margin:8px 0 0}
+.tg-artis-not{margin-top:4px}
+@media (max-width:640px){.tg-cevre-panel .tg-cevre-ad{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}.tg-cevre-panel .tg-artis-satir b{white-space:nowrap}}
