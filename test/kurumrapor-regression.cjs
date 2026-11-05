@@ -204,7 +204,7 @@ const kapsam=(st,g)=>({key:String(g),label:g+'. sınıf',grade:g,count:st.filter
 const kurE=(st,g)=>R.kurumRapor(klon(st),kapsam(st,g),hepsiYok);
 const okulE=st=>R.kurumRapor(klon(st),{key:'okul',label:'Tüm okul',grade:null,count:st.length},hepsiYok);
 const modelRef=(st,oturum,ders,g=12)=>plain(EM.model(klon(st),{duzey:g,oturum,ders,donem:'tum'},null,vm.runInContext('TURKIYE.ortalamalar(TURKIYE.oku().veri)',ctx)));
-const EE_CUMLE='Her etüt için artış: aynı başlangıç düzeyindeki öğrencilere göre, etüt sayısı arttıkça Türkiye farkındaki ek artış (net). Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.';
+const EE_CUMLE='Her etüt için artış: aynı öğrencinin etüt almadığı derslerine göre, etüt alınan dersteki ek artış (Türkiye farkı, net). Çalışkanlık her derse yansıdığı için bu karşılaştırmada çıkar. Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.';
 check('Etüt etkisi: every ders with etüts, TYT and AYT, shows ETUT_ETKI\'s own pooled γ and interval, its verdict phrase and the students counted',()=>{
  trKur(fx.TYT_DERS,fx.AYT_DERS);
  try{
@@ -270,9 +270,11 @@ check('Etüt etkisi: what is missing is said, with the page that adds it',()=>{
  }finally{trGeri()}
 });
 check('Tüm okul: one compact ders × grade table per session (TYT, then AYT) with the per-etüt value and the verdict phrase; no per-grade teacher or count',()=>{
- trKur(fx.TYT_DERS,fx.AYT_DERS);
+ // Grade 11 also sits Türkçe, with no etüt: each student's etüt dersler are compared with it.
+ const TURKCE={ders:'Türkçe',course:'TÜRKÇE',key:'turkce',kod:'TÜRKÇE-T',kat:0,mod:'kontrol'};
+ trKur([...fx.TYT_DERS,TURKCE],fx.AYT_DERS);
  try{
-  const g11=fx.TYT_DERS.slice(0,2).map(c=>({...c,mod:'artis',kat:-0.5}));const st=[...fx.ogrenciler(),...fx.ogrenciler({sinif:11,tyt:[{...fx.TYT_DERS[0],kat:0.2},{...fx.TYT_DERS[1],mod:'azalan',kat:-0.5}],ayt:[]})];
+  const st=[...fx.ogrenciler(),...fx.ogrenciler({sinif:11,tyt:[{...fx.TYT_DERS[0],kat:0.2},{...fx.TYT_DERS[1],mod:'azalan',kat:-0.5},TURKCE],ayt:[]})];
   const k=okulE(st);assert.deepEqual(plain(k.etutEtki.grades.map(g=>[g.grade,g.count,g.sonuc.var])),[[12,21,true],[11,21,true]]);
   const svg=svgK(k,'2026-10-25'),txt=metin(svg).replace(/\s+/g,' ');
   const cell=(g,o,d)=>k.etutEtki.grades.find(x=>x.grade===g).sonuc.oturumlar[o].satirlar.find(r=>r.ders===d);

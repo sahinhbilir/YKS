@@ -149,8 +149,11 @@ sonra her sınıf düzeyinin sayfalarını verir.
   kısa renkli karar (yeşil “artış belirgin”, gri “belirgin fark yok”, kırmızı “etüt alanlarda daha az”,
   soluk “yeterli veri yok”), sayılan öğrenci sayısı ve hesaba katılmayan uç sonuç sayısı (“2 uç sonuç”).
   En çok öğrencisi olan ders için, öğrenci adı olmadan, etüt sayısı × ek artış dağılımı ve çizgisi
-  çizilir. Açıklama: “Her etüt için artış: aynı başlangıç düzeyindeki öğrencilere göre, etüt sayısı
-  arttıkça Türkiye farkındaki ek artış (net). Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.”
+  çizilir. Açıklama: “Her etüt için artış: aynı öğrencinin etüt almadığı derslerine göre, etüt alınan
+  dersteki ek artış (Türkiye farkı, net). Çalışkanlık her derse yansıdığı için bu karşılaştırmada çıkar.
+  Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.” Değerler Etüt etkisi sayfasının kendi
+  hesabıdır (her öğrenci kendi diğer dersleriyle karşılaştırılır); bir oturumda öğrencinin etüt almadığı
+  bir ders yoksa o ders için “yeterli veri yok” yazılır.
   **Tüm okul**'da sınıf düzeyi × ders tek kompakt tablodur (önce TYT, sonra AYT; hücrede değer ve karar).
   Türkiye listesi, etüt raporu, iki deneme ya da denemeler arasında etüt yoksa eksik olan ve hangi
   sayfadan ekleneceği yazılır. Türkiye ortalaması olmayan ders “yeterli veri yok” olur (ham net

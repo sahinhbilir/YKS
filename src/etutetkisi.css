@@ -41,7 +41,7 @@
 #eeKok .ee-nasil{display:flex;flex-direction:column;gap:8px;margin-top:8px;max-width:78ch;color:var(--e-fg2)}
 #eeKok .ee-nasil p{margin:0}#eeKok .ee-nasil b{color:var(--e-fg);font-weight:500}
 /* Chart: drawn at the box's own width, so the type below is real pixels. */
-#eeKok #eeGrafik .ee-grafik{min-height:340px}#eeKok #eeArtis .ee-grafik{min-height:300px}#eeKok #eeFark .ee-grafik{min-height:290px}
+#eeKok #eeOlay .ee-grafik{min-height:340px}#eeKok #eeGrafik .ee-grafik{min-height:340px}#eeKok #eeArtis .ee-grafik{min-height:300px}#eeKok #eeFark .ee-grafik{min-height:290px}
 #eeKok .ee-grafik text{font-size:12px}
 #eeKok .ee-grafik .ee-ad{fill:var(--e-fg);font-weight:500;text-decoration:none;cursor:default}
 #eeKok .ee-grafik .ee-baslik{fill:var(--e-fg2);font-weight:500}
@@ -62,7 +62,7 @@
   #eeKok .et-seg select{max-width:11rem}
   /* A pill with several choices wraps instead of widening the page. */
   #eeKok .et-seg{flex-wrap:wrap;max-width:100%;border-radius:14px}
-  #eeKok #eeGrafik .ee-grafik{min-height:320px}#eeKok #eeArtis .ee-grafik{min-height:280px}#eeKok #eeFark .ee-grafik{min-height:260px}
+  #eeKok #eeOlay .ee-grafik{min-height:330px}#eeKok #eeGrafik .ee-grafik{min-height:320px}#eeKok #eeArtis .ee-grafik{min-height:280px}#eeKok #eeFark .ee-grafik{min-height:260px}
   #eeKok .ee-tablo,#eeKok #eeHocalar .ee-tablo,#eeKok .ee-ogr{min-width:0}
   /* Non-essential columns are hidden (et-dar-gizle) so nothing scrolls sideways; the remaining ones fill the width. */
   #eeKok .ee-tablo td.tg-ad{white-space:normal;overflow:visible}
@@ -77,3 +77,23 @@
 .ee-bosnokta{fill:var(--e-panel);stroke-width:1.2}
 #eeKok .ee-grafik .ee-aykiri-ad{fill:var(--e-fg2)}
 #eeKok .ee-grafik .ee-egri-ad,#eeKok .ee-grafik .ee-aykiri-ad{paint-order:stroke;stroke:var(--e-panel);stroke-width:4px;stroke-linejoin:round}
+
+/* Etütten önce ve sonra: the etüt ders (solid blue) against the same students' dersler without etüt (dashed grey). */
+#eeKok .ee-lejant{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--e-fg)}
+#eeKok .ee-lejant span{display:inline-flex;align-items:center;gap:8px}
+#eeKok .ee-sw{display:inline-block;width:26px;height:0;border-top:3px solid var(--e-c1)}
+#eeKok .ee-sw-kont{border-top:2px dashed var(--e-fg2)}
+#eeKok .ee-ol-cizgi{fill:none;stroke-linecap:round}
+#eeKok .ee-ol-etut.ee-ol-cizgi{stroke:var(--e-c1);stroke-width:3}
+#eeKok .ee-ol-kont.ee-ol-cizgi{stroke:var(--e-fg2);stroke-width:2;stroke-dasharray:6 4}
+#eeKok .ee-ol-etut circle{fill:var(--e-c1);stroke:var(--e-panel);stroke-width:1.5}
+#eeKok .ee-ol-kont circle{fill:var(--e-panel);stroke:var(--e-fg2);stroke-width:2}
+#eeKok .ee-ol-etut .ee-biyik{stroke:var(--e-c1)}
+#eeKok .ee-ol-az{opacity:.35}
+#eeKok .ee-grafik .ee-ol-d-etut{fill:var(--e-c1);font-weight:600;paint-order:stroke;stroke:var(--e-panel);stroke-width:3px}
+#eeKok .ee-grafik .ee-ol-d-kont{fill:var(--e-fg2);font-weight:600;paint-order:stroke;stroke:var(--e-panel);stroke-width:3px}
+#eeKok .ee-grafik .ee-ol-ad{fill:var(--e-fg);font-size:11px}
+#eeKok .ee-grafik .ee-say{fill:var(--e-muted);font-size:11px}
+#eeKok .ee-grafik .ee-ol-isaret-ad{fill:var(--e-fg2)}
+#eeKok .ee-alt-baslik{margin:8px 0 0;font-size:.9375rem;font-weight:500;color:var(--e-fg)}
+#eeKok #eeFark .mini{margin:2px 0 6px}
