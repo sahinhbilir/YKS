@@ -8,12 +8,13 @@
 #eeKok .ee-ad:hover,#eeKok .ee-ad[aria-pressed="true"]{text-decoration-color:var(--e-fg)}
 /* Tables: fixed widths so the rows line up; numbers (th and td alike) are right-aligned; only the name column is flexible. */
 #eeKok .et-tablo-kutu{min-height:0;max-height:none}
-#eeKok .ee-ogr{min-width:50rem}#eeKok .et-tablo-kutu:has(.ee-ogr){max-height:34rem}
-#eeKok .ee-tablo{table-layout:fixed;min-width:42rem}#eeKok #eeHocalar .ee-tablo{min-width:37rem}
+#eeKok .ee-ogr{min-width:68rem}#eeKok .et-tablo-kutu:has(.ee-ogr){max-height:34rem}
+#eeKok .ee-tablo{table-layout:fixed;min-width:42rem}#eeKok #eeHocalar .ee-tablo{min-width:40rem}
+#eeKok .ee-tablo th.et-dar-gizle+th{}
 #eeKok .ee-tablo th{white-space:normal;vertical-align:bottom;line-height:1.3}
 #eeKok .ee-tablo td.tg-ad{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #eeKok .ee-tablo td{vertical-align:middle}
-#eeKok .ee-tablo col.s1{width:4.5rem}#eeKok .ee-tablo col.s2{width:5rem}#eeKok .ee-tablo col.s3{width:6rem}#eeKok .ee-tablo col.s4{width:6.5rem}#eeKok .ee-tablo col.s5{width:4.5rem}#eeKok .ee-tablo col.s6{width:6.5rem}#eeKok .ee-tablo col.sira{width:3.25rem}#eeKok .ee-tablo col.s7{width:9rem}
+#eeKok .ee-tablo col.s1{width:4.5rem}#eeKok .ee-tablo col.s2{width:5rem}#eeKok .ee-tablo col.s3{width:6rem}#eeKok .ee-tablo col.s4{width:6.5rem}#eeKok .ee-tablo col.s5{width:4.5rem}#eeKok .ee-tablo col.s6{width:6.5rem}#eeKok .ee-tablo col.sira{width:3.25rem}#eeKok .ee-tablo col.s8{width:7.5rem}#eeKok .ee-tablo col.s9{width:13rem}#eeKok .ee-tablo col.s7{width:9rem}
 #eeKok .ee-tablo td .mini{display:block;white-space:normal}
 #eeKok .ee-tablo td.sayi .mini{white-space:nowrap}
 #eeKok #eeHocalar td.tg-ad{white-space:normal;overflow:visible}
@@ -40,12 +41,16 @@
 #eeKok .ee-nasil{display:flex;flex-direction:column;gap:8px;margin-top:8px;max-width:78ch;color:var(--e-fg2)}
 #eeKok .ee-nasil p{margin:0}#eeKok .ee-nasil b{color:var(--e-fg);font-weight:500}
 /* Chart: drawn at the box's own width, so the type below is real pixels. */
-#eeKok #eeGrafik .ee-grafik{min-height:340px}#eeKok #eeArtis .ee-grafik{min-height:300px}
+#eeKok #eeGrafik .ee-grafik{min-height:340px}#eeKok #eeArtis .ee-grafik{min-height:300px}#eeKok #eeFark .ee-grafik{min-height:290px}
 #eeKok .ee-grafik text{font-size:12px}
 #eeKok .ee-grafik .ee-ad{fill:var(--e-fg);font-weight:500;text-decoration:none;cursor:default}
 #eeKok .ee-grafik .ee-baslik{fill:var(--e-fg2);font-weight:500}
 .ee-cizgi{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
-.ee-sutun{fill:var(--e-c1)}.ee-kova.az{opacity:.4}
+.ee-sutun{fill:var(--e-c1)}
+.ee-yukari{fill:var(--e-ok)}.ee-asagi{fill:var(--e-bad)}
+.ee-ortcizgi{stroke:var(--e-fg2);stroke-width:1.5;stroke-dasharray:5 4}
+.ee-etutim{stroke:var(--e-fg2);stroke-width:1;stroke-dasharray:2 2;opacity:.8}
+#eeKok .ee-paylar{white-space:nowrap;font-size:.75rem;color:var(--e-fg2)}.ee-kova.az{opacity:.4}
 .ee-biyik{stroke:var(--e-fg2);stroke-width:1.5}
 .ee-sifir{stroke:var(--e-fg2);stroke-width:1.25}
 #eeKok .ee-grafik .ee-deger{fill:var(--e-fg);font-weight:500}
@@ -57,7 +62,7 @@
   #eeKok .et-seg select{max-width:11rem}
   /* A pill with several choices wraps instead of widening the page. */
   #eeKok .et-seg{flex-wrap:wrap;max-width:100%;border-radius:14px}
-  #eeKok #eeGrafik .ee-grafik{min-height:320px}#eeKok #eeArtis .ee-grafik{min-height:280px}
+  #eeKok #eeGrafik .ee-grafik{min-height:320px}#eeKok #eeArtis .ee-grafik{min-height:280px}#eeKok #eeFark .ee-grafik{min-height:260px}
   #eeKok .ee-tablo,#eeKok #eeHocalar .ee-tablo,#eeKok .ee-ogr{min-width:0}
   /* Non-essential columns are hidden (et-dar-gizle) so nothing scrolls sideways; the remaining ones fill the width. */
   #eeKok .ee-tablo td.tg-ad{white-space:normal;overflow:visible}
@@ -65,3 +70,10 @@
   #eeKok .ee-tablo col.s1{width:3.4rem}#eeKok .ee-tablo col.s4{width:4.6rem}#eeKok .ee-tablo col.s6{width:5.5rem}#eeKok #eeHocalar col.s7{width:7.2rem}#eeKok .ee-tablo col.sira{width:2.4rem}#eeKok #eeHocalar col.s1{width:3.5rem}#eeKok #eeHocalar col.s4{width:3.7rem}#eeKok #eeHocalar .ee-tablo th,#eeKok #eeHocalar .ee-tablo td{padding-inline:5px}
   #eeKok .ee-tablo td.et-trend{padding-inline:2px}#eeKok .ee-tablo td.et-trend svg{max-width:100%;height:auto}
 }
+
+.ee-dagilim{fill:var(--e-c1);fill-opacity:.55;stroke:var(--e-c1)}
+.ee-dagilim.ee-aykiri{fill:none;fill-opacity:1;stroke-width:1.5;stroke-dasharray:2 2}
+.ee-egri{stroke:var(--e-fg);stroke-dasharray:none;stroke-width:2}
+.ee-bosnokta{fill:var(--e-panel);stroke-width:1.2}
+#eeKok .ee-grafik .ee-aykiri-ad{fill:var(--e-fg2)}
+#eeKok .ee-grafik .ee-egri-ad,#eeKok .ee-grafik .ee-aykiri-ad{paint-order:stroke;stroke:var(--e-panel);stroke-width:4px;stroke-linejoin:round}
