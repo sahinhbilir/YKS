@@ -108,3 +108,25 @@
 #eeKok .ee-kart-say{margin:0;font-size:.8125rem}
 #eeKok .ee-kart-az{margin:0;color:var(--e-bad)}
 #eeKok .ee-hoca-kart .ee-grafik{min-height:300px}
+
+/* Green above the expected line, red below it (the site's up/down tokens); the strip beneath carries the gap. */
+#eeKok .ee-ol-alan{stroke:none}
+#eeKok .ee-ol-alan-ok{fill:var(--e-ok);fill-opacity:.2}#eeKok .ee-ol-alan-bad{fill:var(--e-bad);fill-opacity:.2}
+#eeKok .ee-ol-etut.ee-ol-ok circle{fill:var(--e-ok)}#eeKok .ee-ol-etut.ee-ol-bad circle{fill:var(--e-bad)}
+#eeKok .ee-ol-kont.ee-ol-cizgi{stroke-width:2.5}
+#eeKok .ee-grafik .ee-ol-d-ok{fill:var(--e-ok);font-weight:600;paint-order:stroke;stroke:var(--e-panel);stroke-width:3px}
+#eeKok .ee-grafik .ee-ol-d-bad{fill:var(--e-bad);font-weight:600;paint-order:stroke;stroke:var(--e-panel);stroke-width:3px}
+#eeKok .ee-sb-ok{fill:var(--e-ok)}#eeKok .ee-sb-bad{fill:var(--e-bad)}#eeKok .ee-sb-on{fill:var(--e-muted);opacity:.55}
+#eeKok .ee-grafik .ee-sb-d{fill:var(--e-fg);font-size:11px;font-weight:500}
+#eeKok .ee-grafik .ee-sb-not{fill:var(--e-muted);font-size:11px}
+#eeKok .ee-grafik .ee-sb-baslik{font-size:11px}
+
+/* Class-average comparison: the pre-etüt area is grey, an uneven start is amber, "rose while ortalama fell" is the strong green. */
+#eeKok .ee-ol-on-alan{fill:var(--e-muted);fill-opacity:.1}
+#eeKok .ee-grafik .ee-ol-on-ad{fill:var(--e-fg2);font-size:11px}
+#eeKok .ee-sb-uyari{fill:var(--e-c4)}#eeKok .ee-sb-guclu{fill:var(--e-ok);stroke:var(--e-fg);stroke-width:1.5}
+#eeKok .ee-sb-ok{fill-opacity:.7}
+#eeKok .ee-grafik .ee-sb-not.ee-sb-uyari{fill:var(--e-fg);font-weight:600}
+#eeKok .ee-ol-etut.ee-ol-guclu circle{stroke:var(--e-fg);stroke-width:2}
+#eeKok .ee-grafik .ee-ol-rozet{fill:var(--e-ok);font-size:11px;font-weight:600;paint-order:stroke;stroke:var(--e-panel);stroke-width:3px}
+#eeKok .ee-kart-olay{font-size:.8125rem}

@@ -74,7 +74,7 @@ check('Etüt etkisi: same-titled exams stay apart, six students are six rows, th
   assert.equal(c.ozet.n, 3); assert.equal(c.ozet.fark, 2); assert(Math.abs(c.ozet.b - 1) < 1e-9, 'one etüt is worth one net here'); assert.equal(c.karar.k, 'veri', 'three students are too few for a verdict');
   assert.equal(c.hocalar.length, 1); assert.deepEqual([c.hocalar[0].n, c.hocalar[0].toplam, c.hocalar[0].sira], [3, 6, null]);
   // Matematik is the only ders in this fixture: there is no other ders of the same student to compare with, so the main estimate says so.
-  assert.equal(m.ozet.b, null); assert.equal(m.karar.k, 'veri'); assert.equal(m.olay.n, 0); assert.equal(m.dersSayisi, 1); assert.equal(m.ogrenciler.length, 6); assert(m.ogrenciler.every(r => r.beklenen === null && r.fark === null));
+  assert.equal(m.ozet.b, null); assert.equal(m.karar.k, 'veri'); assert.equal(m.olay.n, 3, 'the three etüt students against the class average of the three without etüt'); assert.equal(m.dersSayisi, 1); assert.equal(m.ogrenciler.length, 6); assert(m.ogrenciler.every(r => r.beklenen === null && r.fark === null));
   const k = Object.fromEntries(m.cubuklar.map(x => [x.ad, x])); assert.deepEqual([k['0'].n, k['0'].ort, k['1'].n, k['1'].ort], [6, 1, 6, 2]);
   // Etüts only before the second exam: the students, the bars and the teacher are all still there.
   put('__tS', ogrenciler(['2026-10-09'])); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:__tS,warnings:[],etutKapsam:null})');
