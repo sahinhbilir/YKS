@@ -99,22 +99,26 @@ kaplar; kutular ayrı görseller olarak birleştirilmez. Yazıcının kendi kena
 
 Sayfanın üstündeki **Öğrenci raporu | Kurum raporu** düğmesiyle kurum raporuna geçilir.
 Kurum raporu, öğrenci raporunun okul düzeyindeki karşılığıdır: **Tüm okul** ya da tek
-bir sınıf düzeyi (12. sınıf, 11. sınıf, …). Öğrenci adı yazmaz; yalnızca toplamlar ve
-öğretmen adları vardır. Öğrenci raporu tek A4 sayfadır; kurum raporu ise içeriği kadar A4 yatay
+bir sınıf düzeyi (12. sınıf, 11. sınıf, …). Öğrenci, öğretmen ve şube adı yazmaz; öğretmenler
+ve şubeler yarış atı gibi sıralanmasın diye etüt sayısı, öğretmen sıralaması, devamsızlık ve şube
+karşılaştırması raporda **yoktur**. Başlıkta yalnızca “8 öğrenci · 3 şube” yazar. Öğrenci raporu tek A4 sayfadır; kurum raporu ise içeriği kadar A4 yatay
 sayfadır (sayfa sınırına sığdırmak için liste kısaltılmaz, ad kesilmez). Her sayfanın başında
 okul, kapsam, rapor tarihi, kaynak tarih aralıkları ve “Sayfa 1 / 3” yazar. **Kapsam** seçilir;
 önizleme PDF'nin kullandığı sayfaların aynısını alt alta gösterir. **Kurum PDF (n sayfa)** seçilen
 kapsamı, **Tüm düzeyler PDF (n sayfa)** önce okulu, sonra her sınıf düzeyini sırayla indirir.
-Kaynaklar öğrenci modundakiyle aynıdır (Sıralamalar, Etütler, Yoklama ve bu sayfada eklenen ödev /
-İngilizce PDF'leri); üstteki kaynak kutusu iki modda da aynıdır. Öğrenci sayısı, kaynaklarda en az
+Kaynaklar Sıralamalar, Etütler, Türkiye geneli ve bu sayfada eklenen ödev PDF'idir (yoklama kullanılmaz; başlıkta yoklama tarihi yoktur); üstteki kaynak kutusu iki modda da aynıdır. Öğrenci sayısı, kaynaklarda en az
 bir kaydı olan öğrencilerdir.
 
-**Sayfa düzeni.** Sınıf düzeyi seçiliyse 1. sayfada Türkiye geneli bulunur; Etütler, Ödevler ile
-Devamsızlık ve Şube karşılaştırması sonraki sayfalardadır. Şube tablosu uzunsa satırları bir sonraki
-sayfada “(devam)” başlığıyla sürer. Tüm okul'da Türkiye geneli bir satır başına sınıf düzeyi tablosudur
-ve kısa olduğu için etüt bölümüyle aynı sayfaya girebilir.
+**Sayfa düzeni.** Sınıf düzeyi seçiliyse 1. sayfada Türkiye geneli (TYT ve AYT), sonra Etüt etkisi ve
+Ödevler gelir; Ödevler'in yanında, etüt etkisi çizimi varsa küçük bir dağılım grafiği durur. Tüm okul'da
+Türkiye geneli sınıf düzeyi tablosudur, ardından Etüt etkisi tablosu ve Ödevler gelir; bölümler sığdıkça
+aynı sayfaya girer, sığmayan sonraki sayfaya geçer. **Tüm düzeyler PDF** yine önce okul sayfalarını,
+sonra her sınıf düzeyinin sayfalarını verir.
 
-- **Türkiye geneli.** Türkiye geneli sayfasının kendi modeli kullanılır, hesap yinelenmez.
+- **Türkiye geneli.** Türkiye geneli sayfasının kendi modeli kullanılır, hesap yinelenmez; liste türü
+  ve okul, o sayfada öğretmenin seçtiğidir (`EK.tgListe`, `EK.tgOkul`). Seçilen liste türünde o sınıf
+  düzeyi yoksa eski sırayla (Kolej, Tüm kurumlar, Kurs) ilk uygun liste gösterilir ve notta bu yazılır.
+  Kutunun notu liste türüyle başlar (“Kolej listesi · …”).
   **TYT** ve **AYT** ayrı iki grafiktir (yan yana, öğrenci raporundaki TYT / AYT gibi):
   TYT toplam Türkiye yüzdelik dilimi (“ilk %12”, küçük = daha iyi); AYT'de varsa SAY, EA ve SÖZ toplamları.
   Eksen T (z) ölçeğindedir, değerler dilim olarak yazılır (ilk %1 en üstte, %50 ortada); kesik çizgi
@@ -139,18 +143,21 @@ ve kısa olduğu için etüt bölümüyle aynı sayfaya girebilir.
   O sınıf düzeyi için liste yoksa “Türkiye geneli listesi yok; Türkiye geneli sayfasından
   ekleyin.” yazılır ve okulun kendi denemelerinden TYT net ortalaması çizilir. Okul listede
   bulunamazsa Türkiye geneli sayfasında okulun seçilmesi istenir.
-- **Etütler.** Toplam etüt, öğrenci başına ortalama, haftalık etüt grafiği (öğrenci raporundaki
-  haftalama; renk = ders), **her** ders ve **her** öğretmen etüt sayısıyla (azalan sırada). Renk
-  paleti biterse grafikte en küçük dersler gri birleşir; listede hepsi ayrı yazılır.
+- **Etüt etkisi.** Etüt etkisi sayfasının (`ETUT_ETKI.model`) kendi hesabı kullanılır, yeniden yazılmaz;
+  yalnızca okul düzeyindeki ortak değer okunur, öğretmen başına değerler hiç kullanılmaz. Sınıf düzeyi
+  için, etüt alınan her ders TYT ve AYT'de bir satırdır: ders, “her etüt ≈ +0,4 net” ve olası aralığı,
+  kısa renkli karar (yeşil “artış belirgin”, gri “belirgin fark yok”, kırmızı “etüt alanlarda daha az”,
+  soluk “yeterli veri yok”), sayılan öğrenci sayısı ve hesaba katılmayan uç sonuç sayısı (“2 uç sonuç”).
+  En çok öğrencisi olan ders için, öğrenci adı olmadan, etüt sayısı × ek artış dağılımı ve çizgisi
+  çizilir. Açıklama: “Her etüt için artış: aynı başlangıç düzeyindeki öğrencilere göre, etüt sayısı
+  arttıkça Türkiye farkındaki ek artış (net). Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.”
+  **Tüm okul**'da sınıf düzeyi × ders tek kompakt tablodur (önce TYT, sonra AYT; hücrede değer ve karar).
+  Türkiye listesi, etüt raporu, iki deneme ya da denemeler arasında etüt yoksa eksik olan ve hangi
+  sayfadan ekleneceği yazılır. Türkiye ortalaması olmayan ders “yeterli veri yok” olur (ham net
+  karşılaştırması kullanılmaz). Hesap yavaş olduğundan girdileri aynı kaldıkça sonuç saklanır.
 - **Ödevler.** Toplam ödev, durumların dağılımı (Tamamladı, Eksik, Getirmedi, Geç getirdi,
   Yapmadı, Gelmedi), tamamlama oranı (tamamlanan / verilen) ve **her** ders için tamamlama;
   Matematik TYT ve AYT ayrı kalır.
-- **Devamsızlık.** Toplam kaçırılan gün (tam gün ve yarım gün ayrı), devam oranı ve öğrencilerin
-  0 · 1–4 · 5–9 · 10+ kaçırılan gün aralıklarına dağılımı; kural öğrenci raporundakiyle (Yoklama)
-  aynıdır.
-- **Şube karşılaştırması.** Her şube için öğrenci sayısı, etüt, öğrenci başına etüt, ödev
-  tamamlama, devamsız gün, devam oranı ve şubenin kendi sınıf düzeyinin son denemesindeki ortalama TYT
-  neti; ilk satır toplamdır (Tüm okul'da sınıf düzeyleri farklı sınav girdiğinden net toplamı yoktur).
 - Eksik kaynak, ilgili kutuda hangi sayfadan ekleneceğiyle yazılır.
 
 ## Kaynaklar ve saklama
@@ -198,10 +205,13 @@ node test/kurumrapor-regression.cjs
 node test/kurumrapor-browser.cjs
 ```
 
-`test/kurumrapor-regression.cjs` toplamları, şube satırlarını, devamsızlık aralıklarını, ödev oranını,
-Türkiye geneli bloğunu (listeli ve listesiz; tarama → tarama seçimi, boşlukların bağlanması, ayrı TYT / AYT grafikleri), tüm öğretmen ve derslerin yazıldığını ve rapora öğrenci adı girmediğini; `test/kurumrapor-browser.cjs`
-düğmeyi, kapsamı, alt alta sayfaları, PDF sayfa sayısını, uzun bir okulun (14 öğretmen, 13 ödev dersi, 40 şube) taşma/çakışma denetimini ve açık/koyu temayı
-(1280 ve 390 px) kontrol eder.
+`test/kurumrapor-regression.cjs` ödev toplamlarını, Türkiye geneli bloğunu (listeli ve listesiz; tarama → tarama seçimi,
+`EK.tgListe` / `EK.tgOkul` ve yedek liste, ayrı TYT / AYT grafikleri), Etüt etkisi bloğunu (sentetik, etkisi
+yerleştirilmiş öğrencilerle ETUT_ETKI'nin değer ve aralığının birebir yazıldığını, karar ifadelerini, eksik
+veri iletilerini, uç sonuç sayısını, Tüm okul tablosunu), sayfa yapısını ve raporda Devamsızlık, Şube
+karşılaştırması, öğretmen, etüt sayısı, şube sayısı ve öğrenci adı bulunmadığını; `test/kurumrapor-browser.cjs`
+düğmeyi, kapsamı, alt alta sayfaları, PDF sayfa sayısını, kısa ve uzun sentetik okulların (10 TYT + 4 AYT etüt dersi,
+13 ödev dersi) taşma/çakışma denetimini ve açık/koyu temayı (1280 ve 390 px) kontrol eder.
 
 Tarayıcı testi Verify iş akışındaki Playwright ve sabit sürümlü PDF bağımlılıklarını
 `NODE_PATH` üzerinden kullanır. Masaüstü ve telefonda içe aktarma, hatadan sonra
