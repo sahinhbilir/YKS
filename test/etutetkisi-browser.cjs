@@ -143,6 +143,24 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
     for(const c of sonuc.filter(c=>c.sayi)){assert(Math.abs(c.thSag-c.tdSag)<=2,id+' · '+c.ad+': header right '+c.thSag+' vs numbers '+c.tdSag);assert.equal(c.thAlign,'right');assert.equal(c.tdAlign,'right')}
     for(const c of sonuc.filter(c=>!c.sayi))assert(['left','start'].includes(c.thAlign)&&['left','start'].includes(c.tdAlign),id+' · '+c.ad+': names are left-aligned');
    }
+   // A small event study per teacher, under the table: one card each (in the table's order), the same chart drawn at the card's real width, the same y scale,
+   // the title whole, the teacher's own γ, students and etüts; the legend once above; a grid on a desktop, one column on a phone.
+   await page.waitForSelector('#eeHocaGrafik .ee-hoca-kart svg');
+   const hk=await page.evaluate(()=>{
+    const kartlar=[...document.querySelectorAll('#eeHocaGrafik .ee-hoca-kart')];
+    return {n:kartlar.length,adlar:kartlar.map(k=>k.querySelector('.ee-kart-ad').textContent),sol:kartlar.map(k=>Math.round(k.getBoundingClientRect().left)),
+     kesik:kartlar.flatMap(k=>[...k.querySelectorAll('.ee-kart-ad,.ee-kart-say')].filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent)),
+     genis:kartlar.map(k=>{const b=k.querySelector('.et-grafik'),v=b.querySelector('svg');return Math.abs(Number(v.getAttribute('width'))-b.clientWidth)<=1&&v.getBoundingClientRect().right<=k.getBoundingClientRect().right+1}),
+     ticks:kartlar.map(k=>[...k.querySelectorAll('svg text.et-tik[text-anchor="end"]')].map(t=>t.textContent).join()),sifir:kartlar.map(k=>k.querySelector('svg .ee-sifir').getAttribute('y1')),
+     etiket:kartlar.map(k=>[...k.querySelectorAll('svg text')].map(t=>t.textContent).join(' ')),say:kartlar.map(k=>k.querySelector('.ee-kart-say').textContent),
+     enKucuk:Math.min(...kartlar.flatMap(k=>[...k.querySelectorAll('svg text')].map(t=>parseFloat(getComputedStyle(t).fontSize)))),
+     lejant:document.querySelectorAll('#eeHocaLejant').length,sirali:[...document.querySelectorAll('#eeHocalar tbody .ee-ad')].map(b=>b.textContent)};
+   });
+   assert.equal(hk.n,2);assert.deepEqual(hk.adlar,hk.sirali,'cards follow the table order');assert.deepEqual(hk.kesik,[],'titles are whole');assert(hk.genis.every(Boolean),'charts at the card width');
+   assert.equal(hk.ticks[0],hk.ticks[1],'one y scale');assert.equal(hk.sifir[0],hk.sifir[1]);assert.equal(hk.lejant,1);assert(hk.enKucuk>=11,'real-pixel type '+hk.enKucuk);
+   for(const e of hk.etiket){for(const k of ['net','İlk etüt','önce','sonra'])assert(e.includes(k),k);assert((e.match(/n = \d+/g)||[]).length===6)}
+   for(const t of hk.say)assert.match(t,/^Her etüt ≈ [+−]\d,\d\d net \(olası aralık [+−]\d,\d\d … [+−]\d,\d\d\) · \d+ öğrenci · \d+ etüt$/);
+   if(width>=900)assert(hk.sol[0]!==hk.sol[1],'two cards in a row on a desktop');else assert.equal(hk.sol[0],hk.sol[1],'one card per row on a phone');
    assert.deepEqual((await page.locator('#eeHocalar .ee-ad').allInnerTexts()).sort(),['Sentetik Öğretmen A','Sentetik Öğretmen B']);
    assert.deepEqual(await page.locator('#eeHocalar thead th').allTextContents(),['Sıra','Öğretmen','Öğrenci','Etüt','Toplam katkı (net)','Her etüt için artış (net)']);
    // Teachers are ranked by their estimate (largest first): the first row is rank 1 and the column is right-aligned like the other numbers.

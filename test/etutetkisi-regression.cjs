@@ -460,6 +460,38 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     const c = trC(coklu({ n: 36, dersler: ['fizik', 'mat', 'kimya'], e: (i, key) => [key === 'kimya' ? 0 : i % 4, 0, 0, 0], eB: (i, key) => [key === 'fizik' ? Math.floor(i / 4) % 3 : 0, 0, 0, 0], dil: i => (i % 4 + Math.floor(i / 4) % 3) * 0.1 }), { ders: 'Fizik' });
     assert(Math.abs(hoc(c, 'A').b) < 0.02 && Math.abs(hoc(c, 'B').b) < 0.02, [hoc(c, 'A').b, hoc(c, 'B').b].join()); assert(c.capraz.hocalar.every(h => h.b > 0.3), 'the cross-student γ per teacher is inflated');
   });
+  await check('a chart per teacher: only that teacher’s students, x relative to the first etüt with that teacher, +0,6 vs 0 shows in A’s chart and not in B’s, one y scale, faint under 5 students, cards in the table’s order', () => {
+    // A-only students (even i) have their etüt in the first interval, B-only students (odd i) in the third; teacher T has two students. +0,6 per A etüt, 0 for B.
+    const eA = (i, key) => key === 'fizik' && i % 2 === 0 && i < 30 ? [1 + (i % 3), 0, 0, 0] : [0, 0, 0, 0], eBf = (i, key) => key === 'fizik' && i % 2 === 1 && i < 30 ? [0, 0, 1 + (i % 3), 0] : [0, 0, 0, 0];
+    const L = coklu({ n: 36, dersler: ['fizik', 'mat', 'kimya'], e: eA, eB: eBf, dil: i => (i % 5) * 0.05, katA: { fizik: 0.6 }, katB: { fizik: 0 } });
+    // The two T students: B-style etüt of teacher T in the second interval, planted +2 per etüt.
+    for (const i of [30, 31]) { L[i].sessions.push({ date: ekle(TARIH[1], 1), course: 'FİZİK', teacher: 'SENTETİK ÖĞRETMEN T', minutes: 40, time: 900 }); L[i].exams.forEach((e, k) => { if (k >= 2) e.nets.fizik = Math.round((e.nets.fizik + 2) * 1e5) / 1e5; }); }
+    const m = trC(L, { ders: 'Fizik' }), a = hoc(m, 'A'), b = hoc(m, 'B'), t = hoc(m, 'T'), oA = m.hocaOlay[a.key], oB = m.hocaOlay[b.key], oT = m.hocaOlay[t.key];
+    assert.deepEqual(Object.keys(m.hocaOlay).sort(), m.hocalar.map(h => h.key).sort()); assert.deepEqual(Object.keys(m.hocalar[0]).sort(), ['ad', 'az', 'b', 'ci', 'etut', 'katki', 'key', 'n', 'sira', 'toplam'], 'the exported teacher rows are unchanged');
+    assert.equal(oA.n, 15); assert.equal(oB.n, 15); assert.equal(oT.n, 2, 'only that teacher’s students');
+    // x is relative to the first etüt with that teacher: A’s students have the reference at the first exam (nothing before it), B’s at the third (two positions before).
+    assert.equal(oA.noktalar[0].n, 0); assert.equal(oA.noktalar[1].n, 0); assert.equal(oB.noktalar[0].n, 15); assert.equal(oB.noktalar[1].n, 15);
+    assert.equal(oB.noktalar[3].n, 15); assert.equal(oB.noktalar[4].n, 15); assert.equal(oB.noktalar[5].n, 0, 'no exam three after the third of five');
+    for (const o of [oA, oB]) { assert.equal(o.noktalar[2].etut.ort, 0); assert.equal(o.noktalar[2].kontrol.ort, 0); }
+    // A: +0,6 per etüt, so the etüt line leaves the other after the first etüt; B: 0, so it does not, before or after.
+    for (const p of oA.noktalar.slice(3, 5)) assert(p.fark.ort > 0.5 && p.fark.ci[0] > 0.3, 'A diverges: ' + p.ad + ' ' + p.fark.ort);
+    for (const p of oB.noktalar) if (p.n) assert(Math.abs(p.fark.ort) < 0.05, 'B stays together: ' + p.ad + ' ' + p.fark.ort);
+    // The general chart is unchanged: it holds everybody with an etüt in the ders.
+    assert.equal(m.olay.n, 15 + 15 + 2);
+    // One y scale: the same ticks and zero line in every teacher's chart.
+    put('__m', m); const y = get('ETUT_ETKI.ortakY(__m)'); put('__oA', oA); put('__oB', oB); put('__y', y);
+    const sv = k => get('ETUT_ETKI.olaySvg(__o' + k + ',640,{y:__y,net:true})'), ticks = x => [...x.matchAll(/class="et-tik" x="[\d.]+" y="([\d.]+)" dy="0.32em" text-anchor="end">([^<]+)</g)].map(z => z[1] + ':' + z[2]), zero = x => /class="et-eksen ee-sifir" x1="[\d.]+" x2="[\d.]+" y1="([\d.]+)"/.exec(x)[1];
+    assert.deepEqual(ticks(sv('A')), ticks(sv('B'))); assert(ticks(sv('A')).length >= 3); assert.equal(zero(sv('A')), zero(sv('B'))); assert(sv('A').includes('>net</text>'));
+    assert(y[0] <= Math.min(...oA.noktalar.map(p => p.etut.ort ?? 0), ...oB.noktalar.map(p => p.etut.ort ?? 0)) && y[1] >= Math.max(...oA.noktalar.map(p => p.etut.ort ?? 0)));
+    // The page: cards in the table’s order, the teacher’s own γ, students and etüts, the shared legend once, faint with the note and no rank under 5 students; a click keeps the filter.
+    merged(L); trSayfa(TRC); run("EK.eeDers='Fizik'"); const h = run('ETUT_ETKI.icerik()'), kartlar = [...h.matchAll(/<div class="ee-hoca-kart[^"]*" data-ee-hoca="[^"]*"><div class="ee-kart-ust"><button[^>]*>(.*?)<\/button><span class="mini">(.*?)<\/span>/g)].map(z => [z[1], z[2]]);
+    assert.deepEqual(kartlar.map(z => z[0]), m.hocalar.map(x => x.ad)); assert.deepEqual(kartlar.map(z => z[1]), m.hocalar.map(x => x.sira === null ? 'sıralanmadı' : 'Sıra ' + x.sira));
+    assert.equal((h.match(/id="eeHocaLejant"/g) || []).length, 1); assert.match(h, /<h3 class="ee-alt-baslik" id="eeHocaBaslik">Etütten önce ve sonra · öğretmene göre<\/h3>/);
+    assert.match(h, /Her etüt ≈ <b>\+0,\d\d net<\/b> \(olası aralık \+0,\d\d … \+0,\d\d\) · 15 öğrenci · \d+ etüt/); assert.equal((h.match(/5’ten az öğrenci: kesin değil/g) || []).length, 1);
+    assert.match(h, /<div class="ee-hoca-kart ee-az" data-ee-hoca="SENTETİK ÖĞRETMEN T">/); assert(h.indexOf('id="eeHocaGrafik"') > h.indexOf('id="eeHocalar"') && h.indexOf('id="eeHocaGrafik"') < h.indexOf('id="eeOgrenciler"'), 'under the table');
+    assert.equal((h.match(/id="eeOlay"/g) || []).length, 1, 'the general chart stays');
+    run("EK.eeHoca='SENTETİK ÖĞRETMEN B'"); const f = run('ETUT_ETKI.icerik()'); assert.match(f, /<div class="ee-hoca-kart secili" data-ee-hoca="SENTETİK ÖĞRETMEN B">/); assert.equal((f.match(/<tr[^>]*><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 15);
+  });
   await check('teachers within the student: ranked by Toplam katkı, ties share a rank, under 5 students no rank, faint and last; the page table and the teacher filter', () => {
     const P = 'SENTETİK ÖĞRETMEN P', Q = 'SENTETİK ÖĞRETMEN Q', R = 'SENTETİK ÖĞRETMEN R', T = 'SENTETİK ÖĞRETMEN T';
     // Students 0–4 have P, 5–9 Q, 10–14 R, 15–16 T; the Fizik etüt counts 1–3; Matematik has no etüt (the comparison). Planted: P, Q 0,5, R 0,2, T 2.
