@@ -1,7 +1,8 @@
 'use strict';
-// Kurum raporu (the institution-level twin of the student report): totals per scope, per-şube rows, the missed-day
-// bands, the homework completion rate, the Türkiye geneli block with and without a list for the grade, and that no
-// student name is ever drawn. All records are synthetic.
+// Kurum raporu (the institution-level twin of the student report): the homework totals, the Türkiye geneli block (the list kind
+// and school chosen on the Türkiye geneli page, with and without a list for the grade), the Etüt etkisi block (ETUT_ETKI's own pooled
+// gain per etüt per ders, TYT and AYT, its verdict phrases, its missing-data messages), the page structure, and that no student,
+// teacher or şube figure and no Devamsızlık is ever drawn. All records are synthetic.
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const html=fs.readFileSync('index.html','utf8'),a=html.indexOf('<script id="uygulama">')+23,b=html.indexOf('// ---------------------------------------------------------------- başlangıç',a),source=html.slice(a,b);
 const {kurumListesi,kurumRaporu,BIZ,BIZIM}=require('./fixtures/kurum-pdf.cjs');
@@ -32,19 +33,11 @@ const T0='2026-09-14',T1='2026-10-16',et=(p,date,course,teacher)=>({...p,date,co
 const sessions=[et(P[0],'2026-09-15','MATEMATİK TYT','SENTETİK HOCA A'),et(P[0],'2026-09-22','FİZİK','SENTETİK HOCA B'),et(P[1],'2026-09-22','MATEMATİK AYT','SENTETİK HOCA A'),et(P[3],'2026-10-06','KİMYA','SENTETİK HOCA C'),et(P[5],'2026-10-13','MATEMATİK TYT','SENTETİK HOCA A'),et(P[5],'2026-10-13','FİZİK','SENTETİK HOCA B')];
 const reports=[{kind:'exam',students:P,exams,school:'Sentetik Kartal Anadolu Lisesi'},{kind:'homework',students:P,homework,reportDate:'2026-10-24'},{kind:'attendance',students:P,attendance},{kind:'sessions',students:P,sessions,start:T0,end:T1}];
 const merged=R.merge(reports,[]),S=merged.students;
-const svgK=(k,d)=>R.svgKurum(k,d).join(''),hepsiYok=()=>({var:false,neden:'liste'});
-const rapor=(key,tur=hepsiYok)=>{const sc=R.kurumKapsamlari(S).find(x=>x.key===key);return R.kurumRapor(S,sc,tur)};
+const svgK=(k,d)=>R.svgKurum(k,d).join(''),hepsiYok=()=>({var:false,neden:'liste'}),eeYok=()=>({var:false,neden:'etut'});
+const rapor=(key,tur=hepsiYok)=>{const sc=R.kurumKapsamlari(S).find(x=>x.key===key);return R.kurumRapor(S,sc,tur,eeYok)};
 
 check('scopes: Tüm okul first, then each grade that has students, highest first',()=>{
  assert.deepEqual(plain(R.kurumKapsamlari(S).map(x=>[x.key,x.label,x.count])),[['okul','Tüm okul',7],['12','12. sınıf',5],['11','11. sınıf',2]]);
-});
-check('totals per scope: etüt, per-student average, courses and teachers',()=>{
- const k=rapor('okul');assert.equal(k.count,7);assert.equal(k.subeCount,3);assert.equal(k.etut.total,6);assert(Math.abs(k.etut.perStudent-6/7)<1e-9);
- assert.deepEqual(plain(k.etut.teachers.map(t=>[t.name,t.count])),[['SENTETİK HOCA A',3],['SENTETİK HOCA B',2],['SENTETİK HOCA C',1]]);
- assert.deepEqual(plain(k.etut.courses.map(c=>[c.name,c.count])),[['Matematik',3],['Fizik',2],['Kimya',1]]);
- assert.equal(k.etut.weeks.reduce((n,w)=>n+w.count,0),6,'every etüt counted once in the weekly chart');
- const k12=rapor('12');assert.equal(k12.count,5);assert.equal(k12.etut.total,4);assert.equal(k12.subeCount,2);
- const k11=rapor('11');assert.equal(k11.etut.total,2);assert.equal(k11.etut.perStudent,1);
 });
 check('homework: status totals, completion rate and per-ders rows keep Matematik TYT and AYT apart',()=>{
  const k=rapor('okul'),o=k.odev;assert.equal(o.total,32);assert.deepEqual(plain(o.statuses),[22,5,2,1,1,1]);
@@ -54,47 +47,17 @@ check('homework: status totals, completion rate and per-ders rows keep Matematik
  const k12=rapor('12').odev;assert.equal(k12.total,25);assert.equal(k12.statuses[0],17);assert.equal(Math.round(k12.rate*100)/100,68);
  const k11=rapor('11').odev;assert.equal(k11.total,7);assert.equal(Math.round(k11.rate*100)/100,71.43);
 });
-check('attendance: tam and yarım gün separately, devam %, and the 0 · 1–4 · 5–9 · 10+ bands',()=>{
- const d=rapor('okul').devam;assert.equal(d.full,2+6+11);assert.equal(d.half,1);assert.equal(d.missed,20);
- assert.equal(d.students,6,'the student without a yoklama record is not counted');
- assert.deepEqual(plain(d.bands.map(b=>[b.label,b.count])),[['0 gün',2],['1–4 gün',2],['5–9 gün',1],['10+ gün',1]]);
- assert.equal(d.bands.reduce((n,b)=>n+b.count,0),6);
- const days=3+4+8+12+2+1,present=3+2+2+1+1+1;assert.equal(d.known,days);assert.equal(d.present,present);assert(Math.abs(d.percent-100*present/days)<1e-9);
- const d11=rapor('11').devam;assert.equal(d11.half,1);assert.equal(d11.full,0);assert.deepEqual(plain(d11.bands.map(b=>b.count)),[1,1,0,0]);
-});
-check('şube rows: öğrenci, etüt, etüt/öğrenci, ödev %, devamsız gün, devam % and the latest exam TYT average',()=>{
- const k=rapor('okul'),by=Object.fromEntries(k.subeler.map(r=>[r.cls,r]));assert.deepEqual(Object.keys(by).sort(),['11/A','12/A','12/B']);
- assert.equal(by['12/A'].n,3);assert.equal(by['12/A'].etut,3);assert.equal(by['12/A'].perStudent,1);assert.equal(by['12/A'].odevRate,75);assert.equal(by['12/A'].odev,20);assert.equal(by['12/B'].odevRate,40);assert.equal(by['11/A'].odevRate,100*5/7);
- assert.equal(by['12/A'].missed,8);assert.equal(by['12/B'].missed,11);assert.equal(by['11/A'].missed,1);
- assert.equal(by['12/B'].hasAttendance,true);
- // Latest exam is Deneme 2 (nets 18 + 2(i+2)): 12/A holds students 0,1,2 → 22,24,26 → 24.
- assert.equal(by['12/A'].net,24);assert.equal(by['12/B'].net,(28+30)/2);assert.equal(by['11/A'].net,(32+34)/2);
- assert.equal(k.sonDeneme,null,'no single latest exam across grades');assert.equal(k.toplam.net,null);assert.equal(rapor('12').sonDeneme.ad,'Sentetik Deneme 2');
- assert.equal(k.toplam.n,7);assert.equal(k.toplam.etut,6);
-});
-check('TYT average per şube uses its own grade\'s latest exam; Tüm okul has no exam name and no total',()=>{
- // 11/A took an extra, later exam (nets 40 each) that 12/x did not: it is 11/A's latest, 12/A keeps Deneme 2.
- const extra=R.merge([{kind:'exam',students:P,exams:[...exams,...P.filter(p=>p.grade===11).map(p=>({...p,exam:'Sentetik Deneme 3',date:'2026-10-20',session:'TYT',nets:{turkce:20,mat:20}}))]}],[]).students,sc=R.kurumKapsamlari(extra)[0],k=R.kurumRapor(extra,sc,hepsiYok),by=Object.fromEntries(k.subeler.map(r=>[r.cls,r]));
- assert.equal(by['11/A'].net,40);assert.equal(by['12/A'].net,24);assert.equal(by['12/B'].net,29);assert.equal(k.toplam.net,null);
- const svg=svgK(k,'2026-10-25'),txt=metin(svg);assert(txt.includes('TYT ort. (son deneme)'));assert(!txt.includes('Sentetik Deneme 3 '),'no exam name in the Tüm okul header');assert(!svg.includes('…'),'no name is cut with an ellipsis');
- const g=R.kurumRapor(extra,R.kurumKapsamlari(extra).find(x=>x.key==='11'),hepsiYok);assert.equal(g.toplam.net,40);assert.equal(g.sonDeneme.ad,'Sentetik Deneme 3');assert(metin(svgK(g,'2026-10-25')).includes('son deneme: Sentetik Deneme 3'));
-});
-check('missing sources are named on the page and never invent numbers',()=>{
- const bos=R.merge([{kind:'exam',students:P.slice(0,2),exams:exams.slice(0,2)}],[]).students,sc={key:'okul',label:'Tüm okul',grade:null,count:2};
- const k=R.kurumRapor(bos,sc,hepsiYok),svg=svgK(k,'2026-10-25');
- assert.equal(k.etut.total,0);assert.equal(k.odev.total,0);assert.equal(k.devam.students,0);assert.equal(k.odev.rate,null);assert.equal(k.devam.percent,null);
- for(const t of ['Etüt kaydı yok. Etütler sayfasından','Ödev kaydı yok.','Yoklama kaydı yok. Yoklama sayfasından'])assert(metin(svg).includes(t),t);
-});
 
 // ---- Türkiye geneli, through the Türkiye geneli module's own model ----
-const liste=(ad,e,extra={})=>{const L=kurumListesi(e,{ad,normal:{N:180,oran:.09},...extra});ctx.PG=kurumRaporu(L).pages;return vm.runInContext('TURKIYE.pdfCoz(PG,"'+ad+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf")',ctx)};
-const yukle=(grades)=>{ // grades: {12:[exam names], 11:[exam names]} → D.turkiye with the school followed
+const liste=(ad,e,extra={},tur='Kolej')=>{const L=kurumListesi(e,{ad,normal:{N:180,oran:tur==='Kurs'?.05:.09},...extra});ctx.PG=kurumRaporu(L).pages;return vm.runInContext('TURKIYE.pdfCoz(PG,"'+ad+' Ders Ortalamaları İlk 100 Kurum ('+tur+').pdf")',ctx)};
+const yukle=(grades,kurs={})=>{ // grades: {12:[exam names], 11:[exam names]} → D.turkiye with the school followed; kurs: the same exams as a Kurs list
  const rs=[];for(const [g,names] of Object.entries(grades))names.forEach((n,j)=>{const r=liste(n,j+1);r.__g=Number(g);rs.push(r)});
+ for(const [g,names] of Object.entries(kurs))names.forEach((n,j)=>{const r=liste(n,j+1,{},'Kurs');r.__g=Number(g);rs.push(r)});
  ctx.RS=rs;ctx.OKUL=BIZ;
  vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[];(()=>{let a={okul:OKUL,sinavlar:[]};for(const r of RS){a=TURKIYE.birlestir(a,r);a.sinavlar.at(-1).duzey=r.__g}D.turkiye=TURKIYE.paketle(a,5)})()",ctx);
 };
-const turkiyeKapat=()=>vm.runInContext('D=varsayilan();D.rol="rehber";D.ogr=[]',ctx);
-const canli=key=>{const sc=R.kurumKapsamlari(S).find(x=>x.key===key);return R.kurumRapor(S,sc)};
+const turkiyeKapat=()=>vm.runInContext('D=varsayilan();D.rol="rehber";D.ogr=[];EK.tgListe=undefined;EK.tgOkul=undefined',ctx);
+const canli=key=>{const sc=R.kurumKapsamlari(S).find(x=>x.key===key);return R.kurumRapor(S,sc,undefined,eeYok)};
 const TA='27-YKS-1201 TARAMA',GE='27-YKS-1202',TB='27-YKS-1203 TARAMA',GD='27-YKS-1204';
 const ctxT=d=>ctx.T.dilimdenT(d);
 const mT=(extra="")=>plain(vm.runInContext("TURKIYE.model(TURKIYE.oku().veri,{duzey:'d12',oturum:'TYT',mod:'tpuan',aralik:'tum'})",ctx)).toplam.tseri.map(p=>p&&p.t);
@@ -199,52 +162,165 @@ check('Tüm okul: one row per grade, a grade with a list shows the dilim, its ch
  const k=canli('okul');assert.deepEqual(plain(k.turkiye.grades.map(g=>[g.grade,g.count,g.block.var])),[[12,5,true],[11,2,false]]);
  const svg=svgK(k,'2026-10-25');assert(svg.includes('aria-label="12. sınıf Türkiye geneli"')&&svg.includes('aria-label="11. sınıf Türkiye geneli"'));
  assert(metin(svg).includes('Türkiye geneli listesi yok; Türkiye geneli sayfasından ekleyin.'));assert(svg.includes('Okul ort. TYT neti: 33'));
- assert(!metin(svg).includes('dersleri · Türkiye dilimi'),'the whole-school page has no per-ders charts');assert(metin(svg).includes('1201 → 1203'),'the first → latest exam is named');
+ assert(!metin(svg).includes('dersleri · Türkiye dilimi'),'the whole-school page has no per-ders charts');assert(metin(svg).includes('Kolej listesi'),'each grade row names its list kind');assert(metin(svg).includes('1201 → 1203'),'the first → latest exam is named');
 });
 check('a list without the school: the page asks for the school to be chosen',()=>{
  yukle({12:['27-YKS-1201','27-YKS-1202']});vm.runInContext("(()=>{const v=D.turkiye;v.okul=null;})()",ctx);
  const k=canli('12');assert.equal(k.turkiye.var,false);assert.equal(k.turkiye.neden,'okulyok');assert(metin(svgK(k,'2026-10-25')).includes('Okulunuz bu listelerde bulunamadı'));
  turkiyeKapat();
 });
-check('no student name appears anywhere in the report; teacher names do',()=>{
+
+// ---- the list kind and school chosen on the Türkiye geneli page ----
+const ekAyarla=(liste,okul)=>{ctx.__L=liste;ctx.__O=okul;vm.runInContext('EK.tgListe=__L;EK.tgOkul=__O',ctx)};
+const tytT=b=>plain(b.cards.TYT.series.find(x=>x.key==='TYT').t),ref=(liste,okul)=>plain(vm.runInContext("TURKIYE.model(TURKIYE.oku().veri,{liste:"+JSON.stringify(liste)+",okul:"+JSON.stringify(okul)+",duzey:'d12',oturum:'TYT',mod:'tpuan',aralik:'tum'})",ctx));
+check('the Türkiye block uses EK.tgListe and EK.tgOkul (the Türkiye geneli page\'s own choice); the old order only when that list kind has nothing for the grade',()=>{
+ try{
+  yukle({12:[TA,GE,TB]},{12:[TA,GE,TB]});
+  let b=canli('12').turkiye;assert.equal(b.liste,'kolej','nothing chosen: the old order, Kolej first');assert.equal(b.yedek,false);const kolej=tytT(b);
+  ekAyarla('kurs');b=canli('12').turkiye;assert.equal(b.var,true);assert.equal(b.liste,'kurs');assert.equal(b.listeAdi,'Kurs');assert.equal(b.yedek,false);
+  assert.deepEqual(tytT(b),ref('kurs').toplam.tseri.map(p=>p&&p.t),'the page\'s own series for the Kurs list');assert.notDeepEqual(tytT(b),kolej,'not the Kolej series');
+  let txt=metin(svgK(canli('12'),'2026-10-25'));assert(txt.includes('Kurs listesi · ilk %12'),'the list kind is in the note');assert(!txt.includes('Seçtiğiniz'));
+  const okullar=ref('kolej').okullar;assert(okullar.length>3);const baska=okullar.find(a=>a!==BIZ);
+  ekAyarla('kurs',baska);b=canli('12').turkiye;assert.equal(b.okul,baska,'the school chosen on the page');assert.deepEqual(tytT(b),ref('kurs',baska).toplam.tseri.map(p=>p&&p.t));
+  // The school table of Tüm okul follows the choice too and names the list.
+  ekAyarla('kurs');assert(metin(svgK(canli('okul'),'2026-10-25')).includes('Kurs listesi'));
+  // Only Kolej has the grade: the chosen Kurs list has nothing, so the report falls back and says so.
+  yukle({12:[TA,GE,TB]});ekAyarla('kurs');b=canli('12').turkiye;assert.equal(b.liste,'kolej');assert.equal(b.yedek,true);assert.equal(b.secilen,'kurs');
+  txt=metin(svgK(canli('12'),'2026-10-25'));assert(txt.includes('Kolej listesi · ilk %12')&&txt.includes('Seçtiğiniz Kurs listesinde bu sınıf düzeyi yok; Kolej listesi gösterilir.'),txt);
+  assert.deepEqual(tytT(b),ref('kolej').toplam.tseri.map(p=>p&&p.t));
+  // No EK at all (the page is closed): the old order.
+  ekAyarla(undefined,undefined);assert.equal(canli('12').turkiye.liste,'kolej');
+ }finally{turkiyeKapat()}
+});
+
+// ---- Etüt etkisi: ETUT_ETKI's own pooled model, planted effects, synthetic students only ----
+const fx=require('./fixtures/kurum-etut.cjs'),EM=vm.runInContext('ETUT_ETKI',ctx);
+ctx.__oku=vm.runInContext('TURKIYE.oku',ctx);ctx.__ort=vm.runInContext('TURKIYE.ortalamalar',ctx);
+const klon=x=>JSON.parse(JSON.stringify(x));
+const trKur=(...l)=>{ctx.__KI=fx.tr(...l);vm.runInContext('TURKIYE.oku=()=>({veri:{}});TURKIYE.ortalamalar=()=>(a=>{const o=__KI[a];return o?{genel:k=>k in o?o[k]:null}:null})',ctx)};
+const trGeri=()=>{vm.runInContext('TURKIYE.oku=__oku;TURKIYE.ortalamalar=__ort',ctx);turkiyeKapat()};
+const sgn=v=>{const a=Math.round(Math.abs(v)*10)/10,t=a.toLocaleString('tr-TR',{minimumFractionDigits:1,maximumFractionDigits:1});return (v>0&&a>0?'+':v<0&&a>0?'−':'')+t};
+const kapsam=(st,g)=>({key:String(g),label:g+'. sınıf',grade:g,count:st.filter(s=>s.grade===g).length});
+const kurE=(st,g)=>R.kurumRapor(klon(st),kapsam(st,g),hepsiYok);
+const okulE=st=>R.kurumRapor(klon(st),{key:'okul',label:'Tüm okul',grade:null,count:st.length},hepsiYok);
+const modelRef=(st,oturum,ders,g=12)=>plain(EM.model(klon(st),{duzey:g,oturum,ders,donem:'tum'},null,vm.runInContext('TURKIYE.ortalamalar(TURKIYE.oku().veri)',ctx)));
+const EE_CUMLE='Her etüt için artış: aynı başlangıç düzeyindeki öğrencilere göre, etüt sayısı arttıkça Türkiye farkındaki ek artış (net). Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.';
+check('Etüt etkisi: every ders with etüts, TYT and AYT, shows ETUT_ETKI\'s own pooled γ and interval, its verdict phrase and the students counted',()=>{
+ trKur(fx.TYT_DERS,fx.AYT_DERS);
+ try{
+  const st=fx.ogrenciler(),k=kurE(st,12),s=k.etutEtki.sonuc;assert.equal(k.etutEtki.grade,12);assert.equal(s.var,true);
+  const svg=svgK(k,'2026-10-25'),txt=metin(svg);
+  assert.deepEqual(plain(Object.keys(s.oturumlar)),['TYT','AYT']);
+  assert.deepEqual(plain(s.oturumlar.TYT.satirlar.map(r=>r.ders).sort()),['Biyoloji','Fizik','Kimya','Matematik']);assert.deepEqual(plain(s.oturumlar.AYT.satirlar.map(r=>r.ders)),['Matematik'],'a ders with no AYT net is no AYT row');
+  for(const oturum of ['TYT','AYT'])for(const r of s.oturumlar[oturum].satirlar){
+   const m=modelRef(st,oturum,r.ders);
+   assert.deepEqual(plain(r.b),m.ozet.b,r.ders+' γ is the model\'s');assert.deepEqual(plain(r.ci),m.ozet.ci,r.ders+' interval is the model\'s');assert.equal(r.karar.k,m.karar.k);assert.equal(r.karar.yazi,m.karar.yazi);
+   assert.equal(r.n,m.ogrenciler.filter(o=>!o.aykiri).length);assert.equal(r.n,21);assert.equal(r.uc,0);
+   if(r.b!==null&&r.karar.k!=='veri'){assert(txt.includes('≈ '+sgn(m.ozet.b)+' net'),r.ders+' '+sgn(m.ozet.b));assert(txt.includes('('+sgn(m.ozet.ci[0])+' ile '+sgn(m.ozet.ci[1])+')'),r.ders+' interval')}
+  }
+  const by=(o,d)=>s.oturumlar[o].satirlar.find(r=>r.ders===d);
+  assert(Math.abs(by('TYT','Matematik').b-0.4)<1e-9&&by('TYT','Matematik').karar.k==='var','the planted +0,4');assert(Math.abs(by('AYT','Matematik').b-0.3)<1e-9);assert(Math.abs(by('TYT','Kimya').b+0.5)<1e-9&&by('TYT','Kimya').karar.k==='az');
+  assert(Math.abs(by('TYT','Fizik').b)<1e-9&&by('TYT','Fizik').karar.k==='yok','a rebound and a school trend are not credited');assert.equal(by('TYT','Biyoloji').b,null);assert.equal(by('TYT','Biyoloji').karar.k,'veri');
+  assert(txt.includes('≈ +0,4 net')&&txt.includes('≈ +0,3 net')&&txt.includes('≈ −0,5 net')&&txt.includes('≈ 0,0 net'),txt);assert(txt.includes('(+0,4 ile +0,4)'));
+  for(const t of ['artış belirgin','belirgin fark yok','etüt alanlarda daha az','yeterli veri yok'])assert(txt.includes(t),t);
+  assert(txt.includes(EE_CUMLE),'the plain explanation');assert(txt.includes('Her etüt için artış')&&txt.includes('olası aralık')&&txt.includes('Öğrenci')&&txt.includes('Hesaba katılmadı'));
+  assert(/yeterli veri yok/.test(txt.split('Biyoloji')[1]||''),'the row of the ders with no variation');
+  // The colours of the phrases: green, grey, red, muted.
+  for(const c of ['#dcf1ea','#e9ecea','#f6e0d9','#eef0ee'])assert(svg.includes('fill="'+c+'"'),c);
+  assert(txt.includes('TYT')&&txt.includes('AYT')&&!txt.includes('0 uç sonuç'));
+  // Only the pooled gain: no teacher, no per-teacher gain or total, no student name, no etüt count.
+  assert(!/öğretmen/i.test(txt)&&!/Toplam katkı|katkı|sıra/i.test(txt.replace(/okul içinde|Sıralamalar/g,'')),'no teacher figure');assert(!/SENTETİK ÖĞR/.test(svg)&&!svg.includes('SENTETİK ÖĞRETMEN'),'no names');assert(!/hoca/i.test(JSON.stringify(k.etutEtki)));
+  assert(!/etüt sayıları|Haftalık|Derse göre etüt|Öğrenci başına/.test(txt),'no etüt counts');assert(!svg.includes('…'));
+  // The scatter: the ders with the most students, no names, the fitted line.
+  const sc=s.enCok;assert(sc&&sc.n===Math.max(...[].concat(...Object.values(s.oturumlar).map(o=>o.satirlar.map(r=>r.n)))));assert.equal(sc.pts.length,sc.n);
+  assert(svg.includes('Etüt sayısı ve ek artış grafiği · '+sc.ders+' ('+sc.oturum+')'));assert(txt.includes('Etüt sayısı ve ek artış')&&txt.includes('her nokta bir öğrenci')&&txt.includes('Aldığı etüt sayısı')&&txt.includes('Çizgi: her etüt ≈ '+sgn(sc.b)+' net'));
+  assert.equal((svg.match(/<circle[^>]*fill="#fff"[^>]*stroke="#6799c5"/g)||[]).length,sc.n,'one dot per student');
+ }finally{trGeri()}
+});
+check('Etüt etkisi: extreme results are only a count, and the students counted leave them out',()=>{
+ trKur(fx.TYT_DERS,fx.AYT_DERS);
+ try{
+  const st=fx.ogrenciler();st[3].exams.find(e=>e.session==='TYT'&&e.exam===fx.adTyt(2)).nets.mat+=60;
+  const k=kurE(st,12),r=k.etutEtki.sonuc.oturumlar.TYT.satirlar.find(x=>x.ders==='Matematik'),m=modelRef(st,'TYT','Matematik'),txt=metin(svgK(k,'2026-10-25'));
+  const uc=m.uc.filter(u=>u.tur!=='ozet').length;assert(uc>=1,'the planted blank-test style result is flagged');assert.equal(r.uc,uc);assert.equal(r.n,m.ogrenciler.filter(o=>!o.aykiri).length);
+  assert.deepEqual(plain(r.b),m.ozet.b);assert(txt.includes(uc+' uç sonuç'),txt);assert(!/SENTETİK ÖĞR/.test(txt));
+ }finally{trGeri()}
+});
+check('Etüt etkisi: what is missing is said, with the page that adds it',()=>{
+ try{
+  trKur(fx.TYT_DERS,fx.AYT_DERS);
+  const say=(st,g=12)=>metin(svgK(kurE(st,g),'2026-10-25')).replace(/\s+/g,' ');
+  // No etüt report: the students have no etüt at all.
+  let t=say(fx.ogrenciler({ucret:false}));assert(t.includes('Etüt kaydı yok. Etütler sayfasından etüt raporu ekleyin.'),t);assert(!t.includes('≈ +')&&!t.includes('artış belirgin'));
+  // No Türkiye list: the real module has none stored.
+  trGeri();t=say(fx.ogrenciler());assert(t.includes('Etüt etkisi için Türkiye geneli listesi gerekir; Türkiye geneli sayfasından ekleyin.'),t);assert(!t.includes('≈ +'));
+  // A list that does not have the school's exams: the same message (the raw nets are not a comparison).
+  trKur(fx.TYT_DERS,fx.AYT_DERS);ctx.__KI={};t=say(fx.ogrenciler());assert(t.includes('Etüt etkisi için Türkiye geneli listesi gerekir'),t);ctx.__KI=fx.tr(fx.TYT_DERS,fx.AYT_DERS);
+  // One exam only: no two exams in one session.
+  let st=fx.ogrenciler();st.forEach(s=>{s.exams=s.exams.slice(0,1)});t=say(st);assert(t.includes('Etüt etkisi için aynı oturumda en az iki deneme gerekir. Sıralamalar sayfasından deneme listesi ekleyin.'),t);
+  // Etüts only after the last exam.
+  st=fx.ogrenciler();st.forEach(s=>s.sessions.forEach(x=>{x.date='2026-10-25'}));t=say(st);assert(t.includes('Denemeler arasına düşen etüt kaydı yok. Etütler sayfasından etüt raporu ekleyin.'),t);
+  // TYT without a second exam but AYT with: the TYT column says so, the AYT column is drawn.
+  st=fx.ogrenciler();st.forEach(s=>{s.exams=s.exams.filter(e=>e.session==='AYT'||e.exam===fx.adTyt(0))});t=say(st);assert(t.includes('Etüt etkisi için aynı oturumda en az iki deneme gerekir.')&&t.includes('≈ +0,3 net'),t);
+  assert.equal(kurE(st,12).etutEtki.sonuc.oturumlar.TYT.satirlar.length,0);
+  // Whole school: a grade with nothing is named under the table.
+  trKur(fx.TYT_DERS,fx.AYT_DERS);const ok=metin(svgK(okulE([...fx.ogrenciler(),...fx.ogrenciler({sinif:11,ucret:false})]),'2026-10-25'));assert(ok.includes('11. sınıf: Etüt kaydı yok. Etütler sayfasından etüt raporu ekleyin.'),ok);
+  // A scope with no grade has no etüt etkisi: every grade without etüt says so in one sentence.
+  const hic=metin(svgK(okulE(fx.ogrenciler({ucret:false})),'2026-10-25'));assert(hic.includes('Etüt kaydı yok. Etütler sayfasından etüt raporu ekleyin.'));
+ }finally{trGeri()}
+});
+check('Tüm okul: one compact ders × grade table per session (TYT, then AYT) with the per-etüt value and the verdict phrase; no per-grade teacher or count',()=>{
+ trKur(fx.TYT_DERS,fx.AYT_DERS);
+ try{
+  const g11=fx.TYT_DERS.slice(0,2).map(c=>({...c,mod:'artis',kat:-0.5}));const st=[...fx.ogrenciler(),...fx.ogrenciler({sinif:11,tyt:[{...fx.TYT_DERS[0],kat:0.2},{...fx.TYT_DERS[1],mod:'azalan',kat:-0.5}],ayt:[]})];
+  const k=okulE(st);assert.deepEqual(plain(k.etutEtki.grades.map(g=>[g.grade,g.count,g.sonuc.var])),[[12,21,true],[11,21,true]]);
+  const svg=svgK(k,'2026-10-25'),txt=metin(svg).replace(/\s+/g,' ');
+  const cell=(g,o,d)=>k.etutEtki.grades.find(x=>x.grade===g).sonuc.oturumlar[o].satirlar.find(r=>r.ders===d);
+  for(const [g,o,d] of [[12,'TYT','Matematik'],[12,'TYT','Kimya'],[12,'AYT','Matematik'],[11,'TYT','Matematik'],[11,'TYT','Fizik']]){const r=cell(g,o,d),m=modelRef(st.filter(s=>s.grade===g),o,d,g);assert.deepEqual(plain(r.b),m.ozet.b,g+' '+o+' '+d);assert.deepEqual(plain(r.ci),m.ozet.ci);assert(svg.includes('aria-label="'+g+'. sınıf · '+d+' ('+o+') · her etüt ≈ '+sgn(r.b)+' net ('+sgn(r.ci[0])+' ile '+sgn(r.ci[1])+')'),g+o+d)}
+  assert(txt.includes('12. sınıf')&&txt.includes('11. sınıf')&&txt.includes('Her etüt için artış (net) ve karar')&&txt.includes(EE_CUMLE));
+  assert(txt.indexOf('TYT',txt.indexOf('Etüt etkisi'))<txt.indexOf('AYT',txt.indexOf('Etüt etkisi')),'TYT first, then AYT');
+  for(const t of ['artış belirgin','etüt alanlarda daha az','+0,4','+0,2','−0,5'])assert(txt.includes(t),t);
+  assert(!/öğretmen|SENTETİK ÖĞR|uç sonuç hesaba/i.test(txt.replace(/Uç sonuç: diğerlerinden/,'')),'no names');assert(!svg.includes('…'));
+  assert.deepEqual(plain(Object.keys(k).sort()),['count','denemeler','etutEtki','odev','school','scope','sources','subeCount','turkiye']);
+ }finally{trGeri()}
+});
+check('page structure: Türkiye geneli, Etüt etkisi, Ödevler (with the scatter beside them in a grade), each page numbered; no Etütler, Devamsızlık or Şube blocks',()=>{
+ trKur(fx.TYT_DERS,fx.AYT_DERS);
+ try{
+  const st=fx.ogrenciler(),kartlar=pages=>plain(pages).map(p=>[...p.matchAll(/data-kart="([^"]+)"/g)].map(m=>m[1]));
+  const p12=R.svgKurum(kurE(st,12),'2026-10-25'),k12=kartlar(p12);assert.deepEqual(k12.flat(),['Türkiye geneli','Etüt etkisi','Ödevler ve etüt grafiği']);assert(p12.length>=1);
+  const pok=R.svgKurum(okulE([...st,...fx.ogrenciler({sinif:11,tyt:fx.TYT_DERS.slice(0,2),ayt:[]})]),'2026-10-25'),kok=kartlar(pok);assert.deepEqual(kok.flat(),['Türkiye geneli','Etüt etkisi'],'no ödev report and no scatter: no empty Ödevler page');assert(plain(pok)[0].includes('Ödev raporu: yok'),'the header says so');
+  for(const ps of [p12,pok])ps.forEach((p,i)=>{assert(p.includes('Sayfa '+(i+1)+' / '+ps.length));assert.match(p,/^<svg [^>]*viewBox="0 0 1190\.55 841\.89"/);assert(!p.includes('Devamsızlık')&&!p.includes('Şube karşılaştırması')&&!/data-kart="Etütler"/.test(p))});
+  // With a Türkiye list for the grade the dilim cards fill page 1 and the rest follows on page 2.
+  vm.runInContext('TURKIYE.oku=__oku',ctx);turkiyeKapat();yukle({12:[TA,GE,TB]});ctx.__KI=fx.tr(fx.TYT_DERS,fx.AYT_DERS);vm.runInContext('TURKIYE.ortalamalar=()=>(a=>{const o=__KI[a];return o?{genel:k=>k in o?o[k]:null}:null})',ctx);
+  const lk=R.svgKurum(R.kurumRapor(klon(st),kapsam(st,12),R.kurumTurkiye),'2026-10-25'),kl=kartlar(lk);assert.deepEqual(kl[0],['Türkiye geneli']);assert.deepEqual(kl.flat(),['Türkiye geneli','Etüt etkisi','Ödevler ve etüt grafiği']);assert.equal(lk.length,kl.length);
+ }finally{trGeri()}
+});
+check('no devamsızlık, no şube figures, no teacher, no etüt count and no student name in any scope; the header keeps "N öğrenci · M şube"',()=>{
  yukle({12:['27-YKS-1201','27-YKS-1202','27-YKS-1203']});
- for(const key of ['okul','12','11']){const svg=svgK(canli(key),'2026-10-25');
-  for(const n of NAMES)assert(!svg.includes(n),key+' leaks '+n);assert(!/SENTETİK (BİR|İKİ|ÜÇ|DÖRT|BEŞ|ALTI|YEDİ)/.test(svg));
-  assert(svg.includes('SENTETİK HOCA A')||key==='11'&&svg.includes('SENTETİK HOCA A'));assert(svg.includes('Sentetik Kartal Anadolu Lisesi'));
-  assert(!/(^|\D)\d{11}(\D|$)/.test(metin(svg)),'no TC kimlik style numbers');assert.match(svg,/^<svg [^>]*viewBox="0 0 1190\.55 841\.89"/);}
- const head=svgK(canli('12'),'2026-10-25');for(const t of ['Kurum raporu · 12. sınıf','5 öğrenci · 2 şube','Rapor tarihi: 25.10.2026','Etüt: 14.09.2026 – 16.10.2026','Yoklama: 01.10.2026 – 12.10.2026','Ödev raporu: 24.10.2026','Deneme: 20.09.2026 – 18.10.2026'])assert(head.includes(t),t);
- turkiyeKapat();
+ try{
+  for(const key of ['okul','12','11']){const sc=R.kurumKapsamlari(S).find(x=>x.key===key),k=R.kurumRapor(S,sc,undefined,eeYok),pages=R.svgKurum(k,'2026-10-25'),svg=pages.join(''),txt=metin(svg);
+   for(const n of NAMES)assert(!svg.includes(n),key+' leaks '+n);assert(!/SENTETİK (BİR|İKİ|ÜÇ|DÖRT|BEŞ|ALTI|YEDİ)/.test(svg));
+   for(const t of ['Devamsızlık','devamsız','Yoklama','kaçırılan','Şube karşılaştırması','Öğretmene göre','Derse göre etüt','Haftalık','Öğrenci başına','SENTETİK HOCA'])assert(!svg.includes(t),key+' still has '+t);
+   assert(!/öğretmen/i.test(txt),key+' names teachers');assert(!/(^|[^\d])(9|10|11|12)\/[A-Z]([^\p{L}]|$)/u.test(txt)&&!/Şube ·/.test(svg),key+' has a per-şube figure');
+   assert(svg.includes('Sentetik Kartal Anadolu Lisesi'));assert(!/(^|\D)\d{11}(\D|$)/.test(txt),'no TC kimlik style numbers');pages.forEach(p=>assert.match(p,/^<svg [^>]*viewBox="0 0 1190\.55 841\.89"/));
+   assert.deepEqual(plain(Object.keys(k).sort()),['count','denemeler','etutEtki','odev','school','scope','sources','subeCount','turkiye'],'the model keeps nothing of the removed blocks');}
+  const head=svgK(R.kurumRapor(S,R.kurumKapsamlari(S).find(x=>x.key==='12'),undefined,eeYok),'2026-10-25');
+  for(const t of ['Kurum raporu · 12. sınıf','5 öğrenci · 2 şube','Rapor tarihi: 25.10.2026','Etüt: 14.09.2026 – 16.10.2026','Ödev raporu: 24.10.2026','Deneme: 20.09.2026 – 18.10.2026'])assert(head.includes(t),t);
+  assert(!head.includes('Yoklama:'),'no yoklama range in the header');assert(metin(svgK(R.kurumRapor(S,R.kurumKapsamlari(S)[0],undefined,eeYok),'2026-10-25')).includes('7 öğrenci · 3 şube'));
+ }finally{turkiyeKapat()}
 });
-check('the report is aggregate only: scope with no students gives no page, numbers match the student model',()=>{
- const direct=S.reduce((n,s)=>n+s.sessions.length,0),k=rapor('okul');assert.equal(k.etut.total,direct);
- assert.equal(k.odev.total,S.flatMap(s=>s.homework).reduce((n,h)=>n+h.values[0],0));
- const miss=S.reduce((n,s)=>n+s.daily.missed,0);assert.equal(k.devam.missed,miss);
- assert.equal(plain(R.kurumKapsamlari([])).length,1);
-});
-check('Şube karşılaştırması stays inside its card with many şubes (two columns)',()=>{
- const many=[];for(let g of [9,10,11,12])for(const sube of 'ABCDE')many.push({no:g+sube,name:'SENTETİK '+g+sube,cls:g+'/'+sube,grade:g});
- const ms=R.merge([{kind:'exam',students:many,exams:many.map(p=>({...p,exam:'Sentetik Deneme',date:'2026-10-01',session:'TYT',nets:{turkce:20}}))}],[]).students;
- const k=R.kurumRapor(ms,R.kurumKapsamlari(ms)[0],hepsiYok);assert.equal(k.subeler.length,20);const svg=svgK(k,'2026-10-25');assert(svg.includes('aria-label="Şube · 9/A"')&&svg.includes('aria-label="Şube · 12/E"')&&svg.includes('aria-label="Toplam · Tüm okul"'));
-});
-check('every teacher and every ders is listed in full (14 teachers, 12 ödev dersler), on as many pages as needed, with page numbers',()=>{
- turkiyeKapat();
- const ppl=Array.from({length:6},(_,i)=>({no:'9'+i,name:'SENTETİK HER '+i,cls:'12/'+'ABC'[i%3],grade:12})),T=Array.from({length:14},(_,i)=>'SENTETİK ÖĞRETMEN NUMARA '+(i+1)+(i===13?' UZUNCA SOYADLI':'')),C=['MATEMATİK TYT','MATEMATİK AYT','FİZİK','KİMYA','BİYOLOJİ','TÜRKÇE','EDEBİYAT','TARİH','COĞRAFYA','FELSEFE','DİN KÜLTÜRÜ','GEOMETRİ','İNGİLİZCE'];
- const ses=T.map((t,i)=>et(ppl[i%6],'2026-09-'+String(15+i%10).padStart(2,'0'),C[i%C.length],t)),hws=C.map((c,i)=>hw(ppl[i%6],c,[3,1,0,0,0,0]));
- const ms=R.merge([{kind:'exam',students:ppl,exams:[],school:'Sentetik Kartal Anadolu Lisesi'},{kind:'homework',students:ppl,homework:hws,reportDate:'2026-10-24'},{kind:'sessions',students:ppl,sessions:ses,start:T0,end:T1}],[]).students;
- const k=R.kurumRapor(ms,R.kurumKapsamlari(ms)[0],hepsiYok),pages=R.svgKurum(k,'2026-10-25'),txt=metin(pages.join(''));
- assert.equal(k.etut.teachers.length,14);assert.equal(k.odev.courses.length,13);
- for(const t of T)assert(txt.includes(t),t);for(const c of k.etut.courses)assert(txt.includes(c.name),c.name);for(const c of k.odev.courses)assert(txt.includes(c.course),c.course);
- assert(!pages.join('').includes('…')&&!txt.includes('en çok')&&!txt.includes('Diğer ('),'nothing is cut or grouped in the lists');
- pages.forEach((p,i)=>{assert(p.includes('Sayfa '+(i+1)+' / '+pages.length));assert.match(p,/^<svg [^>]*viewBox="0 0 1190\.55 841\.89"/)});
- // Many şubes: the Şube table continues on following pages with every şube listed once.
- const many=[];for(const g of [9,10,11,12])for(const sube of 'ABCDEFGHIJ')many.push({no:g+sube,name:'SENTETİK '+g+sube,cls:g+'/'+sube,grade:g});
- const mm=R.merge([{kind:'exam',students:many,exams:many.map(p=>({...p,exam:'Sentetik Deneme',date:'2026-10-01',session:'TYT',nets:{turkce:20}}))}],[]).students,pg=R.svgKurum(R.kurumRapor(mm,R.kurumKapsamlari(mm)[0],hepsiYok),'2026-10-25');
- assert(pg.length>=2);const t2=metin(pg.join(''));for(const g of [9,10,11,12])for(const sube of 'ABCDEFGHIJ')assert.equal((pg.join('').match(new RegExp('aria-label="Şube · '+g+'/'+sube+'"','g'))||[]).length,1);assert(t2.includes('(devam)')||pg.length>=1);
-});
-check('a grade scope puts the Türkiye geneli block on page 1 and Etütler, Ödevler, Devamsızlık, Şube on the next page',()=>{
- yukle({12:[TA,GE,TB]});const pages=R.svgKurum(canli('12'),'2026-10-25');assert(pages.length>=2);
- assert(pages[0].includes('data-kart="Türkiye geneli"')&&!pages[0].includes('data-kart="Etütler"'));
- for(const n of ['Etütler','Ödevler ve devamsızlık','Şube karşılaştırması'])assert(pages.slice(1).join('').includes('data-kart="'+n+'"'),n);
- turkiyeKapat();
+check('a long school: ten TYT and four AYT dersler and thirteen ödev dersler are all listed in full, on numbered pages, nothing cut',()=>{
+ trKur(fx.TYT_UZUN,fx.AYT_UZUN);
+ try{
+  const st=fx.ogrenciler({tyt:fx.TYT_UZUN,ayt:fx.AYT_UZUN}),C=['MATEMATİK TYT','MATEMATİK AYT','FİZİK','KİMYA','BİYOLOJİ','TÜRKÇE','EDEBİYAT','TARİH','COĞRAFYA','FELSEFE','DİN KÜLTÜRÜ','GEOMETRİ','İNGİLİZCE'];
+  C.forEach((c,i)=>st[i].homework=[{course:c,values:[4,2,1,0,0,1,0],reportDate:'2026-10-24'}]);
+  const k=kurE(st,12),pages=R.svgKurum(k,'2026-10-25'),txt=metin(pages.join(''));
+  assert.equal(k.odev.courses.length,13);assert.equal(k.etutEtki.sonuc.oturumlar.TYT.satirlar.length,10);assert.equal(k.etutEtki.sonuc.oturumlar.AYT.satirlar.length,4);
+  for(const d of ['Matematik','Türkçe','Fizik','Kimya','Biyoloji','Tarih','Coğrafya','Felsefe','Din Kültürü','Geometri'])assert((txt.match(new RegExp(d,'g'))||[]).length>=1,d);
+  for(const c of k.odev.courses)assert(txt.includes(c.course),c.course);
+  assert(!pages.join('').includes('…'));pages.forEach((p,i)=>assert(p.includes('Sayfa '+(i+1)+' / '+pages.length)));assert(pages.length>=2);
+  const ok=R.svgKurum(okulE(st),'2026-10-25').join('');assert(!ok.includes('…'));
+ }finally{trGeri()}
 });
 console.log(passed+' kurum report checks passed');
