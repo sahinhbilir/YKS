@@ -96,6 +96,7 @@ const yukle=(grades)=>{ // grades: {12:[exam names], 11:[exam names]} → D.turk
 const turkiyeKapat=()=>vm.runInContext('D=varsayilan();D.rol="rehber";D.ogr=[]',ctx);
 const canli=key=>{const sc=R.kurumKapsamlari(S).find(x=>x.key===key);return R.kurumRapor(S,sc)};
 const TA='27-YKS-1201 TARAMA',GE='27-YKS-1202',TB='27-YKS-1203 TARAMA',GD='27-YKS-1204';
+const ctxT=d=>ctx.T.dilimdenT(d);
 const mT=(extra="")=>plain(vm.runInContext("TURKIYE.model(TURKIYE.oku().veri,{duzey:'d12',oturum:'TYT',mod:'tpuan',aralik:'tum'})",ctx)).toplam.tseri.map(p=>p&&p.t);
 check('Türkiye geneli: ders ΔT compares the latest Tarama with the previous Tarama (a Genel exam between is skipped); the totals keep first → latest',()=>{
  yukle({12:[TA,GE,TB,GD]});
@@ -109,7 +110,12 @@ check('Türkiye geneli: ders ΔT compares the latest Tarama with the previous Ta
  assert(tyt.sira,'a place is given');assert(tyt.sira.yak===true||tyt.sira.yak===false);
  const ders=c.lessons.find(d=>d.ad==='Türkçe');assert(ders&&Number.isFinite(ders.tNow)&&Number.isFinite(ders.delta));assert.equal(ders.delta,ders.t[2]-ders.t[0],'a ders compares tarama → tarama');assert.equal(ders.tNow,ders.t[2]);assert.notEqual(ders.delta,ders.t[3]-ders.t[0]);
  const txt=metin(svgK(canli('12'),'2026-10-25'));
- for(const t of ['ΔT: 1201 → 1203 (tarama → tarama)','Ders karşılaştırması: 1201 → 1203 (tarama)','Kutulardaki ΔT: ilk → son deneme (1201 → 1204)','Türkiye ortalaması (T = 50)','TYT toplam · T puanı','TYT dersleri · T puanı','Tarama','Genel'])assert(txt.includes(t),t);
+ for(const t of ['Değişim: 1201 → 1203 (tarama → tarama)','Ders karşılaştırması: 1201 → 1203 (tarama)','Değişim: ilk → son deneme (1201 → 1204)','Türkiye’nin ortasındaki okul','TYT toplam · Türkiye dilimi','TYT dersleri · Türkiye dilimi','Türkiye yüzdelik dilimi (küçük = daha iyi)','Tarama','Genel'])assert(txt.includes(t),t);
+ // The headline number is the dilim, said the way ÖSYM says it, with the place beside it and a plain band under it.
+ const dTyt=ctx.T.dilimNokta(plain(vm.runInContext("TURKIYE.model(TURKIYE.oku().veri,{duzey:'d12',oturum:'TYT',mod:'tpuan',aralik:'tum'})",ctx)).toplam.tseri[3]);
+ assert.equal(tyt.dilNow,dTyt,'the tile shows the module\'s own dilim');assert(txt.includes(ctx.T.dilimYazi(tyt.dilNow)),ctx.T.dilimYazi(tyt.dilNow));assert(txt.includes(ctx.T.dilimBandi(tyt.dilNow)));
+ assert(Math.abs(tyt.dilNow-100*(1-ctx.T.normCdf((tyt.tNow-50)/10)))<1e-9,'the dilim is the T said in words');
+ assert(/okul içinde (≈ )?\d+\./.test(txt),'the place beside it: ≈ N okul içinde k.');
  assert(!txt.includes('Türkiye geneli listesi yok'));
  const bands=(svgK(canli('12'),'2026-10-25').match(/fill="#e1efe9"/g)||[]).length;assert(bands>=2,'the compared Tarama exams are shaded in the main charts');
 });
@@ -125,19 +131,54 @@ check('Türkiye geneli: Sıralamalar\' Tarama / Genel choice for an exam wins ov
   c=canli('12').turkiye;assert.deepEqual(plain(c.exams.map(e=>e.tur)),['genel','tarama','genel'],'a stored choice beats the name');assert.equal(c.cards.TYT.pair,null);
  }finally{ctx.__o=asil;vm.runInContext('SIRALAMA.oku=__o',ctx)}
 });
-check('ΔT pill colours follow the Türkiye page rule: green ▲ above +0,5, red ▼ below −0,5, grey within',()=>{
+check('change pills: the colour and the arrow still come from ΔT, the words are the dilim change',()=>{
  yukle({12:[TA,GE,TB]});
- const mk=d=>{const k=canli('12');for(const s of k.turkiye.cards.TYT.series)s.delta=d;for(const l of k.turkiye.cards.TYT.lessons)l.delta=d;return svgK(k,'2026-10-25')};
- assert(mk(2.34).includes('fill="#dcf1ea"')&&mk(2.34).includes('▲ +2,3 T'));
- assert(mk(-1.2).includes('fill="#f6e0d9"')&&mk(-1.2).includes('▼ −1,2 T'));
- const g=mk(.4);assert(g.includes('fill="#e9ecea"')&&g.includes('+0,4 T')&&!g.includes('▲ +0,4'));
+ const mk=d=>{const k=canli('12');for(const c of [k.turkiye.cards.TYT,k.turkiye.cards.AYT].filter(Boolean)){for(const s of c.series){s.delta=d;s.dilFirst=31.2;s.dilLast=12.4}for(const l of c.lessons){l.delta=d;l.dilOnce=31.2;l.dilSon=12.4}}return svgK(k,'2026-10-25')};
+ let v=mk(2.34);assert(v.includes('fill="#dcf1ea"')&&v.includes('▲ ilk %31 → ilk %12')&&v.includes('▲ %31 → %12'),'green ▲ above +0,5 T: total tiles say "ilk", the small ders boxes do not');
+ v=mk(-1.2);assert(v.includes('fill="#f6e0d9"')&&v.includes('▼ ilk %31 → ilk %12')&&v.includes('▼ %31 → %12'),'red ▼ below −0,5 T');
+ const g=mk(.4);assert(g.includes('fill="#e9ecea"')&&g.includes('>ilk %31 → ilk %12<')&&g.includes('>%31 → %12<')&&!g.includes('▲ ilk')&&!g.includes('▼ ilk')&&!g.includes('▲ %')&&!g.includes('▼ %'),'grey within ±0,5 T: no arrow');
+ assert(!/[+−]\d,\d T/.test(metin(v)),'no ΔT figure in the page');
+});
+check('dilim: the formula, the format (whole above 10, one decimal below, never 0), the verbal bands and complete lists',()=>{
+ const T=ctx.T;
+ for(const t of [20,35,45,50,55,61.6,70,80])assert(Math.abs(T.dilimT(t)-100*(1-T.normCdf((t-50)/10)))<1e-12);
+ assert.equal(T.dilimT(50),50);assert(Math.abs(T.dilimT(60)-15.8655)<1e-3);assert(Math.abs(T.dilimT(70)-2.2750)<1e-3);
+ for(const [d,y] of [[12.4,'ilk %12'],[11.5,'ilk %12'],[10,'ilk %10'],[9.96,'ilk %10'],[8.43,'ilk %8,4'],[0.55,'ilk %0,6'],[0.04,'ilk %0,1'],[0,'ilk %0,1'],[30.6,'ilk %31'],[99.7,'ilk %100']])assert.equal(T.dilimYazi(d),y,String(d));
+ assert.equal(T.dilimYazi(null),'—');assert.equal(T.dilimGecis(31.2,12.4),'ilk %31 → ilk %12');
+ // The bands: the same cut points as T 70 / 60 / 55 / 45 / 40.
+ for(const [d,b] of [[0.1,'Türkiye’nin en üst okulları arasında'],[2.3,'Türkiye’nin en üst okulları arasında'],[2.31,'Ortalamanın belirgin üstünde'],[15.9,'Ortalamanın belirgin üstünde'],[15.91,'Ortalamanın üstünde'],[30.9,'Ortalamanın üstünde'],[30.91,'Türkiye ortalaması civarında'],[50,'Türkiye ortalaması civarında'],[69.09,'Türkiye ortalaması civarında'],[69.1,'Ortalamanın altında'],[84.09,'Ortalamanın altında'],[84.1,'Ortalamanın belirgin altında'],[99,'Ortalamanın belirgin altında']])assert.equal(T.dilimBandi(d),b,String(d));
+ assert.equal(T.dilimBandi(T.dilimT(70)),'Türkiye’nin en üst okulları arasında');assert.equal(T.dilimBandi(T.dilimT(60)),'Ortalamanın belirgin üstünde');assert.equal(T.dilimBandi(T.dilimT(55)),'Ortalamanın üstünde');assert.equal(T.dilimBandi(T.dilimT(52)),'Türkiye ortalaması civarında');assert.equal(T.dilimBandi(T.dilimT(40)),'Ortalamanın belirgin altında');
+ // Complete lists: the exact place ÷ the number of schools, so the dilim and the place never disagree; otherwise the T said as a dilim.
+ assert.equal(T.dilimNokta({t:61,tam:true,sira:3,n:60}),5);assert.equal(T.dilimNokta({t:61,tam:false,sira:3,n:180}),T.dilimT(61));assert.equal(T.dilimNokta({t:null}),null);
+ assert.equal(T.siraCumle({sira:23,tahmin:null,n:183,tam:false}),'≈ 183 okul içinde 23.');assert.equal(T.siraCumle({sira:3,tahmin:null,n:60,tam:true}),'60 okul içinde 3.');assert.equal(T.siraCumle({sira:null,tahmin:23,n:183,tam:false}),'≈ 183 okul içinde ≈ 23.');
+ // The estimated place agrees with the dilim: sıra ≈ 1 + (N − 1)(1 − Φ(z)).
+ const N=180,t=61.6;assert.equal(T.tahminiSira(70+(t-50)/10*8,70,8,N),Math.round(1+(N-1)*T.dilimT(t)/100));
+ // The chart axis: z scale, labelled in dilim, ilk %1 at the top and ilk %95 at the bottom.
+ for(const d of [1,5,15,30,50,70,85,95])assert(Math.abs(T.dilimdenT(d)-(50+10*T.normTers(1-d/100)))<1e-12);
+ assert.equal(T.dilimdenT(50),50);assert(T.dilimdenT(1)>T.dilimdenT(5)&&T.dilimdenT(5)>T.dilimdenT(50)&&T.dilimdenT(50)>T.dilimdenT(95));
+});
+check('the Kurum charts have the inverted dilim axis (ilk %1 at the top), the dashed %50 line, and no headline T text',()=>{
+ yukle({12:[TA,GE,TB,GD]});
+ const svg=svgK(canli('12'),'2026-10-25'),txt=metin(svg);
+ for(const oturum of ['TYT'])for(const t of ['ilk %1','ilk %5','ilk %15','ilk %30','ilk %50','ilk %70','ilk %85','ilk %95'])assert(txt.includes(t),t);
+ const y=lab=>Number((new RegExp('<text x="[^"]*" y="([^"]*)"[^>]*>'+lab+'</text>').exec(svg)||[])[1]);
+ assert(y('ilk %1')<y('ilk %5')&&y('ilk %5')<y('ilk %15')&&y('ilk %15')<y('ilk %50')&&y('ilk %50')<y('ilk %95'),'smaller dilim is higher up');
+ assert(Math.abs((y('ilk %50')-y('ilk %1'))-(y('ilk %95')-y('ilk %50'))*(Math.abs(ctxT(50)-ctxT(1))/Math.abs(ctxT(50)-ctxT(95))))<1,'on the z scale, not a linear dilim axis');
+ assert(/stroke-dasharray="5 4"/.test(svg),'the dashed %50 line');
+ // No headline T anywhere on the page: only the hover titles (and the notes) may say T.
+ assert(!/(^|[^\p{L}])T([^\p{L}]|$)/u.test(txt),'no stand-alone T');assert(!txt.includes('ΔT')&&!txt.includes('T puanı')&&!txt.includes('T = 50'));
+ assert(/<title>[^<]*T \d/.test(svg),'the hover titles keep T');
+ const alt=svgK(canli('okul'),'2026-10-25'),tx=metin(alt);assert(!/(^|[^\p{L}])T([^\p{L}]|$)/u.test(tx)&&!tx.includes('ΔT')&&!tx.includes('T puanı'));
+ for(const t of ['TYT dilimi','Değişim','Dilim gelişimi','▲ yeşil: üst dilime çıktı (iyileşti) · ▼ kırmızı: alt dilime düştü'])assert(tx.includes(t),t);
+ assert(/ilk %\d/.test(tx)&&/okul içinde/.test(tx));
+ turkiyeKapat();
 });
 check('TYT and AYT are separate charts, and a missing exam between two points is bridged by one continuous line',()=>{
  yukle({12:[TA,GE,TB,GD]});const k=canli('12'),b=k.turkiye;
- b.cards.TYT.series=[{...b.cards.TYT.series[0],t:[52,null,57,55]}];
+ b.cards.TYT.series=[{...b.cards.TYT.series[0],t:[52,null,57,55],dil:[40,null,20,25]}];
  b.cards.AYT={pair:{once:0,son:3},pairText:'1201 → 1204 (tarama → tarama)',sonKisa:'1204',series:[
-  {key:'SAY',label:'SAY toplam',color:'#487ba7',t:[50,null,null,58],first:0,last:3,tNow:58,delta:8,n:180,tam:false,sira:{v:20,yak:true}},{key:'EA',label:'EA toplam',color:'#78629f',t:[49,53,null,54],first:0,last:3,tNow:54,delta:5,n:180,tam:false,sira:null}],lessons:[{ad:'Matematik',t:[50,51,null,55],tNow:55,delta:5}]};
- const svg=svgK(k,'2026-10-25'),tytG=svg.split('aria-label="TYT T puanı grafiği"')[1].split('</g><text')[0],aytG=svg.split('aria-label="AYT T puanı grafiği"')[1].split('</g><text')[0];
+  {key:'SAY',label:'SAY toplam',color:'#487ba7',t:[50,null,null,58],dil:[50,null,null,20],dilNow:20,dilFirst:50,dilLast:20,first:0,last:3,tNow:58,delta:8,n:180,tam:false,sira:{v:20,yak:true}},{key:'EA',label:'EA toplam',color:'#78629f',t:[49,53,null,54],dil:[54,35,null,34],dilNow:34,dilFirst:54,dilLast:34,first:0,last:3,tNow:54,delta:5,n:180,tam:false,sira:null}],lessons:[{ad:'Matematik',t:[50,51,null,55],dil:[50,46,null,30],dilNow:30,dilOnce:50,dilSon:30,tNow:55,delta:5}]};
+ const svg=svgK(k,'2026-10-25'),tytG=svg.split('aria-label="TYT dilim grafiği"')[1].split('</g><text')[0],aytG=svg.split('aria-label="AYT dilim grafiği"')[1].split('</g><text')[0];
  assert(tytG.includes('data-seri="TYT toplam"')&&!/data-seri="(SAY|EA|SÖZ)/.test(tytG),'TYT chart has only the TYT total');
  assert(aytG.includes('data-seri="SAY toplam"')&&aytG.includes('data-seri="EA toplam"')&&!aytG.includes('data-seri="TYT toplam"'),'AYT chart has the alan totals only');
  const pts=g=>g.match(/<polyline data-seri="TYT toplam" points="([^"]+)"/)[1].split(' ').map(p=>p.split(',').map(Number));
@@ -153,12 +194,12 @@ check('without a Türkiye geneli list for the grade: own TYT average per exam an
  assert(svg.includes('Okul ortalaması'),'the fallback chart is the school\'s own average');assert.equal(k.denemeler.length,2);assert.equal(k.denemeler[1].avg,(32+34)/2);
  turkiyeKapat();const k2=canli('12');assert.equal(k2.turkiye.var,false);assert(metin(svgK(k2,'2026-10-25')).includes('Türkiye geneli listesi yok; Türkiye geneli sayfasından ekleyin.'));
 });
-check('Tüm okul: one row per grade, a grade with a list shows T, ΔT and sıra; one without says so',()=>{
+check('Tüm okul: one row per grade, a grade with a list shows the dilim, its change and sıra; one without says so',()=>{
  yukle({12:[TA,GE,TB]});
  const k=canli('okul');assert.deepEqual(plain(k.turkiye.grades.map(g=>[g.grade,g.count,g.block.var])),[[12,5,true],[11,2,false]]);
  const svg=svgK(k,'2026-10-25');assert(svg.includes('aria-label="12. sınıf Türkiye geneli"')&&svg.includes('aria-label="11. sınıf Türkiye geneli"'));
  assert(metin(svg).includes('Türkiye geneli listesi yok; Türkiye geneli sayfasından ekleyin.'));assert(svg.includes('Okul ort. TYT neti: 33'));
- assert(!metin(svg).includes('dersleri · T puanı'),'the whole-school page has no per-ders charts');assert(metin(svg).includes('1201 → 1203'),'the first → latest exam is named');
+ assert(!metin(svg).includes('dersleri · Türkiye dilimi'),'the whole-school page has no per-ders charts');assert(metin(svg).includes('1201 → 1203'),'the first → latest exam is named');
 });
 check('a list without the school: the page asks for the school to be chosen',()=>{
  yukle({12:['27-YKS-1201','27-YKS-1202']});vm.runInContext("(()=>{const v=D.turkiye;v.okul=null;})()",ctx);
