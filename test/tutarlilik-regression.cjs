@@ -63,20 +63,23 @@ check('attendance: Yoklama and Öğrenci raporları call the same days missed (t
   assert(m.k.length > 0); for (const [a, b] of m.k) assert.equal(a, b);
 });
 
-check('Etüt etkisi: same-titled exams stay apart, six students are six rows, the etüt students are measured against the ones with no etüt, an etüt only before the second exam still draws the chart and the teacher', () => {
+check('Etüt etkisi: same-titled exams stay apart, six students are six rows, the etüt students are measured against the ones with no etüt (the cross-student number), one ders alone cannot be compared with the student’s other dersler, an etüt only before the second exam still draws the intervals and the teacher', () => {
   const m = etki(ogrenciler());
   assert.equal(m.sinavlar.length, 3); assert.deepEqual(m.sinavlar.map(e => e.key), [0, 1, 2].map(KEY));
   // Six students are six students (never counted once per pair of exams): three with etüts, three without; two pairs of exams each: twelve intervals.
   assert.equal(m.hepsi.length, 6); assert.equal(m.ogrenciler.length, 6); assert.equal(m.kontrol, 3); assert.equal(m.disarida.length, 0); assert.equal(m.aralik, 12); assert.equal(m.kip, 'ham', 'no Türkiye list in this fixture: the raw net stands in');
   // 1–3 gain 4 from their first etüt to the last exam, 4–6 (no etüt) gain 2 whatever they start at: the difference is +2 for each of the three.
-  for (const r of m.ogrenciler.filter(x => x.etut)) assert.deepEqual([r.toplam, r.beklenen, r.fark], [4, 2, 2]);
-  assert.equal(m.ozet.n, 3); assert.equal(m.ozet.fark, 2); assert(Math.abs(m.ozet.b - 1) < 1e-9, 'one etüt is worth one net here'); assert.equal(m.karar.k, 'veri', 'three students are too few for a verdict');
-  assert.equal(m.hocalar.length, 1); assert.deepEqual([m.hocalar[0].n, m.hocalar[0].toplam, m.hocalar[0].sira], [3, 6, null]);
+  const c = m.capraz;
+  for (const r of c.ogrenciler.filter(x => x.etut)) assert.deepEqual([r.toplam, r.beklenen, r.fark], [4, 2, 2]);
+  assert.equal(c.ozet.n, 3); assert.equal(c.ozet.fark, 2); assert(Math.abs(c.ozet.b - 1) < 1e-9, 'one etüt is worth one net here'); assert.equal(c.karar.k, 'veri', 'three students are too few for a verdict');
+  assert.equal(c.hocalar.length, 1); assert.deepEqual([c.hocalar[0].n, c.hocalar[0].toplam, c.hocalar[0].sira], [3, 6, null]);
+  // Matematik is the only ders in this fixture: there is no other ders of the same student to compare with, so the main estimate says so.
+  assert.equal(m.ozet.b, null); assert.equal(m.karar.k, 'veri'); assert.equal(m.olay.n, 0); assert.equal(m.dersSayisi, 1); assert.equal(m.ogrenciler.length, 6); assert(m.ogrenciler.every(r => r.beklenen === null && r.fark === null));
   const k = Object.fromEntries(m.cubuklar.map(x => [x.ad, x])); assert.deepEqual([k['0'].n, k['0'].ort, k['1'].n, k['1'].ort], [6, 1, 6, 2]);
   // Etüts only before the second exam: the students, the bars and the teacher are all still there.
   put('__tS', ogrenciler(['2026-10-09'])); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:__tS,warnings:[],etutKapsam:null})');
-  const h = run('ETUT_ETKI.icerik()'); assert.match(h, /id="eeFark"/); assert.match(h, /id="eeArtis"/); assert.match(h, /Sentetik Öğretmen A/); assert(!/Etüt yok|1–2 etüt|3–5 etüt|6\+ etüt/.test(h.replace(/<[^>]+>/g, ' ')));
-  const b = etki(ogrenciler(['2026-10-09'])); assert.equal(b.durum, 'tamam'); assert.deepEqual(b.hocalar.map(x => x.n), [3]); assert.equal(b.etki.n, 3);
+  const h = run('ETUT_ETKI.icerik()'); assert.match(h, /id="eeOlay"/); assert.match(h, /id="eeFark"/); assert.match(h, /id="eeArtis"/); assert.match(h, /Sentetik Öğretmen A/); assert(!/Etüt yok|1–2 etüt|3–5 etüt|6\+ etüt/.test(h.replace(/<[^>]+>/g, ' ')));
+  const b = etki(ogrenciler(['2026-10-09'])); assert.equal(b.durum, 'tamam'); assert.deepEqual(b.capraz.hocalar.map(x => x.n), [3]); assert.equal(b.etki.n, 3);
   const bk = Object.fromEntries(b.cubuklar.map(x => [x.ad, x])); assert.deepEqual([bk['0'].n, bk['1'].n], [9, 3]);
 });
 

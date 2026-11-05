@@ -8,13 +8,17 @@ const ETUT_GUN = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-
 const adTyt = k => '27-YKS-12' + String(k + 1).padStart(2, '0');
 const adAyt = k => '27-YKS-12' + String(k + 11);
 // mod: artis = every student takes 1–5 etüts and gains kat per etüt; sifir = low starters take more etüts and rise anyway
-// (no effect); azalan = a negative effect; sabit = everybody takes exactly two etüts (the effect cannot be told).
+// (no effect); azalan = a negative effect; sabit = everybody takes exactly two etüts (the effect cannot be told);
+// kontrol = no etüt, the same trend and rebound as the others.
 const TYT_DERS = [
   { ders: 'Matematik', course: 'MATEMATİK TYT', key: 'mat', kod: 'MATEMATİK-T', kat: 0.4, mod: 'artis' },
   { ders: 'Fizik', course: 'FİZİK', key: 'fizik', kod: 'FİZİK-T', kat: 0, mod: 'sifir' },
   { ders: 'Kimya', course: 'KİMYA', key: 'kimya', kod: 'KİMYA-T', kat: -0.5, mod: 'azalan' },
   { ders: 'Biyoloji', course: 'BİYOLOJİ', key: 'biyoloji', kod: 'BİYOLOJİ-T', kat: 0.3, mod: 'sabit' }];
-const AYT_DERS = [{ ders: 'Matematik', course: 'MATEMATİK TYT', key: 'mat', kod: 'MATEMATİK-A', kat: 0.3, mod: 'artis' }];
+// AYT Geometri has no etüt: Etüt etkisi compares each student's etüt ders with their other dersler of the same session,
+// so a session needs a ders without etüt to compare against (it is no row of the block itself).
+const AYT_DERS = [{ ders: 'Matematik', course: 'MATEMATİK TYT', key: 'mat', kod: 'MATEMATİK-A', kat: 0.3, mod: 'artis' },
+  { ders: 'Geometri', course: 'GEOMETRİ', key: 'geo', kod: 'GEOMETRİ-A', kat: 0, mod: 'kontrol' }];
 // Ten TYT dersler, for the layout of a long table.
 const TYT_UZUN = [
   ['Matematik', 'MATEMATİK TYT', 'mat', 'MATEMATİK-T'], ['Türkçe', 'TÜRKÇE', 'turkce', 'TÜRKÇE-T'], ['Fizik', 'FİZİK', 'fizik', 'FİZİK-T'], ['Kimya', 'KİMYA', 'kimya', 'KİMYA-T'],
@@ -32,6 +36,7 @@ function tr(...listeler) {
 }
 function plan(c, i) {
   const x0 = (i % 7) - 3;
+  if (c.mod === 'kontrol') return { x0, e: 0, degisim: 1.5 - 0.3 * x0 };
   if (c.mod === 'sifir') return { x0, e: x0 <= -2 ? 3 : x0 <= 0 ? 2 : x0 <= 1 ? 1 : 0, degisim: 2 - 0.5 * x0 };
   const e = c.mod === 'sabit' ? 2 : c.mod === 'azalan' ? 1 + ((i * 3) % 4) : 1 + ((i * 2) % 5);
   return { x0, e, degisim: 1.5 - 0.3 * x0 + c.kat * e };

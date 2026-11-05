@@ -635,7 +635,7 @@ function svgKurum(k,reportDate){
  }
  /* ---- Etüt etkisi (ETUT_ETKI's pooled gain per etüt: no etüt counts, no teachers) ---- */
  const M=boyaci([]),ee=k.etutEtki,COLW=538,GAP=26,X0=[44,44+COLW+GAP],RH=22;
- const EE_BAS='Her etüt için artış: aynı başlangıç düzeyindeki öğrencilere göre, etüt sayısı arttıkça Türkiye farkındaki ek artış (net). Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.';
+ const EE_BAS='Her etüt için artış: aynı öğrencinin etüt almadığı derslerine göre, etüt alınan dersteki ek artış (Türkiye farkı, net). Çalışkanlık her derse yansıdığı için bu karşılaştırmada çıkar. Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.';
  const EE_ACIK='Olası aralık: değerin büyük olasılıkla içinde kaldığı bölge. Artış belirgin: aralığın tamamı 0’ın üstünde · Belirgin fark yok: aralık 0’ı içeriyor · Etüt alanlarda daha az: aralığın tamamı 0’ın altında · Yeterli veri yok: öğrenci ya da etüt çeşidi az. Uç sonuç: diğerlerinden çok farklı olduğu için hesaba katılmayan sonuç.';
  const EE_KARAR={var:['artış belirgin','#dcf1ea','#0b6a5d'],yok:['belirgin fark yok','#e9ecea','#586e70'],az:['etüt alanlarda daha az','#f6e0d9','#9a3f2c'],veri:['yeterli veri yok','#eef0ee',C.muted]};
  const eeSayi=v=>{const a=Math.round(Math.abs(v)*10)/10;return (v>0&&a>0?'+':v<0&&a>0?'−':'')+f1(a)};
