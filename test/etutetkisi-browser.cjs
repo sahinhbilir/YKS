@@ -93,8 +93,17 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
    assert.equal(ol.etutNokta,6);assert.equal(ol.kontNokta,6);assert.equal(ol.cizgi,10,'five segments for each line');assert.equal(ol.sifir,1);assert.equal(ol.isaret,2,'the first-etüt marker and its name');
    for(const k of ['İlk etüt','İlk','etütten','önce','sonra','deneme'])assert(ol.yazi.includes(k),'label '+k+': '+ol.yazi);assert.equal(ol.sayilar.length,6,'a count under each position');assert(ol.degerler>=2,'the end of each line carries its value');
    assert(ol.enKucuk>=11,'type is real pixels: '+ol.enKucuk);assert.deepEqual(ol.tasan,[],'nothing leaves the chart');
-   assert.equal(await page.locator('#eeLejant .ee-sw').count(),2);assert.match(await page.locator('#eeLejant').innerText(),/^Etüt alınan ders \(Matematik\)\s+Aynı öğrencilerin etüt almadığı dersler$/);
-   assert.equal(await page.locator('#eeOlayNot').innerText(),'Etütten önce iki çizgi birlikte gidiyor, sonra etüt alınan ders yukarı ayrılıyorsa artış etüte bağlanabilir. Önceden de ayrılıyorsa bu başka bir farktır.');
+   // The strip under the chart: a bar for each position, centred on that position's x (the count under it), values written, grey before the first etüt, nothing outside the chart.
+   await page.waitForSelector('#eeHocaGrafik .ee-hoca-kart svg');
+   const sb=await page.evaluate(()=>[...document.querySelectorAll('#eeOlay .et-grafik, #eeHocaGrafik .et-grafik')].map(k=>{
+    const svg=k.querySelector('svg'),sr=svg.getBoundingClientRect(),nler=[...svg.querySelectorAll('text.ee-say')].map(t=>{const r=t.getBoundingClientRect();return (r.left+r.right)/2}),
+     barlar=[...svg.querySelectorAll('rect.ee-sb')].map(r=>{const b=r.getBoundingClientRect();return {c:(b.left+b.right)/2,sinif:r.getAttribute('class').replace('ee-sb ee-sb-',''),d:Number(r.dataset.d)}}),
+     yazi=[...svg.querySelectorAll('text.ee-sb-d,.ee-sb-baslik,.ee-sb-not')].map(t=>t.getBoundingClientRect()),sifir=svg.querySelector('.ee-sb-sifir').getBoundingClientRect();
+    return {n:nler.length,bar:barlar.length,hiza:barlar.map(b=>nler.reduce((m,x)=>Math.min(m,Math.abs(x-b.c)),1e9)),on:barlar.slice(0,3).map(b=>b.sinif),son:barlar.slice(3).map(b=>b.sinif+(b.d>0?'+':b.d<0?'-':'0')),
+     tasan:yazi.filter(r=>r.left<sr.left-1||r.right>sr.right+1||r.bottom>sr.bottom+1).length,yazisayi:yazi.length,genis:sifir.width>0}}));
+   for(const k of sb){assert.equal(k.n,6);assert(k.bar>=3,'bars '+k.bar);assert(k.hiza.every(h=>h<=1.5),'bars sit on the x positions '+k.hiza);assert(k.on.every(x=>['on','uyari'].includes(x)),'pre bars grey or amber '+k.on);assert(k.son.every(x=>/^(ok|guclu)\+|^bad-|^on0/.test(x)),'post bars green or red '+k.son);assert.equal(k.tasan,0,'strip text stays inside');assert(k.genis)}
+   assert.equal(await page.locator('#eeLejant .ee-sw').count(),2);assert.match(await page.locator('#eeLejant').innerText(),/^Etüt alan öğrenciler\s+Sınıf ortalaması \(etüt almayanlar\)$/);assert.match(await page.locator('#eeOlayOzet').innerText(),/^İlk etütten sonra etüt alanlar sınıf ortalamasından ≈ [+−]\d,\d net (fazla|az) arttı \(etütten önce fark ≈ [+−]?\d,\d\) · .+, \d+ öğrenci\.$/);
+   assert.equal(await page.locator('#eeOlayNot').innerText(),'Etütten önce iki çizgi birlikte gidiyor, sonra etüt alanların çizgisi sınıf ortalamasından yukarı ayrılıyorsa artış etüte bağlanabilir. Önceden de ayrılıyorsa bu başka bir farktır.');
    // The cross-student dots and the intervals sit in the collapsed Ayrıntı: open it, and they are drawn at the real width.
    await page.locator('#eeAralik summary').click();await page.waitForSelector('#eeFark svg circle.ee-dagilim');
    assert.match(await page.locator('#eeCapraz').innerText(),/^Öğrenciler arası karşılaştırma: her etüt ≈ [+−]\d,\d net \(olası aralık [+−]\d,\d … [+−]\d,\d\)\. Çok etüt alan öğrenciler zaten çalışkan olabilir/);
