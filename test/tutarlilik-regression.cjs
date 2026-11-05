@@ -2,8 +2,8 @@
 'use strict';
 // Cross-page contract: the cases where pages used to disagree, run on one synthetic fixture through Deneme panosu,
 // Etüt etkisi, Öğrenci raporları, Yoklama and Etütler. A participant mean is not the same students' change; one
-// missed-day rule on both attendance pages; same-titled exams stay apart; six students are six rows; an etüt only
-// before the second exam still shows; the analysis base survives an unreadable Etüt planı and carries no attendance.
+// missed-day rule on both attendance pages; same-titled exams stay apart; six students are six rows; a student whose
+// etüt count never changes is compared with no one; an etüt only before the second exam still shows; the analysis base survives an unreadable Etüt planı and carries no attendance.
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
 const { etutRaporu, GUNLER } = require('./fixtures/etut-pdf.cjs'), { ornekRapor } = require('./fixtures/yoklama-pdf.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
@@ -34,7 +34,7 @@ const ogrenciler = (etutGunleri = ['2026-10-09', '2026-10-16']) => Object.entrie
   sessions: i <= 3 ? etutGunleri.map(date => ({ date, course: 'MATEMATİK TYT', teacher: A, minutes: 40, time: 900 })) : [],
   exams: DATES.map((date, k) => ({ exam: 'GENEL DENEME', date, session: 'TYT', nets: { mat: n[k] } })) }));
 const KEY = k => 'GENEL DENEME|' + DATES[k];
-const etki = (ogr, sec = {}) => { put('__tS', ogr); put('__tC', sec); return get('ETUT_ETKI.model(__tS,__tC,null)'); };
+const etki = (ogr, sec = {}) => { put('__tS', ogr); put('__tC', sec); return get('ETUT_ETKI.model(__tS,__tC,null,null)'); };
 
 check('Deneme panosu: when the weaker students miss the later exam, the participant mean jumps; the same students barely move', () => {
   // The board's model on the same lists: the two weak students skip the second exam.
@@ -63,19 +63,21 @@ check('attendance: Yoklama and Öğrenci raporları call the same days missed (t
   assert(m.k.length > 0); for (const [a, b] of m.k) assert.equal(a, b);
 });
 
-check('Etüt etkisi: same-titled exams stay apart, six students are six rows, an etüt only before the second exam still draws the chart and the teacher', () => {
+check('Etüt etkisi: same-titled exams stay apart, six students are six rows, a student whose etüt count never changes is compared with no one, an etüt only before the second exam still draws the bars and the teacher', () => {
   const m = etki(ogrenciler());
   assert.equal(m.sinavlar.length, 3); assert.deepEqual(m.sinavlar.map(e => e.key), [0, 1, 2].map(KEY));
-  // Six students are six rows (a student is never counted once per pair of exams).
-  assert.equal(m.ogrenciler.length, 6); assert.equal(m.disarida.length, 0); assert.equal(m.sinif.n, 6);
-  // 1–3 gain 2 per exam with two etüts each, 4–6 gain 1 per exam with none.
-  const g = Object.fromEntries(m.gruplar.map(x => [x.ad, x]));
-  assert.deepEqual([g['1–2 etüt'].n, g['1–2 etüt'].egim, g['Etüt yok'].n, g['Etüt yok'].egim], [3, 2, 3, 1]); assert.equal(g['3–5 etüt'].n + g['6+ etüt'].n, 0);
-  assert.equal(m.ogrenciler.filter(r => r.n === 2).length, 3); assert.equal(m.hocalar.length, 1); assert.equal(m.hocalar[0].n, 3);
-  // Etüts only before the second exam: the groups and the teacher are still there, and so is the chart section.
+  // Six students are six rows (a student is never counted once per pair of exams); two pairs of exams each: twelve intervals in all.
+  assert.equal(m.ogrenciler.length, 6); assert.equal(m.disarida.length, 0); assert.equal(m.aralik, 12); assert.equal(m.kip, 'ham', 'no Türkiye list in this fixture: the raw net stands in');
+  // 1–3 gain 2 per exam with one etüt in each interval, 4–6 gain 1 per exam with none: the bars show it, but nobody changes their own etüt count,
+  // so there is nothing to compare a student with and the page gives no verdict.
+  const k = Object.fromEntries(m.cubuklar.map(x => [x.ad, x]));
+  assert.deepEqual([k['0'].n, k['0'].ort, k['1'].n, k['1'].ort], [6, 1, 6, 2]); assert.equal(m.etki.b, null); assert.equal(m.etki.n, 0); assert.equal(m.etki.karar.k, 'veri');
+  assert.equal(m.ogrenciler.filter(r => r.n === 2).length, 3); assert.equal(m.hocalar.length, 1); assert.equal(m.hocalar[0].ogrenci, 3); assert.equal(m.hocalar[0].sira, null);
+  // Etüts only before the second exam: the first interval has one, the second none, so those students now compare with themselves.
   put('__tS', ogrenciler(['2026-10-09'])); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:__tS,warnings:[],etutKapsam:null})');
-  const h = run('ETUT_ETKI.icerik()'); assert.match(h, /id="eeGrafik"/); assert.match(h, /Sentetik Öğretmen A/);
-  const b = etki(ogrenciler(['2026-10-09'])); assert.equal(b.durum, 'tamam'); assert.deepEqual(b.hocalar.map(x => x.n), [3]); assert.equal(b.gruplar.find(x => x.ad === '1–2 etüt').n, 3);
+  const h = run('ETUT_ETKI.icerik()'); assert.match(h, /id="eeArtis"/); assert.match(h, /Sentetik Öğretmen A/); assert(!/Etüt yok|1–2 etüt|3–5 etüt|6\+ etüt/.test(h.replace(/<[^>]+>/g, ' ')));
+  const b = etki(ogrenciler(['2026-10-09'])); assert.equal(b.durum, 'tamam'); assert.deepEqual(b.hocalar.map(x => x.ogrenci), [3]); assert.equal(b.etki.n, 3);
+  const bk = Object.fromEntries(b.cubuklar.map(x => [x.ad, x])); assert.deepEqual([bk['0'].n, bk['1'].n], [9, 3]);
 });
 
 check('analysis base: an unreadable Etüt planı stops the report but not Etüt etkisi; no attendance is carried; the etüts match Etütler', () => {
