@@ -110,7 +110,7 @@ const by = (m, id) => m.hepsi.find(r => r.id === id);
     const m = JSON.parse(JSON.stringify(run('ETUT_ETKI.model(JSON.parse(JSON.stringify(__eeP)),{},null,__TF)', put('__eeP', PL) || 0)));
     assert.equal(m.kip, 'turkiye'); assert.deepEqual(m.listesiz, [ad(2), ad(3), ad(4)], 'only the first two exams have a list');
   });
-  await check('intervals: consecutive exams a student sat, the etüts strictly between the exam days, other lessons and AYT-only courses never count', () => {
+  await check('intervals: consecutive exams a student sat, the etüts strictly between the exam days, other lessons never count, and an etüt named AYT counts for TYT too', () => {
     const s = (id, nets, sessions) => ({ id, name: 'SENTETİK ' + id, cls: '12/A', sessions, exams: sinavlar(nets) });
     const L = [
       s('Z1', [10, 12, 13], [...et(MAT, A, '2026-10-07', '2026-10-08', '2026-10-14', '2026-10-15', '2026-10-21', '2026-10-22'), ...et('FİZİK', A, '2026-10-09'), ...et('MATEMATİK AYT', A, '2026-10-10')]),
@@ -118,8 +118,9 @@ const by = (m, id) => m.hepsi.find(r => r.id === id);
       s('Z3', [10, 11, 12, 11, 14], []), s('Z4', [1, 2], et(MAT, A, '2026-10-09')),
       ...PL.slice(0, 6)];
     const m = model(L, { ders: 'Matematik' }, TR), r = Object.fromEntries(m.hepsi.map(x => [x.id, x]));
-    // Z1: 8 Oct (inside 7–14), 15 Oct (inside 14–21) count; the exam days 7, 14, 21 and the 22 Oct (after the last exam) do not.
-    assert.equal(r.Z1.n, 2); assert.equal(r.Z1.aralik, 2); assert.equal(r.Z1.etutlu, 2.5, 'd = 0, −2, 5: the gains −2 and 7, both intervals have an etüt'); assert.equal(r.Z1.etutsuz, null);
+    // Z1: 8 Oct and the "MATEMATİK AYT" etüt of 10 Oct (inside 7–14), 15 Oct (inside 14–21) count; the exam days 7, 14, 21,
+    // the Fizik etüt and the 22 Oct (after the last exam) do not.
+    assert.equal(r.Z1.n, 3); assert.equal(r.Z1.aralik, 2); assert.equal(r.Z1.etutlu, 2.5, 'd = 0, −2, 5: the gains −2 and 7, both intervals have an etüt'); assert.equal(r.Z1.etutsuz, null);
     // Z2: 9 Oct is in 7–21 Oct (the pair spans the missed exam), 17 Oct too; 24 Oct is in 21–28 Oct.
     assert.equal(r.Z2.aralik, 2); assert.equal(r.Z2.n, 3); assert.equal(r.Z2.hoca[B], 3);
     assert.equal(r.Z3.aralik, 4); assert.equal(r.Z3.n, 0); assert.equal(r.Z3.etutlu, null);
@@ -359,13 +360,14 @@ const by = (m, id) => m.hepsi.find(r => r.id === id);
     assert.deepEqual(m.uc.filter(u => u.tur === 'ozet').map(u => u.neden), ['uç sonuç çok fazla: en uç 20% dışarıda']);
     merged(L); trSayfa(TR); assert.match(run('ETUT_ETKI.icerik()'), /uç sonuç çok fazla: en uç 20% dışarıda/);
   });
-  await check('periods and sessions: exams with equal titles stay apart; Son 4 deneme keeps the last four; a TYT-only course never counts for AYT', () => {
+  await check('periods and sessions: exams with equal titles stay apart; Son 4 deneme keeps the last four; an etüt named TYT or AYT counts for both sessions (the school writes TYT for AYT etüts too)', () => {
     const ayni = PL.map(s => ({ ...s, exams: s.exams.map(e => ({ ...e, exam: 'GENEL DENEME' })) }));
     const m = model(ayni, {}, null); assert.equal(m.sinavlar.length, 5); assert.deepEqual(m.sinavlar.map(e => e.etiket), ['7 Eki', '14 Eki', '21 Eki', '28 Eki', '4 Kas'].map(g => 'GENEL DENEME (' + g + ')'));
     const s4 = model(PL, { donem: 'son4' }, TR); assert.equal(s4.donem, 'son4'); assert.deepEqual(s4.sinavlar.map(e => e.ad), [ad(1), ad(2), ad(3), ad(4)]); assert.equal(s4.aralik, 36); assert.equal(model(PL, { donem: 'baska' }, TR).donem, 'tum');
     const ayt = Array.from({ length: 4 }, (_, i) => ({ id: 'a' + i, name: 'SENTETİK AYT ' + i, cls: '12/A', sessions: [...et('MATEMATİK AYT', A, '2026-10-16'), ...et('MATEMATİK TYT', B, '2026-10-16')],
       exams: [['AYT-1', '2026-10-07'], ['AYT-2', '2026-10-21']].map(([exam, date], k) => ({ exam, date, session: 'AYT', nets: { mat: 10 + 2 * k } })) }));
-    const a = model(ayt, { oturum: 'AYT' }); assert.deepEqual(a.oturumlar, ['AYT']); assert.deepEqual(a.hocalar.map(h => h.ad), ['Sentetik Öğretmen A']); assert.equal(get('ETUT_ETKI.etutOturum("MATEMATİK TYT","AYT")'), false);
+    const a = model(ayt, { oturum: 'AYT' }); assert.deepEqual(a.oturumlar, ['AYT']); assert.deepEqual(a.hocalar.map(h => h.ad).sort(), ['Sentetik Öğretmen A', 'Sentetik Öğretmen B'], 'a "MATEMATİK TYT" etüt counts for AYT Matematik too');
+    for (const [c, o] of [['MATEMATİK TYT', 'AYT'], ['MATEMATİK AYT', 'TYT'], ['MATEMATİK', 'AYT'], ['FİZİK TYT', 'TYT']]) assert.equal(get('ETUT_ETKI.etutOturum(' + JSON.stringify(c) + ',' + JSON.stringify(o) + ')'), true, c + ' → ' + o);
     assert.equal(model([...PL, { id: 'K9', name: 'SENTETİK KÜÇÜK', cls: '9/A', sessions: et(MAT, A, '2026-10-16'), exams: sinavlar([7, 8, 9]) }], { duzey: 9 }, TR).duzey, 9);
   });
   await check('coverage: weekdays no etüt report covers are counted and shown; matching warnings are shown; the weekly etüts', () => {
@@ -419,6 +421,13 @@ const by = (m, id) => m.hepsi.find(r => r.id === id);
     assert.match(h, /<h2>Okulun Türkiye’deki yeri · Matematik<\/h2>/); assert(!h.includes('eeHamUyari'), 'the lists exist');
     put('__G', ogr); const st = get('(()=>{const m=ETUT_ETKI.model(__G,{},null,TURKIYE.ortalamalar(TURKIYE.oku().veri));return ETUT_ETKI.durus(__G,m,TURKIYE.oku().veri)})()');
     assert.equal(st.durum, 'tamam'); assert.equal(st.cizgiler.length, 1); assert.equal(st.cizgiler[0].nokta.length, 3);
+    // The same series as the Türkiye geneli page: a deneme after the students' own results (no Sıralamalar list yet, or dated by
+    // the report's print day) is not cut, and the line names the list, the session, the lesson and the denemeler drawn.
+    const ogr2 = ogr.map(s => ({ ...s, exams: s.exams.slice(0, 2) })); put('__G2', ogr2);
+    const st2 = get('(()=>{const m=ETUT_ETKI.model(__G2,{},null,TURKIYE.ortalamalar(TURKIYE.oku().veri));return ETUT_ETKI.durus(__G2,m,TURKIYE.oku().veri)})()');
+    assert.equal(st2.durum, 'tamam'); assert.equal(st2.cizgiler[0].nokta.length, 3, 'the third deneme shows although the students have only two');
+    assert.match(st.kaynak, /^Kolej listesi · TYT Matematik · .+ → .+ · 3 deneme$/);
+    merged(ogr); assert.match(run('ETUT_ETKI.icerik()'), /id="eeDurusKaynak">Türkiye geneli sayfasındaki ders çizgisinin aynısı: Kolej listesi · TYT Matematik · /);
     // The school's Matematik net in the three lists (BIZIM): 12, 11.2, 14.5; the dilim is what the Türkiye geneli page says for the same point.
     const pts = get('(()=>{const t=TURKIYE.model(TURKIYE.oku().veri,{duzey:"d12",oturum:"TYT"});const d=t.dersler.find(x=>x.kod==="MATEMATİK-T");return d.seri.map(p=>TURKIYE.dilimNokta(p))})()');
     assert.deepEqual(st.cizgiler[0].nokta.map(p => p.dilim), pts); assert(pts.every(x => x > 0 && x < 100));
