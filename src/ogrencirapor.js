@@ -661,24 +661,27 @@ function svgKurum(k,reportDate){
  const eeSinif=()=>{
   const s=ee.sonuc;
   if(!s.var)return {name:'Etüt etkisi',h:140,draw:(P,y)=>{P.card(26,y,W2,140,'Etüt etkisi');P.message(26,y+30,W2,110,eeMesaj(s.neden))}};
-  const OT=['TYT','AYT'],n=Math.max(2,...OT.map(o=>s.oturumlar[o].satirlar.length)),r0=eeUst+28,h=r0+n*RH+10+aciklama.length*13+14;
+  // One row per ders: an etüt counts for TYT and AYT alike, so the same etüts are shown against the TYT net and the AYT net side by side.
+  const OT=['TYT','AYT'],adlar=[],by={};OT.forEach(o=>s.oturumlar[o].satirlar.forEach(r=>{if(!by[r.ders]){by[r.ders]={};adlar.push(r.ders)}by[r.ders][o]=r}));
+  const notlar=['Etütler TYT ve AYT için aynı sayılır; her ders tek satırdır ve aynı etütlerin TYT ve AYT netindeki etkisi yan yana yazılır.',...OT.filter(o=>!s.oturumlar[o].satirlar.length).map(o=>o+': '+eeMesaj(s.oturumlar[o].neden))];
+  const n=Math.max(2,adlar.length),r0=eeUst+28,h=r0+n*RH+10+(aciklama.length+notlar.length)*13+14,XB=[180,600],XN=1010;
   return {name:'Etüt etkisi',h,draw:(P,y)=>{
-   P.card(26,y,W2,h,'Etüt etkisi');eeBaslik(P,y);
-   OT.forEach((o,c)=>{const x=X0[c],b=s.oturumlar[o],hy=y+eeUst;
-    P.text(x,hy+14,o,13,C.ink,true);P.text(x+96,hy+3,'Her etüt için artış',10,C.muted,true);P.text(x+96,hy+15,'(olası aralık)',10,C.muted);
-    P.text(x+252,hy+14,'Karar',10,C.muted,true);P.text(x+436,hy+14,'Öğrenci',10,C.muted,true,'end');P.text(x+COLW,hy+3,'Hesaba',10,C.muted,true,'end');P.text(x+COLW,hy+15,'katılmadı',10,C.muted,true,'end');
-    P.line(x,hy+22,x+COLW,hy+22);
-    if(!b.satirlar.length){P.message(x,y+r0,COLW,n*RH,eeMesaj(b.neden),11);return}
-    b.satirlar.forEach((r,i)=>{const cy=y+r0+i*RH+RH/2;
-     P.out.push('<g aria-label="'+esc(eeBaslikTitle(r))+'"><title>'+esc(eeBaslikTitle(r))+'</title>');
-     if(i%2)P.rect(x-6,cy-RH/2,COLW+12,RH,'#f6f8f6',4);
-     P.ftext(x,cy,r.ders,90,11.5,C.ink,true,'start',true);
-     if(eeGoster(r)){const t='≈ '+eeSayi(r.b)+' net';P.text(x+96,cy,t,12,C.ink,true,'start',true);P.text(x+96+P.width(t,12,true)+6,cy,eeAralik(r),10,C.muted,false,'start',true)}else P.text(x+96,cy,'—',12,C.muted,false,'start',true);
-     eeKarar(P,x+252,cy,r);P.text(x+436,cy,r.n,12,C.ink,false,'end',true);
-     if(r.uc)P.text(x+COLW,cy,r.uc+' uç sonuç',10.5,C.muted,false,'end',true);else P.text(x+COLW,cy,'—',11,C.muted,false,'end',true);
-     P.out.push('</g>')});
-   });
-   aciklama.forEach((l,i)=>P.text(44,y+r0+n*RH+22+i*13,l,10,C.muted));
+   P.card(26,y,W2,h,'Etüt etkisi');eeBaslik(P,y);const hy=y+eeUst;
+   P.text(44,hy+14,'Ders',10,C.muted,true);
+   OT.forEach((o,c)=>{const x=XB[c];P.text(x,hy+3,o+' netinde · her etüt için artış',10,C.muted,true);P.text(x,hy+15,'(olası aralık)',10,C.muted);P.text(x+220,hy+14,'Karar',10,C.muted,true)});
+   P.text(XN,hy+3,'Öğrenci',10,C.muted,true,'end');P.text(XN,hy+15,'TYT / AYT',10,C.muted,false,'end');P.text(1146,hy+3,'Hesaba',10,C.muted,true,'end');P.text(1146,hy+15,'katılmadı',10,C.muted,true,'end');
+   P.line(44,hy+22,1146,hy+22);
+   adlar.forEach((d,i)=>{const cy=y+r0+i*RH+RH/2,rr=OT.map(o=>by[d][o]);
+    P.out.push('<g aria-label="'+esc(rr.filter(Boolean).map(eeBaslikTitle).join(' · '))+'"><title>'+esc(rr.filter(Boolean).map(eeBaslikTitle).join(' · '))+'</title>');
+    if(i%2)P.rect(38,cy-RH/2,1114,RH,'#f6f8f6',4);
+    P.ftext(44,cy,d,128,11.5,C.ink,true,'start',true);
+    rr.forEach((r,c)=>{const x=XB[c];if(!r){P.text(x,cy,'—',12,C.muted,false,'start',true);return}
+     if(eeGoster(r)){const t='≈ '+eeSayi(r.b)+' net';P.text(x,cy,t,12,C.ink,true,'start',true);P.text(x+P.width(t,12,true)+6,cy,eeAralik(r),10,C.muted,false,'start',true)}else P.text(x,cy,'—',12,C.muted,false,'start',true);
+     eeKarar(P,x+220,cy,r)});
+    P.text(XN,cy,rr.map(r=>r?r.n:'—').join(' / '),12,C.ink,false,'end',true);
+    const uc=rr.reduce((t,r)=>t+(r&&r.uc||0),0);P.text(1146,cy,uc?uc+' uç sonuç':'—',uc?10.5:11,C.muted,false,'end',true);
+    P.out.push('</g>')});
+   [...aciklama.map(l=>[l,C.muted]),...notlar.flatMap(t=>M.wrap(t,W2-36,10).map(l=>[l,C.ink]))].forEach(([l,c],i)=>P.text(44,y+r0+n*RH+22+i*13,l,10,c));
   }};
  };
  // Whole school: one compact table per session, ders × grade; each cell has the gain per etüt and the verdict phrase.
@@ -710,7 +713,7 @@ function svgKurum(k,reportDate){
  };
  sections.push(sc.key==='okul'?eeOkul():eeSinif());
  /* ---- Ödevler (beside the Etüt etkisi scatter when the grade has one) ---- */
- const o=k.odev,listRh=19,pt=sc.key!=='okul'&&ee.sonuc&&ee.sonuc.var?ee.sonuc.enCok:null,wide=!pt,orows=Math.ceil(o.courses.length/(wide?2:1)),oh=Math.max(pt?272:210,100+orows*listRh+20),ow=wide?W2:716;
+ const o=k.odev,listRh=19,pt=null,wide=!pt,orows=Math.ceil(o.courses.length/(wide?2:1)),oh=Math.max(pt?272:210,100+orows*listRh+20),ow=wide?W2:716;
  // Without an ödev report and without a scatter the card would be an empty page; the header already says "Ödev raporu: yok".
  if(o.total||pt)sections.push({name:pt?'Ödevler ve etüt grafiği':'Ödevler',h:oh,draw:(P,y)=>{const {text,rect,ring,width,ftext}=P;
   P.card(26,y,ow,oh,'Ödevler',o.total?o.total+' ödev':'');

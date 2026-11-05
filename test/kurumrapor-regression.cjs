@@ -231,10 +231,9 @@ check('Etüt etkisi: every ders with etüts, TYT and AYT, shows ETUT_ETKI\'s own
   // Only the pooled gain: no teacher, no per-teacher gain or total, no student name, no etüt count.
   assert(!/öğretmen/i.test(txt)&&!/Toplam katkı|katkı|sıra/i.test(txt.replace(/okul içinde|Sıralamalar/g,'')),'no teacher figure');assert(!/SENTETİK ÖĞR/.test(svg)&&!svg.includes('SENTETİK ÖĞRETMEN'),'no names');assert(!/hoca/i.test(JSON.stringify(k.etutEtki)));
   assert(!/etüt sayıları|Haftalık|Derse göre etüt|Öğrenci başına/.test(txt),'no etüt counts');assert(!svg.includes('…'));
-  // The scatter: the ders with the most students, no names, the fitted line.
-  const sc=s.enCok;assert(sc&&sc.n===Math.max(...[].concat(...Object.values(s.oturumlar).map(o=>o.satirlar.map(r=>r.n)))));assert.equal(sc.pts.length,sc.n);
-  assert(svg.includes('Etüt sayısı ve ek artış grafiği · '+sc.ders+' ('+sc.oturum+')'));assert(txt.includes('Etüt sayısı ve ek artış')&&txt.includes('her nokta bir öğrenci')&&txt.includes('Aldığı etüt sayısı')&&txt.includes('Çizgi: her etüt ≈ '+sgn(sc.b)+' net'));
-  assert.equal((svg.match(/<circle[^>]*fill="#fff"[^>]*stroke="#6799c5"/g)||[]).length,sc.n,'one dot per student');
+  // No scatter (the teacher removed it); one table, each ders once, the TYT and AYT columns side by side.
+  assert(!txt.includes('Etüt sayısı ve ek artış')&&!txt.includes('Aldığı etüt sayısı'));assert(txt.includes('TYT netinde · her etüt için artış')&&txt.includes('AYT netinde · her etüt için artış'));
+  assert.equal((txt.match(/Matematik/g)||[]).length,1,'Matematik is one row');
  }finally{trGeri()}
 });
 check('Etüt etkisi: extreme results are only a count, and the students counted leave them out',()=>{
@@ -290,12 +289,12 @@ check('page structure: Türkiye geneli, Etüt etkisi, Ödevler (with the scatter
  trKur(fx.TYT_DERS,fx.AYT_DERS);
  try{
   const st=fx.ogrenciler(),kartlar=pages=>plain(pages).map(p=>[...p.matchAll(/data-kart="([^"]+)"/g)].map(m=>m[1]));
-  const p12=R.svgKurum(kurE(st,12),'2026-10-25'),k12=kartlar(p12);assert.deepEqual(k12.flat(),['Türkiye geneli','Etüt etkisi','Ödevler ve etüt grafiği']);assert(p12.length>=1);
+  const p12=R.svgKurum(kurE(st,12),'2026-10-25'),k12=kartlar(p12);assert.deepEqual(k12.flat(),['Türkiye geneli','Etüt etkisi']);assert(p12.length>=1);
   const pok=R.svgKurum(okulE([...st,...fx.ogrenciler({sinif:11,tyt:fx.TYT_DERS.slice(0,2),ayt:[]})]),'2026-10-25'),kok=kartlar(pok);assert.deepEqual(kok.flat(),['Türkiye geneli','Etüt etkisi'],'no ödev report and no scatter: no empty Ödevler page');assert(plain(pok)[0].includes('Ödev raporu: yok'),'the header says so');
   for(const ps of [p12,pok])ps.forEach((p,i)=>{assert(p.includes('Sayfa '+(i+1)+' / '+ps.length));assert.match(p,/^<svg [^>]*viewBox="0 0 1190\.55 841\.89"/);assert(!p.includes('Devamsızlık')&&!p.includes('Şube karşılaştırması')&&!/data-kart="Etütler"/.test(p))});
   // With a Türkiye list for the grade the dilim cards fill page 1 and the rest follows on page 2.
   vm.runInContext('TURKIYE.oku=__oku',ctx);turkiyeKapat();yukle({12:[TA,GE,TB]});ctx.__KI=fx.tr(fx.TYT_DERS,fx.AYT_DERS);vm.runInContext('TURKIYE.ortalamalar=()=>(a=>{const o=__KI[a];return o?{genel:k=>k in o?o[k]:null}:null})',ctx);
-  const lk=R.svgKurum(R.kurumRapor(klon(st),kapsam(st,12),R.kurumTurkiye),'2026-10-25'),kl=kartlar(lk);assert.deepEqual(kl[0],['Türkiye geneli']);assert.deepEqual(kl.flat(),['Türkiye geneli','Etüt etkisi','Ödevler ve etüt grafiği']);assert.equal(lk.length,kl.length);
+  const lk=R.svgKurum(R.kurumRapor(klon(st),kapsam(st,12),R.kurumTurkiye),'2026-10-25'),kl=kartlar(lk);assert.deepEqual(kl[0],['Türkiye geneli']);assert.deepEqual(kl.flat(),['Türkiye geneli','Etüt etkisi']);assert.equal(lk.length,kl.length);
  }finally{trGeri()}
 });
 check('no devamsızlık, no şube figures, no teacher, no etüt count and no student name in any scope; the header keeps "N öğrenci · M şube"',()=>{

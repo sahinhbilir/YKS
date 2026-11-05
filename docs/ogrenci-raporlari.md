@@ -148,8 +148,8 @@ sonra her sınıf düzeyinin sayfalarını verir.
   için, etüt alınan her ders TYT ve AYT'de bir satırdır: ders, “her etüt ≈ +0,4 net” ve olası aralığı,
   kısa renkli karar (yeşil “artış belirgin”, gri “belirgin fark yok”, kırmızı “etüt alanlarda daha az”,
   soluk “yeterli veri yok”), sayılan öğrenci sayısı ve hesaba katılmayan uç sonuç sayısı (“2 uç sonuç”).
-  En çok öğrencisi olan ders için, öğrenci adı olmadan, etüt sayısı × ek artış dağılımı ve çizgisi
-  çizilir. Açıklama: “Her etüt için artış: aynı öğrencinin etüt almadığı derslerine göre, etüt alınan
+  Etütler TYT ve AYT için aynı sayıldığından her ders tek satırdır: aynı etütlerin TYT netindeki ve
+  AYT netindeki etkisi yan yana yazılır (öğrenci sayısı “TYT / AYT”). Dağılım grafiği yoktur. Açıklama: “Her etüt için artış: aynı öğrencinin etüt almadığı derslerine göre, etüt alınan
   dersteki ek artış (Türkiye farkı, net). Çalışkanlık her derse yansıdığı için bu karşılaştırmada çıkar.
   Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.” Değerler Etüt etkisi sayfasının kendi
   hesabıdır (her öğrenci kendi diğer dersleriyle karşılaştırılır); bir oturumda öğrencinin etüt almadığı
