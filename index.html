@@ -22691,11 +22691,9 @@ function netAl(s,ex,oturum,ders){
   const v=(NET[oturum][ders]||[]).map(k=>e.nets[k]).filter(Number.isFinite);
   return v.length?r2(v.reduce((a,b)=>a+b,0)):null;
 }
-// An etüt of "MATEMATİK TYT" counts for TYT only, "… AYT" for AYT only, a lesson without either for both.
-function etutOturum(course,oturum){
-  const k=U(course),t=/\bTYT\b/.test(k),a=/\bAYT\b/.test(k);
-  return (!t&&!a)||(oturum==='TYT'?t:a);
-}
+// An etüt counts for both sessions, whatever "TYT" or "AYT" its course name carries: the school writes
+// "MATEMATİK TYT" for AYT etüts too, and one etüt often covers both. The lesson alone decides.
+function etutOturum(course,oturum){return true}
 // Weekdays after bas and before son that no added etüt report covers; null when the coverage is unknown.
 function eksikGun(bas,son,kapsam){
   if(!Array.isArray(kapsam))return null;let n=0;
@@ -22936,28 +22934,33 @@ function dilimler(T=typeof TURKIYE==='object'&&TURKIYE?TURKIYE:{}){
   const tikler=Array.isArray(T.DILIM_TIKLARI)?T.DILIM_TIKLARI:[0.1,1,5,15,30,50,70,85,95];
   return {nokta,yazi,kisa,tikler,tden:d=>tden(Math.min(99.9,Math.max(.05,d))),yerelMi:!f('dilimNokta')};
 }
-const DURUS_PAYI=[3,7];   // days either side of the period in which a Türkiye list's date still belongs to it
 // The lesson's line(s) on the Türkiye geneli page for the grade's group and session: the school's dilim in each exam of the
 // period, and under it (same dates) the weekly etüts of the lesson. tv: the stored Türkiye geneli data (TURKIYE.oku().veri).
 function durus(ogrD,m,tv){
   const yok=neden=>({durum:'yok',neden});
   if(!tv)return yok('Bu sınıf için Türkiye geneli listesi eklenmemiş.');
-  let tm;try{tm=TURKIYE.model(tv,{duzey:'d'+m.duzey,oturum:m.oturum})}catch(e){return yok('Türkiye geneli listesi okunamadı.')}
+  // The same series the Türkiye geneli page draws: its list kind (Kolej / Tüm kurumlar / Kurs) and school choice, and every
+  // deneme of the grade. A deneme is not cut by the students' period: one with no Sıralamalar list is dated by its report's
+  // print day, which can fall days after the deneme, and cutting it hid exactly the latest change.
+  const ek=typeof EK!=='undefined'?EK:{};
+  let tm;try{tm=TURKIYE.model(tv,{duzey:'d'+m.duzey,oturum:m.oturum,liste:ek.tgListe,okul:ek.tgOkul})}catch(e){return yok('Türkiye geneli listesi okunamadı.')}
   if(!tm||tm.duzey!=='d'+m.duzey||tm.oturum!==m.oturum||!tm.sinavlar.length)return yok(m.duzey+'. sınıf '+m.oturum+' için Türkiye geneli listesi eklenmemiş.');
-  const D=dilimler(),ex=m.sinavlar,a=ex[0].gun-DURUS_PAYI[0],b=ex[ex.length-1].gun+DURUS_PAYI[1],ad=TURKIYE.dersBilgi;
+  const D=dilimler(),ad=TURKIYE.dersBilgi;
   const kodlar=(TR_KOD[m.oturum]||{})[m.ders]||[],cizgiler=[];
   kodlar.forEach((kod,q)=>{
     const d=tm.dersler.find(x=>denemeAdAnahtari(x.kod)===denemeAdAnahtari(kod));if(!d)return;
     const nokta=[];
     tm.sinavlar.forEach((s,i)=>{
-      const dil=D.nokta(d.seri[i]);if(!Number.isFinite(s.g)||s.g<a||s.g>b||!Number.isFinite(dil))return;
+      const dil=D.nokta(d.seri[i]);if(!Number.isFinite(s.g)||!Number.isFinite(dil))return;
       nokta.push({g:s.g,sinav:s.ad,dilim:dil,t:D.tden(dil)});
     });
     if(nokta.length)cizgiler.push({kod,ad:kodlar.length>1?ad(kod).ad:m.ders,renk:'var(--e-c'+(q+1)+')',nokta});
   });
   if(!cizgiler.length)return yok('Okul bu derste Türkiye geneli listesinde bulunamadı; Türkiye geneli sayfasında okulu seçin.');
   const g=cizgiler.flatMap(c=>c.nokta.map(p=>p.g)),g0=Math.min(...g),g1=Math.max(...g);
-  return {durum:'tamam',cizgiler,g0,g1,haftalik:haftalikEtut(ogrD,m.oturum,m.ders,g0,g1),yerelDilim:D.yerelMi};
+  const listeAd={kolej:'Kolej',kurum:'Tüm kurumlar',kurs:'Kurs'}[tm.liste]||'',kisa=TURKIYE.kisaAdlar?TURKIYE.kisaAdlar(tm.sinavlar):tm.sinavlar.map(s=>s.ad);
+  const kaynak=[listeAd&&listeAd+' listesi',m.oturum+' '+m.ders,kisa[0]+(kisa.length>1?' → '+kisa.at(-1):''),tm.sinavlar.length+' deneme'].filter(Boolean).join(' · ');
+  return {durum:'tamam',cizgiler,g0,g1,haftalik:haftalikEtut(ogrD,m.oturum,m.ders,g0,g1),yerelDilim:D.yerelMi,kaynak};
 }
 
 /* ---------------- charts ---------------- */
@@ -23134,7 +23137,7 @@ function aralikBlogu(m){
 function durusPaneli(st,m){
   const bas='<div class="et-kart-bas"><h2>'+kacis('Okulun Türkiye’deki yeri · '+m.ders)+'</h2>';
   if(st.durum!=='tamam')return '<section class="et-panel" id="eeGrafik">'+bas+'</div><p class="mini ee-yok">'+kacis(st.neden)+'</p><div class="et-arac">'+gitDugme('turkiye','Türkiye geneli')+'</div></section>';
-  return '<section class="et-panel" id="eeGrafik">'+bas+'<span class="mini">Yukarı çıkmak, Türkiye’de daha üst dilime girmektir. Altta aynı tarihlerde dersin haftalık etütü.</span></div><div class="et-grafik ee-grafik" role="group" aria-label="Okulun Türkiye’deki yeri"></div></section>';
+  return '<section class="et-panel" id="eeGrafik">'+bas+'<span class="mini">Yukarı çıkmak, Türkiye’de daha üst dilime girmektir. Altta aynı tarihlerde dersin haftalık etütü.</span></div><div class="et-grafik ee-grafik" role="group" aria-label="Okulun Türkiye’deki yeri"></div><p class="mini" id="eeDurusKaynak">'+kacis('Türkiye geneli sayfasındaki ders çizgisinin aynısı: '+st.kaynak)+'</p></section>';
 }
 function hocaTablosu(m,secili){
   const satir=h=>'<tr'+(secili===h.key?' class="secili'+(h.az?' ee-az':'')+'"':h.az?' class="ee-az"':'')+'><td class="sayi ee-sira">'+(h.sira===null?'—':fi(h.sira))+'</td><td class="tg-ad"><button type="button" class="ee-ad" data-ee-hoca="'+kacis(h.key)+'" aria-pressed="'+(secili===h.key)+'">'+kacis(h.ad)+'</button>'+
