@@ -155,7 +155,9 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
    // Ders: another lesson, another page (three students, so no verdict and the one teacher is unranked).
    await page.locator('#eeDers').selectOption('Fizik');
    await page.waitForFunction(()=>/· Fizik ·/.test(document.querySelector('#eeCumle').textContent));
-   assert.match(await page.locator('#eeKarar').innerText(),/^Yeterli veri yok/);assert.equal(await page.locator('#eeFark svg rect.ee-fark').count(),3);
+   assert.match(await page.locator('#eeKarar').innerText(),/^Yeterli veri yok/);
+   // The chart is drawn after layout at the box's real width: wait for its bars, do not count them at once.
+   await page.waitForFunction(()=>document.querySelectorAll('#eeFark svg rect.ee-fark').length===3);assert.equal(await page.locator('#eeFark svg rect.ee-fark').count(),3);
    assert.deepEqual(await page.locator('#eeHocalar .ee-ad').allInnerTexts(),['Sentetik Öğretmen F']);assert.equal(await page.locator('#eeHocalar tbody tr td').first().innerText(),'—','one teacher with 3 students is unranked');
    await page.waitForSelector('#eeGrafik svg path.ee-cizgi');
    await page.locator('#eeDers').selectOption('Matematik');
