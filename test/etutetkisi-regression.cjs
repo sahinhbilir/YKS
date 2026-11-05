@@ -434,7 +434,13 @@ const by = (m, id) => m.hepsi.find(r => r.id === id);
     assert.deepEqual(st.cizgiler[0].nokta.map(p => p.g), [gun(TARIH[0]), gun(TARIH[1]), gun(TARIH[2])]); assert.equal(st.haftalik.length > 0, true);
     // The chart: ilk % labels, inverted (a smaller dilim is higher), the weekly bars, no NaN.
     put('__S', st); const svg = get('ETUT_ETKI.durusSvg(__S,640)');
-    assert.match(svg, /<text class="ee-ad"[^>]*>ilk %\d+(,\d)?<\/text>/); assert(svg.includes('>Haftalık etüt</text>') && !svg.includes('NaN') && !svg.includes('undefined'));
+    assert.match(svg, /<text class="ee-ad"[^>]*>ilk %\d+(,\d)?<\/text>/);
+    // Under each date the deneme's short name, so a point can be told from the Türkiye geneli page.
+    assert.equal((svg.match(/<text class="et-tik ee-sinav-ad"/g) || []).length, 3); assert(st.cizgiler[0].nokta.every(p => p.kisa && svg.includes('>' + p.kisa + '</text>')));
+    // A complete list (every school that sat it, fewer than the others) is a hollow dot, named in the note under the chart.
+    put('__T', { ...st, cizgiler: [{ ...st.cizgiler[0], nokta: st.cizgiler[0].nokta.map((p, i) => i === 2 ? { ...p, tam: true, okulN: 80 } : p) }] });
+    const svgT = get('ETUT_ETKI.durusSvg(__T,640)'); assert.equal((svgT.match(/class="ee-nokta ee-tam"/g) || []).length, 1); assert(svgT.includes('tam liste (80 okul)'));
+    assert.match(run('ETUT_ETKI.icerik()'), /id="eeIkiGrafik">Bu grafik okulun Türkiye’deki okullar arasındaki yerini gösterir\. Üstteki “Etüt aldıkça artış” ise okulun içinde/); assert(svg.includes('>Haftalık etüt</text>') && !svg.includes('NaN') && !svg.includes('undefined'));
     const ys = [...svg.matchAll(/<circle class="ee-nokta" cx="[\d.]+" cy="([\d.]+)"/g)].map(x => Number(x[1]));
     assert.equal(ys.length, 3); const sirali = st.cizgiler[0].nokta.map(p => p.dilim); for (let i = 1; i < 3; i++) assert.equal(sirali[i] < sirali[i - 1], ys[i] < ys[i - 1], 'a smaller dilim is drawn higher');
     // The helpers: TURKIYE’s when it exports them, else the formula here; both say "ilk %12".

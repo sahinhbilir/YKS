@@ -22946,13 +22946,13 @@ function durus(ogrD,m,tv){
   let tm;try{tm=TURKIYE.model(tv,{duzey:'d'+m.duzey,oturum:m.oturum,liste:ek.tgListe,okul:ek.tgOkul})}catch(e){return yok('Türkiye geneli listesi okunamadı.')}
   if(!tm||tm.duzey!=='d'+m.duzey||tm.oturum!==m.oturum||!tm.sinavlar.length)return yok(m.duzey+'. sınıf '+m.oturum+' için Türkiye geneli listesi eklenmemiş.');
   const D=dilimler(),ad=TURKIYE.dersBilgi;
-  const kodlar=(TR_KOD[m.oturum]||{})[m.ders]||[],cizgiler=[];
+  const kodlar=(TR_KOD[m.oturum]||{})[m.ders]||[],cizgiler=[],kisaAd=TURKIYE.kisaAdlar?TURKIYE.kisaAdlar(tm.sinavlar):tm.sinavlar.map(s=>s.ad);
   kodlar.forEach((kod,q)=>{
     const d=tm.dersler.find(x=>denemeAdAnahtari(x.kod)===denemeAdAnahtari(kod));if(!d)return;
     const nokta=[];
     tm.sinavlar.forEach((s,i)=>{
       const dil=D.nokta(d.seri[i]);if(!Number.isFinite(s.g)||!Number.isFinite(dil))return;
-      nokta.push({g:s.g,sinav:s.ad,dilim:dil,t:D.tden(dil)});
+      const sp=d.seri[i];nokta.push({g:s.g,sinav:s.ad,kisa:kisaAd[i],dilim:dil,t:D.tden(dil),tam:!!(sp&&sp.tam),okulN:sp&&sp.tam&&Number.isFinite(sp.n)?sp.n:null});
     });
     if(nokta.length)cizgiler.push({kod,ad:kodlar.length>1?ad(kod).ad:m.ders,renk:'var(--e-c'+(q+1)+')',nokta});
   });
@@ -23003,19 +23003,20 @@ function durusSvg(st,W){
   const ts=seriler.flatMap(s=>s.nokta.map(p=>p.t));let lo=Math.min(...ts)-4,hi=Math.max(...ts)+4,tik;
   for(let i=0;i<8;i++){tik=D.tikler.map(d=>({d,t:D.tden(d)})).filter(x=>x.t>=lo&&x.t<=hi);if(tik.length>=3)break;lo-=4;hi+=4}
   const g0=st.g0,g1=st.g1,etiketGen=Math.max(...seriler.map(s=>yaziGen(s.yazi))),L=Math.max(...tik.map(x=>yaziGen(D.kisa(x.d))),20)+8,R=Math.max(L+120,W-etiketGen-26),ust=14,ph=dar?190:230,alt=ust+ph;
-  const x=g=>L+(g1===g0?.5:(g-g0)/(g1-g0))*(R-L),y=t=>alt-(t-lo)/(hi-lo)*ph,sol=alt+22,sUst=sol+14,taban=sUst+54,H=taban+10;
+  const x=g=>L+(g1===g0?.5:(g-g0)/(g1-g0))*(R-L),y=t=>alt-(t-lo)/(hi-lo)*ph,sol=alt+36,sUst=sol+14,taban=sUst+54,H=taban+10;
   let svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" aria-label="Okulun Türkiye\'deki yeri ve haftalık etüt sayısı">';
   svg+=tik.map(k=>'<line class="et-izgara" x1="'+r1(L)+'" x2="'+r1(R)+'" y1="'+r1(y(k.t))+'" y2="'+r1(y(k.t))+'"/><text class="et-tik" x="'+r1(L-6)+'" y="'+r1(y(k.t))+'" dy="0.32em" text-anchor="end">'+D.kisa(k.d)+'</text>').join('');
   const tarih=[...new Set(seriler.flatMap(s=>s.nokta.map(p=>p.g)))].sort((a,b)=>a-b);
-  let sonX=-99;const yazilan=[];
-  tarih.forEach((g,i)=>{const cx=x(g);if(cx-sonX>=48){yazilan.push(g);sonX=cx}else if(i===tarih.length-1){yazilan.pop();yazilan.push(g);sonX=cx}});
+  const adOf=new Map(seriler.flatMap(s=>s.nokta.map(p=>[p.g,p.kisa||''])));
+  let sonX=-99;const yazilan=[],ara=Math.max(48,...[...adOf.values()].map(a=>yaziGen(a)+6));
+  tarih.forEach((g,i)=>{const cx=x(g);if(cx-sonX>=ara){yazilan.push(g);sonX=cx}else if(i===tarih.length-1){yazilan.pop();yazilan.push(g);sonX=cx}});
   svg+=tarih.map(g=>'<line class="et-izgara ee-sinav" x1="'+r1(x(g))+'" x2="'+r1(x(g))+'" y1="'+ust+'" y2="'+taban+'"/>').join('');
   svg+='<line class="et-eksen" x1="'+r1(L)+'" x2="'+r1(R)+'" y1="'+alt+'" y2="'+alt+'"/>';
-  svg+=yazilan.map(g=>'<text class="et-tik" x="'+r1(x(g))+'" y="'+(alt+17)+'" text-anchor="middle">'+gunAy(g)+'</text>').join('');
+  svg+=yazilan.map(g=>'<text class="et-tik" x="'+r1(x(g))+'" y="'+(alt+17)+'" text-anchor="middle">'+gunAy(g)+'</text>'+(adOf.get(g)?'<text class="et-tik ee-sinav-ad" x="'+r1(x(g))+'" y="'+(alt+31)+'" text-anchor="middle">'+kacis(adOf.get(g))+'</text>':'')).join('');
   for(const s of seriler){
     const pts=s.nokta.map(p=>[x(p.g),y(p.t)]);
     if(pts.length>1)svg+='<path class="ee-cizgi" style="stroke:'+s.renk+'" d="'+GRAFIK_CIZGI.yol(pts)+'"/>';
-    svg+=s.nokta.map((p,i)=>'<circle class="ee-nokta" cx="'+r1(pts[i][0])+'" cy="'+r1(pts[i][1])+'" r="4" style="fill:'+s.renk+'"><title>'+kacis(p.sinav+' · '+(seriler.length>1?s.ad+' · ':'')+D.yazi(p.dilim))+'</title></circle>').join('');
+    svg+=s.nokta.map((p,i)=>'<circle class="ee-nokta'+(p.tam?' ee-tam':'')+'" cx="'+r1(pts[i][0])+'" cy="'+r1(pts[i][1])+'" r="4" style="'+(p.tam?'fill:var(--e-yuzey,#fff);stroke:'+s.renk+';stroke-width:2':'fill:'+s.renk)+'"><title>'+kacis(p.sinav+' · '+(seriler.length>1?s.ad+' · ':'')+D.yazi(p.dilim)+(p.tam?' · tam liste'+(p.okulN?' ('+p.okulN+' okul)':''):''))+'</title></circle>').join('');
   }
   // Direct labels at the right end, pushed apart when two lines end close together.
   const blok=seriler.map(s=>({s,h:15,ideal:y(s.son.t)})).sort((a,b)=>a.ideal-b.ideal);
@@ -23137,7 +23138,9 @@ function aralikBlogu(m){
 function durusPaneli(st,m){
   const bas='<div class="et-kart-bas"><h2>'+kacis('Okulun Türkiye’deki yeri · '+m.ders)+'</h2>';
   if(st.durum!=='tamam')return '<section class="et-panel" id="eeGrafik">'+bas+'</div><p class="mini ee-yok">'+kacis(st.neden)+'</p><div class="et-arac">'+gitDugme('turkiye','Türkiye geneli')+'</div></section>';
-  return '<section class="et-panel" id="eeGrafik">'+bas+'<span class="mini">Yukarı çıkmak, Türkiye’de daha üst dilime girmektir. Altta aynı tarihlerde dersin haftalık etütü.</span></div><div class="et-grafik ee-grafik" role="group" aria-label="Okulun Türkiye’deki yeri"></div><p class="mini" id="eeDurusKaynak">'+kacis('Türkiye geneli sayfasındaki ders çizgisinin aynısı: '+st.kaynak)+'</p></section>';
+  return '<section class="et-panel" id="eeGrafik">'+bas+'<span class="mini">Yukarı çıkmak, Türkiye’de daha üst dilime girmektir. Altta aynı tarihlerde dersin haftalık etütü.</span></div><div class="et-grafik ee-grafik" role="group" aria-label="Okulun Türkiye’deki yeri"></div><p class="mini" id="eeDurusKaynak">'+kacis('Türkiye geneli sayfasındaki ders çizgisinin aynısı: '+st.kaynak)+'</p>'+
+    (st.cizgiler.some(c=>c.nokta.some(p=>p.tam))?'<p class="mini" id="eeTamListe">'+kacis('İçi boş nokta: tam liste ('+[...new Set(st.cizgiler.flatMap(c=>c.nokta.filter(p=>p.tam).map(p=>p.kisa+(p.okulN?', '+p.okulN+' okul':''))))].join('; ')+'). O denemeye daha az okul girdi; sıra yalnızca bu okullar arasındadır, diğer denemelerle tam karşılaştırılamaz.')+'</p>':'')+
+    '<p class="mini" id="eeIkiGrafik">'+kacis('Bu grafik okulun Türkiye’deki okullar arasındaki yerini gösterir. Üstteki “Etüt aldıkça artış” ise okulun içinde çok etüt alanları az alanlarla karşılaştırır; okulun genel gidişi orada çıkarılmıştır. Okul bir denemede geriye düşse de çok etüt alanlar daha az düşmüş ya da yükselmiş olabilir; iki grafik bu yüzden birbirini yalanlamaz.')+'</p></section>';
 }
 function hocaTablosu(m,secili){
   const satir=h=>'<tr'+(secili===h.key?' class="secili'+(h.az?' ee-az':'')+'"':h.az?' class="ee-az"':'')+'><td class="sayi ee-sira">'+(h.sira===null?'—':fi(h.sira))+'</td><td class="tg-ad"><button type="button" class="ee-ad" data-ee-hoca="'+kacis(h.key)+'" aria-pressed="'+(secili===h.key)+'">'+kacis(h.ad)+'</button>'+
