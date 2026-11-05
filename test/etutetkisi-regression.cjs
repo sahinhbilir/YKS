@@ -250,77 +250,114 @@ const by = (m, id) => m.hepsi.find(r => r.id === id);
   const dser = (id, d, sessions = [], cls = '12/A') => ({ id, name: 'SENTETİK ÖĞRENCİ ' + id, cls, sessions, exams: sinavlar(d.map((v, k) => v + MAT_T[k])) });
   const kontroller = (n, d = [0, 0, 0]) => Array.from({ length: n }, (_, i) => dser('C' + i, d));
   const hoc = (m, ad) => m.hocalar.find(h => h.ad === 'Sentetik Öğretmen ' + ad);
+  // A student with eA etüts of teacher A and eB of teacher B between the first two exams; the change over the three exams is planted.
+  const DA = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12'], DB = ['2026-10-13', '2026-10-13', '2026-10-13', '2026-10-13'];
+  const oge = (id, x0, change, eA = 0, eB = 0, mid = x0 + change / 2) => dser(id, [x0, mid, x0 + change], [...et(MAT, A, ...DA.slice(0, eA)), ...et(MAT, B, ...DB.slice(0, eB))]);
+  // Every student takes etüts (1 to 5, varying with the start level): change = 1,5 − 0,3·start + 0,4·etüts, exactly.
+  const planted = (n = 20, kat = 0.4) => Array.from({ length: n }, (_, i) => { const x0 = ((i * 3) % 7) - 3, e = 1 + ((i * 2) % 5); return oge('G' + i, x0, 1.5 - 0.3 * x0 + kat * e, e); });
   await check('the teacher’s own example: +5 after the etüt, then −1: the total change is +4 and it is all credit', () => {
-    const m = model([dser('T1', [0, 5, 4], et(MAT, A, '2026-10-09')), ...kontroller(6)], {}, TR), r = m.ogrenciler[0];
-    assert.equal(m.ogrenciler.length, 1); assert.equal(r.onceD, 0); assert.equal(r.sonD, 4); assert.equal(r.onceAd, ad(0)); assert.equal(r.sonAd, ad(2), 'the latest exam after the etüt, not the peak');
-    assert.equal(r.toplam, 4); assert.equal(r.beklenen, 0); assert.equal(r.fark, 4); assert.deepEqual(r.hoca, { [A]: 1 });
-    const h = hoc(m, 'A'); assert.equal(h.toplam, 4); assert.equal(h.ort, 4); assert.equal(h.n, 1); assert.equal(h.etut, 1); assert.equal(h.az, true); assert.equal(h.sira, null);
-    assert.equal(m.ozet.n, 1); assert.equal(m.karar.k, 'veri'); assert.equal(m.kontrol, 6);
+    const m = model([dser('T1', [0, 5, 4], et(MAT, A, '2026-10-09')), ...kontroller(6)], {}, TR), r = m.ogrenciler.find(x => x.id === 'T1');
+    assert.equal(m.ogrenciler.length, 7); assert.equal(r.onceD, 0); assert.equal(r.sonD, 4); assert.equal(r.onceAd, ad(0)); assert.equal(r.sonAd, ad(2), 'the latest exam after the etüt, not the peak');
+    assert.equal(r.toplam, 4); assert.equal(r.beklenen, 0); assert.equal(r.fark, 4); assert.deepEqual(r.sayilar, { [A]: 1 });
+    const h = hoc(m, 'A'); assert(bit(h.b, 4) && bit(h.toplam, 4) && h.n === 1 && h.etut === 1 && h.az === true && h.sira === null); assert.equal(m.kontrol, 6); assert.deepEqual(m.uc, []);
   });
-  await check('the credit is split by each teacher’s share of the student’s etüts: 6 with A and 2 with B give A 75% and B 25%', () => {
-    const s = dser('S1', [0, 5, 4], [...et(MAT, A, '2026-10-08', '2026-10-09', '2026-10-12', '2026-10-13', '2026-10-15', '2026-10-16'), ...et(MAT, B, '2026-10-19', '2026-10-20')]);
-    const m = model([s, ...kontroller(6)], {}, TR), r = m.ogrenciler[0];
-    assert.deepEqual(r.hoca, { [A]: 0.75, [B]: 0.25 }); assert.deepEqual(r.sayilar, { [A]: 6, [B]: 2 }); assert.equal(r.n, 8);
-    assert(bit(hoc(m, 'A').toplam, 3) && bit(hoc(m, 'B').toplam, 1), 'the pockets add up to the student’s difference of 4');
-    assert(bit(hoc(m, 'A').ort, 4) && bit(hoc(m, 'B').ort, 4), 'per student: the weighted mean of the differences'); assert.equal(hoc(m, 'A').etut, 6); assert.equal(hoc(m, 'B').etut, 2);
-    // Etüts after the last exam the student sat are not shared: only those before it count.
-    const t = model([dser('S2', [0, 5, 4], [...et(MAT, A, '2026-10-09'), ...et(MAT, B, '2026-10-21'.replace('21', '21'))]), ...kontroller(6)], {}, TR); assert.deepEqual(t.ogrenciler[0].hoca, { [A]: 1 }, 'an etüt on the day of the last exam does not count');
+  await check('every student took etüt, with different counts: a planted +0,4 net per etüt is recovered, with the rebound and the school trend taken out', () => {
+    const m = model(planted(), {}, TR), o = m.ozet;
+    assert.equal(m.kontrol, 0, 'nobody is without etüt'); assert(bit(o.b, 0.4, 1e-9), 'γ = ' + o.b); assert(bit(m.beklenen.b, -0.3, 1e-9), 'rebound slope ' + m.beklenen.b);
+    for (const r of m.ogrenciler) { assert(bit(r.fark, 0.4 * r.n, 0.011), r.id + ' ' + r.fark + ' vs ' + 0.4 * r.n); assert(bit(r.beklenen, 1.5 - 0.3 * r.onceD, 0.011)); }
+    assert.equal(m.karar.k, 'var'); assert.match(m.karar.yazi, /^Etüt sayısı arttıkça artış belirgin: her etüt ≈ \+0,4 net \(benzer başlangıçtaki öğrencilere göre\)\.$/); assert.deepEqual(m.uc, [], 'no false flags on the clean fixture');
+    assert(bit(hoc(m, 'A').b, 0.4, 1e-9) && bit(hoc(m, 'A').toplam, 0.4 * m.ogrenciler.reduce((t, r) => t + r.n, 0), 1e-9));
   });
-  await check('the expected change removes a school-wide trend and the rebound of low starters: students who rise only as much as non-etüt students do get a difference of 0', () => {
-    // Without etüt, a student changes by 2 − 0,5·start (a school-wide +2 and a rebound of low starters).
-    const kont = [-4, -2, 0, 2, 4, -3, -1, 1, 3, 5].map((x, i) => dser('K' + i, [x, x, x + 2 - 0.5 * x]));
-    const etut = [-4, -3, -2, -1, 0, 1, 2, 3].map((x, i) => dser('E' + i, [x, x, x + 2 - 0.5 * x], et(MAT, A, '2026-10-09')));
-    const m = model([...etut, ...kont], {}, TR);
-    assert(bit(m.beklenen.b, -0.5, 1e-9), 'the shared slope: ' + m.beklenen.b); assert.equal(m.beklenen.cift, 1);
-    for (const r of m.ogrenciler) assert(Math.abs(r.fark) < 1e-9, r.id + ' ' + r.fark);
-    assert(m.ozet.toplam > 2, 'they did rise: ' + m.ozet.toplam); assert(Math.abs(m.ozet.fark) < 1e-9 && bit(m.ozet.toplam, m.ozet.beklenen, 1e-9));
-    assert.equal(m.karar.k, 'yok'); assert.equal(m.karar.yazi, 'Belirgin bir fark yok.');
-    // A planted real gain of +1,5 on top is found.
-    const gain = etut.map(s => ({ ...s, exams: s.exams.map((e, k) => k === 2 ? { ...e, nets: { mat: e.nets.mat + 1.5 } } : e) })), g = model([...gain, ...kont], {}, TR);
-    assert(bit(g.ozet.fark, 1.5, 1e-9)); assert.equal(g.karar.k, 'var'); assert.match(g.karar.yazi, /^Etüt aldıktan sonra artış belirgin: etüt alanlar beklenenden ortalama \+1,5 net fazla arttı\.$/);
-    // The pair’s own intercept: a pair with fewer than 3 controls leans on the pooled one (here 2 controls of 3 equal the pair’s own two-thirds).
-    put('__GZ', [{ p: 'a', x: 0, y: 2 }, { p: 'a', x: 2, y: 1 }, { p: 'a', x: 4, y: 0 }, { p: 'b', x: 0, y: 5 }]);
-    const bm = get('(()=>{const f=ETUT_ETKI.beklenenModel(__GZ);return {b:f.b,havuz:f.havuz,a:f.tahmin("a",0),bb:f.tahmin("b",0),c:f.tahmin("c",0)}})()');
-    assert(bit(bm.b, -0.5) && bit(bm.a, 2) && bit(bm.c, bm.havuz), JSON.stringify(bm)); assert(bm.bb > bm.havuz && bm.bb < 5, 'one control: a third of its own, two thirds pooled: ' + bm.bb);
-    assert.equal(get('ETUT_ETKI.beklenenModel([])'), null);
+  await check('two teachers with different planted gains (+0,6 and 0) are told apart with no split; a student with both counts in both rows by their own counts', () => {
+    const L = []; let i = 0;
+    for (let eA = 0; eA <= 3; eA++) for (let eB = 0; eB <= 2; eB++) for (let rep = 0; rep < 2; rep++, i++) { const x0 = ((i * 5) % 7) - 3; L.push(oge('M' + i, x0, 1 - 0.2 * x0 + 0.6 * eA + 0 * eB, eA, eB)); }
+    const m = model(L, {}, TR), a = hoc(m, 'A'), b = hoc(m, 'B');
+    assert(bit(a.b, 0.6, 1e-9) && Math.abs(b.b) < 1e-9, [a.b, b.b].join()); assert.equal(a.n, 18); assert.equal(b.n, 16); assert.equal(a.etut, 36); assert.equal(b.etut, 24);
+    assert(bit(a.toplam, 0.6 * 36, 1e-9) && Math.abs(b.toplam) < 1e-9, 'Toplam katkı = γ × the etüts the teacher gave'); assert.deepEqual([a.sira, b.sira], [1, 2]); assert(a.ci && a.ci[0] > 0.59 && b.ci);
+    const ikisi = m.ogrenciler.find(r => r.sayilar[A] === 2 && r.sayilar[B] === 1); assert(ikisi, 'a student with both teachers'); assert.deepEqual(ikisi.sayilar, { [A]: 2, [B]: 1 });
+    assert(!('hoca' in ikisi), 'no shares'); assert.deepEqual(m.uc, []);
+    run("EK.eeHoca='SENTETİK ÖĞRETMEN B'"); merged(L); trSayfa(TR); const h = run('ETUT_ETKI.icerik()'); assert.match(h, /<h2>Etüt aldıkça artış · Sentetik Öğretmen B<\/h2>/); assert.equal((h.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 16, 'B’s students');
+  });
+  await check('the rebound and a school-wide trend are not credited: low starters take more etüt and rise anyway, γ = 0', () => {
+    const L = []; for (let i = 0; i < 21; i++) { const x0 = (i % 7) - 3, e = x0 <= -2 ? 3 : x0 <= 0 ? 2 : x0 <= 1 ? 1 : 0; L.push(oge('R' + i, x0, 2 - 0.5 * x0, e)); }
+    const m = model(L, {}, TR); assert(Math.abs(m.ozet.b) < 1e-9, 'γ = ' + m.ozet.b); assert(bit(m.beklenen.b, -0.5, 1e-9)); assert(m.ozet.toplam > 2, 'the etüt students did rise: ' + m.ozet.toplam);
+    assert.equal(m.karar.k, 'yok'); assert.equal(m.karar.yazi, 'Belirgin bir fark yok.'); assert.deepEqual(m.uc, []);
+    for (const r of m.ogrenciler) assert(Math.abs(r.fark) < 1e-9, r.id);
   });
   await check('a first etüt before the first exam uses the first exam (marked); an etüt with no exam after it leaves the student out', () => {
     const m = model([dser('F1', [0, 3, 6], et(MAT, A, '2026-10-05', '2026-10-09')), dser('N1', [0, 2], et(MAT, A, '2026-10-16')), dser('N2', [0, 1, 2], et(MAT, A, '2026-10-22')), ...kontroller(6)], {}, TR);
-    const f = m.ogrenciler.find(r => r.id === 'F1'); assert.equal(f.onceIlk, true); assert.equal(f.onceAd, ad(0)); assert.equal(f.sonAd, ad(2)); assert.equal(f.toplam, 6); assert.deepEqual(f.hoca, { [A]: 1 }); assert.equal(f.n, 2, 'the etüt before the first exam counts');
-    assert.equal(f.isaret, 0, 'the marker sits at the start');
+    const f = m.ogrenciler.find(r => r.id === 'F1'); assert.equal(f.onceIlk, true); assert.equal(f.onceAd, ad(0)); assert.equal(f.sonAd, ad(2)); assert.equal(f.toplam, 6); assert.deepEqual(f.sayilar, { [A]: 2 }); assert.equal(f.n, 2, 'the etüt before the first exam counts'); assert.equal(f.isaret, 0);
     assert(!m.ogrenciler.some(r => r.id === 'N1')); assert.deepEqual(m.disarida.filter(d => d.id === 'N1').map(d => d.neden), ['etütten sonra deneme yok']);
-    assert(!m.disarida.some(d => d.id === 'N2'), 'an etüt after the last exam of the period is not an etüt of the period: a control'); assert(m.kontrol >= 7);
+    const n2 = m.ogrenciler.find(r => r.id === 'N2'); assert(n2 && !n2.etut, 'an etüt after the last exam of the period is not an etüt of the period: no etüt');
     const g = model([dser('G1', [0, 3, 6], et(MAT, A, '2026-10-09')), ...kontroller(6)], {}, TR).ogrenciler[0]; assert.equal(g.onceIlk, false); assert(g.isaret > 0 && g.isaret < 1, 'between exam 1 and 2: ' + g.isaret);
+    const k = m.ogrenciler.find(r => r.id === 'C0'); assert.equal(k.etut, false); assert.equal(k.onceAd, ad(0)); assert.equal(k.sonAd, ad(2), 'no etüt: first exam to last');
   });
-  await check('headline, verdict and bootstrap: the same text and interval every time; fewer than 8 students give no verdict', () => {
-    const tot = [1, 2, 3, 1, 2, 3, 1, 2, 3, 2], L = [...tot.map((t, i) => dser('H' + i, [0, 1, t], et(MAT, A, '2026-10-09'))), ...kontroller(6)];
-    const m = model(L, {}, TR), m2 = model(L, {}, TR); assert.deepEqual(m, m2);
-    assert.equal(m.ozet.n, 10); assert(bit(m.ozet.toplam, 2) && bit(m.ozet.fark, 2) && bit(m.ozet.beklenen, 0)); assert(m.ozet.ci[0] > 1 && m.ozet.ci[0] < 2 && m.ozet.ci[1] > 2 && m.ozet.ci[1] < 3, String(m.ozet.ci));
-    assert.equal(m.karar.k, 'var'); assert.match(m.karar.yazi, /^Etüt aldıktan sonra artış belirgin: etüt alanlar beklenenden ortalama \+2,0 net fazla arttı\.$/);
-    trSayfa(TR); merged(L); const h = run('ETUT_ETKI.icerik()'), ozet = /id="eeOzet">(.*?)<\/p>/.exec(h)[1].replace(/<[^>]+>/g, '');
-    assert.match(ozet, /^Etüt alan 10 öğrenci, ilk etütten bu yana Türkiye farkında ortalama \+2,0 net arttı; benzer başlangıçtaki etüt almayanlar değişmedi\. Fark: \+2,0 net \(olası aralık \+1,\d … \+2,\d\)\.$/);
-    // The teacher's pocket and the interval of the per student figure repeat.
-    assert.deepEqual(hoc(m, 'A').ci, hoc(model(L, {}, TR), 'A').ci); assert(bit(hoc(m, 'A').toplam, 20) && bit(hoc(m, 'A').ort, 2) && hoc(m, 'A').sira === 1);
+  await check('no variation in the etüt counts gives "Yeterli veri yok"; the headline says why; bootstrap determinism', () => {
+    const L = Array.from({ length: 12 }, (_, i) => dser('V' + i, [i % 3, i % 3, (i % 3) + 2], et(MAT, A, '2026-10-09')));
+    const m = model(L, {}, TR); assert.equal(m.ozet.b, null); assert.equal(m.karar.k, 'veri'); assert.match(m.karar.yazi, /^Yeterli veri yok \(etüt sayısı öğrenciler arasında yeterince değişmiyor\)\.$/);
+    trSayfa(TR); merged(L); const h = run('ETUT_ETKI.icerik()'); assert.match(/id="eeOzet">(.*?)<\/p>/.exec(h)[1], /^Etüt sayısı öğrenciler arasında yeterince değişmediği için her etüt için artış hesaplanamadı\.$/);
+    assert(h.includes('id="eeFark"'), 'the dots are still drawn');
+    const P = planted(), a = model(P, {}, TR), b = model(P, {}, TR); assert.deepEqual(a, b);
+    const rnd = mulberry(3), N = planted(16).map((s, i) => ({ ...s, exams: s.exams.map((e, k) => k === 2 ? { ...e, nets: { mat: Math.round((e.nets.mat + (rnd() - 0.5) * 3) * 100) / 100 } } : e) }));
+    const n1 = model(N, {}, TR), n2 = model(N, {}, TR); assert.deepEqual(n1.ozet.ci, n2.ozet.ci); assert(n1.ozet.ci[0] < n1.ozet.b && n1.ozet.b < n1.ozet.ci[1], String([n1.ozet.ci, n1.ozet.b])); assert.equal(get('ETUT_ETKI.BOOT'), 1000);
+    put('__OB', Array.from({ length: 12 }, (_, i) => ({ p: 'a', y: i + (i % 3), x: [i % 4, i % 5] })));
+    const f = t => get('ETUT_ETKI.kumeAralik(__OB,s=>{const f=ETUT_ETKI.regres(s,2);return f?[f.beta[0]]:null},200,' + t + ')'); assert.deepEqual(f(5), f(5)); assert.notDeepEqual(f(5), f(6)); assert.equal(get('ETUT_ETKI.kumeAralik([{p:"a",y:1,x:[1]}],s=>[1])'), null);
+  });
+  await check('the verdict sentences: clear gain, no clear difference, less gain, not enough data (few students, a very wide interval, no variation)', () => {
     const k = o => { put('__K', o); return get('ETUT_ETKI.kararToplam(__K)'); };
-    assert.equal(k({ n: 12, fark: 1.5, ci: [0.6, 2.4] }).k, 'var'); assert.equal(k({ n: 12, fark: 0.5, ci: [-0.6, 1.4] }).yazi, 'Belirgin bir fark yok.');
-    assert.deepEqual(k({ n: 12, fark: -1.5, ci: [-2.4, -0.6] }), { k: 'az', yazi: 'Etüt alanlar beklenenden daha az arttı: ortalama −1,5 net.' });
-    assert.match(k({ n: 7, fark: 1.5, ci: [0.6, 2.4] }).yazi, /^Yeterli veri yok/); assert.equal(k({ n: 12, fark: 1, ci: [-5, 5] }).k, 'veri'); assert.equal(k(null).k, 'veri'); assert.equal(k({ n: 9, fark: 1, ci: null }).k, 'veri');
-    assert.equal(model(L.slice(0, 5).concat(kontroller(6)), {}, TR).karar.k, 'veri');
+    assert.deepEqual(k({ b: 0.4, ci: [0.1, 0.7], n: 12 }), { k: 'var', yazi: 'Etüt sayısı arttıkça artış belirgin: her etüt ≈ +0,4 net (benzer başlangıçtaki öğrencilere göre).' });
+    assert.deepEqual(k({ b: 0.2, ci: [-0.1, 0.5], n: 12 }), { k: 'yok', yazi: 'Belirgin bir fark yok.' });
+    assert.deepEqual(k({ b: -0.5, ci: [-0.9, -0.1], n: 12 }), { k: 'az', yazi: 'Etüt sayısı arttıkça artış daha az: her etüt ≈ −0,5 net.' });
+    assert.match(k({ b: 0.4, ci: [0.1, 0.7], n: 7 }).yazi, /^Yeterli veri yok/); assert.equal(k({ b: 0.4, ci: [-2, 2], n: 30 }).k, 'veri'); assert.equal(k({ b: 0.4, ci: [-1, 1], n: 30 }).k, 'yok');
+    assert.equal(k({ b: null, ci: null, n: 0 }).k, 'veri'); assert.equal(k(null).k, 'veri'); assert.equal(k({ b: 0.4, ci: [0.1, 0.7], n: 8 }).k, 'var', 'eight students are enough');
   });
-  await check('teachers: ranked by the pocket (the sum), ties share a rank, under 5 students no rank, faint and last even with the biggest pocket', () => {
-    const T = (t, k, d) => dser(t.slice(-1) + k, d, et(MAT, t, '2026-10-09'));
-    const P = 'SENTETİK ÖĞRETMEN P', Q = 'SENTETİK ÖĞRETMEN Q', R = 'SENTETİK ÖĞRETMEN R', Tt = 'SENTETİK ÖĞRETMEN T', five = [1, 2, 3, 4, 5];
-    const L = [...five.map(k => T(P, k, [0, 1, 2])), ...five.map(k => T(Q, k, [0, 1, 2])), ...five.map(k => T(R, k, [0, 0, 1])), ...[1, 2].map(k => T(Tt, k, [0, 5, 10])), ...kontroller(6)];
+  await check('teachers: ranked by the pocket (γ × the etüts they gave), ties share a rank, under 5 students no rank, faint and last even with the biggest pocket', () => {
+    const T = (t, k, e, g) => dser(t.slice(-1) + k, [0, 0, 1 + g * e], et(MAT, t, ...DA.slice(0, e)));
+    const P = 'SENTETİK ÖĞRETMEN P', Q = 'SENTETİK ÖĞRETMEN Q', R = 'SENTETİK ÖĞRETMEN R', Tt = 'SENTETİK ÖĞRETMEN T', es = [1, 2, 3, 1, 2];
+    const L = [...es.map((e, k) => T(P, k, e, 0.5)), ...es.map((e, k) => T(Q, k, e, 0.5)), ...es.map((e, k) => T(R, k, e, 0.2)), ...[1, 2].map((e, k) => T(Tt, k, e, 2)), ...Array.from({ length: 8 }, (_, i) => dser('C' + i, [0, 0, 1]))];
     const m = model(L, {}, TR), h = m.hocalar;
-    assert.deepEqual(h.map(x => [x.ad, x.sira, x.az, x.n, x.etut]), [['Sentetik Öğretmen P', 1, false, 5, 5], ['Sentetik Öğretmen Q', 1, false, 5, 5], ['Sentetik Öğretmen R', 3, false, 5, 5], ['Sentetik Öğretmen T', null, true, 2, 2]]);
-    assert.deepEqual(h.map(x => x.toplam), [10, 10, 5, 20]); assert.deepEqual(h.map(x => x.ort), [2, 2, 1, 10]); assert(h[3].toplam > h[0].toplam, 'T has the biggest pocket yet comes last');
-    assert(h.every(x => x.ci && x.ci[0] <= x.ort + 1e-9 && x.ci[1] >= x.ort - 1e-9));
+    assert.deepEqual(h.map(x => [x.ad, x.sira, x.az, x.n, x.etut]), [['Sentetik Öğretmen P', 1, false, 5, 9], ['Sentetik Öğretmen Q', 1, false, 5, 9], ['Sentetik Öğretmen R', 3, false, 5, 9], ['Sentetik Öğretmen T', null, true, 2, 3]]);
+    assert(h.every((x, i) => bit(x.b, [0.5, 0.5, 0.2, 2][i], 1e-9))); assert(h.every((x, i) => bit(x.toplam, [4.5, 4.5, 1.8, 6][i], 1e-9)), h.map(x => x.toplam).join()); assert(h[3].toplam > h[0].toplam, 'T has the biggest pocket yet comes last');
     merged(L); trSayfa(TR); const sayfa = run('ETUT_ETKI.icerik()'), tbody = /<section class="et-panel" id="eeHocalar">[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/.exec(sayfa)[1];
     const rows = tbody.split('</tr>').filter(x => x.includes('<tr')).map(r => [/<td class="sayi ee-sira">(.*?)<\/td>/.exec(r)[1], /class="ee-ad"[^>]*>(.*?)<\/button>/.exec(r)[1], r.includes('class="ee-az"')]);
     assert.deepEqual(rows, [['1', 'Sentetik Öğretmen P', false], ['1', 'Sentetik Öğretmen Q', false], ['3', 'Sentetik Öğretmen R', false], ['—', 'Sentetik Öğretmen T', true]]);
-    assert.match(sayfa, /<th class="sayi ee-sira">Sıra<\/th><th>Öğretmen<\/th><th class="sayi et-dar-gizle">Öğrenci<\/th><th class="sayi et-dar-gizle">Etüt<\/th><th class="sayi">Toplam katkı \(net\)<\/th><th class="sayi">Öğrenci başına \(net\)<\/th>/);
-    // A teacher’s name filters the students; the left-out list stays whole.
+    assert.match(sayfa, /<th class="sayi ee-sira">Sıra<\/th><th>Öğretmen<\/th><th class="sayi et-dar-gizle">Öğrenci<\/th><th class="sayi et-dar-gizle">Etüt<\/th><th class="sayi">Toplam katkı \(net\)<\/th><th class="sayi">Her etüt için artış \(net\)<\/th>/);
+    assert(!/%\d+<\/td>/.test(sayfa), 'no percentages'); assert.match(sayfa, /Sentetik Öğretmen P · 3 etüt/);
     run("EK.eeHoca='SENTETİK ÖĞRETMEN T'"); const t = run('ETUT_ETKI.icerik()'); assert.equal((t.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 2); assert.match(t, /<h2>Öğrenciler · Sentetik Öğretmen T<\/h2>/); assert.match(t, /data-ee-hoca="">Tüm öğretmenler/);
+  });
+  await check('outliers, one exam: a blank test (−15 net) is not used, the window and γ stay as without it, it is listed, drawn hollow', () => {
+    const temiz = planted(20), kirli = temiz.map(s => s.id === 'G3' ? dser('G3', [0, 0, 0], []) : s);
+    const g3 = temiz.find(s => s.id === 'G3'), d3 = g3.exams.map((e, k) => e.nets.mat - MAT_T[k]);
+    const bos = temiz.map(s => s.id !== 'G3' ? s : { ...s, exams: s.exams.map((e, k) => k === 1 ? { ...e, nets: { mat: e.nets.mat - 15 } } : e) });
+    const a = model(temiz, {}, TR), b = model(bos, {}, TR), ra = a.ogrenciler.find(r => r.id === 'G3'), rb = b.ogrenciler.find(r => r.id === 'G3');
+    assert(bit(a.ozet.b, b.ozet.b, 1e-9) && bit(b.ozet.b, 0.4, 1e-9), [a.ozet.b, b.ozet.b].join()); assert.equal(rb.onceAd, ra.onceAd); assert.equal(rb.sonAd, ra.sonAd); assert.equal(rb.toplam, ra.toplam);
+    assert.deepEqual(a.uc, []); assert.equal(b.uc.length, 1); const srt = [d3[0], d3[1] - 15, d3[2]].sort((x, y) => x - y), dev = d3[1] - 15 - srt[1], devYazi = get('ETUT_ETKI.isr(' + dev + ',1)');
+    assert.deepEqual(b.uc[0], { id: 'G3', ad: 'SENTETİK ÖĞRENCİ G3', sinif: '12/A', tur: 'deneme', neden: ad(1) + ': öğrencinin diğer denemelerinden çok farklı (' + devYazi + ' net)' });
+    assert.deepEqual(rb.uc, [false, true, false]); assert.equal(rb.dizi[1], null); assert.equal(rb.dizi0[1], d3[1] - 15); assert.equal(rb.ucDeneme, 1);
+    merged(bos); trSayfa(TR); const h = run('ETUT_ETKI.icerik()');
+    assert.match(h, /<details id="eeUc"><summary>Hesaba katılmayan uç sonuçlar \(1\)<\/summary><ul><li>Sentetik Öğrenci G3 · 12\/A · 27-YKS-1202: öğrencinin diğer denemelerinden çok farklı \([+−]\d+,\d net\)<\/li>/); assert.match(h, /<circle class="ee-bosnokta"/); assert.match(h, /1 deneme uç, hesaba katılmadı/);
+    // The floor: with every deviation 0 nothing is flagged, and a one-net deviation is no outlier.
+    const duz = Array.from({ length: 10 }, (_, i) => dser('D' + i, [3, 3, 3], et(MAT, A, ...DA.slice(0, 1 + i % 3)))); assert.deepEqual(model(duz, {}, TR).uc, []);
+    assert.deepEqual(model([...duz, dser('D9', [3, 3, 4], et(MAT, A, '2026-10-09'))], {}, TR).uc, []);
+  });
+  await check('outliers, students: three extreme students are all flagged, γ matches the clean fixture; two that pull the same way cannot hide each other', () => {
+    const temiz = planted(22), ucOgr = (id, x0, e, extra) => oge(id, x0, 1.5 - 0.3 * x0 + 0.4 * e + extra, e), ref = model(temiz, {}, TR).ozet.b;
+    const tuc = [...temiz, ucOgr('U1', 0, 3, 10), ucOgr('U2', 1, 2, 12), ucOgr('U3', -1, 4, -11)], m = model(tuc, {}, TR);
+    assert.deepEqual(m.uc.map(u => u.id).sort(), ['U1', 'U2', 'U3']); assert(m.uc.every(u => u.tur === 'ogrenci' && /^Toplam değişim diğer öğrencilerden çok farklı/.test(u.neden)));
+    assert(bit(m.ozet.b, ref, 1e-9) && bit(m.ozet.b, 0.4, 1e-9), 'γ = ' + m.ozet.b); assert(m.ogrenciler.filter(r => r.aykiri).length === 3);
+    assert(!hoc(m, 'A').etut || bit(hoc(m, 'A').b, 0.4, 1e-9), 'the teacher’s γ is not moved'); assert.equal(m.ogrenciler.filter(r => !r.aykiri).length, 22);
+    // Two extreme students on the same side in a 14-student fixture: the first pass leaves them looking ordinary; the rounds catch both.
+    const k14 = planted(12), iki = [...k14, ucOgr('X1', 0, 2, 10), ucOgr('X2', 0, 3, 10.5)], m2 = model(iki, {}, TR);
+    assert.deepEqual(m2.uc.map(u => u.id).sort(), ['X1', 'X2']); assert(bit(m2.ozet.b, 0.4, 1e-9), 'γ = ' + m2.ozet.b);
+    assert(!(model(iki, {}, TR).uc.some(u => u.tur === 'ozet')));
+    // The clean fixtures give no flags.
+    assert.deepEqual(model(planted(25), {}, TR).uc, []);
+  });
+  await check('outliers, the 20% cap: with 40% wild students only the most extreme fifth is put aside, and the list says so', () => {
+    const wild = Array.from({ length: 8 }, (_, i) => oge('W' + i, 0, 1.5 + 0.4 * (1 + (i % 5)) + 8 + i, 1 + (i % 5))), L = [...planted(12), ...wild], m = model(L, {}, TR), ucs = m.uc.filter(u => u.tur === 'ogrenci');
+    assert.equal(ucs.length, 4, '20% of 20 students'); assert(ucs.every(u => /^W/.test(u.id)) && ucs.map(u => u.id).sort().join() === 'W4,W5,W6,W7', 'the four most extreme: ' + ucs.map(u => u.id));
+    assert.deepEqual(m.uc.filter(u => u.tur === 'ozet').map(u => u.neden), ['uç sonuç çok fazla: en uç 20% dışarıda']);
+    merged(L); trSayfa(TR); assert.match(run('ETUT_ETKI.icerik()'), /uç sonuç çok fazla: en uç 20% dışarıda/);
   });
   await check('periods and sessions: exams with equal titles stay apart; Son 4 deneme keeps the last four; a TYT-only course never counts for AYT', () => {
     const ayni = PL.map(s => ({ ...s, exams: s.exams.map(e => ({ ...e, exam: 'GENEL DENEME' })) }));
@@ -339,44 +376,40 @@ const by = (m, id) => m.hepsi.find(r => r.id === id);
     merged(PL, null, ['SENTETİK ÇİFT: ad/şube birden fazla öğrenciye ait; kaydı eşleştirilmedi.']); h = run('ETUT_ETKI.icerik()'); assert.match(h, /id="eeDurum">Eşleştirme: SENTETİK ÇİFT/);
     put('__W', PL); const w = get('ETUT_ETKI.model(__W,{},null,null).sinavlar.length'); assert.equal(w, 5);
   });
-  await check('page: the headline, the verdict, the controls, the sections in order, no tiers; the earlier view is a collapsed block', () => {
-    const tot = [1, 2, 3, 1, 2, 3, 1, 2, 3, 2], L = [...tot.map((t, i) => dser('H' + i, [0, 1, t], et(MAT, i % 3 === 0 ? B : A, '2026-10-09'))), ...kontroller(6)];
-    merged(L); trSayfa(TR); let h = run('ETUT_ETKI.icerik()');
+  const gridL = () => { const L = []; let i = 0; for (let eA = 0; eA <= 3; eA++) for (let eB = 0; eB <= 2; eB++) for (let rep = 0; rep < 2; rep++, i++) { const x0 = ((i * 5) % 7) - 3; L.push(oge('M' + i, x0, 1 - 0.2 * x0 + 0.6 * eA, eA, eB)); } return L; };
+  await check('page: the headline, the verdict, the controls, the sections in order, no tiers, no percentages; the earlier view is a collapsed block', () => {
+    const L = gridL(); merged(L); trSayfa(TR); let h = run('ETUT_ETKI.icerik()');
     const metin = id => new RegExp('<p class="et-cumle[^"]*" id="' + id + '">(.*?)</p>').exec(h)[1].replace(/<[^>]+>/g, '');
     assert.equal(metin('eeCumle'), '12. sınıf · Matematik · 3 deneme (7 Eki – 21 Eki)');
-    assert.match(metin('eeOzet'), /^Etüt alan 10 öğrenci, ilk etütten bu yana Türkiye farkında ortalama \+2,0 net arttı; benzer başlangıçtaki etüt almayanlar değişmedi\. Fark: \+2,0 net \(olası aralık/);
-    assert.match(metin('eeKarar'), /^Etüt aldıktan sonra artış belirgin: etüt alanlar beklenenden ortalama \+2,0 net fazla arttı\.$/);
-    assert.equal(metin('eeSayim'), '16 öğrenciden 10’u etüt alan, 6’sı etüt almayan (karşılaştırma için) olarak sayıldı.');
+    assert.match(metin('eeOzet'), /^Etüt sayısı arttıkça artış: her etüt ≈ \+0,\d net \(olası aralık \+0,\d … \+0,\d\)\. Etüt alan 22 öğrenci, ilk etütten bu yana Türkiye farkında ortalama [+−]\d,\d net (arttı|azaldı); etütsüz kalsalardı beklenen [+−]\d,\d net (arttı|azaldı)\.$/);
+    assert.match(metin('eeKarar'), /^Etüt sayısı arttıkça artış belirgin: her etüt ≈ \+0,\d net \(benzer başlangıçtaki öğrencilere göre\)\.$/);
+    assert.equal(metin('eeSayim'), '24 öğrenciden 24’ü sayıldı (22 etüt alan, 2 etüt almayan).');
     assert.match(h, /<p class="mini" id="eeSinir">Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir\.<\/p>/);
     const sira = ['id="eeCumle"', 'id="eeOzet"', 'id="eeKarar"', 'class="et-arac"', 'id="eeFark"', 'id="eeGrafik"', 'id="eeHocalar"', 'id="eeOgrenciler"', 'id="eeAralik"', 'id="eeNasil"'].map(k => h.indexOf(k)); assert(sira.every(i => i > 0), String(sira));
-    assert.deepEqual([...sira].sort((a, b) => a - b), sira, 'order: sentence, headline, verdict, controls, bars, standing, teachers, students, earlier view, method');
+    assert.deepEqual([...sira].sort((a, b) => a - b), sira, 'order: sentence, headline, verdict, controls, dots, standing, teachers, students, earlier view, method');
     assert.match(h, /data-ee-oturum="TYT" aria-pressed="true"/); assert.match(h, /data-ee-oturum="AYT"[^>]*disabled/); assert.match(h, /<select id="eeDers" aria-label="Ders">/);
     assert.match(h, /data-ee-donem="tum" aria-pressed="true">Tümü/); assert.match(h, /data-ee-donem="son4" aria-pressed="false">Son 4 deneme/);
     const duz = h.replace(/<[^>]+>/g, ' ');
-    assert(!yasak.test(duz), 'no tier labels or manual words: ' + (yasak.exec(duz) || [])[0]); assert(!/GRUPLAR|eeGruplar/.test(h));
+    assert(!yasak.test(duz), 'no tier labels or manual words: ' + (yasak.exec(duz) || [])[0]); assert(!/GRUPLAR|eeGruplar/.test(h)); assert(!/%\d+/.test(duz.replace(/%(95|20)/g, '')), 'no percentages: ' + (/.{20}%\d+.{10}/.exec(duz) || [])[0]); assert(!h.includes('id="eeUc"'), 'no outliers in clean data');
     assert.match(h, /<details id="eeAralik"><summary>Ayrıntı: deneme aralarına göre<\/summary>/); assert(!/<details id="eeAralik" open/.test(h)); assert(h.indexOf('id="eeArtis"') > h.indexOf('id="eeAralik"'), 'the interval bars sit inside the collapsed block');
     assert.match(h, /<details id="eeNasil"><summary>Nasıl hesaplanır<\/summary>/); assert(!/<details id="eeNasil" open/.test(h));
-    const nasil = /<details id="eeNasil">([\s\S]*?)<\/details>/.exec(h)[1].replace(/<[^>]+>/g, ' ');
-    for (const k of ['Türkiye farkı', 'Toplam değişim', 'Beklenen değişim', 'toparlanma', 'Öğretmen cebi', 'kendisiyle kıyaslar']) assert(nasil.includes(k), k);
-    for (const b of ['Öğretmen', 'Toplam katkı (net)', 'Öğrenci başına (net)', 'Sıra', 'Etütten önce', 'Son deneme', 'Toplam değişim (net)', 'Beklenen (net)', 'Etüt sonrası fark (net)', 'Öğretmenler', 'Türkiye farkı']) assert(h.includes('>' + b + '</th>'), b);
-    assert.equal((h.match(/<th class="sayi[ "]/g) || []).length, 5 + 5, 'every numeric header is a .sayi header');
-    assert.equal((h.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 10, 'one row per student with etüts');
-    assert.match(h, /<td class="et-dar-gizle ee-paylar">Sentetik Öğretmen [AB] %100<\/td>/); assert.match(h, /<line class="ee-etutim"/, 'the first etüt is marked on the small line');
+    const nasil = /<details id="eeNasil">([\s\S]*?)<\/details>/.exec(h)[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    for (const k of ['Türkiye farkı', 'Toplam değişim', 'Etüt sayısı arttıkça artış', 'toparlanma', 'Beklenen, etütsüz', 'Öğretmen', 'Çok uç sonuçlar (öğrencinin kendi gidişinden ya da diğer öğrencilerden aşırı farklı olanlar) hesaba katılmaz ve ayrıca listelenir']) assert(nasil.includes(k), k);
+    for (const b of ['Öğretmen', 'Toplam katkı (net)', 'Her etüt için artış (net)', 'Sıra', 'Etütten önce', 'Son deneme', 'Toplam değişim (net)', 'Beklenen, etütsüz (net)', 'Etüt sonrası fark (net)', 'Etüt', 'Öğretmenler', 'Türkiye farkı']) assert(h.includes('>' + b + '</th>'), b);
+    assert.equal((h.match(/<th class="sayi[ "]/g) || []).length, 5 + 6, 'every numeric header is a .sayi header');
+    assert.equal((h.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 24, 'one row per counted student');
+    assert.match(h, /<td class="et-dar-gizle ee-paylar">Sentetik Öğretmen A · \d etüt<br>Sentetik Öğretmen B · \d etüt<\/td>/); assert.match(h, /<line class="ee-etutim"/, 'the first etüt is marked on the small line');
     assert(!h.includes('NaN') && !h.includes('undefined'));
-    // Controls change the page.
     run("EK.eeDonem='son4'"); h = run('ETUT_ETKI.icerik()'); assert.match(h, /data-ee-donem="son4" aria-pressed="true"/);
-    run('EK.eeDonem=undefined'); merged(L.map(s => s.id === 'H1' ? { ...s, name: 'SENTETİK <ÖĞRENCİ> "1"' } : s)); h = run('ETUT_ETKI.icerik()'); assert(!h.includes('<öğrenci>')); assert.match(h, /&lt;öğrenci&gt;/);
-    // Without a control student the page still shows the students and the earlier view, and says why there is no headline.
-    merged(PL); h = run('ETUT_ETKI.icerik()'); assert.match(/id="eeOzet">(.*?)<\/p>/.exec(h)[1], /beklenen değişimi hesaplanabilen öğrenci yok/); assert(!h.includes('id="eeFark"') && h.includes('id="eeAralik"'));
+    run('EK.eeDonem=undefined'); merged(L.map(s => s.id === 'M1' ? { ...s, name: 'SENTETİK <ÖĞRENCİ> "1"' } : s)); h = run('ETUT_ETKI.icerik()'); assert(!h.includes('<öğrenci>')); assert.match(h, /&lt;öğrenci&gt;/);
   });
   await check('the left-out list sits under the students with the reasons, including the etüt without a later exam', () => {
-    const tot = [1, 2, 3, 1, 2, 3, 1, 2, 3, 2], base = [...tot.map((t, i) => dser('H' + i, [0, 1, t], et(MAT, A, '2026-10-09'))), ...kontroller(6)];
-    const L = [...base, { id: 'X1', name: 'SENTETİK X1', cls: '12/A', sessions: et(MAT, A, '2026-10-16'), exams: sinavlar([10, null, null, null, null]) }, { id: 'X2', name: 'SENTETİK X2', cls: '12/B', sessions: [], exams: TARIH.map((date, k) => ({ exam: ad(k), date, session: 'TYT', nets: { fizik: 5 } })) },
+    const L = [...planted(12), { id: 'X1', name: 'SENTETİK X1', cls: '12/A', sessions: et(MAT, A, '2026-10-16'), exams: sinavlar([10, null, null, null, null]) }, { id: 'X2', name: 'SENTETİK X2', cls: '12/B', sessions: [], exams: TARIH.map((date, k) => ({ exam: ad(k), date, session: 'TYT', nets: { fizik: 5 } })) },
       { id: 'X3', name: 'SENTETİK X3', cls: '12/A', sessions: et(MAT, A, '2026-10-16'), exams: sinavlar([0, 2].map((v, k) => v + MAT_T[k])) }];
     merged(L); trSayfa(TR); const h = run('ETUT_ETKI.icerik()');
-    assert.equal((h.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 10);
+    assert.equal((h.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 12);
     assert.match(h, /<details id="eeDisarida"><summary>Dışarıda kalan 3 öğrenci<\/summary>[\s\S]*Sentetik X1 · 12\/A · yalnızca 1 denemeye girdi[\s\S]*Sentetik X2 · 12\/B · bu dersin neti yok[\s\S]*Sentetik X3 · 12\/A · etütten sonra deneme yok/);
-    assert.match(new RegExp('id="eeSayim">(.*?)</p>').exec(h)[1], /^19 öğrenciden 10’u etüt alan, 6’sı etüt almayan \(karşılaştırma için\) olarak sayıldı; 3’ü dışarıda \(aşağıda listelenir\)\.$/);
+    assert.match(new RegExp('id="eeSayim">(.*?)</p>').exec(h)[1], /^15 öğrenciden 12’si sayıldı \(12 etüt alan, 0 etüt almayan\); 3’ü dışarıda \(aşağıda listelenir\)\.$/);
   });
   await check('the school’s standing: the lesson line of the Türkiye geneli page for the grade, with the dilim wording, and the weekly etüts on the same dates', () => {
     const rapor = [1, 2, 3].map(e => get('TURKIYE.pdfCoz(' + JSON.stringify(kurumRaporu(kurumListesi(e)).pages) + ',' + JSON.stringify('27-YKS-120' + e + ' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf') + ')'));
@@ -412,14 +445,14 @@ const by = (m, id) => m.hepsi.find(r => r.id === id);
     // A bar with no interval stays empty and says so.
     const bos = model(PL.map(s => ({ ...s, sessions: s.sessions.filter(x => x.date < '2026-10-10') })), {}, TR); put('__M2', bos); assert(!get('ETUT_ETKI.artisSvg(__M2,640)').includes('NaN'));
   });
-  await check('the main chart: a bar per student with etüts, up when above the expected change, the zero line and the mean named at the right', () => {
-    const tot = [1, 2, -1, 1, 2, 3, 1, 2, 3, 2], m = model([...tot.map((t, i) => dser('H' + i, [0, 1, t], et(MAT, A, '2026-10-09'))), ...kontroller(6)], {}, TR); put('__F', m);
-    const svg = get('ETUT_ETKI.farkSvg(__F,640)');
-    assert.equal((svg.match(/<rect class="ee-fark ee-yukari"/g) || []).length, 9); assert.equal((svg.match(/<rect class="ee-fark ee-asagi"/g) || []).length, 1); assert(svg.includes('class="et-eksen ee-sifir"') && svg.includes('class="ee-ortcizgi"'));
-    assert(svg.includes('>ortalama +1,6</text>') && svg.includes('>beklenen</text>'), 'labels'); assert(!svg.includes('NaN') && !svg.includes('undefined')); assert(svg.includes('viewBox="0 0 640 '));
-    const dar = get('ETUT_ETKI.farkSvg(__F,300)'); assert(dar.includes('viewBox="0 0 300 ') && !dar.includes('NaN'));
-    // The interval bars are drawn only when the block is open: a closed block has no width, so nothing is drawn into it.
-    assert(get('typeof ETUT_ETKI.artisSvg')==='function');
+  await check('the main chart: a dot per student at their etüt count, the fitted line with its slope written on it, the zero line; extreme students hollow and labelled; no names', () => {
+    const P = planted(20), ucO = oge('U1', 0, 1.5 + 0.4 * 2 + 12, 2), m = model([...P, ucO], {}, TR); put('__F', m);
+    const svg = get('ETUT_ETKI.farkSvg(__F,640,"")');
+    assert.equal((svg.match(/<circle class="ee-nokta ee-dagilim"/g) || []).length, 20); assert.equal((svg.match(/<circle class="ee-nokta ee-dagilim ee-aykiri"/g) || []).length, 1);
+    assert(svg.includes('class="et-eksen ee-sifir"') && svg.includes('class="ee-ortcizgi ee-egri"')); assert(svg.includes('>her etüt +0,4 net</text>') && svg.includes('>aykırı, hesaba katılmadı</text>') && svg.includes('>Aldığı etüt sayısı</text>'));
+    assert(!svg.includes('NaN') && !svg.includes('undefined') && !svg.includes('SENTETİK') && svg.includes('viewBox="0 0 640 '));
+    const dar = get('ETUT_ETKI.farkSvg(__F,300,"")'); assert(dar.includes('viewBox="0 0 300 ') && !dar.includes('NaN'));
+    const t = get('ETUT_ETKI.farkSvg(__F,640,"' + A + '")'); assert(t.includes('>her etüt +0,4 net</text>') && t.includes('(Sentetik Öğretmen A)'), 'a chosen teacher: their own gain per etüt');
   });
   await check('page states: no data, one exam, no etüt in the period, nobody with two exams, a failing source', () => {
     merged([]); let h = run('ETUT_ETKI.icerik()'); assert.match(h, /Henüz veri yok/); assert.match(h, /data-sekme="siralamalar"/); assert.match(h, /data-sekme="etutler"/);
@@ -428,7 +461,7 @@ const by = (m, id) => m.hepsi.find(r => r.id === id);
     run('OGRENCI_RAPOR.temelOgrenciler=()=>{throw new Error("Rapor okunamadı.")}'); h = run('ETUT_ETKI.icerik()'); assert.match(h, /<p class="et-uyari">Rapor okunamadı\.<\/p>/);
     // Everyone sat only one exam: the page says so instead of drawing nothing.
     merged(PL.map((s, i) => ({ ...s, exams: [s.exams[i % 5]] }))); h = run('ETUT_ETKI.icerik()');
-    assert.match(h, /beklenen değişimi hesaplanabilen öğrenci yok/); assert(!h.includes('id="eeFark"') && !h.includes('NaN'));
+    assert.match(h, /Değişimi hesaplanabilen öğrenci yok/); assert(!h.includes('id="eeFark"') && !h.includes('NaN'));
   });
   await check('menu, viewing teacher and privacy: under Öğrenciler, rehber only, nothing stored or sent to students', () => {
     assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='ogrenciler')[1]"), ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor', 'gunlukrapor']);

@@ -31,6 +31,10 @@ for(let i=1;i<=30;i++){
   const exams=DATES.map((date,k)=>(i===5&&k===2)?null:{exam:ad(k),date,session:'TYT',nets:{mat:mat[k],fizik:6+k*.5}}).filter(Boolean);
   ogrenciler.push({id:'o'+i,name:'SENTETİK ÖĞRENCİ '+String(i).padStart(2,'0'),cls:'12/'+(i%2?'A':'B'),sessions,exams});
 }
+// Two outlier demos: a blank test in the third exam (−15 net), and a student whose whole change is far beyond everyone else's.
+{const sess=et('MATEMATİK TYT','SENTETİK ÖĞRETMEN A',3,7),d=[-1,0.5,2,3.5,5];
+ ogrenciler.push({id:'x3',name:'SENTETİK BOŞ KAĞIT',cls:'12/A',sessions:sess,exams:DATES.map((date,k)=>({exam:ad(k),date,session:'TYT',nets:{mat:Math.round((d[k]+GENEL_MAT[k]-(k===2?15:0))*100)/100,fizik:6}}))});
+ ogrenciler.push({id:'x4',name:'SENTETİK UÇ ÖĞRENCİ',cls:'12/B',sessions:et('MATEMATİK TYT','SENTETİK ÖĞRETMEN A',2,3),exams:DATES.map((date,k)=>({exam:ad(k),date,session:'TYT',nets:{mat:Math.round(([0,3,7,10,14][k]+GENEL_MAT[k])*100)/100,fizik:6}}))});}
 ogrenciler.push({id:'x1',name:'SENTETİK TEK DENEME',cls:'12/A',sessions:et('MATEMATİK TYT','SENTETİK ÖĞRETMEN A',1,2),exams:[{exam:ad(0),date:DATES[0],session:'TYT',nets:{mat:10}}]});
 ogrenciler.push({id:'x2',name:'SENTETİK NETSİZ',cls:'12/B',sessions:[],exams:DATES.map((date,k)=>({exam:ad(k),date,session:'TYT',nets:{fizik:5}}))});
 for(let i=1;i<=6;i++)ogrenciler.push({id:'k'+i,name:'SENTETİK KÜÇÜK '+i,cls:'9/A',sessions:et('MATEMATİK TYT','SENTETİK ÖĞRETMEN A',i%2,i),exams:DATES.map((date,k)=>({exam:'27-TYT-09'+String(k+1).padStart(2,'0'),date,session:'TYT',nets:{mat:5+k+i%3}}))});
@@ -55,14 +59,14 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
    assert.equal(await page.locator('#ray #ogrencilerMenusu [data-sekme="etutetki"]').count(),1);
    assert.deepEqual(await page.locator('#ray #ogrencilerMenusu [data-sekme]').evaluateAll(l=>l.map(x=>x.dataset.sekme)),['takip','etutler','etutetki','etutplani','yoklama','ogrencirapor','gunlukrapor']);
    await page.evaluate(()=>{EK.sekme='etutetki';ciz()});
-   await page.waitForSelector('#eeKok #eeGrafik svg path.ee-cizgi');await page.waitForSelector('#eeFark svg rect.ee-fark');
+   await page.waitForSelector('#eeKok #eeGrafik svg path.ee-cizgi');await page.waitForSelector('#eeFark svg circle.ee-dagilim');
    const cumle=()=>page.locator('#eeCumle').innerText();
    // The headline, the verdict and the counts, in everyday words.
    assert.match(await cumle(),/^12\. sınıf · Matematik · 5 deneme \(7 Eki – 4 Kas\)$/);
-   assert.match(await page.locator('#eeOzet').innerText(),/^Etüt alan \d+ öğrenci, ilk etütten bu yana Türkiye farkında ortalama [+−]\d,\d net (arttı|azaldı); benzer başlangıçtaki etüt almayanlar (değişmedi|[+−]\d,\d net (arttı|azaldı))\. Fark: [+−]\d,\d net \(olası aralık [+−]\d,\d … [+−]\d,\d\)\.$/);
+   assert.match(await page.locator('#eeOzet').innerText(),/^Etüt sayısı arttıkça artış: her etüt ≈ [+−]\d,\d net \(olası aralık [+−]\d,\d … [+−]\d,\d\)\. Etüt alan 20 öğrenci, ilk etütten bu yana Türkiye farkında ortalama [+−]\d,\d net (arttı|azaldı); etütsüz kalsalardı beklenen (değişim yok|[+−]\d,\d net (arttı|azaldı))\.$/);
    const karar=await page.locator('#eeKarar').innerText();
-   assert.match(karar,/^Etüt aldıktan sonra artış belirgin: etüt alanlar beklenenden ortalama \+\d,\d net fazla arttı\.$/,karar);
-   assert.match(await page.locator('#eeSayim').innerText(),/^32 öğrenciden 19’u etüt alan, \d+’\w+ etüt almayan \(karşılaştırma için\) olarak sayıldı; 2’si dışarıda \(aşağıda listelenir\)\.$/);
+   assert.match(karar,/^Etüt sayısı arttıkça artış belirgin: her etüt ≈ \+0,[2-6] net \(benzer başlangıçtaki öğrencilere göre\)\.$/,karar);
+   assert.match(await page.locator('#eeSayim').innerText(),/^34 öğrenciden 32’si sayıldı \(21 etüt alan, 11 etüt almayan\); 2’si dışarıda \(aşağıda listelenir\)\.$/);
    assert.equal(await page.locator('#eeSinir').innerText(),'Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir.');
    assert.equal(await page.locator('#eeHamUyari, #eeListesiz').count(),0,'the lists exist for every exam');
    const yazi=await page.locator('#eeKok').innerText();
@@ -72,16 +76,15 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
    const sira=await page.evaluate(()=>['eeCumle','eeOzet','eeKarar','eeFark','eeGrafik','eeHocalar','eeOgrenciler','eeDisarida','eeAralik','eeNasil'].map(id=>document.getElementById(id).getBoundingClientRect().top+scrollY));
    assert.deepEqual([...sira].sort((a,b)=>a-b),sira,'sections in order: '+sira);
    assert.equal(await page.locator('#eeNasil').evaluate(d=>d.open),false);assert.equal(await page.locator('#eeAralik').evaluate(d=>d.open),false);
-   // The main chart: a bar per student with etüts, drawn at the box's real width, the zero line and the mean named at the right.
+   // The main chart: a dot per student at their etüt count, the fitted line with its slope written on it, the zero line; the extreme student hollow.
    const f=await page.evaluate(()=>{
     const kutu=document.querySelector('#eeFark .et-grafik'),svg=kutu.querySelector('svg'),s=svg.getBoundingClientRect();
     const txt=[...svg.querySelectorAll('text')].map(t=>({t:t.textContent,size:parseFloat(getComputedStyle(t).fontSize),r:t.getBoundingClientRect()}));
-    return {w:s.width,attr:Number(svg.getAttribute('width')),kw:kutu.clientWidth,bars:svg.querySelectorAll('rect.ee-fark').length,up:svg.querySelectorAll('rect.ee-yukari').length,sifir:svg.querySelectorAll('.ee-sifir').length,ort:svg.querySelectorAll('.ee-ortcizgi').length,
-      enKucuk:Math.min(...txt.map(x=>x.size)),etiket:txt.map(x=>x.t).filter(t=>/^ortalama |^beklenen$/.test(t)),tasan:txt.filter(x=>x.r.left<s.left-1||x.r.right>s.right+1).map(x=>x.t),
-      renk:getComputedStyle(svg.querySelector('rect.ee-yukari')).fill};
+    return {w:s.width,attr:Number(svg.getAttribute('width')),kw:kutu.clientWidth,dots:svg.querySelectorAll('circle.ee-dagilim').length,hollow:svg.querySelectorAll('circle.ee-aykiri').length,sifir:svg.querySelectorAll('.ee-sifir').length,egri:svg.querySelectorAll('.ee-egri').length,
+      enKucuk:Math.min(...txt.map(x=>x.size)),etiket:txt.map(x=>x.t).filter(t=>/^her etüt |^aykırı, hesaba katılmadı$/.test(t)),tasan:txt.filter(x=>x.r.left<s.left-1||x.r.right>s.right+1).map(x=>x.t)};
    });
-   assert(Math.abs(f.w-f.kw)<=1&&f.attr===f.kw,'fark chart at the real width '+JSON.stringify([f.w,f.attr,f.kw]));assert.equal(f.bars,19,'a bar per student with etüts');assert(f.up>=12&&f.up<=19);assert.equal(f.sifir,1);assert.equal(f.ort,1);
-   assert.equal(f.etiket.length,2);assert(f.enKucuk>=11);assert.deepEqual(f.tasan,[]);
+   assert(Math.abs(f.w-f.kw)<=1&&f.attr===f.kw,'chart at the real width '+JSON.stringify([f.w,f.attr,f.kw]));assert.equal(f.dots,32,'a dot per counted student');assert.equal(f.hollow,1,'the extreme student is hollow');assert.equal(f.sifir,1);assert.equal(f.egri,1);
+   assert.equal(f.etiket.length,2);assert(f.etiket.some(x=>/^her etüt \+0,\d net$/.test(x))&&f.etiket.includes('aykırı, hesaba katılmadı'));assert(f.enKucuk>=11);assert.deepEqual(f.tasan,[]);
    // The earlier view sits in a collapsed block: open it and its bars are drawn at the real width.
    await page.locator('#eeAralik summary').click();await page.waitForSelector('#eeArtis svg rect.ee-sutun');
    assert.match(await page.locator('#eeAralikKarar').innerText(),/^(Etüt aldıkça artış belirgin|Belirgin bir fark yok|Yeterli veri yok|Etüt alınan aralıklarda)/);
@@ -120,27 +123,33 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
     for(const c of sonuc.filter(c=>!c.sayi))assert(['left','start'].includes(c.thAlign)&&['left','start'].includes(c.tdAlign),id+' · '+c.ad+': names are left-aligned');
    }
    assert.deepEqual((await page.locator('#eeHocalar .ee-ad').allInnerTexts()).sort(),['Sentetik Öğretmen A','Sentetik Öğretmen B']);
-   assert.deepEqual(await page.locator('#eeHocalar thead th').allTextContents(),['Sıra','Öğretmen','Öğrenci','Etüt','Toplam katkı (net)','Öğrenci başına (net)']);
+   assert.deepEqual(await page.locator('#eeHocalar thead th').allTextContents(),['Sıra','Öğretmen','Öğrenci','Etüt','Toplam katkı (net)','Her etüt için artış (net)']);
    // Teachers are ranked by their estimate (largest first): the first row is rank 1 and the column is right-aligned like the other numbers.
    assert.deepEqual(await page.locator('#eeHocalar thead th').first().evaluate(th=>[th.textContent,th.classList.contains('sayi'),getComputedStyle(th).textAlign,th.getBoundingClientRect().width>0]),['Sıra',true,'right',true]);
    const hocaSatirlari=await page.locator('#eeHocalar tbody tr').evaluateAll(l=>l.map(r=>{const son=r.children[r.children.length-1],kat=r.children[r.children.length-2],say=kat.textContent;return {sira:r.children[0].textContent,az:r.classList.contains('ee-az'),tahmin:parseFloat(say.replace(/[▲▼]/g,'').replace(',','.'))*(say.includes('▼')?-1:1),aralik:son.querySelector('.mini')?.textContent||''}}));
    assert.equal(hocaSatirlari[0].sira,'1');assert.match(hocaSatirlari[0].aralik,/^[+−]?\d,\d\d … [+−]?\d,\d\d$/,'the interval is written under the estimate');
    for(let i=1;i<hocaSatirlari.length;i++){const a=hocaSatirlari[i-1],c=hocaSatirlari[i];assert(a.az<=c.az,'small groups last');if(a.az===c.az)assert(a.tahmin>=c.tahmin,'largest pocket first')}
    for(const r of hocaSatirlari)assert.equal(r.sira==='—',r.az,'only small groups lose their rank');
-   assert.deepEqual(await page.locator('#eeOgrenciler thead th').allTextContents(),['Öğrenci','Etütten önce','Son deneme','Toplam değişim (net)','Beklenen (net)','Etüt sonrası fark (net)','Öğretmenler','Türkiye farkı']);
-   const hepsi=await page.locator('#eeOgrenciler tbody tr').count();assert.equal(hepsi,19);
-   assert.equal(await page.locator('#eeOgrenciler tbody tr svg').count(),19,'a small line each');assert.equal(await page.locator('#eeOgrenciler tbody tr line.ee-etutim').count(),19,'the first etüt is marked on each');
+   assert.deepEqual(await page.locator('#eeOgrenciler thead th').allTextContents(),['Öğrenci','Etütten önce','Son deneme','Toplam değişim (net)','Beklenen, etütsüz (net)','Etüt sonrası fark (net)','Etüt','Öğretmenler','Türkiye farkı']);
+   // The outliers are never dropped silently: a collapsed list with the reasons, the table marks the rows, the small line draws a hollow dot.
+   assert.match(await page.locator('#eeUc summary').innerText(),/^Hesaba katılmayan uç sonuçlar \(2\)$/);assert.equal(await page.locator('#eeUc').evaluate(d=>d.open),false);
+   await page.locator('#eeUc summary').click();
+   assert.match(await page.locator('#eeUc').innerText(),/Sentetik Boş Kağıt · 12\/A · 27-YKS-1203: öğrencinin diğer denemelerinden çok farklı \(−\d+,\d net\)[\s\S]*Sentetik Uç Öğrenci · 12\/B · Toplam değişim diğer öğrencilerden çok farklı/);
+   await page.locator('#eeUc summary').click();
+   assert.equal(await page.locator('#eeOgrenciler tr.ee-ucsatir').count(),1);assert.match(await page.locator('#eeOgrenciler tr.ee-ucsatir').innerText(),/aykırı, hesaba katılmadı/);assert.equal(await page.locator('#eeOgrenciler circle.ee-bosnokta').count(),1);
+   const hepsi=await page.locator('#eeOgrenciler tbody tr').count();assert.equal(hepsi,32);
+   assert.equal(await page.locator('#eeOgrenciler tbody tr svg').count(),32,'a small line each');assert.equal(await page.locator('#eeOgrenciler tbody tr line.ee-etutim').count(),21,'the first etüt is marked on each student with etüts');
    assert.match(await page.locator('#eeDisarida summary').innerText(),/^Dışarıda kalan 2 öğrenci$/);
    assert.equal(await page.locator('#eeDisarida').evaluate(d=>d.open),false);
    await page.locator('#eeDisarida summary').click();
    assert.match(await page.locator('#eeDisarida').innerText(),/Sentetik Netsiz · 12\/B · bu dersin neti yok[\s\S]*Sentetik Tek Deneme · 12\/A · yalnızca 1 denemeye girdi/);
    // The method block opens and is plain.
    await page.locator('#eeNasil summary').click();assert.equal(await page.locator('#eeNasil').evaluate(d=>d.open),true);
-   const nasil=await page.locator('#eeNasil').innerText();for(const k of ['Türkiye farkı','Toplam değişim','Beklenen değişim','Öğretmen cebi'])assert(nasil.includes(k),k);
+   const nasil=await page.locator('#eeNasil').innerText();for(const k of ['Türkiye farkı','Toplam değişim','Beklenen, etütsüz','Çok uç sonuçlar'])assert(nasil.includes(k),k);
    await page.locator('#eeNasil summary').click();
    // A teacher filters the students; "Tüm öğretmenler" resets.
    await page.locator('#eeHocalar .ee-ad',{hasText:'Öğretmen B'}).click();
-   await page.waitForFunction(()=>document.querySelectorAll('#eeOgrenciler tbody tr').length<19);
+   await page.waitForFunction(()=>document.querySelectorAll('#eeOgrenciler tbody tr').length<32);
    const nB=await page.locator('#eeOgrenciler tbody tr').count();assert(nB>0&&nB<hepsi);
    assert.match(await page.locator('#eeOgrenciler h2').innerText(),/Öğrenciler · Sentetik Öğretmen B/);assert.equal(await page.locator('#eeHocalar tr.secili').count(),1);
    await page.locator('#eeOgrenciler [data-ee-hoca=""]').click();
@@ -149,15 +158,15 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
    await page.locator('[data-ee-donem="son4"]').click();
    await page.waitForFunction(()=>/ 4 deneme \(14 Eki – 4 Kas\)/.test(document.querySelector('#eeCumle').textContent));
    assert.equal(await page.locator('[data-ee-donem="son4"]').getAttribute('aria-pressed'),'true');
-   await page.waitForSelector('#eeGrafik svg path.ee-cizgi');await page.waitForSelector('#eeFark svg rect.ee-fark');
+   await page.waitForSelector('#eeGrafik svg path.ee-cizgi');await page.waitForSelector('#eeFark svg circle.ee-dagilim');
    await page.locator('[data-ee-donem="tum"]').click();
    await page.waitForFunction(()=>/ 5 deneme \(7 Eki – 4 Kas\)/.test(document.querySelector('#eeCumle').textContent));
    // Ders: another lesson, another page (three students, so no verdict and the one teacher is unranked).
    await page.locator('#eeDers').selectOption('Fizik');
    await page.waitForFunction(()=>/· Fizik ·/.test(document.querySelector('#eeCumle').textContent));
-   assert.match(await page.locator('#eeKarar').innerText(),/^Yeterli veri yok/);
+   assert.match(await page.locator('#eeKarar').innerText(),/^(Yeterli veri yok|Belirgin bir fark yok)/);
    // The chart is drawn after layout at the box's real width: wait for its bars, do not count them at once.
-   await page.waitForFunction(()=>document.querySelectorAll('#eeFark svg rect.ee-fark').length===3);assert.equal(await page.locator('#eeFark svg rect.ee-fark').count(),3);
+   await page.waitForFunction(()=>(document.querySelector('#eeFark .et-grafik').dataset.imza||'').includes('|Fizik|'));assert(await page.locator('#eeFark svg circle.ee-dagilim').count()>=30);
    assert.deepEqual(await page.locator('#eeHocalar .ee-ad').allInnerTexts(),['Sentetik Öğretmen F']);assert.equal(await page.locator('#eeHocalar tbody tr td').first().innerText(),'—','one teacher with 3 students is unranked');
    await page.waitForSelector('#eeGrafik svg path.ee-cizgi');
    await page.locator('#eeDers').selectOption('Matematik');
@@ -177,7 +186,7 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
      gorunen:[...document.querySelectorAll('#'+id+' thead th')].filter(th=>th.getBoundingClientRect().width>0).map(th=>th.textContent),
      tasma:(k=>k.scrollWidth-k.clientWidth)(document.querySelector('#'+id+' .et-tablo-kutu')),tablo:(t=>t.scrollWidth-t.clientWidth)(document.querySelector('#'+id+' table')),
      kesik:[...document.querySelectorAll('#'+id+' td,#'+id+' th')].filter(c=>c.getBoundingClientRect().width>0&&c.scrollWidth>c.clientWidth+1).map(c=>c.textContent+':'+c.scrollWidth+'/'+c.clientWidth)}])));
-    assert.deepEqual(kolonlar.eeHocalar.gorunen,['Sıra','Öğretmen','Toplam katkı (net)','Öğrenci başına (net)']);
+    assert.deepEqual(kolonlar.eeHocalar.gorunen,['Sıra','Öğretmen','Toplam katkı (net)','Her etüt için artış (net)']);
     assert.deepEqual(kolonlar.eeOgrenciler.gorunen,['Öğrenci','Toplam değişim (net)','Etüt sonrası fark (net)','Türkiye farkı']);
     for(const [id,k] of Object.entries(kolonlar)){assert(k.tasma<=1,id+' scrolls sideways by '+k.tasma);assert(k.tablo<=1,id+' table wider than its box by '+k.tablo);assert.deepEqual(k.kesik,[],id+' has cut-off cells')}
    }
