@@ -97,3 +97,14 @@
 #eeKok .ee-grafik .ee-ol-isaret-ad{fill:var(--e-fg2)}
 #eeKok .ee-alt-baslik{margin:8px 0 0;font-size:.9375rem;font-weight:500;color:var(--e-fg)}
 #eeKok #eeFark .mini{margin:2px 0 6px}
+
+/* One small event study per teacher: a grid, one column on a phone. */
+#eeKok .ee-hoca-izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,22rem),1fr));gap:16px}
+#eeKok .ee-hoca-kart{min-width:0;display:flex;flex-direction:column;gap:6px;border:1px solid var(--e-line);border-radius:var(--e-r);padding:12px;cursor:pointer}
+#eeKok .ee-hoca-kart.secili{border-color:var(--e-fg)}
+#eeKok .ee-hoca-kart.ee-az{opacity:.55}
+#eeKok .ee-kart-ust{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+#eeKok .ee-kart-ad{font:inherit;font-weight:600;color:var(--e-fg);background:none;border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--e-line);text-underline-offset:3px;overflow-wrap:anywhere}
+#eeKok .ee-kart-say{margin:0;font-size:.8125rem}
+#eeKok .ee-kart-az{margin:0;color:var(--e-bad)}
+#eeKok .ee-hoca-kart .ee-grafik{min-height:300px}

@@ -416,11 +416,18 @@ function ortCi(l){
 // period) since the exam before the first etüt (the reference, 0), by exam position relative to it: 2 and 1 before, the reference, 1 and
 // 2 after, 3 or more after (a student's values in the tail bin are averaged first). Every ders is in its own school SD and shown back in
 // net of the chosen ders. At each position both lines are the mean of the same students (those with an etüt-free ders at that exam).
-function olayKur(kisiler,D,ders,sd,ex){
+// hoca: only the students who took etüt of the ders from that teacher, with the reference at the exam before their first etüt with them.
+function olayKur(kisiler,D,ders,sd,ex,hoca=null){
   const kutu=OLAY_BIN.map(()=>({s:[],c:[]})),ogr=new Set();
   for(const q of kisiler){
     if(q.aykiri||q.gSel===null)continue;
-    const r=q.sel.bi,ds=D[ders][q.si_].dizi,kon=Object.keys(D).filter(k=>k!==ders&&!q.E[k].length&&D[k][q.si_].dizi[r]!==null&&D[k][q.si_].dizi[r]!==undefined);
+    const ds=D[ders][q.si_].dizi;let r=q.sel.bi;
+    if(hoca!==null){
+      if(!q.sel.tc[hoca])continue;
+      const g0=q.E[ders].find(x=>x.hoca===hoca).g,gec=[];ds.forEach((v,i)=>{if(v!==null)gec.push(i)});
+      r=-1;for(const i of gec)if(ex[i].gun<g0)r=i;if(r<0)r=gec[0];
+    }
+    const kon=Object.keys(D).filter(k=>k!==ders&&!q.E[k].length&&D[k][q.si_].dizi[r]!==null&&D[k][q.si_].dizi[r]!==undefined);
     if(!kon.length||ds[r]===null)continue;
     const bin=OLAY_BIN.map(()=>({s:[],c:[]}));
     for(let j=0;j<ex.length;j++){
@@ -550,7 +557,7 @@ function panelKur({ogrD,ex,oturum,ders,kip,trFn,son,satir,dahil,on,ucSecili}){
   const bK=kix.has(ders)?betaD[kix.get(ders)]:null;
   return {ogrenciler,hocalar,ozet,karar:kararToplam(ozet?{b:ozet.b,ci:ozet.ci,n:ozet.katki,kontrol}:null),panel:{kontrol,katki,ogrenci:kisiler.length},kontrol:ogrenciler.filter(o=>!o.etut&&!o.aykiri).length,uc2,ucDiger,
     model:kisiler.length?{b:bK??0,gama:gamaP,cift:pairs.length,n:kisiler.reduce((t,q)=>t+q.rows.length,0),dersler:KD.length}:null,
-    olay:olayKur(kisiler,D,ders,sd,ex),olcek:{ders:sd[ders],sd},dersSayisi:KD.length};
+    olay:olayKur(kisiler,D,ders,sd,ex),hocaOlay:Object.fromEntries(hocalar.map(h=>[h.key,olayKur(kisiler,D,ders,sd,ex,h.key)])),olcek:{ders:sd[ders],sd},dersSayisi:KD.length};
 }
 
 // sec: {duzey, oturum, ders, donem ('tum' or 'son4'), hoca}; kapsam: the [first, last] days of the added etüt reports;
@@ -612,7 +619,7 @@ function model(ogr,sec={},kapsam,trFn){
   const top=toplamDegisim({satir,ex,oturum,ders,son,disarida,kapsam:null}),capraz={...top,uc:[...ucListe,...top.uc2]};
   const P=panelKur({ogrD,ex,oturum,ders,kip,trFn,son,satir,dahil:new Set(top.ogrenciler.map(o=>o.id)),on});
   return {...taban,ders,kip,listesiz,uc:[...ucListe,...P.ucDiger,...P.uc2],ogrenciler:P.ogrenciler,hocalar:P.hocalar,ozet:P.ozet,karar:P.karar,kontrol:P.kontrol,beklenen:P.model,hepsi,disarida,toplamOgrenci:ogrD.length,
-    olay:P.olay,olcek:P.olcek,dersSayisi:P.dersSayisi,panel:P.panel,capraz,
+    olay:P.olay,hocaOlay:P.hocaOlay,olcek:P.olcek,dersSayisi:P.dersSayisi,panel:P.panel,capraz,
     aralik:toplamAralik,etki,esli:eslestirme(listeler),cubuklar:kovalar(listeler),haftalik:haftalikEtut(ogrD,oturum,ders,bas,son),eksik:eksikGun(bas,son,kapsam)};
 }
 
@@ -767,15 +774,16 @@ function farkSvg(m,W,hoca){
 // y = the mean change of the Türkiye farkı since the reference, in net of the ders. The etüt ders (solid, blue) and the same students'
 // dersler without etüt (dashed, grey); a 95% whisker on each; the first etüt falls between the reference and the next exam (dotted
 // marker). A point of fewer than EN_AZ students is faint. The count under each position is the same students for both lines.
-function olaySvg(o,W){
+function olaySvg(o,W,sec={}){
   const dar=W<520,N=o.noktalar,deger=N.flatMap(p=>[p.etut.ort,p.kontrol.ort,...(p.etut.ci||[]),...(p.kontrol.ci||[])].filter(v=>v!==null&&v!==undefined)),
-    lo0=Math.min(0,...deger),hi0=Math.max(0,...deger),pay=Math.max(.3,(hi0-lo0)*.14),tik=tikler(lo0-(lo0<0?pay:0),hi0+pay,dar?4:5),lo=tik[0],hi=tik[tik.length-1],
+    lo0=sec.y?sec.y[0]:Math.min(0,...deger),hi0=sec.y?sec.y[1]:Math.max(0,...deger),pay=Math.max(.3,(hi0-lo0)*.14),tik=tikler(lo0-(lo0<0?pay:0),hi0+pay,dar?4:5),lo=tik[0],hi=tik[tik.length-1],
     L=Math.max(...tik.map(t=>yaziGen(sayiEtiket(t))))+6,R=W-6,ust=26,ph=dar?200:250,alt=ust+ph,slot=(R-L)/N.length,cx=i=>L+slot*(i+.5),y=v=>alt-(v-lo)/(hi-lo)*ph;
   const mx=Math.max(5,Math.floor((slot-8)/5.8)),sar=t=>{const l=[];let c='';for(const w of t.split(' ')){if(c&&(c+' '+w).length>mx){l.push(c);c=w}else c=c?c+' '+w:w}if(c)l.push(c);return l};
   const satirlar=N.map(p=>sar(p.ad)),altSatir=Math.max(...satirlar.map(l=>l.length)),H=alt+10+altSatir*14+22;
   let svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" aria-label="Etütten önce ve sonra">';
   svg+=tik.map(t=>'<line class="et-izgara" x1="'+r1(L)+'" x2="'+r1(R)+'" y1="'+r1(y(t))+'" y2="'+r1(y(t))+'"/><text class="et-tik" x="'+r1(L-6)+'" y="'+r1(y(t))+'" dy="0.32em" text-anchor="end">'+sayiEtiket(t)+'</text>').join('');
   svg+='<line class="et-eksen ee-sifir" x1="'+r1(L)+'" x2="'+r1(R)+'" y1="'+r1(y(0))+'" y2="'+r1(y(0))+'"/>';
+  if(sec.net)svg+='<text class="et-tik ee-baslik" x="2" y="12">net</text>';
   const mi=OLAY_BIN.indexOf(0),mxX=(cx(mi)+cx(mi+1))/2;
   svg+='<line class="ee-etutim ee-ol-isaret" x1="'+r1(mxX)+'" x2="'+r1(mxX)+'" y1="'+(ust-4)+'" y2="'+alt+'"/><text class="et-tik ee-ol-isaret-ad" x="'+r1(mxX)+'" y="'+(ust-10)+'" text-anchor="middle">İlk etüt</text>';
   const seri=[['kontrol','ee-ol-kont',-3],['etut','ee-ol-etut',3]];
@@ -804,6 +812,11 @@ function olaySvg(o,W){
   });
   return svg+'</svg>';
 }
+// One y range for every teacher's chart: the extremes of all the lines and whiskers, and 0.
+function ortakY(m){
+  const v=[0];for(const h of m.hocalar){const o=m.hocaOlay&&m.hocaOlay[h.key];if(o)for(const p of o.noktalar)for(const x of [p.etut.ort,p.kontrol.ort,...(p.etut.ci||[]),...(p.kontrol.ci||[])])if(x!==null&&x!==undefined)v.push(x)}
+  return [Math.min(...v),Math.max(...v)];
+}
 let SON=null,ZAMAN=null;
 const etkin=()=>EK.sekme==='etutetki'&&rehberMi()&&!!document.getElementById?.('eeKok');
 function grafikleriCiz(){
@@ -817,6 +830,8 @@ function grafikleriCiz(){
     kutu.dataset.imza=im;kutu.innerHTML=yap(W);
   };
   const secili=m.capraz.hocalar.some(h=>h.key===EK.eeHoca)?EK.eeHoca:'',cap={ogrenciler:m.capraz.ogrenciler,hocalar:m.capraz.hocalar,ozet:m.capraz.ozet};
+  const yh=ortakY(m);
+  m.hocalar.forEach((h,i)=>{const o=m.hocaOlay[h.key];if(o)cizim('#eeHocaGrafik .ee-hoca-kart:nth-of-type('+(i+1)+') .et-grafik',h.key+'|'+yh.join()+'|'+o.noktalar.map(p=>[p.n,p.etut.ort,p.kontrol.ort,(p.etut.ci||[]).join(),(p.kontrol.ci||[]).join()].join(':')).join('/'),W=>olaySvg(o,W,{y:yh,net:true}))});
   cizim('#eeOlay .et-grafik',m.olay.noktalar.map(p=>[p.n,p.etut.ort,p.kontrol.ort,(p.etut.ci||[]).join(),(p.kontrol.ci||[]).join()].join(':')).join('/'),W=>olaySvg(m.olay,W));
   if(cap.ozet&&cap.ogrenciler.length)cizim('#eeFark .et-grafik',secili+'|'+cap.ogrenciler.map(o=>o.fark+':'+o.n).join()+'|'+cap.ozet.b+'|'+cap.hocalar.map(h=>h.b).join(),W=>farkSvg(cap,W,secili));
   cizim('#eeArtis .et-grafik',m.cubuklar.map(c=>c.n+':'+c.ort+':'+(c.ci||[]).join()).join(),W=>artisSvg(m,W));
@@ -893,12 +908,22 @@ function durusPaneli(st,m){
     (st.cizgiler.some(c=>c.nokta.some(p=>p.tam))?'<p class="mini" id="eeTamListe">'+kacis('İçi boş nokta: tam liste ('+[...new Set(st.cizgiler.flatMap(c=>c.nokta.filter(p=>p.tam).map(p=>p.kisa+(p.okulN?', '+p.okulN+' okul':''))))].join('; ')+'). O denemeye daha az okul girdi; sıra yalnızca bu okullar arasındadır, diğer denemelerle tam karşılaştırılamaz.')+'</p>':'')+
     '<p class="mini" id="eeIkiGrafik">'+kacis('Bu grafik okulun Türkiye’deki okullar arasındaki yerini gösterir. “Etütten önce ve sonra” ise okulun içinde, etüt alınan dersi aynı öğrencilerin diğer dersleriyle karşılaştırır; okulun genel gidişi orada çıkarılmıştır. Okul bir denemede geriye düşse de etüt alınan ders diğer derslerden daha az düşmüş ya da yükselmiş olabilir; iki grafik bu yüzden birbirini yalanlamaz.')+'</p></section>';
 }
+// A small "Etütten önce ve sonra" per teacher who gave etüts of the ders, in the table's order, the same y range for all.
+function hocaKartlari(m,secili){
+  const l=m.hocalar.filter(h=>m.hocaOlay&&m.hocaOlay[h.key]&&m.hocaOlay[h.key].n>=1);if(!l.length)return '';
+  const kart=h=>'<div class="ee-hoca-kart'+(h.az?' ee-az':'')+(secili===h.key?' secili':'')+'" data-ee-hoca="'+kacis(h.key)+'"><div class="ee-kart-ust"><button type="button" class="ee-kart-ad" data-ee-hoca="'+kacis(h.key)+'" aria-pressed="'+(secili===h.key)+'">'+kacis(h.ad)+'</button><span class="mini">'+(h.sira===null?'sıralanmadı':'Sıra '+fi(h.sira))+'</span></div>'+
+    '<p class="et-cumle ee-kart-say">'+(h.b===null?'Her etüt için artış hesaplanamadı':'Her etüt ≈ <b>'+isr(h.b,2)+' net</b>'+(h.ci?' (olası aralık '+isr(h.ci[0],2)+' … '+isr(h.ci[1],2)+')':''))+' · '+fi(h.n)+' öğrenci · '+fi(h.etut)+' etüt</p>'+
+    (h.n<EN_AZ?'<p class="mini ee-kart-az">5’ten az öğrenci: kesin değil</p>':'')+'<div class="et-grafik ee-grafik" role="group" aria-label="'+kacis(h.ad)+' · Etütten önce ve sonra"></div></div>';
+  return '<h3 class="ee-alt-baslik" id="eeHocaBaslik">Etütten önce ve sonra · öğretmene göre</h3><p class="mini">Her grafik yalnızca o öğretmenden etüt alan öğrencileri gösterir; sıfır noktası o öğretmenle ilk etütten önceki deneme. Hepsi aynı ölçektedir.</p>'+
+    '<div class="ee-lejant" id="eeHocaLejant"><span><i class="ee-sw ee-sw-etut"></i>'+kacis('Etüt alınan ders ('+m.ders+')')+'</span><span><i class="ee-sw ee-sw-kont"></i>Aynı öğrencilerin etüt almadığı dersler</span></div>'+
+    '<div id="eeHocaGrafik" class="ee-hoca-izgara">'+l.map(kart).join('')+'</div>';
+}
 function hocaTablosu(m,secili){
   const satir=h=>'<tr'+(secili===h.key?' class="secili'+(h.az?' ee-az':'')+'"':h.az?' class="ee-az"':'')+'><td class="sayi ee-sira">'+(h.sira===null?'—':fi(h.sira))+'</td><td class="tg-ad"><button type="button" class="ee-ad" data-ee-hoca="'+kacis(h.key)+'" aria-pressed="'+(secili===h.key)+'">'+kacis(h.ad)+'</button>'+
     '<div class="mini">'+fi(h.n)+' öğrenci · '+fi(h.etut)+' etüt'+(h.az?' · az öğrenci, sıralanmadı':'')+'</div></td><td class="sayi et-dar-gizle">'+fi(h.n)+'</td><td class="sayi et-dar-gizle">'+fi(h.etut)+'</td><td class="sayi'+yonlu(h.toplam)+'">'+ok(h.toplam)+'</td><td class="sayi'+yonlu(h.b)+'">'+ok(h.b)+(h.ci?'<div class="mini">'+aralikYazi(h.ci)+'</div>':'')+'</td></tr>';
   return '<section class="et-panel" id="eeHocalar"><div class="et-kart-bas"><h2>Öğretmenlere göre</h2><span class="mini">Her öğretmenin etüt başına kazancı, aynı öğrencinin diğer derslerine göre (öbür öğretmenlerin etütleri sabit tutulur). Toplam katkı = bu kazanç × verdiği etüt. Bir öğretmene basınca öğrenciler aşağıda o öğretmenin etüt verdikleriyle sınırlanır.</span></div><div class="et-tablo-kutu"><table class="et-tablo ee-tablo">'+sutunlar(['sira','ad','s1 et-dar-gizle','s1 et-dar-gizle','s4','s7'])+
     baslikSatiri([['Sıra','sayi ee-sira'],['Öğretmen'],['Öğrenci','sayi et-dar-gizle'],['Etüt','sayi et-dar-gizle'],['Toplam katkı (net)','sayi'],['Her etüt için artış (net)','sayi']])+
-    '<tbody>'+(m.hocalar.length?m.hocalar.map(satir).join(''):'<tr><td colspan="6" class="mini">Bu dönemde etüt alıp sonrasında denemeye giren öğrenci yok.</td></tr>')+'</tbody></table></div></section>';
+    '<tbody>'+(m.hocalar.length?m.hocalar.map(satir).join(''):'<tr><td colspan="6" class="mini">Bu dönemde etüt alıp sonrasında denemeye giren öğrenci yok.</td></tr>')+'</tbody></table></div>'+hocaKartlari(m,secili)+'</section>';
 }
 // A student's Türkiye farkı (their net when no list) over the exams of the period as a small line, with a marker where the first etüt was.
 function kucukCizgi(r){
@@ -985,7 +1010,7 @@ function yenidenCiz(odak){
 document.addEventListener('toggle',()=>{if(etkin())cizimPlanla()},true);
 document.addEventListener('click',ev=>{
   if(!etkin())return;
-  const el=ev.target.closest?.('[data-ee-duzey],[data-ee-oturum],[data-ee-donem],button[data-ee-hoca]');if(!el||el.disabled)return;
+  const el=ev.target.closest?.('[data-ee-duzey],[data-ee-oturum],[data-ee-donem],button[data-ee-hoca],.ee-hoca-kart[data-ee-hoca]');if(!el||el.disabled)return;
   if(el.dataset.eeDuzey){EK.eeDuzey=Number(el.dataset.eeDuzey);EK.eeOturum=EK.eeDers=EK.eeHoca=undefined;yenidenCiz('[data-ee-duzey="'+EK.eeDuzey+'"]');return}
   if(el.dataset.eeOturum){EK.eeOturum=el.dataset.eeOturum;EK.eeDers=EK.eeHoca=undefined;yenidenCiz('[data-ee-oturum="'+EK.eeOturum+'"]');return}
   if(el.dataset.eeDonem){EK.eeDonem=el.dataset.eeDonem;EK.eeHoca=undefined;yenidenCiz('[data-ee-donem="'+EK.eeDonem+'"]');return}
@@ -995,6 +1020,6 @@ document.addEventListener('change',ev=>{
   if(!etkin())return;const el=ev.target;
   if(el.id==='eeDers'){EK.eeDers=el.value;EK.eeHoca=undefined;yenidenCiz('#eeDers')}
 });
-return {model,olaySvg,panelKur,olcek,pencereBul,panelAralik,panelHazirla,gjCoz,regres,kumeAralik,kararToplam,farkSvg,egim,netAl,etutOturum,eksikGun,icerik,gorunum,artisSvg,durusSvg,durus,grafikleriCiz,sahip,trOrtalama,etkiHesapla,karar,eslestirme,kovalar,bootstrap,coz,dilimler,isr,NET,TR_KOD,EN_AZ,EN_AZ_KARAR,EN_KONTROL,GENIS_ARALIK,SD_TABAN,OLAY_BIN,OLAY_AD,BOOT,TOHUM,HAM_UYARI,SINIR_YAZI};
+return {model,olaySvg,ortakY,panelKur,olcek,pencereBul,panelAralik,panelHazirla,gjCoz,regres,kumeAralik,kararToplam,farkSvg,egim,netAl,etutOturum,eksikGun,icerik,gorunum,artisSvg,durusSvg,durus,grafikleriCiz,sahip,trOrtalama,etkiHesapla,karar,eslestirme,kovalar,bootstrap,coz,dilimler,isr,NET,TR_KOD,EN_AZ,EN_AZ_KARAR,EN_KONTROL,GENIS_ARALIK,SD_TABAN,OLAY_BIN,OLAY_AD,BOOT,TOHUM,HAM_UYARI,SINIR_YAZI};
 })();
 function gorunumEtutEtki(){return ETUT_ETKI.gorunum()}
