@@ -1,14 +1,44 @@
 # Yanlışlar defteri
 
 Teacher page under **Denemeler → Yanlışlar defteri** (same roles as Konu Takibi: the guidance teacher; students
-never see it). It prints, for each student of one exam, only the questions the student got **wrong or left empty**,
-cut out of the A booklet as pictures, so the student can solve them again.
+never see it). For each student of the **selected exams** it prints (or downloads as one PDF) only the questions the student got **wrong or left empty**,
+cut out of the A booklets as pictures, so the student can solve them again. One exam is simply a library with one row.
+
+## Deneme kütüphanesi (kept on this device only)
+
+The teacher adds files with one **Dosya ekle** button (many files, all four kinds, many exams at once) or drops them on the page. Each file is recognised by its
+content with the parsers below and grouped into its exam by the exam code: the booklet header (`2026-27-TYT/TÜR-1203` → 1203), the cevap raporu's exam name
+(`…-1203`), the Ders ortalamaları title (`27-YKS-1203`). A çözüm file has no code of its own: it goes to the exam and session whose question count it matches **and**
+whose answer keys it fits (`keyA[a] = keyB[b]`); a number in its title ("1203 TYT ÇÖZÜMLERİ") only breaks a tie, and if several exams still fit it is refused as ambiguous.
+Files are read one by one ("3 / 12 dosya okunuyor…"), then applied in dependency order (reports and booklets first, then çözüm and ortalamalar), so one drop of everything works.
+
+- **Where.** A dedicated IndexedDB database (`yks-deneme-kutuphanesi`, `src/denemekutuphane.js`), keys prefixed with the signed-in teacher's uid, so another account on the same browser never sees it.
+  Never the notebook `D`, Firestore, localStorage or any network request.
+- **What is kept per exam.** The booklet and çözüm PDFs as bytes (the pictures are cut from them), the parsed cevap raporu model (it has no TC; the raw .xlsx is never kept), the booklet's cut geometry,
+  the çözüm pairs and the parsed Ders ortalamaları model (`{kod, dersler:[{ad,n,genel}]}`, no school names). The library refuses to write a model that contains an 11 digit number and anything that is not a PDF.
+  Tests assert that nothing stored has an 11 digit number or an .xlsx.
+- **Reload.** On opening the page the library is read and the exams are ready; booklets are opened (pdf.js) only when pictures must be cut, exam by exam, and their canvases and documents are released afterwards.
+- **Status line.** "Bu cihazda saklanır, sunucuya gönderilmez · 5 deneme · 84 MB" (size from `navigator.storage.estimate()`, else the sum of the stored bytes). `navigator.storage.persist()` is asked once, with the first save.
+- **Removing.** **Sil** on a row (with its files), **Tümünü bu cihazdan sil** (everything of this account).
+- **Logout.** `cikisYerelVerisiniTemizle()` (Kaydet ve çıkış yap, Tarayıcı verilerini sıfırla, a co-teacher losing access) deletes the **whole database, every account's library**, together with the notebook's
+  local copy, and empties the page. Logout already removes all `yks_` data of every account on the browser, and student data must not outlive the session on a shared computer, so the library follows the same rule instead of
+  being kept per account. The library is deleted before the notebook (which goes last); a delete blocked by another tab fails the cleanup like any other storage failure.
+- **No IndexedDB** (private mode, blocked, no account id): everything stays in memory for the session, with one line: "Bu tarayıcı dosyaları saklamaya izin vermiyor; sayfa kapanınca yeniden yüklemeniz gerekir."
+  Bulk upload and bulk export work as usual.
+- **Quota exceeded** while saving: the exam stays in memory, its row says "Yalnız bu oturumda" and the page says "… cihaza sığmadı; bu oturumda bellekte tutuluyor. Yer açmak için eski denemeleri silin." Earlier exams stay stored (the write is one transaction).
+- **Exam table.** One row per exam: checkbox (all selected by default), name, code, date (the report's "Rapor Tarihi"), a ✓ / ✗ per input (TYT kitapçık, AYT kitapçık, Cevap raporu, Çözüm, Ders ort.; "–" where the report has no such session)
+  and the Turkish refusal text of a file in its own row (files that belong to no exam are listed above the table). Çözüm and Ders ort. are optional (their ✗ is muted). Replacing a file re-validates it as before; a file that no longer fits is dropped with the reason.
+- **Bulk print / PDF.** Students are matched across the selected exams by Öğrenci No (name and şube of the latest exam). One defter per student: header with name, no, şube, the exam list and the totals ("3 deneme · 31 yanlış · 9 boş"), then one section per exam
+  (exam heading; TYT, then AYT, with ders headings), and the answer tables at the end grouped by exam, each with its own key. B booklets, Din / Ek Felsefe and the alan rules apply per exam. A student who sat only some exams gets those; a student with nothing to print is skipped
+  (shown on screen as "Yanlış veya boş soru yok"). **Seçili denemeler için yazdır** keeps the print layout (A4 portrait, two columns, pictures at 82%, nothing split, a page per student). The screen preview holds about 3000 pictures; print and PDF always take every student.
+  **PDF indir** builds the same defter in the browser with pdf-lib (`SIRALAMA.kutuphane()`, Roboto): pictures as JPEG (about 185 dpi at printed size, shared between students), student by student with progress, named like `Yanlislar_defteri_3_deneme_12A.pdf`.
+  Above 400 pages the page offers one PDF per şube (those that fit) and says how to narrow the selection.
+- Memory: pictures are cut exam by exam; page canvases beyond three are released at once and all canvases and pdf.js documents of an exam are released when its pictures are done.
 
 ## Files
 
-Three inputs and one optional fourth, each with a short ✓ status once read. None of these files or the generated notebooks are stored: not in localStorage, not in the notebook
-(`D`), not in Firestore, and nothing is sent anywhere. The files stay in the page's memory; reloading or logging out
-clears them, and uploading again is how the teacher reprints.
+Each exam has up to five inputs; the page tells which is which. None of the files or the generated notebooks go to the server: not the notebook (`D`), not Firestore, not localStorage, and nothing is sent anywhere.
+They are kept only in this device's library (see above) and are wiped at logout.
 
 1. **Soru kitapçığı (A)**, PDF. Each test is found by its page header code (`2026-27-TYT/TÜR-1203`) and its count
    ("Bu testte N soru vardır"). A question start is an item "12." at the left edge of a column, first on its line, and the
@@ -24,7 +54,7 @@ clears them, and uploading again is how the teacher reprints.
 3. **Çözüm kitapçığı**, PDF with "A-n / B-m" labels. Needed only for B students; it goes to the session whose question count it matches, and may exist for TYT only (AYT B students then get the numbers-only list). It is accepted only after the other two
    are loaded, and refused as a whole unless every test's A and B numbers are permutations of 1..N, every pair stays in
    one section, and `keyA[a] = keyB[b]` for every pair. If a later booklet or report no longer fits it, it is dropped.
-4. **Ders ortalamaları (isteğe bağlı)**, the publisher's "Ders Ortalamaları İlk 100 Kurum" PDF (read with pdf.js, in memory, like the others; needs only the cevap raporu first).
+4. **Ders ortalamaları (isteğe bağlı)**, the publisher's "Ders Ortalamaları İlk 100 Kurum" PDF (read with pdf.js, like the others; needs only the cevap raporu of the same exam first).
    One section per ders (TYT and AYT), each starting with a title line `27-YKS-1202, TÜRKÇE-T Dersi Net Sıralı Liste _40 Soru_ (İlk 100 Okul)`, then the header
    `Sıralama · Okul Adı · Okul Net · Okul Başarı · Genel Net` and 100 school rows (a continuation page repeats the header without a title). **Only three things are read:** the exam code,
    each ders's question count (from the title) and its **Genel Net**, the network-wide average net, constant down the column (Turkish decimal comma). The school rows are ignored: only the `Genel Net`
@@ -39,7 +69,7 @@ clears them, and uploading again is how the teacher reprints.
   read (not even their shared strings). Any 11 digit number found anywhere else is dropped. The parsed model has no TC
   field. `test/yanlislar-regression.cjs` checks that `JSON.stringify` of the model has no 11 digit number, and that the TC
   cells are not opened.
-- Konu Takibi still refuses this file (`GIZLI` / `CEVAP_RAPORU`); only this page accepts it, in memory.
+- Konu Takibi still refuses this file (`GIZLI` / `CEVAP_RAPORU`); only this page accepts it. The raw .xlsx is read in memory and dropped; only the sanitised model is kept (device only).
 - Tests and fixtures use made-up students and booklet text only.
 
 ## The page
@@ -60,7 +90,7 @@ full-width passage takes a row), never split across pages.
 **Soru durumu** selects wrong, blank, or both. **Zorluk** is a row of chips (Çok kolay · Kolay · Orta · Zor · Çok zor, plus
 **Kendi seviyesi**); all five bands are selected by default. Printing and the counts in the header use the same selection.
 The selected status appears in each printed notebook's heading; Kendi seviyesi, tiers and kademe are never printed. Zero matching questions disables printing.
-Filter choices and answer-file data remain in page memory only. Difficulty is computed from the cevap raporu itself (see
+Filter choices remain in page memory only; the answer-file data is kept in the device library. Difficulty is computed from the cevap raporu itself (see
 "Zorluk ve kademeler"; with the optional Ders ortalamaları file the band scale is anchored to the network average); the school's Madde Analizi in Konu Takibi is now only a validity check (one rank correlation).
 
 - Each student starts on a new page: name, Öğrenci No, şube, exam name, "12 yanlış · 5 boş"; questions grouped by ders in
@@ -184,5 +214,5 @@ AYT tarih1, …; the student by Öğrenci No). The tier is the student's own gra
 References: Wilson (1927) JASA 22; Kuder & Richardson (1937) Psychometrika 2; Ebel & Frisbie (1991) *Essentials of Educational Measurement*;
 Wright & Masters (1982) *Rating Scale Analysis* (separation, strata, fit mean squares); Fisher (1958) JASA 53, 789-798; Jenks (1977), Optimal data classification for choropleth maps; en.wikipedia.org/wiki/Jenks_natural_breaks_optimization.
 
-Tests: `node test/zorluk-regression.cjs` (ders ortalamaları parsing on a synthetic text-item layout, refusals, Δ on a hand example, stronger/weaker school, no file = unchanged; Wilson, r_it, KR-20, seeded JMLE recovery, bands and "?", strata, equating, Veri yetersiz, Kendi
+Tests: `node test/yanlislar-kutuphane-regression.cjs` (library, bulk grouping, multi-exam defter, PDF plan, wipe) and `test/yanlislar-kutuphane-browser.cjs` (real IndexedDB, reload, print, PDF, quota, no IndexedDB); `node test/zorluk-regression.cjs` (ders ortalamaları parsing on a synthetic text-item layout, refusals, Δ on a hand example, stronger/weaker school, no file = unchanged; Wilson, r_it, KR-20, seeded JMLE recovery, bands and "?", strata, equating, Veri yetersiz, Kendi
 seviyesi, two-sheet parsing, TC) and the browser tests `test/yanlislar-browser.cjs`, `test/denemepano-browser.cjs`.
