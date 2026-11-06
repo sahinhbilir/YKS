@@ -20,10 +20,11 @@ const dosya={
  kit:kod=>pdf('kitapcik-'+kod+'.pdf',Y.pdfYaz(Y.kitapcikSpec(kod))),
  rapor:kod=>({name:'cevap-raporu-'+kod+'.xlsx',mimeType:XLSX,buffer:Y.denemeRaporu(kod)}),
  coz:kod=>pdf('cozum-'+kod+'.pdf',Y.pdfYaz(Y.cozumSpec(D[kod].pairs,5,kod))),
+ perf:kod=>pdf('performans-analizi-'+kod+'.pdf',Y.pdfYaz(Y.performansSpec({ascii:true,kod:'27-YKS-'+kod}))),
  ort:kod=>pdf('ders-ortalamalari-'+kod+'.pdf',Y.pdfYaz(Y.ortalamaSpec({ascii:true,satir:12,kod:'27-YKS-'+kod,dersler:[['TÜRKÇE-T',4,2.5],['TARİH-T',2,1.25]]})))
 };
 // two exams, every kind of file, in the worst order: çözüm first, an ortalamalar file before its report, a booklet before its report, reports last
-const KARISIK=()=>[dosya.coz('1204'),dosya.ort('1203'),dosya.kit('1204'),dosya.rapor('1203'),dosya.kit('1203'),dosya.rapor('1204'),dosya.coz('1203')];
+const KARISIK=()=>[dosya.coz('1204'),dosya.perf('1203'),dosya.ort('1203'),dosya.kit('1204'),dosya.rapor('1203'),dosya.kit('1203'),dosya.rapor('1204'),dosya.coz('1203')];
 const sayfaSayisi=b=>(b.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g)||[]).length;
 const IDB_OKU=()=>new Promise((ok,red)=>{
   indexedDB.databases().then(l=>{
@@ -68,12 +69,12 @@ const IDB_OKU=()=>new Promise((ok,red)=>{
   await page.evaluate(()=>{window.__ydIs=[];new MutationObserver(()=>{const t=document.getElementById('ydIs')?.textContent;if(t&&window.__ydIs.at(-1)!==t)window.__ydIs.push(t)}).observe(document.getElementById('ydKok'),{subtree:true,childList:true,characterData:true})});
   await H.yukle(KARISIK());
   const ilerleme=await page.evaluate(()=>window.__ydIs);
-  assert(ilerleme.includes('1 / 7 dosya okunuyor…')&&ilerleme.includes('7 / 7 dosya okunuyor…'),'progress while reading one by one: '+ilerleme.join(' | '));
+  assert(ilerleme.includes('1 / 8 dosya okunuyor…')&&ilerleme.includes('8 / 8 dosya okunuyor…'),'progress while reading one by one: '+ilerleme.join(' | '));
   assert.deepEqual(await H.satirlar(),['1203','1204']);
   assert.equal(await page.locator('.yd-hata').count(),0,'no file refused');
-  assert.deepEqual(await H.hucreler('1203'),['✓','–','✓','✓','✓']);assert.deepEqual(await H.hucreler('1204'),['✓','–','✓','✓','✗']);
+  assert.deepEqual(await H.hucreler('1203'),['✓','–','✓','✓','✓','✓']);assert.deepEqual(await H.hucreler('1204'),['✓','–','✓','✓','✗','✗']);
   assert.equal(await page.locator('[data-yd-sec]:checked').count(),2,'all selected by default');
-  assert.deepEqual(await page.locator('.yd-tablo thead th').allInnerTexts().then(t=>t.map(x=>x.trim()).filter(Boolean)),['Deneme','TYT kitapçık','AYT kitapçık','Cevap raporu','Çözüm','Ders ort.','Sil']);
+  assert.deepEqual(await page.locator('.yd-tablo thead th').allInnerTexts().then(t=>t.map(x=>x.trim()).filter(Boolean)),['Deneme','TYT kitapçık','AYT kitapçık','Cevap raporu','Çözüm','Ders ort.','Performans analizi','Sil']);
   assert.deepEqual(await page.locator('tr[data-yd-satir] .yd-ad').allInnerTexts().then(t=>t.map(x=>x.replace(/\s+/g,' '))),['SENTETİK-1203 03.10.2026','SENTETİK-1204 10.10.2026']);
   assert.match(await H.durumSatiri(),/^Bu cihazda saklanır, sunucuya gönderilmez · 2 deneme · \d+(,\d)? (KB|MB)$/);
   await H.hazir();await H.noScroll('two exams');
@@ -88,7 +89,7 @@ const IDB_OKU=()=>new Promise((ok,red)=>{
   assert.deepEqual(b.outside,[],'nothing leaves the page: the files stay on this device');
   // reload: the exams are there without uploading again, and the pictures are cut from the stored PDFs
   await page.reload();await baslat(page);H=yardimcilar(page);
-  assert.deepEqual(await H.satirlar(),['1203','1204']);assert.deepEqual(await H.hucreler('1203'),['✓','–','✓','✓','✓']);
+  assert.deepEqual(await H.satirlar(),['1203','1204']);assert.deepEqual(await H.hucreler('1203'),['✓','–','✓','✓','✓','✓']);
   assert.match(await H.durumSatiri(),/· 2 deneme ·/);
   await H.hazir();assert(await page.locator('#ydBaski img').count()>0,'pictures after the reload');
   const tinta=await page.evaluate(()=>[...document.querySelectorAll('#ydBaski img')].slice(0,6).map(i=>{const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const x=c.getContext('2d');x.drawImage(i,0,0);const d=x.getImageData(0,0,c.width,c.height).data;let n=0;for(let k=0;k<d.length;k+=4)if(d[k]<200)n++;return n}));
@@ -185,7 +186,7 @@ const IDB_OKU=()=>new Promise((ok,red)=>{
    document.getElementById('ydKok').dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true}));
   },{a:[dosya.kit('1203').name,'application/pdf',dosya.kit('1203').buffer.toString('base64')],b:[dosya.rapor('1203').name,XLSX,dosya.rapor('1203').buffer.toString('base64')]});
   await page.waitForFunction(()=>YANLISLAR.durumu().denemeler.size===1&&YANLISLAR.durumu().mesgul==='');
-  assert.deepEqual(await H.hucreler('1203'),['✓','–','✓','✗','✗'],'two files dropped: recognised and grouped');
+  assert.deepEqual(await H.hucreler('1203'),['✓','–','✓','✗','✗','✗'],'two files dropped: recognised and grouped');
 
   /* ---------- 6. Sil, accounts, the logout wipe ---------- */
   await H.yukle([dosya.kit('1204'),dosya.rapor('1204'),dosya.coz('1204'),dosya.coz('1203')]);
@@ -231,7 +232,7 @@ const IDB_OKU=()=>new Promise((ok,red)=>{
   await H.yukle([dosya.kit('1204'),dosya.rapor('1204'),dosya.coz('1204')]);
   assert.equal(await page.locator('.yd-uyari').innerText(),'SENTETİK-1204 cihaza sığmadı; bu oturumda bellekte tutuluyor. Yer açmak için eski denemeleri silin.');
   assert.equal(await page.locator('tr[data-yd-satir="1204"] .yd-rozet').innerText(),'Yalnız bu oturumda');assert.equal(await page.locator('tr[data-yd-satir="1203"] .yd-rozet').count(),0);
-  assert.deepEqual(await H.hucreler('1204'),['✓','–','✓','✓','✗'],'the exam works this session');assert.equal((await page.evaluate(IDB_OKU)).meta.length,1,'only the first exam is on the device');
+  assert.deepEqual(await H.hucreler('1204'),['✓','–','✓','✓','✗','✗'],'the exam works this session');assert.equal((await page.evaluate(IDB_OKU)).meta.length,1,'only the first exam is on the device');
   await H.hazir();await H.noScroll('quota');await page.screenshot({path:path.join(out_dir,'yd-kota-'+width+'-'+theme+'.png'),fullPage:true});
   await page.evaluate(()=>{window.__kota=false});await page.locator('[data-yd-sil="1203"]').click();await page.waitForFunction(()=>YANLISLAR.durumu().denemeler.size===1);
   await H.yukle([dosya.kit('1204')]);await page.waitForFunction(()=>[...YANLISLAR.durumu().denemeler.values()][0].kalici===true);

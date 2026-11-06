@@ -8,14 +8,14 @@ cut out of the A booklets as pictures, so the student can solve them again. One 
 
 The teacher adds files with one **Dosya ekle** button (many files, all four kinds, many exams at once) or drops them on the page. Each file is recognised by its
 content with the parsers below and grouped into its exam by the exam code: the booklet header (`2026-27-TYT/TÜR-1203` → 1203), the cevap raporu's exam name
-(`…-1203`), the Ders ortalamaları title (`27-YKS-1203`). A çözüm file has no code of its own: it goes to the exam and session whose question count it matches **and**
+(`…-1203`), the Ders ortalamaları title (`27-YKS-1203`). A çözüm label may be one text run ("A-1 / B-3") or pieces on one line ("A-1", "/", "B-3": pieces less than 14 pt apart are joined). A çözüm file has no code of its own: it goes to the exam and session whose question count it matches **and**
 whose answer keys it fits (`keyA[a] = keyB[b]`); a number in its title ("1203 TYT ÇÖZÜMLERİ") only breaks a tie, and if several exams still fit it is refused as ambiguous.
 Files are read one by one ("3 / 12 dosya okunuyor…"), then applied in dependency order (reports and booklets first, then çözüm and ortalamalar), so one drop of everything works.
 
 - **Where.** A dedicated IndexedDB database (`yks-deneme-kutuphanesi`, `src/denemekutuphane.js`), keys prefixed with the signed-in teacher's uid, so another account on the same browser never sees it.
   Never the notebook `D`, Firestore, localStorage or any network request.
 - **What is kept per exam.** The booklet and çözüm PDFs as bytes (the pictures are cut from them), the parsed cevap raporu model (it has no TC; the raw .xlsx is never kept), the booklet's cut geometry,
-  the çözüm pairs and the parsed Ders ortalamaları model (`{kod, dersler:[{ad,n,genel}]}`, no school names). The library refuses to write a model that contains an 11 digit number and anything that is not a PDF.
+  the çözüm pairs, the parsed Performans analizi model and the parsed Ders ortalamaları model (`{kod, dersler:[{ad,n,genel}]}`, no school names). The library refuses to write a model that contains an 11 digit number and anything that is not a PDF.
   Tests assert that nothing stored has an 11 digit number or an .xlsx.
 - **Reload.** On opening the page the library is read and the exams are ready; booklets are opened (pdf.js) only when pictures must be cut, exam by exam, and their canvases and documents are released afterwards.
 - **Status line.** "Bu cihazda saklanır, sunucuya gönderilmez · 5 deneme · 84 MB" (size from `navigator.storage.estimate()`, else the sum of the stored bytes). `navigator.storage.persist()` is asked once, with the first save.
@@ -26,8 +26,8 @@ Files are read one by one ("3 / 12 dosya okunuyor…"), then applied in dependen
 - **No IndexedDB** (private mode, blocked, no account id): everything stays in memory for the session, with one line: "Bu tarayıcı dosyaları saklamaya izin vermiyor; sayfa kapanınca yeniden yüklemeniz gerekir."
   Bulk upload and bulk export work as usual.
 - **Quota exceeded** while saving: the exam stays in memory, its row says "Yalnız bu oturumda" and the page says "… cihaza sığmadı; bu oturumda bellekte tutuluyor. Yer açmak için eski denemeleri silin." Earlier exams stay stored (the write is one transaction).
-- **Exam table.** One row per exam: checkbox (all selected by default), name, code, date (the report's "Rapor Tarihi"), a ✓ / ✗ per input (TYT kitapçık, AYT kitapçık, Cevap raporu, Çözüm, Ders ort.; "–" where the report has no such session)
-  and the Turkish refusal text of a file in its own row (files that belong to no exam are listed above the table). Çözüm and Ders ort. are optional (their ✗ is muted). Replacing a file re-validates it as before; a file that no longer fits is dropped with the reason.
+- **Exam table.** One row per exam: checkbox (all selected by default), name, code, date (the report's "Rapor Tarihi"), a ✓ / ✗ per input (TYT kitapçık, AYT kitapçık, Cevap raporu, Çözüm, Ders ort., Performans analizi; "–" where the report has no such session)
+  and the Turkish refusal text of a file in its own row (files that belong to no exam are listed above the table). Çözüm, Ders ort. and Performans analizi are optional (their ✗ is muted). Replacing a file re-validates it as before; a file that no longer fits is dropped with the reason.
 - **Bulk print / PDF.** Students are matched across the selected exams by Öğrenci No (name and şube of the latest exam). One defter per student: header with name, no, şube, the exam list and the totals ("3 deneme · 31 yanlış · 9 boş"), then one section per exam
   (exam heading; TYT, then AYT, with ders headings), and the answer tables at the end grouped by exam, each with its own key. B booklets, Din / Ek Felsefe and the alan rules apply per exam. A student who sat only some exams gets those; a student with nothing to print is skipped
   (shown on screen as "Yanlış veya boş soru yok"). **Seçili denemeler için yazdır** keeps the print layout (A4 portrait, two columns, pictures at 82%, nothing split, a page per student). The screen preview holds about 3000 pictures; print and PDF always take every student.
@@ -37,7 +37,7 @@ Files are read one by one ("3 / 12 dosya okunuyor…"), then applied in dependen
 
 ## Files
 
-Each exam has up to five inputs; the page tells which is which. None of the files or the generated notebooks go to the server: not the notebook (`D`), not Firestore, not localStorage, and nothing is sent anywhere.
+Each exam has up to six inputs; the page tells which is which. None of the files or the generated notebooks go to the server: not the notebook (`D`), not Firestore, not localStorage, and nothing is sent anywhere.
 They are kept only in this device's library (see above) and are wiped at logout.
 
 1. **Soru kitapçığı (A)**, PDF. Each test is found by its page header code (`2026-27-TYT/TÜR-1203`) and its count
@@ -62,6 +62,12 @@ They are kept only in this device's library (see above) and are wiped at logout.
    It is refused (nothing changes) when the exam code differs from the cevap raporu's ("Sınav kodları uyuşmuyor: … 27-YKS-1202 … 27-YKS-1203"), when a ders's question count differs from the report's section
    ("Soru sayıları uyuşmuyor: …"), when no ders matches, when the Genel Net column is not one value, or when the PDF is not this report. Ders names are matched by the section names of the report (TÜRKÇE-T, TARİH.1-A, FELSEFE GR.-A, S.FELSEFE-A …);
    report sections the file lacks stay unanchored. A new cevap raporu re-checks the file and drops it if it no longer fits.
+
+5. **Performans analizi (isteğe bağlı)**, the publisher's "27-YKS-1202 SINAVI ANALİZLERİ" PDF: aggregate counts over the whole network, no student data. Recognised by its title ("SINAVI ANALİZLERİ" / "Madde Güçlük İndeksi") and read by lines (items grouped by y).
+   The exam code is in the title; there is one page per ders titled like the report's sections ("TÜRKÇE-T (40 Soru )", "TARİH.1-A (10 Soru )"); each row is `1. Soru`, the ÜST and ALT counts of A, B, C, D, E, BOŞ (12 numbers), p (dot decimal), its meaning, r, its meaning, in A-booklet numbers.
+   Only `{kod, dersler:[{ad, n, maddeler:[{no, p, r, ust, alt}]}]}` is kept (stored in the library, no 11 digit number). It is refused (nothing changes) when the exam code differs from the cevap raporu's ("Sınav kodları uyuşmuyor: …"),
+   when a section's question count differs ("Soru sayıları uyuşmuyor: …"), when no ders matches, or when more than about 10% of the questions have a most-marked ÜST option that differs from the report's A key ("N soruda en çok işaretlenen seçenek cevap anahtarından farklı …"; a few differences are accepted,
+   since a cancelled or differently keyed question breaks the rule). A new cevap raporu re-checks it. See "Soru zorluğu" for how it is used.
 
 ## Privacy
 
@@ -118,6 +124,16 @@ Everything below is computed in the browser, in memory; nothing is stored or sen
 Report sections are shown under proper names (checkboxes, defter headings, answer tables, Madde kalitesi): TÜRKÇE → Türkçe, TÜRK DİLİ VE EDB → Türk Dili ve Edebiyatı,
 TARİH.1 → Tarih-1, COĞRAFYA.2 → Coğrafya-2, FELSEFE GR. → Felsefe Grubu, S.FELSEFE → Ek Felsefe, the rest by their plain names (Matematik, Geometri, Fizik, Kimya, Biyoloji, Din Kültürü). A name that exists in
 both sessions gets the session ("TYT Matematik", "AYT Matematik"); otherwise there is no prefix. An unknown section is only title-cased.
+
+### Difficulty source priority
+
+1. **Performans analizi p**: the network-wide p of the question (thousands of students) replaces the school sample. p is turned into the same five bands as the school's Rasch bands: b = ln((1 − p)/p) centred over the section's questions, μθ = the ability at which the expected section score equals the mean p (the average network student),
+   and `b − μθ` goes through the same cut points (≤ −2 Çok kolay, ≤ −0,75 Kolay, < 0,75 Orta, < 2 Zor, otherwise Çok zor). With this N the "?" marker and the low-reliability mark disappear. Applies to the A numbering (A students, and A+B pooled through the çözüm map; a B group without a map keeps the school's bands).
+   The section line says "zorluk: yayınevinin performans analizi (Türkiye geneli, A kitapçığı)" with the rank correlation between the school's p and the publisher's, and Madde kalitesi shows a "Türkiye p" column. The school's own computation stays as the validity check.
+2. The school's p anchored by **Ders ortalamaları** (below).
+3. The school's p alone.
+
+Kendi seviyesi and the kademeler work on whichever band is shown.
 
 ### Soru zorluğu (from the cevap raporu)
 

@@ -43,7 +43,7 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   assert.equal(await hucreBaslik('1203','TYT kitapçık'),'✓ TYT · 6 sayfa · 10 soru');
   await yukle(rapor);
   assert.equal(await hucreBaslik('1203','Cevap raporu'),'✓ 3 öğrenci · SENTETİK-1203');
-  assert.deepEqual(await hucreler('1203'),['✓','–','✓','✗','✗'],'booklet, no AYT sheet, report; çözüm and ders ortalamaları are optional');
+  assert.deepEqual(await hucreler('1203'),['✓','–','✓','✗','✗','✗'],'booklet, no AYT sheet, report; çözüm and ders ortalamaları are optional');
   assert.equal(await page.locator('tr[data-yd-satir] .yd-ad').innerText().then(t=>t.replace(/\s+/g,' ')),'SENTETİK-1203 01.01.2000');
   assert.match(await page.locator('.yd-kut-ana').innerText(),/^Bu cihazda saklanır, sunucuya gönderilmez · 1 deneme · .+$/);
   // ---- without the çözüm file: A student has cut-outs, B student numbers only with the note
@@ -140,6 +140,7 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   assert.equal(await page.locator('.yd-soru').count(),3,'and no question was dropped');
   await noScroll('validity line');
   // ---- optional 4th upload: Ders ortalamaları (İlk 100 Kurum), read by the real pdf.js; the exam code and question counts are checked
+  const pdfPerf=o=>({name:'performans-analizi.pdf',mimeType:'application/pdf',buffer:Y.pdfYaz(Y.performansSpec({ascii:true,...o}))});
   const ortPdf=o=>({name:'ders-ortalamalari.pdf',mimeType:'application/pdf',buffer:Y.pdfYaz(Y.ortalamaSpec({ascii:true,satir:12,...o}))});
   assert.match(await page.locator('th[scope="col"][title="İsteğe bağlı"]').innerText(),/Ders ort\./);assert.equal(await page.locator('#ydDosya').count(),1,'one input for every kind');
   await yukle(ortPdf({kod:'27-YKS-1202',dersler:[['TÜRKÇE-T',4,2.5],['TARİH-T',2,1.25]]}));
@@ -151,7 +152,7 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   await noScroll('refused ders ortalamaları');
   assert(!(await page.locator('.yd-kalite summary').allInnerTexts()).some(t=>/genel ort\./.test(t)),'a refused file changes nothing');
   await yukle(ortPdf({dersler:[['TÜRKÇE-T',4,2.5],['TARİH-T',2,1.25],['FİZİK-T',7,3.75]]}));
-  assert.equal(await hucreBaslik('1203','Ders ort.'),'✓ 3 ders · genel ortalama');assert.deepEqual(await hucreler('1203'),['✓','–','✓','✓','✓']);
+  assert.equal(await hucreBaslik('1203','Ders ort.'),'✓ 3 ders · genel ortalama');assert.deepEqual(await hucreler('1203'),['✓','–','✓','✓','✓','✗']);
   assert.equal(await page.locator('tr[data-yd-satir="1203"] .yd-hata').count(),0,'a good file clears the old error');
   await page.waitForFunction(()=>[...document.querySelectorAll('.yd-kalite summary')].some(s=>/genel ort\. 2,50 net · okul -?\d+,\d\d net · ölçek genele göre$/.test(s.textContent.replace('−','-'))));
   assert((await page.locator('.yd-kalite summary').allInnerTexts()).some(t=>/Tarih · .*genel ort\. 1,25 net/.test(t)));
@@ -160,6 +161,19 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   assert((await page.locator('.yd-kalite').first().locator('tbody tr:first-child td').nth(4).innerText()).match(/^(Çok kolay|Kolay|Orta|Zor|Çok zor)\??$/));
   assert.doesNotMatch(await page.evaluate(()=>document.getElementById('ydBaski').textContent),/genel ort|ölçek|Genele göre/,'nothing about anchoring in the defter');
   await noScroll('with ders ortalamaları');
+  // the publisher's Performans analizi (optional): the difficulty then comes from the network-wide p
+  await yukle(pdfPerf());
+  assert.equal(await hucreBaslik('1203','Performans analizi'),'✓ 4 ders · Türkiye geneli p');assert.deepEqual(await hucreler('1203'),['✓','–','✓','✓','✓','✓']);
+  await page.waitForFunction(()=>[...document.querySelectorAll('.yd-kalite summary')].some(s=>/zorluk: yayınevinin performans analizi \(Türkiye geneli, A kitapçığı\)/.test(s.textContent)));
+  await secOgr('SENTETİK ÖĞRENCİ 1 · 9001');
+  assert.equal(await page.locator('.yd-soru .yd-zorluk').evaluateAll(l=>l.some(x=>/\?$/.test(x.textContent)||x.classList.contains('yd-belirsiz'))),false,'no "?" with the network p');
+  await page.locator('.yd-kalite summary').first().click();
+  assert((await page.locator('.yd-kalite').first().locator('thead th').allInnerTexts()).includes('Türkiye p'));
+  await noScroll('with performans analizi');
+  await yukle(pdfPerf({kod:'27-YKS-1202'}));
+  assert.match(await page.locator('tr[data-yd-satir="1203"] .yd-hata').innerText(),/performans-analizi\.pdf: Sınav kodları uyuşmuyor/);
+  assert.equal((await hucreler('1203'))[5],'✓','a refused file changes nothing');
+  await page.evaluate(()=>{const s=[...YANLISLAR.durumu().denemeler.values()][0];s.perf=null;s.durum.perf='';s.zOnbellek=null;ciz()});
   // a new cevap raporu of another exam drops the file again
   assert.equal(await page.evaluate(()=>[...YANLISLAR.durumu().denemeler.values()][0].ort.dersler.length),3);assert.equal(await page.evaluate(()=>JSON.stringify([...YANLISLAR.durumu().denemeler.values()][0].ort)).then(t=>/OKUL|LISESI/.test(t)),false,'no school row is kept');
   await page.evaluate(()=>{const s=[...YANLISLAR.durumu().denemeler.values()][0];s.ort=null;s.durum.ort='';s.zOnbellek=null;ciz()});
@@ -195,14 +209,14 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   assert.equal(await hucreBaslik('1203','Cevap raporu'),'✓ 63 öğrenci · SENTETİK-1203 · TYT + AYT');
   // the TYT booklet and a booklet of another exam (1202) come in one batch: they are told apart by the code in their page header, each in its own exam row
   await yukle(buyuk,aytEski);
-  assert.deepEqual(await hucreler('1203'),['✓','✗','✓','✗','✗'],'the TYT booklet joined its exam; this exam has an AYT sheet that still lacks its booklet');
-  assert.deepEqual(await hucreler('1202'),['✗','✓','✗','✗','✗'],'the old AYT booklet is an exam of its own, without a report');
+  assert.deepEqual(await hucreler('1203'),['✓','✗','✓','✗','✗','✗'],'the TYT booklet joined its exam; this exam has an AYT sheet that still lacks its booklet');
+  assert.deepEqual(await hucreler('1202'),['✗','✓','✗','✗','✗','✗'],'the old AYT booklet is an exam of its own, without a report');
   assert.equal(await page.locator('tr[data-yd-satir="1202"] .yd-ad').innerText().then(t=>t.replace(/\s+/g,' ')),'Deneme 1202');
   // an exam without a report cannot be printed: only 1203 is selectable for the defter, the 1202 row is removed with Sil
   await page.locator('[data-yd-sil="1202"]').click();await page.waitForFunction(()=>!document.querySelector('[data-yd-satir="1202"]'));
   // the right AYT booklet: one A booklet per session
   await yukle(aytKit);
-  assert.deepEqual(await hucreler('1203'),['✓','✓','✓','✗','✗']);assert.equal(await hucreBaslik('1203','TYT kitapçık'),'✓ TYT · 5 sayfa · 40 soru');assert.equal(await hucreBaslik('1203','AYT kitapçık'),'✓ AYT · 6 sayfa · 8 soru');
+  assert.deepEqual(await hucreler('1203'),['✓','✓','✓','✗','✗','✗']);assert.equal(await hucreBaslik('1203','TYT kitapçık'),'✓ TYT · 5 sayfa · 40 soru');assert.equal(await hucreBaslik('1203','AYT kitapçık'),'✓ AYT · 6 sayfa · 8 soru');
   assert.equal(await page.locator('.yd-hata').count(),0);
   // the çözüm of the TYT only (40 pairs): it goes to the TYT; AYT B students keep the numbers-only list
   await yukle(cozumBuyuk);

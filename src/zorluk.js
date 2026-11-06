@@ -165,12 +165,30 @@ function capala(a, genelNet, n) {
   a.capa = {delta, genel: genelNet, okul: a.okulNet, rs: a.okulOran, rg: genelNet / n};
   return a.capa;
 }
+/* ---- the publisher's network-wide p (Performans analizi) ----
+   ps[i] = p of item i (A numbering), thousands of students, so no "?" and no low-reliability mark. The same five bands from b − μθ: b = the logit difficulty
+   ln((1 − p) / p) centred over the items, μθ = the ability whose expected section score equals the mean score Σp (the network's average student). Returns the summary or null. */
+function performans(a, ps) {
+  const idx = []; a.maddeler.forEach((m, i) => { if (!m.iptal && Number.isFinite(ps[i])) idx.push(i) });
+  if (idx.length < 2) return null;
+  const p = idx.map(i => Math.min(0.99, Math.max(0.01, ps[i]))), d = p.map(v => -logit(v)), mu = ort(d), b = d.map(v => v - mu), hedef = p.reduce((s, v) => s + v, 0);
+  let lo = -10, hi = 10; for (let k = 0; k < 80; k++) { const t = (lo + hi) / 2; if (b.reduce((s, v) => s + sig(t - v), 0) < hedef) lo = t; else hi = t }
+  const th = (lo + hi) / 2;
+  idx.forEach((i, j) => {
+    const m = a.maddeler[i], rel = b[j] - th;
+    m.bantOkul = m.bant; m.belirsizOkul = m.belirsiz; m.pYayin = ps[i]; m.rel = rel; m.bant = BANTLAR[bantNo(rel)][0]; m.belirsiz = false; m.dusuk = false; m.yayin = true;
+  });
+  let rho = null; { const x = [], y = []; idx.forEach(i => { const m = a.maddeler[i]; if (m.p !== null && m.p !== undefined) { x.push(m.p); y.push(ps[i]) } }); rho = spearman(x, y) }
+  a.perf = {n: idx.length, ort: hedef / idx.length, rho};
+  return a.perf;
+}
 const sayi = (v, d = 2) => v === null || v === undefined || !Number.isFinite(v) ? '—' : v.toFixed(d).replace(/^-(0[.,]?0*)$/, '$1').replace('.', ',').replace('-', '−');
 // "Türkçe · 27 öğrenci · KR-20 0,82 · 2 madde işaretli"; low reliability and the school correlation are added after it.
 function bolumSatiri(ad, a, rho) {
   const c = a.capa;
   return ad + ' · ' + a.n + ' öğrenci · KR-20 ' + sayi(a.kr20) + ' · ' + (a.isaretli ? a.isaretli + ' madde işaretli' : 'işaretli madde yok') +
     (a.dusuk ? ' · Güvenilirlik düşük' : '') + (rho !== null && rho !== undefined ? ' · okul verisi ρ ' + sayi(rho) : '') +
+    (a.perf ? ' · zorluk: yayınevinin performans analizi (Türkiye geneli, A kitapçığı)' + (a.perf.rho !== null ? ' · okul ↔ yayınevi ρ ' + sayi(a.perf.rho) : '') : '') +
     (c ? ' · genel ort. ' + sayi(c.genel) + ' net · okul ' + sayi(c.okul) + ' net · ölçek genele göre' : '');
 }
 // Weight class (Kendi seviyesi): the student's tier k of H (1 = strongest, norm-referenced within the grade) picks a window of difficulty bands
@@ -182,5 +200,5 @@ function kendiSeviyesi(kademe, H, bant) {
   const i = BANTLAR.findIndex(b => b[0] === bant);
   return i >= 0 && kademePenceresi(kademe, H).includes(i);
 }
-return {wilson, pearson, ritDuzeltilmis, kr20, spearman, rasch, bantNo, bantla, etiketYazi, BANTLAR, BANT_AD, BAYRAK, bayraklar, bolum, bolumSatiri, capala, capaFarki, kisitla, kendiSeviyesi, kademePenceresi, PENCERELER, EN_AZ_OGRENCI, EN_AZ_KR20, sayi, sig};
+return {wilson, pearson, ritDuzeltilmis, kr20, spearman, rasch, bantNo, bantla, etiketYazi, BANTLAR, BANT_AD, BAYRAK, bayraklar, bolum, bolumSatiri, capala, performans, capaFarki, kisitla, kendiSeviyesi, kademePenceresi, PENCERELER, EN_AZ_OGRENCI, EN_AZ_KR20, sayi, sig};
 })();
