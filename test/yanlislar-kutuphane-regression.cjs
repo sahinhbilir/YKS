@@ -284,8 +284,10 @@ const hepsi = async kodlar => { const out = []; for (const k of kodlar) { const 
     // without IndexedDB the cleanup is a no-op that succeeds
     await K.hepsiniTemizle(null);
     const fn = source.slice(source.indexOf('async function cikisYerelVerisiniTemizle()'), source.indexOf('function kaydedipCikisYap()'));
-    assert(fn.indexOf('DENEME_KUTUPHANE.hepsiniTemizle()') > 0 && fn.indexOf('YANLISLAR.bellekiBosalt()') > 0, 'wired into the logout / browser reset cleanup');
-    assert(fn.indexOf('DENEME_KUTUPHANE.hepsiniTemizle()') < fn.indexOf('LOCAL_STORE.clear()'), 'before the notebook, which is removed last');
+    // In memory mode (no usable IndexedDB) the device is left alone, as the notebook does; only the page's copies are emptied.
+    const call = "DENEME_KUTUPHANE.hepsiniTemizle(LOCAL_STORE.mode()==='memory'?null:undefined)";
+    assert(fn.indexOf(call) > 0 && fn.indexOf('YANLISLAR.bellekiBosalt()') > 0, 'wired into the logout / browser reset cleanup');
+    assert(fn.indexOf(call) < fn.indexOf('LOCAL_STORE.clear()'), 'before the notebook, which is removed last');
     assert.equal(run('typeof cikisYerelVerisiniTemizle'), 'function');
   });
 

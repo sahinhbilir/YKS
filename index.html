@@ -10568,7 +10568,8 @@ async function cikisYerelVerisiniTemizle() {
   }
   // Yanlışlar defteri'nin cihazdaki deneme kütüphanesi (kitapçık PDF'leri, öğrenci cevapları): ortak bilgisayarda oturumdan sonra kalmaz.
   // Tarayıcının tüm hesapları için veritabanı silinir, defter gibi; sayfadaki kopyalar da boşaltılır.
-  await DENEME_KUTUPHANE.hepsiniTemizle();
+  // Geçici (bellek) modda tarayıcı depolaması kullanılamıyor: defter gibi cihaza dokunulmaz, yalnızca sayfadaki kopyalar boşaltılır.
+  await DENEME_KUTUPHANE.hepsiniTemizle(LOCAL_STORE.mode()==='memory'?null:undefined);
   YANLISLAR.bellekiBosalt();
   await LOCAL_STORE.clear();
   // Geçici (bellek) modda cihazdaki defter hiç açılmadı; işareti kalır ki sonraki açılışta boş başlangıç sanılmasın.
