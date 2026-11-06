@@ -133,11 +133,11 @@ const hepsi = async kodlar => { const out = []; for (const k of kodlar) { const 
     const a = await taze('1203'), b = await taze('1204');
     await T.dosyalarEkle([a.rapor, a.kit, a.coz, a.ort, b.rapor].map(dosya), okuyucu);
     const out = T.gorunum(), tablo = out.slice(out.indexOf('<table class="et-tablo yd-tablo"'), out.indexOf('</table>'));
-    assert.deepEqual([...tablo.matchAll(/<th scope="col"[^>]*>([^<]*)</g)].map(m => m[1]).filter(Boolean), ['Deneme', 'TYT kitapçık', 'AYT kitapçık', 'Cevap raporu', 'Çözüm', 'Ders ort.']);
+    assert.deepEqual([...tablo.matchAll(/<th scope="col"[^>]*>([^<]*)</g)].map(m => m[1]).filter(Boolean), ['Deneme', 'TYT kitapçık', 'AYT kitapçık', 'Cevap raporu', 'Çözüm', 'Ders ort.', 'Performans analizi']);
     const satir = kod => { const i = tablo.indexOf('data-yd-satir="' + kod + '"'); return tablo.slice(i, tablo.indexOf('</tr>', i)) };
     const isaret = s => [...s.matchAll(/role="img" aria-label="([^"]*)">([^<]*)</g)].map(m => m[2]);
-    assert.deepEqual(isaret(satir('1203')), ['✓', '–', '✓', '✓', '✓'], 'TYT booklet, no AYT sheet, report, çözüm, ortalamalar');
-    assert.deepEqual(isaret(satir('1204')), ['✗', '–', '✓', '✗', '✗'], 'report only');
+    assert.deepEqual(isaret(satir('1203')), ['✓', '–', '✓', '✓', '✓', '✗'], 'TYT booklet, no AYT sheet, report, çözüm, ortalamalar, performans analizi');
+    assert.deepEqual(isaret(satir('1204')), ['✗', '–', '✓', '✗', '✗', '✗'], 'report only');
     assert.match(satir('1203'), /<b>SENTETİK-1203<\/b>[^]*03\.10\.2026/); assert.match(satir('1203'), /data-yd-sec="1203" checked/); assert.match(satir('1204'), /data-yd-sec="1204" checked/);
     assert.match(satir('1203'), /data-yd-sil="1203"[^>]*>Sil</);
     // an exam without a booklet cannot be printed: only 1203 gives students
@@ -399,6 +399,84 @@ const hepsi = async kodlar => { const out = []; for (const k of kodlar) { const 
     assert.equal(T.pdfDosyaAdi(3, '205 12/A'), 'Yanlislar_defteri_3_deneme_12A.pdf'); assert.equal(T.pdfDosyaAdi(1, ''), 'Yanlislar_defteri_1_deneme.pdf'); assert.equal(T.pdfDosyaAdi(2, '11-Ş'), 'Yanlislar_defteri_2_deneme_11S.pdf');
   });
 
+
+  /* ---- Performans analizi ---- */
+  const perfKur = (o = {}) => T.performansCoz(Y.itemlere(Y.performansSpec(o)));
+  const tytRapor = () => T.raporCoz(bytes(Y.raporXlsx2({})));
+  const perfBir = (kayit = {}) => ({tur: 'perf', ad: 'performans-1203.pdf', perf: perfKur(kayit)});
+  await test('performans analizi: sections, counts, p, r and the ÜST/ALT counts are read for TYT and AYT; only aggregates are kept', async () => {
+    const p = perfKur({dersler: [...Y.PERF_DERSLER, ...Y.PERF_AYT]});
+    assert.equal(p.kod, '27-YKS-1203'); assert.deepEqual(copy(p.dersler.map(d => [d.ad, d.n, d.maddeler.length])), [['TÜRKÇE-T', 4, 4], ['TARİH-T', 2, 2], ['DİN KÜLTÜRÜ-T', 2, 2], ['S.FELSEFE-T', 2, 2], ['TÜRK DİLİ VE EDB-A', 3, 3], ['TARİH.1-A', 2, 2], ['MATEMATİK-A', 3, 3]]);
+    const m = p.dersler[0].maddeler[0]; assert.deepEqual(copy(m), {no: 1, p: 0.9, r: 0.31, ust: [400, 31, 32, 33, 34, 7], alt: [100, 61, 62, 63, 64, 9]});
+    assert.equal(p.dersler[0].maddeler[3].p, 0.2); assert.doesNotMatch(JSON.stringify(p), /\d{11}/);
+    assert.equal(T.pdfTuru(Y.itemlere(Y.performansSpec({ascii: true}))), 'perf', 'recognised by its title (ascii letters too)');
+    assert.equal(perfKur({ascii: true}).dersler[0].maddeler.length, 4);
+    assert.throws(() => T.performansCoz(Y.itemlere(Y.kitapcikSpec())), /eklenmedi/);
+    assert.throws(() => { const pg = Y.itemlere(Y.performansSpec({})); pg[1].items = pg[1].items.filter(i => i.s !== '3. Soru' && !/^3\.$/.test(i.s)).filter((i, k, a) => Math.abs(i.y - 698) > 1); T.performansCoz(pg) }, /soru satırı okunabildi/);
+  });
+  await test('performans analizi: refused for another exam code, other question counts, or answer keys that do not fit; a few differences are accepted', async () => {
+    const rapor = await tytRapor(), tam = [...Y.PERF_DERSLER, ...Y.PERF_AYT];
+    assert.equal(T.performansDogrula(perfKur({dersler: tam}), rapor).map.size, 7);
+    assert.throws(() => T.performansDogrula(perfKur({kod: '27-YKS-1202', dersler: tam}), rapor), /Sınav kodları uyuşmuyor: performans analizi dosyası 27-YKS-1202 sınavına ait.*SENTETİK-1203/);
+    const sayi = tam.map((d, i) => i === 0 ? {...d, n: 5, anahtar: [...d.anahtar, 'A'], p: [...d.p, .5]} : d);
+    assert.throws(() => T.performansDogrula(perfKur({dersler: sayi}), rapor), /Soru sayıları uyuşmuyor: TÜRKÇE-T için cevap raporunda 4, performans analizi dosyasında \(27-YKS-1203\) 5 soru var\. Performans analizi dosyası eklenmedi/);
+    assert.throws(() => T.performansDogrula(perfKur({dersler: [{ad: 'FİZİK-T', n: 2, anahtar: ['A', 'B'], p: [.5, .5]}]}), rapor), /hiçbiri dosyada/);
+    // 18 keyed questions: one differing most-marked option (5%) is accepted, three (17%) refuse the file
+    const v = T.performansDogrula(perfKur({dersler: tam, bozuk: [2]}), rapor); assert.equal(v.farkli, 1); assert.equal(v.toplam, 18);
+    assert.throws(() => T.performansDogrula(perfKur({dersler: tam, bozuk: [2, 5, 9]}), rapor), /3 soruda en çok işaretlenen seçenek cevap anahtarından farklı \(18 sorudan\)/);
+    assert.throws(() => T.performansDogrula(perfKur({dersler: tam, bozuk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]}), rapor), /eklenmedi/);
+  });
+  const hazirDeneme = async (o = {}) => {
+    const rapor = await T.raporCoz(bytes(Y.raporXlsx({method: 8}))), k = T.kitapcikCoz(Y.kitapcikSayfalari());
+    T.sifirla(); const e = T.denemeKoy({kitlar: {TYT: k}, rapor, pairs: {TYT: Y.HARITA}, ...o}); return {rapor, k, e, es: e.es, harita: e.harita};
+  };
+  await test('difficulty from the network p: five bands from the page\'s own cut points, no "?", no low-reliability mark; the school p stays the validity check', async () => {
+    const {rapor, es, harita} = await hazirDeneme(), perf = T.performansCoz(Y.itemlere(Y.performansSpec({})));
+    const za = T.zorlukAnaliz(rapor, es, harita, null, null, perf), tur = za.bolumler[0].gruplar[0];
+    assert(tur.a.perf, 'the section took the publisher p'); const Zr = run('ZORLUK');
+    for (const g of za.bolumler.flatMap(b => b.gruplar)) for (const m of g.a.maddeler) { assert.equal(m.bant, Zr.BANTLAR[Zr.bantNo(m.rel)][0], 'band = the page\'s cut points on rel'); assert.equal(m.belirsiz, false); assert.equal(m.dusuk, false); assert.equal(m.yayin, true) }
+    assert.deepEqual(copy(tur.a.maddeler.map(m => m.pYayin)), [.9, .7, .5, .2]);
+    const i = tur.a.maddeler.map(m => Zr.BANTLAR.findIndex(b => b[0] === m.bant)); assert(i[0] < i[1] && i[1] <= i[2] && i[2] < i[3], 'easier p, easier band: ' + i);
+    // the extremes of a wide section reach the outer bands, the middle is Orta
+    const a = {maddeler: [.97, .9, .5, .1, .03, .5, .5].map((p, k) => ({i: k, p: .5, bant: 'orta', belirsiz: true, dusuk: true}))};
+    assert(Zr.performans(a, [.97, .9, .5, .1, .03, .5, .5])); assert.equal(a.maddeler[0].bant, 'cok-kolay'); assert.equal(a.maddeler[4].bant, 'cok-zor'); assert.equal(a.maddeler[2].bant, 'orta');
+    assert(a.maddeler.every(m => m.belirsiz === false && m.bantOkul === 'orta'));
+    assert.equal(Zr.performans({maddeler: [{i: 0}]}, [.5]), null, 'one item cannot be centred');
+    // the summary line names the source and the rank correlation with the school's own p
+    assert.match(tur.satir, /zorluk: yayınevinin performans analizi \(Türkiye geneli, A kitapçığı\)/); assert(tur.rho === null || Number.isFinite(tur.rho));
+    assert.match(tur.satir, /okul ↔ yayınevi ρ/);
+    // without a file the section is the school's own
+    const yok = T.zorlukAnaliz(rapor, es, harita, null, null, null).bolumler[0].gruplar[0]; assert(!yok.a.perf); assert.doesNotMatch(yok.satir, /performans analizi/);
+  });
+  await test('difficulty source priority: Performans analizi, then Ders ortalamaları anchoring, then the school p alone', async () => {
+    const {rapor, es, harita} = await hazirDeneme(), perf = perfKur({}), ort = T.ortalamaCoz(Y.itemlere(Y.ortalamaSpec({dersler: [['TÜRKÇE-T', 4, 2.5], ['TARİH-T', 2, 1.25]]})));
+    const sec = (o, p) => T.zorlukAnaliz(rapor, es, harita, null, o, p).bolumler[0].gruplar[0];
+    const ikisi = sec(ort, perf); assert(ikisi.a.perf && !ikisi.a.capa, 'both given: the publisher p wins');
+    const sadeceOrt = sec(ort, null); assert(!sadeceOrt.a.perf && sadeceOrt.a.capa, 'ortalamalar anchoring next');
+    const hic = sec(null, null); assert(!hic.a.perf && !hic.a.capa, 'the school p alone');
+    // a perf file with other counts for this ders is ignored by the analysis itself
+    const baska = perfKur({dersler: [{ad: 'TÜRKÇE-T', n: 5, anahtar: ['A', 'B', 'C', 'D', 'E'], p: [.1, .2, .3, .4, .5]}]}); assert(!sec(null, baska).a.perf);
+    // the page uses it: chips come from the exam's file; removing it restores the old bands
+    const {e} = await hazirDeneme({perf, ort}); sayfaHazirla(); Object.assign(S, {onizleme: 1e9, sube: '', ogr: '', status: 'all', bantlar: null, kendi: false, kapali: new Set(), oturum: 'TYT+AYT'});
+    for (const [ti, t] of e.kitlar.TYT.testler.entries()) t.sorular.forEach(q => e.crops.set(ti + ':' + q.no, {url: 'x', blob: null, w: 10, h: 10, genis: false}));
+    const metin = T.gorunum(); assert.match(metin, /zorluk: yayınevinin performans analizi \(Türkiye geneli, A kitapçığı\)/); assert.match(metin, /<th scope="col">Türkiye p<\/th>/); assert.doesNotMatch(metin, /yd-belirsiz|class="yd-zorluk[^"]*">[^<]*\?</);
+    e.perf = null; e.zOnbellek = null; assert.doesNotMatch(T.gorunum(), /Türkiye p/);
+  });
+  await test('bulk and library: the performans file is grouped by its exam code in a mixed batch, the row shows ✓, it survives a reload and holds no 11 digit number', async () => {
+    const disk = yeniDisk(); T.sifirla(); sayfaHazirla(); await kutu('u1', disk);
+    const a = await taze('1203'), b = await taze('1204'), p = (kod, ad) => ({tur: 'perf', ad, perf: perfKur({kod: '27-YKS-' + kod, dersler: [{ad: 'TÜRKÇE-T', n: 4, anahtar: (SINAV[kod] || SINAV['1203']).keyA.slice(0, 4), p: [.9, .7, .5, .2]}]})});
+    await T.dosyalarEkle([p('1204', 'perf-1204.pdf'), a.kit, p('1203', 'perf-1203.pdf'), b.rapor, a.rapor, b.kit].map(dosya), okuyucu);
+    assert.equal(S.genel.length, 0); assert.equal(S.denemeler.get('1203').perf.kod, '27-YKS-1203'); assert.equal(S.denemeler.get('1204').perf.kod, '27-YKS-1204');
+    const out = T.gorunum(); assert.match(out, /title="✓ 1 ders · Türkiye geneli p"/);
+    const isaret = kod => { const i = out.indexOf('data-yd-satir="' + kod + '"'); return [...out.slice(i, out.indexOf('</tr>', i)).matchAll(/role="img" aria-label="[^"]*">([^<]*)</g)].map(m => m[1]) };
+    assert.equal(isaret('1203').at(-1), '✓'); assert.match(out, /Performans analizi/);
+    for (const m of disk.meta.values()) assert.doesNotMatch(JSON.stringify(m), /\d{11}/);
+    T.sifirla(); await kutu('u1', disk); const e = S.denemeler.get('1204'); assert.deepEqual(copy(e.perf), copy(perfKur({kod: '27-YKS-1204', dersler: [{ad: 'TÜRKÇE-T', n: 4, anahtar: SINAV['1204'].keyA.slice(0, 4), p: [.9, .7, .5, .2]}]})));
+    // a file of an exam nobody uploaded, with two reports present, is refused as a general error; with exactly one report the code mismatch is shown in its row
+    await T.dosyalarEkle([dosya(p('1299', 'perf-1299.pdf'))], okuyucu); assert.match(S.genel[0].mesaj, /27-YKS-1299 sınavına ait; bu sınavın cevap raporu yüklü değil/);
+    T.sifirla(); await kutu('u1', yeniDisk()); await T.dosyalarEkle([a.rapor, a.kit].map(dosya), okuyucu); await T.dosyalarEkle([dosya({tur: 'perf', ad: 'x.pdf', perf: perfKur({kod: '27-YKS-1202', dersler: [{ad: 'TÜRKÇE-T', n: 4, anahtar: ['A', 'B', 'C', 'D'], p: [.5, .5, .5, .5]}]})})], okuyucu);
+    assert.match(S.denemeler.get('1203').hatalar[0].mesaj, /Sınav kodları uyuşmuyor/);
+  });
   await test('the module keeps files only through the library: no localStorage, no notebook field, no network in the Yanlışlar code; the library has no network or localStorage either', async () => {
     const yd = source.slice(source.indexOf('const YANLISLAR'), source.indexOf('// END YANLISLAR')), lib = source.slice(source.indexOf('const DENEME_KUTUPHANE'), source.indexOf('// END DENEMEKUTUPHANE'));
     assert.doesNotMatch(yd, /localStorage|sessionStorage|indexedDB|firebase|\bfetch\(|XMLHttpRequest|sendBeacon/);

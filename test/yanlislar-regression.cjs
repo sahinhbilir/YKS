@@ -116,6 +116,20 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert.equal(h.adet, 10); assert.deepEqual(copy(h.testler[0].bToA.slice(1)), [2, 4, 1, 3]); assert.deepEqual(copy(h.testler[1].aToB.slice(1)), [2, 1, 4, 3, 6, 5]);
     assert.throws(() => T.cozumEtiketleri([{w: 567, items: [{s: 'Sentetik', x: 1, y: 1}]}]), /soru eşleşmesi bulunamadı/);
   });
+  await test('çözüm: a label written as pieces on one line ("A-1", "/", "B-3") is joined, in both columns; whole labels still work; far-apart pieces are not a label', async () => {
+    const parca = T.cozumEtiketleri(Y.itemlere(Y.cozumParcaSpec())); assert.deepEqual(copy(parca), Y.HARITA, 'split labels give the same pairs in the same order');
+    assert.deepEqual(copy(T.cozumEtiketleri(Y.itemlere(Y.cozumSpec()))), Y.HARITA, 'whole labels');
+    assert.equal(T.pdfTuru(Y.itemlere(Y.cozumParcaSpec())), 'coz'); assert.equal(T.pdfTuru(Y.itemlere(Y.cozumSpec())), 'coz');
+    const sayfa = items => [{w: 567, items}], it = (s, x, y) => ({s, x, y, w: s.length * 4.5});
+    const ikiSutun = T.cozumEtiketleri(sayfa([it('A-2', 300, 600), it('/', 326, 600), it('B-1', 336, 600), it('A-1', 40, 700), it('/', 66, 700), it('B-3', 76, 700)]));
+    assert.deepEqual(copy(ikiSutun), [[1, 3], [2, 1]], 'left column first, then the right one');
+    // "A-3" and "B-5" far apart on one line are two things, not a label
+    assert.throws(() => T.cozumEtiketleri(sayfa([it('A-3', 40, 700), it('/', 70, 700), it('B-5', 200, 700)])), /eşleşmesi bulunamadı/);
+    assert.equal(T.etiketler(sayfa([it('A-3', 40, 700), it('B-5', 200, 700)])[0]).length, 0);
+    assert.equal(T.etiketler(sayfa([it('A-3', 40, 700), it('B-5', 200, 700), it('A-4 / B-6', 40, 650)])[0]).length, 1);
+    // pieces of different lines are not joined either
+    assert.equal(T.etiketler(sayfa([it('A-3', 40, 700), it('/', 66, 690), it('B-5', 76, 680)])[0]).length, 0);
+  });
   await test('çözüm: every validation failure refuses the file', async () => {
     const {rapor, es} = await kur(), bad = (pairs, re) => assert.throws(() => T.haritaKur(pairs, es, rapor), re);
     const mut = (i, v) => Y.HARITA.map((p, k) => k === i ? v : p);

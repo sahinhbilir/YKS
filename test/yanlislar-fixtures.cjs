@@ -247,4 +247,31 @@ for(const [kod,s] of Object.entries(DENEMELER)){
   if(kod==='1205')s.ogr=[kisi('9001',1,'205 12/A','A',keyA.map((c,i)=>i===9?L5[(L5.indexOf(c)+2)%5]:c)),kisi('9002',2,'205 12/A','B',keyB.map((c,i)=>i===2?L5[(L5.indexOf(c)+1)%5]:c)),kisi('9004',4,'205 12/B','A',keyA.slice())];
 }
 const denemeRaporu=(kod,o={})=>{const s=DENEMELER[kod];return raporXlsx({sinav:s.ad,tarih:s.tarih,anahtarA:s.keyA,anahtarB:s.keyB,ogrenciler:s.ogr,method:8,...o})};
-module.exports={DENEMELER,denemeRaporu,ortalamaSpec,ORT_DERSLER,rng,normal,sig,simule,raporBuyuk,kademeOgrencileri,BUYUK_BOLUMLER,kitapcikSpecBuyuk,AYT_SECTIONS,AYT_KEY_A,AYT_KEY_B,AYT_HARITA,AYT_OGRENCILER,kitapcikSpecAyt,kitapcikSayfalariAyt,raporSatirlariAyt,cokSayfaXlsx,raporXlsx2,W,H,kitapcikSpec,kitapcikSayfalari,pdfYaz,itemlere,SECTIONS,KEY_A,KEY_B,OGRENCILER,raporSatirlari,raporXlsx,HARITA,cozumSpec,SENTETIK_TC};
+
+/* ---- "Performans analizi" (publisher PDF), synthetic: a title page, then one page per ders ("TÜRKÇE-T (4 Soru )") with one row per question:
+   "1. Soru", the ÜST and ALT counts of A, B, C, D, E, BOŞ (12 numbers), p, its meaning, r, its meaning. The most marked option of ÜST is the key unless the question is in `bozuk`. ---- */
+function performansSpec({kod='27-YKS-1203',dersler=PERF_DERSLER,bozuk=[],ascii=false,bolenAyri=true}={}){
+  const tr=t=>ascii?t.replace(/[İıÜüÖöÇçŞşĞğ]/g,c=>ASCII[c]):t,sayfalar=[],harf='ABCDE';
+  sayfalar.push({texts:[[100,800,tr(kod+' SINAVI ANALİZLERİ'),12],[40,770,tr('Madde Güçlük İndeksi (p) ve Madde Ayırdedicilik (r) A kitapçığını işaretleyen tüm öğrenciler üzerinden hesaplanır.'),8]],rects:[],w:595,h:842});
+  let sira=0;
+  for(const d of dersler){
+    const t=[[60,800,tr(d.ad+' ('+d.n+' Soru )'),11]];
+    ['Soru Sırası','A','B','C','D','E','BOŞ','Güçlük İndeksi (p)','Güçlük Anlamı','Ayırdedicilik İndeksi (r)','Ayırdedicilik Anlamı'].forEach((b,k)=>t.push([40+k*45,770,tr(b),7]));
+    d.p.forEach((p,i)=>{
+      const y=740-i*14,dogru=harf.indexOf(d.anahtar[i]),isaret=bozuk.includes(sira)?(dogru+1)%5:dogru,sayi=[];
+      for(let o=0;o<6;o++){const ust=o===isaret?400+i:o===5?7:30+o,alt=o===isaret?100:o===5?9:60+o;sayi.push(ust,alt)}
+      const hucre=[(i+1)+'. Soru',...sayi.map(String),p.toFixed(2),p>.79?'çok kolay soru':p>.64?'kolay soru':p>.34?'orta soru':p>.19?'zor soru':'çok zor soru','0.31','başarılı'];
+      let x=30;hucre.forEach((c,k)=>{t.push([x,y,tr(c),8]);x+=k===0?44:k===13?40:k===14?80:k===15?40:30});
+      sira++;
+    });
+    sayfalar.push({texts:t,rects:[],w:595,h:842});
+  }
+  return sayfalar;
+}
+const PERF_DERSLER=[{ad:'TÜRKÇE-T',n:4,anahtar:KEY_A.slice(0,4),p:[.9,.7,.5,.2]},{ad:'TARİH-T',n:2,anahtar:KEY_A.slice(4,6),p:[.6,.4]},{ad:'DİN KÜLTÜRÜ-T',n:2,anahtar:KEY_A.slice(6,8),p:[.8,.3]},{ad:'S.FELSEFE-T',n:2,anahtar:KEY_A.slice(8,10),p:[.55,.15]}];
+const PERF_AYT=[{ad:'TÜRK DİLİ VE EDB-A',n:3,anahtar:AYT_KEY_A.slice(0,3),p:[.85,.5,.25]},{ad:'TARİH.1-A',n:2,anahtar:AYT_KEY_A.slice(3,5),p:[.7,.45]},{ad:'MATEMATİK-A',n:3,anahtar:AYT_KEY_A.slice(5,8),p:[.6,.35,.1]}];
+// a çözüm page whose labels are pieces of one line ("A-1", "/", "B-3"), the way the newer publisher files write them
+function cozumParcaSpec(pairs=HARITA,perPage=5){
+  return cozumSpec(pairs,perPage).map(p=>({...p,texts:p.texts.flatMap(([x,y,s,z])=>{const m=/^A-(\d+) \/ B-(\d+)$/.exec(s);return m?[[x,y,'A-'+m[1],z],[x+26,y,'/',z],[x+36,y,'B-'+m[2],z]]:[[x,y,s,z]]})}));
+}
+module.exports={performansSpec,PERF_DERSLER,PERF_AYT,cozumParcaSpec,DENEMELER,denemeRaporu,ortalamaSpec,ORT_DERSLER,rng,normal,sig,simule,raporBuyuk,kademeOgrencileri,BUYUK_BOLUMLER,kitapcikSpecBuyuk,AYT_SECTIONS,AYT_KEY_A,AYT_KEY_B,AYT_HARITA,AYT_OGRENCILER,kitapcikSpecAyt,kitapcikSayfalariAyt,raporSatirlariAyt,cokSayfaXlsx,raporXlsx2,W,H,kitapcikSpec,kitapcikSayfalari,pdfYaz,itemlere,SECTIONS,KEY_A,KEY_B,OGRENCILER,raporSatirlari,raporXlsx,HARITA,cozumSpec,SENTETIK_TC};
