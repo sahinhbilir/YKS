@@ -313,15 +313,27 @@ function esOturum(es,ses){
 
 /* ---------------------------------------------------------------- Çözüm kitapçığı: the A <-> B question map */
 const ETIKET=/^A\s*[-–]\s*(\d{1,3})\s*\/\s*B\s*[-–]\s*(\d{1,3})$/u;
+// The labels of one page as {m, x, y}. Some çözüm PDFs write a label as one run ("A-1 / B-3"), others as pieces on one
+// line ("A-1", "/", "B-3"): pieces closer than 14 pt on the same line are joined before matching.
+function etiketler(p){
+  const items=(Array.isArray(p&&p.items)?p.items:[]).filter(i=>i&&typeof i.s==='string'&&Number.isFinite(i.x)&&Number.isFinite(i.y)).map(i=>({s:clean(i.s),x:i.x,y:i.y,w:Number.isFinite(i.w)?i.w:i.s.length*5}));
+  const satir=[];for(const i of items.sort((a,b)=>b.y-a.y||a.x-b.x)){const l=satir.find(l=>Math.abs(l.y-i.y)<2);if(l)l.items.push(i);else satir.push({y:i.y,items:[i]})}
+  const out=[];
+  for(const l of satir){const it=l.items.sort((a,b)=>a.x-b.x);let kosu=null;
+    const bitir=()=>{if(kosu){const m=ETIKET.exec(kosu.s);if(m)out.push({m,x:kosu.x,y:kosu.y})}kosu=null};
+    for(const i of it){if(kosu&&i.x-kosu.son<14&&kosu.n<5){kosu.s=clean(kosu.s+' '+i.s);kosu.son=i.x+i.w;kosu.n++}else{bitir();kosu={s:i.s,x:i.x,y:i.y,son:i.x+i.w,n:1}}
+      if(ETIKET.test(kosu.s))bitir()}
+    bitir()}
+  return out;
+}
 // pages: [{w,items:[{s,x,y}]}]. Labels are read left column top to bottom, then the right column, page after page.
 function cozumEtiketleri(pages){
   const fail=m=>{throw new Error(m+' Çözüm kitapçığı eklenmedi.')};
   if(!Array.isArray(pages)||!pages.length||pages.length>200)fail('PDF sayfaları okunamadı.');
   const pairs=[];
   for(const p of pages){
-    const items=(Array.isArray(p.items)?p.items:[]).filter(i=>i&&typeof i.s==='string'&&Number.isFinite(i.x)&&Number.isFinite(i.y)&&ETIKET.test(clean(i.s)));
     const w=p.w||600;
-    items.map(i=>({m:ETIKET.exec(clean(i.s)),c:i.x<w/2?0:1,y:i.y})).sort((a,b)=>a.c-b.c||b.y-a.y).forEach(i=>pairs.push([+i.m[1],+i.m[2]]));
+    etiketler(p).map(i=>({m:i.m,c:i.x<w/2?0:1,y:i.y})).sort((a,b)=>a.c-b.c||b.y-a.y).forEach(i=>pairs.push([+i.m[1],+i.m[2]]));
   }
   if(!pairs.length)fail('Bu PDF’de "A-1 / B-5" biçiminde soru eşleşmesi bulunamadı.');
   return pairs;
@@ -673,7 +685,7 @@ async function pdfOku(file){
 function pdfTuru(pages){
   const hepsi=pages.flatMap(p=>p.items.map(i=>clean(i.s)));
   if(hepsi.some(s=>ORT_BASLIK.test(s)))return 'ort';
-  if(hepsi.some(s=>ETIKET.test(s)))return 'coz';
+  if(hepsi.some(s=>ETIKET.test(s))||pages.some(p=>etiketler(p).length))return 'coz';
   if(pages.some(p=>p.items.some(i=>KOD.test(clean(i.s))&&i.y>p.h-70)))return 'kit';
   return null;
 }
