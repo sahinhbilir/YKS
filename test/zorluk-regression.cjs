@@ -456,11 +456,13 @@ const sig = z => 1 / (1 + Math.exp(-z));
 
   /* ---------------- chips, print set and the last page ---------------- */
   const show = async (sim, o = {}) => {
-    const k = await kur(sim), S = T.durumu();
-    Object.assign(S, {kitlar: {TYT: k.stub}, rapor: k.rapor, es: k.es, pairs: {}, cozum: {}, zOnbellek: null, bantlar: null, kendi: false, status: 'all', harita: o.harita === false ? null : k.harita, sube: '', ogr: '', kapali: new Set(), crops: new Map(), hata: {kit: '', rapor: '', coz: ''}, ...o.state});
-    k.es.bolumler.forEach((b, i) => { for (let q = 1; q <= b.n; q++) S.crops.set(b.test + ':' + (b.off + q), {url: 'blob:sentetik-' + b.test + '-' + (b.off + q), w: 10, h: 10, genis: false}) });
+    const k = await kur(sim), S = T.durumu(), crops = new Map();
+    T.sifirla();
+    k.es.bolumler.forEach((b, i) => { for (let q = 1; q <= b.n; q++) crops.set(b.test + ':' + (b.off + q), {url: 'blob:sentetik-' + b.test + '-' + (b.off + q), w: 10, h: 10, genis: false}) });
+    const e = T.denemeKoy({kitlar: {TYT: k.stub}, rapor: k.rapor, crops, pairs: o.harita === false ? {} : {TYT: sim.pairs}});
+    Object.assign(S, {bantlar: null, kendi: false, status: 'all', sube: '', ogr: '', kapali: new Set(), ...o.state});
     run("D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='yanlislar'");
-    return {...k, S};
+    return {...k, S, e};
   };
   const soruSayisi = out => (out.match(/<figure class="yd-soru/g) || []).length;
   await test('page: a difficulty chip next to each question replaces "Senin cevabın"; the answers move to the last page with the key', async () => {
@@ -473,7 +475,7 @@ const sig = z => 1 / (1 + Math.exp(-z));
       assert.match(son, /<th scope="col">Soru<\/th><th scope="col">Senin cevabın<\/th><th scope="col">Doğru cevap<\/th>/); assert.match(son, /<caption>Türkçe<\/caption>/);
     }
     // a B student's rows carry their own B numbers, the cut-outs the A numbers (with the B number in brackets)
-    const b = ogr.find(a => a.startsWith('" data-yd-ogr="2"')); assert.match(b, /\(B kitapçığında \d+\)/); assert.match(b.slice(b.indexOf('yd-anahtar')), /<td>\d+<\/td><td>(Boş|[A-E])<\/td><td>[A-E]<\/td>/);
+    const b = ogr.find(a => a.startsWith('" data-yd-ogr="9302"')); assert.match(b, /\(B kitapçığında \d+\)/); assert.match(b.slice(b.indexOf('yd-anahtar')), /<td>\d+<\/td><td>(Boş|[A-E])<\/td><td>[A-E]<\/td>/);
     assert(out.indexOf('Zayıf ayırt') < out.indexOf('<div class="yd-baski"'), 'the quality table sits outside the printed pages');
     // the chips
     assert.equal((out.match(/data-yd-z="/g) || []).length, 6); assert.match(out, /data-yd-z="cok-kolay" aria-pressed="true">Çok kolay</); assert.match(out, /data-yd-z="kendi" aria-pressed="false">Kendi seviyesi</);
@@ -510,13 +512,13 @@ const sig = z => 1 / (1 + Math.exp(-z));
     assert.equal(K.model().dersler.get('TYT:mat@12').yetersiz, false);
     const guclu = rapor.ogrenciler[15], zayif = rapor.ogrenciler[0];
     assert(K.yetenek(guclu.no, 'TYT', 'mat') > K.yetenek(zayif.no, 'TYT', 'mat'));
-    S.ogr = String(guclu.id); const g = T.gorunum(); S.ogr = String(zayif.id); const z = T.gorunum();
+    S.ogr = guclu.no; const g = T.gorunum(); S.ogr = zayif.no; const z = T.gorunum();
     const bantlar = h => [...h.matchAll(/yd-z-([a-z-]+)/g)].map(m => m[1]);
     // the strong student's window sits at harder questions than the weak one's
     const rank = b => ['cok-kolay', 'kolay', 'orta', 'zor', 'cok-zor'].indexOf(b), ort = l => l.map(rank).reduce((a, b) => a + b, 0) / (l.length || 1);
     assert(bantlar(g).length && bantlar(z).length); assert(ort(bantlar(g)) > ort(bantlar(z)), ort(bantlar(g)) + ' vs ' + ort(bantlar(z)));
     // the filter is applied per student and per ders: the same student's list with Kendi seviyesi off is a superset
-    S.kendi = false; S.bantlar = null; S.ogr = String(guclu.id); assert(soruSayisi(T.gorunum()) >= soruSayisi(g));
+    S.kendi = false; S.bantlar = null; S.ogr = guclu.no; assert(soruSayisi(T.gorunum()) >= soruSayisi(g));
     // Kendi seviyesi adds to the chips, never narrows them: all five chips plus Kendi seviyesi is still everything
     S.kendi = true; assert.equal(soruSayisi(T.gorunum()), soruSayisi((S.kendi = false, T.gorunum())));
   });
@@ -606,17 +608,17 @@ const sig = z => 1 / (1 + Math.exp(-z));
     assert.equal(T.zorlukAnaliz(rapor, es, harita, null, {kod: 'x', dersler: [{ad: 'TÜRKÇE-T', n: 25, genel: 10}]}).bolumler[0].gruplar[0].a.capa, undefined);
   });
   await test('anchoring in the page: chips and the table use the anchored band, Madde kalitesi shows the line and the column, the printed defter says nothing', async () => {
-    const k = await show(SIM), S = k.S, bant = out => [...out.matchAll(/yd-z-([a-z-]+)/g)].map(m => m[1]);
+    const k = await show(SIM), S = k.S, e = k.e, bant = out => [...out.matchAll(/yd-z-([a-z-]+)/g)].map(m => m[1]);
     const once = T.gorunum(); assert.doesNotMatch(once, /genel ort\.|Genele göre|ölçek genele/);
-    S.ort = T.ortalamaCoz(ortSayfa({dersler: [['TÜRKÇE-T', 20, 3], ['MATEMATİK-T', 20, 3]]})); S.durum.ort = '✓ 2 ders · genel ortalama'; S.zOnbellek = null;
+    e.ort = T.ortalamaCoz(ortSayfa({dersler: [['TÜRKÇE-T', 20, 3], ['MATEMATİK-T', 20, 3]]})); e.durum.ort = '✓ 2 ders · genel ortalama'; e.zOnbellek = null;
     const sonra = T.gorunum(), a = sonra.slice(sonra.indexOf('<section class="yd-analiz"'), sonra.indexOf('<div class="yd-baski"')), baski = sonra.slice(sonra.indexOf('<div class="yd-baski"'));
     assert.match(a, /<summary>Türkçe · 60 öğrenci · KR-20 0,\d\d · [^<]*genel ort\. 3,00 net · okul \d+,\d\d net · ölçek genele göre<\/summary>/);
     assert.match(a, /<th scope="col">r<sub>it<\/sub><\/th><th scope="col">Genele göre<\/th><th scope="col">İşaret<\/th>/); assert.match(a, /<td>(Çok kolay|Kolay|Orta|Zor|Çok zor)\??<\/td>/);
-    assert.match(sonra, /Ders ortalamaları \(isteğe bağlı\)/); assert.match(sonra, /✓ 2 ders · genel ortalama/);
+    assert.match(sonra, /Ders ort\./); assert.match(sonra, /title="✓ 2 ders · genel ortalama"/);
     assert.doesNotMatch(baski, /genel ort|Genele göre|ölçek|ortalama|Δ/i, 'nothing about anchoring in the defter');
     const rank = b => ['cok-kolay', 'kolay', 'orta', 'zor', 'cok-zor'].indexOf(b), ort = l => l.reduce((x, y) => x + rank(y), 0) / l.length;
     assert(ort(bant(baski)) > ort(bant(once.slice(once.indexOf('<div class="yd-baski"')))), 'a weak network (3 of 20) makes the chips harder');
-    S.ort = null; S.zOnbellek = null; assert.equal(T.gorunum().slice(T.gorunum().indexOf('<section class="yd-analiz"')), once.slice(once.indexOf('<section class="yd-analiz"')).replace(once.match(/<span class="yd-durum">[^]*?<\/span>/)[0], ''), 'removing the file restores the page') ;
+    e.ort = null; e.durum.ort = ''; e.zOnbellek = null; assert.equal(T.gorunum().slice(T.gorunum().indexOf('<section class="yd-analiz"')), once.slice(once.indexOf('<section class="yd-analiz"')), 'removing the file restores the page');
   });
   await test('nothing from the files is kept: no storage, no notebook field, no network in the module', () => {
     const modul = source.slice(source.indexOf('const YANLISLAR'), source.indexOf('// END YANLISLAR')) + source.slice(source.indexOf('const ZORLUK'), source.indexOf('// END ZORLUK'));

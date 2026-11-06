@@ -72,8 +72,9 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     const rows = Y.raporSatirlari();rows[7][4] = '98765432109';
     const r = await T.raporCoz(bytes(F.xlsx({sheetName: 'TYT', shared: true, method: 0, rows})));
     assert.doesNotMatch(JSON.stringify(r), /\d{11}/); assert.equal(r.ogrenciler[0].sube, '');
-    // the page state never holds one either
-    assert.doesNotMatch(JSON.stringify(copy(T.durumu().durum)), /\d{11}/);
+    // what the library would keep of the exam never holds one either
+    const {rapor: r3, k: k3} = await kur();T.sifirla();const e3 = T.denemeKoy({kitlar: {TYT: k3}, rapor: r3});
+    assert.doesNotMatch(JSON.stringify(T.metaOf(e3)), /\d{11}/);T.sifirla();
   });
   await test('privacy: the cells of the TC column (below the header) are never read, only skipped', async () => {
     const touched = [], Real = sandbox.DOMParser;
@@ -216,9 +217,10 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     if (only) assert.deepEqual(dersOf(rapor, es, only, {alan: 'Tümü'}).filter(x => x === 'Matematik'), []);
   });
   await test('print: TYT block then AYT block with session headings; the key has both; no alan or tier text', async () => {
-    const {rapor, kT, kA, es} = await kur2(), S = T.durumu();
-    Object.assign(S, {kitlar: {TYT: kT, AYT: kA}, rapor, es, pairs: {}, cozum: {}, zOnbellek: null, bantlar: null, kendi: false, status: 'all', harita: null, sube: '', ogr: '', kapali: new Set(), crops: new Map(), oturum: 'TYT+AYT', alan: 'SÖZ'});
-    es.testler.forEach((n, ti) => { const f = ti < es.aralik.AYT[0] ? ['TYT', kT, ti] : ['AYT', kA, ti - es.aralik.AYT[0]]; for (let q = 1; q <= n; q++) S.crops.set(ti + ':' + q, {url: 'blob:s-' + ti + '-' + q, w: 10, h: 10, genis: false}) });
+    const {rapor, kT, kA, es} = await kur2(), S = T.durumu(), crops = new Map();
+    T.sifirla();
+    es.testler.forEach((n, ti) => { for (let q = 1; q <= n; q++) crops.set(ti + ':' + q, {url: 'blob:s-' + ti + '-' + q, w: 10, h: 10, genis: false}) });
+    T.denemeKoy({kitlar: {TYT: kT, AYT: kA}, rapor, crops}); Object.assign(S, {oturum: 'TYT+AYT', alan: 'SÖZ'});
     run("D=varsayilan();D.rol='rehber';D.ogr=[{no:'9001',alan:'SÖZ'}];EK.sekme='yanlislar'");
     const out = T.gorunum(), a = out.split('<article class="yd-ogr').slice(1)[0];
     assert(a.indexOf('<h3 class="yd-oturum">TYT</h3>') > 0 && a.indexOf('<h3 class="yd-oturum">TYT</h3>') < a.indexOf('<h3 class="yd-oturum">AYT</h3>'));
@@ -230,9 +232,9 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert.doesNotMatch(a, /SÖZ|Öğrencinin alanı|kademe/i, 'nothing about the alan or tiers is printed');
     // the selectors: Oturum and Alan are offered, with the default 'Öğrencinin alanı'
     assert.match(out, /data-yd-f="oturum"/); assert.match(out, /<option value="ogr">Öğrencinin alanı<\/option>/); assert.match(out, /<option value="SÖZ" selected>SÖZ<\/option>/);
-    assert.doesNotMatch(out, /data-yd-ders="[0-9]+" checked>Matematik/, 'the tick for a test outside the chosen alan is hidden');
+    assert.doesNotMatch(out, /data-yd-ders="Matematik"/, 'the tick for a test outside the chosen alan is hidden');
     S.oturum = 'TYT'; assert.doesNotMatch(T.gorunum(), /data-yd-f="alan"/, 'TYT only: no alan selector');
-    Object.assign(S, {oturum: 'TYT+AYT', alan: 'ogr'});
+    Object.assign(S, {oturum: 'TYT+AYT', alan: 'ogr'});T.sifirla();
   });
   await test('difficulty: an AYT section is analysed on the students who took it; anchoring and tiers use the AYT keys', async () => {
     // 9006 left Edebiyat blank and 9004 sits it: the section n counts only takers, whatever the alan
@@ -254,9 +256,10 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
   });
   // ---- markup ----
   const show = async o => {
-    const {rapor, k, es} = await kur(), S = T.durumu();
-    Object.assign(S, {kitlar: {TYT: k}, rapor, es, pairs: {}, cozum: {}, zOnbellek: null, bantlar: null, kendi: false, status: 'all', harita: o.harita ? T.haritaKur(Y.HARITA, es, rapor) : null, sube: '', ogr: '', kapali: new Set(), crops: new Map(), hata: {kit: '', rapor: '', coz: ''}});
-    k.testler.forEach((t, ti) => t.sorular.forEach(q => S.crops.set(ti + ':' + q.no, {url: 'blob:sentetik-' + ti + '-' + q.no, w: 10, h: 10, genis: false})));
+    const {rapor, k, es} = await kur(), S = T.durumu(), crops = new Map();
+    T.sifirla();
+    k.testler.forEach((t, ti) => t.sorular.forEach(q => crops.set(ti + ':' + q.no, {url: 'blob:sentetik-' + ti + '-' + q.no, w: 10, h: 10, genis: false})));
+    T.denemeKoy({kitlar: {TYT: k}, rapor, crops, pairs: o.harita ? {TYT: Y.HARITA} : {}});
     run("D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='yanlislar'");
     return T.gorunum();
   };
@@ -281,7 +284,7 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert.doesNotMatch(b, /<img/); assert.match(b, /B kitapçığı: sorular kendi kitapçığından çözülecek/); assert.match(b, /<b>Soru 4<\/b>/); assert.doesNotMatch(b, /B kitapçığında/);
     assert.match(b.slice(b.indexOf('yd-anahtar')), /<td>6<\/td><td>A<\/td><td>E<\/td>/);
   });
-  await test('page: nothing about the files is kept anywhere (no storage, no notebook field)', async () => {
+  await test('page: nothing about the files goes to the notebook, the server or localStorage; only the device library (IndexedDB) keeps them', async () => {
     await show({harita: true});
     assert.equal(run('Object.keys(D).filter(k=>/yanlis|defter|kitap|rapor/i.test(k)).length'), 0);
     assert.doesNotMatch(source.slice(source.indexOf('const YANLISLAR'),source.indexOf('// END YANLISLAR')), /localStorage|sessionStorage|indexedDB|firebase|\bfetch\(|XMLHttpRequest|sendBeacon/);
