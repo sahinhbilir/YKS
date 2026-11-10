@@ -24,7 +24,7 @@ Nothing is added, stored or uploaded; the page only reads and caches in memory (
 - **Beklenen:** the exam's Türkiye average plus the mean sapma over the student's previous up to 5 exams that have one; it needs at least 2. **Beklenenden:** the net above (▲) or below (▼) it. Fewer than 2 earlier exams: "En az 3 deneme gerekli".
 - **İstikrar:** the standard deviation (of the whole group of values) of sapma over the last up to 6 exams that have one, at least 3. Below 3 net *Çok istikrarlı*, below 6 *İstikrarlı*, below 10 *Dalgalı*, otherwise *Çok dalgalı*.
 - **Etüt / devamsızlık:** the last 30 days (today and the 29 days before). A missed day follows Yoklama's rule (3 or more missed lessons; *tam gün* when no lesson was attended, else *yarım gün*).
-- **Zayıf konular:** Konu Takibi topics whose "zorluğa göre" is −1 question or less, the worst first, at most 5.
+- **Zayıf konular:** Konu Takibi topics whose "zorluğa göre" is −1 question or less, the worst first, at most 5. When the exams have the publisher's Performans analizi, the expected score comes from Türkiye's success rates and the column reads **Türkiye’ye göre** (a pupil at the Türkiye average would have got one more question right); otherwise from the school's own rates. A button opens the same student in Konu Takibi, weakest topics first.
 
 ## The page, top to bottom
 

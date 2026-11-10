@@ -86,3 +86,12 @@
 .tg-hesap{font-size:.8125rem;color:var(--e-fg2)}.tg-hesap summary{cursor:pointer;font-weight:600;color:var(--e-fg)}.tg-hesap p{margin:8px 0 0}
 .tg-artis-not{margin-top:4px}
 @media (max-width:640px){.tg-cevre-panel .tg-cevre-ad{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}.tg-cevre-panel .tg-artis-satir b{white-space:nowrap}}
+/* Geride kalınan konular: the summary of Konu Takibi · Türkiye'ye göre. */
+#tgKok .tg-konu-not{margin:0}#tgKok .tg-konu-liste{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+#tgKok .tg-konu-satir{width:100%;display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.6fr) 7rem 7rem;gap:12px;align-items:center;text-align:left;border:0;border-top:1px solid var(--e-grid);background:transparent;color:var(--e-fg);font:inherit;padding:10px 4px;cursor:pointer;font-variant-numeric:tabular-nums}
+#tgKok .tg-konu-liste li:first-child .tg-konu-satir{border-top:0}#tgKok .tg-konu-satir:hover{background:color-mix(in srgb,var(--e-fg) 4%,transparent)}
+#tgKok .tg-konu-ad{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}#tgKok .tg-konu-oran{color:var(--e-fg2);font-size:.8125rem}
+#tgKok .tg-konu-fark{text-align:right;font-weight:600}#tgKok .tg-konu-durum{justify-self:start;font-size:.75rem;font-weight:500;padding:2px 9px;border-radius:20px;border:1px solid var(--e-line);color:var(--e-fg2);white-space:nowrap}
+#tgKok .tg-konu-geride .tg-konu-fark{color:var(--e-bad)}#tgKok .tg-konu-geride .tg-konu-durum{color:var(--e-bad);border-color:var(--e-bad)}
+#tgKok .tg-konu-ileride .tg-konu-fark{color:var(--e-ok)}#tgKok .tg-konu-ileride .tg-konu-durum{color:var(--e-ok);border-color:var(--e-ok)}
+@media(max-width:700px){#tgKok .tg-konu-satir{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}#tgKok .tg-konu-oran{grid-column:1}#tgKok .tg-konu-durum{grid-column:2;grid-row:2;justify-self:end}}

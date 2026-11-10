@@ -101,6 +101,18 @@ Exams differ in difficulty, so an increase is read against the Türkiye average'
   - **Sıralamada yakın:** the first school and the four schools on each side of the followed one, with net differences and the Türkiye average placed where it falls. It also shows the place one more net would give, and the gap to the school just above.
 - **Dersler** table (Sıra): place and change, previous place, net, success, Türkiye average, difference, the place with one more net, and the first school.
 
+## Geride kalınan konular
+
+Every view carries a panel **Geride kalınan konular · TYT/AYT**: the topics on which the school's success is furthest
+below Türkiye's, the established gaps first (school %, Türkiye %, difference in points, Durum). The figures come from
+Konu Takibi's files (Performans analizi, Madde Analizi, Sınav özeti; docs/konu-takibi.md, "Türkiye’ye göre"), not
+from the İlk 100 Kurum lists. A row opens that ders in Konu Takibi · Türkiye’ye göre with the topic's questions; the
+button opens the whole view (konu, kazanım, soru, and the pupils' table). Without those files the panel says which to
+add.
+
+**What "Türkiye" covers** (also in "Kaynaklar ve hesaplama"): the publisher's institutions that sat this exam (the
+chosen list: Kolej, Kurs or all), not every school in the country.
+
 ## On both views
 
 - **Denemeler** table: every stored list (all grades and kinds) with its date, its number of subjects and how many of them hold the school. **Sınıf** sets a list's grade, **Sil** deletes one list and **Tüm listeleri sil** deletes them all. A viewing teacher sees the page but cannot add lists, delete them or save the school.

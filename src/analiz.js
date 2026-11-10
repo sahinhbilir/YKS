@@ -32,7 +32,9 @@
 // - aralık: Son 1 ay / Son 3 ay (the earliest of her exams within that many months of her latest → the latest), Tümü, or two
 //   exams picked by dragging on the chart; it drives the change card and the Dersler table.
 // - etüt and devamsızlık: the last 30 days (today and the 29 days before). A missed day is Yoklama's rule (3+ lessons).
-// - zayıf konular: Konu Takibi topics whose "zorluğa göre" is -1 question or less, the worst first, at most 5.
+// - zayıf konular: Konu Takibi topics whose "zorluğa göre" is -1 question or less, the worst first, at most 5. When the exams
+//   have the publisher's Performans analizi, the expected score comes from Türkiye's success rates ("Türkiye’ye göre"); otherwise
+//   from the school's own (the topic is then weak for a pupil of this school, not against Türkiye).
 // The student is identified by the school number (the key of every list).
 const ANALIZ = (() => {
 // measure key, name, Türkiye total
@@ -189,10 +191,11 @@ function devamsizlik(gunler,bugun){
 }
 const dersAdiK=c=>String(c||'').startsWith('MATEMATİK+GEOMETRİ')?'Matematik + Geometri':kisiAdi(String(c||'').replace(/-[TA]$/u,''));
 // The topics of one student whose difficulty-adjusted points are -1 question or less. v: KONU_TAKIBI.oku().veri.
-// {var: the student is in Konu Takibi, zorluk: some topic has difficulty data, liste}
+// {var: the student is in Konu Takibi, zorluk: some topic has difficulty data, taban: 'turkiye' | 'okul', liste}
 function zayifKonular(v,no,okul){
-  const bos={var:false,zorluk:false,liste:[]};
+  const bos={var:false,zorluk:false,taban:'okul',liste:[]};
   if(!v||!Array.isArray(v.exams)||!String(no||''))return bos;
+  const taban=Object.values(v.zorluk||{}).some(e=>e&&e.ozet&&e.turkiye)?'turkiye':'okul';
   const kisiler=new Map();
   for(const e of v.exams)for(const b of e.blocks)if(String(b.student.no)===String(no))kisiler.set(KONU_TAKIBI.studentKey(b.student),b.student.cls);
   if(!kisiler.size)return bos;
@@ -202,7 +205,7 @@ function zayifKonular(v,no,okul){
     for(const session of m0.sessions){
       const ms=KONU_TAKIBI.model(v,{cls,student:sid,session},okul);
       for(const course of ms.courses.filter(c=>!c.includes('+'))){
-        const m=KONU_TAKIBI.model(v,{cls,student:sid,session,course},okul);
+        const m=KONU_TAKIBI.model(v,{cls,student:sid,session,course,taban},okul);
         for(const tp of m.topics){
           if(!tp.z)continue;zorluk=true;
           if(tp.z.fark>ZAYIF_ESIK+1e-9)continue;
@@ -212,7 +215,7 @@ function zayifKonular(v,no,okul){
       }
     }
   }
-  return {var:true,zorluk,liste:[...liste.values()].sort((a,b)=>a.fark-b.fark||a.konu.localeCompare(b.konu,'tr')).slice(0,ZAYIF_EN_COK)};
+  return {var:true,zorluk,taban,liste:[...liste.values()].sort((a,b)=>a.fark-b.fark||a.konu.localeCompare(b.konu,'tr')).slice(0,ZAYIF_EN_COK)};
 }
 
 /* ---------------- sources and cache ---------------- */
@@ -404,7 +407,7 @@ function kart(key,oturum,bugun=bugunNo(),aralik='tumu'){
   // Etüt, Yoklama and Konu Takibi: "var: false" when the source is not there.
   const E=etutKaynagi(k),es=E.var?E.ogr.get(kisi.no):null,etut={var:E.var,son:E.son,...etutOzeti(es?es.sessions:[],bugun)};
   const Y=yoklamaKaynagi(k),yg=Y.ad.get(kisi.key),yoklama={var:!!yg,son:Y.son,...devamsizlik(yg?[...yg]:[],bugun)};
-  let zayif;try{zayif=zayifKonular(konuKaynagi(k),kisi.no,sinavlarOkul())}catch(e){zayif={var:false,zorluk:false,liste:[]}}
+  let zayif;try{zayif=zayifKonular(konuKaynagi(k),kisi.no,sinavlarOkul())}catch(e){zayif={var:false,zorluk:false,taban:'okul',liste:[]}}
   const okul=DG.okul.filter(x=>x.surpriz!==null).pop()||null;
   return {durum:'tamam',kisi:{...kisi,alan:alanAl(k,kisi)},oturumlar:mevcut,oturum:sec,noktalar,tum:DG.sinavlar,duzey:DG.duzey,son,once,
     ust:O.ust,trVar:!!k.trFn,neden,trSayi:trMevcut,istikrar:istikrar(noktalar),hedef,hedefYol,aralik:ar,degisim,gidisat:gid,hedefYks:hy,gidisatHedef,yks,okul,
@@ -643,13 +646,13 @@ function dersTablosu(c){
       c.dersler.map(r=>satir(r)+'</tr>').join('')+'</tbody></table></div>':'<p class="mini">Ders neti yok.</p>')+'</section>';
 }
 function zayifPaneli(c){
-  const z=c.zayif;let g;
+  const z=c.zayif,tr=z.taban==='turkiye',ad=tr?'Türkiye’ye göre':'Zorluğa göre';let g;
   if(!z.var)g='<p class="mini">— · Konu Takibi’nde bu öğrenci yok</p>';
   else if(!z.zorluk)g='<p class="mini">— · Zorluk verisi yok</p>';
-  else if(!z.liste.length)g='<p class="mini">Zorluğa göre zayıf konu yok</p>';
-  else g='<div class="et-tablo-kutu"><table class="et-tablo ok-tablo"><thead><tr><th>Konu</th><th class="sayi">Zorluğa göre (soru)</th><th class="sayi">Son deneme (%)</th></tr></thead><tbody>'+
+  else if(!z.liste.length)g='<p class="mini">'+ad+' zayıf konu yok</p>';
+  else g='<div class="et-tablo-kutu"><table class="et-tablo ok-tablo"><thead><tr><th>Konu</th><th class="sayi">'+ad+' (soru)</th><th class="sayi">Son deneme (%)</th></tr></thead><tbody>'+
     z.liste.map(t=>'<tr><td class="ok-konu">'+kacis(t.konu)+'<span class="mini"> · '+kacis(t.ders)+'</span></td>'+sayiHucre(t.fark,(t.fark<0?'−':t.fark>0?'+':'')+f1(Math.abs(t.fark)))+'<td class="sayi">'+(t.son===null?'—':'%'+fi(Math.round(t.son)))+'</td></tr>').join('')+'</tbody></table></div>';
-  return '<section class="et-panel" id="okZayif"><div class="et-kart-bas"><h2>Zayıf konular</h2><span class="mini">zorluğa göre −1 soru ve altı</span></div>'+g+'</section>';
+  return '<section class="et-panel" id="okZayif"><div class="et-kart-bas"><h2>Zayıf konular</h2><span class="mini">'+(tr?'Türkiye ortalamasındaki öğrenciye göre −1 soru ve altı':'zorluğa göre −1 soru ve altı')+'</span></div>'+g+(z.var&&z.zorluk?'<p class="mini ok-zayif-not"><button type="button" class="et-dugme" data-ok-konu>Konu Takibi · '+(tr?'Türkiye’ye göre':'konular')+' →</button></p>':'')+'</section>';
 }
 function etutPaneli(c){
   const e=c.etut;let g;
@@ -714,7 +717,14 @@ if(typeof document!=='undefined'&&document.addEventListener){
     const o=ev.target.closest?.('[data-ok-oturum]');
     if(o){EK.okOturum=o.dataset.okOturum;aralikSifirla();yenidenCiz('[data-ok-oturum="'+o.dataset.okOturum+'"]');return}
     const a=ev.target.closest?.('[data-ok-aralik]');
-    if(a&&!a.disabled&&a.dataset.okAralik!=='sec'){EK.okAralik=a.dataset.okAralik;yenidenCiz('[data-ok-aralik="'+a.dataset.okAralik+'"]')}
+    if(a&&!a.disabled&&a.dataset.okAralik!=='sec'){EK.okAralik=a.dataset.okAralik;yenidenCiz('[data-ok-aralik="'+a.dataset.okAralik+'"]');return}
+    // Zayıf konular → the same student in Konu Takibi, weakest topics first, against Türkiye when that data exists.
+    if(ev.target.closest?.('[data-ok-konu]')){
+      const kisi=kaynak().liste.find(x=>x.key===EK.okKim),v=KONU_TAKIBI.oku().veri;let ogr=null;
+      if(kisi&&v)for(const e of v.exams)for(const b of e.blocks)if(String(b.student.no)===String(kisi.no))ogr=b.student;
+      if(ogr){EK.ktSelection={cls:ogr.cls,student:KONU_TAKIBI.studentKey(ogr)};EK.ktGorunum='gelisim';EK.ktSira='zayif';
+        EK.ktTaban=Object.values(v.zorluk||{}).some(e=>e&&e.ozet&&e.turkiye)?'turkiye':'okul';EK.sekme='konutakibi';ciz()}
+    }
   });
   document.addEventListener('change',ev=>{if(etkin()&&ev.target.id==='okAra')secildi(ev.target.value)});
   document.addEventListener('keydown',ev=>{if(etkin()&&ev.target.id==='okAra'&&ev.key==='Enter')secildi(ev.target.value)});
