@@ -100,7 +100,7 @@ const ogrenci=(kur)=>{
    await page.waitForFunction(n=>[...document.querySelectorAll('button[data-yaptim="gt"]')].filter(e=>e.getClientRects().length).length===n,once-1);
    assert.equal(await page.evaluate(()=>Object.values(D.ogr[0].kendiPlan.genelTekrar.tamam)[0]===buHafta(0)-1),true,'dated the last day of the previous week');
    assert.equal(await page.locator('button[data-yaptim="gt"]:visible').count(),once-1,'the pressed row has no button any more');
-   assert(/✓ Önceden yapıldı/.test(await page.locator('#ana').innerText()));
+   assert.equal(await page.locator('#oncedenNot [data-onceden-geri]').count(),1,'the row left the week and is listed with Geri al');
    // The rest of the genel tekrar items are watched; the week is rebuilt with the topics.
    await page.evaluate(()=>{const g=D.ogr[0].kendiPlan.genelTekrar;g.sira.forEach(k=>{g.tamam[k]=buHafta(0)-1;});
      Object.keys(D.elle).filter(k=>k.startsWith('0|')).forEach(k=>delete D.elle[k]);EK.sekme='plan';EK.hafta=null;ciz();});
@@ -135,7 +135,7 @@ const ogrenci=(kur)=>{
    assert.deepEqual(await page.evaluate(ki=>D.log.filter(l=>l[2]===ki).map(l=>[l[0]===buHafta(0)-1,l[5]]),test.ki),[[true,3]],'the İyi result is stored at G');
    assert.equal(await page.evaluate(ki=>D.kart['0:'+ki].son===buHafta(0)-1,test.ki),true);
    assert.equal(await page.locator('button[data-yaptim="test"][data-ki="'+test.ki+'"]').count(),0);
-   assert(/✓ Önceden yapıldı/.test(await page.locator('#ana').innerText()));
+   assert(await page.locator('#oncedenNot [data-onceden-geri][data-ki="'+test.ki+'"]').count()>=1,'the pre-done test left the week and is listed with Geri al');
    // The main Sonuç gir page is untouched by the popup: its rows are its own.
    await page.evaluate(()=>{EK.sekme='giris';EK.hafta=null;ciz();});
    const anladim2=page.locator('#sonucBilgiAnladim');if(await anladim2.isVisible())await anladim2.click();

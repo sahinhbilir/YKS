@@ -480,8 +480,8 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     put('KV2', kt.merge(kt.blank(), [rep])); run('D.konutakibi=KV2'); const z2 = kart(1001).zayif; assert.deepEqual([z2.var, z2.zorluk, z2.liste.length], [true, false, 0]);
     assert.match(run('EK.okKim="1001";ANALIZ.icerik()'), /Zorluk verisi yok/);
     // More than five weak topics: the five worst.
-    put('V', { exams: [] }); assert.deepEqual(get('ANALIZ.zayifKonular(V,"1001",[])'), { var: false, zorluk: false, liste: [] });
-    assert.deepEqual(get('ANALIZ.zayifKonular(null,"1001",[])'), { var: false, zorluk: false, liste: [] });
+    put('V', { exams: [] }); assert.deepEqual(get('ANALIZ.zayifKonular(V,"1001",[])'), { var: false, zorluk: false, taban: 'okul', liste: [] });
+    assert.deepEqual(get('ANALIZ.zayifKonular(null,"1001",[])'), { var: false, zorluk: false, taban: 'okul', liste: [] });
   });
   await check('the class and şube target: the şube’s own when set, else the class’s; none when unset', async () => {
     await kurTum();

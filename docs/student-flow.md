@@ -12,6 +12,51 @@ Detailed editing, topic planning, personal routines, data recovery and algorithm
 
 Basic settings contain daily test capacity and rest days. They save automatically and affect upcoming plans. The current issued plan stays intact. Each result requires an explicit recall rating or an actual score: blank rows are never scored as correct, incorrect or completed. Saving a partial set stays on that week's results; saving the complete set opens the upcoming plan.
 
+## Results inside the plan: the slider
+
+The student's weekly plan (table and phone list) is also where results are entered. Under every test row
+(`planSatirEki`, student role only; the teacher's table keeps its status line):
+
+- A four-stop slider: **Tekrar · Zor · İyi · Kolay**. Under each stop stands the interval that rating would give
+  ("İyi · 7 gün"), computed by `sonucOnizleme` with the plan's own `tekrarla()` from the card as it was before that
+  day, the student's parameters and the effective recall target. Below: "Sonraki tekrar ≈ 23.10 · 7 gün sonra".
+  This is the FSRS step made visible: the student sees what each answer does before choosing it.
+- **No result yet:** the slider rests on İyi, dimmed, and the row reads "Sonucunu seç · İyi sayılır", because that
+  is what the plan assumes (see "Missing results count as İyi").
+- **A day that has not come:** the same preview, disabled ("Sonuç girilmezse İyi sayılır").
+- Releasing the slider, pressing a stop, or Enter on the slider saves at once (`planSonucKaydet`): the same path
+  as Sonuç gir for one row (`sonucKaydiDogrula`, issue the shown week first if it is not issued, `sonucIsle`,
+  `kendiPlanSonuclariniIsle`, `planSlotSonuclandi`, save, activity, sync). The message names the next date and the
+  coming weeks are recalculated. Changing the slider later replaces that day's result.
+- Not shown on lessons, genel tekrar, free work, daily practice, a test marked "Yapmadım" or "anlatılmadı" (those
+  stay in Sonuç gir, which keeps doğru/soru entry, Yapmadım and alt konu).
+
+## Gelecek haftaların
+
+Under the current week's plan the student can open **4 hafta · 8 hafta · Sınava kadar**. Every coming week is
+listed (tests, lessons, repetition numbers per day) and opens in full with "Bu haftayı aç". The weeks are computed
+in one pass on a copy of the notebook (`gelecekHaftalar`): each week's unanswered tests are counted as İyi before
+the next week is calculated, exactly like the single-week preview (`varsayimliPlan`). Nothing is written. It is a
+draft that the student's own inputs reshape: results, minutes, rest days and the two boxes below.
+
+## Planı kendine göre ayarla (Ayarlar)
+
+Two opt-in boxes change the general setting of the calculation; an issued week never changes.
+
+- **Uzun süredir çalışıyorum** sets the existing starting memory level (`hafizaSeviyesi`: Güçlü, or Çok güçlü from
+  the list that appears): new topics start with longer first intervals. A weak first result still comes back soon.
+- **Planı çalışma süreme göre ayarla** (`sureyeGore`). FSRS has one workload setting, the recall target: a lower
+  target means longer intervals. When the box is ticked the target is lowered in steps of 1 point until the weekly
+  review load fits 60 % of the student's weekly study minutes (`sureHedefiHesapla`; the rest is left for new
+  topics), never below **80 %** and never above the teacher's / general target. Load = Σ over the student's cards
+  of 7 ÷ interval × test minutes (two tests for a topic last rated Tekrar or Zor). With the app's FSRS-6 parameters
+  90 % → 80 % makes intervals about 3,3 times longer. The value (`sureHedef`) is kept in step before every save
+  and only moves in steps of 2 points or more, so the plan does not shift on every result. The card shows the
+  numbers: load, minutes available, the target and the factor; when even 80 % does not fit it says so, and the
+  overflow carries forward by the usual rule. The cost is stated on the box: a slightly higher chance of
+  forgetting a topic before its review. Both fields travel with the student's work snapshot; the teacher's plan
+  header shows the effective target.
+
 ## Weeks map, “Yapmadım” and printing
 
 Students open the app on Haftalar haritası (a restored tab after a same-tab reload is kept). Each past week with an issued plan is coloured by the share of its tests that actually have a result: grey when none were done, grey-green when few were, deep green when all were. A week with no tests, only konu anlatımı (a Kaydol or Okula gitmiyorum student's first weeks), is coloured the same way by its lessons marked "anlatıldı / izledi" in Sonuç gir, and its box reads "x/y anlatım". A past week with no plan record at all (the app was not used that week) is red; weeks before the student joined stay neutral. “Bu konu daha anlatılmadı” tests are left out of the count; “Yapmadım” and blank tests count as not done. The current week is not coloured before it ends. Tapping a red week opens Geçmiş plan kurtar with that week as the paper's first day and a short note: if the student made a plan that week but it is not in the system, they can save it there.
