@@ -589,24 +589,31 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     // Net returns to the default order (the şimdiki net, largest first: 32 31 21 16).
     run("EK.dpOlcut='net';EK.dpSira='son';EK.dpSiraYon='azalan'"); pencere('tum'); assert.deepEqual(sira(), ['1001', '1003', '1002', '1004']); assert.equal(st('st=>st.olcut'), 'net');
   });
-  await check('Türkiye’ye göre: an exam without a Türkiye list uses the tahmini average, marked with ~ and a title; real averages carry no mark', async () => {
+  await check('Türkiye’ye göre: an exam without a Türkiye list uses the tahmini average, shown as approximate (≈, no arrow, no colour) with a title; real averages carry no mark', async () => {
     // Lists for the first five exams only: the sixth is its school mean 25 (DOĞA sits it too: 32 21 31 16) minus the usual gap 2 (median of 0,333 1 2 2,667 3,667) = 23.
     await trYukle([0, 1, 2, 3, 4]); pencere('tum');
     assert.equal(st('st=>st.tr.tahmini'), true); yk(st('st=>st.tr.fark'), -8);   // 31 → 23
-    assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ▼8,0~ net (27-YKS-1201 → 27-YKS-1206)');
-    let h = run('DPANO.icerik()'); assert(h.includes('<b title="tahmini Türkiye ortalaması">▼8,0~</b>'));
-    let c = trHucreler(); assert.deepEqual(yazilar(c), ['▲3~', '▼2~', '▲13~']); assert(c[1002].attr.includes('title="tahmini Türkiye ortalaması"'));
+    assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ≈−8,0 net (27-YKS-1201 → 27-YKS-1206) · tahmini: Türkiye listesi bekleniyor, sütundaki değerler yaklaşıktır');
+    let h = run('DPANO.icerik()'); assert(h.includes('<b title="tahmini Türkiye ortalaması · Türkiye listesi bekleniyor">≈−8,0</b>'));
+    let c = trHucreler(); assert.deepEqual(yazilar(c), ['≈+3', '≈−2', '≈+13']); assert(c[1002].attr.includes('title="tahmini Türkiye ortalaması · Türkiye listesi bekleniyor"'));
+    assert(Object.values(c).every(x => x.attr.includes('dp-tr-tahmini') && !/et-(yukari|asagi)/.test(x.attr)), 'an estimate is never green or red');
     assert.equal(c[1004].yazi, '—'); assert(!c[1004].attr.includes('title='), 'no value, no mark');
     // Son deneme (the estimated exam against the real one before it): Türkiye 25 → 23 = −2; Son 2 deneme: 27,5 → (25+23)/2 = 24, −3,5.
-    pencere(1); yk(st('st=>st.tr.fark'), -2); assert.equal(st('st=>st.tr.tahmini'), true); assert.deepEqual(yazilar(trHucreler()), ['▲1~', '0~', '▲3~']);
-    pencere(2); yk(st('st=>st.tr.fark'), -3.5); assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ▼3,5~ net (27-YKS-1203 – 27-YKS-1204 ort. → 27-YKS-1205 – 27-YKS-1206 ort.)');
-    assert.deepEqual(yazilar(trHucreler()), ['▲1,5~', '▼1~', '▲5,5~']);
+    pencere(1); yk(st('st=>st.tr.fark'), -2); assert.equal(st('st=>st.tr.tahmini'), true); assert.deepEqual(yazilar(trHucreler()), ['≈+1', '≈0', '≈+3']);
+    pencere(2); yk(st('st=>st.tr.fark'), -3.5); assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ≈−3,5 net (27-YKS-1203 – 27-YKS-1204 ort. → 27-YKS-1205 – 27-YKS-1206 ort.) · tahmini: Türkiye listesi bekleniyor, sütundaki değerler yaklaşıktır');
+    assert.deepEqual(yazilar(trHucreler()), ['≈+1,5', '≈−1', '≈+5,5']);
     // A window on real averages only is not marked: Seç 1201 → 1205 (31 → 25).
     run(`EK.dpAralik='sec';EK.dpOnceki=${JSON.stringify(idOf(TRADLAR[0]))};EK.dpSimdiki=${JSON.stringify(idOf(TRADLAR[4]))}`);
-    assert.equal(st('st=>st.tr.tahmini'), false); yk(st('st=>st.tr.fark'), -6); h = run('DPANO.icerik()'); assert(!h.includes('~') && !h.includes('tahmini Türkiye ortalaması'));
+    assert.equal(st('st=>st.tr.tahmini'), false); yk(st('st=>st.tr.fark'), -6); h = run('DPANO.icerik()'); assert(!h.includes('Türkiye listesi bekleniyor') && !h.includes('tahmini Türkiye ortalaması') && !h.includes('dp-tr-tahmini'));
     assert.equal(trSatiriMetni(), 'Türkiye ortalaması bu aralıkta ▼6,0 net (27-YKS-1201 → 27-YKS-1205)');
     // Own changes −4, −8, +4 against −6.
     assert.deepEqual(yazilar(trHucreler()), ['▲2', '▼2', '▲10']);
+    // The headline carries the same correction: the same students' change (mean of −4, −8, +4) minus Türkiye's −6.
+    yk(st('st=>st.m.ozet[st.s].ayni'), -8 / 3); yk(st('st=>st.trToplam.fark'), -6);
+    assert.match(h, /id="dpKpiTr"><span class="et-hap yukari">[\s\S]{0,80}3,3 net<\/span> Türkiye’ye göre · Türkiye ortalaması ▼6,0<\/span>/, 'the net fell, but less than Türkiye’s');
+    // With an estimated average the headline line is approximate and has no coloured pill.
+    run("EK.dpAralik='tum';EK.dpOnceki=undefined;EK.dpSimdiki=undefined"); h = run('DPANO.icerik()');
+    assert.match(h, /id="dpKpiTr">Türkiye’ye göre <b>≈[+−][\d,]+<\/b> net · Türkiye listesi bekleniyor<\/span>/); assert(!/id="dpKpiTr"><span class="et-hap/.test(h));
   });
   await check('Türkiye’ye göre: no Türkiye data for the window shows a dash, a line saying so, a disabled pill and falls back to Net', async () => {
     await trYukle([]); pencere('tum');
@@ -654,5 +661,15 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     await trYukle([0, 1, 2, 3, 4, 5]); const once = JSON.stringify(get('D')); run('DPANO.icerik()'); assert.equal(JSON.stringify(get('D')), once);
     run('yalnizcaGoruntuleme=()=>true'); assert(run('DPANO.icerik()').includes('data-dp-sira="trFark"'));
   });
+  await check('the students’ charts never show an axis value the measure cannot have: no tick above the maximum net', async () => {
+    const T = run('DPANO.tiklerSinirli'), copy = x => JSON.parse(JSON.stringify(x));
+    // TYT nets from −5 to 115: regular steps of 20, the top tick is 120, not 150.
+    assert.deepEqual(copy(T(-11, 121.75, 7, 120)), [-20, 0, 20, 40, 60, 80, 100, 120]);
+    assert.deepEqual(copy(T(0, 82, 7, 80)), [0, 20, 40, 60, 80], 'AYT: the maximum itself closes the axis');
+    assert.deepEqual(copy(T(0, 8.4, 7, 7)), [0, 2, 4, 6, 7], 'a 7-question ders ends at 7');
+    assert.deepEqual(copy(T(0, 50, 5)), [0, 10, 20, 30, 40, 50], 'without a maximum the ticks are as before');
+    const h = run('DPANO.icerik()'); assert(h.length > 0);
+  });
+
   console.log(passed + ' Deneme panosu checks passed');
 })();

@@ -79,10 +79,12 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    assert.deepEqual(kartlar.map(k=>k.ad),['Son TYT neti','Türkiye’ye göre','Beklenenden','İstikrar','Hedef · son deneme','Aralıkta değişim · 24 Eyl → 29 Eki','Şube hedefi · 12-A']);
    assert.match(kartlar[0].deger,/^\d+,\d\d$/);assert.match(kartlar[0].alt,/^Okulda \d+\. \/ \d+ öğrenci$/);
    // The latest exam has no Türkiye list: the cards use the tahmini Türkiye ortalaması and say so.
-   assert.match(kartlar[1].deger,/^[▲▼]\d+,\d\d net$/);assert.match(kartlar[1].alt,/^tahmini Türkiye ortalaması \(okul ortalamasından\) \d+,\d\d net$/);
-   assert.match(kartlar[2].deger,/^[▲▼]\d+,\d\d net$/);assert.equal(kartlar[2].alt,'tahmini Türkiye ortalamasına göre her zamanki yerinden');
+   // An estimate is approximate: "≈", no arrow, and the tile says the list is awaited.
+   assert.match(kartlar[1].deger,/^≈ [+−]?\d+,\d\d net$/);assert.match(kartlar[1].alt,/^Türkiye listesi bekleniyor · tahmini Türkiye ortalaması \(okul ortalamasından\) \d+,\d\d net$/);
+   assert.match(kartlar[2].deger,/^≈ [+−]?\d+,\d\d net$/);assert.equal(kartlar[2].alt,'Türkiye listesi bekleniyor · tahmini Türkiye ortalamasına göre her zamanki yerinden; liste gelince kesinleşir');
+   assert.equal(await page.locator('#okKartlar .ok-tahmini strong.ok-yukari,#okKartlar .ok-tahmini strong.ok-asagi').count(),0,'an estimate is never green or red');
    assert.match(kartlar[3].alt,/^± \d+,\d\d net · son 6 deneme$/);
-   assert.match(kartlar[4].deger,/^\d+,\d\d net$/);assert.match(kartlar[4].alt,/^tahmini Türkiye [+−]\d+,\d\d · [▲▼]\d+,\d\d net hedefin (altında|üstünde)$/);
+   assert.match(kartlar[4].deger,/^≈ \d+,\d\d net$/);assert.match(kartlar[4].alt,/^Türkiye listesi bekleniyor · tahmini Türkiye [+−]\d+,\d\d · hedefin ≈ \d+,\d\d net (altında|üstünde)$/);
    assert.match(kartlar[5].deger,/^[▲▼]\d+,\d\d net$/);assert.match(kartlar[5].alt,/^6 deneme · deneme başına [▲▼]\d+,\d\d$/);
    assert.match(kartlar[6].deger,/^75,00 net$/);assert.match(kartlar[6].alt,/^Son net hedefin \d+,\d\d net (altında|üstünde)$/);
    const yazi=await page.locator('#okKok').innerText();assert(!/Nasıl okunur|Gözlem|\bham\b|\(%95\)/i.test(yazi),'no manual words');
@@ -222,6 +224,36 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    // The way back.
    await page.locator('[data-sekme="denemeler"]',{hasText:'← Denemeler'}).click();
    await page.waitForSelector('#dpKok #dpTablo');assert.equal(await page.evaluate(()=>EK.sekme),'denemeler');
+   // The teacher's home: the Dikkat card under the two cards of the week, and the student search of the top bar.
+   await page.locator('#ray button.marka').click();await page.locator('#rehberDikkat').waitFor();
+   const dk=page.locator('#rehberDikkat');
+   assert.match((await dk.locator('h2.rd-baslik').innerText()).replace(/\s+/g,' '),/^\d+ öğrenci ilgi bekliyor$/);
+   const adaSatir=dk.locator('.rd-liste li',{has:page.locator('[data-ogrenci-karti="1001"]')});
+   assert.equal(await adaSatir.count(),1,'ADA missed three days of the last thirty');
+   assert.match(await adaSatir.locator('.rd-isaret').first().innerText(),/^Son 30 günde \d gün devamsız$/);
+   assert.match(await adaSatir.locator('.rd-isaret').first().getAttribute('title'),/Yoklama/);
+   assert.deepEqual(await dk.locator('.rd-kaynak.var').allInnerTexts(),['✓ Denemeler','✓ Yoklama'],'the last exam has no Türkiye list and Konu Takibi no Türkiye figures: both say so');
+   const [haftaKutu,dikkatKutu]=[await page.locator('#rehberHafta').boundingBox(),await dk.boundingBox()];
+   assert(dikkatKutu.y>=haftaKutu.y+haftaKutu.height,'below the week card');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'home: no sideways scrolling');
+   assert.equal(await dk.evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'the Dikkat card does not overflow');
+   const ust=await page.locator('#ray').evaluate(e=>e.getBoundingClientRect().height);
+   assert(ust<=(width<820?125:70),'top bar height with the search '+ust+' at '+width);
+   await page.screenshot({path:path.join(out,'ogretmen-ana-dikkat-'+width+'.png'),fullPage:true});
+   // "/" moves into the search; the text survives a redraw of the top bar; Enter opens the card and clears the field.
+   await page.evaluate(()=>{if(document.activeElement&&document.activeElement.blur)document.activeElement.blur()});
+   await page.keyboard.press('/');assert.equal(await page.evaluate(()=>document.activeElement.id),'ustAra');
+   await page.keyboard.type('1007');await page.evaluate(()=>{EK.son='sunucuya kaydedildi';rayCiz()});
+   assert.deepEqual(await page.evaluate(()=>[document.activeElement.id,document.getElementById('ustAra').value]),['ustAra','1007']);
+   assert.match(await page.locator('#ray .durum').innerText(),/sunucuya kaydedildi/,'only the status text is refreshed while typing');
+   await page.keyboard.press('Enter');await page.waitForSelector('#okKok #okKartlar');
+   assert.deepEqual(await page.evaluate(()=>[EK.sekme,EK.okKim,EK.okGeri,document.getElementById('ustAra').value]),['ogrencikarti','1007','ana','']);
+   // A text that names nobody: a notice, the page stays.
+   await page.locator('#ustAra').fill('yok böyle biri');await page.keyboard.press('Enter');
+   assert.equal(await page.evaluate(()=>EK.okKim),'1007');
+   // A name on the Dikkat card opens that student's card.
+   await page.locator('#ray button.marka').click();await page.locator('#rehberDikkat [data-ogrenci-karti="1001"]').click();
+   await page.waitForFunction(()=>EK.sekme==='ogrencikarti'&&EK.okKim==='1001');
    assert.deepEqual(errors,[]);
    await context.close();
    console.log('PASS Öğrenci kartı at '+width+' px ('+tema+')');

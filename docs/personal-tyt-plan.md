@@ -139,6 +139,24 @@ it happened on the **last day of the previous week**: `G = buHafta − 1`.
 
 `ov.onceden` keys are translated with the other week fields in `paketPlanKonulariniCevir`.
 
+### Where a "Zaten yaptım" row goes, and how to take it back
+
+On the **student's own screen** a row marked this way leaves the week it was in (the teacher's table and an already
+printed paper keep it, marked done). Under the table, **Önceden yaptıkların** lists every such row of the week with
+**Geri al** and a button to last week.
+
+- A **test** appears in the week of G, on its last day, as a row labelled *plan dışı sonuç* with the result slider
+  (docs/student-flow.md): the rating can be changed there and the following weeks are recalculated. A week that has
+  no plan of its own still draws its table for these rows.
+- **Geri al** (`oncedenGeriAl`) removes the mark, so the row returns to its week.
+  - Lesson: its date is cleared when it is still G. Genel tekrar: its completion is cleared when it is still G.
+  - Test, notebook **not** linked to a teacher (Kaydol / test account): the result at G is deleted and the card
+    is recomputed; the test is assumed İyi on its own day again.
+  - Test, notebook linked to a teacher (`syncId`): results are synced additively and a deleted one would return,
+    so the result stays (the student can correct it with the slider) and only the mark is removed; the test comes
+    back to be solved on its day. The message says so, and last week's row has no Geri al there.
+
+
 ## "Bu konuyu henüz çalışmadım"
 
 On a personal-track row, the result form's "Bu konu daha anlatılmadı" button reads

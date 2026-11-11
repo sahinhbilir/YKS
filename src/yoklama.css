@@ -1,14 +1,16 @@
 /* Yoklama (#ykKok) has the Etütler look (src/etutler.css) and one colour per day state: Geldi a grey
-   close to white, Geç geldi yellow, Gelmedi red, Raporlu blue, Diğer green. */
+   close to white, Geç geldi amber, Gelmedi red, Raporlu blue, Diğer green. The four colours are the site's own status
+   and series colours (--uyari, --kritik, the report blue and green), so the page reads as part of the same product in
+   both themes; the literal values are fallbacks for a context without the screen theme. */
 #ykKok{
-  --y-geldi:#e2e1db;--y-gec:#f0b400;--y-gelmedi:#d93f36;--y-raporlu:#2a6fd6;--y-diger:#2e9c5a;
-  --y-geldi-yazi:#52514e;--y-gec-yazi:#2a2205;--y-koyu-yazi:#ffffff;
+  --y-geldi:#e2e1db;--y-gec:var(--uyari,#946016);--y-gelmedi:var(--kritik,#ae4e3d);--y-raporlu:var(--rapport-blue,#487ba7);--y-diger:var(--rapport-green,#447944);
+  --y-geldi-yazi:#52514e;--y-gec-yazi:#ffffff;--y-koyu-yazi:#ffffff;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #ykKok{
-  --y-geldi:#3d3d3a;--y-gec:#e3b11c;--y-gelmedi:#ec665d;--y-raporlu:#4b8ff0;--y-diger:#3fb771;
+  --y-geldi:#3d3d3a;--y-gec:var(--uyari,#d9b36c);--y-gelmedi:var(--kritik,#e0907f);--y-raporlu:var(--rapport-blue,#86aed0);--y-diger:var(--rapport-green,#93bd8c);
   --y-geldi-yazi:#c3c2b7;--y-gec-yazi:#1c1703;--y-koyu-yazi:#0b0b0b}}
 :root[data-theme="dark"] #ykKok{
-  --y-geldi:#3d3d3a;--y-gec:#e3b11c;--y-gelmedi:#ec665d;--y-raporlu:#4b8ff0;--y-diger:#3fb771;
+  --y-geldi:#3d3d3a;--y-gec:var(--uyari,#d9b36c);--y-gelmedi:var(--kritik,#e0907f);--y-raporlu:var(--rapport-blue,#86aed0);--y-diger:var(--rapport-green,#93bd8c);
   --y-geldi-yazi:#c3c2b7;--y-gec-yazi:#1c1703;--y-koyu-yazi:#0b0b0b}
 #ykDurum{overflow-wrap:anywhere;font-size:.8125rem;margin:0;color:var(--e-fg2)}#ykDurum:empty{display:none}
 /* The range and the scope */

@@ -114,6 +114,20 @@ function tahmin(alan,tyt,ayt,diploma){
 }
 
 /* ---------------- the student's exams ---------------- */
+// How far the estimate can move: the puan of the lowest and of the highest TYT and AYT totals among the student's last exams
+// (the newest ARALIK_EN_COK usable ones of each session; at least ARALIK_EN_AZ of each). m.sd is only the error of turning nets
+// into a puan; one mock exam's own measurement error and the difference between a mock and the real exam are several times
+// larger, and the spread of the student's own recent exams is the honest picture of that.
+const ARALIK_EN_AZ=3,ARALIK_EN_COK=5;
+function puanAraligi(alan,diploma,si=EK.ogr){
+ const m=modeller()?.[alan];if(!m||!AYT[alan])return null;
+ const s=sinavSecenekleri(alan,si),al=(l,keys)=>l.filter(x=>x.uygun).slice(0,ARALIK_EN_COK).map(x=>sum(x.values,keys)).filter(Number.isFinite);
+ const t=al(s.tyt,TYT),a=al(s.ayt,AYT[alan]);
+ if(t.length<ARALIK_EN_AZ||a.length<ARALIK_EN_AZ)return {yeterli:false,nT:t.length,nA:a.length};
+ const obp=(finite(diploma,50,100)?diploma:DIPLOMA_VARSAYILAN)*5,p=(x,y)=>m.b[0]+m.b[1]*x+m.b[2]*y+m.b[3]*obp;
+ const alt=p(Math.min(...t),Math.min(...a)),ust=p(Math.max(...t),Math.max(...a));
+ return {yeterli:true,nT:t.length,nA:a.length,alt,ust,siraAlt:siraTahmin(m,alt),siraUst:siraTahmin(m,ust)};
+}
 const tarihYaz=t=>String(t||'').split('-').reverse().join('.');
 // The student's records of a session (denemeListe = ogrenciDenemeKayitlari: school-list rows in a teacher session, teacher-sent copies, student-entered ones; the merge by name lives there), oldest first. A list row (okulListe) is already an 's:' option below. Nothing is hidden by exam kind (Tarama / Genel).
 const satirlar=(oturum,si=EK.ogr)=>denemeListe(si).filter(r=>!r.silindi&&r.tur===oturum&&r.oturum===oturum).reverse();
@@ -336,6 +350,10 @@ function content(){
  const gid=merkezBul(o,'gidisat',alan),gidAlan=state.merkez==='gidisat'?durum:alanDurumlari(o,'gidisat');
  const gidOk=!!gid.tyt&&Object.values(gidAlan).some(x=>x.ok),gidNeden=gid.tytNeden||Object.values(gidAlan).find(x=>x.neden)?.neden||'';
  const est=mk.tyt&&mk.ayt?tahmin(alan,mk.tyt.net,mk.ayt.net,o.diplomaNotu):null;
+ const ar=est?puanAraligi(alan,o.diplomaNotu):null;
+ const aralikYazi=!ar?'':ar.yeterli?'<p class="ya-aralik" id="yaAralik">Son denemelerinin en düşük ve en yüksek netleriyle: <strong>'+dec(ar.alt,1)+' – '+dec(ar.ust,1)+'</strong> puan'+
+   (ar.siraUst!==null&&ar.siraAlt!==null?' · başarı sırası '+num(siraYaz(ar.siraUst))+' – '+num(siraYaz(ar.siraAlt)):'')+' <span class="ya-soluk">(son '+ar.nT+' TYT, '+ar.nA+' AYT)</span></p>'
+  :'<p class="ya-aralik ya-soluk" id="yaAralik">Aralık için her oturumdan en az '+ARALIK_EN_AZ+' deneme gerekli (TYT '+ar.nT+', AYT '+ar.nA+'). Tek denemeye dayanan tahmin birkaç on puan oynayabilir.</p>';
  const secenek=sinavSecenekleri(alan);
  const sinavSec=(l,id,ot)=>{const secili=id||(l.find(x=>x.uygun)?.id??'');return '<label>'+ot+' denemesi<select id="ya'+ot+'"'+(l.length?'':' disabled')+'>'+(secili?'':opt('',l.length?'Kullanılabilir deneme yok':'Deneme yok','',false))+l.map(x=>opt(x.id,x.etiket+(x.uygun?'':' · '+eksikYazi(x.eksik)),secili,!x.uygun)).join('')+'</select></label>'};
  const sinavlar=state.merkez==='sec'?sinavSec(secenek.tyt,state.tyt,'TYT')+sinavSec(secenek.ayt,state.ayt,'AYT'):'';
@@ -343,9 +361,11 @@ function content(){
  const panel='<section class="ya-panel"><div class="ya-ayar"><label>Merkez<select id="yaMerkez">'+opt('son','Son deneme',state.merkez)+opt('sec','Önceki deneme seç',state.merkez)+opt('gidisat','Gidişat (YKS günü)'+(gidOk?'':' · '+gidNeden),state.merkez,!gidOk&&state.merkez!=='gidisat')+'</select></label>'+sinavlar+
   '<label>Alan<select id="yaField">'+Object.keys(AYT).map(a=>opt(a,a+(durum[a].ok?'':' · '+durum[a].neden),alan,!durum[a].ok&&a!==alan)).join('')+'</select></label>'+
   '<label>Diploma notu<input id="yaDiploma" type="number" min="50" max="100" step="0.01" inputmode="decimal" placeholder="95"'+(o.diplomaNotu!==undefined&&o.diplomaNotu!==null?' value="'+kacis(String(o.diplomaNotu))+'"':'')+(duzenle?'':' disabled')+'></label></div>'+
-  '<p class="ya-tahmin" aria-live="polite">'+(est?'Tahmini '+alan+' puanın ≈ <strong>'+dec(est.puan,1)+'</strong> ± '+dec(est.sd,1)+' puan · başarı sırası ≈ <strong>'+(est.sira===null?'—':num(siraYaz(est.sira)))+'</strong>'+(est.diplomaGirildi?'':' <span class="ya-soluk">(diploma notu girilmedi, '+DIPLOMA_VARSAYILAN+' (OBP '+DIPLOMA_VARSAYILAN*5+') sayıldı)</span>')
+  '<p class="ya-tahmin" aria-live="polite">'+(est?'Tahmini '+alan+' puanın ≈ <strong>'+dec(est.puan,1)+'</strong> puan · başarı sırası ≈ <strong>'+(est.sira===null?'—':num(siraYaz(est.sira)))+'</strong>'+(est.diplomaGirildi?'':' <span class="ya-soluk">(diploma notu girilmedi, '+DIPLOMA_VARSAYILAN+' (OBP '+DIPLOMA_VARSAYILAN*5+') sayıldı)</span>')
    :'Puan tahmini yok'+(mk.tytNeden||mk.aytNeden?' · '+kacis([mk.tytNeden&&'TYT: '+mk.tytNeden,mk.aytNeden&&'AYT: '+mk.aytNeden].filter(Boolean).join(' · ')):''))+'</p>'+
-  (est?'<p class="ya-soluk ya-kaynak-net">TYT '+num(mk.tyt.net)+' net'+(mk.tyt.tarih?' · '+kacis(tarihYaz(mk.tyt.tarih)):'')+' · AYT '+num(mk.ayt.net)+' net'+(mk.ayt.tarih?' · '+kacis(tarihYaz(mk.ayt.tarih)):'')+'</p>':'')+'</section>';
+  aralikYazi+
+  (est?'<p class="ya-soluk ya-kaynak-net">TYT '+num(mk.tyt.net)+' net'+(mk.tyt.tarih?' · '+kacis(tarihYaz(mk.tyt.tarih)):'')+' · AYT '+num(mk.ayt.net)+' net'+(mk.ayt.tarih?' · '+kacis(tarihYaz(mk.ayt.tarih)):'')+
+    ' · <span title="Netleri puana çeviren formülün kendi hatası. Öğrencinin sınav günündeki sonucunun belirsizliği değildir; onu yukarıdaki aralık gösterir.">net→puan dönüşüm hatası ± '+dec(est.sd,1)+'</span></p>':'')+'</section>';
  const filtre={city:state.city,kind:state.kind,query:state.query};
  const filters='<div class="ya-filters"><label>Şehir<select id="yaCity">'+opt('','Tüm şehirler',state.city)+Object.entries(CITIES).map(([k,l])=>opt(k,l,state.city)).join('')+'</select></label><label>Üniversite türü<select id="yaType">'+opt('','Tümü',state.kind)+opt('DEVLET','Devlet',state.kind)+opt('VAKIF','%100 burslu vakıf',state.kind)+'</select></label><label class="ya-search">Üniversite / bölüm ara<input id="yaSearch" type="search" maxlength="120" value="'+kacis(state.query)+'" placeholder="Örn. bilgisayar mühendisliği"></label></div>';
  const izinli=!yalnizcaGoruntuleme();
@@ -409,6 +429,6 @@ document.addEventListener('click',async e=>{
  }
  catch(err){if(D!==owner||D.ogr[EK.ogr]!==student)return;durum(err.message);b.disabled=false}
 });
-return {gorunum,yukle,profil,kapsam,sinavSecenekleri,merkezBul,alanDurumlari,modelKur,tahmin,siraTahmin,siraYaz,listele,yerlesir,netHedef,hedefSec,netleriAyarla,diplomaYaz,diplomaDogrula,hedefDogrula,katalogDogrula};
+return {puanAraligi,gorunum,yukle,profil,kapsam,sinavSecenekleri,merkezBul,alanDurumlari,modelKur,tahmin,siraTahmin,siraYaz,listele,yerlesir,netHedef,hedefSec,netleriAyarla,diplomaYaz,diplomaDogrula,hedefDogrula,katalogDogrula};
 })();
 function gorunumUniversite(){return YOKATLAS.gorunum()}

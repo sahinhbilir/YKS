@@ -37,9 +37,11 @@ run(`
     kur(rol);
     for (let w = gunNo('2026-09-07'); w <= gunNo(son); w += 7) {
       D.ayar.testTarih = isoDan(w + 2);
-      if (iyi) Object.keys(D.elle).forEach(a => { const hb = +a.split('|')[1];
-        sabitHaftaTestleri(D.elle[a], hb).forEach(t => { if (t.gun < bugunNo() && !D.log.some(l => l[2] === t.ki && l[0] === t.gun))
-          sonucIsle(0, [{ki:t.ki, gun:t.gun, not:3, dogru:null, soru:null}]); }); });
+      // A row whose topic the student did on another day of the same week (the 10 Sep result stands for the 12 Sep row) is
+      // not assumed and so not entered either: the assumption is exactly "İyi on the rows that are assumed".
+      if (iyi) { const vg = varsayimIyiGunleri(0); Object.keys(D.elle).forEach(a => { const hb = +a.split('|')[1];
+        sabitHaftaTestleri(D.elle[a], hb).forEach(t => { if (t.gun < bugunNo() && !D.log.some(l => l[2] === t.ki && l[0] === t.gun) && (vg.get(t.ki) || []).includes(t.gun))
+          sonucIsle(0, [{ki:t.ki, gun:t.gun, not:3, dogru:null, soru:null}]); }); }); }
       varsayimKartlariniGuncelle();
       if (rol === 'rehber') haftayiKullanimaAl(0, buHafta(0)); else ogrenciHaftayiSakla(0, buHafta(0), planHesapla(0, buHafta(0)));
     }
@@ -144,6 +146,60 @@ check('free work, lessons, recovered "yapılmadı" rows and days on or after the
   assert.deepEqual(json(`Array.from(varsayimIyiGunleri(0).keys())`), [41], 'nothing on or after the exam day');
 });
 
+check('a result on another day of the same week stands for that topic’s unanswered row: the row is not assumed on top of it', () => {
+  // Week of 14 Sep, given on Wednesday: topic 1 has a row on some day d. Nothing entered: the row is assumed İyi on d.
+  run(`kur('ogrenci'); D.ayar.testTarih='2026-09-16'; D.log=[]; D.kart={}; ogrenciHaftayiSakla(0, buHafta(0), planHesapla(0, buHafta(0)));`);
+  const hb = run('buHafta(0)'), satirlar = json(`sabitHaftaTestleri(D.elle['0|${hb}'], ${hb})`), t = satirlar.find(r => r.ki === 1);
+  assert(t, 'topic 1 is on this week’s paper'); const baska = t.gun === hb + 1 ? hb + 2 : hb + 1;
+  run(`D.ayar.testTarih=isoDan(${hb + 6})`);
+  assert.deepEqual(json('[...(varsayimIyiGunleri(0).get(1)||[])]'), [t.gun]);
+  // The student studies it on another day of that week and reports it: one real review, no assumed one on top.
+  run(`sonucIsle(0,[{ki:1,gun:${baska},not:3,dogru:null,soru:null}])`);
+  assert.deepEqual(json('[...(varsayimIyiGunleri(0).get(1)||[])]'), [], 'the row is covered by the real result');
+  assert.deepEqual(json(`[D.kart['0:1'].n, D.kart['0:1'].son, D.kart['0:1'].vg||null]`), [1, baska, null]);
+  assert.deepEqual(json(`[...haftaOrtusu(0, ${hb}, [{ki:1,gun:${t.gun}}], ki => ki === 1 ? [${baska}] : null)]`), ['1:' + t.gun]);
+  // Other topics of the week are untouched; a second off-day result does not cover a row that does not exist.
+  const diger = satirlar.find(r => r.ki !== 1);
+  if (diger) assert(json(`[...(varsayimIyiGunleri(0).get(${diger.ki})||[])]`).includes(diger.gun), 'another topic is still assumed');
+  // "Yapmadım" on the row: nothing to cover, nothing assumed.
+  assert.deepEqual(json(`[...haftaOrtusu(0, ${hb}, [{ki:1,gun:${t.gun}}], ki => [${baska}], () => true)]`), []);
+  // A result on the row's own day answers it; the other day's result is then simply an extra.
+  assert.deepEqual(json(`[...haftaOrtusu(0, ${hb}, [{ki:1,gun:${t.gun}}], ki => [${baska}, ${t.gun}])]`), []);
+  // Two rows of one topic, one extra result: the earlier row is covered. A result in another week covers nothing.
+  assert.deepEqual(json(`[...haftaOrtusu(0, ${hb}, [{ki:1,gun:${hb + 4}},{ki:1,gun:${hb + 2}}], ki => [${hb + 1}])]`), ['1:' + (hb + 2)]);
+  assert.deepEqual(json(`[...haftaOrtusu(0, ${hb}, [{ki:1,gun:${hb + 2}}], ki => [${hb - 1}, ${hb + 7}])]`), []);
+});
+
+check('kendi programım: from the day it is switched on, a test without a result is not assumed; switching it off keeps that period', () => {
+  run(`kur('ogrenci'); D.ayar.testTarih='2026-09-16'; D.log=[]; D.kart={}; ogrenciHaftayiSakla(0, buHafta(0), planHesapla(0, buHafta(0)));`);
+  const hb = run('buHafta(0)'), n = json(`sabitHaftaTestleri(D.elle['0|${hb}'], ${hb})`).length;
+  run(`D.ayar.testTarih=isoDan(${hb + 13})`);
+  const say = () => json('[...varsayimIyiGunleri(0).values()].flat().length');
+  assert(n > 1); assert.equal(say(), n, 'every row of the given week is assumed');
+  // Switched on in the middle of that week (as if on its Thursday): the rows from Thursday on are no longer assumed.
+  run(`D.ogr[0].serbest=[[${hb + 3},null]]`);
+  const once = json(`sabitHaftaTestleri(D.elle['0|${hb}'], ${hb}).filter(t=>t.gun<${hb + 3}).length`);
+  assert.equal(say(), once); assert.equal(run('serbestAcikMi(0)'), true);
+  assert.deepEqual(json(`[serbestGunMu(D.ogr[0],${hb + 2}),serbestGunMu(D.ogr[0],${hb + 3}),serbestGunMu(D.ogr[0],${hb + 400})]`), [false, true, true]);
+  // Closed periods keep their days; a day after them is assumed again.
+  run(`D.ogr[0].serbest=[[${hb + 3},${hb + 4}]]`);
+  assert.equal(say(), json(`sabitHaftaTestleri(D.elle['0|${hb}'], ${hb}).filter(t=>t.gun<${hb + 3}||t.gun>${hb + 4}).length`)); assert.equal(run('serbestAcikMi(0)'), false);
+  // The switch itself (the student's own notebook only): opens today, closes yesterday, a same-day close removes the period.
+  run(`D.ogr[0].serbest=undefined; D.ayar.testTarih=isoDan(${hb + 20})`);
+  assert.equal(run('serbestAyarla(0,true)'), true); assert.deepEqual(json('D.ogr[0].serbest'), [[hb + 20, null]]); assert.equal(run('serbestAyarla(0,true)'), false, 'already on');
+  assert.equal(run('serbestAyarla(0,false)'), true); assert.deepEqual(json('D.ogr[0].serbest'), [], 'opened and closed on one day: nothing happened');
+  run(`D.ogr[0].serbest=[[${hb + 10},null]]`); assert.equal(run('serbestAyarla(0,false)'), true); assert.deepEqual(json('D.ogr[0].serbest'), [[hb + 10, hb + 19]]);
+  assert.equal(run('serbestAyarla(0,true)'), true); assert.deepEqual(json('D.ogr[0].serbest'), [[hb + 10, null]], 'closed yesterday and opened again: the same period goes on');
+  run(`D.ayar.testTarih=isoDan(${hb + 30}); serbestAyarla(0,false); D.ayar.testTarih=isoDan(${hb + 40}); serbestAyarla(0,true)`);
+  assert.deepEqual(json('D.ogr[0].serbest'), [[hb + 10, hb + 29], [hb + 40, null]]);
+  run("D.rol='rehber'"); assert.equal(run('serbestAyarla(0,false)'), false, 'a teacher cannot switch it'); run("D.rol='ogrenci'");
+  // Validation: ordered, closed periods, only the last may be open.
+  for (const iyi of ['[]', '[[5,9]]', '[[5,9],[11,null]]', '[[5,5]]']) assert.equal(run('serbestDogrula(' + iyi + ')'), true, iyi);
+  for (const kotu of ['null', '{}', '[[5]]', '[[9,5]]', '[[5,null],[8,9]]', '[[5,9],[9,12]]', '[[5.5,9]]', '[["5",9]]', '[[5,9],[7,null]]']) assert.equal(run('serbestDogrula(' + kotu + ')'), false, kotu);
+  run('D.ogr[0].serbest=[[9,5]]'); assert.throws(() => run('yedekDogrula(D)'), /kendi programım/);
+  run(`D.ogr[0].serbest=[[${hb},null]]`); run('yedekDogrula(D)');
+});
+
 check('calibration and the result package see real results only', () => {
   run(`haftalar('ogrenci', false, '2026-11-02')`);
   assert(run(`Object.values(D.kart).some(k => k.vg)`), 'there are assumed reviews');
@@ -156,7 +212,9 @@ check('the repetition label counts assumed reviews and says no result was entere
   const r = json(`(() => { const out = []; Object.keys(D.elle).map(a => +a.split('|')[1]).sort((a, b) => a - b).forEach(hb => {
     const p = planHesapla(0, hb); p.gunler.forEach((l, g) => l.forEach(x => { if (x.ki === 0) out.push(tekrarBilgisi(0, x, hb + g)); })); }); return out; })()`);
   assert(r.length >= 2);
-  r.forEach((b, i) => assert.equal(b.n, i + 2, 'stage ' + (i + 2)));     // the real 10 Sep result was the 1st
+  // The real 10 Sep result was the 1st. The 12 Sep row of the same week is that same review (covered, not assumed), so it and
+  // the next row are both the 2nd; from there every assumed review counts one more.
+  assert.deepEqual(r.map(b => b.n), [2, ...r.slice(1).map((_, i) => i + 2)]);
   assert.match(r[r.length - 1].aciklama, /sonuç girilmedi/);
   assert.match(r[0].aciklama, /İyi/);                                      // after the real result
 });

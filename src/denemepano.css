@@ -110,3 +110,8 @@
   .dp-kpi>.et-ozet-kart:last-child:nth-child(odd){grid-column:auto}
 }
 .dp-kisi-pano,.kd-pano{align-self:flex-start;margin-top:8px}
+#dpKok .dp-tr-tahmini{color:var(--e-fg2)}
+#dpKok .dp-zor-trli .dp-zor-satir{grid-template-columns:1.6rem minmax(0,1fr) 3rem 9.5rem 6rem 3rem 84px}#dpKok .dp-zor-tr{font-size:.8125rem;color:var(--e-fg2);white-space:nowrap}
+#dpKok .dp-zor-tr b{font-weight:600;margin-left:4px}#dpKok .dp-zor-tr b.et-yukari{color:var(--e-ok)}#dpKok .dp-zor-tr b.et-asagi{color:var(--e-bad)}#dpKok .dp-zor-tr b.et-esit{color:var(--e-fg2)}
+#dpKok .dp-kpi-tr b{font-weight:600;color:var(--e-fg)}
+@media (max-width:640px){#dpKok .dp-zor-trli .dp-zor-satir{grid-template-columns:1.4rem minmax(0,1fr) 2.6rem 7.6rem auto;gap:6px}#dpKok .dp-zor-trli .dp-zor-satir>span:nth-of-type(5){display:none}}

@@ -175,8 +175,10 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     // earlier sapma [2, 0, 2, 0] → mean 1 → beklenenden -1.25 - 1 = -2.25; the estimate is not "no Türkiye average".
     assert.equal(son.son.beklenenden, -2.25); assert.equal(son.neden, null); near(son.istikrar.std, Math.sqrt(1.61)); assert.equal(son.istikrar.n, 5);
     const h2 = run('EK.okKim="1001";ANALIZ.icerik()');
-    assert.match(h2, /<span class="mini">Türkiye’ye göre<\/span><strong class="ok-asagi">▼1,25 <small>net<\/small>[\s\S]*tahmini Türkiye ortalaması \(okul ortalamasından\) 39,25 net/);
-    assert.match(h2, /tahmini Türkiye ortalamasına göre her zamanki yerinden/); assert(!h2.includes('Bu denemenin Türkiye ortalaması yok'));
+    // An estimate is shown as approximate and in a neutral colour: the school's own change would otherwise read as a red or green arrow.
+    assert.match(h2, /<div class="et-ozet-kart ok-tahmini"><span class="mini">Türkiye’ye göre<\/span><strong class="ok-bekliyor">≈ −1,25 <small>net<\/small>[\s\S]*Türkiye listesi bekleniyor · tahmini Türkiye ortalaması \(okul ortalamasından\) 39,25 net/);
+    assert.match(h2, /<span class="mini">Beklenenden<\/span><strong class="ok-bekliyor">≈ −2,25 <small>net<\/small>[\s\S]*tahmini Türkiye ortalamasına göre her zamanki yerinden/); assert(!h2.includes('Bu denemenin Türkiye ortalaması yok'));
+    assert.doesNotMatch(h2, /Türkiye’ye göre<\/span><strong class="ok-(asagi|yukari)"/);
   });
   await check('tahmini needs at least one exam with both numbers; with one such exam its gap is the median; none when the measure has no Türkiye average at all', async () => {
     put('SR', siralama()); run('D.siralama=SR'); await kurTurkiye([0]);
@@ -480,8 +482,8 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     put('KV2', kt.merge(kt.blank(), [rep])); run('D.konutakibi=KV2'); const z2 = kart(1001).zayif; assert.deepEqual([z2.var, z2.zorluk, z2.liste.length], [true, false, 0]);
     assert.match(run('EK.okKim="1001";ANALIZ.icerik()'), /Zorluk verisi yok/);
     // More than five weak topics: the five worst.
-    put('V', { exams: [] }); assert.deepEqual(get('ANALIZ.zayifKonular(V,"1001",[])'), { var: false, zorluk: false, liste: [] });
-    assert.deepEqual(get('ANALIZ.zayifKonular(null,"1001",[])'), { var: false, zorluk: false, liste: [] });
+    put('V', { exams: [] }); assert.deepEqual(get('ANALIZ.zayifKonular(V,"1001",[])'), { var: false, zorluk: false, taban: 'okul', liste: [] });
+    assert.deepEqual(get('ANALIZ.zayifKonular(null,"1001",[])'), { var: false, zorluk: false, taban: 'okul', liste: [] });
   });
   await check('the class and şube target: the şube’s own when set, else the class’s; none when unset', async () => {
     await kurTum();
@@ -751,6 +753,117 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     assert.deepEqual(o.xs.slice().sort((a, b) => a - b), o.xs); assert.equal(o.ys[1], null); assert.equal(o.ids.length, 5);
     assert.deepEqual(o.donem, ['2026-09-17', '2026-09-24', '2026-10-01', '2026-10-08', '2026-10-15'].map(gun));
     assert.equal(get('typeof GRAFIK_OLCUM.kur'), 'function');
+  });
+  await check('Dikkat, the pure exam rules: below the one-sided 95% prediction interval of 3–5 earlier exams and at least 4 net; three falls in a row of 4 net in all (hand-worked)', () => {
+    const P = (sapma, o = {}) => ({ exam: 'e' + (o.i ?? 0), ad: 'D' + (o.i ?? 0), g: 100 + (o.i ?? 0), net: o.net ?? 50, okulOrt: o.okulOrt ?? 50, sapma, tahmini: !!o.tahmini });
+    const isaret = (l, son) => { put('N', l.map((p, i) => ({ ...p, exam: 'e' + i, ad: 'D' + i, g: 100 + i }))); return get(`ANALIZ.netIsaretleri(N,${JSON.stringify(son ?? 'e' + (l.length - 1))})`); };
+    // Earlier 5, 6, 4, 5: mean 5, s = √(2/3) = 0,8165; t(3) = 2,353 → 2,353 · 0,8165 · √1,25 = 2,148 < 4, so the bar is 4 net. Last 0,5 → −4,5.
+    let f = isaret([P(5), P(6), P(4), P(5), P(.5)]);
+    assert.deepEqual(f.map(x => [x.tur, x.taban, x.fark, x.esik, x.n]), [['dusus', 'turkiye', -4.5, 4, 4]]);
+    assert.deepEqual(isaret([P(5), P(6), P(4), P(5), P(1.5)]), [], '3,5 net below: under the 4 net bar');
+    // A swinging student: earlier 8, −8, 6, −6: mean 0, s = √(200/3) = 8,165 → 2,353 · 8,165 · √1,25 = 21,48. A fall of 10 is her usual swing.
+    assert.deepEqual(isaret([P(8), P(-8), P(6), P(-6), P(-10)]), []);
+    f = isaret([P(8), P(-8), P(6), P(-6), P(-22)]); assert.equal(f[0].tur, 'dusus'); near(f[0].esik, 2.353 * Math.sqrt(200 / 3) * Math.sqrt(1.25)); assert.equal(f[0].fark, -22);
+    // Three earlier exams: t(2) = 2,920, √(1 + 1/3). Earlier 0, 2, 4: mean 2, s = 2 → 2,920 · 2 · 1,1547 = 6,743.
+    assert.deepEqual(isaret([P(0), P(2), P(4), P(-4.5)]), [], '−6,5 is inside 6,743');
+    f = isaret([P(0), P(2), P(4), P(-5)]); assert.equal(f.find(x => x.tur === 'dusus').fark, -7); near(f.find(x => x.tur === 'dusus').esik, 2.920 * 2 * Math.sqrt(4 / 3));
+    assert.deepEqual(isaret([P(5), P(5), P(-9)]), [], 'two earlier exams are not enough');
+    // Only the last five earlier exams count: 30 is too old to matter.
+    f = isaret([P(30), P(5), P(5), P(5), P(5), P(5), P(0)]); assert.deepEqual([f[0].fark, f[0].n, f[0].esik], [-5, 5, 4]);
+    // She did not sit her grade’s last exam: nothing is said about her.
+    assert.deepEqual(isaret([P(5), P(6), P(4), P(5), P(.5)], 'e9'), []);
+    // The last exam has only a tahmini Türkiye average: her place against the school mean takes over (net − okulOrt), for every exam.
+    f = isaret([P(9, { net: 52, okulOrt: 50 }), P(9, { net: 53, okulOrt: 50 }), P(9, { net: 51, okulOrt: 50 }), P(-20, { net: 46, okulOrt: 50, tahmini: true })]);
+    assert.deepEqual(f.map(x => [x.tur, x.taban, x.fark, x.esik]), [['dusus', 'okul', -6, 4]], 'earlier 2, 3, 1 → mean 2, s = 1 → 3,372 < 4; last −4');
+    f = isaret([P(null, { net: 52, okulOrt: 50 }), P(null, { net: 53, okulOrt: 50 }), P(null, { net: 51, okulOrt: 50 }), P(null, { net: 46, okulOrt: 50 })]);
+    assert.deepEqual(f.map(x => [x.tur, x.taban, x.fark]), [['dusus', 'okul', -6]], 'no Türkiye list at all: the school mean');
+    // Gerileme: each of the last three exams below the one before, 4 net or more in all.
+    f = isaret([P(6), P(4), P(3), P(1)]); assert.deepEqual(f.filter(x => x.tur === 'gerileme').map(x => [x.taban, x.fark, x.n]), [['turkiye', -5, 3]]);
+    assert.equal(isaret([P(6), P(4), P(5), P(1)]).some(x => x.tur === 'gerileme'), false, 'one rise in between');
+    assert.equal(isaret([P(6), P(5), P(4), P(3)]).some(x => x.tur === 'gerileme'), false, 'three falls of 3 net in all');
+    assert.equal(isaret([P(4), P(3), P(1)]).some(x => x.tur === 'gerileme'), false, 'needs four exams');
+    f = isaret([P(6, { net: 58, okulOrt: 50 }), P(4, { net: 55, okulOrt: 50, tahmini: true }), P(3, { net: 53, okulOrt: 50 }), P(1, { net: 51, okulOrt: 50 })]);
+    assert.deepEqual(f.filter(x => x.tur === 'gerileme').map(x => [x.taban, x.fark]), [['okul', -7]], 'a tahmini exam among the four: all four against the school mean');
+    assert.deepEqual(get('ANALIZ.DIKKAT'), { NET: 4, ONCE: 3, ARDISIK: 3, DEVAMSIZ: 3, KONU: 3, GOSTER: 8, T: { 2: 2.92, 3: 2.353, 4: 2.132 } });
+  });
+  await check('Dikkat, the list: a fall that equals the card’s Beklenenden, 3+ missed days, 3+ topics behind Türkiye, the notebook’s own flags; most pressing first; cached with the sources', async () => {
+    await kurTum();
+    assert.deepEqual(get(`ANALIZ.dikkat(${BUGUN})`), { satirlar: [], kaynaklar: { deneme: true, turkiye: true, yoklama: false, konu: false } }, 'the steady school: nobody');
+    // EGE falls on the last exam: Türkçe 24 → 17, so 29 against the Türkiye 36: sapma −7 after four exams at 0.
+    sandbox.SR.sinavlar[4].T.ogr.find(o => o.no === '1005').n[0] = 17; run('D.siralama=SR;D.siralama.sinavlar[4].ts=Date.now()+5');
+    let d = get(`ANALIZ.dikkat(${BUGUN})`);
+    assert.deepEqual(d.satirlar.map(r => [r.no, r.ad, r.sinif, r.puan]), [['1005', 'SENTETİK EGE', '12/B', 3]]);
+    const f0 = d.satirlar[0].isaretler[0];
+    assert.deepEqual([f0.tur, f0.taban, f0.olcu, f0.fark, f0.esik, f0.n, f0.ad], ['dusus', 'turkiye', 'TYT', -7, 4, 4, ADLAR[4]]);
+    assert.equal(f0.fark, kart(1005).son.beklenenden, 'the same figure as the card’s Beklenenden');
+    assert.deepEqual(get('ANALIZ.isaretYazisi(' + JSON.stringify(f0) + ')')[0], 'TYT: beklenenden 7,0 net düşük');
+    // Without the Türkiye list of the last exam the same fall is measured against the school mean.
+    await kurTurkiye([0, 1, 2, 3]); d = get(`ANALIZ.dikkat(${BUGUN})`);
+    assert.equal(d.kaynaklar.turkiye, false); const fo = d.satirlar.find(r => r.no === '1005').isaretler[0];
+    assert.deepEqual([fo.tur, fo.taban], ['dusus', 'okul']); assert.match(get('ANALIZ.isaretYazisi(' + JSON.stringify(fo) + ')')[0], /^TYT: beklenenden [\d,]+ net düşük \(okula göre\)$/);
+    await kurTurkiye();
+    // Yoklama: ADA missed 3 days of the last 30 (two whole, one half); CEMRE one.
+    const gk = l => l.map(([iso, kod]) => [gun(iso), kod]);
+    put('YK', [{ ad: 'SENTETİK ADA', sinif: '12/A', gun: gk([['2026-09-30', 'AAAAAAAA'], ['2026-10-13', 'MMMPPPPP'], ['2026-10-20', 'RRRRRRRR']]) }, { ad: 'SENTETİK CEMRE', sinif: '12/B', gun: gk([['2026-10-21', 'AAAPPPPP']]) }]);
+    run('(()=>{const k=YK.map(o=>({ad:o.ad,sinif:o.sinif,gun:new Map(o.gun)}));D.yoklama=YOKLAMA.paketle(k,[{bas:' + gun('2026-09-28') + ',bit:' + gun('2026-10-27') + ',n:2,yaz:null,ts:5}],5)})()');
+    // Konu Takibi with the Türkiye figures: ADA is behind in three topics (0 of 4, 0 of 3 and 1 of 3 where Türkiye gets 90%); CEMRE in one.
+    const S1 = { name: 'SENTETİK ADA', no: '1001', cls: '205 12/A' }, S3 = { name: 'SENTETİK CEMRE', no: '1003', cls: '205 12/B' };
+    const kodlar = { 'TÜRKÇE-T': ['T.12.1.1', 'T.12.1.1', 'T.12.1.2', 'T.12.1.2', 'T.12.3.1', 'T.12.3.1', 'T.12.3.1', 'T.12.5.1', 'T.12.5.1', 'T.12.5.1'], 'MATEMATİK-T': ['E.M.9.3.4', 'E.M.9.3.4', 'E.M.9.3.4'] };
+    const ozet = { tur: 'ozet', ad: 'SENTETİK-ZORLUK', oturum: 'TYT', dersler: Object.fromEntries(Object.entries(kodlar).map(([c, l]) => [c, l.map(k => [k])])) };
+    const tr = { tur: 'turkiye', ad: 'SENTETİK-ZORLUK', oturum: 'TYT', dersler: Object.fromEntries(Object.entries(kodlar).map(([c, l]) => [c, l.map(() => .9)])) };
+    const blok = (S, t11, t12, t3, t5, m) => [
+      F.block([F.row('T.12.1.1', 'a', t11), F.row('T.12.1.2', 'b', t12), F.row('T.12.3.1', 'c', t3), F.row('T.12.5.1', 'd', t5)], 'outcome', 'TÜRKÇE-T', S),
+      F.block([F.row('E.M.9.3.4', 'e', m)], 'outcome', 'MATEMATİK-T', S)];
+    const rep = { ad: 'SENTETİK-ZORLUK', blocks: [...blok(S1, [2, 0, 2, 0], [2, 0, 2, 0], [3, 0, 3, 0], [3, 3, 0, 0], [3, 1, 2, 0]), ...blok(S3, [2, 2, 0, 0], [2, 2, 0, 0], [3, 3, 0, 0], [3, 3, 0, 0], [3, 0, 3, 0])] };
+    const kt = run('KONU_TAKIBI'), v = kt.merge(kt.blank(), [rep], [ozet, tr]); v.exams[0].date = '2026-10-14'; put('KV', v); run('D.konutakibi=KV');
+    const gk2 = get('[...ANALIZ.geridekiKonuSayilari(KONU_TAKIBI.oku().veri)]');
+    assert.deepEqual(gk2, [['1001', [{ ders: 'Türkçe', konu: 'Sözcükte Anlam', fark: -3.6, n: 4 }, { ders: 'Türkçe', konu: 'Cümlede Anlam', fark: -2.7, n: 3 }, { ders: 'Matematik', konu: 'Üslü İfadeler ve Denklemler', fark: -1.7, n: 3 }]],
+      ['1003', [{ ders: 'Matematik', konu: 'Üslü İfadeler ve Denklemler', fark: -2.7, n: 3 }]]]);
+    // The notebook’s own flags: BORA has a plan without a result; a student who is only in the notebook gets her own row.
+    const ek = `new Map([["1002",{ad:"x",si:1,isaretler:[{tur:"sonuc",puan:1,yazi:"Geçen haftanın sonucu yok",aciklama:"a"}]}],["si:7",{ad:"SENTETİK YENİ",sinif:"11/C",si:7,isaretler:[{tur:"sonuc",puan:1,yazi:"Geçen haftanın sonucu yok"}]}],["1004",{ad:"y",si:3,isaretler:[]}]])`;
+    d = get(`ANALIZ.dikkat(${BUGUN},${ek})`);
+    assert.deepEqual(d.kaynaklar, { deneme: true, turkiye: true, yoklama: true, konu: true });
+    assert.deepEqual(d.satirlar.map(r => [r.key, r.ad, r.si, r.puan, r.isaretler.map(x => x.tur)]), [
+      ['1001', 'SENTETİK ADA', null, 3, ['devamsiz', 'konu']], ['1005', 'SENTETİK EGE', null, 3, ['dusus']],
+      ['1002', 'SENTETİK BORA', 1, 1, ['sonuc']], ['si:7', 'SENTETİK YENİ', 7, 1, ['sonuc']]], 'most pressing first; equal weight: more flags, then the name');
+    const ada = d.satirlar[0].isaretler;
+    assert.deepEqual([ada[0].n, ada[0].puan], [3, 2]); assert.deepEqual([ada[1].n, ada[1].puan, ada[1].en.map(t => t.konu)], [3, 1, ['Sözcükte Anlam', 'Cümlede Anlam']]);
+    assert.equal(get('ANALIZ.isaretYazisi(' + JSON.stringify(ada[0]) + ')')[0], 'Son 30 günde 3 gün devamsız');
+    assert.deepEqual(get('ANALIZ.isaretYazisi(' + JSON.stringify(ada[1]) + ')'), ['Türkiye’ye göre 3 konuda geride',
+      'Türkiye öğrencilerinin doğru sayısına göre en az 1 soru geride ve şansla açıklanamayan konular. En çok: Türkçe – Sözcükte Anlam (−3,6 soru), Türkçe – Cümlede Anlam (−2,7 soru).']);
+    // The extra flags are never cached into the shared result.
+    assert.deepEqual(get(`ANALIZ.dikkat(${BUGUN})`).satirlar.map(r => r.key), ['1001', '1005']);
+    // Six missed days weigh as much as a fall.
+    put('YK', [{ ad: 'SENTETİK ADA', sinif: '12/A', gun: gk([['2026-10-05', 'AAAAAAAA'], ['2026-10-06', 'AAAAAAAA'], ['2026-10-07', 'AAAAAAAA'], ['2026-10-13', 'AAAAAAAA'], ['2026-10-14', 'AAAAAAAA'], ['2026-10-20', 'AAAAAAAA']]) }]);
+    run('(()=>{const k=YK.map(o=>({ad:o.ad,sinif:o.sinif,gun:new Map(o.gun)}));D.yoklama=YOKLAMA.paketle(k,[{bas:' + gun('2026-09-28') + ',bit:' + gun('2026-10-27') + ',n:2,yaz:null,ts:9}],9)})()');
+    assert.deepEqual(get(`ANALIZ.dikkat(${BUGUN})`).satirlar[0].isaretler.map(x => [x.tur, x.n, x.puan]), [['devamsiz', 6, 3], ['konu', 3, 1]]);
+  });
+  await check('Dikkat, the card and the top bar search: names open the card, the breakdown, the sources, “Tümünü göster” past eight; the search finds by label, number or a unique part', async () => {
+    await kurTum();
+    let h = run('ANALIZ.dikkatKarti()');
+    assert.match(h, /^<section class="kart rehber-dikkat" id="rehberDikkat"/); assert.match(h, /Şu an işaretlenen öğrenci yok/); assert(!h.includes('rd-liste'));
+    assert.match(h, /<span class="rd-kaynak var">✓ Denemeler<\/span><span class="rd-kaynak var">✓ Türkiye listesi \(son deneme\)<\/span><span class="rd-kaynak">– Yoklama<\/span><span class="rd-kaynak">– Konu Takibi · Türkiye’ye göre<\/span>/);
+    sandbox.SR.sinavlar[4].T.ogr.find(o => o.no === '1005').n[0] = 17; run('D.siralama=SR;D.siralama.sinavlar[4].ts=Date.now()+5');
+    const ek = `new Map([["si:7",{ad:"SENTETİK <YENİ>",sinif:"11/C",si:7,isaretler:[{tur:"sonuc",puan:1,yazi:"Geçen haftanın sonucu yok",aciklama:"Plan verildi"}]}]])`;
+    h = run(`ANALIZ.dikkatKarti(${ek},(si,ad)=>'<button data-ogr-gor="'+si+'">'+kacis(ad)+'</button>')`);
+    assert.match(h, /<h2 class="rd-baslik">2 <span>öğrenci ilgi bekliyor<\/span><\/h2>/);
+    assert.match(h, /<p class="rd-ozet">Net düşüşü <strong>1<\/strong> · Sonuç yok <strong>1<\/strong><\/p>/);
+    assert.match(h, /<li><span class="rd-kim"><button type="button" class="et-ad" data-ogrenci-karti="1005">Sentetik Ege<\/button><small>12\/B<\/small><\/span><span class="rd-isaretler"><button type="button" class="rd-isaret rd-p3" data-rd-neden title="[^"]*Eşik: 4,0 net[^"]*">TYT: beklenenden 7,0 net düşük<\/button><\/span><\/li>/);
+    assert.match(h, /<li><span class="rd-kim"><button data-ogr-gor="7">SENTETİK &lt;YENİ&gt;<\/button><small>11\/C<\/small><\/span><span class="rd-isaretler"><button type="button" class="rd-isaret rd-p1" data-rd-neden title="Plan verildi">Geçen haftanın sonucu yok<\/button><\/span><\/li>/);
+    assert(!h.includes('data-rd-tumu'), 'eight or fewer: no button');
+    // Ten notebook-only students: eight rows and the button; all of them once opened.
+    const cok = 'new Map(Array.from({length:10},(_, i)=>["si:"+i,{ad:"SENTETİK "+String.fromCharCode(65+i),si:i,isaretler:[{tur:"sonuc",puan:1,yazi:"Geçen haftanın sonucu yok"}]}]))';
+    run('EK.rdTumu=false'); h = run(`ANALIZ.dikkatKarti(${cok})`);
+    assert.equal((h.match(/<li>/g) || []).length, 8); assert.match(h, /data-rd-tumu aria-expanded="false">Tümünü göster \(11\)</);
+    run('EK.rdTumu=true'); h = run(`ANALIZ.dikkatKarti(${cok})`); assert.equal((h.match(/<li>/g) || []).length, 11); assert.match(h, /aria-expanded="true">Daha az göster</); run('EK.rdTumu=false');
+    // The search.
+    assert.equal(get('ANALIZ.bul("1003").no'), '1003'); assert.equal(get('ANALIZ.bul("Sentetik Doğa · 12/B · 1004").no'), '1004');
+    assert.equal(get('ANALIZ.bul("  cemre ").no'), '1003', 'a part of one name only'); assert.equal(run('ANALIZ.bul("sentetik")'), null, 'several match: none'); assert.equal(run('ANALIZ.bul("")'), null);
+    const ara = run('ANALIZ.ustArama()');
+    assert.match(ara, /^<div class="ust-ara"><input type="search" id="ustAra" list="ustAraListe"/); assert.equal((ara.match(/<option /g) || []).length, 5);
+    run("EK.sekme='ana';rayCiz()"); assert(nodes.ray.innerHTML.includes('id="ustAra"'), 'the teacher’s top bar has the search');
+    run("D.rol='ogrenci';D.ogr=[{ad:'SENTETİK ADA',no:1001,kap:6,off:[6],aktif:true,ilkAktif:" + BUGUN + "}];rayCiz()"); assert(!nodes.ray.innerHTML.includes('ustAra'), 'a student has none');
+    run("D.rol='rehber';D.ogr=[];delete D.siralama"); assert.equal(run('ANALIZ.ustArama()'), '', 'no school lists: no search');
   });
   await check('teacher only, nothing stored: the page and the link need a rehber; the student is sent away; D is never changed', async () => {
     await kurTum(); run('D.yoklama=undefined'); run('EK.okKim="1001"');

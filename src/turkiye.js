@@ -526,7 +526,7 @@ function model(v,sec={}){
       const g=s.dag.dersler.get(anahtar(d.kod)),dg=g?{...g,n:g.tam?g.n:s.dag.n,aralik:g.tam?null:s.dag.aralik,adet:s.dag.adet,cift:s.dag.cift}:null;
       return noktaAl(d,okulK,dg,okulK&&kurumNeti&&kurumOk?kurumNeti(s.ad,d.kod):null)});
     const son=seri.filter(Boolean).pop();
-    return {kod:b.kod,ad:b.ad,oturum:b.oturum,soru:son?son.soru:null,renk:PALET[i%PALET.length],seri};
+    return {kod:b.kod,ad:b.ad,oturum:b.oturum,soru:son?son.soru:null,renk:GRAFIK_RENK.ders(b.kod)||PALET[i%PALET.length],seri};
   });
   const N=Math.max(1,...dersler.flatMap(d=>d.seri.filter(Boolean).map(p=>p.n)));
   const ozet=sinavlar.map((_,i)=>okul?ozetAl(dersler,i):null);
@@ -1113,6 +1113,7 @@ function kaynaklar(v,st,salt){
 function hesapNotu(){
   return '<details class="et-panel tg-hesap" id="tgHesap"><summary>Kaynaklar ve hesaplama</summary>'+
     '<p>'+DILIM_CUMLESI+'</p>'+
+    '<p><b>“Türkiye” neyi kapsar:</b> bu sayfadaki Türkiye, yayınevinin bu denemeye giren kurumlarıdır (seçili liste: Kolej, Kurs ya da tüm kurumlar); ülkedeki bütün okullar değildir. Dilim ve sıra bu kurumlar arasındaki yeri gösterir.</p>'+
     '<p>Dilim, okulun T puanının sözle söylenişidir; aynı hesaptır. Her ders için listedeki okulların netleri ve Türkiye ortalamasından, okul sayısı (N) ve okullar arasındaki yayılma (σ) Normal dağılıma uydurulur. T = 50 + 10 · (net − Türkiye ortalaması) / σ. Dilim = 100 · (1 − Φ((T − 50) / 10)); Φ standart normal dağılım fonksiyonudur (T 60 ≈ ilk %16, T 70 ≈ ilk %2,3). Tahmini sıra ≈ 1 + (N − 1) · dilim / 100.</p>'+
     '<p>Liste tam ise (100’den az okul) sıra listede yazandır ve dilim = sıra ÷ okul sayısı × 100 olur. Toplamlar için ders σ’ları dersler arası korelasyonla birleştirilir. Artış sırası, T’deki değişime (ΔT) göre sıralanır; üst dilimlerde ilerlemek daha zor olduğu için bu adildir. T, ΔT, σ ve N grafiklerin üzerine gelince açılan bilgi kutularında görünür.</p></details>';
 }
@@ -1398,14 +1399,27 @@ function icerik(){
   const ust='<header class="et-bas">'+baslik+'<p class="et-cumle">'+(st.mod==='artis'?cumleArtis(st):st.mod==='sira'?cumle(st):cumleT(st))+'</p></header>'+arac(st,salt)+durumSatiri+digerleri(st);
   if(!m.okul)return ust+'<section class="et-panel et-bos tg-okul-sec"><b>Okulunuzu seçin</b><p>Üstteki “Okul” listesinden okulunuzu seçin.</p></section>'+kaynaklar(veri,st,salt);
   if(!m.ozet[m.simdi])return ust+'<section class="et-panel et-bos"><b>Bu denemede '+kacis(m.oturum||'')+' dersi yok</b></section>'+kaynaklar(veri,st,salt);
-  if(st.mod==='tpuan')return ust+ozetT(st)+tPaneli(st)+dersPaneli(st)+dersKartlariT(st)+artisTSiralamasi(st)+okulTablosu(st)+dersTablosuT(st)+kaynaklar(veri,st,salt);
+  if(st.mod==='tpuan')return ust+ozetT(st)+tPaneli(st)+konuPaneli(st)+dersPaneli(st)+dersKartlariT(st)+artisTSiralamasi(st)+okulTablosu(st)+dersTablosuT(st)+kaynaklar(veri,st,salt);
   if(st.mod==='artis'){
     const grafik=st.odak?netPaneli(st):m.toplam?toplamPaneli(st):'';
     if(m.onceki===null)return ust+grafik+kaynaklar(veri,st,salt);
-    return ust+ozetArtis(st)+'<div class="et-iki">'+grafik+artisSiralamasi(st)+'</div>'+adimlarPaneli(st)+
+    return ust+ozetArtis(st)+'<div class="et-iki">'+grafik+artisSiralamasi(st)+'</div>'+konuPaneli(st)+adimlarPaneli(st)+
       (st.odak?'<div class="tg-ders-geri"><button type="button" class="et-dugme" data-tg-ders="">Tüm dersler</button></div>':'')+dersKartlariArtis(st)+farkArtisPaneli(st)+dersTablosuArtis(st)+kaynaklar(veri,st,salt);
   }
-  return ust+ozetKartlari(st)+siraPaneli(st)+dersKartlari(st)+(st.odak?'<div class="et-iki">'+netPaneli(st)+cevrePaneli(st)+'</div>':farkPaneli(st))+dersTablosu(st)+kaynaklar(veri,st,salt);
+  return ust+ozetKartlari(st)+siraPaneli(st)+konuPaneli(st)+dersKartlari(st)+(st.odak?'<div class="et-iki">'+netPaneli(st)+cevrePaneli(st)+'</div>':farkPaneli(st))+dersTablosu(st)+kaynaklar(veri,st,salt);
+}
+// Geride kalınan konular: the school's success on each topic's questions against Türkiye's (Konu Takibi holds the files and the
+// calculation; this is its summary for the session on screen). A row opens that ders in Konu Takibi · Türkiye'ye göre.
+function konuPaneli(st){
+  if(typeof KONU_TAKIBI!=='object'||!KONU_TAKIBI.geridekiKonular)return '';
+  let o,k;try{o=KONU_TAKIBI.oku();k=o.veri?KONU_TAKIBI.geridekiKonular(o.veri,{session:st.m.oturum},6):null}catch(e){k=null}
+  const git='<button type="button" class="et-dugme" data-tg-konu="">Konu, kazanım ve sorular →</button>';
+  if(!k||!k.var)return '<section class="et-panel tg-konu" id="tgKonu"><div class="et-kart-bas"><h2>Geride kalınan konular</h2>'+git+'</div><p class="mini tg-konu-not">Okulun hangi konu, kazanım ve sorularda Türkiye’nin gerisinde kaldığını görmek için Konu Takibi’ne aynı denemenin performans analizi, madde analizi ve sınav özeti dosyalarını ekleyin.</p></section>';
+  const Y=KONU_TAKIBI.yuzde,P=KONU_TAKIBI.puan;
+  return '<section class="et-panel tg-konu" id="tgKonu"><div class="et-kart-bas"><h2>Geride kalınan konular · '+kacis(k.session)+'</h2>'+git+'</div>'+
+    '<p class="mini tg-konu-not">Belirgin biçimde geride kalınan konu: '+fi(k.geride)+' / '+fi(k.toplam)+' · '+fi(k.sinav)+' deneme · okul '+Y(k.genel.okul)+', Türkiye '+Y(k.genel.tr)+'</p>'+
+    '<ol class="tg-konu-liste">'+k.liste.map(r=>'<li><button type="button" class="tg-konu-satir tg-konu-'+r.durum+'" data-tg-konu="'+kacis(r.dersId+'\u0001'+r.id)+'"><span class="tg-konu-ad"><b>'+kacis(r.ad)+'</b><span class="mini">'+kacis(r.ders)+' · '+fi(r.m)+' soru</span></span>'+
+      '<span class="tg-konu-oran">okul '+Y(r.okul)+' · Türkiye '+Y(r.tr)+'</span><span class="tg-konu-fark">'+P(r.fark)+' puan</span><span class="tg-konu-durum">'+(r.durum==='geride'?'Geride':r.durum==='ileride'?'İleride':'Fark belirsiz')+'</span></button></li>').join('')+'</ol></section>';
 }
 function gorunum(){
   if(!rehberMi())return '<div class="baslik"><h1>Türkiye geneli</h1></div><p>Bu sayfa rehber öğretmen içindir.</p>';
@@ -1443,6 +1457,8 @@ function dersSec(kod){
 }
 document.addEventListener('click',async ev=>{
   if(!etkin())return;
+  const konu=ev.target.closest?.('#tgKok [data-tg-konu]');
+  if(konu){const [ders,satir]=konu.dataset.tgKonu.split('\u0001');EK.ktGorunum='turkiye';EK.ktTr={...(EK.ktTr||{}),session:durumAl(oku().veri).m.oturum,exam:'*',course:ders||'*',seviye:'konu',olcu:'mutlak',sira:'fark',acik:satir||null};EK.sekme='konutakibi';ciz();window.scrollTo(0,0);return}
   const grafik=ev.target.closest?.('.et-grafik[data-tg-grafik="sira"],.et-grafik[data-tg-grafik="dt"],.et-grafik[data-tg-grafik="dtsira"],.et-grafik[data-tg-grafik="dtartis"]');
   if(grafik&&grafik.dataset.seri!==undefined){const g=CIZIMLER.get(grafik.dataset.tgGrafik),s=g&&g.seriler&&g.seriler[Number(grafik.dataset.seri)];if(s){dersSec(s.kod);return}}
   const el=ev.target.closest?.('[data-tg-mod],[data-tg-gor],[data-tg-aralik],[data-tg-sira],[data-tg-biz],[data-tg-toplam],[data-tg-liste],[data-tg-duzey],[data-tg-oturum],[data-tg-cizgi],[data-tg-ders],[data-tg-git],[data-tg-sil],#tgSilHepsi');if(!el||el.disabled)return;

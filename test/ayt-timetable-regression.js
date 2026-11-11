@@ -115,6 +115,16 @@ check('setting-roundtrips-to-teacher-and-can-be-turned-off-again',()=>{
  assert.equal(run('D.ogr[0].aytOncelik'),true);
  run('D=paketiYukle(ogrenciPaketi(0));aytOnceliginiUygula(0,false);work=ogrenciCalismaPaketi();work.ts=Date.now()+2000;D=teacher;ogrenciCalismasiniUygula(work,0)');assert.equal(run('D.ogr[0].aytOncelik'),false);
 });
+check('kendi-programim-roundtrips-to-the-teacher-and-its-end-reaches-her-too',()=>{
+ // The student switches it on: the teacher's copy gets the period and stops assuming İyi for the unanswered rows from that day.
+ run('teacher=D;D=paketiYukle(ogrenciPaketi(0));serbestAyarla(0,true);work=ogrenciCalismaPaketi();work.ts=Date.now()+3000;D=teacher;ogrenciCalismasiniUygula(work,0)');
+ const bugun=run('bugunNo()');assert.deepEqual(plain('D.ogr[0].serbest'),[[bugun,null]]);assert.equal(run('serbestAcikMi(0)'),true);
+ assert.equal(plain('[...varsayimIyiGunleri(0).values()].flat()').filter(g=>g>=bugun).length,0,'the teacher computes the same cards as the student');
+ // Switched off the same day: the empty list travels too (an absent field would leave the teacher's copy on).
+ run('D=paketiYukle(ogrenciPaketi(0));serbestAyarla(0,false);work=ogrenciCalismaPaketi();work.ts=Date.now()+4000;D=teacher;ogrenciCalismasiniUygula(work,0)');
+ assert.deepEqual(plain('D.ogr[0].serbest'),[]);assert.equal(run('serbestAcikMi(0)'),false);
+ run('D.ogr[0].serbest=[[5,3]]');assert.throws(()=>run('yedekDogrula(JSON.parse(JSON.stringify(D)))'),/kendi programım/);run('delete D.ogr[0].serbest');
+});
 check('invalid-values-and-editing-another-student-are-rejected',()=>{
  assert.equal(run("aytOnceliginiUygula(0,'yes')"),false);
  run("D.ogr[0].aytOncelik='yes'");assert.throws(()=>run('yedekDogrula(D)'),/AYT/);

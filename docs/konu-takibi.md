@@ -83,6 +83,64 @@ Storage: optional `zorluk: {[examKey]: {ad, oturum, ogrenci, ts, ozet, madde}}` 
 `D.konutakibi` (≤ 60 exams, ≤ 200 questions per course, p in [0, 1]); it shares the 350 KB limit.
 Removing an exam in Kaynaklar leaves its difficulty data until that is removed too.
 
+## Türkiye’ye göre (where the school and each pupil are behind)
+
+**Görünüm: Gelişim | Türkiye’ye göre.** The second view compares the school's success on every question with the
+network's. It needs, for the same exam: the publisher's **Performans analizi** (PDF “27-YKS-1203 SINAVI ANALİZLERİ”:
+the share of all the publisher's pupils who answered each question of the A booklet correctly), the school's **Madde
+Analizi** and, for konu and kazanım, the **Sınav özeti**. All three go through **Dosya Yükle**; the Performans analizi
+is recognised by its title and read by the Yanlışlar defteri parser. Only the exam code and one p per question are
+kept (`zorluk[exam].turkiye = {course: [p, …]}`): no counts, no school, no pupil. The file names its exam by the code
+only, so it joins the entry whose name carries the same code ("27 YKS 1203 TYT" and "27-YKS-1203" are one exam).
+Kaynaklar shows "Türkiye (performans analizi) ✓" with its own **Türkiye verisini kaldır**.
+
+What the page shows, top to bottom:
+
+- **Okul − Türkiye** (the headline, in percentage points, with its interval), **Geride kalınan ders**, the most
+  behind ders or topic, and the amount of data (questions, exams, pupils).
+- Controls: Sınıf (only when exams of several grades are stored; grades are never mixed, a grade is the karne pupils'
+  grade or the exam code's, "27-YKS-1203" → 12), Oturum, Deneme (all or one), Ders, **Ölçü**.
+- **Dersler · okul ve Türkiye**: one row per ders, the school's dot against Türkiye's tick on a 0–100 scale, the two
+  rates, the difference ± interval, the number of questions and **Durum**. A row selects the ders.
+- **Konular / Kazanımlar / Sorular** of the selected ders (**Düzey**), sorted (En geride, En ileride, En çok soru, Ada
+  göre). A konu or kazanım row opens its questions as chips ("S12 · okul %31 · Türkiye %58").
+- **Öğrenciler · kim nerede geride**: pupils × dersler (or × the topics of the selected ders). A cell is the pupil's
+  correct answers minus what a pupil at the Türkiye average would be expected to get on the same questions (Σ Türkiye p
+  over the kazanım rows of the karne; unit: questions). The most behind pupil is on top, the school's most behind
+  column on the left; colour follows the difference per question, so a 40-question ders and a 7-question ders share
+  one scale. A name opens Öğrenci kartı. Needs the pupils' karne and the Sınav özeti.
+
+### How it is calculated
+
+- **Rates.** okul = Σ doğru ÷ Σ pupils over the group's questions (Madde Analizi); Türkiye = the same weighted mean
+  of the Performans analizi p. **Fark** = okul − Türkiye, in percentage points.
+- **Dersin geneline göre** (the second Ölçü, inside a ders). A school can be above or below Türkiye in a whole ders.
+  For every exam and ders one shift d on the logit scale is solved from Σ σ(logit(p_TR) + d) = Σ p_okul; a
+  question's *beklenen* is σ(logit(p_TR) + d), what a school at this school's level would score on it. okul − beklenen
+  sums to zero inside the ders, so it shows the topics that are weak for the school's own level. This is the logic of
+  differential item functioning (Holland & Wainer 1993), applied to a school instead of a demographic group.
+- **Interval.** The same pupils answer every question of a group, so answers are not independent. With m questions and
+  N pupils, Var(group mean) = [Σv + r·((Σ√v)² − Σv)] / (m²·N), v = p(1 − p) with p smoothed by one right and one wrong
+  answer, r = 0,2 the assumed correlation between two questions (`R_MADDE`; the mean inter-item correlation behind a
+  KR-20 of about 0,9 on 40 questions). r = 0 would be the binomial interval, which is too narrow. The page shows
+  ± 1,96·SE.
+- **Durum.** *Geride* only when the whole interval is below zero, *İleride* when it is above; otherwise *Fark belirsiz*.
+  With about 30 pupils a two-question topic has an interval of roughly ±20 points, so only large gaps are established;
+  pooling several exams narrows it.
+- **Kıyas: Okul içi | Türkiye** (Gelişim view, when a Türkiye file exists) switches the baseline of "zorluğa göre" to
+  Türkiye's rates; the figure is then called "Türkiye’ye göre" everywhere (rows, history tables, Sırala, summary).
+
+### Limits
+
+- "Türkiye" is the publisher's network: the pupils who sat this publisher's exam, not every pupil in the country.
+- The Performans analizi is for the A booklet; the school's Madde Analizi pools both booklets on A numbering.
+- r = 0,2 is an assumption; a topic whose questions are near copies of each other correlates more and has a wider
+  true interval. About one row in twenty is flagged by chance when many rows are read together.
+- A question carrying several kazanım codes is counted in each of them (the publisher's own convention).
+
+Other pages read the same calculation: **Türkiye geneli** shows "Geride kalınan konular" (`geridekiKonular`), and
+**Öğrenci kartı → Zayıf konular** uses the Türkiye baseline when the file is there.
+
 ## Import and topic association
 
 Parsing uses the shared browser PDF.js reader, including its 15 MB/file and
@@ -142,7 +200,8 @@ Shared board tokens live in `src/etutler.css`; run its embed script after change
 The fixture and test suites contain synthetic students only; private PDFs,
 parsed records and screenshots of real students must never enter Git or CI.
 
-- `node test/konutakibi-regression.cjs`: parsing, weighted history, missing data,
+- `node test/konutakibi-regression.cjs`: Türkiye’ye göre worked by hand (rates, interval, status, relative measure,
+  grades and exams, missing parts, each pupil, the upload and the page); parsing, weighted history, missing data,
   duplicate and paired imports, date conflicts, scope, validation, rollback,
   editor permissions, escaped document text and student packet isolation.
 - `node test/konutakibi-browser.cjs`: upload, date entry, drilldowns, charts,

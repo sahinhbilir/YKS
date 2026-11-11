@@ -590,15 +590,24 @@ function denemeGrafikListesi(tum,{tur,oturum,brans,alan,genelVar}) {
 }
 // opt: metrik (default: Denemelerim's choice), alan, genislik (px; default follows the page), hedef (a goal line, net),
 // ac (points open Denemelerim instead of its detail strip; used on the home page).
+// Round axis values: a step of 1, 2, 2,5 or 5 × 10^k that gives about four intervals, the ends on multiples of it.
+function denemeYuvarlakEksen(min,max,hedefAdet=4) {
+  const ham=(max-min)/hedefAdet||1,us=Math.pow(10,Math.floor(Math.log10(ham))),k=ham/us,adim=(k<=1?1:k<=2?2:k<=2.5?2.5:k<=5?5:10)*us;
+  const alt=Math.floor(min/adim+1e-9)*adim,ust=Math.ceil(max/adim-1e-9)*adim,ticks=[];
+  for(let t=alt;t<=ust+adim/2;t+=adim)ticks.push(Math.round(t*1e6)/1e6);
+  return {alt,ust,adim,ticks};
+}
+// "24 Eyl": the way the teacher's boards write a date; the year is added when the chart spans two years.
+const denemeKisaTarih=(iso,yilli)=>{const [y,m,d]=String(iso||'').split('-').map(Number);return Number.isFinite(d)&&DENEME_AY[m-1]?d+' '+DENEME_AY[m-1]+(yilli?' '+y:''):String(iso||'')};
 function denemeGrafik(liste,opt={}) {
   if(!liste.length)return '<div class="dn-bos"><b>Henüz deneme yok</b><p>İlk sonucunu eklediğinde gelişimin burada görünecek.</p></div>';
   const alan=opt.alan || denemeAlan(),metrik=opt.metrik || denemeMetrik(),m=DENEME_METRIK[metrik],val=r=>denemeDeger(r,metrik,alan),hedef=Number.isFinite(opt.hedef)?opt.hedef:null;
   const points=liste.filter(r=>val(r)!==null),eksik=liste.length-points.length;
   if(!points.length)return '<div class="dn-bos">'+(metrik==='puan'?'Bu grafik için yayınevi puanı gerekli. Denemeyi düzenleyip sonuç raporundaki puanı ekleyin.':'Bu grafik için tamamlama süresi gerekli. Denemenin ayrıntısında “Süreyi gir / düzelt” ile süre ekleyin.')+'</div>';
   // Net/dk values are around 0–1, so the minimum axis span follows the metric.
-  const width=opt.genislik?Math.max(280,Math.min(900,Math.round(opt.genislik))):Math.max(320,Math.min(900,(document.getElementById('ana')?.clientWidth||960)-56)),height=280,left=50,right=22,top=24,bottom=38,values=points.map(val),lo=Math.min(0,...values),hi=Math.max(...values,m.adim,hedef ?? 0),pad=Math.max((hi-lo)*.12,m.adim),min=lo<0?lo-pad:0,max=hi+pad;
+  const width=opt.genislik?Math.max(280,Math.min(900,Math.round(opt.genislik))):Math.max(320,Math.min(900,(document.getElementById('ana')?.clientWidth||960)-56)),height=280,left=50,right=22,top=24,bottom=38,values=points.map(val),lo=Math.min(0,...values),hi=Math.max(...values,m.adim,hedef ?? 0),pad=Math.max((hi-lo)*.12,m.adim),eksen=denemeYuvarlakEksen(lo<0?lo-pad:0,hi+pad),min=eksen.alt,max=eksen.ust;
   const dates=points.map(r=>gunNo(r.tarih)),first=Math.min(...dates),last=Math.max(...dates),x=i=>first===last?(points.length===1?width/2:left+i*(width-left-right)/(points.length-1)):left+(dates[i]-first)*(width-left-right)/(last-first),y=v=>height-bottom-(v-min)*(height-top-bottom)/(max-min);
-  const coords=points.map((r,i)=>{const same=dates.map((d,j)=>d===dates[i]?j:-1).filter(j=>j>=0),offset=first===last?0:(same.indexOf(i)-(same.length-1)/2)*Math.min(8,24/Math.max(1,same.length-1));return [Math.max(left,Math.min(width-right,x(i)+offset)),y(val(r))];}),line=coords.map(p=>p.join(',')).join(' '),ticks=Array.from({length:5},(_,i)=>min+(max-min)*i/4);
+  const coords=points.map((r,i)=>{const same=dates.map((d,j)=>d===dates[i]?j:-1).filter(j=>j>=0),offset=first===last?0:(same.indexOf(i)-(same.length-1)/2)*Math.min(8,24/Math.max(1,same.length-1));return [Math.max(left,Math.min(width-right,x(i)+offset)),y(val(r))];}),line=coords.map(p=>p.join(',')).join(' '),ticks=eksen.ticks;
   // Borsa grafiği gibi: her çizgi parçası, vardığı denemenin önceki (en fazla) 4 denemenin ortalamasına
   // göre; her nokta bir önceki denemeye göre renklenir. Süre grafiğinde kısalma iyileşmedir.
   const iyiYon=metrik==='sure'?-1:1,yon=(a,b)=>Math.abs(a-b)<.005?'esit':(a-b)*iyiYon>0?'yukari':'asagi';
@@ -610,12 +619,15 @@ function denemeGrafik(liste,opt={}) {
   const hedefCizgi=hedef===null?'':'<line class="dn-hedef" x1="'+left+'" x2="'+(width-right)+'" y1="'+y(hedef)+'" y2="'+y(hedef)+'"/><text class="dn-hedef-yazi" x="'+(left+6)+'" y="'+(y(hedef)-5)+'">Hedef '+denemeSayi(hedef)+'</text>';
   // One unbroken line under the coloured segments: the series is continuous whatever the dates are.
   const surekli=points.length>1?'<polyline points="'+line+'" class="dn-cizgi"/>':'';
-  const nokta=opt.ac?'data-dn-yol':'data-dn-dot';
+  const nokta=opt.ac?'data-dn-yol':'data-dn-dot',yilli=points[0].tarih.slice(0,4)!==points.at(-1).tarih.slice(0,4);
   return '<div class="dn-chart"><svg viewBox="0 0 '+width+' '+height+'" role="group" aria-label="Deneme gelişim grafiği. Noktaları seçerek sonuçları inceleyin.">'+
     ticks.map(t=>'<line x1="'+left+'" y1="'+y(t)+'" x2="'+(width-right)+'" y2="'+y(t)+'" class="dn-grid"/><text x="'+(left-8)+'" y="'+(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
     '<polygon points="'+left+','+(height-bottom)+' '+line+' '+coords.at(-1)[0]+','+(height-bottom)+'" class="dn-area"/>'+hedefCizgi+ortCizgi+surekli+parcalar+
     points.map((r,i)=>{const kaynak=r.genel?' · '+r.genel+' denemesinden':'';return '<circle class="dn-dot '+(i?yon(values[i],values[i-1]):'esit')+(r.genel?' genel':'')+'" tabindex="0" role="button" aria-label="'+kacis(r.ad+kaynak+' '+r.tarih+' '+denemeSayi(val(r))+m.birim+egilim(i))+'" '+nokta+'="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad+kaynak+' · '+r.tarih+' · '+denemeSayi(val(r))+m.birim+egilim(i))+'</title></circle>';}).join('')+
-    '<text x="'+left+'" y="'+(height-10)+'">'+points[0].tarih+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?points.at(-1).tarih:'')+'</text></svg>'+
+    '<text x="'+left+'" y="'+(height-10)+'">'+denemeKisaTarih(points[0].tarih,yilli)+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?denemeKisaTarih(points.at(-1).tarih,yilli):'')+'</text></svg>'+
+    // What the colours and the dashed line mean, so the chart reads without a guide.
+    (points.length>1?'<div class="dn-lejant" aria-hidden="true"><span><i class="dn-l-nokta yukari"></i>önceki denemeden '+(metrik==='sure'?'kısa':'yüksek')+'</span><span><i class="dn-l-nokta asagi"></i>'+(metrik==='sure'?'uzun':'düşük')+'</span>'+
+      (points.length>2?'<span><i class="dn-l-ort"></i>önceki 4 denemenin ortalaması</span>':'')+(hedef===null?'':'<span><i class="dn-l-hedef"></i>hedef</span>')+'</div>':'')+
     (eksik?'<p class="mini">'+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.</p>':'')+'</div>';
 }
 // Eksen yardımcıları ve branş listesi öğretmenin ortalama grafiğiyle (denemeYolSvg) ortaktır. Öğrencinin ana sayfadaki
@@ -905,6 +917,18 @@ function denemeEksikSatiri(si) {
   const n=yalnizcaGoruntuleme()?0:denemeEksikSayisi(si);
   return n?'<p class="dn-eksik" id="dnEksik" role="status">Bu öğrencinin ekranında '+n+' deneme eksik · <button type="button" class="et-dugme" id="dnEksikGonder" data-si="'+si+'">Öğrencilere gönder</button></p>':'';
 }
+// The student's own usual range for the next exam, from up to five earlier results (at least three): mean ± t·s·√(1+1/n), the
+// two-sided 90% prediction interval (t = 2,920 / 2,353 / 2,132 for 3 / 4 / 5 results, as in the teacher's Dikkat rule). Two exams
+// are never the same difficulty, so one step up or down says little by itself; a result outside this range does.
+const DENEME_OLAGAN_T={2:2.920,3:2.353,4:2.132}, DENEME_OLAGAN_EN_AZ=3, DENEME_OLAGAN_PENCERE=5;
+function denemeOlaganAralik(onceki) {
+  const l=(onceki||[]).filter(Number.isFinite).slice(-DENEME_OLAGAN_PENCERE),n=l.length;
+  if(n<DENEME_OLAGAN_EN_AZ)return null;
+  const ort=l.reduce((a,b)=>a+b,0)/n,s=Math.sqrt(l.reduce((a,x)=>a+(x-ort)**2,0)/(n-1)),pay=DENEME_OLAGAN_T[n-1]*s*Math.sqrt(1+1/n);
+  return {n,ort,alt:ort-pay,ust:ort+pay};
+}
+// Where a result stands against that range: 'asagi' | 'esit' | 'yukari' (null without a range).
+const denemeOlaganKonum=(v,ar)=>!ar||!Number.isFinite(v)?null:v<ar.alt-1e-9?'asagi':v>ar.ust+1e-9?'yukari':'esit';
 function gorunumDenemeler() {
   const rehber=rehberMi(),kisiAcik=denemeKisiAcikMi();
   if(rehber && !kisiAcik && typeof gorunumDenemePanosu==='function')return gorunumDenemePanosu();
@@ -917,12 +941,19 @@ function gorunumDenemeler() {
   // With the net/dk chart selected the summary follows it, over exams that have a time.
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan));
   const son_=ozet.length?ozet.at(-1):null,onc=ozet.length>1?ozet.at(-2):null,ilk=ozet.length>1?ozet[0]:null,enYuksek=ozet.length?Math.max(...ozet):null;
-  const yazi=v=>(v>0?'+':v<0?'−':'')+denemeSayi(Math.abs(v)),hap=v=>'<span class="et-hap '+(v>0?'yukari':v<0?'asagi':'esit')+'">'+(v>0?'<span aria-hidden="true">▲</span>':v<0?'<span aria-hidden="true">▼</span>':'')+denemeSayi(Math.abs(v))+'</span>',not=t=>'<span class="dp-kpi-not">'+t+'</span>';
+  const yazi=v=>(v>0?'+':v<0?'−':'')+denemeSayi(Math.abs(v)),not=t=>'<span class="dp-kpi-not">'+t+'</span>';
   const kart=(sinif,ad,buyuk,alt)=>'<div class="et-ozet-kart'+sinif+'"><span class="dp-kpi-ad">'+ad+'</span><strong>'+buyuk+'</strong><div class="dp-kpi-alt">'+alt+'</div></div>';
+  // The step from the exam before is a plain number (two exams are not one scale); the colour belongs to where the result stands
+  // against the student's own usual range, when there are enough earlier exams to have one.
+  const notr=v=>'<span class="et-hap esit">'+yazi(v)+'</span>';
+  const ar=denemeOlaganAralik(ozet.slice(0,-1)),konum=denemeOlaganKonum(son_,ar);
+  const olagan=onc===null?'':!ar?'<span class="dp-kpi-not dn-olagan" id="dnOlagan">Tek denemelik fark denemenin zorluğundan da olabilir; olağan aralığın '+(DENEME_OLAGAN_EN_AZ+1)+'. denemeden sonra görünür.</span>':
+    '<span class="dp-kpi-not dn-olagan dn-olagan-'+konum+'" id="dnOlagan" title="Önceki '+ar.n+' denemenin ortalaması '+denemeSayi(ar.ort)+'. Aralık: bu denemelerin oynamasına göre bir sonraki sonucun %90 olasılıkla düşeceği yer.">'+
+    (konum==='esit'?'Olağan aralığında':konum==='asagi'?'<b>Olağan aralığının altında</b>':'<b>Olağan aralığının üstünde</b>')+' · '+denemeSayi(Math.max(0,ar.alt))+' – '+denemeSayi(ar.ust)+'</span>';
   const kpi='<div class="et-ozet dp-kpi" id="dpKpi">'+
-    kart(' dp-kpi-ana',hizOzet?'Son net/dk':'Son net',son_===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(son_)+'<small>'+(hizOzet?'net/dk':'net')+'</small>',son_===null?not('Seçili aralıkta deneme yok'):onc!==null?hap(son_-onc)+not('önceki denemeye göre'):not('tek deneme'))+
+    kart(' dp-kpi-ana',hizOzet?'Son net/dk':'Son net',son_===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(son_)+'<small>'+(hizOzet?'net/dk':'net')+'</small>',son_===null?not('Seçili aralıkta deneme yok'):onc!==null?notr(son_-onc)+not('önceki denemeye göre')+olagan:not('tek deneme'))+
     kart('',hizOzet?'Ortalama net/dk':'Ortalama',ozet.length?denemeSayi(ozet.reduce((a,b)=>a+b,0)/ozet.length):'<span class="dp-kpi-yok">veri yok</span>',not((hizOzet?'süreli ':'')+ozet.length+' deneme'+(genelSayi && !hizOzet?' · TYT/AYT’den '+genelSayi:'')))+
-    kart('','En yüksek',enYuksek===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(enYuksek),enYuksek===null?'':son_>=enYuksek?not('son deneme en yüksek'):hap(son_-enYuksek)+not('en yükseğe göre'))+
+    kart('','En yüksek',enYuksek===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(enYuksek),enYuksek===null?'':son_>=enYuksek?not('son deneme en yüksek'):not('son deneme bunun '+denemeSayi(enYuksek-son_)+' altında'))+
     kart('','İlk denemeden değişim',ilk===null?'<span class="dp-kpi-yok">veri yok</span>':yazi(son_-ilk),ilk===null?not('karşılaştırma için iki deneme gerekir'):not('ilk '+denemeSayi(ilk)+' → son '+denemeSayi(son_)))+'</div>';
   const rehberKisi=rehber?'<header class="et-bas"><h1 class="et-baslik">Deneme Panosu · '+kacis(D.ogr[EK.ogr].ad)+'</h1><p class="et-cumle">'+kacis(D.ogr[EK.ogr].sube || '')+' · '+kacis(D.ogr[EK.ogr].alan || '')+' · yalnızca bu öğrencinin sonuçları</p></header>'+
     '<div class="et-arac"><button type="button" class="et-dugme" id="dpSinifaDon">← Sınıf panosu</button>'+ogrSecici()+

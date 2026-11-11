@@ -48,7 +48,7 @@ Yüzeyler ve çizgiler artık tonsuz gridir (R, G, B farkı ≤ 3). Teal yalnız
 | Çok sayıda dolu teal blok (seçili segmentler) | koyu tema, Deneme panosu üst şeridi | Seçili segment nötr yüksek gri + vurgu yazı/çerçeve (`--secili-*`); dolu vurgu yalnız birincil düğmede |
 | Teal yüzey ve çizgiler | tüm koyu ekranlar | Nötr gri belirteçler; açılır yüzeyler `--kagit-yuksek` |
 | Aynı öğrencinin sınavı iki ayrı, birbirinden kopuk ekranda (eski “Öğrenci bazında”) | Denemeler | Eski sayfa silindi; öğrencinin kendi panosu sınıf panosundan, Öğrenci kartından ve Kademeler’den açılır |
-| Öğrenci panosunda beş eşit çıplak kutu | Denemelerim / öğretmenin öğrenci panosu | Ana “Son net” (önceki denemeye göre) + Ortalama, En yüksek (son denemeye göre), İlk denemeden değişim; tek denemede “veri yok” |
+| Öğrenci panosunda beş eşit çıplak kutu | Denemelerim / öğretmenin öğrenci panosu | Ana “Son net” (önceki denemeye göre fark renksiz; renk öğrencinin kendi olağan aralığına göre, bkz. docs/mock-exams.md) + Ortalama, En yüksek (son denemeye göre, oksuz), İlk denemeden değişim; tek denemede “veri yok” |
 | Tekrar eden ölü CSS | `report-theme.css`, `denemeler.css` | `.dn-stats` kişisel kuralları kaldırıldı |
 
 Denetlenen ve değişiklik gerektirmeyen ekranlar (1280 ve 390, açık ve koyu): öğretmen ana sayfası, Öğrenci kartı, Etüt etkisi, Yoklama, Konu takibi, Yanlışlar defteri, Kademeler (mavi ölçek ve kontrast denetimleri aynen geçer), Üniversite hedefi, Günlük raporlar, öğrenci planı. Bunlardaki KPI sayıları ortak `.et-ozet-kart`/`.kutu` kuralıyla artık yazı renginde, yüzeyleri nötr gridir. Kademeler’in mavi ölçeği ve Yoklama’nın durum renkleri bilinçli olarak korunmuştur.

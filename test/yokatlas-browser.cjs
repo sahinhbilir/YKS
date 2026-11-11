@@ -48,7 +48,9 @@ fs.mkdirSync(out,{recursive:true});
   const lists=()=>page.locator('.ya-liste');
   assert.equal(await page.locator('.ya-liste').nth(0).locator('.ya-row').count(),24);assert.equal(await page.locator('.ya-liste').nth(1).locator('.ya-row').count(),24);
   const tahmin=await page.locator('.ya-tahmin').innerText();
-  assert.match(tahmin,/Tahmini SAY puanın ≈ \d{3},\d ± \d,\d puan · başarı sırası ≈ [\d.]+/);assert.match(tahmin,/\(diploma notu girilmedi, 95 \(OBP 475\) sayıldı\)/);
+  assert.match(tahmin,/Tahmini SAY puanın ≈ \d{3},\d puan · başarı sırası ≈ [\d.]+/);assert(!/±/.test(tahmin),'the fit error is not shown as the uncertainty of the result');
+  assert.match(await page.locator('#yaAralik').innerText(),/^(Son denemelerinin en düşük ve en yüksek netleriyle: \d{3},\d – \d{3},\d puan|Aralık için her oturumdan en az 3 deneme gerekli)/);
+  assert.match(await page.locator('.ya-kaynak-net').innerText(),/net→puan dönüşüm hatası ± \d,\d/);assert.match(tahmin,/\(diploma notu girilmedi, 95 \(OBP 475\) sayıldı\)/);
   assert(!/NaN|undefined/.test(await page.locator('#yaKok').innerText()));
   assert.match(await page.locator('#yaKok h2').allInnerTexts().then(t=>t.join('|')),/Yükselirsen\|Düşersen \/ şu an/);
   // the latest usable exams (Genel ones) are the centre; the incomplete newest TYT is skipped

@@ -46,3 +46,27 @@
 #ktKok .kt-chip-zor{border-color:var(--e-bad);color:var(--e-bad)}#ktKok .kt-chip-kolay{border-color:var(--e-ok);color:var(--e-ok)}
 #ktKok .kt-zline{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;font-size:.8125rem;color:var(--e-fg2)}#ktKok .kt-zline .et-dugme{margin-left:auto}
 @media(max-width:700px){#ktKok{padding:16px}#ktKok .kt-sort{flex:1 1 100%}#ktKok .kt-filters{grid-template-columns:1fr 1.7fr;gap:12px}#ktKok .kt-topic>summary{grid-template-columns:minmax(0,1fr) 64px;gap:12px;padding:18px 16px}#ktKok .kt-topic>summary .kt-bar{grid-row:2;grid-column:1}#ktKok .kt-topic>summary strong{grid-row:1;grid-column:2}#ktKok .kt-topic>summary .kt-change{grid-row:2;grid-column:2}#ktKok .kt-detail{padding:0 16px 18px}#ktKok .kt-outcome>summary{grid-template-columns:minmax(0,1fr) 64px;gap:12px}#ktKok .kt-outcome>summary .kt-bar{grid-column:1 / -1;grid-row:2}#ktKok .kt-source{grid-template-columns:minmax(0,1fr) auto;gap:14px}#ktKok .kt-source>div{grid-column:1 / -1}#ktKok .kt-mapping{grid-template-columns:minmax(0,1fr) auto}#ktKok .kt-mapping>label{grid-column:1 / -1}#ktKok .kt-has-z .kt-topic>summary,#ktKok .kt-has-z .kt-outcome>summary{grid-template-columns:minmax(0,1fr) 64px}#ktKok .kt-zcell{grid-column:1 / -1}#ktKok .kt-zline .et-dugme{margin-left:0}}
+/* Türkiye'ye göre: the school's dot against Türkiye's tick, and the pupils' table. */
+#ktKok .kt-satir{flex-direction:row;align-items:center;gap:8px}#ktKok .kt-satir select{min-height:32px;padding:4px 10px;border-radius:999px;font-size:.8125rem}
+#ktKok .kt-tr-tablo{min-width:660px}#ktKok .kt-tr-tablo th,#ktKok .kt-tr-tablo td{padding:8px 10px}
+#ktKok .kt-tr-tablo td span.kt-muted{display:inline;margin:0}#ktKok .kt-tr-tablo td:last-child,#ktKok .kt-tr-tablo th:last-child{text-align:left}
+#ktKok .kt-tr-tablo .kt-db-h{width:28%;min-width:150px;text-align:left}
+#ktKok .kt-db{position:relative;display:block;height:14px;border-radius:7px;background:var(--e-grid)}#ktKok .kt-db i{position:absolute;top:50%}
+#ktKok .kt-db-cizgi{height:3px;margin-top:-1.5px;background:var(--e-fg2);border-radius:2px}
+#ktKok .kt-db-tr{width:2px;height:18px;margin:-9px 0 0 -1px;background:var(--e-fg)}
+#ktKok .kt-db-okul{width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--e-fg2);box-shadow:0 0 0 2px var(--e-panel)}
+#ktKok .kt-tr-geride .kt-db-cizgi,#ktKok .kt-tr-geride .kt-db-okul{background:var(--e-bad)}#ktKok .kt-tr-ileride .kt-db-cizgi,#ktKok .kt-tr-ileride .kt-db-okul{background:var(--e-ok)}
+#ktKok .kt-db-olcek{display:flex;justify-content:space-between;font-weight:400}
+#ktKok .kt-rozet{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.75rem;font-weight:500;border:1px solid var(--e-line);color:var(--e-fg2);white-space:nowrap}
+#ktKok .kt-rozet-geride{color:var(--e-bad);border-color:var(--e-bad)}#ktKok .kt-rozet-ileride{color:var(--e-ok);border-color:var(--e-ok)}
+#ktKok .kt-tr-fark b{font-weight:600}#ktKok .kt-tr-geride .kt-tr-fark b{color:var(--e-bad)}#ktKok .kt-tr-ileride .kt-tr-fark b{color:var(--e-ok)}
+#ktKok .kt-tr-ad,#ktKok .kt-isi .et-ad{border:0;background:transparent;color:inherit;font:inherit;font-weight:600;padding:0;cursor:pointer;text-align:left}
+#ktKok .kt-tr-ad:hover,#ktKok .kt-isi .et-ad:hover{text-decoration:underline}
+#ktKok tr.secili>*{background:color-mix(in srgb,var(--e-fg) 6%,transparent)}
+#ktKok .kt-tr-ayrinti td{text-align:left;white-space:normal;padding:2px 10px 14px}
+#ktKok .kt-isi-kutu{max-height:36rem;overflow:auto;border:1px solid var(--e-line);border-radius:6px}
+#ktKok .kt-isi{min-width:0;width:auto}#ktKok .kt-isi th,#ktKok .kt-isi td{padding:6px 10px}#ktKok .kt-isi td,#ktKok .kt-isi thead th:not(:first-child){min-width:76px}
+#ktKok .kt-isi thead th{position:sticky;top:0;z-index:2;background:var(--e-panel);max-width:8.5rem;white-space:normal;vertical-align:bottom;font-size:.75rem;line-height:1.25}
+#ktKok .kt-isi tbody th{position:sticky;left:0;z-index:1;background:var(--e-panel);white-space:nowrap;min-width:150px}#ktKok .kt-isi thead th:first-child{left:0;z-index:3}
+#ktKok .kt-isi-bos{color:var(--e-muted)}#ktKok .kt-eksik{margin:8px 0 0;padding-left:18px;color:var(--e-fg2);font-size:.8125rem}
+@media(max-width:700px){#ktKok .kt-dar-gizle{display:none}#ktKok .kt-tr-tablo{min-width:480px}#ktKok .kt-tr-tablo .kt-db-h{min-width:84px;width:22%}#ktKok .kt-isi tbody th{min-width:118px;white-space:normal}}

@@ -276,7 +276,7 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     for (let eA = 0; eA <= 3; eA++) for (let eB = 0; eB <= 2; eB++) for (let rep = 0; rep < 2; rep++, i++) { const x0 = ((i * 5) % 7) - 3; L.push(oge('M' + i, x0, 1 - 0.2 * x0 + 0.6 * eA + 0 * eB, eA, eB)); }
     const m = eski(L, {}, TR), a = hoc(m, 'A'), b = hoc(m, 'B');
     assert(bit(a.b, 0.6, 1e-9) && Math.abs(b.b) < 1e-9, [a.b, b.b].join()); assert.equal(a.n, 18); assert.equal(b.n, 16); assert.equal(a.etut, 36); assert.equal(b.etut, 24);
-    assert(bit(a.toplam, 0.6 * 36, 1e-9) && Math.abs(b.toplam) < 1e-9, 'Toplam katkı = γ × the etüts the teacher gave'); assert.deepEqual([a.sira, b.sira], [1, 2]); assert(a.ci && a.ci[0] > 0.59 && b.ci);
+    assert(bit(a.toplam, 0.6 * 36, 1e-9) && Math.abs(b.toplam) < 1e-9, 'Toplam katkı = γ × the etüts the teacher gave'); assert.deepEqual([a.sira, b.sira], [1, null], 'a place only for an established effect: B’s interval includes zero'); assert.deepEqual([a.belirgin, b.belirgin], [true, false]); assert(a.ci && a.ci[0] > 0.59 && b.ci);
     const ikisi = m.ogrenciler.find(r => r.sayilar[A] === 2 && r.sayilar[B] === 1); assert(ikisi, 'a student with both teachers'); assert.deepEqual(ikisi.sayilar, { [A]: 2, [B]: 1 });
     assert(!('hoca' in ikisi), 'no shares'); assert.deepEqual(m.uc, []);
     run("EK.eeHoca='SENTETİK ÖĞRETMEN B'"); merged(L); trSayfa(TR); const h = run('ETUT_ETKI.icerik()'); assert.match(h, /<h3 class="ee-alt-baslik">Etüt aldıkça artış · öğrenciler arası · Sentetik Öğretmen B<\/h3>/); assert.equal((h.match(/<tr><td class="tg-ad">Sentetik Öğrenci /g) || []).length, 16, 'B’s students');
@@ -479,7 +479,7 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     const m = trC(coklu({ n: 36, dersler: ['fizik', 'mat', 'kimya'], e: eA, eB: eBf, dil: i => (i % 5) * 0.1, katA: { fizik: 0.6 }, katB: { fizik: 0 } }), { ders: 'Fizik' });
     const a = hoc(m, 'A'), b = hoc(m, 'B'); assert(a && b);
     assert(bit(a.b, 0.6, 0.02) && Math.abs(b.b) < 0.02, [a.b, b.b].join()); assert.equal(a.etut, m.ogrenciler.reduce((t, r) => t + (r.sayilar[A] || 0), 0)); assert.equal(b.etut, m.ogrenciler.reduce((t, r) => t + (r.sayilar[B] || 0), 0));
-    assert(bit(a.toplam, a.b * a.etut, 1e-9) && bit(b.toplam, b.b * b.etut, 1e-9), 'Toplam katkı = γ × etüts'); assert.deepEqual([a.sira, b.sira], [1, 2]); assert(a.ci && a.ci[0] > 0.5 && b.ci && b.ci[0] < 0 && b.ci[1] > 0);
+    assert(bit(a.toplam, a.b * a.etut, 1e-9) && bit(b.toplam, b.b * b.etut, 1e-9), 'Toplam katkı = γ × etüts'); assert.deepEqual([a.sira, b.sira], [1, null], 'B’s interval spans zero: no place'); assert.deepEqual([a.belirgin, b.belirgin], [true, false]); assert(a.ci && a.ci[0] > 0.5 && b.ci && b.ci[0] < 0 && b.ci[1] > 0);
     const ikisi = m.ogrenciler.find(r => r.sayilar[A] && r.sayilar[B]); assert(ikisi && !('hoca' in ikisi), 'a student with both teachers, no shares');
     assert.equal(a.n, m.ogrenciler.filter(r => r.sayilar[A]).length); assert(!a.az && !b.az);
     // Diligence does not turn into the teacher’s credit either.
@@ -493,7 +493,7 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     // The two T students: B-style etüt of teacher T in the second interval, planted +2 per etüt.
     for (const i of [30, 31]) { L[i].sessions.push({ date: ekle(TARIH[1], 1), course: 'FİZİK', teacher: 'SENTETİK ÖĞRETMEN T', minutes: 40, time: 900 }); L[i].exams.forEach((e, k) => { if (k >= 2) e.nets.fizik = Math.round((e.nets.fizik + 2) * 1e5) / 1e5; }); }
     const m = trC(L, { ders: 'Fizik' }), a = hoc(m, 'A'), b = hoc(m, 'B'), t = hoc(m, 'T'), oA = m.hocaOlay[a.key], oB = m.hocaOlay[b.key], oT = m.hocaOlay[t.key];
-    assert.deepEqual(Object.keys(m.hocaOlay).sort(), m.hocalar.map(h => h.key).sort()); assert.deepEqual(Object.keys(m.hocalar[0]).sort(), ['ad', 'az', 'b', 'ci', 'etut', 'katki', 'key', 'n', 'sira', 'toplam'], 'the exported teacher rows are unchanged');
+    assert.deepEqual(Object.keys(m.hocaOlay).sort(), m.hocalar.map(h => h.key).sort()); assert.deepEqual(Object.keys(m.hocalar[0]).sort(), ['ad', 'az', 'b', 'belirgin', 'ci', 'etut', 'katki', 'key', 'n', 'sira', 'toplam'], 'the exported teacher rows keep their fields (belirgin added)');
     assert.equal(oA.n, 15); assert.equal(oB.n, 15); assert.equal(oT.n, 2, 'only that teacher’s students');
     // x is relative to the first etüt with that teacher: A’s students have the reference at the first exam (nothing before it), B’s at the third (two positions before).
     assert.equal(oA.noktalar[0].n, 0); assert.equal(oA.noktalar[1].n, 0); assert.equal(oB.noktalar[0].n, 15); assert.equal(oB.noktalar[1].n, 15);
@@ -511,7 +511,7 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     assert(y[0] <= Math.min(...oA.noktalar.map(p => p.etut.ort ?? 0), ...oB.noktalar.map(p => p.etut.ort ?? 0)) && y[1] >= Math.max(...oA.noktalar.map(p => p.etut.ort ?? 0)));
     // The page: cards in the table’s order, the teacher’s own γ, students and etüts, the shared legend once, faint with the note and no rank under 5 students; a click keeps the filter.
     merged(L); trSayfa(TRC); run("EK.eeDers='Fizik'"); const h = run('ETUT_ETKI.icerik()'), kartlar = [...h.matchAll(/<div class="ee-hoca-kart[^"]*" data-ee-hoca="[^"]*"><div class="ee-kart-ust"><button[^>]*>(.*?)<\/button><span class="mini">(.*?)<\/span>/g)].map(z => [z[1], z[2]]);
-    assert.deepEqual(kartlar.map(z => z[0]), m.hocalar.map(x => x.ad)); assert.deepEqual(kartlar.map(z => z[1]), m.hocalar.map(x => x.sira === null ? 'sıralanmadı' : 'Sıra ' + x.sira));
+    assert.deepEqual(kartlar.map(z => z[0]), m.hocalar.map(x => x.ad)); assert.deepEqual(kartlar.map(z => z[1]), m.hocalar.map(x => x.sira === null ? (x.az ? 'sıralanmadı' : 'fark belirgin değil') : 'Sıra ' + x.sira));
     assert.equal((h.match(/id="eeHocaLejant"/g) || []).length, 1); assert.match(h, /<h3 class="ee-alt-baslik" id="eeHocaBaslik">Etütten önce ve sonra · öğretmene göre<\/h3>/);
     assert.match(h, /Her etüt ≈ <b>\+0,\d\d net<\/b> \(olası aralık \+0,\d\d … \+0,\d\d\) · 15 öğrenci · \d+ etüt/); assert.equal((h.match(/5’ten az öğrenci: kesin değil/g) || []).length, 1);
     assert.match(h, /<div class="ee-hoca-kart ee-az" data-ee-hoca="SENTETİK ÖĞRETMEN T">/); assert(h.indexOf('id="eeHocaGrafik"') > h.indexOf('id="eeHocalar"') && h.indexOf('id="eeHocaGrafik"') < h.indexOf('id="eeOgrenciler"'), 'under the table');
@@ -601,7 +601,7 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     // The pooled result keeps its field names (the Kurum raporu reads them): ozet, karar, ogrenciler, uc, dersler, ders, kip, durum.
     assert.deepEqual(Object.keys(a.ozet).sort(), ['b', 'beklenen', 'ci', 'etut', 'fark', 'katki', 'n', 'toplam']); assert(Array.isArray(a.ozet.ci) && a.ozet.ci.length === 2);
     assert.deepEqual(Object.keys(a.karar).sort(), ['k', 'yazi']); for (const k of ['durum', 'duzey', 'oturum', 'ders', 'dersler', 'kip', 'ogrenciler', 'hocalar', 'uc', 'hepsi', 'disarida', 'kontrol', 'beklenen', 'karar', 'ozet']) assert(k in a, k);
-    const o = a.ogrenciler[0]; for (const k of ['id', 'n', 'etut', 'sayilar', 'adlar', 'aykiri', 'toplam', 'beklenen', 'fark', 'dizi', 'onceAd', 'sonAd']) assert(k in o, k); assert.deepEqual(Object.keys(a.hocalar[0]).sort(), ['ad', 'az', 'b', 'ci', 'etut', 'katki', 'key', 'n', 'sira', 'toplam']);
+    const o = a.ogrenciler[0]; for (const k of ['id', 'n', 'etut', 'sayilar', 'adlar', 'aykiri', 'toplam', 'beklenen', 'fark', 'dizi', 'onceAd', 'sonAd']) assert(k in o, k); assert.deepEqual(Object.keys(a.hocalar[0]).sort(), ['ad', 'az', 'b', 'belirgin', 'ci', 'etut', 'katki', 'key', 'n', 'sira', 'toplam']);
     assert.equal(a.durum, 'tamam'); assert.deepEqual(a.dersler.map(x => x.ders).sort(), ['Biyoloji', 'Fizik', 'Kimya', 'Matematik', 'Türkçe']);
   });
   await check('periods and sessions: exams with equal titles stay apart; Son 4 deneme keeps the last four; an etüt named TYT or AYT counts for both sessions (the school writes TYT for AYT etüts too)', () => {

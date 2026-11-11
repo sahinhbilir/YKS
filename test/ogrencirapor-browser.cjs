@@ -71,6 +71,20 @@ const upload=name=>({name,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
   assert((await page.locator('.or-preview g[aria-label="SAY neti · 51,75"]').boundingBox()).y<(await page.locator('.or-preview g[aria-label="EA neti · 29,75"]').boundingBox()).y,'SAY stays above EA in a SAY class');
   await page.locator('#orClass').selectOption('12/A');await page.locator('#orStudent').selectOption({label:'SENTETİK ADA · 12/A'});await download('#orAll',await page.locator('#orStudent option').count(),'sinif');
   await page.locator('#orClass').selectOption('');await download('#orAll',allCount,'hepsi');
+  // Veli özeti: ticking the box adds the plain-language page to the preview and to the PDF (two pages per student); nothing is stored.
+  await page.locator('#orStudent').selectOption({label:'SENTETİK ADA · 12/A'});assert.equal(await page.locator('#orVeliOnizleme').count(),0,'off until ticked');
+  await page.locator('#orVeli').check();await page.locator('#orVeliOnizleme svg').waitFor();
+  const veli=await page.evaluate(()=>{const svg=document.querySelector('#orVeliOnizleme svg'),vb=svg.viewBox.baseVal,t=[...svg.querySelectorAll('text')];
+   return {ad:svg.getAttribute('aria-label'),bolum:[...svg.querySelectorAll('g[aria-label^="Veli özeti · "]')].map(g=>g.getAttribute('aria-label').slice(13)),yazi:t.map(x=>x.textContent).join(' '),
+    icinde:t.every(x=>{const b=x.getBBox();return b.x>=0&&b.x+b.width<=vb.width+.5&&b.y>=0&&b.y+b.height<=vb.height+.5}),
+    kart:[...svg.querySelectorAll('g[aria-label^="Veli özeti · "]')].every(g=>{const k=g.querySelector('rect').getBBox();return [...g.querySelectorAll('text')].every(x=>{const b=x.getBBox();return b.x>=k.x&&b.x+b.width<=k.x+k.width+.5&&b.y+b.height<=k.y+k.height+.5})})}});
+  assert.equal(veli.ad,'SENTETİK ADA veli özeti');assert(veli.bolum.includes('Denemeler')&&veli.bolum.includes('Devam')&&veli.bolum.includes('Etüt'),veli.bolum.join());
+  assert(/Son TYT denemesi \(\d{2}\.\d{2}\.\d{4}\): [\d,]+ net\./.test(veli.yazi),veli.yazi.slice(0,300));assert(veli.yazi.includes('Sıralama ve başka öğrencilerle karşılaştırma içermez'));
+  assert(veli.icinde,'every line of the Veli özeti is inside the page');assert(veli.kart,'every sentence is inside its card');
+  await page.locator('#orVeliOnizleme svg').screenshot({path:path.join(out,'ogrenci-veli-'+width+'.png')});
+  await download('#orOne',2,'veli');
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Veli özeti: no sideways scrolling');
+  await page.locator('#orVeli').uncheck();assert.equal(await page.locator('#orVeliOnizleme').count(),0);assert.equal(await page.evaluate(()=>JSON.stringify(D)),before,'the Veli özeti choice is not stored');
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile overflow');
   await page.screenshot({path:path.join(out,'ogrenci-'+width+'.png'),fullPage:true});await page.locator('.or-preview svg').screenshot({path:path.join(out,'ogrenci-rapor-'+width+'.png')});
   await page.locator('#orEnglishFiles').setInputFiles(Object.keys(englishFiles).map(upload));await page.waitForFunction(()=>document.querySelector('#orStatus')?.textContent==='3 dosya eklendi.');assert.equal(await page.evaluate(()=>JSON.stringify(D)),before,'English imports do not change notebook data');

@@ -502,6 +502,114 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   const html=K.gorunum();assert(!html.includes('<img'));assert(html.includes('&lt;img'));
  });
 
+
+ /* ---------------- Türkiye'ye göre: the school and each pupil against the publisher's network-wide success rates ---------------- */
+ const Y=require('./yanlislar-fixtures.cjs');
+ const tpart=(ad,dersler)=>({tur:'turkiye',ad,oturum:'TYT',dersler});
+ // Fizik, 4 questions, 100 pupils. School p .30 .40 (F.1) .70 .50 (F.2); Türkiye p .50 .60 .60 .50.
+ const TSPEC={'FİZİK-T':[['F.1',.30],['F.1',.40],['F.2',.70],['F.2',.50]]},TP={'FİZİK-T':[.5,.6,.6,.5]};
+ const TS2={name:'SENTETİK İKİ',no:'9002',cls:'205 12/A'};
+ const trep=(ad,st,f1,f2)=>({ad,blocks:[F.block([F.row('F.1','Basınç kazanımı',f1),F.row('F.2','Kuvvet kazanımı',f2)],'outcome','FİZİK-T',st)]});
+ function tdata(ad='27-YKS-1203',extra=[]){
+  const v=K.merge(K.blank(),[trep(ad,S1,[2,1,1,0],[2,2,0,0]),{ad,blocks:trep(ad,TS2,[2,0,2,0],[2,2,0,0]).blocks}],[...zpair(ad,TSPEC),tpart(ad,TP),...extra]);
+  v.maps['FİZİK-T|F.1']='Basınç';v.maps['FİZİK-T|F.2']='Kuvvet';return K.dogrula(v);
+ }
+ const seHand=ps=>{const v=ps.map(p=>{const q=(p*NZ+1)/(NZ+2);return q*(1-q)}),sv=v.reduce((a,x)=>a+x,0),ss=v.reduce((a,x)=>a+Math.sqrt(x),0);return Math.sqrt((sv+K.R_MADDE*(ss*ss-sv))/(ps.length**2)/NZ)};
+ await test('Türkiye part: stored beside özet and madde, validated, replaced and removed on its own',async()=>{
+  const v=tdata(),e=v.zorluk[K.ek('27-YKS-1203')];assert.deepEqual(copy(e.turkiye),TP);assert.equal(e.ad,'27-YKS-1203');assert.equal(e.oturum,'TYT');
+  const bad=fn=>{const x=copy(v);fn(Object.values(x.zorluk)[0]);assert.throws(()=>K.dogrula(x),/geçersiz/)};
+  bad(e=>{e.turkiye['FİZİK-T'][0]=1.2});bad(e=>{e.turkiye['FİZİK-T'][0]='0.5'});bad(e=>{e.turkiye={}});bad(e=>{e.turkiye['FİZİK']=[.5]});bad(e=>{e.turkiye=null});bad(e=>{e.fazla=1});
+  // An older record has no turkiye key at all; a record with the Türkiye file alone is valid too.
+  const eski=copy(v);delete Object.values(eski.zorluk)[0].turkiye;assert.doesNotThrow(()=>K.dogrula(eski));
+  const yalniz=K.merge(K.blank(),[],[tpart('27-YKS-1204',TP)]),y=yalniz.zorluk[K.ek('27-YKS-1204')];assert.equal(y.ozet,null);assert.equal(y.madde,null);assert.equal(y.ogrenci,null);assert.deepEqual(copy(y.turkiye),TP);
+  // Adding the file again replaces it; the exam keeps the name its other files gave it.
+  const again=K.merge(v,[],[{...tpart('27 YKS 1203',{'FİZİK-T':[.1,.2,.3,.4]})}]),a=again.zorluk[K.ek('27-YKS-1203')];assert.equal(Object.keys(again.zorluk).length,1);assert.equal(a.ad,'27-YKS-1203');assert.deepEqual(copy(a.turkiye['FİZİK-T']),[.1,.2,.3,.4]);assert(a.ozet&&a.madde);
+  // The other way round: the Türkiye file first under the bare code, then the özet under a longer name adopts it.
+  const once=K.merge(K.blank(),[],[tpart('27-YKS-1205',TP)]),sonra=K.merge(once,[],[zpart('ozet','27 YKS 1205',TSPEC)]);assert.deepEqual(Object.keys(sonra.zorluk),[K.ek('27 YKS 1205')]);assert(sonra.zorluk[K.ek('27 YKS 1205')].turkiye&&sonra.zorluk[K.ek('27 YKS 1205')].ozet);
+  put('__kt',v);run('D.konutakibi=__kt');await K.turkiyeSil(K.ek('27-YKS-1203'));const k=K.oku().veri.zorluk[K.ek('27-YKS-1203')];assert.equal(k.turkiye,undefined);assert(k.ozet&&k.madde);
+  await assert.rejects(K.turkiyeSil(K.ek('27-YKS-1203')),/bulunamadı/);
+  put('__kt',yalniz);run('D.konutakibi=__kt');await K.turkiyeSil(K.ek('27-YKS-1204'));assert.equal(K.oku().veri.zorluk,undefined,'an entry with nothing left is removed');
+ });
+ await test('okul ve Türkiye by hand: rates, difference, interval and status per konu, kazanım and soru',()=>{
+  const v=tdata(),m=K.turkiyeKiyas(v,{});
+  assert.equal(m.veri,true);assert.equal(m.session,'TYT');assert.equal(m.duzey,12);assert.equal(m.exam,'*');assert.equal(m.course,'*');assert.equal(m.soru,4);assert.equal(m.ogrenci,NZ);
+  const d=m.dersler[0];assert.equal(d.ad,'Fizik');near(d.okul,.475);near(d.tr,.55);near(d.fark,-.075);near(d.se,seHand([.3,.4,.7,.5]));assert.equal(d.m,4);
+  assert.equal(d.durum,d.fark+1.96*d.se<0?'geride':'belirsiz');
+  const k=K.turkiyeKiyas(v,{course:d.id});assert.equal(k.seviye,'konu');assert.deepEqual(copy(k.rows.map(r=>r.ad)),['Basınç','Kuvvet'],'the most behind first');
+  const [b,kv]=k.rows;near(b.okul,.35);near(b.tr,.55);near(b.fark,-.2);near(b.se,seHand([.3,.4]));assert.equal(b.durum,'geride');assert.equal(b.m,2);
+  near(kv.okul,.6);near(kv.tr,.55);near(kv.fark,.05);assert.equal(kv.durum,'belirsiz','+5 points on two questions is inside the interval');
+  // With independent answers (r = 0) the interval would be narrower: the published one is the wider.
+  assert(b.se>Math.sqrt([.3,.4].map(p=>{const q=(p*NZ+1)/(NZ+2);return q*(1-q)}).reduce((a,x)=>a+x,0)/4/NZ));
+  // Relative to the school's own level in the ders: zero over the ders, the weak topic negative, the other positive.
+  near(d.goreli,0);near(b.goreli*2+kv.goreli*2,0);assert(b.goreli<0&&kv.goreli>0);assert(Math.abs(b.goreli)<Math.abs(b.fark),'part of the gap is the school’s general level');
+  const g=K.turkiyeKiyas(v,{course:d.id,olcu:'goreli',sira:'ileri'});assert.equal(g.olcu,'goreli');assert.equal(g.rows[0].ad,'Kuvvet');
+  const kz=K.turkiyeKiyas(v,{course:d.id,seviye:'kazanim'});assert.deepEqual(copy(kz.rows.map(r=>[r.id,r.ad])),[['F.1','Basınç kazanımı'],['F.2','Kuvvet kazanımı']]);
+  const sr=K.turkiyeKiyas(v,{course:d.id,seviye:'soru'});assert.equal(sr.rows.length,4);near(sr.rows[0].fark,-.2);assert.deepEqual(copy(sr.rows.map(r=>r.ad).sort()),['Soru 1','Soru 2','Soru 3','Soru 4']);near(sr.rows.find(r=>r.ad==='Soru 4').fark,0);
+  assert.deepEqual(copy(sr.rows[0].sorular[0]),{ad:'27-YKS-1203',no:1,ps:.3,pt:.5,n:NZ});
+ });
+ await test('the school’s level in a ders: the shift is zero when the school equals Türkiye and one logit when it is one logit above',()=>{
+  const sig=x=>1/(1+Math.exp(-x)),lg=p=>Math.log(p/(1-p)),pt=[.3,.5,.7];
+  near(Math.round(K.dersKaymasi(pt.map(p=>({pt:p,ps:p,n:40})))*1e6)/1e6,0);
+  near(Math.round(K.dersKaymasi(pt.map(p=>({pt:p,ps:sig(lg(p)+1),n:40})))*1e6)/1e6,1);
+  const one=K.grupOlc([{ps:.3,pt:.5,bek:.4,n:30}]);near(one.fark,-.2);near(one.goreli,-.1);near(one.se,Math.sqrt((10/32)*(22/32)/30));assert.equal(one.durum,'geride');assert.equal(one.durumG,'belirsiz');
+  // Everybody right: the smoothed variance keeps the interval open instead of claiming certainty.
+  assert(K.grupOlc([{ps:1,pt:.9,bek:.9,n:20}]).se>0);
+ });
+ await test('exams, grades and missing parts: filtered, never mixed, and said',()=>{
+  const st9={name:'SENTETİK DOKUZ',no:'9101',cls:'102 9/A'};
+  const v=K.merge(tdata(),[trep('27-TYT-901',st9,[2,2,0,0],[2,2,0,0])],[...zpair('27-TYT-901',TSPEC),tpart('27-TYT-901',{'FİZİK-T':[.9,.9,.9,.9]}),...zpair('27-YKS-1204',TSPEC),tpart('27-YKS-1204',{'FİZİK-T':[.3,.4,.7,.5]})]);
+  v.maps['FİZİK-T|F.1']='Basınç';v.maps['FİZİK-T|F.2']='Kuvvet';
+  const m=K.turkiyeKiyas(v,{});assert.deepEqual(copy(m.duzeyler),[12,9]);assert.equal(m.duzey,12,'the 12th grade first');assert.deepEqual(copy(m.exams.map(x=>x.ad)),['27-YKS-1203','27-YKS-1204'],'the 9th grade exam is not in the 12th grade view; 1204 has no karne, its grade comes from the code');
+  assert.equal(m.soru,8);near(m.dersler[0].fark,(-.075+0)/2);assert.equal(m.dersler[0].sinav,2);
+  const tek=K.turkiyeKiyas(v,{exam:K.ek('27-YKS-1204')});assert.equal(tek.soru,4);near(tek.dersler[0].fark,0);
+  const dokuz=K.turkiyeKiyas(v,{duzeyNo:9});assert.equal(dokuz.duzey,9);assert.equal(dokuz.exams.length,1);near(dokuz.dersler[0].tr,.9);
+  // A Türkiye file whose question count differs from the Madde Analizi is left out and named.
+  const kisa=K.merge(tdata(),[],[tpart('27-YKS-1203',{'FİZİK-T':[.5,.6,.6]})]),mk=K.turkiyeKiyas(kisa,{});assert.equal(mk.veri,false);assert.deepEqual(copy(mk.uyusmayan),['27-YKS-1203 · Fizik']);
+  // Without the Sınav özeti there is no kazanım to group by: ders and soru still compare, konu says why.
+  const oz=copy(tdata());Object.values(oz.zorluk)[0].ozet=null;const mo=K.turkiyeKiyas(oz,{course:K.key('FİZİK-T')});assert.equal(mo.ozetYok,true);assert.deepEqual(copy(mo.rows.map(r=>r.ad)),['Kazanım haritası yok']);assert.equal(K.turkiyeKiyas(oz,{course:K.key('FİZİK-T'),seviye:'soru'}).rows.length,4);
+  // Without the Madde Analizi there is no school rate: the page lists what is missing.
+  const md=copy(tdata());Object.values(md.zorluk)[0].madde=null;Object.values(md.zorluk)[0].ogrenci=null;const mm=K.turkiyeKiyas(md,{});assert.equal(mm.veri,false);assert.deepEqual(copy(mm.dosyalar),[{k:K.ek('27-YKS-1203'),ad:'27-YKS-1203',ozet:true,madde:false,turkiye:true}]);
+ });
+ await test('each pupil against Türkiye: correct − Σ Türkiye p, by ders and by konu; the Kıyas baseline of the topic list',()=>{
+  const v=tdata(),r=K.ogrenciFark(v,{session:'TYT'}),o=id=>r.ogrenciler.find(x=>x.student.no===id);
+  assert.equal(r.ogrenciler.length,2);assert.equal(r.atlanan,0);
+  near(o('9001').toplam.d,3);near(o('9001').toplam.b,2.2);near(o('9002').toplam.d-o('9002').toplam.b,-.2);
+  const k=[...o('9002').konular.values()];assert.deepEqual(copy(k.map(t=>t.ad)),['Basınç','Kuvvet']);near(k[0].d-k[0].b,-1.1);near(k[1].d-k[1].b,.9);assert.equal(k[0].n,2);
+  assert.equal(K.ogrenciFark(v,{session:'TYT',ids:new Set([K.studentKey(TS2)])}).ogrenciler.length,1);assert.equal(K.ogrenciFark(v,{session:'AYT'}).ogrenciler.length,0);
+  // The same pupil in the topic list: against the school's rates F.1 is −0,7, against Türkiye's −1,1.
+  const okul=K.model(v,{student:K.studentKey(TS2)}),tr=K.model(v,{student:K.studentKey(TS2),taban:'turkiye'}),t=(m,n)=>m.topics.find(x=>x.name===n).z;
+  assert.equal(okul.taban,'okul');assert.equal(tr.taban,'turkiye');assert.equal(okul.trVar,true);
+  near(t(okul,'Basınç').fark,-.7);near(t(tr,'Basınç').fark,-1.1);near(t(tr,'Basınç').b,1.1);near(t(tr,'Kuvvet').fark,.9);near(tr.zorluk.z.fark,-.2);
+  // Öğrenci kartı: weak topics use Türkiye when the file is there (−1,1 ≤ −1), the school's rates otherwise (−0,7 is not weak).
+  const A=run('ANALIZ'),z=A.zayifKonular(v,'9002',[]);assert.equal(z.taban,'turkiye');assert.deepEqual(copy(z.liste.map(x=>[x.konu,x.fark])),[['Basınç',-1.1]]);
+  const eski=copy(v);delete Object.values(eski.zorluk)[0].turkiye;const z2=A.zayifKonular(eski,'9002',[]);assert.equal(z2.taban,'okul');assert.equal(z2.liste.length,0);
+  // The summary other pages show: every topic of every ders, established gaps first.
+  const g=K.geridekiKonular(v,{session:'TYT'},5);assert.equal(g.var,true);assert.equal(g.toplam,2);assert.equal(g.geride,1);assert.deepEqual(copy(g.liste.map(x=>[x.ad,x.ders,x.durum])),[['Basınç','Fizik','geride'],['Kuvvet','Fizik','belirsiz']]);
+  assert.equal(K.geridekiKonular(K.blank(),{}).var,false);
+ });
+ await test('Performans analizi upload: recognised by its title, only the exam code and p are kept; the page and its controls',async()=>{
+  run('denemePdfSayfalari=async f=>({pages:f.pages})');
+  const perf={name:'performans.pdf',size:10,pages:Y.itemlere(Y.performansSpec({})).map(p=>p.items)};
+  const msg=await K.pdfEkle([perf]);assert.equal(msg,'Performans analizi (Türkiye geneli) kaydedildi · 27-YKS-1203 (TYT) · 4 ders · 10 soru');
+  const e=K.oku().veri.zorluk[K.ek('27-YKS-1203')];assert.deepEqual(copy(e.turkiye['TÜRKÇE-T']),[.9,.7,.5,.2]);assert.deepEqual(Object.keys(e).sort(),['ad','madde','ogrenci','oturum','ozet','ts','turkiye']);
+  assert(!/\b\d{3,}\b/.test(JSON.stringify(e.turkiye)),'no counts of the report are stored');
+  // A PDF that is neither is still read as a karne and refused as before.
+  await assert.rejects(async()=>{const m=await K.pdfEkle([{name:'bos.pdf',size:1,pages:[[]]}]);if(/metin içermiyor/.test(m))throw new Error(m)},/metin içermiyor/);
+  // The page: Gelişim is the default; Türkiye’ye göre shows what is missing, then the tables.
+  let html=K.gorunum();assert(html.includes('data-kt-gorunum="gelisim" aria-pressed="true"'));
+  run("EK.ktGorunum='turkiye'");html=K.gorunum();assert(html.includes('Okul hangi konularda Türkiye’nin gerisinde?'));assert(html.includes('performans analizi ✓ · madde analizi yok · sınav özeti yok'));
+  put('__kt',tdata());run("D.konutakibi=__kt;EK.ktTr=undefined");html=K.gorunum();
+  for(const x of ['id="ktTrKpi"','Dersler · okul ve Türkiye','data-kt-tr-ders=','Öğrenciler · kim nerede geride','data-ogrenci-karti="9002"','Konu, kazanım ve soru düzeyi için bir ders seçin'])assert(html.includes(x),x);
+  assert(/Okul − Türkiye · TYT<\/span><strong>−7,5<small>puan/.test(html),'the headline is the difference in points');
+  run("EK.ktTr={course:'"+K.key('FİZİK-T')+"',acik:'"+K.key('Basınç')+"'}");html=K.gorunum();
+  assert(html.includes('Konular · Fizik'));assert(html.includes('kt-rozet-geride">Geride'));assert(html.includes('S1 · okul %30 · Türkiye %50'),'the open topic lists its questions');assert(html.includes('<b>−20</b><span class="kt-muted"> ± '));
+  // Gelişim keeps working and gains the Kıyas switch; a viewing teacher sees both views but no upload or delete.
+  run("EK.ktGorunum='gelisim';EK.ktTaban='turkiye';EK.ktSelection={student:'"+K.studentKey(TS2).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"',cls:'205 12/A'}");html=K.gorunum();
+  assert(html.includes('data-kt-taban="turkiye" aria-pressed="true"'));assert(html.includes('Türkiye’ye göre -1,1 soru'));assert(html.includes('Türkiye’ye göre zayıf'));
+  run("yalnizcaGoruntuleme=()=>true;EK.ktGorunum='turkiye'");html=K.gorunum();assert(html.includes('Dersler · okul ve Türkiye'));assert(!html.includes('id="ktPdf"'));assert(!html.includes('data-kt-trdelete'));
+  run("D.rol='ogrenci'");assert(!K.gorunum().includes('ktTrKpi'));
+ });
+
  console.log(passed+' Konu Takibi tests passed.');
 })();
 

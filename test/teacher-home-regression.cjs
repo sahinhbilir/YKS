@@ -61,7 +61,7 @@ check('student menu keeps its layout', () => {
   run("D.rol='ogrenci';D.ogr=[D.ogr[0]];D.ogr[0].sinavTuru='YKS';rayCiz()");
   const h = nodes.ray.innerHTML;
   assert.equal(nodes.ray.className, 'ray ust');
-  assert.deepEqual(liste(h, 'planMenusu'), ['harita', 'giris'], 'no Karnem, no Geçmiş plan kurtar (red weeks open it)');
+  assert.deepEqual(liste(h, 'planMenusu'), ['hafiza', 'harita', 'giris'], 'Hafızam first; no Karnem, no Geçmiş plan kurtar (red weeks open it)');
   assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['mufredat', 'ayarlar']);
   assert.match(h, /aria-label="Planla ilgili diğer sayfalar"/);
   assert(!h.includes('data-sekme="universite"') && !h.includes('Üniversite Hedefi'), 'no Üniversite Hedefi for students');
@@ -96,6 +96,29 @@ check('this week: names of students given the plan; PDF requested and last week\
   run('D.ogr.forEach(o => { delete o.cikti; })');
   const bos = run('rehberHaftaKarti()');
   assert.match(bos, /<h2 class="rh-plan">0<small>\/3<\/small>/); assert.doesNotMatch(bos, /rh-adlar/);
+});
+
+check('Dikkat: a student given a plan last week who entered no result gets the notebook\'s own flag; the home page carries the card', () => {
+  const ek = JSON.parse(run(`(() => {
+    const hb = buHafta(0), onceki = oncekiHafta(0, hb), ts = Date.parse('2026-10-14T09:00:00+03:00');
+    D.ogr[0].cikti = onceki; D.ogr[0].no = 501;  // Ada: plan last week, a result → no flag
+    D.ogr[1].cikti = onceki; D.ogr[1].no = 502;  // Bora: plan last week, no result → flag (by school number)
+    D.ogr[2].cikti = bugunNo(); delete D.ogr[2].no; // Cem: plan this week only → no flag
+    D.ogr[3].cikti = onceki;                     // deleted student: ignored
+    D.log.push([onceki + 2, 0, 0, 9, 12, 1, ts]);
+    return JSON.stringify([...rehberDikkatEkleri()]);
+  })()`));
+  assert.deepEqual(ek, [['502', { ad: 'Synthetic Bora', sinif: ek[0][1].sinif, si: 1,
+    isaretler: [{ tur: 'sonuc', puan: 1, yazi: 'Geçen haftanın sonucu yok', aciklama: 'Geçen hafta planı verildi, o haftaya hiç test sonucu girilmedi.' }] }]]);
+  // A student without a school number is keyed by her place in the notebook.
+  assert.deepEqual(JSON.parse(run(`(() => { delete D.ogr[1].no; return JSON.stringify([...rehberDikkatEkleri().keys()]); })()`)), ['si:1']);
+  const ana = run('gorunumRehberAna()');
+  assert.match(ana, /<section class="kart rehber-dikkat" id="rehberDikkat"/);
+  assert.match(ana, /<h2 class="rd-baslik">1 <span>öğrenci ilgi bekliyor<\/span><\/h2>/);
+  assert.match(ana, /<span class="rd-kim"><button type="button" class="ogr-ad" data-ogr-gor="1"[^>]*>Synthetic Bora<\/button>/, 'not in the school lists: the name opens her own view');
+  assert.match(ana, /<button type="button" class="rd-isaret rd-p1" data-rd-neden title="Geçen hafta planı verildi, o haftaya hiç test sonucu girilmedi.">Geçen haftanın sonucu yok<\/button>/);
+  assert.ok(ana.indexOf('id="rehberHafta"') < ana.indexOf('id="rehberDikkat"'), 'under the two cards of the week');
+  run("D.rol='ogrenci'"); assert.equal(run('rehberDikkatKarti()'), '', 'teachers only'); run("D.rol='rehber'");
 });
 
 check('the fast per-student result count matches haftaSonucSayisi on a large notebook', () => {

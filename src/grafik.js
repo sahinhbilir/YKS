@@ -43,6 +43,19 @@ return {tur,sec,yol,SECENEKLER};
 // release (or Esc) everything returns to normal and nothing is saved. A press that moves less than
 // 4 px stays a click; on a touch screen measuring starts after a 300 ms hold so the page still scrolls.
 // The Seç handles ([data-tutamak]) keep their own dragging.
+// GRAFIK_RENK gives every ders one colour on every page (Deneme panosu, Türkiye geneli, Etütler, Etüt etkisi), whatever name
+// the page knows it by: "Matematik", "MATEMATİK-T", "MAT", "AMAT", "Matematik TYT". TYT and AYT versions of a ders share
+// the colour; Tarih-2 and Coğrafya-2 have their own, so the twelve AYT dersler never share one. Unknown names give null and
+// the page keeps its own fallback.
+const GRAFIK_RENK = (() => {
+const duz=s=>String(s??'').toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/İ/g,'I').replace(/[^A-Z0-9]/g,'');
+const KURAL=[[/^(TUR|EDB|EDEBIYAT)/,4],[/^(AMAT|MAT)/,1],[/^(AGEO|GEO)/,6],[/^(AFIZ|FIZ)/,3],[/^(AKIM|KIM)/,2],[/^(ABIY|BIY)/,5],
+  [/^(TAR2|TARIH2)/,11],[/^TAR/,8],[/^(COG2|COGRAFYA2)/,12],[/^COG/,7],[/^(FEL|SF|SFELSEFE|EKFELSEFE)/,9],[/^DIN/,10]];
+function no(ad){const k=duz(ad);if(!k)return null;const r=KURAL.find(([re])=>re.test(k));return r?r[1]:null}
+const ders=ad=>{const n=no(ad);return n===null?null:'var(--e-c'+n+')'};
+return {ders,no};
+})();
+
 const GRAFIK_OLCUM = (() => {
 const ESIK=4, BEKLE=300, KAYMA=8;
 // One entry per page (src/etutler.js, src/denemepano.js), see kur().

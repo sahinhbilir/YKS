@@ -44,6 +44,15 @@ const r1=x=>Math.round(x*10)/10;
 const f2=x=>Number(x).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fi=x=>Number(x).toLocaleString('tr-TR');
 const ok=v=>v===null||v===undefined?'—':(v>0?'▲':v<0?'▼':'')+f2(Math.abs(v));
+// Teachers are placed only when their per-etüt effect is established: the whole interval above or below zero (belirgin). Two
+// effects whose intervals both include zero cannot be told apart from "no effect", let alone from each other, so they get no
+// place, no arrow and no colour, and are listed by name after the placed ones. Fewer than EN_AZ students (az) come last.
+function hocaSirala(hocalar,tSayi){
+  const r2=x=>Math.round(x*100)/100;
+  hocalar.forEach(h=>{h.belirgin=!h.az&&Array.isArray(h.ci)&&h.ci.length===2&&h.ci[0]!==null&&h.ci[1]!==null&&(h.ci[0]>0||h.ci[1]<0)});
+  hocalar.sort((a,b)=>a.az-b.az||b.belirgin-a.belirgin||(a.belirgin?tSayi(b)-tSayi(a)||b.n-a.n:0)||a.ad.localeCompare(b.ad,'tr'));
+  hocalar.forEach((h,i)=>{const o=hocalar[i-1];h.sira=!h.belirgin?null:i>0&&o.belirgin&&r2(o.toplam)===r2(h.toplam)?o.sira:i+1});
+}
 // +0,4 / −0,3 / 0,0: the sign of what is shown, with n decimals.
 function isr(v,n=1){
   const k=10**n,a=Math.round(Math.abs(v)*k)/k,s=Number(a).toLocaleString('tr-TR',{minimumFractionDigits:n,maximumFractionDigits:n});
@@ -318,8 +327,7 @@ function toplamDegisim({satir,ex,oturum,ders,son,disarida}){
     return {key,ad:adlar.get(key),n:l.length,etut,b:gam,ci:ciT?ciT[j]:null,toplam:gam===null?null:gam*etut,katki:ft?ft.katki[1+j]:0,az:l.length<EN_AZ||gam===null};
   });
   const tSayi=h=>h.toplam===null?-Infinity:Math.round(h.toplam*1e6)/1e6;
-  hocalar.sort((a,b)=>a.az-b.az||tSayi(b)-tSayi(a)||b.n-a.n||a.ad.localeCompare(b.ad,'tr'));
-  hocalar.forEach((h,i)=>{h.sira=h.az?null:i>0&&!hocalar[i-1].az&&r2(hocalar[i-1].toplam)===r2(h.toplam)?hocalar[i-1].sira:i+1});
+  hocaSirala(hocalar,tSayi);
   const uc2=ogrenciler.filter(o=>o.aykiri).map(o=>({id:o.id,ad:o.ad,sinif:o.sinif,tur:'ogrenci',neden:'Toplam değişim diğer öğrencilerden çok farklı ('+isr(o.toplam-(o.beklenen??0)-0,1)+' net fark)'}));
   if(kesik)uc2.push({tur:'ozet',neden:'uç sonuç çok fazla: en uç 20% dışarıda'});
   return {ogrenciler,hocalar,ozet,karar:kararToplam(ozet?{b:ozet.b,ci:ozet.ci,n:ozet.katki}:null),kontrol:ogrenciler.filter(o=>!o.etut&&!o.aykiri).length,uc2,model:fp&&{b:bP,gama:gP,cift:fp.cift,n:fp.n}};
@@ -564,8 +572,7 @@ function panelKur({ogrD,ex,oturum,ders,kip,trFn,son,satir,dahil,on,ucSecili}){
     return {key,ad:adlar.get(key),n:l.length,etut,b:gam,ci:ciT[j]||null,toplam:gam===null?null:gam*etut,katki:katk,az:l.length<EN_AZ||gam===null};
   });
   const tSayi=h=>h.toplam===null?-Infinity:Math.round(h.toplam*1e6)/1e6;
-  hocalar.sort((a,b)=>a.az-b.az||tSayi(b)-tSayi(a)||b.n-a.n||a.ad.localeCompare(b.ad,'tr'));
-  hocalar.forEach((h,i)=>{h.sira=h.az?null:i>0&&!hocalar[i-1].az&&r2(hocalar[i-1].toplam)===r2(h.toplam)?hocalar[i-1].sira:i+1});
+  hocaSirala(hocalar,tSayi);
   // The students: the chosen ders's change against the mean change of their other dersler (in net of the chosen ders).
   const ogrenciler=kisiler.map(q=>{
     const r=q.rs,sel=q.sel,diger=q.rows.filter(x=>x.k!==ders),bek=diger.length?ort(diger.map(x=>x.y))*sd[ders]:null;
@@ -686,7 +693,7 @@ function durus(ogrD,m,tv){
       const dil=D.nokta(d.seri[i]);if(!Number.isFinite(s.g)||!Number.isFinite(dil))return;
       const sp=d.seri[i];nokta.push({g:s.g,sinav:s.ad,kisa:kisaAd[i],dilim:dil,t:D.tden(dil),tam:!!(sp&&sp.tam),okulN:sp&&sp.tam&&Number.isFinite(sp.n)?sp.n:null});
     });
-    if(nokta.length)cizgiler.push({kod,ad:kodlar.length>1?ad(kod).ad:m.ders,renk:'var(--e-c'+(q+1)+')',nokta});
+    if(nokta.length)cizgiler.push({kod,ad:kodlar.length>1?ad(kod).ad:m.ders,renk:GRAFIK_RENK.ders(kod)||'var(--e-c'+(q+1)+')',nokta});
   });
   if(!cizgiler.length)return yok('Okul bu derste Türkiye geneli listesinde bulunamadı; Türkiye geneli sayfasında okulu seçin.');
   const g=cizgiler.flatMap(c=>c.nokta.map(p=>p.g)),g0=Math.min(...g),g1=Math.max(...g);
@@ -936,6 +943,8 @@ function sayimYazisi(m){
 function sutunlar(l){return '<colgroup>'+l.map(c=>'<col class="'+c+'">').join('')+'</colgroup>'}
 const baslikSatiri=l=>'<thead><tr>'+l.map(([a,c])=>'<th'+(c?' class="'+c+'"':'')+'>'+a+'</th>').join('')+'</tr></thead>';
 const aralikYazi=ci=>ci?isr(ci[0],2)+' … '+isr(ci[1],2):'';
+// A figure that is not established is written plainly: a sign, no arrow, no green or red.
+const isaretliSayi=v=>v===null||v===undefined?'—':(v>0?'+':v<0?'−':'')+f2(Math.abs(v));
 const gitDugme=(sekme,ad)=>'<button type="button" class="et-dugme" data-sekme="'+sekme+'">'+ad+' →</button>';
 function olayPaneli(m){
   const o=m.olay,bas='<div class="et-kart-bas"><h2>'+kacis('Etütten önce ve sonra · '+m.ders)+'</h2>';
@@ -969,7 +978,7 @@ function durusPaneli(st,m){
 // A small "Etütten önce ve sonra" per teacher who gave etüts of the ders, in the table's order, the same y range for all.
 function hocaKartlari(m,secili){
   const l=m.hocalar.filter(h=>m.hocaOlay&&m.hocaOlay[h.key]&&m.hocaOlay[h.key].n>=1);if(!l.length)return '';
-  const kart=h=>'<div class="ee-hoca-kart'+(h.az?' ee-az':'')+(secili===h.key?' secili':'')+'" data-ee-hoca="'+kacis(h.key)+'"><div class="ee-kart-ust"><button type="button" class="ee-kart-ad" data-ee-hoca="'+kacis(h.key)+'" aria-pressed="'+(secili===h.key)+'">'+kacis(h.ad)+'</button><span class="mini">'+(h.sira===null?'sıralanmadı':'Sıra '+fi(h.sira))+'</span></div>'+
+  const kart=h=>'<div class="ee-hoca-kart'+(h.az?' ee-az':'')+(secili===h.key?' secili':'')+'" data-ee-hoca="'+kacis(h.key)+'"><div class="ee-kart-ust"><button type="button" class="ee-kart-ad" data-ee-hoca="'+kacis(h.key)+'" aria-pressed="'+(secili===h.key)+'">'+kacis(h.ad)+'</button><span class="mini">'+(h.sira===null?(h.az?'sıralanmadı':'fark belirgin değil'):'Sıra '+fi(h.sira))+'</span></div>'+
     '<p class="et-cumle ee-kart-say">'+(h.b===null?'Her etüt için artış hesaplanamadı':'Her etüt ≈ <b>'+isr(h.b,2)+' net</b>'+(h.ci?' (olası aralık '+isr(h.ci[0],2)+' … '+isr(h.ci[1],2)+')':''))+' · '+fi(h.n)+' öğrenci · '+fi(h.etut)+' etüt</p>'+
     '<p class="et-cumle ee-kart-say ee-kart-olay">'+olayYazisi(m.hocaOlay[h.key])+'</p>'+(h.n<EN_AZ?'<p class="mini ee-kart-az">5’ten az öğrenci: kesin değil</p>':'')+'<div class="et-grafik ee-grafik" role="group" aria-label="'+kacis(h.ad)+' · Etütten önce ve sonra"></div></div>';
   return '<h3 class="ee-alt-baslik" id="eeHocaBaslik">Etütten önce ve sonra · öğretmene göre</h3><p class="mini">Her grafik yalnızca o öğretmenden etüt alan öğrencileri gösterir; sıfır noktası o öğretmenle ilk etütten önceki deneme; karşılaştırma yine etüt almayan sınıf arkadaşlarıdır. Hepsi aynı ölçektedir.</p>'+
@@ -978,8 +987,9 @@ function hocaKartlari(m,secili){
 }
 function hocaTablosu(m,secili){
   const satir=h=>'<tr'+(secili===h.key?' class="secili'+(h.az?' ee-az':'')+'"':h.az?' class="ee-az"':'')+'><td class="sayi ee-sira">'+(h.sira===null?'—':fi(h.sira))+'</td><td class="tg-ad"><button type="button" class="ee-ad" data-ee-hoca="'+kacis(h.key)+'" aria-pressed="'+(secili===h.key)+'">'+kacis(h.ad)+'</button>'+
-    '<div class="mini">'+fi(h.n)+' öğrenci · '+fi(h.etut)+' etüt'+(h.az?' · az öğrenci, sıralanmadı':'')+'</div></td><td class="sayi et-dar-gizle">'+fi(h.n)+'</td><td class="sayi et-dar-gizle">'+fi(h.etut)+'</td><td class="sayi'+yonlu(h.toplam)+'">'+ok(h.toplam)+'</td><td class="sayi'+yonlu(h.b)+'">'+ok(h.b)+(h.ci?'<div class="mini">'+aralikYazi(h.ci)+'</div>':'')+'</td></tr>';
-  return '<section class="et-panel" id="eeHocalar"><div class="et-kart-bas"><h2>Öğretmenlere göre</h2><span class="mini">Her öğretmenin etüt başına kazancı, aynı öğrencinin diğer derslerine göre (öbür öğretmenlerin etütleri sabit tutulur). Toplam katkı = bu kazanç × verdiği etüt. Bir öğretmene basınca öğrenciler aşağıda o öğretmenin etüt verdikleriyle sınırlanır.</span></div><div class="et-tablo-kutu"><table class="et-tablo ee-tablo">'+sutunlar(['sira','ad','s1 et-dar-gizle','s1 et-dar-gizle','s4','s7'])+
+    '<div class="mini">'+fi(h.n)+' öğrenci · '+fi(h.etut)+' etüt'+(h.az?' · az öğrenci, sıralanmadı':h.belirgin?'':' · aralık sıfırı içeriyor: fark belirgin değil')+'</div></td><td class="sayi et-dar-gizle">'+fi(h.n)+'</td><td class="sayi et-dar-gizle">'+fi(h.etut)+'</td>'+
+    (h.belirgin?'<td class="sayi'+yonlu(h.toplam)+'">'+ok(h.toplam)+'</td><td class="sayi'+yonlu(h.b)+'">'+ok(h.b):'<td class="sayi ee-belirsiz">'+isaretliSayi(h.toplam)+'</td><td class="sayi ee-belirsiz">'+isaretliSayi(h.b))+(h.ci?'<div class="mini">'+aralikYazi(h.ci)+'</div>':'')+'</td></tr>';
+  return '<section class="et-panel" id="eeHocalar"><div class="et-kart-bas"><h2>Öğretmenlere göre</h2><span class="mini">Her öğretmenin etüt başına kazancı, aynı öğrencinin diğer derslerine göre (öbür öğretmenlerin etütleri sabit tutulur). Toplam katkı = bu kazanç × verdiği etüt. Sıra yalnızca olası aralığın tamamı sıfırın üstünde ya da altında olan öğretmenlere verilir; aralığı sıfırı içerenler birbirinden ayırt edilemez ve ada göre listelenir. Bir öğretmene basınca öğrenciler aşağıda o öğretmenin etüt verdikleriyle sınırlanır.</span></div><div class="et-tablo-kutu"><table class="et-tablo ee-tablo">'+sutunlar(['sira','ad','s1 et-dar-gizle','s1 et-dar-gizle','s4','s7'])+
     baslikSatiri([['Sıra','sayi ee-sira'],['Öğretmen'],['Öğrenci','sayi et-dar-gizle'],['Etüt','sayi et-dar-gizle'],['Toplam katkı (net)','sayi'],['Her etüt için artış (net)','sayi']])+
     '<tbody>'+(m.hocalar.length?m.hocalar.map(satir).join(''):'<tr><td colspan="6" class="mini">Bu dönemde etüt alıp sonrasında denemeye giren öğrenci yok.</td></tr>')+'</tbody></table></div>'+hocaKartlari(m,secili)+'</section>';
 }
