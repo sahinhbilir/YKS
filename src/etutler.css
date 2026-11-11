@@ -6,6 +6,7 @@
   --e-line:rgba(11,11,11,.10);--e-grid:rgba(11,11,11,.08);--e-axis:#c3c2b7;--e-ref:#97958d;--e-chart-muted:#c3c2b7;
   --e-ok:#006300;--e-bad:#8e2626;--e-shadow:0 8px 24px #0000001f,0 2px 6px #00000014;
   --e-c1:#2a78d6;--e-c2:#eb6834;--e-c3:#1baf7a;--e-c4:#eda100;--e-c5:#e87ba4;--e-c6:#008300;--e-c7:#6250d6;--e-c8:#e34948;
+  --e-c9:#5d7482;--e-c10:#9c8a6a;--e-c11:#7d5a3c;--e-c12:#7a8734;
   --e-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--e-serif:ui-serif,Georgia,"Times New Roman",serif;
   --e-r:.5rem;
 }
@@ -13,12 +14,12 @@
   --e-bg:#0b0b0b;--e-panel:#1a1a19;--e-pop:#20201f;--e-fg:#f0efec;--e-fg2:#c3c2b7;--e-muted:#898781;
   --e-line:rgba(255,255,255,.10);--e-grid:rgba(255,255,255,.08);--e-axis:#383835;--e-ref:#898781;--e-chart-muted:#5f5e5a;
   --e-ok:#0ca30c;--e-bad:#ec7e7e;--e-shadow:0 8px 24px #00000052,0 2px 6px #0003;
-  --e-c1:#3987e5;--e-c2:#d95926;--e-c3:#199e70;--e-c4:#c98500;--e-c5:#d55181;--e-c6:#008300;--e-c7:#9085e9;--e-c8:#e66767;color-scheme:dark}}
+  --e-c1:#3987e5;--e-c2:#d95926;--e-c3:#199e70;--e-c4:#c98500;--e-c5:#d55181;--e-c6:#008300;--e-c7:#9085e9;--e-c8:#e66767;--e-c9:#9fb3bf;--e-c10:#c9b891;--e-c11:#c29b78;--e-c12:#b7c26f;color-scheme:dark}}
 :root[data-theme="dark"] :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok){
   --e-bg:#0b0b0b;--e-panel:#1a1a19;--e-pop:#20201f;--e-fg:#f0efec;--e-fg2:#c3c2b7;--e-muted:#898781;
   --e-line:rgba(255,255,255,.10);--e-grid:rgba(255,255,255,.08);--e-axis:#383835;--e-ref:#898781;--e-chart-muted:#5f5e5a;
   --e-ok:#0ca30c;--e-bad:#ec7e7e;--e-shadow:0 8px 24px #00000052,0 2px 6px #0003;
-  --e-c1:#3987e5;--e-c2:#d95926;--e-c3:#199e70;--e-c4:#c98500;--e-c5:#d55181;--e-c6:#008300;--e-c7:#9085e9;--e-c8:#e66767;color-scheme:dark}
+  --e-c1:#3987e5;--e-c2:#d95926;--e-c3:#199e70;--e-c4:#c98500;--e-c5:#d55181;--e-c6:#008300;--e-c7:#9085e9;--e-c8:#e66767;--e-c9:#9fb3bf;--e-c10:#c9b891;--e-c11:#c29b78;--e-c12:#b7c26f;color-scheme:dark}
 main:has(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok){min-width:0}
 :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok){min-width:0;display:flex;flex-direction:column;gap:20px;background:var(--e-bg);color:var(--e-fg);font-family:var(--e-sans);font-size:.875rem;line-height:1.45;
   border:1px solid var(--e-line);border-radius:14px;padding:24px}

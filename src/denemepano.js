@@ -54,7 +54,7 @@ function temel(veri){
 // all-subjects chart, the sentence and Kolaydan zora use the lessons only.
 function olcu(key){
   const S=SIRALAMA,renkli=(list,gruplar)=>{const sira=list.slice().sort((a,b)=>ONCELIK.indexOf(a[1])-ONCELIK.indexOf(b[1]));
-    const l=list.map(d=>({kod:d[0],ad:d[1],soru:d[2],renk:PALET[sira.indexOf(d)]||'var(--e-muted)'}));
+    const l=list.map(d=>({kod:d[0],ad:d[1],soru:d[2],renk:GRAFIK_RENK.ders(d[0])||PALET[sira.indexOf(d)]||'var(--e-muted)'}));
     return l.concat(gruplar.map(g=>({kod:g[0],ad:g[1],soru:g[2],uyeler:g[3],renk:(l.find(d=>d.kod===g[3][0])||{renk:'var(--e-muted)'}).renk})))};
   if(key==='TYT')return {key,ad:'TYT',oturum:'tyt',ust:S.SIRA_UST.TYT,deger:s=>S.hasTYT(s)?S.tytTotal(s):null,dersler:renkli(S.SIRA_DERS.TYT,S.SIRA_GRUP.TYT)};
   const f=key.split(':')[1];

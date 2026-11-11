@@ -13,6 +13,7 @@
     --rapport-radius:20px;--rapport-gap:20px;--rapport-chart:#168d7d;
     --rapport-blue:#487ba7;--rapport-orange:#bb632c;--rapport-purple:#78629f;
     --rapport-pink:#ad507a;--rapport-green:#447944;--rapport-red:#bf6951;
+    --rapport-slate:#5d7482;--rapport-sand:#9c8a6a;--rapport-brown:#7d5a3c;--rapport-olive:#7a8734;
     --rapport-axis:#91a8a1;--rapport-grid:#e4ebe7;--rapport-muted-chart:#b7c9c2;
     --rapport-heat-ink:#0b0b0b;
     --rapport-pop-shadow:0 12px 36px rgba(33,61,64,.13);
@@ -28,6 +29,7 @@
       --iyi:#84bf8f;--uyari:#d9b36c;--kritik:#e0907f;
       --golge:none;--rapport-chart:#72b9ab;--rapport-blue:#86aed0;--rapport-orange:#dba37a;
       --rapport-purple:#aa9fd0;--rapport-pink:#d49ab5;--rapport-green:#93bd8c;--rapport-red:#dc9585;
+      --rapport-slate:#9fb3bf;--rapport-sand:#c9b891;--rapport-brown:#c29b78;--rapport-olive:#b7c26f;
       --rapport-axis:#808285;--rapport-grid:#2a2c2f;--rapport-muted-chart:#5f6063;
       --rapport-heat-ink:#ececec;
       --rapport-pop-shadow:0 12px 36px rgba(0,0,0,.45);color-scheme:dark;
@@ -42,6 +44,7 @@
     --iyi:#84bf8f;--uyari:#d9b36c;--kritik:#e0907f;
     --golge:none;--rapport-chart:#72b9ab;--rapport-blue:#86aed0;--rapport-orange:#dba37a;
     --rapport-purple:#aa9fd0;--rapport-pink:#d49ab5;--rapport-green:#93bd8c;--rapport-red:#dc9585;
+      --rapport-slate:#9fb3bf;--rapport-sand:#c9b891;--rapport-brown:#c29b78;--rapport-olive:#b7c26f;
     --rapport-axis:#808285;--rapport-grid:#2a2c2f;--rapport-muted-chart:#5f6063;
     --rapport-heat-ink:#ececec;
     --rapport-pop-shadow:0 12px 36px rgba(0,0,0,.45);color-scheme:dark;
@@ -131,6 +134,7 @@
     --e-ok:var(--iyi);--e-bad:var(--kritik);--e-shadow:var(--rapport-pop-shadow);
     --e-c1:var(--rapport-chart);--e-c2:var(--rapport-orange);--e-c3:var(--rapport-blue);--e-c4:var(--uyari);
     --e-c5:var(--rapport-pink);--e-c6:var(--rapport-green);--e-c7:var(--rapport-purple);--e-c8:var(--rapport-red);
+    --e-c9:var(--rapport-slate);--e-c10:var(--rapport-sand);--e-c11:var(--rapport-brown);--e-c12:var(--rapport-olive);
     --e-sans:Arial,"Segoe UI",system-ui,sans-serif;--e-serif:var(--e-sans);--e-r:18px;
   }
   :root :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) {

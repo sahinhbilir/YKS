@@ -526,7 +526,7 @@ function model(v,sec={}){
       const g=s.dag.dersler.get(anahtar(d.kod)),dg=g?{...g,n:g.tam?g.n:s.dag.n,aralik:g.tam?null:s.dag.aralik,adet:s.dag.adet,cift:s.dag.cift}:null;
       return noktaAl(d,okulK,dg,okulK&&kurumNeti&&kurumOk?kurumNeti(s.ad,d.kod):null)});
     const son=seri.filter(Boolean).pop();
-    return {kod:b.kod,ad:b.ad,oturum:b.oturum,soru:son?son.soru:null,renk:PALET[i%PALET.length],seri};
+    return {kod:b.kod,ad:b.ad,oturum:b.oturum,soru:son?son.soru:null,renk:GRAFIK_RENK.ders(b.kod)||PALET[i%PALET.length],seri};
   });
   const N=Math.max(1,...dersler.flatMap(d=>d.seri.filter(Boolean).map(p=>p.n)));
   const ozet=sinavlar.map((_,i)=>okul?ozetAl(dersler,i):null);

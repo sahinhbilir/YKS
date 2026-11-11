@@ -31,7 +31,8 @@ function dersAdi(brans){
   const b=anahtar(brans);for(const [re,ad] of DERSLER)if(re.test(b))return ad;
   return kisiAdi(kisa(brans,40))||'Diğer';
 }
-const dersRengi=d=>{const i=RENK_SIRA.indexOf(d);return i>=0&&i<8?'var(--e-c'+(i+1)+')':i===8?'var(--e-fg2)':'var(--e-chart-muted)'};
+// One colour per ders on every page (GRAFIK_RENK, src/grafik.js); a ders it does not know keeps a neutral colour.
+const dersRengi=d=>GRAFIK_RENK.ders(d)||'var(--e-chart-muted)';
 const sayi=n=>Number(n).toLocaleString('tr-TR');
 const isaretli=n=>(n>0?'+':n<0?'−':'')+sayi(Math.abs(n));
 const yuzde=p=>'%'+Math.round(Math.abs(p)*100);

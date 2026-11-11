@@ -693,7 +693,7 @@ function durus(ogrD,m,tv){
       const dil=D.nokta(d.seri[i]);if(!Number.isFinite(s.g)||!Number.isFinite(dil))return;
       const sp=d.seri[i];nokta.push({g:s.g,sinav:s.ad,kisa:kisaAd[i],dilim:dil,t:D.tden(dil),tam:!!(sp&&sp.tam),okulN:sp&&sp.tam&&Number.isFinite(sp.n)?sp.n:null});
     });
-    if(nokta.length)cizgiler.push({kod,ad:kodlar.length>1?ad(kod).ad:m.ders,renk:'var(--e-c'+(q+1)+')',nokta});
+    if(nokta.length)cizgiler.push({kod,ad:kodlar.length>1?ad(kod).ad:m.ders,renk:GRAFIK_RENK.ders(kod)||'var(--e-c'+(q+1)+')',nokta});
   });
   if(!cizgiler.length)return yok('Okul bu derste Türkiye geneli listesinde bulunamadı; Türkiye geneli sayfasında okulu seçin.');
   const g=cizgiler.flatMap(c=>c.nokta.map(p=>p.g)),g0=Math.min(...g),g1=Math.max(...g);
