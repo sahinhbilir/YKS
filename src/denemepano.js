@@ -313,13 +313,20 @@ function grafikDers(st,W){
     ...(coklu?{seriler:seri.map(s=>({ad:s.ad,pts:d.map((_,i)=>[x(i),y(deger(s,i))])})),seriNokta:(k,i)=>[noktalar[i][k]],
       seriIpucu:(k,i)=>({bas:ipucu[i].bas,satir:satirlar(i).map(([c,a,v])=>[c,a,v,'cizgi',a===seri[k].ad])})}:{})};
 }
+// An axis that stays inside what the measure allows: no tick above the highest possible net (TYT 120, AYT 80, a ders's question
+// count). When the last regular tick would pass it, the maximum itself is the top tick.
+function tiklerSinirli(lo,hi,n,ust){
+  let t=tikler(lo,hi,n);
+  if(Number.isFinite(ust)&&ust>0&&t[t.length-1]>ust+1e-9){t=t.filter(v=>v<ust-1e-9);if(!t.length||t[t.length-1]<hi)t.push(ust)}
+  return t;
+}
 // Every student as a line (as Derslere göre draws every subject); the class average is dashed.
 // Lines take their class's colour when the scope has several classes. The student under the pointer
 // takes the stage; a click opens the student's card.
 function grafikOgrenci(st,W){
   const m=st.mo,d=m.sinavlar,ogr=m.ogrenciler,H=320;if(!ogr.length||!d.length)return null;
   const vals=ogr.flatMap(o=>o.seri.filter(v=>v!==null)).concat(d.map(s=>s.ort)),lo=Math.min(...vals),hi=Math.max(...vals);
-  const tik=tikler(Math.min(0,lo-(hi-lo)*.05),hi+(hi-lo)*.05+1,5),R=W-(Math.max(...tik.map(t=>yaziGen(f1(t))))+22),L=2,ust=26,alt=H-26;
+  const tik=tiklerSinirli(Math.min(0,lo-(hi-lo)*.05),hi+(hi-lo)*.05+1,7,m.O&&m.O.ust),R=W-(Math.max(...tik.map(t=>yaziGen(f1(t))))+22),L=2,ust=26,alt=H-26;
   const step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>alt-(v-tik[0])/(tik[tik.length-1]-tik[0])*(alt-ust);
   const subeler=[...new Set(ogr.map(o=>o.sinif||'—'))].sort((a,b)=>a.localeCompare(b,'tr')),renk=(o,k)=>PALET[(subeler.length>1?subeler.indexOf(o.sinif||'—'):k)%PALET.length];
   const seriler=ogr.map((o,k)=>({no:o.no,ad:kisiAdi(o.ad),sinif:o.sinif,renk:renk(o,k),pts:o.seri.map((v,i)=>v===null?null:[x(i),y(v)])}));
@@ -359,7 +366,7 @@ function grafikDagilim(st,W){
 function grafikKisi(st,W){
   const m=st.m,o=st.ogrKart;if(!o)return null;
   const d=m.sinavlar,H=220,vals=o.seri.filter(v=>v!==null).concat(d.map(s=>s.p25),d.map(s=>s.p75)),lo=Math.min(...vals),hi=Math.max(...vals);
-  const tik=tikler(Math.min(0,lo-(hi-lo)*.1),hi+(hi-lo)*.1+1,4),R=W-(Math.max(...tik.map(t=>yaziGen(f1(t))))+20),L=2,ust=26,alt=H-26,step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>alt-(v-tik[0])/(tik[tik.length-1]-tik[0])*(alt-ust);
+  const tik=tiklerSinirli(Math.min(0,lo-(hi-lo)*.1),hi+(hi-lo)*.1+1,6,m.O&&m.O.ust),R=W-(Math.max(...tik.map(t=>yaziGen(f1(t))))+20),L=2,ust=26,alt=H-26,step=(R-L)/d.length,x=i=>L+step*(i+.5),y=v=>alt-(v-tik[0])/(tik[tik.length-1]-tik[0])*(alt-ust);
   let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" aria-hidden="true">'+bantlar(m,x,step,st.s,4,alt)+eksenY(tik,y,L,R,f1)+'<line class="et-eksen" x1="'+L+'" x2="'+R+'" y1="'+alt+'" y2="'+alt+'"/>';
   if(d.length>1)svg+='<path class="dp-bant50 soluk" d="'+yol(d.map((s,i)=>[x(i),y(s.p75)]).concat(d.map((s,i)=>[x(i),y(s.p25)]).reverse()))+'Z"/>';
   svg+='<path class="et-ort kesik" d="'+yol(d.map((s,i)=>[x(i),y(s.ort)]))+'"/>';
@@ -900,6 +907,6 @@ function birak(){
 }
 document.addEventListener('pointerup',birak);document.addEventListener('pointercancel',birak);
 GRAFIK_OLCUM.kur({secici:'.et-grafik[data-dp-grafik]',kok:'#dpKok',etkin,bilgi:olcBilgi,yakin:enYakin,ipucuGizle:ipucuSakla,hap,fmt:f1});
-return {temel,olcu,kapsamlar,ayGeri,TARIHLI,gorunumModeli,veriAl,durumAl,icerik,gorunum,grafikleriCiz,GRAFIKLER,CIZIMLER,ESIK,degisimKaynagi,isiHaritasi,isiRengi,kaynakCumlesi,kaynakBolumleri};
+return {tiklerSinirli,temel,olcu,kapsamlar,ayGeri,TARIHLI,gorunumModeli,veriAl,durumAl,icerik,gorunum,grafikleriCiz,GRAFIKLER,CIZIMLER,ESIK,degisimKaynagi,isiHaritasi,isiRengi,kaynakCumlesi,kaynakBolumleri};
 })();
 function gorunumDenemePanosu(){return DPANO.gorunum()}

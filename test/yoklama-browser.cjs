@@ -41,8 +41,14 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    const renk=k=>page.evaluate(k=>getComputedStyle(document.querySelector('.yk-lejant .yk-kare.'+k)).backgroundColor,k);
    const [geldi,gec,gelmedi,raporlu,diger]=await Promise.all(['geldi','gec','gelmedi','raporlu','diger'].map(renk));
    const rgb=s=>s.match(/\d+/g).map(Number);
-   assert(rgb(gelmedi)[0]>200&&rgb(gelmedi)[1]<120,'Gelmedi is red: '+gelmedi);assert(rgb(gec)[0]>200&&rgb(gec)[1]>150&&rgb(gec)[2]<60,'Geç is yellow: '+gec);
-   assert(rgb(raporlu)[2]>200&&rgb(raporlu)[0]<100,'Raporlu is blue: '+raporlu);assert(rgb(diger)[1]>150&&rgb(diger)[0]<100,'Diğer is green: '+diger);
+   // The site's own status and series colours (muted, both themes): told apart by hue, not by saturation.
+   {const [r,g2,b]=rgb(gelmedi);assert(r>g2+50&&r>b+50,'Gelmedi is red: '+gelmedi)}
+   {const [r,g2,b]=rgb(gec);assert(r>g2&&g2>b&&r-b>80,'Geç is amber: '+gec)}
+   {const [r,g2,b]=rgb(raporlu);assert(b>r+40&&b>=g2,'Raporlu is blue: '+raporlu)}
+   {const [r,g2,b]=rgb(diger);assert(g2>r+30&&g2>b+30,'Diğer is green: '+diger)}
+   assert.equal(new Set([geldi,gec,gelmedi,raporlu,diger]).size,5,'five states, five colours');
+   // They are the tokens the other pages use for the same meanings.
+   assert.deepEqual(await page.evaluate(()=>{const s=getComputedStyle(document.getElementById('ykKok')),al=v=>{const e=document.createElement('i');e.style.color=s.getPropertyValue(v).trim();document.body.appendChild(e);const c=getComputedStyle(e).color;e.remove();return c};return [al('--y-gelmedi')===al('--kritik'),al('--y-gec')===al('--uyari')]}),[true,true]);
    const g=rgb(geldi);assert(Math.max(...g)-Math.min(...g)<12,'Geldi is grey: '+geldi);
    if(tema==='light')assert(g[0]>210,'light Geldi is close to white');
    // Hover on the chart shows the week; the keyboard walks it.

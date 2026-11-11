@@ -58,6 +58,25 @@ and follows subsequent OS changes. The existing full device-data cleanup also
 clears this preference. Ordinary buttons use flat surfaces, with a brief border
 transition disabled for reduced-motion users.
 
+## One visual language across pages
+
+- **A ders has one colour everywhere.** `GRAFIK_RENK.ders(name)` (src/grafik.js) maps every name a page uses for a
+  ders ("Matematik", "MATEMATİK-T", "MAT", "AMAT") to the same series token, so Türkçe is the same colour on Deneme
+  panosu, Türkiye geneli, Etütler and Etüt etkisi. TYT and AYT versions of a ders share it. There are twelve series
+  tokens (`--e-c1` … `--e-c12`), so the twelve AYT dersler never share a colour. Pages must not assign ders colours by
+  list position.
+- **Status colours are the site's.** Yoklama's Gelmedi / Geç geldi / Raporlu / Diğer use `--kritik`, `--uyari` and the
+  report blue and green, not a palette of their own.
+- **Charts say what their marks mean.** The student's exam chart has round axis values (1, 2, 2,5 or 5 × 10^k),
+  dates as "24 Eyl" like the teacher's boards, and a key under it for the dot colours, the dashed average and the
+  target. An axis never shows a value the measure cannot have (a TYT chart ends at 120).
+- **A comparison that is not established has no verdict colour**: estimated Türkiye values and teacher effects whose
+  interval includes zero are printed plainly (docs/ogrenci-karti.md, docs/etut-etkisi.md).
+- **Older teacher pages use the board components**: Haftalık öğrenci takibi and Öğrenciler are card lists with compact
+  rows and the theme's inputs.
+- **The filter bar of a board stays in view** under the top bar on wide, tall screens (≥ 1100 × 760), so the scope of
+  a long page is always visible and changeable.
+
 ## Type
 
 - Headings, the brand, numbers and body use Arial / Segoe UI / system sans; no web

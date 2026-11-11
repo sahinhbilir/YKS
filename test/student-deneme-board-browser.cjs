@@ -45,7 +45,7 @@ assert.equal(await page.locator('.dn-ana polyline.dn-cizgi').count(),1,'one cont
 {const x=await page.locator('.dn-ana circle.dn-dot').evaluateAll(l=>l.map(c=>[c.dataset.dnYol,Number(c.getAttribute('cx'))]));
  assert.deepEqual(x.map(a=>a[0]),['p:'+encodeURIComponent('HAZIRBULUNUŞLUK-2|2026-08-18|TYT'),'p:'+encodeURIComponent('27-YKS-1201|2026-09-25|TYT'),'p:'+encodeURIComponent('27-YKS-1203|2026-10-23|TYT')],'3 TYT exams, the own 1203 hidden');
  const g=d=>Date.parse(d)/864e5;assert(Math.abs((x[1][1]-x[0][1])/(x[2][1]-x[0][1])-(g('2026-09-25')-g('2026-08-18'))/(g('2026-10-23')-g('2026-08-18')))<.01,'x follows the real dates; the August exam is not folded onto the term start');}
-{const t=await page.locator('.dn-ana svg text').evaluateAll(l=>l.map(e=>e.textContent));assert(t.includes('2026-08-18')&&t.includes('2026-10-23'),'the axis names the first and last real dates: '+t.join(','));}
+{const t=await page.locator('.dn-ana svg text').evaluateAll(l=>l.map(e=>e.textContent));assert(t.includes('18 Ağu')&&t.includes('23 Eki'),'the axis names the first and last real dates, written as the teacher’s boards write them: '+t.join(','));}
 assert.equal(await page.locator('.dn-ana svg').evaluate(e=>Math.abs(e.getBoundingClientRect().width-e.parentElement.clientWidth)<2),true);
 // The same exams and nets as Denemelerim.
 const anaNetler=await page.locator('.dn-ana circle.dn-dot').evaluateAll(l=>l.map(c=>c.getAttribute('aria-label').match(/ (\S+) net/)?.[1]));

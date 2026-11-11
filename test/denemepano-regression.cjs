@@ -661,5 +661,15 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     await trYukle([0, 1, 2, 3, 4, 5]); const once = JSON.stringify(get('D')); run('DPANO.icerik()'); assert.equal(JSON.stringify(get('D')), once);
     run('yalnizcaGoruntuleme=()=>true'); assert(run('DPANO.icerik()').includes('data-dp-sira="trFark"'));
   });
+  await check('the students’ charts never show an axis value the measure cannot have: no tick above the maximum net', async () => {
+    const T = run('DPANO.tiklerSinirli'), copy = x => JSON.parse(JSON.stringify(x));
+    // TYT nets from −5 to 115: regular steps of 20, the top tick is 120, not 150.
+    assert.deepEqual(copy(T(-11, 121.75, 7, 120)), [-20, 0, 20, 40, 60, 80, 100, 120]);
+    assert.deepEqual(copy(T(0, 82, 7, 80)), [0, 20, 40, 60, 80], 'AYT: the maximum itself closes the axis');
+    assert.deepEqual(copy(T(0, 8.4, 7, 7)), [0, 2, 4, 6, 7], 'a 7-question ders ends at 7');
+    assert.deepEqual(copy(T(0, 50, 5)), [0, 10, 20, 30, 40, 50], 'without a maximum the ticks are as before');
+    const h = run('DPANO.icerik()'); assert(h.length > 0);
+  });
+
   console.log(passed + ' Deneme panosu checks passed');
 })();

@@ -590,15 +590,24 @@ function denemeGrafikListesi(tum,{tur,oturum,brans,alan,genelVar}) {
 }
 // opt: metrik (default: Denemelerim's choice), alan, genislik (px; default follows the page), hedef (a goal line, net),
 // ac (points open Denemelerim instead of its detail strip; used on the home page).
+// Round axis values: a step of 1, 2, 2,5 or 5 × 10^k that gives about four intervals, the ends on multiples of it.
+function denemeYuvarlakEksen(min,max,hedefAdet=4) {
+  const ham=(max-min)/hedefAdet||1,us=Math.pow(10,Math.floor(Math.log10(ham))),k=ham/us,adim=(k<=1?1:k<=2?2:k<=2.5?2.5:k<=5?5:10)*us;
+  const alt=Math.floor(min/adim+1e-9)*adim,ust=Math.ceil(max/adim-1e-9)*adim,ticks=[];
+  for(let t=alt;t<=ust+adim/2;t+=adim)ticks.push(Math.round(t*1e6)/1e6);
+  return {alt,ust,adim,ticks};
+}
+// "24 Eyl": the way the teacher's boards write a date; the year is added when the chart spans two years.
+const denemeKisaTarih=(iso,yilli)=>{const [y,m,d]=String(iso||'').split('-').map(Number);return Number.isFinite(d)&&DENEME_AY[m-1]?d+' '+DENEME_AY[m-1]+(yilli?' '+y:''):String(iso||'')};
 function denemeGrafik(liste,opt={}) {
   if(!liste.length)return '<div class="dn-bos"><b>Henüz deneme yok</b><p>İlk sonucunu eklediğinde gelişimin burada görünecek.</p></div>';
   const alan=opt.alan || denemeAlan(),metrik=opt.metrik || denemeMetrik(),m=DENEME_METRIK[metrik],val=r=>denemeDeger(r,metrik,alan),hedef=Number.isFinite(opt.hedef)?opt.hedef:null;
   const points=liste.filter(r=>val(r)!==null),eksik=liste.length-points.length;
   if(!points.length)return '<div class="dn-bos">'+(metrik==='puan'?'Bu grafik için yayınevi puanı gerekli. Denemeyi düzenleyip sonuç raporundaki puanı ekleyin.':'Bu grafik için tamamlama süresi gerekli. Denemenin ayrıntısında “Süreyi gir / düzelt” ile süre ekleyin.')+'</div>';
   // Net/dk values are around 0–1, so the minimum axis span follows the metric.
-  const width=opt.genislik?Math.max(280,Math.min(900,Math.round(opt.genislik))):Math.max(320,Math.min(900,(document.getElementById('ana')?.clientWidth||960)-56)),height=280,left=50,right=22,top=24,bottom=38,values=points.map(val),lo=Math.min(0,...values),hi=Math.max(...values,m.adim,hedef ?? 0),pad=Math.max((hi-lo)*.12,m.adim),min=lo<0?lo-pad:0,max=hi+pad;
+  const width=opt.genislik?Math.max(280,Math.min(900,Math.round(opt.genislik))):Math.max(320,Math.min(900,(document.getElementById('ana')?.clientWidth||960)-56)),height=280,left=50,right=22,top=24,bottom=38,values=points.map(val),lo=Math.min(0,...values),hi=Math.max(...values,m.adim,hedef ?? 0),pad=Math.max((hi-lo)*.12,m.adim),eksen=denemeYuvarlakEksen(lo<0?lo-pad:0,hi+pad),min=eksen.alt,max=eksen.ust;
   const dates=points.map(r=>gunNo(r.tarih)),first=Math.min(...dates),last=Math.max(...dates),x=i=>first===last?(points.length===1?width/2:left+i*(width-left-right)/(points.length-1)):left+(dates[i]-first)*(width-left-right)/(last-first),y=v=>height-bottom-(v-min)*(height-top-bottom)/(max-min);
-  const coords=points.map((r,i)=>{const same=dates.map((d,j)=>d===dates[i]?j:-1).filter(j=>j>=0),offset=first===last?0:(same.indexOf(i)-(same.length-1)/2)*Math.min(8,24/Math.max(1,same.length-1));return [Math.max(left,Math.min(width-right,x(i)+offset)),y(val(r))];}),line=coords.map(p=>p.join(',')).join(' '),ticks=Array.from({length:5},(_,i)=>min+(max-min)*i/4);
+  const coords=points.map((r,i)=>{const same=dates.map((d,j)=>d===dates[i]?j:-1).filter(j=>j>=0),offset=first===last?0:(same.indexOf(i)-(same.length-1)/2)*Math.min(8,24/Math.max(1,same.length-1));return [Math.max(left,Math.min(width-right,x(i)+offset)),y(val(r))];}),line=coords.map(p=>p.join(',')).join(' '),ticks=eksen.ticks;
   // Borsa grafiği gibi: her çizgi parçası, vardığı denemenin önceki (en fazla) 4 denemenin ortalamasına
   // göre; her nokta bir önceki denemeye göre renklenir. Süre grafiğinde kısalma iyileşmedir.
   const iyiYon=metrik==='sure'?-1:1,yon=(a,b)=>Math.abs(a-b)<.005?'esit':(a-b)*iyiYon>0?'yukari':'asagi';
@@ -610,12 +619,15 @@ function denemeGrafik(liste,opt={}) {
   const hedefCizgi=hedef===null?'':'<line class="dn-hedef" x1="'+left+'" x2="'+(width-right)+'" y1="'+y(hedef)+'" y2="'+y(hedef)+'"/><text class="dn-hedef-yazi" x="'+(left+6)+'" y="'+(y(hedef)-5)+'">Hedef '+denemeSayi(hedef)+'</text>';
   // One unbroken line under the coloured segments: the series is continuous whatever the dates are.
   const surekli=points.length>1?'<polyline points="'+line+'" class="dn-cizgi"/>':'';
-  const nokta=opt.ac?'data-dn-yol':'data-dn-dot';
+  const nokta=opt.ac?'data-dn-yol':'data-dn-dot',yilli=points[0].tarih.slice(0,4)!==points.at(-1).tarih.slice(0,4);
   return '<div class="dn-chart"><svg viewBox="0 0 '+width+' '+height+'" role="group" aria-label="Deneme gelişim grafiği. Noktaları seçerek sonuçları inceleyin.">'+
     ticks.map(t=>'<line x1="'+left+'" y1="'+y(t)+'" x2="'+(width-right)+'" y2="'+y(t)+'" class="dn-grid"/><text x="'+(left-8)+'" y="'+(y(t)+4)+'" text-anchor="end">'+denemeSayi(t)+'</text>').join('')+
     '<polygon points="'+left+','+(height-bottom)+' '+line+' '+coords.at(-1)[0]+','+(height-bottom)+'" class="dn-area"/>'+hedefCizgi+ortCizgi+surekli+parcalar+
     points.map((r,i)=>{const kaynak=r.genel?' · '+r.genel+' denemesinden':'';return '<circle class="dn-dot '+(i?yon(values[i],values[i-1]):'esit')+(r.genel?' genel':'')+'" tabindex="0" role="button" aria-label="'+kacis(r.ad+kaynak+' '+r.tarih+' '+denemeSayi(val(r))+m.birim+egilim(i))+'" '+nokta+'="'+kacis(r.id)+'" cx="'+coords[i][0]+'" cy="'+coords[i][1]+'" r="6"><title>'+kacis(r.ad+kaynak+' · '+r.tarih+' · '+denemeSayi(val(r))+m.birim+egilim(i))+'</title></circle>';}).join('')+
-    '<text x="'+left+'" y="'+(height-10)+'">'+points[0].tarih+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?points.at(-1).tarih:'')+'</text></svg>'+
+    '<text x="'+left+'" y="'+(height-10)+'">'+denemeKisaTarih(points[0].tarih,yilli)+'</text><text x="'+(width-right)+'" y="'+(height-10)+'" text-anchor="end">'+(points.length>1?denemeKisaTarih(points.at(-1).tarih,yilli):'')+'</text></svg>'+
+    // What the colours and the dashed line mean, so the chart reads without a guide.
+    (points.length>1?'<div class="dn-lejant" aria-hidden="true"><span><i class="dn-l-nokta yukari"></i>önceki denemeden '+(metrik==='sure'?'kısa':'yüksek')+'</span><span><i class="dn-l-nokta asagi"></i>'+(metrik==='sure'?'uzun':'düşük')+'</span>'+
+      (points.length>2?'<span><i class="dn-l-ort"></i>önceki 4 denemenin ortalaması</span>':'')+(hedef===null?'':'<span><i class="dn-l-hedef"></i>hedef</span>')+'</div>':'')+
     (eksik?'<p class="mini">'+eksik+' deneme '+(metrik==='puan'?'yayınevi puanı':'süre')+' girilmediği için grafikte yok.</p>':'')+'</div>';
 }
 // Eksen yardımcıları ve branş listesi öğretmenin ortalama grafiğiyle (denemeYolSvg) ortaktır. Öğrencinin ana sayfadaki

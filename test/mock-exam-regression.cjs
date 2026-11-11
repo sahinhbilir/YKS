@@ -250,7 +250,14 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   assert(x0<x1 && x1<x2,'ordered by date');
   const gun=d=>run("gunNo('"+d+"')");const oran=(x1-x0)/(x2-x0),beklenen=(gun('2026-09-25')-gun('2026-08-18'))/(gun('2026-10-23')-gun('2026-08-18'));
   assert(Math.abs(oran-beklenen)<.01,'x is proportional to the real date '+oran+' '+beklenen);
-  assert(h.includes('>2026-08-18</text>') && h.includes('>2026-10-23</text>'),'the axis names the real first and last dates');
+  assert(h.includes('>18 Ağu</text>') && h.includes('>23 Eki</text>'),'the axis names the real first and last dates, written as on the teacher’s boards');
+  // Round axis values and a key for the marks: the chart reads without a guide.
+  const eksen=(a,b)=>JSON.parse(run('JSON.stringify(denemeYuvarlakEksen('+a+','+b+').ticks)'));
+  assert.deepEqual(eksen(0,75.3),[0,20,40,60,80]);assert.deepEqual(eksen(0,95.2),[0,25,50,75,100]);assert.deepEqual(eksen(0,1.1),[0,0.5,1,1.5]);assert.deepEqual(eksen(-7,118),[-50,0,50,100,150]);
+  assert(eksen(0,48).every(t=>Number.isInteger(t)),'whole numbers for nets');
+  assert.equal(run("denemeKisaTarih('2026-09-05')"),'5 Eyl');assert.equal(run("denemeKisaTarih('2027-01-12',true)"),'12 Oca 2027');
+  assert.match(h,/class="dn-lejant"[\s\S]*önceki denemeden yüksek[\s\S]*düşük[\s\S]*önceki 4 denemenin ortalaması/);
+  assert(!/<text[^>]*>\d+,\d\d<\/text>/.test(h.slice(h.indexOf('<svg'),h.indexOf('</svg>'))),'no two-decimal axis labels');
   assert.equal((h.match(/<polyline points="[^"]*" class="dn-cizgi"/g)||[]).length,1,'one continuous line');
   assert.equal((h.match(/class="dn-seg /g)||[]).length,2);
   assert.match(h,/<circle class="dn-dot [^"]*"[^>]*data-dn-yol="p:b"/);
