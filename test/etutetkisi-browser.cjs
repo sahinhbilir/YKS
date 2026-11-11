@@ -174,10 +174,14 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
    assert.deepEqual(await page.locator('#eeHocalar thead th').allTextContents(),['Sıra','Öğretmen','Öğrenci','Etüt','Toplam katkı (net)','Her etüt için artış (net)']);
    // Teachers are ranked by their estimate (largest first): the first row is rank 1 and the column is right-aligned like the other numbers.
    assert.deepEqual(await page.locator('#eeHocalar thead th').first().evaluate(th=>[th.textContent,th.classList.contains('sayi'),getComputedStyle(th).textAlign,th.getBoundingClientRect().width>0]),['Sıra',true,'right',true]);
-   const hocaSatirlari=await page.locator('#eeHocalar tbody tr').evaluateAll(l=>l.map(r=>{const son=r.children[r.children.length-1],kat=r.children[r.children.length-2],say=kat.textContent;return {sira:r.children[0].textContent,az:r.classList.contains('ee-az'),tahmin:parseFloat(say.replace(/[▲▼]/g,'').replace(',','.'))*(say.includes('▼')?-1:1),aralik:son.querySelector('.mini')?.textContent||''}}));
-   assert.equal(hocaSatirlari[0].sira,'1');assert.match(hocaSatirlari[0].aralik,/^[+−]?\d,\d\d … [+−]?\d,\d\d$/,'the interval is written under the estimate');
-   for(let i=1;i<hocaSatirlari.length;i++){const a=hocaSatirlari[i-1],c=hocaSatirlari[i];assert(a.az<=c.az,'small groups last');if(a.az===c.az)assert(a.tahmin>=c.tahmin,'largest pocket first')}
-   for(const r of hocaSatirlari)assert.equal(r.sira==='—',r.az,'only small groups lose their rank');
+   const hocaSatirlari=await page.locator('#eeHocalar tbody tr').evaluateAll(l=>l.map(r=>{const son=r.children[r.children.length-1],kat=r.children[r.children.length-2],say=kat.textContent;return {sira:r.children[0].textContent,az:r.classList.contains('ee-az'),tahmin:parseFloat(say.replace(/[▲▼+−]/g,'').replace(',','.'))*(/[▼−]/.test(say)?-1:1),oklu:/[▲▼]/.test(say),renkli:kat.classList.contains('et-yukari')||kat.classList.contains('et-asagi'),aralik:son.querySelector('.mini')?.textContent||''}}));
+   assert.match(hocaSatirlari[0].aralik,/^[+−]?\d,\d\d … [+−]?\d,\d\d$/,'the interval is written under the estimate');
+   // A place only for an established effect: the whole interval on one side of zero. The others have no place, no arrow and no colour.
+   const sayi=t=>parseFloat(t.replace('−','-').replace('+','').replace(',','.')),belirgin=r=>{const [lo,hi]=r.aralik.split(' … ').map(sayi);return !r.az&&(lo>0||hi<0)};
+   const yerli=hocaSatirlari.filter(belirgin);
+   if(yerli.length)assert.equal(hocaSatirlari[0].sira,'1','placed teachers come first');
+   for(let i=1;i<hocaSatirlari.length;i++){const a=hocaSatirlari[i-1],c=hocaSatirlari[i];assert(a.az<=c.az,'small groups last');assert(belirgin(a)>=belirgin(c),'placed before unplaced');if(belirgin(a)&&belirgin(c))assert(a.tahmin>=c.tahmin,'largest pocket first')}
+   for(const r of hocaSatirlari){assert.equal(r.sira==='—',!belirgin(r),'no place unless the interval excludes zero');if(!r.az)assert.equal(r.oklu||r.renkli,belirgin(r),'arrow and colour only for an established effect')}
    assert.deepEqual(await page.locator('#eeOgrenciler thead th').allTextContents(),['Öğrenci','Etütten önce','Son deneme','Bu dersteki değişim (net)','Diğer derslerinde, ortalama (net)','Fark (net)','Etüt','Öğretmenler','Türkiye farkı']);
    // The outliers are never dropped silently: a collapsed list with the reasons, the table marks the rows, the small line draws a hollow dot.
    assert.match(await page.locator('#eeUc summary').innerText(),/^Hesaba katılmayan uç sonuçlar \(2\)$/);assert.equal(await page.locator('#eeUc').evaluate(d=>d.open),false);

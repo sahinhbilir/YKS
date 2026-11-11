@@ -66,6 +66,19 @@ const student=sandbox.D.ogr[0];
  // Son deneme: the latest usable of each (the incomplete newest TYT and the other alan's AYT are skipped)
  let m=a.merkezBul(student,'son','SAY');
  assert.equal(m.tyt.id,'m:2');assert.equal(m.ayt.id,'m:5');near(m.tyt.net,72,1e-9,'TYT total');near(m.ayt.net,63,1e-9,'AYT total');
+ // The range of the estimate comes from the student's own recent exams, not from the fit error of the formula.
+ // Two usable exams a session: too few, and the page says a single exam can move a lot.
+ {const r=a.puanAraligi('SAY',undefined);assert.equal(r.yeterli,false);same([r.nT,r.nA],[2,2]);
+  const kayit=student.denemeler;
+  // Three usable exams a session (TYT 72, 72, 58,8; AYT 63, 50,4 and one more): lowest with lowest, highest with highest.
+  student.denemeler=[...kayit,exam('m:9','Genel TYT 4','2026-11-06','TYT',{oran:.49}),exam('m:10','Genel AYT 3','2026-11-07','AYT',{oran:.7})];
+  const l=a.sinavSecenekleri('SAY'),t=l.tyt.filter(x=>x.uygun).map(x=>a.merkezBul(student,'sec','SAY',{tyt:x.id}).tyt.net),y=l.ayt.filter(x=>x.uygun).map(x=>a.merkezBul(student,'sec','SAY',{ayt:x.id}).ayt.net);
+  assert.equal(t.length,3);assert.equal(y.length,3);
+  const q=a.puanAraligi('SAY',90),M2=a.modelKur(catalogue).SAY,p=(x,z)=>M2.b[0]+M2.b[1]*x+M2.b[2]*z+M2.b[3]*450;
+  assert.equal(q.yeterli,true);near(q.alt,p(Math.min(...t),Math.min(...y)),1e-9,'lowest TYT with lowest AYT');near(q.ust,p(Math.max(...t),Math.max(...y)),1e-9,'highest with highest');
+  assert(q.ust-q.alt>2*M2.sd,'wider than the fit error it replaces');assert(q.siraUst<=q.siraAlt,'a higher puan never gives a worse place');
+  const h=a.gorunum();assert.match(h,/id="yaAralik">Son denemelerinin en düşük ve en yüksek netleriyle: <strong>[\d,]+ – [\d,]+<\/strong> puan/);assert.match(h,/net→puan dönüşüm hatası ± /);assert(!/<\/strong> ± /.test(h),'no ± beside the estimate');
+  student.denemeler=kayit;}
  // Any earlier exam, including Genel; an unusable one is refused with its reason
  m=a.merkezBul(student,'sec','SAY',{tyt:'m:1',ayt:'m:4'});assert.equal(m.tyt.id,'m:1');assert.equal(m.ayt.id,'m:4');near(m.tyt.net,72,1e-9,'TYT total');
  m=a.merkezBul(student,'sec','SAY',{tyt:'m:3',ayt:'m:4'});assert.equal(m.tyt,null);assert.match(m.tytNeden,/eksik: Fizik/);

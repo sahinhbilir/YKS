@@ -5,6 +5,7 @@
 #okKok .et-arac{align-items:center}
 #okKok .et-ozet-kart strong small{font-family:var(--e-sans);font-size:.75rem;color:var(--e-muted);font-weight:400}
 #okKok .et-ozet-kart strong.ok-yukari{color:var(--e-ok)}#okKok .et-ozet-kart strong.ok-asagi{color:var(--e-bad)}
+#okKok .et-ozet-kart strong.ok-bekliyor{color:var(--e-fg2)}#okKok .et-ozet-kart.ok-tahmini{border-style:dashed}
 #okKok .et-ozet-kart strong{overflow-wrap:anywhere}
 /* Tables: numbers (th and td alike) are right-aligned; only the name column is flexible. */
 #okKok .et-tablo-kutu{min-height:0;max-height:none}

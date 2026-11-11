@@ -219,7 +219,9 @@ function durumAl(t){
   const tr=turkiyeHesapla(sec.key,mo,ogrDers,s),olcut=s&&OLCUT_ALAN[EK.dpOlcut]&&(EK.dpOlcut!=='trfark'||tr.fark!==null)?EK.dpOlcut:'net';
   odakla(m,s);if(mo!==m)odakla(mo,s);olcutUygula(mo,s,olcut,tr);
   const ogr=mo.ogrenciler.find(o=>o.no===EK.dpOgr)||mo.ogrenciler[0]||null,ogrKart=ogr&&m.ogrenciler.find(o=>o.no===ogr.no)||null;
-  return {ks,K,olcular,sec,m,mo,s,tr,tur,turler,ogrDers,olcut,ders:m.dersler.some(d=>d.kod===EK.dpDers)?EK.dpDers:null,ogr,ogrKart};
+  // The headline is always the session total, whatever net the students' part follows.
+  const trToplam=ogrDers?turkiyeHesapla(sec.key,m,null,s):tr;
+  return {ks,K,olcular,sec,m,mo,s,tr,trToplam,tur,turler,ogrDers,olcut,ders:m.dersler.some(d=>d.kod===EK.dpDers)?EK.dpDers:null,ogr,ogrKart};
 }
 
 /* ---------------- charts (SVG strings, sized to their box) ---------------- */
@@ -492,9 +494,15 @@ function ozetKartlari(st){
   const kart=(sinif,ad,buyuk,alt)=>'<div class="et-ozet-kart'+sinif+'"><span class="dp-kpi-ad">'+ad+'</span><strong>'+buyuk+'</strong><div class="dp-kpi-alt">'+alt+'</div></div>';
   const not=t=>'<span class="dp-kpi-not">'+t+'</span>';
   const kiyas=tarihli(st.s)?'başlangıca göre':st.s==='sec'?'seçilen önceki denemeye göre':st.s===1?'önceki denemeye göre':'önceki '+st.s+' denemeye göre';
+  // A raw change mixes the students' progress with the exam's difficulty; the line under it takes the Türkiye average's change
+  // over the same window out. With a tahmini average it is approximate and carries no colour.
+  const tt=st.trToplam,trG=o&&o.ayni!==null&&tt&&tt.fark!==null?y6(o.ayni-tt.fark):null;
+  const trNot=trG===null?(o&&o.ayni!==null?not('Türkiye’ye göre: bu aralıkta Türkiye ortalaması yok'):'')
+    :tt.tahmini?'<span class="dp-kpi-not dp-kpi-tr" id="dpKpiTr">Türkiye’ye göre <b>'+trYazi(trG,true,f1)+'</b> net · Türkiye listesi bekleniyor</span>'
+    :'<span class="dp-kpi-not dp-kpi-tr" id="dpKpiTr">'+hap(trG,f1(Math.abs(trG))+' net')+' Türkiye’ye göre · Türkiye ortalaması '+(tt.fark===0?'değişmedi':trYazi(tt.fark,false,f1))+'</span>';
   const ana=o
     ?kart(' dp-kpi-ana','Aynı öğrencilerin net değişimi',o.ayni===null?'<span class="dp-kpi-yok">veri yok</span>':isaret(o.ayni)+'<small>net</small>',
-      not(o.ayni===null?'İki denemede de giren öğrenci yok':fi(o.ayniN)+' öğrenci iki denemede de girdi · '+fi(o.artan)+' yükseldi, '+fi(o.azalan)+' düştü'))
+      trNot+not(o.ayni===null?'İki denemede de giren öğrenci yok':fi(o.ayniN)+' öğrenci iki denemede de girdi · '+fi(o.artan)+' yükseldi, '+fi(o.azalan)+' düştü'))
     :kart(' dp-kpi-ana','Katılımcı ortalaması',f1(son.ort),not(kacis(son.ad))+not('Karşılaştırma için ikinci deneme gerekir'));
   const ort=kart('','Ortalama',o?f1(o.son):f1(son.ort),o?hap(o.fark,isaret(o.fark).replace(/^[+−]/,''))+not(kiyas):not(kacis(son.ad)));
   const yari=kart('','Ortadaki yarı',f1(son.p25)+'–'+f1(son.p75),not('medyan '+f1(son.medyan))+(once?not(oncekiAdi(st)+': '+f1(once.p25)+'–'+f1(once.p75)):''));
@@ -518,14 +526,20 @@ function zorluk(st){
   const sirala=i=>{const r=l.map(d=>[d,yuzde(d,i)]).sort((a,b)=>b[1]-a[1]||a[0].ad.localeCompare(b[0].ad,'tr')),yer=new Map();
     r.forEach(([d,v],j)=>yer.set(d.kod,j&&Math.abs(r[j-1][1]-v)<1e-9?yer.get(r[j-1][0].kod):j+1));return {r,yer}};
   const S=sirala(m.simdi),P=m.onceki===null?null:sirala(m.onceki),son=m.sinavlar[m.simdi],donem=olcSira(st,m.sinavlar);
+  // Türkiye's success in the same exam (its lesson average ÷ questions), when the exam has a Türkiye list.
+  let trS=null;try{const fn=typeof ANALIZ!=='undefined'?ANALIZ.kaynak().trFn:null;trS=fn?fn(son.ad):null}catch(e){trS=null}
+  const trYuzde=d=>{if(!trS)return null;const v=turkiyeDersi(trS,m.O.oturum,d);return v===null||v===undefined?null:v/d.soru*100};
+  const trVar=!!trS&&l.some(d=>trYuzde(d)!==null);
+  const trHucre=(d,v)=>{if(!trVar)return '';const t=trYuzde(d);if(t===null)return '<span class="dp-zor-tr">—</span>';const f=Math.round(v)-Math.round(t);
+    return '<span class="dp-zor-tr" title="Okul başarısı − Türkiye başarısı">Türkiye %'+fi(Math.round(t))+' <b class="et-'+yon(f)+'">'+(f>0?'+':f<0?'−':'')+fi(Math.abs(f))+'</b></span>'};
   const satir=([d,v])=>{const sf=P?P.yer.get(d.kod)-S.yer.get(d.kod):null,pf=P?v-yuzde(d,m.onceki):null;
     return '<button type="button" class="dp-zor-satir" data-dp-ders="'+kacis(d.kod)+'" aria-pressed="'+(st.ders===d.kod)+'"><span class="dp-zor-sira">'+fi(S.yer.get(d.kod))+'</span>'+
-      '<span class="dp-zor-ad"><i class="et-renk nokta" style="background:'+d.renk+'"></i>'+kacis(d.ad)+'</span><b>%'+fi(Math.round(v))+'</b>'+
+      '<span class="dp-zor-ad"><i class="et-renk nokta" style="background:'+d.renk+'"></i>'+kacis(d.ad)+'</span><b>%'+fi(Math.round(v))+'</b>'+trHucre(d,v)+
       (pf===null?'<span></span>':hap(pf,f1(Math.abs(pf))+' puan'))+'<span>'+siraOk(sf)+'</span>'+
       '<span class="dp-zor-iz">'+kucukCizgi(m.sinavlar.map((_,i)=>yuzde(d,i)),d.renk,null,84,24,null,donem)+'</span></button>'};
   const ilk=S.r[0][0],sonD=S.r[S.r.length-1][0];
   return '<section class="et-panel" id="dpZorluk"><div class="et-kart-bas"><h2>Kolaydan zora · '+kacis(son.ad)+'</h2><span class="mini">En kolay '+kacis(ilk.ad)+' · en zor '+kacis(sonD.ad)+
-      (P?' · '+kacis(m.sinavlar[m.onceki].ad)+' denemesine göre':'')+'</span></div><div class="dp-zor">'+S.r.map(satir).join('')+'</div></section>';
+      (P?' · '+kacis(m.sinavlar[m.onceki].ad)+' denemesine göre':'')+(trVar?' · Türkiye sütunu: aynı denemede Türkiye başarısı ve okulun farkı (puan)':'')+'</span></div><div class="dp-zor'+(trVar?' dp-zor-trli':'')+'">'+S.r.map(satir).join('')+'</div></section>';
 }
 // Değişimin kaynağı and Isı haritası: the same students' change from the önceki to the şimdiki
 // window (those with a value in both, the "Aynı öğrencilerin değişimi" population) split exactly.
@@ -622,9 +636,11 @@ function hareketliler(st){
 // As in Sıralamalar's table: the earlier and current net and the three measures of change side by side.
 const SUTUNLAR=[['ad','Öğrenci'],['sinif','Şube'],['son','Son'],['once','Önceki'],['fark','Net artışı'],['trFark','Türkiye’ye göre'],['yuzde','% artış'],['logFark','Kapanan fark (log)'],['seri','Denemeler'],['sira','Sıra'],['durum','Durum']];
 const yuzdeYazi=v=>v===null?'—':(v>0?'+':v<0?'−':'')+'%'+f1(Math.abs(v));
-// ▲1,25 / ▼3,10 (a trailing ~ when the Türkiye average of the window rests on a tahmini exam).
-const trYazi=(v,t,f=f2)=>v===null||v===undefined?'—':(v>0?'▲':v<0?'▼':'')+f(Math.abs(v))+(t?'~':'');
-const TR_TAHMINI='tahmini Türkiye ortalaması';
+// ▲1,25 / ▼3,10. When the Türkiye average of the window rests on a tahmini exam (no list yet: the average is estimated from
+// the school's own mean, so the school's real change would read as an easy or hard exam) the value is approximate: "≈+1,25",
+// no arrow and no green or red; the list makes it exact when it arrives.
+const trYazi=(v,t,f=f2)=>v===null||v===undefined?'—':t?'≈'+(v>0?'+':v<0?'−':'')+f(Math.abs(v)):(v>0?'▲':v<0?'▼':'')+f(Math.abs(v));
+const TR_TAHMINI='tahmini Türkiye ortalaması · Türkiye listesi bekleniyor';
 // The line above Tüm öğrenciler: how the Türkiye average moved over the window (the exams it rests on).
 function trSatiri(st){
   const tr=st.tr,w=st.s?st.mo.pencere[st.s]:null;if(!w)return '';
@@ -632,7 +648,7 @@ function trSatiri(st){
   const ad=l=>l.length>1?l[0]+' – '+l[l.length-1]+' ort.':l[0];
   if(tr.fark===null)return '<p class="mini dp-tr-satir" id="dpTrSatir">Bu aralıkta Türkiye ortalaması eksik, fark hesaplanamıyor ('+kacis(ad(tr.onceAd.length?tr.onceAd:tr.sonAd))+' için var)</p>';
   return '<p class="mini dp-tr-satir" id="dpTrSatir">Türkiye ortalaması bu aralıkta '+(tr.fark===0?'değişmedi':'<b'+(tr.tahmini?' title="'+TR_TAHMINI+'"':'')+'>'+trYazi(tr.fark,tr.tahmini,f1)+'</b> net')+
-    ' ('+kacis(ad(tr.onceAd))+' → '+kacis(ad(tr.sonAd))+')</p>';
+    ' ('+kacis(ad(tr.onceAd))+' → '+kacis(ad(tr.sonAd))+')'+(tr.tahmini?' · tahmini: Türkiye listesi bekleniyor, sütundaki değerler yaklaşıktır':'')+'</p>';
 }
 const logYazi=v=>v===null?'—':(v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleString('tr-TR',{minimumFractionDigits:3,maximumFractionDigits:3});
 // Average rows above the students, as in Sıralamalar: the scope and, for a grade, each class. The
@@ -663,7 +679,7 @@ function tablo(st){
     sinif:o=>'<td class="et-dar-gizle">'+kacis(o.sinif||'')+'</td>',
     son:o=>'<td class="sayi">'+sayi(o.son)+'</td>',once:o=>'<td class="sayi et-dar-gizle">'+sayi(o.once)+'</td>',
     fark:o=>'<td class="sayi et-'+yon(o.fark||0)+'">'+(o.fark===null?'—':isaret(o.fark,f2))+'</td>',
-    trFark:o=>'<td class="sayi et-'+yon(o.trFark||0)+'"'+(o.trFark!==null&&o.trFark!==undefined&&st.tr.tahmini?' title="'+TR_TAHMINI+'"':'')+'>'+trYazi(o.trFark,st.tr.tahmini)+'</td>',
+    trFark:o=>'<td class="sayi '+(st.tr.tahmini?'dp-tr-tahmini':'et-'+yon(o.trFark||0))+'"'+(o.trFark!==null&&o.trFark!==undefined&&st.tr.tahmini?' title="'+TR_TAHMINI+'"':'')+'>'+trYazi(o.trFark,st.tr.tahmini)+'</td>',
     yuzde:o=>'<td class="sayi et-'+yon(o.yuzde||0)+(dar('yuzde')?' et-dar-gizle':'')+'">'+yuzdeYazi(o.yuzde)+'</td>',logFark:o=>'<td class="sayi et-'+yon(o.logFark||0)+(dar('logFark')?' et-dar-gizle':'')+'">'+logYazi(o.logFark)+'</td>',
     seri:o=>'<td class="et-dar-gizle et-trend">'+kucukCizgi(o.seri,egilimRengi(o.fark||0),son,84,26,null,donem)+'</td>'};
   const ortSatir=g=>'<tr class="dp-ort">'+kol.map(([k])=>k==='ad'?'<td><b>'+kacis(g.ad)+' ortalaması</b> <span class="mini">'+fi(g.n)+' öğrenci</span></td>':

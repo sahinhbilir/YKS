@@ -175,8 +175,10 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     // earlier sapma [2, 0, 2, 0] → mean 1 → beklenenden -1.25 - 1 = -2.25; the estimate is not "no Türkiye average".
     assert.equal(son.son.beklenenden, -2.25); assert.equal(son.neden, null); near(son.istikrar.std, Math.sqrt(1.61)); assert.equal(son.istikrar.n, 5);
     const h2 = run('EK.okKim="1001";ANALIZ.icerik()');
-    assert.match(h2, /<span class="mini">Türkiye’ye göre<\/span><strong class="ok-asagi">▼1,25 <small>net<\/small>[\s\S]*tahmini Türkiye ortalaması \(okul ortalamasından\) 39,25 net/);
-    assert.match(h2, /tahmini Türkiye ortalamasına göre her zamanki yerinden/); assert(!h2.includes('Bu denemenin Türkiye ortalaması yok'));
+    // An estimate is shown as approximate and in a neutral colour: the school's own change would otherwise read as a red or green arrow.
+    assert.match(h2, /<div class="et-ozet-kart ok-tahmini"><span class="mini">Türkiye’ye göre<\/span><strong class="ok-bekliyor">≈ −1,25 <small>net<\/small>[\s\S]*Türkiye listesi bekleniyor · tahmini Türkiye ortalaması \(okul ortalamasından\) 39,25 net/);
+    assert.match(h2, /<span class="mini">Beklenenden<\/span><strong class="ok-bekliyor">≈ −2,25 <small>net<\/small>[\s\S]*tahmini Türkiye ortalamasına göre her zamanki yerinden/); assert(!h2.includes('Bu denemenin Türkiye ortalaması yok'));
+    assert.doesNotMatch(h2, /Türkiye’ye göre<\/span><strong class="ok-(asagi|yukari)"/);
   });
   await check('tahmini needs at least one exam with both numbers; with one such exam its gap is the median; none when the measure has no Türkiye average at all', async () => {
     put('SR', siralama()); run('D.siralama=SR'); await kurTurkiye([0]);

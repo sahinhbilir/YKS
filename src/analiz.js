@@ -597,19 +597,27 @@ function okulSurprizi(olcuKey='TYT',bugun=bugunNo(),duzey=undefined){
 function kartlar(c){
   const s=c.son,ozet=(baslik,deger,alt,yonDeger)=>'<div class="et-ozet-kart"><span class="mini">'+baslik+'</span><strong class="'+(yonDeger===undefined?'':'ok-'+yon(yonDeger))+'">'+deger+'</strong><div class="et-ozet-alt">'+alt+'</div></div>';
   const mini=t=>'<span class="mini">'+t+'</span>';
-  const yok=c.trVar?'Bu denemenin Türkiye ortalaması yok':'Türkiye geneli verisi yok',tahmin=s.tahmini?'tahmini ':'';
+  const yok=c.trVar?'Bu denemenin Türkiye ortalaması yok':'Türkiye geneli verisi yok';
+  // The latest exam has no Türkiye list yet: its average is estimated from the school's own mean, so a real change of the school
+  // would read as "the exam was easy". Such figures are shown as approximate and in a neutral colour, never as a green or red arrow.
+  const yaklasik=v=>'≈ '+(v>0?'+':v<0?'−':'')+f2(Math.abs(v)),bekliyor='Türkiye listesi bekleniyor';
+  const ozetT=(baslik,deger,alt)=>'<div class="et-ozet-kart ok-tahmini"><span class="mini">'+baslik+'</span><strong class="ok-bekliyor">'+deger+'</strong><div class="et-ozet-alt">'+alt+'</div></div>';
   const k=[];
   k.push(ozet('Son '+kacis(c.oturum.ad)+' neti',f2(s.net),mini('Okulda '+fi(s.sira)+'. / '+fi(s.n)+' öğrenci')));
   k.push(s.sapma===null?ozet('Türkiye’ye göre','—',mini(yok)):
-    ozet('Türkiye’ye göre',ok(s.sapma)+' <small>net</small>',mini(s.tahmini?'tahmini Türkiye ortalaması (okul ortalamasından) '+f2(s.tr)+' net':'Türkiye ortalaması '+f2(s.trOrt)+' net'),s.sapma));
+    s.tahmini?ozetT('Türkiye’ye göre',yaklasik(s.sapma)+' <small>net</small>',mini(bekliyor+' · tahmini Türkiye ortalaması (okul ortalamasından) '+f2(s.tr)+' net')):
+    ozet('Türkiye’ye göre',ok(s.sapma)+' <small>net</small>',mini('Türkiye ortalaması '+f2(s.trOrt)+' net'),s.sapma));
   k.push(s.beklenenden===null?ozet('Beklenenden','—',mini(c.neden==='tr-yok'?yok:'En az 3 deneme gerekli')):
-    ozet('Beklenenden',ok(s.beklenenden)+' <small>net</small>',mini(tahmin+'Türkiye ortalamasına göre her zamanki yerinden'),s.beklenenden));
+    s.tahmini?ozetT('Beklenenden',yaklasik(s.beklenenden)+' <small>net</small>',mini(bekliyor+' · tahmini Türkiye ortalamasına göre her zamanki yerinden; liste gelince kesinleşir')):
+    ozet('Beklenenden',ok(s.beklenenden)+' <small>net</small>',mini('Türkiye ortalamasına göre her zamanki yerinden'),s.beklenenden));
   const i=c.istikrar;
   k.push(i.yeterli?ozet('İstikrar',kacis(i.etiket),mini('± '+f2(i.std)+' net · son '+fi(i.n)+' deneme')):ozet('İstikrar','—',mini('En az 3 deneme gerekli')));
   const hy=c.hedefYol;
-  k.push(hy?ozet('Hedef · '+(hy.sonMu?'son deneme':kacis(hy.ad)),f2(hy.net)+' <small>net</small>',
-    mini((hy.tahmini?'tahmini ':'')+'Türkiye '+(hy.gap<0?'−':'+')+f2(Math.abs(hy.gap))+' · '+(hy.fark>=0?'▲':'▼')+f2(Math.abs(hy.fark))+' net hedefin '+(hy.fark>=0?'üstünde':'altında')),hy.fark):
-    ozet('Hedef','—',mini(yok)));
+  k.push(!hy?ozet('Hedef','—',mini(yok)):
+    hy.tahmini?ozetT('Hedef · '+(hy.sonMu?'son deneme':kacis(hy.ad)),'≈ '+f2(hy.net)+' <small>net</small>',
+      mini(bekliyor+' · tahmini Türkiye '+(hy.gap<0?'−':'+')+f2(Math.abs(hy.gap))+' · hedefin ≈ '+f2(Math.abs(hy.fark))+' net '+(hy.fark>=0?'üstünde':'altında'))):
+    ozet('Hedef · '+(hy.sonMu?'son deneme':kacis(hy.ad)),f2(hy.net)+' <small>net</small>',
+      mini('Türkiye '+(hy.gap<0?'−':'+')+f2(Math.abs(hy.gap))+' · '+(hy.fark>=0?'▲':'▼')+f2(Math.abs(hy.fark))+' net hedefin '+(hy.fark>=0?'üstünde':'altında')),hy.fark));
   const d=c.degisim;
   k.push(d.n>1?ozet('Aralıkta değişim · '+aralikYazisi(c),ok(d.fark)+' <small>net</small>',mini(fi(d.n)+' deneme · deneme başına '+ok(d.basina)),d.fark):
     ozet('Aralıkta değişim','—',mini('Aralıkta tek deneme var')));

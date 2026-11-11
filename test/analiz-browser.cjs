@@ -79,10 +79,12 @@ const konuRapor={ad:ADLAR[5],blocks:[F.block([F.row('T.12.1.1','a',[2,0,2,0]),F.
    assert.deepEqual(kartlar.map(k=>k.ad),['Son TYT neti','Türkiye’ye göre','Beklenenden','İstikrar','Hedef · son deneme','Aralıkta değişim · 24 Eyl → 29 Eki','Şube hedefi · 12-A']);
    assert.match(kartlar[0].deger,/^\d+,\d\d$/);assert.match(kartlar[0].alt,/^Okulda \d+\. \/ \d+ öğrenci$/);
    // The latest exam has no Türkiye list: the cards use the tahmini Türkiye ortalaması and say so.
-   assert.match(kartlar[1].deger,/^[▲▼]\d+,\d\d net$/);assert.match(kartlar[1].alt,/^tahmini Türkiye ortalaması \(okul ortalamasından\) \d+,\d\d net$/);
-   assert.match(kartlar[2].deger,/^[▲▼]\d+,\d\d net$/);assert.equal(kartlar[2].alt,'tahmini Türkiye ortalamasına göre her zamanki yerinden');
+   // An estimate is approximate: "≈", no arrow, and the tile says the list is awaited.
+   assert.match(kartlar[1].deger,/^≈ [+−]?\d+,\d\d net$/);assert.match(kartlar[1].alt,/^Türkiye listesi bekleniyor · tahmini Türkiye ortalaması \(okul ortalamasından\) \d+,\d\d net$/);
+   assert.match(kartlar[2].deger,/^≈ [+−]?\d+,\d\d net$/);assert.equal(kartlar[2].alt,'Türkiye listesi bekleniyor · tahmini Türkiye ortalamasına göre her zamanki yerinden; liste gelince kesinleşir');
+   assert.equal(await page.locator('#okKartlar .ok-tahmini strong.ok-yukari,#okKartlar .ok-tahmini strong.ok-asagi').count(),0,'an estimate is never green or red');
    assert.match(kartlar[3].alt,/^± \d+,\d\d net · son 6 deneme$/);
-   assert.match(kartlar[4].deger,/^\d+,\d\d net$/);assert.match(kartlar[4].alt,/^tahmini Türkiye [+−]\d+,\d\d · [▲▼]\d+,\d\d net hedefin (altında|üstünde)$/);
+   assert.match(kartlar[4].deger,/^≈ \d+,\d\d net$/);assert.match(kartlar[4].alt,/^Türkiye listesi bekleniyor · tahmini Türkiye [+−]\d+,\d\d · hedefin ≈ \d+,\d\d net (altında|üstünde)$/);
    assert.match(kartlar[5].deger,/^[▲▼]\d+,\d\d net$/);assert.match(kartlar[5].alt,/^6 deneme · deneme başına [▲▼]\d+,\d\d$/);
    assert.match(kartlar[6].deger,/^75,00 net$/);assert.match(kartlar[6].alt,/^Son net hedefin \d+,\d\d net (altında|üstünde)$/);
    const yazi=await page.locator('#okKok').innerText();assert(!/Nasıl okunur|Gözlem|\bham\b|\(%95\)/i.test(yazi),'no manual words');

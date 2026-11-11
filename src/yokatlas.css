@@ -42,3 +42,5 @@
 }
 @media(max-width:520px){#yaKok .ya-ayar{grid-template-columns:1fr 1fr}#yaKok .ya-tahmin{font-size:1rem}}
 @media print{#yaKok .ya-filters,#yaKok .ya-daha,#yaKok .ya-eylem,#yaKok .ya-actions{display:none}#yaKok .ya-row{break-inside:avoid}}
+
+.ya-aralik{margin:6px 0 0;font-variant-numeric:tabular-nums}
