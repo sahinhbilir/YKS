@@ -366,6 +366,23 @@ tr.pasif td:first-child{opacity:1}
 .rh-adlar .ogr-ad{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rh-ikincil{display:flex;flex-wrap:wrap;gap:4px 22px;margin-top:auto;padding-top:10px;border-top:1px solid var(--cizgi);font-size:13px;color:var(--soluk)}
 .rh-ikincil .rh-sayi{display:flex;align-items:baseline;gap:6px}.rh-ikincil small{font-size:.86em;font-weight:500;color:var(--soluk)}.rh-ikincil strong{font-size:14px;font-weight:700;color:var(--murekkep);font-variant-numeric:tabular-nums}
+.hafiza-kart{padding:20px 22px;border-top:3px solid var(--uyari);margin-bottom:26px;display:flex;flex-direction:column;gap:14px}
+.hf-liste{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+.hf-oge{border:1px solid var(--cizgi);border-radius:9px;padding:11px 13px;min-width:0;background:var(--kagit);display:flex;flex-direction:column;gap:7px}
+.hf-oge.hf-acik{border-color:var(--vurgu)}
+.hf-ust{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.hf-ad{display:flex;flex-direction:column;min-width:0}
+.hf-ad .d{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--soluk);font-weight:600}.hf-ad .k{font-size:15px;line-height:1.35}
+.hf-cubuk{position:relative;height:8px;border-radius:4px;background:var(--cizgi)}
+.hf-cubuk i{display:block;height:100%;border-radius:4px;background:var(--vurgu)}.hf-alt .hf-cubuk i{background:var(--uyari)}
+.hf-cubuk b{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--murekkep);border-radius:1px}
+.hf-yazi{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:12.5px;color:var(--soluk)}
+.hf-yazi strong{font-size:16px;color:var(--murekkep);font-variant-numeric:tabular-nums}.hf-alt .hf-yazi strong{color:var(--uyari)}
+.hf-kutu .ayar-kutu{border-top:0;padding:0}
+.hf-bolum{font-size:18px;margin:26px 0 12px}.hf-bolum .mini{font-weight:400;margin-left:8px}
+.hf-ozet{margin-bottom:16px}.hf-kutu{padding:16px 20px;margin-bottom:8px}
+.hf-baska{margin-top:26px;display:flex;flex-direction:column;gap:10px;max-width:520px}.hf-baska select{min-height:40px;max-width:100%}
+@media (max-width:600px){.hafiza-kart{padding:15px}.hf-liste{grid-template-columns:1fr}}
+@media print{.hafiza-kart{display:none}}
 .bugun-kart{padding:20px 22px;border-top:3px solid var(--vurgu);margin-bottom:26px;display:flex;flex-direction:column;gap:14px}
 .bugun-kart .yol-baslik{align-items:flex-start;gap:14px 28px;flex-wrap:wrap}
 .bg-baslik b{font-variant-numeric:tabular-nums}.yol-baslik .bg-baslik span{display:inline;font-weight:600}
@@ -2250,8 +2267,8 @@ button.gr-kucuk{cursor:zoom-in}
   .ray.ust .menu-ac {border-radius:0 10px 10px 0}
   .ray.ust button.marka {letter-spacing:0}
   .ana-pano {column-gap:24px}
-  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.yks-yolu {border-top:1px solid var(--cizgi);padding:22px 24px}
-  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart {border-radius:var(--rapport-radius)}
+  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.hafiza-kart,.yks-yolu {border-top:1px solid var(--cizgi);padding:22px 24px}
+  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.hafiza-kart {border-radius:var(--rapport-radius)}
   .yol-hafta {border-radius:8px}
   .giris-kart {border-radius:24px;padding:26px;box-shadow:var(--golge)}
   .giris-baslik {letter-spacing:-.025em}
@@ -2371,7 +2388,7 @@ button.gr-kucuk{cursor:zoom-in}
   @media (max-width:600px) {
     .baslik h1,.pano-baslik,
     :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) .et-baslik {font-size:24px}
-    .et-panel,.dn-panel,.ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.yks-yolu,#yaKok .ya-panel {padding:18px}
+    .et-panel,.dn-panel,.ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.hafiza-kart,.yks-yolu,#yaKok .ya-panel {padding:18px}
     .et-ozet-kart,.kutu {padding:16px 18px}
     .et-ders {padding:14px}
     .giris-kart {padding:22px}
@@ -3292,6 +3309,8 @@ function yedekDogrula(y) {
       throw new Error('Geçersiz AYT önceliği: '+(i+1)+'. satır.');
     if (o.sureyeGore !== undefined && typeof o.sureyeGore !== 'boolean')
       throw new Error('Geçersiz süreye göre ayar: '+(i+1)+'. satır.');
+    if (o.serbest !== undefined && !serbestDogrula(o.serbest))
+      throw new Error('Geçersiz kendi programım dönemi: '+(i+1)+'. satır.');
     if (o.sureHedef !== undefined && (typeof o.sureHedef !== 'number' || !Number.isFinite(o.sureHedef) || o.sureHedef < 0.50 || o.sureHedef > 0.99))
       throw new Error('Geçersiz süreye göre hedef: '+(i+1)+'. satır.');
   });
@@ -3985,17 +4004,24 @@ function haftaAnlatimOzeti(si, hb, sonGun) {
   }));
   return oz;
 }
+// kendi: o haftada planda o gün yeri olmayan sonuçlar (öğrencinin kendiliğinden çalışması). Her biri bir test yerine sayılır:
+// hafta, programı izlemeden de bildirilen çalışmayla dolar (verilen test sayısını aşmaz). kendiToplam: sayılsın sayılmasın hepsi.
 function haftaTestOzeti(si, hb, sonGun, yapilan) {
-  const p = planHesapla(si, hb), oz = { toplam: 0, yapilan: 0, yapilmadi: 0 };
+  const p = planHesapla(si, hb), oz = { toplam: 0, yapilan: 0, yapilmadi: 0, kendi: 0, kendiToplam: 0 };
   if (p.kayitYok) return oz;
   yapilan = yapilan || haftaYapilanTestler(si);
+  const planda = new Set();
   (p.gunler || []).forEach((liste, g) => (liste || []).forEach(x => {
     const gun = hb + g;
+    if (!x.serbest && !x.anlatim) planda.add(x.ki + ':' + gun);
     if (x.serbest || x.anlatim || gun > sonGun || konuAnlatilmadiDurumu(si, x.ki, gun)) return;
     oz.toplam++;
     if (yapilan.has(x.ki + ':' + gun) || oncedenMi(p, planSlotAnahtari(x))) oz.yapilan++;
     else if (yapilmadiMi(si, x.ki, gun)) oz.yapilmadi++;
   }));
+  const son = Math.min(sonGun, planHaftaSonu(si, hb));
+  yapilan.forEach(a => { const i = a.lastIndexOf(':'), gun = +a.slice(i + 1); if (gun >= hb && gun <= son && !planda.has(a) && konuAl(+a.slice(0, i))) oz.kendiToplam++; });
+  oz.kendi = Math.max(0, Math.min(oz.kendiToplam, oz.toplam - oz.yapilan)); oz.yapilan += oz.kendi;
   return oz;
 }
 
@@ -4804,6 +4830,9 @@ function planiAyarlaKarti(si) {
     (guclu ? '<div class="ayar-alt"><label class="mini" for="ogrHafizaSec">Ne kadar?</label> ' + hafizaSecici(si).replace('<select class="oHafiza"', '<select id="ogrHafizaSec" class="oHafiza"') + '</div>' : '') +
     '<label class="ayar-kutu"><input type="checkbox" id="ogrSureyeGore"' + (sure ? ' checked' : '') + '><span><b>Planı çalışma süreme göre ayarla</b>' +
       '<span class="mini">Ayırdığın süre bütün tekrarlara yetmiyorsa tekrarlar seyrekleşir; böylece her konu bu sürede döner. Karşılığında bir konuyu tekrar gelmeden unutma olasılığın biraz artar.</span></span></label>' +
+    '<label class="ayar-kutu"><input type="checkbox" id="ogrSerbest"' + (serbestAcikMi(si) ? ' checked' : '') + '><span><b>Kendi programımı kendim yaparım</b>' +
+      '<span class="mini">Plan öneri olarak kalır; neyi ne zaman çalışacağına sen karar verirsin ve çalıştığını Hafızam’dan ya da planından bildirirsin. ' +
+      'Sonucunu girmediğin test artık “İyi” sayılmaz: bildirmediğin konu çalışılmamış sayılır ve hatırlama oranı düşmeye devam eder. Haftan, bildirdiğin çalışmalarla yeşile döner.</span></span></label>' +
     '<p class="mini" role="status" id="sureDurum">' + durum + '</p></div>';
 }
 
@@ -4859,6 +4888,66 @@ function sabitHaftaTestleriHesapla(ov, hb) {
   });
   return liste;
 }
+// ---- Kendi programım: öğrenci planı öneri olarak kullanır, çalıştığını kendi bildirir. o.serbest = [[baş günü, bitiş günü | null], …]
+// (açıp kapadığı dönemler; yalnızca sonuncusu açık olabilir). Bu dönemlerin günlerinde sonucu girilmeyen test "İyi" sayılmaz:
+// bildirilmeyen çalışma yapılmamıştır, kart yalnızca gerçek sonuçlarla ilerler ve hatırlama oranı düşmeye devam eder.
+const serbestGunMu = (o, gun) => !!o && Array.isArray(o.serbest) && o.serbest.some(d => gun >= d[0] && (d[1] === null || gun <= d[1]));
+const serbestAcikMi = si => { const l = ((D.ogr || [])[si] || {}).serbest; return Array.isArray(l) && l.length > 0 && l[l.length - 1][1] === null; };
+function serbestDogrula(l) {
+  if (!Array.isArray(l) || l.length > 200) return false;
+  let once = -Infinity;
+  return l.every((d, i) => {
+    if (!Array.isArray(d) || d.length !== 2 || !Number.isInteger(d[0]) || d[0] <= once) return false;
+    if (d[1] === null) { once = Infinity; return i === l.length - 1; }
+    if (!Number.isInteger(d[1]) || d[1] < d[0]) return false;
+    once = d[1]; return true;
+  });
+}
+// Kutuyu açar ya da kapatır (öğrencinin kendi defterinde). Açılan dönem bugün başlar; kapanan dönem dün biter (aynı gün açılıp
+// kapanan dönem silinir). Dizi boşalsa da alan kalır: kapatma öğretmenin defterine de ulaşsın.
+function serbestAyarla(si, acik) {
+  if (!Number.isInteger(si) || !D.ogr[si] || D.ogr[si].silindi || !(ogrenciMi() && si === 0 && D.ogr.length === 1)) return false;
+  const o = D.ogr[si], bugun = bugunNo(), l = Array.isArray(o.serbest) ? o.serbest.map(d => d.slice()) : [];
+  if (serbestAcikMi(si) === !!acik) return false;
+  if (acik) {
+    const son = l[l.length - 1];
+    if (son && son[1] !== null && son[1] >= bugun - 1) son[1] = null;      // dün ya da bugün kapanan dönem kaldığı yerden sürer
+    else l.push([bugun, null]);
+  } else {
+    const son = l[l.length - 1];
+    if (son[0] >= bugun) l.pop(); else son[1] = bugun - 1;
+  }
+  o.serbest = l; o.ogrCalismaTs = Date.now();
+  hafizaKartlariniYenile(si);
+  return true;
+}
+// Aynı plan haftasında, planda o gün yeri olmayan gerçek bir sonuç (öğrencinin kendiliğinden çalışması) aynı konunun sonucu
+// girilmemiş satırını örter: satır yapılmış sayılır ve ayrıca "İyi" varsayılmaz (aynı çalışma iki kez sayılmaz). Fazladan her
+// sonuç bir satırı örter, önce en erken olanı. satirlar: [{ki, gun}]; gunler: ki → o konunun gerçek sonuç günleri;
+// atla(ki, gun): örtülmeyecek satır ("Yapmadım"). Dönen: 'ki:gun' kümesi.
+function haftaOrtusu(si, hb, satirlar, gunler, atla) {
+  const out = new Set(), son = planHaftaSonu(si, hb), by = new Map();
+  satirlar.forEach(r => { let g = by.get(r.ki); if (!g) by.set(r.ki, g = []); g.push(r.gun); });
+  by.forEach((satirGunleri, ki) => {
+    const g = gunler(ki); if (!g || !g.length) return;
+    const yeri = new Set(satirGunleri), yapilan = new Set(g);
+    let fazla = 0; yapilan.forEach(x => { if (x >= hb && x <= son && !yeri.has(x)) fazla++; });
+    if (!fazla) return;
+    [...yeri].sort((a, b) => a - b).forEach(gun => { if (fazla > 0 && !yapilan.has(gun) && !(atla && atla(ki, gun))) { out.add(ki + ':' + gun); fazla--; } });
+  });
+  return out;
+}
+// Öğrencinin ekranındaki planın örtüsü (bkz. haftaOrtusu): p.gunler'deki test satırları ve D.log.
+function planOrtusu(si, hb, p) {
+  const satirlar = [];
+  (p.gunler || []).forEach((liste, g) => (liste || []).forEach(x => {
+    if (!x.serbest && !x.anlatim && !x.genelTekrar && !x.gunlukEk && !x.planDisi && Number.isInteger(+x.ki) && !oncedenMi(p, planSlotAnahtari(x))) satirlar.push({ ki: +x.ki, gun: hb + g });
+  }));
+  if (!satirlar.length) return new Set();
+  const by = new Map(), son = planHaftaSonu(si, hb);
+  (D.log || []).forEach(l => { if (l[1] !== si || l[0] < hb || l[0] > son) return; let g = by.get(l[2]); if (!g) by.set(l[2], g = []); g.push(l[0]); });
+  return haftaOrtusu(si, hb, satirlar, ki => by.get(ki), (ki, gun) => yapilmadiMi(si, ki, gun));
+}
 // Varsayım hesabının girdileri: öğrenci öğrenci sabit haftalar ve konu konu gerçek sonuç satırları.
 function varsayimDizini(yalnizSi) {
   const elle = new Map(), log = new Map(), tek = yalnizSi !== undefined;
@@ -4887,10 +4976,17 @@ function varsayimIyiGunleri(si, dizin) {
   // Reset denetimleri yalnızca bu öğrencinin bir "anlatılmadı" olayına giren konular için gerekir.
   const resetli = new Set(), yapilmadiVar = Object.keys(yapilmadi).length > 0;
   (D.konuAnlatilmadi || []).forEach(e => { if (e && e.si === si) { resetli.add(+e.ki); Object.keys(e.overrides || {}).forEach(k => resetli.add(+k)); } });
+  const serbestVar = Array.isArray(o.serbest) && o.serbest.length > 0;
   (dizin.elle.get(si) || []).forEach(([hb, ov]) => {
     if (VARSAYIM_YOK_NEDEN.includes((durum[si + '|' + hb] || {}).neden)) return;
-    sabitHaftaTestleri(ov, hb).forEach(({ ki, gun }) => {
+    const satirlar = sabitHaftaTestleri(ov, hb);
+    // Kendiliğinden çalışılan konunun aynı haftadaki satırı ayrıca "İyi" sayılmaz (bkz. haftaOrtusu).
+    const ortu = satirlar.length && gercek.size ? haftaOrtusu(si, hb, satirlar, ki => { const l = gercek.get(ki); return l && l.map(x => x[0]); },
+      (ki, gun) => yapilmadiVar && !!yapilmadi[yapilmadiAnahtari(si, ki, gun)]) : null;
+    satirlar.forEach(({ ki, gun }) => {
       if (gun >= sinav || !konuAl(ki) || (yapilmadiVar && yapilmadi[yapilmadiAnahtari(si, ki, gun)])) return;
+      if (serbestVar && serbestGunMu(o, gun)) return;            // kendi programını yapan öğrencide bildirilmeyen test yapılmamıştır
+      if (ortu && ortu.has(ki + ':' + gun)) return;
       // Sonuç gir sonucu testin kendi gününe yazar; o günün gerçek sonucu varsa sonuç odur.
       const gg = gercek.get(ki); if (gg && gg.some(l => l[0] === gun)) return;
       if (resetli.has(ki) && (sonucDevreDisiMi(si, ki, gun) || konuResetMuafMi(si, ki, gun))) return;
@@ -6307,7 +6403,10 @@ const oncedenGizliMi = (si, p, x, gun) => !x.gunlukEk && oncedenMi(p, String(pla
   (x.anlatim || x.serbest || x.genelTekrar || !(D.log || []).some(l => l[1] === si && l[2] === x.ki && l[0] === gun));
 function ogrenciPlanGunleri(si, hb, p, salt) {
   if (!salt || !ogrenciMi()) return p.gunler;
-  const gunler = p.gunler.map((liste, g) => liste.filter(x => !oncedenGizliMi(si, p, x, hb + g)));
+  // Aynı hafta başka bir gün kendiliğinden çalışılan konunun satırı da kalkar: o çalışma kendi gününde "plan dışı sonuç" olarak durur.
+  const ortu = planOrtusu(si, hb, p);
+  const gunler = p.gunler.map((liste, g) => liste.filter(x => !oncedenGizliMi(si, p, x, hb + g) &&
+    !(ortu.size && !x.serbest && !x.anlatim && !x.genelTekrar && !x.gunlukEk && ortu.has(+x.ki + ':' + (hb + g)))));
   planDisiHaftaSonuclari(si, hb, p).forEach(l => {
     const g = l[0] - hb, k = konuAl(l[2]);
     if (g < 0 || g >= gunler.length || !k) return;
@@ -6336,14 +6435,17 @@ function planSatirEki(si, hb, x, g, p, salt) {
   if (gun >= gunNo(D.ayar.sinav) || konuAnlatilmadiDurumu(si, ki, gun) || (!kayit && yapilmadiMi(si, ki, gun)) ||
       (x.metotVideoGun !== undefined && !TYT_WEEKLY.actionable(si, x, gun))) return eski();
   const oniz = sonucOnizleme(si, ki, gun), not = kayit ? sonucNotu(kayit) : 0, gelecek = gun > bugun, sec = not || VARSAYIM_NOT;
+  const serbestGun = serbestGunMu(D.ogr[si], gun);
   const salt2 = typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme();
   const kapali = gelecek || salt2 ? ' disabled' : '', secilen = oniz[sec - 1];
   const ad = konuGorunenAdi(x.ad);
-  const geriAl = x.planDisi && !D.ogr[si].syncId && kendiKonuMu(si, ki) && !salt2
-    ? '<button type="button" class="dugme mini ps-geri" data-ps-geri data-ki="' + ki + '" data-gun="' + gun + '" title="Bu sonucu sil; test plana geri döner">Geri al</button>' : '';
+  // Hafızam'ın henüz sonucu girilmemiş satırında geri alınacak bir şey yoktur.
+  const geriAl = x.planDisi && (kayit || !x.hafizaSatiri) && !D.ogr[si].syncId && kendiKonuMu(si, ki) && !salt2
+    ? '<button type="button" class="dugme mini ps-geri" data-ps-geri data-ki="' + ki + '" data-gun="' + gun + '" title="Bu sonucu sil' + (x.hafizaSatiri ? '' : '; test plana geri döner') + '">Geri al</button>' : '';
   return '<div class="plan-sonuc' + (not ? '' : ' ps-bos') + (gelecek ? ' ps-gelecek' : '') + '" data-ps data-ki="' + ki + '" data-gun="' + gun + '" data-hb="' + hb + '" data-slot="' + kacis(slot) +
       '" data-plan-disi="' + (x.planDisi ? 1 : 0) + '" data-kayitli="' + (not || 0) + '" data-oniz="' + oniz.map(o => o.ivl + ':' + o.gun).join(',') + '">' +
-    '<div class="ps-ust"><span>' + (not ? (sonucSayisalMi(kayit) ? 'Sonuç · ' + kacis(sonucEtiketiGuvenli(kayit)) : 'Sonucun') : gelecek ? 'Sonuç girilmezse' : 'Sonucunu seç') + '</span><b class="ps-deger">' + NOT_AD[sec] + (not ? '' : ' sayılır') + '</b></div>' +
+    '<div class="ps-ust"><span>' + (not ? (sonucSayisalMi(kayit) ? 'Sonuç · ' + kacis(sonucEtiketiGuvenli(kayit)) : 'Sonucun') : x.hafizaSatiri ? 'Bugün çalıştıysan' : serbestGun ? 'Öneri · çalışırsan sonucunu seç' : gelecek ? 'Sonuç girilmezse' : 'Sonucunu seç') + '</span><b class="ps-deger">' +
+      (not ? NOT_AD[sec] : x.hafizaSatiri ? 'sonucunu seç' : serbestGun ? 'girmezsen sayılmaz' : NOT_AD[sec] + ' sayılır') + '</b></div>' +
     '<input type="range" class="ps-surgu" min="1" max="4" step="1" value="' + sec + '" aria-label="' + kacis(ad + ' testinin sonucu') + '" aria-valuetext="' +
       kacis(NOT_AD[sec] + ' · sonraki tekrar ' + gunSonraYazi(secilen.ivl)) + '"' + kapali + '>' +
     '<div class="ps-duraklar">' + oniz.map(o => '<button type="button" data-ps-not="' + o.not + '"' + (o.not === sec ? ' aria-pressed="' + (not ? 'true' : 'mixed') + '"' : ' aria-pressed="false"') + kapali +
@@ -6940,6 +7042,12 @@ function ogrenciHaftaOzeti(si, hb, p) {
   const girilen = satirlar.filter(({x, gun}) => (D.log || []).some(l => l[1] === si && l[2] === x.ki && l[0] === gun)).length;
   return { toplam: satirlar.length, ilk, tekrar: satirlar.length - ilk, girilen };
 }
+// Bir haftanın, sonGun'e kadarki çalışma günü sayısı (izin günleri hariç, en az 1).
+function haftaCalismaGunu(si, hb, sonGun) {
+  const off = (D.ogr[si] || {}).off || [], son = Math.min(sonGun, planHaftaSonu(si, hb));
+  let n = 0; for (let g = hb; g <= son; g++) if (off.indexOf(haftaGunu(g)) < 0) n++;
+  return Math.max(1, n);
+}
 function ogrenciYksYolu(detay) {
   const si = EK.ogr, bugun = bugunNo(), hb = buHafta(), secili = haftaBasi();
   const sinav = gunNo(D.ayar.sinav), bas = pazartesi(gunNo(D.ayar.donemBasi));
@@ -6971,10 +7079,11 @@ function ogrenciYksYolu(detay) {
     const an = oz && !oz.toplam && !adet ? haftaAnlatimOzeti(si, gun, sonGun) : null;
     let durum = gun < hb ? 'gecmis' : simdi ? 'simdi' : 'gelecek', oran = null;
     if (oz && oz.toplam) { if (oz.yapilan) { durum = 'yesil'; oran = oz.yapilan / oz.toplam; } else if (!simdi) durum = 'gri'; }
-    else if (oz && adet) { durum = 'yesil'; oran = .5; }
+    // Planı olmayan (ya da o güne dek testi gelmemiş) hafta bildirilen çalışmayla dolar: çalışma günü başına bir sonuç tam yeşildir.
+    else if (oz && adet) { durum = 'yesil'; oran = Math.min(1, adet / haftaCalismaGunu(si, gun, sonGun)); }
     else if (an && an.toplam) { if (an.tamam) { durum = 'yesil'; oran = an.tamam / an.toplam; } else if (!simdi) durum = 'gri'; }
     else if (gun < hb && !kayit && gun >= katilim) durum = 'kirmizi';
-    const testMetni = oz && oz.toplam ? oz.yapilan + '/' + oz.toplam + ' test yapıldı' + (oz.yapilmadi ? ', ' + oz.yapilmadi + ' yapılmadı' : '')
+    const testMetni = oz && oz.toplam ? oz.yapilan + '/' + oz.toplam + ' test yapıldı' + (oz.kendi ? ' · ' + oz.kendi + ' kendi seçtiğin çalışma' : '') + (oz.yapilmadi ? ', ' + oz.yapilmadi + ' yapılmadı' : '')
       : an && an.toplam ? an.tamam + '/' + an.toplam + ' konu anlatımı tamamlandı' : '';
     const metin = no + '. hafta · ' + ggyy(gun) + ' · ' + (simdi ? 'bu hafta · ' : '') +
       (testMetni || (adet ? adet + ' sonuç kaydı' : gun < hb ? (gun < katilim ? 'katılmadan önce' : kayit ? 'plan kayıtlı' : 'plan kaydı yok, dokunarak planını kurtarabilirsin') : 'önizleme')) + (son ? ' · YKS haftası' : '');
@@ -7161,6 +7270,7 @@ function gorunumOgrenciPlan() {
   return '<div class="ogrenci-plan">' + ogrenciYksYolu(false) +
     '<div class="baslik"><h1>' + (gelecek ? 'Gelecek haftan' : gecmis ? 'Geçmiş haftan' : 'Haftalık planın') + '</h1>' +
     (gelecek ? '<p>Önizleme</p>' : '') + '</div>' +
+    (serbestAcikMi(si) ? '<p class="mini serbest-not" id="serbestNot">Kendi programını yapıyorsun: bu plan bir öneri. Çalıştığını buradaki sürgüyle ya da <button type="button" class="yol-link" data-sekme="hafiza">Hafızam</button>’dan bildir; girmediğin sonuç yapılmış sayılmaz.</p>' : '') +
     ogrenciHaftaSecici() + kazanimPlaniUyarisi(D.ogr[si]?.sube) + ogrenciProgramYenileUyarisi(si, hb) + ogrenciProgramKapsami(si, hb) +
     (EK.ogrOtoHata ? '<p role="alert">' + kacis(EK.ogrOtoHata) + '</p>' : '') +
     '<div class="arac"><button class="dugme birincil" data-sekme="giris">Sonuç gir</button>' +
@@ -7257,7 +7367,8 @@ function gorunumPlan() {
     '<div class="baslik"><h1>Haftalık plan</h1><p>' + kacis(o.alan) + ' · ' + kacis(o.sube) +
     (o.dakika ? ' · hafta içi ' + o.dakika.hi + ' dk, hafta sonu ' + o.dakika.hs + ' dk' + (o.dakika.deneme !== false ? ' + cumartesi denemesi' : '')
       : ' · günde ' + (o.kap || 6) + ' konu testi') + ' · tatil ' + ((o.off || []).length ? o.off.map(g => GUN_AD[g]).join(', ') : 'yok') +
-    ' · hedef tutma %' + Math.round(hedefTutma(si) * 100) + (o.sureyeGore === true && hedefTutma(si) < (o.hedef || D.ayar.hedef) ? ' (öğrenci çalışma süresine göre ayarladı)' : '') + '</p>' +
+    ' · hedef tutma %' + Math.round(hedefTutma(si) * 100) + (o.sureyeGore === true && hedefTutma(si) < (o.hedef || D.ayar.hedef) ? ' (öğrenci çalışma süresine göre ayarladı)' : '') +
+      (serbestAcikMi(si) ? ' · <b>kendi programını yapıyor</b> (' + ggyy(o.serbest[o.serbest.length - 1][0]) + ' tarihinden beri; sonucu girilmeyen test İyi sayılmaz)' : '') + '</p>' +
     (ogrenciMi() ? '<p class="mini">Her hafta haftalık programınızı ' +
       '<a href="mailto:sahinbilir.rehberlik@gmail.com">sahinbilir.rehberlik@gmail.com</a> e posta olarak gönderin. ' +
       'Ayrıca eğer geçen hafta ders çalışmakta zorluk hissettiyseniz bunun hakkında kısa bir paragraf yazın.</p>' : '') +
@@ -8111,7 +8222,7 @@ function ogrenciBugunKarti(si) {
   if (!liste.length) for (let j = g + 1; j < gunler.length; j++) if ((gunler[j] || []).length) {
     sonraki = 'Sıradaki: ' + GUN_AD[haftaGunu(hb + j)] + ' · ' + gunler[j].length + ' çalışma'; break; }
   const baslik = testler.length
-    ? (kalan ? '<b>' + kalan + '</b> <span>test seni bekliyor</span>' : '<span>Bugünün testleri tamam</span> <b aria-hidden="true">✓</b>')
+    ? (kalan ? '<b>' + kalan + '</b> <span>' + (serbestAcikMi(si) ? 'test öneriliyor' : 'test seni bekliyor') + '</span>' : '<span>Bugünün testleri tamam</span> <b aria-hidden="true">✓</b>')
     : liste.length ? '<b>' + liste.length + '</b> <span>çalışma var</span>'
     : '<span>' + (izin ? 'Bugün izin günün' : p.kayitYok || !p.toplam ? 'Bu hafta için plan yok' : 'Bugün için çalışma yok') + '</span>';
   const oran = hafta.toplam ? Math.min(1, hafta.yapilan / hafta.toplam) : 0;
@@ -8132,12 +8243,130 @@ function ogrenciBugunKarti(si) {
     '<div class="bg-alt"><button class="dugme' + (liste.length ? '' : ' birincil') + '" data-sekme="plan">Haftalık planım →</button>' +
     (testler.length && kalan ? '<span class="mini">Sürgüyü oynat: sonucun kaydedilir, sonraki tekrarın günü ona göre değişir.</span>' : '') + '</div>' + yaptimPencereHtml() + '</section>';
 }
+// ---------------------------------------------------------------- Hafızam: hatırlama oranı ve hedef çizgisi
+// Öğrencinin gerçek sonucu olan her konusu için şu anki tahmini hatırlama oranı (planın kendi kartından: D.kart) ve hedef
+// çizgisi (hedefTutma, çoğu öğrencide %90). cizgiGun: oranın çizgiye indiği/ineceği gün. En çok düşen konu başta.
+// Saf: hiçbir şey yazmaz.
+function hafizaDurumu(si) {
+  const bugun = bugunNo(), hedef = hedefTutma(si), liste = [], carpan = (Math.pow(hedef, 1 / DECAY) - 1) / FACTOR;
+  // Kart bugünkü hâliyle: gerçek sonuçlar (bugün dahil) ve bugünden önceki "İyi" varsayımları. Planın sakladığı kart (D.kart)
+  // bu haftanın henüz yapılmamış testlerini de saymış olur; o yüzden burada kullanılmaz (sonucOnizleme ile aynı kural).
+  const vg = varsayimIyiGunleri(si), satirlar = new Map();
+  (D.log || []).forEach(l => { if (l[1] !== si || l[0] > bugun) return; let g = satirlar.get(l[2]); if (!g) satirlar.set(l[2], g = []); g.push(l); });
+  satirlar.forEach((rows, ki) => {
+    const konu = konuAl(ki); if (!konu) return;
+    const k = kartHesapla(si, ki, (vg.get(ki) || []).filter(g => g < bugun), rows);
+    if (!gercekKartMi(k) || !(k.s > 0) || !Number.isInteger(k.son)) return;
+    const gecen = Math.max(0, bugun - k.son), r = hatirlama(gecen, k.s), cizgiGun = k.son + k.s * carpan;
+    liste.push({ ki, ad: konu[3], ders: konuDersAdi(ki), r, gecen, son: k.son, sayildi: Array.isArray(k.vg) && k.vg.includes(k.son), cizgiGun, altinda: r < hedef - 1e-9 });
+  });
+  liste.sort((a, b) => a.r - b.r || konuGorunenAdi(a.ad).localeCompare(konuGorunenAdi(b.ad), 'tr'));
+  return { hedef, liste, altinda: liste.filter(x => x.altinda).length };
+}
+// Öğrencinin bildirebileceği, henüz sonucu olmayan konular: işlenmiş (ya da kendi planındaki) konular.
+function hafizaOlculmemisKonular(si, d) {
+  const bugun = bugunNo(), o = D.ogr[si] || {}, kp = o.kendiPlan, var_ = new Set((d || hafizaDurumu(si)).liste.map(x => x.ki)), out = [];
+  for (let ki = 0, n = konuSayisi(); ki < n; ki++) {
+    const konu = konuAl(ki); if (!konu || var_.has(ki)) continue;
+    const t = ogrenciIslenisTarihi(si, ki);
+    if ((Number.isInteger(t) && t <= bugun) || (kp && Array.isArray(kp.sira) && kp.sira.includes(ki))) out.push({ ki, ad: konu[3], ders: konuDersAdi(ki) });
+  }
+  return out;
+}
+const HAFIZA_ANA_SATIR = 6;
+const gunOnceYazi = n => n <= 0 ? 'bugün' : n === 1 ? 'dün' : n + ' gün önce';
+// Bir konunun satırı: çubuk (0–100, hedef çizgisi işaretli), sayılar ve "Çalıştım". Açık satırda Planım'daki aynı sonuç
+// sürgüsü durur: konu bugünün planındaysa o satırın sürgüsü, değilse bugüne yazılan plan dışı sonuç.
+function hafizaSatiri(si, x, d, plan) {
+  const bugun = bugunNo(), yuzde = Math.round(x.r * 100), hedefY = Math.round(d.hedef * 100), acik = EK.hafizaAcik === x.ki;
+  const cizgi = x.altinda ? 'çizginin altına ' + gunOnceYazi(Math.max(0, Math.floor(bugun - x.cizgiGun))) + ' indi'
+    : 'çizgiye ' + (Math.ceil(x.cizgiGun - bugun) <= 0 ? 'bugün iniyor' : Math.ceil(x.cizgiGun - bugun) + ' gün var');
+  return '<div class="hf-oge' + (x.altinda ? ' hf-alt' : '') + (acik ? ' hf-acik' : '') + '" data-hf-ki="' + x.ki + '">' +
+    '<div class="hf-ust"><div class="hf-ad"><span class="d">' + kacis(dersKisaAd(x.ders)) + '</span><span class="k">' + konuHtml(x.ad) + '</span></div>' +
+    '<button type="button" class="dugme mini" data-hf-ac="' + x.ki + '" aria-expanded="' + acik + '">' + (acik ? 'Kapat' : 'Çalıştım') + '</button></div>' +
+    '<div class="hf-cubuk" role="img" aria-label="Tahmini hatırlama %' + yuzde + ', hedef çizgisi %' + hedefY + '"><i style="width:' + Math.max(1, yuzde) + '%"></i><b style="left:' + hedefY + '%"></b></div>' +
+    '<div class="hf-yazi"><strong>%' + yuzde + '</strong><span>son çalışma ' + gunOnceYazi(x.gecen) + (x.sayildi ? ' (sonuç girilmedi, İyi sayıldı)' : '') + ' · ' + cizgi + '</span></div>' +
+    (acik ? hafizaSurgusu(si, x.ki, x.ad, x.ders, plan) : '') + '</div>';
+}
+// plan: {hb, g, p, satirlar} bugünün plan satırları (bir kez hesaplanır).
+function hafizaPlani(si) {
+  const hb = buHafta(si), g = bugunNo() - hb;
+  let p = null, satirlar = [];
+  try { p = gunlukEkliPlan(si, hb, planHesapla(si, hb)); satirlar = (ogrenciPlanGunleri(si, hb, p, true)[g] || []); } catch (e) { p = null; satirlar = []; }
+  return { hb, g, p, satirlar };
+}
+function hafizaSurgusu(si, ki, ad, ders, plan) {
+  const x = plan.p && plan.satirlar.find(r => !r.planDisi && !r.anlatim && !r.serbest && !r.genelTekrar && !r.gunlukEk && +r.ki === ki);
+  return '<div class="hf-surgu">' + (x ? planSatirEki(si, plan.hb, x, plan.g, plan.p, true)
+    : planSatirEki(si, plan.hb, { ki, ad, dersAd: ders, planDisi: true, hafizaSatiri: true }, plan.g, plan.p || { elle: {} }, true)) + '</div>';
+}
+// Ölçülmemiş (ya da listede aranmak istenmeyen) bir konuyu seçip bildirmek için.
+function hafizaKonuSecici(si, d, plan) {
+  const bos = hafizaOlculmemisKonular(si, d), secili = Number.isInteger(EK.hafizaAcik) && bos.find(x => x.ki === EK.hafizaAcik);
+  if (!bos.length) return '';
+  const gruplar = new Map(); bos.forEach(x => { const k = dersKisaAd(x.ders); if (!gruplar.has(k)) gruplar.set(k, []); gruplar.get(k).push(x); });
+  return '<div class="hf-baska"><label for="hfKonu">Listede olmayan bir konu çalıştıysan</label> <select id="hfKonu"><option value="">Konu seç…</option>' +
+    [...gruplar].map(([ders, l]) => '<optgroup label="' + kacis(ders) + '">' + l.map(x => '<option value="' + x.ki + '"' + (secili && secili.ki === x.ki ? ' selected' : '') + '>' + konuHtml(x.ad) + '</option>').join('') + '</optgroup>').join('') +
+    '</select>' + (secili ? '<div class="hf-oge hf-acik hf-yeni" data-hf-ki="' + secili.ki + '"><div class="hf-ust"><div class="hf-ad"><span class="d">' + kacis(dersKisaAd(secili.ders)) + '</span><span class="k">' + konuHtml(secili.ad) +
+      '</span></div><span class="mini">henüz sonucu yok · ilk ölçüm olur</span></div>' + hafizaSurgusu(si, secili.ki, secili.ad, secili.ders, plan) + '</div>' : '') + '</div>';
+}
+const hafizaNotu = si => serbestAcikMi(si)
+  ? 'Kendi programını yapıyorsun: sonucunu girmediğin hiçbir test yapılmış sayılmıyor, oranlar yalnızca bildirdiklerinden hesaplanıyor.'
+  : 'Sonucunu girmediğin plan testleri “İyi” sayıldığı için bazı konular olduğundan iyi görünebilir (satırda yazar). Kendi programını yapacaksan “Kendi programımı kendim yaparım”ı aç (Hafızam’da ve Ayarlar’da).';
+// Ana sayfadaki kart: çizginin altındaki konular (en çok düşen başta, en çok HAFIZA_ANA_SATIR) ve Hafızam'a geçiş.
+function hafizaAnaKarti(si) {
+  if (!ogrenciMi() || !D.ogr[si] || bugunNo() >= gunNo(D.ayar.sinav)) return '';
+  const d = hafizaDurumu(si);
+  if (!d.liste.length) return '';
+  const alt = d.liste.filter(x => x.altinda), plan = hafizaPlani(si), hedefY = Math.round(d.hedef * 100), ilk = d.liste.find(x => !x.altinda);
+  // Açık satır ana sayfada da görünsün (sonucu yeni girilen konu çizginin üstüne çıkar ama düzeltilebilmeli).
+  const goster = alt.slice(0, HAFIZA_ANA_SATIR), acik = d.liste.find(x => x.ki === EK.hafizaAcik);
+  if (acik && !goster.includes(acik)) goster.push(acik);
+  return '<section class="kart hafiza-kart" id="hafizaKart" aria-label="Hafızan">' +
+    '<div class="yol-baslik"><div><div class="etiket">Hafızan · hedef çizgisi %' + hedefY + '</div><h2 class="bg-baslik">' +
+    (alt.length ? '<b>' + alt.length + '</b> <span>konu çizginin altına indi</span>' : '<span>Bütün konuların çizginin üstünde</span>') + '</h2>' +
+    '<p class="mini">' + (alt.length ? 'Unutmaya başladıkların. Çalıştığını “Çalıştım” ile bildir; planını beklemen gerekmez, haftan bununla da yeşile döner.'
+      : ilk ? 'Çizgiye en yakın konu: ' + konuHtml(ilk.ad) + ' (%' + Math.round(ilk.r * 100) + ').' : '') + '</p></div></div>' +
+    (goster.length ? '<div class="hf-liste">' + goster.map(x => hafizaSatiri(si, x, d, plan)).join('') + '</div>' : '') +
+    '<div class="bg-alt"><button class="dugme" data-sekme="hafiza">Hafızam: bütün konular (' + d.liste.length + ') →</button>' +
+    (alt.length > goster.length ? '<span class="mini">' + (alt.length - HAFIZA_ANA_SATIR) + ' konu daha çizginin altında</span>' : '') + '</div></section>';
+}
+// Sayfa: bütün konular, çizginin altındakiler başta; kutu ve konu seçici.
+function gorunumHafiza() {
+  const si = EK.ogr, o = D.ogr[si];
+  if (!ogrenciMi() || !o) return '<div class="baslik"><h1>Hafızam</h1></div>';
+  const d = hafizaDurumu(si), plan = hafizaPlani(si), hedefY = Math.round(d.hedef * 100), alt = d.liste.filter(x => x.altinda), ust = d.liste.filter(x => !x.altinda);
+  const hb = buHafta(si), oz = haftaTestOzeti(si, hb, bugunNo()), salt = typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme();
+  return '<div class="hafiza-sayfa"><div class="baslik"><h1>Hafızam</h1><p>Her konunun şu an aklında kalma olasılığı (tahmini). Çizgi senin hedefin: %' + hedefY +
+    '. Bir konu çizginin altına inince unutmaya başlamışsındır; planı beklemeden çalışıp buradan bildirebilirsin.</p></div>' +
+    '<div class="et-ozet hf-ozet"><div class="et-ozet-kart"><span class="dp-kpi-ad">Çizginin altında</span><strong>' + alt.length + '<small> konu</small></strong><div class="dp-kpi-alt"><span class="dp-kpi-not">' + d.liste.length + ' konudan</span></div></div>' +
+    '<div class="et-ozet-kart"><span class="dp-kpi-ad">Hedef çizgisi</span><strong>%' + hedefY + '</strong><div class="dp-kpi-alt"><span class="dp-kpi-not">hatırlama hedefin</span></div></div>' +
+    '<div class="et-ozet-kart"><span class="dp-kpi-ad">Bu hafta</span><strong>' + oz.yapilan + (oz.toplam ? '<small>/' + oz.toplam + '</small>' : '') + '</strong><div class="dp-kpi-alt"><span class="dp-kpi-not">' +
+      (oz.kendiToplam ? oz.kendiToplam + ' kendi seçtiğin çalışma' : 'bildirilen çalışma') + '</span></div></div></div>' +
+    '<div class="kart hf-kutu"><label class="ayar-kutu"><input type="checkbox" id="ogrSerbest"' + (serbestAcikMi(si) ? ' checked' : '') + (salt ? ' disabled' : '') + '><span><b>Kendi programımı kendim yaparım</b>' +
+      '<span class="mini">' + hafizaNotu(si) + '</span></span></label></div>' +
+    (d.liste.length ? '' : '<div class="kart" style="padding:20px">Henüz sonucu olan konun yok. İlk sonuçlarını girince konuların burada görünür.</div>') +
+    (alt.length ? '<h2 class="hf-bolum">Çizginin altındakiler <span class="mini">' + alt.length + ' konu · en çok düşen başta</span></h2><div class="hf-liste">' + alt.map(x => hafizaSatiri(si, x, d, plan)).join('') + '</div>' : '') +
+    (ust.length ? '<h2 class="hf-bolum">Çizginin üstündekiler <span class="mini">' + ust.length + ' konu · çizgiye en yakın başta</span></h2><div class="hf-liste">' + ust.map(x => hafizaSatiri(si, x, d, plan)).join('') + '</div>' : '') +
+    hafizaKonuSecici(si, d, plan) + yaptimPencereHtml() + '</div>';
+}
+// "Çalıştım" (satırı aç/kapat) ve konu seçici: ana tıklama ve değişiklik dinleyicilerinden çağrılır.
+function hafizaSatirAc(ki) {
+  if (!ogrenciMi()) return;
+  EK.hafizaAcik = EK.hafizaAcik === ki ? undefined : ki; ciz();
+  try { (document.querySelector('[data-hf-ki="' + ki + '"] .ps-surgu') || document.querySelector('[data-hf-ac="' + ki + '"]'))?.focus({ preventScroll: true }); } catch (e) {}
+}
+function hafizaKonuSecildi(deger) {
+  if (!ogrenciMi()) return;
+  EK.hafizaAcik = deger === '' ? undefined : +deger; ciz();
+  try { document.querySelector('.hf-yeni .ps-surgu')?.focus({ preventScroll: true }); } catch (e) {}
+}
 // Öğrencinin ana sayfası (girişten sonra, marka yazısıyla): önce bugünün işleri, altında haftalar haritası ve yanında deneme
 // gelişimi (yalnızca YKS). Başlıklar kendi sayfalarına götürür: Haftalar haritası, Denemelerim.
 function gorunumAnaSayfa() {
   const grafik = ogrenciSinavi(D.ogr[EK.ogr]) === 'YKS' ? denemeAnaGrafigi(EK.ogr) : '';
   const baslik = '<div class="baslik pano-sol-bas"><h1><button class="baslik-link" data-sekme="harita" title="Haftalar haritasını aç">Haftalar haritası</button></h1></div>';
-  return ogrenciBugunKarti(EK.ogr) + (grafik ? '<div class="ana-pano">' + baslik + '<div class="baslik pano-sag-bas"><h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler" title="Denemelerim’i aç">Deneme gelişimi</button></h2></div>' +
+  return ogrenciBugunKarti(EK.ogr) + hafizaAnaKarti(EK.ogr) + (grafik ? '<div class="ana-pano">' + baslik + '<div class="baslik pano-sag-bas"><h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler" title="Denemelerim’i aç">Deneme gelişimi</button></h2></div>' +
     ogrenciYksYolu(true) + grafik + '</div>' : baslik + ogrenciYksYolu(true));
 }
 function gorunumHaritasi() {
@@ -9247,7 +9476,7 @@ function ogrenciCalismasiniUygula(calisma, si) {
   const kopya = JSON.parse(JSON.stringify(D));
   try {
     D = kopya;
-    const o = D.ogr[si], kaynak = y.ogr[0], harita = {}, eskiHafiza=o.hafizaSeviyesi||'normal', eskiAyt=!!o.aytOncelik, eskiSure=hedefTutma(si);
+    const o = D.ogr[si], kaynak = y.ogr[0], harita = {}, eskiHafiza=o.hafizaSeviyesi||'normal', eskiAyt=!!o.aytOncelik, eskiSure=hedefTutma(si), eskiSerbest=JSON.stringify(o.serbest||[]);
     // Student saves advance the notebook clock; received work also has a per-student
     // clock. An older imported clock must not hide a newer local edit.
     const yerelTs = ogrenciMi()
@@ -9305,7 +9534,7 @@ function ogrenciCalismasiniUygula(calisma, si) {
     });
     if (dahaYeni) {
       ['kap','off','aktif','cikti','ilkAktif','hedef','maddeler','rutin','gunlukEk','otoTelafi','dengeliYuk',
-       'telafiGecmisYapildi','telafiGunKap','hafizaSeviyesi','aytOncelik','okul','sinavTuru','denemeHedef','sureyeGore','sureHedef'].forEach(k => { if (kaynak[k] !== undefined) o[k] = kaynak[k]; });
+       'telafiGecmisYapildi','telafiGunKap','hafizaSeviyesi','aytOncelik','okul','sinavTuru','denemeHedef','sureyeGore','sureHedef','serbest'].forEach(k => { if (kaynak[k] !== undefined) o[k] = kaynak[k]; });
       // Dakika bütçesine geçiş de, test sayısına dönüş (alanın silinmesi) de öğrencinin seçimidir.
       if (kaynak.dakika !== undefined) o.dakika = kaynak.dakika; else delete o.dakika;
       if (kaynak.kendiPlan) o.kendiPlan = Object.assign({}, kaynak.kendiPlan, { sira: kaynak.kendiPlan.sira.map(cev),
@@ -9317,7 +9546,7 @@ function ogrenciCalismasiniUygula(calisma, si) {
       // An idle device must forward received work with its original version.
       if (ogrenciMi()) D.ogrCalismaTs = calisma.ts;
     }
-    if(eskiHafiza!==(o.hafizaSeviyesi||'normal')||eskiSure!==hedefTutma(si))hafizaKartlariniYenile(si);
+    if(eskiHafiza!==(o.hafizaSeviyesi||'normal')||eskiSure!==hedefTutma(si)||eskiSerbest!==JSON.stringify(o.serbest||[]))hafizaKartlariniYenile(si);
     if(eskiAyt!==!!o.aytOncelik)Object.keys(D.ogrTaslak||{}).forEach(k=>{if(+k.split('|')[0]===si)delete D.ogrTaslak[k];});
     yedekDogrula(D);
   } finally { D = onceki; }
@@ -12526,8 +12755,10 @@ function oncekiHaftaTestiCozulduMu(si, ki, gun) {
 }
 function oncekiHaftaEksikTestSayisi(si, hb, p) {
   let eksik = 0;
+  // Kendi programını yapan öğrencide plan öneridir (eksik sonuç aranmaz); başka gün kendiliğinden çalışılan konu da eksik değildir.
+  const o = D.ogr[si], ortu = planOrtusu(si, hb, p);
   (p.gunler || []).forEach((liste, g) => (liste || []).forEach(x => {
-    if (!x.serbest && !x.anlatim && !oncedenMi(p, planSlotAnahtari(x)) && !oncekiHaftaTestiCozulduMu(si, x.ki, hb + g)) eksik++;
+    if (!x.serbest && !x.anlatim && !oncedenMi(p, planSlotAnahtari(x)) && !serbestGunMu(o, hb + g) && !ortu.has(+x.ki + ':' + (hb + g)) && !oncekiHaftaTestiCozulduMu(si, x.ki, hb + g)) eksik++;
   }));
   return eksik;
 }
@@ -12933,7 +13164,7 @@ function ogrenciGozuyleKapat() {
 const SEKME_REHBER = [['takip', 'Haftalık öğrenci takibi'], ['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
                   ['ogrenciler', 'Öğrenciler'], ['konuplani', 'Özel tasarlanmış müfredat'], ['harita', 'Haftalar haritası'],
                   ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemeler'], ['siralamalar', 'Sıralamalar'], ['turkiye', 'Türkiye geneli'], ['konutakibi', 'Konu Takibi'], ['yanlislar', 'Yanlışlar defteri'], ['universite', 'Üniversite Hedefi'], ['etutler', 'Etütler'], ['etutetki', 'Etüt etkisi'], ['etutplani', 'Etüt planı'], ['yoklama', 'Yoklama'], ['ogrencirapor', 'Öğrenci raporları'], ['gunlukrapor', 'Günlük raporlar'], ['ogrencikarti', 'Öğrenci kartı'], ['ayarlar', 'Ayarlar']];
-const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemelerim'], ['gunlukrapor', 'Günlük rapor'], ['ayarlar', 'Ayarlar']];
+const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['hafiza', 'Hafızam'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemelerim'], ['gunlukrapor', 'Günlük rapor'], ['ayarlar', 'Ayarlar']];
 // Müfredat (lise programı) ve Denemelerim (TYT/AYT) yalnızca YKS öğrencisi içindir.
 // Günlük rapor yalnızca öğretmeni bağlı (okul hesaplı) öğrencide görünür.
 const SEKMELER = () => !ogrenciMi() ? SEKME_REHBER : (ogrenciSinavi(D && D.ogr && D.ogr[0]) === 'YKS' ? SEKME_OGRENCI
@@ -12943,7 +13174,7 @@ const SEKMELER = () => !ogrenciMi() ? SEKME_REHBER : (ogrenciSinavi(D && D.ogr &
 // üzerine gelince) ilgili diğer sayfaları açar. Sağda Müfredat ve Ayarlar.
 // Öğrenci: Planım ▾ · Denemelerim. Öğretmen: Haftalık plan ▾ · Öğrenciler ▾ · Denemeler ▾.
 const PLAN_ALT_SEKMELER = ['harita', 'giris'];
-const MENU_OGRENCI = [['plan', PLAN_ALT_SEKMELER, 'Planla ilgili diğer sayfalar'], ['denemeler', [], 'Denemelerle ilgili diğer sayfalar'], ['gunlukrapor', [], 'Günlük rapor']];
+const MENU_OGRENCI = [['plan', ['hafiza'].concat(PLAN_ALT_SEKMELER), 'Planla ilgili diğer sayfalar'], ['denemeler', [], 'Denemelerle ilgili diğer sayfalar'], ['gunlukrapor', [], 'Günlük rapor']];
 const MENU_REHBER = [['plan', ['giris', 'harita'], 'Planla ilgili diğer sayfalar'],
   ['ogrenciler', ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor', 'gunlukrapor'], 'Öğrencilerle ilgili diğer sayfalar'], ['denemeler', ['siralamalar', 'turkiye', 'konutakibi', 'yanlislar', 'universite'], 'Denemelerle ilgili diğer sayfalar']];
 // Menüde olmayan sayfa, açıldığı yerin menü öğesini seçili gösterir.
@@ -13174,6 +13405,7 @@ function cizIc() {
     EK.sekme === 'ogrenciler' ? gorunumOgrenciler() :
     EK.sekme === 'konuplani' ? gorunumKonuPlani() :
     EK.sekme === 'harita' ? gorunumHaritasi() :
+    EK.sekme === 'hafiza' && ogrenciMi() && D.ogr[EK.ogr] ? gorunumHafiza() :
     EK.sekme === 'ana' && ogrenciMi() && D.ogr[EK.ogr] ? gorunumAnaSayfa() :
     EK.sekme === 'ana' && rehberMi() ? gorunumRehberAna() :
     EK.sekme === 'denemeler' ? gorunumDenemeler() :
@@ -14112,6 +14344,8 @@ document.addEventListener('click', async ev => {
     bilgiVer('Planın artık dakikayla hazırlanıyor: hafta içi ' + d.hi + ' dk, hafta sonu ' + d.hs + ' dk. Mevcut hafta değişmez.');
     return;
   }
+  const hfAc = ev.target.closest('[data-hf-ac]');
+  if (hfAc) { hafizaSatirAc(+hfAc.dataset.hfAc); return; }
   const psNot = ev.target.closest('[data-ps] [data-ps-not]');
   if (psNot && !psNot.disabled) { await planSonucKaydet(psNot.closest('[data-ps]'), +psNot.dataset.psNot); return; }
   const geriEl = ev.target.closest('[data-ps-geri],[data-onceden-geri]');
@@ -15108,6 +15342,8 @@ document.addEventListener('change', async ev => {
   if(el.classList.contains('oAytOncelik')) { if(aytOnceliginiUygula(+el.dataset.i,el.checked)){await kaydet(true);ciz();}return; }
   if(el.classList.contains('oHafiza')) { if(hafizaSeviyesiniUygula(+el.dataset.i,el.value)){await kaydet(true);ciz();}return; }
   if(el.id==='ogrUzunSure') { if(hafizaSeviyesiniUygula(0,el.checked?'guclu':'normal')){await kaydet(true);ciz();bilgiVer(el.checked?'Yeni konuların tekrarları daha seyrek başlayacak. Sonraki haftalar yeniden hesaplandı.':'Başlangıç hafızası normale döndü. Sonraki haftalar yeniden hesaplandı.');}return; }
+  if(el.id==='hfKonu') { hafizaKonuSecildi(el.value); return; }
+  if(el.id==='ogrSerbest') { if(serbestAyarla(0,el.checked)){await kaydet(true);ciz();bilgiVer(el.checked?'Bugünden başlayarak plan bir öneri: girmediğin sonuç yapılmış sayılmaz, haftan bildirdiğin çalışmalarla dolar.':'Plan yeniden esas: bugünden sonra sonucu girilmeyen testler “İyi” sayılır.');}return; }
   if(el.id==='ogrSureyeGore') { if(sureyeGoreAyarla(0,el.checked)){await kaydet(true);ciz();bilgiVer(el.checked?'Plan çalışma sürene göre ayarlanıyor: hatırlama hedefi %'+Math.round(hedefTutma(0)*100)+'. Sonraki haftalar yeniden hesaplandı.':'Süreye göre ayar kapandı; hatırlama hedefi %'+Math.round(hedefTutma(0)*100)+'.');}return; }
   if (el.classList.contains('oHedef')) { D.ogr[+el.dataset.i].hedef = el.value ? +el.value : null; await kaydet(true); ciz(); return; }
   if (el.classList.contains('oTelafiKap')) { D.ogr[+el.dataset.i].telafiGunKap = el.value ? Math.max(1, Math.min(12, +el.value)) : null; await kaydet(true); ciz(); return; }

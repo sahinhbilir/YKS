@@ -22,6 +22,34 @@ The student's home page (`gorunumAnaSayfa`, after login and on the brand) starts
 - The streak (`ogrenciSerisi`) counts back from last week over the weeks that have at least one result, without a gap; this week adds one as soon as it has a result and never breaks the streak while it is still empty. It is a count of weeks worked, not a score: no threshold decides that a week was "good".
 - "Haftalık planım →" opens Planım. The card is the student's only; it is not drawn on the exam day or after it, and never printed.
 
+## Hafızam: studying on the student's own initiative
+
+The plan is a suggestion, not the only way to work. **Hafızam** (Planım ▾ → Hafızam, `gorunumHafiza`; a card of the same rows on the home page under Bugün, `hafizaAnaKarti`) shows what the scheduler knows about the student's memory, so she can decide for herself what to study:
+
+- Every topic that has a real result is one row: a bar from 0 to 100 with the **estimated recall now** and a mark at the **target line** (`hedefTutma`, 90 % unless the teacher or "süreme göre ayarla" changed it). Under it: when it was last studied and when it met / will meet the line ("çizginin altına 12 gün önce indi", "çizgiye 3 gün var").
+- Recall is FSRS-6's forgetting curve, **R(t) = (1 + FACTOR·t/S)^DECAY** with FACTOR = 0,9^(1/DECAY) − 1 (so R(S) = 0,9), t the days since the last review and S the card's stability (`hafizaDurumu`). The card is the topic's state **as of today**: real results up to today and the "İyi" assumptions of earlier days only — the same rule as the slider's preview. (The plan's stored card already counts this week's not-yet-done tests, so it is not used here.) A row whose last review was only assumed says so: "sonuç girilmedi, İyi sayıldı".
+- Topics under the line come first, the most forgotten on top ("Çizginin altındakiler"), then the rest with the nearest to the line first. The home card shows up to six topics under the line.
+- **Çalıştım** opens the row: the plan's own result slider for today. If the topic is on today's plan it is that row's slider; otherwise the result is written to today as a result outside the plan (`planSonucKaydet` with `planDisi`), through the same validation, card and sync path as every result. The topic then stands at 100 % and its next review is scheduled from this result. An unlinked notebook can take it back with Geri al; a notebook linked to a teacher can change it with the slider.
+- **Listede olmayan bir konu çalıştıysan** lists the taught topics (and the topics of the student's own plan) that have no result yet; the first report is that topic's first measurement.
+
+### A week fills with what the student reports
+
+- A result on a day where the plan has no row for that topic (a study of the student's own) counts as one of the week's tests, up to the number of tests given: `haftaTestOzeti` returns `kendi` (counted) and `kendiToplam` (all). The weeks map, the home card's "bu haftanın testi" and Hafızam's "Bu hafta" use it, and the week's title says "5/12 test yapıldı · 2 kendi seçtiğin çalışma". So a week turns green by reporting, whether or not the student followed the paper.
+- A week without a saved plan (or with no test due yet) is green by its results too: one result per working day of the week makes it fully green (`haftaCalismaGunu`; before it was a fixed half).
+- **No double counting.** When the student studies on her own a topic that also has an unanswered row in the same plan week, that result stands for the row (`haftaOrtusu`; each extra result covers one row, the earliest first; a row marked “Yapmadım” is not covered): the row leaves the student's plan and Bugün (the study stands on its own day as "plan dışı sonuç"), it is **not assumed İyi** on top of the real result, and Sonuç gir does not count it as missing. The teacher's table keeps the row as printed.
+
+### Kendi programımı kendim yaparım
+
+A tick box in Ayarlar (Planı kendine göre ayarla) and on Hafızam (`o.serbest`, `serbestAyarla`). While it is on:
+
+- the plan stays as a suggestion ("Kendi programını yapıyorsun: bu plan bir öneri" on Planım, "N test öneriliyor" on the home page, "Öneri · çalışırsan sonucunu seç — girmezsen sayılmaz" on the sliders);
+- **a test without a result is not assumed İyi** from that day on (`serbestGunMu` in `varsayimIyiGunleri`): what is not reported was not done, the card moves only with real results and its recall keeps falling until the student studies it. This is what makes Hafızam honest for a student who does not follow the paper;
+- Sonuç gir does not send her back to last week for "missing" results.
+
+`o.serbest` is a list of periods `[[first day, last day | null], …]` (only the last may be open, validated by `serbestDogrula`). Switching on opens a period today (or continues one closed yesterday or today); switching off closes it yesterday, so a period opened and closed on one day leaves nothing. The days of a closed period keep their rule: turning the box off never re-assumes the tests of the weeks she spent on her own. The list travels with the student's work snapshot (also when empty), the teacher's copy recomputes the cards with it, and the teacher's plan header says "kendi programını yapıyor (… tarihinden beri; sonucu girilmeyen test İyi sayılmaz)".
+
+Without the box the same reporting works; the only difference is that plan tests she does not report are still assumed İyi, which Hafızam states on its note.
+
 ## Results inside the plan: the slider
 
 The student's weekly plan (table and phone list) is also where results are entered. Under every test row
@@ -51,7 +79,7 @@ draft that the student's own inputs reshape: results, minutes, rest days and the
 
 ## Planı kendine göre ayarla (Ayarlar)
 
-Two opt-in boxes change the general setting of the calculation; an issued week never changes.
+Three opt-in boxes change the general setting of the calculation; an issued week never changes. The third, **Kendi programımı kendim yaparım**, is described under Hafızam above.
 
 - **Uzun süredir çalışıyorum** sets the existing starting memory level (`hafizaSeviyesi`: Güçlü, or Çok güçlü from
   the list that appears): new topics start with longer first intervals. A weak first result still comes back soon.
@@ -85,7 +113,7 @@ A test in a given week (a saved plan: printed, downloaded or saved automatically
 
 A real result entered later, even weeks later, replaces the assumption for that day. The card is recomputed and the coming weeks change; weeks already given never change.
 
-Not assumed: a test marked “Yapmadım”, a topic marked “Bu konu daha anlatılmadı” (and the course topics it shifts, before their new date), a week the teacher answered with "okula geldi, testleri kaldı" or "okula gelmedi" in **Nasıl geçti?** (its tests come back, postponed through `D.ertele`), a recovered paper's “yapılmadı” rows, free work, lessons and days on or after the exam. A week that is not given (red) has no tests to assume. A week computed live (not saved) ignores assumptions dated in that week or later, so it never treats its own tests as done.
+Not assumed: a test on a day of a "Kendi programımı kendim yaparım" period, a row whose topic the student studied on another day of the same plan week (see Hafızam), a test marked “Yapmadım”, a topic marked “Bu konu daha anlatılmadı” (and the course topics it shifts, before their new date), a week the teacher answered with "okula geldi, testleri kaldı" or "okula gelmedi" in **Nasıl geçti?** (its tests come back, postponed through `D.ertele`), a recovered paper's “yapılmadı” rows, free work, lessons and days on or after the exam. A week that is not given (red) has no tests to assume. A week computed live (not saved) ignores assumptions dated in that week or later, so it never treats its own tests as done.
 
 Code: `varsayimIyiGunleri` (which tests count), `kartHesapla` / `kartiYenidenHesapla` (cards from real and assumed reviews), `varsayimKartlariniGuncelle` (keeps cards in step; run on every render, skipped when the notebook has not changed, and per student after saving a week, a result, “Yapmadım”, a reset or a week decision). On the first load after this change, a postponement an older version wrote onto a card is kept as `D.ertele`. Tests: `test/assumed-good-regression.cjs`.
 
@@ -149,7 +177,7 @@ Website printing renders the existing print document in a separate view inside t
 
 `node test/student-automation-regression.js` exercises eight Sunday-only weeks with deterministic synthetic scores, draft downloads, week transitions, serialization/reload, historical-plan stability, partial results, late joining, missed weeks, catch-up reversal, capacity changes, result merging, retry and account isolation. It also checks historical repetition labels, previous scores, consistent desktop/mobile/print labels, honest progress counts, map navigation and the exam-day countdown. It makes no real Firebase writes. The optional `YKS_BACKUP=/path/to/backup.json` check loads a private backup locally to verify real plans and preservation of existing history; the fixture is never committed.
 
-`node test/genel-tekrar-regression.js` also covers the home page's Bugün card (today's rows only, the plan's slider on each test, the count falling as results are entered, the week's progress, the streak with and without a result this week, teacher and exam-day exclusions); `test/personal-plan-browser.cjs` checks it at 1280 and 390 px (before the weeks map, heading on one line, no sideways scroll, the way to Planım).
+`node test/genel-tekrar-regression.js` covers Hafızam (the recall value worked out from the formula, the line, the home card and the page, a spontaneous study through the slider, the picker), the week count with the student's own studies and its cap, the covered row leaving the plan, and the wording and effect of "Kendi programımı kendim yaparım"; `test/assumed-good-regression.cjs` covers the two new exceptions to the İyi assumption and the periods (open, close, same-day, validation); `test/ayt-timetable-regression.js` the round trip to the teacher. `node test/genel-tekrar-regression.js` also covers the home page's Bugün card (today's rows only, the plan's slider on each test, the count falling as results are entered, the week's progress, the streak with and without a result this week, teacher and exam-day exclusions); `test/personal-plan-browser.cjs` checks it at 1280 and 390 px (before the weeks map, heading on one line, no sideways scroll, the way to Planım).
 
 CI runs nine Node suites covering teacher compatibility, student automation, mobile export, tab visibility, recall-feedback interactions, lesson postponement and learning-history epochs, result packages, cloud behavior and timetable imports.
 

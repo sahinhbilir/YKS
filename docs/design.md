@@ -167,7 +167,7 @@ Students and teachers both get a top bar (`.ray.ust`), built by `ustMenu` from
 
 - **YKS Tekrar Defteri** (the brand) is a button that opens the home page (`'ana'`).
   On phones (≤480 px) it shortens to "YKS".
-- **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Haftalar haritası
+- **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Hafızam (recall per topic against the target line, see docs/student-flow.md), Haftalar haritası
   and Sonuç gir (`PLAN_ALT_SEKMELER`). Geçmiş plan kurtar opens from a red week on the
   map; there is no Karnem (its FSRS course calibration moved to Ayarlar). Hovering opens it
   with a mouse (`@media (hover:hover)`), a click toggles it on touch screens, and it

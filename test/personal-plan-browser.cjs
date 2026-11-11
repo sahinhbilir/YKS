@@ -157,6 +157,30 @@ const ogrenci=(kur)=>{
    assert.equal(await bugunKart.evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'the Bugün card does not overflow');
    await page.screenshot({path:path.join(out,'student-home-bugun-'+width+'.png'),fullPage:true});
    await bugunKart.locator('[data-sekme="plan"]').click();await page.getByRole('heading',{name:'Haftalık planın'}).waitFor();
+   // Hafızam: every measured topic with its recall bar and the target line; "Çalıştım" opens the slider; the box turns the plan
+   // into a suggestion and back.
+   await page.locator('[aria-controls="planMenusu"]').click();await page.locator('#planMenusu [data-sekme="hafiza"]').click();
+   await page.getByRole('heading',{name:'Hafızam'}).waitFor();
+   const hfSatir=page.locator('.hafiza-sayfa .hf-liste .hf-oge');assert(await hfSatir.count()>=1,'measured topics are listed');
+   assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.hafiza-sayfa .hf-cubuk')].every(c=>{const k=c.getBoundingClientRect(),d=c.querySelector('i').getBoundingClientRect(),b=c.querySelector('b').getBoundingClientRect();
+     return d.width<=k.width+.5&&b.left>=k.left&&b.right<=k.right+.5&&Math.abs((b.left+b.width/2-k.left)/k.width-.9)<.02})),true,'every bar stays inside its track and the line sits at 90%');
+   assert.match(await hfSatir.first().locator('.hf-yazi').innerText(),/^%\d+\s*son çalışma (bugün|dün|\d+ gün önce)/);
+   await hfSatir.first().locator('[data-hf-ac]').click();await page.locator('.hafiza-sayfa .hf-oge.hf-acik [data-ps]').waitFor();
+   assert.equal(await page.locator('.hafiza-sayfa .hf-oge.hf-acik [data-hf-ac]').getAttribute('aria-expanded'),'true');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'Hafızam overflow');
+   assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.hafiza-sayfa .hf-oge')].every(e=>e.scrollWidth<=e.clientWidth+1)),true,'rows do not overflow');
+   await page.screenshot({path:path.join(out,'student-hafizam-'+width+'.png'),fullPage:true});
+   await page.locator('.hafiza-sayfa .hf-oge.hf-acik [data-hf-ac]').click();assert.equal(await page.locator('.hafiza-sayfa .hf-acik').count(),0,'the same button closes the row');
+   await page.locator('#ogrSerbest').check();
+   await page.waitForFunction(()=>serbestAcikMi(0)&&/Kendi programını yapıyorsun/.test(document.querySelector('.hf-kutu')?.textContent||''));   // saved, then redrawn
+   await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});
+   assert.match(await page.locator('#serbestNot').innerText(),/bu plan bir öneri/);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'plan with the note: overflow');
+   await page.locator('#serbestNot [data-sekme="hafiza"]').click();await page.getByRole('heading',{name:'Hafızam'}).waitFor();
+   await page.locator('#ogrSerbest').uncheck();
+   await page.waitForFunction(()=>!serbestAcikMi(0)&&/“İyi” sayıldığı için/.test(document.querySelector('.hf-kutu')?.textContent||''));
+   assert.deepEqual(await page.evaluate(()=>D.ogr[0].serbest),[],'opened and closed on the same day leaves no period');
+   await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});assert.equal(await page.locator('#serbestNot').count(),0);
    await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});
    // 4. Another exam (KPSS): no school or field questions, the date is the student's own.
    await page.evaluate(()=>{D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-23';EK={ogr:0,sekme:'plan',hafta:null,girisAcik:{}};ciz();});

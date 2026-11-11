@@ -78,8 +78,8 @@
   .ray.ust .menu-ac {border-radius:0 10px 10px 0}
   .ray.ust button.marka {letter-spacing:0}
   .ana-pano {column-gap:24px}
-  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.yks-yolu {border-top:1px solid var(--cizgi);padding:22px 24px}
-  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart {border-radius:var(--rapport-radius)}
+  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.hafiza-kart,.yks-yolu {border-top:1px solid var(--cizgi);padding:22px 24px}
+  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.hafiza-kart {border-radius:var(--rapport-radius)}
   .yol-hafta {border-radius:8px}
   .giris-kart {border-radius:24px;padding:26px;box-shadow:var(--golge)}
   .giris-baslik {letter-spacing:-.025em}
@@ -199,7 +199,7 @@
   @media (max-width:600px) {
     .baslik h1,.pano-baslik,
     :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) .et-baslik {font-size:24px}
-    .et-panel,.dn-panel,.ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.yks-yolu,#yaKok .ya-panel {padding:18px}
+    .et-panel,.dn-panel,.ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.hafiza-kart,.yks-yolu,#yaKok .ya-panel {padding:18px}
     .et-ozet-kart,.kutu {padding:16px 18px}
     .et-ders {padding:14px}
     .giris-kart {padding:22px}

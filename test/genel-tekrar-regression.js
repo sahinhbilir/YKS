@@ -663,5 +663,134 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     a.run(`D.ayar.sinav=isoDan(${bugun})`); assert.equal(a.run("ogrenciBugunKarti(0)"), "");
   });
 
+  await check('hafizam-shows-each-topics-recall-now-against-the-target-line-and-takes-a-spontaneous-study', async a => {
+    await okulsuz(a, { kur: false, dakika: { hi: 40, hs: 40, deneme: false } });
+    a.run(`kendiPlanKur(0,${JSON.stringify(hepsiBilir(a))},'2027-04-23')`); genelTekrarBitir(a); a.run('ciz()');
+    const bu = a.run('buHafta(0)'), bugun = a.run('bugunNo()');
+    const kagit = hafta(a, bu).flatMap((l, g) => l.map(x => ({ ...x, gun: bu + g }))).filter(x => !x.gt && !x.anlatim);
+    const disarida = a.json(`D.ogr[0].kendiPlan.sira.filter(k=>!${JSON.stringify(kagit.map(x => x.ki))}.includes(k)).slice(0,3)`);
+    assert.equal(disarida.length, 3, 'three topics that are not on this week’s paper');
+    // Nothing answered yet: nothing to show, no card on the home page.
+    assert.deepEqual(a.json('hafizaDurumu(0)'), { hedef: 0.9, liste: [], altinda: 0 }); assert.equal(a.run('hafizaAnaKarti(0)'), '');
+    // İyi thirty days ago, İyi yesterday. FSRS-6: R(t) = (1 + FACTOR·t/S)^DECAY with FACTOR = 0,9^(1/DECAY) − 1, so R(S) = 0,9.
+    const [ki30, ki1, kiYeni] = disarida;
+    a.run(`sonucIsle(0,[{ki:${ki30},gun:${bugun - 30},not:3,dogru:null,soru:null},{ki:${ki1},gun:${bugun - 1},not:3,dogru:null,soru:null}])`);
+    const [DECAY, FACTOR] = a.json('[DECAY,FACTOR]'), S = a.run(`tekrarla(null,3,0,hedefTutma(0),D.ayar.maks,D.ayar.relearn,parametreAl(0,${ki30})).s`);
+    assert(Math.abs(FACTOR - (Math.pow(0.9, 1 / DECAY) - 1)) < 1e-12); const R = t => Math.pow(1 + FACTOR * t / S, DECAY);
+    assert(Math.abs(R(S) - 0.9) < 1e-12, 'the line is where the interval of the first review ends');
+    let d = a.json('hafizaDurumu(0)');
+    assert.deepEqual(d.liste.map(x => [x.ki, x.gecen, x.son, x.sayildi, x.altinda]), [[ki30, 30, bugun - 30, false, true], [ki1, 1, bugun - 1, false, false]], 'the most forgotten first');
+    assert(Math.abs(d.liste[0].r - R(30)) < 1e-9 && Math.abs(d.liste[1].r - R(1)) < 1e-9); assert.equal(d.altinda, 1);
+    assert(Math.abs(d.liste[0].cizgiGun - (bugun - 30 + S)) < 1e-9, 'it met the line S days after the review');
+    if (Math.abs(S - 2.3065) < 1e-9) assert.equal(Math.round(d.liste[0].r * 100), 67, 'default parameters: (1 + 0,98037·30/2,3065)^−0,1542 = 0,6675');
+    // The home card: the topics under the line, the bar with the line marked, days in words.
+    let h = a.run('hafizaAnaKarti(0)');
+    assert.match(h, /^<section class="kart hafiza-kart" id="hafizaKart" aria-label="Hafızan">/); assert.match(h, /Hafızan · hedef çizgisi %90/);
+    assert.match(h, /<h2 class="bg-baslik"><b>1<\/b> <span>konu çizginin altına indi<\/span><\/h2>/);
+    const y30 = Math.round(R(30) * 100);
+    assert.match(h, new RegExp('<div class="hf-oge hf-alt" data-hf-ki="' + ki30 + '">[\\s\\S]*?<button type="button" class="dugme mini" data-hf-ac="' + ki30 + '" aria-expanded="false">Çalıştım</button>'));
+    assert.match(h, new RegExp('role="img" aria-label="Tahmini hatırlama %' + y30 + ', hedef çizgisi %90"><i style="width:' + y30 + '%"></i><b style="left:90%"></b></div>'));
+    assert.match(h, new RegExp('<strong>%' + y30 + '</strong><span>son çalışma 30 gün önce · çizginin altına ' + Math.floor(30 - S) + ' gün önce indi</span>'));
+    assert(!h.includes('data-hf-ki="' + ki1 + '"'), 'a topic above the line is not on the home card'); assert.doesNotMatch(h, /data-ps/, 'no slider until a row is opened');
+    assert.match(h, /<button class="dugme" data-sekme="hafiza">Hafızam: bütün konular \(2\) →<\/button>/);
+    assert.match(a.run("EK.sekme='ana';gorunumAnaSayfa()"), /id="bugunKart"[\s\S]*id="hafizaKart"[\s\S]*yks-yolu/, 'between today and the weeks map');
+    // "Çalıştım" opens the plan's own slider for today, as a result outside the plan.
+    a.run(`EK.hafizaAcik=${ki30}`); h = a.run('hafizaAnaKarti(0)');
+    assert.match(h, new RegExp('data-hf-ac="' + ki30 + '" aria-expanded="true">Kapat</button>'));
+    assert.match(h, new RegExp('class="plan-sonuc ps-bos" data-ps data-ki="' + ki30 + '" data-gun="' + bugun + '" data-hb="' + bu + '" data-slot="[^"]*" data-plan-disi="1"'));
+    assert.match(h, /<span>Bugün çalıştıysan<\/span><b class="ps-deger">sonucunu seç<\/b>/);
+    const once = a.json(`haftaTestOzeti(0,${bu},planHaftaSonu(0,${bu}))`);
+    assert.deepEqual([once.yapilan, once.kendi, once.kendiToplam], [1, 1, 1], 'yesterday’s own study is in this week and already counts as one of its tests');
+    const kok = ki => `{dataset:{ki:'${ki}',gun:'${bugun}',hb:'${bu}',slot:'',planDisi:'1',kayitli:'0',oniz:''},querySelector:()=>null,querySelectorAll:()=>[]}`;
+    await a.run(`planSonucKaydet(${kok(ki30)},4)`); await a.run('KAYIT_ZINCIRI');
+    assert.deepEqual(a.json(`D.log.filter(l=>l[2]===${ki30}).map(l=>[l[0],l[5]])`), [[bugun - 30, 3], [bugun, 4]]);
+    d = a.json('hafizaDurumu(0)'); const x = d.liste.find(r => r.ki === ki30);
+    assert.deepEqual([x.r, x.gecen, x.altinda, d.altinda], [1, 0, false, 0], 'studied today: back at 100%');
+    assert.match(a.run('hafizaAnaKarti(0)'), /<span>Bütün konuların çizginin üstünde<\/span>/);
+    assert.match(a.run('hafizaAnaKarti(0)'), new RegExp('data-hf-ki="' + ki30 + '"[\\s\\S]*data-kayitli="4"'), 'the open row stays so the result can be corrected');
+    // The page: both groups, the tiles, the switch and the picker for a topic that has no result yet.
+    a.run("EK.sekme='hafiza';EK.hafizaAcik=undefined"); h = a.run('gorunumHafiza()');
+    assert.match(h, /<h1>Hafızam<\/h1>/); assert.match(h, /Çizginin üstündekiler <span class="mini">2 konu/); assert.doesNotMatch(h, /Çizginin altındakiler/);
+    assert.match(h, /<span class="dp-kpi-ad">Çizginin altında<\/span><strong>0<small> konu<\/small><\/strong>/); assert.match(h, /<span class="dp-kpi-ad">Hedef çizgisi<\/span><strong>%90<\/strong>/);
+    assert.match(h, /<input type="checkbox" id="ogrSerbest"><span><b>Kendi programımı kendim yaparım<\/b>/);
+    assert.match(h, new RegExp('<select id="hfKonu"><option value="">Konu seç…</option>[\\s\\S]*<option value="' + kiYeni + '">'));
+    assert(!new RegExp('<option value="' + ki30 + '"').test(h), 'a measured topic is not in the picker');
+    a.run(`hafizaKonuSecildi('${kiYeni}')`); h = a.run('gorunumHafiza()');
+    assert.match(h, new RegExp('<option value="' + kiYeni + '" selected>')); assert.match(h, new RegExp('class="hf-oge hf-acik hf-yeni" data-hf-ki="' + kiYeni + '"[\\s\\S]*henüz sonucu yok · ilk ölçüm olur[\\s\\S]*data-ps data-ki="' + kiYeni + '"[^>]*data-plan-disi="1"'));
+    await a.run(`planSonucKaydet(${kok(kiYeni)},2)`); await a.run('KAYIT_ZINCIRI');
+    assert.deepEqual(a.json('hafizaDurumu(0)').liste.map(r => r.ki).sort((p, q) => p - q), [ki30, ki1, kiYeni].sort((p, q) => p - q));
+    a.run(`hafizaSatirAc(${ki1})`); assert.equal(a.run('EK.hafizaAcik'), ki1); a.run(`hafizaSatirAc(${ki1})`); assert.equal(a.run('EK.hafizaAcik'), undefined, 'the same button closes it');
+    // The menu and the tab; teachers have neither the page nor the card.
+    assert.deepEqual(a.json("[SEKME_OGRENCI.find(s=>s[0]==='hafiza'),MENU_OGRENCI[0][1]]"), [['hafiza', 'Hafızam'], ['hafiza', 'harita', 'giris']]);
+    a.run("D.rol='rehber'"); assert.equal(a.run('hafizaAnaKarti(0)'), ''); assert.equal(a.run('gorunumHafiza()'), '<div class="baslik"><h1>Hafızam</h1></div>'); a.run("D.rol='ogrenci'");
+  });
+  await check('a-week-fills-with-what-the-student-reports-and-a-topic-studied-on-its-own-leaves-the-plan-row-behind', async a => {
+    await okulsuz(a, { kur: false, dakika: { hi: 40, hs: 40, deneme: false } });
+    a.run(`kendiPlanKur(0,${JSON.stringify(hepsiBilir(a))},'2027-04-23')`); genelTekrarBitir(a); a.run('ciz()');
+    const bu = a.run('buHafta(0)'), bugun = a.run('bugunNo()'), son = a.run(`planHaftaSonu(0,${bu})`);
+    const kagit = hafta(a, bu).flatMap((l, g) => l.map(x => ({ ...x, gun: bu + g }))).filter(x => !x.gt && !x.anlatim);
+    const ileri = kagit.find(x => x.gun > bugun), disarida = a.json(`D.ogr[0].kendiPlan.sira.filter(k=>!${JSON.stringify(kagit.map(x => x.ki))}.includes(k)).slice(0,2)`);
+    const T = a.json(`haftaTestOzeti(0,${bu},${son})`); assert.deepEqual([T.yapilan, T.kendi, T.kendiToplam], [0, 0, 0]); assert(T.toplam >= 3 && ileri);
+    const kok = ki => `{dataset:{ki:'${ki}',gun:'${bugun}',hb:'${bu}',slot:'',planDisi:'1',kayitli:'0',oniz:''},querySelector:()=>null,querySelectorAll:()=>[]}`;
+    // Two topics of the student's own choice, reported today: two tests' worth of the week, without touching the plan's rows.
+    for (const ki of disarida) { await a.run(`planSonucKaydet(${kok(ki)},3)`); await a.run('KAYIT_ZINCIRI'); }
+    let oz = a.json(`haftaTestOzeti(0,${bu},${son})`);
+    assert.deepEqual([oz.toplam, oz.yapilan, oz.kendi, oz.kendiToplam], [T.toplam, 2, 2, 2]);
+    assert.match(a.run('ogrenciBugunKarti(0)'), new RegExp('<strong>2<small>/' + T.toplam + '</small></strong><span>bu haftanın testi</span>'));
+    // The map counts the running week up to today: the tests due so far.
+    const Tb = a.json(`haftaTestOzeti(0,${bu},${bugun})`); assert(Tb.toplam >= 2 && Tb.toplam <= T.toplam); assert.equal(Tb.yapilan, 2);
+    assert.match(a.run('ogrenciYksYolu(true)'), new RegExp('2/' + Tb.toplam + ' test yapıldı · 2 kendi seçtiğin çalışma'));
+    assert.match(a.run('ogrenciYksYolu(true)'), new RegExp('class="yol-hafta yesil[^"]*" style="--oran:' + (2 / Tb.toplam).toFixed(2) + '"[^>]*aria-current="date"'), 'the week is green by what was reported');
+    // More reports than the plan asked for never count beyond it.
+    assert.equal(a.run(`(()=>{const y=haftaYapilanTestler(0);for(let i=0;i<50;i++)y.add((900000+i)+':${bugun}');return haftaTestOzeti(0,${bu},${son},y).yapilan})()`), 2, 'unknown topics are not counted');
+    assert.equal(a.run(`(()=>{const y=haftaYapilanTestler(0);D.ogr[0].kendiPlan.sira.forEach(k=>y.add(k+':${bugun}'));const o=haftaTestOzeti(0,${bu},${son},y);return o.yapilan===o.toplam&&o.kendiToplam>o.kendi})()`), true, 'capped at the tests given');
+    // The topic of a later row, studied today on the student's own: that row leaves the student's plan (the result stands on
+    // today as a result outside the plan), it is not assumed İyi on top, and it still counts once.
+    assert(a.json(`[...(varsayimIyiGunleri(0).get(${ileri.ki})||[])]`).includes(ileri.gun), 'control: the unanswered row is assumed');
+    await a.run(`planSonucKaydet(${kok(ileri.ki)},3)`); await a.run('KAYIT_ZINCIRI');
+    const gunler = a.json(`ogrenciPlanGunleri(0,${bu},planHesapla(0,${bu}),true).map(l=>l.map(x=>[x.ki,!!x.planDisi]))`);
+    assert(!gunler[ileri.gun - bu].some(r => r[0] === ileri.ki), 'the row is gone from its day');
+    assert(gunler[bugun - bu].some(r => r[0] === ileri.ki && r[1]), 'the study stands on today');
+    assert.deepEqual(a.json(`[...planOrtusu(0,${bu},planHesapla(0,${bu}))]`), [ileri.ki + ':' + ileri.gun]);
+    assert(!a.json(`[...(varsayimIyiGunleri(0).get(${ileri.ki})||[])]`).includes(ileri.gun), 'not assumed on top of the real result');
+    assert.deepEqual(a.json(`[D.kart['0:${ileri.ki}'].n,D.kart['0:${ileri.ki}'].son]`), [1, bugun]);
+    oz = a.json(`haftaTestOzeti(0,${bu},${son})`); assert.deepEqual([oz.toplam, oz.yapilan, oz.kendiToplam], [T.toplam, 3, 3]);
+    assert.equal(a.run(`oncekiHaftaEksikTestSayisi(0,${bu},planHesapla(0,${bu}))`), T.toplam - 1, 'the covered row is not a missing result');
+    // The teacher's table keeps every row of the paper.
+    a.run("D.rol='rehber'"); assert(a.json(`ogrenciPlanGunleri(0,${bu},planHesapla(0,${bu}),true)[${ileri.gun - bu}].map(x=>x.ki)`).includes(ileri.ki)); a.run("D.rol='ogrenci'");
+    // A week without a saved plan: one result per working day makes it fully green (six working days here, three results: half).
+    assert.equal(a.run(`haftaCalismaGunu(0,${bu},${son})`), 6); assert.equal(a.run(`haftaCalismaGunu(0,${bu},${bu + 1})`), 2); assert.equal(a.run(`haftaCalismaGunu(0,${bu + 6},${bu + 6})`), 1, 'never zero');
+  });
+  await check('kendi-programim-makes-the-plan-a-suggestion-nothing-unreported-counts-and-the-wording-says-so', async a => {
+    await okulsuz(a, { kur: false, dakika: { hi: 40, hs: 40, deneme: false } });
+    a.run(`kendiPlanKur(0,${JSON.stringify(hepsiBilir(a))},'2027-04-23')`); genelTekrarBitir(a); a.run('ciz()');
+    const bu = a.run('buHafta(0)'), bugun = a.run('bugunNo()');
+    const say = () => a.json('[...varsayimIyiGunleri(0).values()].flat()');
+    assert(say().some(g => g >= bugun), 'control: today’s and later rows of the given week are assumed İyi');
+    assert.match(a.run('planiAyarlaKarti(0)'), /<input type="checkbox" id="ogrSerbest"><span><b>Kendi programımı kendim yaparım<\/b>/);
+    assert.doesNotMatch(a.run('gorunumOgrenciPlan()'), /serbestNot/); assert.match(a.run('ogrenciBugunKarti(0)'), /test seni bekliyor/);
+    // Switched on today.
+    assert.equal(a.run('serbestAyarla(0,true)'), true); assert.deepEqual(a.json('D.ogr[0].serbest'), [[bugun, null]]);
+    assert.equal(say().filter(g => g >= bugun).length, 0, 'from today nothing is assumed');
+    assert.doesNotThrow(() => a.run('yedekDogrula(JSON.parse(JSON.stringify(D)))'));
+    const h = a.run('gorunumOgrenciPlan()');
+    assert.match(h, /<p class="mini serbest-not" id="serbestNot">Kendi programını yapıyorsun: bu plan bir öneri\./);
+    assert.match(h, /<span>Öneri · çalışırsan sonucunu seç<\/span><b class="ps-deger">girmezsen sayılmaz<\/b>/); assert.doesNotMatch(h, /İyi sayılır/);
+    assert.match(a.run('ogrenciBugunKarti(0)'), /<span>test öneriliyor<\/span>/);
+    assert.match(a.run('planiAyarlaKarti(0)'), /id="ogrSerbest" checked>/); assert.match(a.run("EK.sekme='hafiza';gorunumHafiza()"), /id="ogrSerbest" checked>[\s\S]*Kendi programını yapıyorsun: sonucunu girmediğin hiçbir test yapılmış sayılmıyor/);
+    // A reported result still works the same way and shows as the student's own.
+    const t = hafta(a, bu).flatMap((l, g) => l.map(x => ({ ...x, gun: bu + g }))).find(x => x.gun === bugun && !x.gt && !x.anlatim);
+    await a.run(`planSonucKaydet({dataset:{ki:'${t.ki}',gun:'${bugun}',hb:'${bu}',slot:'${t.slot}',planDisi:'0',kayitli:'0',oniz:''},querySelector:()=>null,querySelectorAll:()=>[]},3)`); await a.run('KAYIT_ZINCIRI');
+    assert.match(a.run('gorunumOgrenciPlan()'), new RegExp('data-ps data-ki="' + t.ki + '"[^>]*data-kayitli="3"'));
+    // Last week's unanswered rows are not "missing" for a student who was on her own that week.
+    a.run(`D.ogr[0].serbest=[[${bu - 7},null]]`);
+    assert.equal(a.run(`oncekiHaftaEksikTestSayisi(0,${bu},planHesapla(0,${bu}))`), 0);
+    // The teacher's copy takes the switch with the student's work and sees it on the plan header.
+    a.run("D.rol='rehber'"); assert.match(a.run('gorunumPlan()'), new RegExp('<b>kendi programını yapıyor</b> \\(' + a.run(`ggyy(${bu - 7})`).replace(/\./g, '\\.') + ' tarihinden beri; sonucu girilmeyen test İyi sayılmaz\\)')); a.run("D.rol='ogrenci'");
+    // Switched off: today on, the plan is the rule again; the period stays as it was lived.
+    assert.equal(a.run('serbestAyarla(0,false)'), true); assert.deepEqual(a.json('D.ogr[0].serbest'), [[bu - 7, bugun - 1]]);
+    assert.doesNotMatch(a.run('gorunumOgrenciPlan()'), /serbestNot/);
+  });
+
   console.log('genel tekrar regression: ' + checks.length + ' checks passed');
 })().catch(e => { console.error(e); process.exit(1); });

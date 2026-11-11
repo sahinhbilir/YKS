@@ -33,6 +33,8 @@ let browser;
        async getDocFromServer(ref){await window.__record({event:'readback',ref});return snap(window.__cloud[ref]);},
        async oturumuKapat(){if(!await LOCAL_STORE.get('yks_veri'))throw Error('Device data was cleared before sign-out');await window.__record({event:'signout'});user=null;}};
    },role);
+   // The student's list of levels opens with the "Uzun süredir çalışıyorum" box (Ayarlar → Planı kendine göre ayarla).
+   if(role==='ogrenci'){await page.locator('#ogrUzunSure').check();await page.locator('.oHafiza').waitFor();}
    await page.locator('.oHafiza').selectOption('cok-guclu');
    await page.waitForFunction(async()=>JSON.parse(await LOCAL_STORE.get('yks_veri')).ogr[0].hafizaSeviyesi==='cok-guclu');
    assert.equal(await page.evaluate(()=>D.log.length),1);assert.equal(await page.evaluate(()=>D.kart['0:0'].s),28);
