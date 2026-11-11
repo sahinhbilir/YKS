@@ -336,6 +336,31 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   run("EK.denemeMetrik='net'");
   put('one',[sample()]);const tek=run('denemeGrafik(one)');assert(!tek.includes('dn-seg'));assert(tek.includes('class="dn-dot esit"'));
  });
+ await check('the last net against the student own usual range: a plain step from the exam before, colour only outside the 90% prediction interval of three to five earlier exams (hand-worked)',()=>{
+  const near=(a,b)=>assert(Math.abs(a-b)<1e-6,a+' != '+b);
+  // Earlier 80, 84, 82: mean 82, s = 2, t(2) = 2,920 → 2,920 · 2 · √(4/3) = 6,7434 → 75,2566 – 88,7434.
+  put('L',[80,84,82]);let ar=run('denemeOlaganAralik(L)');assert.equal(ar.n,3);near(ar.ort,82);near(ar.alt,82-2.920*2*Math.sqrt(4/3));near(ar.ust,82+2.920*2*Math.sqrt(4/3));
+  assert.deepEqual([75,76,88,89].map(v=>run('denemeOlaganKonum('+v+',denemeOlaganAralik(L))')),['asagi','esit','esit','yukari']);
+  put('L',[80,84]);assert.equal(run('denemeOlaganAralik(L)'),null,'two earlier exams: no range');assert.equal(run('denemeOlaganKonum(70,denemeOlaganAralik(L))'),null);
+  // Only the last five count: 10 is too old. 40, 42, 44, 46, 48: mean 44, s = √10 → 2,132 · 3,1623 · √1,2 = 7,3854.
+  put('L',[10,40,42,44,46,48]);ar=run('denemeOlaganAralik(L)');assert.equal(ar.n,5);near(ar.ort,44);near(ar.ust-ar.ort,2.132*Math.sqrt(10)*Math.sqrt(1.2));
+  // The page: nets 40, 44, 42 then 41 → inside the range (mean 42, s = 2: 35,26 – 48,74), the step −1 is grey, no arrow.
+  const kayit=(i,dogru)=>sample({id:'m:o'+i,ad:'Deneme '+i,tarih:'2026-09-'+String(10+i).padStart(2,'0'),ts:100+i,dersler:[{kod:'turkce',dogru,yanlis:0,soru:40}]});
+  put('records',[kayit(1,40),kayit(2,44),kayit(3,42),kayit(4,41)]);run("D.ogr[0].denemeler=records;EK.sekme='denemeler';EK.denemeTur='TYT';EK.denemeMetrik='net'");
+  let page=run('gorunumDenemeler()');
+  assert.match(page,/<span class="et-hap esit">−1<\/span><span class="dp-kpi-not">önceki denemeye göre<\/span><span class="dp-kpi-not dn-olagan dn-olagan-esit" id="dnOlagan" title="Önceki 3 denemenin ortalaması 42\.[^"]*">Olağan aralığında · 35,26 – 48,74<\/span>/);
+  assert(!/dp-kpi-ana[\s\S]{0,400}[▲▼]/.test(page),'no arrow on the last net');
+  // 30 is below it: the range line says so (the step stays a plain number).
+  sandbox.records[3]=kayit(4,30);run('D.ogr[0].denemeler=records');page=run('gorunumDenemeler()');
+  assert.match(page,/<span class="et-hap esit">−12<\/span><span class="dp-kpi-not">önceki denemeye göre<\/span><span class="dp-kpi-not dn-olagan dn-olagan-asagi" id="dnOlagan"[^>]*><b>Olağan aralığının altında<\/b> · 35,26 – 48,74<\/span>/);
+  sandbox.records[3]=kayit(4,50);run('D.ogr[0].denemeler=records');assert.match(run('gorunumDenemeler()'),/dn-olagan-yukari" id="dnOlagan"[^>]*><b>Olağan aralığının üstünde<\/b>/);
+  // Fewer than four exams: the step with a caution, no judgement. "En yüksek" has no arrow either.
+  put('records',[kayit(1,40),kayit(2,36)]);run('D.ogr[0].denemeler=records');page=run('gorunumDenemeler()');
+  assert.match(page,/<span class="et-hap esit">−4<\/span><span class="dp-kpi-not">önceki denemeye göre<\/span><span class="dp-kpi-not dn-olagan" id="dnOlagan">Tek denemelik fark denemenin zorluğundan da olabilir; olağan aralığın 4\. denemeden sonra görünür\.<\/span>/);
+  assert.match(page,/<span class="dp-kpi-ad">En yüksek<\/span><strong>40<\/strong><div class="dp-kpi-alt"><span class="dp-kpi-not">son deneme bunun 4 altında<\/span>/);
+  assert(!/id="dpKpi"[\s\S]*?[▲▼][\s\S]*?<\/div><\/div><\/div>/.test(page.slice(page.indexOf('id="dpKpi"'),page.indexOf('id="dpKpi"')+2500)),'no arrows in the tiles');
+  put('records',[kayit(1,40)]);run('D.ogr[0].denemeler=records');assert(!run('gorunumDenemeler()').includes('dnOlagan'),'one exam: nothing to compare');
+ });
  await check('PDF report score is read from the leftmost score column',()=>{
   const pages=JSON.parse(fs.readFileSync('test/fixtures/mock-exam-pdf-items.json','utf8')).tyt;
   pages[0].unshift({s:'480.25',x:470,y:470,w:12,h:5});put('pages',pages);assert.equal(run('denemePdfCoz(pages).satirlar[0].puan'),220.5);

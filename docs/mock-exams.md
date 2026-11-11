@@ -18,6 +18,18 @@ Deneme adı, tarih, derslerin doğru/yanlış/soru sayıları girilir. Net doğr
 - TYT/AYT denemesinin ayrıntısındaki her ders kutusu (“Ders gelişimi →”) o dersin Branş grafiğini, bu denemenin bölümü seçili olarak açar.
 - Derslerin ardından denemenin testleri gelir (çerçeveli kutular, “Toplam gelişimi →”): TYT’de **Sosyal Bilimler**, **Matematik + Geometri** ve **Fen Bilimleri**; AYT’de **Edebiyat–Sosyal 1**, **Sosyal 2**, **Matematik + Geometri** ve **Fen Bilimleri** (`DENEME_GRUPLAR`). Testin doğru, yanlış ve soru sayısı sayılan derslerinin toplamıdır (alan ve Din/Ek Felsefe kuralı derslerdeki gibi); net bunlardan hesaplanır. Branş listesinin **Toplam** bölümünden de seçilir. Test yalnızca TYT/AYT denemelerinden gelir: grafiği nettir, “TYT/AYT bölümleri” kutusu yoktur, ayrıntısı derslerini netleriyle sayar. Test hiçbir yere kaydedilmez. Test seçiliyken **+ Deneme ekle** testin ilk dersiyle açılır.
 
+## Son net: çıplak ok yerine bağlam
+
+Denemelerim’in (ve öğretmenin öğrenci panosunun) başındaki **Son net** kutusu bir önceki denemeye göre farkı artık renksiz ve oksuz bir sayı olarak yazar (“−3,5 · önceki denemeye göre”). İki deneme aynı zorlukta olmadığı için tek adımlık bir iniş ya da çıkış kendi başına iyi ya da kötü haber değildir.
+
+Rengi ve yorumu öğrencinin **olağan aralığı** taşır (`denemeOlaganAralik`, `denemeOlaganKonum`):
+
+- Son denemeden önceki en çok beş sonucun (en az üç) ortalaması ± t·s·√(1+1/n): bir sonraki sonucun %90 olasılıkla düşeceği aralık (iki yönlü %90 öngörü aralığı; t = 2,920 / 2,353 / 2,132, öğretmenin Dikkat kuralındaki değerlerle aynı).
+- Son net aralığın içindeyse satır nötrdür: “Olağan aralığında · 79,0 – 89,0”. Dışındaysa “**Olağan aralığının altında**” (kırmızı) ya da “**üstünde**” (yeşil) yazar. Dalgalı sonuçları olan öğrencinin aralığı geniştir; aynı düşüş istikrarlı bir öğrencide aralığın dışına çıkar.
+- Dörtten az deneme varken yorum yapılmaz: “Tek denemelik fark denemenin zorluğundan da olabilir; olağan aralığın 4. denemeden sonra görünür.”
+- **En yüksek** kutusunda da ok yoktur: “son deneme bunun 3,5 altında”.
+- Öğrencinin defterinde denemenin okul ya da Türkiye ortalaması bulunmaz (yayınlanan kopyalar yalnızca kendi sonucunu taşır); bu yüzden bağlam öğrencinin kendi geçmişidir. Türkiye’ye göre yeri öğretmenin Öğrenci kartındadır.
+
 ## Ana sayfadaki deneme gelişimi
 
 Öğrencinin ana sayfası (girişten sonra açılan sayfa, marka yazısı “YKS Tekrar Defteri” ile de açılır) Haftalar haritasının yanında **Deneme gelişimi** grafiğini gösterir (`denemeYolGrafigi`, yalnızca YKS öğrencisi).
@@ -60,6 +72,7 @@ Birleşik raporun TYT tekrarları, başka tarihe sahip olsalar bile aynı sınav
 
 Kaynaklar `src/denemeler.js` ve `src/denemeler.css`. `node scripts/embed-denemeler.cjs` bunları tek dosyalı uygulamaya gömer; `--check` eşitliği denetler; Windows (CRLF) çalışma kopyalarında da aynı sonucu verir. Elle gömülü kopyayı değiştirmeyin.
 
+- `node test/mock-exam-regression.cjs` ayrıca olağan aralığı elle hesaplanmış örneklerle (üç ve beş önceki deneme, aralığın içi / altı / üstü, dörtten az deneme) ve kutulardaki okların kalktığını denetler.
 - `node test/mock-exam-regression.cjs`: ana sayfa grafiğinin sabit eksenleri, TYT/AYT/Branş seçimi ve seçim başına hedef neti (kaydetme, temizleme, aralık dışı değer, eski tek sayı hedef, doğrulama, eşitleme; yeni deneme eski noktaları kaydırmaz, dönem öncesi son denemenin grafiğin başında gösterilmesi, AYT alanı ve 0–80 ekseni, branş ders listesi, dolu/içi boş noktalar, noktadan Denemelerim’e geçiş, bağlantılı başlıklar), alan toplamları, ana sayfa AYT alan seçimi (sınıf alanı önceden seçili, başka alanın toplamı, Denemelerim ile ortak seçim, hedefin yalnızca kendi alanda görünmesi), branş net/dk, genel deneme bölümleri (türetme, boş bölümün 0 net sayılması, alan ve Din/Ek Felsefe kuralı, kayda girmeme, gizleme, yalnızca net, geçişler), sayısal sınırlar, sürüm uyumu, silme/birleştirme, silinmiş sonuçlar, süre önceliği, tam öğrenci eşleşmesi, tekrarlar, sentetik PDF koordinatları (“-/-” ile basılmış girilmeyen oturum ve karışık satır hatası dahil) ve CRLF gömme.
 - `node test/mock-exam-browser.cjs` (Playwright): masaüstü/telefon formu, grafik, düzenleme, branş/AYT ayrımı, genel deneme bölümlerinin Branş grafiğinde gösterilmesi ve ders kutusundan geçiş, kalıcı kayıt, toplu aktarım ve yayınlama hatası/yeniden deneme.
 - Mevcut Firestore emulator testleri: öğretmen/öğrenci erişimi, alan korunması, hesap ve yuva rotasyonu; gerçek iki istemciyle anlık teslim, yeni cihaz, kişisel süre ve eski cihazdan silinen sonucun geri gelmemesi.

@@ -366,6 +366,23 @@ tr.pasif td:first-child{opacity:1}
 .rh-adlar .ogr-ad{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rh-ikincil{display:flex;flex-wrap:wrap;gap:4px 22px;margin-top:auto;padding-top:10px;border-top:1px solid var(--cizgi);font-size:13px;color:var(--soluk)}
 .rh-ikincil .rh-sayi{display:flex;align-items:baseline;gap:6px}.rh-ikincil small{font-size:.86em;font-weight:500;color:var(--soluk)}.rh-ikincil strong{font-size:14px;font-weight:700;color:var(--murekkep);font-variant-numeric:tabular-nums}
+.bugun-kart{padding:20px 22px;border-top:3px solid var(--vurgu);margin-bottom:26px;display:flex;flex-direction:column;gap:14px}
+.bugun-kart .yol-baslik{align-items:flex-start;gap:14px 28px;flex-wrap:wrap}
+.bg-baslik b{font-variant-numeric:tabular-nums}.yol-baslik .bg-baslik span{display:inline;font-weight:600}
+.bg-ilerleme{display:flex;flex-wrap:wrap;gap:10px 26px;margin-left:auto}
+.bg-sayi{display:flex;flex-direction:column;min-width:86px}
+.bg-sayi strong{font-size:22px;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--murekkep)}.bg-sayi strong small{font-size:.62em;font-weight:600;color:var(--soluk)}
+.bg-sayi span{font-size:12px;color:var(--soluk)}
+.bg-cubuk{display:block;height:5px;border-radius:3px;background:var(--cizgi);margin-top:5px;overflow:hidden}.bg-cubuk i{display:block;height:100%;background:var(--vurgu);border-radius:3px}
+.bg-liste{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.bg-oge{border:1px solid var(--cizgi);border-radius:9px;padding:11px 13px;min-width:0;background:var(--kagit)}
+.bg-oge.bg-bitti{border-color:var(--vurgu)}
+.bg-oge .d{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--soluk);font-weight:600}
+.bg-oge .k{font-size:15px;line-height:1.35;margin-top:2px}.bg-oge .n{font-size:11.5px;color:var(--soluk);margin-top:3px}
+.bg-oge .tekrar-bilgi{font-size:12px}
+.bg-alt{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+@media (max-width:600px){.bugun-kart{padding:15px}.bg-ilerleme{margin-left:0;width:100%}.bg-liste{grid-template-columns:1fr}}
+@media print{.bugun-kart{display:none}}
 .rehber-dikkat{grid-column:1/-1;margin-top:28px;padding:20px 22px;border-top:3px solid var(--kritik,var(--vurgu));display:flex;flex-direction:column;gap:12px}
 .rd-baslik span{font-weight:600}
 .rd-ozet{margin:-4px 0 0;font-size:13px;color:var(--soluk)}.rd-ozet strong{color:var(--murekkep);font-variant-numeric:tabular-nums}
@@ -790,6 +807,8 @@ main:has(.dn-tabs){min-width:0}
 .dn-dot.genel{fill:var(--kagit);stroke:var(--soluk);stroke-width:2.5}.dn-dot.genel.yukari{stroke:var(--iyi)}.dn-dot.genel.asagi{stroke:var(--kritik)}
 .dn-dot.genel:hover,.dn-dot.genel:focus{stroke-width:4}
 /* The chart's own key: dot colours (against the exam before), the dashed average and the target. */
+.dn-olagan{font-size:12.5px;line-height:1.4}.dn-olagan b{font-weight:600}
+.dn-olagan-asagi b{color:var(--kritik)}.dn-olagan-yukari b{color:var(--iyi,var(--vurgu))}
 .dn-lejant{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px;font-size:12px;color:var(--soluk)}
 .dn-lejant span{display:inline-flex;align-items:center;gap:6px}
 .dn-l-nokta{width:10px;height:10px;border-radius:50%;background:var(--soluk);flex:none}.dn-l-nokta.yukari{background:var(--iyi)}.dn-l-nokta.asagi{background:var(--kritik)}
@@ -2230,8 +2249,8 @@ button.gr-kucuk{cursor:zoom-in}
   .ray.ust .menu-ac {border-radius:0 10px 10px 0}
   .ray.ust button.marka {letter-spacing:0}
   .ana-pano {column-gap:24px}
-  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.yks-yolu {border-top:1px solid var(--cizgi);padding:22px 24px}
-  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat {border-radius:var(--rapport-radius)}
+  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.yks-yolu {border-top:1px solid var(--cizgi);padding:22px 24px}
+  .ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart {border-radius:var(--rapport-radius)}
   .yol-hafta {border-radius:8px}
   .giris-kart {border-radius:24px;padding:26px;box-shadow:var(--golge)}
   .giris-baslik {letter-spacing:-.025em}
@@ -2351,7 +2370,7 @@ button.gr-kucuk{cursor:zoom-in}
   @media (max-width:600px) {
     .baslik h1,.pano-baslik,
     :is(#etKok,#dpKok,#epKok,#ykKok,#tgKok,#eeKok,#ktKok,#okKok,#ydKok) .et-baslik {font-size:24px}
-    .et-panel,.dn-panel,.ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.yks-yolu,#yaKok .ya-panel {padding:18px}
+    .et-panel,.dn-panel,.ana-pano>.dn-yol,.rehber-hafta,.rehber-dikkat,.bugun-kart,.yks-yolu,#yaKok .ya-panel {padding:18px}
     .et-ozet-kart,.kutu {padding:16px 18px}
     .et-ders {padding:14px}
     .giris-kart {padding:22px}
@@ -8063,13 +8082,62 @@ function haritaPlaniniAc(h) {
   if(duzenlemeKaydi())return false;
   EK.hafta=h;EK.sekme='plan';EK.ogrenciDetay=false;EK.girisAcik={};return true;
 }
-// Öğrencinin ana sayfası (girişten sonra, marka yazısıyla): haftalar haritası ve yanında deneme
+// Öğrencinin emeği sayılarla: sonuç girdiği hafta sayısı, bugüne kadar girdiği sonuç sayısı ve kesintisiz seri
+// (geçen haftadan geriye, en az bir sonucu olan haftalar; bu haftanın sonucu varsa o da sayılır, yoksa seriyi bozmaz).
+function ogrenciSerisi(si) {
+  const hb = buHafta(si), sayilar = new Map();
+  (D.log || []).forEach(l => { if (l[1] !== si) return; const h = ogrenciHaftaBasi(si, l[0]); sayilar.set(h, (sayilar.get(h) || 0) + 1); });
+  let seri = sayilar.get(hb) ? 1 : 0;
+  for (let h = oncekiHafta(si, hb), i = 0; sayilar.get(h) && i < 400; h = oncekiHafta(si, h), i++) seri++;
+  return { seri, hafta: sayilar.size, test: [...sayilar.values()].reduce((a, b) => a + b, 0) };
+}
+// Öğrencinin ana sayfasının başı: bugünün işleri. Bu haftanın planından bugünün satırları, her testin altında
+// Planım'daki aynı sonuç sürgüsü (planSatirEki) ile; yanında haftanın ilerlemesi ve seri. Sınav günü ve sonrasında yoktur.
+function ogrenciBugunKarti(si) {
+  const o = D.ogr[si], bugun = bugunNo(), sinav = gunNo(D.ayar.sinav);
+  if (!ogrenciMi() || !o || !Number.isFinite(sinav) || bugun >= sinav) return '';
+  const hb = buHafta(si), g = bugun - hb;
+  let p; try { p = gunlukEkliPlan(si, hb, planHesapla(si, hb)); } catch (e) { return ''; }
+  if (!p || !Array.isArray(p.gunler) || g < 0 || g >= p.gunler.length) return '';
+  const gunler = ogrenciPlanGunleri(si, hb, p, true), liste = gunler[g] || [], izin = (p.off || []).indexOf(haftaGunu(bugun)) >= 0;
+  const yapilan = haftaYapilanTestler(si);
+  const testMi = x => !x.serbest && !x.anlatim && !x.genelTekrar && !x.gunlukEk && Number.isInteger(+x.ki) && !!konuAl(+x.ki) && !konuAnlatilmadiDurumu(si, +x.ki, bugun);
+  const bittiMi = x => x.planDisi || yapilan.has(x.ki + ':' + bugun) || oncedenMi(p, planSlotAnahtari(x));
+  const testler = liste.filter(testMi), kalan = testler.filter(x => !bittiMi(x)).length, diger = liste.length - testler.length;
+  const hafta = haftaTestOzeti(si, hb, planHaftaSonu(si, hb), yapilan), seri = ogrenciSerisi(si);
+  // Bugün iş yoksa sıradaki çalışma günü.
+  let sonraki = '';
+  if (!liste.length) for (let j = g + 1; j < gunler.length; j++) if ((gunler[j] || []).length) {
+    sonraki = 'Sıradaki: ' + GUN_AD[haftaGunu(hb + j)] + ' · ' + gunler[j].length + ' çalışma'; break; }
+  const baslik = testler.length
+    ? (kalan ? '<b>' + kalan + '</b> <span>test seni bekliyor</span>' : '<span>Bugünün testleri tamam</span> <b aria-hidden="true">✓</b>')
+    : liste.length ? '<b>' + liste.length + '</b> <span>çalışma var</span>'
+    : '<span>' + (izin ? 'Bugün izin günün' : p.kayitYok || !p.toplam ? 'Bu hafta için plan yok' : 'Bugün için çalışma yok') + '</span>';
+  const oran = hafta.toplam ? Math.min(1, hafta.yapilan / hafta.toplam) : 0;
+  const ilerleme = '<div class="bg-ilerleme" aria-label="İlerlemen">' +
+    (hafta.toplam ? '<div class="bg-sayi"><strong>' + hafta.yapilan + '<small>/' + hafta.toplam + '</small></strong><span>bu haftanın testi</span>' +
+      '<i class="bg-cubuk" aria-hidden="true"><i style="width:' + Math.round(oran * 100) + '%"></i></i></div>' : '') +
+    (seri.seri > 1 ? '<div class="bg-sayi"><strong>' + seri.seri + '</strong><span>hafta üst üste</span></div>' : '') +
+    (seri.test ? '<div class="bg-sayi"><strong>' + seri.test + '</strong><span>sonuç · ' + seri.hafta + ' haftada</span></div>' : '') + '</div>';
+  const satir = x => '<div class="bg-oge' + (testMi(x) && bittiMi(x) ? ' bg-bitti' : '') + '"><div class="d">' + kacis(dersKisaAd(x.dersAd)) + '</div>' +
+    '<div class="k">' + konuHtml(x.ad) + '</div>' + tekrarEtiketi(si, x, bugun) +
+    '<div class="n">' + (x.planDisi ? 'PLAN DIŞI SONUÇ' : x.anlatim ? 'KONU ANLATIMI' + (x.kaynak ? ' · ' + kacis(x.kaynak) : '')
+      : x.genelTekrar ? 'GENEL TEKRAR · ' + kacis(x.ad) + ' · ' + GENEL_TEKRAR_DAKIKA / 60 + ' saat'
+      : (x.test > 1 ? x.test + ' test · ' : '') + x.soru + (x.birim === 'dakika' ? ' dakika' : ' soru')) + '</div>' + planSatirEki(si, hb, x, g, p, true) + '</div>';
+  return '<section class="kart bugun-kart" id="bugunKart" aria-label="Bugünün işleri">' +
+    '<div class="yol-baslik"><div><div class="etiket">Bugün · ' + GUN_AD[haftaGunu(bugun)] + ' ' + gg(bugun) + '</div><h2 class="bg-baslik">' + baslik + '</h2>' +
+    (sonraki ? '<p class="mini">' + kacis(sonraki) + '</p>' : diger && testler.length ? '<p class="mini">ve ' + diger + ' çalışma daha</p>' : '') + '</div>' + ilerleme + '</div>' +
+    (liste.length ? '<div class="bg-liste">' + liste.map(satir).join('') + '</div>' : '') +
+    '<div class="bg-alt"><button class="dugme' + (liste.length ? '' : ' birincil') + '" data-sekme="plan">Haftalık planım →</button>' +
+    (testler.length && kalan ? '<span class="mini">Sürgüyü oynat: sonucun kaydedilir, sonraki tekrarın günü ona göre değişir.</span>' : '') + '</div>' + yaptimPencereHtml() + '</section>';
+}
+// Öğrencinin ana sayfası (girişten sonra, marka yazısıyla): önce bugünün işleri, altında haftalar haritası ve yanında deneme
 // gelişimi (yalnızca YKS). Başlıklar kendi sayfalarına götürür: Haftalar haritası, Denemelerim.
 function gorunumAnaSayfa() {
   const grafik = ogrenciSinavi(D.ogr[EK.ogr]) === 'YKS' ? denemeAnaGrafigi(EK.ogr) : '';
   const baslik = '<div class="baslik pano-sol-bas"><h1><button class="baslik-link" data-sekme="harita" title="Haftalar haritasını aç">Haftalar haritası</button></h1></div>';
-  return grafik ? '<div class="ana-pano">' + baslik + '<div class="baslik pano-sag-bas"><h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler" title="Denemelerim’i aç">Deneme gelişimi</button></h2></div>' +
-    ogrenciYksYolu(true) + grafik + '</div>' : baslik + ogrenciYksYolu(true);
+  return ogrenciBugunKarti(EK.ogr) + (grafik ? '<div class="ana-pano">' + baslik + '<div class="baslik pano-sag-bas"><h2 class="pano-baslik"><button class="baslik-link" data-sekme="denemeler" title="Denemelerim’i aç">Deneme gelişimi</button></h2></div>' +
+    ogrenciYksYolu(true) + grafik + '</div>' : baslik + ogrenciYksYolu(true));
 }
 function gorunumHaritasi() {
   if (ogrenciMi() && D.ogr[EK.ogr]) return '<div class="baslik"><h1>Haftalar haritası</h1></div>' + ogrenciYksYolu(true);
@@ -16229,6 +16297,18 @@ function denemeEksikSatiri(si) {
   const n=yalnizcaGoruntuleme()?0:denemeEksikSayisi(si);
   return n?'<p class="dn-eksik" id="dnEksik" role="status">Bu öğrencinin ekranında '+n+' deneme eksik · <button type="button" class="et-dugme" id="dnEksikGonder" data-si="'+si+'">Öğrencilere gönder</button></p>':'';
 }
+// The student's own usual range for the next exam, from up to five earlier results (at least three): mean ± t·s·√(1+1/n), the
+// two-sided 90% prediction interval (t = 2,920 / 2,353 / 2,132 for 3 / 4 / 5 results, as in the teacher's Dikkat rule). Two exams
+// are never the same difficulty, so one step up or down says little by itself; a result outside this range does.
+const DENEME_OLAGAN_T={2:2.920,3:2.353,4:2.132}, DENEME_OLAGAN_EN_AZ=3, DENEME_OLAGAN_PENCERE=5;
+function denemeOlaganAralik(onceki) {
+  const l=(onceki||[]).filter(Number.isFinite).slice(-DENEME_OLAGAN_PENCERE),n=l.length;
+  if(n<DENEME_OLAGAN_EN_AZ)return null;
+  const ort=l.reduce((a,b)=>a+b,0)/n,s=Math.sqrt(l.reduce((a,x)=>a+(x-ort)**2,0)/(n-1)),pay=DENEME_OLAGAN_T[n-1]*s*Math.sqrt(1+1/n);
+  return {n,ort,alt:ort-pay,ust:ort+pay};
+}
+// Where a result stands against that range: 'asagi' | 'esit' | 'yukari' (null without a range).
+const denemeOlaganKonum=(v,ar)=>!ar||!Number.isFinite(v)?null:v<ar.alt-1e-9?'asagi':v>ar.ust+1e-9?'yukari':'esit';
 function gorunumDenemeler() {
   const rehber=rehberMi(),kisiAcik=denemeKisiAcikMi();
   if(rehber && !kisiAcik && typeof gorunumDenemePanosu==='function')return gorunumDenemePanosu();
@@ -16241,12 +16321,19 @@ function gorunumDenemeler() {
   // With the net/dk chart selected the summary follows it, over exams that have a time.
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan));
   const son_=ozet.length?ozet.at(-1):null,onc=ozet.length>1?ozet.at(-2):null,ilk=ozet.length>1?ozet[0]:null,enYuksek=ozet.length?Math.max(...ozet):null;
-  const yazi=v=>(v>0?'+':v<0?'−':'')+denemeSayi(Math.abs(v)),hap=v=>'<span class="et-hap '+(v>0?'yukari':v<0?'asagi':'esit')+'">'+(v>0?'<span aria-hidden="true">▲</span>':v<0?'<span aria-hidden="true">▼</span>':'')+denemeSayi(Math.abs(v))+'</span>',not=t=>'<span class="dp-kpi-not">'+t+'</span>';
+  const yazi=v=>(v>0?'+':v<0?'−':'')+denemeSayi(Math.abs(v)),not=t=>'<span class="dp-kpi-not">'+t+'</span>';
   const kart=(sinif,ad,buyuk,alt)=>'<div class="et-ozet-kart'+sinif+'"><span class="dp-kpi-ad">'+ad+'</span><strong>'+buyuk+'</strong><div class="dp-kpi-alt">'+alt+'</div></div>';
+  // The step from the exam before is a plain number (two exams are not one scale); the colour belongs to where the result stands
+  // against the student's own usual range, when there are enough earlier exams to have one.
+  const notr=v=>'<span class="et-hap esit">'+yazi(v)+'</span>';
+  const ar=denemeOlaganAralik(ozet.slice(0,-1)),konum=denemeOlaganKonum(son_,ar);
+  const olagan=onc===null?'':!ar?'<span class="dp-kpi-not dn-olagan" id="dnOlagan">Tek denemelik fark denemenin zorluğundan da olabilir; olağan aralığın '+(DENEME_OLAGAN_EN_AZ+1)+'. denemeden sonra görünür.</span>':
+    '<span class="dp-kpi-not dn-olagan dn-olagan-'+konum+'" id="dnOlagan" title="Önceki '+ar.n+' denemenin ortalaması '+denemeSayi(ar.ort)+'. Aralık: bu denemelerin oynamasına göre bir sonraki sonucun %90 olasılıkla düşeceği yer.">'+
+    (konum==='esit'?'Olağan aralığında':konum==='asagi'?'<b>Olağan aralığının altında</b>':'<b>Olağan aralığının üstünde</b>')+' · '+denemeSayi(Math.max(0,ar.alt))+' – '+denemeSayi(ar.ust)+'</span>';
   const kpi='<div class="et-ozet dp-kpi" id="dpKpi">'+
-    kart(' dp-kpi-ana',hizOzet?'Son net/dk':'Son net',son_===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(son_)+'<small>'+(hizOzet?'net/dk':'net')+'</small>',son_===null?not('Seçili aralıkta deneme yok'):onc!==null?hap(son_-onc)+not('önceki denemeye göre'):not('tek deneme'))+
+    kart(' dp-kpi-ana',hizOzet?'Son net/dk':'Son net',son_===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(son_)+'<small>'+(hizOzet?'net/dk':'net')+'</small>',son_===null?not('Seçili aralıkta deneme yok'):onc!==null?notr(son_-onc)+not('önceki denemeye göre')+olagan:not('tek deneme'))+
     kart('',hizOzet?'Ortalama net/dk':'Ortalama',ozet.length?denemeSayi(ozet.reduce((a,b)=>a+b,0)/ozet.length):'<span class="dp-kpi-yok">veri yok</span>',not((hizOzet?'süreli ':'')+ozet.length+' deneme'+(genelSayi && !hizOzet?' · TYT/AYT’den '+genelSayi:'')))+
-    kart('','En yüksek',enYuksek===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(enYuksek),enYuksek===null?'':son_>=enYuksek?not('son deneme en yüksek'):hap(son_-enYuksek)+not('en yükseğe göre'))+
+    kart('','En yüksek',enYuksek===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(enYuksek),enYuksek===null?'':son_>=enYuksek?not('son deneme en yüksek'):not('son deneme bunun '+denemeSayi(enYuksek-son_)+' altında'))+
     kart('','İlk denemeden değişim',ilk===null?'<span class="dp-kpi-yok">veri yok</span>':yazi(son_-ilk),ilk===null?not('karşılaştırma için iki deneme gerekir'):not('ilk '+denemeSayi(ilk)+' → son '+denemeSayi(son_)))+'</div>';
   const rehberKisi=rehber?'<header class="et-bas"><h1 class="et-baslik">Deneme Panosu · '+kacis(D.ogr[EK.ogr].ad)+'</h1><p class="et-cumle">'+kacis(D.ogr[EK.ogr].sube || '')+' · '+kacis(D.ogr[EK.ogr].alan || '')+' · yalnızca bu öğrencinin sonuçları</p></header>'+
     '<div class="et-arac"><button type="button" class="et-dugme" id="dpSinifaDon">← Sınıf panosu</button>'+ogrSecici()+

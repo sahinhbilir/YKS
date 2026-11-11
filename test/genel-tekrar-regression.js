@@ -618,5 +618,50 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     a.run(`EK.hafta=${dort[0].hb}`); assert.doesNotMatch(a.run('gorunumOgrenciPlan()'), /id="gelecekHaftalar"/, 'only under the current week');
   });
 
+  await check('home-leads-with-todays-tests-with-the-same-slider-the-weeks-progress-and-the-streak', async a => {
+    await okulsuz(a, { kur: false, dakika: { hi: 40, hs: 40, deneme: false } });
+    a.run(`kendiPlanKur(0,${JSON.stringify(hepsiBilir(a))},'2027-04-23')`); genelTekrarBitir(a); a.run('ciz()');
+    const bu = a.run('buHafta(0)'), bugun = a.run('bugunNo()');
+    const kagit = hafta(a, bu).flatMap((l, g) => l.map(x => ({ ...x, gun: bu + g })));
+    const bugunku = kagit.filter(x => x.gun === bugun), toplam = a.json(`haftaTestOzeti(0,${bu},planHaftaSonu(0,${bu}))`).toplam;
+    assert(bugunku.length >= 2 && toplam > bugunku.length, 'tests today and on later days');
+    let h = a.run('ogrenciBugunKarti(0)');
+    assert.match(h, /^<section class="kart bugun-kart" id="bugunKart" aria-label="Bugünün işleri">/);
+    assert.match(h, new RegExp('<h2 class="bg-baslik"><b>' + bugunku.length + '</b> <span>test seni bekliyor</span></h2>'));
+    assert.equal((h.match(/class="bg-oge"/g) || []).length, bugunku.length, 'one row per test of today, none of another day');
+    // The row carries the plan page's own slider, so a result entered here goes down the same path.
+    for (const t of bugunku) assert.match(h, new RegExp('class="plan-sonuc ps-bos" data-ps data-ki="' + t.ki + '" data-gun="' + bugun + '" data-hb="' + bu + '"'));
+    assert.match(h, new RegExp('<div class="bg-sayi"><strong>0<small>/' + toplam + '</small></strong><span>bu haftanın testi</span>'));
+    assert.doesNotMatch(h, /hafta üst üste|sonuç · /, 'nothing done yet: no streak, no total');
+    assert.match(h, /<button class="dugme" data-sekme="plan">Haftalık planım →<\/button>/);
+    // The home page starts with it; the weeks map follows.
+    const ana = a.run("EK.sekme='ana';gorunumAnaSayfa()");
+    assert(ana.startsWith('<section class="kart bugun-kart"') && ana.indexOf('id="bugunKart"') < ana.indexOf('yks-yolu'), 'today first');
+    // One result: the count falls, the row is marked, the week moves.
+    const t = bugunku[0], kok = `{dataset:{ki:'${t.ki}',gun:'${bugun}',hb:'${bu}',slot:'${t.slot}',planDisi:'0',kayitli:'0',oniz:''},querySelector:()=>null,querySelectorAll:()=>[]}`;
+    await a.run(`planSonucKaydet(${kok},3)`); await a.run('KAYIT_ZINCIRI');
+    h = a.run('ogrenciBugunKarti(0)');
+    assert.match(h, new RegExp('<h2 class="bg-baslik"><b>' + (bugunku.length - 1) + '</b> <span>test seni bekliyor</span></h2>'));
+    assert.equal((h.match(/class="bg-oge bg-bitti"/g) || []).length, 1);
+    assert.match(h, new RegExp('<strong>1<small>/' + toplam + '</small></strong><span>bu haftanın testi</span><i class="bg-cubuk" aria-hidden="true"><i style="width:' + Math.round(100 / toplam) + '%">'));
+    assert.match(h, /<div class="bg-sayi"><strong>1<\/strong><span>sonuç · 1 haftada<\/span><\/div>/);
+    assert.deepEqual(a.json('ogrenciSerisi(0)'), { seri: 1, hafta: 1, test: 1 });
+    // All of today's tests: the heading says so.
+    for (const x of bugunku.slice(1)) { await a.run(`planSonucKaydet({dataset:{ki:'${x.ki}',gun:'${bugun}',hb:'${bu}',slot:'${x.slot}',planDisi:'0',kayitli:'0',oniz:''},querySelector:()=>null,querySelectorAll:()=>[]},3)`); await a.run('KAYIT_ZINCIRI'); }
+    h = a.run('ogrenciBugunKarti(0)');
+    assert.match(h, /<h2 class="bg-baslik"><span>Bugünün testleri tamam<\/span> <b aria-hidden="true">✓<\/b><\/h2>/);
+    assert.doesNotMatch(h, /Sürgüyü oynat/);
+    // The streak: weeks with a result, back from last week without a gap; this week counts once it has one.
+    const once = a.run(`oncekiHafta(0,${bu})`), iki = a.run(`oncekiHafta(0,oncekiHafta(0,${bu}))`), dort = a.run(`oncekiHafta(0,oncekiHafta(0,oncekiHafta(0,oncekiHafta(0,${bu}))))`);
+    a.run(`D.log.push([${once}+1,0,${t.ki},null,null,3,1],[${iki}+2,0,${t.ki},null,null,3,1],[${dort},0,${t.ki},null,null,3,1])`);
+    assert.deepEqual(a.json('ogrenciSerisi(0)'), { seri: 3, hafta: 4, test: bugunku.length + 3 }, 'the week four back is cut off by the empty week before it');
+    assert.match(a.run('ogrenciBugunKarti(0)'), /<div class="bg-sayi"><strong>3<\/strong><span>hafta üst üste<\/span><\/div>/);
+    a.run(`D.log=D.log.filter(l=>l[0]<${bu})`);
+    assert.equal(a.json('ogrenciSerisi(0)').seri, 2, 'no result yet this week: last week still holds the streak');
+    // Not for the teacher; not on or after the exam day.
+    a.run("D.rol='rehber'"); assert.equal(a.run('ogrenciBugunKarti(0)'), ''); a.run("D.rol='ogrenci'");
+    a.run(`D.ayar.sinav=isoDan(${bugun})`); assert.equal(a.run("ogrenciBugunKarti(0)"), "");
+  });
+
   console.log('genel tekrar regression: ' + checks.length + ' checks passed');
 })().catch(e => { console.error(e); process.exit(1); });

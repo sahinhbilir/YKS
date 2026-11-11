@@ -917,6 +917,18 @@ function denemeEksikSatiri(si) {
   const n=yalnizcaGoruntuleme()?0:denemeEksikSayisi(si);
   return n?'<p class="dn-eksik" id="dnEksik" role="status">Bu öğrencinin ekranında '+n+' deneme eksik · <button type="button" class="et-dugme" id="dnEksikGonder" data-si="'+si+'">Öğrencilere gönder</button></p>':'';
 }
+// The student's own usual range for the next exam, from up to five earlier results (at least three): mean ± t·s·√(1+1/n), the
+// two-sided 90% prediction interval (t = 2,920 / 2,353 / 2,132 for 3 / 4 / 5 results, as in the teacher's Dikkat rule). Two exams
+// are never the same difficulty, so one step up or down says little by itself; a result outside this range does.
+const DENEME_OLAGAN_T={2:2.920,3:2.353,4:2.132}, DENEME_OLAGAN_EN_AZ=3, DENEME_OLAGAN_PENCERE=5;
+function denemeOlaganAralik(onceki) {
+  const l=(onceki||[]).filter(Number.isFinite).slice(-DENEME_OLAGAN_PENCERE),n=l.length;
+  if(n<DENEME_OLAGAN_EN_AZ)return null;
+  const ort=l.reduce((a,b)=>a+b,0)/n,s=Math.sqrt(l.reduce((a,x)=>a+(x-ort)**2,0)/(n-1)),pay=DENEME_OLAGAN_T[n-1]*s*Math.sqrt(1+1/n);
+  return {n,ort,alt:ort-pay,ust:ort+pay};
+}
+// Where a result stands against that range: 'asagi' | 'esit' | 'yukari' (null without a range).
+const denemeOlaganKonum=(v,ar)=>!ar||!Number.isFinite(v)?null:v<ar.alt-1e-9?'asagi':v>ar.ust+1e-9?'yukari':'esit';
 function gorunumDenemeler() {
   const rehber=rehberMi(),kisiAcik=denemeKisiAcikMi();
   if(rehber && !kisiAcik && typeof gorunumDenemePanosu==='function')return gorunumDenemePanosu();
@@ -929,12 +941,19 @@ function gorunumDenemeler() {
   // With the net/dk chart selected the summary follows it, over exams that have a time.
   const hizVar=denemeHizGecerli(tur),hizOzet=metrik==='hiz',ozet=hizOzet?liste.map(r=>denemeHiz(r,alan)).filter(v=>v!==null):liste.map(r=>denemeToplam(r,alan));
   const son_=ozet.length?ozet.at(-1):null,onc=ozet.length>1?ozet.at(-2):null,ilk=ozet.length>1?ozet[0]:null,enYuksek=ozet.length?Math.max(...ozet):null;
-  const yazi=v=>(v>0?'+':v<0?'−':'')+denemeSayi(Math.abs(v)),hap=v=>'<span class="et-hap '+(v>0?'yukari':v<0?'asagi':'esit')+'">'+(v>0?'<span aria-hidden="true">▲</span>':v<0?'<span aria-hidden="true">▼</span>':'')+denemeSayi(Math.abs(v))+'</span>',not=t=>'<span class="dp-kpi-not">'+t+'</span>';
+  const yazi=v=>(v>0?'+':v<0?'−':'')+denemeSayi(Math.abs(v)),not=t=>'<span class="dp-kpi-not">'+t+'</span>';
   const kart=(sinif,ad,buyuk,alt)=>'<div class="et-ozet-kart'+sinif+'"><span class="dp-kpi-ad">'+ad+'</span><strong>'+buyuk+'</strong><div class="dp-kpi-alt">'+alt+'</div></div>';
+  // The step from the exam before is a plain number (two exams are not one scale); the colour belongs to where the result stands
+  // against the student's own usual range, when there are enough earlier exams to have one.
+  const notr=v=>'<span class="et-hap esit">'+yazi(v)+'</span>';
+  const ar=denemeOlaganAralik(ozet.slice(0,-1)),konum=denemeOlaganKonum(son_,ar);
+  const olagan=onc===null?'':!ar?'<span class="dp-kpi-not dn-olagan" id="dnOlagan">Tek denemelik fark denemenin zorluğundan da olabilir; olağan aralığın '+(DENEME_OLAGAN_EN_AZ+1)+'. denemeden sonra görünür.</span>':
+    '<span class="dp-kpi-not dn-olagan dn-olagan-'+konum+'" id="dnOlagan" title="Önceki '+ar.n+' denemenin ortalaması '+denemeSayi(ar.ort)+'. Aralık: bu denemelerin oynamasına göre bir sonraki sonucun %90 olasılıkla düşeceği yer.">'+
+    (konum==='esit'?'Olağan aralığında':konum==='asagi'?'<b>Olağan aralığının altında</b>':'<b>Olağan aralığının üstünde</b>')+' · '+denemeSayi(Math.max(0,ar.alt))+' – '+denemeSayi(ar.ust)+'</span>';
   const kpi='<div class="et-ozet dp-kpi" id="dpKpi">'+
-    kart(' dp-kpi-ana',hizOzet?'Son net/dk':'Son net',son_===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(son_)+'<small>'+(hizOzet?'net/dk':'net')+'</small>',son_===null?not('Seçili aralıkta deneme yok'):onc!==null?hap(son_-onc)+not('önceki denemeye göre'):not('tek deneme'))+
+    kart(' dp-kpi-ana',hizOzet?'Son net/dk':'Son net',son_===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(son_)+'<small>'+(hizOzet?'net/dk':'net')+'</small>',son_===null?not('Seçili aralıkta deneme yok'):onc!==null?notr(son_-onc)+not('önceki denemeye göre')+olagan:not('tek deneme'))+
     kart('',hizOzet?'Ortalama net/dk':'Ortalama',ozet.length?denemeSayi(ozet.reduce((a,b)=>a+b,0)/ozet.length):'<span class="dp-kpi-yok">veri yok</span>',not((hizOzet?'süreli ':'')+ozet.length+' deneme'+(genelSayi && !hizOzet?' · TYT/AYT’den '+genelSayi:'')))+
-    kart('','En yüksek',enYuksek===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(enYuksek),enYuksek===null?'':son_>=enYuksek?not('son deneme en yüksek'):hap(son_-enYuksek)+not('en yükseğe göre'))+
+    kart('','En yüksek',enYuksek===null?'<span class="dp-kpi-yok">veri yok</span>':denemeSayi(enYuksek),enYuksek===null?'':son_>=enYuksek?not('son deneme en yüksek'):not('son deneme bunun '+denemeSayi(enYuksek-son_)+' altında'))+
     kart('','İlk denemeden değişim',ilk===null?'<span class="dp-kpi-yok">veri yok</span>':yazi(son_-ilk),ilk===null?not('karşılaştırma için iki deneme gerekir'):not('ilk '+denemeSayi(ilk)+' → son '+denemeSayi(son_)))+'</div>';
   const rehberKisi=rehber?'<header class="et-bas"><h1 class="et-baslik">Deneme Panosu · '+kacis(D.ogr[EK.ogr].ad)+'</h1><p class="et-cumle">'+kacis(D.ogr[EK.ogr].sube || '')+' · '+kacis(D.ogr[EK.ogr].alan || '')+' · yalnızca bu öğrencinin sonuçları</p></header>'+
     '<div class="et-arac"><button type="button" class="et-dugme" id="dpSinifaDon">← Sınıf panosu</button>'+ogrSecici()+

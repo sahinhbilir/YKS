@@ -26,6 +26,8 @@ main:has(.dn-tabs){min-width:0}
 .dn-dot.genel{fill:var(--kagit);stroke:var(--soluk);stroke-width:2.5}.dn-dot.genel.yukari{stroke:var(--iyi)}.dn-dot.genel.asagi{stroke:var(--kritik)}
 .dn-dot.genel:hover,.dn-dot.genel:focus{stroke-width:4}
 /* The chart's own key: dot colours (against the exam before), the dashed average and the target. */
+.dn-olagan{font-size:12.5px;line-height:1.4}.dn-olagan b{font-weight:600}
+.dn-olagan-asagi b{color:var(--kritik)}.dn-olagan-yukari b{color:var(--iyi,var(--vurgu))}
 .dn-lejant{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:6px;font-size:12px;color:var(--soluk)}
 .dn-lejant span{display:inline-flex;align-items:center;gap:6px}
 .dn-l-nokta{width:10px;height:10px;border-radius:50%;background:var(--soluk);flex:none}.dn-l-nokta.yukari{background:var(--iyi)}.dn-l-nokta.asagi{background:var(--kritik)}

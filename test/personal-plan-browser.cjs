@@ -144,6 +144,19 @@ const ogrenci=(kur)=>{
    assert(await page.locator('.gAnlatim').count()>=1,'Sonuç gir keeps its own lesson rows');
    assert(/Önceden yapıldı/.test(await page.locator('#ana').innerText()),'the pre-done test shows as done in Sonuç gir');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'Sonuç gir overflow');
+   // The home page leads with today: the day's rows with the plan's own result slider, the week's progress, then the weeks map.
+   await page.evaluate(()=>{EK.sekme='ana';EK.hafta=null;ciz();});
+   const bugunKart=page.locator('#bugunKart');await bugunKart.waitFor();
+   const [kartKutu,yolKutu]=[await bugunKart.boundingBox(),await page.locator('#ana .yks-yolu').first().boundingBox()];
+   assert(kartKutu.y+kartKutu.height<=yolKutu.y+1,'today comes before the weeks map');
+   assert.match(await bugunKart.locator('.etiket').first().innerText(),/^Bugün · /i);
+   assert.equal(await page.evaluate(()=>{const h=document.querySelector('#bugunKart .bg-baslik'),r=[...h.children].map(e=>e.getBoundingClientRect());return r.every(x=>Math.abs(x.bottom-r[0].bottom)<12)}),true,'the heading stays on one line');
+   const bugunSurgu=bugunKart.locator('[data-ps]:not(.ps-gelecek)');
+   assert(await bugunKart.locator('.bg-oge').count()>=1,'today has rows');assert.equal(await bugunSurgu.count(),await bugunKart.locator('.bg-oge .plan-sonuc').count(),'every slider of today can be used');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'home overflow');
+   assert.equal(await bugunKart.evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'the Bugün card does not overflow');
+   await page.screenshot({path:path.join(out,'student-home-bugun-'+width+'.png'),fullPage:true});
+   await bugunKart.locator('[data-sekme="plan"]').click();await page.getByRole('heading',{name:'Haftalık planın'}).waitFor();
    await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});
    // 4. Another exam (KPSS): no school or field questions, the date is the student's own.
    await page.evaluate(()=>{D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-09-23';EK={ogr:0,sekme:'plan',hafta:null,girisAcik:{}};ciz();});

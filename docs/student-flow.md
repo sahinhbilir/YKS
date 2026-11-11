@@ -4,13 +4,23 @@ Students should understand what to study, why it returns, and how much preparati
 
 ## Daily interface
 
-The student navigation is Planım, Sonuç gir, Haftalar haritası and Ayarlar; the app opens on Haftalar haritası. The plan is read-only by default and offers one download action. Its visible exam countdown and compact weeks map place the current week within the preparation period. The full map opens past plans and distinguishes recorded results from an actually completed week; one recorded result never implies completion. The countdown uses the notebook's configured exam date, not an independently verified official date.
+The student navigation is Planım, Sonuç gir, Haftalar haritası and Ayarlar; the app opens on the home page, which leads with today (below) and then shows Haftalar haritası. The plan is read-only by default and offers one download action. Its visible exam countdown and compact weeks map place the current week within the preparation period. The full map opens past plans and distinguishes recorded results from an actually completed week; one recorded result never implies completion. The countdown uses the notebook's configured exam date, not an independently verified official date.
 
 Each scheduled test shows its repetition number, previous result date and score, and any result recorded for that scheduled day. Desktop, mobile, result entry and printable plans retain this information. Repetition stages are counted from results preceding the scheduled date, so future reviews do not renumber historical plans. “2. tekrar” describes the learning stage; “2 test” describes the question load within that stage. The weekly summary counts first measurements, later repetitions and recorded topic results, excluding free routines and lesson explanations.
 
 Detailed editing, topic planning, personal routines, data recovery and algorithm controls remain accessible through Gelişmiş ayarlar. Teacher navigation and manual tools remain available.
 
 Basic settings contain daily test capacity and rest days. They save automatically and affect upcoming plans. The current issued plan stays intact. Each result requires an explicit recall rating or an actual score: blank rows are never scored as correct, incorrect or completed. Saving a partial set stays on that week's results; saving the complete set opens the upcoming plan.
+
+## Home: today first
+
+The student's home page (`gorunumAnaSayfa`, after login and on the brand) starts with **Bugün** (`ogrenciBugunKarti`, `#bugunKart`), then the weeks map and the exam chart:
+
+- The heading says how many of today's tests are still open ("3 test seni bekliyor"), "Bugünün testleri tamam ✓" once each has a result, or what today is when there is nothing to do (izin günü, no plan, no work today — with the next working day: "Sıradaki: Cuma · 4 çalışma").
+- Under it are today's rows of this week's plan (the same rows as Planım: lessons, genel tekrar, tests and plan-dışı results; a test moved by "Zaten yaptım" is not there). Every test row carries **the plan's own result slider** (`planSatirEki`), so a result entered on the home page goes down the same path as in Planım: it issues the week, recomputes the card and the coming weeks, and the row turns to its done look.
+- On the right: **bu haftanın testi** (done / issued so far this week, with a bar; the same count as the weeks map, `haftaTestOzeti`), **hafta üst üste** (the streak, shown from two weeks) and **sonuç · n haftada** (every result entered, and in how many weeks).
+- The streak (`ogrenciSerisi`) counts back from last week over the weeks that have at least one result, without a gap; this week adds one as soon as it has a result and never breaks the streak while it is still empty. It is a count of weeks worked, not a score: no threshold decides that a week was "good".
+- "Haftalık planım →" opens Planım. The card is the student's only; it is not drawn on the exam day or after it, and never printed.
 
 ## Results inside the plan: the slider
 
@@ -138,6 +148,8 @@ Website printing renders the existing print document in a separate view inside t
 ## Scheduling validation
 
 `node test/student-automation-regression.js` exercises eight Sunday-only weeks with deterministic synthetic scores, draft downloads, week transitions, serialization/reload, historical-plan stability, partial results, late joining, missed weeks, catch-up reversal, capacity changes, result merging, retry and account isolation. It also checks historical repetition labels, previous scores, consistent desktop/mobile/print labels, honest progress counts, map navigation and the exam-day countdown. It makes no real Firebase writes. The optional `YKS_BACKUP=/path/to/backup.json` check loads a private backup locally to verify real plans and preservation of existing history; the fixture is never committed.
+
+`node test/genel-tekrar-regression.js` also covers the home page's Bugün card (today's rows only, the plan's slider on each test, the count falling as results are entered, the week's progress, the streak with and without a result this week, teacher and exam-day exclusions); `test/personal-plan-browser.cjs` checks it at 1280 and 390 px (before the weeks map, heading on one line, no sideways scroll, the way to Planım).
 
 CI runs nine Node suites covering teacher compatibility, student automation, mobile export, tab visibility, recall-feedback interactions, lesson postponement and learning-history epochs, result packages, cloud behavior and timetable imports.
 
