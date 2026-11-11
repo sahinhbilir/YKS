@@ -1407,6 +1407,7 @@ td.et-yukari{color:var(--e-ok)}td.et-asagi{color:var(--e-bad)}
 .or-workspace{max-width:1280px;margin:auto}.or-workspace .arac{flex-wrap:wrap;gap:12px}.or-workspace select{max-width:100%;min-height:40px}.or-workspace label{max-width:100%}.or-sources{margin:16px 0;padding:12px;border:1px solid var(--cizgi);border-radius:10px}.or-sources summary{cursor:pointer;font-weight:600}.or-sources li{margin:6px 0;overflow-wrap:anywhere}.or-kaynaklar{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}.or-kaynaklar li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 12px;border:1px solid var(--cizgi);border-radius:10px}.or-kaynaklar b{min-width:7.5rem}.or-kaynaklar span{flex:1 1 12rem;min-width:0;overflow-wrap:anywhere;color:var(--soluk)}.or-preview{overflow:auto;border-radius:14px;background:#f6f5f0;border:1px solid #d9dfdc}.or-preview svg{display:block;width:100%;height:auto;min-width:760px}.or-workspace #orStatus{overflow-wrap:anywhere}@media(max-width:600px){.or-workspace .arac>label{width:100%}.or-workspace select{width:100%}.or-preview{max-width:100%;-webkit-overflow-scrolling:touch}}@media print{.or-workspace>.arac,.or-workspace>p,.or-sources,.or-kaynaklar{display:none}.or-preview{border:0;overflow:visible}.or-preview svg{min-width:0}}
 .or-mod{display:inline-flex}.or-mod .dugme{border-radius:0;min-height:40px;padding:8px 18px}.or-mod .dugme:first-child{border-radius:8px 0 0 8px}.or-mod .dugme:last-child{border-radius:0 8px 8px 0;margin-left:-1px}.or-mod .dugme[aria-pressed="true"]{background:var(--vurgu);border-color:var(--vurgu);color:var(--vurgu-uzeri);font-weight:600;position:relative}@media print{.or-mod{display:none}}
 .or-sayfalar svg+svg{margin-top:14px;border-top:2px solid #c9d3ce}
+.or-veli{display:inline-flex;align-items:center;gap:7px;font-size:14px;cursor:pointer}.or-veli input{width:17px;height:17px;accent-color:var(--vurgu)}.or-veli-sayfa{margin-top:14px}@media print{.or-veli{display:none}}
 /* END OGRENCIRAPOR */
 
 /* BEGIN YOKLAMA */
@@ -20545,6 +20546,86 @@ function svgReport(s,reportDate){
  });staffY+=row.height}out.push('</g>');
  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.name+' bireysel raporu')+'" font-family="Arial, sans-serif">'+out.join('')+'</svg>';
 }
+/* ---------------- Veli özeti: the same student in plain words, one page for the parent ---------------- */
+// No ranks, no other student, no jargon. A single step between two exams is never judged (two exams are not the same difficulty):
+// the judgement is where the last net stands against the student's own usual range (denemeOlaganAralik, as on Denemelerim), and
+// against the Türkiye average when that exam has a real Türkiye list (never a tahmini one).
+const veliTrack=s=>{const grade=Number(s.grade)||parseInt(cls(s.cls),10),section=nameKey(cls(s.cls)).replace(/\s+/g,'');return /^(11|12)[/-]?A$/.test(section)||[11,12].includes(grade)&&section==='A'?'EA':'SAY'};
+const veliToplam=(e,session,track)=>{const keys=session==='AYT'?DENEME_ALAN[track]:Object.keys(e.nets),nets=keys.map(k=>e.nets[k]).filter(Number.isFinite);return nets.length?nets.reduce((a,b)=>a+b,0):null};
+const veliIsaret=v=>(v>0?'+':v<0?'−':'')+fmt(Math.round(Math.abs(v)*100)/100);
+// What only the teacher's pages know: the Türkiye average of her last exam per measure and the topics to work on. Every part is
+// optional; a missing source gives nothing.
+function veliEk(s){
+ const ek={tr:{},konular:[],taban:'okul'},no=String(s.no||'');
+ if(!no||typeof ANALIZ==='undefined')return ek;
+ try{const k=ANALIZ.kaynak();
+  if(k.olcular)for(const [session,key] of [['TYT','TYT'],['AYT','AYT:'+veliTrack(s)]]){
+   const l=k.olcular[key]?.ogr.get(no),p=l&&l[l.length-1];
+   if(p&&!p.tahmini&&p.sapma!==null&&p.sapma!==undefined&&Number.isFinite(p.trOrt))ek.tr[session]={ad:p.ad,tarih:p.tarih,trOrt:p.trOrt,fark:p.sapma};
+  }
+ }catch(e){ek.tr={}}
+ try{const v=typeof KONU_TAKIBI!=='undefined'&&D.konutakibi!==undefined?KONU_TAKIBI.oku().veri:null;
+  if(v){const z=ANALIZ.zayifKonular(v,no,(SIRALAMA.oku().veri?.sinavlar)||[]);ek.konular=z.liste.slice(0,4).map(t=>({ders:t.ders,konu:t.konu}));ek.taban=z.taban}
+ }catch(e){ek.konular=[]}
+ return ek;
+}
+// Pure: the sections of the page, each a heading and its sentences. ek: veliEk(s) (or {} when there is none).
+function veliOzeti(s,ek={}){
+ const grade=Number(s.grade)||parseInt(cls(s.cls),10),showAYT=![9,10].includes(grade),track=veliTrack(s),out=[];
+ const deneme=[];
+ for(const session of showAYT?['TYT','AYT']:['TYT']){
+  const l=s.exams.filter(e=>e.session===session).map(e=>({e,v:veliToplam(e,session,track)})).filter(x=>x.v!==null),ad=session==='AYT'?'AYT ('+track+')':session;
+  if(!l.length)continue;
+  const son=l[l.length-1],once=l.length>1?l[l.length-2]:null,ar=typeof denemeOlaganAralik==='function'?denemeOlaganAralik(l.slice(0,-1).map(x=>x.v)):null,konum=ar?denemeOlaganKonum(son.v,ar):null;
+  let c='Son '+ad+' denemesi ('+display(son.e.date)+'): '+fmt(son.v)+' net.';
+  if(once)c+=' Bir önceki denemeye göre '+veliIsaret(son.v-once.v)+' net.';
+  deneme.push(c);
+  if(ar){const aralik=fmt(Math.round(Math.max(0,ar.alt)))+' – '+fmt(Math.round(ar.ust))+' net';
+   deneme.push(konum==='esit'?'Bu sonuç, son denemelerindeki olağan aralığının ('+aralik+') içinde: denemeden denemeye görülen olağan bir oynama.'
+    :konum==='asagi'?'Bu sonuç, son denemelerindeki olağan aralığının ('+aralik+') altında. Nedenini öğretmeniyle birlikte konuşmak yararlı olur.'
+    :'Bu sonuç, son denemelerindeki olağan aralığının ('+aralik+') üstünde: belirgin bir yükseliş.')}
+  else if(once)deneme.push('Denemeler aynı zorlukta olmadığı için tek bir farka bakarak yorum yapmak doğru olmaz; birkaç deneme sonra eğilim netleşir.');
+  if(l.length>2)deneme.push('İlk denemesinden bu yana '+veliIsaret(son.v-l[0].v)+' net ('+l.length+' deneme).');
+  const tr=ek.tr&&ek.tr[session];
+  if(tr)deneme.push('Türkiye geneliyle karşılaştırma ('+tr.ad+'): Türkiye ortalaması '+fmt(Math.round(tr.trOrt*100)/100)+' net; öğrenciniz bunun '+fmt(Math.round(Math.abs(tr.fark)*100)/100)+' net '+(tr.fark>0?'üstünde':tr.fark<0?'altında':'düzeyinde')+'.');
+ }
+ const ing=s.exams.filter(e=>e.session==='ENGLISH'&&Number.isFinite(e.scores?.ENGLISH));
+ if(ing.length)deneme.push('Son İngilizce sınavı ('+display(ing.at(-1).date)+'): '+fmt(ing.at(-1).scores.ENGLISH)+' puan.');
+ out.push({baslik:'Denemeler',satirlar:deneme.length?deneme:['Bu dönemde deneme sonucu yok.']});
+ if(s.attendance.length){const d=s.daily,yuzde=d.percent===null?null:Math.round(d.percent*10)/10;
+  out.push({baslik:'Devam',satirlar:[display(s.attendance[0].date)+' – '+display(s.attendance.at(-1).date)+' arasında '+d.present+' gün okuldaydı; '+(d.missed?d.missed+' gün devamsızlığı var':'hiç devamsızlığı yok')+(yuzde===null?'':' (devam %'+fmt(yuzde)+')')+'.']})}
+ else out.push({baslik:'Devam',satirlar:['Yoklama kaydı yok.']});
+ if(s.sessions.length){const by=new Map();for(const e of s.sessions){const c=courseName(e.course);by.set(c,(by.get(c)||0)+1)}
+  const en=[...by].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'tr')).slice(0,3).map(([c,n])=>c+' ('+n+')').join(', ');
+  out.push({baslik:'Etüt',satirlar:['Bu dönemde '+s.sessions.length+' etüde katıldı. En çok: '+en+'.']})}
+ else out.push({baslik:'Etüt',satirlar:['Bu dönemde etüt talebi olmadı.']});
+ if(s.homework.length){const t=s.homework.reduce((a,h)=>a.map((v,i)=>v+h.values[i]),[0,0,0,0,0,0,0]),diger=ODEV_DURUM.slice(1).map(([ad],i)=>t[i+2]?ad.toLocaleLowerCase('tr-TR')+' '+t[i+2]:'').filter(Boolean).join(', ');
+  out.push({baslik:'Ödev',satirlar:['Verilen '+t[0]+' ödevin '+t[1]+' tanesini tamamladı'+(diger?' ('+diger+')':'')+'.']})}
+ if(ek.konular&&ek.konular.length)out.push({baslik:'Üzerinde durulması önerilen konular',satirlar:[ek.konular.map(t=>t.ders+' – '+t.konu).join(' · ')+'.',
+  ek.taban==='turkiye'?'Bu konularda, aynı soruları çözen Türkiye geneli öğrencilerine göre daha az doğru yaptı.':'Bu konularda, soruların zorluğuna göre beklenenden daha az doğru yaptı.']});
+ return out;
+}
+function svgVeli(s,reportDate,ek=veliEk(s)){
+ const out=[],bolumler=veliOzeti(s,ek);
+ const measure=typeof document!=='undefined'?document.createElement('canvas').getContext?.('2d'):null;
+ const width=(label,size)=>{if(measure){measure.font=size+'px Arial';return measure.measureText(label).width}return [...label].length*size*.52};
+ const wrap=(value,maxWidth,size)=>{const lines=[];let line='';for(const word of String(value).trim().split(/\s+/)){const next=line?line+' '+word:word;if(width(next,size)<=maxWidth||!line){line=next;continue}lines.push(line);line=word}if(line)lines.push(line);return lines};
+ const text=(x,y,t,size=12,color=C.ink,bold=false,anchor='start')=>out.push('<text x="'+x+'" y="'+y+'" font-size="'+size+'" fill="'+color+'" font-weight="'+(bold?700:400)+'" text-anchor="'+anchor+'">'+esc(t)+'</text>');
+ const rect=(x,y,w,h,fill='#fff',r=12)=>out.push('<rect x="'+x+'" y="'+y+'" width="'+Math.max(0,w)+'" height="'+Math.max(0,h)+'" rx="'+r+'" fill="'+fill+'"/>');
+ rect(0,0,W,H,C.bg,0);text(28,28,s.school||'ÖĞRENCİ RAPORU',11,C.muted,true);text(28,59,s.name,27,C.ink,true);text(28,80,[s.cls,s.no].filter(Boolean).join(' / '),12,C.muted);
+ text(W-28,47,display(reportDate),12,C.muted,false,'end');text(W-28,70,'Veli özeti',17,C.green,true,'end');
+ // Denemeler on the left (the longest part), the rest stacked on the right; the type shrinks until both columns fit the page.
+ const sol=bolumler.filter(b=>b.baslik==='Denemeler'),sag=bolumler.filter(b=>b.baslik!=='Denemeler'),X=[26,606],CW=558,PAD=22,TOP=100,BOTTOM=H-58;
+ const olc=(l,fs)=>l.reduce((a,b)=>a+PAD*2+24+b.satirlar.reduce((n,t)=>n+wrap(t,CW-PAD*2,fs).length*(fs*1.5)+fs*.6,0)+14,0);
+ let fs=18;while(fs>11&&Math.max(olc(sol,fs),olc(sag,fs))>BOTTOM-TOP)fs-=.5;
+ [sol,sag].forEach((l,i)=>{let y=TOP;for(const b of l){
+  const satirlar=b.satirlar.map(t=>wrap(t,CW-PAD*2,fs)),h=PAD*2+24+satirlar.reduce((n,z)=>n+z.length*(fs*1.5)+fs*.6,0);
+  out.push('<g aria-label="'+esc('Veli özeti · '+b.baslik)+'">');rect(X[i],y,CW,h);text(X[i]+PAD,y+PAD+13,b.baslik,17,C.ink,true);
+  let ty=y+PAD+24+fs*1.25;for(const z of satirlar){for(const line of z){text(X[i]+PAD,ty,line,fs,C.ink);ty+=fs*1.5}ty+=fs*.6}
+  out.push('</g>');y+=h+14}});
+ text(28,H-28,'Bu sayfa okul kayıtlarından otomatik hazırlanmıştır. Sıralama ve başka öğrencilerle karşılaştırma içermez; ayrıntılar için rehber öğretmeninizle görüşebilirsiniz.',11,C.muted);
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.name+' veli özeti')+'" font-family="Arial, sans-serif">'+out.join('')+'</svg>';
+}
 /* ---------------- Kurum raporu: the institution-level twin (aggregate only, no student names) ---------------- */
 // A scope is the whole school or one grade. Everything below reads the students merge() produced, so the
 // sources (site reports plus the homework / English PDFs added on the page) are the same as the student report's.
@@ -20956,9 +21037,10 @@ function svgKurum(k,reportDate){
  });
 }
 /* ---------------- teacher workspace and download ---------------- */
-let OWNER=null,FILES=new Map(),BUSY=false,STATUS='',FILTER='',SELECTED='',GEN=0,MODE='ogrenci',SCOPE='okul';
+// VELI: the PDF (and the preview) carries the Veli özeti page after each student's report page. Off until ticked; never stored.
+let OWNER=null,FILES=new Map(),BUSY=false,STATUS='',FILTER='',SELECTED='',GEN=0,MODE='ogrenci',SCOPE='okul',VELI=false;
 function allowed(){return typeof rehberMi==='function'&&rehberMi()&&!(typeof CIKIS_DURUMU!=='undefined'&&CIKIS_DURUMU)}
-function reset(){FILES=new Map();BUSY=false;STATUS='';FILTER='';SELECTED='';MODE='ogrenci';SCOPE='okul';GEN++;OWNER=typeof D==='undefined'?null:D}
+function reset(){FILES=new Map();BUSY=false;STATUS='';FILTER='';SELECTED='';MODE='ogrenci';SCOPE='okul';VELI=false;GEN++;OWNER=typeof D==='undefined'?null:D}
 function guard(){if(!allowed()){reset();throw new Error('Öğrenci raporları yalnızca rehber öğretmen içindir.')}if(OWNER!==D)reset()}
 const unique=rows=>[...new Map(rows.map(r=>[nameKey(r.name)+'|'+r.cls,{name:r.name,no:'',cls:r.cls}])).values()];
 // temel: exams and etüt sessions only, for analysis pages (Etüt etkisi). An unreadable Etüt planı then only
@@ -21036,9 +21118,10 @@ function view(){
 }
 function ogrenciGorunum(m,classes,list,selected,disable){
  return '<div class="arac"><label>Sınıf <select id="orClass"'+disable+'><option value="">Tüm sınıflar</option>'+classes.map(c=>'<option value="'+esc(c)+'"'+(c===FILTER?' selected':'')+'>'+esc(c||'Şube belirtilmemiş')+'</option>').join('')+'</select></label><label>Öğrenci <select id="orStudent"'+disable+'>'+list.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===SELECTED?' selected':'')+'>'+esc(s.name+' · '+s.cls)+'</option>').join('')+'</select></label></div>'+
- '<div class="arac"><button class="dugme birincil" id="orOne"'+(BUSY||!selected?' disabled':'')+'>Öğrenci PDF</button><button class="dugme" id="orAll"'+(BUSY||!list.length?' disabled':'')+'>Sınıf / tümü PDF ('+list.length+')</button></div>'+
+ '<div class="arac"><button class="dugme birincil" id="orOne"'+(BUSY||!selected?' disabled':'')+'>Öğrenci PDF</button><button class="dugme" id="orAll"'+(BUSY||!list.length?' disabled':'')+'>Sınıf / tümü PDF ('+list.length+')</button>'+
+ '<label class="or-veli" title="Her öğrencinin raporundan sonra, veli için sade bir dille yazılmış ikinci sayfa eklenir."><input type="checkbox" id="orVeli"'+(VELI?' checked':'')+disable+'> Veli özeti sayfasını ekle</label></div>'+
  '<p id="orStatus" role="status" aria-live="polite">'+esc([STATUS,...m.warnings].filter(Boolean).join(' '))+'</p>'+
- (selected?'<div class="or-preview" aria-label="PDF önizlemesi">'+svgReport(selected,today())+'</div>':'<p>Sitede kayıt yok. Denemeleri Sıralamalar’a, etüt raporunu Etütler’e, yoklama raporunu Yoklama’ya ekleyin.</p>');
+ (selected?'<div class="or-preview" aria-label="PDF önizlemesi">'+svgReport(selected,today())+'</div>'+(VELI?'<div class="or-preview or-veli-sayfa" id="orVeliOnizleme" aria-label="Veli özeti önizlemesi">'+svgVeli(selected,today())+'</div>':''):'<p>Sitede kayıt yok. Denemeleri Sıralamalar’a, etüt raporunu Etütler’e, yoklama raporunu Yoklama’ya ekleyin.</p>');
 }
 // The pages (SVG strings) of one scope, and of every scope in order: the preview and the PDF use the very same pages.
 function kurumSayfalar(students,scope){return svgKurum(kurumRapor(students,scope),today())}
@@ -21073,9 +21156,11 @@ async function pdfSayfalar(items,render,title,valid){
  for(const s of items){if(!valid())throw new Error('Oturum değişti.');const bytes=await raster(render(s,d));if(!valid())throw new Error('Oturum değişti.');const img=await doc.embedPng(bytes),p=doc.addPage([PAGE_W,PAGE_H]);p.drawImage(img,{x:0,y:0,width:PAGE_W,height:PAGE_H})}
  return doc.save();
 }
-async function pdfBytes(students,valid=()=>true){
+async function pdfBytes(students,valid=()=>true,veli=VELI){
  if(!students.length)throw new Error('Öğrenci seçilmedi.');if(students.length>300)throw new Error('Bir PDF en fazla 300 öğrenci içerebilir. Sınıf seçerek indirin.');
- return pdfSayfalar(students,svgReport,'Bireysel öğrenci raporları',valid);
+ // With the Veli özeti each student is two pages: the report, then the summary for the parent.
+ const items=veli?students.flatMap(st=>[[st,svgReport],[st,svgVeli]]):students.map(st=>[st,svgReport]);
+ return pdfSayfalar(items,([st,ciz_],d)=>ciz_(st,d),'Bireysel öğrenci raporları',valid);
 }
 // Kurum raporu: every scope gives one or more A4 landscape pages, one after the other (the school first, then each grade).
 async function kurumPdfBytes(students,scopes,valid=()=>true){
@@ -21097,13 +21182,13 @@ async function kurumDownload(all){
 }
 if(typeof document!=='undefined'&&document.addEventListener){
  document.addEventListener('change',async ev=>{if(!allowed()||EK.sekme!=='ogrencirapor')return;const el=ev.target;guard();if(BUSY)return;
-  if(el.id==='orScope'){SCOPE=el.value;refresh()}else if(el.id==='orClass'){FILTER=el.value;SELECTED='';refresh()}else if(el.id==='orStudent'){SELECTED=el.value;refresh()}else if(el.id==='orFiles'||el.id==='orEnglishFiles'){try{await addFiles([...el.files])}catch(e){STATUS=e.message;refresh()}}
+  if(el.id==='orScope'){SCOPE=el.value;refresh()}else if(el.id==='orClass'){FILTER=el.value;SELECTED='';refresh()}else if(el.id==='orStudent'){SELECTED=el.value;refresh()}else if(el.id==='orVeli'){VELI=!!el.checked;refresh()}else if(el.id==='orFiles'||el.id==='orEnglishFiles'){try{await addFiles([...el.files])}catch(e){STATUS=e.message;refresh()}}
  });
  document.addEventListener('click',async ev=>{if(!allowed()||EK.sekme!=='ogrencirapor')return;const el=ev.target.closest?.('button');if(!el)return;guard();if(BUSY)return;
   if(el.id==='orOne'||el.id==='orAll')await download(el.id==='orAll');else if(el.id==='krOne'||el.id==='krAll')await kurumDownload(el.id==='krAll');else if(el.dataset.orMod){MODE=el.dataset.orMod==='kurum'?'kurum':'ogrenci';refresh()}else if(el.id==='orClear'){const mode=MODE,scope=SCOPE;reset();MODE=mode;SCOPE=scope;refresh()}else if(el.hasAttribute('data-or-remove')){FILES.delete(el.getAttribute('data-or-remove'));refresh()}
  });
 }
-return {parse,englishPdf,homeworkPdf,attendancePdf,attendanceSummary,weekly,merge,svgReport,view,model,temelOgrenciler,addFiles,pdfBytes,reset,kurumKapsamlari,kurumRapor,kurumTurkiye,svgKurum,kurumPdfBytes};
+return {parse,englishPdf,homeworkPdf,attendancePdf,attendanceSummary,weekly,merge,svgReport,veliOzeti,veliEk,svgVeli,veliAc:v=>{VELI=!!v},view,model,temelOgrenciler,addFiles,pdfBytes,reset,kurumKapsamlari,kurumRapor,kurumTurkiye,svgKurum,kurumPdfBytes};
 })();
 function gorunumOgrenciRapor(){return OGRENCI_RAPOR.view()}
 // END OGRENCIRAPOR

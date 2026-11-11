@@ -204,5 +204,56 @@ check('a full 60-question placement result is 100/100; half is 50, independent o
  const halfOnly=englishResults({name:'FLY HIGHER PLACEMENT TEST',students:[{...person,net:30,score:.30,correct:35,wrong:15}]});assert.equal(parse(halfOnly).exams[0].scores.ENGLISH,50,'do not scale the strongest student in the file to 100');
   const starter=englishResults({name:'Fly Higher A1+ Level Unit Starter Test',students:[{no:'63',name:'SENTETİK KISMİ',cls:'9/A',code:'102',net:15,score:75,correct:15,wrong:2}]}),starterRecord=parse(starter),partialSvg=R.svgReport(R.merge([starterRecord]).students[0],'2026-10-25');assert.equal(starterRecord.exams[0].questionCount,20);assert(partialSvg.includes('aria-label="İngilizce toplam · doğru 15, yanlış 2, boş 3"'),'starter test unanswered questions remain grey in the ring');
 });
+check('Veli özeti: plain sentences from the same student, the last net judged against her own usual range and a real Türkiye average only; no ranks, no other student (hand-worked)',()=>{
+ const tyt=(i,tur,mat)=>({exam:'27-YKS-120'+i,date:'2026-10-0'+i,session:'TYT',nets:{turkce:tur,mat}}),ayt=(i,mat,fizik)=>({exam:'27-YKS-120'+i,date:'2026-10-1'+i,session:'AYT',nets:{mat,fizik,edebiyat:30}});
+ const temel={name:'SENTETİK ADA',no:'1001',cls:'12/B',grade:12,school:'SENTETİK OKUL',teachers:[],weeks:[],
+  attendance:[{date:'2026-09-14'},{date:'2026-10-30'}],daily:{present:30,missed:2,percent:93.75},
+  sessions:[['MATEMATİK TYT'],['MATEMATİK AYT'],['FİZİK TYT'],['MATEMATİK TYT'],['KİMYA TYT']].map(([course],i)=>({course,teacher:'SENTETİK ÖĞRETMEN',date:'2026-10-0'+(i+1)})),
+  homework:[{course:'MATEMATİK',values:[10,8,1,0,0,1,0],reportDate:'2026-10-24'},{course:'FİZİK',values:[6,6,0,0,0,0,0],reportDate:'2026-10-24'}]};
+ // TYT totals 80, 84, 82 then 81: the earlier three give mean 82, s = 2 → 82 ± 2,920 · 2 · √(4/3) = 75,26 – 88,74 (printed 75 – 89).
+ let s={...temel,exams:[tyt(1,50,30),tyt(2,52,32),tyt(3,51,31),tyt(4,50,31),ayt(1,20,5),ayt(2,22,6)]},before=JSON.stringify(s);
+ let o=plain(R.veliOzeti(s,{tr:{TYT:{ad:'27-YKS-1204',tarih:'04.10.2026',trOrt:75.25,fark:5.75}},konular:[{ders:'Fizik',konu:'Kuvvet'},{ders:'Matematik',konu:'Üslü İfadeler'}],taban:'turkiye'}));
+ assert.equal(JSON.stringify(s),before,'the student is not changed');
+ assert.deepEqual(o.map(b=>b.baslik),['Denemeler','Devam','Etüt','Ödev','Üzerinde durulması önerilen konular']);
+ assert.deepEqual(o[0].satirlar,[
+  'Son TYT denemesi (04.10.2026): 81 net. Bir önceki denemeye göre −1 net.',
+  'Bu sonuç, son denemelerindeki olağan aralığının (75 – 89 net) içinde: denemeden denemeye görülen olağan bir oynama.',
+  'İlk denemesinden bu yana +1 net (4 deneme).',
+  'Türkiye geneliyle karşılaştırma (27-YKS-1204): Türkiye ortalaması 75,25 net; öğrenciniz bunun 5,75 net üstünde.',
+  // AYT for 12/B is SAY: Matematik + Fizik only (Edebiyat is not a SAY lesson): 25 then 28. Two exams: no judgement.
+  'Son AYT (SAY) denemesi (12.10.2026): 28 net. Bir önceki denemeye göre +3 net.',
+  'Denemeler aynı zorlukta olmadığı için tek bir farka bakarak yorum yapmak doğru olmaz; birkaç deneme sonra eğilim netleşir.']);
+ assert.deepEqual(o[1].satirlar,['14.09.2026 – 30.10.2026 arasında 30 gün okuldaydı; 2 gün devamsızlığı var (devam %93,8).']);
+ assert.deepEqual(o[2].satirlar,['Bu dönemde 5 etüde katıldı. En çok: Matematik (3), Fizik (1), Kimya (1).']);
+ assert.deepEqual(o[3].satirlar,['Verilen 16 ödevin 14 tanesini tamamladı (eksik 1, yapmadı 1).']);
+ assert.deepEqual(o[4].satirlar,['Fizik – Kuvvet · Matematik – Üslü İfadeler.','Bu konularda, aynı soruları çözen Türkiye geneli öğrencilerine göre daha az doğru yaptı.']);
+ // Below and above her own range; a Türkiye average she is under; difficulty-based topics.
+ const son=v=>plain(R.veliOzeti({...temel,exams:[tyt(1,50,30),tyt(2,52,32),tyt(3,51,31),tyt(4,v-30,30)]},{tr:{TYT:{ad:'X',trOrt:90,fark:v-90}},konular:[{ders:'Fizik',konu:'Kuvvet'}],taban:'okul'}));
+ assert.equal(son(70)[0].satirlar[1],'Bu sonuç, son denemelerindeki olağan aralığının (75 – 89 net) altında. Nedenini öğretmeniyle birlikte konuşmak yararlı olur.');
+ assert.equal(son(92)[0].satirlar[1],'Bu sonuç, son denemelerindeki olağan aralığının (75 – 89 net) üstünde: belirgin bir yükseliş.');
+ assert.match(son(70)[0].satirlar[3],/Türkiye ortalaması 90 net; öğrenciniz bunun 20 net altında\.$/);
+ assert.equal(son(70)[4].satirlar[1],'Bu konularda, soruların zorluğuna göre beklenenden daha az doğru yaptı.');
+ // Nothing to say is said plainly; a 9th grader has no AYT part; no homework report: no Ödev part.
+ o=plain(R.veliOzeti({...temel,cls:'9/A',grade:9,exams:[ayt(1,20,5)],attendance:[],daily:{present:0,missed:0,percent:null},sessions:[],homework:[]}));
+ assert.deepEqual(o,[{baslik:'Denemeler',satirlar:['Bu dönemde deneme sonucu yok.']},{baslik:'Devam',satirlar:['Yoklama kaydı yok.']},{baslik:'Etüt',satirlar:['Bu dönemde etüt talebi olmadı.']}]);
+ assert.equal(plain(R.veliOzeti({...temel,exams:[],daily:{present:32,missed:0,percent:100}}))[1].satirlar[0],'14.09.2026 – 30.10.2026 arasında 32 gün okuldaydı; hiç devamsızlığı yok (devam %100).');
+ // The page: the student's own header, every section, the closing line; never a rank or another name.
+ const svg=R.svgVeli(s,'2026-10-31',{tr:{},konular:[],taban:'okul'});
+ assert(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg" width="1190.55" height="841.89"')&&svg.includes('aria-label="SENTETİK ADA veli özeti"'));
+ for(const b of ['Denemeler','Devam','Etüt','Ödev'])assert(svg.includes('aria-label="Veli özeti · '+b+'"'),b);
+ assert(svg.includes('>Veli özeti</text>')&&svg.includes('>31.10.2026</text>')&&svg.includes('Sıralama ve başka öğrencilerle karşılaştırma içermez'));
+ assert(!/sıra(?!lama ve başka)|okul ortalaması|SENTETİK ÖĞRETMEN/i.test(svg.replace(/<[^>]+>/g,' ')),'no rank, no school mean, no teacher name');
+ const ys=[...svg.matchAll(/<text x="[\d.]+" y="([\d.]+)"/g)].map(m=>+m[1]);assert(Math.max(...ys)<=841.89-20,'everything inside the page');
+ // Without the teacher's sources the page still draws (veliEk finds nothing for an unknown number).
+ assert.deepEqual(plain(R.veliEk({...s,no:'999999'})),{tr:{},konular:[],taban:'okul'});assert(R.svgVeli({...s,no:''},'2026-10-31').includes('Veli özeti'));
+});
+check('Veli özeti is off until ticked: the page offers the box, the preview adds the second page, a reset clears it',()=>{
+ vm.runInContext("D=varsayilan();D.rol='rehber';D.ogr=[];D.siralama=SIRALAMA.oku().veri;EK.sekme='ogrencirapor'",ctx);ctx.L=[okulListesi(SINAVLAR.sonra.F)];
+ vm.runInContext("for(const l of L)SIRALAMA.ekle(D.siralama,SIRALAMA.pdfCoz(l.pages,l.boylar));",ctx);R.reset();
+ let h=R.view();assert(h.includes('<input type="checkbox" id="orVeli"> Veli özeti sayfasını ekle</label>'));assert(!h.includes('orVeliOnizleme'));
+ R.veliAc(true);h=R.view();assert(h.includes('<input type="checkbox" id="orVeli" checked>'));assert(h.includes('id="orVeliOnizleme" aria-label="Veli özeti önizlemesi"><svg '));
+ assert.equal((h.match(/role="img"/g)||[]).length,2,'the report page and the Veli özeti page');
+ R.reset();assert(!R.view().includes('orVeliOnizleme'));
+});
 check('source embedding is current and idempotent',()=>{require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs','--check']);const before=fs.readFileSync('index.html','utf8');require('child_process').execFileSync(process.execPath,['scripts/embed-ogrencirapor.cjs']);assert.equal(fs.readFileSync('index.html','utf8'),before)});
 console.log(passed+' student report checks passed');

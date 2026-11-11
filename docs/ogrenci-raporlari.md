@@ -95,6 +95,35 @@ kaplar; kutular ayrı görseller olarak birleştirilmez. Yazıcının kendi kena
   çizelgesi ders dağılımını gösterir. Tarih aralığı ve hafta başlangıçları görünür.
   Etüt kaydı, katılımın ayrıca doğrulandığı anlamına gelmez.
 
+## Veli özeti
+
+**Veli özeti sayfasını ekle** kutusu işaretlenince her öğrencinin rapor sayfasından
+sonra veli için sade bir dille yazılmış ikinci bir sayfa gelir (önizlemede ve PDF’te;
+PDF öğrenci başına iki sayfa olur). Kutu varsayılan olarak kapalıdır, deftere
+kaydedilmez ve sayfa yenilenince kapanır.
+
+Sayfa aynı öğrencinin aynı verisinden cümle kurar (`veliOzeti`, `svgVeli`):
+
+- **Denemeler:** son TYT ve AYT (alanına göre) neti ve bir önceki denemeye göre fark.
+  Fark tek başına yorumlanmaz: en az dört deneme varsa sonuç öğrencinin kendi
+  **olağan aralığına** göre söylenir (Denemelerim’deki kural, `denemeOlaganAralik`):
+  içinde, altında (“Nedenini öğretmeniyle birlikte konuşmak yararlı olur”) ya da
+  üstünde. Daha az denemede “tek bir farka bakarak yorum yapmak doğru olmaz” yazar.
+  Üç ve daha çok denemede ilk denemeden bu yana değişim de yazılır.
+- **Türkiye geneli:** öğrencinin o oturumdaki son denemesinin gerçek bir Türkiye
+  listesi varsa Türkiye ortalaması ve öğrencinin buna göre yeri yazılır. Tahmini
+  Türkiye ortalaması veliye hiç gösterilmez.
+- **Devam, Etüt, Ödev:** rapor sayfasındaki sayılar cümleyle (okulda olduğu ve
+  kaçırdığı gün, devam yüzdesi; etüt sayısı ve en çok etüt aldığı üç ders; verilen ve
+  tamamlanan ödev). Kaynağı olmayan bölüm bunu söyler; ödev raporu yoksa Ödev bölümü
+  yazılmaz.
+- **Üzerinde durulması önerilen konular:** Konu Takibi’nde öğrencinin en geride
+  olduğu en çok dört konu (Öğrenci kartındaki Zayıf konular; Türkiye başarı oranları
+  varsa Türkiye’ye göre, yoksa soruların zorluğuna göre).
+- Sayfada sıralama, okul ortalaması, başka öğrenci ya da öğretmen adı yoktur; altında
+  bunu söyleyen bir not ve “rehber öğretmeninizle görüşebilirsiniz” yazar.
+- Yazı boyutu 18’den başlar ve iki sütun sayfaya sığana kadar küçülür (en az 11).
+
 ## Kurum raporu
 
 Sayfanın üstündeki **Öğrenci raporu | Kurum raporu** düğmesiyle kurum raporuna geçilir.
@@ -207,6 +236,8 @@ node test/ogrencirapor-browser.cjs
 node test/kurumrapor-regression.cjs
 node test/kurumrapor-browser.cjs
 ```
+
+`ogrencirapor-regression.cjs` Veli özeti cümlelerini elle hesaplanmış örneklerle (olağan aralığın içi / altı / üstü, iki deneme, 9. sınıf, kaynağı olmayan bölümler, Türkiye cümlesi) ve sayfada sıra ya da başka ad olmadığını; `ogrencirapor-browser.cjs` kutunun önizlemeye ve PDF’e ikinci sayfayı eklediğini, her satırın sayfanın ve kendi kartının içinde kaldığını ve seçimin deftere yazılmadığını 1280 ve 390 px’te denetler.
 
 `test/kurumrapor-regression.cjs` ödev toplamlarını, Türkiye geneli bloğunu (listeli ve listesiz; tarama → tarama seçimi,
 `EK.tgListe` / `EK.tgOkul` ve yedek liste, ayrı TYT / AYT grafikleri), Etüt etkisi bloğunu (sentetik, etkisi
