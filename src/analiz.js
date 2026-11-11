@@ -42,6 +42,11 @@ const OLCULER=[['TYT','TYT','TYT'],['AYT:SAY','AYT · SAY','SAY'],['AYT:EA','AYT
 const HEDEF_ADIM_TYT=1, HEDEF_ADIM_AYT=.5, HEDEF_TAVAN=.5, GIDISAT_EN_AZ=3, GIDISAT_AGIRLIK=.5, GIDISAT_KUCULT=4, GIDISAT_SONUM=.7, GIDISAT_EN_COK_SINAV=30, DENEME_ARALIGI_GUN=14, ORAN_ALT=.02, ORAN_UST=.98, UST_VARSAYILAN=120;
 const BEKLENEN_PENCERE=5, BEKLENEN_EN_AZ=2, ISTIKRAR_PENCERE=6, ISTIKRAR_EN_AZ=3, GUN=30, ZAYIF_ESIK=-1, ZAYIF_EN_COK=5;
 const ISTIKRAR_ETIKETLERI=[[3,'Çok istikrarlı'],[6,'İstikrarlı'],[10,'Dalgalı'],[Infinity,'Çok dalgalı']];
+// Dikkat (the teacher's home): the smallest fall that counts, the earlier exams it needs and looks at, the run of falls, the missed
+// days in 30, the topics behind Türkiye, the one-sided 95% z and how many rows the card lists before "Tümünü göster".
+const DIKKAT_NET=4, DIKKAT_ONCE=3, DIKKAT_PENCERE=5, DIKKAT_ARDISIK=3, DIKKAT_DEVAMSIZ=3, DIKKAT_KONU=3, DIKKAT_Z=1.645, DIKKAT_GOSTER=8;
+// One-sided 95% Student t for 2, 3 and 4 degrees of freedom (three, four and five earlier exams).
+const DIKKAT_T={2:2.920,3:2.353,4:2.132};
 const AY=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 // The lessons of a measure in Sıralamalar' columns, with the lesson's Türkiye code and (for Din Kültürü) the column of
 // Ek Felsefe, which stands in for it.
@@ -281,6 +286,149 @@ function konuKaynagi(k){
   if(k.alt.konu!==undefined)return k.alt.konu;
   let v=null;try{if(D.konutakibi!==undefined)v=KONU_TAKIBI.oku().veri}catch(e){v=null}
   return k.alt.konu=v;
+}
+
+/* ---------------- Dikkat: who needs attention (the teacher's home) ---------------- */
+// The flags of one student in one measure, from real figures only. noktalar: her exams (turet's output); sonId: the last exam of her
+// grade in the measure (a student who did not sit it gets no flag: there is nothing new to say about her).
+//  dusus    – her standing on that exam is below the one-sided 95% prediction interval of her earlier exams (three to five of
+//             them; mean − t·s·√(1+1/n)) and at least DIKKAT_NET net below their mean. Her standing is her net against the Türkiye
+//             average (then the fall is the card's "Beklenenden"); when that exam has no Türkiye list, against the school mean.
+//  gerileme – her standing fell on each of her last three exams, DIKKAT_NET net or more in all (against Türkiye when all four
+//             exams have a Türkiye list, else against the school mean).
+// An exam with a tahmini Türkiye average never raises a flag by itself: the school mean takes its place.
+function netIsaretleri(noktalar,sonId){
+  const out=[],son=noktalar[noktalar.length-1];
+  if(!son||son.exam!==sonId)return out;
+  const gercek=p=>p.sapma!==null&&p.sapma!==undefined&&!p.tahmini;
+  const okulV=p=>Number.isFinite(p.okulOrt)?y6(p.net-p.okulOrt):null,trV=p=>p.sapma===undefined?null:p.sapma;
+  const taban=gercek(son)?'turkiye':'okul',deger=taban==='turkiye'?trV:okulV;
+  const once=noktalar.slice(0,-1).map(deger).filter(v=>v!==null).slice(-DIKKAT_PENCERE),v=deger(son);
+  if(v!==null&&once.length>=DIKKAT_ONCE){
+    const n=once.length,m=ort(once),s=Math.sqrt(once.reduce((a,x)=>a+(x-m)**2,0)/(n-1));
+    const esik=Math.max(DIKKAT_NET,DIKKAT_T[n-1]*s*Math.sqrt(1+1/n)),fark=y6(v-m);
+    if(fark<=-esik+1e-9)out.push({tur:'dusus',taban,fark,esik:y6(esik),n,ad:son.ad,g:son.g});
+  }
+  const l=noktalar.slice(-(DIKKAT_ARDISIK+1));
+  if(l.length===DIKKAT_ARDISIK+1){
+    const t2=l.every(gercek)?'turkiye':'okul',d=l.map(t2==='turkiye'?trV:okulV);
+    if(d.every(x=>x!==null)&&d.every((x,i)=>!i||x<d[i-1]-1e-9)&&d[0]-d[d.length-1]>=DIKKAT_NET-1e-9)
+      out.push({tur:'gerileme',taban:t2,fark:y6(d[d.length-1]-d[0]),n:DIKKAT_ARDISIK,ad:son.ad,g:son.g});
+  }
+  return out;
+}
+// The topics of every student that are behind the Türkiye students: at least one question fewer than they got right and outside the
+// one-sided 95% band of chance (z = (d − b)/√(n·p̄(1−p̄)), p̄ = b/n: never smaller than the true spread, so the test is cautious).
+// v: KONU_TAKIBI.oku().veri → Map(school number → [{ders, konu, fark, n}], most behind first).
+function geridekiKonuSayilari(v){
+  const out=new Map();
+  if(!v||!Object.values(v.zorluk||{}).some(e=>e&&e.ozet&&e.turkiye))return out;
+  for(const session of ['TYT','AYT'])for(const st of KONU_TAKIBI.ogrenciFark(v,{session}).ogrenciler){
+    const no=String(st.student.no||'');if(!no)continue;
+    for(const t of st.konular.values()){
+      if(t.id.endsWith('|?')||!t.n)continue;
+      const fark=t.d-t.b,p=t.b/t.n,sd=Math.sqrt(t.n*p*(1-p));
+      if(fark>ZAYIF_ESIK+1e-9||!(sd>0)||fark/sd>-DIKKAT_Z)continue;
+      const l=out.get(no)||[];l.push({ders:(st.dersler.get(t.ders)||{}).ad||'',konu:t.ad,fark:y6(fark),n:t.n});out.set(no,l);
+    }
+  }
+  for(const l of out.values())l.sort((a,b)=>a.fark-b.fark||a.konu.localeCompare(b.konu,'tr'));
+  return out;
+}
+// Who needs attention, most pressing first: {satirlar: [{key, no, ad, sinif, si, puan, isaretler}], kaynaklar: {deneme, turkiye,
+// yoklama, konu}} (kaynaklar: which sources there are to look at). A flag has a kind (tur) and a weight (puan): dusus and gerileme
+// 3, devamsiz 2 (3 from twice the threshold), konu 1. ek: further flags by school number, Map(no → {ad, si, isaretler}) – the
+// notebook's own (a plan without a result); a student who is not in the school lists gets a row of her own.
+function dikkat(bugun=bugunNo(),ek=null){
+  const k=kaynak(bugun);
+  if(!k.alt.dikkat){
+    const by=new Map(),kaynaklar={deneme:false,turkiye:false,yoklama:false,konu:false};
+    const ekle=(kisi,f)=>{let r=by.get(kisi.key);if(!r){r={key:kisi.key,no:kisi.no,ad:kisi.ad,sinif:kisi.sinif,si:null,isaretler:[]};by.set(kisi.key,r)}r.isaretler.push(f)};
+    if(k.olcular){
+      for(const [key,ad] of OLCULER){
+        const O=k.olcular[key],sonlar=new Map();
+        for(const [d,G] of O.duzeyler){const e=G.sinavlar[G.sinavlar.length-1];if(!e)continue;sonlar.set(d,e);kaynaklar.deneme=true;if(e.trVar)kaynaklar.turkiye=true}
+        for(const [no,noktalar] of O.ogr){
+          const kisi=k.kisiler.get(String(no)),e=sonlar.get(O.ogrDuzey.get(no));if(!kisi||!e)continue;
+          for(const f of netIsaretleri(noktalar,e.id))ekle(kisi,{...f,olcu:ad,puan:3});
+        }
+      }
+      const Y=yoklamaKaynagi(k);kaynaklar.yoklama=Y.var;
+      if(Y.var)for(const [key,gun] of Y.ad){
+        const kisi=k.kisiler.get(key),d=devamsizlik([...gun],bugun);
+        if(kisi&&d.n>=DIKKAT_DEVAMSIZ)ekle(kisi,{tur:'devamsiz',n:d.n,puan:d.n>=2*DIKKAT_DEVAMSIZ?3:2});
+      }
+      let konular=new Map();try{konular=geridekiKonuSayilari(konuKaynagi(k))}catch(e){konular=new Map()}
+      const v=konuKaynagi(k);kaynaklar.konu=!!v&&Object.values(v.zorluk||{}).some(e=>e&&e.ozet&&e.turkiye);
+      for(const [no,l] of konular){const kisi=k.kisiler.get(no);if(kisi&&l.length>=DIKKAT_KONU)ekle(kisi,{tur:'konu',n:l.length,en:l.slice(0,2),puan:1})}
+    }
+    k.alt.dikkat={by,kaynaklar};
+  }
+  const rows=new Map([...k.alt.dikkat.by].map(([key,r])=>[key,{...r,isaretler:r.isaretler.slice()}]));
+  if(ek)for(const [no,e] of ek){
+    if(!e||!e.isaretler||!e.isaretler.length)continue;
+    const key=no&&k.kisiler.has(String(no))?String(no):'si:'+e.si;let r=rows.get(key);
+    if(!r){const kisi=k.kisiler.get(String(no));r={key,no:kisi?kisi.no:'',ad:kisi?kisi.ad:e.ad||'',sinif:kisi?kisi.sinif:e.sinif||'',si:null,isaretler:[]};rows.set(key,r)}
+    if(Number.isInteger(e.si))r.si=e.si;r.isaretler.push(...e.isaretler);
+  }
+  const sira={dusus:0,gerileme:1,devamsiz:2,konu:3};
+  const satirlar=[...rows.values()].map(r=>({...r,puan:r.isaretler.reduce((a,f)=>a+(f.puan||0),0),
+    isaretler:r.isaretler.slice().sort((a,b)=>(b.puan||0)-(a.puan||0)||(sira[a.tur]??9)-(sira[b.tur]??9))}))
+    .sort((a,b)=>b.puan-a.puan||b.isaretler.length-a.isaretler.length||kisiAdi(a.ad).localeCompare(kisiAdi(b.ad),'tr'));
+  return {satirlar,kaynaklar:{...k.alt.dikkat.kaynaklar}};
+}
+const DIKKAT_TABAN={turkiye:'Türkiye ortalamasına göre',okul:'okul ortalamasına göre'};
+// A flag in words: [what the list shows, the reasoning behind it (title)].
+function isaretYazisi(f){
+  if(f.tur==='dusus')return [f.olcu+': beklenenden '+f1(Math.abs(f.fark))+' net düşük'+(f.taban==='okul'?' (okula göre)':''),
+    f.ad+' · '+DIKKAT_TABAN[f.taban]+' yeri, önceki '+f.n+' denemesinin ortalamasından '+f1(Math.abs(f.fark))+' net aşağıda. Eşik: '+f1(f.esik)+' net (en az '+DIKKAT_NET+' net; ayrıca kendi oynamasına göre tek yönlü %95 öngörü aralığının dışında olmalı).'];
+  if(f.tur==='gerileme')return [f.olcu+': '+f.n+' denemedir geriliyor ('+f1(f.fark).replace('-','−')+' net'+(f.taban==='okul'?', okula göre':'')+')',
+    'Son '+f.n+' denemenin her birinde '+DIKKAT_TABAN[f.taban]+' yeri bir öncekinden aşağıda; toplam '+f1(Math.abs(f.fark))+' net. Son deneme: '+f.ad+'.'];
+  if(f.tur==='devamsiz')return ['Son '+GUN+' günde '+f.n+' gün devamsız','Yoklama’ya göre son '+GUN+' günde kaçırdığı gün sayısı (özürlü ve özürsüz).'];
+  if(f.tur==='konu')return ['Türkiye’ye göre '+f.n+' konuda geride',
+    'Türkiye öğrencilerinin doğru sayısına göre en az 1 soru geride ve şansla açıklanamayan konular. En çok: '+f.en.map(t=>(t.ders?t.ders+' – ':'')+t.konu+' ('+f1(t.fark).replace('-','−')+' soru)').join(', ')+'.'];
+  return [f.yazi||'',f.aciklama||''];
+}
+// The card on the teacher's home. ek: see dikkat(); adDugmesiSi(si, ad): the name button of a student who is only in the notebook.
+function dikkatKarti(ek=null,adDugmesiSi=null){
+  let d;try{d=dikkat(bugunNo(),ek)}catch(e){return ''}
+  const hepsi=d.satirlar,goster=EK.rdTumu?hepsi:hepsi.slice(0,DIKKAT_GOSTER),K=d.kaynaklar;
+  const kaynak=[['deneme','Denemeler'],['turkiye','Türkiye listesi (son deneme)'],['yoklama','Yoklama'],['konu','Konu Takibi · Türkiye’ye göre']]
+    .map(([id,ad])=>'<span class="rd-kaynak'+(K[id]?' var':'')+'">'+(K[id]?'✓ ':'– ')+ad+'</span>').join('');
+  // How many students each kind of flag marks (a student with several flags counts in each).
+  const say=tur=>hepsi.filter(r=>r.isaretler.some(f=>tur.includes(f.tur))).length;
+  const ozet=[[['dusus','gerileme'],'Net düşüşü'],[['devamsiz'],'Devamsızlık'],[['konu'],'Konuda geride'],[['sonuc'],'Sonuç yok']]
+    .map(([tur,ad])=>[ad,say(tur)]).filter(x=>x[1]).map(([ad,n])=>kacis(ad)+' <strong>'+fi(n)+'</strong>').join(' · ');
+  const satir=r=>'<li><span class="rd-kim">'+(r.no?adDugmesi(r.no,kisiAdi(r.ad)):adDugmesiSi&&Number.isInteger(r.si)?adDugmesiSi(r.si,r.ad):kacis(r.ad))+
+    (r.sinif?'<small>'+kacis(r.sinif)+'</small>':'')+'</span><span class="rd-isaretler">'+r.isaretler.map(f=>{const [yazi,neden]=isaretYazisi(f);
+      return '<button type="button" class="rd-isaret rd-p'+Math.min(3,Math.max(1,f.puan||1))+'" data-rd-neden title="'+kacis(neden)+'">'+kacis(yazi)+'</button>'}).join('')+'</span></li>';
+  return '<section class="kart rehber-dikkat" id="rehberDikkat" aria-label="Dikkat isteyen öğrenciler">'+
+    '<div class="yol-baslik"><div><div class="etiket">Dikkat</div><h2 class="rd-baslik">'+(hepsi.length?fi(hepsi.length)+' <span>öğrenci ilgi bekliyor</span>':'<span>Şu an işaretlenen öğrenci yok</span>')+'</h2></div></div>'+
+    (hepsi.length?'<p class="rd-ozet">'+ozet+'</p><ol class="rd-liste">'+goster.map(satir).join('')+'</ol>':'')+
+    (hepsi.length>DIKKAT_GOSTER?'<button type="button" class="dugme rd-tumu" data-rd-tumu aria-expanded="'+!!EK.rdTumu+'">'+(EK.rdTumu?'Daha az göster':'Tümünü göster ('+fi(hepsi.length)+')')+'</button>':'')+
+    '<p class="rd-not">Bir öğrenci şu kurallardan biriyle listeye girer: son denemede kendi beklenenin belirgin altında kalmak, üç denemedir gerilemek, son '+GUN+' günde en az '+DIKKAT_DEVAMSIZ+
+    ' gün devamsızlık, Türkiye’ye göre en az '+DIKKAT_KONU+' konuda geride olmak, planı olduğu hâlde geçen hafta sonuç girmemek. Tahmini Türkiye ortalaması kimseyi listeye sokmaz. Ada basınca Öğrenci kartı açılır; işarete basınca gerekçesi görünür.</p>'+
+    '<div class="rd-kaynaklar" aria-label="Bakılan veriler">'+kaynak+'</div></section>';
+}
+// The student a search text names: the full label, the school number, or the only name that contains it.
+function bul(deger){
+  const v=U(deger),l=kaynak().liste;if(!v)return null;
+  let b=l.find(s=>U(etiketKisi(s))===v)||l.find(s=>s.no===v.trim());
+  if(!b){const a=l.filter(s=>U(s.ad+' '+s.no).includes(v));if(a.length===1)b=a[0]}
+  return b||null;
+}
+// The student search of the top bar (teachers): every student of the school lists; choosing one opens her Öğrenci kartı.
+function ustArama(){
+  let l=[];try{l=kaynak().liste}catch(e){l=[]}
+  if(!l.length)return '';
+  return '<div class="ust-ara"><input type="search" id="ustAra" list="ustAraListe" autocomplete="off" placeholder="Öğrenci ara  /" aria-label="Öğrenci ara: Öğrenci kartını açar" title="Öğrenci ya da numara yazın; kısayol: /">'+
+    '<datalist id="ustAraListe">'+l.map(s=>'<option value="'+kacis(etiketKisi(s))+'"></option>').join('')+'</datalist></div>';
+}
+function ustAramaSecildi(el){
+  const deger=el.value;if(!String(deger||'').trim())return;
+  const b=bul(deger);
+  if(!b){if(typeof bilgiVer==='function')bilgiVer('“'+String(deger).trim()+'” ile eşleşen tek bir öğrenci yok. Listeden seçin ya da numarasını yazın.');return}
+  el.value='';if(el.blur)el.blur();ac(b.key);
 }
 
 /* ---------------- the card ---------------- */
@@ -713,14 +861,14 @@ const adDugmesi=(no,ad,sinif='et-ad')=>'<button type="button" class="'+sinif+'" 
 // A range picked by dragging belongs to one student's exams; the presets (Son 1 ay …) carry over to the next student.
 const aralikSifirla=()=>{if(EK.okAralik&&typeof EK.okAralik==='object')EK.okAralik=undefined};
 function secildi(deger){
-  const v=U(deger),l=kaynak().liste;if(!v)return;
-  let b=l.find(s=>U(etiketKisi(s))===v)||l.find(s=>s.no===v.trim());
-  if(!b){const a=l.filter(s=>U(s.ad+' '+s.no).includes(v));if(a.length===1)b=a[0]}
+  const b=bul(deger);
   if(b){EK.okKim=b.key;EK.okOturum=undefined;aralikSifirla();yenidenCiz('#okAra')}
 }
 if(typeof document!=='undefined'&&document.addEventListener){
   document.addEventListener('click',ev=>{
     const el=ev.target.closest?.('[data-ogrenci-karti]');if(el&&rehberMi()){ac(el.dataset.ogrenciKarti);return}
+    const neden=ev.target.closest?.('[data-rd-neden]');if(neden&&rehberMi()){if(neden.title&&typeof bilgiVer==='function')bilgiVer(neden.title);return}
+    if(ev.target.closest?.('[data-rd-tumu]')&&rehberMi()){EK.rdTumu=!EK.rdTumu;ciz();const t=document.querySelector('[data-rd-tumu]');if(t)t.focus();return}
     if(!etkin())return;
     const o=ev.target.closest?.('[data-ok-oturum]');
     if(o){EK.okOturum=o.dataset.okOturum;aralikSifirla();yenidenCiz('[data-ok-oturum="'+o.dataset.okOturum+'"]');return}
@@ -736,6 +884,15 @@ if(typeof document!=='undefined'&&document.addEventListener){
   });
   document.addEventListener('change',ev=>{if(etkin()&&ev.target.id==='okAra')secildi(ev.target.value)});
   document.addEventListener('keydown',ev=>{if(etkin()&&ev.target.id==='okAra'&&ev.key==='Enter')secildi(ev.target.value)});
+  // The top bar's search: a chosen name (change) or Enter opens the card; "/" outside a field moves the cursor into it.
+  document.addEventListener('change',ev=>{if(ev.target.id==='ustAra'&&rehberMi())ustAramaSecildi(ev.target)});
+  document.addEventListener('keydown',ev=>{
+    if(ev.target.id==='ustAra'){if(ev.key==='Enter'&&rehberMi())ustAramaSecildi(ev.target);else if(ev.key==='Escape'){ev.target.value='';ev.target.blur()}return}
+    if(ev.key!=='/'||ev.ctrlKey||ev.metaKey||ev.altKey)return;
+    const t=ev.target,ara=document.getElementById('ustAra');
+    if(!ara||(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName||''))))return;
+    ev.preventDefault();ara.focus();
+  });
   // Dragging on the chart measures (src/grafik.js); on release the dragged range becomes the card's range. Read before the
   // measuring helper clears its state (capture phase), applied after it.
   let OLC_BENIM=false;
@@ -747,7 +904,7 @@ if(typeof document!=='undefined'&&document.addEventListener){
     setTimeout(()=>{if(etkin()){EK.okAralik={bas,bit};yenidenCiz()}},0);
   },true);
 }
-return {OLCULER,ISTIKRAR_ETIKETLERI,turet,istikrar,seriler,karsilastirmaNeti,etutOzeti,devamsizlik,zayifKonular,hedefAl,kaynak,kart,liste,icerik,gorunum,ac,adDugmesi,grafikSvg,cizim,grafikleriCiz,imzaAl,okulSurprizleri,okulSurprizi,okulSurprizYazisi,gidisat,hedefYks,kalanSinav,DENEME_ARALIGI_GUN,aralikSec,dersSatirlari,medyan,yksGunu,
+return {OLCULER,ISTIKRAR_ETIKETLERI,turet,istikrar,seriler,karsilastirmaNeti,etutOzeti,devamsizlik,zayifKonular,netIsaretleri,geridekiKonuSayilari,dikkat,isaretYazisi,dikkatKarti,bul,ustArama,DIKKAT:{NET:DIKKAT_NET,ONCE:DIKKAT_ONCE,ARDISIK:DIKKAT_ARDISIK,DEVAMSIZ:DIKKAT_DEVAMSIZ,KONU:DIKKAT_KONU,GOSTER:DIKKAT_GOSTER,T:DIKKAT_T},hedefAl,kaynak,kart,liste,icerik,gorunum,ac,adDugmesi,grafikSvg,cizim,grafikleriCiz,imzaAl,okulSurprizleri,okulSurprizi,okulSurprizYazisi,gidisat,hedefYks,kalanSinav,DENEME_ARALIGI_GUN,aralikSec,dersSatirlari,medyan,yksGunu,
   get onbellek(){return ONBELLEK}};
 })();
 function gorunumOgrenciKarti(){return ANALIZ.gorunum()}

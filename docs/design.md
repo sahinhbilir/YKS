@@ -218,14 +218,23 @@ student's: the group name opens its page, the arrow opens the related pages.
   accessible name stays "Kaydet ve çıkış yap").
 - Pages outside the menu mark where they open from (`MENU_BAGLI`): a class's
   curriculum and Konular mark Müfredat; Geçmiş plan kurtar marks Haftalar haritası.
-- Below 1250 px the brand shortens to "YKS" and the gaps narrow. Below 1060 px the
+- **Öğrenci ara** (`#ustAra`, between the menu and Müfredat) lists every student of
+  the school lists (name · class · number); choosing one, or typing a number or a
+  part of one name and pressing Enter, opens that student's Öğrenci kartı and
+  empties the field. "/" outside a field moves the cursor into it, Esc leaves it.
+  A text that names nobody (or several students) shows a notice. The field is only
+  there when school lists are loaded, never for a student or in öğrenci gözüyle,
+  and is hidden below 380 px. While the cursor is in it the bar is not redrawn
+  (only the status text is refreshed), so the typed text and the open list stay.
+- Below 1340 px the brand shortens to "YKS" and the gaps narrow. Below 1130 px the
   status moves to its own line under the menu. On phones the bar is two rows plus the
-  status line. A dropdown near the right edge opens leftwards (`menuSigdir`), so it
-  stays on screen.
+  status line (the search shares the second row). A dropdown near the right edge
+  opens leftwards (`menuSigdir`), so it stays on screen.
 
 After login, after opening a cloud notebook (own, view-only or co-teacher) and on
 the brand, teachers land on the home page (`gorunumRehberAna`, tab `'ana'`). Like
-the student home, it has two cards with linked headings:
+the student home, it has two cards with linked headings, and under them the
+**Dikkat** card (who needs attention; see below):
 
 - **Bu hafta** (opens Haftalık öğrenci takibi). It shows the calendar week and
   **n/N Plan verildi** (this week's plan was saved, or a plan was printed this week;
@@ -255,6 +264,44 @@ the student home, it has two cards with linked headings:
 
 A student's name anywhere in the teacher pages opens that student's own screens in an
 isolated frame ("Öğrenci gözüyle"). See docs/ogrenci-gozuyle.md.
+
+
+### Dikkat (the teacher's home)
+
+`ANALIZ.dikkat(bugun, ek)` lists the students who need attention, most pressing
+first, and `ANALIZ.dikkatKarti` draws them under the two cards (`#rehberDikkat`):
+the name (opens Öğrenci kartı), the class, and one chip per flag. A chip is a
+button: pressing it shows the reasoning (also its `title`). The heading counts the
+students, the line under it counts them per kind, eight rows are shown before
+**Tümünü göster (n)**, and the foot says which sources there are to look at
+(✓ Denemeler · Türkiye listesi (son deneme) · Yoklama · Konu Takibi · Türkiye’ye
+göre), so a missing flag is never mistaken for "no problem".
+
+Every rule uses real figures only and can be explained in one sentence:
+
+| Flag | Rule | Weight |
+|---|---|---|
+| **Beklenenden düşük** (`dusus`) | On the last exam of her grade in a measure (TYT, AYT · alan) her standing is below the one-sided 95 % prediction interval of her previous three to five exams (mean − t·s·√(1+1/n); t = 2,920 / 2,353 / 2,132 for 3 / 4 / 5 exams) **and** at least 4 net below their mean. Her standing is her net against the Türkiye average, so the figure is the card's **Beklenenden**. | 3 |
+| **N denemedir geriliyor** (`gerileme`) | Her standing fell on each of her last three exams, 4 net or more in all. | 3 |
+| **Devamsızlık** (`devamsiz`) | 3 or more missed days in the last 30 (Yoklama's rule for a missed day). | 2, from 6 days 3 |
+| **Konuda geride** (`konu`) | 3 or more topics in which she is at least one question behind what the Türkiye students got right and outside the one-sided 95 % band of chance: z = (d − b)/√(n·p̄(1−p̄)) ≤ −1,645 with b the Türkiye expectation, p̄ = b/n (never smaller than the true spread, so the test is cautious). Needs the Performans analizi in Konu Takibi. | 1 |
+| **Geçen haftanın sonucu yok** (`sonuc`) | She was given a plan last week and entered no result in it (`rehberDikkatEkleri`, from the notebook). | 1 |
+
+- A **tahmini** Türkiye average never raises a flag. When the last exam has no
+  Türkiye list (or one of the three falling exams has none), her standing is her
+  net minus the school mean of the exam for every exam of the rule, and the chip
+  says "(okula göre)".
+- A student who did not sit her grade's last exam gets no exam flag: there is
+  nothing new to say about her.
+- The prediction interval makes the rule fair to a student whose nets swing: a
+  fall inside her own usual swing is not a flag, the same fall for a steady
+  student is (Hahn & Meeker, *Statistical Intervals*).
+- Rows are ordered by the sum of the weights, then the number of flags, then the
+  name. A student who is only in the notebook (not in the school lists) gets her
+  own row; her name opens öğrenci gözüyle.
+- The exam, Yoklama and Konu Takibi flags are cached with `ANALIZ.kaynak` (same
+  signature); the notebook's flags are added on every draw and never cached.
+  Nothing is stored in the notebook. Teachers only.
 
 ## Ayarlar
 
