@@ -105,20 +105,70 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(run('OGRETMEN_RAPOR.hucreRengi(null)'), '');
     assert.deepEqual(get('OGRETMEN_RAPOR.olc({d:2,b:2,n:4,v:0})'), { fark: 0, z: null, durum: 'belirsiz' });
   });
+  await check('TYT / AYT from the timetable, class by class: a lesson that names its session is that session alone, an unmarked one takes the rest; Türkçe beside Edebiyat (EA); mixed lessons are both', () => {
+    const PL = { '12/C': { kod: '303', ts: 1, saatler: SA, dersler: [[0, '09.00', 'TYT MATEMATİK', 'SENTETİK ÖĞRETMEN TE'], [0, '10.00', 'AYT MATEMATİK', 'SENTETİK ÖĞRETMEN AY'], [1, '09.00', 'GEOMETRİ', 'SENTETİK ÖĞRETMEN GE'], [1, '10.00', 'TÜRK DİLİ VE EDEBİYATI', 'SENTETİK ÖĞRETMEN ED']] },
+      '11/A': { kod: '201', ts: 1, saatler: SA, dersler: [[0, '09.00', 'TÜRKÇE', 'SENTETİK ÖĞRETMEN TU'], [0, '10.00', 'TÜRK DİLİ VE EDEBİYATI', 'SENTETİK ÖĞRETMEN ED'], [1, '09.00', 'MATEMATİK', 'SENTETİK ÖĞRETMEN TE']] } };
+    run(`(()=>{const p=ETUTPLANI.oku().plan;p.programlar=${JSON.stringify(PL)};D.etutPlani=ETUTPLANI.dogrula(JSON.parse(JSON.stringify(p)))})()`);
+    const l = get('OGRETMEN_RAPOR.ogretmenler()'), o = ad => l.find(x => x.ad === 'SENTETİK ÖĞRETMEN ' + ad).dersler.map(d => [d.ad, d.kodSinif]);
+    assert.deepEqual(o('TE'), [['Matematik', { 'MATEMATİK-T': ['11/A', '12/C'], 'MATEMATİK-A': ['11/A'] }]], 'TYT Matematik in 12/C; 11/A’s unmarked Matematik is both');
+    assert.deepEqual(o('AY'), [['Matematik', { 'MATEMATİK-A': ['12/C'] }]], 'AYT Matematik: a second teacher, AYT only');
+    assert.deepEqual(o('GE'), [['Geometri', { 'GEOMETRİ-T': ['12/C'], 'GEOMETRİ-A': ['12/C'] }]], 'Geometri is TYT and AYT');
+    assert.deepEqual(o('TU'), [['Türkçe', { 'TÜRKÇE-T': ['11/A'] }]]);
+    assert.deepEqual(o('ED'), [['Türk dili ve edebiyatı', { 'TÜRKÇE-T': ['12/C'], 'TÜRK DİLİ VE EDB-A': ['11/A', '12/C'] }]], 'beside Türkçe (11/A) Türk dili ve edebiyatı is AYT Edebiyat; alone (12/C) both');
+    // The page says which session a one-session subject is.
+    kaynakKur(); run(`D.ogr=[];EK.ogrHoca=undefined;EK.ogrDuzey=undefined`); const h = run('OGRETMEN_RAPOR.gorunum()');
+    assert.match(h, /<h2>Sentetik Öğretmen Ay<\/h2><p class="mini">Matematik \(AYT\) · 12\/C<\/p>/);
+    assert.match(h, /<h2>Sentetik Öğretmen Ge<\/h2><p class="mini">Geometri · 12\/C<\/p>/);
+  });
+  await check('Sınıf düzeyi: one grade’s teachers, classes and blocks only', () => {
+    planKur(); kaynakKur(); konuKur(); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:[]})');
+    let h = run('OGRETMEN_RAPOR.gorunum()');
+    assert.match(h, /<select id="ogrDuzey"><option value="">Bütün düzeyler<\/option><option value="12">12\. sınıf<\/option><option value="9">9\. sınıf<\/option><\/select>/);
+    run('EK.ogrDuzey=12'); h = run('OGRETMEN_RAPOR.gorunum()');
+    assert.match(h, /<h1 class="et-baslik">Öğretmen raporu · 12\. sınıf<\/h1>/); assert.match(h, /<option value="12" selected>/);
+    assert.match(h, /<h2>Sentetik Öğretmen Ay<\/h2><p class="mini">Matematik · 12\/A, 12\/B<\/p>/, 'the 9th grade is not listed');
+    run('EK.ogrDuzey=9'); h = run('OGRETMEN_RAPOR.gorunum()');
+    assert.equal((h.match(/<section class="ogr-ogretmen"/g) || []).length, 1, 'only the teacher of the 9th grade'); assert.match(h, /<h2>Sentetik Öğretmen Ay<\/h2><p class="mini">Matematik · 9\/C<\/p>/);
+    assert.match(h, /Bütün öğretmenler \(1\)/); assert.match(h, /henüz deneme ya da konu verisi yok/);
+    run('EK.ogrDuzey=undefined');
+  });
+  await check('the chart writes every value (a printout has no tooltips); the headline says how the gap moved; the grid’s first → last column', () => {
+    kaynakKur();
+    const seri = get(`OGRETMEN_RAPOR.netSerisi(K,['12/A','12/B'],'TYT','MAT','MATEMATİK-T')`);
+    run(`OGRETMEN_RAPOR.netSerisi(K,['12/A','12/B','12/C'],'TYT','MAT','MATEMATİK-T',__g=new Set())`); assert.deepEqual(get('[...__g].sort()'), ['12/A', '12/B'], 'the classes that had a net');
+    sandbox.__b = { seri, kod: 'MATEMATİK-T', dersAd: 'TYT Matematik' };
+    const svg = run('OGRETMEN_RAPOR.netGrafigi(__b,720)'), t = [...svg.matchAll(/<text class="ogr-deger ([^"]*)"[^>]*>([^<]*)<\/text>/g)].map(m => [m[1], m[2]]);
+    // Gaps +8 and +13; nets 20 and 26 against 12 and 13: all written, gap labels green.
+    assert.deepEqual(t, [['ogr-y', '+8,0'], ['ogr-y', '+13,0'], ['ogr-deger-okul', '20,0'], ['ogr-deger-tr', '12,0'], ['ogr-deger-okul', '26,0'], ['ogr-deger-tr', '13,0']]);
+    assert.match(svg, /Türkiye’ye göre fark \(net\)/); assert.match(svg, /<rect class="ogr-cubuk ogr-cubuk-ust"/); assert.match(svg, /<line class="ogr-sifir"/);
+    // The gap panel's scale is the gaps' own: 0 to 13 + 22 % of 13, not 0 to the nets.
+    const yuk = [...svg.matchAll(/<rect class="ogr-cubuk[^"]*" x="[^"]*" y="([^"]*)" width="[^"]*" height="([^"]*)"/g)].map(m => +m[2]);
+    assert(Math.abs(yuk[0] / yuk[1] - 8 / 13) < 0.005, 'bars in proportion to the gaps (heights rounded to 0,1 px)');
+    planKur(); konuKur(); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:[]})'); const h = run('OGRETMEN_RAPOR.gorunum()');
+    // 1201: +8 → 1202: +13: five nets better than the exam before.
+    assert.match(h, /<span class="ogr-degisim"><b class="ogr-y">▲ \+5,0<\/b> önceki denemeye göre<\/span>/);
+    assert.match(h, /<th scope="col" class="ogr-iz-degisim"[^>]*>İlk → son<\/th>/);
+    // The synthetic topics answer alike in every exam: no change.
+    assert.match(h, /<td class="ogr-iz-degisim ogr-sabit"[^>]*>■ 0<\/td>/);
+  });
   await check('the teacher’s own etüts: attendances and students once per session; their gap to Türkiye before the first etüt and on the latest exam (hand-worked)', () => {
     kaynakKur();
     put('OG', [{ no: '1001', name: 'SENTETİK ADA', cls: '12/A', sessions: [{ date: '2026-10-05', course: 'MATEMATİK TYT', teacher: 'SENTETİK ÖĞRETMEN AY' }, { date: '2026-10-08', course: 'MATEMATİK TYT', teacher: 'Sentetik Öğretmen Ay' }, { date: '2026-10-09', course: 'AYT MATEMATİK', teacher: 'SENTETİK ÖĞRETMEN AY' }],
         exams: [{ exam: '27-YKS-1201', date: '2026-10-01', session: 'TYT', nets: { mat: 20 } }, { exam: '27-YKS-1202', date: '2026-10-15', session: 'TYT', nets: { mat: 22 } }] },
       { no: '1002', name: 'SENTETİK BORA', cls: '12/A', sessions: [{ date: '2026-10-20', course: 'MATEMATİK', teacher: 'SENTETİK ÖĞRETMEN AY' }, { date: '2026-10-21', course: 'FİZİK', teacher: 'SENTETİK ÖĞRETMEN AY' }],
-        exams: [{ exam: '27-YKS-1201', date: '2026-10-01', session: 'TYT', nets: { mat: 10 } }] }]);
+        exams: [{ exam: '27-YKS-1201', date: '2026-10-01', session: 'TYT', nets: { mat: 10 } }] },
+      { no: '1009', name: 'SENTETİK CAN', cls: '11/B', sessions: [{ date: '2026-10-20', course: 'MATEMATİK', teacher: 'SENTETİK ÖĞRETMEN AY' }], exams: [] }]);
     run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:OG})');
     const d = '{ad:"Matematik"}';
     const t = get(`OGRETMEN_RAPOR.etutOzeti(${JSON.stringify(run("'SENTETİK ÖĞRETMEN AY'.toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\\p{M}/gu,'')"))},${d},'TYT','MATEMATİK-T',K.trFn)`);
-    // ADA: 2 TYT etüts (the name in any spelling), BORA 1 (no session named: TYT). Fizik is another subject. ADA: 1201 (before her first
-    // etüt) 20 − 12 = +8 → 1202 22 − 13 = +9. BORA has no exam after his etüt: not measured.
-    assert.deepEqual(t, { etut: 3, ogrenci: 2, olculen: 1, once: 8, sonra: 9 });
-    const a = get(`OGRETMEN_RAPOR.etutOzeti(${JSON.stringify(run("'SENTETİK ÖĞRETMEN AY'.toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\\p{M}/gu,'')"))},${d},'AYT','MATEMATİK-A',K.trFn)`);
-    assert.deepEqual([a.etut, a.ogrenci, a.olculen], [1, 1, 0], 'the AYT etüt only in the AYT block');
+    // ADA: 2 TYT etüts (the name in any spelling), BORA 1 (no session named: counted in TYT and in AYT). Fizik is another subject.
+    // CAN (11/B) counts for every grade but not in the 12th grade's block. ADA: 1201 (before her first etüt) 20 − 12 = +8 → 1202
+    // 22 − 13 = +9. BORA has no exam after his etüt: not measured.
+    const hk = JSON.stringify(run("'SENTETİK ÖĞRETMEN AY'.toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\\p{M}/gu,'')"));
+    assert.deepEqual(get(`OGRETMEN_RAPOR.etutOzeti(${hk},${d},'TYT','MATEMATİK-T',K.trFn,undefined,12)`), { etut: 3, ogrenci: 2, olculen: 1, once: 8, sonra: 9, ayrilmamis: 1 });
+    assert.deepEqual([t.etut, t.ogrenci], [4, 3], 'no grade given: CAN too');
+    const a = get(`OGRETMEN_RAPOR.etutOzeti(${hk},${d},'AYT','MATEMATİK-A',K.trFn,undefined,12)`);
+    assert.deepEqual([a.etut, a.ogrenci, a.olculen, a.ayrilmamis], [2, 2, 0, 1], 'AYT: ADA’s AYT etüt and BORA’s unnamed one');
   });
   await check('the page: one section per teacher, classes together, formulas and raw numbers, no student names, no class figures, no ranking; the teacher filter', () => {
     planKur(); kaynakKur(); konuKur(); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:[]})');

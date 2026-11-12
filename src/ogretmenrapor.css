@@ -9,17 +9,23 @@
 .ogr-kpi{display:flex;flex-direction:column;gap:4px}
 .ogr-kpi-ad{font-size:12px;color:var(--soluk)}
 .ogr-kpi strong{font-size:32px;line-height:1.1;font-variant-numeric:tabular-nums}.ogr-kpi strong small{font-size:.45em;font-weight:600;color:var(--soluk)}
-.ogr-k{color:var(--kritik)}.ogr-y{color:var(--iyi)}
+.ogr-degisim{font-size:12.5px;color:var(--soluk)}.ogr-degisim b{font-size:14px;font-variant-numeric:tabular-nums}
+.ogr-k{color:var(--kritik)}.ogr-y{color:var(--iyi)}.ogr-sabit{color:var(--soluk)}
 .ogr-grafik{width:100%;min-height:160px}
 .ogr-net{display:block;overflow:visible}
 .ogr-izgara{stroke:var(--cizgi);stroke-width:1}
 .ogr-tik{font-size:11px;fill:var(--soluk);font-variant-numeric:tabular-nums}
-.ogr-fark-ust{fill:var(--iyi);fill-opacity:.22}.ogr-fark-alt{fill:var(--kritik);fill-opacity:.22}
+.ogr-panel-ad{font-size:12px;font-weight:700;fill:var(--murekkep)}
+.ogr-cubuk-ust{fill:var(--iyi);fill-opacity:.8}.ogr-cubuk-alt{fill:var(--kritik);fill-opacity:.8}
+.ogr-sifir{stroke:var(--murekkep);stroke-width:1.4}
+.ogr-deger{font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;paint-order:stroke;stroke:var(--kagit);stroke-width:3px;stroke-linejoin:round}
+text.ogr-y{fill:var(--iyi)}text.ogr-k{fill:var(--kritik)}.ogr-deger-okul{fill:var(--murekkep)}.ogr-deger-tr{fill:var(--soluk);font-weight:600;font-size:10.5px}
 .ogr-tr{fill:none;stroke:var(--soluk);stroke-width:1.6;stroke-dasharray:5 4}
 .ogr-okul{fill:none;stroke-width:2.6;stroke-linejoin:round}
 .ogr-tr-nokta{fill:var(--kagit);stroke:var(--soluk);stroke-width:1.4}
 .ogr-okul-nokta{stroke:var(--kagit);stroke-width:2}
 .ogr-l-tr{background:repeating-linear-gradient(90deg,var(--soluk) 0 5px,transparent 5px 9px)!important}
+.ogr-l-cubuk{width:12px;height:10px;border-radius:2px;background:linear-gradient(90deg,var(--iyi) 0 50%,var(--kritik) 50%)!important}
 .ogr-alt-baslik{margin:4px 0 0;font-size:14px;color:var(--soluk);font-weight:600}
 .ogr-iz-kutu{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .ogr-iz{border-collapse:separate;border-spacing:3px;font-size:12px;font-variant-numeric:tabular-nums;min-width:100%}
@@ -32,6 +38,7 @@ thead .ogr-iz-konu{color:var(--soluk);font-size:11px;font-weight:600}
 .ogr-iz-soluk{color:var(--soluk);font-weight:500}
 .ogr-iz-bos{background:repeating-linear-gradient(135deg,transparent 0 4px,color-mix(in srgb,var(--cizgi) 60%,transparent) 4px 5px);border-radius:6px}
 .ogr-iz-seri{min-width:46px;text-align:left;padding-left:6px!important}
+.ogr-iz-degisim{min-width:58px;text-align:center;font-weight:700;font-size:12px;white-space:nowrap;padding:0 4px!important}th.ogr-iz-degisim{color:var(--soluk);font-size:11px;font-weight:600;vertical-align:bottom}
 .ogr-seri{font-size:10px;letter-spacing:-1px;white-space:nowrap}.ogr-seri-geride{color:var(--kritik)}.ogr-seri-onde{color:var(--iyi)}
 .ogr-olcek{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--soluk);max-width:460px}
 .ogr-olcek i{flex:1;height:10px;border-radius:5px;background:linear-gradient(90deg,color-mix(in srgb,var(--kritik) 85%,transparent),color-mix(in srgb,var(--kritik) 25%,transparent) 45%,transparent 50%,color-mix(in srgb,var(--iyi) 25%,transparent) 55%,color-mix(in srgb,var(--iyi) 85%,transparent))}
@@ -39,8 +46,15 @@ thead .ogr-iz-konu{color:var(--soluk);font-size:11px;font-weight:600}
 .ogr-etut-sayi{display:flex;align-items:baseline;gap:6px}.ogr-etut-sayi strong{font-size:20px;font-variant-numeric:tabular-nums}.ogr-etut-sayi span{font-size:12px;color:var(--soluk)}
 .ogr-etut-once{display:flex;align-items:baseline;gap:8px;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}.ogr-etut-once i{font-style:normal;color:var(--soluk)}.ogr-etut-once small{font-size:12px;font-weight:400;color:var(--soluk)}
 .ogr-yok{color:var(--soluk)}
+.ogr-etut-not{flex-basis:100%;margin:0}
 .ogr-formul{font-size:13px;line-height:1.55}.ogr-formul summary{cursor:pointer;font-weight:600}.ogr-formul p{margin:8px 0;max-width:110ch}
 .ogr-ham{margin-top:10px}
 @media (max-width:640px){.ogr-ust{grid-template-columns:1fr}.ogr-kpi strong{font-size:26px}}
 @media print{#ogrKok .et-arac,.ogr-formul:not([open]){display:none}.ogr-ogretmen{break-before:page;border-top:0}.ogr-ogretmen:first-of-type{break-before:auto}.ogr-blok{break-inside:avoid}
-  .ogr-iz-h,.ogr-fark-ust,.ogr-fark-alt,.ogr-olcek i{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  /* The subjects' colours: the screen theme sets them for the whole page, print has only these (light) ones. */
+  #ogrKok{--e-c1:#2a78d6;--e-c2:#eb6834;--e-c3:#1baf7a;--e-c4:#eda100;--e-c5:#e87ba4;--e-c6:#008300;--e-c7:#6250d6;--e-c8:#e34948;--e-c9:#5d7482;--e-c10:#9c8a6a;--e-c11:#7d5a3c;--e-c12:#7a8734}
+  /* Colours and fills print even with "background graphics" off. */
+  #ogrKok,#ogrKok *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* The chart takes the page's width (it is drawn again at that width); the headline sits above it. */
+  .ogr-ust{grid-template-columns:1fr;gap:6px}.ogr-kpi{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 14px}.ogr-kpi strong{font-size:24px}
+  .ogr-net{max-width:100%;height:auto}.ogr-iz-kutu{overflow:visible}}
