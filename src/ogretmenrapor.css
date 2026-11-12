@@ -25,6 +25,13 @@ text.ogr-y{fill:var(--iyi)}text.ogr-k{fill:var(--kritik)}.ogr-deger-okul{fill:va
 .ogr-tr-nokta{fill:var(--kagit);stroke:var(--soluk);stroke-width:1.4}
 .ogr-okul-nokta{stroke:var(--kagit);stroke-width:2}
 .ogr-l-tr{background:repeating-linear-gradient(90deg,var(--soluk) 0 5px,transparent 5px 9px)!important}
+/* The list's own yardstick (its last row against the Türkiye average) on the gap panel, and the KPI lines under the gap. */
+.ogr-sinir{fill:none;stroke:var(--e-c7);stroke-width:1.6;stroke-dasharray:6 3}
+.ogr-sinir-nokta{fill:var(--kagit);stroke:var(--e-c7);stroke-width:1.4}
+text.ogr-sinir-yazi{fill:var(--e-c7);font-weight:600;font-size:10.5px}
+.ogr-l-sinir{background:repeating-linear-gradient(90deg,var(--e-c7) 0 6px,transparent 6px 9px)!important}
+.ogr-sinir-kpi,.ogr-sira-kpi{font-size:12.5px;color:var(--soluk)}.ogr-sinir-kpi b,.ogr-sira-kpi b{font-size:14px;color:var(--murekkep);font-variant-numeric:tabular-nums}
+.ogr-sira-kpi b.ogr-y{color:var(--iyi)}.ogr-sira-kpi b.ogr-k{color:var(--kritik)}.ogr-sira-kpi b.ogr-sabit{color:var(--soluk)}
 .ogr-l-cubuk{width:12px;height:10px;border-radius:2px;background:linear-gradient(90deg,var(--iyi) 0 50%,var(--kritik) 50%)!important}
 .ogr-alt-baslik{margin:4px 0 0;font-size:14px;color:var(--soluk);font-weight:600}
 .ogr-iz-kutu{overflow-x:auto;-webkit-overflow-scrolling:touch}

@@ -46,6 +46,8 @@
 #eeKok .ee-grafik .ee-ad{fill:var(--e-fg);font-weight:500;text-decoration:none;cursor:default}
 #eeKok .ee-grafik .ee-baslik{fill:var(--e-fg2);font-weight:500}
 .ee-cizgi{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.ee-cizgi.ee-kesik{stroke-width:1.6;stroke-dasharray:4 4;opacity:.7}
+.et-izgara.ee-disi{stroke-dasharray:2 4}
 .ee-sutun{fill:var(--e-c1)}
 .ee-yukari{fill:var(--e-ok)}.ee-asagi{fill:var(--e-bad)}
 .ee-ortcizgi{stroke:var(--e-fg2);stroke-width:1.5;stroke-dasharray:5 4}

@@ -6,6 +6,7 @@
 
 - **No class comparisons.** A teacher's students are the students of all the classes the teacher teaches the subject in, taken together. A class is never shown on its own and classes are never ranked against each other (the class names appear only to say whom the section covers).
 - **No students.** No student is named, listed or ranked.
+- **The only place shown** is the whole school's among Türkiye's schools, as the publisher's list prints it.
 - **No teacher comparisons.** Each section is about one teacher; there is no league table.
 
 ## Where the data comes from
@@ -28,9 +29,9 @@ Each teacher's subject is split by grade (an exam belongs to one grade) and by e
 
 ## A block
 
-1. **Headline:** *Son deneme · Türkiye’ye göre* in net (green above, red below), for the newest exam that has a Türkiye list; an exam whose list has not come yet is skipped, never filled in. Under it, how that gap moved: ▲/▼ against the exam before and against the first exam.
+1. **Headline:** *Son deneme · Türkiye’ye göre* in net (green above, red below), for the newest exam that has a Türkiye list; an exam whose list has not come yet is skipped, never filled in. Under it, how that gap moved: ▲/▼ against the exam before and against the first exam. Then the list's own yardstick in the same exam, *İlk 100 sınırı: Türkiye ortalaması +6,5 net* (how far above the Türkiye average the list's last row, the 100th school, stands), and *Okulun Türkiye sırası (tüm okul)*: the whole school's printed place in the subject's list in the newest exam with a list (“İlk 100 dışı” outside it), with its move since the exam before (▲ green rose, ▼ red fell; outside the list counts as 101.; “40. → dışı”). The place is the school's, never a class's or the teacher's, and is never estimated; it needs the school chosen on the Türkiye geneli page.
 2. **Net chart**, two panels on one time axis, every value written on the chart (a printout has no tooltips):
-   - *Türkiye’ye göre fark (net)*: a bar per exam from the Türkiye line (0), green above, red below, its value on it. The scale is the gaps' own range, so a change of a few tenths of a net is visible;
+   - *Türkiye’ye göre fark (net)*: a bar per exam from the Türkiye line (0), green above, red below, its value on it, and a dashed purple line, **İlk 100 sınırı**: where the list's last row stood against the Türkiye average in that exam, its value written at the newest exam. It is the list's own scale for a gap (something like a spread, read from the printed list, not fitted): a bar that reaches the line means the students' mean is as far above the Türkiye average as the 100th school. The scale covers the gaps and the line;
    - *Ortalama net*: the students' mean net in the subject (solid, the subject's colour) and the Türkiye average (dashed), each point with its value. Mean net = the mean over the students whose net the list prints (a blank cell is not a 0 here).
 
    With many exams the values are written on every k-th point counted back from the newest, so they never overlap.
@@ -43,7 +44,7 @@ Each teacher's subject is split by grade (an exam belongs to one grade) and by e
    - rows are ordered most behind first; each column's head carries the whole subject's gap that exam; hatched cells: the topic had no question that exam.
    Because b uses Türkiye's success on the same questions, a hard question does not paint a topic red on its own: if everybody found it hard, the expectation is low too.
 4. **Etüt:** the teacher's etüt attendances in the subject (rows of the etüt report: one student at one etüt) by students of the block's grade, and the number of those students. The arrow shows their mean gap to the Türkiye average in the subject on their last exam on or before their first etüt with the teacher → on their latest exam (only students with both). It is descriptive: everything else the students did also moves it. Etüts are not split into TYT and AYT the way classes are: an etüt whose name gives a session (“MATEMATİK TYT”, “AYT FİZİK”) counts in that block; one that names none counts in each of the teacher's blocks of the subject (TYT and AYT), and the block says how many such etüts it counted.
-5. **Nasıl hesaplanır · ham veriler:** the rules above in plain words, and the raw tables: per exam (students, mean net, Türkiye average, gap) and per topic and exam (n, d, b, gap, z). The topic table is built when the box is opened (over all teachers it runs to thousands of rows).
+5. **Nasıl hesaplanır · ham veriler:** the rules above in plain words, and the raw tables: per exam (students, mean net, Türkiye average, gap, the list's last row, the 1st school, the school's place) and per topic and exam (n, d, b, gap, z). The topic table is built when the box is opened (over all teachers it runs to thousands of rows).
 
 ## Use and print
 

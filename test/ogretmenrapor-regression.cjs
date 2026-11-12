@@ -73,6 +73,29 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.deepEqual(get(`OGRETMEN_RAPOR.netSerisi(K,['11/A'],'TYT','MAT','MATEMATİK-T')`), []);
     run(`K.trFn=()=>null`); assert.deepEqual(get(`OGRETMEN_RAPOR.netSerisi(K,['12/A'],'TYT','MAT','MATEMATİK-T')`).map(p => [p.genel, p.fark]), [[null, null], [null, null]], 'no Türkiye list: no gap, never a guess');
   });
+  await check('the list’s own yardstick and the school’s printed place: the last row against the Türkiye average, the move in places, never estimated (hand-worked)', () => {
+    kaynakKur();
+    // MATEMATİK-T in 1201: the list's last row 18,5 net (Türkiye 12 → +6,5), 1st school 26; the school 40th. In 1202: last row 19 (+6), the school outside.
+    // Then 1203 brings it back at 31st.
+    run(`(()=>{const li={'27-YKS-1201':{n:100,ilk:{ad:'A',net:26},son:{ad:'B',net:18.5},sira:40},'27-YKS-1202':{n:100,ilk:{ad:'A',net:27},son:{ad:'B',net:19},sira:null}};
+      const tr={'27-YKS-1201':{'MATEMATİK-T':12},'27-YKS-1202':{'MATEMATİK-T':13}};
+      K.trFn=ad=>tr[ad]?{genel:k=>tr[ad][k]??null,dersListesi:k=>k==='MATEMATİK-T'&&li[ad]?{...li[ad],genel:tr[ad][k]}:null}:null})()`);
+    const s = get(`OGRETMEN_RAPOR.netSerisi(K,['12/A'],'TYT','MAT','MATEMATİK-T')`);
+    assert.deepEqual(s.map(p => [p.sinir, p.birinci, p.listeN, p.sira]), [[18.5, 26, 100, 40], [19, 27, 100, null]]);
+    const b = { dersAd: 'TYT Matematik', duzey: 12, kod: 'MATEMATİK-T', siniflar: ['12/A'], seri: s, izgara: null, etut: null };
+    put('__B', b); const h = run('OGRETMEN_RAPOR.blokHtml(__B,0)'), svg = run('OGRETMEN_RAPOR.netGrafigi(__B,700)');
+    const yazi = h.replace(/<[^>]+>/g, '');
+    assert.match(yazi, /İlk 100 sınırı: Türkiye ortalaması \+6,0 net/, 'the yardstick in the newest exam');
+    // 40th → outside (counted as 101st): 61 places down.
+    assert.match(yazi, /Okulun Türkiye sırası \(tüm okul\): İlk 100 dışı ▼ 61 40\. → dışı/);
+    assert(svg.includes('class="ogr-sinir"') && /ilk 100 sınırı \+6,0/.test(svg), 'the dashed yardstick with its value');
+    assert(!/≈|tahmini|dilim|ilk %/.test(yazi + svg), 'nothing estimated');
+    // Raw numbers: the last row, the 1st school, the school's place.
+    const ham = h.slice(h.indexOf('<table'));assert.match(ham, /<td class="sayi">18,50<\/td><td class="sayi">26,00<\/td><td class="sayi">40\.<\/td>/);assert.match(ham, /<td class="sayi">dışı<\/td>/);
+    // No school followed on the Türkiye geneli page: no place, the yardstick stays.
+    put('__B2', { ...b, seri: s.map(p => ({ ...p, sira: undefined })) }); const h2 = run('OGRETMEN_RAPOR.blokHtml(__B2,0)');
+    assert(!h2.includes('Okulun Türkiye sırası (tüm okul)') && h2.includes('İlk 100 sınırı'));
+  });
   await check('topic grid: correct answers against Türkiye on the same questions, gap in points, z with the design effect, three in a row (hand-worked)', () => {
     konuKur();
     const z = get(`OGRETMEN_RAPOR.konuIzgarasi(D.konutakibi,['12/A'],'TYT','TÜRKÇE-T')`);
@@ -194,7 +217,8 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert(!h.includes('<td>Sözcükte Anlam</td>'), 'the topic rows are not in the page until opened');
     // Never a student's name, never a rank.
     for (const ad of ['SENTETİK ADA', 'SENTETİK BORA', 'SENTETİK CEMRE', 'Sentetik Ada']) assert(!h.includes(ad), ad);
-    assert(!/sıra|Sıra|\d+\. sıra/.test(h.replace(/<select[\s\S]*?<\/select>/, '')), 'no ranking');
+    // The only place on the page is the whole school's among Türkiye's schools (the printed list), never a class, teacher or student.
+    assert(!/sıra|Sıra|\d+\. sıra/.test(h.replace(/<select[\s\S]*?<\/select>/, '').replace(/Okulun (Türkiye )?sırası/g, '')), 'no ranking');
     // One teacher.
     run(`EK.ogrHoca=${JSON.stringify(get('OGRETMEN_RAPOR.ogretmenler()')[1].key)}`); h = run('OGRETMEN_RAPOR.gorunum()');
     assert.equal((h.match(/<section class="ogr-ogretmen"/g) || []).length, 1); assert.match(h, /<h2>Sentetik Öğretmen De<\/h2>/);

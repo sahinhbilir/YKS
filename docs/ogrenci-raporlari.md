@@ -148,27 +148,25 @@ sonra her sınıf düzeyinin sayfalarını verir.
   ve okul, o sayfada öğretmenin seçtiğidir (`EK.tgListe`, `EK.tgOkul`). Seçilen liste türünde o sınıf
   düzeyi yoksa eski sırayla (Kolej, Tüm kurumlar, Kurs) ilk uygun liste gösterilir ve notta bu yazılır.
   Kutunun notu liste türüyle başlar (“Kolej listesi · …”).
-  **TYT** ve **AYT** ayrı iki grafiktir (yan yana, öğrenci raporundaki TYT / AYT gibi):
-  TYT toplam Türkiye yüzdelik dilimi (“ilk %12”, küçük = daha iyi); AYT'de varsa SAY, EA ve SÖZ toplamları.
-  Eksen T (z) ölçeğindedir, değerler dilim olarak yazılır (ilk %1 en üstte, %50 ortada); kesik çizgi
-  “Türkiye’nin ortasındaki okul”dur (%50). Dilim, Türkiye geneli sayfasındaki T puanının sözle
-  söylenişidir (dilim = 100·(1 − Φ((T − 50)/10)); tam listede sıra ÷ okul sayısı). Bir toplamın değeri o seride bulunmayan bir denemede boşsa çizgi kopmaz, önceki
-  noktadan sonrakine düz bağlanır; nokta yalnızca değeri olan denemelerdedir. Her toplam için kutuda
-  son dilim, altında sözlü bant (“Ortalamanın belirgin üstünde” …), değişim (**ilk denemeden son denemeye**,
-  ikisi de değeri olan denemeler; “▲ ilk %31 → ilk %12”) ve sıra (“≈ 183 okul içinde 23.”) yazılır;
-  tahmini sıra “≈” ile işaretlenir. Her denemenin altında tarihi, adı ve türü (**Tarama** / **Genel**) görünür.
-  Her grafiğin altında, öğrenci raporundaki gibi, **ders başına bir küçük dilim grafiği** vardır
-  (TYT dersleri TYT grafiğinin, AYT dersleri AYT grafiğinin altında): tam ders adı, son dilim ve değişim
-  (küçük kutuda “▲ %31 → %12”; “ilk %” sayfa altındaki açıklamadadır).
+  Yalnızca listelerde yazan kullanılır: sıra listede yazan yerdir (1 = en iyi); okulun listede olmadığı ders
+  “İlk 100 dışı” yazılır, yeri tahmin edilmez. Yüzdelik dilim, T puanı ve tahmini sıra yoktur.
+  **TYT** ve **AYT** ayrı iki karttır (yan yana): oturumun derslerindeki **ortalama sıra** deneme deneme
+  (listede olmayan ders 101. sayılır; eksen 1. en üstte, 100. en altta). Bir değeri olmayan denemede çizgi
+  kopmaz, önceki noktadan sonrakine düz bağlanır; nokta yalnızca değeri olan denemelerdedir. Sağdaki iki kutu:
+  **Ortalama sıra** (son değer ve **ilk denemeden son denemeye** değişimi, “▲ 31,2 → 12,4”) ve **İlk 100’de**
+  (listede yer alınan ders sayısı, “7 / 10 ders”, ve değişimi). Her denemenin altında tarihi, adı ve türü
+  (**Tarama** / **Genel**) görünür.
+  Kartın altında **ders başına bir küçük sıra grafiği** vardır: tam ders adı, son sıra (“23.” ya da
+  “İlk 100 dışı”) ve değişim (“▲ 35. → 23.”, listeden çıkışta “dışı”).
   **Ders değişimi yalnızca tarama → tarama**dır: son Tarama denemesi ile bir önceki Tarama denemesi (arada
   Genel deneme varsa atlanır), ör. 1202 → 1203; ders bölümünün başlığı bu çifti yazar. Çifti oluşturan iki
   deneme ana grafikte açık yeşil sütunla ve “Ders karşılaştırması: 1202 → 1203 (tarama)” yazısıyla
   işaretlenir. Deneme türü Sıralamalar'daki Tarama / Genel seçiminden, yoksa deneme adından
-  (adında “tarama” geçiyorsa Tarama) alınır. İki Tarama denemesi yoksa işaret görünmez ve ders ΔT'leri
-  “—” olur (“İki tarama denemesi yok”). Renk ve ok Türkiye geneli sayfasındaki ΔT kuralından gelir (±0,5 T), açıklama sözlüdür:
-  ▲ yeşil: üst dilime çıktı (iyileşti) · ▼ kırmızı: alt dilime düştü · gri: değişmedi. T ve σ yalnızca
-  grafiklerin üzerine gelince açılan kutularda görünür.
-  **Tüm okul**'da sınıf düzeyi başına bir satır vardır (son TYT dilimi ve bandı, ilk → son değişim, sıra, küçük çizgi).
+  (adında “tarama” geçiyorsa Tarama) alınır. İki Tarama denemesi yoksa işaret görünmez ve ders değişimleri
+  “—” olur (“İki tarama denemesi yok”). Renk ve ok: ▲ yeşil: sıra yükseldi · ▼ kırmızı: sıra düştü ·
+  gri: değişmedi (yarım sıradan az).
+  **Tüm okul**'da sınıf düzeyi başına bir satır vardır (TYT ortalama sırası, ilk → son değişim, listede
+  olunan ders sayısı, küçük çizgi).
   O sınıf düzeyi için liste yoksa “Türkiye geneli listesi yok; Türkiye geneli sayfasından
   ekleyin.” yazılır ve okulun kendi denemelerinden TYT net ortalaması çizilir. Okul listede
   bulunamazsa Türkiye geneli sayfasında okulun seçilmesi istenir.
