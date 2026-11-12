@@ -139,6 +139,10 @@ works" paragraphs and no redundant hints under fields. What stays:
   import);
 - warnings in the confirmation dialogs of destructive actions;
 - the opt-in "Nasıl seçilir?" help in Sonuç gir.
+- on a page printed for people who never open the app (Öğretmen raporu, handed to subject teachers), the reading notes
+  the paper needs: whom it covers, where the numbers come from, how to read a sign and a colour, and a worked example
+  beside the table. They are printed with every teacher's sheets; on screen the notes are folded once at the top
+  (docs/ogretmen-raporu.md).
 
 The screen theme removes the long dashboard header narratives, duplicate KPI
 footnotes, prose chart summaries and repeated equations. Headings, primary values

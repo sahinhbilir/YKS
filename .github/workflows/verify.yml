@@ -51,7 +51,7 @@ jobs:
         run: node scripts/embed-etutetkisi.cjs --check && node test/etutetkisi-regression.cjs
       - name: Öğrenci kartı series against the Türkiye average, etüt, absences, weak topics, cache and embedding
         run: node scripts/embed-analiz.cjs --check && node test/analiz-regression.cjs
-      - name: Öğretmen raporu teachers, classes together, topic grid against Türkiye, etüts and embedding
+      - name: Öğretmen raporu teachers, classes together, labelled figures, topic table against Türkiye and embedding
         run: node scripts/embed-ogretmenrapor.cjs --check && node test/ogretmenrapor-regression.cjs
       - name: A school-sized notebook builds the shared student base without per-student copies or scans
         run: node test/buyuk-okul-regression.cjs
@@ -180,7 +180,7 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/analiz-browser.cjs
       - name: Hafızam on desktop and phone (taught topics, red, drag and drop, Düzenle, lesson speed)
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/hafizam-browser.cjs
-      - name: Öğretmen raporu on desktop and phone, and its print layout
+      - name: Öğretmen raporu on desktop and phone, and the PDF handed to teachers
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/ogretmenrapor-browser.cjs
       - name: Konu Takibi upload and drilldown on desktop and phone
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/konutakibi-browser.cjs
