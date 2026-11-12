@@ -25,13 +25,14 @@ const phiTers = p => { let lo = -9, hi = 9; for (let i = 0; i < 70; i++) { const
 const normalNet = (k, N, mu, sigma) => Math.round((mu + sigma * phiTers(1 - (k - 0.5) / N)) * 100) / 100;
 // One exam's list: {ad, yazdirma, dersler:[{kod, soru, genel, satir:[[ad, net], …]}]}, each subject's
 // schools by net (ties keep the generated order), the first 100 kept. kurum adds two courses.
-// normal: {N, oran} draws every subject's schools from Normal(Türkiye average, oran × questions) over N schools.
+// normal: {N, oran, kayma} draws every subject's schools from Normal(Türkiye average − kayma·σ, σ = oran × questions) over N schools.
 function kurumListesi(e, { ad = '27-YKS-120' + e, liste = 'kolej', dersler = DERSLER, okulSayisi = 120, ilk = 100, normal = null } = {}) {
   const yazdirma = String(e * 7).padStart(2, '0') + '.10.2026';
   return {
     ad, yazdirma, dersler: dersler.map(([kod, soru]) => {
       const rows = [], genel0 = Math.round((soru * 0.5 + e * 0.1) * 100) / 100;
-      if (normal) for (let i = 0; i < normal.N; i++) rows.push([okul(i), normalNet(i + 1, normal.N, genel0, soru * normal.oran), i]);
+      // kayma: the schools' centre sits that many spreads below the Türkiye average (as on the publisher's Kolej lists).
+      if (normal) for (let i = 0; i < normal.N; i++) rows.push([okul(i), normalNet(i + 1, normal.N, genel0 - (normal.kayma || 0) * soru * normal.oran, soru * normal.oran), i]);
       else for (let i = 0; i < okulSayisi; i++) {
         let net = Math.round((soru * (0.82 - 0.0055 * i) + 0.15 * e + ((i * 13 + e * 7 + soru) % 9 - 4) * 0.01) * 100) / 100;
         if (kod === 'MATEMATİK-T' && e === 1 && i >= 60 && i <= 64) net = 12;

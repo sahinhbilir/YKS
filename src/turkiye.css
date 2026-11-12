@@ -95,3 +95,29 @@
 #tgKok .tg-konu-geride .tg-konu-fark{color:var(--e-bad)}#tgKok .tg-konu-geride .tg-konu-durum{color:var(--e-bad);border-color:var(--e-bad)}
 #tgKok .tg-konu-ileride .tg-konu-fark{color:var(--e-ok)}#tgKok .tg-konu-ileride .tg-konu-durum{color:var(--e-ok);border-color:var(--e-ok)}
 @media(max-width:700px){#tgKok .tg-konu-satir{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}#tgKok .tg-konu-oran{grid-column:1}#tgKok .tg-konu-durum{grid-column:2;grid-row:2;justify-self:end}}
+/* Dağılımda yeriniz: the projected distribution (dotted), the printed schools (solid ticks), the Türkiye average and the school. */
+.tg-dagilim{width:100%;min-height:120px}
+.tg-dagilim-svg{display:block;overflow:visible}
+.tg-dg-izgara{stroke:var(--e-grid,var(--cizgi));stroke-width:1}
+.tg-dg-taban{stroke:var(--e-grid,var(--cizgi));stroke-width:1}
+.tg-dg-ad{font-size:12px;font-weight:600;fill:var(--e-fg,var(--murekkep))}.tg-dg-tarih{font-weight:400;fill:var(--e-fg2,var(--soluk))}
+.tg-dg-ort .tg-dg-ad{font-weight:700}
+.tg-dg-alan{fill:var(--e-fg2,var(--soluk));fill-opacity:.06;stroke:none}
+.tg-dg-ustu{fill:var(--e-c1);fill-opacity:.16;stroke:none}
+.tg-dg-egri{fill:none;stroke:var(--e-fg2,var(--soluk));stroke-width:1.7;stroke-linecap:round;stroke-dasharray:.1 4.2}
+.tg-dg-genel{stroke:var(--e-fg2,var(--soluk));stroke-width:1.2}
+.tg-dg-liste{stroke:var(--e-fg,var(--murekkep));stroke-width:1;stroke-opacity:.55}
+.tg-dg-okul{fill:var(--e-c1);stroke:var(--e-bg,var(--kagit));stroke-width:2}
+.tg-dg-okul-ort{stroke-width:2.5}
+.tg-dg-yol{fill:none;stroke:var(--e-c1);stroke-width:1.6;stroke-opacity:.55;stroke-linejoin:round}
+.tg-dg-yuzde{font-size:12px;font-weight:700;fill:var(--e-fg,var(--murekkep));font-variant-numeric:tabular-nums}
+.tg-dg-net{font-size:11px;fill:var(--e-fg2,var(--soluk));font-variant-numeric:tabular-nums}
+.tg-dg-eksen{font-style:italic}
+.tg-dg-lejant i{display:inline-block;width:18px;height:10px;margin-right:6px;vertical-align:middle}
+.tg-dg-l-egri{border-bottom:2px dotted var(--e-fg2,var(--soluk))}
+.tg-dg-l-liste{background:repeating-linear-gradient(90deg,var(--e-fg,var(--murekkep)) 0 1px,transparent 1px 4px);opacity:.6}
+.tg-dg-l-genel{width:2px!important;background:var(--e-fg2,var(--soluk))}
+.tg-dg-l-okul{width:10px!important;height:10px!important;border-radius:50%;background:var(--e-c1)}
+.tg-formul{margin-top:12px;font-size:13px;line-height:1.55}.tg-formul summary{cursor:pointer;font-weight:600}
+.tg-formul p{margin:8px 0;max-width:110ch}.tg-dg-ort-satir td{font-weight:700}
+@media print{.tg-formul:not([open]){display:none}}

@@ -621,6 +621,81 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     run("EK.tgMod='sira'"); h = run('TURKIYE.icerik()'); assert.match(h, /data-tg-grafik="sira"/);
     sl({ MAT: 12.4, FİZ: 2.3 }); run("EK.tgMod='bilinmeyen'"); assert.match(run('TURKIYE.icerik()'), /data-tg-grafik="t"/, 'an unknown view falls back to T'); run('SIRALAMA.oku=__so;SIRALAMA.model=__sm');
   });
+  await check('a list that is most of its schools (most printed below the Türkiye average): centre and spread fitted from the list, one N per session; the Türkiye average a separate line (hand-worked)', async () => {
+    // 140 schools per subject, centre half a spread below the Türkiye average, the first 100 printed: like the publisher's Kolej lists.
+    const kolej = e => liste(e, { normal: { N: 140, oran: 0.12, kayma: 0.5 } });
+    const L = kolej(1), tur = L.dersler.find(d => d.kod === 'TÜRKÇE-T');
+    const alt = tur.satir.filter(r => r.net < tur.genel - 1e-9).length; assert(alt >= 40 && alt <= 70, 'most of the printed schools are below the average: ' + alt);
+    put('S', { id: 'k|kolej', ts: 1, dersler: L.dersler.map(d => ({ kod: d.kod, soru: d.soru, genel: d.genel, satir: d.satir })) });
+    const dg = get('(()=>{const d=TURKIYE.dagilimAl(S);return {serbestN:d.serbestN,dersler:[...d.dersler]}})()');
+    // One N per session (the same schools sit every subject of a session), near the generated 140 (one extra school, BIZ, is in the lists).
+    assert(Math.abs(dg.serbestN.TYT - 141) <= 8 && Math.abs(dg.serbestN.AYT - 141) <= 8, JSON.stringify(dg.serbestN));
+    for (const [k, g] of dg.dersler) {
+      const d = L.dersler.find(x => run('denemeAdAnahtari')(x.kod) === k), sigma = d.soru * 0.12, merkez = d.genel - 0.5 * sigma;
+      assert.equal(g.serbest, true, k); assert.equal(g.genel, d.genel, k + ': the Türkiye average is kept'); assert.equal(g.n, dg.serbestN[d.kod.endsWith('-A') ? 'AYT' : 'TYT']);
+      assert(Math.abs(g.mu - merkez) < 0.12 * sigma, k + ' centre ' + g.mu + ' ≈ ' + merkez); assert(Math.abs(g.sigma / sigma - 1) < 0.08, k + ' σ ' + g.sigma + ' ≈ ' + sigma);
+      assert(g.uyum < 0.2, k + ' fits: ' + g.uyum);
+    }
+    // On the page: T and the share use the fitted centre; the Türkiye average is carried as turkiye, for the chart’s own line.
+    await ekle(kolej(1), kolej(2)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')'); sl({ MAT: 12.4, FİZ: 2.3 });
+    const m = model(), p = m.dersler.find(d => d.kod === 'TÜRKÇE-T').seri[0];
+    assert.equal(p.dg.serbest, true); assert(Math.abs(p.t - (50 + 10 * (p.tNet - p.dg.mu) / p.dg.sigma)) < 1e-9); assert.equal(p.genel, tur.genel);
+    const q = m.toplam.tseri[0], ps = m.dersler.map(d => d.seri[0]);
+    assert(q.t !== null, 'the total has a value: ' + q.yok); assert(Math.abs(q.genel - ps.reduce((a, x) => a + x.dg.mu, 0)) < 1e-9, 'the total’s centre is the sum of the centres'); assert(Math.abs(q.turkiye - ps.reduce((a, x) => a + x.genel, 0)) < 1e-9);
+    assert.equal(q.serbest, true); assert(q.turkiye > q.genel, 'the Türkiye average stands above the middle school');
+    sandbox.ST = run('TURKIYE.durumAl(TURKIYE.oku().veri)'); const D = get('TURKIYE.dagilimVerisi(ST)');
+    assert(Math.abs(D.satirlar[0].mu - q.genel) < 1e-9 && Math.abs(D.satirlar[0].turkiye - q.turkiye) < 1e-9);
+    const g = run('TURKIYE.grafikDagilim(ST,900)'), xs = [...g.svg.matchAll(/<line class="tg-dg-genel" x1="([\d.]+)"/g)].map(x => +x[1]);
+    const x = v => 900 >= 560 ? 104 + (v - g.lo) / (g.hi - g.lo) * (900 - 92 - 104) : 0;
+    assert(Math.abs(xs[1] - x(D.satirlar[0].turkiye)) < 0.2, 'the line is at the Türkiye average, not at the curve’s peak');
+    const h = run('TURKIYE.icerik()'); assert.match(h, /<th scope="col" class="sayi">Okulların ortası μ<\/th><th scope="col" class="sayi">Türkiye ort\. \(Genel Net\)<\/th>/); assert.match(h, /Türkiye ortalaması \(Genel Net\) eğrinin ortası mı\?/);
+    // A list that is only the top of many schools (≈10 % printed below the average) keeps the centre at the Türkiye average.
+    await ekle(normalListe(1)); const m2 = model(), p2 = m2.dersler.find(d => d.kod === 'TÜRKÇE-T').seri.find(Boolean);
+    assert.equal(!!p2.dg.serbest, false); assert.equal(p2.dg.mu, p2.genel);
+  });
+  await check('Dağılımda yeriniz: each exam’s fitted curve (dotted projection), the printed schools, the Türkiye average and the school; the all-exams row; formulas and raw numbers (hand-worked)', async () => {
+    await ekle(normalListe(1), normalListe(2)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')'); sl({ MAT: 12.4, FİZ: 2.3 });
+    sandbox.ST = run('TURKIYE.durumAl(TURKIYE.oku().veri)');
+    const D = JSON.parse(run('JSON.stringify(TURKIYE.dagilimVerisi(ST))')), T = JSON.parse(run('JSON.stringify(ST.m.toplam.tseri)'));
+    assert.equal(D.ad, 'TYT toplam'); assert.equal(D.satirlar.length, 2);
+    D.satirlar.forEach((r, i) => {
+      const p = T[i];
+      // The curve is the page's own fit for the total: centre μ = the summed Türkiye averages, spread σ; the school's net is its summed net.
+      assert.equal(r.mu, p.genel); assert.equal(r.sigma, p.sigma); assert.equal(r.net, p.net); assert.equal(r.n, p.n);
+      assert(Math.abs(r.z - (p.net - p.genel) / p.sigma) < 1e-12, 'z = (net − μ) / σ');
+      assert(Math.abs(r.dilim - 100 * (1 - run('TURKIYE.normCdf')(r.z))) < 1e-9, 'ilk % = 100·(1 − Φ(z))');
+      // The printed schools of a total are those in every subject list of the total, by their summed nets.
+      const s = run('ST.m.sinavlar[' + i + ']'), kod = ['TÜRKÇE-T', 'MATEMATİK-T', 'FİZİK-T'], L = kod.map(k => s.dersler.find(d => d.kod === k));
+      const ortak = L[0].satir.filter(r0 => L.every(d => d.satir.some(q => q.ad === r0.ad)));
+      assert.equal(r.gozlenen.length, ortak.length); assert(r.gozlenen.length > 0 && r.gozlenen.length <= 100);
+    });
+    // Tüm denemeler: the mean of the school's nets on the mean centre, σ = √(mean σ²).
+    const [a, b] = D.satirlar, o = D.ort;
+    assert.equal(o.adet, 2); assert(Math.abs(o.net - (a.net + b.net) / 2) < 1e-12); assert(Math.abs(o.mu - (a.mu + b.mu) / 2) < 1e-12);
+    assert(Math.abs(o.sigma - Math.sqrt((a.sigma ** 2 + b.sigma ** 2) / 2)) < 1e-12); assert(Math.abs(o.dilim - 100 * (1 - run('TURKIYE.normCdf')((o.net - o.mu) / o.sigma))) < 1e-9);
+    // The drawing: the curve dotted, the printed schools as ticks, the Türkiye average, the school's dots joined by one line, ≈ on the projected shares.
+    const g = run('TURKIYE.grafikDagilim(ST,900)').svg;
+    assert.equal((g.match(/class="tg-dg-egri"/g) || []).length, 3, 'a dotted curve per exam and for the mean');
+    assert.equal((g.match(/class="tg-dg-liste"/g) || []).length, a.gozlenen.length + b.gozlenen.length);
+    assert.equal((g.match(/class="tg-dg-genel"/g) || []).length, 3); assert.equal((g.match(/<circle class="tg-dg-okul/g) || []).length, 3); assert.equal((g.match(/class="tg-dg-yol"/g) || []).length, 1);
+    assert(g.indexOf('class="tg-dg-yol"') < g.indexOf('<circle class="tg-dg-okul'), 'the dots sit on top of the joining line');
+    assert.equal((g.match(/class="tg-dg-yuzde"[^>]*>≈ ilk %[\d,]+<\/text>/g) || []).length, 3, 'every share is marked as a projection');
+    assert.match(g, /<text class="tg-dg-ad" x="\d+(\.\d)?" y="[\d.]+" text-anchor="end">Ortalama/);
+    // Every x coordinate inside the plot.
+    for (const m of g.matchAll(/\b(?:cx|x1|x2)="(-?[\d.]+)"/g)) assert(+m[1] >= 0 && +m[1] <= 900, 'inside ' + m[1]);
+    // The panel: in the Dilim ve sıra view, after the headline strip; the legend says what is projected; formulas and raw numbers fold out.
+    const h = run('TURKIYE.icerik()');
+    assert(h.indexOf('id="tgKpi"') < h.indexOf('id="tgDagilim"') && h.indexOf('id="tgDagilim"') < h.indexOf('id="tgTPanel"'));
+    assert.match(h, /<h2>Dağılımda yeriniz · TYT toplam<\/h2>/); assert.match(h, /Tahmini okul dağılımı \(ilk 100’den yansıtma\)/); assert.match(h, /Listede basılan okullar/);
+    assert.match(h, /<details class="tg-formul"><summary>Nasıl hesaplanır · ham veriler<\/summary>/);
+    assert.match(h, /k\. sıradaki okulun neti ≈ μ \+ σ · Φ⁻¹\(1 − \(k − 0,5\) \/ N\)/); assert.match(h, /z = \(okul neti − μ\) \/ σ/); assert.match(h, /100 · \(1 − Φ\(z\)\)/);
+    assert.equal((h.match(/<tr( class="tg-dg-ort-satir")?><td>/g) || []).length, 3, 'one raw row per exam and the mean');
+    assert.match(h, new RegExp('<td>27-YKS-1201</td><td class="sayi">' + a.mu.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace('.', '\\.') + '</td>'));
+    // A subject chosen on the page: the distribution follows it; the subjects’ mean T (no net scale) draws none.
+    run("EK.tgDers='TÜRKÇE-T'"); sandbox.ST = run('TURKIYE.durumAl(TURKIYE.oku().veri)');
+    const Dd = JSON.parse(run('JSON.stringify(TURKIYE.dagilimVerisi(ST))')); if (sandbox.ST.odak) { assert.equal(Dd.ad, 'Türkçe'); assert.equal(Dd.satirlar[0].gozlenen.length, run('ST.m.sinavlar[0].dersler.find(d=>d.kod==="TÜRKÇE-T").satir.length')); }
+    run('EK.tgDers=undefined');
+  });
   await check('dilim: the same fit said in words (formula, format, bands), exact place ÷ N on complete lists, and no headline T in the page body', async () => {
     await ekle(normalListe(1), normalListe(2)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')'); sl({ MAT: 12.4, FİZ: 2.3 });
     const d = run('(()=>{const m=TURKIYE.model(D.turkiye,{mod:"tpuan",aralik:"tum"});const p=m.toplam.tseri[1];return {t:p.t,dilim:TURKIYE.dilimNokta(p),sira:p.tahmin,n:p.n}})()');
@@ -628,7 +703,7 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert(Math.abs(d.sira - (1 + (d.n - 1) * d.dilim / 100)) <= .5, 'agrees with the estimated place 1 + (N−1)(1−Φ(z))');
     for (const [x, y] of [[12.4, 'ilk %12'], [9.96, 'ilk %10'], [8.43, 'ilk %8,4'], [0.55, 'ilk %0,6'], [0, 'ilk %0,1']]) assert.equal(run('TURKIYE.dilimYazi(' + x + ')'), y);
     for (const [x, y] of [[2.3, 'Türkiye’nin en üst okulları arasında'], [15.9, 'Ortalamanın belirgin üstünde'], [30.9, 'Ortalamanın üstünde'], [69.09, 'Türkiye ortalaması civarında'], [69.1, 'Ortalamanın altında'], [84.1, 'Ortalamanın belirgin altında']]) assert.equal(run('TURKIYE.dilimBandi(' + x + ')'), y);
-    let h = run('TURKIYE.icerik()'); const govde = h.replace(/<details[\s\S]*?<\/details>/, '').replace(/ (title|aria-label)="[^"]*"/g, '').replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ');
+    let h = run('TURKIYE.icerik()'); const govde = h.replace(/<details[\s\S]*?<\/details>/g, '').replace(/ (title|aria-label)="[^"]*"/g, '').replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ');
     assert(!/(^|[^\p{L}])T([^\p{L}]|$)/u.test(govde) && !govde.includes('ΔT') && !govde.includes('T puanı'), 'no headline T in the page body: ' + (/.{30}(^|[^\p{L}])T([^\p{L}]|$).{20}/u.exec(govde) || [''])[0]);
     // A complete list: the dilim is sıra / N · 100, so it never disagrees with the place beside it.
     await ekle(tamListe(1), tamListe(2)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')');

@@ -63,6 +63,18 @@ const ad=e=>'27-YKS-120'+e+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf';
    const ip=await d.locator('.et-ipucu').innerText();{const v=[...ip.matchAll(/(Türkçe|Fizik|Matematik)\s*ilk %(\d+(?:,\d)?)/g)].map(m=>Number(m[2].replace(',','.')));assert.equal(v.length,3);assert.deepEqual(v,v.slice().sort((x,y)=>x-y),'every subject, best dilim first');}
    assert.equal((await page.locator('#tgKok .et-ozet,#tgKok .et-cumle,#tgTPanel .et-kart-bas,#tgDPanel .et-kart-bas').allInnerTexts()).join(' ').includes('N ≈'),false,'N ≈ only in the tooltips');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no sideways scrolling');
+   // Dağılımda yeriniz: drawn at the panel's width, above the main chart; the projected curves dotted, the school's dots and their line inside the plot.
+   await page.waitForFunction(()=>document.querySelector('#tgDagilim .tg-dagilim svg'));
+   const dg=await page.evaluate(()=>{const k=document.querySelector('#tgDagilim .tg-dagilim'),svg=k.querySelector('svg'),b=svg.getBoundingClientRect(),kb=k.getBoundingClientRect();
+     const e=svg.querySelector('.tg-dg-egri'),cs=getComputedStyle(e);
+     return {sigar:b.width<=kb.width+1,egri:svg.querySelectorAll('.tg-dg-egri').length,okul:svg.querySelectorAll('circle.tg-dg-okul').length,dash:cs.strokeDasharray,
+       ici:[...svg.querySelectorAll('circle.tg-dg-okul')].every(c=>{const r=c.getBoundingClientRect();return r.left>=b.left-1&&r.right<=b.right+1}),
+       once:!!(document.querySelector('#tgDagilim').compareDocumentPosition(document.querySelector('#tgTPanel'))&Node.DOCUMENT_POSITION_FOLLOWING)}});
+   assert(dg.sigar&&dg.ici&&dg.once,'distribution panel fits, before the main chart: '+JSON.stringify(dg));assert(dg.egri>=2&&dg.okul>=2,'curves and school dots: '+JSON.stringify(dg));
+   assert(dg.dash&&dg.dash!=='none','the projected curve is dotted: '+dg.dash);
+   await page.locator('#tgDagilim summary').click();assert.match(await page.locator('#tgDagilim .tg-formul').innerText(),/z = \(okul neti − μ\) \/ σ/);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),true,'no sideways scrolling with the formulas open');
+   await page.locator('#tgDagilim summary').click();
    await page.screenshot({path:path.join(out,'turkiye-t-'+width+(tema==='dark'?'-dark':'')+'.png'),fullPage:true});
    // Isolating a subject (its card) changes the Dersler chart only; the main chart keeps the total.
    const anaOnce=(await ana()).d;
