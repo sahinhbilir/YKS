@@ -453,9 +453,11 @@ function ortalamaDogrula(ort,rapor){
 /* ---------------------------------------------------------------- Performans analizi (publisher PDF), optional
    "27-YKS-1202 SINAVI ANALİZLERİ": one page per ders ("TÜRKÇE-T (40 Soru )", section names as in the cevap raporu), one row per question of the A booklet:
    "1. Soru | 73 54 399 15 98 1994 1295 1 95 6 111 … | 0.83 | çok kolay soru | 0.34 | başarılı" = ÜST and ALT counts of A, B, C, D, E, BOŞ, then p, its meaning, r, its meaning.
-   Aggregate counts over the whole network, no student data. Only {kod, dersler:[{ad, n, maddeler:[{no, p, r, ust:[A..E,BOŞ], alt:[…]}]}]} is kept. */
+   Aggregate counts, with a separate reference population for each subject. Option counts are only for the upper and lower groups. */
 const PERF_SATIR=/^(\d{1,3})\s*\.\s*Soru\s+(\d+(?:\s+\d+){11})\s+(\d(?:[.,]\d+)?)\s+(?:\S.*?\s+)?(-?\d(?:[.,]\d+)?)(?:\s+\S.*)?$/iu;
 const PERF_BASLIK=/^(.+?)\s*\(\s*(\d{1,3})\s*Soru\s*\)\s*$/iu;
+const PERF_SAYIM=/^(.+?)\s*:\s*(\d{1,9})$/u;
+const basamak=s=>s.split(/[.,]/u)[1]?.length||0;
 // the text of each line of a page (items on one baseline joined left to right)
 function satirMetinleri(p){
   const items=(Array.isArray(p&&p.items)?p.items:[]).filter(i=>i&&typeof i.s==='string'&&Number.isFinite(i.x)&&Number.isFinite(i.y));
@@ -463,21 +465,38 @@ function satirMetinleri(p){
   return satir.map(l=>clean(l.items.sort((a,b)=>a.x-b.x).map(i=>i.s).join(' ')));
 }
 const perfBaslikMi=s=>{const k=key(s);return k.includes('SINAVIANALIZLERI')||k.includes('MADDEGUCLUKINDEKSI')};
-function performansCoz(pages){
+const performansMi=pages=>pages.some(p=>satirMetinleri(p).some(perfBaslikMi));
+function performansCoz(pages,{tamAd=false}={}){
   const fail=m=>{throw new Error(m+' Performans analizi dosyası eklenmedi.')};
   if(!Array.isArray(pages)||!pages.length||pages.length>200)fail('PDF sayfaları okunamadı.');
-  let kod='',cur=null;const dersler=[];
+  let kod='',cur=null;const dersler=[],metin=[];
   for(const p of pages){
     for(const s of satirMetinleri(p)){
-      const k=/(\d{1,3}-[A-Z]+-\d{3,5})\s+S[Iİı]NAVI/u.exec(s)||/(\d{1,3}-[A-Z]+-\d{3,5}).*AN[AİI]L[İI]ZLER[İI]/iu.exec(s);
-      if(k&&!kod)kod=k[1].toUpperCase();
+      const k=tamAd?/^(\S.{0,159}?)\s+S[Iİı]NAVI\s+AN[AİI]L[İI]ZLER[İI]$/iu.exec(s):
+        /(\d{1,3}-[A-Z]+-\d{3,5})\s+S[Iİı]NAVI/u.exec(s)||/(\d{1,3}-[A-Z]+-\d{3,5}).*AN[AİI]L[İI]ZLER[İI]/iu.exec(s);
+      if(k){
+        const yeni=tamAd?clean(k[1]):k[1].toUpperCase();
+        if(kod&&kod!==yeni)fail('Dosyada birden çok sınav adı var.');
+        kod=yeni;
+      }
       const b=PERF_BASLIK.exec(s);
-      if(b&&/-[TA]$/u.test(clean(b[1]))){cur={ad:clean(b[1]),n:+b[2],maddeler:[]};dersler.push(cur);continue}
+      if(b&&/-[TA]$/u.test(clean(b[1]))){cur={ad:clean(b[1]),n:+b[2],orneklem:null,grupToplam:null,maddeler:[]};dersler.push(cur);continue}
+      if(!cur)metin.push(s);
+      const sayim=cur&&PERF_SAYIM.exec(s);
+      if(sayim){
+        const ad=key(sayim[1]),alan=ad==='ISARETLEMEYAPANOGRENCISAYISI'?'orneklem':ad==='USTVEALTGRUPTOPLAMOGRENCISAYISI'?'grupToplam':null;
+        if(alan){
+          const n=+sayim[2];if(cur[alan]!==null&&cur[alan]!==n)fail(cur.ad+' öğrenci sayıları tutarsız.');
+          cur[alan]=n;continue;
+        }
+      }
       const r=cur&&PERF_SATIR.exec(s);
       if(!r)continue;
       const c=r[2].split(/\s+/).map(Number),no=+r[1];
-      if(cur.maddeler.some(m=>m.no===no))continue;
-      cur.maddeler.push({no,p:+r[3].replace(',','.'),r:+r[4].replace(',','.'),ust:c.filter((_,i)=>i%2===0),alt:c.filter((_,i)=>i%2===1)});
+      const madde={no,p:+r[3].replace(',','.'),r:+r[4].replace(',','.'),pBasamak:basamak(r[3]),rBasamak:basamak(r[4]),ust:c.filter((_,i)=>i%2===0),alt:c.filter((_,i)=>i%2===1)};
+      const eski=cur.maddeler.find(m=>m.no===no);
+      if(eski){if(JSON.stringify(eski)!==JSON.stringify(madde))fail(cur.ad+' soru '+no+' iki farklı satırda geçiyor.');continue}
+      cur.maddeler.push(madde);
     }
   }
   if(!kod)fail('Sınav kodu ("27-YKS-1202 SINAVI ANALİZLERİ") bulunamadı.');
@@ -491,7 +510,8 @@ function performansCoz(pages){
     if(d.maddeler.length!==d.n||d.maddeler.some((m,i)=>m.no!==i+1))fail(d.ad+' dersinde '+d.n+' soru yazıyor, '+d.maddeler.length+' soru satırı okunabildi.');
     if(d.maddeler.some(m=>!(m.p>=0&&m.p<=1)||!(m.r>=-1&&m.r<=1)))fail(d.ad+' dersinde güçlük veya ayırdedicilik değeri geçersiz.');
   }
-  return {kod,dersler};
+  const kitapcik=/\bA\s+kitap[cç][ıi][gğ][ıi](?:n[ıi])?(?!\p{L})/iu.test(metin.join(' '))?'A':null;
+  return {kod,kitapcik,dersler};
 }
 // The file must be this exam's, its question counts must fit the report's sections, and the most marked option of the high group (ÜST) should be the report's A key.
 // A few differences are normal (a cancelled or differently keyed question); more than about 10% means the mapping is wrong and the file is refused.
@@ -759,7 +779,7 @@ async function pdfOku(file){
 function pdfTuru(pages){
   const hepsi=pages.flatMap(p=>p.items.map(i=>clean(i.s)));
   if(hepsi.some(s=>ORT_BASLIK.test(s)))return 'ort';
-  if(pages.some(p=>satirMetinleri(p).some(perfBaslikMi)))return 'perf';
+  if(performansMi(pages))return 'perf';
   if(hepsi.some(s=>ETIKET.test(s))||pages.some(p=>etiketler(p).length))return 'coz';
   if(pages.some(p=>p.items.some(i=>KOD.test(clean(i.s))&&i.y>p.h-70)))return 'kit';
   return null;
@@ -1426,7 +1446,7 @@ function denemeKoy({kod,kitlar={},rapor=null,pairs={},ort=null,perf=null,ad='',s
   if(crops)for(const [k,v] of crops)e.crops.set(k,v);
   S.denemeler.set(e.kod,e);return e;
 }
-return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
+return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
   dosyalarEkle,topluUygula,dosyaTani,pdfTuru,denemeKoy,kutuphaneKur,kutAc,sakla,geriYukle,metaOf,denemeSil,hepsiniSil,bellekiBosalt,sifirla,birlesik,kisiPlani,pdfPlan,pdfDosyaAdi,pdfIndir,boyutYaz,
   gorunum,yazdir,hazirla,durumu,key,title};
 })();

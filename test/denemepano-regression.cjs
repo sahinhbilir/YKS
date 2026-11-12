@@ -571,6 +571,23 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     // The line sits above the table, below the title and the Sırala pills.
     assert(h.indexOf('data-dp-olcut="trfark"') < h.indexOf('id="dpTrSatir"') && h.indexOf('id="dpTrSatir"') < h.indexOf('id="dpAra"'));
   });
+  await check('Türkiye’ye göre over the exams the student sat: a student who missed one exam of a two-exam side is set against the Türkiye change of the same exams (hand-worked)', async () => {
+    await trYukle([0, 1, 2, 3, 4, 5]);
+    // ADA (1001) misses 27-YKS-1204 (index 3). Son 2 deneme: önce = 1203 + 1204, son = 1205 + 1206. Türkiye TYT (Türkçe + Matematik + Geometri):
+    // 31 30 28 27 25 24. For the window Türkiye goes 27,5 → 24,5 (−3); for ADA, who sat only 1203 on the önce side, 28 → 24,5 (−3,5).
+    sandbox.SR.sinavlar[3].T.ogr = sandbox.SR.sinavlar[3].T.ogr.filter(o => String(o.no) !== '1001'); run('D.siralama=SR;D.siralama.sinavlar[3].ts=Date.now()+7');
+    pencere(2); yk(st('st=>st.tr.fark'), -3, 'the line above the table still describes the whole window');
+    const k = st('st=>Object.fromEntries(st.mo.ogrenciler.map(o=>[o.no,{fark:o.k[2].fark,tr:o.k[2].trFark,seri:o.seri}]))');
+    assert.equal(k[1001].seri[3], null, 'ADA has no 1204');
+    yk(k[1001].tr, k[1001].fark + 3.5, 'ADA: her own change against −3,5, not −3');
+    yk(k[1002].tr, k[1002].fark + 3, 'BORA sat all four: the window’s −3');
+    yk(k[1003].tr, k[1003].fark + 3, 'CEMRE sat all four');
+    // The exported helper says the same for a hand-built student: sides with no exam that has an average give nothing.
+    put('TRX', { seri: [{ v: 31 }, { v: 30 }, { v: 28 }, null, { v: 25 }, { v: 24 }] });
+    yk(run('DPANO.ogrenciTrFark({seri:[null,null,40,null,38,39]},{once:[2,3],son:[4,5]},TRX)'), (38.5 - 40) - (24.5 - 28));
+    assert.equal(run('DPANO.ogrenciTrFark({seri:[null,null,null,41,38,39]},{once:[2,3],son:[4,5]},TRX)'), null, 'her only önce exam has no Türkiye average');
+    assert.equal(run('DPANO.ogrenciTrFark({seri:[1,2,3,4,5,6]},{once:[2,3],son:[4,5]},null)'), null);
+  });
   await check('Türkiye’ye göre: sorting by the column and by the Sırala pill, ranks, students without a value last', async () => {
     await trYukle([0, 1, 2, 3, 4, 5]); pencere('tum');
     const sira = () => [...run('DPANO.icerik()').matchAll(/<tr data-dp-ogr="(\d+)"/g)].map(x => x[1]);

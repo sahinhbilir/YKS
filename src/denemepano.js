@@ -163,12 +163,22 @@ const OLCUT_ALAN={artis:'fark',trfark:'trFark',yuzde:'yuzde',fark:'logFark'};
 const y6=x=>Math.round(x*1e6)/1e6;
 // Türkiye’ye göre: the change net of the Türkiye average's change over the same window (tr.fark, see turkiyeHesapla).
 const trGore=(fark,tr)=>fark!==null&&fark!==undefined&&tr&&tr.fark!==null?y6(fark-tr.fark):null;
+// One student's Türkiye’ye göre over exactly the exams they sat: each side of the window is the mean of the student's exams
+// that have a Türkiye average, and the Türkiye side is the mean over those same exams. A student who missed an exam is never
+// set against a Türkiye change that includes it. null when a side has no such exam.
+function ogrenciTrFark(o,w,tr){
+  if(!w||!tr||!Array.isArray(tr.seri))return null;
+  const yan=([a,b])=>{const ogr=[],trl=[];for(let i=a;i<=b;i++){const v=o.seri[i],t=tr.seri[i];if(v!==null&&v!==undefined&&t)ogr.push(v),trl.push(t.v)}
+    return ogr.length?{o:ort(ogr),t:ort(trl)}:null};
+  const once=yan(w.once),son=yan(w.son);
+  return once&&son?y6((son.o-once.o)-(son.t-once.t)):null;
+}
 function olcutUygula(m,s,olcut,tr){
   if(!s)return;
   for(const o of m.ogrenciler){const c=o.k[s];if(!c)continue;
     c.yuzde=c.fark!==null&&c.once>0?c.fark/c.once*100:null;
     c.logFark=c.fark!==null?Math.log((m.O.ust-c.once+1)/(m.O.ust-c.son+1)):null;
-    c.trFark=trGore(c.fark,tr)}
+    c.trFark=c.fark===null?null:ogrenciTrFark(o,m.pencere[s],tr)}
   const k=OLCUT_ALAN[olcut];if(!k)return;
   const l=m.ogrenciler.filter(o=>o.k[s][k]!==null).sort((a,b)=>b.k[s][k]-a.k[s][k]);
   for(const o of m.ogrenciler){o.sira=null;o.siraFark=null}
@@ -204,7 +214,8 @@ function turkiyeHesapla(key,mo,ders,s){
   const dilim=([a,b])=>{const l=[];for(let i=a;i<=b;i++)if(seri[i])l.push({...seri[i],ad:mo.sinavlar[i].ad});
     return l.length?{v:ort(l.map(x=>x.v)),t:l.some(x=>x.t),ad:l.map(x=>x.ad)}:null};
   const once=dilim(w.once),son=dilim(w.son);
-  return {var:!!(once||son),once:once&&once.v,son:son&&son.v,fark:once&&son?y6(son.v-once.v):null,tahmini:!!((once&&once.t)||(son&&son.t)),onceAd:once?once.ad:[],sonAd:son?son.ad:[]};
+  // seri: the average of every exam of the board (null without one), for each student's own window (ogrenciTrFark).
+  return {var:!!(once||son),once:once&&once.v,son:son&&son.v,fark:once&&son?y6(son.v-once.v):null,tahmini:!!((once&&once.t)||(son&&son.t)),onceAd:once?once.ad:[],sonAd:son?son.ad:[],seri};
 }
 function durumAl(t){
   // Tür: genel or tarama exams only (from the name, or as the teacher set it).
@@ -907,6 +918,6 @@ function birak(){
 }
 document.addEventListener('pointerup',birak);document.addEventListener('pointercancel',birak);
 GRAFIK_OLCUM.kur({secici:'.et-grafik[data-dp-grafik]',kok:'#dpKok',etkin,bilgi:olcBilgi,yakin:enYakin,ipucuGizle:ipucuSakla,hap,fmt:f1});
-return {tiklerSinirli,temel,olcu,kapsamlar,ayGeri,TARIHLI,gorunumModeli,veriAl,durumAl,icerik,gorunum,grafikleriCiz,GRAFIKLER,CIZIMLER,ESIK,degisimKaynagi,isiHaritasi,isiRengi,kaynakCumlesi,kaynakBolumleri};
+return {ogrenciTrFark,tiklerSinirli,temel,olcu,kapsamlar,ayGeri,TARIHLI,gorunumModeli,veriAl,durumAl,icerik,gorunum,grafikleriCiz,GRAFIKLER,CIZIMLER,ESIK,degisimKaynagi,isiHaritasi,isiRengi,kaynakCumlesi,kaynakBolumleri};
 })();
 function gorunumDenemePanosu(){return DPANO.gorunum()}
