@@ -174,6 +174,36 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // The synthetic topics answer alike in every exam: no change.
     assert.match(h, /<td class="ogr-iz-degisim ogr-sabit"[^>]*>■ 0<\/td>/);
   });
+  await check('plain summary distinguishes a shrinking advantage from a closing deficit, and does not invent missing comparisons or repeat priorities', () => {
+    planKur(); kaynakKur(); konuKur(); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:[]})');
+    const summary = () => run('OGRETMEN_RAPOR.gorunum()').match(/<p class="ogr-ozet">([^<]*)<\/p>/)[1];
+    for (const [gaps, expected] of [
+      [[1, .5], 'Türkiye ortalamasının üzerindesiniz; önceki denemeye göre avantajınız azaldı.'],
+      [[.5, 1], 'Türkiye ortalamasının üzerindesiniz; önceki denemeye göre avantajınız arttı.'],
+      [[-2, -1], 'Türkiye ortalamasının altındasınız; önceki denemeye göre aradaki fark azaldı.'],
+      [[-1, -2], 'Türkiye ortalamasının altındasınız; önceki denemeye göre aradaki fark arttı.'],
+      [[-1, 1], 'Türkiye ortalamasının üzerine çıktınız.'],
+      [[1, -1], 'Türkiye ortalamasının altına düştünüz.'],
+      [[1, 1], 'Türkiye ortalamasının üzerindesiniz; önceki denemeye göre fark değişmedi.'],
+      [[1, 0], 'Türkiye ortalamasıyla aynı düzeydesiniz.']
+    ]) {
+      put('GAPS', gaps);
+      run('K.trFn=()=>({genel:()=>10});K.t.sinavlar.forEach((s,i)=>Object.values(s.tyt).forEach(o=>o.net.MAT=10+GAPS[i]))');
+      assert.equal(summary(), expected);
+    }
+    // The latest exam has no Türkiye figure: identify the older comparison, with no invented trend.
+    run("K.trFn=ad=>ad==='27-YKS-1201'?{genel:()=>10}:null");
+    let h = run('OGRETMEN_RAPOR.gorunum()');
+    assert.equal(summary(), 'Türkiye ortalamasının üzerindesiniz.');
+    assert.match(h, /27-YKS-1201 · 3 öğrenci/);
+    assert.match(h, /Son denemenin Türkiye ortalaması henüz yok/);
+    assert.match(h, /Tekrar önceliği: Sözcükte Anlam/);
+    run('K.trFn=()=>null');
+    assert.equal(summary(), 'Net karşılaştırması için Türkiye ortalaması eksik.');
+    run('D.konutakibi.exams=D.konutakibi.exams.slice(0,2)');
+    h = run('OGRETMEN_RAPOR.gorunum()');
+    assert(!h.includes('Tekrar önceliği:'), 'two negative measurements do not imply a three-measurement pattern');
+  });
   await check('the teacher’s own etüts: attendances and students once per session; their gap to Türkiye before the first etüt and on the latest exam (hand-worked)', () => {
     kaynakKur();
     put('OG', [{ no: '1001', name: 'SENTETİK ADA', cls: '12/A', sessions: [{ date: '2026-10-05', course: 'MATEMATİK TYT', teacher: 'SENTETİK ÖĞRETMEN AY' }, { date: '2026-10-08', course: 'MATEMATİK TYT', teacher: 'Sentetik Öğretmen Ay' }, { date: '2026-10-09', course: 'AYT MATEMATİK', teacher: 'SENTETİK ÖĞRETMEN AY' }],
@@ -196,14 +226,14 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
   await check('the page: one section per teacher, classes together, formulas and raw numbers, no student names, no class figures, no ranking; the teacher filter', () => {
     planKur(); kaynakKur(); konuKur(); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:[]})');
     let h = run('OGRETMEN_RAPOR.gorunum()');
-    assert.match(h, /<h1 class="et-baslik">Öğretmen raporu<\/h1>/); assert.match(h, /Sınıflar ve öğrenciler birbiriyle karşılaştırılmaz/);
+    assert.match(h, /<h1 class="et-baslik">Öğretmen raporu<\/h1>/); assert.match(h, /aynı denemelerde Türkiye ortalamasıyla karşılaştırılır/);
     assert.equal((h.match(/<section class="ogr-ogretmen"/g) || []).length, 2);
     assert.match(h, /<h2>Sentetik Öğretmen Ay<\/h2><p class="mini">Matematik · 9\/C, 12\/A, 12\/B<\/p>/);
     // AY: TYT Matematik for the 12th grade (12/A and 12/B together); the 9th grade has no data. DE: TYT Türkçe with the topic grid.
     assert.match(h, /TYT Matematik · 12\. sınıf/); assert(!/12\/A ·|12\/B ·/.test(h.replace(/<p class="mini">[^<]*<\/p>/g, '').replace(/<details[\s\S]*?<\/details>/g, '')), 'no figure per class');
     assert.match(h, /TYT Türkçe · 12\. sınıf/); assert.match(h, /<table class="ogr-iz">/); assert.match(h, /▼▼▼/); assert.match(h, /▲▲▲/);
     // Headline: the newest exam with a Türkiye average, 12/A and 12/B together: 1202 → (22 + 30) / 2 = 26 against 13 → +13.
-    assert.match(h, /<span class="ogr-kpi-ad">Son deneme · Türkiye’ye göre<\/span><strong class="ogr-y">\+13,0<small> net<\/small><\/strong><span class="mini">27-YKS-1202 · 2 öğrenci<\/span>/);
+    assert.match(h, /<span class="ogr-kpi-ad">Son karşılaştırma · Türkiye’ye göre<\/span><strong class="ogr-y">\+13,0<small> net<\/small><\/strong><span class="mini">27-YKS-1202 · 2 öğrenci<\/span>/);
     // Formulas in plain words and the raw numbers.
     assert.match(h, /<summary>Nasıl hesaplanır · ham veriler<\/summary>/); assert.match(h, /Fark = 100 · \(d − b\) \/ n puan/); assert.match(h, /z = \(d − b\) \/ √\(Σ n·p·\(1 − p\) · \(1 \+ \(soru − 1\) · 0,2\)\)/);
     assert.match(h, /<td>27-YKS-1201<\/td><td class="sayi">3<\/td><td class="sayi">20,00<\/td><td class="sayi">12,00<\/td><td class="sayi">\+8,00<\/td>/, 'raw exam row: n, mean, Türkiye, gap');
