@@ -14,13 +14,13 @@ const kur=()=>{
   // School lists as ANALIZ.kaynak gives them: six exams, 20 students in two classes.
   const kisi=new Map(),sinavlar=[],tr={};
   for(let i=0;i<20;i++){const no=String(1001+i);kisi.set(no,{no,ad:'SENTETİK ÖĞRENCİ '+i,sinif:i%2?'12/B':'12/A'})}
-  for(let e=0;e<6;e++){const ad='27-YKS-120'+(e+1),tyt={};tr[ad]={'MATEMATİK-T':10+e*.4,'TÜRKÇE-T':22+e*.3};
+  for(let e=0;e<6;e++){const ad=e===5?'SENTETİK YAYINLARI TÜRKİYE GENELİ TYT 27-YKS-1206':'27-YKS-120'+(e+1),tyt={};tr[ad]={'MATEMATİK-T':10+e*.4,'TÜRKÇE-T':22+e*.3};
     for(let i=0;i<20;i++){const no=String(1001+i);tyt[no]={no,net:{MAT:9+(i%7)+e*.6,TÜR:21+(i%5)+e*.2}}}
     sinavlar.push({id:'s'+e,ad,g:gunNo('2026-09-0'+1)+e*14,tyt,ayt:{}})}
   const K={t:{sinavlar,kisi},trFn:ad=>tr[ad]?{genel:k=>tr[ad][k]??null}:null};ANALIZ.kaynak=()=>K;
   // Konu Takibi: three exams, Türkçe; the class answers differ by topic so the grid has red and green rows.
   const kt=KONU_TAKIBI,reps=[],parts=[],kodlar=['T.12.1.1','T.12.1.1','T.12.1.2','T.12.1.2','T.12.3.1','T.12.3.1','T.12.5.1','T.12.5.1'],p0=[.5,.5,.9,.9,.2,.2,.6,.6];
-  for(let e=1;e<=3;e++){const ad='SENTETİK-KONU-'+e,blocks=[];
+  for(let e=1;e<=3;e++){const ad=e===3?'SENTETİK YAYINLARI TÜRKİYE GENELİ KONU-3':'SENTETİK-KONU-'+e,blocks=[];
     for(let i=0;i<20;i++){const s={name:'SENTETİK ÖĞRENCİ '+i,no:String(1001+i),cls:(i%2?'201 12/B':'301 12/A')};
       const d=[[2,i%3?0:1],[2,i%4?0:1],[2,2],[2,i%2?2:1]];
       blocks.push({student:s,course:'TÜRKÇE-T',kind:'outcome',rows:[{code:'T.12.1.1',name:'a',c:[2,d[0][1],2-d[0][1],0]},{code:'T.12.1.2',name:'b',c:[2,d[1][1],2-d[1][1],0]},{code:'T.12.3.1',name:'c',c:[2,d[2][1],2-d[2][1],0]},{code:'T.12.5.1',name:'d',c:[2,d[3][1],2-d[3][1],0]}]})}
@@ -50,7 +50,25 @@ const kur=()=>{
      return rows.map(r=>{const c=r.querySelector('td.ogr-iz-h'),b=rgb(getComputedStyle(c).backgroundColor);return {ad:r.querySelector('th').textContent,metin:c.textContent,r:b[0],g:b[1],renk:getComputedStyle(c).color}})});
    assert(iz.length>=3,JSON.stringify(iz));assert(iz[0].metin.startsWith('−'),'most behind first: '+JSON.stringify(iz[0]));
    assert(iz[0].r>iz[0].g,'behind is red: '+JSON.stringify(iz[0]));const yesil=iz.find(x=>x.metin.startsWith('+'));assert(yesil&&yesil.g>yesil.r,'ahead is green: '+JSON.stringify(yesil));
-   await page.locator('.ogr-ogretmen').nth(1).screenshot({path:path.join(out,'ogretmen-raporu-'+width+'-'+tema+'.png')});
+   // The takeaway and reading guide are visible without hovering or opening the formulas, including on phones.
+   const report=page.locator('.ogr-ogretmen').nth(1);
+   assert.match(await report.locator('.ogr-ozet').innerText(),/avantajınız azaldı\. Tekrar önceliği: Sözcükte Anlam\./);
+   assert.deepEqual(await report.locator('.ogr-iz-sinav>span').allTextContents(),['SENTETİK-KONU-1','SENTETİK-KONU-2','SENTETİK YAYINLARI TÜRKİYE GENELİ KONU-3']);
+   assert.equal(await report.locator('.ogr-sinav-adi').last().getAttribute('aria-label'),'SENTETİK YAYINLARI TÜRKİYE GENELİ TYT 27-YKS-1206');
+   assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.ogr-net')].every(svg=>{
+    const labels=[...svg.querySelectorAll('.ogr-sinav-adi')],w=svg.viewBox.baseVal.width,h=svg.viewBox.baseVal.height;
+    return labels.every((el,i)=>{
+     const box=el.getBBox(),previous=i?labels[i-1].getBBox():null;
+     return [...el.querySelectorAll('tspan')].map(x=>x.textContent).join('').replace(/\s/g,'')===el.getAttribute('aria-label').replace(/\s/g,'')&&
+      box.x>=0&&box.x+box.width<=w&&box.y+box.height<=h&&(!previous||previous.x+previous.width<=box.x);
+    });
+   })),true,'full exam names fit without overlapping on desktop and phones');
+   for(const selector of ['.ogr-ozet','.ogr-iz-aciklama','.ogr-olcek','.ogr-iz-not']){
+    const item=report.locator(selector);assert(await item.isVisible(),selector+' visible');
+    const box=await item.boundingBox();assert(box.x>=0&&box.x+box.width<=width+1,selector+' readable without sideways scrolling');
+   }
+   // A tall element screenshot scrolls the fixed menu over the report; hide it only in the captured image.
+   await page.locator('.ogr-ogretmen').nth(1).screenshot({path:path.join(out,'ogretmen-raporu-'+width+'-'+tema+'.png'),style:'#ray{visibility:hidden}'});
    // The formulas and raw numbers fold out.
    const det=page.locator('.ogr-ogretmen').nth(1).locator('.ogr-formul').first();await det.locator('summary').click();
    assert.match(await det.innerText(),/Fark = 100 · \(d − b\) \/ n puan/);
@@ -71,6 +89,7 @@ const kur=()=>{
    // Print: no toolbar, each teacher on a new page.
    await page.emulateMedia({media:'print'});
    assert.equal(await page.locator('#ogrKok .et-arac').isVisible(),false,'no toolbar in print');
+   for(const selector of ['.ogr-ozet','.ogr-iz-aciklama','.ogr-olcek','.ogr-iz-not'])assert(await report.locator(selector).isVisible(),selector+' kept in print');
    assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelectorAll('.ogr-ogretmen')[1]).breakBefore),'page','each teacher on its own page');
    // In print the charts are drawn again at the paper's width and keep the subject's colour (the screen theme's colours do not
    // reach print); the topic cells keep their fills.
