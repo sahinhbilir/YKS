@@ -25507,15 +25507,23 @@ function zorlukIndex(zorluk,taban='okul'){
           const m=md.get(ck);courses.set(ck,kur(c,q,i=>t.q[i],m&&m.q.length===q.length?m:null));
         }
       }
-    }else if(e.ozet&&e.madde){
+    }
+    // The sessions a part has (TYT, AYT), and the sessions of the exam whose Sınav özeti is missing while the other's is there.
+    const otr=o=>['TYT','AYT'].filter(x=>Object.keys(o||{}).some(c=>c.endsWith(x==='TYT'?'-T':'-A'))),otC=c=>c.endsWith('-A')?'AYT':'TYT';
+    const oturum={ozet:otr(e.ozet),madde:otr(e.madde),turkiye:otr(e.turkiye)},hepsi=[...new Set([...oturum.ozet,...oturum.madde,...oturum.turkiye])];
+    const eksik={ozet:e.ozet?hepsi.filter(x=>!oturum.ozet.includes(x)):[]};
+    if(taban!=='turkiye'&&e.ozet&&e.madde){
+      // Uyuşmuyor: both files have the ders with different question counts, or the Madde Analizi has a ders the session's Sınav
+      // özeti does not know. A Sınav özeti ders missing from the Madde Analizi is not: a test nobody took is left out of it. A
+      // session without a Sınav özeti is eksik, not uyuşmuyor.
       for(const [ck,{c,q}] of oz){
-        const m=md.get(ck);
-        if(!m||m.q.length!==q.length){bad.push(c);continue}
+        const m=md.get(ck);if(!m)continue;
+        if(m.q.length!==q.length){bad.push(c);continue}
         courses.set(ck,kur(c,q,i=>m.q[i][0],m));
       }
-      for(const [ck,{c}] of md)if(!oz.has(ck))bad.push(c);
+      for(const [ck,{c}] of md)if(!oz.has(ck)&&oturum.ozet.includes(otC(c)))bad.push(c);
     }
-    out.set(k,{courses,bad,ozet:!!e.ozet,madde:!!e.madde,turkiye:!!e.turkiye});
+    out.set(k,{courses,bad,ozet:!!e.ozet,madde:!!e.madde,turkiye:!!e.turkiye,oturum,eksik});
   }
   return out;
 }
@@ -25795,7 +25803,10 @@ function topicHTML(t,sira,ctx={}){
 // Per exam: which of the two difficulty files are loaded, and whether they match question for question.
 function zorlukSatiri(v,zi,k){
   const e=v.zorluk?.[k],x=zi.get(k),bad=x?.bad||[];
-  return '<div class="kt-zline"><span>Zorluk: özet '+(e?.ozet?'✓':'yok')+' · madde analizi '+(e?.madde?'✓':'yok')+' · Türkiye (performans analizi) '+(e?.turkiye?'✓':'yok')+'</span>'+(bad.length?'<span class="kt-warning">Zorluk verisi uyuşmuyor: '+h(bad.map(courseLabel).join(', '))+'</span>':'')+
+  // An exam with a TYT and an AYT shows each part per session: "özet TYT ✓ · AYT yok".
+  const iki=x&&new Set([...x.oturum.ozet,...x.oturum.madde,...x.oturum.turkiye]).size>1;
+  const parca=t=>!e?.[t]?'yok':!iki?'✓':['TYT','AYT'].map(o=>o+' '+(x.oturum[t].includes(o)?'✓':'yok')).join(', ');
+  return '<div class="kt-zline"><span>Zorluk: özet '+parca('ozet')+' · madde analizi '+parca('madde')+' · Türkiye (performans analizi) '+parca('turkiye')+'</span>'+(bad.length?'<span class="kt-warning">Zorluk verisi uyuşmuyor: '+h(bad.map(courseLabel).join(', '))+'</span>':'')+
     (e?.turkiye&&!readonly()?'<button type="button" class="et-dugme" data-kt-trdelete="'+h(k)+'"'+(busy?' disabled':'')+'>Türkiye verisini kaldır</button>':'')+
     (e&&(e.ozet||e.madde)&&!readonly()?'<button type="button" class="et-dugme" data-kt-zdelete="'+h(k)+'"'+(busy?' disabled':'')+'>Zorluk verisini kaldır</button>':'')+'</div>';
 }
@@ -25955,7 +25966,9 @@ async function pdfEkle(files){
     await ekle(reports,owner,previous,zparts);
     // Say so at once when the two difficulty files of an exam do not fit each other.
     const zi=zorlukIndex(oku().veri?.zorluk);
-    for(const k of new Set(zparts.map(p=>ek(p.ad)))){const bad=zi.get(k)?.bad||[];if(bad.length)extra.push('Zorluk verisi uyuşmuyor: '+bad.map(courseLabel).join(', ')+'.')}
+    for(const k of new Set(zparts.map(p=>ek(p.ad)))){const x=zi.get(k),ad=oku().veri?.zorluk?.[k]?.ad||k;if(!x)continue;
+      if(x.bad.length)extra.push(ad+': Zorluk verisi uyuşmuyor: '+x.bad.map(courseLabel).join(', ')+'.');
+      for(const o of x.eksik.ozet)extra.push(ad+': '+o+' Sınav özeti yok; '+o+' dersleri konu ve kazanım düzeyinde eşlenemez. '+o+' Sınav özetini (Excel) ekleyin.')}
   }
   return uploadMessage(reports,errors,extra);
 }

@@ -75,8 +75,11 @@ as in a TÖDER file where 15 of the 29 listed pupils sat it). A test nobody answ
 an optional Seçmeli Felsefe) is left out, and the upload message says so; its 0 % would otherwise read as far behind
 Türkiye. One file may carry the exam's TYT and its AYT ("27-YKS-1203 / TYT", "… / AYT"), each with its own student count;
 two different exams in one file are refused. Either file may come first; the difficulty is used only
-when both exist and every course has the same question count ("Zorluk verisi uyuşmuyor:
-<ders>" otherwise). Uploading an exam's file again replaces that part for the sessions the file carries: an exam's TYT
+when both exist and every course has the same question count ("<sınav>: Zorluk verisi uyuşmuyor:
+<ders>" otherwise; also when the Madde Analizi has a ders the session's Sınav özeti does not know). A Sınav özeti ders missing
+from the Madde Analizi is not a mismatch (a test nobody took is left out of it), and a session with no Sınav özeti is not
+either: the upload says "<sınav>: AYT Sınav özeti yok; …" when the exam has the other session's özet, and Kaynaklar shows
+each part per session for an exam with TYT and AYT ("özet TYT ✓, AYT yok · madde analizi TYT ✓, AYT ✓"). Uploading an exam's file again replaces that part for the sessions the file carries: an exam's TYT
 and AYT files (Sınav özeti, Madde Analizi or Performans analizi) sit side by side. The Türkiye comparison counts each ders
 with its own students (the most doğru + yanlış + boş of its rows), so an AYT taken by 26 is not counted as 27. Kaynaklar shows
 "Zorluk: özet ✓ · madde analizi ✓" per exam with a button to remove it (editing teacher only).

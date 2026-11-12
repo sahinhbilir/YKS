@@ -361,6 +361,19 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   const other=zpart('madde','SENTETİK-ZORLUK',{'TÜRKÇE-T':spec['TÜRKÇE-T'],'TARİH-T':[['E.TAR.9.1.1',.5]]});
   assert.deepEqual(copy([...K.zorlukIndex(K.merge(K.blank(),[ZREP],[zpart('ozet','SENTETİK-ZORLUK',spec),other]).zorluk).values()][0].bad),['TARİH-T']);
  });
+ await test('a TYT Sınav özeti with Seçmeli Felsefe beside a TYT + AYT Madde Analizi without it: nothing is "uyuşmuyor"; the missing AYT özet is named',async()=>{
+  const ozet=zpart('ozet','SENTETİK-ZORLUK',{'TÜRKÇE-T':[['T.1',.5],['T.2',.5]],'S.FELSEFE-T':[['F.1',0],['F.2',0]]});
+  const madde={tur:'madde',ad:'SENTETİK-ZORLUK',oturum:'TYT + AYT',ogrenci:27,dersler:{'TÜRKÇE-T':[[.5,13,10,4,'Orta'],[.4,11,10,6,'Orta']],'MATEMATİK-A':[[.5,13,10,3,'Orta'],[.25,6,10,10,'Zor']]}};
+  const v=K.merge(K.blank(),[ZREP],[ozet,madde]),x=[...K.zorlukIndex(v.zorluk).values()][0];
+  assert.deepEqual(copy(x.bad),[],'Seçmeli Felsefe (left out of the Madde Analizi) and the AYT dersler (no AYT özet) are not mismatches');
+  assert.deepEqual(copy(x.eksik.ozet),['AYT']);assert(x.courses.has(K.key('TÜRKÇE-T')),'TYT Türkçe has its difficulty');
+  put('__kt',v);run('D.konutakibi=__kt');const html=K.gorunum();
+  assert(html.includes('Zorluk: özet TYT ✓, AYT yok · madde analizi TYT ✓, AYT ✓'),'each part per session');assert(!html.includes('uyuşmuyor'));
+  // The upload says what to add.
+  run('D.konutakibi=__kt;denemePdfSayfalari=async f=>({pages:f.pages})');
+  const msg=await K.pdfEkle([{name:'m.pdf',size:10,pages:F.maddePages({ad:'SENTETİK-ZORLUK',oturum:'AYT',N:26,courses:[{course:'MATEMATİK-A',rows:[[13,10,3],[6,10,10]]}]})}]);
+  assert.match(msg,/SENTETİK-ZORLUK: AYT Sınav özeti yok; AYT dersleri konu ve kazanım düzeyinde eşlenemez\. AYT Sınav özetini \(Excel\) ekleyin\./);assert(!/uyuşmuyor/.test(msg));
+ });
  await test('exam with only difficulty files is listed in Kaynaklar; either file may come first',()=>{
   const v=K.merge(K.blank(),[],zpair('SENTETİK-1203',{'TÜRKÇE-T':[['T.12.1.1',.5]]}));
   assert.equal(v.exams.length,0);put('__kt',v);run('D.konutakibi=__kt');const html=K.gorunum();assert(html.includes('SENTETİK-1203'));assert(html.includes('kazanım haritası yüklenmedi'));assert(html.includes('Zorluk: özet ✓ · madde analizi ✓'));
@@ -478,7 +491,7 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   msg=await K.pdfEkle([karne,madde]);assert.match(msg,/^1 PDF kaydedildi · 1 sınav \(SENTETİK-1\) · 1 öğrenci\. Aynı sınavın tekrarları güncellendi\. Madde Analizi kaydedildi · SENTETİK-1203 \(TYT\) · 3 ders · 6 soru$/);
   // fewer questions in the new özet than in the stored Madde Analizi: stored, but flagged
   const short=xl('ozet.xlsx',F.ozetXlsx(QS.slice(0,5)));msg=await K.pdfEkle([short]);
-  assert.match(msg,/^Sınav özeti kaydedildi · SENTETİK-1203 \(TYT\) · 2 ders · 5 soru Zorluk verisi uyuşmuyor: Geometri\.$/);
+  assert.match(msg,/^Sınav özeti kaydedildi · SENTETİK-1203 \(TYT\) · 2 ders · 5 soru SENTETİK-1203: Zorluk verisi uyuşmuyor: Geometri\.$/);
   assert.equal(K.model(K.oku().veri,{}).zorluk.z,null);
   // bad files do not block the good ones
   msg=await K.pdfEkle([pdf('bozuk.pdf',[[{s:'x',x:1,y:1,w:3}]]),xl('cevap.xlsx',F.cevapXlsx()),ozet]);assert.match(msg,/^Sınav özeti kaydedildi · SENTETİK-1203 \(TYT\) · 3 ders · 6 soru bozuk\.pdf: .*cevap\.xlsx: Bu dosya öğrenci cevap raporu/);
