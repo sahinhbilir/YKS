@@ -19,7 +19,7 @@ sandbox.window.document = sandbox.document; vm.createContext(sandbox); new vm.Sc
 const run = code => vm.runInContext(code, sandbox);
 const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
-sandbox.__kaynak = run('ANALIZ.kaynak'); sandbox.__temel = run('OGRENCI_RAPOR.temelOgrenciler');
+sandbox.__kaynak = run('ANALIZ.kaynak'); sandbox.__temel = run('OGRENCI_RAPOR.temelOgrenciler'); sandbox.__okuAsil = null; sandbox.__farkAsil = null; sandbox.__say = null;
 const reset = () => run(`D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='ogretmenrapor';EK.ogrHoca=undefined;ANALIZ.kaynak=__kaynak;OGRENCI_RAPOR.temelOgrenciler=__temel;kaydet=async()=>true`);
 const near = (a, b, msg) => assert(Math.abs(a - b) < 1e-6, (msg || '') + ' ' + a + ' != ' + b);
 let passed = 0;
@@ -135,7 +135,13 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.match(h, /<summary>Nasıl hesaplanır · ham veriler<\/summary>/); assert.match(h, /Fark = 100 · \(d − b\) \/ n puan/); assert.match(h, /z = \(d − b\) \/ √\(Σ n·p·\(1 − p\) · \(1 \+ \(soru − 1\) · 0,2\)\)/);
     assert.match(h, /<td>27-YKS-1201<\/td><td class="sayi">3<\/td><td class="sayi">20,00<\/td><td class="sayi">12,00<\/td><td class="sayi">\+8,00<\/td>/, 'raw exam row: n, mean, Türkiye, gap');
     // Raw topic row (12/A and 12/B together): Sözcükte Anlam, n = 3 · 4 = 12, d = 1, b = 3 · 2,8 = 8,4 → 100 · (1 − 8,4) / 12 = −61,7.
-    assert.match(h, /<td>Sözcükte Anlam<\/td><td>SENTETİK-KONU-1<\/td><td class="sayi">12<\/td><td class="sayi">1<\/td><td class="sayi">8,40<\/td><td class="sayi">−61,7<\/td>/, 'raw topic row');
+    // The topic table is built when its box opens: the page carries its place, the module its rows.
+    const tr = h.match(/<details class="ogr-formul" data-ogr-ham="(\d+)">(?:(?!<\/details>)[\s\S])*<div class="ogr-ham-konu" data-ogr-ham-konu="\1"><\/div>/g) || [];
+    assert.equal(tr.length, 1, 'one topic table to fill (TYT Türkçe)');
+    const i = +tr[0].match(/data-ogr-ham="(\d+)"/)[1], ham = run(`OGRETMEN_RAPOR.hamKonu(OGRETMEN_RAPOR.bloklar()[${i}])`);
+    assert.match(run(`OGRETMEN_RAPOR.bloklar()[${i}].dersAd`), /^TYT Türkçe$/);
+    assert.match(ham, /<td>Sözcükte Anlam<\/td><td>SENTETİK-KONU-1<\/td><td class="sayi">12<\/td><td class="sayi">1<\/td><td class="sayi">8,40<\/td><td class="sayi">−61,7<\/td>/, 'raw topic row');
+    assert(!h.includes('<td>Sözcükte Anlam</td>'), 'the topic rows are not in the page until opened');
     // Never a student's name, never a rank.
     for (const ad of ['SENTETİK ADA', 'SENTETİK BORA', 'SENTETİK CEMRE', 'Sentetik Ada']) assert(!h.includes(ad), ad);
     assert(!/sıra|Sıra|\d+\. sıra/.test(h.replace(/<select[\s\S]*?<\/select>/, '')), 'no ranking');
@@ -144,6 +150,17 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal((h.match(/<section class="ogr-ogretmen"/g) || []).length, 1); assert.match(h, /<h2>Sentetik Öğretmen De<\/h2>/);
     // Empty: no timetables.
     run('delete D.etutPlani'); assert.match(run('OGRETMEN_RAPOR.gorunum()'), /<b>Ders programı yok<\/b>[\s\S]*data-sekme="etutplani"/);
+  });
+  await check('one page reads each source once, whatever the number of teachers and blocks (the page froze when every block rebuilt them)', () => {
+    planKur(); kaynakKur(); konuKur();
+    run(`__say={temel:0,oku:0,fark:0};OGRENCI_RAPOR.temelOgrenciler=()=>{__say.temel++;return {students:[]}};
+      __okuAsil=__okuAsil||KONU_TAKIBI.oku;__farkAsil=__farkAsil||KONU_TAKIBI.ogrenciFark;
+      KONU_TAKIBI.oku=(...a)=>{__say.oku++;return __okuAsil(...a)};KONU_TAKIBI.ogrenciFark=(...a)=>{__say.fark++;return __farkAsil(...a)}`);
+    try {
+      const h = run('OGRETMEN_RAPOR.gorunum()'); assert.equal((h.match(/<section class="et-panel ogr-blok"/g) || []).length, 2, 'two blocks');
+      // One student base, one Konu Takibi read, one comparison per exam (three TYT exams), shared by every block.
+      assert.deepEqual(get('__say'), { temel: 1, oku: 1, fark: 3 });
+    } finally { run('KONU_TAKIBI.oku=__okuAsil;KONU_TAKIBI.ogrenciFark=__farkAsil'); }
   });
   await check('teacher only; the menu and the route; nothing is stored', () => {
     planKur(); kaynakKur(); konuKur(); const once = run('JSON.stringify(D)');

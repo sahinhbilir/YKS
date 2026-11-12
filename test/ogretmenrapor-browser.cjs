@@ -53,7 +53,10 @@ const kur=()=>{
    await page.locator('.ogr-ogretmen').nth(1).screenshot({path:path.join(out,'ogretmen-raporu-'+width+'-'+tema+'.png')});
    // The formulas and raw numbers fold out.
    const det=page.locator('.ogr-ogretmen').nth(1).locator('.ogr-formul').first();await det.locator('summary').click();
-   assert.match(await det.innerText(),/Fark = 100 · \(d − b\) \/ n puan/);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'formulas open: no sideways scrolling');
+   assert.match(await det.innerText(),/Fark = 100 · \(d − b\) \/ n puan/);
+   // The raw topic table is built when the box opens.
+   await det.locator('.ogr-ham-konu table tbody tr').first().waitFor();assert((await det.locator('.ogr-ham-konu table tbody tr').count())>=3,'raw topic rows');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'formulas open: no sideways scrolling');
    await det.locator('summary').click();
    // One teacher.
    await page.locator('#ogrHoca').selectOption({label:'Sentetik Öğretmen De'});await page.waitForFunction(()=>document.querySelectorAll('.ogr-ogretmen').length===1);
