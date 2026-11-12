@@ -11,6 +11,12 @@
 ## Where the data comes from
 
 - **Teachers, subjects, classes:** the classes' weekly timetables in **Etüt planı** (`programlar`: day, time, lesson, teacher). A lesson is mapped to its exam subjects (`DERSLER`): Matematik → TYT and AYT Matematik; Türk dili ve edebiyatı → TYT Türkçe and AYT Edebiyat; Tarih → TYT Tarih, AYT Tarih-1 and -2; and so on. Lessons with no exam subject (Beden eğitimi, Rehberlik …) are left out. No timetable → the page says so and links to Etüt planı.
+- **TYT or AYT, class by class:** the timetable decides. In a class, a lesson whose name gives its session (*TYT MATEMATİK*, *AYT MATEMATİK*) or is Türkçe (TYT by its name) takes that session's exam subject alone; a lesson that names none (*MATEMATİK*, *GEOMETRİ*, *FİZİK*, *TÜRK DİLİ VE EDEBİYATI*) takes the exam subjects no such lesson took. So:
+  - TYT and AYT Matematik split between two teachers where the timetable splits them;
+  - Geometri, Fizik and the other mixed lessons are TYT and AYT;
+  - in an EA class with a Türkçe lesson, Türk dili ve edebiyatı is AYT Edebiyat; alone (other classes) it is TYT Türkçe and AYT Edebiyat, and a block lists only the classes that had data, so an SAY class does not appear under AYT Edebiyat.
+
+  A subject a teacher teaches in one session only says so under their name: *Matematik (AYT) · 12/C*.
 - **Nets:** the school's exam lists (Sıralamalar, through `ANALIZ.kaynak()`).
 - **Türkiye average:** the publisher's Genel Net from the Türkiye geneli lists.
 - **Topics:** Konu Takibi: the students' kazanım reports, the exam summary (question → kazanım) and the publisher's **Performans analizi** (Türkiye's success rate per question). Without the Performans analizi the grid is replaced by a one-line note saying what to add.
@@ -18,24 +24,31 @@
 
 Each teacher's subject is split by grade (an exam belongs to one grade) and by exam subject: one block per *TYT Matematik · 12. sınıf*, *AYT Matematik · 12. sınıf* …
 
+**Sınıf düzeyi** shows one grade only (*12. sınıf*): its teachers, the classes of that grade under their names, its blocks, and the grade in the page title (also in print).
+
 ## A block
 
-1. **Headline:** *Son deneme · Türkiye’ye göre* in net (green above, red below), for the newest exam that has a Türkiye list; an exam whose list has not come yet is skipped, never filled in.
-2. **Net chart:** the students' mean net in the subject (solid, the subject's colour) and the Türkiye average (dashed) exam by exam; between them a bar, green where the students are above, red where below. Mean net = the mean over the students whose net the list prints (a blank cell is not a 0 here).
+1. **Headline:** *Son deneme · Türkiye’ye göre* in net (green above, red below), for the newest exam that has a Türkiye list; an exam whose list has not come yet is skipped, never filled in. Under it, how that gap moved: ▲/▼ against the exam before and against the first exam.
+2. **Net chart**, two panels on one time axis, every value written on the chart (a printout has no tooltips):
+   - *Türkiye’ye göre fark (net)*: a bar per exam from the Türkiye line (0), green above, red below, its value on it. The scale is the gaps' own range, so a change of a few tenths of a net is visible;
+   - *Ortalama net*: the students' mean net in the subject (solid, the subject's colour) and the Türkiye average (dashed), each point with its value. Mean net = the mean over the students whose net the list prints (a blank cell is not a 0 here).
+
+   With many exams the values are written on every k-th point counted back from the newest, so they never overlap.
 3. **Topic grid** (*Konular · Türkiye ile aynı sorularda*): a row per topic, a column per exam. Each cell compares the students' correct answers d with the number students across Türkiye would get on **the same questions**, b = Σ p (the publisher's success rates of those questions):
    - gap = 100 · (d − b) / n points (n: the students' answers to those questions);
    - colour: **red** when behind, **green** when ahead, deeper with the gap (full at ±20 points); white text on the deepest cells;
    - **pale** when the gap is within chance: z = (d − b) / √(Σ n·p·(1 − p) · (1 + (q − 1)·0,2)) with |z| < 1,96 (summed over the students; p = b/n per student; one student's answers to the questions of one topic are taken as correlated, r = 0,2, so the band is widened by the design effect 1 + (q − 1)·0,2, q the topic's questions per student — the same assumption as Konu Takibi);
    - **▼▼▼ / ▲▲▲** at the end of a row: behind / ahead (beyond chance) on the last three measured exams in a row: a signal to change the approach, or to keep it;
+   - **İlk → son:** the topic's gap on its last measured exam minus on its first (points), ▲ green when it improved, ▼ red when it fell; descriptive, no chance test;
    - rows are ordered most behind first; each column's head carries the whole subject's gap that exam; hatched cells: the topic had no question that exam.
    Because b uses Türkiye's success on the same questions, a hard question does not paint a topic red on its own: if everybody found it hard, the expectation is low too.
-4. **Etüt:** the teacher's etüt attendances in the subject (rows of the etüt report: one student at one etüt) and the number of students. The arrow shows those students' mean gap to the Türkiye average in the subject on their last exam on or before their first etüt with the teacher → on their latest exam (only students with both). It is descriptive: everything else the students did also moves it. An etüt belongs to the session its course names (“MATEMATİK TYT”, “AYT FİZİK”); one that names none counts with TYT, so nothing is counted twice.
+4. **Etüt:** the teacher's etüt attendances in the subject (rows of the etüt report: one student at one etüt) by students of the block's grade, and the number of those students. The arrow shows their mean gap to the Türkiye average in the subject on their last exam on or before their first etüt with the teacher → on their latest exam (only students with both). It is descriptive: everything else the students did also moves it. Etüts are not split into TYT and AYT the way classes are: an etüt whose name gives a session (“MATEMATİK TYT”, “AYT FİZİK”) counts in that block; one that names none counts in each of the teacher's blocks of the subject (TYT and AYT), and the block says how many such etüts it counted.
 5. **Nasıl hesaplanır · ham veriler:** the rules above in plain words, and the raw tables: per exam (students, mean net, Türkiye average, gap) and per topic and exam (n, d, b, gap, z). The topic table is built when the box is opened (over all teachers it runs to thousands of rows).
 
 ## Use and print
 
 - **Öğretmen** filters to one teacher (*Bütün öğretmenler* by default).
-- **Yazdır / PDF** prints every shown teacher on their own page (no toolbar; colours kept), so the whole school's report is one document, or one teacher's alone.
+- **Yazdır / PDF** prints every shown teacher on their own page (no toolbar), so the whole school's report is one document, one grade's, or one teacher's alone. In print: the subjects' colours are the page's own (the screen theme's do not reach print), every fill prints even with "background graphics" off, the headline sits above the chart and the charts are drawn again at the paper's width, so their values stay readable.
 - Nothing is stored and nothing is sent; the page reads the notebook only.
 
 ## Speed
@@ -52,6 +65,6 @@ On a synthetic school of 500 students, 14 weeks of lists and two etüts per stud
 
 `src/ogretmenrapor.js` (`OGRETMEN_RAPOR`), `src/ogretmenrapor.css`, embedded by `node scripts/embed-ogretmenrapor.cjs` (`--check` verifies).
 
-- `node test/ogretmenrapor-regression.cjs`: teachers from the timetables (lessons without an exam subject left out); the mean net of a teacher's classes together against the Türkiye average (a blank is not a 0, another class is not counted, no list → no gap); the topic grid with hand-worked d, b, gap and z (design effect), the run of three behind / ahead, the order and the exam column; the colours; the etüts (each once, by session; before → after); the page (formulas, raw rows, no student names, no figure per class, no ranking, the teacher filter, the empty state); each source read once per page; teacher only; nothing stored.
+- `node test/ogretmenrapor-regression.cjs`: teachers from the timetables (lessons without an exam subject left out); TYT / AYT class by class (a session-named lesson alone, an unmarked one the rest; Türkçe beside Edebiyat; mixed lessons both); Sınıf düzeyi; every value written on the chart, the gap panel's own scale, the headline's change, the grid's first → last column; the mean net of a teacher's classes together against the Türkiye average (a blank is not a 0, another class is not counted, no list → no gap); the topic grid with hand-worked d, b, gap and z (design effect), the run of three behind / ahead, the order and the exam column; the colours; the etüts (by session where the name gives one, in both blocks where it does not; the block's grade only; before → after); the page (formulas, raw rows, no student names, no figure per class, no ranking, the teacher filter, the empty state); each source read once per page; teacher only; nothing stored.
 - `node test/buyuk-okul-regression.cjs`: a school-sized notebook through the app's own stores: the student base copies the lists once, not per student; a combined TYT+AYT list gives the TYT row TYT lessons and the AYT row AYT lessons; etüt rows reach the student of that name and class (the same name in two classes stays two students); the report builds the base once.
-- `node test/ogretmenrapor-browser.cjs`: 1280 px light and 390 px dark: the sections, the charts at their box's width, red behind and green ahead in the grid, no sideways scrolling (also with the formulas open), the raw topic table filled when its box opens, the filter, and the print layout (one teacher per page, no toolbar).
+- `node test/ogretmenrapor-browser.cjs`: 1280 px light and 390 px dark: the sections, the charts at their box's width, red behind and green ahead in the grid, no sideways scrolling (also with the formulas open), the raw topic table filled when its box opens, the values on the chart, the teacher and grade filters, and print (one teacher per page, no toolbar, the chart redrawn at the paper's width with the subject's colour, the cells' fills kept).

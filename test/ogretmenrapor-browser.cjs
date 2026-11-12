@@ -62,10 +62,24 @@ const kur=()=>{
    await page.locator('#ogrHoca').selectOption({label:'Sentetik Öğretmen De'});await page.waitForFunction(()=>document.querySelectorAll('.ogr-ogretmen').length===1);
    assert.equal(await page.locator('.ogr-ogretmen h2').innerText(),'Sentetik Öğretmen De');
    await page.locator('#ogrHoca').selectOption('');await page.waitForFunction(()=>document.querySelectorAll('.ogr-ogretmen').length===2);
+   // Sınıf düzeyi: 12. sınıf (every synthetic class is a 12th-grade one).
+   await page.locator('#ogrDuzey').selectOption('12');await page.waitForFunction(()=>/12\. sınıf/.test(document.querySelector('#ogrKok .et-baslik').textContent));
+   assert.equal(await page.locator('.ogr-ogretmen').count(),2);await page.locator('#ogrDuzey').selectOption('');
+   await page.waitForFunction(()=>document.querySelectorAll('#ogrKok .ogr-grafik svg').length>=2);
+   // Every value is written on the chart: the gaps and both nets.
+   assert(await page.locator('#ogrKok .ogr-grafik text.ogr-deger').count()>=12,'values on the chart');
    // Print: no toolbar, each teacher on a new page.
    await page.emulateMedia({media:'print'});
    assert.equal(await page.locator('#ogrKok .et-arac').isVisible(),false,'no toolbar in print');
    assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelectorAll('.ogr-ogretmen')[1]).breakBefore),'page','each teacher on its own page');
+   // In print the charts are drawn again at the paper's width and keep the subject's colour (the screen theme's colours do not
+   // reach print); the topic cells keep their fills.
+   await page.evaluate(()=>OGRETMEN_RAPOR.grafikleriCiz());
+   const yaz=await page.evaluate(()=>{const k=document.querySelector('#ogrKok .ogr-grafik'),svg=k.querySelector('svg'),yol=svg.querySelector('path.ogr-okul'),nokta=svg.querySelector('circle.ogr-okul-nokta'),h=document.querySelector('#ogrKok td.ogr-iz-h');
+     return {w:Number(svg.getAttribute('width')),kutu:Math.round(k.clientWidth),cizgi:getComputedStyle(yol).stroke,nokta:getComputedStyle(nokta).fill,hucre:getComputedStyle(h).printColorAdjust||getComputedStyle(h).webkitPrintColorAdjust,deger:svg.querySelectorAll('text.ogr-deger').length}});
+   assert(Math.abs(yaz.w-yaz.kutu)<=1,'chart at its printed width: '+JSON.stringify(yaz));
+   assert(!/none|rgb\(0, 0, 0\)/.test(yaz.cizgi)&&!/rgb\(0, 0, 0\)/.test(yaz.nokta),'the students’ line keeps its colour in print: '+JSON.stringify(yaz));
+   assert.equal(yaz.hucre,'exact');assert(yaz.deger>=6,'values in print');
    await page.emulateMedia({media:'screen'});
    assert.deepEqual(errors,[]);await context.close();console.log('PASS Öğretmen raporu at '+width+' px ('+tema+')');
   }
