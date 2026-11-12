@@ -1,7 +1,7 @@
 // Etüt etkisi on desktop and mobile: the page under Öğrenciler; the headline and the verdict (each student against their own other dersler), the "Etütten önce ve sonra"
 // event study (two lines for the same students, the first etüt marked, the count under each position), the collapsed "Ayrıntı" block (the cross-student number and its
 // dots, the "Etüt aldıkça artış" bars), and the
-// school's Türkiye standing drawn at their real width (the standing named at its right end in "ilk %…" wording, the weekly etüts
+// school's Türkiye standing drawn at their real width (the printed place named at its right end, "İlk 100 dışı" outside the list, the weekly etüts
 // beneath), the teachers and students tables (every numeric header sits over its numbers), a teacher's filter, the Ders and Dönem
 // controls, the students left out, the collapsed method block, the missing-list banner, and no sideways scrolling on a phone.
 // Synthetic merged students only (the shape Öğrenci raporları gives the page; the merge has its own tests) and the synthetic
@@ -129,7 +129,7 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
    });
    assert(Math.abs(b.w-b.kw)<=1&&b.attr===b.kw,'bars drawn at the real width '+JSON.stringify([b.w,b.attr,b.kw]));
    assert.equal(b.sutun,5);assert.equal(b.sifir,1);assert(b.biyik>=6&&b.biyik%3===0,'whiskers '+b.biyik);assert(b.faint>=1,'small bars are faint');assert.equal(b.sayilar,5);assert.deepEqual(b.adlar,['0','1','2','3','4+']);assert(b.enKucuk>=11,'type is real pixels: '+b.enKucuk);assert.deepEqual(b.tasan,[],'nothing leaves the box');
-   // The standing: the school's line, named at its right end in the "ilk %…" wording, the weekly etüts beneath on the same dates.
+   // The standing: the school's line of printed places, named at its right end ("23." or "İlk 100 dışı"), the weekly etüts beneath on the same dates.
    const g=await page.evaluate(()=>{
     const kutu=document.querySelector('#eeGrafik .et-grafik'),svg=kutu.querySelector('svg'),s=svg.getBoundingClientRect(),k=kutu.getBoundingClientRect();
     const yazilar=[...svg.querySelectorAll('text.ee-ad')].map(t=>{const r=t.getBoundingClientRect();return {t:t.textContent,top:r.top,bottom:r.bottom,right:r.right,font:parseFloat(getComputedStyle(t).fontSize)}});
@@ -138,9 +138,9 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
       cubuk:svg.querySelectorAll('rect.ee-cubuk').length,yazilar,enKucuk:Math.min(...tum),lejant:document.querySelectorAll('#eeGrafik .et-lejant').length,ticks:[...svg.querySelectorAll('text.et-tik')].map(t=>t.textContent)};
    });
    assert(Math.abs(g.w-g.kw)<=1&&g.attr===g.kw,'standing drawn at the real width '+JSON.stringify([g.w,g.attr,g.kw]));
-   assert.equal(g.yollar,1);assert.equal(g.noktalar,5);assert(g.cubuk>=3,'weekly bars');assert.equal(g.lejant,0);assert(g.enKucuk>=11,'type is real pixels: '+g.enKucuk);
-   assert.equal(g.yazilar.length,1);assert.match(g.yazilar[0].t,/^ilk %\d+(,\d)?$/,'named with the dilim wording: '+g.yazilar[0].t);assert(g.yazilar[0].right<=g.kutuSag+1,'label stays inside the box');
-   assert(g.ticks.some(t=>/^%\d+(,\d)?$/.test(t)),'dilim ticks: '+g.ticks);
+   assert(g.yollar>=1);assert.equal(g.noktalar,5);assert(g.cubuk>=3,'weekly bars');assert.equal(g.lejant,0);assert(g.enKucuk>=11,'type is real pixels: '+g.enKucuk);
+   assert.equal(g.yazilar.length,1);assert.match(g.yazilar[0].t,/^(\d+\.|İlk 100 dışı)$/,'named with the printed place: '+g.yazilar[0].t);assert(g.yazilar[0].right<=g.kutuSag+1,'label stays inside the box');
+   assert(g.ticks.includes('1.')&&g.ticks.includes('100.')&&g.ticks.some(t=>t==='İlk 100 dışı'||t==='dışı'),'place ticks: '+g.ticks);assert(!g.ticks.some(t=>/%/.test(t)),'no percentile ticks');
    assert(await page.locator('#eeGrafik svg text',{hasText:'Haftalık etüt'}).count()===1);
    // Tables: every numeric header ends where its numbers end, in every table of the page.
    for(const id of ['eeHocalar','eeOgrenciler']){

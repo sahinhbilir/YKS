@@ -447,12 +447,14 @@ function kurumTurkiye(grade){
  if(KT_ONBELLEK)KT_ONBELLEK.set(grade,r);return r;
 }
 function kurumOnbellekli(f){KT_ONBELLEK=new Map();try{return f()}finally{KT_ONBELLEK=null}}
-// The school's Türkiye geneli standing for one grade, from the Türkiye geneli page's own model (nothing is re-computed here).
-// {var:false, neden} when no list / school. Else every exam (with its kind: Tarama or Genel, Sıralamalar' choice for that exam,
-// else from its name) and two cards, TYT and AYT: the total T series (shown as the yüzdelik dilim, "ilk %12", dil / dilNow; the colour and arrow of
-// a change still come from ΔT) (TYT toplam; SAY, EA, SÖZ), every ders's T series and the
-// comparison pair. The totals' ΔT is first → latest exam with a value. A ders's ΔT is the latest Tarama against the Tarama before it
-// (a Genel exam between them is skipped), so two kinds of exam are never mixed; with fewer than two Tarama exams a ders has no ΔT.
+// The school's Türkiye geneli standing for one grade, from the Türkiye geneli page's own model: only what the lists print, nothing
+// estimated. {var:false, neden} when no list / school. Else every exam (with its kind: Tarama or Genel, Sıralamalar' choice for that
+// exam, else from its name) and two cards, TYT and AYT. A card holds, exam by exam, the school's average place over the session's
+// subjects (a subject outside its list counts as one past the list's end, 101.; lower is better) and how many subjects it is in,
+// and every ders's printed place (null: outside the list; undefined: the ders is not in that exam). The card's change is first →
+// latest exam with a value; a ders's change is the latest Tarama against the Tarama before it (a Genel exam between them is
+// skipped), so two kinds of exam are never mixed; with fewer than two Tarama exams a ders has no change. A change is in places,
+// positive when the school rose.
 function kurumTurkiyeAl(grade){
  const yok=neden=>({var:false,neden});
  if(typeof TURKIYE==='undefined'||typeof D==='undefined')return yok('liste');
@@ -460,7 +462,7 @@ function kurumTurkiyeAl(grade){
  // The list kind and school the teacher chose on the Türkiye geneli page (EK.tgListe / EK.tgOkul) come first, so the
  // charts are the page's own; only when that list kind has nothing for the grade does the old order (kolej, kurum, kurs) apply.
  const ek=typeof EK!=='undefined'&&EK?EK:{},SIRA=['kolej','kurum','kurs'],secili=SIRA.includes(ek.tgListe)?ek.tgListe:null,okulSec=ek.tgOkul||undefined;
- const duzey='d'+grade,al=(liste,oturum,toplam)=>TURKIYE.model(veri,{liste,duzey,oturum,toplam,okul:okulSec,mod:'tpuan',aralik:'tum'});
+ const duzey='d'+grade,al=(liste,oturum)=>TURKIYE.model(veri,{liste,duzey,oturum,okul:okulSec,mod:'sira'});
  let liste=null,temel=null;
  for(const l of secili?[secili,...SIRA.filter(x=>x!==secili)]:SIRA){const m=al(l,'TYT');if(m.liste===l&&m.duzey===duzey){liste=l;temel=m;break}}
  if(!temel)return yok('liste');
@@ -468,29 +470,27 @@ function kurumTurkiyeAl(grade){
  const tur=ad=>{const k=denemeAdAnahtari(ad),s=sl.find(x=>denemeAdAnahtari(x.ad)===k);return s?(s.tur||SIRALAMA.addanTur(s.ad)):SIRALAMA.addanTur(ad)};
  const sinavlar=temel.sinavlar,kisa=TURKIYE.kisaAdlar(sinavlar);
  const exams=sinavlar.map((s,i)=>({ad:s.ad,kisa:kisa[i].replace(/[\s_-]*tarama[\s_-]*/giu,' ').trim()||kisa[i],date:s.g===null||s.g===undefined?null:iso(s.g),tur:tur(s.ad)}));
- const tOf=seri=>seri.map(p=>p&&Number.isFinite(p.t)?p.t:null),lastIdx=t=>{for(let i=t.length-1;i>=0;i--)if(t[i]!==null)return i;return -1};
- // The two latest Tarama exams in which this card has a T.
- const pairOf=ts=>{const ok=exams.map((e,i)=>e.tur==='tarama'&&ts.some(t=>t[i]!==null)?i:-1).filter(i=>i>=0);return ok.length>=2?{once:ok.at(-2),son:ok.at(-1)}:null};
- const card=(series,lessons)=>{
-  const ts=series.map(s=>s.t).concat(lessons.map(d=>d.t)),pair=pairOf(ts);if(!series.length&&!lessons.length)return null;
-  const at=t=>{const i=pair?pair.son:lastIdx(t);return i>=0?t[i]:null},dl=t=>pair&&t[pair.once]!==null&&t[pair.son]!==null?t[pair.son]-t[pair.once]:null;
-  return {pair,pairText:pair?exams[pair.once].kisa+' → '+exams[pair.son].kisa+' (tarama → tarama)':null,
-   series:series.map(s=>{const li=lastIdx(s.t),fi=s.t.findIndex(v=>v!==null),p=s.tseri[li];return {key:s.key,label:s.label,color:s.color,t:s.t,dil:s.dil,dilNow:s.dil[li],dilFirst:fi>=0?s.dil[fi]:null,dilLast:li>=0?s.dil[li]:null,tNow:s.t[li],first:fi,last:li,delta:li>fi?s.t[li]-s.t[fi]:null,n:p&&p.n!=null?p.n:null,tam:!!(p&&p.tam),sira:p&&p.sira!=null?{v:p.sira,yak:false}:p&&p.tahmin!=null?{v:p.tahmin,yak:true}:null}}),
-   lessons:lessons.map(d=>({ad:d.ad,t:d.t,dil:d.dil,dilNow:(i=>i>=0?d.dil[i]:null)(pair?pair.son:lastIdx(d.t)),dilOnce:pair?d.dil[pair.once]:null,dilSon:pair?d.dil[pair.son]:null,tNow:at(d.t),delta:dl(d.t)}))};
- };
- const cards={};
+ const yer=(sira,n)=>sira===undefined?null:sira===null?n+1:sira;
+ const cards={};let bulundu=false;
  for(const oturum of ['TYT','AYT']){
-  const series=[],lessons=[];let aytDone=false;
-  for(const [key,label,o,color] of [['TYT','TYT toplam','TYT','#213d40'],['SAY','SAY toplam','AYT',C.blue],['EA','EA toplam','AYT','#78629f'],['SÖZ','SÖZ toplam','AYT',C.amber]]){
-   if(o!==oturum)continue;
-   const m=key==='TYT'?temel:al(liste,'AYT',key);if(m.oturum!==o)continue;
-   if(m.toplam&&m.toplam.key===key){const t=tOf(m.toplam.tseri);if(lastIdx(t)>=0)series.push({key,label,color,t,tseri:m.toplam.tseri,dil:m.toplam.tseri.map(p=>TURKIYE.dilimNokta(p))})}
-   if(!aytDone){aytDone=true;for(const d of m.dersler){const t=tOf(d.seri);if(lastIdx(t)>=0)lessons.push({ad:d.ad,t,dil:d.seri.map(p=>TURKIYE.dilimNokta(p))})}}
-  }
-  cards[oturum]=card(series,lessons);
+  const m=oturum==='TYT'?temel:al(liste,'AYT');
+  if(m.oturum!==oturum||!m.okul||!m.dersler.length){cards[oturum]=null;continue}
+  const lessons=m.dersler.map(d=>({ad:d.ad,sira:d.seri.map(p=>p?p.sira:undefined),n:d.seri.map(p=>p?p.n:null)})).filter(d=>d.sira.some(v=>v!==undefined));
+  if(lessons.some(d=>d.sira.some(v=>v!==undefined&&v!==null)))bulundu=true;
+  const ort=m.ozet.map(o=>o?Math.round(o.ort*10)/10:null),ilk=m.ozet.map(o=>o?o.ilk:null),ders=m.ozet.map(o=>o?o.ders:null);
+  const idx=ort.map((v,i)=>v===null?-1:i).filter(i=>i>=0),first=idx.length?idx[0]:-1,last=idx.length?idx.at(-1):-1;
+  // The two latest Tarama exams in which a ders of this card is in the exam.
+  const ok=exams.map((e,i)=>e.tur==='tarama'&&lessons.some(d=>d.sira[i]!==undefined)?i:-1).filter(i=>i>=0),pair=ok.length>=2?{once:ok.at(-2),son:ok.at(-1)}:null;
+  const sonIdx=d=>{for(let i=d.sira.length-1;i>=0;i--)if(d.sira[i]!==undefined)return i;return -1};
+  cards[oturum]={pair,pairText:pair?exams[pair.once].kisa+' → '+exams[pair.son].kisa+' (tarama → tarama)':null,N:m.N,ort,ilk,ders,first,last,
+   ortNow:last>=0?ort[last]:null,ilkNow:last>=0?ilk[last]:null,dersNow:last>=0?ders[last]:null,delta:last>first?Math.round((ort[first]-ort[last])*10)/10:null,
+   lessons:lessons.map(d=>{const i=pair?pair.son:sonIdx(d),j=pair?pair.once:-1,a=j>=0?d.sira[j]:undefined,b=i>=0?d.sira[i]:undefined;
+    // Places moved from the earlier Tarama to the later one; none when the ders is missing from either or outside both lists.
+    const delta=a===undefined||b===undefined||(a===null&&b===null)?null:yer(a,d.n[j])-yer(b,d.n[i]);
+    return {ad:d.ad,sira:d.sira,n:d.n,yer:d.sira.map((v,k)=>yer(v,d.n[k])),now:b===undefined?undefined:b,nNow:i>=0?d.n[i]:null,once:a,nOnce:j>=0?d.n[j]:null,delta}})};
  }
- if(!cards.TYT&&!cards.AYT)return {var:false,neden:temel.okul?'okul':'okulyok',liste,exams,okul:temel.okul||null};
- if(!(cards.TYT&&cards.TYT.series.length)&&!(cards.AYT&&cards.AYT.series.length))return {var:false,neden:temel.okul?'okul':'okulyok',liste,exams,okul:temel.okul||null};
+ if(!cards.TYT&&!cards.AYT)return {var:false,neden:'okulyok',liste,exams,okul:temel.okul||null};
+ if(!bulundu)return {var:false,neden:'okul',liste,exams,okul:temel.okul||null};
  return {var:true,liste,listeAdi:LISTE_ADI[liste],secilen:secili,yedek:!!secili&&secili!==liste,okul:temel.okul,exams,cards};
 }
 // ---- Etüt etkisi: ETUT_ETKI's own model, once per ders of the grade and session (nothing is re-computed here) ----
@@ -578,7 +578,7 @@ const KURUM_MESAJ={
  okulyok:'Okulunuz bu listelerde bulunamadı; Türkiye geneli sayfasında okulu seçin.',
  hata:'Türkiye geneli verisi okunamadı; Türkiye geneli sayfasını kontrol edin.'
 };
-// Change colours: green rise, red fall, grey within ±0,5 T of ΔT (the Türkiye geneli page's rule; the words say it in dilim). Text colours keep contrast on the tint.
+// Change colours: green rise, red fall, grey within ±0,5 (half a place). Text colours keep contrast on the tint.
 const DT_ESIK=.5,DT_STIL={1:['#dcf1ea','#0b6a5d','▲ '],'-1':['#f6e0d9','#9a3f2c','▼ '],0:['#e9ecea','#586e70','']};
 const f1=n=>Number(n).toLocaleString('tr-TR',{minimumFractionDigits:1,maximumFractionDigits:1});
 const isaret=(v,f=f1)=>(v>0?'+':v<0?'−':'')+f(Math.abs(v));
@@ -594,9 +594,9 @@ function boyaci(out){
  const line=(x1,y1,x2,y2,color=C.gray,w=1,dash='')=>out.push('<path d="M'+x1+','+y1+' L'+x2+','+y2+'" fill="none" stroke="'+color+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="'+dash+'"':'')+'/>');
  const dot=(x,y,r,color)=>out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#fff" stroke="'+color+'" stroke-width="1.7"/>');
  const ring=(x,y,r,percent,color=C.green,stroke=13)=>{out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="none" stroke="'+C.gray+'" stroke-width="'+stroke+'"/>');if(percent!==null&&percent!==undefined){const c=2*Math.PI*r;out.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+stroke+'" stroke-dasharray="'+c*Math.max(0,Math.min(100,percent))/100+' '+c+'" transform="rotate(-90 '+x+' '+y+')"/>')}};
- // ΔT pill: arrow and sign carry the meaning as well as the colour. v is the raw change; |v| ≤ 0,5 reads as unchanged (grey).
- // label: the words in the pill ("ilk %31 → ilk %12"); the colour and the arrow still come from the raw change v.
- const pill=(x,y,w,h,v,size=10,suffix=' T',label=null)=>{const k=Math.abs(v)<=DT_ESIK?0:v>0?1:-1,[bg,fg,ok]=DT_STIL[k];rect(x,y,w,h,bg,h/2);text(x+w/2,y+h/2+.5,ok+(label!==null?label:isaret(v)+suffix),size,fg,true,'middle',true)};
+ // Change pill: arrow and sign carry the meaning as well as the colour. v is the raw change (positive = better); |v| ≤ 0,5 reads as unchanged (grey).
+ // label: the words in the pill ("▲ 35. → 23."); the colour and the arrow still come from the raw change v.
+ const pill=(x,y,w,h,v,size=10,suffix='',label=null)=>{const k=Math.abs(v)<=DT_ESIK?0:v>0?1:-1,[bg,fg,ok]=DT_STIL[k];rect(x,y,w,h,bg,h/2);text(x+w/2,y+h/2+.5,ok+(label!==null?label:isaret(v)+suffix),size,fg,true,'middle',true)};
  const none=(x,y,w,h,size=10)=>{rect(x,y,w,h,'#eef0ee',h/2);text(x+w/2,y+h/2+.5,'—',size,C.muted,false,'middle',true)};
  const card=(x,y,w,h,title,right,rightColor=C.green)=>{rect(x,y,w,h);text(x+18,y+26,title,17,C.ink,true);if(right)text(x+w-18,y+26,right,15,rightColor,true,'end')};
  const message=(x,y,w,h,t,size=12.5)=>{const lines=wrap(t,w-36,size),top=y+h/2-(lines.length-1)*size*.8;lines.forEach((l,i)=>text(x+w/2,top+i*size*1.6,l,size,C.muted,false,'middle',true))};
@@ -608,7 +608,7 @@ function boyaci(out){
 // A line chart in a box. series: values (null = no result in that exam). A missing exam between two points is bridged: one
 // continuous line from the previous point to the next, dots only where there is a value. ref: a dashed reference line.
 // axis: value grid, y labels and the three x label lines (date, exam, kind); bands: exam indices lightly shaded (the compared pair).
-// ticks: [[value, label]] replaces the even grid; a series' labels / titles (one text per exam) replace the plain numbers (dilim texts).
+// ticks: [[value, label]] replaces the even grid; a series' labels / titles (one text per exam) replace the plain numbers.
 function kurumGrafik(P,{x,y,w,h,xs,series,lo,hi,ref,tick,unit,axis=true,bands=[],endLabels=true,dotR=3.2,lw=2.3,pad=14,labelAll=false,ticks=null}){
  const {text,line,dot,rect}=P,out=P.out,n=xs.length,yy=v=>y+h-(v-lo)/(hi-lo)*h,xx=i=>n>1?x+pad+(w-2*pad)*i/(n-1):x+w/2,step=n>1?(w-2*pad)/(n-1):w;
  for(const i of bands)rect(xx(i)-step/2,y-6,step,h+12,'#e1efe9',4);
@@ -629,12 +629,11 @@ function kurumGrafik(P,{x,y,w,h,xs,series,lo,hi,ref,tick,unit,axis=true,bands=[]
  ends.forEach(e=>text(xx(e.i)+8,e.y+3.5,e.v,11,e.color,true));
 }
 const KURUM_UST=100,KURUM_ALT=812,KURUM_ARA=14;
-// "≈ 183 okul içinde 23.": "≈" before the number of schools when it is estimated, and before the place when the place is.
-const siraYazisi=s=>s.sira?(s.n?(s.tam?'':'≈ ')+fmt(s.n)+' okul içinde ':'')+(s.sira.yak?'≈ ':'')+fmt(s.sira.v)+'.':'—';
-const dilimTikleri=(lo,hi)=>TURKIYE.DILIM_TIKLARI.filter(d=>d>=1&&d<=95||d===.1&&TURKIYE.dilimdenT(d)<=hi).map(d=>[TURKIYE.dilimdenT(d),'ilk %'+(d===.1?'0,1':d)]);
-// The Türkiye dilimi chart is on the T (z) scale, symmetric around ilk %50; only its labels are dilim values.
-const dilimAraligi=vals=>{const yarim=Math.max(TURKIYE.dilimdenT(1)-50,...vals.map(v=>Math.abs(v-50)+2));return {lo:50-yarim,hi:50+yarim}};
-const dilimEtiketleri=(t,dil)=>({labels:dil.map(d=>TURKIYE.dilimKisa(d)),titles:dil.map((d,i)=>d===null||t[i]===null?'—':TURKIYE.dilimYazi(d)+' (T '+f1(t[i])+')')});
+// A printed place: "23.", "İlk 100 dışı" (a shorter list: "Listede yok"), "—" when the ders is not in that exam. Short form for pills.
+const yerYazisi=(sira,n)=>sira===undefined?'—':sira===null?(n===100?'İlk 100 dışı':'Listede yok'):fmt(sira)+'.';
+const yerKisa=sira=>sira===undefined?'—':sira===null?'dışı':fmt(sira)+'.';
+// Place axes: 1 at the top, the list's last place at the bottom (places are drawn as −place, so up is better).
+const yerTikleri=N=>[...new Set([1,...[25,50,75].filter(t=>t<N-4),N])].map(t=>[-t,fmt(t)+'.']);
 // The Kurum raporu is as many A4 landscape pages as its content needs: the Türkiye geneli block first, then Etüt etkisi and Ödevler.
 // It names no student, no teacher and no şube, and has no etüt counts, attendance or comparison between şubes. Returns one SVG string per page.
 function svgKurum(k,reportDate){
@@ -646,76 +645,75 @@ function svgKurum(k,reportDate){
   const hi=Math.max(10,Math.ceil(Math.max(...d.map(e=>e.avg))/10)*10),xs=d.map(e=>({top:display(e.date).slice(0,5),bottom:e.ad.replace(/^27-/,'').slice(0,18)}));
   kurumGrafik(P,{x,y,w,h,xs,series:[{label:'Okul ortalaması',color:'#213d40',values:d.map(e=>Math.round(e.avg*100)/100)}],lo:0,hi,tick:hi/2,unit:'net',labelAll:true})};
  const neden=b=>KURUM_MESAJ[b.neden]||KURUM_MESAJ.liste;
- // A change pill sized to its words and right-aligned at rx: colour and arrow from ΔT, the words are the dilim change.
+ // A change pill sized to its words and right-aligned at rx: the colour and the arrow say rose / fell / unchanged, the words are the places.
  const degisim=(P,rx,y,h,delta,size,label)=>{
   if(delta===null||label===null){P.none(rx-34,y,34,h,size);return rx-34}
   const w=Math.ceil(P.width('▲ '+label,size,true))+14;P.pill(rx-w,y,w,h,delta,size,'',label);return rx-w;
  };
- // The ders boxes start under the total tiles (three tiles for AYT).
- const dersUst=card=>Math.max(256,62+Math.max(0,(card?card.series.length:0)-1)*72+68+18);
- // One card (TYT or AYT): the total dilim chart with the dashed ilk %50 line, a tile per total, and a small dilim chart per ders beneath.
- const tCard=(P,x,y,w,h,title,card,oturum,b)=>{
+ const DERS_UST=256;
+ // One card (TYT or AYT): the average place over the session's subjects, exam by exam, two tiles (average place, subjects in the
+ // list) and a small place chart per ders beneath. Only printed places; a ders outside its list is "İlk 100 dışı".
+ const sCard=(P,x,y,w,h,title,card,oturum,b)=>{
   P.rect(x,y,w,h);P.text(x+18,y+26,title,17,C.ink,true);
-  if(!card||!card.series.length&&!card.lessons.length){P.message(x,y+30,w,h-30,oturum==='AYT'?'AYT için Türkiye geneli listesi yok; Türkiye geneli sayfasından ekleyin.':KURUM_MESAJ.liste);return}
-  const s0=card.series[0],TW=240,TX=x+w-TW-14;
-  P.text(x+18,y+44,'Türkiye yüzdelik dilimi (küçük = daha iyi)',11,C.muted);
-  if(s0)P.ftext(TX,y+56,'Değişim: ilk → son deneme ('+b.exams[s0.first].kisa+' → '+b.exams[s0.last].kisa+')',TW,10,C.muted);
-  const all=card.series.flatMap(s=>s.t.filter(v=>v!==null)).concat(card.lessons.flatMap(d=>d.t.filter(v=>v!==null))),lo=Math.floor((Math.min(40,...all)-2)/10)*10,hi=Math.ceil((Math.max(60,...all)+2)/10)*10;
-  const xs=b.exams.map(exTxt),cw=w-44-TW-28;
-  if(card.series.length){
-   const ar=dilimAraligi(card.series.flatMap(s=>s.t.filter(v=>v!==null)));
-   P.out.push('<g aria-label="'+esc(oturum+' dilim grafiği')+'">');
-   kurumGrafik(P,{x:x+44,y:y+62,w:cw,h:130,pad:30,xs,series:card.series.map(s=>({label:s.label,color:s.color,values:s.t,...dilimEtiketleri(s.t,s.dil)})),lo:ar.lo,hi:ar.hi,tick:10,ticks:dilimTikleri(ar.lo,ar.hi),ref:{value:50,label:'Türkiye’nin ortasındaki okul'},unit:'T',bands:card.pair?[card.pair.once,card.pair.son]:[],labelAll:oturum==='TYT'&&xs.length<=7});
+  if(!card||!card.lessons.length){P.message(x,y+30,w,h-30,oturum==='AYT'?'AYT için Türkiye geneli listesi yok; Türkiye geneli sayfasından ekleyin.':KURUM_MESAJ.liste);return}
+  const N=card.N,TW=240,TX=x+w-TW-14,xs=b.exams.map(exTxt),cw=w-44-TW-28,ilkN=N===100?'İlk 100’de':'Listede';
+  P.text(x+18,y+44,'Ortalama sıra, '+oturum+' dersleri (1 = en iyi; listede olmayan ders '+fmt(N+1)+'. sayılır)',11,C.muted);
+  if(card.last>=0){
+   P.out.push('<g aria-label="'+esc(oturum+' ortalama sıra grafiği')+'">');
+   kurumGrafik(P,{x:x+44,y:y+62,w:cw,h:130,pad:30,xs,series:[{label:'Ortalama sıra',color:'#213d40',values:card.ort.map(v=>v===null?null:-v),labels:card.ort.map(v=>v===null?'':f1(v)),
+    titles:card.ort.map((v,i)=>v===null?'—':'ortalama sıra '+f1(v)+' · '+ilkN.toLocaleLowerCase('tr-TR')+' '+fmt(card.ilk[i])+' / '+fmt(card.ders[i])+' ders')}],lo:-(N+1),hi:-1,ticks:yerTikleri(N),unit:'',
+    bands:card.pair?[card.pair.once,card.pair.son]:[],labelAll:oturum==='TYT'&&xs.length<=7});
    P.out.push('</g>');if(card.pair)P.text(x+48,y+58,'Ders karşılaştırması: '+b.exams[card.pair.once].kisa+' → '+b.exams[card.pair.son].kisa+' (tarama)',10,C.ink,true);
-   card.series.forEach((s,i)=>{const tx=TX,ty=y+62+i*72,rx=tx+TW-12;
-    P.out.push('<g aria-label="'+esc(s.label+' · '+TURKIYE.dilimYazi(s.dilNow)+' · '+TURKIYE.dilimBandi(s.dilNow))+'"><title>'+esc(s.label+' · ilk → son deneme: '+b.exams[s.first].ad+' → '+b.exams[s.last].ad+(s.tNow===null?'':' · T '+f1(s.tNow)))+'</title>');
-    P.rect(tx,ty,TW,68,'#f3f5f2',8);P.rect(tx,ty+9,4,50,s.color,2);P.text(tx+14,ty+17,s.label,11.5,C.ink,true);P.text(rx,ty+19,TURKIYE.dilimYazi(s.dilNow),18,C.ink,true,'end');
-    P.ftext(tx+14,ty+32,TURKIYE.dilimBandi(s.dilNow),TW-28,9.5,C.ink);P.ftext(tx+14,ty+45,siraYazisi(s),TW-28,9.5,C.muted);
-    {const lab=s.delta===null||s.dilFirst==null||s.dilLast==null?null:TURKIYE.dilimGecis(s.dilFirst,s.dilLast);degisim(P,tx+14+(lab===null?34:Math.ceil(P.width('▲ '+lab,9.5,true))+14),ty+50,14,s.delta,9.5,lab)}
-    P.out.push('</g>');
-   });
-  }else P.message(x,y+50,w,100,'Bu oturum için toplam dilimi yok.');
-  // Ders ders: one small dilim chart per ders under the total chart, with its latest dilim and its change.
-  const L=card.lessons;if(!L.length)return;
-  const ty0=y+dersUst(card);P.text(x+18,ty0,oturum+' dersleri · Türkiye dilimi',13,C.ink,true);P.text(x+32+P.width(oturum+' dersleri · Türkiye dilimi',13,true),ty0,card.pair?'  Değişim: '+card.pairText:'  İki tarama denemesi yok (değişim gösterilmez)',11,card.pair?C.ink:C.muted);
+   const f=card.first,l=card.last,tile=(ty,ad,buyuk,alt,delta,lab)=>{
+    P.out.push('<g aria-label="'+esc(oturum+' · '+ad+' · '+buyuk)+'">');
+    P.rect(TX,ty,TW,68,'#f3f5f2',8);P.rect(TX,ty+9,4,50,'#213d40',2);P.text(TX+14,ty+17,ad,11.5,C.ink,true);P.text(TX+TW-12,ty+19,buyuk,18,C.ink,true,'end');
+    P.ftext(TX+14,ty+34,alt,TW-28,9.5,C.muted);degisim(P,TX+14+(lab===null?34:Math.ceil(P.width('▲ '+lab,9.5,true))+14),ty+48,14,delta,9.5,lab);P.out.push('</g>')};
+   P.ftext(TX,y+56,'Değişim: ilk → son deneme ('+b.exams[f].kisa+' → '+b.exams[l].kisa+')',TW,10,C.muted);
+   tile(y+62,'Ortalama sıra',f1(card.ortNow),'ders sıralarının ortalaması (küçük = daha iyi)',card.delta,card.delta===null?null:f1(card.ort[f])+' → '+f1(card.ort[l]));
+   tile(y+134,ilkN,fmt(card.ilkNow)+' / '+fmt(card.dersNow)+' ders','listede yer alınan ders sayısı',l>f?card.ilk[l]-card.ilk[f]:null,l>f?fmt(card.ilk[f])+' → '+fmt(card.ilk[l])+' ders':null);
+  }else P.message(x,y+50,w,100,'Bu oturumda sıra yok.');
+  // Ders ders: one small place chart per ders, with its latest place and its change.
+  const L=card.lessons,ty0=y+DERS_UST,bas=oturum+' dersleri · Türkiye’deki sıra';
+  P.text(x+18,ty0,bas,13,C.ink,true);P.text(x+32+P.width(bas,13,true),ty0,card.pair?'  Değişim: '+card.pairText:'  İki tarama denemesi yok (değişim gösterilmez)',11,card.pair?C.ink:C.muted);
   const cols=Math.max(5,Math.ceil(L.length/2)),g=6,bw=(w-28-(cols-1)*g)/cols,bh=100;
-  L.forEach((d,i)=>{const bx=x+14+(i%cols)*(bw+g),by=ty0+10+Math.floor(i/cols)*(bh+8);
-   P.out.push('<g aria-label="'+esc(oturum+' ders · '+d.ad+' · '+TURKIYE.dilimYazi(d.dilNow))+'"><title>'+esc(d.ad+' · '+TURKIYE.dilimYazi(d.dilNow)+(d.tNow===null?'':' (T '+f1(d.tNow)+')')+(d.delta===null?'':' · ΔT '+isaret(d.delta)))+'</title>');
-   P.rect(bx,by,bw,bh,'#f6f8f6',8);P.ftext(bx+8,by+17,d.ad,bw-14,11.5,C.ink,true);P.text(bx+8,by+38,TURKIYE.dilimYazi(d.dilNow),14,C.ink,true);
-   degisim(P,bx+bw-8,by+44,14,d.delta,8.5,d.delta===null||d.dilOnce==null||d.dilSon==null?null:TURKIYE.dilimKisa(d.dilOnce)+' → '+TURKIYE.dilimKisa(d.dilSon));
-   kurumGrafik(P,{x:bx+8,y:by+64,w:bw-16,h:28,xs:b.exams.map(()=>({})),series:[{label:d.ad,color:'#213d40',values:d.t}],lo,hi,ref:{value:50},tick:10,unit:'T',axis:false,endLabels:false,dotR:2,lw:1.6,pad:3});
+  L.forEach((d,i)=>{const bx=x+14+(i%cols)*(bw+g),by=ty0+10+Math.floor(i/cols)*(bh+8),now=yerYazisi(d.now,d.nNow);
+   P.out.push('<g aria-label="'+esc(oturum+' ders · '+d.ad+' · '+now)+'"><title>'+esc(d.ad+' · '+now+(d.delta===null?'':d.delta>0?' · '+fmt(d.delta)+' sıra yükseldi':d.delta<0?' · '+fmt(-d.delta)+' sıra düştü':' · sıra aynı'))+'</title>');
+   P.rect(bx,by,bw,bh,'#f6f8f6',8);P.ftext(bx+8,by+17,d.ad,bw-14,11.5,C.ink,true);P.ftext(bx+8,by+38,now,bw-14,14,C.ink,true);
+   degisim(P,bx+bw-8,by+44,14,d.delta,8.5,d.delta===null?null:yerKisa(d.once)+' → '+yerKisa(d.now));
+   kurumGrafik(P,{x:bx+8,y:by+64,w:bw-16,h:28,xs:b.exams.map(()=>({})),series:[{label:d.ad,color:'#213d40',values:d.yer.map(v=>v===null?null:-v)}],lo:-(N+1),hi:-1,tick:N,unit:'',axis:false,endLabels:false,dotR:2,lw:1.6,pad:3});
    P.out.push('</g>')});
  };
- const tCardH=card=>{const n=card?card.lessons.length:0,cols=Math.max(5,Math.ceil(n/2));return n?dersUst(card)+10+Math.ceil(n/cols)*108+4:290};
+ const sCardH=card=>{const n=card?card.lessons.length:0,cols=Math.max(5,Math.ceil(n/2));return n?DERS_UST+10+Math.ceil(n/cols)*108+4:290};
  if(sc.key==='okul'){
   const rows=tp.grades;
   sections.push({name:'Türkiye geneli',h:112+Math.max(1,rows.length)*38+34,draw:(P,y)=>{
    const h=112+Math.max(1,rows.length)*38+34;P.card(26,y,W2,h,'Türkiye geneli · sınıf düzeylerine göre');
-   P.text(44,y+46,'Okulun Türkiye’deki yeri: ilk %12 = Türkiye’deki okulların en iyi %12’sinde (küçük sayı daha iyi). Değişim = ilk denemeden son denemeye.',11.5,C.muted);
-   const cols=[44,150,230,420,610,770,950],heads=['Sınıf düzeyi','Öğrenci','Karşılaştırma (ilk → son)','TYT dilimi','Değişim','Sıra','Dilim gelişimi'];
+   P.text(44,y+46,'Okulun Türkiye ilk 100 listelerindeki yeri: TYT derslerindeki sıralarının ortalaması (1 = en iyi; listede olmayan ders 101. sayılır). Değişim = ilk denemeden son denemeye.',11.5,C.muted);
+   const cols=[44,150,230,420,610,770,950],heads=['Sınıf düzeyi','Öğrenci','Karşılaştırma (ilk → son)','TYT ortalama sıra','Değişim','Listede olduğu ders','Sıra gelişimi'];
    heads.forEach((t,i)=>P.text(cols[i],y+72,t,11,C.muted,true));P.line(44,y+80,1146,y+80);
-   rows.forEach(({grade,count,block,avgNet},i)=>{const ry=y+84+i*38,cy=ry+19,card=block.var?block.cards.TYT:null,tyt=card&&card.series.find(s=>s.key==='TYT');
+   rows.forEach(({grade,count,block,avgNet},i)=>{const ry=y+84+i*38,cy=ry+19,card=block.var?block.cards.TYT:null,var_=card&&card.last>=0;
     P.out.push('<g aria-label="'+esc(grade+'. sınıf Türkiye geneli')+'">');P.text(cols[0],block.var?cy-6:cy,grade+'. sınıf',14,C.ink,true,'start',true);if(block.var)P.text(cols[0],cy+10,block.listeAdi+' listesi',9.5,C.muted,false,'start',true);P.text(cols[1],cy,count,13,C.ink,false,'start',true);
-    if(!tyt){P.text(cols[2],cy,block.var?'TYT toplam dilimi yok':neden(block),12,C.muted,false,'start',true);if(avgNet)P.text(1146,cy,'Okul ort. TYT neti: '+fmt(Math.round(avgNet.avg*10)/10),12,C.ink,false,'end',true)}
-    else{P.ftext(cols[2],cy,tyt.delta===null?'Tek deneme':block.exams[tyt.first].kisa+' → '+block.exams[tyt.last].kisa,180,12,tyt.delta===null?C.muted:C.ink,false,'start',true);
-     P.text(cols[3],cy-5,TURKIYE.dilimYazi(tyt.dilNow),16,C.ink,true,'start',true);P.ftext(cols[3],cy+11,TURKIYE.dilimBandi(tyt.dilNow),180,9.5,C.muted,false,'start',true);
-     {const lab=tyt.delta===null||tyt.dilFirst==null||tyt.dilLast==null?null:TURKIYE.dilimGecis(tyt.dilFirst,tyt.dilLast);degisim(P,cols[4]+(lab===null?34:Math.ceil(P.width('▲ '+lab,11,true))+14),cy-10,20,tyt.delta,11,lab)}
-     P.ftext(cols[5],cy,siraYazisi(tyt),170,12,C.ink,true,'start',true);
-     const sx=cols[6],sw=1146-sx-6,sh=24,vals=tyt.t,ok_=vals.filter(v=>v!==null),lo=Math.min(40,...ok_)-1,hi=Math.max(60,...ok_)+1;
-     kurumGrafik(P,{x:sx,y:cy-sh/2,w:sw,h:sh,xs:vals.map(()=>({})),series:[{label:'TYT toplam',color:'#213d40',values:vals}],lo,hi,ref:{value:50},tick:10,unit:'T',axis:false,endLabels:false,dotR:2.6,lw:2,pad:8})}
+    if(!var_){P.text(cols[2],cy,block.var?'TYT sırası yok':neden(block),12,C.muted,false,'start',true);if(avgNet)P.text(1146,cy,'Okul ort. TYT neti: '+fmt(Math.round(avgNet.avg*10)/10),12,C.ink,false,'end',true)}
+    else{const f=card.first,l=card.last;
+     P.ftext(cols[2],cy,card.delta===null?'Tek deneme':block.exams[f].kisa+' → '+block.exams[l].kisa,180,12,card.delta===null?C.muted:C.ink,false,'start',true);
+     P.text(cols[3],cy+5,f1(card.ortNow),16,C.ink,true,'start',true);
+     {const lab=card.delta===null?null:f1(card.ort[f])+' → '+f1(card.ort[l]);degisim(P,cols[4]+(lab===null?34:Math.ceil(P.width('▲ '+lab,11,true))+14),cy-10,20,card.delta,11,lab)}
+     P.text(cols[5],cy+4,fmt(card.ilkNow)+' / '+fmt(card.dersNow)+' ders',12,C.ink,true,'start',true);
+     const sx=cols[6],sw=1146-sx-6,sh=24;
+     kurumGrafik(P,{x:sx,y:cy-sh/2,w:sw,h:sh,xs:card.ort.map(()=>({})),series:[{label:'TYT ortalama sıra',color:'#213d40',values:card.ort.map(v=>v===null?null:-v)}],lo:-(card.N+1),hi:-1,tick:card.N,unit:'',axis:false,endLabels:false,dotR:2.6,lw:2,pad:8})}
     P.out.push('</g>');if(i<rows.length-1)P.line(44,ry+38,1146,ry+38,'#eef1ee',1)});
    if(!rows.length)P.message(26,y+40,W2,h-40,'Sınıf düzeyi belirlenemedi.');
-   P.text(44,y+h-12,'Kesik çizgi (sağdaki grafikte): Türkiye’nin ortasındaki okul (%50) · ▲ yeşil: üst dilime çıktı (iyileşti) · ▼ kırmızı: alt dilime düştü · gri: değişmedi',10.5,C.muted)}});
+   P.text(44,y+h-12,'▲ yeşil: sıra yükseldi · ▼ kırmızı: sıra düştü · gri: değişmedi · sağdaki grafikte yukarı = daha iyi sıra · sıralar listede yazandır, tahmin edilmez',10.5,C.muted)}});
  }else if(!tp.var){
-  sections.push({name:'Türkiye geneli',h:262,draw:(P,y)=>{P.card(26,y,W2,262,'Türkiye geneli · yüzdelik dilim');P.text(44,y+46,'Okulun kendi TYT ortalaması (net), deneme deneme',11.5,C.muted);
+  sections.push({name:'Türkiye geneli',h:262,draw:(P,y)=>{P.card(26,y,W2,262,'Türkiye geneli · ilk 100 listesi');P.text(44,y+46,'Okulun kendi TYT ortalaması (net), deneme deneme',11.5,C.muted);
    netGrafik(P,70,y+74,600,110);P.rect(720,y+60,408,150,'#f3f5f2',10);P.message(720,y+60,408,150,neden(tp),13)}});
  }else{
-  const ne=tp.yedek?14:0,hh=Math.max(tCardH(tp.cards.TYT),tCardH(tp.cards.AYT))+48+ne;
+  const ne=tp.yedek?14:0,hh=Math.max(sCardH(tp.cards.TYT),sCardH(tp.cards.AYT))+48+ne;
   sections.push({name:'Türkiye geneli',h:hh,breakAfter:true,draw:(P,y)=>{const ch=hh-48-ne;
-   tCard(P,26,y,558,ch,'TYT toplam · Türkiye dilimi',tp.cards.TYT,'TYT',tp);tCard(P,600,y,564,ch,'AYT toplam · Türkiye dilimi',tp.cards.AYT,'AYT',tp);
+   sCard(P,26,y,558,ch,'TYT · Türkiye’deki sıra',tp.cards.TYT,'TYT',tp);sCard(P,600,y,564,ch,'AYT · Türkiye’deki sıra',tp.cards.AYT,'AYT',tp);
    P.rect(26,y+ch+8,W2,40+ne,'#fff',8);
-   P.text(40,y+ch+25,tp.listeAdi+' listesi · ilk %12 = Türkiye’deki okulların en iyi %12’sinde (küçük sayı daha iyi) · kesik çizgi: Türkiye’nin ortasındaki okul (%50) · kutularda değişim: ilk → son deneme; ders kutularında: tarama → tarama (açık yeşil sütun)',10.5,C.muted);
-   P.text(40,y+ch+41,'▲ yeşil: üst dilime çıktı (iyileşti) · ▼ kırmızı: alt dilime düştü · gri: değişmedi (çok küçük değişim). Ders kutularında “ilk” yazılmaz: %12 = ilk %12.',10.5,C.muted);
+   P.text(40,y+ch+25,tp.listeAdi+' listesi · sıra: listede yazan yer (1 = en iyi) · listede olmayan ders: İlk 100 dışı (ortalama sırada 101.) · kutularda değişim: ilk → son deneme; ders kutularında: tarama → tarama (açık yeşil sütun)',10.5,C.muted);
+   P.text(40,y+ch+41,'▲ yeşil: sıra yükseldi · ▼ kırmızı: sıra düştü · gri: değişmedi. Sıralar tahmin değildir: listede olmayan okulun sırası bilinmez.',10.5,C.muted);
    if(ne)P.text(40,y+ch+57,'Seçtiğiniz '+LISTE_ADI[tp.secilen]+' listesinde bu sınıf düzeyi yok; '+tp.listeAdi+' listesi gösterilir.',10.5,C.ink,true)}});
  }
  /* ---- Etüt etkisi (ETUT_ETKI's pooled gain per etüt: no etüt counts, no teachers) ---- */
@@ -910,7 +908,7 @@ function view(){
   kaynak('İngilizce',dosyalar('english').length?esc(dosyalar('english').join(', ')):'İngilizce sınavı eklenmedi','<label class="dugme">İngilizce PDF ekle<input id="orEnglishFiles" type="file" accept="application/pdf,.pdf" multiple hidden'+disable+'></label>')+
   kaynak('Ders programları',src.programs?esc(src.programs)+' sınıfın öğretmenleri ve dersleri':'Haftalık ders programı eklenmedi',git('etutplani','Ders programları'))+
  '</ul>'+
- '<details class="or-sources"><summary>Kaynaklar ve hesaplama</summary><p>Denemeler Sıralamalar’dan ve öğrencilerin sonuçlarından, etütler Etütler’den, devam Yoklama’dan gelir; bu sayfalara eklenen raporlar burada kendiliğinden görünür. Ödev ve İngilizce raporları bu sayfada eklenir ve sayfa yenilenene kadar tutulur. 60 soruluk Fly Higher Placement neti 100 üzerinden gösterilir: net / 60 × 100 (60 net → 100). Starter puanları aynen kullanılır. Öğretmenler sınıfın Etüt planı içindeki haftalık ders programından gelir. Ödev raporunda görev/teslim tarihi yoksa rapor tarihi ayrı gösterilir. Ödevlerde her durum (tamamladı, eksik, getirmedi, geç getirdi, yapmadı, gelmedi) ayrı renktedir. Raporun henüz durum yazmadığı ödevler verilmemiş sayılır: toplam, durumların toplamıdır.</p><p>Bir günde en az 3 ders yoksa kaçırdığı günlere eklenir; mazeretli ve raporlu kayıtlar dahildir. 0–2 ders yoksa okulda sayılır. Boş hücreler devamsızlık sayılmaz; tamamen boş günler yüzdeye katılmaz. Devam yüzdesi = okulda gün / durumu bilinen gün.</p><p>Grafiklerde her öğrencinin kendi sonuçları yer alır. AYT grafiği 11/A ve 12/A için EA, diğer 11. ve 12. sınıflarda SAY netini gösterir. Yandaki SAY, EA ve SÖZ değerleri son AYT sınavının alan netleridir. Etüt sayıları rapor kayıtlarıdır. Haftalar pazartesi başlar.</p><p>Kurum raporu öğrenci, öğretmen ve şube adı içermez; etüt sayısı ve devamsızlık da vermez. Türkiye geneli bölümü Türkiye geneli sayfasında seçtiğiniz listeyi ve okulu kullanır, yüzdelik dilimi ve sırayı oradan alır; seçtiğiniz listede o sınıf düzeyi yoksa sırayla diğer listelere bakılır, hiçbirinde yoksa okulun kendi TYT net ortalaması gösterilir. Etüt etkisi, Etüt etkisi sayfasındaki hesabın okul düzeyindeki sonucudur: her etüt için ortalama artış, olası aralığı ve kararı; öğretmen ayrımı yapılmaz. Bu bir karşılaştırmadır, farkın sebebi etüt olmayabilir. Değişim ilk denemeden son denemeyedir: ▲ yeşil: üst dilime çıktı (iyileşti), ▼ kırmızı: alt dilime düştü, gri: değişmedi (T puanında ±0,5’ten az değişim). Dilim, okulun Türkiye’deki okulların yüzde kaçının gerisinde kaldığını gösterir: ilk %12 = okulların %88’inden iyi. Dilim, Türkiye geneli sayfasındaki T puanının sözle söylenişidir (T = 50 + 10 · (net − Türkiye ortalaması) / σ; dilim = 100 · (1 − Φ((T − 50) / 10))); T ve σ yalnızca grafiklerin üzerine gelince açılan kutularda görünür.</p><ul>'+[...FILES.entries()].map(([n,r])=>'<li>'+esc(n)+' <button type="button" class="dugme" data-or-remove="'+esc(n)+'"'+disable+'>Kaldır</button></li>').join('')+'</ul></details>'+
+ '<details class="or-sources"><summary>Kaynaklar ve hesaplama</summary><p>Denemeler Sıralamalar’dan ve öğrencilerin sonuçlarından, etütler Etütler’den, devam Yoklama’dan gelir; bu sayfalara eklenen raporlar burada kendiliğinden görünür. Ödev ve İngilizce raporları bu sayfada eklenir ve sayfa yenilenene kadar tutulur. 60 soruluk Fly Higher Placement neti 100 üzerinden gösterilir: net / 60 × 100 (60 net → 100). Starter puanları aynen kullanılır. Öğretmenler sınıfın Etüt planı içindeki haftalık ders programından gelir. Ödev raporunda görev/teslim tarihi yoksa rapor tarihi ayrı gösterilir. Ödevlerde her durum (tamamladı, eksik, getirmedi, geç getirdi, yapmadı, gelmedi) ayrı renktedir. Raporun henüz durum yazmadığı ödevler verilmemiş sayılır: toplam, durumların toplamıdır.</p><p>Bir günde en az 3 ders yoksa kaçırdığı günlere eklenir; mazeretli ve raporlu kayıtlar dahildir. 0–2 ders yoksa okulda sayılır. Boş hücreler devamsızlık sayılmaz; tamamen boş günler yüzdeye katılmaz. Devam yüzdesi = okulda gün / durumu bilinen gün.</p><p>Grafiklerde her öğrencinin kendi sonuçları yer alır. AYT grafiği 11/A ve 12/A için EA, diğer 11. ve 12. sınıflarda SAY netini gösterir. Yandaki SAY, EA ve SÖZ değerleri son AYT sınavının alan netleridir. Etüt sayıları rapor kayıtlarıdır. Haftalar pazartesi başlar.</p><p>Kurum raporu öğrenci, öğretmen ve şube adı içermez; etüt sayısı ve devamsızlık da vermez. Türkiye geneli bölümü Türkiye geneli sayfasında seçtiğiniz listeyi ve okulu kullanır ve sırayı oradan alır; seçtiğiniz listede o sınıf düzeyi yoksa sırayla diğer listelere bakılır, hiçbirinde yoksa okulun kendi TYT net ortalaması gösterilir. Sıra, listede yazan yerdir (1 = en iyi); okulun listede olmadığı ders “İlk 100 dışı” yazılır ve ortalama sırada 101. sayılır; sıra tahmin edilmez. Etüt etkisi, Etüt etkisi sayfasındaki hesabın okul düzeyindeki sonucudur: her etüt için ortalama artış, olası aralığı ve kararı; öğretmen ayrımı yapılmaz. Bu bir karşılaştırmadır, farkın sebebi etüt olmayabilir. Değişim ilk denemeden son denemeyedir: ▲ yeşil: sıra yükseldi, ▼ kırmızı: sıra düştü, gri: değişmedi.</p><ul>'+[...FILES.entries()].map(([n,r])=>'<li>'+esc(n)+' <button type="button" class="dugme" data-or-remove="'+esc(n)+'"'+disable+'>Kaldır</button></li>').join('')+'</ul></details>'+
  (kurum?kurumGorunum(m,disable):ogrenciGorunum(m,classes,list,selected,disable))+'</section>';
 }
 function ogrenciGorunum(m,classes,list,selected,disable){

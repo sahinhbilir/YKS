@@ -39,8 +39,9 @@ const ad=e=>'27-YKS-120'+e+' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf';
    await page.locator('#tgOkul').selectOption(BIZ);
    await page.waitForFunction(()=>document.querySelector('#tgKok .et-ozet'));
    assert.equal(await page.evaluate(()=>D.turkiye.okul),BIZ);
-   // Dilim ve sıra (T said as a yüzdelik dilim) is the default view (test/turkiye-t-browser.cjs); this test goes on in Artış.
-   assert.equal(await page.locator('[data-tg-mod="tpuan"]').getAttribute('aria-pressed'),'true');
+   // Sıra (the printed places) is the default view; there is no fitted distribution, percentile or T anywhere. This test goes on in Artış.
+   assert.equal(await page.locator('[data-tg-mod="sira"]').getAttribute('aria-pressed'),'true');await page.locator('[data-tg-grafik="sira"] svg').waitFor();
+   assert.equal(await page.locator('[data-tg-mod="tpuan"],.tg-dagilim').count(),0);assert(!/ilk %|dilim|≈/i.test(await page.locator('#tgKok').innerText()),'no estimate on the page');
    await page.locator('[data-tg-mod="artis"]').click();
    await page.waitForFunction(()=>document.querySelector('[data-tg-grafik="toplam"] svg'));
    const cumle=()=>page.locator('#tgKok .et-cumle').innerText();

@@ -667,7 +667,7 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     assert.match(h, /<details id="eeDisarida"><summary>Dışarıda kalan 3 öğrenci<\/summary>[\s\S]*Sentetik X1 · 12\/A · yalnızca 1 denemeye girdi[\s\S]*Sentetik X2 · 12\/B · bu dersin neti yok[\s\S]*Sentetik X3 · 12\/A · etütten sonra deneme yok/);
     assert.match(new RegExp('id="eeSayim">(.*?)</p>').exec(h)[1], /^15 öğrenciden 12’si sayıldı \(12 etüt alan, 0 etüt almayan\); 3’ü dışarıda \(aşağıda listelenir\)\.$/);
   });
-  await check('the school’s standing: the lesson line of the Türkiye geneli page for the grade, with the dilim wording, and the weekly etüts on the same dates', () => {
+  await check('the school’s standing: the lesson line of the Türkiye geneli page for the grade, the printed place (İlk 100 dışı outside the list, never estimated), and the weekly etüts on the same dates', () => {
     const rapor = [1, 2, 3].map(e => get('TURKIYE.pdfCoz(' + JSON.stringify(kurumRaporu(kurumListesi(e)).pages) + ',' + JSON.stringify('27-YKS-120' + e + ' Ders Ortalamaları İlk 100 Kurum (Kolej).pdf') + ')'));
     put('__RP', rapor); run(`D.turkiye=TURKIYE.paketle(__RP.reduce((a,r)=>TURKIYE.birlestir(a,r),{okul:${JSON.stringify(BIZ)},sinavlar:[]}),1)`);
     const ogr = [...PL.map(s => ({ ...s, exams: s.exams.slice(0, 3) })), ...kontroller(6)];
@@ -682,26 +682,26 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     assert.equal(st2.durum, 'tamam'); assert.equal(st2.cizgiler[0].nokta.length, 3, 'the third deneme shows although the students have only two');
     assert.match(st.kaynak, /^Kolej listesi · TYT Matematik · .+ → .+ · 3 deneme$/);
     merged(ogr); assert.match(run('ETUT_ETKI.icerik()'), /id="eeDurusKaynak">Türkiye geneli sayfasındaki ders çizgisinin aynısı: Kolej listesi · TYT Matematik · /);
-    // The school's Matematik net in the three lists (BIZIM): 12, 11.2, 14.5; the dilim is what the Türkiye geneli page says for the same point.
-    const pts = get('(()=>{const t=TURKIYE.model(TURKIYE.oku().veri,{duzey:"d12",oturum:"TYT"});const d=t.dersler.find(x=>x.kod==="MATEMATİK-T");return d.seri.map(p=>TURKIYE.dilimNokta(p))})()');
-    assert.deepEqual(st.cizgiler[0].nokta.map(p => p.dilim), pts); assert(pts.every(x => x > 0 && x < 100));
+    // The school's printed place in the three lists: the same as the Türkiye geneli page's, and the list in the fixture.
+    const pts = get('(()=>{const t=TURKIYE.model(TURKIYE.oku().veri,{duzey:"d12",oturum:"TYT"});const d=t.dersler.find(x=>x.kod==="MATEMATİK-T");return d.seri.map(p=>p.sira)})()');
+    const yer = e => { const i = kurumListesi(e).dersler.find(d => d.kod === 'MATEMATİK-T').satir.findIndex(r => r[0] === BIZ); return i < 0 ? null : i + 1 };
+    assert.deepEqual(st.cizgiler[0].nokta.map(p => p.sira), pts); assert.deepEqual(pts, [1, 2, 3].map(yer)); assert(pts.some(x => x !== null));
+    assert.deepEqual(Object.keys(st.cizgiler[0].nokta[0]).sort(), ['g', 'kisa', 'n', 'sinav', 'sira']); assert.equal(st.N, 100);
     assert.deepEqual(st.cizgiler[0].nokta.map(p => p.g), [gun(TARIH[0]), gun(TARIH[1]), gun(TARIH[2])]); assert.equal(st.haftalik.length > 0, true);
-    // The chart: ilk % labels, inverted (a smaller dilim is higher), the weekly bars, no NaN.
+    // The chart: place labels 1. … 100., the dışı lane, the latest place at the line's end, the weekly bars, no NaN, no estimate.
     put('__S', st); const svg = get('ETUT_ETKI.durusSvg(__S,640)');
-    assert.match(svg, /<text class="ee-ad"[^>]*>ilk %\d+(,\d)?<\/text>/);
+    for (const t of ['1.', '25.', '50.', '75.', '100.', 'İlk 100 dışı']) assert(svg.includes('>' + t + '</text>'), t);
+    const son = st.cizgiler[0].nokta.at(-1); assert(svg.includes('<text class="ee-ad"') && svg.includes('>' + (son.sira === null ? 'İlk 100 dışı' : son.sira + '.') + '</text>'));
+    assert(!/ilk %|dilim|≈/.test(svg), 'nothing estimated');
     // Under each date the deneme's short name, so a point can be told from the Türkiye geneli page.
     assert.equal((svg.match(/<text class="et-tik ee-sinav-ad"/g) || []).length, 3); assert(st.cizgiler[0].nokta.every(p => p.kisa && svg.includes('>' + p.kisa + '</text>')));
-    // A complete list (every school that sat it, fewer than the others) is a hollow dot, named in the note under the chart.
-    put('__T', { ...st, cizgiler: [{ ...st.cizgiler[0], nokta: st.cizgiler[0].nokta.map((p, i) => i === 2 ? { ...p, tam: true, okulN: 80 } : p) }] });
-    const svgT = get('ETUT_ETKI.durusSvg(__T,640)'); assert.equal((svgT.match(/class="ee-nokta ee-tam"/g) || []).length, 1); assert(svgT.includes('tam liste (80 okul)'));
     assert.match(run('ETUT_ETKI.icerik()'), /id="eeIkiGrafik">Bu grafik okulun Türkiye’deki okullar arasındaki yerini gösterir\. “Etütten önce ve sonra” ise okulun içinde/); assert(svg.includes('>Haftalık etüt</text>') && !svg.includes('NaN') && !svg.includes('undefined'));
-    const ys = [...svg.matchAll(/<circle class="ee-nokta" cx="[\d.]+" cy="([\d.]+)"/g)].map(x => Number(x[1]));
-    assert.equal(ys.length, 3); const sirali = st.cizgiler[0].nokta.map(p => p.dilim); for (let i = 1; i < 3; i++) assert.equal(sirali[i] < sirali[i - 1], ys[i] < ys[i - 1], 'a smaller dilim is drawn higher');
-    // The helpers: TURKIYE’s when it exports them, else the formula here; both say "ilk %12".
-    assert.equal(get('ETUT_ETKI.dilimler().yerelMi'), false); assert.equal(get('ETUT_ETKI.dilimler().yazi(12.2)'), 'ilk %12'); assert.equal(get('ETUT_ETKI.dilimler().yazi(8.43)'), 'ilk %8,4'); assert.equal(get('ETUT_ETKI.dilimler().yazi(0.02)'), 'ilk %0,1');
-    assert.equal(get('ETUT_ETKI.dilimler({}).yerelMi'), true); assert.equal(get('ETUT_ETKI.dilimler({}).yazi(ETUT_ETKI.dilimler({}).nokta({t:62}))'), 'ilk %12', 'T 62 is the 12th percentile from the top');
-    assert.equal(get('ETUT_ETKI.dilimler({}).yazi(8.43)'), 'ilk %8,4'); assert.equal(get('ETUT_ETKI.dilimler({}).yazi(0.02)'), 'ilk %0,1'); assert.equal(get('ETUT_ETKI.dilimler({}).yazi(12.2)'), 'ilk %12'); assert(Math.abs(get('ETUT_ETKI.dilimler({}).tden(15.87)') - 60) < 0.05);
-    assert(Math.abs(get('ETUT_ETKI.dilimler({}).nokta({t:62})') - get('TURKIYE.dilimNokta({t:62})')) < 1e-4, 'the local formula and TURKIYE’s agree');
+    // A better (smaller) place is drawn higher; a deneme outside the list sits on the dışı lane as a hollow dot, joined by a dashed line.
+    put('__T', { ...st, cizgiler: [{ ...st.cizgiler[0], nokta: [{ ...st.cizgiler[0].nokta[0], sira: 40 }, { ...st.cizgiler[0].nokta[1], sira: 12 }, { ...st.cizgiler[0].nokta[2], sira: null }] }] });
+    const svgT = get('ETUT_ETKI.durusSvg(__T,640)'), ys = [...svgT.matchAll(/<circle class="ee-nokta( ee-disi-nokta)?" cx="[\d.]+" cy="([\d.]+)"/g)].map(x => [Number(x[2]), !!x[1]]);
+    assert.equal(ys.length, 3); assert(ys[1][0] < ys[0][0], '12. is above 40.'); assert(ys[2][0] > ys[0][0] && ys[2][1] && !ys[0][1], 'outside the list: lowest, hollow');
+    assert.equal((svgT.match(/class="ee-cizgi ee-kesik"/g) || []).length, 1, 'the step to the dışı lane is dashed'); assert(svgT.includes('>İlk 100 dışı</text>'));
+    assert.equal(run('typeof ETUT_ETKI.dilimler'), 'undefined');
     // No list for the grade: the page says so with the button; the rest of the page stays.
     run('D.turkiye=undefined'); const bos = run('ETUT_ETKI.icerik()'); assert.match(bos, /id="eeGrafik"[\s\S]*?Bu sınıf için Türkiye geneli listesi eklenmemiş\.[\s\S]*?data-sekme="turkiye">Türkiye geneli →/); assert(bos.includes('id="eeHocalar"'));
   });
