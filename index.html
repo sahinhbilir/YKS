@@ -25001,7 +25001,10 @@ function gorunumEtutEtki(){return ETUT_ETKI.gorunum()}
 // Teacher-only publisher assessment evidence. Embedded by scripts/embed-konutakibi.cjs.
 // No personal data or source PDFs belong in this file. See docs/konu-takibi.md.
 const KONU_TAKIBI = (() => {
-const LIMIT=350000, MAX_ROWS=30000;
+// Growth caps for a new upload (write): 2.500 KB and 120.000 kazanım rows, about ten exams of a 32-pupil grade with TYT and
+// AYT. The notebook's own budget (cloud copy 900 KB compressed, device 5.000 KB) is checked on every save as well. Reading
+// never fails on size: SANITY_* only stops a record no upload could have made.
+const LIMIT=2500000, MAX_ROWS=120000, SANITY_BYTES=10000000, SANITY_ROWS=500000;
 const clean=s=>String(s??'').replace(/\s+/gu,' ').trim();
 const key=s=>clean(s).toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/[^A-Z0-9ÇĞİÖŞÜ]/gu,'');
 const ek=s=>denemeAdAnahtari(s);
@@ -25402,13 +25405,22 @@ function dogrula(v){
     if(!str(e.ad,160)||exams.has(ek(e.ad))||(e.date!==null&&!dateOK(e.date))||!Array.isArray(e.blocks)||!e.blocks.length)fail();exams.add(ek(e.ad));const bs=new Set();
     for(const b of e.blocks){
       if(!b.student||!str(b.student.name,160)||!str(b.student.no,12)||!/^\d+$/u.test(b.student.no)||!str(b.student.cls,80)||!str(b.course,80)||!/-[TA]$/u.test(b.course)||!['topic','outcome'].includes(b.kind)||!Array.isArray(b.rows)||!b.rows.length||b.rows.length>1000||bs.has(blockKey(b)))fail();bs.add(blockKey(b));
-      const rs=new Set();for(const r of b.rows){if(!Array.isArray(r)||r.length!==5||!Number.isInteger(r[0])||r[0]<0||r[0]>=v.labels.length||!countOK(r.slice(1))||rs.has(r[0])||(b.kind==='outcome')!==!!v.labels[r[0]][0])fail();rs.add(r[0]);if(++count>MAX_ROWS)fail()}
+      const rs=new Set();for(const r of b.rows){if(!Array.isArray(r)||r.length!==5||!Number.isInteger(r[0])||r[0]<0||r[0]>=v.labels.length||!countOK(r.slice(1))||rs.has(r[0])||(b.kind==='outcome')!==!!v.labels[r[0]][0])fail();rs.add(r[0]);if(++count>SANITY_ROWS)fail()}
     }
   }
   zorlukDogrula(v.zorluk,fail,str);
-  if(baytBoyu(JSON.stringify(v))>LIMIT)throw new Error('Konu Takibi alanı doldu. Kaynaklar bölümünden eski sınavları kaldırın.');
+  if(baytBoyu(JSON.stringify(v))>SANITY_BYTES)fail();
   return v;
 }
+// The record's size and kazanım rows.
+const olcu=v=>({bayt:v?baytBoyu(JSON.stringify(v)):0,satir:v&&Array.isArray(v.exams)?v.exams.reduce((a,e)=>a+e.blocks.reduce((b,x)=>b+x.rows.length,0),0):0});
+// An upload may not grow the record past the caps; one that shrinks or keeps it (a removal, a replaced exam) always may.
+function sinirDenetle(v,previous){
+  const yeni=olcu(v),eski=olcu(previous);
+  if(yeni.bayt>LIMIT&&yeni.bayt>eski.bayt)throw new Error('Konu Takibi '+kb(LIMIT)+' sınırını aşıyor ('+kb(yeni.bayt)+'). Dosyalar eklenmedi; Kaynaklar bölümünden eski sınavları kaldırıp yeniden deneyin.');
+  if(yeni.satir>MAX_ROWS&&yeni.satir>eski.satir)throw new Error('Konu Takibi '+MAX_ROWS.toLocaleString('tr-TR')+' kazanım satırı sınırını aşıyor ('+yeni.satir.toLocaleString('tr-TR')+'). Dosyalar eklenmedi; Kaynaklar bölümünden eski sınavları kaldırıp yeniden deneyin.');
+}
+const kb=b=>Math.round(b/1000).toLocaleString('tr-TR')+' KB';
 function oku(){try{return {veri:D.konutakibi===undefined?blank():dogrula(JSON.parse(JSON.stringify(D.konutakibi)))}}catch(e){return {veri:null,hata:e.message}}}
 const oturumOf=e=>{const t=new Set(Object.keys({...e.ozet,...e.madde,...e.turkiye}).map(c=>c.endsWith('-T')?'TYT':'AYT'));return t.size>1?'TYT + AYT':[...t][0]};
 // The exam code inside a name ("27-YKS-1203", "27 YKS 1203 TYT" → 27YKS1203): the Performans analizi names its exam by the code only.
@@ -25462,7 +25474,7 @@ const readonly=()=>typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme(
 function canWrite(){if(!rehberMi()||readonly())throw new Error('Yalnızca düzenleme yetkisi olan rehber öğretmen değiştirebilir.')}
 let saving=false;
 async function write(v,owner=D,previous=D.konutakibi){
-  canWrite();if(saving||D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti. İşlemi yeniden deneyin.');dogrula(v);
+  canWrite();if(saving||D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti. İşlemi yeniden deneyin.');dogrula(v);sinirDenetle(v,previous);
   const next={...owner,konutakibi:v};
   saving=true;
   const oncekiDefter=JSON.stringify(D);
@@ -26006,7 +26018,7 @@ document.addEventListener('click',ev=>{
   if(zel&&confirm('Bu sınavın zorluk verisi (sınav özeti ve Madde Analizi) kaldırılsın mı? Dosyalar yeniden yüklenebilir.')){const k=zel.dataset.ktZdelete;act(()=>zorlukSil(k))}
 });
 document.addEventListener('submit',ev=>{const form=ev.target;if(!active()||!form.matches?.('.kt-mapping'))return;ev.preventDefault();if(readonly()||busy)return;const {ktCourse,ktCode}=form.dataset,name=form.elements.topic.value;act(()=>esle(ktCourse,ktCode,name))});
-return {geridekiKonular,yuzde,puan,turkiyeCoz,turkiyeKiyas,ogrenciFark,grupOlc,dersKaymasi,turkiyeSil,R_MADDE,pdfCoz,ozetCoz,maddeCoz,zorlukIndex,zorlukSil,zipListe,zipDosya,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,oku,merge,compact,examDate,history,model,examsText,order,summaryText,uploadMessage,SIRA,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
+return {yaz:(v)=>write(v),geridekiKonular,yuzde,puan,turkiyeCoz,turkiyeKiyas,ogrenciFark,grupOlc,dersKaymasi,turkiyeSil,R_MADDE,pdfCoz,ozetCoz,maddeCoz,zorlukIndex,zorlukSil,zipListe,zipDosya,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,oku,merge,compact,examDate,history,model,examsText,order,summaryText,uploadMessage,SIRA,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
 })();
 function gorunumKonuTakibi(){return KONU_TAKIBI.gorunum()}
 // END KONUTAKIBI

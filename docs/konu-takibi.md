@@ -91,7 +91,7 @@ and per-question counts are kept, never names or numbers.
 
 Storage: optional `zorluk: {[examKey]: {ad, oturum, ogrenci, ts, ozet, madde}}` in
 `D.konutakibi` (≤ 60 exams, ≤ 40 courses per part so an exam's TYT and AYT fit side by side, ≤ 200 questions per course,
-p in [0, 1]); it shares the 350 KB limit.
+p in [0, 1]); it counts toward the record's size caps below.
 Removing an exam in Kaynaklar leaves its difficulty data until that is removed too.
 
 ## Türkiye’ye göre (where the school and each pupil are behind)
@@ -195,9 +195,12 @@ on the same day form a single timeline step, avoiding an invented within-day
 order. All component exam names remain visible.
 
 `D.konutakibi` version 1 holds a dictionary of outcome codes/descriptions, packed
-integer counts, exam blocks, dates and manual associations. Limits are 350 KB,
-100 exams and 30,000 rows, additionally bounded by the existing notebook backup
-limit. Unreadable existing data is preserved and blocks imports. A failed save
+integer counts, exam blocks, dates and manual associations. An upload may not grow the record past 2,500 KB or 120,000
+kazanım rows (about twelve exams of a 32-pupil grade with TYT and AYT: one such exam is about 6,400 rows and 205 KB, 33 KB
+in the compressed cloud copy); 100 exams at most. Every save is also checked against the notebook's own budget (cloud copy
+900 KB compressed, device 5,000 KB). The caps apply to growth only: a removal, a replaced exam or any change that does not
+grow the record always saves, and reading never fails on size (only a record no upload could have made, over 10 MB or
+500,000 rows, is refused as corrupt). The old caps (350 KB, 30,000 rows) filled in under two exams of a whole grade. Unreadable existing data is preserved and blocks imports. A failed save
 rolls back; an import cannot cross notebook/account switches or overwrite another
 concurrent Konu Takibi update. Deleting an exam also compacts unused labels.
 

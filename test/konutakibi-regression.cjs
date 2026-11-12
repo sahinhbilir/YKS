@@ -519,10 +519,23 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   assert.throws(()=>K.merge(sixty,[],zpair('SENTETİK-YENİ',{'TÜRKÇE-T':[['T.12.1.1',.5]]})),/En fazla 60/);
   const huge=good();Object.values(huge.zorluk)[0].ad='S'.repeat(160);assert.throws(()=>K.dogrula(huge),/geçersiz/);// key no longer equals the exam key
  });
- await test('whole-record guard: zorluk shares the 350 KB limit',()=>{
-  const v=zdata();for(let i=0;i<59;i++){const ad='SENTETİK-'+i,c=Array.from({length:200},()=>['T.12.1.1','T.12.1.2','T.12.1.3','T.12.1.4','T.12.1.5','T.12.1.6','T.12.1.7','T.12.1.8','T.12.1.9','T.12.1.10']);
-   v.zorluk[K.ek(ad)]={ad,oturum:'TYT',ogrenci:null,ts:1,ozet:{'TÜRKÇE-T':c,'TARİH-T':c,'FİZİK-T':c},madde:null}}
-  assert.throws(()=>K.dogrula(v),/alanı doldu/);
+ await test('size caps: an upload may not grow the record past 2.500 KB or 120.000 rows; reading never fails on size; a smaller record always saves',async()=>{
+  // A grade of 32 pupils with TYT and AYT adds about 190 KB and 6.400 rows an exam: the old 350 KB / 30.000-row cap filled in
+  // under two exams. Many exams of a whole grade now fit.
+  reset();const blok=(no,course,n)=>F.block(Array.from({length:n},(_,i)=>F.row('T.12.'+(i+1)+'.1','Kazanım '+(i+1),[2,1,1,0])),'outcome',course,{name:'SENTETİK ÖĞRENCİ '+no,no:String(9000+no),cls:'205 12/A'});
+  const sinav=k=>({ad:'SENTETİK-'+k,blocks:Array.from({length:32},(_,o)=>[blok(o,'TÜRKÇE-T',30),blok(o,'MATEMATİK-T',30),blok(o,'TÜRK DİLİ VE EDB-A',30),blok(o,'MATEMATİK-A',30)]).flat()});
+  for(let k=1;k<=8;k++)await K.ekle([sinav(k)]);
+  const {veri}=K.oku();assert(veri,'readable');const satir=veri.exams.reduce((a,e)=>a+e.blocks.reduce((b,x)=>b+x.rows.length,0),0);
+  assert.equal(satir,8*32*4*30);assert(satir>30000,'past the old 30.000-row cap');assert(run('baytBoyu(JSON.stringify(D.konutakibi))')>350000,'past the old 350 KB');
+  // Past a cap: refused, nothing changed.
+  const once=run('JSON.stringify(D.konutakibi)');
+  const v=copy(veri);for(let i=0;i<59;i++){const ad='SENTETİK-Z'+i,c=Array.from({length:200},()=>['T.12.1.1','T.12.1.2','T.12.1.3','T.12.1.4','T.12.1.5','T.12.1.6','T.12.1.7','T.12.1.8','T.12.1.9','T.12.1.10']);
+   v.zorluk=v.zorluk||{};v.zorluk[K.ek(ad)]={ad,oturum:'TYT',ogrenci:null,ts:1,ozet:{'TÜRKÇE-T':c,'TARİH-T':c,'FİZİK-T':c,'KİMYA-T':c},madde:null}}
+  assert.doesNotThrow(()=>K.dogrula(copy(v)),'a large record is still valid to read');
+  put('__buyuk',v);await assert.rejects(run('KONU_TAKIBI.yaz(__buyuk)'),/2\.500 KB sınırını aşıyor/);assert.equal(run('JSON.stringify(D.konutakibi)'),once);
+  // Already over the cap (as an older, larger record could be): a change that does not grow it saves.
+  put('__kt',v);run('D.konutakibi=__kt');const kucuk=copy(v);delete kucuk.zorluk[K.ek('SENTETİK-Z0')];put('__kucuk',kucuk);
+  await run('KONU_TAKIBI.yaz(__kucuk)');assert.equal(Object.keys(run('D.konutakibi.zorluk')).length,58);
  });
  await test('re-uploading an exam file replaces that part only; delete removes the difficulty data',async()=>{
   await K.ekle([ZREP],undefined,undefined,zpair('SENTETİK-ZORLUK',ZSPEC));
