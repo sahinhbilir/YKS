@@ -1659,6 +1659,32 @@ button.yk-cz-ad:hover{text-decoration:underline;text-underline-offset:3px}
 #tgKok .tg-konu-geride .tg-konu-fark{color:var(--e-bad)}#tgKok .tg-konu-geride .tg-konu-durum{color:var(--e-bad);border-color:var(--e-bad)}
 #tgKok .tg-konu-ileride .tg-konu-fark{color:var(--e-ok)}#tgKok .tg-konu-ileride .tg-konu-durum{color:var(--e-ok);border-color:var(--e-ok)}
 @media(max-width:700px){#tgKok .tg-konu-satir{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}#tgKok .tg-konu-oran{grid-column:1}#tgKok .tg-konu-durum{grid-column:2;grid-row:2;justify-self:end}}
+/* Dağılımda yeriniz: the projected distribution (dotted), the printed schools (solid ticks), the Türkiye average and the school. */
+.tg-dagilim{width:100%;min-height:120px}
+.tg-dagilim-svg{display:block;overflow:visible}
+.tg-dg-izgara{stroke:var(--e-grid,var(--cizgi));stroke-width:1}
+.tg-dg-taban{stroke:var(--e-grid,var(--cizgi));stroke-width:1}
+.tg-dg-ad{font-size:12px;font-weight:600;fill:var(--e-fg,var(--murekkep))}.tg-dg-tarih{font-weight:400;fill:var(--e-fg2,var(--soluk))}
+.tg-dg-ort .tg-dg-ad{font-weight:700}
+.tg-dg-alan{fill:var(--e-fg2,var(--soluk));fill-opacity:.06;stroke:none}
+.tg-dg-ustu{fill:var(--e-c1);fill-opacity:.16;stroke:none}
+.tg-dg-egri{fill:none;stroke:var(--e-fg2,var(--soluk));stroke-width:1.7;stroke-linecap:round;stroke-dasharray:.1 4.2}
+.tg-dg-genel{stroke:var(--e-fg2,var(--soluk));stroke-width:1.2}
+.tg-dg-liste{stroke:var(--e-fg,var(--murekkep));stroke-width:1;stroke-opacity:.55}
+.tg-dg-okul{fill:var(--e-c1);stroke:var(--e-bg,var(--kagit));stroke-width:2}
+.tg-dg-okul-ort{stroke-width:2.5}
+.tg-dg-yol{fill:none;stroke:var(--e-c1);stroke-width:1.6;stroke-opacity:.55;stroke-linejoin:round}
+.tg-dg-yuzde{font-size:12px;font-weight:700;fill:var(--e-fg,var(--murekkep));font-variant-numeric:tabular-nums}
+.tg-dg-net{font-size:11px;fill:var(--e-fg2,var(--soluk));font-variant-numeric:tabular-nums}
+.tg-dg-eksen{font-style:italic}
+.tg-dg-lejant i{display:inline-block;width:18px;height:10px;margin-right:6px;vertical-align:middle}
+.tg-dg-l-egri{border-bottom:2px dotted var(--e-fg2,var(--soluk))}
+.tg-dg-l-liste{background:repeating-linear-gradient(90deg,var(--e-fg,var(--murekkep)) 0 1px,transparent 1px 4px);opacity:.6}
+.tg-dg-l-genel{width:2px!important;background:var(--e-fg2,var(--soluk))}
+.tg-dg-l-okul{width:10px!important;height:10px!important;border-radius:50%;background:var(--e-c1)}
+.tg-formul{margin-top:12px;font-size:13px;line-height:1.55}.tg-formul summary{cursor:pointer;font-weight:600}
+.tg-formul p{margin:8px 0;max-width:110ch}.tg-dg-ort-satir td{font-weight:700}
+@media print{.tg-formul:not([open]){display:none}}
 /* END TURKIYE */
 
 /* BEGIN ETUTETKISI */
@@ -2185,6 +2211,55 @@ button.gr-kucuk{cursor:zoom-in}
 .gr-ortu img{max-width:100%;max-height:calc(100vh - 90px);object-fit:contain;border-radius:8px}
 @media (max-width:520px){.gr-kart{padding:14px 14px}.gr-kucuk img{width:84px;height:84px}}
 /* END GUNLUKRAPOR */
+
+/* BEGIN OGRETMENRAPOR */
+/* Öğretmen raporu: one section per teacher; per subject a net chart against Türkiye and the topic grid (red behind ↔ green ahead). */
+#ogrKok{display:flex;flex-direction:column;gap:18px}
+.ogr-ogretmen{display:flex;flex-direction:column;gap:14px;padding-top:6px;border-top:2px solid var(--cizgi)}
+.ogr-ogretmen:first-of-type{border-top:0}
+.ogr-ogretmen-bas h2{margin:0;font-size:22px}.ogr-ogretmen-bas p{margin:2px 0 0}
+.ogr-blok{display:flex;flex-direction:column;gap:12px}
+.ogr-blok h3{margin:0;font-size:17px;display:flex;align-items:center;gap:8px}
+.ogr-ust{display:grid;grid-template-columns:minmax(150px,200px) minmax(0,1fr);gap:16px;align-items:center}
+.ogr-kpi{display:flex;flex-direction:column;gap:4px}
+.ogr-kpi-ad{font-size:12px;color:var(--soluk)}
+.ogr-kpi strong{font-size:32px;line-height:1.1;font-variant-numeric:tabular-nums}.ogr-kpi strong small{font-size:.45em;font-weight:600;color:var(--soluk)}
+.ogr-k{color:var(--kritik)}.ogr-y{color:var(--iyi)}
+.ogr-grafik{width:100%;min-height:160px}
+.ogr-net{display:block;overflow:visible}
+.ogr-izgara{stroke:var(--cizgi);stroke-width:1}
+.ogr-tik{font-size:11px;fill:var(--soluk);font-variant-numeric:tabular-nums}
+.ogr-fark-ust{fill:var(--iyi);fill-opacity:.22}.ogr-fark-alt{fill:var(--kritik);fill-opacity:.22}
+.ogr-tr{fill:none;stroke:var(--soluk);stroke-width:1.6;stroke-dasharray:5 4}
+.ogr-okul{fill:none;stroke-width:2.6;stroke-linejoin:round}
+.ogr-tr-nokta{fill:var(--kagit);stroke:var(--soluk);stroke-width:1.4}
+.ogr-okul-nokta{stroke:var(--kagit);stroke-width:2}
+.ogr-l-tr{background:repeating-linear-gradient(90deg,var(--soluk) 0 5px,transparent 5px 9px)!important}
+.ogr-alt-baslik{margin:4px 0 0;font-size:14px;color:var(--soluk);font-weight:600}
+.ogr-iz-kutu{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ogr-iz{border-collapse:separate;border-spacing:3px;font-size:12px;font-variant-numeric:tabular-nums;min-width:100%}
+.ogr-iz th,.ogr-iz td{padding:0}
+.ogr-iz-konu{text-align:left;font-weight:500;padding:4px 8px 4px 0!important;min-width:150px;max-width:280px;white-space:normal;line-height:1.3}
+thead .ogr-iz-konu{color:var(--soluk);font-size:11px;font-weight:600}
+.ogr-iz-sinav{min-width:52px;font-weight:600;color:var(--soluk);font-size:11px;text-align:center;vertical-align:bottom}
+.ogr-iz-sinav span{display:block}.ogr-iz-sinav b{display:block;font-size:12px;margin-top:2px}
+.ogr-iz-h{height:30px;min-width:52px;text-align:center;border-radius:6px;color:var(--murekkep);font-weight:600;cursor:default}
+.ogr-iz-soluk{color:var(--soluk);font-weight:500}
+.ogr-iz-bos{background:repeating-linear-gradient(135deg,transparent 0 4px,color-mix(in srgb,var(--cizgi) 60%,transparent) 4px 5px);border-radius:6px}
+.ogr-iz-seri{min-width:46px;text-align:left;padding-left:6px!important}
+.ogr-seri{font-size:10px;letter-spacing:-1px;white-space:nowrap}.ogr-seri-geride{color:var(--kritik)}.ogr-seri-onde{color:var(--iyi)}
+.ogr-olcek{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--soluk);max-width:460px}
+.ogr-olcek i{flex:1;height:10px;border-radius:5px;background:linear-gradient(90deg,color-mix(in srgb,var(--kritik) 85%,transparent),color-mix(in srgb,var(--kritik) 25%,transparent) 45%,transparent 50%,color-mix(in srgb,var(--iyi) 25%,transparent) 55%,color-mix(in srgb,var(--iyi) 85%,transparent))}
+.ogr-etut{display:flex;flex-wrap:wrap;align-items:center;gap:10px 26px;padding-top:10px;border-top:1px solid var(--cizgi)}
+.ogr-etut-sayi{display:flex;align-items:baseline;gap:6px}.ogr-etut-sayi strong{font-size:20px;font-variant-numeric:tabular-nums}.ogr-etut-sayi span{font-size:12px;color:var(--soluk)}
+.ogr-etut-once{display:flex;align-items:baseline;gap:8px;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}.ogr-etut-once i{font-style:normal;color:var(--soluk)}.ogr-etut-once small{font-size:12px;font-weight:400;color:var(--soluk)}
+.ogr-yok{color:var(--soluk)}
+.ogr-formul{font-size:13px;line-height:1.55}.ogr-formul summary{cursor:pointer;font-weight:600}.ogr-formul p{margin:8px 0;max-width:110ch}
+.ogr-ham{margin-top:10px}
+@media (max-width:640px){.ogr-ust{grid-template-columns:1fr}.ogr-kpi strong{font-size:26px}}
+@media print{#ogrKok .et-arac,.ogr-formul:not([open]){display:none}.ogr-ogretmen{break-before:page;border-top:0}.ogr-ogretmen:first-of-type{break-before:auto}.ogr-blok{break-inside:avoid}
+  .ogr-iz-h,.ogr-fark-ust,.ogr-fark-alt,.ogr-olcek i{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+/* END OGRETMENRAPOR */
 
 /* BEGIN REPORT_THEME */
 /* The screen follows Öğrenci Raporları. Keep this entire layer screen-only:
@@ -13163,7 +13238,7 @@ function ogrenciGozuyleKapat() {
 // Müfredat sayfasından, kurtarma haritadaki kırmızı (plan verilmemiş) haftadan açılır.
 const SEKME_REHBER = [['takip', 'Haftalık öğrenci takibi'], ['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
                   ['ogrenciler', 'Öğrenciler'], ['konuplani', 'Özel tasarlanmış müfredat'], ['harita', 'Haftalar haritası'],
-                  ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemeler'], ['siralamalar', 'Sıralamalar'], ['turkiye', 'Türkiye geneli'], ['konutakibi', 'Konu Takibi'], ['yanlislar', 'Yanlışlar defteri'], ['universite', 'Üniversite Hedefi'], ['etutler', 'Etütler'], ['etutetki', 'Etüt etkisi'], ['etutplani', 'Etüt planı'], ['yoklama', 'Yoklama'], ['ogrencirapor', 'Öğrenci raporları'], ['gunlukrapor', 'Günlük raporlar'], ['ogrencikarti', 'Öğrenci kartı'], ['ayarlar', 'Ayarlar']];
+                  ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemeler'], ['siralamalar', 'Sıralamalar'], ['turkiye', 'Türkiye geneli'], ['konutakibi', 'Konu Takibi'], ['ogretmenrapor', 'Öğretmen raporu'], ['yanlislar', 'Yanlışlar defteri'], ['universite', 'Üniversite Hedefi'], ['etutler', 'Etütler'], ['etutetki', 'Etüt etkisi'], ['etutplani', 'Etüt planı'], ['yoklama', 'Yoklama'], ['ogrencirapor', 'Öğrenci raporları'], ['gunlukrapor', 'Günlük raporlar'], ['ogrencikarti', 'Öğrenci kartı'], ['ayarlar', 'Ayarlar']];
 const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['hafiza', 'Hafızam'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemelerim'], ['gunlukrapor', 'Günlük rapor'], ['ayarlar', 'Ayarlar']];
 // Müfredat (lise programı) ve Denemelerim (TYT/AYT) yalnızca YKS öğrencisi içindir.
 // Günlük rapor yalnızca öğretmeni bağlı (okul hesaplı) öğrencide görünür.
@@ -13176,7 +13251,7 @@ const SEKMELER = () => !ogrenciMi() ? SEKME_REHBER : (ogrenciSinavi(D && D.ogr &
 const PLAN_ALT_SEKMELER = ['harita', 'giris'];
 const MENU_OGRENCI = [['plan', ['hafiza'].concat(PLAN_ALT_SEKMELER), 'Planla ilgili diğer sayfalar'], ['denemeler', [], 'Denemelerle ilgili diğer sayfalar'], ['gunlukrapor', [], 'Günlük rapor']];
 const MENU_REHBER = [['plan', ['giris', 'harita'], 'Planla ilgili diğer sayfalar'],
-  ['ogrenciler', ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor', 'gunlukrapor'], 'Öğrencilerle ilgili diğer sayfalar'], ['denemeler', ['siralamalar', 'turkiye', 'konutakibi', 'yanlislar', 'universite'], 'Denemelerle ilgili diğer sayfalar']];
+  ['ogrenciler', ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor', 'gunlukrapor'], 'Öğrencilerle ilgili diğer sayfalar'], ['denemeler', ['siralamalar', 'turkiye', 'konutakibi', 'ogretmenrapor', 'yanlislar', 'universite'], 'Denemelerle ilgili diğer sayfalar']];
 // Menüde olmayan sayfa, açıldığı yerin menü öğesini seçili gösterir.
 const MENU_BAGLI = { konular: 'mufredat', konuplani: 'mufredat', kurtarma: 'harita', ogrencikarti: 'ogrenciler' };
 const MENU_OK = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -13365,7 +13440,7 @@ function cizIc() {
   rayCiz();
   const ana = document.getElementById('ana');
   if (!canli.length && EK.sekme !== 'ayarlar' && EK.sekme !== 'ogrenciler' && EK.sekme !== 'mufredat' && EK.sekme !== 'takip' &&
-      !(rehberMi() && (EK.sekme === 'ogrencirapor' || EK.sekme === 'gunlukrapor' || EK.sekme === 'siralamalar' || EK.sekme === 'etutler' || EK.sekme === 'etutplani' || EK.sekme === 'yoklama' || EK.sekme === 'turkiye' || EK.sekme === 'konutakibi' || EK.sekme === 'yanlislar' || EK.sekme === 'etutetki' || EK.sekme === 'ogrencikarti' || (EK.sekme === 'denemeler' && !EK.denemeKlasik)))) {
+      !(rehberMi() && (EK.sekme === 'ogrencirapor' || EK.sekme === 'gunlukrapor' || EK.sekme === 'siralamalar' || EK.sekme === 'etutler' || EK.sekme === 'etutplani' || EK.sekme === 'yoklama' || EK.sekme === 'turkiye' || EK.sekme === 'konutakibi' || EK.sekme === 'ogretmenrapor' || EK.sekme === 'yanlislar' || EK.sekme === 'etutetki' || EK.sekme === 'ogrencikarti' || (EK.sekme === 'denemeler' && !EK.denemeKlasik)))) {
     ana.innerHTML = '<div class="kurulum"><div class="kur-kutu" style="text-align:' + (ogrenciMi() ? 'left' : 'center') + '">' +
       '<h1 style="text-align:center;margin-bottom:22px">' + (ogrenciMi() ? 'Bilgilerini gir, başlayalım' : 'Henüz öğrenci yok') + '</h1>' +
       (ogrenciMi()
@@ -13418,6 +13493,7 @@ function cizIc() {
     EK.sekme === 'gunlukrapor' ? gorunumGunlukRapor() :
     EK.sekme === 'turkiye' && rehberMi() ? gorunumTurkiye() :
     EK.sekme === 'konutakibi' && rehberMi() ? gorunumKonuTakibi() :
+    EK.sekme === 'ogretmenrapor' && rehberMi() ? gorunumOgretmenRapor() :
     EK.sekme === 'yanlislar' && rehberMi() ? gorunumYanlislar() :
     EK.sekme === 'etutetki' && rehberMi() ? gorunumEtutEtki() :
     EK.sekme === 'ogrencikarti' && rehberMi() ? gorunumOgrenciKarti() :
@@ -19117,12 +19193,22 @@ const OLCUT_ALAN={artis:'fark',trfark:'trFark',yuzde:'yuzde',fark:'logFark'};
 const y6=x=>Math.round(x*1e6)/1e6;
 // Türkiye’ye göre: the change net of the Türkiye average's change over the same window (tr.fark, see turkiyeHesapla).
 const trGore=(fark,tr)=>fark!==null&&fark!==undefined&&tr&&tr.fark!==null?y6(fark-tr.fark):null;
+// One student's Türkiye’ye göre over exactly the exams they sat: each side of the window is the mean of the student's exams
+// that have a Türkiye average, and the Türkiye side is the mean over those same exams. A student who missed an exam is never
+// set against a Türkiye change that includes it. null when a side has no such exam.
+function ogrenciTrFark(o,w,tr){
+  if(!w||!tr||!Array.isArray(tr.seri))return null;
+  const yan=([a,b])=>{const ogr=[],trl=[];for(let i=a;i<=b;i++){const v=o.seri[i],t=tr.seri[i];if(v!==null&&v!==undefined&&t)ogr.push(v),trl.push(t.v)}
+    return ogr.length?{o:ort(ogr),t:ort(trl)}:null};
+  const once=yan(w.once),son=yan(w.son);
+  return once&&son?y6((son.o-once.o)-(son.t-once.t)):null;
+}
 function olcutUygula(m,s,olcut,tr){
   if(!s)return;
   for(const o of m.ogrenciler){const c=o.k[s];if(!c)continue;
     c.yuzde=c.fark!==null&&c.once>0?c.fark/c.once*100:null;
     c.logFark=c.fark!==null?Math.log((m.O.ust-c.once+1)/(m.O.ust-c.son+1)):null;
-    c.trFark=trGore(c.fark,tr)}
+    c.trFark=c.fark===null?null:ogrenciTrFark(o,m.pencere[s],tr)}
   const k=OLCUT_ALAN[olcut];if(!k)return;
   const l=m.ogrenciler.filter(o=>o.k[s][k]!==null).sort((a,b)=>b.k[s][k]-a.k[s][k]);
   for(const o of m.ogrenciler){o.sira=null;o.siraFark=null}
@@ -19158,7 +19244,8 @@ function turkiyeHesapla(key,mo,ders,s){
   const dilim=([a,b])=>{const l=[];for(let i=a;i<=b;i++)if(seri[i])l.push({...seri[i],ad:mo.sinavlar[i].ad});
     return l.length?{v:ort(l.map(x=>x.v)),t:l.some(x=>x.t),ad:l.map(x=>x.ad)}:null};
   const once=dilim(w.once),son=dilim(w.son);
-  return {var:!!(once||son),once:once&&once.v,son:son&&son.v,fark:once&&son?y6(son.v-once.v):null,tahmini:!!((once&&once.t)||(son&&son.t)),onceAd:once?once.ad:[],sonAd:son?son.ad:[]};
+  // seri: the average of every exam of the board (null without one), for each student's own window (ogrenciTrFark).
+  return {var:!!(once||son),once:once&&once.v,son:son&&son.v,fark:once&&son?y6(son.v-once.v):null,tahmini:!!((once&&once.t)||(son&&son.t)),onceAd:once?once.ad:[],sonAd:son?son.ad:[],seri};
 }
 function durumAl(t){
   // Tür: genel or tarama exams only (from the name, or as the teacher set it).
@@ -19861,7 +19948,7 @@ function birak(){
 }
 document.addEventListener('pointerup',birak);document.addEventListener('pointercancel',birak);
 GRAFIK_OLCUM.kur({secici:'.et-grafik[data-dp-grafik]',kok:'#dpKok',etkin,bilgi:olcBilgi,yakin:enYakin,ipucuGizle:ipucuSakla,hap,fmt:f1});
-return {tiklerSinirli,temel,olcu,kapsamlar,ayGeri,TARIHLI,gorunumModeli,veriAl,durumAl,icerik,gorunum,grafikleriCiz,GRAFIKLER,CIZIMLER,ESIK,degisimKaynagi,isiHaritasi,isiRengi,kaynakCumlesi,kaynakBolumleri};
+return {ogrenciTrFark,tiklerSinirli,temel,olcu,kapsamlar,ayGeri,TARIHLI,gorunumModeli,veriAl,durumAl,icerik,gorunum,grafikleriCiz,GRAFIKLER,CIZIMLER,ESIK,degisimKaynagi,isiHaritasi,isiRengi,kaynakCumlesi,kaynakBolumleri};
 })();
 function gorunumDenemePanosu(){return DPANO.gorunum()}
 // END DENEMEPANO
@@ -22356,6 +22443,10 @@ async function sil(){yazabilir();await yaz(null)}
 // N and sigma are fitted by least squares (sigma given mu and N has a closed form). The schools' means are
 // not the students' scores: sigma is the spread BETWEEN schools. See docs/turkiye-geneli.md.
 const ESIK_UYUM=.35, EN_AZ_SATIR=10, N_UST=6000, TOPLAM_KORELASYON=.8;
+// The share of a subject's printed schools below the Türkiye average (median over a session's subjects) from which the list is
+// taken as most of its population and fitted with a free centre. A top-of-many list has almost none there (ranks 91–100 of 180
+// schools drawn around the average are 10 %); the publisher's Kolej lists have 38–78 %.
+const SERBEST_ESIK=.25;
 // Φ⁻¹ (Wichura, AS241) and Φ (Hart, double precision).
 function normTers(p){
   if(!(p>0&&p<1))return p<=0?-Infinity:Infinity;
@@ -22381,11 +22472,18 @@ function normCdf(x){
 }
 // satir: [{sira, net}] (the printed place and net), mu: the Türkiye average. With n given, only sigma is fitted.
 // Returns {n, sigma, rmse (in nets), mu, adet} or null when the list is too short or does not fit a spread.
-function siraUydur(satir,mu,n){
-  const k=[],x=[];for(const r of satir||[])if(r&&Number.isFinite(r.sira)&&Number.isFinite(r.net)){k.push(r.sira);x.push(r.net-mu)}
-  if(k.length<EN_AZ_SATIR||!Number.isFinite(mu))return null;
+// serbest: the centre is fitted too (x_k = mu + sigma·q_k by least squares with an intercept); mu is then ignored. Used for lists
+// that are most of their population (many printed schools below the Türkiye average), always with a pooled N (serbestHavuz).
+function siraUydur(satir,mu,n,serbest){
+  const k=[],x=[];for(const r of satir||[])if(r&&Number.isFinite(r.sira)&&Number.isFinite(r.net)){k.push(r.sira);x.push(serbest?r.net:r.net-mu)}
+  if(k.length<EN_AZ_SATIR||(!serbest&&!Number.isFinite(mu)))return null;
   const kmax=Math.max(...k),sxx=x.reduce((t,v)=>t+v*v,0);
-  const dene=N=>{let sxq=0,sqq=0;for(let i=0;i<k.length;i++){const q=normTers(1-(k[i]-.5)/N);sxq+=x[i]*q;sqq+=q*q}
+  const dene=N=>{
+    if(serbest){const q=k.map(v=>normTers(1-(v-.5)/N)),L=q.length,mq=q.reduce((a,b)=>a+b,0)/L,mx=x.reduce((a,b)=>a+b,0)/L;
+      let sqq=0,sxq=0;for(let i=0;i<L;i++){sqq+=(q[i]-mq)*(q[i]-mq);sxq+=(q[i]-mq)*(x[i]-mx)}
+      if(!(sqq>0))return null;const sigma=sxq/sqq,m0=mx-sigma*mq;let sse=0;for(let i=0;i<L;i++)sse+=(x[i]-m0-sigma*q[i])*(x[i]-m0-sigma*q[i]);
+      return sigma>0?{n:N,sigma,sse,mu:m0}:null}
+    let sxq=0,sqq=0;for(let i=0;i<k.length;i++){const q=normTers(1-(k[i]-.5)/N);sxq+=x[i]*q;sqq+=q*q}
     if(!(sqq>0))return null;const sigma=sxq/sqq;return sigma>0?{n:N,sigma,sse:Math.max(0,sxx-sigma*sxq)}:null};
   let en=null;
   if(n!==undefined)en=Number.isFinite(n)&&n>kmax?dene(n):null;
@@ -22396,7 +22494,23 @@ function siraUydur(satir,mu,n){
     for(let N=Math.max(lo,1050);N<=N_UST;N+=50)al(N);
     if(en){const b=en.n,w=b>=1000?50:10;for(let N=Math.max(kmax+1,b-w);N<=Math.min(N_UST,b+w);N++)al(N)}
   }
-  return en?{n:en.n,sigma:en.sigma,rmse:Math.sqrt(en.sse/k.length),mu,adet:k.length}:null;
+  return en?{n:en.n,sigma:en.sigma,rmse:Math.sqrt(en.sse/k.length),mu:serbest?en.mu:mu,adet:k.length,serbest:!!serbest}:null;
+}
+// One session's subjects (the same schools sit each of them): one N for all, each subject's centre and spread fitted
+// (siraUydur serbest). N minimises the subjects' summed squared error, each scaled by the variance of its printed nets so a
+// 40-question subject does not outweigh a 5-question one. {n, fits:[{d, f}]} or null.
+function serbestHavuz(dersler){
+  const l=dersler.filter(d=>d.satir.length>=EN_AZ_SATIR);if(!l.length)return null;
+  const kmax=Math.max(...l.flatMap(d=>d.satir.map(r=>r.sira)));
+  const vari=d=>{const x=d.satir.map(r=>r.net),m=x.reduce((a,b)=>a+b,0)/x.length;return Math.max(1e-9,x.reduce((a,v)=>a+(v-m)*(v-m),0)/x.length)};
+  const V=new Map(l.map(d=>[d,vari(d)]));let en=null;
+  const al=N=>{let t=0;for(const d of l){const f=siraUydur(d.satir,null,N,true);if(!f)return;t+=f.rmse*f.rmse/V.get(d)}if(!en||t<en.t-1e-12)en={N,t}};
+  for(let N=kmax+1;N<=Math.min(400,N_UST);N++)al(N);
+  for(let N=410;N<=N_UST;N+=10)al(N);
+  if(!en||en.N>=N_UST-10)return null;
+  // As with the fixed centre, a pooled N needs at least one subject that fits a curve well.
+  const fits=l.map(d=>({d,f:siraUydur(d.satir,null,en.N,true)}));
+  return fits.some(x=>x.f&&x.f.sigma>0&&x.f.rmse/x.f.sigma<ESIK_UYUM)?{n:en.N,fits}:null;
 }
 const sdAl=l=>{const m=l.reduce((a,v)=>a+v,0)/l.length;return Math.sqrt(l.reduce((a,v)=>a+(v-m)*(v-m),0)/Math.max(1,l.length-1))};
 // Thorndike (1949) Case II: the correlation of a population from the one seen in a sample selected on the measured
@@ -22451,21 +22565,37 @@ const DAGILIM_ONBELLEK=new Map();
 function dagilimAl(s){
   const imza=s.id+'|'+s.ts+'|'+s.dersler.map(d=>d.kod+':'+d.genel+':'+d.satir.length+':'+d.satir.reduce((t,r)=>t+r.net*r.sira,0).toFixed(2)).join(',');
   if(DAGILIM_ONBELLEK.has(imza))return DAGILIM_ONBELLEK.get(imza);
-  const kendi=s.dersler.filter(d=>!tamListe(d)).map(d=>({d,f:siraUydur(d.satir,d.genel)})),tamlar=s.dersler.filter(tamListe);
+  // A session whose printed schools are mostly at or below the Türkiye average is not the top of a much larger population: the
+  // list is most of it, and the Türkiye average (all students) is not the middle school. Its subjects are fitted with a free
+  // centre and one pooled N (serbestHavuz); the Türkiye average stays a separate line. Other sessions keep the centre at it.
+  const oturumu=d=>dersBilgi(d.kod).oturum,altPay=d=>d.satir.filter(r=>r.net<d.genel-1e-9).length/d.satir.length;
+  const serbestOt=new Set(OTURUMLAR.filter(o=>{const l=s.dersler.filter(d=>!tamListe(d)&&oturumu(d)===o);return l.length>0&&ortancaHam(l.map(altPay))>=SERBEST_ESIK}));
+  const kendi=s.dersler.filter(d=>!tamListe(d)&&!serbestOt.has(oturumu(d))).map(d=>({d,f:siraUydur(d.satir,d.genel)})),tamlar=s.dersler.filter(tamListe);
   const iyi=kendi.filter(x=>x.f&&x.f.rmse/x.f.sigma<ESIK_UYUM).map(x=>x.f.n);
   const tamN=tamlar.length&&!kendi.length?ortanca(tamlar.map(d=>d.satir.length)):null;
   const n=iyi.length?ortanca(iyi):tamN,dersler=new Map();
   for(const d of tamlar){const g=tamDagilim(d.satir);if(g)dersler.set(anahtar(d.kod),{mu:g.mu,sigma:g.sigma,rmse:0,uyum:0,kendiN:null,tam:true,n:g.n})}
   for(const {d,f} of kendi){
     const g=!iyi.length?null:siraUydur(d.satir,d.genel,n);
-    if(g)dersler.set(anahtar(d.kod),{mu:d.genel,sigma:g.sigma,rmse:g.rmse,uyum:g.rmse/g.sigma,kendiN:f?f.n:null,tam:false,n});
+    if(g)dersler.set(anahtar(d.kod),{mu:d.genel,genel:d.genel,sigma:g.sigma,rmse:g.rmse,uyum:g.rmse/g.sigma,kendiN:f?f.n:null,tam:false,n});
+  }
+  const serbestN={};
+  for(const o of serbestOt){
+    const h=serbestHavuz(s.dersler.filter(d=>!tamListe(d)&&oturumu(d)===o));
+    for(const d of s.dersler.filter(x=>!tamListe(x)&&oturumu(x)===o)){
+      const f=h&&(h.fits.find(x=>x.d===d)||{}).f;
+      // A subject whose free fit fails falls back to the centre at the Türkiye average with the session's N.
+      const g=f&&f.sigma>0?f:h?siraUydur(d.satir,d.genel,h.n):null;
+      if(g)dersler.set(anahtar(d.kod),{mu:g.mu,genel:d.genel,sigma:g.sigma,rmse:g.rmse,uyum:g.rmse/g.sigma,kendiN:null,tam:false,n:h.n,serbest:!!g.serbest});
+    }
+    if(h)serbestN[o]=h.n;
   }
   const cift=new Map();
-  if(iyi.length){
+  if(dersler.size){
     const liste=s.dersler.filter(d=>!tamListe(d)&&dersler.has(anahtar(d.kod))).map(d=>({k:anahtar(d.kod),sigma:dersler.get(anahtar(d.kod)).sigma,net:new Map(d.satir.map(r=>[anahtar(r.ad),r.net])),sd:sdAl(d.satir.map(r=>r.net))}));
     for(let i=0;i<liste.length;i++)for(let j=i+1;j<liste.length;j++){const c=ciftKorelasyon(liste[i],liste[j]);if(c)cift.set(liste[i].k+'|'+liste[j].k,c);cift.set(liste[j].k+'|'+liste[i].k,c)}
   }
-  const sonuc={n,aralik:iyi.length?[Math.min(...iyi),Math.max(...iyi)]:null,adet:iyi.length,dersler,cift};
+  const sonuc={n,aralik:iyi.length?[Math.min(...iyi),Math.max(...iyi)]:null,adet:iyi.length,dersler,cift,serbestN};
   if(DAGILIM_ONBELLEK.size>200)DAGILIM_ONBELLEK.clear();
   DAGILIM_ONBELLEK.set(imza,sonuc);return sonuc;
 }
@@ -22612,7 +22742,7 @@ function model(v,sec={}){
   for(const s of sinavlar)for(const d of s.dersler){const b=dersBilgi(d.kod),k=anahtar(d.kod);if(b.oturum===oturum&&!kodlar.has(k))kodlar.set(k,{kod:d.kod,...b})}
   const dersler=[...kodlar.values()].sort((a,b)=>a.sira-b.sira||a.ad.localeCompare(b.ad,'tr')).map((b,i)=>{
     const seri=sinavlar.map(s=>{const d=s.dersler.find(x=>anahtar(x.kod)===anahtar(b.kod));if(!d)return null;
-      const g=s.dag.dersler.get(anahtar(d.kod)),dg=g?{...g,n:g.tam?g.n:s.dag.n,aralik:g.tam?null:s.dag.aralik,adet:s.dag.adet,cift:s.dag.cift}:null;
+      const g=s.dag.dersler.get(anahtar(d.kod)),dg=g?{...g,n:g.tam||g.serbest?g.n:s.dag.n??g.n,aralik:g.tam||g.serbest?null:s.dag.aralik,adet:s.dag.adet,cift:s.dag.cift}:null;
       return noktaAl(d,okulK,dg,okulK&&kurumNeti&&kurumOk?kurumNeti(s.ad,d.kod):null)});
     const son=seri.filter(Boolean).pop();
     return {kod:b.kod,ad:b.ad,oturum:b.oturum,soru:son?son.soru:null,renk:GRAFIK_RENK.ders(b.kod)||PALET[i%PALET.length],seri};
@@ -22653,7 +22783,7 @@ function model(v,sec={}){
   const toplamT=kodlar=>sinavlar.map((_,i)=>{
     const ps=kodlar.map(k=>{const d=dersHarita.get(k);return d?d.seri[i]:null});
     if(!ps.length||ps.some(p=>!p))return null;
-    const mu=ps.reduce((a,p)=>a+p.genel,0),bos={t:null,sira:null,tahmin:null,net:null,genel:mu,sigma:null,n:null,aralik:null,kaynak:null,ortT:null,yok:ps.some(p=>p.tNet===null)?'net':'dagilim'};
+    const tr=ps.reduce((a,p)=>a+p.genel,0),bos={t:null,sira:null,tahmin:null,net:null,genel:tr,turkiye:tr,sigma:null,n:null,aralik:null,kaynak:null,ortT:null,yok:ps.some(p=>p.tNet===null)?'net':'dagilim'};
     if(ps.some(p=>p.tNet===null))return bos;
     const net=ps.reduce((a,p)=>a+p.tNet,0),kaynak=ps.every(p=>p.kaynak==='liste')?'liste':'okul';
     if(ps.some(p=>!p.dg))return {...bos,net,kaynak,yok:'dagilim'};
@@ -22661,10 +22791,12 @@ function model(v,sec={}){
       // Complete lists: the total's own distribution, from each school's summed nets; the place is the exact one.
       const tt=tamToplam(sinavlar[i],kodlar);
       if(tt){const sira=kaynak==='liste'?tt.sirasi(net):null;
-        return {t:tPuani(net,tt.mu,tt.sigma),sira,tahmin:null,net,genel:tt.mu,sigma:tt.sigma,n:tt.n,aralik:null,tam:true,kaynak,ortT:ps.reduce((a,p)=>a+p.t,0)/ps.length,yok:null,rOrt:null,rVarsayilan:false}}
+        return {t:tPuani(net,tt.mu,tt.sigma),sira,tahmin:null,net,genel:tt.mu,turkiye:tr,sigma:tt.sigma,n:tt.n,aralik:null,tam:true,kaynak,ortT:ps.reduce((a,p)=>a+p.t,0)/ps.length,yok:null,rOrt:null,rVarsayilan:false}}
     }
+    // The total's centre is the sum of its subjects' centres (the Türkiye average where the centre is not fitted).
+    const mu=ps.reduce((a,p)=>a+p.dg.mu,0),serbest=ps.some(p=>p.dg.serbest);
     const kor=toplamKorelasyon(kodlar,ps[0].dg.cift),sigma=toplamSigma(ps.map(p=>p.dg.sigma),kor.R),n=ps[0].dg.n,t=tPuani(net,mu,sigma);
-    return {t,sira:null,tahmin:tahminiSira(net,mu,sigma,n,1),net,genel:mu,sigma,n,aralik:ps[0].dg.aralik,kaynak,ortT:ps.reduce((a,p)=>a+p.t,0)/ps.length,yok:null,rOrt:kor.ortanca,rVarsayilan:kor.varsayilan};
+    return {t,sira:null,tahmin:tahminiSira(net,mu,sigma,n,1),net,genel:mu,turkiye:tr,serbest,sigma,n,aralik:ps[0].dg.aralik,kaynak,ortT:ps.reduce((a,p)=>a+p.t,0)/ps.length,yok:null,rOrt:kor.ortanca,rVarsayilan:kor.varsayilan};
   });
   const dersK=new Set(dersler.map(d=>anahtar(d.kod)));
   const toplamlar=(TOPLAMLAR[oturum]||[]).map(([key,ad,l])=>({key,ad,kodlar:l?l.map(anahtar):[...dersK]})).filter(t=>t.kodlar.length&&t.kodlar.every(k=>dersK.has(k)));
@@ -22863,7 +22995,7 @@ function grafikToplam(st,W){
 const rr2=x=>Math.round(x*100)/100;
 // A subject's or the total's point as the charts read it: {t, sira (printed place), tahmin (estimated place), net, genel, sigma, n,
 // aralik, kaynak, ortT, tam, yok} or null.
-const tNokta=p=>p?{t:p.t,sira:p.sira,tahmin:p.tahmin,net:p.tNet,genel:p.dg?p.dg.mu:p.genel,sigma:p.dg?p.dg.sigma:null,n:p.dg?p.dg.n:null,aralik:p.dg?p.dg.aralik:null,kaynak:p.kaynak,ortT:null,tam:!!(p.dg&&p.dg.tam),
+const tNokta=p=>p?{t:p.t,sira:p.sira,tahmin:p.tahmin,net:p.tNet,genel:p.dg?p.dg.mu:p.genel,turkiye:p.genel,serbest:!!(p.dg&&p.dg.serbest),sigma:p.dg?p.dg.sigma:null,n:p.dg?p.dg.n:null,aralik:p.dg?p.dg.aralik:null,kaynak:p.kaynak,ortT:null,tam:!!(p.dg&&p.dg.tam),
   yok:p.tNet===null?'net':!p.dg?'dagilim':null}:null;
 // The measure on show, exam by exam: the chosen subject, else the session's total, else the subjects' mean T.
 function olcuT(st,ana){
@@ -22977,7 +23109,8 @@ function grafikBirlesik(st,W,tur,kip){
     if(T){if(p.t===null)return [[fg,l.ad,'dilim yok','cizgi'],...(ortMu?[]:[[null,'Neden',tYok(p)]])];
       const dn=dilimNokta(p);
       return [[fg,l.ad+' · Türkiye dilimi',dilimYazi(dn),'cizgi'],...(ortMu?[[null,'Ders sayısı',fi(p.adet)]]:[[null,'Sıra',siraCumle(p)],[null,'Hesap','T '+f1(p.t)+' · net '+f2(p.net)+' · σ '+f2(p.sigma)],
-        ...(p.kaynak==='okul'?[[null,'Net kaynağı','Sıralamalar kurum ortalaması']]:[]),[null,p.tam?'Okul ortalaması (tam liste)':'Türkiye ortalaması',f2(p.genel)+' net'],
+        ...(p.kaynak==='okul'?[[null,'Net kaynağı','Sıralamalar kurum ortalaması']]:[]),[null,p.tam?'Okul ortalaması (tam liste)':p.serbest?'Listedeki okulların ortası':'Türkiye ortalaması',f2(p.genel)+' net'],
+        ...((p.tam||p.serbest)&&Number.isFinite(p.turkiye)?[[null,'Türkiye ortalaması',f2(p.turkiye)+' net']]:[]),
         ...(p.rOrt!==null&&p.rOrt!==undefined?[[null,'Derslerarası r','≈ '+f2(p.rOrt)+(p.rVarsayilan?' (varsayılan korelasyon)':' (düzeltilmiş)')]]:[]),[null,'N',okulSayisiYazisi(p)],...(p.ortT!==null&&p.ortT!==undefined?[[null,'Ders ortalaması T',f1(p.ortT)]]:[])])]}
     const net=p.net!==null&&p.net!==undefined?[[null,'Net',f2(p.net)+(p.kaynak==='okul'?' · Sıralamalar kurum ortalaması':'')]]:[];
     if(p.sira!==null)return [[fg,l.ad+' · sıra',fi(p.sira)+'.','cizgi'],...net,...(p.n?[[null,'N',okulSayisiYazisi(p)]]:[])];
@@ -23001,6 +23134,11 @@ let ZAMAN=null;
 const etkin=()=>EK.sekme==='turkiye'&&rehberMi()&&!!document.getElementById?.('tgKok');
 function grafikleriCiz(){
   if(!etkin())return;const {veri}=oku();if(!veri)return;const st=durumAl(veri);
+  document.querySelectorAll('.tg-dagilim[data-tg-dagilim]').forEach(kutu=>{
+    const W=Math.round(kutu.clientWidth);if(W<200)return;
+    const imza=[W,veri.ts,st.m.liste,st.m.duzey,st.m.oturum,st.m.toplam&&st.m.toplam.key,st.m.okul,st.odak&&st.odak.kod].join('|');if(kutu.dataset.imza===imza)return;
+    const g=grafikDagilim(st,W);kutu.dataset.imza=imza;kutu.innerHTML=g?g.svg:'';
+  });
   document.querySelectorAll('.et-grafik[data-tg-grafik]').forEach(kutu=>{
     const W=Math.round(kutu.clientWidth);if(W<120)return;
     const imza=[W,veri.ts,st.m.liste,st.m.duzey,st.m.oturum,st.m.simdi,st.m.onceki,st.m.toplam&&st.m.toplam.key,st.mod,st.grafik,st.aralik,st.m.okul,st.odak&&st.odak.kod,GRAFIK_CIZGI.tur()].join('|');if(kutu.dataset.imza===imza)return;
@@ -23241,6 +23379,107 @@ function ozetT(st){
   const ust=kart('','Ortalamanın üstünde',fi(u.n)+'<small>/ '+fi(u.top)+' ders</small>',(u0&&u0.top?hap(u.n-u0.n,fi(Math.abs(u.n-u0.n)))+not('ilk denemeye göre ('+fi(u0.n)+' / '+fi(u0.top)+')'):not('ilk %50 içindeki dersler')));
   const okulN=kart('','Okul sayısı',p&&p.n?fi(p.n)+'<small>okul</small>':yok,not(p&&p.n?(p.tam?'tam liste':'tahmin'+(p.aralik&&p.aralik[0]!==p.aralik[1]?' (derslerde '+fi(p.aralik[0])+'–'+fi(p.aralik[1])+')':'')):'okullar arası dağılım yok')+(q&&q.n&&p&&p.n&&q.n!==p.n?not('ilk denemede '+fi(q.n)):''));
   return '<div class="et-ozet dp-kpi" id="tgKpi">'+ana+tT+ust+okulN+'</div>';
+}
+/* ---------------- Dağılımda yer: the projected distribution of schools, exam by exam ----------------
+   The lists print only the top schools. Each exam's fit (dagilimAl: the Türkiye average μ, the spread σ between schools and the
+   number of schools N that best match the printed places) is drawn as a DOTTED bell curve: a projection, not data. What the lists
+   print (the schools' nets, the Türkiye average) and the school's own net are drawn SOLID. The school's dot sits on its exam's curve;
+   a thin line joins it across exams. "Tüm denemeler" is the mean of the school's nets over the exams with a fit, on a curve with the
+   mean μ and σ = √(mean σ²). ≈ ilk % = 100·(1 − Φ((net − μ)/σ)) (the page's dilim); a complete list gives the exact share. */
+function dagilimVerisi(st){
+  const m=st.m,O=olcuT(st,false);
+  const kodlar=O.tur==='ders'&&st.odak?[anahtar(st.odak.kod)]:O.tur==='toplam'&&m.toplam?m.toplam.kodlar:null;
+  if(!kodlar||!m.sinavlar.length)return null;
+  const kisa=kisaAdlar(m.sinavlar);
+  const satirlar=m.sinavlar.map((s,i)=>{
+    const p=O.seri[i],L=kodlar.map(k=>s.dersler.find(d=>anahtar(d.kod)===k));
+    // The printed schools of this measure: a subject's rows; a total's schools that are in every list of the total (their summed nets).
+    let gozlenen=[];
+    if(L.every(Boolean)){const h=new Map();L.forEach(d=>d.satir.forEach(r=>{const k=anahtar(r.ad),e=h.get(k)||{n:0,t:0};e.n++;e.t+=r.net;h.set(k,e)}));
+      gozlenen=[...h.values()].filter(e=>e.n===L.length).map(e=>Math.round(e.t*100)/100).sort((a,b)=>b-a)}
+    // mu: the middle school (the curve's centre: fitted from the list, else the Türkiye average); turkiye: the Türkiye average.
+    const mu=p&&Number.isFinite(p.genel)?p.genel:null,sigma=p&&p.sigma>0?p.sigma:null,net=p&&Number.isFinite(p.net)?p.net:null;
+    const turkiye=p&&Number.isFinite(p.turkiye)?p.turkiye:mu;
+    const z=net!==null&&mu!==null&&sigma?(net-mu)/sigma:null,dl=p?dilimNokta(p):null;
+    return {i,ad:s.ad,kisa:kisa[i],g:s.g,mu,turkiye,sigma,n:p&&p.n||null,net,kaynak:p?p.kaynak:null,z,dilim:dl,tam:!!(p&&p.tam),serbest:!!(p&&p.serbest),gozlenen,var:mu!==null&&!!sigma};
+  });
+  const ok=satirlar.filter(r=>r.var&&r.net!==null);
+  const ortA=l=>l.reduce((a,b)=>a+b,0)/l.length;
+  let ort=null;
+  if(ok.length>=2){const mu=ortA(ok.map(r=>r.mu)),sigma=Math.sqrt(ortA(ok.map(r=>r.sigma*r.sigma))),net=ortA(ok.map(r=>r.net)),z=(net-mu)/sigma;
+    ort={ad:'Tüm denemeler',kisa:'Ortalama',mu,turkiye:ortA(ok.map(r=>r.turkiye)),sigma,net,z,dilim:dilimT(50+10*z),adet:ok.length,gozlenen:[],var:true,ort:true,serbest:ok.some(r=>r.serbest)}}
+  return {ad:O.ad,okul:m.okul,satirlar,ort,var:satirlar.some(r=>r.var),serbest:satirlar.some(r=>r.serbest)};
+}
+function grafikDagilim(st,W){
+  const D=dagilimVerisi(st);if(!D||!D.var)return null;
+  const dar=W<560,LW=dar?58:104,RW=dar?62:92,L=LW,R=W-RW,RH=dar?48:58,UST=12,ARA=D.ort?16:0;
+  const satir=[...(D.ort?[D.ort]:[]),...D.satirlar];
+  const H=UST+satir.length*RH+ARA+30,yTaban=k=>UST+(k+1)*RH+(D.ort&&k>0?ARA:0);
+  // One x scale (net) for every row: the curves' 3,2 σ and everything printed or measured.
+  const xs=[];for(const r of satir){if(r.var){xs.push(r.mu-3.2*r.sigma,r.mu+3.2*r.sigma,r.turkiye)}if(r.net!==null)xs.push(r.net);xs.push(...r.gozlenen.slice(0,1),...r.gozlenen.slice(-1))}
+  // A school's average net is not below 0 unless something printed or measured is: the curve's left tail stops at 0.
+  const gercek=satir.flatMap(r=>[...r.gozlenen,...(r.net!==null?[r.net]:[])]);
+  let lo=Math.max(Math.min(...xs),Math.min(0,...gercek)),hi=Math.max(...xs);if(!(hi>lo)){lo-=1;hi+=1}
+  const tk=tikler(lo,hi,dar?4:7);lo=Math.min(lo,tk[0]);hi=Math.max(hi,tk[tk.length-1]);
+  const x=v=>r1(L+(v-lo)/(hi-lo)*(R-L));
+  let svg='<svg class="tg-dagilim-svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+kacis('Okulların tahmini dağılımı ve '+okulAdi(D.okul)+' · '+D.ad)+'">';
+  for(const v of tk)svg+='<line class="tg-dg-izgara" x1="'+x(v)+'" x2="'+x(v)+'" y1="'+UST+'" y2="'+(H-28)+'"/><text class="et-tik" x="'+x(v)+'" y="'+(H-10)+'" text-anchor="middle">'+fi(v)+'</text>';
+  svg+='<text class="et-tik tg-dg-eksen" x="'+(L-8)+'" y="'+(H-10)+'" text-anchor="end">net →</text>';
+  const okulPts=[];let noktalar='';
+  satir.forEach((r,k)=>{
+    const b=yTaban(k),tepe=RH*.78,g=v=>r.var?Math.exp(-.5*Math.pow((v-r.mu)/r.sigma,2)):0,y=v=>r1(b-tepe*g(v));
+    const ad=kacis(r.kisa)+(r.g&&!dar?'<tspan class="tg-dg-tarih" dx="5">'+kacis(gunAy(r.g))+'</tspan>':'');
+    svg+='<g class="tg-dg-satir'+(r.ort?' tg-dg-ort':'')+'"><title>'+kacis(dagilimIpucu(r,D))+'</title>';
+    svg+='<line class="tg-dg-taban" x1="'+L+'" x2="'+R+'" y1="'+b+'" y2="'+b+'"/>';
+    svg+='<text class="tg-dg-ad" x="'+(L-8)+'" y="'+r1(b-6)+'" text-anchor="end">'+ad+'</text>';
+    if(r.var){
+      const n=90,pts=[];for(let j=0;j<=n;j++){const v=lo+(hi-lo)*j/n;pts.push([x(v),y(v)])}
+      const yolStr='M'+pts.map(p=>p[0]+','+p[1]).join(' L');
+      svg+='<path class="tg-dg-alan" d="'+yolStr+' L'+R+','+b+' L'+L+','+b+' Z"/>';
+      // The share of schools above the school's net (its "ilk %"), lightly shaded under the curve.
+      if(r.net!==null){const ust=pts.filter(p=>p[0]>=x(r.net));if(ust.length)svg+='<path class="tg-dg-ustu" d="M'+x(r.net)+','+b+' L'+x(r.net)+','+y(r.net)+' L'+ust.map(p=>p[0]+','+p[1]).join(' L')+' L'+R+','+b+' Z"/>'}
+      svg+='<path class="tg-dg-egri" d="'+yolStr+'"/>';
+      // The Türkiye average (all students): a solid line of its own, up to the curve at that net. Where the centre is fitted from
+      // the list it stands to the right of the curve's peak; elsewhere it is the peak.
+      svg+='<line class="tg-dg-genel" x1="'+x(r.turkiye)+'" x2="'+x(r.turkiye)+'" y1="'+b+'" y2="'+r1(y(r.turkiye)-4)+'"/>';
+    }
+    for(const v of r.gozlenen)svg+='<line class="tg-dg-liste" x1="'+x(v)+'" x2="'+x(v)+'" y1="'+r1(b-7)+'" y2="'+b+'"/>';
+    if(r.net!==null){const px=x(r.net),py=r.var?y(r.net):b;if(!r.ort)okulPts.push([px,py]);
+      noktalar+='<circle class="tg-dg-okul'+(r.ort?' tg-dg-okul-ort':'')+'" cx="'+px+'" cy="'+py+'" r="'+(r.ort?6:5)+'"><title>'+kacis(dagilimIpucu(r,D))+'</title></circle>'}
+    svg+='<text class="tg-dg-yuzde" x="'+(R+8)+'" y="'+r1(b-6)+'">'+(r.dilim===null||r.dilim===undefined?'—':(r.tam&&!r.ort?'':'≈ ')+kacis(dilimYazi(r.dilim)))+'</text>';
+    if(!dar&&r.net!==null)svg+='<text class="tg-dg-net" x="'+(R+8)+'" y="'+r1(b+8)+'">'+f1(r.net)+' net</text>';
+    svg+='</g>';
+  });
+  // The joining line, then the dots on top of it.
+  if(okulPts.length>1)svg+='<path class="tg-dg-yol" d="M'+okulPts.map(p=>p[0]+','+p[1]).join(' L')+'"/>';
+  return {svg:svg+noktalar+'</svg>',H,lo,hi};
+}
+function dagilimIpucu(r,D){
+  if(!r.var)return r.ad+': bu denemede dağılım kestirilemedi'+(r.net!==null?' · okul '+f1(r.net)+' net':'');
+  return r.ad+(r.ort?' ('+fi(r.adet)+' deneme)':'')+(r.serbest?' · okulların ortası ≈ '+f1(r.mu)+' net':'')+' · Türkiye ortalaması '+f1(r.turkiye)+' net · okullar arası yayılım σ ≈ '+f1(r.sigma)+' net'+
+    (r.net!==null?' · '+okulAdi(D.okul)+' '+f1(r.net)+' net · z = '+f2(r.z).replace('-','−')+' · '+(r.tam&&!r.ort?'':'≈ ')+dilimYazi(r.dilim):' · okulun neti yok')+
+    (r.gozlenen.length?' · listede basılan '+fi(r.gozlenen.length)+' okul':'');
+}
+function dagilimPaneli(st){
+  const D=dagilimVerisi(st);
+  if(!D||!D.var)return '';
+  const lj='<div class="et-lejant tg-dg-lejant"><span><i class="tg-dg-l-egri"></i>Tahmini okul dağılımı (ilk 100’den yansıtma)</span><span><i class="tg-dg-l-liste"></i>Listede basılan okullar</span>'+
+    '<span><i class="tg-dg-l-genel"></i>Türkiye ortalaması (Genel Net)</span><span><i class="tg-dg-l-okul"></i>'+kacis(okulAdi(D.okul))+'</span></div>';
+  const satir=[...(D.ort?[D.ort]:[]),...D.satirlar];
+  const tablo='<div class="et-tablo-kutu"><table class="et-tablo tg-dg-tablo"><thead><tr><th scope="col">Deneme</th><th scope="col" class="sayi">Okulların ortası μ</th><th scope="col" class="sayi">Türkiye ort. (Genel Net)</th><th scope="col" class="sayi">Yayılım σ</th><th scope="col" class="sayi">Okul sayısı N</th>'+
+    '<th scope="col" class="sayi">Listedeki okul</th><th scope="col" class="sayi">Okul neti</th><th scope="col" class="sayi">z</th><th scope="col" class="sayi">Türkiye’de</th></tr></thead><tbody>'+
+    satir.map(r=>'<tr'+(r.ort?' class="tg-dg-ort-satir"':'')+'><td>'+kacis(r.ort?'Tüm denemeler ('+fi(r.adet)+')':r.ad)+'</td><td class="sayi">'+(r.var?f2(r.mu):'—')+'</td><td class="sayi">'+(r.var?f2(r.turkiye):'—')+'</td><td class="sayi">'+(r.var?f2(r.sigma):'—')+'</td>'+
+      '<td class="sayi">'+(r.ort?'—':r.n?(r.tam?'':'≈ ')+fi(r.n):'—')+'</td><td class="sayi">'+(r.ort?'—':fi(r.gozlenen.length))+'</td><td class="sayi">'+(r.net!==null?f2(r.net):'—')+'</td>'+
+      '<td class="sayi">'+(r.z!==null&&r.z!==undefined?f2(r.z).replace('-','−'):'—')+'</td><td class="sayi">'+(r.dilim===null||r.dilim===undefined?'—':(r.tam&&!r.ort?'':'≈ ')+kacis(dilimYazi(r.dilim)))+'</td></tr>').join('')+'</tbody></table></div>';
+  const formul='<details class="tg-formul"><summary>Nasıl hesaplanır · ham veriler</summary>'+
+    '<p><b>Neden tahmin?</b> Yayınevi listesi yalnızca en iyi okulları basar. Bütün okulların nasıl dağıldığını bilmediğimiz için, okul ortalamalarının bir çan eğrisi (normal dağılım) çizdiği varsayılır. Bu yüzden eğri <b>noktalı</b> çizilir. Düz çizilen her şey (listedeki okullar, Türkiye ortalaması, okulunuzun neti) basılı veridir.</p>'+
+    '<p><b>Eğri:</b> k. sıradaki okulun neti ≈ μ + σ · Φ⁻¹(1 − (k − 0,5) / N). μ eğrinin ortası (ortadaki okul), σ genişliği, N okul sayısıdır; listedeki okulların sırasına ve netine en iyi uyacak biçimde bulunurlar.</p>'+
+    '<p><b>Türkiye ortalaması (Genel Net) eğrinin ortası mı?</b> Listedeki okulların çoğu Genel Net’in altındaysa (bir oturumun derslerinde ortanca pay %'+fi(SERBEST_ESIK*100)+' ve üstü) liste o okulların büyük kısmıdır ve Genel Net ortadaki okul değildir: o zaman μ de listeden bulunur ve bir oturumun bütün dersleri aynı N’yi paylaşır (aynı okullar). Genel Net ayrı bir düz çizgi olarak durur. Aksi hâlde (liste çok daha büyük bir okul topluluğunun yalnızca en üstüyse) μ = Genel Net alınır.</p>'+
+    '<p><b>Okulunuzun yeri:</b> z = (okul neti − μ) / σ. Türkiye’de ilk % = 100 · (1 − Φ(z)); eğrinin altında okulunuzun sağında kalan boyalı alan budur. Tam liste (bütün okullar basılmışsa) gerçek sırayı kullanır.</p>'+
+    '<p><b>Tüm denemeler:</b> okul neti = okulun, dağılımı olan denemelerdeki netlerinin ortalaması; μ = bu denemelerin μ ortalaması; Genel Net = Genel Net ortalaması; σ = √(σ² ortalaması).</p>'+
+    '<p><b>Sınırlar:</b> okulların çan eğrisi gibi dağıldığı bir varsayımdır; listede olmayan okulların yeri bu varsayımdan gelir. Bu yüzden yüzdeler yaklaşıktır (≈). Denemeden denemeye hareket, aynı yöntemle hesaplandığı için yine de karşılaştırılabilir.</p>'+tablo+'</details>';
+  return '<section class="et-panel tg-dagilim-panel" id="tgDagilim"><div class="et-kart-bas"><h2>Dağılımda yeriniz · '+kacis(D.ad)+'</h2>'+lj+'</div>'+
+    '<div class="tg-dagilim" data-tg-dagilim="1"></div>'+formul+'</section>';
 }
 // The main chart: the chosen total alone, as one bold line, following the Grafik toggle.
 function tPaneli(st){
@@ -23488,7 +23727,7 @@ function icerik(){
   const ust='<header class="et-bas">'+baslik+'<p class="et-cumle">'+(st.mod==='artis'?cumleArtis(st):st.mod==='sira'?cumle(st):cumleT(st))+'</p></header>'+arac(st,salt)+durumSatiri+digerleri(st);
   if(!m.okul)return ust+'<section class="et-panel et-bos tg-okul-sec"><b>Okulunuzu seçin</b><p>Üstteki “Okul” listesinden okulunuzu seçin.</p></section>'+kaynaklar(veri,st,salt);
   if(!m.ozet[m.simdi])return ust+'<section class="et-panel et-bos"><b>Bu denemede '+kacis(m.oturum||'')+' dersi yok</b></section>'+kaynaklar(veri,st,salt);
-  if(st.mod==='tpuan')return ust+ozetT(st)+tPaneli(st)+konuPaneli(st)+dersPaneli(st)+dersKartlariT(st)+artisTSiralamasi(st)+okulTablosu(st)+dersTablosuT(st)+kaynaklar(veri,st,salt);
+  if(st.mod==='tpuan')return ust+ozetT(st)+dagilimPaneli(st)+tPaneli(st)+konuPaneli(st)+dersPaneli(st)+dersKartlariT(st)+artisTSiralamasi(st)+okulTablosu(st)+dersTablosuT(st)+kaynaklar(veri,st,salt);
   if(st.mod==='artis'){
     const grafik=st.odak?netPaneli(st):m.toplam?toplamPaneli(st):'';
     if(m.onceki===null)return ust+grafik+kaynaklar(veri,st,salt);
@@ -23618,7 +23857,7 @@ document.addEventListener('keydown',ev=>{
   ipucuGoster(kutu,ev.key==='Home'?0:ev.key==='End'?g.xs.length-1:Math.max(0,Math.min(g.xs.length-1,i+(ev.key==='ArrowLeft'?-1:1))));
 });
 document.addEventListener('focusout',ev=>{const kutu=ev.target.closest?.('.et-grafik[data-tg-grafik]');if(kutu&&etkin())ipucuGizle(kutu)});
-return {ortalamalar,grafikToplam,pdfCoz,listeTuru,dersBilgi,sinifDuzeyi,adDuzeyi,okulAdi,kisaAdlar,dogrula,oku,ac,paketle,birlestir,raporEkle,okulKaydet,duzeyKaydet,sinavSil,sil,model,durumAl,
+return {dagilimVerisi,grafikDagilim,ortalamalar,grafikToplam,pdfCoz,listeTuru,dersBilgi,sinifDuzeyi,adDuzeyi,okulAdi,kisaAdlar,dogrula,oku,ac,paketle,birlestir,raporEkle,okulKaydet,duzeyKaydet,sinavSil,sil,model,durumAl,
   dilim,dilimT,dilimdenT,dilimNokta,dilimSayi,dilimYazi,dilimKisa,dilimGecis,dilimBandi,siraCumle,DILIM_TIKLARI,DILIM_CUMLESI,grafikSira,grafikNet,grafikT,grafikTSira,grafikTArtis,grafikBirlesik,degisimKart,artisSinifi,grafikDT,grafikDTSira,grafikDTArtis,artisT,artisSeri,tHaritasi,okulSatirlari,grafikleriCiz,icerik,normTers,normCdf,siraUydur,toplamKorelasyon,duzeltilmisR,ciftKorelasyon,sdAl,dagilimAl,tPuani,tahminiSira,toplamSigma,olcuT,ESIK_UYUM,TOPLAM_KORELASYON,gorunum,CIZIMLER,UST_SINIR,EN_COK_SINAV,DERSLER};
 })();
 function gorunumTurkiye(){return TURKIYE.gorunum()}
@@ -27832,9 +28071,11 @@ function ortalamaDogrula(ort,rapor){
 /* ---------------------------------------------------------------- Performans analizi (publisher PDF), optional
    "27-YKS-1202 SINAVI ANALİZLERİ": one page per ders ("TÜRKÇE-T (40 Soru )", section names as in the cevap raporu), one row per question of the A booklet:
    "1. Soru | 73 54 399 15 98 1994 1295 1 95 6 111 … | 0.83 | çok kolay soru | 0.34 | başarılı" = ÜST and ALT counts of A, B, C, D, E, BOŞ, then p, its meaning, r, its meaning.
-   Aggregate counts over the whole network, no student data. Only {kod, dersler:[{ad, n, maddeler:[{no, p, r, ust:[A..E,BOŞ], alt:[…]}]}]} is kept. */
+   Aggregate counts, with a separate reference population for each subject. Option counts are only for the upper and lower groups. */
 const PERF_SATIR=/^(\d{1,3})\s*\.\s*Soru\s+(\d+(?:\s+\d+){11})\s+(\d(?:[.,]\d+)?)\s+(?:\S.*?\s+)?(-?\d(?:[.,]\d+)?)(?:\s+\S.*)?$/iu;
 const PERF_BASLIK=/^(.+?)\s*\(\s*(\d{1,3})\s*Soru\s*\)\s*$/iu;
+const PERF_SAYIM=/^(.+?)\s*:\s*(\d{1,9})$/u;
+const basamak=s=>s.split(/[.,]/u)[1]?.length||0;
 // the text of each line of a page (items on one baseline joined left to right)
 function satirMetinleri(p){
   const items=(Array.isArray(p&&p.items)?p.items:[]).filter(i=>i&&typeof i.s==='string'&&Number.isFinite(i.x)&&Number.isFinite(i.y));
@@ -27842,21 +28083,38 @@ function satirMetinleri(p){
   return satir.map(l=>clean(l.items.sort((a,b)=>a.x-b.x).map(i=>i.s).join(' ')));
 }
 const perfBaslikMi=s=>{const k=key(s);return k.includes('SINAVIANALIZLERI')||k.includes('MADDEGUCLUKINDEKSI')};
-function performansCoz(pages){
+const performansMi=pages=>pages.some(p=>satirMetinleri(p).some(perfBaslikMi));
+function performansCoz(pages,{tamAd=false}={}){
   const fail=m=>{throw new Error(m+' Performans analizi dosyası eklenmedi.')};
   if(!Array.isArray(pages)||!pages.length||pages.length>200)fail('PDF sayfaları okunamadı.');
-  let kod='',cur=null;const dersler=[];
+  let kod='',cur=null;const dersler=[],metin=[];
   for(const p of pages){
     for(const s of satirMetinleri(p)){
-      const k=/(\d{1,3}-[A-Z]+-\d{3,5})\s+S[Iİı]NAVI/u.exec(s)||/(\d{1,3}-[A-Z]+-\d{3,5}).*AN[AİI]L[İI]ZLER[İI]/iu.exec(s);
-      if(k&&!kod)kod=k[1].toUpperCase();
+      const k=tamAd?/^(\S.{0,159}?)\s+S[Iİı]NAVI\s+AN[AİI]L[İI]ZLER[İI]$/iu.exec(s):
+        /(\d{1,3}-[A-Z]+-\d{3,5})\s+S[Iİı]NAVI/u.exec(s)||/(\d{1,3}-[A-Z]+-\d{3,5}).*AN[AİI]L[İI]ZLER[İI]/iu.exec(s);
+      if(k){
+        const yeni=tamAd?clean(k[1]):k[1].toUpperCase();
+        if(kod&&kod!==yeni)fail('Dosyada birden çok sınav adı var.');
+        kod=yeni;
+      }
       const b=PERF_BASLIK.exec(s);
-      if(b&&/-[TA]$/u.test(clean(b[1]))){cur={ad:clean(b[1]),n:+b[2],maddeler:[]};dersler.push(cur);continue}
+      if(b&&/-[TA]$/u.test(clean(b[1]))){cur={ad:clean(b[1]),n:+b[2],orneklem:null,grupToplam:null,maddeler:[]};dersler.push(cur);continue}
+      if(!cur)metin.push(s);
+      const sayim=cur&&PERF_SAYIM.exec(s);
+      if(sayim){
+        const ad=key(sayim[1]),alan=ad==='ISARETLEMEYAPANOGRENCISAYISI'?'orneklem':ad==='USTVEALTGRUPTOPLAMOGRENCISAYISI'?'grupToplam':null;
+        if(alan){
+          const n=+sayim[2];if(cur[alan]!==null&&cur[alan]!==n)fail(cur.ad+' öğrenci sayıları tutarsız.');
+          cur[alan]=n;continue;
+        }
+      }
       const r=cur&&PERF_SATIR.exec(s);
       if(!r)continue;
       const c=r[2].split(/\s+/).map(Number),no=+r[1];
-      if(cur.maddeler.some(m=>m.no===no))continue;
-      cur.maddeler.push({no,p:+r[3].replace(',','.'),r:+r[4].replace(',','.'),ust:c.filter((_,i)=>i%2===0),alt:c.filter((_,i)=>i%2===1)});
+      const madde={no,p:+r[3].replace(',','.'),r:+r[4].replace(',','.'),pBasamak:basamak(r[3]),rBasamak:basamak(r[4]),ust:c.filter((_,i)=>i%2===0),alt:c.filter((_,i)=>i%2===1)};
+      const eski=cur.maddeler.find(m=>m.no===no);
+      if(eski){if(JSON.stringify(eski)!==JSON.stringify(madde))fail(cur.ad+' soru '+no+' iki farklı satırda geçiyor.');continue}
+      cur.maddeler.push(madde);
     }
   }
   if(!kod)fail('Sınav kodu ("27-YKS-1202 SINAVI ANALİZLERİ") bulunamadı.');
@@ -27870,7 +28128,8 @@ function performansCoz(pages){
     if(d.maddeler.length!==d.n||d.maddeler.some((m,i)=>m.no!==i+1))fail(d.ad+' dersinde '+d.n+' soru yazıyor, '+d.maddeler.length+' soru satırı okunabildi.');
     if(d.maddeler.some(m=>!(m.p>=0&&m.p<=1)||!(m.r>=-1&&m.r<=1)))fail(d.ad+' dersinde güçlük veya ayırdedicilik değeri geçersiz.');
   }
-  return {kod,dersler};
+  const kitapcik=/\bA\s+kitap[cç][ıi][gğ][ıi](?:n[ıi])?(?!\p{L})/iu.test(metin.join(' '))?'A':null;
+  return {kod,kitapcik,dersler};
 }
 // The file must be this exam's, its question counts must fit the report's sections, and the most marked option of the high group (ÜST) should be the report's A key.
 // A few differences are normal (a cancelled or differently keyed question); more than about 10% means the mapping is wrong and the file is refused.
@@ -28138,7 +28397,7 @@ async function pdfOku(file){
 function pdfTuru(pages){
   const hepsi=pages.flatMap(p=>p.items.map(i=>clean(i.s)));
   if(hepsi.some(s=>ORT_BASLIK.test(s)))return 'ort';
-  if(pages.some(p=>satirMetinleri(p).some(perfBaslikMi)))return 'perf';
+  if(performansMi(pages))return 'perf';
   if(hepsi.some(s=>ETIKET.test(s))||pages.some(p=>etiketler(p).length))return 'coz';
   if(pages.some(p=>p.items.some(i=>KOD.test(clean(i.s))&&i.y>p.h-70)))return 'kit';
   return null;
@@ -28805,7 +29064,7 @@ function denemeKoy({kod,kitlar={},rapor=null,pairs={},ort=null,perf=null,ad='',s
   if(crops)for(const [k,v] of crops)e.crops.set(k,v);
   S.denemeler.set(e.kod,e);return e;
 }
-return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
+return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
   dosyalarEkle,topluUygula,dosyaTani,pdfTuru,denemeKoy,kutuphaneKur,kutAc,sakla,geriYukle,metaOf,denemeSil,hepsiniSil,bellekiBosalt,sifirla,birlesik,kisiPlani,pdfPlan,pdfDosyaAdi,pdfIndir,boyutYaz,
   gorunum,yazdir,hazirla,durumu,key,title};
 })();
@@ -30381,6 +30640,260 @@ async function hepsiniTemizle(idb = typeof indexedDB !== 'undefined' ? indexedDB
 return { olustur, hepsiniTemizle, idbAdaptor, bellekAdaptor, DB, SLOT };
 })();
 // END DENEMEKUTUPHANE
+
+// BEGIN OGRETMENRAPOR
+// Embedded in index.html by scripts/embed-ogretmenrapor.cjs. No student data belongs here.
+// Öğretmen raporu (rehber öğretmen only): one section per teacher of the weekly timetables (Etüt planı → ders programları).
+// A teacher's students are the students of the classes the teacher teaches the subject in, TAKEN TOGETHER: the report never
+// shows a class on its own, never ranks classes, never names a student and never compares one teacher with another. Per grade
+// and per exam subject (TYT Matematik, AYT Matematik …) it shows:
+//  1. the students' mean net in the subject against the Türkiye average (Genel Net) exam by exam, and the gap;
+//  2. a topic grid: for every topic of the subject (Konu Takibi) and every exam, how the students did against students across
+//     Türkiye on the same questions: green where better, red where worse, deeper the larger the gap; pale when the gap is
+//     within chance; arrows where a topic has been behind (or ahead) on three measured exams in a row;
+//  3. the teacher's own etüts: how many, how many students, and those students' gap to Türkiye before and after;
+//  4. folded: the formulas in plain words and every raw number behind the figures.
+// Nothing is stored or sent. See docs/ogretmen-raporu.md.
+const OGRETMEN_RAPOR = (() => {
+'use strict';
+// A subject of the timetable → its exam subjects: [session, Sıralamalar key, publisher code].
+const DERSLER=[
+  ['Türk dili ve edebiyatı',/TURK DILI|EDEBIYAT/,[['TYT','TÜR','TÜRKÇE-T'],['AYT','EDB','TÜRK DİLİ VE EDB-A']]],
+  ['Türkçe',/TURKCE/,[['TYT','TÜR','TÜRKÇE-T']]],
+  ['Matematik',/MATEMATIK/,[['TYT','MAT','MATEMATİK-T'],['AYT','AMAT','MATEMATİK-A']]],
+  ['Geometri',/GEOMETRI/,[['TYT','GEO','GEOMETRİ-T'],['AYT','AGEO','GEOMETRİ-A']]],
+  ['Fizik',/FIZIK/,[['TYT','FİZ','FİZİK-T'],['AYT','AFİZ','FİZİK-A']]],
+  ['Kimya',/KIMYA/,[['TYT','KİM','KİMYA-T'],['AYT','AKİM','KİMYA-A']]],
+  ['Biyoloji',/BIYOLOJI/,[['TYT','BİY','BİYOLOJİ-T'],['AYT','ABİY','BİYOLOJİ-A']]],
+  ['Tarih',/TARIH|INKILAP/,[['TYT','TAR','TARİH-T'],['AYT','TAR1','TARİH.1-A'],['AYT','TAR2','TARİH.2-A']]],
+  ['Coğrafya',/COGRAFYA/,[['TYT','COĞ','COĞRAFYA-T'],['AYT','COĞ1','COĞRAFYA.1-A'],['AYT','COĞ2','COĞRAFYA.2-A']]],
+  ['Felsefe',/FELSEFE|PSIKOLOJI|SOSYOLOJI|MANTIK/,[['TYT','FEL','FELSEFE-T'],['AYT','FELGR','FELSEFE GR.-A']]],
+  ['Din kültürü',/DIN KULTURU/,[['TYT','DİN','DİN KÜLTÜRÜ-T'],['AYT','DİN2','DİN KÜLTÜRÜ-A']]]];
+const OGRENCI_KISA={'TÜRKÇE-T':'turkce','TARİH-T':'tarih','COĞRAFYA-T':'cografya','FELSEFE-T':'felsefe','DİN KÜLTÜRÜ-T':'din','MATEMATİK-T':'mat','GEOMETRİ-T':'geo','FİZİK-T':'fizik','KİMYA-T':'kimya','BİYOLOJİ-T':'biyoloji',
+  'TÜRK DİLİ VE EDB-A':'edebiyat','TARİH.1-A':'tarih1','COĞRAFYA.1-A':'cografya1','TARİH.2-A':'tarih2','COĞRAFYA.2-A':'cografya2','FELSEFE GR.-A':'felsefe','DİN KÜLTÜRÜ-A':'din','MATEMATİK-A':'mat','GEOMETRİ-A':'geo','FİZİK-A':'fizik','KİMYA-A':'kimya','BİYOLOJİ-A':'biyoloji'};
+// Design effect for the topic test: the answers of one student to the questions of one topic are correlated (assumed r = 0,2,
+// as in Konu Takibi), so the chance band is widened by √(1 + (q − 1)·0,2), q the topic's questions per student.
+const R_MADDE=.2, Z=1.96, ART_ARDA=3, RENK_UST=20;
+const yaz=s=>String(s??'').replace(/\s+/g,' ').trim();
+const katla=s=>yaz(s).toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/İ/g,'I').replace(/ı/g,'I');
+const sinifK=s=>{const m=/(\d{1,2})\s*[-/]?\s*([A-ZÇĞİÖŞÜ]+)\b/u.exec(yaz(s).toLocaleUpperCase('tr-TR'));return m?m[1]+'/'+m[2]:''};
+const duzeyi=c=>{const d=parseInt(c,10);return Number.isFinite(d)?d:null};
+const kisiAd=s=>yaz(s).toLocaleLowerCase('tr-TR').split(' ').map(w=>w?w[0].toLocaleUpperCase('tr-TR')+w.slice(1):w).join(' ');
+const ort=l=>l.length?l.reduce((a,b)=>a+b,0)/l.length:null;
+const f1=x=>Number(x).toLocaleString('tr-TR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const f2=x=>Number(x).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fi=x=>Number(x).toLocaleString('tr-TR');
+const isaret=(v,f=f1)=>v===null||v===undefined?'—':(v>0?'+':v<0?'−':'')+f(Math.abs(v));
+const AY=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+const gunAy=g=>{if(!Number.isFinite(g))return '';const t=new Date(g*864e5);return t.getUTCDate()+' '+AY[t.getUTCMonth()]};
+const r1=x=>Math.round(x*10)/10;
+const dersBul=course=>{const k=katla(course);return DERSLER.find(([,re])=>re.test(k))||null};
+
+/* ---------------- teachers (pure over the notebook) ---------------- */
+// [{key, ad, dersler:[{ad, kodlar, siniflar:[…]}]}] from the classes' timetables; lessons with no exam subject are left out.
+function ogretmenler(){
+  let plan=null;try{plan=typeof ETUTPLANI!=='undefined'?ETUTPLANI.oku().plan:null}catch(e){plan=null}
+  const by=new Map();
+  for(const [sinif,p] of Object.entries((plan&&plan.programlar)||{})){
+    const c=sinifK(sinif);if(!c)continue;
+    for(const x of p.dersler||[]){
+      const hoca=yaz(x[3]),d=dersBul(x[2]);if(!hoca||!d)continue;
+      const k=katla(hoca);let o=by.get(k);if(!o){o={key:k,ad:hoca,dersler:new Map()};by.set(k,o)}
+      let dd=o.dersler.get(d[0]);if(!dd){dd={ad:d[0],kodlar:d[2],siniflar:new Set()};o.dersler.set(d[0],dd)}
+      dd.siniflar.add(c);
+    }
+  }
+  return [...by.values()].map(o=>({key:o.key,ad:o.ad,dersler:[...o.dersler.values()].map(d=>({...d,siniflar:[...d.siniflar].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true}))}))}))
+    .sort((a,b)=>a.ad.localeCompare(b.ad,'tr'));
+}
+
+/* ---------------- the figures (pure) ---------------- */
+// The school's exams (Sıralamalar) for one subject code: per exam the mean net of the given classes' students who have a net
+// in it, the Türkiye average (Genel Net) and the gap. A blank cell is not a 0 here: a student is counted where the list
+// prints their net.
+function netSerisi(k,siniflar,oturum,anahtar,kod){
+  const out=[];if(!k||!k.t)return out;
+  const S=new Set(siniflar),alan=oturum==='TYT'?'tyt':'ayt';
+  for(const s of k.t.sinavlar){
+    const l=[];for(const o of Object.values(s[alan]||{})){const kisi=k.t.kisi.get(o.no);if(!kisi||!S.has(sinifK(kisi.sinif)))continue;const v=o.net&&o.net[anahtar];if(Number.isFinite(v))l.push(v)}
+    if(!l.length)continue;
+    const tr=k.trFn?k.trFn(s.ad):null,genel=tr?tr.genel(kod):null;
+    out.push({id:s.id,ad:s.ad,g:s.g,n:l.length,net:ort(l),genel:Number.isFinite(genel)?genel:null,fark:Number.isFinite(genel)?ort(l)-genel:null});
+  }
+  return out.sort((a,b)=>(a.g??0)-(b.g??0));
+}
+// Konu Takibi: per exam and topic of the subject, the given classes' students' correct answers d against the number the
+// Türkiye students' success rates predict for the same questions b = Σ p_q, over n question answers.
+//   fark (percentage points) = 100 · (d − b) / n
+//   z = (d − b) / √(Σ n_i·p_i·(1 − p_i) · (1 + (q_i − 1)·0,2))   (i: a student; p_i = b_i / n_i; q_i: the topic's questions)
+// A cell is "belirgin" when |z| ≥ 1,96. Needs the publisher's Performans analizi in Konu Takibi (Türkiye's p per question).
+function konuIzgarasi(v,siniflar,oturum,kod){
+  if(!v||!Array.isArray(v.exams)||typeof KONU_TAKIBI==='undefined')return null;
+  const S=new Set(siniflar),ck=KONU_TAKIBI.key(kod),sinavlar=[],konular=new Map();
+  const ex=v.exams.filter(e=>e.blocks.some(b=>b.course===kod)).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||a.ad.localeCompare(b.ad,'tr',{numeric:true}));
+  for(const e of ex){
+    const ids=new Set(e.blocks.filter(b=>b.course===kod&&S.has(sinifK(b.student.cls))).map(b=>KONU_TAKIBI.studentKey(b.student)));if(!ids.size)continue;
+    let r;try{r=KONU_TAKIBI.ogrenciFark(v,{session:oturum,exam:KONU_TAKIBI.ek(e.ad),ids})}catch(err){r=null}
+    if(!r||!r.ogrenciler.length)continue;
+    const i=sinavlar.length,toplam={d:0,b:0,n:0,v:0,ogr:0};let var_=false;
+    for(const st of r.ogrenciler){let bu=false;
+      for(const t of st.konular.values()){if(t.ders!==ck||!t.n||t.id.endsWith('|?'))continue;var_=bu=true;
+        let K=konular.get(t.id);if(!K){K={id:t.id,ad:t.ad,hucre:[]};konular.set(t.id,K)}
+        const c=K.hucre[i]||(K.hucre[i]={d:0,b:0,n:0,v:0,ogr:0}),p=Math.min(1,Math.max(0,t.b/t.n)),vv=t.n*p*(1-p)*(1+(t.n-1)*R_MADDE);
+        c.d+=t.d;c.b+=t.b;c.n+=t.n;c.v+=vv;c.ogr++;toplam.d+=t.d;toplam.b+=t.b;toplam.n+=t.n;toplam.v+=vv}
+      if(bu)toplam.ogr++}
+    if(!var_)continue;
+    sinavlar.push({ad:e.ad,g:e.date?Date.parse(e.date+'T00:00:00Z')/864e5:null,ogr:toplam.ogr,...olc(toplam)});
+  }
+  if(!sinavlar.length)return null;
+  const satir=[...konular.values()].map(K=>{
+    const hucre=sinavlar.map((_,i)=>K.hucre[i]?{...K.hucre[i],...olc(K.hucre[i])}:null);
+    const olcu=hucre.filter(Boolean),sonlar=olcu.slice(-ART_ARDA);
+    const seri=sonlar.length===ART_ARDA&&sonlar.every(c=>c.durum==='geride')?'geride':sonlar.length===ART_ARDA&&sonlar.every(c=>c.durum==='onde')?'onde':null;
+    const fl=olcu.map(c=>c.fark);return {id:K.id,ad:K.ad,hucre,seri,ortFark:fl.length?ort(fl):0,olcum:olcu.length};
+  }).sort((a,b)=>a.ortFark-b.ortFark||a.ad.localeCompare(b.ad,'tr'));
+  return {sinavlar,satir};
+}
+function olc(c){
+  const fark=c.n?100*(c.d-c.b)/c.n:null,z=c.v>0?(c.d-c.b)/Math.sqrt(c.v):null;
+  return {fark,z,durum:z===null?'belirsiz':z<=-Z?'geride':z>=Z?'onde':'belirsiz'};
+}
+// The teacher's own etüts in the subject: sessions, students, and those students' gap to the Türkiye average in the subject on
+// their last exam on or before their first etüt with the teacher, and on their latest exam. Only students with both are counted.
+// An etüt belongs to the session its course names (“MATEMATİK TYT”, “AYT FİZİK”); one that names none counts with TYT, so no
+// etüt is counted twice when a subject has a TYT and an AYT block.
+const etutOturumu=c=>{const k=katla(c);return /\bAYT\b/.test(k)?'AYT':/\bTYT\b/.test(k)?'TYT':null};
+function etutOzeti(ogretmenKey,ders,oturum,kod,trFn){
+  let base;try{base=typeof OGRENCI_RAPOR!=='undefined'?OGRENCI_RAPOR.temelOgrenciler():null}catch(e){base=null}
+  if(!base)return null;
+  const kisa=OGRENCI_KISA[kod],out={etut:0,ogrenci:0,once:[],sonra:[]};
+  for(const s of base.students||[]){
+    const l=(s.sessions||[]).filter(x=>katla(x.teacher)===ogretmenKey&&(dersBul(x.course)||[])[0]===ders.ad&&(etutOturumu(x.course)||'TYT')===oturum).map(x=>x.date).filter(Boolean).sort();
+    if(!l.length)continue;out.etut+=l.length;out.ogrenci++;
+    const ex=(s.exams||[]).filter(e=>e.session===oturum&&e.nets&&Number.isFinite(e.nets[kisa])).map(e=>{const tr=trFn?trFn(e.exam):null,g=tr?tr.genel(kod):null;
+      return Number.isFinite(g)?{date:e.date,fark:e.nets[kisa]-g}:null}).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));
+    const once=ex.filter(e=>e.date<=l[0]).pop(),son=ex[ex.length-1];
+    if(once&&son&&son.date>l[0]){out.once.push(once.fark);out.sonra.push(son.fark)}
+  }
+  return out.etut?{etut:out.etut,ogrenci:out.ogrenci,olculen:out.once.length,once:ort(out.once),sonra:ort(out.sonra)}:null;
+}
+// Everything for one teacher: per subject, per grade, per exam subject (code).
+function ogretmenModeli(o){
+  let k=null;try{k=typeof ANALIZ!=='undefined'?ANALIZ.kaynak():null}catch(e){k=null}
+  let v=null;try{v=typeof KONU_TAKIBI!=='undefined'&&D.konutakibi!==undefined?KONU_TAKIBI.oku().veri:null}catch(e){v=null}
+  const bloklar=[];
+  for(const d of o.dersler){
+    const duzeyler=[...new Set(d.siniflar.map(duzeyi))].filter(x=>x!==null).sort((a,b)=>b-a);
+    for(const duz of duzeyler){const siniflar=d.siniflar.filter(c=>duzeyi(c)===duz);
+      for(const [oturum,anahtar,kod] of d.kodlar){
+        const seri=netSerisi(k,siniflar,oturum,anahtar,kod),izgara=konuIzgarasi(v,siniflar,oturum,kod);
+        if(!seri.length&&!izgara)continue;
+        bloklar.push({ders:d.ad,duzey:duz,siniflar,oturum,kod,dersAd:dersEtiketi(kod),seri,izgara,etut:etutOzeti(o.key,d,oturum,kod,k&&k.trFn)});
+      }}
+  }
+  return {...o,bloklar};
+}
+const dersEtiketi=kod=>({'TÜRKÇE-T':'TYT Türkçe','TARİH-T':'TYT Tarih','COĞRAFYA-T':'TYT Coğrafya','FELSEFE-T':'TYT Felsefe','DİN KÜLTÜRÜ-T':'TYT Din kültürü','MATEMATİK-T':'TYT Matematik','GEOMETRİ-T':'TYT Geometri',
+  'FİZİK-T':'TYT Fizik','KİMYA-T':'TYT Kimya','BİYOLOJİ-T':'TYT Biyoloji','TÜRK DİLİ VE EDB-A':'AYT Edebiyat','TARİH.1-A':'AYT Tarih-1','COĞRAFYA.1-A':'AYT Coğrafya-1','TARİH.2-A':'AYT Tarih-2','COĞRAFYA.2-A':'AYT Coğrafya-2',
+  'FELSEFE GR.-A':'AYT Felsefe grubu','DİN KÜLTÜRÜ-A':'AYT Din kültürü','MATEMATİK-A':'AYT Matematik','GEOMETRİ-A':'AYT Geometri','FİZİK-A':'AYT Fizik','KİMYA-A':'AYT Kimya','BİYOLOJİ-A':'AYT Biyoloji'})[kod]||kod;
+
+/* ---------------- drawing ---------------- */
+const renk=kod=>(typeof GRAFIK_RENK!=='undefined'&&GRAFIK_RENK.ders(kod))||'var(--e-c1)';
+// The cell colour: red (behind) ↔ green (ahead), deeper with the gap (full at ±20 points); a gap within chance is drawn pale.
+function hucreRengi(c){
+  if(!c)return '';
+  const t=Math.min(1,Math.abs(c.fark)/RENK_UST),a=Math.round((c.durum==='belirsiz'?.12+.18*t:.25+.6*t)*100);
+  return 'background:color-mix(in srgb,'+(c.fark<0?'var(--kritik)':'var(--iyi)')+' '+a+'%,transparent)'+(a>=60?';color:#fff':'');
+}
+function netGrafigi(b,W){
+  const l=b.seri;if(!l.length)return '';
+  const dar=W<520,L=dar?34:44,R=W-(dar?10:16),UST=14,ALT=dar?150:180,H=ALT+30,n=l.length;
+  const vals=l.flatMap(p=>[p.net,...(p.genel!==null?[p.genel]:[])]),lo0=Math.min(...vals),hi0=Math.max(...vals),pad=Math.max(1,(hi0-lo0)*.15);
+  const lo=Math.max(0,Math.floor(lo0-pad)),hi=Math.ceil(hi0+pad),x=i=>r1(n===1?(L+R)/2:L+(R-L)*i/(n-1)),y=v=>r1(ALT-(v-lo)/(hi-lo||1)*(ALT-UST));
+  let s='<svg class="ogr-net" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+kacis(b.dersAd+': öğrencilerin ortalama neti ve Türkiye ortalaması, deneme deneme')+'">';
+  const adim=Math.max(1,Math.round((hi-lo)/4));for(let v=Math.ceil(lo/adim)*adim;v<=hi;v+=adim)s+='<line class="ogr-izgara" x1="'+L+'" x2="'+R+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text class="ogr-tik" x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end">'+fi(v)+'</text>';
+  // The gap between the two lines, green where the students are above Türkiye, red where below.
+  for(let i=0;i<n;i++){const p=l[i];if(p.genel===null)continue;const w=n===1?24:Math.max(6,(R-L)/(n-1)*.5),x0=Math.max(L,x(i)-w/2),x1=Math.min(R,x(i)+w/2);
+    s+='<rect class="ogr-fark '+(p.fark>=0?'ogr-fark-ust':'ogr-fark-alt')+'" x="'+r1(x0)+'" y="'+Math.min(y(p.net),y(p.genel))+'" width="'+r1(x1-x0)+'" height="'+r1(Math.abs(y(p.net)-y(p.genel)))+'"><title>'+kacis(p.ad+': '+isaret(p.fark,f2)+' net Türkiye’ye göre')+'</title></rect>'}
+  const yol=(pts,c)=>pts.length>1?'<path class="'+c+'" d="M'+pts.map(([a,b2])=>a+','+b2).join(' L')+'"/>':'';
+  s+=yol(l.map((p,i)=>p.genel===null?null:[x(i),y(p.genel)]).filter(Boolean),'ogr-tr');
+  s+=yol(l.map((p,i)=>[x(i),y(p.net)]),'ogr-okul').replace('class="ogr-okul"','class="ogr-okul" style="stroke:'+renk(b.kod)+'"');
+  l.forEach((p,i)=>{if(p.genel!==null)s+='<circle class="ogr-tr-nokta" cx="'+x(i)+'" cy="'+y(p.genel)+'" r="3"/>';
+    s+='<circle class="ogr-okul-nokta" cx="'+x(i)+'" cy="'+y(p.net)+'" r="4.5" style="fill:'+renk(b.kod)+'"><title>'+kacis(p.ad+' · öğrencileriniz '+f2(p.net)+' net ('+fi(p.n)+' öğrenci)'+(p.genel!==null?' · Türkiye '+f2(p.genel)+' net':''))+'</title></circle>'});
+  const her=Math.max(1,Math.ceil(n/(dar?4:8)));
+  l.forEach((p,i)=>{if((n-1-i)%her)return;s+='<text class="ogr-tik" x="'+x(i)+'" y="'+(ALT+18)+'" text-anchor="'+(n>1&&i===0?'start':n>1&&i===n-1?'end':'middle')+'">'+kacis(gunAy(p.g)||p.ad)+'</text>'});
+  return s+'</svg>';
+}
+function izgaraHtml(b){
+  const z=b.izgara;if(!z)return '<p class="mini ogr-yok">Konu karşılaştırması için Konu Takibi’ne bu dersin karne raporunu, sınav özetini ve yayınevinin performans analizini (Türkiye başarı oranları) ekleyin.</p>';
+  const bas=z.sinavlar.map(e=>'<th scope="col" class="ogr-iz-sinav" title="'+kacis(e.ad+' · '+fi(e.ogr)+' öğrenci · '+isaret(e.fark,f1)+' puan Türkiye’ye göre')+'"><span>'+kacis(gunAy(e.g)||e.ad)+'</span><b class="'+(e.durum==='geride'?'ogr-k':e.durum==='onde'?'ogr-y':'')+'">'+isaret(e.fark,v=>fi(Math.round(v)))+'</b></th>').join('');
+  const seri=r=>r.seri==='geride'?'<span class="ogr-seri ogr-seri-geride" title="Son '+ART_ARDA+' ölçümde belirgin biçimde geride">▼▼▼</span>':r.seri==='onde'?'<span class="ogr-seri ogr-seri-onde" title="Son '+ART_ARDA+' ölçümde belirgin biçimde önde">▲▲▲</span>':'';
+  const hucre=(r,c,e)=>!c?'<td class="ogr-iz-bos" title="'+kacis(e.ad+': bu konuda soru yok')+'"></td>':
+    '<td class="ogr-iz-h'+(c.durum==='belirsiz'?' ogr-iz-soluk':'')+'" style="'+hucreRengi(c)+'" title="'+kacis(r.ad+' · '+e.ad+': öğrencileriniz %'+fi(Math.round(100*c.d/c.n))+', Türkiye’nin aynı sorulardaki başarısı %'+fi(Math.round(100*c.b/c.n))+' → '+isaret(c.fark,f1)+' puan'+(c.durum==='belirsiz'?' (şans payı içinde)':''))+'">'+isaret(c.fark,v=>fi(Math.round(v)))+'</td>';
+  return '<div class="ogr-iz-kutu"><table class="ogr-iz"><thead><tr><th scope="col" class="ogr-iz-konu">Konu</th>'+bas+'<th scope="col" class="ogr-iz-seri"></th></tr></thead><tbody>'+
+    z.satir.map(r=>'<tr><th scope="row" class="ogr-iz-konu">'+kacis(r.ad)+'</th>'+r.hucre.map((c,i)=>hucre(r,c,z.sinavlar[i])).join('')+'<td class="ogr-iz-seri">'+seri(r)+'</td></tr>').join('')+'</tbody></table></div>'+
+    '<div class="ogr-olcek" aria-hidden="true"><span>Türkiye’nin gerisinde</span><i></i><span>Türkiye’nin önünde</span></div>';
+}
+function etutHtml(b){
+  const e=b.etut;if(!e)return '';
+  const ok=e.olculen&&e.once!==null&&e.sonra!==null;
+  return '<div class="ogr-etut"><div class="ogr-etut-sayi" title="Etüt raporundaki satır sayısı: bir öğrencinin bir etüde katılımı"><strong>'+fi(e.etut)+'</strong><span>etüt katılımı</span></div><div class="ogr-etut-sayi"><strong>'+fi(e.ogrenci)+'</strong><span>öğrenci</span></div>'+
+    (ok?'<div class="ogr-etut-once" title="Etüt alan '+fi(e.olculen)+' öğrencinin Türkiye’ye göre ortalama farkı: ilk etütten önceki son deneme → son deneme"><span class="'+(e.once<0?'ogr-k':'ogr-y')+'">'+isaret(e.once,f1)+'</span><i aria-hidden="true">→</i><span class="'+(e.sonra<0?'ogr-k':'ogr-y')+'">'+isaret(e.sonra,f1)+'</span><small>net Türkiye’ye göre · '+fi(e.olculen)+' öğrenci</small></div>':'')+'</div>';
+}
+function hamVeri(b){
+  const seri=b.seri.length?'<div class="et-tablo-kutu"><table class="et-tablo ogr-ham"><thead><tr><th scope="col">Deneme</th><th scope="col" class="sayi">Öğrenci</th><th scope="col" class="sayi">Ortalama net</th><th scope="col" class="sayi">Türkiye ort. (Genel Net)</th><th scope="col" class="sayi">Fark</th></tr></thead><tbody>'+
+    b.seri.map(p=>'<tr><td>'+kacis(p.ad)+'</td><td class="sayi">'+fi(p.n)+'</td><td class="sayi">'+f2(p.net)+'</td><td class="sayi">'+(p.genel===null?'—':f2(p.genel))+'</td><td class="sayi">'+isaret(p.fark,f2)+'</td></tr>').join('')+'</tbody></table></div>':'';
+  const z=b.izgara,konu=z?'<div class="et-tablo-kutu"><table class="et-tablo ogr-ham"><thead><tr><th scope="col">Konu</th><th scope="col">Deneme</th><th scope="col" class="sayi">Yanıt (n)</th><th scope="col" class="sayi">Doğru (d)</th><th scope="col" class="sayi">Türkiye’ye göre beklenen (b)</th><th scope="col" class="sayi">Fark (puan)</th><th scope="col" class="sayi">z</th></tr></thead><tbody>'+
+    z.satir.flatMap(r=>r.hucre.map((c,i)=>c?'<tr><td>'+kacis(r.ad)+'</td><td>'+kacis(z.sinavlar[i].ad)+'</td><td class="sayi">'+fi(c.n)+'</td><td class="sayi">'+fi(c.d)+'</td><td class="sayi">'+f2(c.b)+'</td><td class="sayi">'+isaret(c.fark,f1)+'</td><td class="sayi">'+(c.z===null?'—':isaret(c.z,f2))+'</td></tr>':'')).join('')+'</tbody></table></div>':'';
+  return '<details class="ogr-formul"><summary>Nasıl hesaplanır · ham veriler</summary>'+
+    '<p><b>Kimler?</b> '+kacis(b.siniflar.join(', '))+' sınıflarının öğrencileri birlikte (ders programında bu dersi verdiğiniz sınıflar). Sınıflar ayrı ayrı gösterilmez, öğrenci adı yoktur.</p>'+
+    '<p><b>Net grafiği:</b> her denemede öğrencilerinizin bu dersteki net ortalaması (netı basılmış öğrenciler) ve yayınevinin Türkiye ortalaması (Genel Net). Fark = ortalama net − Genel Net; çubuk yeşilse Türkiye’nin üstünde, kırmızıysa altında.</p>'+
+    '<p><b>Konu tablosu:</b> her hücre, o denemede o konunun sorularında öğrencilerinizin doğru sayısını (d), aynı soruları çözen Türkiye geneli öğrencilerinin başarı oranlarından beklenen doğru sayısıyla (b = soruların Türkiye başarı oranlarının toplamı) karşılaştırır. Fark = 100 · (d − b) / n puan; n öğrencilerinizin o sorulara verdiği yanıt sayısıdır. Böylece zor sorular konuyu haksız yere kırmızıya boyamaz: aynı soruda Türkiye de zorlanmışsa beklenen de düşüktür.</p>'+
+    '<p><b>Renk:</b> kırmızı = Türkiye’nin gerisinde, yeşil = önünde; fark büyüdükçe renk koyulaşır (±'+RENK_UST+' puanda en koyu). Soluk hücre: fark şans payı içinde (z = (d − b) / √(Σ n·p·(1 − p) · (1 + (soru − 1) · 0,2)), |z| < 1,96; bir öğrencinin aynı konudaki yanıtları birbirine bağlı sayılır). ▼▼▼ / ▲▲▲: konu son '+ART_ARDA+' ölçümde belirgin biçimde geride / önde.</p>'+
+    '<p><b>Etüt:</b> bu dersteki etütleriniz ve aldıkları öğrenci sayısı. Ok, etüt alan öğrencilerin Türkiye’ye göre ortalama farkıdır: ilk etütten önceki son denemede → son denemede. Betimleyicidir: etüt dışındaki her şey de bu değişime katkı yapar.</p>'+seri+konu+'</details>';
+}
+function blokHtml(b,i){
+  // The newest exam that has a Türkiye average (an exam whose list has not come yet is skipped, never filled in).
+  const son=b.seri.filter(p=>p.fark!==null).pop()||null,fark=son?son.fark:null;
+  const kpi='<div class="ogr-kpi"><span class="ogr-kpi-ad">Son deneme · Türkiye’ye göre</span><strong class="'+(fark===null?'':fark<0?'ogr-k':'ogr-y')+'">'+(fark===null?'—':isaret(fark,f1))+'<small> net</small></strong>'+
+    (son?'<span class="mini">'+kacis(son.ad)+' · '+fi(son.n)+' öğrenci</span>':'')+'</div>';
+  return '<section class="et-panel ogr-blok"><div class="et-kart-bas"><h3><i class="et-renk nokta" style="background:'+renk(b.kod)+'"></i> '+kacis(b.dersAd)+' · '+fi(b.duzey)+'. sınıf</h3>'+
+    '<div class="et-lejant"><span><i class="et-renk cizgi" style="background:'+renk(b.kod)+'"></i>Öğrencileriniz</span><span><i class="et-renk cizgi ogr-l-tr"></i>Türkiye ortalaması</span></div></div>'+
+    '<div class="ogr-ust">'+kpi+'<div class="ogr-grafik" data-ogr-grafik="'+i+'"></div></div>'+
+    '<h4 class="ogr-alt-baslik">Konular · Türkiye ile aynı sorularda</h4>'+izgaraHtml(b)+etutHtml(b)+hamVeri(b)+'</section>';
+}
+let SON=null;
+function gorunum(){
+  if(typeof rehberMi!=='function'||!rehberMi())return '<div class="baslik"><h1>Öğretmen raporu</h1></div><p>Bu sayfa rehber öğretmen içindir.</p>';
+  const l=ogretmenler();
+  if(!l.length){SON=null;return '<div id="ogrKok"><header class="et-bas"><h1 class="et-baslik">Öğretmen raporu</h1></header><section class="et-panel et-bos"><b>Ders programı yok</b><p>Öğretmenler, Etüt planı’na eklenen sınıf ders programlarından gelir. Etüt planı’nda sınıfların haftalık ders programlarını ekleyin.</p><button type="button" class="et-dugme" data-sekme="etutplani">Etüt planı →</button></section></div>'}
+  const secili=l.find(o=>o.key===EK.ogrHoca)?EK.ogrHoca:'',goster=secili?l.filter(o=>o.key===secili):l;
+  const modeller=goster.map(ogretmenModeli);SON=modeller;
+  let sayac=0;
+  const bolum=o=>'<section class="ogr-ogretmen" data-ogr-hoca="'+kacis(o.key)+'"><header class="ogr-ogretmen-bas"><h2>'+kacis(kisiAd(o.ad))+'</h2><p class="mini">'+
+    o.dersler.map(d=>kacis(d.ad)+' · '+kacis(d.siniflar.join(', '))).join(' — ')+'</p></header>'+
+    (o.bloklar.length?o.bloklar.map(b=>blokHtml(b,sayac++)).join(''):'<p class="mini ogr-yok">Bu öğretmenin derslerinde henüz deneme ya da konu verisi yok.</p>')+'</section>';
+  const secim='<label class="et-seg"><span class="et-seg-label">Öğretmen</span><select id="ogrHoca"><option value="">Bütün öğretmenler ('+fi(l.length)+')</option>'+l.map(o=>'<option value="'+kacis(o.key)+'"'+(o.key===secili?' selected':'')+'>'+kacis(kisiAd(o.ad))+'</option>').join('')+'</select></label>';
+  planla();
+  return '<div id="ogrKok"><header class="et-bas"><h1 class="et-baslik">Öğretmen raporu</h1><p class="et-cumle">Her öğretmenin, dersini verdiği sınıfların öğrencileri birlikte: Türkiye ortalamasına göre net ve aynı sorularda konu konu Türkiye ile karşılaştırma. Sınıflar ve öğrenciler birbiriyle karşılaştırılmaz.</p></header>'+
+    '<div class="et-arac">'+secim+'<button type="button" class="et-dugme" id="ogrYazdir">Yazdır / PDF</button></div>'+modeller.map(bolum).join('')+'</div>';
+}
+let ZAMAN=null;
+function grafikleriCiz(){
+  if(!SON||typeof document==='undefined')return;const bl=SON.flatMap(o=>o.bloklar);
+  document.querySelectorAll('#ogrKok .ogr-grafik[data-ogr-grafik]').forEach(k=>{const b=bl[+k.dataset.ogrGrafik];if(!b)return;const W=Math.round(k.clientWidth);if(W<160)return;
+    if(k.dataset.w===String(W))return;k.dataset.w=String(W);k.innerHTML=netGrafigi(b,W)});
+}
+function planla(){if(typeof window==='undefined'||!window.requestAnimationFrame)return;window.cancelAnimationFrame(ZAMAN);ZAMAN=window.requestAnimationFrame(grafikleriCiz)}
+if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('resize',()=>{if(typeof EK!=='undefined'&&EK.sekme==='ogretmenrapor')planla()});
+if(typeof document!=='undefined'&&document.addEventListener){
+  document.addEventListener('change',ev=>{if(ev.target.id==='ogrHoca'&&typeof rehberMi==='function'&&rehberMi()){EK.ogrHoca=ev.target.value||undefined;ciz()}});
+  document.addEventListener('click',ev=>{if(ev.target.closest?.('#ogrYazdir')&&typeof rehberMi==='function'&&rehberMi()){grafikleriCiz();try{window.print()}catch(e){}}});
+}
+return {DERSLER,ogretmenler,netSerisi,konuIzgarasi,olc,etutOzeti,ogretmenModeli,hucreRengi,netGrafigi,izgaraHtml,gorunum,grafikleriCiz,sinifK,R_MADDE,RENK_UST,ART_ARDA};
+})();
+function gorunumOgretmenRapor(){return OGRETMEN_RAPOR.gorunum()}
+// END OGRETMENRAPOR
 
 // ---------------------------------------------------------------- başlangıç
 function dosyaGomuluYalnizcaOku() {

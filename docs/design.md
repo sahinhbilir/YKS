@@ -212,7 +212,7 @@ student's: the group name opens its page, the arrow opens the related pages.
 
 - **Haftalık plan ▾**: Sonuç girişi, Haftalar haritası.
 - **Öğrenciler ▾**: Haftalık öğrenci takibi.
-- **Denemeler ▾**: Sıralamalar.
+- **Denemeler ▾**: Sıralamalar, Türkiye geneli, Konu Takibi, **Öğretmen raporu** (docs/ogretmen-raporu.md), Yanlışlar defteri, Üniversite Hedefi.
 - **Müfredat** and **Ayarlar** on the right, then "Kaydet ve çıkış yap" and the
   two-line status. On phones (≤520 px) the logout button reads "Çıkış" (its
   accessible name stays "Kaydet ve çıkış yap").

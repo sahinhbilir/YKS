@@ -51,6 +51,8 @@ jobs:
         run: node scripts/embed-etutetkisi.cjs --check && node test/etutetkisi-regression.cjs
       - name: Öğrenci kartı series against the Türkiye average, etüt, absences, weak topics, cache and embedding
         run: node scripts/embed-analiz.cjs --check && node test/analiz-regression.cjs
+      - name: Öğretmen raporu teachers, classes together, topic grid against Türkiye, etüts and embedding
+        run: node scripts/embed-ogretmenrapor.cjs --check && node test/ogretmenrapor-regression.cjs
       - name: Konu Takibi cumulative evidence, import and embedding
         run: node scripts/embed-konutakibi.cjs --check && node test/konutakibi-regression.cjs
       - name: Yanlışlar defteri booklet cut-outs, cevap raporu without TC, A and B numbers and embedding
@@ -174,6 +176,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/etutetkisi-browser.cjs
       - name: Öğrenci kartı on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/analiz-browser.cjs
+      - name: Öğretmen raporu on desktop and phone, and its print layout
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/ogretmenrapor-browser.cjs
       - name: Konu Takibi upload and drilldown on desktop and phone
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/konutakibi-browser.cjs
       - name: Yanlışlar defteri cut-outs, filters and printing on desktop and phone
