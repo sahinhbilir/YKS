@@ -157,14 +157,15 @@ const ogrenci=(kur)=>{
    assert.equal(await bugunKart.evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'the Bugün card does not overflow');
    await page.screenshot({path:path.join(out,'student-home-bugun-'+width+'.png'),fullPage:true});
    await bugunKart.locator('[data-sekme="plan"]').click();await page.getByRole('heading',{name:'Haftalık planın'}).waitFor();
-   // Hafızam: every measured topic with its recall bar and the target line; "Çalıştım" opens the slider; the box turns the plan
+   // Hafızam: every taught or measured topic with its recall bar and the target line; "Çalıştım" opens the slider; the box turns the plan
    // into a suggestion and back.
    await page.locator('[aria-controls="planMenusu"]').click();await page.locator('#planMenusu [data-sekme="hafiza"]').click();
    await page.getByRole('heading',{name:'Hafızam'}).waitFor();
-   const hfSatir=page.locator('.hafiza-sayfa .hf-liste .hf-oge');assert(await hfSatir.count()>=1,'measured topics are listed');
+   const hfSatir=page.locator('.hafiza-sayfa .hf-liste .hf-oge');assert(await hfSatir.count()>=1,'taught and measured topics are listed');
    assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.hafiza-sayfa .hf-cubuk')].every(c=>{const k=c.getBoundingClientRect(),d=c.querySelector('i').getBoundingClientRect(),b=c.querySelector('b').getBoundingClientRect();
      return d.width<=k.width+.5&&b.left>=k.left&&b.right<=k.right+.5&&Math.abs((b.left+b.width/2-k.left)/k.width-.9)<.02})),true,'every bar stays inside its track and the line sits at 90%');
-   assert.match(await hfSatir.first().locator('.hf-yazi').innerText(),/^%\d+\s*son çalışma (bugün|dün|\d+ gün önce)/);
+   // A measured topic says when it was last studied; a taught one without a result says when it was taught.
+   assert.match(await hfSatir.first().locator('.hf-yazi').innerText(),/^%\d+\s*(son çalışma|derste işlendi) (bugün|dün|\d+ gün önce)/);
    await hfSatir.first().locator('[data-hf-ac]').click();await page.locator('.hafiza-sayfa .hf-oge.hf-acik [data-ps]').waitFor();
    assert.equal(await page.locator('.hafiza-sayfa .hf-oge.hf-acik [data-hf-ac]').getAttribute('aria-expanded'),'true');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'Hafızam overflow');
