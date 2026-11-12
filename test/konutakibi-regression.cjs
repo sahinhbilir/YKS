@@ -433,6 +433,12 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   const r=copy(K.maddeCoz(birlesik));assert.equal(r.oturum,'TYT + AYT');assert.deepEqual(Object.keys(r.dersler),['TÜRKÇE-T','MATEMATİK-A']);
   // p is kept to four decimals.
   assert.equal(r.dersler['TÜRKÇE-T'][0][0],Math.round(20/27*1e4)/1e4);assert.equal(r.dersler['MATEMATİK-A'][0][0],.5);assert.equal(r.ogrenci,27);
+  // A whole YKS file: 11 TYT and 13 AYT dersler (24) are read and saved as one exam (the stored part once allowed only 20).
+  const TD=['TÜRKÇE-T','TARİH-T','COĞRAFYA-T','FELSEFE-T','DİN KÜLTÜRÜ-T','S.FELSEFE-T','MATEMATİK-T','GEOMETRİ-T','FİZİK-T','KİMYA-T','BİYOLOJİ-T'];
+  const AD=['TÜRK DİLİ VE EDB-A','TARİH.1-A','COĞRAFYA.1-A','TARİH.2-A','COĞRAFYA.2-A','FELSEFE GR.-A','DİN KÜLTÜRÜ-A','S.FELSEFE-A','MATEMATİK-A','GEOMETRİ-A','FİZİK-A','KİMYA-A','BİYOLOJİ-A'];
+  const tam=K.maddeCoz([...F.maddePages({oturum:'TYT',N:27,courses:TD.map(course=>({course,rows:[[10,10,7],[5,5,17]]}))}),...F.maddePages({oturum:'AYT',N:26,courses:AD.map(course=>({course,rows:[[10,10,6],[5,5,16]]}))})]);
+  assert.equal(Object.keys(tam.dersler).length,24);const kayit=K.merge(K.blank(),[],[tam]);assert.doesNotThrow(()=>K.dogrula(copy(kayit)));
+  assert.equal(Object.keys(Object.values(kayit.zorluk)[0].madde).length,24);
   // Two exams in one file are still refused; one session's counts must agree.
   const iki=[...F.maddePages({ad:'SENTETİK-1203',courses:[{course:'TÜRKÇE-T',rows:[[1,1,1]]}]}),...F.maddePages({ad:'SENTETİK-1204',oturum:'AYT',courses:[{course:'MATEMATİK-A',rows:[[1,1,1]]}]})];
   assert.throws(()=>K.maddeCoz(iki),/birden çok sınav/);

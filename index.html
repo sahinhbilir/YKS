@@ -25379,7 +25379,8 @@ function zorlukDogrula(z,fail,str){
     for(const part of ['ozet','madde']){
       const o=e[part];if(o===null)continue;
       if(!o||typeof o!=='object'||Array.isArray(o))fail();
-      const cs=Object.entries(o);if(!cs.length||cs.length>20)fail();
+      // An exam's TYT and AYT side by side: up to 40 dersler (24 in the YKS: 11 TYT + 13 AYT), as for the Türkiye part.
+      const cs=Object.entries(o);if(!cs.length||cs.length>40)fail();
       for(const [c,qs] of cs){
         if(!str(c,80)||!/-[TA]$/u.test(c)||!Array.isArray(qs)||!qs.length||qs.length>200)fail();
         for(const q of qs){
