@@ -63,14 +63,14 @@ async function check(name, fn) { try { await fn(); passed++; console.log('PASS',
     const ayni = t.students.filter(s => s.name === 'SENTETİK AYNI AD').map(s => [s.cls, s.sessions.length]).sort();
     assert.deepEqual(ayni.map(x => x[0]), ['12/A', '12/B']); assert(ayni.every(x => x[1] === 2 * W), JSON.stringify(ayni));
   });
-  await check('Öğretmen raporu over the whole school builds the student base once', () => {
+  await check('Öğretmen raporu over the whole school never builds the student base (etüts are not part of it)', () => {
     run("__temelSay=0;{const f=OGRENCI_RAPOR.temelOgrenciler;__temelAsil=f;OGRENCI_RAPOR.temelOgrenciler=(...a)=>{__temelSay++;return f(...a)}};EK.sekme='ogretmenrapor';EK.ogrHoca=undefined");
     try {
       const h = run('OGRETMEN_RAPOR.gorunum()');
       assert.equal((h.match(/<section class="ogr-ogretmen"/g) || []).length, 2);
       assert((h.match(/<section class="et-panel ogr-blok"/g) || []).length >= 3, 'blocks for both teachers');
-      assert.equal(run('__temelSay'), 1);
-      assert.match(h, /etüt katılımı/);
+      assert.equal(run('__temelSay'), 0);
+      assert(!/etüt/i.test(h), 'a teacher’s lessons in class only');
     } finally { run('OGRENCI_RAPOR.temelOgrenciler=__temelAsil'); }
   });
   console.log(passed + ' school-sized checks passed');

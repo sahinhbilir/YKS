@@ -2,8 +2,9 @@
 'use strict';
 // Öğretmen raporu: teachers from the timetables, a teacher's classes taken together (never class by class, never a student),
 // the subject's mean net against the Türkiye average, the topic grid against Türkiye on the same questions (hand-worked d, b,
-// gap and z), the run of three, the colours, the teacher's own etüts (each counted once), the page (formulas, raw numbers,
-// no ranking, no student or class figures), and teacher-only access. Synthetic school and students only ('SENTETİK …').
+// gap and z), the run of three, the colours, the page as a teacher reads it on paper (labelled headline boxes, reading notes,
+// the source of the numbers; formulas and raw numbers folded; no ranking, no student or class figures, no etüts), and
+// teacher-only access. Synthetic school and students only ('SENTETİK …').
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
 const F = require('./konutakibi-fixtures.cjs');
 const html = fs.readFileSync(process.argv[2] || 'index.html', 'utf8');
@@ -82,19 +83,23 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
       K.trFn=ad=>tr[ad]?{genel:k=>tr[ad][k]??null,dersListesi:k=>k==='MATEMATİK-T'&&li[ad]?{...li[ad],genel:tr[ad][k]}:null}:null})()`);
     const s = get(`OGRETMEN_RAPOR.netSerisi(K,['12/A'],'TYT','MAT','MATEMATİK-T')`);
     assert.deepEqual(s.map(p => [p.sinir, p.birinci, p.listeN, p.sira]), [[18.5, 26, 100, 40], [19, 27, 100, null]]);
-    const b = { dersAd: 'TYT Matematik', duzey: 12, kod: 'MATEMATİK-T', siniflar: ['12/A'], seri: s, izgara: null, etut: null };
+    const b = { dersAd: 'TYT Matematik', duzey: 12, kod: 'MATEMATİK-T', siniflar: ['12/A'], seri: s, izgara: null };
     put('__B', b); const h = run('OGRETMEN_RAPOR.blokHtml(__B,0)'), svg = run('OGRETMEN_RAPOR.netGrafigi(__B,700)');
     const yazi = h.replace(/<[^>]+>/g, '');
-    assert.match(yazi, /İlk 100 sınırı: Türkiye ortalaması \+6,0 net/, 'the yardstick in the newest exam');
+    // Each figure sits in a box under its own label, with a line saying what it is.
+    assert.match(h, /<span class="ogr-kutu-ad">İlk 100 sınırı<\/span><strong class="ogr-kutu-orta">\+6,0<small> net<\/small><\/strong><span class="ogr-kutu-not">Türkiye’de ilk 100’e giren son okul, ortalamanın bu kadar üzerinde<\/span>/, 'the yardstick in the newest exam');
     // 40th → outside (counted as 101st): 61 places down.
-    assert.match(yazi, /Okulun Türkiye sırası \(tüm okul\): İlk 100 dışı ▼ 61 40\. → dışı/);
-    assert(svg.includes('class="ogr-sinir"') && /ilk 100 sınırı \+6,0/.test(svg), 'the dashed yardstick with its value');
+    assert.match(h, /<span class="ogr-kutu-ad">Okulun Türkiye sırası<\/span><strong class="ogr-kutu-orta">İlk 100 dışı<\/strong><span class="ogr-degisim"><b class="ogr-k">▼ 61<\/b> önceki denemede 40\.<\/span><span class="ogr-kutu-not">bu derste bütün okulun yeri<\/span>/);
+    // The chart keeps to the two nets and their difference: the yardstick is a labelled figure, not a fourth series.
+    assert(!svg.includes('ogr-sinir') && !/ilk 100/i.test(svg), 'no yardstick line on the chart');
+    // What the block covers: the classes together, the number of exams and the days they span.
+    assert.match(h, /<p class="ogr-kapsam">12\/A sınıfı · 2 deneme · 1 Eki – 15 Eki 2026<\/p>/);
     assert(!/≈|tahmini|dilim|ilk %/.test(yazi + svg), 'nothing estimated');
     // Raw numbers: the last row, the 1st school, the school's place.
     const ham = h.slice(h.indexOf('<table'));assert.match(ham, /<td class="sayi">18,50<\/td><td class="sayi">26,00<\/td><td class="sayi">40\.<\/td>/);assert.match(ham, /<td class="sayi">dışı<\/td>/);
     // No school followed on the Türkiye geneli page: no place, the yardstick stays.
     put('__B2', { ...b, seri: s.map(p => ({ ...p, sira: undefined })) }); const h2 = run('OGRETMEN_RAPOR.blokHtml(__B2,0)');
-    assert(!h2.includes('Okulun Türkiye sırası (tüm okul)') && h2.includes('İlk 100 sınırı'));
+    assert(!h2.includes('<span class="ogr-kutu-ad">Okulun Türkiye sırası</span>') && h2.includes('<span class="ogr-kutu-ad">İlk 100 sınırı</span>'));
   });
   await check('topic grid: correct answers against Türkiye on the same questions, gap in points, z with the design effect, three in a row (hand-worked)', () => {
     konuKur();
@@ -108,6 +113,17 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(s.seri, 'geride', 'behind on three measured exams in a row');
     // Cümlede Anlam (p .2 .2): ADA 2 + BORA 1 = 3 correct; b = 2 · ,4 = ,8 → 100 · 2,2 / 4 = +55; var = 2 · (2 · ,2 · ,8 · 1,2) = ,768 → z = 2,51 → ahead.
     const c = r('Cümlede Anlam'); near(c.hucre[0].fark, 55); near(c.hucre[0].z, 2.2 / Math.sqrt(0.768)); assert.equal(c.hucre[0].durum, 'onde'); assert.equal(c.seri, 'onde');
+    // On the page (12/A): the run of three in words beside the topic's name; the cells in whole points; the whole subject as
+    // the last row, pale because its gap is within chance; a dot where a topic had no question.
+    put('__Z', { dersAd: 'TYT Türkçe', duzey: 12, kod: 'TÜRKÇE-T', siniflar: ['12/A'], seri: [], izgara: z }); const zh = run('OGRETMEN_RAPOR.izgaraHtml(__Z)');
+    assert.match(zh, /<th scope="row" class="ogr-iz-konu">Sözcükte Anlam<span class="ogr-seri ogr-seri-geride"[^>]*>Son 3 denemede geride<\/span><\/th><td class="ogr-iz-ort"[^>]*><span class="ogr-ort"><b class="ogr-k">−58<\/b>/);
+    assert.match(zh, /<th scope="row" class="ogr-iz-konu">Cümlede Anlam<span class="ogr-seri ogr-seri-onde"[^>]*>Son 3 denemede önde<\/span><\/th><td class="ogr-iz-ort"[^>]*><span class="ogr-ort"><b class="ogr-y">\+55<\/b>/);
+    assert.match(zh, /<tr class="ogr-iz-toplam"><th scope="row" class="ogr-iz-konu">Bütün konular<small>[^<]*<\/small><\/th><td class="ogr-iz-ort"[^>]*><span class="ogr-ort"><b class="ogr-k">−20<\/b>[\s\S]*?<td class="ogr-iz-h ogr-iz-soluk"[^>]*>−20<\/td>/);
+    put('__Z2', { dersAd: 'TYT Türkçe', duzey: 12, kod: 'TÜRKÇE-T', siniflar: ['12/A'], seri: [], izgara: { sinavlar: z.sinavlar, satir: z.satir.map((r, i) => i ? r : { ...r, hucre: [null, ...r.hucre.slice(1)] }) } });
+    assert.match(run('OGRETMEN_RAPOR.izgaraHtml(__Z2)'), /<td class="ogr-iz-bos" title="SENTETİK-KONU-1: bu konuda soru yok">·<\/td>/);
+    // A value that rounds to zero carries no sign.
+    put('__Z3', { siniflar: [], seri: [], izgara: { sinavlar: [{ ad: 'S', ogr: 1, fark: -.3, z: -.1, durum: 'belirsiz' }], satir: [{ ad: 'K', hucre: [{ d: 1, b: 1.01, n: 3, fark: -.3, z: -.1, durum: 'belirsiz' }], seri: null, ortFark: -.3, olcum: 1, degisim: null }] } });
+    assert.deepEqual([...run('OGRETMEN_RAPOR.izgaraHtml(__Z3)').matchAll(/<td class="ogr-iz-h ogr-iz-soluk"[^>]*>([^<]*)<\/td>/g)].map(m => m[1]), ['0', '0'], 'the cell and the whole subject under it');
     // Rows: most behind first. The exam column carries the whole topic set's gap: (4 − (5,6 + ,8)) / 12 = −20 points.
     assert.deepEqual(z.satir.map(x => x.ad), ['Sözcükte Anlam', 'Cümlede Anlam']); near(z.sinavlar[0].fark, -20);
     // Its z adds the two topics' variances: −2,4 / √(2,688 + ,768) = −1,29, within chance.
@@ -161,10 +177,13 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     run(`OGRETMEN_RAPOR.netSerisi(K,['12/A','12/B','12/C'],'TYT','MAT','MATEMATİK-T',__g=new Set())`); assert.deepEqual(get('[...__g].sort()'), ['12/A', '12/B'], 'the classes that had a net');
     sandbox.__b = { seri, kod: 'MATEMATİK-T', dersAd: 'TYT Matematik' };
     const svg = run('OGRETMEN_RAPOR.netGrafigi(__b,720)'), t = [...svg.matchAll(/<text class="ogr-deger ([^"]*)"[^>]*>([^<]*)<\/text>/g)].map(m => [m[1], m[2]]);
-    // Gaps +8 and +13; nets 20 and 26 against 12 and 13: all written, gap labels green.
-    assert.deepEqual(t, [['ogr-y', '+8,0'], ['ogr-y', '+13,0'], ['ogr-deger-okul', '20,0'], ['ogr-deger-tr', '12,0'], ['ogr-deger-okul', '26,0'], ['ogr-deger-tr', '13,0']]);
-    assert.match(svg, /Türkiye’ye göre fark \(net\)/); assert.match(svg, /<rect class="ogr-cubuk ogr-cubuk-ust"/); assert.match(svg, /<line class="ogr-sifir"/);
-    // The gap panel's scale is the gaps' own: 0 to 13 + 22 % of 13, not 0 to the nets.
+    // Nets 20 and 26 against 12 and 13, then their differences +8 and +13: all written, gap labels green.
+    assert.deepEqual(t, [['ogr-deger-okul', '20,0'], ['ogr-deger-tr', '12,0'], ['ogr-deger-okul', '26,0'], ['ogr-deger-tr', '13,0'], ['ogr-y', '+8,0'], ['ogr-y', '+13,0']]);
+    // The nets come first and the difference under them, each panel under its own title; both exams are named on the axis.
+    assert(svg.indexOf('>Ortalama net<') < svg.indexOf('>Türkiye ortalamasına göre fark (net)<') && svg.indexOf('>Ortalama net<') > 0, 'nets above their difference');
+    assert.deepEqual([...svg.matchAll(/<text class="ogr-tik ogr-sinav-adi"[^>]*aria-label="([^"]*)"/g)].map(m => m[1]), ['27-YKS-1201', '27-YKS-1202']);
+    assert.match(svg, /<rect class="ogr-cubuk ogr-cubuk-ust"/); assert.match(svg, /<line class="ogr-sifir"/);
+    // The gap panel's scale is the gaps' own: 0 to 13 and room for the labels, not 0 to the nets.
     const yuk = [...svg.matchAll(/<rect class="ogr-cubuk[^"]*" x="[^"]*" y="([^"]*)" width="[^"]*" height="([^"]*)"/g)].map(m => +m[2]);
     assert(Math.abs(yuk[0] / yuk[1] - 8 / 13) < 0.005, 'bars in proportion to the gaps (heights rounded to 0,1 px)');
     planKur(); konuKur(); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:[]})'); const h = run('OGRETMEN_RAPOR.gorunum()');
@@ -195,35 +214,16 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     run("K.trFn=ad=>ad==='27-YKS-1201'?{genel:()=>10}:null");
     let h = run('OGRETMEN_RAPOR.gorunum()');
     assert.equal(summary(), 'Türkiye ortalamasının üzerindesiniz.');
-    assert.match(h, /27-YKS-1201 · 3 öğrenci/);
-    assert.match(h, /Son denemenin Türkiye ortalaması henüz yok/);
-    assert.match(h, /Tekrar önceliği: Sözcükte Anlam/);
+    assert.match(h, /Son karşılaştırılan deneme: <b>27-YKS-1201<\/b>/); assert.match(h, /3 öğrencinin ortalaması/);
+    assert.match(h, /Son denemenin Türkiye ortalaması henüz yok \(27-YKS-1202\); karşılaştırma ondan önceki denemeyle yapıldı\./);
+    assert.match(h, /Tekrar önceliği: Sözcükte Anlam \(son 3 denemede Türkiye’nin gerisinde\)\./, 'the priority says why');
     run('K.trFn=()=>null');
     assert.equal(summary(), 'Net karşılaştırması için Türkiye ortalaması eksik.');
     run('D.konutakibi.exams=D.konutakibi.exams.slice(0,2)');
     h = run('OGRETMEN_RAPOR.gorunum()');
     assert(!h.includes('Tekrar önceliği:'), 'two negative measurements do not imply a three-measurement pattern');
   });
-  await check('the teacher’s own etüts: attendances and students once per session; their gap to Türkiye before the first etüt and on the latest exam (hand-worked)', () => {
-    kaynakKur();
-    put('OG', [{ no: '1001', name: 'SENTETİK ADA', cls: '12/A', sessions: [{ date: '2026-10-05', course: 'MATEMATİK TYT', teacher: 'SENTETİK ÖĞRETMEN AY' }, { date: '2026-10-08', course: 'MATEMATİK TYT', teacher: 'Sentetik Öğretmen Ay' }, { date: '2026-10-09', course: 'AYT MATEMATİK', teacher: 'SENTETİK ÖĞRETMEN AY' }],
-        exams: [{ exam: '27-YKS-1201', date: '2026-10-01', session: 'TYT', nets: { mat: 20 } }, { exam: '27-YKS-1202', date: '2026-10-15', session: 'TYT', nets: { mat: 22 } }] },
-      { no: '1002', name: 'SENTETİK BORA', cls: '12/A', sessions: [{ date: '2026-10-20', course: 'MATEMATİK', teacher: 'SENTETİK ÖĞRETMEN AY' }, { date: '2026-10-21', course: 'FİZİK', teacher: 'SENTETİK ÖĞRETMEN AY' }],
-        exams: [{ exam: '27-YKS-1201', date: '2026-10-01', session: 'TYT', nets: { mat: 10 } }] },
-      { no: '1009', name: 'SENTETİK CAN', cls: '11/B', sessions: [{ date: '2026-10-20', course: 'MATEMATİK', teacher: 'SENTETİK ÖĞRETMEN AY' }], exams: [] }]);
-    run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:OG})');
-    const d = '{ad:"Matematik"}';
-    const t = get(`OGRETMEN_RAPOR.etutOzeti(${JSON.stringify(run("'SENTETİK ÖĞRETMEN AY'.toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\\p{M}/gu,'')"))},${d},'TYT','MATEMATİK-T',K.trFn)`);
-    // ADA: 2 TYT etüts (the name in any spelling), BORA 1 (no session named: counted in TYT and in AYT). Fizik is another subject.
-    // CAN (11/B) counts for every grade but not in the 12th grade's block. ADA: 1201 (before her first etüt) 20 − 12 = +8 → 1202
-    // 22 − 13 = +9. BORA has no exam after his etüt: not measured.
-    const hk = JSON.stringify(run("'SENTETİK ÖĞRETMEN AY'.toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\\p{M}/gu,'')"));
-    assert.deepEqual(get(`OGRETMEN_RAPOR.etutOzeti(${hk},${d},'TYT','MATEMATİK-T',K.trFn,undefined,12)`), { etut: 3, ogrenci: 2, olculen: 1, once: 8, sonra: 9, ayrilmamis: 1 });
-    assert.deepEqual([t.etut, t.ogrenci], [4, 3], 'no grade given: CAN too');
-    const a = get(`OGRETMEN_RAPOR.etutOzeti(${hk},${d},'AYT','MATEMATİK-A',K.trFn,undefined,12)`);
-    assert.deepEqual([a.etut, a.ogrenci, a.olculen, a.ayrilmamis], [2, 2, 0, 1], 'AYT: ADA’s AYT etüt and BORA’s unnamed one');
-  });
-  await check('the page: one section per teacher, classes together, formulas and raw numbers, no student names, no class figures, no ranking; the teacher filter', () => {
+  await check('the page: one section per teacher, classes together, labelled figures and reading notes, formulas and raw numbers folded, no student names, no class figures, no ranking, no etüts; the teacher filter', () => {
     planKur(); kaynakKur(); konuKur(); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:[]})');
     let h = run('OGRETMEN_RAPOR.gorunum()');
     assert.match(h, /<h1 class="et-baslik">Öğretmen raporu<\/h1>/); assert.match(h, /aynı denemelerde Türkiye ortalamasıyla karşılaştırılır/);
@@ -231,11 +231,32 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.match(h, /<h2>Sentetik Öğretmen Ay<\/h2><p class="mini">Matematik · 9\/C, 12\/A, 12\/B<\/p>/);
     // AY: TYT Matematik for the 12th grade (12/A and 12/B together); the 9th grade has no data. DE: TYT Türkçe with the topic grid.
     assert.match(h, /TYT Matematik · 12\. sınıf/); assert(!/12\/A ·|12\/B ·/.test(h.replace(/<p class="mini">[^<]*<\/p>/g, '').replace(/<details[\s\S]*?<\/details>/g, '')), 'no figure per class');
-    assert.match(h, /TYT Türkçe · 12\. sınıf/); assert.match(h, /<table class="ogr-iz">/); assert.match(h, /▼▼▼/); assert.match(h, /▲▲▲/);
+    assert.match(h, /TYT Türkçe · 12\. sınıf/); assert.match(h, /<table class="ogr-iz" style="--ogr-en:504px;--ogr-ust:760px">/, 'three exams: the table’s least and greatest width');
+    // A topic behind (ahead) on three exams running says so in words beside its name, not in a symbol to decode.
+    assert.match(h, /<th scope="row" class="ogr-iz-konu">Sözcükte Anlam<span class="ogr-seri ogr-seri-geride"[^>]*>Son 3 denemede geride<\/span><\/th>/);
+    assert(!/▼▼▼|▲▲▲/.test(h), 'no symbols to decode');
+    // The rows' order made visible: each topic's average gap over its exams (Sözcükte Anlam −61,7 on each of the three), and the
+    // whole subject on the same questions as the last row ((1 + 3) − 3 · (2,8 + ,4) = −5,6 over 18 answers → −31,1 each exam).
+    assert.match(h, /<td class="ogr-iz-ort" title="Sözcükte Anlam: soru çıkan denemelerdeki farkların ortalaması −61,7 puan"><span class="ogr-ort"><b class="ogr-k">−62<\/b>/);
+    assert.match(h, /<tr class="ogr-iz-toplam"><th scope="row" class="ogr-iz-konu">Bütün konular<small>[^<]*<\/small><\/th><td class="ogr-iz-ort" title="Bütün konular: soru çıkan denemelerdeki farkların ortalaması −31,1 puan">/);
+    // The reading aids are on the page itself: what a box is, with a worked example, and the key to the colours.
+    assert.match(h, /<p class="ogr-iz-aciklama">Her kutu bir denemedir\.[^<]*Örnek: Türkiye’de öğrencilerin %60’ı, sizin öğrencilerinizin %50’si doğru cevapladıysa kutuda −10 yazar\./);
+    assert.match(h, /<b>Koyu kutu:<\/b> fark belirgin\.<\/span><span><b>Soluk kutu:<\/b> fark küçük; tesadüf olabilir\./);
     // Headline: the newest exam with a Türkiye average, 12/A and 12/B together: 1202 → (22 + 30) / 2 = 26 against 13 → +13.
-    assert.match(h, /<span class="ogr-kpi-ad">Son karşılaştırma · Türkiye’ye göre<\/span><strong class="ogr-y">\+13,0<small> net<\/small><\/strong><span class="mini">27-YKS-1202 · 2 öğrenci<\/span>/);
-    // Formulas in plain words and the raw numbers.
-    assert.match(h, /<summary>Nasıl hesaplanır · ham veriler<\/summary>/); assert.match(h, /Fark = 100 · \(d − b\) \/ n puan/); assert.match(h, /z = \(d − b\) \/ √\(Σ n·p·\(1 − p\) · \(1 \+ \(soru − 1\) · 0,2\)\)/);
+    assert.match(h, /Son karşılaştırılan deneme: <b>27-YKS-1202<\/b><\/p><div class="ogr-kpi"><div class="ogr-kutu ogr-kutu-ana"><span class="ogr-kutu-ad">Öğrencileriniz<\/span><strong>26,0<small> net<\/small><\/strong><span class="ogr-kutu-not">2 öğrencinin ortalaması<\/span><\/div>/);
+    assert.match(h, /<span class="ogr-kutu-ad">Türkiye ortalaması<\/span><strong>13,0<small> net<\/small><\/strong><span class="ogr-kutu-not">aynı denemede<\/span>/);
+    assert.match(h, /<div class="ogr-kutu ogr-kutu-ana ogr-kutu-fark ogr-arti"><span class="ogr-kutu-ad">Fark<\/span><strong class="ogr-y">\+13,0<small> net<\/small><\/strong><span class="ogr-kutu-not">Türkiye ortalamasının üzerinde<\/span>/);
+    // What a reader needs before the first figure, with every teacher's sheets (paper) and once, folded, on screen: whom the
+    // report covers, where the numbers come from, how to read a sign and a colour.
+    assert.equal((h.match(/<div class="ogr-baski ogr-rehber">/g) || []).length, 2, 'the reading notes with each teacher');
+    assert.match(h, /<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu rapor nasıl okunur\?<\/summary>/);
+    for (const yazi of ['Kimleri kapsıyor?', 'Veriler nereden geliyor?', 'Nasıl okunur?', 'okulda uygulanan denemelerin sonuç listelerinden', 'yayınevinin aynı denemeler için açıkladığı Türkiye geneli sonuçlarından', 'Hiçbir değer tahmin edilmez.']) assert(h.includes(yazi), yazi);
+    // On paper each teacher's sheets say what they are and when they were printed (the test clock is not set: today).
+    assert.match(h, /<p class="ogr-baski ogr-ust-yazi">Öğretmen raporu · \d{1,2} [A-ZÇŞ][a-zğşuü]{2} \d{4}<\/p><h2>Sentetik Öğretmen Ay<\/h2>/);
+    // A teacher's lessons in class only: etüts (one-to-one sessions after school) are not part of the report.
+    assert(!/etüt/i.test(h), 'no etüts');
+    // Formulas and the raw numbers, folded.
+    assert.match(h, /<summary>Hesaplama ayrıntıları ve ham veriler<\/summary>/); assert.match(h, /Fark = 100 · \(d − b\) \/ n puan/); assert.match(h, /z = \(d − b\) \/ √\(Σ n·p·\(1 − p\) · \(1 \+ \(soru − 1\) · 0,2\)\)/);
     assert.match(h, /<td>27-YKS-1201<\/td><td class="sayi">3<\/td><td class="sayi">20,00<\/td><td class="sayi">12,00<\/td><td class="sayi">\+8,00<\/td>/, 'raw exam row: n, mean, Türkiye, gap');
     // Raw topic row (12/A and 12/B together): Sözcükte Anlam, n = 3 · 4 = 12, d = 1, b = 3 · 2,8 = 8,4 → 100 · (1 − 8,4) / 12 = −61,7.
     // The topic table is built when its box opens: the page carries its place, the module its rows.
@@ -262,8 +283,9 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
       KONU_TAKIBI.oku=(...a)=>{__say.oku++;return __okuAsil(...a)};KONU_TAKIBI.ogrenciFark=(...a)=>{__say.fark++;return __farkAsil(...a)}`);
     try {
       const h = run('OGRETMEN_RAPOR.gorunum()'); assert.equal((h.match(/<section class="et-panel ogr-blok"/g) || []).length, 2, 'two blocks');
-      // One student base, one Konu Takibi read, one comparison per exam (three TYT exams), shared by every block.
-      assert.deepEqual(get('__say'), { temel: 1, oku: 1, fark: 3 });
+      // One Konu Takibi read and one comparison per exam (three TYT exams), shared by every block; the student base (the
+      // etüts' source) is not built at all.
+      assert.deepEqual(get('__say'), { temel: 0, oku: 1, fark: 3 });
     } finally { run('KONU_TAKIBI.oku=__okuAsil;KONU_TAKIBI.ogrenciFark=__farkAsil'); }
   });
   await check('teacher only; the menu and the route; nothing is stored', () => {

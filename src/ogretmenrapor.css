@@ -1,21 +1,44 @@
-/* Öğretmen raporu: one section per teacher; per subject a net chart against Türkiye and the topic grid (red behind ↔ green ahead). */
+/* Öğretmen raporu: one section per teacher; per subject the headline boxes, a net chart against Türkiye and the topic table
+   (red behind ↔ green ahead). It is handed to teachers on paper: the print block at the end is the page they read. */
 #ogrKok{display:flex;flex-direction:column;gap:18px}
-.ogr-ogretmen{display:flex;flex-direction:column;gap:14px;padding-top:6px;border-top:2px solid var(--cizgi)}
-.ogr-ogretmen:first-of-type{border-top:0}
-.ogr-ogretmen-bas h2{margin:0;font-size:22px}.ogr-ogretmen-bas p{margin:2px 0 0}
-.ogr-blok{display:flex;flex-direction:column;gap:12px}
-.ogr-blok h3{margin:0;font-size:17px;display:flex;align-items:center;gap:8px}
-.ogr-ozet{margin:0;font-size:14px;line-height:1.5;color:var(--murekkep);overflow-wrap:anywhere}
-.ogr-ust{display:grid;grid-template-columns:minmax(150px,200px) minmax(0,1fr);gap:16px;align-items:center}
-.ogr-kpi{display:flex;flex-direction:column;gap:4px}
-.ogr-kpi-ad{font-size:12px;color:var(--soluk)}
-.ogr-kpi strong{font-size:32px;line-height:1.1;font-variant-numeric:tabular-nums}.ogr-kpi strong small{font-size:.45em;font-weight:600;color:var(--soluk)}
-.ogr-degisim{font-size:12.5px;color:var(--soluk);overflow-wrap:anywhere}.ogr-degisim b{font-size:14px;font-variant-numeric:tabular-nums}
+#ogrKok .ogr-baski{display:none}
 .ogr-k{color:var(--kritik)}.ogr-y{color:var(--iyi)}.ogr-sabit{color:var(--soluk)}
+.ogr-yok{margin:0;color:var(--soluk)}
+/* Reading notes: folded on screen, printed with every teacher's sheets. */
+.ogr-rehber-ekran{font-size:13px;line-height:1.55;color:var(--soluk)}
+.ogr-rehber-ekran summary{width:max-content;max-width:100%;cursor:pointer;font-weight:600;color:var(--murekkep)}
+.ogr-rehber-ic{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:8px 28px;margin-top:8px}
+.ogr-rehber-ic p{margin:0}.ogr-rehber-ic p b{display:block;color:var(--murekkep)}
+/* A teacher. */
+.ogr-ogretmen{display:flex;flex-direction:column;gap:16px;padding-top:24px;border-top:1px solid var(--cizgi)}
+#ogrKok>.ogr-ogretmen:first-of-type{padding-top:4px;border-top:0}
+.ogr-ogretmen-bas h2{margin:0;font-size:22px;line-height:1.25}.ogr-ogretmen-bas .mini{margin:3px 0 0}
+/* A block: what it covers, the takeaway, the headline boxes, the chart, the topics. */
+.et-panel.ogr-blok{display:flex;flex-direction:column;gap:20px}
+.ogr-blok-bas{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 20px;padding-bottom:14px;border-bottom:1px solid var(--cizgi)}
+.ogr-blok h3{margin:0;font-size:18px;line-height:1.3;display:flex;align-items:center;gap:8px}
+.ogr-kapsam{margin:0;font-size:13px;line-height:1.4;color:var(--soluk)}
+.ogr-genel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ogr-ozet{margin:0;font-size:16px;font-weight:600;line-height:1.45;color:var(--murekkep);overflow-wrap:anywhere}
+.ogr-son{margin:4px 0 -4px;font-size:12.5px;line-height:1.45;color:var(--soluk)}.ogr-son b{color:var(--murekkep)}
+/* The headline boxes: hairlines between them, the difference tinted by its sign. */
+.ogr-kpi{display:flex;flex-wrap:wrap;gap:1px;background:var(--cizgi);border:1px solid var(--cizgi);border-radius:14px;overflow:hidden}
+.ogr-kutu{flex:1 1 150px;min-width:0;display:flex;flex-direction:column;gap:3px;padding:12px 16px;background:var(--kagit)}
+.ogr-kutu-ad{font-size:12px;font-weight:600;line-height:1.35;color:var(--soluk)}
+.ogr-kutu strong{font-size:26px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--murekkep)}
+.ogr-kutu strong.ogr-k{color:var(--kritik)}.ogr-kutu strong.ogr-y{color:var(--iyi)}
+.ogr-kutu strong small{font-size:.5em;font-weight:600;color:var(--soluk)}
+.ogr-kutu strong.ogr-kutu-orta{font-size:20px;line-height:1.3}
+.ogr-kutu-not{font-size:12px;line-height:1.35;color:var(--soluk)}
+.ogr-kutu.ogr-arti{background:color-mix(in srgb,var(--iyi) 9%,var(--kagit))}.ogr-kutu.ogr-eksi{background:color-mix(in srgb,var(--kritik) 9%,var(--kagit))}
+.ogr-degisim{font-size:12.5px;line-height:1.4;color:var(--soluk);overflow-wrap:anywhere}.ogr-degisim b{font-size:14px;font-variant-numeric:tabular-nums}.ogr-tek{white-space:nowrap}
+/* The chart, its key directly above it. */
+.ogr-sekil{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
 .ogr-grafik{width:100%;min-height:160px}
 .ogr-net{display:block;overflow:visible}
 .ogr-izgara{stroke:var(--cizgi);stroke-width:1}
 .ogr-tik{font-size:11px;fill:var(--soluk);font-variant-numeric:tabular-nums}
+.ogr-sinav-adi{font-size:10.5px}
 .ogr-panel-ad{font-size:12px;font-weight:700;fill:var(--murekkep)}
 .ogr-cubuk-ust{fill:var(--iyi);fill-opacity:.8}.ogr-cubuk-alt{fill:var(--kritik);fill-opacity:.8}
 .ogr-sifir{stroke:var(--murekkep);stroke-width:1.4}
@@ -25,45 +48,112 @@ text.ogr-y{fill:var(--iyi)}text.ogr-k{fill:var(--kritik)}.ogr-deger-okul{fill:va
 .ogr-okul{fill:none;stroke-width:2.6;stroke-linejoin:round}
 .ogr-tr-nokta{fill:var(--kagit);stroke:var(--soluk);stroke-width:1.4}
 .ogr-okul-nokta{stroke:var(--kagit);stroke-width:2}
-.ogr-l-tr{background:repeating-linear-gradient(90deg,var(--soluk) 0 5px,transparent 5px 9px)!important}
-/* The list's own yardstick (its last row against the Türkiye average) on the gap panel, and the KPI lines under the gap. */
-.ogr-sinir{fill:none;stroke:var(--e-c7);stroke-width:1.6;stroke-dasharray:6 3}
-.ogr-sinir-nokta{fill:var(--kagit);stroke:var(--e-c7);stroke-width:1.4}
-text.ogr-sinir-yazi{fill:var(--e-c7);font-weight:600;font-size:10.5px}
-.ogr-l-sinir{background:repeating-linear-gradient(90deg,var(--e-c7) 0 6px,transparent 6px 9px)!important}
-.ogr-sinir-kpi,.ogr-sira-kpi{font-size:12.5px;color:var(--soluk)}.ogr-sinir-kpi b,.ogr-sira-kpi b{font-size:14px;color:var(--murekkep);font-variant-numeric:tabular-nums}
-.ogr-sira-kpi b.ogr-y{color:var(--iyi)}.ogr-sira-kpi b.ogr-k{color:var(--kritik)}.ogr-sira-kpi b.ogr-sabit{color:var(--soluk)}
-.ogr-l-cubuk{width:12px;height:10px;border-radius:2px;background:linear-gradient(90deg,var(--iyi) 0 50%,var(--kritik) 50%)!important}
-.ogr-alt-baslik{margin:4px 0 0;font-size:14px;color:var(--soluk);font-weight:600}
+.ogr-l-tr{background:repeating-linear-gradient(90deg,var(--soluk) 0 5px,transparent 5px 9px)}
+.ogr-l-ust,.ogr-l-alt{width:12px;height:10px;border-radius:2px;opacity:.8}.ogr-l-ust{background:var(--iyi)}.ogr-l-alt{background:var(--kritik)}
+/* The topics: a section of their own, under a hairline. */
+.ogr-konular{display:flex;flex-direction:column;gap:10px;min-width:0;padding-top:18px;border-top:1px solid var(--cizgi)}
+.ogr-alt-baslik{margin:0;font-size:15px;font-weight:700;line-height:1.35;color:var(--murekkep)}
+.ogr-iz-aciklama{margin:0;max-width:125ch;font-size:12.5px;line-height:1.55;color:var(--soluk)}
 .ogr-iz-kutu{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.ogr-iz{border-collapse:separate;border-spacing:3px;font-size:12px;font-variant-numeric:tabular-nums;min-width:100%}
-.ogr-iz-aciklama{margin:-8px 0 0;font-size:12px;line-height:1.5;color:var(--soluk)}
-.ogr-iz th,.ogr-iz td{padding:0}
-.ogr-iz-konu{text-align:left;font-weight:500;padding:4px 8px 4px 0!important;min-width:150px;max-width:280px;white-space:normal;line-height:1.3}
-thead .ogr-iz-konu{color:var(--soluk);font-size:11px;font-weight:600}
-.ogr-iz-sinav{min-width:92px;font-weight:600;color:var(--soluk);font-size:11px;text-align:center;vertical-align:bottom}
-.ogr-iz-sinav span{display:block;max-width:140px;margin:auto;white-space:normal;overflow-wrap:anywhere;line-height:1.35}.ogr-iz-sinav b{display:block;font-size:12px;margin-top:2px}
-.ogr-iz-h{height:30px;min-width:52px;text-align:center;border-radius:6px;color:var(--murekkep);font-weight:600;cursor:default}
+/* The name and the two summary columns keep their width; the exams share the rest equally. Below its own least width (--ogr-en)
+   the table scrolls inside its box; with few exams it stops at --ogr-ust instead of stretching the cells into bands. */
+.ogr-iz{table-layout:fixed;width:100%;min-width:var(--ogr-en,0);max-width:var(--ogr-ust,none);border-collapse:separate;border-spacing:3px;font-size:12px;font-variant-numeric:tabular-nums}
+.ogr-iz th,.ogr-iz td{padding:0;border:0;text-transform:none;letter-spacing:0}
+.ogr-iz thead th{vertical-align:bottom;padding-bottom:3px;font-size:11px;font-weight:600;line-height:1.3;color:var(--soluk)}
+.ogr-iz th small{display:block;font-size:10.5px;font-weight:400;color:var(--soluk)}
+.ogr-iz .ogr-iz-konu{width:210px;padding:4px 10px 4px 0;text-align:left;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
+.ogr-iz tbody .ogr-iz-konu,.ogr-iz tfoot .ogr-iz-konu{font-size:12.5px;font-weight:600;color:var(--murekkep)}
+.ogr-seri{display:block;width:max-content;max-width:100%;margin-top:3px;padding:0 7px;border:1px solid currentColor;border-radius:9px;font-size:10.5px;font-weight:700;line-height:1.6}
+.ogr-seri-geride{color:var(--kritik)}.ogr-seri-onde{color:var(--iyi)}
+/* The topic's average gap: a bar from the Türkiye line in the middle, left when behind, right when ahead. */
+.ogr-iz .ogr-iz-ort{width:130px;padding-right:10px;text-align:left}
+.ogr-ort{display:flex;align-items:center;gap:6px}
+.ogr-ort b{flex:none;width:30px;text-align:right;font-size:12.5px}
+.ogr-ort-yol{position:relative;flex:1;min-width:0;height:14px;background:linear-gradient(var(--soluk),var(--soluk)) center/1px 100% no-repeat}
+.ogr-ort-cubuk{position:absolute;top:2px;bottom:2px;border-radius:2px}
+.ogr-ort-alt{right:50%;background:var(--kritik)}.ogr-ort-ust{left:50%;background:var(--iyi)}
+.ogr-iz-sinav{text-align:center}
+.ogr-iz-sinav span{display:block;white-space:normal;overflow-wrap:anywhere}
+.ogr-iz-h,.ogr-iz-bos{height:30px;text-align:center;border-radius:6px;color:var(--murekkep);font-weight:700;cursor:default}
 .ogr-iz-soluk{color:var(--soluk);font-weight:500}
-.ogr-iz-bos{background:repeating-linear-gradient(135deg,transparent 0 4px,color-mix(in srgb,var(--cizgi) 60%,transparent) 4px 5px);border-radius:6px}
-.ogr-iz-seri{min-width:46px;text-align:left;padding-left:6px!important}
-.ogr-iz-degisim{min-width:58px;text-align:center;font-weight:700;font-size:12px;white-space:nowrap;padding:0 4px!important}th.ogr-iz-degisim{color:var(--soluk);font-size:11px;font-weight:600;vertical-align:bottom}
-.ogr-seri{font-size:10px;letter-spacing:-1px;white-space:nowrap}.ogr-seri-geride{color:var(--kritik)}.ogr-seri-onde{color:var(--iyi)}
-.ogr-olcek{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;font-size:12px;line-height:1.5;color:var(--soluk)}
-.ogr-iz-not{margin:-8px 0 0;font-size:12px;line-height:1.5;color:var(--soluk)}
-.ogr-etut{display:flex;flex-wrap:wrap;align-items:center;gap:10px 26px;padding-top:10px;border-top:1px solid var(--cizgi)}
-.ogr-etut-sayi{display:flex;align-items:baseline;gap:6px}.ogr-etut-sayi strong{font-size:20px;font-variant-numeric:tabular-nums}.ogr-etut-sayi span{font-size:12px;color:var(--soluk)}
-.ogr-etut-once{display:flex;align-items:baseline;gap:8px;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}.ogr-etut-once i{font-style:normal;color:var(--soluk)}.ogr-etut-once small{font-size:12px;font-weight:400;color:var(--soluk)}
-.ogr-yok{color:var(--soluk)}
-.ogr-etut-not{flex-basis:100%;margin:0}
-.ogr-formul{font-size:13px;line-height:1.55}.ogr-formul summary{cursor:pointer;font-weight:600}.ogr-formul p{margin:8px 0;max-width:110ch}
-.ogr-ham{margin-top:10px}
-@media (max-width:640px){.ogr-ust{grid-template-columns:1fr}.ogr-kpi strong{font-size:26px}}
-@media print{#ogrKok .et-arac,.ogr-formul:not([open]){display:none}.ogr-ogretmen{break-before:page;border-top:0}.ogr-ogretmen:first-of-type{break-before:auto}.ogr-blok{break-inside:avoid}
-  /* The subjects' colours: the screen theme sets them for the whole page, print has only these (light) ones. */
-  #ogrKok{--e-c1:#2a78d6;--e-c2:#eb6834;--e-c3:#1baf7a;--e-c4:#eda100;--e-c5:#e87ba4;--e-c6:#008300;--e-c7:#6250d6;--e-c8:#e34948;--e-c9:#5d7482;--e-c10:#9c8a6a;--e-c11:#7d5a3c;--e-c12:#7a8734}
+.ogr-iz-bos{color:var(--soluk);font-weight:400}
+.ogr-iz .ogr-iz-degisim{width:66px;padding:0 4px;text-align:center;font-size:12px;font-weight:700;white-space:nowrap}
+.ogr-iz thead .ogr-iz-degisim{font-size:11px;font-weight:600}
+.ogr-iz-ara td{height:1px;background:var(--cizgi)}
+.ogr-olcek{display:flex;flex-wrap:wrap;align-items:center;gap:6px 20px;font-size:12px;line-height:1.5;color:var(--soluk)}
+.ogr-olcek b{color:var(--murekkep)}
+.ogr-olcek-serit{display:inline-flex;align-items:center;gap:3px}
+.ogr-olcek-serit em{margin:0 5px;font-style:normal}
+.ogr-olcek-serit i{display:inline-flex;align-items:center;justify-content:center;width:26px;height:18px;border-radius:4px;font-style:normal;font-size:11px;font-weight:700;color:var(--murekkep)}
+.ogr-olcek-serit i:first-of-type,.ogr-olcek-serit i:last-of-type{color:#fff}
+/* The appendix: formulas and raw numbers, for whoever wants to check a figure. */
+.ogr-formul{padding-top:14px;border-top:1px solid var(--cizgi);font-size:13px;line-height:1.55}
+.ogr-formul summary{cursor:pointer;font-weight:600;color:var(--soluk)}.ogr-formul p{margin:8px 0;max-width:110ch}
+.ogr-ham{margin-top:10px}.ogr-ham th{text-transform:none;letter-spacing:0}
+@media screen{.ogr-iz .ogr-iz-konu{position:sticky;left:0;z-index:1;background:var(--kagit)}}
+@media (max-width:640px){.ogr-kutu{flex-basis:132px;padding:10px 12px}.ogr-kutu strong{font-size:22px}.ogr-kutu strong.ogr-kutu-orta{font-size:18px}
+  .ogr-iz .ogr-iz-konu{width:128px}.ogr-iz .ogr-iz-ort{width:100px}}
+/* Paper (A4 landscape): every teacher's sheets stand alone. A teacher starts a page under a letterhead with the reading notes;
+   every further block starts its own page; the figures and the topic table are never cut across pages. */
+@media print{
+  /* Paper has its own palette and type: the screen theme (a dark one too) and the screen's ders colours do not reach it. */
+  #ogrKok{--murekkep:#17292c;--soluk:#566a6d;--cizgi:#d2dadb;--kagit:#fff;--iyi:#1c7a58;--kritik:#b3402f;--marka-koyu:#17292c;
+    --e-panel:#fff;--e-line:#d2dadb;--e-grid:#e3e8e8;--e-fg:#17292c;--e-fg2:#566a6d;--e-muted:#566a6d;
+    --e-c1:#2a78d6;--e-c2:#eb6834;--e-c3:#1baf7a;--e-c4:#eda100;--e-c5:#e87ba4;--e-c6:#008300;--e-c7:#6250d6;--e-c8:#e34948;--e-c9:#5d7482;--e-c10:#9c8a6a;--e-c11:#7d5a3c;--e-c12:#7a8734;
+    display:block;color:var(--murekkep);font-family:Arial,"Helvetica Neue",Helvetica,"Segoe UI",system-ui,sans-serif;font-size:11.5px;line-height:1.45}
   /* Colours and fills print even with "background graphics" off. */
   #ogrKok,#ogrKok *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  /* The chart takes the page's width (it is drawn again at that width); the headline sits above it. */
-  .ogr-ust{grid-template-columns:1fr;gap:6px}.ogr-kpi{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 14px}.ogr-kpi strong{font-size:24px}
-  .ogr-net{max-width:100%;height:auto}.ogr-iz-kutu{overflow:visible}}
+  #ogrKok :is(h2,h3,h4){font-family:inherit;letter-spacing:0;color:var(--murekkep)}
+  #ogrKok .mini{color:var(--soluk)}
+  #ogrKok>.et-bas,#ogrKok>.et-arac,#ogrKok>.ogr-rehber-ekran,#ogrKok .ogr-ekran,.ogr-formul:not([open]){display:none}
+  #ogrKok .ogr-baski{display:revert}
+  .ogr-ogretmen{display:block;padding-top:0;border-top:0;break-before:page}
+  #ogrKok>.ogr-ogretmen:first-of-type{padding-top:0;break-before:auto}
+  /* The letterhead: the report's name and day, the teacher, the lessons and classes; beside them the reading notes. */
+  .ogr-ogretmen-bas{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.2fr);gap:28px;align-items:start;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--murekkep)}
+  .ogr-ust-yazi{margin:0 0 6px;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--soluk)}
+  .ogr-ogretmen-bas .mini{font-size:11px}
+  .ogr-rehber{font-size:9.5px;line-height:1.4;color:var(--soluk)}
+  .ogr-rehber-ad{display:block;margin-bottom:3px;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+  .ogr-rehber .ogr-rehber-ic{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:0}
+  .et-panel.ogr-blok{display:block;padding:0;border:0;border-radius:0;background:none;box-shadow:none;break-before:page}
+  .ogr-ogretmen>section.ogr-blok:first-of-type{break-before:auto}
+  .ogr-blok>*+*{margin-top:12px}
+  .ogr-genel,.ogr-konular,.ogr-iz tr{break-inside:avoid}
+  .ogr-blok-bas{gap:2px 20px;padding-bottom:7px}
+  .ogr-blok h3{font-size:16px}
+  .ogr-sayfa-adi{font-size:10.5px;font-weight:600;color:var(--soluk)}
+  .ogr-alt-baslik .ogr-sayfa-adi{float:right;font-weight:400}
+  .ogr-kapsam{flex-basis:100%;font-size:11px}
+  .ogr-genel{gap:9px}
+  .ogr-ozet{font-size:14px}
+  .ogr-son{margin:0;font-size:10.5px}
+  .ogr-kpi{border-radius:8px}
+  .ogr-kutu{flex-basis:120px;gap:2px;padding:7px 12px}
+  .ogr-kutu strong{font-size:21px}.ogr-kutu strong.ogr-kutu-orta{font-size:16px}
+  .ogr-kutu-ad,.ogr-kutu-not{font-size:10px}
+  .ogr-degisim{font-size:10.5px}.ogr-degisim b{font-size:12px}
+  /* The chart takes the page's width (it is drawn again at that width). */
+  .ogr-grafik{min-height:0}.ogr-net{max-width:100%;height:auto}
+  .ogr-konular{gap:7px;padding-top:11px}
+  .ogr-alt-baslik{font-size:13px}
+  .ogr-iz-aciklama{max-width:none;font-size:10.5px;line-height:1.45}
+  /* The table fits the page whatever the number of exams. */
+  .ogr-iz-kutu{overflow:visible}
+  .ogr-iz{min-width:0;border-spacing:2px;font-size:10.5px}
+  .ogr-iz thead th{font-size:9px}.ogr-iz th small{font-size:8.5px}
+  .ogr-iz .ogr-iz-konu{width:21%;padding:2px 8px 2px 0}
+  .ogr-iz tbody .ogr-iz-konu,.ogr-iz tfoot .ogr-iz-konu{font-size:10.5px}
+  .ogr-seri{margin-top:1px;padding:0 5px;font-size:8.5px;line-height:1.5}
+  .ogr-iz .ogr-iz-ort{width:150px}.ogr-ort b{font-size:10.5px}.ogr-ort-yol{height:11px}
+  .ogr-iz thead .ogr-iz-sinav{font-size:8.5px}
+  .ogr-iz-h,.ogr-iz-bos{height:21px;border-radius:3px}
+  .ogr-iz .ogr-iz-degisim{width:58px;font-size:10.5px}.ogr-iz thead .ogr-iz-degisim{font-size:9px}
+  .ogr-iz tfoot{display:table-row-group}
+  /* Many exams: the names stand upright (a long one in two columns of text), so every column keeps its number readable. */
+  .ogr-iz-cok .ogr-iz-sinav span{margin:0 auto;max-height:104px;line-height:1.15;writing-mode:vertical-rl;transform:rotate(180deg)}
+  .ogr-olcek{gap:3px 16px;font-size:10px}.ogr-olcek-serit i{width:22px;height:14px;border-radius:3px;font-size:9.5px}
+  .ogr-formul{padding-top:10px;font-size:10.5px}.ogr-formul summary{list-style:none}.ogr-formul p{max-width:none}
+  .ogr-formul .et-tablo-kutu{max-height:none;min-height:0;overflow:visible}
+  .ogr-ham{font-size:10px}.ogr-ham th{position:static;padding:4px 8px;font-size:9.5px}.ogr-ham td{padding:3px 8px}
+}
