@@ -26,11 +26,27 @@ The student's home page (`gorunumAnaSayfa`, after login and on the brand) starts
 
 The plan is a suggestion, not the only way to work. **Hafızam** (Planım ▾ → Hafızam, `gorunumHafiza`; a card of the same rows on the home page under Bugün, `hafizaAnaKarti`) shows what the scheduler knows about the student's memory, so she can decide for herself what to study:
 
-- Every topic that has a real result is one row: a bar from 0 to 100 with the **estimated recall now** and a mark at the **target line** (`hedefTutma`, 90 % unless the teacher or "süreme göre ayarla" changed it). Under it: when it was last studied and when it met / will meet the line ("çizginin altına 12 gün önce indi", "çizgiye 3 gün var").
+- **Every taught topic is a row**, not only the measured ones: the topics whose lesson day (`ogrenciIslenisTarihi`: the class's müfredat and timetable, `subeIslenis`, or the student's own dates) is today or earlier, plus every topic with a result or an own state. A taught topic never measured starts on its lesson day with the first İyi's stability (`ilkS(3, w)`): "derste işlendi 10 gün önce · henüz sonucun yok".
+- Each topic is one row: a bar from 0 to 100 with the **estimated recall now** and a mark at the **target line** (`hedefTutma`, 90 % unless the teacher or "süreme göre ayarla" changed it). Under it: when it was last studied and when it met / will meet the line ("çizginin altına 12 gün önce indi", "çizgiye 3 gün var").
 - Recall is FSRS-6's forgetting curve, **R(t) = (1 + FACTOR·t/S)^DECAY** with FACTOR = 0,9^(1/DECAY) − 1 (so R(S) = 0,9), t the days since the last review and S the card's stability (`hafizaDurumu`). The card is the topic's state **as of today**: real results up to today and the "İyi" assumptions of earlier days only — the same rule as the slider's preview. (The plan's stored card already counts this week's not-yet-done tests, so it is not used here.) A row whose last review was only assumed says so: "sonuç girilmedi, İyi sayıldı".
 - Topics under the line come first, the most forgotten on top ("Çizginin altındakiler"), then the rest with the nearest to the line first. The home card shows up to six topics under the line.
 - **Çalıştım** opens the row: the plan's own result slider for today. If the topic is on today's plan it is that row's slider; otherwise the result is written to today as a result outside the plan (`planSonucKaydet` with `planDisi`), through the same validation, card and sync path as every result. The topic then stands at 100 % and its next review is scheduled from this result. An unlinked notebook can take it back with Geri al; a notebook linked to a teacher can change it with the slider.
-- **Listede olmayan bir konu çalıştıysan** lists the taught topics (and the topics of the student's own plan) that have no result yet; the first report is that topic's first measurement.
+- **Listede olmayan bir konu çalıştıysan** lists the topics of the student's own plan that are not taught yet; the first report is that topic's first measurement.
+- **Red: no result for a long time.** A topic with no entered result for `HAFIZA_UZUN` = 21 days or more (counted from the last real result, the student's own state, or else the lesson day; an "İyi" assumed for an unanswered plan row is not a result) has a red edge and says "21 gündür sonuç girmedin" ("… hiç sonucun yok" when never measured). The tile "Uzun süredir sonuçsuz" counts them.
+- **Ders filter:** one button per lesson with "under the line / all" counts; the list then shows that lesson's topics only.
+
+### The student's own forgetting
+
+The algorithm's guess can be corrected by the student's own experience; both settings sync to the teacher (topic numbers mapped both ways) and are checked by the notebook validation.
+
+- **Derslerine göre unutma hızın** (`o.unutmaDers = {ders: k}`, `unutmaDersAyarla`): Çok çabuk (0,5) · Çabuk (0,75) · Normal (1) · Geç (1,5) · Çok geç unuturum (2). It is a time scale: in `kartHesapla` the days between reviews are divided by k and the next interval multiplied by k (capped by the maximum interval); Hafızam's recall is R(t / k) and the line is met k times later; the plan's retrievability (`x.R`) uses the same scale. So the line falls slower or faster for every topic of the lesson and the plan's review days move with it. Parameters learnt from results stay as they are.
+- **Düzenle** on a row (`o.hafizaElle = {ki: {g, r, s, ts}}`, `hafizaElleKaydet` / `hafizaElleSil`): two sliders, *Şu an aklımda %r* and *Unutma hızı · %90'a S günde* (1–365 days), with a live preview ("çizginin altına 12 gün sonra iner"). It is the topic's state on day g: the card is built as if fully learnt t whole days before g, with t = S/FACTOR·(r^(1/DECAY) − 1) rounded, and the stability adjusted so that R(t) is exactly r (`hafizaElleKarti`). It replaces the results and assumptions before it; results after it continue from it. The row says "kendi ayarın (bugün)" until a real result follows; **Algoritmaya bırak** removes it.
+
+### The basket (Sepetin)
+
+At the end of Hafızam (`hafizaSepeti`): this week's or next week's days, each showing the studies the student added (with × to take one out) and how many plan studies it has, and the mixed studies **Karışık Paragraf · Karışık Problem · Karışık Geometri**.
+
+- **Drag** a topic card or a mixed study onto a day (HTML5 drag and drop; the basket docks at the bottom of the window while dragging), or **tap** "Sepete" / a chip and then a day (phones; the basket docks while something is picked). A topic becomes the student's own test that day, a mixed study a 20-question study that day (`ogrenciElleEkle`, the same path as "Planıma çalışma ekle"); **Her gün** makes a mixed study a daily target (`gunlukEkAyarla`). A topic already on that day's plan is not added twice; days that have passed take nothing.
 
 ### A week fills with what the student reports
 

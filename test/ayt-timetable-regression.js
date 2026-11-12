@@ -125,6 +125,21 @@ check('kendi-programim-roundtrips-to-the-teacher-and-its-end-reaches-her-too',()
  assert.deepEqual(plain('D.ogr[0].serbest'),[]);assert.equal(run('serbestAcikMi(0)'),false);
  run('D.ogr[0].serbest=[[5,3]]');assert.throws(()=>run('yedekDogrula(JSON.parse(JSON.stringify(D)))'),/kendi programım/);run('delete D.ogr[0].serbest');
 });
+check('hafizam-own-settings-roundtrip-to-the-teacher-with-topic-numbers-mapped',()=>{
+ // The student sets a lesson's forgetting speed and her own state of one topic: the teacher's copy gets both and builds the same card.
+ const {t}=seed();
+ run(`teacher=D;D=paketiYukle(ogrenciPaketi(0));__ki=Number(Object.keys(D.ogrIslenis&&D.ogrIslenis[0]||{})[0]??${t});unutmaDersAyarla(0,dersAnahtari(__ki),2);hafizaElleKaydet(0,__ki,0.7,30);__ogrKart=JSON.stringify(D.kart['0:'+__ki]);__ogrDers=dersAnahtari(__ki);__ad=konuAl(__ki)[3];work=ogrenciCalismaPaketi();work.ts=Date.now()+5000;D=teacher;ogrenciCalismasiniUygula(work,0)`);
+ assert.deepEqual(plain('D.ogr[0].unutmaDers'),{[run('__ogrDers')]:2});
+ const kiT=plain('Number(Object.keys(D.ogr[0].hafizaElle)[0])');assert.equal(run(`konuAl(${kiT})[3]`),run('__ad'),'the same topic on the teacher’s numbering');
+ assert.equal(plain(`D.ogr[0].hafizaElle[${kiT}].r`),0.7);assert.equal(plain(`D.ogr[0].hafizaElle[${kiT}].s`),30);
+ const tk=plain(`D.kart['0:'+${kiT}]`),sk=JSON.parse(run('__ogrKart'));assert.deepEqual([tk.s,tk.son,tk.due,tk.elle],[sk.s,sk.son,sk.due,sk.elle],'the teacher computes the student’s card');
+ // Taken back: both disappear from the teacher's copy.
+ run(`D=paketiYukle(ogrenciPaketi(0));unutmaDersAyarla(0,__ogrDers,1);hafizaElleSil(0,Number(Object.keys(D.ogr[0].hafizaElle)[0]));work=ogrenciCalismaPaketi();work.ts=Date.now()+6000;D=teacher;ogrenciCalismasiniUygula(work,0)`);
+ assert.equal(run('D.ogr[0].unutmaDers'),undefined);assert.equal(run('D.ogr[0].hafizaElle'),undefined);
+ // Invalid values are refused by the notebook check.
+ run("D.ogr[0].unutmaDers={'Fizik':3}");assert.throws(()=>run('yedekDogrula(JSON.parse(JSON.stringify(D)))'),/unutma hızı/);run('delete D.ogr[0].unutmaDers');
+ run("D.ogr[0].hafizaElle={0:{g:1,r:2,s:10,ts:1}}");assert.throws(()=>run('yedekDogrula(JSON.parse(JSON.stringify(D)))'),/hafıza ayarı/);run('delete D.ogr[0].hafizaElle');
+});
 check('invalid-values-and-editing-another-student-are-rejected',()=>{
  assert.equal(run("aytOnceliginiUygula(0,'yes')"),false);
  run("D.ogr[0].aytOncelik='yes'");assert.throws(()=>run('yedekDogrula(D)'),/AYT/);

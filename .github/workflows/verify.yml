@@ -178,6 +178,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/etutetkisi-browser.cjs
       - name: Öğrenci kartı on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/analiz-browser.cjs
+      - name: Hafızam on desktop and phone (taught topics, red, drag and drop, Düzenle, lesson speed)
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/hafizam-browser.cjs
       - name: Öğretmen raporu on desktop and phone, and its print layout
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/ogretmenrapor-browser.cjs
       - name: Konu Takibi upload and drilldown on desktop and phone
