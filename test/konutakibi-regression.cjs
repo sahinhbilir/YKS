@@ -427,6 +427,40 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   rej(F.maddePages({courses:[{course:'TÜRKÇE-A',rows:[[1,1,1]]}]}),/Ders adı tanınmadı/);
   const m=F.maddePages({courses:MC,ad:'SENTETİK-1203'});m[1]=m[1].map(i=>i.s==='SENTETİK-1203 / TYT'?{...i,s:'SENTETİK-1204 / TYT'}:i);rej(m,/birden çok sınav/);
  });
+ await test('Madde Analizi: one file with the exam’s TYT and AYT (each its own student count); the Başarı denominator per ders; a test nobody answered is left out',()=>{
+  // 27-YKS-1203 style: TYT for 27 students, AYT for 26, in one file.
+  const birlesik=[...F.maddePages({oturum:'TYT',N:27,courses:[{course:'TÜRKÇE-T',rows:[[20,5,2],[10,10,7]]}]}),...F.maddePages({oturum:'AYT',N:26,courses:[{course:'MATEMATİK-A',rows:[[13,10,3],[26,0,0]]}]})];
+  const r=copy(K.maddeCoz(birlesik));assert.equal(r.oturum,'TYT + AYT');assert.deepEqual(Object.keys(r.dersler),['TÜRKÇE-T','MATEMATİK-A']);
+  // p is kept to four decimals.
+  assert.equal(r.dersler['TÜRKÇE-T'][0][0],Math.round(20/27*1e4)/1e4);assert.equal(r.dersler['MATEMATİK-A'][0][0],.5);assert.equal(r.ogrenci,27);
+  // Two exams in one file are still refused; one session's counts must agree.
+  const iki=[...F.maddePages({ad:'SENTETİK-1203',courses:[{course:'TÜRKÇE-T',rows:[[1,1,1]]}]}),...F.maddePages({ad:'SENTETİK-1204',oturum:'AYT',courses:[{course:'MATEMATİK-A',rows:[[1,1,1]]}]})];
+  assert.throws(()=>K.maddeCoz(iki),/birden çok sınav/);
+  // TÖDER style: 29 on the list, 15 sat the exam. Türkçe: Başarı = D / 15 (all 15 answered the test); Coğrafya: 14 answered the
+  // test but its rows count the 15 who sat the exam and Başarı = D / 15; Seçmeli Felsefe: nobody answered, left out.
+  const t=copy(K.maddeCoz(F.maddePages({N:29,courses:[{course:'TÜRKÇE-T',taban:15,cevap:15,rows:[[15,0,0],[12,3,0]]},{course:'COĞRAFYA-T',taban:15,cevap:14,rows:[[2,6,7],[10,2,3]]},{course:'S.FELSEFE-T',taban:29,cevap:0,rows:[[0,0,29],[0,0,29]]}]})));
+  assert.deepEqual(Object.keys(t.dersler),['TÜRKÇE-T','COĞRAFYA-T']);assert.deepEqual(t.atlanan,['S.FELSEFE-T']);assert.equal(t.ogrenci,15);
+  assert.equal(t.dersler['TÜRKÇE-T'][0][0],1);assert.equal(t.dersler['COĞRAFYA-T'][0][0],Math.round(2/15*1e4)/1e4);
+  // A percentage no denominator explains is still refused.
+  assert.throws(()=>K.maddeCoz(F.maddePages({N:29,courses:[{course:'TÜRKÇE-T',cevap:15,rows:[[12,3,0]],pct:{1:'61.0%'}}]})),/Başarı yüzdesi doğru sayısıyla uyuşmuyor/);
+  // Nothing answered at all: a clear refusal.
+  assert.throws(()=>K.maddeCoz(F.maddePages({courses:[{course:'S.FELSEFE-T',cevap:0,rows:[[0,0,27]]}]})),/cevaplayan öğrenci yok/);
+ });
+ await test('an exam’s TYT and AYT files sit side by side (a later file replaces only its own session); each ders’s own student count in the Türkiye comparison',()=>{
+  const mpart=(oturum,N,dersler)=>({tur:'madde',ad:'SENTETİK-1203',oturum,ogrenci:N,dersler});
+  const tyt=mpart('TYT',27,{'TÜRKÇE-T':[[.5,13,10,4,'Orta'],[.4,11,10,6,'Orta']]}),ayt=mpart('AYT',26,{'MATEMATİK-A':[[.5,13,10,3,'Orta'],[.25,6,10,10,'Zor']]});
+  let v=K.merge(K.blank(),[],[tyt]);v=K.merge(v,[],[ayt]);let e=Object.values(v.zorluk)[0];
+  assert.deepEqual(Object.keys(e.madde),['TÜRKÇE-T','MATEMATİK-A'],'the AYT file does not wipe the TYT one');assert.equal(e.oturum,'TYT + AYT');assert.equal(e.ogrenci,27);
+  v=K.merge(v,[],[mpart('TYT',27,{'TARİH-T':[[.5,13,10,4,'Orta']]})]);e=Object.values(v.zorluk)[0];
+  assert.deepEqual(Object.keys(e.madde),['MATEMATİK-A','TARİH-T'],'the TYT file again replaces the TYT part only');
+  // Sınav özeti the same way.
+  v=K.merge(v,[],[zpart('ozet','SENTETİK-1203',{'TÜRKÇE-T':[['T.1',.5],['T.1',.5]]}),{tur:'ozet',ad:'SENTETİK-1203',oturum:'AYT',dersler:{'MATEMATİK-A':[['M.1'],['M.2']]}}]);
+  assert.deepEqual(Object.keys(Object.values(v.zorluk)[0].ozet).sort(),['MATEMATİK-A','TÜRKÇE-T']);
+  // The Türkiye comparison counts each ders with its own students: AYT 26, not the exam's largest 27.
+  v=K.merge(K.blank(),[],[tyt,ayt,{tur:'turkiye',ad:'SENTETİK-1203',oturum:'TYT + AYT',dersler:{'TÜRKÇE-T':[.5,.5],'MATEMATİK-A':[.5,.5]}}]);
+  const n=o=>[...new Set(K.turkiyeKiyas(K.dogrula(v),{session:o}).dersler.flatMap(r=>r.sorular.map(q=>q.n)))];
+  assert.deepEqual(n('AYT'),[26]);assert.deepEqual(n('TYT'),[27]);
+ });
  await test('upload routes by content, saves once, names what was added and reports a mismatch',async()=>{
   run('denemePdfSayfalari=async f=>({pages:f.pages})');
   const pdf=(name,pages)=>({name,pages,size:10}),xl=(name,buf)=>({name,size:buf.length,arrayBuffer:async()=>buf.buffer.slice(buf.byteOffset,buf.byteOffset+buf.length)});
@@ -515,6 +549,17 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   v.maps['FİZİK-T|F.1']='Basınç';v.maps['FİZİK-T|F.2']='Kuvvet';return K.dogrula(v);
  }
  const seHand=ps=>{const v=ps.map(p=>{const q=(p*NZ+1)/(NZ+2);return q*(1-q)}),sv=v.reduce((a,x)=>a+x,0),ss=v.reduce((a,x)=>a+Math.sqrt(x),0);return Math.sqrt((sv+K.R_MADDE*(ss*ss-sv))/(ps.length**2)/NZ)};
+ await test('Performans analizi: an exam with a code is named by it; one without a code (27-TYT_SIFIR_POZİTİF) by its full name, and meets its Sınav özeti under that name',async()=>{
+  const sayfa=kod=>Y.itemlere(Y.performansSpec({kod})).map(p=>p.items);
+  put('__pg',sayfa('27-YKS-1203'));const kodlu=run('KONU_TAKIBI.turkiyeCoz(__pg)');assert.equal(kodlu.ad,'27-YKS-1203');assert.equal(kodlu.oturum,'TYT');
+  put('__pg',sayfa('SENTETİK-TYT_SIFIR_DENEME'));const adli=copy(run('KONU_TAKIBI.turkiyeCoz(__pg)'));
+  assert.equal(adli.ad,'SENTETİK-TYT_SIFIR_DENEME');assert.deepEqual(adli.dersler['TÜRKÇE-T'],[.9,.7,.5,.2]);assert.deepEqual(Object.keys(adli.dersler),['TÜRKÇE-T','TARİH-T','DİN KÜLTÜRÜ-T','S.FELSEFE-T']);
+  // The Sınav özeti of the same exam ("SENTETİK-TYT_SIFIR_DENEME - TYT" → its name) and the Performans analizi make one exam.
+  const v=K.merge(K.blank(),[],[zpart('ozet','SENTETİK-TYT_SIFIR_DENEME',{'TÜRKÇE-T':[['T.1',.5],['T.1',.5],['T.2',.5],['T.2',.5]]}),adli]);
+  assert.equal(Object.keys(v.zorluk).length,1);const e=Object.values(v.zorluk)[0];assert(e.ozet&&e.turkiye,'özet and Türkiye under one exam');
+  // A page with neither a code nor a "… SINAVI ANALİZLERİ" title is still refused.
+  put('__pg',sayfa('27-YKS-1203').map(p=>p.filter(i=>!/SINAVI ANALİZLERİ/.test(i.s))));assert.throws(()=>run('KONU_TAKIBI.turkiyeCoz(__pg)'),/eklenmedi/);
+ });
  await test('Türkiye part: stored beside özet and madde, validated, replaced and removed on its own',async()=>{
   const v=tdata(),e=v.zorluk[K.ek('27-YKS-1203')];assert.deepEqual(copy(e.turkiye),TP);assert.equal(e.ad,'27-YKS-1203');assert.equal(e.oturum,'TYT');
   const bad=fn=>{const x=copy(v);fn(Object.values(x.zorluk)[0]);assert.throws(()=>K.dogrula(x),/geçersiz/)};

@@ -68,10 +68,17 @@ class and grade views sum over pupils and also show "öğrenci başına". Sıral
 
 Two files per exam supply p, both uploaded through **Dosya Yükle**: the **Sınav özeti**
 (.xlsx, sheet "Sınav Özeti": question order within each Ders with its kazanım codes) and
-the **Madde Analizi** (.pdf, rotated pages; p = Doğru / Öğrenci Sayısı, which must agree
-with the printed Başarı within 0,1). Either may come first; the difficulty is used only
+the **Madde Analizi** (.pdf, rotated pages; p = Doğru / n, which must agree with the printed Başarı within 0,1). Publishers
+print Başarı over different bases, so n is, per ders, the first of these the percentages fit: the list's **Öğrenci Sayısı**,
+the ders's **Testi Cevaplamış Öğrenci Sayısı**, or the students its rows count (doğru + yanlış + boş: those who sat the exam,
+as in a TÖDER file where 15 of the 29 listed pupils sat it). A test nobody answered (Testi Cevaplamış 0, every row blank:
+an optional Seçmeli Felsefe) is left out, and the upload message says so; its 0 % would otherwise read as far behind
+Türkiye. One file may carry the exam's TYT and its AYT ("27-YKS-1203 / TYT", "… / AYT"), each with its own student count;
+two different exams in one file are refused. Either file may come first; the difficulty is used only
 when both exist and every course has the same question count ("Zorluk verisi uyuşmuyor:
-<ders>" otherwise). Uploading an exam's file again replaces that part. Kaynaklar shows
+<ders>" otherwise). Uploading an exam's file again replaces that part for the sessions the file carries: an exam's TYT
+and AYT files (Sınav özeti, Madde Analizi or Performans analizi) sit side by side. The Türkiye comparison counts each ders
+with its own students (the most doğru + yanlış + boş of its rows), so an AYT taken by 26 is not counted as 27. Kaynaklar shows
 "Zorluk: özet ✓ · madde analizi ✓" per exam with a button to remove it (editing teacher only).
 The xlsx is read in the browser by a minimal ZIP reader, `DecompressionStream` and `DOMParser`; no library.
 
@@ -91,7 +98,9 @@ the share of all the publisher's pupils who answered each question of the A book
 Analizi** and, for konu and kazanım, the **Sınav özeti**. All three go through **Dosya Yükle**; the Performans analizi
 is recognised by its title and read by the Yanlışlar defteri parser. Only the exam code and one p per question are
 kept (`zorluk[exam].turkiye = {course: [p, …]}`): no counts, no school, no pupil. The file names its exam by the code
-only, so it joins the entry whose name carries the same code ("27 YKS 1203 TYT" and "27-YKS-1203" are one exam).
+only, so it joins the entry whose name carries the same code ("27 YKS 1203 TYT" and "27-YKS-1203" are one exam). An
+exam without such a code ("27-TYT_SIFIR_POZİTİF SINAVI ANALİZLERİ") is named by its full name, the name its karneler and
+Sınav özeti give it, so the three files still meet under one exam.
 Kaynaklar shows "Türkiye (performans analizi) ✓" with its own **Türkiye verisini kaldır**.
 
 What the page shows, top to bottom:

@@ -266,8 +266,11 @@ const MADDE_ZORUNLU=['No','Doğru','Yanlış','Boş','Başarı','Zorluk'];
 function maddeCoz(pages){
   const fail=msg=>{throw new Error(msg+' Dosya eklenmedi.')};
   if(!Array.isArray(pages)||!pages.length||pages.length>100)throw new Error('PDF sayfaları okunamadı.');
-  const out={tur:'madde',ad:null,oturum:null,ogrenci:null,dersler:{}};let cur=null;
-  const TITLE=/^(.+?)\s+Madde Analizi$/u,EXAM=/^(.+?)\s*\/\s*(TYT|AYT)$/u,INFO=/^Öğrenci Sayısı\s*:\s*(\d+)$/u;
+  // One exam; a file may carry its TYT and its AYT (each session has its own student count). A ders's Başarı is D / the
+  // students of the list (Öğrenci Sayısı), D / those who answered that test (Testi Cevaplamış Öğrenci Sayısı) or D / the
+  // students its rows count (doğru + yanlış + boş: those who sat the exam): the one the percentages fit is used. A test nobody answered (an optional Seçmeli Felsefe) is left out: its 0 % is no measurement.
+  const out={tur:'madde',ad:null,oturum:null,ogrenci:null,dersler:{},atlanan:[]};let cur=null;const oturumN={};
+  const TITLE=/^(.+?)\s+Madde Analizi$/u,EXAM=/^(.+?)\s*\/\s*(TYT|AYT)$/u,INFO=/^Öğrenci Sayısı\s*:\s*(\d+)$/u,CEVAP=/^Testi Cevaplamış Öğrenci Sayısı\s*:\s*(\d+)$/u;
   pages.forEach((raw,pi)=>{
     const sayfa='Sayfa '+(pi+1)+': ';
     const items=(Array.isArray(raw)?raw:[]).filter(i=>i&&typeof i.s==='string'&&Number.isFinite(i.x)&&Number.isFinite(i.y)).map(i=>({...i,s:clean(i.s),w:Number.isFinite(i.w)?i.w:0})).filter(i=>i.s);
@@ -289,20 +292,21 @@ function maddeCoz(pages){
     if(!heads.length)fail(sayfa+'Madde Analizi tablosu bulunamadı.');
     const pos=i=>rot?i.x:-i.y,col=i=>rot?i.y+i.w/2:i.x+i.w/2;
     heads.sort((a,b)=>a.pos-b.pos);
-    const titles=items.filter(i=>TITLE.test(i.s)),exams=items.filter(i=>EXAM.test(i.s)),infos=items.filter(i=>INFO.test(i.s));
+    const titles=items.filter(i=>TITLE.test(i.s)),exams=items.filter(i=>EXAM.test(i.s)),infos=items.filter(i=>INFO.test(i.s)),cevaplar=items.filter(i=>CEVAP.test(i.s));
     heads.forEach((hd,k)=>{
       const before=k?heads[k-1].pos:-Infinity,near=list=>list.filter(i=>pos(i)<hd.pos&&pos(i)>before).sort((a,b)=>pos(b)-pos(a))[0];
       const title=near(titles);
       if(title){
         if(cur)fail('Önceki dersin sonu (Ortalama satırı) eksik: '+cur.course+'.');
-        const ex=near(exams),info=near(infos);if(!ex||!info)fail(sayfa+'Sınav adı veya öğrenci sayısı bulunamadı.');
-        const em=EXAM.exec(ex.s),course=TITLE.exec(title.s)[1],n=+INFO.exec(info.s)[1];
+        const ex=near(exams),info=near(infos),cv=near(cevaplar);if(!ex||!info)fail(sayfa+'Sınav adı veya öğrenci sayısı bulunamadı.');
+        const em=EXAM.exec(ex.s),course=TITLE.exec(title.s)[1],n=+INFO.exec(info.s)[1],cevap=cv?+CEVAP.exec(cv.s)[1]:null;
         if(!/-[TA]$/u.test(course)||course.length>80||course.endsWith(em[2]==='TYT'?'-A':'-T'))fail(sayfa+'Ders adı tanınmadı: '+course+'.');
-        if(out.ad!==null&&(ek(out.ad)!==ek(em[1])||out.oturum!==em[2]))fail('Dosyada birden çok sınav var.');
-        if(out.ogrenci!==null&&out.ogrenci!==n)fail('Öğrenci sayısı derslerde farklı.');
+        if(out.ad!==null&&ek(out.ad)!==ek(em[1]))fail('Dosyada birden çok sınav var.');
+        if(oturumN[em[2]]!==undefined&&oturumN[em[2]]!==n)fail('Öğrenci sayısı derslerde farklı.');
         if(!(n>=1&&n<=10000))fail(sayfa+'Öğrenci sayısı okunamadı.');
-        if(out.dersler[course])fail('Aynı ders dosyada tekrarlanıyor: '+course+'.');
-        out.ad=clean(em[1]);out.oturum=em[2];out.ogrenci=n;cur={course,n,rows:[]};
+        if(cevap!==null&&cevap>n)fail(sayfa+course+': testi cevaplayan öğrenci sayısı öğrenci sayısını aşıyor.');
+        if(out.dersler[course]||out.atlanan.includes(course))fail('Aynı ders dosyada tekrarlanıyor: '+course+'.');
+        out.ad=clean(em[1]);oturumN[em[2]]=n;cur={course,n,cevap,rows:[]};
       }else if(!cur)fail(sayfa+'Ders başlığı bulunamadı.');
       // Rows of this header: after it and before the next subject's title/info or header. The side table (far right) maps to no column.
       const stops=[...titles,...exams,...infos].map(pos).filter(p=>p>hd.pos),end=Math.min(...stops,heads[k+1]?.pos??Infinity);
@@ -320,7 +324,7 @@ function maddeCoz(pages){
       for(const ln of lines){
         if(ln.avg){
           if(!cur||!cur.rows.length)fail(sayfa+'Ortalama satırı soru satırlarından önce geldi.');
-          out.dersler[cur.course]=cur.rows;cur=null;continue;
+          dersKapat(cur);cur=null;continue;
         }
         const cell=c=>ln.items.filter(x=>x.c===c).sort((a,b)=>a.col-b.col).map(x=>x.s).join(' ');
         if(!cell('No')){if(['Doğru','Yanlış','Boş'].some(c=>cell(c)))fail(sayfa+'Soru numarası okunamadı.');continue}
@@ -330,16 +334,28 @@ function maddeCoz(pages){
         if(D===null||Y===null||B===null)fail(sayfa+cur.course+' soru '+no+': doğru, yanlış veya boş sayısı okunamadı.');
         if(D+Y+B>cur.n)fail(cur.course+' soru '+no+': doğru + yanlış + boş öğrenci sayısını aşıyor.');
         const pm=/^%?\s*(\d+(?:[.,]\d+)?)\s*%?$/u.exec(cell('Başarı')),label=cell('Zorluk');
-        if(!pm||Math.abs(+pm[1].replace(',','.')-100*D/cur.n)>0.1001)fail(cur.course+' soru '+no+': Başarı yüzdesi doğru sayısıyla uyuşmuyor.');
+        if(!pm)fail(cur.course+' soru '+no+': Başarı yüzdesi okunamadı.');
         if(!label||label.length>24)fail(cur.course+' soru '+no+': zorluk etiketi okunamadı.');
         if(cur.rows.length>=200)fail('Bir derste en fazla 200 soru olabilir.');
-        cur.rows.push([Math.round(D/cur.n*10000)/10000,D,Y,B,label]);
+        cur.rows.push({no,D,Y,B,yuzde:+pm[1].replace(',','.'),label});
       }
     });
   });
   if(cur)fail('Ders sonu (Ortalama satırı) eksik: '+cur.course+'.');
-  if(!Object.keys(out.dersler).length)fail('Bu PDF’de Madde Analizi tablosu yok.');
+  if(!Object.keys(out.dersler).length)fail(out.atlanan.length?'Dosyadaki testleri cevaplayan öğrenci yok.':'Bu PDF’de Madde Analizi tablosu yok.');
+  const ot=['TYT','AYT'].filter(o=>Object.keys(out.dersler).some(c=>c.endsWith(o==='TYT'?'-T':'-A')));
+  out.oturum=ot.length>1?'TYT + AYT':ot[0];if(!out.atlanan.length)delete out.atlanan;
   return out;
+  // A ders's rows are kept with the denominator its percentages fit: the list's students, those who answered the test, or
+  // those its rows count.
+  function dersKapat(d){
+    if(d.cevap===0&&d.rows.every(r=>r.D===0&&r.Y===0)){out.atlanan.push(d.course);return}
+    const uyar=m=>d.rows.every(r=>r.D+r.Y+r.B<=m&&Math.abs(r.yuzde-100*r.D/m)<=0.1001);
+    const m=[d.n,d.cevap,Math.max(...d.rows.map(r=>r.D+r.Y+r.B))].find(x=>x>0&&uyar(x));
+    if(!m){const r=d.rows.find(r=>Math.abs(r.yuzde-100*r.D/d.n)>0.1001)||d.rows[0];fail(d.course+' soru '+r.no+': Başarı yüzdesi doğru sayısıyla uyuşmuyor.')}
+    out.dersler[d.course]=d.rows.map(r=>[Math.round(r.D/m*10000)/10000,r.D,r.Y,r.B,r.label]);
+    out.ogrenci=Math.max(out.ogrenci||0,m);
+  }
 }
 
 /* Dictionary-packed storage; replacements are per exam/student/subject/representation, not class. */
@@ -412,7 +428,12 @@ function mergeZorluk(n,parts){
     // The same exam's file again replaces that part (özet or madde analizi); the other part stays.
     // The Performans analizi names the exam by its code only; keep the name the other two files gave it.
     if(p.tur!=='turkiye'||(!e.ozet&&!e.madde))e.ad=p.ad;
-    e[p.tur]=p.dersler;if(p.tur==='madde')e.ogrenci=p.ogrenci;e.oturum=oturumOf(e);e.ts=Date.now();
+    // A file replaces the sessions it carries: an exam's TYT and AYT files (or one file with both) live side by side.
+    const ot=c=>c.endsWith('-A')?'AYT':'TYT',yeni=new Set(Object.keys(p.dersler).map(ot));
+    const kalan=Object.fromEntries(Object.entries(e[p.tur]||{}).filter(([c])=>!yeni.has(ot(c))));
+    e[p.tur]={...kalan,...p.dersler};
+    if(p.tur==='madde')e.ogrenci=Object.keys(kalan).length?Math.max(e.ogrenci||0,p.ogrenci):p.ogrenci;
+    e.oturum=oturumOf(e);e.ts=Date.now();
   }
 }
 function merge(v,reports,zparts=[]){
@@ -646,7 +667,9 @@ function turkiyeKiyas(v,sel={}){
       const m=md.get(key(c));if(!m)continue;
       if(m.q.length!==pt.length){uyusmayan.push(e.ad+' · '+courseLabel(m.c));continue}
       const o=oz.get(key(c)),codes=o&&o.length===pt.length?o:null;if(!codes)ozetYok=true;
-      pt.forEach((p,i)=>Q.push({k,ad:e.ad,duzey,ck:key(c),course:m.c,no:i+1,ps:m.q[i][0],n:e.ogrenci,pt:p,codes:codes?codes[i]:[],bek:0}));
+      // The ders's own student count: its rows' doğru + yanlış + boş (a TYT and an AYT, or tests answered by fewer students, differ).
+      const nd=Math.max(0,...m.q.map(q=>q[1]+q[2]+q[3]))||e.ogrenci;
+      pt.forEach((p,i)=>Q.push({k,ad:e.ad,duzey,ck:key(c),course:m.c,no:i+1,ps:m.q[i][0],n:nd,pt:p,codes:codes?codes[i]:[],bek:0}));
     }
   }
   const duzeyler=[...new Set(Q.map(q=>q.duzey).filter(Boolean))].sort((a,b)=>b-a),duzey=duzeyler.includes(sel.duzeyNo)?sel.duzeyNo:duzeyler.includes(12)?12:duzeyler[0]??null;
@@ -900,7 +923,11 @@ function uploadMessage(reports,errors=[],extra=[]){
 const perfMi=pages=>pages.some(p=>{if(!Array.isArray(p))return false;const t=key(p.map(i=>typeof i?.s==='string'?i.s:'').join(' '));return t.includes('SINAVIANALIZLERI')||t.includes('MADDEGUCLUKINDEKSI')});
 function turkiyeCoz(pages){
   if(typeof YANLISLAR!=='object'||typeof YANLISLAR.performansCoz!=='function')throw new Error('Performans analizi okunamadı.');
-  const perf=YANLISLAR.performansCoz(pages.map(items=>({items:Array.isArray(items)?items:[]}))),dersler={};
+  // An exam with a code ("27-YKS-1202 SINAVI ANALİZLERİ") is named by its code; one without ("27-TYT_SIFIR_POZİTİF SINAVI
+  // ANALİZLERİ") by its full name, the name its karneler and Sınav özeti give it, so the files still meet under one exam.
+  const sayfalar=pages.map(items=>({items:Array.isArray(items)?items:[]}));let perf;
+  try{perf=YANLISLAR.performansCoz(sayfalar)}catch(e){if(!/Sınav kodu/u.test(e.message))throw e;perf=YANLISLAR.performansCoz(sayfalar,{tamAd:true})}
+  const dersler={};
   for(const d of perf.dersler)dersler[d.ad]=d.maddeler.map(x=>Math.round(x.p*10000)/10000);
   const o=new Set(Object.keys(dersler).map(c=>c.endsWith('-T')?'TYT':'AYT'));
   return {tur:'turkiye',ad:perf.kod,oturum:o.size>1?'TYT + AYT':[...o][0],dersler};
@@ -915,7 +942,8 @@ async function dosyaCoz(file){
   if(perfMi(pages))return {z:turkiyeCoz(pages)};
   return pages.some(p=>Array.isArray(p)&&p.some(i=>typeof i?.s==='string'&&/Madde Analizi$/u.test(clean(i.s))))?{z:maddeCoz(pages)}:{rapor:pdfCoz(pages)};
 }
-const zorlukMesaj=p=>(p.tur==='madde'?'Madde Analizi':p.tur==='turkiye'?'Performans analizi (Türkiye geneli)':'Sınav özeti')+' kaydedildi · '+p.ad+' ('+p.oturum+') · '+Object.keys(p.dersler).length+' ders · '+Object.values(p.dersler).reduce((a,q)=>a+q.length,0)+' soru';
+const zorlukMesaj=p=>(p.tur==='madde'?'Madde Analizi':p.tur==='turkiye'?'Performans analizi (Türkiye geneli)':'Sınav özeti')+' kaydedildi · '+p.ad+' ('+p.oturum+') · '+Object.keys(p.dersler).length+' ders · '+Object.values(p.dersler).reduce((a,q)=>a+q.length,0)+' soru'+
+  (p.atlanan&&p.atlanan.length?' · testi cevaplayan olmadığı için alınmadı: '+p.atlanan.map(courseLabel).join(', '):'');
 async function pdfEkle(files){
   canWrite();if(files.length>10)throw new Error('Bir defada en fazla 10 dosya seçin.');
   const owner=D,previous=D.konutakibi,reports=[],zparts=[],errors=[];

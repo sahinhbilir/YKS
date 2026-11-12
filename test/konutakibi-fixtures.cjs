@@ -63,18 +63,19 @@ const cevapXlsx=(o={})=>xlsx({sheetName:'TYT',...o,rows:[['SINAV CEVAP RAPORU'],
 // Madde Analizi geometry as measured on the real report: pages are rotated (rows advance along x, columns along y).
 const MADDE_COL=[46,88,126.5,168.5,209,246,284,322,360.5,397.5,445,512.5];
 const zorlukEtiketi=p=>p>=.8?'Çok Kolay':p>=.6?'Kolay':p>=.4?'Orta':p>=.2?'Zor':'Çok Zor';
-// courses: [{course:'TÜRKÇE-T', rows:[[D,Y,B],...], pct:{3:'12.3%'} (printed Başarı overrides)}]
+// courses: [{course:'TÜRKÇE-T', rows:[[D,Y,B],...], pct:{3:'12.3%'} (printed Başarı overrides), taban: the Başarı denominator
+// (default N), cevap: the ders's "Testi Cevaplamış Öğrenci Sayısı" (default answered)}]
 function maddePages({ad='SENTETİK-1203',oturum='TYT',N=27,courses,rotated=true,perPage=32,okul='SENTETİK ANADOLU LİSESİ',answered=N}){
  const item=(s,row,col,w=String(s).length*4.5)=>rotated?{s:String(s),x:row,y:col-w/2,w,h:8,z:8,f:'g_f1'}:{s:String(s),x:col-w/2,y:800-row,w,h:8,z:8,f:'g_f1'};
  const pages=[],hdr=(row)=>['No','Cevap','Doğru','Yanlış','Boş','A','B','C','D','E','Başarı','Zorluk'].map((s,i)=>item(s,row,MADDE_COL[i]));
  const side=(row,n)=>[item('Zorluk',row,631),item('Soru Numaraları',row,738),...Array.from({length:n},(_,i)=>[item(['Çok Kolay','Kolay','Orta','Zor','Çok Zor'][i%5],row+16+14*i,619),item('1,2,3',row+16+14*i,694)]).flat()];
- const line=(r,q,row,pct)=>{const [D,Y,B]=q,p=D/N;return [item(r,row,MADDE_COL[0]),item('ABCDE'[r%5],row,MADDE_COL[1]),item(D,row,MADDE_COL[2]),item(Y,row,MADDE_COL[3]),item(B,row,MADDE_COL[4]),...[0,1,2,3,4].map(i=>item(i,row,MADDE_COL[5+i])),item(pct??(100*D/N).toFixed(1)+'%',row,MADDE_COL[10]),item(zorlukEtiketi(p),row,MADDE_COL[11])]};
+ const line=(r,q,row,pct,t=N)=>{const [D,Y,B]=q,p=t?D/t:0;return [item(r,row,MADDE_COL[0]),item('ABCDE'[r%5],row,MADDE_COL[1]),item(D,row,MADDE_COL[2]),item(Y,row,MADDE_COL[3]),item(B,row,MADDE_COL[4]),...[0,1,2,3,4].map(i=>item(i,row,MADDE_COL[5+i])),item(pct??(100*p).toFixed(1)+'%',row,MADDE_COL[10]),item(zorlukEtiketi(p),row,MADDE_COL[11])]};
  for(const c of courses){
   let page=[],row=136,i=0;
-  page.push(item(okul,34,421,234),item(ad+' / '+oturum,48,421),item(c.course+' Madde Analizi',65,421),item('Öğrenci Sayısı : '+N,84,62),item('Testi Cevaplamış Öğrenci Sayısı : '+answered,98,62),...hdr(120),...side(120,2));
+  page.push(item(okul,34,421,234),item(ad+' / '+oturum,48,421),item(c.course+' Madde Analizi',65,421),item('Öğrenci Sayısı : '+N,84,62),item('Testi Cevaplamış Öğrenci Sayısı : '+(c.cevap??answered),98,62),...hdr(120),...side(120,2));
   for(const q of c.rows){
    if(i&&i%perPage===0){pages.push(page);page=[...hdr(32)];row=48}
-   page.push(...line(i+1,q,row,c.pct?.[i+1]));row+=14;i++;
+   page.push(...line(i+1,q,row,c.pct?.[i+1],c.taban??N));row+=14;i++;
   }
   page.push(item('Ortalama',row,45),item('50.0%',row,MADDE_COL[10]),item('Orta',row,MADDE_COL[11]));pages.push(page);
  }
