@@ -515,6 +515,17 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   v.maps['FİZİK-T|F.1']='Basınç';v.maps['FİZİK-T|F.2']='Kuvvet';return K.dogrula(v);
  }
  const seHand=ps=>{const v=ps.map(p=>{const q=(p*NZ+1)/(NZ+2);return q*(1-q)}),sv=v.reduce((a,x)=>a+x,0),ss=v.reduce((a,x)=>a+Math.sqrt(x),0);return Math.sqrt((sv+K.R_MADDE*(ss*ss-sv))/(ps.length**2)/NZ)};
+ await test('Performans analizi: an exam with a code is named by it; one without a code (27-TYT_SIFIR_POZİTİF) by its full name, and meets its Sınav özeti under that name',async()=>{
+  const sayfa=kod=>Y.itemlere(Y.performansSpec({kod})).map(p=>p.items);
+  put('__pg',sayfa('27-YKS-1203'));const kodlu=run('KONU_TAKIBI.turkiyeCoz(__pg)');assert.equal(kodlu.ad,'27-YKS-1203');assert.equal(kodlu.oturum,'TYT');
+  put('__pg',sayfa('SENTETİK-TYT_SIFIR_DENEME'));const adli=copy(run('KONU_TAKIBI.turkiyeCoz(__pg)'));
+  assert.equal(adli.ad,'SENTETİK-TYT_SIFIR_DENEME');assert.deepEqual(adli.dersler['TÜRKÇE-T'],[.9,.7,.5,.2]);assert.deepEqual(Object.keys(adli.dersler),['TÜRKÇE-T','TARİH-T','DİN KÜLTÜRÜ-T','S.FELSEFE-T']);
+  // The Sınav özeti of the same exam ("SENTETİK-TYT_SIFIR_DENEME - TYT" → its name) and the Performans analizi make one exam.
+  const v=K.merge(K.blank(),[],[zpart('ozet','SENTETİK-TYT_SIFIR_DENEME',{'TÜRKÇE-T':[['T.1',.5],['T.1',.5],['T.2',.5],['T.2',.5]]}),adli]);
+  assert.equal(Object.keys(v.zorluk).length,1);const e=Object.values(v.zorluk)[0];assert(e.ozet&&e.turkiye,'özet and Türkiye under one exam');
+  // A page with neither a code nor a "… SINAVI ANALİZLERİ" title is still refused.
+  put('__pg',sayfa('27-YKS-1203').map(p=>p.filter(i=>!/SINAVI ANALİZLERİ/.test(i.s))));assert.throws(()=>run('KONU_TAKIBI.turkiyeCoz(__pg)'),/eklenmedi/);
+ });
  await test('Türkiye part: stored beside özet and madde, validated, replaced and removed on its own',async()=>{
   const v=tdata(),e=v.zorluk[K.ek('27-YKS-1203')];assert.deepEqual(copy(e.turkiye),TP);assert.equal(e.ad,'27-YKS-1203');assert.equal(e.oturum,'TYT');
   const bad=fn=>{const x=copy(v);fn(Object.values(x.zorluk)[0]);assert.throws(()=>K.dogrula(x),/geçersiz/)};

@@ -900,7 +900,11 @@ function uploadMessage(reports,errors=[],extra=[]){
 const perfMi=pages=>pages.some(p=>{if(!Array.isArray(p))return false;const t=key(p.map(i=>typeof i?.s==='string'?i.s:'').join(' '));return t.includes('SINAVIANALIZLERI')||t.includes('MADDEGUCLUKINDEKSI')});
 function turkiyeCoz(pages){
   if(typeof YANLISLAR!=='object'||typeof YANLISLAR.performansCoz!=='function')throw new Error('Performans analizi okunamadı.');
-  const perf=YANLISLAR.performansCoz(pages.map(items=>({items:Array.isArray(items)?items:[]}))),dersler={};
+  // An exam with a code ("27-YKS-1202 SINAVI ANALİZLERİ") is named by its code; one without ("27-TYT_SIFIR_POZİTİF SINAVI
+  // ANALİZLERİ") by its full name, the name its karneler and Sınav özeti give it, so the files still meet under one exam.
+  const sayfalar=pages.map(items=>({items:Array.isArray(items)?items:[]}));let perf;
+  try{perf=YANLISLAR.performansCoz(sayfalar)}catch(e){if(!/Sınav kodu/u.test(e.message))throw e;perf=YANLISLAR.performansCoz(sayfalar,{tamAd:true})}
+  const dersler={};
   for(const d of perf.dersler)dersler[d.ad]=d.maddeler.map(x=>Math.round(x.p*10000)/10000);
   const o=new Set(Object.keys(dersler).map(c=>c.endsWith('-T')?'TYT':'AYT'));
   return {tur:'turkiye',ad:perf.kod,oturum:o.size>1?'TYT + AYT':[...o][0],dersler};
