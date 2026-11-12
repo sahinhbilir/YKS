@@ -87,7 +87,8 @@ No, Kitapçık) is refused before anything is read further or stored. Only Ders,
 and per-question counts are kept, never names or numbers.
 
 Storage: optional `zorluk: {[examKey]: {ad, oturum, ogrenci, ts, ozet, madde}}` in
-`D.konutakibi` (≤ 60 exams, ≤ 200 questions per course, p in [0, 1]); it shares the 350 KB limit.
+`D.konutakibi` (≤ 60 exams, ≤ 40 courses per part so an exam's TYT and AYT fit side by side, ≤ 200 questions per course,
+p in [0, 1]); it shares the 350 KB limit.
 Removing an exam in Kaynaklar leaves its difficulty data until that is removed too.
 
 ## Türkiye’ye göre (where the school and each pupil are behind)
