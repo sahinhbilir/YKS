@@ -138,11 +138,18 @@ function gorunumModeli(t,O,K,sec){
     ozet[kk]={once,son,fark:son-once,ayni:ayni.length?ayni.reduce((a,b)=>a+b,0)/ayni.length:null,ayniN:ayni.length,artan:ogrenciler.filter(o=>o.k[kk].durum==='Yükseliyor').length,azalan:ogrenciler.filter(o=>o.k[kk].durum==='Düşüyor').length}}
   return {O,K,sinavlar,pencere,ogrenciler,dersler,ozet,yil:sinavlar.length?new Date(sinavlar[n-1].g*864e5).getUTCFullYear():null};
 }
-let ONBELLEK={imza:null,t:null};
+let ONBELLEK={imza:null,t:null,ham:null,hamImza:null};
+const listeImzasi=l=>l.map(s=>s.id+':'+s.ts+':'+(s.tarih||'')+':'+(s.tur||'')+':'+(s.tarihler?JSON.stringify(s.tarihler):'')).join('|');
+// The stored lists are copied and checked (SIRALAMA.oku) only when they changed: pages that read them once per student
+// (Öğrenci raporları' base, a student's deneme rows) would otherwise copy every list for every student. veri is still a fresh copy
+// for whoever asks for it.
 function veriAl(){
+  const ham=D.siralama,hamImza=ham&&Array.isArray(ham.sinavlar)?listeImzasi(ham.sinavlar):null;
+  if(hamImza!==null&&ONBELLEK.t&&ONBELLEK.ham===ham&&ONBELLEK.hamImza===hamImza)return {t:ONBELLEK.t,get veri(){return SIRALAMA.oku().veri}};
   const {veri,hata}=SIRALAMA.oku();if(!veri)return {hata};
-  const imza=veri.sinavlar.map(s=>s.id+':'+s.ts+':'+(s.tarih||'')+':'+(s.tur||'')+':'+(s.tarihler?JSON.stringify(s.tarihler):'')).join('|');
+  const imza=listeImzasi(veri.sinavlar);
   if(ONBELLEK.imza!==imza)ONBELLEK={imza,t:temel(veri)};
+  ONBELLEK.ham=ham;ONBELLEK.hamImza=hamImza;
   return {t:ONBELLEK.t,veri};
 }
 // Şimdiki and önceki exam of the comparison: the two chosen in Seç, otherwise the last two. Ranks

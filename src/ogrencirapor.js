@@ -10,7 +10,9 @@ const AYT_GROUPS=[
  {label:['Türk Dili ve Edebiyatı','Sosyal 1'],keys:['edebiyat','tarih1','cografya1']},
  {label:['Sosyal 2'],keys:['tarih2','cografya2','felsefe','din','sf']}
 ];
-const clean=s=>String(s??'').replace(/\s+/g,' ').trim(),nameKey=s=>clean(s).normalize('NFKC').toLocaleUpperCase('tr-TR');
+// nameKey runs for every name, class and exam of every record and the same few thousand strings repeat: each is worked out once.
+const clean=s=>String(s??'').replace(/\s+/g,' ').trim(),ADANAHTAR=new Map();
+const nameKey=s=>{const k=String(s??'');let v=ADANAHTAR.get(k);if(v===undefined){v=clean(k).normalize('NFKC').toLocaleUpperCase('tr-TR');if(ADANAHTAR.size>=50000)ADANAHTAR.clear();ADANAHTAR.set(k,v)}return v};
 // A classroom code ("302") stands for its class ("11/A"): the notebook keeps the code as şube (toplu
 // öğrenci ekle stores Myexamy's "302"), Etütler and Yoklama write the class. Lists that print both
 // ("302 11/A") teach the pairs, so a class is never split in two.
@@ -20,7 +22,8 @@ const cls=s=>{const m=nameKey(s).match(/(\d{1,2})\s*[-/]\s*([A-ZÇĞİÖŞÜ]+)/
 // A student without a school number is told apart by name and class: same names in two classes are two students.
 const key=s=>s.no?String(s.no)+'|'+nameKey(s.name):'|'+nameKey(s.name)+'|'+cls(s.cls),cx=o=>o.x+o.w/2;
 function date(s){const m=clean(s).match(/^(\d{2})[./](\d{2})[./](\d{4})$/);const iso=m?m[3]+'-'+m[2]+'-'+m[1]:s;if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')||new Date(iso+'T00:00:00Z').toISOString().slice(0,10)!==iso)throw new Error('Geçersiz tarih: '+s);return iso}
-const day=s=>Math.floor(Date.parse(date(s)+'T00:00:00Z')/86400000),iso=g=>new Date(g*86400000).toISOString().slice(0,10),display=s=>s?date(s).split('-').reverse().join('.'):'Tarih yok';
+// day: a few hundred distinct dates, asked for again and again (every exam and etüt of every student): each is worked out once.
+const GUNLER=new Map(),day=s=>{const k=String(s);let v=GUNLER.get(k);if(v===undefined){v=Math.floor(Date.parse(date(s)+'T00:00:00Z')/86400000);if(GUNLER.size>=20000)GUNLER.clear();GUNLER.set(k,v)}return v},iso=g=>new Date(g*86400000).toISOString().slice(0,10),display=s=>s?date(s).split('-').reverse().join('.'):'Tarih yok';
 const normItems=p=>p.filter(o=>clean(o.s)).map(o=>({...o,s:clean(o.s)}));
 function join(items){return items.slice().sort((a,b)=>Math.abs(a.y-b.y)>2?b.y-a.y:a.x-b.x).map(o=>o.s).join(' ').replace(/\s+/g,' ').trim()}
 function printedDate(pages){
@@ -132,22 +135,24 @@ function homeworkCourseName(course){
 function merge(reports,roster=[]){
  const map=new Map(),alias=new Map(),loose=[],warnings=[];
  const yazili=c=>/^\d{1,2}\/[A-ZÇĞİÖŞÜ]+$/u.test(cls(c));
+ // The students by name, in the order they were added (as map.values()): a record without a number is matched among those of its
+ // name only, so an etüt report of thousands of rows is not compared with every student.
+ const adlar=new Map(),adla=s=>adlar.get(nameKey(s.name))||[];
  // A numbered record whose number the notebook does not have (no number, or another one) is the one
  // student of that name in that class; a different number is reported so the notebook can be fixed.
- const ikiz=s=>{const a=[...map.values()].filter(x=>x.cls&&s.cls&&nameKey(x.name)===nameKey(s.name)&&cls(x.cls)===cls(s.cls));return a.length===1?a[0]:null};
+ const ikiz=s=>{const a=adla(s).filter(x=>x.cls&&s.cls&&cls(x.cls)===cls(s.cls));return a.length===1?a[0]:null};
  // A class written as grade/şube wins over a classroom code no list explained.
  const ensure=(s,english=false)=>{const id=key(s);let o=map.get(id)||alias.get(id);
   if(!o&&english&&s.no&&s.cls){const a=[...map.values()].filter(x=>String(x.no)===String(s.no)&&cls(x.cls)===cls(s.cls));if(a.length===1){o=a[0];alias.set(id,o)}}
   if(!o&&s.no&&(o=ikiz(s))){alias.set(id,o);if(!o.no)o.no=s.no;else if(o.no!==s.no)warnings.push(o.name+': numarası defterde '+o.no+', raporda '+s.no+'; aynı öğrenci sayıldı.')}
-  if(!o)map.set(id,o={...s,id,exams:[],homework:[],attendance:[],sessions:[]});else if(s.cls&&(!o.cls||!yazili(o.cls)&&yazili(s.cls)))o.cls=cls(s.cls);
+  if(!o){map.set(id,o={...s,id,exams:[],homework:[],attendance:[],sessions:[]});const k=nameKey(o.name);if(!adlar.has(k))adlar.set(k,[]);adlar.get(k).push(o)}else if(s.cls&&(!o.cls||!yazili(o.cls)&&yazili(s.cls)))o.cls=cls(s.cls);
   return o};
  roster.forEach(s=>ensure(s));
  reports.filter(r=>r.kind!=='english').concat(reports.filter(r=>r.kind==='english')).forEach(r=>(r.students||[]).forEach(s=>{if(s.no)ensure(s,r.kind==='english');else loose.push(s)}));
  // Records without a number match by name and class; a class written another way ("12 A") still matches
  // the one student of that name in the same grade.
  const grade=c=>parseInt(cls(c),10);
- const named=s=>{const a=[...map.values()].filter(x=>nameKey(x.name)===nameKey(s.name)&&cls(x.cls)===cls(s.cls));if(a.length)return a;
-  const b=[...map.values()].filter(x=>nameKey(x.name)===nameKey(s.name));
+ const named=s=>{const b=adla(s),a=b.filter(x=>cls(x.cls)===cls(s.cls));if(a.length)return a;
   return b.length===1&&(!b[0].cls||!s.cls||!(yazili(b[0].cls)&&yazili(s.cls))&&grade(b[0].cls)===grade(s.cls))?b:[]};
  for(const s of loose)if(!named(s).length)ensure(s);
  const find=s=>{if(s.no)return map.get(key(s))||alias.get(key(s));const a=named(s);if(a.length>1)warnings.push(s.name+': ad/şube birden fazla öğrenciye ait; kaydı eşleştirilmedi.');return a.length===1?a[0]:null};

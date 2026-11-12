@@ -124,7 +124,24 @@ function denemeEnYakin(r,adaylar) {
   for(const x of adaylar){if(!denemeAyniSinav(r,x))continue;const f=Math.abs(gunNo(r.tarih)-gunNo(x.tarih));if(en===null || f<fark){en=x;fark=f;}}
   return en;
 }
-const DENEME_LISTE_ONBELLEK = new WeakMap();
+const DENEME_LISTE_ONBELLEK = new WeakMap(), DENEME_LISTE_SUTUN = new WeakMap();
+// The lessons a list printed (a grade's own exam, a lesson missing, has its own question counts) and each lesson's question count.
+function denemeListeSutunlari(kaynak,oturum,dy) {
+  // A TYT+AYT list gives both sessions one student table: the columns are kept per session.
+  let bu=DENEME_LISTE_SUTUN.get(kaynak);if(!bu){bu={};DENEME_LISTE_SUTUN.set(kaynak,bu);}
+  let c=bu[oturum];if(c)return c;
+  const sutunlar=oturum==='TYT'?SIRALAMA.TYT_KEYS:SIRALAMA.AYT_KEYS,tum=Object.values(kaynak);
+  const kodlar=new Map();
+  for(const k of sutunlar){const kod=DENEME_SIRA_KODU[k];if(kod && tum.some(x=>x.net && x.net[k]!=null || dy(x.dy && x.dy[k])))kodlar.set(k,kod);}
+  const standart=DENEME_DERSLER[oturum].filter(d=>d[0]!=='sf').every(d=>[...kodlar.values()].includes(d[0]));
+  const soru=new Map();
+  for(const [k,kod] of kodlar){
+    let enCok=0;for(const x of tum){const q=dy(x.dy && x.dy[k]);if(q && q[0]+q[1]>enCok)enCok=q[0]+q[1];}
+    const std=(DENEME_DERSLER[oturum].find(x=>x[0]===kod)||[0,0,enCok])[2];
+    soru.set(k,oturum==='TYT' && !standart?Math.min(std,denemeSoruTahmini(kod,enCok)):std);
+  }
+  c={kodlar,soru};bu[oturum]=c;return c;
+}
 function denemeOkulListeSatirlari(no,ad) {
   if(!rehberMi() || no===undefined || no===null || typeof DPANO==='undefined' || typeof SIRALAMA==='undefined')return [];
   let t;try{t=DPANO.veriAl().t;}catch(e){return [];}
@@ -141,19 +158,14 @@ function denemeOkulListeSatirlari(no,ad) {
       if(!iso)continue;
       const kaynak=oturum==='TYT'?s.tyt:s.ayt,o=kaynak && kaynak[n];
       if(!o || denemeAdAnahtari(o.name)!==denemeAdAnahtari(ad) || !(oturum==='TYT'?SIRALAMA.hasTYT(o):SIRALAMA.hasAYT(o)))continue;
-      const sutunlar=oturum==='TYT'?SIRALAMA.TYT_KEYS:SIRALAMA.AYT_KEYS,tum=Object.values(kaynak);
-      // The lessons this exam's list printed; a grade's own exam (a lesson missing) has its own question counts.
-      const kodlar=new Map();
-      for(const k of sutunlar){const kod=DENEME_SIRA_KODU[k];if(kod && tum.some(x=>x.net && x.net[k]!=null || dy(x.dy && x.dy[k])))kodlar.set(k,kod);}
-      const standart=DENEME_DERSLER[oturum].filter(d=>d[0]!=='sf').every(d=>[...kodlar.values()].includes(d[0]));
+      // The lessons this exam's list printed and their question counts are the list's, not the student's: worked out once per list.
+      const {kodlar,soru}=denemeListeSutunlari(kaynak,oturum,dy);
       const dersler=new Map();
       for(const [k,kod] of kodlar){
         const p=dy(o.dy && o.dy[k]),net=o.net && o.net[k]!=null?o.net[k]:null;
         const d=dersler.get(kod) || {kod,dogru:0,yanlis:0,soru:0};
         if(p){d.dogru+=p[0];d.yanlis+=p[1];}else if(net!==null)d.dogru+=Math.max(0,net);
-        const enCok=Math.max(0,...tum.map(x=>{const q=dy(x.dy && x.dy[k]);return q?q[0]+q[1]:0;}));
-        const std=(DENEME_DERSLER[oturum].find(x=>x[0]===kod)||[0,0,enCok])[2];
-        d.soru=oturum==='TYT' && !standart?Math.min(std,denemeSoruTahmini(kod,enCok)):std;
+        d.soru=soru.get(k);
         dersler.set(kod,d);
       }
       cikti.push({id:'p:'+encodeURIComponent([denemeAdAnahtari(s.ad),iso,oturum].join('|')),ad:s.ad,tarih:iso,tur:oturum,oturum,brans:'',alan:'SAY',
