@@ -196,7 +196,7 @@ async function check(name, fn) {
     await b.tikla('testHesapAc');
     assert.equal(b.run('D.ogr[0].ad'), 'Kuzey');
     assert.equal(b.run('D.log.length'), 1);
-    assert.equal(b.run('EK.sekme'), 'ana');
+    assert.equal(b.run('EK.sekme'), 'hafiza');   // a student lands on Hafızam
     assert(b.events.some(e => e.startsWith('bilgi:Hoş geldin Kuzey')));
   });
 
@@ -446,7 +446,7 @@ async function check(name, fn) {
     assert(Object.values(o.kendiPlan.seviye).every(v => v === 'hic') && Object.keys(o.kendiPlan.seviye).length > 3);
     assert(o.kendiPlan.sira.length > 100, 'TYT and EA AYT topics: ' + o.kendiPlan.sira.length);
     assert(a.run('kendiPlanKuyrugu(0).length') > 0);
-    assert.equal(a.run('EK.sekme'), 'ana'); assert.equal(a.run('EK.kaydol'), false);
+    assert.equal(a.run('EK.sekme'), 'hafiza'); assert.equal(a.run('EK.kaydol'), false);
     assert(a.events.some(e => /^bilgi:Hoş geldin aliveli07 — YKS planın bu hafta başladı/.test(e)));
     // The cloud notebook is the same as a test account's; the reset is not offered.
     assert.equal((await yukle(a)).tur, 'tamam');
@@ -476,7 +476,7 @@ async function check(name, fn) {
     await girisYap(b, '  ALİ veli07 ', 'gizli-123');
     assert.deepEqual(b.cagri, [['giris', 'aliveli07'], ['giris', 'aliveli07'], ['yon']], 'not tried as a school login; the redirect follows the notebook check');
     assert.equal(b.run('D.testHesap.uid'), 'uye-aliveli07'); assert.equal(b.run('D.log.length'), 1);
-    assert.equal(b.run('EK.sekme'), 'ana');
+    assert.equal(b.run('EK.sekme'), 'hafiza');
     assert(b.events.some(e => e === 'bilgi:Hoş geldin aliveli07 — defterin buluttan açıldı.'));
   });
 

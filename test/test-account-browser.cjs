@@ -134,7 +134,7 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    // Student top menu: "Planım" opens the weekly plan; its arrow (hover or click) lists the other plan pages.
    assert.equal(await page.locator('#ray').getAttribute('class'),'ray ust');
    // The brand is home; Planım has a submenu; Denemelerim is a plain button (Üniversite Hedefi is teacher-only).
-   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','denemeler']);
+   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','hafiza','denemeler']);
    assert.deepEqual(await page.locator('#ray > .menu-grup > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['plan']);
    assert.equal(await page.locator('#denemelerMenusu').count(),0,'Denemelerim has no submenu: Üniversite Hedefi is teacher-only');
    assert.equal(await page.locator('#ray [data-sekme="universite"]').count(),0);
@@ -142,7 +142,7 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    const menu=page.locator('#planMenusu'),ok=page.locator('#ray [aria-controls="planMenusu"]');
    assert.equal(await menu.isVisible(),false,'menu folded');
    await ok.hover();assert.equal(await menu.isVisible(),true,'hovering the arrow opens it');
-   assert.deepEqual(await menu.locator('button').allTextContents(),['Hafızam','Haftalar haritası','Sonuç gir']);
+   assert.deepEqual(await menu.locator('button').allTextContents(),['Haftalar haritası','Sonuç gir']);
    await page.mouse.move(width-20,780);assert.equal(await menu.isVisible(),false,'leaving closes it');
    await ok.click();await page.mouse.move(width-20,780);
    assert.equal(await menu.isVisible(),true,'a click keeps it open');assert.equal(await ok.getAttribute('aria-expanded'),'true');
@@ -225,7 +225,7 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'sign-up overflow');
    await page.screenshot({path:path.join(out,'kaydol-form-'+width+'.png')});
    await page.locator('#kaydolSifre').press('Enter');                     // Enter submits like the button
-   await page.locator('.ana-pano').waitFor();
+   await page.locator('.hafiza-sayfa').waitFor();   // a new student lands on Hafızam
    assert.deepEqual(await page.evaluate(()=>window.__uyeKayit),['denizkaya','gizli-123']);
    assert.equal(await page.evaluate(()=>D.testHesap.tur==='uye'&&D.ogr[0].okul===false&&D.ogr[0].alan==='SAY'&&D.ogr[0].kendiPlan.tur==='YKS'&&
      D.ayar.donemBasi===isoDan(pazartesi(bugunNo()))),true,'YKS without school, own plan, weeks from this Monday');

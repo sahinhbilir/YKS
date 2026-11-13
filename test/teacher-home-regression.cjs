@@ -61,7 +61,9 @@ check('student menu keeps its layout', () => {
   run("D.rol='ogrenci';D.ogr=[D.ogr[0]];D.ogr[0].sinavTuru='YKS';rayCiz()");
   const h = nodes.ray.innerHTML;
   assert.equal(nodes.ray.className, 'ray ust');
-  assert.deepEqual(liste(h, 'planMenusu'), ['hafiza', 'harita', 'giris'], 'Hafızam first; no Karnem, no Geçmiş plan kurtar (red weeks open it)');
+  assert.deepEqual(liste(h, 'planMenusu'), ['harita', 'giris'], 'no Karnem, no Geçmiş plan kurtar (red weeks open it)');
+  // Hafızam is a tab of its own, the leftmost after the brand.
+  assert(h.indexOf('<button data-sekme="hafiza"') > 0 && h.indexOf('<button data-sekme="hafiza"') < h.indexOf('data-sekme="plan"'), 'Hafızam before Planım');
   assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['mufredat', 'ayarlar']);
   assert.match(h, /aria-label="Planla ilgili diğer sayfalar"/);
   assert(!h.includes('data-sekme="universite"') && !h.includes('Üniversite Hedefi'), 'no Üniversite Hedefi for students');

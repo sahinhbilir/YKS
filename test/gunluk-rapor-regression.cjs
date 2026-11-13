@@ -252,7 +252,7 @@ const rapor = (o = {}) => ({ogrenciUid:UID, ogrenciBulutId:'bulut-1', ts:1760000
 
   await check('student menu entry only for a student linked to a teacher; teacher entry sits under Öğrenciler', async () => {
     assert(run('SEKMELER().some(s=>s[0]==="gunlukrapor")'));
-    assert.deepEqual(j(run('MENU_OGRENCI.map(m=>m[0])')), ['plan', 'denemeler', 'gunlukrapor']);
+    assert.deepEqual(j(run('MENU_OGRENCI.map(m=>m[0])')), ['hafiza', 'plan', 'denemeler', 'gunlukrapor']);
     run('D.ogr[0].hesapUid=""'); assert(!run('SEKMELER().some(s=>s[0]==="gunlukrapor")'));
     run(`D=varsayilan();D.rol='rehber';`);
     assert(run('MENU_REHBER.find(m=>m[0]==="ogrenciler")[1].includes("gunlukrapor")'));

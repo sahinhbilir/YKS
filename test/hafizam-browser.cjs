@@ -57,6 +57,7 @@ const kur=()=>{
     await surukle(page.locator('#hfSepet [data-hf-surukle="ek:paragraf"]'),page.locator('#hfSepet [data-hf-gun="her"]'));
     await page.waitForFunction(()=>gunlukEkSorusu(0,'paragraf',bugunNo())===20);
     // Düzenle: the sliders write their result before saving; Kaydet keeps the student's own state.
+    await page.locator(`.hf-oge[data-hf-ki="${kiA}"] .hf-diger>summary`).click();   // the extra actions are folded under "Diğer"
     await page.locator(`[data-hf-duzenle="${kiA}"]`).click();const ed=page.locator(`[data-hf-duzen="${kiA}"]`);await ed.waitFor();
     await ed.locator('[data-hf-r]').fill('95');await ed.locator('[data-hf-s]').fill('14');
     assert.equal(await ed.locator('[data-hf-r-yazi]').innerText(),'%95');assert.equal(await ed.locator('[data-hf-s-yazi]').innerText(),'180 günde');
@@ -66,8 +67,17 @@ const kur=()=>{
     // The page is drawn again once the save is done.
     await page.waitForFunction(k=>/%95[\s\S]*kendi ayarın \(bugün\)/.test(document.querySelector(`[data-hf-ki="${k}"] .hf-yazi`)?.innerText||''),kiA);
     // A lesson's speed.
+    await page.locator('.hf-ayar>summary').click();   // the settings are folded at the end of the page
     await page.locator('.hf-dersler summary').click();const sec=page.locator('.hf-dersler select').first(),ders=await sec.getAttribute('data-hf-ders');
     await sec.selectOption('2');await page.waitForFunction(d=>(D.ogr[0].unutmaDers||{})[d]===2,ders);
+    // Raporum (PDF), as the button prints it: laid out like the weekly plan, A4 landscape, a column per day (a second sheet only
+    // when a day's studies do not fit; this notebook's today has more than a dozen).
+    await page.evaluate(()=>{const st=document.createElement('style');st.id='hfSayfaStili';st.textContent='@media print{@page{size:A4 landscape;margin:8mm}}';document.head.appendChild(st);document.body.classList.add('hf-yazdir')});
+    const pdf=await page.pdf({preferCSSPageSize:true});require('node:fs').writeFileSync(path.join(out,'hafizam-rapor.pdf'),pdf);
+    const metin=pdf.toString('latin1');assert((metin.match(/\/Type\s*\/Page\b(?!s)/g)||[]).length<=2,'the report is one or two sheets');
+    assert.equal(await page.evaluate(()=>{document.body.classList.remove('hf-yazdir');const t=document.querySelector('#hfRapor table.plan.hf-r-tablo');return t.querySelectorAll('thead th').length===t.querySelectorAll('tbody td').length&&t.querySelectorAll('thead th').length>=5}),true,'a column per day');
+    assert(/\/MediaBox\s*\[\s*0\s+0\s+84[12](\.\d+)?\s+59[45](\.\d+)?\s*\]/.test(metin),'A4 landscape');
+    await page.evaluate(()=>{document.body.classList.remove('hf-yazdir');document.getElementById('hfSayfaStili')?.remove()});
     await page.screenshot({path:path.join(out,'hafizam-'+width+'-'+tema+'.png'),fullPage:true});
    }else{
     // Phone: no dragging needed. "Sepete" picks the topic, a day takes it.
