@@ -75,3 +75,11 @@
 #tgKok .tg-konu-geride .tg-konu-fark{color:var(--e-bad)}#tgKok .tg-konu-geride .tg-konu-durum{color:var(--e-bad);border-color:var(--e-bad)}
 #tgKok .tg-konu-ileride .tg-konu-fark{color:var(--e-ok)}#tgKok .tg-konu-ileride .tg-konu-durum{color:var(--e-ok);border-color:var(--e-ok)}
 @media(max-width:700px){#tgKok .tg-konu-satir{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}#tgKok .tg-konu-oran{grid-column:1}#tgKok .tg-konu-durum{grid-column:2;grid-row:2;justify-self:end}}
+
+/* Artış sırası, deneme deneme (place 1 at the top) and the note on where the Türkiye average falls in the list. */
+.tg-artis-grafik{display:block;width:100%;max-width:760px;height:auto}
+.tg-artis-yol{fill:none;stroke:var(--e-c1);stroke-width:2.5;stroke-linejoin:round}
+.tg-artis-nokta{fill:var(--e-c1);stroke:var(--e-panel);stroke-width:2}
+.tg-artis-deger{font-size:12px;font-weight:700;fill:var(--e-fg);font-variant-numeric:tabular-nums}
+.tg-ort-not{margin:8px 0 0;max-width:110ch}
+.tg-fark-ust{grid-column:1/-1;text-align:right;color:var(--e-muted);overflow-wrap:anywhere}
