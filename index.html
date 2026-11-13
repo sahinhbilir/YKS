@@ -2292,6 +2292,12 @@ text.ogr-y{fill:var(--iyi)}text.ogr-k{fill:var(--kritik)}.ogr-deger-okul{fill:va
 .ogr-iz .ogr-iz-degisim{width:66px;padding:0 4px;text-align:center;font-size:12px;font-weight:700;white-space:nowrap}
 .ogr-iz thead .ogr-iz-degisim{font-size:11px;font-weight:600}
 .ogr-iz-ara td{height:1px;background:var(--cizgi)}
+/* A topic's kazanımlar: indented under it, their boxes smaller and inset. */
+.ogr-iz .ogr-iz-alt .ogr-iz-konu{padding:1px 10px 1px 14px;font-size:11px;font-weight:400;line-height:1.3;color:var(--soluk)}
+.ogr-kod{display:inline-block;margin-right:6px;font-weight:700;color:var(--murekkep);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ogr-iz-kh,.ogr-iz-kb{text-align:center;font-size:10.5px;color:var(--murekkep)}.ogr-iz-kb{color:var(--soluk)}
+.ogr-iz-kh i{display:block;margin:0 16%;border-radius:4px;font-style:normal;font-weight:700;line-height:18px}.ogr-iz-kh.ogr-iz-soluk i{font-weight:500}
+.ogr-iz-alt .ogr-ort b{font-size:11px;font-weight:600}.ogr-iz .ogr-iz-alt .ogr-iz-degisim{font-size:10.5px;font-weight:600}
 .ogr-olcek{display:flex;flex-wrap:wrap;align-items:center;gap:6px 20px;font-size:12px;line-height:1.5;color:var(--soluk)}
 .ogr-olcek b{color:var(--murekkep)}
 .ogr-olcek-serit{display:inline-flex;align-items:center;gap:3px}
@@ -2362,6 +2368,9 @@ text.ogr-y{fill:var(--iyi)}text.ogr-k{fill:var(--kritik)}.ogr-deger-okul{fill:va
   .ogr-iz-h,.ogr-iz-bos{height:21px;border-radius:3px}
   .ogr-iz .ogr-iz-degisim{width:58px;font-size:10.5px}.ogr-iz thead .ogr-iz-degisim{font-size:9px}
   .ogr-iz tfoot{display:table-row-group}
+  .ogr-iz-grup{break-inside:avoid}
+  .ogr-iz .ogr-iz-alt .ogr-iz-konu{padding:0 8px 0 10px;font-size:9px}.ogr-iz-kh,.ogr-iz-kb{font-size:9px}.ogr-iz-kh i{line-height:13px;border-radius:2px}
+  .ogr-iz-alt .ogr-ort b,.ogr-iz .ogr-iz-alt .ogr-iz-degisim{font-size:9px}
   /* Many exams: the names stand upright (a long one in two columns of text), so every column keeps its number readable. */
   .ogr-iz-cok .ogr-iz-sinav span{margin:0 auto;max-height:104px;line-height:1.15;writing-mode:vertical-rl;transform:rotate(180deg)}
   .ogr-olcek{gap:3px 16px;font-size:10px}.ogr-olcek-serit i{width:22px;height:14px;border-radius:3px;font-size:9.5px}
@@ -25491,6 +25500,8 @@ function ogrenciFark(v,sel={}){
         const d=st.dersler.get(ck)||{id:ck,ad:courseLabel(g.course),b:0,d:0,n:0};d.b+=z.b;d.d+=z.d;d.n+=z.n;st.dersler.set(ck,d);
         st.toplam.b+=z.b;st.toplam.d+=z.d;st.toplam.n+=z.n;
         const kid=ck+'|'+(konu?key(konu):kazanim?'k:'+key(kazanim[0]):'?'),t=st.konular.get(kid)||{id:kid,ders:ck,ad:konu?topicName(konu):kazanim?clean(kazanim[1])||kazanim[0]:'Konusu eşleşmeyen kazanımlar',b:0,d:0,n:0};t.b+=z.b;t.d+=z.d;t.n+=z.n;st.konular.set(kid,t);
+        // kazanim: the kazanımlar of a topic are kept too (code, name), so a page can show them under their topic.
+        if(kazanim&&konu){const m=st.kazanimlar||(st.kazanimlar=new Map()),qid=kid+'|'+key(kazanim[0]),q=m.get(qid)||{id:qid,ders:ck,konu:kid,kod:kazanim[0],ad:clean(kazanim[1])||kazanim[0],b:0,d:0,n:0};q.b+=z.b;q.d+=z.d;q.n+=z.n;m.set(qid,q)}
       };
       if(g.detail){for(const r of g.detail.rows){const code=v.labels[r[0]][0],c=r.slice(1);if(!c[0])continue;const rz=rowZ(g.zc,code,c,g.sid);if(!rz.z){atlanan++;continue}ekle(topicFor(g.course,code,v.maps),rz.z,sel.kazanim?v.labels[r[0]]:null)}}
       else if(g.summary){for(const r of g.summary.rows){const ad=v.labels[r[0]][1],c=r.slice(1),id=key(topicName(ad));if(!c[0])continue;
@@ -30594,6 +30605,10 @@ function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen){
         let K=konular.get(t.id);if(!K){K={id:t.id,ad:t.ad,hucre:[]};konular.set(t.id,K)}
         const c=K.hucre[i]||(K.hucre[i]={d:0,b:0,n:0,v:0,ogr:0}),p=Math.min(1,Math.max(0,t.b/t.n)),vv=t.n*p*(1-p)*(1+(t.n-1)*R_MADDE);
         c.d+=t.d;c.b+=t.b;c.n+=t.n;c.v+=vv;c.ogr++;toplam.d+=t.d;toplam.b+=t.b;toplam.n+=t.n;toplam.v+=vv}
+      // The kazanımlar of each topic, measured the same way (alt): smaller rows under the topic's own.
+      if(st.kazanimlar)for(const q of st.kazanimlar.values()){if(q.ders!==ck||!q.n)continue;const K=konular.get(q.konu);if(!K)continue;
+        K.alt=K.alt||new Map();let A=K.alt.get(q.kod);if(!A)K.alt.set(q.kod,A={kod:q.kod,ad:q.ad,hucre:[]});
+        const h=A.hucre[i]||(A.hucre[i]={d:0,b:0,n:0,v:0,ogr:0}),p=Math.min(1,Math.max(0,q.b/q.n));h.d+=q.d;h.b+=q.b;h.n+=q.n;h.v+=q.n*p*(1-p)*(1+(q.n-1)*R_MADDE);h.ogr++}
       if(bu){toplam.ogr++;if(gorulen)gorulen.add(sc)}}
     if(!var_)continue;
     sinavlar.push({ad:e.ad,g:e.date?Date.parse(e.date+'T00:00:00Z')/864e5:null,ogr:toplam.ogr,...olc(toplam)});
@@ -30603,7 +30618,9 @@ function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen){
     const hucre=sinavlar.map((_,i)=>K.hucre[i]?{...K.hucre[i],...olc(K.hucre[i])}:null);
     const olcu=hucre.filter(Boolean),sonlar=olcu.slice(-ART_ARDA);
     const seri=sonlar.length===ART_ARDA&&sonlar.every(c=>c.durum==='geride')?'geride':sonlar.length===ART_ARDA&&sonlar.every(c=>c.durum==='onde')?'onde':null;
-    const fl=olcu.map(c=>c.fark);return {id:K.id,ad:K.ad,hucre,seri,ortFark:fl.length?ort(fl):0,olcum:olcu.length,degisim:olcu.length>=2?olcu[olcu.length-1].fark-olcu[0].fark:null};
+    const alt=K.alt?[...K.alt.values()].map(A=>{const hc=sinavlar.map((_,i)=>A.hucre[i]?{...A.hucre[i],...olc(A.hucre[i])}:null),ol=hc.filter(Boolean),f=ol.map(c=>c.fark);
+      return {kod:A.kod,ad:A.ad,hucre:hc,ortFark:f.length?ort(f):0,degisim:ol.length>=2?ol[ol.length-1].fark-ol[0].fark:null}}).sort((a,b)=>a.kod.localeCompare(b.kod,'tr',{numeric:true})):[];
+    const fl=olcu.map(c=>c.fark);return {id:K.id,ad:K.ad,alt,hucre,seri,ortFark:fl.length?ort(fl):0,olcum:olcu.length,degisim:olcu.length>=2?olcu[olcu.length-1].fark-olcu[0].fark:null};
   }).sort((a,b)=>a.ortFark-b.ortFark||a.ad.localeCompare(b.ad,'tr'));
   return {sinavlar,satir};
 }
@@ -30805,12 +30822,16 @@ function izgaraHtml(b,ust=''){
   const satirDegisim=r=>r.degisim===null?degisim(r.ad,null,null):degisim(r.ad,r.hucre.find(Boolean).fark,[...r.hucre].reverse().find(Boolean).fark);
   const sonSatir=z.sinavlar.length>=2?degisim('Bütün konular',z.sinavlar[0].fark,z.sinavlar[z.sinavlar.length-1].fark):degisim('',null,null);
   const toplamHucre=e=>'<td class="ogr-iz-h'+(e.durum==='belirsiz'?' ogr-iz-soluk':'')+'" style="'+hucreRengi(e)+'" title="'+kacis(e.ad+' · bütün konular: '+isaret(e.fark,f1)+' puan'+(e.durum==='belirsiz'?' (fark küçük; tesadüf olabilir)':''))+'">'+tam(e.fark)+'</td>';
+  // A topic's kazanımlar: smaller boxes under the topic's own, each with its number, name and the same difference per exam.
+  const altSatir=a=>{const ol=a.hucre.filter(Boolean);return '<tr class="ogr-iz-alt"><th scope="row" class="ogr-iz-konu"><span class="ogr-kod">'+kacis(a.kod)+'</span>'+(a.ad&&a.ad!==a.kod?kacis(a.ad):'')+'</th><td class="ogr-iz-ort"><span class="ogr-ort"><b class="'+yonSinifi(a.ortFark,.5)+'">'+tam(a.ortFark)+'</b></span></td>'+
+    a.hucre.map((c,i)=>!c?'<td class="ogr-iz-kb">·</td>':'<td class="ogr-iz-kh'+(c.durum==='belirsiz'?' ogr-iz-soluk':'')+'" title="'+kacis(a.kod+' · '+z.sinavlar[i].ad+': öğrencileriniz %'+fi(Math.round(100*c.d/c.n))+', Türkiye %'+fi(Math.round(100*c.b/c.n))+' → '+isaret(c.fark,f1)+' puan')+'"><i style="'+hucreRengi(c)+'">'+tam(c.fark)+'</i></td>').join('')+
+    (ol.length>=2?degisim(a.kod,ol[0].fark,ol[ol.length-1].fark):degisim('',null,null))+'</tr>'};
   const koyu=(c,a)=>'background:color-mix(in srgb,var(--'+c+') '+a+'%,transparent)';
   return '<div class="ogr-konular">'+bas+
-    '<p class="ogr-iz-aciklama">Her kutu bir denemedir. İçindeki sayı, o konunun sorularını doğru cevaplayan öğrenci yüzdesinin Türkiye’deki yüzdeden farkıdır. Örnek: Türkiye’de öğrencilerin %60’ı, sizin öğrencilerinizin %50’si doğru cevapladıysa kutuda −10 yazar. Karşılaştırma aynı sorular üzerinden yapılır; zor bir deneme konuyu kendiliğinden kötü göstermez. Konular, en geride kalınandan en önde olunana doğru dizilmiştir.</p>'+
+    '<p class="ogr-iz-aciklama">Her kutu bir denemedir. İçindeki sayı, o konunun sorularını doğru cevaplayan öğrenci yüzdesinin Türkiye’deki yüzdeden farkıdır. Örnek: Türkiye’de öğrencilerin %60’ı, sizin öğrencilerinizin %50’si doğru cevapladıysa kutuda −10 yazar. Karşılaştırma aynı sorular üzerinden yapılır; zor bir deneme konuyu kendiliğinden kötü göstermez. Konular, en geride kalınandan en önde olunana doğru dizilmiştir. Her konunun altındaki küçük kutular o konunun kazanımlarıdır (numarasıyla); sayılar aynı biçimde okunur.</p>'+
     '<div class="ogr-iz-kutu"><table class="ogr-iz'+(z.sinavlar.length>12?' ogr-iz-cok':'')+'" style="--ogr-en:'+(330+z.sinavlar.length*58)+'px;--ogr-ust:'+(400+z.sinavlar.length*120)+'px"><thead><tr><th scope="col" class="ogr-iz-konu">Konu</th><th scope="col" class="ogr-iz-ort" title="Konunun soru çıkan denemelerdeki farklarının ortalaması (yüzde puan)">Ortalama<small>bütün denemeler</small></th>'+basliklar+
-    '<th scope="col" class="ogr-iz-degisim" title="Konunun son denemedeki farkı eksi ilk denemedeki farkı (yüzde puan)">İlk → son</th></tr></thead><tbody>'+
-    z.satir.map(r=>'<tr><th scope="row" class="ogr-iz-konu">'+kacis(r.ad)+etiket(r)+'</th>'+cubuk(r.ortFark,r.ad)+r.hucre.map((c,i)=>hucre(r.ad,c,z.sinavlar[i])).join('')+satirDegisim(r)+'</tr>').join('')+'</tbody>'+
+    '<th scope="col" class="ogr-iz-degisim" title="Konunun son denemedeki farkı eksi ilk denemedeki farkı (yüzde puan)">İlk → son</th></tr></thead>'+
+    z.satir.map(r=>'<tbody class="ogr-iz-grup"><tr><th scope="row" class="ogr-iz-konu">'+kacis(r.ad)+etiket(r)+'</th>'+cubuk(r.ortFark,r.ad)+r.hucre.map((c,i)=>hucre(r.ad,c,z.sinavlar[i])).join('')+satirDegisim(r)+'</tr>'+(r.alt||[]).map(altSatir).join('')+'</tbody>').join('')+
     '<tfoot><tr class="ogr-iz-ara" aria-hidden="true"><td colspan="'+(z.sinavlar.length+3)+'"></td></tr><tr class="ogr-iz-toplam"><th scope="row" class="ogr-iz-konu">Bütün konular<small>dersin o denemedeki bütün soruları</small></th>'+cubuk(toplamOrt,'Bütün konular')+z.sinavlar.map(toplamHucre).join('')+sonSatir+'</tr></tfoot></table></div>'+
     '<div class="ogr-olcek"><span class="ogr-olcek-serit"><em>Türkiye’nin gerisinde</em><i style="'+koyu('kritik',85)+'">−</i><i style="'+koyu('kritik',21)+'">−</i><i style="'+koyu('iyi',21)+'">+</i><i style="'+koyu('iyi',85)+'">+</i><em>Türkiye’nin önünde</em></span>'+
     '<span><b>Koyu kutu:</b> fark belirgin.</span><span><b>Soluk kutu:</b> fark küçük; tesadüf olabilir.</span><span><b>·</b> O denemede bu konudan soru çıkmadı.</span></div></div>';

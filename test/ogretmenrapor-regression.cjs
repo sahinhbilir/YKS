@@ -113,12 +113,19 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(s.seri, 'geride', 'behind on three measured exams in a row');
     // Cümlede Anlam (p .2 .2): ADA 2 + BORA 1 = 3 correct; b = 2 · ,4 = ,8 → 100 · 2,2 / 4 = +55; var = 2 · (2 · ,2 · ,8 · 1,2) = ,768 → z = 2,51 → ahead.
     const c = r('Cümlede Anlam'); near(c.hucre[0].fark, 55); near(c.hucre[0].z, 2.2 / Math.sqrt(0.768)); assert.equal(c.hucre[0].durum, 'onde'); assert.equal(c.seri, 'onde');
+    // The topic's kazanımlar, measured the same way (12/A, each exam): T.12.1.1 (p .5 .5) 0 correct of 4 against 2 → −50;
+    // T.12.1.2 (p .9 .9) 1 of 4 against 3,6 → −65. Together they are the topic's own cell (−57,5).
+    assert.deepEqual(s.alt.map(a => a.kod), ['T.12.1.1', 'T.12.1.2']); near(s.alt[0].hucre[0].fark, -50); near(s.alt[1].hucre[0].fark, -65); near(s.alt[1].ortFark, -65);
+    assert.deepEqual(s.alt.map(a => [a.hucre[0].d, a.hucre[0].n]), [[0, 4], [1, 4]]); assert.equal(s.alt[0].degisim, 0);
     // On the page (12/A): the run of three in words beside the topic's name; the cells in whole points; the whole subject as
     // the last row, pale because its gap is within chance; a dot where a topic had no question.
     put('__Z', { dersAd: 'TYT Türkçe', duzey: 12, kod: 'TÜRKÇE-T', siniflar: ['12/A'], seri: [], izgara: z }); const zh = run('OGRETMEN_RAPOR.izgaraHtml(__Z)');
     assert.match(zh, /<th scope="row" class="ogr-iz-konu">Sözcükte Anlam<span class="ogr-seri ogr-seri-geride"[^>]*>Son 3 denemede geride<\/span><\/th><td class="ogr-iz-ort"[^>]*><span class="ogr-ort"><b class="ogr-k">−58<\/b>/);
     assert.match(zh, /<th scope="row" class="ogr-iz-konu">Cümlede Anlam<span class="ogr-seri ogr-seri-onde"[^>]*>Son 3 denemede önde<\/span><\/th><td class="ogr-iz-ort"[^>]*><span class="ogr-ort"><b class="ogr-y">\+55<\/b>/);
     assert.match(zh, /<tr class="ogr-iz-toplam"><th scope="row" class="ogr-iz-konu">Bütün konular<small>[^<]*<\/small><\/th><td class="ogr-iz-ort"[^>]*><span class="ogr-ort"><b class="ogr-k">−20<\/b>[\s\S]*?<td class="ogr-iz-h ogr-iz-soluk"[^>]*>−20<\/td>/);
+    // Under the topic's row: a smaller row per kazanım with its number, name and the same points in a smaller box.
+    assert.match(zh, /<tbody class="ogr-iz-grup"><tr><th scope="row" class="ogr-iz-konu">Sözcükte Anlam[\s\S]*?<\/tr><tr class="ogr-iz-alt"><th scope="row" class="ogr-iz-konu"><span class="ogr-kod">T\.12\.1\.1<\/span>a<\/th><td class="ogr-iz-ort"><span class="ogr-ort"><b class="ogr-k">−50<\/b><\/span><\/td><td class="ogr-iz-kh[^"]*"[^>]*><i style="background:[^"]*">−50<\/i><\/td>/);
+    assert.match(zh, /<span class="ogr-kod">T\.12\.1\.2<\/span>b<\/th>[\s\S]*?<i style="[^"]*">−65<\/i>/); assert.match(zh, /küçük kutular o konunun kazanımlarıdır/);
     put('__Z2', { dersAd: 'TYT Türkçe', duzey: 12, kod: 'TÜRKÇE-T', siniflar: ['12/A'], seri: [], izgara: { sinavlar: z.sinavlar, satir: z.satir.map((r, i) => i ? r : { ...r, hucre: [null, ...r.hucre.slice(1)] }) } });
     assert.match(run('OGRETMEN_RAPOR.izgaraHtml(__Z2)'), /<td class="ogr-iz-bos" title="SENTETİK-KONU-1: bu konuda soru yok">·<\/td>/);
     // A value that rounds to zero carries no sign.

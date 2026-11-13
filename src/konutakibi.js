@@ -773,6 +773,8 @@ function ogrenciFark(v,sel={}){
         const d=st.dersler.get(ck)||{id:ck,ad:courseLabel(g.course),b:0,d:0,n:0};d.b+=z.b;d.d+=z.d;d.n+=z.n;st.dersler.set(ck,d);
         st.toplam.b+=z.b;st.toplam.d+=z.d;st.toplam.n+=z.n;
         const kid=ck+'|'+(konu?key(konu):kazanim?'k:'+key(kazanim[0]):'?'),t=st.konular.get(kid)||{id:kid,ders:ck,ad:konu?topicName(konu):kazanim?clean(kazanim[1])||kazanim[0]:'Konusu eşleşmeyen kazanımlar',b:0,d:0,n:0};t.b+=z.b;t.d+=z.d;t.n+=z.n;st.konular.set(kid,t);
+        // kazanim: the kazanımlar of a topic are kept too (code, name), so a page can show them under their topic.
+        if(kazanim&&konu){const m=st.kazanimlar||(st.kazanimlar=new Map()),qid=kid+'|'+key(kazanim[0]),q=m.get(qid)||{id:qid,ders:ck,konu:kid,kod:kazanim[0],ad:clean(kazanim[1])||kazanim[0],b:0,d:0,n:0};q.b+=z.b;q.d+=z.d;q.n+=z.n;m.set(qid,q)}
       };
       if(g.detail){for(const r of g.detail.rows){const code=v.labels[r[0]][0],c=r.slice(1);if(!c[0])continue;const rz=rowZ(g.zc,code,c,g.sid);if(!rz.z){atlanan++;continue}ekle(topicFor(g.course,code,v.maps),rz.z,sel.kazanim?v.labels[r[0]]:null)}}
       else if(g.summary){for(const r of g.summary.rows){const ad=v.labels[r[0]][1],c=r.slice(1),id=key(topicName(ad));if(!c[0])continue;
