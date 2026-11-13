@@ -179,7 +179,7 @@ const ogrenci=(kur)=>{
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'plan with the note: overflow');
    await page.locator('#serbestNot [data-sekme="hafiza"]').click();await page.getByRole('heading',{name:'Hafızam'}).waitFor();
    await page.locator('#ogrSerbest').uncheck();
-   await page.waitForFunction(()=>!serbestAcikMi(0)&&/“İyi” sayıldığı için/.test(document.querySelector('.hf-kutu')?.textContent||''));
+   await page.waitForFunction(()=>!serbestAcikMi(0)&&/yalnızca bildirdiğin çalışmalardan/.test(document.querySelector('.hf-kutu')?.textContent||''));
    assert.deepEqual(await page.evaluate(()=>D.ogr[0].serbest),[],'opened and closed on the same day leaves no period');
    await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});assert.equal(await page.locator('#serbestNot').count(),0);
    await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});

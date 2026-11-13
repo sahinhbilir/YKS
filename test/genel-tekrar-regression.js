@@ -679,7 +679,7 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     assert(Math.abs(FACTOR - (Math.pow(0.9, 1 / DECAY) - 1)) < 1e-12); const R = t => Math.pow(1 + FACTOR * t / S, DECAY);
     assert(Math.abs(R(S) - 0.9) < 1e-12, 'the line is where the interval of the first review ends');
     let d = a.json('hafizaDurumu(0)');
-    assert.deepEqual(d.liste.map(x => [x.ki, x.gecen, x.son, x.sayildi, x.altinda]), [[ki30, 30, bugun - 30, false, true], [ki1, 1, bugun - 1, false, false]], 'the most forgotten first');
+    assert.deepEqual(d.liste.map(x => [x.ki, x.gecen, x.son, x.unutuldu, x.altinda]), [[ki30, 30, bugun - 30, false, true], [ki1, 1, bugun - 1, false, false]], 'the most forgotten first');
     assert(Math.abs(d.liste[0].r - R(30)) < 1e-9 && Math.abs(d.liste[1].r - R(1)) < 1e-9); assert.equal(d.altinda, 1);
     assert(Math.abs(d.liste[0].cizgiGun - (bugun - 30 + S)) < 1e-9, 'it met the line S days after the review');
     if (Math.abs(S - 2.3065) < 1e-9) assert.equal(Math.round(d.liste[0].r * 100), 67, 'default parameters: (1 + 0,98037·30/2,3065)^−0,1542 = 0,6675');
@@ -687,12 +687,13 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     let h = a.run('hafizaAnaKarti(0)');
     assert.match(h, /^<section class="kart hafiza-kart" id="hafizaKart" aria-label="Hafızan">/); assert.match(h, /Hafızan · hedef çizgisi %90/);
     assert.match(h, /<h2 class="bg-baslik"><b>1<\/b> <span>konu çizginin altına indi<\/span><\/h2>/);
-    const y30 = Math.round(R(30) * 100);
+    // Under the line the bar and the figure turn from orange to red with the distance fallen (full red at 40 % and below).
+    const y30 = Math.round(R(30) * 100), kizil = 'color-mix\\(in srgb,var\\(--kritik\\) ' + Math.round(100 * Math.min(1, Math.max(0, (0.9 - R(30)) / 0.5))) + '%,var\\(--uyari\\)\\)';
     // Thirty days without an entered result: also red (HAFIZA_UZUN = 21), with the days in words; the card can be dragged to the basket.
     assert.match(h, new RegExp('<div class="hf-oge hf-alt hf-eski" data-hf-ki="' + ki30 + '" draggable="true" data-hf-surukle="konu:' + ki30 + '">[\\s\\S]*?<button type="button" class="dugme mini" data-hf-ac="' + ki30 + '" aria-expanded="false">Çalıştım</button>'));
     assert.match(h, /<div class="hf-eski-not">30 gündür sonuç girmedin<\/div>/);
-    assert.match(h, new RegExp('role="img" aria-label="Tahmini hatırlama %' + y30 + ', hedef çizgisi %90"><i style="width:' + y30 + '%"></i><b style="left:90%"></b></div>'));
-    assert.match(h, new RegExp('<strong>%' + y30 + '</strong><span>son çalışma 30 gün önce · çizginin altına ' + Math.floor(30 - S) + ' gün önce indi</span>'));
+    assert.match(h, new RegExp('role="img" aria-label="Tahmini hatırlama %' + y30 + ', hedef çizgisi %90"><i style="width:' + y30 + '%;background:' + kizil + '"></i><b style="left:90%"></b></div>'));
+    assert.match(h, new RegExp('<strong style="color:' + kizil + '">%' + y30 + '</strong><span>son çalışma 30 gün önce · çizginin altına ' + Math.floor(30 - S) + ' gün önce indi</span>'));
     assert(!h.includes('data-hf-ki="' + ki1 + '"'), 'a topic above the line is not on the home card'); assert.doesNotMatch(h, /data-ps/, 'no slider until a row is opened');
     assert.match(h, /<button class="dugme" data-sekme="hafiza">Hafızam: bütün konular \(2\) →<\/button>/);
     assert.match(a.run("EK.sekme='ana';gorunumAnaSayfa()"), /id="bugunKart"[\s\S]*id="hafizaKart"[\s\S]*yks-yolu/, 'between today and the weeks map');
@@ -763,7 +764,7 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     assert.deepEqual([a.json(`D.kart['0:${kiA}'].n`), a.json(`D.kart['0:${kiA}'].elle`)], [2, bugun], 'a result after the own state continues from it');
     assert.equal(a.run(`hafizaElleSil(0,${kiA})`), true); assert.equal(a.json(`D.kart['0:${kiA}'].n`), 1); assert.equal(a.run('D.ogr[0].hafizaElle'), undefined);
     // The basket: a topic and a mixed study onto today, a mixed study onto every day; taken out again; never onto a past day.
-    const g = bugun - bu;
+    const g = bugun - bu, onceB = a.json(`hafizaDurumu(0).liste.find(x=>x.ki===${kiB})||null`);
     assert.equal(a.run(`hafizaSepeteEkle('konu:${kiB}',${bu},${g})`), 1); assert.equal(a.run(`hafizaSepeteEkle('ek:paragraf',${bu},${g})`), 1);
     const gun = hafta(a, bu)[g]; assert(gun.some(r => r.ki === kiB), 'the topic is on today’s plan'); assert(gun.some(r => r.ad === 'Karışık Paragraf'));
     assert.equal(a.run(`hafizaSepeteEkle('ek:problem',${bu},'her')`), 1); assert.equal(a.run("gunlukEkSorusu(0,'problem',bugunNo())"), 20);
@@ -772,7 +773,23 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     assert.match(h, /<section class="kart hf-sepet" id="hfSepet" aria-label="Sepetin">/); assert.match(h, new RegExp('data-hf-gun="' + g + '" data-hf-hb="' + bu + '"'));
     assert.match(h, /data-hf-surukle="ek:paragraf"/); assert.match(h, /data-hf-gun="her"/);
     const slot = gun.find(r => r.ki === kiB).slot; assert.match(h, new RegExp('data-hf-cikar="' + slot + '"'));
+    // Putting a topic in the basket is not studying it: its memory row is exactly what it was. It goes in with 12 questions,
+    // the student can change the number, and today's study can be answered “Yapmadım” (out of the basket, nothing recorded).
+    assert.deepEqual(a.json(`hafizaDurumu(0).liste.find(x=>x.ki===${kiB})||null`), onceB, 'the basket does not touch memory');
+    assert.equal(a.json(`D.elle['0|${bu}'].soru['${slot}']`), 12);
+    assert.match(h, new RegExp('<select data-hf-soru="' + slot + '" data-hf-hb="' + bu + '"[^>]*>[\\s\\S]*?<option value="12" selected>12 soru</option>[\\s\\S]*?</select> <button type="button" class="hf-yok" data-hf-cikar="' + slot + '"[^>]*>Yapmadım</button>'));
+    assert.equal(a.run(`hafizaSepetSoru('${slot}',${bu},20)`), true); assert.equal(a.json(`D.elle['0|${bu}'].soru['${slot}']`), 20); assert.equal(a.run(`hafizaSepetSoru('${slot}',${bu},0)`), false);
+    assert.match(a.run('gorunumHafiza()'), /<option value="20" selected>20 soru<\/option>/);
+    // The report (print / PDF) is on the page for paper only: the day's unreported basket study is written as not done.
+    assert.match(h, /<section class="hf-rapor" id="hfRapor"><h1>Çalışma raporum<\/h1>/); assert.match(h, /<li class="hf-r-yok"><span>[^<]*<\/span><b>sepetteydi · yapılmadı<\/b><\/li>/);
+    assert.match(h, /data-hf-rapor[^>]*>Raporum \(PDF\)<\/button>/); assert.doesNotMatch(h, /İyi sayıldı/, 'memory never shows an assumed result');
     assert.equal(a.run(`hafizaSepettenCikar('${slot}',${bu})`), true); assert(!hafta(a, bu)[g].some(r => r.ki === kiB));
+    assert.deepEqual(a.json(`hafizaDurumu(0).liste.find(x=>x.ki===${kiB})||null`), onceB, '“Yapmadım”: the topic is as it was');
+    // “Çoktan unuttum”: the topic turns into a konu anlatımı (dragged to the basket as a lesson, not a test); it can be taken back.
+    assert.equal(a.run(`hafizaElleKaydet(0,${kiC},0.01,1)`), true); assert.equal(a.json(`hafizaDurumu(0).liste.find(x=>x.ki===${kiC}).unutuldu`), true);
+    h = a.run('gorunumHafiza()');
+    assert.match(h, new RegExp('<div class="hf-oge hf-alt[^"]* hf-unutuldu[^"]*" data-hf-ki="' + kiC + '" draggable="true" data-hf-surukle="anlatim:' + kiC + '">[\\s\\S]*?konu anlatımıyla yeniden başla[\\s\\S]*?data-hf-birak="' + kiC + '">Unutmadım · geri al</button>'));
+    assert.equal(a.run(`hafizaElleSil(0,${kiC})`), true); assert.match(a.run('gorunumHafiza()'), new RegExp('data-hf-unuttum="' + kiC + '"|^(?![\\s\\S]*data-hf-ki="' + kiC + '")'));
     // The filter keeps one lesson's topics.
     a.run(`EK.hafizaDersFiltre=${JSON.stringify(ders)}`); h = a.run('gorunumHafiza()');
     for (const ki of [kiA, kiB, kiC]) assert.equal(new RegExp('data-hf-ki="' + ki + '"').test(h), a.run(`dersAnahtari(${ki})`) === ders, 'only ' + ders);
@@ -831,7 +848,7 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     assert.match(h, /<p class="mini serbest-not" id="serbestNot">Kendi programını yapıyorsun: bu plan bir öneri\./);
     assert.match(h, /<span>Öneri · çalışırsan sonucunu seç<\/span><b class="ps-deger">girmezsen sayılmaz<\/b>/); assert.doesNotMatch(h, /İyi sayılır/);
     assert.match(a.run('ogrenciBugunKarti(0)'), /<span>test öneriliyor<\/span>/);
-    assert.match(a.run('planiAyarlaKarti(0)'), /id="ogrSerbest" checked>/); assert.match(a.run("EK.sekme='hafiza';gorunumHafiza()"), /id="ogrSerbest" checked>[\s\S]*Kendi programını yapıyorsun: sonucunu girmediğin hiçbir test yapılmış sayılmıyor/);
+    assert.match(a.run('planiAyarlaKarti(0)'), /id="ogrSerbest" checked>/); assert.match(a.run("EK.sekme='hafiza';gorunumHafiza()"), /id="ogrSerbest" checked>[\s\S]*Kendi programını yapıyorsun: plan yalnızca bir öneri, sonucunu girmediğin test planında da yapılmış sayılmıyor/);
     // A reported result still works the same way and shows as the student's own.
     const t = hafta(a, bu).flatMap((l, g) => l.map(x => ({ ...x, gun: bu + g }))).find(x => x.gun === bugun && !x.gt && !x.anlatim);
     await a.run(`planSonucKaydet({dataset:{ki:'${t.ki}',gun:'${bugun}',hb:'${bu}',slot:'${t.slot}',planDisi:'0',kayitli:'0',oniz:''},querySelector:()=>null,querySelectorAll:()=>[]},3)`); await a.run('KAYIT_ZINCIRI');
