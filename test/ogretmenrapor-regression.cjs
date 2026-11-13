@@ -151,6 +151,12 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(tf('MATEMATİK-A', 'M.12.5.2.3'), 'Anlık Değişim Oranı ve Türev'); assert.equal(tf('MATEMATİK-A', 'E.M.11.1.2.1'), 'Trigonometrik Fonksiyonlar');
     assert.equal(tf('GEOMETRİ-A', 'GEO.12.7.1.1'), 'Çemberin Analitik İncelenmesi'); assert.equal(tf('MATEMATİK-A', 'E.M.10.3.2'), 'Polinomların Çarpanlara Ayrılması');
     assert.equal(tf('MATEMATİK-T', 'E.M.10.2.1.4'), 'Fonksiyon Kavramı ve Gösterimi', 'the built-in list first'); assert.equal(tf('MATEMATİK-A', 'M.12.5.2.3', { 'MATEMATİK-A|M.12.5.2.3': 'Türev' }), 'Türev', 'an own mapping first');
+    // The 9th–11th grades follow the new programme (codes like MAT.11.1.1): its numbers mean other topics, so the earlier
+    // programme's list never answers for them. The 11th grade's unit comes from the app's curriculum; a grade without codes
+    // there has no topic (the report shows the kazanım itself).
+    const unite = run("MUFREDAT_2026.siniflar['11'].find(d=>d.uniteler.some(u=>(u.ciktiKodlari||[]).includes('MAT.11.1.1'))).uniteler.find(u=>u.ciktiKodlari.includes('MAT.11.1.1')).ad");
+    assert.equal(tf('MATEMATİK-T', 'MAT.11.1.1'), unite); assert.equal(tf('MATEMATİK-T', 'MAT.11.1.1.2'), unite); assert.notEqual(unite, 'Yönlü Açılar');
+    assert.equal(tf('MATEMATİK-A', 'MAT.10.3.1'), null, 'not the earlier programme’s Polinomlar'); assert.equal(tf('MATEMATİK-A', 'MAT.12.5.2'), null);
     assert.equal(tf('FİZİK-A', 'F.12.5.2.3'), null); assert.equal(tf('MATEMATİK-A', 'M.12.9.9.1'), null); assert.equal(tf('TÜRKÇE-T', 'ZZ.11.1.1'), null);
     // Konu Takibi's own page keeps its pooled row: the option is the report's.
     assert(get(`KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular`) !== null);
