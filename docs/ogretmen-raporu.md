@@ -31,6 +31,7 @@ The rehber öğretmen prints it (**Yazdır / PDF**) and hands each teacher their
   A subject a teacher teaches in one session only says so under their name: *Matematik (AYT) · 12/C*.
 - **Nets:** the school's exam lists (Sıralamalar, through `ANALIZ.kaynak()`).
 - **Türkiye average:** the publisher's Genel Net from the Türkiye geneli lists.
+- **A kazanım with no topic is its own row.** Konu Takibi's built-in kazanım → topic map covers the 9th and 10th grade codes and Türkçe; an 11th or 12th grade kazanım (most of AYT) has a topic only if the teacher mapped it. The report asks `ogrenciFark` for `kazanim: true`, so such a kazanım is a row under its own name and every question of every exam is in the table. (Before, these were dropped: an AYT Matematik block showed only the few 9th–10th grade questions of one exam, which read as TYT topics.)
 - **Topics:** Konu Takibi: the students' kazanım reports, the exam summary (question → kazanım) and the publisher's **Performans analizi** (Türkiye's success rate per question). Without the Performans analizi the grid is replaced by a one-line note saying what to add.
 
 Each teacher's subject is split by grade (an exam belongs to one grade) and by exam subject: one block per *TYT Matematik · 12. sınıf*, *AYT Matematik · 12. sınıf* …
