@@ -135,6 +135,20 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(D.konutakibi,['12/A'],'TYT','MATEMATİK-T')`), null, 'no Matematik in Konu Takibi');
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(null,['12/A'],'TYT','TÜRKÇE-T')`), null);
   });
+  await check('a kazanım without a topic is a row under its own name: no question and no exam is dropped (11th and 12th grade codes have no built-in topic)', () => {
+    // One exam, ADA (12/A): Sözcükte Anlam ×2 (p .5, .5; 1 correct) and a code outside every map ×1 (p .4; correct).
+    const kt = run('KONU_TAKIBI'), ad = 'SENTETİK-KONU-9';
+    const v = kt.merge(kt.blank(), [{ ad, blocks: [F.block([F.row('T.12.1.1', 'a', [2, 1, 1, 0]), F.row('ZZ.11.1.1', 'Sentetik kazanımı uygular', [1, 1, 0, 0])], 'outcome', 'TÜRKÇE-T', A)] }],
+      [{ tur: 'ozet', ad, oturum: 'TYT', dersler: { 'TÜRKÇE-T': [['T.12.1.1'], ['T.12.1.1'], ['ZZ.11.1.1']] } }, { tur: 'turkiye', ad, oturum: 'TYT', dersler: { 'TÜRKÇE-T': [.5, .5, .4] } }]);
+    v.exams.forEach(x => x.date = '2026-10-01'); put('KV2', v);
+    const z = get(`OGRETMEN_RAPOR.konuIzgarasi(KV2,['12/A'],'TYT','TÜRKÇE-T')`);
+    assert.deepEqual(z.satir.map(r => r.ad).sort(), ['Sentetik kazanımı uygular', 'Sözcükte Anlam']);
+    // 1 correct against ,4 expected over 1 answer → +60 points; the whole subject counts all three questions: (2 − 1,4) / 3 = +20.
+    near(z.satir.find(r => r.ad === 'Sentetik kazanımı uygular').hucre[0].fark, 60); near(z.sinavlar[0].fark, 20);
+    // Konu Takibi's own page keeps its pooled row: the option is the report's.
+    assert(get(`KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular`) !== null);
+    assert.deepEqual(run(`[...KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular.values()].map(t=>t.ad).sort().join('|')`), 'Konusu eşleşmeyen kazanımlar|Sözcükte Anlam');
+  });
   await check('colours: red behind, green ahead, deeper with the gap (full at ±20 points), pale within chance, white text on the deepest', () => {
     const c = (fark, durum) => run(`OGRETMEN_RAPOR.hucreRengi({fark:${fark},durum:'${durum}'})`);
     assert.equal(c(-20, 'geride'), 'background:color-mix(in srgb,var(--kritik) 85%,transparent);color:#fff');

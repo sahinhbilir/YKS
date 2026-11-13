@@ -137,7 +137,9 @@ function dersSinavlari(c,kod){
 }
 function sinavFarki(c,oturum,e){
   const anahtar=oturum+'|'+KONU_TAKIBI.ek(e.ad);
-  if(!c.fark.has(anahtar)){let r;try{r=KONU_TAKIBI.ogrenciFark(c.v,{session:oturum,exam:KONU_TAKIBI.ek(e.ad)})}catch(err){r=null}c.fark.set(anahtar,r)}
+  // kazanim: a kazanım with no topic (every 11th and 12th grade code: the built-in map stops at the 10th grade) is a row under
+  // its own name. Dropping them left an AYT block with the few 9th and 10th grade questions of one exam and nothing else.
+  if(!c.fark.has(anahtar)){let r;try{r=KONU_TAKIBI.ogrenciFark(c.v,{session:oturum,exam:KONU_TAKIBI.ek(e.ad),kazanim:true})}catch(err){r=null}c.fark.set(anahtar,r)}
   return c.fark.get(anahtar);
 }
 function olc(c){

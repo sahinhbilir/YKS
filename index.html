@@ -25445,7 +25445,9 @@ function geridekiKonular(v,sel={},adet=5){
   return {var:true,session:m.session,duzey:m.duzey,sinav:m.exams.length,geride:liste.filter(r=>r.durum==='geride').length,toplam:liste.length,liste:liste.slice(0,adet),dersler:m.dersler,genel:m.genel};
 }
 /* Each pupil against Türkiye: correct − expected, expected = Σ Türkiye p over the questions of the pupil's kazanım rows (the
-   same row rule as "zorluğa göre"). Unit: questions. ids: the pupils to include (a Set of studentKey), or all. */
+   same row rule as "zorluğa göre"). Unit: questions. ids: the pupils to include (a Set of studentKey), or all.
+   kazanim: a kazanım that has no topic (no own mapping, not in the built-in map: every 11th and 12th grade code) is kept as
+   a row under its own name instead of being pooled into "Konusu eşleşmeyen kazanımlar". */
 function ogrenciFark(v,sel={}){
   const zi=zorlukIndex(v.zorluk,'turkiye'),sfx=sel.session==='AYT'?'-A':'-T',out=new Map();let atlanan=0;
   for(const e of v.exams){
@@ -25461,12 +25463,12 @@ function ogrenciFark(v,sel={}){
     for(const g of by.values()){
       let st=out.get(g.sid);if(!st){st={id:g.sid,student:g.student,toplam:{b:0,d:0,n:0},dersler:new Map(),konular:new Map()};out.set(g.sid,st)}
       const ck=key(g.course);
-      const ekle=(konu,z)=>{
+      const ekle=(konu,z,kazanim)=>{
         const d=st.dersler.get(ck)||{id:ck,ad:courseLabel(g.course),b:0,d:0,n:0};d.b+=z.b;d.d+=z.d;d.n+=z.n;st.dersler.set(ck,d);
         st.toplam.b+=z.b;st.toplam.d+=z.d;st.toplam.n+=z.n;
-        const kid=ck+'|'+(konu?key(konu):'?'),t=st.konular.get(kid)||{id:kid,ders:ck,ad:konu?topicName(konu):'Konusu eşleşmeyen kazanımlar',b:0,d:0,n:0};t.b+=z.b;t.d+=z.d;t.n+=z.n;st.konular.set(kid,t);
+        const kid=ck+'|'+(konu?key(konu):kazanim?'k:'+key(kazanim[0]):'?'),t=st.konular.get(kid)||{id:kid,ders:ck,ad:konu?topicName(konu):kazanim?clean(kazanim[1])||kazanim[0]:'Konusu eşleşmeyen kazanımlar',b:0,d:0,n:0};t.b+=z.b;t.d+=z.d;t.n+=z.n;st.konular.set(kid,t);
       };
-      if(g.detail){for(const r of g.detail.rows){const code=v.labels[r[0]][0],c=r.slice(1);if(!c[0])continue;const rz=rowZ(g.zc,code,c,g.sid);if(!rz.z){atlanan++;continue}ekle(topicFor(g.course,code,v.maps),rz.z)}}
+      if(g.detail){for(const r of g.detail.rows){const code=v.labels[r[0]][0],c=r.slice(1);if(!c[0])continue;const rz=rowZ(g.zc,code,c,g.sid);if(!rz.z){atlanan++;continue}ekle(topicFor(g.course,code,v.maps),rz.z,sel.kazanim?v.labels[r[0]]:null)}}
       else if(g.summary){for(const r of g.summary.rows){const ad=v.labels[r[0]][1],c=r.slice(1),id=key(topicName(ad));if(!c[0])continue;
         const qs=g.zc.qs.filter(q=>q.codes.some(cd=>{const t=topicFor(g.course,cd,v.maps);return t&&key(t)===id}));if(qs.length!==c[0]){atlanan++;continue}
         ekle(ad,{b:qs.reduce((a,q)=>a+q.p,0),d:c[1],n:qs.length})}}
@@ -30591,7 +30593,9 @@ function dersSinavlari(c,kod){
 }
 function sinavFarki(c,oturum,e){
   const anahtar=oturum+'|'+KONU_TAKIBI.ek(e.ad);
-  if(!c.fark.has(anahtar)){let r;try{r=KONU_TAKIBI.ogrenciFark(c.v,{session:oturum,exam:KONU_TAKIBI.ek(e.ad)})}catch(err){r=null}c.fark.set(anahtar,r)}
+  // kazanim: a kazanım with no topic (every 11th and 12th grade code: the built-in map stops at the 10th grade) is a row under
+  // its own name. Dropping them left an AYT block with the few 9th and 10th grade questions of one exam and nothing else.
+  if(!c.fark.has(anahtar)){let r;try{r=KONU_TAKIBI.ogrenciFark(c.v,{session:oturum,exam:KONU_TAKIBI.ek(e.ad),kazanim:true})}catch(err){r=null}c.fark.set(anahtar,r)}
   return c.fark.get(anahtar);
 }
 function olc(c){
