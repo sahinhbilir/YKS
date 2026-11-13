@@ -171,7 +171,9 @@ Students and teachers both get a top bar (`.ray.ust`), built by `ustMenu` from
 
 - **YKS Tekrar Defteri** (the brand) is a button that opens the home page (`'ana'`).
   On phones (≤480 px) it shortens to "YKS".
-- **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Hafızam (recall per topic against the target line, see docs/student-flow.md), Haftalar haritası
+- **Hafızam** is the first tab, a tab of its own, and the page a student lands on after login (recall per topic against the
+  target line, see docs/student-flow.md).
+- **Planım ▾**: "Planım" opens the weekly plan. The arrow opens Haftalar haritası
   and Sonuç gir (`PLAN_ALT_SEKMELER`). Geçmiş plan kurtar opens from a red week on the
   map; there is no Karnem (its FSRS course calibration moved to Ayarlar). Hovering opens it
   with a mouse (`@media (hover:hover)`), a click toggles it on touch screens, and it
@@ -190,7 +192,7 @@ in a sticky footer inside the results card, and secondary mobile actions also ha
 44 px targets. Help links and SVG week arrows use the same visual language as the
 other controls; week arrows have explicit accessible names.
 
-After login, students land on the home page (`gorunumAnaSayfa`, tab `'ana'`). It
+After login, students land on Hafızam. The brand opens the home page (`gorunumAnaSayfa`, tab `'ana'`). It
 shows the weeks map, and for a YKS student the **Deneme gelişimi** chart beside it.
 Both headings are links: "Haftalar haritası" opens the map page (the map alone, also
 in the Planım menu) and "Deneme gelişimi" opens Denemelerim. On hover or focus they

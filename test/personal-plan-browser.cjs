@@ -159,7 +159,7 @@ const ogrenci=(kur)=>{
    await bugunKart.locator('[data-sekme="plan"]').click();await page.getByRole('heading',{name:'Haftalık planın'}).waitFor();
    // Hafızam: every taught or measured topic with its recall bar and the target line; "Çalıştım" opens the slider; the box turns the plan
    // into a suggestion and back.
-   await page.locator('[aria-controls="planMenusu"]').click();await page.locator('#planMenusu [data-sekme="hafiza"]').click();
+   await page.locator('#ray > button[data-sekme="hafiza"]').click();   // Hafızam is a tab of its own
    await page.getByRole('heading',{name:'Hafızam'}).waitFor();
    const hfSatir=page.locator('.hafiza-sayfa .hf-liste .hf-oge');assert(await hfSatir.count()>=1,'taught and measured topics are listed');
    assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.hafiza-sayfa .hf-cubuk')].every(c=>{const k=c.getBoundingClientRect(),d=c.querySelector('i').getBoundingClientRect(),b=c.querySelector('b').getBoundingClientRect();
@@ -172,12 +172,14 @@ const ogrenci=(kur)=>{
    assert.equal(await page.evaluate(()=>[...document.querySelectorAll('.hafiza-sayfa .hf-oge')].every(e=>e.scrollWidth<=e.clientWidth+1)),true,'rows do not overflow');
    await page.screenshot({path:path.join(out,'student-hafizam-'+width+'.png'),fullPage:true});
    await page.locator('.hafiza-sayfa .hf-oge.hf-acik [data-hf-ac]').click();assert.equal(await page.locator('.hafiza-sayfa .hf-acik').count(),0,'the same button closes the row');
+   await page.evaluate(()=>{EK.hafizaAyarAcik=true;ciz()});   // Hafızam keeps its settings folded
    await page.locator('#ogrSerbest').check();
    await page.waitForFunction(()=>serbestAcikMi(0)&&/Kendi programını yapıyorsun/.test(document.querySelector('.hf-kutu')?.textContent||''));   // saved, then redrawn
    await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});
    assert.match(await page.locator('#serbestNot').innerText(),/bu plan bir öneri/);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'plan with the note: overflow');
    await page.locator('#serbestNot [data-sekme="hafiza"]').click();await page.getByRole('heading',{name:'Hafızam'}).waitFor();
+   await page.evaluate(()=>{EK.hafizaAyarAcik=true;ciz()});
    await page.locator('#ogrSerbest').uncheck();
    await page.waitForFunction(()=>!serbestAcikMi(0)&&/yalnızca bildirdiğin çalışmalardan/.test(document.querySelector('.hf-kutu')?.textContent||''));
    assert.deepEqual(await page.evaluate(()=>D.ogr[0].serbest),[],'opened and closed on the same day leaves no period');

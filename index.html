@@ -417,13 +417,30 @@ tr.pasif td:first-child{opacity:1}
 .hf-gun ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:12.5px}.hf-gun li{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px}
 .hf-gun select{font:inherit;font-size:12px;padding:1px 2px;max-width:100%}.hf-gun.hf-gecti.hf-dolu{opacity:.8}
 .hf-yok{font:inherit;font-size:11.5px;border:1px solid var(--kritik);border-radius:999px;background:none;color:var(--kritik);cursor:pointer;padding:0 7px}
+.hf-durum{margin:0 0 4px;font-size:15px;color:var(--soluk)}.hf-durum b{font-size:22px;color:var(--murekkep);font-variant-numeric:tabular-nums}.hf-durum b.hf-durum-alt{color:var(--kritik)}
+.hf-araclar{align-items:center}.hf-diger{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}.hf-diger summary{cursor:pointer;font-size:12px;color:var(--soluk);list-style:none;padding:4px 6px}
+.hf-diger summary::-webkit-details-marker{display:none}.hf-diger[open]{flex-basis:100%}.hf-diger-ic{display:inline-flex;flex-wrap:wrap;gap:6px}
+.hf-hiz{font-weight:700}.hf-hiz-gec{color:var(--iyi)}.hf-hiz-cabuk{color:var(--kritik)}
+.hf-olcer{display:inline-flex;gap:2px;margin-left:8px;vertical-align:middle}.hf-olcer i{width:9px;height:8px;border-radius:2px;background:var(--cizgi)}
+.hf-olcer-0 i:nth-child(-n+1),.hf-olcer-1 i:nth-child(-n+2){background:var(--kritik)}.hf-olcer-2 i:nth-child(-n+3){background:var(--soluk)}.hf-olcer-3 i:nth-child(-n+4),.hf-olcer-4 i{background:var(--iyi)}
+.hf-ders-liste label.hf-ayarli>span:first-child{font-weight:700;color:var(--murekkep)}
+.hf-egri svg{display:block;width:100%;max-width:320px;height:auto}.hf-egri-yol{fill:none;stroke:var(--vurgu);stroke-width:2}.hf-egri-hedef{stroke:var(--murekkep);stroke-width:1;stroke-dasharray:4 3}.hf-egri-nokta{fill:var(--kritik)}.hf-egri text{font-size:9px;fill:var(--soluk)}
+.hf-anlatim{margin:22px 0 0;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.hf-anl-ders{display:flex;flex-direction:column;gap:5px;width:100%}.hf-anl-ders>b{font-size:12px;color:var(--soluk)}
+.hf-ayar{padding:12px 18px;margin:22px 0 0}.hf-ayar>summary{cursor:pointer;font-weight:600}.hf-ayar .hf-kutu{padding:10px 0 0;margin:0;border:0;box-shadow:none;background:none}
+.hf-ayar .hf-dersler{margin:10px 0 0;padding:10px 0 0;border:0;border-top:1px solid var(--cizgi);border-radius:0;box-shadow:none;background:none}
 .hf-rapor{display:none}
 @media print{body.hf-yazdir>:not(.kabuk),body.hf-yazdir .kabuk>:not(main),body.hf-yazdir #ana>:not(.hafiza-sayfa),body.hf-yazdir .hafiza-sayfa>:not(.hf-rapor){display:none!important}
-  body.hf-yazdir .hf-rapor{display:block;color:#111;font:12px/1.45 Arial,Helvetica,sans-serif}
-  .hf-rapor h1{font-size:20px;margin:0 0 2px;color:#111}.hf-rapor h2{font-size:14px;margin:14px 0 4px;padding-bottom:2px;color:#111;border-bottom:1px solid #999}
-  .hf-rapor ul{margin:0;padding:0;list-style:none}.hf-rapor li{display:flex;justify-content:space-between;gap:12px;padding:2px 0;border-bottom:1px dotted #ccc;break-inside:avoid}
-  .hf-rapor .hf-r-yok{color:#a33}.hf-rapor p{margin:2px 0 0}}
-@media print{.hafiza-kart,.hf-sepet,.hf-dersler,.hf-suzgec,.hf-araclar{display:none}}
+  body.hf-yazdir .hf-rapor{display:block;color:#000;font-family:"Segoe UI",Arial,sans-serif}
+  .hf-r-ust{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3mm}.hf-r-ust b{font-size:13pt}.hf-r-ust span{font-size:10pt}
+  .hf-rapor table.hf-r-tablo{table-layout:fixed;width:100%;border-collapse:collapse;border:.3mm solid #000}
+  .hf-rapor table.hf-r-tablo th,.hf-rapor table.hf-r-tablo td{border:.3mm solid #999;vertical-align:top;padding:1mm 1.2mm}
+  .hf-rapor table.hf-r-tablo th{border-color:#000;text-align:center;font-size:8pt;color:#000;text-transform:none;letter-spacing:0;background:none}.hf-rapor table.hf-r-tablo td{height:70mm}
+  .hf-r-oge{padding-bottom:1.2mm;margin-bottom:1.2mm;border-bottom:.2mm dotted #bbb;break-inside:avoid}
+  .hf-r-oge .d{font-size:6.4pt;letter-spacing:.02em;text-transform:uppercase;color:#555}.hf-r-oge .k{font-size:8pt;line-height:1.15}.hf-r-oge .n{font-size:6.6pt;color:#555;margin-top:.4mm}
+  .hf-r-yok .k{color:#777}.hf-r-yok .n{color:#a33;font-weight:700}
+  .hf-r-alt{display:flex;flex-wrap:wrap;gap:1mm 4mm;margin-top:3mm;font-size:7.4pt}.hf-r-alt b{flex-basis:100%;font-size:8.4pt}.hf-r-alt i{font-style:normal;font-weight:700;color:#a33}
+  .hf-r-not{margin:2mm 0 0;font-size:6.6pt;color:#555}}
+@media print{.hafiza-kart,.hf-sepet,.hf-dersler,.hf-suzgec,.hf-araclar,.hf-anlatim,.hf-ayar,.hf-durum{display:none}}
 .bugun-kart{padding:20px 22px;border-top:3px solid var(--vurgu);margin-bottom:26px;display:flex;flex-direction:column;gap:14px}
 .bugun-kart .yol-baslik{align-items:flex-start;gap:14px 28px;flex-wrap:wrap}
 .bg-baslik b{font-variant-numeric:tabular-nums}.yol-baslik .bg-baslik span{display:inline;font-weight:600}
@@ -8508,24 +8525,32 @@ function hafizaDurumu(si) {
   const satirlar = new Map();
   (D.log || []).forEach(l => { if (l[1] !== si || l[0] > bugun) return; let g = satirlar.get(l[2]); if (!g) satirlar.set(l[2], g = []); g.push(l); });
   // Konular: sonucu ya da kendi ayarı olanlar, ve dersinde bugüne kadar işlenmiş olanlar (şubenin müfredatı ve ders programından).
-  const kiler = new Set([...satirlar.keys(), ...Object.keys(o.hafizaElle || {}).map(Number)]);
+  // Öğrencinin sepete koyduğu konu anlatımı (günü gelmiş, "Yapmadım" denmemiş): konu o gün öğrenilmiş sayılır ve unutma çubuğu başlar.
+  const anlatim = new Map();
+  Object.keys(D.elle || {}).forEach(a => { const [s2, hb] = a.split('|').map(Number), ov = D.elle[a]; if (s2 !== si || !ov || !ov.anlatim) return;
+    Object.keys(ov.anlatim).forEach(k => { const yer = (ov.yer || {})[k], gun = hb + (Array.isArray(yer) ? +yer[0] : NaN); if ((ov.ogrEk || {})[k] && Number.isInteger(gun) && gun <= bugun) anlatim.set(+k, Math.max(anlatim.get(+k) ?? -Infinity, gun)); }); });
+  const kiler = new Set([...satirlar.keys(), ...Object.keys(o.hafizaElle || {}).map(Number), ...anlatim.keys()]);
   for (let ki = 0, n = konuSayisi(); ki < n; ki++) { const t = ogrenciIslenisTarihi(si, ki); if (Number.isInteger(t) && t <= bugun) kiler.add(ki); }
   kiler.forEach(ki => {
     const konu = konuAl(ki); if (!konu) return;
     const rows = satirlar.get(ki) || [], k = unutmaKatsayisi(si, ki), islenis = ogrenciIslenisTarihi(si, ki), elle = hafizaElleAl(si, ki);
-    let kart = kartHesapla(si, ki, [], rows), olculmedi = false;
+    let kart = kartHesapla(si, ki, [], rows), olculmedi = false, anlatildi = false;
+    const anl = anlatim.get(ki), bas = Math.max(Number.isInteger(islenis) && islenis <= bugun ? islenis : -Infinity, anl ?? -Infinity);
     if (!kart || !(kart.s > 0) || !Number.isInteger(kart.son)) {
-      if (!Number.isInteger(islenis) || islenis > bugun) return;
-      // Derste işlendi, hiç ölçülmedi: o gün öğrenilmiş sayılır, ilk "İyi"nin başlangıç kalıcılığıyla.
-      kart = { s: ilkS(3, parametreAl(si, ki)), son: islenis }; olculmedi = true;
+      if (!Number.isFinite(bas)) return;
+      // Derste işlendi (ya da anlatımını kendi yaptı), hiç ölçülmedi: o gün öğrenilmiş sayılır, ilk "İyi"nin başlangıç kalıcılığıyla.
+      kart = { s: ilkS(3, parametreAl(si, ki)), son: bas }; olculmedi = true; anlatildi = anl === bas;
+    } else if (anl !== undefined && anl > kart.son) {
+      // Son sonuçtan ya da "Çoktan unuttum"dan sonra yapılan konu anlatımı: konu o günden yeniden başlar.
+      kart = { s: ilkS(3, parametreAl(si, ki)), son: anl }; olculmedi = true; anlatildi = true;
     }
     const gecen = Math.max(0, bugun - kart.son), r = hatirlama(gecen / k, kart.s), cizgiGun = kart.son + k * kart.s * carpan;
     const gercekGun = rows.filter(l => sonucNotu(l) && !sonucDevreDisiMi(si, ki, l[0])).reduce((m, l) => Math.max(m, l[0]), -Infinity);
     const dayanak = Math.max(gercekGun, elle && kart.elle === elle.g ? elle.g : -Infinity);
-    const sonucsuz = bugun - (Number.isFinite(dayanak) ? dayanak : Number.isInteger(islenis) ? islenis : kart.son);
+    const sonucsuz = bugun - (anlatildi ? kart.son : Number.isFinite(dayanak) ? dayanak : Number.isInteger(islenis) ? islenis : kart.son);
     // The student's own state is the latest word when no real result came after it.
     const elleSon = elle && kart.elle === elle.g && !rows.some(l => sonucNotu(l) && !sonucDevreDisiMi(si, ki, l[0]) && (l[0] > elle.g || (l[0] === elle.g && (+l[6] || 0) > elle.ts))) ? elle.g : null;
-    liste.push({ ki, ad: konu[3], ders: konuDersAdi(ki), r, gecen, son: kart.son, cizgiGun, unutuldu: elleSon !== null && elle.r <= 0.02,
+    liste.push({ ki, ad: konu[3], ders: konuDersAdi(ki), r, gecen, son: kart.son, cizgiGun, anlatildi, unutuldu: elleSon !== null && elle.r <= 0.02,
       altinda: r < hedef - 1e-9, olculmedi, elle: !!elle && kart.elle === elle.g, elleSon, sonucsuz, eski: sonucsuz >= HAFIZA_UZUN, k, sGun: kart.s * k });
   });
   liste.sort((a, b) => a.r - b.r || konuGorunenAdi(a.ad).localeCompare(konuGorunenAdi(b.ad), 'tr'));
@@ -8553,20 +8578,20 @@ function hafizaSatiri(si, x, d, plan) {
     : 'çizgiye ' + (Math.ceil(x.cizgiGun - bugun) <= 0 ? 'bugün iniyor' : Math.ceil(x.cizgiGun - bugun) + ' gün var');
   // Çizginin altında renk turuncudan kırmızıya döner: unutmaya yaklaştıkça kızarır (%40 ve altı tam kırmızı).
   const kizil = x.altinda ? Math.round(100 * Math.min(1, Math.max(0, (d.hedef - x.r) / Math.max(.01, d.hedef - .4)))) : 0, renk = x.altinda ? 'color-mix(in srgb,var(--kritik) ' + kizil + '%,var(--uyari))' : '';
-  const ne = x.olculmedi ? 'derste işlendi ' + gunOnceYazi(x.gecen) + ' · henüz sonucun yok'
+  const ne = x.olculmedi ? (x.anlatildi ? 'konu anlatımını yaptın ' : 'derste işlendi ') + gunOnceYazi(x.gecen) + ' · henüz sonucun yok'
     : x.unutuldu ? 'çoktan unuttum dedin (' + gunOnceYazi(bugun - x.elleSon) + ') · konu anlatımıyla yeniden başla'
     : x.elleSon !== null ? 'kendi ayarın (' + gunOnceYazi(bugun - x.elleSon) + ')'
     : 'son çalışma ' + gunOnceYazi(x.gecen) + (x.elle ? ' · kendi ayarından devam' : '');
   return '<div class="hf-oge' + (x.altinda ? ' hf-alt' : '') + (x.eski ? ' hf-eski' : '') + (x.unutuldu ? ' hf-unutuldu' : '') + (acik || duzen ? ' hf-acik' : '') + (secili ? ' hf-secili' : '') + '" data-hf-ki="' + x.ki + '"' +
       (salt ? '' : ' draggable="true" data-hf-surukle="' + deger + '"') + '>' +
-    '<div class="hf-ust"><div class="hf-ad"><span class="d">' + kacis(dersKisaAd(x.ders)) + (x.k !== 1 ? ' · ' + (x.k > 1 ? 'geç unuturum' : 'çabuk unuturum') : '') + '</span><span class="k">' + konuHtml(x.ad) + '</span></div>' +
+    '<div class="hf-ust"><div class="hf-ad"><span class="d">' + kacis(dersKisaAd(x.ders)) + (x.k !== 1 ? ' · <b class="hf-hiz ' + (x.k > 1 ? 'hf-hiz-gec">geç unuturum' : 'hf-hiz-cabuk">çabuk unuturum') + '</b>' : '') + '</span><span class="k">' + konuHtml(x.ad) + '</span></div>' +
     '<button type="button" class="dugme mini" data-hf-ac="' + x.ki + '" aria-expanded="' + acik + '">' + (acik ? 'Kapat' : 'Çalıştım') + '</button></div>' +
     '<div class="hf-cubuk" role="img" aria-label="Tahmini hatırlama %' + yuzde + ', hedef çizgisi %' + hedefY + '"><i style="width:' + Math.max(1, yuzde) + '%' + (renk ? ';background:' + renk : '') + '"></i><b style="left:' + hedefY + '%"></b></div>' +
     '<div class="hf-yazi"><strong' + (renk ? ' style="color:' + renk + '"' : '') + '>%' + yuzde + '</strong><span>' + ne + ' · ' + cizgi + '</span></div>' +
     (x.eski ? '<div class="hf-eski-not">' + (x.olculmedi ? x.sonucsuz + ' gündür hiç sonucun yok' : x.sonucsuz + ' gündür sonuç girmedin') + '</div>' : '') +
-    (salt ? '' : '<div class="hf-araclar"><button type="button" class="dugme mini" data-hf-duzenle="' + x.ki + '" aria-expanded="' + duzen + '">' + (duzen ? 'Vazgeç' : 'Düzenle') + '</button>' +
-      (x.unutuldu ? '<button type="button" class="dugme mini" data-hf-birak="' + x.ki + '">Unutmadım · geri al</button>' : '<button type="button" class="dugme mini" data-hf-unuttum="' + x.ki + '" title="Bu konuyu baştan öğrenmem gerekiyor: konu anlatımına döner">Çoktan unuttum</button>') +
-      '<button type="button" class="dugme mini" data-hf-sec="' + deger + '" aria-pressed="' + secili + '">' + (secili ? 'Seçildi · bir gün seç' : x.unutuldu ? 'Sepete · konu anlatımı' : 'Sepete') + '</button></div>') +
+    (salt ? '' : '<div class="hf-araclar"><button type="button" class="dugme mini" data-hf-sec="' + deger + '" aria-pressed="' + secili + '">' + (secili ? 'Seçildi · bir gün seç' : x.unutuldu ? 'Sepete · konu anlatımı' : 'Sepete') + '</button>' +
+      '<details class="hf-diger"' + (duzen || x.unutuldu ? ' open' : '') + '><summary>Diğer</summary><span class="hf-diger-ic"><button type="button" class="dugme mini" data-hf-duzenle="' + x.ki + '" aria-expanded="' + duzen + '">' + (duzen ? 'Vazgeç' : 'Düzenle') + '</button>' +
+      (x.unutuldu ? '<button type="button" class="dugme mini" data-hf-birak="' + x.ki + '">Unutmadım · geri al</button>' : '<button type="button" class="dugme mini" data-hf-unuttum="' + x.ki + '" title="Bu konuyu baştan öğrenmem gerekiyor: konu anlatımına döner">Çoktan unuttum</button>') + '</span></details></div>') +
     (duzen ? hafizaDuzenleyici(si, x, d) : '') +
     (acik ? hafizaSurgusu(si, x.ki, x.ad, x.ders, plan) : '') + '</div>';
 }
@@ -8577,10 +8602,22 @@ function hafizaDuzenleyici(si, x, d) {
     '<label class="hf-duzen-satir"><span>Şu an aklımda</span><b data-hf-r-yazi>%' + r + '</b><input type="range" min="5" max="100" step="1" value="' + r + '" data-hf-r aria-label="Şu an aklında kalma oranı"></label>' +
     '<label class="hf-duzen-satir"><span>Unutma hızı · %90’a</span><b data-hf-s-yazi>' + HAFIZA_ELLE_S[idx] + ' günde</b><input type="range" min="0" max="' + (HAFIZA_ELLE_S.length - 1) + '" step="1" value="' + idx +
       '" data-hf-s aria-label="Unutma hızı: tam öğrenilmiş konunun yüzde doksana inme süresi"><span class="hf-duzen-uc"><i>hızlı unuturum</i><i>yavaş unuturum</i></span></label>' +
+    '<div class="hf-egri" data-hf-egri>' + hafizaEgri(r / 100, HAFIZA_ELLE_S[idx], d.hedef) + '</div>' +
     '<p class="mini" data-hf-onizle>' + hafizaOnizleYazi(r / 100, HAFIZA_ELLE_S[idx], d.hedef) + '</p>' +
     '<div class="arac"><button type="button" class="dugme birincil mini" data-hf-kaydet="' + x.ki + '">Kaydet</button>' +
     (x.elle ? '<button type="button" class="dugme mini" data-hf-birak="' + x.ki + '">Algoritmaya bırak</button>' : '') + '</div>' +
     '<p class="mini">Bundan sonra gireceğin sonuçlar bu ayardan devam eder. Planındaki tekrar günleri de buna göre kayar.</p></div>';
+}
+// Unutma eğrisi (küçük çizim): bugünden itibaren hatırlama, hedef çizgisi (kesik) ve çizgiyi kestiği gün (nokta). Sürgüler
+// oynadıkça yeniden çizilir: unutma hızını değiştirmenin ne yaptığı gözle görülür.
+function hafizaEgri(r, sGun, hedef) {
+  const W = 260, H = 66, t0 = sGun / FACTOR * (Math.pow(Math.min(1, Math.max(0.01, r)), 1 / DECAY) - 1), kes = sGun * (Math.pow(hedef, 1 / DECAY) - 1) / FACTOR - t0;
+  const T = Math.max(14, Math.min(365, Math.ceil(Math.max(kes, 0) * 1.6 + 7))), R = t => Math.pow(1 + FACTOR * (t0 + t) / sGun, DECAY);
+  const x = t => 4 + (W - 8) * t / T, y = v => 4 + (H - 22) * (1 - (Math.min(1, Math.max(.4, v)) - .4) / .6);
+  let yol = ''; for (let i = 0; i <= 40; i++) { const t = T * i / 40; yol += (i ? ' L' : 'M') + x(t).toFixed(1) + ',' + y(R(t)).toFixed(1); }
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Unutma eğrisi, ' + T + ' gün"><line class="hf-egri-hedef" x1="4" x2="' + (W - 4) + '" y1="' + y(hedef).toFixed(1) + '" y2="' + y(hedef).toFixed(1) + '"/><path class="hf-egri-yol" d="' + yol + '"/>' +
+    (kes > 0 && kes < T ? '<circle class="hf-egri-nokta" cx="' + x(kes).toFixed(1) + '" cy="' + y(hedef).toFixed(1) + '" r="3"/>' : '') +
+    '<text x="4" y="' + (H - 4) + '">bugün</text><text x="' + (W - 4) + '" y="' + (H - 4) + '" text-anchor="end">' + T + ' gün sonra</text></svg>';
 }
 // Kaç gün sonra çizginin altına iner: r'ye inmiş, S günde %90'a inen bir konuda kalan gün (FSRS eğrisi).
 function hafizaOnizleYazi(r, sGun, hedef) {
@@ -8594,8 +8631,8 @@ function hafizaDersAyarlari(si, d) {
   const ayarli = dersler.filter(ders => ((o.unutmaDers || {})[ders] || 1) !== 1).length;
   return '<details class="kart hf-dersler"' + (EK.hafizaDersAcik ? ' open' : '') + '><summary>Derslerine göre unutma hızın' + (ayarli ? ' <span class="mini">· ' + ayarli + ' ders ayarlı</span>' : '') + '</summary>' +
     '<p class="mini">Bir dersi ne kadar çabuk unuttuğunu sen seç: o dersin bütün konularında çizgi daha yavaş ya da daha hızlı iner, planındaki tekrarlar da buna göre kayar.</p>' +
-    '<div class="hf-ders-liste">' + dersler.map(ders => '<label><span>' + kacis(ders) + '</span><select data-hf-ders="' + kacis(ders) + '"' + (salt ? ' disabled' : '') + '>' +
-      UNUTMA_HIZLARI.map(([k, ad]) => '<option value="' + k + '"' + (((o.unutmaDers || {})[ders] || 1) === k ? ' selected' : '') + '>' + ad + '</option>').join('') + '</select></label>').join('') + '</div></details>';
+    '<div class="hf-ders-liste">' + dersler.map(ders => '<label' + (((o.unutmaDers || {})[ders] || 1) !== 1 ? ' class="hf-ayarli"' : '') + '><span>' + kacis(ders) + '</span><select data-hf-ders="' + kacis(ders) + '"' + (salt ? ' disabled' : '') + '>' +
+      UNUTMA_HIZLARI.map(([k, ad]) => '<option value="' + k + '"' + (((o.unutmaDers || {})[ders] || 1) === k ? ' selected' : '') + '>' + ad + '</option>').join('') + '</select><span class="hf-olcer hf-olcer-' + Math.max(0, UNUTMA_HIZLARI.findIndex(h => h[0] === ((o.unutmaDers || {})[ders] || 1))) + '" aria-hidden="true">' + '<i></i>'.repeat(5) + '</span></label>').join('') + '</div></details>';
 }
 // Sepet: konuları ve karışık çalışmaları bu haftanın ya da gelecek haftanın bir gününe sürükle (ya da seç ve güne dokun).
 function hafizaSepeti(si) {
@@ -8626,7 +8663,7 @@ function hafizaSepeti(si) {
   return '<section class="kart hf-sepet' + (sec ? ' hf-sepet-secili' : '') + '" id="hfSepet" aria-label="Sepetin"><div class="hf-sepet-bas"><h2>Sepetin</h2><button type="button" class="dugme mini" data-hf-rapor title="Bu hafta ne çalıştığının raporu (yazdır ya da PDF kaydet)">Raporum (PDF)</button><div class="yg-secim" role="group" aria-label="Hafta">' +
       [[0, 'Bu hafta'], [1, 'Gelecek hafta']].map(([v, ad]) => '<button type="button" class="' + ((EK.hafizaSepetHafta === 1 ? 1 : 0) === v ? 'secili' : '') + '" data-hf-sepet-hafta="' + v + '">' + ad + '</button>').join('') + '</div></div>' +
     '<p class="mini">' + (sec ? 'Seçtiğini eklemek istediğin güne dokun' + (ekSecili ? ' ya da “Her gün”e' : '') + '. <button type="button" class="dugme mini" data-hf-sec="">Vazgeç</button>'
-      : 'Konuları ya da karışık çalışmaları bir güne sürükle (ya da “Sepete”ye basıp güne dokun). Konu ' + HAFIZA_SEPET_SORU + ' soruyla eklenir, sayıyı değiştirebilirsin. Sepete koymak çalışmış saymaz: yaptığında “Çalıştım” ile bildir, yapamadıysan “Yapmadım” de; hafızana yalnızca bildirdiğin işlenir.') + '</p>' +
+      : 'Bir konuyu güne sürükle ya da “Sepete”ye basıp güne dokun. Yapamadıysan “Yapmadım” de.') + '</p>' +
     '<div class="hf-ekler">' + ekstra + '</div><div class="hf-gunler">' + gunler.join('') +
     '<div class="hf-gun hf-hergun' + (ekSecili ? ' hf-hedef' : '') + '" data-hf-gun="her" data-hf-hb="' + hb + '" role="button" tabindex="0" aria-label="Karışık çalışmayı her güne ekle"><div class="hf-gun-bas"><b>Her gün</b></div><span class="mini">karışık çalışmalar için</span></div></div></section>';
 }
@@ -8675,31 +8712,48 @@ function hafizaAnaKarti(si) {
     (alt.length > goster.length ? '<span class="mini">' + (alt.length - HAFIZA_ANA_SATIR) + ' konu daha çizginin altında</span>' : '') + '</div></section>';
 }
 // Sayfa: bütün konular, çizginin altındakiler başta; kutu ve konu seçici.
+// Konu anlatımları: düğmeyle açılır. Öğrencinin bütün konuları dersine göre; biri bir güne sürüklenir (ya da seçilip güne
+// dokunulur) ve o günün konu anlatımı olur. Günü gelince konu yukarıda unutma çubuğuyla görünür ("Yapmadım" denmediyse).
+function hafizaAnlatimlari(si, d, plan) {
+  if (typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme()) return '';
+  const acik = !!EK.hafizaAnlatimAcik, sec = EK.hafizaSepet || '';
+  let ic = '';
+  if (acik) {
+    const kp = (D.ogr[si] || {}).kendiPlan, sira = new Set(kp && Array.isArray(kp.sira) ? kp.sira : []), hepsi = [], gruplar = new Map();
+    for (let ki = 0, n = konuSayisi(); ki < n; ki++) if (konuAl(ki)) hepsi.push(ki);
+    const benim = hepsi.filter(ki => sira.has(ki) || Number.isInteger(ogrenciIslenisTarihi(si, ki)));
+    (benim.length ? benim : hepsi).forEach(ki => { const k = dersKisaAd(konuDersAdi(ki)); if (!gruplar.has(k)) gruplar.set(k, []); gruplar.get(k).push(ki); });
+    ic = '<p class="mini">Bir konunun anlatımını güne sürükle ya da dokunup günü seç.</p>' +
+      [...gruplar].map(([ders, l]) => '<div class="hf-anl-ders"><b>' + kacis(ders) + '</b><div class="hf-ekler">' + l.map(ki => { const v = 'anlatim:' + ki;
+        return '<button type="button" class="hf-ek hf-anl' + (sec === v ? ' hf-secili' : '') + '" draggable="true" data-hf-surukle="' + v + '" data-hf-sec="' + v + '" aria-pressed="' + (sec === v) + '">' + konuHtml(konuAl(ki)[3]) + '</button>'; }).join('') + '</div></div>').join('') +
+      hafizaKonuSecici(si, d, plan);
+  }
+  return '<section class="hf-anlatim" id="hfAnlatim"><button type="button" class="dugme" data-hf-anlatim-ac aria-expanded="' + acik + '">' + (acik ? 'Konu anlatımlarını gizle' : 'Konu anlatımlarını göster') + '</button>' + ic + '</section>';
+}
+// Sayfa sade: bir cümle, tek satır özet, dikkat isteyen konular. Aklında olanlar uzun listede kapalı durur; ayarlar en altta
+// katlıdır; bir satırın "Çalıştım" ve "Sepete" dışındaki işleri "Diğer"in altındadır.
+const HAFIZA_UST_ACIK = 12;
 function gorunumHafiza() {
   const si = EK.ogr, o = D.ogr[si];
   if (!ogrenciMi() || !o) return '<div class="baslik"><h1>Hafızam</h1></div>';
-  const d = hafizaDurumu(si), plan = hafizaPlani(si), hedefY = Math.round(d.hedef * 100);
-  const hb = buHafta(si), oz = haftaTestOzeti(si, hb, bugunNo()), salt = typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme();
+  const d = hafizaDurumu(si), plan = hafizaPlani(si), salt = typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme();
   // Ders süzgeci: bütün işlenen konular listelendiği için ders ders bakılabilir.
   const dersler = [...new Map(d.liste.map(x => [dersKisaAd(x.ders), 0])).keys()].sort((a, b) => a.localeCompare(b, 'tr')), filtre = dersler.includes(EK.hafizaDersFiltre) ? EK.hafizaDersFiltre : '';
   const gor = filtre ? d.liste.filter(x => dersKisaAd(x.ders) === filtre) : d.liste, alt = gor.filter(x => x.altinda), ust = gor.filter(x => !x.altinda);
   const suzgec = dersler.length > 1 ? '<div class="hf-suzgec" role="group" aria-label="Ders">' + [['', 'Bütün dersler', d.liste]].concat(dersler.map(ders => [ders, ders, d.liste.filter(x => dersKisaAd(x.ders) === ders)]))
     .map(([v, ad, l]) => '<button type="button" class="dugme mini' + (v === filtre ? ' secili' : '') + '" data-hf-filtre="' + kacis(v) + '" aria-pressed="' + (v === filtre) + '">' + kacis(ad) +
       ' <small>' + l.filter(x => x.altinda).length + '/' + l.length + '</small></button>').join('') + '</div>' : '';
-  return '<div class="hafiza-sayfa"><div class="baslik"><h1>Hafızam</h1><p>Her konunun şu an aklında kalma olasılığı (tahmini). Çizgi senin hedefin: %' + hedefY +
-    '. Bir konu çizginin altına inince unutmaya başlamışsındır; planı beklemeden çalışıp buradan bildirebilirsin.</p></div>' +
-    '<div class="et-ozet hf-ozet"><div class="et-ozet-kart"><span class="dp-kpi-ad">Çizginin altında</span><strong>' + alt.length + '<small> konu</small></strong><div class="dp-kpi-alt"><span class="dp-kpi-not">' + d.liste.length + ' konudan</span></div></div>' +
-    '<div class="et-ozet-kart"><span class="dp-kpi-ad">Hedef çizgisi</span><strong>%' + hedefY + '</strong><div class="dp-kpi-alt"><span class="dp-kpi-not">hatırlama hedefin</span></div></div>' +
-    '<div class="et-ozet-kart' + (d.eski ? ' hf-eski-kart' : '') + '"><span class="dp-kpi-ad">Uzun süredir sonuçsuz</span><strong>' + d.eski + '<small> konu</small></strong><div class="dp-kpi-alt"><span class="dp-kpi-not">' + HAFIZA_UZUN + ' gün ve daha uzun</span></div></div>' +
-    '<div class="et-ozet-kart"><span class="dp-kpi-ad">Bu hafta</span><strong>' + oz.yapilan + (oz.toplam ? '<small>/' + oz.toplam + '</small>' : '') + '</strong><div class="dp-kpi-alt"><span class="dp-kpi-not">' +
-      (oz.kendiToplam ? oz.kendiToplam + ' kendi seçtiğin çalışma' : 'bildirilen çalışma') + '</span></div></div></div>' +
-    '<div class="kart hf-kutu"><label class="ayar-kutu"><input type="checkbox" id="ogrSerbest"' + (serbestAcikMi(si) ? ' checked' : '') + (salt ? ' disabled' : '') + '><span><b>Kendi programımı kendim yaparım</b>' +
-      '<span class="mini">' + hafizaNotu(si) + '</span></span></label></div>' +
-    hafizaDersAyarlari(si, d) +
-    (d.liste.length ? suzgec : '<div class="kart" style="padding:20px">Henüz derste işlenmiş ya da sonucu olan konun yok. Konular derste işlendikçe ve sonuçlarını girdikçe burada görünür.</div>') +
-    (alt.length ? '<h2 class="hf-bolum">Çizginin altındakiler <span class="mini">' + alt.length + ' konu · en çok düşen başta</span></h2><div class="hf-liste">' + alt.map(x => hafizaSatiri(si, x, d, plan)).join('') + '</div>' : '') +
-    (ust.length ? '<h2 class="hf-bolum">Çizginin üstündekiler <span class="mini">' + ust.length + ' konu · çizgiye en yakın başta</span></h2><div class="hf-liste">' + ust.map(x => hafizaSatiri(si, x, d, plan)).join('') + '</div>' : '') +
-    hafizaKonuSecici(si, d, plan) + hafizaSepeti(si) + hafizaRaporu(si) + yaptimPencereHtml() + '</div>';
+  const uzun = alt.length > 0 && ust.length > HAFIZA_UST_ACIK && !filtre, ustAcik = !uzun || !!EK.hafizaUstAcik || ust.some(x => x.ki === EK.hafizaAcik || x.ki === EK.hafizaDuzenle);
+  return '<div class="hafiza-sayfa"><div class="baslik"><h1>Hafızam</h1><p>Çubuk kızardıkça konuyu unutuyorsun. Çalıştığında “Çalıştım”a bas.</p></div>' +
+    (d.liste.length ? '<p class="hf-durum"><b' + (d.altinda ? ' class="hf-durum-alt"' : '') + '>' + d.altinda + '</b> konu unutuluyor · <b>' + (d.liste.length - d.altinda) + '</b> konu aklında</p>' + suzgec
+      : '<div class="kart" style="padding:20px">Henüz derste işlenmiş ya da sonucu olan konun yok. Konular derste işlendikçe ve sonuçlarını girdikçe burada görünür.</div>') +
+    (alt.length ? '<h2 class="hf-bolum">Unutmaya başladıkların <span class="mini">' + alt.length + ' konu</span></h2><div class="hf-liste">' + alt.map(x => hafizaSatiri(si, x, d, plan)).join('') + '</div>' : '') +
+    (ust.length ? '<h2 class="hf-bolum">Aklında olanlar <span class="mini">' + ust.length + ' konu</span>' + (uzun ? ' <button type="button" class="dugme mini" data-hf-ust aria-expanded="' + ustAcik + '">' + (ustAcik ? 'Gizle' : 'Göster') + '</button>' : '') + '</h2>' +
+      (ustAcik ? '<div class="hf-liste">' + ust.map(x => hafizaSatiri(si, x, d, plan)).join('') + '</div>' : '') : '') +
+    hafizaAnlatimlari(si, d, plan) + hafizaSepeti(si) +
+    '<details class="kart hf-ayar"' + (EK.hafizaAyarAcik ? ' open' : '') + '><summary>Ayarlar</summary><div class="hf-kutu"><label class="ayar-kutu"><input type="checkbox" id="ogrSerbest"' + (serbestAcikMi(si) ? ' checked' : '') + (salt ? ' disabled' : '') +
+      '><span><b>Kendi programımı kendim yaparım</b><span class="mini">' + hafizaNotu(si) + '</span></span></label></div>' + hafizaDersAyarlari(si, d) + '</details>' +
+    hafizaRaporu(si) + yaptimPencereHtml() + '</div>';
 }
 // "Çalıştım" (satırı aç/kapat) ve konu seçici: ana tıklama ve değişiklik dinleyicilerinden çağrılır.
 function hafizaSatirAc(ki) {
@@ -8732,25 +8786,28 @@ function hafizaSepetSoru(slot, hb, n) {
 function hafizaRaporu(si) {
   const bugun = bugunNo(), hb = buHafta(si), o = D.ogr[si] || {};
   let p; try { p = gunlukEkliPlan(si, hb, planHesapla(si, hb)); } catch (e) { return ''; }
-  const d = hafizaDurumu(si), son = Math.min(bugun, planHaftaSonu(si, hb)), satir = (ad, sag, yok) => '<li' + (yok ? ' class="hf-r-yok"' : '') + '><span>' + ad + '</span><b>' + sag + '</b></li>';
-  let gunler = '', toplam = 0;
+  const d = hafizaDurumu(si), son = planHaftaSonu(si, hb), benimMi = x => !!(p.elle.ogrEk || {})[planSlotAnahtari(x)];
+  const oge = (ders, ad, not, yok) => '<div class="hf-r-oge' + (yok ? ' hf-r-yok' : '') + '"><div class="d">' + ders + '</div><div class="k">' + ad + '</div><div class="n">' + not + '</div></div>';
+  let bas = '', govde = '', toplam = 0;
   for (let gun = hb; gun <= son; gun++) {
     const yapilan = (D.log || []).filter(l => l[1] === si && l[0] === gun && sonucNotu(l) && konuAl(l[2])), var_ = new Set(yapilan.map(l => l[2]));
-    const kalan = (p.gunler[gun - hb] || []).filter(x => !x.serbest && !x.gunlukEk && konuAl(+x.ki) && !var_.has(+x.ki));
+    // Geçmiş ve bugün: bildirilmeyen her çalışma; gelecek günler: yalnızca sepete koydukların.
+    const kalan = (p.gunler[gun - hb] || []).filter(x => !x.serbest && !x.gunlukEk && konuAl(+x.ki) && !var_.has(+x.ki) && (gun <= bugun || benimMi(x)));
     toplam += yapilan.length;
-    gunler += '<h2>' + GUN_AD[haftaGunu(gun)] + ' ' + gg(gun) + (gun === bugun ? ' · bugün' : '') + '</h2>' + (yapilan.length || kalan.length ? '<ul>' +
-      yapilan.map(l => satir(konuHtml(konuAl(l[2])[3]) + ' <span>· ' + kacis(dersKisaAd(konuDersAdi(l[2]))) + '</span>', NOT_AD[sonucNotu(l)] || 'yapıldı')).join('') +
-      kalan.map(x => satir(kacis(konuGorunenAdi(x.ad)) + (x.anlatim ? ' <span>· konu anlatımı</span>' : ''), (p.elle.ogrEk || {})[planSlotAnahtari(x)] ? 'sepetteydi · yapılmadı' : 'bildirilmedi', true)).join('') + '</ul>' : '<p>Bildirilen çalışma yok.</p>');
+    bas += '<th>' + GUN_AD[haftaGunu(gun)] + '<br>' + gg(gun) + (gun === bugun ? ' · bugün' : '') + '</th>';
+    govde += '<td>' + yapilan.map(l => oge(kacis(dersKisaAd(konuDersAdi(l[2]))), konuHtml(konuAl(l[2])[3]), '✓ ' + (NOT_AD[sonucNotu(l)] || 'yapıldı'))).join('') +
+      kalan.map(x => oge(kacis(dersKisaAd(konuDersAdi(+x.ki))), kacis(konuGorunenAdi(x.ad)), (x.anlatim ? 'konu anlatımı · ' : '') + (gun > bugun ? 'sepette' : benimMi(x) ? 'sepetteydi · yapılmadı' : 'bildirilmedi'), gun <= bugun)).join('') + '</td>';
   }
-  const alt = d.liste.filter(x => x.altinda).slice(0, 15);
-  return '<section class="hf-rapor" id="hfRapor"><h1>Çalışma raporum</h1><p>' + kacis(o.ad || '') + ' · ' + gg(hb) + ' – ' + gg(son) + ' · ' + toplam + ' çalışma bildirildi · hazırlanma ' + ggyy(bugun) + '</p>' + gunler +
-    '<h2>Dikkat isteyen konular (çizginin altında)</h2>' + (alt.length ? '<ul>' + alt.map(x => satir(konuHtml(x.ad) + ' <span>· ' + kacis(dersKisaAd(x.ders)) + '</span>', '%' + Math.round(x.r * 100) + (x.unutuldu ? ' · konu anlatımı' : ''))).join('') + '</ul>' : '<p>Bütün konular çizginin üstünde.</p>') +
-    '<p>Hafıza oranları yalnızca bildirilen çalışmalardan hesaplanır; “yapılmadı” ve “bildirilmedi” yazanlar hafızaya işlenmemiştir.</p></section>';
+  const alt = d.liste.filter(x => x.altinda).slice(0, 18);
+  return '<section class="hf-rapor" id="hfRapor"><div class="hf-r-ust"><b>Çalışma raporum' + (o.ad ? ' · ' + kacis(o.ad) : '') + '</b><span>' + gg(hb) + ' – ' + ggyy(son) + ' · ' + toplam + ' çalışma bildirildi</span></div>' +
+    '<table class="plan hf-r-tablo"><thead><tr>' + bas + '</tr></thead><tbody><tr>' + govde + '</tr></tbody></table>' +
+    '<div class="hf-r-alt"><b>Dikkat isteyen konular</b>' + (alt.length ? alt.map(x => '<span>' + konuHtml(x.ad) + ' <i>%' + Math.round(x.r * 100) + '</i></span>').join('') : '<span>Bütün konular çizginin üstünde.</span>') + '</div>' +
+    '<p class="hf-r-not">Hafızaya yalnızca bildirilen çalışmalar işlenir; “yapılmadı” ve “bildirilmedi” yazanlar işlenmemiştir.</p></section>';
 }
 function hafizaYazdir() {
   if (typeof document === 'undefined' || !document.body) return;
   const bitir = () => { document.body.classList.remove('hf-yazdir'); document.getElementById('hfSayfaStili')?.remove(); };
-  bitir(); const stil = document.createElement('style'); stil.id = 'hfSayfaStili'; stil.textContent = '@media print{@page{size:A4 portrait;margin:14mm}}';
+  bitir(); const stil = document.createElement('style'); stil.id = 'hfSayfaStili'; stil.textContent = '@media print{@page{size:A4 landscape;margin:8mm}}';
   document.head.appendChild(stil); document.body.classList.add('hf-yazdir'); window.addEventListener('afterprint', bitir, { once: true });
   try { window.print(); } catch (e) { bitir(); }
 }
@@ -9477,7 +9534,7 @@ async function ogrenciHesabindanYukle(ad, no, hazirKullanici) {
     birlesme = sunucuPaketi ? sonucPaketiUygula(sunucuPaketi, 0) : { eklenen: 0 };
     if (yerelPaket) sonucPaketiUygula(yerelPaket, 0);
     denemeOkulGuvenliUygula(0, yuva.denemeOkul);
-    EK.ogr = 0; EK.sekme = 'ana'; EK.hafta = null;
+    EK.ogr = 0; EK.sekme = OGRENCI_ACILIS; EK.hafta = null;
     if (!(await kaydet(true))) throw new Error('Birleştirilen öğrenci verisi bu cihaza kaydedilemedi. Sayfayı kapatmadan yeniden deneyin.');
   } catch (e) {
     D = oncekiD;
@@ -10721,7 +10778,7 @@ async function testHesabiniAc() {
   if (D && D.rol) throw new Error('Bu cihazda zaten açık bir defter var.');
   if (anlik.exists()) {
     await testDefteriniYerlestir((anlik.data() || {}).veri, kullanici.uid);
-    EK.sekme = 'ana'; ciz();
+    EK.sekme = ogrenciMi() ? OGRENCI_ACILIS : 'ana'; ciz();
     bilgiVer('Hoş geldin ' + D.ogr[0].ad + ' — test defterin buluttan açıldı.');
     return;
   }
@@ -10862,7 +10919,7 @@ async function kaydolVeBasla(kullaniciAdi, sifre, alan) {
     bulutYedekTemeliniUnut(kullanici.uid);
     D.rol = 'ogrenci'; D.testHesap = { uid: kullanici.uid, acilis: Date.now(), tur: 'uye', ad: ad };
     uyeDefteriniKur(ad, alan);
-    EK.sekme = 'ana'; EK.kaydol = false;
+    EK.sekme = OGRENCI_ACILIS; EK.kaydol = false;
     if (!(await kaydet(true))) throw new Error('Defter bu cihaza kaydedilemedi.');
   } catch (e) { D = JSON.parse(onceki); EK.kaydol = true; throw e; }
   ciz();
@@ -10887,7 +10944,7 @@ async function uyeHesabiniAc(kullaniciAdi, sifre) {
     }
     if (b.uyeYonunuYaz) await b.uyeYonunuYaz();
     await testDefteriniYerlestir(veri, kullanici.uid);
-    EK.sekme = 'ana'; ciz();
+    EK.sekme = ogrenciMi() ? OGRENCI_ACILIS : 'ana'; ciz();
     return { ad: D.ogr[0] ? D.ogr[0].ad : ad, yeni: false };
   }
   // Şifresi öğretmence sıfırlanmış hesap: yeni hesap eski defteri (devir izniyle) okuyup kendine taşır.
@@ -10901,7 +10958,7 @@ async function uyeHesabiniAc(kullaniciAdi, sifre) {
       y.testHesap = { ...(y.testHesap || {}), uid: kullanici.uid, ad: ad };
       await testDefteriniYerlestir(JSON.stringify(y), kullanici.uid);
       bulutYedekTemeliniUnut(kullanici.uid);       // bulutta bu hesabın defteri henüz yok
-      EK.sekme = 'ana'; ciz();
+      EK.sekme = ogrenciMi() ? OGRENCI_ACILIS : 'ana'; ciz();
       await bulutaYedekle();
       return { ad: D.ogr[0] ? D.ogr[0].ad : ad, yeni: false, tasindi: true };
     }
@@ -13597,7 +13654,7 @@ function ogrenciGozuyleKapat() {
 const SEKME_REHBER = [['takip', 'Haftalık öğrenci takibi'], ['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
                   ['ogrenciler', 'Öğrenciler'], ['konuplani', 'Özel tasarlanmış müfredat'], ['harita', 'Haftalar haritası'],
                   ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemeler'], ['siralamalar', 'Sıralamalar'], ['turkiye', 'Türkiye geneli'], ['konutakibi', 'Konu Takibi'], ['ogretmenrapor', 'Öğretmen raporu'], ['yanlislar', 'Yanlışlar defteri'], ['universite', 'Üniversite Hedefi'], ['etutler', 'Etütler'], ['etutetki', 'Etüt etkisi'], ['etutplani', 'Etüt planı'], ['yoklama', 'Yoklama'], ['ogrencirapor', 'Öğrenci raporları'], ['gunlukrapor', 'Günlük raporlar'], ['ogrencikarti', 'Öğrenci kartı'], ['ayarlar', 'Ayarlar']];
-const SEKME_OGRENCI = [['plan', 'Planım'], ['mufredat', 'Müfredat'], ['hafiza', 'Hafızam'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemelerim'], ['gunlukrapor', 'Günlük rapor'], ['ayarlar', 'Ayarlar']];
+const SEKME_OGRENCI = [['hafiza', 'Hafızam'], ['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemelerim'], ['gunlukrapor', 'Günlük rapor'], ['ayarlar', 'Ayarlar']];
 // Müfredat (lise programı) ve Denemelerim (TYT/AYT) yalnızca YKS öğrencisi içindir.
 // Günlük rapor yalnızca öğretmeni bağlı (okul hesaplı) öğrencide görünür.
 const SEKMELER = () => !ogrenciMi() ? SEKME_REHBER : (ogrenciSinavi(D && D.ogr && D.ogr[0]) === 'YKS' ? SEKME_OGRENCI
@@ -13607,7 +13664,9 @@ const SEKMELER = () => !ogrenciMi() ? SEKME_REHBER : (ogrenciSinavi(D && D.ogr &
 // üzerine gelince) ilgili diğer sayfaları açar. Sağda Müfredat ve Ayarlar.
 // Öğrenci: Planım ▾ · Denemelerim. Öğretmen: Haftalık plan ▾ · Öğrenciler ▾ · Denemeler ▾.
 const PLAN_ALT_SEKMELER = ['harita', 'giris'];
-const MENU_OGRENCI = [['plan', ['hafiza'].concat(PLAN_ALT_SEKMELER), 'Planla ilgili diğer sayfalar'], ['denemeler', [], 'Denemelerle ilgili diğer sayfalar'], ['gunlukrapor', [], 'Günlük rapor']];
+// Hafızam en solda, kendi sekmesiyle: öğrencinin açılış sayfası.
+const OGRENCI_ACILIS = 'hafiza';
+const MENU_OGRENCI = [['hafiza', [], 'Hafızam'], ['plan', PLAN_ALT_SEKMELER, 'Planla ilgili diğer sayfalar'], ['denemeler', [], 'Denemelerle ilgili diğer sayfalar'], ['gunlukrapor', [], 'Günlük rapor']];
 const MENU_REHBER = [['plan', ['giris', 'harita'], 'Planla ilgili diğer sayfalar'],
   ['ogrenciler', ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor', 'gunlukrapor'], 'Öğrencilerle ilgili diğer sayfalar'], ['denemeler', ['siralamalar', 'turkiye', 'konutakibi', 'ogretmenrapor', 'yanlislar', 'universite'], 'Denemelerle ilgili diğer sayfalar']];
 // Menüde olmayan sayfa, açıldığı yerin menü öğesini seçili gösterir.
@@ -14784,7 +14843,7 @@ document.addEventListener('click', async ev => {
   const hfDz = ev.target.closest('[data-hf-duzenle]');
   if (hfDz && ogrenciMi()) { const ki = +hfDz.dataset.hfDuzenle; EK.hafizaDuzenle = EK.hafizaDuzenle === ki ? undefined : ki; ciz(); return; }
   const hfKy = ev.target.closest('[data-hf-kaydet]');
-  if (hfKy && ogrenciMi()) {
+  if (hfKy && ogrenciMi()) { EK.hafizaUstAcik = true;
     const ki = +hfKy.dataset.hfKaydet, kok = hfKy.closest('[data-hf-duzen]'), r = +(kok?.querySelector('[data-hf-r]')?.value) / 100, sGun = HAFIZA_ELLE_S[+(kok?.querySelector('[data-hf-s]')?.value)];
     EK.hafizaDuzenle = undefined;
     await hafizaIslem(() => hafizaElleKaydet(EK.ogr, ki, r, sGun), 'Kaydedildi: bu konu senin ayarından devam ediyor.'); return;
@@ -14794,6 +14853,8 @@ document.addEventListener('click', async ev => {
   const hfUn = ev.target.closest('[data-hf-unuttum]');
   if (hfUn && ogrenciMi()) { EK.hafizaDuzenle = undefined; await hafizaIslem(() => hafizaElleKaydet(EK.ogr, +hfUn.dataset.hfUnuttum, 0.01, 1), 'Konu anlatımına döndü: sepete konu anlatımı olarak ekleyebilirsin.'); return; }
   if (ev.target.closest('[data-hf-rapor]') && ogrenciMi()) { hafizaYazdir(); return; }
+  if (ev.target.closest('[data-hf-ust]') && ogrenciMi()) { EK.hafizaUstAcik = !EK.hafizaUstAcik; ciz(); return; }
+  if (ev.target.closest('[data-hf-anlatim-ac]') && ogrenciMi()) { EK.hafizaAnlatimAcik = !EK.hafizaAnlatimAcik; ciz(); return; }
   const hfFl = ev.target.closest('[data-hf-filtre]');
   if (hfFl && ogrenciMi()) { EK.hafizaDersFiltre = hfFl.dataset.hfFiltre || undefined; ciz(); return; }
   const hfSh = ev.target.closest('[data-hf-sepet-hafta]');
@@ -15615,6 +15676,8 @@ document.addEventListener('dragstart', ev => {
   EK.hafizaSurukle = kay.dataset.hfSurukle; document.getElementById('hfSepet')?.classList.add('hf-surukleniyor');
 });
 document.addEventListener('keydown', ev => { const g = ev.target.closest?.('#hfSepet [data-hf-gun]'); if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); g.click(); } });
+// Katlanan kutular yeniden çizimde açık kalsın (toggle kabarcıklanmaz: inerken dinlenir).
+document.addEventListener('toggle', ev => { const d = ev.target; if (!d || !d.matches) return; if (d.matches('.hf-ayar')) EK.hafizaAyarAcik = d.open; else if (d.matches('.hf-dersler')) EK.hafizaDersAcik = d.open; }, true);
 document.addEventListener('dragend', () => { EK.hafizaSurukle = undefined; document.getElementById('hfSepet')?.classList.remove('hf-surukleniyor'); document.querySelectorAll('.hf-ustunde').forEach(e => e.classList.remove('hf-ustunde')); });
 document.addEventListener('dragover', ev => {
   const gun = ev.target.closest?.('#hfSepet [data-hf-gun]');
@@ -15638,6 +15701,7 @@ document.addEventListener('input', ev => {
     const r = +hfDuzen.querySelector('[data-hf-r]').value, sGun = HAFIZA_ELLE_S[+hfDuzen.querySelector('[data-hf-s]').value];
     hfDuzen.querySelector('[data-hf-r-yazi]').textContent = '%' + r; hfDuzen.querySelector('[data-hf-s-yazi]').textContent = sGun + ' günde';
     hfDuzen.querySelector('[data-hf-onizle]').textContent = hafizaOnizleYazi(r / 100, sGun, +hfDuzen.dataset.hedef);
+    const egri = hfDuzen.querySelector('[data-hf-egri]'); if (egri) egri.innerHTML = hafizaEgri(r / 100, sGun, +hfDuzen.dataset.hedef);
     return;
   }
   // Yapıştırılan liste ekranda kalır; değişince eski önizlemeyle eklenmesin.
@@ -30995,7 +31059,7 @@ function dosyaGomuluYalnizcaOku() {
   let izlemeMesaji = '';
   try { izlemeMesaji = sessionStorage.getItem('yks_izleme_mesaj') || ''; sessionStorage.removeItem('yks_izleme_mesaj'); } catch (e) { /* yok */ }
   if (rehberMi()) { EK.sekme = 'ana'; EK.takipHafta = null; EK.takipOlcut = 'islem'; }
-  else if (ogrenciMi() && !sekmeGeriYuklendi) EK.sekme = 'ana';   // öğrenci ana sayfayla başlar (harita + deneme gelişimi)
+  else if (ogrenciMi() && !sekmeGeriYuklendi) EK.sekme = OGRENCI_ACILIS;   // öğrenci ana sayfayla başlar (harita + deneme gelişimi)
   // ders programı ve konu planı hazırsa gelecek haftaları kendiliğinden doldur:
   // aynı işlemi tekrar tekrar yapmak zararsız, çünkü işlenmiş konuya dokunulmuyor
   try {
