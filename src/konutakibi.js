@@ -109,7 +109,18 @@ E.BİY.10.3.1|Ekosistem Ekolojisi`.split('\n').map(s=>s.split('|')).sort((a,b)=>
 const canon=new Map(PARENTS.map(([,n])=>[key(n),n]));
 canon.set(key('FİZİKSEL NİCELİKLERİNSINIFLANDIRILMASI'),'Fiziksel Niceliklerin Sınıflandırılması');
 const topicName=n=>canon.get(key(n))||title(n);
-const topicFor=(course,code,maps={})=>maps[course+'|'+code]||PARENTS.find(([p])=>code===p||code.startsWith(p+'.'))?.[1]||null;
+// The maths topics of the 10th–12th grades that the list above lacks (they are asked in AYT), by their number in the MEB
+// programme: grade.unit.topic. The publisher's codes carry that number after a prefix that differs by grade and ders
+// (E.M.10.3.1, M.12.5.2, GEO.12.7.1 …), as its 9th and 10th grade codes above do, so the number is read wherever it stands.
+const MEB_MAT={'10.3.1':'Polinom Kavramı ve Polinomlarla İşlemler','10.3.2':'Polinomların Çarpanlara Ayrılması','10.4.1':'İkinci Dereceden Bir Bilinmeyenli Denklemler',
+  '11.1.1':'Yönlü Açılar','11.1.2':'Trigonometrik Fonksiyonlar','11.2.1':'Doğrunun Analitik İncelenmesi','11.3.1':'Fonksiyonlarla İlgili Uygulamalar','11.3.2':'İkinci Dereceden Fonksiyonlar ve Grafikleri',
+  '11.3.3':'Fonksiyonların Dönüşümleri','11.4.1':'İkinci Dereceden İki Bilinmeyenli Denklem Sistemleri','11.4.2':'İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler ve Eşitsizlik Sistemleri',
+  '11.5.1':'Çemberin Temel Elemanları','11.5.2':'Çemberde Açılar','11.5.3':'Çemberde Teğet','11.5.4':'Dairenin Çevresi ve Alanı','11.6.1':'Katı Cisimler','11.7.1':'Koşullu Olasılık','11.7.2':'Deneysel ve Teorik Olasılık',
+  '12.1.1':'Üstel Fonksiyon','12.1.2':'Logaritma Fonksiyonu','12.1.3':'Üstel, Logaritmik Denklemler ve Eşitsizlikler','12.2.1':'Gerçek Sayı Dizileri','12.3.1':'Toplam-Fark ve İki Kat Açı Formülleri',
+  '12.3.2':'Trigonometrik Denklemler','12.4.1':'Analitik Düzlemde Temel Dönüşümler','12.5.1':'Limit ve Süreklilik','12.5.2':'Anlık Değişim Oranı ve Türev','12.5.3':'Türevin Uygulamaları',
+  '12.6.1':'Belirsiz İntegral','12.6.2':'Belirli İntegral ve Uygulamaları','12.7.1':'Çemberin Analitik İncelenmesi'};
+const mebKonu=(course,code)=>{if(!/^(MATEMATİK|GEOMETRİ)-/u.test(course||''))return null;const m=/(?:^|\.)(1[0-2])\.(\d)\.(\d)(?:\.|$)/u.exec(code||'');return m?MEB_MAT[m[1]+'.'+m[2]+'.'+m[3]]||null:null};
+const topicFor=(course,code,maps={})=>maps[course+'|'+code]||PARENTS.find(([p])=>code===p||code.startsWith(p+'.'))?.[1]||mebKonu(course,code);
 
 /* A PDF is accepted atomically. Every subject must end in a verified total, including across pages. */
 function pdfCoz(pages){

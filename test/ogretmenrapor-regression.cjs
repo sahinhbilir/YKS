@@ -145,6 +145,13 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.deepEqual(z.satir.map(r => r.ad).sort(), ['Sentetik kazanımı uygular', 'Sözcükte Anlam']);
     // 1 correct against ,4 expected over 1 answer → +60 points; the whole subject counts all three questions: (2 − 1,4) / 3 = +20.
     near(z.satir.find(r => r.ad === 'Sentetik kazanımı uygular').hucre[0].fark, 60); near(z.sinavlar[0].fark, 20);
+    // The 10th–12th grade maths topics come from the MEB programme number inside the code, whatever its prefix; the student's
+    // own mapping and the built-in list still come first; another ders or an unknown number has no topic.
+    const tf = (c, k, m) => run(`KONU_TAKIBI.topicFor(${JSON.stringify(c)},${JSON.stringify(k)}${m ? ',' + JSON.stringify(m) : ''})`);
+    assert.equal(tf('MATEMATİK-A', 'M.12.5.2.3'), 'Anlık Değişim Oranı ve Türev'); assert.equal(tf('MATEMATİK-A', 'E.M.11.1.2.1'), 'Trigonometrik Fonksiyonlar');
+    assert.equal(tf('GEOMETRİ-A', 'GEO.12.7.1.1'), 'Çemberin Analitik İncelenmesi'); assert.equal(tf('MATEMATİK-A', 'E.M.10.3.2'), 'Polinomların Çarpanlara Ayrılması');
+    assert.equal(tf('MATEMATİK-T', 'E.M.10.2.1.4'), 'Fonksiyon Kavramı ve Gösterimi', 'the built-in list first'); assert.equal(tf('MATEMATİK-A', 'M.12.5.2.3', { 'MATEMATİK-A|M.12.5.2.3': 'Türev' }), 'Türev', 'an own mapping first');
+    assert.equal(tf('FİZİK-A', 'F.12.5.2.3'), null); assert.equal(tf('MATEMATİK-A', 'M.12.9.9.1'), null); assert.equal(tf('TÜRKÇE-T', 'ZZ.11.1.1'), null);
     // Konu Takibi's own page keeps its pooled row: the option is the report's.
     assert(get(`KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular`) !== null);
     assert.deepEqual(run(`[...KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular.values()].map(t=>t.ad).sort().join('|')`), 'Konusu eşleşmeyen kazanımlar|Sözcükte Anlam');
