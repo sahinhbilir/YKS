@@ -134,9 +134,9 @@ const kesisir=(a,b)=>a.x<b.x+b.width&&b.x<a.x+a.width&&a.y<b.y+b.height&&b.y<a.y
    // Student top menu: "Planım" opens the weekly plan; its arrow (hover or click) lists the other plan pages.
    assert.equal(await page.locator('#ray').getAttribute('class'),'ray ust');
    // The brand is home; Planım has a submenu; Denemelerim is a plain button (Üniversite Hedefi is teacher-only).
-   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','hafiza']);   // Planım and Denemelerim are groups with a submenu
-   assert.deepEqual(await page.locator('#ray > .menu-grup > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['plan','denemeler']);
-   assert.equal(await page.locator('#denemelerMenusu [data-sekme="universite"]').count(),1,'Denemelerim ▾ → Üniversite hedefi');
+   assert.deepEqual(await page.locator('#ray > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['ana','hafiza','denemeler','universite']);   // Planım is a group with a submenu
+   assert.deepEqual(await page.locator('#ray > .menu-grup > button[data-sekme]').evaluateAll(b=>b.map(x=>x.dataset.sekme)),['plan']);
+   assert.equal(await page.locator('#ray > button[data-sekme="universite"]').count(),1,'Üniversite hedefi is a tab of its own');
    assert.equal(await page.locator('#ray > button.marka').isVisible(),true,'the brand stays visible at '+width);
    const menu=page.locator('#planMenusu'),ok=page.locator('#ray [aria-controls="planMenusu"]');
    assert.equal(await menu.isVisible(),false,'menu folded');

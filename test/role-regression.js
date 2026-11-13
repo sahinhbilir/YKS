@@ -71,7 +71,7 @@ function studentState(extra) {
     EK.sekme = 'universite'; cizIc();
     return { tabs: SEKMELER().map(x => x[0]), menu: MENU_OGRENCI.flatMap(m => m[1]), selected: EK.sekme, view: document.getElementById('ana').innerHTML };
   })()`);
-  assert(uni.tabs.includes('universite') && uni.menu.includes('universite'), 'A YKS student has Üniversite hedefi under Denemelerim.');
+  assert(uni.tabs.includes('universite') && !uni.menu.includes('universite'), 'A YKS student has Üniversite hedefi as a tab of its own (not in a submenu).');
   assert(uni.selected === 'universite', 'A YKS student stays on the universite route.');
   assert(uni.view.includes('yaKok') && !uni.view.includes('id="yaStudent"'), 'The page is the student’s own: no student chooser.');
   run("EK.sekme = 'anlasma'");
