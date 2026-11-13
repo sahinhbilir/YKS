@@ -230,8 +230,19 @@ function gidisatNeti(student,key){
  }catch(e){return {neden:'hesaplanamadı'}}
 }
 // The centre of the lists: the student's TYT and AYT net totals. kip: 'son' (the latest usable exam of each), 'sec' (picked exams;
-// secim.tyt / secim.ayt, the latest usable when null) or 'gidisat' (the Öğrenci kartı projection at the YKS date).
+// secim.tyt / secim.ayt, the latest usable when null), 'eniyi' (each branch's best net over all usable exams of the session,
+// totalled: Türkçe, Sosyal, Matematik, Fen for TYT; the alan's AYT tests) or 'gidisat' (the Öğrenci kartı projection at the YKS date).
 function merkezBul(student,kip,alan,secim={},si=EK.ogr){
+ if(kip==='eniyi'){
+  const s=sinavSecenekleri(alan,si);
+  const en=(l,keys,ot)=>{
+   const u=l.filter(x=>x.uygun);if(!u.length)return {neden:l.length?eksikYazi(l[0].eksik):ot+' denemesi yok'};
+   const parca={};for(const k of keys)for(const x of u){const v=x.values[k];if(Number.isFinite(v)&&(!parca[k]||v>parca[k].net))parca[k]={net:v,ad:x.ad}}
+   return {v:{net:keys.reduce((n,k)=>n+(parca[k]?parca[k].net:0),0),ad:'Her dersin en iyisi',parca,sayi:u.length}};
+  };
+  const t=en(s.tyt,TYT,'TYT'),a=en(s.ayt,AYT[alan],'AYT');
+  return {kip,tyt:t.v||null,ayt:a.v||null,tytNeden:t.neden||'',aytNeden:a.neden||''};
+ }
  if(kip==='gidisat'){
   const t=gidisatNeti(student,'TYT'),a=gidisatNeti(student,'AYT:'+alan);
   return {kip,tyt:t.net===undefined?null:{net:t.net,ad:'Gidişat'},ayt:a.net===undefined?null:{net:a.net,ad:'Gidişat'},tytNeden:t.neden||'',aytNeden:a.neden||''};
@@ -281,6 +292,7 @@ function netHedef(p){
  if(p.field==='SÖZ')h['AYT:sosyal2']=g.tar2+g.cog2+g.fel+g.din;
  return h;
 }
+// Teacher-owned writes (target, net goals, diploma notu). A student sees the page for their own notebook only.
 const ogretmenIslemi=(owner,student)=>!saving&&D===owner&&D.ogr[EK.ogr]===student&&rehberMi()&&!yalnizcaGoruntuleme()&&ogrenciSinavi(student)==='YKS';
 // Choosing a programme never touches the net goals (denemeHedef); netleriAyarla does, on an explicit request.
 async function hedefSec(id,owner=D,student=D.ogr[EK.ogr]){
@@ -324,6 +336,8 @@ function prepare(){
  if(state.owner!==D||state.student!==student)state=taze(D,student);
  return student;
 }
+// Each branch's best net and the exam it came from: "Türkçe 32,5 (27-YKS-1203)".
+const parcaYazi=(m,keys)=>keys.map(k=>m.parca[k]?SUBJECTS[k][0]+' '+num(m.parca[k].net)+' ('+m.parca[k].ad+')':'').filter(Boolean).join(' · ');
 const opt=(v,label,selected,disabled)=>'<option value="'+kacis(String(v))+'"'+(String(v)===String(selected)?' selected':'')+(disabled?' disabled':'')+'>'+kacis(label)+'</option>';
 function satirHtml(p,{puan=null,secili=false,izinli=false,baslik=''}={}){
  const yer=yerlesir(p),tyt=p.nets?sum(p.nets.values,TYT):null,ayt=p.nets?sum(p.nets.values,AYT[p.field]):null;
@@ -339,10 +353,12 @@ function satirHtml(p,{puan=null,secili=false,izinli=false,baslik=''}={}){
 const baslikHtml='<div class="ya-baslik" aria-hidden="true"><span>Bölüm</span><span>Üniversite</span><span>Taban puan</span><span>Başarı sırası</span><span>TYT net</span><span>AYT net</span><span>OBP</span></div>';
 function content(){
  const o=prepare();
- if(!rehberMi())return '<h1>Üniversite hedefi</h1><p>Bu bölüm yalnızca öğretmen içindir.</p>';
+ const ogretmen=rehberMi();
+ if(!ogretmen&&!ogrenciMi())return '<h1>Üniversite hedefi</h1><p>Bu bölüm öğretmen ve öğrenci içindir.</p>';
  if(!o)return '<h1>Üniversite hedefi</h1><p>Öğrenci seçin.</p>';
  if(ogrenciSinavi(o)!=='YKS')return '<h1>Üniversite hedefi</h1><p>Bu bölüm YKS öğrencileri içindir.</p>';
- const chooser='<label class="ya-student">Öğrenci<select id="yaStudent">'+canliOgrenciler().map(i=>opt(i,D.ogr[i].ad+' · '+(D.ogr[i].sube||''),EK.ogr)).join('')+'</select></label>';
+ // A student sees their own lists; the target, the net goals and the diploma notu stay the teacher's.
+ const chooser=ogretmen?'<label class="ya-student">Öğrenci<select id="yaStudent">'+canliOgrenciler().map(i=>opt(i,D.ogr[i].ad+' · '+(D.ogr[i].sube||''),EK.ogr)).join('')+'</select></label>':'';
  const head='<div class="ya-heading"><h1>Üniversite hedefi</h1>'+chooser+'</div>';
  if(!catalog){if(!pending&&!error)void yukle().then(draw,draw);return head+'<p role="status">'+(error?kacis(error):'YÖK Atlas kataloğu yükleniyor…')+'</p>'+(error?'<button class="dugme" data-ya-retry>Yeniden dene</button>':'')}
  const secim={tyt:state.tyt,ayt:state.ayt},alan=state.field;
@@ -357,18 +373,19 @@ function content(){
  const secenek=sinavSecenekleri(alan);
  const sinavSec=(l,id,ot)=>{const secili=id||(l.find(x=>x.uygun)?.id??'');return '<label>'+ot+' denemesi<select id="ya'+ot+'"'+(l.length?'':' disabled')+'>'+(secili?'':opt('',l.length?'Kullanılabilir deneme yok':'Deneme yok','',false))+l.map(x=>opt(x.id,x.etiket+(x.uygun?'':' · '+eksikYazi(x.eksik)),secili,!x.uygun)).join('')+'</select></label>'};
  const sinavlar=state.merkez==='sec'?sinavSec(secenek.tyt,state.tyt,'TYT')+sinavSec(secenek.ayt,state.ayt,'AYT'):'';
- const duzenle=!yalnizcaGoruntuleme();
- const panel='<section class="ya-panel"><div class="ya-ayar"><label>Merkez<select id="yaMerkez">'+opt('son','Son deneme',state.merkez)+opt('sec','Önceki deneme seç',state.merkez)+opt('gidisat','Gidişat (YKS günü)'+(gidOk?'':' · '+gidNeden),state.merkez,!gidOk&&state.merkez!=='gidisat')+'</select></label>'+sinavlar+
+ const duzenle=ogretmen&&!yalnizcaGoruntuleme();
+ const panel='<section class="ya-panel"><div class="ya-ayar"><label>Merkez<select id="yaMerkez">'+opt('son','Son deneme',state.merkez)+opt('sec','Önceki deneme seç',state.merkez)+opt('eniyi','Her dersin en iyisi',state.merkez)+opt('gidisat','Gidişat (YKS günü)'+(gidOk?'':' · '+gidNeden),state.merkez,!gidOk&&state.merkez!=='gidisat')+'</select></label>'+sinavlar+
   '<label>Alan<select id="yaField">'+Object.keys(AYT).map(a=>opt(a,a+(durum[a].ok?'':' · '+durum[a].neden),alan,!durum[a].ok&&a!==alan)).join('')+'</select></label>'+
   '<label>Diploma notu<input id="yaDiploma" type="number" min="50" max="100" step="0.01" inputmode="decimal" placeholder="95"'+(o.diplomaNotu!==undefined&&o.diplomaNotu!==null?' value="'+kacis(String(o.diplomaNotu))+'"':'')+(duzenle?'':' disabled')+'></label></div>'+
   '<p class="ya-tahmin" aria-live="polite">'+(est?'Tahmini '+alan+' puanın ≈ <strong>'+dec(est.puan,1)+'</strong> puan · başarı sırası ≈ <strong>'+(est.sira===null?'—':num(siraYaz(est.sira)))+'</strong>'+(est.diplomaGirildi?'':' <span class="ya-soluk">(diploma notu girilmedi, '+DIPLOMA_VARSAYILAN+' (OBP '+DIPLOMA_VARSAYILAN*5+') sayıldı)</span>')
    :'Puan tahmini yok'+(mk.tytNeden||mk.aytNeden?' · '+kacis([mk.tytNeden&&'TYT: '+mk.tytNeden,mk.aytNeden&&'AYT: '+mk.aytNeden].filter(Boolean).join(' · ')):''))+'</p>'+
   aralikYazi+
   (est?'<p class="ya-soluk ya-kaynak-net">TYT '+num(mk.tyt.net)+' net'+(mk.tyt.tarih?' · '+kacis(tarihYaz(mk.tyt.tarih)):'')+' · AYT '+num(mk.ayt.net)+' net'+(mk.ayt.tarih?' · '+kacis(tarihYaz(mk.ayt.tarih)):'')+
+    (mk.kip==='eniyi'?'</p><p class="ya-soluk ya-eniyi">Her dersin en iyi neti · TYT: '+kacis(parcaYazi(mk.tyt,TYT))+' · AYT: '+kacis(parcaYazi(mk.ayt,AYT[alan]))+'</p><p class="ya-soluk">':'')+
     ' · <span title="Netleri puana çeviren formülün kendi hatası. Öğrencinin sınav günündeki sonucunun belirsizliği değildir; onu yukarıdaki aralık gösterir.">net→puan dönüşüm hatası ± '+dec(est.sd,1)+'</span></p>':'')+'</section>';
  const filtre={city:state.city,kind:state.kind,query:state.query};
  const filters='<div class="ya-filters"><label>Şehir<select id="yaCity">'+opt('','Tüm şehirler',state.city)+Object.entries(CITIES).map(([k,l])=>opt(k,l,state.city)).join('')+'</select></label><label>Üniversite türü<select id="yaType">'+opt('','Tümü',state.kind)+opt('DEVLET','Devlet',state.kind)+opt('VAKIF','%100 burslu vakıf',state.kind)+'</select></label><label class="ya-search">Üniversite / bölüm ara<input id="yaSearch" type="search" maxlength="120" value="'+kacis(state.query)+'" placeholder="Örn. bilgisayar mühendisliği"></label></div>';
- const izinli=!yalnizcaGoruntuleme();
+ const izinli=ogretmen&&!yalnizcaGoruntuleme();
  const secili=catalog.programs.find(p=>p.id===o.universiteHedef?.id);
  let pin='';
  if(o.universiteHedef){
@@ -388,7 +405,7 @@ function content(){
  const bos='<p class="ya-soluk">Bu filtrelerle bölüm yok.</p>';
  const listeler=est?
   '<section class="ya-liste"><div class="ya-heading"><h2>Yükselirsen</h2></div>'+daha(L.yukariKalan)+baslikHtml+(L.yukari.length?rows(L.yukari,{puan:est.puan}):bos)+'</section>'+
-  '<div class="ya-cizgi" role="separator"><span>'+(mk.kip==='gidisat'?'YKS günü: ':'')+'TYT netin: '+num(mk.tyt.net)+' · AYT netin: '+num(mk.ayt.net)+'</span><strong>≈ '+dec(est.puan,1)+' puan</strong></div>'+
+  '<div class="ya-cizgi" role="separator"><span>'+(mk.kip==='gidisat'?'YKS günü: ':mk.kip==='eniyi'?'Her dersin en iyisi: ':'')+'TYT netin: '+num(mk.tyt.net)+' · AYT netin: '+num(mk.ayt.net)+'</span><strong>≈ '+dec(est.puan,1)+' puan</strong></div>'+
   '<section class="ya-liste"><div class="ya-heading"><h2>Düşersen / şu an</h2></div>'+baslikHtml+(L.asagi.length?rows(L.asagi,{puan:est.puan}):bos)+daha(L.asagiKalan)+'</section>':'';
  const yokListe=L.yok.length?'<section class="ya-liste"><div class="ya-heading"><h2>Puan verisi yok</h2></div>'+rows(L.yok,{})+(L.yokKalan?'<button class="dugme ya-daha" data-ya-more>Daha fazla</button>':'')+'</section>':'';
  return head+panel+pin+filters+listeler+yokListe+'<p class="ya-kaynak">YÖK Atlas · '+catalog.referenceYear+' yerleşme verisi</p><p id="yaStatus" role="status"></p>';

@@ -33,11 +33,12 @@ fs.mkdirSync(out,{recursive:true});
    D.ogr[0].denemeler=[kayit('TYT','Sadece Ogrenci','2026-10-05','genel',.5)];
    ciz();
   });
-  // 0) Students have no Üniversite Hedefi: not in the menu, and a restored/typed route lands on the plan.
-  assert.equal(await page.locator('#ray [data-sekme="universite"]').count(),0,'student menu has no Üniversite Hedefi');
-  assert(!(await page.locator('#ray').innerText()).includes('Üniversite Hedefi'));
+  // 0) A student has the page under Denemelerim ▾, for their own notebook: no chooser, no target buttons.
+  assert.equal(await page.locator('#denemelerMenusu [data-sekme="universite"]').count(),1,'student menu has Üniversite hedefi');
   await page.evaluate(()=>{EK.sekme='universite';ciz()});
-  assert.equal(await page.evaluate(()=>EK.sekme),'plan','student route redirects to the plan');assert.equal(await page.locator('#yaKok').count(),0);
+  assert.equal(await page.evaluate(()=>EK.sekme),'universite');await page.locator('#yaKok').waitFor();
+  assert.equal(await page.locator('#yaStudent').count(),0);assert.equal(await page.locator('[data-ya-target]').count(),0);
+  // (The catalogue's first load fails on purpose in this test: the teacher's retry below loads it.)
   // The teacher reaches the page from the Denemeler menu and sees the selected student.
   await page.evaluate(()=>{D.rol='rehber';EK.sekme='plan';ciz()});
   assert.equal(await page.locator('#denemelerMenusu [data-sekme="universite"]').count(),1,'teacher menu has the page');

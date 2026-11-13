@@ -164,7 +164,12 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     const unite = run("MUFREDAT_2026.siniflar['11'].find(d=>d.uniteler.some(u=>(u.ciktiKodlari||[]).includes('MAT.11.1.1'))).uniteler.find(u=>u.ciktiKodlari.includes('MAT.11.1.1')).ad");
     assert.equal(tf('MATEMATİK-T', 'MAT.11.1.1'), unite); assert.equal(tf('MATEMATİK-T', 'MAT.11.1.1.2'), unite); assert.notEqual(unite, 'Yönlü Açılar');
     assert.equal(tf('MATEMATİK-A', 'MAT.10.3.1'), null, 'not the earlier programme’s Polinomlar'); assert.equal(tf('MATEMATİK-A', 'MAT.12.5.2'), null);
-    assert.equal(tf('FİZİK-A', 'F.12.5.2.3'), null); assert.equal(tf('MATEMATİK-A', 'M.12.9.9.1'), null); assert.equal(tf('TÜRKÇE-T', 'ZZ.11.1.1'), null);
+    // The other lessons of the earlier programme: the unit by grade.unit, a topic where the unit is broad; the ders comes from
+    // the course code (12.2 is Basit Harmonik Hareket in Fizik, Karbon Kimyasına Giriş in Kimya).
+    assert.equal(tf('FİZİK-A', 'F.12.2.1.3'), 'Basit Harmonik Hareket'); assert.equal(tf('KİMYA-A', 'K.12.2.1.3'), 'Karbon Kimyasına Giriş'); assert.equal(tf('FİZİK-A', 'E.FİZ.11.1.8.2'), 'Tork');
+    assert.equal(tf('BİYOLOJİ-A', 'B.11.1.4.1'), 'Dolaşım Sistemleri'); assert.equal(tf('COĞRAFYA.2-A', 'C.12.2.3'), 'Beşerî Sistemler'); assert.equal(tf('TARİH.1-A', 'İTA.12.3.1'), 'Atatürkçülük ve Türk İnkılabı');
+    assert.equal(tf('FELSEFE GR.-A', 'MAN.11.2.1'), 'Klasik Mantık'); assert.equal(tf('DİN KÜLTÜRÜ-A', 'D.12.1.2'), 'İslam ve Bilim'); assert.equal(tf('TÜRK DİLİ VE EDB-A', 'EDB.11.4.2'), 'Makale');
+    assert.notEqual(tf('FİZİK-A', 'FİZ.11.1.1'), 'Vektörler', 'a new-programme code is never read from the earlier lists (it takes the app’s own curriculum unit)'); assert.equal(tf('FİZİK-A', 'F.12.9.1'), null); assert.equal(tf('MATEMATİK-A', 'M.12.9.9.1'), null); assert.equal(tf('TÜRKÇE-T', 'ZZ.11.1.1'), null);
     // Konu Takibi's own page keeps its pooled row: the option is the report's.
     assert(get(`KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular`) !== null);
     assert.deepEqual(run(`[...KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular.values()].map(t=>t.ad).sort().join('|')`), 'Konusu eşleşmeyen kazanımlar|Sözcükte Anlam');
