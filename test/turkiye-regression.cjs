@@ -268,12 +268,20 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.equal(turkce.adim, 2); assert.deepEqual(J(turkce.adimlar.map(x => [x.onceki, x.ad])), [['27-YKS-1201', '27-YKS-1202'], ['27-YKS-1202', '27-YKS-1203']]);
     assert(turkce.adimlar.every(x => x.fark !== null) && Math.abs(turkce.adimlar.reduce((t, x) => t + x.fark, 0) - turkce.fark) < 0.011, 'the steps add up to the total');
     assert.equal(turkce.ort, r2(turkce.fark / 2));
+    // Each step's increase place (Artış sırası, deneme deneme): among the schools in both neighbouring lists, the school's place by
+    // its increase (1: the most improved), hand-worked from the lists.
+    for (const [j, x] of turkce.adimlar.entries()) {
+      const both = L[j + 1].dersler.find(d => d.kod === 'TÜRKÇE-T').satir.map(r => r[0]).filter(ad => net(j, 'TÜRKÇE-T', ad) !== null);
+      const f = r2(net(j + 1, 'TÜRKÇE-T', BIZ) - net(j, 'TÜRKÇE-T', BIZ));
+      assert.equal(x.kurum, both.length); assert.equal(x.sira, both.filter(ad => r2(net(j + 1, 'TÜRKÇE-T', ad) - net(j, 'TÜRKÇE-T', ad)) > f + 1e-9).length + 1);
+    }
     // AYT: one total per field.
     m = run('TURKIYE.model(D.turkiye,{oturum:"AYT"})'); assert.equal(m.toplamlar.length, 0, 'the fixture has no complete field');
     let h = run('TURKIYE.icerik()');
     const cumle = /<p class="et-cumle">(.*?)<\/p>/.exec(h)[1].replace(/<[^>]+>/g, '');
     assert.match(cumle, /^27-YKS-1201 → 27-YKS-1203 \(3 deneme\) · Kolej listesi · Sentetik Kartal Anadolu Lisesi · TYT toplam: net toplam [▲▼]\d+,\d\d, deneme başına [▲▼]\d+,\d\d \(okul \d+,\d\d → \d+,\d\d; Türkiye ortalaması [▲▼]\d+,\d\d, deneme başına [▲▼]\d+,\d\d\)\. Türkiye’ye göre toplam [+−]\d+,\d\d net\. Artış sırası \d+\. \/ \d+ kurum\.$/);
     assert.match(h, /data-tg-mod="artis" aria-pressed="true"/); assert.match(h, /data-tg-grafik="toplam"/); assert.match(h, /id="tgArtisSira"/);
+    assert.match(h, /<section class="et-panel" id="tgArtisSiraGrafik"><div class="et-kart-bas"><h2>Artış sırası, deneme deneme · TYT toplam<\/h2>/);
     assert.match(h, /Artış sıralaması · TYT toplam/); assert.match(h, /class="tg-cevre-satir tg-artis-satir tg-biz"/); assert.match(h, /Türkiye’ye göre artış · 27-YKS-1201 → 27-YKS-1203/);
     assert.match(h, /Dersler · 27-YKS-1201 → 27-YKS-1203/); assert.match(h, /<option value="27-YKS-1201\|kolej" selected>27-YKS-1201<\/option>/);
     assert.equal((h.match(/class="et-ders"/g) || []).length, 3);
