@@ -80,6 +80,12 @@ text.ogr-y{fill:var(--iyi)}text.ogr-k{fill:var(--kritik)}.ogr-deger-okul{fill:va
 .ogr-iz .ogr-iz-degisim{width:66px;padding:0 4px;text-align:center;font-size:12px;font-weight:700;white-space:nowrap}
 .ogr-iz thead .ogr-iz-degisim{font-size:11px;font-weight:600}
 .ogr-iz-ara td{height:1px;background:var(--cizgi)}
+/* A topic's kazanımlar: indented under it, their boxes smaller and inset. */
+.ogr-iz .ogr-iz-alt .ogr-iz-konu{padding:1px 10px 1px 14px;font-size:11px;font-weight:400;line-height:1.3;color:var(--soluk)}
+.ogr-kod{display:inline-block;margin-right:6px;font-weight:700;color:var(--murekkep);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ogr-iz-kh,.ogr-iz-kb{text-align:center;font-size:10.5px;color:var(--murekkep)}.ogr-iz-kb{color:var(--soluk)}
+.ogr-iz-kh i{display:block;margin:0 16%;border-radius:4px;font-style:normal;font-weight:700;line-height:18px}.ogr-iz-kh.ogr-iz-soluk i{font-weight:500}
+.ogr-iz-alt .ogr-ort b{font-size:11px;font-weight:600}.ogr-iz .ogr-iz-alt .ogr-iz-degisim{font-size:10.5px;font-weight:600}
 .ogr-olcek{display:flex;flex-wrap:wrap;align-items:center;gap:6px 20px;font-size:12px;line-height:1.5;color:var(--soluk)}
 .ogr-olcek b{color:var(--murekkep)}
 .ogr-olcek-serit{display:inline-flex;align-items:center;gap:3px}
@@ -150,6 +156,9 @@ text.ogr-y{fill:var(--iyi)}text.ogr-k{fill:var(--kritik)}.ogr-deger-okul{fill:va
   .ogr-iz-h,.ogr-iz-bos{height:21px;border-radius:3px}
   .ogr-iz .ogr-iz-degisim{width:58px;font-size:10.5px}.ogr-iz thead .ogr-iz-degisim{font-size:9px}
   .ogr-iz tfoot{display:table-row-group}
+  .ogr-iz-grup{break-inside:avoid}
+  .ogr-iz .ogr-iz-alt .ogr-iz-konu{padding:0 8px 0 10px;font-size:9px}.ogr-iz-kh,.ogr-iz-kb{font-size:9px}.ogr-iz-kh i{line-height:13px;border-radius:2px}
+  .ogr-iz-alt .ogr-ort b,.ogr-iz .ogr-iz-alt .ogr-iz-degisim{font-size:9px}
   /* Many exams: the names stand upright (a long one in two columns of text), so every column keeps its number readable. */
   .ogr-iz-cok .ogr-iz-sinav span{margin:0 auto;max-height:104px;line-height:1.15;writing-mode:vertical-rl;transform:rotate(180deg)}
   .ogr-olcek{gap:3px 16px;font-size:10px}.ogr-olcek-serit i{width:22px;height:14px;border-radius:3px;font-size:9.5px}

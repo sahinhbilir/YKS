@@ -46,7 +46,7 @@ const kur=()=>{
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'no sideways scrolling');
    assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#ogrKok .et-panel')].every(p=>p.scrollWidth<=p.clientWidth+1)),true,'panels do not overflow (the grid scrolls inside its box)');
    // The grid: a red row and a green row, the red one first; the deepest cells have white text.
-   const iz=await page.evaluate(()=>{const rows=[...document.querySelectorAll('#ogrKok .ogr-iz tbody tr')];
+   const iz=await page.evaluate(()=>{const rows=[...document.querySelectorAll('#ogrKok .ogr-iz tbody tr:not(.ogr-iz-alt)')];
      const rgb=c=>(c.match(/[\d.]+/g)||[]).map(Number);
      return rows.map(r=>{const c=r.querySelector('td.ogr-iz-h'),b=rgb(getComputedStyle(c).backgroundColor);return {ad:r.querySelector('th').textContent,metin:c.textContent,r:b[0],g:b[1],renk:getComputedStyle(c).color}})});
    assert(iz.length>=3,JSON.stringify(iz));assert(iz[0].metin.startsWith('−'),'most behind first: '+JSON.stringify(iz[0]));
@@ -66,7 +66,7 @@ const kur=()=>{
    assert.equal(await page.locator('details.ogr-rehber-ekran').count(),1);assert.equal(await page.locator('.ogr-rehber.ogr-baski').first().isVisible(),false,'the per-teacher notes are for paper');
    // The topic table: the average gap as a bar from the Türkiye line (left behind, right ahead), the exams in equal columns,
    // the whole subject as the last row.
-   const bar=await report.locator('.ogr-iz tbody tr').evaluateAll(rows=>rows.map(r=>{const y=r.querySelector('.ogr-ort-yol').getBoundingClientRect(),c=r.querySelector('.ogr-ort-cubuk').getBoundingClientRect(),orta=y.left+y.width/2;
+   const bar=await report.locator('.ogr-iz tbody tr:not(.ogr-iz-alt)').evaluateAll(rows=>rows.map(r=>{const y=r.querySelector('.ogr-ort-yol').getBoundingClientRect(),c=r.querySelector('.ogr-ort-cubuk').getBoundingClientRect(),orta=y.left+y.width/2;
      return {sayi:r.querySelector('.ogr-ort b').textContent,sol:c.right<=orta+1&&c.width>1,sag:c.left>=orta-1&&c.width>1}}));
    assert(bar[0].sayi.startsWith('−')&&bar[0].sol&&!bar[0].sag,'behind: the bar runs left of the Türkiye line '+JSON.stringify(bar[0]));
    const sagda=bar.find(x=>x.sayi.startsWith('+'));assert(sagda&&sagda.sag&&!sagda.sol,'ahead: the bar runs right '+JSON.stringify(bar));
@@ -119,7 +119,7 @@ const kur=()=>{
    // Nothing is cut across pages; a teacher's first block follows the letterhead, every further block would start a page.
    const kes=await page.evaluate(()=>{const cs=s=>getComputedStyle(document.querySelector(s)),ilk=document.querySelector('.ogr-ogretmen>section.ogr-blok'),ikinci=ilk.cloneNode(true);
      ilk.after(ikinci);const sonraki=getComputedStyle(ikinci).breakBefore;ikinci.remove();
-     return {genel:cs('.ogr-genel').breakInside,konu:cs('.ogr-konular').breakInside,satir:cs('.ogr-iz tbody tr').breakInside,ilk:getComputedStyle(ilk).breakBefore,sonraki}});
+     return {genel:cs('.ogr-genel').breakInside,konu:cs('.ogr-konular').breakInside,satir:cs('.ogr-iz tbody tr:not(.ogr-iz-alt)').breakInside,ilk:getComputedStyle(ilk).breakBefore,sonraki}});
    assert.deepEqual(kes,{genel:'avoid',konu:'avoid',satir:'avoid',ilk:'auto',sonraki:'page'});
    // The topic table fits the paper's width whatever the number of exams, and the page does not depend on the screen theme.
    assert.equal(await report.locator('.ogr-iz-kutu').evaluate(k=>k.scrollWidth<=k.clientWidth+1),true,'the table fits the page');
