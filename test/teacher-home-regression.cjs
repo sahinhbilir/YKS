@@ -66,9 +66,8 @@ check('student menu keeps its layout', () => {
   assert(h.indexOf('<button data-sekme="hafiza"') > 0 && h.indexOf('<button data-sekme="hafiza"') < h.indexOf('data-sekme="plan"'), 'Hafızam before Planım');
   assert.deepEqual(sekmeler(h.slice(h.indexOf('<div class="bosluk">'))), ['mufredat', 'ayarlar']);
   assert.match(h, /aria-label="Planla ilgili diğer sayfalar"/);
-  assert(!h.includes('data-sekme="universite"') && !h.includes('Üniversite Hedefi'), 'no Üniversite Hedefi for students');
-  assert.equal(liste(h, 'denemelerMenusu'), null, 'Denemelerim has no submenu');
-  assert(!run('SEKMELER().map(s=>s[0])').includes('universite') && !run('MENU_OGRENCI.flatMap(m=>m[1])').includes('universite'));
+  assert(h.indexOf('<button data-sekme="universite"') > h.indexOf('data-sekme="denemeler"'), 'Üniversite hedefi is a tab of its own, after Denemelerim');
+  assert(run('SEKMELER().map(s=>s[0])').includes('universite') && run('MENU_OGRENCI.map(m=>m[0])').includes('universite'));
 });
 
 check('this week: names of students given the plan; PDF requested and last week\'s result small below', () => {

@@ -66,6 +66,16 @@ const student=sandbox.D.ogr[0];
  // Son deneme: the latest usable of each (the incomplete newest TYT and the other alan's AYT are skipped)
  let m=a.merkezBul(student,'son','SAY');
  assert.equal(m.tyt.id,'m:2');assert.equal(m.ayt.id,'m:5');near(m.tyt.net,72,1e-9,'TYT total');near(m.ayt.net,63,1e-9,'AYT total');
+ // Her dersin en iyisi: each branch's best net over the usable exams of the session, totalled (here the two usable TYTs are
+ // alike, so the best of each branch is the same total; an exam with a branch missing is not used).
+ {const kayit=student.denemeler;
+  student.denemeler=[...kayit,exam('m:11','Mat iyi TYT','2026-10-16','TYT',{oran:.4}),exam('m:12','Fen eksik TYT','2026-10-20','TYT',{skip:['fizik'],oran:1})];
+  const sec=a.sinavSecenekleri('SAY').tyt.filter(x=>x.uygun),e=a.merkezBul(student,'eniyi','SAY');
+  const bek=['tr','sos','mat','fen'].reduce((n,k)=>n+Math.max(...sec.map(x=>x.values[k])),0);
+  near(e.tyt.net,bek,1e-9,'TYT: the sum of each branch’s best');same(Object.keys(e.tyt.parca),['tr','sos','mat','fen']);assert.equal(e.tyt.sayi,3,'the exam with a missing branch is not used');
+  near(e.ayt.net,63,1e-9,'AYT: the best of each SAY test');assert.equal(e.kip,'eniyi');
+  assert.match(a.gorunum(),/<option value="eniyi"/);
+  student.denemeler=kayit}
  // The range of the estimate comes from the student's own recent exams, not from the fit error of the formula.
  // Two usable exams a session: too few, and the page says a single exam can move a lot.
  {const r=a.puanAraligi('SAY',undefined);assert.equal(r.yeterli,false);same([r.nT,r.nA],[2,2]);
@@ -159,7 +169,10 @@ const student=sandbox.D.ogr[0];
  const goals=a.netHedef(program);assert.equal(goals.TYT,82);assert.equal(goals.AYT,44);assert.equal(goals['TYT:matgeo'],25);assert.equal(goals['AYT:fen'],24);assert.equal(a.netHedef({...program,nets:{...program.nets,values:{...values,tr:-2}}})['TYT:turkce'],0);
  student.denemeHedef={TYT:60};
  // the target is the teacher's: a student session (or a read-only teacher) can neither set nor clear it
- sandbox.D.rol='ogrenci';await assert.rejects(a.hedefSec(program.id),/öğretmen/);await assert.rejects(a.netleriAyarla(),/öğretmen/);await assert.rejects(a.diplomaYaz(80),/öğretmen/);assert.equal(student.universiteHedef,undefined);sandbox.D.rol='rehber';
+ // A student sets their own target and diploma notu; the change moves their work clock so it reaches the teacher.
+ sandbox.D.rol='ogrenci';{const ts0=student.ogrCalismaTs;await a.hedefSec(program.id);assert.equal(student.universiteHedef.id,program.id);assert(student.ogrCalismaTs>(ts0||0),'the work clock moved');
+  await a.diplomaYaz(88);assert.equal(student.diplomaNotu,88);await a.diplomaYaz(null);await a.hedefSec(null);delete student.universiteHedef;if(ts0===undefined)delete student.ogrCalismaTs;else student.ogrCalismaTs=ts0;delete student.diplomaNotu}
+ sandbox.D.rol='';await assert.rejects(a.hedefSec(program.id));sandbox.D.rol='rehber';
  const t1=student.ogrCalismaTs;await a.hedefSec(program.id);assert.equal(student.universiteHedef.id,program.id);same(student.denemeHedef,{TYT:60},'selecting a target must not touch denemeHedef');assert.equal(student.ogrCalismaTs,t1,'a teacher-owned target leaves the student work clock alone');
  confirmAnswer=false;assert.equal(await a.netleriAyarla(),false);same(student.denemeHedef,{TYT:60},'a declined confirm changes nothing');
  student.ogrCalismaTs=5;confirmAnswer=true;assert.equal(await a.netleriAyarla(),true);assert(student.ogrCalismaTs>5,'net goals edit advances the work clock');assert.equal(student.denemeHedef.TYT,82);assert.equal(student.denemeHedef['AYT:fen'],24);
@@ -181,7 +194,7 @@ const student=sandbox.D.ogr[0];
  await a.diplomaYaz(null);assert.equal(student.diplomaNotu,null);
  sandbox.yalnizcaGoruntuleme=()=>true;await assert.rejects(a.diplomaYaz(80));sandbox.yalnizcaGoruntuleme=()=>false;
  sandbox.D.rol='';await assert.rejects(a.diplomaYaz(80));sandbox.D.rol='rehber';
- // the page itself is teacher-only
- sandbox.D.rol='ogrenci';assert.match(a.gorunum(),/yalnızca öğretmen/);sandbox.D.rol='rehber';
+ // A student sees the page for their own notebook, without the student chooser, target buttons or an editable diploma notu.
+ sandbox.D.rol='ogrenci';{const h=a.gorunum();assert.match(h,/<h1>Üniversite hedefi<\/h1>/);assert.doesNotMatch(h,/id="yaStudent"/);assert.doesNotMatch(h,/<input id="yaDiploma"[^>]* disabled>/,'the student sets their own diploma notu');assert.match(h,/data-ya-target=/,'and their own target')}sandbox.D.rol='';assert.match(a.gorunum(),/öğretmen ve öğrenci içindir/);sandbox.D.rol='rehber';
  console.log('PASS YÖK Atlas model, exams, Gidişat, lists, targets and diploma notu');
 })().catch(e=>{console.error(e);process.exitCode=1});

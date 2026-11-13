@@ -123,6 +123,59 @@ const MEB_MAT={'10.3.1':'Polinom Kavramı ve Polinomlarla İşlemler','10.3.2':'
   '12.3.2':'Trigonometrik Denklemler','12.4.1':'Analitik Düzlemde Temel Dönüşümler','12.5.1':'Limit ve Süreklilik','12.5.2':'Anlık Değişim Oranı ve Türev','12.5.3':'Türevin Uygulamaları',
   '12.6.1':'Belirsiz İntegral','12.6.2':'Belirli İntegral ve Uygulamaları','12.7.1':'Çemberin Analitik İncelenmesi'};
 const yeniProgramMi=code=>/^(MAT|FİZ|KİM|BİY|TAR|COĞ|FEL|DKAB|TDE)\./u.test(code||'');
+// Earlier programme, the other lessons: unit names by grade.unit (u), and topic names by grade.unit.topic (t) where a unit is
+// broad. The ders comes from the publisher's course code, so the same number means its own lesson's unit. A number not listed
+// stays without a topic (the report shows the kazanım itself).
+const COG_U=['Doğal Sistemler','Beşerî Sistemler','Küresel Ortam: Bölgeler ve Ülkeler','Çevre ve Toplum'];
+const ESKI={
+  FİZ:{u:{'9.1':'Fizik Bilimine Giriş','9.2':'Madde ve Özellikleri','9.3':'Hareket ve Kuvvet','9.4':'Enerji','9.5':'Isı ve Sıcaklık','9.6':'Elektrostatik','10.1':'Elektrik ve Manyetizma','10.2':'Basınç ve Kaldırma Kuvveti','10.3':'Dalgalar','10.4':'Optik',
+    '11.1':'Kuvvet ve Hareket','11.2':'Elektrik ve Manyetizma','12.1':'Çembersel Hareket','12.2':'Basit Harmonik Hareket','12.3':'Dalga Mekaniği','12.4':'Atom Fiziğine Giriş ve Radyoaktivite','12.5':'Modern Fizik','12.6':'Modern Fiziğin Teknolojideki Uygulamaları'},
+    t:{'11.1.1':'Vektörler','11.1.2':'Bağıl Hareket','11.1.3':'Newton’un Hareket Yasaları','11.1.4':'Bir Boyutta Sabit İvmeli Hareket','11.1.5':'İki Boyutta Hareket','11.1.6':'Enerji ve Hareket','11.1.7':'İtme ve Çizgisel Momentum',
+    '11.1.8':'Tork','11.1.9':'Denge ve Denge Şartları','11.1.10':'Basit Makineler','11.2.1':'Elektriksel Kuvvet ve Elektrik Alan','11.2.2':'Elektriksel Potansiyel','11.2.3':'Düzgün Elektrik Alan ve Sığa',
+    '11.2.4':'Manyetizma ve Elektromanyetik İndüklenme','11.2.5':'Alternatif Akım','11.2.6':'Transformatörler','12.1.1':'Düzgün Çembersel Hareket','12.1.2':'Dönerek Öteleme Hareketi','12.1.3':'Açısal Momentum',
+    '12.1.4':'Kütle Çekim ve Kepler Kanunları','12.5.1':'Özel Görelilik','12.5.2':'Kuantum Fiziğine Giriş','12.5.3':'Fotoelektrik Olayı','12.5.4':'Compton Saçılması ve De Broglie Dalga Boyu'}},
+  KİM:{u:{'9.1':'Kimya Bilimi','9.2':'Atom ve Periyodik Sistem','9.3':'Kimyasal Türler Arası Etkileşimler','9.4':'Maddenin Halleri','9.5':'Doğa ve Kimya','10.1':'Kimyanın Temel Kanunları ve Kimyasal Hesaplamalar','10.2':'Karışımlar',
+    '10.3':'Asitler, Bazlar ve Tuzlar','10.4':'Kimya Her Yerde','11.1':'Modern Atom Teorisi','11.2':'Gazlar','11.3':'Sıvı Çözeltiler ve Çözünürlük','11.4':'Kimyasal Tepkimelerde Enerji','11.5':'Kimyasal Tepkimelerde Hız',
+    '11.6':'Kimyasal Tepkimelerde Denge','12.1':'Kimya ve Elektrik','12.2':'Karbon Kimyasına Giriş','12.3':'Organik Bileşikler','12.4':'Enerji Kaynakları ve Bilimsel Gelişmeler'}},
+  BİY:{u:{'9.1':'Yaşam Bilimi Biyoloji','9.2':'Hücre','9.3':'Canlılar Dünyası','10.1':'Hücre Bölünmeleri','10.2':'Kalıtımın Genel İlkeleri','10.3':'Ekosistem Ekolojisi ve Güncel Çevre Sorunları','11.1':'İnsan Fizyolojisi',
+    '11.2':'Komünite ve Popülasyon Ekolojisi','12.1':'Genden Proteine','12.2':'Canlılarda Enerji Dönüşümleri','12.3':'Bitki Biyolojisi','12.4':'Canlılar ve Çevre'},
+    t:{'11.1.1':'Denetleyici ve Düzenleyici Sistem, Duyu Organları','11.1.2':'Destek ve Hareket Sistemi','11.1.3':'Sindirim Sistemi','11.1.4':'Dolaşım Sistemleri','11.1.5':'Solunum Sistemi','11.1.6':'Üriner Sistem',
+    '11.1.7':'Üreme Sistemi ve Embriyonik Gelişim','12.2.1':'Fotosentez','12.2.2':'Kemosentez','12.2.3':'Hücresel Solunum'}},
+  TAR:{u:{'9.1':'Tarih ve Zaman','9.2':'İnsanlığın İlk Dönemleri','9.3':'Orta Çağ’da Dünya','9.4':'İlk ve Orta Çağlarda Türk Dünyası','9.5':'İslam Medeniyetinin Doğuşu','9.6':'Türklerin İslamiyet’i Kabulü ve İlk Türk İslam Devletleri',
+    '10.1':'Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi','10.2':'Beylikten Devlete Osmanlı Siyaseti (1302-1453)','10.3':'Devletleşme Sürecinde Savaşçılar ve Askerler','10.4':'Beylikten Devlete Osmanlı Medeniyeti',
+    '10.5':'Dünya Gücü Osmanlı (1453-1595)','10.6':'Sultan ve Osmanlı Merkez Teşkilatı','10.7':'Klasik Çağda Osmanlı Toplum Düzeni','11.1':'Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595-1774)',
+    '11.2':'Değişim Çağında Avrupa ve Osmanlı','11.3':'Uluslararası İlişkilerde Denge Stratejisi (1774-1914)','11.4':'Devrimler Çağında Değişen Devlet-Toplum İlişkileri','11.5':'Sermaye ve Emek','11.6':'XIX. ve XX. Yüzyılda Değişen Gündelik Hayat',
+    '12.1':'20. Yüzyıl Başlarında Osmanlı Devleti ve Dünya','12.2':'Millî Mücadele','12.3':'Atatürkçülük ve Türk İnkılabı','12.4':'İki Savaş Arasındaki Dönemde Türkiye ve Dünya','12.5':'II. Dünya Savaşı Sürecinde Türkiye ve Dünya',
+    '12.6':'II. Dünya Savaşı Sonrasında Türkiye ve Dünya','12.7':'Toplumsal Devrim Çağında Dünya ve Türkiye','12.8':'XXI. Yüzyılın Eşiğinde Türkiye ve Dünya'}},
+  ÇTD:{u:{'1':'20. Yüzyıl Başlarında Dünya','2':'İkinci Dünya Savaşı','3':'Soğuk Savaş Dönemi','4':'Yumuşama Dönemi ve Sonrası','5':'Küreselleşen Dünya'}},
+  COĞ:{u:Object.fromEntries([9,10,11,12].flatMap(g=>COG_U.map((ad,i)=>[g+'.'+(i+1),ad])))},
+  DİN:{u:{'9.1':'Bilgi ve İnanç','9.2':'Din ve İslam','9.3':'İslam ve İbadet','9.4':'Gençlik ve Değerler','9.5':'Gönül Coğrafyamız','10.1':'Allah İnsan İlişkisi','10.2':'Hz. Muhammed ve Gençlik','10.3':'Din ve Hayat',
+    '10.4':'Ahlaki Tutum ve Davranışlar','10.5':'İslam Düşüncesinde İtikadi, Siyasi ve Fıkhi Yorumlar','11.1':'Dünya ve Ahiret','11.2':'Kur’an’a Göre Hz. Muhammed','11.3':'Kur’an’da Bazı Kavramlar','11.4':'İnançla İlgili Meseleler',
+    '11.5':'Dinler ve İslam','12.1':'İslam ve Bilim','12.2':'Anadolu’da İslam','12.3':'İslam Düşüncesinde Tasavvufi Yorumlar','12.4':'Güncel Dini Meseleler','12.5':'Hint ve Çin Dinleri'}},
+  FEL:{u:{'10.1':'Felsefeyi Tanıma','10.2':'Felsefe ile Düşünme','10.3':'Felsefenin Temel Konuları ve Problemleri','11.1':'MÖ 6. Yüzyıl-MS 2. Yüzyıl Felsefesi','11.2':'MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesi',
+    '11.3':'15. Yüzyıl-17. Yüzyıl Felsefesi','11.4':'18. Yüzyıl-19. Yüzyıl Felsefesi','11.5':'20. Yüzyıl Felsefesi'}},
+  MAN:{u:{'1':'Mantığa Giriş','2':'Klasik Mantık','3':'Mantık ve Dil','4':'Sembolik Mantık'}},
+  PSİ:{u:{'1':'Psikoloji Bilimini Tanıyalım','2':'Psikolojinin Temel Süreçleri','3':'Öğrenme, Bellek, Düşünme','4':'Ruh Sağlığının Temelleri'}},
+  SOS:{u:{'1':'Sosyolojiye Giriş','2':'Birey ve Toplum','3':'Toplumsal Yapı','4':'Toplumsal Değişme ve Gelişme','5':'Toplum ve Kültür','6':'Toplumsal Kurumlar'}},
+  EDB:{u:{'9.1':'Giriş','9.2':'Hikâye','9.3':'Şiir','9.4':'Masal/Fabl','9.5':'Roman','9.6':'Tiyatro','9.7':'Biyografi/Otobiyografi','9.8':'Mektup/E-posta','9.9':'Günlük/Blog','10.1':'Giriş','10.2':'Hikâye','10.3':'Şiir',
+    '10.4':'Destan/Efsane','10.5':'Roman','10.6':'Tiyatro','10.7':'Anı','10.8':'Haber Metni','10.9':'Gezi Yazısı','11.1':'Giriş','11.2':'Hikâye','11.3':'Şiir','11.4':'Makale','11.5':'Sohbet ve Fıkra','11.6':'Roman',
+    '11.7':'Tiyatro','11.8':'Eleştiri','11.9':'Mülakat/Röportaj','12.1':'Giriş','12.2':'Hikâye','12.3':'Şiir','12.4':'Roman','12.5':'Tiyatro','12.6':'Deneme','12.7':'Söylev (Nutuk)'}}};
+// The lesson of a course code (and, inside Tarih and the Felsefe grubu, of the code's own prefix).
+function eskiDers(course,code){
+  const c=course||'',k=String(code||'').toLocaleUpperCase('tr-TR');
+  if(/^FİZİK-/u.test(c))return 'FİZ';if(/^KİMYA-/u.test(c))return 'KİM';if(/^BİYOLOJİ-/u.test(c))return 'BİY';if(/^COĞRAFYA/u.test(c))return 'COĞ';if(/^DİN KÜLTÜRÜ/u.test(c))return 'DİN';
+  if(/^TÜRK DİLİ VE EDB/u.test(c))return 'EDB';if(/^TARİH/u.test(c))return /ÇTD|ÇAĞ/u.test(k)?'ÇTD':'TAR';
+  if(/^FELSEFE/u.test(c))return /(^|\.)MAN/u.test(k)?'MAN':/(^|\.)PS/u.test(k)?'PSİ':/(^|\.)SOS/u.test(k)?'SOS':'FEL';
+  return null;
+}
+function eskiKonu(course,code){
+  if(yeniProgramMi(code))return null;
+  const ders=eskiDers(course,code),tb=ders&&ESKI[ders];if(!tb)return null;
+  const m=/(?:^|\.)(9|1[0-2])\.(\d{1,2})(?:\.(\d{1,2}))?(?:\.|$)/u.exec(code||'');if(!m)return null;
+  // Lessons taught in one grade (Mantık, Psikoloji, Sosyoloji, Çağdaş Türk ve Dünya Tarihi): the unit number alone.
+  if(tb.u['1'])return tb.u[m[2]]||null;
+  return (m[3]&&tb.t&&tb.t[m[1]+'.'+m[2]+'.'+m[3]])||tb.u[m[1]+'.'+m[2]]||null;
+}
 const mebKonu=(course,code)=>{if(!/^(MATEMATİK|GEOMETRİ)-/u.test(course||'')||yeniProgramMi(code))return null;const m=/(?:^|\.)(1[0-2])\.(\d)\.(\d)(?:\.|$)/u.exec(code||'');return m?MEB_MAT[m[1]+'.'+m[2]+'.'+m[3]]||null:null};
 // New programme: the unit that lists the code in the app's own curriculum (MUFREDAT_2026; it carries codes for the 11th grade).
 // A code of a grade it has no codes for stays without a topic: the report then shows the kazanım under its own name.
@@ -133,7 +186,7 @@ const yeniKonu=code=>{
   const p=String(code).split('.');for(let n=p.length;n>=3;n--){const k=YENI_KONU.get(p.slice(0,n).join('.'));if(k)return k}
   return null;
 };
-const topicFor=(course,code,maps={})=>maps[course+'|'+code]||PARENTS.find(([p])=>code===p||code.startsWith(p+'.'))?.[1]||yeniKonu(code)||mebKonu(course,code);
+const topicFor=(course,code,maps={})=>maps[course+'|'+code]||PARENTS.find(([p])=>code===p||code.startsWith(p+'.'))?.[1]||yeniKonu(code)||mebKonu(course,code)||eskiKonu(course,code);
 
 /* A PDF is accepted atomically. Every subject must end in a verified total, including across pages. */
 function pdfCoz(pages){
