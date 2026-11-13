@@ -429,6 +429,9 @@ tr.pasif td:first-child{opacity:1}
 .hf-ayar{padding:12px 18px;margin:22px 0 0}.hf-ayar>summary{cursor:pointer;font-weight:600}.hf-ayar .hf-kutu{padding:10px 0 0;margin:0;border:0;box-shadow:none;background:none}
 .hf-ayar .hf-dersler{margin:10px 0 0;padding:10px 0 0;border:0;border-top:1px solid var(--cizgi);border-radius:0;box-shadow:none;background:none}
 .hf-rapor{display:none}
+.yl-sinav{padding:16px 20px;margin-bottom:14px}.yl-sinav h2{font-size:18px;margin:0 0 8px}.yl-sinav h3{font-size:14px;margin:12px 0 4px}
+.yl-tablo{font-variant-numeric:tabular-nums}.yl-tablo th,.yl-tablo td{padding:5px 8px;text-transform:none;letter-spacing:0}.yl-yanlis{color:var(--kritik);font-weight:700}.yl-bos{color:var(--soluk)}
+@media print{.yl-sinav{break-inside:avoid-page;box-shadow:none;border:0;padding:0}#yanlisYazdir{display:none}}
 @media print{body.hf-yazdir>:not(.kabuk),body.hf-yazdir .kabuk>:not(main),body.hf-yazdir #ana>:not(.hafiza-sayfa),body.hf-yazdir .hafiza-sayfa>:not(.hf-rapor){display:none!important}
   body.hf-yazdir .hf-rapor{display:block;color:#000;font-family:"Segoe UI",Arial,sans-serif}
   .hf-r-ust{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3mm}.hf-r-ust b{font-size:13pt}.hf-r-ust span{font-size:10pt}
@@ -9392,7 +9395,9 @@ function ogrenciPaketi(si) {
     par: JSON.parse(JSON.stringify(((D.par || {})[si]) || {})),
     ekKonular: ekK,
     // Türkiye ortalaması karşılaştırması: the student's comparison, worked out here (the student has no lists or Konu Takibi).
-    turkiyeKiyas: (() => { try { return typeof OGRETMEN_RAPOR !== 'undefined' && rehberMi() ? OGRETMEN_RAPOR.kiyasOzeti(o) : null; } catch (e) { return null; } })()
+    turkiyeKiyas: (() => { try { return typeof OGRETMEN_RAPOR !== 'undefined' && rehberMi() ? OGRETMEN_RAPOR.kiyasOzeti(o) : null; } catch (e) { return null; } })(),
+    // Yanlışlar defteri as a list (no pictures), from this device's library (opened before a publish).
+    yanlislar: (() => { try { return typeof YANLISLAR !== 'undefined' && rehberMi() ? YANLISLAR.ogrenciListesi(o.no) : null; } catch (e) { return null; } })()
   };
 }
 // öğrenci tarafında paketi aç
@@ -9452,6 +9457,7 @@ function paketiYukle(pk) {
   y.altKonu = {}; Object.keys(pk.altKonu || {}).filter(konuVar).forEach(k => { y.altKonu[cev(+k)] = cev(pk.altKonu[k]); });
   y.par = {}; if (pk.par && Object.keys(pk.par).length) y.par[0] = pk.par;
   if (pk.turkiyeKiyas && typeof pk.turkiyeKiyas === 'object' && !Array.isArray(pk.turkiyeKiyas)) y.turkiyeKiyas = pk.turkiyeKiyas;
+  if (pk.yanlislar && typeof pk.yanlislar === 'object' && !Array.isArray(pk.yanlislar)) y.yanlisListe = pk.yanlislar;
   y.ayarSurum = VERI_SURUMU; y.katalogImza = KATALOG_IMZA;
   yedekDogrula(y);
   return y;
@@ -9560,6 +9566,8 @@ async function ogrenciHesaplariniYayinla(sadece) {
     ? await window.bulut.girisOgretmen() : onceki;
   if (!ogretmen || ogretmen.isAnonymous) throw new Error('Öğretmen Google girişi tamamlanamadı.');
 
+  // Yanlışlar defteri lists come from this device's library: open it before the packages are built.
+  try { if (typeof YANLISLAR !== 'undefined') await YANLISLAR.kutAc(); } catch (e) { /* no library: the packages carry no list */ }
   const rapor = [];
   for (let i = 0; i < D.ogr.length; i++) {
     const o = D.ogr[i];
@@ -13658,11 +13666,11 @@ function ogrenciGozuyleKapat() {
 const SEKME_REHBER = [['takip', 'Haftalık öğrenci takibi'], ['plan', 'Haftalık plan'], ['giris', 'Sonuç girişi'], ['konular', 'Konular'], ['mufredat', 'Müfredat'],
                   ['ogrenciler', 'Öğrenciler'], ['konuplani', 'Özel tasarlanmış müfredat'], ['harita', 'Haftalar haritası'],
                   ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemeler'], ['siralamalar', 'Sıralamalar'], ['turkiye', 'Türkiye geneli'], ['konutakibi', 'Konu Takibi'], ['ogretmenrapor', 'Öğretmen raporu'], ['ogrencitr', 'Türkiye karşılaştırması (öğrenci)'], ['yanlislar', 'Yanlışlar defteri'], ['universite', 'Üniversite Hedefi'], ['etutler', 'Etütler'], ['etutetki', 'Etüt etkisi'], ['etutplani', 'Etüt planı'], ['yoklama', 'Yoklama'], ['ogrencirapor', 'Öğrenci raporları'], ['gunlukrapor', 'Günlük raporlar'], ['ogrencikarti', 'Öğrenci kartı'], ['ayarlar', 'Ayarlar']];
-const SEKME_OGRENCI = [['hafiza', 'Hafızam'], ['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemelerim'], ['gunlukrapor', 'Günlük rapor'], ['kiyas', 'Türkiye karşılaştırması'], ['universite', 'Üniversite hedefi'], ['ayarlar', 'Ayarlar']];
+const SEKME_OGRENCI = [['hafiza', 'Hafızam'], ['plan', 'Planım'], ['mufredat', 'Müfredat'], ['giris', 'Sonuç gir'], ['harita', 'Haftalar haritası'], ['kurtarma', 'Geçmiş plan kurtar'], ['denemeler', 'Denemelerim'], ['gunlukrapor', 'Günlük rapor'], ['kiyas', 'Türkiye karşılaştırması'], ['yanlisim', 'Yanlışlar defteri'], ['universite', 'Üniversite hedefi'], ['ayarlar', 'Ayarlar']];
 // Müfredat (lise programı) ve Denemelerim (TYT/AYT) yalnızca YKS öğrencisi içindir.
 // Günlük rapor yalnızca öğretmeni bağlı (okul hesaplı) öğrencide görünür.
 const SEKMELER = () => !ogrenciMi() ? SEKME_REHBER : (ogrenciSinavi(D && D.ogr && D.ogr[0]) === 'YKS' ? SEKME_OGRENCI
-  : SEKME_OGRENCI.filter(([id]) => id !== 'mufredat' && id !== 'denemeler' && id !== 'universite' && id !== 'kiyas')).filter(([id]) => id !== 'gunlukrapor' || GUNLUKRAPOR.uygun());
+  : SEKME_OGRENCI.filter(([id]) => id !== 'mufredat' && id !== 'denemeler' && id !== 'universite' && id !== 'kiyas' && id !== 'yanlisim')).filter(([id]) => id !== 'gunlukrapor' || GUNLUKRAPOR.uygun());
 
 // Menü üstte, gruplar halinde: grubun adı kendi sayfasına gider; yanındaki ok (tıklayınca ya da
 // üzerine gelince) ilgili diğer sayfaları açar. Sağda Müfredat ve Ayarlar.
@@ -13670,7 +13678,7 @@ const SEKMELER = () => !ogrenciMi() ? SEKME_REHBER : (ogrenciSinavi(D && D.ogr &
 const PLAN_ALT_SEKMELER = ['harita', 'giris'];
 // Hafızam en solda, kendi sekmesiyle: öğrencinin açılış sayfası.
 const OGRENCI_ACILIS = 'hafiza';
-const MENU_OGRENCI = [['hafiza', [], 'Hafızam'], ['plan', PLAN_ALT_SEKMELER, 'Planla ilgili diğer sayfalar'], ['denemeler', [], 'Denemelerle ilgili diğer sayfalar'], ['kiyas', [], 'Türkiye karşılaştırması'], ['universite', [], 'Üniversite hedefi'], ['gunlukrapor', [], 'Günlük rapor']];
+const MENU_OGRENCI = [['hafiza', [], 'Hafızam'], ['plan', PLAN_ALT_SEKMELER, 'Planla ilgili diğer sayfalar'], ['denemeler', [], 'Denemelerle ilgili diğer sayfalar'], ['kiyas', [], 'Türkiye karşılaştırması'], ['yanlisim', [], 'Yanlışlar defteri'], ['universite', [], 'Üniversite hedefi'], ['gunlukrapor', [], 'Günlük rapor']];
 const MENU_REHBER = [['plan', ['giris', 'harita'], 'Planla ilgili diğer sayfalar'],
   ['ogrenciler', ['takip', 'etutler', 'etutetki', 'etutplani', 'yoklama', 'ogrencirapor', 'gunlukrapor'], 'Öğrencilerle ilgili diğer sayfalar'], ['denemeler', ['siralamalar', 'turkiye', 'konutakibi', 'ogretmenrapor', 'ogrencitr', 'yanlislar', 'universite'], 'Denemelerle ilgili diğer sayfalar']];
 // Menüde olmayan sayfa, açıldığı yerin menü öğesini seçili gösterir.
@@ -13917,6 +13925,7 @@ function cizIc() {
     EK.sekme === 'ogretmenrapor' && rehberMi() ? gorunumOgretmenRapor() :
     EK.sekme === 'ogrencitr' && rehberMi() ? OGRETMEN_RAPOR.gorunumOgrenci() :
     EK.sekme === 'kiyas' && ogrenciMi() ? OGRETMEN_RAPOR.gorunumKendi() :
+    EK.sekme === 'yanlisim' && ogrenciMi() ? gorunumYanlisListem() :
     EK.sekme === 'yanlislar' && rehberMi() ? gorunumYanlislar() :
     EK.sekme === 'etutetki' && rehberMi() ? gorunumEtutEtki() :
     EK.sekme === 'ogrencikarti' && rehberMi() ? gorunumOgrenciKarti() :
@@ -14859,6 +14868,7 @@ document.addEventListener('click', async ev => {
   const hfUn = ev.target.closest('[data-hf-unuttum]');
   if (hfUn && ogrenciMi()) { EK.hafizaDuzenle = undefined; await hafizaIslem(() => hafizaElleKaydet(EK.ogr, +hfUn.dataset.hfUnuttum, 0.01, 1), 'Konu anlatımına döndü: sepete konu anlatımı olarak ekleyebilirsin.'); return; }
   if (ev.target.closest('[data-hf-rapor]') && ogrenciMi()) { hafizaYazdir(); return; }
+  if (ev.target.closest('#yanlisYazdir') && ogrenciMi()) { try { window.print(); } catch (e) {} return; }
   if (ev.target.closest('[data-hf-ust]') && ogrenciMi()) { EK.hafizaUstAcik = !EK.hafizaUstAcik; ciz(); return; }
   if (ev.target.closest('[data-hf-anlatim-ac]') && ogrenciMi()) { EK.hafizaAnlatimAcik = !EK.hafizaAnlatimAcik; ciz(); return; }
   const hfFl = ev.target.closest('[data-hf-filtre]');
@@ -29052,11 +29062,71 @@ function denemeKoy({kod,kitlar={},rapor=null,pairs={},ort=null,perf=null,ad='',s
   if(crops)for(const [k,v] of crops)e.crops.set(k,v);
   S.denemeler.set(e.kod,e);return e;
 }
-return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
+/* ---------------------------------------------------------------- the student's own list (no pictures)
+   For the student's Yanlışlar defteri tab: the teacher's app writes, into the student's package, per exam of this device's library
+   (newest first, at most YO_SINAV) the questions the student got wrong or left empty, by ders: the A booklet number, the student's
+   and the correct answer, the share of this school's students who answered it right, the share across the publisher's schools
+   (Performans analizi, when added) and the question's konu (Konu Takibi's sınav özeti, when there). No booklet picture leaves the
+   device. */
+const YO_SINAV=15,yuzde=x=>x===null||x===undefined||!Number.isFinite(x)?null:Math.round(x*100);
+const OKUL_P=new WeakMap();
+// The share of the school's students who answered each question right, keyed by "test:A number" (B students through the çözüm map).
+function okulOranlari(e){
+  const c=OKUL_P.get(e.rapor);if(c&&c.harita===e.harita&&c.es===e.es)return c.m;
+  const r=e.rapor,es=e.es,m=new Map();
+  for(const b of es?.bolumler||[]){
+    const ses=b.oturum||'TYT',hm=e.harita?.testler?.[b.test]||null,kimler=r.ogrenciler.filter(o=>(o.oturumlar||[ses]).includes(ses));
+    for(let k=0;k<b.n;k++){
+      const a=b.off+k+1;let dogru=0,n=0;
+      for(const o of kimler){const kit=o.kits?o.kits[ses]:o.kit,own=kit==='B'?(hm?hm.aToB[a]:null):a;if(own===null||own===undefined)continue;
+        const g=b.bas+(own-b.off-1),cvp=r.anahtar[kit]?.[g];if(!harfOK(cvp))continue;n++;if(o.cev[g]===cvp)dogru++}
+      if(n)m.set(b.test+':'+a,dogru/n);
+    }
+  }
+  OKUL_P.set(r,{harita:e.harita,es,m});return m;
+}
+// The question's konu from Konu Takibi (sınav özeti of the same exam and ders; A booklet order).
+function konuBul(rapor,dersAd,k){
+  try{
+    if(typeof KONU_TAKIBI==='undefined'||D.konutakibi===undefined)return '';
+    const v=KONU_TAKIBI.oku().veri,ek=KONU_TAKIBI.ek(rapor.ad||''),dk=KONU_TAKIBI.key(dersAd);
+    for(const z of Object.values(v.zorluk||{})){if(KONU_TAKIBI.ek(z.ad||'')!==ek||!z.ozet)continue;
+      for(const [c,l] of Object.entries(z.ozet))if(KONU_TAKIBI.key(c)===dk&&Array.isArray(l)&&Array.isArray(l[k])){
+        const ad=l[k].map(cd=>KONU_TAKIBI.topicFor(c,cd,v.maps)).find(Boolean);if(ad)return KONU_TAKIBI.topicName(ad)}}
+  }catch(x){}
+  return '';
+}
+function ogrenciListesi(no){
+  if(no===undefined||no===null||no==='')return null;
+  const sinavlar=[...S.denemeler.values()].filter(e=>e.rapor&&e.es).sort((a,b)=>String(b.tarih||'').localeCompare(String(a.tarih||''))).slice(0,YO_SINAV),out=[];
+  for(const e of sinavlar){
+    const o=e.rapor.ogrenciler.find(x=>String(x.no)===String(no));if(!o)continue;
+    const d=defterKur(e.rapor,e.es,e.harita,o,acikBolumler(e.es,o));if(!d.bolumler.length)continue;
+    const op=okulOranlari(e),perf=e.perf?new Map(e.perf.dersler.map(x=>[key(x.ad),x])):null;
+    out.push({ad:adOf(e),tarih:e.tarih||'',d:d.bolumler.map(b=>{const eb=e.es.bolumler[b.i],rb=e.rapor.bolumler[eb.ri??b.i]||{},pd=perf?perf.get(key(rb.ad||'')):null;
+      return [b.ders,b.oturum,b.sorular.map(s=>{const ak=s.a===null?null:s.a-eb.off-1,tp=pd&&pd.n===eb.n&&ak!==null&&pd.maddeler[ak]?pd.maddeler[ak].p:null;
+        return [s.a!==null?String(s.a):'B-'+s.own,s.isaret||'',s.dogru,yuzde(s.a!==null?op.get(eb.test+':'+s.a):null),yuzde(tp===null?null:tp>1?tp/100:tp),ak===null?'':konuBul(e.rapor,rb.ad||'',ak)]})]})});
+  }
+  return out.length?{v:1,s:out}:null;
+}
+return {ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
   dosyalarEkle,topluUygula,dosyaTani,pdfTuru,denemeKoy,kutuphaneKur,kutAc,sakla,geriYukle,metaOf,denemeSil,hepsiniSil,bellekiBosalt,sifirla,birlesik,kisiPlani,pdfPlan,pdfDosyaAdi,pdfIndir,boyutYaz,
   gorunum,yazdir,hazirla,durumu,key,title};
 })();
 function gorunumYanlislar(){return YANLISLAR.gorunum()}
+// The student's own Yanlışlar defteri: the list the teacher's app sent (D.yanlisListe), exam by exam and ders by ders, each question
+// with the student's and the correct answer, how many in the school and across the publisher's schools answered it right, and its konu.
+function gorunumYanlisListem(){
+  const L=D.yanlisListe,bas='<div class="baslik"><h1>Yanlışlar defteri</h1><p>Yanlış ya da boş bıraktığın sorular. Kitapçığını açıp yeniden çöz.</p></div>';
+  if(!L||L.v!==1||!Array.isArray(L.s)||!L.s.length)return bas+'<div class="kart" style="padding:20px">Henüz liste yok. Öğretmenin deneme dosyalarını ekleyip planını yayınladığında burada görünür.</div>';
+  const yz=v=>v===null||v===undefined?'—':'%'+v;
+  return bas+'<div class="arac"><button type="button" class="dugme" id="yanlisYazdir">Yazdır / PDF</button></div>'+L.s.map(s=>{
+    const n=s.d.reduce((t,d)=>t+d[2].length,0);
+    return '<section class="kart yl-sinav"><h2>'+kacis(s.ad)+' <span class="mini">'+(s.tarih?kacis(s.tarih.split('-').reverse().join('.'))+' · ':'')+n+' soru</span></h2>'+
+      s.d.map(([ders,ot,l])=>'<h3>'+kacis(ders)+' <span class="mini">'+kacis(ot)+' · '+l.length+'</span></h3><table class="yl-tablo"><thead><tr><th>Soru</th><th>Senin</th><th>Doğru</th><th title="Okulundaki öğrencilerden bu soruyu doğru yapanlar">Okulunda doğru</th><th title="Sınava giren bütün okullarda bu soruyu doğru yapanlar">Sınav okullarında doğru</th><th>Konu</th></tr></thead><tbody>'+
+        l.map(([no,sen,dogru,okul,tr,konu])=>'<tr><td><b>'+kacis(no)+'</b></td><td class="'+(sen?'yl-yanlis':'yl-bos')+'">'+(sen?kacis(sen):'boş')+'</td><td><b>'+kacis(dogru)+'</b></td><td>'+yz(okul)+'</td><td>'+yz(tr)+'</td><td>'+kacis(konu||'')+'</td></tr>').join('')+'</tbody></table>').join('')+'</section>';
+  }).join('')+'<p class="mini">Okulunda doğru: okulundaki öğrencilerden bu soruyu doğru yapanların yüzdesi. Sınav okullarında doğru: yayınevinin bu sınava giren bütün okullardaki yüzdesi. Öğretmeninin son yayınından.</p>';
+}
 // END YANLISLAR
 
 // BEGIN TYT_METOT

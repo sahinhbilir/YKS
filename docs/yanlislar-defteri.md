@@ -233,3 +233,15 @@ Wright & Masters (1982) *Rating Scale Analysis* (separation, strata, fit mean sq
 
 Tests: `node test/yanlislar-kutuphane-regression.cjs` (library, bulk grouping, multi-exam defter, PDF plan, wipe) and `test/yanlislar-kutuphane-browser.cjs` (real IndexedDB, reload, print, PDF, quota, no IndexedDB); `node test/zorluk-regression.cjs` (ders ortalamaları parsing on a synthetic text-item layout, refusals, Δ on a hand example, stronger/weaker school, no file = unchanged; Wilson, r_it, KR-20, seeded JMLE recovery, bands and "?", strata, equating, Veri yetersiz, Kendi
 seviyesi, two-sheet parsing, TC) and the browser tests `test/yanlislar-browser.cjs`, `test/denemepano-browser.cjs`.
+
+## The student's own list (Yanlışlar defteri tab, no pictures)
+
+YKS students have a **Yanlışlar defteri** tab (`yanlisim`, `gorunumYanlisListem`). It is a list, not the picture defter: no booklet picture leaves the teacher's device.
+When the teacher publishes the students' accounts, the library is opened first (`YANLISLAR.kutAc`) and each package carries `yanlislar` (`YANLISLAR.ogrenciListesi(no)`;
+the student's notebook keeps it as `D.yanlisListe`): for each exam of the library (newest first, at most 15) the questions the student got wrong or left empty, by ders, as
+`[A booklet number (or "B-n" without a çözüm map), the student's answer ("" = empty), the correct answer, the school's share of right answers %, the share across the publisher's schools %, konu]`.
+
+- **Okulunda doğru** (`okulOranlari`): among the school's students who sat the session, the share who answered that question right (B students through the çözüm map; without it, A students only).
+- **Sınav okullarında doğru**: the Performans analizi's p of the question (A numbers), when the file is in the library; otherwise "—".
+- **Konu**: from Konu Takibi's sınav özeti of the same exam and ders (A booklet order), when there.
+- No TC and no picture is in the list (tested). It is as new as the teacher's last publish.
