@@ -169,8 +169,8 @@ const student=sandbox.D.ogr[0];
  const goals=a.netHedef(program);assert.equal(goals.TYT,82);assert.equal(goals.AYT,44);assert.equal(goals['TYT:matgeo'],25);assert.equal(goals['AYT:fen'],24);assert.equal(a.netHedef({...program,nets:{...program.nets,values:{...values,tr:-2}}})['TYT:turkce'],0);
  student.denemeHedef={TYT:60};
  // the target is the teacher's: a student session (or a read-only teacher) can neither set nor clear it
- // A student sets their own target and diploma notu; the change moves their work clock so it reaches the teacher.
- sandbox.D.rol='ogrenci';{const ts0=student.ogrCalismaTs;await a.hedefSec(program.id);assert.equal(student.universiteHedef.id,program.id);assert(student.ogrCalismaTs>(ts0||0),'the work clock moved');
+ // A student sets their own target and diploma notu, on their own device.
+ sandbox.D.rol='ogrenci';{const ts0=student.ogrCalismaTs;await a.hedefSec(program.id);assert.equal(student.universiteHedef.id,program.id);assert.equal(student.ogrCalismaTs,ts0,'the work clock is left alone: the choice stays on the student’s device');
   await a.diplomaYaz(88);assert.equal(student.diplomaNotu,88);await a.diplomaYaz(null);await a.hedefSec(null);delete student.universiteHedef;if(ts0===undefined)delete student.ogrCalismaTs;else student.ogrCalismaTs=ts0;delete student.diplomaNotu}
  sandbox.D.rol='';await assert.rejects(a.hedefSec(program.id));sandbox.D.rol='rehber';
  const t1=student.ogrCalismaTs;await a.hedefSec(program.id);assert.equal(student.universiteHedef.id,program.id);same(student.denemeHedef,{TYT:60},'selecting a target must not touch denemeHedef');assert.equal(student.ogrCalismaTs,t1,'a teacher-owned target leaves the student work clock alone');
