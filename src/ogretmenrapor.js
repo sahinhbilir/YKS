@@ -89,7 +89,7 @@ function netSerisi(k,siniflar,oturum,anahtar,kod,gorulen,nolar){
   const out=[];if(!k||!k.t)return out;
   const S=new Set(siniflar),alan=oturum==='TYT'?'tyt':'ayt';
   for(const s of k.t.sinavlar){
-    const l=[];for(const o of Object.values(s[alan]||{})){const kisi=k.t.kisi.get(o.no);if(!kisi)continue;const c=sinifK(kisi.sinif);if(nolar?!nolar.has(String(o.no)):!S.has(c))continue;const v=o.net&&o.net[anahtar];if(Number.isFinite(v)){l.push(v);if(gorulen)gorulen.add(c)}}
+    const l=[],liste=s[alan]||{};for(const o of (nolar?[...nolar].map(n=>liste[n]).filter(Boolean):Object.values(liste))){const kisi=k.t.kisi.get(o.no);if(!kisi)continue;const c=sinifK(kisi.sinif);if(nolar?!nolar.has(String(o.no)):!S.has(c))continue;const v=o.net&&o.net[anahtar];if(Number.isFinite(v)){l.push(v);if(gorulen)gorulen.add(c)}}
     if(!l.length)continue;
     const tr=k.trFn?k.trFn(s.ad):null,genel=tr?tr.genel(kod):null,li=tr&&tr.dersListesi&&Number.isFinite(genel)?tr.dersListesi(kod):null;
     out.push({id:s.id,ad:s.ad,g:s.g,n:l.length,net:ort(l),genel:Number.isFinite(genel)?genel:null,fark:Number.isFinite(genel)?ort(l)-genel:null,
@@ -110,7 +110,8 @@ function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen,nolar){
   for(const e of dersSinavlari(c,kod)){
     const r=sinavFarki(c,oturum,e);if(!r||!r.ogrenciler.length)continue;
     const i=sinavlar.length,toplam={d:0,b:0,n:0,v:0,ogr:0};let var_=false;
-    for(const st of r.ogrenciler){const sc=sinifK(st.student.cls);if(nolar?!nolar.has(String(st.student.no)):!S.has(sc))continue;let bu=false;
+    if(nolar&&!r.idx){r.idx=new Map();for(const st of r.ogrenciler)r.idx.set(String(st.student.no),st)}
+    for(const st of (nolar?[...nolar].map(n=>r.idx.get(n)).filter(Boolean):r.ogrenciler)){const sc=sinifK(st.student.cls);if(nolar?!nolar.has(String(st.student.no)):!S.has(sc))continue;let bu=false;
       for(const t of st.konular.values()){if(t.ders!==ck||!t.n||t.id.endsWith('|?'))continue;var_=bu=true;
         let K=konular.get(t.id);if(!K){K={id:t.id,ad:t.ad,hucre:[]};konular.set(t.id,K)}
         const c=K.hucre[i]||(K.hucre[i]={d:0,b:0,n:0,v:0,ogr:0}),p=Math.min(1,Math.max(0,t.b/t.n)),vv=t.n*p*(1-p)*(1+(t.n-1)*R_MADDE);
@@ -124,6 +125,10 @@ function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen,nolar){
     sinavlar.push({ad:e.ad,g:e.date?Date.parse(e.date+'T00:00:00Z')/864e5:null,ogr:toplam.ogr,...olc(toplam)});
   }
   if(!sinavlar.length)return null;
+  return izgaraKur(sinavlar,konular);
+}
+// sinavlar: [{ad, g, ogr, fark, z, durum}]; konular: Map(id → {id, ad, hucre:[{d,b,n,v}], alt: Map(kod → {kod, ad, hucre})}).
+function izgaraKur(sinavlar,konular){
   const satir=[...konular.values()].map(K=>{
     const hucre=sinavlar.map((_,i)=>K.hucre[i]?{...K.hucre[i],...olc(K.hucre[i])}:null);
     const olcu=hucre.filter(Boolean),sonlar=olcu.slice(-ART_ARDA);
@@ -457,7 +462,7 @@ function ogrenciModeli(kisi,c){
   return {key:String(kisi.no),ad:kisi.ad,sinif,no:kisi.no,bloklar};
 }
 function gorunumOgrenci(){
-  const bas='<header class="et-bas"><h1 class="et-baslik">Öğrenci raporu (Türkiye)</h1><p class="et-cumle">Öğrencinin netleri ve konu başarıları, aynı denemelerde Türkiye ortalamasıyla karşılaştırılır.</p></header>';
+  const bas='<header class="et-bas"><h1 class="et-baslik">Türkiye ortalaması karşılaştırması</h1><p class="et-cumle">Öğrencinin netleri ve konu başarıları, aynı denemelerde Türkiye ortalamasıyla karşılaştırılır.</p></header>';
   if(typeof rehberMi!=='function'||!rehberMi())return '<div class="baslik"><h1>Öğrenci raporu</h1></div><p>Bu sayfa rehber öğretmen içindir.</p>';
   const c=sayfaBaglami(),kisiler=c.k&&c.k.t?[...c.k.t.kisi.values()].filter(x=>sinifK(x.sinif)):[];
   if(!kisiler.length){SON=null;return '<div id="ogrKok">'+bas+'<section class="et-panel et-bos"><b>Deneme listesi yok</b><p>Öğrenciler, Denemeler’e eklenen okul sonuç listelerinden gelir.</p><button type="button" class="et-dugme" data-sekme="denemeler">Denemeler →</button></section></div>'}
@@ -468,7 +473,7 @@ function gorunumOgrenci(){
   const secili=subede.some(x=>String(x.no)===EK.osOgr)?EK.osOgr:'',goster=secili?subede.filter(x=>String(x.no)===secili):subede;
   const modeller=goster.map(x=>ogrenciModeli(x,c));SON=modeller;
   const bugun=typeof bugunNo==='function'?gunYaz(bugunNo()):'';let sayac=0;
-  const bolum=o=>{const ad=kisiAd(o.ad);return '<section class="ogr-ogretmen" data-ogr-ogrenci="'+kacis(o.key)+'"><header class="ogr-ogretmen-bas"><div class="ogr-kimlik"><p class="ogr-baski ogr-ust-yazi">'+kacis('Öğrenci raporu'+(bugun?' · '+bugun:''))+'</p><h2>'+kacis(ad)+'</h2><p class="mini">'+
+  const bolum=o=>{const ad=kisiAd(o.ad);return '<section class="ogr-ogretmen" data-ogr-ogrenci="'+kacis(o.key)+'"><header class="ogr-ogretmen-bas"><div class="ogr-kimlik"><p class="ogr-baski ogr-ust-yazi">'+kacis('Türkiye ortalaması karşılaştırması'+(bugun?' · '+bugun:''))+'</p><h2>'+kacis(ad)+'</h2><p class="mini">'+
     kacis(o.sinif+' · okul no '+o.no)+'</p></div><div class="ogr-baski ogr-rehber"><b class="ogr-rehber-ad">Bu raporu okurken</b>'+rehberHtml(REHBER_OGRENCI)+'</div></header>'+
     (o.bloklar.length?o.bloklar.map((b,j)=>blokHtml(b,sayac++,ad,!j)).join(''):'<p class="mini ogr-yok">Bu öğrencinin henüz deneme ya da konu verisi yok.</p>')+'</section>'};
   const sec=(id,ad,l,v)=>'<label class="et-seg"><span class="et-seg-label">'+ad+'</span><select id="'+id+'">'+l.map(([d,y])=>'<option value="'+kacis(String(d))+'"'+(String(d)===String(v)?' selected':'')+'>'+kacis(y)+'</option>').join('')+'</select></label>';
@@ -476,6 +481,58 @@ function gorunumOgrenci(){
   return '<div id="ogrKok">'+bas+'<div class="et-arac">'+sec('osDuzey','Sınıf düzeyi',duzeyler.map(d=>[d,d+'. sınıf']),duzey)+sec('osSube','Şube',subeler.map(s=>[s,s]),sube)+
     sec('osOgr','Öğrenci',[['','Bütün öğrenciler ('+fi(subede.length)+')']].concat(subede.map(x=>[String(x.no),kisiAd(x.ad)])),secili)+'<button type="button" class="et-dugme" id="ogrYazdir">Yazdır / PDF</button></div>'+
     '<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu rapor nasıl okunur?</summary>'+rehberHtml(REHBER_OGRENCI)+'</details>'+modeller.map(bolum).join('')+'</div>';
+}
+/* ---- Türkiye karşılaştırması on the student's own device ----
+   The student's notebook has no school lists and no Konu Takibi, so the teacher's app works out the student's comparison and
+   sends it in the student's package (ogrenciPaketi → turkiyeKiyas), compactly: per block the exams [ad, g, net, Türkiye] and
+   per topic and kazanım the cells [d, b, n] (0: no question). The student's page builds the same blocks from it. A budget keeps
+   the package small: the kazanımlar are left out first, then the topic tables. */
+const KIYAS_SURUM=1,KIYAS_UST=250000;
+let KIYAS_BAGLAM=null;
+const r3=x=>Math.round(x*1000)/1000;
+function kiyasOzeti(o){
+  if(!o||o.no===undefined||o.no===null||o.no==='')return null;
+  // One context for a run of packages (a publish builds every student's in a row).
+  const simdi=Date.now();
+  if(!KIYAS_BAGLAM||KIYAS_BAGLAM.D!==(typeof D!=='undefined'?D:null)||simdi-KIYAS_BAGLAM.t>5000)KIYAS_BAGLAM={D:typeof D!=='undefined'?D:null,t:simdi,c:sayfaBaglami()};
+  const c=KIYAS_BAGLAM.c,kisi=c.k&&c.k.t?c.k.t.kisi.get(String(o.no)):null;if(!kisi)return null;
+  const m=ogrenciModeli(kisi,c);if(!m.bloklar.length)return null;
+  const hc=h=>h?[h.d,r3(h.b),h.n]:0;
+  const blok=(b,altVar,izVar)=>({k:b.kod,o:b.oturum,s:b.seri.map(p=>[p.ad,p.g,r3(p.net),p.genel===null?null:r3(p.genel)]),
+    z:izVar&&b.izgara?{e:b.izgara.sinavlar.map(e=>[e.ad,e.g]),r:b.izgara.satir.map(r=>[r.ad,r.hucre.map(hc),altVar?(r.alt||[]).map(a=>[a.kod,a.ad,a.hucre.map(hc)]):[]])}:null});
+  for(const [altVar,izVar] of [[true,true],[false,true],[false,false]]){
+    const oz={v:KIYAS_SURUM,t:typeof bugunNo==='function'?bugunNo():null,sinif:m.sinif,b:m.bloklar.map(b=>blok(b,altVar,izVar))};
+    if(JSON.stringify(oz).length<=KIYAS_UST)return oz;
+  }
+  return null;
+}
+// Back from the snapshot to the blocks the page draws (the same measures: olc on the same d, b, n; one student's variance).
+function kiyasAc(oz){
+  if(!oz||oz.v!==KIYAS_SURUM||!Array.isArray(oz.b))return [];
+  const hucre=x=>{if(!Array.isArray(x))return null;const [d,b,n]=x;if(!(n>0))return null;const p=Math.min(1,Math.max(0,b/n));return {d,b,n,v:n*p*(1-p)*(1+(n-1)*R_MADDE),ogr:1}};
+  return oz.b.filter(x=>x&&typeof x.k==='string').map(x=>{
+    const seri=(x.s||[]).map(([ad,g,net,genel])=>({ad,g,n:1,net,genel:Number.isFinite(genel)?genel:null,fark:Number.isFinite(genel)?net-genel:null,sinir:null,birinci:null,listeN:null,sira:undefined}));
+    let izgara=null;
+    if(x.z&&Array.isArray(x.z.e)&&x.z.e.length){
+      const konular=new Map(),toplam=x.z.e.map(()=>({d:0,b:0,n:0,v:0,ogr:0}));
+      for(const [ad,hl,al] of x.z.r||[]){const K={id:ad,ad,hucre:(hl||[]).map(hucre)};K.hucre.forEach((h,i)=>{if(h&&toplam[i]){const t=toplam[i];t.d+=h.d;t.b+=h.b;t.n+=h.n;t.v+=h.v;t.ogr=1}});
+        if(Array.isArray(al)&&al.length){K.alt=new Map();for(const [kod,kad,ah] of al)K.alt.set(kod,{kod,ad:kad,hucre:(ah||[]).map(hucre)})}konular.set(ad,K)}
+      izgara=izgaraKur(x.z.e.map(([ad,g],i)=>({ad,g,ogr:1,...olc(toplam[i])})),konular);
+    }
+    return {ders:dersEtiketi(x.k),duzey:duzeyi(oz.sinif),siniflar:oz.sinif?[oz.sinif]:[],oturum:x.o,kod:x.k,dersAd:dersEtiketi(x.k),seri,izgara,y:YAZI.ogrenci};
+  }).filter(b=>b.seri.length||b.izgara);
+}
+function gorunumKendi(){
+  const bas='<header class="et-bas"><h1 class="et-baslik">Türkiye ortalaması karşılaştırması</h1><p class="et-cumle">Netlerin ve konu başarıların, aynı denemelerde Türkiye ortalamasıyla karşılaştırılır.</p></header>';
+  const o=typeof D!=='undefined'&&D.ogr?D.ogr[0]:null,bloklar=kiyasAc(typeof D!=='undefined'?D.turkiyeKiyas:null);
+  if(!o||!bloklar.length){SON=null;return '<div id="ogrKok">'+bas+'<section class="et-panel et-bos"><b>Henüz karşılaştırma yok</b><p>Öğretmenin okulun deneme sonuçlarını ve yayınevinin Türkiye geneli sonuçlarını ekleyip planını yayınladığında burada görünür.</p></section></div>'}
+  const m={key:'0',ad:o.ad||'',sinif:D.turkiyeKiyas.sinif||o.sube||'',bloklar};SON=[m];
+  const ad=kisiAd(m.ad),tarih=Number.isInteger(D.turkiyeKiyas.t)?gunYaz(D.turkiyeKiyas.t):'';let sayac=0;
+  planla();
+  return '<div id="ogrKok">'+bas+'<div class="et-arac"><button type="button" class="et-dugme" id="ogrYazdir">Yazdır / PDF</button>'+(tarih?'<span class="mini">Öğretmeninin son yayınından · '+kacis(tarih)+'</span>':'')+'</div>'+
+    '<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu sayfa nasıl okunur?</summary>'+rehberHtml(REHBER_OGRENCI)+'</details>'+
+    '<section class="ogr-ogretmen"><header class="ogr-ogretmen-bas"><div class="ogr-kimlik"><p class="ogr-baski ogr-ust-yazi">'+kacis('Türkiye ortalaması karşılaştırması'+(tarih?' · '+tarih:''))+'</p><h2>'+kacis(ad)+'</h2><p class="mini">'+kacis(m.sinif)+'</p></div>'+
+    '<div class="ogr-baski ogr-rehber"><b class="ogr-rehber-ad">Bu raporu okurken</b>'+rehberHtml(REHBER_OGRENCI)+'</div></header>'+bloklar.map((b,j)=>blokHtml(b,sayac++,ad,!j)).join('')+'</section></div>';
 }
 let ZAMAN=null;
 function grafikleriCiz(){
@@ -486,7 +543,7 @@ function grafikleriCiz(){
 }
 function planla(){if(typeof window==='undefined'||!window.requestAnimationFrame)return;window.cancelAnimationFrame(ZAMAN);ZAMAN=window.requestAnimationFrame(grafikleriCiz)}
 if(typeof window!=='undefined'&&window.addEventListener){
-  const acik=()=>typeof EK!=='undefined'&&(EK.sekme==='ogretmenrapor'||EK.sekme==='ogrencitr');
+  const acik=()=>typeof EK!=='undefined'&&(EK.sekme==='ogretmenrapor'||EK.sekme==='ogrencitr'||EK.sekme==='kiyas');
   window.addEventListener('resize',()=>{if(acik())planla()});
   // Printing lays the page out at the paper's width: the charts are drawn again at their printed width (text stays readable), and
   // again at the screen's afterwards.
@@ -509,6 +566,6 @@ function hamDoldur(d){
   const b=SON?SON.flatMap(o=>o.bloklar)[+yer.dataset.ogrHamKonu]:null;if(!b)return;
   yer.innerHTML=hamKonu(b);yer.dataset.dolu='1';
 }
-return {gorunumOgrenci,ogrenciModeli,DERSLER,ogretmenler,netSerisi,konuIzgarasi,olc,ogretmenModeli,hucreRengi,netGrafigi,izgaraHtml,blokHtml,hamKonu,bloklar:()=>SON?SON.flatMap(o=>o.bloklar):[],gorunum,grafikleriCiz,sinifK,R_MADDE,RENK_UST,ART_ARDA};
+return {gorunumOgrenci,gorunumKendi,kiyasOzeti,kiyasAc,ogrenciModeli,DERSLER,ogretmenler,netSerisi,konuIzgarasi,olc,ogretmenModeli,hucreRengi,netGrafigi,izgaraHtml,blokHtml,hamKonu,bloklar:()=>SON?SON.flatMap(o=>o.bloklar):[],gorunum,grafikleriCiz,sinifK,R_MADDE,RENK_UST,ART_ARDA};
 })();
 function gorunumOgretmenRapor(){return OGRETMEN_RAPOR.gorunum()}
