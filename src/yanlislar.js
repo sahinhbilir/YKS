@@ -1446,8 +1446,68 @@ function denemeKoy({kod,kitlar={},rapor=null,pairs={},ort=null,perf=null,ad='',s
   if(crops)for(const [k,v] of crops)e.crops.set(k,v);
   S.denemeler.set(e.kod,e);return e;
 }
-return {dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
+/* ---------------------------------------------------------------- the student's own list (no pictures)
+   For the student's Yanlışlar defteri tab: the teacher's app writes, into the student's package, per exam of this device's library
+   (newest first, at most YO_SINAV) the questions the student got wrong or left empty, by ders: the A booklet number, the student's
+   and the correct answer, the share of this school's students who answered it right, the share across the publisher's schools
+   (Performans analizi, when added) and the question's konu (Konu Takibi's sınav özeti, when there). No booklet picture leaves the
+   device. */
+const YO_SINAV=15,yuzde=x=>x===null||x===undefined||!Number.isFinite(x)?null:Math.round(x*100);
+const OKUL_P=new WeakMap();
+// The share of the school's students who answered each question right, keyed by "test:A number" (B students through the çözüm map).
+function okulOranlari(e){
+  const c=OKUL_P.get(e.rapor);if(c&&c.harita===e.harita&&c.es===e.es)return c.m;
+  const r=e.rapor,es=e.es,m=new Map();
+  for(const b of es?.bolumler||[]){
+    const ses=b.oturum||'TYT',hm=e.harita?.testler?.[b.test]||null,kimler=r.ogrenciler.filter(o=>(o.oturumlar||[ses]).includes(ses));
+    for(let k=0;k<b.n;k++){
+      const a=b.off+k+1;let dogru=0,n=0;
+      for(const o of kimler){const kit=o.kits?o.kits[ses]:o.kit,own=kit==='B'?(hm?hm.aToB[a]:null):a;if(own===null||own===undefined)continue;
+        const g=b.bas+(own-b.off-1),cvp=r.anahtar[kit]?.[g];if(!harfOK(cvp))continue;n++;if(o.cev[g]===cvp)dogru++}
+      if(n)m.set(b.test+':'+a,dogru/n);
+    }
+  }
+  OKUL_P.set(r,{harita:e.harita,es,m});return m;
+}
+// The question's konu from Konu Takibi (sınav özeti of the same exam and ders; A booklet order).
+function konuBul(rapor,dersAd,k){
+  try{
+    if(typeof KONU_TAKIBI==='undefined'||D.konutakibi===undefined)return '';
+    const v=KONU_TAKIBI.oku().veri,ek=KONU_TAKIBI.ek(rapor.ad||''),dk=KONU_TAKIBI.key(dersAd);
+    for(const z of Object.values(v.zorluk||{})){if(KONU_TAKIBI.ek(z.ad||'')!==ek||!z.ozet)continue;
+      for(const [c,l] of Object.entries(z.ozet))if(KONU_TAKIBI.key(c)===dk&&Array.isArray(l)&&Array.isArray(l[k])){
+        const ad=l[k].map(cd=>KONU_TAKIBI.topicFor(c,cd,v.maps)).find(Boolean);if(ad)return KONU_TAKIBI.topicName(ad)}}
+  }catch(x){}
+  return '';
+}
+function ogrenciListesi(no){
+  if(no===undefined||no===null||no==='')return null;
+  const sinavlar=[...S.denemeler.values()].filter(e=>e.rapor&&e.es).sort((a,b)=>String(b.tarih||'').localeCompare(String(a.tarih||''))).slice(0,YO_SINAV),out=[];
+  for(const e of sinavlar){
+    const o=e.rapor.ogrenciler.find(x=>String(x.no)===String(no));if(!o)continue;
+    const d=defterKur(e.rapor,e.es,e.harita,o,acikBolumler(e.es,o));if(!d.bolumler.length)continue;
+    const op=okulOranlari(e),perf=e.perf?new Map(e.perf.dersler.map(x=>[key(x.ad),x])):null;
+    out.push({ad:adOf(e),tarih:e.tarih||'',d:d.bolumler.map(b=>{const eb=e.es.bolumler[b.i],rb=e.rapor.bolumler[eb.ri??b.i]||{},pd=perf?perf.get(key(rb.ad||'')):null;
+      return [b.ders,b.oturum,b.sorular.map(s=>{const ak=s.a===null?null:s.a-eb.off-1,tp=pd&&pd.n===eb.n&&ak!==null&&pd.maddeler[ak]?pd.maddeler[ak].p:null;
+        return [s.a!==null?String(s.a):'B-'+s.own,s.isaret||'',s.dogru,yuzde(s.a!==null?op.get(eb.test+':'+s.a):null),yuzde(tp===null?null:tp>1?tp/100:tp),ak===null?'':konuBul(e.rapor,rb.ad||'',ak)]})]})});
+  }
+  return out.length?{v:1,s:out}:null;
+}
+return {ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
   dosyalarEkle,topluUygula,dosyaTani,pdfTuru,denemeKoy,kutuphaneKur,kutAc,sakla,geriYukle,metaOf,denemeSil,hepsiniSil,bellekiBosalt,sifirla,birlesik,kisiPlani,pdfPlan,pdfDosyaAdi,pdfIndir,boyutYaz,
   gorunum,yazdir,hazirla,durumu,key,title};
 })();
 function gorunumYanlislar(){return YANLISLAR.gorunum()}
+// The student's own Yanlışlar defteri: the list the teacher's app sent (D.yanlisListe), exam by exam and ders by ders, each question
+// with the student's and the correct answer, how many in the school and across the publisher's schools answered it right, and its konu.
+function gorunumYanlisListem(){
+  const L=D.yanlisListe,bas='<div class="baslik"><h1>Yanlışlar defteri</h1><p>Yanlış ya da boş bıraktığın sorular. Kitapçığını açıp yeniden çöz.</p></div>';
+  if(!L||L.v!==1||!Array.isArray(L.s)||!L.s.length)return bas+'<div class="kart" style="padding:20px">Henüz liste yok. Öğretmenin deneme dosyalarını ekleyip planını yayınladığında burada görünür.</div>';
+  const yz=v=>v===null||v===undefined?'—':'%'+v;
+  return bas+'<div class="arac"><button type="button" class="dugme" id="yanlisYazdir">Yazdır / PDF</button></div>'+L.s.map(s=>{
+    const n=s.d.reduce((t,d)=>t+d[2].length,0);
+    return '<section class="kart yl-sinav"><h2>'+kacis(s.ad)+' <span class="mini">'+(s.tarih?kacis(s.tarih.split('-').reverse().join('.'))+' · ':'')+n+' soru</span></h2>'+
+      s.d.map(([ders,ot,l])=>'<h3>'+kacis(ders)+' <span class="mini">'+kacis(ot)+' · '+l.length+'</span></h3><table class="yl-tablo"><thead><tr><th>Soru</th><th>Senin</th><th>Doğru</th><th title="Okulundaki öğrencilerden bu soruyu doğru yapanlar">Okulunda doğru</th><th title="Sınava giren bütün okullarda bu soruyu doğru yapanlar">Sınav okullarında doğru</th><th>Konu</th></tr></thead><tbody>'+
+        l.map(([no,sen,dogru,okul,tr,konu])=>'<tr><td><b>'+kacis(no)+'</b></td><td class="'+(sen?'yl-yanlis':'yl-bos')+'">'+(sen?kacis(sen):'boş')+'</td><td><b>'+kacis(dogru)+'</b></td><td>'+yz(okul)+'</td><td>'+yz(tr)+'</td><td>'+kacis(konu||'')+'</td></tr>').join('')+'</tbody></table>').join('')+'</section>';
+  }).join('')+'<p class="mini">Okulunda doğru: okulundaki öğrencilerden bu soruyu doğru yapanların yüzdesi. Sınav okullarında doğru: yayınevinin bu sınava giren bütün okullardaki yüzdesi. Öğretmeninin son yayınından.</p>';
+}

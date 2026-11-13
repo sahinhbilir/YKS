@@ -319,5 +319,19 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert.throws(() => T.ortalamaDogrula(T.ortalamaCoz(pages({dersler: [['TÜRKÇE-T', 5, 2.5]]})), rapor), /Soru sayıları uyuşmuyor/);
     assert.throws(() => T.ortalamaCoz(Y.itemlere(Y.kitapcikSpec())), /eklenmedi/);
   });
+  await test('the student’s own list (no pictures): wrong and empty questions with the school’s and the publisher’s share of right answers, for the package', async () => {
+    const {rapor, k} = await kur(); T.sifirla(); T.denemeKoy({kitlar: {TYT: k}, rapor});
+    const L = copy(T.ogrenciListesi('9001')); assert.equal(L.v, 1); assert.equal(L.s.length, 1);
+    const tr = L.s[0].d.find(d => d[0] === 'Türkçe');
+    // A numbers 2 (C for B) and 3 (empty, C). The school's share among the A students who sat it (9001 wrong, 9003 right) is 50 %;
+    // B students count through the çözüm map only (none here). No Performans analizi, no Konu Takibi: no publisher share, no konu.
+    assert.deepEqual(tr[2], [['2', 'C', 'B', 50, null, ''], ['3', '', 'C', 50, null, '']]);
+    assert.equal(T.ogrenciListesi('9003'), null, 'nothing wrong: no list'); assert.equal(T.ogrenciListesi(''), null);
+    assert.doesNotMatch(JSON.stringify(L), /\d{11}|data:|blob:/, 'no TC, no pictures');
+    // The student's tab draws it.
+    run(`D=varsayilan();D.rol='ogrenci';D.yanlisListe=${JSON.stringify(L)}`); const h = run('gorunumYanlisListem()');
+    assert.match(h, /<h1>Yanlışlar defteri<\/h1>/); assert.match(h, /<th[^>]*>Okulunda doğru<\/th><th[^>]*>Sınav okullarında doğru<\/th>/); assert.match(h, /<td><b>2<\/b><\/td><td class="yl-yanlis">C<\/td><td><b>B<\/b><\/td><td>%50<\/td><td>—<\/td>/);
+    run('delete D.yanlisListe'); assert.match(run('gorunumYanlisListem()'), /Henüz liste yok/); run("D.rol='rehber'"); T.sifirla();
+  });
   console.log('Yanlışlar defteri: ' + passed + ' tests passed.');
 })();

@@ -293,9 +293,8 @@ function netHedef(p){
  return h;
 }
 // The target, the net goals and the diploma notu: the teacher for the selected student, or the student for their own notebook.
-// A student's change moves their work clock (ogrCalismaTs), so it reaches the teacher with the student's work.
+// A student's choice stays on the student's device: the teacher's import of the student's work does not carry these fields.
 const ogretmenIslemi=(owner,student)=>!saving&&D===owner&&D.ogr[EK.ogr]===student&&(rehberMi()||ogrenciMi())&&!yalnizcaGoruntuleme()&&ogrenciSinavi(student)==='YKS';
-const isaretle=student=>{const ts=student.ogrCalismaTs;if(ogrenciMi())student.ogrCalismaTs=Date.now();return ()=>{if(ts===undefined)delete student.ogrCalismaTs;else student.ogrCalismaTs=ts}};
 // Choosing a programme never touches the net goals (denemeHedef); netleriAyarla does, on an explicit request.
 async function hedefSec(id,owner=D,student=D.ogr[EK.ogr]){
  if(!ogretmenIslemi(owner,student))throw new Error('Üniversite hedefi şu an değiştirilemiyor.');
@@ -304,10 +303,10 @@ async function hedefSec(id,owner=D,student=D.ogr[EK.ogr]){
  const old=student.universiteHedef;
  const next=p?{surum:1,id:p.id,yil:catalog.referenceYear,alan:p.field}:null;
  hedefDogrula(next);saving=true;
- // The teacher's change leaves the student's work clock alone; the student's own moves it (isaretle).
- student.universiteHedef=next;const geri=isaretle(student);
+ // The student's work clock is left alone: the target is not part of the work the teacher imports.
+ student.universiteHedef=next;
  try{if(!await kaydet(true))throw new Error('Hedef kaydedilemedi. Yeniden deneyin.');}
- catch(e){if(student.universiteHedef===next){if(old===undefined)delete student.universiteHedef;else student.universiteHedef=old;geri()}throw e}
+ catch(e){if(student.universiteHedef===next){if(old===undefined)delete student.universiteHedef;else student.universiteHedef=old}throw e}
  finally{saving=false}
 }
 async function netleriAyarla(owner=D,student=D.ogr[EK.ogr]){
@@ -326,9 +325,9 @@ async function diplomaYaz(deger,owner=D,student=D.ogr[EK.ogr]){
  const n=deger===null?null:Math.round(Number(deger)*100)/100;
  diplomaDogrula(n);
  const old=student.diplomaNotu;
- student.diplomaNotu=n;saving=true;const geri=isaretle(student);
+ student.diplomaNotu=n;saving=true;
  try{if(!await kaydet(true))throw new Error('Diploma notu kaydedilemedi. Yeniden deneyin.');}
- catch(e){if(student.diplomaNotu===n){if(old===undefined)delete student.diplomaNotu;else student.diplomaNotu=old;geri()}throw e}
+ catch(e){if(student.diplomaNotu===n){if(old===undefined)delete student.diplomaNotu;else student.diplomaNotu=old}throw e}
  finally{saving=false}
 }
 

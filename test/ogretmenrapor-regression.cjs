@@ -315,6 +315,49 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // Empty: no timetables.
     run('delete D.etutPlani'); assert.match(run('OGRETMEN_RAPOR.gorunum()'), /<b>Ders programı yok<\/b>[\s\S]*data-sekme="etutplani"/);
   });
+  await check('Öğrenci raporu (Türkiye): the same blocks for one student, in the student’s words; no school place; the filters (hand-worked)', () => {
+    planKur(); kaynakKur(); konuKur();
+    // ADA (1001, 12/A): TYT Matematik 20 and 22 against 12 and 13 → +8 and +9; her Türkçe topics alone.
+    const m = get(`OGRETMEN_RAPOR.ogrenciModeli(K.t.kisi.get('1001'),{k:K,v:D.konutakibi,fark:new Map(),dersSinav:new Map()})`);
+    const mat = m.bloklar.find(b => b.kod === 'MATEMATİK-T');
+    assert.deepEqual(mat.seri.map(p => [p.n, p.net, p.fark]), [[1, 20, 8], [1, 22, 9]]);
+    // Sözcükte Anlam (p .5 .5 .9 .9): ADA 0 + 1 correct of 4 against 2,8 → 100 · (1 − 2,8) / 4 = −45 points each exam.
+    const tr = m.bloklar.find(b => b.kod === 'TÜRKÇE-T'); near(tr.izgara.satir.find(r => r.ad === 'Sözcükte Anlam').hucre[0].fark, -45); assert.deepEqual(tr.izgara.sinavlar.map(e => e.ogr), [1, 1, 1]);
+    assert(m.bloklar.findIndex(b => b.oturum === 'AYT') < 0 || m.bloklar.findIndex(b => b.oturum === 'AYT') > m.bloklar.findIndex(b => b.oturum === 'TYT'), 'TYT before AYT');
+    // The page: grade → şube → student; each student a section of their own; the student’s words; no school place or list yardstick.
+    run("EK.osDuzey=12;EK.osSube='12/A';EK.osOgr='1001'");
+    const h = run('OGRETMEN_RAPOR.gorunumOgrenci()');
+    assert.match(h, /<h1 class="et-baslik">Türkiye ortalaması karşılaştırması<\/h1>/); assert.equal((h.match(/<section class="ogr-ogretmen" data-ogr-ogrenci=/g) || []).length, 1);
+    assert.match(h, /<h2>Sentetik Ada<\/h2><p class="mini">12\/A · okul no 1001<\/p>/); assert.match(h, /<span class="ogr-kutu-ad">Netin<\/span><strong>22,0<small> net<\/small><\/strong>/);
+    assert.match(h, /Türkiye ortalamasının üzerindesin; önceki denemeye göre avantajın arttı\./); assert.match(h, /Konular: Türkiye’ye göre neredesin\?/); assert.match(h, /Kimi kapsıyor\?/);
+    assert(!/öğrencileriniz|Öğrencileriniz|Okulun Türkiye sırası|İlk 100 sınırı/.test(h), 'no teacher wording, no school figures');
+    assert(!/SENTETİK BORA|Sentetik Bora|SENTETİK CEMRE|Sentetik Cemre/.test(h.replace(/<select id="osOgr">[\s\S]*?<\/select>/, '')), 'no other student on the report');
+    run("EK.osOgr=undefined"); assert.equal((run('OGRETMEN_RAPOR.gorunumOgrenci()').match(/data-ogr-ogrenci=/g) || []).length, 2, 'the whole şube: ADA and BORA, each on their own sheets');
+    run("EK.osDuzey=undefined;EK.osSube=undefined");
+    // The teacher's report keeps its own words.
+    assert.match(run('OGRETMEN_RAPOR.gorunum()'), /<span class="ogr-kutu-ad">Öğrencileriniz<\/span>/);
+  });
+  await check('Türkiye karşılaştırması on the student’s own device: the teacher’s package carries a compact snapshot; the same figures come back (hand-worked)', () => {
+    planKur(); kaynakKur(); konuKur();
+    const oz = get(`OGRETMEN_RAPOR.kiyasOzeti({no:'1001'})`);
+    assert.equal(oz.v, 1); assert.equal(oz.sinif, '12/A'); assert(JSON.stringify(oz).length < 250000);
+    assert.equal(get(`OGRETMEN_RAPOR.kiyasOzeti({no:'9999'})`), null, 'a student not in the lists has none');
+    // Back on the student's side: the same nets, gaps and topic cells (Sözcükte Anlam −45 each exam; TYT Matematik +8, +9).
+    put('__OZ', oz); const b = get('OGRETMEN_RAPOR.kiyasAc(__OZ)');
+    assert.deepEqual(b.find(x => x.kod === 'MATEMATİK-T').seri.map(p => p.fark), [8, 9]);
+    const tr = b.find(x => x.kod === 'TÜRKÇE-T'), sa = tr.izgara.satir.find(r => r.ad === 'Sözcükte Anlam');
+    near(sa.hucre[0].fark, -45); assert.deepEqual(sa.alt.map(a => a.kod), ['T.12.1.1', 'T.12.1.2']);
+    // Its chance test is the student's own: n·p·(1 − p)·(1 + (n − 1)·0,2) with p = b / n (4 answers, b = 2,8).
+    near(sa.hucre[0].z, (1 - 2.8) / Math.sqrt(4 * .7 * .3 * (1 + 3 * .2)));
+    // The package carries it and the student's notebook keeps it; the student's own tab draws it.
+    run(`D.ogr=[{no:'1001',ad:'SENTETİK ADA',sube:'12/A',sinif:12,alan:'SAY',kap:6,off:[6],aktif:true,syncId:'s',ogrenciBulutId:'b'}]`);
+    const pk = run('ogrenciPaketi(0)'); assert.equal(pk.turkiyeKiyas.v, 1);
+    run(`D.turkiyeKiyas=${JSON.stringify(oz)};D.rol='ogrenci'`);
+    assert.deepEqual(run("MENU_OGRENCI.map(m=>m[0])").includes('kiyas'), true);
+    const h = run('OGRETMEN_RAPOR.gorunumKendi()');
+    assert.match(h, /<h1 class="et-baslik">Türkiye ortalaması karşılaştırması<\/h1>/); assert.match(h, /<span class="ogr-kutu-ad">Netin<\/span>/); assert.match(h, /Konular: Türkiye’ye göre neredesin\?/);
+    run('delete D.turkiyeKiyas'); assert.match(run('OGRETMEN_RAPOR.gorunumKendi()'), /Henüz karşılaştırma yok/); run("D.rol='rehber';D.ogr=[]");
+  });
   await check('one page reads each source once, whatever the number of teachers and blocks (the page froze when every block rebuilt them)', () => {
     planKur(); kaynakKur(); konuKur();
     run(`__say={temel:0,oku:0,fark:0};OGRENCI_RAPOR.temelOgrenciler=()=>{__say.temel++;return {students:[]}};
@@ -330,7 +373,7 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
   await check('teacher only; the menu and the route; nothing is stored', () => {
     planKur(); kaynakKur(); konuKur(); const once = run('JSON.stringify(D)');
     run('OGRETMEN_RAPOR.gorunum()'); assert.equal(run('JSON.stringify(D)'), once, 'nothing written');
-    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='denemeler')[1]"), ['siralamalar', 'turkiye', 'konutakibi', 'ogretmenrapor', 'yanlislar', 'universite']);
+    assert.deepEqual(get("MENU_REHBER.find(m=>m[0]==='denemeler')[1]"), ['siralamalar', 'turkiye', 'konutakibi', 'ogretmenrapor', 'ogrencitr', 'yanlislar', 'universite']);
     assert.equal(get("SEKME_REHBER.find(s=>s[0]==='ogretmenrapor')[1]"), 'Öğretmen raporu');
     run("D.rol='ogrenci'"); assert.match(run('OGRETMEN_RAPOR.gorunum()'), /Bu sayfa rehber öğretmen içindir/); assert(!get('SEKMELER().map(s=>s[0])').includes('ogretmenrapor'));
   });
