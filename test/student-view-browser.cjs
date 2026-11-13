@@ -69,7 +69,7 @@ const dosya=ad=>({name:ad,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.
    const gozuyle=async(tikla,ad)=>{
     await tikla();const ortu=page.locator('#ogrGor');await ortu.waitFor();
     assert.equal(await ortu.locator('.ogr-gor-ust b').innerText(),ad);
-    const cerceve=page.frameLocator('#ogrGor iframe');await cerceve.getByRole('heading',{name:'Haftalar haritası'}).waitFor();
+    const cerceve=page.frameLocator('#ogrGor iframe');await cerceve.getByRole('heading',{name:'Hafızam'}).waitFor();   // the student's landing page
     assert.equal(await page.locator('#ogrGor iframe').getAttribute('sandbox'),'allow-scripts allow-modals allow-downloads');
     assert.equal(await cerceve.locator('#oturumKapat').count(),0,'no logout inside');
     assert.equal(await page.evaluate(()=>document.body.classList.contains('ogr-gor-acik')),true);

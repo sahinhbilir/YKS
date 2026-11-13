@@ -308,7 +308,8 @@ async function check(name,fn){reset();try{await fn();passed++;console.log('PASS'
   run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
   for(const bad of ['130','{"TYT":130}','{"YKS":10}','{"TYT:Mat":10}','[]','"80"'])
     assert.throws(()=>run("(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].denemeHedef="+bad+";yedekDogrula(y);})()"),/deneme hedefi/,bad);
-  assert.match(html,/'okul','sinavTuru','denemeHedef'(,'\w+')*\]\.forEach/,'the target travels with the work snapshot');
+  // The student's own net goals stay on the student's device: the teacher's import of the student's work does not carry them.
+  assert.match(html,/'okul','sinavTuru','sureyeGore','sureHedef','serbest'\]\.forEach/);assert.doesNotMatch(html,/'sinavTuru','denemeHedef'/,'net goals do not travel to the teacher');
   run("EK.denemeTur='BRANS';EK.denemeOturum='TYT';EK.denemeBrans='turkce'");
   await hedefYaz('35','TYT:turkce',40);assert.deepEqual(JSON.parse(run('JSON.stringify(D.ogr[0].denemeHedef)')),{TYT:75,AYT:50,'TYT:turkce':35});
   assert.match(run('denemeAnaGrafigi(0)'),/>Hedef 35<\/text>/);run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
