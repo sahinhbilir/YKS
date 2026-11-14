@@ -5746,13 +5746,17 @@ const kacis = s => String(s).replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 }[c]));
 // Keep curriculum identity in saved data; show only the topic title in the UI.
+// Ekranda konu adı: sınıf/kazanım öneki ve coğrafyadaki " (TYT)" eki görünmez (TYT varsayılandır; AYT konusu "(AYT)" ile
+// ayrılır). Kayıtlı ad değişmez: konuyu tanıyan, TYT/AYT ayıran ve eşleştiren kod tam adı kullanır.
 function konuGorunenAdi(ad) {
-  return String(ad).replace(/^(?:9|10|11|12)\. sınıf · \d+\.\d+ · /, '');
+  return String(ad).replace(/^(?:9|10|11|12)\. sınıf · \d+\.\d+ · /, '').replace(/ \(TYT\)$/, '');
 }
 const konuHtml = ad => kacis(konuGorunenAdi(ad));
+// Düzenlenen ad, eski adın önekini ve " (TYT)" ekini korur (öğretmen ekranda onları görmeden yazar).
 function konuDuzenlemeAdi(eski, yeni) {
-  const ek = String(eski).match(/^(?:9|10|11|12)\. sınıf · \d+\.\d+ · /);
-  return (ek ? ek[0] : '') + konuGorunenAdi(yeni);
+  const ek = String(eski).match(/^(?:9|10|11|12)\. sınıf · \d+\.\d+ · /), tyt = / \(TYT\)$/.test(String(eski));
+  const ad = konuGorunenAdi(yeni);
+  return (ek ? ek[0] : '') + ad + (tyt && !/\((?:TYT|AYT)\)$/.test(ad) ? ' (TYT)' : '');
 }
 
 const ogrSecici = () => {
@@ -6431,13 +6435,15 @@ function mufredataEksikYksDersleri(liste, alan) {
   liste.forEach((x, i) => { out.push(x); while (j < m && Math.floor((j + 1) * n / (m + 1)) <= i) out.push(eksik[j++]); });
   return out.concat(eksik.slice(j));
 }
+// Okul planında bir konunun ikinci haftası ("… (devamı)", "… - devamı"): kendi hızında çalışan plana ve konu anlatımı listesine girmez.
+const devamKonusuMu = ad => /(?:\(devamı\)|- devamı)$/i.test(String(ad).trim());
 // Bir konu planının (haftalar → ders → konular) konuları tek sırada: hafta hafta, her haftada dersler sırayla.
 function planKonuSirasi(plan, uygun = () => true) {
   const out = [], gor = new Set();
   (Array.isArray(plan) ? plan : []).forEach(h => {
     if (!h || typeof h !== 'object') return;
     const kuyruk = Object.keys(h).map(dersAd => (Array.isArray(h[dersAd]) ? h[dersAd] : [])
-      .filter(ad => ad && typeof ad === 'string' && uygun(dersAd, ad)).map(ad => ({ dersAd, ad })));
+      .filter(ad => ad && typeof ad === 'string' && !devamKonusuMu(ad) && uygun(dersAd, ad)).map(ad => ({ dersAd, ad })));
     for (let i = 0; kuyruk.some(q => q.length > i); i++) kuyruk.forEach(q => {
       const x = q[i];
       if (x && !gor.has(x.dersAd + '|' + x.ad)) { gor.add(x.dersAd + '|' + x.ad); out.push(x); }
@@ -8925,7 +8931,7 @@ function hafizaAnlatimlari(si, d, plan) {
   let ic = '';
   if (acik) {
     const kp = (D.ogr[si] || {}).kendiPlan, sira = new Set(kp && Array.isArray(kp.sira) ? kp.sira : []), hepsi = [], gruplar = new Map();
-    for (let ki = 0, n = konuSayisi(); ki < n; ki++) if (konuAl(ki)) hepsi.push(ki);
+    for (let ki = 0, n = konuSayisi(); ki < n; ki++) if (konuAl(ki) && !devamKonusuMu(konuAl(ki)[3])) hepsi.push(ki);
     const benim = hepsi.filter(ki => sira.has(ki) || Number.isInteger(ogrenciIslenisTarihi(si, ki)));
     (benim.length ? benim : hepsi).forEach(ki => { const k = dersKisaAd(konuDersAdi(ki)); if (!gruplar.has(k)) gruplar.set(k, []); gruplar.get(k).push(ki); });
     ic = '<p class="mini">Bir konunun anlatımını güne sürükle ya da dokunup günü seç.</p>' +
