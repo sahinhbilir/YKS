@@ -188,8 +188,35 @@ const TYT_WEEKLY = (() => {
     }
     return {days,budget,blocked,over,real,finalStart,phase:aytOpen?'AYT':realTYT?'TYT deneme haftası':'TYT'};
   }
+  // The student's own additions (Hafızam → Sepetin, Planım → ekle) stand beside the method rows: they live in the week's
+  // ogrEk/yer/anlatim/konuSlot/serbest entries, never in the snapshot, so issued method rows stay as they were printed.
+  function ownRows(si,hb,ov) {
+    const out=Array.from({length:7},()=>[]);
+    for(const slot of Object.keys(ov.ogrEk||{})) {
+      const yer=(ov.yer||{})[slot],g=Array.isArray(yer)?+yer[0]:NaN;if(!(g>=0&&g<7))continue;
+      let x=null;
+      if((ov.serbest||{})[slot]) {
+        const k=ov.serbest[slot],soru=+k.soru||D.ayar.soru;
+        x={ki:slot,serbest:true,ders:-1,dersAd:k.ders||'Serbest',ad:k.ad||'Serbest çalışma',soru,birim:k.birim||'',kopya:!!k.kopya,
+          test:Math.max(1,Math.round(soru/D.ayar.soru)),mod:'serbest'};
+      } else if((ov.konuSlot||{})[slot]) {
+        const ki=+ov.konuSlot[slot].ki,k=konuAl(ki);if(!k||k[6])continue;
+        const soru=+(ov.soru||{})[slot]||D.ayar.soru,kart=D.kart[si+':'+ki]||null;
+        x={ki,slotKi:slot,ders:k[0],dersAd:konuDersAdi(ki),ad:k[3],kart,R:null,ek:true,slotEk:true,soru,
+          test:Math.max(1,Math.round(soru/D.ayar.soru)),mod:kart?'koruma':'ilk'};
+      } else if((ov.anlatim||{})[slot]) {
+        const ki=+slot,k=konuAl(ki);if(!Number.isInteger(ki)||!k||k[6])continue;
+        x={ki,ders:k[0],dersAd:konuDersAdi(ki),ad:k[3],anlatim:true,ek:true,test:1,soru:0,mod:'anlatim',R:null,kaynak:ov.anlatim[slot].kaynak||''};
+      }
+      if(!x)continue;
+      x.due=hb;x.pin=yer;x.metotDakika=Math.min(600,Math.max(0,Math.round(isDakikasi(x))));
+      out[g].push(x);
+    }
+    return out;
+  }
   function shape(si,hb,hs,ov,s,blocked=[]) {
-    const gunler=copy(s.gunler).map((l,g)=>hb+g<=hs?l:[]);
+    const kendi=ownRows(si,hb,ov);
+    const gunler=copy(s.gunler).map((l,g)=>hb+g<=hs?l.concat(kendi[g].filter(x=>!l.some(y=>planSlotAnahtari(y)===planSlotAnahtari(x)))):[]);
     const gunYuk=gunler.map(l=>l.reduce((n,x)=>n+(x.test||1),0));
     return {gunler,devreden:0,tasan:[],toplam:gunler.reduce((n,l)=>n+l.length,0),bekleyen:blocked.filter(x=>!x.serbest).map(x=>({ki:x.ki,due:x.due,metotId:x.metotId,metotVideoGun:x.metotVideoGun})),
       testToplam:gunYuk.reduce((a,b)=>a+b,0),gunYuk,kap:s.kap,off:s.off.slice(),elle:ov,
