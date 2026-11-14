@@ -59,5 +59,60 @@ const kur = () => run(`D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-11-1
     run("D.rol='ogrenci'"); assert.equal(run('okulDisiYap(0,true)'), false); run("D.rol='rehber'");
     run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
   });
+  // Tasarlanmış müfredatlar: the teacher's designed curricula travel to an okul dışı student as topic orders; the student picks one.
+  const mufredatKur = () => { kur(); run(`okulDisiYap(1,true);
+    D.konuPlani['12-C']=JSON.parse(JSON.stringify(D.konuPlani['12-A']));
+    D.konuPlani['12-B']=JSON.parse(JSON.stringify(D.konuPlani['12-A']));D.konuPlani['12-B'].reverse();
+    D.konuPlani['9-Z']=sinifaGoreKonuPlani(9,'SAY');D.mufredatSinif={'12-B':12,'12-C':12,'9-Z':9};
+    D.ogr[1].syncId='s';D.ogr[1].ogrenciBulutId='b';D.ogr[0].syncId='s0';D.ogr[0].ogrenciBulutId='b0'`); };
+  await check('the package carries the designed curricula to an okul dışı student only; the same curriculum is one choice', () => {
+    mufredatKur();
+    assert.equal(run('ogrenciPaketi(0).mufredatlar'), null, 'a student at school follows the class curriculum');
+    const m = get('ogrenciPaketi(1).mufredatlar');
+    assert.deepEqual(m.map(x => [x.ad, x.sinif, x.alanlar]), [['12-A, 12-C', 12, ['SAY']], ['12-B', 12, []], ['9-Z', 9, []]],
+      'same content once; the student’s field and grade 12 first');
+    assert(m.every(x => run('mufredatSecenegiGecerli(' + JSON.stringify(x) + ')')));
+    const ilk = get(`planKonuSirasi(D.konuPlani['12-A']).filter(x=>dersEsle(x.dersAd)>=0).map(x=>x.dersAd+'|'+x.ad)`);
+    assert.deepEqual(m[0].k.map(([d, ad]) => m[0].d[d] + '|' + ad), ilk, 'the topic order of the curriculum, week by week');
+    assert(run('baytBoyu(JSON.stringify(ogrenciPaketi(1).mufredatlar))') <= run('OKUL_DISI_MUFREDAT_BAYT'));
+  });
+  await check('the student picks one in Ayarlar: the plan follows its topics in its order; switching keeps the plan going', () => {
+    mufredatKur(); const pk = JSON.stringify(run('ogrenciPaketi(1)'));
+    run(`D=paketiYukle(${pk});EK.ogr=0;kaydet=async()=>true`);
+    assert.equal(run('ogrenciMi()'), true);
+    assert.match(run('kendiPlanKarti(0)'), /<select id="kpMufredat" style="max-width:100%"><option value="">Hazır YKS planı<\/option><option value="12-A, 12-C">12-A, 12-C müfredatı · 12\. sınıf · SAY<\/option>/);
+    run(`EK.kpMufredat='12-B'`); assert.match(run('kendiPlanKarti(0)'), /<option value="12-B" selected>12-B müfredatı · 12\. sınıf<\/option>/);
+    run(`kendiPlanKur(0,{},'2027-06-19',mufredatSecenegiAl('12-B'))`);
+    assert.equal(run('D.ogr[0].kendiPlan.mufredat'), '12-B');
+    // Each topic of the curriculum in its order (a catalog topic may carry its own, slightly different name).
+    const ilk12B = get('D.ogr[0].kendiPlan.sira');
+    assert(get(`(()=>{const m=mufredatSecenegiAl('12-B');return m.k.slice(0,30).map(([d,ad],i)=>{const a=iskelet(konuAl(D.ogr[0].kendiPlan.sira[i])[3]),b=iskelet(ad);
+      return a===b||a.startsWith(b)||b.startsWith(a)})})()`).every(Boolean), 'the topics come in the curriculum’s order');
+    assert.match(run('kendiPlanKarti(0)'), /<option value="12-B" selected>/);
+    run(`kendiPlanMufredatDegistir(0,mufredatSecenegiAl('9-Z'))`);
+    assert.equal(run('D.ogr[0].kendiPlan.mufredat'), '9-Z');
+    assert(run('D.ogr[0].kendiPlan.sira.length>50 && D.ogr[0].kendiPlan.sira.every(ki=>konuAl(ki)[1]===9)'), 'grade-9 topics, as the 9th grade curriculum names them');
+    assert.equal(run(`D.ogr[0].kendiPlan.hedef`), '2027-06-19', 'the target date stays');
+    run('kendiPlanMufredatDegistir(0,null)');
+    assert.equal(run('D.ogr[0].kendiPlan.mufredat'), undefined);
+    assert.deepEqual(get('D.ogr[0].kendiPlan.sira'), get('kendiPlanSirasi(0,null)'), 'back to the ready YKS plan');
+    assert.equal(run('D.ogr[0].kendiPlan.sira.length'), run(`kendiPlanKonulari('SAY','YKS').length`));
+    const konuSayisi = run('konuSayisi()');
+    run(`kendiPlanMufredatDegistir(0,mufredatSecenegiAl('12-B'))`);
+    assert.deepEqual(get('D.ogr[0].kendiPlan.sira'), ilk12B, 'switching back finds the same topics');
+    assert.equal(run('konuSayisi()'), konuSayisi, 'no duplicate topic is opened when the plan is rebuilt');
+    run('yedekDogrula(JSON.parse(JSON.stringify(D)))');
+    assert.equal(JSON.parse(run('ogrenciCalismaPaketi().veri')).mufredatSecenek, undefined, 'the curricula do not travel back with the work');
+    assert.throws(() => run(`(()=>{const y=JSON.parse(JSON.stringify(D));y.ogr[0].kendiPlan.mufredat='x'.repeat(121);yedekDogrula(y)})()`), /Geçersiz kendi TYT planı/);
+    assert.throws(() => run(`(()=>{const y=JSON.parse(JSON.stringify(D));y.mufredatSecenek[0].k[0][0]=99;yedekDogrula(y)})()`), /Geçersiz müfredat seçenekleri/);
+  });
+  await check('a student at school gets no choice; the teacher sees the chosen curriculum on the student row', () => {
+    mufredatKur(); const okulda = JSON.stringify(run('ogrenciPaketi(0)')), secenek = JSON.stringify(run('ogrenciPaketi(1).mufredatlar'));
+    run(`D=paketiYukle(${okulda});EK.ogr=0;D.mufredatSecenek=${secenek}`);
+    assert.doesNotMatch(run('kendiPlanKarti(0)'), /kpMufredat/, 'the school student’s own TYT plan has no curriculum choice');
+    run(`kendiPlanKur(0,{},'2027-06-19',mufredatSecenegiAl('12-B'))`); assert.equal(run('D.ogr[0].kendiPlan.mufredat'), undefined);
+    mufredatKur(); run(`D.ogr[1].kendiPlan={tur:'YKS',hedef:'2027-06-19',seviye:{},sira:[],anlatimGerek:{},mufredat:'12-B'}`);
+    assert.match(run('gorunumOgrenciler()'), />Okul dışı · 12-B müfredatı<\/span>/);
+  });
   console.log(passed + ' okul dışı checks passed');
 })();
