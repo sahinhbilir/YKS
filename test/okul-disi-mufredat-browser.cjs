@@ -1,5 +1,6 @@
 // Okul dışı öğrenci picks one of the rehber's designed curricula (Tasarlanmış müfredatlar) as the topic order of
-// Kendi YKS planın, starts it, then switches while it runs. Synthetic notebook built in the page, no Firebase.
+// Kendi YKS planın, starts it, then switches while it runs; on the method week a konu anlatımı dragged into Hafızam →
+// Sepetin shows on its day, in the plan and in the report. Synthetic notebook built in the page, no Firebase.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
@@ -43,6 +44,20 @@ fs.mkdirSync(out,{recursive:true});
   await page.evaluate(()=>{EK.sekme='plan';EK.hafta=null;ciz();});
   await page.getByRole('heading',{name:'Haftalık planın'}).waitFor();
   await page.screenshot({path:path.join(out,'okul-disi-mufredat-plan-'+width+'.png'),fullPage:false});
+  // Hafızam → Sepetin on a method week: a dragged konu anlatımı lands on the day, in the weekly plan and in Raporum (PDF).
+  await page.evaluate(()=>{EK.sekme='hafiza';EK.hafizaAnlatimAcik=true;ciz();});
+  const cip=page.locator('#hfAnlatim .hf-anl').first(),ad=(await cip.innerText()).trim(),ki=+(await cip.getAttribute('data-hf-surukle')).split(':')[1];
+  const pazar=page.locator('#hfSepet [data-hf-gun]').filter({hasText:'Pazar'});
+  await page.evaluate(()=>{const c=document.querySelector('#hfAnlatim .hf-anl'),g=[...document.querySelectorAll('#hfSepet [data-hf-gun]')].find(e=>/Pazar/.test(e.textContent));
+    const dt=new DataTransfer();c.dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer:dt}));
+    g.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:dt}));g.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));});
+  await pazar.locator('li').filter({hasText:ad}).waitFor();
+  assert.match(await pazar.locator('li').filter({hasText:ad}).innerText(),/konu anlatımı/);
+  assert.equal(await page.evaluate(ki=>planHesapla(0,buHafta(0)).gunler[6].some(x=>x.ki===ki&&x.anlatim),ki),true,'the lesson is in the weekly plan');
+  assert.match(await page.evaluate(()=>hafizaRaporu(0)),/konu anlatımı · sepette/,'and in the PDF report');
+  await page.screenshot({path:path.join(out,'okul-disi-mufredat-sepet-'+width+'.png'),fullPage:false});
+  await pazar.locator('li').filter({hasText:ad}).locator('[data-hf-cikar]').click();
+  await page.waitForFunction(ki=>!planHesapla(0,buHafta(0)).gunler[6].some(x=>x.ki===ki),ki);
   assert.deepEqual(errors,[]);
   await context.close();
  }
