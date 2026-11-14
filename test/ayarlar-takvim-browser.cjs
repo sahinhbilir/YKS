@@ -64,7 +64,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
    await page.locator('#ray button.marka').click();
    await page.getByRole('heading',{name:'Bu hafta'}).getByRole('button').click();
    await page.getByRole('heading',{name:'Haftalık öğrenci takibi'}).waitFor();
-   assert.equal((await page.locator('.etkinlik-ozet .kart').first().innerText()).replace(/\s+/g,' ').trim(),'2 / 5 Plan verildi');
+   assert.equal((await page.locator('.etkinlik-ozet .kart').nth(1).innerText()).replace(/\s+/g,' ').trim(),'2 / 5 Plan verildi');
    // 3) Ayarlar sections; holidays in Ders programı.
    await page.evaluate(()=>{EK.sekme='ayarlar';ciz();});
    assert.deepEqual(await page.locator('[data-ayar-bolum]').allInnerTexts(),['Genel','Ders programı','Öğrenci kalibrasyonu']);
