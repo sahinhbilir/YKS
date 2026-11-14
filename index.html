@@ -6409,8 +6409,27 @@ function kendiPlanKonulari(alan, tur = 'TYT', mufredat) {
     return out;
   }
   // Okul dışı öğrencinin seçtiği tasarlanmış müfredat (rehberin müfredatı) konuları ve sırasını verir.
-  if (mufredat && tur === 'YKS') return mufredat.k.map(([d, ad]) => ({ dersAd: mufredat.d[d], ad }));
+  if (mufredat && tur === 'YKS') {
+    const liste = mufredat.k.map(([d, ad]) => ({ dersAd: mufredat.d[d], ad }));
+    return mufredat.sinif === 12 ? mufredataEksikYksDersleri(liste, alan) : liste;
+  }
   return planKonuSirasi(yeniYksKonuPlani(alan), (dersAd, ad) => tur === 'YKS' || tytPlanKonusuMu(dersAd, ad));
+}
+// Rehberin 12. sınıf müfredatı, okulda o sınıfın dersleriyle kuruludur: ör. eski SAY planlarında TYT sosyal (Tarih, Coğrafya,
+// Felsefe, Din Kültürü) yoktur. Okul dışı öğrenci YKS'nin tamamını çalışsın diye alanın hazır YKS planında olup müfredatta hiç
+// olmayan derslerin konuları müfredatın sırasına eşit aralıklarla serpiştirilir. Ders kimliği: Türkçe ile edebiyat ayrı,
+// matematik ailesi (Matematik, Geometri) tek; diğerleri ders numarasıyla.
+const yksDersAnahtari = d => { const i = dersEsle(d); return i === 0 ? dersKimligi(d) : i; };
+function mufredatEksikYksDersleri(liste, alan) {
+  const var_ = new Set(liste.map(x => yksDersAnahtari(x.dersAd)));
+  return planKonuSirasi(yeniYksKonuPlani(alan)).filter(x => dersEsle(x.dersAd) >= 0 && !var_.has(yksDersAnahtari(x.dersAd)));
+}
+function mufredataEksikYksDersleri(liste, alan) {
+  const eksik = mufredatEksikYksDersleri(liste, alan), n = liste.length, m = eksik.length;
+  if (!m || !n) return liste.concat(eksik);
+  const out = []; let j = 0;
+  liste.forEach((x, i) => { out.push(x); while (j < m && Math.floor((j + 1) * n / (m + 1)) <= i) out.push(eksik[j++]); });
+  return out.concat(eksik.slice(j));
 }
 // Bir konu planının (haftalar → ders → konular) konuları tek sırada: hafta hafta, her haftada dersler sırayla.
 function planKonuSirasi(plan, uygun = () => true) {
@@ -6519,6 +6538,12 @@ function mufredatSecenegiGecerli(m) {
 }
 const mufredatSecenekleri = () => (Array.isArray(D.mufredatSecenek) ? D.mufredatSecenek : []).filter(mufredatSecenegiGecerli);
 const mufredatSecenegiAl = ad => ad ? mufredatSecenekleri().find(m => m.ad === ad) || null : null;
+// Seçilen 12. sınıf müfredatında olmayan YKS dersleri, hazır YKS planından araya eklenir; öğrenci hangilerinin geldiğini görür.
+function mufredatEkNotu(o, m) {
+  if (!m || m.sinif !== 12) return '';
+  const dersler = [...new Set(mufredatEksikYksDersleri(m.k.map(([d, ad]) => ({ dersAd: m.d[d], ad })), o.alan).map(x => kendiDersAdi(x.dersAd)))];
+  return dersler.length ? ' Bu müfredatta olmayan YKS dersleri hazır YKS planından araya eklenir: <b>' + kacis(dersler.join(', ')) + '</b>.' : '';
+}
 const mufredatSecenekAdi = m => m.ad + ' müfredatı · ' + m.sinif + '. sınıf' + (m.alanlar.length ? ' · ' + m.alanlar.join(', ') : '');
 // Çalışan planın konu sırası başka bir müfredata (ya da hazır YKS planına) geçer. Seviyeler, hedef, sonuçlar, başlamış
 // konuların tekrarları ve izlenmiş genel tekrarlar kalır; yeni planda olmayan derslerin seviyesi "Bilmiyorum"dur.
@@ -7060,7 +7085,7 @@ function kendiPlanKarti(si) {
       kacis(mufredatSecenekAdi(m)) + '</option>').join('') +
     (secili && !mufredatSecenegiAl(secili) ? '<option value="' + kacis(secili) + '" selected disabled>' + kacis(secili) + ' müfredatı (artık listede yok)</option>' : '') +
     '</select></label><p class="mini" style="margin:0 0 12px">Rehber öğretmeninin tasarladığı bir müfredatı seçersen konular o müfredatın sırasıyla gelir; ' +
-    'okulun haftalarını değil, kendi hızını izlersin.' + (kp ? ' Değiştirirsen başlamış konuların tekrarları sürer.' : '') + '</p>';
+    'okulun haftalarını değil, kendi hızını izlersin.' + (kp ? ' Değiştirirsen başlamış konuların tekrarları sürer.' : '') + mufredatEkNotu(o, mufredatSecenegiAl(secili)) + '</p>';
   const seviye = d => ((kp && kp.seviye) || {})[d] || 'hic';
   const sec = d => '<label class="etiket kp-ders">' + kacis(kendiDersAdi(d)) + '<br><select class="kpSeviye" data-ders="' + kacis(d) + '">' +
     KENDI_SEVIYE.map(([v, ad]) => '<option value="' + v + '"' + (seviye(d) === v ? ' selected' : '') + '>' + ad + '</option>').join('') +
