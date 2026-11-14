@@ -114,5 +114,26 @@ const kur = () => run(`D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-11-1
     mufredatKur(); run(`D.ogr[1].kendiPlan={tur:'YKS',hedef:'2027-06-19',seviye:{},sira:[],anlatimGerek:{},mufredat:'12-B'}`);
     assert.match(run('gorunumOgrenciler()'), />Okul dışı · 12-B müfredatı<\/span>/);
   });
+  await check('a grade-12 curriculum without some YKS lessons (old SAY plans: no TYT sosyal) gets them from the ready YKS plan, spread through it', () => {
+    mufredatKur(); run(`D.konuPlani['12-ESKI']=JSON.parse(JSON.stringify(VARSAYILAN_KONU_PLANI.SAY));D.mufredatSinif['12-ESKI']=12`);
+    const pk = JSON.stringify(run('ogrenciPaketi(1)'));
+    run(`D=paketiYukle(${pk});EK.ogr=0;kaydet=async()=>true`);
+    const m = get(`mufredatSecenegiAl('12-ESKI')`);
+    assert.deepEqual(m.d.slice().sort(), ['Biyoloji', 'Fizik', 'Geometri', 'Kimya', 'Matematik AYT', 'Matematik TYT', 'Türkçe'], 'the old plan has no TYT sosyal');
+    const dersler = get(`kendiPlanDersleri('SAY','YKS',mufredatSecenegiAl('12-ESKI'))`);
+    for (const d of ['Tarih', 'Coğrafya', 'Felsefe', 'Din Kültürü']) assert(dersler.includes(d), d + ' is added');
+    const liste = get(`kendiPlanKonulari('SAY','YKS',mufredatSecenegiAl('12-ESKI'))`);
+    assert.deepEqual(liste.filter(x => m.d.includes(x.dersAd)).map(x => x.dersAd + '|' + x.ad), m.k.map(([d, ad]) => m.d[d] + '|' + ad), 'the curriculum keeps its own order');
+    const sosyal = liste.map((x, i) => ['Tarih', 'Coğrafya', 'Felsefe', 'Din Kültürü'].includes(x.dersAd) ? i : -1).filter(i => i >= 0);
+    assert(sosyal[0] < liste.length / 4 && sosyal[sosyal.length - 1] > liste.length * 3 / 4, 'spread through the order, not piled at the end');
+    const kart = run(`EK.kpMufredat='12-ESKI';kendiPlanKarti(0)`);
+    assert.match(kart, /araya eklenir: <b>[^<]*Tarih[^<]*<\/b>/); for (const d of ['Coğrafya', 'Felsefe', 'Din Kültürü']) assert(kart.includes(d));
+    // A complete grade-12 curriculum and a grade-9 one are taken as they are.
+    assert.equal(get(`kendiPlanKonulari('SAY','YKS',mufredatSecenegiAl('12-A, 12-C')).length`), get(`mufredatSecenegiAl('12-A, 12-C').k.length`));
+    assert.equal(get(`kendiPlanKonulari('SAY','YKS',mufredatSecenegiAl('9-Z')).length`), get(`mufredatSecenegiAl('9-Z').k.length`));
+    assert.doesNotMatch(run(`EK.kpMufredat='12-A, 12-C';kendiPlanKarti(0)`), /araya eklenir/);
+    run(`kendiPlanKur(0,{},'2027-06-19',mufredatSecenegiAl('12-ESKI'))`);
+    assert(run(`D.ogr[0].kendiPlan.sira.some(ki=>dersEsle(konuDersAdi(ki))===5)`), 'the plan holds Tarih topics');
+  });
   console.log(passed + ' okul dışı checks passed');
 })();

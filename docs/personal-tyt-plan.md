@@ -48,6 +48,10 @@ The teacher's **Tasarlanmış müfredatlar** (Müfredat page; `D.konuPlani`) tra
   field come first, then grade 12. Options are dropped from the end when they pass `OKUL_DISI_MUFREDAT_BAYT`, so the
   package stays under the cloud limit. A school student's package carries none, and their own TYT plan has no choice.
 - Topics are resolved with the curriculum's own grade. A grade-9 curriculum gives grade-9 topics.
+- **A grade-12 curriculum is completed to the whole YKS.** A school curriculum carries only that class's lessons. Old 12 SAY plans, for example, have no TYT sosyal (Tarih, Coğrafya, Felsefe, Din Kültürü).
+  - The field's ready-plan lessons that the curriculum lacks entirely are spread through its order at even intervals (`mufredataEksikYksDersleri`), so an out-of-school student still studies the whole YKS.
+  - Lessons are compared by identity: Türkçe and edebiyat are different lessons, the mathematics family (Matematik, Geometri) counts as one, and the rest go by lesson number.
+  - The curriculum's own order is kept. Ayarlar names the added lessons. Grade 9–11 curricula are taken as they are.
 - The choice is stored as `kendiPlan.mufredat` (the option's name). The teacher sees it on the student's row in
   **Öğrenciler** ("Okul dışı · 12-B müfredatı").
 - **Switching while the plan runs** (`kendiPlanMufredatDegistir`) only rebuilds `kendiPlan.sira`, after a confirm. Levels,
