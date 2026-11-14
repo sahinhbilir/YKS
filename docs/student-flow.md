@@ -71,6 +71,16 @@ A tick box in Ayarlar (Planı kendine göre ayarla) and on Hafızam (`o.serbest`
 
 `o.serbest` is a list of periods `[[first day, last day | null], …]` (only the last may be open, validated by `serbestDogrula`). Switching on opens a period today (or continues one closed yesterday or today); switching off closes it yesterday, so a period opened and closed on one day leaves nothing. The days of a closed period keep their rule: turning the box off never re-assumes the tests of the weeks she spent on her own. The list travels with the student's work snapshot (also when empty), the teacher's copy recomputes the cards with it, and the teacher's plan header says "kendi programını yapıyor (… tarihinden beri; sonucu girilmeyen test İyi sayılmaz)".
 
+**Two kinds, picked under the box** (`serbestKipSecimi`, `serbestKipAyarla`):
+
+- **Öneriler görünsün** (the default) is the behaviour above. The plan's rows stay as suggestions, and the basket's day cards say "N öneri" instead of "N plan çalışması".
+- **Boş plan** (`o.serbestBos`, the day it was picked) starts the plan empty from that day on. `planHesapla` wraps the plan builder (`planHesaplaHam`) with `bosPlanUygula`, so every screen, the A4 print, Sonuç gir and Raporum (PDF) show only the student's own rows on those days:
+  - what she put in from Hafızam → Sepetin or Planım,
+  - her "her gün" mixed practice,
+  - rows that already have a result that day.
+
+  Planım says "Kendi programını yapıyorsun · boş plan: planında yalnızca senin koydukların var", and the basket counts what is left as "N çalışma". Days before that day keep their rows. Switching back to suggestions brings the plan's rows back, and turning the box off ends the empty plan (`null`). `serbestBos` travels with the work snapshot, is validated (an integer day or `null`), and the teacher's plan header adds "boş plan: planında yalnızca kendi koydukları var".
+
 Without the box the same reporting works; the only difference is that plan tests she does not report are still assumed İyi **in the plan** (its preview and review days). Hafızam does not use that assumption either way, and its note says so.
 
 ## Results inside the plan: the slider

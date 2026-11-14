@@ -63,6 +63,8 @@ const TYT_WEEKLY = (() => {
     const start=Math.max(gunNo(m.baslangic),bugunNo()), exam=gunNo(D.ayar.sinav);
     const end=Math.min(exam-1,Math.max(until+3,gunNo(kp.hedef)+21,start+120));
     const days=new Map(), locked=new Set(), watched=new Map(real.videos), tested=new Map(real.recalls), intros=new Map(real.intros);
+    // The student's own additions (Sepetin) take their time and rows on their day, beside the method rows.
+    const ownMin=new Map(), ownN=new Map(), ownIntro=new Map();
     const blocked=[], over=new Set(), topicByKi=new Map(all.map(x=>[x.ki,x]));
     // The unchanged A4 programme is a workload limit, not a reason to shrink type.
     // Reserve a row for the recall as well as the video before assigning either.
@@ -70,7 +72,8 @@ const TYT_WEEKLY = (() => {
     const budget=day=>(o.off||[]).includes(haftaGunu(day))?0:
       o.dakika ? (haftaGunu(day)>=CUMARTESI?o.dakika.hs:o.dakika.hi) : m.dakika;
     const rows=day=>{if(!days.has(day))days.set(day,[]);return days.get(day);};
-    const used=day=>rows(day).reduce((n,x)=>n+x.metotDakika,0);
+    const used=day=>rows(day).reduce((n,x)=>n+x.metotDakika,0)+(ownMin.get(day)||0);
+    const cnt=day=>rows(day).length+(ownN.get(day)||0);
     const put=(day,x)=>{if(day>=start&&day<exam&&!rows(day).some(y=>y.metotId===x.metotId))rows(day).push(x);};
     const extra=(id,ad,tur,min,q=0,extra={})=>({ki:'TM_'+id,serbest:true,ders:-1,dersAd:'Çalışma',ad,soru:q||min,birim:q?'':'dakika',test:1,mod:'serbest',metotId:id,metotTur:tur,metotDakika:min,...extra});
     const video=(x,day)=>({ki:x.ki,ders:konuAl(x.ki)[0],dersAd:x.ders,ad:x.ad,anlatim:true,test:1,soru:0,mod:'anlatim',R:null,
@@ -92,6 +95,18 @@ const TYT_WEEKLY = (() => {
         if(row.metotTur==='overview'&&day>=start&&!intros.has(row.metotId))intros.set(row.metotId,day);
       }
     }
+    // Genel son tekrar comes only when the student asks for it: an own row (Hafızam → Sepetin) with metotTur 'overview'.
+    // It is that lesson's overview from its day on (no topic video of the lesson on the same day; Türkçe's recall follows).
+    for(const [key,ov] of Object.entries(D.elle||{})) {
+      const [owner,h]=key.split('|').map(Number);if(owner!==si||!ov.ogrEk)continue;
+      ownRows(si,h,ov).forEach((l,g)=>l.forEach(x=>{
+        const day=h+g;if(day<start||day>end)return;
+        ownMin.set(day,(ownMin.get(day)||0)+x.metotDakika);ownN.set(day,(ownN.get(day)||0)+1);
+        if(x.metotTur!=='overview'||!x.metotId)return;
+        ownIntro.set(day,(ownIntro.get(day)||0)+1);
+        if(!intros.has(x.metotId))intros.set(x.metotId,day);
+      }));
+    }
     // Daily habits are real rows in the same plan, not an extra rendering layer.
     for(let day=start;day<=end;day++)if(!locked.has(day)&&budget(day)>0) {
       put(day,extra('p|'+isoDan(day),'Paragraf · 20 soru','paragraph',30,20,{dersAd:'Türkçe'}));
@@ -111,7 +126,7 @@ const TYT_WEEKLY = (() => {
     pool.forEach(x=>{if(watched.has(x.ki))reserve(x,watched.get(x.ki));});
     const trIntro='g|TYT|tr';
     if(intros.has(trIntro)&&!real.extras.has('gr')) {
-      const v=intros.get(trIntro),r=extra('gr','Dil bilgisi genel tekrar testi · 5 dk hatırla, notsuz çöz','overviewRecall',40,25,{dersAd:'Türkçe',metotVideoGun:v,due:v+3});
+      const v=intros.get(trIntro),r=extra('gr','Dil bilgisi genel tekrar testi · 5 dk hatırla, notsuz çöz','overviewRecall',40,25,{dersAd:'Türkçe',metotVideoGun:v,due:v+3,...(real.intros.has(trIntro)?{}:{metotKosullu:true})});
       if(v+3<start)blocked.push({...r,metotGecikti:true});else if(!locked.has(v+3))put(v+3,r);
     }
     const fraction=(xs,day)=>xs.length?xs.filter(x=>real.recalls.has(x.ki)||watched.has(x.ki)&&watched.get(x.ki)<=day).length/xs.length:1;
@@ -126,20 +141,8 @@ const TYT_WEEKLY = (() => {
     let finalStart=null;
     for(let day=start;day<=end;day++) {
       if(locked.has(day)||!budget(day))continue;
-      // Overview days establish a starting point. They do not also start that
-      // lesson's topic campaign, and leave room rather than filling every minute.
-      const eligible=courses.filter(c=>gates(day)(c));
-      let overviews=rows(day).filter(x=>x.metotTur==='overview').length;
-      for(const c of eligible.slice().sort((a,b)=>Number(!starts[a])-Number(!starts[b])||firstDay(a)-firstDay(b)||courses.indexOf(a)-courses.indexOf(b))) {
-        const xs=pool.filter(x=>(x.c||x.ders)===c),id='g|'+session+'|'+c;
-        if(!xs.some(x=>!watched.has(x.ki)&&!real.recalls.has(x.ki))||intros.has(id))continue;
-        if(overviews>=2&&!starts[c])continue;
-        if(rows(day).length>=rowCap||used(day)+120>budget(day))continue;
-        if(c==='tr'&&session==='TYT'&&(day+3>=exam||locked.has(day+3)||rows(day+3).length>=rowCap||used(day+3)+40>budget(day+3)))continue;
-        put(day,extra(id,(info(c)[0]||xs[0].ders)+' · genel son tekrar','overview',120,0,{dersAd:xs[0].ders,metotKaynak:session==='TYT'?info(c)[2]:undefined}));
-        intros.set(id,day);overviews++;
-        if(c==='tr'&&session==='TYT')put(day+3,extra('gr','Dil bilgisi genel tekrar testi · 5 dk hatırla, notsuz çöz','overviewRecall',40,25,{dersAd:'Türkçe',metotVideoGun:day,due:day+3,metotKosullu:true}));
-      }
+      // Genel son tekrar is never placed on its own (only on request, above); a requested one leaves room for at most one video.
+      const overviews=rows(day).filter(x=>x.metotTur==='overview').length+(ownIntro.get(day)||0);
       const weight=c=>c==='mat'?2:c==='tr'||c==='cog'?1:.65;
       const progress=c=>pool.filter(x=>(x.c||x.ders)===c&&watched.has(x.ki)).length/weight(c);
       const todayVideos=c=>rows(day).filter(x=>x.metotTur==='video'&&(topicByKi.get(x.ki)?.c||x.dersAd)===c).length;
@@ -156,9 +159,9 @@ const TYT_WEEKLY = (() => {
           const x=xs.find(x=>!watched.has(x.ki)&&!real.recalls.has(x.ki));
           if(!x)continue;
           const id='g|'+session+'|'+c;
-          if(!intros.has(id)||intros.get(id)>=day||todayVideos(c)>=videoLimit(c)||
+          if(intros.get(id)===day||todayVideos(c)>=videoLimit(c)||
             overviews===1&&rows(day).filter(x=>x.metotTur==='video').length>=1||
-            day+3>=exam||locked.has(day+3)||rows(day).length>=rowCap||rows(day+3).length>=rowCap||used(day)+60>budget(day)||used(day+3)+45>budget(day+3))continue;
+            day+3>=exam||locked.has(day+3)||cnt(day)>=rowCap||cnt(day+3)>=rowCap||used(day)+60>budget(day)||used(day+3)+45>budget(day+3))continue;
           put(day,video(x,day));watched.set(x.ki,day);reserve(x,day);changed=true;break;
         }
       }
@@ -183,7 +186,7 @@ const TYT_WEEKLY = (() => {
       }
       if(socialDone)branches.push(['sos','Sosyal',20,tyt.filter(x=>SOCIAL.includes(x.c))]);
       if(scienceDone)branches.push(['fen','Fen',20,tyt.filter(x=>SCIENCE.includes(x.c))]);
-      if((day-gunNo(m.baslangic))%3===0)for(const [c,name,q,xs] of branches)if(rows(day).length<rowCap&&used(day)+45<=budget(day))
+      if((day-gunNo(m.baslangic))%3===0)for(const [c,name,q,xs] of branches)if(cnt(day)<rowCap&&used(day)+45<=budget(day))
         put(day,extra('b|'+c+'|'+isoDan(day),name+' branş denemesi','branch',45,q,{dersAd:name,metotDers:c,metotKosullu:!xs.every(x=>real.recalls.has(x.ki))}));
     }
     return {days,budget,blocked,over,real,finalStart,phase:aytOpen?'AYT':realTYT?'TYT deneme haftası':'TYT'};
@@ -199,6 +202,7 @@ const TYT_WEEKLY = (() => {
         const k=ov.serbest[slot],soru=+k.soru||D.ayar.soru;
         x={ki:slot,serbest:true,ders:-1,dersAd:k.ders||'Serbest',ad:k.ad||'Serbest çalışma',soru,birim:k.birim||'',kopya:!!k.kopya,
           test:Math.max(1,Math.round(soru/D.ayar.soru)),mod:'serbest'};
+        if(k.metotId&&k.metotTur==='overview')Object.assign(x,{metotId:k.metotId,metotTur:'overview',...(k.metotKaynak?{metotKaynak:k.metotKaynak}:{})});
       } else if((ov.konuSlot||{})[slot]) {
         const ki=+ov.konuSlot[slot].ki,k=konuAl(ki);if(!k||k[6])continue;
         const soru=+(ov.soru||{})[slot]||D.ayar.soru,kart=D.kart[si+':'+ki]||null;
@@ -211,6 +215,26 @@ const TYT_WEEKLY = (() => {
       if(!x)continue;
       x.due=hb;x.pin=yer;x.metotDakika=Math.min(600,Math.max(0,Math.round(isDakikasi(x))));
       out[g].push(x);
+    }
+    return out;
+  }
+  // Lessons whose genel son tekrar (2 hours) the student can ask for: the current session's lessons, not watched yet and not
+  // already in the plan from today on (asked for, or issued before this became a request).
+  function overviewOptions(si) {
+    const o=D.ogr[si];if(o?.okul!==false||ogrenciSinavi(o)!=='YKS'||o.kendiPlan?.metot?.surum!==1)return [];
+    const real=ledger(si),all=TYT_METOT.topics(si),tyt=all.filter(x=>x.tyt&&x.c),ayt=all.filter(x=>!x.tyt);
+    const aytOpen=tyt.length>0&&tyt.every(x=>real.recalls.has(x.ki))&&MOCKS.every(n=>real.extras.has('d|'+n));
+    const pool=aytOpen?ayt:tyt,session=aytOpen?'AYT':'TYT',today=bugunNo(),asked=new Set();
+    for(const [key,ov] of Object.entries(D.elle||{})) {
+      const [owner,h]=key.split('|').map(Number);if(owner!==si)continue;
+      ownRows(si,h,ov).forEach((l,g)=>l.forEach(x=>{if(x.metotTur==='overview'&&h+g>=today)asked.add(x.metotId);}));
+      if(ov.sabit)(ov.metotPlan?.gunler||[]).forEach((l,g)=>l.forEach(x=>{if(x.metotTur==='overview'&&h+g>=today)asked.add(x.metotId);}));
+    }
+    const out=[];
+    for(const c of [...ORDER,...pool.map(x=>x.c||x.ders)].filter((c,i,a)=>a.indexOf(c)===i)) {
+      const xs=pool.filter(x=>(x.c||x.ders)===c),id='g|'+session+'|'+c;
+      if(!xs.length||real.intros.has(id)||asked.has(id))continue;
+      out.push({id,ad:(info(c)[0]||xs[0].ders)+' · genel son tekrar',ders:info(c)[0]||xs[0].ders,dersAd:xs[0].ders,kaynak:session==='TYT'?info(c)[2]:undefined});
     }
     return out;
   }
@@ -260,5 +284,5 @@ const TYT_WEEKLY = (() => {
     }
     return true;
   }
-  return {weekly,forecast,ledger,validateSnapshot,actionable};
+  return {weekly,forecast,ledger,validateSnapshot,actionable,overviewOptions};
 })();
