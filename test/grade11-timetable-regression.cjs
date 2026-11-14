@@ -277,6 +277,11 @@ test('topic display omits curriculum bookkeeping while saved identities remain i
   assert.equal(a.run('JSON.stringify(D)'),before);
   assert(a.run("D.konuPlani['11-A'][0].Matematik[0].startsWith('11. sınıf · 1.1 · ')"));
   assert.equal(a.run("konuDuzenlemeAdi('11. sınıf · 1.1 · Eski','Yeni')"),'11. sınıf · 1.1 · Yeni');
+  // Geography's " (TYT)" is not shown; the stored name keeps it, and an edit keeps it too. AYT stays marked.
+  assert.equal(a.run("konuGorunenAdi('Harita Bilgisi (TYT)')"),'Harita Bilgisi');
+  assert.equal(a.run("konuGorunenAdi('Türkiye’de Nüfus (AYT)')"),'Türkiye’de Nüfus (AYT)');
+  assert.equal(a.run("konuDuzenlemeAdi('Harita Bilgisi (TYT)','Harita ve Ölçek')"),'Harita ve Ölçek (TYT)');
+  assert.equal(a.run("konuDuzenlemeAdi('Harita Bilgisi (TYT)','Harita Bilgisi (AYT)')"),'Harita Bilgisi (AYT)');
   assert.equal(a.run("konuHtml('11. sınıf · 1.1 · <script>')"),'&lt;script&gt;');
 });
 
