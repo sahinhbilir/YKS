@@ -25,6 +25,16 @@ açık lise, a break from school) changes the setup:
   Starting it before the current week has any work puts the first topics in this
   week.
 
+### Okul dışı, under a rehber öğretmen
+
+The teacher can keep such a student in the school notebook (**Öğrenciler**: the **Okul dışı** box when adding, or the
+**okul dışı** box on a student's row; `okulDisiYap`). The student keeps the school number, so the school's mock exam lists
+(Sıralamalar, Denemeler, Türkiye geneli, Öğrenci kartı) still find them, but gets `okul: false` and the şube
+`OKUL_DISI_SUBE` ("Okul dışı"): not a class, so it is not in the şube lists, has no timetable and no school topic plan
+(`varsayilanKonuPlaniniHazirla` creates none), and the week holds no school topic. The student does their own konu
+anlatımı with **Kendi YKS planın**, started in Ayarlar on their device after the teacher publishes the account, exactly as
+above; the plan travels back with their work. Unticking the box asks for the class to join.
+
 `okul` travels with the work snapshot and is validated as a boolean; `kendiPlan.tur`
 is `'TYT'`, `'YKS'` or one of the other exams. DİL remains TYT-only (no YDT
 syllabus is claimed). LGS, KPSS, ALES, DGS and AGS use this same plan with their
