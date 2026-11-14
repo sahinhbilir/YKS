@@ -78,8 +78,8 @@ const kur=()=>{
     await page.locator('input[name="serbestKip"][value="bos"]').check();
     await page.waitForFunction(()=>D.ogr[0].serbestBos===bugunNo());
     await page.waitForFunction(()=>{const hb=buHafta(0),p=planHesapla(0,hb);return p.gunler.every((l,g)=>hb+g<bugunNo()||l.every(x=>(p.elle.ogrEk||{})[planSlotAnahtari(x)]||x.gunlukEk||D.log.some(r=>r[1]===0&&r[2]===x.ki&&r[0]===hb+g)))});
-    const sepetYazi=await page.locator('#hfSepet').innerText();
-    assert.doesNotMatch(sepetYazi,/\d+ (öneri|plan çalışması)/,'nothing suggested on the empty plan');
+    // The basket is drawn again once the save is done: nothing is suggested on the empty plan.
+    await page.waitForFunction(()=>{const t=document.querySelector('#hfSepet')?.innerText||'';return /\d+ çalışma|boş/.test(t)&&!/\d+ (öneri|plan çalışması)/.test(t)});
     await page.screenshot({path:path.join(out,'hafizam-bos-plan-'+width+'-'+tema+'.png'),fullPage:false});
     await page.evaluate(()=>{EK.sekme='plan';ciz()});
     assert.match(await page.locator('#serbestNot').innerText(),/boş plan: planında yalnızca senin koydukların var/);
