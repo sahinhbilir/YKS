@@ -5938,9 +5938,26 @@ const kullanan = i => D.ogr[i].aktif !== false;
 const kullananlar = () => D.ogr.map((o, i) => i).filter(i => !D.ogr[i].silindi && kullanan(i));
 const canliOgrenciler = () => D.ogr.map((o, i) => i).filter(i => !D.ogr[i].silindi);
 const subeKullananlar = su => kullananlar().filter(i => D.ogr[i].sube === su);
+// Okul dışı öğrenci: rehber öğretmenin listesinde, okulun denemelerine girer ama bir sınıfın ders programını ve müfredatını
+// izlemez; konu anlatımlarını kendi planıyla yapar (o.okul === false, şubesi OKUL_DISI_SUBE). Bu "şube" bir sınıf değildir:
+// şube listelerinde, müfredatta ve ders programlarında yer almaz.
+const OKUL_DISI_SUBE = 'Okul dışı';
+function okulDisiYap(i, acik, sube) {
+  const o = D.ogr[i];
+  if (!rehberMi() || !o || o.silindi) return false;
+  if (acik) {
+    if (o.okul === false && o.sube === OKUL_DISI_SUBE) return false;
+    o.okul = false; o.sube = OKUL_DISI_SUBE; o.sinif = 12; delete o.mufredatBaslangic;
+    return true;
+  }
+  if (o.okul !== false || !sube || sube === OKUL_DISI_SUBE) return false;
+  delete o.okul; o.sube = sube; o.sinif = subeSinifi(sube) || 12;
+  varsayilanKonuPlaniniHazirla(sube, o.alan, ogrenciSinifi(o));
+  return true;
+}
 function subeListesi() {
   const k = {};
-  (D.ogr || []).forEach(o => { if (!o.silindi && o.sube) k[o.sube] = 1; });
+  (D.ogr || []).forEach(o => { if (!o.silindi && o.sube && o.sube !== OKUL_DISI_SUBE) k[o.sube] = 1; });
   Object.keys(D.dersProgrami || {}).forEach(x => { if (x) k[x] = 1; });
   Object.keys(D.programHafta || {}).forEach(x => { if (x) k[x] = 1; });
   return Object.keys(k).sort();
@@ -6307,6 +6324,7 @@ async function mufredatOlustur(sube, sinif, alan, kaynak) {
 
 function varsayilanKonuPlaniniHazirla(sube, alan, sinif = subeSinifi(sube)) {
   if (!sube) return { hata: 'Şube seçilmedi.' };
+  if (sube === OKUL_DISI_SUBE) return { olustu: false };      // okul dışı öğrencinin okul müfredatı yok
   D.konuPlani = D.konuPlani || {};
   if (Object.prototype.hasOwnProperty.call(D.konuPlani, sube)) return { olustu: false };
   const kaynak = sinifaGoreKonuPlani(sinif, alan);
@@ -8182,6 +8200,7 @@ function gorunumOgrenciler() {
     '<select id="yAlan">' + ['SAY', 'EA', 'SÖZ', 'DİL'].map(a => '<option>' + a + '</option>').join('') + '</select>' +
     '<span class="mini">günde</span><input id="yKap" type="number" min="1" max="12" value="6" style="width:64px">' +
     '<span class="mini">test</span>' +
+    '<label class="mini" title="Okulun denemelerine girer ama bir sınıfın ders programını izlemez; konu anlatımlarını kendi planıyla yapar (Ayarlar → Kendi YKS planın)."><input type="checkbox" id="yOkulDisi"> Okul dışı</label>' +
     '<button class="dugme birincil" id="ogrEkle">Öğrenci ekle</button></div>' +
     topluOgrenciKarti() +
     '<div class="kart sarma"><table><thead><tr><th>Kullanıyor</th><th>No</th><th>Ad Soyad</th><th>Şube</th><th>Sınıf</th><th>Alan</th>' +
@@ -8201,7 +8220,9 @@ function gorunumOgrenciler() {
         '" style="width:80px"></td>' +
       '<td><div class="ad-gor"><input class="oAd" data-i="' + i + '" value="' + kacis(o.ad) + '" style="min-width:190px;width:100%">' +
         '<button type="button" class="ogr-gor-dugme" data-ogr-gor="' + i + '" title="Öğrenci gözüyle gör" aria-label="' + kacis(o.ad) + ': öğrenci gözüyle gör">' + GOR_SVG + '</button></div></td>' +
-      '<td><input class="oSube" data-i="' + i + '" value="' + kacis(o.sube) + '" style="width:72px"></td>' +
+      '<td>' + (o.okul === false ? '<span class="mini" title="Okulun ders programını izlemez; konu anlatımlarını kendi planıyla yapar">Okul dışı</span>'
+        : '<input class="oSube" data-i="' + i + '" value="' + kacis(o.sube) + '" style="width:72px">') +
+        '<label class="mini" style="display:block;white-space:nowrap" title="Okul dışı: okulun denemelerine girer, sınıfın ders programını izlemez, konu anlatımlarını kendi planıyla yapar"><input type="checkbox" class="oOkulDisi" data-i="' + i + '"' + (o.okul === false ? ' checked' : '') + '> okul dışı</label></td>' +
       '<td>' + ogrenciSinifi(o) + '. sınıf</td>' +
       '<td><select class="oAlan" data-i="' + i + '">' + ['SAY', 'EA', 'SÖZ', 'DİL'].map(a =>
         '<option' + (a === o.alan ? ' selected' : '') + '>' + a + '</option>').join('') + '</select></td>' +
@@ -15246,8 +15267,8 @@ document.addEventListener('click', async ev => {
     const ad = (document.getElementById('yAd').value || '').trim();
     if (!ad) { alert('Önce öğrencinin adını yazın.'); return; }
     if (ad.length > 120) { alert('Öğrenci adı en fazla 120 karakter olabilir.'); return; }
-    const su = document.getElementById('ySube');
-    let sube = su.value === '__yeni'
+    const su = document.getElementById('ySube'), okulDisi = !!document.getElementById('yOkulDisi')?.checked;
+    let sube = okulDisi ? OKUL_DISI_SUBE : su.value === '__yeni'
       ? (document.getElementById('ySubeYeni').value || '').trim()
       : su.value;
     if (!sube) { alert('Şube kodunu yazın.'); return; }
@@ -15256,8 +15277,8 @@ document.addEventListener('click', async ev => {
     if (!Number.isInteger(no) || no < 1 || no > 9999) { alert('Öğrenci numarası 1–9999 arasında tam sayı olmalı.'); return; }
     if (D.ogr.some(o => !o.silindi && String(o.no) === String(no))) { alert('Bu öğrenci numarası zaten kullanılıyor.'); return; }
     const alan = document.getElementById('yAlan').value;
-    const sinif = +(document.getElementById('ySinif')?.value || 12);
-    const hata = subeSinifHatasi(sube, sinif);
+    const sinif = okulDisi ? 12 : +(document.getElementById('ySinif')?.value || 12);
+    const hata = okulDisi ? '' : subeSinifHatasi(sube, sinif);
     if (hata) { alert(hata); return; }
     const mevcut = D.ogr.find(o => !o.silindi && o.sube === sube);
     const bas = mevcut?.mufredatBaslangic || document.getElementById('yMufredatBaslangic')?.value || isoDan(pazartesi(bugunNo()));
@@ -15266,11 +15287,12 @@ document.addEventListener('click', async ev => {
       no: no, ad: ad, alan: alan, sube: sube, sinif: sinif, ...(sinif < 12 ? { mufredatBaslangic: bas } : {}),
       kap: Math.max(1, Math.min(12, +document.getElementById('yKap').value || 6)),
       off: [6], hedef: null, aktif: false, cikti: null,
-      maddeler: [], rutin: { once: '', ara: '', sonra: '' }
+      maddeler: [], rutin: { once: '', ara: '', sonra: '' }, ...(okulDisi ? { okul: false } : {})
     });
     varsayilanKonuPlaniniHazirla(sube, alan, sinif);
     await kaydet(true); ciz();
-    bilgiVer(ad + ' listeye eklendi (' + sube + '). Çıktı verdiğinizde “kullanıyor” olarak işaretlenecek.');
+    bilgiVer(okulDisi ? ad + ' okul dışı öğrenci olarak eklendi: denemelere girer, konu anlatımlarını kendi planıyla yapar (öğrenci Ayarlar → Kendi YKS planın ile başlatır).'
+      : ad + ' listeye eklendi (' + sube + '). Çıktı verdiğinizde “kullanıyor” olarak işaretlenecek.');
     return;
   }
   if (t.id === 'topluOgrOnizle') {
@@ -15901,6 +15923,14 @@ document.addEventListener('change', async ev => {
       alert('Bu öğrenci numarası zaten kullanılıyor.'); ciz(); return;
     }
     D.ogr[i].no = no; await kaydet(true); return;
+  }
+  if (el.classList.contains('oOkulDisi')) {
+    const i = +el.dataset.i, o = D.ogr[i];
+    let sube = '';
+    if (!el.checked) { sube = (prompt(o.ad + ' hangi şubeye alınsın?', subeListesi()[0] || '') || '').trim(); if (!sube) { ciz(); return; }
+      const hata = subeSinifHatasi(sube, subeSinifi(sube) || 12, i); if (hata) { alert(hata); ciz(); return; } }
+    if (okulDisiYap(i, el.checked, sube)) { await kaydet(true); bilgiVer(el.checked ? o.ad + ': okul dışı. Konu anlatımlarını kendi planıyla yapar; denemelere girmeye devam eder.' : o.ad + ' ' + sube + ' şubesine alındı.'); }
+    ciz(); return;
   }
   if (el.classList.contains('oSube')) {
     const i = +el.dataset.i, o = D.ogr[i], sube = el.value.trim();

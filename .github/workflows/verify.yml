@@ -55,6 +55,8 @@ jobs:
         run: node scripts/embed-ogretmenrapor.cjs --check && node test/ogretmenrapor-regression.cjs
       - name: A school-sized notebook builds the shared student base without per-student copies or scans
         run: node test/buyuk-okul-regression.cjs
+      - name: Okul dışı öğrenci (mock exams, no class timetable, own konu anlatımı)
+        run: node test/okul-disi-regression.cjs
       - name: Konu Takibi cumulative evidence, import and embedding
         run: node scripts/embed-konutakibi.cjs --check && node test/konutakibi-regression.cjs
       - name: Yanlışlar defteri booklet cut-outs, cevap raporu without TC, A and B numbers and embedding
