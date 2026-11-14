@@ -35,7 +35,9 @@ fs.mkdirSync(out,{recursive:true});
    await page.locator('#yazdirOnizle').click();
    assert.deepEqual(await page.evaluate(()=>window.analyticsTest.map(x=>x.name)),['student_results_opened','student_results_saved','student_pdf_requested']);
    assert.equal(await page.evaluate(()=>D.ogr[0].etkinlik.kayit.find(r=>r.tur==='pdf').sonucHafta),await page.evaluate(()=>gunNo('2026-09-21')));
-   assert.equal(await page.evaluate(async()=>JSON.parse(await LOCAL_STORE.get('yks_veri')).ogr[0].etkinlik.kayit.length),3);
+   // The three actions, besides the pages the student opened on the way (Siteye giriş).
+   assert.equal(await page.evaluate(async()=>JSON.parse(await LOCAL_STORE.get('yks_veri')).ogr[0].etkinlik.kayit.filter(r=>r.tur!=='sekme').length),3);
+   assert(await page.evaluate(async()=>JSON.parse(await LOCAL_STORE.get('yks_veri')).ogr[0].etkinlik.kayit.some(r=>r.tur==='sekme')),'the opened pages are kept too');
    await page.evaluate(async()=>{
     disariAktarmayiKapat();D.rol='rehber';
     D.ogr.push({ad:'Synthetic Ece',no:43,sube:'11-B',sinif:11,alan:'EA',kap:6,off:[6],aktif:true});
@@ -49,25 +51,25 @@ fs.mkdirSync(out,{recursive:true});
    await page.evaluate(()=>{EK.takipFiltre='akis';EK.takipHafta=EK.takipHafta??null;});
    await page.getByRole('heading',{name:'Bu hafta'}).getByRole('button').click();await page.getByRole('heading',{name:'Haftalık öğrenci takibi'}).waitFor();
    assert.equal(await page.locator('#takipFiltre').inputValue(),'hepsi');
-   // The tracking page counts "Plan verildi" exactly like the main screen.
-   assert.equal((await page.locator('.etkinlik-ozet .kart').first().innerText()).replace(/\s+/g,' ').trim(),anaPlan.replace('/',' / ')+' Plan verildi');
+   // The tracking page counts "Plan verildi" exactly like the main screen (the first card is Siteye girdi).
+   assert.equal((await page.locator('.etkinlik-ozet .kart').nth(1).innerText()).replace(/\s+/g,' ').trim(),anaPlan.replace('/',' / ')+' Plan verildi');
    assert.equal(await page.locator('#takipHafta').inputValue(),'2026-09-28');
    assert.equal(await page.locator('#takipOlcut').inputValue(),'islem');
    const rows=page.locator('.etkinlik-satir:not(.etkinlik-baslik)');
    assert.equal(await rows.count(),2);
    const ada=rows.filter({hasText:'Synthetic Ada'});
    assert((await ada.innerText()).includes('Kaydetti'));assert((await ada.innerText()).includes('28.09.2026'));
-   assert.equal(await page.locator('.etkinlik-ozet strong').nth(1).innerText(),'1 / 2');
+   assert.equal(await page.locator('.etkinlik-ozet strong').nth(2).innerText(),'1 / 2');
    assert((await ada.innerText()).includes('Sonuç: 21.09.2026'));
    await page.locator('#takipOlcut').selectOption('sonuc');
-   assert.equal(await page.locator('.etkinlik-ozet strong').nth(1).innerText(),'0 / 2');
+   assert.equal(await page.locator('.etkinlik-ozet strong').nth(2).innerText(),'0 / 2');
    await page.getByRole('button',{name:'Önceki takip haftası'}).click();
-   assert.equal(await page.locator('.etkinlik-ozet strong').nth(1).innerText(),'1 / 2');
+   assert.equal(await page.locator('.etkinlik-ozet strong').nth(2).innerText(),'1 / 2');
    await page.locator('#takipOlcut').selectOption('islem');
-   assert.equal(await page.locator('.etkinlik-ozet strong').nth(1).innerText(),'0 / 2');
+   assert.equal(await page.locator('.etkinlik-ozet strong').nth(2).innerText(),'0 / 2');
    await page.getByRole('button',{name:'Bu hafta',exact:true}).click();
    await page.locator('#takipSube').selectOption('11-B');assert.equal(await rows.count(),1);
-   assert.equal(await page.locator('.etkinlik-ozet strong').nth(1).innerText(),'0 / 1');
+   assert.equal(await page.locator('.etkinlik-ozet strong').nth(2).innerText(),'0 / 1');
    await page.locator('#takipSube').selectOption('');
    await page.locator('#takipFiltre').selectOption('akis');assert.equal(await rows.count(),1);
    await page.getByRole('button',{name:'Önceki takip haftası'}).click();assert.equal(await rows.count(),0);

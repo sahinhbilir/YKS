@@ -811,7 +811,7 @@ table.plan td.hedef{outline:2px dashed var(--vurgu);outline-offset:-2px;backgrou
 
 .gpDuzen{display:grid;grid-template-columns:minmax(220px,1fr) minmax(320px,2fr);gap:16px;align-items:start}.gpAlanlar{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}.gpAlanlar label{flex:1;min-width:130px}.gpAlanlar input,.gpAlanlar select{display:block;width:100%;margin-top:4px}.gpSatir input[list]{margin-top:4px}@media(max-width:760px){.gpDuzen{grid-template-columns:1fr}.gpDuzen img{max-height:65vh;object-fit:contain}}
 .cikis-durum{position:fixed;z-index:10000;bottom:16px;left:50%;transform:translateX(-50%);width:min(540px,calc(100vw - 24px));padding:18px;background:var(--kagit);color:var(--murekkep);border:1px solid var(--cizgi);border-radius:12px;box-shadow:0 8px 32px #0003}.cikis-durum .arac{margin-top:12px}@media print{.cikis-durum,#oturumKapat{display:none!important}}
-.etkinlik-ozet{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:20px 0}.etkinlik-ozet .kart{padding:16px;border:1px solid #cbd5e1;border-radius:12px}.etkinlik-ozet strong{font-size:26px}.etkinlik-satir{display:grid;grid-template-columns:1.5fr .7fr 1fr 1fr 1.3fr 1.3fr;gap:12px;padding:16px 0;border-bottom:1px solid #cbd5e1;overflow-wrap:anywhere}.etkinlik-mobil{display:none}.etkinlik-liste time{font-size:13px}#takipArama{max-width:100%}@media(max-width:700px){.etkinlik-ozet{grid-template-columns:repeat(2,minmax(0,1fr))}.etkinlik-satir{grid-template-columns:1fr;gap:10px}.etkinlik-baslik{display:none}.etkinlik-mobil{display:inline;font-weight:600}.etkinlik-satir>div:first-child{font-size:18px}}
+.etkinlik-ozet{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:20px 0}.etkinlik-ozet .kart{padding:16px;border:1px solid #cbd5e1;border-radius:12px}.etkinlik-ozet strong{font-size:26px}.etkinlik-satir{display:grid;grid-template-columns:1.5fr 1.3fr .7fr 1fr 1fr 1.3fr 1.3fr;gap:12px;padding:16px 0;border-bottom:1px solid #cbd5e1;overflow-wrap:anywhere}.etkinlik-mobil{display:none}.etkinlik-liste time{font-size:13px}#takipArama{max-width:100%}@media(max-width:700px){.etkinlik-ozet{grid-template-columns:repeat(2,minmax(0,1fr))}.etkinlik-satir{grid-template-columns:1fr;gap:10px}.etkinlik-baslik{display:none}.etkinlik-mobil{display:inline;font-weight:600}.etkinlik-satir>div:first-child{font-size:18px}}
 /* Yalnızca görüntüleme (izleyici öğretmen) şeridi */
 .izleme-bant{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin:0 0 16px;padding:10px 14px;border:1px solid var(--uyari);border-left-width:4px;border-radius:10px;background:var(--kagit);color:var(--murekkep);font-size:13.5px}
 .izleme-bant b{color:var(--uyari)}
@@ -13424,7 +13424,11 @@ function bilgiVer(metin) {
 
 // Weekly activity is part of the student's existing protected result packet.
 // First/last timestamps merge idempotently; transaction retries never count as clicks.
-const ETKINLIK_TURLERI = {acildi:'student_results_opened', kaydedildi:'student_results_saved', pdf:'student_pdf_requested'};
+const ETKINLIK_TURLERI = {acildi:'student_results_opened', kaydedildi:'student_results_saved', pdf:'student_pdf_requested', sekme:null};
+// Sekme ziyaretleri (tur 'sekme'): öğrencinin hangi sayfaları açtığı, Istanbul haftası ve sayfa başına ilk ve son açılış.
+// Öğretmen Haftalık öğrenci takibinde görür. Bir sayfa aynı hafta yarım saatten sık yazılmaz; Analytics'e gönderilmez.
+const ETKINLIK_SEKMELER = ['ana','hafiza','plan','harita','giris','kurtarma','denemeler','kiyas','yanlisim','universite','gunlukrapor','mufredat','ayarlar'];
+const ETKINLIK_SEKME_ARALIK = 30 * 60000;
 const ETKINLIK_TARIH_BICIMI = new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Istanbul',year:'numeric',month:'2-digit',day:'2-digit'});
 function etkinlikDogrula(e) {
   const nesne = x => x && typeof x === 'object' && !Array.isArray(x);
@@ -13437,7 +13441,8 @@ function etkinlikDogrula(e) {
     if (!nesne(r) || !Object.hasOwn(ETKINLIK_TURLERI, r.tur) || !gun(r.hafta) || !gun(r.sonucHafta) ||
         !ts(r.ilk) || !ts(r.son) || r.ilk > r.son || r.ilk < e.baslangic ||
         (r.tur !== 'pdf' && r.hafta !== r.sonucHafta) || r.hafta < r.sonucHafta || r.hafta > r.sonucHafta + 7 ||
-        Object.keys(r).some(k => !['tur','hafta','sonucHafta','ilk','son'].includes(k)))
+        (r.tur === 'sekme' ? !ETKINLIK_SEKMELER.includes(r.sekme) : r.sekme !== undefined) ||
+        Object.keys(r).some(k => !['tur','hafta','sonucHafta','ilk','son','sekme'].includes(k)))
       throw new Error('Öğrenci etkinlik satırı geçersiz.');
     const k = etkinlikAnahtari(r);
     if (anahtarlar.has(k)) throw new Error('Öğrenci etkinlik satırı yineleniyor.');
@@ -13445,7 +13450,7 @@ function etkinlikDogrula(e) {
   });
   return e;
 }
-const etkinlikAnahtari = r => r.tur + ':' + r.sonucHafta + ':' + r.hafta;
+const etkinlikAnahtari = r => r.tur + ':' + r.sonucHafta + ':' + r.hafta + (r.sekme ? ':' + r.sekme : '');
 function etkinlikImzasi(e) {
   if (e === undefined || e === null) return '';
   etkinlikDogrula(e);
@@ -13453,7 +13458,7 @@ function etkinlikImzasi(e) {
   // including every timestamp, without depending on object or record order.
   return JSON.stringify([e.v,e.baslangic,e.kayit.slice()
     .sort((a,b)=>etkinlikAnahtari(a).localeCompare(etkinlikAnahtari(b)))
-    .map(r=>[r.tur,r.hafta,r.sonucHafta,r.ilk,r.son])]);
+    .map(r=>[r.tur,r.hafta,r.sonucHafta,r.ilk,r.son,r.sekme||''])]);
 }
 function etkinlikBirlestir(a, b) {
   if (a) etkinlikDogrula(a); etkinlikDogrula(b);
@@ -13481,7 +13486,7 @@ function etkinlikKaydet(tur, hb, si = EK.ogr) {
     if (tur === 'pdf') {
       // Keep the source result week when the UI advances to its next plan.
       // This survives reloads and another device receiving the merged packet.
-      const kaynak = o.etkinlik.kayit.filter(r => r.tur !== 'pdf' && r.son <= ts && ts-r.son <= 7*86400000 &&
+      const kaynak = o.etkinlik.kayit.filter(r => r.tur !== 'pdf' && r.tur !== 'sekme' && r.son <= ts && ts-r.son <= 7*86400000 &&
         (r.hafta === hb || sonrakiHafta(0,r.hafta) === hb)).sort((a,b) => b.son-a.son)[0];
       if (kaynak) sonucHafta = kaynak.hafta;
     }
@@ -13500,6 +13505,21 @@ function etkinlikKaydet(tur, hb, si = EK.ogr) {
     return true;
   } catch (_) { return false; } // Tracking must never interrupt results or printing.
 }
+// A page the student opened: one row per page and Istanbul week; the same page is written again at most every half hour.
+function etkinlikSekme(sekme) {
+  if (!ogrenciMi() || D?.ogr?.length !== 1 || D.ogr[0].silindi || CIKIS_DURUMU || !ETKINLIK_SEKMELER.includes(sekme)) return false;
+  try {
+    etkinlikHazirla();
+    const o = D.ogr[0], ts = Date.now(), hafta = pazartesi(etkinlikGunu(ts));
+    const once = o.etkinlik.kayit.find(r => r.tur === 'sekme' && r.sekme === sekme && r.hafta === hafta);
+    if (once && ts - once.son < ETKINLIK_SEKME_ARALIK) return false;
+    o.etkinlik = etkinlikBirlestir(o.etkinlik, {v:1, baslangic:Math.min(ts, o.etkinlik.baslangic), kayit:[{tur:'sekme', sekme, hafta, sonucHafta:hafta, ilk:ts, son:ts}]});
+    kaydet(true).catch(() => {});
+    ogrenciEsitlemePlanla(20000);
+    return true;
+  } catch (_) { return false; } // Tracking must never interrupt the page.
+}
+const ETKINLIK_SEKME_ADI = sekme => sekme === 'ana' ? 'Ana sayfa' : ((SEKME_OGRENCI.find(x => x[0] === sekme) || [])[1] || sekme);
 function etkinlikBugun() {
   if (GELISTIRME_MODU && D?.ayar?.testTarih) return bugunNo();
   return etkinlikGunu(Date.now());
@@ -13535,9 +13555,12 @@ function etkinlikSatirlari(hb, olcut = EK.takipOlcut || 'islem') {
     });
     const al = tur => kayit.filter(r => r.tur === tur).sort((a,b) => b.son-a.son)[0];
     const acildi = al('acildi'), kaydedildi = al('kaydedildi'), pdf = al('pdf');
+    // Siteye giriş: every page opened in the week (first by the latest), and the latest opening.
+    const sekmeler = kayit.filter(r => r.tur === 'sekme').sort((a,b) => b.son-a.son);
+    const ziyaret = sekmeler.length ? {son:sekmeler[0].son, ilk:Math.min(...sekmeler.map(r => r.ilk)), sekmeler:sekmeler.map(r => r.sekme)} : null;
     const akis = kayit.some(a => a.tur === 'acildi' && kayit.some(p => p.tur === 'pdf' &&
       p.sonucHafta === a.sonucHafta && p.son >= a.ilk));
-    return [{o,si,hafta,acildi,kaydedildi,pdf,akis,plan:planVerildiMi(si,takvim)}];
+    return [{o,si,hafta,ziyaret,acildi,kaydedildi,pdf,akis,plan:planVerildiMi(si,takvim)}];
   });
 }
 function etkinlikZamani(ts) { return new Date(ts).toLocaleString('tr-TR', {timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
@@ -13556,7 +13579,7 @@ function gorunumEtkinlik() {
   const satirlar = tum.filter(r => !seciliSube || r.o.sube === seciliSube);
   const filtre = EK.takipFiltre || 'hepsi', arama = (EK.takipArama || '').toLocaleLowerCase('tr');
   const gorunen = satirlar.filter(r => (!arama || (r.o.ad+' '+r.o.no).toLocaleLowerCase('tr').includes(arama)) &&
-    (filtre === 'hepsi' || filtre === 'bekleyen' ? filtre !== 'bekleyen' || !r.kaydedildi || !r.pdf : !!r[filtre]));
+    (filtre === 'hepsi' || filtre === 'bekleyen' ? filtre !== 'bekleyen' || !r.kaydedildi || !r.pdf : filtre === 'girmedi' ? !r.ziyaret : !!r[filtre]));
   const hucre = (r, tur) => {
     const olay = r[tur];
     if (!olay) return r.o.etkinlik ? '<span class="mini">Bu hafta kayıt yok</span>'
@@ -13573,17 +13596,20 @@ function gorunumEtkinlik() {
     '<button class="dugme" data-takip-hafta="1" aria-label="Sonraki takip haftası">→</button><button class="dugme" data-takip-hafta="0">Bu hafta</button>'+
     '<label>Şube <select id="takipSube"><option value="">Tüm şubeler</option>'+subeler.map(s=>'<option'+(s===seciliSube?' selected':'')+' value="'+kacis(s)+'">'+kacis(s)+'</option>').join('')+'</select></label></div>'+
     '<p class="mini">'+ggyy(hb)+' – '+ggyy(hb+6)+'</p>'+
-    '<div class="etkinlik-ozet">'+[['plan','Plan verildi'],['acildi','Sonuç gir açtı'],['kaydedildi','Sonuç kaydetti'],['pdf','PDF istedi'],['akis','Açtı → PDF istedi']].map(([k,ad])=>
+    '<div class="etkinlik-ozet">'+[['ziyaret','Siteye girdi'],['plan','Plan verildi'],['acildi','Sonuç gir açtı'],['kaydedildi','Sonuç kaydetti'],['pdf','PDF istedi'],['akis','Açtı → PDF istedi']].map(([k,ad])=>
       '<div class="kart"><strong>'+satirlar.filter(r=>r[k]).length+' / '+satirlar.length+'</strong><br>'+ad+'</div>').join('')+'</div>'+
     '<div class="arac"><label>Öğrenci ara <input id="takipArama" type="search" value="'+kacis(EK.takipArama||'')+'" placeholder="Ad veya numara"></label>'+
-    '<label>Göster <select id="takipFiltre">'+[['hepsi','Tüm öğrenciler'],['plan','Planı verilenler'],['acildi','Formu açanlar'],['kaydedildi','Sonuç kaydedenler'],['pdf','PDF isteyenler'],['akis','Açıp PDF isteyenler'],['bekleyen','Sonuç / PDF kaydı eksik']].map(([k,v])=>'<option value="'+k+'"'+(filtre===k?' selected':'')+'>'+v+'</option>').join('')+'</select></label></div>'+
-    '<div class="etkinlik-liste" role="table" aria-label="Haftalık öğrenci etkinlikleri"><div class="etkinlik-satir etkinlik-baslik" role="row">'+['Öğrenci','Plan','Sonuç gir','Sonuç kaydı','PDF isteği','Veri durumu'].map(x=>'<b role="columnheader">'+x+'</b>').join('')+'</div>'+
+    '<label>Göster <select id="takipFiltre">'+[['hepsi','Tüm öğrenciler'],['ziyaret','Siteye girenler'],['girmedi','Siteye girmeyenler'],['plan','Planı verilenler'],['acildi','Formu açanlar'],['kaydedildi','Sonuç kaydedenler'],['pdf','PDF isteyenler'],['akis','Açıp PDF isteyenler'],['bekleyen','Sonuç / PDF kaydı eksik']].map(([k,v])=>'<option value="'+k+'"'+(filtre===k?' selected':'')+'>'+v+'</option>').join('')+'</select></label></div>'+
+    '<div class="etkinlik-liste" role="table" aria-label="Haftalık öğrenci etkinlikleri"><div class="etkinlik-satir etkinlik-baslik" role="row">'+['Öğrenci','Siteye giriş','Plan','Sonuç gir','Sonuç kaydı','PDF isteği','Veri durumu'].map(x=>'<b role="columnheader">'+x+'</b>').join('')+'</div>'+
     gorunen.map(r=>{
       const canli=ETKINLIK_CANLI.get(r.o.syncId), bas=r.o.etkinlik?.baslangic;
       const durum=!r.o.syncId?'Öğretmen bağlantısı yok':canli?.durum==='tamam'?'Sunucudan alındı · '+etkinlikZamani(canli.ts):
         canli?.durum==='hata'?'Bağlantı doğrulanamadı':canli?.durum==='eski'?'Yeni sürümden etkinlik bekleniyor':'Canlı bağlantı bekleniyor';
       return '<div class="etkinlik-satir" role="row"><div role="cell"><b>'+ogrAdDugmesi(r.si)+'</b><br>'+kacis(r.o.sube)+' · '+kacis(r.o.no||'')+
         '</div>'+
+        '<div role="cell"><span class="etkinlik-mobil">Siteye giriş: </span>'+(r.ziyaret?'<b>Girdi</b><br><time title="İlk: '+kacis(etkinlikZamani(r.ziyaret.ilk))+'">'+kacis(etkinlikZamani(r.ziyaret.son))+'</time>'+
+          '<br><span class="mini">'+kacis(r.ziyaret.sekmeler.map(ETKINLIK_SEKME_ADI).join(' · '))+'</span>'
+          :r.o.etkinlik?'<span class="mini">Bu hafta girmedi</span>':'<span class="mini" title="Öğrenci henüz girmemiş, çevrimdışı kalmış ya da eski sürümü kullanıyor olabilir.">Kayıt ulaşmadı</span>')+'</div>'+
         '<div role="cell"><span class="etkinlik-mobil">Plan: </span>'+(r.plan?'<b>Verildi</b>':'<span class="mini">Verilmedi</span>')+'</div>'+
         ['acildi','kaydedildi','pdf'].map((k,i)=>'<div role="cell"><span class="etkinlik-mobil">'+['Sonuç gir','Sonuç kaydı','PDF isteği'][i]+': </span>'+hucre(r,k)+'</div>').join('')+
         '<div role="cell" class="mini">'+kacis(durum)+(bas?'<br>Takip başlangıcı: '+kacis(etkinlikZamani(bas)):'<br>Henüz etkinlik verisi yok')+'</div></div>';
@@ -13892,6 +13918,7 @@ function cizIc() {
   if (ogrenciMi() && EK.sekme === 'gunlukrapor' && !GUNLUKRAPOR.uygun()) EK.sekme = 'plan';
   if (ogrenciMi() && ['takip','konular','ogrenciler','etutler','etutetki','etutplani','yoklama','ogrencirapor','ogrencikarti','turkiye','konutakibi','yanlislar','ogrencitr'].indexOf(EK.sekme) >= 0) EK.sekme = 'plan';
   if (EK.sekme === 'rapor' || EK.sekme === 'anlasma') EK.sekme = 'ana';   // kaldırılan sayfalar
+  if (ogrenciMi()) etkinlikSekme(EK.sekme);   // öğretmenin Haftalık öğrenci takibi için: hangi sayfa açıldı
   if (EK.sekme === 'program') { EK.sekme = 'ayarlar'; EK.ayarBolum = 'program'; if (ogrenciMi()) EK.gelismisAcik = true; }
   const canli = canliOgrenciler();
   if (canli.length && (EK.ogr === undefined || !D.ogr[EK.ogr] || D.ogr[EK.ogr].silindi)) EK.ogr = canli[0];

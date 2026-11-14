@@ -33,6 +33,16 @@ plan period back to its result period, even after reload or another device syncs
 Unrelated PDFs are attributed to their own plan period. Import, render, teacher
 actions, synchronization retries and background auto-generation emit no events.
 
+## Siteye giriş (pages opened)
+
+The first column of the page, **Siteye giriş**, and the first card, **Siteye girdi**, say whether the student opened the
+app that week, when last (the first time in the tooltip) and which pages ("Hafızam · Planım · Denemelerim"). Filters:
+**Siteye girenler**, **Siteye girmeyenler**. A student device records a page when it is drawn (`etkinlikSekme`, from
+`cizIc`): one row per page and Istanbul week, `{tur:'sekme', sekme, hafta, sonucHafta:hafta, ilk, son}`, written again at
+most every half hour (`ETKINLIK_SEKME_ARALIK`), only for the student pages (`ETKINLIK_SEKMELER`). It rides the same
+`etkinlik` packet, merge and limits as the three actions; it is **not** sent to Analytics. "Bu hafta girmedi" means the
+packet arrived with no page that week; "Kayıt ulaşmadı" that no packet has arrived yet (or an old version of the app).
+
 ## Storage and authorization
 
 `ogrenciler/{syncId}.paket.etkinlik` extends the existing student-owned result

@@ -131,5 +131,24 @@ check('retention is bounded and newest observations survive',()=>{
  assert.equal(run(`(()=>{const e={v:1,baslangic:1,kayit:Array.from({length:600},(_,i)=>({tur:'acildi',hafta:20000+i,sonucHafta:20000+i,ilk:i+1,son:i+1}))};
  const b={v:1,baslangic:1,kayit:[{tur:'pdf',hafta:22000,sonucHafta:22000,ilk:999,son:999}]};const m=etkinlikBirlestir(e,b);return m.kayit.length===600 && m.kayit.some(r=>r.son===999);})()`),true);
 });
+check('pages the student opens: one row per page and week, at most every half hour; the teacher sees who visited and which pages',()=>{
+ run(`etkinlikSekme('hafiza');etkinlikSekme('plan');etkinlikSekme('hafiza');`);
+ assert.deepEqual(JSON.parse(run(`JSON.stringify(D.ogr[0].etkinlik.kayit.filter(r=>r.tur==='sekme').map(r=>r.sekme).sort())`)),['hafiza','plan'],'the second Hafızam within half an hour is not written');
+ clock('2026-09-25T11:00:00+03:00');assert.equal(run(`etkinlikSekme('hafiza')`),true,'an hour later the same page updates its last time');
+ assert.equal(run(`D.ogr[0].etkinlik.kayit.filter(r=>r.tur==='sekme').length`),2);
+ assert.equal(run(`etkinlikSekme('takip')`),false,'only the student pages');
+ run(`etkinlikDogrula(D.ogr[0].etkinlik)`);
+ assert.throws(()=>run(`etkinlikDogrula({v:1,baslangic:1,kayit:[{tur:'sekme',sekme:'yok',hafta:20000,sonucHafta:20000,ilk:2,son:2}]})`),/geçersiz/);
+ assert.throws(()=>run(`etkinlikDogrula({v:1,baslangic:1,kayit:[{tur:'acildi',sekme:'plan',hafta:20000,sonucHafta:20000,ilk:2,son:2}]})`),/geçersiz/);
+ // A merge from another device keeps both devices' pages; a PDF never takes its result week from a page visit.
+ const m=JSON.parse(run(`JSON.stringify(etkinlikBirlestir(D.ogr[0].etkinlik,{v:1,baslangic:1,kayit:[{tur:'sekme',sekme:'denemeler',hafta:pazartesi(etkinlikGunu(Date.now())),sonucHafta:pazartesi(etkinlikGunu(Date.now())),ilk:5,son:5}]}))`));
+ assert.equal(m.kayit.filter(r=>r.tur==='sekme').length,3);
+ run(`D.rol='rehber'`);
+ const r=JSON.parse(run('JSON.stringify(etkinlikSatirlari(pazartesi(etkinlikGunu(Date.now())))[0].ziyaret)'));
+ assert.deepEqual(r.sekmeler,['hafiza','plan']);assert.equal(r.son,Date.parse('2026-09-25T11:00:00+03:00'));
+ const h=run('gorunumEtkinlik()');assert.match(h,/<b role="columnheader">Siteye giriş<\/b>/);assert.match(h,/<b>Girdi<\/b><br><time[^>]*>[^<]+<\/time><br><span class="mini">Hafızam · Planım<\/span>/);
+ assert.match(h,/<strong>1 \/ 1<\/strong><br>Siteye girdi/);
+ assert.equal(run('etkinlikSatirlari(pazartesi(etkinlikGunu(Date.now()))-7)[0].ziyaret'),null,'not in the week before');
+});
 console.log(JSON.stringify({passed:checks.filter(x=>x.ok).length,total:checks.length,checks},null,2));
 process.exitCode=checks.every(x=>x.ok)?0:1;
