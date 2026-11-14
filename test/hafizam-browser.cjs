@@ -70,6 +70,22 @@ const kur=()=>{
     await page.locator('.hf-ayar>summary').click();   // the settings are folded at the end of the page
     await page.locator('.hf-dersler summary').click();const sec=page.locator('.hf-dersler select').first(),ders=await sec.getAttribute('data-hf-ders');
     await sec.selectOption('2');await page.waitForFunction(d=>(D.ogr[0].unutmaDers||{})[d]===2,ders);
+    // Kendi programımı kendim yaparım: suggestions stay (the basket calls them "öneri"), or an empty plan from today on.
+    await page.locator('#ogrSerbest').check();await page.waitForFunction(()=>serbestAcikMi(0));
+    await page.locator('input[name="serbestKip"][value="oneri"]').waitFor();
+    assert.equal(await page.locator('input[name="serbestKip"][value="oneri"]').isChecked(),true,'suggestions by default');
+    assert.match(await page.locator('#hfSepet').innerText(),/\d+ öneri/);
+    await page.locator('input[name="serbestKip"][value="bos"]').check();
+    await page.waitForFunction(()=>D.ogr[0].serbestBos===bugunNo());
+    await page.waitForFunction(()=>{const hb=buHafta(0),p=planHesapla(0,hb);return p.gunler.every((l,g)=>hb+g<bugunNo()||l.every(x=>(p.elle.ogrEk||{})[planSlotAnahtari(x)]||x.gunlukEk||D.log.some(r=>r[1]===0&&r[2]===x.ki&&r[0]===hb+g)))});
+    const sepetYazi=await page.locator('#hfSepet').innerText();
+    assert.doesNotMatch(sepetYazi,/\d+ (öneri|plan çalışması)/,'nothing suggested on the empty plan');
+    await page.screenshot({path:path.join(out,'hafizam-bos-plan-'+width+'-'+tema+'.png'),fullPage:false});
+    await page.evaluate(()=>{EK.sekme='plan';ciz()});
+    assert.match(await page.locator('#serbestNot').innerText(),/boş plan: planında yalnızca senin koydukların var/);
+    await page.evaluate(()=>{EK.sekme='hafiza';ciz()});
+    await page.locator('#ogrSerbest').uncheck();await page.waitForFunction(()=>!serbestAcikMi(0)&&D.ogr[0].serbestBos===null);
+    await page.locator('.hf-ayar[open]').waitFor();
     // Raporum (PDF), as the button prints it: laid out like the weekly plan, A4 landscape, a column per day (a second sheet only
     // when a day's studies do not fit; this notebook's today has more than a dozen).
     await page.evaluate(()=>{const st=document.createElement('style');st.id='hfSayfaStili';st.textContent='@media print{@page{size:A4 landscape;margin:8mm}}';document.head.appendChild(st);document.body.classList.add('hf-yazdir')});

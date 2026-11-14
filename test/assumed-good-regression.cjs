@@ -200,6 +200,34 @@ check('kendi programım: from the day it is switched on, a test without a result
   run(`D.ogr[0].serbest=[[${hb},null]]`); run('yedekDogrula(D)');
 });
 
+check('kendi programım has two kinds: suggestions stay, or an empty plan holds only what the student puts in', () => {
+  run(`kur('ogrenci'); D.ayar.testTarih='2026-09-16'; D.log=[]; D.kart={}; D.ogr[0].serbest=undefined; delete D.ogr[0].serbestBos; EK.ogr=0;`);
+  const hb = run('buHafta(0)'), bugun = run('bugunNo()'), g = bugun - hb;
+  const say = () => json(`planHesapla(0,${hb}).gunler.map(l=>l.length)`), once = say();
+  assert(once.slice(g).some(n => n > 0), 'the plan suggests work');
+  assert.equal(run('serbestKipAyarla(0,true)'), false, 'only while the box is on');
+  run('serbestAyarla(0,true)'); assert.deepEqual(say(), once, 'suggestions stay by default');
+  assert.match(run('hafizaSepeti(0)'), /\d+ öneri</, 'the basket calls them suggestions');
+  assert.equal(run('serbestKipAyarla(0,true)'), true); assert.equal(run('D.ogr[0].serbestBos'), bugun);
+  const bos = say();
+  assert.deepEqual(bos.slice(0, g), once.slice(0, g), 'days before today keep their rows');
+  assert(bos.slice(g).every(n => n === 0), 'from today on, nothing the student did not put in');
+  assert.doesNotMatch(run('hafizaSepeti(0)'), / öneri</);
+  // What the student puts into the basket is there; a suggested row with a result that day stays too.
+  const ki = json(`planHesaplaHam(0,${hb}).gunler[${g}].find(x=>!x.serbest&&!x.anlatim).ki`);
+  assert.equal(run(`hafizaSepeteEkle('konu:${ki}',${hb},${g})`), 1);
+  assert.deepEqual(json(`planHesapla(0,${hb}).gunler[${g}].map(x=>x.ki)`), [ki]);
+  const diger = json(`planHesaplaHam(0,${hb}).gunler[${g}].find(x=>!x.serbest&&!x.anlatim&&x.ki!==${ki}).ki`);
+  run(`D.log.push([${bugun},0,${diger},null,null,3,Date.now()])`);
+  assert(json(`planHesapla(0,${hb}).gunler[${g}].map(x=>x.ki)`).includes(diger), 'a row with a result that day stays');
+  // Back to suggestions: the plan's rows come back; closing the box ends the empty plan too.
+  assert.equal(run('serbestKipAyarla(0,false)'), true); assert.equal(run('D.ogr[0].serbestBos'), null);
+  assert(say()[g] >= once[g], 'suggestions are back');
+  run('serbestKipAyarla(0,true)'); run('serbestAyarla(0,false)');
+  assert.equal(run('D.ogr[0].serbestBos'), null); assert.equal(run('bosPlanBasi(D.ogr[0])'), null);
+  run('yedekDogrula(D)'); run("D.ogr[0].serbestBos='x'"); assert.throws(() => run('yedekDogrula(D)'), /boş plan/); run('D.ogr[0].serbestBos=null');
+});
+
 check('calibration and the result package see real results only', () => {
   run(`haftalar('ogrenci', false, '2026-11-02')`);
   assert(run(`Object.values(D.kart).some(k => k.vg)`), 'there are assumed reviews');

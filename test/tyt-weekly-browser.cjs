@@ -26,6 +26,15 @@ const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[
   assert.equal(plan.length,7);assert(plan.flat().some(x=>x.anlatim),'weekly plan includes video instruction');
   assert(plan.flat().some(x=>!x.anlatim&&!x.serbest),'weekly plan includes recall test');
   assert(/ANLATIM/i.test(printed.text),'A4 contains video instruction');assert(/soru/i.test(printed.text),'A4 contains recall questions');
+  // Genel son tekrar comes only on request: the student puts Türkçe's into today's basket (Hafızam → Sepetin).
+  assert(!plan.flat().some(x=>x.metotTur==='overview'),'no genel son tekrar unless asked for');
+  await page.evaluate(()=>{EK.sekme='hafiza';ciz()});
+  await page.locator('.hf-gstler [data-hf-sec="gst:g|TYT|tr"]').click();
+  await page.locator('#hfSepet [data-hf-gun="0"]').click();
+  await page.waitForFunction(()=>planHesapla(0,buHafta(0)).gunler[0].some(x=>x.metotId==='g|TYT|tr'));
+  assert.match(await page.locator('#hfSepet [data-hf-gun="0"]').innerText(),/Türkçe · genel son tekrar\s+2 saat/);
+  assert.equal(await page.locator('.hf-gstler [data-hf-sec="gst:g|TYT|tr"]').count(),0,'asked for once');
+  await page.evaluate(()=>{EK.sekme='plan';ciz()});
   await page.evaluate(()=>{haftayiSabitle(0,buHafta(0));ciz()});
   const already=page.locator('[data-yaptim="metotGt"][data-ki="g|TYT|tr"]:visible').first();
   await already.click();await page.locator('#yaptimMetotTarih').fill('2026-10-25');await page.locator('#yaptimKaydet').click();

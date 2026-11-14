@@ -3,7 +3,11 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 let fixture=fs.readFileSync('test/tyt-metot-regression.cjs','utf8').split('(async()=>{')[0];
 fixture=fixture.replace('const listeners={},nodes={}',"source=source.slice(0,source.indexOf('// BEGIN TYT_WEEKLY'))+require('node:fs').readFileSync('src/tyt-weekly.js','utf8')+source.slice(source.indexOf('// END TYT_WEEKLY')+'// END TYT_WEEKLY'.length);\nconst listeners={},nodes={}");
 const {run,data,nodes}=new Function('require',fixture+'\nreturn {run,data,nodes};')(require);
-run(`D.ayar.testTarih='2026-11-01';D.ogr[0].kendiPlan.metot.baslangic='2026-11-01';D.ogr[0].kendiPlan.metot.tamam={};hb=buHafta(0);p=planHesapla(0,hb);ovRow=p.gunler.flat().find(x=>x.metotTur==='overview'&&x.metotId==='g|TYT|tr');`);
+run(`D.ayar.testTarih='2026-11-01';D.ogr[0].kendiPlan.metot.baslangic='2026-11-01';D.ogr[0].kendiPlan.metot.tamam={};hb=buHafta(0);EK.ogr=0;`);
+// Genel son tekrar comes only on request: the student puts Türkçe's into today's basket.
+assert.equal(run("planHesapla(0,hb).gunler.flat().some(x=>x.metotTur==='overview')"),false,'none unless asked for');
+assert.equal(run("hafizaSepeteEkle('gst:g|TYT|tr',hb,bugunNo()-hb)"),1);
+run(`p=planHesapla(0,hb);ovRow=p.gunler.flat().find(x=>x.metotTur==='overview'&&x.metotId==='g|TYT|tr');`);
 assert(run('!!ovRow'),'Türkçe overview exists');
 run('haftayiSabitle(0,hb,p);frozen=JSON.stringify(planHesapla(0,hb).gunler)');
 assert.match(run('yaptimDugmesi(0,hb,ovRow,0,p)'),/data-yaptim="metotGt"/);

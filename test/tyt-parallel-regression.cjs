@@ -16,8 +16,10 @@ const forecast=()=>data(`(()=>{const f=TYT_WEEKLY.forecast(0,gunNo('2026-11-30')
  assert(week.some(x=>x.metotTur==='video'&&x.dersAd==='Türkçe'));
  assert(week.some(x=>x.metotTur==='video'&&x.dersAd==='Matematik TYT'));
  assert(week.some(x=>x.metotTur==='video'&&['Tarih','Coğrafya'].includes(x.dersAd)),'social overlaps core lessons in the first week');
- const day4=week.filter(x=>x.day===start+4&&x.metotTur==='video');
- assert.equal(day4.filter(x=>x.dersAd==='Matematik TYT').length,2);assert.equal(day4.filter(x=>x.dersAd==='Türkçe').length,1);
+ // Genel son tekrar comes only on request: topic videos start on the first day, mathematics with two blocks per Türkçe block.
+ assert(!baseRows.some(x=>x.metotTur==='overview'),'no genel son tekrar unless the student asks for it');
+ const day0=week.filter(x=>x.day===start&&x.metotTur==='video');
+ assert.equal(day0.filter(x=>x.dersAd==='Matematik TYT').length,2);assert.equal(day0.filter(x=>x.dersAd==='Türkçe').length,1);
  const inspect=days=>{
   const rows=days.flatMap(({day,rows})=>rows.map(x=>({...x,day})));
   for(const {day,rows:daily} of days){
@@ -33,8 +35,21 @@ const forecast=()=>data(`(()=>{const f=TYT_WEEKLY.forecast(0,gunNo('2026-11-30')
  inspect(base);
  await run("TYT_METOT.setStarts({fiz:'2026-10-27',kim:'2026-10-27',bio:'2026-10-27',tar:'2026-10-28'})");
  const overridden=forecast(),flat=overridden.flatMap(({day,rows})=>rows.map(x=>({...x,day})));inspect(overridden);
- for(const c of ['Fizik','Kimya','Biyoloji'])assert(flat.some(x=>x.day===start+1&&x.metotTur==='overview'&&x.dersAd===c),c+' starts on requested day');
- assert(flat.some(x=>x.day===start+2&&x.metotTur==='overview'&&x.dersAd==='Tarih'));
+ for(const c of ['Fizik','Kimya','Biyoloji'])assert(flat.some(x=>x.day===start+1&&x.metotTur==='video'&&x.dersAd===c),c+' starts on requested day');
+ assert(!flat.some(x=>x.day<start+1&&['Fizik','Kimya','Biyoloji'].includes(x.dersAd)),'not before it');
+ assert(flat.some(x=>x.day===start+2&&x.metotTur==='video'&&x.dersAd==='Tarih'));
+ // A requested genel son tekrar (Hafızam → Sepetin) stands on its day: that lesson's video waits a day, Türkçe's recall follows.
+ run(`hbR=buHafta(0);EK.ogr=0;secenek=TYT_WEEKLY.overviewOptions(0).map(x=>x.id)`);
+ assert(run("secenek.includes('g|TYT|tr')&&secenek.includes('g|TYT|mat')"),'every lesson can be asked for');
+ assert.equal(run(`hafizaSepeteEkle('gst:g|TYT|tr',hbR,2)`),1);
+ const asked=forecast().flatMap(({day,rows})=>rows.map(x=>({...x,day})));inspect(forecast());
+ assert(!asked.some(x=>x.day===start+2&&x.metotTur==='video'&&x.dersAd==='Türkçe'),'no Türkçe video on its genel son tekrar day');
+ assert(asked.some(x=>x.day===start+5&&x.metotId==='gr'&&x.metotKosullu),'the grammar recall follows three days later');
+ const row=data('planHesapla(0,hbR).gunler[2].find(x=>x.metotTur===\'overview\')');
+ assert.equal(row.metotId,'g|TYT|tr');assert.equal(row.metotDakika,120);assert.equal(row.ad,'Türkçe · genel son tekrar');
+ assert(!run("TYT_WEEKLY.overviewOptions(0).some(x=>x.id==='g|TYT|tr')"),'asked once');
+ run(`hafizaSepettenCikar(String(planSlotAnahtari(planHesapla(0,hbR).gunler[2].find(x=>x.metotTur==='overview'))),hbR)`);
+ assert(run("TYT_WEEKLY.overviewOptions(0).some(x=>x.id==='g|TYT|tr')")&&!forecast().some(({rows})=>rows.some(x=>x.metotTur==='overview')),'removed from the basket, gone from the plan');
  const nextDate={fiz:'2026-11-02'};
  run(`hb=buHafta(0);wp=TYT_WEEKLY.weekly(0,hb,planHaftaSonu(0,hb),elleAl(0,hb));haftayiSabitle(0,hb,wp);D.elle['0|'+hb].ogrenciOtomatik=true;D.elle['0|'+hb].metotBaski=true;frozen=JSON.stringify(planHesapla(0,hb).gunler)`);
  await run(`TYT_METOT.setStarts(${JSON.stringify(nextDate)})`);assert.equal(run('JSON.stringify(planHesapla(0,hb).gunler)'),run('frozen'),'printed sheet remains unchanged');
