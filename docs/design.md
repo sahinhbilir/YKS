@@ -343,7 +343,9 @@ One page at the top right, with two tabs:
   page). **+ Kendi müfredatını tasarla** creates a curriculum for a class code from
   the MEB suggestion for a grade and field, or as a copy of another class's; a class
   without students keeps the chosen grade (`D.mufredatSinif`). A view-only teacher
-  sees the list without the button.
+  sees the list without the button. Okul dışı students can follow any of these
+  curricula at their own pace (Ayarlar → Kendi YKS planın → Konu sırası; see
+  [personal-tyt-plan.md](personal-tyt-plan.md)).
 - **MEB müfredatı**: the official programme per grade (what students see as Müfredat).
 
 ## Weeks map colours (teacher)

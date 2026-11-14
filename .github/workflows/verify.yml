@@ -202,6 +202,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/design-browser.cjs
       - name: Personal TYT plan, no-school YKS plan and another exam's plan
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/personal-plan-browser.cjs
+      - name: Okul dışı curriculum choice browser regression
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/okul-disi-mufredat-browser.cjs
       - name: No-school TYT method and three-day recall on desktop and phone
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/tyt-weekly-browser.cjs && NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/tyt-weekly-print.cjs
       - name: Teacher top menu and main screen on desktop and mobile

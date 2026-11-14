@@ -35,6 +35,28 @@ The teacher can keep such a student in the school notebook (**Öğrenciler**: th
 anlatımı with **Kendi YKS planın**, started in Ayarlar on their device after the teacher publishes the account, exactly as
 above; the plan travels back with their work. Unticking the box asks for the class to join.
 
+#### Choosing one of the rehber's designed curricula
+
+The teacher's **Tasarlanmış müfredatlar** (Müfredat page; `D.konuPlani`) travel in an okul dışı student's package as
+`mufredatlar` (`okulDisiMufredatlari`), and the student picks one in Ayarlar → Kendi YKS planın → **Konu sırası**.
+**Hazır YKS planı** (the built-in plan above) stays the default.
+
+- Each option carries the curriculum's **topic order only**, not its school weeks: the topics come week by week, and the
+  lessons alternate within each week (`planKonuSirasi`). The student keeps their own pace, levels, target date and checks.
+  Each option looks like `{ad, sinif, alanlar, d: [ders…], k: [[ders index, konu]…]}`.
+- Curricula with the same content are one option, named after all their classes (`12-A, 12-C`). Options in the student's
+  field come first, then grade 12. Options are dropped from the end when they pass `OKUL_DISI_MUFREDAT_BAYT`, so the
+  package stays under the cloud limit. A school student's package carries none, and their own TYT plan has no choice.
+- Topics are resolved with the curriculum's own grade. A grade-9 curriculum gives grade-9 topics.
+- The choice is stored as `kendiPlan.mufredat` (the option's name). The teacher sees it on the student's row in
+  **Öğrenciler** ("Okul dışı · 12-B müfredatı").
+- **Switching while the plan runs** (`kendiPlanMufredatDegistir`) only rebuilds `kendiPlan.sira`, after a confirm. Levels,
+  target date, results, the repeats of started topics and the watched genel tekrar stay. Building the order resolves
+  exact names first, and an okul dışı plan reuses a lesson-labelled catalog topic it would otherwise duplicate. Switching
+  back and forth therefore opens no new topics.
+- A teacher's later edit to a curriculum does not change a running plan. The student picks it again to follow the new
+  order. A curriculum that is no longer offered shows as "(artık listede yok)".
+
 `okul` travels with the work snapshot and is validated as a boolean; `kendiPlan.tur`
 is `'TYT'`, `'YKS'` or one of the other exams. DİL remains TYT-only (no YDT
 syllabus is claimed). LGS, KPSS, ALES, DGS and AGS use this same plan with their

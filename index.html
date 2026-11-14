@@ -3495,6 +3495,8 @@ function yedekDogrula(y) {
   if (!y || typeof y !== 'object' || Array.isArray(y)) throw new Error('Yedek bir veri nesnesi değil.');
   if (!y.ayar || typeof y.ayar !== 'object') throw new Error('Yedekte ayarlar bölümü yok.');
   if (!Array.isArray(y.ogr)) throw new Error('Yedekte öğrenci listesi yok.');
+  if (y.mufredatSecenek !== undefined && (!Array.isArray(y.mufredatSecenek) || y.mufredatSecenek.length > 60 || !y.mufredatSecenek.every(mufredatSecenegiGecerli)))
+    throw new Error('Geçersiz müfredat seçenekleri.');
   if (y.ayarSurum !== undefined && (!Number.isInteger(+y.ayarSurum) || +y.ayarSurum < 1 || +y.ayarSurum > VERI_SURUMU))
     throw new Error('Desteklenmeyen veri sürümü: ' + y.ayarSurum + '.');
   ['sinav', 'planBasi', 'donemBasi'].forEach(k => {
@@ -3550,6 +3552,7 @@ function yedekDogrula(y) {
       if (!kp || typeof kp !== 'object' || Array.isArray(kp) || !['TYT', 'YKS'].concat(DIGER_SINAVLAR).includes(kp.tur) || !isoTarihGecerli(kp.hedef) ||
           !Array.isArray(kp.sira) || kp.sira.length > 2000 || !kp.sira.every(k => Number.isInteger(k) && konu(k)) ||
           !kp.seviye || typeof kp.seviye !== 'object' || Array.isArray(kp.seviye) ||
+          (kp.mufredat !== undefined && (typeof kp.mufredat !== 'string' || !kp.mufredat || kp.mufredat.length > 120)) ||
           Object.values(kp.seviye).some(v => !['hic', 'biraz', 'bilir'].includes(v)) ||
           (kp.anlatimGerek !== undefined && (!kp.anlatimGerek || typeof kp.anlatimGerek !== 'object' || Array.isArray(kp.anlatimGerek) ||
             Object.entries(kp.anlatimGerek).some(([k, g]) => !konu(k) || !Number.isInteger(g)))) ||
@@ -6358,7 +6361,7 @@ function tytPlanKonusuMu(dersAd, ad) {
   if (k === dersKimligi('Felsefe (+ Felsefe Grubu)')) return /Felsef|Felsefi/.test(ad);
   return idx >= 0;
 }
-function kendiPlanKonulari(alan, tur = 'TYT') {
+function kendiPlanKonulari(alan, tur = 'TYT', mufredat) {
   const out = [], gor = new Set(), sinav = (SINAV_KONULARI.sinavlar || {})[tur];
   if (sinav) {                                   // dersler sırayla: her turda her dersten bir konu
     for (let i = 0; sinav.dersler.some(d => d.konular.length > i); i++) sinav.dersler.forEach(d => {
@@ -6367,9 +6370,17 @@ function kendiPlanKonulari(alan, tur = 'TYT') {
     });
     return out;
   }
-  yeniYksKonuPlani(alan).forEach(h => {
-    const kuyruk = Object.keys(h).map(dersAd => (h[dersAd] || [])
-      .filter(ad => ad && (tur === 'YKS' || tytPlanKonusuMu(dersAd, ad))).map(ad => ({ dersAd, ad })));
+  // Okul dışı öğrencinin seçtiği tasarlanmış müfredat (rehberin müfredatı) konuları ve sırasını verir.
+  if (mufredat && tur === 'YKS') return mufredat.k.map(([d, ad]) => ({ dersAd: mufredat.d[d], ad }));
+  return planKonuSirasi(yeniYksKonuPlani(alan), (dersAd, ad) => tur === 'YKS' || tytPlanKonusuMu(dersAd, ad));
+}
+// Bir konu planının (haftalar → ders → konular) konuları tek sırada: hafta hafta, her haftada dersler sırayla.
+function planKonuSirasi(plan, uygun = () => true) {
+  const out = [], gor = new Set();
+  (Array.isArray(plan) ? plan : []).forEach(h => {
+    if (!h || typeof h !== 'object') return;
+    const kuyruk = Object.keys(h).map(dersAd => (Array.isArray(h[dersAd]) ? h[dersAd] : [])
+      .filter(ad => ad && typeof ad === 'string' && uygun(dersAd, ad)).map(ad => ({ dersAd, ad })));
     for (let i = 0; kuyruk.some(q => q.length > i); i++) kuyruk.forEach(q => {
       const x = q[i];
       if (x && !gor.has(x.dersAd + '|' + x.ad)) { gor.add(x.dersAd + '|' + x.ad); out.push(x); }
@@ -6377,7 +6388,7 @@ function kendiPlanKonulari(alan, tur = 'TYT') {
   });
   return out;
 }
-function kendiPlanDersleri(alan, tur = 'TYT') { return [...new Set(kendiPlanKonulari(alan, tur).map(x => x.dersAd))]; }
+function kendiPlanDersleri(alan, tur = 'TYT', mufredat) { return [...new Set(kendiPlanKonulari(alan, tur, mufredat).map(x => x.dersAd))]; }
 const kendiDersAdi = d => String(d).replace(' (+ Felsefe Grubu)', '');
 function kendiPlanVarsayilanHedef() {
   const sinav = gunNo(D.ayar.sinav);
@@ -6391,21 +6402,99 @@ function kendiPlanHedefHatasi(hedef) {
 }
 // Konuları öğrencinin sınıfına göre, okul programının kullandığı aynı kimlik kuralıyla
 // bulur ya da oluşturur; böylece okulun verdiği konu (ör. 11. sınıf TYT matematik) eşleşir.
-function kendiPlanKur(si, seviye, hedef) {
-  const o = D.ogr[si], sinif = ogrenciSinifi(o), sira = [], gor = new Set(), tur = kendiPlanTuru(o);
-  D.konuKaynak = D.konuKaynak || {}; D.konuDers = D.konuDers || {};
-  kendiPlanKonulari(o.alan, tur).forEach(({ dersAd, ad, idx }) => {
-    const dersIdx = idx !== undefined ? idx : dersEsle(dersAd);
-    if (dersIdx < 0) return;
-    // Diğer sınavların konuları tam adla eşleşir; YKS konuları okul programının kuralını izler.
-    const ki = idx !== undefined ? kullaniciKonusuTam(dersIdx, ad, dersAd, 12) : kullaniciKonusu(dersIdx, ad, null, dersAd, sinif);
-    if (gor.has(ki)) return;
-    gor.add(ki); sira.push(ki);
-    if (D.konuDers[ki] === undefined) { D.konuDers[ki] = dersAd; D.konuKaynak[ki] = iskelet(dersAd); }
-  });
-  o.kendiPlan = { tur, hedef, seviye: Object.assign({}, seviye), sira, anlatimGerek: {} };
+function kendiPlanKur(si, seviye, hedef, mufredat) {
+  const o = D.ogr[si], tur = kendiPlanTuru(o);
+  if (mufredat && !okulDisiMufredatSecebilir(o)) mufredat = null;
+  const sira = kendiPlanSirasi(si, mufredat);
+  o.kendiPlan = { tur, hedef, seviye: Object.assign({}, seviye), sira, anlatimGerek: {}, ...(mufredat ? { mufredat: mufredat.ad } : {}) };
   genelTekrarHazirla(si);
   return sira.length;
+}
+// Planın konu numaraları sırayla; konular öğrencinin (seçilen müfredatta müfredatın) sınıfına göre bulunur ya da oluşturulur.
+function kendiPlanSirasi(si, mufredat) {
+  const o = D.ogr[si], sinif = mufredat ? mufredat.sinif : ogrenciSinifi(o), tur = kendiPlanTuru(o), yeniden = okulDisiMufredatSecebilir(o);
+  D.konuKaynak = D.konuKaynak || {}; D.konuDers = D.konuDers || {};
+  const etiketle = (ki, dersAd) => { if (D.konuDers[ki] === undefined) { D.konuDers[ki] = dersAd; D.konuKaynak[ki] = iskelet(dersAd); } return ki; };
+  const girdi = kendiPlanKonulari(o.alan, tur, mufredat).map(x => Object.assign({}, x, { dersIdx: x.idx !== undefined ? x.idx : dersEsle(x.dersAd) }))
+    .filter(x => x.dersIdx >= 0);
+  // Diğer sınavların konuları tam adla eşleşir; YKS konuları okul programının kuralını izler. Önce adı tam tutan konular
+  // bulunur: sırada önce gelen yakın adlı bir konu ("… (devamı)") tam adın konusunu almasın.
+  const ki = girdi.map(x => {
+    if (x.idx !== undefined) return etiketle(kullaniciKonusuTam(x.dersIdx, x.ad, x.dersAd, 12), x.dersAd);
+    const v = konuBulTamEslesme(x.dersIdx, x.ad, x.dersAd, sinif);
+    return v >= 0 ? etiketle(v, x.dersAd) : undefined;
+  });
+  const kullanilan = new Set(ki.filter(v => v !== undefined));
+  girdi.forEach((x, j) => {
+    if (ki[j] !== undefined) return;
+    ki[j] = etiketle(kendiKonuBul(x.dersIdx, x.ad, x.dersAd, sinif, yeniden && kullanilan), x.dersAd);
+    kullanilan.add(ki[j]);
+  });
+  return [...new Set(ki)];
+}
+// Okul dışı öğrencinin planı yeniden kurulabilir (müfredat değişimi). kullaniciKonusu, adı tam tutmayan bir katalog konusunu
+// yalnızca ders etiketi yokken verir; ikinci kurulumda etiketli olduğu için yeni bir konu açardı. Aynı dersle etiketli ve bu
+// kurulumda henüz kullanılmamış o konu yeniden alınır (kullanilan: bu kurulumda alınmış konular; false ise eski kural).
+function kendiKonuBul(dersIdx, ad, dersAd, sinif, kullanilan) {
+  if (kullanilan && sinif === 12 && !mufredatKonuBilgisi(dersIdx, ad) && konuBulTamEslesme(dersIdx, ad, dersAd, 12) < 0) {
+    const aday = konuBul(dersIdx, ad);
+    if (aday >= 0 && !kullanilan.has(aday) && konuAl(aday)[0] === dersIdx && (D.konuDers || {})[aday] &&
+        dersKimligi(D.konuDers[aday]) === dersKimligi(dersAd)) return aday;
+  }
+  return kullaniciKonusu(dersIdx, ad, null, dersAd, sinif);
+}
+// ---- Okul dışı öğrencinin müfredat seçimi
+// Rehberin tasarlanmış müfredatları (Müfredat → Tasarlanmış müfredatlar) okul dışı öğrencinin paketine konu sırası olarak
+// gider (haftalar değil: öğrenci kendi hızında ilerler). Öğrenci Ayarlar → Kendi YKS planın'da birini seçer; plan o
+// müfredatın konularını o sırayla verir. Aynı içerikli müfredatlar tek seçenektir; paket sınırı için toplam boyut sınırlıdır.
+const OKUL_DISI_MUFREDAT_BAYT = 160000;
+const okulDisiMufredatSecebilir = o => !!o && o.okul === false && kendiPlanTuru(o) === 'YKS';
+function okulDisiMufredatlari(o) {
+  if (!okulDisiMufredatSecebilir(o) || !rehberMi()) return null;
+  const gruplar = new Map();
+  mufredatSubeleri().forEach(su => {
+    const plan = (D.konuPlani || {})[su];
+    if (!Array.isArray(plan)) return;
+    const sira = planKonuSirasi(plan).filter(x => dersEsle(x.dersAd) >= 0).slice(0, 2000);
+    if (!sira.length) return;
+    const d = [...new Set(sira.map(x => x.dersAd))], sinif = subeSinifi(su);
+    const k = sira.map(x => [d.indexOf(x.dersAd), x.ad]), anahtar = JSON.stringify([sinif, d, k]);
+    const alanlar = canliOgrenciler().map(i => D.ogr[i]).filter(x => x.sube === su).map(x => x.alan).filter(Boolean);
+    const g = gruplar.get(anahtar);
+    if (g) { g.subeler.push(su); alanlar.forEach(a => g.alanlar.add(a)); }
+    else gruplar.set(anahtar, { subeler: [su], alanlar: new Set(alanlar), sinif, d, k });
+  });
+  // Öğrencinin alanına uyan ve 12. sınıf müfredatları önce; sınır aşılırsa sondakiler pakete girmez.
+  const liste = [...gruplar.values()].map(g => ({ ad: g.subeler.join(', ').slice(0, 120), sinif: g.sinif, alanlar: [...g.alanlar].sort(), d: g.d, k: g.k }))
+    .sort((a, b) => (b.alanlar.includes(o.alan) - a.alanlar.includes(o.alan)) || (b.sinif === 12) - (a.sinif === 12) ||
+      a.ad.localeCompare(b.ad, 'tr', { numeric: true }));
+  const out = []; let bayt = 0;
+  liste.forEach(m => { const b = baytBoyu(JSON.stringify(m)); if (bayt + b <= OKUL_DISI_MUFREDAT_BAYT) { out.push(m); bayt += b; } });
+  return out.length ? out : null;
+}
+function mufredatSecenegiGecerli(m) {
+  return !!m && typeof m === 'object' && !Array.isArray(m) && typeof m.ad === 'string' && m.ad.length > 0 && m.ad.length <= 120 &&
+    [9, 10, 11, 12].includes(m.sinif) && Array.isArray(m.alanlar) && m.alanlar.every(a => typeof a === 'string' && a.length <= 10) &&
+    Array.isArray(m.d) && m.d.length > 0 && m.d.length <= 60 && m.d.every(x => typeof x === 'string' && x.length > 0 && x.length <= 80) &&
+    Array.isArray(m.k) && m.k.length > 0 && m.k.length <= 2000 &&
+    m.k.every(x => Array.isArray(x) && x.length === 2 && Number.isInteger(x[0]) && x[0] >= 0 && x[0] < m.d.length && typeof x[1] === 'string' && x[1].length > 0 && x[1].length <= 300);
+}
+const mufredatSecenekleri = () => (Array.isArray(D.mufredatSecenek) ? D.mufredatSecenek : []).filter(mufredatSecenegiGecerli);
+const mufredatSecenegiAl = ad => ad ? mufredatSecenekleri().find(m => m.ad === ad) || null : null;
+const mufredatSecenekAdi = m => m.ad + ' müfredatı · ' + m.sinif + '. sınıf' + (m.alanlar.length ? ' · ' + m.alanlar.join(', ') : '');
+// Çalışan planın konu sırası başka bir müfredata (ya da hazır YKS planına) geçer. Seviyeler, hedef, sonuçlar, başlamış
+// konuların tekrarları ve izlenmiş genel tekrarlar kalır; yeni planda olmayan derslerin seviyesi "Bilmiyorum"dur.
+function kendiPlanMufredatDegistir(si, mufredat) {
+  const o = D.ogr[si], kp = o && o.kendiPlan;
+  if (!kp || !okulDisiMufredatSecebilir(o)) return false;
+  const sira = kendiPlanSirasi(si, mufredat);
+  if (!sira.length) return false;
+  kp.sira = sira;
+  if (mufredat) kp.mufredat = mufredat.ad; else delete kp.mufredat;
+  const tamam = kp.genelTekrar && kp.genelTekrar.tamam || {};
+  delete kp.genelTekrar; genelTekrarHazirla(si);
+  if (kp.genelTekrar) Object.entries(tamam).forEach(([k, g]) => { if (kp.genelTekrar.sira.includes(k)) kp.genelTekrar.tamam[k] = g; });
+  return true;
 }
 function kendiKonuMu(si, ki) {
   const o = D.ogr[si], kp = o && o.kendiPlan;
@@ -6923,7 +7012,17 @@ function yaptimPencereHtml() {
     '<button type="button" class="dugme" id="yaptimVazgec">Vazgeç</button></div></div></div></div>';
 }
 function kendiPlanKarti(si) {
-  const o = D.ogr[si], kp = o.kendiPlan, tur = kendiPlanTuru(o), dersler = kendiPlanDersleri(o.alan, tur);
+  const o = D.ogr[si], kp = o.kendiPlan, tur = kendiPlanTuru(o);
+  // Okul dışı öğrenci konu sırasını rehberin tasarlanmış müfredatlarından seçebilir (yoksa hazır YKS planı).
+  const secenekler = okulDisiMufredatSecebilir(o) ? mufredatSecenekleri() : [];
+  const secili = !okulDisiMufredatSecebilir(o) ? '' : kp ? kp.mufredat || '' : mufredatSecenegiAl(EK.kpMufredat) ? EK.kpMufredat : '';
+  const dersler = kendiPlanDersleri(o.alan, tur, mufredatSecenegiAl(secili));
+  const mufredatSecimi = !secenekler.length && !secili ? '' : '<label class="etiket" style="display:block;margin-bottom:6px">Konu sırası<br><select id="kpMufredat" style="max-width:100%">' +
+    '<option value="">Hazır YKS planı</option>' + secenekler.map(m => '<option value="' + kacis(m.ad) + '"' + (m.ad === secili ? ' selected' : '') + '>' +
+      kacis(mufredatSecenekAdi(m)) + '</option>').join('') +
+    (secili && !mufredatSecenegiAl(secili) ? '<option value="' + kacis(secili) + '" selected disabled>' + kacis(secili) + ' müfredatı (artık listede yok)</option>' : '') +
+    '</select></label><p class="mini" style="margin:0 0 12px">Rehber öğretmeninin tasarladığı bir müfredatı seçersen konular o müfredatın sırasıyla gelir; ' +
+    'okulun haftalarını değil, kendi hızını izlersin.' + (kp ? ' Değiştirirsen başlamış konuların tekrarları sürer.' : '') + '</p>';
   const seviye = d => ((kp && kp.seviye) || {})[d] || 'hic';
   const sec = d => '<label class="etiket kp-ders">' + kacis(kendiDersAdi(d)) + '<br><select class="kpSeviye" data-ders="' + kacis(d) + '">' +
     KENDI_SEVIYE.map(([v, ad]) => '<option value="' + v + '"' + (seviye(d) === v ? ' selected' : '') + '>' + ad + '</option>').join('') +
@@ -6939,7 +7038,7 @@ function kendiPlanKarti(si) {
     (durum ? '<p role="status"><b>' + durum.kalan + ' konu kaldı</b> · hedef ' + ggyy(gunNo(kp.hedef)) +
       (durum.kalan ? ' · haftada yaklaşık ' + durum.haftalik + ' yeni konu' : ' · bütün konular başladı') + '</p>' +
       (durum.genelTekrar ? '<p role="status"><b>Önce genel tekrar:</b> ' + durum.genelTekrar + ' ders · ~' + durum.genelTekrarSaat + ' saat</p>' : '') : '') +
-    '<div class="kp-dersler">' + dersler.map(sec).join('') + '</div>' + (kp?.metot ? TYT_METOT.settings(si) : '') +
+    mufredatSecimi + '<div class="kp-dersler">' + dersler.map(sec).join('') + '</div>' + (kp?.metot ? TYT_METOT.settings(si) : '') +
     '<label class="etiket" style="display:block;margin-top:12px">Hedef bitiş tarihi <input type="date" id="kpHedef" value="' +
       (kp ? kp.hedef : kendiPlanVarsayilanHedef()) + '"></label>' +
     '<div class="arac">' + (kp ? '<button class="dugme" id="kpKapat">Kendi planımı durdur</button>'
@@ -8220,7 +8319,8 @@ function gorunumOgrenciler() {
         '" style="width:80px"></td>' +
       '<td><div class="ad-gor"><input class="oAd" data-i="' + i + '" value="' + kacis(o.ad) + '" style="min-width:190px;width:100%">' +
         '<button type="button" class="ogr-gor-dugme" data-ogr-gor="' + i + '" title="Öğrenci gözüyle gör" aria-label="' + kacis(o.ad) + ': öğrenci gözüyle gör">' + GOR_SVG + '</button></div></td>' +
-      '<td>' + (o.okul === false ? '<span class="mini" title="Okulun ders programını izlemez; konu anlatımlarını kendi planıyla yapar">Okul dışı</span>'
+      '<td>' + (o.okul === false ? '<span class="mini" title="Okulun ders programını izlemez; konu anlatımlarını kendi planıyla yapar">Okul dışı' +
+          (o.kendiPlan && o.kendiPlan.mufredat ? ' · ' + kacis(o.kendiPlan.mufredat) + ' müfredatı' : '') + '</span>'
         : '<input class="oSube" data-i="' + i + '" value="' + kacis(o.sube) + '" style="width:72px">') +
         '<label class="mini" style="display:block;white-space:nowrap" title="Okul dışı: okulun denemelerine girer, sınıfın ders programını izlemez, konu anlatımlarını kendi planıyla yapar"><input type="checkbox" class="oOkulDisi" data-i="' + i + '"' + (o.okul === false ? ' checked' : '') + '> okul dışı</label></td>' +
       '<td>' + ogrenciSinifi(o) + '. sınıf</td>' +
@@ -9426,7 +9526,9 @@ function ogrenciPaketi(si) {
     // Türkiye ortalaması karşılaştırması: the student's comparison, worked out here (the student has no lists or Konu Takibi).
     turkiyeKiyas: (() => { try { return typeof OGRETMEN_RAPOR !== 'undefined' && rehberMi() ? OGRETMEN_RAPOR.kiyasOzeti(o) : null; } catch (e) { return null; } })(),
     // Yanlışlar defteri as a list (no pictures), from this device's library (opened before a publish).
-    yanlislar: (() => { try { return typeof YANLISLAR !== 'undefined' && rehberMi() ? YANLISLAR.ogrenciListesi(o.no) : null; } catch (e) { return null; } })()
+    yanlislar: (() => { try { return typeof YANLISLAR !== 'undefined' && rehberMi() ? YANLISLAR.ogrenciListesi(o.no) : null; } catch (e) { return null; } })(),
+    // Okul dışı öğrenci: rehberin tasarlanmış müfredatları, kendi planının konu sırası olarak seçilebilsin diye.
+    mufredatlar: okulDisiMufredatlari(o)
   };
 }
 // öğrenci tarafında paketi aç
@@ -9487,6 +9589,7 @@ function paketiYukle(pk) {
   y.par = {}; if (pk.par && Object.keys(pk.par).length) y.par[0] = pk.par;
   if (pk.turkiyeKiyas && typeof pk.turkiyeKiyas === 'object' && !Array.isArray(pk.turkiyeKiyas)) y.turkiyeKiyas = pk.turkiyeKiyas;
   if (pk.yanlislar && typeof pk.yanlislar === 'object' && !Array.isArray(pk.yanlislar)) y.yanlisListe = pk.yanlislar;
+  if (Array.isArray(pk.mufredatlar)) { const m = pk.mufredatlar.filter(mufredatSecenegiGecerli).slice(0, 60); if (m.length) y.mufredatSecenek = m; }
   y.ayarSurum = VERI_SURUMU; y.katalogImza = KATALOG_IMZA;
   yedekDogrula(y);
   return y;
@@ -9974,6 +10077,7 @@ function ogrenciCalismaPaketi() {
   delete kopya.ogrSonEsitlenen;
   kopya.ogr = D.ogr.map(o => { const k = {...o}; delete k.etkinlik; delete k.denemeler; delete k.denemeOkul; delete k.denemeSure; delete k.denemeYayinBekliyor; return k; });
   delete kopya.ogrTaslak; // gelecekteki hesaplama önbelleği; programdan yeniden üretilir
+  delete kopya.mufredatSecenek; // rehberin müfredatları: öğretmende zaten var, paketle her seferinde yeniden gelir
   return { ts: +D.ogrCalismaTs || +D.ts || Date.now(), veri: JSON.stringify(kopya) };
 }
 function ogrenciCalismasiniDogrula(calisma, si) {
@@ -14970,8 +15074,10 @@ document.addEventListener('click', async ev => {
     if (hata) { alert(hata); return; }
     const seviye = {};
     document.querySelectorAll('.kpSeviye').forEach(s => { if (KENDI_SEVIYE.some(([v]) => v === s.value)) seviye[s.dataset.ders] = s.value; });
+    const mufredat = mufredatSecenegiAl((document.getElementById('kpMufredat') || {}).value);
     // Sayılar, bu hafta verilip konular kâğıda geçmeden önce alınır.
-    const buSabit = !!elleAl(0, buHafta(0)).sabit, sayi = kendiPlanKur(0, seviye, hedef), d = kendiPlanHaftalikSayi(0);
+    const buSabit = !!elleAl(0, buHafta(0)).sabit, sayi = kendiPlanKur(0, seviye, hedef, mufredat), d = kendiPlanHaftalikSayi(0);
+    delete EK.kpMufredat;
     if (TYT_METOT.eligible()) { await TYT_METOT.start(); EK.sekme='plan'; ciz(); return; }
     await kaydet(true); ciz();
     bilgiVer(kendiPlanEtiketi(D.ogr[0].kendiPlan.tur) + ' başladı: ' + d.kalan + ' konu' +
@@ -15918,6 +16024,18 @@ document.addEventListener('change', async ev => {
     return;
   }
   if (el.classList.contains('oKap')) { D.ogr[+el.dataset.i].kap = Math.max(1, Math.min(12, +el.value || 6)); await kaydet(true); ciz(); return; }
+  // Konu sırası: plan başlamadan yalnızca seçim; çalışan planda konu sırası seçilen müfredata geçer.
+  if (el.id === 'kpMufredat' && ogrenciMi() && D.ogr[0]) {
+    const m = mufredatSecenegiAl(el.value);
+    if (el.value && !m) { ciz(); return; }
+    if (!D.ogr[0].kendiPlan) { EK.kpMufredat = el.value; ciz(); return; }
+    const adi = m ? m.ad + ' müfredatı' : 'hazır YKS planı';
+    if (!confirm('Konular bundan sonra ' + adi + ' sırasıyla gelecek. Başlamış konuların tekrarları sürer. Devam edilsin mi?')) { ciz(); return; }
+    const once = JSON.parse(JSON.stringify(D.ogr[0].kendiPlan));
+    if (!kendiPlanMufredatDegistir(0, m)) { alert('Bu müfredatta plana alınabilecek konu yok.'); ciz(); return; }
+    if (!(await kaydet(true))) { D.ogr[0].kendiPlan = once; ciz(); alert('Kaydedilemedi; konu sırası değişmedi.'); return; }
+    ciz(); bilgiVer('Konu sırası: ' + adi + '. ' + kendiPlanHaftalikSayi(0).kalan + ' konu kaldı.'); return;
+  }
   // Plan açıkken seviye ve hedef değişiklikleri yalnızca henüz başlamamış konulara yansır.
   if ((el.classList.contains('kpSeviye') || el.id === 'kpHedef') && ogrenciMi() && D.ogr[0]?.kendiPlan) {
     const kp = D.ogr[0].kendiPlan;
