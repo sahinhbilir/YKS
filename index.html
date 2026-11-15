@@ -9587,6 +9587,8 @@ function ogrenciPaketi(si) {
   (o.otoTelafiHaric || []).forEach(isaretle);
   (o.otoTelafiEklenen || []).forEach(x => isaretle(x.ki));
   Object.keys(o.hafizaElle || {}).forEach(k => isaretle(+k));
+  // Kendi planın konuları (okulun kataloğunda olmayanlar dahil) da pakete girer; öğrencide yeniden numaralanır.
+  if (o.kendiPlan) { (o.kendiPlan.sira || []).forEach(isaretle); Object.keys(o.kendiPlan.anlatimGerek || {}).forEach(k => isaretle(+k)); }
   const ekK = {};
   Object.keys(gerekli).forEach(ix => { ekK[ix] = (D.ekKonular || [])[ix]; });
   return {
@@ -9651,6 +9653,9 @@ function paketiYukle(pk) {
     return harita[ki] !== undefined ? harita[ki] : +ki;
   };
   if (y.ogr[0].otoTelafiHaric) y.ogr[0].otoTelafiHaric = y.ogr[0].otoTelafiHaric.map(cev);
+  const kp = y.ogr[0].kendiPlan;
+  if (kp && Array.isArray(kp.sira)) y.ogr[0].kendiPlan = Object.assign({}, kp, { sira: kp.sira.map(cev),
+    anlatimGerek: Object.fromEntries(Object.entries(kp.anlatimGerek || {}).map(([k, g]) => [cev(+k), g])) });
   if (y.ogr[0].hafizaElle) y.ogr[0].hafizaElle = Object.fromEntries(Object.entries(y.ogr[0].hafizaElle).map(([k, e]) => [cev(+k), e]));
   if (y.ogr[0].otoTelafiEklenen) y.ogr[0].otoTelafiEklenen = y.ogr[0].otoTelafiEklenen
     .map(x => Object.assign({}, x, {ki:cev(x.ki)}));
