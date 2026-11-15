@@ -135,5 +135,13 @@ const kur = () => run(`D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-11-1
     run(`kendiPlanKur(0,{},'2027-06-19',mufredatSecenegiAl('12-ESKI'))`);
     assert(run(`D.ogr[0].kendiPlan.sira.some(ki=>dersEsle(konuDersAdi(ki))===5)`), 'the plan holds Tarih topics');
   });
+  await check('the teacher’s package carries the own plan’s topics (outside the catalog too), so the student view opens', () => {
+    mufredatKur(); run(`kendiPlanKur(1,{},'2027-06-19',null);D.ogr[1].kendiPlan.anlatimGerek={[D.ogr[1].kendiPlan.sira.find(ki=>ki>=KATALOG.length)]:bugunNo()}`);
+    assert(run('D.ogr[1].kendiPlan.sira.some(ki=>ki>=KATALOG.length)'), 'the plan holds topics outside the catalog');
+    const adlar = get('D.ogr[1].kendiPlan.sira.map(ki=>konuAl(ki)[3])');
+    run(`y=paketiYukle(JSON.parse(JSON.stringify(ogrenciPaketi(1))));yedekDogrula(y);D=y`);
+    assert.deepEqual(get('D.ogr[0].kendiPlan.sira.map(ki=>konuAl(ki)[3])'), adlar, 'the same topics, renumbered');
+    assert(run('Object.keys(D.ogr[0].kendiPlan.anlatimGerek).every(k=>konuAl(+k))'));
+  });
   console.log(passed + ' okul dışı checks passed');
 })();
