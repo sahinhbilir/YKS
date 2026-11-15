@@ -142,6 +142,11 @@ const kur = () => run(`D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-11-1
     run(`y=paketiYukle(JSON.parse(JSON.stringify(ogrenciPaketi(1))));yedekDogrula(y);D=y`);
     assert.deepEqual(get('D.ogr[0].kendiPlan.sira.map(ki=>konuAl(ki)[3])'), adlar, 'the same topics, renumbered');
     assert(run('Object.keys(D.ogr[0].kendiPlan.anlatimGerek).every(k=>konuAl(+k))'));
+    // A package published before this carried no such topics: it still opens, the missing topics drop out of the plan.
+    mufredatKur(); run(`kendiPlanKur(1,{},'2027-06-19',null);eski=JSON.parse(JSON.stringify(ogrenciPaketi(1)));
+      eski.ekKonular={};eski.ogr.kendiPlan.sira.push(KATALOG.length+5000);y=paketiYukle(eski);yedekDogrula(y)`);
+    assert(run('y.ogr[0].kendiPlan.sira.length>0&&y.ogr[0].kendiPlan.sira.every(ki=>konuAl.call(null,ki)!==undefined||ki<KATALOG.length)'));
+    run(`D.ogr[1].kendiPlan.sira.push(KATALOG.length+5000)`); assert.doesNotThrow(() => run('ogrenciPaketi(1)'), 'a missing topic does not stop the teacher’s package');
   });
   console.log(passed + ' okul dışı checks passed');
 })();
