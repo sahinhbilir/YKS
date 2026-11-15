@@ -9588,13 +9588,17 @@ function ogrenciPaketi(si) {
   (o.otoTelafiEklenen || []).forEach(x => isaretle(x.ki));
   Object.keys(o.hafizaElle || {}).forEach(k => isaretle(+k));
   // Kendi planın konuları (okulun kataloğunda olmayanlar dahil) da pakete girer; öğrencide yeniden numaralanır.
-  if (o.kendiPlan) { (o.kendiPlan.sira || []).forEach(isaretle); Object.keys(o.kendiPlan.anlatimGerek || {}).forEach(k => isaretle(+k)); }
+  // Bu defterde bulunmayan bir konu numarası paketi durdurmaz: plandan düşer (aşağıda ogr kopyasında da).
+  const kpVar = k => Number.isSafeInteger(+k) && +k >= 0 && !!konuAl(+k);
+  if (o.kendiPlan) { (o.kendiPlan.sira || []).filter(kpVar).forEach(isaretle); Object.keys(o.kendiPlan.anlatimGerek || {}).filter(kpVar).forEach(k => isaretle(+k)); }
   const ekK = {};
   Object.keys(gerekli).forEach(ix => { ekK[ix] = (D.ekKonular || [])[ix]; });
   return {
     tur: 'yks-ogrenci-paketi', surum: PAKET_SURUM, katalogImza: KATALOG_IMZA,
     kurum: D.kurum || '', tarih: bugunNo(), syncId: o.syncId,
-    ogr: JSON.parse(JSON.stringify(o)),
+    ogr: (() => { const k = JSON.parse(JSON.stringify(o)), kp = k.kendiPlan;
+      if (kp && Array.isArray(kp.sira)) { kp.sira = kp.sira.filter(kpVar); kp.anlatimGerek = Object.fromEntries(Object.entries(kp.anlatimGerek || {}).filter(([x]) => kpVar(x))); }
+      return k; })(),
     ayar: JSON.parse(JSON.stringify(D.ayar)),
     anlasma: JSON.parse(JSON.stringify(D.anlasma || {})),
     rutinBasliklari: D.rutinBasliklari,
@@ -9654,8 +9658,9 @@ function paketiYukle(pk) {
   };
   if (y.ogr[0].otoTelafiHaric) y.ogr[0].otoTelafiHaric = y.ogr[0].otoTelafiHaric.map(cev);
   const kp = y.ogr[0].kendiPlan;
-  if (kp && Array.isArray(kp.sira)) y.ogr[0].kendiPlan = Object.assign({}, kp, { sira: kp.sira.map(cev),
-    anlatimGerek: Object.fromEntries(Object.entries(kp.anlatimGerek || {}).map(([k, g]) => [cev(+k), g])) });
+  // Eski paketler kendi planın özel konularını taşımaz: pakette olmayan konu plandan düşer (öğretmen yeniden yayınlayınca gelir).
+  if (kp && Array.isArray(kp.sira)) y.ogr[0].kendiPlan = Object.assign({}, kp, { sira: [...new Set(kp.sira.filter(konuVar).map(cev))],
+    anlatimGerek: Object.fromEntries(Object.entries(kp.anlatimGerek || {}).filter(([k]) => konuVar(k)).map(([k, g]) => [cev(+k), g])) });
   if (y.ogr[0].hafizaElle) y.ogr[0].hafizaElle = Object.fromEntries(Object.entries(y.ogr[0].hafizaElle).map(([k, e]) => [cev(+k), e]));
   if (y.ogr[0].otoTelafiEklenen) y.ogr[0].otoTelafiEklenen = y.ogr[0].otoTelafiEklenen
     .map(x => Object.assign({}, x, {ki:cev(x.ki)}));
