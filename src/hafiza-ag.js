@@ -45,8 +45,8 @@ function ayarKur(opts) {
 }
 
 /* ---- the map ---- */
-function agKur(konular, baglar) {
-  const dugum = new Map(), takma = new Map(), uyarilar = [], asagi = new Map(), yukari = new Map(), parcalar = new Map(), karisik = [];
+function agKur(konular, baglar, birimler) {
+  const dugum = new Map(), takma = new Map(), uyarilar = [], asagi = new Map(), yukari = new Map(), parcalar = new Map(), karisik = [], birim = new Map();
   const ekle = (m, a, x) => { let l = m.get(a); if (!l) m.set(a, l = []); l.push(x); };
   (konular || []).forEach((k, i) => {
     if (!k || k.id == null || dugum.has(k.id)) return void uyarilar.push('konu ' + i + ': kimliği yok ya da tekrar ediyor');
@@ -55,6 +55,12 @@ function agKur(konular, baglar) {
   dugum.forEach(k => (k.esler || []).forEach(e => {
     if (takma.has(e)) uyarilar.push('eş ' + e + ': başka bir konuya ait'); else takma.set(e, k.id);
   }));
+  // School units (grade 9–11): a result or lesson on a unit counts for every YKS topic it covers.
+  (birimler || []).forEach((b, i) => {
+    const kapsar = [...new Set((b && b.kapsar || []).map(x => takma.get(x)).filter(x => x != null))];
+    if (!b || b.id == null || takma.has(b.id) || birim.has(b.id) || !kapsar.length) return void uyarilar.push('birim ' + i + ': kimliği ya da kapsadığı konu yok');
+    birim.set(b.id, {kapsar, ogrenildi: b.ogrenildi});
+  });
   const bagla = (alt, ust, u, ic) => {
     const anahtar = alt + '>' + ust, var_ = (asagi.get(ust) || []).find(e => e.id === alt);
     if (var_) { uyarilar.push('bağ ' + anahtar + ': iki kez çizilmiş, büyüğü kaldı'); if (u > var_.u) { var_.u = u; (yukari.get(alt) || []).find(e => e.id === ust).u = u; } return; }
@@ -78,7 +84,7 @@ function agKur(konular, baglar) {
   // How much each topic is used by every topic above it: the strongest path, use multiplied along it.
   const kullananlar = new Map(), temeller = new Map();
   dugum.forEach((_, id) => { kullananlar.set(id, enIyiYol(yukari, id, e => e.u, 1e-9)); temeller.set(id, new Set(enIyiYol(asagi, id, e => e.u, 1e-9).keys())); });
-  return {dugum, takma, asagi, yukari, parcalar, karisik, kullananlar, temeller, uyarilar};
+  return {dugum, takma, asagi, yukari, parcalar, karisik, birim, kullananlar, temeller, uyarilar};
 }
 // Strongest multiplied path from `kaynak` through `komsu` edges; Map id → share (kaynak left out).
 function enIyiYol(komsu, kaynak, agirlik, esik, atla) {
@@ -197,9 +203,12 @@ function calistir(girdi, o, F, ag, prm, kayit, olaylar, kume) {
 
   const sira = [];
   ag.dugum.forEach((_, id) => { const g = ozellik(id, 'ogrenildi'); if (Number.isInteger(g) && g <= bugun) sira.push({gun: g, id, ders: true, i: -1}); });
+  ag.birim.forEach(b => { const g = b.ogrenildi; if (Number.isInteger(g) && g <= bugun) b.kapsar.forEach(id => sira.push({gun: g, id, ders: true, i: -1})); });
   (girdi.sonuclar || []).forEach((r, i) => {
-    const id = r && ag.takma.get(r.id);
-    if (id != null && [1, 2, 3, 4].includes(r.not) && Number.isInteger(r.gun) && r.gun <= bugun) sira.push({gun: r.gun, id, not: r.not, i});
+    if (!r || ![1, 2, 3, 4].includes(r.not) || !Number.isInteger(r.gun) || r.gun > bugun) return;
+    const id = ag.takma.get(r.id), b = ag.birim.get(r.id);
+    if (id != null) sira.push({gun: r.gun, id, not: r.not, i});
+    else if (b) b.kapsar.forEach(k => sira.push({gun: r.gun, id: k, not: r.not, i}));
   });
   sira.sort((a, b) => a.gun - b.gun || a.i - b.i);
   for (const e of sira) {
@@ -214,10 +223,11 @@ function calistir(girdi, o, F, ag, prm, kayit, olaylar, kume) {
 }
 
 /* ---- what the student sees ---- */
-// girdi: {konular, baglar, sonuclar: [{gun, id, not 1–4}], bugun, sinavGunu?, konuEk?: {id: {k, w, ogrenildi}},
+// girdi: {konular, baglar, birimler?: [{id, kapsar: [ids], ogrenildi?}], sonuclar: [{gun, id, not 1–4}], bugun, sinavGunu?,
+//         konuEk?: {id: {k, w, ogrenildi}},
 //         parametreler?, ornekGecmisi?: [{gun, id}], anahtar? (a stable student key for the sample draw)}
 function hesapla(girdi, opts) {
-  const o = ayarKur(opts), F = fsrsAl(opts), ag = agKur(girdi.konular, girdi.baglar), olaylar = [];
+  const o = ayarKur(opts), F = fsrsAl(opts), ag = agKur(girdi.konular, girdi.baglar, girdi.birimler), olaylar = [];
   if (!Number.isInteger(girdi.bugun)) throw new Error('HAFIZA_AG: bugun must be a day number');
   const prm = paramOkuyucu(girdi.parametreler, o);
   const {durum, R, kat, var_, gosterilen} = calistir(girdi, o, F, ag, prm, null, olaylar);
@@ -266,7 +276,7 @@ function karistir(m) { let h = 2166136261; for (let i = 0; i < m.length; i++) h 
 // girdi.sadece: [anahtar] limits a call to some links, so the work can be spread (about 1 s per student per full pass
 // on a 90-link map). Each value is judged by its direct effect only (see the kume comment below).
 function ogren(girdi, opts) {
-  const o = ayarKur(opts), F = fsrsAl(opts), ag = agKur(girdi.konular, girdi.baglar), K = o.ozGuven;
+  const o = ayarKur(opts), F = fsrsAl(opts), ag = agKur(girdi.konular, girdi.baglar, girdi.birimler), K = o.ozGuven;
   const onceki = girdi.parametreler || {}, paylasilan = JSON.parse(JSON.stringify(onceki.paylasilan || {}));
   const ogrenci = {}; (girdi.ogrenciler || []).forEach(s => { ogrenci[s.anahtar] = JSON.parse(JSON.stringify(((onceki.ogrenci || {})[s.anahtar]) || {})); });
   const ll = (p, y) => { const q = sinirla(p, 1e-4, 1 - 1e-4); return y ? Math.log(q) : Math.log(1 - q); };
@@ -312,7 +322,7 @@ function ogren(girdi, opts) {
 // How well the map predicts the student's results, against the app's plain FSRS-6 on the same results (each raw topic
 // on its own, results only): mean log loss of the recall predicted just before each result. Lower is better.
 function degerlendir(girdi, opts) {
-  const o = ayarKur(opts), F = fsrsAl(opts), ag = agKur(girdi.konular, girdi.baglar), ile = [];
+  const o = ayarKur(opts), F = fsrsAl(opts), ag = agKur(girdi.konular, girdi.baglar, girdi.birimler), ile = [];
   calistir(girdi, o, F, ag, paramOkuyucu(girdi.parametreler, o), ile, null);
   const duz = new Map(), kart = new Map();
   (girdi.sonuclar || []).map((r, i) => Object.assign({i}, r)).filter(r => r && ag.takma.has(r.id) && [1, 2, 3, 4].includes(r.not) && Number.isInteger(r.gun) && r.gun <= girdi.bugun)

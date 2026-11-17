@@ -122,6 +122,16 @@ test('a hidden part is tested with its topic; a twin result counts for the topic
   assert.equal(out.konular.some(s => s.id === 'okulTrig'), false, 'one node');
 });
 
+test('a school unit\'s result and lesson count for every YKS topic it covers', () => {
+  const birimler = [{id: 'okul9DikTrig', kapsar: ['dik', 'tytTrig'], ogrenildi: 0}];
+  const out = H.hesapla(girdi([{gun: 6, id: 'okul9DikTrig', not: 3}], 10, {birimler}));
+  ['dik', 'tytTrig', 'sincos'].forEach(id => { assert.equal(satir(out, id).sonOz, 6, id); });
+  const ayri = H.hesapla(girdi([{gun: 0, id: 'dik', not: 3}, {gun: 0, id: 'tytTrig', not: 3}, {gun: 6, id: 'dik', not: 3}, {gun: 6, id: 'tytTrig', not: 3}], 10));
+  assert(Math.abs(satir(out, 'tytTrig').sGun - satir(ayri, 'tytTrig').sGun) < 1e-9, 'lesson day = first "İyi", then the unit result as a review');
+  assert.equal(out.konular.some(s => s.id === 'okul9DikTrig'), false, 'not a node of its own');
+  assert.equal(H.hesapla(girdi([], 1, {birimler: [{id: 'x', kapsar: ['yok']}]})).uyarilar.length, 1);
+});
+
 test('live pull-down: the weakest-relative foundation pulls the shown recall, never the stored memory', () => {
   // TYT trig learnt long ago, AYT trig just tested.
   const s = [{gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 25, id: 'aytTrig', not: 3}];
