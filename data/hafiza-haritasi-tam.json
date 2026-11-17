@@ -1,0 +1,5743 @@
+{
+ "surum": "2026-11-17-taslak-tam",
+ "not": "Tam taslak: Geometri, Matematik TYT, Matematik AYT, Fizik (SAY plan konuları). Pilot olduğu gibi korunur; yeni konu, bağ, sınav payı ve okul ünitesi eklendi. Gözden geçirilecek; uygulama şimdilik pilotu kullanır. \"Genel Tekrar\" (Geometri) bir konu değil, haritada yok.",
+ "konular": [
+  {
+   "id": "geoAci",
+   "ders": "Geometri",
+   "ad": "Temel Kavramlar ve Düzlemde Açılar"
+  },
+  {
+   "id": "geoUcgenAci",
+   "ders": "Geometri",
+   "ad": "Üçgende Açılar"
+  },
+  {
+   "id": "geoEslik",
+   "ders": "Geometri",
+   "ad": "Üçgende Eşlik"
+  },
+  {
+   "id": "geoBenzer",
+   "ders": "Geometri",
+   "ad": "Üçgende Benzerlik"
+  },
+  {
+   "id": "geoDik",
+   "ders": "Geometri",
+   "ad": "Dik Üçgen"
+  },
+  {
+   "id": "geoIkiz",
+   "ders": "Geometri",
+   "ad": "İkizkenar Üçgen"
+  },
+  {
+   "id": "geoEskenar",
+   "ders": "Geometri",
+   "ad": "Eşkenar Üçgen"
+  },
+  {
+   "id": "geoAciortay",
+   "ders": "Geometri",
+   "ad": "Üçgende Açıortay"
+  },
+  {
+   "id": "geoKenarortay",
+   "ders": "Geometri",
+   "ad": "Üçgende Kenarortay"
+  },
+  {
+   "id": "geoAciKenar",
+   "ders": "Geometri",
+   "ad": "Üçgende Açı-Kenar Bağıntıları"
+  },
+  {
+   "id": "geoAlan",
+   "ders": "Geometri",
+   "ad": "Üçgende Alan"
+  },
+  {
+   "id": "geoCokgen",
+   "ders": "Geometri",
+   "ad": "Çokgenler"
+  },
+  {
+   "id": "geoDortgen",
+   "ders": "Geometri",
+   "ad": "Dörtgenler"
+  },
+  {
+   "id": "geoYamuk",
+   "ders": "Geometri",
+   "ad": "Yamuk"
+  },
+  {
+   "id": "geoParalel",
+   "ders": "Geometri",
+   "ad": "Paralelkenar"
+  },
+  {
+   "id": "geoEskDortgen",
+   "ders": "Geometri",
+   "ad": "Eşkenar Dörtgen"
+  },
+  {
+   "id": "geoDeltoid",
+   "ders": "Geometri",
+   "ad": "Deltoid"
+  },
+  {
+   "id": "geoDikdortgen",
+   "ders": "Geometri",
+   "ad": "Dikdörtgen"
+  },
+  {
+   "id": "geoKare",
+   "ders": "Geometri",
+   "ad": "Kare"
+  },
+  {
+   "id": "geoNokta",
+   "ders": "Geometri",
+   "ad": "Noktanın Analitiği"
+  },
+  {
+   "id": "geoDogru",
+   "ders": "Geometri",
+   "ad": "Doğrunun Analitiği"
+  },
+  {
+   "id": "geoDonusum",
+   "ders": "Geometri",
+   "ad": "Dönüşüm Geometrisi"
+  },
+  {
+   "id": "geoCember",
+   "ders": "Geometri",
+   "ad": "Çemberde Temel Elemanlar"
+  },
+  {
+   "id": "geoCemberAci",
+   "ders": "Geometri",
+   "ad": "Çemberde Açı"
+  },
+  {
+   "id": "geoCemberUzunluk",
+   "ders": "Geometri",
+   "ad": "Çemberde Uzunluk"
+  },
+  {
+   "id": "geoDaire",
+   "ders": "Geometri",
+   "ad": "Dairenin Çevresi ve Alanı"
+  },
+  {
+   "id": "geoKati",
+   "ders": "Geometri",
+   "ad": "Katı Cisimler"
+  },
+  {
+   "id": "geoCemberAnalitik",
+   "ders": "Geometri",
+   "ad": "Çemberin Analitiği"
+  },
+  {
+   "id": "tytTemel",
+   "ders": "Matematik TYT",
+   "ad": "Temel Kavramlar, Tek-Çift ve Negatif-Pozitif Sayılar"
+  },
+  {
+   "id": "tytAsal",
+   "ders": "Matematik TYT",
+   "ad": "Asal Sayılar, Ardışık Sayılar, Faktöriyel"
+  },
+  {
+   "id": "tytBasamak",
+   "ders": "Matematik TYT",
+   "ad": "Basamak Kavramı, Asal Çarpanlara Ayırma"
+  },
+  {
+   "id": "tytBolme",
+   "ders": "Matematik TYT",
+   "ad": "Bölme ve Bölünebilme"
+  },
+  {
+   "id": "tytEbob",
+   "ders": "Matematik TYT",
+   "ad": "EBOB-EKOK ve Periyodik Tekrar Eden Durumların Problemleri"
+  },
+  {
+   "id": "tytRasyonel",
+   "ders": "Matematik TYT",
+   "ad": "Rasyonel Sayılar"
+  },
+  {
+   "id": "tytDenklem",
+   "ders": "Matematik TYT",
+   "ad": "Birinci Dereceden Denklemler"
+  },
+  {
+   "id": "tytEsitsizlik",
+   "ders": "Matematik TYT",
+   "ad": "Basit Eşitsizlikler"
+  },
+  {
+   "id": "tytMutlak",
+   "ders": "Matematik TYT",
+   "ad": "Mutlak Değer"
+  },
+  {
+   "id": "tytCarpan",
+   "ders": "Matematik TYT",
+   "ad": "Çarpanlara Ayırma"
+  },
+  {
+   "id": "tytUslu",
+   "ders": "Matematik TYT",
+   "ad": "Üslü İfadeler"
+  },
+  {
+   "id": "tytKok",
+   "ders": "Matematik TYT",
+   "ad": "Köklü İfadeler"
+  },
+  {
+   "id": "tytOran",
+   "ders": "Matematik TYT",
+   "ad": "Oran-Orantı"
+  },
+  {
+   "id": "tytSayiP",
+   "ders": "Matematik TYT",
+   "ad": "Sayı Problemleri"
+  },
+  {
+   "id": "tytKesirP",
+   "ders": "Matematik TYT",
+   "ad": "Kesir Problemleri"
+  },
+  {
+   "id": "tytYasP",
+   "ders": "Matematik TYT",
+   "ad": "Yaş Problemleri"
+  },
+  {
+   "id": "tytYuzdeP",
+   "ders": "Matematik TYT",
+   "ad": "Yüzde Problemleri"
+  },
+  {
+   "id": "tytKarP",
+   "ders": "Matematik TYT",
+   "ad": "Kâr-Zarar Problemleri"
+  },
+  {
+   "id": "tytKarisimP",
+   "ders": "Matematik TYT",
+   "ad": "Karışım Problemleri"
+  },
+  {
+   "id": "tytHareketP",
+   "ders": "Matematik TYT",
+   "ad": "Hareket Problemleri"
+  },
+  {
+   "id": "tytIsciP",
+   "ders": "Matematik TYT",
+   "ad": "İşçi Problemleri"
+  },
+  {
+   "id": "tytGrafikP",
+   "ders": "Matematik TYT",
+   "ad": "Grafik Problemleri"
+  },
+  {
+   "id": "tytPolinom",
+   "ders": "Matematik TYT",
+   "ad": "Polinomlar"
+  },
+  {
+   "id": "tytVeri",
+   "ders": "Matematik TYT",
+   "ad": "Veri Analizi"
+  },
+  {
+   "id": "tytMantik",
+   "ders": "Matematik TYT",
+   "ad": "Mantık"
+  },
+  {
+   "id": "tytKume",
+   "ders": "Matematik TYT",
+   "ad": "Kümeler"
+  },
+  {
+   "id": "tytPerm",
+   "ders": "Matematik TYT",
+   "ad": "Permütasyon"
+  },
+  {
+   "id": "tytKomb",
+   "ders": "Matematik TYT",
+   "ad": "Kombinasyon"
+  },
+  {
+   "id": "tytBinom",
+   "ders": "Matematik TYT",
+   "ad": "Binom Açılımı"
+  },
+  {
+   "id": "tytOlasilik",
+   "ders": "Matematik TYT",
+   "ad": "Olasılık"
+  },
+  {
+   "id": "aytFonk",
+   "ders": "Matematik AYT",
+   "ad": "Fonksiyon Kavramı - Tanım ve Görüntü Kümesi"
+  },
+  {
+   "id": "aytFonkCesit",
+   "ders": "Matematik AYT",
+   "ad": "Fonksiyon Çeşitleri"
+  },
+  {
+   "id": "aytFonkIslem",
+   "ders": "Matematik AYT",
+   "ad": "Fonksiyonlarda İşlemler"
+  },
+  {
+   "id": "aytParcali",
+   "ders": "Matematik AYT",
+   "ad": "Parçalı ve Mutlak Değer Fonksiyonu"
+  },
+  {
+   "id": "aytGrafik",
+   "ders": "Matematik AYT",
+   "ad": "Grafik Yorumlama"
+  },
+  {
+   "id": "aytTers",
+   "ders": "Matematik AYT",
+   "ad": "Bir Fonksiyonun Tersi"
+  },
+  {
+   "id": "aytBileske",
+   "ders": "Matematik AYT",
+   "ad": "Bileşke Fonksiyon ve Özellikleri"
+  },
+  {
+   "id": "aytBileskeTers",
+   "ders": "Matematik AYT",
+   "ad": "Bileşke ve Ters Fonksiyon"
+  },
+  {
+   "id": "aytPeriyodik",
+   "ders": "Matematik AYT",
+   "ad": "Periyodik Fonksiyon"
+  },
+  {
+   "id": "aytArtanAzalan",
+   "ders": "Matematik AYT",
+   "ad": "Artan - Azalan Fonksiyon"
+  },
+  {
+   "id": "aytOrtDegisim",
+   "ders": "Matematik AYT",
+   "ad": "Ortalama Değişim Hızı"
+  },
+  {
+   "id": "aytFonkDonusum",
+   "ders": "Matematik AYT",
+   "ad": "Dönüşüm - Ötelenme - Simetri"
+  },
+  {
+   "id": "aytUstel",
+   "ders": "Matematik AYT",
+   "ad": "Üstel Fonksiyon ve Tersi"
+  },
+  {
+   "id": "aytLog",
+   "ders": "Matematik AYT",
+   "ad": "Logaritma Fonksiyonu ve Grafiği"
+  },
+  {
+   "id": "aytLogOzellik",
+   "ders": "Matematik AYT",
+   "ad": "Logaritma Fonksiyonunun Özellikleri"
+  },
+  {
+   "id": "aytUstelLogDenklem",
+   "ders": "Matematik AYT",
+   "ad": "Üstel-Logaritmik Denklem ve Eşitsizlikler"
+  },
+  {
+   "id": "aytUstelLogProblem",
+   "ders": "Matematik AYT",
+   "ad": "Gerçek Hayat Durumları İle İlgili Üstel ve Logaritmik Fonksiyon Problemleri"
+  },
+  {
+   "id": "aytDiziFonk",
+   "ders": "Matematik AYT",
+   "ad": "Dizi ve Fonksiyon Kavramı Arasındaki İlişki"
+  },
+  {
+   "id": "aytDiziTerim",
+   "ders": "Matematik AYT",
+   "ad": "Genel Terimi ve İndirgenme Bağıntısı Verilen Bir Dizinin Terimleri"
+  },
+  {
+   "id": "aytAritmetik",
+   "ders": "Matematik AYT",
+   "ad": "Aritmetik Dizi"
+  },
+  {
+   "id": "aytGeometrik",
+   "ders": "Matematik AYT",
+   "ad": "Geometrik Dizi"
+  },
+  {
+   "id": "aytDiskriminant",
+   "ders": "Matematik AYT",
+   "ad": "Diskriminant Kavramı ve Denklemlerin Kökleri"
+  },
+  {
+   "id": "aytKarmasik",
+   "ders": "Matematik AYT",
+   "ad": "Karmaşık Sayılar"
+  },
+  {
+   "id": "aytKokKatsayi",
+   "ders": "Matematik AYT",
+   "ad": "Kök-Katsayı Bağıntıları"
+  },
+  {
+   "id": "aytTepe",
+   "ders": "Matematik AYT",
+   "ad": "Tepe Noktası ve Simetri Ekseni"
+  },
+  {
+   "id": "aytEnBuyuk",
+   "ders": "Matematik AYT",
+   "ad": "En Büyük - En Küçük Değer"
+  },
+  {
+   "id": "aytParabolDenklem",
+   "ders": "Matematik AYT",
+   "ad": "Parabol Denklemini Yazma"
+  },
+  {
+   "id": "aytParabolDogru",
+   "ders": "Matematik AYT",
+   "ad": "Parabol ve Doğrunun Birbirlerine Göre Durumları"
+  },
+  {
+   "id": "aytIkinciEsitsizlik",
+   "ders": "Matematik AYT",
+   "ad": "İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler"
+  },
+  {
+   "id": "aytEsitsizlikSistem",
+   "ders": "Matematik AYT",
+   "ad": "Eşitsizlik Sistemleri"
+  },
+  {
+   "id": "aytAciOlcu",
+   "ders": "Matematik AYT",
+   "ad": "Açı Ölçü Birimleri"
+  },
+  {
+   "id": "aytEsas",
+   "ders": "Matematik AYT",
+   "ad": "Esas Ölçü"
+  },
+  {
+   "id": "aytBirim",
+   "ders": "Matematik AYT",
+   "ad": "Birim Çemberde Trigonometrik Oranlar"
+  },
+  {
+   "id": "aytOzdeslik",
+   "ders": "Matematik AYT",
+   "ad": "Trigonometrik Özdeşlikler"
+  },
+  {
+   "id": "aytIsaret",
+   "ders": "Matematik AYT",
+   "ad": "Sıralama ve İşaret İncelemesi"
+  },
+  {
+   "id": "aytDonusum",
+   "ders": "Matematik AYT",
+   "ad": "Trigonometrik Dönüşümler"
+  },
+  {
+   "id": "aytPeriyot",
+   "ders": "Matematik AYT",
+   "ad": "Periyot ve Grafik"
+  },
+  {
+   "id": "aytTersTrig",
+   "ders": "Matematik AYT",
+   "ad": "Ters Trigonometrik Fonksiyonlar"
+  },
+  {
+   "id": "aytSinCos",
+   "ders": "Matematik AYT",
+   "ad": "Sinüs ve Cosinüs Teoremi"
+  },
+  {
+   "id": "aytToplamFark",
+   "ders": "Matematik AYT",
+   "ad": "Toplam-Fark ve Yarım Açı"
+  },
+  {
+   "id": "aytDenklem",
+   "ders": "Matematik AYT",
+   "ad": "Trigonometrik Denklemler"
+  },
+  {
+   "id": "aytLimitSagSol",
+   "ders": "Matematik AYT",
+   "ad": "Bir Fonksiyonun Sağdan ve Soldan Limit Kavramı"
+  },
+  {
+   "id": "aytLimitOzellik",
+   "ders": "Matematik AYT",
+   "ad": "Limitin Özellikleri ve Uygulamaları"
+  },
+  {
+   "id": "aytLimitParcali",
+   "ders": "Matematik AYT",
+   "ad": "Parçalı Fonksiyonların Limiti"
+  },
+  {
+   "id": "aytBelirsizlik",
+   "ders": "Matematik AYT",
+   "ad": "Belirsizlik Durumu"
+  },
+  {
+   "id": "aytLimitUyg",
+   "ders": "Matematik AYT",
+   "ad": "Limit Uygulamaları"
+  },
+  {
+   "id": "aytSureklilik",
+   "ders": "Matematik AYT",
+   "ad": "Süreklilik Kavramı"
+  },
+  {
+   "id": "aytAnlik",
+   "ders": "Matematik AYT",
+   "ad": "Anlık Değişim Hızı - Ortalama Değişim Hızı"
+  },
+  {
+   "id": "aytTurevSagSol",
+   "ders": "Matematik AYT",
+   "ad": "Soldan ve Sağdan Türev"
+  },
+  {
+   "id": "aytTurevKural",
+   "ders": "Matematik AYT",
+   "ad": "Türev Alma Kuralları"
+  },
+  {
+   "id": "aytBileskeTurev",
+   "ders": "Matematik AYT",
+   "ad": "Bileşke Fonksiyonun Türevi"
+  },
+  {
+   "id": "aytZincir",
+   "ders": "Matematik AYT",
+   "ad": "Zincir Kuralı"
+  },
+  {
+   "id": "aytIkinciTurev",
+   "ders": "Matematik AYT",
+   "ad": "İkinci Mertebeden Türev ve Türevin Limit Uygulamaları"
+  },
+  {
+   "id": "aytTurevGeo",
+   "ders": "Matematik AYT",
+   "ad": "Birinci Türevin Geometrik Yorumu"
+  },
+  {
+   "id": "aytArtanAzalanTurev",
+   "ders": "Matematik AYT",
+   "ad": "Artan ve Azalan Fonksiyonlar"
+  },
+  {
+   "id": "aytEkstremum",
+   "ders": "Matematik AYT",
+   "ad": "Yerel Ekstremum Noktaları"
+  },
+  {
+   "id": "aytPolinomGrafik",
+   "ders": "Matematik AYT",
+   "ad": "Polinom Fonksiyonlarının Grafikleri"
+  },
+  {
+   "id": "aytMaxMin",
+   "ders": "Matematik AYT",
+   "ad": "Maksimum - Minimum Problemleri"
+  },
+  {
+   "id": "aytBelirsizInt",
+   "ders": "Matematik AYT",
+   "ad": "Belirsiz İntegral ve İntegral Alma Kuralları"
+  },
+  {
+   "id": "aytDegiskenDegistirme",
+   "ders": "Matematik AYT",
+   "ad": "Değişken Değiştirme Metodu"
+  },
+  {
+   "id": "aytRiemann",
+   "ders": "Matematik AYT",
+   "ad": "Riemann Toplamı"
+  },
+  {
+   "id": "aytBelirliInt",
+   "ders": "Matematik AYT",
+   "ad": "Belirli İntegral ve Özellikleri"
+  },
+  {
+   "id": "aytIntAlan",
+   "ders": "Matematik AYT",
+   "ad": "Belirli İntegral ve Alan Hesabı"
+  },
+  {
+   "id": "fizGiris",
+   "ders": "Fizik",
+   "ad": "Fizik Bilimine Giriş"
+  },
+  {
+   "id": "fizMadde",
+   "ders": "Fizik",
+   "ad": "Madde ve Özellikleri"
+  },
+  {
+   "id": "fizBasinc",
+   "ders": "Fizik",
+   "ad": "Basınç"
+  },
+  {
+   "id": "fizVektor",
+   "ders": "Fizik",
+   "ad": "Vektörler ve Kuvvet"
+  },
+  {
+   "id": "fizTork",
+   "ders": "Fizik",
+   "ad": "Tork ve Tork Dengesi"
+  },
+  {
+   "id": "fizKesisen",
+   "ders": "Fizik",
+   "ad": "Kesişen Kuvvetlerin Dengesi"
+  },
+  {
+   "id": "fizKutleMerkezi",
+   "ders": "Fizik",
+   "ad": "Kütle ve Ağırlık Merkezi"
+  },
+  {
+   "id": "fizBasitMakine",
+   "ders": "Fizik",
+   "ad": "Basit Makineler"
+  },
+  {
+   "id": "fizKaldirma",
+   "ders": "Fizik",
+   "ad": "Kaldırma Kuvveti"
+  },
+  {
+   "id": "fizIsi",
+   "ders": "Fizik",
+   "ad": "Isı ve Sıcaklık"
+  },
+  {
+   "id": "fizAydinlanma",
+   "ders": "Fizik",
+   "ad": "Aydınlanma"
+  },
+  {
+   "id": "fizGolge",
+   "ders": "Fizik",
+   "ad": "Tam ve Yarı Gölge"
+  },
+  {
+   "id": "fizYansima",
+   "ders": "Fizik",
+   "ad": "Yansıma"
+  },
+  {
+   "id": "fizKuresel",
+   "ders": "Fizik",
+   "ad": "Küresel Aynalar"
+  },
+  {
+   "id": "fizCembersel",
+   "ders": "Fizik",
+   "ad": "Çembersel Hareket"
+  },
+  {
+   "id": "fizBHH",
+   "ders": "Fizik",
+   "ad": "Basit Harmonik Hareket"
+  },
+  {
+   "id": "fizDalgaMek",
+   "ders": "Fizik",
+   "ad": "Dalga Mekaniği (su dalgalarında kırınım ve girişim)"
+  },
+  {
+   "id": "fizKirilma",
+   "ders": "Fizik",
+   "ad": "Kırılma"
+  },
+  {
+   "id": "fizPrizma",
+   "ders": "Fizik",
+   "ad": "Prizmalar"
+  },
+  {
+   "id": "fizRenk",
+   "ders": "Fizik",
+   "ad": "Renk"
+  },
+  {
+   "id": "fizMercek",
+   "ders": "Fizik",
+   "ad": "Mercekler"
+  },
+  {
+   "id": "fizDalgaTemel",
+   "ders": "Fizik",
+   "ad": "Dalgalar (dalgaların temel özellikleri ve yay dalgaları)"
+  },
+  {
+   "id": "fizIsikTeori",
+   "ders": "Fizik",
+   "ad": "Işık Teorileri"
+  },
+  {
+   "id": "fizEMDalga",
+   "ders": "Fizik",
+   "ad": "Elektromanyetik Dalgalar"
+  },
+  {
+   "id": "fizBagil",
+   "ders": "Fizik",
+   "ad": "Bağıl Hareket"
+  },
+  {
+   "id": "fizNewton",
+   "ders": "Fizik",
+   "ad": "Newton'un Hareket Yasaları"
+  },
+  {
+   "id": "fizDalgaSu",
+   "ders": "Fizik",
+   "ad": "Dalgalar (su dalgaları, ses dalgaları ve deprem dalgaları)"
+  },
+  {
+   "id": "fizElektrostatik",
+   "ders": "Fizik",
+   "ad": "Elektrostatik"
+  },
+  {
+   "id": "fizAkim",
+   "ders": "Fizik",
+   "ad": "Elektrik Akımı"
+  },
+  {
+   "id": "fizUretec",
+   "ders": "Fizik",
+   "ad": "Üreteçler"
+  },
+  {
+   "id": "fizElGuc",
+   "ders": "Fizik",
+   "ad": "Elektriksel Enerji ve Güç"
+  },
+  {
+   "id": "fizLamba",
+   "ders": "Fizik",
+   "ad": "Lambalar"
+  },
+  {
+   "id": "fizAtom",
+   "ders": "Fizik",
+   "ad": "Atom Modelleri"
+  },
+  {
+   "id": "fizBuyukPatlama",
+   "ders": "Fizik",
+   "ad": "Büyük Patlama ve Evrenin Oluşumu"
+  },
+  {
+   "id": "fizRadyo",
+   "ders": "Fizik",
+   "ad": "Radyoaktivite"
+  },
+  {
+   "id": "fizModern",
+   "ders": "Fizik",
+   "ad": "Modern Fizik"
+  },
+  {
+   "id": "fizElKuvvet",
+   "ders": "Fizik",
+   "ad": "Elektriksel Kuvvet"
+  },
+  {
+   "id": "fizElAlan",
+   "ders": "Fizik",
+   "ad": "Elektrik Alan"
+  },
+  {
+   "id": "fizPotansiyel",
+   "ders": "Fizik",
+   "ad": "Elektrik Potansiyel Enerjisi ve Elektrik Potansiyeli"
+  },
+  {
+   "id": "fizDuzgunAlan",
+   "ders": "Fizik",
+   "ad": "Düzgün Elektrik Alan"
+  },
+  {
+   "id": "fizSigac",
+   "ders": "Fizik",
+   "ad": "Sığaçlar"
+  },
+  {
+   "id": "fizAtis",
+   "ders": "Fizik",
+   "ad": "Atışlar"
+  },
+  {
+   "id": "fizIs",
+   "ders": "Fizik",
+   "ad": "İş-Güç-Enerji"
+  },
+  {
+   "id": "fizMiknatis",
+   "ders": "Fizik",
+   "ad": "Mıknatıslar"
+  },
+  {
+   "id": "fizManyetikAlan",
+   "ders": "Fizik",
+   "ad": "Manyetik Alan"
+  },
+  {
+   "id": "fizManyetikKuvvet",
+   "ders": "Fizik",
+   "ad": "Manyetik Kuvvet"
+  },
+  {
+   "id": "fizIndukleme",
+   "ders": "Fizik",
+   "ad": "Elektromanyetik İndüklenme"
+  },
+  {
+   "id": "fizAC",
+   "ders": "Fizik",
+   "ad": "Alternatif Akım"
+  },
+  {
+   "id": "fizTrafo",
+   "ders": "Fizik",
+   "ad": "Transformatör"
+  },
+  {
+   "id": "fizMomentum",
+   "ders": "Fizik",
+   "ad": "İtme ve Momentum"
+  },
+  {
+   "id": "fizGoruntu",
+   "ders": "Fizik",
+   "ad": "Görüntüleme Teknikleri"
+  },
+  {
+   "id": "fizYariIletken",
+   "ders": "Fizik",
+   "ad": "Yarı İletken Teknolojisi"
+  },
+  {
+   "id": "fizNano",
+   "ders": "Fizik",
+   "ad": "Nanoteknoloji"
+  },
+  {
+   "id": "fizLazer",
+   "ders": "Fizik",
+   "ad": "Lazer"
+  },
+  {
+   "id": "pPisagor",
+   "ders": "Geometri",
+   "ad": "Pisagor bağıntısı",
+   "gizli": true,
+   "parcasi": "geoDik"
+  },
+  {
+   "id": "pOranlar",
+   "ders": "Geometri",
+   "ad": "Dik üçgende sin-cos-tan ve özel açılar",
+   "gizli": true,
+   "parcasi": "geoDik"
+  },
+  {
+   "id": "pBilesen",
+   "ders": "Fizik",
+   "ad": "Vektörü bileşenlerine ayırma",
+   "gizli": true,
+   "parcasi": "fizVektor"
+  }
+ ],
+ "baglar": [
+  {
+   "alt": "geoAci",
+   "ust": "geoUcgenAci",
+   "kullanim": "tam",
+   "gerekce": "Açı kavramları üçgende açıların tamamında kullanılır."
+  },
+  {
+   "alt": "geoUcgenAci",
+   "ust": "geoDik",
+   "kullanim": "cok",
+   "gerekce": "Dik üçgende açı hesapları, iç açılar toplamı."
+  },
+  {
+   "alt": "geoBenzer",
+   "ust": "geoDik",
+   "kullanim": "cok",
+   "gerekce": "Öklid bağıntıları ve trigonometrik oranlar benzerlikten gelir."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "geoBenzer",
+   "kullanim": "cok",
+   "gerekce": "Benzerlik oranı = oran-orantı."
+  },
+  {
+   "alt": "tytKok",
+   "ust": "geoDik",
+   "kullanim": "cok",
+   "gerekce": "Pisagor ve özel üçgenlerde köklü sonuçlar (√2, √3)."
+  },
+  {
+   "alt": "geoDik",
+   "ust": "geoAlan",
+   "kullanim": "az",
+   "gerekce": "Yükseklik çoğu zaman dik üçgenle bulunur."
+  },
+  {
+   "alt": "pOranlar",
+   "ust": "geoAlan",
+   "kullanim": "az",
+   "gerekce": "Alan = ½·a·b·sin C."
+  },
+  {
+   "alt": "geoUcgenAci",
+   "ust": "geoAciKenar",
+   "kullanim": "cok",
+   "gerekce": "Büyük açı karşısında büyük kenar."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "geoNokta",
+   "kullanim": "cok",
+   "gerekce": "İki nokta arası uzaklık = Pisagor."
+  },
+  {
+   "alt": "geoNokta",
+   "ust": "geoDogru",
+   "kullanim": "cok",
+   "gerekce": "Doğru denklemi noktalarla kurulur."
+  },
+  {
+   "alt": "pOranlar",
+   "ust": "geoDogru",
+   "kullanim": "az",
+   "gerekce": "Eğim = tan α."
+  },
+  {
+   "alt": "geoAci",
+   "ust": "aytAciOlcu",
+   "kullanim": "cok",
+   "gerekce": "Derece kavramı; radyana geçiş."
+  },
+  {
+   "alt": "aytAciOlcu",
+   "ust": "aytEsas",
+   "kullanim": "tam",
+   "gerekce": "Esas ölçü açı ölçüsü üzerine kurulur."
+  },
+  {
+   "alt": "pOranlar",
+   "ust": "aytBirim",
+   "kullanim": "tam",
+   "gerekce": "Birim çember, dik üçgendeki oranların genişletilmesidir."
+  },
+  {
+   "alt": "aytEsas",
+   "ust": "aytBirim",
+   "kullanim": "cok",
+   "gerekce": "90°'den büyük açıları birim çembere yerleştirme."
+  },
+  {
+   "alt": "geoCember",
+   "ust": "aytBirim",
+   "kullanim": "az",
+   "gerekce": "Yarıçap, merkez açı."
+  },
+  {
+   "alt": "geoNokta",
+   "ust": "aytBirim",
+   "kullanim": "az",
+   "gerekce": "Noktanın koordinatları (cos x, sin x)."
+  },
+  {
+   "alt": "tytKok",
+   "ust": "aytBirim",
+   "kullanim": "az",
+   "gerekce": "Özel açı değerleri köklüdür."
+  },
+  {
+   "alt": "aytBirim",
+   "ust": "aytOzdeslik",
+   "kullanim": "tam",
+   "gerekce": "Özdeşlikler oranların tanımlarından çıkar."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "aytOzdeslik",
+   "kullanim": "cok",
+   "gerekce": "sin²x + cos²x = 1."
+  },
+  {
+   "alt": "tytCarpan",
+   "ust": "aytOzdeslik",
+   "kullanim": "cok",
+   "gerekce": "Özdeşlik sorularında çarpanlara ayırma, iki kare farkı."
+  },
+  {
+   "alt": "aytBirim",
+   "ust": "aytIsaret",
+   "kullanim": "tam",
+   "gerekce": "Bölgelere göre işaret ve sıralama birim çemberden okunur."
+  },
+  {
+   "alt": "aytBirim",
+   "ust": "aytDonusum",
+   "kullanim": "tam",
+   "gerekce": "kπ/2 ∓ α biçimindeki açıların oranları (indirgeme) birim çember simetrisidir. Öğretmen modülü 7, 11. sınıf sırası."
+  },
+  {
+   "alt": "aytIsaret",
+   "ust": "aytDonusum",
+   "kullanim": "cok",
+   "gerekce": "İndirgemede işaret bölgeye göre belirlenir."
+  },
+  {
+   "alt": "aytBirim",
+   "ust": "aytPeriyot",
+   "kullanim": "tam",
+   "gerekce": "Grafik, birim çemberin açılmış hâlidir."
+  },
+  {
+   "alt": "aytPeriyodik",
+   "ust": "aytPeriyot",
+   "kullanim": "cok",
+   "gerekce": "Periyot kavramı."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytPeriyodik",
+   "kullanim": "cok",
+   "gerekce": "Fonksiyon kavramı."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytTers",
+   "kullanim": "cok",
+   "gerekce": "Ters fonksiyon, fonksiyon tanımına dayanır."
+  },
+  {
+   "alt": "aytTers",
+   "ust": "aytTersTrig",
+   "kullanim": "cok",
+   "gerekce": "arcsin, arccos ters fonksiyon mantığıdır."
+  },
+  {
+   "alt": "aytBirim",
+   "ust": "aytTersTrig",
+   "kullanim": "cok",
+   "gerekce": "Açıyı orandan geri bulma."
+  },
+  {
+   "alt": "aytPeriyot",
+   "ust": "aytTersTrig",
+   "kullanim": "az",
+   "gerekce": "Tanım kümesini kısıtlama grafikten görülür."
+  },
+  {
+   "alt": "aytBirim",
+   "ust": "aytSinCos",
+   "kullanim": "cok",
+   "gerekce": "Geniş açılı üçgende sin, cos değerleri."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "aytSinCos",
+   "kullanim": "az",
+   "gerekce": "Kosinüs teoremi Pisagor'un genelleşmesidir."
+  },
+  {
+   "alt": "geoCember",
+   "ust": "aytSinCos",
+   "kullanim": "az",
+   "gerekce": "Sinüs teoremi çemberle: a / sin A = 2R. Öğretmen modülü 7, 11. sınıf Çember ve Daire."
+  },
+  {
+   "alt": "aytOzdeslik",
+   "ust": "aytToplamFark",
+   "kullanim": "cok",
+   "gerekce": "Formüller özdeşliklerle sadeleştirilir."
+  },
+  {
+   "alt": "aytDonusum",
+   "ust": "aytToplamFark",
+   "kullanim": "az",
+   "gerekce": "Açıları uygun biçime çevirme."
+  },
+  {
+   "alt": "aytOzdeslik",
+   "ust": "aytDenklem",
+   "kullanim": "cok",
+   "gerekce": "Denklemi tek orana indirme."
+  },
+  {
+   "alt": "aytDonusum",
+   "ust": "aytDenklem",
+   "kullanim": "cok",
+   "gerekce": "Tüm çözümleri bulmak için açı dönüşümleri."
+  },
+  {
+   "alt": "aytPeriyot",
+   "ust": "aytDenklem",
+   "kullanim": "cok",
+   "gerekce": "Genel çözüm = kök + k·periyot."
+  },
+  {
+   "alt": "aytToplamFark",
+   "ust": "aytDenklem",
+   "kullanim": "az",
+   "gerekce": "İki kat açılı denklemler."
+  },
+  {
+   "alt": "aytTersTrig",
+   "ust": "aytDenklem",
+   "kullanim": "az",
+   "gerekce": "Özel olmayan değerlerde çözüm arcsin ile yazılır."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "aytDenklem",
+   "kullanim": "az",
+   "gerekce": "Yardımcı bilinmeyenle birinci/ikinci derece çözme."
+  },
+  {
+   "alt": "pOranlar",
+   "ust": "pBilesen",
+   "kullanim": "tam",
+   "gerekce": "Bileşenler F·cos α ve F·sin α."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "fizVektor",
+   "kullanim": "cok",
+   "gerekce": "Dik bileşenlerden bileşke büyüklüğü."
+  },
+  {
+   "alt": "aytSinCos",
+   "ust": "fizVektor",
+   "kullanim": "az",
+   "gerekce": "Bileşke: R² = a² + b² + 2ab·cos θ."
+  },
+  {
+   "alt": "fizVektor",
+   "ust": "fizKesisen",
+   "kullanim": "tam",
+   "gerekce": "Kuvvetlerin vektörel toplamı sıfır."
+  },
+  {
+   "alt": "aytSinCos",
+   "ust": "fizKesisen",
+   "kullanim": "cok",
+   "gerekce": "Lami teoremi = sinüs teoremi."
+  },
+  {
+   "alt": "pBilesen",
+   "ust": "fizTork",
+   "kullanim": "cok",
+   "gerekce": "Kuvvetin dik bileşeni (F·sin α)."
+  },
+  {
+   "alt": "pBilesen",
+   "ust": "fizNewton",
+   "kullanim": "cok",
+   "gerekce": "Eğik düzlemde mg·sin α, mg·cos α."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "fizNewton",
+   "kullanim": "cok",
+   "gerekce": "F = m·a denklemlerini çözme."
+  },
+  {
+   "alt": "pBilesen",
+   "ust": "fizAtis",
+   "kullanim": "tam",
+   "gerekce": "Eğik atış: v·cos α yatay, v·sin α düşey."
+  },
+  {
+   "alt": "fizNewton",
+   "ust": "fizAtis",
+   "kullanim": "az",
+   "gerekce": "Yer çekimi ivmesiyle hareket."
+  },
+  {
+   "alt": "aytToplamFark",
+   "ust": "fizAtis",
+   "kullanim": "az",
+   "gerekce": "Menzil formülünde sin 2α."
+  },
+  {
+   "alt": "pBilesen",
+   "ust": "fizIs",
+   "kullanim": "az",
+   "gerekce": "W = F·d·cos θ."
+  },
+  {
+   "alt": "fizVektor",
+   "ust": "fizBagil",
+   "kullanim": "cok",
+   "gerekce": "Bağıl hız vektör farkıdır."
+  },
+  {
+   "alt": "pOranlar",
+   "ust": "fizKirilma",
+   "kullanim": "az",
+   "gerekce": "Snell yasası (n₁ sin θ₁ = n₂ sin θ₂)."
+  },
+  {
+   "alt": "aytBirim",
+   "ust": "fizBHH",
+   "kullanim": "az",
+   "gerekce": "Referans çember, sinüsel konum."
+  },
+  {
+   "alt": "geoUcgenAci",
+   "ust": "geoEslik",
+   "kullanim": "cok",
+   "gerekce": "Eşlik koşulları açı-kenar eşitliğiyle kurulur."
+  },
+  {
+   "alt": "geoEslik",
+   "ust": "geoBenzer",
+   "kullanim": "cok",
+   "gerekce": "Eşlik, benzerlik oranının 1 olduğu hâldir."
+  },
+  {
+   "alt": "geoUcgenAci",
+   "ust": "geoBenzer",
+   "kullanim": "cok",
+   "gerekce": "Açı-açı benzerliği."
+  },
+  {
+   "alt": "geoUcgenAci",
+   "ust": "geoIkiz",
+   "kullanim": "cok",
+   "gerekce": "Taban açıları eşit."
+  },
+  {
+   "alt": "geoEslik",
+   "ust": "geoIkiz",
+   "kullanim": "az",
+   "gerekce": "Yüksekliğin ayırdığı eş üçgenler."
+  },
+  {
+   "alt": "geoIkiz",
+   "ust": "geoEskenar",
+   "kullanim": "tam",
+   "gerekce": "Eşkenar üçgen özel bir ikizkenar üçgendir."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "geoEskenar",
+   "kullanim": "cok",
+   "gerekce": "Yükseklik a√3/2."
+  },
+  {
+   "alt": "geoUcgenAci",
+   "ust": "geoAciortay",
+   "kullanim": "cok",
+   "gerekce": "Açıortay açıyı ikiye böler."
+  },
+  {
+   "alt": "geoBenzer",
+   "ust": "geoAciortay",
+   "kullanim": "cok",
+   "gerekce": "Açıortay teoremi oranla kurulur."
+  },
+  {
+   "alt": "geoBenzer",
+   "ust": "geoKenarortay",
+   "kullanim": "cok",
+   "gerekce": "Kenarortaylar ve ağırlık merkezi oranları."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "geoKenarortay",
+   "kullanim": "az",
+   "gerekce": "Kenarortay uzunluk bağıntısı."
+  },
+  {
+   "alt": "geoBenzer",
+   "ust": "geoAlan",
+   "kullanim": "az",
+   "gerekce": "Benzer üçgenlerde alanlar oranı."
+  },
+  {
+   "alt": "geoUcgenAci",
+   "ust": "geoCokgen",
+   "kullanim": "cok",
+   "gerekce": "İç açılar toplamı üçgenlere bölerek bulunur."
+  },
+  {
+   "alt": "geoCokgen",
+   "ust": "geoDortgen",
+   "kullanim": "cok",
+   "gerekce": "Dörtgen, dört kenarlı çokgendir."
+  },
+  {
+   "alt": "geoAlan",
+   "ust": "geoDortgen",
+   "kullanim": "cok",
+   "gerekce": "Dörtgen alanları üçgen alanlarından."
+  },
+  {
+   "alt": "geoDortgen",
+   "ust": "geoYamuk",
+   "kullanim": "cok",
+   "gerekce": "Yamuk özel bir dörtgendir."
+  },
+  {
+   "alt": "geoAlan",
+   "ust": "geoYamuk",
+   "kullanim": "cok",
+   "gerekce": "Yamukta alan."
+  },
+  {
+   "alt": "geoBenzer",
+   "ust": "geoYamuk",
+   "kullanim": "az",
+   "gerekce": "Köşegenlerin ayırdığı benzer üçgenler."
+  },
+  {
+   "alt": "geoDortgen",
+   "ust": "geoParalel",
+   "kullanim": "cok",
+   "gerekce": "Paralelkenar özel bir dörtgendir."
+  },
+  {
+   "alt": "geoAlan",
+   "ust": "geoParalel",
+   "kullanim": "cok",
+   "gerekce": "Paralelkenarda alan."
+  },
+  {
+   "alt": "geoParalel",
+   "ust": "geoEskDortgen",
+   "kullanim": "tam",
+   "gerekce": "Eşkenar dörtgen özel bir paralelkenardır."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "geoEskDortgen",
+   "kullanim": "cok",
+   "gerekce": "Köşegenler dik kesişir."
+  },
+  {
+   "alt": "geoParalel",
+   "ust": "geoDikdortgen",
+   "kullanim": "tam",
+   "gerekce": "Dikdörtgen özel bir paralelkenardır."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "geoDikdortgen",
+   "kullanim": "az",
+   "gerekce": "Köşegen uzunluğu."
+  },
+  {
+   "alt": "geoDikdortgen",
+   "ust": "geoKare",
+   "kullanim": "tam",
+   "gerekce": "Kare özel bir dikdörtgendir."
+  },
+  {
+   "alt": "geoEskDortgen",
+   "ust": "geoKare",
+   "kullanim": "cok",
+   "gerekce": "Kare aynı zamanda eşkenar dörtgendir."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "geoKare",
+   "kullanim": "az",
+   "gerekce": "Köşegen a√2."
+  },
+  {
+   "alt": "geoDortgen",
+   "ust": "geoDeltoid",
+   "kullanim": "cok",
+   "gerekce": "Deltoid özel bir dörtgendir."
+  },
+  {
+   "alt": "geoIkiz",
+   "ust": "geoDeltoid",
+   "kullanim": "cok",
+   "gerekce": "Deltoid iki ikizkenar üçgenden oluşur."
+  },
+  {
+   "alt": "geoCember",
+   "ust": "geoCemberAci",
+   "kullanim": "cok",
+   "gerekce": "Merkez ve çevre açılar çemberin elemanlarıyla."
+  },
+  {
+   "alt": "geoUcgenAci",
+   "ust": "geoCemberAci",
+   "kullanim": "cok",
+   "gerekce": "Çevre açı, üçgende açılarla."
+  },
+  {
+   "alt": "geoCember",
+   "ust": "geoCemberUzunluk",
+   "kullanim": "cok",
+   "gerekce": "Kiriş, teğet ve kesen uzunlukları."
+  },
+  {
+   "alt": "geoBenzer",
+   "ust": "geoCemberUzunluk",
+   "kullanim": "cok",
+   "gerekce": "Kuvvet bağıntıları benzerlikten gelir."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "geoCemberUzunluk",
+   "kullanim": "cok",
+   "gerekce": "Teğet uzunluğu Pisagor ile."
+  },
+  {
+   "alt": "geoCember",
+   "ust": "geoDaire",
+   "kullanim": "cok",
+   "gerekce": "Çevre ve alan yarıçapla."
+  },
+  {
+   "alt": "geoCemberAci",
+   "ust": "geoDaire",
+   "kullanim": "az",
+   "gerekce": "Daire diliminde merkez açı."
+  },
+  {
+   "alt": "geoDaire",
+   "ust": "geoKati",
+   "kullanim": "cok",
+   "gerekce": "Silindir, koni ve küre daireyle kurulur."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "geoKati",
+   "kullanim": "cok",
+   "gerekce": "Cisim köşegeni, koninin ana doğrusu."
+  },
+  {
+   "alt": "geoAlan",
+   "ust": "geoKati",
+   "kullanim": "az",
+   "gerekce": "Taban alanları."
+  },
+  {
+   "alt": "geoDortgen",
+   "ust": "geoKati",
+   "kullanim": "az",
+   "gerekce": "Prizmaların yüzleri."
+  },
+  {
+   "alt": "geoNokta",
+   "ust": "geoDonusum",
+   "kullanim": "cok",
+   "gerekce": "Öteleme, yansıma ve dönme koordinatlarla yapılır."
+  },
+  {
+   "alt": "geoDogru",
+   "ust": "geoDonusum",
+   "kullanim": "az",
+   "gerekce": "Bir doğruya göre simetri."
+  },
+  {
+   "alt": "geoDogru",
+   "ust": "geoCemberAnalitik",
+   "kullanim": "cok",
+   "gerekce": "Teğet ve kesen doğrular."
+  },
+  {
+   "alt": "geoCember",
+   "ust": "geoCemberAnalitik",
+   "kullanim": "cok",
+   "gerekce": "Merkez ve yarıçap."
+  },
+  {
+   "alt": "pPisagor",
+   "ust": "geoCemberAnalitik",
+   "kullanim": "cok",
+   "gerekce": "Çember denklemi uzaklıktan gelir."
+  },
+  {
+   "alt": "tytTemel",
+   "ust": "tytAsal",
+   "kullanim": "cok",
+   "gerekce": "Sayı türleri."
+  },
+  {
+   "alt": "tytTemel",
+   "ust": "tytBasamak",
+   "kullanim": "cok",
+   "gerekce": "Rakam ve sayı kavramı."
+  },
+  {
+   "alt": "tytAsal",
+   "ust": "tytBasamak",
+   "kullanim": "cok",
+   "gerekce": "Asal çarpanlara ayırma asallarla."
+  },
+  {
+   "alt": "tytBasamak",
+   "ust": "tytBolme",
+   "kullanim": "cok",
+   "gerekce": "Bölünebilme kuralları basamaklarla."
+  },
+  {
+   "alt": "tytAsal",
+   "ust": "tytBolme",
+   "kullanim": "cok",
+   "gerekce": "Asal bölenler."
+  },
+  {
+   "alt": "tytBolme",
+   "ust": "tytEbob",
+   "kullanim": "tam",
+   "gerekce": "EBOB-EKOK bölünebilme üzerine kurulur."
+  },
+  {
+   "alt": "tytAsal",
+   "ust": "tytEbob",
+   "kullanim": "cok",
+   "gerekce": "Asal çarpanlarla EBOB-EKOK."
+  },
+  {
+   "alt": "tytTemel",
+   "ust": "tytRasyonel",
+   "kullanim": "cok",
+   "gerekce": "Sayı kümeleri."
+  },
+  {
+   "alt": "tytEbob",
+   "ust": "tytRasyonel",
+   "kullanim": "az",
+   "gerekce": "Payda eşitleme EKOK ile."
+  },
+  {
+   "alt": "tytRasyonel",
+   "ust": "tytDenklem",
+   "kullanim": "cok",
+   "gerekce": "Kesirli katsayılar."
+  },
+  {
+   "alt": "tytTemel",
+   "ust": "tytDenklem",
+   "kullanim": "cok",
+   "gerekce": "İşlem önceliği, işaretler."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "tytEsitsizlik",
+   "kullanim": "tam",
+   "gerekce": "Eşitsizlik denklem çözümünün devamıdır."
+  },
+  {
+   "alt": "tytEsitsizlik",
+   "ust": "tytMutlak",
+   "kullanim": "cok",
+   "gerekce": "Mutlak değerli eşitsizlikler."
+  },
+  {
+   "alt": "tytTemel",
+   "ust": "tytMutlak",
+   "kullanim": "cok",
+   "gerekce": "Sayının işareti."
+  },
+  {
+   "alt": "tytTemel",
+   "ust": "tytUslu",
+   "kullanim": "cok",
+   "gerekce": "Negatif tabanlar, tek-çift kuvvetler."
+  },
+  {
+   "alt": "tytUslu",
+   "ust": "tytKok",
+   "kullanim": "tam",
+   "gerekce": "Kök, rasyonel üstür."
+  },
+  {
+   "alt": "tytUslu",
+   "ust": "tytCarpan",
+   "kullanim": "az",
+   "gerekce": "Kuvvetli ifadelerde ortak çarpan."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "tytCarpan",
+   "kullanim": "az",
+   "gerekce": "Çarpanlara ayırarak denklem çözme."
+  },
+  {
+   "alt": "tytCarpan",
+   "ust": "tytPolinom",
+   "kullanim": "cok",
+   "gerekce": "Polinomlarda çarpanlara ayırma."
+  },
+  {
+   "alt": "tytUslu",
+   "ust": "tytPolinom",
+   "kullanim": "az",
+   "gerekce": "Derece kavramı."
+  },
+  {
+   "alt": "tytRasyonel",
+   "ust": "tytOran",
+   "kullanim": "cok",
+   "gerekce": "Oran bir kesirdir."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "tytSayiP",
+   "kullanim": "tam",
+   "gerekce": "Sayı problemleri denklem kurmaktır."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "tytKesirP",
+   "kullanim": "tam",
+   "gerekce": "Denklem kurma."
+  },
+  {
+   "alt": "tytRasyonel",
+   "ust": "tytKesirP",
+   "kullanim": "cok",
+   "gerekce": "Kesirlerle işlem."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "tytYasP",
+   "kullanim": "tam",
+   "gerekce": "Denklem kurma."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "tytYuzdeP",
+   "kullanim": "cok",
+   "gerekce": "Yüzde, 100 tabanlı orandır."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "tytYuzdeP",
+   "kullanim": "cok",
+   "gerekce": "Denklem kurma."
+  },
+  {
+   "alt": "tytYuzdeP",
+   "ust": "tytKarP",
+   "kullanim": "tam",
+   "gerekce": "Kâr-zarar yüzde problemidir."
+  },
+  {
+   "alt": "tytYuzdeP",
+   "ust": "tytKarisimP",
+   "kullanim": "cok",
+   "gerekce": "Karışım oranı yüzdeyle."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "tytKarisimP",
+   "kullanim": "cok",
+   "gerekce": "Oranla karıştırma."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "tytHareketP",
+   "kullanim": "cok",
+   "gerekce": "Hız = yol / zaman."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "tytHareketP",
+   "kullanim": "cok",
+   "gerekce": "Denklem kurma."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "tytIsciP",
+   "kullanim": "cok",
+   "gerekce": "İş hızı oranı."
+  },
+  {
+   "alt": "tytRasyonel",
+   "ust": "tytIsciP",
+   "kullanim": "cok",
+   "gerekce": "1/a + 1/b biçimi."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "tytGrafikP",
+   "kullanim": "cok",
+   "gerekce": "Grafikten oran okuma."
+  },
+  {
+   "alt": "tytHareketP",
+   "ust": "tytGrafikP",
+   "kullanim": "az",
+   "gerekce": "Konum-zaman grafikleri."
+  },
+  {
+   "alt": "tytYuzdeP",
+   "ust": "tytVeri",
+   "kullanim": "az",
+   "gerekce": "Yüzdelik dağılımlar."
+  },
+  {
+   "alt": "tytRasyonel",
+   "ust": "tytVeri",
+   "kullanim": "az",
+   "gerekce": "Ortalama hesabı."
+  },
+  {
+   "alt": "tytKume",
+   "ust": "tytMantik",
+   "kullanim": "az",
+   "gerekce": "Önermeler ve kümeler."
+  },
+  {
+   "alt": "tytAsal",
+   "ust": "tytPerm",
+   "kullanim": "cok",
+   "gerekce": "Faktöriyel."
+  },
+  {
+   "alt": "tytPerm",
+   "ust": "tytKomb",
+   "kullanim": "tam",
+   "gerekce": "Kombinasyon permütasyondan türetilir."
+  },
+  {
+   "alt": "tytKomb",
+   "ust": "tytBinom",
+   "kullanim": "cok",
+   "gerekce": "Binom katsayıları kombinasyondur."
+  },
+  {
+   "alt": "tytKomb",
+   "ust": "tytOlasilik",
+   "kullanim": "cok",
+   "gerekce": "Örnek uzayı sayma."
+  },
+  {
+   "alt": "tytPerm",
+   "ust": "tytOlasilik",
+   "kullanim": "cok",
+   "gerekce": "Sıralı sayma."
+  },
+  {
+   "alt": "tytKume",
+   "ust": "tytOlasilik",
+   "kullanim": "az",
+   "gerekce": "Olay = kümedir."
+  },
+  {
+   "alt": "tytRasyonel",
+   "ust": "tytOlasilik",
+   "kullanim": "az",
+   "gerekce": "Olasılık bir kesirdir."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "geoAlan",
+   "kullanim": "az",
+   "gerekce": "Alan problemlerinde denklem kurma."
+  },
+  {
+   "alt": "tytKume",
+   "ust": "aytFonk",
+   "kullanim": "cok",
+   "gerekce": "Fonksiyon, kümeler arasında bir bağıntıdır."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytFonkCesit",
+   "kullanim": "tam",
+   "gerekce": "Fonksiyon çeşitleri tanımdan ayrılır."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytFonkIslem",
+   "kullanim": "cok",
+   "gerekce": "Tanım ve görüntü kümeleri."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytParcali",
+   "kullanim": "cok",
+   "gerekce": "Parçalı tanım."
+  },
+  {
+   "alt": "tytMutlak",
+   "ust": "aytParcali",
+   "kullanim": "cok",
+   "gerekce": "Mutlak değer fonksiyonu."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytGrafik",
+   "kullanim": "cok",
+   "gerekce": "Grafik fonksiyonun gösterimidir."
+  },
+  {
+   "alt": "aytFonkCesit",
+   "ust": "aytTers",
+   "kullanim": "cok",
+   "gerekce": "Birebir ve örten fonksiyon tersinirdir."
+  },
+  {
+   "alt": "aytFonkIslem",
+   "ust": "aytBileske",
+   "kullanim": "cok",
+   "gerekce": "Bileşke bir işlemdir."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytBileske",
+   "kullanim": "cok",
+   "gerekce": "Tanım kümesi uyumu."
+  },
+  {
+   "alt": "aytBileske",
+   "ust": "aytBileskeTers",
+   "kullanim": "tam",
+   "gerekce": "Bileşke ve ters birlikte."
+  },
+  {
+   "alt": "aytTers",
+   "ust": "aytBileskeTers",
+   "kullanim": "tam",
+   "gerekce": "Bileşke ve ters birlikte."
+  },
+  {
+   "alt": "aytGrafik",
+   "ust": "aytArtanAzalan",
+   "kullanim": "cok",
+   "gerekce": "Grafikten artanlık okuma."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytArtanAzalan",
+   "kullanim": "cok",
+   "gerekce": "Tanım."
+  },
+  {
+   "alt": "aytGrafik",
+   "ust": "aytOrtDegisim",
+   "kullanim": "cok",
+   "gerekce": "Eğimle değişim hızı."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "aytOrtDegisim",
+   "kullanim": "az",
+   "gerekce": "Değişim oranı."
+  },
+  {
+   "alt": "aytGrafik",
+   "ust": "aytFonkDonusum",
+   "kullanim": "cok",
+   "gerekce": "Grafiği öteleme ve yansıtma."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytFonkDonusum",
+   "kullanim": "cok",
+   "gerekce": "f(x−a), −f(x) gösterimi."
+  },
+  {
+   "alt": "tytUslu",
+   "ust": "aytUstel",
+   "kullanim": "tam",
+   "gerekce": "Üstel fonksiyon üslü ifade üzerine kurulur."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytUstel",
+   "kullanim": "cok",
+   "gerekce": "Fonksiyon kavramı."
+  },
+  {
+   "alt": "aytTers",
+   "ust": "aytLog",
+   "kullanim": "cok",
+   "gerekce": "Logaritma üstelin tersidir."
+  },
+  {
+   "alt": "aytUstel",
+   "ust": "aytLog",
+   "kullanim": "tam",
+   "gerekce": "Logaritma üstel fonksiyondan tanımlanır."
+  },
+  {
+   "alt": "aytLog",
+   "ust": "aytLogOzellik",
+   "kullanim": "tam",
+   "gerekce": "Özellikler tanımdan çıkar."
+  },
+  {
+   "alt": "tytUslu",
+   "ust": "aytLogOzellik",
+   "kullanim": "cok",
+   "gerekce": "Üs kurallarının karşılığı."
+  },
+  {
+   "alt": "aytLogOzellik",
+   "ust": "aytUstelLogDenklem",
+   "kullanim": "cok",
+   "gerekce": "Denklemde logaritma kuralları."
+  },
+  {
+   "alt": "aytUstel",
+   "ust": "aytUstelLogDenklem",
+   "kullanim": "cok",
+   "gerekce": "Üstel denklemler."
+  },
+  {
+   "alt": "tytEsitsizlik",
+   "ust": "aytUstelLogDenklem",
+   "kullanim": "az",
+   "gerekce": "Eşitsizlik çözümü."
+  },
+  {
+   "alt": "aytUstelLogDenklem",
+   "ust": "aytUstelLogProblem",
+   "kullanim": "cok",
+   "gerekce": "Problemler denklem kurmaktır."
+  },
+  {
+   "alt": "tytYuzdeP",
+   "ust": "aytUstelLogProblem",
+   "kullanim": "az",
+   "gerekce": "Faiz ve büyüme yüzdeyle."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytDiziFonk",
+   "kullanim": "cok",
+   "gerekce": "Dizi, doğal sayılarda tanımlı fonksiyondur."
+  },
+  {
+   "alt": "aytDiziFonk",
+   "ust": "aytDiziTerim",
+   "kullanim": "cok",
+   "gerekce": "Genel terim."
+  },
+  {
+   "alt": "aytDiziTerim",
+   "ust": "aytAritmetik",
+   "kullanim": "cok",
+   "gerekce": "Ortak fark."
+  },
+  {
+   "alt": "aytDiziTerim",
+   "ust": "aytGeometrik",
+   "kullanim": "cok",
+   "gerekce": "Ortak çarpan."
+  },
+  {
+   "alt": "tytUslu",
+   "ust": "aytGeometrik",
+   "kullanim": "cok",
+   "gerekce": "Genel terim üslüdür."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "aytAritmetik",
+   "kullanim": "az",
+   "gerekce": "Terimlerden denklem kurma."
+  },
+  {
+   "alt": "tytCarpan",
+   "ust": "aytDiskriminant",
+   "kullanim": "cok",
+   "gerekce": "Çarpanlara ayırarak kök bulma."
+  },
+  {
+   "alt": "tytDenklem",
+   "ust": "aytDiskriminant",
+   "kullanim": "cok",
+   "gerekce": "Denklem çözme."
+  },
+  {
+   "alt": "tytKok",
+   "ust": "aytDiskriminant",
+   "kullanim": "cok",
+   "gerekce": "Kökler köklü ifadedir."
+  },
+  {
+   "alt": "tytPolinom",
+   "ust": "aytDiskriminant",
+   "kullanim": "az",
+   "gerekce": "İkinci dereceden polinom."
+  },
+  {
+   "alt": "aytDiskriminant",
+   "ust": "aytKarmasik",
+   "kullanim": "cok",
+   "gerekce": "Δ<0 iken karmaşık kökler."
+  },
+  {
+   "alt": "tytKok",
+   "ust": "aytKarmasik",
+   "kullanim": "az",
+   "gerekce": "i = √−1."
+  },
+  {
+   "alt": "aytDiskriminant",
+   "ust": "aytKokKatsayi",
+   "kullanim": "cok",
+   "gerekce": "Köklerin toplamı ve çarpımı."
+  },
+  {
+   "alt": "tytPolinom",
+   "ust": "aytKokKatsayi",
+   "kullanim": "az",
+   "gerekce": "Katsayılar."
+  },
+  {
+   "alt": "aytDiskriminant",
+   "ust": "aytTepe",
+   "kullanim": "cok",
+   "gerekce": "Tepe noktası −b/2a."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytTepe",
+   "kullanim": "az",
+   "gerekce": "İkinci dereceden fonksiyon."
+  },
+  {
+   "alt": "aytTepe",
+   "ust": "aytEnBuyuk",
+   "kullanim": "tam",
+   "gerekce": "En büyük/küçük değer tepe noktasındadır."
+  },
+  {
+   "alt": "aytTepe",
+   "ust": "aytParabolDenklem",
+   "kullanim": "cok",
+   "gerekce": "Tepe noktasından denklem."
+  },
+  {
+   "alt": "aytKokKatsayi",
+   "ust": "aytParabolDenklem",
+   "kullanim": "cok",
+   "gerekce": "Köklerden denklem."
+  },
+  {
+   "alt": "aytDiskriminant",
+   "ust": "aytParabolDogru",
+   "kullanim": "cok",
+   "gerekce": "Kesişim, ortak denklemin diskriminantıdır."
+  },
+  {
+   "alt": "aytParabolDenklem",
+   "ust": "aytParabolDogru",
+   "kullanim": "az",
+   "gerekce": "Parabolün denklemi."
+  },
+  {
+   "alt": "geoDogru",
+   "ust": "aytParabolDogru",
+   "kullanim": "az",
+   "gerekce": "Doğru denklemi."
+  },
+  {
+   "alt": "tytEsitsizlik",
+   "ust": "aytIkinciEsitsizlik",
+   "kullanim": "cok",
+   "gerekce": "Eşitsizlik kuralları."
+  },
+  {
+   "alt": "aytDiskriminant",
+   "ust": "aytIkinciEsitsizlik",
+   "kullanim": "cok",
+   "gerekce": "Kökler ve işaret tablosu."
+  },
+  {
+   "alt": "aytIkinciEsitsizlik",
+   "ust": "aytEsitsizlikSistem",
+   "kullanim": "tam",
+   "gerekce": "Sistem, eşitsizliklerin ortak çözümüdür."
+  },
+  {
+   "alt": "aytFonk",
+   "ust": "aytLimitSagSol",
+   "kullanim": "cok",
+   "gerekce": "Fonksiyon değerlerine yaklaşma."
+  },
+  {
+   "alt": "aytGrafik",
+   "ust": "aytLimitSagSol",
+   "kullanim": "cok",
+   "gerekce": "Grafikten limit okuma."
+  },
+  {
+   "alt": "aytLimitSagSol",
+   "ust": "aytLimitOzellik",
+   "kullanim": "tam",
+   "gerekce": "Özellikler limit tanımı üzerine."
+  },
+  {
+   "alt": "aytLimitSagSol",
+   "ust": "aytLimitParcali",
+   "kullanim": "cok",
+   "gerekce": "Sağdan-soldan limit."
+  },
+  {
+   "alt": "aytParcali",
+   "ust": "aytLimitParcali",
+   "kullanim": "cok",
+   "gerekce": "Parçalı fonksiyon."
+  },
+  {
+   "alt": "aytLimitOzellik",
+   "ust": "aytBelirsizlik",
+   "kullanim": "cok",
+   "gerekce": "Limit kuralları."
+  },
+  {
+   "alt": "tytCarpan",
+   "ust": "aytBelirsizlik",
+   "kullanim": "cok",
+   "gerekce": "0/0 belirsizliğinde sadeleştirme."
+  },
+  {
+   "alt": "tytKok",
+   "ust": "aytBelirsizlik",
+   "kullanim": "az",
+   "gerekce": "Eşlenikle çarpma."
+  },
+  {
+   "alt": "aytLimitOzellik",
+   "ust": "aytLimitUyg",
+   "kullanim": "cok",
+   "gerekce": "Limit kuralları."
+  },
+  {
+   "alt": "aytBelirsizlik",
+   "ust": "aytLimitUyg",
+   "kullanim": "cok",
+   "gerekce": "Belirsizlik giderme."
+  },
+  {
+   "alt": "aytBirim",
+   "ust": "aytLimitUyg",
+   "kullanim": "az",
+   "gerekce": "Trigonometrik limitler."
+  },
+  {
+   "alt": "aytLimitSagSol",
+   "ust": "aytSureklilik",
+   "kullanim": "cok",
+   "gerekce": "Süreklilik limitle tanımlanır."
+  },
+  {
+   "alt": "aytParcali",
+   "ust": "aytSureklilik",
+   "kullanim": "az",
+   "gerekce": "Parçalı fonksiyonda süreklilik."
+  },
+  {
+   "alt": "aytOrtDegisim",
+   "ust": "aytAnlik",
+   "kullanim": "cok",
+   "gerekce": "Anlık hız ortalama hızın limitidir."
+  },
+  {
+   "alt": "aytLimitOzellik",
+   "ust": "aytAnlik",
+   "kullanim": "cok",
+   "gerekce": "Türev bir limittir."
+  },
+  {
+   "alt": "aytAnlik",
+   "ust": "aytTurevSagSol",
+   "kullanim": "cok",
+   "gerekce": "Türev tanımı."
+  },
+  {
+   "alt": "aytLimitParcali",
+   "ust": "aytTurevSagSol",
+   "kullanim": "cok",
+   "gerekce": "Sağdan-soldan limit."
+  },
+  {
+   "alt": "aytSureklilik",
+   "ust": "aytTurevSagSol",
+   "kullanim": "az",
+   "gerekce": "Türevlenebilirlik ve süreklilik."
+  },
+  {
+   "alt": "aytAnlik",
+   "ust": "aytTurevKural",
+   "kullanim": "cok",
+   "gerekce": "Kurallar tanımdan çıkar."
+  },
+  {
+   "alt": "tytUslu",
+   "ust": "aytTurevKural",
+   "kullanim": "az",
+   "gerekce": "xⁿ türevi."
+  },
+  {
+   "alt": "aytOzdeslik",
+   "ust": "aytTurevKural",
+   "kullanim": "az",
+   "gerekce": "Trigonometrik türevler."
+  },
+  {
+   "alt": "aytLogOzellik",
+   "ust": "aytTurevKural",
+   "kullanim": "az",
+   "gerekce": "Logaritmik türev."
+  },
+  {
+   "alt": "aytTurevKural",
+   "ust": "aytBileskeTurev",
+   "kullanim": "cok",
+   "gerekce": "Türev kuralları."
+  },
+  {
+   "alt": "aytBileske",
+   "ust": "aytBileskeTurev",
+   "kullanim": "cok",
+   "gerekce": "Bileşke fonksiyon."
+  },
+  {
+   "alt": "aytBileskeTurev",
+   "ust": "aytZincir",
+   "kullanim": "tam",
+   "gerekce": "Zincir kuralı bileşkenin türevidir."
+  },
+  {
+   "alt": "aytTurevKural",
+   "ust": "aytIkinciTurev",
+   "kullanim": "cok",
+   "gerekce": "Türevin türevi."
+  },
+  {
+   "alt": "aytBelirsizlik",
+   "ust": "aytIkinciTurev",
+   "kullanim": "az",
+   "gerekce": "L’Hospital ile limit."
+  },
+  {
+   "alt": "aytTurevKural",
+   "ust": "aytTurevGeo",
+   "kullanim": "cok",
+   "gerekce": "Türev eğimdir."
+  },
+  {
+   "alt": "geoDogru",
+   "ust": "aytTurevGeo",
+   "kullanim": "cok",
+   "gerekce": "Teğet doğrusunun denklemi."
+  },
+  {
+   "alt": "aytTurevKural",
+   "ust": "aytArtanAzalanTurev",
+   "kullanim": "cok",
+   "gerekce": "Türevin işareti."
+  },
+  {
+   "alt": "aytArtanAzalan",
+   "ust": "aytArtanAzalanTurev",
+   "kullanim": "cok",
+   "gerekce": "Artan-azalan kavramı."
+  },
+  {
+   "alt": "aytIkinciEsitsizlik",
+   "ust": "aytArtanAzalanTurev",
+   "kullanim": "az",
+   "gerekce": "İşaret tablosu."
+  },
+  {
+   "alt": "aytArtanAzalanTurev",
+   "ust": "aytEkstremum",
+   "kullanim": "cok",
+   "gerekce": "İşaret değişimi ekstremumdur."
+  },
+  {
+   "alt": "aytIkinciTurev",
+   "ust": "aytEkstremum",
+   "kullanim": "az",
+   "gerekce": "İkinci türev testi."
+  },
+  {
+   "alt": "aytEkstremum",
+   "ust": "aytPolinomGrafik",
+   "kullanim": "cok",
+   "gerekce": "Ekstremumlarla grafik çizme."
+  },
+  {
+   "alt": "aytArtanAzalanTurev",
+   "ust": "aytPolinomGrafik",
+   "kullanim": "cok",
+   "gerekce": "Artan-azalan aralıklar."
+  },
+  {
+   "alt": "aytEkstremum",
+   "ust": "aytMaxMin",
+   "kullanim": "cok",
+   "gerekce": "Maksimum-minimum problemleri ekstremumdur."
+  },
+  {
+   "alt": "aytEnBuyuk",
+   "ust": "aytMaxMin",
+   "kullanim": "az",
+   "gerekce": "Parabolde en büyük değer."
+  },
+  {
+   "alt": "geoAlan",
+   "ust": "aytMaxMin",
+   "kullanim": "az",
+   "gerekce": "Alan en büyükleme."
+  },
+  {
+   "alt": "aytTurevKural",
+   "ust": "aytBelirsizInt",
+   "kullanim": "tam",
+   "gerekce": "İntegral türevin tersidir."
+  },
+  {
+   "alt": "aytBelirsizInt",
+   "ust": "aytDegiskenDegistirme",
+   "kullanim": "cok",
+   "gerekce": "İntegral kuralları."
+  },
+  {
+   "alt": "aytZincir",
+   "ust": "aytDegiskenDegistirme",
+   "kullanim": "cok",
+   "gerekce": "Değişken değiştirme zincir kuralının tersidir."
+  },
+  {
+   "alt": "aytAritmetik",
+   "ust": "aytRiemann",
+   "kullanim": "az",
+   "gerekce": "Toplam sembolü."
+  },
+  {
+   "alt": "aytLimitOzellik",
+   "ust": "aytRiemann",
+   "kullanim": "az",
+   "gerekce": "Toplamın limiti."
+  },
+  {
+   "alt": "geoAlan",
+   "ust": "aytRiemann",
+   "kullanim": "az",
+   "gerekce": "Dikdörtgenlerle alan."
+  },
+  {
+   "alt": "aytBelirsizInt",
+   "ust": "aytBelirliInt",
+   "kullanim": "cok",
+   "gerekce": "Belirli integral ters türevle hesaplanır."
+  },
+  {
+   "alt": "aytRiemann",
+   "ust": "aytBelirliInt",
+   "kullanim": "cok",
+   "gerekce": "Tanım Riemann toplamıdır."
+  },
+  {
+   "alt": "aytDegiskenDegistirme",
+   "ust": "aytBelirliInt",
+   "kullanim": "cok",
+   "gerekce": "Sınırlı değişken değiştirme."
+  },
+  {
+   "alt": "aytBelirliInt",
+   "ust": "aytIntAlan",
+   "kullanim": "tam",
+   "gerekce": "Alan belirli integraldir."
+  },
+  {
+   "alt": "aytPolinomGrafik",
+   "ust": "aytIntAlan",
+   "kullanim": "az",
+   "gerekce": "Eğrinin konumu."
+  },
+  {
+   "alt": "fizGiris",
+   "ust": "fizMadde",
+   "kullanim": "az",
+   "gerekce": "Nicelikler ve birimler."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "fizMadde",
+   "kullanim": "cok",
+   "gerekce": "Özkütle oranı."
+  },
+  {
+   "alt": "fizMadde",
+   "ust": "fizBasinc",
+   "kullanim": "cok",
+   "gerekce": "Özkütle."
+  },
+  {
+   "alt": "fizBasinc",
+   "ust": "fizKaldirma",
+   "kullanim": "cok",
+   "gerekce": "Kaldırma kuvveti basınç farkıdır."
+  },
+  {
+   "alt": "fizMadde",
+   "ust": "fizKaldirma",
+   "kullanim": "cok",
+   "gerekce": "Özkütle."
+  },
+  {
+   "alt": "fizMadde",
+   "ust": "fizIsi",
+   "kullanim": "az",
+   "gerekce": "Maddenin halleri."
+  },
+  {
+   "alt": "fizVektor",
+   "ust": "fizTork",
+   "kullanim": "az",
+   "gerekce": "Kuvvet vektörü."
+  },
+  {
+   "alt": "fizTork",
+   "ust": "fizKutleMerkezi",
+   "kullanim": "cok",
+   "gerekce": "Tork dengesiyle ağırlık merkezi."
+  },
+  {
+   "alt": "fizTork",
+   "ust": "fizBasitMakine",
+   "kullanim": "cok",
+   "gerekce": "Kaldıraç tork dengesidir."
+  },
+  {
+   "alt": "fizKesisen",
+   "ust": "fizBasitMakine",
+   "kullanim": "az",
+   "gerekce": "Makaralarda kuvvet dengesi."
+  },
+  {
+   "alt": "fizAydinlanma",
+   "ust": "fizGolge",
+   "kullanim": "cok",
+   "gerekce": "Işığın doğrusal yayılması."
+  },
+  {
+   "alt": "fizYansima",
+   "ust": "fizKuresel",
+   "kullanim": "tam",
+   "gerekce": "Küresel aynada yansıma."
+  },
+  {
+   "alt": "geoBenzer",
+   "ust": "fizKuresel",
+   "kullanim": "cok",
+   "gerekce": "Görüntü boyu oranı benzerlikle."
+  },
+  {
+   "alt": "fizYansima",
+   "ust": "fizKirilma",
+   "kullanim": "az",
+   "gerekce": "Sınır yüzeyinde ışık."
+  },
+  {
+   "alt": "fizKirilma",
+   "ust": "fizPrizma",
+   "kullanim": "cok",
+   "gerekce": "Prizmada kırılma."
+  },
+  {
+   "alt": "fizKirilma",
+   "ust": "fizMercek",
+   "kullanim": "cok",
+   "gerekce": "Mercekte kırılma."
+  },
+  {
+   "alt": "geoBenzer",
+   "ust": "fizMercek",
+   "kullanim": "cok",
+   "gerekce": "Görüntü boyu oranı."
+  },
+  {
+   "alt": "fizPrizma",
+   "ust": "fizRenk",
+   "kullanim": "cok",
+   "gerekce": "Beyaz ışığın ayrışması."
+  },
+  {
+   "alt": "fizKirilma",
+   "ust": "fizRenk",
+   "kullanim": "az",
+   "gerekce": "Renklere göre kırılma."
+  },
+  {
+   "alt": "fizDalgaTemel",
+   "ust": "fizDalgaSu",
+   "kullanim": "cok",
+   "gerekce": "Dalga kavramları."
+  },
+  {
+   "alt": "fizDalgaTemel",
+   "ust": "fizDalgaMek",
+   "kullanim": "cok",
+   "gerekce": "Dalga kavramları."
+  },
+  {
+   "alt": "fizDalgaSu",
+   "ust": "fizDalgaMek",
+   "kullanim": "cok",
+   "gerekce": "Su dalgalarında kırınım ve girişim."
+  },
+  {
+   "alt": "pOranlar",
+   "ust": "fizDalgaMek",
+   "kullanim": "az",
+   "gerekce": "Girişimde d·sin θ."
+  },
+  {
+   "alt": "fizDalgaMek",
+   "ust": "fizIsikTeori",
+   "kullanim": "cok",
+   "gerekce": "Girişim ışığın dalga modelini destekler."
+  },
+  {
+   "alt": "fizRenk",
+   "ust": "fizIsikTeori",
+   "kullanim": "az",
+   "gerekce": "Renk ve dalga boyu."
+  },
+  {
+   "alt": "fizIsikTeori",
+   "ust": "fizEMDalga",
+   "kullanim": "cok",
+   "gerekce": "Işık elektromanyetik dalgadır."
+  },
+  {
+   "alt": "fizDalgaTemel",
+   "ust": "fizEMDalga",
+   "kullanim": "cok",
+   "gerekce": "Dalga kavramları."
+  },
+  {
+   "alt": "fizNewton",
+   "ust": "fizIs",
+   "kullanim": "az",
+   "gerekce": "Kuvvet ve hareket."
+  },
+  {
+   "alt": "fizNewton",
+   "ust": "fizMomentum",
+   "kullanim": "cok",
+   "gerekce": "İtme = kuvvet × zaman."
+  },
+  {
+   "alt": "fizIs",
+   "ust": "fizMomentum",
+   "kullanim": "az",
+   "gerekce": "Çarpışmada enerji."
+  },
+  {
+   "alt": "fizNewton",
+   "ust": "fizCembersel",
+   "kullanim": "cok",
+   "gerekce": "Merkezcil kuvvet."
+  },
+  {
+   "alt": "fizVektor",
+   "ust": "fizCembersel",
+   "kullanim": "az",
+   "gerekce": "Hız vektörünün yön değiştirmesi."
+  },
+  {
+   "alt": "fizCembersel",
+   "ust": "fizBHH",
+   "kullanim": "cok",
+   "gerekce": "Referans çember."
+  },
+  {
+   "alt": "fizIs",
+   "ust": "fizBHH",
+   "kullanim": "az",
+   "gerekce": "Enerji korunumu."
+  },
+  {
+   "alt": "fizElektrostatik",
+   "ust": "fizElKuvvet",
+   "kullanim": "cok",
+   "gerekce": "Yükler arası kuvvet."
+  },
+  {
+   "alt": "fizElKuvvet",
+   "ust": "fizElAlan",
+   "kullanim": "tam",
+   "gerekce": "Elektrik alan birim yüke etki eden kuvvettir."
+  },
+  {
+   "alt": "fizVektor",
+   "ust": "fizElAlan",
+   "kullanim": "cok",
+   "gerekce": "Alanlar vektörel toplanır."
+  },
+  {
+   "alt": "fizElAlan",
+   "ust": "fizPotansiyel",
+   "kullanim": "cok",
+   "gerekce": "Potansiyel alanla ilişkilidir."
+  },
+  {
+   "alt": "fizIs",
+   "ust": "fizPotansiyel",
+   "kullanim": "cok",
+   "gerekce": "Potansiyel enerji iştir."
+  },
+  {
+   "alt": "fizElAlan",
+   "ust": "fizDuzgunAlan",
+   "kullanim": "cok",
+   "gerekce": "Paralel levhalarda alan."
+  },
+  {
+   "alt": "fizPotansiyel",
+   "ust": "fizDuzgunAlan",
+   "kullanim": "cok",
+   "gerekce": "Potansiyel farkı."
+  },
+  {
+   "alt": "fizAtis",
+   "ust": "fizDuzgunAlan",
+   "kullanim": "az",
+   "gerekce": "Yüklü parçacığın sapması atış gibidir."
+  },
+  {
+   "alt": "fizDuzgunAlan",
+   "ust": "fizSigac",
+   "kullanim": "cok",
+   "gerekce": "Sığaç paralel levhadır."
+  },
+  {
+   "alt": "fizElektrostatik",
+   "ust": "fizAkim",
+   "kullanim": "az",
+   "gerekce": "Yük ve akım."
+  },
+  {
+   "alt": "fizAkim",
+   "ust": "fizUretec",
+   "kullanim": "cok",
+   "gerekce": "Devrede akım."
+  },
+  {
+   "alt": "fizAkim",
+   "ust": "fizElGuc",
+   "kullanim": "cok",
+   "gerekce": "Güç = akım × gerilim."
+  },
+  {
+   "alt": "fizIs",
+   "ust": "fizElGuc",
+   "kullanim": "az",
+   "gerekce": "Enerji ve güç."
+  },
+  {
+   "alt": "fizAkim",
+   "ust": "fizLamba",
+   "kullanim": "cok",
+   "gerekce": "Devre çözümleri."
+  },
+  {
+   "alt": "fizElGuc",
+   "ust": "fizLamba",
+   "kullanim": "cok",
+   "gerekce": "Lambanın parlaklığı güçtür."
+  },
+  {
+   "alt": "fizMiknatis",
+   "ust": "fizManyetikAlan",
+   "kullanim": "cok",
+   "gerekce": "Manyetik alan çizgileri."
+  },
+  {
+   "alt": "fizAkim",
+   "ust": "fizManyetikAlan",
+   "kullanim": "cok",
+   "gerekce": "Akımın oluşturduğu alan."
+  },
+  {
+   "alt": "fizManyetikAlan",
+   "ust": "fizManyetikKuvvet",
+   "kullanim": "cok",
+   "gerekce": "Alan içinde kuvvet."
+  },
+  {
+   "alt": "fizVektor",
+   "ust": "fizManyetikKuvvet",
+   "kullanim": "az",
+   "gerekce": "Sağ el kuralı, vektörel yön."
+  },
+  {
+   "alt": "fizCembersel",
+   "ust": "fizManyetikKuvvet",
+   "kullanim": "az",
+   "gerekce": "Yüklü parçacığın çembersel hareketi."
+  },
+  {
+   "alt": "fizManyetikAlan",
+   "ust": "fizIndukleme",
+   "kullanim": "cok",
+   "gerekce": "Akı değişimi."
+  },
+  {
+   "alt": "fizManyetikKuvvet",
+   "ust": "fizIndukleme",
+   "kullanim": "az",
+   "gerekce": "Hareketli iletkende kuvvet."
+  },
+  {
+   "alt": "fizIndukleme",
+   "ust": "fizAC",
+   "kullanim": "cok",
+   "gerekce": "Alternatif akım indüksiyonla üretilir."
+  },
+  {
+   "alt": "aytPeriyot",
+   "ust": "fizAC",
+   "kullanim": "az",
+   "gerekce": "Sinüsel gerilim."
+  },
+  {
+   "alt": "fizAC",
+   "ust": "fizTrafo",
+   "kullanim": "cok",
+   "gerekce": "Transformatör alternatif akımla çalışır."
+  },
+  {
+   "alt": "fizIndukleme",
+   "ust": "fizTrafo",
+   "kullanim": "cok",
+   "gerekce": "Karşılıklı indüksiyon."
+  },
+  {
+   "alt": "fizAtom",
+   "ust": "fizRadyo",
+   "kullanim": "cok",
+   "gerekce": "Çekirdek yapısı."
+  },
+  {
+   "alt": "fizAtom",
+   "ust": "fizModern",
+   "kullanim": "cok",
+   "gerekce": "Atom modelleri."
+  },
+  {
+   "alt": "fizIsikTeori",
+   "ust": "fizModern",
+   "kullanim": "cok",
+   "gerekce": "Fotoelektrik ışığın tanecik modelidir."
+  },
+  {
+   "alt": "fizEMDalga",
+   "ust": "fizModern",
+   "kullanim": "cok",
+   "gerekce": "Işığın enerjisi."
+  },
+  {
+   "alt": "fizBuyukPatlama",
+   "ust": "fizAtom",
+   "kullanim": "az",
+   "gerekce": "Temel parçacıklar."
+  },
+  {
+   "alt": "fizModern",
+   "ust": "fizGoruntu",
+   "kullanim": "az",
+   "gerekce": "Görüntüleme fiziği."
+  },
+  {
+   "alt": "fizModern",
+   "ust": "fizYariIletken",
+   "kullanim": "az",
+   "gerekce": "Enerji bantları."
+  },
+  {
+   "alt": "fizAkim",
+   "ust": "fizYariIletken",
+   "kullanim": "az",
+   "gerekce": "Diyot ve transistörde akım."
+  },
+  {
+   "alt": "fizModern",
+   "ust": "fizLazer",
+   "kullanim": "cok",
+   "gerekce": "Uyarılmış ışıma."
+  },
+  {
+   "alt": "fizIsikTeori",
+   "ust": "fizLazer",
+   "kullanim": "az",
+   "gerekce": "Işığın doğası."
+  },
+  {
+   "alt": "fizModern",
+   "ust": "fizNano",
+   "kullanim": "az",
+   "gerekce": "Nano ölçekte fizik."
+  }
+ ],
+ "sinavSatirlari": [
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Problemler",
+   "yillar": {
+    "2018": 11,
+    "2019": 12,
+    "2020": 13,
+    "2021": 13,
+    "2022": 13,
+    "2023": 10,
+    "2024": 11,
+    "2025": 12
+   },
+   "paylar": {
+    "tytSayiP": 0.18,
+    "tytKesirP": 0.1,
+    "tytYasP": 0.1,
+    "tytYuzdeP": 0.12,
+    "tytKarP": 0.12,
+    "tytKarisimP": 0.08,
+    "tytHareketP": 0.12,
+    "tytIsciP": 0.08,
+    "tytGrafikP": 0.1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Temel Kavramlar",
+   "yillar": {
+    "2018": 4,
+    "2019": 1,
+    "2020": 1,
+    "2021": 3,
+    "2022": 3,
+    "2023": 2,
+    "2024": 1,
+    "2025": 3
+   },
+   "paylar": {
+    "tytTemel": 0.5,
+    "tytAsal": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Sayı Basamakları",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 1,
+    "2021": 2,
+    "2022": 1,
+    "2023": 1,
+    "2024": 2,
+    "2025": 1
+   },
+   "paylar": {
+    "tytBasamak": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Bölünebilme Kuralları",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytBolme": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "OBEB-OKEK",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 2,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "tytEbob": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Rasyonel Sayılar",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 3,
+    "2021": 3,
+    "2022": 1,
+    "2023": 2,
+    "2024": 2,
+    "2025": 1
+   },
+   "paylar": {
+    "tytRasyonel": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Basit Eşitsizlikler",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 3,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "tytEsitsizlik": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Mutlak Değer",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 2,
+    "2025": 1
+   },
+   "paylar": {
+    "tytMutlak": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Üslü İfadeler",
+   "yillar": {
+    "2018": 2,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytUslu": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Kümeler- Kartezyen Çarpım",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytKume": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Mantık",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytMantik": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Fonksiyonlar",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "aytFonk": 0.6,
+    "aytFonkIslem": 0.2,
+    "aytGrafik": 0.2
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Polinomlar",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tytPolinom": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Permütasyon-Kombinasyon",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 3,
+    "2025": 1
+   },
+   "paylar": {
+    "tytPerm": 0.5,
+    "tytKomb": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Olasılık",
+   "yillar": {
+    "2018": 2,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytOlasilik": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "İstatistik",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytVeri": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Açılar ve Üçgenler",
+   "yillar": {
+    "2018": 3,
+    "2019": 1,
+    "2020": 2,
+    "2021": 4,
+    "2022": 4,
+    "2023": 5,
+    "2024": 5,
+    "2025": 4
+   },
+   "paylar": {
+    "geoAci": 0.1,
+    "geoUcgenAci": 0.15,
+    "geoEslik": 0.05,
+    "geoBenzer": 0.12,
+    "geoDik": 0.15,
+    "geoIkiz": 0.08,
+    "geoEskenar": 0.05,
+    "geoAciortay": 0.07,
+    "geoKenarortay": 0.07,
+    "geoAciKenar": 0.04,
+    "geoAlan": 0.12
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Çokgenler",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "geoCokgen": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Yamuk",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 2,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "geoYamuk": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Eşkenar Dörtgen",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "geoEskDortgen": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Kare",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "geoKare": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Dikdörtgen",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "geoDikdortgen": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Çember-Daire",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "geoCember": 0.25,
+    "geoCemberAci": 0.3,
+    "geoCemberUzunluk": 0.2,
+    "geoDaire": 0.25
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Katı Cisimler",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 2,
+    "2021": 2,
+    "2022": 2,
+    "2023": 2,
+    "2024": 2,
+    "2025": 2
+   },
+   "paylar": {
+    "geoKati": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Fizik Bilimine Giriş",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "fizGiris": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Madde ve Özellikleri",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "fizMadde": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Isı, Sıcaklık ve Genleşme",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "fizIsi": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Elektrostatik",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "fizElektrostatik": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Elektrik ve Manyetizma",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 2,
+    "2024": 2,
+    "2025": 0
+   },
+   "paylar": {
+    "fizAkim": 0.4,
+    "fizUretec": 0.1,
+    "fizElGuc": 0.15,
+    "fizLamba": 0.15,
+    "fizMiknatis": 0.2
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Basınç",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "fizBasinc": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Kaldırma Kuvveti",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "fizKaldirma": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Dalgalar",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "fizDalgaTemel": 0.5,
+    "fizDalgaSu": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Optik",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 2,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "fizAydinlanma": 0.1,
+    "fizGolge": 0.1,
+    "fizYansima": 0.2,
+    "fizKuresel": 0.15,
+    "fizKirilma": 0.2,
+    "fizMercek": 0.15,
+    "fizPrizma": 0.05,
+    "fizRenk": 0.05
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Temel Kavramlar",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 2,
+    "2021": 3,
+    "2022": 2,
+    "2023": 4,
+    "2024": 2,
+    "2025": 3
+   },
+   "paylar": {
+    "tytTemel": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Sayı Basamakları",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 3,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "tytBasamak": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Bölme ve Bölünebilme",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tytBolme": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "EBOB – EKOK",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tytEbob": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Basit Eşitsizlikler",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "tytEsitsizlik": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Mutlak Değer",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tytMutlak": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Üslü Sayılar",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tytUslu": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Kümeler ve Kartezyen Çarpım",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytKume": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Mantık",
+   "yillar": {
+    "2018": 4,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytMantik": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Fonksiyonlar",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 2,
+    "2021": 2,
+    "2022": 2,
+    "2023": 2,
+    "2024": 2,
+    "2025": 2
+   },
+   "paylar": {
+    "aytFonk": 0.15,
+    "aytFonkCesit": 0.1,
+    "aytFonkIslem": 0.1,
+    "aytParcali": 0.1,
+    "aytGrafik": 0.15,
+    "aytTers": 0.1,
+    "aytBileske": 0.1,
+    "aytBileskeTers": 0.05,
+    "aytPeriyodik": 0.03,
+    "aytArtanAzalan": 0.05,
+    "aytOrtDegisim": 0.03,
+    "aytFonkDonusum": 0.04
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Polinomlar",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 2,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tytPolinom": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "2.Dereceden Denklemler ve Eşitsizlikler",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 2,
+    "2023": 2,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "aytDiskriminant": 0.4,
+    "aytKokKatsayi": 0.3,
+    "aytIkinciEsitsizlik": 0.2,
+    "aytEsitsizlikSistem": 0.1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Parabol",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "aytTepe": 0.3,
+    "aytEnBuyuk": 0.2,
+    "aytParabolDenklem": 0.3,
+    "aytParabolDogru": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Permütasyon-Kombinasyon-Olasılık – Binom",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 3,
+    "2021": 2,
+    "2022": 3,
+    "2023": 3,
+    "2024": 3,
+    "2025": 3
+   },
+   "paylar": {
+    "tytPerm": 0.25,
+    "tytKomb": 0.3,
+    "tytBinom": 0.15,
+    "tytOlasilik": 0.3
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Karmaşık Sayılar",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "aytKarmasik": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Logaritma",
+   "yillar": {
+    "2018": 2,
+    "2019": 3,
+    "2020": 3,
+    "2021": 1,
+    "2022": 2,
+    "2023": 3,
+    "2024": 1,
+    "2025": 2
+   },
+   "paylar": {
+    "aytUstel": 0.15,
+    "aytLog": 0.2,
+    "aytLogOzellik": 0.3,
+    "aytUstelLogDenklem": 0.25,
+    "aytUstelLogProblem": 0.1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Diziler",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 2,
+    "2024": 1,
+    "2025": 2
+   },
+   "paylar": {
+    "aytDiziFonk": 0.1,
+    "aytDiziTerim": 0.2,
+    "aytAritmetik": 0.35,
+    "aytGeometrik": 0.35
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Limit",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 0,
+    "2021": 2,
+    "2022": 2,
+    "2023": 0,
+    "2024": 2,
+    "2025": 1
+   },
+   "paylar": {
+    "aytLimitSagSol": 0.2,
+    "aytLimitOzellik": 0.2,
+    "aytLimitParcali": 0.15,
+    "aytBelirsizlik": 0.2,
+    "aytLimitUyg": 0.15,
+    "aytSureklilik": 0.1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Türev",
+   "yillar": {
+    "2018": 4,
+    "2019": 4,
+    "2020": 0,
+    "2021": 3,
+    "2022": 4,
+    "2023": 0,
+    "2024": 3,
+    "2025": 5
+   },
+   "paylar": {
+    "aytAnlik": 0.05,
+    "aytTurevSagSol": 0.05,
+    "aytTurevKural": 0.15,
+    "aytBileskeTurev": 0.05,
+    "aytZincir": 0.1,
+    "aytIkinciTurev": 0.05,
+    "aytTurevGeo": 0.15,
+    "aytArtanAzalanTurev": 0.1,
+    "aytEkstremum": 0.1,
+    "aytPolinomGrafik": 0.1,
+    "aytMaxMin": 0.1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "İntegral",
+   "yillar": {
+    "2018": 4,
+    "2019": 4,
+    "2020": 0,
+    "2021": 4,
+    "2022": 4,
+    "2023": 0,
+    "2024": 5,
+    "2025": 3
+   },
+   "paylar": {
+    "aytBelirsizInt": 0.25,
+    "aytDegiskenDegistirme": 0.15,
+    "aytRiemann": 0.1,
+    "aytBelirliInt": 0.25,
+    "aytIntAlan": 0.25
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Özel Üçgenler",
+   "yillar": {
+    "2018": 2,
+    "2019": 0,
+    "2020": 2,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "geoDik": 0.4,
+    "geoIkiz": 0.3,
+    "geoEskenar": 0.3
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Açıortay – Kenarortay",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "geoAciortay": 0.5,
+    "geoKenarortay": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Çokgenler",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "geoCokgen": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Özel Dörtgenler",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "geoDortgen": 0.2,
+    "geoYamuk": 0.2,
+    "geoParalel": 0.2,
+    "geoEskDortgen": 0.1,
+    "geoDeltoid": 0.1,
+    "geoDikdortgen": 0.1,
+    "geoKare": 0.1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Çember ve Daire",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 2,
+    "2021": 3,
+    "2022": 2,
+    "2023": 2,
+    "2024": 2,
+    "2025": 2
+   },
+   "paylar": {
+    "geoCember": 0.25,
+    "geoCemberAci": 0.3,
+    "geoCemberUzunluk": 0.2,
+    "geoDaire": 0.25
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Dönüşüm Geometrisi",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "geoDonusum": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Katı Cisimler",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 2,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "geoKati": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Çemberin Analitiği",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1,
+    "2025": 2
+   },
+   "paylar": {
+    "geoCemberAnalitik": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Kuvvet, Tork ve Denge",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "fizKesisen": 0.35,
+    "fizTork": 0.35,
+    "fizKutleMerkezi": 0.15,
+    "fizBasitMakine": 0.15
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Basit Makineler",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "fizBasitMakine": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "İtme ve Momentum",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "fizMomentum": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Elektrik Alan ve Potansiyel",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 2,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "fizElKuvvet": 0.2,
+    "fizElAlan": 0.4,
+    "fizPotansiyel": 0.4
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Paralel Levhalar ve Sığa",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "fizDuzgunAlan": 0.5,
+    "fizSigac": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Manyetik Alan ve Manyetik Kuvvet",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "fizManyetikAlan": 0.5,
+    "fizManyetikKuvvet": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "İndüksiyon, Alternatif Akım ve Transformatörler",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "fizIndukleme": 0.5,
+    "fizAC": 0.3,
+    "fizTrafo": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Çembersel Hareket",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "fizCembersel": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Dalga Mekaniği ve Elektromanyetik Dalgalar",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "fizDalgaMek": 0.5,
+    "fizEMDalga": 0.3,
+    "fizIsikTeori": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Atom Modelleri",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "fizAtom": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Büyük Patlama ve Parçacık Fiziği",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "fizBuyukPatlama": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Atom Fiziğine Giriş ve Radyoaktivite",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "fizRadyo": 0.6,
+    "fizAtom": 0.4
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Özel Görelilik",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "fizModern": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Fotoelektrik Olay ve Compton Olayı",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "fizModern": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Modern Fiziğin Teknolojideki Uygulamaları",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "fizGoruntu": 0.3,
+    "fizYariIletken": 0.3,
+    "fizNano": 0.2,
+    "fizLazer": 0.2
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Analitik Geometri",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "geoNokta": 0.5,
+    "geoDogru": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Doğruda ve Üçgende Açı",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 2,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "geoAci": 0.4,
+    "geoUcgenAci": 0.6
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Üçgende Alan Benzerlik",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0,
+    "2025": 3
+   },
+   "paylar": {
+    "geoBenzer": 0.5,
+    "geoAlan": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Açı Kenar Bağıntıları",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "geoAciKenar": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Noktanın Analitiği",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 2,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "geoNokta": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Geometri",
+   "konu": "Doğrunun Analitiği",
+   "yillar": {
+    "2018": 2,
+    "2019": 1,
+    "2020": 1,
+    "2021": 2,
+    "2022": 1,
+    "2023": 0,
+    "2024": 3,
+    "2025": 2
+   },
+   "paylar": {
+    "geoDogru": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Köklü İfadeler",
+   "yillar": {
+    "2018": 2,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytKok": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Oran-Orantı",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "tytOran": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Denklem Çözme",
+   "yillar": {
+    "2018": 0,
+    "2019": 2,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "tytDenklem": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Çarpanlara Ayırma",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tytCarpan": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Çarpanlara Ayırma",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "tytCarpan": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Matematik",
+   "konu": "Trigonometri",
+   "yillar": {
+    "2018": 3,
+    "2019": 3,
+    "2020": 4,
+    "2021": 5,
+    "2022": 4,
+    "2023": 5,
+    "2024": 5,
+    "2025": 5
+   },
+   "paylar": {
+    "aytAciOlcu": 0.04,
+    "aytEsas": 0.05,
+    "aytBirim": 0.12,
+    "aytOzdeslik": 0.12,
+    "aytIsaret": 0.05,
+    "aytDonusum": 0.1,
+    "aytPeriyot": 0.1,
+    "aytTersTrig": 0.07,
+    "aytSinCos": 0.1,
+    "aytToplamFark": 0.13,
+    "aytDenklem": 0.12
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Hareket ve Kuvvet",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "fizNewton": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "İş, Güç, Enerji 1",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "fizIs": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Vektörler",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "fizVektor": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Newton’un Hareket Yasaları",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "fizNewton": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Atışlar",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "fizAtis": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "İş, Güç ve Enerji II",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "fizIs": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Bağıl Hareket",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "fizBagil": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Fizik",
+   "konu": "Basit Harmonik Hareket",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "fizBHH": 1
+   }
+  }
+ ],
+ "birimler": [
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Üçgenlerde Temel Kavramlar",
+   "kapsar": [
+    "geoAci",
+    "geoUcgenAci"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Üçgenlerde Eşlik ve Benzerlik",
+   "kapsar": [
+    "geoBenzer"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Dik Üçgen ve Trigonometri",
+   "kapsar": [
+    "geoDik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Üçgenin Alanı",
+   "kapsar": [
+    "geoAlan"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Denklemler ve Eşitsizliklerle İlgili Uygulamalar",
+   "kapsar": [
+    "tytDenklem"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "Fonksiyon Kavramı ve Gösterimi",
+   "kapsar": [
+    "aytFonk"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "İki Fonksiyonun Bileşkesi ve Bir Fonksiyonun Tersi",
+   "kapsar": [
+    "aytTers"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "Polinomların Çarpanlara Ayrılması",
+   "kapsar": [
+    "tytCarpan"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Yönlü Açılar",
+   "kapsar": [
+    "aytAciOlcu",
+    "aytEsas"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Trigonometrik Fonksiyonlar",
+   "kapsar": [
+    "aytBirim",
+    "aytOzdeslik",
+    "aytIsaret",
+    "aytDonusum",
+    "aytPeriyot",
+    "aytTersTrig"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Doğrunun Analitik İncelenmesi",
+   "kapsar": [
+    "geoNokta",
+    "geoDogru"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Dik Üçgen",
+   "kapsar": [
+    "geoDik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Çemberin Temel Elemanları",
+   "kapsar": [
+    "geoCember"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Toplam-Fark ve İki kat Açı Formülleri",
+   "kapsar": [
+    "aytToplamFark"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Trigonometrik Denklemler",
+   "kapsar": [
+    "aytDenklem"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Newton’ın Hareket Yasaları",
+   "kapsar": [
+    "fizNewton"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Newton’ın Hareket Yasaları",
+   "kapsar": [
+    "fizNewton"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "İş, Enerji ve Güç",
+   "kapsar": [
+    "fizIs"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Enerji ve Hareket",
+   "kapsar": [
+    "fizIs"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Kırılma",
+   "kapsar": [
+    "fizKirilma"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Vektörler",
+   "kapsar": [
+    "fizVektor"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Bağıl Hareket",
+   "kapsar": [
+    "fizBagil"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "İki Boyutta Hareket",
+   "kapsar": [
+    "fizAtis"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Tork",
+   "kapsar": [
+    "fizTork"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Denge ve Denge Şartları",
+   "kapsar": [
+    "fizKesisen"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Basit Harmonik Hareket",
+   "kapsar": [
+    "fizBHH"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Önermeler ve Bileşik Önermeler",
+   "kapsar": [
+    "tytMantik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Kümelerde Temel Kavramlar",
+   "kapsar": [
+    "tytKume"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Kümelerde İşlemler",
+   "kapsar": [
+    "tytKume"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Sayı Kümeleri",
+   "kapsar": [
+    "tytTemel"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Bölünebilme Kuralları",
+   "kapsar": [
+    "tytBolme"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Üslü İfadeler ve Denklemler",
+   "kapsar": [
+    "tytUslu"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Üçgenin Yardımcı Elemanları",
+   "kapsar": [
+    "geoAciortay",
+    "geoKenarortay"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Merkezî Eğilim ve Yayılım Ölçüleri",
+   "kapsar": [
+    "tytVeri"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 9,
+   "ad": "Verilerin Grafikle Gösterilmesi",
+   "kapsar": [
+    "tytVeri",
+    "tytGrafikP"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "Sıralama ve Seçme",
+   "kapsar": [
+    "tytPerm",
+    "tytKomb"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "Basit Olayların Olasılıkları",
+   "kapsar": [
+    "tytOlasilik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "Polinom Kavramı ve Polinomlarla İşlemler",
+   "kapsar": [
+    "tytPolinom"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "İkinci Dereceden Bir Bilinmeyenli Denklemler",
+   "kapsar": [
+    "aytDiskriminant",
+    "aytKokKatsayi"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "Çokgenler",
+   "kapsar": [
+    "geoCokgen"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "Dörtgenler ve Özellikleri",
+   "kapsar": [
+    "geoDortgen"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "Özel Dörtgenler",
+   "kapsar": [
+    "geoYamuk",
+    "geoParalel",
+    "geoEskDortgen",
+    "geoDeltoid",
+    "geoDikdortgen",
+    "geoKare"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 10,
+   "ad": "Katı Cisimler",
+   "kapsar": [
+    "geoKati"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Sayı Kümeleri",
+   "kapsar": [
+    "tytTemel"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Bölünebilme",
+   "kapsar": [
+    "tytBolme"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Fonksiyonlarla İlgili Uygulamalar",
+   "kapsar": [
+    "aytGrafik",
+    "aytOrtDegisim"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Birinci Dereceden Denklem ve Eşitsizlikler",
+   "kapsar": [
+    "tytDenklem",
+    "tytEsitsizlik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "İkinci Dereceden Fonksiyonlar ve Grafikleri",
+   "kapsar": [
+    "aytTepe",
+    "aytEnBuyuk",
+    "aytParabolDenklem"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Bilinçli Tüketici Aritmetiği",
+   "kapsar": [
+    "tytYuzdeP",
+    "tytKarP"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Fonksiyonların Dönüşümleri",
+   "kapsar": [
+    "aytFonkDonusum"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "İkinci Dereceden İki Bilinmeyenli Denklem Sistemleri",
+   "kapsar": [
+    "aytParabolDogru"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Çemberde Açılar",
+   "kapsar": [
+    "geoCemberAci"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Dairenin Çevresi ve Alanı",
+   "kapsar": [
+    "geoDaire"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Çemberde Teğet",
+   "kapsar": [
+    "geoCemberUzunluk"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Katı Cisimler",
+   "kapsar": [
+    "geoKati"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Koşullu Olasılık",
+   "kapsar": [
+    "tytOlasilik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 11,
+   "ad": "Deneysel ve Teorik Olasılık",
+   "kapsar": [
+    "tytOlasilik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Üstel Fonksiyon",
+   "kapsar": [
+    "aytUstel"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Üslü ve Köklü İfadeler",
+   "kapsar": [
+    "tytUslu",
+    "tytKok"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Logaritma Fonksiyonu",
+   "kapsar": [
+    "aytLog",
+    "aytLogOzellik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Üstel, Logaritmik Denklemler ve Eşitsizlikler",
+   "kapsar": [
+    "aytUstelLogDenklem"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Gerçek Sayı Dizileri",
+   "kapsar": [
+    "aytDiziFonk",
+    "aytDiziTerim",
+    "aytAritmetik",
+    "aytGeometrik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Analitik Düzlemde Temel Dönüşümler",
+   "kapsar": [
+    "geoDonusum"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Limit ve Süreklilik",
+   "kapsar": [
+    "aytLimitSagSol",
+    "aytLimitOzellik",
+    "aytLimitParcali",
+    "aytBelirsizlik",
+    "aytLimitUyg",
+    "aytSureklilik"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Anlık Değişim Oranı ve Türev",
+   "kapsar": [
+    "aytAnlik",
+    "aytTurevSagSol",
+    "aytTurevKural",
+    "aytBileskeTurev",
+    "aytZincir"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Türevin Uygulamaları",
+   "kapsar": [
+    "aytIkinciTurev",
+    "aytTurevGeo",
+    "aytArtanAzalanTurev",
+    "aytEkstremum",
+    "aytPolinomGrafik",
+    "aytMaxMin"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Belirsiz İntegral",
+   "kapsar": [
+    "aytBelirsizInt",
+    "aytDegiskenDegistirme"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Belirli İntegral ve Uygulamaları",
+   "kapsar": [
+    "aytRiemann",
+    "aytBelirliInt",
+    "aytIntAlan"
+   ]
+  },
+  {
+   "ders": "Matematik",
+   "sinif": 12,
+   "ad": "Çemberin Analitik İncelenmesi",
+   "kapsar": [
+    "geoCemberAnalitik"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Fizik Biliminin Önemi",
+   "kapsar": [
+    "fizGiris"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Fiziğin Uygulama Alanları",
+   "kapsar": [
+    "fizGiris"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Fiziksel Niceliklerin Sınıflandırılması",
+   "kapsar": [
+    "fizGiris"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Bilim Araştırma Merkezleri",
+   "kapsar": [
+    "fizGiris"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Madde ve Özkütle",
+   "kapsar": [
+    "fizMadde"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Dayanıklılık",
+   "kapsar": [
+    "fizMadde"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Yapışma ve Birbirini Tutma",
+   "kapsar": [
+    "fizMadde"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Sürtünme Kuvveti",
+   "kapsar": [
+    "fizNewton"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Mekanik Enerji",
+   "kapsar": [
+    "fizIs"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Enerjinin Korunumu ve Enerji Dönüşümleri",
+   "kapsar": [
+    "fizIs"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Verim",
+   "kapsar": [
+    "fizIs"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Enerji Kaynakları",
+   "kapsar": [
+    "fizIs"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Isı ve Sıcaklık",
+   "kapsar": [
+    "fizIsi"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Hâl Değişimi",
+   "kapsar": [
+    "fizIsi"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Isıl Denge",
+   "kapsar": [
+    "fizIsi"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Enerji İletim Yolları ve Enerji İletim Hızı",
+   "kapsar": [
+    "fizIsi"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Genleşme",
+   "kapsar": [
+    "fizIsi"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 9,
+   "ad": "Elektrik Yükleri",
+   "kapsar": [
+    "fizElektrostatik"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Elektrik Akımı, Potansiyel Farkı ve Direnç",
+   "kapsar": [
+    "fizAkim"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Elektrik Devreleri",
+   "kapsar": [
+    "fizAkim",
+    "fizUretec",
+    "fizElGuc",
+    "fizLamba"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Mıknatıs ve Manyetik Alan",
+   "kapsar": [
+    "fizMiknatis"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Akım ve Manyetik Alan",
+   "kapsar": [
+    "fizManyetikAlan"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Basınç",
+   "kapsar": [
+    "fizBasinc"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Kaldırma Kuvveti",
+   "kapsar": [
+    "fizKaldirma"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Dalgalar",
+   "kapsar": [
+    "fizDalgaTemel"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Yay Dalgası",
+   "kapsar": [
+    "fizDalgaTemel"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Ses Dalgası",
+   "kapsar": [
+    "fizDalgaSu"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Deprem Dalgası",
+   "kapsar": [
+    "fizDalgaSu"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Aydınlanma",
+   "kapsar": [
+    "fizAydinlanma"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Gölge",
+   "kapsar": [
+    "fizGolge"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Yansıma",
+   "kapsar": [
+    "fizYansima"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Düzlem Ayna",
+   "kapsar": [
+    "fizYansima"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Küresel Aynalar",
+   "kapsar": [
+    "fizKuresel"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Mercekler",
+   "kapsar": [
+    "fizMercek"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Prizmalar",
+   "kapsar": [
+    "fizPrizma"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 10,
+   "ad": "Renk",
+   "kapsar": [
+    "fizRenk"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "İtme ve Çizgisel Momentum",
+   "kapsar": [
+    "fizMomentum"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Basit Makineler",
+   "kapsar": [
+    "fizBasitMakine"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Elektriksel Kuvvet ve Elektrik Alan",
+   "kapsar": [
+    "fizElKuvvet",
+    "fizElAlan"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Elektriksel Potansiyel",
+   "kapsar": [
+    "fizPotansiyel"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Düzgün Elektrik Alan ve Sığa",
+   "kapsar": [
+    "fizDuzgunAlan",
+    "fizSigac"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Manyetizma ve Elektromanyetik İndüklenme",
+   "kapsar": [
+    "fizManyetikAlan",
+    "fizManyetikKuvvet",
+    "fizIndukleme"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Alternatif Akım",
+   "kapsar": [
+    "fizAC"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 11,
+   "ad": "Transformatörler",
+   "kapsar": [
+    "fizTrafo"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Düzgün Çembersel Hareket",
+   "kapsar": [
+    "fizCembersel"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Dalgalarda Kırınım, Girişim ve Doppler Olayı",
+   "kapsar": [
+    "fizDalgaMek"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Elektromanyetik Dalgalar",
+   "kapsar": [
+    "fizEMDalga"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Atom Kavramının Tarihsel Gelişimi",
+   "kapsar": [
+    "fizAtom"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Büyük Patlama ve Evrenin Oluşumu",
+   "kapsar": [
+    "fizBuyukPatlama"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Radyoaktivite",
+   "kapsar": [
+    "fizRadyo"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Özel Görelilik",
+   "kapsar": [
+    "fizModern"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Kuantum Fiziğine Giriş",
+   "kapsar": [
+    "fizModern"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Fotoelektrik Olayı",
+   "kapsar": [
+    "fizModern"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Compton Saçılması ve de Broglie Dalga Boyu",
+   "kapsar": [
+    "fizModern"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Görüntüleme Teknolojileri",
+   "kapsar": [
+    "fizGoruntu"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Yarı İletken Teknolojisi",
+   "kapsar": [
+    "fizYariIletken"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Nanoteknoloji",
+   "kapsar": [
+    "fizNano"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Laser Işınları",
+   "kapsar": [
+    "fizLazer"
+   ]
+  }
+ ]
+}
