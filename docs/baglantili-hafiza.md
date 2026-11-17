@@ -98,6 +98,39 @@ Each topic keeps the app's FSRS-6 card (S, D), built from its own results exactl
   - Zhou et al. 2024, [PSI-KT](https://arxiv.org/abs/2403.13179).
   - Khajah, Lindsey & Mozer 2016, [*How deep is knowledge tracing?*](https://arxiv.org/abs/1604.02416).
 
+## Haritam: what the student sees (decided 2026-11-17 from image mockups)
+
+- **Placement:** a new tab, **Haritam**, for every student who has Mathematics. Each student sees only their own subjects. Hafızam stays as it is.
+- **Background:** neutral, never blue.
+  - Dark: near-black `#0E0E0F`.
+  - Light: white.
+  - Light mode follows the app theme with the same rules (a "daytime" version).
+- **Layout:** every subject is its own constellation (neural network), and a thread between constellations is a cross-subject link.
+  - The subject name sits above its constellation in small, letter-spaced capitals.
+  - Threads are thin and neutral: white or black at low opacity, never coloured.
+- **Topic = a point of light.** Flat core, no clip-art, no spikes, no nebulae, no decorative star field.
+- **Colour** is the topic's shown recall, computed in OKLCH so the steps read as one spectrum:
+  - At or above the student's line: mint, `oklch(.79 .13 163)` (light theme `oklch(.62 .13 163)`).
+  - Below the line: crimson-red just under it, getting steadily darker to deep wine. `f = (line − r) / .45`, colour `oklch(.57 − .22f, .19 − .035f, 21° − 18°f)`; light theme starts at L `.52`.
+  - No orange anywhere. The Hafızam card bar uses the same two reds.
+- **Shine** shows the memory level. Every topic shines a little:
+  - short-term: a faint glow;
+  - settling: a medium glow;
+  - long-term: a lit neuron, with a white-hot core and light in its colour.
+- **Saturn ring** around every long-term topic, tilted, passing behind and then in front of the core.
+  - **Golden shining ring** for a topic safe until YKS (recall on exam day still at or above the line).
+  - **Asteroid belt:** a long-term topic that falls below the line keeps its ring, but the ring breaks into rocks and grains along the orbit. They spread out, thin and scatter as recall falls; at the deepest red only scattered grains are left.
+- **Size** = importance, capped. A topic grows only up to the 85th percentile of importance, so the largest is about twice the smallest.
+- **Labels:** only foundational and alarmed topics are named before anything is touched.
+- **Alarms:** an alarmed foundation twinkles (an animated pulse of its own light; still when the student asks for reduced motion). The top 3 also appear as chips above the map, whose dot is the topic's own colour. There is no separate alarm ring.
+- **Never studied:** a faint grey point.
+- **Touch / hover:**
+  - The topic grows and its threads and neighbours light up while the rest dims.
+  - It opens the **real Hafızam card** (`hafizaSatiri`), not a look-alike. It is placed on the side that covers the fewest topics.
+  - On a computer, hover shows the card and a click pins it. On a phone, the card opens under the map.
+- **Teacher side:** Ayarlar → a "Bağlantılı hafıza" box with **Bağları güncelle** (learns the links from the notebook's results, with a progress bar), when it last ran, and the links that do not seem to hold.
+- **Map editing:** for v1 only in the repository (`data/hafiza-haritasi-*.json`), by the project owner. Confusable pairs are drawn there only, with no effect.
+
 ## Not done yet
 
 - Starter map for Math, Geometry, Physics (table + picture, for review).
