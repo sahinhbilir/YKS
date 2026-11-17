@@ -34,7 +34,7 @@ const etiket = k => k.ad + (k.gizli ? ' [parça: ' + byId.get(k.parcasi).ad + ']
 fs.mkdirSync(cikti, {recursive: true});
 fs.writeFileSync(path.join(cikti, ad + '-baglar.csv'), '﻿' + csv([['Temel (B)', 'Ders', 'Kullanan (A)', 'Ders', 'A, B\'nin ne kadarını kullanıyor', 'Gerekçe', 'Düzeltme']]
   .concat(harita.baglar.filter(b => (b.tur || 'kullanir') === 'kullanir').map(b => [etiket(byId.get(b.alt)), byId.get(b.alt).ders, etiket(byId.get(b.ust)), byId.get(b.ust).ders, kul[b.kullanim], b.gerekce, '']))));
-fs.writeFileSync(path.join(cikti, ad + '-konular.csv'), '﻿' + csv([['Konu', 'Ders', 'Gizli parça', 'Yılda beklenen YKS sorusu', 'Kaynak ve desen', 'Kullananlar (ağırlıklı)', 'Temel mi (≥ 1,5)', 'Önem', 'Düzeltme']]
+fs.writeFileSync(path.join(cikti, ad + '-konular.csv'), '﻿' + csv([['Konu', 'Ders', 'Gizli parça', 'Yılda beklenen YKS sorusu', 'Kaynak ve desen', 'Kullananlar (ağırlıklı)', 'Temel mi (≥ ' + String(H.AYAR.temelEsik).replace('.', ',') + ')', 'Önem', 'Düzeltme']]
   .concat(konular.map(k => { const s = satir.get(k.id); return [k.ad, k.ders, k.gizli ? 'evet, ' + byId.get(k.parcasi).ad + ' içinde' : '', sayi(k.soru), (desen.get(k.id) || ['sınav satırı yok']).join(' | '), sayi(s.kullananAgirlik), s.temel ? 'evet' : 'hayır', sayi(s.onem), '']; })
   .sort((a, b) => parseFloat(b[7].replace(',', '.')) - parseFloat(a[7].replace(',', '.'))))));
 

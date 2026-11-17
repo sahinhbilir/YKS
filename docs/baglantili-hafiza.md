@@ -42,7 +42,7 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
 - **Recall** (colour, red → green): the shown recall, own memory with the pull-down applied.
 - **Memory level** from stability S (days for recall to fall to 90 %): < 7 short-term · 7–30 settling · ≥ 30 long-term. Credit can lift a topic to long-term.
 - **Safe until YKS** (star): shown recall on exam day, with no more study, is at least the student's own target.
-- **Foundational**: the topics using it, directly or through others, weighted by use along the strongest path, add up to at least 1.5.
+- **Foundational**: the topics using it, directly or through others, weighted by use along the strongest path, add up to at least 2.5 (raised from 1.5 on 2026-11-17, once the full map showed 65 of 178 topics as foundational at 1.5; 43 at 2.5).
 - **Importance**: 2 × the topic's own expected YKS questions + Σ (use along the chain × that user's expected questions).
 - **Alarms** (foundational topics only, one per topic, in this order):
   1. **grey**: no memory, while a topic using it has memory;
@@ -115,6 +115,7 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
 - **Layout:** every subject is its own constellation (neural network), and a thread between constellations is a cross-subject link.
   - The subject name sits above its constellation in small, letter-spaced capitals.
   - Threads are thin and neutral: white or black at low opacity, never coloured.
+  - All subjects share one scale, so a link is equally long everywhere. Subjects sit in rows of two (one column on a phone), each row as tall as its tallest subject, so a big subject gets more room and the map grows taller instead of crowding.
 - **Topic = a point of light.** Flat core, no clip-art, no spikes, no nebulae, no decorative star field.
 - **Colour** is the topic's shown recall, computed in OKLCH so the steps read as one spectrum:
   - At or above the student's line: mint, `oklch(.79 .13 163)` (light theme `oklch(.62 .13 163)`).
@@ -130,7 +131,8 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
   - **Golden shining ring** for a topic safe until YKS (recall on exam day still at or above the line).
   - **Asteroid belt:** a long-term topic that falls below the line keeps its ring, but the ring breaks into rocks and grains along the orbit. They spread out, thin and scatter as recall falls; at the deepest red only scattered grains are left.
 - **Size** = importance, capped. A topic grows only up to the 85th percentile of importance, so the largest is about twice the smallest.
-- **Labels:** only foundational and alarmed topics are named before anything is touched.
+- **Labels:** only foundational and alarmed topics are named before anything is touched, alarms first, then foundations by importance. A label that would cover one already placed is left out. Touching a topic names its neighbours. Labels are drawn larger on a phone and never cut at the edge.
+- **Touch:** only a topic's own spot takes the pointer; a neighbour's glow never covers it.
 - **Alarms:** an alarmed foundation twinkles (an animated pulse of its own light; still when the student asks for reduced motion). The top 3 also appear as chips above the map, whose dot is the topic's own colour. There is no separate alarm ring.
 - **Never studied:** a faint grey point.
 - **Touch / hover:**
@@ -172,7 +174,7 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
   - `test/haritam-regression.cjs` (tab rules, resolution, page; Hafızam's states in, and the same number on both pages, with no link effects equal to Hafızam's own).
   - `test/haritam-browser.cjs` (1280 px dark/light, 390 px; hover, pin, Çalıştım, filter).
 
-## Full map draft (2026-11-17, waiting for review)
+## Full map (2026-11-17, in the app)
 
 - `data/hafiza-haritasi-tam.json`, built by `scripts/hafiza-haritasi-tam.py`:
   - every SAY plan topic of Geometri, Matematik TYT, Matematik AYT and Fizik (175) and the three hidden parts;
@@ -181,9 +183,10 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
   - 127 school units.
 - The builder checks names against the plan (none missing), ids, cycles and share sums.
 - Review files: `node scripts/hafiza-haritasi.cjs data/hafiza-haritasi-tam.json <out>` writes the two tables and one picture per subject (a ← line under a topic lists its foundations from other subjects).
-- 65 of 178 topics are foundational at the 1.5 threshold. Alarms stay quiet because only the top 3 show.
-- The app still embeds the pilot until the draft is reviewed.
+- 43 of 178 topics are foundational at the 2.5 threshold.
+- Embedded in place of the pilot (`scripts/embed-haritam.cjs`); `data/hafiza-haritasi-pilot.json` is kept as the reviewed trigonometry start. The layout is worked out on the first map drawn, not when the app opens.
+- Pull-down applies to Hafızam too: a topic passed today whose foundation is weak shows a little under 100 %.
 
 ## Not done yet
 
-- Review of the full map draft; then embed it in place of the pilot.
+- Delivering the learnt link values to students (teacher view only for now).

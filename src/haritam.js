@@ -1,5 +1,5 @@
 // Haritam: the student's connected-memory map (bağlantılı hafıza). Embedded by scripts/embed-haritam.cjs together
-// with src/hafiza-ag.js (HAFIZA_AG) and data/hafiza-haritasi-pilot.json (HARITA_VERI). Rules: docs/baglantili-hafiza.md.
+// with src/hafiza-ag.js (HAFIZA_AG) and data/hafiza-haritasi-tam.json (HARITA_VERI). Rules: docs/baglantili-hafiza.md.
 // Reads the student's results, lesson days and settings; writes nothing except the view state in EK.
 const HARITAM = (() => {
 const V = HARITA_VERI, DERS_SIRA = ['Geometri', 'Matematik TYT', 'Matematik AYT', 'Fizik'];
@@ -31,8 +31,10 @@ const SORU = (() => { const m = new Map(); for (const r of V.sinavSatirlari || [
 const KONU = new Map(V.konular.map(k => [k.id, k]));
 const KENAR = V.baglar.filter(b => (b.tur || 'kullanir') === 'kullanir').map(b => ({a: b.alt, b: b.ust, u: KEN[b.kullanim] || .5}))
   .concat(V.konular.filter(k => k.gizli).map(k => ({a: k.id, b: k.parcasi, u: 1, ic: true})));
-// Each subject is laid out on its own (a deterministic force layout), centred at 0.
-const YER = (() => {
+// Each subject is laid out on its own (a deterministic force layout), centred at 0. Worked out on the first map drawn,
+// not when the app opens.
+let yerHazir = null;
+const yerAl = () => yerHazir || (yerHazir = (() => {
   const yer = {};
   DERS_SIRA.forEach((ders, n) => {
     let seed = 5 + n * 17; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
@@ -49,7 +51,7 @@ const YER = (() => {
     yer[ders] = new Map([...P].map(([id, p]) => [id, {x: p.x - cx, y: p.y - cy}]));
   });
   return yer;
-})();
+})());
 
 /* ---- the student ---- */
 // Subjects the student has: Mathematics brings Geometri, Matematik TYT and AYT; Fizik for SAY (and before grade 12
@@ -180,19 +182,28 @@ function ogretmenKarti() {
 const kac = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const sabit = n => Math.round(n * 10) / 10;
 const dar = () => { try { return innerWidth < 640; } catch (e) { return false; } };
-function bolgeler(dersler, W, H) {
-  const n = dersler.length, pad = 46, ust = 34;
-  if (n === 1) return {[dersler[0]]: [pad, ust + 10, W - pad, H - pad]};
-  // a phone stacks the subjects in one column, each across the full width
-  const sut = dar() ? 1 : 2, sat = Math.ceil(n / sut), w = (W - pad) / sut, h = (H - ust) / sat;
-  const b = {}; dersler.forEach((d, i) => { const c = i % sut, r = Math.floor(i / sut); b[d] = [pad / 2 + c * w + 30, ust + r * h + 20, pad / 2 + (c + 1) * w - 30, ust + (r + 1) * h - 26]; });
-  return b;
-}
-function konumlar(dersler, W, H) {
-  const B = bolgeler(dersler, W, H), genis = d => { const v = [...YER[d].values()]; return [Math.max(...v.map(p => p.x)) - Math.min(...v.map(p => p.x)) || 1, Math.max(...v.map(p => p.y)) - Math.min(...v.map(p => p.y)) || 1]; };
-  const olcek = Math.min(2.6, ...dersler.map(d => { const [w, h] = genis(d), k = B[d]; return Math.min((k[2] - k[0]) / w, (k[3] - k[1]) / h); }));
-  const P = new Map(); for (const d of dersler) { const k = B[d]; YER[d].forEach((p, id) => P.set(id, {x: (k[0] + k[2]) / 2 + p.x * olcek, y: (k[1] + k[3]) / 2 + p.y * olcek})); }
-  return {P, B};
+// Subjects in rows of two (one column on a phone). Every subject keeps its own layout at one shared scale, so a link is
+// as long in each; a bigger subject gets more room and the map grows taller instead of crowding. B: each subject's box.
+function konumlar(dersler, W) {
+  const YER = yerAl(), pad = 46, ust = 34, ara = 60, baslik = 26, bosluk = dar() ? 72 : 40; // phone labels are larger
+  const K = new Map(dersler.map(d => { const v = [...YER[d].values()], xs = v.map(p => p.x), ys = v.map(p => p.y);
+    return [d, {w: Math.max(1, Math.max(...xs) - Math.min(...xs)), h: Math.max(1, Math.max(...ys) - Math.min(...ys))}]; }));
+  const sut = dersler.length > 1 && !dar() ? 2 : 1, satirlar = [];
+  for (let i = 0; i < dersler.length; i += sut) satirlar.push(dersler.slice(i, i + sut));
+  const olcek = Math.min(2.6, ...satirlar.map(r => (W - pad - ara * r.length) / r.reduce((t, d) => t + K.get(d).w, 0)));
+  const P = new Map(), B = {}; let y = ust;
+  for (const r of satirlar) {
+    const yuk = Math.max(...r.map(d => K.get(d).h)) * olcek, bos = (W - pad - r.reduce((t, d) => t + K.get(d).w * olcek, 0)) / r.length;
+    let x = pad / 2;
+    for (const d of r) {
+      const w = K.get(d).w * olcek + bos, cx = x + w / 2, cy = y + baslik + yuk / 2;
+      B[d] = [x + bos / 2, y + baslik, x + w - bos / 2, y + baslik + yuk];
+      YER[d].forEach((p, id) => P.set(id, {x: cx + p.x * olcek, y: cy + p.y * olcek}));
+      x += w;
+    }
+    y += baslik + yuk + bosluk;
+  }
+  return {P, B, H: Math.max(320, Math.round(y))};
 }
 // Glow, ring and belt for one topic. guc: short-term .5, settling and long-term 1 (shine is one step ahead of the ring).
 function noron(t, s, x, y, r, c, hedef, gid, dokun) {
@@ -233,12 +244,14 @@ function noron(t, s, x, y, r, c, hedef, gid, dokun) {
   return (s.alarm ? `<g class="hm-yan">${govde}</g>` : govde) + arka + cekirdek + on + (dokun ? `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r + 3.5)}" fill="none" stroke="${koyu ? '#fff' : '#000'}" stroke-opacity=".7"/>` : '');
 }
 function cizim(si, d, dersler, secili) {
-  const t = koyuMu() ? TEMA.koyu : TEMA.acik, W = dar() ? 560 : 1100, H = dar() ? Math.max(440, dersler.length * 380) : dersler.length > 2 ? 660 : dersler.length === 2 ? 420 : 520;
-  const {P, B} = konumlar(dersler, W, H), gor = new Set(P.keys()), sat = d.satir;
+  const t = koyuMu() ? TEMA.koyu : TEMA.acik, W = dar() ? 560 : 1100;
+  const {P, B, H} = konumlar(dersler, W), gor = new Set(P.keys()), sat = d.satir;
   const sirali = d.out.konular.map(s => s.onem).sort((a, b) => a - b), tavan = Math.max(1, sirali[Math.floor(sirali.length * .85)] || 1);
   const yaricap = s => (KONU.get(s.id).gizli ? 2.2 : 2.8 + 2.8 * Math.sqrt(Math.min(1, s.onem / tavan))) * (s.id === secili ? 1.6 : 1);
   const komsu = new Set(secili ? [secili] : []); if (secili) KENAR.forEach(e => { if (e.a === secili) komsu.add(e.b); if (e.b === secili) komsu.add(e.a); });
   let defs = '', ipler = '', dugumler = '', yazilar = '';
+  // a phone shows the 560-wide drawing at about 350 px: labels are drawn larger there to stay readable
+  const adlar = [], yazi = dar() ? 1.45 : 1;
   const grad = new Map(), gradId = c => { if (!grad.has(c)) { const id = 'hmg' + grad.size; grad.set(c, id);
     defs += `<radialGradient id="${id}"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>` +
       `<radialGradient id="${id}c"><stop offset="0" stop-color="${t.cekirdek}"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${c}"/></radialGradient>`; } return grad.get(c); };
@@ -255,10 +268,24 @@ function cizim(si, d, dersler, secili) {
     const p = P.get(s.id), r = yaricap(s), k = KONU.get(s.id), ki = (d.kaynak.get(k.gizli ? k.parcasi : s.id) || [])[0];
     const ic = s.r == null ? `<circle cx="${sabit(p.x)}" cy="${sabit(p.y)}" r="${sabit(r * .7)}" fill="${t.bos}"/>` : noron(t, s, p.x, p.y, r, renk(t, s.r, d.hedef), d.hedef, gradId(renk(t, s.r, d.hedef)), s.id === secili);
     dugumler += `<g class="hm-d${komsu.has(s.id) ? ' hm-yakin' : ''}" data-hm="${s.id}" data-x="${sabit(p.x)}" data-y="${sabit(p.y)}"${ki !== undefined ? ' data-hm-ki="' + ki + '"' : ''} tabindex="0" role="button" aria-label="${kac(k.ad)}">` +
-      `<circle cx="${sabit(p.x)}" cy="${sabit(p.y)}" r="${sabit(Math.max(10, r * 2.4))}" fill="transparent"/>${ic}</g>`;
-    if (s.temel || s.alarm || komsu.has(s.id)) yazilar += `<text class="hm-ad${komsu.has(s.id) ? ' hm-yakin' : ''}" data-hm-ad="${s.id}" x="${sabit(p.x)}" y="${sabit(p.y + r + 14)}" fill="${komsu.has(s.id) ? t.yaziGuclu : t.yazi}" stroke="${t.zemin}">${kac(k.ad.length > 30 ? k.ad.slice(0, 29) + '…' : k.ad)}</text>`;
+      `<circle class="hm-vur" cx="${sabit(p.x)}" cy="${sabit(p.y)}" r="${sabit(Math.max(10, r * 2.4))}" fill="transparent"/>${ic}</g>`;
+    adlar.push({s, k, x: p.x, y: p.y + r + 14 * yazi});
   }
-  return {svg: `<svg class="hm-svg${secili ? ' hm-odak' : ''}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Konu haritası" style="background:${t.zemin}"><defs>${defs}</defs>${ipler}${dugumler}${yazilar}</svg>`, P, W, H};
+  // Labels: the chosen topic's neighbours always; then alarms (in alarm order) and foundations (by importance), each only
+  // where it covers no label already placed. Every other label is drawn hidden and shows while its topic is next to the
+  // one touched.
+  const once = a => komsu.has(a.s.id) ? 0 : a.s.alarm ? 1 : a.s.temel ? 2 : 3, alarmSira = new Map(d.out.alarmlar.map((id, i) => [id, i]));
+  const kutular = Object.entries(B).map(([ders, k]) => { const w = ders.length * 8.5 + 10, x = (k[0] + k[2]) / 2; return [x - w / 2, k[1] - 24, x + w / 2, k[1] - 8]; });
+  adlar.sort((a, b) => once(a) - once(b) || (alarmSira.get(a.s.id) ?? 0) - (alarmSira.get(b.s.id) ?? 0) || b.s.onem - a.s.onem);
+  for (const a of adlar) {
+    const metin = a.k.ad.length > 30 ? a.k.ad.slice(0, 29) + '…' : a.k.ad, w = metin.length * 5.7 * yazi + 6;
+    a.x = Math.min(W - w / 2 - 4, Math.max(w / 2 + 4, a.x)); // never cut at the edge
+    const b = [a.x - w / 2, a.y - 10 * yazi, a.x + w / 2, a.y + 3 * yazi];
+    const goster = once(a) === 0 || (once(a) < 3 && !kutular.some(c => b[0] < c[2] && c[0] < b[2] && b[1] < c[3] && c[1] < b[3]));
+    if (goster) kutular.push(b);
+    yazilar += `<text class="hm-ad${komsu.has(a.s.id) ? ' hm-yakin' : ''}${goster ? '' : ' hm-sakla'}" data-hm-ad="${a.s.id}" x="${sabit(a.x)}" y="${sabit(a.y)}" fill="${komsu.has(a.s.id) ? t.yaziGuclu : t.yazi}" stroke="${t.zemin}">${kac(metin)}</text>`;
+  }
+  return {svg: `<svg class="hm-svg${secili ? ' hm-odak' : ''}${yazi > 1 ? ' hm-dar' : ''}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Konu haritası" style="background:${t.zemin}"><defs>${defs}</defs>${ipler}${dugumler}${yazilar}</svg>`, P, W, H};
 }
 
 /* ---- the Hafızam card for a map topic ---- */
@@ -327,6 +354,7 @@ function vurgula(svg, id) {
   svg.classList.toggle('hm-odak', !!id);
   svg.querySelectorAll('.hm-d').forEach(g => g.classList.toggle('hm-yakin', !!id && komsu.has(g.dataset.hm)));
   svg.querySelectorAll('.hm-ip').forEach(p => p.classList.toggle('hm-yakin', !!id && (p.dataset.a === id || p.dataset.b === id)));
+  svg.querySelectorAll('.hm-ad').forEach(t => t.classList.toggle('hm-yakin', !!id && komsu.has(t.dataset.hmAd)));
 }
 let baglandi = false;
 function bagla() {

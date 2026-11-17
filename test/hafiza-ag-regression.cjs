@@ -211,27 +211,29 @@ test('memory level from stability; the exam star uses the shown recall on exam d
 test('foundational by weighted use; importance counts the topic\'s own questions twice', () => {
   const out = H.hesapla(girdi([], 0));
   const tyt = satir(out, 'tytTrig'), sin = satir(out, 'sincos'), dik = satir(out, 'dik'), fonk = satir(out, 'fonk');
-  near(tyt.kullananAgirlik, 1 + 0.5, 1e-12); assert.equal(tyt.temel, true);
+  near(tyt.kullananAgirlik, 1 + 0.5, 1e-12); assert.equal(tyt.temel, false, 'below the 2.5 threshold');
+  assert.equal(H.AYAR.temelEsik, 2.5); assert.equal(satir(H.hesapla(girdi([], 0), {temelEsik: 1.5}), 'tytTrig').temel, true, 'the threshold is a setting');
   near(tyt.onem, 2 * 3 + 1 * 4 + 0.5 * 2, 1e-12);
-  near(sin.kullananAgirlik, 1 + 1 + 0.5 + 0.5, 1e-12, 'its topic, what uses its topic, and physics vectors');
+  near(sin.kullananAgirlik, 1 + 1 + 0.5 + 0.5, 1e-12, 'its topic, what uses its topic, and physics vectors'); assert.equal(sin.temel, true);
   near(sin.onem, 0 + 1 * 3 + 1 * 4 + 0.5 * 2 + 0.5 * 2, 1e-12);
   near(dik.kullananAgirlik, 0.5 + 0.5 + 0.25, 1e-12); assert.equal(dik.temel, false);
   near(fonk.kullananAgirlik, 0.5 + 0.5, 1e-12, 'integral counted once, by its strongest path'); assert.equal(fonk.temel, false);
 });
 
 test('alarms: one per foundation, grey > red > orange > yellow; top 3 by colour then importance', () => {
+  // On this small map TYT trig is foundational at 1.5 (the map's default is 2.5).
   // Nothing learnt but AYT trig and trig functions: TYT trig and its part are missing (grey).
-  const gri = H.hesapla(girdi([{gun: 0, id: 'trigFonk', not: 3}], 1), {});
+  const gri = H.hesapla(girdi([{gun: 0, id: 'trigFonk', not: 3}], 1), {temelEsik: 1.5});
   // the pass on trigFonk started TYT trig, so it is not grey
   assert.notEqual(satir(gri, 'tytTrig').alarm, 'gri');
-  const yalniz = H.hesapla({konular: KONULAR, baglar: BAGLAR, sonuclar: [], bugun: 1});
+  const yalniz = H.hesapla({konular: KONULAR, baglar: BAGLAR, sonuclar: [], bugun: 1}, {temelEsik: 1.5});
   assert.equal(satir(yalniz, 'tytTrig').alarm, null, 'nothing studied above it: no alarm');
   const s = [{gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 0, id: 'trigFonk', not: 3}];
-  const kirmizi = H.hesapla(girdi(s, 8), {kredi: 0});
+  const kirmizi = H.hesapla(girdi(s, 8), {kredi: 0, temelEsik: 1.5});
   assert.equal(satir(kirmizi, 'tytTrig').alarm, 'kirmizi'); assert.equal(satir(kirmizi, 'aytTrig').alarm, null, 'not foundational');
-  const sari = H.hesapla(girdi(s, 1), {kredi: 0});
+  const sari = H.hesapla(girdi(s, 1), {kredi: 0, temelEsik: 1.5});
   assert.equal(satir(sari, 'tytTrig').alarm, 'sari');
-  const turuncu = H.hesapla(girdi(s.concat({gun: 1, id: 'tytTrig', not: 3}, {gun: 2, id: 'aytTrig', not: 1}), 2), {kredi: 0});
+  const turuncu = H.hesapla(girdi(s.concat({gun: 1, id: 'tytTrig', not: 3}, {gun: 2, id: 'aytTrig', not: 1}), 2), {kredi: 0, temelEsik: 1.5});
   assert.equal(satir(turuncu, 'tytTrig').alarm, 'turuncu');
   assert.deepEqual(duz(kirmizi.ust3), duz(kirmizi.alarmlar.slice(0, 3)));
   const sirali = kirmizi.alarmlar.map(id => satir(kirmizi, id));

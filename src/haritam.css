@@ -9,10 +9,15 @@
 .hm-svg{display:block;width:100%;height:auto;border-radius:10px;font-family:"IBM Plex Sans",system-ui,sans-serif}
 .hm-ders{font-size:10.5px;letter-spacing:.14em;font-weight:600;text-anchor:middle;opacity:.75}
 .hm-ad{font-size:10.5px;text-anchor:middle;paint-order:stroke;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.hm-dar .hm-ad{font-size:15px;stroke-width:4px}.hm-dar .hm-ders{font-size:14px}
 .hm-d{cursor:pointer;outline:none}
+/* only a topic's own hit area takes the pointer: a neighbour's glow never covers it */
+.hm-d *{pointer-events:none}.hm-d .hm-vur{pointer-events:all}
 .hm-d:focus-visible circle:last-child{stroke:var(--vurgu);stroke-width:2}
 .hm-svg .hm-d,.hm-svg .hm-ip,.hm-svg .hm-ad{transition:opacity .18s}
 .hm-svg.hm-odak .hm-d:not(.hm-yakin),.hm-svg.hm-odak .hm-ad:not(.hm-yakin){opacity:.2}
+/* a label left out where it would cover another shows only while its topic is next to the one touched */
+.hm-svg .hm-ad.hm-sakla:not(.hm-yakin){opacity:0}
 .hm-svg.hm-odak .hm-ip:not(.hm-yakin){opacity:.25}
 .hm-svg.hm-odak .hm-ip.hm-yakin{stroke-opacity:.75}
 @keyframes hm-yan{0%,100%{opacity:.35}50%{opacity:1}}
