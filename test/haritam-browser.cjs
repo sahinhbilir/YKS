@@ -49,6 +49,32 @@ const kur=()=>{
    }
    assert.deepEqual(errors,[]);await context.close();
   }
+  // Teacher: Ayarlar → Öğrenci kalibrasyonu → Bağlantılı hafıza. "Bağları güncelle" learns over the notebook with a
+  // progress bar and keeps the values in the notebook; the teacher opens a student's map from the same box.
+  {
+   const context=await browser.newContext({viewport:{width:1280,height:900},colorScheme:'dark'}),page=await context.newPage(),errors=[];
+   page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>{errors.push('dialog: '+d.message());d.accept()});
+   await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
+   await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
+   await page.evaluate(()=>{
+    D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-11-11';bulutYedekPlanla=()=>{};
+    const b=bugunNo(),dik=KATALOG.findIndex(k=>k[0]===1&&k[1]===9&&k[3]==='Dik Üçgen ve Trigonometri'),trig=KATALOG.findIndex(k=>k[0]===1&&k[1]===11&&k[3]==='Trigonometrik Fonksiyonlar');
+    D.ogr=[];D.log=[];
+    for(let s=0;s<12;s++){D.ogr.push({no:s+1,ad:'Öğrenci '+(s+1),sube:'12A',alan:'SAY',sinif:12,aktif:true});
+      D.log.push([b-90,s,dik,null,null,3],[b-90,s,trig,null,null,3]);for(let g=b-84;g<b;g+=7)D.log.push([g,s,trig,null,null,3]);for(let g=b-80;g<b;g+=20)D.log.push([g,s,dik,null,null,s%3?3:1]);}
+    EK={sekme:'ayarlar',ayarBolum:'kalibrasyon',hafta:null,girisAcik:{}};ciz();
+   });
+   await page.locator('#hmOgretmen').waitFor();assert.match(await page.locator('#hmOgretmen').innerText(),/Henüz güncellenmedi/);
+   await page.locator('#hmOgren').click();await page.waitForFunction(()=>D.hafizaAg&&D.hafizaAg.son,null,{timeout:120000});
+   await page.locator('#hmOgretmen').waitFor();assert.match(await page.locator('#hmOgretmen').innerText(),/12 öğrenci/);
+   const p=await page.evaluate(()=>D.hafizaAg.parametreler.paylasilan['tytTrig>aytTrig']||D.hafizaAg.parametreler.paylasilan['geoDik>geoAlan']);
+   assert(p&&Number.isFinite(p.kredi),'shared values stored in the notebook');
+   await page.selectOption('#hmOgrSec','2');await page.locator('#hmOgrAc').click();
+   await page.locator('.hm-sayfa').waitFor();assert.match(await page.locator('.hm-sayfa h1').innerText(),/Haritası · Öğrenci 3/);
+   assert(await page.locator('.hm-d').count()>0);await page.screenshot({path:path.join(out,'haritam-ogretmen.png')});
+   await page.locator('#hmGeri').click();await page.locator('#hmOgretmen').waitFor();
+   assert.deepEqual(errors,[]);await context.close();
+  }
   console.log('Haritam browser: passed ('+out+')');
  } finally { await browser.close(); }
 })().catch(e=>{console.error(e);process.exit(1)});

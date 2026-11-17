@@ -73,28 +73,84 @@ function cozumle() {
     KATALOG.forEach((k, ki) => { if (k[0] === di && k[1] === b.sinif && k[3] === b.ad) birimler.push({id: ki, kapsar: b.kapsar}); }); }
   return {esler, birimler};
 }
-function durum(si) {
-  const o = D.ogr[si], bugun = bugunNo(), hedef = hedefTutma(si), {esler, birimler} = cozumle();
+// A student's input for HAFIZA_AG: the shared map (konular, birimler) and this student's own part (konuEk: forgetting
+// speed, FSRS parameters and lesson day per topic; birimEk: lesson day per school unit; real results).
+const ogrAnahtar = o => (o && o.no !== undefined ? o.no : '') + '|' + (o && o.ad || '');
+function girdi(si, cz) {
+  const o = D.ogr[si], bugun = bugunNo(), {esler, birimler} = cz || cozumle();
   const islenis = ki => { const g = ogrenciIslenisTarihi(si, ki); return Number.isInteger(g) && g <= bugun ? g : null; };
-  const konular = V.konular.map(k => {
-    const kis = esler.get(k.id) || [], g = kis.map(islenis).filter(x => x !== null), x = {id: k.id, ad: k.ad, ders: k.ders, gizli: !!k.gizli, soru: SORU.get(k.id) || 0, esler: kis};
-    if (k.gizli) x.parcasi = k.parcasi;
-    if (kis.length) { x.k = unutmaKatsayisi(si, kis[0]); x.w = parametreAl(si, kis[0]); }
-    if (g.length) x.ogrenildi = Math.min(...g);
-    return x;
-  });
-  const bir = birimler.map(b => { const g = islenis(b.id); return g === null ? b : Object.assign({ogrenildi: g}, b); });
+  const konular = V.konular.map(k => { const x = {id: k.id, ad: k.ad, ders: k.ders, gizli: !!k.gizli, soru: SORU.get(k.id) || 0, esler: esler.get(k.id) || []}; if (k.gizli) x.parcasi = k.parcasi; return x; });
+  const konuEk = {}, birimEk = {};
+  for (const k of konular) {
+    if (!k.esler.length) continue;
+    const g = k.esler.map(islenis).filter(x => x !== null), e = {k: unutmaKatsayisi(si, k.esler[0]), w: parametreAl(si, k.esler[0])};
+    if (g.length) e.ogrenildi = Math.min(...g);
+    konuEk[k.id] = e;
+  }
+  for (const b of birimler) { const g = islenis(b.id); if (g !== null) birimEk[b.id] = g; }
   const sonuclar = [];
   for (const l of D.log || []) {
     if (l[1] !== si || l[0] > bugun) continue;
     const not = sonucNotu(l); if (!not || sonucDevreDisiMi(si, l[2], l[0])) continue;
     sonuclar.push({gun: l[0], id: l[2], not});
   }
-  const parametreler = D.hafizaAg && D.hafizaAg.parametreler ? {paylasilan: D.hafizaAg.parametreler.paylasilan, ogrenci: ((D.hafizaAg.parametreler.ogrenci || {})[o && o.ad] || {})} : null;
-  const out = HAFIZA_AG.hesapla({konular, baglar: V.baglar, birimler: bir, sonuclar, bugun, sinavGunu: gunNo(D.ayar.sinav), anahtar: String(si) + '|' + (o && o.ad), parametreler}, {hedef});
+  return {konular, baglar: V.baglar, birimler, konuEk, birimEk, sonuclar, bugun, sinavGunu: gunNo(D.ayar.sinav), anahtar: ogrAnahtar(o), esler};
+}
+// Learnt link values: the notebook's shared ones and this student's own (Bağları güncelle, teacher side).
+function parametreleri(o) {
+  const p = D.hafizaAg && D.hafizaAg.parametreler; if (!p) return null;
+  return {paylasilan: p.paylasilan || {}, ogrenci: (p.ogrenci || {})[ogrAnahtar(o)] || {}};
+}
+function durum(si) {
+  const o = D.ogr[si], hedef = hedefTutma(si), cz = cozumle(), g = girdi(si, cz);
+  const out = HAFIZA_AG.hesapla(Object.assign({}, g, {parametreler: parametreleri(o)}), {hedef});
   // Where a topic's memory lives in this notebook: plan topics with its name first, then school units covering it.
-  const kaynak = new Map(V.konular.map(k => [k.id, (esler.get(k.id) || []).concat(birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))]));
-  return {out, esler, kaynak, hedef, satir: new Map(out.konular.map(s => [s.id, s]))};
+  const kaynak = new Map(V.konular.map(k => [k.id, (cz.esler.get(k.id) || []).concat(cz.birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))]));
+  return {out, esler: cz.esler, kaynak, hedef, satir: new Map(out.konular.map(s => [s.id, s]))};
+}
+
+/* ---- teacher: learning the links over the notebook (Ayarlar → Öğrenci kalibrasyonu) ---- */
+const LINKLER = V.baglar.filter(b => (b.tur || 'kullanir') === 'kullanir').map(b => b.alt + '>' + b.ust);
+let ogreniyor = null;
+const yuvarla = x => Math.round(x * 1000) / 1000;
+// Only what was learnt is kept: shared values for every link, a student's own only where they had results on it.
+function sikistir(p) {
+  const tek = v => { const o = {n: {}}; for (const k of ['kredi', 'ceza', 'cekis']) if (Number.isFinite(v[k])) { o[k] = yuvarla(v[k]); o.n[k] = (v.n || {})[k] || 0; } return o; };
+  const paylasilan = {}; for (const [a, v] of Object.entries(p.paylasilan || {})) paylasilan[a] = tek(v);
+  const ogrenci = {};
+  for (const [s, l] of Object.entries(p.ogrenci || {})) { const m = {}; for (const [a, v] of Object.entries(l)) if (Object.values(v.n || {}).some(n => n > 0)) m[a] = tek(v); if (Object.keys(m).length) ogrenci[s] = m; }
+  return {paylasilan, ogrenci};
+}
+async function ogren(ilerleme) {
+  if (ogreniyor) return ogreniyor;
+  ogreniyor = (async () => {
+    const cz = cozumle(), ogrenciler = [];
+    (D.ogr || []).forEach((o, si) => { if (o && o.aktif !== false && dersleri(o).length) { const g = girdi(si, cz); if (g.sonuclar.length) ogrenciler.push({anahtar: g.anahtar, sonuclar: g.sonuclar, bugun: g.bugun, konuEk: g.konuEk, birimEk: g.birimEk}); } });
+    const ilk = ogrenciler.length ? girdi(D.ogr.findIndex(o => o && ogrAnahtar(o) === ogrenciler[0].anahtar), cz) : null;
+    let p = (D.hafizaAg && D.hafizaAg.parametreler) || {paylasilan: {}, ogrenci: {}}, notlar = [];
+    if (ilk) for (let i = 0; i < LINKLER.length; i++) {
+      // one link at a time, yielding between links so the page stays responsive
+      const r = HAFIZA_AG.ogren({konular: ilk.konular, baglar: V.baglar, birimler: ilk.birimler, ogrenciler, parametreler: p, sadece: [LINKLER[i]]});
+      p = {paylasilan: Object.assign({}, p.paylasilan, r.paylasilan), ogrenci: r.ogrenci};
+      notlar = notlar.filter(n => n.anahtar !== LINKLER[i]).concat(r.notlar);
+      if (ilerleme) ilerleme((i + 1) / LINKLER.length);
+      await new Promise(res => setTimeout(res, 0));
+    }
+    D.hafizaAg = {parametreler: sikistir(p), son: Date.now(), ogrenciSayisi: ogrenciler.length, sonucSayisi: ogrenciler.reduce((t, s) => t + s.sonuclar.length, 0), notlar: notlar.map(n => ({anahtar: n.anahtar, deger: yuvarla(n.deger), n: n.n}))};
+  })();
+  try { await ogreniyor; } finally { ogreniyor = null; }
+}
+function ogretmenKarti() {
+  const h = D.hafizaAg || {}, salt = typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme();
+  const ad = id => (KONU.get(id) || {}).ad || id, link = a => { const [alt, ust] = a.split('>'); return kac(ad(ust)) + ' → ' + kac(ad(alt)); };
+  const ogr = (D.ogr || []).map((o, si) => [o, si]).filter(([o]) => o && o.aktif !== false && dersleri(o).length);
+  return '<div class="kart hm-ogretmen" id="hmOgretmen"><h2>Bağlantılı hafıza</h2>' +
+    '<p class="mini">Konu haritasındaki bağların gücünü bu defterdeki öğrencilerin gerçek sonuçlarından öğrenir. Öğrenilen değerleri şimdilik yalnızca siz görürsünüz; öğrencilerin Haritam’ı başlangıç değerleriyle (0,5) çalışır.</p>' +
+    (h.son ? '<p>Son güncelleme: <b>' + new Date(h.son).toLocaleString('tr-TR') + '</b> · ' + h.ogrenciSayisi + ' öğrenci, ' + h.sonucSayisi + ' sonuç</p>' : '<p class="mini">Henüz güncellenmedi.</p>') +
+    (salt ? '' : '<div class="arac"><button type="button" class="dugme birincil" id="hmOgren">Bağları güncelle</button><progress id="hmIlerleme" max="1" value="0" hidden></progress></div>') +
+    ((h.notlar || []).length ? '<h3>Tutmuyor gibi görünen bağlar</h3><ul class="mini">' + h.notlar.map(n => '<li>' + link(n.anahtar) + ' · öğrenilen kredi ' + String(n.deger).replace('.', ',') + ' (' + n.n + ' sonuç). Bu bağı gözden geçirin.</li>').join('') + '</ul>' : '') +
+    (ogr.length ? '<div class="arac"><label>Öğrencinin haritası <select id="hmOgrSec">' + ogr.map(([o, si]) => '<option value="' + si + '">' + kac(o.ad || ('Öğrenci ' + (si + 1))) + '</option>').join('') + '</select></label><button type="button" class="dugme" id="hmOgrAc">Aç</button></div>' : '') +
+    '</div>';
 }
 
 /* ---- drawing ---- */
@@ -198,7 +254,8 @@ function kart(si, d, id) {
 let son = null; // last render, for the hover card
 function gorunum() {
   const si = EK.ogr, o = D.ogr[si], tum = dersleri(o);
-  if (!tum.length) return '<div class="baslik"><h1>Haritam</h1><p>Harita şimdilik matematik ve fizik konuları için var.</p></div>';
+  const ogretmen = !ogrenciMi(), baslik = ogretmen ? 'Haritası · ' + kac(o && o.ad || '') : 'Haritam';
+  if (!tum.length) return '<div class="baslik"><h1>' + baslik + '</h1><p>Harita şimdilik matematik ve fizik konuları için var.</p></div>';
   const filtre = tum.includes(EK.haritamDers) ? EK.haritamDers : '', dersler = filtre ? [filtre] : tum;
   const d = durum(si), secili = d.satir.has(EK.haritamSecili) ? EK.haritamSecili : null, c = cizim(si, d, dersler, secili);
   son = {si, d, P: c.P, W: c.W, H: c.H};
@@ -218,7 +275,8 @@ function gorunum() {
     ornek('', '<path d="M-11,0 A11,3.8 0 0 1 11,0" transform="rotate(-22)" fill="none" stroke="' + n + '" stroke-opacity=".45"/><circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/><path d="M11,0 A11,3.8 0 0 1 -11,0" transform="rotate(-22)" fill="none" stroke="' + n + '"/>') + 'halka: uzun süreli</span>' +
     ornek('', '<path d="M-11,0 A11,3.8 0 0 1 11,0" transform="rotate(-22)" fill="none" stroke="' + ALTIN + '" stroke-opacity=".6"/><circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/><path d="M11,0 A11,3.8 0 0 1 -11,0" transform="rotate(-22)" fill="none" stroke="' + ALTIN + '" stroke-width="1.5"/>') + 'altın halka: YKS’ye kadar kalıcı</span>' +
     '<span>dağılan halka: kalıcıydı, unutuluyor</span><span>yanıp sönen: dikkat isteyen temel</span><span>büyük nokta: çok konu ona dayanıyor</span></div>';
-  return '<div class="hm-sayfa"><div class="baslik"><h1>Haritam</h1><p>Her nokta bir konu; ışığı ne kadar kalıcı olduğunu, rengi ne kadar hatırladığını gösterir. Bir konuya dokun.</p></div>' +
+  return '<div class="hm-sayfa"><div class="baslik"><h1>' + baslik + '</h1><p>' + (ogretmen ? 'Öğrencinin konu haritası; bağlar bu defterden öğrenilen değerlerle hesaplanır. ' +
+      '<button type="button" class="dugme mini" id="hmGeri">Ayarlar’a dön</button>' : 'Her nokta bir konu; ışığı ne kadar kalıcı olduğunu, rengi ne kadar hatırladığını gösterir. Bir konuya dokun.') + '</p></div>' +
     cipler + (alarmlar ? '<div class="hm-alarmlar">' + alarmlar + '</div>' : '') +
     // One card: over the map on a computer, under it on a phone (CSS); pinned until the topic is touched again.
     '<div class="hm-harita" data-hm-harita>' + c.svg + '<div class="hm-kart-yer' + (secili ? ' hm-sabit' : '') + '"' + (yer ? ' style="left:' + yer.x + '%;top:' + yer.y + '%"' : ' hidden') + ' data-hm-kart>' + kartHtml + '</div></div>' +
@@ -255,7 +313,15 @@ function bagla() {
     try { yer.innerHTML = kart(son.si, son.d, id); } catch (e) { return; }
     yer.style.left = p.x + '%'; yer.style.top = p.y + '%'; yer.hidden = false; vurgula(harita.querySelector('svg'), id);
   });
-  document.addEventListener('click', ev => {
+  document.addEventListener('click', async ev => {
+    const id = ev.target && ev.target.id;
+    if (id === 'hmOgren') {
+      const btn = ev.target, bar = document.getElementById('hmIlerleme'); btn.disabled = true; if (bar) bar.hidden = false;
+      try { await ogren(f => { if (bar) bar.value = f; }); await kaydet(true); } finally { ciz(); }
+      return;
+    }
+    if (id === 'hmOgrAc') { const sel = document.getElementById('hmOgrSec'); EK.ogr = +sel.value; EK.haritamSecili = undefined; EK.haritamDers = undefined; EK.sekme = 'haritam'; ciz(); return; }
+    if (id === 'hmGeri') { EK.sekme = 'ayarlar'; EK.ayarBolum = 'kalibrasyon'; ciz(); return; }
     if (EK.sekme !== 'haritam') return;
     const ders = ev.target.closest && ev.target.closest('[data-hm-ders]');
     if (ders) { EK.haritamDers = ders.dataset.hmDers || undefined; EK.haritamSecili = undefined; ciz(); return; }
@@ -272,5 +338,5 @@ function bagla() {
 bagla();
 // kaynaklar: map topic → the notebook topic ids that feed it (plan topics, then school units)
 const kaynaklar = () => { const {esler, birimler} = cozumle(); return new Map(V.konular.map(k => [k.id, (esler.get(k.id) || []).concat(birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))])); };
-return {gorunum, uygun, dersleri, durum, cozumle, kaynaklar, renk, oklch, TEMA};
+return {gorunum, uygun, dersleri, durum, girdi, cozumle, kaynaklar, ogren, ogretmenKarti, renk, oklch, TEMA};
 })();

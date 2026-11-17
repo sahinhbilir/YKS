@@ -203,7 +203,8 @@ function calistir(girdi, o, F, ag, prm, kayit, olaylar, kume) {
 
   const sira = [];
   ag.dugum.forEach((_, id) => { const g = ozellik(id, 'ogrenildi'); if (Number.isInteger(g) && g <= bugun) sira.push({gun: g, id, ders: true, i: -1}); });
-  ag.birim.forEach(b => { const g = b.ogrenildi; if (Number.isInteger(g) && g <= bugun) b.kapsar.forEach(id => sira.push({gun: g, id, ders: true, i: -1})); });
+  // a school unit's lesson day: this student's (birimEk, when learning over a notebook), else the map input's
+  ag.birim.forEach((b, bid) => { const be = girdi.birimEk || {}, g = be[bid] !== undefined ? be[bid] : b.ogrenildi; if (Number.isInteger(g) && g <= bugun) b.kapsar.forEach(id => sira.push({gun: g, id, ders: true, i: -1})); });
   (girdi.sonuclar || []).forEach((r, i) => {
     if (!r || ![1, 2, 3, 4].includes(r.not) || !Number.isInteger(r.gun) || r.gun > bugun) return;
     const id = ag.takma.get(r.id), b = ag.birim.get(r.id);
@@ -269,7 +270,7 @@ function hesapla(girdi, opts) {
 function karistir(m) { let h = 2166136261; for (let i = 0; i < m.length; i++) h = Math.imul(h ^ m.charCodeAt(i), 16777619); return h >>> 0; }
 
 /* ---- learning the links from the notebook's results ---- */
-// ogrenciler: [{anahtar, sonuclar, bugun, konuEk?}]. For every link and each of kredi, ceza and çekiş, the value on the
+// ogrenciler: [{anahtar, sonuclar, bugun, konuEk?, birimEk?}]. For every link and each of kredi, ceza and çekiş, the value on the
 // grid that best predicts the results it affects (log-likelihood of each own result given the shown recall just before
 // it). Shared value = notebook's best, blended with the starting value by count; a student's value = own best blended
 // with the shared one (ozGuven results weigh as much as it). One coordinate pass per call; calls repeat as data grows.

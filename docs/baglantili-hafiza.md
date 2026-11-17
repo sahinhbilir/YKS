@@ -144,6 +144,13 @@ Each topic keeps the app's FSRS-6 card (S, D), built from its own results exactl
 - **Inputs.** The student's real results (`sonucNotu`, excluding `sonucDevreDisiMi` rows), lesson days (`ogrenciIslenisTarihi`), forgetting speed per lesson (`unutmaKatsayisi`), FSRS parameters (`parametreAl`), recall target (`hedefTutma`) and exam day.
 - **Card.** The touched topic's card is Hafızam's own `hafizaSatiri`. It shows the map's recall, and its bar uses the map's reds inside Haritam only. Its buttons are Hafızam's (Çalıştım opens the same result slider).
 - **Not changed.** Hafızam, the weekly plan and every FSRS card.
+- **Teacher (v1: teacher view only).** Ayarlar → Öğrenci kalibrasyonu → **Bağlantılı hafıza**.
+  - **Bağları güncelle** learns every link over the notebook's active students with results. It works one link at a time with a progress bar (`HARITAM.ogren`) and stores the values in the notebook as `D.hafizaAg`:
+    - shared values for every link;
+    - a student's own values only for links where they had results;
+    - rounded, with the time, student and result counts, and the links that do not seem to hold.
+  - The teacher opens any student's map from the same box, computed with the learnt values.
+  - Students' Haritam keeps the starting values until delivery is decided.
 - **Tests.**
   - `test/hafiza-ag-regression.cjs` (algorithm).
   - `test/haritam-regression.cjs` (tab rules, resolution, page).
@@ -151,6 +158,5 @@ Each topic keeps the app's FSRS-6 card (S, D), built from its own results exactl
 
 ## Not done yet
 
-- Teacher side: **Bağları güncelle** and storing and delivering the learnt link values. Until then every link uses its starting values.
 - The rest of the Mathematics, Geometry and Physics map, after the pilot is reviewed.
 - Hafızam's own states ("Çoktan unuttum", Düzenle) and basket lessons are not yet read by the map.
