@@ -1,0 +1,38 @@
+/* Haritam (bağlantılı hafıza). Embedded by scripts/embed-haritam.cjs. The map panel is neutral in both themes. */
+.hm-sayfa{display:flex;flex-direction:column;gap:12px}
+.hm-cipler{display:flex;flex-wrap:wrap;gap:6px}
+.hm-alarmlar{display:flex;flex-wrap:wrap;gap:8px}
+.hm-alarm-cip{display:flex;align-items:center;gap:8px;border:1px solid var(--cizgi);background:var(--kagit);border-radius:9px;padding:6px 11px;font-size:12.5px;cursor:pointer;color:var(--murekkep)}
+.hm-alarm-cip i{width:8px;height:8px;border-radius:50%;flex:none}
+.hm-alarm-cip b{font-weight:600}.hm-alarm-cip span{color:var(--soluk)}
+.hm-harita{position:relative;border:1px solid var(--cizgi);border-radius:10px;overflow:visible}
+.hm-svg{display:block;width:100%;height:auto;border-radius:10px;font-family:"IBM Plex Sans",system-ui,sans-serif}
+.hm-ders{font-size:10.5px;letter-spacing:.14em;font-weight:600;text-anchor:middle;opacity:.75}
+.hm-ad{font-size:10.5px;text-anchor:middle;paint-order:stroke;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.hm-d{cursor:pointer;outline:none}
+.hm-d:focus-visible circle:last-child{stroke:var(--vurgu);stroke-width:2}
+.hm-svg .hm-d,.hm-svg .hm-ip,.hm-svg .hm-ad{transition:opacity .18s}
+.hm-svg.hm-odak .hm-d:not(.hm-yakin),.hm-svg.hm-odak .hm-ad:not(.hm-yakin){opacity:.2}
+.hm-svg.hm-odak .hm-ip:not(.hm-yakin){opacity:.25}
+.hm-svg.hm-odak .hm-ip.hm-yakin{stroke-opacity:.75}
+@keyframes hm-yan{0%,100%{opacity:.35}50%{opacity:1}}
+.hm-yan{animation:hm-yan 2.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.hm-yan{animation:none;opacity:.9}}
+.hm-kart-yer{position:absolute;width:340px;max-width:calc(100% - 12px);z-index:3;box-shadow:0 12px 32px rgba(0,0,0,.35);border-radius:9px}
+.hm-kart-yer[hidden]{display:none}
+/* the card's bar below the line uses the map's reds (crimson-red at the line → wine), only inside Haritam */
+.hm-kart-yer{--uyari:#be2035;--kritik:#6b002e}
+:root[data-theme="dark"] .hm-kart-yer{--uyari:#d03543;--kritik:#740033}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hm-kart-yer{--uyari:#d03543;--kritik:#740033}}
+.hm-kart-yer .hm-parca{margin:0 0 6px;padding:6px 10px;background:var(--kagit);border:1px solid var(--cizgi);border-radius:7px}
+.hm-bos{gap:6px}.hm-bos .mini{margin:0}
+.hm-lejant{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--soluk);align-items:center}
+.hm-lejant span{display:inline-flex;align-items:center;gap:5px}
+.hm-yelpaze{display:inline-block;width:56px;height:6px;border-radius:3px}
+.hm-ornek svg{flex:none}
+@media (max-width:640px){
+  .hm-kart-yer{position:static;width:auto;max-width:none;margin-top:10px;box-shadow:none;left:auto!important;top:auto!important}
+  .hm-harita{border:0}
+  .hm-svg{border:1px solid var(--cizgi)}
+  .hm-lejant{gap:4px 12px}
+}

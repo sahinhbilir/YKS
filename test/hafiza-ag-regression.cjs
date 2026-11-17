@@ -11,7 +11,8 @@ const sandbox = {console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,TextEn
   localStorage:{getItem(){return null},setItem(){}},sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},navigator:{},window:{scrollTo(){},open(){return null},addEventListener(){}},
   document:{activeElement:null,addEventListener(){},contains(){return true},getElementById(id){return nodes[id]||null},querySelector(){return null},querySelectorAll(){return []},createElement(){return node()},body:{appendChild(){},insertAdjacentHTML(){}}}};
 sandbox.window.document = sandbox.document; vm.createContext(sandbox); new vm.Script(source).runInContext(sandbox);
-new vm.Script(fs.readFileSync(__dirname + '/../src/hafiza-ag.js', 'utf8'), {filename: 'src/hafiza-ag.js'}).runInContext(sandbox);
+// index.html embeds src/hafiza-ag.js (scripts/embed-haritam.cjs --check keeps them identical); load the source only when it is not embedded yet.
+if (!/const HAFIZA_AG = /.test(source)) new vm.Script(fs.readFileSync(__dirname + '/../src/hafiza-ag.js', 'utf8'), {filename: 'src/hafiza-ag.js'}).runInContext(sandbox);
 const run = code => vm.runInContext(code, sandbox);
 const H = run('HAFIZA_AG'), hatirlama = run('hatirlama'), tekrarla = run('tekrarla'), ilkS = run('ilkS');
 const near = (a, b, tol, msg) => assert(Math.abs(a - b) <= tol, (msg || '') + ' ' + a + ' vs ' + b);

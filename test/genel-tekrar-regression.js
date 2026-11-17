@@ -732,7 +732,8 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     a.run(`hafizaSatirAc(${ki1})`); assert.equal(a.run('EK.hafizaAcik'), ki1); a.run(`hafizaSatirAc(${ki1})`); assert.equal(a.run('EK.hafizaAcik'), undefined, 'the same button closes it');
     // The menu and the tab; teachers have neither the page nor the card.
     assert.deepEqual(a.json("[SEKME_OGRENCI.find(s=>s[0]==='hafiza'),MENU_OGRENCI[0][1]]"), [['hafiza', 'Hafızam'], []]);
-    assert.deepEqual(a.json('[SEKME_OGRENCI[0][0],MENU_OGRENCI[0][0],MENU_OGRENCI[1][1],OGRENCI_ACILIS]'), ['hafiza', 'hafiza', ['harita', 'giris'], 'hafiza'], 'Hafızam: the first tab, a tab of its own, the landing page');
+    assert.deepEqual(a.json('[SEKME_OGRENCI[0][0],MENU_OGRENCI[0][0],MENU_OGRENCI.find(m=>m[0]===\'plan\')[1],OGRENCI_ACILIS]'), ['hafiza', 'hafiza', ['harita', 'giris'], 'hafiza'], 'Hafızam: the first tab, a tab of its own, the landing page');
+    assert.deepEqual(a.json('[SEKME_OGRENCI[1][0],MENU_OGRENCI[1][0]]'), ['haritam', 'haritam'], 'Haritam right after Hafızam');
     a.run("D.rol='rehber'"); assert.equal(a.run('hafizaAnaKarti(0)'), ''); assert.equal(a.run('gorunumHafiza()'), '<div class="baslik"><h1>Hafızam</h1></div>'); a.run("D.rol='ogrenci'");
   });
   await check('hafizam-lists-every-taught-topic-marks-long-silence-red-and-takes-the-students-own-speed-state-and-basket', async a => {

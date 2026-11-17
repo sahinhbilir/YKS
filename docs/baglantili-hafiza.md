@@ -113,10 +113,12 @@ Each topic keeps the app's FSRS-6 card (S, D), built from its own results exactl
   - At or above the student's line: mint, `oklch(.79 .13 163)` (light theme `oklch(.62 .13 163)`).
   - Below the line: crimson-red just under it, getting steadily darker to deep wine. `f = (line − r) / .45`, colour `oklch(.57 − .22f, .19 − .035f, 21° − 18°f)`; light theme starts at L `.52`.
   - No orange anywhere. The Hafızam card bar uses the same two reds.
-- **Shine** shows the memory level. Every topic shines a little:
-  - short-term: a faint glow;
-  - settling: a medium glow;
-  - long-term: a lit neuron, with a white-hot core and light in its colour.
+- **Shine** shows the memory level, one step ahead of the ring:
+  - short-term: soft light;
+  - settling: a fully lit neuron, with a white-hot core and light in its colour;
+  - long-term: fully lit and with its Saturn ring.
+
+  Only never-studied topics are unlit.
 - **Saturn ring** around every long-term topic, tilted, passing behind and then in front of the core.
   - **Golden shining ring** for a topic safe until YKS (recall on exam day still at or above the line).
   - **Asteroid belt:** a long-term topic that falls below the line keeps its ring, but the ring breaks into rocks and grains along the orbit. They spread out, thin and scatter as recall falls; at the deepest red only scattered grains are left.
@@ -131,10 +133,24 @@ Each topic keeps the app's FSRS-6 card (S, D), built from its own results exactl
 - **Teacher side:** Ayarlar → a "Bağlantılı hafıza" box with **Bağları güncelle** (learns the links from the notebook's results, with a progress bar), when it last ran, and the links that do not seem to hold.
 - **Map editing:** for v1 only in the repository (`data/hafiza-haritasi-*.json`), by the project owner. Confusable pairs are drawn there only, with no effect.
 
+## In the app (v1)
+
+- **Haritam tab** (`src/haritam.js`, `src/haritam.css`, embedded with `src/hafiza-ag.js` and the map by `scripts/embed-haritam.cjs`). It sits right after Hafızam for students with Mathematics (`HARITAM.uygun`); Physics is shown for SAY, and before grade 12 when no field is chosen.
+- **Topic resolution.** A map topic is fed by:
+  - the student's plan topics with the same course label and name;
+  - every school unit (`birimler`: subject, grade, catalogue name) that covers it.
+
+  A unit's result and lesson day count for each YKS topic it covers.
+- **Inputs.** The student's real results (`sonucNotu`, excluding `sonucDevreDisiMi` rows), lesson days (`ogrenciIslenisTarihi`), forgetting speed per lesson (`unutmaKatsayisi`), FSRS parameters (`parametreAl`), recall target (`hedefTutma`) and exam day.
+- **Card.** The touched topic's card is Hafızam's own `hafizaSatiri`. It shows the map's recall, and its bar uses the map's reds inside Haritam only. Its buttons are Hafızam's (Çalıştım opens the same result slider).
+- **Not changed.** Hafızam, the weekly plan and every FSRS card.
+- **Tests.**
+  - `test/hafiza-ag-regression.cjs` (algorithm).
+  - `test/haritam-regression.cjs` (tab rules, resolution, page).
+  - `test/haritam-browser.cjs` (1280 px dark/light, 390 px; hover, pin, Çalıştım, filter).
+
 ## Not done yet
 
-- Starter map for Math, Geometry, Physics (table + picture, for review).
-- Question-count table and its split onto app topics.
-- Map mockups to choose from.
-- Wiring into Hafızam: the student's lessons, results, k and FSRS parameters as input; parameters stored per notebook.
-- Learning run in the background.
+- Teacher side: **Bağları güncelle** and storing and delivering the learnt link values. Until then every link uses its starting values.
+- The rest of the Mathematics, Geometry and Physics map, after the pilot is reviewed.
+- Hafızam's own states ("Çoktan unuttum", Düzenle) and basket lessons are not yet read by the map.
