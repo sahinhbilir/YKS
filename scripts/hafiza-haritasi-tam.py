@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Builds data/hafiza-haritasi-tam.json: the full draft map (Geometri, Matematik TYT, Matematik AYT, Fizik) from the
-reviewed pilot plus every remaining plan topic. Checks that names match the app's SAY plan topics, that links form no
-cycle, that every id exists and that exam shares do not exceed a row. A draft for review; the app still uses the pilot.
+"""Builds data/hafiza-haritasi-tam.json: the full map (every subject of the SAY and EA plans) from the reviewed pilot
+plus every remaining plan topic. Checks that names match the app's plan topics, that links form no
+cycle, that every id exists and that exam shares do not exceed a row. Embedded by scripts/embed-haritam.cjs.
 Usage: python3 scripts/hafiza-haritasi-tam.py"""
 import json, re, sys
 from collections import defaultdict
@@ -271,6 +271,288 @@ B = {35:['tytMantik'],36:['tytKume'],37:['tytKume'],38:['tytTemel'],39:['tytBolm
  153:['fizManyetikAlan','fizManyetikKuvvet','fizIndukleme'],154:['fizAC'],155:['fizTrafo'],156:['fizCembersel'],162:['fizDalgaMek'],163:['fizEMDalga'],164:['fizAtom'],165:['fizBuyukPatlama'],166:['fizRadyo'],
  167:['fizModern'],168:['fizModern'],169:['fizModern'],170:['fizModern'],171:['fizGoruntu'],172:['fizYariIletken'],174:['fizNano'],175:['fizLazer']}
 
+# ---- every other subject of the SAY and EA plans (2026-11-17: "all topics of all lessons") ----
+# A "(devamı)" / "- devamı" plan topic is the same topic continued: it feeds the topic's node (the app matches it).
+def ters(*v): return yillar(*reversed(v))  # kitapsec AYT tables list 2024 first; 2018–2024
+DERS.update({
+ 'Türkçe': [('trkSozcukAnlam','Sözcükte Anlam'),('trkSozObek','Söz Öbeklerinde Anlam'),('trkYapi','Sözcükte Yapı'),('trkCumleAnlam','Cümlede Anlam ve Anlatım'),
+   ('trkAnlatimNit','Anlatımın Temel Nitelikleri ve Anlamla İlgili Anlatım Bozuklukları'),('trkSes','Ses Bilgisi'),('trkYazim','Yazım Kuralları'),('trkNoktalama','Noktalama İşaretleri'),
+   ('trkParagrafAnlatim','Paragrafta Anlatım'),('trkParagrafYapi','Paragrafta Yapı'),('trkParagrafAnlam','Paragrafta Anlam'),('trkAd','Adlar (İsimler)'),('trkSifat','Ön Adlar (Sıfatlar)'),
+   ('trkZamir','Adıllar (Zamirler)'),('trkZarf','Zarflar (Belirteçler)'),('trkEdat','Edat (İlgeç) - Bağlaç - Ünlem'),('trkFiil','Fiiller (Eylemler)'),('trkFiilimsi','Fiilimsiler (Eylemsiler)'),
+   ('trkOge','Cümlenin Ögeleri'),('trkCati','Fiilde (Eylemde) Çatı'),('trkKelimeGrup','Kelime Grupları (Sözcük Öbekleri)'),('trkCumleTur','Cümle Türleri'),
+   ('trkDilBozuk','Dil Bilgisiyle İlgili Anlatım Bozuklukları'),('trkIletisim','İletişim, Dil ve Kültür')],
+ 'Kimya': [('kimBilim','Kimya Bilimi'),('kimAtom','Atom Modelleri, Atomun Temel Tanecikleri'),('kimKuantum','Atomun Kuantum Modeli'),('kimPeriyodik','Periyodik Sistem ve Periyodik Özellikler'),
+   ('kimRedoks','Redoks Tepkimelerinin Denkleştirilmesi / Aktiflik'),('kimPil','Piller'),('kimElektroliz','Elektroliz / Korozyon'),('kimKanun','Kimyanın Temel Kanunları'),('kimMol','Mol Kavramı'),
+   ('kimTepkime','Kimyasal Tepkimeler ve Denklemler'),('kimHesap','Kimyasal Hesaplamalar'),('kimTur','Kimyasal Türler / Türler Arası Etkileşimlerin Sınıflandırılması'),
+   ('kimEtkilesim','Güçlü ve Zayıf Etkileşimler'),('kimDegisim','Fiziksel ve Kimyasal Değişimler'),('kimKarbon','Karbon Kimyasına Giriş'),('kimAlkan','Alkanlar'),('kimAlken','Alkenler'),
+   ('kimAlkin','Alkinler'),('kimAromatik','Aromatik Bileşikler'),('kimHal','Maddenin Hâlleri'),('kimKarisim','Karışımlar'),('kimAsitBaz','Asitler, Bazlar ve Tuzlar'),('kimAlkol','Alkoller ve Eterler'),
+   ('kimAldehit','Aldehitler ve Ketonlar'),('kimKarboksil','Karboksilik Asitler ve Esterler'),('kimGaz','Gazlar'),('kimDoga','Doğa ve Kimya'),('kimHerYer','Kimya Her Yerde'),
+   ('kimCozelti','Sıvı Çözeltiler ve Çözünürlük'),('kimEnerji','Kimyasal Tepkimelerde Enerji'),('kimHiz','Kimyasal Tepkimelerde Hız'),('kimDenge','Kimyasal Tepkimelerde Denge'),
+   ('kimAsitBazDenge','Sulu Ortamlarda Asit-Baz Dengesi'),('kimCozunurluk','Tuzların Çözünürlük Dengesi'),('kimEnerjiKaynak','Enerji Kaynakları ve Bilimsel Gelişmeler')],
+ 'Biyoloji': [('bioOrtak','Canlıların Ortak Özellikleri'),('bioBilesen','Canlıların Temel Bileşenleri'),('bioNukleik','Nükleik Asitlerin Yapısı ve Çeşitleri'),('bioReplikasyon','DNA Replikasyonu'),
+   ('bioProtein','Genden Proteine (Protein Sentezi)'),('bioBiyotek','Genden Proteine (Genetik Mühendisliği ve Biyoteknoloji)'),('bioHucre','Hücre'),('bioSiniflandirma','Canlı Çeşitliliği ve Sınıflandırılması'),
+   ('bioAlem','Canlı Âlemleri ve Virüsler'),('bioEnerji','Canlılık ve Enerji (Fotosentez - Kemosentez - Hücresel Solunum - Fermantasyon)'),('bioEkosistem','Ekosistem Ekolojisi'),
+   ('bioKomunite','Komünite Ekolojisi'),('bioPopulasyon','Popülasyon Ekolojisi'),('bioBolunme','Hücre Bölünmeleri ve Üreme'),('bioKalitim','Kalıtım ve Biyolojik Çeşitlilik'),('bioCevre','Canlılar ve Çevre'),
+   ('bioBitkiYapi','Bitkilerin Yapısı'),('bioBitkiTasima','Bitkilerde Madde Taşınması'),('bioBitkiUreme','Bitkilerde Eşeyli Üreme'),('bioSinir','Sinir Sistemi'),('bioEndokrin','Endokrin Sistem'),
+   ('bioDuyu','Duyu Organları'),('bioDolasim','Dolaşım Sistemi'),('bioLenf','Lenf ve Bağışıklık Sistemi'),('bioSindirim','Sindirim Sistemi'),('bioDestek','Destek ve Hareket Sistemi'),
+   ('bioSolunum','Solunum Sistemi'),('bioUriner','Üriner Sistem'),('bioUreme','Üreme Sistemi ve Embriyonik Gelişim')],
+ 'Türk Dili ve Edebiyatı': [('edSanat','Sanat ve Edebiyat'),('edDonem','Türk Dilinin ve Edebiyatının Tarihî Dönemleri'),
+   ('edSiirDili','Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)'),('edSiirBilgi','Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'),
+   ('edSiirTarih1','Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)'),('edSiirTarih2','Tarihsel Süreç İçinde Şiir (Halk Edebiyatı / Divan Edebiyatı)'),
+   ('edSiirAkim','Şiirde Edebî Akımlar'),('edBatiSiir','Batı Etkisindeki Türk Şiiri (Tanzimat, Servetifünun, Fecriati Dönemlerinde Şiir)'),('edMilliSiir',"Millî Edebiyat Dönemi'nde Şiir"),
+   ('edCumSiir',"Cumhuriyet Dönemi'nde Şiir"),('edAnlatTur','Anlatmaya Bağlı Metin Türleri'),('edAnlatAkim','Anlatmaya Bağlı Metinlerde Edebî Akımlar'),
+   ('edAnlatUnsur','Anlatmaya Bağlı Metinlerde Unsurlar ve Teknikler'),('edAnlatBati','Anlatmaya Bağlı Metinler (Tanzimat, Servetifünun, Millî Edebiyat Dönemlerinde Hikâye ve Roman)'),
+   ('edAnlatCum',"Anlatmaya Bağlı Metinler (Cumhuriyet Dönemi'nde Hikâye ve Roman)"),('edTiyatro','Göstermeye Bağlı Metinler (Tiyatro / Tiyatronun Özellikleri, Unsurları)'),
+   ('edTiyatroTarih','Göstermeye Bağlı Metinler (Geleneksel Türk Tiyatrosu / Tanzimat, Millî Edebiyat, Cumhuriyet Dönemlerinde Tiyatro)'),('edOgretici','Öğretici Metinler'),('edSozlu','Sözlü Anlatım Türleri')],
+ 'T.C. İnkılap Tarihi ve Atatürkçülük': [('inkMK',"Mustafa Kemal'in Hayatı"),('ink20','XX. Yüzyıl Başlarında Osmanlı Devleti'),('inkWW1','I. Dünya Savaşı ve Sonrası Gelişmeler'),
+   ('inkHazirlik',"Millî Mücadele'nin Hazırlık Çalışmaları"),('inkTBMM',"Büyük Millet Meclisi'nin Açılması"),('inkSevr','Sevr Antlaşması'),('inkDoguGuney','Doğu ve Güney Cephesi'),
+   ('inkBati','Batı Cephesi'),('inkLozan','Lozan Barış Antlaşması'),('inkInkilap','Atatürkçülük ve Türk İnkılabı'),('inkIkiSavas','İki Savaş Arasındaki Dönemde Türkiye ve Dünya'),
+   ('inkWW2','II. Dünya Savaşı Sürecinde Türkiye ve Dünya'),('inkWW2Sonra','II. Dünya Savaşı Sonrasında Türkiye ve Dünya'),('inkToplumsal','Toplumsal Devrim Çağında Dünya ve Türkiye'),
+   ('ink21','XXI. Yüzyılın Eşiğinde Türkiye ve Dünya')],
+ 'Coğrafya': [('cogDoga','Doğa ve İnsan Etkileşimi (TYT)'),('cogKonu','Coğrafyanın Konusu, Bölümleri ve Gelişimi (TYT)'),('cogDunyaSekil',"Dünya'nın Şekli ve Hareketleri (TYT)"),
+   ('cogEkosistem','Ekosistemlerin Özellikleri ve İşleyişi (AYT)'),('cogEkstrem','Ekstrem Doğa Olayları - Küresel İklim Değişimi (AYT)'),('cogKoordinat','Koordinat Sistemi ve Coğrafi Konum (TYT)'),
+   ('cogHarita','Harita Bilgisi (TYT)'),('cogEkoSosyal','Ekonomik Faaliyetlerin Sosyal ve Kültürel Etkileri (AYT)'),('cogSehirEko','Geçmişten Geleceğe Şehir ve Ekonomi (AYT)'),
+   ('cogIslevsel',"Türkiye'nin İşlevsel Bölgeleri ve Kalkınma Projeleri (AYT)"),('cogUlasimTr',"Türkiye'de Ulaşım, Enerji Güzergâhları ve Etkileri (AYT)"),
+   ('cogTicaretTr',"Küresel Ticaret ve Türkiye'de Ticaret (AYT)"),('cogAtmosfer','Atmosfer ve Özellikleri (TYT)'),('cogIklimEleman',"Dünyada ve Türkiye'de İklim Elemanları (TYT)"),
+   ('cogNufusPol','Nüfus Politikaları (AYT)'),('cogSehirler',"Şehirler ve Etki Alanları - Türkiye'de Yerleşmeler (AYT)"),('cogEkoKaynak','Ekonomik Faaliyetler (Üretim-Dağıtım-Tüketim) ve Doğal Kaynaklar (AYT)'),
+   ('cogIklimTip','İklim Tipleri ve Bitki Örtüsü (TYT)'),('cogIklimTr',"Türkiye'de İklim Tipleri (TYT)"),('cogYapi',"Dünya'nın Yapısı ve Oluşum Süreci (TYT)"),('cogIc',"Dünyada ve Türkiye'de İç Kuvvetler (TYT)"),
+   ('cogEkoPol',"Türkiye'nin Ekonomi Politikaları ve Ekonominin Sektörel Dağılımı (AYT)"),('cogTarim',"Türkiye'de Tarım, Ormancılık ve Hayvancılık (AYT)"),
+   ('cogMaden',"Türkiye'de Madenler ve Enerji Kaynakları (AYT)"),('cogSanayi',"Türkiye'de Sanayi (AYT)"),('cogToprak',"Dünyada ve Türkiye'de Topraklar (TYT)"),
+   ('cogSu',"Dünyada ve Türkiye'de Su Kaynakları (TYT)"),('cogDis',"Dünyada ve Türkiye'de Dış Kuvvetler (TYT)"),('cogHammadde','Küresel Ticaret - Hammadde-Üretim-Pazar (AYT)'),
+   ('cogTurizm',"Dünyada ve Türkiye'de Turizm (AYT)"),('cogKulturMerkez','İlk Kültür Merkezleri ve Kültür Bölgeleri (AYT)'),('cogTurkKultur','Türk Kültürü ve Özellikleri (AYT)'),
+   ('cogJeopolitik','Jeopolitik Konum (AYT)'),('cogNufus',"Dünya'da ve Türkiye'de Nüfusun Özellikleri, Değişim ve Dağılışı (TYT)"),('cogPiramit','Nüfus Piramitleri (TYT)'),
+   ('cogGoc',"Dünyada ve Türkiye'de Göçler (TYT)"),('cogEkoFaal','Ekonomik Faaliyetler (TYT)'),('cogYerlesme','Yerleşmeler (TYT)'),('cogBolge','Bölgeler ve Ülkeler (TYT)'),
+   ('cogUlasimDunya','Uluslararası Ulaşım Hatları (TYT)'),('cogAfet','Afetler (TYT)'),('cogDogalOrtam','İnsanların Doğal Ortamı Kullanma Şekilleri (TYT)'),
+   ('cogTeknoloji','Teknolojik Gelişmelerin Kültürel ve Ekonomik Etkileri (AYT)'),('cogGelisme','Ülkelerin Gelişmesinde Etkili Olan Faktörler (AYT)'),
+   ('cogCatisma','Sıcak Çatışma Bölgeleri ve Ülkeler (AYT)'),('cogOrgut','Küresel Bölgeler ve Örgütler (AYT)'),('cogCevre','Çevre Sorunları ve Türleri (AYT)'),
+   ('cogCevreCozum','Çevre Sorunlarının Çözümüne Yönelik Yaklaşımlar (AYT)')],
+ 'Felsefe (+ Felsefe Grubu)': [('felTanima','Felsefeyi Tanıma'),('felDusunme','Felsefe ile Düşünme'),('psiTanima','Psikoloji Bilimini Tanıyalım'),('psiSurec','Psikolojinin Temel Süreçleri'),
+   ('felKonular','Felsefenin Temel Konuları ve Problemleri'),('psiOgrenme','Öğrenme, Bellek, Düşünme'),('psiRuh','Ruh Sağlığının Temelleri'),('felOkuma','Felsefi Okuma ve Yazma'),
+   ('felMO6','MÖ 6. Yüzyıl - MS 2. Yüzyıl Felsefesi'),('felMS2','MS 2. Yüzyıl - 15. Yüzyıl Felsefesi'),('sosGiris','Sosyolojiye Giriş'),('sosBirey','Birey ve Toplum'),('sosYapi','Toplumsal Yapı'),
+   ('fel15','15. Yüzyıl - 17. Yüzyıl Felsefesi'),('sosDegisme','Toplumsal Değişme ve Gelişme'),('sosKultur','Toplum ve Kültür'),('sosKurum','Toplumsal Kurumlar'),
+   ('fel18','18. Yüzyıl - 19. Yüzyıl Felsefesi'),('fel20','20. Yüzyıl Felsefesi'),('manGiris','Mantığa Giriş'),('manKlasik','Klasik Mantık'),('manDil','Mantık ve Dil'),('manSembolik','Sembolik Mantık')],
+})
+Y += [
+ # Türkçe: meaning, then paragraphs; grammar from word structure up to sentences
+ ('trkSozcukAnlam','trkSozObek','cok','Öbeğin anlamı sözcüklerin anlamından kurulur.'),('trkSozcukAnlam','trkCumleAnlam','cok','Cümlenin anlamı sözcüklerin anlamına dayanır.'),
+ ('trkSozObek','trkCumleAnlam','az','Deyim ve ikilemeler cümlede.'),('trkCumleAnlam','trkParagrafAnlam','cok','Ana düşünce cümleleri yorumlayarak bulunur.'),
+ ('trkCumleAnlam','trkParagrafAnlatim','cok','Anlatım biçimleri cümlelerden tanınır.'),('trkCumleAnlam','trkParagrafYapi','az','Cümlelerin bağlantısı.'),
+ ('trkCumleAnlam','trkAnlatimNit','cok','Anlamla ilgili bozukluk cümlede aranır.'),('trkSozcukAnlam','trkAnlatimNit','cok','Sözcüğün yanlış anlamda kullanılması.'),
+ ('trkParagrafAnlatim','trkParagrafAnlam','az','Anlatım biçimi ana düşünceyi taşır.'),('trkParagrafYapi','trkParagrafAnlam','az','Giriş, gelişme ve sonuç.'),('trkAnlatimNit','trkParagrafAnlatim','az','Açıklık, duruluk, akıcılık.'),
+ ('trkSes','trkYazim','cok','Ses olayları yazımı belirler.'),('trkYapi','trkYazim','az','Eklerin yazımı.'),('trkEdat','trkYazim','az','"de", "ki", "mi"nin yazımı.'),
+ ('trkYapi','trkAd','cok','Kök, ek, basit, türemiş ve birleşik sözcük.'),('trkYapi','trkFiil','cok','Fiil kök ve ekleri.'),('trkYapi','trkFiilimsi','cok','Fiilimsi ekleri yapım ekidir.'),('trkYapi','trkSifat','az','Türemiş sıfatlar.'),
+ ('trkAd','trkSifat','cok','Sıfat adı niteler.'),('trkAd','trkZamir','cok','Zamir adın yerini tutar.'),('trkSifat','trkZarf','az','Zarf ve sıfatın ayrımı.'),
+ ('trkFiil','trkFiilimsi','cok','Fiilimsi fiilden türer.'),('trkFiil','trkCati','cok','Çatı fiilin özelliğidir.'),('trkFiil','trkOge','cok','Yüklem.'),('trkAd','trkOge','az','Özne ve nesne ad soyludur.'),
+ ('trkOge','trkCati','cok','Özne ve nesneye göre çatı.'),('trkOge','trkCumleTur','cok','Yüklemin türü ve yeri.'),('trkFiilimsi','trkCumleTur','cok','Fiilimsili birleşik cümle.'),
+ ('trkFiilimsi','trkKelimeGrup','cok','Fiilimsi grubu.'),('trkSifat','trkKelimeGrup','cok','Sıfat tamlaması.'),('trkAd','trkKelimeGrup','cok','İsim tamlaması.'),('trkKelimeGrup','trkOge','az','Ögeler kelime gruplarından oluşur.'),
+ ('trkEdat','trkCumleTur','az','Bağlaçla bağlı cümleler.'),('trkZamir','trkOge','az','Zamirle kurulan özne ve nesne.'),
+ ('trkOge','trkDilBozuk','cok','Öge eksikliği ve uyumsuzluğu.'),('trkCati','trkDilBozuk','az','Çatı uyuşmazlığı.'),('trkKelimeGrup','trkDilBozuk','az','Tamlama yanlışları.'),('trkEdat','trkDilBozuk','az','Bağlaç ve edat yanlışları.'),
+ ('trkOge','trkNoktalama','az','Ögeleri ayıran virgül.'),
+ # Edebiyat
+ ('edSanat','edDonem','az','Edebiyatın sanatla ilişkisi.'),('edSanat','edAnlatTur','az','Metin türleri.'),('edSanat','edOgretici','az','Metin türleri.'),('edSanat','edSozlu','az','Sözlü ve yazılı anlatım.'),
+ ('edSiirBilgi','edSiirTarih1','cok','Hece ölçüsü, nazım biçimleri.'),('edSiirBilgi','edSiirTarih2','cok','Aruz ölçüsü, nazım biçimleri.'),('edSiirDili','edSiirTarih2','cok','Divan şiirinde söz sanatları.'),
+ ('edSiirDili','edSiirTarih1','az','Halk şiirinde söz sanatları.'),('edDonem','edSiirTarih1','cok','Dönemler.'),('edDonem','edSiirTarih2','cok','Dönemler.'),('edSiirTarih1','edSiirTarih2','cok','Halk edebiyatı sürer.'),
+ ('edSiirAkim','edBatiSiir','cok','Servetifünunda sembolizm ve parnasizm.'),('edSiirAkim','edCumSiir','cok','Cumhuriyet şiirinde akımlar.'),('edSiirTarih2','edBatiSiir','az','Tanzimat şiiri divan biçimlerini sürdürür.'),
+ ('edDonem','edBatiSiir','az','Dönemler.'),('edBatiSiir','edMilliSiir','cok','Millî Edebiyat ona tepkidir.'),('edMilliSiir','edCumSiir','cok','Beş Hececiler ve Memleketçiler.'),('edSiirTarih1','edMilliSiir','az','Hece ölçüsü ve halk şiiri.'),
+ ('edSiirBilgi','edBatiSiir','az','Ölçü ve kafiye.'),('edSiirBilgi','edCumSiir','az','Serbest ölçü.'),
+ ('edAnlatTur','edAnlatUnsur','cok','Türün unsurları.'),('edAnlatTur','edAnlatAkim','az','Türler ve akımlar.'),('edAnlatUnsur','edAnlatBati','cok','Hikâye ve romanda unsurlar.'),('edAnlatUnsur','edAnlatCum','cok','Hikâye ve romanda unsurlar.'),
+ ('edAnlatAkim','edAnlatBati','cok','Realizm ve natüralizm.'),('edAnlatAkim','edAnlatCum','cok','Modernizm ve bilinç akışı.'),('edSiirAkim','edAnlatAkim','az','Aynı akımlar.'),
+ ('edBatiSiir','edAnlatBati','cok','Aynı dönemlerin bilgisi.'),('edMilliSiir','edAnlatBati','az','Millî Edebiyat dönemi.'),('edCumSiir','edAnlatCum','cok','Cumhuriyet dönemi topluluklarının bilgisi.'),
+ ('edAnlatBati','edAnlatCum','az','Dönemlerin sırası.'),('edTiyatro','edTiyatroTarih','cok','Tiyatronun unsurları.'),('edAnlatBati','edTiyatroTarih','az','Tanzimat yazarlarının tiyatrosu.'),
+ ('edOgretici','edSozlu','az','Öğretici ve sözlü anlatım.'),
+ ('trkParagrafAnlam','edOgretici','az','Metni anlama.'),('trkSozcukAnlam','edSiirDili','az','Mecaz ve yan anlam.'),('trkCumleAnlam','edSiirDili','az','Cümlede söz sanatı.'),('trkIletisim','edDonem','az','Türk dilinin tarihî dönemleri.'),
+ # Kimya
+ ('kimAtom','kimKuantum','cok','Atom modelleri.'),('kimAtom','kimPeriyodik','cok','Proton ve elektron sayısı.'),('kimKuantum','kimPeriyodik','cok','Elektron dizilimi.'),
+ ('kimPeriyodik','kimTur','cok','Elektronegatiflik ve bağ türü.'),('kimTur','kimEtkilesim','cok','Kimyasal türler.'),('kimEtkilesim','kimHal','cok','Moleküller arası kuvvetler.'),
+ ('kimEtkilesim','kimCozelti','cok','Benzer benzeri çözer.'),('kimHal','kimGaz','cok','Gaz hâli.'),('kimHal','kimKarisim','az','Karışımın bileşenleri.'),('kimKarisim','kimCozelti','cok','Çözelti bir karışımdır.'),
+ ('kimDegisim','kimTepkime','az','Kimyasal değişim tepkimedir.'),('kimKanun','kimMol','cok','Kütlenin korunumu ve sabit oranlar.'),('kimMol','kimHesap','tam','Hesaplamalar mol üzerinden yapılır.'),
+ ('kimTepkime','kimHesap','cok','Denkleştirilmiş denklem.'),('kimMol','kimGaz','cok','Mol ve hacim.'),('kimMol','kimCozelti','cok','Molarite.'),
+ ('kimTepkime','kimRedoks','cok','Denkleştirme.'),('kimPeriyodik','kimRedoks','az','Aktiflik.'),('kimRedoks','kimPil','cok','Pil bir redoks tepkimesidir.'),('kimRedoks','kimElektroliz','cok','Elektroliz redokstur.'),
+ ('kimPil','kimElektroliz','cok','Elektrot ve hücre.'),('kimTepkime','kimEnerji','cok','Tepkime ısısı.'),('kimEnerji','kimHiz','az','Aktifleşme enerjisi.'),('kimTepkime','kimHiz','cok','Tepkime hızı.'),
+ ('kimHiz','kimDenge','cok','İleri ve geri hız eşitliği.'),('kimEnerji','kimDenge','az','Sıcaklığın dengeye etkisi.'),('kimDenge','kimAsitBazDenge','cok','Denge sabiti.'),('kimAsitBaz','kimAsitBazDenge','cok','Asit ve baz.'),
+ ('kimDenge','kimCozunurluk','cok','Çözünürlük çarpımı bir denge sabitidir.'),('kimCozelti','kimCozunurluk','cok','Çözünürlük.'),('kimTepkime','kimAsitBaz','az','Nötrleşme tepkimesi.'),
+ ('kimTur','kimKarbon','az','Kovalent bağ.'),('kimKarbon','kimAlkan','cok','Hidrokarbonlar.'),('kimAlkan','kimAlken','cok','Adlandırma.'),('kimAlken','kimAlkin','cok','Katılma tepkimeleri.'),
+ ('kimAlken','kimAromatik','az','Çift bağ.'),('kimAlkan','kimAlkol','cok','Adlandırma.'),('kimAlkol','kimAldehit','cok','Yükseltgenme.'),('kimAldehit','kimKarboksil','cok','Yükseltgenme.'),('kimAlkol','kimKarboksil','az','Esterleşme.'),
+ ('kimBilim','kimHerYer','az','Kimyanın alanları.'),('kimBilim','kimDoga','az','Kimyanın alanları.'),('kimEnerji','kimEnerjiKaynak','az','Yakıtların enerjisi.'),('kimAsitBaz','kimHerYer','az','Temizlik maddeleri.'),
+ ('tytOran','kimHesap','az','Orantı kurma.'),('tytYuzdeP','kimCozelti','az','Kütlece yüzde.'),('aytLog','kimAsitBazDenge','az','pH = −log[H⁺].'),('fizBasinc','kimGaz','az','Gaz basıncı.'),
+ ('kimAtom','fizAtom','az','Atomun yapısı.'),('kimPil','fizUretec','az','Pil bir üreteçtir.'),
+ # Biyoloji
+ ('bioBilesen','bioNukleik','cok','Nükleik asitler temel bileşiktir.'),('bioNukleik','bioReplikasyon','cok','DNA yapısı.'),('bioNukleik','bioProtein','cok','DNA ve RNA.'),('bioReplikasyon','bioBiyotek','az','DNA kopyalama.'),
+ ('bioProtein','bioBiyotek','cok','Gen ifadesi.'),('bioBilesen','bioHucre','cok','Zarın ve organellerin yapısı.'),('bioHucre','bioBolunme','cok','Hücre yapısı.'),('bioReplikasyon','bioBolunme','cok','Bölünmeden önce DNA eşlenir.'),
+ ('bioBolunme','bioKalitim','cok','Mayoz ve gamet.'),('bioNukleik','bioKalitim','az','Gen ve kromozom.'),('bioOrtak','bioSiniflandirma','az','Canlılık özellikleri.'),('bioSiniflandirma','bioAlem','cok','Sınıflandırma ölçütleri.'),
+ ('bioHucre','bioAlem','az','Prokaryot ve ökaryot hücre.'),('bioBilesen','bioEnerji','cok','ATP ve enzimler.'),('bioHucre','bioEnerji','cok','Mitokondri ve kloroplast.'),
+ ('bioEkosistem','bioKomunite','cok','Ekosistem kavramları.'),('bioEkosistem','bioPopulasyon','az','Ekosistem kavramları.'),('bioEnerji','bioEkosistem','az','Enerji akışı.'),('bioEkosistem','bioCevre','cok','Madde döngüleri.'),
+ ('bioHucre','bioBitkiYapi','az','Bitki hücresi ve doku.'),('bioBitkiYapi','bioBitkiTasima','cok','İletim demetleri.'),('bioBitkiYapi','bioBitkiUreme','cok','Çiçeğin yapısı.'),('bioBolunme','bioBitkiUreme','cok','Döl almaşı ve mayoz.'),
+ ('bioHucre','bioBitkiTasima','az','Madde geçişleri.'),('bioHucre','bioSinir','az','Nöron bir hücredir.'),('bioSinir','bioDuyu','cok','Uyartı iletimi.'),('bioSinir','bioEndokrin','cok','Hipotalamus ve hipofiz.'),
+ ('bioBilesen','bioSindirim','cok','Besinlerin yapısı.'),('bioDolasim','bioLenf','cok','Kan ve lenf.'),('bioDolasim','bioSolunum','az','Gazların kanla taşınması.'),('bioEnerji','bioSolunum','az','Hücresel solunum.'),
+ ('bioDolasim','bioUriner','az','Böbrekte kanın süzülmesi.'),('bioEndokrin','bioUreme','cok','Üreme hormonları.'),('bioBolunme','bioUreme','cok','Gametlerin oluşumu.'),('bioSinir','bioDestek','az','Kas kasılmasının denetimi.'),
+ ('bioEndokrin','bioUriner','az','ADH ve aldosteron.'),('tytOlasilik','bioKalitim','az','Çaprazlamada olasılık.'),('kimEtkilesim','bioBilesen','az','Su ve hidrojen bağı.'),
+ # İnkılap Tarihi: each period needs the one before it
+ ('ink20','inkWW1','cok','Savaşa giden süreç.'),('inkWW1','inkHazirlik','cok','Mondros ve işgaller.'),('inkMK','inkHazirlik','az','Mustafa Kemal’in Samsun’a çıkışı.'),('inkHazirlik','inkTBMM','cok','Kongreler.'),
+ ('inkTBMM','inkSevr','az','Sevr’e karşı TBMM.'),('inkWW1','inkSevr','cok','Savaşın sonu.'),('inkTBMM','inkDoguGuney','cok','TBMM orduları.'),('inkTBMM','inkBati','cok','Düzenli ordu.'),('inkDoguGuney','inkBati','az','Cephelerin sırası.'),
+ ('inkBati','inkLozan','cok','Mudanya.'),('inkSevr','inkLozan','cok','Sevr ile karşılaştırma.'),('inkLozan','inkInkilap','az','Bağımsızlık.'),('inkTBMM','inkInkilap','az','Saltanatın kaldırılması.'),('inkMK','inkInkilap','az','Atatürk’ün ilkeleri.'),
+ ('inkInkilap','inkIkiSavas','az','Yeni devlet.'),('inkLozan','inkIkiSavas','cok','Musul ve Boğazlar.'),('inkIkiSavas','inkWW2','cok','Savaşa giden süreç.'),('inkWW2','inkWW2Sonra','cok','Savaş sonrası düzen.'),
+ ('inkWW2Sonra','inkToplumsal','cok','Soğuk Savaş.'),('inkToplumsal','ink21','cok','Soğuk Savaş’ın sonu.'),
+ # Coğrafya
+ ('cogKonu','cogDoga','az','Coğrafyanın konusu.'),('cogDunyaSekil','cogKoordinat','cok','Enlem, boylam ve yerel saat.'),('cogKoordinat','cogHarita','cok','Koordinatlar haritada.'),('tytOran','cogHarita','cok','Ölçek bir orandır.'),
+ ('cogDunyaSekil','cogAtmosfer','az','Güneş ışınlarının geliş açısı.'),('cogAtmosfer','cogIklimEleman','cok','Atmosferin özellikleri.'),('cogKoordinat','cogIklimEleman','cok','Enlemin iklime etkisi.'),
+ ('cogIklimEleman','cogIklimTip','cok','İklim elemanları.'),('cogIklimTip','cogIklimTr','cok','İklim tipleri.'),('cogIklimEleman','cogIklimTr','cok','İklim elemanları.'),('cogIklimTip','cogEkosistem','cok','Biyomlar.'),
+ ('cogIklimEleman','cogEkstrem','cok','İklim elemanlarının uç değerleri.'),('cogYapi','cogIc','cok','Levhalar ve tektonik.'),('cogIc','cogDis','az','Yer şekilleri.'),('cogYapi','cogDis','az','Kayaçlar.'),
+ ('cogDis','cogToprak','cok','Ayrışma.'),('cogIklimTip','cogToprak','cok','İklim ve toprak tipleri.'),('cogIklimEleman','cogSu','cok','Yağış ve akarsu rejimi.'),('cogDis','cogSu','az','Akarsu ve göller.'),
+ ('cogIc','cogAfet','cok','Deprem ve volkanizma.'),('cogIklimEleman','cogAfet','az','Sel ve kuraklık.'),('cogAfet','cogEkstrem','az','Doğal afetler.'),
+ ('cogNufus','cogPiramit','cok','Nüfusun yapısı.'),('cogNufus','cogGoc','cok','Nüfusun dağılışı.'),('cogNufus','cogNufusPol','cok','Nüfus artışı.'),('cogPiramit','cogNufusPol','cok','Piramitten politika okuma.'),
+ ('cogNufus','cogYerlesme','az','Nüfus ve yerleşme.'),('cogYerlesme','cogSehirler','cok','Yerleşme tipleri.'),('cogGoc','cogSehirler','az','Göç ve şehirleşme.'),('cogSehirler','cogSehirEko','az','Şehrin ekonomisi.'),
+ ('cogEkoFaal','cogEkoKaynak','cok','Ekonomik faaliyet türleri.'),('cogEkoKaynak','cogEkoPol','cok','Doğal kaynaklar.'),('cogEkoPol','cogTarim','cok','Sektörler.'),('cogEkoPol','cogMaden','az','Sektörler.'),
+ ('cogEkoPol','cogSanayi','cok','Sektörler.'),('cogMaden','cogSanayi','cok','Hammadde ve enerji.'),('cogIklimTr','cogTarim','cok','Tarım ürünleri iklime bağlıdır.'),('cogToprak','cogTarim','az','Toprak verimliliği.'),
+ ('cogEkoFaal','cogEkoSosyal','cok','Ekonomik faaliyetler.'),('cogEkoKaynak','cogHammadde','cok','Hammadde ve üretim.'),('cogHammadde','cogTicaretTr','cok','Ticaret akışları.'),('cogUlasimDunya','cogTicaretTr','az','Ticaret yolları.'),
+ ('cogUlasimDunya','cogUlasimTr','cok','Ulaşım hatları.'),('cogMaden','cogUlasimTr','az','Enerji nakil hatları.'),('cogBolge','cogIslevsel','cok','Bölge kavramı.'),('cogEkoPol','cogIslevsel','cok','Kalkınma.'),
+ ('cogIklimTr','cogTurizm','az','Turizmde iklim.'),('cogEkoFaal','cogTurizm','az','Hizmet sektörü.'),('cogKulturMerkez','cogTurkKultur','az','Kültür bölgeleri.'),('cogBolge','cogJeopolitik','cok','Bölgeler ve ülkeler.'),
+ ('cogJeopolitik','cogCatisma','cok','Jeopolitik konum.'),('cogBolge','cogOrgut','cok','Bölgeler ve ülkeler.'),('cogBolge','cogGelisme','az','Ülkeler.'),('cogEkoFaal','cogGelisme','cok','Sektörlerin payı.'),
+ ('cogEkoFaal','cogTeknoloji','az','Ekonomi.'),('cogGelisme','cogTeknoloji','az','Gelişmişlik.'),('cogDogalOrtam','cogCevre','cok','İnsan etkisi.'),('cogEkosistem','cogCevre','cok','Ekosistem.'),
+ ('cogCevre','cogCevreCozum','cok','Sorunların türleri.'),('cogDoga','cogDogalOrtam','cok','Doğa ve insan.'),
+ # Felsefe, psikoloji, sosyoloji, mantık
+ ('felTanima','felDusunme','cok','Felsefenin anlamı.'),('felDusunme','felKonular','cok','Felsefi düşünme.'),('felTanima','felKonular','cok','Felsefenin alanları.'),
+ ('felKonular','felMO6','cok','Varlık ve bilgi problemleri.'),('felKonular','felMS2','cok','Varlık ve bilgi problemleri.'),('felKonular','fel15','cok','Bilgi problemi.'),('felKonular','fel18','cok','Bilgi ve ahlak problemi.'),
+ ('felKonular','fel20','cok','Problemler.'),('felMO6','felMS2','az','Antik felsefe sürer.'),('felMS2','fel15','az','Dönemlerin sırası.'),('fel15','fel18','cok','Rasyonalizmden Kant’a.'),('fel18','fel20','az','Dönemlerin sırası.'),
+ ('felDusunme','felOkuma','cok','Felsefi metin.'),('felTanima','manGiris','az','Mantık felsefenin dalıdır.'),
+ ('manGiris','manKlasik','cok','Kavram, terim, önerme.'),('manKlasik','manDil','az','Önerme.'),('manGiris','manDil','az','Kavram.'),('manKlasik','manSembolik','cok','Önermeler.'),
+ ('tytMantik','manSembolik','cok','Önermeler mantığı ve doğruluk tablosu.'),('tytMantik','manKlasik','az','Önerme ve niceleyici.'),
+ ('psiTanima','psiSurec','cok','Psikolojinin yöntemleri.'),('psiSurec','psiOgrenme','cok','Duyum ve algı.'),('psiTanima','psiRuh','az','Psikolojinin alanları.'),('psiOgrenme','psiRuh','az','Stres ve başa çıkma.'),
+ ('sosGiris','sosBirey','cok','Sosyolojinin kavramları.'),('sosBirey','sosYapi','cok','Toplumsal ilişkiler.'),('sosYapi','sosKurum','cok','Toplumsal yapının unsurları.'),('sosYapi','sosDegisme','cok','Toplumsal yapı.'),
+ ('sosGiris','sosKultur','az','Kültür kavramı.'),('sosKultur','sosDegisme','az','Kültür değişmesi.'),
+]
+# TYT (2018–2025, the school's table)
+satir('TYT','Türkçe','Ses Bilgisi',yillar(3,1,0,1,0,1,0,0),{'trkSes':1})
+satir('TYT','Türkçe','Dil Bilgisi',yillar(1,8,3,2,3,2,3,3),{'trkYapi':.17,'trkAd':.07,'trkSifat':.07,'trkZamir':.06,'trkZarf':.06,'trkEdat':.06,'trkFiil':.07,'trkFiilimsi':.1,'trkOge':.1,'trkCati':.07,'trkKelimeGrup':.07,'trkCumleTur':.1})
+satir('TYT','Türkçe','Noktalama İşaretleri',yillar(1,1,2,2,2,2,2,2),{'trkNoktalama':1})
+satir('TYT','Türkçe','Yazım Kuralları',yillar(2,2,2,2,2,2,2,2),{'trkYazim':1})
+satir('TYT','Türkçe','Anlatım Bozukluğu',yillar(1,0,0,0,0,0,0,0),{'trkAnlatimNit':.5,'trkDilBozuk':.5})
+satir('TYT','Türkçe','Paragraf',yillar(22,22,26,25,26,26,26,26),{'trkParagrafAnlam':.6,'trkParagrafYapi':.2,'trkParagrafAnlatim':.2})
+satir('TYT','Türkçe','Cümlede Anlam',yillar(7,3,6,3,3,4,3,3),{'trkCumleAnlam':1})
+satir('TYT','Türkçe','Sözcükte Anlam',yillar(3,3,1,5,4,3,4,4),{'trkSozcukAnlam':.75,'trkSozObek':.25})
+satir('TYT','Kimya','Kimya Bilimi',yillar(2,0,1,1,1,1,1,1),{'kimBilim':1})
+satir('TYT','Kimya','Atomun Yapısı',yillar(0,1,1,0,0,0,1,1),{'kimAtom':1})
+satir('TYT','Kimya','Periyodik Tablo',yillar(1,1,0,1,1,1,0,0),{'kimPeriyodik':1})
+satir('TYT','Kimya','Maddenin Halleri',yillar(1,1,1,1,1,1,1,1),{'kimHal':1})
+satir('TYT','Kimya','Kimyasal Türler Arası Etkileşimler',yillar(1,1,1,1,1,1,1,1),{'kimTur':.5,'kimEtkilesim':.5})
+satir('TYT','Kimya','Kimyasal Hesaplamalar',yillar(0,0,1,1,0,0,1,0),{'kimMol':.3,'kimTepkime':.3,'kimHesap':.4})
+satir('TYT','Kimya','Kimyanın Temel Kanunları',yillar(1,0,0,0,1,1,0,0),{'kimKanun':1})
+satir('TYT','Kimya','Asit, Baz ve Tuzlar',yillar(0,1,1,1,1,1,1,1),{'kimAsitBaz':1})
+satir('TYT','Kimya','Karışımlar',yillar(0,1,1,1,1,1,1,1),{'kimKarisim':1})
+satir('TYT','Kimya','Kimya Her Yerde',yillar(1,1,0,0,0,0,0,0),{'kimHerYer':1})
+satir('TYT','Biyoloji','Canlıların Ortak Özellikleri',yillar(0,1,0,0,1,0,0,1),{'bioOrtak':1})
+satir('TYT','Biyoloji','Canlıların Temel Bileşenleri',yillar(1,1,1,1,0,1,1,0),{'bioBilesen':.8,'bioNukleik':.2})
+satir('TYT','Biyoloji','Hücre ve Organelleri',yillar(0,0,1,1,1,1,1,0),{'bioHucre':1})
+satir('TYT','Biyoloji','Madde Geçişleri',yillar(1,0,0,0,0,0,0,1),{'bioHucre':1})
+satir('TYT','Biyoloji','Canlıların Sınıflandırılması',yillar(1,1,1,1,1,1,1,1),{'bioSiniflandirma':.5,'bioAlem':.5})
+satir('TYT','Biyoloji','Hücre Bölünmeleri ve Üreme',yillar(1,1,1,1,1,1,1,1),{'bioBolunme':1})
+satir('TYT','Biyoloji','Ekosistem Ekoloji',yillar(1,1,0,1,0,1,1,0),{'bioEkosistem':1})
+satir('TYT','Biyoloji','Güncel Çevre Sorunları',yillar(1,0,1,0,1,0,0,1),{'bioCevre':1})
+satir('TYT','Biyoloji','Kalıtım',yillar(0,1,1,1,1,1,1,1),{'bioKalitim':1})
+satir('TYT','Tarih','XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya',yillar(1,0,1,0,0,0,0,0),{'ink20':.5,'inkWW1':.5})
+MM = {'inkHazirlik':.2,'inkTBMM':.2,'inkSevr':.1,'inkDoguGuney':.15,'inkBati':.2,'inkLozan':.15}
+satir('TYT','Tarih','Milli Mücadele',yillar(0,1,1,1,1,2,1,1),MM)
+satir('TYT','Tarih','Atatürkçülük ve Türk İnkılabı',yillar(0,1,0,1,1,0,1,1),{'inkInkilap':1})
+satir('TYT','Coğrafya','Doğa ve İnsan',yillar(1,1,0,0,0,0,0,0),{'cogDoga':.6,'cogKonu':.2,'cogDogalOrtam':.2})
+satir('TYT','Coğrafya','Dünyanın Şekli ve Hareketleri',yillar(0,0,0,1,0,0,0,0),{'cogDunyaSekil':1})
+satir('TYT','Coğrafya','Coğrafi Konum',yillar(0,0,0,0,0,0,0,0),{'cogKoordinat':1})
+satir('TYT','Coğrafya','Harita Bilgisi',yillar(1,0,1,0,1,0,1,1),{'cogHarita':1})
+satir('TYT','Coğrafya','İklim Bilgisi',yillar(1,1,1,1,1,1,1,1),{'cogAtmosfer':.15,'cogIklimEleman':.35,'cogIklimTip':.25,'cogIklimTr':.25})
+satir('TYT','Coğrafya','İç ve Dış Kuvvetler',yillar(0,0,1,1,1,1,0,0),{'cogYapi':.2,'cogIc':.4,'cogDis':.4})
+satir('TYT','Coğrafya','Nüfus ve Yerleşme',yillar(1,2,1,1,0,1,1,1),{'cogNufus':.35,'cogPiramit':.15,'cogGoc':.2,'cogYerlesme':.3})
+satir('TYT','Coğrafya','Ekonomik Faaliyetler',yillar(0,0,0,0,1,0,0,0),{'cogEkoFaal':1})
+satir('TYT','Coğrafya','Bölgeler',yillar(0,0,1,1,0,1,1,1),{'cogBolge':1})
+satir('TYT','Coğrafya','Uluslar Arası Ulaşım Hatları',yillar(0,0,0,0,0,0,0,0),{'cogUlasimDunya':1})
+satir('TYT','Coğrafya','Doğal Afetler',yillar(1,1,0,0,1,1,1,1),{'cogAfet':1})
+satir('TYT','Felsefe','Felsefe Alanı',yillar(0,1,0,2,1,2,1,0),{'felTanima':.5,'felDusunme':.5})
+for ad, v in [('Bilgi Felsefesi',(2,1,1,0,2,2,1,3)),('Bilim Felsefesi',(0,1,0,0,0,0,0,1)),('Varlık Felsefesi',(1,0,1,1,0,0,1,0)),('Ahlak Felsefesi',(1,1,2,0,1,1,1,1)),
+              ('Siyaset Felsefesi',(0,1,0,1,1,0,0,0)),('Din Felsefesi',(1,0,1,0,0,0,1,0)),('Sanat Felsefesi',(0,0,0,1,0,0,0,0))]:
+    satir('TYT','Felsefe',ad,yillar(*v),{'felKonular':1})
+# AYT (kitapsec.com; 2018–2024, given newest first)
+satir('AYT','Edebiyat','Anlam Bilgisi',ters(6,6,6,3,6,4,4),{'trkParagrafAnlam':.5,'trkCumleAnlam':.25,'trkSozcukAnlam':.25})
+satir('AYT','Edebiyat','Metinlerin Sınıflandırılması',ters(1,1,0,0,0,0,0),{'edAnlatTur':.4,'edOgretici':.3,'edSanat':.3})
+satir('AYT','Edebiyat','Şiir Bilgisi',ters(2,3,3,2,3,3,3),{'edSiirBilgi':1})
+satir('AYT','Edebiyat','Edebi Sanatlar',ters(2,1,2,2,1,1,1),{'edSiirDili':1})
+satir('AYT','Edebiyat','İslamiyet Öncesi Türk Edebiyatı ve Geçiş Dönemi',ters(1,0,1,1,1,1,0),{'edSiirTarih1':.7,'edDonem':.3})
+satir('AYT','Edebiyat','Halk Edebiyatı',ters(1,2,1,2,2,2,1),{'edSiirTarih1':.4,'edSiirTarih2':.4,'edTiyatroTarih':.2})
+satir('AYT','Edebiyat','Divan Edebiyatı',ters(4,5,4,6,4,3,5),{'edSiirTarih2':.7,'edDonem':.1,'edOgretici':.2})
+satir('AYT','Edebiyat','Tanzimat Edebiyatı',ters(1,1,1,2,1,2,3),{'edBatiSiir':.4,'edAnlatBati':.4,'edTiyatroTarih':.2})
+satir('AYT','Edebiyat','Servet-i Fünun ve Fecr-i Ati Edebiyatı',ters(1,1,1,1,2,1,1),{'edBatiSiir':.5,'edAnlatBati':.5})
+satir('AYT','Edebiyat','Milli Edebiyat',ters(1,1,1,1,1,1,1),{'edMilliSiir':.5,'edAnlatBati':.3,'edTiyatroTarih':.2})
+satir('AYT','Edebiyat','Cumhuriyet Dönemi Edebiyatı',ters(3,2,3,3,2,5,4),{'edCumSiir':.45,'edAnlatCum':.45,'edTiyatroTarih':.1})
+satir('AYT','Edebiyat','Batı Edebiyat Akımları',ters(1,1,1,1,1,1,1),{'edSiirAkim':.5,'edAnlatAkim':.5})
+satir('AYT','Tarih-1','XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya',ters(3,1,0,1,2,4,3),{'ink20':.5,'inkWW1':.5})
+satir('AYT','Tarih-1','Milli Mücadele',ters(3,1,5,4,4,3,1),MM)
+satir('AYT','Tarih-1','Atatürkçülük ve Türk İnkılabı',ters(2,5,1,3,2,2,2),{'inkInkilap':1})
+satir('AYT','Tarih-1','İki Savaş Arasındaki Dönemde Türkiye ve Dünya',ters(0,1,0,0,0,0,1),{'inkIkiSavas':1})
+satir('AYT','Tarih-1','II. Dünya Savaşı Sürecinde – Sonrasında Türkiye ve Dünya',ters(1,0,2,0,0,0,1),{'inkWW2':.5,'inkWW2Sonra':.5})
+satir('AYT','Tarih-1','XXI. Yüzyılın Eşiğinde Türkiye ve Dünya',ters(0,0,0,0,0,0,1),{'ink21':1})
+satir('AYT','Coğrafya-1','İklim ve Yer Şekilleri',ters(0,0,0,0,2,1,1),{'cogIklimTip':.3,'cogIklimTr':.3,'cogIc':.2,'cogDis':.2})
+satir('AYT','Coğrafya-1','Coğrafi Konum',ters(0,0,0,0,0,0,2),{'cogKoordinat':1})
+satir('AYT','Coğrafya-1','Harita Bilgisi',ters(0,0,0,0,0,0,1),{'cogHarita':1})
+satir('AYT','Coğrafya-1','İç ve Dış Kuvvetler',ters(0,0,0,0,0,0,1),{'cogIc':.5,'cogDis':.5})
+satir('AYT','Coğrafya-1','Ekosistem',ters(2,6,4,3,3,3,0),{'cogEkosistem':1})
+satir('AYT','Coğrafya-1','Nüfus Politikaları',ters(1,1,0,0,2,1,1),{'cogNufusPol':1})
+satir('AYT','Coğrafya-1','Yerleşmenin Özellikleri',ters(2,1,1,0,0,1,4),{'cogSehirler':.6,'cogYerlesme':.4})
+satir('AYT','Coğrafya-1','Ekonomik Faaliyetler ve Doğal Kaynaklar',ters(1,0,2,1,1,1,1),{'cogEkoKaynak':1})
+satir('AYT','Coğrafya-1','Göç ve Şehirleşme',ters(1,0,1,0,1,1,0),{'cogGoc':.5,'cogSehirEko':.5})
+satir('AYT','Coğrafya-1','Türkiye Ekonomisi',ters(0,5,2,3,1,2,4),{'cogEkoPol':.25,'cogTarim':.25,'cogMaden':.2,'cogSanayi':.2,'cogTurizm':.1})
+satir('AYT','Coğrafya-1',"Türkiye'nin İşlevsel Bölgeleri ve Kalkınma Projeleri",ters(1,0,1,1,1,0,1),{'cogIslevsel':1})
+satir('AYT','Coğrafya-1','Küresel Ticaret',ters(1,0,1,1,0,0,0),{'cogTicaretTr':.5,'cogHammadde':.5})
+satir('AYT','Coğrafya-1','İlk Uygarlıklar',ters(1,1,0,1,0,2,0),{'cogKulturMerkez':.8,'cogTurkKultur':.2})
+satir('AYT','Coğrafya-1','Küresel ve Bölgesel Örgütler',ters(1,1,0,1,1,2,0),{'cogOrgut':1})
+satir('AYT','Coğrafya-1','Ülkeler Arası Etkileşimler',ters(0,0,0,1,0,1,0),{'cogJeopolitik':.5,'cogCatisma':.5})
+satir('AYT','Coğrafya-1','Bölgeler ve Ülkeler',ters(1,0,4,2,2,1,1),{'cogGelisme':.4,'cogBolge':.3,'cogTeknoloji':.3})
+satir('AYT','Coğrafya-1','Çevre ve Toplum',ters(4,1,1,3,3,1,0),{'cogCevre':.5,'cogCevreCozum':.3,'cogEkstrem':.2})
+for ad, v, p in [('Felsefe ve Bilim',(0,0,0,0,0,0,1),{'felKonular':1}),('Bilgi Felsefesi',(1,1,1,1,0,2,1),{'felKonular':1}),('Varlık Felsefesi',(0,0,0,0,2,1,1),{'felKonular':1}),
+    ('Ahlak Felsefesi',(0,1,1,1,0,0,0),{'felKonular':1}),('Din Felsefesi',(1,0,0,0,1,0,0),{'felKonular':1}),('20. Yüzyıl Felsefesi',(0,1,1,1,0,0,0),{'fel20':1}),
+    ('Mantığa Giriş',(1,1,1,1,2,1,1),{'manGiris':1}),('Klasik Mantık',(2,1,1,1,1,2,2),{'manKlasik':1}),('Mantık ve Dil',(0,1,1,1,0,0,0),{'manDil':1}),
+    ('Psikoloji Bilimini Tanıyalım',(1,0,0,0,3,1,0),{'psiTanima':1}),('Psikolojinin Temel Süreçleri',(0,1,1,1,0,1,0),{'psiSurec':1}),('Öğrenme Bellek Düşünme',(1,1,1,1,0,1,2),{'psiOgrenme':1}),
+    ('Ruh Sağlığının Temelleri',(1,1,1,1,0,0,0),{'psiRuh':1}),('Sosyolojiye Giriş',(1,1,1,1,0,1,0),{'sosGiris':1}),('Birey ve Toplum',(0,0,0,0,2,1,1),{'sosBirey':1}),
+    ('Toplumsal Yapı',(1,0,0,0,1,0,1),{'sosYapi':1}),('Toplumsal Değişme ve Gelişme',(0,1,1,1,0,0,1),{'sosDegisme':1}),('Toplum ve Kültür',(1,0,0,1,0,1,0),{'sosKultur':1}),
+    ('Toplumsal Kurumlar',(0,1,1,0,0,0,1),{'sosKurum':1})]:
+    satir('AYT','Felsefe Grubu',ad,ters(*v),p)
+for ad, v, p in [('Atom ve Yapısı',(0,0,0,0,0,1,0),{'kimAtom':1}),('Periyodik Sistem',(0,0,0,1,0,0,1),{'kimPeriyodik':1}),('Kimyasal Hesaplamalar',(0,0,0,0,0,1,1),{'kimMol':.3,'kimTepkime':.3,'kimHesap':.4}),
+    ('Modern Atom Teorisi',(1,1,1,0,2,0,0),{'kimKuantum':1}),('Gazlar',(1,2,1,1,1,1,1),{'kimGaz':1}),('Sıvı Çözeltiler',(2,2,2,2,2,1,1),{'kimCozelti':1}),
+    ('Kimyasal Tepkimelerde Enerji',(1,1,1,1,1,1,1),{'kimEnerji':1}),('Kimyasal Tepkimelerde Hız',(1,1,1,1,1,1,1),{'kimHiz':1}),('Kimyasal Tepkimelerde Denge',(1,2,1,1,1,0,0),{'kimDenge':1}),
+    ('Asit-Baz Dengesi',(1,0,0,1,1,2,1),{'kimAsitBazDenge':1}),('Çözünürlük Dengesi',(0,0,1,0,0,0,0),{'kimCozunurluk':1}),('Kimya ve Elektrik',(2,3,2,2,3,2,2),{'kimRedoks':.3,'kimPil':.4,'kimElektroliz':.3}),
+    ('Organik Kimya',(3,1,3,3,1,3,4),{'kimKarbon':.15,'kimAlkan':.15,'kimAlken':.12,'kimAlkin':.1,'kimAromatik':.08,'kimAlkol':.15,'kimAldehit':.12,'kimKarboksil':.13})]:
+    satir('AYT','Kimya',ad,ters(*v),p)
+for ad, v, p in [('Sinir Sistemi',(1,1,0,0,0,0,1),{'bioSinir':1}),('Endokrin Sistem',(1,2,0,1,1,1,0),{'bioEndokrin':1}),('Duyu Organları',(0,0,1,0,1,0,0),{'bioDuyu':1}),
+    ('Destek ve Hareket Sistemi',(0,0,1,1,0,0,1),{'bioDestek':1}),('Sindirim Sistemi',(1,1,0,0,1,1,0),{'bioSindirim':1}),('Dolaşım ve Bağışıklık Sistemi',(1,1,1,1,1,1,1),{'bioDolasim':.6,'bioLenf':.4}),
+    ('Solunum Sistemi',(1,1,1,1,1,1,0),{'bioSolunum':1}),('Üriner Sistem',(0,1,0,0,1,1,1),{'bioUriner':1}),('Üreme Sistemi ve Embriyonik Gelişim',(0,0,1,0,0,0,0),{'bioUreme':1}),
+    ('Komünite ve Popülasyon Ekolojisi',(2,2,2,2,2,0,2),{'bioKomunite':.5,'bioPopulasyon':.5}),('Nükleik Asitler',(0,0,0,0,1,1,0),{'bioNukleik':.6,'bioReplikasyon':.4}),
+    ('Genetik Şifre ve Protein Sentezi',(2,1,2,2,2,1,3),{'bioProtein':.8,'bioBiyotek':.2}),('Canlılık ve Enerji',(1,1,1,0,0,0,0),{'bioEnerji':1}),
+    ('Fotosentez ve Kemosentez',(1,0,1,1,1,1,1),{'bioEnerji':1}),('Hücresel Solunum',(0,1,0,1,1,1,0),{'bioEnerji':1}),
+    ('Bitki Biyolojisi',(2,0,2,2,0,3,2),{'bioBitkiYapi':.35,'bioBitkiTasima':.35,'bioBitkiUreme':.3}),('Canlılar ve Çevre',(0,1,0,1,0,1,1),{'bioCevre':1})]:
+    satir('AYT','Biyoloji',ad,ters(*v),p)
+# School units (grades 9–12): catalogue index → the topics they cover. Tarih (grades 9–11) has no plan topic yet.
+def ayni(ixler, kap): return {i: kap for i in ixler}
+B.update({0:['edSanat'],9:['edDonem'],18:['edSanat'],27:['edSanat'],1:['edAnlatTur','edAnlatUnsur'],2:['edSiirBilgi','edSiirDili'],3:['edAnlatTur'],4:['edAnlatUnsur'],5:['edTiyatro'],
+ 6:['edOgretici'],7:['edOgretici'],8:['edOgretici'],10:['edAnlatTur'],11:['edSiirTarih1','edSiirTarih2'],12:['edSiirTarih1'],13:['edAnlatBati'],14:['edTiyatroTarih'],15:['edOgretici'],16:['edOgretici'],
+ 17:['edOgretici'],19:['edAnlatBati'],20:['edBatiSiir','edMilliSiir'],21:['edOgretici'],22:['edOgretici','edSozlu'],23:['edAnlatBati'],24:['edTiyatroTarih'],25:['edOgretici'],26:['edSozlu'],
+ 28:['edAnlatCum'],29:['edCumSiir'],30:['edAnlatCum'],31:['edTiyatroTarih'],32:['edOgretici'],33:['edSozlu']})
+B.update(ayni(range(176, 180), ['kimBilim'])); B.update({180:['kimAtom'],181:['kimAtom'],182:['kimPeriyodik'],183:['kimTur'],184:['kimTur'],185:['kimEtkilesim'],186:['kimEtkilesim'],187:['kimDegisim']})
+B.update(ayni(range(188, 192), ['kimHal'])); B.update({192:['kimDoga'],193:['kimDoga'],194:['kimKanun'],195:['kimMol'],196:['kimTepkime'],197:['kimHesap'],198:['kimKarisim'],199:['kimKarisim']})
+B.update(ayni(range(200, 204), ['kimAsitBaz'])); B.update({204:['kimHerYer'],205:['kimHerYer'],206:['kimKuantum'],207:['kimKuantum','kimPeriyodik'],208:['kimPeriyodik'],209:['kimPeriyodik'],210:['kimRedoks']})
+B.update(ayni(range(211, 216), ['kimGaz'])); B.update(ayni(range(216, 221), ['kimCozelti'])); B.update(ayni(range(221, 225), ['kimEnerji']))
+B.update({225:['kimHiz'],226:['kimHiz'],227:['kimDenge'],228:['kimDenge'],229:['kimAsitBazDenge','kimCozunurluk'],230:['kimRedoks'],231:['kimPil'],232:['kimPil'],233:['kimPil'],234:['kimElektroliz'],235:['kimElektroliz']})
+B.update(ayni(range(236, 241), ['kimKarbon'])); B.update({241:['kimAlkan','kimAlken','kimAlkin','kimAromatik'],242:['kimAlkol','kimAldehit','kimKarboksil'],243:['kimAlkol'],244:['kimAlkol'],245:['kimAldehit'],246:['kimKarboksil'],247:['kimKarboksil']})
+B.update(ayni(range(248, 252), ['kimEnerjiKaynak']))
+B.update({252:['bioOrtak'],253:['bioBilesen'],254:['bioHucre'],255:['bioSiniflandirma'],256:['bioAlem'],257:['bioBolunme'],258:['bioBolunme'],259:['bioKalitim'],260:['bioEkosistem'],261:['bioCevre'],262:['bioCevre'],
+ 263:['bioSinir','bioEndokrin','bioDuyu'],264:['bioDestek'],265:['bioSindirim'],266:['bioDolasim','bioLenf'],267:['bioSolunum'],268:['bioUriner'],269:['bioUreme'],270:['bioKomunite'],271:['bioPopulasyon'],
+ 272:['bioNukleik','bioReplikasyon'],273:['bioProtein','bioBiyotek'],274:['bioEnerji'],275:['bioEnerji'],276:['bioEnerji'],277:['bioEnerji'],278:['bioBitkiYapi'],279:['bioBitkiTasima'],280:['bioBitkiUreme'],281:['bioCevre']})
+B.update({299:['ink20','inkWW1'],300:['inkHazirlik','inkTBMM','inkSevr','inkDoguGuney','inkBati','inkLozan'],301:['inkInkilap'],302:['inkIkiSavas'],303:['inkWW2'],304:['inkWW2Sonra']})
+COG = {'cogDoga':[305],'cogKonu':[306,307],'cogDunyaSekil':[308],'cogKoordinat':[309],'cogHarita':[310,311,312],'cogAtmosfer':[313],'cogIklimEleman':[314,315],'cogIklimTip':[316,341,342],'cogIklimTr':[317,343],
+ 'cogYerlesme':[318,319,320,321],'cogBolge':[322,323,324],'cogDogalOrtam':[325,326],'cogYapi':[327,328],'cogIc':[329,330,331],'cogDis':[332,333,334],'cogSu':[335,336,337],'cogToprak':[338,339,340],
+ 'cogNufus':[344,345,347,348,349],'cogPiramit':[346],'cogGoc':[350,351,352],'cogEkoFaal':[353],'cogUlasimDunya':[354],'cogAfet':[355,356,357,358],'cogEkosistem':[359,360,361,362],'cogNufusPol':[363,364,365],
+ 'cogSehirler':[366,367,368,369],'cogEkoKaynak':[370,371,372,373],'cogEkoPol':[374,375],'cogTarim':[376,377],'cogMaden':[378,379],'cogSanayi':[380,381],'cogKulturMerkez':[382,383,385],'cogTurkKultur':[384,418],
+ 'cogHammadde':[386],'cogTurizm':[387,411,412,413],'cogGelisme':[388,389,420,421],'cogOrgut':[390],'cogCevre':[391,392,393,394,395,396],'cogCevreCozum':[397,424,425,426,427],'cogEkstrem':[398],
+ 'cogSehirEko':[399,400],'cogIslevsel':[401,402],'cogEkoSosyal':[403],'cogUlasimTr':[404,405,406,423],'cogTicaretTr':[407,408,409,410],'cogJeopolitik':[414,415,416,417],'cogTeknoloji':[419],'cogCatisma':[422]}
+for kid, ixler in COG.items():
+    for ix in ixler: B[ix] = [kid]
+B.update({428:['felTanima'],429:['felDusunme'],430:['felKonular'],431:['felOkuma'],432:['felMO6'],433:['felMS2'],434:['fel15'],435:['fel18'],436:['fel20']})
+
 # ---- assemble and check ----
 hata = []
 konular, ids = [], set()
@@ -279,9 +561,10 @@ for ders, liste in DERS.items():
         if i in ids: hata.append('tekrar konu ' + i)
         ids.add(i); konular.append({'id': i, 'ders': ders, 'ad': a})
 for g in GIZLI: konular.append(g); ids.add(g['id'])
-# names must be the app's SAY plan topics
+# names must be the app's plan topics (SAY and EA)
 i = html.index('const VARSAYILAN_KONU_PLANI = '); plan = json.loads(re.sub(r'([{,])([A-Z]+):', r'\1"\2":', html[i + 30:html.index(';\n', i)]))
-adlar = {(d, a) for hafta in plan['SAY'] for d, l in hafta.items() for a in l}
+DEVAM = re.compile(r'\s*(?:\(devamı\)|- devamı)$', re.I)
+adlar = {(d, DEVAM.sub('', a)) for alan in ('SAY', 'EA') for hafta in plan[alan] for d, l in hafta.items() for a in l}
 for k in konular:
     if not k.get('gizli') and (k['ders'], k['ad']) not in adlar: hata.append('plan adı yok: ' + k['ders'] + ' / ' + k['ad'])
 eksik = sorted({(d, a) for d, a in adlar if d in DERS and a != 'Genel Tekrar'} - {(k['ders'], k['ad']) for k in konular})
@@ -316,7 +599,7 @@ for ix, kap in B.items():
     if anahtar not in var_b: var_b.add(anahtar); birimler.append({'ders': KISA[k[0]], 'sinif': k[1], 'ad': k[3], 'kapsar': kap})
 yalniz = [k['id'] for k in konular if not any(b['alt'] == k['id'] or b['ust'] == k['id'] for b in baglar) and not k.get('gizli')]
 if hata: print('\n'.join(hata)); sys.exit(1)
-cikti = {'surum': '2026-11-17-taslak-tam', 'not': 'Tam taslak: Geometri, Matematik TYT, Matematik AYT, Fizik (SAY plan konuları). Pilot olduğu gibi korunur; yeni konu, bağ, sınav payı ve okul ünitesi eklendi. Gözden geçirilecek; uygulama şimdilik pilotu kullanır. "Genel Tekrar" (Geometri) bir konu değil, haritada yok.',
+cikti = {'surum': '2026-11-17-tam', 'not': 'Tam harita: SAY ve EA planlarının bütün dersleri (Geometri, Matematik TYT ve AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, İnkılap Tarihi, Coğrafya, Felsefe grubu). Pilot olduğu gibi korunur. "Genel Tekrar" bir konu değil; "(devamı)" konuları kendi konusunu besler (uygulama eşler).',
          'konular': konular, 'baglar': baglar, 'sinavSatirlari': S, 'birimler': birimler}
 json.dump(cikti, open('data/hafiza-haritasi-tam.json', 'w', encoding='utf8'), ensure_ascii=False, indent=1)
 print(json.dumps({'konu': len(konular), 'bag': len(baglar), 'sinav_satiri': len(S), 'birim': len(birimler), 'baglantisiz': yalniz}, ensure_ascii=False))

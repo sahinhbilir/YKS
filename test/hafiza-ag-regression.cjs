@@ -211,17 +211,18 @@ test('memory level from stability; the exam star uses the shown recall on exam d
 test('foundational by weighted use; importance counts the topic\'s own questions twice', () => {
   const out = H.hesapla(girdi([], 0));
   const tyt = satir(out, 'tytTrig'), sin = satir(out, 'sincos'), dik = satir(out, 'dik'), fonk = satir(out, 'fonk');
-  near(tyt.kullananAgirlik, 1 + 0.5, 1e-12); assert.equal(tyt.temel, false, 'below the 2.5 threshold');
-  assert.equal(H.AYAR.temelEsik, 2.5); assert.equal(satir(H.hesapla(girdi([], 0), {temelEsik: 1.5}), 'tytTrig').temel, true, 'the threshold is a setting');
+  near(tyt.kullananAgirlik, 1 + 0.5, 1e-12); assert.equal(tyt.temel, false, 'below the threshold of 4');
+  assert.equal(H.AYAR.temelEsik, 4); assert.equal(satir(H.hesapla(girdi([], 0), {temelEsik: 1.5}), 'tytTrig').temel, true, 'the threshold is a setting');
   near(tyt.onem, 2 * 3 + 1 * 4 + 0.5 * 2, 1e-12);
-  near(sin.kullananAgirlik, 1 + 1 + 0.5 + 0.5, 1e-12, 'its topic, what uses its topic, and physics vectors'); assert.equal(sin.temel, true);
+  near(sin.kullananAgirlik, 1 + 1 + 0.5 + 0.5, 1e-12, 'its topic, what uses its topic, and physics vectors'); assert.equal(sin.temel, false, '3 < 4');
+  assert.equal(satir(H.hesapla(girdi([], 0), {temelEsik: 3}), 'sincos').temel, true);
   near(sin.onem, 0 + 1 * 3 + 1 * 4 + 0.5 * 2 + 0.5 * 2, 1e-12);
   near(dik.kullananAgirlik, 0.5 + 0.5 + 0.25, 1e-12); assert.equal(dik.temel, false);
   near(fonk.kullananAgirlik, 0.5 + 0.5, 1e-12, 'integral counted once, by its strongest path'); assert.equal(fonk.temel, false);
 });
 
 test('alarms: one per foundation, grey > red > orange > yellow; top 3 by colour then importance', () => {
-  // On this small map TYT trig is foundational at 1.5 (the map's default is 2.5).
+  // On this small map TYT trig is foundational at 1.5 (the map's default is 4).
   // Nothing learnt but AYT trig and trig functions: TYT trig and its part are missing (grey).
   const gri = H.hesapla(girdi([{gun: 0, id: 'trigFonk', not: 3}], 1), {temelEsik: 1.5});
   // the pass on trigFonk started TYT trig, so it is not grey

@@ -41,9 +41,11 @@ fs.writeFileSync(path.join(cikti, ad + '-konular.csv'), '﻿' + csv([['Konu', 'D
 // ---- picture: one for the whole map and one per subject. Layers by longest path from foundations (inside the drawn
 // set); order inside a layer by the mean position of neighbours. In a subject picture, foundations from other subjects
 // are listed under the topic and the topics in other subjects that use it are counted.
-const DERS = ['Geometri', 'Matematik TYT', 'Matematik AYT', 'Fizik'];
-const RENK = {'Geometri': '#2a7f62', 'Matematik TYT': '#8a5cc2', 'Matematik AYT': '#2f6db5', 'Fizik': '#c2602f'};
-const KISA = {'Geometri': 'Geo', 'Matematik TYT': 'TYT', 'Matematik AYT': 'AYT', 'Fizik': 'Fiz'};
+const DERS = ['Geometri', 'Matematik TYT', 'Matematik AYT', 'Fizik', 'Kimya', 'Biyoloji', 'Türkçe', 'Türk Dili ve Edebiyatı', 'T.C. İnkılap Tarihi ve Atatürkçülük', 'Coğrafya', 'Felsefe (+ Felsefe Grubu)'];
+const RENK = {'Geometri': '#2a7f62', 'Matematik TYT': '#8a5cc2', 'Matematik AYT': '#2f6db5', 'Fizik': '#c2602f', 'Kimya': '#b5367a', 'Biyoloji': '#4f8a2a', 'Türkçe': '#a07a12',
+  'Türk Dili ve Edebiyatı': '#8f4b2e', 'T.C. İnkılap Tarihi ve Atatürkçülük': '#b03030', 'Coğrafya': '#1f7f8f', 'Felsefe (+ Felsefe Grubu)': '#5a5aa8'};
+const KISA = {'Geometri': 'Geo', 'Matematik TYT': 'TYT', 'Matematik AYT': 'AYT', 'Fizik': 'Fiz', 'Kimya': 'Kim', 'Biyoloji': 'Bio', 'Türkçe': 'Trk', 'Türk Dili ve Edebiyatı': 'Edb',
+  'T.C. İnkılap Tarihi ve Atatürkçülük': 'Ink', 'Coğrafya': 'Cog', 'Felsefe (+ Felsefe Grubu)': 'Fel'};
 const tumKenar = [];
 ag.asagi.forEach((l, ust) => l.forEach(e => tumKenar.push({alt: e.id, ust, u: e.u, ic: e.ic})));
 const enBuyuk = Math.max(...out.konular.map(s => s.onem), 1);
@@ -79,7 +81,7 @@ function resim(ids, baslik, dosya) {
       + (dt.length ? `<text x="${p.x + 8}" y="${p.y + 44}" font-size="9.5" fill="#777">⟵ ${esc(kisalt(dis, 58))}</text>` : '') + '</g>';
   }
   const lejant = (tek ? `<text x="${PAD}" y="${PAD + 2}" font-size="16" font-weight="700" fill="${RENK[baslik]}">${esc(baslik)}</text>` : DERS.map((dd, i) => `<rect x="${PAD + i * 150}" y="${PAD - 10}" width="14" height="14" rx="3" fill="${RENK[dd]}"/><text x="${PAD + i * 150 + 20}" y="${PAD + 2}" font-size="13">${dd}</text>`).join(''))
-    + `<text x="${PAD + (tek ? 180 : 620)}" y="${PAD + 2}" font-size="12" fill="#444">Ok: temel → onu kullanan · kalınlık: az / çok / tam · kesik kutu: gizli parça · kalın kenar: temel konu · kutu boyu: önem${tek ? ' · ⟵ başka dersten temeller' : ''}</text>`;
+    + `<text x="${PAD + (tek ? 180 : DERS.length * 150 + 20)}" y="${PAD + 2}" font-size="12" fill="#444">Ok: temel → onu kullanan · kalınlık: az / çok / tam · kesik kutu: gizli parça · kalın kenar: temel konu · kutu boyu: önem${tek ? ' · ⟵ başka dersten temeller' : ''}</text>`;
   fs.writeFileSync(path.join(cikti, dosya), `<!doctype html><meta charset="utf-8"><title>${esc(baslik)}</title><body style="margin:0;background:#fff;font-family:system-ui,sans-serif">`
     + `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}"><defs><marker id="ok" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#777"/></marker></defs>${lejant}${svg}</svg></body>`);
   return {dosya, genislik: W, yukseklik: Hh};

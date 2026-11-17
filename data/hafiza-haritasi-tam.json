@@ -1,6 +1,6 @@
 {
- "surum": "2026-11-17-taslak-tam",
- "not": "Tam taslak: Geometri, Matematik TYT, Matematik AYT, Fizik (SAY plan konuları). Pilot olduğu gibi korunur; yeni konu, bağ, sınav payı ve okul ünitesi eklendi. Gözden geçirilecek; uygulama şimdilik pilotu kullanır. \"Genel Tekrar\" (Geometri) bir konu değil, haritada yok.",
+ "surum": "2026-11-17-tam",
+ "not": "Tam harita: SAY ve EA planlarının bütün dersleri (Geometri, Matematik TYT ve AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, İnkılap Tarihi, Coğrafya, Felsefe grubu). Pilot olduğu gibi korunur. \"Genel Tekrar\" bir konu değil; \"(devamı)\" konuları kendi konusunu besler (uygulama eşler).",
  "konular": [
   {
    "id": "geoAci",
@@ -876,6 +876,971 @@
    "id": "fizLazer",
    "ders": "Fizik",
    "ad": "Lazer"
+  },
+  {
+   "id": "trkSozcukAnlam",
+   "ders": "Türkçe",
+   "ad": "Sözcükte Anlam"
+  },
+  {
+   "id": "trkSozObek",
+   "ders": "Türkçe",
+   "ad": "Söz Öbeklerinde Anlam"
+  },
+  {
+   "id": "trkYapi",
+   "ders": "Türkçe",
+   "ad": "Sözcükte Yapı"
+  },
+  {
+   "id": "trkCumleAnlam",
+   "ders": "Türkçe",
+   "ad": "Cümlede Anlam ve Anlatım"
+  },
+  {
+   "id": "trkAnlatimNit",
+   "ders": "Türkçe",
+   "ad": "Anlatımın Temel Nitelikleri ve Anlamla İlgili Anlatım Bozuklukları"
+  },
+  {
+   "id": "trkSes",
+   "ders": "Türkçe",
+   "ad": "Ses Bilgisi"
+  },
+  {
+   "id": "trkYazim",
+   "ders": "Türkçe",
+   "ad": "Yazım Kuralları"
+  },
+  {
+   "id": "trkNoktalama",
+   "ders": "Türkçe",
+   "ad": "Noktalama İşaretleri"
+  },
+  {
+   "id": "trkParagrafAnlatim",
+   "ders": "Türkçe",
+   "ad": "Paragrafta Anlatım"
+  },
+  {
+   "id": "trkParagrafYapi",
+   "ders": "Türkçe",
+   "ad": "Paragrafta Yapı"
+  },
+  {
+   "id": "trkParagrafAnlam",
+   "ders": "Türkçe",
+   "ad": "Paragrafta Anlam"
+  },
+  {
+   "id": "trkAd",
+   "ders": "Türkçe",
+   "ad": "Adlar (İsimler)"
+  },
+  {
+   "id": "trkSifat",
+   "ders": "Türkçe",
+   "ad": "Ön Adlar (Sıfatlar)"
+  },
+  {
+   "id": "trkZamir",
+   "ders": "Türkçe",
+   "ad": "Adıllar (Zamirler)"
+  },
+  {
+   "id": "trkZarf",
+   "ders": "Türkçe",
+   "ad": "Zarflar (Belirteçler)"
+  },
+  {
+   "id": "trkEdat",
+   "ders": "Türkçe",
+   "ad": "Edat (İlgeç) - Bağlaç - Ünlem"
+  },
+  {
+   "id": "trkFiil",
+   "ders": "Türkçe",
+   "ad": "Fiiller (Eylemler)"
+  },
+  {
+   "id": "trkFiilimsi",
+   "ders": "Türkçe",
+   "ad": "Fiilimsiler (Eylemsiler)"
+  },
+  {
+   "id": "trkOge",
+   "ders": "Türkçe",
+   "ad": "Cümlenin Ögeleri"
+  },
+  {
+   "id": "trkCati",
+   "ders": "Türkçe",
+   "ad": "Fiilde (Eylemde) Çatı"
+  },
+  {
+   "id": "trkKelimeGrup",
+   "ders": "Türkçe",
+   "ad": "Kelime Grupları (Sözcük Öbekleri)"
+  },
+  {
+   "id": "trkCumleTur",
+   "ders": "Türkçe",
+   "ad": "Cümle Türleri"
+  },
+  {
+   "id": "trkDilBozuk",
+   "ders": "Türkçe",
+   "ad": "Dil Bilgisiyle İlgili Anlatım Bozuklukları"
+  },
+  {
+   "id": "trkIletisim",
+   "ders": "Türkçe",
+   "ad": "İletişim, Dil ve Kültür"
+  },
+  {
+   "id": "kimBilim",
+   "ders": "Kimya",
+   "ad": "Kimya Bilimi"
+  },
+  {
+   "id": "kimAtom",
+   "ders": "Kimya",
+   "ad": "Atom Modelleri, Atomun Temel Tanecikleri"
+  },
+  {
+   "id": "kimKuantum",
+   "ders": "Kimya",
+   "ad": "Atomun Kuantum Modeli"
+  },
+  {
+   "id": "kimPeriyodik",
+   "ders": "Kimya",
+   "ad": "Periyodik Sistem ve Periyodik Özellikler"
+  },
+  {
+   "id": "kimRedoks",
+   "ders": "Kimya",
+   "ad": "Redoks Tepkimelerinin Denkleştirilmesi / Aktiflik"
+  },
+  {
+   "id": "kimPil",
+   "ders": "Kimya",
+   "ad": "Piller"
+  },
+  {
+   "id": "kimElektroliz",
+   "ders": "Kimya",
+   "ad": "Elektroliz / Korozyon"
+  },
+  {
+   "id": "kimKanun",
+   "ders": "Kimya",
+   "ad": "Kimyanın Temel Kanunları"
+  },
+  {
+   "id": "kimMol",
+   "ders": "Kimya",
+   "ad": "Mol Kavramı"
+  },
+  {
+   "id": "kimTepkime",
+   "ders": "Kimya",
+   "ad": "Kimyasal Tepkimeler ve Denklemler"
+  },
+  {
+   "id": "kimHesap",
+   "ders": "Kimya",
+   "ad": "Kimyasal Hesaplamalar"
+  },
+  {
+   "id": "kimTur",
+   "ders": "Kimya",
+   "ad": "Kimyasal Türler / Türler Arası Etkileşimlerin Sınıflandırılması"
+  },
+  {
+   "id": "kimEtkilesim",
+   "ders": "Kimya",
+   "ad": "Güçlü ve Zayıf Etkileşimler"
+  },
+  {
+   "id": "kimDegisim",
+   "ders": "Kimya",
+   "ad": "Fiziksel ve Kimyasal Değişimler"
+  },
+  {
+   "id": "kimKarbon",
+   "ders": "Kimya",
+   "ad": "Karbon Kimyasına Giriş"
+  },
+  {
+   "id": "kimAlkan",
+   "ders": "Kimya",
+   "ad": "Alkanlar"
+  },
+  {
+   "id": "kimAlken",
+   "ders": "Kimya",
+   "ad": "Alkenler"
+  },
+  {
+   "id": "kimAlkin",
+   "ders": "Kimya",
+   "ad": "Alkinler"
+  },
+  {
+   "id": "kimAromatik",
+   "ders": "Kimya",
+   "ad": "Aromatik Bileşikler"
+  },
+  {
+   "id": "kimHal",
+   "ders": "Kimya",
+   "ad": "Maddenin Hâlleri"
+  },
+  {
+   "id": "kimKarisim",
+   "ders": "Kimya",
+   "ad": "Karışımlar"
+  },
+  {
+   "id": "kimAsitBaz",
+   "ders": "Kimya",
+   "ad": "Asitler, Bazlar ve Tuzlar"
+  },
+  {
+   "id": "kimAlkol",
+   "ders": "Kimya",
+   "ad": "Alkoller ve Eterler"
+  },
+  {
+   "id": "kimAldehit",
+   "ders": "Kimya",
+   "ad": "Aldehitler ve Ketonlar"
+  },
+  {
+   "id": "kimKarboksil",
+   "ders": "Kimya",
+   "ad": "Karboksilik Asitler ve Esterler"
+  },
+  {
+   "id": "kimGaz",
+   "ders": "Kimya",
+   "ad": "Gazlar"
+  },
+  {
+   "id": "kimDoga",
+   "ders": "Kimya",
+   "ad": "Doğa ve Kimya"
+  },
+  {
+   "id": "kimHerYer",
+   "ders": "Kimya",
+   "ad": "Kimya Her Yerde"
+  },
+  {
+   "id": "kimCozelti",
+   "ders": "Kimya",
+   "ad": "Sıvı Çözeltiler ve Çözünürlük"
+  },
+  {
+   "id": "kimEnerji",
+   "ders": "Kimya",
+   "ad": "Kimyasal Tepkimelerde Enerji"
+  },
+  {
+   "id": "kimHiz",
+   "ders": "Kimya",
+   "ad": "Kimyasal Tepkimelerde Hız"
+  },
+  {
+   "id": "kimDenge",
+   "ders": "Kimya",
+   "ad": "Kimyasal Tepkimelerde Denge"
+  },
+  {
+   "id": "kimAsitBazDenge",
+   "ders": "Kimya",
+   "ad": "Sulu Ortamlarda Asit-Baz Dengesi"
+  },
+  {
+   "id": "kimCozunurluk",
+   "ders": "Kimya",
+   "ad": "Tuzların Çözünürlük Dengesi"
+  },
+  {
+   "id": "kimEnerjiKaynak",
+   "ders": "Kimya",
+   "ad": "Enerji Kaynakları ve Bilimsel Gelişmeler"
+  },
+  {
+   "id": "bioOrtak",
+   "ders": "Biyoloji",
+   "ad": "Canlıların Ortak Özellikleri"
+  },
+  {
+   "id": "bioBilesen",
+   "ders": "Biyoloji",
+   "ad": "Canlıların Temel Bileşenleri"
+  },
+  {
+   "id": "bioNukleik",
+   "ders": "Biyoloji",
+   "ad": "Nükleik Asitlerin Yapısı ve Çeşitleri"
+  },
+  {
+   "id": "bioReplikasyon",
+   "ders": "Biyoloji",
+   "ad": "DNA Replikasyonu"
+  },
+  {
+   "id": "bioProtein",
+   "ders": "Biyoloji",
+   "ad": "Genden Proteine (Protein Sentezi)"
+  },
+  {
+   "id": "bioBiyotek",
+   "ders": "Biyoloji",
+   "ad": "Genden Proteine (Genetik Mühendisliği ve Biyoteknoloji)"
+  },
+  {
+   "id": "bioHucre",
+   "ders": "Biyoloji",
+   "ad": "Hücre"
+  },
+  {
+   "id": "bioSiniflandirma",
+   "ders": "Biyoloji",
+   "ad": "Canlı Çeşitliliği ve Sınıflandırılması"
+  },
+  {
+   "id": "bioAlem",
+   "ders": "Biyoloji",
+   "ad": "Canlı Âlemleri ve Virüsler"
+  },
+  {
+   "id": "bioEnerji",
+   "ders": "Biyoloji",
+   "ad": "Canlılık ve Enerji (Fotosentez - Kemosentez - Hücresel Solunum - Fermantasyon)"
+  },
+  {
+   "id": "bioEkosistem",
+   "ders": "Biyoloji",
+   "ad": "Ekosistem Ekolojisi"
+  },
+  {
+   "id": "bioKomunite",
+   "ders": "Biyoloji",
+   "ad": "Komünite Ekolojisi"
+  },
+  {
+   "id": "bioPopulasyon",
+   "ders": "Biyoloji",
+   "ad": "Popülasyon Ekolojisi"
+  },
+  {
+   "id": "bioBolunme",
+   "ders": "Biyoloji",
+   "ad": "Hücre Bölünmeleri ve Üreme"
+  },
+  {
+   "id": "bioKalitim",
+   "ders": "Biyoloji",
+   "ad": "Kalıtım ve Biyolojik Çeşitlilik"
+  },
+  {
+   "id": "bioCevre",
+   "ders": "Biyoloji",
+   "ad": "Canlılar ve Çevre"
+  },
+  {
+   "id": "bioBitkiYapi",
+   "ders": "Biyoloji",
+   "ad": "Bitkilerin Yapısı"
+  },
+  {
+   "id": "bioBitkiTasima",
+   "ders": "Biyoloji",
+   "ad": "Bitkilerde Madde Taşınması"
+  },
+  {
+   "id": "bioBitkiUreme",
+   "ders": "Biyoloji",
+   "ad": "Bitkilerde Eşeyli Üreme"
+  },
+  {
+   "id": "bioSinir",
+   "ders": "Biyoloji",
+   "ad": "Sinir Sistemi"
+  },
+  {
+   "id": "bioEndokrin",
+   "ders": "Biyoloji",
+   "ad": "Endokrin Sistem"
+  },
+  {
+   "id": "bioDuyu",
+   "ders": "Biyoloji",
+   "ad": "Duyu Organları"
+  },
+  {
+   "id": "bioDolasim",
+   "ders": "Biyoloji",
+   "ad": "Dolaşım Sistemi"
+  },
+  {
+   "id": "bioLenf",
+   "ders": "Biyoloji",
+   "ad": "Lenf ve Bağışıklık Sistemi"
+  },
+  {
+   "id": "bioSindirim",
+   "ders": "Biyoloji",
+   "ad": "Sindirim Sistemi"
+  },
+  {
+   "id": "bioDestek",
+   "ders": "Biyoloji",
+   "ad": "Destek ve Hareket Sistemi"
+  },
+  {
+   "id": "bioSolunum",
+   "ders": "Biyoloji",
+   "ad": "Solunum Sistemi"
+  },
+  {
+   "id": "bioUriner",
+   "ders": "Biyoloji",
+   "ad": "Üriner Sistem"
+  },
+  {
+   "id": "bioUreme",
+   "ders": "Biyoloji",
+   "ad": "Üreme Sistemi ve Embriyonik Gelişim"
+  },
+  {
+   "id": "edSanat",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Sanat ve Edebiyat"
+  },
+  {
+   "id": "edDonem",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Türk Dilinin ve Edebiyatının Tarihî Dönemleri"
+  },
+  {
+   "id": "edSiirDili",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)"
+  },
+  {
+   "id": "edSiirBilgi",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)"
+  },
+  {
+   "id": "edSiirTarih1",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)"
+  },
+  {
+   "id": "edSiirTarih2",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Tarihsel Süreç İçinde Şiir (Halk Edebiyatı / Divan Edebiyatı)"
+  },
+  {
+   "id": "edSiirAkim",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Şiirde Edebî Akımlar"
+  },
+  {
+   "id": "edBatiSiir",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Batı Etkisindeki Türk Şiiri (Tanzimat, Servetifünun, Fecriati Dönemlerinde Şiir)"
+  },
+  {
+   "id": "edMilliSiir",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Millî Edebiyat Dönemi'nde Şiir"
+  },
+  {
+   "id": "edCumSiir",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Cumhuriyet Dönemi'nde Şiir"
+  },
+  {
+   "id": "edAnlatTur",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Anlatmaya Bağlı Metin Türleri"
+  },
+  {
+   "id": "edAnlatAkim",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Anlatmaya Bağlı Metinlerde Edebî Akımlar"
+  },
+  {
+   "id": "edAnlatUnsur",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Anlatmaya Bağlı Metinlerde Unsurlar ve Teknikler"
+  },
+  {
+   "id": "edAnlatBati",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Anlatmaya Bağlı Metinler (Tanzimat, Servetifünun, Millî Edebiyat Dönemlerinde Hikâye ve Roman)"
+  },
+  {
+   "id": "edAnlatCum",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Anlatmaya Bağlı Metinler (Cumhuriyet Dönemi'nde Hikâye ve Roman)"
+  },
+  {
+   "id": "edTiyatro",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Göstermeye Bağlı Metinler (Tiyatro / Tiyatronun Özellikleri, Unsurları)"
+  },
+  {
+   "id": "edTiyatroTarih",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Göstermeye Bağlı Metinler (Geleneksel Türk Tiyatrosu / Tanzimat, Millî Edebiyat, Cumhuriyet Dönemlerinde Tiyatro)"
+  },
+  {
+   "id": "edOgretici",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Öğretici Metinler"
+  },
+  {
+   "id": "edSozlu",
+   "ders": "Türk Dili ve Edebiyatı",
+   "ad": "Sözlü Anlatım Türleri"
+  },
+  {
+   "id": "inkMK",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "Mustafa Kemal'in Hayatı"
+  },
+  {
+   "id": "ink20",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "XX. Yüzyıl Başlarında Osmanlı Devleti"
+  },
+  {
+   "id": "inkWW1",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "I. Dünya Savaşı ve Sonrası Gelişmeler"
+  },
+  {
+   "id": "inkHazirlik",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "Millî Mücadele'nin Hazırlık Çalışmaları"
+  },
+  {
+   "id": "inkTBMM",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "Büyük Millet Meclisi'nin Açılması"
+  },
+  {
+   "id": "inkSevr",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "Sevr Antlaşması"
+  },
+  {
+   "id": "inkDoguGuney",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "Doğu ve Güney Cephesi"
+  },
+  {
+   "id": "inkBati",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "Batı Cephesi"
+  },
+  {
+   "id": "inkLozan",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "Lozan Barış Antlaşması"
+  },
+  {
+   "id": "inkInkilap",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "Atatürkçülük ve Türk İnkılabı"
+  },
+  {
+   "id": "inkIkiSavas",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "İki Savaş Arasındaki Dönemde Türkiye ve Dünya"
+  },
+  {
+   "id": "inkWW2",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "II. Dünya Savaşı Sürecinde Türkiye ve Dünya"
+  },
+  {
+   "id": "inkWW2Sonra",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "II. Dünya Savaşı Sonrasında Türkiye ve Dünya"
+  },
+  {
+   "id": "inkToplumsal",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "Toplumsal Devrim Çağında Dünya ve Türkiye"
+  },
+  {
+   "id": "ink21",
+   "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
+   "ad": "XXI. Yüzyılın Eşiğinde Türkiye ve Dünya"
+  },
+  {
+   "id": "cogDoga",
+   "ders": "Coğrafya",
+   "ad": "Doğa ve İnsan Etkileşimi (TYT)"
+  },
+  {
+   "id": "cogKonu",
+   "ders": "Coğrafya",
+   "ad": "Coğrafyanın Konusu, Bölümleri ve Gelişimi (TYT)"
+  },
+  {
+   "id": "cogDunyaSekil",
+   "ders": "Coğrafya",
+   "ad": "Dünya'nın Şekli ve Hareketleri (TYT)"
+  },
+  {
+   "id": "cogEkosistem",
+   "ders": "Coğrafya",
+   "ad": "Ekosistemlerin Özellikleri ve İşleyişi (AYT)"
+  },
+  {
+   "id": "cogEkstrem",
+   "ders": "Coğrafya",
+   "ad": "Ekstrem Doğa Olayları - Küresel İklim Değişimi (AYT)"
+  },
+  {
+   "id": "cogKoordinat",
+   "ders": "Coğrafya",
+   "ad": "Koordinat Sistemi ve Coğrafi Konum (TYT)"
+  },
+  {
+   "id": "cogHarita",
+   "ders": "Coğrafya",
+   "ad": "Harita Bilgisi (TYT)"
+  },
+  {
+   "id": "cogEkoSosyal",
+   "ders": "Coğrafya",
+   "ad": "Ekonomik Faaliyetlerin Sosyal ve Kültürel Etkileri (AYT)"
+  },
+  {
+   "id": "cogSehirEko",
+   "ders": "Coğrafya",
+   "ad": "Geçmişten Geleceğe Şehir ve Ekonomi (AYT)"
+  },
+  {
+   "id": "cogIslevsel",
+   "ders": "Coğrafya",
+   "ad": "Türkiye'nin İşlevsel Bölgeleri ve Kalkınma Projeleri (AYT)"
+  },
+  {
+   "id": "cogUlasimTr",
+   "ders": "Coğrafya",
+   "ad": "Türkiye'de Ulaşım, Enerji Güzergâhları ve Etkileri (AYT)"
+  },
+  {
+   "id": "cogTicaretTr",
+   "ders": "Coğrafya",
+   "ad": "Küresel Ticaret ve Türkiye'de Ticaret (AYT)"
+  },
+  {
+   "id": "cogAtmosfer",
+   "ders": "Coğrafya",
+   "ad": "Atmosfer ve Özellikleri (TYT)"
+  },
+  {
+   "id": "cogIklimEleman",
+   "ders": "Coğrafya",
+   "ad": "Dünyada ve Türkiye'de İklim Elemanları (TYT)"
+  },
+  {
+   "id": "cogNufusPol",
+   "ders": "Coğrafya",
+   "ad": "Nüfus Politikaları (AYT)"
+  },
+  {
+   "id": "cogSehirler",
+   "ders": "Coğrafya",
+   "ad": "Şehirler ve Etki Alanları - Türkiye'de Yerleşmeler (AYT)"
+  },
+  {
+   "id": "cogEkoKaynak",
+   "ders": "Coğrafya",
+   "ad": "Ekonomik Faaliyetler (Üretim-Dağıtım-Tüketim) ve Doğal Kaynaklar (AYT)"
+  },
+  {
+   "id": "cogIklimTip",
+   "ders": "Coğrafya",
+   "ad": "İklim Tipleri ve Bitki Örtüsü (TYT)"
+  },
+  {
+   "id": "cogIklimTr",
+   "ders": "Coğrafya",
+   "ad": "Türkiye'de İklim Tipleri (TYT)"
+  },
+  {
+   "id": "cogYapi",
+   "ders": "Coğrafya",
+   "ad": "Dünya'nın Yapısı ve Oluşum Süreci (TYT)"
+  },
+  {
+   "id": "cogIc",
+   "ders": "Coğrafya",
+   "ad": "Dünyada ve Türkiye'de İç Kuvvetler (TYT)"
+  },
+  {
+   "id": "cogEkoPol",
+   "ders": "Coğrafya",
+   "ad": "Türkiye'nin Ekonomi Politikaları ve Ekonominin Sektörel Dağılımı (AYT)"
+  },
+  {
+   "id": "cogTarim",
+   "ders": "Coğrafya",
+   "ad": "Türkiye'de Tarım, Ormancılık ve Hayvancılık (AYT)"
+  },
+  {
+   "id": "cogMaden",
+   "ders": "Coğrafya",
+   "ad": "Türkiye'de Madenler ve Enerji Kaynakları (AYT)"
+  },
+  {
+   "id": "cogSanayi",
+   "ders": "Coğrafya",
+   "ad": "Türkiye'de Sanayi (AYT)"
+  },
+  {
+   "id": "cogToprak",
+   "ders": "Coğrafya",
+   "ad": "Dünyada ve Türkiye'de Topraklar (TYT)"
+  },
+  {
+   "id": "cogSu",
+   "ders": "Coğrafya",
+   "ad": "Dünyada ve Türkiye'de Su Kaynakları (TYT)"
+  },
+  {
+   "id": "cogDis",
+   "ders": "Coğrafya",
+   "ad": "Dünyada ve Türkiye'de Dış Kuvvetler (TYT)"
+  },
+  {
+   "id": "cogHammadde",
+   "ders": "Coğrafya",
+   "ad": "Küresel Ticaret - Hammadde-Üretim-Pazar (AYT)"
+  },
+  {
+   "id": "cogTurizm",
+   "ders": "Coğrafya",
+   "ad": "Dünyada ve Türkiye'de Turizm (AYT)"
+  },
+  {
+   "id": "cogKulturMerkez",
+   "ders": "Coğrafya",
+   "ad": "İlk Kültür Merkezleri ve Kültür Bölgeleri (AYT)"
+  },
+  {
+   "id": "cogTurkKultur",
+   "ders": "Coğrafya",
+   "ad": "Türk Kültürü ve Özellikleri (AYT)"
+  },
+  {
+   "id": "cogJeopolitik",
+   "ders": "Coğrafya",
+   "ad": "Jeopolitik Konum (AYT)"
+  },
+  {
+   "id": "cogNufus",
+   "ders": "Coğrafya",
+   "ad": "Dünya'da ve Türkiye'de Nüfusun Özellikleri, Değişim ve Dağılışı (TYT)"
+  },
+  {
+   "id": "cogPiramit",
+   "ders": "Coğrafya",
+   "ad": "Nüfus Piramitleri (TYT)"
+  },
+  {
+   "id": "cogGoc",
+   "ders": "Coğrafya",
+   "ad": "Dünyada ve Türkiye'de Göçler (TYT)"
+  },
+  {
+   "id": "cogEkoFaal",
+   "ders": "Coğrafya",
+   "ad": "Ekonomik Faaliyetler (TYT)"
+  },
+  {
+   "id": "cogYerlesme",
+   "ders": "Coğrafya",
+   "ad": "Yerleşmeler (TYT)"
+  },
+  {
+   "id": "cogBolge",
+   "ders": "Coğrafya",
+   "ad": "Bölgeler ve Ülkeler (TYT)"
+  },
+  {
+   "id": "cogUlasimDunya",
+   "ders": "Coğrafya",
+   "ad": "Uluslararası Ulaşım Hatları (TYT)"
+  },
+  {
+   "id": "cogAfet",
+   "ders": "Coğrafya",
+   "ad": "Afetler (TYT)"
+  },
+  {
+   "id": "cogDogalOrtam",
+   "ders": "Coğrafya",
+   "ad": "İnsanların Doğal Ortamı Kullanma Şekilleri (TYT)"
+  },
+  {
+   "id": "cogTeknoloji",
+   "ders": "Coğrafya",
+   "ad": "Teknolojik Gelişmelerin Kültürel ve Ekonomik Etkileri (AYT)"
+  },
+  {
+   "id": "cogGelisme",
+   "ders": "Coğrafya",
+   "ad": "Ülkelerin Gelişmesinde Etkili Olan Faktörler (AYT)"
+  },
+  {
+   "id": "cogCatisma",
+   "ders": "Coğrafya",
+   "ad": "Sıcak Çatışma Bölgeleri ve Ülkeler (AYT)"
+  },
+  {
+   "id": "cogOrgut",
+   "ders": "Coğrafya",
+   "ad": "Küresel Bölgeler ve Örgütler (AYT)"
+  },
+  {
+   "id": "cogCevre",
+   "ders": "Coğrafya",
+   "ad": "Çevre Sorunları ve Türleri (AYT)"
+  },
+  {
+   "id": "cogCevreCozum",
+   "ders": "Coğrafya",
+   "ad": "Çevre Sorunlarının Çözümüne Yönelik Yaklaşımlar (AYT)"
+  },
+  {
+   "id": "felTanima",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Felsefeyi Tanıma"
+  },
+  {
+   "id": "felDusunme",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Felsefe ile Düşünme"
+  },
+  {
+   "id": "psiTanima",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Psikoloji Bilimini Tanıyalım"
+  },
+  {
+   "id": "psiSurec",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Psikolojinin Temel Süreçleri"
+  },
+  {
+   "id": "felKonular",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Felsefenin Temel Konuları ve Problemleri"
+  },
+  {
+   "id": "psiOgrenme",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Öğrenme, Bellek, Düşünme"
+  },
+  {
+   "id": "psiRuh",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Ruh Sağlığının Temelleri"
+  },
+  {
+   "id": "felOkuma",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Felsefi Okuma ve Yazma"
+  },
+  {
+   "id": "felMO6",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "MÖ 6. Yüzyıl - MS 2. Yüzyıl Felsefesi"
+  },
+  {
+   "id": "felMS2",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "MS 2. Yüzyıl - 15. Yüzyıl Felsefesi"
+  },
+  {
+   "id": "sosGiris",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Sosyolojiye Giriş"
+  },
+  {
+   "id": "sosBirey",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Birey ve Toplum"
+  },
+  {
+   "id": "sosYapi",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Toplumsal Yapı"
+  },
+  {
+   "id": "fel15",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "15. Yüzyıl - 17. Yüzyıl Felsefesi"
+  },
+  {
+   "id": "sosDegisme",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Toplumsal Değişme ve Gelişme"
+  },
+  {
+   "id": "sosKultur",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Toplum ve Kültür"
+  },
+  {
+   "id": "sosKurum",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Toplumsal Kurumlar"
+  },
+  {
+   "id": "fel18",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "18. Yüzyıl - 19. Yüzyıl Felsefesi"
+  },
+  {
+   "id": "fel20",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "20. Yüzyıl Felsefesi"
+  },
+  {
+   "id": "manGiris",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Mantığa Giriş"
+  },
+  {
+   "id": "manKlasik",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Klasik Mantık"
+  },
+  {
+   "id": "manDil",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Mantık ve Dil"
+  },
+  {
+   "id": "manSembolik",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Sembolik Mantık"
   },
   {
    "id": "pPisagor",
@@ -2837,6 +3802,1656 @@
    "ust": "fizNano",
    "kullanim": "az",
    "gerekce": "Nano ölçekte fizik."
+  },
+  {
+   "alt": "trkSozcukAnlam",
+   "ust": "trkSozObek",
+   "kullanim": "cok",
+   "gerekce": "Öbeğin anlamı sözcüklerin anlamından kurulur."
+  },
+  {
+   "alt": "trkSozcukAnlam",
+   "ust": "trkCumleAnlam",
+   "kullanim": "cok",
+   "gerekce": "Cümlenin anlamı sözcüklerin anlamına dayanır."
+  },
+  {
+   "alt": "trkSozObek",
+   "ust": "trkCumleAnlam",
+   "kullanim": "az",
+   "gerekce": "Deyim ve ikilemeler cümlede."
+  },
+  {
+   "alt": "trkCumleAnlam",
+   "ust": "trkParagrafAnlam",
+   "kullanim": "cok",
+   "gerekce": "Ana düşünce cümleleri yorumlayarak bulunur."
+  },
+  {
+   "alt": "trkCumleAnlam",
+   "ust": "trkParagrafAnlatim",
+   "kullanim": "cok",
+   "gerekce": "Anlatım biçimleri cümlelerden tanınır."
+  },
+  {
+   "alt": "trkCumleAnlam",
+   "ust": "trkParagrafYapi",
+   "kullanim": "az",
+   "gerekce": "Cümlelerin bağlantısı."
+  },
+  {
+   "alt": "trkCumleAnlam",
+   "ust": "trkAnlatimNit",
+   "kullanim": "cok",
+   "gerekce": "Anlamla ilgili bozukluk cümlede aranır."
+  },
+  {
+   "alt": "trkSozcukAnlam",
+   "ust": "trkAnlatimNit",
+   "kullanim": "cok",
+   "gerekce": "Sözcüğün yanlış anlamda kullanılması."
+  },
+  {
+   "alt": "trkParagrafAnlatim",
+   "ust": "trkParagrafAnlam",
+   "kullanim": "az",
+   "gerekce": "Anlatım biçimi ana düşünceyi taşır."
+  },
+  {
+   "alt": "trkParagrafYapi",
+   "ust": "trkParagrafAnlam",
+   "kullanim": "az",
+   "gerekce": "Giriş, gelişme ve sonuç."
+  },
+  {
+   "alt": "trkAnlatimNit",
+   "ust": "trkParagrafAnlatim",
+   "kullanim": "az",
+   "gerekce": "Açıklık, duruluk, akıcılık."
+  },
+  {
+   "alt": "trkSes",
+   "ust": "trkYazim",
+   "kullanim": "cok",
+   "gerekce": "Ses olayları yazımı belirler."
+  },
+  {
+   "alt": "trkYapi",
+   "ust": "trkYazim",
+   "kullanim": "az",
+   "gerekce": "Eklerin yazımı."
+  },
+  {
+   "alt": "trkEdat",
+   "ust": "trkYazim",
+   "kullanim": "az",
+   "gerekce": "\"de\", \"ki\", \"mi\"nin yazımı."
+  },
+  {
+   "alt": "trkYapi",
+   "ust": "trkAd",
+   "kullanim": "cok",
+   "gerekce": "Kök, ek, basit, türemiş ve birleşik sözcük."
+  },
+  {
+   "alt": "trkYapi",
+   "ust": "trkFiil",
+   "kullanim": "cok",
+   "gerekce": "Fiil kök ve ekleri."
+  },
+  {
+   "alt": "trkYapi",
+   "ust": "trkFiilimsi",
+   "kullanim": "cok",
+   "gerekce": "Fiilimsi ekleri yapım ekidir."
+  },
+  {
+   "alt": "trkYapi",
+   "ust": "trkSifat",
+   "kullanim": "az",
+   "gerekce": "Türemiş sıfatlar."
+  },
+  {
+   "alt": "trkAd",
+   "ust": "trkSifat",
+   "kullanim": "cok",
+   "gerekce": "Sıfat adı niteler."
+  },
+  {
+   "alt": "trkAd",
+   "ust": "trkZamir",
+   "kullanim": "cok",
+   "gerekce": "Zamir adın yerini tutar."
+  },
+  {
+   "alt": "trkSifat",
+   "ust": "trkZarf",
+   "kullanim": "az",
+   "gerekce": "Zarf ve sıfatın ayrımı."
+  },
+  {
+   "alt": "trkFiil",
+   "ust": "trkFiilimsi",
+   "kullanim": "cok",
+   "gerekce": "Fiilimsi fiilden türer."
+  },
+  {
+   "alt": "trkFiil",
+   "ust": "trkCati",
+   "kullanim": "cok",
+   "gerekce": "Çatı fiilin özelliğidir."
+  },
+  {
+   "alt": "trkFiil",
+   "ust": "trkOge",
+   "kullanim": "cok",
+   "gerekce": "Yüklem."
+  },
+  {
+   "alt": "trkAd",
+   "ust": "trkOge",
+   "kullanim": "az",
+   "gerekce": "Özne ve nesne ad soyludur."
+  },
+  {
+   "alt": "trkOge",
+   "ust": "trkCati",
+   "kullanim": "cok",
+   "gerekce": "Özne ve nesneye göre çatı."
+  },
+  {
+   "alt": "trkOge",
+   "ust": "trkCumleTur",
+   "kullanim": "cok",
+   "gerekce": "Yüklemin türü ve yeri."
+  },
+  {
+   "alt": "trkFiilimsi",
+   "ust": "trkCumleTur",
+   "kullanim": "cok",
+   "gerekce": "Fiilimsili birleşik cümle."
+  },
+  {
+   "alt": "trkFiilimsi",
+   "ust": "trkKelimeGrup",
+   "kullanim": "cok",
+   "gerekce": "Fiilimsi grubu."
+  },
+  {
+   "alt": "trkSifat",
+   "ust": "trkKelimeGrup",
+   "kullanim": "cok",
+   "gerekce": "Sıfat tamlaması."
+  },
+  {
+   "alt": "trkAd",
+   "ust": "trkKelimeGrup",
+   "kullanim": "cok",
+   "gerekce": "İsim tamlaması."
+  },
+  {
+   "alt": "trkKelimeGrup",
+   "ust": "trkOge",
+   "kullanim": "az",
+   "gerekce": "Ögeler kelime gruplarından oluşur."
+  },
+  {
+   "alt": "trkEdat",
+   "ust": "trkCumleTur",
+   "kullanim": "az",
+   "gerekce": "Bağlaçla bağlı cümleler."
+  },
+  {
+   "alt": "trkZamir",
+   "ust": "trkOge",
+   "kullanim": "az",
+   "gerekce": "Zamirle kurulan özne ve nesne."
+  },
+  {
+   "alt": "trkOge",
+   "ust": "trkDilBozuk",
+   "kullanim": "cok",
+   "gerekce": "Öge eksikliği ve uyumsuzluğu."
+  },
+  {
+   "alt": "trkCati",
+   "ust": "trkDilBozuk",
+   "kullanim": "az",
+   "gerekce": "Çatı uyuşmazlığı."
+  },
+  {
+   "alt": "trkKelimeGrup",
+   "ust": "trkDilBozuk",
+   "kullanim": "az",
+   "gerekce": "Tamlama yanlışları."
+  },
+  {
+   "alt": "trkEdat",
+   "ust": "trkDilBozuk",
+   "kullanim": "az",
+   "gerekce": "Bağlaç ve edat yanlışları."
+  },
+  {
+   "alt": "trkOge",
+   "ust": "trkNoktalama",
+   "kullanim": "az",
+   "gerekce": "Ögeleri ayıran virgül."
+  },
+  {
+   "alt": "edSanat",
+   "ust": "edDonem",
+   "kullanim": "az",
+   "gerekce": "Edebiyatın sanatla ilişkisi."
+  },
+  {
+   "alt": "edSanat",
+   "ust": "edAnlatTur",
+   "kullanim": "az",
+   "gerekce": "Metin türleri."
+  },
+  {
+   "alt": "edSanat",
+   "ust": "edOgretici",
+   "kullanim": "az",
+   "gerekce": "Metin türleri."
+  },
+  {
+   "alt": "edSanat",
+   "ust": "edSozlu",
+   "kullanim": "az",
+   "gerekce": "Sözlü ve yazılı anlatım."
+  },
+  {
+   "alt": "edSiirBilgi",
+   "ust": "edSiirTarih1",
+   "kullanim": "cok",
+   "gerekce": "Hece ölçüsü, nazım biçimleri."
+  },
+  {
+   "alt": "edSiirBilgi",
+   "ust": "edSiirTarih2",
+   "kullanim": "cok",
+   "gerekce": "Aruz ölçüsü, nazım biçimleri."
+  },
+  {
+   "alt": "edSiirDili",
+   "ust": "edSiirTarih2",
+   "kullanim": "cok",
+   "gerekce": "Divan şiirinde söz sanatları."
+  },
+  {
+   "alt": "edSiirDili",
+   "ust": "edSiirTarih1",
+   "kullanim": "az",
+   "gerekce": "Halk şiirinde söz sanatları."
+  },
+  {
+   "alt": "edDonem",
+   "ust": "edSiirTarih1",
+   "kullanim": "cok",
+   "gerekce": "Dönemler."
+  },
+  {
+   "alt": "edDonem",
+   "ust": "edSiirTarih2",
+   "kullanim": "cok",
+   "gerekce": "Dönemler."
+  },
+  {
+   "alt": "edSiirTarih1",
+   "ust": "edSiirTarih2",
+   "kullanim": "cok",
+   "gerekce": "Halk edebiyatı sürer."
+  },
+  {
+   "alt": "edSiirAkim",
+   "ust": "edBatiSiir",
+   "kullanim": "cok",
+   "gerekce": "Servetifünunda sembolizm ve parnasizm."
+  },
+  {
+   "alt": "edSiirAkim",
+   "ust": "edCumSiir",
+   "kullanim": "cok",
+   "gerekce": "Cumhuriyet şiirinde akımlar."
+  },
+  {
+   "alt": "edSiirTarih2",
+   "ust": "edBatiSiir",
+   "kullanim": "az",
+   "gerekce": "Tanzimat şiiri divan biçimlerini sürdürür."
+  },
+  {
+   "alt": "edDonem",
+   "ust": "edBatiSiir",
+   "kullanim": "az",
+   "gerekce": "Dönemler."
+  },
+  {
+   "alt": "edBatiSiir",
+   "ust": "edMilliSiir",
+   "kullanim": "cok",
+   "gerekce": "Millî Edebiyat ona tepkidir."
+  },
+  {
+   "alt": "edMilliSiir",
+   "ust": "edCumSiir",
+   "kullanim": "cok",
+   "gerekce": "Beş Hececiler ve Memleketçiler."
+  },
+  {
+   "alt": "edSiirTarih1",
+   "ust": "edMilliSiir",
+   "kullanim": "az",
+   "gerekce": "Hece ölçüsü ve halk şiiri."
+  },
+  {
+   "alt": "edSiirBilgi",
+   "ust": "edBatiSiir",
+   "kullanim": "az",
+   "gerekce": "Ölçü ve kafiye."
+  },
+  {
+   "alt": "edSiirBilgi",
+   "ust": "edCumSiir",
+   "kullanim": "az",
+   "gerekce": "Serbest ölçü."
+  },
+  {
+   "alt": "edAnlatTur",
+   "ust": "edAnlatUnsur",
+   "kullanim": "cok",
+   "gerekce": "Türün unsurları."
+  },
+  {
+   "alt": "edAnlatTur",
+   "ust": "edAnlatAkim",
+   "kullanim": "az",
+   "gerekce": "Türler ve akımlar."
+  },
+  {
+   "alt": "edAnlatUnsur",
+   "ust": "edAnlatBati",
+   "kullanim": "cok",
+   "gerekce": "Hikâye ve romanda unsurlar."
+  },
+  {
+   "alt": "edAnlatUnsur",
+   "ust": "edAnlatCum",
+   "kullanim": "cok",
+   "gerekce": "Hikâye ve romanda unsurlar."
+  },
+  {
+   "alt": "edAnlatAkim",
+   "ust": "edAnlatBati",
+   "kullanim": "cok",
+   "gerekce": "Realizm ve natüralizm."
+  },
+  {
+   "alt": "edAnlatAkim",
+   "ust": "edAnlatCum",
+   "kullanim": "cok",
+   "gerekce": "Modernizm ve bilinç akışı."
+  },
+  {
+   "alt": "edSiirAkim",
+   "ust": "edAnlatAkim",
+   "kullanim": "az",
+   "gerekce": "Aynı akımlar."
+  },
+  {
+   "alt": "edBatiSiir",
+   "ust": "edAnlatBati",
+   "kullanim": "cok",
+   "gerekce": "Aynı dönemlerin bilgisi."
+  },
+  {
+   "alt": "edMilliSiir",
+   "ust": "edAnlatBati",
+   "kullanim": "az",
+   "gerekce": "Millî Edebiyat dönemi."
+  },
+  {
+   "alt": "edCumSiir",
+   "ust": "edAnlatCum",
+   "kullanim": "cok",
+   "gerekce": "Cumhuriyet dönemi topluluklarının bilgisi."
+  },
+  {
+   "alt": "edAnlatBati",
+   "ust": "edAnlatCum",
+   "kullanim": "az",
+   "gerekce": "Dönemlerin sırası."
+  },
+  {
+   "alt": "edTiyatro",
+   "ust": "edTiyatroTarih",
+   "kullanim": "cok",
+   "gerekce": "Tiyatronun unsurları."
+  },
+  {
+   "alt": "edAnlatBati",
+   "ust": "edTiyatroTarih",
+   "kullanim": "az",
+   "gerekce": "Tanzimat yazarlarının tiyatrosu."
+  },
+  {
+   "alt": "edOgretici",
+   "ust": "edSozlu",
+   "kullanim": "az",
+   "gerekce": "Öğretici ve sözlü anlatım."
+  },
+  {
+   "alt": "trkParagrafAnlam",
+   "ust": "edOgretici",
+   "kullanim": "az",
+   "gerekce": "Metni anlama."
+  },
+  {
+   "alt": "trkSozcukAnlam",
+   "ust": "edSiirDili",
+   "kullanim": "az",
+   "gerekce": "Mecaz ve yan anlam."
+  },
+  {
+   "alt": "trkCumleAnlam",
+   "ust": "edSiirDili",
+   "kullanim": "az",
+   "gerekce": "Cümlede söz sanatı."
+  },
+  {
+   "alt": "trkIletisim",
+   "ust": "edDonem",
+   "kullanim": "az",
+   "gerekce": "Türk dilinin tarihî dönemleri."
+  },
+  {
+   "alt": "kimAtom",
+   "ust": "kimKuantum",
+   "kullanim": "cok",
+   "gerekce": "Atom modelleri."
+  },
+  {
+   "alt": "kimAtom",
+   "ust": "kimPeriyodik",
+   "kullanim": "cok",
+   "gerekce": "Proton ve elektron sayısı."
+  },
+  {
+   "alt": "kimKuantum",
+   "ust": "kimPeriyodik",
+   "kullanim": "cok",
+   "gerekce": "Elektron dizilimi."
+  },
+  {
+   "alt": "kimPeriyodik",
+   "ust": "kimTur",
+   "kullanim": "cok",
+   "gerekce": "Elektronegatiflik ve bağ türü."
+  },
+  {
+   "alt": "kimTur",
+   "ust": "kimEtkilesim",
+   "kullanim": "cok",
+   "gerekce": "Kimyasal türler."
+  },
+  {
+   "alt": "kimEtkilesim",
+   "ust": "kimHal",
+   "kullanim": "cok",
+   "gerekce": "Moleküller arası kuvvetler."
+  },
+  {
+   "alt": "kimEtkilesim",
+   "ust": "kimCozelti",
+   "kullanim": "cok",
+   "gerekce": "Benzer benzeri çözer."
+  },
+  {
+   "alt": "kimHal",
+   "ust": "kimGaz",
+   "kullanim": "cok",
+   "gerekce": "Gaz hâli."
+  },
+  {
+   "alt": "kimHal",
+   "ust": "kimKarisim",
+   "kullanim": "az",
+   "gerekce": "Karışımın bileşenleri."
+  },
+  {
+   "alt": "kimKarisim",
+   "ust": "kimCozelti",
+   "kullanim": "cok",
+   "gerekce": "Çözelti bir karışımdır."
+  },
+  {
+   "alt": "kimDegisim",
+   "ust": "kimTepkime",
+   "kullanim": "az",
+   "gerekce": "Kimyasal değişim tepkimedir."
+  },
+  {
+   "alt": "kimKanun",
+   "ust": "kimMol",
+   "kullanim": "cok",
+   "gerekce": "Kütlenin korunumu ve sabit oranlar."
+  },
+  {
+   "alt": "kimMol",
+   "ust": "kimHesap",
+   "kullanim": "tam",
+   "gerekce": "Hesaplamalar mol üzerinden yapılır."
+  },
+  {
+   "alt": "kimTepkime",
+   "ust": "kimHesap",
+   "kullanim": "cok",
+   "gerekce": "Denkleştirilmiş denklem."
+  },
+  {
+   "alt": "kimMol",
+   "ust": "kimGaz",
+   "kullanim": "cok",
+   "gerekce": "Mol ve hacim."
+  },
+  {
+   "alt": "kimMol",
+   "ust": "kimCozelti",
+   "kullanim": "cok",
+   "gerekce": "Molarite."
+  },
+  {
+   "alt": "kimTepkime",
+   "ust": "kimRedoks",
+   "kullanim": "cok",
+   "gerekce": "Denkleştirme."
+  },
+  {
+   "alt": "kimPeriyodik",
+   "ust": "kimRedoks",
+   "kullanim": "az",
+   "gerekce": "Aktiflik."
+  },
+  {
+   "alt": "kimRedoks",
+   "ust": "kimPil",
+   "kullanim": "cok",
+   "gerekce": "Pil bir redoks tepkimesidir."
+  },
+  {
+   "alt": "kimRedoks",
+   "ust": "kimElektroliz",
+   "kullanim": "cok",
+   "gerekce": "Elektroliz redokstur."
+  },
+  {
+   "alt": "kimPil",
+   "ust": "kimElektroliz",
+   "kullanim": "cok",
+   "gerekce": "Elektrot ve hücre."
+  },
+  {
+   "alt": "kimTepkime",
+   "ust": "kimEnerji",
+   "kullanim": "cok",
+   "gerekce": "Tepkime ısısı."
+  },
+  {
+   "alt": "kimEnerji",
+   "ust": "kimHiz",
+   "kullanim": "az",
+   "gerekce": "Aktifleşme enerjisi."
+  },
+  {
+   "alt": "kimTepkime",
+   "ust": "kimHiz",
+   "kullanim": "cok",
+   "gerekce": "Tepkime hızı."
+  },
+  {
+   "alt": "kimHiz",
+   "ust": "kimDenge",
+   "kullanim": "cok",
+   "gerekce": "İleri ve geri hız eşitliği."
+  },
+  {
+   "alt": "kimEnerji",
+   "ust": "kimDenge",
+   "kullanim": "az",
+   "gerekce": "Sıcaklığın dengeye etkisi."
+  },
+  {
+   "alt": "kimDenge",
+   "ust": "kimAsitBazDenge",
+   "kullanim": "cok",
+   "gerekce": "Denge sabiti."
+  },
+  {
+   "alt": "kimAsitBaz",
+   "ust": "kimAsitBazDenge",
+   "kullanim": "cok",
+   "gerekce": "Asit ve baz."
+  },
+  {
+   "alt": "kimDenge",
+   "ust": "kimCozunurluk",
+   "kullanim": "cok",
+   "gerekce": "Çözünürlük çarpımı bir denge sabitidir."
+  },
+  {
+   "alt": "kimCozelti",
+   "ust": "kimCozunurluk",
+   "kullanim": "cok",
+   "gerekce": "Çözünürlük."
+  },
+  {
+   "alt": "kimTepkime",
+   "ust": "kimAsitBaz",
+   "kullanim": "az",
+   "gerekce": "Nötrleşme tepkimesi."
+  },
+  {
+   "alt": "kimTur",
+   "ust": "kimKarbon",
+   "kullanim": "az",
+   "gerekce": "Kovalent bağ."
+  },
+  {
+   "alt": "kimKarbon",
+   "ust": "kimAlkan",
+   "kullanim": "cok",
+   "gerekce": "Hidrokarbonlar."
+  },
+  {
+   "alt": "kimAlkan",
+   "ust": "kimAlken",
+   "kullanim": "cok",
+   "gerekce": "Adlandırma."
+  },
+  {
+   "alt": "kimAlken",
+   "ust": "kimAlkin",
+   "kullanim": "cok",
+   "gerekce": "Katılma tepkimeleri."
+  },
+  {
+   "alt": "kimAlken",
+   "ust": "kimAromatik",
+   "kullanim": "az",
+   "gerekce": "Çift bağ."
+  },
+  {
+   "alt": "kimAlkan",
+   "ust": "kimAlkol",
+   "kullanim": "cok",
+   "gerekce": "Adlandırma."
+  },
+  {
+   "alt": "kimAlkol",
+   "ust": "kimAldehit",
+   "kullanim": "cok",
+   "gerekce": "Yükseltgenme."
+  },
+  {
+   "alt": "kimAldehit",
+   "ust": "kimKarboksil",
+   "kullanim": "cok",
+   "gerekce": "Yükseltgenme."
+  },
+  {
+   "alt": "kimAlkol",
+   "ust": "kimKarboksil",
+   "kullanim": "az",
+   "gerekce": "Esterleşme."
+  },
+  {
+   "alt": "kimBilim",
+   "ust": "kimHerYer",
+   "kullanim": "az",
+   "gerekce": "Kimyanın alanları."
+  },
+  {
+   "alt": "kimBilim",
+   "ust": "kimDoga",
+   "kullanim": "az",
+   "gerekce": "Kimyanın alanları."
+  },
+  {
+   "alt": "kimEnerji",
+   "ust": "kimEnerjiKaynak",
+   "kullanim": "az",
+   "gerekce": "Yakıtların enerjisi."
+  },
+  {
+   "alt": "kimAsitBaz",
+   "ust": "kimHerYer",
+   "kullanim": "az",
+   "gerekce": "Temizlik maddeleri."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "kimHesap",
+   "kullanim": "az",
+   "gerekce": "Orantı kurma."
+  },
+  {
+   "alt": "tytYuzdeP",
+   "ust": "kimCozelti",
+   "kullanim": "az",
+   "gerekce": "Kütlece yüzde."
+  },
+  {
+   "alt": "aytLog",
+   "ust": "kimAsitBazDenge",
+   "kullanim": "az",
+   "gerekce": "pH = −log[H⁺]."
+  },
+  {
+   "alt": "fizBasinc",
+   "ust": "kimGaz",
+   "kullanim": "az",
+   "gerekce": "Gaz basıncı."
+  },
+  {
+   "alt": "kimAtom",
+   "ust": "fizAtom",
+   "kullanim": "az",
+   "gerekce": "Atomun yapısı."
+  },
+  {
+   "alt": "kimPil",
+   "ust": "fizUretec",
+   "kullanim": "az",
+   "gerekce": "Pil bir üreteçtir."
+  },
+  {
+   "alt": "bioBilesen",
+   "ust": "bioNukleik",
+   "kullanim": "cok",
+   "gerekce": "Nükleik asitler temel bileşiktir."
+  },
+  {
+   "alt": "bioNukleik",
+   "ust": "bioReplikasyon",
+   "kullanim": "cok",
+   "gerekce": "DNA yapısı."
+  },
+  {
+   "alt": "bioNukleik",
+   "ust": "bioProtein",
+   "kullanim": "cok",
+   "gerekce": "DNA ve RNA."
+  },
+  {
+   "alt": "bioReplikasyon",
+   "ust": "bioBiyotek",
+   "kullanim": "az",
+   "gerekce": "DNA kopyalama."
+  },
+  {
+   "alt": "bioProtein",
+   "ust": "bioBiyotek",
+   "kullanim": "cok",
+   "gerekce": "Gen ifadesi."
+  },
+  {
+   "alt": "bioBilesen",
+   "ust": "bioHucre",
+   "kullanim": "cok",
+   "gerekce": "Zarın ve organellerin yapısı."
+  },
+  {
+   "alt": "bioHucre",
+   "ust": "bioBolunme",
+   "kullanim": "cok",
+   "gerekce": "Hücre yapısı."
+  },
+  {
+   "alt": "bioReplikasyon",
+   "ust": "bioBolunme",
+   "kullanim": "cok",
+   "gerekce": "Bölünmeden önce DNA eşlenir."
+  },
+  {
+   "alt": "bioBolunme",
+   "ust": "bioKalitim",
+   "kullanim": "cok",
+   "gerekce": "Mayoz ve gamet."
+  },
+  {
+   "alt": "bioNukleik",
+   "ust": "bioKalitim",
+   "kullanim": "az",
+   "gerekce": "Gen ve kromozom."
+  },
+  {
+   "alt": "bioOrtak",
+   "ust": "bioSiniflandirma",
+   "kullanim": "az",
+   "gerekce": "Canlılık özellikleri."
+  },
+  {
+   "alt": "bioSiniflandirma",
+   "ust": "bioAlem",
+   "kullanim": "cok",
+   "gerekce": "Sınıflandırma ölçütleri."
+  },
+  {
+   "alt": "bioHucre",
+   "ust": "bioAlem",
+   "kullanim": "az",
+   "gerekce": "Prokaryot ve ökaryot hücre."
+  },
+  {
+   "alt": "bioBilesen",
+   "ust": "bioEnerji",
+   "kullanim": "cok",
+   "gerekce": "ATP ve enzimler."
+  },
+  {
+   "alt": "bioHucre",
+   "ust": "bioEnerji",
+   "kullanim": "cok",
+   "gerekce": "Mitokondri ve kloroplast."
+  },
+  {
+   "alt": "bioEkosistem",
+   "ust": "bioKomunite",
+   "kullanim": "cok",
+   "gerekce": "Ekosistem kavramları."
+  },
+  {
+   "alt": "bioEkosistem",
+   "ust": "bioPopulasyon",
+   "kullanim": "az",
+   "gerekce": "Ekosistem kavramları."
+  },
+  {
+   "alt": "bioEnerji",
+   "ust": "bioEkosistem",
+   "kullanim": "az",
+   "gerekce": "Enerji akışı."
+  },
+  {
+   "alt": "bioEkosistem",
+   "ust": "bioCevre",
+   "kullanim": "cok",
+   "gerekce": "Madde döngüleri."
+  },
+  {
+   "alt": "bioHucre",
+   "ust": "bioBitkiYapi",
+   "kullanim": "az",
+   "gerekce": "Bitki hücresi ve doku."
+  },
+  {
+   "alt": "bioBitkiYapi",
+   "ust": "bioBitkiTasima",
+   "kullanim": "cok",
+   "gerekce": "İletim demetleri."
+  },
+  {
+   "alt": "bioBitkiYapi",
+   "ust": "bioBitkiUreme",
+   "kullanim": "cok",
+   "gerekce": "Çiçeğin yapısı."
+  },
+  {
+   "alt": "bioBolunme",
+   "ust": "bioBitkiUreme",
+   "kullanim": "cok",
+   "gerekce": "Döl almaşı ve mayoz."
+  },
+  {
+   "alt": "bioHucre",
+   "ust": "bioBitkiTasima",
+   "kullanim": "az",
+   "gerekce": "Madde geçişleri."
+  },
+  {
+   "alt": "bioHucre",
+   "ust": "bioSinir",
+   "kullanim": "az",
+   "gerekce": "Nöron bir hücredir."
+  },
+  {
+   "alt": "bioSinir",
+   "ust": "bioDuyu",
+   "kullanim": "cok",
+   "gerekce": "Uyartı iletimi."
+  },
+  {
+   "alt": "bioSinir",
+   "ust": "bioEndokrin",
+   "kullanim": "cok",
+   "gerekce": "Hipotalamus ve hipofiz."
+  },
+  {
+   "alt": "bioBilesen",
+   "ust": "bioSindirim",
+   "kullanim": "cok",
+   "gerekce": "Besinlerin yapısı."
+  },
+  {
+   "alt": "bioDolasim",
+   "ust": "bioLenf",
+   "kullanim": "cok",
+   "gerekce": "Kan ve lenf."
+  },
+  {
+   "alt": "bioDolasim",
+   "ust": "bioSolunum",
+   "kullanim": "az",
+   "gerekce": "Gazların kanla taşınması."
+  },
+  {
+   "alt": "bioEnerji",
+   "ust": "bioSolunum",
+   "kullanim": "az",
+   "gerekce": "Hücresel solunum."
+  },
+  {
+   "alt": "bioDolasim",
+   "ust": "bioUriner",
+   "kullanim": "az",
+   "gerekce": "Böbrekte kanın süzülmesi."
+  },
+  {
+   "alt": "bioEndokrin",
+   "ust": "bioUreme",
+   "kullanim": "cok",
+   "gerekce": "Üreme hormonları."
+  },
+  {
+   "alt": "bioBolunme",
+   "ust": "bioUreme",
+   "kullanim": "cok",
+   "gerekce": "Gametlerin oluşumu."
+  },
+  {
+   "alt": "bioSinir",
+   "ust": "bioDestek",
+   "kullanim": "az",
+   "gerekce": "Kas kasılmasının denetimi."
+  },
+  {
+   "alt": "bioEndokrin",
+   "ust": "bioUriner",
+   "kullanim": "az",
+   "gerekce": "ADH ve aldosteron."
+  },
+  {
+   "alt": "tytOlasilik",
+   "ust": "bioKalitim",
+   "kullanim": "az",
+   "gerekce": "Çaprazlamada olasılık."
+  },
+  {
+   "alt": "kimEtkilesim",
+   "ust": "bioBilesen",
+   "kullanim": "az",
+   "gerekce": "Su ve hidrojen bağı."
+  },
+  {
+   "alt": "ink20",
+   "ust": "inkWW1",
+   "kullanim": "cok",
+   "gerekce": "Savaşa giden süreç."
+  },
+  {
+   "alt": "inkWW1",
+   "ust": "inkHazirlik",
+   "kullanim": "cok",
+   "gerekce": "Mondros ve işgaller."
+  },
+  {
+   "alt": "inkMK",
+   "ust": "inkHazirlik",
+   "kullanim": "az",
+   "gerekce": "Mustafa Kemal’in Samsun’a çıkışı."
+  },
+  {
+   "alt": "inkHazirlik",
+   "ust": "inkTBMM",
+   "kullanim": "cok",
+   "gerekce": "Kongreler."
+  },
+  {
+   "alt": "inkTBMM",
+   "ust": "inkSevr",
+   "kullanim": "az",
+   "gerekce": "Sevr’e karşı TBMM."
+  },
+  {
+   "alt": "inkWW1",
+   "ust": "inkSevr",
+   "kullanim": "cok",
+   "gerekce": "Savaşın sonu."
+  },
+  {
+   "alt": "inkTBMM",
+   "ust": "inkDoguGuney",
+   "kullanim": "cok",
+   "gerekce": "TBMM orduları."
+  },
+  {
+   "alt": "inkTBMM",
+   "ust": "inkBati",
+   "kullanim": "cok",
+   "gerekce": "Düzenli ordu."
+  },
+  {
+   "alt": "inkDoguGuney",
+   "ust": "inkBati",
+   "kullanim": "az",
+   "gerekce": "Cephelerin sırası."
+  },
+  {
+   "alt": "inkBati",
+   "ust": "inkLozan",
+   "kullanim": "cok",
+   "gerekce": "Mudanya."
+  },
+  {
+   "alt": "inkSevr",
+   "ust": "inkLozan",
+   "kullanim": "cok",
+   "gerekce": "Sevr ile karşılaştırma."
+  },
+  {
+   "alt": "inkLozan",
+   "ust": "inkInkilap",
+   "kullanim": "az",
+   "gerekce": "Bağımsızlık."
+  },
+  {
+   "alt": "inkTBMM",
+   "ust": "inkInkilap",
+   "kullanim": "az",
+   "gerekce": "Saltanatın kaldırılması."
+  },
+  {
+   "alt": "inkMK",
+   "ust": "inkInkilap",
+   "kullanim": "az",
+   "gerekce": "Atatürk’ün ilkeleri."
+  },
+  {
+   "alt": "inkInkilap",
+   "ust": "inkIkiSavas",
+   "kullanim": "az",
+   "gerekce": "Yeni devlet."
+  },
+  {
+   "alt": "inkLozan",
+   "ust": "inkIkiSavas",
+   "kullanim": "cok",
+   "gerekce": "Musul ve Boğazlar."
+  },
+  {
+   "alt": "inkIkiSavas",
+   "ust": "inkWW2",
+   "kullanim": "cok",
+   "gerekce": "Savaşa giden süreç."
+  },
+  {
+   "alt": "inkWW2",
+   "ust": "inkWW2Sonra",
+   "kullanim": "cok",
+   "gerekce": "Savaş sonrası düzen."
+  },
+  {
+   "alt": "inkWW2Sonra",
+   "ust": "inkToplumsal",
+   "kullanim": "cok",
+   "gerekce": "Soğuk Savaş."
+  },
+  {
+   "alt": "inkToplumsal",
+   "ust": "ink21",
+   "kullanim": "cok",
+   "gerekce": "Soğuk Savaş’ın sonu."
+  },
+  {
+   "alt": "cogKonu",
+   "ust": "cogDoga",
+   "kullanim": "az",
+   "gerekce": "Coğrafyanın konusu."
+  },
+  {
+   "alt": "cogDunyaSekil",
+   "ust": "cogKoordinat",
+   "kullanim": "cok",
+   "gerekce": "Enlem, boylam ve yerel saat."
+  },
+  {
+   "alt": "cogKoordinat",
+   "ust": "cogHarita",
+   "kullanim": "cok",
+   "gerekce": "Koordinatlar haritada."
+  },
+  {
+   "alt": "tytOran",
+   "ust": "cogHarita",
+   "kullanim": "cok",
+   "gerekce": "Ölçek bir orandır."
+  },
+  {
+   "alt": "cogDunyaSekil",
+   "ust": "cogAtmosfer",
+   "kullanim": "az",
+   "gerekce": "Güneş ışınlarının geliş açısı."
+  },
+  {
+   "alt": "cogAtmosfer",
+   "ust": "cogIklimEleman",
+   "kullanim": "cok",
+   "gerekce": "Atmosferin özellikleri."
+  },
+  {
+   "alt": "cogKoordinat",
+   "ust": "cogIklimEleman",
+   "kullanim": "cok",
+   "gerekce": "Enlemin iklime etkisi."
+  },
+  {
+   "alt": "cogIklimEleman",
+   "ust": "cogIklimTip",
+   "kullanim": "cok",
+   "gerekce": "İklim elemanları."
+  },
+  {
+   "alt": "cogIklimTip",
+   "ust": "cogIklimTr",
+   "kullanim": "cok",
+   "gerekce": "İklim tipleri."
+  },
+  {
+   "alt": "cogIklimEleman",
+   "ust": "cogIklimTr",
+   "kullanim": "cok",
+   "gerekce": "İklim elemanları."
+  },
+  {
+   "alt": "cogIklimTip",
+   "ust": "cogEkosistem",
+   "kullanim": "cok",
+   "gerekce": "Biyomlar."
+  },
+  {
+   "alt": "cogIklimEleman",
+   "ust": "cogEkstrem",
+   "kullanim": "cok",
+   "gerekce": "İklim elemanlarının uç değerleri."
+  },
+  {
+   "alt": "cogYapi",
+   "ust": "cogIc",
+   "kullanim": "cok",
+   "gerekce": "Levhalar ve tektonik."
+  },
+  {
+   "alt": "cogIc",
+   "ust": "cogDis",
+   "kullanim": "az",
+   "gerekce": "Yer şekilleri."
+  },
+  {
+   "alt": "cogYapi",
+   "ust": "cogDis",
+   "kullanim": "az",
+   "gerekce": "Kayaçlar."
+  },
+  {
+   "alt": "cogDis",
+   "ust": "cogToprak",
+   "kullanim": "cok",
+   "gerekce": "Ayrışma."
+  },
+  {
+   "alt": "cogIklimTip",
+   "ust": "cogToprak",
+   "kullanim": "cok",
+   "gerekce": "İklim ve toprak tipleri."
+  },
+  {
+   "alt": "cogIklimEleman",
+   "ust": "cogSu",
+   "kullanim": "cok",
+   "gerekce": "Yağış ve akarsu rejimi."
+  },
+  {
+   "alt": "cogDis",
+   "ust": "cogSu",
+   "kullanim": "az",
+   "gerekce": "Akarsu ve göller."
+  },
+  {
+   "alt": "cogIc",
+   "ust": "cogAfet",
+   "kullanim": "cok",
+   "gerekce": "Deprem ve volkanizma."
+  },
+  {
+   "alt": "cogIklimEleman",
+   "ust": "cogAfet",
+   "kullanim": "az",
+   "gerekce": "Sel ve kuraklık."
+  },
+  {
+   "alt": "cogAfet",
+   "ust": "cogEkstrem",
+   "kullanim": "az",
+   "gerekce": "Doğal afetler."
+  },
+  {
+   "alt": "cogNufus",
+   "ust": "cogPiramit",
+   "kullanim": "cok",
+   "gerekce": "Nüfusun yapısı."
+  },
+  {
+   "alt": "cogNufus",
+   "ust": "cogGoc",
+   "kullanim": "cok",
+   "gerekce": "Nüfusun dağılışı."
+  },
+  {
+   "alt": "cogNufus",
+   "ust": "cogNufusPol",
+   "kullanim": "cok",
+   "gerekce": "Nüfus artışı."
+  },
+  {
+   "alt": "cogPiramit",
+   "ust": "cogNufusPol",
+   "kullanim": "cok",
+   "gerekce": "Piramitten politika okuma."
+  },
+  {
+   "alt": "cogNufus",
+   "ust": "cogYerlesme",
+   "kullanim": "az",
+   "gerekce": "Nüfus ve yerleşme."
+  },
+  {
+   "alt": "cogYerlesme",
+   "ust": "cogSehirler",
+   "kullanim": "cok",
+   "gerekce": "Yerleşme tipleri."
+  },
+  {
+   "alt": "cogGoc",
+   "ust": "cogSehirler",
+   "kullanim": "az",
+   "gerekce": "Göç ve şehirleşme."
+  },
+  {
+   "alt": "cogSehirler",
+   "ust": "cogSehirEko",
+   "kullanim": "az",
+   "gerekce": "Şehrin ekonomisi."
+  },
+  {
+   "alt": "cogEkoFaal",
+   "ust": "cogEkoKaynak",
+   "kullanim": "cok",
+   "gerekce": "Ekonomik faaliyet türleri."
+  },
+  {
+   "alt": "cogEkoKaynak",
+   "ust": "cogEkoPol",
+   "kullanim": "cok",
+   "gerekce": "Doğal kaynaklar."
+  },
+  {
+   "alt": "cogEkoPol",
+   "ust": "cogTarim",
+   "kullanim": "cok",
+   "gerekce": "Sektörler."
+  },
+  {
+   "alt": "cogEkoPol",
+   "ust": "cogMaden",
+   "kullanim": "az",
+   "gerekce": "Sektörler."
+  },
+  {
+   "alt": "cogEkoPol",
+   "ust": "cogSanayi",
+   "kullanim": "cok",
+   "gerekce": "Sektörler."
+  },
+  {
+   "alt": "cogMaden",
+   "ust": "cogSanayi",
+   "kullanim": "cok",
+   "gerekce": "Hammadde ve enerji."
+  },
+  {
+   "alt": "cogIklimTr",
+   "ust": "cogTarim",
+   "kullanim": "cok",
+   "gerekce": "Tarım ürünleri iklime bağlıdır."
+  },
+  {
+   "alt": "cogToprak",
+   "ust": "cogTarim",
+   "kullanim": "az",
+   "gerekce": "Toprak verimliliği."
+  },
+  {
+   "alt": "cogEkoFaal",
+   "ust": "cogEkoSosyal",
+   "kullanim": "cok",
+   "gerekce": "Ekonomik faaliyetler."
+  },
+  {
+   "alt": "cogEkoKaynak",
+   "ust": "cogHammadde",
+   "kullanim": "cok",
+   "gerekce": "Hammadde ve üretim."
+  },
+  {
+   "alt": "cogHammadde",
+   "ust": "cogTicaretTr",
+   "kullanim": "cok",
+   "gerekce": "Ticaret akışları."
+  },
+  {
+   "alt": "cogUlasimDunya",
+   "ust": "cogTicaretTr",
+   "kullanim": "az",
+   "gerekce": "Ticaret yolları."
+  },
+  {
+   "alt": "cogUlasimDunya",
+   "ust": "cogUlasimTr",
+   "kullanim": "cok",
+   "gerekce": "Ulaşım hatları."
+  },
+  {
+   "alt": "cogMaden",
+   "ust": "cogUlasimTr",
+   "kullanim": "az",
+   "gerekce": "Enerji nakil hatları."
+  },
+  {
+   "alt": "cogBolge",
+   "ust": "cogIslevsel",
+   "kullanim": "cok",
+   "gerekce": "Bölge kavramı."
+  },
+  {
+   "alt": "cogEkoPol",
+   "ust": "cogIslevsel",
+   "kullanim": "cok",
+   "gerekce": "Kalkınma."
+  },
+  {
+   "alt": "cogIklimTr",
+   "ust": "cogTurizm",
+   "kullanim": "az",
+   "gerekce": "Turizmde iklim."
+  },
+  {
+   "alt": "cogEkoFaal",
+   "ust": "cogTurizm",
+   "kullanim": "az",
+   "gerekce": "Hizmet sektörü."
+  },
+  {
+   "alt": "cogKulturMerkez",
+   "ust": "cogTurkKultur",
+   "kullanim": "az",
+   "gerekce": "Kültür bölgeleri."
+  },
+  {
+   "alt": "cogBolge",
+   "ust": "cogJeopolitik",
+   "kullanim": "cok",
+   "gerekce": "Bölgeler ve ülkeler."
+  },
+  {
+   "alt": "cogJeopolitik",
+   "ust": "cogCatisma",
+   "kullanim": "cok",
+   "gerekce": "Jeopolitik konum."
+  },
+  {
+   "alt": "cogBolge",
+   "ust": "cogOrgut",
+   "kullanim": "cok",
+   "gerekce": "Bölgeler ve ülkeler."
+  },
+  {
+   "alt": "cogBolge",
+   "ust": "cogGelisme",
+   "kullanim": "az",
+   "gerekce": "Ülkeler."
+  },
+  {
+   "alt": "cogEkoFaal",
+   "ust": "cogGelisme",
+   "kullanim": "cok",
+   "gerekce": "Sektörlerin payı."
+  },
+  {
+   "alt": "cogEkoFaal",
+   "ust": "cogTeknoloji",
+   "kullanim": "az",
+   "gerekce": "Ekonomi."
+  },
+  {
+   "alt": "cogGelisme",
+   "ust": "cogTeknoloji",
+   "kullanim": "az",
+   "gerekce": "Gelişmişlik."
+  },
+  {
+   "alt": "cogDogalOrtam",
+   "ust": "cogCevre",
+   "kullanim": "cok",
+   "gerekce": "İnsan etkisi."
+  },
+  {
+   "alt": "cogEkosistem",
+   "ust": "cogCevre",
+   "kullanim": "cok",
+   "gerekce": "Ekosistem."
+  },
+  {
+   "alt": "cogCevre",
+   "ust": "cogCevreCozum",
+   "kullanim": "cok",
+   "gerekce": "Sorunların türleri."
+  },
+  {
+   "alt": "cogDoga",
+   "ust": "cogDogalOrtam",
+   "kullanim": "cok",
+   "gerekce": "Doğa ve insan."
+  },
+  {
+   "alt": "felTanima",
+   "ust": "felDusunme",
+   "kullanim": "cok",
+   "gerekce": "Felsefenin anlamı."
+  },
+  {
+   "alt": "felDusunme",
+   "ust": "felKonular",
+   "kullanim": "cok",
+   "gerekce": "Felsefi düşünme."
+  },
+  {
+   "alt": "felTanima",
+   "ust": "felKonular",
+   "kullanim": "cok",
+   "gerekce": "Felsefenin alanları."
+  },
+  {
+   "alt": "felKonular",
+   "ust": "felMO6",
+   "kullanim": "cok",
+   "gerekce": "Varlık ve bilgi problemleri."
+  },
+  {
+   "alt": "felKonular",
+   "ust": "felMS2",
+   "kullanim": "cok",
+   "gerekce": "Varlık ve bilgi problemleri."
+  },
+  {
+   "alt": "felKonular",
+   "ust": "fel15",
+   "kullanim": "cok",
+   "gerekce": "Bilgi problemi."
+  },
+  {
+   "alt": "felKonular",
+   "ust": "fel18",
+   "kullanim": "cok",
+   "gerekce": "Bilgi ve ahlak problemi."
+  },
+  {
+   "alt": "felKonular",
+   "ust": "fel20",
+   "kullanim": "cok",
+   "gerekce": "Problemler."
+  },
+  {
+   "alt": "felMO6",
+   "ust": "felMS2",
+   "kullanim": "az",
+   "gerekce": "Antik felsefe sürer."
+  },
+  {
+   "alt": "felMS2",
+   "ust": "fel15",
+   "kullanim": "az",
+   "gerekce": "Dönemlerin sırası."
+  },
+  {
+   "alt": "fel15",
+   "ust": "fel18",
+   "kullanim": "cok",
+   "gerekce": "Rasyonalizmden Kant’a."
+  },
+  {
+   "alt": "fel18",
+   "ust": "fel20",
+   "kullanim": "az",
+   "gerekce": "Dönemlerin sırası."
+  },
+  {
+   "alt": "felDusunme",
+   "ust": "felOkuma",
+   "kullanim": "cok",
+   "gerekce": "Felsefi metin."
+  },
+  {
+   "alt": "felTanima",
+   "ust": "manGiris",
+   "kullanim": "az",
+   "gerekce": "Mantık felsefenin dalıdır."
+  },
+  {
+   "alt": "manGiris",
+   "ust": "manKlasik",
+   "kullanim": "cok",
+   "gerekce": "Kavram, terim, önerme."
+  },
+  {
+   "alt": "manKlasik",
+   "ust": "manDil",
+   "kullanim": "az",
+   "gerekce": "Önerme."
+  },
+  {
+   "alt": "manGiris",
+   "ust": "manDil",
+   "kullanim": "az",
+   "gerekce": "Kavram."
+  },
+  {
+   "alt": "manKlasik",
+   "ust": "manSembolik",
+   "kullanim": "cok",
+   "gerekce": "Önermeler."
+  },
+  {
+   "alt": "tytMantik",
+   "ust": "manSembolik",
+   "kullanim": "cok",
+   "gerekce": "Önermeler mantığı ve doğruluk tablosu."
+  },
+  {
+   "alt": "tytMantik",
+   "ust": "manKlasik",
+   "kullanim": "az",
+   "gerekce": "Önerme ve niceleyici."
+  },
+  {
+   "alt": "psiTanima",
+   "ust": "psiSurec",
+   "kullanim": "cok",
+   "gerekce": "Psikolojinin yöntemleri."
+  },
+  {
+   "alt": "psiSurec",
+   "ust": "psiOgrenme",
+   "kullanim": "cok",
+   "gerekce": "Duyum ve algı."
+  },
+  {
+   "alt": "psiTanima",
+   "ust": "psiRuh",
+   "kullanim": "az",
+   "gerekce": "Psikolojinin alanları."
+  },
+  {
+   "alt": "psiOgrenme",
+   "ust": "psiRuh",
+   "kullanim": "az",
+   "gerekce": "Stres ve başa çıkma."
+  },
+  {
+   "alt": "sosGiris",
+   "ust": "sosBirey",
+   "kullanim": "cok",
+   "gerekce": "Sosyolojinin kavramları."
+  },
+  {
+   "alt": "sosBirey",
+   "ust": "sosYapi",
+   "kullanim": "cok",
+   "gerekce": "Toplumsal ilişkiler."
+  },
+  {
+   "alt": "sosYapi",
+   "ust": "sosKurum",
+   "kullanim": "cok",
+   "gerekce": "Toplumsal yapının unsurları."
+  },
+  {
+   "alt": "sosYapi",
+   "ust": "sosDegisme",
+   "kullanim": "cok",
+   "gerekce": "Toplumsal yapı."
+  },
+  {
+   "alt": "sosGiris",
+   "ust": "sosKultur",
+   "kullanim": "az",
+   "gerekce": "Kültür kavramı."
+  },
+  {
+   "alt": "sosKultur",
+   "ust": "sosDegisme",
+   "kullanim": "az",
+   "gerekce": "Kültür değişmesi."
   }
  ],
  "sinavSatirlari": [
@@ -4669,6 +7284,2411 @@
    "paylar": {
     "fizBHH": 1
    }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Türkçe",
+   "konu": "Ses Bilgisi",
+   "yillar": {
+    "2018": 3,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "trkSes": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Türkçe",
+   "konu": "Dil Bilgisi",
+   "yillar": {
+    "2018": 1,
+    "2019": 8,
+    "2020": 3,
+    "2021": 2,
+    "2022": 3,
+    "2023": 2,
+    "2024": 3,
+    "2025": 3
+   },
+   "paylar": {
+    "trkYapi": 0.17,
+    "trkAd": 0.07,
+    "trkSifat": 0.07,
+    "trkZamir": 0.06,
+    "trkZarf": 0.06,
+    "trkEdat": 0.06,
+    "trkFiil": 0.07,
+    "trkFiilimsi": 0.1,
+    "trkOge": 0.1,
+    "trkCati": 0.07,
+    "trkKelimeGrup": 0.07,
+    "trkCumleTur": 0.1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Türkçe",
+   "konu": "Noktalama İşaretleri",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 2,
+    "2022": 2,
+    "2023": 2,
+    "2024": 2,
+    "2025": 2
+   },
+   "paylar": {
+    "trkNoktalama": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Türkçe",
+   "konu": "Yazım Kuralları",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 2,
+    "2021": 2,
+    "2022": 2,
+    "2023": 2,
+    "2024": 2,
+    "2025": 2
+   },
+   "paylar": {
+    "trkYazim": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Türkçe",
+   "konu": "Anlatım Bozukluğu",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "trkAnlatimNit": 0.5,
+    "trkDilBozuk": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Türkçe",
+   "konu": "Paragraf",
+   "yillar": {
+    "2018": 22,
+    "2019": 22,
+    "2020": 26,
+    "2021": 25,
+    "2022": 26,
+    "2023": 26,
+    "2024": 26,
+    "2025": 26
+   },
+   "paylar": {
+    "trkParagrafAnlam": 0.6,
+    "trkParagrafYapi": 0.2,
+    "trkParagrafAnlatim": 0.2
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Türkçe",
+   "konu": "Cümlede Anlam",
+   "yillar": {
+    "2018": 7,
+    "2019": 3,
+    "2020": 6,
+    "2021": 3,
+    "2022": 3,
+    "2023": 4,
+    "2024": 3,
+    "2025": 3
+   },
+   "paylar": {
+    "trkCumleAnlam": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Türkçe",
+   "konu": "Sözcükte Anlam",
+   "yillar": {
+    "2018": 3,
+    "2019": 3,
+    "2020": 1,
+    "2021": 5,
+    "2022": 4,
+    "2023": 3,
+    "2024": 4,
+    "2025": 4
+   },
+   "paylar": {
+    "trkSozcukAnlam": 0.75,
+    "trkSozObek": 0.25
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Kimya Bilimi",
+   "yillar": {
+    "2018": 2,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "kimBilim": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Atomun Yapısı",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "kimAtom": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Periyodik Tablo",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "kimPeriyodik": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Maddenin Halleri",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "kimHal": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Kimyasal Türler Arası Etkileşimler",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "kimTur": 0.5,
+    "kimEtkilesim": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Kimyasal Hesaplamalar",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "kimMol": 0.3,
+    "kimTepkime": 0.3,
+    "kimHesap": 0.4
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Kimyanın Temel Kanunları",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "kimKanun": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Asit, Baz ve Tuzlar",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "kimAsitBaz": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Karışımlar",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "kimKarisim": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Kimya",
+   "konu": "Kimya Her Yerde",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "kimHerYer": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Biyoloji",
+   "konu": "Canlıların Ortak Özellikleri",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "bioOrtak": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Biyoloji",
+   "konu": "Canlıların Temel Bileşenleri",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "bioBilesen": 0.8,
+    "bioNukleik": 0.2
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Biyoloji",
+   "konu": "Hücre ve Organelleri",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "bioHucre": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Biyoloji",
+   "konu": "Madde Geçişleri",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "bioHucre": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Biyoloji",
+   "konu": "Canlıların Sınıflandırılması",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "bioSiniflandirma": 0.5,
+    "bioAlem": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Biyoloji",
+   "konu": "Hücre Bölünmeleri ve Üreme",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "bioBolunme": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Biyoloji",
+   "konu": "Ekosistem Ekoloji",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "bioEkosistem": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Biyoloji",
+   "konu": "Güncel Çevre Sorunları",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "bioCevre": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Biyoloji",
+   "konu": "Kalıtım",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "bioKalitim": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "ink20": 0.5,
+    "inkWW1": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "Milli Mücadele",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 2,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "inkHazirlik": 0.2,
+    "inkTBMM": 0.2,
+    "inkSevr": 0.1,
+    "inkDoguGuney": 0.15,
+    "inkBati": 0.2,
+    "inkLozan": 0.15
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "Atatürkçülük ve Türk İnkılabı",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "inkInkilap": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "Doğa ve İnsan",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "cogDoga": 0.6,
+    "cogKonu": 0.2,
+    "cogDogalOrtam": 0.2
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "Dünyanın Şekli ve Hareketleri",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "cogDunyaSekil": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "Coğrafi Konum",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "cogKoordinat": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "Harita Bilgisi",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "cogHarita": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "İklim Bilgisi",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "cogAtmosfer": 0.15,
+    "cogIklimEleman": 0.35,
+    "cogIklimTip": 0.25,
+    "cogIklimTr": 0.25
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "İç ve Dış Kuvvetler",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "cogYapi": 0.2,
+    "cogIc": 0.4,
+    "cogDis": 0.4
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "Nüfus ve Yerleşme",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "cogNufus": 0.35,
+    "cogPiramit": 0.15,
+    "cogGoc": 0.2,
+    "cogYerlesme": 0.3
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "Ekonomik Faaliyetler",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "cogEkoFaal": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "Bölgeler",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "cogBolge": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "Uluslar Arası Ulaşım Hatları",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "cogUlasimDunya": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Coğrafya",
+   "konu": "Doğal Afetler",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "cogAfet": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Felsefe",
+   "konu": "Felsefe Alanı",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 2,
+    "2022": 1,
+    "2023": 2,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "felTanima": 0.5,
+    "felDusunme": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Felsefe",
+   "konu": "Bilgi Felsefesi",
+   "yillar": {
+    "2018": 2,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 2,
+    "2023": 2,
+    "2024": 1,
+    "2025": 3
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Felsefe",
+   "konu": "Bilim Felsefesi",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Felsefe",
+   "konu": "Varlık Felsefesi",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Felsefe",
+   "konu": "Ahlak Felsefesi",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Felsefe",
+   "konu": "Siyaset Felsefesi",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Felsefe",
+   "konu": "Din Felsefesi",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Felsefe",
+   "konu": "Sanat Felsefesi",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Anlam Bilgisi",
+   "yillar": {
+    "2018": 4,
+    "2019": 4,
+    "2020": 6,
+    "2021": 3,
+    "2022": 6,
+    "2023": 6,
+    "2024": 6
+   },
+   "paylar": {
+    "trkParagrafAnlam": 0.5,
+    "trkCumleAnlam": 0.25,
+    "trkSozcukAnlam": 0.25
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Metinlerin Sınıflandırılması",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "edAnlatTur": 0.4,
+    "edOgretici": 0.3,
+    "edSanat": 0.3
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Şiir Bilgisi",
+   "yillar": {
+    "2018": 3,
+    "2019": 3,
+    "2020": 3,
+    "2021": 2,
+    "2022": 3,
+    "2023": 3,
+    "2024": 2
+   },
+   "paylar": {
+    "edSiirBilgi": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Edebi Sanatlar",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 2,
+    "2022": 2,
+    "2023": 1,
+    "2024": 2
+   },
+   "paylar": {
+    "edSiirDili": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "İslamiyet Öncesi Türk Edebiyatı ve Geçiş Dönemi",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "edSiirTarih1": 0.7,
+    "edDonem": 0.3
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Halk Edebiyatı",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 2,
+    "2021": 2,
+    "2022": 1,
+    "2023": 2,
+    "2024": 1
+   },
+   "paylar": {
+    "edSiirTarih1": 0.4,
+    "edSiirTarih2": 0.4,
+    "edTiyatroTarih": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Divan Edebiyatı",
+   "yillar": {
+    "2018": 5,
+    "2019": 3,
+    "2020": 4,
+    "2021": 6,
+    "2022": 4,
+    "2023": 5,
+    "2024": 4
+   },
+   "paylar": {
+    "edSiirTarih2": 0.7,
+    "edDonem": 0.1,
+    "edOgretici": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Tanzimat Edebiyatı",
+   "yillar": {
+    "2018": 3,
+    "2019": 2,
+    "2020": 1,
+    "2021": 2,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "edBatiSiir": 0.4,
+    "edAnlatBati": 0.4,
+    "edTiyatroTarih": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Servet-i Fünun ve Fecr-i Ati Edebiyatı",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "edBatiSiir": 0.5,
+    "edAnlatBati": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Milli Edebiyat",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "edMilliSiir": 0.5,
+    "edAnlatBati": 0.3,
+    "edTiyatroTarih": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Cumhuriyet Dönemi Edebiyatı",
+   "yillar": {
+    "2018": 4,
+    "2019": 5,
+    "2020": 2,
+    "2021": 3,
+    "2022": 3,
+    "2023": 2,
+    "2024": 3
+   },
+   "paylar": {
+    "edCumSiir": 0.45,
+    "edAnlatCum": 0.45,
+    "edTiyatroTarih": 0.1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Edebiyat",
+   "konu": "Batı Edebiyat Akımları",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "edSiirAkim": 0.5,
+    "edAnlatAkim": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya",
+   "yillar": {
+    "2018": 3,
+    "2019": 4,
+    "2020": 2,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 3
+   },
+   "paylar": {
+    "ink20": 0.5,
+    "inkWW1": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Milli Mücadele",
+   "yillar": {
+    "2018": 1,
+    "2019": 3,
+    "2020": 4,
+    "2021": 4,
+    "2022": 5,
+    "2023": 1,
+    "2024": 3
+   },
+   "paylar": {
+    "inkHazirlik": 0.2,
+    "inkTBMM": 0.2,
+    "inkSevr": 0.1,
+    "inkDoguGuney": 0.15,
+    "inkBati": 0.2,
+    "inkLozan": 0.15
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Atatürkçülük ve Türk İnkılabı",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 2,
+    "2021": 3,
+    "2022": 1,
+    "2023": 5,
+    "2024": 2
+   },
+   "paylar": {
+    "inkInkilap": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "İki Savaş Arasındaki Dönemde Türkiye ve Dünya",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "inkIkiSavas": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "II. Dünya Savaşı Sürecinde – Sonrasında Türkiye ve Dünya",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 2,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "inkWW2": 0.5,
+    "inkWW2Sonra": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "XXI. Yüzyılın Eşiğinde Türkiye ve Dünya",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "ink21": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "İklim ve Yer Şekilleri",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "cogIklimTip": 0.3,
+    "cogIklimTr": 0.3,
+    "cogIc": 0.2,
+    "cogDis": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Coğrafi Konum",
+   "yillar": {
+    "2018": 2,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "cogKoordinat": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Harita Bilgisi",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "cogHarita": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "İç ve Dış Kuvvetler",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "cogIc": 0.5,
+    "cogDis": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Ekosistem",
+   "yillar": {
+    "2018": 0,
+    "2019": 3,
+    "2020": 3,
+    "2021": 3,
+    "2022": 4,
+    "2023": 6,
+    "2024": 2
+   },
+   "paylar": {
+    "cogEkosistem": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Nüfus Politikaları",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "cogNufusPol": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Yerleşmenin Özellikleri",
+   "yillar": {
+    "2018": 4,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 2
+   },
+   "paylar": {
+    "cogSehirler": 0.6,
+    "cogYerlesme": 0.4
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Ekonomik Faaliyetler ve Doğal Kaynaklar",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 2,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "cogEkoKaynak": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Göç ve Şehirleşme",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "cogGoc": 0.5,
+    "cogSehirEko": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Türkiye Ekonomisi",
+   "yillar": {
+    "2018": 4,
+    "2019": 2,
+    "2020": 1,
+    "2021": 3,
+    "2022": 2,
+    "2023": 5,
+    "2024": 0
+   },
+   "paylar": {
+    "cogEkoPol": 0.25,
+    "cogTarim": 0.25,
+    "cogMaden": 0.2,
+    "cogSanayi": 0.2,
+    "cogTurizm": 0.1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Türkiye'nin İşlevsel Bölgeleri ve Kalkınma Projeleri",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "cogIslevsel": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Küresel Ticaret",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "cogTicaretTr": 0.5,
+    "cogHammadde": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "İlk Uygarlıklar",
+   "yillar": {
+    "2018": 0,
+    "2019": 2,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "cogKulturMerkez": 0.8,
+    "cogTurkKultur": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Küresel ve Bölgesel Örgütler",
+   "yillar": {
+    "2018": 0,
+    "2019": 2,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "cogOrgut": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Ülkeler Arası Etkileşimler",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "cogJeopolitik": 0.5,
+    "cogCatisma": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Bölgeler ve Ülkeler",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 2,
+    "2022": 4,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "cogGelisme": 0.4,
+    "cogBolge": 0.3,
+    "cogTeknoloji": 0.3
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Coğrafya-1",
+   "konu": "Çevre ve Toplum",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 3,
+    "2021": 3,
+    "2022": 1,
+    "2023": 1,
+    "2024": 4
+   },
+   "paylar": {
+    "cogCevre": 0.5,
+    "cogCevreCozum": 0.3,
+    "cogEkstrem": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Felsefe ve Bilim",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Bilgi Felsefesi",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Varlık Felsefesi",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Ahlak Felsefesi",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Din Felsefesi",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "felKonular": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "20. Yüzyıl Felsefesi",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "fel20": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Mantığa Giriş",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "manGiris": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Klasik Mantık",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 2
+   },
+   "paylar": {
+    "manKlasik": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Mantık ve Dil",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "manDil": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Psikoloji Bilimini Tanıyalım",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 3,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "psiTanima": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Psikolojinin Temel Süreçleri",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "psiSurec": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Öğrenme Bellek Düşünme",
+   "yillar": {
+    "2018": 2,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "psiOgrenme": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Ruh Sağlığının Temelleri",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "psiRuh": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Sosyolojiye Giriş",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "sosGiris": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Birey ve Toplum",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "sosBirey": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Toplumsal Yapı",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "sosYapi": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Toplumsal Değişme ve Gelişme",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "sosDegisme": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Toplum ve Kültür",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "sosKultur": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Felsefe Grubu",
+   "konu": "Toplumsal Kurumlar",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "sosKurum": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Atom ve Yapısı",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "kimAtom": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Periyodik Sistem",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "kimPeriyodik": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Kimyasal Hesaplamalar",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "kimMol": 0.3,
+    "kimTepkime": 0.3,
+    "kimHesap": 0.4
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Modern Atom Teorisi",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 2,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "kimKuantum": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Gazlar",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 2,
+    "2024": 1
+   },
+   "paylar": {
+    "kimGaz": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Sıvı Çözeltiler",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 2,
+    "2022": 2,
+    "2023": 2,
+    "2024": 2
+   },
+   "paylar": {
+    "kimCozelti": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Kimyasal Tepkimelerde Enerji",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "kimEnerji": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Kimyasal Tepkimelerde Hız",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "kimHiz": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Kimyasal Tepkimelerde Denge",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 2,
+    "2024": 1
+   },
+   "paylar": {
+    "kimDenge": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Asit-Baz Dengesi",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "kimAsitBazDenge": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Çözünürlük Dengesi",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "kimCozunurluk": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Kimya ve Elektrik",
+   "yillar": {
+    "2018": 2,
+    "2019": 2,
+    "2020": 3,
+    "2021": 2,
+    "2022": 2,
+    "2023": 3,
+    "2024": 2
+   },
+   "paylar": {
+    "kimRedoks": 0.3,
+    "kimPil": 0.4,
+    "kimElektroliz": 0.3
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Kimya",
+   "konu": "Organik Kimya",
+   "yillar": {
+    "2018": 4,
+    "2019": 3,
+    "2020": 1,
+    "2021": 3,
+    "2022": 3,
+    "2023": 1,
+    "2024": 3
+   },
+   "paylar": {
+    "kimKarbon": 0.15,
+    "kimAlkan": 0.15,
+    "kimAlken": 0.12,
+    "kimAlkin": 0.1,
+    "kimAromatik": 0.08,
+    "kimAlkol": 0.15,
+    "kimAldehit": 0.12,
+    "kimKarboksil": 0.13
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Sinir Sistemi",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "bioSinir": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Endokrin Sistem",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 2,
+    "2024": 1
+   },
+   "paylar": {
+    "bioEndokrin": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Duyu Organları",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "bioDuyu": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Destek ve Hareket Sistemi",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "bioDestek": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Sindirim Sistemi",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "bioSindirim": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Dolaşım ve Bağışıklık Sistemi",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "bioDolasim": 0.6,
+    "bioLenf": 0.4
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Solunum Sistemi",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "bioSolunum": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Üriner Sistem",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "bioUriner": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Üreme Sistemi ve Embriyonik Gelişim",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "bioUreme": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Komünite ve Popülasyon Ekolojisi",
+   "yillar": {
+    "2018": 2,
+    "2019": 0,
+    "2020": 2,
+    "2021": 2,
+    "2022": 2,
+    "2023": 2,
+    "2024": 2
+   },
+   "paylar": {
+    "bioKomunite": 0.5,
+    "bioPopulasyon": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Nükleik Asitler",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "bioNukleik": 0.6,
+    "bioReplikasyon": 0.4
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Genetik Şifre ve Protein Sentezi",
+   "yillar": {
+    "2018": 3,
+    "2019": 1,
+    "2020": 2,
+    "2021": 2,
+    "2022": 2,
+    "2023": 1,
+    "2024": 2
+   },
+   "paylar": {
+    "bioProtein": 0.8,
+    "bioBiyotek": 0.2
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Canlılık ve Enerji",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "bioEnerji": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Fotosentez ve Kemosentez",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "bioEnerji": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Hücresel Solunum",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "bioEnerji": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Bitki Biyolojisi",
+   "yillar": {
+    "2018": 2,
+    "2019": 3,
+    "2020": 0,
+    "2021": 2,
+    "2022": 2,
+    "2023": 0,
+    "2024": 2
+   },
+   "paylar": {
+    "bioBitkiYapi": 0.35,
+    "bioBitkiTasima": 0.35,
+    "bioBitkiUreme": 0.3
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Biyoloji",
+   "konu": "Canlılar ve Çevre",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "bioCevre": 1
+   }
   }
  ],
  "birimler": [
@@ -5737,6 +10757,2253 @@
    "ad": "Laser Işınları",
    "kapsar": [
     "fizLazer"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 9,
+   "ad": "1. Ünite: Giriş",
+   "kapsar": [
+    "edSanat"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 10,
+   "ad": "1. Ünite: Giriş",
+   "kapsar": [
+    "edDonem"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 11,
+   "ad": "1. Ünite: Giriş",
+   "kapsar": [
+    "edSanat"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 12,
+   "ad": "1. Ünite: Giriş",
+   "kapsar": [
+    "edSanat"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 9,
+   "ad": "2. Ünite: Hikâye",
+   "kapsar": [
+    "edAnlatTur",
+    "edAnlatUnsur"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 9,
+   "ad": "3. Ünite: Şiir",
+   "kapsar": [
+    "edSiirBilgi",
+    "edSiirDili"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 9,
+   "ad": "4. Ünite: Masal/Fabl",
+   "kapsar": [
+    "edAnlatTur"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 9,
+   "ad": "5. Ünite: Roman",
+   "kapsar": [
+    "edAnlatUnsur"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 9,
+   "ad": "6. Ünite: Tiyatro",
+   "kapsar": [
+    "edTiyatro"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 9,
+   "ad": "7. Ünite: Biyografi/Otobiyografi",
+   "kapsar": [
+    "edOgretici"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 9,
+   "ad": "8. Ünite: Mektup/E -Posta",
+   "kapsar": [
+    "edOgretici"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 9,
+   "ad": "9. Ünite: Günlük/Blog",
+   "kapsar": [
+    "edOgretici"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 10,
+   "ad": "2. Ünite: Hikâye",
+   "kapsar": [
+    "edAnlatTur"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 10,
+   "ad": "3. Ünite: Şiir",
+   "kapsar": [
+    "edSiirTarih1",
+    "edSiirTarih2"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 10,
+   "ad": "4. Ünite: Destan/Efsane",
+   "kapsar": [
+    "edSiirTarih1"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 10,
+   "ad": "5. Ünite: Roman",
+   "kapsar": [
+    "edAnlatBati"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 10,
+   "ad": "6. Ünite: Tiyatro",
+   "kapsar": [
+    "edTiyatroTarih"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 10,
+   "ad": "7. Ünite: Ani (Hatira)",
+   "kapsar": [
+    "edOgretici"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 10,
+   "ad": "8. Ünite: Haber Metni",
+   "kapsar": [
+    "edOgretici"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 10,
+   "ad": "9. Ünite: Gezi Yazisi",
+   "kapsar": [
+    "edOgretici"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 11,
+   "ad": "2. Ünite: Hikâye",
+   "kapsar": [
+    "edAnlatBati"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 11,
+   "ad": "3. Ünite: Şiir",
+   "kapsar": [
+    "edBatiSiir",
+    "edMilliSiir"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 11,
+   "ad": "4. Ünite: Makale",
+   "kapsar": [
+    "edOgretici"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 11,
+   "ad": "5. Ünite: Sohbet Ve Fikra",
+   "kapsar": [
+    "edOgretici",
+    "edSozlu"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 11,
+   "ad": "6. Ünite: Roman",
+   "kapsar": [
+    "edAnlatBati"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 11,
+   "ad": "7. Ünite: Tiyatro",
+   "kapsar": [
+    "edTiyatroTarih"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 11,
+   "ad": "8. Ünite: Eleştiri",
+   "kapsar": [
+    "edOgretici"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 11,
+   "ad": "9. Ünite: Mülakat/Röportaj",
+   "kapsar": [
+    "edSozlu"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 12,
+   "ad": "2. Ünite: Hikâye",
+   "kapsar": [
+    "edAnlatCum"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 12,
+   "ad": "3. Ünite: Şiir",
+   "kapsar": [
+    "edCumSiir"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 12,
+   "ad": "4. Ünite: Roman",
+   "kapsar": [
+    "edAnlatCum"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 12,
+   "ad": "5. Ünite: Tiyatro",
+   "kapsar": [
+    "edTiyatroTarih"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 12,
+   "ad": "6. Ünite: Deneme",
+   "kapsar": [
+    "edOgretici"
+   ]
+  },
+  {
+   "ders": "Edebiyat",
+   "sinif": 12,
+   "ad": "7. Ünite: Söylev (Nutuk)",
+   "kapsar": [
+    "edSozlu"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Simyadan Kimyaya",
+   "kapsar": [
+    "kimBilim"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Kimya Disiplinleri ve Kimyacıların Çalışma Alanları",
+   "kapsar": [
+    "kimBilim"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Kimyanın Sembolik Dili",
+   "kapsar": [
+    "kimBilim"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Kimya Uygulamalarında İş Sağlığı ve Güvenliği",
+   "kapsar": [
+    "kimBilim"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Atom Modelleri",
+   "kapsar": [
+    "kimAtom"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Atomun Yapısı",
+   "kapsar": [
+    "kimAtom"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Periyodik Sistem",
+   "kapsar": [
+    "kimPeriyodik"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Kimyasal Tür",
+   "kapsar": [
+    "kimTur"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Kimyasal Türler Arası Etkileşimlerin Sınıflandırılması",
+   "kapsar": [
+    "kimTur"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Güçlü Etkileşimler",
+   "kapsar": [
+    "kimEtkilesim"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Zayıf Etkileşimler",
+   "kapsar": [
+    "kimEtkilesim"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Fiziksel ve Kimyasal Değişimler",
+   "kapsar": [
+    "kimDegisim"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Katılar",
+   "kapsar": [
+    "kimHal"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Sıvılar",
+   "kapsar": [
+    "kimHal"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Gazlar",
+   "kapsar": [
+    "kimHal"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Plazma",
+   "kapsar": [
+    "kimHal"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Su ve Hayat",
+   "kapsar": [
+    "kimDoga"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 9,
+   "ad": "Çevre Kimyası",
+   "kapsar": [
+    "kimDoga"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Kimyanın Temel Kanunları",
+   "kapsar": [
+    "kimKanun"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Mol Kavramı",
+   "kapsar": [
+    "kimMol"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Kimyasal Tepkimeler ve Denklemler",
+   "kapsar": [
+    "kimTepkime"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Kimyasal Tepkimelerde Hesaplamalar",
+   "kapsar": [
+    "kimHesap"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Homojen ve Heterojen Karışımlar",
+   "kapsar": [
+    "kimKarisim"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Ayırma ve Saflaştırma Teknikleri",
+   "kapsar": [
+    "kimKarisim"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Asitler ve Bazlar",
+   "kapsar": [
+    "kimAsitBaz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Asitlerin ve Bazların Tepkimeleri",
+   "kapsar": [
+    "kimAsitBaz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Hayatımızda Asitler ve Bazlar",
+   "kapsar": [
+    "kimAsitBaz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Tuzlar",
+   "kapsar": [
+    "kimAsitBaz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Yaygın Günlük Hayat Kimyasalları",
+   "kapsar": [
+    "kimHerYer"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 10,
+   "ad": "Gıdalar",
+   "kapsar": [
+    "kimHerYer"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Atomun Kuantum Modeli",
+   "kapsar": [
+    "kimKuantum"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Periyodik Sistem ve Elektron Dizilimleri",
+   "kapsar": [
+    "kimKuantum",
+    "kimPeriyodik"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Periyodik Özellikler",
+   "kapsar": [
+    "kimPeriyodik"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Elementleri Tanıyalım",
+   "kapsar": [
+    "kimPeriyodik"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Yükseltgenme Basamakları",
+   "kapsar": [
+    "kimRedoks"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Gazların Özellikleri ve Gaz Yasaları",
+   "kapsar": [
+    "kimGaz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "İdeal Gaz Yasası",
+   "kapsar": [
+    "kimGaz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Gazlarda Kinetik Teori",
+   "kapsar": [
+    "kimGaz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Gaz Karışımları",
+   "kapsar": [
+    "kimGaz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Gerçek Gazlar",
+   "kapsar": [
+    "kimGaz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Çözücü Çözünen Etkileşimleri",
+   "kapsar": [
+    "kimCozelti"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Derişim Birimleri",
+   "kapsar": [
+    "kimCozelti"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Koligatif Özellikler",
+   "kapsar": [
+    "kimCozelti"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Çözünürlük",
+   "kapsar": [
+    "kimCozelti"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Çözünürlüğe Etki Eden Faktörler",
+   "kapsar": [
+    "kimCozelti"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Tepkimelerde Isı Değişimi",
+   "kapsar": [
+    "kimEnerji"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Oluşum Entalpisi",
+   "kapsar": [
+    "kimEnerji"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Bağ Enerjileri",
+   "kapsar": [
+    "kimEnerji"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Tepkime Isılarının Toplanabilirliği",
+   "kapsar": [
+    "kimEnerji"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Tepkime Hızları",
+   "kapsar": [
+    "kimHiz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Tepkime Hızını Etkileyen Faktörler",
+   "kapsar": [
+    "kimHiz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Kimyasal Denge",
+   "kapsar": [
+    "kimDenge"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Dengeyi Etkileyen Faktörler",
+   "kapsar": [
+    "kimDenge"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 11,
+   "ad": "Sulu Çözelti Dengeleri",
+   "kapsar": [
+    "kimAsitBazDenge",
+    "kimCozunurluk"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "İndirgenme-Yükseltgenme Tepkimelerinde Elektrik Akımı",
+   "kapsar": [
+    "kimRedoks"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Elektrotlar ve Elektrokimyasal Hücreler",
+   "kapsar": [
+    "kimPil"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Elektrot Potansiyelleri",
+   "kapsar": [
+    "kimPil"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Kimyasallardan Elektrik Üretimi",
+   "kapsar": [
+    "kimPil"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Elektroliz",
+   "kapsar": [
+    "kimElektroliz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Korozyon",
+   "kapsar": [
+    "kimElektroliz"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Anorganik ve Organik Bileşikler",
+   "kapsar": [
+    "kimKarbon"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Basit Formül ve Molekül Formülü",
+   "kapsar": [
+    "kimKarbon"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Doğada Karbon",
+   "kapsar": [
+    "kimKarbon"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Lewis Formülleri",
+   "kapsar": [
+    "kimKarbon"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Hibritleşme-Molekül Geometrileri",
+   "kapsar": [
+    "kimKarbon"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Hidrokarbonlar",
+   "kapsar": [
+    "kimAlkan",
+    "kimAlken",
+    "kimAlkin",
+    "kimAromatik"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Fonksiyonel Gruplar",
+   "kapsar": [
+    "kimAlkol",
+    "kimAldehit",
+    "kimKarboksil"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Alkoller",
+   "kapsar": [
+    "kimAlkol"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Eterler",
+   "kapsar": [
+    "kimAlkol"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Karbonil Bileşikleri",
+   "kapsar": [
+    "kimAldehit"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Karboksilik Asitler",
+   "kapsar": [
+    "kimKarboksil"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Esterler",
+   "kapsar": [
+    "kimKarboksil"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Fosil Yakıtlar",
+   "kapsar": [
+    "kimEnerjiKaynak"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Alternatif Enerji Kaynakları",
+   "kapsar": [
+    "kimEnerjiKaynak"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Sürdürülebilirlik",
+   "kapsar": [
+    "kimEnerjiKaynak"
+   ]
+  },
+  {
+   "ders": "Kimya",
+   "sinif": 12,
+   "ad": "Nanoteknoloji",
+   "kapsar": [
+    "kimEnerjiKaynak"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 9,
+   "ad": "Biyoloji ve Canlıların Ortak Özellikleri",
+   "kapsar": [
+    "bioOrtak"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 9,
+   "ad": "Canlıların Yapısında Bulunan Temel Bileşikler",
+   "kapsar": [
+    "bioBilesen"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 9,
+   "ad": "Hücre",
+   "kapsar": [
+    "bioHucre"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 9,
+   "ad": "Canlıların Çeşitliliği ve Sınıflandırılması",
+   "kapsar": [
+    "bioSiniflandirma"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 9,
+   "ad": "Canlı Âlemleri ve Özellikleri",
+   "kapsar": [
+    "bioAlem"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 10,
+   "ad": "Mitoz ve Eşeysiz Üreme",
+   "kapsar": [
+    "bioBolunme"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 10,
+   "ad": "Mayoz ve Eşeyli Üreme",
+   "kapsar": [
+    "bioBolunme"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 10,
+   "ad": "Kalıtım ve Biyolojik Çeşitlilik",
+   "kapsar": [
+    "bioKalitim"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 10,
+   "ad": "Ekosistem Ekolojisi",
+   "kapsar": [
+    "bioEkosistem"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 10,
+   "ad": "Güncel Çevre Sorunları ve İnsan",
+   "kapsar": [
+    "bioCevre"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 10,
+   "ad": "Doğal Kaynaklar ve Biyolojik Çeşitliliğin Korunması",
+   "kapsar": [
+    "bioCevre"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 11,
+   "ad": "Denetleyici ve Düzeleyici Sistem, Duyu Organları",
+   "kapsar": [
+    "bioSinir",
+    "bioEndokrin",
+    "bioDuyu"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 11,
+   "ad": "Destek ve Hareket Sistemi",
+   "kapsar": [
+    "bioDestek"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 11,
+   "ad": "Sindirim Sistemi",
+   "kapsar": [
+    "bioSindirim"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 11,
+   "ad": "Dolaşım Sistemleri",
+   "kapsar": [
+    "bioDolasim",
+    "bioLenf"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 11,
+   "ad": "Solunum Sistemi",
+   "kapsar": [
+    "bioSolunum"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 11,
+   "ad": "Üriner Sistem",
+   "kapsar": [
+    "bioUriner"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 11,
+   "ad": "Üreme Sistemi ve Embriyonik Gelişim",
+   "kapsar": [
+    "bioUreme"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 11,
+   "ad": "Komünite Ekolojisi",
+   "kapsar": [
+    "bioKomunite"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 11,
+   "ad": "Popülasyon Ekolojisi",
+   "kapsar": [
+    "bioPopulasyon"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Nükleik Asitlerin Keşfi ve Önemi",
+   "kapsar": [
+    "bioNukleik",
+    "bioReplikasyon"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Genetik Şifre ve Protein Sentezi",
+   "kapsar": [
+    "bioProtein",
+    "bioBiyotek"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Canlılık ve Enerji",
+   "kapsar": [
+    "bioEnerji"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Fotosentez",
+   "kapsar": [
+    "bioEnerji"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Kemosentez",
+   "kapsar": [
+    "bioEnerji"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Hücresel Solunum",
+   "kapsar": [
+    "bioEnerji"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Bitkilerin Yapısı",
+   "kapsar": [
+    "bioBitkiYapi"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Bitkilerde Madde Taşınması",
+   "kapsar": [
+    "bioBitkiTasima"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Bitkilerde Eşeyli Üreme",
+   "kapsar": [
+    "bioBitkiUreme"
+   ]
+  },
+  {
+   "ders": "Biyoloji",
+   "sinif": 12,
+   "ad": "Canlılar ve Çevre",
+   "kapsar": [
+    "bioCevre"
+   ]
+  },
+  {
+   "ders": "İnkılap",
+   "sinif": 12,
+   "ad": "20. Yüzyıl Başlarında Osmanlı Devleti ve Dünya",
+   "kapsar": [
+    "ink20",
+    "inkWW1"
+   ]
+  },
+  {
+   "ders": "İnkılap",
+   "sinif": 12,
+   "ad": "Millî Mücadele",
+   "kapsar": [
+    "inkHazirlik",
+    "inkTBMM",
+    "inkSevr",
+    "inkDoguGuney",
+    "inkBati",
+    "inkLozan"
+   ]
+  },
+  {
+   "ders": "İnkılap",
+   "sinif": 12,
+   "ad": "Atatürkçülük ve Türk İnkılabı",
+   "kapsar": [
+    "inkInkilap"
+   ]
+  },
+  {
+   "ders": "İnkılap",
+   "sinif": 12,
+   "ad": "İki Savaş Arasındaki Dönemde Türkiye ve Dünya",
+   "kapsar": [
+    "inkIkiSavas"
+   ]
+  },
+  {
+   "ders": "İnkılap",
+   "sinif": 12,
+   "ad": "Iı. Dünya Savaşı Sürecinde Türkiye ve Dünya",
+   "kapsar": [
+    "inkWW2"
+   ]
+  },
+  {
+   "ders": "İnkılap",
+   "sinif": 12,
+   "ad": "Iı. Dünya Savaşı Sonrasında Türkiye ve Dünya",
+   "kapsar": [
+    "inkWW2Sonra"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Doğa ve insan etkileşimini örneklerle açıklar",
+   "kapsar": [
+    "cogDoga"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Coğrafyanın konularını ve bölümlenmesini açıklar",
+   "kapsar": [
+    "cogKonu"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Coğrafya biliminin gelişimini açıklar",
+   "kapsar": [
+    "cogKonu"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Dünya’nın şekli ve hareketlerinin etkilerini değerlendirir",
+   "kapsar": [
+    "cogDunyaSekil"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Koordinat sistemini kullanarak zaman ve yere ait özellikler hakkında çıkarımlarda bulunur",
+   "kapsar": [
+    "cogKoordinat"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Haritayı oluşturan unsurlardan yararlanarak harita kullanır",
+   "kapsar": [
+    "cogHarita"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Bilgileri haritalara aktarmada kullanılan yöntem ve teknikleri açıklar",
+   "kapsar": [
+    "cogHarita"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Haritalarda yer şekillerinin gösteriminde kullanılan yöntem ve teknikleri açıklar",
+   "kapsar": [
+    "cogHarita"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Atmosferin katmanları ve özellikleri ile hava olaylarını ilişkilendirir",
+   "kapsar": [
+    "cogAtmosfer"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Örneklerden yararlanarak hava durumu ile iklim özelliklerini etkileri açısından karşılaştı",
+   "kapsar": [
+    "cogIklimEleman"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "İklim elemanlarının oluşumunu ve dağılışını açıklar",
+   "kapsar": [
+    "cogIklimEleman"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Yeryüzündeki farklı iklim tiplerinin özellikleri ve dağılışları hakkında çıkarımlarda bulu",
+   "kapsar": [
+    "cogIklimTip"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Bitki toplulukları ve türlerini genel özelliklerine göre sınıflandırır",
+   "kapsar": [
+    "cogIklimTip"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Bitki topluluklarının dağılışı ile iklim ve yer şekillerini ilişkilendirir",
+   "kapsar": [
+    "cogIklimTip"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Türkiye’de görülen iklim tiplerinin özellikleri hakkında çıkarımlarda bulunur",
+   "kapsar": [
+    "cogIklimTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’deki doğal bitki topluluklarının dağılışını yetişme şartları açısından analiz eder",
+   "kapsar": [
+    "cogIklimTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Yerleşmelerin gelişimini etkileyen faktörleri analiz eder",
+   "kapsar": [
+    "cogYerlesme"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Yerleşme doku ve tiplerinin oluşumunda etkili olan faktörleri örneklerle açıklar",
+   "kapsar": [
+    "cogYerlesme"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Türkiye’de yerleşmelerin dağılışını etkileyen faktörleri örneklerle açıklar",
+   "kapsar": [
+    "cogYerlesme"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Türkiye’deki yerleşim birimlerini idari fonksiyonlarına göre ayırt eder",
+   "kapsar": [
+    "cogYerlesme"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Dünyadaki farklı bölge örneklerini, özellikleri ve bölge belirlemede kullanılan kriterler ",
+   "kapsar": [
+    "cogBolge"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Bölge sınırlarının amaca göre değişebilirliğini örneklerle açıklar",
+   "kapsar": [
+    "cogBolge"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Harita kullanarak çeşitli coğrafi kriterlerle belirlenmiş bölgelerde bulunan ülkeleri sını",
+   "kapsar": [
+    "cogBolge"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "İnsanların doğal çevreyi kullanma biçimlerini örneklendirir",
+   "kapsar": [
+    "cogDogalOrtam"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 9,
+   "ad": "Doğal ortamda insan etkisiyle meydana gelen değişimleri sonuçları açısından değerlendirir",
+   "kapsar": [
+    "cogDogalOrtam"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Dünya’nın tektonik oluşumunu açıklar",
+   "kapsar": [
+    "cogYapi"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Jeolojik zamanların özelliklerini tektonik olaylarla ilişkilendirerek açıklar",
+   "kapsar": [
+    "cogYapi"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "İç kuvvetleri; yer şekillerinin oluşum sürecine etkileri açısından açıklar",
+   "kapsar": [
+    "cogIc"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Kayaçların özellikleri ile yeryüzü şekillerinin oluşum süreçlerini ilişkilendirir",
+   "kapsar": [
+    "cogIc"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’deki yer şekillerinin oluşum sürecine iç kuvvetlerin etkisini açıklar",
+   "kapsar": [
+    "cogIc"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Dış kuvvetleri yer şekillerinin oluşum sürecine etkileri açısından açıklar",
+   "kapsar": [
+    "cogDis"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’deki yer şekillerinin oluşum sürecine dış kuvvetlerin etkisini açıklar",
+   "kapsar": [
+    "cogDis"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’deki ana yer şekillerini temel özellikleri ve dağılışları açısından değerlendirir",
+   "kapsar": [
+    "cogDis"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Yeryüzündeki su varlıklarını özelliklerine göre sınıflandırır",
+   "kapsar": [
+    "cogSu"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’deki su varlıklarının genel özelliklerini ve dağılışını açıklar",
+   "kapsar": [
+    "cogSu"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’deki su varlığını verimli kullanmanın ekonomik, sosyal ve kültürel etkilerini değe",
+   "kapsar": [
+    "cogSu"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Yeryüzündeki toprak çeşitliliğini oluşum süreçleri ile ilişkilendirir",
+   "kapsar": [
+    "cogToprak"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’deki toprakların dağılışını etkileyen faktörler ile toprak tiplerini ilişkilendiri",
+   "kapsar": [
+    "cogToprak"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye topraklarının kullanımını verimlilik açısından değerlendirir",
+   "kapsar": [
+    "cogToprak"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "İstatistiki verilerden yararlanarak nüfus özellikleri ve nüfusun önemi hakkında çıkarımlar",
+   "kapsar": [
+    "cogNufus"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Nüfusun dağılışı üzerinde etkili olan faktörler ile dünya nüfusunun dağılışını ilişkilendi",
+   "kapsar": [
+    "cogNufus"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’de nüfusun tarihsel seyrini sosyal ve ekonomik faktörler açısından değerlendirir",
+   "kapsar": [
+    "cogNufus"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’de nüfusun dağılışını, nüfusun dağılışında etkili olan faktörler açısından değerle",
+   "kapsar": [
+    "cogNufus"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Güncel verilerden yararlanarak Türkiye nüfusunun yapısal özelliklerini analiz eder",
+   "kapsar": [
+    "cogNufus"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Nüfus piramitlerinden hareketle nüfusun yapısıyla ilgili çıkarımlarda bulunur",
+   "kapsar": [
+    "cogPiramit"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Tarihî metin, belge ve haritalardan yararlanarak dünyadaki göçlerin nedenleri ve sonuçları",
+   "kapsar": [
+    "cogGoc"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’deki göçleri sebep ve sonuçları açısından değerlendirir",
+   "kapsar": [
+    "cogGoc"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Göçün mekânsal etkilerini Türkiye'den örneklerle açıklar",
+   "kapsar": [
+    "cogGoc"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Ekonomik faaliyetleri temel özelliklerine göre ayırt eder",
+   "kapsar": [
+    "cogEkoFaal"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Uluslararası ulaşım hatlarını bölgesel ve küresel etkileri açısından analiz eder",
+   "kapsar": [
+    "cogUlasimDunya"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Afetlerin oluşum nedenlerini ve özelliklerini açıklar",
+   "kapsar": [
+    "cogAfet"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Afetlerin dağılışları ile etkilerini ilişkilendirir",
+   "kapsar": [
+    "cogAfet"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Türkiye’deki afetlerin dağılışları ile etkilerini ilişkilendirir",
+   "kapsar": [
+    "cogAfet"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 10,
+   "ad": "Afetlerden korunma yöntemlerini açıklar",
+   "kapsar": [
+    "cogAfet"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Biyoçeşitliliğin oluşumu ve azalmasında etkili olan faktörleri açıklar",
+   "kapsar": [
+    "cogEkosistem"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Ekosistemi oluşturan unsurları ayırt eder",
+   "kapsar": [
+    "cogEkosistem"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Madde döngüleri ve enerji akışını ekosistemin devamlılığı açısından analiz eder",
+   "kapsar": [
+    "cogEkosistem"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Su ekosisteminin unsurlarını ve işleyişini açıklar",
+   "kapsar": [
+    "cogEkosistem"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Ülkelerin farklı dönemlerde izledikleri nüfus politikaları ve sonuçlarını karşılaştırır",
+   "kapsar": [
+    "cogNufusPol"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye’nin nüfus politikalarını gerekçeleri açısından değerlendirir",
+   "kapsar": [
+    "cogNufusPol"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye’nin nüfus projeksiyonlarına dayalı senaryolar oluşturur",
+   "kapsar": [
+    "cogNufusPol"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Şehirleri fonksiyonel özellikleri açısından karşılaştırır",
+   "kapsar": [
+    "cogSehirler"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Şehirlerin küresel ve bölgesel etkilerini fonksiyonel açıdan yorumlar",
+   "kapsar": [
+    "cogSehirler"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye’deki şehirleri fonksiyonlarına göre ayırt eder",
+   "kapsar": [
+    "cogSehirler"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye’deki kır yerleşme tiplerini ayırt eder",
+   "kapsar": [
+    "cogSehirler"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Doğal unsurları üretim, dağıtım ve tüketim süreçleri üzerindeki etkisi açısından değerlend",
+   "kapsar": [
+    "cogEkoKaynak"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Beşerî unsurları üretim, dağıtım ve tüketim süreçleri üzerindeki etkisi açısından değerlen",
+   "kapsar": [
+    "cogEkoKaynak"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Doğal kaynaklar ile ekonomi ilişkisini açıklar",
+   "kapsar": [
+    "cogEkoKaynak"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye’deki doğal kaynaklar ile ekonomi arasındaki ilişkiyi analiz eder",
+   "kapsar": [
+    "cogEkoKaynak"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye’de uygulanan ekonomi politikalarını mekânsal etkileri açısından değerlendirir",
+   "kapsar": [
+    "cogEkoPol"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye ekonomisinin sektörel dağılımından hareketle ülke ekonomisi hakkında çıkarımlarda ",
+   "kapsar": [
+    "cogEkoPol"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye’de tarım sektörünün özelliklerini açıklar",
+   "kapsar": [
+    "cogTarim"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Tarımın Türkiye ekonomisindeki yerini açıklar",
+   "kapsar": [
+    "cogTarim"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye'nin madenleri ve enerji kaynaklarının dağılışını açıklar",
+   "kapsar": [
+    "cogMaden"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye’nin maden ve enerji kaynaklarının etkin kullanımını ülke ekonomisine katkısı açısı",
+   "kapsar": [
+    "cogMaden"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye'de sanayi sektörünün özelliklerini açıklar",
+   "kapsar": [
+    "cogSanayi"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye sanayisini, ülke ekonomisindeki yeri açısından analiz eder",
+   "kapsar": [
+    "cogSanayi"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "İlk kültür merkezlerinin ortaya çıkışı, yayılışı ve dağılışlarını belirleyen faktörleri aç",
+   "kapsar": [
+    "cogKulturMerkez"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Farklı kültürel bölgelerin yeryüzünde yayılışına etki eden faktörleri açıklar",
+   "kapsar": [
+    "cogKulturMerkez"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türkiye’nin tarih boyunca medeniyetler merkezi olmasını konumu açısından değerlendirir",
+   "kapsar": [
+    "cogKulturMerkez"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Türk kültürünün yayılış alanlarını bölgesel özellikler açısından analiz eder",
+   "kapsar": [
+    "cogTurkKultur"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Türk kültür bölgeleri ile ülkemiz arasındaki tarihî ve kültürel bağları açıklar",
+   "kapsar": [
+    "cogTurkKultur"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Ülkeler ve bölgeler arasındaki ticaret ile ham madde, üretim ve pazar alanlarını ilişkilen",
+   "kapsar": [
+    "cogHammadde"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Ülkeler arası etkileşimde turizm faaliyetlerinin rolünü açıklar",
+   "kapsar": [
+    "cogTurizm"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Türkiye'deki doğal ve kültürel sembollerin mekânla ilişkisini açıklar",
+   "kapsar": [
+    "cogTurizm"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Türkiye’nin turizm potansiyelini ve varlıklarını açıklar",
+   "kapsar": [
+    "cogTurizm"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Turizmin Türkiye ekonomisindeki yerini değerlendirir",
+   "kapsar": [
+    "cogTurizm"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Sanayileşmiş bir ülkeyi sanayileşme süreçleri açısından değerlendirir",
+   "kapsar": [
+    "cogGelisme"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Farklı gelişmişlik düzeylerine sahip ülkelerin tarım-ekonomi ilişkisini analiz eder",
+   "kapsar": [
+    "cogGelisme"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Ülkelerin gelişmişlik seviyelerinin belirlenmesinde etkili olan faktörleri açıklar",
+   "kapsar": [
+    "cogGelisme"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Gelişmiş ve gelişmekte olan ülkelerin ekonomik özelliklerini karşılaştırır",
+   "kapsar": [
+    "cogGelisme"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Bölgesel ve küresel ölçekteki örgütleri etki alanları açısından değerlendirir",
+   "kapsar": [
+    "cogOrgut"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Çevre sorunlarını oluşum sebeplerine göre sınıflandırır",
+   "kapsar": [
+    "cogCevre"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Madenlerin ve enerji kaynaklarının çevre üzerindeki etkilerini örneklerle açıklar",
+   "kapsar": [
+    "cogCevre"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Yenilenemeyen kaynakların kullanımını tükenebilirlik ve alternatif kaynaklar açısından ana",
+   "kapsar": [
+    "cogCevre"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Farklı gelişmişliğe sahip ülkelerdeki doğal kaynak kullanımını çevresel etkileri açısından",
+   "kapsar": [
+    "cogCevre"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Arazi kullanımına ilişkin farklı uygulamaları çevre üzerindeki etkileri açısından değerlen",
+   "kapsar": [
+    "cogCevre"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Çevre sorunlarının oluşum ve yayılma süreçlerini küresel etkileri açısından analiz eder",
+   "kapsar": [
+    "cogCevre"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 11,
+   "ad": "Doğal kaynakların sürdürülebilir kullanımını geri dönüşüm stratejileri açısından değerlend",
+   "kapsar": [
+    "cogCevreCozum"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Doğal çevrenin sınırlılığını açıklar",
+   "kapsar": [
+    "cogCevreCozum"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Farklı gelişmişlik düzeyine sahip ülkelerin çevre sorunlarının önlenmesine yönelik politik",
+   "kapsar": [
+    "cogCevreCozum"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Çevresel örgüt ve anlaşmaların çevre yönetimi ve korunmasına etkilerini açıklar",
+   "kapsar": [
+    "cogCevreCozum"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Ortak doğal ve kültürel mirasa yönelik tehditleri açıklar",
+   "kapsar": [
+    "cogCevreCozum"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Doğa olaylarının ekstrem durumlarını ve etkilerini açıklar",
+   "kapsar": [
+    "cogEkstrem"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Şehirleşme, göç ve sanayileşme ilişkisini toplumsal etkileri açısından yorumlar",
+   "kapsar": [
+    "cogSehirEko"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Nüfus, yerleşme ve ekonomik faaliyetlerde gelecekte olabilecek değişimlerle ilgili çıkarım",
+   "kapsar": [
+    "cogSehirEko"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Ülkemizdeki işlevsel bölgeleri özelliklerine göre analiz eder",
+   "kapsar": [
+    "cogIslevsel"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Türkiye’deki bölgesel kalkınma projelerini ekonomik, sosyal ve kültürel etkileri açısından",
+   "kapsar": [
+    "cogIslevsel"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Hizmet sektörünün Türkiye’nin ekonomik kalkınmasıyla olan ilişkisini açıklar",
+   "kapsar": [
+    "cogEkoSosyal"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Ulaşım sisteminin gelişiminde etkili olan faktörleri açıklar",
+   "kapsar": [
+    "cogUlasimTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Ulaşım ağları ile yerleşme ve ekonomik faaliyetler arasında ilişki kurar",
+   "kapsar": [
+    "cogUlasimTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Türkiye’deki ulaşım sisteminin gelişim sürecini açıklar",
+   "kapsar": [
+    "cogUlasimTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Dünyadaki başlıca enerji nakil hatlarının bölge ve ülkelere etkisini açıklar",
+   "kapsar": [
+    "cogUlasimTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Dünya ticaret merkezleri ve ağlarını küresel ekonomideki yerleri açısından analiz eder",
+   "kapsar": [
+    "cogTicaretTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Türkiye’deki ticaret merkezlerinin ticarete konu olan ürünlere ve akış yönlerine etkilerin",
+   "kapsar": [
+    "cogTicaretTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Tarihî ticaret yollarını Türkiye'nin konumu açısından değerlendirir",
+   "kapsar": [
+    "cogTicaretTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Türkiye’nin dış ticaretini ve dünya pazarlarındaki yerini ticarete konu olan ürünler açısı",
+   "kapsar": [
+    "cogTicaretTr"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Kıtaların ve okyanusların konumsal önemindeki değişimi örneklerle açıklar",
+   "kapsar": [
+    "cogJeopolitik"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Ülkelerin konumunun bölgesel ve küresel etkilerini değerlendirir",
+   "kapsar": [
+    "cogJeopolitik"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Tarihsel süreçte Türkiye’nin jeopolitik konumunu değerlendirir",
+   "kapsar": [
+    "cogJeopolitik"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Türkiye’nin içinde yer aldığı jeopolitik bölgelerle olan ilişkisini açıklar",
+   "kapsar": [
+    "cogJeopolitik"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Teknolojik gelişmelerin, bölgeler ve ülkeler arası kültürel ve ekonomik etkileşimdeki rolü",
+   "kapsar": [
+    "cogTeknoloji"
+   ]
+  },
+  {
+   "ders": "Coğrafya",
+   "sinif": 12,
+   "ad": "Ülkelerin bölgesel ve küresel ilişkilerini doğal kaynak potansiyeli açısından değerlendiri",
+   "kapsar": [
+    "cogCatisma"
+   ]
+  },
+  {
+   "ders": "Felsefe",
+   "sinif": 10,
+   "ad": "Felsefeyi Tanıma",
+   "kapsar": [
+    "felTanima"
+   ]
+  },
+  {
+   "ders": "Felsefe",
+   "sinif": 10,
+   "ad": "Felsefe ile Düşünme",
+   "kapsar": [
+    "felDusunme"
+   ]
+  },
+  {
+   "ders": "Felsefe",
+   "sinif": 10,
+   "ad": "Felsefenin Temel Konuları ve Problemleri",
+   "kapsar": [
+    "felKonular"
+   ]
+  },
+  {
+   "ders": "Felsefe",
+   "sinif": 10,
+   "ad": "Felsefi Okuma ve Yazma",
+   "kapsar": [
+    "felOkuma"
+   ]
+  },
+  {
+   "ders": "Felsefe",
+   "sinif": 11,
+   "ad": "Mö 6. Yüzyıl-ms 2. Yüzyıl Felsefesi",
+   "kapsar": [
+    "felMO6"
+   ]
+  },
+  {
+   "ders": "Felsefe",
+   "sinif": 11,
+   "ad": "Ms 2. Yüzyıl-ms 15. Yüzyıl Felsefesi",
+   "kapsar": [
+    "felMS2"
+   ]
+  },
+  {
+   "ders": "Felsefe",
+   "sinif": 11,
+   "ad": "15. Yüzyıl-17. Yüzyıl Felsefesi",
+   "kapsar": [
+    "fel15"
+   ]
+  },
+  {
+   "ders": "Felsefe",
+   "sinif": 11,
+   "ad": "18. Yüzyıl-19. Yüzyıl Felsefesi",
+   "kapsar": [
+    "fel18"
+   ]
+  },
+  {
+   "ders": "Felsefe",
+   "sinif": 11,
+   "ad": "20. Yüzyıl Felsefesi",
+   "kapsar": [
+    "fel20"
    ]
   }
  ]

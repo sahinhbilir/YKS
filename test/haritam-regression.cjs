@@ -40,15 +40,17 @@ test('the embedded module and the map are in index.html', () => {
   assert.match(html, /\/\* BEGIN HARITAM \*\/[\s\S]*\.hm-svg/);
 });
 
-test('who gets Haritam: students with Mathematics, Physics only for SAY (or before a field is chosen)', () => {
+test('who gets Haritam: every YKS student, with the subjects of their field (all of them before a field is chosen)', () => {
   const a = app();
   ogrenci(a, 'SAY', 12);
-  assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), ['Geometri', 'Matematik TYT', 'Matematik AYT', 'Fizik']);
+  const MAT = ['Geometri', 'Matematik TYT', 'Matematik AYT'], SOZEL = ['Türk Dili ve Edebiyatı', 'T.C. İnkılap Tarihi ve Atatürkçülük', 'Coğrafya', 'Felsefe (+ Felsefe Grubu)'];
+  assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), [...MAT, 'Fizik', 'Kimya', 'Biyoloji', 'Türkçe']);
   assert(a.json('SEKMELER().map(s=>s[0])').includes('haritam'));
-  a.run("D.ogr[0].alan='EA'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), ['Geometri', 'Matematik TYT', 'Matematik AYT']);
-  a.run("D.ogr[0].alan='SÖZ'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), []);
-  assert(!a.json('SEKMELER().map(s=>s[0])').includes('haritam'), 'no Mathematics: no tab');
-  a.run("delete D.ogr[0].alan;D.ogr[0].sinif=10"); assert.equal(a.json('HARITAM.dersleri(D.ogr[0]).length'), 4);
+  a.run("D.ogr[0].alan='EA'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), [...MAT, 'Türkçe', ...SOZEL]);
+  a.run("D.ogr[0].alan='SÖZ'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), ['Türkçe', ...SOZEL]);
+  assert(a.json('SEKMELER().map(s=>s[0])').includes('haritam'), 'no Mathematics: the tab is still there');
+  a.run("D.ogr[0].alan='DİL'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), ['Türkçe']);
+  a.run("delete D.ogr[0].alan;D.ogr[0].sinif=10"); assert.equal(a.json('HARITAM.dersleri(D.ogr[0]).length'), 11, 'no field yet: every subject');
   a.run("D.ogr[0].sinavTuru='LGS'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), []);
   assert(a.json('ETKINLIK_SEKMELER').includes('haritam'), 'visits are counted like other pages');
   a.run("D.rol='rehber'"); assert(!a.json('SEKMELER().map(s=>s[0])').includes('haritam'), 'not a teacher page');
@@ -59,6 +61,11 @@ test('a plan topic and a school unit both reach the map', () => {
   ogrenci(a, 'SAY', 12);
   const kaynak = a.json('[...HARITAM.kaynaklar()].map(([id,k])=>[id,k])'), K = new Map(kaynak);
   assert(K.get('geoDik').length >= 1, 'the plan topic Dik Üçgen');
+  // A continued plan topic ("… - devamı", "… (devamı)") is the same topic: it feeds the same point.
+  const fiilimsi = K.get('trkFiilimsi')[0];
+  a.run(`konuAl(${fiilimsi})[3]='Fiilimsiler (Eylemsiler) - devamı'`); assert.equal(a.run(`konuAl(${fiilimsi})[3]`), 'Fiilimsiler (Eylemsiler) - devamı');
+  assert(a.json(`HARITAM.kaynaklar().get('trkFiilimsi')`).includes(fiilimsi), 'the "- devamı" topic feeds Fiilimsiler');
+  a.run(`konuAl(${fiilimsi})[3]='Fiilimsiler (Eylemsiler)'`);
   const trig = a.run("KATALOG.findIndex(k=>k[0]===1&&k[1]===11&&k[3]==='Trigonometrik Fonksiyonlar')");
   for (const id of ['aytBirim', 'aytOzdeslik', 'aytIsaret', 'aytDonusum', 'aytPeriyot', 'aytTersTrig']) assert(K.get(id).includes(trig), id + ' fed by the grade-11 unit');
   const dik = K.get('geoDik')[0];
@@ -77,7 +84,7 @@ test('the page: one point per topic of the student\'s subjects, the real Hafıza
   a.run(`sonucIsle(0,[{ki:${dik},gun:bugunNo()-6,not:3,dogru:null,soru:null}])`);
   let h = a.run('HARITAM.gorunum()');
   assert.match(h, /<svg class="hm-svg"/);
-  assert.equal((h.match(/class="hm-d[ "]/g) || []).length, a.run('HARITA_VERI.konular.length'), 'every map topic of SAY');
+  assert.equal((h.match(/class="hm-d[ "]/g) || []).length, a.run('HARITA_VERI.konular.filter(k=>HARITAM.dersleri(D.ogr[0]).includes(k.ders)).length'), 'every map topic of SAY');
   assert.doesNotMatch(h, /data-hm-kart>[^<]*<div class="hf-oge/, 'no card before a topic is chosen');
   a.run("EK.haritamSecili='geoDik'"); h = a.run('HARITAM.gorunum()');
   assert.match(h, /hm-kart-yer hm-sabit/); assert.match(h, new RegExp('data-hf-ac="' + dik + '"'), 'Hafızam’s own Çalıştım button');

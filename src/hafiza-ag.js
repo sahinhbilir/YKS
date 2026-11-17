@@ -24,7 +24,7 @@ const AYAR = Object.freeze({
   ceza: 0.5,           // starting share of a lapse a topic gets when a foundation it fully uses is failed
   cekis: 0.5,          // starting share of the gap by which a weaker foundation pulls the shown recall down
   ortukNotTavan: 3,    // credit counts as at most "İyi"
-  temelEsik: 2.5,      // foundational: topics using it, weighted by use (tam 1, çok 0.5, az 0.25), add up to this
+  temelEsik: 4,        // foundational: topics using it, weighted by use (tam 1, çok 0.5, az 0.25), add up to this
   ozGuven: 10,         // own results on a link after which a student's data weighs as much as the shared value
   yilKatsayi: 0.9,     // past exams: each year counts this much of the year after it
   kontrolSoru: 5,      // questions in a check test

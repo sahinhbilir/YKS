@@ -25,7 +25,7 @@ const kur=()=>{
    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(kur);await page.locator('.hm-sayfa').waitFor();
    assert.equal(await page.locator('button[data-sekme="haritam"]').count(),1,'Haritam in the menu');
-   assert.equal(await page.locator('.hm-d').count(),await page.evaluate(()=>HARITA_VERI.konular.length),'every map topic drawn');
+   assert.equal(await page.locator('.hm-d').count(),await page.evaluate(()=>HARITA_VERI.konular.filter(k=>HARITAM.dersleri(D.ogr[0]).includes(k.ders)).length),'every topic of the student\'s subjects drawn');
    const zemin=await page.evaluate(()=>getComputedStyle(document.querySelector('.hm-svg')).backgroundColor);
    assert.equal(zemin,tema==='dark'?'rgb(14, 14, 15)':'rgb(255, 255, 255)','neutral sky, never blue');
    if(width>600){

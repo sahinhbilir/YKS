@@ -42,7 +42,7 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
 - **Recall** (colour, red → green): the shown recall, own memory with the pull-down applied.
 - **Memory level** from stability S (days for recall to fall to 90 %): < 7 short-term · 7–30 settling · ≥ 30 long-term. Credit can lift a topic to long-term.
 - **Safe until YKS** (star): shown recall on exam day, with no more study, is at least the student's own target.
-- **Foundational**: the topics using it, directly or through others, weighted by use along the strongest path, add up to at least 2.5 (raised from 1.5 on 2026-11-17, once the full map showed 65 of 178 topics as foundational at 1.5; 43 at 2.5).
+- **Foundational**: the topics using it, directly or through others, weighted by use along the strongest path, add up to at least 4. On 2026-11-17 it went from 1.5 (65 of the 178 math and physics topics) to 2.5 (43), then to 4 (30 of the 371 topics of every subject, almost all in mathematics; only long chains reach it).
 - **Importance**: 2 × the topic's own expected YKS questions + Σ (use along the chain × that user's expected questions).
 - **Alarms** (foundational topics only, one per topic, in this order):
   1. **grey**: no memory, while a topic using it has memory;
@@ -144,7 +144,12 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
 
 ## In the app (v1)
 
-- **Haritam tab** (`src/haritam.js`, `src/haritam.css`, embedded with `src/hafiza-ag.js` and the map by `scripts/embed-haritam.cjs`). It sits right after Hafızam for students with Mathematics (`HARITAM.uygun`); Physics is shown for SAY, and before grade 12 when no field is chosen.
+- **Haritam tab** (`src/haritam.js`, `src/haritam.css`, embedded with `src/hafiza-ag.js` and the map by `scripts/embed-haritam.cjs`). It sits right after Hafızam for every YKS student (`HARITAM.uygun`) with the subjects of their field (`HARITAM.dersleri`):
+  - Türkçe for everyone;
+  - Geometri, Matematik TYT and AYT for SAY and EA (and with no field, or before grade 12);
+  - Fizik, Kimya and Biyoloji for SAY;
+  - Edebiyat, İnkılap Tarihi, Coğrafya and Felsefe (with psikoloji, sosyoloji and mantık) for EA and SÖZ;
+  - every subject before grade 12 when no field is chosen yet.
 - **Topic resolution.** A map topic is fed by:
   - the student's plan topics with the same course label and name;
   - every school unit (`birimler`: subject, grade, catalogue name) that covers it.
@@ -177,14 +182,15 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
 ## Full map (2026-11-17, in the app)
 
 - `data/hafiza-haritasi-tam.json`, built by `scripts/hafiza-haritasi-tam.py`:
-  - every SAY plan topic of Geometri, Matematik TYT, Matematik AYT and Fizik (175) and the three hidden parts;
-  - 323 links with use level and reason (the pilot's kept as reviewed);
-  - exam shares for every TYT and AYT row from 2018;
-  - 127 school units.
-- The builder checks names against the plan (none missing), ids, cycles and share sums.
+  - every topic of the SAY and EA plans (368) and the three hidden parts: Geometri, Matematik TYT and AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, İnkılap Tarihi, Coğrafya, Felsefe grubu;
+  - 598 links with use level and reason (the pilot's kept as reviewed), a few across subjects (orantı → harita ölçeği and kimyasal hesaplamalar, logaritma → pH, olasılık → kalıtım, TYT mantık → sembolik mantık);
+  - exam shares for every TYT row from 2018 (the school's table) and every AYT row from 2018 (kitapsec.com; 2025 only for mathematics);
+  - 405 school units (grades 9–12). Tarih (grades 9–11) and Din Kültürü have no plan topic yet, so they are not on the map.
+- A continued plan topic ("… (devamı)", "… - devamı") feeds its topic's point.
+- The builder checks names against both plans (none missing), ids, cycles and share sums.
 - Review files: `node scripts/hafiza-haritasi.cjs data/hafiza-haritasi-tam.json <out>` writes the two tables and one picture per subject (a ← line under a topic lists its foundations from other subjects).
-- 43 of 178 topics are foundational at the 2.5 threshold.
-- Embedded in place of the pilot (`scripts/embed-haritam.cjs`); `data/hafiza-haritasi-pilot.json` is kept as the reviewed trigonometry start. The layout is worked out on the first map drawn, not when the app opens.
+- 30 of 371 topics are foundational at the threshold of 4.
+- Embedded in place of the pilot (`scripts/embed-haritam.cjs`); `data/hafiza-haritasi-pilot.json` is kept as the reviewed trigonometry start. Each subject's layout is worked out when it is first drawn, not when the app opens.
 - Pull-down applies to Hafızam too: a topic passed today whose foundation is weak shows a little under 100 %.
 
 ## Not done yet

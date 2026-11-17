@@ -2,7 +2,10 @@
 // with src/hafiza-ag.js (HAFIZA_AG) and data/hafiza-haritasi-tam.json (HARITA_VERI). Rules: docs/baglantili-hafiza.md.
 // Reads the student's results, lesson days and settings; writes nothing except the view state in EK.
 const HARITAM = (() => {
-const V = HARITA_VERI, DERS_SIRA = ['Geometri', 'Matematik TYT', 'Matematik AYT', 'Fizik'];
+const V = HARITA_VERI, DERS_SIRA = ['Geometri', 'Matematik TYT', 'Matematik AYT', 'Fizik', 'Kimya', 'Biyoloji', 'Türkçe', 'Türk Dili ve Edebiyatı',
+  'T.C. İnkılap Tarihi ve Atatürkçülük', 'Coğrafya', 'Felsefe (+ Felsefe Grubu)'].filter(d => V.konular.some(k => k.ders === d));
+// Plan course labels as the map shows them.
+const KISA_AD = {'Türk Dili ve Edebiyatı': 'Edebiyat', 'T.C. İnkılap Tarihi ve Atatürkçülük': 'İnkılap Tarihi', 'Felsefe (+ Felsefe Grubu)': 'Felsefe'}, dersAd = d => KISA_AD[d] || d;
 const KEN = {az: .25, cok: .5, tam: 1};
 
 /* ---- colours: one spectrum in OKLCH ---- */
@@ -31,44 +34,44 @@ const SORU = (() => { const m = new Map(); for (const r of V.sinavSatirlari || [
 const KONU = new Map(V.konular.map(k => [k.id, k]));
 const KENAR = V.baglar.filter(b => (b.tur || 'kullanir') === 'kullanir').map(b => ({a: b.alt, b: b.ust, u: KEN[b.kullanim] || .5}))
   .concat(V.konular.filter(k => k.gizli).map(k => ({a: k.id, b: k.parcasi, u: 1, ic: true})));
-// Each subject is laid out on its own (a deterministic force layout), centred at 0. Worked out on the first map drawn,
-// not when the app opens.
-let yerHazir = null;
-const yerAl = () => yerHazir || (yerHazir = (() => {
-  const yer = {};
-  DERS_SIRA.forEach((ders, n) => {
-    let seed = 5 + n * 17; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-    const ids = V.konular.filter(k => k.ders === ders).map(k => k.id), P = new Map(ids.map(id => [id, {x: rnd() * 100, y: rnd() * 100, vx: 0, vy: 0}]));
-    const E = KENAR.filter(e => P.has(e.a) && P.has(e.b));
-    for (let it = 0, T = 1; it < 1500; it++, T *= .996) {
-      for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) { const p = P.get(ids[i]), q = P.get(ids[j]), dx = p.x - q.x, dy = p.y - q.y, d2 = dx * dx + dy * dy + .01, d = Math.sqrt(d2), f = 1400 / d2;
-        p.vx += f * dx / d; p.vy += f * dy / d; q.vx -= f * dx / d; q.vy -= f * dy / d; }
-      for (const e of E) { const p = P.get(e.a), q = P.get(e.b), dx = q.x - p.x, dy = q.y - p.y, d = Math.sqrt(dx * dx + dy * dy) + .01, f = (d - (e.ic ? 18 : 46 - 10 * e.u)) * (.05 + .04 * e.u);
-        p.vx += f * dx / d; p.vy += f * dy / d; q.vx -= f * dx / d; q.vy -= f * dy / d; }
-      for (const p of P.values()) { p.vx += (50 - p.x) * .012; p.vy += (50 - p.y) * .012; p.x += Math.max(-6, Math.min(6, p.vx * T)); p.y += Math.max(-6, Math.min(6, p.vy * T)); p.vx *= .5; p.vy *= .5; }
-    }
-    const xs = [...P.values()].map(p => p.x), ys = [...P.values()].map(p => p.y), cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-    yer[ders] = new Map([...P].map(([id, p]) => [id, {x: p.x - cx, y: p.y - cy}]));
-  });
-  return yer;
-})());
+// Each subject is laid out on its own (a deterministic force layout), centred at 0. Worked out when the subject is first
+// drawn, not when the app opens.
+const yerHazir = {};
+function yerAl(ders) {
+  if (yerHazir[ders]) return yerHazir[ders];
+  let seed = 5 + DERS_SIRA.indexOf(ders) * 17; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const ids = V.konular.filter(k => k.ders === ders).map(k => k.id), P = new Map(ids.map(id => [id, {x: rnd() * 100, y: rnd() * 100, vx: 0, vy: 0}]));
+  const E = KENAR.filter(e => P.has(e.a) && P.has(e.b));
+  for (let it = 0, T = 1; it < 1500; it++, T *= .996) {
+    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) { const p = P.get(ids[i]), q = P.get(ids[j]), dx = p.x - q.x, dy = p.y - q.y, d2 = dx * dx + dy * dy + .01, d = Math.sqrt(d2), f = 1400 / d2;
+      p.vx += f * dx / d; p.vy += f * dy / d; q.vx -= f * dx / d; q.vy -= f * dy / d; }
+    for (const e of E) { const p = P.get(e.a), q = P.get(e.b), dx = q.x - p.x, dy = q.y - p.y, d = Math.sqrt(dx * dx + dy * dy) + .01, f = (d - (e.ic ? 18 : 46 - 10 * e.u)) * (.05 + .04 * e.u);
+      p.vx += f * dx / d; p.vy += f * dy / d; q.vx -= f * dx / d; q.vy -= f * dy / d; }
+    for (const p of P.values()) { p.vx += (50 - p.x) * .012; p.vy += (50 - p.y) * .012; p.x += Math.max(-6, Math.min(6, p.vx * T)); p.y += Math.max(-6, Math.min(6, p.vy * T)); p.vx *= .5; p.vy *= .5; }
+  }
+  const xs = [...P.values()].map(p => p.x), ys = [...P.values()].map(p => p.y), cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  return (yerHazir[ders] = new Map([...P].map(([id, p]) => [id, {x: p.x - cx, y: p.y - cy}])));
+}
 
 /* ---- the student ---- */
-// Subjects the student has: Mathematics brings Geometri, Matematik TYT and AYT; Fizik for SAY (and before grade 12
-// when no field is chosen yet).
+// Subjects the student has, by field: Türkçe for every YKS student; Mathematics (Geometri, Matematik TYT and AYT) as
+// before (SAY, EA, no field, or before grade 12); Fizik, Kimya and Biyoloji for SAY; Edebiyat, İnkılap Tarihi, Coğrafya
+// and Felsefe for EA and SÖZ. Before grade 12 with no field chosen yet: every subject.
+const FEN = new Set(['Fizik', 'Kimya', 'Biyoloji']), SOZEL = new Set(['Türk Dili ve Edebiyatı', 'T.C. İnkılap Tarihi ve Atatürkçülük', 'Coğrafya', 'Felsefe (+ Felsefe Grubu)']);
 function dersleri(o) {
   if (!o || ogrenciSinavi(o) !== 'YKS') return [];
-  const alan = o.alan, sinif = ogrenciSinifi(o);
-  const mat = !alan || alan === 'SAY' || alan === 'EA' || sinif < 12, fiz = alan === 'SAY' || (!alan && sinif < 12);
-  return DERS_SIRA.filter(d => d === 'Fizik' ? fiz : mat);
+  const alan = o.alan, sinif = ogrenciSinifi(o), hepsi = !alan && sinif < 12;
+  const mat = !alan || alan === 'SAY' || alan === 'EA' || sinif < 12, fen = alan === 'SAY' || hepsi, sozel = alan === 'EA' || alan === 'SÖZ' || hepsi;
+  return DERS_SIRA.filter(d => FEN.has(d) ? fen : SOZEL.has(d) ? sozel : d === 'Türkçe' || mat);
 }
 const uygun = () => { try { return ogrenciMi() && !!D.ogr[EK.ogr] && dersleri(D.ogr[EK.ogr]).length > 0; } catch (e) { return false; } };
-// Map node → the student's topic ids: same course label and same topic name. School units (catalogue: subject,
-// grade, name) count for every YKS topic they cover.
+// Map node → the student's topic ids: same course label and same topic name; a continued plan topic ("… (devamı)",
+// "… - devamı") is the same topic. School units (catalogue: subject, grade, name) count for every YKS topic they cover.
+const devamsiz = ad => String(ad).trim().replace(/\s*(?:\(devamı\)|- devamı)$/i, '');
 function cozumle() {
   const adlar = new Map();
   for (let ki = 0, n = konuSayisi(); ki < n; ki++) { const k = konuAl(ki); if (!k) continue;
-    const a = dersKimligi(konuDersAdi(ki)) + '|' + konuAdiTamAnahtari(k[3]); (adlar.get(a) || adlar.set(a, []).get(a)).push(ki); }
+    const a = dersKimligi(konuDersAdi(ki)) + '|' + konuAdiTamAnahtari(devamsiz(k[3])); (adlar.get(a) || adlar.set(a, []).get(a)).push(ki); }
   const esler = new Map(V.konular.map(k => [k.id, adlar.get(dersKimligi(k.ders) + '|' + konuAdiTamAnahtari(k.ad)) || []]));
   const birimler = [];
   for (const b of V.birimler || []) { const di = KISA.indexOf(b.ders);
@@ -185,7 +188,7 @@ const dar = () => { try { return innerWidth < 640; } catch (e) { return false; }
 // Subjects in rows of two (one column on a phone). Every subject keeps its own layout at one shared scale, so a link is
 // as long in each; a bigger subject gets more room and the map grows taller instead of crowding. B: each subject's box.
 function konumlar(dersler, W) {
-  const YER = yerAl(), pad = 46, ust = 34, ara = 60, baslik = 26, bosluk = dar() ? 72 : 40; // phone labels are larger
+  const YER = Object.fromEntries(dersler.map(d => [d, yerAl(d)])), pad = 46, ust = 34, ara = 60, baslik = 26, bosluk = dar() ? 72 : 40; // phone labels are larger
   const K = new Map(dersler.map(d => { const v = [...YER[d].values()], xs = v.map(p => p.x), ys = v.map(p => p.y);
     return [d, {w: Math.max(1, Math.max(...xs) - Math.min(...xs)), h: Math.max(1, Math.max(...ys) - Math.min(...ys))}]; }));
   const sut = dersler.length > 1 && !dar() ? 2 : 1, satirlar = [];
@@ -255,7 +258,7 @@ function cizim(si, d, dersler, secili) {
   const grad = new Map(), gradId = c => { if (!grad.has(c)) { const id = 'hmg' + grad.size; grad.set(c, id);
     defs += `<radialGradient id="${id}"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>` +
       `<radialGradient id="${id}c"><stop offset="0" stop-color="${t.cekirdek}"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${c}"/></radialGradient>`; } return grad.get(c); };
-  for (const [ders, k] of Object.entries(B)) yazilar += `<text x="${sabit((k[0] + k[2]) / 2)}" y="${sabit(k[1] - 12)}" class="hm-ders" fill="${t.yazi}">${kac(ders.toLocaleUpperCase('tr'))}</text>`;
+  for (const [ders, k] of Object.entries(B)) yazilar += `<text x="${sabit((k[0] + k[2]) / 2)}" y="${sabit(k[1] - 12)}" class="hm-ders" fill="${t.yazi}">${kac(dersAd(ders).toLocaleUpperCase('tr'))}</text>`;
   KENAR.forEach((e, i) => {
     if (!gor.has(e.a) || !gor.has(e.b)) return;
     const p = P.get(e.a), q = P.get(e.b), ayni = KONU.get(e.a).ders === KONU.get(e.b).ders, sa = sat.get(e.a), sb = sat.get(e.b), yanik = sa.katman === 'uzun' && sb.katman === 'uzun' && sa.r >= d.hedef && sb.r >= d.hedef;
@@ -294,7 +297,7 @@ function kart(si, d, id) {
   // The card of the notebook topic Hafızam knows (plan topic first, then a school unit covering it).
   const hd = hafizaDurumu(si), x = kis.map(i => hd.liste.find(y => y.ki === i)).find(Boolean) || null;
   const parca = k.gizli ? '<p class="mini hm-parca">' + kac(k.ad) + ' · ' + kac(KONU.get(k.parcasi).ad) + ' konusunun parçası</p>' : '';
-  if (!x || s.r == null) return '<div class="hf-oge hm-bos"><div class="hf-ad"><span class="d">' + kac(KONU.get(asil).ders) + '</span><span class="k">' + kac(KONU.get(asil).ad) + '</span></div>' + parca +
+  if (!x || s.r == null) return '<div class="hf-oge hm-bos"><div class="hf-ad"><span class="d">' + kac(dersAd(KONU.get(asil).ders)) + '</span><span class="k">' + kac(KONU.get(asil).ad) + '</span></div>' + parca +
     '<p class="mini">' + (ki === undefined ? 'Bu konu senin planında yok.' : 'Henüz çalışmadın: derste işlendiğinde ya da sonucunu girdiğinde burada parlar.') + '</p></div>';
   // Hafızam already shows this node's value on its plan topic. A school unit covering several nodes shows their mean
   // there; here the card shows this node's value and says so.
@@ -314,7 +317,7 @@ function gorunum() {
   const d = durum(si), secili = d.satir.has(EK.haritamSecili) ? EK.haritamSecili : null, c = cizim(si, d, dersler, secili);
   son = {si, d, P: c.P, W: c.W, H: c.H};
   const t = koyuMu() ? TEMA.koyu : TEMA.acik;
-  const cipler = '<div class="hm-cipler" role="group" aria-label="Ders">' + [['', 'Tümü']].concat(tum.map(x => [x, x])).map(([v, ad]) =>
+  const cipler = '<div class="hm-cipler" role="group" aria-label="Ders">' + [['', 'Tümü']].concat(tum.map(x => [x, dersAd(x)])).map(([v, ad]) =>
     '<button type="button" class="dugme mini' + (v === filtre ? ' secili' : '') + '" data-hm-ders="' + kac(v) + '" aria-pressed="' + (v === filtre) + '">' + kac(ad) + '</button>').join('') + '</div>';
   const alarmlar = d.out.ust3.filter(id => d.satir.has(id)).map(id => { const s = d.satir.get(id), k = KONU.get(id), c2 = renk(t, s.r, d.hedef);
     const ne = {gri: 'Eksik temel', kirmizi: 'Unutuluyor', turuncu: 'Kontrol testi', sari: 'Henüz kalıcı değil'}[s.alarm];
