@@ -13,180 +13,263 @@ const sandbox = {console,setTimeout,clearTimeout,Blob,URL,URLSearchParams,TextEn
 sandbox.window.document = sandbox.document; vm.createContext(sandbox); new vm.Script(source).runInContext(sandbox);
 new vm.Script(fs.readFileSync(__dirname + '/../src/hafiza-ag.js', 'utf8'), {filename: 'src/hafiza-ag.js'}).runInContext(sandbox);
 const run = code => vm.runInContext(code, sandbox);
-const H = run('HAFIZA_AG'), hatirlama = run('hatirlama'), tekrarla = run('tekrarla');
+const H = run('HAFIZA_AG'), hatirlama = run('hatirlama'), tekrarla = run('tekrarla'), ilkS = run('ilkS');
 const near = (a, b, tol, msg) => assert(Math.abs(a - b) <= tol, (msg || '') + ' ' + a + ' vs ' + b);
+const duz = x => JSON.parse(JSON.stringify(x)); // objects made inside the sandbox have its prototypes
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; console.log('PASS', name) } catch (e) { console.error('FAIL', name, e); process.exitCode = 1 } }
 const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 };
 
-// A small YKS map. ust rests on alt: solving the upper topic practises part of the lower one.
+// A small YKS map. `ust` uses `alt`; sincos is a hidden part of TYT trigonometry; okulTrig is TYT trigonometry's twin.
 const KONULAR = [
-  {id: 'dik', ad: 'Dik Üçgen ve Öklid', ders: 'Geometri'},
-  {id: 'tytTrig', ad: 'Trigonometrik Oranlar (TYT)', ders: 'Matematik TYT'},
-  {id: 'aytTrig', ad: 'Trigonometrik Denklemler (AYT)', ders: 'Matematik AYT'},
-  {id: 'matVek', ad: 'Vektörler', ders: 'Matematik AYT'},
-  {id: 'fizVek', ad: 'Vektörler ve Kuvvet', ders: 'Fizik'},
-  {id: 'fonk', ad: 'Fonksiyonlar', ders: 'Matematik AYT'},
-  {id: 'turev', ad: 'Türev', ders: 'Matematik AYT'},
-  {id: 'integral', ad: 'İntegral', ders: 'Matematik AYT'}
+  {id: 'dik', ad: 'Dik Üçgen', ders: 'Geometri', soru: 2},
+  {id: 'tytTrig', ad: 'Trigonometri (TYT)', ders: 'Matematik TYT', soru: 3, esler: ['okulTrig']},
+  {id: 'sincos', ad: 'Dik üçgende sin/cos', gizli: true, parcasi: 'tytTrig'},
+  {id: 'aytTrig', ad: 'Trigonometrik Denklemler', ders: 'Matematik AYT', soru: 4},
+  {id: 'trigFonk', ad: 'Trigonometrik Fonksiyonlar', ders: 'Matematik AYT', soru: 2},
+  {id: 'matVek', ad: 'Vektörler', ders: 'Matematik AYT', soru: 1},
+  {id: 'fizVek', ad: 'Vektörler ve Kuvvet', ders: 'Fizik', soru: 2},
+  {id: 'fonk', ad: 'Fonksiyonlar', ders: 'Matematik AYT', soru: 3},
+  {id: 'turev', ad: 'Türev', ders: 'Matematik AYT', soru: 6},
+  {id: 'integral', ad: 'İntegral', ders: 'Matematik AYT', soru: 4}
 ];
 const BAGLAR = [
-  {ust: 'aytTrig', alt: 'tytTrig', tur: 'kapsar', w: 0.6},
-  {ust: 'tytTrig', alt: 'dik', tur: 'kapsar', w: 0.5},
-  {ust: 'matVek', alt: 'tytTrig', tur: 'kapsar', w: 0.3},
-  {a: 'matVek', b: 'fizVek', tur: 'kardes', w: 0.2},
-  {ust: 'turev', alt: 'fonk', tur: 'kapsar', w: 0.5},
-  {ust: 'integral', alt: 'turev', tur: 'kapsar', w: 0.5},
-  {ust: 'integral', alt: 'fonk', tur: 'onkosul'}
+  {alt: 'dik', ust: 'tytTrig', kullanim: 'cok'},
+  {alt: 'tytTrig', ust: 'aytTrig', kullanim: 'tam'},
+  {alt: 'tytTrig', ust: 'trigFonk', kullanim: 'cok'},
+  {alt: 'matVek', ust: 'fizVek', kullanim: 'tam'},
+  {alt: 'sincos', ust: 'fizVek', kullanim: 'cok'},
+  {alt: 'fonk', ust: 'turev', kullanim: 'cok'},
+  {alt: 'turev', ust: 'integral', kullanim: 'tam'},
+  {alt: 'fonk', ust: 'integral', kullanim: 'az'},
+  {alt: 'turev', ust: 'integral', tur: 'karisik'}
 ];
 const girdi = (sonuclar, bugun, extra) => Object.assign({konular: KONULAR, baglar: BAGLAR, sonuclar, bugun}, extra || {});
 const satir = (out, id) => out.konular.find(s => s.id === id);
-const olay = (out, kaynak, id, tur, gun) => out.olaylar.filter(e => e.kaynak === kaynak && e.id === id && e.tur === tur && (gun === undefined || e.gun === gun));
-const duz = x => JSON.parse(JSON.stringify(x)); // objects made inside the sandbox have its prototypes
+const olay = (out, kaynak, id, tur, gun) => out.olaylar.filter(e => (kaynak === null || e.kaynak === kaynak) && e.id === id && e.tur === tur && (gun === undefined || e.gun === gun));
+const hepsi = (ids, gun, not = 3) => ids.map(id => ({gun, id, not}));
 
-test('no links: every topic is the app\'s own FSRS-6 chain', () => {
+test('no links: every topic is the app\'s own FSRS-6 chain, shown = own', () => {
   const sonuclar = [{gun: 0, id: 'tytTrig', not: 3}, {gun: 3, id: 'tytTrig', not: 3}, {gun: 12, id: 'tytTrig', not: 1}, {gun: 14, id: 'tytTrig', not: 2}, {gun: 30, id: 'tytTrig', not: 4}];
-  const out = H.hesapla({konular: KONULAR, baglar: [], sonuclar, bugun: 45});
+  const out = H.hesapla({konular: KONULAR.filter(k => !k.gizli), baglar: [], sonuclar, bugun: 45});
   let kart = null, son = 0;
   for (const r of sonuclar) { const t = tekrarla(kart, r.not, r.gun - son, 0.9, 365, 1); kart = {s: t.s, d: t.d}; son = r.gun; }
   const s = satir(out, 'tytTrig');
-  near(s.sGun, kart.s, 1e-12, 'S'); near(s.r, hatirlama(45 - 30, kart.s), 1e-12, 'R');
+  near(s.sGun, kart.s, 1e-12, 'S'); near(s.rOz, hatirlama(15, kart.s), 1e-12, 'R'); near(s.r, s.rOz, 0);
   assert.equal(out.olaylar.length, 0);
+  const e = H.degerlendir({konular: KONULAR.filter(k => !k.gizli), baglar: [], sonuclar, bugun: 45});
+  near(e.ag, e.duz, 1e-12, 'evaluation: same model'); assert.equal(e.n, 4);
 });
 
-test('a result on AYT trigonometry reviews TYT trigonometry and, further down, the right triangle (FIRe)', () => {
-  const onu = [{gun: 0, id: 'dik', not: 3}, {gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}];
+test('a pass on AYT trig: half a review to TYT trig, the same to its hidden part, less further down', () => {
+  const onu = hepsi(['dik', 'tytTrig', 'aytTrig', 'matVek', 'fizVek'], 0);
   const once = H.hesapla(girdi(onu, 9)), sonra = H.hesapla(girdi(onu.concat({gun: 9, id: 'aytTrig', not: 3}), 9));
-  const [t] = olay(sonra, 'aytTrig', 'tytTrig', 'ortuk', 9), [d] = olay(sonra, 'aytTrig', 'dik', 'ortuk', 9);
-  near(t.w, 0.6, 1e-12); near(d.w, 0.3, 1e-12, 'the share multiplies along the path');
-  assert(satir(sonra, 'tytTrig').r > satir(once, 'tytTrig').r && satir(sonra, 'tytTrig').sGun > satir(once, 'tytTrig').sGun);
-  near(t.rSonra, t.rOnce + 0.6 * (1 - t.rOnce), 1e-12, 'recall refreshed by the share');
-  near(satir(sonra, 'tytTrig').r, t.rSonra, 1e-9, 'the curve is rebuilt through the refreshed recall');
-  // A full review would give more; a farther topic gets less.
+  const [t] = olay(sonra, 'aytTrig', 'tytTrig', 'kredi', 9), [p] = olay(sonra, 'aytTrig', 'sincos', 'kredi', 9), [d] = olay(sonra, 'aytTrig', 'dik', 'kredi', 9);
+  near(t.w, 0.5, 1e-12, 'kredi 0.5 × tam 1'); near(p.w, 0.5, 1e-12, 'a part gets what its topic gets'); near(d.w, 0.125, 1e-12, '0.5 × (0.5 × çok 0.5)');
+  near(t.rSonra, t.rOnce + 0.5 * (1 - t.rOnce), 1e-12); near(satir(sonra, 'tytTrig').rOz, t.rSonra, 1e-9);
+  assert(satir(sonra, 'tytTrig').sGun > satir(once, 'tytTrig').sGun);
   const tam = H.hesapla(girdi(onu.concat({gun: 9, id: 'tytTrig', not: 3}), 9));
-  assert(satir(sonra, 'tytTrig').sGun < satir(tam, 'tytTrig').sGun);
-  assert(d.sSonra / d.sOnce < t.sSonra / t.sOnce);
-  // Credit never flows up: TYT practice does not review AYT.
-  const yukari = H.hesapla(girdi(onu.concat({gun: 9, id: 'tytTrig', not: 3}), 9));
-  assert.equal(olay(yukari, 'tytTrig', 'aytTrig', 'ortuk').length, 0);
+  assert(satir(sonra, 'tytTrig').sGun < satir(tam, 'tytTrig').sGun, 'less than its own test');
+  assert.equal(olay(tam, 'tytTrig', 'aytTrig', 'kredi').length, 0, 'credit never flows up');
+  assert.equal(olay(sonra, 'aytTrig', 'matVek', 'kredi').length, 0, 'not connected');
 });
 
-test('implicit practice while recall is still high adds almost nothing', () => {
-  const erken = H.hesapla(girdi([{gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}], 0));
-  const [e] = olay(erken, 'aytTrig', 'tytTrig', 'ortuk').slice(-1);
-  assert.equal(olay(erken, 'aytTrig', 'tytTrig', 'ortuk').length, 2);
-  near(e.sSonra, e.sOnce, 1e-9, 'same day: R = 1, FSRS gain 0');
-  const gec = H.hesapla(girdi([{gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 20, id: 'aytTrig', not: 3}], 20));
-  const [g] = olay(gec, 'aytTrig', 'tytTrig', 'ortuk', 20);
-  assert(g.sSonra / g.sOnce > 1.5, 'late: a real gain');
+test('credit while recall is still high adds almost nothing', () => {
+  const ayni = H.hesapla(girdi(hepsi(['tytTrig', 'aytTrig'], 0).concat({gun: 0, id: 'aytTrig', not: 3}), 0));
+  const [e] = olay(ayni, 'aytTrig', 'tytTrig', 'kredi', 0).slice(-1);
+  near(e.sSonra, e.sOnce, 1e-9);
+  const gec = H.hesapla(girdi(hepsi(['tytTrig', 'aytTrig'], 0).concat({gun: 20, id: 'aytTrig', not: 3}), 20));
+  const [g] = olay(gec, 'aytTrig', 'tytTrig', 'kredi', 20);
+  assert(g.sSonra / g.sOnce > 1.5);
 });
 
-test('implicit credit is capped until the topic gets a real result of its own', () => {
-  const sonuclar = [{gun: 0, id: 'tytTrig', not: 3}];
-  for (let g = 3; g <= 120; g += 3) sonuclar.push({gun: g, id: 'aytTrig', not: 4});
-  const out = H.hesapla(girdi(sonuclar, 120)), s0 = tekrarla(null, 3, 0, 0.9, 365, 1).s;
-  near(satir(out, 'tytTrig').sGun, s0 * H.AYAR.ortukTavan, 1e-9, 'stops at the cap');
-  assert(olay(out, 'aytTrig', 'tytTrig', 'tavan').length > 0);
-  // Its own result lifts the cap again.
-  const sonra = H.hesapla(girdi(sonuclar.concat({gun: 121, id: 'tytTrig', not: 3}, {gun: 150, id: 'aytTrig', not: 3}), 150));
-  assert(olay(sonra, 'aytTrig', 'tytTrig', 'ortuk').some(e => e.gun === 150));
+test('a lesson or a pass on a topic starts its foundations that have no memory', () => {
+  const ders = H.hesapla({konular: KONULAR.map(k => k.id === 'aytTrig' ? Object.assign({}, k, {ogrenildi: 5}) : k), baglar: BAGLAR, sonuclar: [], bugun: 10});
+  ['aytTrig', 'tytTrig', 'sincos', 'dik'].forEach(id => { assert(satir(ders, id).rOz > 0, id); });
+  assert.equal(satir(ders, 'fizVek').rOz, null, 'not a foundation of AYT trig');
+  near(satir(ders, 'tytTrig').sGun, ilkS(3), 1e-12, 'started as taught that day');
+  assert.equal(olay(ders, 'aytTrig', 'tytTrig', 'basla', 5).length, 1);
+  const gecti = H.hesapla(girdi([{gun: 2, id: 'integral', not: 3}], 4));
+  ['turev', 'fonk'].forEach(id => { assert(satir(gecti, id).rOz > 0, id); });
+  // A lesson also credits a foundation that already has memory, as an "İyi".
+  const kredi = H.hesapla({konular: KONULAR.map(k => k.id === 'aytTrig' ? Object.assign({}, k, {ogrenildi: 20}) : k), baglar: BAGLAR, sonuclar: [{gun: 0, id: 'tytTrig', not: 3}], bugun: 20});
+  near(olay(kredi, 'aytTrig', 'tytTrig', 'kredi', 20)[0].w, 0.5, 1e-12);
 });
 
-test('a failed foundation dents the topics built on it; a failed upper topic only flags its foundations', () => {
-  const onu = [{gun: 0, id: 'dik', not: 3}, {gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 5, id: 'aytTrig', not: 3}];
-  const temiz = H.hesapla(girdi(onu, 10));
-  const tytHata = H.hesapla(girdi(onu.concat({gun: 10, id: 'tytTrig', not: 1}), 10));
-  assert(satir(tytHata, 'aytTrig').r < satir(temiz, 'aytTrig').r, 'AYT recall falls');
-  near(olay(tytHata, 'tytTrig', 'aytTrig', 'hata')[0].w, 0.6 * H.AYAR.hataYukari, 1e-12);
-  near(satir(tytHata, 'dik').r, satir(temiz, 'dik').r, 1e-12, 'nothing flows down on a failure');
+test('a failed foundation dents the topics using it, one step; its own foundations are flagged, not lowered', () => {
+  const onu = hepsi(['dik', 'tytTrig', 'aytTrig', 'trigFonk', 'matVek', 'fizVek'], 0).concat({gun: 5, id: 'aytTrig', not: 3});
+  const temiz = H.hesapla(girdi(onu, 10)), hata = H.hesapla(girdi(onu.concat({gun: 10, id: 'tytTrig', not: 1}), 10));
+  near(olay(hata, 'tytTrig', 'aytTrig', 'ceza', 10)[0].w, 0.5, 1e-12, 'ceza 0.5 × tam');
+  near(olay(hata, 'tytTrig', 'trigFonk', 'ceza', 10)[0].w, 0.25, 1e-12, 'ceza 0.5 × çok');
+  assert(satir(hata, 'aytTrig').rOz < satir(temiz, 'aytTrig').rOz);
+  // The hidden part failed with its topic; what uses the part (physics vectors) is dented too.
+  assert.equal(satir(hata, 'sincos').sonOz, 10);
+  near(olay(hata, 'tytTrig', 'fizVek', 'ceza', 10)[0].w, 0.25, 1e-12);
+  near(satir(hata, 'dik').rOz, satir(temiz, 'dik').rOz, 1e-12, 'nothing flows down on a failure');
+  assert.deepEqual(duz(satir(hata, 'dik').kontrol), {gun: 10, kaynak: 'tytTrig'});
   const aytHata = H.hesapla(girdi(onu.concat({gun: 10, id: 'aytTrig', not: 1}), 10));
-  near(satir(aytHata, 'tytTrig').r, satir(temiz, 'tytTrig').r, 1e-12, 'foundation memory untouched');
-  assert.deepEqual(duz(satir(aytHata, 'tytTrig').kontrol), {gun: 10, kaynak: 'aytTrig'});
-  assert.equal(satir(aytHata, 'tytTrig').alarm, 'alarm', 'below the line: the red alarm outranks the check');
-  const iyi = H.hesapla(girdi(onu.concat({gun: 9, id: 'tytTrig', not: 3}, {gun: 10, id: 'aytTrig', not: 1}), 10));
-  assert(satir(iyi, 'tytTrig').r >= 0.9); assert.equal(satir(iyi, 'tytTrig').alarm, 'kontrol', 'remembered: a check test');
-  const kontrolSonra = H.hesapla(girdi(onu.concat({gun: 10, id: 'aytTrig', not: 1}, {gun: 11, id: 'tytTrig', not: 3}), 11));
-  assert.equal(satir(kontrolSonra, 'tytTrig').kontrol, null, 'its own result clears the flag');
-  // A pure prerequisite carries a small fixed share of a failure and no practice credit.
-  const fonk = H.hesapla(girdi([{gun: 0, id: 'fonk', not: 3}, {gun: 0, id: 'turev', not: 3}, {gun: 0, id: 'integral', not: 3}, {gun: 8, id: 'fonk', not: 1}], 8));
-  near(olay(fonk, 'fonk', 'integral', 'hata')[0].w, H.AYAR.hataOnkosul, 1e-12);
-  const int = H.hesapla(girdi([{gun: 0, id: 'fonk', not: 3}, {gun: 0, id: 'turev', not: 3}, {gun: 0, id: 'integral', not: 3}, {gun: 8, id: 'integral', not: 3}], 8));
-  near(olay(int, 'integral', 'fonk', 'ortuk')[0].w, 0.25, 1e-12, 'only through Türev, 0.5 × 0.5');
+  near(satir(aytHata, 'tytTrig').rOz, satir(temiz, 'tytTrig').rOz, 1e-12, 'foundation memory untouched');
+  assert.equal(satir(aytHata, 'tytTrig').kontrol.kaynak, 'aytTrig');
+  const sonra = H.hesapla(girdi(onu.concat({gun: 10, id: 'aytTrig', not: 1}, {gun: 11, id: 'tytTrig', not: 3}), 11));
+  assert.equal(satir(sonra, 'tytTrig').kontrol, null, 'its own test clears the flag');
 });
 
-test('kardes topics share a little, both ways, one step only', () => {
-  const out = H.hesapla(girdi([{gun: 0, id: 'matVek', not: 3}, {gun: 0, id: 'fizVek', not: 3}, {gun: 0, id: 'tytTrig', not: 3}, {gun: 10, id: 'fizVek', not: 3}, {gun: 20, id: 'matVek', not: 3}], 20));
-  near(olay(out, 'fizVek', 'matVek', 'ortuk')[0].w, 0.2, 1e-12);
-  near(olay(out, 'matVek', 'fizVek', 'ortuk')[0].w, 0.2, 1e-12);
-  assert.equal(olay(out, 'fizVek', 'tytTrig', 'ortuk').length, 0, 'no cascade through a kardes link');
+test('a hidden part is tested with its topic; a twin result counts for the topic', () => {
+  const out = H.hesapla(girdi([{gun: 0, id: 'okulTrig', not: 3}, {gun: 4, id: 'okulTrig', not: 3}], 10));
+  assert.equal(satir(out, 'tytTrig').sonOz, 4); assert.equal(satir(out, 'sincos').sonOz, 4);
+  near(satir(out, 'sincos').sGun, satir(out, 'tytTrig').sGun, 1e-12);
+  assert.equal(satir(out, 'sincos').calis, 'tytTrig', 'its alarm sends the student to TYT trig');
+  assert.equal(out.konular.some(s => s.id === 'okulTrig'), false, 'one node');
 });
 
-test('short-term / long-term tier and exam safety', () => {
-  const kisa = H.hesapla(girdi([{gun: 0, id: 'dik', not: 3}], 1, {sinavGunu: 200}));
-  assert.equal(satir(kisa, 'dik').katman, 'kisa'); assert.equal(satir(kisa, 'dik').sinavaKadar, false);
+test('live pull-down: the weakest-relative foundation pulls the shown recall, never the stored memory', () => {
+  // TYT trig learnt long ago, AYT trig just tested.
+  const s = [{gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 25, id: 'aytTrig', not: 3}];
+  const out = H.hesapla(girdi(s, 26), {kredi: 0});
+  const ayt = satir(out, 'aytTrig'), tyt = satir(out, 'tytTrig');
+  assert(tyt.r < ayt.rOz);
+  near(ayt.r, ayt.rOz - 0.5 * 1 * (ayt.rOz - tyt.r), 1e-12, 'çekiş 0.5 × tam × gap');
+  // Two weak foundations: only the strongest pull counts (integral uses türev tam and fonksiyonlar az).
+  const iki = H.hesapla(girdi([{gun: 0, id: 'fonk', not: 3}, {gun: 0, id: 'turev', not: 3}, {gun: 12, id: 'turev', not: 3}, {gun: 0, id: 'integral', not: 3}, {gun: 29, id: 'integral', not: 3}], 30), {kredi: 0});
+  const i = satir(iki, 'integral'), t = satir(iki, 'turev'), f = satir(iki, 'fonk');
+  near(i.r, i.rOz - Math.max(0.5 * 1 * (i.rOz - t.r), 0.5 * 0.25 * (i.rOz - f.r)), 1e-12);
+  assert(t.r < t.rOz, 'türev itself pulled by fonksiyonlar: the weak base reaches up the chain');
+  // A foundation without memory pulls nothing.
+  const yok = H.hesapla({konular: KONULAR, baglar: BAGLAR, sonuclar: [{gun: 0, id: 'fizVek', not: 3}], bugun: 3});
+  near(satir(yok, 'fizVek').r, satir(yok, 'fizVek').rOz, 1e-12);
+});
+
+test('memory level from stability; the exam star uses the shown recall on exam day', () => {
   const seri = [{gun: 0, id: 'dik', not: 3}, {gun: 3, id: 'dik', not: 3}, {gun: 12, id: 'dik', not: 3}, {gun: 40, id: 'dik', not: 3}, {gun: 130, id: 'dik', not: 3}];
   const tiers = [1, 2, 3, 4, 5].map(n => satir(H.hesapla(girdi(seri.slice(0, n), seri[n - 1].gun, {sinavGunu: 200})), 'dik'));
   assert.deepEqual(tiers.map(t => t.katman), tiers.map(t => t.sGun < 7 ? 'kisa' : t.sGun < 30 ? 'orta' : 'uzun'));
-  assert(tiers.map(t => t.sGun).every((s, i, a) => i === 0 || s > a[i - 1]));
-  assert.equal(tiers[4].katman, 'uzun');
-  assert.equal(tiers[4].sinavaKadar, hatirlama(200 - 130, tiers[4].sGun) >= 0.9);
-  assert.equal(satir(kisa, 'tytTrig').katman, null, 'not learnt: no tier');
+  assert.equal(tiers[0].katman, 'kisa'); assert.equal(tiers[4].katman, 'uzun');
+  assert.equal(tiers[4].sinavaKadar, hatirlama(70, tiers[4].sGun) >= 0.9);
+  // Credit alone can lift a topic to long-term.
+  const kredi = [{gun: 0, id: 'tytTrig', not: 3}];
+  for (let g = 3; g <= 150; g += 3) kredi.push({gun: g, id: 'aytTrig', not: 4});
+  assert.equal(satir(H.hesapla(girdi(kredi, 150)), 'tytTrig').katman, 'uzun');
 });
 
-test('foundations ring the alarm; a leaf with the same recall does not, and ranks lower', () => {
-  // Same history for TYT trig (2 topics on it) and İntegral (none on it).
-  const s = [{gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'integral', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 0, id: 'matVek', not: 3}];
-  const out = H.hesapla(girdi(s, 6, {sinavGunu: 200}), {ortukKatsayi: 0});
-  const t = satir(out, 'tytTrig'), i = satir(out, 'integral');
-  near(t.r, i.r, 1e-12); assert(t.r < 0.9);
-  assert.equal(t.bagimli, 2); assert.equal(t.temel, true); assert.equal(t.alarm, 'alarm');
-  assert.equal(i.bagimli, 0); assert.equal(i.alarm, null);
-  assert(out.sira.indexOf('tytTrig') < out.sira.indexOf('integral'));
-  near(t.oncelik / i.oncelik, Math.sqrt(3), 1e-12);
-  // Remembered but not yet long-term: a quieter warning.
-  assert.equal(satir(H.hesapla(girdi(s, 1)), 'tytTrig').alarm, 'uyari');
-  // The right triangle has three topics on it; never measured while they are studied: start it with a lesson.
-  assert.equal(satir(out, 'dik').bagimli, 3); assert.equal(satir(out, 'dik').alarm, 'eksik');
-  // A lesson day starts memory without a result.
-  const ders = H.hesapla({konular: KONULAR.map(k => k.id === 'dik' ? Object.assign({ogrenildi: 0}, k) : k), baglar: BAGLAR, sonuclar: s, bugun: 6});
-  assert.notEqual(satir(ders, 'dik').alarm, 'eksik'); assert(satir(ders, 'dik').r > 0);
+test('foundational by weighted use; importance counts the topic\'s own questions twice', () => {
+  const out = H.hesapla(girdi([], 0));
+  const tyt = satir(out, 'tytTrig'), sin = satir(out, 'sincos'), dik = satir(out, 'dik'), fonk = satir(out, 'fonk');
+  near(tyt.kullananAgirlik, 1 + 0.5, 1e-12); assert.equal(tyt.temel, true);
+  near(tyt.onem, 2 * 3 + 1 * 4 + 0.5 * 2, 1e-12);
+  near(sin.kullananAgirlik, 1 + 1 + 0.5 + 0.5, 1e-12, 'its topic, what uses its topic, and physics vectors');
+  near(sin.onem, 0 + 1 * 3 + 1 * 4 + 0.5 * 2 + 0.5 * 2, 1e-12);
+  near(dik.kullananAgirlik, 0.5 + 0.5 + 0.25, 1e-12); assert.equal(dik.temel, false);
+  near(fonk.kullananAgirlik, 0.5 + 0.5, 1e-12, 'integral counted once, by its strongest path'); assert.equal(fonk.temel, false);
 });
 
-test('suggestions: a study is worth its own need plus the shares of the due topics it reviews', () => {
-  const s = [{gun: 0, id: 'dik', not: 3}, {gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 0, id: 'integral', not: 3}];
-  const out = H.hesapla(girdi(s, 5)), need = id => satir(out, id).oncelik, by = id => out.oneriler.find(o => o.id === id);
-  // TYT trigonometry first: a foundation itself (two topics on it) and it reviews half of the right triangle.
-  assert.equal(out.oneriler[0].id, 'tytTrig');
-  near(by('tytTrig').deger, need('tytTrig') + 0.5 * need('dik'), 1e-12);
-  assert.deepEqual(duz(by('aytTrig').kapsadiklari).map(k => k.id), ['tytTrig', 'dik']);
-  near(by('aytTrig').deger, need('aytTrig') + 0.6 * need('tytTrig') + 0.3 * need('dik'), 1e-12);
-  assert(by('aytTrig').deger > need('integral'), 'beats a leaf with the same own need');
-  assert(!by('integral'), 'covers nothing: not a graph suggestion');
-  assert.equal(H.hesapla(girdi(s, 5), {ortukKatsayi: 0}).oneriler.length, 0, 'no graph credit, no compression');
+test('alarms: one per foundation, grey > red > orange > yellow; top 3 by colour then importance', () => {
+  // Nothing learnt but AYT trig and trig functions: TYT trig and its part are missing (grey).
+  const gri = H.hesapla(girdi([{gun: 0, id: 'trigFonk', not: 3}], 1), {});
+  // the pass on trigFonk started TYT trig, so it is not grey
+  assert.notEqual(satir(gri, 'tytTrig').alarm, 'gri');
+  const yalniz = H.hesapla({konular: KONULAR, baglar: BAGLAR, sonuclar: [], bugun: 1});
+  assert.equal(satir(yalniz, 'tytTrig').alarm, null, 'nothing studied above it: no alarm');
+  const s = [{gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 0, id: 'trigFonk', not: 3}];
+  const kirmizi = H.hesapla(girdi(s, 8), {kredi: 0});
+  assert.equal(satir(kirmizi, 'tytTrig').alarm, 'kirmizi'); assert.equal(satir(kirmizi, 'aytTrig').alarm, null, 'not foundational');
+  const sari = H.hesapla(girdi(s, 1), {kredi: 0});
+  assert.equal(satir(sari, 'tytTrig').alarm, 'sari');
+  const turuncu = H.hesapla(girdi(s.concat({gun: 1, id: 'tytTrig', not: 3}, {gun: 2, id: 'aytTrig', not: 1}), 2), {kredi: 0});
+  assert.equal(satir(turuncu, 'tytTrig').alarm, 'turuncu');
+  assert.deepEqual(duz(kirmizi.ust3), duz(kirmizi.alarmlar.slice(0, 3)));
+  const sirali = kirmizi.alarmlar.map(id => satir(kirmizi, id));
+  sirali.forEach((a, j) => { if (j) { const r = {gri: 0, kirmizi: 1, turuncu: 2, sari: 3}, b = sirali[j - 1];
+    assert(r[b.alarm] < r[a.alarm] || (r[b.alarm] === r[a.alarm] && b.onem >= a.onem)); } });
 });
 
-test('gates at zero give plain FSRS; bad input is reported, cycles end', () => {
-  const s = [{gun: 0, id: 'dik', not: 3}, {gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 7, id: 'aytTrig', not: 1}, {gun: 9, id: 'aytTrig', not: 3}];
-  const kapali = H.hesapla(girdi(s, 20), {ortukKatsayi: 0, hataKatsayi: 0}), yalin = H.hesapla({konular: KONULAR, baglar: [], sonuclar: s, bugun: 20});
-  kapali.konular.forEach(k => { near(k.r ?? -1, satir(yalin, k.id).r ?? -1, 1e-12, k.id); });
-  const kotu = H.hesapla({konular: KONULAR.concat({id: 'dik'}), baglar: [{ust: 'x', alt: 'dik'}, {ust: 'dik', alt: 'dik'}, {ust: 'dik', alt: 'fonk', tur: 'garip'},
-    {ust: 'dik', alt: 'tytTrig', w: 0.9}, {ust: 'tytTrig', alt: 'dik', w: 0.9}], sonuclar: s.concat({gun: 3, id: 'yok', not: 3}, {gun: 4, id: 'dik', not: 7}), bugun: 20});
-  assert.equal(kotu.uyarilar.length, 4);
-  assert(satir(kotu, 'dik').r > 0);
+test('check tests: flagged foundations, and one sample a month among credit-only foundations', () => {
+  const onu = hepsi(['tytTrig', 'aytTrig', 'trigFonk'], 0).concat({gun: 3, id: 'aytTrig', not: 1});
+  const k = H.hesapla(girdi(onu, 3));
+  assert.deepEqual(duz(k.kontroller.filter(c => c.sebep === 'supheli').map(c => c.id)), ['tytTrig'], 'AYT trig failed: its direct foundation');
+  assert.equal(k.kontroller.find(c => c.id === 'tytTrig').soru, 5);
+  // TYT trig kept up only by AYT passes for 60 days: a sample check, once per window, the same draw every time.
+  const kredi = [{gun: 0, id: 'tytTrig', not: 3}];
+  for (let g = 10; g <= 60; g += 10) kredi.push({gun: g, id: 'aytTrig', not: 3});
+  const a = H.hesapla(girdi(kredi, 61, {anahtar: 'ogr-7'})), b = H.hesapla(girdi(kredi, 61, {anahtar: 'ogr-7'}));
+  const ornek = a.kontroller.filter(c => c.sebep === 'ornek');
+  assert.equal(ornek.length, 1); assert.deepEqual(duz(ornek), duz(b.kontroller.filter(c => c.sebep === 'ornek')));
+  // Candidates: TYT trig and its part (own test 61 days ago) and the right triangle (started by the AYT passes, never tested).
+  assert(['tytTrig', 'sincos', 'dik'].includes(ornek[0].id));
+  const anahtarlar = new Set(); for (let i = 0; i < 40; i++) anahtarlar.add(H.hesapla(girdi(kredi, 61, {anahtar: 'ogr-' + i})).kontroller.find(c => c.sebep === 'ornek').id);
+  assert(anahtarlar.size > 1, 'different students draw different topics');
+  const yapildi = H.hesapla(girdi(kredi, 61, {anahtar: 'ogr-7', ornekGecmisi: [{gun: 60, id: 'tytTrig'}]}));
+  assert.equal(yapildi.kontroller.filter(c => c.sebep === 'ornek').length, 0, 'already one in this window');
+  const yeni = H.hesapla(girdi(kredi.slice(0, 2), 12, {anahtar: 'ogr-7'}));
+  assert.equal(yeni.kontroller.filter(c => c.sebep === 'ornek').length, 0, 'own test recent, or memory only just started');
 });
 
-test('evaluation: log loss of the graph against plain FSRS on the same results', () => {
-  // A student whose memory really is connected (simulated with the graph model itself, outcomes drawn from its recall).
-  const r = rng(7), sonuclar = [], ids = KONULAR.map(k => k.id);
-  for (let gun = 0; gun < 240; gun += 1 + Math.floor(r() * 3)) {
-    const id = ids[Math.floor(r() * ids.length)];
-    const p = sonuclar.some(x => x.id === id) ? satir(H.hesapla(girdi(sonuclar, gun)), id).r : 0.9;
-    sonuclar.push({gun, id, not: r() < p ? 3 : 1});
+test('learning: links whose credit does not hold are learnt down, per student blended with the shared value', () => {
+  // Every student passes AYT trig often but fails TYT trig whenever it is tested: credit over-predicts.
+  const r = rng(11), ogrenciler = [];
+  for (let s = 0; s < 6; s++) {
+    const sonuclar = [{gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}];
+    for (let g = 4; g <= 120; g += 4) sonuclar.push({gun: g, id: 'aytTrig', not: 3});
+    for (let g = 15; g <= 120; g += 15) sonuclar.push({gun: g + Math.floor(r() * 3), id: 'tytTrig', not: 1});
+    ogrenciler.push({anahtar: 'o' + s, sonuclar, bugun: 125});
   }
-  const e = H.degerlendir(girdi(sonuclar, 240));
-  assert(e.n > 50); assert(e.ag < e.duz, JSON.stringify(e)); near(e.fark, e.duz - e.ag, 1e-12);
-  const yalin = H.degerlendir(girdi(sonuclar, 240), {ortukKatsayi: 0, hataKatsayi: 0});
-  near(yalin.ag, yalin.duz, 1e-12, 'gates at zero: the same model');
+  const ogr = H.ogren({konular: KONULAR, baglar: BAGLAR, ogrenciler});
+  const pay = ogr.paylasilan['tytTrig>aytTrig'];
+  assert(pay.kredi < 0.5, 'shared credit learnt down: ' + pay.kredi);
+  assert(pay.n.kredi > 0);
+  const o0 = ogr.ogrenci.o0['tytTrig>aytTrig'];
+  near(o0.kredi, (o0.n.kredi * 0 + 10 * pay.kredi) / (o0.n.kredi + 10), 0.13, 'own best blended with shared by 10');
+  const tek = H.ogren({konular: KONULAR, baglar: BAGLAR, ogrenciler, sadece: ['tytTrig>aytTrig']});
+  assert.deepEqual(duz(Object.keys(tek.paylasilan)), ['tytTrig>aytTrig'], 'one link per call when asked');
+  near(tek.paylasilan['tytTrig>aytTrig'].kredi, pay.kredi, 1e-12);
+  // A link nobody's results touch keeps its starting value.
+  assert.equal(ogr.paylasilan['matVek>fizVek'].kredi, 0.5);
+  // Values feed back into the student's map.
+  const out = H.hesapla(girdi(ogrenciler[0].sonuclar, 125, {parametreler: {paylasilan: ogr.paylasilan, ogrenci: ogr.ogrenci.o0}}));
+  const ilk = H.hesapla(girdi(ogrenciler[0].sonuclar, 125));
+  assert(satir(out, 'tytTrig').rOz < satir(ilk, 'tytTrig').rOz, 'less credit: lower TYT recall');
+});
+
+test('learning: a bad link is reported to the teacher', () => {
+  const ogrenciler = [];
+  for (let s = 0; s < 8; s++) {
+    const sonuclar = [{gun: 0, id: 'matVek', not: 3}];
+    for (let g = 3; g <= 90; g += 3) sonuclar.push({gun: g, id: 'fizVek', not: 4});
+    for (let g = 10; g <= 90; g += 10) sonuclar.push({gun: g, id: 'matVek', not: 1});
+    ogrenciler.push({anahtar: 'b' + s, sonuclar, bugun: 95});
+  }
+  let p = {};
+  for (let i = 0; i < 2; i++) p = Object.assign({}, H.ogren({konular: KONULAR, baglar: BAGLAR, ogrenciler, parametreler: {paylasilan: p.paylasilan, ogrenci: p.ogrenci}}));
+  const not = p.notlar.find(n => n.anahtar === 'matVek>fizVek');
+  assert(not && not.deger < 0.1 && not.n >= 30, JSON.stringify(duz(p.notlar)));
+});
+
+test('evaluation against plain FSRS-6 on the same results', () => {
+  const r = rng(5), sonuclar = [], ids = ['dik', 'tytTrig', 'aytTrig', 'fonk', 'turev', 'integral'];
+  for (let gun = 0; gun < 200; gun += 1 + Math.floor(r() * 3)) sonuclar.push({gun, id: ids[Math.floor(r() * ids.length)], not: r() < 0.8 ? 3 : 1});
+  const e = H.degerlendir(girdi(sonuclar, 200));
+  assert(e.n > 30 && Number.isFinite(e.ag) && Number.isFinite(e.duz));
+});
+
+test('past-exam question counts: recency-weighted, patterns described only', () => {
+  const y = {2018: 2, 2019: 1, 2020: 1, 2021: 1, 2022: 1, 2023: 1, 2024: 1, 2025: 1};
+  const b = H.soruBeklentisi(y);
+  let pay = 0, payda = 0; Object.keys(y).forEach(t => { const a = Math.pow(0.9, 2025 - t); pay += a * y[t]; payda += a; });
+  near(b.beklenen, pay / payda, 1e-12); assert.equal(b.desen, 'her yıl');
+  const d = H.soruBeklentisi({2018: 1, 2019: '-', 2020: 2, 2021: '-', 2022: 1, 2023: '-', 2024: 1, 2025: '-'});
+  assert.equal(d.desen, 'iki yılda bir (son yıl sorulmadı)'); assert(d.beklenen > 0, 'a pattern never zeroes the expectation');
+  assert.equal(H.soruBeklentisi({2018: 0, 2019: 3, 2020: 0, 2021: 0}).desen, '4 yılın 1’inde');
+});
+
+test('confusable links are drawn only; bad input is reported, cycles end', () => {
+  const s = hepsi(['turev', 'integral'], 0).concat({gun: 9, id: 'integral', not: 3});
+  const ile = H.hesapla(girdi(s, 10)), olmadan = H.hesapla(girdi(s, 10, {baglar: BAGLAR.filter(b => b.tur !== 'karisik')}));
+  assert.deepEqual(duz(ile.karisik), [{a: 'turev', b: 'integral'}]);
+  assert.deepEqual(duz(ile.konular), duz(olmadan.konular));
+  const kotu = H.hesapla({konular: KONULAR.concat({id: 'dik'}, {id: 'x', gizli: true, parcasi: 'yok'}), baglar: [{alt: 'q', ust: 'dik', kullanim: 'tam'}, {alt: 'dik', ust: 'dik', kullanim: 'tam'},
+    {alt: 'dik', ust: 'fonk', kullanim: 'biraz'}, {alt: 'dik', ust: 'tytTrig', kullanim: 'tam'}, {alt: 'tytTrig', ust: 'dik', kullanim: 'tam'}, {alt: 'dik', ust: 'fonk', tur: 'garip'}],
+    sonuclar: hepsi(['dik', 'tytTrig'], 0).concat({gun: 5, id: 'tytTrig', not: 3}, {gun: 3, id: 'yok', not: 3}, {gun: 4, id: 'dik', not: 7}), bugun: 20});
+  assert.equal(kotu.uyarilar.length, 6, JSON.stringify(duz(kotu.uyarilar)));
+  assert(satir(kotu, 'dik').r > 0);
 });
 
 console.log(passed + ' passed');
