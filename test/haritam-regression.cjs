@@ -103,4 +103,49 @@ test('the student\'s FSRS settings and only real results go in', () => {
   assert.equal(a.json("HARITAM.durum(0).satir.get('geoDik').sonOz"), a.run('bugunNo()') - 20, 'a future row is ignored');
 });
 
+// Haritam is Hafızam drawn as a map: it reads the same states (results with their entry time, lesson days, Düzenle,
+// "Çoktan unuttum", basket lessons); with every link value at 0 it gives Hafızam's own numbers, and with the links
+// Hafızam shows the map's number, so the two pages always agree.
+test('Haritam reads Hafızam\'s own states, and the two pages show one number', () => {
+  const a = app();
+  ogrenci(a, 'SAY', 12);
+  const K = new Map(a.json('[...HARITAM.kaynaklar()]')), ki = id => K.get(id)[0], b = a.run('bugunNo()');
+  const sonuc = (id, g, n) => a.run(`sonucIsle(0,[{ki:${ki(id)},gun:${b + g},not:${n},dogru:null,soru:null}])`);
+  sonuc('geoDik', -40, 3); sonuc('geoDik', -20, 3); sonuc('tytKok', -30, 3); sonuc('tytKok', -12, 2); sonuc('aytOzdeslik', -15, 3);
+  sonuc('geoAci', -50, 3); sonuc('fizVektor', -25, 3); sonuc('aytBirim', -9, 4);
+  assert(a.run(`hafizaElleKaydet(0,${ki('geoDik')},0.7,14)`), 'Düzenle');
+  assert(a.run(`hafizaElleKaydet(0,${ki('tytKok')},0.01,1)`), 'Çoktan unuttum');
+  sonuc('geoAci', 0, 2); // after the settings, the same day
+  // A basket lesson today on a topic with an older result.
+  const hb = a.run('buHafta(0)'), anl = ['fizVektor', 'aytOzdeslik', 'geoAci'].find(id => a.run(`ogrenciElleEkle(0,${hb},[${b}-${hb}],{tur:'anlatim',ki:${ki(id)}})`) === 1);
+  assert(anl, 'a basket lesson was added');
+  const hafiza = a.json('hafizaDurumu(0).liste'), H = new Map(hafiza.map(x => [x.ki, x]));
+  // Map nodes with one notebook topic that has any state (a topic Hafızam does not list has none: no result, lesson,
+  // setting or basket lesson), so its events are the node's events.
+  const gizli = new Set(a.json("HARITA_VERI.konular.filter(k=>k.gizli).map(k=>k.id)"));
+  const kac = new Map(); K.forEach((l, id) => { if (!gizli.has(id)) l.forEach(k => kac.set(k, (kac.get(k) || 0) + 1)); });
+  const tekil = [...K].filter(([id, l]) => !gizli.has(id) && l.filter(k => H.has(k)).length === 1).map(([id, l]) => [id, l.find(k => H.has(k))]);
+  assert(tekil.length >= 8, 'enough topics with one source: ' + tekil.length);
+  const sifir = new Map(a.json("[...HARITAM.durum(0,{kredi:0,ceza:0,cekis:0}).satir].map(([id,s])=>[id,{r:s.r,c:s.cizgiGun}])"));
+  for (const [id, k] of tekil) {
+    const x = H.get(k), own = Number.isFinite(x.rKendi) ? x.rKendi : x.r;
+    assert(sifir.get(id).r !== null, id + ' has memory on the map');
+    assert(Math.abs(sifir.get(id).r - own) < 1e-9, id + ': no link effects → Hafızam\'s own number ' + sifir.get(id).r + ' vs ' + own);
+  }
+  assert(Math.abs(sifir.get('geoDik').r - 0.7) < 0.02, 'Düzenle: the map starts from the student\'s setting');
+  assert(sifir.get('tytKok').r < 0.05, '"Çoktan unuttum": nearly nothing on the map');
+  assert(H.get(ki(anl)).anlatildi, 'the basket lesson restarted ' + anl + ' in Hafızam'); assert(Math.abs(sifir.get(anl).r - 1) < 1e-9, '…and on the map');
+  // With the links: Hafızam shows the map's number for every one-to-one topic.
+  const harita = new Map(a.json("[...HARITAM.durum(0).satir].map(([id,s])=>[id,s.r])"));
+  for (const [id, k] of tekil.filter(([, k]) => kac.get(k) === 1)) assert(Math.abs(H.get(k).r - harita.get(id)) < 1e-9, id + ': Hafızam = map');
+  // A school unit covering several nodes: Hafızam shows their mean.
+  const birim = [...kac].find(([k, n]) => n > 1 && H.has(k));
+  if (birim) { const l = [...K].filter(([id, ks]) => !gizli.has(id) && ks.includes(birim[0]) && harita.get(id) !== null).map(([id]) => harita.get(id));
+    assert(Math.abs(H.get(birim[0]).r - l.reduce((t, r) => t + r, 0) / l.length) < 1e-9, 'unit = mean of its nodes'); }
+  const fark = hafiza.find(x => Number.isFinite(x.rKendi) && Math.round(x.r * 100) !== Math.round(x.rKendi * 100));
+  assert(fark, 'connected topics change at least one number');
+  assert.match(a.run(`(()=>{const d=hafizaDurumu(0);return hafizaSatiri(0,d.liste.find(x=>x.ki===${fark.ki}),d,{p:null,satirlar:[]})})()`), /bağlı konular [+−]\d+/, 'Hafızam says how much connected topics changed it');
+  a.run("EK.haritamSecili='tytKok'"); assert.match(a.run('HARITAM.gorunum()'), /çoktan unuttum dedin/, 'the map card is Hafızam\'s card');
+});
+
 console.log(passed + ' passed');

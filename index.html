@@ -8764,6 +8764,13 @@ function ogrenciBugunKarti(si) {
 // Saf: hiçbir şey yazmaz.
 // Bu kadar gündür sonuç girilmemiş konu kırmızıyla gösterilir (son gerçek sonuçtan, kendi ayarından ya da yoksa dersteki işlenişten).
 const HAFIZA_UZUN = 21, HAFIZA_SEPET_SORU = 12, HAFIZA_SEPET_SORULAR = [5, 8, 10, 12, 15, 20, 25, 30, 40];
+// Öğrencinin sepete koyduğu, günü gelmiş ve "Yapmadım" denmemiş konu anlatımları: [ki, gün] (Hafızam ve Haritam aynısını okur).
+function konuAnlatimGunleri(si, bugun) {
+  const out = [];
+  Object.keys(D.elle || {}).forEach(a => { const [s2, hb] = a.split('|').map(Number), ov = D.elle[a]; if (s2 !== si || !ov || !ov.anlatim) return;
+    Object.keys(ov.anlatim).forEach(k => { const yer = (ov.yer || {})[k], gun = hb + (Array.isArray(yer) ? +yer[0] : NaN); if ((ov.ogrEk || {})[k] && Number.isInteger(gun) && gun <= bugun) out.push([+k, gun]); }); });
+  return out;
+}
 function hafizaDurumu(si) {
   const bugun = bugunNo(), hedef = hedefTutma(si), liste = [], carpan = (Math.pow(hedef, 1 / DECAY) - 1) / FACTOR, o = (D.ogr || [])[si] || {};
   // Hafıza dürüsttür: kart yalnızca gerçek sonuçlardan (bugün dahil) ve öğrencinin kendi ayarından kurulur. Sonucu girilmeyen
@@ -8773,8 +8780,7 @@ function hafizaDurumu(si) {
   // Konular: sonucu ya da kendi ayarı olanlar, ve dersinde bugüne kadar işlenmiş olanlar (şubenin müfredatı ve ders programından).
   // Öğrencinin sepete koyduğu konu anlatımı (günü gelmiş, "Yapmadım" denmemiş): konu o gün öğrenilmiş sayılır ve unutma çubuğu başlar.
   const anlatim = new Map();
-  Object.keys(D.elle || {}).forEach(a => { const [s2, hb] = a.split('|').map(Number), ov = D.elle[a]; if (s2 !== si || !ov || !ov.anlatim) return;
-    Object.keys(ov.anlatim).forEach(k => { const yer = (ov.yer || {})[k], gun = hb + (Array.isArray(yer) ? +yer[0] : NaN); if ((ov.ogrEk || {})[k] && Number.isInteger(gun) && gun <= bugun) anlatim.set(+k, Math.max(anlatim.get(+k) ?? -Infinity, gun)); }); });
+  konuAnlatimGunleri(si, bugun).forEach(([ki, gun]) => anlatim.set(ki, Math.max(anlatim.get(ki) ?? -Infinity, gun)));
   const kiler = new Set([...satirlar.keys(), ...Object.keys(o.hafizaElle || {}).map(Number), ...anlatim.keys()]);
   for (let ki = 0, n = konuSayisi(); ki < n; ki++) { const t = ogrenciIslenisTarihi(si, ki); if (Number.isInteger(t) && t <= bugun) kiler.add(ki); }
   kiler.forEach(ki => {
@@ -8799,6 +8805,9 @@ function hafizaDurumu(si) {
     liste.push({ ki, ad: konu[3], ders: konuDersAdi(ki), r, gecen, son: kart.son, cizgiGun, anlatildi, unutuldu: elleSon !== null && elle.r <= 0.02,
       altinda: r < hedef - 1e-9, olculmedi, elle: !!elle && kart.elle === elle.g, elleSon, sonucsuz, eski: sonucsuz >= HAFIZA_UZUN, k, sGun: kart.s * k });
   });
+  // Haritam is Hafızam drawn as a map: for the topics on it, the map's value (own memory and what connected topics add or
+  // pull) is shown here too, so both pages always show one number. rKendi keeps the topic's own value.
+  if (typeof HARITAM !== 'undefined') try { HARITAM.hafizayaUygula(si, liste, hedef); } catch (e) { console.error(e); }
   liste.sort((a, b) => a.r - b.r || konuGorunenAdi(a.ad).localeCompare(konuGorunenAdi(b.ad), 'tr'));
   return { hedef, liste, altinda: liste.filter(x => x.altinda).length, eski: liste.filter(x => x.eski).length };
 }
@@ -8828,12 +8837,14 @@ function hafizaSatiri(si, x, d, plan) {
     : x.unutuldu ? 'çoktan unuttum dedin (' + gunOnceYazi(bugun - x.elleSon) + ') · konu anlatımıyla yeniden başla'
     : x.elleSon !== null ? 'kendi ayarın (' + gunOnceYazi(bugun - x.elleSon) + ')'
     : 'son çalışma ' + gunOnceYazi(x.gecen) + (x.elle ? ' · kendi ayarından devam' : '');
+  // Haritam: how much connected topics changed the value (credit from tests above it, or a weak foundation pulling it).
+  const bag = Number.isFinite(x.rKendi) ? yuzde - Math.round(x.rKendi * 100) : 0, bagYazi = bag ? ' · bağlı konular ' + (bag > 0 ? '+' : '−') + Math.abs(bag) : '';
   return '<div class="hf-oge' + (x.altinda ? ' hf-alt' : '') + (x.eski ? ' hf-eski' : '') + (x.unutuldu ? ' hf-unutuldu' : '') + (acik || duzen ? ' hf-acik' : '') + (secili ? ' hf-secili' : '') + '" data-hf-ki="' + x.ki + '"' +
       (salt ? '' : ' draggable="true" data-hf-surukle="' + deger + '"') + '>' +
     '<div class="hf-ust"><div class="hf-ad"><span class="d">' + kacis(dersKisaAd(x.ders)) + (x.k !== 1 ? ' · <b class="hf-hiz ' + (x.k > 1 ? 'hf-hiz-gec">geç unuturum' : 'hf-hiz-cabuk">çabuk unuturum') + '</b>' : '') + '</span><span class="k">' + konuHtml(x.ad) + '</span></div>' +
     '<button type="button" class="dugme mini" data-hf-ac="' + x.ki + '" aria-expanded="' + acik + '">' + (acik ? 'Kapat' : 'Çalıştım') + '</button></div>' +
     '<div class="hf-cubuk" role="img" aria-label="Tahmini hatırlama %' + yuzde + ', hedef çizgisi %' + hedefY + '"><i style="width:' + Math.max(1, yuzde) + '%' + (renk ? ';background:' + renk : '') + '"></i><b style="left:' + hedefY + '%"></b></div>' +
-    '<div class="hf-yazi"><strong' + (renk ? ' style="color:' + renk + '"' : '') + '>%' + yuzde + '</strong><span>' + ne + ' · ' + cizgi + '</span></div>' +
+    '<div class="hf-yazi"><strong' + (renk ? ' style="color:' + renk + '"' : '') + '>%' + yuzde + '</strong><span>' + ne + bagYazi + ' · ' + cizgi + '</span></div>' +
     (x.eski ? '<div class="hf-eski-not">' + (x.olculmedi ? x.sonucsuz + ' gündür hiç sonucun yok' : x.sonucsuz + ' gündür sonuç girmedin') + '</div>' : '') +
     (salt ? '' : '<div class="hf-araclar"><button type="button" class="dugme mini" data-hf-sec="' + deger + '" aria-pressed="' + secili + '">' + (secili ? 'Seçildi · bir gün seç' : x.unutuldu ? 'Sepete · konu anlatımı' : 'Sepete') + '</button>' +
       '<details class="hf-diger"' + (duzen || x.unutuldu ? ' open' : '') + '><summary>Diğer</summary><span class="hf-diger-ic"><button type="button" class="dugme mini" data-hf-duzenle="' + x.ki + '" aria-expanded="' + duzen + '">' + (duzen ? 'Vazgeç' : 'Düzenle') + '</button>' +
@@ -31679,9 +31690,12 @@ function gorunumOgretmenRapor(){return OGRETMEN_RAPOR.gorunum()}
 // data/hafiza-haritasi-pilot.json
 const HARITA_VERI = {"surum":"2026-11-17-taslak","not":"Pilot: trigonometri ailesi (Geometri, Matematik TYT, Matematik AYT, Fizik). Taslak; öğretmen düzeltir. Konu adları SAY planındaki adlardır. kullanim: az 0.25, cok 0.5, tam 1 (A, B'nin ne kadarını kullanıyor; hafıza kredisi değil). Soru sayıları: TYT 2018–2025 okul tablosu, AYT kitapsec.com tablosu (2018 sonrası; AYT Fizik 2018–2024). pay: sınav satırının konuya düşen tahmini payı; kalan pay pilot dışındaki konulara gider. birimler: 9–12. sınıf okul ünitesi (katalog: ders, sınıf, konu adı) → kapsadığı YKS konuları; ünitenin sonucu ve ders günü her biri için sayılır.","konular":[{"id":"geoAci","ders":"Geometri","ad":"Temel Kavramlar ve Düzlemde Açılar"},{"id":"geoUcgenAci","ders":"Geometri","ad":"Üçgende Açılar"},{"id":"geoBenzer","ders":"Geometri","ad":"Üçgende Benzerlik"},{"id":"geoDik","ders":"Geometri","ad":"Dik Üçgen"},{"id":"pPisagor","ders":"Geometri","ad":"Pisagor bağıntısı","gizli":true,"parcasi":"geoDik"},{"id":"pOranlar","ders":"Geometri","ad":"Dik üçgende sin-cos-tan ve özel açılar","gizli":true,"parcasi":"geoDik"},{"id":"geoAlan","ders":"Geometri","ad":"Üçgende Alan"},{"id":"geoAciKenar","ders":"Geometri","ad":"Üçgende Açı-Kenar Bağıntıları"},{"id":"geoCember","ders":"Geometri","ad":"Çemberde Temel Elemanlar"},{"id":"geoNokta","ders":"Geometri","ad":"Noktanın Analitiği"},{"id":"geoDogru","ders":"Geometri","ad":"Doğrunun Analitiği"},{"id":"tytKok","ders":"Matematik TYT","ad":"Köklü İfadeler"},{"id":"tytOran","ders":"Matematik TYT","ad":"Oran-Orantı"},{"id":"tytDenklem","ders":"Matematik TYT","ad":"Birinci Dereceden Denklemler"},{"id":"tytCarpan","ders":"Matematik TYT","ad":"Çarpanlara Ayırma"},{"id":"aytFonk","ders":"Matematik AYT","ad":"Fonksiyon Kavramı - Tanım ve Görüntü Kümesi"},{"id":"aytTers","ders":"Matematik AYT","ad":"Bir Fonksiyonun Tersi"},{"id":"aytPeriyodik","ders":"Matematik AYT","ad":"Periyodik Fonksiyon"},{"id":"aytAciOlcu","ders":"Matematik AYT","ad":"Açı Ölçü Birimleri"},{"id":"aytEsas","ders":"Matematik AYT","ad":"Esas Ölçü"},{"id":"aytBirim","ders":"Matematik AYT","ad":"Birim Çemberde Trigonometrik Oranlar"},{"id":"aytOzdeslik","ders":"Matematik AYT","ad":"Trigonometrik Özdeşlikler"},{"id":"aytIsaret","ders":"Matematik AYT","ad":"Sıralama ve İşaret İncelemesi"},{"id":"aytDonusum","ders":"Matematik AYT","ad":"Trigonometrik Dönüşümler"},{"id":"aytPeriyot","ders":"Matematik AYT","ad":"Periyot ve Grafik"},{"id":"aytTersTrig","ders":"Matematik AYT","ad":"Ters Trigonometrik Fonksiyonlar"},{"id":"aytSinCos","ders":"Matematik AYT","ad":"Sinüs ve Cosinüs Teoremi"},{"id":"aytToplamFark","ders":"Matematik AYT","ad":"Toplam-Fark ve Yarım Açı"},{"id":"aytDenklem","ders":"Matematik AYT","ad":"Trigonometrik Denklemler"},{"id":"fizVektor","ders":"Fizik","ad":"Vektörler ve Kuvvet"},{"id":"pBilesen","ders":"Fizik","ad":"Vektörü bileşenlerine ayırma","gizli":true,"parcasi":"fizVektor"},{"id":"fizKesisen","ders":"Fizik","ad":"Kesişen Kuvvetlerin Dengesi"},{"id":"fizTork","ders":"Fizik","ad":"Tork ve Tork Dengesi"},{"id":"fizNewton","ders":"Fizik","ad":"Newton'un Hareket Yasaları"},{"id":"fizAtis","ders":"Fizik","ad":"Atışlar"},{"id":"fizIs","ders":"Fizik","ad":"İş-Güç-Enerji"},{"id":"fizBagil","ders":"Fizik","ad":"Bağıl Hareket"},{"id":"fizKirilma","ders":"Fizik","ad":"Kırılma"},{"id":"fizBHH","ders":"Fizik","ad":"Basit Harmonik Hareket"}],"baglar":[{"alt":"geoAci","ust":"geoUcgenAci","kullanim":"tam","gerekce":"Açı kavramları üçgende açıların tamamında kullanılır."},{"alt":"geoUcgenAci","ust":"geoDik","kullanim":"cok","gerekce":"Dik üçgende açı hesapları, iç açılar toplamı."},{"alt":"geoBenzer","ust":"geoDik","kullanim":"cok","gerekce":"Öklid bağıntıları ve trigonometrik oranlar benzerlikten gelir."},{"alt":"tytOran","ust":"geoBenzer","kullanim":"cok","gerekce":"Benzerlik oranı = oran-orantı."},{"alt":"tytKok","ust":"geoDik","kullanim":"cok","gerekce":"Pisagor ve özel üçgenlerde köklü sonuçlar (√2, √3)."},{"alt":"geoDik","ust":"geoAlan","kullanim":"az","gerekce":"Yükseklik çoğu zaman dik üçgenle bulunur."},{"alt":"pOranlar","ust":"geoAlan","kullanim":"az","gerekce":"Alan = ½·a·b·sin C."},{"alt":"geoUcgenAci","ust":"geoAciKenar","kullanim":"cok","gerekce":"Büyük açı karşısında büyük kenar."},{"alt":"pPisagor","ust":"geoNokta","kullanim":"cok","gerekce":"İki nokta arası uzaklık = Pisagor."},{"alt":"geoNokta","ust":"geoDogru","kullanim":"cok","gerekce":"Doğru denklemi noktalarla kurulur."},{"alt":"pOranlar","ust":"geoDogru","kullanim":"az","gerekce":"Eğim = tan α."},{"alt":"geoAci","ust":"aytAciOlcu","kullanim":"cok","gerekce":"Derece kavramı; radyana geçiş."},{"alt":"aytAciOlcu","ust":"aytEsas","kullanim":"tam","gerekce":"Esas ölçü açı ölçüsü üzerine kurulur."},{"alt":"pOranlar","ust":"aytBirim","kullanim":"tam","gerekce":"Birim çember, dik üçgendeki oranların genişletilmesidir."},{"alt":"aytEsas","ust":"aytBirim","kullanim":"cok","gerekce":"90°'den büyük açıları birim çembere yerleştirme."},{"alt":"geoCember","ust":"aytBirim","kullanim":"az","gerekce":"Yarıçap, merkez açı."},{"alt":"geoNokta","ust":"aytBirim","kullanim":"az","gerekce":"Noktanın koordinatları (cos x, sin x)."},{"alt":"tytKok","ust":"aytBirim","kullanim":"az","gerekce":"Özel açı değerleri köklüdür."},{"alt":"aytBirim","ust":"aytOzdeslik","kullanim":"tam","gerekce":"Özdeşlikler oranların tanımlarından çıkar."},{"alt":"pPisagor","ust":"aytOzdeslik","kullanim":"cok","gerekce":"sin²x + cos²x = 1."},{"alt":"tytCarpan","ust":"aytOzdeslik","kullanim":"cok","gerekce":"Özdeşlik sorularında çarpanlara ayırma, iki kare farkı."},{"alt":"aytBirim","ust":"aytIsaret","kullanim":"tam","gerekce":"Bölgelere göre işaret ve sıralama birim çemberden okunur."},{"alt":"aytBirim","ust":"aytDonusum","kullanim":"tam","gerekce":"kπ/2 ∓ α biçimindeki açıların oranları (indirgeme) birim çember simetrisidir. Öğretmen modülü 7, 11. sınıf sırası."},{"alt":"aytIsaret","ust":"aytDonusum","kullanim":"cok","gerekce":"İndirgemede işaret bölgeye göre belirlenir."},{"alt":"aytBirim","ust":"aytPeriyot","kullanim":"tam","gerekce":"Grafik, birim çemberin açılmış hâlidir."},{"alt":"aytPeriyodik","ust":"aytPeriyot","kullanim":"cok","gerekce":"Periyot kavramı."},{"alt":"aytFonk","ust":"aytPeriyodik","kullanim":"cok","gerekce":"Fonksiyon kavramı."},{"alt":"aytFonk","ust":"aytTers","kullanim":"cok","gerekce":"Ters fonksiyon, fonksiyon tanımına dayanır."},{"alt":"aytTers","ust":"aytTersTrig","kullanim":"cok","gerekce":"arcsin, arccos ters fonksiyon mantığıdır."},{"alt":"aytBirim","ust":"aytTersTrig","kullanim":"cok","gerekce":"Açıyı orandan geri bulma."},{"alt":"aytPeriyot","ust":"aytTersTrig","kullanim":"az","gerekce":"Tanım kümesini kısıtlama grafikten görülür."},{"alt":"aytBirim","ust":"aytSinCos","kullanim":"cok","gerekce":"Geniş açılı üçgende sin, cos değerleri."},{"alt":"pPisagor","ust":"aytSinCos","kullanim":"az","gerekce":"Kosinüs teoremi Pisagor'un genelleşmesidir."},{"alt":"geoCember","ust":"aytSinCos","kullanim":"az","gerekce":"Sinüs teoremi çemberle: a / sin A = 2R. Öğretmen modülü 7, 11. sınıf Çember ve Daire."},{"alt":"aytOzdeslik","ust":"aytToplamFark","kullanim":"cok","gerekce":"Formüller özdeşliklerle sadeleştirilir."},{"alt":"aytDonusum","ust":"aytToplamFark","kullanim":"az","gerekce":"Açıları uygun biçime çevirme."},{"alt":"aytOzdeslik","ust":"aytDenklem","kullanim":"cok","gerekce":"Denklemi tek orana indirme."},{"alt":"aytDonusum","ust":"aytDenklem","kullanim":"cok","gerekce":"Tüm çözümleri bulmak için açı dönüşümleri."},{"alt":"aytPeriyot","ust":"aytDenklem","kullanim":"cok","gerekce":"Genel çözüm = kök + k·periyot."},{"alt":"aytToplamFark","ust":"aytDenklem","kullanim":"az","gerekce":"İki kat açılı denklemler."},{"alt":"aytTersTrig","ust":"aytDenklem","kullanim":"az","gerekce":"Özel olmayan değerlerde çözüm arcsin ile yazılır."},{"alt":"tytDenklem","ust":"aytDenklem","kullanim":"az","gerekce":"Yardımcı bilinmeyenle birinci/ikinci derece çözme."},{"alt":"pOranlar","ust":"pBilesen","kullanim":"tam","gerekce":"Bileşenler F·cos α ve F·sin α."},{"alt":"pPisagor","ust":"fizVektor","kullanim":"cok","gerekce":"Dik bileşenlerden bileşke büyüklüğü."},{"alt":"aytSinCos","ust":"fizVektor","kullanim":"az","gerekce":"Bileşke: R² = a² + b² + 2ab·cos θ."},{"alt":"fizVektor","ust":"fizKesisen","kullanim":"tam","gerekce":"Kuvvetlerin vektörel toplamı sıfır."},{"alt":"aytSinCos","ust":"fizKesisen","kullanim":"cok","gerekce":"Lami teoremi = sinüs teoremi."},{"alt":"pBilesen","ust":"fizTork","kullanim":"cok","gerekce":"Kuvvetin dik bileşeni (F·sin α)."},{"alt":"pBilesen","ust":"fizNewton","kullanim":"cok","gerekce":"Eğik düzlemde mg·sin α, mg·cos α."},{"alt":"tytDenklem","ust":"fizNewton","kullanim":"cok","gerekce":"F = m·a denklemlerini çözme."},{"alt":"pBilesen","ust":"fizAtis","kullanim":"tam","gerekce":"Eğik atış: v·cos α yatay, v·sin α düşey."},{"alt":"fizNewton","ust":"fizAtis","kullanim":"az","gerekce":"Yer çekimi ivmesiyle hareket."},{"alt":"aytToplamFark","ust":"fizAtis","kullanim":"az","gerekce":"Menzil formülünde sin 2α."},{"alt":"pBilesen","ust":"fizIs","kullanim":"az","gerekce":"W = F·d·cos θ."},{"alt":"fizVektor","ust":"fizBagil","kullanim":"cok","gerekce":"Bağıl hız vektör farkıdır."},{"alt":"pOranlar","ust":"fizKirilma","kullanim":"az","gerekce":"Snell yasası (n₁ sin θ₁ = n₂ sin θ₂)."},{"alt":"aytBirim","ust":"fizBHH","kullanim":"az","gerekce":"Referans çember, sinüsel konum."}],"sinavSatirlari":[{"sinav":"TYT","ders":"Geometri","konu":"Açılar ve Üçgenler","yillar":{"2018":3,"2019":1,"2020":2,"2021":4,"2022":4,"2023":5,"2024":5,"2025":4},"paylar":{"geoAci":0.15,"geoUcgenAci":0.2,"geoDik":0.2,"geoBenzer":0.15,"geoAlan":0.1,"geoAciKenar":0.05}},{"sinav":"TYT","ders":"Geometri","konu":"Analitik Geometri","yillar":{"2018":1,"2019":1,"2020":0,"2021":1,"2022":1,"2023":0,"2024":0,"2025":0},"paylar":{"geoNokta":0.5,"geoDogru":0.5}},{"sinav":"TYT","ders":"Geometri","konu":"Çember-Daire","yillar":{"2018":1,"2019":2,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0},"paylar":{"geoCember":0.25}},{"sinav":"AYT","ders":"Geometri","konu":"Doğruda ve Üçgende Açı","yillar":{"2018":1,"2019":0,"2020":1,"2021":0,"2022":1,"2023":2,"2024":1,"2025":0},"paylar":{"geoAci":0.4,"geoUcgenAci":0.6}},{"sinav":"AYT","ders":"Geometri","konu":"Özel Üçgenler","yillar":{"2018":2,"2019":0,"2020":2,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0},"paylar":{"geoDik":0.6}},{"sinav":"AYT","ders":"Geometri","konu":"Üçgende Alan Benzerlik","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":0,"2023":1,"2024":0,"2025":3},"paylar":{"geoBenzer":0.5,"geoAlan":0.5}},{"sinav":"AYT","ders":"Geometri","konu":"Açı Kenar Bağıntıları","yillar":{"2018":0,"2019":1,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0},"paylar":{"geoAciKenar":1}},{"sinav":"AYT","ders":"Geometri","konu":"Çember ve Daire","yillar":{"2018":1,"2019":2,"2020":2,"2021":3,"2022":2,"2023":2,"2024":2,"2025":2},"paylar":{"geoCember":0.25}},{"sinav":"AYT","ders":"Geometri","konu":"Noktanın Analitiği","yillar":{"2018":0,"2019":0,"2020":1,"2021":2,"2022":1,"2023":1,"2024":1,"2025":0},"paylar":{"geoNokta":1}},{"sinav":"AYT","ders":"Geometri","konu":"Doğrunun Analitiği","yillar":{"2018":2,"2019":1,"2020":1,"2021":2,"2022":1,"2023":0,"2024":3,"2025":2},"paylar":{"geoDogru":1}},{"sinav":"TYT","ders":"Matematik","konu":"Köklü İfadeler","yillar":{"2018":2,"2019":1,"2020":0,"2021":1,"2022":1,"2023":1,"2024":1,"2025":1},"paylar":{"tytKok":1}},{"sinav":"TYT","ders":"Matematik","konu":"Oran-Orantı","yillar":{"2018":0,"2019":0,"2020":1,"2021":1,"2022":1,"2023":1,"2024":0,"2025":1},"paylar":{"tytOran":1}},{"sinav":"TYT","ders":"Matematik","konu":"Denklem Çözme","yillar":{"2018":0,"2019":2,"2020":0,"2021":0,"2022":1,"2023":1,"2024":0,"2025":1},"paylar":{"tytDenklem":1}},{"sinav":"TYT","ders":"Matematik","konu":"Çarpanlara Ayırma","yillar":{"2018":0,"2019":1,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0},"paylar":{"tytCarpan":1}},{"sinav":"AYT","ders":"Matematik","konu":"Çarpanlara Ayırma","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":1,"2023":0,"2024":1,"2025":0},"paylar":{"tytCarpan":1}},{"sinav":"AYT","ders":"Matematik","konu":"Fonksiyonlar","yillar":{"2018":2,"2019":2,"2020":2,"2021":2,"2022":2,"2023":2,"2024":2,"2025":2},"paylar":{"aytFonk":0.2,"aytTers":0.15,"aytPeriyodik":0.05}},{"sinav":"AYT","ders":"Matematik","konu":"Trigonometri","yillar":{"2018":3,"2019":3,"2020":4,"2021":5,"2022":4,"2023":5,"2024":5,"2025":5},"paylar":{"aytAciOlcu":0.04,"aytEsas":0.05,"aytBirim":0.12,"aytOzdeslik":0.12,"aytIsaret":0.05,"aytDonusum":0.1,"aytPeriyot":0.1,"aytTersTrig":0.07,"aytSinCos":0.1,"aytToplamFark":0.13,"aytDenklem":0.12}},{"sinav":"TYT","ders":"Fizik","konu":"Hareket ve Kuvvet","yillar":{"2018":1,"2019":1,"2020":1,"2021":1,"2022":1,"2023":1,"2024":0,"2025":1},"paylar":{"fizNewton":0.5}},{"sinav":"TYT","ders":"Fizik","konu":"İş, Güç, Enerji 1","yillar":{"2018":0,"2019":1,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0},"paylar":{"fizIs":1}},{"sinav":"TYT","ders":"Fizik","konu":"Optik","yillar":{"2018":2,"2019":2,"2020":1,"2021":1,"2022":1,"2023":2,"2024":1,"2025":1},"paylar":{"fizKirilma":0.2}},{"sinav":"AYT","ders":"Fizik","konu":"Vektörler","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":1,"2023":1,"2024":0},"paylar":{"fizVektor":1}},{"sinav":"AYT","ders":"Fizik","konu":"Kuvvet, Tork ve Denge","yillar":{"2018":1,"2019":1,"2020":1,"2021":1,"2022":0,"2023":0,"2024":0},"paylar":{"fizKesisen":0.5,"fizTork":0.5}},{"sinav":"AYT","ders":"Fizik","konu":"Newton’un Hareket Yasaları","yillar":{"2018":1,"2019":0,"2020":1,"2021":0,"2022":1,"2023":1,"2024":1},"paylar":{"fizNewton":1}},{"sinav":"AYT","ders":"Fizik","konu":"Atışlar","yillar":{"2018":1,"2019":1,"2020":1,"2021":1,"2022":0,"2023":0,"2024":1},"paylar":{"fizAtis":1}},{"sinav":"AYT","ders":"Fizik","konu":"İş, Güç ve Enerji II","yillar":{"2018":0,"2019":0,"2020":1,"2021":1,"2022":0,"2023":1,"2024":1},"paylar":{"fizIs":1}},{"sinav":"AYT","ders":"Fizik","konu":"Bağıl Hareket","yillar":{"2018":0,"2019":1,"2020":1,"2021":0,"2022":0,"2023":1,"2024":1},"paylar":{"fizBagil":1}},{"sinav":"AYT","ders":"Fizik","konu":"Basit Harmonik Hareket","yillar":{"2018":1,"2019":1,"2020":1,"2021":1,"2022":1,"2023":1,"2024":1},"paylar":{"fizBHH":1}}],"birimler":[{"ders":"Matematik","sinif":9,"ad":"Üçgenlerde Temel Kavramlar","kapsar":["geoAci","geoUcgenAci"]},{"ders":"Matematik","sinif":9,"ad":"Üçgenlerde Eşlik ve Benzerlik","kapsar":["geoBenzer"]},{"ders":"Matematik","sinif":9,"ad":"Dik Üçgen ve Trigonometri","kapsar":["geoDik"]},{"ders":"Matematik","sinif":9,"ad":"Üçgenin Alanı","kapsar":["geoAlan"]},{"ders":"Matematik","sinif":9,"ad":"Denklemler ve Eşitsizliklerle İlgili Uygulamalar","kapsar":["tytDenklem"]},{"ders":"Matematik","sinif":10,"ad":"Fonksiyon Kavramı ve Gösterimi","kapsar":["aytFonk"]},{"ders":"Matematik","sinif":10,"ad":"İki Fonksiyonun Bileşkesi ve Bir Fonksiyonun Tersi","kapsar":["aytTers"]},{"ders":"Matematik","sinif":10,"ad":"Polinomların Çarpanlara Ayrılması","kapsar":["tytCarpan"]},{"ders":"Matematik","sinif":11,"ad":"Yönlü Açılar","kapsar":["aytAciOlcu","aytEsas"]},{"ders":"Matematik","sinif":11,"ad":"Trigonometrik Fonksiyonlar","kapsar":["aytBirim","aytOzdeslik","aytIsaret","aytDonusum","aytPeriyot","aytTersTrig"]},{"ders":"Matematik","sinif":11,"ad":"Doğrunun Analitik İncelenmesi","kapsar":["geoNokta","geoDogru"]},{"ders":"Matematik","sinif":11,"ad":"Dik Üçgen","kapsar":["geoDik"]},{"ders":"Matematik","sinif":11,"ad":"Çemberin Temel Elemanları","kapsar":["geoCember"]},{"ders":"Matematik","sinif":12,"ad":"Toplam-Fark ve İki kat Açı Formülleri","kapsar":["aytToplamFark"]},{"ders":"Matematik","sinif":12,"ad":"Trigonometrik Denklemler","kapsar":["aytDenklem"]},{"ders":"Fizik","sinif":9,"ad":"Newton’ın Hareket Yasaları","kapsar":["fizNewton"]},{"ders":"Fizik","sinif":11,"ad":"Newton’ın Hareket Yasaları","kapsar":["fizNewton"]},{"ders":"Fizik","sinif":9,"ad":"İş, Enerji ve Güç","kapsar":["fizIs"]},{"ders":"Fizik","sinif":11,"ad":"Enerji ve Hareket","kapsar":["fizIs"]},{"ders":"Fizik","sinif":10,"ad":"Kırılma","kapsar":["fizKirilma"]},{"ders":"Fizik","sinif":11,"ad":"Vektörler","kapsar":["fizVektor"]},{"ders":"Fizik","sinif":11,"ad":"Bağıl Hareket","kapsar":["fizBagil"]},{"ders":"Fizik","sinif":11,"ad":"İki Boyutta Hareket","kapsar":["fizAtis"]},{"ders":"Fizik","sinif":11,"ad":"Tork","kapsar":["fizTork"]},{"ders":"Fizik","sinif":11,"ad":"Denge ve Denge Şartları","kapsar":["fizKesisen"]},{"ders":"Fizik","sinif":12,"ad":"Basit Harmonik Hareket","kapsar":["fizBHH"]}]};
 // Bağlantılı hafıza: FSRS-6 on a map of topics (konu ağı). The agreed rules: docs/baglantili-hafiza.md.
-// Pure functions: no DOM, no storage. Not embedded in index.html yet; test/hafiza-ag-regression.cjs runs it beside the
+// Pure functions: no DOM, no storage. Embedded in index.html by scripts/embed-haritam.cjs; test/hafiza-ag-regression.cjs runs it beside the
 // app's own FSRS-6 (hatirlama, hatirlaS, unutS, ilkS, ilkD, yeniD, FACTOR, DECAY), or `opts.fsrs` supplies them.
 // Days are integer day numbers (the app's bugunNo()). Only real results and lesson days go in; an assumed "İyi" never does.
+// A topic's own memory follows Hafızam's rules exactly (so with every link value at 0 the map shows Hafızam's numbers):
+// a lesson starts it until its first test, which is a first review; the student's own setting (Düzenle, "Çoktan
+// unuttum") replaces it at that moment; a basket lesson after the last test restarts it until the next test.
 //
 // One kind of link: {alt, ust, kullanim} — `ust` uses `alt` (alt is its foundation, whatever order the müfredat teaches
 // them). kullanim = how much of alt it uses: az 0.25 · çok 0.5 · tam 1. How much memory flows is separate and learned
@@ -31806,7 +31820,9 @@ function calistir(girdi, o, F, ag, prm, kayit, olaylar, kume) {
   const zincir = new Map();
   const ozellik = (id, a) => { const e = ek[id]; return e && e[a] !== undefined ? e[a] : ag.dugum.get(id)[a]; };
   const kat = id => { const v = ozellik(id, 'k'); return v > 0 ? v : 1; }, wp = id => ozellik(id, 'w');
-  const al = id => { let x = durum.get(id); if (!x) durum.set(id, x = {s: 0, d: 0, son: null, bas: null, sonOz: null, kontrol: null, kredili: false, n: 0}); return x; };
+  // gercek: memory from an own test or setting; sonKart: Hafızam's card day (last test, the setting's start, the lesson);
+  // yedek: a lesson's start is provisional until the next own test, which goes on from what was before (null: nothing).
+  const al = id => { let x = durum.get(id); if (!x) durum.set(id, x = {s: 0, d: 0, son: null, bas: null, sonOz: null, kontrol: null, kredili: false, n: 0, gercek: false, sonKart: null, yedek: undefined}); return x; };
   const var_ = id => { const x = durum.get(id); return !!x && x.s > 0; };
   const R = (id, gun) => { const x = durum.get(id); return F.hatirlama(Math.max(0, gun - x.son) / kat(id), x.s); };
   const yaz = olaylar ? e => olaylar.push(e) : () => {};
@@ -31827,15 +31843,42 @@ function calistir(girdi, o, F, ag, prm, kayit, olaylar, kume) {
   const baslat = (id, gun, kaynak) => {
     if (!icinde(id)) return true;
     const x = al(id), w = wp(id); if (x.s > 0) return false;
-    Object.assign(x, {s: F.ilkS(3, w), d: F.ilkD(3, true, w), son: gun, bas: gun});
+    Object.assign(x, {s: F.ilkS(3, w), d: F.ilkD(3, true, w), son: gun, bas: gun, sonKart: gun, yedek: null});
     yaz({gun, kaynak, id, tur: 'basla'}); return true;
+  };
+  // The topic's own lesson (school or unit lesson day): starts it; a later lesson before any own test starts it again
+  // that day (Hafızam counts from the latest), keeping what credit built.
+  const ders = (id, gun, kaynak) => {
+    if (!icinde(id) || baslat(id, gun, kaynak)) return;
+    const x = al(id); if (x.gercek || gun <= x.sonKart) return;
+    Object.assign(x, {s: Math.max(x.s, F.ilkS(3, wp(id))), son: gun, sonKart: gun});
+  };
+  // A basket lesson (the student did the lesson): like a lesson; after the last own test or setting it restarts the
+  // topic from a fresh "İyi" until the next own test.
+  const anlatim = (id, gun, kaynak) => {
+    if (!icinde(id)) return;
+    const x = al(id); if (!x.gercek) return void ders(id, gun, kaynak);
+    if (gun <= x.sonKart) return;
+    if (x.yedek === undefined) x.yedek = {s: x.s, d: x.d, son: x.son, sonKart: x.sonKart};
+    Object.assign(x, {s: F.ilkS(3, wp(id)), d: F.ilkD(3, true, wp(id)), son: gun, sonKart: gun});
+    yaz({gun, kaynak, id, tur: 'anlatim'});
+  };
+  // The student's own setting: recall r that day and sGun days (in the student's time) for a full topic to fall to 90 %.
+  // Whole days back to "fully learnt", stability adjusted so recall is exactly r that day (Hafızam's hafizaElleKarti).
+  const ayar = (id, gun, r, sGun) => {
+    if (!icinde(id)) return;
+    const x = al(id), w = wp(id), k = kat(id), sIc = sGun / k, rr = sinirla(r, 0.01, 1), u = Math.pow(rr, 1 / F.DECAY) - 1;
+    const t = rr >= 1 ? 0 : Math.max(0, Math.round(k * sIc / F.FACTOR * u)), s = t >= 1 ? (t / k) * F.FACTOR / u : sIc;
+    Object.assign(x, {s, d: F.ilkD(3, true, w), son: gun - t, sonKart: gun - t, bas: x.bas ?? gun, sonOz: gun, kontrol: null, kredili: false, gercek: true, yedek: undefined, n: x.n + 1});
+    yaz({gun, id, tur: 'ayar', r: rr, sGun});
   };
   const oz = (id, not, gun) => {
     if (!icinde(id)) return;
     const x = al(id), w = wp(id);
+    if (x.yedek !== undefined) { Object.assign(x, x.yedek || {s: 0, d: 0}); x.yedek = undefined; }
     if (x.s > 0) { const r = R(id, gun); x.s = Math.max(not === 1 ? F.unutS(x.d, x.s, r, w) : F.hatirlaS(x.d, x.s, r, not, w), 0.001); x.d = F.yeniD(x.d, not, w); }
-    else { x.s = F.ilkS(not, w); x.d = F.ilkD(not, true, w); x.bas = gun; }
-    Object.assign(x, {son: gun, sonOz: gun, kontrol: null, kredili: false, n: x.n + 1});
+    else { x.s = F.ilkS(not, w); x.d = F.ilkD(not, true, w); x.bas = x.bas ?? gun; }
+    Object.assign(x, {son: gun, sonOz: gun, sonKart: gun, gercek: true, kontrol: null, kredili: false, n: x.n + 1});
   };
   // A pass (or a lesson, as "İyi") on the sources: foundations reached get a fractional review; one without memory
   // starts that day. Starting depends on use only, credit on use × the learned kredi of each link.
@@ -31881,31 +31924,53 @@ function calistir(girdi, o, F, ag, prm, kayit, olaylar, kume) {
     }
   };
 
-  const sira = [];
-  ag.dugum.forEach((_, id) => { const g = ozellik(id, 'ogrenildi'); if (Number.isInteger(g) && g <= bugun) sira.push({gun: g, id, ders: true, i: -1}); });
+  // Order within a day: lessons, then own results and settings by the time they were entered (a result entered at the
+  // setting's moment counts as before it, as in Hafızam), then basket lessons.
+  const sira = [], hedefler = x => { const id = ag.takma.get(x), b = ag.birim.get(x); return id != null ? [id] : b ? b.kapsar : []; };
+  ag.dugum.forEach((_, id) => { const g = ozellik(id, 'ogrenildi'); if (Number.isInteger(g) && g <= bugun) sira.push({gun: g, faz: 0, ts: 0, id, tur: 'ders', i: -1}); });
   // a school unit's lesson day: this student's (birimEk, when learning over a notebook), else the map input's
-  ag.birim.forEach((b, bid) => { const be = girdi.birimEk || {}, g = be[bid] !== undefined ? be[bid] : b.ogrenildi; if (Number.isInteger(g) && g <= bugun) b.kapsar.forEach(id => sira.push({gun: g, id, ders: true, i: -1})); });
+  ag.birim.forEach((b, bid) => { const be = girdi.birimEk || {}, g = be[bid] !== undefined ? be[bid] : b.ogrenildi; if (Number.isInteger(g) && g <= bugun) b.kapsar.forEach(id => sira.push({gun: g, faz: 0, ts: 0, id, tur: 'ders', i: -1})); });
   (girdi.sonuclar || []).forEach((r, i) => {
     if (!r || ![1, 2, 3, 4].includes(r.not) || !Number.isInteger(r.gun) || r.gun > bugun) return;
-    const id = ag.takma.get(r.id), b = ag.birim.get(r.id);
-    if (id != null) sira.push({gun: r.gun, id, not: r.not, i});
-    else if (b) b.kapsar.forEach(k => sira.push({gun: r.gun, id: k, not: r.not, i}));
+    hedefler(r.id).forEach(id => sira.push({gun: r.gun, faz: 1, ts: +r.ts || 0, sonra: 0, id, not: r.not, i}));
   });
-  sira.sort((a, b) => a.gun - b.gun || a.i - b.i);
+  (girdi.ayarlar || []).forEach(a => {
+    if (!a || !Number.isInteger(a.gun) || a.gun > bugun || !(a.r > 0 && a.r <= 1) || !(a.s > 0)) return;
+    hedefler(a.id).forEach(id => sira.push({gun: a.gun, faz: 1, ts: +a.ts || 0, sonra: 1, id, tur: 'ayar', r: a.r, s: a.s, i: -1}));
+  });
+  (girdi.anlatimlar || []).forEach(a => {
+    if (!a || !Number.isInteger(a.gun) || a.gun > bugun) return;
+    hedefler(a.id).forEach(id => sira.push({gun: a.gun, faz: 2, ts: 0, id, tur: 'anlatim', i: -1}));
+  });
+  sira.sort((a, b) => a.gun - b.gun || a.faz - b.faz || a.ts - b.ts || (a.sonra || 0) - (b.sonra || 0) || a.i - b.i);
   for (const e of sira) {
     if (ilgili && !ilgili.has(e.id)) continue;
     const kaynaklar = [e.id, ...(ag.parcalar.get(e.id) || [])];
-    if (e.ders) { kaynaklar.forEach(id => baslat(id, e.gun, e.id)); basari(kaynaklar, 3, e.gun); continue; }
+    if (e.tur === 'ayar') { kaynaklar.forEach(id => ayar(id, e.gun, e.r, e.s)); continue; }
+    if (e.tur === 'ders' || e.tur === 'anlatim') { kaynaklar.forEach(id => (e.tur === 'ders' ? ders : anlatim)(id, e.gun, e.id)); basari(kaynaklar, 3, e.gun); continue; }
     if (kayit) kaynaklar.forEach(id => { if (icinde(id) && var_(id)) kayit.push({i: e.i, id, gun: e.gun, p: gosterilen(id, e.gun), y: e.not > 1 ? 1 : 0}); });
     kaynaklar.forEach(id => oz(id, e.not, e.gun));
     if (e.not > 1) basari(kaynaklar, e.not, e.gun); else basarisiz(kaynaklar, e.gun);
   }
   return {durum, R, kat, var_, gosterilen};
 }
+// The day the shown recall crosses the line (past or coming), as Hafızam's cizgiGun: on the own curve exactly when no
+// foundation pulls it; else searched on the shown recall, between the memory's start and the own curve's crossing.
+function cizgiGunu(id, bugun, hedef, F, x, kat, R, gosterilen) {
+  const oz = x.son + kat(id) * x.s * (Math.pow(hedef, 1 / F.DECAY) - 1) / F.FACTOR;
+  const cek = g => gosterilen(id, g) < R(id, g) - 1e-12;
+  if (!cek(bugun) && !cek(Math.max(bugun, oz))) return oz;
+  let lo, hi;
+  if (gosterilen(id, bugun) >= hedef) { lo = bugun; hi = Math.max(bugun, oz); }
+  else { lo = Math.min(x.son, oz); hi = bugun; if (gosterilen(id, lo) < hedef) return lo; }
+  for (let i = 0; i < 40 && hi - lo > 1e-6; i++) { const m = (lo + hi) / 2; if (gosterilen(id, m) >= hedef) lo = m; else hi = m; }
+  return hi;
+}
 
 /* ---- what the student sees ---- */
-// girdi: {konular, baglar, birimler?: [{id, kapsar: [ids], ogrenildi?}], sonuclar: [{gun, id, not 1–4}], bugun, sinavGunu?,
-//         konuEk?: {id: {k, w, ogrenildi}},
+// girdi: {konular, baglar, birimler?: [{id, kapsar: [ids], ogrenildi?}], sonuclar: [{gun, id, not 1–4, ts?}], bugun, sinavGunu?,
+//         konuEk?: {id: {k, w, ogrenildi}}, ayarlar?: [{gun, id, r, s (days to 90 %), ts}] (the student's own settings),
+//         anlatimlar?: [{gun, id}] (basket lessons),
 //         parametreler?, ornekGecmisi?: [{gun, id}], anahtar? (a stable student key for the sample draw)}
 function hesapla(girdi, opts) {
   const o = ayarKur(opts), F = fsrsAl(opts), ag = agKur(girdi.konular, girdi.baglar, girdi.birimler), olaylar = [];
@@ -31919,10 +31984,10 @@ function hesapla(girdi, opts) {
     let agirlik = 0, onem = 2 * soru(id);
     kul.forEach((u, a) => { agirlik += u; onem += u * soru(a); });
     const s = {id, ad: d.ad, ders: d.ders, gizli: !!d.gizli, calis: d.gizli ? d.parcasi : id, onem, kullananAgirlik: agirlik,
-      temel: agirlik >= o.temelEsik - 1e-9, r: null, rOz: null, sGun: null, katman: null, sinavaKadar: null, risk: null,
+      temel: agirlik >= o.temelEsik - 1e-9, r: null, rOz: null, sGun: null, cizgiGun: null, katman: null, sinavaKadar: null, risk: null,
       sonOz: x ? x.sonOz : null, baslangic: x ? x.bas : null, kredili: !!(x && x.kredili), kontrol: x && x.kontrol ? x.kontrol : null, alarm: null};
     if (var_(id)) {
-      s.rOz = R(id, bugun); s.r = gosterilen(id, bugun); s.sGun = x.s * kat(id);
+      s.rOz = R(id, bugun); s.r = gosterilen(id, bugun); s.sGun = x.s * kat(id); s.cizgiGun = cizgiGunu(id, bugun, o.hedef, F, x, kat, R, gosterilen);
       s.katman = s.sGun < o.kisa ? 'kisa' : s.sGun < o.uzun ? 'orta' : 'uzun';
       s.risk = 1 - gosterilen(id, bugun + o.ufuk);
       s.sinavaKadar = Number.isInteger(girdi.sinavGunu) ? gosterilen(id, girdi.sinavGunu) >= o.hedef : null;
@@ -31950,7 +32015,7 @@ function hesapla(girdi, opts) {
 function karistir(m) { let h = 2166136261; for (let i = 0; i < m.length; i++) h = Math.imul(h ^ m.charCodeAt(i), 16777619); return h >>> 0; }
 
 /* ---- learning the links from the notebook's results ---- */
-// ogrenciler: [{anahtar, sonuclar, bugun, konuEk?, birimEk?}]. For every link and each of kredi, ceza and çekiş, the value on the
+// ogrenciler: [{anahtar, sonuclar, bugun, konuEk?, birimEk?, ayarlar?, anlatimlar?}]. For every link and each of kredi, ceza and çekiş, the value on the
 // grid that best predicts the results it affects (log-likelihood of each own result given the shown recall just before
 // it). Shared value = notebook's best, blended with the starting value by count; a student's value = own best blended
 // with the shared one (ozGuven results weigh as much as it). One coordinate pass per call; calls repeat as data grows.
@@ -32111,8 +32176,9 @@ function cozumle() {
     KATALOG.forEach((k, ki) => { if (k[0] === di && k[1] === b.sinif && k[3] === b.ad) birimler.push({id: ki, kapsar: b.kapsar}); }); }
   return {esler, birimler};
 }
-// A student's input for HAFIZA_AG: the shared map (konular, birimler) and this student's own part (konuEk: forgetting
-// speed, FSRS parameters and lesson day per topic; birimEk: lesson day per school unit; real results).
+// A student's input for HAFIZA_AG: the shared map (konular, birimler) and this student's own part, read from what
+// Hafızam reads (konuEk: forgetting speed, FSRS parameters and lesson day per topic; birimEk: lesson day per school unit;
+// real results with their entry time; own settings from Düzenle and "Çoktan unuttum"; basket lessons).
 const ogrAnahtar = o => (o && o.no !== undefined ? o.no : '') + '|' + (o && o.ad || '');
 function girdi(si, cz) {
   const o = D.ogr[si], bugun = bugunNo(), {esler, birimler} = cz || cozumle();
@@ -32130,21 +32196,43 @@ function girdi(si, cz) {
   for (const l of D.log || []) {
     if (l[1] !== si || l[0] > bugun) continue;
     const not = sonucNotu(l); if (!not || sonucDevreDisiMi(si, l[2], l[0])) continue;
-    sonuclar.push({gun: l[0], id: l[2], not});
+    sonuclar.push({gun: l[0], id: l[2], not, ts: +l[6] || 0});
   }
-  return {konular, baglar: V.baglar, birimler, konuEk, birimEk, sonuclar, bugun, sinavGunu: gunNo(D.ayar.sinav), anahtar: ogrAnahtar(o), esler};
+  const ayarlar = Object.entries((o && o.hafizaElle) || {}).filter(([ki]) => hafizaElleAl(si, +ki)).map(([ki, e]) => ({gun: e.g, id: +ki, r: e.r, s: e.s, ts: +e.ts || 0}));
+  const anlatimlar = konuAnlatimGunleri(si, bugun).map(([ki, gun]) => ({gun, id: ki}));
+  return {konular, baglar: V.baglar, birimler, konuEk, birimEk, sonuclar, ayarlar, anlatimlar, bugun, sinavGunu: gunNo(D.ayar.sinav), anahtar: ogrAnahtar(o), esler};
 }
 // Learnt link values: the notebook's shared ones and this student's own (Bağları güncelle, teacher side).
 function parametreleri(o) {
   const p = D.hafizaAg && D.hafizaAg.parametreler; if (!p) return null;
   return {paylasilan: p.paylasilan || {}, ogrenci: (p.ogrenci || {})[ogrAnahtar(o)] || {}};
 }
-function durum(si) {
-  const o = D.ogr[si], hedef = hedefTutma(si), cz = cozumle(), g = girdi(si, cz);
-  const out = HAFIZA_AG.hesapla(Object.assign({}, g, {parametreler: parametreleri(o)}), {hedef});
+// opts (tests): link values over the starting ones, e.g. {kredi: 0, ceza: 0, cekis: 0} = Hafızam's own numbers.
+// Hafızam, the map and its card all ask for it during one page draw, so the last answer is kept while the input is the same.
+let onbellek = null;
+function durum(si, opts) {
+  const o = D.ogr[si], hedef = hedefTutma(si), cz = cozumle(), g = girdi(si, cz), prm = parametreleri(o);
+  const anahtar = JSON.stringify([si, hedef, g.bugun, g.sinavGunu, g.sonuclar, g.konuEk, g.birimEk, g.ayarlar, g.anlatimlar, prm, opts || null, konuSayisi()]);
+  if (onbellek && onbellek.anahtar === anahtar) return onbellek.d;
+  const out = HAFIZA_AG.hesapla(Object.assign({}, g, {parametreler: prm}), Object.assign({}, opts, {hedef}));
   // Where a topic's memory lives in this notebook: plan topics with its name first, then school units covering it.
   const kaynak = new Map(V.konular.map(k => [k.id, (cz.esler.get(k.id) || []).concat(cz.birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))]));
-  return {out, esler: cz.esler, kaynak, hedef, satir: new Map(out.konular.map(s => [s.id, s]))};
+  const d = {out, esler: cz.esler, kaynak, hedef, satir: new Map(out.konular.map(s => [s.id, s]))};
+  onbellek = {anahtar, d};
+  return d;
+}
+// Hafızam's rows (hafizaDurumu) for the student's topics on the map take the map's value: a plan topic its node's, a
+// school unit covering several nodes their mean (its line day: the nearest coming crossing, or the latest one passed).
+function hafizayaUygula(si, liste, hedef) {
+  const o = D.ogr[si], ders = new Set(dersleri(o)); if (!ders.size) return;
+  const d = durum(si), dugum = new Map();
+  d.kaynak.forEach((kis, id) => { const s = d.satir.get(id); if (!s || s.gizli || s.r === null || !ders.has(s.ders)) return; kis.forEach(ki => (dugum.get(ki) || dugum.set(ki, []).get(ki)).push(s)); });
+  for (const x of liste) {
+    const l = dugum.get(x.ki); if (!l) continue;
+    const ort = f => l.reduce((t, s) => t + f(s), 0) / l.length, r = ort(s => s.r), alt = r < hedef - 1e-9;
+    const cizgiGun = l.length === 1 ? l[0].cizgiGun : alt ? Math.max(...l.filter(s => s.r < hedef).map(s => s.cizgiGun)) : Math.min(...l.filter(s => s.r >= hedef).map(s => s.cizgiGun));
+    Object.assign(x, {rKendi: x.r, r, altinda: alt, cizgiGun, sGun: ort(s => s.sGun), harita: l.map(s => s.id)});
+  }
 }
 
 /* ---- teacher: learning the links over the notebook (Ayarlar → Öğrenci kalibrasyonu) ---- */
@@ -32163,7 +32251,7 @@ async function ogren(ilerleme) {
   if (ogreniyor) return ogreniyor;
   ogreniyor = (async () => {
     const cz = cozumle(), ogrenciler = [];
-    (D.ogr || []).forEach((o, si) => { if (o && o.aktif !== false && dersleri(o).length) { const g = girdi(si, cz); if (g.sonuclar.length) ogrenciler.push({anahtar: g.anahtar, sonuclar: g.sonuclar, bugun: g.bugun, konuEk: g.konuEk, birimEk: g.birimEk}); } });
+    (D.ogr || []).forEach((o, si) => { if (o && o.aktif !== false && dersleri(o).length) { const g = girdi(si, cz); if (g.sonuclar.length) ogrenciler.push({anahtar: g.anahtar, sonuclar: g.sonuclar, bugun: g.bugun, konuEk: g.konuEk, birimEk: g.birimEk, ayarlar: g.ayarlar, anlatimlar: g.anlatimlar}); } });
     const ilk = ogrenciler.length ? girdi(D.ogr.findIndex(o => o && ogrAnahtar(o) === ogrenciler[0].anahtar), cz) : null;
     let p = (D.hafizaAg && D.hafizaAg.parametreler) || {paylasilan: {}, ogrenci: {}}, notlar = [];
     if (ilk) for (let i = 0; i < LINKLER.length; i++) {
@@ -32284,8 +32372,12 @@ function kart(si, d, id) {
   const parca = k.gizli ? '<p class="mini hm-parca">' + kac(k.ad) + ' · ' + kac(KONU.get(k.parcasi).ad) + ' konusunun parçası</p>' : '';
   if (!x || s.r == null) return '<div class="hf-oge hm-bos"><div class="hf-ad"><span class="d">' + kac(KONU.get(asil).ders) + '</span><span class="k">' + kac(KONU.get(asil).ad) + '</span></div>' + parca +
     '<p class="mini">' + (ki === undefined ? 'Bu konu senin planında yok.' : 'Henüz çalışmadın: derste işlendiğinde ya da sonucunu girdiğinde burada parlar.') + '</p></div>';
-  const r = d.satir.get(asil).r ?? s.r;
-  return parca + hafizaSatiri(si, Object.assign({}, x, {r, altinda: r < d.hedef - 1e-9}), hd, hafizaPlani(si));
+  // Hafızam already shows this node's value on its plan topic. A school unit covering several nodes shows their mean
+  // there; here the card shows this node's value and says so.
+  const a = d.satir.get(asil), r = a.r ?? s.r, birlikte = !!x.harita && x.harita.length > 1;
+  const y = x.harita && !birlikte ? x : Object.assign({}, x, {r, altinda: r < d.hedef - 1e-9, cizgiGun: a.cizgiGun ?? s.cizgiGun, sGun: a.sGun ?? s.sGun, rKendi: undefined});
+  const unite = birlikte ? '<p class="mini hm-parca">Okuldaki ' + kac(konuGorunenAdi(x.ad)) + ' ünitesinden · Hafızam’da ünitenin ortalaması %' + Math.round(x.r * 100) + '</p>' : '';
+  return parca + unite + hafizaSatiri(si, y, hd, hafizaPlani(si));
 }
 
 /* ---- page ---- */
@@ -32376,7 +32468,7 @@ function bagla() {
 bagla();
 // kaynaklar: map topic → the notebook topic ids that feed it (plan topics, then school units)
 const kaynaklar = () => { const {esler, birimler} = cozumle(); return new Map(V.konular.map(k => [k.id, (esler.get(k.id) || []).concat(birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))])); };
-return {gorunum, uygun, dersleri, durum, girdi, cozumle, kaynaklar, ogren, ogretmenKarti, renk, oklch, TEMA};
+return {gorunum, uygun, dersleri, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA};
 })();
 // END HARITAM
 

@@ -1,7 +1,10 @@
 // Bağlantılı hafıza: FSRS-6 on a map of topics (konu ağı). The agreed rules: docs/baglantili-hafiza.md.
-// Pure functions: no DOM, no storage. Not embedded in index.html yet; test/hafiza-ag-regression.cjs runs it beside the
+// Pure functions: no DOM, no storage. Embedded in index.html by scripts/embed-haritam.cjs; test/hafiza-ag-regression.cjs runs it beside the
 // app's own FSRS-6 (hatirlama, hatirlaS, unutS, ilkS, ilkD, yeniD, FACTOR, DECAY), or `opts.fsrs` supplies them.
 // Days are integer day numbers (the app's bugunNo()). Only real results and lesson days go in; an assumed "İyi" never does.
+// A topic's own memory follows Hafızam's rules exactly (so with every link value at 0 the map shows Hafızam's numbers):
+// a lesson starts it until its first test, which is a first review; the student's own setting (Düzenle, "Çoktan
+// unuttum") replaces it at that moment; a basket lesson after the last test restarts it until the next test.
 //
 // One kind of link: {alt, ust, kullanim} — `ust` uses `alt` (alt is its foundation, whatever order the müfredat teaches
 // them). kullanim = how much of alt it uses: az 0.25 · çok 0.5 · tam 1. How much memory flows is separate and learned
@@ -126,7 +129,9 @@ function calistir(girdi, o, F, ag, prm, kayit, olaylar, kume) {
   const zincir = new Map();
   const ozellik = (id, a) => { const e = ek[id]; return e && e[a] !== undefined ? e[a] : ag.dugum.get(id)[a]; };
   const kat = id => { const v = ozellik(id, 'k'); return v > 0 ? v : 1; }, wp = id => ozellik(id, 'w');
-  const al = id => { let x = durum.get(id); if (!x) durum.set(id, x = {s: 0, d: 0, son: null, bas: null, sonOz: null, kontrol: null, kredili: false, n: 0}); return x; };
+  // gercek: memory from an own test or setting; sonKart: Hafızam's card day (last test, the setting's start, the lesson);
+  // yedek: a lesson's start is provisional until the next own test, which goes on from what was before (null: nothing).
+  const al = id => { let x = durum.get(id); if (!x) durum.set(id, x = {s: 0, d: 0, son: null, bas: null, sonOz: null, kontrol: null, kredili: false, n: 0, gercek: false, sonKart: null, yedek: undefined}); return x; };
   const var_ = id => { const x = durum.get(id); return !!x && x.s > 0; };
   const R = (id, gun) => { const x = durum.get(id); return F.hatirlama(Math.max(0, gun - x.son) / kat(id), x.s); };
   const yaz = olaylar ? e => olaylar.push(e) : () => {};
@@ -147,15 +152,42 @@ function calistir(girdi, o, F, ag, prm, kayit, olaylar, kume) {
   const baslat = (id, gun, kaynak) => {
     if (!icinde(id)) return true;
     const x = al(id), w = wp(id); if (x.s > 0) return false;
-    Object.assign(x, {s: F.ilkS(3, w), d: F.ilkD(3, true, w), son: gun, bas: gun});
+    Object.assign(x, {s: F.ilkS(3, w), d: F.ilkD(3, true, w), son: gun, bas: gun, sonKart: gun, yedek: null});
     yaz({gun, kaynak, id, tur: 'basla'}); return true;
+  };
+  // The topic's own lesson (school or unit lesson day): starts it; a later lesson before any own test starts it again
+  // that day (Hafızam counts from the latest), keeping what credit built.
+  const ders = (id, gun, kaynak) => {
+    if (!icinde(id) || baslat(id, gun, kaynak)) return;
+    const x = al(id); if (x.gercek || gun <= x.sonKart) return;
+    Object.assign(x, {s: Math.max(x.s, F.ilkS(3, wp(id))), son: gun, sonKart: gun});
+  };
+  // A basket lesson (the student did the lesson): like a lesson; after the last own test or setting it restarts the
+  // topic from a fresh "İyi" until the next own test.
+  const anlatim = (id, gun, kaynak) => {
+    if (!icinde(id)) return;
+    const x = al(id); if (!x.gercek) return void ders(id, gun, kaynak);
+    if (gun <= x.sonKart) return;
+    if (x.yedek === undefined) x.yedek = {s: x.s, d: x.d, son: x.son, sonKart: x.sonKart};
+    Object.assign(x, {s: F.ilkS(3, wp(id)), d: F.ilkD(3, true, wp(id)), son: gun, sonKart: gun});
+    yaz({gun, kaynak, id, tur: 'anlatim'});
+  };
+  // The student's own setting: recall r that day and sGun days (in the student's time) for a full topic to fall to 90 %.
+  // Whole days back to "fully learnt", stability adjusted so recall is exactly r that day (Hafızam's hafizaElleKarti).
+  const ayar = (id, gun, r, sGun) => {
+    if (!icinde(id)) return;
+    const x = al(id), w = wp(id), k = kat(id), sIc = sGun / k, rr = sinirla(r, 0.01, 1), u = Math.pow(rr, 1 / F.DECAY) - 1;
+    const t = rr >= 1 ? 0 : Math.max(0, Math.round(k * sIc / F.FACTOR * u)), s = t >= 1 ? (t / k) * F.FACTOR / u : sIc;
+    Object.assign(x, {s, d: F.ilkD(3, true, w), son: gun - t, sonKart: gun - t, bas: x.bas ?? gun, sonOz: gun, kontrol: null, kredili: false, gercek: true, yedek: undefined, n: x.n + 1});
+    yaz({gun, id, tur: 'ayar', r: rr, sGun});
   };
   const oz = (id, not, gun) => {
     if (!icinde(id)) return;
     const x = al(id), w = wp(id);
+    if (x.yedek !== undefined) { Object.assign(x, x.yedek || {s: 0, d: 0}); x.yedek = undefined; }
     if (x.s > 0) { const r = R(id, gun); x.s = Math.max(not === 1 ? F.unutS(x.d, x.s, r, w) : F.hatirlaS(x.d, x.s, r, not, w), 0.001); x.d = F.yeniD(x.d, not, w); }
-    else { x.s = F.ilkS(not, w); x.d = F.ilkD(not, true, w); x.bas = gun; }
-    Object.assign(x, {son: gun, sonOz: gun, kontrol: null, kredili: false, n: x.n + 1});
+    else { x.s = F.ilkS(not, w); x.d = F.ilkD(not, true, w); x.bas = x.bas ?? gun; }
+    Object.assign(x, {son: gun, sonOz: gun, sonKart: gun, gercek: true, kontrol: null, kredili: false, n: x.n + 1});
   };
   // A pass (or a lesson, as "İyi") on the sources: foundations reached get a fractional review; one without memory
   // starts that day. Starting depends on use only, credit on use × the learned kredi of each link.
@@ -201,31 +233,53 @@ function calistir(girdi, o, F, ag, prm, kayit, olaylar, kume) {
     }
   };
 
-  const sira = [];
-  ag.dugum.forEach((_, id) => { const g = ozellik(id, 'ogrenildi'); if (Number.isInteger(g) && g <= bugun) sira.push({gun: g, id, ders: true, i: -1}); });
+  // Order within a day: lessons, then own results and settings by the time they were entered (a result entered at the
+  // setting's moment counts as before it, as in Hafızam), then basket lessons.
+  const sira = [], hedefler = x => { const id = ag.takma.get(x), b = ag.birim.get(x); return id != null ? [id] : b ? b.kapsar : []; };
+  ag.dugum.forEach((_, id) => { const g = ozellik(id, 'ogrenildi'); if (Number.isInteger(g) && g <= bugun) sira.push({gun: g, faz: 0, ts: 0, id, tur: 'ders', i: -1}); });
   // a school unit's lesson day: this student's (birimEk, when learning over a notebook), else the map input's
-  ag.birim.forEach((b, bid) => { const be = girdi.birimEk || {}, g = be[bid] !== undefined ? be[bid] : b.ogrenildi; if (Number.isInteger(g) && g <= bugun) b.kapsar.forEach(id => sira.push({gun: g, id, ders: true, i: -1})); });
+  ag.birim.forEach((b, bid) => { const be = girdi.birimEk || {}, g = be[bid] !== undefined ? be[bid] : b.ogrenildi; if (Number.isInteger(g) && g <= bugun) b.kapsar.forEach(id => sira.push({gun: g, faz: 0, ts: 0, id, tur: 'ders', i: -1})); });
   (girdi.sonuclar || []).forEach((r, i) => {
     if (!r || ![1, 2, 3, 4].includes(r.not) || !Number.isInteger(r.gun) || r.gun > bugun) return;
-    const id = ag.takma.get(r.id), b = ag.birim.get(r.id);
-    if (id != null) sira.push({gun: r.gun, id, not: r.not, i});
-    else if (b) b.kapsar.forEach(k => sira.push({gun: r.gun, id: k, not: r.not, i}));
+    hedefler(r.id).forEach(id => sira.push({gun: r.gun, faz: 1, ts: +r.ts || 0, sonra: 0, id, not: r.not, i}));
   });
-  sira.sort((a, b) => a.gun - b.gun || a.i - b.i);
+  (girdi.ayarlar || []).forEach(a => {
+    if (!a || !Number.isInteger(a.gun) || a.gun > bugun || !(a.r > 0 && a.r <= 1) || !(a.s > 0)) return;
+    hedefler(a.id).forEach(id => sira.push({gun: a.gun, faz: 1, ts: +a.ts || 0, sonra: 1, id, tur: 'ayar', r: a.r, s: a.s, i: -1}));
+  });
+  (girdi.anlatimlar || []).forEach(a => {
+    if (!a || !Number.isInteger(a.gun) || a.gun > bugun) return;
+    hedefler(a.id).forEach(id => sira.push({gun: a.gun, faz: 2, ts: 0, id, tur: 'anlatim', i: -1}));
+  });
+  sira.sort((a, b) => a.gun - b.gun || a.faz - b.faz || a.ts - b.ts || (a.sonra || 0) - (b.sonra || 0) || a.i - b.i);
   for (const e of sira) {
     if (ilgili && !ilgili.has(e.id)) continue;
     const kaynaklar = [e.id, ...(ag.parcalar.get(e.id) || [])];
-    if (e.ders) { kaynaklar.forEach(id => baslat(id, e.gun, e.id)); basari(kaynaklar, 3, e.gun); continue; }
+    if (e.tur === 'ayar') { kaynaklar.forEach(id => ayar(id, e.gun, e.r, e.s)); continue; }
+    if (e.tur === 'ders' || e.tur === 'anlatim') { kaynaklar.forEach(id => (e.tur === 'ders' ? ders : anlatim)(id, e.gun, e.id)); basari(kaynaklar, 3, e.gun); continue; }
     if (kayit) kaynaklar.forEach(id => { if (icinde(id) && var_(id)) kayit.push({i: e.i, id, gun: e.gun, p: gosterilen(id, e.gun), y: e.not > 1 ? 1 : 0}); });
     kaynaklar.forEach(id => oz(id, e.not, e.gun));
     if (e.not > 1) basari(kaynaklar, e.not, e.gun); else basarisiz(kaynaklar, e.gun);
   }
   return {durum, R, kat, var_, gosterilen};
 }
+// The day the shown recall crosses the line (past or coming), as Hafızam's cizgiGun: on the own curve exactly when no
+// foundation pulls it; else searched on the shown recall, between the memory's start and the own curve's crossing.
+function cizgiGunu(id, bugun, hedef, F, x, kat, R, gosterilen) {
+  const oz = x.son + kat(id) * x.s * (Math.pow(hedef, 1 / F.DECAY) - 1) / F.FACTOR;
+  const cek = g => gosterilen(id, g) < R(id, g) - 1e-12;
+  if (!cek(bugun) && !cek(Math.max(bugun, oz))) return oz;
+  let lo, hi;
+  if (gosterilen(id, bugun) >= hedef) { lo = bugun; hi = Math.max(bugun, oz); }
+  else { lo = Math.min(x.son, oz); hi = bugun; if (gosterilen(id, lo) < hedef) return lo; }
+  for (let i = 0; i < 40 && hi - lo > 1e-6; i++) { const m = (lo + hi) / 2; if (gosterilen(id, m) >= hedef) lo = m; else hi = m; }
+  return hi;
+}
 
 /* ---- what the student sees ---- */
-// girdi: {konular, baglar, birimler?: [{id, kapsar: [ids], ogrenildi?}], sonuclar: [{gun, id, not 1–4}], bugun, sinavGunu?,
-//         konuEk?: {id: {k, w, ogrenildi}},
+// girdi: {konular, baglar, birimler?: [{id, kapsar: [ids], ogrenildi?}], sonuclar: [{gun, id, not 1–4, ts?}], bugun, sinavGunu?,
+//         konuEk?: {id: {k, w, ogrenildi}}, ayarlar?: [{gun, id, r, s (days to 90 %), ts}] (the student's own settings),
+//         anlatimlar?: [{gun, id}] (basket lessons),
 //         parametreler?, ornekGecmisi?: [{gun, id}], anahtar? (a stable student key for the sample draw)}
 function hesapla(girdi, opts) {
   const o = ayarKur(opts), F = fsrsAl(opts), ag = agKur(girdi.konular, girdi.baglar, girdi.birimler), olaylar = [];
@@ -239,10 +293,10 @@ function hesapla(girdi, opts) {
     let agirlik = 0, onem = 2 * soru(id);
     kul.forEach((u, a) => { agirlik += u; onem += u * soru(a); });
     const s = {id, ad: d.ad, ders: d.ders, gizli: !!d.gizli, calis: d.gizli ? d.parcasi : id, onem, kullananAgirlik: agirlik,
-      temel: agirlik >= o.temelEsik - 1e-9, r: null, rOz: null, sGun: null, katman: null, sinavaKadar: null, risk: null,
+      temel: agirlik >= o.temelEsik - 1e-9, r: null, rOz: null, sGun: null, cizgiGun: null, katman: null, sinavaKadar: null, risk: null,
       sonOz: x ? x.sonOz : null, baslangic: x ? x.bas : null, kredili: !!(x && x.kredili), kontrol: x && x.kontrol ? x.kontrol : null, alarm: null};
     if (var_(id)) {
-      s.rOz = R(id, bugun); s.r = gosterilen(id, bugun); s.sGun = x.s * kat(id);
+      s.rOz = R(id, bugun); s.r = gosterilen(id, bugun); s.sGun = x.s * kat(id); s.cizgiGun = cizgiGunu(id, bugun, o.hedef, F, x, kat, R, gosterilen);
       s.katman = s.sGun < o.kisa ? 'kisa' : s.sGun < o.uzun ? 'orta' : 'uzun';
       s.risk = 1 - gosterilen(id, bugun + o.ufuk);
       s.sinavaKadar = Number.isInteger(girdi.sinavGunu) ? gosterilen(id, girdi.sinavGunu) >= o.hedef : null;
@@ -270,7 +324,7 @@ function hesapla(girdi, opts) {
 function karistir(m) { let h = 2166136261; for (let i = 0; i < m.length; i++) h = Math.imul(h ^ m.charCodeAt(i), 16777619); return h >>> 0; }
 
 /* ---- learning the links from the notebook's results ---- */
-// ogrenciler: [{anahtar, sonuclar, bugun, konuEk?, birimEk?}]. For every link and each of kredi, ceza and çekiş, the value on the
+// ogrenciler: [{anahtar, sonuclar, bugun, konuEk?, birimEk?, ayarlar?, anlatimlar?}]. For every link and each of kredi, ceza and çekiş, the value on the
 // grid that best predicts the results it affects (log-likelihood of each own result given the shown recall just before
 // it). Shared value = notebook's best, blended with the starting value by count; a student's value = own best blended
 // with the shared one (ozGuven results weigh as much as it). One coordinate pass per call; calls repeat as data grows.

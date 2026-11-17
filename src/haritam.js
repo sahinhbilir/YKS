@@ -73,8 +73,9 @@ function cozumle() {
     KATALOG.forEach((k, ki) => { if (k[0] === di && k[1] === b.sinif && k[3] === b.ad) birimler.push({id: ki, kapsar: b.kapsar}); }); }
   return {esler, birimler};
 }
-// A student's input for HAFIZA_AG: the shared map (konular, birimler) and this student's own part (konuEk: forgetting
-// speed, FSRS parameters and lesson day per topic; birimEk: lesson day per school unit; real results).
+// A student's input for HAFIZA_AG: the shared map (konular, birimler) and this student's own part, read from what
+// Hafızam reads (konuEk: forgetting speed, FSRS parameters and lesson day per topic; birimEk: lesson day per school unit;
+// real results with their entry time; own settings from Düzenle and "Çoktan unuttum"; basket lessons).
 const ogrAnahtar = o => (o && o.no !== undefined ? o.no : '') + '|' + (o && o.ad || '');
 function girdi(si, cz) {
   const o = D.ogr[si], bugun = bugunNo(), {esler, birimler} = cz || cozumle();
@@ -92,21 +93,43 @@ function girdi(si, cz) {
   for (const l of D.log || []) {
     if (l[1] !== si || l[0] > bugun) continue;
     const not = sonucNotu(l); if (!not || sonucDevreDisiMi(si, l[2], l[0])) continue;
-    sonuclar.push({gun: l[0], id: l[2], not});
+    sonuclar.push({gun: l[0], id: l[2], not, ts: +l[6] || 0});
   }
-  return {konular, baglar: V.baglar, birimler, konuEk, birimEk, sonuclar, bugun, sinavGunu: gunNo(D.ayar.sinav), anahtar: ogrAnahtar(o), esler};
+  const ayarlar = Object.entries((o && o.hafizaElle) || {}).filter(([ki]) => hafizaElleAl(si, +ki)).map(([ki, e]) => ({gun: e.g, id: +ki, r: e.r, s: e.s, ts: +e.ts || 0}));
+  const anlatimlar = konuAnlatimGunleri(si, bugun).map(([ki, gun]) => ({gun, id: ki}));
+  return {konular, baglar: V.baglar, birimler, konuEk, birimEk, sonuclar, ayarlar, anlatimlar, bugun, sinavGunu: gunNo(D.ayar.sinav), anahtar: ogrAnahtar(o), esler};
 }
 // Learnt link values: the notebook's shared ones and this student's own (Bağları güncelle, teacher side).
 function parametreleri(o) {
   const p = D.hafizaAg && D.hafizaAg.parametreler; if (!p) return null;
   return {paylasilan: p.paylasilan || {}, ogrenci: (p.ogrenci || {})[ogrAnahtar(o)] || {}};
 }
-function durum(si) {
-  const o = D.ogr[si], hedef = hedefTutma(si), cz = cozumle(), g = girdi(si, cz);
-  const out = HAFIZA_AG.hesapla(Object.assign({}, g, {parametreler: parametreleri(o)}), {hedef});
+// opts (tests): link values over the starting ones, e.g. {kredi: 0, ceza: 0, cekis: 0} = Hafızam's own numbers.
+// Hafızam, the map and its card all ask for it during one page draw, so the last answer is kept while the input is the same.
+let onbellek = null;
+function durum(si, opts) {
+  const o = D.ogr[si], hedef = hedefTutma(si), cz = cozumle(), g = girdi(si, cz), prm = parametreleri(o);
+  const anahtar = JSON.stringify([si, hedef, g.bugun, g.sinavGunu, g.sonuclar, g.konuEk, g.birimEk, g.ayarlar, g.anlatimlar, prm, opts || null, konuSayisi()]);
+  if (onbellek && onbellek.anahtar === anahtar) return onbellek.d;
+  const out = HAFIZA_AG.hesapla(Object.assign({}, g, {parametreler: prm}), Object.assign({}, opts, {hedef}));
   // Where a topic's memory lives in this notebook: plan topics with its name first, then school units covering it.
   const kaynak = new Map(V.konular.map(k => [k.id, (cz.esler.get(k.id) || []).concat(cz.birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))]));
-  return {out, esler: cz.esler, kaynak, hedef, satir: new Map(out.konular.map(s => [s.id, s]))};
+  const d = {out, esler: cz.esler, kaynak, hedef, satir: new Map(out.konular.map(s => [s.id, s]))};
+  onbellek = {anahtar, d};
+  return d;
+}
+// Hafızam's rows (hafizaDurumu) for the student's topics on the map take the map's value: a plan topic its node's, a
+// school unit covering several nodes their mean (its line day: the nearest coming crossing, or the latest one passed).
+function hafizayaUygula(si, liste, hedef) {
+  const o = D.ogr[si], ders = new Set(dersleri(o)); if (!ders.size) return;
+  const d = durum(si), dugum = new Map();
+  d.kaynak.forEach((kis, id) => { const s = d.satir.get(id); if (!s || s.gizli || s.r === null || !ders.has(s.ders)) return; kis.forEach(ki => (dugum.get(ki) || dugum.set(ki, []).get(ki)).push(s)); });
+  for (const x of liste) {
+    const l = dugum.get(x.ki); if (!l) continue;
+    const ort = f => l.reduce((t, s) => t + f(s), 0) / l.length, r = ort(s => s.r), alt = r < hedef - 1e-9;
+    const cizgiGun = l.length === 1 ? l[0].cizgiGun : alt ? Math.max(...l.filter(s => s.r < hedef).map(s => s.cizgiGun)) : Math.min(...l.filter(s => s.r >= hedef).map(s => s.cizgiGun));
+    Object.assign(x, {rKendi: x.r, r, altinda: alt, cizgiGun, sGun: ort(s => s.sGun), harita: l.map(s => s.id)});
+  }
 }
 
 /* ---- teacher: learning the links over the notebook (Ayarlar → Öğrenci kalibrasyonu) ---- */
@@ -125,7 +148,7 @@ async function ogren(ilerleme) {
   if (ogreniyor) return ogreniyor;
   ogreniyor = (async () => {
     const cz = cozumle(), ogrenciler = [];
-    (D.ogr || []).forEach((o, si) => { if (o && o.aktif !== false && dersleri(o).length) { const g = girdi(si, cz); if (g.sonuclar.length) ogrenciler.push({anahtar: g.anahtar, sonuclar: g.sonuclar, bugun: g.bugun, konuEk: g.konuEk, birimEk: g.birimEk}); } });
+    (D.ogr || []).forEach((o, si) => { if (o && o.aktif !== false && dersleri(o).length) { const g = girdi(si, cz); if (g.sonuclar.length) ogrenciler.push({anahtar: g.anahtar, sonuclar: g.sonuclar, bugun: g.bugun, konuEk: g.konuEk, birimEk: g.birimEk, ayarlar: g.ayarlar, anlatimlar: g.anlatimlar}); } });
     const ilk = ogrenciler.length ? girdi(D.ogr.findIndex(o => o && ogrAnahtar(o) === ogrenciler[0].anahtar), cz) : null;
     let p = (D.hafizaAg && D.hafizaAg.parametreler) || {paylasilan: {}, ogrenci: {}}, notlar = [];
     if (ilk) for (let i = 0; i < LINKLER.length; i++) {
@@ -246,8 +269,12 @@ function kart(si, d, id) {
   const parca = k.gizli ? '<p class="mini hm-parca">' + kac(k.ad) + ' · ' + kac(KONU.get(k.parcasi).ad) + ' konusunun parçası</p>' : '';
   if (!x || s.r == null) return '<div class="hf-oge hm-bos"><div class="hf-ad"><span class="d">' + kac(KONU.get(asil).ders) + '</span><span class="k">' + kac(KONU.get(asil).ad) + '</span></div>' + parca +
     '<p class="mini">' + (ki === undefined ? 'Bu konu senin planında yok.' : 'Henüz çalışmadın: derste işlendiğinde ya da sonucunu girdiğinde burada parlar.') + '</p></div>';
-  const r = d.satir.get(asil).r ?? s.r;
-  return parca + hafizaSatiri(si, Object.assign({}, x, {r, altinda: r < d.hedef - 1e-9}), hd, hafizaPlani(si));
+  // Hafızam already shows this node's value on its plan topic. A school unit covering several nodes shows their mean
+  // there; here the card shows this node's value and says so.
+  const a = d.satir.get(asil), r = a.r ?? s.r, birlikte = !!x.harita && x.harita.length > 1;
+  const y = x.harita && !birlikte ? x : Object.assign({}, x, {r, altinda: r < d.hedef - 1e-9, cizgiGun: a.cizgiGun ?? s.cizgiGun, sGun: a.sGun ?? s.sGun, rKendi: undefined});
+  const unite = birlikte ? '<p class="mini hm-parca">Okuldaki ' + kac(konuGorunenAdi(x.ad)) + ' ünitesinden · Hafızam’da ünitenin ortalaması %' + Math.round(x.r * 100) + '</p>' : '';
+  return parca + unite + hafizaSatiri(si, y, hd, hafizaPlani(si));
 }
 
 /* ---- page ---- */
@@ -338,5 +365,5 @@ function bagla() {
 bagla();
 // kaynaklar: map topic → the notebook topic ids that feed it (plan topics, then school units)
 const kaynaklar = () => { const {esler, birimler} = cozumle(); return new Map(V.konular.map(k => [k.id, (esler.get(k.id) || []).concat(birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))])); };
-return {gorunum, uygun, dersleri, durum, girdi, cozumle, kaynaklar, ogren, ogretmenKarti, renk, oklch, TEMA};
+return {gorunum, uygun, dersleri, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA};
 })();

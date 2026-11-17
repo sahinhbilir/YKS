@@ -15,7 +15,14 @@ Every rule below was decided in the design session of 2026-11-17. Lines marked *
 
 ## Memory
 
-Each topic keeps the app's FSRS-6 card (S, D), built from its own results exactly as today. Three link effects are added. Each has a value per link that starts at 0.5 and is learnt.
+Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds it (below). Three link effects are added. Each has a value per link that starts at 0.5 and is learnt.
+
+**A topic's own memory follows Hafızam's rules** (decided 2026-11-17: Haritam is Hafızam drawn as a map, not a second memory). With every link value at 0, the map shows Hafızam's own numbers exactly:
+
+- **Lesson day.** Starts the memory as an "İyi" that day, until the topic's first own test. A later lesson before any test counts from that later day.
+- **First own test.** A first FSRS review (`ilkS` of its grade), as in Hafızam, whatever the lesson or credit built before it.
+- **Düzenle and "Çoktan unuttum".** The student's own setting replaces the memory at that moment (`hafizaElleKarti`: recall r that day, S days to fall to 90 %). Results entered after it go on from it; same-day order is by entry time.
+- **Basket lesson** (konu anlatımı in the basket, day come, not "Yapmadım"). After the last own test it restarts the topic as a fresh "İyi" until the next own test, which goes on from the memory before the lesson. Before any test it counts like a lesson day. It credits the foundations like a lesson.
 
 | Event | Effect | Reach |
 |---|---|---|
@@ -141,9 +148,18 @@ Each topic keeps the app's FSRS-6 card (S, D), built from its own results exactl
   - every school unit (`birimler`: subject, grade, catalogue name) that covers it.
 
   A unit's result and lesson day count for each YKS topic it covers.
-- **Inputs.** The student's real results (`sonucNotu`, excluding `sonucDevreDisiMi` rows), lesson days (`ogrenciIslenisTarihi`), forgetting speed per lesson (`unutmaKatsayisi`), FSRS parameters (`parametreAl`), recall target (`hedefTutma`) and exam day.
-- **Card.** The touched topic's card is Hafızam's own `hafizaSatiri`. It shows the map's recall, and its bar uses the map's reds inside Haritam only. Its buttons are Hafızam's (Çalıştım opens the same result slider).
-- **Not changed.** Hafızam, the weekly plan and every FSRS card.
+- **Inputs: what Hafızam reads.**
+  - Real results (`sonucNotu`, excluding `sonucDevreDisiMi` rows), with their entry time.
+  - Lesson days (`ogrenciIslenisTarihi`) and basket lessons (`konuAnlatimGunleri`, shared with Hafızam).
+  - Own settings (`hafizaElle`: Düzenle and "Çoktan unuttum").
+  - Forgetting speed per lesson (`unutmaKatsayisi`), FSRS parameters (`parametreAl`), recall target (`hedefTutma`) and exam day.
+- **One number on both pages.**
+  - Hafızam (`hafizaDurumu`) takes the map's value for the student's topics on the map: recall, below the line or not, line day, stability. A school unit covering several map topics shows their mean.
+  - `rKendi` keeps the topic's own value. The row says how much connected topics changed it ("bağlı konular +6").
+  - The map's line day is the own curve's crossing when nothing pulls, else the shown recall's crossing.
+  - The map is computed once per input (`HARITAM.durum` keeps the last answer): about 13 ms for 250 results, then about 4 ms.
+- **Card.** The touched topic's card is Hafızam's own `hafizaSatiri`, so it is the same card and number as in Hafızam. Its bar uses the map's reds inside Haritam only. Its buttons are Hafızam's (Çalıştım opens the same result slider). For a topic fed by a school unit covering several map topics, the card shows this topic's value and says Hafızam shows the unit's mean.
+- **Not changed.** The weekly plan and every stored FSRS card (`D.kart`); only what Hafızam shows.
 - **Teacher (v1: teacher view only).** Ayarlar → Öğrenci kalibrasyonu → **Bağlantılı hafıza**.
   - **Bağları güncelle** learns every link over the notebook's active students with results. It works one link at a time with a progress bar (`HARITAM.ogren`) and stores the values in the notebook as `D.hafizaAg`:
     - shared values for every link;
@@ -153,10 +169,21 @@ Each topic keeps the app's FSRS-6 card (S, D), built from its own results exactl
   - Students' Haritam keeps the starting values until delivery is decided.
 - **Tests.**
   - `test/hafiza-ag-regression.cjs` (algorithm).
-  - `test/haritam-regression.cjs` (tab rules, resolution, page).
+  - `test/haritam-regression.cjs` (tab rules, resolution, page; Hafızam's states in, and the same number on both pages, with no link effects equal to Hafızam's own).
   - `test/haritam-browser.cjs` (1280 px dark/light, 390 px; hover, pin, Çalıştım, filter).
+
+## Full map draft (2026-11-17, waiting for review)
+
+- `data/hafiza-haritasi-tam.json`, built by `scripts/hafiza-haritasi-tam.py`:
+  - every SAY plan topic of Geometri, Matematik TYT, Matematik AYT and Fizik (175) and the three hidden parts;
+  - 323 links with use level and reason (the pilot's kept as reviewed);
+  - exam shares for every TYT and AYT row from 2018;
+  - 127 school units.
+- The builder checks names against the plan (none missing), ids, cycles and share sums.
+- Review files: `node scripts/hafiza-haritasi.cjs data/hafiza-haritasi-tam.json <out>` writes the two tables and one picture per subject (a ← line under a topic lists its foundations from other subjects).
+- 65 of 178 topics are foundational at the 1.5 threshold. Alarms stay quiet because only the top 3 show.
+- The app still embeds the pilot until the draft is reviewed.
 
 ## Not done yet
 
-- The rest of the Mathematics, Geometry and Physics map, after the pilot is reviewed.
-- Hafızam's own states ("Çoktan unuttum", Düzenle) and basket lessons are not yet read by the map.
+- Review of the full map draft; then embed it in place of the pilot.

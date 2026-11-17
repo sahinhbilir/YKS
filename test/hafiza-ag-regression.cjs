@@ -127,10 +127,56 @@ test('a school unit\'s result and lesson count for every YKS topic it covers', (
   const birimler = [{id: 'okul9DikTrig', kapsar: ['dik', 'tytTrig'], ogrenildi: 0}];
   const out = H.hesapla(girdi([{gun: 6, id: 'okul9DikTrig', not: 3}], 10, {birimler}));
   ['dik', 'tytTrig', 'sincos'].forEach(id => { assert.equal(satir(out, id).sonOz, 6, id); });
-  const ayri = H.hesapla(girdi([{gun: 0, id: 'dik', not: 3}, {gun: 0, id: 'tytTrig', not: 3}, {gun: 6, id: 'dik', not: 3}, {gun: 6, id: 'tytTrig', not: 3}], 10));
-  assert(Math.abs(satir(out, 'tytTrig').sGun - satir(ayri, 'tytTrig').sGun) < 1e-9, 'lesson day = first "İyi", then the unit result as a review');
+  const ayri = H.hesapla(girdi([{gun: 6, id: 'dik', not: 3}, {gun: 6, id: 'tytTrig', not: 3}], 10));
+  assert(Math.abs(satir(out, 'tytTrig').sGun - satir(ayri, 'tytTrig').sGun) < 1e-9, 'the lesson starts it; the unit result is its first review, as in Hafızam');
+  near(satir(out, 'tytTrig').sGun, ilkS(3), 1e-9);
   assert.equal(out.konular.some(s => s.id === 'okul9DikTrig'), false, 'not a node of its own');
   assert.equal(H.hesapla(girdi([], 1, {birimler: [{id: 'x', kapsar: ['yok']}]})).uyarilar.length, 1);
+});
+
+// Hafızam's own rules (index.html hafizaDurumu, kartHesapla, hafizaElleKarti): with no links the map is Hafızam.
+const yalniz = (sonuclar, bugun, extra) => H.hesapla(Object.assign({konular: KONULAR.filter(k => !k.gizli), baglar: [], sonuclar, bugun}, extra || {}));
+const elleKart = (g, r, sGun, k = 1) => { const F = run('({FACTOR, DECAY})'), u = Math.pow(r, 1 / F.DECAY) - 1, t = r >= 1 ? 0 : Math.max(0, Math.round(sGun / F.FACTOR * u)), s = t >= 1 ? t * F.FACTOR / u : sGun / k; return {s, son: g - t}; };
+test('a lesson starts a topic until its first test, which is a first review; a later lesson before any test counts from that day', () => {
+  const ders = (g, sonuclar, bugun) => yalniz(sonuclar, bugun, {konular: KONULAR.filter(k => !k.gizli).map(k => k.id === 'dik' ? Object.assign({}, k, {ogrenildi: g}) : k)});
+  near(satir(ders(2, [], 10), 'dik').rOz, hatirlama(8, ilkS(3)), 1e-12, 'taught, not measured: an "İyi" that day');
+  near(satir(ders(2, [{gun: 9, id: 'dik', not: 4}], 10), 'dik').sGun, ilkS(4), 1e-12, 'first test = first review');
+  const iki = yalniz([], 10, {konular: KONULAR.filter(k => !k.gizli).map(k => k.id === 'dik' ? Object.assign({}, k, {ogrenildi: 2}) : k), anlatimlar: [{gun: 6, id: 'dik'}]});
+  near(satir(iki, 'dik').rOz, hatirlama(4, ilkS(3)), 1e-12, 'Hafızam counts from the latest of lesson and basket lesson');
+});
+test('the student\'s own setting (Düzenle, "Çoktan unuttum") replaces the memory; results entered after it go on from it', () => {
+  const once = [{gun: 0, id: 'dik', not: 3}, {gun: 5, id: 'dik', not: 3, ts: 100}];
+  const ayar = {gun: 5, id: 'dik', r: 0.6, s: 10, ts: 200}, e = elleKart(5, 0.6, 10);
+  const out = yalniz(once, 12, {ayarlar: [ayar]});
+  near(satir(out, 'dik').rOz, hatirlama(12 - e.son, e.s), 1e-12, 'the setting is the memory');
+  near(hatirlama(5 - e.son, e.s), 0.6, 0.02, 'recall that day is the setting');
+  const sonra = yalniz(once.concat({gun: 5, id: 'dik', not: 4, ts: 300}, {gun: 9, id: 'dik', not: 3}), 12, {ayarlar: [ayar]});
+  let kart = {s: e.s, d: run('ilkD')(3, true)}; let son = e.son;
+  for (const [g, n] of [[5, 4], [9, 3]]) { const t = tekrarla(kart, n, g - son, 0.9, 365, 1); kart = {s: t.s, d: t.d}; son = g; }
+  near(satir(sonra, 'dik').sGun, kart.s, 1e-9, 'a result entered after the setting is a review of it');
+  const unuttum = yalniz(once, 12, {ayarlar: [{gun: 6, id: 'dik', r: 0.01, s: 1, ts: 1}]});
+  assert(satir(unuttum, 'dik').rOz < 0.05, '"Çoktan unuttum" is nearly nothing'); assert.equal(satir(unuttum, 'dik').sonOz, 6);
+  // A setting entered before that day's result (ts 50 < 100): the result is a review of the setting.
+  const t = tekrarla({s: e.s, d: run('ilkD')(3, true)}, 3, 5 - e.son, 0.9, 365, 1);
+  near(satir(yalniz(once, 12, {ayarlar: [{gun: 5, id: 'dik', r: 0.6, s: 10, ts: 50}]}), 'dik').sGun, t.s, 1e-9, 'same-day order by entry time');
+});
+test('a basket lesson after the last test restarts the topic until the next test, which goes on from before it', () => {
+  const s = [{gun: 0, id: 'dik', not: 3}, {gun: 4, id: 'dik', not: 3}];
+  const anl = yalniz(s, 12, {anlatimlar: [{gun: 8, id: 'dik'}]});
+  near(satir(anl, 'dik').rOz, hatirlama(4, ilkS(3)), 1e-12, 'restarted that day as an "İyi"');
+  near(satir(yalniz(s, 12, {anlatimlar: [{gun: 3, id: 'dik'}]}), 'dik').rOz, satir(yalniz(s, 12), 'dik').rOz, 1e-12, 'before the last test: nothing');
+  const test2 = yalniz(s.concat({gun: 10, id: 'dik', not: 3}), 12, {anlatimlar: [{gun: 8, id: 'dik'}]});
+  near(satir(test2, 'dik').sGun, satir(yalniz(s.concat({gun: 10, id: 'dik', not: 3}), 12), 'dik').sGun, 1e-12, 'the next test goes on from the memory before the lesson');
+  const zincir = H.hesapla(girdi(hepsi(['dik', 'tytTrig'], 0), 9, {anlatimlar: [{gun: 9, id: 'tytTrig'}]}));
+  assert.equal(olay(zincir, 'tytTrig', 'dik', 'kredi', 9).length, 1, 'a basket lesson credits the foundations as a lesson does');
+});
+test('the line day: the own curve when nothing pulls, earlier when a weak foundation pulls', () => {
+  const tek = satir(yalniz([{gun: 0, id: 'dik', not: 3}, {gun: 4, id: 'dik', not: 3}], 6), 'dik'), F = run('({FACTOR, DECAY})');
+  near(tek.cizgiGun, 4 + tek.sGun * (Math.pow(0.9, 1 / F.DECAY) - 1) / F.FACTOR, 1e-9);
+  const s = [{gun: 0, id: 'tytTrig', not: 3}, {gun: 0, id: 'aytTrig', not: 3}, {gun: 25, id: 'aytTrig', not: 3}];
+  const cekili = satir(H.hesapla(girdi(s, 26), {kredi: 0}), 'aytTrig'), duz = satir(H.hesapla(girdi(s, 26), {kredi: 0, cekis: 0}), 'aytTrig');
+  assert(cekili.cizgiGun < duz.cizgiGun, 'pulled down: crosses sooner');
+  assert(cekili.r >= 0.9 ? cekili.cizgiGun >= 26 : cekili.cizgiGun <= 26);
 });
 
 test('live pull-down: the weakest-relative foundation pulls the shown recall, never the stored memory', () => {
