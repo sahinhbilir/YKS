@@ -52,7 +52,8 @@ const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[
    }
    if(!await kaydet(true))throw Error('Synthetic plans/results save failed');
    yedekDogrula(JSON.parse(JSON.stringify(D)));
-   return {frozen,logs,topics:D.konutakibi.exams.length,blocks:D.konutakibi.exams.reduce((n,e)=>n+e.blocks.length,0)};
+   const kt=KONU_TAKIBI.oku().veri;   // the record as pages read it (the notebook stores it compactly)
+   return {frozen,logs,topics:kt.exams.length,blocks:kt.exams.reduce((n,e)=>n+e.blocks.length,0)};
   },F.BASE);
   assert.deepEqual(extra,{frozen:40,logs:1000,topics:3,blocks:93});
   const result=await page.evaluate(async()=>{
