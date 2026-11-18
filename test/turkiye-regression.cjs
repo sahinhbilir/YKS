@@ -55,6 +55,14 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     assert.equal(get('TURKIYE.dersBilgi("İNGİLİZCE-T")').oturum, 'TYT');
     assert.equal(get('TURKIYE.okulAdi("SINAV KOLEJİ DOĞU KAMPÜSÜ (KESTEL) FEN/ANADOLU LİSESİ")'), 'Sınav Koleji Doğu Kampüsü (Kestel) Fen/Anadolu Lisesi');
   });
+  await check('opened without a choice, a session the latest exam has; with TYT chosen, the latest exam that has TYT', async () => {
+    await ekle(liste(1), liste(2), liste(3)); await run('TURKIYE.okulKaydet(' + JSON.stringify(BIZ) + ')');
+    // The latest exam (1203) becomes AYT-only, like 27_AYT_ÖZEL_1: the page used to open on an empty TYT view.
+    run(`(()=>{const s=D.turkiye.sinavlar.find(x=>x.ad==='27-YKS-1203');s.dersler=s.dersler.filter(d=>TURKIYE.dersBilgi(d[0]).oturum==='AYT')})()`);
+    let m = model(); assert.equal(m.oturum, 'AYT'); assert.equal(m.simdi, 2); assert(m.ozet[m.simdi], 'something to show');
+    m = model({ oturum: 'TYT' }); assert.equal(m.simdi, 1, 'the latest exam with TYT'); assert.equal(m.onceki, 0); assert(m.ozet[m.simdi]);
+    assert.doesNotMatch(run('TURKIYE.icerik()'), /dersi yok/, 'the page does not open empty');
+  });
   await check('the list kind comes from the file name, else from the names; other reports are refused', () => {
     assert.equal(run('TURKIYE.listeTuru("x (Kolej).pdf",["SENTETİK İLERİ KURS"])'), 'kolej');
     assert.equal(run('TURKIYE.listeTuru("x (Kurs).pdf",["A LİSESİ"])'), 'kurs');

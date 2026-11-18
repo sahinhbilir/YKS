@@ -20,7 +20,7 @@ const run = code => vm.runInContext(code, sandbox);
 const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
 sandbox.__yg = run('yalnizcaGoruntuleme'); sandbox.__bg = run('bulutYedekGecmisi'); sandbox.__bga = run('buluttanGunAl');
-const reset = () => run(`yalnizcaGoruntuleme=__yg;bulutYedekGecmisi=__bg;buluttanGunAl=__bga;confirm=()=>true;delete window.bulut;D=varsayilan();D.rol='rehber';D.ogr=[{no:1001,ad:'Sentetik Ada',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='etutler';
+const reset = () => run(`yalnizcaGoruntuleme=__yg;bulutYedekGecmisi=__bg;buluttanGunAl=__bga;confirm=()=>true;delete window.bulut;D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-20';D.ogr=[{no:1001,ad:'Sentetik Ada',sube:'12-A',alan:'EA',sinif:12,kap:6,off:[6],aktif:true}];EK.ogr=0;EK.sekme='etutler';
   EK.etAralik=undefined;EK.etTur=undefined;EK.etDers=undefined;EK.etHoca=undefined;EK.etSecA=undefined;EK.etSecB=undefined;EK.etOlcu=undefined;EK.etOgr=undefined;EK.etSira=undefined;EK.etKademe=undefined;EK.etAra='';EK.etSinif='';KAYIT=0;kaydet=async()=>{KAYIT++;return true};ETUT.onbellek.ts=null;`);
 const rapor = (gunler = GUNLER, aralik) => { put('pages', etutRaporu(gunler, aralik).pages); return get('ETUT.pdfCoz(pages)'); };
 const iso = g => run('isoDan(' + g + ')');
@@ -81,6 +81,10 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const r = rapor(); r.satirlar[0].ad = 'SENTETİK <img src=x>'; await ekle(r);
     const h = run('ETUT.icerik()');
     assert.match(h, /Son 2 hafta \(5–18 Eki\): <b>17<\/b> etüt, önceki 2 haftaya göre <b>%42 fazla<\/b>/);
+    // A month later with no new records (a holiday, a gap): the same weeks are named as the last recorded ones, not "Son 2 hafta".
+    run("D.ayar.testTarih='2026-11-18'"); const eski = run('ETUT.icerik()');
+    assert.match(eski, /Son 2 kayıtlı hafta \(5–18 Eki; sonrasında etüt kaydı yok\): <b>17<\/b> etüt/); assert.doesNotMatch(eski, /Son 2 hafta \(/);
+    run("D.ayar.testTarih='2026-10-20'");
     assert.match(h, /data-et-aralik="4"[^>]* disabled/); assert(h.includes('id="etPdf"')); assert(h.includes('id="etSil"'));
     for (const g of ['genel', 'ders', 'hoca', 'ogrenci', 'kisi']) assert(h.includes('data-et-grafik="' + g + '"'), g);
     assert(!/<img/i.test(h)); assert(/&lt;img src=x&gt;/i.test(h));

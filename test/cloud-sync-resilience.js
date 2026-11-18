@@ -1414,10 +1414,14 @@ test('failed-automatic-backup-is-recorded-not-swallowed', async () => {
   assert(/yayınlanmamış|ogretmenler/.test(hata), 'and it must explain the likely cause: ' + hata);
   const gorunum = run('gorunumAyarlar()');
   assert(/son deneme başarısız/.test(gorunum), 'settings must show the failure, not claim everything is fine');
+  // Not only in tiny grey text: a red banner above every teacher page, with the way to compare the cloud notebook.
+  const bant = run('izlemeBandi()');
+  assert(/id="bulutUyariBandi"/.test(bant) && /Bulut yedeği yapılamadı: değişiklikler yalnızca bu cihazda/.test(bant) && /id="bulutUyariAyar"/.test(bant), 'a banner on every teacher page: ' + bant);
   // sonraki başarılı yükleme uyarıyı temizlemeli
   sandbox.window.bulut = baseBulut({ yapilandirilmis: true, setDoc: async () => {} });
   await run('bulutaYedekle()');
   equal(run('EK.bulutYedekHata'), '', 'a later success must clear the warning');
+  equal(run('izlemeBandi().includes("bulutUyariBandi")'), false, 'and the banner');
   assert(run('!!EK.bulutYedekTs'), 'and record when it succeeded');
 });
 

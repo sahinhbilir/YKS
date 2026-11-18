@@ -30,7 +30,7 @@ const student=sandbox.D.ogr[0];
  const loaded=await a.yukle();assert.equal(await a.yukle(),loaded);assert.equal(fetches,1);
 
  // --- model: coefficients and residual SD per alan, fitted from the real catalogue ---
- const M=a.modelKur(catalogue),beklenen={SAY:[[129.8,1.274,2.714,0.119],2.7],EA:[[127.6,1.246,2.866,0.121],2.3],'SÖZ':[[131.0,1.244,2.83,0.11],4.8]};
+ const M=a.modelKur(catalogue),beklenen={SAY:[[129.8,1.274,2.714,0.119],2.7],EA:[[127.9,1.245,2.858,0.121],2.0],'SÖZ':[[131.6,1.257,2.828,0.108],4.5]};   // refitted without Açık/Uzaktan Öğretim (2026-11-18)
  for(const [f,[b,sd]] of Object.entries(beklenen)){
   const m=M[f];assert(m,f);near(m.b[0],b[0],1,f+' a');near(m.b[1],b[1],.01,f+' TYT');near(m.b[2],b[2],.02,f+' AYT');near(m.b[3],b[3],.005,f+' OBP');near(m.sd,sd,.2,f+' SD');
   console.log('model',f,m.n,m.b.map(v=>+v.toFixed(3)).join(' '),'SD',m.sd.toFixed(2));

@@ -598,7 +598,11 @@ function cumle(m,st){
   const b=t=>'<b>'+t+'</b>';
   const onceki=st.s==='sec'?gunAy(w.once[0])+' haftasına':st.s===1?'önceki haftaya':'önceki '+st.s+' haftaya';
   const degisim=o.etutFark===0?b('aynı'):o.etutOran===null?b(isaretli(o.etutFark)):b(yuzde(o.etutOran)+' '+(o.etutFark<0?'az':'fazla'));
-  const bas=st.s==='sec'?gunAy(w.son[0])+' haftası':(st.s===1?'Geçen hafta':'Son '+st.s+' hafta')+' ('+aralikYazi(w.son[0],w.son[1]+6)+')';
+  // The windows are the last weeks with records. When they end more than a week before today (a holiday, a gap), they are not
+  // "the last 2 weeks": the sentence says the weeks are the last recorded ones and that nothing came after.
+  const bugun=typeof bugunNo==='function'?bugunNo():null,eski=st.s!=='sec'&&Number.isInteger(bugun)&&bugun-(w.son[1]+6)>7;
+  const bas=st.s==='sec'?gunAy(w.son[0])+' haftası':eski?(st.s===1?'Son kayıtlı hafta':'Son '+st.s+' kayıtlı hafta')+' ('+aralikYazi(w.son[0],w.son[1]+6)+'; sonrasında etüt kaydı yok)'
+    :(st.s===1?'Geçen hafta':'Son '+st.s+' hafta')+' ('+aralikYazi(w.son[0],w.son[1]+6)+')';
   return kapsam+bas+': '+b(sayi(o.etutSon))+' etüt, '+onceki+' göre '+degisim+(st.s==='sec'?' ('+sayi(o.etutOnce)+' → '+sayi(o.etutSon)+')':'')+'. En büyük değişim: '+kacis(en.ders)+' '+b(isaretli(en.k[st.s].fark))+'. '+
     b(sayi(o.azalan))+' öğrenci daha az, '+b(sayi(o.artan))+' öğrenci daha çok etüt alıyor.';
 }

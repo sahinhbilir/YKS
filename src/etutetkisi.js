@@ -1050,8 +1050,9 @@ function icerik(){
   const kapsamUyari=m.eksik?'<p class="et-uyari" id="eeKapsam">Etüt raporları bu dönemin '+fi(m.eksik)+' iş gününü kapsamıyor; o günlerin etütleri kayıtlı değil, etüt sayıları eksik olabilir.</p>':'';
   const secili=m.hocalar.some(h=>h.key===EK.eeHoca)?EK.eeHoca:'';
   cizimPlanla();
+  // The verdict comes first, then the numbers behind it: "+2,8 net" before "Belirgin bir fark yok" read as an effect.
   return '<header class="et-bas">'+baslik+'<p class="et-cumle" id="eeCumle">'+cumle(m)+'</p>'+
-    '<p class="et-cumle" id="eeOlayOzet">'+olayYazisi(m.olay)+'</p><p class="et-cumle" id="eeOzet">'+ozetYazisi(m)+'</p><p class="et-cumle ee-karar ee-k-'+m.karar.k+'" id="eeKarar"><b>'+kacis(m.karar.yazi)+'</b></p>'+
+    '<p class="et-cumle ee-karar ee-k-'+m.karar.k+'" id="eeKarar"><b>'+kacis(m.karar.yazi)+'</b></p><p class="et-cumle" id="eeOlayOzet">'+olayYazisi(m.olay)+'</p><p class="et-cumle" id="eeOzet">'+ozetYazisi(m)+'</p>'+
     '<p class="et-cumle" id="eeSayim">'+sayimYazisi(m)+'</p><p class="mini" id="eeSinir">'+SINIR_YAZI+'</p></header>'+arac(m)+uyari+hamUyari+listesiz+kapsamUyari+
     (m.hepsi.length?olayPaneli(m)+durusPaneli(st,m)+hocaTablosu(m,secili)+ogrenciTablosu(m,secili)+ucBlogu(m)+aralikBlogu(m,secili)+nasilBlogu(m):ogrenciTablosu(m,secili)+ucBlogu(m)+nasilBlogu(m));
 }

@@ -470,7 +470,7 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     const L = olayFx({ o: { trend: { fizik: 0.1 }, katA: { fizik: 0.5 } } });
     merged(L); trSayfa(TRC); run("EK.eeDers='Fizik'"); const h = run('ETUT_ETKI.icerik()'), t = /id="eeOlayOzet">(.*?)<\/p>/.exec(h)[1].replace(/<[^>]+>/g, '');
     assert.match(t, /^İlk etütten sonra etüt alanlar sınıf ortalamasından ≈ \+\d,\d net fazla arttı \(etütten önce fark ≈ [+−]?0,0\) · 3\+ sonra, 16 öğrenci\.$/);
-    assert(h.indexOf('id="eeOlayOzet"') < h.indexOf('id="eeOzet"') && h.indexOf('id="eeOzet"') < h.indexOf('id="eeKarar"'));
+    assert(h.indexOf('id="eeKarar"') < h.indexOf('id="eeOlayOzet"') && h.indexOf('id="eeOlayOzet"') < h.indexOf('id="eeOzet"'), 'the verdict first, then the numbers behind it');
     assert.match(h, /<p class="et-cumle ee-kart-say ee-kart-olay">İlk etütten sonra etüt alanlar sınıf ortalamasından/); assert.match(h, /Sınıf ortalaması \(etüt almayanlar\)/); assert(!h.includes('aynı öğrencilerin etüt almadığı dersler'));
     assert(!h.includes('Beklenen (etüt olmasaydı)'));
   });
@@ -631,8 +631,8 @@ const eski = (...a) => { const m = model(...a); return { ...m, ...m.capraz, bekl
     assert.match(metin('eeKarar'), /^Etüt alınan derste artış belirgin: her etüt ≈ \+0,\d net \(aynı öğrencinin diğer derslerine göre\)\.$/);
     assert.match(metin('eeSayim'), /^36 öğrenciden 36’sı sayıldı \(\d+ etüt alan, \d+ etüt almayan\)\.$/);
     assert.match(h, /<p class="mini" id="eeSinir">Bu bir karşılaştırmadır; farkın sebebi etüt olmayabilir\.<\/p>/);
-    const sira = ['id="eeCumle"', 'id="eeOzet"', 'id="eeKarar"', 'class="et-arac"', 'id="eeOlay"', 'id="eeGrafik"', 'id="eeHocalar"', 'id="eeOgrenciler"', 'id="eeAralik"', 'id="eeNasil"'].map(k => h.indexOf(k)); assert(sira.every(i => i > 0), String(sira));
-    assert.deepEqual([...sira].sort((a, b) => a - b), sira, 'order: sentence, headline, verdict, controls, event study, standing, teachers, students, Ayrıntı, method');
+    const sira = ['id="eeCumle"', 'id="eeKarar"', 'id="eeOzet"', 'class="et-arac"', 'id="eeOlay"', 'id="eeGrafik"', 'id="eeHocalar"', 'id="eeOgrenciler"', 'id="eeAralik"', 'id="eeNasil"'].map(k => h.indexOf(k)); assert(sira.every(i => i > 0), String(sira));
+    assert.deepEqual([...sira].sort((a, b) => a - b), sira, 'order: sentence, verdict, headline, controls, event study, standing, teachers, students, Ayrıntı, method');
     assert(h.indexOf('id="eeFark"') > h.indexOf('id="eeAralik"') && h.indexOf('id="eeArtis"') > h.indexOf('id="eeAralik"'), 'the scatter and the bars sit inside the collapsed block');
     assert.match(h, /data-ee-oturum="TYT" aria-pressed="true"/); assert.match(h, /data-ee-oturum="AYT"[^>]*disabled/); assert.match(h, /<select id="eeDers" aria-label="Ders">/);
     assert.match(h, /data-ee-donem="tum" aria-pressed="true">Tümü/); assert.match(h, /data-ee-donem="son4" aria-pressed="false">Son 4 deneme/);

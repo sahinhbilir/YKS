@@ -119,14 +119,14 @@ check('the first-review delay is learned after 4 weeks of first measurements; Ay
   assert.match(run('ilkTekrarBilgisi(2)'), /ayardaki değer; 8 ilk ölçüm ve 4 hafta birikince algoritma belirler \(şu an 6 ölçüm, 2 hafta\)/);
 });
 
-check('alt konu: compound topic names and kazanım codes become a list; a click splits one for this student only', () => {
+check('alt konu: compound topic names become a list (never bare kazanım codes); a click splits one for this student only', () => {
   run(`D = varsayilan(); D.rol = 'rehber'; D.ayar.testTarih = '2026-10-14';
     D.ogr = [0, 1].map(i => ({ad:'S' + i, no:i + 1, sube:'12-A', sinif:12, alan:'SAY', kap:6, off:[6], aktif:true}));
     D.ekKonular = [[1, 12, 'Sayılar', 'Asal Sayılar, Ardışık Sayılar, Faktöriyel', 0, '', 0], [0, 9, 'Şiir', '9. sınıf · 1.1 · Şiir ve deneme: edebî dil, imge ve sembol', 0, '', 0]];
     var asal = KATALOG.length, siir = KATALOG.length + 1;`);
   assert.deepEqual(json('konuKazanimlari(asal)'), ['Asal Sayılar', 'Ardışık Sayılar', 'Faktöriyel']);
   assert.deepEqual(json('konuKazanimlari(siir)'), ['Şiir ve deneme: edebî dil', 'Şiir ve deneme: imge ve sembol']);
-  assert.deepEqual(json('konuKazanimlari(0)'), ['Kazanım 9.1', 'Kazanım 9.2', 'Kazanım 9.3'], 'catalogue topics show their codes');
+  assert.deepEqual(json('konuKazanimlari(0)'), [], 'catalogue topics known only by kazanım codes offer no raw codes as sub-topics');
   let h = run('altKonuKutusu(0, asal)');
   assert.match(h, /<details class="altKutu"><summary>Alt konulara ayır \(3\)/, 'closed unless broad');
   assert.match(h, /data-ad="Ardışık Sayılar">Ardışık Sayılar<\/button>/); assert.match(h, /class="altKonuAd"/);
