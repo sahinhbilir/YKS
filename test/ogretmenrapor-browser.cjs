@@ -67,7 +67,7 @@ const kur=()=>{
    assert.equal(await report.locator('.ogr-sekil').evaluate(f=>f.querySelector('.ogr-lejant').getBoundingClientRect().bottom<=f.querySelector('.ogr-grafik').getBoundingClientRect().top+1),true,'the key above the chart');
    assert(await report.locator('.ogr-grafik path.ogr-alan-ust').count()>=1,'shaded green');
    // The reading notes: folded once on screen, not repeated under every teacher.
-   assert.equal(await page.locator('details.ogr-rehber-ekran').count(),1);assert.equal(await page.locator('.ogr-rehber.ogr-baski').first().isVisible(),false,'the per-teacher notes are for paper');
+   assert.equal(await page.locator('details.ogr-rehber-ekran').count(),1);
    // The exams in equal columns, the whole subject as the last row.
    const kolon=await report.locator('.ogr-iz thead .ogr-iz-sinav').evaluateAll(l=>l.map(x=>Math.round(x.getBoundingClientRect().width)));
    assert(Math.max(...kolon)-Math.min(...kolon)<=1,'exam columns share the width equally: '+kolon);
@@ -110,11 +110,11 @@ const kur=()=>{
    assert.equal(await page.locator('#ogrKok .et-arac').isVisible(),false,'no toolbar in print');
    for(const selector of ['.ogr-skor','.ogr-lejant','.ogr-olcek'])assert(await report.locator(selector).isVisible(),selector+' kept in print');
    assert.equal(await report.locator('.ogr-iz-ac').isVisible(),false,'no tick box on paper');
-   // Each teacher's sheets stand alone: the report's name and day, the reading notes (whom it covers, where the numbers come
-   // from, how to read a sign) beside the name; the page's own title and the folded appendix are not printed.
+   // Each teacher's sheets stand alone: the report's name and day above the name, nothing else to read; the page's own title,
+   // the tick box and the folded appendix are not printed.
    assert.match(await report.locator('.ogr-ust-yazi').innerText(),/^ÖĞRETMEN RAPORU · 30 EKİ 2026$/i);
-   assert(await report.locator('.ogr-rehber.ogr-baski').isVisible(),'reading notes on paper');
-   assert.match(await report.locator('.ogr-rehber.ogr-baski').innerText(),/Kimleri kapsıyor\?[\s\S]*Veriler nereden geliyor\?[\s\S]*okulda uygulanan denemelerin sonuç listelerinden[\s\S]*Nasıl okunur\?/);
+   assert.equal(await report.locator('.ogr-rehber').count(),0,'no paragraphs of notes on paper');
+   assert.equal(await report.locator('.ogr-iz-eksik').isVisible(),false,'no screen-only line on paper');
    assert.equal(await page.locator('#ogrKok>.et-bas').isVisible(),false);assert.equal(await page.locator('details.ogr-rehber-ekran').isVisible(),false);assert.equal(await report.locator('.ogr-formul').first().isVisible(),false,'the appendix prints only when opened');
    // Nothing is cut across pages; a teacher's first block follows the letterhead, every further block would start a page.
    const kes=await page.evaluate(()=>{const cs=s=>getComputedStyle(document.querySelector(s)),ilk=document.querySelector('.ogr-ogretmen>section.ogr-blok'),ikinci=ilk.cloneNode(true);

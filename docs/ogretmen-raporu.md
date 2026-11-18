@@ -59,7 +59,7 @@ Simplified on 2026-11-18 so that it reads from colour and shape alone: no differ
 ## Use and print
 
 - **Öğretmen** filters to one teacher (*Bütün öğretmenler* by default); **Sınıf düzeyi** to one grade.
-- **Bu rapor nasıl okunur?** (folded, once, on screen) holds the reading notes that are printed with every teacher's sheets.
+- **Bu rapor nasıl okunur?** (folded, once, on screen) holds the reading notes. On paper (2026-11-18) a teacher's sheet carries only the report's name and day, the teacher, the blocks and their keys (the chart's legend, the squares' key): no paragraphs of notes, no tick box, no *Konu verisi henüz yok* line; a teacher fits one sheet.
 - **Yazdır / PDF** prints the shown teachers as one document: the whole school's report, one grade's, or one teacher's alone.
 - Nothing is stored and nothing is sent; the page reads the notebook only.
 

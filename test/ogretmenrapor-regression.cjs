@@ -316,9 +316,9 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.match(h, /<em>Türkiye’nin gerisinde<\/em>[\s\S]*?<em>Türkiye’nin önünde<\/em>/);
     // Headline: the newest exam with a Türkiye average, 12/A and 12/B together: 1202 → (22 + 30) / 2 = 26 against 13.
     assert.match(h, /<span>Öğrencileriniz<\/span><strong class="ogr-y">26,0<\/strong><\/div><div class="ogr-skor-sayi"><span>Türkiye<\/span><strong>13,0<\/strong>/);
-    // What a reader needs before the first figure, with every teacher's sheets (paper) and once, folded, on screen: whom the
-    // report covers, where the numbers come from, how to read a sign and a colour.
-    assert.equal((h.match(/<div class="ogr-baski ogr-rehber">/g) || []).length, 2, 'the reading notes with each teacher');
+    // What a reader needs before the first figure, once, folded, on screen: whom the report covers, where the numbers come from,
+    // how to read a colour. On paper the chart's legend and the squares' key are enough.
+    assert.equal((h.match(/<div class="ogr-baski ogr-rehber">/g) || []).length, 0, 'no paragraphs of notes on paper: the keys are the notes');
     assert.match(h, /<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu rapor nasıl okunur\?<\/summary>/);
     for (const yazi of ['Kimleri kapsıyor?', 'Veriler nereden geliyor?', 'Nasıl okunur?', 'okulda uygulanan denemelerin sonuç listelerinden', 'yayınevinin aynı denemeler için açıkladığı Türkiye geneli sonuçlarından', 'Hiçbir değer tahmin edilmez.', 'Yeşil, Türkiye ortalamasının üzerinde; kırmızı, altında']) assert(h.includes(yazi), yazi);
     // On paper each teacher's sheets say what they are and when they were printed (the test clock is not set: today).
@@ -391,8 +391,8 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // The exam with a net but no topic data is named in one quiet line under the topic table (27-YKS-1201 has no AYT kazanım
     // karnesi here), on the teacher's and the student's page alike.
     run("EK.osDuzey=12;EK.osSube='12/B';EK.osOgr='1003'"); const sayfa = run('OGRETMEN_RAPOR.gorunumOgrenci()');
-    assert.match(sayfa, /<p class="mini ogr-iz-eksik">Konu verisi henüz yok: 27-YKS-1201<\/p>/, 'the student’s sheet');
-    assert.match(run('OGRETMEN_RAPOR.gorunum()'), /<p class="mini ogr-iz-eksik">Konu verisi henüz yok: 27-YKS-1201<\/p>/, 'Öğretmen raporu');
+    assert.match(sayfa, /<p class="mini ogr-iz-eksik ogr-ekran">Konu verisi henüz yok: 27-YKS-1201<\/p>/, 'the student’s sheet');
+    assert.match(run('OGRETMEN_RAPOR.gorunum()'), /<p class="mini ogr-iz-eksik ogr-ekran">Konu verisi henüz yok: 27-YKS-1201<\/p>/, 'Öğretmen raporu');
     put('__OZ3', get(`OGRETMEN_RAPOR.kiyasOzeti({no:'1003'})`)); run(`D.turkiyeKiyas=__OZ3;D.ogr=[{no:'1003',ad:'SENTETİK CEMRE',sube:'12/B',sinif:12,alan:'EA',kap:6,off:[6],aktif:true}];D.rol='ogrenci'`);
     assert.match(run('OGRETMEN_RAPOR.gorunumKendi()'), /Konu verisi henüz yok: 27-YKS-1201/);
     run("D.rol='rehber';EK.osDuzey=undefined;EK.osSube=undefined;EK.osOgr=undefined");

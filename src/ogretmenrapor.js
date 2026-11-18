@@ -336,7 +336,7 @@ function izgaraHtml(b,ust=''){
     '<tfoot><tr class="ogr-iz-toplam"><th scope="row" class="ogr-iz-konu">Bütün konular</th>'+z.sinavlar.map(toplam).join('')+'</tr></tfoot></table></div>'+
     '<div class="ogr-olcek"><span class="ogr-olcek-serit"><em>Türkiye’nin gerisinde</em><i style="'+koyu('kritik',90)+'"></i><i style="'+koyu('kritik',30)+'"></i><i style="'+koyu('iyi',30)+'"></i><i style="'+koyu('iyi',90)+'"></i><em>Türkiye’nin önünde</em></span>'+
     '<span class="ogr-olcek-bos"><i></i>soru yok</span></div>'+
-    (eksik.length?'<p class="mini ogr-iz-eksik">Konu verisi henüz yok: '+kacis(eksik.join(', '))+'</p>':'')+'</div>';
+    (eksik.length?'<p class="mini ogr-iz-eksik ogr-ekran">Konu verisi henüz yok: '+kacis(eksik.join(', '))+'</p>':'')+'</div>';
 }
 // The raw topic table can run to thousands of rows over all teachers, so it is built when its box is opened (hamKonu).
 function hamKonu(b){
@@ -391,10 +391,11 @@ function gorunum(){
   // A subject taught in one session only (TYT Matematik, AYT Edebiyat …) says which.
   const dersYazisi=d=>{const ot=[...new Set(d.kodlar.filter(k=>((d.kodSinif||{})[k[2]]||d.siniflar).some(x=>d.siniflar.includes(x))).map(k=>k[0]))];
     return kacis(d.ad)+(ot.length===1?' ('+ot[0]+')':'')+' · '+kacis(d.siniflar.join(', '))};
-  // On paper every teacher's sheets stand alone: the report's name, the day it was printed and the reading notes come with each.
+  // On paper every teacher's sheets stand alone: the report's name and the day it was printed come with each; the picture's own keys
+  // (the chart's legend, the squares' key) are the only reading notes on paper.
   const bugun=typeof bugunNo==='function'?gunYaz(bugunNo()):'',ustYazi='Öğretmen raporu'+(duzey!==null?' · '+duzey+'. sınıf':'')+(bugun?' · '+bugun:'');
   const bolum=o=>{const ad=kisiAd(o.ad);return '<section class="ogr-ogretmen" data-ogr-hoca="'+kacis(o.key)+'"><header class="ogr-ogretmen-bas"><div class="ogr-kimlik"><p class="ogr-baski ogr-ust-yazi">'+kacis(ustYazi)+'</p><h2>'+kacis(ad)+'</h2><p class="mini">'+
-    o.dersler.map(dersYazisi).join(' — ')+'</p></div><div class="ogr-baski ogr-rehber"><b class="ogr-rehber-ad">Bu raporu okurken</b>'+rehberHtml()+'</div></header>'+
+    o.dersler.map(dersYazisi).join(' — ')+'</p></div></header>'+
     (o.bloklar.length?o.bloklar.map((b,j)=>blokHtml(b,sayac++,ad,!j)).join(''):'<p class="mini ogr-yok">Bu öğretmenin derslerinde henüz deneme ya da konu verisi yok.</p>')+'</section>'};
   const duzeySec='<label class="et-seg"><span class="et-seg-label">Sınıf düzeyi</span><select id="ogrDuzey"><option value="">Bütün düzeyler</option>'+duzeyler.map(d=>'<option value="'+d+'"'+(d===duzey?' selected':'')+'>'+d+'. sınıf</option>').join('')+'</select></label>';
   const secim='<label class="et-seg"><span class="et-seg-label">Öğretmen</span><select id="ogrHoca"><option value="">Bütün öğretmenler ('+fi(uygun.length)+')</option>'+uygun.map(o=>'<option value="'+kacis(o.key)+'"'+(o.key===secili?' selected':'')+'>'+kacis(kisiAd(o.ad))+'</option>').join('')+'</select></label>';
@@ -429,7 +430,7 @@ function gorunumOgrenci(){
   const modeller=goster.map(x=>ogrenciModeli(x,c));SON=modeller;
   const bugun=typeof bugunNo==='function'?gunYaz(bugunNo()):'';let sayac=0;
   const bolum=o=>{const ad=kisiAd(o.ad);return '<section class="ogr-ogretmen" data-ogr-ogrenci="'+kacis(o.key)+'"><header class="ogr-ogretmen-bas"><div class="ogr-kimlik"><p class="ogr-baski ogr-ust-yazi">'+kacis('Türkiye ortalaması karşılaştırması'+(bugun?' · '+bugun:''))+'</p><h2>'+kacis(ad)+'</h2><p class="mini">'+
-    kacis(o.sinif+' · okul no '+o.no)+'</p></div><div class="ogr-baski ogr-rehber"><b class="ogr-rehber-ad">Bu raporu okurken</b>'+rehberHtml(REHBER_OGRENCI)+'</div></header>'+
+    kacis(o.sinif+' · okul no '+o.no)+'</p></div></header>'+
     (o.bloklar.length?o.bloklar.map((b,j)=>blokHtml(b,sayac++,ad,!j)).join(''):'<p class="mini ogr-yok">Bu öğrencinin henüz deneme ya da konu verisi yok.</p>')+'</section>'};
   const sec=(id,ad,l,v)=>'<label class="et-seg"><span class="et-seg-label">'+ad+'</span><select id="'+id+'">'+l.map(([d,y])=>'<option value="'+kacis(String(d))+'"'+(String(d)===String(v)?' selected':'')+'>'+kacis(y)+'</option>').join('')+'</select></label>';
   planla();
@@ -488,7 +489,7 @@ function gorunumKendi(){
   return '<div id="ogrKok">'+bas+'<div class="et-arac"><button type="button" class="et-dugme" id="ogrYazdir">Yazdır / PDF</button>'+(tarih?'<span class="mini">Öğretmeninin son yayınından · '+kacis(tarih)+'</span>':'')+'</div>'+
     '<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu sayfa nasıl okunur?</summary>'+rehberHtml(REHBER_OGRENCI)+'</details>'+
     '<section class="ogr-ogretmen"><header class="ogr-ogretmen-bas"><div class="ogr-kimlik"><p class="ogr-baski ogr-ust-yazi">'+kacis('Türkiye ortalaması karşılaştırması'+(tarih?' · '+tarih:''))+'</p><h2>'+kacis(ad)+'</h2><p class="mini">'+kacis(m.sinif)+'</p></div>'+
-    '<div class="ogr-baski ogr-rehber"><b class="ogr-rehber-ad">Bu raporu okurken</b>'+rehberHtml(REHBER_OGRENCI)+'</div></header>'+bloklar.map((b,j)=>blokHtml(b,sayac++,ad,!j)).join('')+'</section></div>';
+    '</header>'+bloklar.map((b,j)=>blokHtml(b,sayac++,ad,!j)).join('')+'</section></div>';
 }
 let ZAMAN=null;
 function grafikleriCiz(){
