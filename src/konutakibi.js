@@ -17,6 +17,11 @@ const studentKey=s=>JSON.stringify([s.cls,s.no]);
 const blockKey=b=>JSON.stringify([studentKey(b.student),b.course,b.kind]);
 const countOK=c=>Array.isArray(c)&&c.length===4&&c.every(n=>Number.isSafeInteger(n)&&n>=0&&n<=10000)&&c[0]===c[1]+c[2]+c[3];
 const codeRE=/^([\p{L}.]+(?:\.\d+)+)\s*[-–]\s*(.+)$/u;
+// A test the pupil left wholly blank (no correct and no wrong answer in any row) was not taken: every pupil gets the whole AYT
+// booklet but answers only their field's tests (an SAY pupil's AYT Edebiyat, an EA pupil's AYT Fizik), and a SÖZ pupil may skip
+// TYT Fen. It says nothing about the topics, so it is left out instead of being counted as every question wrong.
+// A row is [label, questions, correct, wrong, blank].
+const alinmadi=b=>!!b&&Array.isArray(b.rows)&&b.rows.length>0&&b.rows.every(r=>!(r[2]+r[3]));
 // Publisher topic parents, checked against paired KONU and coded reports. These are NOT inferred
 // from answer percentages. Unknown codes remain unassigned until the teacher supplies a topic.
 const PARENTS=`T.12.1|Sözcükte Anlam
@@ -679,6 +684,7 @@ function model(v,selection={},school=[]){
     // Per pupil and subject the summary/detail rule applies once; only then are pupils and subjects added up.
     for(const sid of ids)for(const part of parts){
       const bs=blocksOf(e,part).filter(b=>studentKey(b.student)===sid),detail=bs.find(b=>b.kind==='outcome'),summary=bs.find(b=>b.kind==='topic'),groups=new Map(),zc=zx?.courses.get(key(part));
+      if(bs.length&&bs.every(alinmadi))continue;
       if(bs.length&&zx?.bad.some(c=>key(c)===key(part)))zBad.add(part);
       const get=n=>{const id=key(n);if(!groups.has(id))groups.set(id,{name:topicName(n),detail:[],summary:null});return groups.get(id)};
       if(summary)for(const r of summary.rows)get(v.labels[r[0]][1]).summary=r.slice(1);
@@ -820,6 +826,7 @@ function ogrenciFark(v,sel={}){
       g[b.kind==='outcome'?'detail':'summary']=b;
     }
     for(const g of by.values()){
+      if([g.detail,g.summary].filter(Boolean).every(alinmadi))continue;
       let st=out.get(g.sid);if(!st){st={id:g.sid,student:g.student,toplam:{b:0,d:0,n:0},dersler:new Map(),konular:new Map()};out.set(g.sid,st)}
       const ck=key(g.course);
       const ekle=(konu,z,kazanim)=>{

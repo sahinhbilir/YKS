@@ -96,6 +96,8 @@ Removing an exam in Kaynaklar leaves its difficulty data until that is removed t
 
 ## Türkiye’ye göre (where the school and each pupil are behind)
 
+**A test a pupil left wholly blank was not taken** (no correct and no wrong answer in any of its rows): every pupil gets the whole AYT booklet but answers only their field's tests, and a SÖZ pupil may skip TYT Fen. Such a test gives no per-pupil Türkiye gap (`ogrenciFark`) and no topics in the pupil's list (`model`), instead of every question counting as wrong. This is what Öğretmen raporu, the Türkiye karşılaştırması pages, Öğrenci kartı's Zayıf konular and the Dikkat card's “konuda geride” read (2026-11-18: an SAY pupil's blank AYT Edebiyat flagged every 12th grader).
+
 **Görünüm: Gelişim | Türkiye’ye göre.** The second view compares the school's success on every question with the
 network's. It needs, for the same exam: the publisher's **Performans analizi** (PDF “27-YKS-1203 SINAVI ANALİZLERİ”:
 the share of all the publisher's pupils who answered each question of the A booklet correctly), the school's **Madde

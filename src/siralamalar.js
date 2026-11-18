@@ -306,6 +306,14 @@ const hasTYT=s=>TYT_KEYS.some(k=>s.net[k]!=null);
 const hasAYT=s=>AYT_KEYS.some(k=>s.net[k]!=null);
 function attempted(s,t){let n=0;for(const k of TESTS[t]){const p=dyParts(s.dy[k]);if(p)n+=p[0]+p[1]}return n>0}
 const took=(s,f)=>!!s&&hasAYT(s)&&FIELDS[f].every(t=>attempted(s,t));
+// Did the student answer any question of the AYT test this subject is in (TDE-SB1, SB2, MAT, FEN)? Every student gets the whole
+// booklet but answers only their field's tests, so another field's 0 net is not a result. null: not an AYT subject, or the list
+// printed no D/Y for that test (then nothing is decided from it).
+function denedi(s,k){
+  const t=TEST_OF[k];if(!s||!t)return null;let bilinen=false,n=0;
+  for(const x of TESTS[t]){const p=dyParts(s.dy&&s.dy[x]);if(p){bilinen=true;n+=p[0]+p[1]}}
+  return bilinen?n>0:null;
+}
 const fnet=(s,f)=>FCOLS[f].reduce((a,k)=>a+(s.net[k]||0),0);
 function dySum(s,keys){let d=0,y=0,any=false;for(const k of keys){const p=dyParts(s.dy[k]);if(p){d+=p[0];y+=p[1];any=true}}return any?d+'/'+y:'-/-'}
 const tytTotal=s=>TYT_KEYS.reduce((a,k)=>a+(s.net[k]||0),0);
@@ -878,7 +886,7 @@ document.addEventListener('change',async ev=>{
     yenidenCiz();document.getElementById(id)?.focus();
   }
 });
-return {kutuphane,tarihHucresi,listeAdlari,ayniDuzey,dersAnahtarlari,TYT_KEYS,AYT_KEYS,SIRALA,clsShort,turDegistir,addanTur,SINAV_TURLERI,hasTYT,hasAYT,took,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_GRUP,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,yayinlanmisGruplar,yayindanKaldir,sinavTarihleri,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
+return {kutuphane,tarihHucresi,listeAdlari,ayniDuzey,dersAnahtarlari,TYT_KEYS,AYT_KEYS,SIRALA,clsShort,turDegistir,addanTur,SINAV_TURLERI,hasTYT,hasAYT,took,denedi,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_GRUP,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,yayinlanmisGruplar,yayindanKaldir,sinavTarihleri,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
   get onbellek(){return ONBELLEK},get durumYazisi(){return DURUM}};
 })();
 function siralamaPdfCoz(sayfalar,boylar){return SIRALAMA.pdfCoz(sayfalar,boylar)}

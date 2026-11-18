@@ -87,9 +87,10 @@ function ogretmenler(){
 // nolar (optional Set of school numbers): those students instead of the classes (Öğrenci raporu: one student).
 function netSerisi(k,siniflar,oturum,anahtar,kod,gorulen,nolar){
   const out=[];if(!k||!k.t)return out;
-  const S=new Set(siniflar),alan=oturum==='TYT'?'tyt':'ayt';
+  // AYT: a student counts in a subject only when they answered its test (an SAY student's 0 net in Edebiyat is not a result).
+  const S=new Set(siniflar),alan=oturum==='TYT'?'tyt':'ayt',almadi=o=>oturum==='AYT'&&typeof SIRALAMA!=='undefined'&&typeof SIRALAMA.denedi==='function'&&SIRALAMA.denedi(o,anahtar)===false;
   for(const s of k.t.sinavlar){
-    const l=[],liste=s[alan]||{};for(const o of (nolar?[...nolar].map(n=>liste[n]).filter(Boolean):Object.values(liste))){const kisi=k.t.kisi.get(o.no);if(!kisi)continue;const c=sinifK(kisi.sinif);if(nolar?!nolar.has(String(o.no)):!S.has(c))continue;const v=o.net&&o.net[anahtar];if(Number.isFinite(v)){l.push(v);if(gorulen)gorulen.add(c)}}
+    const l=[],liste=s[alan]||{};for(const o of (nolar?[...nolar].map(n=>liste[n]).filter(Boolean):Object.values(liste))){const kisi=k.t.kisi.get(o.no);if(!kisi)continue;const c=sinifK(kisi.sinif);if(nolar?!nolar.has(String(o.no)):!S.has(c))continue;if(almadi(o))continue;const v=o.net&&o.net[anahtar];if(Number.isFinite(v)){l.push(v);if(gorulen)gorulen.add(c)}}
     if(!l.length)continue;
     const tr=k.trFn?k.trFn(s.ad):null,genel=tr?tr.genel(kod):null,li=tr&&tr.dersListesi&&Number.isFinite(genel)?tr.dersListesi(kod):null;
     out.push({id:s.id,ad:s.ad,g:s.g,n:l.length,net:ort(l),genel:Number.isFinite(genel)?genel:null,fark:Number.isFinite(genel)?ort(l)-genel:null,

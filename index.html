@@ -18239,6 +18239,14 @@ const hasTYT=s=>TYT_KEYS.some(k=>s.net[k]!=null);
 const hasAYT=s=>AYT_KEYS.some(k=>s.net[k]!=null);
 function attempted(s,t){let n=0;for(const k of TESTS[t]){const p=dyParts(s.dy[k]);if(p)n+=p[0]+p[1]}return n>0}
 const took=(s,f)=>!!s&&hasAYT(s)&&FIELDS[f].every(t=>attempted(s,t));
+// Did the student answer any question of the AYT test this subject is in (TDE-SB1, SB2, MAT, FEN)? Every student gets the whole
+// booklet but answers only their field's tests, so another field's 0 net is not a result. null: not an AYT subject, or the list
+// printed no D/Y for that test (then nothing is decided from it).
+function denedi(s,k){
+  const t=TEST_OF[k];if(!s||!t)return null;let bilinen=false,n=0;
+  for(const x of TESTS[t]){const p=dyParts(s.dy&&s.dy[x]);if(p){bilinen=true;n+=p[0]+p[1]}}
+  return bilinen?n>0:null;
+}
 const fnet=(s,f)=>FCOLS[f].reduce((a,k)=>a+(s.net[k]||0),0);
 function dySum(s,keys){let d=0,y=0,any=false;for(const k of keys){const p=dyParts(s.dy[k]);if(p){d+=p[0];y+=p[1];any=true}}return any?d+'/'+y:'-/-'}
 const tytTotal=s=>TYT_KEYS.reduce((a,k)=>a+(s.net[k]||0),0);
@@ -18811,7 +18819,7 @@ document.addEventListener('change',async ev=>{
     yenidenCiz();document.getElementById(id)?.focus();
   }
 });
-return {kutuphane,tarihHucresi,listeAdlari,ayniDuzey,dersAnahtarlari,TYT_KEYS,AYT_KEYS,SIRALA,clsShort,turDegistir,addanTur,SINAV_TURLERI,hasTYT,hasAYT,took,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_GRUP,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,yayinlanmisGruplar,yayindanKaldir,sinavTarihleri,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
+return {kutuphane,tarihHucresi,listeAdlari,ayniDuzey,dersAnahtarlari,TYT_KEYS,AYT_KEYS,SIRALA,clsShort,turDegistir,addanTur,SINAV_TURLERI,hasTYT,hasAYT,took,denedi,fnet,tytTotal,aytTotal,FCOLS,SIRA_DERS,SIRA_GRUP,SIRA_UST,pdfOku,pdfCoz,dogrula,oku,ekle,kaydetListeler,sil,yayinlanmisGruplar,yayindanKaldir,sinavTarihleri,tercihKaydet,tarihDegistir,siraSatirlari,siraNumarala,siraOrtalama,siraBolumu,model,modeller,secim,neden,tytRows,tytAvg,aytRow,aytKurum,aytSube,aytSayfalari,fromBranches,deltaStyle,classGroups,defaultSort,raporBaytlari,hepsiBaytlari,gorunum,RAPORLAR,KAYNAK,UST_SINIR,
   get onbellek(){return ONBELLEK},get durumYazisi(){return DURUM}};
 })();
 function siralamaPdfCoz(sayfalar,boylar){return SIRALAMA.pdfCoz(sayfalar,boylar)}
@@ -25217,6 +25225,11 @@ const studentKey=s=>JSON.stringify([s.cls,s.no]);
 const blockKey=b=>JSON.stringify([studentKey(b.student),b.course,b.kind]);
 const countOK=c=>Array.isArray(c)&&c.length===4&&c.every(n=>Number.isSafeInteger(n)&&n>=0&&n<=10000)&&c[0]===c[1]+c[2]+c[3];
 const codeRE=/^([\p{L}.]+(?:\.\d+)+)\s*[-–]\s*(.+)$/u;
+// A test the pupil left wholly blank (no correct and no wrong answer in any row) was not taken: every pupil gets the whole AYT
+// booklet but answers only their field's tests (an SAY pupil's AYT Edebiyat, an EA pupil's AYT Fizik), and a SÖZ pupil may skip
+// TYT Fen. It says nothing about the topics, so it is left out instead of being counted as every question wrong.
+// A row is [label, questions, correct, wrong, blank].
+const alinmadi=b=>!!b&&Array.isArray(b.rows)&&b.rows.length>0&&b.rows.every(r=>!(r[2]+r[3]));
 // Publisher topic parents, checked against paired KONU and coded reports. These are NOT inferred
 // from answer percentages. Unknown codes remain unassigned until the teacher supplies a topic.
 const PARENTS=`T.12.1|Sözcükte Anlam
@@ -25879,6 +25892,7 @@ function model(v,selection={},school=[]){
     // Per pupil and subject the summary/detail rule applies once; only then are pupils and subjects added up.
     for(const sid of ids)for(const part of parts){
       const bs=blocksOf(e,part).filter(b=>studentKey(b.student)===sid),detail=bs.find(b=>b.kind==='outcome'),summary=bs.find(b=>b.kind==='topic'),groups=new Map(),zc=zx?.courses.get(key(part));
+      if(bs.length&&bs.every(alinmadi))continue;
       if(bs.length&&zx?.bad.some(c=>key(c)===key(part)))zBad.add(part);
       const get=n=>{const id=key(n);if(!groups.has(id))groups.set(id,{name:topicName(n),detail:[],summary:null});return groups.get(id)};
       if(summary)for(const r of summary.rows)get(v.labels[r[0]][1]).summary=r.slice(1);
@@ -26020,6 +26034,7 @@ function ogrenciFark(v,sel={}){
       g[b.kind==='outcome'?'detail':'summary']=b;
     }
     for(const g of by.values()){
+      if([g.detail,g.summary].filter(Boolean).every(alinmadi))continue;
       let st=out.get(g.sid);if(!st){st={id:g.sid,student:g.student,toplam:{b:0,d:0,n:0},dersler:new Map(),konular:new Map()};out.set(g.sid,st)}
       const ck=key(g.course);
       const ekle=(konu,z,kazanim)=>{
@@ -31239,9 +31254,10 @@ function ogretmenler(){
 // nolar (optional Set of school numbers): those students instead of the classes (Öğrenci raporu: one student).
 function netSerisi(k,siniflar,oturum,anahtar,kod,gorulen,nolar){
   const out=[];if(!k||!k.t)return out;
-  const S=new Set(siniflar),alan=oturum==='TYT'?'tyt':'ayt';
+  // AYT: a student counts in a subject only when they answered its test (an SAY student's 0 net in Edebiyat is not a result).
+  const S=new Set(siniflar),alan=oturum==='TYT'?'tyt':'ayt',almadi=o=>oturum==='AYT'&&typeof SIRALAMA!=='undefined'&&typeof SIRALAMA.denedi==='function'&&SIRALAMA.denedi(o,anahtar)===false;
   for(const s of k.t.sinavlar){
-    const l=[],liste=s[alan]||{};for(const o of (nolar?[...nolar].map(n=>liste[n]).filter(Boolean):Object.values(liste))){const kisi=k.t.kisi.get(o.no);if(!kisi)continue;const c=sinifK(kisi.sinif);if(nolar?!nolar.has(String(o.no)):!S.has(c))continue;const v=o.net&&o.net[anahtar];if(Number.isFinite(v)){l.push(v);if(gorulen)gorulen.add(c)}}
+    const l=[],liste=s[alan]||{};for(const o of (nolar?[...nolar].map(n=>liste[n]).filter(Boolean):Object.values(liste))){const kisi=k.t.kisi.get(o.no);if(!kisi)continue;const c=sinifK(kisi.sinif);if(nolar?!nolar.has(String(o.no)):!S.has(c))continue;if(almadi(o))continue;const v=o.net&&o.net[anahtar];if(Number.isFinite(v)){l.push(v);if(gorulen)gorulen.add(c)}}
     if(!l.length)continue;
     const tr=k.trFn?k.trFn(s.ad):null,genel=tr?tr.genel(kod):null,li=tr&&tr.dersListesi&&Number.isFinite(genel)?tr.dersListesi(kod):null;
     out.push({id:s.id,ad:s.ad,g:s.g,n:l.length,net:ort(l),genel:Number.isFinite(genel)?genel:null,fark:Number.isFinite(genel)?ort(l)-genel:null,

@@ -337,6 +337,29 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // The teacher's report keeps its own words.
     assert.match(run('OGRETMEN_RAPOR.gorunum()'), /<span class="ogr-kutu-ad">Öğrencileriniz<\/span>/);
   });
+  await check('AYT: another field’s test the student left blank is no result: no 0 net in the box, no red topics; the student’s own field stays (hand-worked)', () => {
+    planKur(); kaynakKur(); konuKur();
+    // The lists: ADA (SAY) answered the MAT and FEN tests and left TDE-SB1 (Edebiyat, Tarih-1, Coğrafya-1) blank, so her Edebiyat
+    // net prints as 0; CEMRE (EA) answered TDE-SB1 and MAT and left FEN blank. Every student gets the whole AYT booklet.
+    run(`(()=>{const a=(no,net,dy)=>({no,net,dy});
+      K.t.sinavlar[0].ayt={1001:a('1001',{EDB:0,AMAT:15,AFİZ:8},{EDB:'0/0',TAR1:'0/0',COĞ1:'0/0',AMAT:'16/4',AGEO:'2/1',AFİZ:'9/4',AKİM:'5/2',ABİY:'4/1'}),
+        1003:a('1003',{EDB:12,AMAT:10,AFİZ:0},{EDB:'13/4',TAR1:'5/2',COĞ1:'3/1',AMAT:'11/4',AGEO:'1/0',AFİZ:'0/0',AKİM:'0/0',ABİY:'0/0'})};
+      const tr=K.trFn;K.trFn=ad=>{const t=tr(ad);return t?{genel:k=>({'TÜRK DİLİ VE EDB-A':10,'MATEMATİK-A':12,'FİZİK-A':6})[k]??t.genel(k)}:null}})()`);
+    // Konu Takibi, one AYT exam: ADA's Edebiyat rows are all blank (2 questions, 0 correct, 0 wrong); CEMRE answered (1 correct, 1 wrong).
+    const kt = run('KONU_TAKIBI'), ad = 'SENTETİK-AYT-1', rows = c => [F.row('EDB.11.4.2', 'e', c)];
+    let v = kt.merge(run('D.konutakibi'), [{ ad, blocks: [F.block(rows([2, 0, 0, 2]), 'outcome', 'TÜRK DİLİ VE EDB-A', A), F.block(rows([2, 1, 1, 0]), 'outcome', 'TÜRK DİLİ VE EDB-A', C)] }],
+      [{ tur: 'ozet', ad, oturum: 'AYT', dersler: { 'TÜRK DİLİ VE EDB-A': [['EDB.11.4.2'], ['EDB.11.4.2']] } }, { tur: 'turkiye', ad, oturum: 'AYT', dersler: { 'TÜRK DİLİ VE EDB-A': [.5, .5] } }]);
+    v.exams.find(x => x.ad === ad).date = '2026-10-04'; put('KV2', v); run('D.konutakibi=KV2');
+    const model = no => get(`OGRETMEN_RAPOR.ogrenciModeli(K.t.kisi.get('${no}'),{k:K,v:D.konutakibi,fark:new Map(),dersSinav:new Map()})`), blok = (m, kod) => m.bloklar.find(b => b.kod === kod);
+    const ada = model('1001'), cemre = model('1003');
+    assert.equal(blok(ada, 'TÜRK DİLİ VE EDB-A'), undefined, 'ADA (SAY) has no AYT Edebiyat: neither the 0 net nor red topics');
+    assert.deepEqual(blok(ada, 'MATEMATİK-A').seri.map(p => [p.net, p.fark]), [[15, 3]], 'her own field stays');
+    assert.equal(blok(cemre, 'FİZİK-A'), undefined, 'CEMRE (EA) has no AYT Fizik');
+    const edb = blok(cemre, 'TÜRK DİLİ VE EDB-A'); assert.deepEqual(edb.seri.map(p => [p.net, p.fark]), [[12, 2]]);
+    near(edb.izgara.satir[0].hucre[0].fark, 0, 'CEMRE: 1 correct of 2 against Türkiye 2 · ,5 = 1 → 0 points');
+    // The Dikkat card's "konuda geride" reads the same per-student gaps: ADA is not behind in topics she never answered.
+    assert.equal(get(`KONU_TAKIBI.ogrenciFark(D.konutakibi,{session:'AYT'}).ogrenciler.map(o=>o.student.no)`).join(), '1003');
+  });
   await check('Türkiye karşılaştırması on the student’s own device: the teacher’s package carries a compact snapshot; the same figures come back (hand-worked)', () => {
     planKur(); kaynakKur(); konuKur();
     const oz = get(`OGRETMEN_RAPOR.kiyasOzeti({no:'1001'})`);
