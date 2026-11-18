@@ -66,8 +66,9 @@ const kur=()=>{
    await report.locator('.ogr-iz-ac input').check();assert(await report.locator('.ogr-iz-alt').first().isVisible(),'kazanımlar shown');await report.locator('.ogr-iz-ac input').uncheck();
    // The headline: the students' mean and the Türkiye average, side by side, and a coloured word; the block says what it covers.
    assert.deepEqual(await report.locator('.ogr-skor-sayi span').allTextContents(),['Öğrencileriniz','Türkiye']);
-   assert.deepEqual(await report.locator('.ogr-skor-sayi strong').allInnerTexts(),['24,0','23,5']);
-   assert.equal(await report.locator('.ogr-durum').innerText(),'▲ Türkiye’nin üstünde');
+   // TYT Türkçe, 40 questions: 24,0 net → %60, Türkiye 23,5 → %59; the nets under them.
+   assert.deepEqual(await report.locator('.ogr-skor-sayi strong').allInnerTexts(),['%60','%59']);assert.deepEqual(await report.locator('.ogr-skor-sayi small').allInnerTexts(),['24,0 net','23,5 net']);
+   assert.equal(await report.locator('.ogr-durum:not(.ogr-egilim)').innerText(),'▲ Türkiye’nin üstünde');assert.match(await report.locator('.ogr-egilim').innerText(),/^Fark (açılıyor|daralıyor|değişmedi)$/);
    assert.match(await report.locator('.ogr-kapsam').innerText(),/^12\/A, 12\/B · 6 deneme$/);
    assert.equal(await report.locator('.ogr-ozet,.ogr-kpi,.ogr-iz-aciklama,.ogr-iz-ort,.ogr-iz-degisim').count(),0,'no sentence, no boxes, no explanation, no extra columns');
    // The chart's key is directly above the chart; the room between the lines is shaded (green: above Türkiye in every exam).
