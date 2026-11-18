@@ -209,7 +209,7 @@ function konumlar(dersler, W) {
   return {P, B, H: Math.max(320, Math.round(y))};
 }
 // Glow, ring and belt for one topic. guc: short-term .175, settling and long-term .525 (shine is one step ahead of the
-// ring; on 2026-11-18 lowered half a step, then 30 % more). Settling and long-term keep the white-hot core.
+// ring; on 2026-11-18 lowered half a step, then 30 % more). Every studied topic has the white-hot core.
 function noron(t, s, x, y, r, c, hedef, gid, dokun) {
   const parlak = s.katman === 'uzun' || s.katman === 'orta', guc = parlak ? .525 : .175, koyu = t === TEMA.koyu;
   let arka = '', on = '', govde = '';
@@ -243,8 +243,8 @@ function noron(t, s, x, y, r, c, hedef, gid, dokun) {
       arka += `<g fill="${hc}">${ka}</g>`; on += `<g fill="${hc}">${ko}</g>`;
     }
   }
-  const cekirdek = KONU.get(s.id).gizli ? `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="${t.zemin}" stroke="${c}" stroke-width="1.3"/>`
-    : parlak ? `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="url(#${gid}c)"/>` : `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="${c}"/>`;
+  // Every studied topic, hidden parts included, has the white-hot core (2026-11-18: one without it distracts).
+  const cekirdek = `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="url(#${gid}c)"/>`;
   return (s.alarm ? `<g class="hm-yan">${govde}</g>` : govde) + arka + cekirdek + on + (dokun ? `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r + 3.5)}" fill="none" stroke="${koyu ? '#fff' : '#000'}" stroke-opacity=".7"/>` : '');
 }
 function cizim(si, d, dersler, secili) {
@@ -328,7 +328,7 @@ function gorunum() {
   const n = t.nane, g = (r, a) => '<circle r="' + r + '" fill="' + n + '" opacity="' + a + '"/>';
   const lejant = '<div class="hm-lejant">' +
     '<span><i class="hm-yelpaze" style="background:linear-gradient(90deg,' + renk(t, .45, .9) + ',' + renk(t, .89, .9) + ' 72%,' + n + ' 72%)"></i>hatırlama: çizginin altı → üstü</span>' +
-    ornek('', g(5.2, .1) + '<circle r="3" fill="' + n + '"/>') + 'hafif ışık: kısa süreli</span>' +
+    ornek('', g(5.2, .1) + '<circle r="3" fill="#fff" stroke="' + n + '" stroke-width="1.4"/>') + 'hafif ışık: kısa süreli</span>' +
     ornek('', g(7, .24) + '<circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/>') + 'ışıldıyor: pekişiyor</span>' +
     ornek('', '<path d="M-11,0 A11,3.8 0 0 1 11,0" transform="rotate(-22)" fill="none" stroke="' + n + '" stroke-opacity=".45"/><circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/><path d="M11,0 A11,3.8 0 0 1 -11,0" transform="rotate(-22)" fill="none" stroke="' + n + '"/>') + 'halka: uzun süreli</span>' +
     ornek('', '<path d="M-11,0 A11,3.8 0 0 1 11,0" transform="rotate(-22)" fill="none" stroke="' + ALTIN + '" stroke-opacity=".6"/><circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/><path d="M11,0 A11,3.8 0 0 1 -11,0" transform="rotate(-22)" fill="none" stroke="' + ALTIN + '" stroke-width="1.5"/>') + 'altın halka: YKS’ye kadar kalıcı</span>' +
