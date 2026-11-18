@@ -23337,6 +23337,67 @@ function pdfCoz(sayfalar,dosya){
   return {ad:sinav,liste:listeTuru(dosya,adlar),yaz,dersler:sonuc,atlanan};
 }
 
+// TÖDER (Akbim) result lists — "TYT SIRALI TYT LİSTESİ", "KURUM KARNESİ" — print no list of schools, only the average of
+// everyone who took the exam, on a row "SINAV GENELİ ( 328382 Öğrenci )" under the subject headers. That row is kept as the
+// exam's Türkiye averages (Genel Net) with no school list: Öğretmen raporu, Analiz and the student reports compare with it,
+// and this page's place charts, which need a list, leave the exam out. Its question counts are the TYT's.
+const AKBIM_DERS={'TÜRKÇE':['TÜRKÇE-T',40],'TAR':['TARİH-T',5],'COĞ':['COĞRAFYA-T',5],'FEL':['FELSEFE-T',5],'DİN':['DİN KÜLTÜRÜ-T',5],
+  'T. MAT':['MATEMATİK-T',30],'GEO':['GEOMETRİ-T',10],'FİZ':['FİZİK-T',7],'KİM':['KİMYA-T',7],'BİY':['BİYOLOJİ-T',6]};
+const AKBIM_GENEL=/^SINAV GENELİ\s*\(/u;
+const akbimMi=sayfalar=>(sayfalar||[]).some(p=>(p||[]).some(i=>i&&typeof i.s==='string'&&AKBIM_GENEL.test(i.s.trim())));
+function akbimCoz(sayfalar){
+  let ad=null,gun=null,yaz=null,bulunan=null;
+  for(const items of sayfalar||[]){
+    const it=(items||[]).filter(i=>i&&typeof i.s==='string'&&i.s.trim()&&Number.isFinite(i.x)&&Number.isFinite(i.y))
+      .map(i=>({s:i.s.trim().replace(/\s+/g,' '),x:i.x,y:i.y,w:Number.isFinite(i.w)?i.w:i.s.trim().length*4,z:Number.isFinite(i.z)?i.z:0}));
+    for(const i of it){
+      const t=/^Sınav Tarihi\s*:\s*(\d{1,2})\.(\d{1,2})\.(\d{4})$/u.exec(i.s);
+      if(t&&gun===null)gun=gunDan(t[1].padStart(2,'0')+'.'+t[2].padStart(2,'0')+'.'+t[3]);
+      const g=gunDan(i.s);if(g!==null)yaz=yaz===null?g:Math.max(yaz,g);
+    }
+    // The exam's name is the title: the largest words on the first page.
+    if(ad===null){const b=it.filter(i=>/\p{Lu}/u.test(i.s)&&!/\d{1,2}\.\d{1,2}\.\d{4}/.test(i.s)).sort((a,b)=>b.z-a.z)[0];if(b)ad=kisa(b.s,120)}
+    const g=it.find(i=>AKBIM_GENEL.test(i.s));if(!g)continue;
+    // The subject headers: of the lines above the row, the one with the most subjects.
+    const bas=new Map();for(const i of it)if(i.y>g.y&&(AKBIM_DERS[i.s]||i.s==='TOPLAM')){const k=Math.round(i.y);if(!bas.has(k))bas.set(k,[]);bas.get(k).push(i)}
+    const h=[...bas.values()].map(l=>({l,n:l.filter(i=>AKBIM_DERS[i.s]).length})).filter(x=>x.n>=3).sort((a,b)=>b.n-a.n||a.l[0].y-b.l[0].y)[0];
+    if(!h)throw new Error('TÖDER listesinde ders başlıkları okunamadı.');
+    const sutun=h.l.map(i=>({ad:i.s,c:i.x+i.w/2})),deger=new Map();
+    for(const i of it){
+      if(i===g||Math.abs(i.y-g.y)>=1.5||!SAYI.test(i.s))continue;
+      const c=i.x+i.w/2;let en=null,ed=15;for(const s of sutun)if(Math.abs(s.c-c)<ed){ed=Math.abs(s.c-c);en=s.ad}
+      if(!en)continue;if(deger.has(en))throw new Error('TÖDER listesinde '+en+' ortalaması iki kez okundu.');deger.set(en,sayiOku(i.s));
+    }
+    const dersler=[];
+    for(const [k,[kod,soru]] of Object.entries(AKBIM_DERS)){
+      if(!sutun.some(s=>s.ad===k))continue;const v=deger.get(k);
+      if(v===undefined)throw new Error('TÖDER listesinde '+k+' Türkiye ortalaması okunamadı.');
+      if(v<-soru/4||v>soru)throw new Error('TÖDER listesinde '+k+' ortalaması soru sayısını aşıyor.');
+      dersler.push({kod,soru,genel:v,satir:[]});
+    }
+    if(dersler.length<3)throw new Error('TÖDER listesinde ders ortalamaları okunamadı.');
+    // The printed total is the sum of the subjects' averages, each rounded to two decimals.
+    const top=deger.get('TOPLAM');
+    if(top!==undefined&&Math.abs(top-dersler.reduce((t,d)=>t+d.genel,0))>0.01*dersler.length)throw new Error('TÖDER listesinde ders ortalamalarının toplamı tutmuyor.');
+    if(bulunan&&JSON.stringify(bulunan)!==JSON.stringify(dersler))throw new Error('TÖDER listesinde iki farklı Türkiye ortalaması var.');
+    bulunan=dersler;
+  }
+  if(!bulunan)throw new Error('TÖDER listesinde “SINAV GENELİ” satırı yok.');
+  if(!ad)throw new Error('TÖDER listesinde sınav adı okunamadı.');
+  return {ad,liste:'kurum',yaz,gun,dersler:bulunan,atlanan:0,yalnizOrtalama:true};
+}
+// A TÖDER list names the exam its own way ("TÖDER TYT DENEME-1"); the school's lists (Sıralamalar) may call it otherwise
+// ("27-TYT_TÖDER"), and the reports find the Türkiye average by the school's name. The averages take the name of the school's
+// exam held the same day, else of the one within a week that shares a word with the list's title; otherwise null.
+function okulSinavAdi(r,sl=siralamaSinavlari()){
+  if(!r||r.gun===null||r.gun===undefined)return null;
+  const l=sl.map(s=>({ad:s.ad,g:sinavGunu(s.ad,sl)})).filter(s=>s.g!==null);
+  const ayni=l.filter(s=>s.g===r.gun);if(ayni.length===1)return ayni[0].ad;
+  const kel=s=>new Set(String(s).toLocaleUpperCase('tr-TR').split(/[^0-9A-ZÇĞİÖŞÜ]+/u).filter(w=>w.length>=4&&!/^\d+$/.test(w)));
+  const k=kel(r.ad),yakin=l.filter(s=>Math.abs(s.g-r.gun)<=7&&[...kel(s.ad)].some(w=>k.has(w)));
+  return yakin.length===1?yakin[0].ad:null;
+}
+
 /* ---------------- notebook storage ---------------- */
 // D.turkiye = {surum, ts, okul, adlar:[school names], sinavlar:[{ad, liste, yaz, ts, dersler:[[kod, soru, genel, satırlar]]}]}
 // okul is the school the page follows (as printed), null until chosen. genel is the Türkiye average in
@@ -23353,7 +23414,7 @@ function dogrula(v){
   const tam=(x,a,b)=>Number.isSafeInteger(x)&&x>=a&&x<=b;
   if(!v||typeof v!=='object'||Array.isArray(v)||v.surum!==SURUM||!tam(v.ts,0,1e14))hata('yapı');
   if(v.okul!==null&&!metin(v.okul,120))hata('okul');
-  if(!Array.isArray(v.adlar)||!v.adlar.length||v.adlar.length>EN_COK_AD||!v.adlar.every(a=>metin(a,120))||new Set(v.adlar.map(anahtar)).size!==v.adlar.length)hata('kurumlar');
+  if(!Array.isArray(v.adlar)||v.adlar.length>EN_COK_AD||!v.adlar.every(a=>metin(a,120))||new Set(v.adlar.map(anahtar)).size!==v.adlar.length)hata('kurumlar');
   if(!Array.isArray(v.sinavlar)||!v.sinavlar.length||v.sinavlar.length>EN_COK_SINAV)hata('denemeler');
   const ids=new Set();
   for(const s of v.sinavlar){
@@ -23364,7 +23425,7 @@ function dogrula(v){
     for(const d of s.dersler){
       if(!Array.isArray(d)||d.length!==4||!metin(d[0],60)||kodlar.has(anahtar(d[0]))||!tam(d[1],1,200)||!tam(d[2],-20000,20000)||typeof d[3]!=='string')hata('ders');
       kodlar.add(anahtar(d[0]));
-      const p=d[3].split(',');if(p.length>EN_COK_SATIR)hata('ders satırları');
+      const p=d[3]?d[3].split(','):[];if(p.length>EN_COK_SATIR)hata('ders satırları');   // '': the Türkiye average alone (a TÖDER list)
       for(const x of p){const m=PARCA.exec(x);if(!m||parseInt(m[1],36)>=v.adlar.length||Math.abs(parseInt(m[2],36))>d[1]*100||(m[3]!==undefined&&!tam(parseInt(m[3],36),1,99999)))hata('ders satırı')}
     }
   }
@@ -23378,7 +23439,7 @@ function oku(){
 function ac(v){
   if(!v)return {okul:null,sinavlar:[]};
   return {okul:v.okul,sinavlar:v.sinavlar.map(s=>({id:kimlik(s.ad,s.liste),ad:s.ad,liste:s.liste,yaz:s.yaz,ts:s.ts,...(s.duzey===undefined?{}:{duzey:s.duzey}),
-    dersler:s.dersler.filter(d=>!disarida(d[0])).map(([kod,soru,genel,sat])=>({kod,soru,genel:genel/100,satir:sat.split(',').map((p,i)=>{const m=PARCA.exec(p);
+    dersler:s.dersler.filter(d=>!disarida(d[0])).map(([kod,soru,genel,sat])=>({kod,soru,genel:genel/100,satir:(sat?sat.split(','):[]).map((p,i)=>{const m=PARCA.exec(p);
       return {sira:m[3]===undefined?i+1:parseInt(m[3],36),ad:v.adlar[parseInt(m[1],36)],net:parseInt(m[2],36)/100}})}))})).filter(s=>s.dersler.length)};
 }
 function paketle(a,ts){
@@ -23477,10 +23538,12 @@ function siralamaDuzeyi(ad,sl){
 function model(v,sec={}){
   const A=ac(v),sl=siralamaSinavlari();
   const tum=A.sinavlar.map(s=>{const g=sinavGunu(s.ad,sl),oto=adDuzeyi(s.ad)??siralamaDuzeyi(s.ad,sl),d=s.duzey!==undefined?s.duzey:oto;
-    return {...s,duzeyOto:oto,duzeyElle:s.duzey!==undefined,grup:d===null?null:d===0?'d':'d'+d,g:g??s.yaz,gKaynak:g!==null?'sinav':s.yaz!==null?'rapor':null}});
-  const listeler=LISTELER.map(l=>l[0]).filter(l=>tum.some(s=>s.liste===l));
+    return {...s,duzeyOto:oto,duzeyElle:s.duzey!==undefined,grup:d===null?null:d===0?'d':'d'+d,g:g??s.yaz,gKaynak:g!==null?'sinav':s.yaz!==null?'rapor':null,
+      sirali:s.dersler.every(d=>d.satir.length>0)}});
+  // The place charts read the lists; an exam with the Türkiye average alone (sirali false: a TÖDER list) is only in tum.
+  const listeler=LISTELER.map(l=>l[0]).filter(l=>tum.some(s=>s.sirali&&s.liste===l));
   const liste=listeler.includes(sec.liste)?sec.liste:listeler[0]||null;
-  const l1=tum.filter(s=>s.liste===liste),sayac=new Map();l1.forEach(s=>{if(s.grup)sayac.set(s.grup,(sayac.get(s.grup)||0)+1)});
+  const l1=tum.filter(s=>s.sirali&&s.liste===liste),sayac=new Map();l1.forEach(s=>{if(s.grup)sayac.set(s.grup,(sayac.get(s.grup)||0)+1)});
   const ana=sayac.has('d12')?'d12':[...sayac].sort((a,b)=>b[1]-a[1]||grupSira(b[0])-grupSira(a[0]))[0]?.[0]??null;
   tum.forEach(s=>{s.yer=s.grup??(s.liste===liste?ana:null)});
   const gruplar=[...sayac.keys()].sort((a,b)=>grupSira(b)-grupSira(a)),duzeyler=gruplar.length>1?[...gruplar,'tum']:gruplar;
@@ -23944,7 +24007,7 @@ function kaynaklar(v,st,salt){
       const sinif=salt?(s.yer?grupAdi(s.yer):'—'):'<select class="tg-sinif" data-tg-sinif="'+kacis(s.id)+'" aria-label="'+kacis(s.ad)+' sınıfı"><option value="">'+(s.duzeyOto?'Otomatik · '+s.duzeyOto+'. sınıf':s.yer?'Otomatik · '+grupAdi(s.yer):'Otomatik')+'</option>'+
         [12,11,10,9,0].map(d=>'<option value="'+d+'"'+(s.duzeyElle&&s.duzey===d?' selected':'')+'>'+(d?d+'. sınıf':'Diğer')+'</option>').join('')+'</select>';
       return '<tr><td class="tg-ad">'+kacis(s.ad)+'</td><td class="tg-dar-gizle">'+sinif+'</td><td class="tg-dar-gizle">'+kacis(LISTE_ADI[s.liste])+'</td><td class="tg-ad">'+(s.g!==null?tarihUzun(s.g)+(s.gKaynak==='rapor'?' <span class="mini tg-dar-gizle">rapor</span>':''):'—')+'</td>'+
-        '<td class="tg-dar-gizle">'+fi(s.dersler.length)+'</td><td>'+(var_===null?'—':fi(var_)+' derste')+'</td>'+(salt?'':'<td><button type="button" class="et-dugme" data-tg-sil="'+kacis(s.id)+'" aria-label="'+kacis(s.ad+' · '+LISTE_ADI[s.liste])+' listesini sil">Sil</button></td>')+'</tr>'}).join('')+'</tbody></table></div></section>'+hesapNotu();
+        '<td class="tg-dar-gizle">'+fi(s.dersler.length)+'</td><td>'+(!s.sirali?'Yalnız Türkiye ortalaması':var_===null?'—':fi(var_)+' derste')+'</td>'+(salt?'':'<td><button type="button" class="et-dugme" data-tg-sil="'+kacis(s.id)+'" aria-label="'+kacis(s.ad+' · '+LISTE_ADI[s.liste])+' listesini sil">Sil</button></td>')+'</tr>'}).join('')+'</tbody></table></div></section>'+hesapNotu();
 }
 // What the page shows and where its numbers come from: only what the lists print; nothing is estimated.
 function hesapNotu(){
@@ -24093,8 +24156,10 @@ function icerik(){
   const durumSatiri='<p id="tgDurum" role="status" aria-live="polite">'+kacis(DURUM_YAZI)+'</p>';
   if(hata)return '<header class="et-bas">'+baslik+'</header><p class="et-uyari">'+kacis(hata)+'</p>'+durumSatiri;
   if(!veri)return '<header class="et-bas">'+baslik+'</header><div class="et-arac">'+ekle+'</div>'+durumSatiri+
-    '<section class="et-panel et-bos"><b>Henüz liste yok</b>'+(salt?'':'<p>Myexamy’de sınavın Raporlar → Türkiye Geneli Analiz ve Raporları bölümünden “Ders Ortalamaları İlk 100 Kurum (Kolej)” PDF’ini indirip “PDF ekle” ile ekleyin. Her yeni deneme grafiğe bir nokta ekler.</p>')+'</section>';
+    '<section class="et-panel et-bos"><b>Henüz liste yok</b>'+(salt?'':'<p>Myexamy’de sınavın Raporlar → Türkiye Geneli Analiz ve Raporları bölümünden “Ders Ortalamaları İlk 100 Kurum (Kolej)” PDF’ini indirip “PDF ekle” ile ekleyin. Her yeni deneme grafiğe bir nokta ekler. TÖDER denemelerinde okulun “KURUM_TYT_SIRALI_LISTE” ya da “KURUM_KARNE” PDF’i yalnızca Türkiye ortalamalarını (Sınav geneli) ekler.</p>')+'</section>';
   const st=durumAl(veri),m=st.m;
+  if(!m.tum.some(s=>s.sirali))return '<header class="et-bas">'+baslik+'</header><div class="et-arac">'+ekle+'</div>'+durumSatiri+
+    '<section class="et-panel et-bos"><b>Sıra grafikleri için kurum listesi yok</b><p>Eklenen denemelerde yalnızca Türkiye ortalaması var (TÖDER sonuç listesi). Öğretmen raporu ve Analiz bu ortalamaları kullanır. Kurumların sırası için “Ders Ortalamaları İlk 100 Kurum” PDF’ini ekleyin.</p></section>'+kaynaklar(veri,st,salt);
   cizimPlanla();
   const ust='<header class="et-bas">'+baslik+'<p class="et-cumle">'+(st.mod==='artis'?cumleArtis(st):cumle(st))+'</p></header>'+arac(st,salt)+durumSatiri+digerleri(st);
   if(!m.okul)return ust+'<section class="et-panel et-bos tg-okul-sec"><b>Okulunuzu seçin</b><p>Üstteki “Okul” listesinden okulunuzu seçin.</p></section>'+kaynaklar(veri,st,salt);
@@ -24133,7 +24198,10 @@ async function pdfEkle(files){
   const okunan=[],hatalar=[],defter=D;let atlanan=0;
   for(const file of files){
     durum('PDF okunuyor: '+file.name);
-    try{const {pages}=await denemePdfSayfalari(file);const r=pdfCoz(pages,file.name);atlanan+=r.atlanan;okunan.push(r)}catch(e){hatalar.push(file.name+': '+e.message)}
+    try{const {pages}=await denemePdfSayfalari(file);
+      if(akbimMi(pages)){const r=akbimCoz(pages),ok=okulSinavAdi(r);if(ok&&anahtar(ok)!==anahtar(r.ad)){r.listeAdi=r.ad;r.ad=ok}else if(!ok)r.eslesmedi=true;okunan.push(r)}
+      else{const r=pdfCoz(pages,file.name);atlanan+=r.atlanan;okunan.push(r)}
+    }catch(e){hatalar.push(file.name+': '+e.message)}
   }
   if(D!==defter||!rehberMi())throw new Error('Oturum değişti.');
   if(okunan.length){
@@ -24141,12 +24209,15 @@ async function pdfEkle(files){
     // The page moves to the list just added: its kind, its grade and the exam itself.
     const r=okunan[okunan.length-1];gorunumeGit(kimlik(r.ad,r.liste));
   }
-  return (okunan.length?'Eklendi: '+okunan.map(r=>r.ad+' · '+LISTE_ADI[r.liste]+' · '+fi(r.dersler.length)+' ders').join(', ')+'.':'Liste eklenmedi.')+
+  const yalniz=okunan.filter(r=>r.yalnizOrtalama);
+  return (okunan.length?'Eklendi: '+okunan.map(r=>r.ad+' · '+(r.yalnizOrtalama?'Türkiye ortalamaları'+(r.listeAdi?' (listede: '+r.listeAdi+')':''):LISTE_ADI[r.liste])+' · '+fi(r.dersler.length)+' ders').join(', ')+'.':'Liste eklenmedi.')+
+    (yalniz.length?' Öğretmen raporu ve Analiz bu ortalamaları kullanır; listede kurum sırası olmadığı için sıra grafiklerinde yer almaz.':'')+
+    yalniz.filter(r=>r.eslesmedi).map(r=>' '+r.ad+': Sıralamalar’da aynı günün denemesi bulunamadı; ortalamalar ancak aynı adlı denemede görünür.').join('')+
     (atlanan?' Okunamayan '+fi(atlanan)+' satır atlandı.':'')+(hatalar.length?' Okunamayan: '+hatalar.join(' · '):'');
 }
 // Shows one stored list: its kind, its grade group and the exam itself.
 function gorunumeGit(id){
-  const {veri}=oku();if(!veri)return;const m=model(veri,{}),s=m.tum.find(x=>x.id===id);if(!s)return;
+  const {veri}=oku();if(!veri)return;const m=model(veri,{}),s=m.tum.find(x=>x.id===id);if(!s||!s.sirali)return;
   const mm=s.liste===m.liste?m:model(veri,{liste:s.liste}),t=mm.tum.find(x=>x.id===id);
   EK.tgListe=s.liste;EK.tgDuzey=mm.duzeyler.includes(t.yer)?t.yer:undefined;EK.tgSimdi=id;EK.tgOnceki=EK.tgDers=undefined;
 }
@@ -24223,7 +24294,7 @@ document.addEventListener('keydown',ev=>{
   ipucuGoster(kutu,ev.key==='Home'?0:ev.key==='End'?g.xs.length-1:Math.max(0,Math.min(g.xs.length-1,i+(ev.key==='ArrowLeft'?-1:1))));
 });
 document.addEventListener('focusout',ev=>{const kutu=ev.target.closest?.('.et-grafik[data-tg-grafik]');if(kutu&&etkin())ipucuGizle(kutu)});
-return {ortalamalar,grafikToplam,pdfCoz,listeTuru,dersBilgi,sinifDuzeyi,adDuzeyi,okulAdi,kisaAdlar,dogrula,oku,ac,paketle,birlestir,raporEkle,okulKaydet,duzeyKaydet,sinavSil,sil,model,durumAl,
+return {ortalamalar,grafikToplam,pdfCoz,akbimMi,akbimCoz,okulSinavAdi,listeTuru,dersBilgi,sinifDuzeyi,adDuzeyi,okulAdi,kisaAdlar,dogrula,oku,ac,paketle,birlestir,raporEkle,okulKaydet,duzeyKaydet,sinavSil,sil,model,durumAl,
   grafikSira,grafikNet,grafikleriCiz,icerik,gorunum,CIZIMLER,UST_SINIR,EN_COK_SINAV,DERSLER};
 })();
 function gorunumTurkiye(){return TURKIYE.gorunum()}

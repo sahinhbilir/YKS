@@ -15,6 +15,10 @@ In Myexamy: select the exam on **Sınavlar**, then **Raporlar → Türkiye Genel
 - A PDF with no such title is refused, and so are Şube and Öğrenci lists and a file that mixes two exams.
 - **List kind.** The same report set also contains “İlk 100 Kurum” (schools and courses together) and “(Kurs)”. The kind comes from the file name when it says *(Kolej)* or *(Kurs)*. Otherwise it is inferred from the names: no course means Kolej, only courses means Kurs, and a mix means *Tüm kurumlar*. Different kinds are never mixed. When more than one kind is stored, a **Liste** switch appears and Kolej is the default.
 - Adding an exam's list again (same exam name and kind) replaces it.
+- **TÖDER (Akbim) lists.** TÖDER publishes no school list. Its `KURUM_TYT_SIRALI_LISTE` and `KURUM_KARNE` PDFs print a row `SINAV GENELİ ( 328382 Öğrenci )` under the subject headers (TÜRKÇE, TAR, COĞ, FEL, DİN, T. MAT, GEO, FİZ, KİM, BİY, TOPLAM). That row is kept as the exam's Türkiye averages with an empty school list, as kind *Tüm kurumlar*, with the TYT question counts.
+  - Each value is matched to the subject header it sits under. A missing value, a value above the question count, or a TOPLAM that is not the sum of the subjects refuses the file.
+  - The list names the exam its own way (`TÖDER TYT DENEME-1`), but the reports look the average up by the school's name. So the averages take the name of the Sıralamalar exam held on the list's *Sınav Tarihi*. Failing that, they take the one within a week that shares a word of four or more letters with the title. Otherwise the list's own name stands, and the status line says so.
+  - Öğretmen raporu, Analiz and the student reports compare with these averages (`ortalamalar`). The place and Artış charts need a school list, so they leave such an exam out. The Denemeler table shows it as *Yalnız Türkiye ortalaması*.
 
 ## The exams and the school
 
