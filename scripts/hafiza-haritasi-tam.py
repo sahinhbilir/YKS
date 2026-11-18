@@ -3,7 +3,7 @@
 plus every remaining plan topic. Checks that names match the app's plan topics, that links form no
 cycle, that every id exists and that exam shares do not exceed a row. Embedded by scripts/embed-haritam.cjs.
 Usage: python3 scripts/hafiza-haritasi-tam.py"""
-import json, re, sys
+import ast, json, re, sys
 from collections import defaultdict
 
 pilot = json.load(open('data/hafiza-haritasi-pilot.json', encoding='utf8'))
@@ -53,7 +53,7 @@ DERS = {
    ('fizRadyo','Radyoaktivite'),('fizModern','Modern Fizik'),('fizElKuvvet','Elektriksel Kuvvet'),('fizElAlan','Elektrik Alan'),('fizPotansiyel','Elektrik Potansiyel Enerjisi ve Elektrik Potansiyeli'),
    ('fizDuzgunAlan','Düzgün Elektrik Alan'),('fizSigac','Sığaçlar'),('fizAtis','Atışlar'),('fizIs','İş-Güç-Enerji'),('fizMiknatis','Mıknatıslar'),('fizManyetikAlan','Manyetik Alan'),
    ('fizManyetikKuvvet','Manyetik Kuvvet'),('fizIndukleme','Elektromanyetik İndüklenme'),('fizAC','Alternatif Akım'),('fizTrafo','Transformatör'),('fizMomentum','İtme ve Momentum'),
-   ('fizGoruntu','Görüntüleme Teknikleri'),('fizYariIletken','Yarı İletken Teknolojisi'),('fizNano','Nanoteknoloji'),('fizLazer','Lazer')],
+   ('fizGoruntu','Görüntüleme Teknikleri'),('fizYariIletken','Yarı İletken Teknolojisi'),('fizSuperIletken','Süper İletkenler'),('fizNano','Nanoteknoloji'),('fizLazer','Lazer')],
 }
 GIZLI = [p for p in pilot['konular'] if p.get('gizli')]
 
@@ -251,7 +251,7 @@ satir('AYT','Fizik','Büyük Patlama ve Parçacık Fiziği',yillar(0,0,0,0,1,0,0
 satir('AYT','Fizik','Atom Fiziğine Giriş ve Radyoaktivite',yillar(1,1,0,1,0,0,1),{'fizRadyo':.6,'fizAtom':.4})
 satir('AYT','Fizik','Özel Görelilik',yillar(0,0,0,0,1,0,0),{'fizModern':1})
 satir('AYT','Fizik','Fotoelektrik Olay ve Compton Olayı',yillar(1,1,0,1,1,0,0),{'fizModern':1})
-satir('AYT','Fizik','Modern Fiziğin Teknolojideki Uygulamaları',yillar(1,1,0,1,1,0,1),{'fizGoruntu':.3,'fizYariIletken':.3,'fizNano':.2,'fizLazer':.2})
+satir('AYT','Fizik','Modern Fiziğin Teknolojideki Uygulamaları',yillar(1,1,0,1,1,0,1),{'fizGoruntu':.3,'fizYariIletken':.25,'fizSuperIletken':.05,'fizNano':.2,'fizLazer':.2})
 DEGISEN = {('TYT','Geometri','Açılar ve Üçgenler'),('TYT','Fizik','Optik'),('TYT','Geometri','Çember-Daire'),('AYT','Geometri','Özel Üçgenler'),('AYT','Geometri','Çember ve Daire'),('AYT','Matematik','Fonksiyonlar'),('AYT','Fizik','Kuvvet, Tork ve Denge')}
 for r in pilot['sinavSatirlari']:
     if (r['sinav'], r['ders'], r['konu']) not in DEGISEN: S.append(r)
@@ -269,7 +269,7 @@ B = {35:['tytMantik'],36:['tytKume'],37:['tytKume'],38:['tytTemel'],39:['tytBolm
  125:['fizBasinc'],126:['fizKaldirma'],127:['fizDalgaTemel'],128:['fizDalgaTemel'],129:['fizDalgaSu'],130:['fizDalgaSu'],131:['fizAydinlanma'],132:['fizGolge'],133:['fizYansima'],134:['fizYansima'],
  135:['fizKuresel'],137:['fizMercek'],138:['fizPrizma'],139:['fizRenk'],146:['fizMomentum'],149:['fizBasitMakine'],150:['fizElKuvvet','fizElAlan'],151:['fizPotansiyel'],152:['fizDuzgunAlan','fizSigac'],
  153:['fizManyetikAlan','fizManyetikKuvvet','fizIndukleme'],154:['fizAC'],155:['fizTrafo'],156:['fizCembersel'],162:['fizDalgaMek'],163:['fizEMDalga'],164:['fizAtom'],165:['fizBuyukPatlama'],166:['fizRadyo'],
- 167:['fizModern'],168:['fizModern'],169:['fizModern'],170:['fizModern'],171:['fizGoruntu'],172:['fizYariIletken'],174:['fizNano'],175:['fizLazer']}
+ 167:['fizModern'],168:['fizModern'],169:['fizModern'],170:['fizModern'],171:['fizGoruntu'],172:['fizYariIletken'],173:['fizSuperIletken'],174:['fizNano'],175:['fizLazer']}
 
 # ---- every other subject of the SAY and EA plans (2026-11-17: "all topics of all lessons") ----
 # A "(devamı)" / "- devamı" plan topic is the same topic continued: it feeds the topic's node (the app matches it).
@@ -553,6 +553,114 @@ for kid, ixler in COG.items():
     for ix in ixler: B[ix] = [kid]
 B.update({428:['felTanima'],429:['felDusunme'],430:['felKonular'],431:['felOkuma'],432:['felMO6'],433:['felMS2'],434:['fel15'],435:['fel18'],436:['fel20']})
 
+# ---- 2026-11-18: every YKS topic ("did you really check all the topics of YKS?") ----
+# Tarih (grades 9–11) and Din Kültürü are in every YKS plan the app builds (YKS_EK_DERSLER; yeniYksKonuPlani), named as the
+# MEB programmes this year's 12th grade was taught (Tarih 2023, DKAB 2018; checked against mufredat.meb.gov.tr).
+i = html.index('const YKS_EK_DERSLER = '); EK = json.loads(html[i + 23:html.index(';\n', i)])
+TAR_ID = ['tarZaman','tarIlk','tarOrta','tarTurkDunya','tarIslam','tarTurkIslam','tarSelcuklu','tarOsmSiyaset','tarAsker','tarOsmMedeniyet','tarDunyaGucu',
+          'tarSultan','tarToplum','tarDengeler','tarDegisim','tarDevrim','tarDenge','tarSosyo']
+DIN_ID = ['din91','din92','din93','din94','din95','din101','din102','din103','din104','din105','din111','din112','din113','din114','din115',
+          'din121','din122','din123','din124','din125']
+assert len(EK['Tarih']) == len(TAR_ID) and len(EK['Din Kültürü']) == len(DIN_ID), 'YKS_EK_DERSLER changed: update the ids'
+DERS['Tarih'] = list(zip(TAR_ID, EK['Tarih'])); DERS['Din Kültürü'] = list(zip(DIN_ID, EK['Din Kültürü']))
+# Felsefe: the plan's one topic "Felsefenin Temel Konuları ve Problemleri" is MEB unit 10.3, whose kazanımlar are the seven
+# branches (10.3.1 Varlık … 10.3.7 Sanat). They are parts of it (one memory: its lessons and tests), drawn as topics (dal).
+FEL_DAL = [('felVarlik','Varlık Felsefesi'),('felBilgi','Bilgi Felsefesi'),('felBilim','Bilim Felsefesi'),('felAhlak','Ahlak Felsefesi'),
+           ('felDin','Din Felsefesi'),('felSiyaset','Siyaset Felsefesi'),('felSanat','Sanat Felsefesi')]
+for i_, a in FEL_DAL: GIZLI.append({'id': i_, 'ders': 'Felsefe (+ Felsefe Grubu)', 'ad': a, 'gizli': True, 'parcasi': 'felKonular', 'dal': True})
+Y += [
+ # Tarih: the 2023 programme's order; a unit uses the one before it where the story continues
+ ('tarZaman','tarIlk','cok','Kronoloji ve takvimler; tarihin kaynakları.'),('tarIlk','tarOrta','az','İlk Çağ’ın sonundan Orta Çağ’a (hukuk, devlet).'),
+ ('tarIlk','tarTurkDunya','az','İlk Çağ medeniyet havzaları ve İç Asya.'),('tarOrta','tarTurkDunya','az','Kavimler Göçü.'),
+ ('tarTurkDunya','tarTurkIslam','cok','İslamiyet öncesi Türk devlet yapısı.'),('tarIslam','tarTurkIslam','cok','Abbasiler ve İslam medeniyeti.'),
+ ('tarTurkIslam','tarSelcuklu','cok','Büyük Selçuklu’dan Türkiye Selçuklu Devleti’ne.'),('tarSelcuklu','tarOsmSiyaset','cok','Beylikler dönemi ve Osmanlı’nın kuruluşu.'),
+ ('tarOsmSiyaset','tarAsker','az','Osmanlı ordusunun kuruluşu.'),('tarOsmSiyaset','tarOsmMedeniyet','az','Kuruluş döneminin kurumları.'),
+ ('tarOsmSiyaset','tarDunyaGucu','cok','1453’e kadarki büyüme.'),('tarDunyaGucu','tarSultan','az','Klasik çağın merkez teşkilatı.'),('tarSultan','tarToplum','az','Klasik çağın düzeni.'),
+ ('tarDunyaGucu','tarDengeler','cok','1595 sonrasının siyaseti.'),('tarDengeler','tarDegisim','az','Avrupa’daki değişim ve Osmanlı.'),
+ ('tarDegisim','tarDevrim','cok','Aydınlanmadan devrimlere.'),('tarDengeler','tarDenge','cok','1774 sonrasının siyaseti.'),('tarDevrim','tarDenge','az','Milliyetçilik ve dağılma.'),
+ ('tarDevrim','tarSosyo','az','Sanayi Devrimi ve gündelik hayat.'),('tarDenge','ink20','cok','1914’e gelinen süreç.'),('tarDevrim','ink20','az','Meşrutiyet ve Jön Türkler.'),
+ ('tarTurkIslam','din122','az','Türklerin İslamiyet’i kabulü ve Anadolu’da İslam.'),
+ # Din Kültürü: 9th grade foundations, then their 10th–12th grade continuations
+ ('din91','din92','cok','İman ve İslam kavramları.'),('din92','din93','cok','İslam’ın esasları ve ibadet.'),('din91','din101','az','Bilginin kaynakları; akli ve naklî deliller.'),
+ ('din94','din102','az','Gençlik ve örnek davranış.'),('din94','din104','az','Değerler ve ahlak.'),('din102','din112','cok','Hz. Muhammed’in örnekliği.'),
+ ('din92','din105','az','Din ve dinin yorumu.'),('din105','din123','cok','Yorumlar ve tasavvufi yorumlar.'),('din105','din124','az','Dinî meselelerin çözümünde yöntem.'),
+ ('din95','din122','cok','İslam medeniyeti ve Anadolu.'),('din95','din121','az','İslam medeniyetinde bilim.'),('din101','din111','az','Allah inancı ve ahiret.'),
+ ('din101','din114','az','İnançla ilgili yaklaşımlar.'),('din91','din113','az','Kur’an’daki kavramlar.'),('din92','din103','az','Din ve hayat.'),
+ ('din92','din115','az','Din tanımları ve dinler.'),('din115','din125','az','Dinler.'),
+ # Süper İletkenler (MEB 12.6.3): every SAY plan has it after Yarı İletken Teknolojisi (yeniYksKonuPlani)
+ ('fizYariIletken','fizSuperIletken','az','İletkenlik ve enerji bantları.'),('fizAkim','fizSuperIletken','az','Direnç ve akım.'),
+ # Felsefe's branches: the history-of-philosophy units use them
+ ('felVarlik','felMO6','cok','Arkhe: varlığın ana maddesi.'),('felBilgi','fel15','cok','Rasyonalizm ve empirizm: bilginin kaynağı.'),('felBilgi','fel18','cok','Kant’ın eleştirel felsefesi.'),
+ ('felBilgi','felBilim','az','Bilimsel bilginin değeri.'),('felBilim','fel20','cok','Popper ve Kuhn.'),('felDin','felMS2','cok','Tanrı’nın varlığına ilişkin kanıtlar.'),
+ ('felAhlak','fel18','az','Ödev ahlakı ve faydacılık.'),('felAhlak','felSiyaset','az','Adalet ve iyi yaşam.'),('felSiyaset','fel15','az','Toplum sözleşmesi.'),
+ ('felSanat','fel18','az','Estetik yargı.'),('felBilgi','psiSurec','az','Duyum ve bilginin başlangıcı.'),
+]
+# TYT (the school's table, 2018–2025)
+satir('TYT','Tarih','Tarih ve Zaman',yillar(0,0,0,0,0,0,0,0),{'tarZaman':1})
+satir('TYT','Tarih','İlk ve Orta Çağlarda Türk Dünyası',yillar(1,1,1,1,1,1,1,1),{'tarTurkDunya':1})
+satir('TYT','Tarih','İslam Medeniyetinin Doğuşu',yillar(1,0,0,0,0,0,0,0),{'tarIslam':1})
+satir('TYT','Tarih','Türklerin İslamiyet’i Kabulü ve İlk Türk İslam Devletleri',yillar(1,1,1,1,1,1,1,1),{'tarTurkIslam':1})
+satir('TYT','Tarih','Beylikten Devlete Osmanlı',yillar(1,1,0,0,1,0,0,1),{'tarOsmSiyaset':.5,'tarOsmMedeniyet':.5})
+satir('TYT','Tarih','Dünya Gücü Osmanlı',yillar(0,0,0,0,0,0,1,0),{'tarDunyaGucu':1})
+satir('TYT','Tarih','Değişim Çağında Avrupa ve Osmanlı',yillar(0,0,0,0,0,0,0,0),{'tarDegisim':1})
+satir('TYT','Tarih','Uluslararası İlişkilerde Denge Stratejisi (1774-1914)',yillar(1,0,1,1,0,1,0,0),{'tarDenge':1})
+for ad, v, p in [('Bilgi ve İnanç',(1,2,1,1,1,1,1,1),{'din91':1}),('Din ve İslam',(0,0,0,0,1,1,1,1),{'din92':1}),('İslam ve İbadet',(1,1,0,1,1,0,0,0),{'din93':1}),
+    ('Gençlik ve Değerler',(1,1,1,1,0,0,0,0),{'din94':1}),('Allah İnsan İlişkisi',(0,0,0,0,1,0,1,1),{'din101':1}),('Hz. Muhammed (S.A.V)',(1,1,1,0,0,1,1,1),{'din102':.5,'din112':.5}),
+    # MEB 9.1.1 (bilginin kaynakları: vahiy, akıl) and 10.1.2 (akli ve naklî deliller)
+    ('Vahiy ve Akıl',(1,0,2,1,0,0,0,0),{'din91':.7,'din101':.3}),('İslam Düşüncesinde Yorumlar, Mezhepler',(0,0,0,0,0,1,1,0),{'din105':1}),
+    # MEB 9.5.1 (kültür ve medeniyet; İslam medeniyeti), 12.1 and 12.2
+    ('Din, Kültür ve Medeniyet',(0,0,0,1,1,1,0,1),{'din95':.5,'din122':.25,'din121':.25})]:
+    satir('TYT','Din Kültürü',ad,yillar(*v),p)
+# Rows of the school's TYT table the map lacked (2026-11-18; a blank cell, as in Basit Eşitsizlikler, is 2024 with no question)
+satir('TYT','Matematik','Oran-Orantı',yillar(0,0,1,1,1,1,0,1),{'tytOran':1})
+satir('TYT','Matematik','Denklem Çözme',yillar(0,2,0,0,1,1,0,1),{'tytDenklem':1})
+satir('TYT','Matematik','Köklü İfadeler',yillar(2,1,0,1,1,1,1,1),{'tytKok':1})
+satir('TYT','Matematik','Çarpanlara Ayırma',yillar(0,1,0,0,0,0,0,0),{'tytCarpan':1})
+satir('TYT','Matematik','İşlem',yillar(0,1,0,0,0,0,0,0),{'tytTemel':1})
+satir('TYT','Geometri','Analitik Geometri',yillar(1,1,0,1,1,0,0,0),{'geoNokta':.4,'geoDogru':.6})
+# 9th-grade Hareket ve Kuvvet (Newton's laws, force) and Enerji are TYT topics though the plan lists them under AYT
+satir('TYT','Fizik','Hareket ve Kuvvet',yillar(1,1,1,1,1,1,0,1),{'fizNewton':.7,'fizVektor':.3})
+satir('TYT','Fizik','İş, Güç, Enerji',yillar(0,1,0,0,0,0,0,0),{'fizIs':1})
+# AYT Tarih-1 (kitapsec.com, 2018–2024, given newest first); "Sermaye ve Emek" is the 2018 programme's unit, in 11.5 since 2023
+for ad, v, p in [('Tarih ve Zaman',(1,1,1,1,1,1,1),{'tarZaman':1}),('İnsanlığın İlk Dönemleri',(1,1,1,1,1,1,1),{'tarIlk':1}),("Orta Çağ'da Dünya",(0,0,0,0,0,0,0),{'tarOrta':1}),
+    ('İlk ve Orta Çağlarda Türk Dünyası',(2,2,2,1,2,2,3),{'tarTurkDunya':1}),('İslam Medeniyetinin Doğuşu',(1,1,1,1,2,1,1),{'tarIslam':1}),
+    ("Türklerin İslamiyet'i Kabulü ve İlk Türk İslam Devletleri",(2,1,1,3,1,1,1),{'tarTurkIslam':1}),('Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi',(0,0,1,0,0,1,0),{'tarSelcuklu':1}),
+    ('Beylikten Devlete Osmanlı',(2,2,3,0,1,1,2),{'tarOsmSiyaset':.5,'tarOsmMedeniyet':.5}),('Devletleşme Sürecinde Savaşçılar ve Askerler',(0,0,1,0,1,0,0),{'tarAsker':1}),
+    ('Dünya Gücü Osmanlı',(0,2,0,1,0,1,2),{'tarDunyaGucu':1}),('Sultan ve Osmanlı Merkez Teşkilatı',(0,1,1,1,0,0,0),{'tarSultan':1}),
+    ('Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti',(0,0,1,1,1,0,0),{'tarDengeler':1}),('Değişim Çağında Avrupa ve Osmanlı',(0,1,0,1,2,2,0),{'tarDegisim':1}),
+    ('Uluslararası İlişkilerde Denge Stratejisi (1774-1914)',(2,1,0,1,0,0,1),{'tarDenge':1}),('Devrimler Çağında Değişen Devlet-Toplum İlişkileri',(1,0,0,1,0,0,0),{'tarDevrim':1}),
+    ('Sermaye ve Emek',(0,0,0,0,1,1,0),{'tarSosyo':1})]:
+    satir('AYT','Tarih-1',ad,ters(*v),p)
+# The Felsefe rows that name a branch count for that branch (they counted for the whole unit before).
+DAL_AD = {a: i_ for i_, a in FEL_DAL}; DAL_AD['Felsefe ve Bilim'] = 'felBilim'
+for r in S:
+    if r['ders'] in ('Felsefe', 'Felsefe Grubu') and r['konu'] in DAL_AD and r['paylar'] == {'felKonular': 1}: r['paylar'] = {DAL_AD[r['konu']]: 1}
+# School units (catalogue: Tarih 282–298, Din Kültürü 438–460; a broad duplicate row is matched by its name instead)
+B.update({282:['tarZaman'],283:['tarIlk'],284:['tarOrta'],285:['tarTurkDunya'],286:['tarIslam'],287:['tarTurkIslam'],288:['tarSelcuklu'],289:['tarOsmSiyaset'],
+ 290:['tarAsker'],291:['tarOsmMedeniyet'],292:['tarDunyaGucu'],293:['tarSultan','tarToplum'],294:['tarDengeler'],295:['tarDegisim'],296:['tarDevrim'],297:['tarDenge'],298:['tarSosyo']})
+B.update({438:['din91'],439:['din92'],440:['din93'],441:['din94'],442:['din95'],444:['din101'],445:['din102'],446:['din103'],447:['din104'],448:['din105'],
+ 450:['din111'],451:['din112'],452:['din113'],453:['din114'],454:['din115'],456:['din121'],457:['din122'],458:['din123'],459:['din124'],460:['din125']})
+# Which exam asks each topic: TYT for every YKS student, AYT for the fields whose AYT has its subject (the page decides).
+i = html.index('const PLAN_FEN_SINAVI = '); j = html.index('const out = {};', i)
+FEN_TYT = {d: ast.literal_eval('[' + m + ']') for d, m in re.findall(r'(Fizik|Kimya|Biyoloji):\[(.*?)\],?\n', html[i:j])}
+INK_TYT = {'inkMK','ink20','inkWW1','inkHazirlik','inkTBMM','inkSevr','inkDoguGuney','inkBati','inkLozan','inkInkilap'}
+SATIR_SINAV = defaultdict(set)
+for r in S:
+    for x in r['paylar']: SATIR_SINAV[x].add(r['sinav'])
+def sinavi(k):
+    # the subject's rule, and every exam whose rows count the topic
+    return sorted(set(sinav_kurali(k)) | SATIR_SINAV[k['id']], key=['TYT', 'AYT'].index)
+def sinav_kurali(k):
+    d, a = k['ders'], k['ad']
+    if d in ('Matematik TYT', 'Türkçe'): return ['TYT']
+    if d in ('Matematik AYT', 'Türk Dili ve Edebiyatı'): return ['AYT']
+    if d in ('Geometri', 'Tarih', 'Din Kültürü'): return ['TYT', 'AYT']
+    if d in FEN_TYT: return ['TYT'] if a in FEN_TYT[d] else ['AYT']
+    if d == 'T.C. İnkılap Tarihi ve Atatürkçülük': return ['TYT', 'AYT'] if k['id'] in INK_TYT else ['AYT']
+    if d == 'Coğrafya': return ['TYT'] if a.endswith('(TYT)') else ['AYT']
+    if d == 'Felsefe (+ Felsefe Grubu)': return ['TYT', 'AYT'] if re.search('Felsef', a) else ['AYT']
+    raise SystemExit('sınavı belirsiz ders: ' + d)
+
 # ---- assemble and check ----
 hata = []
 konular, ids = [], set()
@@ -561,10 +669,12 @@ for ders, liste in DERS.items():
         if i in ids: hata.append('tekrar konu ' + i)
         ids.add(i); konular.append({'id': i, 'ders': ders, 'ad': a})
 for g in GIZLI: konular.append(g); ids.add(g['id'])
+ana = {k['id']: k for k in konular}
+for k in konular: k['sinav'] = sinavi(ana[k['parcasi']] if k.get('gizli') else k)
 # names must be the app's plan topics (SAY and EA)
 i = html.index('const VARSAYILAN_KONU_PLANI = '); plan = json.loads(re.sub(r'([{,])([A-Z]+):', r'\1"\2":', html[i + 30:html.index(';\n', i)]))
 DEVAM = re.compile(r'\s*(?:\(devamı\)|- devamı)$', re.I)
-adlar = {(d, DEVAM.sub('', a)) for alan in ('SAY', 'EA') for hafta in plan[alan] for d, l in hafta.items() for a in l}
+adlar = {(d, DEVAM.sub('', a)) for alan in ('SAY', 'EA') for hafta in plan[alan] for d, l in hafta.items() for a in l} | {(d, a) for d, l in EK.items() for a in l} | {('Fizik', 'Süper İletkenler')}
 for k in konular:
     if not k.get('gizli') and (k['ders'], k['ad']) not in adlar: hata.append('plan adı yok: ' + k['ders'] + ' / ' + k['ad'])
 eksik = sorted({(d, a) for d, a in adlar if d in DERS and a != 'Genel Tekrar'} - {(k['ders'], k['ad']) for k in konular})
@@ -599,7 +709,7 @@ for ix, kap in B.items():
     if anahtar not in var_b: var_b.add(anahtar); birimler.append({'ders': KISA[k[0]], 'sinif': k[1], 'ad': k[3], 'kapsar': kap})
 yalniz = [k['id'] for k in konular if not any(b['alt'] == k['id'] or b['ust'] == k['id'] for b in baglar) and not k.get('gizli')]
 if hata: print('\n'.join(hata)); sys.exit(1)
-cikti = {'surum': '2026-11-17-tam', 'not': 'Tam harita: SAY ve EA planlarının bütün dersleri (Geometri, Matematik TYT ve AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, İnkılap Tarihi, Coğrafya, Felsefe grubu). Pilot olduğu gibi korunur. "Genel Tekrar" bir konu değil; "(devamı)" konuları kendi konusunu besler (uygulama eşler).',
+cikti = {'surum': '2026-11-18-yks', 'not': 'Tam harita: YKS planlarının bütün dersleri (Geometri, Matematik TYT ve AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, Tarih, İnkılap Tarihi, Coğrafya, Felsefe grubu, Din Kültürü); her konunun hangi sınavda sorulduğu (sinav). Pilot olduğu gibi korunur. "Genel Tekrar" bir konu değil; "(devamı)" konuları kendi konusunu besler (uygulama eşler).',
          'konular': konular, 'baglar': baglar, 'sinavSatirlari': S, 'birimler': birimler}
 json.dump(cikti, open('data/hafiza-haritasi-tam.json', 'w', encoding='utf8'), ensure_ascii=False, indent=1)
 print(json.dumps({'konu': len(konular), 'bag': len(baglar), 'sinav_satiri': len(S), 'birim': len(birimler), 'baglantisiz': yalniz}, ensure_ascii=False))

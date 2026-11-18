@@ -25,7 +25,7 @@ const kur=()=>{
    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(kur);await page.locator('.hm-sayfa').waitFor();
    assert.equal(await page.locator('button[data-sekme="haritam"]').count(),1,'Haritam in the menu');
-   assert.equal(await page.locator('.hm-d').count(),await page.evaluate(()=>HARITA_VERI.konular.filter(k=>HARITAM.dersleri(D.ogr[0]).includes(k.ders)).length),'every topic of the student\'s subjects drawn');
+   assert.equal(await page.locator('.hm-d').count(),await page.evaluate(()=>HARITAM.gorunur(D.ogr[0]).size),'every topic of the student\'s exams drawn');
    const zemin=await page.evaluate(()=>getComputedStyle(document.querySelector('.hm-svg')).backgroundColor);
    assert.equal(zemin,tema==='dark'?'rgb(14, 14, 15)':'rgb(255, 255, 255)','neutral sky, never blue');
    if(width>600){
@@ -40,6 +40,13 @@ const kur=()=>{
     await page.locator('.hm-d[data-hm="aytBirim"]').click();await page.waitForFunction(()=>EK.haritamSecili===undefined);
     await page.locator('[data-hm-ders="Fizik"]').click();await page.waitForFunction(()=>EK.haritamDers==='Fizik');
     assert.equal(await page.locator('.hm-d[data-hm="geoDik"]').count(),0,'subject filter');
+    // Felsefe (SAY: its TYT part): the seven branches drawn as topics; a branch shows its plan topic's card.
+    await page.locator('[data-hm-ders="Felsefe (+ Felsefe Grubu)"]').click();await page.waitForFunction(()=>EK.haritamDers==='Felsefe (+ Felsefe Grubu)');
+    assert.equal(await page.locator('.hm-d[data-hm="felBilgi"]').count(),1,'Bilgi Felsefesi is on the map');
+    await page.locator('.hm-d[data-hm="felBilgi"]').click();await page.waitForFunction(()=>EK.haritamSecili==='felBilgi');
+    assert.match(await page.locator('[data-hm-kart]').innerText(),/Felsefenin Temel Konuları ve Problemleri konusunun parçası/);
+    await page.screenshot({path:path.join(out,`haritam-${width}-${tema}-felsefe.png`)});
+    await page.locator('.hm-d[data-hm="felBilgi"]').click();await page.waitForFunction(()=>EK.haritamSecili===undefined);
    } else {
     await page.locator('.hm-d[data-hm="aytOzdeslik"]').click();await page.locator('[data-hm-kart] .hf-oge').waitFor();
     const kart=await page.locator('[data-hm-kart]').boundingBox(),svg=await page.locator('.hm-svg').boundingBox();

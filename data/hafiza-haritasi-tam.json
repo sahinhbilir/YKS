@@ -1,1867 +1,3504 @@
 {
- "surum": "2026-11-17-tam",
- "not": "Tam harita: SAY ve EA planlarının bütün dersleri (Geometri, Matematik TYT ve AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, İnkılap Tarihi, Coğrafya, Felsefe grubu). Pilot olduğu gibi korunur. \"Genel Tekrar\" bir konu değil; \"(devamı)\" konuları kendi konusunu besler (uygulama eşler).",
+ "surum": "2026-11-18-yks",
+ "not": "Tam harita: YKS planlarının bütün dersleri (Geometri, Matematik TYT ve AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, Tarih, İnkılap Tarihi, Coğrafya, Felsefe grubu, Din Kültürü); her konunun hangi sınavda sorulduğu (sinav). Pilot olduğu gibi korunur. \"Genel Tekrar\" bir konu değil; \"(devamı)\" konuları kendi konusunu besler (uygulama eşler).",
  "konular": [
   {
    "id": "geoAci",
    "ders": "Geometri",
-   "ad": "Temel Kavramlar ve Düzlemde Açılar"
+   "ad": "Temel Kavramlar ve Düzlemde Açılar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoUcgenAci",
    "ders": "Geometri",
-   "ad": "Üçgende Açılar"
+   "ad": "Üçgende Açılar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoEslik",
    "ders": "Geometri",
-   "ad": "Üçgende Eşlik"
+   "ad": "Üçgende Eşlik",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoBenzer",
    "ders": "Geometri",
-   "ad": "Üçgende Benzerlik"
+   "ad": "Üçgende Benzerlik",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoDik",
    "ders": "Geometri",
-   "ad": "Dik Üçgen"
+   "ad": "Dik Üçgen",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoIkiz",
    "ders": "Geometri",
-   "ad": "İkizkenar Üçgen"
+   "ad": "İkizkenar Üçgen",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoEskenar",
    "ders": "Geometri",
-   "ad": "Eşkenar Üçgen"
+   "ad": "Eşkenar Üçgen",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoAciortay",
    "ders": "Geometri",
-   "ad": "Üçgende Açıortay"
+   "ad": "Üçgende Açıortay",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoKenarortay",
    "ders": "Geometri",
-   "ad": "Üçgende Kenarortay"
+   "ad": "Üçgende Kenarortay",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoAciKenar",
    "ders": "Geometri",
-   "ad": "Üçgende Açı-Kenar Bağıntıları"
+   "ad": "Üçgende Açı-Kenar Bağıntıları",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoAlan",
    "ders": "Geometri",
-   "ad": "Üçgende Alan"
+   "ad": "Üçgende Alan",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoCokgen",
    "ders": "Geometri",
-   "ad": "Çokgenler"
+   "ad": "Çokgenler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoDortgen",
    "ders": "Geometri",
-   "ad": "Dörtgenler"
+   "ad": "Dörtgenler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoYamuk",
    "ders": "Geometri",
-   "ad": "Yamuk"
+   "ad": "Yamuk",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoParalel",
    "ders": "Geometri",
-   "ad": "Paralelkenar"
+   "ad": "Paralelkenar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoEskDortgen",
    "ders": "Geometri",
-   "ad": "Eşkenar Dörtgen"
+   "ad": "Eşkenar Dörtgen",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoDeltoid",
    "ders": "Geometri",
-   "ad": "Deltoid"
+   "ad": "Deltoid",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoDikdortgen",
    "ders": "Geometri",
-   "ad": "Dikdörtgen"
+   "ad": "Dikdörtgen",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoKare",
    "ders": "Geometri",
-   "ad": "Kare"
+   "ad": "Kare",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoNokta",
    "ders": "Geometri",
-   "ad": "Noktanın Analitiği"
+   "ad": "Noktanın Analitiği",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoDogru",
    "ders": "Geometri",
-   "ad": "Doğrunun Analitiği"
+   "ad": "Doğrunun Analitiği",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoDonusum",
    "ders": "Geometri",
-   "ad": "Dönüşüm Geometrisi"
+   "ad": "Dönüşüm Geometrisi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoCember",
    "ders": "Geometri",
-   "ad": "Çemberde Temel Elemanlar"
+   "ad": "Çemberde Temel Elemanlar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoCemberAci",
    "ders": "Geometri",
-   "ad": "Çemberde Açı"
+   "ad": "Çemberde Açı",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoCemberUzunluk",
    "ders": "Geometri",
-   "ad": "Çemberde Uzunluk"
+   "ad": "Çemberde Uzunluk",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoDaire",
    "ders": "Geometri",
-   "ad": "Dairenin Çevresi ve Alanı"
+   "ad": "Dairenin Çevresi ve Alanı",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoKati",
    "ders": "Geometri",
-   "ad": "Katı Cisimler"
+   "ad": "Katı Cisimler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "geoCemberAnalitik",
    "ders": "Geometri",
-   "ad": "Çemberin Analitiği"
+   "ad": "Çemberin Analitiği",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytTemel",
    "ders": "Matematik TYT",
-   "ad": "Temel Kavramlar, Tek-Çift ve Negatif-Pozitif Sayılar"
+   "ad": "Temel Kavramlar, Tek-Çift ve Negatif-Pozitif Sayılar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytAsal",
    "ders": "Matematik TYT",
-   "ad": "Asal Sayılar, Ardışık Sayılar, Faktöriyel"
+   "ad": "Asal Sayılar, Ardışık Sayılar, Faktöriyel",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytBasamak",
    "ders": "Matematik TYT",
-   "ad": "Basamak Kavramı, Asal Çarpanlara Ayırma"
+   "ad": "Basamak Kavramı, Asal Çarpanlara Ayırma",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytBolme",
    "ders": "Matematik TYT",
-   "ad": "Bölme ve Bölünebilme"
+   "ad": "Bölme ve Bölünebilme",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytEbob",
    "ders": "Matematik TYT",
-   "ad": "EBOB-EKOK ve Periyodik Tekrar Eden Durumların Problemleri"
+   "ad": "EBOB-EKOK ve Periyodik Tekrar Eden Durumların Problemleri",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytRasyonel",
    "ders": "Matematik TYT",
-   "ad": "Rasyonel Sayılar"
+   "ad": "Rasyonel Sayılar",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytDenklem",
    "ders": "Matematik TYT",
-   "ad": "Birinci Dereceden Denklemler"
+   "ad": "Birinci Dereceden Denklemler",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytEsitsizlik",
    "ders": "Matematik TYT",
-   "ad": "Basit Eşitsizlikler"
+   "ad": "Basit Eşitsizlikler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytMutlak",
    "ders": "Matematik TYT",
-   "ad": "Mutlak Değer"
+   "ad": "Mutlak Değer",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytCarpan",
    "ders": "Matematik TYT",
-   "ad": "Çarpanlara Ayırma"
+   "ad": "Çarpanlara Ayırma",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytUslu",
    "ders": "Matematik TYT",
-   "ad": "Üslü İfadeler"
+   "ad": "Üslü İfadeler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytKok",
    "ders": "Matematik TYT",
-   "ad": "Köklü İfadeler"
+   "ad": "Köklü İfadeler",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytOran",
    "ders": "Matematik TYT",
-   "ad": "Oran-Orantı"
+   "ad": "Oran-Orantı",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytSayiP",
    "ders": "Matematik TYT",
-   "ad": "Sayı Problemleri"
+   "ad": "Sayı Problemleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytKesirP",
    "ders": "Matematik TYT",
-   "ad": "Kesir Problemleri"
+   "ad": "Kesir Problemleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytYasP",
    "ders": "Matematik TYT",
-   "ad": "Yaş Problemleri"
+   "ad": "Yaş Problemleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytYuzdeP",
    "ders": "Matematik TYT",
-   "ad": "Yüzde Problemleri"
+   "ad": "Yüzde Problemleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytKarP",
    "ders": "Matematik TYT",
-   "ad": "Kâr-Zarar Problemleri"
+   "ad": "Kâr-Zarar Problemleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytKarisimP",
    "ders": "Matematik TYT",
-   "ad": "Karışım Problemleri"
+   "ad": "Karışım Problemleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytHareketP",
    "ders": "Matematik TYT",
-   "ad": "Hareket Problemleri"
+   "ad": "Hareket Problemleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytIsciP",
    "ders": "Matematik TYT",
-   "ad": "İşçi Problemleri"
+   "ad": "İşçi Problemleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytGrafikP",
    "ders": "Matematik TYT",
-   "ad": "Grafik Problemleri"
+   "ad": "Grafik Problemleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytPolinom",
    "ders": "Matematik TYT",
-   "ad": "Polinomlar"
+   "ad": "Polinomlar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytVeri",
    "ders": "Matematik TYT",
-   "ad": "Veri Analizi"
+   "ad": "Veri Analizi",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "tytMantik",
    "ders": "Matematik TYT",
-   "ad": "Mantık"
+   "ad": "Mantık",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytKume",
    "ders": "Matematik TYT",
-   "ad": "Kümeler"
+   "ad": "Kümeler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytPerm",
    "ders": "Matematik TYT",
-   "ad": "Permütasyon"
+   "ad": "Permütasyon",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytKomb",
    "ders": "Matematik TYT",
-   "ad": "Kombinasyon"
+   "ad": "Kombinasyon",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytBinom",
    "ders": "Matematik TYT",
-   "ad": "Binom Açılımı"
+   "ad": "Binom Açılımı",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "tytOlasilik",
    "ders": "Matematik TYT",
-   "ad": "Olasılık"
+   "ad": "Olasılık",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "aytFonk",
    "ders": "Matematik AYT",
-   "ad": "Fonksiyon Kavramı - Tanım ve Görüntü Kümesi"
+   "ad": "Fonksiyon Kavramı - Tanım ve Görüntü Kümesi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "aytFonkCesit",
    "ders": "Matematik AYT",
-   "ad": "Fonksiyon Çeşitleri"
+   "ad": "Fonksiyon Çeşitleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytFonkIslem",
    "ders": "Matematik AYT",
-   "ad": "Fonksiyonlarda İşlemler"
+   "ad": "Fonksiyonlarda İşlemler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "aytParcali",
    "ders": "Matematik AYT",
-   "ad": "Parçalı ve Mutlak Değer Fonksiyonu"
+   "ad": "Parçalı ve Mutlak Değer Fonksiyonu",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytGrafik",
    "ders": "Matematik AYT",
-   "ad": "Grafik Yorumlama"
+   "ad": "Grafik Yorumlama",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "aytTers",
    "ders": "Matematik AYT",
-   "ad": "Bir Fonksiyonun Tersi"
+   "ad": "Bir Fonksiyonun Tersi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytBileske",
    "ders": "Matematik AYT",
-   "ad": "Bileşke Fonksiyon ve Özellikleri"
+   "ad": "Bileşke Fonksiyon ve Özellikleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytBileskeTers",
    "ders": "Matematik AYT",
-   "ad": "Bileşke ve Ters Fonksiyon"
+   "ad": "Bileşke ve Ters Fonksiyon",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytPeriyodik",
    "ders": "Matematik AYT",
-   "ad": "Periyodik Fonksiyon"
+   "ad": "Periyodik Fonksiyon",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytArtanAzalan",
    "ders": "Matematik AYT",
-   "ad": "Artan - Azalan Fonksiyon"
+   "ad": "Artan - Azalan Fonksiyon",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytOrtDegisim",
    "ders": "Matematik AYT",
-   "ad": "Ortalama Değişim Hızı"
+   "ad": "Ortalama Değişim Hızı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytFonkDonusum",
    "ders": "Matematik AYT",
-   "ad": "Dönüşüm - Ötelenme - Simetri"
+   "ad": "Dönüşüm - Ötelenme - Simetri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytUstel",
    "ders": "Matematik AYT",
-   "ad": "Üstel Fonksiyon ve Tersi"
+   "ad": "Üstel Fonksiyon ve Tersi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytLog",
    "ders": "Matematik AYT",
-   "ad": "Logaritma Fonksiyonu ve Grafiği"
+   "ad": "Logaritma Fonksiyonu ve Grafiği",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytLogOzellik",
    "ders": "Matematik AYT",
-   "ad": "Logaritma Fonksiyonunun Özellikleri"
+   "ad": "Logaritma Fonksiyonunun Özellikleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytUstelLogDenklem",
    "ders": "Matematik AYT",
-   "ad": "Üstel-Logaritmik Denklem ve Eşitsizlikler"
+   "ad": "Üstel-Logaritmik Denklem ve Eşitsizlikler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytUstelLogProblem",
    "ders": "Matematik AYT",
-   "ad": "Gerçek Hayat Durumları İle İlgili Üstel ve Logaritmik Fonksiyon Problemleri"
+   "ad": "Gerçek Hayat Durumları İle İlgili Üstel ve Logaritmik Fonksiyon Problemleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytDiziFonk",
    "ders": "Matematik AYT",
-   "ad": "Dizi ve Fonksiyon Kavramı Arasındaki İlişki"
+   "ad": "Dizi ve Fonksiyon Kavramı Arasındaki İlişki",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytDiziTerim",
    "ders": "Matematik AYT",
-   "ad": "Genel Terimi ve İndirgenme Bağıntısı Verilen Bir Dizinin Terimleri"
+   "ad": "Genel Terimi ve İndirgenme Bağıntısı Verilen Bir Dizinin Terimleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytAritmetik",
    "ders": "Matematik AYT",
-   "ad": "Aritmetik Dizi"
+   "ad": "Aritmetik Dizi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytGeometrik",
    "ders": "Matematik AYT",
-   "ad": "Geometrik Dizi"
+   "ad": "Geometrik Dizi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytDiskriminant",
    "ders": "Matematik AYT",
-   "ad": "Diskriminant Kavramı ve Denklemlerin Kökleri"
+   "ad": "Diskriminant Kavramı ve Denklemlerin Kökleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytKarmasik",
    "ders": "Matematik AYT",
-   "ad": "Karmaşık Sayılar"
+   "ad": "Karmaşık Sayılar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytKokKatsayi",
    "ders": "Matematik AYT",
-   "ad": "Kök-Katsayı Bağıntıları"
+   "ad": "Kök-Katsayı Bağıntıları",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytTepe",
    "ders": "Matematik AYT",
-   "ad": "Tepe Noktası ve Simetri Ekseni"
+   "ad": "Tepe Noktası ve Simetri Ekseni",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytEnBuyuk",
    "ders": "Matematik AYT",
-   "ad": "En Büyük - En Küçük Değer"
+   "ad": "En Büyük - En Küçük Değer",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytParabolDenklem",
    "ders": "Matematik AYT",
-   "ad": "Parabol Denklemini Yazma"
+   "ad": "Parabol Denklemini Yazma",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytParabolDogru",
    "ders": "Matematik AYT",
-   "ad": "Parabol ve Doğrunun Birbirlerine Göre Durumları"
+   "ad": "Parabol ve Doğrunun Birbirlerine Göre Durumları",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytIkinciEsitsizlik",
    "ders": "Matematik AYT",
-   "ad": "İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler"
+   "ad": "İkinci Dereceden Bir Bilinmeyenli Eşitsizlikler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytEsitsizlikSistem",
    "ders": "Matematik AYT",
-   "ad": "Eşitsizlik Sistemleri"
+   "ad": "Eşitsizlik Sistemleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytAciOlcu",
    "ders": "Matematik AYT",
-   "ad": "Açı Ölçü Birimleri"
+   "ad": "Açı Ölçü Birimleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytEsas",
    "ders": "Matematik AYT",
-   "ad": "Esas Ölçü"
+   "ad": "Esas Ölçü",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytBirim",
    "ders": "Matematik AYT",
-   "ad": "Birim Çemberde Trigonometrik Oranlar"
+   "ad": "Birim Çemberde Trigonometrik Oranlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytOzdeslik",
    "ders": "Matematik AYT",
-   "ad": "Trigonometrik Özdeşlikler"
+   "ad": "Trigonometrik Özdeşlikler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytIsaret",
    "ders": "Matematik AYT",
-   "ad": "Sıralama ve İşaret İncelemesi"
+   "ad": "Sıralama ve İşaret İncelemesi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytDonusum",
    "ders": "Matematik AYT",
-   "ad": "Trigonometrik Dönüşümler"
+   "ad": "Trigonometrik Dönüşümler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytPeriyot",
    "ders": "Matematik AYT",
-   "ad": "Periyot ve Grafik"
+   "ad": "Periyot ve Grafik",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytTersTrig",
    "ders": "Matematik AYT",
-   "ad": "Ters Trigonometrik Fonksiyonlar"
+   "ad": "Ters Trigonometrik Fonksiyonlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytSinCos",
    "ders": "Matematik AYT",
-   "ad": "Sinüs ve Cosinüs Teoremi"
+   "ad": "Sinüs ve Cosinüs Teoremi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytToplamFark",
    "ders": "Matematik AYT",
-   "ad": "Toplam-Fark ve Yarım Açı"
+   "ad": "Toplam-Fark ve Yarım Açı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytDenklem",
    "ders": "Matematik AYT",
-   "ad": "Trigonometrik Denklemler"
+   "ad": "Trigonometrik Denklemler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytLimitSagSol",
    "ders": "Matematik AYT",
-   "ad": "Bir Fonksiyonun Sağdan ve Soldan Limit Kavramı"
+   "ad": "Bir Fonksiyonun Sağdan ve Soldan Limit Kavramı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytLimitOzellik",
    "ders": "Matematik AYT",
-   "ad": "Limitin Özellikleri ve Uygulamaları"
+   "ad": "Limitin Özellikleri ve Uygulamaları",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytLimitParcali",
    "ders": "Matematik AYT",
-   "ad": "Parçalı Fonksiyonların Limiti"
+   "ad": "Parçalı Fonksiyonların Limiti",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytBelirsizlik",
    "ders": "Matematik AYT",
-   "ad": "Belirsizlik Durumu"
+   "ad": "Belirsizlik Durumu",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytLimitUyg",
    "ders": "Matematik AYT",
-   "ad": "Limit Uygulamaları"
+   "ad": "Limit Uygulamaları",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytSureklilik",
    "ders": "Matematik AYT",
-   "ad": "Süreklilik Kavramı"
+   "ad": "Süreklilik Kavramı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytAnlik",
    "ders": "Matematik AYT",
-   "ad": "Anlık Değişim Hızı - Ortalama Değişim Hızı"
+   "ad": "Anlık Değişim Hızı - Ortalama Değişim Hızı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytTurevSagSol",
    "ders": "Matematik AYT",
-   "ad": "Soldan ve Sağdan Türev"
+   "ad": "Soldan ve Sağdan Türev",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytTurevKural",
    "ders": "Matematik AYT",
-   "ad": "Türev Alma Kuralları"
+   "ad": "Türev Alma Kuralları",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytBileskeTurev",
    "ders": "Matematik AYT",
-   "ad": "Bileşke Fonksiyonun Türevi"
+   "ad": "Bileşke Fonksiyonun Türevi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytZincir",
    "ders": "Matematik AYT",
-   "ad": "Zincir Kuralı"
+   "ad": "Zincir Kuralı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytIkinciTurev",
    "ders": "Matematik AYT",
-   "ad": "İkinci Mertebeden Türev ve Türevin Limit Uygulamaları"
+   "ad": "İkinci Mertebeden Türev ve Türevin Limit Uygulamaları",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytTurevGeo",
    "ders": "Matematik AYT",
-   "ad": "Birinci Türevin Geometrik Yorumu"
+   "ad": "Birinci Türevin Geometrik Yorumu",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytArtanAzalanTurev",
    "ders": "Matematik AYT",
-   "ad": "Artan ve Azalan Fonksiyonlar"
+   "ad": "Artan ve Azalan Fonksiyonlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytEkstremum",
    "ders": "Matematik AYT",
-   "ad": "Yerel Ekstremum Noktaları"
+   "ad": "Yerel Ekstremum Noktaları",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytPolinomGrafik",
    "ders": "Matematik AYT",
-   "ad": "Polinom Fonksiyonlarının Grafikleri"
+   "ad": "Polinom Fonksiyonlarının Grafikleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytMaxMin",
    "ders": "Matematik AYT",
-   "ad": "Maksimum - Minimum Problemleri"
+   "ad": "Maksimum - Minimum Problemleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytBelirsizInt",
    "ders": "Matematik AYT",
-   "ad": "Belirsiz İntegral ve İntegral Alma Kuralları"
+   "ad": "Belirsiz İntegral ve İntegral Alma Kuralları",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytDegiskenDegistirme",
    "ders": "Matematik AYT",
-   "ad": "Değişken Değiştirme Metodu"
+   "ad": "Değişken Değiştirme Metodu",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytRiemann",
    "ders": "Matematik AYT",
-   "ad": "Riemann Toplamı"
+   "ad": "Riemann Toplamı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytBelirliInt",
    "ders": "Matematik AYT",
-   "ad": "Belirli İntegral ve Özellikleri"
+   "ad": "Belirli İntegral ve Özellikleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "aytIntAlan",
    "ders": "Matematik AYT",
-   "ad": "Belirli İntegral ve Alan Hesabı"
+   "ad": "Belirli İntegral ve Alan Hesabı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizGiris",
    "ders": "Fizik",
-   "ad": "Fizik Bilimine Giriş"
+   "ad": "Fizik Bilimine Giriş",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizMadde",
    "ders": "Fizik",
-   "ad": "Madde ve Özellikleri"
+   "ad": "Madde ve Özellikleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizBasinc",
    "ders": "Fizik",
-   "ad": "Basınç"
+   "ad": "Basınç",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizVektor",
    "ders": "Fizik",
-   "ad": "Vektörler ve Kuvvet"
+   "ad": "Vektörler ve Kuvvet",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "fizTork",
    "ders": "Fizik",
-   "ad": "Tork ve Tork Dengesi"
+   "ad": "Tork ve Tork Dengesi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizKesisen",
    "ders": "Fizik",
-   "ad": "Kesişen Kuvvetlerin Dengesi"
+   "ad": "Kesişen Kuvvetlerin Dengesi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizKutleMerkezi",
    "ders": "Fizik",
-   "ad": "Kütle ve Ağırlık Merkezi"
+   "ad": "Kütle ve Ağırlık Merkezi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizBasitMakine",
    "ders": "Fizik",
-   "ad": "Basit Makineler"
+   "ad": "Basit Makineler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizKaldirma",
    "ders": "Fizik",
-   "ad": "Kaldırma Kuvveti"
+   "ad": "Kaldırma Kuvveti",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizIsi",
    "ders": "Fizik",
-   "ad": "Isı ve Sıcaklık"
+   "ad": "Isı ve Sıcaklık",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizAydinlanma",
    "ders": "Fizik",
-   "ad": "Aydınlanma"
+   "ad": "Aydınlanma",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizGolge",
    "ders": "Fizik",
-   "ad": "Tam ve Yarı Gölge"
+   "ad": "Tam ve Yarı Gölge",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizYansima",
    "ders": "Fizik",
-   "ad": "Yansıma"
+   "ad": "Yansıma",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizKuresel",
    "ders": "Fizik",
-   "ad": "Küresel Aynalar"
+   "ad": "Küresel Aynalar",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizCembersel",
    "ders": "Fizik",
-   "ad": "Çembersel Hareket"
+   "ad": "Çembersel Hareket",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizBHH",
    "ders": "Fizik",
-   "ad": "Basit Harmonik Hareket"
+   "ad": "Basit Harmonik Hareket",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizDalgaMek",
    "ders": "Fizik",
-   "ad": "Dalga Mekaniği (su dalgalarında kırınım ve girişim)"
+   "ad": "Dalga Mekaniği (su dalgalarında kırınım ve girişim)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizKirilma",
    "ders": "Fizik",
-   "ad": "Kırılma"
+   "ad": "Kırılma",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizPrizma",
    "ders": "Fizik",
-   "ad": "Prizmalar"
+   "ad": "Prizmalar",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizRenk",
    "ders": "Fizik",
-   "ad": "Renk"
+   "ad": "Renk",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizMercek",
    "ders": "Fizik",
-   "ad": "Mercekler"
+   "ad": "Mercekler",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizDalgaTemel",
    "ders": "Fizik",
-   "ad": "Dalgalar (dalgaların temel özellikleri ve yay dalgaları)"
+   "ad": "Dalgalar (dalgaların temel özellikleri ve yay dalgaları)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizIsikTeori",
    "ders": "Fizik",
-   "ad": "Işık Teorileri"
+   "ad": "Işık Teorileri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizEMDalga",
    "ders": "Fizik",
-   "ad": "Elektromanyetik Dalgalar"
+   "ad": "Elektromanyetik Dalgalar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizBagil",
    "ders": "Fizik",
-   "ad": "Bağıl Hareket"
+   "ad": "Bağıl Hareket",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizNewton",
    "ders": "Fizik",
-   "ad": "Newton'un Hareket Yasaları"
+   "ad": "Newton'un Hareket Yasaları",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "fizDalgaSu",
    "ders": "Fizik",
-   "ad": "Dalgalar (su dalgaları, ses dalgaları ve deprem dalgaları)"
+   "ad": "Dalgalar (su dalgaları, ses dalgaları ve deprem dalgaları)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizElektrostatik",
    "ders": "Fizik",
-   "ad": "Elektrostatik"
+   "ad": "Elektrostatik",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizAkim",
    "ders": "Fizik",
-   "ad": "Elektrik Akımı"
+   "ad": "Elektrik Akımı",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizUretec",
    "ders": "Fizik",
-   "ad": "Üreteçler"
+   "ad": "Üreteçler",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizElGuc",
    "ders": "Fizik",
-   "ad": "Elektriksel Enerji ve Güç"
+   "ad": "Elektriksel Enerji ve Güç",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizLamba",
    "ders": "Fizik",
-   "ad": "Lambalar"
+   "ad": "Lambalar",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizAtom",
    "ders": "Fizik",
-   "ad": "Atom Modelleri"
+   "ad": "Atom Modelleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizBuyukPatlama",
    "ders": "Fizik",
-   "ad": "Büyük Patlama ve Evrenin Oluşumu"
+   "ad": "Büyük Patlama ve Evrenin Oluşumu",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizRadyo",
    "ders": "Fizik",
-   "ad": "Radyoaktivite"
+   "ad": "Radyoaktivite",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizModern",
    "ders": "Fizik",
-   "ad": "Modern Fizik"
+   "ad": "Modern Fizik",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizElKuvvet",
    "ders": "Fizik",
-   "ad": "Elektriksel Kuvvet"
+   "ad": "Elektriksel Kuvvet",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizElAlan",
    "ders": "Fizik",
-   "ad": "Elektrik Alan"
+   "ad": "Elektrik Alan",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizPotansiyel",
    "ders": "Fizik",
-   "ad": "Elektrik Potansiyel Enerjisi ve Elektrik Potansiyeli"
+   "ad": "Elektrik Potansiyel Enerjisi ve Elektrik Potansiyeli",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizDuzgunAlan",
    "ders": "Fizik",
-   "ad": "Düzgün Elektrik Alan"
+   "ad": "Düzgün Elektrik Alan",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizSigac",
    "ders": "Fizik",
-   "ad": "Sığaçlar"
+   "ad": "Sığaçlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizAtis",
    "ders": "Fizik",
-   "ad": "Atışlar"
+   "ad": "Atışlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizIs",
    "ders": "Fizik",
-   "ad": "İş-Güç-Enerji"
+   "ad": "İş-Güç-Enerji",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "fizMiknatis",
    "ders": "Fizik",
-   "ad": "Mıknatıslar"
+   "ad": "Mıknatıslar",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "fizManyetikAlan",
    "ders": "Fizik",
-   "ad": "Manyetik Alan"
+   "ad": "Manyetik Alan",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizManyetikKuvvet",
    "ders": "Fizik",
-   "ad": "Manyetik Kuvvet"
+   "ad": "Manyetik Kuvvet",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizIndukleme",
    "ders": "Fizik",
-   "ad": "Elektromanyetik İndüklenme"
+   "ad": "Elektromanyetik İndüklenme",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizAC",
    "ders": "Fizik",
-   "ad": "Alternatif Akım"
+   "ad": "Alternatif Akım",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizTrafo",
    "ders": "Fizik",
-   "ad": "Transformatör"
+   "ad": "Transformatör",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizMomentum",
    "ders": "Fizik",
-   "ad": "İtme ve Momentum"
+   "ad": "İtme ve Momentum",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizGoruntu",
    "ders": "Fizik",
-   "ad": "Görüntüleme Teknikleri"
+   "ad": "Görüntüleme Teknikleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizYariIletken",
    "ders": "Fizik",
-   "ad": "Yarı İletken Teknolojisi"
+   "ad": "Yarı İletken Teknolojisi",
+   "sinav": [
+    "AYT"
+   ]
+  },
+  {
+   "id": "fizSuperIletken",
+   "ders": "Fizik",
+   "ad": "Süper İletkenler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizNano",
    "ders": "Fizik",
-   "ad": "Nanoteknoloji"
+   "ad": "Nanoteknoloji",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fizLazer",
    "ders": "Fizik",
-   "ad": "Lazer"
+   "ad": "Lazer",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "trkSozcukAnlam",
    "ders": "Türkçe",
-   "ad": "Sözcükte Anlam"
+   "ad": "Sözcükte Anlam",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "trkSozObek",
    "ders": "Türkçe",
-   "ad": "Söz Öbeklerinde Anlam"
+   "ad": "Söz Öbeklerinde Anlam",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkYapi",
    "ders": "Türkçe",
-   "ad": "Sözcükte Yapı"
+   "ad": "Sözcükte Yapı",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkCumleAnlam",
    "ders": "Türkçe",
-   "ad": "Cümlede Anlam ve Anlatım"
+   "ad": "Cümlede Anlam ve Anlatım",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "trkAnlatimNit",
    "ders": "Türkçe",
-   "ad": "Anlatımın Temel Nitelikleri ve Anlamla İlgili Anlatım Bozuklukları"
+   "ad": "Anlatımın Temel Nitelikleri ve Anlamla İlgili Anlatım Bozuklukları",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkSes",
    "ders": "Türkçe",
-   "ad": "Ses Bilgisi"
+   "ad": "Ses Bilgisi",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkYazim",
    "ders": "Türkçe",
-   "ad": "Yazım Kuralları"
+   "ad": "Yazım Kuralları",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkNoktalama",
    "ders": "Türkçe",
-   "ad": "Noktalama İşaretleri"
+   "ad": "Noktalama İşaretleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkParagrafAnlatim",
    "ders": "Türkçe",
-   "ad": "Paragrafta Anlatım"
+   "ad": "Paragrafta Anlatım",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkParagrafYapi",
    "ders": "Türkçe",
-   "ad": "Paragrafta Yapı"
+   "ad": "Paragrafta Yapı",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkParagrafAnlam",
    "ders": "Türkçe",
-   "ad": "Paragrafta Anlam"
+   "ad": "Paragrafta Anlam",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "trkAd",
    "ders": "Türkçe",
-   "ad": "Adlar (İsimler)"
+   "ad": "Adlar (İsimler)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkSifat",
    "ders": "Türkçe",
-   "ad": "Ön Adlar (Sıfatlar)"
+   "ad": "Ön Adlar (Sıfatlar)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkZamir",
    "ders": "Türkçe",
-   "ad": "Adıllar (Zamirler)"
+   "ad": "Adıllar (Zamirler)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkZarf",
    "ders": "Türkçe",
-   "ad": "Zarflar (Belirteçler)"
+   "ad": "Zarflar (Belirteçler)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkEdat",
    "ders": "Türkçe",
-   "ad": "Edat (İlgeç) - Bağlaç - Ünlem"
+   "ad": "Edat (İlgeç) - Bağlaç - Ünlem",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkFiil",
    "ders": "Türkçe",
-   "ad": "Fiiller (Eylemler)"
+   "ad": "Fiiller (Eylemler)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkFiilimsi",
    "ders": "Türkçe",
-   "ad": "Fiilimsiler (Eylemsiler)"
+   "ad": "Fiilimsiler (Eylemsiler)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkOge",
    "ders": "Türkçe",
-   "ad": "Cümlenin Ögeleri"
+   "ad": "Cümlenin Ögeleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkCati",
    "ders": "Türkçe",
-   "ad": "Fiilde (Eylemde) Çatı"
+   "ad": "Fiilde (Eylemde) Çatı",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkKelimeGrup",
    "ders": "Türkçe",
-   "ad": "Kelime Grupları (Sözcük Öbekleri)"
+   "ad": "Kelime Grupları (Sözcük Öbekleri)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkCumleTur",
    "ders": "Türkçe",
-   "ad": "Cümle Türleri"
+   "ad": "Cümle Türleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkDilBozuk",
    "ders": "Türkçe",
-   "ad": "Dil Bilgisiyle İlgili Anlatım Bozuklukları"
+   "ad": "Dil Bilgisiyle İlgili Anlatım Bozuklukları",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "trkIletisim",
    "ders": "Türkçe",
-   "ad": "İletişim, Dil ve Kültür"
+   "ad": "İletişim, Dil ve Kültür",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimBilim",
    "ders": "Kimya",
-   "ad": "Kimya Bilimi"
+   "ad": "Kimya Bilimi",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimAtom",
    "ders": "Kimya",
-   "ad": "Atom Modelleri, Atomun Temel Tanecikleri"
+   "ad": "Atom Modelleri, Atomun Temel Tanecikleri",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "kimKuantum",
    "ders": "Kimya",
-   "ad": "Atomun Kuantum Modeli"
+   "ad": "Atomun Kuantum Modeli",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimPeriyodik",
    "ders": "Kimya",
-   "ad": "Periyodik Sistem ve Periyodik Özellikler"
+   "ad": "Periyodik Sistem ve Periyodik Özellikler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "kimRedoks",
    "ders": "Kimya",
-   "ad": "Redoks Tepkimelerinin Denkleştirilmesi / Aktiflik"
+   "ad": "Redoks Tepkimelerinin Denkleştirilmesi / Aktiflik",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimPil",
    "ders": "Kimya",
-   "ad": "Piller"
+   "ad": "Piller",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimElektroliz",
    "ders": "Kimya",
-   "ad": "Elektroliz / Korozyon"
+   "ad": "Elektroliz / Korozyon",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimKanun",
    "ders": "Kimya",
-   "ad": "Kimyanın Temel Kanunları"
+   "ad": "Kimyanın Temel Kanunları",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimMol",
    "ders": "Kimya",
-   "ad": "Mol Kavramı"
+   "ad": "Mol Kavramı",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "kimTepkime",
    "ders": "Kimya",
-   "ad": "Kimyasal Tepkimeler ve Denklemler"
+   "ad": "Kimyasal Tepkimeler ve Denklemler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "kimHesap",
    "ders": "Kimya",
-   "ad": "Kimyasal Hesaplamalar"
+   "ad": "Kimyasal Hesaplamalar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "kimTur",
    "ders": "Kimya",
-   "ad": "Kimyasal Türler / Türler Arası Etkileşimlerin Sınıflandırılması"
+   "ad": "Kimyasal Türler / Türler Arası Etkileşimlerin Sınıflandırılması",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimEtkilesim",
    "ders": "Kimya",
-   "ad": "Güçlü ve Zayıf Etkileşimler"
+   "ad": "Güçlü ve Zayıf Etkileşimler",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimDegisim",
    "ders": "Kimya",
-   "ad": "Fiziksel ve Kimyasal Değişimler"
+   "ad": "Fiziksel ve Kimyasal Değişimler",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimKarbon",
    "ders": "Kimya",
-   "ad": "Karbon Kimyasına Giriş"
+   "ad": "Karbon Kimyasına Giriş",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimAlkan",
    "ders": "Kimya",
-   "ad": "Alkanlar"
+   "ad": "Alkanlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimAlken",
    "ders": "Kimya",
-   "ad": "Alkenler"
+   "ad": "Alkenler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimAlkin",
    "ders": "Kimya",
-   "ad": "Alkinler"
+   "ad": "Alkinler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimAromatik",
    "ders": "Kimya",
-   "ad": "Aromatik Bileşikler"
+   "ad": "Aromatik Bileşikler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimHal",
    "ders": "Kimya",
-   "ad": "Maddenin Hâlleri"
+   "ad": "Maddenin Hâlleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimKarisim",
    "ders": "Kimya",
-   "ad": "Karışımlar"
+   "ad": "Karışımlar",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimAsitBaz",
    "ders": "Kimya",
-   "ad": "Asitler, Bazlar ve Tuzlar"
+   "ad": "Asitler, Bazlar ve Tuzlar",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimAlkol",
    "ders": "Kimya",
-   "ad": "Alkoller ve Eterler"
+   "ad": "Alkoller ve Eterler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimAldehit",
    "ders": "Kimya",
-   "ad": "Aldehitler ve Ketonlar"
+   "ad": "Aldehitler ve Ketonlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimKarboksil",
    "ders": "Kimya",
-   "ad": "Karboksilik Asitler ve Esterler"
+   "ad": "Karboksilik Asitler ve Esterler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimGaz",
    "ders": "Kimya",
-   "ad": "Gazlar"
+   "ad": "Gazlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimDoga",
    "ders": "Kimya",
-   "ad": "Doğa ve Kimya"
+   "ad": "Doğa ve Kimya",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimHerYer",
    "ders": "Kimya",
-   "ad": "Kimya Her Yerde"
+   "ad": "Kimya Her Yerde",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "kimCozelti",
    "ders": "Kimya",
-   "ad": "Sıvı Çözeltiler ve Çözünürlük"
+   "ad": "Sıvı Çözeltiler ve Çözünürlük",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimEnerji",
    "ders": "Kimya",
-   "ad": "Kimyasal Tepkimelerde Enerji"
+   "ad": "Kimyasal Tepkimelerde Enerji",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimHiz",
    "ders": "Kimya",
-   "ad": "Kimyasal Tepkimelerde Hız"
+   "ad": "Kimyasal Tepkimelerde Hız",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimDenge",
    "ders": "Kimya",
-   "ad": "Kimyasal Tepkimelerde Denge"
+   "ad": "Kimyasal Tepkimelerde Denge",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimAsitBazDenge",
    "ders": "Kimya",
-   "ad": "Sulu Ortamlarda Asit-Baz Dengesi"
+   "ad": "Sulu Ortamlarda Asit-Baz Dengesi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimCozunurluk",
    "ders": "Kimya",
-   "ad": "Tuzların Çözünürlük Dengesi"
+   "ad": "Tuzların Çözünürlük Dengesi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "kimEnerjiKaynak",
    "ders": "Kimya",
-   "ad": "Enerji Kaynakları ve Bilimsel Gelişmeler"
+   "ad": "Enerji Kaynakları ve Bilimsel Gelişmeler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioOrtak",
    "ders": "Biyoloji",
-   "ad": "Canlıların Ortak Özellikleri"
+   "ad": "Canlıların Ortak Özellikleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "bioBilesen",
    "ders": "Biyoloji",
-   "ad": "Canlıların Temel Bileşenleri"
+   "ad": "Canlıların Temel Bileşenleri",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "bioNukleik",
    "ders": "Biyoloji",
-   "ad": "Nükleik Asitlerin Yapısı ve Çeşitleri"
+   "ad": "Nükleik Asitlerin Yapısı ve Çeşitleri",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "bioReplikasyon",
    "ders": "Biyoloji",
-   "ad": "DNA Replikasyonu"
+   "ad": "DNA Replikasyonu",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioProtein",
    "ders": "Biyoloji",
-   "ad": "Genden Proteine (Protein Sentezi)"
+   "ad": "Genden Proteine (Protein Sentezi)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioBiyotek",
    "ders": "Biyoloji",
-   "ad": "Genden Proteine (Genetik Mühendisliği ve Biyoteknoloji)"
+   "ad": "Genden Proteine (Genetik Mühendisliği ve Biyoteknoloji)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioHucre",
    "ders": "Biyoloji",
-   "ad": "Hücre"
+   "ad": "Hücre",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "bioSiniflandirma",
    "ders": "Biyoloji",
-   "ad": "Canlı Çeşitliliği ve Sınıflandırılması"
+   "ad": "Canlı Çeşitliliği ve Sınıflandırılması",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "bioAlem",
    "ders": "Biyoloji",
-   "ad": "Canlı Âlemleri ve Virüsler"
+   "ad": "Canlı Âlemleri ve Virüsler",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "bioEnerji",
    "ders": "Biyoloji",
-   "ad": "Canlılık ve Enerji (Fotosentez - Kemosentez - Hücresel Solunum - Fermantasyon)"
+   "ad": "Canlılık ve Enerji (Fotosentez - Kemosentez - Hücresel Solunum - Fermantasyon)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioEkosistem",
    "ders": "Biyoloji",
-   "ad": "Ekosistem Ekolojisi"
+   "ad": "Ekosistem Ekolojisi",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "bioKomunite",
    "ders": "Biyoloji",
-   "ad": "Komünite Ekolojisi"
+   "ad": "Komünite Ekolojisi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioPopulasyon",
    "ders": "Biyoloji",
-   "ad": "Popülasyon Ekolojisi"
+   "ad": "Popülasyon Ekolojisi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioBolunme",
    "ders": "Biyoloji",
-   "ad": "Hücre Bölünmeleri ve Üreme"
+   "ad": "Hücre Bölünmeleri ve Üreme",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "bioKalitim",
    "ders": "Biyoloji",
-   "ad": "Kalıtım ve Biyolojik Çeşitlilik"
+   "ad": "Kalıtım ve Biyolojik Çeşitlilik",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "bioCevre",
    "ders": "Biyoloji",
-   "ad": "Canlılar ve Çevre"
+   "ad": "Canlılar ve Çevre",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "bioBitkiYapi",
    "ders": "Biyoloji",
-   "ad": "Bitkilerin Yapısı"
+   "ad": "Bitkilerin Yapısı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioBitkiTasima",
    "ders": "Biyoloji",
-   "ad": "Bitkilerde Madde Taşınması"
+   "ad": "Bitkilerde Madde Taşınması",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioBitkiUreme",
    "ders": "Biyoloji",
-   "ad": "Bitkilerde Eşeyli Üreme"
+   "ad": "Bitkilerde Eşeyli Üreme",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioSinir",
    "ders": "Biyoloji",
-   "ad": "Sinir Sistemi"
+   "ad": "Sinir Sistemi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioEndokrin",
    "ders": "Biyoloji",
-   "ad": "Endokrin Sistem"
+   "ad": "Endokrin Sistem",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioDuyu",
    "ders": "Biyoloji",
-   "ad": "Duyu Organları"
+   "ad": "Duyu Organları",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioDolasim",
    "ders": "Biyoloji",
-   "ad": "Dolaşım Sistemi"
+   "ad": "Dolaşım Sistemi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioLenf",
    "ders": "Biyoloji",
-   "ad": "Lenf ve Bağışıklık Sistemi"
+   "ad": "Lenf ve Bağışıklık Sistemi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioSindirim",
    "ders": "Biyoloji",
-   "ad": "Sindirim Sistemi"
+   "ad": "Sindirim Sistemi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioDestek",
    "ders": "Biyoloji",
-   "ad": "Destek ve Hareket Sistemi"
+   "ad": "Destek ve Hareket Sistemi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioSolunum",
    "ders": "Biyoloji",
-   "ad": "Solunum Sistemi"
+   "ad": "Solunum Sistemi",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioUriner",
    "ders": "Biyoloji",
-   "ad": "Üriner Sistem"
+   "ad": "Üriner Sistem",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "bioUreme",
    "ders": "Biyoloji",
-   "ad": "Üreme Sistemi ve Embriyonik Gelişim"
+   "ad": "Üreme Sistemi ve Embriyonik Gelişim",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edSanat",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Sanat ve Edebiyat"
+   "ad": "Sanat ve Edebiyat",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edDonem",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Türk Dilinin ve Edebiyatının Tarihî Dönemleri"
+   "ad": "Türk Dilinin ve Edebiyatının Tarihî Dönemleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edSiirDili",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)"
+   "ad": "Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edSiirBilgi",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)"
+   "ad": "Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edSiirTarih1",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)"
+   "ad": "Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edSiirTarih2",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Tarihsel Süreç İçinde Şiir (Halk Edebiyatı / Divan Edebiyatı)"
+   "ad": "Tarihsel Süreç İçinde Şiir (Halk Edebiyatı / Divan Edebiyatı)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edSiirAkim",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Şiirde Edebî Akımlar"
+   "ad": "Şiirde Edebî Akımlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edBatiSiir",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Batı Etkisindeki Türk Şiiri (Tanzimat, Servetifünun, Fecriati Dönemlerinde Şiir)"
+   "ad": "Batı Etkisindeki Türk Şiiri (Tanzimat, Servetifünun, Fecriati Dönemlerinde Şiir)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edMilliSiir",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Millî Edebiyat Dönemi'nde Şiir"
+   "ad": "Millî Edebiyat Dönemi'nde Şiir",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edCumSiir",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Cumhuriyet Dönemi'nde Şiir"
+   "ad": "Cumhuriyet Dönemi'nde Şiir",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edAnlatTur",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Anlatmaya Bağlı Metin Türleri"
+   "ad": "Anlatmaya Bağlı Metin Türleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edAnlatAkim",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Anlatmaya Bağlı Metinlerde Edebî Akımlar"
+   "ad": "Anlatmaya Bağlı Metinlerde Edebî Akımlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edAnlatUnsur",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Anlatmaya Bağlı Metinlerde Unsurlar ve Teknikler"
+   "ad": "Anlatmaya Bağlı Metinlerde Unsurlar ve Teknikler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edAnlatBati",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Anlatmaya Bağlı Metinler (Tanzimat, Servetifünun, Millî Edebiyat Dönemlerinde Hikâye ve Roman)"
+   "ad": "Anlatmaya Bağlı Metinler (Tanzimat, Servetifünun, Millî Edebiyat Dönemlerinde Hikâye ve Roman)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edAnlatCum",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Anlatmaya Bağlı Metinler (Cumhuriyet Dönemi'nde Hikâye ve Roman)"
+   "ad": "Anlatmaya Bağlı Metinler (Cumhuriyet Dönemi'nde Hikâye ve Roman)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edTiyatro",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Göstermeye Bağlı Metinler (Tiyatro / Tiyatronun Özellikleri, Unsurları)"
+   "ad": "Göstermeye Bağlı Metinler (Tiyatro / Tiyatronun Özellikleri, Unsurları)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edTiyatroTarih",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Göstermeye Bağlı Metinler (Geleneksel Türk Tiyatrosu / Tanzimat, Millî Edebiyat, Cumhuriyet Dönemlerinde Tiyatro)"
+   "ad": "Göstermeye Bağlı Metinler (Geleneksel Türk Tiyatrosu / Tanzimat, Millî Edebiyat, Cumhuriyet Dönemlerinde Tiyatro)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edOgretici",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Öğretici Metinler"
+   "ad": "Öğretici Metinler",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "edSozlu",
    "ders": "Türk Dili ve Edebiyatı",
-   "ad": "Sözlü Anlatım Türleri"
+   "ad": "Sözlü Anlatım Türleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "inkMK",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "Mustafa Kemal'in Hayatı"
+   "ad": "Mustafa Kemal'in Hayatı",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "ink20",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "XX. Yüzyıl Başlarında Osmanlı Devleti"
+   "ad": "XX. Yüzyıl Başlarında Osmanlı Devleti",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "inkWW1",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "I. Dünya Savaşı ve Sonrası Gelişmeler"
+   "ad": "I. Dünya Savaşı ve Sonrası Gelişmeler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "inkHazirlik",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "Millî Mücadele'nin Hazırlık Çalışmaları"
+   "ad": "Millî Mücadele'nin Hazırlık Çalışmaları",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "inkTBMM",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "Büyük Millet Meclisi'nin Açılması"
+   "ad": "Büyük Millet Meclisi'nin Açılması",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "inkSevr",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "Sevr Antlaşması"
+   "ad": "Sevr Antlaşması",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "inkDoguGuney",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "Doğu ve Güney Cephesi"
+   "ad": "Doğu ve Güney Cephesi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "inkBati",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "Batı Cephesi"
+   "ad": "Batı Cephesi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "inkLozan",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "Lozan Barış Antlaşması"
+   "ad": "Lozan Barış Antlaşması",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "inkInkilap",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "Atatürkçülük ve Türk İnkılabı"
+   "ad": "Atatürkçülük ve Türk İnkılabı",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "inkIkiSavas",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "İki Savaş Arasındaki Dönemde Türkiye ve Dünya"
+   "ad": "İki Savaş Arasındaki Dönemde Türkiye ve Dünya",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "inkWW2",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "II. Dünya Savaşı Sürecinde Türkiye ve Dünya"
+   "ad": "II. Dünya Savaşı Sürecinde Türkiye ve Dünya",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "inkWW2Sonra",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "II. Dünya Savaşı Sonrasında Türkiye ve Dünya"
+   "ad": "II. Dünya Savaşı Sonrasında Türkiye ve Dünya",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "inkToplumsal",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "Toplumsal Devrim Çağında Dünya ve Türkiye"
+   "ad": "Toplumsal Devrim Çağında Dünya ve Türkiye",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "ink21",
    "ders": "T.C. İnkılap Tarihi ve Atatürkçülük",
-   "ad": "XXI. Yüzyılın Eşiğinde Türkiye ve Dünya"
+   "ad": "XXI. Yüzyılın Eşiğinde Türkiye ve Dünya",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogDoga",
    "ders": "Coğrafya",
-   "ad": "Doğa ve İnsan Etkileşimi (TYT)"
+   "ad": "Doğa ve İnsan Etkileşimi (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogKonu",
    "ders": "Coğrafya",
-   "ad": "Coğrafyanın Konusu, Bölümleri ve Gelişimi (TYT)"
+   "ad": "Coğrafyanın Konusu, Bölümleri ve Gelişimi (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogDunyaSekil",
    "ders": "Coğrafya",
-   "ad": "Dünya'nın Şekli ve Hareketleri (TYT)"
+   "ad": "Dünya'nın Şekli ve Hareketleri (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogEkosistem",
    "ders": "Coğrafya",
-   "ad": "Ekosistemlerin Özellikleri ve İşleyişi (AYT)"
+   "ad": "Ekosistemlerin Özellikleri ve İşleyişi (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogEkstrem",
    "ders": "Coğrafya",
-   "ad": "Ekstrem Doğa Olayları - Küresel İklim Değişimi (AYT)"
+   "ad": "Ekstrem Doğa Olayları - Küresel İklim Değişimi (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogKoordinat",
    "ders": "Coğrafya",
-   "ad": "Koordinat Sistemi ve Coğrafi Konum (TYT)"
+   "ad": "Koordinat Sistemi ve Coğrafi Konum (TYT)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "cogHarita",
    "ders": "Coğrafya",
-   "ad": "Harita Bilgisi (TYT)"
+   "ad": "Harita Bilgisi (TYT)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "cogEkoSosyal",
    "ders": "Coğrafya",
-   "ad": "Ekonomik Faaliyetlerin Sosyal ve Kültürel Etkileri (AYT)"
+   "ad": "Ekonomik Faaliyetlerin Sosyal ve Kültürel Etkileri (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogSehirEko",
    "ders": "Coğrafya",
-   "ad": "Geçmişten Geleceğe Şehir ve Ekonomi (AYT)"
+   "ad": "Geçmişten Geleceğe Şehir ve Ekonomi (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogIslevsel",
    "ders": "Coğrafya",
-   "ad": "Türkiye'nin İşlevsel Bölgeleri ve Kalkınma Projeleri (AYT)"
+   "ad": "Türkiye'nin İşlevsel Bölgeleri ve Kalkınma Projeleri (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogUlasimTr",
    "ders": "Coğrafya",
-   "ad": "Türkiye'de Ulaşım, Enerji Güzergâhları ve Etkileri (AYT)"
+   "ad": "Türkiye'de Ulaşım, Enerji Güzergâhları ve Etkileri (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogTicaretTr",
    "ders": "Coğrafya",
-   "ad": "Küresel Ticaret ve Türkiye'de Ticaret (AYT)"
+   "ad": "Küresel Ticaret ve Türkiye'de Ticaret (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogAtmosfer",
    "ders": "Coğrafya",
-   "ad": "Atmosfer ve Özellikleri (TYT)"
+   "ad": "Atmosfer ve Özellikleri (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogIklimEleman",
    "ders": "Coğrafya",
-   "ad": "Dünyada ve Türkiye'de İklim Elemanları (TYT)"
+   "ad": "Dünyada ve Türkiye'de İklim Elemanları (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogNufusPol",
    "ders": "Coğrafya",
-   "ad": "Nüfus Politikaları (AYT)"
+   "ad": "Nüfus Politikaları (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogSehirler",
    "ders": "Coğrafya",
-   "ad": "Şehirler ve Etki Alanları - Türkiye'de Yerleşmeler (AYT)"
+   "ad": "Şehirler ve Etki Alanları - Türkiye'de Yerleşmeler (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogEkoKaynak",
    "ders": "Coğrafya",
-   "ad": "Ekonomik Faaliyetler (Üretim-Dağıtım-Tüketim) ve Doğal Kaynaklar (AYT)"
+   "ad": "Ekonomik Faaliyetler (Üretim-Dağıtım-Tüketim) ve Doğal Kaynaklar (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogIklimTip",
    "ders": "Coğrafya",
-   "ad": "İklim Tipleri ve Bitki Örtüsü (TYT)"
+   "ad": "İklim Tipleri ve Bitki Örtüsü (TYT)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "cogIklimTr",
    "ders": "Coğrafya",
-   "ad": "Türkiye'de İklim Tipleri (TYT)"
+   "ad": "Türkiye'de İklim Tipleri (TYT)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "cogYapi",
    "ders": "Coğrafya",
-   "ad": "Dünya'nın Yapısı ve Oluşum Süreci (TYT)"
+   "ad": "Dünya'nın Yapısı ve Oluşum Süreci (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogIc",
    "ders": "Coğrafya",
-   "ad": "Dünyada ve Türkiye'de İç Kuvvetler (TYT)"
+   "ad": "Dünyada ve Türkiye'de İç Kuvvetler (TYT)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "cogEkoPol",
    "ders": "Coğrafya",
-   "ad": "Türkiye'nin Ekonomi Politikaları ve Ekonominin Sektörel Dağılımı (AYT)"
+   "ad": "Türkiye'nin Ekonomi Politikaları ve Ekonominin Sektörel Dağılımı (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogTarim",
    "ders": "Coğrafya",
-   "ad": "Türkiye'de Tarım, Ormancılık ve Hayvancılık (AYT)"
+   "ad": "Türkiye'de Tarım, Ormancılık ve Hayvancılık (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogMaden",
    "ders": "Coğrafya",
-   "ad": "Türkiye'de Madenler ve Enerji Kaynakları (AYT)"
+   "ad": "Türkiye'de Madenler ve Enerji Kaynakları (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogSanayi",
    "ders": "Coğrafya",
-   "ad": "Türkiye'de Sanayi (AYT)"
+   "ad": "Türkiye'de Sanayi (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogToprak",
    "ders": "Coğrafya",
-   "ad": "Dünyada ve Türkiye'de Topraklar (TYT)"
+   "ad": "Dünyada ve Türkiye'de Topraklar (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogSu",
    "ders": "Coğrafya",
-   "ad": "Dünyada ve Türkiye'de Su Kaynakları (TYT)"
+   "ad": "Dünyada ve Türkiye'de Su Kaynakları (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogDis",
    "ders": "Coğrafya",
-   "ad": "Dünyada ve Türkiye'de Dış Kuvvetler (TYT)"
+   "ad": "Dünyada ve Türkiye'de Dış Kuvvetler (TYT)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "cogHammadde",
    "ders": "Coğrafya",
-   "ad": "Küresel Ticaret - Hammadde-Üretim-Pazar (AYT)"
+   "ad": "Küresel Ticaret - Hammadde-Üretim-Pazar (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogTurizm",
    "ders": "Coğrafya",
-   "ad": "Dünyada ve Türkiye'de Turizm (AYT)"
+   "ad": "Dünyada ve Türkiye'de Turizm (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogKulturMerkez",
    "ders": "Coğrafya",
-   "ad": "İlk Kültür Merkezleri ve Kültür Bölgeleri (AYT)"
+   "ad": "İlk Kültür Merkezleri ve Kültür Bölgeleri (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogTurkKultur",
    "ders": "Coğrafya",
-   "ad": "Türk Kültürü ve Özellikleri (AYT)"
+   "ad": "Türk Kültürü ve Özellikleri (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogJeopolitik",
    "ders": "Coğrafya",
-   "ad": "Jeopolitik Konum (AYT)"
+   "ad": "Jeopolitik Konum (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogNufus",
    "ders": "Coğrafya",
-   "ad": "Dünya'da ve Türkiye'de Nüfusun Özellikleri, Değişim ve Dağılışı (TYT)"
+   "ad": "Dünya'da ve Türkiye'de Nüfusun Özellikleri, Değişim ve Dağılışı (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogPiramit",
    "ders": "Coğrafya",
-   "ad": "Nüfus Piramitleri (TYT)"
+   "ad": "Nüfus Piramitleri (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogGoc",
    "ders": "Coğrafya",
-   "ad": "Dünyada ve Türkiye'de Göçler (TYT)"
+   "ad": "Dünyada ve Türkiye'de Göçler (TYT)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "cogEkoFaal",
    "ders": "Coğrafya",
-   "ad": "Ekonomik Faaliyetler (TYT)"
+   "ad": "Ekonomik Faaliyetler (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogYerlesme",
    "ders": "Coğrafya",
-   "ad": "Yerleşmeler (TYT)"
+   "ad": "Yerleşmeler (TYT)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "cogBolge",
    "ders": "Coğrafya",
-   "ad": "Bölgeler ve Ülkeler (TYT)"
+   "ad": "Bölgeler ve Ülkeler (TYT)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "cogUlasimDunya",
    "ders": "Coğrafya",
-   "ad": "Uluslararası Ulaşım Hatları (TYT)"
+   "ad": "Uluslararası Ulaşım Hatları (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogAfet",
    "ders": "Coğrafya",
-   "ad": "Afetler (TYT)"
+   "ad": "Afetler (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogDogalOrtam",
    "ders": "Coğrafya",
-   "ad": "İnsanların Doğal Ortamı Kullanma Şekilleri (TYT)"
+   "ad": "İnsanların Doğal Ortamı Kullanma Şekilleri (TYT)",
+   "sinav": [
+    "TYT"
+   ]
   },
   {
    "id": "cogTeknoloji",
    "ders": "Coğrafya",
-   "ad": "Teknolojik Gelişmelerin Kültürel ve Ekonomik Etkileri (AYT)"
+   "ad": "Teknolojik Gelişmelerin Kültürel ve Ekonomik Etkileri (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogGelisme",
    "ders": "Coğrafya",
-   "ad": "Ülkelerin Gelişmesinde Etkili Olan Faktörler (AYT)"
+   "ad": "Ülkelerin Gelişmesinde Etkili Olan Faktörler (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogCatisma",
    "ders": "Coğrafya",
-   "ad": "Sıcak Çatışma Bölgeleri ve Ülkeler (AYT)"
+   "ad": "Sıcak Çatışma Bölgeleri ve Ülkeler (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogOrgut",
    "ders": "Coğrafya",
-   "ad": "Küresel Bölgeler ve Örgütler (AYT)"
+   "ad": "Küresel Bölgeler ve Örgütler (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogCevre",
    "ders": "Coğrafya",
-   "ad": "Çevre Sorunları ve Türleri (AYT)"
+   "ad": "Çevre Sorunları ve Türleri (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "cogCevreCozum",
    "ders": "Coğrafya",
-   "ad": "Çevre Sorunlarının Çözümüne Yönelik Yaklaşımlar (AYT)"
+   "ad": "Çevre Sorunlarının Çözümüne Yönelik Yaklaşımlar (AYT)",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "felTanima",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Felsefeyi Tanıma"
+   "ad": "Felsefeyi Tanıma",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "felDusunme",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Felsefe ile Düşünme"
+   "ad": "Felsefe ile Düşünme",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "psiTanima",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Psikoloji Bilimini Tanıyalım"
+   "ad": "Psikoloji Bilimini Tanıyalım",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "psiSurec",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Psikolojinin Temel Süreçleri"
+   "ad": "Psikolojinin Temel Süreçleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "felKonular",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Felsefenin Temel Konuları ve Problemleri"
+   "ad": "Felsefenin Temel Konuları ve Problemleri",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "psiOgrenme",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Öğrenme, Bellek, Düşünme"
+   "ad": "Öğrenme, Bellek, Düşünme",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "psiRuh",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Ruh Sağlığının Temelleri"
+   "ad": "Ruh Sağlığının Temelleri",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "felOkuma",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Felsefi Okuma ve Yazma"
+   "ad": "Felsefi Okuma ve Yazma",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "felMO6",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "MÖ 6. Yüzyıl - MS 2. Yüzyıl Felsefesi"
+   "ad": "MÖ 6. Yüzyıl - MS 2. Yüzyıl Felsefesi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "felMS2",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "MS 2. Yüzyıl - 15. Yüzyıl Felsefesi"
+   "ad": "MS 2. Yüzyıl - 15. Yüzyıl Felsefesi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "sosGiris",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Sosyolojiye Giriş"
+   "ad": "Sosyolojiye Giriş",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "sosBirey",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Birey ve Toplum"
+   "ad": "Birey ve Toplum",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "sosYapi",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Toplumsal Yapı"
+   "ad": "Toplumsal Yapı",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fel15",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "15. Yüzyıl - 17. Yüzyıl Felsefesi"
+   "ad": "15. Yüzyıl - 17. Yüzyıl Felsefesi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "sosDegisme",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Toplumsal Değişme ve Gelişme"
+   "ad": "Toplumsal Değişme ve Gelişme",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "sosKultur",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Toplum ve Kültür"
+   "ad": "Toplum ve Kültür",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "sosKurum",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Toplumsal Kurumlar"
+   "ad": "Toplumsal Kurumlar",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "fel18",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "18. Yüzyıl - 19. Yüzyıl Felsefesi"
+   "ad": "18. Yüzyıl - 19. Yüzyıl Felsefesi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "fel20",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "20. Yüzyıl Felsefesi"
+   "ad": "20. Yüzyıl Felsefesi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "manGiris",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Mantığa Giriş"
+   "ad": "Mantığa Giriş",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "manKlasik",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Klasik Mantık"
+   "ad": "Klasik Mantık",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "manDil",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Mantık ve Dil"
+   "ad": "Mantık ve Dil",
+   "sinav": [
+    "AYT"
+   ]
   },
   {
    "id": "manSembolik",
    "ders": "Felsefe (+ Felsefe Grubu)",
-   "ad": "Sembolik Mantık"
+   "ad": "Sembolik Mantık",
+   "sinav": [
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarZaman",
+   "ders": "Tarih",
+   "ad": "Tarih ve Zaman",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarIlk",
+   "ders": "Tarih",
+   "ad": "İnsanlığın İlk Dönemleri",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarOrta",
+   "ders": "Tarih",
+   "ad": "Orta Çağ’da Dünya",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarTurkDunya",
+   "ders": "Tarih",
+   "ad": "İlk ve Orta Çağlarda Türk Dünyası",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarIslam",
+   "ders": "Tarih",
+   "ad": "İslam Medeniyetinin Doğuşu",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarTurkIslam",
+   "ders": "Tarih",
+   "ad": "Türklerin İslamiyet’i Kabulü ve İlk Türk İslam Devletleri",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarSelcuklu",
+   "ders": "Tarih",
+   "ad": "Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarOsmSiyaset",
+   "ders": "Tarih",
+   "ad": "Beylikten Devlete Osmanlı Siyaseti (1302–1453)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarAsker",
+   "ders": "Tarih",
+   "ad": "Devletleşme Sürecinde Savaşçılar ve Askerler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarOsmMedeniyet",
+   "ders": "Tarih",
+   "ad": "Beylikten Devlete Osmanlı Medeniyeti",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarDunyaGucu",
+   "ders": "Tarih",
+   "ad": "Dünya Gücü Osmanlı (1453–1595)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarSultan",
+   "ders": "Tarih",
+   "ad": "Sultan ve Osmanlı Merkez Teşkilatı",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarToplum",
+   "ders": "Tarih",
+   "ad": "Klasik Çağda Osmanlı Toplum Düzeni",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarDengeler",
+   "ders": "Tarih",
+   "ad": "Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595–1774)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarDegisim",
+   "ders": "Tarih",
+   "ad": "Değişim Çağında Avrupa ve Osmanlı",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarDevrim",
+   "ders": "Tarih",
+   "ad": "Devrimler Çağında Değişen Devlet-Toplum İlişkileri",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarDenge",
+   "ders": "Tarih",
+   "ad": "Uluslararası İlişkilerde Denge Stratejisi (1774–1914)",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "tarSosyo",
+   "ders": "Tarih",
+   "ad": "XIX ve XX. Yüzyılda Değişen Sosyoekonomik Hayat",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din91",
+   "ders": "Din Kültürü",
+   "ad": "Bilgi ve İnanç",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din92",
+   "ders": "Din Kültürü",
+   "ad": "Din ve İslam",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din93",
+   "ders": "Din Kültürü",
+   "ad": "İslam ve İbadet",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din94",
+   "ders": "Din Kültürü",
+   "ad": "Gençlik ve Değerler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din95",
+   "ders": "Din Kültürü",
+   "ad": "Gönül Coğrafyamız",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din101",
+   "ders": "Din Kültürü",
+   "ad": "Allah İnsan İlişkisi",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din102",
+   "ders": "Din Kültürü",
+   "ad": "Hz. Muhammed ve Gençlik",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din103",
+   "ders": "Din Kültürü",
+   "ad": "Din ve Hayat",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din104",
+   "ders": "Din Kültürü",
+   "ad": "Ahlaki Tutum ve Davranışlar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din105",
+   "ders": "Din Kültürü",
+   "ad": "İslam Düşüncesinde İtikadi, Siyasi ve Fıkhi Yorumlar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din111",
+   "ders": "Din Kültürü",
+   "ad": "Dünya ve Ahiret",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din112",
+   "ders": "Din Kültürü",
+   "ad": "Kur’an’a Göre Hz. Muhammed",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din113",
+   "ders": "Din Kültürü",
+   "ad": "Kur’an’da Bazı Kavramlar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din114",
+   "ders": "Din Kültürü",
+   "ad": "İnançla İlgili Meseleler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din115",
+   "ders": "Din Kültürü",
+   "ad": "Yahudilik ve Hıristiyanlık",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din121",
+   "ders": "Din Kültürü",
+   "ad": "İslam ve Bilim",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din122",
+   "ders": "Din Kültürü",
+   "ad": "Anadolu’da İslam",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din123",
+   "ders": "Din Kültürü",
+   "ad": "İslam Düşüncesinde Tasavvufi Yorumlar",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din124",
+   "ders": "Din Kültürü",
+   "ad": "Güncel Dinî Meseleler",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "din125",
+   "ders": "Din Kültürü",
+   "ad": "Hint ve Çin Dinleri",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "pPisagor",
    "ders": "Geometri",
    "ad": "Pisagor bağıntısı",
    "gizli": true,
-   "parcasi": "geoDik"
+   "parcasi": "geoDik",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "pOranlar",
    "ders": "Geometri",
    "ad": "Dik üçgende sin-cos-tan ve özel açılar",
    "gizli": true,
-   "parcasi": "geoDik"
+   "parcasi": "geoDik",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   },
   {
    "id": "pBilesen",
    "ders": "Fizik",
    "ad": "Vektörü bileşenlerine ayırma",
    "gizli": true,
-   "parcasi": "fizVektor"
+   "parcasi": "fizVektor",
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "felVarlik",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Varlık Felsefesi",
+   "gizli": true,
+   "parcasi": "felKonular",
+   "dal": true,
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "felBilgi",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Bilgi Felsefesi",
+   "gizli": true,
+   "parcasi": "felKonular",
+   "dal": true,
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "felBilim",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Bilim Felsefesi",
+   "gizli": true,
+   "parcasi": "felKonular",
+   "dal": true,
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "felAhlak",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Ahlak Felsefesi",
+   "gizli": true,
+   "parcasi": "felKonular",
+   "dal": true,
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "felDin",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Din Felsefesi",
+   "gizli": true,
+   "parcasi": "felKonular",
+   "dal": true,
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "felSiyaset",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Siyaset Felsefesi",
+   "gizli": true,
+   "parcasi": "felKonular",
+   "dal": true,
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
+  },
+  {
+   "id": "felSanat",
+   "ders": "Felsefe (+ Felsefe Grubu)",
+   "ad": "Sanat Felsefesi",
+   "gizli": true,
+   "parcasi": "felKonular",
+   "dal": true,
+   "sinav": [
+    "TYT",
+    "AYT"
+   ]
   }
  ],
  "baglar": [
@@ -5452,6 +7089,318 @@
    "ust": "sosDegisme",
    "kullanim": "az",
    "gerekce": "Kültür değişmesi."
+  },
+  {
+   "alt": "tarZaman",
+   "ust": "tarIlk",
+   "kullanim": "cok",
+   "gerekce": "Kronoloji ve takvimler; tarihin kaynakları."
+  },
+  {
+   "alt": "tarIlk",
+   "ust": "tarOrta",
+   "kullanim": "az",
+   "gerekce": "İlk Çağ’ın sonundan Orta Çağ’a (hukuk, devlet)."
+  },
+  {
+   "alt": "tarIlk",
+   "ust": "tarTurkDunya",
+   "kullanim": "az",
+   "gerekce": "İlk Çağ medeniyet havzaları ve İç Asya."
+  },
+  {
+   "alt": "tarOrta",
+   "ust": "tarTurkDunya",
+   "kullanim": "az",
+   "gerekce": "Kavimler Göçü."
+  },
+  {
+   "alt": "tarTurkDunya",
+   "ust": "tarTurkIslam",
+   "kullanim": "cok",
+   "gerekce": "İslamiyet öncesi Türk devlet yapısı."
+  },
+  {
+   "alt": "tarIslam",
+   "ust": "tarTurkIslam",
+   "kullanim": "cok",
+   "gerekce": "Abbasiler ve İslam medeniyeti."
+  },
+  {
+   "alt": "tarTurkIslam",
+   "ust": "tarSelcuklu",
+   "kullanim": "cok",
+   "gerekce": "Büyük Selçuklu’dan Türkiye Selçuklu Devleti’ne."
+  },
+  {
+   "alt": "tarSelcuklu",
+   "ust": "tarOsmSiyaset",
+   "kullanim": "cok",
+   "gerekce": "Beylikler dönemi ve Osmanlı’nın kuruluşu."
+  },
+  {
+   "alt": "tarOsmSiyaset",
+   "ust": "tarAsker",
+   "kullanim": "az",
+   "gerekce": "Osmanlı ordusunun kuruluşu."
+  },
+  {
+   "alt": "tarOsmSiyaset",
+   "ust": "tarOsmMedeniyet",
+   "kullanim": "az",
+   "gerekce": "Kuruluş döneminin kurumları."
+  },
+  {
+   "alt": "tarOsmSiyaset",
+   "ust": "tarDunyaGucu",
+   "kullanim": "cok",
+   "gerekce": "1453’e kadarki büyüme."
+  },
+  {
+   "alt": "tarDunyaGucu",
+   "ust": "tarSultan",
+   "kullanim": "az",
+   "gerekce": "Klasik çağın merkez teşkilatı."
+  },
+  {
+   "alt": "tarSultan",
+   "ust": "tarToplum",
+   "kullanim": "az",
+   "gerekce": "Klasik çağın düzeni."
+  },
+  {
+   "alt": "tarDunyaGucu",
+   "ust": "tarDengeler",
+   "kullanim": "cok",
+   "gerekce": "1595 sonrasının siyaseti."
+  },
+  {
+   "alt": "tarDengeler",
+   "ust": "tarDegisim",
+   "kullanim": "az",
+   "gerekce": "Avrupa’daki değişim ve Osmanlı."
+  },
+  {
+   "alt": "tarDegisim",
+   "ust": "tarDevrim",
+   "kullanim": "cok",
+   "gerekce": "Aydınlanmadan devrimlere."
+  },
+  {
+   "alt": "tarDengeler",
+   "ust": "tarDenge",
+   "kullanim": "cok",
+   "gerekce": "1774 sonrasının siyaseti."
+  },
+  {
+   "alt": "tarDevrim",
+   "ust": "tarDenge",
+   "kullanim": "az",
+   "gerekce": "Milliyetçilik ve dağılma."
+  },
+  {
+   "alt": "tarDevrim",
+   "ust": "tarSosyo",
+   "kullanim": "az",
+   "gerekce": "Sanayi Devrimi ve gündelik hayat."
+  },
+  {
+   "alt": "tarDenge",
+   "ust": "ink20",
+   "kullanim": "cok",
+   "gerekce": "1914’e gelinen süreç."
+  },
+  {
+   "alt": "tarDevrim",
+   "ust": "ink20",
+   "kullanim": "az",
+   "gerekce": "Meşrutiyet ve Jön Türkler."
+  },
+  {
+   "alt": "tarTurkIslam",
+   "ust": "din122",
+   "kullanim": "az",
+   "gerekce": "Türklerin İslamiyet’i kabulü ve Anadolu’da İslam."
+  },
+  {
+   "alt": "din91",
+   "ust": "din92",
+   "kullanim": "cok",
+   "gerekce": "İman ve İslam kavramları."
+  },
+  {
+   "alt": "din92",
+   "ust": "din93",
+   "kullanim": "cok",
+   "gerekce": "İslam’ın esasları ve ibadet."
+  },
+  {
+   "alt": "din91",
+   "ust": "din101",
+   "kullanim": "az",
+   "gerekce": "Bilginin kaynakları; akli ve naklî deliller."
+  },
+  {
+   "alt": "din94",
+   "ust": "din102",
+   "kullanim": "az",
+   "gerekce": "Gençlik ve örnek davranış."
+  },
+  {
+   "alt": "din94",
+   "ust": "din104",
+   "kullanim": "az",
+   "gerekce": "Değerler ve ahlak."
+  },
+  {
+   "alt": "din102",
+   "ust": "din112",
+   "kullanim": "cok",
+   "gerekce": "Hz. Muhammed’in örnekliği."
+  },
+  {
+   "alt": "din92",
+   "ust": "din105",
+   "kullanim": "az",
+   "gerekce": "Din ve dinin yorumu."
+  },
+  {
+   "alt": "din105",
+   "ust": "din123",
+   "kullanim": "cok",
+   "gerekce": "Yorumlar ve tasavvufi yorumlar."
+  },
+  {
+   "alt": "din105",
+   "ust": "din124",
+   "kullanim": "az",
+   "gerekce": "Dinî meselelerin çözümünde yöntem."
+  },
+  {
+   "alt": "din95",
+   "ust": "din122",
+   "kullanim": "cok",
+   "gerekce": "İslam medeniyeti ve Anadolu."
+  },
+  {
+   "alt": "din95",
+   "ust": "din121",
+   "kullanim": "az",
+   "gerekce": "İslam medeniyetinde bilim."
+  },
+  {
+   "alt": "din101",
+   "ust": "din111",
+   "kullanim": "az",
+   "gerekce": "Allah inancı ve ahiret."
+  },
+  {
+   "alt": "din101",
+   "ust": "din114",
+   "kullanim": "az",
+   "gerekce": "İnançla ilgili yaklaşımlar."
+  },
+  {
+   "alt": "din91",
+   "ust": "din113",
+   "kullanim": "az",
+   "gerekce": "Kur’an’daki kavramlar."
+  },
+  {
+   "alt": "din92",
+   "ust": "din103",
+   "kullanim": "az",
+   "gerekce": "Din ve hayat."
+  },
+  {
+   "alt": "din92",
+   "ust": "din115",
+   "kullanim": "az",
+   "gerekce": "Din tanımları ve dinler."
+  },
+  {
+   "alt": "din115",
+   "ust": "din125",
+   "kullanim": "az",
+   "gerekce": "Dinler."
+  },
+  {
+   "alt": "fizYariIletken",
+   "ust": "fizSuperIletken",
+   "kullanim": "az",
+   "gerekce": "İletkenlik ve enerji bantları."
+  },
+  {
+   "alt": "fizAkim",
+   "ust": "fizSuperIletken",
+   "kullanim": "az",
+   "gerekce": "Direnç ve akım."
+  },
+  {
+   "alt": "felVarlik",
+   "ust": "felMO6",
+   "kullanim": "cok",
+   "gerekce": "Arkhe: varlığın ana maddesi."
+  },
+  {
+   "alt": "felBilgi",
+   "ust": "fel15",
+   "kullanim": "cok",
+   "gerekce": "Rasyonalizm ve empirizm: bilginin kaynağı."
+  },
+  {
+   "alt": "felBilgi",
+   "ust": "fel18",
+   "kullanim": "cok",
+   "gerekce": "Kant’ın eleştirel felsefesi."
+  },
+  {
+   "alt": "felBilgi",
+   "ust": "felBilim",
+   "kullanim": "az",
+   "gerekce": "Bilimsel bilginin değeri."
+  },
+  {
+   "alt": "felBilim",
+   "ust": "fel20",
+   "kullanim": "cok",
+   "gerekce": "Popper ve Kuhn."
+  },
+  {
+   "alt": "felDin",
+   "ust": "felMS2",
+   "kullanim": "cok",
+   "gerekce": "Tanrı’nın varlığına ilişkin kanıtlar."
+  },
+  {
+   "alt": "felAhlak",
+   "ust": "fel18",
+   "kullanim": "az",
+   "gerekce": "Ödev ahlakı ve faydacılık."
+  },
+  {
+   "alt": "felAhlak",
+   "ust": "felSiyaset",
+   "kullanim": "az",
+   "gerekce": "Adalet ve iyi yaşam."
+  },
+  {
+   "alt": "felSiyaset",
+   "ust": "fel15",
+   "kullanim": "az",
+   "gerekce": "Toplum sözleşmesi."
+  },
+  {
+   "alt": "felSanat",
+   "ust": "fel18",
+   "kullanim": "az",
+   "gerekce": "Estetik yargı."
+  },
+  {
+   "alt": "felBilgi",
+   "ust": "psiSurec",
+   "kullanim": "az",
+   "gerekce": "Duyum ve bilginin başlangıcı."
   }
  ],
  "sinavSatirlari": [
@@ -6913,7 +8862,8 @@
    },
    "paylar": {
     "fizGoruntu": 0.3,
-    "fizYariIletken": 0.3,
+    "fizYariIletken": 0.25,
+    "fizSuperIletken": 0.05,
     "fizNano": 0.2,
     "fizLazer": 0.2
    }
@@ -8093,7 +10043,7 @@
     "2025": 3
    },
    "paylar": {
-    "felKonular": 1
+    "felBilgi": 1
    }
   },
   {
@@ -8111,7 +10061,7 @@
     "2025": 1
    },
    "paylar": {
-    "felKonular": 1
+    "felBilim": 1
    }
   },
   {
@@ -8129,7 +10079,7 @@
     "2025": 0
    },
    "paylar": {
-    "felKonular": 1
+    "felVarlik": 1
    }
   },
   {
@@ -8147,7 +10097,7 @@
     "2025": 1
    },
    "paylar": {
-    "felKonular": 1
+    "felAhlak": 1
    }
   },
   {
@@ -8165,7 +10115,7 @@
     "2025": 0
    },
    "paylar": {
-    "felKonular": 1
+    "felSiyaset": 1
    }
   },
   {
@@ -8183,7 +10133,7 @@
     "2025": 0
    },
    "paylar": {
-    "felKonular": 1
+    "felDin": 1
    }
   },
   {
@@ -8201,7 +10151,7 @@
     "2025": 0
    },
    "paylar": {
-    "felKonular": 1
+    "felSanat": 1
    }
   },
   {
@@ -8854,7 +10804,7 @@
     "2024": 0
    },
    "paylar": {
-    "felKonular": 1
+    "felBilim": 1
    }
   },
   {
@@ -8871,7 +10821,7 @@
     "2024": 1
    },
    "paylar": {
-    "felKonular": 1
+    "felBilgi": 1
    }
   },
   {
@@ -8888,7 +10838,7 @@
     "2024": 0
    },
    "paylar": {
-    "felKonular": 1
+    "felVarlik": 1
    }
   },
   {
@@ -8905,7 +10855,7 @@
     "2024": 0
    },
    "paylar": {
-    "felKonular": 1
+    "felAhlak": 1
    }
   },
   {
@@ -8922,7 +10872,7 @@
     "2024": 1
    },
    "paylar": {
-    "felKonular": 1
+    "felDin": 1
    }
   },
   {
@@ -9688,6 +11638,736 @@
    },
    "paylar": {
     "bioCevre": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "Tarih ve Zaman",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tarZaman": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "İlk ve Orta Çağlarda Türk Dünyası",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tarTurkDunya": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "İslam Medeniyetinin Doğuşu",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tarIslam": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "Türklerin İslamiyet’i Kabulü ve İlk Türk İslam Devletleri",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tarTurkIslam": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "Beylikten Devlete Osmanlı",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "tarOsmSiyaset": 0.5,
+    "tarOsmMedeniyet": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "Dünya Gücü Osmanlı",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "tarDunyaGucu": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "Değişim Çağında Avrupa ve Osmanlı",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tarDegisim": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Tarih",
+   "konu": "Uluslararası İlişkilerde Denge Stratejisi (1774-1914)",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tarDenge": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Din Kültürü",
+   "konu": "Bilgi ve İnanç",
+   "yillar": {
+    "2018": 1,
+    "2019": 2,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "din91": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Din Kültürü",
+   "konu": "Din ve İslam",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "din92": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Din Kültürü",
+   "konu": "İslam ve İbadet",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "din93": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Din Kültürü",
+   "konu": "Gençlik ve Değerler",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "din94": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Din Kültürü",
+   "konu": "Allah İnsan İlişkisi",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "din101": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Din Kültürü",
+   "konu": "Hz. Muhammed (S.A.V)",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "din102": 0.5,
+    "din112": 0.5
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Din Kültürü",
+   "konu": "Vahiy ve Akıl",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 2,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "din91": 0.7,
+    "din101": 0.3
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Din Kültürü",
+   "konu": "İslam Düşüncesinde Yorumlar, Mezhepler",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 1,
+    "2024": 1,
+    "2025": 0
+   },
+   "paylar": {
+    "din105": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Din Kültürü",
+   "konu": "Din, Kültür ve Medeniyet",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "din95": 0.5,
+    "din122": 0.25,
+    "din121": 0.25
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Oran-Orantı",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "tytOran": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Denklem Çözme",
+   "yillar": {
+    "2018": 0,
+    "2019": 2,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "tytDenklem": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Köklü İfadeler",
+   "yillar": {
+    "2018": 2,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1
+   },
+   "paylar": {
+    "tytKok": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "Çarpanlara Ayırma",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tytCarpan": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Matematik",
+   "konu": "İşlem",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "tytTemel": 1
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Geometri",
+   "konu": "Analitik Geometri",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "geoNokta": 0.4,
+    "geoDogru": 0.6
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "Hareket ve Kuvvet",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0,
+    "2025": 1
+   },
+   "paylar": {
+    "fizNewton": 0.7,
+    "fizVektor": 0.3
+   }
+  },
+  {
+   "sinav": "TYT",
+   "ders": "Fizik",
+   "konu": "İş, Güç, Enerji",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0,
+    "2025": 0
+   },
+   "paylar": {
+    "fizIs": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Tarih ve Zaman",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "tarZaman": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "İnsanlığın İlk Dönemleri",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "tarIlk": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Orta Çağ'da Dünya",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "tarOrta": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "İlk ve Orta Çağlarda Türk Dünyası",
+   "yillar": {
+    "2018": 3,
+    "2019": 2,
+    "2020": 2,
+    "2021": 1,
+    "2022": 2,
+    "2023": 2,
+    "2024": 2
+   },
+   "paylar": {
+    "tarTurkDunya": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "İslam Medeniyetinin Doğuşu",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 2,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1
+   },
+   "paylar": {
+    "tarIslam": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Türklerin İslamiyet'i Kabulü ve İlk Türk İslam Devletleri",
+   "yillar": {
+    "2018": 1,
+    "2019": 1,
+    "2020": 1,
+    "2021": 3,
+    "2022": 1,
+    "2023": 1,
+    "2024": 2
+   },
+   "paylar": {
+    "tarTurkIslam": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 0,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "tarSelcuklu": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Beylikten Devlete Osmanlı",
+   "yillar": {
+    "2018": 2,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 3,
+    "2023": 2,
+    "2024": 2
+   },
+   "paylar": {
+    "tarOsmSiyaset": 0.5,
+    "tarOsmMedeniyet": 0.5
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Devletleşme Sürecinde Savaşçılar ve Askerler",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 0,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "tarAsker": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Dünya Gücü Osmanlı",
+   "yillar": {
+    "2018": 2,
+    "2019": 1,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 2,
+    "2024": 0
+   },
+   "paylar": {
+    "tarDunyaGucu": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Sultan ve Osmanlı Merkez Teşkilatı",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "tarSultan": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 1,
+    "2021": 1,
+    "2022": 1,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "tarDengeler": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Değişim Çağında Avrupa ve Osmanlı",
+   "yillar": {
+    "2018": 0,
+    "2019": 2,
+    "2020": 2,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 0
+   },
+   "paylar": {
+    "tarDegisim": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Uluslararası İlişkilerde Denge Stratejisi (1774-1914)",
+   "yillar": {
+    "2018": 1,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 1,
+    "2024": 2
+   },
+   "paylar": {
+    "tarDenge": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Devrimler Çağında Değişen Devlet-Toplum İlişkileri",
+   "yillar": {
+    "2018": 0,
+    "2019": 0,
+    "2020": 0,
+    "2021": 1,
+    "2022": 0,
+    "2023": 0,
+    "2024": 1
+   },
+   "paylar": {
+    "tarDevrim": 1
+   }
+  },
+  {
+   "sinav": "AYT",
+   "ders": "Tarih-1",
+   "konu": "Sermaye ve Emek",
+   "yillar": {
+    "2018": 0,
+    "2019": 1,
+    "2020": 1,
+    "2021": 0,
+    "2022": 0,
+    "2023": 0,
+    "2024": 0
+   },
+   "paylar": {
+    "tarSosyo": 1
    }
   }
  ],
@@ -10741,6 +13421,14 @@
    "ad": "Yarı İletken Teknolojisi",
    "kapsar": [
     "fizYariIletken"
+   ]
+  },
+  {
+   "ders": "Fizik",
+   "sinif": 12,
+   "ad": "Süper İletkenler",
+   "kapsar": [
+    "fizSuperIletken"
    ]
   },
   {
@@ -13004,6 +15692,303 @@
    "ad": "20. Yüzyıl Felsefesi",
    "kapsar": [
     "fel20"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 9,
+   "ad": "Tarih ve Zaman",
+   "kapsar": [
+    "tarZaman"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 9,
+   "ad": "İnsanlığın İlk Dönemleri",
+   "kapsar": [
+    "tarIlk"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 9,
+   "ad": "Orta Çağ’da Dünya",
+   "kapsar": [
+    "tarOrta"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 9,
+   "ad": "İlk ve Orta Çağlarda Türk Dünyası",
+   "kapsar": [
+    "tarTurkDunya"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 9,
+   "ad": "İslam Medeniyetinin Doğuşu",
+   "kapsar": [
+    "tarIslam"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 9,
+   "ad": "Türklerin İslamiyet’i Kabulü ve İlk Türk İslam Devletleri",
+   "kapsar": [
+    "tarTurkIslam"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 10,
+   "ad": "Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi",
+   "kapsar": [
+    "tarSelcuklu"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 10,
+   "ad": "Beylikten Devlete Osmanlı Siyaseti (1302-1453)",
+   "kapsar": [
+    "tarOsmSiyaset"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 10,
+   "ad": "Devletleşme Sürecinde Savaşçılar ve Askerler",
+   "kapsar": [
+    "tarAsker"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 10,
+   "ad": "Beylikten Devlete Osmanlı Medeniyeti",
+   "kapsar": [
+    "tarOsmMedeniyet"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 10,
+   "ad": "Dünya Gücü Osmanlı (1453-1595)",
+   "kapsar": [
+    "tarDunyaGucu"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 10,
+   "ad": "Sultan ve Osmanlı Merkez Teşkilatı",
+   "kapsar": [
+    "tarSultan",
+    "tarToplum"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 11,
+   "ad": "Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595-1774)",
+   "kapsar": [
+    "tarDengeler"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 11,
+   "ad": "Değişim Çağında Avrupa ve Osmanlı",
+   "kapsar": [
+    "tarDegisim"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 11,
+   "ad": "Devrimler Çağında Değişen Devlet-toplum İlişkileri",
+   "kapsar": [
+    "tarDevrim"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 11,
+   "ad": "Uluslararası İlişkilerde Denge Stratejisi (1774-1914)",
+   "kapsar": [
+    "tarDenge"
+   ]
+  },
+  {
+   "ders": "Tarih",
+   "sinif": 11,
+   "ad": "Xıx ve Xx. Yüzyılda Değişen Sosyo-ekonomik Hayat",
+   "kapsar": [
+    "tarSosyo"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 9,
+   "ad": "Bilgi ve İnanç",
+   "kapsar": [
+    "din91"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 9,
+   "ad": "Din ve İslam",
+   "kapsar": [
+    "din92"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 9,
+   "ad": "İslam ve İbadet",
+   "kapsar": [
+    "din93"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 9,
+   "ad": "Gençlik ve Değerler",
+   "kapsar": [
+    "din94"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 9,
+   "ad": "Gönül Coğrafyamız",
+   "kapsar": [
+    "din95"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 10,
+   "ad": "Allah İnsan İlişkisi",
+   "kapsar": [
+    "din101"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 10,
+   "ad": "Hz. Muhammed ve Gençlik",
+   "kapsar": [
+    "din102"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 10,
+   "ad": "Din ve Hayat",
+   "kapsar": [
+    "din103"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 10,
+   "ad": "Ahlaki Tutum ve Davranışlar",
+   "kapsar": [
+    "din104"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 10,
+   "ad": "İslam Düşüncesinde İtikadi, Siyasi ve Fıkhi Yorumlar",
+   "kapsar": [
+    "din105"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 11,
+   "ad": "Dünya ve Ahiret",
+   "kapsar": [
+    "din111"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 11,
+   "ad": "Kur’an’a Göre Hz. Muhammed",
+   "kapsar": [
+    "din112"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 11,
+   "ad": "Kur’an’da Bazı Kavramlar",
+   "kapsar": [
+    "din113"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 11,
+   "ad": "İnançla İlgili Meseleler",
+   "kapsar": [
+    "din114"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 11,
+   "ad": "Yahudilik ve Hıristiyanlık",
+   "kapsar": [
+    "din115"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 12,
+   "ad": "İslam ve Bilim",
+   "kapsar": [
+    "din121"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 12,
+   "ad": "Anadolu’da İslam",
+   "kapsar": [
+    "din122"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 12,
+   "ad": "İslam Düşüncesinde Tasavvufi Yorumlar",
+   "kapsar": [
+    "din123"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 12,
+   "ad": "Güncel Dinî Meseleler",
+   "kapsar": [
+    "din124"
+   ]
+  },
+  {
+   "ders": "Din Kültürü",
+   "sinif": 12,
+   "ad": "Hint ve Çin Dinleri",
+   "kapsar": [
+    "din125"
    ]
   }
  ]
