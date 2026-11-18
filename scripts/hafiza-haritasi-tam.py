@@ -441,13 +441,14 @@ satir('TYT','Kimya','Asit, Baz ve Tuzlar',yillar(0,1,1,1,1,1,1,1),{'kimAsitBaz':
 satir('TYT','Kimya','Karışımlar',yillar(0,1,1,1,1,1,1,1),{'kimKarisim':1})
 satir('TYT','Kimya','Kimya Her Yerde',yillar(1,1,0,0,0,0,0,0),{'kimHerYer':1})
 satir('TYT','Biyoloji','Canlıların Ortak Özellikleri',yillar(0,1,0,0,1,0,0,1),{'bioOrtak':1})
-satir('TYT','Biyoloji','Canlıların Temel Bileşenleri',yillar(1,1,1,1,0,1,1,0),{'bioBilesen':.8,'bioNukleik':.2})
+satir('TYT','Biyoloji','Canlıların Temel Bileşenleri',yillar(1,1,1,1,0,1,1,0),{'bioBilesen':1})
 satir('TYT','Biyoloji','Hücre ve Organelleri',yillar(0,0,1,1,1,1,1,0),{'bioHucre':1})
 satir('TYT','Biyoloji','Madde Geçişleri',yillar(1,0,0,0,0,0,0,1),{'bioHucre':1})
 satir('TYT','Biyoloji','Canlıların Sınıflandırılması',yillar(1,1,1,1,1,1,1,1),{'bioSiniflandirma':.5,'bioAlem':.5})
 satir('TYT','Biyoloji','Hücre Bölünmeleri ve Üreme',yillar(1,1,1,1,1,1,1,1),{'bioBolunme':1})
 satir('TYT','Biyoloji','Ekosistem Ekoloji',yillar(1,1,0,1,0,1,1,0),{'bioEkosistem':1})
-satir('TYT','Biyoloji','Güncel Çevre Sorunları',yillar(1,0,1,0,1,0,0,1),{'bioCevre':1})
+# MEB 10.3 "Ekosistem Ekolojisi ve Güncel Çevre Sorunları": the plan's TYT topic Ekosistem Ekolojisi (not 12.4 Canlılar ve Çevre)
+satir('TYT','Biyoloji','Güncel Çevre Sorunları',yillar(1,0,1,0,1,0,0,1),{'bioEkosistem':1})
 satir('TYT','Biyoloji','Kalıtım',yillar(0,1,1,1,1,1,1,1),{'bioKalitim':1})
 satir('TYT','Tarih','XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya',yillar(1,0,1,0,0,0,0,0),{'ink20':.5,'inkWW1':.5})
 MM = {'inkHazirlik':.2,'inkTBMM':.2,'inkSevr':.1,'inkDoguGuney':.15,'inkBati':.2,'inkLozan':.15}
@@ -618,8 +619,9 @@ satir('TYT','Matematik','Köklü İfadeler',yillar(2,1,0,1,1,1,1,1),{'tytKok':1}
 satir('TYT','Matematik','Çarpanlara Ayırma',yillar(0,1,0,0,0,0,0,0),{'tytCarpan':1})
 satir('TYT','Matematik','İşlem',yillar(0,1,0,0,0,0,0,0),{'tytTemel':1})
 satir('TYT','Geometri','Analitik Geometri',yillar(1,1,0,1,1,0,0,0),{'geoNokta':.4,'geoDogru':.6})
-# 9th-grade Hareket ve Kuvvet (Newton's laws, force) and Enerji are TYT topics though the plan lists them under AYT
-satir('TYT','Fizik','Hareket ve Kuvvet',yillar(1,1,1,1,1,1,0,1),{'fizNewton':.7,'fizVektor':.3})
+# 9th-grade Hareket ve Kuvvet (motion, force, Newton's laws: the plan's Newton'un Hareket Yasaları; vectors are 11.1.1, AYT) and
+# Enerji are TYT topics though the plan listed them under AYT
+satir('TYT','Fizik','Hareket ve Kuvvet',yillar(1,1,1,1,1,1,0,1),{'fizNewton':1})
 satir('TYT','Fizik','İş, Güç, Enerji',yillar(0,1,0,0,0,0,0,0),{'fizIs':1})
 # AYT Tarih-1 (kitapsec.com, 2018–2024, given newest first); "Sermaye ve Emek" is the 2018 programme's unit, in 11.5 since 2023
 for ad, v, p in [('Tarih ve Zaman',(1,1,1,1,1,1,1),{'tarZaman':1}),('İnsanlığın İlk Dönemleri',(1,1,1,1,1,1,1),{'tarIlk':1}),("Orta Çağ'da Dünya",(0,0,0,0,0,0,0),{'tarOrta':1}),

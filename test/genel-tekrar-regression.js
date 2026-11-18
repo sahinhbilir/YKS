@@ -60,7 +60,9 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     const adlar = a.json('[...genelTekrarDurumu(0).gr.g.values()].map(g=>g.ad)');
     for (const ad of ['TYT Matematik', 'AYT Matematik', 'TYT Fizik', 'AYT Fizik', 'TYT Türkçe', 'AYT Kimya', 'TYT Geometri', 'TYT Din Kültürü'])
       assert(adlar.includes(ad), ad + ' in ' + adlar);
-    assert(!adlar.some(x => /Türk Dili|İnkılap/.test(x)), 'SAY has no edebiyat or inkılap course');
+    assert(!adlar.some(x => /Türk Dili/.test(x)), 'SAY has no edebiyat course');
+    // İnkılap Tarihi only as TYT asks it (2026-11-18: every TYT topic in every field's plan).
+    assert(adlar.some(x => /^TYT .*İnkılap/.test(x)) && !adlar.some(x => /^AYT .*İnkılap/.test(x)), 'SAY has TYT İnkılap Tarihi only: ' + adlar);
     assert.equal(new Set(adlar).size, adlar.length, 'one item per subject and session');
     assert.equal(a.run('GENEL_TEKRAR_DAKIKA'), 120);
     // The first plan week carries them as their own row type, 120 minutes each.

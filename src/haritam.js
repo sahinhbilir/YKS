@@ -85,8 +85,8 @@ const uygun = () => { try { return ogrenciMi() && !!D.ogr[EK.ogr] && dersleri(D.
 // "… - devamı") is the same topic. School units (catalogue: subject, grade, name) count for every YKS topic they cover.
 const devamsiz = ad => String(ad).trim().replace(/\s*(?:\(devamı\)|- devamı)$/i, '');
 // A course the plans name two ways: the Felsefe grubu is "Felsefe" in every field's plan but SÖZ's (yeniYksKonuPlani), and so
-// are the catalogue's Felsefe units.
-const DERS_ESI = {'Felsefe (+ Felsefe Grubu)': ['Felsefe']};
+// are the catalogue's Felsefe units; TYT's function topics are under Matematik TYT in the plans without AYT mathematics.
+const DERS_ESI = {'Felsefe (+ Felsefe Grubu)': ['Felsefe'], 'Matematik AYT': ['Matematik TYT']};
 function cozumle() {
   const adlar = new Map();
   for (let ki = 0, n = konuSayisi(); ki < n; ki++) { const k = konuAl(ki); if (!k) continue;

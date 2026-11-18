@@ -1045,7 +1045,6 @@
    "ders": "Fizik",
    "ad": "Vektörler ve Kuvvet",
    "sinav": [
-    "TYT",
     "AYT"
    ]
   },
@@ -1960,7 +1959,6 @@
    "ders": "Biyoloji",
    "ad": "Nükleik Asitlerin Yapısı ve Çeşitleri",
    "sinav": [
-    "TYT",
     "AYT"
    ]
   },
@@ -2065,7 +2063,6 @@
    "ders": "Biyoloji",
    "ad": "Canlılar ve Çevre",
    "sinav": [
-    "TYT",
     "AYT"
    ]
   },
@@ -3412,7 +3409,6 @@
    "gizli": true,
    "parcasi": "fizVektor",
    "sinav": [
-    "TYT",
     "AYT"
    ]
   },
@@ -9610,8 +9606,7 @@
     "2025": 0
    },
    "paylar": {
-    "bioBilesen": 0.8,
-    "bioNukleik": 0.2
+    "bioBilesen": 1
    }
   },
   {
@@ -9720,7 +9715,7 @@
     "2025": 1
    },
    "paylar": {
-    "bioCevre": 1
+    "bioEkosistem": 1
    }
   },
   {
@@ -12075,8 +12070,7 @@
     "2025": 1
    },
    "paylar": {
-    "fizNewton": 0.7,
-    "fizVektor": 0.3
+    "fizNewton": 1
    }
   },
   {

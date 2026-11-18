@@ -74,8 +74,27 @@ own topic lists; see [exams.md](exams.md).
   - physics/chemistry/biology topics marked TYT in `PLAN_FEN_SINAVI`
   - geography topics labelled `(TYT)`
   - philosophy-group topics only when they are philosophy (SÖZ)
-- AYT courses, `Türk Dili ve Edebiyatı`, `T.C. İnkılap Tarihi` and `(AYT)` topics
-  are excluded. Around 200 topics for SAY.
+  - the topics TYT asks that the plan keeps under an AYT course (`YKS_TYT_EK`, 2026-11-18): TYT Tarih's İnkılap Tarihi
+    part (Mustafa Kemal'in Hayatı to Atatürkçülük ve Türk İnkılabı, MEB 12.1–12.3, and the catalogue's units for them) and
+    TYT Matematik's function topics, which a TYT plan lists under `Matematik TYT`; 9th-grade Hareket ve Kuvvet and Enerji
+    are TYT in `PLAN_FEN_SINAVI` (Newton'un Hareket Yasaları, İş-Güç-Enerji; vectors stay AYT, 11.1.1)
+- Other AYT courses, `Türk Dili ve Edebiyatı`, the rest of `T.C. İnkılap Tarihi` and `(AYT)` topics are excluded. Around
+  200 topics for SAY.
+
+## Every YKS topic in every plan (2026-11-18)
+
+- `yeniYksKonuPlani(alan)` holds every topic the field's exams ask: every TYT topic (SAY now has TYT's İnkılap Tarihi;
+  EA, SÖZ and DİL TYT's Hareket ve Kuvvet and Enerji; SÖZ and DİL TYT's function topics under Matematik TYT; DİL TYT's
+  İnkılap part) and the field's AYT. `test/yks-plan-regression.cjs` checks it against the connected-memory map's exam per
+  topic (`HARITA_VERI` `sinav`), so the plan and the map cannot drift apart.
+- Plans made before are completed by themselves (`yksPlanlariniTamamla`, run with the other upgrades when the page is
+  drawn): a 12th-grade YKS şube's plan gets every topic it lacks, by name within its own ders (or a whole ders it lacks),
+  spread over the weeks from next week's on (this week's papers are out; in a holiday week the next one taught), and the
+  timetable is spread again. A student's own plan gets them in their places in its order, on the student's own device, its
+  general reviews worked out again with those done kept. Each happens once per version of the rules (`YKS_KONU_SURUMU`;
+  `D.yksKonuSurumu[sube]`, `kendiPlan.yksKonuSurumu`), so a topic the teacher removes afterwards does not come back. The
+  teacher does nothing; the "eksik başlıklar" notice and its button stay for a viewing teacher's notebook, which is never
+  changed. An error leaves that plan as it was and is retried on the next draw: opening the notebook never fails on it.
 - Plan weeks keep their order. Within a week, courses alternate, so each week
   mixes subjects.
 - Topics are resolved with the same rule the school timetable uses
