@@ -259,8 +259,9 @@ function netGrafigi(b,W){
   const x=i=>r1(n===1?(L+R)/2:L+ic+(R-L-2*ic)*i/(n-1)),adim=n>1?(R-L-2*ic)/(n-1):R-L;
   // A value is written on every point when the labels fit, otherwise on every k-th counted back from the newest exam.
   const her=Math.max(1,Math.ceil((dar?32:36)/Math.max(1,adim))),yazili=i=>(n-1-i)%her===0;
-  // The students' line is ink, not the subject's colour: only the shading is red or green, so a green subject cannot read as "above".
-  const renkli='var(--murekkep)',UST=16,ALT=UST+(dar?130:150);
+  // The students' line is the site's accent blue, not the subject's colour: only the shading is red or green, so a green
+  // subject cannot read as "above".
+  const renkli='var(--vurgu,#1F4FC8)',UST=16,ALT=UST+(dar?130:150);
   const vals=l.flatMap(p=>[p.net,...(p.genel!==null?[p.genel]:[])]),lo0=Math.min(...vals),hi0=Math.max(...vals),pad=Math.max(.8,(hi0-lo0)*.25);
   // A mean net below zero (more wrong than right) stays on the chart: the axis goes below 0 only then.
   const lo=lo0<0?lo0-pad:Math.max(0,lo0-pad),hi=hi0+pad,y=v=>r1(ALT-(v-lo)/(hi-lo||1)*(ALT-UST)),ad=adimBul(hi-lo,dar?3:4);
@@ -402,7 +403,7 @@ function gorunum(){
   const secim='<label class="et-seg"><span class="et-seg-label">Öğretmen</span><select id="ogrHoca"><option value="">Bütün öğretmenler ('+fi(uygun.length)+')</option>'+uygun.map(o=>'<option value="'+kacis(o.key)+'"'+(o.key===secili?' selected':'')+'>'+kacis(kisiAd(o.ad))+'</option>').join('')+'</select></label>';
   planla();
   return '<div id="ogrKok"><header class="et-bas"><h1 class="et-baslik">Öğretmen raporu'+(duzey!==null?' · '+duzey+'. sınıf':'')+'</h1><p class="et-cumle">Öğrencilerinizin netleri ve konu başarıları, aynı denemelerde Türkiye ortalamasıyla karşılaştırılır.</p></header>'+
-    '<div class="et-arac">'+duzeySec+secim+'<button type="button" class="et-dugme" id="ogrYazdir">Yazdır / PDF</button></div>'+
+    '<div class="et-arac">'+duzeySec+secim+'<button type="button" class="et-dugme" id="ogrYazdir">PDF indir</button><span class="mini ogr-pdf-durum" id="ogrPdfDurum" role="status"></span></div>'+
     '<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu rapor nasıl okunur?</summary>'+rehberHtml()+'</details>'+
     (modeller.length?modeller.map(bolum).join(''):'<p class="mini ogr-yok">Bu sınıf düzeyinde ders veren öğretmen yok.</p>')+'</div>';
 }
@@ -436,7 +437,7 @@ function gorunumOgrenci(){
   const sec=(id,ad,l,v)=>'<label class="et-seg"><span class="et-seg-label">'+ad+'</span><select id="'+id+'">'+l.map(([d,y])=>'<option value="'+kacis(String(d))+'"'+(String(d)===String(v)?' selected':'')+'>'+kacis(y)+'</option>').join('')+'</select></label>';
   planla();
   return '<div id="ogrKok">'+bas+'<div class="et-arac">'+sec('osDuzey','Sınıf düzeyi',duzeyler.map(d=>[d,d+'. sınıf']),duzey)+sec('osSube','Şube',subeler.map(s=>[s,s]),sube)+
-    sec('osOgr','Öğrenci',[['','Bütün öğrenciler ('+fi(subede.length)+')']].concat(subede.map(x=>[String(x.no),kisiAd(x.ad)])),secili)+'<button type="button" class="et-dugme" id="ogrYazdir">Yazdır / PDF</button></div>'+
+    sec('osOgr','Öğrenci',[['','Bütün öğrenciler ('+fi(subede.length)+')']].concat(subede.map(x=>[String(x.no),kisiAd(x.ad)])),secili)+'<button type="button" class="et-dugme" id="ogrYazdir">PDF indir</button><span class="mini ogr-pdf-durum" id="ogrPdfDurum" role="status"></span></div>'+
     '<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu rapor nasıl okunur?</summary>'+rehberHtml(REHBER_OGRENCI)+'</details>'+modeller.map(bolum).join('')+'</div>';
 }
 /* ---- Türkiye karşılaştırması on the student's own device ----
@@ -487,12 +488,178 @@ function gorunumKendi(){
   const m={key:'0',ad:o.ad||'',sinif:D.turkiyeKiyas.sinif||o.sube||'',bloklar};SON=[m];
   const ad=kisiAd(m.ad),tarih=Number.isInteger(D.turkiyeKiyas.t)?gunYaz(D.turkiyeKiyas.t):'';let sayac=0;
   planla();
-  return '<div id="ogrKok">'+bas+'<div class="et-arac"><button type="button" class="et-dugme" id="ogrYazdir">Yazdır / PDF</button>'+(tarih?'<span class="mini">Öğretmeninin son yayınından · '+kacis(tarih)+'</span>':'')+'</div>'+
+  return '<div id="ogrKok">'+bas+'<div class="et-arac"><button type="button" class="et-dugme" id="ogrYazdir">PDF indir</button><span class="mini ogr-pdf-durum" id="ogrPdfDurum" role="status"></span>'+(tarih?'<span class="mini">Öğretmeninin son yayınından · '+kacis(tarih)+'</span>':'')+'</div>'+
     '<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu sayfa nasıl okunur?</summary>'+rehberHtml(REHBER_OGRENCI)+'</details>'+
     '<section class="ogr-ogretmen"><header class="ogr-ogretmen-bas"><div class="ogr-kimlik"><p class="ogr-baski ogr-ust-yazi">'+kacis('Türkiye ortalaması karşılaştırması'+(tarih?' · '+tarih:''))+'</p><h2>'+kacis(ad)+'</h2><p class="mini">'+kacis(m.sinif)+'</p></div>'+
     '</header>'+bloklar.map((b,j)=>blokHtml(b,sayac++,ad,!j)).join('')+'</section></div>';
 }
 let ZAMAN=null;
+/* ---- PDF: one A4 landscape page per teacher (or student), drawn like the Öğrenci raporu: white soft-cornered cards on a warm
+   page, one picture per page, saved straight to a PDF file, so no browser header, address, title or page number is printed.
+   A page fits whatever the number of blocks: the blocks with a topic table are the large cards side by side, the blocks with
+   nets only are the small cards along the bottom; row heights and the chart shrink to fit. ---- */
+const PC={ink:'#213d40',muted:'#657878',line:'#2c6aa8',green:'#168d7d',red:'#bf6951',gray:'#d9dfdc',bg:'#f6f5f0',grid:'#e5ebe7',tr:'#8a9b99'},PW=1190.55,PH=841.89;
+const PDF_W=841.89,PDF_H=595.28,PDF_OLCEK=3;
+// Where the students stand, as on the screen: [pill fill, text colour, arrow, words].
+const PDF_DURUM={1:['#dcf1ea','#0b6a5d','▲','Türkiye’nin üstünde'],'-1':['#f6e0d9','#9a3f2c','▼','Türkiye’nin altında'],0:['#e9ecea','#586e70','■','Türkiye ile aynı']};
+// A colour on white: a = 0 white, 1 the colour. The squares use the screen's rule (hucreRengi) drawn on paper.
+function karisim(hex,a){const n=parseInt(hex.slice(1),16),m=c=>Math.round(255+(c-255)*a);return 'rgb('+m(n>>16)+','+m(n>>8&255)+','+m(n&255)+')'}
+function kareRengi(c){const t=Math.min(1,Math.abs(c.fark)/RENK_UST);return karisim(c.fark<0?PC.red:PC.green,c.durum==='belirsiz'?.22+.16*t:.45+.45*t)}
+function ressam(out){
+  let olc=null;try{olc=typeof document!=='undefined'?document.createElement('canvas').getContext?.('2d')||null:null}catch(e){olc=null}
+  const en=(t,s,b=false)=>{if(olc){olc.font=(b?'bold ':'')+s+'px Arial';return olc.measureText(String(t)).width}return [...String(t)].length*s*(b?.62:.56)};
+  const sigdir=(t,max,s,b=false)=>{t=String(t);if(en(t,s,b)<=max)return t;const c=[...t];let lo=0,hi=c.length;while(lo<hi){const m=Math.ceil((lo+hi)/2);if(en(c.slice(0,m).join('')+'…',s,b)<=max)lo=m;else hi=m-1}return c.slice(0,lo).join('').trimEnd()+'…'};
+  // Up to `adet` lines at word boundaries; the last line is cut with an ellipsis when the words run on.
+  const satirla=(t,max,s,b=false,adet=2)=>{const l=[''];for(const k of String(t).split(/\s+/)){const son=l.length-1,yeni=l[son]?l[son]+' '+k:k;if(en(yeni,s,b)<=max||!l[son])l[son]=yeni;else l.push(k)}
+    return l.length<=adet?l.map(x=>sigdir(x,max,s,b)):[...l.slice(0,adet-1).map(x=>sigdir(x,max,s,b)),sigdir(l.slice(adet-1).join(' '),max,s,b)]};
+  const yazi=(x,y,t,s=12,renk=PC.ink,b=false,hiza='start')=>out.push('<text x="'+r1(x)+'" y="'+r1(y)+'" font-size="'+s+'" fill="'+renk+'" font-weight="'+(b?700:400)+'" text-anchor="'+hiza+'">'+kacis(t)+'</text>');
+  const kutu=(x,y,w,h,dolgu='#fff',r=14,ek='')=>out.push('<rect x="'+r1(x)+'" y="'+r1(y)+'" width="'+r1(Math.max(0,w))+'" height="'+r1(Math.max(0,h))+'" rx="'+r1(Math.max(0,Math.min(r,h/2,w/2)))+'" fill="'+dolgu+'"'+ek+'/>');
+  const cizgi=(x1,y1,x2,y2,renk=PC.grid,w=1,kesik='')=>out.push('<path d="M'+r1(x1)+','+r1(y1)+' L'+r1(x2)+','+r1(y2)+'" stroke="'+renk+'" stroke-width="'+w+'" fill="none"'+(kesik?' stroke-dasharray="'+kesik+'"':'')+'/>');
+  return {en,sigdir,satirla,yazi,kutu,cizgi,out};
+}
+const kartBasligi=b=>b.dersAd+(yz(b).ogrenci?'':' · '+fi(b.duzey)+'. sınıf');
+// The two numbers and where the students stand. buyuk: the large card (the words in the pill and the exam's name); else the
+// small card (the arrow alone). Returns the y under it.
+function pdfSkor(P,b,x,y,buyuk){
+  const fl=b.seri.filter(p=>p.fark!==null),son=fl[fl.length-1]||null,sonNet=b.seri[b.seri.length-1],ad=yz(b).ogrenci?'Senin netin':yz(b).biz;
+  const ls=buyuk?10.5:8.5,ns=buyuk?30:19,ara=buyuk?26:12,ny=y+ls+3+ns*.82;
+  if(!sonNet)return y;
+  const k=son?(son.fark>=.05?1:son.fark<=-.05?-1:0):null,net=son?son.net:sonNet.net;
+  P.yazi(x,y+ls,ad,ls,PC.muted,true);P.yazi(x,ny,f1(net),ns,k===1?PC.green:k===-1?PC.red:PC.ink,true);
+  if(!son){P.yazi(x+Math.max(P.en(ad,ls,true),P.en(f1(net),ns,true))+ara,ny,'Türkiye ortalaması yok',ls,PC.muted);return ny+6}
+  const x2=x+Math.max(P.en(ad,ls,true),P.en(f1(net),ns,true))+ara;
+  P.yazi(x2,y+ls,'Türkiye',ls,PC.muted,true);P.yazi(x2,ny,f1(son.genel),ns,PC.ink,true);
+  const x3=x2+Math.max(P.en('Türkiye',ls,true),P.en(f1(son.genel),ns,true))+ara,[bg,fg,okc,soz]=PDF_DURUM[k];
+  if(buyuk){const ps=11,metin=okc+' '+soz,pw=P.en(metin,ps,true)+22,ph=22,py=y+ls-4;
+    P.kutu(x3,py,pw,ph,bg,ph/2);P.yazi(x3+pw/2,py+ph/2+ps*.36,metin,ps,fg,true,'middle');P.yazi(x3,py+ph+14,son.ad,9.5,PC.muted)}
+  else{const ph=18,py=ny-ph+2;P.kutu(x3,py,ph+6,ph,bg,ph/2);P.yazi(x3+(ph+6)/2,py+ph/2+3.6,okc,10,fg,true,'middle')}
+  return ny+6;
+}
+// The net chart: the students' line, the Türkiye line dashed, the room between shaded green above and red below (split where
+// they cross), the students' values on their points, the exam names under it (spaced when they do not fit).
+function pdfGrafik(P,b,x,y,w,h,as=9){
+  const l=b.seri,n=l.length;if(!n||h<40)return;
+  const isimH=as*2.5,py0=y+10,py1=y+h-isimH-6;
+  const vals=l.flatMap(p=>[p.net,...(p.genel!==null?[p.genel]:[])]),lo0=Math.min(...vals),hi0=Math.max(...vals),pad=Math.max(.6,(hi0-lo0)*.22);
+  const lo=lo0<0?lo0-pad:Math.max(0,lo0-pad),hi=hi0+pad,yy=v=>py1-(v-lo)/(hi-lo||1)*(py1-py0);
+  const sol=x+28,sag=x+w-12,ic=n>1?Math.min(20,(sag-sol)/(n-1)*.25):0,xx=i=>n===1?(sol+sag)/2:sol+ic+(sag-sol-2*ic)*i/(n-1),adim=n>1?(sag-sol-2*ic)/(n-1):sag-sol;
+  const ad=adimBul(hi-lo,h>150?4:3);
+  for(let v=Math.ceil(lo/ad)*ad;v<=hi+1e-9;v+=ad){P.cizgi(sol,yy(v),sag,yy(v),PC.grid,.8);P.yazi(sol-6,yy(v)+3,fi(Math.round(v*10)/10+0),8.5,PC.muted,false,'end')}
+  const alan=(xa,na,ga,xb,nb,gb,ust)=>P.out.push('<path d="M'+r1(xa)+','+r1(yy(na))+' L'+r1(xb)+','+r1(yy(nb))+' L'+r1(xb)+','+r1(yy(gb))+' L'+r1(xa)+','+r1(yy(ga))+' Z" fill="'+(ust?PC.green:PC.red)+'" fill-opacity=".24"/>');
+  for(let i=0;i+1<n;i++){const a=l[i],c=l[i+1];if(a.genel===null||c.genel===null)continue;const d0=a.net-a.genel,d1=c.net-c.genel,x0=xx(i),x1=xx(i+1);
+    if(d0*d1<0){const t=d0/(d0-d1),xm=x0+(x1-x0)*t,vm=a.net+(c.net-a.net)*t;alan(x0,a.net,a.genel,xm,vm,vm,d0>0);alan(xm,vm,vm,x1,c.net,c.genel,d1>0)}else if(d0||d1)alan(x0,a.net,a.genel,x1,c.net,c.genel,d0+d1>0)}
+  const yol=(pts,renk,w_,kesik)=>{if(pts.length>1)P.out.push('<path d="M'+pts.map(([a,c])=>r1(a)+','+r1(c)).join(' L')+'" fill="none" stroke="'+renk+'" stroke-width="'+w_+'" stroke-linejoin="round"'+(kesik?' stroke-dasharray="'+kesik+'"':'')+'/>')};
+  yol(l.map((p,i)=>p.genel===null?null:[xx(i),yy(p.genel)]).filter(Boolean),PC.tr,1.4,'4 3');
+  yol(l.map((p,i)=>[xx(i),yy(p.net)]),PC.line,2.4);
+  const her=Math.max(1,Math.ceil(28/Math.max(1,adim)));
+  l.forEach((p,i)=>{if(p.genel!==null)P.out.push('<circle cx="'+r1(xx(i))+'" cy="'+r1(yy(p.genel))+'" r="2.2" fill="#fff" stroke="'+PC.tr+'" stroke-width="1.2"/>');
+    P.out.push('<circle cx="'+r1(xx(i))+'" cy="'+r1(yy(p.net))+'" r="3.4" fill="'+PC.line+'" stroke="#fff" stroke-width="1.4"/>');
+    if((n-1-i)%her===0){const ust=p.genel===null||p.net>=p.genel;P.yazi(xx(i),ust?yy(p.net)-7:yy(p.net)+14,f1(p.net),9.5,PC.ink,true,'middle')}});
+  const tum=adim>=as*6.5,esAdim=tum?1:Math.max(her,Math.ceil(as*11/Math.max(1,adim))),pay=n>1?adim*esAdim:w;
+  l.forEach((p,i)=>{if((n-1-i)%esAdim)return;
+    // Each name keeps to its own share of the axis: half a step either side, the page edge for the first and the last.
+    const sinirL=n===1?x+2:Math.max(x+2,xx(i)-pay/2+3),sinirR=n===1?x+w-2:Math.min(x+w-2,xx(i)+pay/2-3),sat=P.satirla(p.ad,Math.max(20,sinirR-sinirL),as),gw=Math.max(...sat.map(t=>P.en(t,as)));
+    const hz=xx(i)-gw/2<sinirL?'start':xx(i)+gw/2>sinirR?'end':'middle',tx=hz==='start'?sinirL:hz==='end'?sinirR:xx(i);
+    sat.forEach((t,j)=>P.yazi(tx,py1+as+6+j*(as+2),t,as,PC.muted,false,hz))});
+}
+// The topic table: the exam names on top, a row per topic in the order taught with a coloured square per exam (an empty dashed
+// square: no question), the whole subject last under a hairline. Rows shrink to fit the height they are given.
+function pdfIzgara(P,z,x,y,w,h){
+  const ns=z.sinavlar.length,n=z.satir.length+1,hb=26,rh=Math.max(7,Math.min(24,(h-hb-8)/n)),fs=Math.max(6.5,Math.min(10.5,rh*.56));
+  const adW=Math.min(Math.max(110,w*.42),250),kx=x+adW+6,kw=(x+w-kx)/ns,kareW=Math.min(kw-4,76),kr=Math.min(5,rh/3);
+  z.sinavlar.forEach((e,j)=>{const sat=P.satirla(e.ad,kw-4,8,true);sat.forEach((t,k)=>P.yazi(kx+kw*j+kw/2,y+hb-6-(sat.length-1-k)*10,t,8,PC.muted,true,'middle'))});
+  const kare=(c,j,ry)=>{const bx=kx+kw*j+(kw-kareW)/2,by=ry+1.5,bh=rh-3;if(c)P.kutu(bx,by,kareW,bh,kareRengi(c),kr);else P.kutu(bx,by,kareW,bh,'#fff',kr,' stroke="'+PC.gray+'" stroke-width=".8" stroke-dasharray="3 2"')};
+  z.satir.forEach((r,i)=>{const ry=y+hb+i*rh;P.yazi(x,ry+rh/2+fs*.36,P.sigdir(r.ad,adW-4,fs,true),fs,PC.ink,true);r.hucre.forEach((c,j)=>kare(c,j,ry))});
+  const ty=y+hb+(n-1)*rh+6;P.cizgi(x,ty-3,x+adW,ty-3,PC.gray,.8);
+  P.yazi(x,ty+rh/2+fs*.36,'Bütün konular',fs,PC.ink,true);z.sinavlar.forEach((e,j)=>kare(e,j,ty));
+}
+// A large card's height for its content within hMax: the head (title, numbers), then the chart and the topic table side by side
+// (a wide card) or one above the other; rows of about 22–24 px, a chart of 110–260 px; never taller than hMax.
+const IZG=(n,rh)=>34+n*rh;
+function buyukYukseklik(b,w,hMax){
+  const n=b.izgara.satir.length+1,bas=b.seri.length?100:44,yer=hMax-bas-14;
+  const ic=!b.seri.length?IZG(n,24):w>=700?Math.max(230,IZG(n,24)):Math.min(200,Math.max(110,yer*.36))+6+IZG(n,22);
+  return bas+14+Math.min(yer,ic);
+}
+function buyukKart(P,b,x,y,w,h){
+  P.kutu(x,y,w,h);
+  P.yazi(x+18,y+28,P.sigdir(kartBasligi(b),w*.6,15,true),15,PC.ink,true);
+  P.yazi(x+w-18,y+28,P.sigdir(kapsamYazisi(b),w*.36,10),10,PC.muted,false,'end');
+  const ust=b.seri.length?pdfSkor(P,b,x+18,y+40,true)+16:y+44,ch=y+h-14-ust,z=b.izgara,n=z.satir.length+1;
+  if(!b.seri.length){pdfIzgara(P,z,x+18,ust,w-36,ch);return}
+  if(w>=700){const gw=Math.min(w*.5,260+z.sinavlar.length*92);pdfGrafik(P,b,x+8,ust,w-gw-50,Math.min(ch,260));pdfIzgara(P,z,x+w-18-gw,ust,gw,ch);return}
+  let gh=Math.min(200,ch-6-IZG(n,22));if(gh<110)gh=Math.max(84,Math.min(200,ch-6-IZG(n,12)));
+  pdfGrafik(P,b,x+8,ust,w-26,gh);pdfIzgara(P,z,x+18,ust+gh+6,w-36,ch-gh-6);
+}
+function kucukKart(P,b,x,y,w,h){
+  P.kutu(x,y,w,h);const buyuk=h>=230&&w>=340;
+  P.yazi(x+14,y+22,P.sigdir(kartBasligi(b),w-28,buyuk?14:12,true),buyuk?14:12,PC.ink,true);
+  const alt=pdfSkor(P,b,x+14,y+32,buyuk)+(buyuk?18:6);
+  pdfGrafik(P,b,x+4,alt,w-14,y+h-8-alt,buyuk?9:8);
+}
+// One key for the page, at its foot: the two lines, then the colours from red to green, and the empty square.
+function lejant(P,x,y,ad,kareli){
+  const s=9.5;let cx=x;const ek=(t,g=18)=>{P.yazi(cx,y,t,s,PC.muted);cx+=P.en(t,s)+g};
+  P.cizgi(cx,y-3.5,cx+18,y-3.5,PC.line,2.4);cx+=24;ek(ad);
+  P.cizgi(cx,y-3.5,cx+18,y-3.5,PC.tr,1.4,'4 3');cx+=24;ek('Türkiye ortalaması',28);
+  ek('Türkiye’nin gerisinde',6);
+  for(const [r,a] of [[PC.red,.9],[PC.red,.3],[PC.green,.3],[PC.green,.9]]){P.kutu(cx,y-10,18,12,karisim(r,a),3);cx+=21}
+  cx+=4;ek('Türkiye’nin önünde',kareli?24:0);
+  if(kareli){P.kutu(cx,y-10,18,12,'#fff',3,' stroke="'+PC.gray+'" stroke-dasharray="3 2"');cx+=24;ek('soru yok',0)}
+}
+// m: a teacher's model (ad, dersler, bloklar) or a student's (ad, sinif, no, bloklar). ust: the line above the name.
+function sayfaSvg(m,ust='',tarih=''){
+  const out=[],P=ressam(out),M=28,USTY=104,ALTY=PH-42,genis=PW-2*M,ARA=14,yer=ALTY-USTY;
+  out.push('<rect width="'+PW+'" height="'+PH+'" fill="'+PC.bg+'"/>');
+  const ogrenci=m.bloklar.some(b=>yz(b).ogrenci)||!m.dersler;
+  const alt=m.dersler?m.dersler.map(d=>d.ad+' · '+d.siniflar.join(', ')).join('   ·   '):[m.sinif,m.no!==undefined&&m.no!==''?'okul no '+m.no:''].filter(Boolean).join(' · ');
+  P.yazi(M,38,P.sigdir(String(ust).toLocaleUpperCase('tr-TR'),genis-160,10,true),10,PC.muted,true);
+  P.yazi(M,68,P.sigdir(kisiAd(m.ad),genis-160,26,true),26,PC.ink,true);
+  P.yazi(M,88,P.sigdir(alt,genis-160,12),12,PC.muted);
+  if(tarih)P.yazi(PW-M,38,tarih,12,PC.muted,false,'end');
+  const F=m.bloklar.filter(b=>b.izgara),S=m.bloklar.filter(b=>!b.izgara);
+  if(F.length){
+    const sk=Math.min(S.length,6),sr=S.length?Math.ceil(S.length/6):0,hs=sr>1?128:150,hF=yer-sr*(hs+ARA);
+    const fk=Math.min(F.length,3),fr=Math.ceil(F.length/3),wF=(genis-(fk-1)*ARA)/fk,hFk=(hF-(fr-1)*ARA)/fr;
+    let y=USTY;
+    for(let r=0;r<fr;r++){const satir=F.slice(r*fk,r*fk+fk),h=Math.max(...satir.map(b=>buyukYukseklik(b,wF,hFk)));
+      satir.forEach((b,i)=>buyukKart(P,b,M+i*(wF+ARA),y,wF,h));y+=h+ARA}
+    const ws=sk?(genis-(sk-1)*ARA)/sk:0;S.forEach((b,i)=>kucukKart(P,b,M+(i%sk)*(ws+ARA),y+Math.floor(i/sk)*(hs+ARA),ws,hs));
+  }else if(S.length){
+    const k=S.length<=3?S.length:Math.min(4,Math.ceil(S.length/2)),r=Math.ceil(S.length/k),w=(genis-(k-1)*ARA)/k,h=Math.min(k===1?300:330,(yer-(r-1)*ARA)/r);
+    S.forEach((b,i)=>kucukKart(P,b,M+(i%k)*(w+ARA),USTY+Math.floor(i/k)*(h+ARA),w,h));
+  }
+  lejant(P,M,PH-18,ogrenci?'Senin netin':'Öğrencileriniz',F.length>0);
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+PW+'" height="'+PH+'" viewBox="0 0 '+PW+' '+PH+'" font-family="Arial, sans-serif" role="img" aria-label="'+kacis(kisiAd(m.ad))+'">'+out.join('')+'</svg>';
+}
+async function rasterle(svg){
+  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+  try{const img=new Image();await new Promise((ok,bad)=>{img.onload=ok;img.onerror=()=>bad(new Error('Rapor görseli oluşturulamadı.'));img.src=url});
+    const cv=document.createElement('canvas');cv.width=Math.round(PW*PDF_OLCEK);cv.height=Math.round(PH*PDF_OLCEK);const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);ctx.drawImage(img,0,0,cv.width,cv.height);
+    return await new Promise((ok,bad)=>cv.toBlob(async b=>{if(!b){bad(new Error('PDF görseli hazırlanamadı.'));return}ok(new Uint8Array(await b.arrayBuffer()))},'image/png'));
+  }finally{URL.revokeObjectURL(url)}
+}
+// The pages of what is shown (the filters apply): a page per teacher or student with data.
+const pdfSayfalari=(modeller,ust,tarih)=>modeller.filter(m=>m.bloklar&&m.bloklar.length).map(m=>sayfaSvg(m,ust,tarih));
+async function pdfYap(sayfalar,baslik){
+  if(!sayfalar.length)throw new Error('PDF’e girecek deneme verisi yok.');
+  const L=await SIRALAMA.kutuphane(),doc=await L.PDFLib.PDFDocument.create();doc.setTitle(baslik);
+  for(const svg of sayfalar){const img=await doc.embedPng(await rasterle(svg)),p=doc.addPage([PDF_W,PDF_H]);p.drawImage(img,{x:0,y:0,width:PDF_W,height:PDF_H})}
+  return doc.save();
+}
+let PDF_MESGUL=false;
+async function pdfIndir(dugme){
+  if(PDF_MESGUL||!SON)return;PDF_MESGUL=true;const durum=document.getElementById('ogrPdfDurum'),eski=dugme.textContent;dugme.disabled=true;dugme.textContent='PDF hazırlanıyor…';if(durum)durum.textContent='';
+  try{
+    const ogrenci=!SON[0]||!SON[0].dersler,tarih=typeof bugunNo==='function'?gunYaz(bugunNo()):'';
+    const duzey=!ogrenci&&typeof EK!=='undefined'&&Number.isInteger(EK.ogrDuzey)?EK.ogrDuzey:null;
+    const ust=ogrenci?'Türkiye ortalaması karşılaştırması':'Öğretmen raporu · Türkiye karşılaştırması'+(duzey!==null?' · '+duzey+'. sınıf':'');
+    const ad=(ogrenci?'Turkiye_karsilastirmasi':'Ogretmen_raporu')+(SON.length===1?'_'+kisiAd(SON[0].ad):duzey!==null?'_'+duzey+'_sinif':'');
+    const bytes=await pdfYap(pdfSayfalari(SON,ust,tarih),ogrenci?'Türkiye ortalaması karşılaştırması':'Öğretmen raporu');
+    await indir(ad.replace(/[^\p{L}\p{N} _-]/gu,'_').replace(/\s+/g,'_')+'.pdf',bytes,'pdf');
+  }catch(e){if(durum)durum.textContent=e.message}
+  finally{PDF_MESGUL=false;dugme.disabled=false;dugme.textContent=eski}
+}
 function grafikleriCiz(){
   if(!SON||typeof document==='undefined')return;const bl=SON.flatMap(o=>o.bloklar);
   // Every width is read before any chart is drawn: reading one after drawing another would lay the whole page out again each time.
@@ -515,7 +682,8 @@ if(typeof document!=='undefined'&&document.addEventListener){
     else if(ev.target.id==='osSube'){EK.osSube=ev.target.value;EK.osOgr=undefined;ciz()}
     else if(ev.target.id==='osOgr'){EK.osOgr=ev.target.value||undefined;ciz()}
     else if(ev.target.id==='ogrDuzey'){EK.ogrDuzey=ev.target.value?Number(ev.target.value):undefined;ciz()}});
-  document.addEventListener('click',ev=>{if(ev.target.closest?.('#ogrYazdir')&&typeof rehberMi==='function'&&rehberMi()){grafikleriCiz();try{window.print()}catch(e){}}});
+  // PDF indir: the PDF is built here, a page per teacher (or student) shown, and saved as a file (see sayfaSvg).
+  document.addEventListener('click',ev=>{const d=ev.target.closest?.('#ogrYazdir');if(d&&document.getElementById('ogrKok'))pdfIndir(d)});
   // toggle does not bubble: listen while it travels down.
   document.addEventListener('toggle',ev=>{const d=ev.target;if(!d||!d.open||!d.matches||!d.matches('#ogrKok details.ogr-formul[data-ogr-ham]'))return;hamDoldur(d)},true);
 }
@@ -524,6 +692,6 @@ function hamDoldur(d){
   const b=SON?SON.flatMap(o=>o.bloklar)[+yer.dataset.ogrHamKonu]:null;if(!b)return;
   yer.innerHTML=hamKonu(b);yer.dataset.dolu='1';
 }
-return {gorunumOgrenci,gorunumKendi,kiyasOzeti,kiyasAc,ogrenciModeli,DERSLER,ogretmenler,netSerisi,konuIzgarasi,olc,ogretmenModeli,hucreRengi,netGrafigi,izgaraHtml,blokHtml,hamKonu,bloklar:()=>SON?SON.flatMap(o=>o.bloklar):[],gorunum,grafikleriCiz,sinifK,R_MADDE,RENK_UST,ART_ARDA};
+return {sayfaSvg,pdfSayfalari,pdfYap,gorunumOgrenci,gorunumKendi,kiyasOzeti,kiyasAc,ogrenciModeli,DERSLER,ogretmenler,netSerisi,konuIzgarasi,olc,ogretmenModeli,hucreRengi,netGrafigi,izgaraHtml,blokHtml,hamKonu,bloklar:()=>SON?SON.flatMap(o=>o.bloklar):[],gorunum,grafikleriCiz,sinifK,R_MADDE,RENK_UST,ART_ARDA};
 })();
 function gorunumOgretmenRapor(){return OGRETMEN_RAPOR.gorunum()}

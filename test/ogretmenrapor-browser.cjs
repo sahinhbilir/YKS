@@ -6,6 +6,13 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
+// The PDF tools the page loads from the CDN, served from the installed packages (as in ogrencirapor-browser).
+const paket=ad=>{for(const d of [...(process.env.NODE_PATH||'').split(path.delimiter),path.join(__dirname,'..','node_modules')].filter(Boolean)){const p=path.join(d,ad);if(fs.existsSync(path.join(p,'package.json')))return p}throw new Error('Install '+ad)};
+const CDN={
+ 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js':[paket('pdf-lib'),'dist/pdf-lib.min.js','text/javascript'],
+ 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js':[paket('@pdf-lib/fontkit'),'dist/fontkit.umd.min.js','text/javascript'],
+ 'https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Regular.woff':[paket('roboto-fontface'),'fonts/roboto/Roboto-Regular.woff','font/woff'],
+ 'https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Medium.woff':[paket('roboto-fontface'),'fonts/roboto/Roboto-Medium.woff','font/woff']};
 const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-ogretmenrapor-'));fs.mkdirSync(out,{recursive:true});
 const kur=()=>{
   D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-30';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
@@ -34,10 +41,10 @@ const kur=()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage'],...(process.env.YKS_CHROMIUM?{executablePath:process.env.YKS_CHROMIUM}:{})});
  try{
   for(const [width,tema] of [[1280,'light'],[390,'dark']]){
-   const context=await browser.newContext({viewport:{width,height:900},colorScheme:tema}),page=await context.newPage(),errors=[];
+   const context=await browser.newContext({viewport:{width,height:900},colorScheme:tema,acceptDownloads:true}),page=await context.newPage(),errors=[];
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
    await page.clock.setFixedTime(new Date('2026-10-30T12:00:00+03:00'));
-   await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
+   await context.route('**/*',r=>{const u=r.request().url();if(u.startsWith('http://localhost/'))return r.fulfill({status:200,contentType:'text/html',body:html});if(CDN[u])return r.fulfill({path:path.join(CDN[u][0],CDN[u][1]),contentType:CDN[u][2],headers:{'access-control-allow-origin':'*'}});return r.abort()});
    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(kur);
    await page.locator('#ogrKok').waitFor();await page.waitForFunction(()=>document.querySelectorAll('#ogrKok .ogr-grafik svg').length>=2);
@@ -136,7 +143,15 @@ const kur=()=>{
    assert(!/none|rgb\(0, 0, 0\)/.test(yaz.cizgi)&&!/rgb\(0, 0, 0\)/.test(yaz.nokta),'the students’ line is drawn in print: '+JSON.stringify(yaz));
    assert.equal(yaz.hucre,'exact');assert(yaz.deger>=6,'values in print');
    await page.emulateMedia({media:null});   // no emulation: the PDF below is laid out as paper by the browser itself
-   // The PDF itself (desktop run): one sheet per teacher: the simple block (two numbers, the chart, the squares) fits a sheet even
+   // PDF indir builds the file itself, like the Öğrenci raporu: one A4 landscape page per teacher, drawn as one picture, so no
+   // browser header, title, address or page number can be on it.
+   if(width===1280){const [dl]=await Promise.all([page.waitForEvent('download'),page.locator('#ogrYazdir').click()]);
+    assert.equal(dl.suggestedFilename(),'Ogretmen_raporu.pdf');const yol=path.join(out,'ogretmen-raporu-indir.pdf');await dl.saveAs(yol);
+    const {PDFDocument}=require('pdf-lib'),bytes=fs.readFileSync(yol),doc=await PDFDocument.load(bytes);assert.equal(doc.getPageCount(),2,'a page per teacher');
+    assert.deepEqual(doc.getPages().map(p=>{const z=p.getSize();return [Math.round(z.width),Math.round(z.height)]}),[[842,595],[842,595]],'A4 landscape');
+    assert.equal(doc.getTitle(),'Öğretmen raporu');assert(!/ykstekrar|YKS Tekrar/i.test(bytes.toString('latin1')),'no site name or address');
+    assert.equal(await page.locator('#ogrYazdir').innerText(),'PDF indir');assert.equal(await page.locator('#ogrPdfDurum').innerText(),'')}
+   // Ctrl+P still prints the page itself (desktop run): one sheet per teacher: the simple block (two numbers, the chart, the squares) fits a sheet even
    // with a topic table; no empty sheet, nothing left over. Chromium writes one "/Type /Page" object per sheet.
    if(width===1280){const pdf=await page.pdf({preferCSSPageSize:true});fs.writeFileSync(path.join(out,'ogretmen-raporu.pdf'),pdf);
     const metin=pdf.toString('latin1');assert.equal((metin.match(/\/Type\s*\/Page\b(?!s)/g)||[]).length,2,'two sheets');
