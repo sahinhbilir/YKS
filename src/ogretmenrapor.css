@@ -48,6 +48,12 @@
 .ogr-l-tr{background:repeating-linear-gradient(90deg,var(--soluk) 0 5px,transparent 5px 9px)}
 .ogr-l-okul{background:var(--vurgu,#1F4FC8)}
 .ogr-pdf-durum{align-self:center;color:var(--kritik)}
+/* Sınıf düzeyi: a button a grade, the chosen one filled. */
+.ogr-duzeyler{display:inline-flex;flex-wrap:wrap;gap:4px;padding:3px;border:1px solid var(--cizgi);border-radius:12px;background:var(--kagit)}
+.ogr-duzey{min-height:34px;padding:6px 14px;border:0;border-radius:9px;background:none;color:var(--murekkep);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.ogr-duzey:hover{background:color-mix(in srgb,var(--vurgu,#1F4FC8) 10%,transparent)}
+.ogr-duzey[aria-pressed="true"]{background:var(--vurgu,#1F4FC8);color:var(--vurgu-uzeri,#fff)}
+.ogr-duzey:focus-visible{outline:2px solid var(--vurgu,#1F4FC8);outline-offset:2px}
 /* The topics: coloured squares, no numbers. */
 .ogr-konular{display:flex;flex-direction:column;gap:10px;min-width:0}
 .ogr-konu-bas{display:flex;align-items:center;justify-content:space-between;gap:12px}
