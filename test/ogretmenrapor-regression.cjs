@@ -131,7 +131,7 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // A value that rounds to zero carries no sign.
     put('__Z3', { siniflar: [], seri: [], izgara: { sinavlar: [{ ad: 'S', ogr: 1, fark: -.3, z: -.1, durum: 'belirsiz' }], satir: [{ ad: 'K', hucre: [{ d: 1, b: 1.01, n: 3, fark: -.3, z: -.1, durum: 'belirsiz' }], seri: null, ortFark: -.3, olcum: 1, degisim: null }] } });
     assert.deepEqual([...run('OGRETMEN_RAPOR.izgaraHtml(__Z3)').matchAll(/<td class="ogr-iz-h ogr-iz-soluk"[^>]*>([^<]*)<\/td>/g)].map(m => m[1]), ['0', '0'], 'the cell and the whole subject under it');
-    // Rows: most behind first. The exam column carries the whole topic set's gap: (4 − (5,6 + ,8)) / 12 = −20 points.
+    // Rows: in the order taught (T.12.1 before T.12.3). The exam column carries the whole topic set's gap: (4 − (5,6 + ,8)) / 12 = −20 points.
     assert.deepEqual(z.satir.map(x => x.ad), ['Sözcükte Anlam', 'Cümlede Anlam']); near(z.sinavlar[0].fark, -20);
     // Its z adds the two topics' variances: −2,4 / √(2,688 + ,768) = −1,29, within chance.
     near(z.sinavlar[0].z, -2.4 / Math.sqrt(3.456)); assert.equal(z.sinavlar[0].durum, 'belirsiz');
@@ -141,6 +141,37 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     const b = get(`OGRETMEN_RAPOR.konuIzgarasi(D.konutakibi,['12/B'],'TYT','TÜRKÇE-T')`); assert.deepEqual(b.sinavlar.map(e => e.ogr), [1, 1, 1]);
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(D.konutakibi,['12/A'],'TYT','MATEMATİK-T')`), null, 'no Matematik in Konu Takibi');
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(null,['12/A'],'TYT','TÜRKÇE-T')`), null);
+  });
+  await check('topic grid columns in date order: an exam with no date of its own takes the one the school lists give it; no date anywhere goes last', () => {
+    // Most karneler print no date. Sorted by '' they all came before the one dated exam, and by name an AYT exam named
+    // "27_AYT_…" came before "27-YKS-…" even though it was the newest.
+    const kt = run('KONU_TAKIBI'), reps = [], parts = [], adlar = ['27_AYT_ÖZEL_1', 'SENTETİK-TARİHSİZ', '27-YKS-1203', '27-YKS-1201'];
+    for (const ad of adlar) {
+      reps.push({ ad, blocks: [F.block(satirlar(1, 1, 1), 'outcome', 'TÜRKÇE-T', A)] });
+      parts.push({ tur: 'ozet', ad, oturum: 'TYT', dersler: { 'TÜRKÇE-T': [['T.12.1.1'], ['T.12.1.1'], ['T.12.1.2'], ['T.12.1.2'], ['T.12.3.1'], ['T.12.3.1']] } },
+        { tur: 'turkiye', ad, oturum: 'TYT', dersler: { 'TÜRKÇE-T': [.5, .5, .9, .9, .2, .2] } });
+    }
+    const v = kt.merge(kt.blank(), reps, parts); v.exams.forEach(x => x.date = x.ad === '27-YKS-1203' ? '2026-10-24' : null); put('KV3', v);
+    run(`__sirAsil=SIRALAMA.oku;SIRALAMA.oku=()=>({veri:{sinavlar:[{ad:'27-YKS-1201',F:{tarih:'25.09.2026'}},{ad:'27-YKS-1203',F:{tarih:'30.10.2026'}},{ad:'27_AYT_ÖZEL_1',F:{tarih:'11.11.2026'}}]}})`);
+    try {
+      const z = get(`OGRETMEN_RAPOR.konuIzgarasi(KV3,['12/A'],'TYT','TÜRKÇE-T')`);
+      assert.deepEqual(z.sinavlar.map(e => e.ad), ['27-YKS-1201', '27-YKS-1203', '27_AYT_ÖZEL_1', 'SENTETİK-TARİHSİZ']);
+      assert.deepEqual(z.sinavlar.map(e => e.g), [get("gunNo('2026-09-25')"), get("gunNo('2026-10-24')"), get("gunNo('2026-11-11')"), null], 'Konu Takibi’s own date wins over the lists');
+    } finally { run('SIRALAMA.oku=__sirAsil'); }
+  });
+  await check('topic rows in the order taught: by the earliest kazanım code (grade, unit, topic), not by the gap; kazanım rows the same; the student’s snapshot keeps it', () => {
+    // Geometri: Cümlede-style mix of grades given out of order and with the largest gap on the latest-taught topic. Each code's own
+    // number decides: 9.4.1 < 9.4.3 < 10.5.1 < 11.5.2; a kazanım with no topic (ZZ.10.2.1) sits by its number too.
+    const kt = run('KONU_TAKIBI'), ad = 'SENTETİK-GEO-1', K = ['E.GEO.11.5.2', 'E.GEO.9.4.3.2', 'E.GEO.10.5.1', 'E.GEO.9.4.3.1', 'E.GEO.9.4.1', 'ZZ.10.2.1'];
+    const v = kt.merge(kt.blank(), [{ ad, blocks: [F.block(K.map((k, i) => F.row(k, 'k' + i, [1, i % 2, 1 - i % 2, 0])), 'outcome', 'GEOMETRİ-T', A)] }],
+      [{ tur: 'ozet', ad, oturum: 'TYT', dersler: { 'GEOMETRİ-T': K.map(k => [k]) } }, { tur: 'turkiye', ad, oturum: 'TYT', dersler: { 'GEOMETRİ-T': K.map(() => .5) } }]);
+    v.exams.forEach(x => x.date = '2026-10-01'); put('KV4', v);
+    const z = get(`OGRETMEN_RAPOR.konuIzgarasi(KV4,['12/A'],'TYT','GEOMETRİ-T')`);
+    assert.deepEqual(z.satir.map(r => r.ad), ['Üçgenlerde Temel Kavramlar', 'Üçgenin Yardımcı Elemanları', 'k5', 'Çokgenler', 'Çemberde Açılar']);
+    assert.deepEqual(z.satir[1].alt.map(a => a.kod), ['E.GEO.9.4.3.1', 'E.GEO.9.4.3.2']);
+    // The student's own page: the rows come back in the same order, whatever their gaps.
+    put('__OZ', { v: 1, sinif: '12/A', b: [{ k: 'GEOMETRİ-T', o: 'TYT', s: [], z: { e: [[ad, null]], r: [['C', [[0, .5, 1]], []], ['A', [[1, .5, 1]], []], ['B', [[0, .5, 1]], []]] } }] });
+    assert.deepEqual(get('OGRETMEN_RAPOR.kiyasAc(__OZ)[0].izgara.satir.map(r=>r.ad)'), ['C', 'A', 'B']);
   });
   await check('a kazanım without a topic is a row under its own name: no question and no exam is dropped; every grade’s codes and the publisher’s AYT Edebiyat codes have a topic', () => {
     // One exam, ADA (12/A): Sözcükte Anlam ×2 (p .5, .5; 1 correct) and a code outside every map ×1 (p .4; correct).

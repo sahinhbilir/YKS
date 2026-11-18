@@ -26259,7 +26259,7 @@ function ogrenciFark(v,sel={}){
       const ekle=(konu,z,kazanim)=>{
         const d=st.dersler.get(ck)||{id:ck,ad:courseLabel(g.course),b:0,d:0,n:0};d.b+=z.b;d.d+=z.d;d.n+=z.n;st.dersler.set(ck,d);
         st.toplam.b+=z.b;st.toplam.d+=z.d;st.toplam.n+=z.n;
-        const kid=ck+'|'+(konu?key(konu):kazanim?'k:'+key(kazanim[0]):'?'),t=st.konular.get(kid)||{id:kid,ders:ck,ad:konu?topicName(konu):kazanim?clean(kazanim[1])||kazanim[0]:'Konusu eşleşmeyen kazanımlar',b:0,d:0,n:0};t.b+=z.b;t.d+=z.d;t.n+=z.n;st.konular.set(kid,t);
+        const kid=ck+'|'+(konu?key(konu):kazanim?'k:'+key(kazanim[0]):'?'),t=st.konular.get(kid)||{id:kid,ders:ck,ad:konu?topicName(konu):kazanim?clean(kazanim[1])||kazanim[0]:'Konusu eşleşmeyen kazanımlar',b:0,d:0,n:0};if(!konu&&kazanim)t.kod=kazanim[0];t.b+=z.b;t.d+=z.d;t.n+=z.n;st.konular.set(kid,t);
         // kazanim: the kazanımlar of a topic are kept too (code, name), so a page can show them under their topic.
         if(kazanim&&konu){const m=st.kazanimlar||(st.kazanimlar=new Map()),qid=kid+'|'+key(kazanim[0]),q=m.get(qid)||{id:qid,ders:ck,konu:kid,kod:kazanim[0],ad:clean(kazanim[1])||kazanim[0],b:0,d:0,n:0};q.b+=z.b;q.d+=z.d;q.n+=z.n;m.set(qid,q)}
       };
@@ -31529,38 +31529,59 @@ function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen,nolar){
     if(nolar&&!r.idx){r.idx=new Map();for(const st of r.ogrenciler)r.idx.set(String(st.student.no),st)}
     for(const st of (nolar?[...nolar].map(n=>r.idx.get(n)).filter(Boolean):r.ogrenciler)){const sc=sinifK(st.student.cls);if(nolar?!nolar.has(String(st.student.no)):!S.has(sc))continue;let bu=false;
       for(const t of st.konular.values()){if(t.ders!==ck||!t.n||t.id.endsWith('|?'))continue;var_=bu=true;
-        let K=konular.get(t.id);if(!K){K={id:t.id,ad:t.ad,hucre:[]};konular.set(t.id,K)}
+        let K=konular.get(t.id);if(!K){K={id:t.id,ad:t.ad,hucre:[]};konular.set(t.id,K)}if(t.kod)siraAl(K,t.kod);
         const c=K.hucre[i]||(K.hucre[i]={d:0,b:0,n:0,v:0,ogr:0}),p=Math.min(1,Math.max(0,t.b/t.n)),vv=t.n*p*(1-p)*(1+(t.n-1)*R_MADDE);
         c.d+=t.d;c.b+=t.b;c.n+=t.n;c.v+=vv;c.ogr++;toplam.d+=t.d;toplam.b+=t.b;toplam.n+=t.n;toplam.v+=vv}
       // The kazanımlar of each topic, measured the same way (alt): smaller rows under the topic's own.
       if(st.kazanimlar)for(const q of st.kazanimlar.values()){if(q.ders!==ck||!q.n)continue;const K=konular.get(q.konu);if(!K)continue;
-        K.alt=K.alt||new Map();let A=K.alt.get(q.kod);if(!A)K.alt.set(q.kod,A={kod:q.kod,ad:q.ad,hucre:[]});
+        K.alt=K.alt||new Map();let A=K.alt.get(q.kod);if(!A)K.alt.set(q.kod,A={kod:q.kod,ad:q.ad,hucre:[]});siraAl(K,q.kod);
         const h=A.hucre[i]||(A.hucre[i]={d:0,b:0,n:0,v:0,ogr:0}),p=Math.min(1,Math.max(0,q.b/q.n));h.d+=q.d;h.b+=q.b;h.n+=q.n;h.v+=q.n*p*(1-p)*(1+(q.n-1)*R_MADDE);h.ogr++}
       if(bu){toplam.ogr++;if(gorulen)gorulen.add(sc)}}
     if(!var_)continue;
-    sinavlar.push({ad:e.ad,g:e.date?Date.parse(e.date+'T00:00:00Z')/864e5:null,ogr:toplam.ogr,...olc(toplam)});
+    const tarih=tarihi(c)(e);sinavlar.push({ad:e.ad,g:tarih?Date.parse(tarih+'T00:00:00Z')/864e5:null,ogr:toplam.ogr,...olc(toplam)});
   }
   if(!sinavlar.length)return null;
   return izgaraKur(sinavlar,konular);
 }
-// sinavlar: [{ad, g, ogr, fark, z, durum}]; konular: Map(id → {id, ad, hucre:[{d,b,n,v}], alt: Map(kod → {kod, ad, hucre})}).
+// The order topics are taught in: a kazanım code's numbers after the lesson's letters (E.GEO.9.4.3.1 → 9, 4, 3, 1: grade, unit,
+// topic, kazanım), so 9th-grade Üçgenler come before 10th-grade Çokgenler and 11th-grade Çember. A topic takes its earliest
+// kazanım's place (sira); a topic with no numbered kazanım goes last.
+const kodSirasi=kod=>{const m=/(?:^|\.)(\d+(?:\.\d+)*)/u.exec(String(kod||''));return m?m[1].split('.').map(Number):null};
+function siraKarsilastir(a,b){
+  if(!a||!b)return (!a)-(!b);
+  for(let i=0;i<Math.max(a.length,b.length);i++){const x=a[i]??-1,y=b[i]??-1;if(x!==y)return x-y}
+  return 0;
+}
+function siraAl(K,kod){const s=kodSirasi(kod);if(s&&(!K.sira||siraKarsilastir(s,K.sira)<0))K.sira=s}
+// sinavlar: [{ad, g, ogr, fark, z, durum}]; konular: Map(id → {id, ad, sira, hucre:[{d,b,n,v}], alt: Map(kod → {kod, ad, hucre})}).
 function izgaraKur(sinavlar,konular){
   const satir=[...konular.values()].map(K=>{
     const hucre=sinavlar.map((_,i)=>K.hucre[i]?{...K.hucre[i],...olc(K.hucre[i])}:null);
     const olcu=hucre.filter(Boolean),sonlar=olcu.slice(-ART_ARDA);
     const seri=sonlar.length===ART_ARDA&&sonlar.every(c=>c.durum==='geride')?'geride':sonlar.length===ART_ARDA&&sonlar.every(c=>c.durum==='onde')?'onde':null;
     const alt=K.alt?[...K.alt.values()].map(A=>{const hc=sinavlar.map((_,i)=>A.hucre[i]?{...A.hucre[i],...olc(A.hucre[i])}:null),ol=hc.filter(Boolean),f=ol.map(c=>c.fark);
-      return {kod:A.kod,ad:A.ad,hucre:hc,ortFark:f.length?ort(f):0,degisim:ol.length>=2?ol[ol.length-1].fark-ol[0].fark:null}}).sort((a,b)=>a.kod.localeCompare(b.kod,'tr',{numeric:true})):[];
-    const fl=olcu.map(c=>c.fark);return {id:K.id,ad:K.ad,alt,hucre,seri,ortFark:fl.length?ort(fl):0,olcum:olcu.length,degisim:olcu.length>=2?olcu[olcu.length-1].fark-olcu[0].fark:null};
-  }).sort((a,b)=>a.ortFark-b.ortFark||a.ad.localeCompare(b.ad,'tr'));
+      return {kod:A.kod,ad:A.ad,hucre:hc,ortFark:f.length?ort(f):0,degisim:ol.length>=2?ol[ol.length-1].fark-ol[0].fark:null}})
+      .sort((a,b)=>siraKarsilastir(kodSirasi(a.kod),kodSirasi(b.kod))||a.kod.localeCompare(b.kod,'tr',{numeric:true})):[];
+    const fl=olcu.map(c=>c.fark);return {id:K.id,ad:K.ad,sira:K.sira||null,alt,hucre,seri,ortFark:fl.length?ort(fl):0,olcum:olcu.length,degisim:olcu.length>=2?olcu[olcu.length-1].fark-olcu[0].fark:null};
+  }).sort((a,b)=>siraKarsilastir(a.sira,b.sira)||a.ad.localeCompare(b.ad,'tr'));
   return {sinavlar,satir};
 }
 // The page's shared context: the lists (ANALIZ), Konu Takibi and, on first use, every exam's topic comparison. One render reads
 // each source once, whatever the number of teachers and blocks.
-function baglam(k,v){return {k,v,fark:new Map(),dersSinav:new Map()}}
+function baglam(k,v){return {k,v,fark:new Map(),dersSinav:new Map(),tarih:sinavTarihi()}}
+const tarihi=c=>c.tarih||(c.tarih=sinavTarihi());
+// An exam's day in Konu Takibi (ISO, or null): its own date, else the one the school lists (Sıralamalar) give it, as on the
+// Konu Takibi page and in the net chart. Most karneler print no date: sorted by '' they came before every dated exam.
+function sinavTarihi(){
+  let okul=[];try{okul=typeof SIRALAMA!=='undefined'?SIRALAMA.oku().veri?.sinavlar||[]:[]}catch(e){okul=[]}
+  const m=new Map();
+  return e=>{if(!m.has(e))m.set(e,typeof KONU_TAKIBI!=='undefined'&&typeof KONU_TAKIBI.examDate==='function'?KONU_TAKIBI.examDate(e,okul):e.date||null);return m.get(e)};
+}
+// Oldest first; an exam with no date anywhere goes last (it is most often the newest, its lists not added yet).
 function dersSinavlari(c,kod){
   let l=c.dersSinav.get(kod);
-  if(!l){l=(c.v&&Array.isArray(c.v.exams)?c.v.exams:[]).filter(e=>e.blocks.some(b=>b.course===kod)).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||a.ad.localeCompare(b.ad,'tr',{numeric:true}));c.dersSinav.set(kod,l)}
+  if(!l){const t=tarihi(c);l=(c.v&&Array.isArray(c.v.exams)?c.v.exams:[]).filter(e=>e.blocks.some(b=>b.course===kod))
+    .sort((a,b)=>(!t(a))-(!t(b))||String(t(a)||'').localeCompare(String(t(b)||''))||a.ad.localeCompare(b.ad,'tr',{numeric:true}));c.dersSinav.set(kod,l)}
   return l;
 }
 function sinavFarki(c,oturum,e){
@@ -31744,7 +31765,7 @@ function kpiHtml(b){
   const enYeni=b.seri[b.seri.length-1];
   return '<p class="ogr-son">Son karşılaştırılan deneme: <b>'+kacis(son.ad)+'</b>'+(son!==enYeni?' · Son denemenin Türkiye ortalaması henüz yok ('+kacis(enYeni.ad)+'); karşılaştırma ondan önceki denemeyle yapıldı.':'')+'</p><div class="ogr-kpi">'+h+'</div>';
 }
-// The topic table: a row per topic, most behind first. After the name: the topic's average gap over its exams as a bar from the
+// The topic table: a row per topic, in the order taught (kodSirasi). After the name: the topic's average gap over its exams as a bar from the
 // Türkiye line (the order of the rows made visible), then a cell per exam, then how the gap moved from its first exam to its last.
 // The last row is the whole subject on the same questions. ust: printed beside the heading, so a loose sheet says whose it is.
 function izgaraHtml(b,ust=''){
@@ -31776,7 +31797,7 @@ function izgaraHtml(b,ust=''){
   const eksikNot=eksik.length?'<p class="mini ogr-iz-eksik">Konu tablosunda olmayan '+(eksik.length===1?'deneme':'denemeler')+': <b>'+kacis(eksik.join(', '))+'</b>. '+
     (y.ogrenci?'Bu denemelerin konu sonuçları henüz yok.':'Konu Takibi’nde bu denemelerin '+kacis(b.oturum||'')+' öğrenci kazanım karnesi yok; yayınevinin '+kacis(b.oturum||'')+' Kazanım Karnesi PDF’i eklenince tabloya girerler (Konu Takibi → Kaynaklar hangi dosyanın eksik olduğunu gösterir).')+'</p>':'';
   return '<div class="ogr-konular">'+bas+
-    '<p class="ogr-iz-aciklama">Her kutu bir denemedir. İçindeki sayı, o konunun sorularını doğru cevaplayan öğrenci yüzdesinin Türkiye’deki yüzdeden farkıdır. Örnek: '+y.ornek.slice(0,-1)+'. Karşılaştırma aynı sorular üzerinden yapılır; zor bir deneme konuyu kendiliğinden kötü göstermez. Konular, en geride kalınandan en önde olunana doğru dizilmiştir. Her konunun altındaki küçük kutular o konunun kazanımlarıdır (numarasıyla); sayılar aynı biçimde okunur.</p>'+eksikNot+
+    '<p class="ogr-iz-aciklama">Her kutu bir denemedir. İçindeki sayı, o konunun sorularını doğru cevaplayan öğrenci yüzdesinin Türkiye’deki yüzdeden farkıdır. Örnek: '+y.ornek.slice(0,-1)+'. Karşılaştırma aynı sorular üzerinden yapılır; zor bir deneme konuyu kendiliğinden kötü göstermez. Konular, derste işlendikleri düzende (müfredattaki kazanım numarasına göre) dizilmiştir. Her konunun altındaki küçük kutular o konunun kazanımlarıdır (numarasıyla); sayılar aynı biçimde okunur.</p>'+eksikNot+
     '<div class="ogr-iz-kutu"><table class="ogr-iz'+(z.sinavlar.length>12?' ogr-iz-cok':'')+'" style="--ogr-en:'+(330+z.sinavlar.length*58)+'px;--ogr-ust:'+(400+z.sinavlar.length*120)+'px"><thead><tr><th scope="col" class="ogr-iz-konu">Konu</th><th scope="col" class="ogr-iz-ort" title="Konunun soru çıkan denemelerdeki farklarının ortalaması (yüzde puan)">Ortalama<small>bütün denemeler</small></th>'+basliklar+
     '<th scope="col" class="ogr-iz-degisim" title="Konunun son denemedeki farkı eksi ilk denemedeki farkı (yüzde puan)">İlk → son</th></tr></thead>'+
     z.satir.map(r=>'<tbody class="ogr-iz-grup"><tr><th scope="row" class="ogr-iz-konu">'+kacis(r.ad)+etiket(r)+'</th>'+cubuk(r.ortFark,r.ad)+r.hucre.map((c,i)=>hucre(r.ad,c,z.sinavlar[i])).join('')+satirDegisim(r)+'</tr>'+(r.alt||[]).map(altSatir).join('')+'</tbody>').join('')+
@@ -31937,7 +31958,8 @@ function kiyasAc(oz){
     let izgara=null;
     if(x.z&&Array.isArray(x.z.e)&&x.z.e.length){
       const konular=new Map(),toplam=x.z.e.map(()=>({d:0,b:0,n:0,v:0,ogr:0}));
-      for(const [ad,hl,al] of x.z.r||[]){const K={id:ad,ad,hucre:(hl||[]).map(hucre)};K.hucre.forEach((h,i)=>{if(h&&toplam[i]){const t=toplam[i];t.d+=h.d;t.b+=h.b;t.n+=h.n;t.v+=h.v;t.ogr=1}});
+      // The rows come in the teacher's order (the order taught), which the student's page keeps.
+      for(const [ad,hl,al] of x.z.r||[]){const K={id:ad,ad,sira:[konular.size],hucre:(hl||[]).map(hucre)};K.hucre.forEach((h,i)=>{if(h&&toplam[i]){const t=toplam[i];t.d+=h.d;t.b+=h.b;t.n+=h.n;t.v+=h.v;t.ogr=1}});
         if(Array.isArray(al)&&al.length){K.alt=new Map();for(const [kod,kad,ah] of al)K.alt.set(kod,{kod,ad:kad,hucre:(ah||[]).map(hucre)})}konular.set(ad,K)}
       izgara=izgaraKur(x.z.e.map(([ad,g],i)=>({ad,g,ogr:1,...olc(toplam[i])})),konular);
     }

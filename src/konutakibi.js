@@ -953,7 +953,7 @@ function ogrenciFark(v,sel={}){
       const ekle=(konu,z,kazanim)=>{
         const d=st.dersler.get(ck)||{id:ck,ad:courseLabel(g.course),b:0,d:0,n:0};d.b+=z.b;d.d+=z.d;d.n+=z.n;st.dersler.set(ck,d);
         st.toplam.b+=z.b;st.toplam.d+=z.d;st.toplam.n+=z.n;
-        const kid=ck+'|'+(konu?key(konu):kazanim?'k:'+key(kazanim[0]):'?'),t=st.konular.get(kid)||{id:kid,ders:ck,ad:konu?topicName(konu):kazanim?clean(kazanim[1])||kazanim[0]:'Konusu eşleşmeyen kazanımlar',b:0,d:0,n:0};t.b+=z.b;t.d+=z.d;t.n+=z.n;st.konular.set(kid,t);
+        const kid=ck+'|'+(konu?key(konu):kazanim?'k:'+key(kazanim[0]):'?'),t=st.konular.get(kid)||{id:kid,ders:ck,ad:konu?topicName(konu):kazanim?clean(kazanim[1])||kazanim[0]:'Konusu eşleşmeyen kazanımlar',b:0,d:0,n:0};if(!konu&&kazanim)t.kod=kazanim[0];t.b+=z.b;t.d+=z.d;t.n+=z.n;st.konular.set(kid,t);
         // kazanim: the kazanımlar of a topic are kept too (code, name), so a page can show them under their topic.
         if(kazanim&&konu){const m=st.kazanimlar||(st.kazanimlar=new Map()),qid=kid+'|'+key(kazanim[0]),q=m.get(qid)||{id:qid,ders:ck,konu:kid,kod:kazanim[0],ad:clean(kazanim[1])||kazanim[0],b:0,d:0,n:0};q.b+=z.b;q.d+=z.d;q.n+=z.n;m.set(qid,q)}
       };
