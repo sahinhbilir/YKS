@@ -32316,9 +32316,10 @@ function konumlar(dersler, W) {
   }
   return {P, B, H: Math.max(320, Math.round(y))};
 }
-// Glow, ring and belt for one topic. guc: short-term .5, settling and long-term 1 (shine is one step ahead of the ring).
+// Glow, ring and belt for one topic. guc: short-term .25, settling and long-term .75 (shine is one step ahead of the ring;
+// both lowered half a step on 2026-11-18). Settling and long-term keep the white-hot core.
 function noron(t, s, x, y, r, c, hedef, gid, dokun) {
-  const guc = s.katman === 'uzun' || s.katman === 'orta' ? 1 : .5, koyu = t === TEMA.koyu;
+  const parlak = s.katman === 'uzun' || s.katman === 'orta', guc = parlak ? .75 : .25, koyu = t === TEMA.koyu;
   let arka = '', on = '', govde = '';
   const isik = (R, a) => `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(R)}" fill="url(#${gid})" opacity="${sabit(a * 100) / 100}"/>`;
   govde += isik(r * 8 * (.55 + .45 * guc), (koyu ? .45 : .3) * guc) + isik(r * 3.6 * (.55 + .45 * guc), (koyu ? .75 : .5) * guc);
@@ -32351,7 +32352,7 @@ function noron(t, s, x, y, r, c, hedef, gid, dokun) {
     }
   }
   const cekirdek = KONU.get(s.id).gizli ? `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="${t.zemin}" stroke="${c}" stroke-width="1.3"/>`
-    : guc === 1 ? `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="url(#${gid}c)"/>` : `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="${c}"/>`;
+    : parlak ? `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="url(#${gid}c)"/>` : `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="${c}"/>`;
   return (s.alarm ? `<g class="hm-yan">${govde}</g>` : govde) + arka + cekirdek + on + (dokun ? `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r + 3.5)}" fill="none" stroke="${koyu ? '#fff' : '#000'}" stroke-opacity=".7"/>` : '');
 }
 function cizim(si, d, dersler, secili) {
@@ -32435,8 +32436,8 @@ function gorunum() {
   const n = t.nane, g = (r, a) => '<circle r="' + r + '" fill="' + n + '" opacity="' + a + '"/>';
   const lejant = '<div class="hm-lejant">' +
     '<span><i class="hm-yelpaze" style="background:linear-gradient(90deg,' + renk(t, .45, .9) + ',' + renk(t, .89, .9) + ' 72%,' + n + ' 72%)"></i>hatırlama: çizginin altı → üstü</span>' +
-    ornek('', g(6, .3) + '<circle r="3" fill="' + n + '"/>') + 'hafif ışık: kısa süreli</span>' +
-    ornek('', g(8, .45) + '<circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/>') + 'ışıldıyor: pekişiyor</span>' +
+    ornek('', g(5.5, .15) + '<circle r="3" fill="' + n + '"/>') + 'hafif ışık: kısa süreli</span>' +
+    ornek('', g(7.5, .34) + '<circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/>') + 'ışıldıyor: pekişiyor</span>' +
     ornek('', '<path d="M-11,0 A11,3.8 0 0 1 11,0" transform="rotate(-22)" fill="none" stroke="' + n + '" stroke-opacity=".45"/><circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/><path d="M11,0 A11,3.8 0 0 1 -11,0" transform="rotate(-22)" fill="none" stroke="' + n + '"/>') + 'halka: uzun süreli</span>' +
     ornek('', '<path d="M-11,0 A11,3.8 0 0 1 11,0" transform="rotate(-22)" fill="none" stroke="' + ALTIN + '" stroke-opacity=".6"/><circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/><path d="M11,0 A11,3.8 0 0 1 -11,0" transform="rotate(-22)" fill="none" stroke="' + ALTIN + '" stroke-width="1.5"/>') + 'altın halka: YKS’ye kadar kalıcı</span>' +
     '<span>dağılan halka: kalıcıydı, unutuluyor</span><span>yanıp sönen: dikkat isteyen temel</span><span>büyük nokta: çok konu ona dayanıyor</span></div>';
