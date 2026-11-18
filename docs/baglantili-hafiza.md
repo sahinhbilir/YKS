@@ -126,6 +126,8 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
   - settling: a fully lit neuron, with a white-hot core and light in its colour;
   - long-term: fully lit and with its Saturn ring.
 
+  On 2026-11-18 every glow was lowered half a step: short-term at a quarter strength, settling and long-term at three quarters. The white-hot core stays.
+
   Only never-studied topics are unlit.
 - **Saturn ring** around every long-term topic, tilted, passing behind and then in front of the core.
   - **Golden shining ring** for a topic safe until YKS (recall on exam day still at or above the line).
