@@ -169,8 +169,9 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(tf('MATEMATİK-A', 'MAT.12.5.2'), 'Anlık Değişim Oranı ve Türev'); assert.equal(tf('BİYOLOJİ-A', 'BİY.12.1.1.2'), 'Genden Proteine');
     // AYT Edebiyat: the publisher's own AYT order (TDE.12.2 is şiir, not the MEB 12th-grade Hikâye), part by part, else the unit;
     // an unknown unit has no topic (never a MEB unit name); Seçmeli Felsefe reads the Felsefe grubu codes.
-    for (const [k, t] of [['TDE.12.1.1.3', 'Sanat ve Edebiyat'], ['TDE.12.1.3.1', 'Türk Edebiyatının Dönemleri'], ['TDE.12.1.5.2', 'Metinlerin Sınıflandırılması'], ['TDE.12.2.1.6', 'Şiir Bilgisi'],
-      ['TDE.12.2.1.12', 'Şiir Bilgisi'], ['TDE.12.2.2.3', 'Şiir Dili ve Edebî Sanatlar'], ['TDE.12.3.1.1', 'İslamiyet Öncesi Türk Edebiyatı'], ['TDE.12.2.7.1', 'Şiir'], ['TDE.12.9.1.1', null]])
+    for (const [k, t] of [['TDE.12.1.1.3', 'Sanat ve Edebiyat'], ['TDE.12.1.3.1', 'Türk Dilinin ve Edebiyatının Tarihî Dönemleri'], ['TDE.12.1.5.2', 'Sanat ve Edebiyat'],
+      ['TDE.12.2.1.6', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'], ['TDE.12.2.1.12', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'], ['TDE.12.2.2.3', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)'],
+      ['TDE.12.3.1.1', 'Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)'], ['TDE.12.2.7.1', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'], ['TDE.12.9.1.1', null]])
       assert.equal(tf('TÜRK DİLİ VE EDB-A', k), t, k);
     assert.equal(tf('S.FELSEFE-A', 'PSK.12.2.1'), 'Psikolojinin Temel Süreçleri'); assert.equal(tf('FELSEFE GR.-A', 'PSK.12.2.1'), 'Psikolojinin Temel Süreçleri');
     // The other lessons of the earlier programme: the unit by grade.unit, a topic where the unit is broad; the ders comes from

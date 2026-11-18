@@ -168,10 +168,12 @@ and filenames plus errors appear in the page status. No PDF is sent to a server.
 **12th-grade and AYT codes (2026-11-18, from the publisher's 27-YKS-1202 AYT Sınav özeti).** The new programme has reached the
 9th–11th grades only, so a 12th-grade code with a new-style prefix (`BİY.12.1.1.2`, `MAT.12.5.2`) is read as the earlier
 programme's (`yeniProgramMi`). AYT Edebiyat's `TDE.12.unit.part.kazanım` codes follow the publisher's own AYT order, not the MEB
-12th-grade units, so they have their own table (`AYT_EDB`): 12.1.1 Sanat ve Edebiyat, 12.1.3 Türk Edebiyatının Dönemleri, 12.1.5
-Metinlerin Sınıflandırılması, 12.2.1 Şiir Bilgisi, 12.2.2 Şiir Dili ve Edebî Sanatlar, 12.3.1 İslamiyet Öncesi Türk Edebiyatı; a part
-not seen yet takes its unit (12.1 Edebiyata Giriş, 12.2 Şiir, 12.3 Türk Edebiyatının Tarihî Dönemleri), an unknown unit stays for
-**Eşleştir**. Seçmeli Felsefe (`S.FELSEFE-A`) reads the Felsefe grubu codes. All 166 AYT questions of that exam now have a topic
+12th-grade units, so they have their own table (`AYT_EDB`). Its names are the app's own AYT Edebiyat plan topics
+(`VARSAYILAN_KONU_PLANI`, the same names as Hafızam and Haritam; the publisher's teacher modules on Drive are 9th–10th grade only
+and name no AYT topic): 12.1.1 and 12.1.5 (güzel sanatlar; öğretici and edebî metinler) Sanat ve Edebiyat, 12.1.3 Türk Dilinin ve
+Edebiyatının Tarihî Dönemleri, 12.2.1 Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi), 12.2.2 … (Şiir Dili / Söz Sanatları),
+12.3.1 Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı). A part not seen yet takes its
+unit's topic (12.1 Sanat ve Edebiyat, 12.2 Şiir Bilgisi, 12.3 Tarihî Dönemleri), an unknown unit stays for **Eşleştir**. Seçmeli Felsefe (`S.FELSEFE-A`) reads the Felsefe grubu codes. All 166 AYT questions of that exam now have a topic
 (before: 27 had none: 18 Edebiyat, 6 Biyoloji, 3 Seçmeli Felsefe). Topics are worked out when a page is drawn, so stored data
 regroups by itself; a teacher's own Eşleştir still comes first.
 

@@ -133,9 +133,13 @@ const yeniProgramMi=code=>/^(MAT|FİZ|KİM|BİY|TAR|COĞ|FEL|DKAB|TDE)\.(?!12\.)
 // The publisher's AYT Edebiyat codes (TDE.12.unit.part.kazanım) follow its own AYT order, not the MEB 12th-grade units (there 12.2
 // is Hikâye; here TDE.12.2 is Şiir), read from its Sınav özeti (27-YKS-1202): 12.1 introduction (güzel sanatlar, dönemler, metin
 // türleri), 12.2 şiir (12.2.1 şiir bilgisi: tema, ahenk, ölçü, redif, uyak, şiir türleri; 12.2.2 şiir dili, imge, edebî sanatlar),
-// 12.3 the periods (12.3.1 İslamiyet öncesi). A part not seen yet takes its unit's name; an unknown unit has no topic.
-const AYT_EDB={t:{'12.1.1':'Sanat ve Edebiyat','12.1.3':'Türk Edebiyatının Dönemleri','12.1.5':'Metinlerin Sınıflandırılması','12.2.1':'Şiir Bilgisi',
-  '12.2.2':'Şiir Dili ve Edebî Sanatlar','12.3.1':'İslamiyet Öncesi Türk Edebiyatı'},u:{'12.1':'Edebiyata Giriş','12.2':'Şiir','12.3':'Türk Edebiyatının Tarihî Dönemleri'}};
+// 12.3 the periods (12.3.1 İslamiyet öncesi). The names are the app's own AYT Edebiyat plan topics (VARSAYILAN_KONU_PLANI, the
+// same as Hafızam and Haritam), so a row joins its topic there: metin türleri (öğretici / edebî) are taught in Sanat ve Edebiyat.
+// A part not seen yet takes its unit's topic; an unknown unit has no topic.
+const AYT_EDB={t:{'12.1.1':'Sanat ve Edebiyat','12.1.3':'Türk Dilinin ve Edebiyatının Tarihî Dönemleri','12.1.5':'Sanat ve Edebiyat',
+  '12.2.1':'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)','12.2.2':'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)',
+  '12.3.1':'Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)'},
+  u:{'12.1':'Sanat ve Edebiyat','12.2':'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)','12.3':'Türk Dilinin ve Edebiyatının Tarihî Dönemleri'}};
 const aytEdbKonu=(course,code)=>{
   if(!/^TÜRK DİLİ VE EDB/u.test(course||''))return null;
   const m=/^TDE\.(12)\.(\d{1,2})(?:\.(\d{1,2}))?(?:\.|$)/u.exec(code||'');if(!m)return null;
