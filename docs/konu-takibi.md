@@ -227,13 +227,24 @@ overall change remains unavailable until all relevant dates are known. Exams
 on the same day form a single timeline step, avoiding an invented within-day
 order. All component exam names remain visible.
 
-`D.konutakibi` version 1 holds a dictionary of outcome codes/descriptions, packed
-integer counts, exam blocks, dates and manual associations. An upload may not grow the record past 2,500 KB or 120,000
-kazanım rows (about twelve exams of a 32-pupil grade with TYT and AYT: one such exam is about 6,400 rows and 205 KB, 33 KB
-in the compressed cloud copy); 100 exams at most. Every save is also checked against the notebook's own budget (cloud copy
-900 KB compressed, device 5,000 KB). The caps apply to growth only: a removal, a replaced exam or any change that does not
-grow the record always saves, and reading never fails on size (only a record no upload could have made, over 10 MB or
-500,000 rows, is refused as corrupt). The old caps (350 KB, 30,000 rows) filled in under two exams of a whole grade. Unreadable existing data is preserved and blocks imports. A failed save
+`D.konutakibi` holds a dictionary of outcome codes/descriptions, integer counts, exam blocks, dates and manual
+associations. Every page reads it as version 1 (`oku`); since 2026-11-18 the notebook stores version 2 (`sakla`/`ac`): each
+exam's students listed once, each block's kazanım list (label, question count) as a shared template, and each pupil's doğru
+and yanlış per row as base-36 characters (boş = soru − doğru − yanlış, which every row satisfies). `write` stores it only after
+checking that it reads back to exactly the record it was given; a version 1 record still reads, and the next save converts
+it. Measured on a realistic 31-pupil TYT + AYT exam: 39 KB stored instead of 153 KB, 9 KB instead of 18 KB of the cloud copy;
+thirty such exams 598 KB instead of 4,043 KB (cloud 137 KB instead of 424 KB), so a school year fits easily where version 1
+filled the old cap at about nineteen exams. An upload may not grow the stored record past 2,500 KB or 400,000 kazanım rows
+(about seventy such exams; the rows are what a page works on); 100 exams at most. Kaynaklar shows the record's size and rows
+against the caps and about how many more exams of the average size fit. Every save is also checked against the notebook's
+own budget (cloud copy 900 KB compressed, device 5,000 KB). The caps apply to growth only: a removal, a replaced exam or any
+change that does not grow the record always saves, and reading never fails on size (only a record no upload could have
+made, over 10 MB stored or 1,000,000 rows, is refused as corrupt).
+
+**Large karne files (2026-11-18).** A kazanım karnesi (its first page says so) is read page by page (`karneCozucu`;
+`denemePdfSayfalari`'s `sayfaIsle`), up to 1,000 pages and 60 MB like the other school lists, keeping only its rows and each
+kazanım's text once; the pages themselves are dropped as they are read. Kaynaklar's status shows "… okunuyor · n / t sayfa"
+on long files. The Madde Analizi and Performans analizi stay at 100 pages. Unreadable existing data is preserved and blocks imports. A failed save
 rolls back; an import cannot cross notebook/account switches or overwrite another
 concurrent Konu Takibi update. Deleting an exam also compacts unused labels.
 

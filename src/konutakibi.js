@@ -1,10 +1,11 @@
 // Teacher-only publisher assessment evidence. Embedded by scripts/embed-konutakibi.cjs.
 // No personal data or source PDFs belong in this file. See docs/konu-takibi.md.
 const KONU_TAKIBI = (() => {
-// Growth caps for a new upload (write): 2.500 KB and 120.000 kazanım rows, about ten exams of a 32-pupil grade with TYT and
-// AYT. The notebook's own budget (cloud copy 900 KB compressed, device 5.000 KB) is checked on every save as well. Reading
-// never fails on size: SANITY_* only stops a record no upload could have made.
-const LIMIT=2500000, MAX_ROWS=120000, SANITY_BYTES=10000000, SANITY_ROWS=500000;
+// Growth caps for a new upload (write), on the stored record (surum 2, see sakla): 2.500 KB and 400.000 kazanım rows. A
+// 31-pupil grade's TYT + AYT exam is about 20 KB and 5.700 rows stored so (150 KB in surum 1, which filled the cap at about
+// nineteen exams): about seventy such exams, the rows being what a page works on. The notebook's own budget (cloud copy 900 KB compressed, device
+// 5.000 KB) is checked on every save as well. Reading never fails on size: SANITY_* only stops a record no upload could make.
+const LIMIT=2500000, MAX_ROWS=400000, SANITY_BYTES=10000000, SANITY_ROWS=1000000, MAX_EXAMS=100;
 const clean=s=>String(s??'').replace(/\s+/gu,' ').trim();
 const key=s=>clean(s).toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/[^A-Z0-9ÇĞİÖŞÜ]/gu,'');
 const ek=s=>denemeAdAnahtari(s);
@@ -225,11 +226,19 @@ const yeniKonu=code=>{
 const topicFor=(course,code,maps={})=>maps[course+'|'+code]||PARENTS.find(([p])=>code===p||code.startsWith(p+'.'))?.[1]||yeniKonu(code)||aytEdbKonu(course,code)||mebKonu(course,code)||eskiKonu(course,code);
 
 /* A PDF is accepted atomically. Every subject must end in a verified total, including across pages. */
+// A kazanım karnesi read page by page (karneCozucu: sayfa(items) per page, then bitir()), so a whole grade's file is never
+// held in memory whole; only its rows are kept, and a kazanım's text once however many pupils share it.
+const KARNE_SAYFA=1000,KARNE_MB=60;
 function pdfCoz(pages){
-  if(!Array.isArray(pages)||!pages.length||pages.length>100)throw new Error('PDF sayfaları okunamadı.');
-  const out={ad:null,blocks:[]};let student=null,kind=null,block=null,cols=null,seen=new Set();
-  const fail=msg=>{throw new Error(msg+' PDF eklenmedi.')};
-  for(const raw of pages){
+  if(!Array.isArray(pages)||!pages.length||pages.length>KARNE_SAYFA)throw new Error('PDF sayfaları okunamadı.');
+  const c=karneCozucu();for(const raw of pages)c.sayfa(raw);return c.bitir();
+}
+function karneCozucu(){
+  const out={ad:null,blocks:[]};let student=null,kind=null,block=null,cols=null,seen=new Set(),sayfaNo=0;
+  const fail=msg=>{throw new Error(msg+' PDF eklenmedi.')},adlar=new Map(),ortak=t=>{let v=adlar.get(t);if(v===undefined)adlar.set(t,v=t);return v};
+  return {sayfa(raw){
+    if(++sayfaNo>KARNE_SAYFA)fail('PDF en fazla '+KARNE_SAYFA+' sayfa olabilir.');
+    if(!Array.isArray(raw))raw=[];
     const items=raw.filter(i=>i&&typeof i.s==='string'&&Number.isFinite(i.x)&&Number.isFinite(i.y)).map(i=>({...i,s:clean(i.s)}));
     const heading=items.find(i=>/^KAZANIM KARNESİ(?:-KONU)?$/u.test(i.s));
     if(heading){
@@ -243,7 +252,7 @@ function pdfCoz(pages){
     }
     const headers=items.filter(i=>i.s==='Toplam');
     if(headers.length){const h=headers[0],cs=['Toplam','Doğru','Yanlış','Boş'].map(s=>items.find(i=>i.s===s&&Math.abs(i.y-h.y)<1));if(cs.some(x=>!x))fail('Tablo sütunları eksik.');cols=cs.map(i=>i.x+i.w/2)}
-    if(!cols||!student){if(items.length)fail('Tek sınavlık kazanım haritası bulunamadı.');continue}
+    if(!cols||!student){if(items.length)fail('Tek sınavlık kazanım haritası bulunamadı.');return}
     const anchors=items.filter(i=>/^\d+$/u.test(i.s)&&Math.abs(i.x+i.w/2-cols[0])<5).map(i=>({y:i.y,counts:cols.map(c=>items.filter(j=>Math.abs(j.y-i.y)<1&&Math.abs(j.x+j.w/2-c)<5)),labels:[]}));
     const events=headers.map(h=>({type:'header',y:h.y,label:items.filter(i=>i.x<cols[0]-25&&Math.abs(i.y-h.y)<1).map(i=>i.s).join(' ')}));
     const all=[...anchors.map(a=>({...a,type:'row'})),...events].sort((a,b)=>b.y-a.y);
@@ -267,15 +276,17 @@ function pdfCoz(pages){
         out.blocks.push(block);block=null;
       }else{
         const m=codeRE.exec(label);if(!label||(kind==='outcome'&&!m))fail('Kazanım satırı okunamadı: '+label);
-        const row={code:m?m[1]:'',name:m?m[2]:topicName(label),c};
+        const row={code:m?ortak(m[1]):'',name:ortak(m?m[2]:topicName(label)),c};
         if(block.rows.some(r=>(r.code||key(r.name))===(row.code||key(row.name))))fail('Yinelenen konu veya kazanım satırı.');
         block.rows.push(row);
       }
     }
-  }
-  if(block)fail('Son dersin toplamı eksik.');
-  if(!out.ad||!out.blocks.length)fail('Bu PDF metin içermiyor. Resim veya birleşik karne yerine tek sınavın metin içeren kazanım haritasını yükleyin.');
-  return out;
+  },
+  bitir(){
+    if(block)fail('Son dersin toplamı eksik.');
+    if(!out.ad||!out.blocks.length)fail('Bu PDF metin içermiyor. Resim veya birleşik karne yerine tek sınavın metin içeren kazanım haritasını yükleyin.');
+    return out;
+  }};
 }
 
 /* Zorluk (difficulty) sources. Two files per exam: the Sınav özeti (.xlsx: question -> outcome codes, booklet A order) and
@@ -510,7 +521,7 @@ function zorlukDogrula(z,fail,str){
 }
 function dogrula(v){
   const fail=()=>{throw new Error('Konu Takibi kaydı geçersiz; mevcut veri korunuyor.')},str=(s,n)=>typeof s==='string'&&s.length>0&&s.length<=n;
-  if(!v||v.surum!==1||!Number.isSafeInteger(v.ts)||v.ts<0||!Array.isArray(v.labels)||v.labels.length>10000||!Array.isArray(v.exams)||v.exams.length>100||!v.maps||Array.isArray(v.maps)||typeof v.maps!=='object')fail();
+  if(!v||v.surum!==1||!Number.isSafeInteger(v.ts)||v.ts<0||!Array.isArray(v.labels)||v.labels.length>10000||!Array.isArray(v.exams)||v.exams.length>MAX_EXAMS||!v.maps||Array.isArray(v.maps)||typeof v.maps!=='object')fail();
   if(Object.entries(v.maps).length>10000||Object.entries(v.maps).some(([k,n])=>!str(k,180)||!str(n,240)))fail();
   const labels=new Set();for(const l of v.labels){if(!Array.isArray(l)||l.length!==2||typeof l[0]!=='string'||l[0].length>100||!str(l[1],1500))fail();const k=l[0]||key(l[1]);if(labels.has(k))fail();labels.add(k)}
   let count=0;const exams=new Set();
@@ -522,11 +533,61 @@ function dogrula(v){
     }
   }
   zorlukDogrula(v.zorluk,fail,str);
-  if(baytBoyu(JSON.stringify(v))>SANITY_BYTES)fail();
   return v;
 }
-// The record's size and kazanım rows.
-const olcu=v=>({bayt:v?baytBoyu(JSON.stringify(v)):0,satir:v&&Array.isArray(v.exams)?v.exams.reduce((a,e)=>a+e.blocks.reduce((b,x)=>b+x.rows.length,0),0):0});
+/* The stored form (surum 2, 2026-11-18). The record a reader gets is surum 1 (oku); what the notebook keeps is the same record
+   with each exam's students listed once (o: [name, no, cls]), each block's kazanım rows as a shared template (s: [ders,
+   konu özeti?, [[label, soru], …]]; dersler: the course names) and each block as [student, template, doğru and yanlış of
+   every row in base 36], boş being soru − doğru − yanlış (countOK). A number takes one character up to 35, two up to 1.295,
+   three beyond (the width is the string's length over the rows). The zorluk part is kept as it is. write checks that the
+   stored form reads back to exactly the record it was given before anything is saved. */
+const B36='0123456789abcdefghijklmnopqrstuvwxyz';
+function sakla(v){
+  const dersler=[],di=new Map(),ders=c=>{if(!di.has(c)){di.set(c,dersler.length);dersler.push(c)}return di.get(c)};
+  const exams=v.exams.map(e=>{
+    const o=[],oi=new Map(),sab=[],si=new Map(),b=[];
+    for(const x of e.blocks){
+      const ok=JSON.stringify([x.student.name,x.student.no,x.student.cls]);if(!oi.has(ok)){oi.set(ok,o.length);o.push([x.student.name,x.student.no,x.student.cls])}
+      const t=[ders(x.course),x.kind==='topic'?1:0,x.rows.map(r=>[r[0],r[1]])],tk=JSON.stringify(t);if(!si.has(tk)){si.set(tk,sab.length);sab.push(t)}
+      const enb=Math.max(0,...x.rows.flatMap(r=>[r[2],r[3]])),w=enb<36?1:enb<1296?2:3;
+      const n=k=>{let t='';for(let i=0;i<w;i++){t=B36[k%36]+t;k=Math.floor(k/36)}return t};
+      b.push([oi.get(ok),si.get(tk),x.rows.map(r=>n(r[2])+n(r[3])).join('')]);
+    }
+    return {ad:e.ad,date:e.date,o,s:sab,b};
+  });
+  const z={surum:2,ts:v.ts,labels:v.labels,maps:v.maps,dersler,exams};if(v.zorluk!==undefined)z.zorluk=v.zorluk;return z;
+}
+// surum 2 → surum 1; a malformed record throws (the reader then keeps the notebook's data and says so).
+function ac(z){
+  const fail=()=>{throw new Error('Konu Takibi kaydı geçersiz; mevcut veri korunuyor.')},tam=(n,ust)=>Number.isSafeInteger(n)&&n>=0&&n<ust;
+  if(!z||z.surum!==2||!Number.isSafeInteger(z.ts)||!Array.isArray(z.labels)||!Array.isArray(z.dersler)||z.dersler.length>1000||!z.dersler.every(c=>typeof c==='string')||
+    !Array.isArray(z.exams)||z.exams.length>MAX_EXAMS)fail();
+  const exams=z.exams.map(e=>{
+    if(!e||!Array.isArray(e.o)||!Array.isArray(e.s)||!Array.isArray(e.b)||e.o.length>5000||e.s.length>20000||e.b.length>100000)fail();
+    for(const x of e.o)if(!Array.isArray(x)||x.length!==3||!x.every(t=>typeof t==='string'))fail();
+    for(const t of e.s)if(!Array.isArray(t)||t.length!==3||!tam(t[0],z.dersler.length)||(t[1]!==0&&t[1]!==1)||!Array.isArray(t[2])||!t[2].length||t[2].length>1000||
+      !t[2].every(r=>Array.isArray(r)&&r.length===2&&tam(r[0],z.labels.length)&&tam(r[1],10001)))fail();
+    const blocks=e.b.map(x=>{
+      if(!Array.isArray(x)||x.length!==3||!tam(x[0],e.o.length)||!tam(x[1],e.s.length)||typeof x[2]!=='string')fail();
+      const t=e.s[x[1]],st=e.o[x[0]],w=x[2].length/(2*t[2].length);if(w!==1&&w!==2&&w!==3)fail();
+      const sayi=i=>{let k=0;for(let j=0;j<w;j++){const c=B36.indexOf(x[2][i*w+j]);if(c<0)fail();k=k*36+c}return k};
+      return {student:{name:st[0],no:st[1],cls:st[2]},course:z.dersler[t[0]],kind:t[1]?'topic':'outcome',
+        rows:t[2].map((r,i)=>{const d=sayi(2*i),y=sayi(2*i+1),bos=r[1]-d-y;if(bos<0)fail();return [r[0],r[1],d,y,bos]})};
+    });
+    return {ad:e.ad,date:e.date,blocks};
+  });
+  const v={surum:1,ts:z.ts,labels:z.labels,exams,maps:z.maps};if(z.zorluk!==undefined)v.zorluk=z.zorluk;return v;
+}
+// Deep equality, key order aside (the check that the stored form reads back).
+const ayni=(a,b)=>{if(a===b)return true;if(typeof a!=='object'||typeof b!=='object'||!a||!b||Array.isArray(a)!==Array.isArray(b))return false;
+  const ka=Object.keys(a),kb=Object.keys(b);return ka.length===kb.length&&ka.every(k=>Object.hasOwn(b,k)&&ayni(a[k],b[k]))};
+// The stored record's size and kazanım rows (either form; an unreadable one counts as empty).
+function olcu(z){
+  if(!z||typeof z!=='object')return {bayt:0,satir:0,sinav:0};
+  try{const bayt=baytBoyu(JSON.stringify(z)),ex=Array.isArray(z.exams)?z.exams:[];
+    const satir=z.surum===2?ex.reduce((a,e)=>a+e.b.reduce((t,x)=>t+((e.s[x[1]]||[])[2]||[]).length,0),0):ex.reduce((a,e)=>a+e.blocks.reduce((b,x)=>b+x.rows.length,0),0);
+    return {bayt,satir,sinav:ex.length}}catch(e){return {bayt:0,satir:0,sinav:0}}
+}
 // An upload may not grow the record past the caps; one that shrinks or keeps it (a removal, a replaced exam) always may.
 function sinirDenetle(v,previous){
   const yeni=olcu(v),eski=olcu(previous);
@@ -534,7 +595,9 @@ function sinirDenetle(v,previous){
   if(yeni.satir>MAX_ROWS&&yeni.satir>eski.satir)throw new Error('Konu Takibi '+MAX_ROWS.toLocaleString('tr-TR')+' kazanım satırı sınırını aşıyor ('+yeni.satir.toLocaleString('tr-TR')+'). Dosyalar eklenmedi; Kaynaklar bölümünden eski sınavları kaldırıp yeniden deneyin.');
 }
 const kb=b=>Math.round(b/1000).toLocaleString('tr-TR')+' KB';
-function oku(){try{return {veri:D.konutakibi===undefined?blank():dogrula(JSON.parse(JSON.stringify(D.konutakibi)))}}catch(e){return {veri:null,hata:e.message}}}
+function oku(){try{const z=D.konutakibi;if(z===undefined)return {veri:blank()};
+  if(baytBoyu(JSON.stringify(z))>SANITY_BYTES)throw new Error('Konu Takibi kaydı geçersiz; mevcut veri korunuyor.');
+  return {veri:dogrula(z&&z.surum===2?ac(z):JSON.parse(JSON.stringify(z)))}}catch(e){return {veri:null,hata:e.message}}}
 const oturumOf=e=>{const t=new Set(Object.keys({...e.ozet,...e.madde,...e.turkiye}).map(c=>c.endsWith('-T')?'TYT':'AYT'));return t.size>1?'TYT + AYT':[...t][0]};
 // The exam code inside a name ("27-YKS-1203", "27 YKS 1203 TYT" → 27YKS1203): the Performans analizi names its exam by the code only.
 const sinavKodu=ad=>{const m=/(\d{1,3})[\s\-_]*([A-ZÇĞİÖŞÜ]{2,6})[\s\-_]*(\d{3,5})/u.exec(clean(ad).toLocaleUpperCase('tr-TR'));return m?m[1]+m[2]+m[3]:''};
@@ -594,14 +657,16 @@ const readonly=()=>typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme(
 function canWrite(){if(!rehberMi()||readonly())throw new Error('Yalnızca düzenleme yetkisi olan rehber öğretmen değiştirebilir.')}
 let saving=false;
 async function write(v,owner=D,previous=D.konutakibi){
-  canWrite();if(saving||D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti. İşlemi yeniden deneyin.');dogrula(v);sinirDenetle(v,previous);
-  const next={...owner,konutakibi:v};
+  canWrite();if(saving||D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti. İşlemi yeniden deneyin.');dogrula(v);
+  const z=sakla(v);if(!ayni(dogrula(ac(z)),v))throw new Error('Konu Takibi kaydı sıkıştırılamadı; mevcut veri korunuyor.');
+  sinirDenetle(z,previous);
+  const next={...owner,konutakibi:z};
   saving=true;
   const oncekiDefter=JSON.stringify(D);
   try{await defterAdayiniDogrula(next,{previous:owner});if(D!==owner||owner.konutakibi!==previous||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.')}catch(e){saving=false;throw e}
-  D.konutakibi=v;
+  D.konutakibi=z;
   try{if(!await kaydet(true))throw new Error('Kaydedilemedi; önceki kayıt korundu.')}
-  catch(e){if(owner.konutakibi===v){if(previous===undefined)delete owner.konutakibi;else owner.konutakibi=previous}throw e}
+  catch(e){if(owner.konutakibi===z){if(previous===undefined)delete owner.konutakibi;else owner.konutakibi=previous}throw e}
   finally{saving=false}
 }
 async function ekle(reports,owner=D,previous=D.konutakibi,zparts=[]){canWrite();const o=oku();if(o.hata)throw new Error(o.hata);return write(merge(o.veri,reports,zparts),owner,previous)}
@@ -956,10 +1021,17 @@ function karneYok(zi,k,sessions){
 }
 const karneUyari=l=>{if(!l.length)return '';const o=l.join(' ve ');
   return '<p class="kt-warning kt-karne-yok">'+o+' öğrenci kazanım karnesi yok: bu denemenin '+o+' konuları Konu Takibi’ne ve Türkiye karşılaştırmasına girmez. Yayınevinin '+o+' Kazanım Karnesi PDF’ini ekleyin.</p>'};
+// How full the record is: its size and rows against the caps, and how many more exams of the average size fit.
+function kapasite(){
+  const o=olcu(D.konutakibi);if(!o.bayt)return '';
+  const n=o.sinav,kalan=n?Math.max(0,Math.min(Math.floor((LIMIT-o.bayt)/(o.bayt/n)),o.satir?Math.floor((MAX_ROWS-o.satir)/(o.satir/n)):Infinity,MAX_EXAMS-n)):null;
+  return '<p class="kt-muted kt-kapasite">Kayıt: '+kb(o.bayt)+' / '+kb(LIMIT)+' · '+o.satir.toLocaleString('tr-TR')+' / '+MAX_ROWS.toLocaleString('tr-TR')+' kazanım satırı'+
+    (kalan===null?'':kalan>0?' · bu büyüklükte yaklaşık '+kalan.toLocaleString('tr-TR')+' sınav daha sığar':' · sınıra ulaşıldı: yeni sınav için eskileri kaldırın')+'.</p>';
+}
 function sources(v,school){
   const zi=zorlukIndex(v.zorluk),only=Object.keys(v.zorluk||{}).filter(k=>!v.exams.some(e=>ek(e.ad)===k));
   if(!v.exams.length&&!only.length)return '';
-  return '<details class="kt-sources"'+(v.exams.some(e=>!examDate(e,school))?' open':'')+'><summary>Kaynaklar · '+(v.exams.length+only.length)+' Deneme</summary><div class="kt-source-list">'+v.exams.map(e=>{
+  return '<details class="kt-sources"'+(v.exams.some(e=>!examDate(e,school))?' open':'')+'><summary>Kaynaklar · '+(v.exams.length+only.length)+' Deneme</summary>'+kapasite()+'<div class="kt-source-list">'+v.exams.map(e=>{
     const date=examDate(e,school),students=new Set(e.blocks.map(b=>studentKey(b.student))).size,kind=[...new Set(e.blocks.map(b=>b.kind))].map(k=>k==='topic'?'Konu özeti':'Kazanım ayrıntısı').join(' + '),
       sessions=['TYT','AYT'].filter(x=>e.blocks.some(b=>b.course.endsWith(x==='TYT'?'-T':'-A'))).join(' + '),classes=[...new Set(e.blocks.map(b=>classOf(b.student.cls)))].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true})).join(', ');
     return '<div class="kt-source"><div><b>'+h(e.ad)+'</b><span class="kt-muted">'+sessions+' · '+h(classes)+' · '+students+' öğrenci · '+kind+'</span></div><label>Sınav Tarihi'+(readonly()?'<b>'+dateLabel(date)+'</b>':'<input type="date" data-kt-date="'+h(ek(e.ad))+'" value="'+h(date||'')+'" aria-label="'+h(e.ad+' sınav tarihi')+'"'+(busy?' disabled':'')+'>')+'</label>'+(!readonly()?'<button type="button" class="et-dugme" data-kt-delete="'+h(ek(e.ad))+'"'+(busy?' disabled':'')+'>Kaldır</button>':'')+zorlukSatiri(v,zi,ek(e.ad))+karneUyari(karneYok(zi,ek(e.ad),sessions.split(' + ')))+'</div>';
@@ -1096,7 +1168,19 @@ async function dosyaCoz(file){
     if(file.size>15*1024*1024)throw new Error('Excel dosyası en fazla 15 MB olabilir.');
     return {z:await ozetCoz(new Uint8Array(await file.arrayBuffer()))};
   }
-  const {pages}=await denemePdfSayfalari(file);
+  // A kazanım karnesi (its first page says so) is read page by page, up to KARNE_SAYFA pages and KARNE_MB: a whole grade's
+  // TYT + AYT file can run past the 100 pages and 15 MB the other PDFs here are held to. Those (Madde Analizi, Performans
+  // analizi) are short and read whole.
+  let tur=null,coz=null,okunan=0;const diger=[];
+  const yaz=(n,t)=>{const el=typeof document!=='undefined'&&document.getElementById('ktStatus');if(el)el.textContent=file.name+' okunuyor · '+n+' / '+t+' sayfa'};
+  const isle=items=>{okunan++;
+    if(tur===null)tur=Array.isArray(items)&&items.some(i=>typeof i?.s==='string'&&/^KAZANIM KARNESİ(?:-KONU)?$/u.test(clean(i.s)))?'karne':'diger';
+    if(tur==='karne')(coz||(coz=karneCozucu())).sayfa(items);
+    else{if(diger.length>=100)throw new Error('PDF en fazla 100 sayfa olabilir.');diger.push(items)}};
+  const r=await denemePdfSayfalari(file,{sayfa:KARNE_SAYFA,mb:KARNE_MB,sayfaIsle:isle,ilerleme:yaz});
+  if(!okunan&&r&&Array.isArray(r.pages))r.pages.forEach(isle);   // a reader that hands over the pages at the end
+  if(tur==='karne')return {rapor:coz.bitir()};
+  const pages=diger;if(!pages.length)throw new Error('PDF sayfaları okunamadı.');
   if(perfMi(pages))return {z:turkiyeCoz(pages)};
   return pages.some(p=>Array.isArray(p)&&p.some(i=>typeof i?.s==='string'&&/Madde Analizi$/u.test(clean(i.s))))?{z:maddeCoz(pages)}:{rapor:pdfCoz(pages)};
 }
@@ -1152,6 +1236,6 @@ document.addEventListener('click',ev=>{
   if(zel&&confirm('Bu sınavın zorluk verisi (sınav özeti ve Madde Analizi) kaldırılsın mı? Dosyalar yeniden yüklenebilir.')){const k=zel.dataset.ktZdelete;act(()=>zorlukSil(k))}
 });
 document.addEventListener('submit',ev=>{const form=ev.target;if(!active()||!form.matches?.('.kt-mapping'))return;ev.preventDefault();if(readonly()||busy)return;const {ktCourse,ktCode}=form.dataset,name=form.elements.topic.value;act(()=>esle(ktCourse,ktCode,name))});
-return {yaz:(v)=>write(v),geridekiKonular,yuzde,puan,turkiyeCoz,turkiyeKiyas,ogrenciFark,grupOlc,dersKaymasi,turkiyeSil,R_MADDE,pdfCoz,ozetCoz,maddeCoz,zorlukIndex,zorlukSil,zipListe,zipDosya,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,oku,merge,compact,examDate,history,model,examsText,order,summaryText,uploadMessage,SIRA,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
+return {yaz:(v)=>write(v),geridekiKonular,yuzde,puan,turkiyeCoz,turkiyeKiyas,ogrenciFark,grupOlc,dersKaymasi,turkiyeSil,R_MADDE,pdfCoz,ozetCoz,maddeCoz,zorlukIndex,zorlukSil,zipListe,zipDosya,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,sakla,ac,olcu,oku,merge,compact,examDate,history,model,examsText,order,summaryText,uploadMessage,SIRA,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
 })();
 function gorunumKonuTakibi(){return KONU_TAKIBI.gorunum()}

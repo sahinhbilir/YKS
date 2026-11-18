@@ -388,8 +388,10 @@ async function denemePdfjs() {
 // Text items of every page. Sıralamalar also needs each page's height and the font size (z).
 // sinir: {sayfa, mb, ilerleme(n, toplam)}. Exam lists stay at 100 pages / 15 MB; the school's long
 // reports (yoklama, etüt, ödev) pass a larger limit and show the page count while they are read.
+// sinir.sayfaIsle(items, n, toplam): each page is handed over as it is read and not kept (pages is then null), so a file of
+// hundreds of pages never sits in memory whole.
 async function denemePdfSayfalari(file,sinir={}) {
-  const enCokSayfa=sinir.sayfa||100,enCokMb=sinir.mb||15,ilerleme=typeof sinir.ilerleme==='function'?sinir.ilerleme:null;
+  const enCokSayfa=sinir.sayfa||100,enCokMb=sinir.mb||15,ilerleme=typeof sinir.ilerleme==='function'?sinir.ilerleme:null,isle=typeof sinir.sayfaIsle==='function'?sinir.sayfaIsle:null;
   if(file.size>enCokMb*1024*1024)throw new Error('PDF en fazla '+enCokMb+' MB olabilir.');
   const pdfjs=await denemePdfjs();
   const task=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false,useSystemFonts:true});
@@ -401,11 +403,12 @@ async function denemePdfSayfalari(file,sinir={}) {
       const page=await pdf.getPage(n), text=await page.getTextContent();
       boylar.push(page.getViewport({scale:1}).height);
       // f is the run's font: the Etüt planı's timetables tell lessons (bold) from teachers by it.
-      pages.push(text.items.filter(x=>x.str?.trim()).map(x=>({s:x.str.trim(),x:x.transform[4],y:x.transform[5],w:x.width,h:x.height,z:Math.hypot(x.transform[0],x.transform[1]),f:x.fontName})));
+      const items=text.items.filter(x=>x.str?.trim()).map(x=>({s:x.str.trim(),x:x.transform[4],y:x.transform[5],w:x.width,h:x.height,z:Math.hypot(x.transform[0],x.transform[1]),f:x.fontName}));
       page.cleanup();
+      if(isle)await isle(items,n,pdf.numPages);else pages.push(items);
       if(ilerleme&&pdf.numPages>20&&(n%10===0||n===pdf.numPages))ilerleme(n,pdf.numPages);
     }
-    return {pages,boylar};
+    return {pages:isle?null:pages,boylar};
   } finally { await task.destroy(); }
 }
 // The school's own list is read by coordinates. Any other file (another publisher's list, a photo,
