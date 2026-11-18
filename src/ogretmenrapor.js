@@ -95,6 +95,16 @@ function soruSayisi(liste,anahtar){
   let en=0;for(const o of Object.values(liste||{})){const m=/^(\d+)\/(\d+)/.exec((o&&o.dy&&o.dy[anahtar])||'');if(m)en=Math.max(en,+m[1]+ +m[2])}
   const st=SORU_STANDART[anahtar]||0;if(!st)return en||null;return en>st||en&&en<st*.7?en:st;
 }
+// The page's Türkiye is the publisher's whole network (2026-11-19), the pupils the topic squares are measured against: its mean
+// net from the same Performans analizi (KONU_TAKIBI.agNet: Σ (p − w / 4)). The İlk 100 list's Genel Net is the top schools'
+// level (AYT Geometri 27-YKS-1202: 3,11 against the network's 0,90) and is no longer the line; the list still gives the school's
+// place (sira). An exam without that file, or with one read before the wrong shares were kept, has no Türkiye value (ilk100
+// keeps the list's figure for the appendix).
+function agBagla(seri,v,kod){
+  const agNet=typeof KONU_TAKIBI!=='undefined'&&typeof KONU_TAKIBI.agNet==='function'?KONU_TAKIBI.agNet:null;
+  for(const p of seri){const ag=agNet&&v?agNet(v,p.ad,kod):null;p.ilk100=p.genel;p.genel=Number.isFinite(ag)?ag:null;p.fark=p.genel===null?null:p.net-p.genel}
+  return seri;
+}
 // The exact count where Konu Takibi has the publisher's Sınav özeti of the exam (one entry a question).
 function ozetSorulari(seri,v,kod){
   if(!v||!v.zorluk||typeof KONU_TAKIBI==='undefined')return seri;
@@ -259,7 +269,7 @@ function ogretmenModeli(o,c=sayfaBaglami(),duzey=null){
     for(const duz of duzeyler){
       for(const [oturum,anahtar,kod] of d.kodlar){
         const siniflar=((d.kodSinif&&d.kodSinif[kod])||d.siniflar).filter(c=>duzeyi(c)===duz);if(!siniflar.length)continue;
-        const gorulen=new Set(),seri=ozetSorulari(netSerisi(k,siniflar,oturum,anahtar,kod,gorulen),v,kod),izgara=konuIzgarasi(v,siniflar,oturum,kod,c,gorulen);
+        const gorulen=new Set(),seri=agBagla(ozetSorulari(netSerisi(k,siniflar,oturum,anahtar,kod,gorulen),v,kod),v,kod),izgara=konuIzgarasi(v,siniflar,oturum,kod,c,gorulen);
         if(!seri.length&&!izgara)continue;
         bloklar.push({ders:d.ad,duzey:duz,siniflar:siniflar.filter(x=>gorulen.has(x)),oturum,kod,dersAd:dersEtiketi(kod),seri,izgara});
       }}
@@ -372,7 +382,11 @@ function netGrafigi(b,W){
     s+='<text class="ogr-tik ogr-sinav-adi" x="'+xx+'" y="'+(y0+18)+'" text-anchor="'+hiza+'" aria-label="'+kacis(p.ad)+'">'+
       satirlar.map((satir,j)=>'<tspan x="'+xx+'" dy="'+(j?13:0)+'">'+kacis(satir)+'</tspan>').join('')+'</text>';
   });
-  const H=y0+26+(etiketSatiri-1)*13;
+  // Under each name the school's place in the İlk 100 list, an arrow against the exam before (▲ green up, ▼ red down).
+  const yl=yerler(b);
+  if(yl)l.forEach((p,i)=>{if((n-1-i)%etiketAdimi||!yl[i])return;const o=yl[i],xx=x(i);
+    s+='<text class="ogr-tik ogr-sira'+(o.k===1?' ogr-y':o.k===-1?' ogr-k':'')+'" x="'+xx+'" y="'+(y0+18+etiketSatiri*13+2)+'" text-anchor="'+(xx<40?'start':xx>W-40?'end':'middle')+'">'+(o.k===1?'▲ ':o.k===-1?'▼ ':'')+kacis(o.yazi)+'</text>'});
+  const H=y0+26+(etiketSatiri-1)*13+(yl?16:0);
   return '<svg class="ogr-net" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+kacis(b.dersAd+': ortalama net ve Türkiye ortalaması, deneme deneme')+'">'+s+'</svg>';
 }
 // Whom and what a block covers, in one line: the classes taken together, the number of exams and the days they span.
@@ -382,6 +396,22 @@ function kapsamYazisi(b){
 }
 // The headline: the students' mean and the Türkiye average in the newest exam that has a Türkiye average (an exam whose list
 // has not come yet is skipped, never filled in), side by side, with a coloured word for where the students stand.
+// The school's place in the subject's İlk 100 list, exam by exam (sira; undefined when no school is followed on the Türkiye geneli
+// page; null outside the list, counted as one past its end). Teachers' pages only: a student's sheet has no school place.
+const yerDegeri=p=>p.sira===null?(p.listeN||100)+1:p.sira;
+const yerYazisi=p=>p.sira===null?'100+':fi(p.sira)+'.';
+const yerVar=b=>!yz(b).ogrenci&&b.seri.some(p=>p.sira!==undefined);
+// Each exam's place and its move since the exam before that has one: 1 up (green), −1 down (red), 0 the same.
+function yerler(b){
+  if(!yerVar(b))return null;let once=null;
+  return b.seri.map(p=>{if(p.sira===undefined)return null;const k=once===null?null:yerDegeri(p)<yerDegeri(once)?1:yerDegeri(p)>yerDegeri(once)?-1:0;once=p;return {yazi:yerYazisi(p),k}});
+}
+// The newest move, for the words beside where the students stand (outside the list both times: nothing).
+function siraDurumu(b){
+  if(!yerVar(b))return null;const l=b.seri.filter(p=>p.sira!==undefined);if(l.length<2)return null;
+  const a=l[l.length-2],c=l[l.length-1];if(a.sira===null&&c.sira===null)return null;
+  const d=yerDegeri(a)-yerDegeri(c);return d>0?{k:1,yazi:'Sıralama yükseldi'}:d<0?{k:-1,yazi:'Sıralama düştü'}:{k:0,yazi:'Sıralama aynı'};
+}
 // Where the students stand in the newest exam with a Türkiye average, and how the gap moved since the exam before:
 // behind and the gap closing is good (green), ahead and the gap closing is not (red); a move under 1 point (0,05 net) is none.
 function durumu(b){
@@ -393,12 +423,15 @@ function durumu(b){
   return {son,yon,egilim};
 }
 function skorHtml(b){
-  const d=durumu(b);if(!d)return '';const {son}=d,y=yz(b),yon=d.yon>0?'ogr-y':d.yon<0?'ogr-k':'ogr-sabit';
+  const d=durumu(b),sr=siraDurumu(b),y=yz(b);if(!d&&!sr)return '';
+  const rozet=(o,ek='')=>o?'<b class="ogr-durum ogr-egilim'+ek+' '+(o.k>0?'ogr-y':o.k<0?'ogr-k':'ogr-sabit')+'">'+o.yazi+'</b>':'';
+  const siraR=rozet(sr,' ogr-sira-durum');
+  if(!d){const son=b.seri[b.seri.length-1];return '<div class="ogr-skor"><div class="ogr-skor-sayi"><span>'+(y.ogrenci?'Senin netin':y.biz)+'</span><strong>'+f1(son.net)+'</strong></div><div class="ogr-skor-durum"><div class="ogr-rozetler">'+siraR+'</div><span>'+kacis(son.ad)+'</span></div></div>'}
+  const {son}=d,yon=d.yon>0?'ogr-y':d.yon<0?'ogr-k':'ogr-sabit';
   const durum=d.yon>0?'▲ Türkiye’nin üstünde':d.yon<0?'▼ Türkiye’nin altında':'■ Türkiye ile aynı';
-  const eg=d.egilim?'<b class="ogr-durum ogr-egilim '+(d.egilim.k>0?'ogr-y':d.egilim.k<0?'ogr-k':'ogr-sabit')+'">'+d.egilim.yazi+'</b>':'';
   return '<div class="ogr-skor"><div class="ogr-skor-sayi"><span>'+(y.ogrenci?'Senin netin':y.biz)+'</span><strong class="'+yon+'">'+f1(son.net)+'</strong></div>'+
     '<div class="ogr-skor-sayi"><span>Türkiye</span><strong>'+f1(son.genel)+'</strong></div>'+
-    '<div class="ogr-skor-durum"><div class="ogr-rozetler"><b class="ogr-durum '+yon+'">'+durum+'</b>'+eg+'</div><span>'+kacis(son.ad)+'</span></div></div>';
+    '<div class="ogr-skor-durum"><div class="ogr-rozetler"><b class="ogr-durum '+yon+'">'+durum+'</b>'+rozet(d.egilim)+siraR+'</div><span>'+kacis(son.ad)+'</span></div></div>';
 }
 // The topic table: a row per topic in the şube's plan order (planaGore; without a plan the kazanım codes, kodSirasi), a coloured square per exam (green ahead of Türkiye, red
 // behind, deeper the larger the gap, pale when within chance; empty: no question). No number on the page: the figures are in
@@ -436,16 +469,16 @@ function hamKonu(b){
 // The appendix for whoever wants to check a figure: the rules with their formulas, and every raw number. Folded; printed only
 // when it is open.
 function hamVeri(b,i){
-  const seri=b.seri.length?'<div class="et-tablo-kutu"><table class="et-tablo ogr-ham"><thead><tr><th scope="col">Deneme</th><th scope="col" class="sayi">Öğrenci</th><th scope="col" class="sayi">Ortalama net</th><th scope="col" class="sayi">Türkiye ort. (Genel Net)</th><th scope="col" class="sayi">Fark</th></tr></thead><tbody>'+
+  const seri=b.seri.length?'<div class="et-tablo-kutu"><table class="et-tablo ogr-ham"><thead><tr><th scope="col">Deneme</th><th scope="col" class="sayi">Öğrenci</th><th scope="col" class="sayi">Ortalama net</th><th scope="col" class="sayi">Türkiye ort. (yayınevinin bütün kurumları)</th><th scope="col" class="sayi">Fark</th><th scope="col" class="sayi">İlk 100 listesinde okulun yeri</th></tr></thead><tbody>'+
     b.seri.map(p=>'<tr><td>'+kacis(p.ad)+'</td><td class="sayi">'+fi(p.n)+'</td><td class="sayi">'+f2(p.net)+'</td><td class="sayi">'+(p.genel===null?'—':f2(p.genel))+'</td><td class="sayi">'+(p.fark===null?'—':isaret(p.fark,f2))+'</td>'+'</tr>').join('')+'</tbody></table></div>':'';
   const konu=b.izgara?'<div class="ogr-ham-konu" data-ogr-ham-konu="'+i+'"></div>':'';
   if(yz(b).ogrenci)return '<details class="ogr-formul" data-ogr-ham="'+i+'"><summary>Hesaplama ayrıntıları ve ham veriler</summary>'+
-    '<p><b>Net grafiği:</b> her denemede bu dersteki netin ve yayınevinin Türkiye ortalaması (Genel Net). İki çizgi arası yeşilse Türkiye’nin üstündesin, kırmızıysa altında.</p>'+
+    '<p><b>Net grafiği:</b> her denemede bu dersteki netin ve yayınevinin bütün kurumlarındaki öğrencilerin ortalama neti (o denemenin performans analizinden). İki çizgi arası yeşilse Türkiye’nin üstündesin, kırmızıysa altında.</p>'+
     '<p><b>Konu tablosu:</b> her hücre, o denemede o konunun sorularında senin doğru sayını (d), aynı soruları çözen Türkiye geneli öğrencilerinin başarı oranlarından beklenen doğru sayısıyla (b) karşılaştırır. Fark = 100 · (d − b) / n puan; n o konudaki soru sayısıdır. Zor sorular konuyu haksız yere kırmızıya boyamaz: aynı soruda Türkiye de zorlanmışsa beklenen de düşüktür.</p>'+
     '<p><b>Renk:</b> kırmızı = Türkiye’nin gerisinde, yeşil = önünde; fark büyüdükçe renk koyulaşır. Soluk hücre: fark küçük ya da soru az; tesadüf olabilir (z = (d − b) / √(n·p·(1 − p) · (1 + (soru − 1) · 0,2)), |z| < 1,96). Tek öğrencide bir konunun birkaç sorusu olduğu için çoğu kare soluk çıkar: yönü okumak için koyu karelere ve tekrar eden renge bakın.</p>'+seri+konu+'</details>';
   return '<details class="ogr-formul" data-ogr-ham="'+i+'"><summary>Hesaplama ayrıntıları ve ham veriler</summary>'+
     '<p><b>Kimler?</b> '+kacis(b.siniflar.join(', '))+' sınıflarının öğrencileri birlikte (ders programında bu dersi verdiğiniz sınıflar). Sınıflar ayrı ayrı gösterilmez, öğrenci adı yoktur.</p>'+
-    '<p><b>Net grafiği:</b> her denemede öğrencilerinizin bu dersteki net ortalaması (neti basılmış öğrenciler) ve yayınevinin Türkiye ortalaması (Genel Net). İki çizgi arası yeşilse Türkiye’nin üstünde, kırmızıysa altındadır. Fark = ortalama net − Genel Net.</p>'+
+    '<p><b>Net grafiği:</b> her denemede öğrencilerinizin bu dersteki net ortalaması (neti basılmış öğrenciler) ve yayınevinin bütün kurumlarındaki öğrencilerin ortalama neti (o denemenin performans analizinden: her soruda doğru oranı − yanlış oranı / 4; konu karelerinin karşılaştırıldığı öğrencilerin aynısı). İki çizgi arası yeşilse Türkiye’nin üstünde, kırmızıysa altındadır. Fark = ortalama net − Türkiye ortalaması. Grafiğin yüksekliği testin tamamıdır (0’dan soru sayısına). Deneme adının altındaki sayı okulun bu dersteki İlk 100 listesindeki yeridir.</p>'+
     '<p><b>Konu tablosu:</b> her hücre, o denemede o konunun sorularında öğrencilerinizin doğru sayısını (d), aynı soruları çözen Türkiye geneli öğrencilerinin başarı oranlarından beklenen doğru sayısıyla (b = soruların Türkiye başarı oranlarının toplamı) karşılaştırır. Fark = 100 · (d − b) / n puan; n öğrencilerinizin o sorulara verdiği yanıt sayısıdır. Böylece zor sorular konuyu haksız yere kırmızıya boyamaz: aynı soruda Türkiye de zorlanmışsa beklenen de düşüktür. Konular derste işlendikleri düzende (kazanım numarasına göre) dizilir. Bütün konular: dersin o denemedeki bütün sorularıyla aynı hesap.</p>'+
     '<p><b>Renk:</b> kırmızı = Türkiye’nin gerisinde, yeşil = önünde; fark büyüdükçe renk koyulaşır (±'+RENK_UST+' puanda en koyu). Soluk hücre: bu hesaba göre fark henüz belirgin değil (z = (d − b) / √(Σ n·p·(1 − p) · (1 + (soru − 1) · 0,2)), |z| < 1,96; bir öğrencinin aynı konudaki yanıtları birbirine bağlı sayılır). Boş kare: o denemede konudan soru yok. Bir karenin üzerine gelince yüzdeler görünür.</p>'+seri+konu+'</details>';
 }
@@ -504,7 +537,7 @@ const TUM_KODLAR=(()=>{const m=new Map();for(const [,,l] of DERSLER)for(const k 
 function ogrenciModeli(kisi,c){
   const nolar=new Set([String(kisi.no)]),sinif=sinifK(kisi.sinif),bloklar=[];
   for(const [oturum,anahtar,kod] of TUM_KODLAR){
-    const seri=ozetSorulari(netSerisi(c.k,[],oturum,anahtar,kod,null,nolar),c.v,kod),izgara=konuIzgarasi(c.v,[],oturum,kod,c,null,nolar);
+    const seri=agBagla(ozetSorulari(netSerisi(c.k,[],oturum,anahtar,kod,null,nolar),c.v,kod),c.v,kod),izgara=konuIzgarasi(c.v,[],oturum,kod,c,null,nolar);
     if(!seri.length&&!izgara)continue;
     bloklar.push({ders:dersEtiketi(kod),duzey:duzeyi(sinif),siniflar:sinif?[sinif]:[],oturum,kod,dersAd:dersEtiketi(kod),seri,izgara,y:YAZI.ogrenci});
   }
@@ -623,7 +656,7 @@ function pdfSkor(P,b,x,y,buyuk){
   P.yazi(x2,y+ls,'Türkiye',ls,PC.muted,true);P.yazi(x2,ny,deger(son.genel),ns,PC.ink,true);if(netAlti)P.yazi(x2,ny+13,f1(son.genel)+' net',9,PC.muted);
   let x3=x2+genis('Türkiye',son.genel)+ara;const [bg,fg,okc,soz]=PDF_DURUM[d.yon],eg=d.egilim?PDF_DURUM[d.egilim.k]:null;
   if(buyuk){const ps=11,ph=22,py=y+ls-4,hap=(metin,r)=>{const pw=P.en(metin,ps,true)+22;P.kutu(x3,py,pw,ph,r[0],ph/2);P.yazi(x3+pw/2,py+ph/2+ps*.36,metin,ps,r[1],true,'middle');x3+=pw+8};
-    const x0=x3;hap(okc+' '+soz,[bg,fg]);if(eg)hap(d.egilim.yazi,eg);P.yazi(x0,py+ph+14,son.ad,9.5,PC.muted)}
+    const x0=x3,sr=siraDurumu(b);hap(okc+' '+soz,[bg,fg]);if(eg)hap(d.egilim.yazi,eg);if(sr)hap(sr.yazi,PDF_DURUM[sr.k]);P.yazi(x0,py+ph+14,son.ad,9.5,PC.muted)}
   else{const ph=18,py=ny-ph+2;P.kutu(x3,py,ph+6,ph,bg,ph/2);P.yazi(x3+(ph+6)/2,py+ph/2+3.6,okc,10,fg,true,'middle');x3+=ph+12;
     if(eg){const t=d.egilim.k===0?'aynı':d.egilim.yazi.replace('Fark ',''),pw=P.en(t,8,true)+12;P.kutu(x3,py+2,pw,ph-4,eg[0],(ph-4)/2);P.yazi(x3+pw/2,py+ph/2+3,t,8,eg[1],true,'middle')}}
   return alt;
@@ -632,7 +665,7 @@ function pdfSkor(P,b,x,y,buyuk){
 // they cross), the students' values on their points, the exam names under it (spaced when they do not fit).
 function pdfGrafik(P,b,x,y,w,h,as=9){
   const l=b.seri,n=l.length;if(!n||h<40)return;
-  const isimH=as*2.5,py0=y+10,py1=y+h-isimH-6;
+  const yl=yerler(b),isimH=as*2.5+(yl?as+4:0),py0=y+10,py1=y+h-isimH-6;
   const O=olcekKur(l),yy=v=>py1-(v-O.lo)/(O.hi-O.lo||1)*(py1-py0);
   const sol=x+28,sag=x+w-12,ic=n>1?Math.min(20,(sag-sol)/(n-1)*.25):0,xx=i=>n===1?(sol+sag)/2:sol+ic+(sag-sol-2*ic)*i/(n-1),adim=n>1?(sag-sol-2*ic)/(n-1):sag-sol;
   for(const [v,et] of O.tikler(h>150?4:3)){P.cizgi(sol,yy(v),sag,yy(v),PC.grid,.8);P.yazi(sol-6,yy(v)+3,et,8.5,PC.muted,false,'end')}
@@ -651,7 +684,8 @@ function pdfGrafik(P,b,x,y,w,h,as=9){
     // Each name keeps to its own share of the axis: half a step either side, the page edge for the first and the last.
     const sinirL=n===1?x+2:Math.max(x+2,xx(i)-pay/2+3),sinirR=n===1?x+w-2:Math.min(x+w-2,xx(i)+pay/2-3),sat=P.satirla(p.ad,Math.max(20,sinirR-sinirL),as),gw=Math.max(...sat.map(t=>P.en(t,as)));
     const hz=xx(i)-gw/2<sinirL?'start':xx(i)+gw/2>sinirR?'end':'middle',tx=hz==='start'?sinirL:hz==='end'?sinirR:xx(i);
-    sat.forEach((t,j)=>P.yazi(tx,py1+as+6+j*(as+2),t,as,PC.muted,false,hz))});
+    sat.forEach((t,j)=>P.yazi(tx,py1+as+6+j*(as+2),t,as,PC.muted,false,hz));
+    if(yl&&yl[i]){const o=yl[i];P.yazi(tx,py1+as+6+2*(as+2)+2,(o.k===1?'▲ ':o.k===-1?'▼ ':'')+o.yazi,as,o.k===1?PC.green:o.k===-1?PC.red:PC.muted,true,hz)}});
 }
 // The topic table: the exam names on top, a row per topic in the order taught with a coloured square per exam (an empty dashed
 // square: no question), the whole subject last under a hairline. Rows shrink to fit the height they are given.

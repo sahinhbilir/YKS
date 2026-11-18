@@ -27,6 +27,8 @@ const kur=()=>{
     for(let i=0;i<20;i++){const no=String(1001+i);tyt[no]={no,net:{MAT:9+(i%7)+e*.6,TÜR:21+(i%5)+e*.2}}}
     sinavlar.push({id:'s'+e,ad,g:gunNo('2026-09-0'+1)+e*14,tyt,ayt:{}})}
   const K={t:{sinavlar,kisi},trFn:ad=>tr[ad]?{genel:k=>tr[ad][k]??null}:null};ANALIZ.kaynak=()=>K;
+  // The network's mean net (from the Performans analizi in the app) given as the lists' figure, so the page has a Türkiye line.
+  KONU_TAKIBI.agNet=(v,ad,kod)=>{const g=tr[ad]?tr[ad][kod]:null;return Number.isFinite(g)?g:null};
   // Konu Takibi: three exams, Türkçe; the class answers differ by topic so the grid has red and green rows.
   const kt=KONU_TAKIBI,reps=[],parts=[],kodlar=['T.12.1.1','T.12.1.1','T.12.1.2','T.12.1.2','T.12.3.1','T.12.3.1','T.12.5.1','T.12.5.1'],p0=[.5,.5,.9,.9,.2,.2,.6,.6];
   for(let e=1;e<=3;e++){const ad=e===3?'SENTETİK YAYINLARI TÜRKİYE GENELİ KONU-3':'SENTETİK-KONU-'+e,blocks=[];

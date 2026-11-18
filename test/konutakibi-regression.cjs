@@ -764,11 +764,18 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   const g=K.geridekiKonular(v,{session:'TYT'},5);assert.equal(g.var,true);assert.equal(g.toplam,2);assert.equal(g.geride,1);assert.deepEqual(copy(g.liste.map(x=>[x.ad,x.ders,x.durum])),[['Basınç','Fizik','geride'],['Kuvvet','Fizik','belirsiz']]);
   assert.equal(K.geridekiKonular(K.blank(),{}).var,false);
  });
- await test('Performans analizi upload: recognised by its title, only the exam code and p are kept; the page and its controls',async()=>{
+ await test('Performans analizi upload: recognised by its title, only the exam code, p and each question’s wrong share are kept; the network’s mean net; the page and its controls',async()=>{
   run('denemePdfSayfalari=async f=>({pages:f.pages})');
   const perf={name:'performans.pdf',size:10,pages:Y.itemlere(Y.performansSpec({})).map(p=>p.items)};
   const msg=await K.pdfEkle([perf]);assert.equal(msg,'Performans analizi (Türkiye geneli) kaydedildi · 27-YKS-1203 (TYT) · 4 ders · 10 soru');
-  const e=K.oku().veri.zorluk[K.ek('27-YKS-1203')];assert.deepEqual(copy(e.turkiye['TÜRKÇE-T']),[.9,.7,.5,.2]);assert.deepEqual(Object.keys(e).sort(),['ad','madde','ogrenci','oturum','ozet','ts','turkiye']);
+  const e=K.oku().veri.zorluk[K.ek('27-YKS-1203')];assert.deepEqual(copy(e.turkiye['TÜRKÇE-T']),[.9,.7,.5,.2]);assert.deepEqual(Object.keys(e).sort(),['ad','madde','ogrenci','oturum','ozet','ts','turkiye','turkiyeY']);
+  // Each question's wrong share: p's remainder split as the top and bottom groups split it. The fixture's groups mark the four
+  // other options 30–34 (ÜST) and 60–64 (ALT) times and leave 7 + 9 blank, so about 96% of what is not correct is wrong.
+  const w=copy(e.turkiyeY['TÜRKÇE-T']);assert.equal(w.length,4);[.9,.7,.5,.2].forEach((p,i)=>assert(w[i]>(1-p)*.95&&w[i]<(1-p)*.97,i+': '+w[i]));
+  // The network's mean net: Σ (p − w / 4).
+  const ag=run("KONU_TAKIBI.agNet(KONU_TAKIBI.oku().veri,'27-YKS-1203','TÜRKÇE-T')");assert(Math.abs(ag-([.9,.7,.5,.2].reduce((a,p)=>a+p,0)-w.reduce((a,x)=>a+x,0)/4))<1e-9);
+  assert.equal(run("KONU_TAKIBI.agNet(KONU_TAKIBI.oku().veri,'27-YKS-9999','TÜRKÇE-T')"),null,'no file: no average');
+  assert(Object.values(e.turkiyeY).flat().every(x=>x>=0&&x<=1),'shares only, no counts of the report are stored');
   assert(!/\b\d{3,}\b/.test(JSON.stringify(e.turkiye)),'no counts of the report are stored');
   // A PDF that is neither is still read as a karne and refused as before.
   await assert.rejects(async()=>{const m=await K.pdfEkle([{name:'bos.pdf',size:1,pages:[[]]}]);if(/metin içermiyor/.test(m))throw new Error(m)},/metin içermiyor/);

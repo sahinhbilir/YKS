@@ -21,7 +21,11 @@ const run = code => vm.runInContext(code, sandbox);
 const put = (name, value) => sandbox[name] = JSON.parse(JSON.stringify(value));
 const get = code => JSON.parse(JSON.stringify(run(code)));
 sandbox.__kaynak = run('ANALIZ.kaynak'); sandbox.__temel = run('OGRENCI_RAPOR.temelOgrenciler'); sandbox.__okuAsil = null; sandbox.__farkAsil = null; sandbox.__say = null;
-const reset = () => run(`D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='ogretmenrapor';EK.ogrHoca=undefined;ANALIZ.kaynak=__kaynak;OGRENCI_RAPOR.temelOgrenciler=__temel;kaydet=async()=>true`);
+sandbox.__agAsil = run('KONU_TAKIBI.agNet');
+// The network's mean net comes from the Performans analizi (KONU_TAKIBI.agNet); the fixtures give it as the lists' Türkiye figure
+// (K.trFn), so the page's figures are the same ones the hand-worked checks use. One check below uses the real agNet.
+const reset = () => run(`D=varsayilan();D.rol='rehber';D.ogr=[];EK.sekme='ogretmenrapor';EK.ogrHoca=undefined;ANALIZ.kaynak=__kaynak;OGRENCI_RAPOR.temelOgrenciler=__temel;kaydet=async()=>true;
+  KONU_TAKIBI.agNet=(v,ad,kod)=>{const t=typeof K!=='undefined'&&K&&K.trFn?K.trFn(ad):null,g=t?t.genel(kod):null;return Number.isFinite(g)?g:null}`);
 const near = (a, b, msg) => assert(Math.abs(a - b) < 1e-6, (msg || '') + ' ' + a + ' != ' + b);
 let passed = 0;
 async function check(name, fn) { reset(); try { await fn(); passed++; console.log('PASS', name); } catch (e) { console.error('FAIL', name, e); process.exitCode = 1; } }
@@ -74,7 +78,7 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.deepEqual(get(`OGRETMEN_RAPOR.netSerisi(K,['11/A'],'TYT','MAT','MATEMATİK-T')`), []);
     run(`K.trFn=()=>null`); assert.deepEqual(get(`OGRETMEN_RAPOR.netSerisi(K,['12/A'],'TYT','MAT','MATEMATİK-T')`).map(p => [p.genel, p.fark]), [[null, null], [null, null]], 'no Türkiye list: no gap, never a guess');
   });
-  await check('the list’s own yardstick and the school’s place stay in the model, never estimated; the page shows only the two nets and where the students stand (hand-worked)', () => {
+  await check('the list’s yardstick stays in the model, never estimated; the page shows the two nets, where the students stand, and the school’s İlk 100 place exam by exam with its move (hand-worked)', () => {
     kaynakKur();
     // MATEMATİK-T in 1201: the list's last row 18,5 net (Türkiye 12 → +6,5), 1st school 26; the school 40th. In 1202: last row 19 (+6), the school outside.
     // Then 1203 brings it back at 31st.
@@ -88,10 +92,12 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     const yazi = h.replace(/<[^>]+>/g, '');
     // The page keeps to two numbers and coloured words: the students' mean and the Türkiye average in the newest exam (nets);
     // where they stand, and the gap since the exam before (+3 → +9 net ahead: widening, good).
-    assert.match(h, /<div class="ogr-skor"><div class="ogr-skor-sayi"><span>Öğrencileriniz<\/span><strong class="ogr-y">22,0<\/strong><\/div><div class="ogr-skor-sayi"><span>Türkiye<\/span><strong>13,0<\/strong><\/div><div class="ogr-skor-durum"><div class="ogr-rozetler"><b class="ogr-durum ogr-y">▲ Türkiye’nin üstünde<\/b><b class="ogr-durum ogr-egilim ogr-y">Fark açılıyor<\/b><\/div><span>27-YKS-1202<\/span><\/div><\/div>/);
+    assert.match(h, /<div class="ogr-skor"><div class="ogr-skor-sayi"><span>Öğrencileriniz<\/span><strong class="ogr-y">22,0<\/strong><\/div><div class="ogr-skor-sayi"><span>Türkiye<\/span><strong>13,0<\/strong><\/div><div class="ogr-skor-durum"><div class="ogr-rozetler"><b class="ogr-durum ogr-y">▲ Türkiye’nin üstünde<\/b><b class="ogr-durum ogr-egilim ogr-y">Fark açılıyor<\/b><b class="ogr-durum ogr-egilim ogr-sira-durum ogr-k">Sıralama düştü<\/b><\/div><span>27-YKS-1202<\/span><\/div><\/div>/);
+    // The school's place in the İlk 100 list under each exam: 40th, then outside (▼ red).
+    assert.deepEqual([...svg.matchAll(/<text class="ogr-tik ogr-sira([^"]*)"[^>]*>([^<]*)<\/text>/g)].map(m => [m[1].trim(), m[2]]), [['', '40.'], ['ogr-k', '▼ 100+']]);
     assert.deepEqual(s.map(p => p.soru), [30, 30], 'TYT Matematik: 30 questions (YKS), the lists print no blanks');
-    // The list's yardstick, the school's place and the gap are not on the page (they stay in the model and the raw numbers).
-    assert(!/İlk 100|sırası|Fark nasıl|ogr-kutu/.test(h.slice(0, h.indexOf('<details'))), 'no place, no yardstick, no difference box');
+    // The list's yardstick and the gap boxes are not on the page (they stay in the model and the raw numbers).
+    assert(!/İlk 100 sınırı|Fark nasıl|ogr-kutu/.test(h.slice(0, h.indexOf('<details'))), 'no yardstick, no difference box');
     assert(!svg.includes('ogr-sinir') && !/ilk 100/i.test(svg) && !svg.includes('ogr-cubuk'), 'one picture: two lines, no bars, no yardstick');
     // What the block covers: the classes and the number of exams.
     assert.match(h, /<p class="ogr-kapsam">12\/A · 2 deneme<\/p>/);
@@ -158,6 +164,32 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     run(`D.konuPlani={'201':[{'Türkçe':['Cümlede Anlam ve Anlatım','Sözcükte Anlam']}],'301':[{'Geometri':['Cümlede Anlam']}]}`);
     assert.deepEqual(sira(), ['Sözcükte Anlam', 'Cümlede Anlam']);
     run('D.konuPlani={}');
+  });
+  await check('the page’s Türkiye is the publisher’s whole network, from the same Performans analizi as the squares: Σ (p − w / 4); no file, no Türkiye value', () => {
+    planKur(); kaynakKur(); konuKur(); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:[]})');
+    run('KONU_TAKIBI.agNet=__agAsil');
+    // 27-YKS-1202, TYT Matematik, 30 questions: every p .5, every wrong share .2 → 30 · (.5 − .05) = 13,5. 27-YKS-1201 has no file.
+    run(`D.konutakibi.zorluk=D.konutakibi.zorluk||{};D.konutakibi.zorluk[KONU_TAKIBI.ek('27-YKS-1202')]={ad:'27-YKS-1202',oturum:'TYT',ogrenci:null,ts:1,ozet:null,madde:null,turkiye:{'MATEMATİK-T':Array(30).fill(.5)},turkiyeY:{'MATEMATİK-T':Array(30).fill(.2)}}`);
+    const o = get(`(()=>{const t=OGRETMEN_RAPOR.ogretmenler().find(x=>x.ad.endsWith('AY'));return OGRETMEN_RAPOR.ogretmenModeli(t).bloklar.find(b=>b.kod==='MATEMATİK-T').seri})()`);
+    assert.deepEqual(o.map(p => [p.ad, p.genel === null ? null : Math.round(p.genel * 1e6) / 1e6, p.ilk100]), [['27-YKS-1201', null, 12], ['27-YKS-1202', 13.5, 13]]);
+    near(o[1].fark, 26 - 13.5);
+    // The file read before the wrong shares were kept: no Türkiye value.
+    run(`delete D.konutakibi.zorluk[KONU_TAKIBI.ek('27-YKS-1202')].turkiyeY`);
+    assert.equal(get(`(()=>{const t=OGRETMEN_RAPOR.ogretmenler().find(x=>x.ad.endsWith('AY'));return OGRETMEN_RAPOR.ogretmenModeli(t).bloklar.find(b=>b.kod==='MATEMATİK-T').seri[1].genel})()`), null);
+  });
+  await check('the school’s İlk 100 place: under each exam with an arrow against the exam before, and “Sıralama yükseldi / düştü / aynı” beside where the students stand; never on a student’s sheet', () => {
+    const p = (ad, sira, fark = 1) => ({ ad, g: 1, n: 1, soru: 30, net: 10 + fark, genel: 10, fark, sira, listeN: 100 });
+    const h = seri => { put('__S', { dersAd: 'TYT Matematik', duzey: 12, kod: 'MATEMATİK-T', siniflar: ['12/A'], seri, izgara: null }); return run('OGRETMEN_RAPOR.blokHtml(__S,0)') };
+    const rozet = x => (x.match(/ogr-sira-durum ([^"]*)">([^<]*)</) || []).slice(1);
+    assert.deepEqual(rozet(h([p('A', 40), p('B', 31)])), ['ogr-y', 'Sıralama yükseldi']);
+    assert.deepEqual(rozet(h([p('A', 31), p('B', null)])), ['ogr-k', 'Sıralama düştü'], 'outside the list counts as 101st');
+    assert.deepEqual(rozet(h([p('A', 31), p('B', 31)])), ['ogr-sabit', 'Sıralama aynı']);
+    assert.deepEqual(rozet(h([p('A', null), p('B', null)])), [], 'outside both times: nothing');
+    assert.deepEqual(rozet(h([p('A', undefined), p('B', undefined)])), [], 'no school followed: nothing');
+    // An exam without a Türkiye value still shows the place.
+    assert.deepEqual(rozet(h([{ ...p('A', 40), genel: null, fark: null }, { ...p('B', 31), genel: null, fark: null }])), ['ogr-y', 'Sıralama yükseldi']);
+    put('__S2', { dersAd: 'TYT Matematik', kod: 'MATEMATİK-T', seri: [p('A', 40), p('B', 31)], izgara: null, y: get('({ogrenci:true,biz:"Netin",bizK:"sen"})') });
+    assert(!/Sıralama|ogr-sira/.test(run('OGRETMEN_RAPOR.blokHtml(__S2,0)') + run('OGRETMEN_RAPOR.netGrafigi(__S2,700)')), 'a student’s sheet has no school place');
   });
   await check('topic grid columns in date order: an exam with no date of its own takes the one the school lists give it; no date anywhere goes last', () => {
     // Most karneler print no date. Sorted by '' they all came before the one dated exam, and by name an AYT exam named
@@ -376,8 +408,9 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert(!h.includes('<td>Sözcükte Anlam</td>'), 'the topic rows are not in the page until opened');
     // Never a student's name, never a rank.
     for (const ad of ['SENTETİK ADA', 'SENTETİK BORA', 'SENTETİK CEMRE', 'Sentetik Ada']) assert(!h.includes(ad), ad);
-    // No place at all: not the school's, a class's, a teacher's or a student's.
-    assert(!/sıra|Sıra|\d+\. sıra|İlk 100/.test(h.replace(/<select[\s\S]*?<\/select>/, '')), 'no ranking');
+    // No ranking of students, classes or teachers (the school's own İlk 100 place shows only when the Türkiye geneli page follows
+    // a school; not here).
+    assert(!/sıra|Sıra|\d+\. sıra/.test(h.replace(/<select[\s\S]*?<\/select>/, '').replace(/<details[\s\S]*?<\/details>/g, '')), 'no ranking');
     // One teacher.
     run(`EK.ogrHoca=${JSON.stringify(get('OGRETMEN_RAPOR.ogretmenler()')[1].key)}`); h = run('OGRETMEN_RAPOR.gorunum()');
     assert.equal((h.match(/<section class="ogr-ogretmen"/g) || []).length, 1); assert.match(h, /<h2>Sentetik Öğretmen De<\/h2>/);

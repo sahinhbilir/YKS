@@ -46,6 +46,7 @@
 .ogr-tr-nokta{fill:var(--kagit);stroke:var(--soluk);stroke-width:1.4}
 .ogr-okul-nokta{stroke:var(--kagit);stroke-width:2}
 .ogr-l-tr{background:repeating-linear-gradient(90deg,var(--soluk) 0 5px,transparent 5px 9px)}
+.ogr-sira{font-weight:700}text.ogr-y{fill:var(--iyi)}text.ogr-k{fill:var(--kritik)}
 .ogr-l-okul{background:var(--vurgu,#1F4FC8)}
 .ogr-pdf-durum{align-self:center;color:var(--kritik)}
 /* Sınıf düzeyi: a button a grade, the chosen one filled. */
