@@ -95,6 +95,12 @@ function soruSayisi(liste,anahtar){
   let en=0;for(const o of Object.values(liste||{})){const m=/^(\d+)\/(\d+)/.exec((o&&o.dy&&o.dy[anahtar])||'');if(m)en=Math.max(en,+m[1]+ +m[2])}
   const st=SORU_STANDART[anahtar]||0;if(!st)return en||null;return en>st||en&&en<st*.7?en:st;
 }
+// The exact count where Konu Takibi has the publisher's Sınav özeti of the exam (one entry a question).
+function ozetSorulari(seri,v,kod){
+  if(!v||!v.zorluk||typeof KONU_TAKIBI==='undefined')return seri;
+  for(const p of seri){const z=v.zorluk[KONU_TAKIBI.ek(p.ad)],q=z&&z.ozet&&z.ozet[kod];if(Array.isArray(q)&&q.length)p.soru=q.length}
+  return seri;
+}
 const anahtarOf=kod=>{for(const [,,l] of DERSLER)for(const k of l)if(k[2]===kod)return k[1];return null};
 // A net as a percentage of the test (null when the count is unknown).
 const yuzdesi=(v,soru)=>v===null||v===undefined||!soru?null:100*v/soru;
@@ -119,9 +125,9 @@ function netSerisi(k,siniflar,oturum,anahtar,kod,gorulen,nolar){
 // A cell is "belirgin" when |z| ≥ 1,96. Needs the publisher's Performans analizi in Konu Takibi (Türkiye's p per question).
 // c: the page's shared context (baglam): every exam's comparison is worked out once for all students and every block takes its
 // classes' students from it; without one the work is done here.
-function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen,nolar){
+function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen,nolar,seri=null){
   if(!v||!Array.isArray(v.exams)||typeof KONU_TAKIBI==='undefined')return null;
-  const S=new Set(siniflar),ck=KONU_TAKIBI.key(kod),sinavlar=[],konular=new Map();
+  const S=new Set(siniflar),ck=KONU_TAKIBI.key(kod),sinavlar=[],konular=new Map(),toplamlar=[];
   for(const e of dersSinavlari(c,kod)){
     const r=sinavFarki(c,oturum,e);if(!r||!r.ogrenciler.length)continue;
     const i=sinavlar.length,toplam={d:0,b:0,n:0,v:0,ogr:0};let var_=false;
@@ -137,12 +143,13 @@ function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen,nolar){
         const h=A.hucre[i]||(A.hucre[i]={d:0,b:0,n:0,v:0,ogr:0}),p=Math.min(1,Math.max(0,q.b/q.n));h.d+=q.d;h.b+=q.b;h.n+=q.n;h.v+=q.n*p*(1-p)*(1+(q.n-1)*R_MADDE);h.ogr++}
       if(bu){toplam.ogr++;if(gorulen)gorulen.add(sc)}}
     if(!var_)continue;
-    const tarih=tarihi(c)(e);sinavlar.push({ad:e.ad,g:tarih?Date.parse(tarih+'T00:00:00Z')/864e5:null,ogr:toplam.ogr,...olc(toplam)});
+    const tarih=tarihi(c)(e);sinavlar.push({ad:e.ad,g:tarih?Date.parse(tarih+'T00:00:00Z')/864e5:null,ogr:toplam.ogr,...olc(toplam)});toplamlar.push(toplam);
   }
   if(!sinavlar.length)return null;
   // The şube's plan order: the block's classes, or the student's own class.
   const planSiniflari=siniflar.length?siniflar:nolar&&c.k&&c.k.t?[...nolar].map(n=>c.k.t.kisi.get(String(n))).filter(Boolean).map(k=>sinifK(k.sinif)):[];
   const liste=planListesi(planSiniflari,kod,oturum);if(liste)planaGore(konular,liste);
+  if(seri)turkiyeyeBagla(sinavlar,konular,seri,toplamlar);
   return izgaraKur(sinavlar,konular);
 }
 // The order topics are taught in: a kazanım code's numbers after the lesson's letters (E.GEO.9.4.3.1 → 9, 4, 3, 1: grade, unit,
@@ -196,6 +203,25 @@ function planaGore(konular,liste){
   for(const K of l){const i=planYeri(K.ad,liste);if(i!==null){son=i;ek=0;K.sira=[i,0]}else K.sira=[son,++ek]}
 }
 function siraAl(K,kod){const s=kodSirasi(kod);if(s&&(!K.sira||siraKarsilastir(s,K.sira)<0))K.sira=s}
+// The squares on the chart's Türkiye (2026-11-19). The publisher's per-question Türkiye success rates (Performans analizi) come from
+// a wider group of students than the Türkiye average net of the lists (the chart): in AYT Geometri 27-YKS-1202 the rates add up to
+// 1,37 correct answers a student while Türkiye's average is 3,11 net, which no net can be above. Measured against the wider group a
+// class below Türkiye on the chart came out green. So, exam by exam, every topic's gap is moved by one amount, the difference
+// between the chart's gap (Türkiye's average net against the students', in points of the test) and the whole subject's gap on the
+// questions; the topics keep their order against each other and "Bütün konular" says what the chart says. An exam without a
+// Türkiye net on the chart is left as measured. The expected count b moves: b' = b − s·n/100 (kept within 0 … n).
+function turkiyeyeBagla(sinavlar,konular,seri,toplamlar){
+  const anahtar=s=>typeof denemeAdAnahtari==='function'?denemeAdAnahtari(s):String(s);
+  sinavlar.forEach((e,i)=>{
+    const p=seri.find(x=>anahtar(x.ad)===anahtar(e.ad)),t=toplamlar[i];
+    if(!p||p.fark===null||!p.soru||!t||!t.n)return;
+    const s=100*p.fark/p.soru-100*(t.d-t.b)/t.n;e.kayma=s;
+    const kaydir=c=>{if(!c||!c.n)return;const p0=Math.min(1,Math.max(0,c.b/c.n)),b=Math.min(c.n,Math.max(0,c.b-s*c.n/100)),p1=b/c.n,o=p0*(1-p0);
+      if(c.v!==undefined)c.v=o>0?c.v*(p1*(1-p1))/o:c.v;c.b=b};
+    for(const K of konular.values()){kaydir(K.hucre[i]);if(K.alt)for(const A of K.alt.values())kaydir(A.hucre[i])}
+    kaydir(t);Object.assign(e,olc(t));
+  });
+}
 // sinavlar: [{ad, g, ogr, fark, z, durum}]; konular: Map(id → {id, ad, sira, hucre:[{d,b,n,v}], alt: Map(kod → {kod, ad, hucre})}).
 function izgaraKur(sinavlar,konular){
   const satir=[...konular.values()].map(K=>{
@@ -253,7 +279,7 @@ function ogretmenModeli(o,c=sayfaBaglami(),duzey=null){
     for(const duz of duzeyler){
       for(const [oturum,anahtar,kod] of d.kodlar){
         const siniflar=((d.kodSinif&&d.kodSinif[kod])||d.siniflar).filter(c=>duzeyi(c)===duz);if(!siniflar.length)continue;
-        const gorulen=new Set(),seri=netSerisi(k,siniflar,oturum,anahtar,kod,gorulen),izgara=konuIzgarasi(v,siniflar,oturum,kod,c,gorulen);
+        const gorulen=new Set(),seri=ozetSorulari(netSerisi(k,siniflar,oturum,anahtar,kod,gorulen),v,kod),izgara=konuIzgarasi(v,siniflar,oturum,kod,c,gorulen,undefined,seri);
         if(!seri.length&&!izgara)continue;
         bloklar.push({ders:d.ad,duzey:duz,siniflar:siniflar.filter(x=>gorulen.has(x)),oturum,kod,dersAd:dersEtiketi(kod),seri,izgara});
       }}
@@ -495,7 +521,7 @@ const TUM_KODLAR=(()=>{const m=new Map();for(const [,,l] of DERSLER)for(const k 
 function ogrenciModeli(kisi,c){
   const nolar=new Set([String(kisi.no)]),sinif=sinifK(kisi.sinif),bloklar=[];
   for(const [oturum,anahtar,kod] of TUM_KODLAR){
-    const seri=netSerisi(c.k,[],oturum,anahtar,kod,null,nolar),izgara=konuIzgarasi(c.v,[],oturum,kod,c,null,nolar);
+    const seri=ozetSorulari(netSerisi(c.k,[],oturum,anahtar,kod,null,nolar),c.v,kod),izgara=konuIzgarasi(c.v,[],oturum,kod,c,null,nolar,seri);
     if(!seri.length&&!izgara)continue;
     bloklar.push({ders:dersEtiketi(kod),duzey:duzeyi(sinif),siniflar:sinif?[sinif]:[],oturum,kod,dersAd:dersEtiketi(kod),seri,izgara,y:YAZI.ogrenci});
   }
@@ -685,6 +711,8 @@ function buyukKart(P,b,x,y,w,h,kazanim=false){
 function kucukKart(P,b,x,y,w,h){
   P.kutu(x,y,w,h);const buyuk=h>=230&&w>=340;
   P.yazi(x+14,y+22,P.sigdir(kartBasligi(b),w-28,buyuk?14:12,true),buyuk?14:12,PC.ink,true);
+  // A wide, low card: the numbers on the left, the chart beside them the card's whole height.
+  if(!buyuk&&w>=420){pdfSkor(P,b,x+14,y+32,false);const sol=x+Math.min(300,w*.34);pdfGrafik(P,b,sol,y+8,x+w-8-sol,h-14,8);return}
   const alt=pdfSkor(P,b,x+14,y+32,buyuk)+(buyuk?18:6);
   pdfGrafik(P,b,x+4,alt,w-14,y+h-8-alt,buyuk?9:8);
 }

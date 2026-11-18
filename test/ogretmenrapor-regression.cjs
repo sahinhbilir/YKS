@@ -160,6 +160,18 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.deepEqual(sira(), ['Sözcükte Anlam', 'Cümlede Anlam']);
     run('D.konuPlani={}');
   });
+  await check('the squares stand on the chart’s Türkiye: each exam’s topics move by one amount so that the whole subject says what the net chart says (hand-worked)', () => {
+    konuKur();
+    // 12/A, SENTETİK-KONU-1, measured on the questions: Sözcükte Anlam −57,5, Cümlede Anlam +55, the whole subject −20 points.
+    // The chart: +2 net of a 40-question test = +5 points. Every square moves by 5 − (−20) = +25: −32,5 and +5; Cümlede Anlam
+    // would need Türkiye at −0,2 correct of 4, so it stops at 0: 3 of 4 → +75.
+    put('__SERI', [{ ad: 'SENTETİK-KONU-1', g: 1, n: 2, soru: 40, net: 26, genel: 24, fark: 2 }, { ad: 'SENTETİK-KONU-2', g: 2, n: 2, soru: 40, net: 20, genel: null, fark: null }]);
+    const z = get(`OGRETMEN_RAPOR.konuIzgarasi(D.konutakibi,['12/A'],'TYT','TÜRKÇE-T',undefined,undefined,undefined,__SERI)`), r = ad => z.satir.find(x => x.ad === ad);
+    near(z.sinavlar[0].fark, 5, 'the whole subject: the chart’s gap'); near(r('Sözcükte Anlam').hucre[0].fark, -32.5); near(r('Cümlede Anlam').hucre[0].fark, 75);
+    near(r('Sözcükte Anlam').alt[0].hucre[0].fark, -25, 'a kazanım moves with its topic (−50 + 25)');
+    // An exam without a Türkiye net on the chart (KONU-2), or not on it at all (KONU-3), stays as measured.
+    near(z.sinavlar[1].fark, -20); near(z.sinavlar[2].fark, -20); near(r('Sözcükte Anlam').hucre[1].fark, -57.5);
+  });
   await check('topic grid columns in date order: an exam with no date of its own takes the one the school lists give it; no date anywhere goes last', () => {
     // Most karneler print no date. Sorted by '' they all came before the one dated exam, and by name an AYT exam named
     // "27_AYT_…" came before "27-YKS-…" even though it was the newest.
