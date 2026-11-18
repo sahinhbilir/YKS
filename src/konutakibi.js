@@ -1,10 +1,11 @@
 // Teacher-only publisher assessment evidence. Embedded by scripts/embed-konutakibi.cjs.
 // No personal data or source PDFs belong in this file. See docs/konu-takibi.md.
 const KONU_TAKIBI = (() => {
-// Growth caps for a new upload (write): 2.500 KB and 120.000 kazanım rows, about ten exams of a 32-pupil grade with TYT and
-// AYT. The notebook's own budget (cloud copy 900 KB compressed, device 5.000 KB) is checked on every save as well. Reading
-// never fails on size: SANITY_* only stops a record no upload could have made.
-const LIMIT=2500000, MAX_ROWS=120000, SANITY_BYTES=10000000, SANITY_ROWS=500000;
+// Growth caps for a new upload (write), on the stored record (surum 2, see sakla): 2.500 KB and 400.000 kazanım rows. A
+// 31-pupil grade's TYT + AYT exam is about 20 KB and 5.700 rows stored so (150 KB in surum 1, which filled the cap at about
+// nineteen exams): about seventy such exams, the rows being what a page works on. The notebook's own budget (cloud copy 900 KB compressed, device
+// 5.000 KB) is checked on every save as well. Reading never fails on size: SANITY_* only stops a record no upload could make.
+const LIMIT=2500000, MAX_ROWS=400000, SANITY_BYTES=10000000, SANITY_ROWS=1000000, MAX_EXAMS=100;
 const clean=s=>String(s??'').replace(/\s+/gu,' ').trim();
 const key=s=>clean(s).toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/[^A-Z0-9ÇĞİÖŞÜ]/gu,'');
 const ek=s=>denemeAdAnahtari(s);
@@ -63,6 +64,7 @@ E.DİN.10.4|Ahlaki Tutum ve Davranışlar
 E.DİN.11.3|Kur’an’da Bazı Kavramlar
 DİN.12.2|Anadolu’da İslam
 E.M.9.1.1|Önermeler ve Bileşik Önermeler
+E.M.9.2.1.5|Sayı Basamakları
 E.M.9.2.1|Kümelerde Temel Kavramlar
 E.M.9.2.2|Kümelerde İşlemler
 E.M.9.3.1|Sayı Kümeleri
@@ -113,7 +115,16 @@ E.BİY.10.2.1|Kalıtım ve Biyolojik Çeşitlilik
 E.BİY.10.3.1|Ekosistem Ekolojisi`.split('\n').map(s=>s.split('|')).sort((a,b)=>b[0].length-a[0].length);
 const canon=new Map(PARENTS.map(([,n])=>[key(n),n]));
 canon.set(key('FİZİKSEL NİCELİKLERİNSINIFLANDIRILMASI'),'Fiziksel Niceliklerin Sınıflandırılması');
-const topicName=n=>canon.get(key(n))||title(n);
+// Every built-in name displays as written (Sanat ve Edebiyat, II. Dünya Savaşı…), not title-cased; the publisher's names first.
+let KANON=null;
+function kanon(){
+  if(KANON)return KANON;const m=new Map(canon),ekle=n=>{if(n&&!m.has(key(n)))m.set(key(n),n)};
+  Object.values(MEB_MAT).forEach(ekle);Object.values(AYT_EDB.t).forEach(ekle);Object.values(AYT_EDB.u).forEach(ekle);
+  for(const tb of Object.values(ESKI)){Object.values(tb.u||{}).forEach(ekle);Object.values(tb.t||{}).forEach(ekle)}
+  try{for(const l of Object.values(MUFREDAT_2026.siniflar))for(const d of l)for(const u of d.uniteler||[])ekle(u.ad)}catch(e){}
+  return KANON=m;
+}
+const topicName=n=>kanon().get(key(n))||title(n);
 // Two programmes are in use at once. This year's 12th grade follows the earlier programme (its 9th–11th grade topics are the
 // "E." codes above); the 9th–11th grades follow the new one, whose codes start with the ders in full (MAT.11.1.1) and whose
 // numbers mean other topics. So a number is never read without knowing which programme the code belongs to.
@@ -146,7 +157,9 @@ const aytEdbKonu=(course,code)=>{
   return (m[3]&&AYT_EDB.t[m[1]+'.'+m[2]+'.'+m[3]])||AYT_EDB.u[m[1]+'.'+m[2]]||null;
 };
 // Earlier programme, the other lessons: unit names by grade.unit (u), and topic names by grade.unit.topic (t) where a unit is
-// broad. The ders comes from the publisher's course code, so the same number means its own lesson's unit. A number not listed
+// broad. Checked against MEB's published programmes (mufredat.meb.gov.tr, 2026-11-18): the 2018 programmes, and for Tarih the
+// 2023 one this year's 12th grade was taught (its 11th grade: 11.3 Devrimler Çağında…, 11.4 Denge Stratejisi, 11.5 Sosyoekonomik
+// Hayat; no Sermaye ve Emek). The ders comes from the publisher's course code, so the same number means its own lesson's unit. A number not listed
 // stays without a topic (the report shows the kazanım itself).
 const COG_U=['Doğal Sistemler','Beşerî Sistemler','Küresel Ortam: Bölgeler ve Ülkeler','Çevre ve Toplum'];
 const ESKI={
@@ -155,26 +168,26 @@ const ESKI={
     t:{'11.1.1':'Vektörler','11.1.2':'Bağıl Hareket','11.1.3':'Newton’un Hareket Yasaları','11.1.4':'Bir Boyutta Sabit İvmeli Hareket','11.1.5':'İki Boyutta Hareket','11.1.6':'Enerji ve Hareket','11.1.7':'İtme ve Çizgisel Momentum',
     '11.1.8':'Tork','11.1.9':'Denge ve Denge Şartları','11.1.10':'Basit Makineler','11.2.1':'Elektriksel Kuvvet ve Elektrik Alan','11.2.2':'Elektriksel Potansiyel','11.2.3':'Düzgün Elektrik Alan ve Sığa',
     '11.2.4':'Manyetizma ve Elektromanyetik İndüklenme','11.2.5':'Alternatif Akım','11.2.6':'Transformatörler','12.1.1':'Düzgün Çembersel Hareket','12.1.2':'Dönerek Öteleme Hareketi','12.1.3':'Açısal Momentum',
-    '12.1.4':'Kütle Çekim ve Kepler Kanunları','12.5.1':'Özel Görelilik','12.5.2':'Kuantum Fiziğine Giriş','12.5.3':'Fotoelektrik Olayı','12.5.4':'Compton Saçılması ve De Broglie Dalga Boyu'}},
-  KİM:{u:{'9.1':'Kimya Bilimi','9.2':'Atom ve Periyodik Sistem','9.3':'Kimyasal Türler Arası Etkileşimler','9.4':'Maddenin Halleri','9.5':'Doğa ve Kimya','10.1':'Kimyanın Temel Kanunları ve Kimyasal Hesaplamalar','10.2':'Karışımlar',
+    '12.1.4':'Kütle Çekim Kuvveti','12.1.5':'Kepler Kanunları','12.5.1':'Özel Görelilik','12.5.2':'Kuantum Fiziğine Giriş','12.5.3':'Fotoelektrik Olayı','12.5.4':'Compton Saçılması ve De Broglie Dalga Boyu'}},
+  KİM:{u:{'9.1':'Kimya Bilimi','9.2':'Atom ve Periyodik Sistem','9.3':'Kimyasal Türler Arası Etkileşimler','9.4':'Maddenin Hâlleri','9.5':'Doğa ve Kimya','10.1':'Kimyanın Temel Kanunları ve Kimyasal Hesaplamalar','10.2':'Karışımlar',
     '10.3':'Asitler, Bazlar ve Tuzlar','10.4':'Kimya Her Yerde','11.1':'Modern Atom Teorisi','11.2':'Gazlar','11.3':'Sıvı Çözeltiler ve Çözünürlük','11.4':'Kimyasal Tepkimelerde Enerji','11.5':'Kimyasal Tepkimelerde Hız',
     '11.6':'Kimyasal Tepkimelerde Denge','12.1':'Kimya ve Elektrik','12.2':'Karbon Kimyasına Giriş','12.3':'Organik Bileşikler','12.4':'Enerji Kaynakları ve Bilimsel Gelişmeler'}},
   BİY:{u:{'9.1':'Yaşam Bilimi Biyoloji','9.2':'Hücre','9.3':'Canlılar Dünyası','10.1':'Hücre Bölünmeleri','10.2':'Kalıtımın Genel İlkeleri','10.3':'Ekosistem Ekolojisi ve Güncel Çevre Sorunları','11.1':'İnsan Fizyolojisi',
     '11.2':'Komünite ve Popülasyon Ekolojisi','12.1':'Genden Proteine','12.2':'Canlılarda Enerji Dönüşümleri','12.3':'Bitki Biyolojisi','12.4':'Canlılar ve Çevre'},
     t:{'11.1.1':'Denetleyici ve Düzenleyici Sistem, Duyu Organları','11.1.2':'Destek ve Hareket Sistemi','11.1.3':'Sindirim Sistemi','11.1.4':'Dolaşım Sistemleri','11.1.5':'Solunum Sistemi','11.1.6':'Üriner Sistem',
-    '11.1.7':'Üreme Sistemi ve Embriyonik Gelişim','12.2.1':'Fotosentez','12.2.2':'Kemosentez','12.2.3':'Hücresel Solunum'}},
+    '11.1.7':'Üreme Sistemi ve Embriyonik Gelişim','12.2.1':'Canlılık ve Enerji','12.2.2':'Fotosentez','12.2.3':'Kemosentez','12.2.4':'Hücresel Solunum'}},
   TAR:{u:{'9.1':'Tarih ve Zaman','9.2':'İnsanlığın İlk Dönemleri','9.3':'Orta Çağ’da Dünya','9.4':'İlk ve Orta Çağlarda Türk Dünyası','9.5':'İslam Medeniyetinin Doğuşu','9.6':'Türklerin İslamiyet’i Kabulü ve İlk Türk İslam Devletleri',
     '10.1':'Yerleşme ve Devletleşme Sürecinde Selçuklu Türkiyesi','10.2':'Beylikten Devlete Osmanlı Siyaseti (1302-1453)','10.3':'Devletleşme Sürecinde Savaşçılar ve Askerler','10.4':'Beylikten Devlete Osmanlı Medeniyeti',
     '10.5':'Dünya Gücü Osmanlı (1453-1595)','10.6':'Sultan ve Osmanlı Merkez Teşkilatı','10.7':'Klasik Çağda Osmanlı Toplum Düzeni','11.1':'Değişen Dünya Dengeleri Karşısında Osmanlı Siyaseti (1595-1774)',
-    '11.2':'Değişim Çağında Avrupa ve Osmanlı','11.3':'Uluslararası İlişkilerde Denge Stratejisi (1774-1914)','11.4':'Devrimler Çağında Değişen Devlet-Toplum İlişkileri','11.5':'Sermaye ve Emek','11.6':'XIX. ve XX. Yüzyılda Değişen Gündelik Hayat',
+    '11.2':'Değişim Çağında Avrupa ve Osmanlı','11.3':'Devrimler Çağında Değişen Devlet-Toplum İlişkileri','11.4':'Uluslararası İlişkilerde Denge Stratejisi (1774-1914)','11.5':'XIX ve XX. Yüzyılda Değişen Sosyoekonomik Hayat',
     '12.1':'20. Yüzyıl Başlarında Osmanlı Devleti ve Dünya','12.2':'Millî Mücadele','12.3':'Atatürkçülük ve Türk İnkılabı','12.4':'İki Savaş Arasındaki Dönemde Türkiye ve Dünya','12.5':'II. Dünya Savaşı Sürecinde Türkiye ve Dünya',
     '12.6':'II. Dünya Savaşı Sonrasında Türkiye ve Dünya','12.7':'Toplumsal Devrim Çağında Dünya ve Türkiye','12.8':'XXI. Yüzyılın Eşiğinde Türkiye ve Dünya'}},
   ÇTD:{u:{'1':'20. Yüzyıl Başlarında Dünya','2':'İkinci Dünya Savaşı','3':'Soğuk Savaş Dönemi','4':'Yumuşama Dönemi ve Sonrası','5':'Küreselleşen Dünya'}},
   COĞ:{u:Object.fromEntries([9,10,11,12].flatMap(g=>COG_U.map((ad,i)=>[g+'.'+(i+1),ad])))},
   DİN:{u:{'9.1':'Bilgi ve İnanç','9.2':'Din ve İslam','9.3':'İslam ve İbadet','9.4':'Gençlik ve Değerler','9.5':'Gönül Coğrafyamız','10.1':'Allah İnsan İlişkisi','10.2':'Hz. Muhammed ve Gençlik','10.3':'Din ve Hayat',
     '10.4':'Ahlaki Tutum ve Davranışlar','10.5':'İslam Düşüncesinde İtikadi, Siyasi ve Fıkhi Yorumlar','11.1':'Dünya ve Ahiret','11.2':'Kur’an’a Göre Hz. Muhammed','11.3':'Kur’an’da Bazı Kavramlar','11.4':'İnançla İlgili Meseleler',
-    '11.5':'Dinler ve İslam','12.1':'İslam ve Bilim','12.2':'Anadolu’da İslam','12.3':'İslam Düşüncesinde Tasavvufi Yorumlar','12.4':'Güncel Dini Meseleler','12.5':'Hint ve Çin Dinleri'}},
-  FEL:{u:{'10.1':'Felsefeyi Tanıma','10.2':'Felsefe ile Düşünme','10.3':'Felsefenin Temel Konuları ve Problemleri','11.1':'MÖ 6. Yüzyıl-MS 2. Yüzyıl Felsefesi','11.2':'MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesi',
+    '11.5':'Yahudilik ve Hıristiyanlık','12.1':'İslam ve Bilim','12.2':'Anadolu’da İslam','12.3':'İslam Düşüncesinde Tasavvufi Yorumlar','12.4':'Güncel Dinî Meseleler','12.5':'Hint ve Çin Dinleri'}},
+  FEL:{u:{'10.1':'Felsefeyi Tanıma','10.2':'Felsefe ile Düşünme','10.3':'Felsefenin Temel Konuları ve Problemleri','10.4':'Felsefi Okuma ve Yazma','11.1':'MÖ 6. Yüzyıl-MS 2. Yüzyıl Felsefesi','11.2':'MS 2. Yüzyıl-MS 15. Yüzyıl Felsefesi',
     '11.3':'15. Yüzyıl-17. Yüzyıl Felsefesi','11.4':'18. Yüzyıl-19. Yüzyıl Felsefesi','11.5':'20. Yüzyıl Felsefesi'}},
   MAN:{u:{'1':'Mantığa Giriş','2':'Klasik Mantık','3':'Mantık ve Dil','4':'Sembolik Mantık'}},
   PSİ:{u:{'1':'Psikoloji Bilimini Tanıyalım','2':'Psikolojinin Temel Süreçleri','3':'Öğrenme, Bellek, Düşünme','4':'Ruh Sağlığının Temelleri'}},
@@ -213,11 +226,19 @@ const yeniKonu=code=>{
 const topicFor=(course,code,maps={})=>maps[course+'|'+code]||PARENTS.find(([p])=>code===p||code.startsWith(p+'.'))?.[1]||yeniKonu(code)||aytEdbKonu(course,code)||mebKonu(course,code)||eskiKonu(course,code);
 
 /* A PDF is accepted atomically. Every subject must end in a verified total, including across pages. */
+// A kazanım karnesi read page by page (karneCozucu: sayfa(items) per page, then bitir()), so a whole grade's file is never
+// held in memory whole; only its rows are kept, and a kazanım's text once however many pupils share it.
+const KARNE_SAYFA=1000,KARNE_MB=60;
 function pdfCoz(pages){
-  if(!Array.isArray(pages)||!pages.length||pages.length>100)throw new Error('PDF sayfaları okunamadı.');
-  const out={ad:null,blocks:[]};let student=null,kind=null,block=null,cols=null,seen=new Set();
-  const fail=msg=>{throw new Error(msg+' PDF eklenmedi.')};
-  for(const raw of pages){
+  if(!Array.isArray(pages)||!pages.length||pages.length>KARNE_SAYFA)throw new Error('PDF sayfaları okunamadı.');
+  const c=karneCozucu();for(const raw of pages)c.sayfa(raw);return c.bitir();
+}
+function karneCozucu(){
+  const out={ad:null,blocks:[]};let student=null,kind=null,block=null,cols=null,seen=new Set(),sayfaNo=0;
+  const fail=msg=>{throw new Error(msg+' PDF eklenmedi.')},adlar=new Map(),ortak=t=>{let v=adlar.get(t);if(v===undefined)adlar.set(t,v=t);return v};
+  return {sayfa(raw){
+    if(++sayfaNo>KARNE_SAYFA)fail('PDF en fazla '+KARNE_SAYFA+' sayfa olabilir.');
+    if(!Array.isArray(raw))raw=[];
     const items=raw.filter(i=>i&&typeof i.s==='string'&&Number.isFinite(i.x)&&Number.isFinite(i.y)).map(i=>({...i,s:clean(i.s)}));
     const heading=items.find(i=>/^KAZANIM KARNESİ(?:-KONU)?$/u.test(i.s));
     if(heading){
@@ -231,7 +252,7 @@ function pdfCoz(pages){
     }
     const headers=items.filter(i=>i.s==='Toplam');
     if(headers.length){const h=headers[0],cs=['Toplam','Doğru','Yanlış','Boş'].map(s=>items.find(i=>i.s===s&&Math.abs(i.y-h.y)<1));if(cs.some(x=>!x))fail('Tablo sütunları eksik.');cols=cs.map(i=>i.x+i.w/2)}
-    if(!cols||!student){if(items.length)fail('Tek sınavlık kazanım haritası bulunamadı.');continue}
+    if(!cols||!student){if(items.length)fail('Tek sınavlık kazanım haritası bulunamadı.');return}
     const anchors=items.filter(i=>/^\d+$/u.test(i.s)&&Math.abs(i.x+i.w/2-cols[0])<5).map(i=>({y:i.y,counts:cols.map(c=>items.filter(j=>Math.abs(j.y-i.y)<1&&Math.abs(j.x+j.w/2-c)<5)),labels:[]}));
     const events=headers.map(h=>({type:'header',y:h.y,label:items.filter(i=>i.x<cols[0]-25&&Math.abs(i.y-h.y)<1).map(i=>i.s).join(' ')}));
     const all=[...anchors.map(a=>({...a,type:'row'})),...events].sort((a,b)=>b.y-a.y);
@@ -255,15 +276,17 @@ function pdfCoz(pages){
         out.blocks.push(block);block=null;
       }else{
         const m=codeRE.exec(label);if(!label||(kind==='outcome'&&!m))fail('Kazanım satırı okunamadı: '+label);
-        const row={code:m?m[1]:'',name:m?m[2]:topicName(label),c};
+        const row={code:m?ortak(m[1]):'',name:ortak(m?m[2]:topicName(label)),c};
         if(block.rows.some(r=>(r.code||key(r.name))===(row.code||key(row.name))))fail('Yinelenen konu veya kazanım satırı.');
         block.rows.push(row);
       }
     }
-  }
-  if(block)fail('Son dersin toplamı eksik.');
-  if(!out.ad||!out.blocks.length)fail('Bu PDF metin içermiyor. Resim veya birleşik karne yerine tek sınavın metin içeren kazanım haritasını yükleyin.');
-  return out;
+  },
+  bitir(){
+    if(block)fail('Son dersin toplamı eksik.');
+    if(!out.ad||!out.blocks.length)fail('Bu PDF metin içermiyor. Resim veya birleşik karne yerine tek sınavın metin içeren kazanım haritasını yükleyin.');
+    return out;
+  }};
 }
 
 /* Zorluk (difficulty) sources. Two files per exam: the Sınav özeti (.xlsx: question -> outcome codes, booklet A order) and
@@ -498,7 +521,7 @@ function zorlukDogrula(z,fail,str){
 }
 function dogrula(v){
   const fail=()=>{throw new Error('Konu Takibi kaydı geçersiz; mevcut veri korunuyor.')},str=(s,n)=>typeof s==='string'&&s.length>0&&s.length<=n;
-  if(!v||v.surum!==1||!Number.isSafeInteger(v.ts)||v.ts<0||!Array.isArray(v.labels)||v.labels.length>10000||!Array.isArray(v.exams)||v.exams.length>100||!v.maps||Array.isArray(v.maps)||typeof v.maps!=='object')fail();
+  if(!v||v.surum!==1||!Number.isSafeInteger(v.ts)||v.ts<0||!Array.isArray(v.labels)||v.labels.length>10000||!Array.isArray(v.exams)||v.exams.length>MAX_EXAMS||!v.maps||Array.isArray(v.maps)||typeof v.maps!=='object')fail();
   if(Object.entries(v.maps).length>10000||Object.entries(v.maps).some(([k,n])=>!str(k,180)||!str(n,240)))fail();
   const labels=new Set();for(const l of v.labels){if(!Array.isArray(l)||l.length!==2||typeof l[0]!=='string'||l[0].length>100||!str(l[1],1500))fail();const k=l[0]||key(l[1]);if(labels.has(k))fail();labels.add(k)}
   let count=0;const exams=new Set();
@@ -510,11 +533,61 @@ function dogrula(v){
     }
   }
   zorlukDogrula(v.zorluk,fail,str);
-  if(baytBoyu(JSON.stringify(v))>SANITY_BYTES)fail();
   return v;
 }
-// The record's size and kazanım rows.
-const olcu=v=>({bayt:v?baytBoyu(JSON.stringify(v)):0,satir:v&&Array.isArray(v.exams)?v.exams.reduce((a,e)=>a+e.blocks.reduce((b,x)=>b+x.rows.length,0),0):0});
+/* The stored form (surum 2, 2026-11-18). The record a reader gets is surum 1 (oku); what the notebook keeps is the same record
+   with each exam's students listed once (o: [name, no, cls]), each block's kazanım rows as a shared template (s: [ders,
+   konu özeti?, [[label, soru], …]]; dersler: the course names) and each block as [student, template, doğru and yanlış of
+   every row in base 36], boş being soru − doğru − yanlış (countOK). A number takes one character up to 35, two up to 1.295,
+   three beyond (the width is the string's length over the rows). The zorluk part is kept as it is. write checks that the
+   stored form reads back to exactly the record it was given before anything is saved. */
+const B36='0123456789abcdefghijklmnopqrstuvwxyz';
+function sakla(v){
+  const dersler=[],di=new Map(),ders=c=>{if(!di.has(c)){di.set(c,dersler.length);dersler.push(c)}return di.get(c)};
+  const exams=v.exams.map(e=>{
+    const o=[],oi=new Map(),sab=[],si=new Map(),b=[];
+    for(const x of e.blocks){
+      const ok=JSON.stringify([x.student.name,x.student.no,x.student.cls]);if(!oi.has(ok)){oi.set(ok,o.length);o.push([x.student.name,x.student.no,x.student.cls])}
+      const t=[ders(x.course),x.kind==='topic'?1:0,x.rows.map(r=>[r[0],r[1]])],tk=JSON.stringify(t);if(!si.has(tk)){si.set(tk,sab.length);sab.push(t)}
+      const enb=Math.max(0,...x.rows.flatMap(r=>[r[2],r[3]])),w=enb<36?1:enb<1296?2:3;
+      const n=k=>{let t='';for(let i=0;i<w;i++){t=B36[k%36]+t;k=Math.floor(k/36)}return t};
+      b.push([oi.get(ok),si.get(tk),x.rows.map(r=>n(r[2])+n(r[3])).join('')]);
+    }
+    return {ad:e.ad,date:e.date,o,s:sab,b};
+  });
+  const z={surum:2,ts:v.ts,labels:v.labels,maps:v.maps,dersler,exams};if(v.zorluk!==undefined)z.zorluk=v.zorluk;return z;
+}
+// surum 2 → surum 1; a malformed record throws (the reader then keeps the notebook's data and says so).
+function ac(z){
+  const fail=()=>{throw new Error('Konu Takibi kaydı geçersiz; mevcut veri korunuyor.')},tam=(n,ust)=>Number.isSafeInteger(n)&&n>=0&&n<ust;
+  if(!z||z.surum!==2||!Number.isSafeInteger(z.ts)||!Array.isArray(z.labels)||!Array.isArray(z.dersler)||z.dersler.length>1000||!z.dersler.every(c=>typeof c==='string')||
+    !Array.isArray(z.exams)||z.exams.length>MAX_EXAMS)fail();
+  const exams=z.exams.map(e=>{
+    if(!e||!Array.isArray(e.o)||!Array.isArray(e.s)||!Array.isArray(e.b)||e.o.length>5000||e.s.length>20000||e.b.length>100000)fail();
+    for(const x of e.o)if(!Array.isArray(x)||x.length!==3||!x.every(t=>typeof t==='string'))fail();
+    for(const t of e.s)if(!Array.isArray(t)||t.length!==3||!tam(t[0],z.dersler.length)||(t[1]!==0&&t[1]!==1)||!Array.isArray(t[2])||!t[2].length||t[2].length>1000||
+      !t[2].every(r=>Array.isArray(r)&&r.length===2&&tam(r[0],z.labels.length)&&tam(r[1],10001)))fail();
+    const blocks=e.b.map(x=>{
+      if(!Array.isArray(x)||x.length!==3||!tam(x[0],e.o.length)||!tam(x[1],e.s.length)||typeof x[2]!=='string')fail();
+      const t=e.s[x[1]],st=e.o[x[0]],w=x[2].length/(2*t[2].length);if(w!==1&&w!==2&&w!==3)fail();
+      const sayi=i=>{let k=0;for(let j=0;j<w;j++){const c=B36.indexOf(x[2][i*w+j]);if(c<0)fail();k=k*36+c}return k};
+      return {student:{name:st[0],no:st[1],cls:st[2]},course:z.dersler[t[0]],kind:t[1]?'topic':'outcome',
+        rows:t[2].map((r,i)=>{const d=sayi(2*i),y=sayi(2*i+1),bos=r[1]-d-y;if(bos<0)fail();return [r[0],r[1],d,y,bos]})};
+    });
+    return {ad:e.ad,date:e.date,blocks};
+  });
+  const v={surum:1,ts:z.ts,labels:z.labels,exams,maps:z.maps};if(z.zorluk!==undefined)v.zorluk=z.zorluk;return v;
+}
+// Deep equality, key order aside (the check that the stored form reads back).
+const ayni=(a,b)=>{if(a===b)return true;if(typeof a!=='object'||typeof b!=='object'||!a||!b||Array.isArray(a)!==Array.isArray(b))return false;
+  const ka=Object.keys(a),kb=Object.keys(b);return ka.length===kb.length&&ka.every(k=>Object.hasOwn(b,k)&&ayni(a[k],b[k]))};
+// The stored record's size and kazanım rows (either form; an unreadable one counts as empty).
+function olcu(z){
+  if(!z||typeof z!=='object')return {bayt:0,satir:0,sinav:0};
+  try{const bayt=baytBoyu(JSON.stringify(z)),ex=Array.isArray(z.exams)?z.exams:[];
+    const satir=z.surum===2?ex.reduce((a,e)=>a+e.b.reduce((t,x)=>t+((e.s[x[1]]||[])[2]||[]).length,0),0):ex.reduce((a,e)=>a+e.blocks.reduce((b,x)=>b+x.rows.length,0),0);
+    return {bayt,satir,sinav:ex.length}}catch(e){return {bayt:0,satir:0,sinav:0}}
+}
 // An upload may not grow the record past the caps; one that shrinks or keeps it (a removal, a replaced exam) always may.
 function sinirDenetle(v,previous){
   const yeni=olcu(v),eski=olcu(previous);
@@ -522,10 +595,14 @@ function sinirDenetle(v,previous){
   if(yeni.satir>MAX_ROWS&&yeni.satir>eski.satir)throw new Error('Konu Takibi '+MAX_ROWS.toLocaleString('tr-TR')+' kazanım satırı sınırını aşıyor ('+yeni.satir.toLocaleString('tr-TR')+'). Dosyalar eklenmedi; Kaynaklar bölümünden eski sınavları kaldırıp yeniden deneyin.');
 }
 const kb=b=>Math.round(b/1000).toLocaleString('tr-TR')+' KB';
-function oku(){try{return {veri:D.konutakibi===undefined?blank():dogrula(JSON.parse(JSON.stringify(D.konutakibi)))}}catch(e){return {veri:null,hata:e.message}}}
+function oku(){try{const z=D.konutakibi;if(z===undefined)return {veri:blank()};
+  if(baytBoyu(JSON.stringify(z))>SANITY_BYTES)throw new Error('Konu Takibi kaydı geçersiz; mevcut veri korunuyor.');
+  return {veri:dogrula(z&&z.surum===2?ac(z):JSON.parse(JSON.stringify(z)))}}catch(e){return {veri:null,hata:e.message}}}
 const oturumOf=e=>{const t=new Set(Object.keys({...e.ozet,...e.madde,...e.turkiye}).map(c=>c.endsWith('-T')?'TYT':'AYT'));return t.size>1?'TYT + AYT':[...t][0]};
 // The exam code inside a name ("27-YKS-1203", "27 YKS 1203 TYT" → 27YKS1203): the Performans analizi names its exam by the code only.
 const sinavKodu=ad=>{const m=/(\d{1,3})[\s\-_]*([A-ZÇĞİÖŞÜ]{2,6})[\s\-_]*(\d{3,5})/u.exec(clean(ad).toLocaleUpperCase('tr-TR'));return m?m[1]+m[2]+m[3]:''};
+// The one name in a list with the same exam code (27-YKS-1201 = 27 YKS 1201 AYT), or null: none, or more than one.
+const ayniKod=(ad,adlar)=>{const kod=sinavKodu(ad);if(!kod)return null;const l=[...new Set(adlar.filter(x=>sinavKodu(x)===kod))];return l.length===1?l[0]:null};
 function mergeZorluk(n,parts){
   for(const p of parts){
     let k=ek(p.ad);n.zorluk=n.zorluk||{};
@@ -555,7 +632,12 @@ function merge(v,reports,zparts=[]){
   const people=new Map(n.exams.flatMap(e=>e.blocks.map(b=>[studentKey(b.student),key(b.student.name)])));
   for(const r of reports){
     if(!r||!Array.isArray(r.blocks)||!r.blocks.length)throw new Error('Boş rapor eklenemez.');
-    let e=n.exams.find(e=>ek(e.ad)===ek(r.ad));if(!e){e={ad:r.ad,date:null,blocks:[]};n.exams.push(e)}
+    // The same exam under another spelling (an AYT karnesi titled "27-YKS-1201 AYT" for the exam whose TYT is here) is matched
+    // by its code, so its students join that exam and its difficulty files; a new exam takes the name its difficulty files
+    // gave it, which is the key they are joined by.
+    let e=n.exams.find(e=>ek(e.ad)===ek(r.ad));
+    if(!e){const ad=ayniKod(r.ad,n.exams.map(x=>x.ad));if(ad!==null)e=n.exams.find(x=>x.ad===ad)}
+    if(!e){const zad=n.zorluk&&!n.zorluk[ek(r.ad)]?ayniKod(r.ad,Object.values(n.zorluk).map(z=>z.ad)):null;e={ad:zad??r.ad,date:null,blocks:[]};n.exams.push(e)}
     for(const b of r.blocks){
       const sk=studentKey(b.student),name=key(b.student.name);
       if(people.has(sk)&&people.get(sk)!==name)throw new Error('Aynı şube ve öğrenci numarası farklı adlarla kayıtlı. PDF kimliğini kontrol edin; dosya eklenmedi.');people.set(sk,name);
@@ -575,14 +657,16 @@ const readonly=()=>typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme(
 function canWrite(){if(!rehberMi()||readonly())throw new Error('Yalnızca düzenleme yetkisi olan rehber öğretmen değiştirebilir.')}
 let saving=false;
 async function write(v,owner=D,previous=D.konutakibi){
-  canWrite();if(saving||D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti. İşlemi yeniden deneyin.');dogrula(v);sinirDenetle(v,previous);
-  const next={...owner,konutakibi:v};
+  canWrite();if(saving||D!==owner||D.konutakibi!==previous)throw new Error('Defter değişti. İşlemi yeniden deneyin.');dogrula(v);
+  const z=sakla(v);if(!ayni(dogrula(ac(z)),v))throw new Error('Konu Takibi kaydı sıkıştırılamadı; mevcut veri korunuyor.');
+  sinirDenetle(z,previous);
+  const next={...owner,konutakibi:z};
   saving=true;
   const oncekiDefter=JSON.stringify(D);
   try{await defterAdayiniDogrula(next,{previous:owner});if(D!==owner||owner.konutakibi!==previous||JSON.stringify(D)!==oncekiDefter)throw new Error('Defter değişti. İşlemi yeniden deneyin.')}catch(e){saving=false;throw e}
-  D.konutakibi=v;
+  D.konutakibi=z;
   try{if(!await kaydet(true))throw new Error('Kaydedilemedi; önceki kayıt korundu.')}
-  catch(e){if(owner.konutakibi===v){if(previous===undefined)delete owner.konutakibi;else owner.konutakibi=previous}throw e}
+  catch(e){if(owner.konutakibi===z){if(previous===undefined)delete owner.konutakibi;else owner.konutakibi=previous}throw e}
   finally{saving=false}
 }
 async function ekle(reports,owner=D,previous=D.konutakibi,zparts=[]){canWrite();const o=oku();if(o.hata)throw new Error(o.hata);return write(merge(o.veri,reports,zparts),owner,previous)}
@@ -929,14 +1013,29 @@ function zorlukSatiri(v,zi,k){
     (e?.turkiye&&!readonly()?'<button type="button" class="et-dugme" data-kt-trdelete="'+h(k)+'"'+(busy?' disabled':'')+'>Türkiye verisini kaldır</button>':'')+
     (e&&(e.ozet||e.madde)&&!readonly()?'<button type="button" class="et-dugme" data-kt-zdelete="'+h(k)+'"'+(busy?' disabled':'')+'>Zorluk verisini kaldır</button>':'')+'</div>';
 }
+// A session whose difficulty files are here but whose students' Kazanım Karnesi is not: its topics enter no table (Konu Takibi
+// and the Türkiye karşılaştırması read each student's own kazanım results), so the row says which file is missing.
+function karneYok(zi,k,sessions){
+  const x=zi.get(k);if(!x)return [];const z=new Set([...x.oturum.ozet,...x.oturum.madde,...x.oturum.turkiye]);
+  return ['TYT','AYT'].filter(o=>z.has(o)&&!sessions.includes(o));
+}
+const karneUyari=l=>{if(!l.length)return '';const o=l.join(' ve ');
+  return '<p class="kt-warning kt-karne-yok">'+o+' öğrenci kazanım karnesi yok: bu denemenin '+o+' konuları Konu Takibi’ne ve Türkiye karşılaştırmasına girmez. Yayınevinin '+o+' Kazanım Karnesi PDF’ini ekleyin.</p>'};
+// How full the record is: its size and rows against the caps, and how many more exams of the average size fit.
+function kapasite(){
+  const o=olcu(D.konutakibi);if(!o.bayt)return '';
+  const n=o.sinav,kalan=n?Math.max(0,Math.min(Math.floor((LIMIT-o.bayt)/(o.bayt/n)),o.satir?Math.floor((MAX_ROWS-o.satir)/(o.satir/n)):Infinity,MAX_EXAMS-n)):null;
+  return '<p class="kt-muted kt-kapasite">Kayıt: '+kb(o.bayt)+' / '+kb(LIMIT)+' · '+o.satir.toLocaleString('tr-TR')+' / '+MAX_ROWS.toLocaleString('tr-TR')+' kazanım satırı'+
+    (kalan===null?'':kalan>0?' · bu büyüklükte yaklaşık '+kalan.toLocaleString('tr-TR')+' sınav daha sığar':' · sınıra ulaşıldı: yeni sınav için eskileri kaldırın')+'.</p>';
+}
 function sources(v,school){
   const zi=zorlukIndex(v.zorluk),only=Object.keys(v.zorluk||{}).filter(k=>!v.exams.some(e=>ek(e.ad)===k));
   if(!v.exams.length&&!only.length)return '';
-  return '<details class="kt-sources"'+(v.exams.some(e=>!examDate(e,school))?' open':'')+'><summary>Kaynaklar · '+(v.exams.length+only.length)+' Deneme</summary><div class="kt-source-list">'+v.exams.map(e=>{
+  return '<details class="kt-sources"'+(v.exams.some(e=>!examDate(e,school))?' open':'')+'><summary>Kaynaklar · '+(v.exams.length+only.length)+' Deneme</summary>'+kapasite()+'<div class="kt-source-list">'+v.exams.map(e=>{
     const date=examDate(e,school),students=new Set(e.blocks.map(b=>studentKey(b.student))).size,kind=[...new Set(e.blocks.map(b=>b.kind))].map(k=>k==='topic'?'Konu özeti':'Kazanım ayrıntısı').join(' + '),
       sessions=['TYT','AYT'].filter(x=>e.blocks.some(b=>b.course.endsWith(x==='TYT'?'-T':'-A'))).join(' + '),classes=[...new Set(e.blocks.map(b=>classOf(b.student.cls)))].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true})).join(', ');
-    return '<div class="kt-source"><div><b>'+h(e.ad)+'</b><span class="kt-muted">'+sessions+' · '+h(classes)+' · '+students+' öğrenci · '+kind+'</span></div><label>Sınav Tarihi'+(readonly()?'<b>'+dateLabel(date)+'</b>':'<input type="date" data-kt-date="'+h(ek(e.ad))+'" value="'+h(date||'')+'" aria-label="'+h(e.ad+' sınav tarihi')+'"'+(busy?' disabled':'')+'>')+'</label>'+(!readonly()?'<button type="button" class="et-dugme" data-kt-delete="'+h(ek(e.ad))+'"'+(busy?' disabled':'')+'>Kaldır</button>':'')+zorlukSatiri(v,zi,ek(e.ad))+'</div>';
-  }).join('')+only.map(k=>{const e=v.zorluk[k];return '<div class="kt-source"><div><b>'+h(e.ad)+'</b><span class="kt-muted">'+e.oturum+' · kazanım haritası yüklenmedi</span></div>'+zorlukSatiri(v,zi,k)+'</div>'}).join('')+'</div></details>';
+    return '<div class="kt-source"><div><b>'+h(e.ad)+'</b><span class="kt-muted">'+sessions+' · '+h(classes)+' · '+students+' öğrenci · '+kind+'</span></div><label>Sınav Tarihi'+(readonly()?'<b>'+dateLabel(date)+'</b>':'<input type="date" data-kt-date="'+h(ek(e.ad))+'" value="'+h(date||'')+'" aria-label="'+h(e.ad+' sınav tarihi')+'"'+(busy?' disabled':'')+'>')+'</label>'+(!readonly()?'<button type="button" class="et-dugme" data-kt-delete="'+h(ek(e.ad))+'"'+(busy?' disabled':'')+'>Kaldır</button>':'')+zorlukSatiri(v,zi,ek(e.ad))+karneUyari(karneYok(zi,ek(e.ad),sessions.split(' + ')))+'</div>';
+  }).join('')+only.map(k=>{const e=v.zorluk[k];return '<div class="kt-source"><div><b>'+h(e.ad)+'</b><span class="kt-muted">'+e.oturum+' · öğrenci kazanım karnesi yüklenmedi</span></div>'+zorlukSatiri(v,zi,k)+karneUyari(karneYok(zi,k,[]))+'</div>'}).join('')+'</div></details>';
 }
 const classOf=c=>/(?:9|1[012])\s*[/\-]\s*[A-ZÇĞİÖŞÜ]\S*/u.exec(c)?.[0]||c;
 const examsText=m=>m.sessionExams.length?m.session+': '+m.sessionExams.slice(0,6).map(x=>m.scope==='student'?x.ad:x.ad+' ('+x.n+')').join(', ')+(m.sessionExams.length>6?' +'+(m.sessionExams.length-6):''):'';
@@ -1069,7 +1168,19 @@ async function dosyaCoz(file){
     if(file.size>15*1024*1024)throw new Error('Excel dosyası en fazla 15 MB olabilir.');
     return {z:await ozetCoz(new Uint8Array(await file.arrayBuffer()))};
   }
-  const {pages}=await denemePdfSayfalari(file);
+  // A kazanım karnesi (its first page says so) is read page by page, up to KARNE_SAYFA pages and KARNE_MB: a whole grade's
+  // TYT + AYT file can run past the 100 pages and 15 MB the other PDFs here are held to. Those (Madde Analizi, Performans
+  // analizi) are short and read whole.
+  let tur=null,coz=null,okunan=0;const diger=[];
+  const yaz=(n,t)=>{const el=typeof document!=='undefined'&&document.getElementById('ktStatus');if(el)el.textContent=file.name+' okunuyor · '+n+' / '+t+' sayfa'};
+  const isle=items=>{okunan++;
+    if(tur===null)tur=Array.isArray(items)&&items.some(i=>typeof i?.s==='string'&&/^KAZANIM KARNESİ(?:-KONU)?$/u.test(clean(i.s)))?'karne':'diger';
+    if(tur==='karne')(coz||(coz=karneCozucu())).sayfa(items);
+    else{if(diger.length>=100)throw new Error('PDF en fazla 100 sayfa olabilir.');diger.push(items)}};
+  const r=await denemePdfSayfalari(file,{sayfa:KARNE_SAYFA,mb:KARNE_MB,sayfaIsle:isle,ilerleme:yaz});
+  if(!okunan&&r&&Array.isArray(r.pages))r.pages.forEach(isle);   // a reader that hands over the pages at the end
+  if(tur==='karne')return {rapor:coz.bitir()};
+  const pages=diger;if(!pages.length)throw new Error('PDF sayfaları okunamadı.');
   if(perfMi(pages))return {z:turkiyeCoz(pages)};
   return pages.some(p=>Array.isArray(p)&&p.some(i=>typeof i?.s==='string'&&/Madde Analizi$/u.test(clean(i.s))))?{z:maddeCoz(pages)}:{rapor:pdfCoz(pages)};
 }
@@ -1125,6 +1236,6 @@ document.addEventListener('click',ev=>{
   if(zel&&confirm('Bu sınavın zorluk verisi (sınav özeti ve Madde Analizi) kaldırılsın mı? Dosyalar yeniden yüklenebilir.')){const k=zel.dataset.ktZdelete;act(()=>zorlukSil(k))}
 });
 document.addEventListener('submit',ev=>{const form=ev.target;if(!active()||!form.matches?.('.kt-mapping'))return;ev.preventDefault();if(readonly()||busy)return;const {ktCourse,ktCode}=form.dataset,name=form.elements.topic.value;act(()=>esle(ktCourse,ktCode,name))});
-return {yaz:(v)=>write(v),geridekiKonular,yuzde,puan,turkiyeCoz,turkiyeKiyas,ogrenciFark,grupOlc,dersKaymasi,turkiyeSil,R_MADDE,pdfCoz,ozetCoz,maddeCoz,zorlukIndex,zorlukSil,zipListe,zipDosya,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,oku,merge,compact,examDate,history,model,examsText,order,summaryText,uploadMessage,SIRA,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
+return {yaz:(v)=>write(v),geridekiKonular,yuzde,puan,turkiyeCoz,turkiyeKiyas,ogrenciFark,grupOlc,dersKaymasi,turkiyeSil,R_MADDE,pdfCoz,ozetCoz,maddeCoz,zorlukIndex,zorlukSil,zipListe,zipDosya,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,sakla,ac,olcu,oku,merge,compact,examDate,history,model,examsText,order,summaryText,uploadMessage,SIRA,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
 })();
 function gorunumKonuTakibi(){return KONU_TAKIBI.gorunum()}

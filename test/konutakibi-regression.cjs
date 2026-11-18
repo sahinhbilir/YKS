@@ -374,9 +374,28 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   const msg=await K.pdfEkle([{name:'m.pdf',size:10,pages:F.maddePages({ad:'SENTETİK-ZORLUK',oturum:'AYT',N:26,courses:[{course:'MATEMATİK-A',rows:[[13,10,3],[6,10,10]]}]})}]);
   assert.match(msg,/SENTETİK-ZORLUK: AYT Sınav özeti yok; AYT dersleri konu ve kazanım düzeyinde eşlenemez\. AYT Sınav özetini \(Excel\) ekleyin\./);assert(!/uyuşmuyor/.test(msg));
  });
+ await test('Kaynaklar names a session whose difficulty files are here but whose student karnesi is not; an AYT karnesi under another spelling joins its exam',()=>{
+  const ayt={...zpart('ozet','27-YKS-1201',{'MATEMATİK-A':[['M.12.1.1',.5]]}),oturum:'AYT'},tyt=zpart('ozet','27-YKS-1201',ZSPEC);
+  let v=K.merge(K.blank(),[zrep('27-YKS-1201',zrows([2,0,2,0],[2,1,1,0],[1,1,0,0],[3,2,1,0]))],[tyt,ayt]);
+  put('__kt',v);run('D.konutakibi=__kt');let html=K.gorunum();
+  assert(html.includes('AYT öğrenci kazanım karnesi yok: bu denemenin AYT konuları Konu Takibi’ne ve Türkiye karşılaştırmasına girmez.'),'the AYT difficulty files are here, the AYT karnesi is not');
+  assert(!html.includes('TYT öğrenci kazanım karnesi yok'),'the TYT karnesi is here');
+  // The AYT karnesi titled with the session: one exam, both sessions, no warning; its key is still the difficulty files' key.
+  v=K.merge(v,[{ad:'27 YKS 1201 AYT',blocks:[F.block([F.row('M.12.1.1','Üstel fonksiyon',[1,1,0,0])],'outcome','MATEMATİK-A',S1)]}]);
+  assert.equal(v.exams.length,1);assert.equal(v.exams[0].ad,'27-YKS-1201');assert.deepEqual(copy([...new Set(v.exams[0].blocks.map(b=>b.course))]),['TÜRKÇE-T','MATEMATİK-A']);
+  put('__kt',v);run('D.konutakibi=__kt');html=K.gorunum();assert(!html.includes('öğrenci kazanım karnesi yok'));assert(html.includes('TYT + AYT · 12/A'));
+  // Only difficulty files so far: the karnesi under another spelling takes their name, so the two are joined.
+  const w=K.merge(K.merge(K.blank(),[],[{...zpart('ozet','27-YKS-1209',{'MATEMATİK-A':[['M.12.1.1',.5]]}),oturum:'AYT'}]),[{ad:'27-YKS-1209 AYT',blocks:[F.block([F.row('M.12.1.1','Üstel fonksiyon',[1,1,0,0])],'outcome','MATEMATİK-A',S1)]}]);
+  assert.deepEqual(copy(w.exams.map(e=>e.ad)),['27-YKS-1209']);
+  // Two exams with the same code are never guessed between.
+  const x=K.merge(K.merge(K.blank(),[zrep('27-YKS-1301 A',zrows([2,0,2,0],[2,1,1,0],[1,1,0,0],[3,2,1,0]))]),[zrep('27-YKS-1301 B',zrows([2,0,2,0],[2,1,1,0],[1,1,0,0],[3,2,1,0]),S2)]);
+  assert.equal(x.exams.length,1,'one existing exam with the code: joined');
+  const y=K.merge(x,[zrep('27-YKS-1301 C',zrows([2,0,2,0],[2,1,1,0],[1,1,0,0],[3,2,1,0]),S3)]);assert.equal(y.exams.length,1);
+ });
  await test('exam with only difficulty files is listed in Kaynaklar; either file may come first',()=>{
   const v=K.merge(K.blank(),[],zpair('SENTETİK-1203',{'TÜRKÇE-T':[['T.12.1.1',.5]]}));
-  assert.equal(v.exams.length,0);put('__kt',v);run('D.konutakibi=__kt');const html=K.gorunum();assert(html.includes('SENTETİK-1203'));assert(html.includes('kazanım haritası yüklenmedi'));assert(html.includes('Zorluk: özet ✓ · madde analizi ✓'));
+  assert.equal(v.exams.length,0);put('__kt',v);run('D.konutakibi=__kt');const html=K.gorunum();assert(html.includes('SENTETİK-1203'));assert(html.includes('öğrenci kazanım karnesi yüklenmedi'));
+  assert(html.includes('TYT öğrenci kazanım karnesi yok: bu denemenin TYT konuları Konu Takibi’ne ve Türkiye karşılaştırmasına girmez. Yayınevinin TYT Kazanım Karnesi PDF’ini ekleyin.'),'the missing file is named');assert(html.includes('Zorluk: özet ✓ · madde analizi ✓'));
   const a=K.merge(K.merge(K.blank(),[],[zpart('ozet','SENTETİK-ZORLUK',ZSPEC)]),[ZREP],[zpart('madde','SENTETİK-ZORLUK',ZSPEC)]),b=K.merge(K.merge(K.blank(),[ZREP],[zpart('madde','SENTETİK-ZORLUK',ZSPEC)]),[],[zpart('ozet','SENTETİK-ZORLUK',ZSPEC)]);
   assert.deepEqual(copy(K.model(a,{}).topics.map(t=>t.z&&t.z.fark)),copy(K.model(b,{}).topics.map(t=>t.z&&t.z.fark)));assert.equal(Object.values(a.zorluk)[0].ogrenci,NZ);
  });
@@ -519,14 +538,18 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   assert.throws(()=>K.merge(sixty,[],zpair('SENTETİK-YENİ',{'TÜRKÇE-T':[['T.12.1.1',.5]]})),/En fazla 60/);
   const huge=good();Object.values(huge.zorluk)[0].ad='S'.repeat(160);assert.throws(()=>K.dogrula(huge),/geçersiz/);// key no longer equals the exam key
  });
- await test('size caps: an upload may not grow the record past 2.500 KB or 120.000 rows; reading never fails on size; a smaller record always saves',async()=>{
+ await test('size caps: an upload may not grow the stored record past 2.500 KB or 400.000 rows; reading never fails on size; a smaller record always saves',async()=>{
   // A grade of 32 pupils with TYT and AYT adds about 190 KB and 6.400 rows an exam: the old 350 KB / 30.000-row cap filled in
   // under two exams. Many exams of a whole grade now fit.
   reset();const blok=(no,course,n)=>F.block(Array.from({length:n},(_,i)=>F.row('T.12.'+(i+1)+'.1','Kazanım '+(i+1),[2,1,1,0])),'outcome',course,{name:'SENTETİK ÖĞRENCİ '+no,no:String(9000+no),cls:'205 12/A'});
   const sinav=k=>({ad:'SENTETİK-'+k,blocks:Array.from({length:32},(_,o)=>[blok(o,'TÜRKÇE-T',30),blok(o,'MATEMATİK-T',30),blok(o,'TÜRK DİLİ VE EDB-A',30),blok(o,'MATEMATİK-A',30)]).flat()});
   for(let k=1;k<=8;k++)await K.ekle([sinav(k)]);
   const {veri}=K.oku();assert(veri,'readable');const satir=veri.exams.reduce((a,e)=>a+e.blocks.reduce((b,x)=>b+x.rows.length,0),0);
-  assert.equal(satir,8*32*4*30);assert(satir>30000,'past the old 30.000-row cap');assert(run('baytBoyu(JSON.stringify(D.konutakibi))')>350000,'past the old 350 KB');
+  assert.equal(satir,8*32*4*30);assert(satir>30000,'past the old 30.000-row cap');
+  // Stored compactly (surum 2): a fifth or less of the record the pages read.
+  assert.equal(run('D.konutakibi.surum'),2);const kayit=run('baytBoyu(JSON.stringify(D.konutakibi))'),acik=run('baytBoyu(JSON.stringify(KONU_TAKIBI.ac(D.konutakibi)))');
+  assert(acik>350000&&kayit*5<acik,'stored '+kayit+' of '+acik);
+  assert.match(K.gorunum(),/Kayıt: \d+ KB \/ 2\.500 KB · 30\.720 \/ 400\.000 kazanım satırı · bu büyüklükte yaklaşık \d+ sınav daha sığar\./);
   // Past a cap: refused, nothing changed.
   const once=run('JSON.stringify(D.konutakibi)');
   const v=copy(veri);for(let i=0;i<59;i++){const ad='SENTETİK-Z'+i,c=Array.from({length:200},()=>['T.12.1.1','T.12.1.2','T.12.1.3','T.12.1.4','T.12.1.5','T.12.1.6','T.12.1.7','T.12.1.8','T.12.1.9','T.12.1.10']);
@@ -536,6 +559,40 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   // Already over the cap (as an older, larger record could be): a change that does not grow it saves.
   put('__kt',v);run('D.konutakibi=__kt');const kucuk=copy(v);delete kucuk.zorluk[K.ek('SENTETİK-Z0')];put('__kucuk',kucuk);
   await run('KONU_TAKIBI.yaz(__kucuk)');assert.equal(Object.keys(run('D.konutakibi.zorluk')).length,58);
+ });
+ await test('stored form (surum 2): reads back exactly; an old surum 1 record is read and converted on the next save; a malformed one is refused, the data kept',()=>{
+  // Varied blocks: two students with different row lists in one course, a konu özeti, counts needing two and three characters.
+  const st=(n,c)=>({name:'SENTETİK '+n,no:String(9100+n),cls:c});
+  const r1=[F.row('T.12.1.1','Bir',[2,1,1,0]),F.row('T.12.1.2','İki',[40,20,15,5])],r2=[F.row('T.12.1.2','İki',[3,0,0,3]),F.row('T.12.1.1','Bir',[2000,1500,400,100])];
+  const v=K.merge(K.blank(),[{ad:'SENTETİK-K',blocks:[F.block(r1,'outcome','TÜRKÇE-T',st(1,'205 12/A')),F.block(r2,'outcome','TÜRKÇE-T',st(2,'210 12/B')),
+    F.block([F.row('','Paragraf',[5,3,1,1])],'topic','TÜRKÇE-T',st(1,'205 12/A')),F.block(r1,'outcome','MATEMATİK-A',st(2,'210 12/B'))]}],zpair('SENTETİK-K',ZSPEC));
+  const z=K.sakla(v);assert.equal(z.surum,2);assert.deepEqual(copy(K.ac(z)),copy(v),'reads back exactly');assert.equal(JSON.stringify(K.ac(z)),JSON.stringify(v),'key order too');
+  assert.equal(z.exams[0].o.length,2,'each student once');assert(z.exams[0].b.some(b=>b[2].length===2*2*3),'three characters where a count passes 1.295');
+  assert.deepEqual(copy(z.zorluk),copy(v.zorluk),'zorluk kept as it is');assert.equal(K.olcu(z).satir,7);
+  // An old record (surum 1) reads as before, and the next save stores surum 2.
+  reset();put('__kt',v);run('D.konutakibi=__kt');assert.deepEqual(copy(K.oku().veri),copy(v));
+  return K.tarihKaydet(K.ek('SENTETİK-K'),'2026-10-09').then(()=>{assert.equal(run('D.konutakibi.surum'),2);const g=K.oku().veri;assert.equal(g.exams[0].date,'2026-10-09');
+    assert.deepEqual(copy(g.exams[0].blocks),copy(v.exams[0].blocks),'nothing else changed');
+    // Malformed: a count past its question total, a bad character, an index out of range. Refused; the notebook keeps it.
+    for(const bozuk of [y=>{y.exams[0].b[0][2]='zz'+y.exams[0].b[0][2].slice(2)},y=>{y.exams[0].b[0][2]='!'+y.exams[0].b[0][2].slice(1)},y=>{y.exams[0].b[0][1]=99},y=>{y.dersler=7}]){
+      const y=copy(run('D.konutakibi'));bozuk(y);put('__bozuk',y);run('D.konutakibi=__bozuk');const o=K.oku();assert.equal(o.veri,null);assert.match(o.hata,/geçersiz/);
+      assert.deepEqual(copy(run('D.konutakibi')),y,'kept as it was')}
+  });
+ });
+ await test('a whole grade’s karnesi of more than 100 pages is read page by page, keeping only its rows; the other PDFs keep their 100 pages',async()=>{
+  reset();
+  const sayfa=k=>F.pages()[0].map(i=>i.s===F.student.name?{...i,s:'SENTETİK ÖĞRENCİ '+k}:i.s===F.student.no?{...i,s:String(9200+k)}:i);
+  // The reader as the app's: each page handed over and none kept when sayfaIsle is given.
+  run('denemePdfSayfalari=async(f,s)=>{if(!s||typeof s.sayfaIsle!=="function")throw new Error("tümü bellekte");if(f.sayfalar.length>s.sayfa)throw new Error("PDF en fazla "+s.sayfa+" sayfa olabilir.");'+
+    'for(let n=0;n<f.sayfalar.length;n++)await s.sayfaIsle(f.sayfalar[n],n+1,f.sayfalar.length);return {pages:null}}');
+  await K.pdfEkle([{name:'karne.pdf',size:1,sayfalar:Array.from({length:150},(_,k)=>sayfa(k))}]);
+  const v=K.oku().veri;assert.equal(v.exams.length,1);assert.equal(v.exams[0].blocks.length,150,'150 pages, 150 pupils');
+  assert.equal(run('KONU_TAKIBI.ac(D.konutakibi).exams[0].blocks[149].student.name'),'SENTETİK ÖĞRENCİ 149');
+  // A file past the karnesi's own limit is refused whole; a karnesi page after a Madde Analizi first page is no karnesi.
+  await assert.rejects(K.pdfEkle([{name:'cok.pdf',size:1,sayfalar:Array.from({length:1001},(_,k)=>sayfa(k))}]).then(m=>{if(/eklenmedi|sayfa/.test(m))throw new Error(m)}),/1000 sayfa/);
+  assert.equal(K.oku().veri.exams[0].blocks.length,150,'nothing added');
+  // The array form (tests, other callers) keeps working, with the same limit.
+  assert.throws(()=>K.pdfCoz(Array.from({length:1001},()=>sayfa(0))),/okunamadı/);assert.equal(K.pdfCoz([sayfa(1)]).blocks.length,1);
  });
  await test('re-uploading an exam file replaces that part only; delete removes the difficulty data',async()=>{
   await K.ekle([ZREP],undefined,undefined,zpair('SENTETİK-ZORLUK',ZSPEC));

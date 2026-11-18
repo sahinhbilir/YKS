@@ -146,12 +146,10 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
 
 ## In the app (v1)
 
-- **Haritam tab** (`src/haritam.js`, `src/haritam.css`, embedded with `src/hafiza-ag.js` and the map by `scripts/embed-haritam.cjs`). It sits right after Hafızam for every YKS student (`HARITAM.uygun`) with the subjects of their field (`HARITAM.dersleri`):
-  - Türkçe for everyone;
-  - Geometri, Matematik TYT and AYT for SAY and EA (and with no field, or before grade 12);
-  - Fizik, Kimya and Biyoloji for SAY;
-  - Edebiyat, İnkılap Tarihi, Coğrafya and Felsefe (with psikoloji, sosyoloji and mantık) for EA and SÖZ;
-  - every subject before grade 12 when no field is chosen yet.
+- **Haritam tab** (`src/haritam.js`, `src/haritam.css`, embedded with `src/hafiza-ag.js` and the map by `scripts/embed-haritam.cjs`). It sits right after Hafızam for every YKS student (`HARITAM.uygun`) with the topics of their exams (`HARITAM.gorunur`, 2026-11-18; `HARITAM.dersleri` lists the subjects that have one). Every topic of the map says which exam asks it (`sinav`: TYT, AYT or both):
+  - every TYT topic for every YKS student: Türkçe, TYT Matematik and Geometri, TYT Fizik, Kimya and Biyoloji, Tarih, İnkılap Tarihi's TYT part, TYT Coğrafya, Felsefe and Din Kültürü;
+  - and the AYT topics of the subjects their field's AYT has: SAY Matematik, Geometri, Fizik, Kimya, Biyoloji; EA Matematik, Geometri, Edebiyat, Tarih-1 (Tarih and İnkılap Tarihi), Coğrafya-1; SÖZ Edebiyat, Tarih, İnkılap Tarihi, Coğrafya, the Felsefe grubu, Din Kültürü; DİL none (its second exam is YDT);
+  - with no field yet, every topic. A hidden part goes with its topic. Before, a student saw whole subjects by field: an SAY student had no Tarih, Coğrafya, Felsefe or Din Kültürü, an EA student no TYT Fizik, Kimya or Biyoloji, and SÖZ and DİL no TYT Matematik, though every YKS student takes TYT.
 - **Topic resolution.** A map topic is fed by:
   - the student's plan topics with the same course label and name;
   - every school unit (`birimler`: subject, grade, catalogue name) that covers it.
@@ -181,17 +179,19 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
   - `test/haritam-regression.cjs` (tab rules, resolution, page; Hafızam's states in, and the same number on both pages, with no link effects equal to Hafızam's own).
   - `test/haritam-browser.cjs` (1280 px dark/light, 390 px; hover, pin, Çalıştım, filter).
 
-## Full map (2026-11-17, in the app)
+## Full map (2026-11-17, in the app; every YKS topic 2026-11-18)
 
 - `data/hafiza-haritasi-tam.json`, built by `scripts/hafiza-haritasi-tam.py`:
-  - every topic of the SAY and EA plans (368) and the three hidden parts: Geometri, Matematik TYT and AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, İnkılap Tarihi, Coğrafya, Felsefe grubu;
-  - 598 links with use level and reason (the pilot's kept as reviewed), a few across subjects (orantı → harita ölçeği and kimyasal hesaplamalar, logaritma → pH, olasılık → kalıtım, TYT mantık → sembolik mantık);
-  - exam shares for every TYT row from 2018 (the school's table) and every AYT row from 2018 (kitapsec.com; 2025 only for mathematics);
-  - 405 school units (grades 9–12). Tarih (grades 9–11) and Din Kültürü have no plan topic yet, so they are not on the map.
+  - every topic of the app's YKS plans (407): the SAY and EA plans, the Tarih (18) and Din Kültürü (20) every plan gets (`YKS_EK_DERSLER`), and Süper İletkenler (MEB 12.6.3, inserted into every SAY plan); Geometri, Matematik TYT and AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, Tarih, İnkılap Tarihi, Coğrafya, Felsefe grubu, Din Kültürü. Tarih is named as the 2023 programme this year's 12th grade was taught, Din Kültürü as the 2018 DKAB programme (checked against mufredat.meb.gov.tr);
+  - ten parts: the pilot's three hidden parts, and Felsefe's seven branches (Varlık, Bilgi, Bilim, Ahlak, Din, Siyaset, Sanat Felsefesi: MEB 10.3.1–10.3.7, `dal`). The plan has them as one topic, "Felsefenin Temel Konuları ve Problemleri"; the branches are its parts, so its lessons and tests are theirs and a branch shows its card, but each is drawn as a topic with its own links (Bilgi Felsefesi → 15.–17. and 18.–19. yüzyıl felsefesi, Bilim Felsefesi, psikolojinin temel süreçleri; Varlık → MÖ 6. yüzyıl; Din → MS 2.–15. yüzyıl; Bilim → 20. yüzyıl …). The plan and the stored data are unchanged (decided 2026-11-18: the catalogue's numbering is frozen, so a real split would rewrite every şube's plan);
+  - 650 links with use level and reason (the pilot's kept as reviewed), a few across subjects (orantı → harita ölçeği and kimyasal hesaplamalar, logaritma → pH, olasılık → kalıtım, TYT mantık → sembolik mantık, Denge Stratejisi → XX. yüzyıl başları, Türklerin İslamiyet'i kabulü → Anadolu'da İslam, Bilgi Felsefesi → psikolojinin temel süreçleri);
+  - exam shares for every TYT row from 2018 (the school's table) and every AYT row from 2018 (kitapsec.com; 2025 only for mathematics). Checked row by row against the school's table on 2026-11-18, which added the rows the map lacked: TYT Tarih and Din Kültürü; Felsefe by branch (Bilgi Felsefesi 12 questions in 2018–2025); TYT Fizik Hareket ve Kuvvet (7, Newton'un Hareket Yasaları: motion, force and Newton's laws; vectors are 11.1.1, AYT) and İş, Güç, Enerji (1), whose topics the plan listed under AYT only (now TYT too: `PLAN_FEN_SINAVI`); TYT Biyoloji's Güncel Çevre Sorunları counts for Ekosistem Ekolojisi (MEB 10.3, the plan's TYT topic) and Canlıların Temel Bileşenleri wholly for its own topic (they had gone to the AYT topics Canlılar ve Çevre and Nükleik Asitler); TYT Matematik Oran-Orantı, Denklem Çözme, Köklü İfadeler, Çarpanlara Ayırma, İşlem; TYT Geometri Analitik Geometri. A blank cell of that table (Basit Eşitsizlikler, Oran-Orantı …) is 2024 with no question. AYT Tarih-1 adds the Tarih units (kitapsec.com);
+  - 443 school units (grades 9–12), Tarih and Din Kültürü included.
+- A plan topic finds its catalogue topic by name; the Felsefe grubu is "Felsefe" in every field's plan but SÖZ's (`DERS_ESI`). Where the catalogue spells a topic otherwise ("Mö 6. Yüzyıl-ms 2. …", "Sosyo-ekonomik") it reaches the map as a school unit.
 - A continued plan topic ("… (devamı)", "… - devamı") feeds its topic's point.
-- The builder checks names against both plans (none missing), ids, cycles and share sums.
+- The builder checks names against the plans (none missing), ids, cycles and share sums, and gives every topic its exam (`sinav`: the subject's rule — the plan's own TYT list for Fizik, Kimya and Biyoloji, the (TYT)/(AYT) of Coğrafya — and every exam whose rows count it).
 - Review files: `node scripts/hafiza-haritasi.cjs data/hafiza-haritasi-tam.json <out>` writes the two tables and one picture per subject (a ← line under a topic lists its foundations from other subjects).
-- 30 of 371 topics are foundational at the threshold of 4.
+- 31 of 417 topics are foundational at the threshold of 4 (Bilgi Felsefesi is the new one).
 - Embedded in place of the pilot (`scripts/embed-haritam.cjs`); `data/hafiza-haritasi-pilot.json` is kept as the reviewed trigonometry start. Each subject's layout is worked out when it is first drawn, not when the app opens.
 - Pull-down applies to Hafızam too: a topic passed today whose foundation is weak shows a little under 100 %.
 

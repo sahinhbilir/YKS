@@ -23,6 +23,8 @@ jobs:
         run: node scripts/embed-report-theme.cjs --check && node test/report-theme-integrity.cjs && node test/dark-theme-contrast.cjs
       - name: Current grade curricula and legacy preservation
         run: node test/curriculum-regression.js
+      - name: Every YKS topic in every plan, completed by itself
+        run: node test/yks-plan-regression.cjs
       - name: Grade 11 timetable topics and TYT mathematics separation
         run: node --test test/grade11-timetable-regression.cjs
       - name: Mock exams, import validation and embedding

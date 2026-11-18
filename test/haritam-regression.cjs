@@ -40,20 +40,75 @@ test('the embedded module and the map are in index.html', () => {
   assert.match(html, /\/\* BEGIN HARITAM \*\/[\s\S]*\.hm-svg/);
 });
 
-test('who gets Haritam: every YKS student, with the subjects of their field (all of them before a field is chosen)', () => {
+test('who gets Haritam: every YKS student, with the topics of their exams (TYT for all, the AYT of their field)', () => {
   const a = app();
   ogrenci(a, 'SAY', 12);
-  const MAT = ['Geometri', 'Matematik TYT', 'Matematik AYT'], SOZEL = ['Türk Dili ve Edebiyatı', 'T.C. İnkılap Tarihi ve Atatürkçülük', 'Coğrafya', 'Felsefe (+ Felsefe Grubu)'];
-  assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), [...MAT, 'Fizik', 'Kimya', 'Biyoloji', 'Türkçe']);
+  const V = a.json('HARITA_VERI.konular'), K = new Map(V.map(k => [k.id, k])), gor = () => new Set(a.json('[...HARITAM.gorunur(D.ogr[0])]'));
+  const AYT = {SAY: ['Geometri', 'Matematik AYT', 'Fizik', 'Kimya', 'Biyoloji'],
+    EA: ['Geometri', 'Matematik AYT', 'Türk Dili ve Edebiyatı', 'Tarih', 'T.C. İnkılap Tarihi ve Atatürkçülük', 'Coğrafya'],
+    SÖZ: ['Türk Dili ve Edebiyatı', 'Tarih', 'T.C. İnkılap Tarihi ve Atatürkçülük', 'Coğrafya', 'Felsefe (+ Felsefe Grubu)', 'Din Kültürü'], DİL: []};
+  assert(V.every(k => Array.isArray(k.sinav) && k.sinav.length && k.sinav.every(x => x === 'TYT' || x === 'AYT')), 'every topic says its exam');
+  for (const alan of ['SAY', 'EA', 'SÖZ', 'DİL']) {
+    a.run(`D.ogr[0].alan='${alan}'`); const g = gor();
+    for (const k of V) {
+      const asil = k.gizli ? K.get(k.parcasi) : k, olmali = asil.sinav.includes('TYT') || (asil.sinav.includes('AYT') && AYT[alan].includes(asil.ders));
+      assert.equal(g.has(k.id), olmali, alan + ' ' + k.id);
+    }
+    assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), a.json('HARITAM.dersleri(D.ogr[0])').filter(d => V.some(k => k.ders === d && g.has(k.id))));
+  }
+  // Every YKS student takes TYT: Tarih, Din Kültürü, Felsefe and Coğrafya (TYT) for SAY; TYT Fizik, Kimya, Biyoloji for EA.
+  a.run("D.ogr[0].alan='SAY'"); let g = gor(), d = a.json('HARITAM.dersleri(D.ogr[0])');
+  for (const x of ['Tarih', 'Din Kültürü', 'Felsefe (+ Felsefe Grubu)', 'Coğrafya', 'T.C. İnkılap Tarihi ve Atatürkçülük', 'Fizik']) assert(d.includes(x), 'SAY ' + x);
+  assert(!d.includes('Türk Dili ve Edebiyatı'), 'SAY: no AYT Edebiyat');
+  assert(g.has('felBilgi') && g.has('tarTurkIslam') && g.has('din91') && g.has('cogIklimTr') && g.has('inkWW1') && g.has('fizCembersel'));
+  assert(!g.has('cogEkosistem') && !g.has('psiSurec') && !g.has('inkWW2'), 'SAY: no AYT Coğrafya, Felsefe grubu or later İnkılap');
+  a.run("D.ogr[0].alan='EA'"); g = gor(); d = a.json('HARITAM.dersleri(D.ogr[0])');
+  assert(d.includes('Fizik') && d.includes('Türk Dili ve Edebiyatı') && d.includes('Tarih'));
+  assert(g.has('fizMadde') && g.has('fizNewton') && !g.has('fizCembersel'), 'EA: TYT Fizik only (Newton’s laws are TYT: the school’s table)');
+  assert(g.has('cogEkosistem') && g.has('inkWW2') && !g.has('psiSurec') && !g.has('manKlasik'), 'EA: AYT Coğrafya-1 and Tarih-1, no Felsefe grubu');
+  a.run("D.ogr[0].alan='SÖZ'"); g = gor();
+  assert(g.has('psiSurec') && g.has('tytOran') && !g.has('aytLimitOzellik'), 'SÖZ: the Felsefe grubu and TYT Matematik, no AYT Matematik');
   assert(a.json('SEKMELER().map(s=>s[0])').includes('haritam'));
-  a.run("D.ogr[0].alan='EA'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), [...MAT, 'Türkçe', ...SOZEL]);
-  a.run("D.ogr[0].alan='SÖZ'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), ['Türkçe', ...SOZEL]);
-  assert(a.json('SEKMELER().map(s=>s[0])').includes('haritam'), 'no Mathematics: the tab is still there');
-  a.run("D.ogr[0].alan='DİL'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), ['Türkçe']);
-  a.run("delete D.ogr[0].alan;D.ogr[0].sinif=10"); assert.equal(a.json('HARITAM.dersleri(D.ogr[0]).length'), 11, 'no field yet: every subject');
+  a.run("D.ogr[0].alan='DİL'"); g = gor(); assert(g.has('trkParagrafAnlam') && g.has('tytOran') && !g.has('edSiirBilgi'), 'DİL: every TYT topic, no AYT');
+  a.run("delete D.ogr[0].alan;D.ogr[0].sinif=10"); assert.equal(a.json('HARITAM.dersleri(D.ogr[0]).length'), 13, 'no field yet: every subject');
+  assert.equal(gor().size, V.length);
   a.run("D.ogr[0].sinavTuru='LGS'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), []);
   assert(a.json('ETKINLIK_SEKMELER').includes('haritam'), 'visits are counted like other pages');
   a.run("D.rol='rehber'"); assert(!a.json('SEKMELER().map(s=>s[0])').includes('haritam'), 'not a teacher page');
+});
+
+test('every topic of the YKS plan has its point: Tarih, Din Kültürü, and Felsefe’s branches as parts of their plan topic', () => {
+  const a = app();
+  ogrenci(a, 'EA', 12);
+  const V = a.json('HARITA_VERI.konular'), kaynak = new Map(a.json('[...HARITAM.kaynaklar()]'));
+  // Every topic of the app's YKS plans (the field plans and the subjects every plan gets) is a point, by its plan name.
+  const planAdlari = a.json("(()=>{const s=new Set();for(const alan of ['SAY','EA'])for(const h of yeniYksKonuPlani(alan))for(const [d,l] of Object.entries(h))for(const ad of l)s.add(dersKimligi(d)+'|'+konuAdiTamAnahtari(ad.replace(/\\s*(?:\\(devamı\\)|- devamı)$/i,'')));return [...s]})()");
+  const noktalar = new Set(a.json("HARITA_VERI.konular.filter(k=>!k.gizli).flatMap(k=>[k.ders].concat(k.ders==='Felsefe (+ Felsefe Grubu)'?['Felsefe']:[]).map(d=>dersKimligi(d)+'|'+konuAdiTamAnahtari(k.ad)))"));
+  const eksik = planAdlari.filter(x => !noktalar.has(x) && !/GENEL TEKRAR/i.test(x));
+  assert.deepEqual(eksik, [], 'plan topics with no point');
+  // Every topic of this plan reaches its catalogue topic: by name (the Felsefe grubu too, which the plans call "Felsefe"), or
+  // as a school unit where the catalogue spells it otherwise ("Mö 6. Yüzyıl-ms 2. …").
+  const esler = new Map(a.json('[...HARITAM.cozumle().esler]'));
+  for (const k of V.filter(k => !k.gizli && (['Tarih', 'Din Kültürü'].includes(k.ders) || (k.ders === 'Felsefe (+ Felsefe Grubu)' && /Felsef/.test(k.ad)))))
+    assert(kaynak.get(k.id).length >= 1, k.id + ' reaches its catalogue topic');
+  for (const id of ['felKonular', 'felTanima', 'tarTurkIslam', 'tarOsmSiyaset', 'din105', 'din115']) assert(esler.get(id).length >= 1, id + ' by name');
+  assert.equal(V.filter(k => k.ders === 'Tarih').length, 18); assert.equal(V.filter(k => k.ders === 'Din Kültürü').length, 20);
+  // Felsefe: the seven branches (MEB 10.3.1–10.3.7) are parts of the plan topic: its lessons and tests are theirs.
+  const dal = V.filter(k => k.dal).map(k => k.ad);
+  assert.deepEqual(dal, ['Varlık Felsefesi', 'Bilgi Felsefesi', 'Bilim Felsefesi', 'Ahlak Felsefesi', 'Din Felsefesi', 'Siyaset Felsefesi', 'Sanat Felsefesi']);
+  assert(V.filter(k => k.dal).every(k => k.gizli && k.parcasi === 'felKonular'));
+  const ki = kaynak.get('felKonular')[0];
+  a.run(`sonucIsle(0,[{ki:${ki},gun:bugunNo()-5,not:3,dogru:null,soru:null}])`);
+  const R = new Map(a.json('[...HARITAM.durum(0).satir].map(([id,s])=>[id,s.sonOz])'));
+  for (const id of ['felKonular', 'felBilgi', 'felAhlak', 'felSanat']) assert.equal(R.get(id), a.run('bugunNo()') - 5, id + ' tested with its plan topic');
+  a.run("EK.haritamSecili='felBilgi'"); const h = a.run('HARITAM.gorunum()');
+  assert.match(h, /Bilgi Felsefesi · Felsefenin Temel Konuları ve Problemleri konusunun parçası/);
+  assert.match(h, new RegExp('data-hf-ac="' + ki + '"'), 'the plan topic’s own Hafızam card');
+  const r = id => +new RegExp('data-hm="' + id + '"[^>]*>\\s*<circle class="hm-vur" cx="[^"]*" cy="[^"]*" r="([0-9.]+)"').exec(h)[1];
+  assert(r('felBilgi') >= 10, 'a branch is drawn as a topic (a hidden part’s touch area is smaller)');
+  // The TYT table's rows count for the branches (Bilgi Felsefesi 12 questions 2018–2025), not for the whole unit.
+  const S = a.json('HARITA_VERI.sinavSatirlari'), bilgi = S.find(x => x.sinav === 'TYT' && x.konu === 'Bilgi Felsefesi');
+  assert.deepEqual(bilgi.paylar, {felBilgi: 1}); assert(!S.some(x => x.sinav === 'TYT' && x.paylar.felKonular));
 });
 
 test('a plan topic and a school unit both reach the map', () => {
@@ -84,7 +139,7 @@ test('the page: one point per topic of the student\'s subjects, the real Hafıza
   a.run(`sonucIsle(0,[{ki:${dik},gun:bugunNo()-6,not:3,dogru:null,soru:null}])`);
   let h = a.run('HARITAM.gorunum()');
   assert.match(h, /<svg class="hm-svg"/);
-  assert.equal((h.match(/class="hm-d[ "]/g) || []).length, a.run('HARITA_VERI.konular.filter(k=>HARITAM.dersleri(D.ogr[0]).includes(k.ders)).length'), 'every map topic of SAY');
+  assert.equal((h.match(/class="hm-d[ "]/g) || []).length, a.run('HARITAM.gorunur(D.ogr[0]).size'), 'every topic of SAY’s exams');
   assert.doesNotMatch(h, /data-hm-kart>[^<]*<div class="hf-oge/, 'no card before a topic is chosen');
   a.run("EK.haritamSecili='geoDik'"); h = a.run('HARITAM.gorunum()');
   assert.match(h, /hm-kart-yer hm-sabit/); assert.match(h, new RegExp('data-hf-ac="' + dik + '"'), 'Hafızam’s own Çalıştım button');
@@ -92,7 +147,7 @@ test('the page: one point per topic of the student\'s subjects, the real Hafıza
   a.run("EK.haritamSecili='pOranlar'"); h = a.run('HARITAM.gorunum()');
   assert.match(h, /Dik Üçgen konusunun parçası/, 'a hidden part shows its topic’s card');
   a.run("D.ogr[0].alan='EA';EK.haritamSecili=undefined"); h = a.run('HARITAM.gorunum()');
-  assert.doesNotMatch(h, /data-hm="fizVektor"/, 'EA: no physics points'); assert.doesNotMatch(h, /FİZİK/);
+  assert.doesNotMatch(h, /data-hm="fizCembersel"/, 'EA: no AYT physics points'); assert.match(h, /data-hm="fizMadde"/, 'EA: TYT physics');
   a.run("D.ogr[0].alan='SAY';EK.haritamDers='Fizik'"); h = a.run('HARITAM.gorunum()');
   assert.match(h, /data-hm="fizVektor"/); assert.doesNotMatch(h, /data-hm="geoDik"/, 'subject filter');
 });

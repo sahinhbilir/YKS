@@ -113,8 +113,12 @@ fs.mkdirSync(out,{recursive:true});
    // Teacher adds grade11 to a notebook containing existing grade12 students.
    await page.evaluate(()=>{D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-09-23';
     D.ogr=[{no:1,ad:'Mevcut Öğrenci',sube:'12-A',alan:'SAY',aktif:false}];
-    D.konuPlani['12-A']=JSON.parse(JSON.stringify(VARSAYILAN_KONU_PLANI.SAY));window.oldPlan=JSON.stringify(D.konuPlani['12-A']);
-    EK.ogr=0;EK.sekme='ogrenciler';EK.sube=null;ciz();});
+    D.konuPlani['12-A']=JSON.parse(JSON.stringify(VARSAYILAN_KONU_PLANI.SAY));window.legacyPlan=JSON.stringify(D.konuPlani['12-A']);
+    EK.ogr=0;EK.sekme='ogrenciler';EK.sube=null;ciz();window.oldPlan=JSON.stringify(D.konuPlani['12-A']);});
+   // The legacy 12-A plan is completed by itself on the first draw (2026-11-18: every YKS topic in every plan): nothing it had is
+   // lost or moved, nothing is left for the "eksik başlıklar" button.
+   assert.equal(await page.evaluate(()=>{const a=JSON.parse(window.legacyPlan),b=JSON.parse(window.oldPlan);
+     return a.every((h,i)=>Object.entries(h).every(([d,l])=>l.every(ad=>(b[i][d]||[]).includes(ad))))&&yksPlanEksikleri('12-A').length===0&&D.yksKonuSurumu['12-A']===YKS_KONU_SURUMU}),true);
    await page.locator('#yAd').fill('Yeni Öğrenci');await page.locator('#ySinif').selectOption('11');await page.locator('#ogrEkle').click();
    assert.equal(await page.evaluate(()=>D.ogr.length),1,'mixed grade branch rejected');assert(dialogs.some(x=>x.includes('farklı sınıf')));
    await page.locator('#ySube').selectOption('__yeni');await page.locator('#ySubeYeni').fill('11-A');await page.locator('#ySinif').selectOption('11');
@@ -126,7 +130,7 @@ fs.mkdirSync(out,{recursive:true});
    // A class's curriculum opens from Müfredat (top right) → Tasarlanmış müfredatlar.
    await page.locator('#ray > [data-sekme="mufredat"]').click();await page.locator('[data-mufredat-sube="12-A"]').click();
    assert.equal(await page.locator('#subeSec').inputValue(),'12-A');
-   await page.locator('#yksEksikleriEkle').click();await page.waitForFunction(()=>yksPlanEksikleri('12-A').length===0,null,{timeout:5000});
+   assert.equal(await page.locator('#yksEksikleriEkle').count(),0,'nothing left to add by hand');
    assert.deepEqual(errors,[]);await context.close();
   }
   console.log('PASS desktop/mobile: enrollment, mixed-grade guard, persistence, source browsing and legacy repair. Screenshots: '+out);
