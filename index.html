@@ -32128,6 +32128,10 @@ const TEMA = {
   koyu: {zemin: '#0E0E0F', ip: '255,255,255', yazi: '#8E8E93', yaziGuclu: '#D1D1D6', bos: '#3A3A3C', nane: oklch(.79, .13, 163), kL: .57, cekirdek: '#FFFFFF'},
   acik: {zemin: '#FFFFFF', ip: '0,0,0', yazi: '#6E6E73', yaziGuclu: '#1C1C1E', bos: '#D1D1D6', nane: oklch(.62, .13, 163), kL: .52, cekirdek: '#FFFFFF'}};
 const ALTIN = '#E9C46A';
+// A short-term topic's core: its colour this far toward white (a white-hot core would outshine its weak glow).
+const ILIK = .4;
+// sRGB blend of two #rrggbb colours, a toward b by k.
+const karis = (a, b, k) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - k) + parseInt(b.slice(i, i + 2), 16) * k).toString(16).padStart(2, '0')).join('');
 // Green at or above the line; below it crimson-red deepening to wine (f = 0 at the line, 1 at 45 points under it).
 function renk(t, r, hedef) {
   if (r == null) return t.bos;
@@ -32351,8 +32355,9 @@ function noron(t, s, x, y, r, c, hedef, gid, dokun) {
       arka += `<g fill="${hc}">${ka}</g>`; on += `<g fill="${hc}">${ko}</g>`;
     }
   }
-  // Every studied topic, hidden parts included, has the white-hot core (2026-11-18: one without it distracts).
-  const cekirdek = `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="url(#${gid}c)"/>`;
+  // Every studied topic, hidden parts included, has a hot core. Its heat follows the shine, like a cooling ember: white-hot
+  // where the glow is strong (settling, long-term), a warm tint of its own colour where the glow is weak (short-term).
+  const cekirdek = `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r)}" fill="url(#${gid}${parlak ? 'c' : 's'})"/>`;
   return (s.alarm ? `<g class="hm-yan">${govde}</g>` : govde) + arka + cekirdek + on + (dokun ? `<circle cx="${sabit(x)}" cy="${sabit(y)}" r="${sabit(r + 3.5)}" fill="none" stroke="${koyu ? '#fff' : '#000'}" stroke-opacity=".7"/>` : '');
 }
 function cizim(si, d, dersler, secili) {
@@ -32366,7 +32371,8 @@ function cizim(si, d, dersler, secili) {
   const adlar = [], yazi = dar() ? 1.45 : 1;
   const grad = new Map(), gradId = c => { if (!grad.has(c)) { const id = 'hmg' + grad.size; grad.set(c, id);
     defs += `<radialGradient id="${id}"><stop offset="0" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>` +
-      `<radialGradient id="${id}c"><stop offset="0" stop-color="${t.cekirdek}"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${c}"/></radialGradient>`; } return grad.get(c); };
+      `<radialGradient id="${id}c"><stop offset="0" stop-color="${t.cekirdek}"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${c}"/></radialGradient>` +
+      `<radialGradient id="${id}s"><stop offset="0" stop-color="${karis(c, t.cekirdek, ILIK)}"/><stop offset=".55" stop-color="${c}"/><stop offset="1" stop-color="${c}"/></radialGradient>`; } return grad.get(c); };
   for (const [ders, k] of Object.entries(B)) yazilar += `<text x="${sabit((k[0] + k[2]) / 2)}" y="${sabit(k[1] - 12)}" class="hm-ders" fill="${t.yazi}">${kac(dersAd(ders).toLocaleUpperCase('tr'))}</text>`;
   KENAR.forEach((e, i) => {
     if (!gor.has(e.a) || !gor.has(e.b)) return;
@@ -32436,7 +32442,7 @@ function gorunum() {
   const n = t.nane, g = (r, a) => '<circle r="' + r + '" fill="' + n + '" opacity="' + a + '"/>';
   const lejant = '<div class="hm-lejant">' +
     '<span><i class="hm-yelpaze" style="background:linear-gradient(90deg,' + renk(t, .45, .9) + ',' + renk(t, .89, .9) + ' 72%,' + n + ' 72%)"></i>hatırlama: çizginin altı → üstü</span>' +
-    ornek('', g(5.2, .1) + '<circle r="3" fill="#fff" stroke="' + n + '" stroke-width="1.4"/>') + 'hafif ışık: kısa süreli</span>' +
+    ornek('', g(5.2, .1) + '<circle r="3" fill="' + karis(n, '#ffffff', ILIK) + '" stroke="' + n + '" stroke-width="1.4"/>') + 'hafif ışık: kısa süreli</span>' +
     ornek('', g(7, .24) + '<circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/>') + 'ışıldıyor: pekişiyor</span>' +
     ornek('', '<path d="M-11,0 A11,3.8 0 0 1 11,0" transform="rotate(-22)" fill="none" stroke="' + n + '" stroke-opacity=".45"/><circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/><path d="M11,0 A11,3.8 0 0 1 -11,0" transform="rotate(-22)" fill="none" stroke="' + n + '"/>') + 'halka: uzun süreli</span>' +
     ornek('', '<path d="M-11,0 A11,3.8 0 0 1 11,0" transform="rotate(-22)" fill="none" stroke="' + ALTIN + '" stroke-opacity=".6"/><circle r="3.2" fill="#fff" stroke="' + n + '" stroke-width="1.4"/><path d="M11,0 A11,3.8 0 0 1 -11,0" transform="rotate(-22)" fill="none" stroke="' + ALTIN + '" stroke-width="1.5"/>') + 'altın halka: YKS’ye kadar kalıcı</span>' +

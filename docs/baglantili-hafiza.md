@@ -126,7 +126,7 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
   - settling: a fully lit neuron, with a white-hot core and light in its colour;
   - long-term: fully lit and with its Saturn ring.
 
-  On 2026-11-18 every glow was lowered half a step (short-term ¼, settling and long-term ¾), then 30 % more: short-term at 0.175 of the original strength, settling and long-term at 0.525. Every studied topic, short-term ones and hidden parts included, now has the white-hot core: a point without it was distracting. Memory level shows in the glow and the ring only.
+  On 2026-11-18 every glow was lowered half a step (short-term ¼, settling and long-term ¾), then 30 % more: short-term at 0.175 of the original strength, settling and long-term at 0.525. Every studied topic, short-term ones and hidden parts included, has a hot core (a point without one was distracting). The core's heat follows the shine, like a cooling ember: white-hot where the glow is strong (settling, long-term), a warm tint of the topic's own colour (40 % toward white) where the glow is weak (short-term), so the core never outshines its glow.
 
   Only never-studied topics are unlit.
 - **Saturn ring** around every long-term topic, tilted, passing behind and then in front of the core.
