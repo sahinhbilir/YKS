@@ -282,6 +282,12 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     const svg2 = run('OGRETMEN_RAPOR.netGrafigi(__c,720)'), alan = [...svg2.matchAll(/<path class="ogr-alan ([^"]*)" d="M([\d.]+),[\d.]+ L([\d.]+),/g)].map(m => [m[1], +m[2], +m[3]]);
     assert.deepEqual(alan.map(a => a[0]), ['ogr-alan-alt', 'ogr-alan-ust']); assert.equal(alan[0][2], alan[1][1], 'split at the crossing');
     near(alan[0][2], (alan[0][1] + alan[1][2]) / 2, 'halfway: −1 to +1');
+    // A negative mean net stays inside the chart: the axis goes below 0 (it was cut at 0 and the point fell off).
+    sandbox.__e = { seri: [{ ad: 'A', g: 1, n: 1, net: .8, genel: 4, fark: -3.2 }, { ad: 'B', g: 2, n: 1, net: -1, genel: 3.1, fark: -4.1 }], kod: 'BİYOLOJİ-A', dersAd: 'AYT Biyoloji' };
+    const svg3 = run('OGRETMEN_RAPOR.netGrafigi(__e,720)'), H = +svg3.match(/height="([\d.]+)"/)[1], ad0 = svg3.indexOf('ogr-sinav-adi');
+    const ny = [...svg3.matchAll(/<circle class="ogr-okul-nokta" cx="[^"]*" cy="([\d.]+)"/g)].map(m => +m[1]), etiketY = +svg3.slice(ad0).match(/y="([\d.]+)"/)[1];
+    assert(Math.max(...ny) < etiketY - 10, 'the −1 point sits above the exam names: ' + ny + ' / ' + etiketY);
+    assert.match(svg3, /text-anchor="end">[−-][12]<\/text>/, 'a tick below zero');
     // An exam without a Türkiye average: no shading next to it.
     sandbox.__d = { seri: [{ ad: 'A', g: 1, n: 1, net: 9, genel: null, fark: null }, { ad: 'B', g: 2, n: 1, net: 11, genel: 10, fark: 1 }], kod: 'MATEMATİK-T', dersAd: 'TYT Matematik' };
     assert(!run('OGRETMEN_RAPOR.netGrafigi(__d,720)').includes('ogr-alan'));

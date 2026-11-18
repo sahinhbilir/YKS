@@ -262,9 +262,10 @@ function netGrafigi(b,W){
   // The students' line is ink, not the subject's colour: only the shading is red or green, so a green subject cannot read as "above".
   const renkli='var(--murekkep)',UST=16,ALT=UST+(dar?130:150);
   const vals=l.flatMap(p=>[p.net,...(p.genel!==null?[p.genel]:[])]),lo0=Math.min(...vals),hi0=Math.max(...vals),pad=Math.max(.8,(hi0-lo0)*.25);
-  const lo=Math.max(0,lo0-pad),hi=hi0+pad,y=v=>r1(ALT-(v-lo)/(hi-lo||1)*(ALT-UST)),ad=adimBul(hi-lo,dar?3:4);
+  // A mean net below zero (more wrong than right) stays on the chart: the axis goes below 0 only then.
+  const lo=lo0<0?lo0-pad:Math.max(0,lo0-pad),hi=hi0+pad,y=v=>r1(ALT-(v-lo)/(hi-lo||1)*(ALT-UST)),ad=adimBul(hi-lo,dar?3:4);
   let s='';
-  for(let v=Math.ceil(lo/ad)*ad;v<=hi+1e-9;v+=ad)s+='<line class="ogr-izgara" x1="'+L+'" x2="'+R+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text class="ogr-tik" x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end">'+fi(Math.round(v*10)/10)+'</text>';
+  for(let v=Math.ceil(lo/ad)*ad;v<=hi+1e-9;v+=ad)s+='<line class="ogr-izgara" x1="'+L+'" x2="'+R+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text class="ogr-tik" x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end">'+fi(Math.round(v*10)/10+0)+'</text>';
   // The shading: between consecutive exams that both have a Türkiye average.
   const alan=(xa,na,ga,xb,nb,gb,ust)=>s+='<path class="ogr-alan '+(ust?'ogr-alan-ust':'ogr-alan-alt')+'" d="M'+xa+','+y(na)+' L'+xb+','+y(nb)+' L'+xb+','+y(gb)+' L'+xa+','+y(ga)+' Z"/>';
   for(let i=0;i+1<n;i++){
