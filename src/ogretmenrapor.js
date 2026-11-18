@@ -346,9 +346,9 @@ function netGrafigi(b,W){
   const x=i=>r1(n===1?(L+R)/2:L+ic+(R-L-2*ic)*i/(n-1)),adim=n>1?(R-L-2*ic)/(n-1):R-L;
   // A value is written on every point when the labels fit, otherwise on every k-th counted back from the newest exam.
   const her=Math.max(1,Math.ceil((dar?32:36)/Math.max(1,adim))),yazili=i=>(n-1-i)%her===0;
-  // The students' line is the site's accent blue, not the subject's colour: only the shading is red or green, so a green
-  // subject cannot read as "above".
-  const renkli='var(--vurgu,#1F4FC8)',UST=16,ALT=UST+(dar?130:150);
+  // The students' line is a fixed blue (--ogr-cizgi), not the subject's colour nor the theme's accent (which can be green): only
+  // the shading is red or green.
+  const renkli='var(--ogr-cizgi)',UST=16,ALT=UST+(dar?130:150);
   // Every value as a percentage of its test on a fixed 0–100% axis (the same picture for a 5- and a 40-question test); without
   // the counts, nets on their own scale.
   const O=olcekKur(l),y=v=>r1(ALT-(v-O.lo)/(O.hi-O.lo||1)*(ALT-UST));
