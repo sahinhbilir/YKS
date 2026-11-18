@@ -87,9 +87,10 @@ function ogretmenler(){
 // nolar (optional Set of school numbers): those students instead of the classes (Öğrenci raporu: one student).
 function netSerisi(k,siniflar,oturum,anahtar,kod,gorulen,nolar){
   const out=[];if(!k||!k.t)return out;
-  const S=new Set(siniflar),alan=oturum==='TYT'?'tyt':'ayt';
+  // AYT: a student counts in a subject only when they answered its test (an SAY student's 0 net in Edebiyat is not a result).
+  const S=new Set(siniflar),alan=oturum==='TYT'?'tyt':'ayt',almadi=o=>oturum==='AYT'&&typeof SIRALAMA!=='undefined'&&typeof SIRALAMA.denedi==='function'&&SIRALAMA.denedi(o,anahtar)===false;
   for(const s of k.t.sinavlar){
-    const l=[],liste=s[alan]||{};for(const o of (nolar?[...nolar].map(n=>liste[n]).filter(Boolean):Object.values(liste))){const kisi=k.t.kisi.get(o.no);if(!kisi)continue;const c=sinifK(kisi.sinif);if(nolar?!nolar.has(String(o.no)):!S.has(c))continue;const v=o.net&&o.net[anahtar];if(Number.isFinite(v)){l.push(v);if(gorulen)gorulen.add(c)}}
+    const l=[],liste=s[alan]||{};for(const o of (nolar?[...nolar].map(n=>liste[n]).filter(Boolean):Object.values(liste))){const kisi=k.t.kisi.get(o.no);if(!kisi)continue;const c=sinifK(kisi.sinif);if(nolar?!nolar.has(String(o.no)):!S.has(c))continue;if(almadi(o))continue;const v=o.net&&o.net[anahtar];if(Number.isFinite(v)){l.push(v);if(gorulen)gorulen.add(c)}}
     if(!l.length)continue;
     const tr=k.trFn?k.trFn(s.ad):null,genel=tr?tr.genel(kod):null,li=tr&&tr.dersListesi&&Number.isFinite(genel)?tr.dersListesi(kod):null;
     out.push({id:s.id,ad:s.ad,g:s.g,n:l.length,net:ort(l),genel:Number.isFinite(genel)?genel:null,fark:Number.isFinite(genel)?ort(l)-genel:null,
@@ -353,8 +354,14 @@ function izgaraHtml(b,ust=''){
     a.hucre.map((c,i)=>!c?'<td class="ogr-iz-kb">·</td>':'<td class="ogr-iz-kh'+(c.durum==='belirsiz'?' ogr-iz-soluk':'')+'" title="'+kacis(a.kod+' · '+z.sinavlar[i].ad+': '+y.bizK+' %'+fi(Math.round(100*c.d/c.n))+', Türkiye %'+fi(Math.round(100*c.b/c.n))+' → '+isaret(c.fark,f1)+' puan')+'"><i style="'+hucreRengi(c)+'">'+tam(c.fark)+'</i></td>').join('')+
     (ol.length>=2?degisim(a.kod,ol[0].fark,ol[ol.length-1].fark):degisim('',null,null))+'</tr>'};
   const koyu=(c,a)=>'background:color-mix(in srgb,var(--'+c+') '+a+'%,transparent)';
+  // Exams with nets above but no topic data (no kazanım karnesi of that session in Konu Takibi): the table names them, so a column
+  // missing is not read as no question; the teacher is told what to add.
+  const adK=s=>typeof denemeAdAnahtari==='function'?denemeAdAnahtari(s):String(s),konulu=new Set(z.sinavlar.map(e=>adK(e.ad)));
+  const eksik=[...new Set((b.seri||[]).filter(e=>!konulu.has(adK(e.ad))).map(e=>e.ad))];
+  const eksikNot=eksik.length?'<p class="mini ogr-iz-eksik">Konu tablosunda olmayan '+(eksik.length===1?'deneme':'denemeler')+': <b>'+kacis(eksik.join(', '))+'</b>. '+
+    (y.ogrenci?'Bu denemelerin konu sonuçları henüz yok.':'Konu Takibi’nde bu denemelerin '+kacis(b.oturum||'')+' kazanım karnesi yok; eklenince tabloya girerler (sınav özeti ve Türkiye performans analiziyle birlikte).')+'</p>':'';
   return '<div class="ogr-konular">'+bas+
-    '<p class="ogr-iz-aciklama">Her kutu bir denemedir. İçindeki sayı, o konunun sorularını doğru cevaplayan öğrenci yüzdesinin Türkiye’deki yüzdeden farkıdır. Örnek: '+y.ornek.slice(0,-1)+'. Karşılaştırma aynı sorular üzerinden yapılır; zor bir deneme konuyu kendiliğinden kötü göstermez. Konular, en geride kalınandan en önde olunana doğru dizilmiştir. Her konunun altındaki küçük kutular o konunun kazanımlarıdır (numarasıyla); sayılar aynı biçimde okunur.</p>'+
+    '<p class="ogr-iz-aciklama">Her kutu bir denemedir. İçindeki sayı, o konunun sorularını doğru cevaplayan öğrenci yüzdesinin Türkiye’deki yüzdeden farkıdır. Örnek: '+y.ornek.slice(0,-1)+'. Karşılaştırma aynı sorular üzerinden yapılır; zor bir deneme konuyu kendiliğinden kötü göstermez. Konular, en geride kalınandan en önde olunana doğru dizilmiştir. Her konunun altındaki küçük kutular o konunun kazanımlarıdır (numarasıyla); sayılar aynı biçimde okunur.</p>'+eksikNot+
     '<div class="ogr-iz-kutu"><table class="ogr-iz'+(z.sinavlar.length>12?' ogr-iz-cok':'')+'" style="--ogr-en:'+(330+z.sinavlar.length*58)+'px;--ogr-ust:'+(400+z.sinavlar.length*120)+'px"><thead><tr><th scope="col" class="ogr-iz-konu">Konu</th><th scope="col" class="ogr-iz-ort" title="Konunun soru çıkan denemelerdeki farklarının ortalaması (yüzde puan)">Ortalama<small>bütün denemeler</small></th>'+basliklar+
     '<th scope="col" class="ogr-iz-degisim" title="Konunun son denemedeki farkı eksi ilk denemedeki farkı (yüzde puan)">İlk → son</th></tr></thead>'+
     z.satir.map(r=>'<tbody class="ogr-iz-grup"><tr><th scope="row" class="ogr-iz-konu">'+kacis(r.ad)+etiket(r)+'</th>'+cubuk(r.ortFark,r.ad)+r.hucre.map((c,i)=>hucre(r.ad,c,z.sinavlar[i])).join('')+satirDegisim(r)+'</tr>'+(r.alt||[]).map(altSatir).join('')+'</tbody>').join('')+

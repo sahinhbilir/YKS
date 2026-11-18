@@ -43,6 +43,14 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     for (const tur of ['T', 'F']) { put('pages', okulListesi(SINAVLAR.sonra[tur]).pages); const r = get('denemePdfCoz(pages)');
       assert.equal(r.ad, 'Sentetik Deneme 2'); assert.equal(r.satirlar.filter(x => x.oturum === 'TYT').length, 5); }
   });
+  await check('denedi: a subject counts only when its AYT test was answered (any D or Y); unknown when no D/Y is printed', () => {
+    const s = JSON.stringify({ dy: { EDB: '0/0', TAR1: '0/0', COĞ1: '0/0', AMAT: '16/4', AGEO: '0/0', AFİZ: '0/0', AKİM: '0/1', ABİY: '-/-' } });
+    assert.equal(run(`SIRALAMA.denedi(${s},'EDB')`), false, 'TDE-SB1 left blank');
+    assert.equal(run(`SIRALAMA.denedi(${s},'AGEO')`), true, 'MAT test answered (Geometri 0/0 within it)');
+    assert.equal(run(`SIRALAMA.denedi(${s},'ABİY')`), true, 'FEN test answered (Kimya 0/1)');
+    assert.equal(run(`SIRALAMA.denedi(${s},'TAR2')`), null, 'no D/Y printed for SB2');
+    assert.equal(run(`SIRALAMA.denedi(${s},'MAT')`), null, 'a TYT subject is not decided here');
+  });
   await check('non-list PDFs and lists without an exam name are refused', () => {
     put('pages', [[{s:'Merhaba',x:10,y:500,w:30,h:9,z:9}]]); assert.throws(() => run('siralamaPdfCoz(pages,[595.28])'), /toplu sonuç listesi/);
     const p = okulListesi(SINAVLAR.sonra.T); p.pages[0] = p.pages[0].filter(i => !/^Sınav Adı|^Sentetik Deneme/.test(i.s)); put('pages', p.pages);

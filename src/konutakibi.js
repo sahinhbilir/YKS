@@ -17,6 +17,11 @@ const studentKey=s=>JSON.stringify([s.cls,s.no]);
 const blockKey=b=>JSON.stringify([studentKey(b.student),b.course,b.kind]);
 const countOK=c=>Array.isArray(c)&&c.length===4&&c.every(n=>Number.isSafeInteger(n)&&n>=0&&n<=10000)&&c[0]===c[1]+c[2]+c[3];
 const codeRE=/^([\p{L}.]+(?:\.\d+)+)\s*[-–]\s*(.+)$/u;
+// A test the pupil left wholly blank (no correct and no wrong answer in any row) was not taken: every pupil gets the whole AYT
+// booklet but answers only their field's tests (an SAY pupil's AYT Edebiyat, an EA pupil's AYT Fizik), and a SÖZ pupil may skip
+// TYT Fen. It says nothing about the topics, so it is left out instead of being counted as every question wrong.
+// A row is [label, questions, correct, wrong, blank].
+const alinmadi=b=>!!b&&Array.isArray(b.rows)&&b.rows.length>0&&b.rows.every(r=>!(r[2]+r[3]));
 // Publisher topic parents, checked against paired KONU and coded reports. These are NOT inferred
 // from answer percentages. Unknown codes remain unassigned until the teacher supplies a topic.
 const PARENTS=`T.12.1|Sözcükte Anlam
@@ -122,7 +127,24 @@ const MEB_MAT={'10.3.1':'Polinom Kavramı ve Polinomlarla İşlemler','10.3.2':'
   '12.1.1':'Üstel Fonksiyon','12.1.2':'Logaritma Fonksiyonu','12.1.3':'Üstel, Logaritmik Denklemler ve Eşitsizlikler','12.2.1':'Gerçek Sayı Dizileri','12.3.1':'Toplam-Fark ve İki Kat Açı Formülleri',
   '12.3.2':'Trigonometrik Denklemler','12.4.1':'Analitik Düzlemde Temel Dönüşümler','12.5.1':'Limit ve Süreklilik','12.5.2':'Anlık Değişim Oranı ve Türev','12.5.3':'Türevin Uygulamaları',
   '12.6.1':'Belirsiz İntegral','12.6.2':'Belirli İntegral ve Uygulamaları','12.7.1':'Çemberin Analitik İncelenmesi'};
-const yeniProgramMi=code=>/^(MAT|FİZ|KİM|BİY|TAR|COĞ|FEL|DKAB|TDE)\./u.test(code||'');
+// The new programme has reached the 9th–11th grades only (it reaches the 12th in 2027–2028; the app's curriculum has no 12th-grade
+// codes): a 12th-grade code with a new-style prefix (BİY.12.1.1.2, TDE.12.2.1.6, MAT.12.5.2) is the earlier programme's.
+const yeniProgramMi=code=>/^(MAT|FİZ|KİM|BİY|TAR|COĞ|FEL|DKAB|TDE)\.(?!12\.)/u.test(code||'');
+// The publisher's AYT Edebiyat codes (TDE.12.unit.part.kazanım) follow its own AYT order, not the MEB 12th-grade units (there 12.2
+// is Hikâye; here TDE.12.2 is Şiir), read from its Sınav özeti (27-YKS-1202): 12.1 introduction (güzel sanatlar, dönemler, metin
+// türleri), 12.2 şiir (12.2.1 şiir bilgisi: tema, ahenk, ölçü, redif, uyak, şiir türleri; 12.2.2 şiir dili, imge, edebî sanatlar),
+// 12.3 the periods (12.3.1 İslamiyet öncesi). The names are the app's own AYT Edebiyat plan topics (VARSAYILAN_KONU_PLANI, the
+// same as Hafızam and Haritam), so a row joins its topic there: metin türleri (öğretici / edebî) are taught in Sanat ve Edebiyat.
+// A part not seen yet takes its unit's topic; an unknown unit has no topic.
+const AYT_EDB={t:{'12.1.1':'Sanat ve Edebiyat','12.1.3':'Türk Dilinin ve Edebiyatının Tarihî Dönemleri','12.1.5':'Sanat ve Edebiyat',
+  '12.2.1':'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)','12.2.2':'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)',
+  '12.3.1':'Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)'},
+  u:{'12.1':'Sanat ve Edebiyat','12.2':'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)','12.3':'Türk Dilinin ve Edebiyatının Tarihî Dönemleri'}};
+const aytEdbKonu=(course,code)=>{
+  if(!/^TÜRK DİLİ VE EDB/u.test(course||''))return null;
+  const m=/^TDE\.(12)\.(\d{1,2})(?:\.(\d{1,2}))?(?:\.|$)/u.exec(code||'');if(!m)return null;
+  return (m[3]&&AYT_EDB.t[m[1]+'.'+m[2]+'.'+m[3]])||AYT_EDB.u[m[1]+'.'+m[2]]||null;
+};
 // Earlier programme, the other lessons: unit names by grade.unit (u), and topic names by grade.unit.topic (t) where a unit is
 // broad. The ders comes from the publisher's course code, so the same number means its own lesson's unit. A number not listed
 // stays without a topic (the report shows the kazanım itself).
@@ -165,12 +187,14 @@ function eskiDers(course,code){
   const c=course||'',k=String(code||'').toLocaleUpperCase('tr-TR');
   if(/^FİZİK-/u.test(c))return 'FİZ';if(/^KİMYA-/u.test(c))return 'KİM';if(/^BİYOLOJİ-/u.test(c))return 'BİY';if(/^COĞRAFYA/u.test(c))return 'COĞ';if(/^DİN KÜLTÜRÜ/u.test(c))return 'DİN';
   if(/^TÜRK DİLİ VE EDB/u.test(c))return 'EDB';if(/^TARİH/u.test(c))return /ÇTD|ÇAĞ/u.test(k)?'ÇTD':'TAR';
-  if(/^FELSEFE/u.test(c))return /(^|\.)MAN/u.test(k)?'MAN':/(^|\.)PS/u.test(k)?'PSİ':/(^|\.)SOS/u.test(k)?'SOS':'FEL';
+  // Seçmeli Felsefe (S.FELSEFE, for students exempt from Din Kültürü) asks the same Felsefe grubu kazanımlar (PSK.12.2.1 …).
+  if(/^(S\.)?FELSEFE/u.test(c))return /(^|\.)MAN/u.test(k)?'MAN':/(^|\.)PS/u.test(k)?'PSİ':/(^|\.)SOS/u.test(k)?'SOS':'FEL';
   return null;
 }
 function eskiKonu(course,code){
   if(yeniProgramMi(code))return null;
   const ders=eskiDers(course,code),tb=ders&&ESKI[ders];if(!tb)return null;
+  if(ders==='EDB'&&/^TDE\.12\./u.test(code||''))return null;   // the publisher's AYT order, not the MEB units (AYT_EDB)
   const m=/(?:^|\.)(9|1[0-2])\.(\d{1,2})(?:\.(\d{1,2}))?(?:\.|$)/u.exec(code||'');if(!m)return null;
   // Lessons taught in one grade (Mantık, Psikoloji, Sosyoloji, Çağdaş Türk ve Dünya Tarihi): the unit number alone.
   if(tb.u['1'])return tb.u[m[2]]||null;
@@ -186,7 +210,7 @@ const yeniKonu=code=>{
   const p=String(code).split('.');for(let n=p.length;n>=3;n--){const k=YENI_KONU.get(p.slice(0,n).join('.'));if(k)return k}
   return null;
 };
-const topicFor=(course,code,maps={})=>maps[course+'|'+code]||PARENTS.find(([p])=>code===p||code.startsWith(p+'.'))?.[1]||yeniKonu(code)||mebKonu(course,code)||eskiKonu(course,code);
+const topicFor=(course,code,maps={})=>maps[course+'|'+code]||PARENTS.find(([p])=>code===p||code.startsWith(p+'.'))?.[1]||yeniKonu(code)||aytEdbKonu(course,code)||mebKonu(course,code)||eskiKonu(course,code);
 
 /* A PDF is accepted atomically. Every subject must end in a verified total, including across pages. */
 function pdfCoz(pages){
@@ -679,6 +703,7 @@ function model(v,selection={},school=[]){
     // Per pupil and subject the summary/detail rule applies once; only then are pupils and subjects added up.
     for(const sid of ids)for(const part of parts){
       const bs=blocksOf(e,part).filter(b=>studentKey(b.student)===sid),detail=bs.find(b=>b.kind==='outcome'),summary=bs.find(b=>b.kind==='topic'),groups=new Map(),zc=zx?.courses.get(key(part));
+      if(bs.length&&bs.every(alinmadi))continue;
       if(bs.length&&zx?.bad.some(c=>key(c)===key(part)))zBad.add(part);
       const get=n=>{const id=key(n);if(!groups.has(id))groups.set(id,{name:topicName(n),detail:[],summary:null});return groups.get(id)};
       if(summary)for(const r of summary.rows)get(v.labels[r[0]][1]).summary=r.slice(1);
@@ -820,6 +845,7 @@ function ogrenciFark(v,sel={}){
       g[b.kind==='outcome'?'detail':'summary']=b;
     }
     for(const g of by.values()){
+      if([g.detail,g.summary].filter(Boolean).every(alinmadi))continue;
       let st=out.get(g.sid);if(!st){st={id:g.sid,student:g.student,toplam:{b:0,d:0,n:0},dersler:new Map(),konular:new Map()};out.set(g.sid,st)}
       const ck=key(g.course);
       const ekle=(konu,z,kazanim)=>{

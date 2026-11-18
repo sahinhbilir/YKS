@@ -142,7 +142,7 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(D.konutakibi,['12/A'],'TYT','MATEMATİK-T')`), null, 'no Matematik in Konu Takibi');
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(null,['12/A'],'TYT','TÜRKÇE-T')`), null);
   });
-  await check('a kazanım without a topic is a row under its own name: no question and no exam is dropped (11th and 12th grade codes have no built-in topic)', () => {
+  await check('a kazanım without a topic is a row under its own name: no question and no exam is dropped; every grade’s codes and the publisher’s AYT Edebiyat codes have a topic', () => {
     // One exam, ADA (12/A): Sözcükte Anlam ×2 (p .5, .5; 1 correct) and a code outside every map ×1 (p .4; correct).
     const kt = run('KONU_TAKIBI'), ad = 'SENTETİK-KONU-9';
     const v = kt.merge(kt.blank(), [{ ad, blocks: [F.block([F.row('T.12.1.1', 'a', [2, 1, 1, 0]), F.row('ZZ.11.1.1', 'Sentetik kazanımı uygular', [1, 1, 0, 0])], 'outcome', 'TÜRKÇE-T', A)] }],
@@ -163,7 +163,17 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // there has no topic (the report shows the kazanım itself).
     const unite = run("MUFREDAT_2026.siniflar['11'].find(d=>d.uniteler.some(u=>(u.ciktiKodlari||[]).includes('MAT.11.1.1'))).uniteler.find(u=>u.ciktiKodlari.includes('MAT.11.1.1')).ad");
     assert.equal(tf('MATEMATİK-T', 'MAT.11.1.1'), unite); assert.equal(tf('MATEMATİK-T', 'MAT.11.1.1.2'), unite); assert.notEqual(unite, 'Yönlü Açılar');
-    assert.equal(tf('MATEMATİK-A', 'MAT.10.3.1'), null, 'not the earlier programme’s Polinomlar'); assert.equal(tf('MATEMATİK-A', 'MAT.12.5.2'), null);
+    assert.equal(tf('MATEMATİK-A', 'MAT.10.3.1'), null, 'not the earlier programme’s Polinomlar');
+    // The new programme has not reached the 12th grade: a 12th-grade code with a new-style prefix is the earlier programme's
+    // (the publisher's 27-YKS-1202 AYT: BİY.12.1.1.2 Nükleik asitler, TDE.12.…).
+    assert.equal(tf('MATEMATİK-A', 'MAT.12.5.2'), 'Anlık Değişim Oranı ve Türev'); assert.equal(tf('BİYOLOJİ-A', 'BİY.12.1.1.2'), 'Genden Proteine');
+    // AYT Edebiyat: the publisher's own AYT order (TDE.12.2 is şiir, not the MEB 12th-grade Hikâye), part by part, else the unit;
+    // an unknown unit has no topic (never a MEB unit name); Seçmeli Felsefe reads the Felsefe grubu codes.
+    for (const [k, t] of [['TDE.12.1.1.3', 'Sanat ve Edebiyat'], ['TDE.12.1.3.1', 'Türk Dilinin ve Edebiyatının Tarihî Dönemleri'], ['TDE.12.1.5.2', 'Sanat ve Edebiyat'],
+      ['TDE.12.2.1.6', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'], ['TDE.12.2.1.12', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'], ['TDE.12.2.2.3', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)'],
+      ['TDE.12.3.1.1', 'Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)'], ['TDE.12.2.7.1', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'], ['TDE.12.9.1.1', null]])
+      assert.equal(tf('TÜRK DİLİ VE EDB-A', k), t, k);
+    assert.equal(tf('S.FELSEFE-A', 'PSK.12.2.1'), 'Psikolojinin Temel Süreçleri'); assert.equal(tf('FELSEFE GR.-A', 'PSK.12.2.1'), 'Psikolojinin Temel Süreçleri');
     // The other lessons of the earlier programme: the unit by grade.unit, a topic where the unit is broad; the ders comes from
     // the course code (12.2 is Basit Harmonik Hareket in Fizik, Karbon Kimyasına Giriş in Kimya).
     assert.equal(tf('FİZİK-A', 'F.12.2.1.3'), 'Basit Harmonik Hareket'); assert.equal(tf('KİMYA-A', 'K.12.2.1.3'), 'Karbon Kimyasına Giriş'); assert.equal(tf('FİZİK-A', 'E.FİZ.11.1.8.2'), 'Tork');
@@ -336,6 +346,37 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     run("EK.osDuzey=undefined;EK.osSube=undefined");
     // The teacher's report keeps its own words.
     assert.match(run('OGRETMEN_RAPOR.gorunum()'), /<span class="ogr-kutu-ad">Öğrencileriniz<\/span>/);
+  });
+  await check('AYT: another field’s test the student left blank is no result: no 0 net in the box, no red topics; the student’s own field stays (hand-worked)', () => {
+    planKur(); kaynakKur(); konuKur();
+    // The lists: ADA (SAY) answered the MAT and FEN tests and left TDE-SB1 (Edebiyat, Tarih-1, Coğrafya-1) blank, so her Edebiyat
+    // net prints as 0; CEMRE (EA) answered TDE-SB1 and MAT and left FEN blank. Every student gets the whole AYT booklet.
+    run(`(()=>{const a=(no,net,dy)=>({no,net,dy});
+      K.t.sinavlar[0].ayt={1001:a('1001',{EDB:0,AMAT:15,AFİZ:8},{EDB:'0/0',TAR1:'0/0',COĞ1:'0/0',AMAT:'16/4',AGEO:'2/1',AFİZ:'9/4',AKİM:'5/2',ABİY:'4/1'}),
+        1003:a('1003',{EDB:12,AMAT:10,AFİZ:0},{EDB:'13/4',TAR1:'5/2',COĞ1:'3/1',AMAT:'11/4',AGEO:'1/0',AFİZ:'0/0',AKİM:'0/0',ABİY:'0/0'})};
+      const tr=K.trFn;K.trFn=ad=>{const t=tr(ad);return t?{genel:k=>({'TÜRK DİLİ VE EDB-A':10,'MATEMATİK-A':12,'FİZİK-A':6})[k]??t.genel(k)}:null}})()`);
+    // Konu Takibi, one AYT exam: ADA's Edebiyat rows are all blank (2 questions, 0 correct, 0 wrong); CEMRE answered (1 correct, 1 wrong).
+    const kt = run('KONU_TAKIBI'), ad = 'SENTETİK-AYT-1', rows = c => [F.row('EDB.11.4.2', 'e', c)];
+    let v = kt.merge(run('D.konutakibi'), [{ ad, blocks: [F.block(rows([2, 0, 0, 2]), 'outcome', 'TÜRK DİLİ VE EDB-A', A), F.block(rows([2, 1, 1, 0]), 'outcome', 'TÜRK DİLİ VE EDB-A', C)] }],
+      [{ tur: 'ozet', ad, oturum: 'AYT', dersler: { 'TÜRK DİLİ VE EDB-A': [['EDB.11.4.2'], ['EDB.11.4.2']] } }, { tur: 'turkiye', ad, oturum: 'AYT', dersler: { 'TÜRK DİLİ VE EDB-A': [.5, .5] } }]);
+    v.exams.find(x => x.ad === ad).date = '2026-10-04'; put('KV2', v); run('D.konutakibi=KV2');
+    const model = no => get(`OGRETMEN_RAPOR.ogrenciModeli(K.t.kisi.get('${no}'),{k:K,v:D.konutakibi,fark:new Map(),dersSinav:new Map()})`), blok = (m, kod) => m.bloklar.find(b => b.kod === kod);
+    const ada = model('1001'), cemre = model('1003');
+    assert.equal(blok(ada, 'TÜRK DİLİ VE EDB-A'), undefined, 'ADA (SAY) has no AYT Edebiyat: neither the 0 net nor red topics');
+    assert.deepEqual(blok(ada, 'MATEMATİK-A').seri.map(p => [p.net, p.fark]), [[15, 3]], 'her own field stays');
+    assert.equal(blok(cemre, 'FİZİK-A'), undefined, 'CEMRE (EA) has no AYT Fizik');
+    const edb = blok(cemre, 'TÜRK DİLİ VE EDB-A'); assert.deepEqual(edb.seri.map(p => [p.net, p.fark]), [[12, 2]]);
+    near(edb.izgara.satir[0].hucre[0].fark, 0, 'CEMRE: 1 correct of 2 against Türkiye 2 · ,5 = 1 → 0 points');
+    // The exam with a net but no topic data is named under the topic table (27-YKS-1201 has no AYT kazanım karnesi here):
+    // the teacher is told what to add, the student only that it has no topic results yet.
+    run("EK.osDuzey=12;EK.osSube='12/B';EK.osOgr='1003'"); const sayfa = run('OGRETMEN_RAPOR.gorunumOgrenci()');
+    assert.match(sayfa, /<p class="mini ogr-iz-eksik">Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Bu denemelerin konu sonuçları henüz yok\.<\/p>/, 'the student’s sheet, in the student’s words');
+    assert.match(run('OGRETMEN_RAPOR.gorunum()'), /Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Konu Takibi’nde bu denemelerin AYT kazanım karnesi yok;/, 'Öğretmen raporu says what to add');
+    put('__OZ3', get(`OGRETMEN_RAPOR.kiyasOzeti({no:'1003'})`)); run(`D.turkiyeKiyas=__OZ3;D.ogr=[{no:'1003',ad:'SENTETİK CEMRE',sube:'12/B',sinif:12,alan:'EA',kap:6,off:[6],aktif:true}];D.rol='ogrenci'`);
+    assert.match(run('OGRETMEN_RAPOR.gorunumKendi()'), /Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Bu denemelerin konu sonuçları henüz yok\./);
+    run("D.rol='rehber';EK.osDuzey=undefined;EK.osSube=undefined;EK.osOgr=undefined");
+    // The Dikkat card's "konuda geride" reads the same per-student gaps: ADA is not behind in topics she never answered.
+    assert.equal(get(`KONU_TAKIBI.ogrenciFark(D.konutakibi,{session:'AYT'}).ogrenciler.map(o=>o.student.no)`).join(), '1003');
   });
   await check('Türkiye karşılaştırması on the student’s own device: the teacher’s package carries a compact snapshot; the same figures come back (hand-worked)', () => {
     planKur(); kaynakKur(); konuKur();

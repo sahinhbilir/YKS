@@ -96,6 +96,8 @@ Removing an exam in Kaynaklar leaves its difficulty data until that is removed t
 
 ## Türkiye’ye göre (where the school and each pupil are behind)
 
+**A test a pupil left wholly blank was not taken** (no correct and no wrong answer in any of its rows): every pupil gets the whole AYT booklet but answers only their field's tests, and a SÖZ pupil may skip TYT Fen. Such a test gives no per-pupil Türkiye gap (`ogrenciFark`) and no topics in the pupil's list (`model`), instead of every question counting as wrong. This is what Öğretmen raporu, the Türkiye karşılaştırması pages, Öğrenci kartı's Zayıf konular and the Dikkat card's “konuda geride” read (2026-11-18: an SAY pupil's blank AYT Edebiyat flagged every 12th grader).
+
 **Görünüm: Gelişim | Türkiye’ye göre.** The second view compares the school's success on every question with the
 network's. It needs, for the same exam: the publisher's **Performans analizi** (PDF “27-YKS-1203 SINAVI ANALİZLERİ”:
 the share of all the publisher's pupils who answered each question of the A booklet correctly), the school's **Madde
@@ -162,6 +164,18 @@ labels, split text runs and student/subject continuation pages. Every subject's
 four printed totals must match the sum of its rows; a truncated or malformed
 file is rejected as a whole. Other valid files in a batch may still be saved,
 and filenames plus errors appear in the page status. No PDF is sent to a server.
+
+**12th-grade and AYT codes (2026-11-18, from the publisher's 27-YKS-1202 AYT Sınav özeti).** The new programme has reached the
+9th–11th grades only, so a 12th-grade code with a new-style prefix (`BİY.12.1.1.2`, `MAT.12.5.2`) is read as the earlier
+programme's (`yeniProgramMi`). AYT Edebiyat's `TDE.12.unit.part.kazanım` codes follow the publisher's own AYT order, not the MEB
+12th-grade units, so they have their own table (`AYT_EDB`). Its names are the app's own AYT Edebiyat plan topics
+(`VARSAYILAN_KONU_PLANI`, the same names as Hafızam and Haritam; the publisher's teacher modules on Drive are 9th–10th grade only
+and name no AYT topic): 12.1.1 and 12.1.5 (güzel sanatlar; öğretici and edebî metinler) Sanat ve Edebiyat, 12.1.3 Türk Dilinin ve
+Edebiyatının Tarihî Dönemleri, 12.2.1 Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi), 12.2.2 … (Şiir Dili / Söz Sanatları),
+12.3.1 Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı). A part not seen yet takes its
+unit's topic (12.1 Sanat ve Edebiyat, 12.2 Şiir Bilgisi, 12.3 Tarihî Dönemleri), an unknown unit stays for **Eşleştir**. Seçmeli Felsefe (`S.FELSEFE-A`) reads the Felsefe grubu codes. All 166 AYT questions of that exam now have a topic
+(before: 27 had none: 18 Edebiyat, 6 Biyoloji, 3 Seçmeli Felsefe). Topics are worked out when a page is drawn, so stored data
+regroups by itself; a teacher's own Eşleştir still comes first.
 
 The seeded publisher code-parent dictionary was checked against all students
 in the supplied paired detail/topic reports for two exams. All paired counts
