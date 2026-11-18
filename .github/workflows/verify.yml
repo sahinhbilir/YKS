@@ -65,6 +65,8 @@ jobs:
         run: node scripts/embed-denemekutuphane.cjs --check && node test/yanlislar-kutuphane-regression.cjs
       - name: Soru zorluğu, madde kalitesi, kademeler, two-session cevap raporu and embedding
         run: node scripts/embed-zorluk.cjs --check && node test/zorluk-regression.cjs
+      - name: Haritam connected-memory map, link algorithm and embedding
+        run: node scripts/embed-haritam.cjs --check && node test/hafiza-ag-regression.cjs && node test/haritam-regression.cjs
       - name: Gemini reading of other files, checks, fallback and embedding
         run: node scripts/embed-yapayzeka.cjs --check && node test/yapayzeka-regression.cjs
       - name: Günlük rapor ids, payload caps, AI reply checks, failure fallback and embedding
@@ -156,6 +158,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/curriculum-browser.cjs
       - name: Weekly student activity on desktop and mobile
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/student-activity-browser.cjs
+      - name: Haritam map in the browser (hover card, pin, phone)
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/haritam-browser.cjs
       - name: Mock exam entry, charts and teacher imports
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/mock-exam-browser.cjs
       - name: University picker, net comparison and target selection on desktop and phone

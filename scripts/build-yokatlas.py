@@ -34,6 +34,8 @@ REQUIRED = {
 }
 
 
+OPEN_DISTANCE = ('Açık Öğretim', 'Uzaktan Öğretim')
+
 def number(value, lo=None, hi=None):
     if value in (None, '') or isinstance(value, bool):
         return None
@@ -144,6 +146,10 @@ def build(programs, nets, reference_year):
         if 'KKTC UYRUKLU' in text(p['birimAdi']).upper():
             counts['excludedNationalityQuota'] += 1
             continue
+        # Open and distance education (Açıköğretim, Uzaktan Öğretim) are not targets a student works towards with nets.
+        if text(p.get('ogrenimTuruAdi')) in OPEN_DISTANCE:
+            counts['excludedOpenDistance'] += 1
+            continue
         # A programme in a foreign campus must not inherit the home university's city.
         label = (text(p['birimAdi']) + ' ' + text(p.get('fymkAdi')) + ' ' + text(p.get('universiteAdi'))).upper()
         if any(s in label for s in ('LEFKOŞA', 'LEFKOSA', 'KIBRIS', 'KKTC', 'GİRNE', 'GIRNE', 'GAZİMAĞUSA', 'GAZIMAGUSA', 'CYPRUS', 'NICOSIA', 'FAMAGUSTA', 'KYRENIA')):
@@ -187,7 +193,7 @@ def build(programs, nets, reference_year):
     return {
         'schema': 1, 'catalogYear': catalog_year, 'referenceYear': reference_year,
         'retrieved': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
-        'source': BASE, 'cities': CITIES, 'scope': 'LISANS; SAY/EA/SÖZ; DEVLET or VAKIF bursOraniId=158; physical programme city',
+        'source': BASE, 'cities': CITIES, 'scope': 'LISANS; SAY/EA/SÖZ; DEVLET or VAKIF bursOraniId=158; physical programme city; no Açık/Uzaktan Öğretim',
         'audit': dict(counts), 'programs': selected,
     }
 

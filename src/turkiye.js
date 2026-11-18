@@ -315,15 +315,20 @@ function model(v,sec={}){
   const duzey=duzeyler.includes(sec.duzey)?sec.duzey:ana??'tum';
   const sinavlar=l1.filter(s=>duzey==='tum'||s.yer===duzey).sort((a,b)=>(a.g??1e9)-(b.g??1e9)||a.ad.localeCompare(b.ad,'tr',{numeric:true}));
   const oturumlar=OTURUMLAR.filter(o=>sinavlar.some(s=>s.dersler.some(d=>dersBilgi(d.kod).oturum===o)));
-  const oturum=oturumlar.includes(sec.oturum)?sec.oturum:oturumlar[0]||null;
+  // Opened without a choice, the page shows a session the latest exam has (an AYT-only latest exam opens on AYT, not on an
+  // empty TYT view); with a session chosen, Şimdiki and Önceki default to exams that have it.
+  const oturumVar=(s,o)=>!!s&&s.dersler.some(d=>dersBilgi(d.kod).oturum===o),sonS=sinavlar[sinavlar.length-1];
+  const oturum=oturumlar.includes(sec.oturum)?sec.oturum:oturumlar.find(o=>oturumVar(sonS,o))||oturumlar[0]||null;
+  const oncesi=i=>{for(let j=i;j>=0;j--)if(oturumVar(sinavlar[j],oturum))return j;return -1};
   const okullar=[...new Map(sinavlar.flatMap(s=>s.dersler.flatMap(d=>d.satir.map(r=>[anahtar(r.ad),r.ad])))).values()].sort((a,b)=>a.localeCompare(b,'tr'));
   const aday=sec.okul||A.okul||okulTahmini(okullar,sl),okulK=aday?anahtar(aday):null;
   const okul=okulK?okullar.find(a=>anahtar(a)===okulK)||aday:null;
   const okulKaynak=!okul?null:sec.okul?'gecici':A.okul?'secili':'tahmin';
-  let simdi=sinavlar.findIndex(s=>s.id===sec.simdi);if(simdi<0)simdi=sinavlar.length-1;
-  // Artış compares the first exam of the chart with the latest (the whole run); Sıra the exam before.
+  let simdi=sinavlar.findIndex(s=>s.id===sec.simdi);if(simdi<0){simdi=oncesi(sinavlar.length-1);if(simdi<0)simdi=sinavlar.length-1}
+  // Artış compares the first exam of the chart with the latest (the whole run); Sıra the exam before (both with the session).
   let onceki=sinavlar.findIndex(s=>s.id===sec.onceki);
-  if(onceki<0||onceki>=simdi)onceki=simdi>0?(sec.mod==='artis'?0:simdi-1):null;
+  if(onceki<0||onceki>=simdi){const ilk=sinavlar.findIndex(s=>oturumVar(s,oturum)),once=oncesi(simdi-1);
+    onceki=simdi>0?(sec.mod==='artis'?(ilk>=0&&ilk<simdi?ilk:0):(once>=0?once:simdi-1)):null}
   const kodlar=new Map();
   for(const s of sinavlar)for(const d of s.dersler){const b=dersBilgi(d.kod),k=anahtar(d.kod);if(b.oturum===oturum&&!kodlar.has(k))kodlar.set(k,{kod:d.kod,...b})}
   const dersler=[...kodlar.values()].sort((a,b)=>a.sira-b.sira||a.ad.localeCompare(b.ad,'tr')).map((b,i)=>{

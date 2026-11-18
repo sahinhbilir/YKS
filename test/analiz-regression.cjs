@@ -607,6 +607,9 @@ const seri = (no, o = 'TYT') => kart(no, o).noktalar;
     // The y-axis: the top tick is the maximum (120) and nothing is drawn above it; the lowest tick is below every value.
     assert.equal(g.tikler[g.tikler.length - 1], 120); assert.equal(g.ustDeger, 120); assert(svg.includes('>120</text>')); assert(!svg.includes('>130</text>') && !svg.includes('>125</text>'));
     for (const q of g.seriler) for (const p of q.pts.concat(q.uzanti || [])) assert(p[1] >= g.ust - 0.06 && p[1] <= g.alt + 0.06, q.id);
+    // The lowest tick is at or below the lowest value, so a low net is never pinned to the bottom tick (30,50 used to sit on 40).
+    const T = (lo, hi, n) => get(`ANALIZ.tikler(${lo},${hi},${n})`);
+    for (const [lo, n] of [[29.7, 5], [30.5, 4], [38, 5], [0, 5], [61.2, 4], [119, 5]]) { const t = T(lo, 120, n); assert(t[0] <= lo + 1e-9 && t[t.length - 1] === 120, lo + ': ' + t); assert(t.length < 2 || t[1] > lo, lo + ': one tick below is enough ' + t); }
     // The dates under the points: 17 Eyl … 15 Eki, then YKS.
     const alt = [...svg.matchAll(/<text class="et-tik ok-tarih" [^>]*>([^<]*)</g)].map(m => m[1]); assert.deepEqual(alt, ['17 Eyl', '24 Eyl', '1 Eki', '8 Eki', '15 Eki']);
     // The YKS column: both markers at its x; each joined to its last in-data value by one short dashed segment; no line runs across it (no path reaches further than the column).

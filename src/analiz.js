@@ -393,8 +393,11 @@ function isaretYazisi(f){
 function dikkatKarti(ek=null,adDugmesiSi=null){
   let d;try{d=dikkat(bugunNo(),ek)}catch(e){return ''}
   const hepsi=d.satirlar,goster=EK.rdTumu?hepsi:hepsi.slice(0,DIKKAT_GOSTER),K=d.kaynaklar;
+  // Attendance whose records stopped (a holiday, a gap): the source is named with its last day, not as if it were current.
+  let ySon=null;try{const y=yoklamaKaynagi(kaynak(bugunNo()));ySon=Number.isFinite(y.son)?y.son:null}catch(e){}
   const kaynak=[['deneme','Denemeler'],['turkiye','Türkiye listesi (son deneme)'],['yoklama','Yoklama'],['konu','Konu Takibi · Türkiye’ye göre']]
-    .map(([id,ad])=>'<span class="rd-kaynak'+(K[id]?' var':'')+'">'+(K[id]?'✓ ':'– ')+ad+'</span>').join('');
+    .map(([id,ad])=>id==='yoklama'&&K[id]&&kayitEski(ySon,bugunNo())?'<span class="rd-kaynak var eski">✓ '+ad+' · son kayıt '+gunAy(ySon)+'</span>'
+      :'<span class="rd-kaynak'+(K[id]?' var':'')+'">'+(K[id]?'✓ ':'– ')+ad+'</span>').join('');
   // How many students each kind of flag marks (a student with several flags counts in each).
   const say=tur=>hepsi.filter(r=>r.isaretler.some(f=>tur.includes(f.tur))).length;
   const ozet=[[['dusus','gerileme'],'Net düşüşü'],[['devamsiz'],'Devamsızlık'],[['konu'],'Konuda geride'],[['sonuc'],'Sonuç yok']]
@@ -564,10 +567,11 @@ function kart(key,oturum,bugun=bugunNo(),aralik='tumu'){
 const liste=(bugun)=>kaynak(bugun).liste;
 
 /* ---------------- chart ---------------- */
-// Ticks from the top (the measure's maximum, always a tick) down to the first one at or below lo.
+// Ticks from the top (the measure's maximum, always a tick) down to the first one at or below lo, so nothing drawn is
+// below the lowest tick (it used to stop at the last tick above lo and pin a low net to it).
 function tikler(lo,hi,n){
   const ham=(hi-lo||1)/n,adim=[.5,1,2,5,10,20,50,100].find(a=>a>=ham)||100,l=[];
-  for(let v=hi;l.length<14;v-=adim){l.push(Math.round(v*1e6)/1e6);if(v-adim<lo-1e-9)break}
+  for(let v=hi;l.length<40;v-=adim){l.push(Math.round(v*1e6)/1e6);if(v<=lo+1e-9)break}
   return l.reverse();
 }
 const yaziGen=t=>String(t).length*6.8+4;
@@ -618,7 +622,7 @@ function cizim(c,W){
   }
   // Y scale: the top is the maximum of the measure (always a tick), the bottom just under the lowest value drawn.
   const degerler=S.flatMap(x=>x.pts.map(q=>q[1]).concat(x.uzanti?[x.uzanti[1]]:[])),lo0=Math.min(...degerler),pay=Math.max(.5,(UST-lo0)*.08);
-  const tik=tikler(Math.min(lo0-pay,UST-1),UST,dar?4:5),lo=tik[0],hi=UST;
+  const tik=tikler(Math.min(lo0>=0?Math.max(0,lo0-pay):lo0-pay,UST-1),UST,dar?4:5),lo=tik[0],hi=UST;
   const tikYazi=t=>Number.isInteger(t)?fi(t):String(t).replace('.',',');
   const L=Math.max(...tik.map(t=>yaziGen(tikYazi(t))))+8,ust=14,ph=dar?200:240,alt=ust+ph,H=alt+30;
   const genis=x=>Math.max(yaziGen(x.ad),yaziGen(x.yazi));
@@ -810,20 +814,22 @@ function zayifPaneli(c){
     z.liste.map(t=>'<tr><td class="ok-konu">'+kacis(t.konu)+'<span class="mini"> · '+kacis(t.ders)+'</span></td>'+sayiHucre(t.fark,(t.fark<0?'−':t.fark>0?'+':'')+f1(Math.abs(t.fark)))+'<td class="sayi">'+(t.son===null?'—':'%'+fi(Math.round(t.son)))+'</td></tr>').join('')+'</tbody></table></div>';
   return '<section class="et-panel" id="okZayif"><div class="et-kart-bas"><h2>Zayıf konular</h2><span class="mini">'+(tr?'Türkiye ortalamasındaki öğrenciye göre −1 soru ve altı':'zorluğa göre −1 soru ve altı')+'</span></div>'+g+(z.var&&z.zorluk?'<p class="mini ok-zayif-not"><button type="button" class="et-dugme" data-ok-konu>Konu Takibi · '+(tr?'Türkiye’ye göre':'konular')+' →</button></p>':'')+'</section>';
 }
+// A source whose records end more than 3 days before today: its "son 30 gün" counts days nobody recorded.
+const kayitEski=(son,bugun)=>Number.isFinite(son)&&Number.isFinite(bugun)&&bugun-son>3;
 function etutPaneli(c){
-  const e=c.etut;let g;
+  const e=c.etut,eski=kayitEski(e.son,c.bugun);let g;
   if(!e.var)g='<p class="mini">— · Etüt kaydı yok</p>';
-  else if(!e.dersler.length)g='<p class="mini">Son 30 günde etüt yok</p>';
+  else if(!e.dersler.length)g='<p class="mini">'+(eski?'Kayıtlı günlerde etüt yok; '+gunAy(e.son)+' sonrasında etüt kaydı yok':'Son 30 günde etüt yok')+'</p>';
   else g='<div class="et-tablo-kutu"><table class="et-tablo ok-tablo"><thead><tr><th>Ders</th><th class="sayi">Etüt (adet)</th><th>Öğretmen</th></tr></thead><tbody>'+
     e.dersler.map(d=>'<tr><td class="ok-ad">'+kacis(d.ders)+'</td><td class="sayi">'+fi(d.n)+'</td><td class="ok-hoca">'+kacis(d.hocalar.map(h=>h.ad+(d.hocalar.length>1?' ('+h.n+')':'')).join(', '))+'</td></tr>').join('')+'</tbody></table></div>';
-  return '<section class="et-panel" id="okEtut"><div class="et-kart-bas"><h2>Etütler (son 30 gün)</h2><span class="mini">'+(e.var?fi(e.toplam)+' etüt'+(e.son?' · son kayıt '+gunAy(e.son):''):'')+'</span></div>'+g+'</section>';
+  return '<section class="et-panel" id="okEtut"><div class="et-kart-bas"><h2>Etütler (son 30 gün)</h2><span class="mini">'+(e.var?fi(e.toplam)+' etüt'+(e.son?' · son kayıt '+gunAy(e.son)+(eski?' · sonrası bilinmiyor':''):''):'')+'</span></div>'+g+'</section>';
 }
 function devamPaneli(c){
-  const y=c.yoklama;let g;
+  const y=c.yoklama,eski=kayitEski(y.son,c.bugun);let g;
   if(!y.var)g='<p class="mini">— · Yoklama kaydı yok</p>';
-  else if(!y.n)g='<p class="mini">Son 30 günde devamsız gün yok</p>';
+  else if(!y.n)g='<p class="mini">'+(eski?'Kayıtlı günlerde devamsız gün yok; '+gunAy(y.son)+' sonrasında yoklama kaydı yok':'Son 30 günde devamsız gün yok')+'</p>';
   else g='<ul class="ok-gunler">'+y.gunler.map(d=>'<li><b>'+gunAy(d.g)+'</b><span class="mini"> '+(d.tur==='tam'?'tam gün':'yarım gün')+'</span></li>').join('')+'</ul>';
-  return '<section class="et-panel" id="okDevam"><div class="et-kart-bas"><h2>Devamsızlık (son 30 gün)</h2><span class="mini">'+(y.var?fi(y.n)+' gün'+(y.son?' · son kayıt '+gunAy(y.son):''):'')+'</span></div>'+g+'</section>';
+  return '<section class="et-panel" id="okDevam"><div class="et-kart-bas"><h2>Devamsızlık (son 30 gün)</h2><span class="mini">'+(y.var?fi(y.n)+' gün'+(y.son?' · son kayıt '+gunAy(y.son)+(eski?' · sonrası bilinmiyor':''):''):'')+'</span></div>'+g+'</section>';
 }
 function icerik(){
   const baslik=t=>'<header class="et-bas"><h1 class="et-baslik">'+t+'</h1></header>',git=(sekme,ad)=>'<button type="button" class="et-dugme" data-sekme="'+sekme+'">'+ad+' →</button>';
@@ -904,7 +910,7 @@ if(typeof document!=='undefined'&&document.addEventListener){
     setTimeout(()=>{if(etkin()){EK.okAralik={bas,bit};yenidenCiz()}},0);
   },true);
 }
-return {OLCULER,ISTIKRAR_ETIKETLERI,turet,istikrar,seriler,karsilastirmaNeti,etutOzeti,devamsizlik,zayifKonular,netIsaretleri,geridekiKonuSayilari,dikkat,isaretYazisi,dikkatKarti,bul,ustArama,DIKKAT:{NET:DIKKAT_NET,ONCE:DIKKAT_ONCE,ARDISIK:DIKKAT_ARDISIK,DEVAMSIZ:DIKKAT_DEVAMSIZ,KONU:DIKKAT_KONU,GOSTER:DIKKAT_GOSTER,T:DIKKAT_T},hedefAl,kaynak,kart,liste,icerik,gorunum,ac,adDugmesi,grafikSvg,cizim,grafikleriCiz,imzaAl,okulSurprizleri,okulSurprizi,okulSurprizYazisi,gidisat,hedefYks,kalanSinav,DENEME_ARALIGI_GUN,aralikSec,dersSatirlari,medyan,yksGunu,
+return {OLCULER,ISTIKRAR_ETIKETLERI,tikler,turet,istikrar,seriler,karsilastirmaNeti,etutOzeti,devamsizlik,zayifKonular,netIsaretleri,geridekiKonuSayilari,dikkat,isaretYazisi,dikkatKarti,bul,ustArama,DIKKAT:{NET:DIKKAT_NET,ONCE:DIKKAT_ONCE,ARDISIK:DIKKAT_ARDISIK,DEVAMSIZ:DIKKAT_DEVAMSIZ,KONU:DIKKAT_KONU,GOSTER:DIKKAT_GOSTER,T:DIKKAT_T},hedefAl,kaynak,kart,liste,icerik,gorunum,ac,adDugmesi,grafikSvg,cizim,grafikleriCiz,imzaAl,okulSurprizleri,okulSurprizi,okulSurprizYazisi,gidisat,hedefYks,kalanSinav,DENEME_ARALIGI_GUN,aralikSec,dersSatirlari,medyan,yksGunu,
   get onbellek(){return ONBELLEK}};
 })();
 function gorunumOgrenciKarti(){return ANALIZ.gorunum()}

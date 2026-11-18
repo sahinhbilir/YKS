@@ -45,6 +45,11 @@ class BuilderTest(unittest.TestCase):
         self.assertEqual([x['id'] for x in result['programs']], ['100000001'])
         self.assertEqual(result['audit']['excludedForeignCampus'], 1)
         self.assertEqual(result['audit']['excludedNationalityQuota'], 1)
+        # Open and distance education are left out (they appeared as targets: Anadolu Üniversitesi Açıköğretim).
+        rows = [program(), program(100000004, ogrenimTuruAdi='Açık Öğretim'), program(100000005, ogrenimTuruAdi='Uzaktan Öğretim'), program(100000006, ogrenimTuruAdi='İkinci Öğretim')]
+        result = builder.build(rows, [], 2025)
+        self.assertEqual([x['id'] for x in result['programs']], ['100000001', '100000006'])
+        self.assertEqual(result['audit']['excludedOpenDistance'], 2)
         with self.assertRaises(ValueError):
             builder.build([program(fymkIlKodu=6)], [], 2025)
 

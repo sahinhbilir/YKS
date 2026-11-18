@@ -75,8 +75,8 @@ const listeler=[1,2,3,4,5].map(e=>{const L=kurumListesi(e);if(e===5)L.yazdirma='
    const yazi=await page.locator('#eeKok').innerText();
    assert(!/Gözlem|±|\bham\b|eğim|\(%95\)|Etüt yok|1–2 etüt|3–5 etüt|6\+ etüt|Etüt sayısına göre/i.test(yazi),'no tiers and no jargon');
    assert.equal(await page.locator('#eeKok .et-arac button, #eeKok .et-arac select').count()>=4,true);
-   // The sections, in order; the method block is collapsed and says it in plain words.
-   const sira=await page.evaluate(()=>['eeCumle','eeOzet','eeKarar','eeOlay','eeGrafik','eeHocalar','eeOgrenciler','eeDisarida','eeAralik','eeNasil'].map(id=>document.getElementById(id).getBoundingClientRect().top+scrollY));
+   // The sections, in order (the verdict before the numbers behind it); the method block is collapsed and says it in plain words.
+   const sira=await page.evaluate(()=>['eeCumle','eeKarar','eeOzet','eeOlay','eeGrafik','eeHocalar','eeOgrenciler','eeDisarida','eeAralik','eeNasil'].map(id=>document.getElementById(id).getBoundingClientRect().top+scrollY));
    assert.deepEqual([...sira].sort((a,b)=>a-b),sira,'sections in order: '+sira);
    assert.equal(await page.locator('#eeNasil').evaluate(d=>d.open),false);assert.equal(await page.locator('#eeAralik').evaluate(d=>d.open),false);
    // The main chart (the event study): two lines for the same students, six positions around the first etüt, the zero line, the first-etüt marker,
