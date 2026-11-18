@@ -27,6 +27,8 @@ const kur=()=>{
     for(let i=0;i<20;i++){const no=String(1001+i);tyt[no]={no,net:{MAT:9+(i%7)+e*.6,TÜR:21+(i%5)+e*.2}}}
     sinavlar.push({id:'s'+e,ad,g:gunNo('2026-09-0'+1)+e*14,tyt,ayt:{}})}
   const K={t:{sinavlar,kisi},trFn:ad=>tr[ad]?{genel:k=>tr[ad][k]??null}:null};ANALIZ.kaynak=()=>K;
+  // The network's mean net (from the Performans analizi in the app) given as the lists' figure, so the page has a Türkiye line.
+  KONU_TAKIBI.agNet=(v,ad,kod)=>{const g=tr[ad]?tr[ad][kod]:null;return Number.isFinite(g)?g:null};
   // Konu Takibi: three exams, Türkçe; the class answers differ by topic so the grid has red and green rows.
   const kt=KONU_TAKIBI,reps=[],parts=[],kodlar=['T.12.1.1','T.12.1.1','T.12.1.2','T.12.1.2','T.12.3.1','T.12.3.1','T.12.5.1','T.12.5.1'],p0=[.5,.5,.9,.9,.2,.2,.6,.6];
   for(let e=1;e<=3;e++){const ad=e===3?'SENTETİK YAYINLARI TÜRKİYE GENELİ KONU-3':'SENTETİK-KONU-'+e,blocks=[];
@@ -67,7 +69,7 @@ const kur=()=>{
    // The headline: the students' mean and the Türkiye average, side by side, and a coloured word; the block says what it covers.
    assert.deepEqual(await report.locator('.ogr-skor-sayi span').allTextContents(),['Öğrencileriniz','Türkiye']);
    assert.deepEqual(await report.locator('.ogr-skor-sayi strong').allInnerTexts(),['24,0','23,5']);
-   assert.equal(await report.locator('.ogr-durum').innerText(),'▲ Türkiye’nin üstünde');
+   assert.equal(await report.locator('.ogr-durum:not(.ogr-egilim)').innerText(),'▲ Türkiye’nin üstünde');assert.match(await report.locator('.ogr-egilim').innerText(),/^Fark (açılıyor|daralıyor|değişmedi)$/);
    assert.match(await report.locator('.ogr-kapsam').innerText(),/^12\/A, 12\/B · 6 deneme$/);
    assert.equal(await report.locator('.ogr-ozet,.ogr-kpi,.ogr-iz-aciklama,.ogr-iz-ort,.ogr-iz-degisim').count(),0,'no sentence, no boxes, no explanation, no extra columns');
    // The chart's key is directly above the chart; the room between the lines is shaded (green: above Türkiye in every exam).
@@ -107,8 +109,10 @@ const kur=()=>{
    assert.equal(await page.locator('.ogr-ogretmen h2').innerText(),'Sentetik Öğretmen De');
    await page.locator('#ogrHoca').selectOption('');await page.waitForFunction(()=>document.querySelectorAll('.ogr-ogretmen').length===2);
    // Sınıf düzeyi: 12. sınıf (every synthetic class is a 12th-grade one).
-   await page.locator('#ogrDuzey').selectOption('12');await page.waitForFunction(()=>/12\. sınıf/.test(document.querySelector('#ogrKok .et-baslik').textContent));
-   assert.equal(await page.locator('.ogr-ogretmen').count(),2);await page.locator('#ogrDuzey').selectOption('');
+   // Sınıf düzeyi: a button a grade, one always chosen (no "Bütün düzeyler"); every synthetic class is a 12th-grade one.
+   assert.deepEqual(await page.locator('#ogrDuzey .ogr-duzey').allInnerTexts(),['12. sınıf']);assert.equal(await page.locator('#ogrDuzey .ogr-duzey').getAttribute('aria-pressed'),'true');
+   assert.match(await page.locator('#ogrKok .et-baslik').innerText(),/12\. sınıf/);await page.locator('#ogrDuzey .ogr-duzey').click();
+   assert.equal(await page.locator('.ogr-ogretmen').count(),2);
    await page.waitForFunction(()=>document.querySelectorAll('#ogrKok .ogr-grafik svg').length>=2);
    // The students' nets are written on the chart.
    assert(await page.locator('#ogrKok .ogr-grafik text.ogr-deger').count()>=12,'values on the chart');
@@ -119,7 +123,7 @@ const kur=()=>{
    assert.equal(await report.locator('.ogr-iz-ac').isVisible(),false,'no tick box on paper');
    // Each teacher's sheets stand alone: the report's name and day above the name, nothing else to read; the page's own title,
    // the tick box and the folded appendix are not printed.
-   assert.match(await report.locator('.ogr-ust-yazi').innerText(),/^ÖĞRETMEN RAPORU · 30 EKİ 2026$/i);
+   assert.match(await report.locator('.ogr-ust-yazi').innerText(),/^ÖĞRETMEN RAPORU · 12\. SINIF · 30 EKİ 2026$/i);
    assert.equal(await report.locator('.ogr-rehber').count(),0,'no paragraphs of notes on paper');
    assert.equal(await report.locator('.ogr-iz-eksik').isVisible(),false,'no screen-only line on paper');
    assert.equal(await page.locator('#ogrKok>.et-bas').isVisible(),false);assert.equal(await page.locator('details.ogr-rehber-ekran').isVisible(),false);assert.equal(await report.locator('.ogr-formul').first().isVisible(),false,'the appendix prints only when opened');
@@ -146,7 +150,7 @@ const kur=()=>{
    // PDF indir builds the file itself, like the Öğrenci raporu: one A4 landscape page per teacher, drawn as one picture, so no
    // browser header, title, address or page number can be on it.
    if(width===1280){const [dl]=await Promise.all([page.waitForEvent('download'),page.locator('#ogrYazdir').click()]);
-    assert.equal(dl.suggestedFilename(),'Ogretmen_raporu.pdf');const yol=path.join(out,'ogretmen-raporu-indir.pdf');await dl.saveAs(yol);
+    assert.equal(dl.suggestedFilename(),'Ogretmen_raporu_12_sinif.pdf');const yol=path.join(out,'ogretmen-raporu-indir.pdf');await dl.saveAs(yol);
     const {PDFDocument}=require('pdf-lib'),bytes=fs.readFileSync(yol),doc=await PDFDocument.load(bytes);assert.equal(doc.getPageCount(),2,'a page per teacher');
     assert.deepEqual(doc.getPages().map(p=>{const z=p.getSize();return [Math.round(z.width),Math.round(z.height)]}),[[842,595],[842,595]],'A4 landscape');
     assert.equal(doc.getTitle(),'Öğretmen raporu');assert(!/ykstekrar|YKS Tekrar/i.test(bytes.toString('latin1')),'no site name or address');

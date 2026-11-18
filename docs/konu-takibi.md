@@ -102,8 +102,11 @@ Removing an exam in Kaynaklar leaves its difficulty data until that is removed t
 network's. It needs, for the same exam: the publisher's **Performans analizi** (PDF “27-YKS-1203 SINAVI ANALİZLERİ”:
 the share of all the publisher's pupils who answered each question of the A booklet correctly), the school's **Madde
 Analizi** and, for konu and kazanım, the **Sınav özeti**. All three go through **Dosya Yükle**; the Performans analizi
-is recognised by its title and read by the Yanlışlar defteri parser. Only the exam code and one p per question are
-kept (`zorluk[exam].turkiye = {course: [p, …]}`): no counts, no school, no pupil. The file names its exam by the code
+is recognised by its title and read by the Yanlışlar defteri parser. Only the exam code, one p per question and (2026-11-19)
+one wrong share per question are kept (`zorluk[exam].turkiye = {course: [p, …]}`, `turkiyeY = {course: [w, …]}`): no counts, no school, no pupil.
+p is over every pupil of the network who marked the A booklet; w = (1 − p) · Y / (Y + B), Y and B the wrong and blank answers of the
+file's top and bottom 27% groups. `agNet` gives the network's mean net of a ders, Σ (p − w / 4), the Türkiye line of Öğretmen raporu.
+A file added before 2026-11-19 has no w: Kaynaklar asks to add it again. The file names its exam by the code
 only, so it joins the entry whose name carries the same code ("27 YKS 1203 TYT" and "27-YKS-1203" are one exam). An
 exam without such a code ("27-TYT_SIFIR_POZİTİF SINAVI ANALİZLERİ") is named by its full name, the name its karneler and
 Sınav özeti give it, so the three files still meet under one exam.

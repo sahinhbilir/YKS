@@ -494,12 +494,16 @@ function zorlukDogrula(z,fail,str){
   if(z===undefined)return;
   if(!z||typeof z!=='object'||Array.isArray(z)||Object.keys(z).length>60)fail();
   for(const [k,e] of Object.entries(z)){
-    if(!e||typeof e!=='object'||Array.isArray(e)||!['ad,madde,ogrenci,oturum,ozet,ts','ad,madde,ogrenci,oturum,ozet,ts,turkiye'].includes(Object.keys(e).sort().join())||!str(k,200)||!str(e.ad,160)||k!==ek(e.ad)||!ZOTURUM.includes(e.oturum)||!Number.isSafeInteger(e.ts)||e.ts<0)fail();
+    if(!e||typeof e!=='object'||Array.isArray(e)||!['ad,madde,ogrenci,oturum,ozet,ts','ad,madde,ogrenci,oturum,ozet,ts,turkiye','ad,madde,ogrenci,oturum,ozet,ts,turkiye,turkiyeY'].includes(Object.keys(e).sort().join())||!str(k,200)||!str(e.ad,160)||k!==ek(e.ad)||!ZOTURUM.includes(e.oturum)||!Number.isSafeInteger(e.ts)||e.ts<0)fail();
     if(e.ozet===null&&e.madde===null&&e.turkiye===undefined)fail();
     if(e.turkiye!==undefined){
       const t=e.turkiye;if(!t||typeof t!=='object'||Array.isArray(t))fail();
       const cs=Object.entries(t);if(!cs.length||cs.length>40)fail();
       for(const [c,qs] of cs)if(!str(c,80)||!/-[TA]$/u.test(c)||!Array.isArray(qs)||!qs.length||qs.length>200||!qs.every(x=>typeof x==='number'&&x>=0&&x<=1))fail();
+      // turkiyeY: each question's wrong-answer share, for the dersler of turkiye and as many questions (files read before
+      // 2026-11-19 have none).
+      if(e.turkiyeY!==undefined){const y=e.turkiyeY;if(!y||typeof y!=='object'||Array.isArray(y))fail();
+        for(const [c,qs] of Object.entries(y))if(!Array.isArray(t[c])||!Array.isArray(qs)||qs.length!==t[c].length||!qs.every(x=>typeof x==='number'&&x>=0&&x<=1))fail()}
     }
     if(e.madde===null?e.ogrenci!==null:!Number.isInteger(e.ogrenci)||e.ogrenci<1||e.ogrenci>10000)fail();
     for(const part of ['ozet','madde']){
@@ -622,6 +626,8 @@ function mergeZorluk(n,parts){
     const ot=c=>c.endsWith('-A')?'AYT':'TYT',yeni=new Set(Object.keys(p.dersler).map(ot));
     const kalan=Object.fromEntries(Object.entries(e[p.tur]||{}).filter(([c])=>!yeni.has(ot(c))));
     e[p.tur]={...kalan,...p.dersler};
+    if(p.tur==='turkiye'){const kalanY=Object.fromEntries(Object.entries(e.turkiyeY||{}).filter(([c])=>!yeni.has(ot(c))&&e.turkiye[c])),y={...kalanY,...(p.yanlis||{})};
+      if(Object.keys(y).length)e.turkiyeY=y;else delete e.turkiyeY}
     if(p.tur==='madde')e.ogrenci=Object.keys(kalan).length?Math.max(e.ogrenci||0,p.ogrenci):p.ogrenci;
     e.oturum=oturumOf(e);e.ts=Date.now();
   }
@@ -692,7 +698,7 @@ async function change(fn){canWrite();const {veri,hata}=oku();if(hata)throw new E
 const tarihKaydet=(ad,date)=>change(v=>{const e=v.exams.find(e=>ek(e.ad)===ad);if(!e)throw new Error('Sınav bulunamadı.');if(date!==null&&!dateOK(date))throw new Error('Tarih geçersiz.');e.date=date});
 const sinavSil=ad=>change(v=>{v.exams=v.exams.filter(e=>ek(e.ad)!==ad)});
 const zorlukSil=k=>change(v=>{if(!v.zorluk?.[k])throw new Error('Zorluk verisi bulunamadı.');delete v.zorluk[k];if(!Object.keys(v.zorluk).length)delete v.zorluk});
-const turkiyeSil=k=>change(v=>{const e=v.zorluk?.[k];if(!e||e.turkiye===undefined)throw new Error('Türkiye verisi bulunamadı.');delete e.turkiye;if(!e.ozet&&!e.madde)delete v.zorluk[k];else e.oturum=oturumOf(e);if(!Object.keys(v.zorluk).length)delete v.zorluk});
+const turkiyeSil=k=>change(v=>{const e=v.zorluk?.[k];if(!e||e.turkiye===undefined)throw new Error('Türkiye verisi bulunamadı.');delete e.turkiye;delete e.turkiyeY;if(!e.ozet&&!e.madde)delete v.zorluk[k];else e.oturum=oturumOf(e);if(!Object.keys(v.zorluk).length)delete v.zorluk});
 const esle=(course,code,name)=>change(v=>{if(!v.labels.some(l=>l[0]===code)||!clean(name))throw new Error('Konu adı gerekli.');v.maps[course+'|'+code]=topicName(name)});
 
 /* Running rates use integer evidence, never the average of percentages. Undated results are
@@ -702,6 +708,15 @@ function examDate(e,school=[]){
   const matches=school.filter(s=>ek(s.ad)===ek(e.ad)),dates=new Set();
   for(const s of matches){const ds=s.tarih?[s.tarih]:[s.T?.tarih,s.F?.tarih].filter(Boolean);for(const d of ds){const m=/^(\d{2})\.(\d{2})\.(\d{4})$/u.exec(d);if(m&&dateOK(m[3]+'-'+m[2]+'-'+m[1]))dates.add(m[3]+'-'+m[2]+'-'+m[1])}}
   return dates.size===1?[...dates][0]:null;
+}
+// The network's mean net in a ders of an exam (Performans analizi: Σ (p − w / 4)), or null when the file was read without the
+// wrong shares (before 2026-11-19) or not added. The exam is found by its name or, spelt another way, by its code.
+function agNet(v,ad,course){
+  const z=v&&v.zorluk;if(!z)return null;let e=z[ek(ad)];
+  if(!e){const kod=sinavKodu(ad),es=kod?Object.values(z).filter(x=>sinavKodu(x.ad)===kod):[];e=es.length===1?es[0]:null}
+  const p=e&&e.turkiye&&e.turkiye[course],w=e&&e.turkiyeY&&e.turkiyeY[course];
+  if(!Array.isArray(p)||!Array.isArray(w)||p.length!==w.length)return null;
+  return p.reduce((a,x,i)=>a+x-w[i]/4,0);
 }
 /* Difficulty. A question's difficulty is the school's own success rate p; a correct answer earns 1 - p and a wrong or blank
    answer costs p, so over a set of questions: fark = doğru - beklenen with beklenen = sum of p. Units are questions.
@@ -1027,7 +1042,7 @@ function zorlukSatiri(v,zi,k){
   // An exam with a TYT and an AYT shows each part per session: "özet TYT ✓ · AYT yok".
   const iki=x&&new Set([...x.oturum.ozet,...x.oturum.madde,...x.oturum.turkiye]).size>1;
   const parca=t=>!e?.[t]?'yok':!iki?'✓':['TYT','AYT'].map(o=>o+' '+(x.oturum[t].includes(o)?'✓':'yok')).join(', ');
-  return '<div class="kt-zline"><span>Zorluk: özet '+parca('ozet')+' · madde analizi '+parca('madde')+' · Türkiye (performans analizi) '+parca('turkiye')+'</span>'+(bad.length?'<span class="kt-warning">Zorluk verisi uyuşmuyor: '+h(bad.map(courseLabel).join(', '))+'</span>':'')+
+  return '<div class="kt-zline"><span>Zorluk: özet '+parca('ozet')+' · madde analizi '+parca('madde')+' · Türkiye (performans analizi) '+parca('turkiye')+(e?.turkiye&&!e.turkiyeY?' · <b>ortalama net için dosyayı yeniden ekleyin</b>':'')+'</span>'+(bad.length?'<span class="kt-warning">Zorluk verisi uyuşmuyor: '+h(bad.map(courseLabel).join(', '))+'</span>':'')+
     (e?.turkiye&&!readonly()?'<button type="button" class="et-dugme" data-kt-trdelete="'+h(k)+'"'+(busy?' disabled':'')+'>Türkiye verisini kaldır</button>':'')+
     (e&&(e.ozet||e.madde)&&!readonly()?'<button type="button" class="et-dugme" data-kt-zdelete="'+h(k)+'"'+(busy?' disabled':'')+'>Zorluk verisini kaldır</button>':'')+'</div>';
 }
@@ -1167,7 +1182,16 @@ function uploadMessage(reports,errors=[],extra=[]){
   return reports.length+' PDF kaydedildi · '+exams.size+' sınav'+(exams.size<=3?' ('+[...exams.values()].join(', ')+')':'')+' · '+pupils.size+' öğrenci. Aynı sınavın tekrarları güncellendi. '+[...extra,...errors].join(' ');
 }
 // The publisher's Performans analizi ("27-YKS-1202 SINAVI ANALİZLERİ"): read by the Yanlışlar defteri parser; only the exam
-// code and each question's network-wide success rate p are kept (no counts, no school, no pupil).
+// code, each question's network-wide success rate p and its wrong-answer share are kept (no counts, no school, no pupil).
+// p is over every pupil of the network who marked the A booklet; the file gives the answers of the top and bottom 27% only, so
+// the wrong share is p's remainder split as those groups split it: w = (1 − p) · Y / (Y + B), Y and B the groups' wrong and
+// blank answers (the key is the upper group's most marked option, as performansDogrula reads it). The network's mean net in a
+// ders is then Σ (p − w / 4) (agNet), the same pupils the squares are measured against.
+function yanlisPayi(m){
+  const ust=m.ust||[],alt=m.alt||[];if(ust.length<6||alt.length<6)return 0;
+  const k=[0,1,2,3,4].reduce((a,i)=>ust[i]>ust[a]?i:a,0),T=ust.concat(alt).reduce((a,x)=>a+x,0),B=ust[5]+alt[5],Y=T-B-ust[k]-alt[k];
+  return Y+B>0?Math.round((1-m.p)*Y/(Y+B)*10000)/10000:0;
+}
 const perfMi=pages=>pages.some(p=>{if(!Array.isArray(p))return false;const t=key(p.map(i=>typeof i?.s==='string'?i.s:'').join(' '));return t.includes('SINAVIANALIZLERI')||t.includes('MADDEGUCLUKINDEKSI')});
 function turkiyeCoz(pages){
   if(typeof YANLISLAR!=='object'||typeof YANLISLAR.performansCoz!=='function')throw new Error('Performans analizi okunamadı.');
@@ -1175,10 +1199,10 @@ function turkiyeCoz(pages){
   // ANALİZLERİ") by its full name, the name its karneler and Sınav özeti give it, so the files still meet under one exam.
   const sayfalar=pages.map(items=>({items:Array.isArray(items)?items:[]}));let perf;
   try{perf=YANLISLAR.performansCoz(sayfalar)}catch(e){if(!/Sınav kodu/u.test(e.message))throw e;perf=YANLISLAR.performansCoz(sayfalar,{tamAd:true})}
-  const dersler={};
-  for(const d of perf.dersler)dersler[d.ad]=d.maddeler.map(x=>Math.round(x.p*10000)/10000);
+  const dersler={},yanlis={};
+  for(const d of perf.dersler){dersler[d.ad]=d.maddeler.map(x=>Math.round(x.p*10000)/10000);yanlis[d.ad]=d.maddeler.map(yanlisPayi)}
   const o=new Set(Object.keys(dersler).map(c=>c.endsWith('-T')?'TYT':'AYT'));
-  return {tur:'turkiye',ad:perf.kod,oturum:o.size>1?'TYT + AYT':[...o][0],dersler};
+  return {tur:'turkiye',ad:perf.kod,oturum:o.size>1?'TYT + AYT':[...o][0],dersler,yanlis};
 }
 // Routes a file by what it is: Excel -> Sınav özeti (or the refused answer report); PDF -> Performans analizi, Madde Analizi or kazanım karnesi.
 async function dosyaCoz(file){
@@ -1256,6 +1280,6 @@ document.addEventListener('click',ev=>{
   if(zel&&confirm('Bu sınavın zorluk verisi (sınav özeti ve Madde Analizi) kaldırılsın mı? Dosyalar yeniden yüklenebilir.')){const k=zel.dataset.ktZdelete;act(()=>zorlukSil(k))}
 });
 document.addEventListener('submit',ev=>{const form=ev.target;if(!active()||!form.matches?.('.kt-mapping'))return;ev.preventDefault();if(readonly()||busy)return;const {ktCourse,ktCode}=form.dataset,name=form.elements.topic.value;act(()=>esle(ktCourse,ktCode,name))});
-return {yaz:(v)=>write(v),geridekiKonular,yuzde,puan,turkiyeCoz,turkiyeKiyas,ogrenciFark,grupOlc,dersKaymasi,turkiyeSil,R_MADDE,pdfCoz,ozetCoz,maddeCoz,zorlukIndex,zorlukSil,zipListe,zipDosya,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,sakla,ac,olcu,oku,merge,compact,examDate,history,model,examsText,order,summaryText,uploadMessage,SIRA,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
+return {agNet,yaz:(v)=>write(v),geridekiKonular,yuzde,puan,turkiyeCoz,turkiyeKiyas,ogrenciFark,grupOlc,dersKaymasi,turkiyeSil,R_MADDE,pdfCoz,ozetCoz,maddeCoz,zorlukIndex,zorlukSil,zipListe,zipDosya,topicFor,topicName,key,ek,studentKey,blockKey,blank,dogrula,sakla,ac,olcu,oku,merge,compact,examDate,history,model,examsText,order,summaryText,uploadMessage,SIRA,ekle,tarihKaydet,sinavSil,esle,gorunum,pdfEkle,drawAll};
 })();
 function gorunumKonuTakibi(){return KONU_TAKIBI.gorunum()}
