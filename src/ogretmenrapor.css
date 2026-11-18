@@ -36,7 +36,7 @@
 .ogr-izgara{stroke:var(--cizgi);stroke-width:1;opacity:.6}
 .ogr-tik{font-size:11px;fill:var(--soluk);font-variant-numeric:tabular-nums}
 .ogr-sinav-adi{font-size:10.5px}
-.ogr-alan{stroke:none}.ogr-alan-ust{fill:var(--iyi);fill-opacity:.22}.ogr-alan-alt{fill:var(--kritik);fill-opacity:.22}
+.ogr-alan{stroke:none}.ogr-alan-ust{fill:var(--iyi);fill-opacity:.38}.ogr-alan-alt{fill:var(--kritik);fill-opacity:.38}
 .ogr-deger{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;paint-order:stroke;stroke:var(--kagit);stroke-width:3px;stroke-linejoin:round}
 .ogr-deger-okul{fill:var(--murekkep)}
 .ogr-tr{fill:none;stroke:var(--soluk);stroke-width:1.6;stroke-dasharray:5 4}
@@ -44,6 +44,7 @@
 .ogr-tr-nokta{fill:var(--kagit);stroke:var(--soluk);stroke-width:1.4}
 .ogr-okul-nokta{stroke:var(--kagit);stroke-width:2}
 .ogr-l-tr{background:repeating-linear-gradient(90deg,var(--soluk) 0 5px,transparent 5px 9px)}
+.ogr-l-okul{background:var(--murekkep)}
 /* The topics: coloured squares, no numbers. */
 .ogr-konular{display:flex;flex-direction:column;gap:10px;min-width:0}
 .ogr-konu-bas{display:flex;align-items:center;justify-content:space-between;gap:12px}

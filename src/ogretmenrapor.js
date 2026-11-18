@@ -230,7 +230,7 @@ const ok=(v,esik=.05)=>v>=esik?'▲':v<=-esik?'▼':'■';
 // The cell colour: red (behind) ↔ green (ahead), deeper with the gap (full at ±20 points); a gap within chance is drawn pale.
 function hucreRengi(c){
   if(!c)return '';
-  const t=Math.min(1,Math.abs(c.fark)/RENK_UST),a=Math.round((c.durum==='belirsiz'?.12+.18*t:.25+.6*t)*100);
+  const t=Math.min(1,Math.abs(c.fark)/RENK_UST),a=Math.round((c.durum==='belirsiz'?.22+.16*t:.45+.45*t)*100);
   return 'background:color-mix(in srgb,'+(c.fark<0?'var(--kritik)':'var(--iyi)')+' '+a+'%,transparent)'+(a>=60?';color:#fff':'');
 }
 // A round step for about `adet` ticks over `aralik` (1, 2, 2,5 or 5 · 10^k).
@@ -259,7 +259,8 @@ function netGrafigi(b,W){
   const x=i=>r1(n===1?(L+R)/2:L+ic+(R-L-2*ic)*i/(n-1)),adim=n>1?(R-L-2*ic)/(n-1):R-L;
   // A value is written on every point when the labels fit, otherwise on every k-th counted back from the newest exam.
   const her=Math.max(1,Math.ceil((dar?32:36)/Math.max(1,adim))),yazili=i=>(n-1-i)%her===0;
-  const renkli=renk(b.kod),UST=16,ALT=UST+(dar?130:150);
+  // The students' line is ink, not the subject's colour: only the shading is red or green, so a green subject cannot read as "above".
+  const renkli='var(--murekkep)',UST=16,ALT=UST+(dar?130:150);
   const vals=l.flatMap(p=>[p.net,...(p.genel!==null?[p.genel]:[])]),lo0=Math.min(...vals),hi0=Math.max(...vals),pad=Math.max(.8,(hi0-lo0)*.25);
   const lo=Math.max(0,lo0-pad),hi=hi0+pad,y=v=>r1(ALT-(v-lo)/(hi-lo||1)*(ALT-UST)),ad=adimBul(hi-lo,dar?3:4);
   let s='';
@@ -333,7 +334,7 @@ function izgaraHtml(b,ust=''){
     '<div class="ogr-iz-kutu"><table class="ogr-iz'+(z.sinavlar.length>12?' ogr-iz-cok':'')+'" style="--ogr-en:'+(220+z.sinavlar.length*40)+'px;--ogr-ust:'+(260+z.sinavlar.length*96)+'px"><thead><tr><th scope="col" class="ogr-iz-konu"></th>'+basliklar+'</tr></thead>'+
     z.satir.map(r=>'<tbody class="ogr-iz-grup"><tr><th scope="row" class="ogr-iz-konu">'+kacis(r.ad)+'</th>'+r.hucre.map((c,i)=>kare(r.ad,c,z.sinavlar[i],'ogr-iz-h')).join('')+'</tr>'+(r.alt||[]).map(altSatir).join('')+'</tbody>').join('')+
     '<tfoot><tr class="ogr-iz-toplam"><th scope="row" class="ogr-iz-konu">Bütün konular</th>'+z.sinavlar.map(toplam).join('')+'</tr></tfoot></table></div>'+
-    '<div class="ogr-olcek"><span class="ogr-olcek-serit"><em>Türkiye’nin gerisinde</em><i style="'+koyu('kritik',85)+'"></i><i style="'+koyu('kritik',24)+'"></i><i style="'+koyu('iyi',24)+'"></i><i style="'+koyu('iyi',85)+'"></i><em>Türkiye’nin önünde</em></span>'+
+    '<div class="ogr-olcek"><span class="ogr-olcek-serit"><em>Türkiye’nin gerisinde</em><i style="'+koyu('kritik',90)+'"></i><i style="'+koyu('kritik',30)+'"></i><i style="'+koyu('iyi',30)+'"></i><i style="'+koyu('iyi',90)+'"></i><em>Türkiye’nin önünde</em></span>'+
     '<span class="ogr-olcek-bos"><i></i>soru yok</span></div>'+
     (eksik.length?'<p class="mini ogr-iz-eksik">Konu verisi henüz yok: '+kacis(eksik.join(', '))+'</p>':'')+'</div>';
 }
@@ -368,7 +369,7 @@ function blokHtml(b,i,hoca='',ilk=true){
   return '<section class="et-panel ogr-blok"><header class="ogr-blok-bas"><h3><i class="et-renk nokta" style="background:'+renk(b.kod)+'"></i> '+kacis(baslik)+'</h3>'+
     (hoca&&!ilk?'<span class="ogr-baski ogr-sayfa-adi">'+kacis(hoca)+'</span>':'')+(kapsam?'<p class="ogr-kapsam">'+kacis(kapsam)+'</p>':'')+'</header>'+
     (b.seri.length?'<div class="ogr-genel">'+skorHtml(b)+
-      '<figure class="ogr-sekil"><div class="et-lejant ogr-lejant"><span><i class="et-renk cizgi ogr-l-okul" style="background:'+renk(b.kod)+'"></i>'+(y.ogrenci?'Senin netin':y.biz)+'</span><span><i class="et-renk cizgi ogr-l-tr"></i>Türkiye ortalaması</span></div><div class="ogr-grafik" data-ogr-grafik="'+i+'"></div></figure></div>':'')+
+      '<figure class="ogr-sekil"><div class="et-lejant ogr-lejant"><span><i class="et-renk cizgi ogr-l-okul"></i>'+(y.ogrenci?'Senin netin':y.biz)+'</span><span><i class="et-renk cizgi ogr-l-tr"></i>Türkiye ortalaması</span></div><div class="ogr-grafik" data-ogr-grafik="'+i+'"></div></figure></div>':'')+
     izgaraHtml(b,hoca?baslik+' · '+hoca:'')+hamVeri(b,i)+'</section>';
 }
 // What a reader needs before the first figure: whom the report covers, where the numbers come from, how to read a sign and a colour.
