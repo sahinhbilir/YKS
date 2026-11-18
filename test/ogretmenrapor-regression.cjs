@@ -142,7 +142,7 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(D.konutakibi,['12/A'],'TYT','MATEMATİK-T')`), null, 'no Matematik in Konu Takibi');
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(null,['12/A'],'TYT','TÜRKÇE-T')`), null);
   });
-  await check('a kazanım without a topic is a row under its own name: no question and no exam is dropped (11th and 12th grade codes have no built-in topic)', () => {
+  await check('a kazanım without a topic is a row under its own name: no question and no exam is dropped; every grade’s codes and the publisher’s AYT Edebiyat codes have a topic', () => {
     // One exam, ADA (12/A): Sözcükte Anlam ×2 (p .5, .5; 1 correct) and a code outside every map ×1 (p .4; correct).
     const kt = run('KONU_TAKIBI'), ad = 'SENTETİK-KONU-9';
     const v = kt.merge(kt.blank(), [{ ad, blocks: [F.block([F.row('T.12.1.1', 'a', [2, 1, 1, 0]), F.row('ZZ.11.1.1', 'Sentetik kazanımı uygular', [1, 1, 0, 0])], 'outcome', 'TÜRKÇE-T', A)] }],
@@ -163,7 +163,16 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // there has no topic (the report shows the kazanım itself).
     const unite = run("MUFREDAT_2026.siniflar['11'].find(d=>d.uniteler.some(u=>(u.ciktiKodlari||[]).includes('MAT.11.1.1'))).uniteler.find(u=>u.ciktiKodlari.includes('MAT.11.1.1')).ad");
     assert.equal(tf('MATEMATİK-T', 'MAT.11.1.1'), unite); assert.equal(tf('MATEMATİK-T', 'MAT.11.1.1.2'), unite); assert.notEqual(unite, 'Yönlü Açılar');
-    assert.equal(tf('MATEMATİK-A', 'MAT.10.3.1'), null, 'not the earlier programme’s Polinomlar'); assert.equal(tf('MATEMATİK-A', 'MAT.12.5.2'), null);
+    assert.equal(tf('MATEMATİK-A', 'MAT.10.3.1'), null, 'not the earlier programme’s Polinomlar');
+    // The new programme has not reached the 12th grade: a 12th-grade code with a new-style prefix is the earlier programme's
+    // (the publisher's 27-YKS-1202 AYT: BİY.12.1.1.2 Nükleik asitler, TDE.12.…).
+    assert.equal(tf('MATEMATİK-A', 'MAT.12.5.2'), 'Anlık Değişim Oranı ve Türev'); assert.equal(tf('BİYOLOJİ-A', 'BİY.12.1.1.2'), 'Genden Proteine');
+    // AYT Edebiyat: the publisher's own AYT order (TDE.12.2 is şiir, not the MEB 12th-grade Hikâye), part by part, else the unit;
+    // an unknown unit has no topic (never a MEB unit name); Seçmeli Felsefe reads the Felsefe grubu codes.
+    for (const [k, t] of [['TDE.12.1.1.3', 'Sanat ve Edebiyat'], ['TDE.12.1.3.1', 'Türk Edebiyatının Dönemleri'], ['TDE.12.1.5.2', 'Metinlerin Sınıflandırılması'], ['TDE.12.2.1.6', 'Şiir Bilgisi'],
+      ['TDE.12.2.1.12', 'Şiir Bilgisi'], ['TDE.12.2.2.3', 'Şiir Dili ve Edebî Sanatlar'], ['TDE.12.3.1.1', 'İslamiyet Öncesi Türk Edebiyatı'], ['TDE.12.2.7.1', 'Şiir'], ['TDE.12.9.1.1', null]])
+      assert.equal(tf('TÜRK DİLİ VE EDB-A', k), t, k);
+    assert.equal(tf('S.FELSEFE-A', 'PSK.12.2.1'), 'Psikolojinin Temel Süreçleri'); assert.equal(tf('FELSEFE GR.-A', 'PSK.12.2.1'), 'Psikolojinin Temel Süreçleri');
     // The other lessons of the earlier programme: the unit by grade.unit, a topic where the unit is broad; the ders comes from
     // the course code (12.2 is Basit Harmonik Hareket in Fizik, Karbon Kimyasına Giriş in Kimya).
     assert.equal(tf('FİZİK-A', 'F.12.2.1.3'), 'Basit Harmonik Hareket'); assert.equal(tf('KİMYA-A', 'K.12.2.1.3'), 'Karbon Kimyasına Giriş'); assert.equal(tf('FİZİK-A', 'E.FİZ.11.1.8.2'), 'Tork');
@@ -357,6 +366,14 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(blok(cemre, 'FİZİK-A'), undefined, 'CEMRE (EA) has no AYT Fizik');
     const edb = blok(cemre, 'TÜRK DİLİ VE EDB-A'); assert.deepEqual(edb.seri.map(p => [p.net, p.fark]), [[12, 2]]);
     near(edb.izgara.satir[0].hucre[0].fark, 0, 'CEMRE: 1 correct of 2 against Türkiye 2 · ,5 = 1 → 0 points');
+    // The exam with a net but no topic data is named under the topic table (27-YKS-1201 has no AYT kazanım karnesi here):
+    // the teacher is told what to add, the student only that it has no topic results yet.
+    run("EK.osDuzey=12;EK.osSube='12/B';EK.osOgr='1003'"); const sayfa = run('OGRETMEN_RAPOR.gorunumOgrenci()');
+    assert.match(sayfa, /<p class="mini ogr-iz-eksik">Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Bu denemelerin konu sonuçları henüz yok\.<\/p>/, 'the student’s sheet, in the student’s words');
+    assert.match(run('OGRETMEN_RAPOR.gorunum()'), /Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Konu Takibi’nde bu denemelerin AYT kazanım karnesi yok;/, 'Öğretmen raporu says what to add');
+    put('__OZ3', get(`OGRETMEN_RAPOR.kiyasOzeti({no:'1003'})`)); run(`D.turkiyeKiyas=__OZ3;D.ogr=[{no:'1003',ad:'SENTETİK CEMRE',sube:'12/B',sinif:12,alan:'EA',kap:6,off:[6],aktif:true}];D.rol='ogrenci'`);
+    assert.match(run('OGRETMEN_RAPOR.gorunumKendi()'), /Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Bu denemelerin konu sonuçları henüz yok\./);
+    run("D.rol='rehber';EK.osDuzey=undefined;EK.osSube=undefined;EK.osOgr=undefined");
     // The Dikkat card's "konuda geride" reads the same per-student gaps: ADA is not behind in topics she never answered.
     assert.equal(get(`KONU_TAKIBI.ogrenciFark(D.konutakibi,{session:'AYT'}).ogrenciler.map(o=>o.student.no)`).join(), '1003');
   });

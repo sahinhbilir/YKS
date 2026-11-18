@@ -165,6 +165,16 @@ four printed totals must match the sum of its rows; a truncated or malformed
 file is rejected as a whole. Other valid files in a batch may still be saved,
 and filenames plus errors appear in the page status. No PDF is sent to a server.
 
+**12th-grade and AYT codes (2026-11-18, from the publisher's 27-YKS-1202 AYT Sınav özeti).** The new programme has reached the
+9th–11th grades only, so a 12th-grade code with a new-style prefix (`BİY.12.1.1.2`, `MAT.12.5.2`) is read as the earlier
+programme's (`yeniProgramMi`). AYT Edebiyat's `TDE.12.unit.part.kazanım` codes follow the publisher's own AYT order, not the MEB
+12th-grade units, so they have their own table (`AYT_EDB`): 12.1.1 Sanat ve Edebiyat, 12.1.3 Türk Edebiyatının Dönemleri, 12.1.5
+Metinlerin Sınıflandırılması, 12.2.1 Şiir Bilgisi, 12.2.2 Şiir Dili ve Edebî Sanatlar, 12.3.1 İslamiyet Öncesi Türk Edebiyatı; a part
+not seen yet takes its unit (12.1 Edebiyata Giriş, 12.2 Şiir, 12.3 Türk Edebiyatının Tarihî Dönemleri), an unknown unit stays for
+**Eşleştir**. Seçmeli Felsefe (`S.FELSEFE-A`) reads the Felsefe grubu codes. All 166 AYT questions of that exam now have a topic
+(before: 27 had none: 18 Edebiyat, 6 Biyoloji, 3 Seçmeli Felsefe). Topics are worked out when a page is drawn, so stored data
+regroups by itself; a teacher's own Eşleştir still comes first.
+
 The seeded publisher code-parent dictionary was checked against all students
 in the supplied paired detail/topic reports for two exams. All paired counts
 matched. Original descriptions are retained, including publisher classifications
