@@ -431,5 +431,37 @@ async function check(name, fn) { reset(); try { await fn(); passed++; console.lo
     const baska = L[1].dersler[0].satir[4][0]; put('O', baska); run('EK.tgOkul=O');
     assert.equal(get("TURKIYE.ortalamalar(D.turkiye)(A).dersListesi('" + L[1].dersler[0].kod + "').sira"), 5);
   });
+  await check('a TÖDER (Akbim) list gives the Türkiye averages alone, under the school\'s name of the exam, and stays off the place charts', async () => {
+    // Synthetic TÖDER layout: title, exam day, subject headers and the SINAV GENELİ row (values centred under their subject).
+    const it = (s, x, y, w, z = 6) => ({ s, x, y, w, z });
+    const bas = [['TÜRKÇE', 161, 19.3], ['TAR', 213, 9.8], ['COĞ', 259, 10.9], ['FEL', 307, 8.1], ['DİN', 353.5, 9.2], ['T. MAT', 396.3, 17.5], ['GEO', 446.4, 10.6], ['FİZ', 494.9, 7.1], ['KİM', 540.2, 10], ['BİY', 588, 7.9], ['TOPLAM', 630.9, 21.3]];
+    const ort = ['25,51', '2,22', '2,45', '3,28', '3,35', '12,23', '2,65', '1,30', '1,17', '2,65', '56,79'];
+    const sayfa = (genel = ort) => [it('18.11.2026', 784, 564, 39.5, 7.9), it('Sınav Tarihi : 6.11.2026', 68.8, 546, 83.8, 7.9), it('SENTETİK TYT DENEME-1', 343, 529, 154, 13.9),
+      ...bas.map(([s, x, w]) => it(s, x, 502, w)), it('İL GENELİ ( 2131 Öğrenci )', 73, 120, 70), it('SINAV GENELİ ( 328382 Öğrenci )', 52, 110, 90),
+      ...genel.map((v, i) => { const [, x, w] = bas[i], vw = v.length * 3; return it(v, x + w / 2 - vw / 2, 110, vw); }), it('313,363', 671, 110, 20)];
+    put('P', [sayfa()]);assert.equal(run('TURKIYE.akbimMi(P)'), true);assert.equal(run('TURKIYE.akbimMi([[{s:"TÜRKÇE",x:1,y:1,w:1}]])'), false);
+    const r = get('TURKIYE.akbimCoz(P)');
+    assert.equal(r.ad, 'SENTETİK TYT DENEME-1');assert.equal(r.gun, gun('2026-11-06'));assert.equal(r.yaz, gun('2026-11-18'));assert.equal(r.liste, 'kurum');
+    assert.deepEqual(r.dersler.map(d => [d.kod, d.soru, d.genel, d.satir.length]), [['TÜRKÇE-T', 40, 25.51, 0], ['TARİH-T', 5, 2.22, 0], ['COĞRAFYA-T', 5, 2.45, 0], ['FELSEFE-T', 5, 3.28, 0], ['DİN KÜLTÜRÜ-T', 5, 3.35, 0],
+      ['MATEMATİK-T', 30, 12.23, 0], ['GEOMETRİ-T', 10, 2.65, 0], ['FİZİK-T', 7, 1.3, 0], ['KİMYA-T', 7, 1.17, 0], ['BİYOLOJİ-T', 6, 2.65, 0]]);
+    // A value missing from the row or a total that does not add up refuses the file.
+    put('P', [sayfa(ort.map((v, i) => i === 5 ? '' : v))]);assert.throws(() => run('TURKIYE.akbimCoz(P)'), /T\. MAT Türkiye ortalaması okunamadı/);
+    put('P', [sayfa(ort.map((v, i) => i === 10 ? '60,00' : v))]);assert.throws(() => run('TURKIYE.akbimCoz(P)'), /toplamı tutmuyor/);
+    // The school's exam: same day first, else within a week sharing a word of the title; otherwise none.
+    const sl = [{ ad: '27-TYT_SENTETİK', T: { tarih: '03.11.2026' } }, { ad: '27-YKS-1203', T: { tarih: '09.11.2026' } }];put('SL', sl);put('R', r);
+    assert.equal(run('TURKIYE.okulSinavAdi(R,SL)'), '27-TYT_SENTETİK');
+    put('SL', [...sl, { ad: '27-YKS-1202', T: { tarih: '06.11.2026' } }]);assert.equal(run('TURKIYE.okulSinavAdi(R,SL)'), '27-YKS-1202');
+    put('SL', [{ ad: '27-YKS-1203', T: { tarih: '09.11.2026' } }]);assert.equal(run('TURKIYE.okulSinavAdi(R,SL)'), null);
+    // Stored with an empty list: it round-trips, feeds the averages, and the place charts leave it out.
+    await ekle({ ...r, ad: '27-TYT_SENTETİK' });
+    assert.equal(get('TURKIYE.ortalamalar(D.turkiye)("27-TYT_SENTETİK").genel("MATEMATİK-T")'), 12.23);
+    assert.equal(get('TURKIYE.ortalamalar(D.turkiye)("27-TYT_SENTETİK").toplam("TYT").genel'), 56.81);
+    assert.equal(get('TURKIYE.ortalamalar(D.turkiye)("27-TYT_SENTETİK").dersListesi("MATEMATİK-T")'), null);
+    let m = model();assert.equal(m.sinavlar.length, 0);assert.equal(m.tum.length, 1);assert.equal(m.tum[0].sirali, false);
+    assert(get('TURKIYE.gorunum()').includes('Sıra grafikleri için kurum listesi yok'));
+    await ekle(liste(1));m = model();assert.deepEqual(m.sinavlar.map(s => s.ad), ['27-YKS-1201']);assert.equal(m.tum.length, 2);
+    assert(get('TURKIYE.gorunum()').includes('Yalnız Türkiye ortalaması'));
+    assert.equal(get('TURKIYE.ortalamalar(D.turkiye)("27-TYT_SENTETİK").genel("TÜRKÇE-T")'), 25.51);
+  });
   console.log(passed + ' Türkiye geneli checks passed');
 })();
