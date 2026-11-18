@@ -32123,8 +32123,10 @@ function ressam(out){
   const sigdir=(t,max,s,b=false)=>{t=String(t);if(en(t,s,b)<=max)return t;const c=[...t];let lo=0,hi=c.length;while(lo<hi){const m=Math.ceil((lo+hi)/2);if(en(c.slice(0,m).join('')+'…',s,b)<=max)lo=m;else hi=m-1}return c.slice(0,lo).join('').trimEnd()+'…'};
   // Up to `adet` lines at word boundaries; the last line is cut with an ellipsis when the words run on.
   // A word too long for the line breaks after a dash or an underscore (27-YKS-1201, 27_AYT_ÖZEL_1).
-  const satirla=(t,max,s,b=false,adet=2)=>{const l=[''];for(const k of String(t).split(/\s+/).flatMap(w=>en(w,s,b)>max?w.split(/(?<=[-_])/):[w])){const son=l.length-1,yeni=l[son]?l[son]+' '+k:k;if(en(yeni,s,b)<=max||!l[son])l[son]=yeni;else l.push(k)}
-    return l.length<=adet?l.map(x=>sigdir(x,max,s,b)):[...l.slice(0,adet-1).map(x=>sigdir(x,max,s,b)),sigdir(l.slice(adet-1).join(' '),max,s,b)]};
+  // A word longer than a line breaks after its - or _; its pieces join again without a space (bas: a line starts mid-word).
+  const satirla=(t,max,s,b=false,adet=2)=>{const l=[''],bas=[false];for(const [k,bit] of String(t).split(/\s+/).flatMap(w=>en(w,s,b)>max?w.split(/(?<=[-_])/).map((p,j)=>[p,j>0]):[[w,false]])){const son=l.length-1,yeni=l[son]?l[son]+(bit?'':' ')+k:k;if(en(yeni,s,b)<=max||!l[son])l[son]=yeni;else{l.push(k);bas.push(bit)}}
+    const kalan=l.slice(adet-1).reduce((a,x,i)=>a+(i&&!bas[adet-1+i]?' ':'')+x,'');
+    return l.length<=adet?l.map(x=>sigdir(x,max,s,b)):[...l.slice(0,adet-1).map(x=>sigdir(x,max,s,b)),sigdir(kalan,max,s,b)]};
   const yazi=(x,y,t,s=12,renk=PC.ink,b=false,hiza='start')=>out.push('<text x="'+r1(x)+'" y="'+r1(y)+'" font-size="'+s+'" fill="'+renk+'" font-weight="'+(b?700:400)+'" text-anchor="'+hiza+'">'+kacis(t)+'</text>');
   const kutu=(x,y,w,h,dolgu='#fff',r=14,ek='')=>out.push('<rect x="'+r1(x)+'" y="'+r1(y)+'" width="'+r1(Math.max(0,w))+'" height="'+r1(Math.max(0,h))+'" rx="'+r1(Math.max(0,Math.min(r,h/2,w/2)))+'" fill="'+dolgu+'"'+ek+'/>');
   const cizgi=(x1,y1,x2,y2,renk=PC.grid,w=1,kesik='')=>out.push('<path d="M'+r1(x1)+','+r1(y1)+' L'+r1(x2)+','+r1(y2)+'" stroke="'+renk+'" stroke-width="'+w+'" fill="none"'+(kesik?' stroke-dasharray="'+kesik+'"':'')+'/>');
