@@ -126,6 +126,9 @@ function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen,nolar){
     const tarih=tarihi(c)(e);sinavlar.push({ad:e.ad,g:tarih?Date.parse(tarih+'T00:00:00Z')/864e5:null,ogr:toplam.ogr,...olc(toplam)});
   }
   if(!sinavlar.length)return null;
+  // The şube's plan order: the block's classes, or the student's own class.
+  const planSiniflari=siniflar.length?siniflar:nolar&&c.k&&c.k.t?[...nolar].map(n=>c.k.t.kisi.get(String(n))).filter(Boolean).map(k=>sinifK(k.sinif)):[];
+  const liste=planListesi(planSiniflari,kod,oturum);if(liste)planaGore(konular,liste);
   return izgaraKur(sinavlar,konular);
 }
 // The order topics are taught in: a kazanım code's numbers after the lesson's letters (E.GEO.9.4.3.1 → 9, 4, 3, 1: grade, unit,
@@ -136,6 +139,44 @@ function siraKarsilastir(a,b){
   if(!a||!b)return (!a)-(!b);
   for(let i=0;i<Math.max(a.length,b.length);i++){const x=a[i]??-1,y=b[i]??-1;if(x!==y)return x-y}
   return 0;
+}
+// The order the students' weekly schedules use (2026-11-18): the şube's own topic plan (Müfredat, D.konuPlani[şube kodu]),
+// week by week. A class (12/A) finds its şube code in the timetables (Etüt planı → 12/A = 301); the lesson by its name
+// (MATEMATİK-A → "Matematik AYT", GEOMETRİ-T → "Geometri", TARİH.1-A → "Tarih"). Konu Takibi names its topics after the MEB
+// programme and the plan after the school's own list ("Üçgenlerde Eşlik ve Benzerlik" / "Üçgende Eşlik"), so a topic takes the
+// plan entry sharing most of its words (at least 60% of them, or all of the entry's) (each word cut to its first five letters; one a prefix of the other counts, so Alanı
+// meets Alan). A topic with no such entry stays after the topic before it in the kazanım codes. No plan: the kazanım codes.
+const planNorm=t=>String(t||'').toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/[^A-Z0-9]+/g,' ').trim();
+const PLAN_DOLGU=new Set(['VE','ILE','DE','DA','KI','BIR','IN','TYT','AYT','DEVAMI','I','II']);
+const planKokleri=t=>planNorm(t).split(' ').filter(w=>w.length>=3&&!PLAN_DOLGU.has(w)).map(w=>w.slice(0,5));
+function planDersi(plan,kod,oturum){
+  const n=planNorm(kod).replace(/ [TA]$/,'').replace(/^S /,'').replace(/ (GR|[12])\b.*$/,'').trim(),k=n.split(' '),taban=/^(TURK|DIN)$/.test(k[0])?k.slice(0,2).join(' '):k[0];
+  const adlar=[...new Set(plan.flatMap(h=>Object.keys(h||{})))],aday=adlar.filter(d=>planNorm(d)===taban||planNorm(d).startsWith(taban+' ')&&!(taban==='TURK'&&/TURKCE/.test(planNorm(d))));
+  return aday.find(d=>planNorm(d).split(' ').includes(oturum))||aday.find(d=>!/ (TYT|AYT)$/.test(planNorm(d)))||aday[0]||null;
+}
+function planListesi(siniflar,kod,oturum){
+  if(typeof D==='undefined'||!D||!D.konuPlani)return null;
+  const kodlar={};try{const pl=typeof ETUTPLANI!=='undefined'?ETUTPLANI.oku().plan:null;for(const [s,x] of Object.entries((pl&&pl.programlar)||{}))if(x&&x.kod)kodlar[sinifK(s)]=String(x.kod)}catch(e){}
+  for(const c of siniflar){
+    const plan=D.konuPlani[kodlar[c]]||D.konuPlani[c];if(!Array.isArray(plan))continue;
+    const ders=planDersi(plan,kod,oturum);if(!ders)continue;
+    const l=[];for(const h of plan)for(const t of (h&&h[ders])||[]){if(planNorm(t)==='GENEL TEKRAR'||l.includes(t))continue;const tag=/\((TYT|AYT)\)\s*$/.exec(t);if(tag&&tag[1]!==oturum)continue;l.push(t)}
+    if(l.length)return l;
+  }
+  return null;
+}
+function planYeri(ad,liste){
+  const a=planKokleri(ad);if(!a.length)return null;let en=null,puan=0,ikinci=0;
+  liste.forEach((t,i)=>{const b=planKokleri(t);if(!b.length)return;const ortak=a.filter(x=>b.some(y=>x.startsWith(y)||y.startsWith(x))).length,p=ortak/a.length,q=ortak/b.length;
+    // Most of the topic's words (60%), or every word of the entry (Özel Dörtgenler → Dörtgenler); one shared word of two is not enough
+    // (Sözcükte Anlam is not Cümlede Anlam ve Anlatım).
+    if((p>=.6||q===1)&&(p>puan||p===puan&&q>ikinci)){en=i;puan=p;ikinci=q}});
+  return en;
+}
+// Topics in the plan's order: matched ones by their place, the others right after the topic before them in the kazanım codes.
+function planaGore(konular,liste){
+  const l=[...konular.values()].sort((a,b)=>siraKarsilastir(a.sira,b.sira)||a.ad.localeCompare(b.ad,'tr'));let son=-1,ek=0;
+  for(const K of l){const i=planYeri(K.ad,liste);if(i!==null){son=i;ek=0;K.sira=[i,0]}else K.sira=[son,++ek]}
 }
 function siraAl(K,kod){const s=kodSirasi(kod);if(s&&(!K.sira||siraKarsilastir(s,K.sira)<0))K.sira=s}
 // sinavlar: [{ad, g, ogr, fark, z, durum}]; konular: Map(id → {id, ad, sira, hucre:[{d,b,n,v}], alt: Map(kod → {kod, ad, hucre})}).
@@ -313,7 +354,7 @@ function skorHtml(b){
     '<div class="ogr-skor-sayi"><span>Türkiye</span><strong>'+f1(son.genel)+'</strong></div>'+
     '<div class="ogr-skor-durum"><b class="ogr-durum '+yon+'">'+durum+'</b><span>'+kacis(son.ad)+'</span></div></div>';
 }
-// The topic table: a row per topic in the order taught (kodSirasi), a coloured square per exam (green ahead of Türkiye, red
+// The topic table: a row per topic in the şube's plan order (planaGore; without a plan the kazanım codes, kodSirasi), a coloured square per exam (green ahead of Türkiye, red
 // behind, deeper the larger the gap, pale when within chance; empty: no question). No number on the page: the figures are in
 // each square's tooltip and the folded appendix. The kazanımlar under each topic are hidden until "Kazanımlar" is ticked.
 // The last row is the whole subject. ust: printed beside the heading, so a loose sheet says whose it is.
@@ -510,7 +551,8 @@ function ressam(out){
   const en=(t,s,b=false)=>{if(olc){olc.font=(b?'bold ':'')+s+'px Arial';return olc.measureText(String(t)).width}return [...String(t)].length*s*(b?.62:.56)};
   const sigdir=(t,max,s,b=false)=>{t=String(t);if(en(t,s,b)<=max)return t;const c=[...t];let lo=0,hi=c.length;while(lo<hi){const m=Math.ceil((lo+hi)/2);if(en(c.slice(0,m).join('')+'…',s,b)<=max)lo=m;else hi=m-1}return c.slice(0,lo).join('').trimEnd()+'…'};
   // Up to `adet` lines at word boundaries; the last line is cut with an ellipsis when the words run on.
-  const satirla=(t,max,s,b=false,adet=2)=>{const l=[''];for(const k of String(t).split(/\s+/)){const son=l.length-1,yeni=l[son]?l[son]+' '+k:k;if(en(yeni,s,b)<=max||!l[son])l[son]=yeni;else l.push(k)}
+  // A word too long for the line breaks after a dash or an underscore (27-YKS-1201, 27_AYT_ÖZEL_1).
+  const satirla=(t,max,s,b=false,adet=2)=>{const l=[''];for(const k of String(t).split(/\s+/).flatMap(w=>en(w,s,b)>max?w.split(/(?<=[-_])/):[w])){const son=l.length-1,yeni=l[son]?l[son]+' '+k:k;if(en(yeni,s,b)<=max||!l[son])l[son]=yeni;else l.push(k)}
     return l.length<=adet?l.map(x=>sigdir(x,max,s,b)):[...l.slice(0,adet-1).map(x=>sigdir(x,max,s,b)),sigdir(l.slice(adet-1).join(' '),max,s,b)]};
   const yazi=(x,y,t,s=12,renk=PC.ink,b=false,hiza='start')=>out.push('<text x="'+r1(x)+'" y="'+r1(y)+'" font-size="'+s+'" fill="'+renk+'" font-weight="'+(b?700:400)+'" text-anchor="'+hiza+'">'+kacis(t)+'</text>');
   const kutu=(x,y,w,h,dolgu='#fff',r=14,ek='')=>out.push('<rect x="'+r1(x)+'" y="'+r1(y)+'" width="'+r1(Math.max(0,w))+'" height="'+r1(Math.max(0,h))+'" rx="'+r1(Math.max(0,Math.min(r,h/2,w/2)))+'" fill="'+dolgu+'"'+ek+'/>');
@@ -565,7 +607,7 @@ function pdfGrafik(P,b,x,y,w,h,as=9){
 // The topic table: the exam names on top, a row per topic in the order taught with a coloured square per exam (an empty dashed
 // square: no question), the whole subject last under a hairline. Rows shrink to fit the height they are given.
 function pdfIzgara(P,z,x,y,w,h){
-  const ns=z.sinavlar.length,n=z.satir.length+1,hb=26,rh=Math.max(7,Math.min(24,(h-hb-8)/n)),fs=Math.max(6.5,Math.min(10.5,rh*.56));
+  const ns=z.sinavlar.length,n=z.satir.length+1,hb=26,rh=Math.max(8,Math.min(24,(h-hb-8)/n)),fs=Math.max(7.5,Math.min(10.5,rh*.66));
   const adW=Math.min(Math.max(110,w*.42),250),kx=x+adW+6,kw=(x+w-kx)/ns,kareW=Math.min(kw-4,76),kr=Math.min(5,rh/3);
   z.sinavlar.forEach((e,j)=>{const sat=P.satirla(e.ad,kw-4,8,true);sat.forEach((t,k)=>P.yazi(kx+kw*j+kw/2,y+hb-6-(sat.length-1-k)*10,t,8,PC.muted,true,'middle'))});
   const kare=(c,j,ry)=>{const bx=kx+kw*j+(kw-kareW)/2,by=ry+1.5,bh=rh-3;if(c)P.kutu(bx,by,kareW,bh,kareRengi(c),kr);else P.kutu(bx,by,kareW,bh,'#fff',kr,' stroke="'+PC.gray+'" stroke-width=".8" stroke-dasharray="3 2"')};
@@ -619,8 +661,10 @@ function sayfaSvg(m,ust='',tarih=''){
   if(tarih)P.yazi(PW-M,38,tarih,12,PC.muted,false,'end');
   const F=m.bloklar.filter(b=>b.izgara),S=m.bloklar.filter(b=>!b.izgara);
   if(F.length){
-    const sk=Math.min(S.length,6),sr=S.length?Math.ceil(S.length/6):0,hs=sr>1?128:150,hF=yer-sr*(hs+ARA);
-    const fk=Math.min(F.length,3),fr=Math.ceil(F.length/3),wF=(genis-(fk-1)*ARA)/fk,hFk=(hF-(fr-1)*ARA)/fr;
+    const sk=Math.min(S.length,6),sr=S.length?Math.ceil(S.length/6):0,fk=Math.min(F.length,3),fr=Math.ceil(F.length/3),wF=(genis-(fk-1)*ARA)/fk;
+    // The small cards give up some height when a topic table needs it (a 24-topic AYT Matematik beside them).
+    const sigar=hs=>{const hF=yer-sr*(hs+ARA),hFk=(hF-(fr-1)*ARA)/fr;return F.every(b=>buyukYukseklik(b,wF,1e4)<=hFk)};
+    const hs=!sr||sigar(sr>1?128:150)?(sr>1?128:150):(sr>1?112:118),hF=yer-sr*(hs+ARA),hFk=(hF-(fr-1)*ARA)/fr;
     let y=USTY;
     for(let r=0;r<fr;r++){const satir=F.slice(r*fk,r*fk+fk),h=Math.max(...satir.map(b=>buyukYukseklik(b,wF,hFk)));
       satir.forEach((b,i)=>buyukKart(P,b,M+i*(wF+ARA),y,wF,h));y+=h+ARA}

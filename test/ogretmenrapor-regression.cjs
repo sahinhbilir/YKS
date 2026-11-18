@@ -142,6 +142,21 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(D.konutakibi,['12/A'],'TYT','MATEMATİK-T')`), null, 'no Matematik in Konu Takibi');
     assert.equal(get(`OGRETMEN_RAPOR.konuIzgarasi(null,['12/A'],'TYT','TÜRKÇE-T')`), null);
   });
+  await check('topic rows in the şube’s own plan order (Müfredat), matched by shared words; an unmatched topic after the one before it in the codes; no plan: the codes', () => {
+    planKur(); konuKur();
+    const sira = () => get(`OGRETMEN_RAPOR.konuIzgarasi(D.konutakibi,['12/A'],'TYT','TÜRKÇE-T')`).satir.map(r => r.ad);
+    assert.deepEqual(sira(), ['Sözcükte Anlam', 'Cümlede Anlam'], 'no plan: the kazanım codes');
+    // 12/A is şube 301 in the timetables; its plan teaches "Cümlede Anlam ve Anlatım" first, "Sözcükte Anlam" two weeks later.
+    run(`D.konuPlani={'301':[{'Türkçe':['Cümlede Anlam ve Anlatım'],'Matematik TYT':['Sayılar']},{'Türkçe':['Ses Bilgisi']},{'Türkçe':['Sözcükte Anlam']}]}`);
+    assert.deepEqual(sira(), ['Cümlede Anlam', 'Sözcükte Anlam'], 'the plan’s order');
+    // A topic the plan does not name stays after the topic before it in the codes (here: first, nothing comes before it).
+    run(`D.konuPlani={'301':[{'Türkçe':['Cümlede Anlam ve Anlatım','Genel Tekrar']}]}`);
+    assert.deepEqual(sira(), ['Sözcükte Anlam', 'Cümlede Anlam']);
+    // Another şube's plan, or another lesson's, does not count.
+    run(`D.konuPlani={'201':[{'Türkçe':['Cümlede Anlam ve Anlatım','Sözcükte Anlam']}],'301':[{'Geometri':['Cümlede Anlam']}]}`);
+    assert.deepEqual(sira(), ['Sözcükte Anlam', 'Cümlede Anlam']);
+    run('D.konuPlani={}');
+  });
   await check('topic grid columns in date order: an exam with no date of its own takes the one the school lists give it; no date anywhere goes last', () => {
     // Most karneler print no date. Sorted by '' they all came before the one dated exam, and by name an AYT exam named
     // "27_AYT_…" came before "27-YKS-…" even though it was the newest.
@@ -437,6 +452,28 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
       // etüts' source) is not built at all.
       assert.deepEqual(get('__say'), { temel: 0, oku: 1, fark: 3 });
     } finally { run('KONU_TAKIBI.oku=__okuAsil;KONU_TAKIBI.ogrenciFark=__farkAsil'); }
+  });
+  await check('PDF indir: a page per teacher with data, drawn like the Öğrenci raporu (white soft cards on a warm page); no site name or address; the same squares and words', () => {
+    planKur(); kaynakKur(); konuKur(); run('OGRENCI_RAPOR.temelOgrenciler=()=>({students:[]})');
+    const sayfalar = get(`OGRETMEN_RAPOR.pdfSayfalari(OGRETMEN_RAPOR.ogretmenler().map(o=>OGRETMEN_RAPOR.ogretmenModeli(o)),'Öğretmen raporu · Türkiye karşılaştırması','18 Kas 2026')`);
+    assert.equal(sayfalar.length, 2, 'AY (nets only) and DE (nets and topics)');
+    for (const svg of sayfalar) {
+      assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="1190\.55" height="841\.89"/, 'A4 landscape, one picture');
+      assert.match(svg, /<rect width="1190\.55" height="841\.89" fill="#f6f5f0"\/>/, 'the warm page');
+      assert.match(svg, /<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="[\d.]+" rx="14" fill="#fff"\/>/, 'white soft-cornered cards');
+      assert(!/ykstekrar|YKS Tekrar|http:\/\/(?!www\.w3\.org)/i.test(svg), 'no site name or address');
+      assert.match(svg, />ÖĞRETMEN RAPORU · TÜRKİYE KARŞILAŞTIRMASI<\/text>/); assert.match(svg, />18 Kas 2026<\/text>/);
+      assert(!/sıra|İlk 100|Fark/.test(svg.replace(/<[^>]+>/g, ' ')), 'no place, no yardstick, no difference box');
+    }
+    const [ay, de] = sayfalar;
+    assert.match(ay, />Sentetik Öğretmen Ay<\/text>/); assert.match(ay, />TYT Matematik · 12\. sınıf<\/text>/);
+    // DE: the two numbers and the word, the topic rows in the order taught, Sözcükte Anlam deep red (#bf6951 at 90% on white).
+    assert.match(de, />Öğrencileriniz<\/text>[\s\S]*?>Türkiye<\/text>[\s\S]*?>▲ Türkiye’nin üstünde<\/text>/);
+    assert(de.indexOf('>Sözcükte Anlam<') < de.indexOf('>Cümlede Anlam<') && de.indexOf('>Cümlede Anlam<') < de.indexOf('>Bütün konular<'), 'rows in the order taught, the whole subject last');
+    assert.match(de, /fill="rgb\(197,120,98\)"/, 'a deep red square');
+    assert.match(de, />Türkiye’nin gerisinde<\/text>[\s\S]*>Türkiye’nin önünde<\/text>[\s\S]*>soru yok<\/text>/, 'one key at the foot');
+    // A teacher without data is not a page.
+    run('EK.ogrDuzey=9'); assert.equal(get(`OGRETMEN_RAPOR.pdfSayfalari(OGRETMEN_RAPOR.ogretmenler().filter(o=>o.ad.endsWith('AY')).map(o=>OGRETMEN_RAPOR.ogretmenModeli(o,undefined,9)),'x')`).length, 0); run('EK.ogrDuzey=undefined');
   });
   await check('teacher only; the menu and the route; nothing is stored', () => {
     planKur(); kaynakKur(); konuKur(); const once = run('JSON.stringify(D)');
