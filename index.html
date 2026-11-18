@@ -2341,6 +2341,12 @@ button.gr-kucuk{cursor:zoom-in}
 .ogr-iz-alt .ogr-hz-kare{height:13px;margin-top:-6.5px;width:calc(var(--ogr-kw) * .6);border-radius:5px}
 .ogr-hz-toplam{margin-top:6px;padding-top:6px;border-top:1px solid var(--cizgi)}.ogr-hz-toplam .ogr-hz-kare{margin-top:-8px}
 .ogr-konular.ogr-hz-kutu{margin-top:-8px}
+/* Narrow: the topic's name on a line of its own, its squares under it across the chart's whole width. */
+.ogr-hz-dar .ogr-hz-satir{display:block;min-height:0;padding-bottom:28px}
+.ogr-hz-dar .ogr-hz-ad{width:auto;padding:6px 0 2px;font-size:12.5px}
+.ogr-hz-dar .ogr-hz-kare{top:auto;bottom:3px;margin-top:0}
+.ogr-hz-dar .ogr-hz-satir.ogr-iz-alt{padding-bottom:17px}.ogr-hz-dar .ogr-iz-alt .ogr-hz-ad{padding-top:3px}.ogr-hz-dar .ogr-iz-alt .ogr-hz-kare{bottom:2px;margin-top:0}
+.ogr-hz-dar .ogr-hz-toplam .ogr-hz-kare{margin-top:0}
 /* A topic's kazanımlar: indented under it, smaller squares. */
 .ogr-iz .ogr-iz-alt .ogr-iz-konu{padding:1px 10px 1px 14px;font-size:11px;font-weight:400;line-height:1.3;color:var(--soluk)}
 .ogr-kod{display:inline-block;margin-right:6px;font-weight:700;color:var(--murekkep);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -31758,15 +31764,18 @@ function adimBul(aralik,adet){const ham=aralik/Math.max(1,adet),u=Math.pow(10,Ma
 // An estimate of a label's width at the exam names' size (10,5 px): enough to wrap a name and to keep neighbours apart.
 const harfEn=c=>/\d/.test(c)?6.2:/[\s\-.,·:;'’()/]/.test(c)?3.8:/[A-ZÇĞÖŞÜ]/.test(c)&&!/[Iİ]/.test(c)?7.9:/[ıijlIİftr]/.test(c)?4:6.2;
 const yaziEn=s=>Array.from(s).reduce((t,c)=>t+harfEn(c),0);
-// Wrap a full exam name at word boundaries to `en` px; a word longer than a line is cut so that every character is kept.
-function sinavAdSatirlari(ad,en){
+// Wrap a full exam name at word boundaries to `en` px; a word longer than a line breaks after its - or _ first, and a piece
+// still longer is cut so that every character is kept. enCok: at most that many lines, the last one ending in "…" (0: no limit).
+function sinavAdSatirlari(ad,en,enCok=0){
   const satir=[''];
+  const koy=(p,bitisik)=>{const son=satir.length-1,yeni=satir[son]+(satir[son]&&!bitisik?' ':'')+p;if(satir[son]&&yaziEn(yeni)>en)satir.push(p);else satir[son]=yeni};
   for(const kelime of yaz(ad).split(' ')){
-    let parca='';
-    const koy=p=>{const son=satir.length-1;if(satir[son]&&yaziEn(satir[son]+' '+p)>en)satir.push(p);else satir[son]+=(satir[son]?' ':'')+p};
-    for(const h of Array.from(kelime)){if(parca&&yaziEn(parca+h)>en){koy(parca);parca=h}else parca+=h}
-    if(parca)koy(parca);
+    const parcalar=yaziEn(kelime)>en?kelime.split(/(?<=[-_])/):[kelime];
+    parcalar.forEach((pc,j)=>{let parca='',ic=false;
+      for(const h of Array.from(pc)){if(parca&&yaziEn(parca+h)>en){koy(parca,j>0||ic);ic=true;parca=h}else parca+=h}
+      if(parca)koy(parca,j>0||ic)});
   }
+  if(enCok&&satir.length>enCok){const l=satir.slice(0,enCok);let t=l[enCok-1];while(t&&yaziEn(t+'…')>en)t=t.slice(0,-1);l[enCok-1]=t+'…';return l}
   return satir;
 }
 // The chart's scale: every value is placed by its share of the test (0 at the foot, the whole test at the top; below 0 only for
@@ -31796,7 +31805,7 @@ function sutunYerleri(b){
 // The chart's geometry at width W: left edge L (the topic names' column when the squares sit under it), right margin, inset ic
 // of the first and last point, the points' x and the step between them.
 function geometri(b,W){
-  const n=b.seri.length,dar=W<520,hizali=!!sutunYerleri(b),L=hizali?(dar?124:214):dar?30:38,Rk=dar?12:20,R=W-Rk;
+  const n=b.seri.length,dar=W<520,hizali=!!sutunYerleri(b),L=hizali&&!dar?214:dar?30:38,Rk=dar?12:20,R=W-Rk;
   const ic=n>1?(hizali?(dar?14:24):Math.min(dar?14:30,(R-L)/(n-1)*.3)):0;
   const x=i=>r1(n===1?(L+R)/2:L+ic+(R-L-2*ic)*i/(n-1)),adim=n>1?(R-L-2*ic)/(n-1):R-L;
   return {n,dar,hizali,L,Rk,R,ic,x,adim,kw:Math.max(18,Math.min(76,adim*.72))};
@@ -31833,12 +31842,13 @@ function netGrafigi(b,W){
     if(yazili(i))s+='<text class="ogr-deger ogr-deger-okul" x="'+x(i)+'" y="'+(ust?y(O.v(p))-9:y(O.v(p))+17)+'" text-anchor="middle">'+kacis(O.etiket(p))+'</text>';
   });
   // The exam names: every exam when they fit side by side, otherwise spaced ones counted back from the newest.
-  const y0=ALT,tumu=n===1||adim>=(dar?70:78),etiketAdimi=tumu?1:Math.max(her,Math.ceil((dar?110:130)/Math.max(1,adim)));
-  const en=n===1?Math.min(R-L,220):tumu?adim-12:Math.min(dar?104:132,adim*etiketAdimi-12);
+  const y0=ALT,tumu=n===1||G.hizali||adim>=(dar?70:78),etiketAdimi=tumu?1:Math.max(her,Math.ceil((dar?110:130)/Math.max(1,adim)));
+  // Under the topic squares every exam is named (its column has to be told apart), in at most three lines.
+  const en=n===1?Math.min(R-L,220):G.hizali?Math.max(36,adim-8):tumu?adim-12:Math.min(dar?104:132,adim*etiketAdimi-12);
   let etiketSatiri=1;
   l.forEach((p,i)=>{
     if((n-1-i)%etiketAdimi)return;
-    const satirlar=sinavAdSatirlari(p.ad,en),xx=x(i),genis=Math.max(...satirlar.map(yaziEn)),hiza=xx-genis/2<2?'start':xx+genis/2>W-2?'end':'middle';
+    const satirlar=sinavAdSatirlari(p.ad,en,G.hizali?3:0),xx=x(i),genis=Math.max(...satirlar.map(yaziEn)),hiza=xx-genis/2<2?'start':xx+genis/2>W-2?'end':'middle';
     etiketSatiri=Math.max(etiketSatiri,satirlar.length);
     s+='<text class="ogr-tik ogr-sinav-adi" x="'+xx+'" y="'+(y0+18)+'" text-anchor="'+hiza+'" aria-label="'+kacis(p.ad)+'">'+
       satirlar.map((satir,j)=>'<tspan x="'+xx+'" dy="'+(j?13:0)+'">'+kacis(satir)+'</tspan>').join('')+'</text>';
@@ -32157,7 +32167,7 @@ function pdfGrafik(P,b,x,y,w,h,as=9,solW=28){
   l.forEach((p,i)=>{if(p.genel!==null)P.out.push('<circle cx="'+r1(xx(i))+'" cy="'+r1(yy(O.g(p)))+'" r="2.2" fill="#fff" stroke="'+PC.tr+'" stroke-width="1.2"/>');
     P.out.push('<circle cx="'+r1(xx(i))+'" cy="'+r1(yy(O.v(p)))+'" r="3.4" fill="'+PC.line+'" stroke="#fff" stroke-width="1.4"/>');
     if((n-1-i)%her===0){const ust=p.genel===null||O.v(p)>=O.g(p);P.yazi(xx(i),ust?yy(O.v(p))-7:yy(O.v(p))+14,O.etiket(p),9.5,PC.ink,true,'middle')}});
-  const tum=adim>=as*6.5,esAdim=tum?1:Math.max(her,Math.ceil(as*11/Math.max(1,adim))),pay=n>1?adim*esAdim:w;
+  const tum=hz||adim>=as*6.5,esAdim=tum?1:Math.max(her,Math.ceil(as*11/Math.max(1,adim))),pay=n>1?adim*esAdim:w;
   l.forEach((p,i)=>{if((n-1-i)%esAdim)return;
     // Each name keeps to its own share of the axis: half a step either side, the page edge for the first and the last.
     const sinirL=n===1?x+2:Math.max(x+2,xx(i)-pay/2+3),sinirR=n===1?x+w-2:Math.min(x+w-2,xx(i)+pay/2-3),sat=P.satirla(p.ad,Math.max(20,sinirR-sinirL),as),gw=Math.max(...sat.map(t=>P.en(t,as)));
@@ -32337,7 +32347,7 @@ function grafikleriCiz(){
   const kutular=[...document.querySelectorAll('#ogrKok .ogr-grafik[data-ogr-grafik]')].map(k=>[k,Math.round(k.clientWidth)]);
   for(const [k,W] of kutular){const b=bl[+k.dataset.ogrGrafik];if(!b||W<160||k.dataset.w===String(W))continue;k.dataset.w=String(W);k.innerHTML=netGrafigi(b,W);
     // The squares under the chart take its geometry: the same left edge, inset and step.
-    const G=geometri(b,W),blok=k.closest('.ogr-blok');if(G.hizali&&blok)for(const [a,v] of [['--ogr-L',G.L],['--ogr-ic',G.ic],['--ogr-R',G.Rk],['--ogr-kw',r1(G.kw)]])blok.style.setProperty(a,v+'px')}
+    const G=geometri(b,W),blok=k.closest('.ogr-blok');if(blok)blok.classList.toggle('ogr-hz-dar',G.hizali&&G.dar);if(G.hizali&&blok)for(const [a,v] of [['--ogr-L',G.L],['--ogr-ic',G.ic],['--ogr-R',G.Rk],['--ogr-kw',r1(G.kw)]])blok.style.setProperty(a,v+'px')}
 }
 function planla(){if(typeof window==='undefined'||!window.requestAnimationFrame)return;window.cancelAnimationFrame(ZAMAN);ZAMAN=window.requestAnimationFrame(grafikleriCiz)}
 if(typeof window!=='undefined'&&window.addEventListener){

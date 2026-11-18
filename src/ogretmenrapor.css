@@ -99,6 +99,12 @@
 .ogr-iz-alt .ogr-hz-kare{height:13px;margin-top:-6.5px;width:calc(var(--ogr-kw) * .6);border-radius:5px}
 .ogr-hz-toplam{margin-top:6px;padding-top:6px;border-top:1px solid var(--cizgi)}.ogr-hz-toplam .ogr-hz-kare{margin-top:-8px}
 .ogr-konular.ogr-hz-kutu{margin-top:-8px}
+/* Narrow: the topic's name on a line of its own, its squares under it across the chart's whole width. */
+.ogr-hz-dar .ogr-hz-satir{display:block;min-height:0;padding-bottom:28px}
+.ogr-hz-dar .ogr-hz-ad{width:auto;padding:6px 0 2px;font-size:12.5px}
+.ogr-hz-dar .ogr-hz-kare{top:auto;bottom:3px;margin-top:0}
+.ogr-hz-dar .ogr-hz-satir.ogr-iz-alt{padding-bottom:17px}.ogr-hz-dar .ogr-iz-alt .ogr-hz-ad{padding-top:3px}.ogr-hz-dar .ogr-iz-alt .ogr-hz-kare{bottom:2px;margin-top:0}
+.ogr-hz-dar .ogr-hz-toplam .ogr-hz-kare{margin-top:0}
 /* A topic's kazanımlar: indented under it, smaller squares. */
 .ogr-iz .ogr-iz-alt .ogr-iz-konu{padding:1px 10px 1px 14px;font-size:11px;font-weight:400;line-height:1.3;color:var(--soluk)}
 .ogr-kod{display:inline-block;margin-right:6px;font-weight:700;color:var(--murekkep);font-variant-numeric:tabular-nums;white-space:nowrap}
