@@ -88,9 +88,7 @@
    (--ogr-ic) and right margin (--ogr-R) as the chart, set by the chart when it is drawn; a faint band down each column. */
 .ogr-blok{--ogr-L:214px;--ogr-ic:24px;--ogr-R:20px;--ogr-kw:64px}
 .ogr-hz{position:relative;padding:6px 0}
-.ogr-hz-bantlar{position:absolute;inset:0;pointer-events:none}
-.ogr-hz-bantlar i,.ogr-hz-kare{position:absolute;left:calc(var(--ogr-L) + var(--ogr-ic) + (100% - var(--ogr-L) - var(--ogr-R) - 2 * var(--ogr-ic)) * var(--t));transform:translateX(-50%)}
-.ogr-hz-bantlar i{top:0;bottom:0;width:calc(var(--ogr-kw) + 14px);border-radius:12px;background:color-mix(in srgb,var(--murekkep) 4.5%,transparent)}
+.ogr-hz-kare{position:absolute;left:calc(var(--ogr-L) + var(--ogr-ic) + (100% - var(--ogr-L) - var(--ogr-R) - 2 * var(--ogr-ic)) * var(--t));transform:translateX(-50%)}
 .ogr-hz-satir{position:relative;display:flex;align-items:center;min-height:30px}
 .ogr-hz-ad{width:calc(var(--ogr-L) - 16px);padding:4px 0;font-size:13px;font-weight:600;line-height:1.25;color:var(--murekkep);overflow-wrap:anywhere}
 .ogr-hz-kare{top:50%;height:22px;margin-top:-11px;width:var(--ogr-kw);border-radius:7px;cursor:default}
@@ -112,6 +110,7 @@
 .ogr-olcek-serit{display:inline-flex;align-items:center;gap:3px}
 .ogr-olcek-serit em{margin:0 6px;font-style:normal}
 .ogr-olcek-serit i{display:inline-block;width:22px;height:16px;border-radius:4px}
+.ogr-olcek-serit .ogr-spektrum{width:132px;height:14px;border-radius:7px}
 .ogr-olcek-bos{display:inline-flex;align-items:center;gap:6px}
 .ogr-olcek-bos i{display:inline-block;width:22px;height:16px;border:1px dashed var(--cizgi);border-radius:4px;box-sizing:border-box}
 .ogr-iz-eksik{margin:0;font-size:11.5px;color:var(--soluk)}
@@ -174,7 +173,7 @@
   .ogr-iz .ogr-iz-alt .ogr-iz-konu{padding:0 8px 0 10px;font-size:9px}
   /* Many exams: the names stand upright (a long one in two columns of text). */
   .ogr-iz-cok .ogr-iz-sinav span{margin:0 auto;max-height:104px;line-height:1.15;writing-mode:vertical-rl;transform:rotate(180deg)}
-  .ogr-olcek{gap:3px 16px;font-size:10px}.ogr-olcek-serit i,.ogr-olcek-bos i{width:18px;height:12px;border-radius:3px}
+  .ogr-olcek{gap:3px 16px;font-size:10px}.ogr-olcek-serit i,.ogr-olcek-bos i{width:18px;height:12px;border-radius:3px}.ogr-olcek-serit .ogr-spektrum{width:110px;height:11px}
   .ogr-formul{padding-top:10px;font-size:10.5px}.ogr-formul summary{list-style:none}.ogr-formul p{max-width:none}
   .ogr-formul .et-tablo-kutu{max-height:none;min-height:0;overflow:visible}
   .ogr-ham{font-size:10px}.ogr-ham th{position:static;padding:4px 8px;font-size:9.5px}.ogr-ham td{padding:3px 8px}
