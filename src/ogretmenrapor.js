@@ -348,8 +348,7 @@ function hamKonu(b){
 // when it is open.
 function hamVeri(b,i){
   const seri=b.seri.length?'<div class="et-tablo-kutu"><table class="et-tablo ogr-ham"><thead><tr><th scope="col">Deneme</th><th scope="col" class="sayi">Öğrenci</th><th scope="col" class="sayi">Ortalama net</th><th scope="col" class="sayi">Türkiye ort. (Genel Net)</th><th scope="col" class="sayi">Fark</th></tr></thead><tbody>'+
-    b.seri.map(p=>'<tr><td>'+kacis(p.ad)+'</td><td class="sayi">'+fi(p.n)+'</td><td class="sayi">'+f2(p.net)+'</td><td class="sayi">'+(p.genel===null?'—':f2(p.genel))+'</td><td class="sayi">'+(p.fark===null?'—':isaret(p.fark,f2))+'</td>'+
-      '<td class="sayi">'+(Number.isFinite(p.sinir)?f2(p.sinir)+(p.listeN!==100?' ('+fi(p.listeN)+'.)':''):'—')+'</td><td class="sayi">'+(Number.isFinite(p.birinci)?f2(p.birinci):'—')+'</td><td class="sayi">'+(p.sira===undefined?'—':p.sira===null?'dışı':fi(p.sira)+'.')+'</td></tr>').join('')+'</tbody></table></div>':'';
+    b.seri.map(p=>'<tr><td>'+kacis(p.ad)+'</td><td class="sayi">'+fi(p.n)+'</td><td class="sayi">'+f2(p.net)+'</td><td class="sayi">'+(p.genel===null?'—':f2(p.genel))+'</td><td class="sayi">'+(p.fark===null?'—':isaret(p.fark,f2))+'</td>'+'</tr>').join('')+'</tbody></table></div>':'';
   const konu=b.izgara?'<div class="ogr-ham-konu" data-ogr-ham-konu="'+i+'"></div>':'';
   if(yz(b).ogrenci)return '<details class="ogr-formul" data-ogr-ham="'+i+'"><summary>Hesaplama ayrıntıları ve ham veriler</summary>'+
     '<p><b>Net grafiği:</b> her denemede bu dersteki netin ve yayınevinin Türkiye ortalaması (Genel Net). İki çizgi arası yeşilse Türkiye’nin üstündesin, kırmızıysa altında.</p>'+

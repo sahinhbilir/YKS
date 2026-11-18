@@ -116,7 +116,7 @@
   .ogr-blok-bas{gap:2px 20px;padding-bottom:4px}
   .ogr-blok h3{font-size:16px}
   .ogr-sayfa-adi{font-size:10.5px;font-weight:600;color:var(--soluk)}
-  .ogr-alt-baslik .ogr-sayfa-adi{float:right;font-weight:400}
+  .ogr-konu-bas .ogr-alt-baslik{flex:1}.ogr-alt-baslik .ogr-sayfa-adi{float:right;margin-left:16px;font-weight:400}
   .ogr-kapsam{flex-basis:100%;font-size:11px}
   .ogr-genel{gap:9px}
   .ogr-skor-sayi strong{font-size:28px}.ogr-skor-sayi span,.ogr-skor-durum span{font-size:10px}.ogr-durum{font-size:11px;padding:2px 10px}
