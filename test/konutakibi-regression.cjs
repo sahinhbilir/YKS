@@ -727,13 +727,25 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   // Without the Madde Analizi there is no school rate: the page lists what is missing.
   const md=copy(tdata());Object.values(md.zorluk)[0].madde=null;Object.values(md.zorluk)[0].ogrenci=null;const mm=K.turkiyeKiyas(md,{});assert.equal(mm.veri,false);assert.deepEqual(copy(mm.dosyalar),[{k:K.ek('27-YKS-1203'),ad:'27-YKS-1203',ozet:true,madde:false,turkiye:true}]);
  });
- await test('a test the pupil left wholly blank was not taken: no Türkiye gap and no topics from it (an SAY pupil’s AYT Edebiyat)',()=>{
-  const TS3={name:'SENTETİK ÜÇ',no:'9003',cls:'205 12/A'},v=K.dogrula(K.merge(tdata(),[{ad:'27-YKS-1203',blocks:trep('27-YKS-1203',TS3,[2,0,0,2],[2,0,0,2]).blocks}]));
-  assert.deepEqual(copy(K.ogrenciFark(v,{session:'TYT'}).ogrenciler.map(o=>o.student.no).sort()),['9001','9002'],'9003 left FİZİK-T blank: not in the gaps');
-  assert.equal(K.model(v,{student:K.studentKey(TS3),taban:'turkiye'}).topics.length,0,'nor in the pupil’s topic list');
-  // One answered question is enough to count the test.
-  const w=K.dogrula(K.merge(tdata(),[{ad:'27-YKS-1203',blocks:trep('27-YKS-1203',TS3,[2,0,1,1],[2,0,0,2]).blocks}]));
+ await test('compulsory TYT blanks count as zero success; AYT and optional TYT blanks remain excluded',()=>{
+  const TS3={name:'SENTETİK ÜÇ',no:'9003',cls:'205 12/A'},ad='27-YKS-1203',sid=K.studentKey(TS3);
+  const v=K.dogrula(K.merge(tdata(),[{ad,blocks:trep(ad,TS3,[2,0,0,2],[2,0,0,2]).blocks}]));
+  const p=K.ogrenciFark(v,{session:'TYT'}).ogrenciler.find(o=>o.student.no==='9003');
+  assert(p);assert.equal(p.toplam.n,4);near(p.toplam.d,0);near(p.toplam.b,2.2);
+  const m=K.model(v,{student:sid,session:'TYT',course:'FİZİK-T',taban:'turkiye'});
+  assert.equal(m.topics.length,2);for(const t of m.topics){assert.equal(t.rate,0);assert.deepEqual(copy(t.total),[2,0,0,2]);}
+  const w=K.dogrula(K.merge(tdata(),[{ad,blocks:trep(ad,TS3,[2,0,1,1],[2,0,0,2]).blocks}]));
   assert(K.ogrenciFark(w,{session:'TYT'}).ogrenciler.some(o=>o.student.no==='9003'));
+  const blocks=[
+    F.block([F.row('E.GEO.9.4.1','Üçgenlerde Temel Kavramlar',[10,0,0,10])],'outcome','GEOMETRİ-T',TS3),
+    F.block([F.row('E.M.9.3.1','Sayı Kümeleri',[30,10,4,16])],'outcome','MATEMATİK-T',TS3),
+    F.block([F.row('E.FEL.10.1.2','Felsefi düşünce',[5,0,0,5])],'outcome','S.FELSEFE-T',TS3),
+    F.block([F.row('E.FİZ.9.1.3','Fiziksel Nicelikler',[7,0,0,7])],'outcome','FİZİK-A',TS3)];
+  const x=K.merge(K.blank(),[{ad,blocks}]);
+  const geo=K.model(x,{student:sid,session:'TYT',course:'GEOMETRİ-T'});
+  assert.equal(geo.topics.length,1);assert.equal(geo.topics[0].rate,0);assert.deepEqual(copy(geo.topics[0].total),[10,0,0,10]);
+  assert.equal(K.model(x,{student:sid,session:'TYT',course:'S.FELSEFE-T'}).topics.length,0);
+  assert.equal(K.model(x,{student:sid,session:'AYT',course:'FİZİK-A'}).topics.length,0);
  });
  await test('each pupil against Türkiye: correct − Σ Türkiye p, by ders and by konu; the Kıyas baseline of the topic list',()=>{
   const v=tdata(),r=K.ogrenciFark(v,{session:'TYT'}),o=id=>r.ogrenciler.find(x=>x.student.no===id);
