@@ -84,6 +84,21 @@
 .ogr-iz tfoot th,.ogr-iz tfoot td{padding-top:8px}
 .ogr-iz tfoot tr{box-shadow:none}
 .ogr-iz tfoot .ogr-iz-konu{border-top:1px solid var(--cizgi)}
+/* The squares under the chart: each exam's column at the chart's point (--t from 0 to 1), the same left edge (--ogr-L), inset
+   (--ogr-ic) and right margin (--ogr-R) as the chart, set by the chart when it is drawn; a faint band down each column. */
+.ogr-blok{--ogr-L:214px;--ogr-ic:24px;--ogr-R:20px;--ogr-kw:64px}
+.ogr-hz{position:relative;padding:6px 0}
+.ogr-hz-bantlar{position:absolute;inset:0;pointer-events:none}
+.ogr-hz-bantlar i,.ogr-hz-kare{position:absolute;left:calc(var(--ogr-L) + var(--ogr-ic) + (100% - var(--ogr-L) - var(--ogr-R) - 2 * var(--ogr-ic)) * var(--t));transform:translateX(-50%)}
+.ogr-hz-bantlar i{top:0;bottom:0;width:calc(var(--ogr-kw) + 14px);border-radius:12px;background:color-mix(in srgb,var(--murekkep) 4.5%,transparent)}
+.ogr-hz-satir{position:relative;display:flex;align-items:center;min-height:30px}
+.ogr-hz-ad{width:calc(var(--ogr-L) - 16px);padding:4px 0;font-size:13px;font-weight:600;line-height:1.25;color:var(--murekkep);overflow-wrap:anywhere}
+.ogr-hz-kare{top:50%;height:22px;margin-top:-11px;width:var(--ogr-kw);border-radius:7px;cursor:default}
+.ogr-hz-bos{border:1px dashed var(--cizgi);box-sizing:border-box}
+.ogr-hz-satir.ogr-iz-alt{min-height:20px}.ogr-iz-alt .ogr-hz-ad{padding-left:14px;font-size:11px;font-weight:400;color:var(--soluk)}
+.ogr-iz-alt .ogr-hz-kare{height:13px;margin-top:-6.5px;width:calc(var(--ogr-kw) * .6);border-radius:5px}
+.ogr-hz-toplam{margin-top:6px;padding-top:6px;border-top:1px solid var(--cizgi)}.ogr-hz-toplam .ogr-hz-kare{margin-top:-8px}
+.ogr-konular.ogr-hz-kutu{margin-top:-8px}
 /* A topic's kazanımlar: indented under it, smaller squares. */
 .ogr-iz .ogr-iz-alt .ogr-iz-konu{padding:1px 10px 1px 14px;font-size:11px;font-weight:400;line-height:1.3;color:var(--soluk)}
 .ogr-kod{display:inline-block;margin-right:6px;font-weight:700;color:var(--murekkep);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -149,6 +164,7 @@
   .ogr-iz-kh i,.ogr-iz-kh.ogr-iz-bos::after{height:11px;border-radius:3px}
   .ogr-iz tfoot{display:table-row-group}
   .ogr-iz-grup{break-inside:avoid}
+  .ogr-hz-satir{min-height:21px;break-inside:avoid}.ogr-hz-ad{font-size:10.5px}.ogr-hz-kare{height:16px;margin-top:-8px}.ogr-iz-alt .ogr-hz-ad{font-size:9px}.ogr-hz-satir.ogr-iz-alt{min-height:14px}
   .ogr-iz .ogr-iz-alt .ogr-iz-konu{padding:0 8px 0 10px;font-size:9px}
   /* Many exams: the names stand upright (a long one in two columns of text). */
   .ogr-iz-cok .ogr-iz-sinav span{margin:0 auto;max-height:104px;line-height:1.15;writing-mode:vertical-rl;transform:rotate(180deg)}

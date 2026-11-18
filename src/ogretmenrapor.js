@@ -339,11 +339,26 @@ function olcekKur(l){
 // One picture, every value of the students written on it (a printout has no tooltips): the students' mean net (the subject's
 // colour) and the Türkiye average (dashed). The room between the two lines is shaded green where the students are above,
 // red where below (split where the lines cross), so the picture reads without a number. Exam names run under it.
+// The squares under the chart (2026-11-19): each exam's column of squares sits right under that exam on the chart, so the exam's
+// name (and the school's place) under the chart names the column. sutunYerleri(b): for every exam of the topic table, its point
+// on the chart (index into b.seri), or null when one has no point there (then the table keeps its own columns).
+function sutunYerleri(b){
+  const z=b.izgara;if(!z||!b.seri||!b.seri.length)return null;
+  const k=s=>typeof denemeAdAnahtari==='function'?denemeAdAnahtari(s):String(s),yer=new Map(b.seri.map((p,i)=>[k(p.ad),i]));
+  const l=z.sinavlar.map(e=>yer.has(k(e.ad))?yer.get(k(e.ad)):-1);return l.every(i=>i>=0)?l:null;
+}
+// The chart's geometry at width W: left edge L (the topic names' column when the squares sit under it), right margin, inset ic
+// of the first and last point, the points' x and the step between them.
+function geometri(b,W){
+  const n=b.seri.length,dar=W<520,hizali=!!sutunYerleri(b),L=hizali?(dar?124:214):dar?30:38,Rk=dar?12:20,R=W-Rk;
+  const ic=n>1?(hizali?(dar?14:24):Math.min(dar?14:30,(R-L)/(n-1)*.3)):0;
+  const x=i=>r1(n===1?(L+R)/2:L+ic+(R-L-2*ic)*i/(n-1)),adim=n>1?(R-L-2*ic)/(n-1):R-L;
+  return {n,dar,hizali,L,Rk,R,ic,x,adim,kw:Math.max(18,Math.min(76,adim*.72))};
+}
 function netGrafigi(b,W){
   const l=b.seri;if(!l.length)return '';
   // The first and last points sit in from the axes, so the end labels cover no tick label.
-  const n=l.length,dar=W<520,L=dar?30:38,R=W-(dar?12:20),ic=n>1?Math.min(dar?14:30,(R-L)/(n-1)*.3):0;
-  const x=i=>r1(n===1?(L+R)/2:L+ic+(R-L-2*ic)*i/(n-1)),adim=n>1?(R-L-2*ic)/(n-1):R-L;
+  const G=geometri(b,W),{n,dar,L,R,x,adim}=G;
   // A value is written on every point when the labels fit, otherwise on every k-th counted back from the newest exam.
   const her=Math.max(1,Math.ceil((dar?32:36)/Math.max(1,adim))),yazili=i=>(n-1-i)%her===0;
   // The students' line is a fixed blue (--ogr-cizgi), not the subject's colour nor the theme's accent (which can be green): only
@@ -438,6 +453,7 @@ function skorHtml(b){
 // each square's tooltip and the folded appendix. The kazanımlar under each topic are hidden until "Kazanımlar" is ticked.
 // The last row is the whole subject. ust: printed beside the heading, so a loose sheet says whose it is.
 function izgaraHtml(b,ust=''){
+  if(sutunYerleri(b))return hizaliIzgaraHtml(b,ust);
   const z=b.izgara,y=yz(b),bas='<h4 class="ogr-alt-baslik">Konular'+(ust?'<span class="ogr-baski ogr-sayfa-adi">'+kacis(ust)+'</span>':'')+'</h4>';
   if(!z)return '<div class="ogr-konular ogr-ekran">'+bas+'<p class="mini ogr-yok">Bu ders için konu verisi henüz yok.</p></div>';
   const yuzde=c=>y.bizK+' %'+fi(Math.round(100*c.d/c.n))+', Türkiye %'+fi(Math.round(100*c.b/c.n));
@@ -459,6 +475,22 @@ function izgaraHtml(b,ust=''){
     '<div class="ogr-olcek"><span class="ogr-olcek-serit"><em>Türkiye’nin gerisinde</em><i style="'+koyu('kritik',90)+'"></i><i style="'+koyu('kritik',30)+'"></i><i style="'+koyu('iyi',30)+'"></i><i style="'+koyu('iyi',90)+'"></i><em>Türkiye’nin önünde</em></span>'+
     '<span class="ogr-olcek-bos"><i></i>soru yok</span></div>'+
     (eksik.length?'<p class="mini ogr-iz-eksik ogr-ekran">Konu verisi henüz yok: '+kacis(eksik.join(', '))+'</p>':'')+'</div>';
+}
+// The topic table under the chart: a row a topic, its squares at the chart's points (t: the point's place from 0 to 1 along the
+// axis), a faint band down each exam's column, no column heads (the chart's exam names are right above).
+function hizaliIzgaraHtml(b,ust=''){
+  const z=b.izgara,y=yz(b),yer=sutunYerleri(b),n=b.seri.length,t=i=>n===1?.5:yer[i]/(n-1);
+  const bas='<h4 class="ogr-alt-baslik">Konular'+(ust?'<span class="ogr-baski ogr-sayfa-adi">'+kacis(ust)+'</span>':'')+'</h4>';
+  const yuzde=c=>y.bizK+' %'+fi(Math.round(100*c.d/c.n))+', Türkiye %'+fi(Math.round(100*c.b/c.n));
+  const kare=(ad,c,e,i)=>!c?'<i class="ogr-hz-kare ogr-hz-bos" style="--t:'+t(i)+'" title="'+kacis(e.ad+': soru yok')+'"></i>':
+    '<i class="ogr-hz-kare'+(c.durum==='belirsiz'?' ogr-iz-soluk':'')+'" style="--t:'+t(i)+';'+hucreRengi(c)+'" title="'+kacis(ad+' · '+e.ad+': '+yuzde(c))+'"></i>';
+  const satir=r=>'<div class="ogr-hz-satir"><span class="ogr-hz-ad">'+kacis(r.ad)+'</span>'+r.hucre.map((c,i)=>kare(r.ad,c,z.sinavlar[i],i)).join('')+'</div>'+
+    (r.alt||[]).map(a=>'<div class="ogr-hz-satir ogr-iz-alt"><span class="ogr-hz-ad"><span class="ogr-kod">'+kacis(a.kod)+'</span>'+(a.ad&&a.ad!==a.kod?kacis(a.ad):'')+'</span>'+a.hucre.map((c,i)=>kare(a.kod,c,z.sinavlar[i],i)).join('')+'</div>').join('');
+  const toplam='<div class="ogr-hz-satir ogr-hz-toplam"><span class="ogr-hz-ad">Bütün konular</span>'+z.sinavlar.map((e,i)=>kare('Bütün konular',e,e,i)).join('')+'</div>';
+  const altVar=z.satir.some(r=>r.alt&&r.alt.length),koyu=(c,a)=>'background:color-mix(in srgb,var(--'+c+') '+a+'%,transparent)';
+  return '<div class="ogr-konular ogr-hz-kutu'+(altVar?' ogr-iz-kazanimli':'')+'"><div class="ogr-konu-bas">'+bas+(altVar?'<label class="ogr-iz-ac ogr-ekran"><input type="checkbox"> Kazanımlar</label>':'')+'</div>'+
+    '<div class="ogr-hz"><div class="ogr-hz-bantlar" aria-hidden="true">'+z.sinavlar.map((e,i)=>'<i style="--t:'+t(i)+'"></i>').join('')+'</div>'+z.satir.map(satir).join('')+toplam+'</div>'+
+    '<div class="ogr-olcek"><span class="ogr-olcek-serit"><em>Türkiye’nin gerisinde</em><i style="'+koyu('kritik',90)+'"></i><i style="'+koyu('kritik',30)+'"></i><i style="'+koyu('iyi',30)+'"></i><i style="'+koyu('iyi',90)+'"></i><em>Türkiye’nin önünde</em></span><span class="ogr-olcek-bos"><i></i>soru yok</span></div></div>';
 }
 // The raw topic table can run to thousands of rows over all teachers, so it is built when its box is opened (hamKonu).
 function hamKonu(b){
@@ -663,11 +695,11 @@ function pdfSkor(P,b,x,y,buyuk){
 }
 // The net chart: the students' line, the Türkiye line dashed, the room between shaded green above and red below (split where
 // they cross), the students' values on their points, the exam names under it (spaced when they do not fit).
-function pdfGrafik(P,b,x,y,w,h,as=9){
-  const l=b.seri,n=l.length;if(!n||h<40)return;
+function pdfGrafik(P,b,x,y,w,h,as=9,solW=28){
+  const l=b.seri,n=l.length;if(!n||h<40)return null;
   const yl=yerler(b),isimH=as*2.5+(yl?as+4:0),py0=y+10,py1=y+h-isimH-6;
   const O=olcekKur(l),yy=v=>py1-(v-O.lo)/(O.hi-O.lo||1)*(py1-py0);
-  const sol=x+28,sag=x+w-12,ic=n>1?Math.min(20,(sag-sol)/(n-1)*.25):0,xx=i=>n===1?(sol+sag)/2:sol+ic+(sag-sol-2*ic)*i/(n-1),adim=n>1?(sag-sol-2*ic)/(n-1):sag-sol;
+  const sol=x+solW,sag=x+w-12,hz=solW>28,ic=n>1?(hz?20:Math.min(20,(sag-sol)/(n-1)*.25)):0,xx=i=>n===1?(sol+sag)/2:sol+ic+(sag-sol-2*ic)*i/(n-1),adim=n>1?(sag-sol-2*ic)/(n-1):sag-sol;
   for(const [v,et] of O.tikler(h>150?4:3)){P.cizgi(sol,yy(v),sag,yy(v),PC.grid,.8);P.yazi(sol-6,yy(v)+3,et,8.5,PC.muted,false,'end')}
   const alan=(xa,na,ga,xb,nb,gb,ust)=>P.out.push('<path d="M'+r1(xa)+','+r1(yy(na))+' L'+r1(xb)+','+r1(yy(nb))+' L'+r1(xb)+','+r1(yy(gb))+' L'+r1(xa)+','+r1(yy(ga))+' Z" fill="'+(ust?PC.green:PC.red)+'" fill-opacity=".24"/>');
   for(let i=0;i+1<n;i++){const a=l[i],c=l[i+1];if(a.genel===null||c.genel===null)continue;const an=O.v(a),ag=O.g(a),cn=O.v(c),cg=O.g(c),d0=an-ag,d1=cn-cg,x0=xx(i),x1=xx(i+1);
@@ -686,6 +718,7 @@ function pdfGrafik(P,b,x,y,w,h,as=9){
     const hz=xx(i)-gw/2<sinirL?'start':xx(i)+gw/2>sinirR?'end':'middle',tx=hz==='start'?sinirL:hz==='end'?sinirR:xx(i);
     sat.forEach((t,j)=>P.yazi(tx,py1+as+6+j*(as+2),t,as,PC.muted,false,hz));
     if(yl&&yl[i]){const o=yl[i];P.yazi(tx,py1+as+6+2*(as+2)+2,(o.k===1?'▲ ':o.k===-1?'▼ ':'')+o.yazi,as,o.k===1?PC.green:o.k===-1?PC.red:PC.muted,true,hz)}});
+  return {xx,adim};
 }
 // The topic table: the exam names on top, a row per topic in the order taught with a coloured square per exam (an empty dashed
 // square: no question), the whole subject last under a hairline. Rows shrink to fit the height they are given.
@@ -704,23 +737,41 @@ function pdfIzgara(P,z,x,y,w,h,kazanim=false){
 }
 // A large card's height for its content within hMax: the head (title, numbers), then the chart and the topic table side by side
 // (a wide card) or one above the other; rows of about 22–24 px, a chart of 110–260 px; never taller than hMax.
+// The topic table under the PDF chart: the squares at the chart's points (G.xx), a faint band down each exam's column, the names
+// in the chart's left column (adW wide), no column heads.
+function pdfIzgaraHizali(P,b,x,y,w,h,kazanim,G,adW){
+  const z=b.izgara,yer=sutunYerleri(b),satirlar=z.satir.flatMap(r=>[{r},...(kazanim?(r.alt||[]).map(a=>({a})):[])]);
+  const n=satirlar.length+1,rh=Math.max(8,Math.min(24,(h-14)/n)),fs=Math.max(7.5,Math.min(10.5,rh*.66)),ks=Math.max(7,fs-1.5),kareW=Math.max(14,Math.min(80,G.adim*.72)),kr=Math.min(5,rh/3);
+  const boy=n*rh+10;z.sinavlar.forEach((e,j)=>P.kutu(G.xx(yer[j])-kareW/2-5,y-2,kareW+10,boy,'#eef0ec',8));
+  const kare=(c,j,ry,kucuk)=>{const kw2=kucuk?kareW*.6:kareW,bx=G.xx(yer[j])-kw2/2,by=ry+(kucuk?3:1.5),bh=rh-(kucuk?6:3);if(c)P.kutu(bx,by,kw2,bh,kareRengi(c),kr);else P.kutu(bx,by,kw2,bh,'#fff',kr,' stroke="'+PC.gray+'" stroke-width=".8" stroke-dasharray="3 2"')};
+  satirlar.forEach((o,i)=>{const ry=y+2+i*rh;
+    if(o.r){P.yazi(x,ry+rh/2+fs*.36,P.sigdir(o.r.ad,adW-4,fs,true),fs,PC.ink,true);o.r.hucre.forEach((c,j)=>kare(c,j,ry,false))}
+    else{const kod=o.a.kod,kodW=P.en(kod,ks,true);P.yazi(x+10,ry+rh/2+ks*.36,kod,ks,PC.ink,true);
+      if(o.a.ad&&o.a.ad!==kod)P.yazi(x+16+kodW,ry+rh/2+ks*.36,P.sigdir(o.a.ad,adW-26-kodW,ks),ks,PC.muted);o.a.hucre.forEach((c,j)=>kare(c,j,ry,true))}});
+  const ty=y+2+(n-1)*rh+6;P.cizgi(x,ty-3,x+adW,ty-3,PC.gray,.8);
+  P.yazi(x,ty+rh/2+fs*.36,'Bütün konular',fs,PC.ink,true);z.sinavlar.forEach((e,j)=>kare(e,j,ty,false));
+}
+const IZGH=(n,rh)=>16+n*rh;
 const IZG=(n,rh)=>34+n*rh;
 const satirSayisi=(b,kazanim)=>b.izgara.satir.length+1+(kazanim?b.izgara.satir.reduce((t,r)=>t+((r.alt||[]).length),0):0);
 // A large card's height for its content within hMax: the head (title, numbers), then the chart and the topic table side by side
 // (a wide card) or one above the other; rows of about 22–24 px, a chart of 110–260 px; never taller than hMax.
 function buyukYukseklik(b,w,hMax,kazanim=false){
   const n=satirSayisi(b,kazanim),bas=b.seri.length?116:44,yer=hMax-bas-14;
-  const ic=!b.seri.length?IZG(n,24):w>=700?Math.max(230,IZG(n,24)):Math.min(200,Math.max(110,yer*.36))+6+IZG(n,22);
+  const ic=!b.seri.length?IZG(n,24):sutunYerleri(b)?Math.min(220,Math.max(110,yer*.36))+6+IZGH(n,22):w>=700?Math.max(230,IZG(n,24)):Math.min(200,Math.max(110,yer*.36))+6+IZG(n,22);
   return bas+14+Math.min(yer,ic);
 }
 // The least height a card needs with readable rows (11 px): whether the kazanımlar fit on the teacher's page.
-function buyukEnAz(b,w,kazanim){const n=satirSayisi(b,kazanim),bas=b.seri.length?116:44;return bas+14+(!b.seri.length?IZG(n,11):w>=700?Math.max(180,IZG(n,11)):84+6+IZG(n,11))}
+function buyukEnAz(b,w,kazanim){const n=satirSayisi(b,kazanim),bas=b.seri.length?116:44;return bas+14+(!b.seri.length?IZG(n,11):sutunYerleri(b)?84+6+IZGH(n,11):w>=700?Math.max(180,IZG(n,11)):84+6+IZG(n,11))}
 function buyukKart(P,b,x,y,w,h,kazanim=false){
   P.kutu(x,y,w,h);
   P.yazi(x+18,y+28,P.sigdir(kartBasligi(b),w*.6,15,true),15,PC.ink,true);
   P.yazi(x+w-18,y+28,P.sigdir(kapsamYazisi(b),w*.36,10),10,PC.muted,false,'end');
   const ust=b.seri.length?pdfSkor(P,b,x+18,y+40,true)+16:y+44,ch=y+h-14-ust,z=b.izgara,n=satirSayisi(b,kazanim);
   if(!b.seri.length){pdfIzgara(P,z,x+18,ust,w-36,ch,kazanim);return}
+  // The squares under the chart: the chart above, its left column the topic names' column.
+  if(sutunYerleri(b)){const solW=Math.min(260,Math.max(150,w*.36));let gh=Math.min(w>=700?220:200,ch-6-IZGH(n,22));if(gh<110)gh=Math.max(84,Math.min(200,ch-6-IZGH(n,12)));
+    const G=pdfGrafik(P,b,x+8,ust,w-26,gh,9,solW);if(G){pdfIzgaraHizali(P,b,x+18,ust+gh+8,w-36,ch-gh-8,kazanim,G,solW-18);return}}
   if(w>=700){const gw=Math.min(w*.52,300+z.sinavlar.length*92);pdfGrafik(P,b,x+8,ust,w-gw-50,Math.min(ch,260));pdfIzgara(P,z,x+w-18-gw,ust,gw,ch,kazanim);return}
   let gh=Math.min(200,ch-6-IZG(n,22));if(gh<110)gh=Math.max(84,Math.min(200,ch-6-IZG(n,12)));
   pdfGrafik(P,b,x+8,ust,w-26,gh);pdfIzgara(P,z,x+18,ust+gh+6,w-36,ch-gh-6,kazanim);
@@ -838,7 +889,9 @@ function grafikleriCiz(){
   if(!SON||typeof document==='undefined')return;const bl=SON.flatMap(o=>o.bloklar);
   // Every width is read before any chart is drawn: reading one after drawing another would lay the whole page out again each time.
   const kutular=[...document.querySelectorAll('#ogrKok .ogr-grafik[data-ogr-grafik]')].map(k=>[k,Math.round(k.clientWidth)]);
-  for(const [k,W] of kutular){const b=bl[+k.dataset.ogrGrafik];if(!b||W<160||k.dataset.w===String(W))continue;k.dataset.w=String(W);k.innerHTML=netGrafigi(b,W)}
+  for(const [k,W] of kutular){const b=bl[+k.dataset.ogrGrafik];if(!b||W<160||k.dataset.w===String(W))continue;k.dataset.w=String(W);k.innerHTML=netGrafigi(b,W);
+    // The squares under the chart take its geometry: the same left edge, inset and step.
+    const G=geometri(b,W),blok=k.closest('.ogr-blok');if(G.hizali&&blok)for(const [a,v] of [['--ogr-L',G.L],['--ogr-ic',G.ic],['--ogr-R',G.Rk],['--ogr-kw',r1(G.kw)]])blok.style.setProperty(a,v+'px')}
 }
 function planla(){if(typeof window==='undefined'||!window.requestAnimationFrame)return;window.cancelAnimationFrame(ZAMAN);ZAMAN=window.requestAnimationFrame(grafikleriCiz)}
 if(typeof window!=='undefined'&&window.addEventListener){
