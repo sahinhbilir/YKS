@@ -31541,7 +31541,7 @@ function siraKarsilastir(a,b){
 // meets Alan). A topic with no such entry stays after the topic before it in the kazanım codes. No plan: the kazanım codes.
 const planNorm=t=>String(t||'').toLocaleUpperCase('tr-TR').normalize('NFD').replace(/\p{M}/gu,'').replace(/[^A-Z0-9]+/g,' ').trim();
 const PLAN_DOLGU=new Set(['VE','ILE','DE','DA','KI','BIR','IN','TYT','AYT','DEVAMI','I','II']);
-const PLAN_GENEL=new Set(['ANLAM','KAVRA','TEMEL','PROBL','SISTE','ISLEM','OZELL','IFADE','DENKL','SAYI','SAYIL','GENEL','YAPI','TURLE','CESIT','ELEMA','UYGUL','GOSTE','ILISK','DONEM']);
+const PLAN_GENEL=new Set(['ANLAM','KAVRA','TEMEL','PROBL','SISTE','ISLEM','OZELL','IFADE','DENKL','SAYI','SAYIL','GENEL','YAPI','TURLE','CESIT','ELEMA','UYGUL','GOSTE','ILISK','DONEM','FONKS','GRAFI','DEREC','BILIN','ESITS']);
 const planKokleri=t=>planNorm(t).split(' ').filter(w=>w.length>=3&&!PLAN_DOLGU.has(w)).map(w=>w.slice(0,5));
 function planDersi(plan,kod,oturum){
   const n=planNorm(kod).replace(/ [TA]$/,'').replace(/^S /,'').replace(/ (GR|[12])\b.*$/,'').trim(),k=n.split(' '),taban=/^(TURK|DIN)$/.test(k[0])?k.slice(0,2).join(' '):k[0];
