@@ -374,9 +374,28 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   const msg=await K.pdfEkle([{name:'m.pdf',size:10,pages:F.maddePages({ad:'SENTETİK-ZORLUK',oturum:'AYT',N:26,courses:[{course:'MATEMATİK-A',rows:[[13,10,3],[6,10,10]]}]})}]);
   assert.match(msg,/SENTETİK-ZORLUK: AYT Sınav özeti yok; AYT dersleri konu ve kazanım düzeyinde eşlenemez\. AYT Sınav özetini \(Excel\) ekleyin\./);assert(!/uyuşmuyor/.test(msg));
  });
+ await test('Kaynaklar names a session whose difficulty files are here but whose student karnesi is not; an AYT karnesi under another spelling joins its exam',()=>{
+  const ayt={...zpart('ozet','27-YKS-1201',{'MATEMATİK-A':[['M.12.1.1',.5]]}),oturum:'AYT'},tyt=zpart('ozet','27-YKS-1201',ZSPEC);
+  let v=K.merge(K.blank(),[zrep('27-YKS-1201',zrows([2,0,2,0],[2,1,1,0],[1,1,0,0],[3,2,1,0]))],[tyt,ayt]);
+  put('__kt',v);run('D.konutakibi=__kt');let html=K.gorunum();
+  assert(html.includes('AYT öğrenci kazanım karnesi yok: bu denemenin AYT konuları Konu Takibi’ne ve Türkiye karşılaştırmasına girmez.'),'the AYT difficulty files are here, the AYT karnesi is not');
+  assert(!html.includes('TYT öğrenci kazanım karnesi yok'),'the TYT karnesi is here');
+  // The AYT karnesi titled with the session: one exam, both sessions, no warning; its key is still the difficulty files' key.
+  v=K.merge(v,[{ad:'27 YKS 1201 AYT',blocks:[F.block([F.row('M.12.1.1','Üstel fonksiyon',[1,1,0,0])],'outcome','MATEMATİK-A',S1)]}]);
+  assert.equal(v.exams.length,1);assert.equal(v.exams[0].ad,'27-YKS-1201');assert.deepEqual(copy([...new Set(v.exams[0].blocks.map(b=>b.course))]),['TÜRKÇE-T','MATEMATİK-A']);
+  put('__kt',v);run('D.konutakibi=__kt');html=K.gorunum();assert(!html.includes('öğrenci kazanım karnesi yok'));assert(html.includes('TYT + AYT · 12/A'));
+  // Only difficulty files so far: the karnesi under another spelling takes their name, so the two are joined.
+  const w=K.merge(K.merge(K.blank(),[],[{...zpart('ozet','27-YKS-1209',{'MATEMATİK-A':[['M.12.1.1',.5]]}),oturum:'AYT'}]),[{ad:'27-YKS-1209 AYT',blocks:[F.block([F.row('M.12.1.1','Üstel fonksiyon',[1,1,0,0])],'outcome','MATEMATİK-A',S1)]}]);
+  assert.deepEqual(copy(w.exams.map(e=>e.ad)),['27-YKS-1209']);
+  // Two exams with the same code are never guessed between.
+  const x=K.merge(K.merge(K.blank(),[zrep('27-YKS-1301 A',zrows([2,0,2,0],[2,1,1,0],[1,1,0,0],[3,2,1,0]))]),[zrep('27-YKS-1301 B',zrows([2,0,2,0],[2,1,1,0],[1,1,0,0],[3,2,1,0]),S2)]);
+  assert.equal(x.exams.length,1,'one existing exam with the code: joined');
+  const y=K.merge(x,[zrep('27-YKS-1301 C',zrows([2,0,2,0],[2,1,1,0],[1,1,0,0],[3,2,1,0]),S3)]);assert.equal(y.exams.length,1);
+ });
  await test('exam with only difficulty files is listed in Kaynaklar; either file may come first',()=>{
   const v=K.merge(K.blank(),[],zpair('SENTETİK-1203',{'TÜRKÇE-T':[['T.12.1.1',.5]]}));
-  assert.equal(v.exams.length,0);put('__kt',v);run('D.konutakibi=__kt');const html=K.gorunum();assert(html.includes('SENTETİK-1203'));assert(html.includes('kazanım haritası yüklenmedi'));assert(html.includes('Zorluk: özet ✓ · madde analizi ✓'));
+  assert.equal(v.exams.length,0);put('__kt',v);run('D.konutakibi=__kt');const html=K.gorunum();assert(html.includes('SENTETİK-1203'));assert(html.includes('öğrenci kazanım karnesi yüklenmedi'));
+  assert(html.includes('TYT öğrenci kazanım karnesi yok: bu denemenin TYT konuları Konu Takibi’ne ve Türkiye karşılaştırmasına girmez. Yayınevinin TYT Kazanım Karnesi PDF’ini ekleyin.'),'the missing file is named');assert(html.includes('Zorluk: özet ✓ · madde analizi ✓'));
   const a=K.merge(K.merge(K.blank(),[],[zpart('ozet','SENTETİK-ZORLUK',ZSPEC)]),[ZREP],[zpart('madde','SENTETİK-ZORLUK',ZSPEC)]),b=K.merge(K.merge(K.blank(),[ZREP],[zpart('madde','SENTETİK-ZORLUK',ZSPEC)]),[],[zpart('ozet','SENTETİK-ZORLUK',ZSPEC)]);
   assert.deepEqual(copy(K.model(a,{}).topics.map(t=>t.z&&t.z.fark)),copy(K.model(b,{}).topics.map(t=>t.z&&t.z.fark)));assert.equal(Object.values(a.zorluk)[0].ogrenci,NZ);
  });

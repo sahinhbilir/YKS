@@ -173,6 +173,19 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
       ['TDE.12.2.1.6', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'], ['TDE.12.2.1.12', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'], ['TDE.12.2.2.3', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Dili / Söz Sanatları)'],
       ['TDE.12.3.1.1', 'Tarihsel Süreç İçinde Türk Şiiri (İslamiyet Öncesi / Geçiş Dönemi 11-12.yy / Halk Edebiyatı)'], ['TDE.12.2.7.1', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)'], ['TDE.12.9.1.1', null]])
       assert.equal(tf('TÜRK DİLİ VE EDB-A', k), t, k);
+    // Checked against MEB's published programmes: Biyoloji 12.2.1 is Canlılık ve Enerji (Fotosentez is 12.2.2), Fizik 12.1.4
+    // Kütle Çekim Kuvveti and 12.1.5 Kepler; Tarih's 11th grade follows the 2023 programme; Din 11.5 is Yahudilik ve Hıristiyanlık;
+    // Felsefe 10.4 Felsefi Okuma ve Yazma; E.M.9.2.1.5 is the publisher's own code for Sayı Basamakları (MEB 9.2.1 ends at 9.2.1.3).
+    for (const [c, k, t] of [['BİYOLOJİ-A', 'BİY.12.2.1.1', 'Canlılık ve Enerji'], ['BİYOLOJİ-A', 'BİY.12.2.2.3', 'Fotosentez'], ['BİYOLOJİ-A', 'B.12.2.3.1', 'Kemosentez'],
+      ['BİYOLOJİ-A', 'B.12.2.4.2', 'Hücresel Solunum'], ['FİZİK-A', 'F.12.1.4.1', 'Kütle Çekim Kuvveti'], ['FİZİK-A', 'F.12.1.5.1', 'Kepler Kanunları'],
+      ['TARİH.2-A', 'E.TAR.11.3.2', 'Devrimler Çağında Değişen Devlet-Toplum İlişkileri'], ['TARİH.2-A', 'E.TAR.11.4.1', 'Uluslararası İlişkilerde Denge Stratejisi (1774-1914)'],
+      ['TARİH.2-A', 'E.TAR.11.5.1', 'XIX ve XX. Yüzyılda Değişen Sosyoekonomik Hayat'], ['TARİH.2-A', 'E.TAR.11.6.1', null], ['TARİH.1-A', 'E.TAR.9.3.4', 'Orta Çağ’da Dünya'],
+      ['DİN KÜLTÜRÜ-A', 'E.DİN.11.5.1', 'Yahudilik ve Hıristiyanlık'], ['DİN KÜLTÜRÜ-A', 'D.12.4.1', 'Güncel Dinî Meseleler'], ['FELSEFE GR.-A', 'E.FEL.10.4.1', 'Felsefi Okuma ve Yazma'],
+      ['KİMYA-A', 'K.9.4.1', 'Maddenin Hâlleri'], ['MATEMATİK-A', 'E.M.9.2.1.5', 'Sayı Basamakları'], ['MATEMATİK-A', 'E.M.9.2.1.2', 'Kümelerde Temel Kavramlar']])
+      assert.equal(tf(c, k), t, c + ' ' + k);
+    // Built-in names display as written, never title-cased ("Sanat Ve Edebiyat", "Iı. Dünya Savaşı").
+    for (const n of ['Sanat ve Edebiyat', 'Coşku ve Heyecanı Dile Getiren Metinler (Şiir Bilgisi)', 'II. Dünya Savaşı Sürecinde Türkiye ve Dünya', 'XIX ve XX. Yüzyılda Değişen Sosyoekonomik Hayat'])
+      assert.equal(run('KONU_TAKIBI.topicName(' + JSON.stringify(n.toLocaleUpperCase('tr-TR')) + ')'), n);
     assert.equal(tf('S.FELSEFE-A', 'PSK.12.2.1'), 'Psikolojinin Temel Süreçleri'); assert.equal(tf('FELSEFE GR.-A', 'PSK.12.2.1'), 'Psikolojinin Temel Süreçleri');
     // The other lessons of the earlier programme: the unit by grade.unit, a topic where the unit is broad; the ders comes from
     // the course code (12.2 is Basit Harmonik Hareket in Fizik, Karbon Kimyasına Giriş in Kimya).
@@ -371,7 +384,7 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // the teacher is told what to add, the student only that it has no topic results yet.
     run("EK.osDuzey=12;EK.osSube='12/B';EK.osOgr='1003'"); const sayfa = run('OGRETMEN_RAPOR.gorunumOgrenci()');
     assert.match(sayfa, /<p class="mini ogr-iz-eksik">Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Bu denemelerin konu sonuçları henüz yok\.<\/p>/, 'the student’s sheet, in the student’s words');
-    assert.match(run('OGRETMEN_RAPOR.gorunum()'), /Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Konu Takibi’nde bu denemelerin AYT kazanım karnesi yok;/, 'Öğretmen raporu says what to add');
+    assert.match(run('OGRETMEN_RAPOR.gorunum()'), /Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Konu Takibi’nde bu denemelerin AYT öğrenci kazanım karnesi yok; yayınevinin AYT Kazanım Karnesi PDF’i eklenince tabloya girerler/, 'Öğretmen raporu says what to add');
     put('__OZ3', get(`OGRETMEN_RAPOR.kiyasOzeti({no:'1003'})`)); run(`D.turkiyeKiyas=__OZ3;D.ogr=[{no:'1003',ad:'SENTETİK CEMRE',sube:'12/B',sinif:12,alan:'EA',kap:6,off:[6],aktif:true}];D.rol='ogrenci'`);
     assert.match(run('OGRETMEN_RAPOR.gorunumKendi()'), /Konu tablosunda olmayan deneme: <b>27-YKS-1201<\/b>\. Bu denemelerin konu sonuçları henüz yok\./);
     run("D.rol='rehber';EK.osDuzey=undefined;EK.osSube=undefined;EK.osOgr=undefined");
