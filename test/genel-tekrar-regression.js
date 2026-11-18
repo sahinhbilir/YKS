@@ -668,8 +668,10 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     a.run(`kendiPlanKur(0,${JSON.stringify(hepsiBilir(a))},'2027-04-23')`); genelTekrarBitir(a); a.run('ciz()');
     const bu = a.run('buHafta(0)'), bugun = a.run('bugunNo()');
     const kagit = hafta(a, bu).flatMap((l, g) => l.map(x => ({ ...x, gun: bu + g }))).filter(x => !x.gt && !x.anlatim);
-    // Topics on the connected-memory map show the map's value in Hafızam (test/haritam-regression.cjs); these check Hafızam's own rules.
-    const disarida = a.json(`(()=>{const harita=new Set([...HARITAM.kaynaklar().values()].flat());return D.ogr[0].kendiPlan.sira.filter(k=>!${JSON.stringify(kagit.map(x => x.ki))}.includes(k)&&!harita.has(k)).slice(0,3)})()`);
+    // Topics on the connected-memory map show the map's value in Hafızam (test/haritam-regression.cjs); every plan topic is on the
+    // map now, so the map's overlay is switched off here: these check Hafızam's own rules.
+    a.run('HARITAM.hafizayaUygula=()=>{}');
+    const disarida = a.json(`D.ogr[0].kendiPlan.sira.filter(k=>!${JSON.stringify(kagit.map(x => x.ki))}.includes(k)).slice(0,3)`);
     assert.equal(disarida.length, 3, 'three topics that are not on this week’s paper');
     // Nothing answered yet: nothing to show, no card on the home page.
     assert.deepEqual(a.json('hafizaDurumu(0)'), { hedef: 0.9, liste: [], altinda: 0, eski: 0 }); assert.equal(a.run('hafizaAnaKarti(0)'), '');
@@ -742,8 +744,10 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     a.run(`kendiPlanKur(0,${JSON.stringify(hepsiBilir(a))},'2027-04-23')`); genelTekrarBitir(a); a.run('ciz()');
     const bu = a.run('buHafta(0)'), bugun = a.run('bugunNo()');
     const kagit = hafta(a, bu).flatMap(l => l.map(x => x.ki));
-    // Not on the connected-memory map, whose topics show the map's value (test/haritam-regression.cjs).
-    const [kiA, kiB, kiC] = a.json(`(()=>{const harita=new Set([...HARITAM.kaynaklar().values()].flat());return D.ogr[0].kendiPlan.sira.filter(k=>!${JSON.stringify(kagit)}.includes(k)&&!harita.has(k)).slice(0,3)})()`);
+    // The connected-memory map's topics show the map's value (test/haritam-regression.cjs); every plan topic is on the map now,
+    // so its overlay is switched off here: Hafızam's own rules.
+    a.run('HARITAM.hafizayaUygula=()=>{}');
+    const [kiA, kiB, kiC] = a.json(`D.ogr[0].kendiPlan.sira.filter(k=>!${JSON.stringify(kagit)}.includes(k)).slice(0,3)`);
     // Taught in class (the curriculum and the timetable put the topic on a lesson day): 10 and 25 days ago, never measured.
     a.run(`D.ogrIslenis=D.ogrIslenis||{};D.ogrIslenis[0]=Object.assign(D.ogrIslenis[0]||{},{${kiA}:${bugun - 10},${kiB}:${bugun - 25}})`);
     a.run(`sonucIsle(0,[{ki:${kiC},gun:${bugun - 5},not:3,dogru:null,soru:null}])`);
