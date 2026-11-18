@@ -88,7 +88,30 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   const packet=get('ogrenciPaketi(0)');assert(!JSON.stringify(packet).includes('konutakibi'));assert(!JSON.stringify(packet).includes('SENTETİK-1'));
  });
  await test('a reused number with a different name cannot silently merge two pupils',()=>{
-  const r=copy(F.reports[1]);r.blocks[0].student.name='BAŞKA ÖĞRENCİ';assert.throws(()=>K.merge(stored(),[r]),/farklı adlarla/);
+  const r=copy(F.reports[1]);r.blocks[0].student.name='BAŞKA ÖĞRENCİ';
+  assert.throws(()=>K.merge(stored(),[r]),/başka adla kayıtlı \(205 12\/A · 9001: kayıtlı «SENTETİK ÖĞRENCİ», PDF’de «BAŞKA ÖĞRENCİ»\)\. PDF kimliğini kontrol edin; dosya eklenmedi\./);
+  for(const ad of ['SENTETİK ÖĞRENCİ AYŞE','AYŞE SENTETİK','SENTETİK ÖĞRENCİM','SENTETIK OGRENCI'])assert.throws(()=>{const x=copy(F.reports[1]);x.blocks[0].student.name=ad;K.merge(K.merge(K.blank(),[{ad:'A',blocks:[F.block(F.reports[0].blocks[0].rows,'outcome','TÜRKÇE-T',{...F.student,name:'AYŞE SENTETİK ÖĞRENCİ'})]}]),[{...x,ad:'B',blocks:[{...x.blocks[0],student:{...x.blocks[0].student,name:'BORA ÇETİN'}}]}])},/başka adla/,ad);
+ });
+ await test('the same pupil spelled another way by the school list joins their record under the first name stored',()=>{
+  const base=K.merge(K.blank(),[{ad:'A',blocks:[F.block(F.reports[0].blocks[0].rows,'outcome','TÜRKÇE-T',{...F.student,name:'MUHAMMET ALİ AVLU'})]}]);
+  for(const ad of ['MUHAMMED ALİ AVLU','AVLU MUHAMMET ALİ','MUHAMMET AVLU','MUHAMMET ALİ AVLU KAYA','Muhammet Ali  Avlu']){
+   const v=K.merge(base,[{ad:'B',blocks:[F.block(F.reports[0].blocks[0].rows,'outcome','TÜRKÇE-T',{...F.student,name:ad})]}]);
+   assert.deepEqual(v.exams.map(e=>e.blocks.map(b=>b.student.name).join()),['MUHAMMET ALİ AVLU','MUHAMMET ALİ AVLU'],ad);
+   assert.equal(K.model(v,{}).students.length,1,ad);
+  }
+  // Two letters off, another given name, or one name alone is another pupil.
+  for(const ad of ['MEHMET ALİ AVLU','MUHAMMET VELİ AVLU','AVLU','MUHAMMED ALI AVCU'])
+   assert.throws(()=>K.merge(base,[{ad:'B',blocks:[F.block(F.reports[0].blocks[0].rows,'outcome','TÜRKÇE-T',{...F.student,name:ad})]}]),/başka adla kayıtlı/,ad);
+  // Every clash is named, and nothing of the file is kept.
+  const x=[1,2,3,4].map(i=>F.block(F.reports[0].blocks[0].rows,'outcome','TÜRKÇE-T',{...F.student,no:String(9000+i),name:'ÖĞRENCİ '+i}));
+  const many=K.merge(K.blank(),[{ad:'A',blocks:x}]);
+  assert.throws(()=>K.merge(many,[{ad:'B',blocks:x.map(b=>({...b,student:{...b.student,name:'YENİ '+b.student.no}}))}]),/9001: kayıtlı «ÖĞRENCİ 1», PDF’de «YENİ 9001»; .*9003.* ve 1 öğrenci daha\)/);
+ });
+ await test('a deneme result list dropped on Konu Takibi says where it goes',async()=>{
+  const it=(s,x,y)=>({s,x,y,w:s.length*4,z:9});
+  run('denemePdfSayfalari=async()=>({pages:'+JSON.stringify([[it('DENEME SINAVI TOPLU SONUÇ LİSTESİ Net Sayısı Sıralı',283,573),it('Toplam',778,517)]])+'})');
+  const msg=await K.pdfEkle([{name:'liste.pdf',size:10}]);
+  assert.match(msg,/^liste\.pdf: Bu PDF denemenin toplu sonuç listesi \(netler ve puanlar\); Denemeler sekmesindeki PDF ile ekleyin\./);assert.equal(run('D.konutakibi'),undefined);
  });
  await test('notebook limit is enforced before mutation',async()=>{
   run("D.__syntheticPadding='x'.repeat(DEFTER_HAM_UST_SINIR)");await assert.rejects(K.ekle([F.reports[0]]),/5\.000 KB cihaz bütçesini/);assert.equal(run('D.konutakibi'),undefined);

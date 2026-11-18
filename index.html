@@ -25933,9 +25933,26 @@ function mergeZorluk(n,parts){
     e.oturum=oturumOf(e);e.ts=Date.now();
   }
 }
+// One student written two ways: the school list and a publisher's karne may drop a middle name, swap the order or differ in
+// one letter (MUHAMMET / MUHAMMED). Every name of the shorter spelling must be in the other, at most one of them a letter off
+// (names of 4+ letters); another student under the same class and number is still refused.
+const birHarf=(a,b)=>{   // exactly one letter changed, added or dropped
+  if(a===b)return false;if(a.length<b.length)[a,b]=[b,a];if(a.length-b.length>1)return false;
+  let i=0;while(i<b.length&&a[i]===b[i])i++;return a.slice(i+1)===b.slice(a.length===b.length?i+1:i);
+};
+function ayniKisi(a,b){
+  if(key(a)===key(b))return true;
+  const t=s=>clean(s).split(/\s+/u).map(key).filter(Boolean),[k,u]=[t(a),t(b)].sort((x,y)=>x.length-y.length),kalan=[...u];let yakin=0;
+  if(k.length<2)return false;
+  for(const x of k){let i=kalan.indexOf(x);if(i<0&&!yakin&&x.length>=4){i=kalan.findIndex(y=>y.length>=4&&birHarf(x,y));if(i>=0)yakin++}if(i<0)return false;kalan.splice(i,1)}
+  return true;
+}
 function merge(v,reports,zparts=[]){
   const n=JSON.parse(JSON.stringify(v)),labels=new Map(n.labels.map((l,i)=>[l[0]||key(l[1]),i]));
-  const people=new Map(n.exams.flatMap(e=>e.blocks.map(b=>[studentKey(b.student),key(b.student.name)])));
+  // A student is their class and number; the name kept is the first one stored, so a later file spelling it another way
+  // still shows one student under one name.
+  const people=new Map();for(const e of n.exams)for(const b of e.blocks){const sk=studentKey(b.student);if(!people.has(sk))people.set(sk,b.student.name)}
+  const farkli=new Map();
   for(const r of reports){
     if(!r||!Array.isArray(r.blocks)||!r.blocks.length)throw new Error('Boş rapor eklenemez.');
     // The same exam under another spelling (an AYT karnesi titled "27-YKS-1201 AYT" for the exam whose TYT is here) is matched
@@ -25945,13 +25962,15 @@ function merge(v,reports,zparts=[]){
     if(!e){const ad=ayniKod(r.ad,n.exams.map(x=>x.ad));if(ad!==null)e=n.exams.find(x=>x.ad===ad)}
     if(!e){const zad=n.zorluk&&!n.zorluk[ek(r.ad)]?ayniKod(r.ad,Object.values(n.zorluk).map(z=>z.ad)):null;e={ad:zad??r.ad,date:null,blocks:[]};n.exams.push(e)}
     for(const b of r.blocks){
-      const sk=studentKey(b.student),name=key(b.student.name);
-      if(people.has(sk)&&people.get(sk)!==name)throw new Error('Aynı şube ve öğrenci numarası farklı adlarla kayıtlı. PDF kimliğini kontrol edin; dosya eklenmedi.');people.set(sk,name);
+      const sk=studentKey(b.student),kayitli=people.get(sk);
+      if(kayitli===undefined)people.set(sk,b.student.name);
+      else if(!ayniKisi(kayitli,b.student.name)){farkli.set(sk,b.student.cls+' · '+b.student.no+': kayıtlı «'+kayitli+'», PDF’de «'+b.student.name+'»');continue}
       const rows=b.rows.map(r=>{const k=r.code||key(r.name);let i=labels.get(k);if(i===undefined){i=n.labels.length;labels.set(k,i);n.labels.push([r.code,r.name])}return [i,...r.c]});
-      const newB={student:{...b.student},course:b.course,kind:b.kind,rows},i=e.blocks.findIndex(x=>blockKey(x)===blockKey(newB));
+      const newB={student:{...b.student,name:kayitli??b.student.name},course:b.course,kind:b.kind,rows},i=e.blocks.findIndex(x=>blockKey(x)===blockKey(newB));
       if(i<0)e.blocks.push(newB);else e.blocks[i]=newB;
     }
   }
+  if(farkli.size){const l=[...farkli.values()];throw new Error('Aynı şube ve öğrenci numarası başka adla kayıtlı ('+l.slice(0,3).join('; ')+(l.length>3?' ve '+(l.length-3)+' öğrenci daha':'')+'). PDF kimliğini kontrol edin; dosya eklenmedi.')}
   mergeZorluk(n,zparts);
   n.ts=Math.max(Date.now(),v.ts+1);return dogrula(compact(n));
 }
@@ -26487,8 +26506,10 @@ async function dosyaCoz(file){
   if(!okunan&&r&&Array.isArray(r.pages))r.pages.forEach(isle);   // a reader that hands over the pages at the end
   if(tur==='karne')return {rapor:coz.bitir()};
   const pages=diger;if(!pages.length)throw new Error('PDF sayfaları okunamadı.');
+  const yazi=re=>pages.some(p=>Array.isArray(p)&&p.some(i=>typeof i?.s==='string'&&re.test(clean(i.s))));
+  if(yazi(/^DENEME SINAVI TOPLU SONUÇ LİSTESİ/u))throw new Error('Bu PDF denemenin toplu sonuç listesi (netler ve puanlar); Denemeler sekmesindeki PDF ile ekleyin. Konu Takibi kazanım karnesi, Madde Analizi, Performans analizi ve Sınav özeti alır.');
   if(perfMi(pages))return {z:turkiyeCoz(pages)};
-  return pages.some(p=>Array.isArray(p)&&p.some(i=>typeof i?.s==='string'&&/Madde Analizi$/u.test(clean(i.s))))?{z:maddeCoz(pages)}:{rapor:pdfCoz(pages)};
+  return yazi(/Madde Analizi$/u)?{z:maddeCoz(pages)}:{rapor:pdfCoz(pages)};
 }
 const zorlukMesaj=p=>(p.tur==='madde'?'Madde Analizi':p.tur==='turkiye'?'Performans analizi (Türkiye geneli)':'Sınav özeti')+' kaydedildi · '+p.ad+' ('+p.oturum+') · '+Object.keys(p.dersler).length+' ders · '+Object.values(p.dersler).reduce((a,q)=>a+q.length,0)+' soru'+
   (p.atlanan&&p.atlanan.length?' · testi cevaplayan olmadığı için alınmadı: '+p.atlanan.map(courseLabel).join(', '):'');
