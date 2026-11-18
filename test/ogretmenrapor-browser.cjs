@@ -1,11 +1,18 @@
-// Öğretmen raporu on desktop and phone, light and dark: a section per teacher, the labelled headline boxes, the net chart drawn
-// at its box's width, the topic table in red (behind) and green (ahead), no sideways scrolling, the teacher filter, and the
+// Öğretmen raporu on desktop and phone, light and dark: a section per teacher, two headline numbers, the net chart drawn at its
+// box's width with the room between the lines shaded, the topic table of coloured squares in red (behind) and green (ahead), no sideways scrolling, the teacher filter, and the
 // paper the teachers are handed: a letterhead with the reading notes for each teacher, a page per block, nothing cut across
 // pages, no empty page, its own palette whatever the screen theme. Synthetic school only: the timetables, the school lists and
 // Konu Takibi are built in the page.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const html=fs.readFileSync('index.html','utf8').replace(/<script type="module">[\s\S]*?<\/script>/,'');
+// The PDF tools the page loads from the CDN, served from the installed packages (as in ogrencirapor-browser).
+const paket=ad=>{for(const d of [...(process.env.NODE_PATH||'').split(path.delimiter),path.join(__dirname,'..','node_modules')].filter(Boolean)){const p=path.join(d,ad);if(fs.existsSync(path.join(p,'package.json')))return p}throw new Error('Install '+ad)};
+const CDN={
+ 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js':[paket('pdf-lib'),'dist/pdf-lib.min.js','text/javascript'],
+ 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js':[paket('@pdf-lib/fontkit'),'dist/fontkit.umd.min.js','text/javascript'],
+ 'https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Regular.woff':[paket('roboto-fontface'),'fonts/roboto/Roboto-Regular.woff','font/woff'],
+ 'https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Medium.woff':[paket('roboto-fontface'),'fonts/roboto/Roboto-Medium.woff','font/woff']};
 const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yks-ogretmenrapor-'));fs.mkdirSync(out,{recursive:true});
 const kur=()=>{
   D=varsayilan();D.rol='rehber';D.ayar.testTarih='2026-10-30';bulutYedekPlanla=()=>{};ogretmenDinlemeyiBaslat=()=>{};
@@ -34,10 +41,10 @@ const kur=()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage'],...(process.env.YKS_CHROMIUM?{executablePath:process.env.YKS_CHROMIUM}:{})});
  try{
   for(const [width,tema] of [[1280,'light'],[390,'dark']]){
-   const context=await browser.newContext({viewport:{width,height:900},colorScheme:tema}),page=await context.newPage(),errors=[];
+   const context=await browser.newContext({viewport:{width,height:900},colorScheme:tema,acceptDownloads:true}),page=await context.newPage(),errors=[];
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
    await page.clock.setFixedTime(new Date('2026-10-30T12:00:00+03:00'));
-   await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
+   await context.route('**/*',r=>{const u=r.request().url();if(u.startsWith('http://localhost/'))return r.fulfill({status:200,contentType:'text/html',body:html});if(CDN[u])return r.fulfill({path:path.join(CDN[u][0],CDN[u][1]),contentType:CDN[u][2],headers:{'access-control-allow-origin':'*'}});return r.abort()});
    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
    await page.evaluate(kur);
    await page.locator('#ogrKok').waitFor();await page.waitForFunction(()=>document.querySelectorAll('#ogrKok .ogr-grafik svg').length>=2);
@@ -45,31 +52,30 @@ const kur=()=>{
    assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#ogrKok .ogr-grafik')].every(k=>{const s=k.querySelector('svg');return s&&Math.abs(Number(s.getAttribute('width'))-k.clientWidth)<=1})),true,'charts at their box width');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'no sideways scrolling');
    assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#ogrKok .et-panel')].every(p=>p.scrollWidth<=p.clientWidth+1)),true,'panels do not overflow (the grid scrolls inside its box)');
-   // The grid: a red row and a green row, the red one first; the deepest cells have white text.
+   // The grid: squares without numbers, rows in the order taught (T.12.1 Sözcükte Anlam, T.12.3 Cümlede Anlam, T.12.5 Ses Bilgisi):
+   // the first red, a later one green.
    const iz=await page.evaluate(()=>{const rows=[...document.querySelectorAll('#ogrKok .ogr-iz tbody tr:not(.ogr-iz-alt)')];
      const rgb=c=>(c.match(/[\d.]+/g)||[]).map(Number);
-     return rows.map(r=>{const c=r.querySelector('td.ogr-iz-h'),b=rgb(getComputedStyle(c).backgroundColor);return {ad:r.querySelector('th').textContent,metin:c.textContent,r:b[0],g:b[1],renk:getComputedStyle(c).color}})});
-   assert(iz.length>=3,JSON.stringify(iz));assert(iz[0].metin.startsWith('−'),'most behind first: '+JSON.stringify(iz[0]));
-   assert(iz[0].r>iz[0].g,'behind is red: '+JSON.stringify(iz[0]));const yesil=iz.find(x=>x.metin.startsWith('+'));assert(yesil&&yesil.g>yesil.r,'ahead is green: '+JSON.stringify(yesil));
-   // The takeaway and reading guide are visible without hovering or opening the formulas, including on phones.
+     return rows.map(r=>{const c=r.querySelector('td.ogr-iz-h'),b=rgb(getComputedStyle(c.querySelector('i')).backgroundColor);return {ad:r.querySelector('th').textContent,metin:c.textContent,r:b[0],g:b[1],yuk:c.querySelector('i').getBoundingClientRect().height}})});
+   assert(iz.length>=3,JSON.stringify(iz));assert.deepEqual(iz.slice(0,3).map(x=>x.ad),['Sözcükte Anlam','Cümlede Anlam','Ses Bilgisi'],'the order taught');
+   assert(iz.every(x=>x.metin===''),'no number in a square');assert(iz.every(x=>x.yuk>=15),'squares have a body: '+JSON.stringify(iz));
+   assert(iz[0].r>iz[0].g,'behind is red: '+JSON.stringify(iz[0]));const yesil=iz.find(x=>x.g>x.r);assert(yesil&&yesil.ad==='Cümlede Anlam','ahead is green: '+JSON.stringify(iz));
+   // The kazanımlar are hidden until ticked.
    const report=page.locator('.ogr-ogretmen').nth(1);
-   assert.match(await report.locator('.ogr-ozet').innerText(),/avantajınız azaldı\. Tekrar önceliği: Sözcükte Anlam \(son 3 denemede Türkiye’nin gerisinde\)\./);
-   // The headline boxes: the students' mean, the Türkiye average and their difference, each under its own label; the block says
-   // what it covers.
-   assert.deepEqual(await report.locator('.ogr-kutu-ad').allTextContents(),['Öğrencileriniz','Türkiye ortalaması','Fark','Fark nasıl değişti?']);
-   assert.deepEqual(await report.locator('.ogr-kutu-ana strong').allInnerTexts(),['24,0 net','23,5 net','+0,5 net']);
-   assert.match(await report.locator('.ogr-kapsam').innerText(),/^12\/A, 12\/B sınıfları birlikte · 6 deneme · 1 Eyl – 10 Kas 2026$/);
-   // The boxes sit side by side (desktop) or wrap (phone) inside the card; the chart's key is directly above the chart.
-   assert.equal(await report.locator('.ogr-kpi').evaluate(k=>[...k.children].every(c=>{const r=c.getBoundingClientRect(),p=k.getBoundingClientRect();return r.left>=p.left-1&&r.right<=p.right+1})),true,'boxes inside their row');
+   assert.equal(await report.locator('.ogr-iz-alt').first().isVisible(),false,'kazanımlar folded');
+   await report.locator('.ogr-iz-ac input').check();assert(await report.locator('.ogr-iz-alt').first().isVisible(),'kazanımlar shown');await report.locator('.ogr-iz-ac input').uncheck();
+   // The headline: the students' mean and the Türkiye average, side by side, and a coloured word; the block says what it covers.
+   assert.deepEqual(await report.locator('.ogr-skor-sayi span').allTextContents(),['Öğrencileriniz','Türkiye']);
+   assert.deepEqual(await report.locator('.ogr-skor-sayi strong').allInnerTexts(),['24,0','23,5']);
+   assert.equal(await report.locator('.ogr-durum').innerText(),'▲ Türkiye’nin üstünde');
+   assert.match(await report.locator('.ogr-kapsam').innerText(),/^12\/A, 12\/B · 6 deneme$/);
+   assert.equal(await report.locator('.ogr-ozet,.ogr-kpi,.ogr-iz-aciklama,.ogr-iz-ort,.ogr-iz-degisim').count(),0,'no sentence, no boxes, no explanation, no extra columns');
+   // The chart's key is directly above the chart; the room between the lines is shaded (green: above Türkiye in every exam).
    assert.equal(await report.locator('.ogr-sekil').evaluate(f=>f.querySelector('.ogr-lejant').getBoundingClientRect().bottom<=f.querySelector('.ogr-grafik').getBoundingClientRect().top+1),true,'the key above the chart');
+   assert(await report.locator('.ogr-grafik path.ogr-alan-ust').count()>=1,'shaded green');
    // The reading notes: folded once on screen, not repeated under every teacher.
-   assert.equal(await page.locator('details.ogr-rehber-ekran').count(),1);assert.equal(await page.locator('.ogr-rehber.ogr-baski').first().isVisible(),false,'the per-teacher notes are for paper');
-   // The topic table: the average gap as a bar from the Türkiye line (left behind, right ahead), the exams in equal columns,
-   // the whole subject as the last row.
-   const bar=await report.locator('.ogr-iz tbody tr:not(.ogr-iz-alt)').evaluateAll(rows=>rows.map(r=>{const y=r.querySelector('.ogr-ort-yol').getBoundingClientRect(),c=r.querySelector('.ogr-ort-cubuk').getBoundingClientRect(),orta=y.left+y.width/2;
-     return {sayi:r.querySelector('.ogr-ort b').textContent,sol:c.right<=orta+1&&c.width>1,sag:c.left>=orta-1&&c.width>1}}));
-   assert(bar[0].sayi.startsWith('−')&&bar[0].sol&&!bar[0].sag,'behind: the bar runs left of the Türkiye line '+JSON.stringify(bar[0]));
-   const sagda=bar.find(x=>x.sayi.startsWith('+'));assert(sagda&&sagda.sag&&!sagda.sol,'ahead: the bar runs right '+JSON.stringify(bar));
+   assert.equal(await page.locator('details.ogr-rehber-ekran').count(),1);
+   // The exams in equal columns, the whole subject as the last row.
    const kolon=await report.locator('.ogr-iz thead .ogr-iz-sinav').evaluateAll(l=>l.map(x=>Math.round(x.getBoundingClientRect().width)));
    assert(Math.max(...kolon)-Math.min(...kolon)<=1,'exam columns share the width equally: '+kolon);
    assert.equal(await report.locator('.ogr-iz tfoot .ogr-iz-toplam .ogr-iz-konu').evaluate(x=>x.firstChild.textContent),'Bütün konular');
@@ -83,7 +89,7 @@ const kur=()=>{
       box.x>=0&&box.x+box.width<=w&&box.y+box.height<=h&&(!previous||previous.x+previous.width<=box.x);
     });
    })),true,'full exam names fit without overlapping on desktop and phones');
-   for(const selector of ['.ogr-ozet','.ogr-son','.ogr-kpi','.ogr-lejant','.ogr-iz-aciklama','.ogr-olcek']){
+   for(const selector of ['.ogr-skor','.ogr-lejant','.ogr-olcek']){
     const item=report.locator(selector);assert(await item.isVisible(),selector+' visible');
     const box=await item.boundingBox();assert(box.x>=0&&box.x+box.width<=width+1,selector+' readable without sideways scrolling');
    }
@@ -104,17 +110,18 @@ const kur=()=>{
    await page.locator('#ogrDuzey').selectOption('12');await page.waitForFunction(()=>/12\. sınıf/.test(document.querySelector('#ogrKok .et-baslik').textContent));
    assert.equal(await page.locator('.ogr-ogretmen').count(),2);await page.locator('#ogrDuzey').selectOption('');
    await page.waitForFunction(()=>document.querySelectorAll('#ogrKok .ogr-grafik svg').length>=2);
-   // Every value is written on the chart: the gaps and both nets.
+   // The students' nets are written on the chart.
    assert(await page.locator('#ogrKok .ogr-grafik text.ogr-deger').count()>=12,'values on the chart');
    // Print: no toolbar, each teacher on a new page.
    await page.emulateMedia({media:'print'});
    assert.equal(await page.locator('#ogrKok .et-arac').isVisible(),false,'no toolbar in print');
-   for(const selector of ['.ogr-ozet','.ogr-son','.ogr-kpi','.ogr-lejant','.ogr-iz-aciklama','.ogr-olcek'])assert(await report.locator(selector).isVisible(),selector+' kept in print');
-   // Each teacher's sheets stand alone: the report's name and day, the reading notes (whom it covers, where the numbers come
-   // from, how to read a sign) beside the name; the page's own title and the folded appendix are not printed.
+   for(const selector of ['.ogr-skor','.ogr-lejant','.ogr-olcek'])assert(await report.locator(selector).isVisible(),selector+' kept in print');
+   assert.equal(await report.locator('.ogr-iz-ac').isVisible(),false,'no tick box on paper');
+   // Each teacher's sheets stand alone: the report's name and day above the name, nothing else to read; the page's own title,
+   // the tick box and the folded appendix are not printed.
    assert.match(await report.locator('.ogr-ust-yazi').innerText(),/^ÖĞRETMEN RAPORU · 30 EKİ 2026$/i);
-   assert(await report.locator('.ogr-rehber.ogr-baski').isVisible(),'reading notes on paper');
-   assert.match(await report.locator('.ogr-rehber.ogr-baski').innerText(),/Kimleri kapsıyor\?[\s\S]*Veriler nereden geliyor\?[\s\S]*okulda uygulanan denemelerin sonuç listelerinden[\s\S]*Nasıl okunur\?/);
+   assert.equal(await report.locator('.ogr-rehber').count(),0,'no paragraphs of notes on paper');
+   assert.equal(await report.locator('.ogr-iz-eksik').isVisible(),false,'no screen-only line on paper');
    assert.equal(await page.locator('#ogrKok>.et-bas').isVisible(),false);assert.equal(await page.locator('details.ogr-rehber-ekran').isVisible(),false);assert.equal(await report.locator('.ogr-formul').first().isVisible(),false,'the appendix prints only when opened');
    // Nothing is cut across pages; a teacher's first block follows the letterhead, every further block would start a page.
    const kes=await page.evaluate(()=>{const cs=s=>getComputedStyle(document.querySelector(s)),ilk=document.querySelector('.ogr-ogretmen>section.ogr-blok'),ikinci=ilk.cloneNode(true);
@@ -124,22 +131,30 @@ const kur=()=>{
    // The topic table fits the paper's width whatever the number of exams, and the page does not depend on the screen theme.
    assert.equal(await report.locator('.ogr-iz-kutu').evaluate(k=>k.scrollWidth<=k.clientWidth+1),true,'the table fits the page');
    assert.equal(await page.evaluate(()=>{const k=document.documentElement,eski=k.getAttribute('data-theme');k.setAttribute('data-theme','dark');
-     const r=[getComputedStyle(document.querySelector('#ogrKok')).color,getComputedStyle(document.querySelector('#ogrKok .ogr-kutu')).backgroundColor,getComputedStyle(document.querySelector('#ogrKok .ogr-ogretmen h2')).color].join('|');
-     if(eski===null)k.removeAttribute('data-theme');else k.setAttribute('data-theme',eski);return r}),'rgb(23, 41, 44)|rgb(255, 255, 255)|rgb(23, 41, 44)','dark ink on white paper under the dark theme too');
+     const r=[getComputedStyle(document.querySelector('#ogrKok')).color,getComputedStyle(document.querySelector('#ogrKok .ogr-skor-sayi:nth-child(2) strong')).color,getComputedStyle(document.querySelector('#ogrKok .ogr-ogretmen h2')).color].join('|');
+     if(eski===null)k.removeAttribute('data-theme');else k.setAttribute('data-theme',eski);return r}),'rgb(23, 41, 44)|rgb(23, 41, 44)|rgb(23, 41, 44)','dark ink on white paper under the dark theme too');
    assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelectorAll('.ogr-ogretmen')[1]).breakBefore),'page','each teacher on its own page');
-   // In print the charts are drawn again at the paper's width and keep the subject's colour (the screen theme's colours do not
-   // reach print); the topic cells keep their fills.
+   // In print the charts are drawn again at the paper's width in the paper's ink (the screen theme's colours do not reach print);
+   // the topic squares keep their fills.
    await page.evaluate(()=>OGRETMEN_RAPOR.grafikleriCiz());
    const yaz=await page.evaluate(()=>{const k=document.querySelector('#ogrKok .ogr-grafik'),svg=k.querySelector('svg'),yol=svg.querySelector('path.ogr-okul'),nokta=svg.querySelector('circle.ogr-okul-nokta'),h=document.querySelector('#ogrKok td.ogr-iz-h');
      return {w:Number(svg.getAttribute('width')),kutu:Math.round(k.clientWidth),cizgi:getComputedStyle(yol).stroke,nokta:getComputedStyle(nokta).fill,hucre:getComputedStyle(h).printColorAdjust||getComputedStyle(h).webkitPrintColorAdjust,deger:svg.querySelectorAll('text.ogr-deger').length}});
    assert(Math.abs(yaz.w-yaz.kutu)<=1,'chart at its printed width: '+JSON.stringify(yaz));
-   assert(!/none|rgb\(0, 0, 0\)/.test(yaz.cizgi)&&!/rgb\(0, 0, 0\)/.test(yaz.nokta),'the students’ line keeps its colour in print: '+JSON.stringify(yaz));
+   assert(!/none|rgb\(0, 0, 0\)/.test(yaz.cizgi)&&!/rgb\(0, 0, 0\)/.test(yaz.nokta),'the students’ line is drawn in print: '+JSON.stringify(yaz));
    assert.equal(yaz.hucre,'exact');assert(yaz.deger>=6,'values in print');
    await page.emulateMedia({media:null});   // no emulation: the PDF below is laid out as paper by the browser itself
-   // The PDF itself (desktop run): one sheet for the teacher with nets only, two for the teacher with a topic table (the nets,
-   // then the topics); no empty sheet, nothing left over. Chromium writes one "/Type /Page" object per sheet.
+   // PDF indir builds the file itself, like the Öğrenci raporu: one A4 landscape page per teacher, drawn as one picture, so no
+   // browser header, title, address or page number can be on it.
+   if(width===1280){const [dl]=await Promise.all([page.waitForEvent('download'),page.locator('#ogrYazdir').click()]);
+    assert.equal(dl.suggestedFilename(),'Ogretmen_raporu.pdf');const yol=path.join(out,'ogretmen-raporu-indir.pdf');await dl.saveAs(yol);
+    const {PDFDocument}=require('pdf-lib'),bytes=fs.readFileSync(yol),doc=await PDFDocument.load(bytes);assert.equal(doc.getPageCount(),2,'a page per teacher');
+    assert.deepEqual(doc.getPages().map(p=>{const z=p.getSize();return [Math.round(z.width),Math.round(z.height)]}),[[842,595],[842,595]],'A4 landscape');
+    assert.equal(doc.getTitle(),'Öğretmen raporu');assert(!/ykstekrar|YKS Tekrar/i.test(bytes.toString('latin1')),'no site name or address');
+    assert.equal(await page.locator('#ogrYazdir').innerText(),'PDF indir');assert.equal(await page.locator('#ogrPdfDurum').innerText(),'')}
+   // Ctrl+P still prints the page itself (desktop run): one sheet per teacher: the simple block (two numbers, the chart, the squares) fits a sheet even
+   // with a topic table; no empty sheet, nothing left over. Chromium writes one "/Type /Page" object per sheet.
    if(width===1280){const pdf=await page.pdf({preferCSSPageSize:true});fs.writeFileSync(path.join(out,'ogretmen-raporu.pdf'),pdf);
-    const metin=pdf.toString('latin1');assert.equal((metin.match(/\/Type\s*\/Page\b(?!s)/g)||[]).length,3,'three sheets');
+    const metin=pdf.toString('latin1');assert.equal((metin.match(/\/Type\s*\/Page\b(?!s)/g)||[]).length,2,'two sheets');
     // A4 landscape: about 842 × 595 pt.
     assert(/\/MediaBox\s*\[\s*0\s+0\s+84[12](\.\d+)?\s+59[45](\.\d+)?\s*\]/.test(metin),'A4 landscape')}
    assert.deepEqual(errors,[]);await context.close();console.log('PASS Öğretmen raporu at '+width+' px ('+tema+')');
