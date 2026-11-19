@@ -157,22 +157,22 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     // ders toggle
     const acik = new Set([0]);assert.deepEqual(copy(T.defterKur(rapor, es, null, rapor.ogrenciler[0], acik).bolumler.map(b => b.ders)), ['Türkçe']);
   });
-  await test('Din / Ek Felsefe: a fully blank one is skipped only when the other has an answer', async () => {
+  await test('Din / Ek Felsefe: Din is compulsory and never skipped; only a wholly blank Ek Felsefe is skipped', async () => {
     const {rapor, es} = await kur(), blank = ['', ''], dersler = o => copy(T.defterKur(rapor, es, null, o, null).bolumler.map(b => b.ders));
     const mk = (din, sf) => ({...rapor.ogrenciler[0], cev: ['A', 'B', 'C', 'D', 'A', 'B', ...din, ...sf]});
-    assert.deepEqual(dersler(mk(blank, ['A', 'A'])), ['Ek Felsefe'], 'Din blank, Ek Felsefe answered: Din skipped');
-    assert.deepEqual(dersler(mk(['A', ''], blank)), ['Din Kültürü'], 'Ek Felsefe blank, Din answered: S.Felsefe skipped');
-    assert.deepEqual(dersler(mk(blank, blank)), ['Din Kültürü', 'Ek Felsefe'], 'both blank: nothing answered, both shown');
+    assert.deepEqual(dersler(mk(blank, ['A', 'A'])), ['Din Kültürü', 'Ek Felsefe'], 'Din blank, Ek Felsefe answered: Din still counts (every student must answer it)');
+    assert.deepEqual(dersler(mk(['A', ''], blank)), ['Din Kültürü'], 'Ek Felsefe blank, Din answered: Ek Felsefe skipped');
+    assert.deepEqual(dersler(mk(blank, blank)), ['Din Kültürü'], 'both blank: Din shown as boş, Ek Felsefe skipped');
     assert.deepEqual(dersler(mk(['', 'D'], ['E', 'A'])), ['Din Kültürü'], 'both answered: only the one with a wrong or empty question is listed');
   });
   await test('B student without the çözüm file: numbers only, B numbers, a note; with the map: A images, A numbers, B numbers', async () => {
     const {rapor, es} = await kur(), b = rapor.ogrenciler[1];
     const d0 = T.defterKur(rapor, es, null, b, null);
     assert.equal(d0.gorsel, false);
-    assert.deepEqual(copy(d0.bolumler.map(x => [x.ders, x.sorular.map(s => [s.a, s.b, s.own, s.isaret, s.dogru, s.durum])])), [['Türkçe', [[null, 4, 4, '', 'C', 'bos']]], ['Tarih', [[null, 2, 2, '', 'A', 'bos']]], ['Ek Felsefe', [[null, 6, 6, 'A', 'E', 'yanlis']]]]);
+    assert.deepEqual(copy(d0.bolumler.map(x => [x.ders, x.sorular.map(s => [s.a, s.b, s.own, s.isaret, s.dogru, s.durum])])), [['Türkçe', [[null, 4, 4, '', 'C', 'bos']]], ['Tarih', [[null, 2, 2, '', 'A', 'bos']]], ['Din Kültürü', [[null, 3, 3, '', 'D', 'bos'], [null, 4, 4, '', 'C', 'bos']]], ['Ek Felsefe', [[null, 6, 6, 'A', 'E', 'yanlis']]]]);
     const h = T.haritaKur(Y.HARITA, es, rapor), d1 = T.defterKur(rapor, es, h, b, null);
     assert.equal(d1.gorsel, true);
-    assert.deepEqual(copy(d1.bolumler.map(x => [x.ders, x.sorular.map(s => [s.test, s.a, s.b, s.isaret, s.dogru])])), [['Türkçe', [[0, 3, 4, '', 'C']]], ['Tarih', [[1, 1, 2, '', 'A']]], ['Ek Felsefe', [[1, 5, 6, 'A', 'E']]]]);
+    assert.deepEqual(copy(d1.bolumler.map(x => [x.ders, x.sorular.map(s => [s.test, s.a, s.b, s.isaret, s.dogru])])), [['Türkçe', [[0, 3, 4, '', 'C']]], ['Tarih', [[1, 1, 2, '', 'A']]], ['Din Kültürü', [[1, 3, 4, '', 'C'], [1, 4, 3, '', 'D']]], ['Ek Felsefe', [[1, 5, 6, 'A', 'E']]]]);
   });
   // ---- Oturum and Alan (TYT + AYT) ----
   const kur2 = async ogr => {
@@ -200,15 +200,16 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert.deepEqual([say('Tümü').yanlis, say('Tümü').bos], [1, 3]);
     assert.equal(T.filterDefter(say('SAY'), {status: 'all'}).bos, 1, 'the filter sees only the chosen alan');
   });
-  await test('alan: Öğrencinin alanı reads the notebook by school no; unknown falls back to the AYT tests answered', async () => {
+  await test('alan: Öğrencinin alanı reads the notebook by school no: the field’s tests plus every other AYT test answered; unknown falls back to the AYT tests answered', async () => {
     // 9005 left Matematik completely blank, 9006 left Edebiyat and Tarih-1 blank
     const ogr = [...Y.AYT_OGRENCILER, {no: '9005', ad: 'SENTETİK ÖĞRENCİ 5', sube: '205 12/A', kit: 'A', cev: ['A', 'B', 'C', 'D', 'E', '', '', '']}, {no: '9006', ad: 'SENTETİK ÖĞRENCİ 6', sube: '205 12/A', kit: 'A', cev: ['', '', '', '', '', 'A', 'B', 'B']}];
     const {rapor, es} = await kur2(ogr), s = no => rapor.ogrenciler.find(x => x.no === no);
     run("D=varsayilan();D.rol='rehber';D.ogr=[{no:'9001',alan:'SÖZ'},{no:'9002',alan:'SAY'},{no:' 9003 ',alan:'EA'},{no:'9004',alan:'Karma'},{no:'9005',alan:'SAY',silindi:true}]");
     assert.equal(T.ogrAlani('9001'), 'SÖZ'); assert.equal(T.ogrAlani('9003'), 'EA'); assert.equal(T.ogrAlani('9004'), null, 'an invalid field is unknown'); assert.equal(T.ogrAlani('9005'), null, 'a deleted student is ignored'); assert.equal(T.ogrAlani('9999'), null);
     const opt = {alan: 'ogr', oturum: 'AYT'};
-    assert.deepEqual(aytOf(rapor, es, s('9001'), opt), ['Türk Dili ve Edebiyatı', 'Tarih-1']);
-    assert.deepEqual(aytOf(rapor, es, s('9002'), opt), ['Matematik']);
+    // SÖZ: the TDE–Sosyal-1 test; 9001 also answered two Matematik questions, so it chose to be judged on the Matematik test too
+    assert.deepEqual(aytOf(rapor, es, s('9001'), opt), ['Türk Dili ve Edebiyatı', 'Tarih-1', 'Matematik']);
+    assert.deepEqual(aytOf(rapor, es, s('9002'), opt), ['Türk Dili ve Edebiyatı', 'Tarih-1', 'Matematik'], 'SAY, but answered Edebiyat questions: judged on the whole TDE–Sosyal-1 test');
     assert.deepEqual(aytOf(rapor, es, s('9003'), opt), [], 'EA student 9003 answered everything correctly: nothing wrong');
     // unknown (no notebook entry): only what was answered; 9005's blank Matematik is not boş, 9006's blank Edebiyat and Tarih-1 neither
     assert.deepEqual(aytOf(rapor, es, s('9004'), opt), ['Türk Dili ve Edebiyatı', 'Tarih-1', 'Matematik'], 'unknown alan: the AYT tests it answered');

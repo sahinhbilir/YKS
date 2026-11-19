@@ -127,7 +127,8 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.match(zh, /<tbody class="ogr-iz-grup"><tr><th scope="row" class="ogr-iz-konu">Sözcükte Anlam<\/th><td class="ogr-iz-h" title="Sözcükte Anlam · SENTETİK-KONU-1: öğrencileriniz %13, Türkiye %70"><i style="background:#a82022"><\/i><\/td>/);
     assert.match(zh, /<th scope="row" class="ogr-iz-konu">Cümlede Anlam<\/th><td class="ogr-iz-h" title="Cümlede Anlam · SENTETİK-KONU-1: öğrencileriniz %75, Türkiye %20"><i style="background:#1a764e"/);
     assert.match(zh, /<tr class="ogr-iz-toplam"><th scope="row" class="ogr-iz-konu">Bütün konular<\/th><td class="ogr-iz-h ogr-iz-soluk" title="SENTETİK-KONU-1 · bütün konular"><i style="background:#[0-9a-f]{6}"><\/i><\/td>/);
-    assert.equal(run(`OGRETMEN_RAPOR.hucreRengi(__Z.izgara.sinavlar[0])`), run(`OGRETMEN_RAPOR.hucreRengi({fark:__Z.izgara.sinavlar[0].fark*.6,durum:"geride"})`), 'within chance: nearer the middle of the spectrum');
+    assert.equal(run(`__Z.izgara.sinavlar[0].durum`), 'belirsiz');
+    assert.equal(run(`OGRETMEN_RAPOR.hucreRengi(__Z.izgara.sinavlar[0])`), 'background:' + run(`GRAFIK_RENK.spektrum(Math.max(-1,Math.min(1,__Z.izgara.sinavlar[0].fark/20))*GRAFIK_RENK.SANS)`), 'within chance: nearer the middle of the spectrum (× 0,3)');
     const metin = zh.replace(/<[^>]+>/g, ' ');
     assert(!/[−+]\d|\d+ puan|Ortalama|İlk → son|Son 3 denemede|fark/i.test(metin), 'no number, no gap, no run label on the page');
     // Under the topic's row: a row per kazanım with its number and name, smaller squares, hidden until "Kazanımlar" is ticked.
@@ -278,20 +279,19 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert(get(`KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular`) !== null);
     assert.deepEqual(run(`[...KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular.values()].map(t=>t.ad).sort().join('|')`), 'Konusu eşleşmeyen kazanımlar|Sözcükte Anlam');
   });
-  await check('colours: one solid spectrum, deep red behind through amber to deep green ahead (ends at ±20 points), squashed around the middle, nearer the middle within chance', () => {
+  await check('colours: the chance test decides red and green, the gap only how deep; a gap within chance is never redder than orange (one shared, squashed spectrum)', () => {
     const c = (fark, durum) => run(`OGRETMEN_RAPOR.hucreRengi({fark:${fark},durum:'${durum}'})`);
     assert.equal(c(-20, 'geride'), 'background:#a82022'); assert.equal(c(20, 'onde'), 'background:#1a764e'); assert.equal(c(0, 'belirsiz'), 'background:#f2c86b');
-    // squashed (2026-11-19): orange and light green at ±6 points, the clear red and green at ±12
-    assert.equal(c(-6, 'geride'), 'background:#ea8a5f'); assert.equal(c(6, 'onde'), 'background:#9ccf86');
-    assert.equal(c(-12, 'geride'), 'background:#cc3a30'); assert.equal(c(12, 'onde'), 'background:#3e9e68');
-    // a gap that touches 20 points is clearly red, not orange, even when it is within chance (drawn at 12)
-    assert.equal(c(-20, 'belirsiz'), 'background:#cc3a30');
+    // a real gap (|z| ≥ 1,96) starts at the clear red or green (GRAFIK_RENK.KESIN) whatever its size, and deepens up to 20 points
+    assert.equal(c(-0.5, 'geride'), 'background:' + run('GRAFIK_RENK.spektrum(-0.61)'), 'a small but real gap is clear red');
+    assert.equal(c(-10, 'geride'), 'background:' + run('GRAFIK_RENK.spektrum(-0.8)')); assert.equal(c(10, 'onde'), 'background:' + run('GRAFIK_RENK.spektrum(0.8)'));
+    // within chance: × 0,3 of the gap's place, orange and light green at most
+    assert.equal(c(-20, 'belirsiz'), 'background:#ea8a5f'); assert.equal(c(-60, 'belirsiz'), 'background:#ea8a5f'); assert.equal(c(20, 'belirsiz'), 'background:#9ccf86');
+    assert.equal(c(-10, 'belirsiz'), 'background:' + run('GRAFIK_RENK.spektrum(-0.15)'));
     const rgbK = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), kirmizi = h => { const [r, g, b] = rgbK(h.slice(11)); return r > 150 && g < 70 && b < 60 };
-    for (const f of [-12, -15, -20, -30]) { assert(kirmizi(c(f, 'geride')), 'red at ' + f); }
-    for (const f of [-20, -25]) { assert(kirmizi(c(f, 'belirsiz')), 'red within chance at ' + f); }
-    assert.equal(run('OGRETMEN_RAPOR.hucreRengi({fark:-20,durum:"geride"})'), 'background:' + run('GRAFIK_RENK.spektrum(-1)'), 'the shared spectrum');
+    for (const f of [-1, -3, -6, -12, -20, -30]) { assert(kirmizi(c(f, 'geride')), 'a real gap is red at ' + f); }
+    for (const f of [-6, -12, -20, -40]) { assert(!kirmizi(c(f, 'belirsiz')), 'not red within chance at ' + f); }
     assert.equal(c(-40, 'geride'), c(-20, 'geride'), 'capped at 20 points');
-    assert.equal(c(-10, 'belirsiz'), c(-6, 'geride'), 'within chance: nearer the middle, still a solid colour');
     const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
     for (const f of [-20, -12, -6, -1, 1, 6, 12, 20]) { const [r, g, b] = rgb(c(f, 'geride').slice(11)); assert(Math.max(r, g, b) - Math.min(r, g, b) >= 60, 'never greyish: ' + f); }
     assert.doesNotMatch(c(-3, 'belirsiz'), /transparent|color-mix/);

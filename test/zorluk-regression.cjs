@@ -479,7 +479,7 @@ const sig = z => 1 / (1 + Math.exp(-z));
     assert(out.indexOf('Zayıf ayırt') < out.indexOf('<div class="yd-baski"'), 'the quality table sits outside the printed pages');
     // the chips
     assert.equal((out.match(/data-yd-z="/g) || []).length, 6); assert.match(out, /data-yd-z="cok-kolay" aria-pressed="true">Çok kolay</); assert.match(out, /data-yd-z="kendi" aria-pressed="false">Kendi seviyesi</);
-    assert.equal((out.match(/aria-pressed="true"/g) || []).length, 5, 'default: all five bands, Kendi seviyesi off');
+    assert.equal((out.match(/data-yd-z="[^"]*" aria-pressed="true"/g) || []).length, 5, 'default: all five bands, Kendi seviyesi off');
   });
   await test('page: the chip selection makes a smaller print set, the header counts follow it, "Zor" includes "Zor?"', async () => {
     const {S} = await show(SIM), hepsi = T.gorunum(), toplam = soruSayisi(hepsi);

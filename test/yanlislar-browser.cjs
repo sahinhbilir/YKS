@@ -68,17 +68,18 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   await secOgr('SENTETİK ÖĞRENCİ 2 · 9002');
   assert.equal(await page.locator('.yd-ogr img').count(),0);
   assert.match(await page.locator('.yd-not').innerText(),/^B kitapçığı: sorular kendi kitapçığından çözülecek$/);
-  assert.deepEqual(await page.locator('.yd-satir b').allInnerTexts(),['Soru 4','Soru 2','Soru 6']);
-  assert.deepEqual(await tablo(),[['Türkçe','4 Boş C'],['Tarih','2 Boş A'],['Ek Felsefe','6 A E']]);
+  // 9002 left Din blank and answered Ek Felsefe: Din is compulsory, so its blanks are listed (2026-11-19)
+  assert.deepEqual(await page.locator('.yd-satir b').allInnerTexts(),['Soru 4','Soru 2','Soru 3','Soru 4','Soru 6']);
+  assert.deepEqual(await tablo(),[['Türkçe','4 Boş C'],['Tarih','2 Boş A'],['Din Kültürü','3 Boş D','4 Boş C'],['Ek Felsefe','6 A E']]);
   await noScroll('B student without the map');
   // ---- çözüm file: B student gets the A cut-outs labelled with the B number
   await yukle(cozum);
   assert.equal(await hucreBaslik('1203','Çözüm'),'✓ TYT · 10 soru eşleşmesi');
   await hazir();
-  assert.deepEqual(await page.locator('.yd-soru figcaption > span:first-child').allInnerTexts(),['Soru 3 (B kitapçığında 4)','Soru 1 (B kitapçığında 2)','Soru 5 (B kitapçığında 6)']);
-  assert.equal(await page.locator('.yd-ogr img').count(),3);
+  assert.deepEqual(await page.locator('.yd-soru figcaption > span:first-child').allInnerTexts(),['Soru 3 (B kitapçığında 4)','Soru 1 (B kitapçığında 2)','Soru 3 (B kitapçığında 4)','Soru 4 (B kitapçığında 3)','Soru 5 (B kitapçığında 6)']);
+  assert.equal(await page.locator('.yd-ogr img').count(),5);
   assert.equal(await page.locator('.yd-not').count(),0);
-  assert.deepEqual(await tablo(),[['Türkçe','4 Boş C'],['Tarih','2 Boş A'],['Ek Felsefe','6 A E']],'last page uses the B numbers');
+  assert.deepEqual(await tablo(),[['Türkçe','4 Boş C'],['Tarih','2 Boş A'],['Din Kültürü','4 Boş C','3 Boş D'],['Ek Felsefe','6 A E']],'last page uses the B numbers');
   // the shared passage (5 - 6) is part of the picture: question 5's cut-out is taller than question 1's
   const hs=await page.evaluate(()=>Object.fromEntries([...document.querySelectorAll('#ydBaski img')].map(i=>[i.alt,i.naturalHeight])));
   assert(hs['Soru 5']>hs['Soru 1']*1.8,JSON.stringify(hs));
@@ -114,7 +115,8 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
    const pdf=await page.pdf({preferCSSPageSize:true,printBackground:true});
    if(process.env.YKS_UI_ARTIFACTS)fs.writeFileSync(path.join(out_dir,'yanlislar-baski.pdf'),pdf);
    assert.match(pdf.toString('latin1'),/\/MediaBox\s*\[\s*0\s+0\s+59[45](\.\d+)?\s+84[12](\.\d+)?\s*\]/,'A4 portrait');
-   assert.equal(sayfaSayisi(pdf),4,'two students with questions: a page each plus a key page each; the one without questions is not printed');
+   // 9002's questions (with Din, compulsory since 2026-11-19) take two pages; each student's key a page; the one without questions is not printed
+   assert.equal(sayfaSayisi(pdf),5,'two students with questions: their pages plus a key page each; the one without questions is not printed');
    // the printed defter never mentions Kendi seviyesi, tier or kademe (text and markup of every student)
    const basHtml=await page.evaluate(()=>document.getElementById('ydBaski').innerHTML+' '+document.getElementById('ydBaski').textContent);
    assert.doesNotMatch(basHtml,/Kendi seviyesi|kademe|tier/i,'printed HTML has no Kendi seviyesi, kademe or tier');
@@ -277,8 +279,8 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   assert.equal(await page.locator('.yd-kalite').first().locator('tbody tr').count(),20);
   await noScroll('Madde kalitesi open');
   // ---- chips: the five bands and Kendi seviyesi
-  assert.deepEqual(await page.locator('.yd-chips button').allInnerTexts(),['Çok kolay','Kolay','Orta','Zor','Çok zor','Kendi seviyesi']);
-  assert.deepEqual(await page.locator('.yd-chips button').evaluateAll(l=>l.map(b=>b.getAttribute('aria-pressed'))),['true','true','true','true','true','false']);
+  assert.deepEqual(await page.locator('.yd-chips button[data-yd-z]').allInnerTexts(),['Çok kolay','Kolay','Orta','Zor','Çok zor','Kendi seviyesi']);
+  assert.deepEqual(await page.locator('.yd-chips button[data-yd-z]').evaluateAll(l=>l.map(b=>b.getAttribute('aria-pressed'))),['true','true','true','true','true','false']);
   await secOgr('SENTETİK ÖĞRENCİ 1 · 9300');
   const etiketler=()=>page.locator('.yd-soru .yd-zorluk').allInnerTexts();
   const tum=await page.locator('.yd-soru').count(),hepsi=await etiketler();
@@ -296,7 +298,7 @@ const sayfaSayisi=pdf=>(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g
   for(const k of ['cok-kolay','kolay','orta'])await page.locator('[data-yd-z="'+k+'"]').click();
   await hazir();
   const zor=await page.locator('.yd-soru').count();assert(zor>0&&zor<tum,zor+' of '+tum);
-  assert.deepEqual(await page.locator('.yd-chips button').evaluateAll(l=>l.map(b=>b.getAttribute('aria-pressed'))),['false','false','false','true','true','false']);
+  assert.deepEqual(await page.locator('.yd-chips button[data-yd-z]').evaluateAll(l=>l.map(b=>b.getAttribute('aria-pressed'))),['false','false','false','true','true','false']);
   assert((await etiketler()).every(t=>/^(Zor|Çok zor)\??$/.test(t)),'Zor includes Zor?, nothing else');
   assert.equal(await ozetMetni(),'1 öğrenci · '+zor+' soru');
   assert.match(await page.locator('.yd-ust').innerText(),/Zor · Çok zor/);
