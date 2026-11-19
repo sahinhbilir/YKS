@@ -59,6 +59,43 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
   K={t:{sinavlar,kisi},trFn:ad=>tr[ad]?{genel:k=>tr[ad][k]??null}:null};ANALIZ.kaynak=()=>K})()`);
 
 (async () => {
+  // ---- whose AYT subjects: 12/S an SAY class, 12/E an EA class, one biology teacher and one Din teacher in both
+  const ALAN_PLAN = { '12/S': { kod: '311', ts: 1, saatler: SA, dersler: [[0, '09.00', 'BİYOLOJİ', 'SENTETİK ÖĞRETMEN BİY'], [0, '10.00', 'DİN KÜLTÜRÜ VE AHLAK BİLGİSİ', 'SENTETİK ÖĞRETMEN DİN']] },
+    '12/E': { kod: '312', ts: 1, saatler: SA, dersler: [[0, '09.00', 'BİYOLOJİ', 'SENTETİK ÖĞRETMEN BİY'], [0, '10.00', 'DİN KÜLTÜRÜ VE AHLAK BİLGİSİ', 'SENTETİK ÖĞRETMEN DİN']] } };
+  // 12/S: 2001, 2002 (SAY, AYT Fen answered); 12/E: 2003, 2004, 2005 (EA); 2003 also marked a few AYT Biyoloji and Din (Sosyal-2) questions
+  const alanKur = (defter = true) => {
+    run(`(()=>{const p=ETUTPLANI.oku().plan;p.programlar=${JSON.stringify(ALAN_PLAN)};D.etutPlani=ETUTPLANI.dogrula(JSON.parse(JSON.stringify(p)))})()`);
+    if (defter) run(`D.ogr=[{no:'2001',ad:'S1',alan:'SAY',sube:'12/S'},{no:'2002',ad:'S2',alan:'SAY',sube:'12/S'},{no:'2003',ad:'E1',alan:'EA',sube:'12/E'},{no:'2004',ad:'E2',alan:'EA',sube:'12/E'},{no:'2005',ad:'E3',alan:'EA',sube:'12/E'}]`);
+    run(`(()=>{const kisi=new Map([['2001',{no:'2001',ad:'S1',sinif:'12/S'}],['2002',{no:'2002',ad:'S2',sinif:'12/S'}],['2003',{no:'2003',ad:'E1',sinif:'12/E'}],['2004',{no:'2004',ad:'E2',sinif:'12/E'}],['2005',{no:'2005',ad:'E3',sinif:'12/E'}]]);
+      const fen=(no,biy)=>({no,net:{ABİY:biy,BİY:3},dy:{AFİZ:'5/2',AKİM:'4/1',ABİY:'6/2',EDB:'-/-',TAR2:'-/-'}});
+      const ea=(no,biy,din)=>({no,net:{EDB:12,ABİY:biy,'DİN2':din,BİY:2},dy:{EDB:'14/6',AFİZ:'-/-',AKİM:'-/-',ABİY:biy===null?'-/-':'2/1','DİN2':din===null?'-/-':'3/1',TAR2:din===null?'-/-':'1/0',AMAT:'10/5'}});
+      const tyt=no=>({no,net:{BİY:3,DİN:3}});
+      const sinavlar=[{id:'a1',ad:'27-YKS-1201',g:gunNo('2026-10-01'),tyt:{2001:tyt('2001'),2002:tyt('2002'),2003:tyt('2003'),2004:tyt('2004'),2005:tyt('2005')},
+        ayt:{2001:fen('2001',6),2002:fen('2002',5),2003:ea('2003',1.75,2.75),2004:ea('2004',null,null),2005:ea('2005',null,null)}}];
+      const tr={'27-YKS-1201':{'BİYOLOJİ-A':5,'BİYOLOJİ-T':3,'DİN KÜLTÜRÜ-A':3,'DİN KÜLTÜRÜ-T':3}};
+      K={t:{sinavlar,kisi},trFn:ad=>tr[ad]?{genel:k=>tr[ad][k]??null}:null};ANALIZ.kaynak=()=>K})()`);
+  };
+  const bloklari = () => get(`OGRETMEN_RAPOR.ogretmenler().map(o=>[o.ad,OGRETMEN_RAPOR.ogretmenModeli(o).bloklar.map(b=>[b.dersAd,b.siniflar])])`);
+  await check('AYT subjects by field: an EA class is not in AYT Biyoloji even when a few of its students marked it; the SÖZ subjects (Sosyal-2) are left out', () => {
+    reset(); alanKur();
+    assert.deepEqual(bloklari(), [
+      ['SENTETİK ÖĞRETMEN BİY', [['TYT Biyoloji', ['12/E', '12/S']], ['AYT Biyoloji', ['12/S']]]],
+      ['SENTETİK ÖĞRETMEN DİN', [['TYT Din kültürü', ['12/E', '12/S']]]]], 'AYT Biyoloji only for the SAY class; no AYT Din kültürü at all');
+    // the SAY class's AYT Biyoloji mean is its own two students' (6 and 5), not the EA student's 1,75
+    const biy = get(`(()=>{const o=OGRETMEN_RAPOR.ogretmenler().find(x=>x.ad==='SENTETİK ÖĞRETMEN BİY');return OGRETMEN_RAPOR.ogretmenModeli(o).bloklar.find(b=>b.dersAd==='AYT Biyoloji').seri.map(x=>[x.n,x.net])})()`);
+    assert.deepEqual(biy, [[2, 5.5]]);
+  });
+  await check('AYT subjects by field without the notebook: the tests more than half of a class answered in the AYT lists', () => {
+    reset(); alanKur(false);
+    assert.deepEqual(bloklari().find(x => x[0] === 'SENTETİK ÖĞRETMEN BİY')[1], [['TYT Biyoloji', ['12/E', '12/S']], ['AYT Biyoloji', ['12/S']]], '12/E: 1 of 3 answered Fen');
+  });
+  await check('Türkiye karşılaştırması (öğrenci): a student is judged on their own field’s AYT tests; no SÖZ subject', () => {
+    reset(); alanKur();
+    const dersler = no => get(`OGRETMEN_RAPOR.ogrenciModeli({no:'${no}',ad:'X',sinif:'${no < '2003' ? '12/S' : '12/E'}'},{k:ANALIZ.kaynak(),v:null,fark:new Map(),dersSinav:new Map()}).bloklar.map(b=>b.dersAd)`);
+    assert.deepEqual(dersler('2001'), ['TYT Biyoloji', 'TYT Din kültürü', 'AYT Biyoloji']);
+    assert.deepEqual(dersler('2003'), ['TYT Biyoloji', 'TYT Din kültürü', 'AYT Edebiyat'], 'an EA student: AYT Edebiyat, but no AYT Biyoloji and no AYT Din kültürü, though marked');
+  });
+
   await check('teachers from the timetables: subjects, the classes of each, lessons without an exam subject left out', () => {
     planKur();
     const l = get('OGRETMEN_RAPOR.ogretmenler()');

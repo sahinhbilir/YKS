@@ -144,6 +144,11 @@ async function iki() {
     const din3 = T.farkSorusu(e, e.es.bolumler.find(b => b.ders === 'Din Kültürü'), 0, T.okulMaddeleri(e), new Map(e.perf.dersler.map(x => [T.key(x.ad), x])));
     assert.deepEqual(copy([din3.okul, din3.okullar, din3.geride]), [67, 90, false]);
     S.kapali = new Set(['Türkçe']); assert.deepEqual(copy(T.farkModeli().geride.map(g => g.ders)), ['Din Kültürü'], 'an unticked ders is left out'); S.kapali = new Set();
+    // Hangi sorular: a fixed gap instead of the chance test lists Din 3 too (67 against 90: 23 points), whatever the number of students
+    S.secim = 20; M = T.farkModeli();
+    assert.deepEqual(copy(M.geride.map(g => [g.ders, g.denemeler[0].sorular.map(x => [x.a, x.fark])])), [['Türkçe', [[3, -64]]], ['Din Kültürü', [[3, -23], [4, -62]]]]);
+    S.secim = 25; assert.deepEqual(copy(T.farkModeli().geride.map(g => [g.ders, g.denemeler[0].sorular.map(x => x.a)])), [['Türkçe', [3]], ['Din Kültürü', [4]]], '25 points: Din 3 (23) is out');
+    S.secim = 'z';
     // a second exam without the Performans analizi is named, not guessed
     const {rapor, k} = await kur({method: 8}); T.denemeKoy({kod: '1299', kitlar: {TYT: k}, rapor, ad: 'SENTETİK-1299'});
     assert.deepEqual(copy(T.farkModeli().eksik), ['SENTETİK-1299']);
@@ -172,11 +177,16 @@ async function iki() {
     assert.match(out, /data-yd-gorunum="ogrenci" aria-pressed="true">Öğrenci defterleri<\/button><button type="button" class="yd-chip" data-yd-gorunum="ders" aria-pressed="false">Ders öğretmenleri: fark soruları<\/button>/);
     S.gorunum = 'ders'; out = T.gorunum();
     assert.match(out, /<label class="yd-sec">Öğretmen<select data-yd-f="ogretmen"><option value="" selected>Bütün öğretmenler<\/option><option value="Sentetik Öğretmen Din">/);
-    assert.doesNotMatch(out, /data-yd-f="esik"|Fark eşiği/, 'no threshold: the chance test picks the questions');
+    assert.match(out, /<label class="yd-sec">Hangi sorular<select data-yd-f="secim"><option value="z" selected>Tesadüf olamayacak kadar geride<\/option><option value="10">En az 10 puan geride<\/option><option value="15">En az 15 puan geride<\/option><option value="20">En az 20 puan geride<\/option>/, 'the chance test by default, a fixed gap as an option');
     assert.doesNotMatch(out, /data-yd-f="alan"|data-yd-f="sube"|data-yd-f="ogr"|Kendi seviyesi/, 'no student filters in this view');
     assert.match(out, /Listelenen sorular: şubelerin doğru oranının, öğrenci sayısına göre tesadüfle açıklanamayacak kadar sınav okullarının altında kaldığı sorular \(z ≤ −1,96\)\./);
     assert.match(out, /<span><b>Sentetik Öğretmen Din · TYT Din Kültürü<\/b> 1<\/span><span><b>Sentetik Öğretmen Tür A · TYT Türkçe<\/b> 1<\/span>/);
     assert.match(out, /Belirgin biçimde geride kalınan soru yok: Sentetik Öğretmen Tür B · TYT Türkçe/); assert.match(out, /Ders programında öğretmeni olmayan: TYT Tarih \(12\/A, 12\/B\)\./);
+    S.secim = 20; let o20 = T.gorunum(); S.secim = 'z';
+    assert.match(o20, /<option value="20" selected>En az 20 puan geride<\/option>/);
+    assert.match(o20, /Listelenen sorular: sınav okullarında doğru cevaplayanların oranının şubelerinkinden en az 20 puan yüksek olduğu sorular \(öğrenci sayısına bakılmaksızın\)\./);
+    assert.match(o20, /<span><b>Sentetik Öğretmen Din · TYT Din Kültürü<\/b> 2<\/span>/, 'Din 3 and 4');
+    assert.doesNotMatch(o20.split('<div class="yd-baski"')[1].replace(/<[^>]+>/g, ' '), /puan|Fark|fark/, 'the sheet still says no points');
     const sayfalar = out.split('<article class="yd-ogr yd-fd"').slice(1); assert.equal(sayfalar.length, 2);
     const a = sayfalar[1];
     assert.match(a, /<h2>TYT Türkçe<\/h2><p class="yd-kimlik"><b>Sentetik Öğretmen Tür A · 12\/A<\/b><\/p><p class="yd-kimlik">Bu denemede şubelerinizin sınav okullarının gerisinde kaldığı sorular<\/p><p class="yd-say"><b>1<\/b> soru<\/p>/);
@@ -211,13 +221,14 @@ async function iki() {
       ['Doğru cevap: C · En çok işaretlenen yanlış: B (%50)', 'Boş bırakan: %40']);
     assert.equal(T.farkDosyaAdi([{kod: '1203'}]), 'Fark_sorulari_1203.pdf'); assert.equal(T.farkDosyaAdi([{kod: '1203'}, {kod: '1204'}]), 'Fark_sorulari_2_deneme.pdf');
     assert.equal(T.farkDosyaAdi([{kod: '1203'}], 'Sentetik Öğretmen Tür A'), 'Fark_sorulari_1203_SentetikOgretmenTurA.pdf');
+    assert.equal(T.farkDosyaAdi([{kod: '1203'}], '', 20), 'Fark_sorulari_1203_20_puan.pdf', 'a fixed gap is named in the file');
     run('delete D.etutPlani');
   });
 
   await test('nothing is stored or sent: the view adds no notebook field', async () => {
     await sinav(); Object.assign(S, {gorunum: 'ders'}); T.gorunum();
     assert.equal(run('Object.keys(D).filter(k=>/fark|yanlis/i.test(k)).length'), 0);
-    T.sifirla(); assert.equal(S.gorunum, 'ogrenci'); assert.equal(S.ogretmen, ''); assert.equal('esik' in S, false);
+    T.sifirla(); assert.equal(S.gorunum, 'ogrenci'); assert.equal(S.ogretmen, ''); assert.equal(S.secim, 'z'); assert.equal('esik' in S, false);
   });
   console.log('Fark soruları: ' + passed + ' tests passed.');
 })();

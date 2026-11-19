@@ -89,6 +89,13 @@ const DOSYALAR=()=>[
   await noScroll('fark soruları');
   await page.screenshot({path:path.join(out_dir,'fark-sayfa-'+width+'-'+theme+'.png'),fullPage:true});
   await page.locator('.yd-fd').first().screenshot({path:path.join(out_dir,'fark-ders-'+width+'-'+theme+'.png')});
+  // Hangi sorular: at least 20 points behind, whatever the number of students; the default is the chance test
+  assert.equal(await page.locator('[data-yd-f="secim"]').inputValue(),'z');
+  await page.locator('[data-yd-f="secim"]').selectOption('20');await hazir();
+  const yirmi=await page.locator('.yd-fd .yd-fs').evaluateAll(l=>l.map(f=>f.dataset.ydOkullar-f.dataset.ydOkul));
+  assert(yirmi.length>0&&yirmi.every(f=>f>=20),'every question at least 20 points behind: '+yirmi);
+  assert.match(await page.locator('.yd-fs-durum').innerText(),/en az 20 puan yüksek olduğu sorular \(öğrenci sayısına bakılmaksızın\)/);
+  await page.locator('[data-yd-f="secim"]').selectOption('z');await hazir();
   // one teacher's sheets only
   await page.locator('[data-yd-f="ogretmen"]').selectOption('Sentetik Öğretmen Mat');await hazir();
   assert.deepEqual(await page.locator('.yd-fd').evaluateAll(l=>l.map(a=>a.dataset.ydFd)),['Sentetik Öğretmen Mat · TYT Matematik']);
