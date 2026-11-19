@@ -485,5 +485,54 @@ const hepsi = async kodlar => { const out = []; for (const k of kodlar) { const 
     assert.match(lib, /indexedDB/);
     run("D=varsayilan();D.rol='rehber'"); assert.equal(run('Object.keys(D).filter(k=>/yanlis|deneme.*kutuphane|kitap|rapor/i.test(k)).length'), 0);
   });
+  // ---- a named exam (27_AYT_ÖZEL_1 in the real files): no number anywhere, the booklet header ends in "ÖZEL1" and is broken over two lines on a test's first page
+  const ADLI = '27_TYT_ÖZEL_1', adliKitap = () => {
+    const sp = Y.kitapcikSpec('ÖZEL1');
+    // the first page of each test: "2026-27-TYT/TUR-" above "ÖZEL1", right-aligned under it (as the real AYT booklet prints it)
+    for (const pg of [sp[1], sp[3]]) { const i = pg.texts.findIndex(t => /^2026-27-TYT\//.test(t[2])); const [x, y, c, z] = pg.texts[i]; pg.texts.splice(i, 1, [x, y, c.replace(/ÖZEL1$/, ''), z], [x + 40, 801.5, 'ÖZEL1', z]) }
+    return sp;
+  };
+  const adliOgeler = async () => ({
+    rapor: {tur: 'rapor', ad: 'rapor-ozel.xlsx', rapor: await T.raporCoz(bytes(Y.raporXlsx({sinav: ADLI, method: 8})))},
+    kit: {tur: 'kit', ad: 'kitapcik-ozel.pdf', kit: T.kitapcikCoz(Y.itemlere(adliKitap())), blob: new Blob([Y.pdfYaz(adliKitap())])},
+    coz: {tur: 'coz', ad: 'cozum-ozel.pdf', pairs: T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(Y.HARITA, 5, 'OZEL'))), kodIpucu: '', blob: new Blob([Y.pdfYaz(Y.cozumSpec(Y.HARITA, 5, 'OZEL'))])},
+    ort: {tur: 'ort', ad: 'ort-ozel.pdf', ort: T.ortalamaCoz(Y.itemlere(Y.ortalamaSpec({kod: ADLI, dersler: [['TÜRKÇE-T', 4, 2.5], ['TARİH-T', 2, 1.25]]})))},
+    perf: {tur: 'perf', ad: 'perf-ozel.pdf', perf: perfKur({kod: ADLI})}
+  });
+  await test('a named exam: one identity for its files (27_TYT_ÖZEL_1, …-ÖZEL1), numbered exams as before; two numbered or two named files of different exams still differ', () => {
+    const k = s => run(`(()=>{const T=YANLISLAR;return T.sinavAnahtari(${JSON.stringify(s)})})()`);
+    assert.deepEqual(['27_AYT_ÖZEL_1', 'ÖZEL1', '27_TYT_ÖZEL_1', '27-YKS-1203', 'SENTETİK-1203', '1203', '27-TYT_SIFIR_POZİTİF'].map(k), ['OZEL1', 'OZEL1', 'OZEL1', '1203', '1203', '1203', 'SIFIRPOZITIF']);
+  });
+  await test('a named exam: booklet header "…-ÖZEL1" (broken over two lines on a test’s first page), named cevap raporu, Performans analizi and Ders ortalamaları titles are read', async () => {
+    const o = await adliOgeler();
+    assert.equal(T.pdfTuru(Y.itemlere(adliKitap())), 'kit');
+    assert.deepEqual(copy([o.kit.kit.sinav, o.kit.kit.oturum, o.kit.kit.testler.map(t => [t.kod, t.ad, t.soru])]), ['ÖZEL1', 'TYT', [['TUR', 'TURKCE TESTI', 4], ['SOS', 'SOSYAL BILIMLER TESTI', 6]]], 'the broken code is joined back, not taken for the title');
+    assert.deepEqual(copy([o.rapor.rapor.ad, o.rapor.rapor.sinavNo]), [ADLI, '']);
+    assert.equal(T.pdfTuru(Y.itemlere(Y.ortalamaSpec({kod: ADLI}))), 'ort'); assert.equal(o.ort.ort.kod, ADLI);
+    assert.equal(o.perf.perf.kod, ADLI);
+    assert.throws(() => T.performansCoz(Y.itemlere(Y.performansSpec({kod: ADLI})).map((p, i) => i ? p : {...p, items: p.items.filter(x => !/ANAL/.test(x.s))})), /Sınav adı/, 'no title: refused');
+  });
+  await test('a named exam: its five files in any order make one exam, every input ✓; next to a numbered exam in the same batch; a booklet of another named exam stays apart', async () => {
+    T.sifirla(); sayfaHazirla(); await kutu('u1', yeniDisk());
+    const o = await adliOgeler(), n = await taze('1204');   // 1204 has its own keys, so the named exam's çözüm fits only the named exam
+    await T.dosyalarEkle([o.perf, o.coz, o.ort, o.kit, n.kit, o.rapor, n.rapor].map(dosya), okuyucu);
+    assert.deepEqual(copy(S.genel), []); assert.equal(S.denemeler.size, 2);
+    const e = [...S.denemeler.values()].find(x => x.ad === ADLI);
+    assert(e && e.rapor && e.es && e.kitlar.TYT && e.perf && e.ort, 'report, booklet, perf and ort on one exam');
+    assert.equal(e.harita?.adet, 10, 'the çözüm map'); assert.deepEqual(copy(e.hatalar), []);
+    assert.equal(S.denemeler.get('1204').ad, 'SENTETİK-1204', 'the numbered exam keeps its key');
+    // the files of a named exam attach to it in any order (booklet before its report)
+    T.sifirla(); await kutu('u1', yeniDisk()); const o2 = await adliOgeler();
+    await T.dosyalarEkle([dosya(o2.kit)], okuyucu); await T.dosyalarEkle([dosya(o2.rapor)], okuyucu); await T.dosyalarEkle([dosya(o2.perf)], okuyucu);
+    assert.equal(S.denemeler.size, 1); const e2 = [...S.denemeler.values()][0]; assert(e2.rapor && e2.es && e2.perf, 'one exam');
+    // another named exam's booklet does not join this report
+    const baska = T.kitapcikCoz(Y.itemlere(Y.kitapcikSpec('ÖZEL2')));
+    await T.dosyalarEkle([dosya({tur: 'kit', ad: 'k2.pdf', kit: baska, blob: new Blob([Y.pdfYaz(Y.kitapcikSpec('ÖZEL2'))])})], okuyucu);
+    assert.equal(S.denemeler.size, 2, 'ÖZEL2 is its own exam'); assert(e2.kitlar.TYT.sinav === 'ÖZEL1');
+    // a named perf of another exam is refused on the one report in the library
+    T.sifirla(); await kutu('u1', yeniDisk()); const o3 = await adliOgeler(); await T.dosyalarEkle([o3.rapor, o3.kit].map(dosya), okuyucu);
+    await T.dosyalarEkle([dosya({tur: 'perf', ad: 'p.pdf', perf: perfKur({kod: '27_TYT_ÖZEL_2'})})], okuyucu);
+    assert.match([...S.denemeler.values()][0].hatalar[0].mesaj, /Sınav kodları uyuşmuyor/);
+  });
   console.log('Yanlışlar defteri, Deneme kütüphanesi: ' + passed + ' tests passed.');
 })().catch(e => { console.error(e); process.exit(1) });

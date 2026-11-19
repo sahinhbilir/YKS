@@ -25,8 +25,19 @@ const harfOK=s=>/^[A-E]$/u.test(s);
    sequence. Numbers inside tables ("1.", "1. sıra") fail one of those three. A question's region runs from its number to the
    next start in the same column (or to the footer). A shared passage ("35 - 36. soruları aşağıdaki parçaya göre …") is added
    in front of each question it belongs to. */
-const KOD=/^\d{4}-\d{2}-[A-Z]+\/(.+)-\d{3,5}$/u;
-const KODTAM=/^\d{4}-\d{2}-([A-Z]+)\/.+-(\d{3,5})$/u;
+// The exam's code ends the header: a number ("…/TÜR-1203") or, for a named exam, letters and digits ("2026-27-AYT/TDE-SB1-ÖZEL1").
+const KOD=/^\d{4}-\d{2}-[A-Z]+\/(.+)-[\p{Lu}\d]{1,12}$/u;
+const KODTAM=/^\d{4}-\d{2}-([A-Z]+)\/.+-([\p{Lu}\d]{1,12})$/u;
+const KOD_BAS=/^\d{4}-\d{2}-[A-Z]+\/.+-$/u;
+// A test's first page may break the header code over two lines ("2026-27-AYT/TDE-SB1-" above "ÖZEL1", right-aligned under it): joined back.
+function kodBirlestir(p){
+  for(const i of p.items){
+    if(i.y<=p.h-70||!KOD_BAS.test(i.s))continue;
+    const alt=p.items.find(o=>o!==i&&o.s&&o.y<i.y&&i.y-o.y<20&&o.y>p.h-70&&o.x>=i.x-2&&o.x<=i.x+Math.max(i.w,40)+10&&/^[\p{Lu}\d]{1,12}$/u.test(o.s));
+    if(alt){i.s+=alt.s;alt.s=''}
+  }
+  p.items=p.items.filter(i=>i.s);
+}
 const NO=/^(\d{1,3})\.$/u;
 const GRUP=/^\(?\s*(\d{1,3})\s*[-–—]\s*(\d{1,3})\s*\.\s*soru/iu;
 const SAYIM=/(\d{1,3})\s+soru\s+vard[ıi]r/iu;
@@ -58,7 +69,7 @@ function kitapcikCoz(pages){
   const fail=m=>{throw new Error(m+' Soru kitapçığı eklenmedi.')};
   if(!Array.isArray(pages)||!pages.length||pages.length>100)fail('PDF sayfaları okunamadı.');
   const P=pages.map(p=>({w:+p.w,h:+p.h,ox:+p.ox||0,oy:+p.oy||0,items:(Array.isArray(p.items)?p.items:[]).filter(i=>i&&typeof i.s==='string'&&Number.isFinite(i.x)&&Number.isFinite(i.y)).map(i=>({s:clean(i.s),x:i.x,y:i.y,w:Number.isFinite(i.w)?i.w:0,h:Number.isFinite(i.h)&&i.h>0?i.h:9})).filter(i=>i.s)}));
-  for(const p of P)p.items=parcaBirlestir(p.items);
+  for(const p of P){p.items=parcaBirlestir(p.items);kodBirlestir(p)}
   if(P.some(p=>!(p.w>200&&p.h>200)))fail('Sayfa boyutu okunamadı.');
   // Pages of one test share the header code (2026-27-TYT/TÜR-1203); the cover has none.
   const runs=[];
@@ -69,7 +80,7 @@ function kitapcikCoz(pages){
     else{if(runs.some(r=>r.kod===p.kod))fail('Test sayfaları kesintili ('+p.kod+').');runs.push({kod:p.kod,ilk:i,son:i})}
   });
   if(!runs.length)fail('Bu PDF bir soru kitapçığına benzemiyor (sayfa üst bilgisi bulunamadı).');
-  // The session (TYT / AYT) and the exam number come from the header code of the pages: "2026-27-TYT/TÜR-1203".
+  // The session (TYT / AYT) and the exam code come from the header code of the pages: "2026-27-TYT/TÜR-1203", "2026-27-AYT/MAT-ÖZEL1".
   const oturumlar=new Set(P.filter(p=>p.tam).map(p=>p.tam[1])),sinavlar=new Set(P.filter(p=>p.tam).map(p=>p.tam[2]));
   if(oturumlar.size>1||sinavlar.size>1)fail('Bu PDF birden fazla oturum veya sınav içeriyor ('+[...oturumlar,...sinavlar].join(', ')+').');
   const inRun=runs.flatMap(r=>P.slice(r.ilk,r.son+1)),W=P[0].w;
@@ -275,6 +286,17 @@ async function raporCoz(bytes){
   return {ad,tarih:parcalar.map(p=>p.tarih).find(Boolean)||'',sinavNo:sayiOf(ad)||'',oturumlar:parcalar.map(p=>p.oturum),bolumler,T:toplam,anahtar,ogrenciler};
 }
 
+/* ---------------------------------------------------------------- One exam, several spellings
+   A numbered exam is its number wherever it is written ("27-YKS-1203", "SENTETİK-1203", a booklet's "…/TÜR-1203" → "1203"). A named exam is its name's
+   letters and digits without the year and the session ("27_AYT_ÖZEL_1", the Performans analizi's and the Ders ortalamaları's "27_AYT_ÖZEL_1", the booklet's
+   "…/MAT-ÖZEL1" → "OZEL1"). */
+const sayisalSinav=s=>/\d{3,5}\s*$/u.test(String(s??''));
+const sinavAnahtari=s=>{const t=String(s??''),n=(/(\d{3,5})\s*$/u.exec(t)||[])[1];if(n)return n;return key(t).replace(/^(?:\d{4}|\d{2})(?=[A-Z])/u,'').replace(/^(?:TYT|AYT|YKS)(?=[A-Z0-9])/u,'')};
+// Two files name different exams: both spelled the same way (numbered or named) and their identities differ. A numbered file against a named report is not
+// judged (a report may carry a name where the booklet carries the number).
+const farkliSinav=(a,b)=>!!a&&!!b&&sayisalSinav(a)===sayisalSinav(b)&&!!sinavAnahtari(a)&&!!sinavAnahtari(b)&&sinavAnahtari(a)!==sinavAnahtari(b);
+const raporSinavi=r=>r.sinavNo||r.ad||'';
+
 /* ---------------------------------------------------------------- Report sections -> booklet tests
    The report's sections run in booklet order. Each test takes consecutive sections until its question count is full.
    One A booklet per session: kitlar = {TYT: kit, AYT: kit}. A session without a booklet has no cut-outs (its sections are left out). */
@@ -287,7 +309,7 @@ function esle(rapor,kitlar){
   const bolumler=[],testler=[],aralik={},ciftler=[];let t0=0;
   for(const ses of oturumlar){
     const kit=kitlar[ses];if(!kit)continue;
-    if(kit.sinav&&rapor.sinavNo&&kit.sinav!==rapor.sinavNo)fail(ses+' soru kitapçığı '+kit.sinav+' numaralı sınava ait, cevap raporu '+rapor.sinavNo+' numaralı sınav ('+rapor.ad+').');
+    if(farkliSinav(kit.sinav,raporSinavi(rapor)))fail(sayisalSinav(kit.sinav)?ses+' soru kitapçığı '+kit.sinav+' numaralı sınava ait, cevap raporu '+rapor.sinavNo+' numaralı sınav ('+rapor.ad+').':ses+' soru kitapçığı '+kit.sinav+' sınavına ait, cevap raporu '+rapor.ad+' sınavı.');
     const secs=rapor.bolumler.map((b,ri)=>({b,ri})).filter(x=>(x.b.oturum||'TYT')===ses);
     const ozet=(oturumlar.length>1?ses+' · ':'')+'Rapor: '+secs.map(x=>x.b.ders+' '+x.b.n).join(', ')+'. Kitapçık: '+kit.testler.map(t=>t.ad+' '+t.soru).join(', ')+'.';
     let ti=0,off=0;const yerel=[];
@@ -445,7 +467,8 @@ function defterKur(rapor,es,harita,ogr,acik){
    header "Sıralama · Okul Adı · Okul Net · Okul Başarı · Genel Net", then 100 school rows. Only three things are read: the exam code, the question count of the
    title and the Genel Net column (network-wide average net, constant down the column). The school rows are never looked at: the school name cells are not
    in any column we read, and nothing but {kod, dersler:[{ad,n,genel}]} is kept. pages: [{items:[{s,x,y}]}]; a ders continues over pages that repeat the header without a title. */
-const ORT_BASLIK=/^(\d{1,3}-[A-Z]+-\d{3,5})\s*,\s*(.+?)\s+Dersi\s+Net\s+S[ıi]ral[ıi]\s+Liste\s*_\s*(\d{1,3})\s*Soru\s*_/iu;
+// "27-YKS-1202, TÜRKÇE-T Dersi Net Sıralı Liste _40 Soru_" or, for a named exam, "27_AYT_ÖZEL_1, TÜRK DİLİ VE EDB-A Dersi …".
+const ORT_BASLIK=/^([^,]{1,60}?)\s*,\s*(.+?)\s+Dersi\s+Net\s+S[ıi]ral[ıi]\s+Liste\s*_\s*(\d{1,3})\s*Soru\s*_/iu;
 const ORT_SUTUNLAR=['SIRALAMA','OKULADI','OKULNET','OKULBASARI','GENELNET'];
 const ORT_SAYI=/^\d{1,3}(?:[.,]\d{1,2})?$/u;
 function ortalamaCoz(pages){
@@ -487,8 +510,7 @@ function ortalamaCoz(pages){
 // The file must be the report's exam and its question counts must match the report's sections. Sections of the report that the file does not list simply stay unanchored.
 function ortalamaDogrula(ort,rapor){
   const fail=m=>{throw new Error(m+' Ders ortalamaları dosyası eklenmedi.')};
-  const no=(/(\d{3,5})$/u.exec(ort.kod)||[])[1];
-  if(rapor.sinavNo&&no!==rapor.sinavNo)fail('Sınav kodları uyuşmuyor: ders ortalamaları dosyası '+ort.kod+' sınavına ait, cevap raporu '+(rapor.ad||rapor.sinavNo)+' sınavı.');
+  if(farkliSinav(ort.kod,raporSinavi(rapor)))fail('Sınav kodları uyuşmuyor: ders ortalamaları dosyası '+ort.kod+' sınavına ait, cevap raporu '+(rapor.ad||rapor.sinavNo)+' sınavı.');
   const map=new Map(ort.dersler.map(d=>[key(d.ad),d]));let eslesen=0;
   for(const b of rapor.bolumler){
     const d=map.get(key(b.ad));if(!d)continue;
@@ -517,15 +539,20 @@ const performansMi=pages=>pages.some(p=>satirMetinleri(p).some(perfBaslikMi));
 function performansCoz(pages,{tamAd=false}={}){
   const fail=m=>{throw new Error(m+' Performans analizi dosyası eklenmedi.')};
   if(!Array.isArray(pages)||!pages.length||pages.length>200)fail('PDF sayfaları okunamadı.');
-  let kod='',cur=null;const dersler=[],metin=[];
+  // The title: "27-YKS-1202 SINAVI ANALİZLERİ" (the code), or a named exam's "27_AYT_ÖZEL_1 SINAVI ANALİZLERİ" (the whole name; tamAd: always the whole name).
+  let kod='',adli='',cur=null;const dersler=[],metin=[];
+  const tamBaslik=/^(\S.{0,159}?)\s+S[Iİı]NAVI\s+AN[AİI]L[İI]ZLER[İI]$/iu;
   for(const p of pages){
     for(const s of satirMetinleri(p)){
-      const k=tamAd?/^(\S.{0,159}?)\s+S[Iİı]NAVI\s+AN[AİI]L[İI]ZLER[İI]$/iu.exec(s):
+      const k=tamAd?tamBaslik.exec(s):
         /(\d{1,3}-[A-Z]+-\d{3,5})\s+S[Iİı]NAVI/u.exec(s)||/(\d{1,3}-[A-Z]+-\d{3,5}).*AN[AİI]L[İI]ZLER[İI]/iu.exec(s);
       if(k){
         const yeni=tamAd?clean(k[1]):k[1].toUpperCase();
         if(kod&&kod!==yeni)fail('Dosyada birden çok sınav adı var.');
         kod=yeni;
+      }else if(!tamAd&&!cur){
+        const a=tamBaslik.exec(s);
+        if(a){const yeni=clean(a[1]);if(adli&&adli!==yeni)fail('Dosyada birden çok sınav adı var.');adli=yeni}
       }
       const b=PERF_BASLIK.exec(s);
       if(b&&/-[TA]$/u.test(clean(b[1]))){cur={ad:clean(b[1]),n:+b[2],orneklem:null,grupToplam:null,maddeler:[]};dersler.push(cur);continue}
@@ -547,7 +574,8 @@ function performansCoz(pages,{tamAd=false}={}){
       cur.maddeler.push(madde);
     }
   }
-  if(!kod)fail('Sınav kodu ("27-YKS-1202 SINAVI ANALİZLERİ") bulunamadı.');
+  if(!kod&&adli)kod=adli;
+  if(!kod)fail('Sınav adı ("27-YKS-1202 SINAVI ANALİZLERİ") bulunamadı.');
   if(!dersler.length)fail('Bu PDF’de "TÜRKÇE-T (40 Soru )" başlıklı ders sayfası bulunamadı.');
   if(dersler.length>40)fail('Çok fazla ders bölümü var.');
   const gorulen=new Set();
@@ -565,8 +593,7 @@ function performansCoz(pages,{tamAd=false}={}){
 // A few differences are normal (a cancelled or differently keyed question); more than about 10% means the mapping is wrong and the file is refused.
 function performansDogrula(perf,rapor){
   const fail=m=>{throw new Error(m+' Performans analizi dosyası eklenmedi.')};
-  const no=(/(\d{3,5})$/u.exec(perf.kod)||[])[1];
-  if(rapor.sinavNo&&no!==rapor.sinavNo)fail('Sınav kodları uyuşmuyor: performans analizi dosyası '+perf.kod+' sınavına ait, cevap raporu '+(rapor.ad||rapor.sinavNo)+' sınavı.');
+  if(farkliSinav(perf.kod,raporSinavi(rapor)))fail('Sınav kodları uyuşmuyor: performans analizi dosyası '+perf.kod+' sınavına ait, cevap raporu '+(rapor.ad||rapor.sinavNo)+' sınavı.');
   const map=new Map(perf.dersler.map(d=>[key(d.ad),d]));let eslesen=0,toplam=0,farkli=0;
   for(const b of rapor.bolumler){
     const d=map.get(key(b.ad));if(!d)continue;
@@ -689,8 +716,18 @@ const h=s=>kacis(String(s??''));
 const rehber=()=>typeof rehberMi==='function'&&rehberMi();
 const etkin=()=>EK.sekme==='yanlislar'&&rehber()&&!!document.getElementById('ydKok');
 const tick=()=>new Promise(r=>setTimeout(r,0));
-const sinavKodu=s=>(/(\d{3,5})\s*$/u.exec(String(s||''))||[])[1]||'';
 const raporKodu=r=>r.sinavNo||key(r.ad)||'0';
+// The exam a file belongs to: the same key, else the one exam whose identity matches (a named exam's files spell it differently); oturum narrows it to the
+// exam whose report has that session.
+function denemeBul(kod,oturum){
+  if(!kod)return null;
+  if(S.denemeler.has(kod))return S.denemeler.get(kod);
+  const a=sinavAnahtari(kod);if(!a)return null;
+  const l=[...S.denemeler.values()].filter(e=>sinavAnahtari(e.kod)===a||(e.rapor&&sinavAnahtari(raporSinavi(e.rapor))===a));
+  const o=oturum?l.filter(e=>!e.rapor||(e.rapor.oturumlar||[]).includes(oturum)):l;
+  return o.length===1?o[0]:l.length===1?l[0]:null;
+}
+const dosyaOturumu=dersler=>{const s=new Set(dersler.map(d=>/-A$/u.test(clean(d.ad))?'AYT':/-T$/u.test(clean(d.ad))?'TYT':'').filter(Boolean));return s.size===1?[...s][0]:null};
 const adOf=e=>e.ad||('Deneme '+e.kod);
 const tarihYaz=t=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/u.exec(t||'');return m?m[3]+'.'+m[2]+'.'+m[1]:''};
 const boyutYaz=b=>{const f=(v,k)=>(v>=10?String(Math.round(v)):v.toFixed(1).replace('.',','))+' '+k;return b<1048576?Math.max(1,Math.round(b/1024))+' KB':b<1073741824?f(b/1048576,'MB'):f(b/1073741824,'GB')};
@@ -738,14 +775,15 @@ function yenidenDogrula(e){
 }
 /* The four kinds of file, applied to the library. Each throws a Turkish message (with .kod = the exam it concerns, when known) and then changes nothing. */
 function raporEkle(it){
-  const rapor=it.rapor,kod=raporKodu(rapor),var_=S.denemeler.get(kod),e=var_||yeniDeneme(kod);
+  const rapor=it.rapor,var_=S.denemeler.get(raporKodu(rapor))||denemeBul(raporSinavi(rapor),rapor.oturumlar?.length===1?rapor.oturumlar[0]:null),kod=var_?var_.kod:raporKodu(rapor),e=var_||yeniDeneme(kod);
   let es=null;if(kitVar(e)){try{es=esle(rapor,e.kitlar)}catch(x){throw hataKod(var_?kod:null,x.message+' Cevap raporu eklenmedi.')}}
   e.rapor=rapor;e.es=es;e.ad=rapor.ad||e.ad;e.tarih=rapor.tarih||e.tarih;e.zOnbellek=null;
   e.durum.rapor='✓ '+rapor.ogrenciler.length+' öğrenci'+(rapor.ad?' · '+rapor.ad:'')+(rapor.oturumlar.length>1?' · '+rapor.oturumlar.join(' + '):'');
   yenidenDogrula(e);S.denemeler.set(kod,e);return e;
 }
 function kitapEkle(it){
-  const kit=it.kit,kod=kit.sinav||(S.denemeler.size===1?[...S.denemeler.keys()][0]:'0'),var_=S.denemeler.get(kod),e=var_||yeniDeneme(kod);
+  const kit=it.kit,bulunan=kit.sinav?denemeBul(kit.sinav,kit.oturum):(S.denemeler.size===1?[...S.denemeler.values()][0]:null);
+  const kod=bulunan?bulunan.kod:kit.sinav?(sayisalSinav(kit.sinav)?sinavAnahtari(kit.sinav):kit.sinav):'0',var_=bulunan||S.denemeler.get(kod),e=var_||yeniDeneme(kod);
   const ses=kit.oturum||(e.rapor?.oturumlar.length===1?e.rapor.oturumlar[0]:'TYT');kit.oturum=ses;
   const kitlar={...e.kitlar,[ses]:kit};
   let es=null;if(e.rapor){try{es=esle(e.rapor,kitlar)}catch(x){throw hataKod(var_?kod:null,x.message+' Soru kitapçığı eklenmedi.')}}
@@ -756,7 +794,7 @@ function kitapEkle(it){
   yenidenDogrula(e);S.denemeler.set(kod,e);return e;
 }
 function ortEkle(it){
-  const ort=it.ort,kod=sinavKodu(ort.kod);let e=S.denemeler.get(kod);
+  const ort=it.ort;let e=denemeBul(sinavAnahtari(ort.kod),dosyaOturumu(ort.dersler))||denemeBul(ort.kod,dosyaOturumu(ort.dersler));
   // an exam the library does not know: with exactly one report in the library the usual "Sınav kodları uyuşmuyor" message is given in its row
   if(!e){const tek=[...S.denemeler.values()].filter(x=>x.rapor);if(tek.length===1)e=tek[0]}
   if(!e||!e.rapor)throw hataKod(null,'Bu ders ortalamaları dosyası '+ort.kod+' sınavına ait; bu sınavın cevap raporu yüklü değil. Ders ortalamaları dosyası eklenmedi.');
@@ -764,7 +802,7 @@ function ortEkle(it){
   e.ort=ort;e.zOnbellek=null;e.durum.ort='✓ '+ort.dersler.length+' ders · genel ortalama';return e;
 }
 function perfEkle(it){
-  const perf=it.perf,kod=sinavKodu(perf.kod);let e=S.denemeler.get(kod);
+  const perf=it.perf;let e=denemeBul(sinavAnahtari(perf.kod),dosyaOturumu(perf.dersler))||denemeBul(perf.kod,dosyaOturumu(perf.dersler));
   if(!e){const tek=[...S.denemeler.values()].filter(x=>x.rapor);if(tek.length===1)e=tek[0]}
   if(!e||!e.rapor)throw hataKod(null,'Bu performans analizi dosyası '+perf.kod+' sınavına ait; bu sınavın cevap raporu yüklü değil. Performans analizi dosyası eklenmedi.');
   let v;try{v=performansDogrula(perf,e.rapor)}catch(x){throw hataKod(e.kod,x.message)}
@@ -829,7 +867,7 @@ function pdfTuru(pages){
   if(hepsi.some(s=>ORT_BASLIK.test(s)))return 'ort';
   if(performansMi(pages))return 'perf';
   if(hepsi.some(s=>ETIKET.test(s))||pages.some(p=>etiketler(p).length))return 'coz';
-  if(pages.some(p=>p.items.some(i=>KOD.test(clean(i.s))&&i.y>p.h-70)))return 'kit';
+  if(pages.some(p=>p.items.some(i=>(KOD.test(clean(i.s))||KOD_BAS.test(clean(i.s)))&&i.y>p.h-70)))return 'kit';
   return null;
 }
 // A çözüm title can carry the exam number ("1203 TYT ÇÖZÜMLERİ"); only a hint for choosing between exams that fit equally.
@@ -1185,7 +1223,7 @@ function satirHTML(e){
   const var1=x=>x?1:0,sesler=e.rapor?e.rapor.oturumlar:['TYT','AYT'];
   const kit=ses=>!e.rapor||sesler.includes(ses)?hucre(var1(e.kitlar[ses]),ses+' kitapçık',e.kitlar[ses]?e.kitDurum[ses]:null):hucre(null,ses+' kitapçık');
   const coz=e.rapor?hucre(var1(Object.keys(e.cozum).length),'Çözüm',Object.keys(e.cozum).length?e.durum.coz.replace(/\n/g,' · '):'Çözüm: yok (isteğe bağlı; B kitapçığı öğrencileri için)',true):hucre(0,'Çözüm',null,true);
-  const ad=adOf(e),kodMetni=ad.includes(e.kod)?'':' <span class="yd-kod">'+h(e.kod)+'</span>',tarih=tarihYaz(e.tarih);
+  const ad=adOf(e),kodMetni=ad.includes(e.kod)||key(ad)===e.kod?'':' <span class="yd-kod">'+h(e.kod)+'</span>',tarih=tarihYaz(e.tarih);
   const hatalar=e.hatalar.map(x=>'<span class="yd-hata" role="alert">'+(x.dosya&&x.dosya!=='kesim'?h(x.dosya)+': ':'')+h(x.mesaj)+'</span>').join('');
   const gecici=S.kut&&S.kut.mod()==='kalici'&&e.kalici===false?' <span class="yd-rozet">Yalnız bu oturumda</span>':'';
   return '<tr class="yd-satir-d" data-yd-satir="'+h(e.kod)+'"><td class="yd-sec-h"><input type="checkbox" data-yd-sec="'+h(e.kod)+'"'+(e.sec?' checked':'')+' aria-label="Seç: '+h(ad)+'"></td>'+
@@ -1492,25 +1530,34 @@ async function pdfIndir(sube){
      over the whole school ("okulumuzda").
    - Our rate counts the students judged on the question's test (sayilanKural), a blank as wrong; B students through the çözüm map. A cancelled
      question is left out. Both rates are rounded to whole percents for the sentence.
-   - A question is listed when the şubeler are behind beyond chance: z = (D − N·p) / √(N·p·(1 − p)) ≤ −1,96, N the şubeler's students judged on
-     it, D their right answers, p the sınav okulları rate (thousands of pupils, so its own error is ignored; printed with two decimals, so it is
-     read within 0,01 … 0,99: a printed 1,00 does not make one miss in thirty a gap). The gap needed follows N: about 18 points with 30
-     students at p = 50 %, 13 with 60. */
+   - A question is listed when the şubeler are behind beyond chance (z ≤ −1,96), N the şubeler's students judged on it, D their right answers,
+     p the sınav okulları rate over M pupils (the file's "İşaretleme yapan öğrenci sayısı" of the ders). Both rates are samples, so the two are
+     compared as two groups: z = (D/N − p) / √(p̄·(1 − p̄)·(1/N + 1/M)), p̄ = (D + p·M) / (N + M). With thousands of pupils this is the one-group
+     test z = (D − N·p) / √(N·p·(1 − p)); on a ders few pupils take (AYT Sosyal-2: 25 in 27_AYT_ÖZEL_1), a printed 100 % of 25 is not certain
+     and the test says so. Without M the one-group test is used. p and p̄ are read within 0,01 … 0,99 (two printed decimals: a printed 1,00 does
+     not make one miss in thirty a gap). The gap needed follows N: about 18 points with 30 students at p = 50 %, 13 with 60. */
 const Z_SINIR=1.96;
 const perfHaritasi=e=>e.perf?new Map(e.perf.dersler.map(x=>[key(x.ad),x])):null;
-// The sınav okulları rate of a question (ak: its place in the section, A booklet), or null without the Performans analizi's ders.
-function okullarP(pm,eb,ak){
+// The sınav okulları rate of a question (ak: its place in the section, A booklet) and how many pupils it is over, or null without the Performans analizi's ders.
+function okullarMadde(pm,eb,ak){
   const pd=pm?pm.get(key(eb.ad||'')):null,tp=pd&&pd.n===eb.n&&ak!==null&&ak!==undefined&&pd.maddeler[ak]?pd.maddeler[ak].p:null;
-  return tp===null||tp===undefined||!Number.isFinite(tp)?null:tp>1?tp/100:tp;
+  return tp===null||tp===undefined||!Number.isFinite(tp)?null:{p:tp>1?tp/100:tp,n:pd.orneklem>0?pd.orneklem:null};
+}
+const okullarP=(pm,eb,ak)=>okullarMadde(pm,eb,ak)?.p??null;
+const sinirla=x=>Math.min(.99,Math.max(.01,x));
+// Behind beyond chance? D right answers of N against the rate p over M pupils (null: very many). See the note above.
+function farkZ(D,N,p,M){
+  if(M>0){const pb=sinirla((D+p*M)/(N+M));return (D/N-p)/Math.sqrt(pb*(1-pb)*(1/N+1/M))}
+  const q=sinirla(p);return (D-N*q)/Math.sqrt(N*q*(1-q));
 }
 const yuz=x=>Math.round(x*100);
 // One question of a section compared (q: its place in the section; m: our rates, okulMaddeleri), or null when one of the two rates is missing.
 function farkSorusu(e,eb,q,m,pm){
-  const a=eb.off+q+1,s=m.get(eb.test+':'+a),tp=okullarP(pm,eb,q);
+  const a=eb.off+q+1,s=m.get(eb.test+':'+a),om=okullarMadde(pm,eb,q),tp=om?.p??null;
   if(!s||tp===null)return null;
   const okul=yuz(s.p),okullar=yuz(tp),cevap=e.rapor.anahtar.A?.[eb.bas+q]||'',yanlis=['A','B','C','D','E'].filter(x=>x!==cevap&&s.sec[x]>0).sort((x,y)=>s.sec[y]-s.sec[x]||x.localeCompare(y))[0]||null;
-  const p=Math.min(.99,Math.max(.01,tp)),z=(s.dogru-s.n*p)/Math.sqrt(s.n*p*(1-p));
-  return {test:eb.test,a,q,okul,okullar,n:s.n,dogru:s.dogru,z,geride:z<=-Z_SINIR,cevap,yanlis,yanlisPay:yanlis?yuz(s.sec[yanlis]/s.n):0,bos:yuz(s.sec['']/s.n),konu:''};
+  const z=farkZ(s.dogru,s.n,tp,om.n);
+  return {test:eb.test,a,q,okul,okullar,n:s.n,okullarN:om.n,dogru:s.dogru,z,geride:z<=-Z_SINIR,cevap,yanlis,yanlisPay:yanlis?yuz(s.sec[yanlis]/s.n):0,bos:yuz(s.sec['']/s.n),konu:''};
 }
 const sinifOf=s=>typeof OGRETMEN_RAPOR!=='undefined'?OGRETMEN_RAPOR.sinifK(s):String(s??'').trim();
 // The sheets' owners: [{ogretmen, kod (the report section), siniflar}] from the timetables, or null without them.
@@ -1747,7 +1794,7 @@ function ogrenciListesi(no){
   }
   return out.length?{v:1,s:out}:null;
 }
-return {farkModeli,farkPlan,dersPlani,farkPdfIndir,farkDosyaAdi,farkSorusu,farkCumle,ekli,okulMaddeleri,bolumMaddeleri,sayilanKural,ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
+return {farkModeli,farkPlan,dersPlani,farkPdfIndir,farkDosyaAdi,farkSorusu,farkCumle,ekli,farkZ,sinavAnahtari,okulMaddeleri,bolumMaddeleri,sayilanKural,ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
   dosyalarEkle,topluUygula,dosyaTani,pdfTuru,denemeKoy,kutuphaneKur,kutAc,sakla,geriYukle,metaOf,denemeSil,hepsiniSil,bellekiBosalt,sifirla,birlesik,kisiPlani,pdfPlan,pdfDosyaAdi,pdfIndir,boyutYaz,
   gorunum,yazdir,hazirla,durumu,key,title,kitAc,kitKapat};
 })();
