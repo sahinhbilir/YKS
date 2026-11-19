@@ -41,3 +41,6 @@
   .hm-svg{border:1px solid var(--cizgi)}
   .hm-lejant{gap:4px 12px}
 }
+
+/* Denemeye göre ayarla: one line with its button on Hafızam and Haritam */
+.hm-deneme{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 12px;overflow-wrap:anywhere}

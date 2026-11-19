@@ -356,7 +356,7 @@ function gorunum() {
     '<span>dağılan halka: kalıcıydı, unutuluyor</span><span>yanıp sönen: dikkat isteyen temel</span><span>büyük nokta: çok konu ona dayanıyor</span></div>';
   return '<div class="hm-sayfa"><div class="baslik"><h1>' + baslik + '</h1><p>' + (ogretmen ? 'Öğrencinin konu haritası; bağlar bu defterden öğrenilen değerlerle hesaplanır. ' +
       '<button type="button" class="dugme mini" id="hmGeri">Ayarlar’a dön</button>' : 'Her nokta bir konu; ışığı ne kadar kalıcı olduğunu, rengi ne kadar hatırladığını gösterir. Bir konuya dokun.') + '</p></div>' +
-    cipler + (alarmlar ? '<div class="hm-alarmlar">' + alarmlar + '</div>' : '') +
+    (ogretmen ? '' : denemeDugmesi(si)) + cipler + (alarmlar ? '<div class="hm-alarmlar">' + alarmlar + '</div>' : '') +
     // One card: over the map on a computer, under it on a phone (CSS); pinned until the topic is touched again.
     '<div class="hm-harita" data-hm-harita>' + c.svg + '<div class="hm-kart-yer' + (secili ? ' hm-sabit' : '') + '"' + (yer ? ' style="left:' + yer.x + '%;top:' + yer.y + '%"' : ' hidden') + ' data-hm-kart>' + kartHtml + '</div></div>' +
     lejant + '</div>';
@@ -416,7 +416,70 @@ function bagla() {
   });
 }
 bagla();
+
+/* ---- Denemeye göre ayarla (2026-11-19): a student who joins late fills Hafızam and the map from their mock exams in one press instead of setting each
+   topic by hand. The source is the topic results the teacher's app sends with the student's package (D.turkiyeKiyas, Türkiye karşılaştırması: per
+   topic and exam, the student's right answers d of n questions). A topic's last three exams with questions decide (DENEME_AYAR):
+     at least 75 % right → recalled today at 90 %, 21 days to fall to 90 % (settling, never long-term: so never "YKS'ye kadar hafızanda");
+     50–75 % → 75 % and 7 days; under 50 % → 50 % and 3 days (forgetting).
+   Written as the student's own setting (Düzenle: hafizaElle), so a later result goes on from it, "Algoritmaya bırak" undoes one topic and Geri al the
+   whole press in the same visit. A topic with the student's own result or own setting is never changed. A deneme topic meets Hafızam's topics by
+   name within its subject (a curriculum unit's or a plan topic's name). A topic answered right by luck counts as known: accepted for the effort saved. */
+const DENEME_AYAR = [[.75, .9, 21], [.5, .75, 7], [0, .5, 3]];
+const harfKey = s => String(s ?? '').toLocaleUpperCase('tr').normalize('NFD').replace(/\p{M}/gu, '').replace(/[^A-Z]/g, '');
+const AILE = [[/^(TURKCE|TURKDILI)/, /^(TURKCE|TURKDILI|EDEBIYAT)/], [/^(MATEMATIK|GEOMETRI)/, /^(MATEMATIK|GEOMETRI)/], [/^FIZIK/, /^FIZIK/], [/^KIMYA/, /^KIMYA/],
+  [/^BIYOLOJI/, /^BIYOLOJI/], [/^TARIH/, /^(TARIH|INKILAP)/], [/^COGRAFYA/, /^COGRAFYA/], [/^FELSEFE/, /^(FELSEFE|MANTIK|PSIKOLOJI|SOSYOLOJI)/], [/^DIN/, /^DIN/]];
+const kendiDefteri = si => ogrenciMi() && si === 0 && D.ogr.length === 1;
+function denemeAyari(si) {
+  const o = D.ogr[si], oz = kendiDefteri(si) ? D.turkiyeKiyas : null;
+  if (!o || !oz || !Array.isArray(oz.b)) return {kaynak: !!oz, liste: []};
+  const adlar = new Map();
+  for (let ki = 0, n = konuSayisi(); ki < n; ki++) { const k = konuAl(ki); if (!k) continue; const a = konuAdiTamAnahtari(devamsiz(k[3])); (adlar.get(a) || adlar.set(a, []).get(a)).push(ki); }
+  const kendi = new Set((D.log || []).filter(l => l[1] === si).map(l => l[2])), elle = o.hafizaElle || {}, topla = new Map();
+  for (const b of oz.b) {
+    const aile = AILE.find(([re]) => re.test(harfKey(b && b.k))); if (!aile || !b.z || !Array.isArray(b.z.r)) continue;
+    for (const [konu, hucre] of b.z.r) {
+      const son = (Array.isArray(hucre) ? hucre : []).filter(h => Array.isArray(h) && h[2] > 0).slice(-3); if (!son.length) continue;
+      for (const ki of adlar.get(konuAdiTamAnahtari(konu)) || []) {
+        if (!aile[1].test(harfKey(konuDersAdi(ki))) || kendi.has(ki) || elle[ki]) continue;
+        const t = topla.get(ki) || {d: 0, n: 0}; for (const h of son) { t.d += h[0]; t.n += h[2]; } topla.set(ki, t);
+      }
+    }
+  }
+  return {kaynak: true, liste: [...topla].map(([ki, t]) => { const oran = Math.min(1, t.d / t.n), [, r, s] = DENEME_AYAR.find(x => oran >= x[0]); return {ki, oran, r, s}; })};
+}
+function denemeyeGoreAyarla(si) {
+  const o = D.ogr[si], {liste} = denemeAyari(si); if (!o || !liste.length || !kendiDefteri(si)) return 0;
+  const g = bugunNo(), ts = Date.now(), m = Object.assign({}, o.hafizaElle || {});
+  for (const x of liste) m[x.ki] = {g, r: x.r, s: x.s, ts};
+  o.hafizaElle = m; o.ogrCalismaTs = ts; EK.denemeAyarTs = ts; hafizaKartlariniYenile(si);
+  return liste.length;
+}
+function denemeAyariniGeriAl(si) {
+  const o = D.ogr[si], ts = EK.denemeAyarTs; if (!o || !o.hafizaElle || !ts || !kendiDefteri(si)) return 0;
+  const m = {}; let n = 0; for (const [ki, e] of Object.entries(o.hafizaElle)) { if (e && e.ts === ts) n++; else m[ki] = e; }
+  if (Object.keys(m).length) o.hafizaElle = m; else delete o.hafizaElle;
+  o.ogrCalismaTs = Date.now(); EK.denemeAyarTs = null; hafizaKartlariniYenile(si); return n;
+}
+// The line on Hafızam and Haritam (the student's own device, not a viewing teacher).
+function denemeDugmesi(si) {
+  if (!kendiDefteri(si) || (typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme())) return '';
+  const a = denemeAyari(si), n = a.liste.length, geri = EK.denemeAyarTs ? ' <button type="button" class="dugme mini" data-deneme-geri>Geri al</button>' : '';
+  if (!a.kaynak) return '';
+  if (!n) return geri ? '<p class="mini hm-deneme">Konular deneme sonuçlarına göre ayarlandı.' + geri + '</p>' : '';
+  return '<p class="mini hm-deneme"><button type="button" class="dugme mini" data-deneme-ayarla>Denemeye göre ayarla</button> Programa sonradan katıldıysan: ' + n +
+    ' konuyu tek tek ayarlamak yerine deneme sonuçların ayarlasın. Kendi girdiğin sonuçlar ve ayarlar değişmez.' + geri + '</p>';
+}
+if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', ev => {
+  const a = ev.target && ev.target.closest && ev.target.closest('[data-deneme-ayarla],[data-deneme-geri]'); if (!a || a.disabled) return;
+  const si = EK.ogr;
+  if (a.hasAttribute('data-deneme-geri')) { if (denemeAyariniGeriAl(si)) { kaydet(); ciz(); } return; }
+  const n = denemeAyari(si).liste.length;
+  if (!n || !confirm('Deneme sonuçlarına göre ' + n + ' konu ayarlanacak: denemelerde çoğunu doğru yaptığın konular aklında, yanlış yaptıkların unutuluyor görünecek. ' +
+    'Şans eseri doğru yaptığın bir konu da aklında sayılabilir; hiçbiri “YKS’ye kadar hafızanda” olmaz. Kendi girdiğin sonuçlar ve ayarlar değişmez. Devam edilsin mi?')) return;
+  if (denemeyeGoreAyarla(si)) { kaydet(); ciz(); }
+});
 // kaynaklar: map topic → the notebook topic ids that feed it (plan topics, then school units)
 const kaynaklar = () => { const {esler, birimler} = cozumle(); return new Map(V.konular.map(k => [k.id, (esler.get(k.id) || []).concat(birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))])); };
-return {gorunum, uygun, dersleri, gorunur, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA};
+return {gorunum, uygun, dersleri, gorunur, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA, denemeAyari, denemeyeGoreAyarla, denemeAyariniGeriAl, denemeDugmesi, DENEME_AYAR};
 })();
