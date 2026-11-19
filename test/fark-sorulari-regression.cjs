@@ -117,6 +117,19 @@ async function iki() {
     assert.equal(T.farkSorusu(e, eb, 0, om(9, 30, {}), pm(50)).okullar, 50); assert.equal(T.farkSorusu(e, eb, 0, om(9, 30, {}), new Map()), null);
   });
 
+  await test('two groups: when the Performans analizi prints few pupils for a ders (25 on AYT Sosyal-2), its rate is a sample too: z = (D/N − p) / √(p̄(1 − p̄)(1/N + 1/M))', () => {
+    const z2 = (D, N, p, M) => { const pb = Math.min(.99, Math.max(.01, (D + p * M) / (N + M))); return (D / N - p) / Math.sqrt(pb * (1 - pb) * (1 / N + 1 / M)) };
+    const Z = (D, N, p, M) => run(`YANLISLAR.farkZ(${D},${N},${p},${M})`);
+    assert(Math.abs(Z(3, 8, 1, 25) - z2(3, 8, 1, 25)) < 1e-12); assert(Math.abs(Z(3, 8, 1, 25) - -4.287) < .01, '3 of 8 against 25 of 25: still behind (z ≈ −4,3, not −17)');
+    assert(Z(2, 8, .64, 25) > -1.96, '2 of 8 against 64 % of 25: may be chance');
+    assert(Z(2, 8, .64, null) <= -1.96, 'the same against a rate of thousands: behind');
+    assert(Math.abs(Z(9, 30, .5, 100000) - Z(9, 30, .5, null)) < .01, 'many pupils: the one-group test');
+    // the question carries the count it was compared against
+    const e = {rapor: {anahtar: {A: ['C']}}}, eb = {off: 0, test: 0, bas: 0, n: 1, ad: 'TÜRKÇE-T'};
+    const x = T.farkSorusu(e, eb, 0, new Map([['0:1', {dogru: 2, n: 8, p: .25, sec: {A: 0, B: 0, C: 2, D: 0, E: 0, '': 6}}]]), new Map([[T.key('TÜRKÇE-T'), {n: 1, orneklem: 25, maddeler: [{p: .64}]}]]));
+    assert.deepEqual(copy([x.okullarN, x.geride]), [25, false]);
+  });
+
   await test('the model without timetables: a sheet per ders for the whole school; only questions behind beyond chance; dersler with none, exams without a Performans analizi, the ders ticks', async () => {
     const e = await sinav(); Object.assign(S, {gorunum: 'ders', ogretmen: ''});
     let M = T.farkModeli();
