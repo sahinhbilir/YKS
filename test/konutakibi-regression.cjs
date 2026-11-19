@@ -772,6 +772,10 @@ function topic(v,name='Sözcükte Anlam'){return K.model(v).topics.find(t=>t.nam
   // Each question's wrong share: p's remainder split as the top and bottom groups split it. The fixture's groups mark the four
   // other options 30–34 (ÜST) and 60–64 (ALT) times and leave 7 + 9 blank, so about 96% of what is not correct is wrong.
   const w=copy(e.turkiyeY['TÜRKÇE-T']);assert.equal(w.length,4);[.9,.7,.5,.2].forEach((p,i)=>assert(w[i]>(1-p)*.95&&w[i]<(1-p)*.97,i+': '+w[i]));
+  // When a distractor beats the correct option in ÜST, yanlisPayi picks the option whose (ÜST - ALT) / nGrup is closest to r.
+  const zorSayfa=[[{s:'27-YKS-1203 SINAVI ANALİZLERİ',x:100,y:800},{s:'TÜRKÇE-T (1 Soru )',x:60,y:760},{s:'1. Soru 40 10 90 90 0 0 0 0 0 0 70 100 0.20 zor soru 0.15 zayıf',x:30,y:730}]];
+  put('__zp',zorSayfa);const zc=copy(run('KONU_TAKIBI.turkiyeCoz(__zp)'));
+  assert.equal(zc.yanlis['TÜRKÇE-T'][0],Math.round(0.8*180/(180+170)*10000)/10000,'correct option A (40/10, r=0.15) picked over distractor B (90/90, r=0)');
   // The network's mean net: Σ (p − w / 4).
   const ag=run("KONU_TAKIBI.agNet(KONU_TAKIBI.oku().veri,'27-YKS-1203','TÜRKÇE-T')");assert(Math.abs(ag-([.9,.7,.5,.2].reduce((a,p)=>a+p,0)-w.reduce((a,x)=>a+x,0)/4))<1e-9);
   assert.equal(run("KONU_TAKIBI.agNet(KONU_TAKIBI.oku().veri,'27-YKS-9999','TÜRKÇE-T')"),null,'no file: no average');

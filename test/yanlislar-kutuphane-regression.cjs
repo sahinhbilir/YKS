@@ -407,7 +407,7 @@ const hepsi = async kodlar => { const out = []; for (const k of kodlar) { const 
   await test('performans analizi: sections, counts, p, r and the ÜST/ALT counts are read for TYT and AYT; only aggregates are kept', async () => {
     const p = perfKur({dersler: [...Y.PERF_DERSLER, ...Y.PERF_AYT]});
     assert.equal(p.kod, '27-YKS-1203'); assert.deepEqual(copy(p.dersler.map(d => [d.ad, d.n, d.maddeler.length])), [['TÜRKÇE-T', 4, 4], ['TARİH-T', 2, 2], ['DİN KÜLTÜRÜ-T', 2, 2], ['S.FELSEFE-T', 2, 2], ['TÜRK DİLİ VE EDB-A', 3, 3], ['TARİH.1-A', 2, 2], ['MATEMATİK-A', 3, 3]]);
-    const m = p.dersler[0].maddeler[0]; assert.deepEqual(copy(m), {no: 1, p: 0.9, r: 0.31, pBasamak: 2, rBasamak: 2, ust: [400, 31, 32, 33, 34, 7], alt: [100, 61, 62, 63, 64, 9]});
+    const m = p.dersler[0].maddeler[0]; assert.deepEqual(copy(m), {no: 1, p: 0.9, r: 0.56, pBasamak: 2, rBasamak: 2, ust: [400, 31, 32, 33, 34, 7], alt: [100, 61, 62, 63, 64, 9]});
     assert.equal(p.kitapcik, 'A'); assert.equal(p.dersler[0].orneklem, null, 'legacy fixture without a printed reference count');
     assert.equal(p.dersler[0].maddeler[3].p, 0.2); assert.doesNotMatch(JSON.stringify(p), /\d{11}/);
     assert.equal(T.pdfTuru(Y.itemlere(Y.performansSpec({ascii: true}))), 'perf', 'recognised by its title (ascii letters too)');
@@ -422,10 +422,18 @@ const hepsi = async kodlar => { const out = []; for (const k of kodlar) { const 
     const sayi = tam.map((d, i) => i === 0 ? {...d, n: 5, anahtar: [...d.anahtar, 'A'], p: [...d.p, .5]} : d);
     assert.throws(() => T.performansDogrula(perfKur({dersler: sayi}), rapor), /Soru sayıları uyuşmuyor: TÜRKÇE-T için cevap raporunda 4, performans analizi dosyasında \(27-YKS-1203\) 5 soru var\. Performans analizi dosyası eklenmedi/);
     assert.throws(() => T.performansDogrula(perfKur({dersler: [{ad: 'FİZİK-T', n: 2, anahtar: ['A', 'B'], p: [.5, .5]}]}), rapor), /hiçbiri dosyada/);
-    // 18 keyed questions: one differing most-marked option (5%) is accepted, three (17%) refuse the file
+    // 18 keyed questions: one differing discrimination index (5%) is accepted, three (17%) refuse the file
     const v = T.performansDogrula(perfKur({dersler: tam, bozuk: [2]}), rapor); assert.equal(v.farkli, 1); assert.equal(v.toplam, 18);
-    assert.throws(() => T.performansDogrula(perfKur({dersler: tam, bozuk: [2, 5, 9]}), rapor), /3 soruda en çok işaretlenen seçenek cevap anahtarından farklı \(18 sorudan\)/);
+    assert.throws(() => T.performansDogrula(perfKur({dersler: tam, bozuk: [2, 5, 9]}), rapor), /3 soruda ayırdedicilik değeri cevap anahtarıyla uyuşmuyor \(18 sorudan\)/);
     assert.throws(() => T.performansDogrula(perfKur({dersler: tam, bozuk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]}), rapor), /eklenmedi/);
+    // on hard questions a distractor can beat the correct option in ÜST while r still equals (ÜST[key] - ALT[key]) / nGrup: zero mismatches
+    const zorPerf = perfKur({dersler: tam});
+    for (const d of zorPerf.dersler) d.maddeler.forEach((m, q) => {
+      const idx = 'ABCDE'.indexOf(rapor.anahtar.A[rapor.bolumler.find(b => b.ad === d.ad).bas + q]), cel = (idx + 1) % 5;
+      m.ust[idx] = 80; m.alt[idx] = 20; m.ust[cel] = 250; m.alt[cel] = 180;
+      const nGrup = m.ust.reduce((a, x) => a + x, 0); m.r = +((m.ust[idx] - m.alt[idx]) / nGrup).toFixed(2);
+    });
+    assert.equal(T.performansDogrula(zorPerf, rapor).farkli, 0);
   });
   const hazirDeneme = async (o = {}) => {
     const rapor = await T.raporCoz(bytes(Y.raporXlsx({method: 8}))), k = T.kitapcikCoz(Y.kitapcikSayfalari());

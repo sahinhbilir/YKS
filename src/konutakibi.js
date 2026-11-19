@@ -1185,11 +1185,13 @@ function uploadMessage(reports,errors=[],extra=[]){
 // code, each question's network-wide success rate p and its wrong-answer share are kept (no counts, no school, no pupil).
 // p is over every pupil of the network who marked the A booklet; the file gives the answers of the top and bottom 27% only, so
 // the wrong share is p's remainder split as those groups split it: w = (1 − p) · Y / (Y + B), Y and B the groups' wrong and
-// blank answers (the key is the upper group's most marked option, as performansDogrula reads it). The network's mean net in a
+// blank answers (the key is the option whose (ÜST − ALT) / nGrup is closest to r, as performansDogrula checks it). The network's mean net in a
 // ders is then Σ (p − w / 4) (agNet), the same pupils the squares are measured against.
 function yanlisPayi(m){
   const ust=m.ust||[],alt=m.alt||[];if(ust.length<6||alt.length<6)return 0;
-  const k=[0,1,2,3,4].reduce((a,i)=>ust[i]>ust[a]?i:a,0),T=ust.concat(alt).reduce((a,x)=>a+x,0),B=ust[5]+alt[5],Y=T-B-ust[k]-alt[k];
+  const nGrup=ust.reduce((a,x)=>a+x,0),fark=i=>nGrup>0&&Number.isFinite(m.r)?Math.abs((ust[i]-alt[i])/nGrup-m.r):0;
+  const k=[0,1,2,3,4].reduce((a,i)=>{const d=fark(i)-fark(a);return d<-1e-12||(Math.abs(d)<=1e-12&&ust[i]>ust[a])?i:a},0);
+  const T=ust.concat(alt).reduce((a,x)=>a+x,0),B=ust[5]+alt[5],Y=T-B-ust[k]-alt[k];
   return Y+B>0?Math.round((1-m.p)*Y/(Y+B)*10000)/10000:0;
 }
 const perfMi=pages=>pages.some(p=>{if(!Array.isArray(p))return false;const t=key(p.map(i=>typeof i?.s==='string'?i.s:'').join(' '));return t.includes('SINAVIANALIZLERI')||t.includes('MADDEGUCLUKINDEKSI')});

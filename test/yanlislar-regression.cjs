@@ -335,5 +335,31 @@ const pairsOf = (pairs, perPage) => T.cozumEtiketleri(Y.itemlere(Y.cozumSpec(pai
     assert.match(h, /<h1>Yanlışlar defteri<\/h1>/); assert.match(h, /<th[^>]*>Okulunda doğru<\/th><th[^>]*>Sınav okullarında doğru<\/th>/); assert.match(h, /<td><b>2<\/b><\/td><td class="yl-yanlis">C<\/td><td><b>B<\/b><\/td><td>%50<\/td><td>—<\/td>/);
     run('delete D.yanlisListe'); assert.match(run('gorunumYanlisListem()'), /Henüz liste yok/); run("D.rol='rehber'"); T.sifirla();
   });
+  await test('Matematik / Geometri boundary swap in Çözüm PDF (A-2 / B-3 and A-3 / B-2 inside one test): haritaKur, defterKur, zAnahtar, ogrenciListesi and konuKarnesi resolve the A-booklet section', async () => {
+    // One AYT test of 3 questions split into MATEMATİK-A (2) and GEOMETRİ-A (1); A-2 / B-3 and A-3 / B-2 swap across the section boundary
+    const bolumler = [['MATEMATİK-A', 2], ['GEOMETRİ-A', 1]], keyA = ['A', 'D', 'E'], keyB = ['A', 'E', 'D'], pairs = [[1, 1], [2, 3], [3, 2]];
+    const ogr = [{no: '9001', ad: 'SENTETİK A', sube: '12/A', kit: 'A', cev: ['A', 'D', 'E']}, {no: '9002', ad: 'SENTETİK B', sube: '12/A', kit: 'B', cev: ['A', '', '']}];
+    const rapor = await T.raporCoz(bytes(F.xlsx({sheetName: 'AYT', method: 0, rows: Y.raporSatirlari({bolumler, anahtarA: keyA, anahtarB: keyB, ogrenciler: ogr}).map((r, i) => i === 1 ? [r[0].replace('Form: TYT', 'Form: AYT')] : r)})));
+    const kA = T.kitapcikCoz(Y.kitapcikSayfalariAyt()); kA.testler.shift();
+    const es = T.esle(rapor, {AYT: kA}), harita = T.haritaKur(pairs, es, rapor);
+    assert.equal(harita.adet, 3);
+    const d = T.defterKur(rapor, es, harita, rapor.ogrenciler[1], null);
+    // B-2 (in Matematik) is A-3 (in Geometri: ai=1, ak=0); B-3 (in Geometri) is A-2 (in Matematik: ai=0, ak=1)
+    assert.deepEqual(copy(d.bolumler.map(b => [b.ders, b.sorular.map(s => [s.own, s.a, s.i, s.ai, s.ak])])), [['Matematik', [[2, 3, 0, 1, 0]]], ['Geometri', [[3, 2, 1, 0, 1]]]]);
+    const perf = T.performansCoz(Y.itemlere(Y.performansSpec({dersler: [{ad: 'MATEMATİK-A', n: 2, anahtar: ['A', 'D'], p: [.8, .25]}, {ad: 'GEOMETRİ-A', n: 1, anahtar: ['E'], p: [.6]}]})));
+    T.sifirla(); run(`D=varsayilan();D.rol='rehber';D.ogr=[];D.konutakibi={};KONU_TAKIBI.__oku=KONU_TAKIBI.__oku||KONU_TAKIBI.oku;KONU_TAKIBI.oku=()=>({veri:{maps:{},zorluk:{x:{ad:${JSON.stringify(rapor.ad)},ozet:{'MATEMATİK-A':[['E.M.10.2.1'],['M.12.5.1']],'GEOMETRİ-A':[['E.GEO.10.5.1']]}}}}})`);
+    const e = T.denemeKoy({kitlar: {AYT: kA}, rapor, pairs: {AYT: pairs}, perf});
+    // filterDefter looks up index.map via zAnahtar using ai:A:(ak+1)
+    const index = {map: new Map([['0:A:2', {bant: 'zor'}], ['1:A:1', {bant: 'orta'}]])};
+    assert.deepEqual(copy(T.filterDefter(d, {bantlar: new Set(['zor'])}, index).bolumler.map(b => [b.ders, b.sorular.map(s => s.a)])), [['Geometri', [2]]]);
+    // ogrenciListesi resolves okullarP and konu from the A-booklet section (ba)
+    const L = copy(T.ogrenciListesi('9002'));
+    assert.deepEqual(L.s[0].d, [['Matematik', 'AYT', [['3', '', 'E', 50, 60, 'Çokgenler']]], ['Geometri', 'AYT', [['2', '', 'D', 50, 25, 'Limit ve Süreklilik']]]]);
+    // konuKarnesi resolves konu and difficulty band from the A-booklet section (ba)
+    const kk = copy(T.konuKarnesi('9002', [e]));
+    assert.deepEqual(kk.s[0][2], ['Fonksiyon Kavramı ve Gösterimi', 'Çokgenler', 'Limit ve Süreklilik']);
+    assert.deepEqual(kk.s[0][3].map(b => [b[0], b[3].map(q => [q[0], q[1], q[3]])]), [['Matematik', [[1, 0, 1], [2, 1, -1]]], ['Geometri', [[3, 2, -1]]]]);
+    run('if(KONU_TAKIBI.__oku)KONU_TAKIBI.oku=KONU_TAKIBI.__oku;delete D.konutakibi'); T.sifirla();
+  });
   console.log('Yanlışlar defteri: ' + passed + ' tests passed.');
 })();

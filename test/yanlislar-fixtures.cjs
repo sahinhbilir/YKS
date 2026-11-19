@@ -258,9 +258,10 @@ function performansSpec({kod='27-YKS-1203',dersler=PERF_DERSLER,bozuk=[],ascii=f
     const t=[[60,800,tr(d.ad+' ('+d.n+' Soru )'),11]];
     ['Soru Sırası','A','B','C','D','E','BOŞ','Güçlük İndeksi (p)','Güçlük Anlamı','Ayırdedicilik İndeksi (r)','Ayırdedicilik Anlamı'].forEach((b,k)=>t.push([40+k*45,770,tr(b),7]));
     d.p.forEach((p,i)=>{
-      const y=740-i*14,dogru=harf.indexOf(d.anahtar[i]),isaret=bozuk.includes(sira)?(dogru+1)%5:dogru,sayi=[];
-      for(let o=0;o<6;o++){const ust=o===isaret?400+i:o===5?7:30+o,alt=o===isaret?100:o===5?9:60+o;sayi.push(ust,alt)}
-      const hucre=[(i+1)+'. Soru',...sayi.map(String),p.toFixed(2),p>.79?'çok kolay soru':p>.64?'kolay soru':p>.34?'orta soru':p>.19?'zor soru':'çok zor soru','0.31','başarılı'];
+      const y=740-i*14,dogru=harf.indexOf(d.anahtar[i]),isaret=bozuk.includes(sira)?(dogru+1)%5:dogru,sayi=[],ust=[],alt=[];
+      for(let o=0;o<6;o++){const u=o===isaret?400+i:o===5?7:30+o,a=o===isaret?100:o===5?9:60+o;ust.push(u);alt.push(a);sayi.push(u,a)}
+      const nGrup=ust.reduce((a,x)=>a+x,0),r=((ust[isaret]-alt[isaret])/nGrup).toFixed(2);
+      const hucre=[(i+1)+'. Soru',...sayi.map(String),p.toFixed(2),p>.79?'çok kolay soru':p>.64?'kolay soru':p>.34?'orta soru':p>.19?'zor soru':'çok zor soru',r,'başarılı'];
       let x=30;hucre.forEach((c,k)=>{t.push([x,y,tr(c),8]);x+=k===0?44:k===13?40:k===14?80:k===15?40:30});
       sira++;
     });

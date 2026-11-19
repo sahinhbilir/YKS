@@ -378,10 +378,11 @@ function haritaKur(pairs,es,rapor){
   });
   const sec=(t,n)=>es.bolumler.findIndex(b=>b.test===t&&n>b.off&&n<=b.off+b.n);
   const harf=(k,t,n)=>{const i=sec(t,n);return rapor.anahtar[k]?.[es.bolumler[i].bas+n-es.bolumler[i].off-1]};
+  const matGeo=i=>['MATEMATIK','GEOMETRI'].includes(courseKey(es.bolumler[i]?.ders||es.bolumler[i]?.ad));
   testler.forEach(({aToB},t)=>{
     for(let a=1;a<aToB.length;a++){
       const b=aToB[a],sa=sec(t,a),sb=sec(t,b);
-      if(sa!==sb)fail('A-'+a+' / B-'+b+' farklı derslere ait ('+es.bolumler[sa].ders+' ve '+es.bolumler[sb].ders+').');
+      if(sa!==sb&&!(matGeo(sa)&&matGeo(sb)))fail('A-'+a+' / B-'+b+' farklı derslere ait ('+es.bolumler[sa].ders+' ve '+es.bolumler[sb].ders+').');
       if(rapor.anahtar.A&&rapor.anahtar.B&&harf('A',t,a)!==harf('B',t,b))fail('A-'+a+' / B-'+b+' cevap anahtarlarıyla uyuşmuyor.');
     }
   });
@@ -439,7 +440,7 @@ function sayilanKural(rapor,es){
 /* ---------------------------------------------------------------- One student's defter */
 // Wrong or empty questions per ders, in booklet order. a = number in the A booklet, b = number in the student's own B booklet.
 // A student has one booklet per session (kits: {TYT:'A', AYT:'B'}); sections of a session the student did not sit are left out.
-// i = the section's index in the report, k = the question's position in the section (own booklet), ak = the same for the A booklet.
+// i = the section's index in the report, ai = the A booklet section's index in the report, k = the question's position in the section (own booklet), ak = the same for the A booklet.
 // Din Kültürü is compulsory for every student: it is never skipped. Ek Felsefe (S.FELSEFE) never counts.
 function defterKur(rapor,es,harita,ogr,acik){
   const atla=new Set();
@@ -453,7 +454,8 @@ function defterKur(rapor,es,harita,ogr,acik){
       const g=b.bas+k,isaret=ogr.cev[g],dogru=anahtar[g];
       if(!harfOK(dogru)||isaret===dogru)continue;
       const own=b.off+k+1,a=kit==='A'?own:(harita?.testler[b.test]?.bToA[own]??null);
-      sorular.push({test:b.test,i:b.ri??i,k,ak:a===null?null:a-b.off-1,own,a,b:kit==='B'?own:null,isaret,dogru,durum:isaret?'yanlis':'bos'});
+      const ba=a===null?b:(es.bolumler.find(x=>x.test===b.test&&a>x.off&&a<=x.off+x.n)||b);
+      sorular.push({test:b.test,i:b.ri??i,ai:ba.ri??es.bolumler.indexOf(ba),k,ak:a===null?null:a-ba.off-1,own,a,b:kit==='B'?own:null,isaret,dogru,durum:isaret?'yanlis':'bos'});
     }
     if(!sorular.length)return;
     sorular.sort((x,y)=>(x.a??x.own)-(y.a??y.own));
@@ -589,7 +591,7 @@ function performansCoz(pages,{tamAd=false}={}){
   const kitapcik=/\bA\s+kitap[cç][ıi][gğ][ıi](?:n[ıi])?(?!\p{L})/iu.test(metin.join(' '))?'A':null;
   return {kod,kitapcik,dersler};
 }
-// The file must be this exam's, its question counts must fit the report's sections, and the most marked option of the high group (ÜST) should be the report's A key.
+// The file must be this exam's, its question counts must fit the report's sections, and the printed discrimination index r should match (ÜST[key] − ALT[key]) / nGrup for the report's A key.
 // A few differences are normal (a cancelled or differently keyed question); more than about 10% means the mapping is wrong and the file is refused.
 function performansDogrula(perf,rapor){
   const fail=m=>{throw new Error(m+' Performans analizi dosyası eklenmedi.')};
@@ -601,12 +603,13 @@ function performansDogrula(perf,rapor){
     eslesen++;
     d.maddeler.forEach((m,q)=>{
       const dogru=rapor.anahtar.A?.[b.bas+q];if(!harfOK(dogru))return;
-      const say=m.ust.slice(0,5),mx=Math.max(...say);toplam++;
-      if(say['ABCDE'.indexOf(dogru)]!==mx)farkli++;
+      const idx='ABCDE'.indexOf(dogru),nGrup=m.ust.reduce((a,x)=>a+x,0);if(!(nGrup>0))return;
+      const hesapR=(m.ust[idx]-m.alt[idx])/nGrup;toplam++;
+      if(Math.abs(hesapR-m.r)>0.55*Math.pow(10,-(m.rBasamak||2))+1e-6)farkli++;
     });
   }
   if(!eslesen)fail('Cevap raporundaki derslerin hiçbiri dosyada ('+perf.kod+') bulunamadı.');
-  if(toplam&&farkli>toplam*.1)fail(farkli+' soruda en çok işaretlenen seçenek cevap anahtarından farklı ('+toplam+' sorudan); dosya bu cevap raporuna ait değil veya sorular eşleşmiyor.');
+  if(toplam&&farkli>toplam*.1)fail(farkli+' soruda ayırdedicilik değeri cevap anahtarıyla uyuşmuyor ('+toplam+' sorudan); dosya bu cevap raporuna ait değil veya sorular eşleşmiyor.');
   return {map,farkli,toplam};
 }
 /* ---------------------------------------------------------------- Soru zorluğu ve madde kalitesi (src/zorluk.js)
@@ -682,7 +685,7 @@ function difficultyIndex(rapor,es,source){
 // What is kept for one student: the status, the selected difficulty chips (bantlar: a Set of band keys, null = all five) and Kendi seviyesi
 // (options.kendi(ogr, bolum) -> the band keys of the student's window in that ders). index.map holds the section analysis; a question without a label is kept only while all five bands are selected.
 // With Kendi seviyesi the included bands of a ders = the selected chips ∪ the student's window for that ders.
-const zAnahtar=s=>s.i+':'+(s.a!==null?'A:'+(s.ak+1):'B:'+(s.k+1));
+const zAnahtar=s=>(s.a!==null?(s.ai??s.i)+':A:'+(s.ak+1):s.i+':B:'+(s.k+1));
 const BANT_ANAHTAR=()=>ZORLUK.BANTLAR.map(x=>x[0]);
 function filterDefter(d,options={},index={map:new Map()}){
   let yanlis=0,bos=0,unknown=0;
@@ -1815,8 +1818,8 @@ function ogrenciListesi(no){
     const d=defterKur(e.rapor,e.es,e.harita,o,acikBolumler(e.es,o,undefined,undefined,sayilanKural(e.rapor,e.es).f));if(!d.bolumler.length)continue;
     const op=okulOranlari(e),pm=perfHaritasi(e);
     out.push({ad:adOf(e),tarih:e.tarih||'',d:d.bolumler.map(b=>{const eb=e.es.bolumler[b.i],rb=e.rapor.bolumler[eb.ri??b.i]||{};
-      return [b.ders,b.oturum,b.sorular.map(s=>{const ak=s.a===null?null:s.a-eb.off-1;
-        return [s.a!==null?String(s.a):'B-'+s.own,s.isaret||'',s.dogru,yuzde(s.a!==null?op.get(eb.test+':'+s.a):null),yuzde(okullarP(pm,eb,ak)),ak===null?'':konuBul(e.rapor,rb.ad||'',ak)]})]})});
+      return [b.ders,b.oturum,b.sorular.map(s=>{const ba=s.a===null?eb:(e.es.bolumler.find(x=>x.test===eb.test&&s.a>x.off&&s.a<=x.off+x.n)||eb),rba=e.rapor.bolumler[ba.ri??e.es.bolumler.indexOf(ba)]||rb,ak=s.a===null?null:s.a-ba.off-1;
+        return [s.a!==null?String(s.a):'B-'+s.own,s.isaret||'',s.dogru,yuzde(s.a!==null?op.get(eb.test+':'+s.a):null),yuzde(okullarP(pm,ba,ak)),ak===null?'':konuBul(e.rapor,rba.ad||'',ak)]})]})});
   }
   return out.length?{v:1,s:out}:null;
 }
@@ -1856,9 +1859,10 @@ function konuKarnesi(no,sinavlar){
       const adlar=konuDizisi(e.rapor,rb.ad||'',b.n),sorular=[];
       for(let k=0;k<b.n;k++){
         const g=b.bas+k,dogru=anahtar[g];if(!harfOK(dogru))continue;
-        const own=b.off+k+1,a=kit==='A'?own:(e.harita?.testler?.[b.test]?.bToA?.[own]??null),ak=a===null?null:a-b.off-1;
-        const konu=ak===null?'':adlar[ak];if(konu&&!ki.has(konu)){ki.set(konu,konular.length);konular.push(konu)}
-        const z=za?.map.get(ri+':'+(a!==null?'A:'+(ak+1):'B:'+(k+1)))||null;
+        const own=b.off+k+1,a=kit==='A'?own:(e.harita?.testler?.[b.test]?.bToA?.[own]??null);
+        const ba=a===null?b:(e.es.bolumler.find(x=>x.test===b.test&&a>x.off&&a<=x.off+x.n)||b),ai=ba.ri??e.es.bolumler.indexOf(ba),rba=e.rapor.bolumler[ai]||rb,ak=a===null?null:a-ba.off-1;
+        const konu=ak===null?'':(ba===b?adlar[ak]:konuBul(e.rapor,rba.ad||'',ak));if(konu&&!ki.has(konu)){ki.set(konu,konular.length);konular.push(konu)}
+        const z=za?.map.get((a!==null?ai+':A:'+(ak+1):ri+':B:'+(k+1)))||null;
         sorular.push([own,konu?ki.get(konu):-1,z&&z.bant?BANT_NO(z.bant):-1,o.cev[g]===dogru?1:o.cev[g]?0:-1]);
       }
       if(sorular.length)bolumler.push([dersAdi(rb.ad||b.ders),ses,kit||'A',sorular]);
