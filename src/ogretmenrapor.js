@@ -303,12 +303,8 @@ const yonSinifi=(v,esik=.05)=>v>=esik?'ogr-y':v<=-esik?'ogr-k':'ogr-sabit';
 const ok=(v,esik=.05)=>v>=esik?'▲':v<=-esik?'▼':'■';
 // The squares' colours: one solid spectrum from deep red (far behind Türkiye) through orange and amber (about level) to deep
 // green (far ahead); the gap sets the place, the ends at ±RENK_UST points. A gap within chance sits nearer the middle (×0,6).
-const SPEKTRUM=[[-1,[196,69,58]],[-.5,[234,138,95]],[0,[242,200,107]],[.5,[156,207,134]],[1,[47,148,103]]];
-function spektrum(u){
-  u=Math.max(-1,Math.min(1,u));let i=0;while(i<SPEKTRUM.length-2&&u>SPEKTRUM[i+1][0])i++;
-  const [a,ca]=SPEKTRUM[i],[b,cb]=SPEKTRUM[i+1],t=(u-a)/(b-a);
-  return '#'+ca.map((v,k)=>Math.round(v+(cb[k]-v)*t).toString(16).padStart(2,'0')).join('');
-}
+// The spectrum is shared (GRAFIK_RENK.spektrum, src/grafik.js) and squashed around the middle: a 20-point gap is red, not orange.
+const {SPEKTRUM,spektrum}=GRAFIK_RENK;
 const kareYeri=c=>Math.max(-1,Math.min(1,c.fark/RENK_UST))*(c.durum==='belirsiz'?.6:1);
 function hucreRengi(c){return c?'background:'+spektrum(kareYeri(c)):''}
 // The key: the spectrum as one bar.

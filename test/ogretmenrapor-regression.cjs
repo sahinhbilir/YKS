@@ -124,8 +124,8 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // On the page (12/A): a coloured square per exam and no number in it; the figures are in the square's tooltip. Sözcükte Anlam
     // −57,5 behind beyond chance: deep red; the whole subject −20 within chance: nearer the middle (orange); Cümlede Anlam +55: deep green.
     put('__Z', { dersAd: 'TYT Türkçe', duzey: 12, kod: 'TÜRKÇE-T', siniflar: ['12/A'], seri: [], izgara: z }); const zh = run('OGRETMEN_RAPOR.izgaraHtml(__Z)');
-    assert.match(zh, /<tbody class="ogr-iz-grup"><tr><th scope="row" class="ogr-iz-konu">Sözcükte Anlam<\/th><td class="ogr-iz-h" title="Sözcükte Anlam · SENTETİK-KONU-1: öğrencileriniz %13, Türkiye %70"><i style="background:#c4453a"><\/i><\/td>/);
-    assert.match(zh, /<th scope="row" class="ogr-iz-konu">Cümlede Anlam<\/th><td class="ogr-iz-h" title="Cümlede Anlam · SENTETİK-KONU-1: öğrencileriniz %75, Türkiye %20"><i style="background:#2f9467"/);
+    assert.match(zh, /<tbody class="ogr-iz-grup"><tr><th scope="row" class="ogr-iz-konu">Sözcükte Anlam<\/th><td class="ogr-iz-h" title="Sözcükte Anlam · SENTETİK-KONU-1: öğrencileriniz %13, Türkiye %70"><i style="background:#a82022"><\/i><\/td>/);
+    assert.match(zh, /<th scope="row" class="ogr-iz-konu">Cümlede Anlam<\/th><td class="ogr-iz-h" title="Cümlede Anlam · SENTETİK-KONU-1: öğrencileriniz %75, Türkiye %20"><i style="background:#1a764e"/);
     assert.match(zh, /<tr class="ogr-iz-toplam"><th scope="row" class="ogr-iz-konu">Bütün konular<\/th><td class="ogr-iz-h ogr-iz-soluk" title="SENTETİK-KONU-1 · bütün konular"><i style="background:#[0-9a-f]{6}"><\/i><\/td>/);
     assert.equal(run(`OGRETMEN_RAPOR.hucreRengi(__Z.izgara.sinavlar[0])`), run(`OGRETMEN_RAPOR.hucreRengi({fark:__Z.izgara.sinavlar[0].fark*.6,durum:"geride"})`), 'within chance: nearer the middle of the spectrum');
     const metin = zh.replace(/<[^>]+>/g, ' ');
@@ -134,7 +134,7 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert.match(zh, /<tbody class="ogr-iz-grup"><tr><th scope="row" class="ogr-iz-konu">Sözcükte Anlam[\s\S]*?<\/tr><tr class="ogr-iz-alt"><th scope="row" class="ogr-iz-konu"><span class="ogr-kod">T\.12\.1\.1<\/span>a<\/th><td class="ogr-iz-kh ogr-iz-soluk" title="T\.12\.1\.1 · SENTETİK-KONU-1: öğrencileriniz %0, Türkiye %50"><i style="background:[^"]*"><\/i><\/td>/);
     assert.match(zh, /<div class="ogr-konular ogr-iz-kazanimli"><div class="ogr-konu-bas"><h4 class="ogr-alt-baslik">Konular<\/h4><label class="ogr-iz-ac ogr-ekran"><input type="checkbox"> Kazanımlar<\/label><\/div>/);
     // The key: four squares from red to green between two words, and the empty square.
-    assert.match(zh, /<div class="ogr-olcek"><span class="ogr-olcek-serit"><em>Türkiye’nin gerisinde<\/em><i class="ogr-spektrum" style="background:linear-gradient\(90deg,#c4453a 0%,#ea8a5f 25%,#f2c86b 50%,#9ccf86 75%,#2f9467 100%\)"><\/i><em>Türkiye’nin önünde<\/em><\/span><span class="ogr-olcek-bos"><i><\/i>soru yok<\/span><\/div>/);
+    assert.match(zh, /<div class="ogr-olcek"><span class="ogr-olcek-serit"><em>Türkiye’nin gerisinde<\/em><i class="ogr-spektrum" style="background:linear-gradient\(90deg,#a82022 0%,#cc3a30 20%,#ea8a5f 35%,#f2c86b 50%,#9ccf86 65%,#3e9e68 80%,#1a764e 100%\)"><\/i><em>Türkiye’nin önünde<\/em><\/span><span class="ogr-olcek-bos"><i><\/i>soru yok<\/span><\/div>/);
     put('__Z2', { dersAd: 'TYT Türkçe', duzey: 12, kod: 'TÜRKÇE-T', siniflar: ['12/A'], seri: [], izgara: { sinavlar: z.sinavlar, satir: z.satir.map((r, i) => i ? r : { ...r, alt: [], hucre: [null, ...r.hucre.slice(1)] }) } });
     assert.match(run('OGRETMEN_RAPOR.izgaraHtml(__Z2)'), /<td class="ogr-iz-h ogr-iz-bos" title="SENTETİK-KONU-1: soru yok"><\/td>/);
     // No kazanımlar: no toggle.
@@ -278,10 +278,18 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     assert(get(`KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular`) !== null);
     assert.deepEqual(run(`[...KONU_TAKIBI.ogrenciFark(KV2,{session:'TYT'}).ogrenciler[0].konular.values()].map(t=>t.ad).sort().join('|')`), 'Konusu eşleşmeyen kazanımlar|Sözcükte Anlam');
   });
-  await check('colours: one solid spectrum, deep red behind through amber to deep green ahead (ends at ±20 points), nearer the middle within chance', () => {
+  await check('colours: one solid spectrum, deep red behind through amber to deep green ahead (ends at ±20 points), squashed around the middle, nearer the middle within chance', () => {
     const c = (fark, durum) => run(`OGRETMEN_RAPOR.hucreRengi({fark:${fark},durum:'${durum}'})`);
-    assert.equal(c(-20, 'geride'), 'background:#c4453a'); assert.equal(c(20, 'onde'), 'background:#2f9467'); assert.equal(c(0, 'belirsiz'), 'background:#f2c86b');
-    assert.equal(c(-10, 'geride'), 'background:#ea8a5f'); assert.equal(c(10, 'onde'), 'background:#9ccf86');
+    assert.equal(c(-20, 'geride'), 'background:#a82022'); assert.equal(c(20, 'onde'), 'background:#1a764e'); assert.equal(c(0, 'belirsiz'), 'background:#f2c86b');
+    // squashed (2026-11-19): orange and light green at ±6 points, the clear red and green at ±12
+    assert.equal(c(-6, 'geride'), 'background:#ea8a5f'); assert.equal(c(6, 'onde'), 'background:#9ccf86');
+    assert.equal(c(-12, 'geride'), 'background:#cc3a30'); assert.equal(c(12, 'onde'), 'background:#3e9e68');
+    // a gap that touches 20 points is clearly red, not orange, even when it is within chance (drawn at 12)
+    assert.equal(c(-20, 'belirsiz'), 'background:#cc3a30');
+    const rgbK = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), kirmizi = h => { const [r, g, b] = rgbK(h.slice(11)); return r > 150 && g < 70 && b < 60 };
+    for (const f of [-12, -15, -20, -30]) { assert(kirmizi(c(f, 'geride')), 'red at ' + f); }
+    for (const f of [-20, -25]) { assert(kirmizi(c(f, 'belirsiz')), 'red within chance at ' + f); }
+    assert.equal(run('OGRETMEN_RAPOR.hucreRengi({fark:-20,durum:"geride"})'), 'background:' + run('GRAFIK_RENK.spektrum(-1)'), 'the shared spectrum');
     assert.equal(c(-40, 'geride'), c(-20, 'geride'), 'capped at 20 points');
     assert.equal(c(-10, 'belirsiz'), c(-6, 'geride'), 'within chance: nearer the middle, still a solid colour');
     const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -521,11 +529,11 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     }
     const [ay, de] = sayfalar;
     assert.match(ay, />Sentetik Öğretmen Ay<\/text>/); assert.match(ay, />TYT Matematik · 12\. sınıf<\/text>/);
-    // DE: the two numbers and the word, the topic rows in the order taught, Sözcükte Anlam deep red (the spectrum's end, #c4453a).
+    // DE: the two numbers and the word, the topic rows in the order taught, Sözcükte Anlam deep red (the spectrum's end, #a82022).
     assert.match(de, />Öğrencileriniz<\/text><text[^>]*>[\d,]+<\/text>/, 'the net');
     assert.match(de, />Türkiye<\/text>[\s\S]*?>▲ Türkiye’nin üstünde<\/text>[\s\S]*?>Fark (açılıyor|daralıyor|değişmedi)<\/text>/, 'where they stand and the gap’s move');
     assert(de.indexOf('>Sözcükte Anlam<') < de.indexOf('>Cümlede Anlam<') && de.indexOf('>Cümlede Anlam<') < de.indexOf('>Bütün konular<'), 'rows in the order taught, the whole subject last');
-    assert.match(de, /fill="#c4453a"/, 'a deep red square'); assert.match(de, /<linearGradient id="ogrSpektrum">/, 'the key: the spectrum as one bar');
+    assert.match(de, /fill="#a82022"/, 'a deep red square'); assert.match(de, /<linearGradient id="ogrSpektrum">/, 'the key: the spectrum as one bar');
     assert.match(de, />Türkiye’nin gerisinde<\/text>[\s\S]*>Türkiye’nin önünde<\/text>[\s\S]*>soru yok<\/text>/, 'one key at the foot');
     // The kazanımlar: under their topics when the rows stay readable (DE: three topics, three kazanımlar), else on the pages after.
     assert.match(de, />T\.12\.1\.1<\/text>[\s\S]*?>a<\/text>/, 'a kazanım row on the teacher’s page');
