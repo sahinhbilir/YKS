@@ -1,5 +1,6 @@
 /* Haritam (bağlantılı hafıza). Embedded by scripts/embed-haritam.cjs. The map panel is neutral in both themes. */
 .hm-sayfa{display:flex;flex-direction:column;gap:12px}
+.hm-sayfa>.yg-secim{align-self:flex-start;margin:0}
 .hm-cipler{display:flex;flex-wrap:wrap;gap:6px}
 .hm-alarmlar{display:flex;flex-wrap:wrap;gap:8px}
 .hm-alarm-cip{display:flex;align-items:center;gap:8px;border:1px solid var(--cizgi);background:var(--kagit);border-radius:9px;padding:6px 11px;font-size:12.5px;cursor:pointer;color:var(--murekkep)}

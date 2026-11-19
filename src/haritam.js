@@ -331,9 +331,15 @@ function kart(si, d, id) {
 
 /* ---- page ---- */
 let son = null; // last render, for the hover card
+function secici(secili) {
+  if (!uygun()) return '';
+  return '<div class="yg-secim muf-secim" role="group" aria-label="Hafızam">' +
+    [['liste', 'Hafızam'], ['harita', 'Hafıza haritam']].map(([k, ad]) =>
+      '<button type="button" class="' + (k === secili ? 'secili' : '') + '" aria-pressed="' + (k === secili) + '" data-hafiza-gor="' + k + '">' + ad + '</button>').join('') + '</div>';
+}
 function gorunum() {
   const si = EK.ogr, o = D.ogr[si], tum = dersleri(o);
-  const ogretmen = !ogrenciMi(), baslik = ogretmen ? 'Haritası · ' + kac(o && o.ad || '') : 'Haritam';
+  const ogretmen = !ogrenciMi(), baslik = ogretmen ? 'Haritası · ' + kac(o && o.ad || '') : 'Hafıza haritam';
   if (!tum.length) return '<div class="baslik"><h1>' + baslik + '</h1><p>Harita, YKS’ye hazırlanan öğrencinin konularını gösterir.</p></div>';
   const filtre = tum.includes(EK.haritamDers) ? EK.haritamDers : '', dersler = filtre ? [filtre] : tum;
   const d = durum(si), secili = d.satir.has(EK.haritamSecili) ? EK.haritamSecili : null, c = cizim(si, d, dersler, secili);
@@ -356,7 +362,7 @@ function gorunum() {
     '<span>dağılan halka: kalıcıydı, unutuluyor</span><span>yanıp sönen: dikkat isteyen temel</span><span>büyük nokta: çok konu ona dayanıyor</span></div>';
   return '<div class="hm-sayfa"><div class="baslik"><h1>' + baslik + '</h1><p>' + (ogretmen ? 'Öğrencinin konu haritası; bağlar bu defterden öğrenilen değerlerle hesaplanır. ' +
       '<button type="button" class="dugme mini" id="hmGeri">Ayarlar’a dön</button>' : 'Her nokta bir konu; ışığı ne kadar kalıcı olduğunu, rengi ne kadar hatırladığını gösterir. Bir konuya dokun.') + '</p></div>' +
-    (ogretmen ? '' : denemeDugmesi(si)) + cipler + (alarmlar ? '<div class="hm-alarmlar">' + alarmlar + '</div>' : '') +
+    (ogretmen ? '' : secici('harita') + denemeDugmesi(si)) + cipler + (alarmlar ? '<div class="hm-alarmlar">' + alarmlar + '</div>' : '') +
     // One card: over the map on a computer, under it on a phone (CSS); pinned until the topic is touched again.
     '<div class="hm-harita" data-hm-harita>' + c.svg + '<div class="hm-kart-yer' + (secili ? ' hm-sabit' : '') + '"' + (yer ? ' style="left:' + yer.x + '%;top:' + yer.y + '%"' : ' hidden') + ' data-hm-kart>' + kartHtml + '</div></div>' +
     lejant + '</div>';
@@ -373,6 +379,7 @@ function kartYeri(P, W, H, id) {
 
 /* ---- interaction: hover shows (fine pointer), click pins ---- */
 const inceIsaretci = () => { try { return matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) { return false; } };
+const acikMi = () => EK.sekme === 'haritam' || (EK.sekme === 'hafiza' && EK.hafizaGorunum === 'harita');
 function vurgula(svg, id) {
   if (!svg) return;
   const komsu = new Set([id]); KENAR.forEach(e => { if (e.a === id) komsu.add(e.b); if (e.b === id) komsu.add(e.a); });
@@ -385,7 +392,7 @@ let baglandi = false;
 function bagla() {
   if (baglandi || typeof document === 'undefined' || !document.addEventListener) return; baglandi = true;
   document.addEventListener('pointerover', ev => {
-    if (EK.sekme !== 'haritam' || EK.haritamSecili || !son || !inceIsaretci()) return;
+    if (!acikMi() || EK.haritamSecili || !son || !inceIsaretci()) return;
     const g = ev.target.closest && ev.target.closest('.hm-d'), harita = document.querySelector('[data-hm-harita]'), yer = harita && harita.querySelector('[data-hm-kart]');
     if (!harita || !yer) return;
     if (!g || !harita.contains(g)) { if (!ev.target.closest || !ev.target.closest('[data-hm-kart]')) { yer.hidden = true; vurgula(harita.querySelector('svg'), null); } return; }
@@ -402,7 +409,17 @@ function bagla() {
     }
     if (id === 'hmOgrAc') { const sel = document.getElementById('hmOgrSec'); EK.ogr = +sel.value; EK.haritamSecili = undefined; EK.haritamDers = undefined; EK.sekme = 'haritam'; ciz(); return; }
     if (id === 'hmGeri') { EK.sekme = 'ayarlar'; EK.ayarBolum = 'kalibrasyon'; ciz(); return; }
-    if (EK.sekme !== 'haritam') return;
+    const gor = ev.target && ev.target.closest && ev.target.closest('[data-hafiza-gor]');
+    if (gor && ogrenciMi()) {
+      const h = gor.dataset.hafizaGor === 'harita' && uygun();
+      EK.hafizaGorunum = h ? 'harita' : undefined;
+      if (!h) EK.haritamSecili = undefined;
+      EK.sekme = 'hafiza';
+      ciz();
+      try { document.querySelector('[data-hafiza-gor="' + (h ? 'harita' : 'liste') + '"]')?.focus(); } catch (e) {}
+      return;
+    }
+    if (!acikMi()) return;
     const ders = ev.target.closest && ev.target.closest('[data-hm-ders]');
     if (ders) { EK.haritamDers = ders.dataset.hmDers || undefined; EK.haritamSecili = undefined; ciz(); return; }
     const sec = ev.target.closest && (ev.target.closest('[data-hm-sec]') || ev.target.closest('.hm-d'));
@@ -410,7 +427,7 @@ function bagla() {
     if (ev.target.closest && ev.target.closest('.hm-svg') && EK.haritamSecili) { EK.haritamSecili = undefined; ciz(); }
   });
   document.addEventListener('keydown', ev => {
-    if (EK.sekme !== 'haritam' || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+    if (!acikMi() || (ev.key !== 'Enter' && ev.key !== ' ')) return;
     const g = ev.target.closest && ev.target.closest('.hm-d'); if (!g) return;
     ev.preventDefault(); EK.haritamSecili = EK.haritamSecili === g.dataset.hm ? undefined : g.dataset.hm; ciz();
   });
@@ -586,5 +603,5 @@ if (typeof document !== 'undefined' && document.addEventListener) document.addEv
 });
 // kaynaklar: map topic → the notebook topic ids that feed it (plan topics, then school units)
 const kaynaklar = () => { const {esler, birimler} = cozumle(); return new Map(V.konular.map(k => [k.id, (esler.get(k.id) || []).concat(birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))])); };
-return {gorunum, uygun, dersleri, gorunur, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA, denemeAyari, denemeyeGoreAyarla, denemeAyariniGeriAl, denemeDugmesi, DENEME_AYAR, denemeSeviyesi: seviye, denemeKanitlari: kanitlar};
+return {gorunum, secici, uygun, dersleri, gorunur, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA, denemeAyari, denemeyeGoreAyarla, denemeAyariniGeriAl, denemeDugmesi, DENEME_AYAR, denemeSeviyesi: seviye, denemeKanitlari: kanitlar};
 })();

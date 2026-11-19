@@ -143,12 +143,15 @@ test('who gets Haritam: every YKS student, with the topics of their exams (TYT f
   assert(g.has('cogEkosistem') && g.has('inkWW2') && !g.has('psiSurec') && !g.has('manKlasik'), 'EA: AYT Coğrafya-1 and Tarih-1, no Felsefe grubu');
   a.run("D.ogr[0].alan='SÖZ'"); g = gor();
   assert(g.has('psiSurec') && g.has('tytOran') && !g.has('aytLimitOzellik'), 'SÖZ: the Felsefe grubu and TYT Matematik, no AYT Matematik');
-  assert(a.json('SEKMELER().map(s=>s[0])').includes('haritam'));
+  assert(!a.json('SEKMELER().map(s=>s[0])').includes('haritam'), 'not a separate top-bar tab');
+  assert.match(a.run("EK.hafizaGorunum=undefined;gorunumHafiza()"), /data-hafiza-gor="harita">Hafıza haritam<\/button>/, 'switcher inside Hafızam');
+  assert.match(a.run("EK.hafizaGorunum='harita';gorunumHafiza()"), /<h1>Hafıza haritam<\/h1>[\s\S]*<svg class="hm-svg"/, 'Hafıza haritam opens inside Hafızam');
   a.run("D.ogr[0].alan='DİL'"); g = gor(); assert(g.has('trkParagrafAnlam') && g.has('tytOran') && !g.has('edSiirBilgi'), 'DİL: every TYT topic, no AYT');
   a.run("delete D.ogr[0].alan;D.ogr[0].sinif=10"); assert.equal(a.json('HARITAM.dersleri(D.ogr[0]).length'), 13, 'no field yet: every subject');
   assert.equal(gor().size, V.length);
   a.run("D.ogr[0].sinavTuru='LGS'"); assert.deepEqual(a.json('HARITAM.dersleri(D.ogr[0])'), []);
-  assert(a.json('ETKINLIK_SEKMELER').includes('haritam'), 'visits are counted like other pages');
+  assert.doesNotMatch(a.run("EK.hafizaGorunum=undefined;gorunumHafiza()"), /data-hafiza-gor/, 'non-YKS student has no map switcher');
+  assert(a.json('ETKINLIK_SEKMELER').includes('haritam') && a.run("ETKINLIK_SEKME_ADI('haritam')") === 'Hafıza haritam', 'visits are counted like other pages');
   a.run("D.rol='rehber'"); assert(!a.json('SEKMELER().map(s=>s[0])').includes('haritam'), 'not a teacher page');
 });
 

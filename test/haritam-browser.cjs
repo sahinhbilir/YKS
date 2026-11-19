@@ -8,7 +8,7 @@ const out=process.env.YKS_UI_ARTIFACTS||fs.mkdtempSync(path.join(os.tmpdir(),'yk
 const kur=()=>{
   D=varsayilan();D.rol='ogrenci';D.ayar.testTarih='2026-11-11';D.ayar.planBasi='2026-08-31';D.ayar.donemBasi='2026-08-31';D.ayar.donemElle=true;
   D.ogr=[{no:1,ad:'Sentetik Öğrenci',sube:'201',alan:'SAY',sinif:12,kap:6,off:[6],aktif:true,ilkAktif:gunNo('2026-08-31'),maddeler:[],rutin:{},dakika:{hi:200,hs:290,deneme:false},telafiGunKap:3}];
-  EK={ogr:0,sekme:'haritam',hafta:null,girisAcik:{}};bulutYedekPlanla=()=>{};
+  EK={ogr:0,sekme:'hafiza',hafta:null,girisAcik:{}};bulutYedekPlanla=()=>{};
   kendiPlanKur(0,Object.fromEntries(kendiPlanDersleri('SAY').map(d=>[d,'bilir'])),'2027-04-23');
   const k=HARITAM.kaynaklar(),b=bugunNo(),plan={geoAci:[[-75,3],[-60,3],[-30,3]],geoDik:[[-55,3],[-35,2],[-10,3]],tytKok:[[-80,3],[-50,3],[-15,3],[-2,4]],
     aytBirim:[[-16,3],[-6,3]],aytOzdeslik:[[-10,2],[-3,1]],fizVektor:[[-60,3],[-30,3]],fizAtis:[[-12,3]]},satir=[];
@@ -23,8 +23,10 @@ const kur=()=>{
    page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>{errors.push('dialog: '+d.message());d.accept()});
    await context.route('**/*',r=>r.request().url().startsWith('http://localhost/')?r.fulfill({status:200,contentType:'text/html',body:html}):r.abort());
    await page.goto('http://localhost/?dev=1');await page.waitForFunction(()=>typeof ciz==='function'&&typeof D==='object'&&ACILIS_KAYIT>=0);
-   await page.evaluate(kur);await page.locator('.hm-sayfa').waitFor();
-   assert.equal(await page.locator('button[data-sekme="haritam"]').count(),1,'Haritam in the menu');
+   await page.evaluate(kur);await page.locator('.hafiza-sayfa').waitFor();
+   assert.equal(await page.locator('button[data-sekme="haritam"]').count(),0,'no separate Haritam tab in the top menu');
+   await page.locator('button[data-hafiza-gor="harita"]').click();await page.locator('.hm-sayfa').waitFor();
+   assert.equal(await page.locator('button[data-sekme="hafiza"]').getAttribute('aria-current'),'page','inside the Hafızam tab');
    assert.equal(await page.locator('.hm-d').count(),await page.evaluate(()=>HARITAM.gorunur(D.ogr[0]).size),'every topic of the student\'s exams drawn');
    const zemin=await page.evaluate(()=>getComputedStyle(document.querySelector('.hm-svg')).backgroundColor);
    assert.equal(zemin,tema==='dark'?'rgb(14, 14, 15)':'rgb(255, 255, 255)','neutral sky, never blue');

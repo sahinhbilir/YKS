@@ -719,8 +719,8 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     // The page: both groups, the tiles, the switch and the picker for a topic that has no result yet.
     a.run("EK.sekme='hafiza';EK.hafizaAcik=undefined"); h = a.run('gorunumHafiza()');
     assert.match(h, /<h1>Hafızam<\/h1>/); assert.match(h, /Aklında olanlar <span class="mini">2 konu/); assert.doesNotMatch(h, /Unutmaya başladıkların/);
-    // A quiet page: one sentence, one line of summary; no tiles. The settings are folded at the end.
-    assert.match(h, /<h1>Hafızam<\/h1><p>Çubuk kızardıkça konuyu unutuyorsun\. Çalıştığında “Çalıştım”a bas\.<\/p><\/div><p class="hf-durum"><b>0<\/b> konu unutuluyor · <b>2<\/b> konu aklında<\/p>/);
+    // A quiet page: one sentence, the Hafızam / Hafıza haritam switcher, one line of summary; no tiles. The settings are folded at the end.
+    assert.match(h, /<h1>Hafızam<\/h1><p>Çubuk kızardıkça konuyu unutuyorsun\. Çalıştığında “Çalıştım”a bas\.<\/p><\/div><div class="yg-secim muf-secim"[^>]*>[\s\S]*?data-hafiza-gor="harita">Hafıza haritam<\/button><\/div><p class="hf-durum"><b>0<\/b> konu unutuluyor · <b>2<\/b> konu aklında<\/p>/);
     assert.doesNotMatch(h, /et-ozet-kart|dp-kpi-ad/); assert.match(h, /<details class="kart hf-ayar"><summary>Ayarlar<\/summary>/);
     assert.match(h, /<input type="checkbox" id="ogrSerbest"><span><b>Kendi programımı kendim yaparım<\/b>/);
     // Konu anlatımları stay behind a button. Open: every topic of the student as a konu anlatımı to drag onto a day, and the
@@ -738,7 +738,7 @@ const sonraki = (a, h) => a.run(`sonrakiHafta(0,${h})`);
     // The menu and the tab; teachers have neither the page nor the card.
     assert.deepEqual(a.json("[SEKME_OGRENCI.find(s=>s[0]==='hafiza'),MENU_OGRENCI[0][1]]"), [['hafiza', 'Hafızam'], []]);
     assert.deepEqual(a.json('[SEKME_OGRENCI[0][0],MENU_OGRENCI[0][0],MENU_OGRENCI.find(m=>m[0]===\'plan\')[1],OGRENCI_ACILIS]'), ['hafiza', 'hafiza', ['harita', 'giris'], 'hafiza'], 'Hafızam: the first tab, a tab of its own, the landing page');
-    assert.deepEqual(a.json('[SEKME_OGRENCI[1][0],MENU_OGRENCI[1][0]]'), ['haritam', 'haritam'], 'Haritam right after Hafızam');
+    assert.deepEqual(a.json('[SEKME_OGRENCI[1][0],MENU_OGRENCI[1][0]]'), ['plan', 'plan'], 'Hafıza haritam lives inside Hafızam, so Planım is next');
     a.run("D.rol='rehber'"); assert.equal(a.run('hafizaAnaKarti(0)'), ''); assert.equal(a.run('gorunumHafiza()'), '<div class="baslik"><h1>Hafızam</h1></div>'); a.run("D.rol='ogrenci'");
   });
   await check('hafizam-lists-every-taught-topic-marks-long-silence-red-and-takes-the-students-own-speed-state-and-basket', async a => {
