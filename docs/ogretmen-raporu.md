@@ -36,6 +36,10 @@ The rehber öğretmen prints it (**Yazdır / PDF**) and hands each teacher their
 
 Each teacher's subject is split by grade (an exam belongs to one grade) and by exam subject: one block per *TYT Matematik · 12. sınıf*, *AYT Matematik · 12. sınıf* …
 
+**AYT subjects follow the class's field** (2026-11-19, `sinifAlir`). An AYT subject belongs to one ÖSYM test and a field takes two: SAY Matematik + Fen, EA TDE–Sosyal-1 + Matematik, SÖZ TDE–Sosyal-1 + Sosyal-2. A class counts in an AYT block only when the subject's test is one of its field's, so an EA class taught Biyoloji gives its teacher TYT Biyoloji only, even when a few of its students marked AYT Biyoloji questions. A class's field: the fields at least a third of its students have in the notebook (the student list's alan, matched by şube); without them, the AYT tests more than half of its students answered in the school's AYT lists; unknown, every test (as before). On a student's own sheet (Türkiye karşılaştırması) the AYT blocks are the student's own field's (their alan, else their class's).
+
+**No SÖZ subjects** (2026-11-19): AYT Tarih-2, Coğrafya-2, Felsefe grubu and Din kültürü (the Sosyal-2 test, taken only by SÖZ) are left out of the report, the teachers' and the students' sheets alike. TDE–Sosyal-1 (Edebiyat, Tarih-1, Coğrafya-1) stays: it is EA's too.
+
 **Sınıf düzeyi** (2026-11-19) is a row of buttons, one a grade (*12. sınıf*, *11. sınıf* …), the highest chosen first and one always chosen: there is no *Bütün düzeyler*. The page shows that grade's teachers, the classes of that grade under their names, its blocks, and the grade in the page title (also in print and on the PDF). The student's report (Türkiye karşılaştırması, öğrenci) has the same buttons.
 
 ## A block

@@ -228,6 +228,36 @@ function izgaraKur(sinavlar,konular){
 // The page's shared context: the lists (ANALIZ), Konu Takibi and, on first use, every exam's topic comparison. One render reads
 // each source once, whatever the number of teachers and blocks.
 function baglam(k,v){return {k,v,fark:new Map(),dersSinav:new Map(),tarih:sinavTarihi()}}
+/* Whose AYT subjects (2026-11-19). An AYT subject belongs to one ÖSYM test and a field takes two (SAY: Matematik + Fen; EA: TDE–Sosyal-1 + Matematik;
+   SÖZ: TDE–Sosyal-1 + Sosyal-2). A class counts in an AYT subject only when the subject's test is one of its field's: an EA class's few answers in AYT
+   Biyoloji are not its biology teacher's result. A class's tests: the fields at least a third of its students have in the notebook (D.ogr alan); without
+   them, the AYT tests more than half of its students answered in the school's AYT lists; unknown, every test. A student (Türkiye karşılaştırması) is
+   judged on their own field's tests (their alan, else their class's). The SÖZ-only subjects (Sosyal-2: Tarih-2, Coğrafya-2, Felsefe grubu, Din kültürü)
+   are left out of the report. */
+const AYT_TEST={EDB:'tde',TAR1:'tde','COĞ1':'tde',TAR2:'sb2','COĞ2':'sb2',FELGR:'sb2','DİN2':'sb2',AMAT:'mat',AGEO:'mat','AFİZ':'fen','AKİM':'fen','ABİY':'fen'};
+const ALAN_TEST={SAY:['mat','fen'],EA:['tde','mat'],'SÖZ':['tde','sb2']};
+const TEST_ANAHTAR={tde:'EDB',sb2:'TAR2',mat:'AMAT',fen:'AFİZ'};
+const SOZ_DERSLERI=new Set(['TAR2','COĞ2','FELGR','DİN2']);
+const defterOgrencileri=()=>typeof D!=='undefined'&&Array.isArray(D.ogr)?D.ogr.filter(o=>o&&!o.silindi):[];
+function sinifTestleri(c){
+  if(c.testler)return c.testler;
+  const out=new Map(),alanlar=new Map(),cevap=new Map();
+  for(const o of defterOgrencileri()){const cl=sinifK(o.sube),a=ALAN_TEST[o.alan]?o.alan:null;if(!cl||!a)continue;const m=alanlar.get(cl)||new Map();m.set(a,(m.get(a)||0)+1);alanlar.set(cl,m)}
+  for(const [cl,m] of alanlar){const n=[...m.values()].reduce((x,y)=>x+y,0),t=new Set();for(const [a,k] of m)if(3*k>=n)for(const x of ALAN_TEST[a])t.add(x);out.set(cl,t)}
+  const k=c.k,den=typeof SIRALAMA!=='undefined'&&typeof SIRALAMA.denedi==='function'?SIRALAMA.denedi:null;
+  if(k&&k.t&&den)for(const s of k.t.sinavlar||[])for(const o of Object.values(s.ayt||{})){
+    const kisi=k.t.kisi.get(o.no),cl=kisi&&sinifK(kisi.sinif);if(!cl||out.has(cl))continue;
+    const m=cevap.get(cl)||{n:0};m.n++;for(const [t,a] of Object.entries(TEST_ANAHTAR))if(den(o,a)===true)m[t]=(m[t]||0)+1;cevap.set(cl,m);
+  }
+  for(const [cl,m] of cevap){const t=new Set(Object.keys(TEST_ANAHTAR).filter(x=>2*(m[x]||0)>m.n));if(t.size)out.set(cl,t)}
+  return c.testler=out;
+}
+const sinifAlir=(c,cl,anahtar)=>{const t=sinifTestleri(c).get(cl);return !t||t.has(AYT_TEST[anahtar])};
+function ogrenciAlir(c,kisi,anahtar){
+  if(!c.ogrAlan){c.ogrAlan=new Map();for(const o of defterOgrencileri())if(ALAN_TEST[o.alan]&&!c.ogrAlan.has(String(o.no).trim()))c.ogrAlan.set(String(o.no).trim(),o.alan)}
+  const a=c.ogrAlan.get(String(kisi.no).trim());
+  return a?ALAN_TEST[a].includes(AYT_TEST[anahtar]):!sinifK(kisi.sinif)||sinifAlir(c,sinifK(kisi.sinif),anahtar);
+}
 const tarihi=c=>c.tarih||(c.tarih=sinavTarihi());
 // An exam's day in Konu Takibi (ISO, or null): its own date, else the one the school lists (Sıralamalar) give it, as on the
 // Konu Takibi page and in the net chart. Most karneler print no date: sorted by '' they came before every dated exam.
@@ -261,14 +291,15 @@ function sayfaBaglami(){
   return baglam(k,v);
 }
 // duzey: only that grade's classes (null: every grade). A block lists only the classes that had data in it (an SAY class taught
-// Türk dili ve edebiyatı has no AYT Edebiyat).
+// Türk dili ve edebiyatı has no AYT Edebiyat), and an AYT block only the classes whose field takes its test (sinifAlir); no SÖZ-only subject.
 function ogretmenModeli(o,c=sayfaBaglami(),duzey=null){
   const k=c.k,v=c.v,bloklar=[];
   for(const d of o.dersler){
     const duzeyler=[...new Set(d.siniflar.map(duzeyi))].filter(x=>x!==null&&(duzey===null||x===duzey)).sort((a,b)=>b-a);
     for(const duz of duzeyler){
       for(const [oturum,anahtar,kod] of d.kodlar){
-        const siniflar=((d.kodSinif&&d.kodSinif[kod])||d.siniflar).filter(c=>duzeyi(c)===duz);if(!siniflar.length)continue;
+        if(oturum==='AYT'&&SOZ_DERSLERI.has(anahtar))continue;
+        const siniflar=((d.kodSinif&&d.kodSinif[kod])||d.siniflar).filter(x=>duzeyi(x)===duz&&(oturum!=='AYT'||sinifAlir(c,x,anahtar)));if(!siniflar.length)continue;
         const gorulen=new Set(),seri=agBagla(ozetSorulari(netSerisi(k,siniflar,oturum,anahtar,kod,gorulen),v,kod),v,kod),izgara=konuIzgarasi(v,siniflar,oturum,kod,c,gorulen);
         if(!seri.length&&!izgara)continue;
         bloklar.push({ders:d.ad,duzey:duz,siniflar:siniflar.filter(x=>gorulen.has(x)),oturum,kod,dersAd:dersEtiketi(kod),seri,izgara});
@@ -577,6 +608,7 @@ const TUM_KODLAR=(()=>{const m=new Map();for(const [,,l] of DERSLER)for(const k 
 function ogrenciModeli(kisi,c){
   const nolar=new Set([String(kisi.no)]),sinif=sinifK(kisi.sinif),bloklar=[];
   for(const [oturum,anahtar,kod] of TUM_KODLAR){
+    if(oturum==='AYT'&&(SOZ_DERSLERI.has(anahtar)||!ogrenciAlir(c,kisi,anahtar)))continue;
     const seri=agBagla(ozetSorulari(netSerisi(c.k,[],oturum,anahtar,kod,null,nolar),c.v,kod),c.v,kod),izgara=konuIzgarasi(c.v,[],oturum,kod,c,null,nolar);
     if(!seri.length&&!izgara)continue;
     bloklar.push({ders:dersEtiketi(kod),duzey:duzeyi(sinif),siniflar:sinif?[sinif]:[],oturum,kod,dersAd:dersEtiketi(kod),seri,izgara,y:YAZI.ogrenci});
