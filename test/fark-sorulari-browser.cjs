@@ -1,7 +1,8 @@
 // Yanlışlar defteri → Ders öğretmenleri: fark soruları in a real browser (real pdf.js cut-outs, real pdf-lib PDF), at 1280 light and 390 dark.
-// A 60-student TYT (Türkçe and Matematik, 20 questions each) whose Performans analizi puts a few questions 22-30 points above our students, and
-// the small AYT group of the fixture with two questions 23 and 25 points behind. Timetables give each subject one teacher over 12/A and 12/B:
-// a sheet per teacher and subject, the data in words, no points and no colours. Synthetic data only. Set YKS_UI_ARTIFACTS to keep the files.
+// A 60-student TYT (Türkçe and Matematik, 20 questions each) whose Performans analizi puts a few questions 22-30 points above our students (behind
+// beyond chance) and the rest within 3-5 points (chance), and the small AYT group of the fixture (three A students) with two near-certain questions
+// they missed once. Timetables give each subject one teacher over 12/A and 12/B: a sheet per teacher and subject, the data in words, no points and
+// no colours; the questions are picked by the chance test (z ≤ −1,96), with no threshold to set. Synthetic data only. Set YKS_UI_ARTIFACTS to keep the files.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {chromium}=require('playwright'),{PDFDocument}=require('pdf-lib'),Y=require('./yanlislar-fixtures.cjs');
 const paket=ad=>{for(const d of [...(process.env.NODE_PATH||'').split(path.delimiter),path.join(__dirname,'..','node_modules')].filter(Boolean)){const p=path.join(d,ad);if(fs.existsSync(path.join(p,'package.json')))return p}throw new Error('Install '+ad+' (see .github/workflows/verify.yml)')};
@@ -26,7 +27,7 @@ const p=[0,1].map(t=>Array.from({length:20},(_,i)=>{
   return Math.round(tr*100)/100;
 }));
 const perfDersler=[{ad:'TÜRKÇE-T',n:20,anahtar:sim.keyA.slice(0,20),p:p[0]},{ad:'MATEMATİK-T',n:20,anahtar:sim.keyA.slice(20,40),p:p[1]},
-  {ad:'TÜRK DİLİ VE EDB-A',n:3,anahtar:Y.AYT_KEY_A.slice(0,3),p:[.85,.9,.25]},{ad:'TARİH.1-A',n:2,anahtar:Y.AYT_KEY_A.slice(3,5),p:[.92,.45]},{ad:'MATEMATİK-A',n:3,anahtar:Y.AYT_KEY_A.slice(5,8),p:[.6,.35,.1]}];
+  {ad:'TÜRK DİLİ VE EDB-A',n:3,anahtar:Y.AYT_KEY_A.slice(0,3),p:[.85,.99,.25]},{ad:'TARİH.1-A',n:2,anahtar:Y.AYT_KEY_A.slice(3,5),p:[.98,.45]},{ad:'MATEMATİK-A',n:3,anahtar:Y.AYT_KEY_A.slice(5,8),p:[.6,.35,.1]}];
 // Timetables: one teacher per lesson over both classes; Türkçe beside Türk dili ve edebiyatı makes the latter AYT Edebiyat.
 const PLAN=Object.fromEntries(['12/A','12/B'].map((c,i)=>[c,{kod:String(301+i),ts:1,saatler:['09.00','10.00','11.00','12.00'],dersler:[[0,'09.00','TÜRKÇE','SENTETİK ÖĞRETMEN AY'],[0,'10.00','TÜRK DİLİ VE EDEBİYATI','SENTETİK ÖĞRETMEN EDB'],[0,'11.00','MATEMATİK','SENTETİK ÖĞRETMEN MAT'],[0,'12.00','TARİH','SENTETİK ÖĞRETMEN TAR']]}]));
 const DOSYALAR=()=>[
@@ -60,7 +61,7 @@ const DOSYALAR=()=>[
   await page.evaluate(PL=>{const p=ETUTPLANI.oku().plan;p.programlar=PL;D.etutPlani=ETUTPLANI.dogrula(JSON.parse(JSON.stringify(p)));ciz()},PLAN);
   await page.locator('[data-yd-gorunum="ders"]').click();await hazir();
   assert.equal(await page.locator('[data-yd-gorunum="ders"]').getAttribute('aria-pressed'),'true');
-  assert.equal(await page.locator('[data-yd-f="esik"]').inputValue(),'20');
+  assert.equal(await page.locator('[data-yd-f="esik"]').count(),0,'no threshold to set');
   assert.deepEqual(await page.locator('[data-yd-f="ogretmen"] option').allInnerTexts(),['Bütün öğretmenler','Sentetik Öğretmen Ay','Sentetik Öğretmen Edb','Sentetik Öğretmen Mat','Sentetik Öğretmen Tar']);
   assert.equal(await page.locator('[data-yd-f="alan"],[data-yd-f="sube"],[data-yd-f="ogr"]').count(),0,'no student filters');
   const sayfalar=await page.locator('.yd-fd').evaluateAll(l=>l.map(a=>a.dataset.ydFd));
@@ -69,29 +70,30 @@ const DOSYALAR=()=>[
   const sorular=await page.locator('.yd-fd .yd-fs').evaluateAll(l=>l.map(f=>({sayfa:f.closest('.yd-fd').dataset.ydFd,no:f.querySelector('b').textContent,okul:+f.dataset.ydOkul,okullar:+f.dataset.ydOkullar,cumle:f.querySelector('.yd-fs-cumle').innerText,bilgi:f.querySelector('.yd-fs-bilgi').innerText})));
   const of=ad=>sorular.filter(s=>s.sayfa.endsWith(ad));
   assert.deepEqual(of('TYT Türkçe').map(s=>s.no),GERI[0].map(a=>'Soru '+a));assert.deepEqual(of('TYT Matematik').map(s=>s.no),GERI[1].map(a=>'Soru '+a));
-  assert(sorular.every(s=>s.okullar-s.okul>=20),'every question at least 20 points behind');
+  assert(sorular.every(s=>s.okullar>s.okul),'every question behind');
+  // the model's own test: every listed question is behind beyond chance, every other compared question is not
+  const zler=await page.evaluate(()=>{const M=YANLISLAR.durumu().fark;return M.sayfalar.flatMap(g=>g.denemeler.flatMap(d=>d.sorular.map(x=>x.z)))});
+  assert(zler.length===sorular.length&&zler.every(z=>z<=-1.96),'z ≤ −1,96: '+zler);
   for(const s of sorular)assert.match(s.cumle,/^Sınav okullarında öğrencilerin %\d+’(ı|i|u|ü|sı|si|su|sü) bu soruyu doğru cevapladı; şubelerinizde (yalnızca %\d+’(ı|i|u|ü|sı|si|su|sü)|kimse doğru cevaplamadı)\.$/,s.cumle);
-  assert.deepEqual(of('AYT Türk Dili ve Edebiyatı').map(s=>[s.no,s.cumle]),[['Soru 2','Sınav okullarında öğrencilerin %90’ı bu soruyu doğru cevapladı; şubelerinizde yalnızca %67’si.']],'three A students (the B one has no AYT map)');
-  assert.deepEqual(of('AYT Tarih-1').map(s=>[s.no,s.okul,s.okullar]),[['Soru 4',67,92]]);
+  assert.deepEqual(of('AYT Türk Dili ve Edebiyatı').map(s=>[s.no,s.cumle]),[['Soru 2','Sınav okullarında öğrencilerin %99’u bu soruyu doğru cevapladı; şubelerinizde yalnızca %67’si.']],'three A students (the B one has no AYT map); Soru 1 (67 against 85) may be chance');
+  assert.deepEqual(of('AYT Tarih-1').map(s=>[s.no,s.okul,s.okullar]),[['Soru 4',67,98]]);
   assert.match(of('AYT Türk Dili ve Edebiyatı')[0].bilgi,/^Doğru cevap: B\s+En çok işaretlenen yanlış: C \(%33\)\s+Boş bırakan: %0$/);
   assert.match(await page.locator('.yd-fd').first().locator('.yd-kimlik').nth(2).innerText(),/^60 öğrenci · 3 \/ 20 soru$/);
   const metin=await page.locator('#ydBaski').innerText();assert.doesNotMatch(metin,/puan|[Ff]ark|tesadüf/,'no points and no gap on the sheets');
   assert.equal(await page.locator('#ydBaski [style*="background"]').count(),0,'no colours on the sheets');
-  assert.match(await page.locator('.yd-fs-durum').innerText(),/Bu eşikte geride kalınan soru yok: Sentetik Öğretmen Mat · AYT Matematik/);
+  assert.match(await page.locator('.yd-fs-durum').innerText(),/Listelenen sorular: şubelerin doğru oranının, öğrenci sayısına göre tesadüfle açıklanamayacak kadar sınav okullarının altında kaldığı sorular \(z ≤ −1,96\)\./);
+  assert.match(await page.locator('.yd-fs-durum').innerText(),/Belirgin biçimde geride kalınan soru yok: Sentetik Öğretmen Mat · AYT Matematik/);
   // the cut-outs are real pictures of the booklet
   const tinta=await page.evaluate(()=>[...document.querySelectorAll('#ydBaski img')].map(i=>{const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;const x=c.getContext('2d');x.drawImage(i,0,0);const d=x.getImageData(0,0,c.width,c.height).data;let n=0;for(let k=0;k<d.length;k+=4)if(d[k]<200)n++;return n}));
   assert(tinta.length===7&&tinta.every(n=>n>200),'seven real cut-outs: '+tinta);
   await noScroll('fark soruları');
   await page.screenshot({path:path.join(out_dir,'fark-sayfa-'+width+'-'+theme+'.png'),fullPage:true});
   await page.locator('.yd-fd').first().screenshot({path:path.join(out_dir,'fark-ders-'+width+'-'+theme+'.png')});
-  // a higher threshold keeps fewer; one teacher's sheets only
-  await page.locator('[data-yd-f="esik"]').selectOption('25');await hazir();
-  assert(await page.locator('.yd-fd .yd-fs').count()<sorular.length);assert((await page.locator('.yd-fd .yd-fs').evaluateAll(l=>l.map(f=>f.dataset.ydOkullar-f.dataset.ydOkul))).every(f=>f>=25));
-  await page.locator('[data-yd-f="esik"]').selectOption('20');await hazir();
+  // one teacher's sheets only
   await page.locator('[data-yd-f="ogretmen"]').selectOption('Sentetik Öğretmen Mat');await hazir();
   assert.deepEqual(await page.locator('.yd-fd').evaluateAll(l=>l.map(a=>a.dataset.ydFd)),['Sentetik Öğretmen Mat · TYT Matematik']);
   const [dl1]=await Promise.all([page.waitForEvent('download'),page.locator('[data-yd-pdf]').click()]);
-  assert.equal(dl1.suggestedFilename(),'Fark_sorulari_1203_SentetikOgretmenMat_20_puan.pdf');assert.equal((await PDFDocument.load(fs.readFileSync(await dl1.path()))).getPageCount(),1);
+  assert.equal(dl1.suggestedFilename(),'Fark_sorulari_1203_SentetikOgretmenMat.pdf');assert.equal((await PDFDocument.load(fs.readFileSync(await dl1.path()))).getPageCount(),1);
   await page.locator('[data-yd-f="ogretmen"]').selectOption('');await hazir();
 
   /* ---------- print: a sheet a page ---------- */
@@ -107,7 +109,7 @@ const DOSYALAR=()=>[
 
   /* ---------- PDF indir: the same sheets built in the browser ---------- */
   const [dl]=await Promise.all([page.waitForEvent('download'),page.locator('[data-yd-pdf]').click()]);
-  assert.equal(dl.suggestedFilename(),'Fark_sorulari_1203_20_puan.pdf');
+  assert.equal(dl.suggestedFilename(),'Fark_sorulari_1203.pdf');
   const buf=fs.readFileSync(await dl.path()),belge=await PDFDocument.load(buf);
   assert.equal(belge.getPageCount(),4,'one page per sheet here');
   const [w,h]=[belge.getPage(0).getWidth(),belge.getPage(0).getHeight()];assert(Math.abs(w-595.28)<1&&Math.abs(h-841.89)<1,'A4 portrait');

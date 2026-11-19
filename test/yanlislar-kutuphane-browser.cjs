@@ -110,7 +110,7 @@ const IDB_OKU=()=>new Promise((ok,red)=>{
   assert.match(await page.locator('.yd-arac .yd-ozet').first().innerText(),/^4 öğrenci · \d+ soru · 2 deneme$/);
   assert.deepEqual(await page.locator('.yd-arac button').allInnerTexts(),['Seçili denemeler için yazdır','PDF indir']);
   // the ders ticks are the union by name; the exams' options apply together
-  assert.deepEqual(await page.locator('[data-yd-ders]').evaluateAll(l=>l.map(c=>c.dataset.ydDers)),['Türkçe','Tarih','Din Kültürü','Ek Felsefe']);
+  assert.deepEqual(await page.locator('[data-yd-ders]').evaluateAll(l=>l.map(c=>c.dataset.ydDers)),['Türkçe','Tarih','Din Kültürü'],'Ek Felsefe never counts: no tick');
   assert.deepEqual(await page.locator('[data-yd-f="sube"] option').allInnerTexts(),['Tüm şubeler','205 12/A','205 12/B']);
   await page.locator('[data-yd-f="sube"]').selectOption('205 12/B');await H.hazir();
   assert.deepEqual(await page.locator('.yd-ogr').evaluateAll(l=>l.map(a=>a.dataset.ydOgr)),['9003','9004']);
@@ -130,8 +130,7 @@ const IDB_OKU=()=>new Promise((ok,red)=>{
    const pdfBaski=await page.pdf({preferCSSPageSize:true,printBackground:true});
    assert.match(pdfBaski.toString('latin1'),/\/MediaBox\s*\[\s*0\s+0\s+59[45](\.\d+)?\s+84[12](\.\d+)?\s*\]/,'A4 portrait');
    const yazilan=await page.locator('.yd-ogr:not(.yd-yok)').count();assert.equal(yazilan,3);
-   // 9002 (two exams, with Din, compulsory since 2026-11-19) takes one more page of questions
-   assert.equal(sayfaSayisi(pdfBaski),yazilan*2+1,'each student with questions: their pages and a key page, the one without questions is not printed');
+   assert.equal(sayfaSayisi(pdfBaski),yazilan*2,'each student with questions: a page and a key page, the one without questions is not printed');
    const basHtml=await page.evaluate(()=>document.getElementById('ydBaski').innerHTML+' '+document.getElementById('ydBaski').textContent);
    assert.doesNotMatch(basHtml,/Kendi seviyesi|kademe|tier|Madde kalitesi/i);
    fs.writeFileSync(path.join(out_dir,'yd-baski.pdf'),pdfBaski);
