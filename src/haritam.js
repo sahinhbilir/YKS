@@ -417,69 +417,174 @@ function bagla() {
 }
 bagla();
 
-/* ---- Denemeye göre ayarla (2026-11-19): a student who joins late fills Hafızam and the map from their mock exams in one press instead of setting each
-   topic by hand. The source is the topic results the teacher's app sends with the student's package (D.turkiyeKiyas, Türkiye karşılaştırması: per
-   topic and exam, the student's right answers d of n questions). A topic's last three exams with questions decide (DENEME_AYAR):
-     at least 75 % right → recalled today at 90 %, 21 days to fall to 90 % (settling, never long-term: so never "YKS'ye kadar hafızanda");
-     50–75 % → 75 % and 7 days; under 50 % → 50 % and 3 days (forgetting).
-   Written as the student's own setting (Düzenle: hafizaElle), so a later result goes on from it, "Algoritmaya bırak" undoes one topic and Geri al the
-   whole press in the same visit. A topic with the student's own result or own setting is never changed. A deneme topic meets Hafızam's topics by
-   name within its subject (a curriculum unit's or a plan topic's name). A topic answered right by luck counts as known: accepted for the effort saved. */
-const DENEME_AYAR = [[.75, .9, 21], [.5, .75, 7], [0, .5, 3]];
+/* ---- Denemeye göre ayarla (2026-11-19, raise-only since 2026-11-20): a student who studied before joining tells the app "I know these" in one
+   press, instead of setting each topic by hand. It only ever raises a topic: what the app already knows stays, and a topic the student did badly on
+   in the denemeler is left as it is (never turned red by this button).
+   Evidence, per deneme topic (Konu Takibi's topic names), the last three exams with questions on it:
+     - the Deneme karnesi the rehber published from Yanlışlar defteri (D.konuKarne): every question's konu, difficulty band and result; easy =
+       Çok kolay and Kolay, hard = Zor and Çok zor;
+     - else the Türkiye karşılaştırması package (D.turkiyeKiyas): right answers d of n and the network's expected b (Σ p of those questions).
+   Levels (DENEME_AYAR): güçlü = at least 75 % right and the hard ones too (karne: at least half of the hard questions, one at least; Türkiye: the
+   network averaged at most half on these questions), over at least three questions in two exams → 97 % today and 30 days above the student's
+   line (long-term); biliyor = at least 75 % right → 96 %, 14 days above the line; temel (karne only) = at least 75 % of the easy questions (two at
+   least) and half of all → 94 %, a week above the line. The days to 90 % (s) follow from the recall today and the days above the line, under 30 for
+   biliyor and temel so they stay settling (the first version set s alone, so a topic set "known" fell under the line within a week). Recall is
+   never set under the line: at least the target + 2 points. Anything less: nothing.
+   Never lower: a setting replaces a map topic's memory at that moment, so it is decided per map topic. A topic's target is the best level of the
+   deneme topics reaching it (a plan topic of its name, or a school unit covering it); it is written only where it beats today's own memory, as the
+   larger of each (recall today, days to 90 %). It goes on a notebook topic that reaches that map topic alone (the plan topic first); a school unit
+   covering several is written only when it lowers none of them. A topic the student answered or set themselves on or after the newest exam is left
+   alone. Off the map (no YKS map), Hafızam's own value is compared the same way. Written as the student's own setting (hafizaElle, what Düzenle
+   writes): "Algoritmaya bırak" undoes one topic, Geri al the whole press in the same visit (earlier settings come back). */
+// [recall today, days above the line, highest s]
+const DENEME_AYAR = {guclu: [.97, 30, 365], biliyor: [.96, 14, 29], temel: [.94, 7, 29]}, SEVIYE_SIRA = ['temel', 'biliyor', 'guclu'];
 const harfKey = s => String(s ?? '').toLocaleUpperCase('tr').normalize('NFD').replace(/\p{M}/gu, '').replace(/[^A-Z]/g, '');
 const AILE = [[/^(TURKCE|TURKDILI)/, /^(TURKCE|TURKDILI|EDEBIYAT)/], [/^(MATEMATIK|GEOMETRI)/, /^(MATEMATIK|GEOMETRI)/], [/^FIZIK/, /^FIZIK/], [/^KIMYA/, /^KIMYA/],
   [/^BIYOLOJI/, /^BIYOLOJI/], [/^TARIH/, /^(TARIH|INKILAP)/], [/^COGRAFYA/, /^COGRAFYA/], [/^FELSEFE/, /^(FELSEFE|MANTIK|PSIKOLOJI|SOSYOLOJI)/], [/^DIN/, /^DIN/]];
 const kendiDefteri = si => ogrenciMi() && si === 0 && D.ogr.length === 1;
-function denemeAyari(si) {
-  const o = D.ogr[si], oz = kendiDefteri(si) ? D.turkiyeKiyas : null;
-  if (!o || !oz || !Array.isArray(oz.b)) return {kaynak: !!oz, liste: []};
-  const adlar = new Map();
-  for (let ki = 0, n = konuSayisi(); ki < n; ki++) { const k = konuAl(ki); if (!k) continue; const a = konuAdiTamAnahtari(devamsiz(k[3])); (adlar.get(a) || adlar.set(a, []).get(a)).push(ki); }
-  const kendi = new Set((D.log || []).filter(l => l[1] === si).map(l => l[2])), elle = o.hafizaElle || {}, topla = new Map();
-  for (const b of oz.b) {
-    const aile = AILE.find(([re]) => re.test(harfKey(b && b.k))); if (!aile || !b.z || !Array.isArray(b.z.r)) continue;
-    for (const [konu, hucre] of b.z.r) {
-      const son = (Array.isArray(hucre) ? hucre : []).filter(h => Array.isArray(h) && h[2] > 0).slice(-3); if (!son.length) continue;
-      for (const ki of adlar.get(konuAdiTamAnahtari(konu)) || []) {
-        if (!aile[1].test(harfKey(konuDersAdi(ki))) || kendi.has(ki) || elle[ki]) continue;
-        const t = topla.get(ki) || {d: 0, n: 0}; for (const h of son) { t.d += h[0]; t.n += h[2]; } topla.set(ki, t);
+const sayi = x => Number.isFinite(x) && x >= 0 ? x : 0;
+// One topic's evidence: {d, n, b (expected right answers, Türkiye; null with the karne), kd, kn, zd, zn (karne; null without), sinav (exams), gun}.
+function seviye(t) {
+  if (!(t.n > 0)) return null;
+  const a = t.d / t.n, karne = t.kn !== null;
+  const zor = karne ? t.zd >= 1 && t.zd >= t.zn / 2 : t.b !== null && t.b <= t.n / 2;
+  if (a >= .75 && zor && t.n >= 3 && t.sinav >= 2) return 'guclu';
+  if (a >= .75) return 'biliyor';
+  if (karne && t.kn >= 2 && t.kd >= .75 * t.kn && a >= .5) return 'temel';
+  return null;
+}
+// Deneme topic name → its evidence, per subject family. Karne first (it knows the easy and the hard questions); a topic it lacks comes from Türkiye.
+function kanitlar(oz, karne) {
+  const out = new Map(), anahtar = (aile, konu) => AILE.indexOf(aile) + '|' + konuAdiTamAnahtari(konu);
+  const ekle = (aile, konu, satir, kaynak) => { const k = anahtar(aile, konu); if (!out.has(k)) out.set(k, Object.assign({aile, konu, kaynak}, satir)); };
+  if (karne && karne.v === 2 && Array.isArray(karne.s)) {
+    // per exam, oldest first here (the package is newest first), so the last three are the newest; a konu's questions of one exam add up
+    const konular = new Map();
+    [...karne.s].reverse().forEach(s => {
+      if (!Array.isArray(s) || !Array.isArray(s[3])) return; const gun = typeof s[1] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s[1]) ? gunNo(s[1]) : null, adlar = Array.isArray(s[2]) ? s[2] : [];
+      const buSinav = new Map();
+      for (const b of s[3]) {
+        if (!Array.isArray(b) || !Array.isArray(b[3])) continue; const aile = AILE.find(([re]) => re.test(harfKey(b[0]))); if (!aile) continue;
+        for (const q of b[3]) {
+          if (!Array.isArray(q) || !Number.isInteger(q[1]) || typeof adlar[q[1]] !== 'string') continue;
+          const k = anahtar(aile, adlar[q[1]]); let h = buSinav.get(k); if (!h) buSinav.set(k, h = {aile, konu: adlar[q[1]], gun, d: 0, n: 0, kd: 0, kn: 0, zd: 0, zn: 0});
+          const dg = q[3] === 1 ? 1 : 0; h.d += dg; h.n++; if (q[2] === 0 || q[2] === 1) { h.kd += dg; h.kn++; } else if (q[2] === 3 || q[2] === 4) { h.zd += dg; h.zn++; }
+        }
       }
+      buSinav.forEach((h, k) => { let l = konular.get(k); if (!l) konular.set(k, l = {aile: h.aile, konu: h.konu, h: []}); l.h.push(h); });
+    });
+    for (const l of konular.values()) { const son = l.h.slice(-3), t = {d: 0, n: 0, b: null, kd: 0, kn: 0, zd: 0, zn: 0, sinav: son.length, gun: null};
+      for (const h of son) { ['d', 'n', 'kd', 'kn', 'zd', 'zn'].forEach(x => { t[x] += h[x]; }); if (h.gun !== null) t.gun = Math.max(t.gun ?? -Infinity, h.gun); }
+      t.d = Math.min(t.d, t.n); ekle(l.aile, l.konu, t, 'karne'); }
+  }
+  if (oz && Array.isArray(oz.b)) for (const b of oz.b) {
+    const aile = AILE.find(([re]) => re.test(harfKey(b && b.k))); if (!aile || !b.z || !Array.isArray(b.z.r)) continue;
+    const gunler = (Array.isArray(b.z.e) ? b.z.e : []).map(e => Array.isArray(e) && Number.isInteger(e[1]) ? e[1] : null);
+    for (const [konu, hucre] of b.z.r) {
+      const son = (Array.isArray(hucre) ? hucre : []).map((h, i) => [h, i]).filter(([h]) => Array.isArray(h) && h[2] > 0).slice(-3); if (!son.length || typeof konu !== 'string') continue;
+      const t = {d: 0, n: 0, b: 0, kd: null, kn: null, zd: null, zn: null, sinav: son.length, gun: null};
+      for (const [h, i] of son) { t.d += sayi(h[0]); t.b += sayi(h[1]); t.n += h[2]; const g = gunler[i] ?? (Number.isInteger(oz.t) ? oz.t : null); if (g !== null) t.gun = Math.max(t.gun ?? -Infinity, g); }
+      t.d = Math.min(t.d, t.n); ekle(aile, konu, t, 'turkiye');
     }
   }
-  return {kaynak: true, liste: [...topla].map(([ki, t]) => { const oran = Math.min(1, t.d / t.n), [, r, s] = DENEME_AYAR.find(x => oran >= x[0]); return {ki, oran, r, s}; })};
+  return [...out.values()];
+}
+// What one press would write: {kaynak, liste: [{ki, r, s}], konular: map topics and off-map notebook topics raised, seviyeler: count per level}.
+function denemeAyari(si) {
+  const o = D.ogr[si], oz = kendiDefteri(si) ? D.turkiyeKiyas : null, karne = kendiDefteri(si) ? D.konuKarne : null;
+  const kaynak = !!(oz && Array.isArray(oz.b)) || !!(karne && Array.isArray(karne.s) && karne.s.length);
+  const bos = {kaynak, liste: [], konular: 0, seviyeler: {}};
+  if (!o || !kaynak) return bos;
+  const kan = kanitlar(oz, karne).map(t => Object.assign(t, {seviye: seviye(t)})).filter(t => t.seviye);
+  if (!kan.length) return bos;
+  // the notebook's topics by name within the family
+  const adlar = new Map();
+  for (let ki = 0, n = konuSayisi(); ki < n; ki++) { const k = konuAl(ki); if (!k) continue; const a = konuAdiTamAnahtari(devamsiz(k[3])); (adlar.get(a) || adlar.set(a, []).get(a)).push(ki); }
+  const kiKanit = new Map(), daha = (a, b) => !b || SEVIYE_SIRA.indexOf(a.seviye) > SEVIYE_SIRA.indexOf(b.seviye) || (a.seviye === b.seviye && (a.gun ?? -Infinity) > (b.gun ?? -Infinity));
+  for (const t of kan) for (const ki of adlar.get(konuAdiTamAnahtari(t.konu)) || []) if (t.aile[1].test(harfKey(konuDersAdi(ki))) && daha(t, kiKanit.get(ki))) kiKanit.set(ki, t);
+  if (!kiKanit.size) return bos;
+  // s for `gun` days from recall r down to the line: R(t) = (1 + FACTOR·t/s)^DECAY, so t = s·x(R)/FACTOR with x(R) = R^(1/DECAY) − 1.
+  const hedef = hedefTutma(si), x = R => Math.pow(R, 1 / DECAY) - 1;
+  const hedefi = sv => { const [r0, gun, ust] = DENEME_AYAR[sv], r = Math.min(.99, Math.max(r0, hedef + .02)); return {r, s: Math.min(ust, Math.max(1, gun * FACTOR / (x(hedef) - x(r))))}; };
+  // Better than now: a little higher recall or a clearly longer memory (the setting rounds to whole days).
+  const iyiMi = (h, rOz, sGun) => rOz === null || rOz === undefined || h.r > rOz + .01 || h.s > sGun * 1.1 + .5;
+  const birlestir = (h, rOz, sGun) => rOz === null || rOz === undefined ? {r: h.r, s: h.s} : {r: Math.min(1, Math.max(h.r, rOz)), s: Math.min(3650, Math.max(h.s, sGun))};
+  const yuvarla = x => ({r: Math.round(x.r * 1000) / 1000, s: Math.round(x.s * 10) / 10});
+  const liste = [], seviyeler = {}; let konular = 0;
+  const gor = gorunur(o);
+  if (gor.size) {
+    const d = durum(si), ulas = new Map();     // notebook topic → the visible map topics it reaches
+    d.kaynak.forEach((kis, id) => { const k = KONU.get(id); if (!k || k.gizli || !gor.has(id)) return; kis.forEach(ki => (ulas.get(ki) || ulas.set(ki, []).get(ki)).push(id)); });
+    // per map topic: its best evidence, and what it would become
+    const dugum = new Map();
+    kiKanit.forEach((t, ki) => (ulas.get(ki) || []).forEach(id => { const x = dugum.get(id); if (!x || daha(t, x.t)) dugum.set(id, {t}); }));
+    dugum.forEach((x, id) => {
+      const s = d.satir.get(id), h = hedefi(x.t.seviye);
+      // the student's own word on this topic (a result or a setting) on or after the newest exam stays
+      if (s.sonOz !== null && s.sonOz !== undefined && x.t.gun !== null && s.sonOz >= x.t.gun) return;
+      if (iyiMi(h, s.rOz, s.sGun)) x.yeni = yuvarla(birlestir(h, s.rOz, s.sGun));
+    });
+    const tekYazar = id => { const kis = d.kaynak.get(id) || []; return kis.find(ki => (ulas.get(ki) || []).length === 1 && (ulas.get(ki) || [])[0] === id); };
+    const yazilan = new Set();
+    dugum.forEach((x, id) => { if (!x.yeni) return; const ki = tekYazar(id); if (ki === undefined) return; liste.push({ki, ...x.yeni, sonra: 1}); yazilan.add(id); konular++; seviyeler[x.t.seviye] = (seviyeler[x.t.seviye] || 0) + 1; });
+    // A school unit covering several map topics: only for topics no single notebook topic can take, and only when it lowers none of its topics.
+    const birimde = new Set();
+    kiKanit.forEach((t, ki) => {
+      const ids = ulas.get(ki) || []; if (ids.length < 2 || !ids.some(id => dugum.get(id)?.yeni && !yazilan.has(id) && !birimde.has(id))) return;
+      const h = hedefi(t.seviye);
+      const dusurmez = ids.every(id => { const s = d.satir.get(id); return yazilan.has(id) || s.rOz === null || s.rOz === undefined || (h.r >= s.rOz - .005 && h.s >= s.sGun - .5); });
+      const korunur = ids.every(id => { const s = d.satir.get(id); return yazilan.has(id) || s.sonOz === null || s.sonOz === undefined || t.gun === null || s.sonOz < t.gun; });
+      if (!dusurmez || !korunur) return;
+      liste.push({ki, ...yuvarla(h), sonra: 0});
+      ids.forEach(id => { if (!yazilan.has(id) && !birimde.has(id) && dugum.get(id)?.yeni) { birimde.add(id); konular++; seviyeler[t.seviye] = (seviyeler[t.seviye] || 0) + 1; } });
+    });
+  } else {
+    // No map (not a YKS student): Hafızam's own value of the topic.
+    const hd = new Map(hafizaDurumu(si).liste.map(x => [x.ki, x]));
+    kiKanit.forEach((t, ki) => {
+      const x = hd.get(ki), h = hedefi(t.seviye), rOz = x ? x.rKendi ?? x.r : null, sGun = x ? x.sGun : null;
+      const sonOz = Math.max(...(D.log || []).filter(l => l[1] === si && l[2] === ki && sonucNotu(l)).map(l => l[0]), hafizaElleAl(si, ki)?.g ?? -Infinity);
+      if (Number.isFinite(sonOz) && t.gun !== null && sonOz >= t.gun) return;
+      if (!iyiMi(h, rOz, sGun)) return;
+      liste.push({ki, ...yuvarla(birlestir(h, rOz, sGun)), sonra: 1}); konular++; seviyeler[t.seviye] = (seviyeler[t.seviye] || 0) + 1;
+    });
+  }
+  return {kaynak, liste, konular, seviyeler};
 }
 function denemeyeGoreAyarla(si) {
-  const o = D.ogr[si], {liste} = denemeAyari(si); if (!o || !liste.length || !kendiDefteri(si)) return 0;
-  const g = bugunNo(), ts = Date.now(), m = Object.assign({}, o.hafizaElle || {});
-  for (const x of liste) m[x.ki] = {g, r: x.r, s: x.s, ts};
-  o.hafizaElle = m; o.ogrCalismaTs = ts; EK.denemeAyarTs = ts; hafizaKartlariniYenile(si);
-  return liste.length;
+  const o = D.ogr[si], a = denemeAyari(si); if (!o || !a.liste.length || !kendiDefteri(si)) return 0;
+  const g = bugunNo(), ts = Date.now(), m = Object.assign({}, o.hafizaElle || {}), once = {};
+  // a unit first (ts), then the single topics (ts + 1): within a day the later setting is the topic's own
+  for (const x of a.liste) { if (!(x.ki in once)) once[x.ki] = m[x.ki] ? Object.assign({}, m[x.ki]) : null; m[x.ki] = {g, r: x.r, s: x.s, ts: ts + x.sonra}; }
+  o.hafizaElle = m; o.ogrCalismaTs = ts + 1; EK.denemeAyarTs = ts; EK.denemeAyarOnce = once; hafizaKartlariniYenile(si);
+  return a.konular;
 }
 function denemeAyariniGeriAl(si) {
-  const o = D.ogr[si], ts = EK.denemeAyarTs; if (!o || !o.hafizaElle || !ts || !kendiDefteri(si)) return 0;
-  const m = {}; let n = 0; for (const [ki, e] of Object.entries(o.hafizaElle)) { if (e && e.ts === ts) n++; else m[ki] = e; }
+  const o = D.ogr[si], ts = EK.denemeAyarTs, once = EK.denemeAyarOnce || {}; if (!o || !o.hafizaElle || !ts || !kendiDefteri(si)) return 0;
+  const m = Object.assign({}, o.hafizaElle); let n = 0;
+  for (const [ki, e] of Object.entries(o.hafizaElle)) { if (!e || (e.ts !== ts && e.ts !== ts + 1)) continue; n++; if (once[ki]) m[ki] = once[ki]; else delete m[ki]; }
   if (Object.keys(m).length) o.hafizaElle = m; else delete o.hafizaElle;
-  o.ogrCalismaTs = Date.now(); EK.denemeAyarTs = null; hafizaKartlariniYenile(si); return n;
+  o.ogrCalismaTs = Date.now(); EK.denemeAyarTs = null; EK.denemeAyarOnce = null; hafizaKartlariniYenile(si); return n;
 }
 // The line on Hafızam and Haritam (the student's own device, not a viewing teacher).
 function denemeDugmesi(si) {
   if (!kendiDefteri(si) || (typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme())) return '';
-  const a = denemeAyari(si), n = a.liste.length, geri = EK.denemeAyarTs ? ' <button type="button" class="dugme mini" data-deneme-geri>Geri al</button>' : '';
+  const a = denemeAyari(si), n = a.konular, geri = EK.denemeAyarTs ? ' <button type="button" class="dugme mini" data-deneme-geri>Geri al</button>' : '';
   if (!a.kaynak) return '';
-  if (!n) return geri ? '<p class="mini hm-deneme">Konular deneme sonuçlarına göre ayarlandı.' + geri + '</p>' : '';
-  return '<p class="mini hm-deneme"><button type="button" class="dugme mini" data-deneme-ayarla>Denemeye göre ayarla</button> Programa sonradan katıldıysan: ' + n +
-    ' konuyu tek tek ayarlamak yerine deneme sonuçların ayarlasın. Kendi girdiğin sonuçlar ve ayarlar değişmez.' + geri + '</p>';
+  if (!n) return geri ? '<p class="mini hm-deneme">Denemelerde bildiğin konular aklında gösteriliyor.' + geri + '</p>' : '';
+  return '<p class="mini hm-deneme"><button type="button" class="dugme mini" data-deneme-ayarla>Denemeye göre ayarla</button> Bu sistemi kullanmadan çalıştıysan: denemelerde bildiğini gösterdiğin ' + n +
+    ' konu aklında görünsün. Hiçbir konu aşağı inmez; denemede zorlandığın konular olduğu gibi kalır.' + geri + '</p>';
 }
 if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', ev => {
   const a = ev.target && ev.target.closest && ev.target.closest('[data-deneme-ayarla],[data-deneme-geri]'); if (!a || a.disabled) return;
   const si = EK.ogr;
   if (a.hasAttribute('data-deneme-geri')) { if (denemeAyariniGeriAl(si)) { kaydet(); ciz(); } return; }
-  const n = denemeAyari(si).liste.length;
-  if (!n || !confirm('Deneme sonuçlarına göre ' + n + ' konu ayarlanacak: denemelerde çoğunu doğru yaptığın konular aklında, yanlış yaptıkların unutuluyor görünecek. ' +
-    'Şans eseri doğru yaptığın bir konu da aklında sayılabilir; hiçbiri “YKS’ye kadar hafızanda” olmaz. Kendi girdiğin sonuçlar ve ayarlar değişmez. Devam edilsin mi?')) return;
+  const n = denemeAyari(si).konular;
+  if (!n || !confirm(n + ' konu, denemelerdeki doğrularına göre aklında görünecek (zor sorularını da yaptığın konular daha uzun süre). ' +
+    'Hiçbir konu aşağı inmez: zaten aklında olanlar ve denemede zorlandıkların olduğu gibi kalır. Şans eseri doğru yaptığın bir konu da aklında sayılabilir. Devam edilsin mi?')) return;
   if (denemeyeGoreAyarla(si)) { kaydet(); ciz(); }
 });
 // kaynaklar: map topic → the notebook topic ids that feed it (plan topics, then school units)
 const kaynaklar = () => { const {esler, birimler} = cozumle(); return new Map(V.konular.map(k => [k.id, (esler.get(k.id) || []).concat(birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))])); };
-return {gorunum, uygun, dersleri, gorunur, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA, denemeAyari, denemeyeGoreAyarla, denemeAyariniGeriAl, denemeDugmesi, DENEME_AYAR};
+return {gorunum, uygun, dersleri, gorunur, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA, denemeAyari, denemeyeGoreAyarla, denemeAyariniGeriAl, denemeDugmesi, DENEME_AYAR, denemeSeviyesi: seviye, denemeKanitlari: kanitlar};
 })();

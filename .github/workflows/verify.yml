@@ -61,8 +61,8 @@ jobs:
         run: node test/okul-disi-regression.cjs
       - name: Konu Takibi cumulative evidence, import and embedding
         run: node scripts/embed-konutakibi.cjs --check && node test/konutakibi-regression.cjs
-      - name: Yanlışlar defteri booklet cut-outs, cevap raporu without TC, A and B numbers and embedding
-        run: node scripts/embed-yanlislar.cjs --check && node test/yanlislar-regression.cjs && node test/yanlislar-difficulty-regression.cjs && node test/fark-sorulari-regression.cjs
+      - name: Yanlışlar defteri booklet cut-outs, cevap raporu without TC, A and B numbers, konu karnesi and embedding
+        run: node scripts/embed-yanlislar.cjs --check && node test/yanlislar-regression.cjs && node test/yanlislar-difficulty-regression.cjs && node test/fark-sorulari-regression.cjs && node test/konu-karnesi-regression.cjs
       - name: Yanlışlar defteri device library, bulk grouping, multi-exam defter, PDF plan, logout wipe and embedding
         run: node scripts/embed-denemekutuphane.cjs --check && node test/yanlislar-kutuphane-regression.cjs
       - name: Soru zorluğu, madde kalitesi, kademeler, two-session cevap raporu and embedding
@@ -198,6 +198,8 @@ jobs:
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/yanlislar-kutuphane-browser.cjs
       - name: Yanlışlar defteri fark soruları for subject teachers (real cut-outs, red and orange gaps, print and PDF)
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/fark-sorulari-browser.cjs
+      - name: Konu karnesi slides and Denemeye göre ayarla (raise-only) on desktop and phone, light and dark
+        run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/konu-karnesi-browser.cjs
       - name: Drag to measure and line shape on Etütler and Deneme panosu
         run: NODE_PATH="$RUNNER_TEMP/yks-browser/node_modules" YKS_UI_ARTIFACTS="$RUNNER_TEMP/yks-photo-ui" node test/grafik-browser.cjs
       - name: Test account button, nickname setup, first cloud save and reset
