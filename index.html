@@ -2432,6 +2432,11 @@ button.gr-kucuk{cursor:zoom-in}
   .ogr-formul .et-tablo-kutu{max-height:none;min-height:0;overflow:visible}
   .ogr-ham{font-size:10px}.ogr-ham th{position:static;padding:4px 8px;font-size:9.5px}.ogr-ham td{padding:3px 8px}
 }
+/* Vekil öğretmen panel (screen only) */
+#ogrKok .ogr-vekil-liste{margin:6px 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+#ogrKok .ogr-vekil-liste li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;overflow-wrap:anywhere}
+#ogrKok .ogr-vekil-ekle{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px;margin-top:8px}
+#ogrKok .ogr-vekil-ekle input{min-width:0;max-width:100%}
 /* END OGRETMENRAPOR */
 
 /* BEGIN HARITAM */
@@ -31908,13 +31913,19 @@ const siraliSinif=l=>[...l].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true}));
 // lesson's alone; a lesson that names no session (Matematik, Geometri, Fizik, Türk dili ve edebiyatı) takes the exam subjects no
 // such lesson took. So TYT and AYT Matematik split between two teachers where the timetable splits them, Türk dili ve edebiyatı
 // beside a Türkçe lesson (EA) is AYT Edebiyat, and a mixed lesson (Geometri, Fizik …) is both.
-function ogretmenler(){
+/* Vekil öğretmen (2026-11-19): while a teacher is on leave, a class of theirs can be given to a substitute in this report only. The rules
+   {sinif, asil, vekil} are kept in the teacher notebook (D.ogrVekil) until removed; the timetables, Etüt planı and every other page are not changed.
+   ogretmenler(true) applies them (the report); ogretmenler() is the timetables as they are (Yanlışlar defteri's sheets and the rest). */
+const vekiller=()=>typeof D!=='undefined'&&Array.isArray(D.ogrVekil)?D.ogrVekil.filter(v=>v&&v.sinif&&v.asil&&v.vekil):[];
+function ogretmenler(vekilli=false){
+  const V=vekilli?vekiller():[];
   let plan=null;try{plan=typeof ETUTPLANI!=='undefined'?ETUTPLANI.oku().plan:null}catch(e){plan=null}
   const by=new Map();
   for(const [sinif,p] of Object.entries((plan&&plan.programlar)||{})){
     const c=sinifK(sinif);if(!c)continue;
     const dersler=[];
-    for(const x of p.dersler||[]){const hoca=yaz(x[3]),d=dersBul(x[2]);if(!hoca||!d)continue;const ot=dersOturumu(x[2],d);dersler.push({hoca,d,ot,kodlar:ot?d[2].filter(k=>k[0]===ot):d[2]})}
+    for(const x of p.dersler||[]){let hoca=yaz(x[3]);const d=dersBul(x[2]);if(!hoca||!d)continue;
+      const v=V.find(r=>sinifK(r.sinif)===c&&katla(r.asil)===katla(hoca));if(v)hoca=yaz(v.vekil);const ot=dersOturumu(x[2],d);dersler.push({hoca,d,ot,kodlar:ot?d[2].filter(k=>k[0]===ot):d[2]})}
     const isaretli=new Set(dersler.filter(l=>l.ot).flatMap(l=>l.kodlar.map(k=>k[2])));
     for(const l of dersler){
       const kodlar=l.ot?l.kodlar:l.kodlar.filter(k=>!isaretli.has(k[2]));if(!kodlar.length)continue;
@@ -32429,7 +32440,7 @@ let SON_DUZEY=null;
 let SON=null;
 function gorunum(){
   if(typeof rehberMi!=='function'||!rehberMi())return '<div class="baslik"><h1>Öğretmen raporu</h1></div><p>Bu sayfa rehber öğretmen içindir.</p>';
-  const l=ogretmenler();
+  const l=ogretmenler(true);
   if(!l.length){SON=null;return '<div id="ogrKok"><header class="et-bas"><h1 class="et-baslik">Öğretmen raporu</h1></header><section class="et-panel et-bos"><b>Ders programı yok</b><p>Öğretmenler, Etüt planı’na eklenen sınıf ders programlarından gelir. Etüt planı’nda sınıfların haftalık ders programlarını ekleyin.</p><button type="button" class="et-dugme" data-sekme="etutplani">Etüt planı →</button></section></div>'}
   // Sınıf düzeyi: always one grade at a time (2026-11-19: no "Bütün düzeyler"), the highest first; the teachers are those who
   // teach that grade.
@@ -32452,8 +32463,40 @@ function gorunum(){
   planla();
   return '<div id="ogrKok"><header class="et-bas"><h1 class="et-baslik">Öğretmen raporu'+(duzey!==null?' · '+duzey+'. sınıf':'')+'</h1><p class="et-cumle">Öğrencilerinizin netleri ve konu başarıları, aynı denemelerde Türkiye ortalamasıyla karşılaştırılır.</p></header>'+
     '<div class="et-arac">'+duzeySec+secim+'<button type="button" class="et-dugme" id="ogrYazdir">PDF indir</button><span class="mini ogr-pdf-durum" id="ogrPdfDurum" role="status"></span></div>'+
-    '<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu rapor nasıl okunur?</summary>'+rehberHtml()+'</details>'+
+    '<details class="ogr-rehber ogr-rehber-ekran"><summary>Bu rapor nasıl okunur?</summary>'+rehberHtml()+'</details>'+vekilHtml()+
     (modeller.length?modeller.map(bolum).join(''):'<p class="mini ogr-yok">Bu sınıf düzeyinde ders veren öğretmen yok.</p>')+'</div>';
+}
+// The Vekil öğretmen panel (screen only): the rules in force with Kaldır, and a row to add one: şube, its teacher in the timetable, the substitute.
+function vekilHtml(){
+  const salt=typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme(),V=vekiller(),asil=ogretmenler();
+  const siniflar=[...new Set(asil.flatMap(o=>o.dersler.flatMap(d=>d.siniflar)))].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true}));
+  const sinif=siniflar.includes(EK.ogrVekilSinif)?EK.ogrVekilSinif:siniflar[0]||'';
+  const hocalar=asil.filter(o=>o.dersler.some(d=>d.siniflar.includes(sinif))).map(o=>o.ad);
+  const liste=V.length?'<ul class="ogr-vekil-liste">'+V.map((v,i)=>'<li><b>'+kacis(sinifK(v.sinif)||v.sinif)+'</b> · '+kacis(kisiAd(v.asil))+' yerine <b>'+kacis(kisiAd(v.vekil))+'</b>'+
+    (salt?'':' <button type="button" class="et-dugme" data-ogr-vekil-sil="'+i+'">Kaldır</button>')+'</li>').join('')+'</ul>':'<p class="mini">Vekil yok: her sınıf ders programındaki öğretmeninde.</p>';
+  const opt=(v,t,s)=>'<option value="'+kacis(v)+'"'+(s?' selected':'')+'>'+kacis(t)+'</option>';
+  const form=salt||!siniflar.length?'':'<div class="ogr-vekil-ekle"><label class="et-seg"><span class="et-seg-label">Şube</span><select id="ogrVekilSinif">'+siniflar.map(c=>opt(c,c,c===sinif)).join('')+'</select></label>'+
+    '<label class="et-seg"><span class="et-seg-label">Öğretmen</span><select id="ogrVekilAsil">'+hocalar.map(h=>opt(h,kisiAd(h),false)).join('')+'</select></label>'+
+    '<label class="et-seg"><span class="et-seg-label">Vekil öğretmen</span><input id="ogrVekilAd" list="ogrVekilAdlar" maxlength="60" autocomplete="off"></label>'+
+    '<datalist id="ogrVekilAdlar">'+[...new Set(asil.map(o=>kisiAd(o.ad)))].map(a=>'<option value="'+kacis(a)+'">').join('')+'</datalist>'+
+    '<button type="button" class="et-dugme" id="ogrVekilEkle">Ekle</button><span class="mini" id="ogrVekilDurum" role="status"></span></div>';
+  return '<details class="ogr-rehber ogr-ekran ogr-vekil"'+(V.length?' open':'')+'><summary>Vekil öğretmen'+(V.length?' ('+fi(V.length)+')':'')+'</summary>'+
+    '<p class="mini">İzindeki öğretmenin bir şubesini bu raporda vekil öğretmene verir. Ders programı ve uygulamanın başka hiçbir yeri değişmez; kayıt siz kaldırana kadar kalır.</p>'+liste+form+'</details>';
+}
+function vekilEkle(){
+  const sinif=document.getElementById('ogrVekilSinif')?.value||'',asil=document.getElementById('ogrVekilAsil')?.value||'',vekil=yaz(document.getElementById('ogrVekilAd')?.value||'').slice(0,60);
+  const durum=m=>{const el=document.getElementById('ogrVekilDurum');if(el)el.textContent=m};
+  if(!sinif||!asil)return durum('Şube ve öğretmen seçin.');
+  if(!vekil)return durum('Vekil öğretmenin adını yazın.');
+  if(katla(vekil)===katla(asil))return durum('Vekil, öğretmenin kendisi olamaz.');
+  const eski=Array.isArray(D.ogrVekil)?D.ogrVekil:[];
+  D.ogrVekil=[...eski.filter(v=>!(v&&sinifK(v.sinif)===sinifK(sinif)&&katla(v.asil)===katla(asil))),{sinif,asil,vekil}].slice(-60);
+  EK.ogrHoca=undefined;if(typeof kaydet==='function')kaydet();ciz();
+}
+function vekilSil(i){
+  const V=Array.isArray(D.ogrVekil)?D.ogrVekil:[];if(!(i>=0&&i<V.length))return;
+  D.ogrVekil=V.filter((_,k)=>k!==i);if(!D.ogrVekil.length)delete D.ogrVekil;
+  EK.ogrHoca=undefined;if(typeof kaydet==='function')kaydet();ciz();
 }
 // Öğrenci raporu (Türkiye): the same blocks for one student: every exam subject the student has nets or topic answers in, TYT
 // before AYT. The student is found by the school number in the lists and in Konu Takibi.
@@ -32799,6 +32842,7 @@ if(typeof window!=='undefined'&&window.addEventListener){
 if(typeof document!=='undefined'&&document.addEventListener){
   document.addEventListener('change',ev=>{if(typeof rehberMi!=='function'||!rehberMi())return;
     if(ev.target.id==='ogrHoca'){EK.ogrHoca=ev.target.value||undefined;ciz()}
+    else if(ev.target.id==='ogrVekilSinif'){EK.ogrVekilSinif=ev.target.value;ciz()}
     else if(ev.target.id==='osSube'){EK.osSube=ev.target.value;EK.osOgr=undefined;ciz()}
     else if(ev.target.id==='osOgr'){EK.osOgr=ev.target.value||undefined;ciz()}});
   // A grade button: that grade (the student's report starts again from its first şube).
@@ -32806,6 +32850,10 @@ if(typeof document!=='undefined'&&document.addEventListener){
     if(d.dataset.duzeyAlan==='ogrDuzey'){if(EK.ogrDuzey===n)return;EK.ogrDuzey=n;EK.ogrHoca=undefined}else{if(EK.osDuzey===n)return;EK.osDuzey=n;EK.osSube=undefined;EK.osOgr=undefined}ciz()});
   // PDF indir: the PDF is built here, a page per teacher (or student) shown, and saved as a file (see sayfaSvg).
   document.addEventListener('click',ev=>{const d=ev.target.closest?.('#ogrYazdir');if(d&&document.getElementById('ogrKok'))pdfIndir(d)});
+  // Vekil öğretmen: add or remove a rule (not for a viewing teacher)
+  document.addEventListener('click',ev=>{if(!document.getElementById('ogrKok')||typeof rehberMi!=='function'||!rehberMi()||(typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme()))return;
+    if(ev.target.closest?.('#ogrVekilEkle')){vekilEkle();return}
+    const s=ev.target.closest?.('[data-ogr-vekil-sil]');if(s)vekilSil(Number(s.dataset.ogrVekilSil))});
   // toggle does not bubble: listen while it travels down.
   document.addEventListener('toggle',ev=>{const d=ev.target;if(!d||!d.open||!d.matches||!d.matches('#ogrKok details.ogr-formul[data-ogr-ham]'))return;hamDoldur(d)},true);
 }
@@ -32814,7 +32862,7 @@ function hamDoldur(d){
   const b=SON?SON.flatMap(o=>o.bloklar)[+yer.dataset.ogrHamKonu]:null;if(!b)return;
   yer.innerHTML=hamKonu(b);yer.dataset.dolu='1';
 }
-return {sayfaSvg,sayfaCiz,kazanimSayfalari,pdfSayfalari,pdfYap,gorunumOgrenci,gorunumKendi,kiyasOzeti,kiyasAc,ogrenciModeli,DERSLER,ogretmenler,netSerisi,konuIzgarasi,olc,ogretmenModeli,hucreRengi,netGrafigi,izgaraHtml,blokHtml,hamKonu,bloklar:()=>SON?SON.flatMap(o=>o.bloklar):[],gorunum,grafikleriCiz,sinifK,R_MADDE,RENK_UST,ART_ARDA};
+return {vekiller,vekilHtml,vekilEkle,vekilSil,sayfaSvg,sayfaCiz,kazanimSayfalari,pdfSayfalari,pdfYap,gorunumOgrenci,gorunumKendi,kiyasOzeti,kiyasAc,ogrenciModeli,DERSLER,ogretmenler,netSerisi,konuIzgarasi,olc,ogretmenModeli,hucreRengi,netGrafigi,izgaraHtml,blokHtml,hamKonu,bloklar:()=>SON?SON.flatMap(o=>o.bloklar):[],gorunum,grafikleriCiz,sinifK,R_MADDE,RENK_UST,ART_ARDA};
 })();
 function gorunumOgretmenRapor(){return OGRETMEN_RAPOR.gorunum()}
 // END OGRETMENRAPOR

@@ -59,6 +59,38 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
   K={t:{sinavlar,kisi},trFn:ad=>tr[ad]?{genel:k=>tr[ad][k]??null}:null};ANALIZ.kaynak=()=>K})()`);
 
 (async () => {
+  await check('Vekil öğretmen: a class of a teacher on leave goes to the substitute in this report only; the timetables and every other page keep the teacher; add, replace, remove', () => {
+    reset(); planKur();
+    const dersleri = vekilli => get(`OGRETMEN_RAPOR.ogretmenler(${vekilli}).map(o=>[o.ad,o.dersler.map(d=>[d.ad,d.siniflar,d.kodlar.map(k=>k[2])])])`);
+    const once = dersleri(false);
+    run(`D.ogrVekil=[{sinif:'12/A',asil:'Sentetik Öğretmen Ay',vekil:'SENTETİK VEKİL'}]`);
+    assert.deepEqual(dersleri(true), [
+      ['SENTETİK ÖĞRETMEN AY', [['Matematik', ['9/C', '12/B'], ['MATEMATİK-T', 'MATEMATİK-A']]]],
+      ['SENTETİK ÖĞRETMEN DE', [['Türk dili ve edebiyatı', ['12/A', '12/B'], ['TÜRKÇE-T', 'TÜRK DİLİ VE EDB-A']]]],
+      ['SENTETİK VEKİL', [['Matematik', ['12/A'], ['MATEMATİK-T']]]]], '12/A’s TYT Matematik goes to the substitute; the name is matched without case or Turkish letters');
+    assert.deepEqual(dersleri(false), once, 'ogretmenler() (Yanlışlar defteri’s sheets, everything else) is the timetable as it is');
+    assert.equal(get('D.etutPlani.programlar["12/A"].dersler[0][3]'), 'SENTETİK ÖĞRETMEN AY', 'the timetable itself is not changed');
+    let h = run('OGRETMEN_RAPOR.gorunum()');
+    assert.match(h, /<details class="ogr-rehber ogr-ekran ogr-vekil" open><summary>Vekil öğretmen \(1\)<\/summary>/);
+    assert.match(h, /<li><b>12\/A<\/b> · Sentetik Öğretmen Ay yerine <b>Sentetik Vekil<\/b> <button type="button" class="et-dugme" data-ogr-vekil-sil="0">Kaldır<\/button><\/li>/);
+    assert.match(h, /data-ogr-hoca="SENTETIK VEKIL"/, 'the substitute has a section');
+    // adding from the form: şube, the timetable's teacher, the substitute; the same şube and teacher again replaces the rule
+    const alan = (id, value) => { sandbox.document.getElementById = (x => n => n === id ? {value} : x(n))(sandbox.document.getElementById) };
+    const kur = (sinif, asil, vekil) => { const eski = sandbox.document.getElementById; alan('ogrVekilSinif', sinif); alan('ogrVekilAsil', asil); alan('ogrVekilAd', vekil); run('OGRETMEN_RAPOR.vekilEkle()'); sandbox.document.getElementById = eski };
+    kur('12/B', 'SENTETİK ÖĞRETMEN DE', '  Sentetik   İkinci Vekil ');
+    assert.deepEqual(get('D.ogrVekil'), [{sinif: '12/A', asil: 'Sentetik Öğretmen Ay', vekil: 'SENTETİK VEKİL'}, {sinif: '12/B', asil: 'SENTETİK ÖĞRETMEN DE', vekil: 'Sentetik İkinci Vekil'}]);
+    kur('12/B', 'SENTETİK ÖĞRETMEN DE', 'Sentetik Üçüncü'); assert.equal(get('D.ogrVekil').length, 2, 'replaced, not added'); assert.equal(get('D.ogrVekil[1].vekil'), 'Sentetik Üçüncü');
+    kur('12/B', 'SENTETİK ÖĞRETMEN DE', 'sentetik öğretmen de'); assert.equal(get('D.ogrVekil').length, 2, 'a teacher is not their own substitute');
+    kur('12/B', 'SENTETİK ÖĞRETMEN DE', '   '); assert.equal(get('D.ogrVekil[1].vekil'), 'Sentetik Üçüncü', 'no name: nothing changes');
+    run('OGRETMEN_RAPOR.vekilSil(0)'); assert.deepEqual(get('D.ogrVekil.map(v=>v.sinif)'), ['12/B']);
+    run('OGRETMEN_RAPOR.vekilSil(0)'); assert.equal(run('D.ogrVekil'), undefined, 'the last rule removed: no field left');
+    assert.match(run('OGRETMEN_RAPOR.gorunum()'), /<summary>Vekil öğretmen<\/summary><p class="mini">İzindeki öğretmenin bir şubesini bu raporda vekil öğretmene verir\. Ders programı ve uygulamanın başka hiçbir yeri değişmez; kayıt siz kaldırana kadar kalır\.<\/p><p class="mini">Vekil yok/);
+    // a viewing teacher sees the rules but cannot change them
+    run(`D.ogrVekil=[{sinif:'12/A',asil:'SENTETİK ÖĞRETMEN AY',vekil:'SENTETİK VEKİL'}];__yg=typeof yalnizcaGoruntuleme==='function'?yalnizcaGoruntuleme:null;yalnizcaGoruntuleme=()=>true`);
+    h = run('OGRETMEN_RAPOR.vekilHtml()'); assert.match(h, /Sentetik Vekil/); assert.doesNotMatch(h, /data-ogr-vekil-sil|id="ogrVekilEkle"/);
+    run('if(__yg)yalnizcaGoruntuleme=__yg;else delete globalThis.yalnizcaGoruntuleme;delete D.ogrVekil');
+  });
+
   // ---- whose AYT subjects: 12/S an SAY class, 12/E an EA class, one biology teacher and one Din teacher in both
   const ALAN_PLAN = { '12/S': { kod: '311', ts: 1, saatler: SA, dersler: [[0, '09.00', 'BİYOLOJİ', 'SENTETİK ÖĞRETMEN BİY'], [0, '10.00', 'DİN KÜLTÜRÜ VE AHLAK BİLGİSİ', 'SENTETİK ÖĞRETMEN DİN']] },
     '12/E': { kod: '312', ts: 1, saatler: SA, dersler: [[0, '09.00', 'BİYOLOJİ', 'SENTETİK ÖĞRETMEN BİY'], [0, '10.00', 'DİN KÜLTÜRÜ VE AHLAK BİLGİSİ', 'SENTETİK ÖĞRETMEN DİN']] } };
