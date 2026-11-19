@@ -711,7 +711,7 @@ function filterDefter(d,options={},index={map:new Map()}){
    keeps the PDFs as bytes and the parsed models; this page only holds the models and opens a booklet when a picture has to be cut. */
 const OLCEK=2,BOSLUK=8,ONIZLEME=3000,PDF_SAYFA_SINIR=400;   // ONIZLEME: pictures the screen preview holds; print and PDF always take every student
 const S={denemeler:new Map(),genel:[],kut:null,kutUid:undefined,kutYuklendi:false,kutHazir:Promise.resolve(),boyut:null,sube:'',ogr:'',status:'all',oturum:'TYT+AYT',alan:'ogr',bantlar:null,kendi:false,kapali:new Set(),
-  jeton:0,hazir:Promise.resolve(),ilerleme:'',is:'',mesgul:'',kilit:'',liste:[],onizleme:ONIZLEME,pdfOneri:null,pdfSinir:PDF_SAYFA_SINIR,gorunum:'ogrenci',ogretmen:'',fark:null};
+  jeton:0,hazir:Promise.resolve(),ilerleme:'',is:'',mesgul:'',kilit:'',liste:[],onizleme:ONIZLEME,pdfOneri:null,pdfSinir:PDF_SAYFA_SINIR,gorunum:'ogrenci',ogretmen:'',secim:'z',fark:null};
 const h=s=>kacis(String(s??''));
 const rehber=()=>typeof rehberMi==='function'&&rehberMi();
 const etkin=()=>EK.sekme==='yanlislar'&&rehber()&&!!document.getElementById('ydKok');
@@ -966,7 +966,7 @@ function bellekiBosalt(){
   for(const e of S.denemeler.values()){resimleriBirak(e);kitKapat(e)}
   S.denemeler=new Map();S.genel=[];S.boyut=null;S.liste=[];S.pdfOneri=null;if(S.kut)S.kut.kapat();S.kut=null;S.kutUid=undefined;S.kutYuklendi=false;
 }
-function sifirla(){bellekiBosalt();Object.assign(S,{sube:'',ogr:'',status:'all',oturum:'TYT+AYT',alan:'ogr',bantlar:null,kendi:false,kapali:new Set(),mesgul:'',kilit:'',is:'',ilerleme:'',onizleme:ONIZLEME,pdfSinir:PDF_SAYFA_SINIR,gorunum:'ogrenci',ogretmen:'',fark:null})}
+function sifirla(){bellekiBosalt();Object.assign(S,{sube:'',ogr:'',status:'all',oturum:'TYT+AYT',alan:'ogr',bantlar:null,kendi:false,kapali:new Set(),mesgul:'',kilit:'',is:'',ilerleme:'',onizleme:ONIZLEME,pdfSinir:PDF_SAYFA_SINIR,gorunum:'ogrenci',ogretmen:'',secim:'z',fark:null})}
 // Test hook: a library over a given adapter, loaded like the page does.
 function kutuphaneKur(uid,adaptor){
   if(S.kut)S.kut.kapat();
@@ -1268,7 +1268,8 @@ function content(){
   if(S.gorunum==='ders'){
     S.liste=[];const M=S.fark=farkModeli(),soru=M.geride.reduce((a,g)=>a+g.soru,0),bos=!soru||!!S.kilit;
     const ogrSel=M.ogretmenli?sel('Öğretmen','ogretmen',opt('','Bütün öğretmenler',!S.ogretmen)+M.ogretmenler.map(o=>opt(o,o,o===S.ogretmen)).join('')):'';
-    const filtre=oturumSel||ogrSel?'<div class="yd-filtre">'+oturumSel+ogrSel+'</div>':'';
+    const secimSel=sel('Hangi sorular','secim',opt('z','Tesadüf olamayacak kadar geride',S.secim==='z')+ESIKLER.map(v=>opt(v,'En az '+v+' puan geride',S.secim===v)).join(''));
+    const filtre='<div class="yd-filtre">'+oturumSel+ogrSel+secimSel+'</div>';
     const arac='<div class="yd-arac"><button type="button" class="et-dugme birincil" data-yd-yazdir'+(bos?' disabled':'')+'>Yazdır</button><button type="button" class="et-dugme" data-yd-pdf'+(bos?' disabled':'')+'>PDF indir</button><span class="yd-ozet">'+M.geride.length+' sayfa grubu · '+soru+' soru'+(exU.length>1?' · '+exU.length+' deneme':'')+'</span>'+ilerleme+'</div>';
     return top+gorunumSec+filtre+dersler+arac+farkOzetHTML(M)+'<div class="yd-baski" id="ydBaski">'+M.geride.map(farkSayfaHTML).join('')+'</div>';
   }
@@ -1537,6 +1538,11 @@ async function pdfIndir(sube){
      and the test says so. Without M the one-group test is used. p and p̄ are read within 0,01 … 0,99 (two printed decimals: a printed 1,00 does
      not make one miss in thirty a gap). The gap needed follows N: about 18 points with 30 students at p = 50 %, 13 with 60. */
 const Z_SINIR=1.96;
+// Which questions (Seçim, the rehber's choice on screen; never printed): 'z' behind beyond chance (the default), or a fixed gap of at least that many points
+// (the rounded rates' difference: 60 % against 40 % is 20 points), whatever the number of students.
+const ESIKLER=[10,15,20,25,30];
+const secimGecerli=v=>v==='z'||ESIKLER.includes(v);
+const listelenir=x=>S.secim==='z'?x.geride:x.okullar-x.okul>=S.secim;
 const perfHaritasi=e=>e.perf?new Map(e.perf.dersler.map(x=>[key(x.ad),x])):null;
 // The sınav okulları rate of a question (ak: its place in the section, A booklet) and how many pupils it is over, or null without the Performans analizi's ders.
 function okullarMadde(pm,eb,ak){
@@ -1557,7 +1563,7 @@ function farkSorusu(e,eb,q,m,pm){
   if(!s||tp===null)return null;
   const okul=yuz(s.p),okullar=yuz(tp),cevap=e.rapor.anahtar.A?.[eb.bas+q]||'',yanlis=['A','B','C','D','E'].filter(x=>x!==cevap&&s.sec[x]>0).sort((x,y)=>s.sec[y]-s.sec[x]||x.localeCompare(y))[0]||null;
   const z=farkZ(s.dogru,s.n,tp,om.n);
-  return {test:eb.test,a,q,okul,okullar,n:s.n,okullarN:om.n,dogru:s.dogru,z,geride:z<=-Z_SINIR,cevap,yanlis,yanlisPay:yanlis?yuz(s.sec[yanlis]/s.n):0,bos:yuz(s.sec['']/s.n),konu:''};
+  return {test:eb.test,a,q,okul,okullar,fark:okul-okullar,n:s.n,okullarN:om.n,dogru:s.dogru,z,geride:z<=-Z_SINIR,cevap,yanlis,yanlisPay:yanlis?yuz(s.sec[yanlis]/s.n):0,bos:yuz(s.sec['']/s.n),konu:''};
 }
 const sinifOf=s=>typeof OGRETMEN_RAPOR!=='undefined'?OGRETMEN_RAPOR.sinifK(s):String(s??'').trim();
 // The sheets' owners: [{ogretmen, kod (the report section), siniflar}] from the timetables, or null without them.
@@ -1581,7 +1587,7 @@ function farkModeli(){
       for(const h of sahipler){
         const grup=h.siniflar?kimler.filter(x=>h.siniflar.has(sinifOf(x.sube))):kimler;if(!grup.length)continue;
         const m=bolumMaddeleri(e,eb,grup),sorular=[];let n=0,toplam=0;
-        for(let q=0;q<eb.n;q++){const x=farkSorusu(e,eb,q,m,pm);if(!x)continue;toplam++;n=Math.max(n,x.n);if(x.geride)sorular.push(x)}
+        for(let q=0;q<eb.n;q++){const x=farkSorusu(e,eb,q,m,pm);if(!x)continue;toplam++;n=Math.max(n,x.n);if(listelenir(x))sorular.push(x)}
         if(!toplam)continue;
         for(const x of sorular)x.konu=konuBul(e.rapor,eb.ad||'',x.q);
         const gk=(h.ogretmen||'')+'|'+o+'|'+eb.ders;let g=gruplar.get(gk);
@@ -1626,8 +1632,9 @@ function farkSayfaHTML(g){
 function farkOzetHTML(M){
   const ad=g=>(g.ogretmen?g.ogretmen+' · ':'')+dersBasligi(g),satir=[];
   if(M.geride.length)satir.push('<p class="yd-fs-ozet">'+M.geride.map(g=>'<span><b>'+h(ad(g))+'</b> '+g.soru+'</span>').join('')+'</p>');
-  satir.push('<p class="yd-ozet">Listelenen sorular: şubelerin doğru oranının, öğrenci sayısına göre tesadüfle açıklanamayacak kadar sınav okullarının altında kaldığı sorular (z ≤ −1,96).</p>');
-  if(M.temiz.length)satir.push('<p class="yd-ozet">Belirgin biçimde geride kalınan soru yok: '+h(M.temiz.map(ad).join(', '))+'</p>');
+  satir.push('<p class="yd-ozet">'+(S.secim==='z'?'Listelenen sorular: şubelerin doğru oranının, öğrenci sayısına göre tesadüfle açıklanamayacak kadar sınav okullarının altında kaldığı sorular (z ≤ −1,96).':
+    'Listelenen sorular: sınav okullarında doğru cevaplayanların oranının şubelerinkinden en az '+S.secim+' puan yüksek olduğu sorular (öğrenci sayısına bakılmaksızın).')+'</p>');
+  if(M.temiz.length)satir.push('<p class="yd-ozet">'+(S.secim==='z'?'Belirgin biçimde geride kalınan soru yok: ':'Bu eşikte geride kalınan soru yok: ')+h(M.temiz.map(ad).join(', '))+'</p>');
   if(M.eksik.length)satir.push('<p class="yd-uyari" role="status">Performans analizi eklenmemiş: '+h(M.eksik.join(', '))+'. Sınav okullarının oranları bu dosyadan okunur.</p>');
   if(M.sahipsiz.length&&!S.ogretmen)satir.push('<p class="yd-ozet">Ders programında öğretmeni olmayan: '+h(M.sahipsiz.join(', '))+'.</p>');
   if(!M.ogretmenli)satir.push('<p class="yd-ozet">Ders programı yok: sayfalar ders ders, bütün okul için. Öğretmenlerin kendi şubeleri Etüt planı’ndaki ders programlarından okunur.</p>');
@@ -1666,7 +1673,7 @@ function dersPlani(g,olcu){
   return {ders:baslik,ogretmen:g.ogretmen,sayfalar:A.sayfalar};
 }
 function farkPlan(M,olcu){const kisiler=M.geride.map(g=>dersPlani(g,olcu));return {kisiler,sayfa:kisiler.reduce((a,k)=>a+k.sayfalar.length,0)}}
-const farkDosyaAdi=(ex,ogretmen)=>'Fark_sorulari_'+(ex.length===1?subeAdi(ex[0].kod)||'1_deneme':ex.length+'_deneme')+(ogretmen?'_'+subeAdi(String(ogretmen).replace(/\s+/g,'')):'')+'.pdf';
+const farkDosyaAdi=(ex,ogretmen,secim='z')=>'Fark_sorulari_'+(ex.length===1?subeAdi(ex[0].kod)||'1_deneme':ex.length+'_deneme')+(ogretmen?'_'+subeAdi(String(ogretmen).replace(/\s+/g,'')):'')+(secim==='z'?'':'_'+secim+'_puan')+'.pdf';
 async function farkPdfIndir(){
   if(S.kilit)return;
   S.kilit='pdf';
@@ -1681,7 +1688,7 @@ async function farkPdfIndir(){
     await pdfCiz(B,L,plan,(i,n)=>yaz('PDF hazırlanıyor… '+i+'/'+n+' sayfa grubu'));
     B.doc.setTitle('Fark soruları');
     yaz('PDF kaydediliyor…');await tick();
-    indir(await B.doc.save(),farkDosyaAdi(ex,S.ogretmen));
+    indir(await B.doc.save(),farkDosyaAdi(ex,S.ogretmen,S.secim));
     S.sonPdf={sayfa:plan.sayfa,kisi:plan.kisiler.length};
   }catch(x){S.genel.push({dosya:'',mesaj:'PDF hazırlanamadı: '+(x.message||x)})}
   finally{S.kilit='';yaz('');render()}
@@ -1698,6 +1705,7 @@ document.addEventListener('change',ev=>{
   if(el.dataset?.ydF==='oturum'){if(['TYT+AYT','TYT','AYT'].includes(el.value))S.oturum=el.value;S.pdfOneri=null;render('[data-yd-f="oturum"]');return}
   if(el.dataset?.ydF==='alan'){if(['ogr',...ALANLAR,'Tümü'].includes(el.value))S.alan=el.value;S.pdfOneri=null;render('[data-yd-f="alan"]');return}
   if(el.dataset?.ydF==='ogretmen'){S.ogretmen=el.value;render('[data-yd-f="ogretmen"]');return}
+  if(el.dataset?.ydF==='secim'){const v=el.value==='z'?'z':Number(el.value);if(secimGecerli(v))S.secim=v;render('[data-yd-f="secim"]');return}
   if(el.dataset?.ydF==='status'){if(['all','yanlis','bos'].includes(el.value))S.status=el.value;S.pdfOneri=null;render('[data-yd-f="status"]');return}
   if(el.dataset?.ydDers!==undefined){const ad=el.dataset.ydDers;if(el.checked)S.kapali.delete(ad);else S.kapali.add(ad);S.pdfOneri=null;render('[data-yd-ders="'+ad.replace(/"/g,'\\"')+'"]')}
 });
@@ -1794,7 +1802,7 @@ function ogrenciListesi(no){
   }
   return out.length?{v:1,s:out}:null;
 }
-return {farkModeli,farkPlan,dersPlani,farkPdfIndir,farkDosyaAdi,farkSorusu,farkCumle,ekli,farkZ,sinavAnahtari,okulMaddeleri,bolumMaddeleri,sayilanKural,ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
+return {farkModeli,farkPlan,dersPlani,farkPdfIndir,farkDosyaAdi,farkSorusu,farkCumle,ekli,farkZ,sinavAnahtari,ESIKLER,okulMaddeleri,bolumMaddeleri,sayilanKural,ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
   dosyalarEkle,topluUygula,dosyaTani,pdfTuru,denemeKoy,kutuphaneKur,kutAc,sakla,geriYukle,metaOf,denemeSil,hepsiniSil,bellekiBosalt,sifirla,birlesik,kisiPlani,pdfPlan,pdfDosyaAdi,pdfIndir,boyutYaz,
   gorunum,yazdir,hazirla,durumu,key,title,kitAc,kitKapat};
 })();
