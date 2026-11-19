@@ -110,7 +110,7 @@ const IDB_OKU=()=>new Promise((ok,red)=>{
   assert.match(await page.locator('.yd-arac .yd-ozet').first().innerText(),/^4 öğrenci · \d+ soru · 2 deneme$/);
   assert.deepEqual(await page.locator('.yd-arac button').allInnerTexts(),['Seçili denemeler için yazdır','PDF indir']);
   // the ders ticks are the union by name; the exams' options apply together
-  assert.deepEqual(await page.locator('[data-yd-ders]').evaluateAll(l=>l.map(c=>c.dataset.ydDers)),['Türkçe','Tarih','Din Kültürü','Ek Felsefe']);
+  assert.deepEqual(await page.locator('[data-yd-ders]').evaluateAll(l=>l.map(c=>c.dataset.ydDers)),['Türkçe','Tarih','Din Kültürü'],'Ek Felsefe never counts: no tick');
   assert.deepEqual(await page.locator('[data-yd-f="sube"] option').allInnerTexts(),['Tüm şubeler','205 12/A','205 12/B']);
   await page.locator('[data-yd-f="sube"]').selectOption('205 12/B');await H.hazir();
   assert.deepEqual(await page.locator('.yd-ogr').evaluateAll(l=>l.map(a=>a.dataset.ydOgr)),['9003','9004']);

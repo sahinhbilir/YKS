@@ -350,7 +350,7 @@ const hepsi = async kodlar => { const out = []; for (const k of kodlar) { const 
   await test('multi-exam filters: Şube and Öğrenci across the selection, the ders ticks are the union by name, a closed ders closes it in every exam', async () => {
     await uc();
     let out = T.gorunum();
-    assert.deepEqual([...out.matchAll(/data-yd-ders="([^"]*)"/g)].map(m => m[1]), ['Türkçe', 'Tarih', 'Din Kültürü', 'Ek Felsefe'], 'union by name, once');
+    assert.deepEqual([...out.matchAll(/data-yd-ders="([^"]*)"/g)].map(m => m[1]), ['Türkçe', 'Tarih', 'Din Kültürü'], 'union by name, once; Ek Felsefe never counts, so it has no tick');
     assert.match(out, /<option value="9001">SENTETİK ÖĞRENCİ 1 · 9001<\/option>/); assert.match(out, /Tüm öğrenciler \(4\)/);
     S.sube = '205 12/B'; assert.deepEqual(nos(T.birlesik()), ['9003', '9004']);
     S.sube = ''; S.kapali = new Set(['Türkçe']);

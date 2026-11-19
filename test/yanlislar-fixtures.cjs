@@ -244,7 +244,7 @@ const DENEMELER={
 for(const [kod,s] of Object.entries(DENEMELER)){
   const {keyA,keyB}=anahtarlar(s.kayma,s.pairs);s.keyA=keyA;s.keyB=keyB;
   if(kod==='1204')s.ogr=[kisi('9001',1,'205 12/A','A',keyA.map((c,i)=>i===0?L5[(L5.indexOf(c)+1)%5]:c)),kisi('9003',3,'205 12/B','A',keyA.map((c,i)=>i===5?'':c)),kisi('9004',4,'205 12/B','A',keyA.slice())];
-  if(kod==='1205')s.ogr=[kisi('9001',1,'205 12/A','A',keyA.map((c,i)=>i===9?L5[(L5.indexOf(c)+2)%5]:c)),kisi('9002',2,'205 12/A','B',keyB.map((c,i)=>i===2?L5[(L5.indexOf(c)+1)%5]:c)),kisi('9004',4,'205 12/B','A',keyA.slice())];
+  if(kod==='1205')s.ogr=[kisi('9001',1,'205 12/A','A',keyA.map((c,i)=>i===7?L5[(L5.indexOf(c)+2)%5]:c)),kisi('9002',2,'205 12/A','B',keyB.map((c,i)=>i===2?L5[(L5.indexOf(c)+1)%5]:c)),kisi('9004',4,'205 12/B','A',keyA.slice())];
 }
 const denemeRaporu=(kod,o={})=>{const s=DENEMELER[kod];return raporXlsx({sinav:s.ad,tarih:s.tarih,anahtarA:s.keyA,anahtarB:s.keyB,ogrenciler:s.ogr,method:8,...o})};
 

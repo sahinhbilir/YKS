@@ -301,15 +301,13 @@ const gunYaz=(g,yil=true)=>{const t=new Date(g*864e5);return t.getUTCDate()+' '+
 const donem=l=>{const g=l.map(p=>p.g).filter(Number.isFinite);if(!g.length)return '';const a=Math.min(...g),b=Math.max(...g);return a===b?gunYaz(a):gunYaz(a,yilNo(a)!==yilNo(b))+' – '+gunYaz(b)};
 const yonSinifi=(v,esik=.05)=>v>=esik?'ogr-y':v<=-esik?'ogr-k':'ogr-sabit';
 const ok=(v,esik=.05)=>v>=esik?'▲':v<=-esik?'▼':'■';
-// The squares' colours: one solid spectrum from deep red (far behind Türkiye) through orange and amber (about level) to deep
-// green (far ahead); the gap sets the place, the ends at ±RENK_UST points. A gap within chance sits nearer the middle (×0,6).
-const SPEKTRUM=[[-1,[196,69,58]],[-.5,[234,138,95]],[0,[242,200,107]],[.5,[156,207,134]],[1,[47,148,103]]];
-function spektrum(u){
-  u=Math.max(-1,Math.min(1,u));let i=0;while(i<SPEKTRUM.length-2&&u>SPEKTRUM[i+1][0])i++;
-  const [a,ca]=SPEKTRUM[i],[b,cb]=SPEKTRUM[i+1],t=(u-a)/(b-a);
-  return '#'+ca.map((v,k)=>Math.round(v+(cb[k]-v)*t).toString(16).padStart(2,'0')).join('');
-}
-const kareYeri=c=>Math.max(-1,Math.min(1,c.fark/RENK_UST))*(c.durum==='belirsiz'?.6:1);
+// The squares' colours: one solid spectrum (shared, src/grafik.js) from deep red (behind Türkiye) through orange and amber (about level)
+// to deep green (ahead). The chance test decides the colour, not the size of the gap (2026-11-19): a gap beyond chance (|z| ≥ 1,96) is red
+// or green, from the clear colour (GRAFIK_RENK.KESIN) to the deep one at RENK_UST points; a gap within chance stays near the middle
+// (× GRAFIK_RENK.SANS), never redder than orange or greener than light green, however large.
+const {SPEKTRUM,spektrum}=GRAFIK_RENK;
+const kareYeri=c=>{const g=Math.max(-1,Math.min(1,(Number(c.fark)||0)/RENK_UST)),{KESIN,SANS}=GRAFIK_RENK;
+  return c.durum==='geride'?-(KESIN+(1-KESIN)*Math.abs(g)):c.durum==='onde'?KESIN+(1-KESIN)*Math.abs(g):g*SANS};
 function hucreRengi(c){return c?'background:'+spektrum(kareYeri(c)):''}
 // The key: the spectrum as one bar.
 const SPEKTRUM_CSS='linear-gradient(90deg,'+SPEKTRUM.map(([u])=>spektrum(u)+' '+(u+1)*50+'%').join(',')+')';
@@ -517,12 +515,12 @@ function hamVeri(b,i){
   if(yz(b).ogrenci)return '<details class="ogr-formul" data-ogr-ham="'+i+'"><summary>Hesaplama ayrıntıları ve ham veriler</summary>'+
     '<p><b>Net grafiği:</b> her denemede bu dersteki netin ve yayınevinin bütün kurumlarındaki öğrencilerin ortalama neti (o denemenin performans analizinden). İki çizgi arası yeşilse Türkiye’nin üstündesin, kırmızıysa altında.</p>'+
     '<p><b>Konu tablosu:</b> her hücre, o denemede o konunun sorularında senin doğru sayını (d), aynı soruları çözen Türkiye geneli öğrencilerinin başarı oranlarından beklenen doğru sayısıyla (b) karşılaştırır. Fark = 100 · (d − b) / n puan; n o konudaki soru sayısıdır. Zor sorular konuyu haksız yere kırmızıya boyamaz: aynı soruda Türkiye de zorlanmışsa beklenen de düşüktür.</p>'+
-    '<p><b>Renk:</b> koyu kırmızıdan turuncu ve sarıya, oradan koyu yeşile uzanan tek bir renk yelpazesi: kırmızı = Türkiye’nin gerisinde, sarı = Türkiye ile aşağı yukarı aynı, yeşil = önünde; fark büyüdükçe renk uca yaklaşır. Fark küçük ya da soru azsa (tesadüf olabilir: z = (d − b) / √(n·p·(1 − p) · (1 + (soru − 1) · 0,2)), |z| < 1,96) renk ortaya, sarıya daha yakın çizilir. Tek öğrencide bir konunun birkaç sorusu olduğu için çoğu kare ortaya yakın çıkar: yönü okumak için koyu karelere ve tekrar eden renge bakın.</p>'+seri+konu+'</details>';
+    '<p><b>Renk:</b> koyu kırmızıdan turuncu ve sarıya, oradan koyu yeşile uzanan tek bir renk yelpazesi: kırmızı = Türkiye’nin gerisinde, sarı = Türkiye ile aşağı yukarı aynı, yeşil = önünde. Rengi farkın büyüklüğü değil, tesadüf olup olmadığı belirler: fark tesadüf olamayacak kadar belirginse (z = (d − b) / √(n·p·(1 − p) · (1 + (soru − 1) · 0,2)), |z| ≥ 1,96) kare kırmızı ya da yeşildir, fark büyüdükçe koyulaşır; tesadüf olabilirse ortaya yakın çizilir, en fazla turuncu olur. Tek öğrencide bir konunun birkaç sorusu olduğu için çoğu kare ortaya yakın çıkar: yönü okumak için koyu karelere ve tekrar eden renge bakın.</p>'+seri+konu+'</details>';
   return '<details class="ogr-formul" data-ogr-ham="'+i+'"><summary>Hesaplama ayrıntıları ve ham veriler</summary>'+
     '<p><b>Kimler?</b> '+kacis(b.siniflar.join(', '))+' sınıflarının öğrencileri birlikte (ders programında bu dersi verdiğiniz sınıflar). Sınıflar ayrı ayrı gösterilmez, öğrenci adı yoktur.</p>'+
     '<p><b>Net grafiği:</b> her denemede öğrencilerinizin bu dersteki net ortalaması (neti basılmış öğrenciler) ve yayınevinin bütün kurumlarındaki öğrencilerin ortalama neti (o denemenin performans analizinden: her soruda doğru oranı − yanlış oranı / 4; konu karelerinin karşılaştırıldığı öğrencilerin aynısı). İki çizgi arası yeşilse Türkiye’nin üstünde, kırmızıysa altındadır. Fark = ortalama net − Türkiye ortalaması. Grafiğin yüksekliği testin tamamıdır (0’dan soru sayısına). Deneme adının altındaki sayı okulun bu dersteki İlk 100 listesindeki yeridir.</p>'+
     '<p><b>Konu tablosu:</b> her hücre, o denemede o konunun sorularında öğrencilerinizin doğru sayısını (d), aynı soruları çözen Türkiye geneli öğrencilerinin başarı oranlarından beklenen doğru sayısıyla (b = soruların Türkiye başarı oranlarının toplamı) karşılaştırır. Fark = 100 · (d − b) / n puan; n öğrencilerinizin o sorulara verdiği yanıt sayısıdır. Böylece zor sorular konuyu haksız yere kırmızıya boyamaz: aynı soruda Türkiye de zorlanmışsa beklenen de düşüktür. Konular derste işlendikleri düzende (kazanım numarasına göre) dizilir. Bütün konular: dersin o denemedeki bütün sorularıyla aynı hesap.</p>'+
-    '<p><b>Renk:</b> koyu kırmızıdan turuncu ve sarıya, oradan koyu yeşile uzanan tek bir renk yelpazesi: kırmızı = Türkiye’nin gerisinde, sarı = Türkiye ile aşağı yukarı aynı, yeşil = önünde; fark büyüdükçe renk uca yaklaşır (±'+RENK_UST+' puanda en uçta). Fark bu hesaba göre henüz belirgin değilse renk ortaya, sarıya daha yakın çizilir (z = (d − b) / √(Σ n·p·(1 − p) · (1 + (soru − 1) · 0,2)), |z| < 1,96; bir öğrencinin aynı konudaki yanıtları birbirine bağlı sayılır). Boş kare: o denemede konudan soru yok. Bir karenin üzerine gelince yüzdeler görünür.</p>'+seri+konu+'</details>';
+    '<p><b>Renk:</b> koyu kırmızıdan turuncu ve sarıya, oradan koyu yeşile uzanan tek bir renk yelpazesi: kırmızı = Türkiye’nin gerisinde, sarı = Türkiye ile aşağı yukarı aynı, yeşil = önünde; rengi farkın büyüklüğü değil, tesadüf olup olmadığı belirler: fark bu hesaba göre belirginse kare kırmızı ya da yeşildir ve fark büyüdükçe koyulaşır (±'+RENK_UST+' puanda en koyu); belirgin değilse ortaya yakın çizilir, en fazla turuncu olur (z = (d − b) / √(Σ n·p·(1 − p) · (1 + (soru − 1) · 0,2)), |z| < 1,96; bir öğrencinin aynı konudaki yanıtları birbirine bağlı sayılır). Boş kare: o denemede konudan soru yok. Bir karenin üzerine gelince yüzdeler görünür.</p>'+seri+konu+'</details>';
 }
 // One block: what it covers, the two headline numbers, the chart with its key, the topics, the folded appendix.
 // hoca: the teacher's name, printed beside the topic heading (the topics usually fall on a sheet of their own) and, on a block

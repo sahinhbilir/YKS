@@ -53,7 +53,17 @@ const KURAL=[[/^(TUR|EDB|EDEBIYAT)/,4],[/^(AMAT|MAT)/,1],[/^(AGEO|GEO)/,6],[/^(A
   [/^(TAR2|TARIH2)/,11],[/^TAR/,8],[/^(COG2|COGRAFYA2)/,12],[/^COG/,7],[/^(FEL|SF|SFELSEFE|EKFELSEFE)/,9],[/^DIN/,10]];
 function no(ad){const k=duz(ad);if(!k)return null;const r=KURAL.find(([re])=>re.test(k));return r?r[1]:null}
 const ders=ad=>{const n=no(ad);return n===null?null:'var(--e-c'+n+')'};
-return {ders,no};
+// One solid spectrum for a gap against Türkiye (Öğretmen raporu's squares): u from −1 deep red through 0 amber to +1 deep green. The
+// middle is squashed (2026-11-19): orange and light green at ±0,3, the clear red and green at ±0,6. KESIN: where a real gap starts
+// (beyond chance: red or green, deeper with the gap); SANS: how far a gap within chance may go (never redder than orange).
+const SPEKTRUM=[[-1,[168,32,34]],[-.6,[204,58,48]],[-.3,[234,138,95]],[0,[242,200,107]],[.3,[156,207,134]],[.6,[62,158,104]],[1,[26,118,78]]];
+function spektrum(u){
+  u=Math.max(-1,Math.min(1,Number(u)||0));let i=0;while(i<SPEKTRUM.length-2&&u>SPEKTRUM[i+1][0])i++;
+  const [a,ca]=SPEKTRUM[i],[b,cb]=SPEKTRUM[i+1],t=(u-a)/(b-a);
+  return '#'+ca.map((v,k)=>Math.round(v+(cb[k]-v)*t).toString(16).padStart(2,'0')).join('');
+}
+const KESIN=.6,SANS=.3;
+return {ders,no,SPEKTRUM,spektrum,KESIN,SANS};
 })();
 
 const GRAFIK_OLCUM = (() => {
