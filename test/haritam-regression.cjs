@@ -35,6 +35,44 @@ const ogrenci = (a, alan, sinif) => {
   if (alan) a.run(`kendiPlanKur(0,Object.fromEntries(kendiPlanDersleri('${alan}').map(d=>[d,'bilir'])),'2027-04-23')`);
 };
 
+test('Denemeye göre ayarla: the package’s topic results set Hafızam and the map in one press, within the subject; own results kept; never “YKS’ye kadar hafızanda”; Geri al', () => {
+  const a = app(); ogrenci(a, 'SAY', 12);
+  const ki = ad => a.json(`(()=>{const l=[];for(let i=0;i<konuSayisi();i++){const k=konuAl(i);if(k&&k[3]===${JSON.stringify(ad)}&&/Matematik/.test(konuDersAdi(i)))l.push(i)}return l})()`);
+  const tk = ki('Üçgenlerde Temel Kavramlar'), eb = ki('Üçgenlerde Eşlik ve Benzerlik'), alan = ki('Üçgenin Alanı');
+  assert(tk.length && eb.length && alan.length, 'the curriculum units are in the catalogue');
+  assert.equal(a.run('HARITAM.denemeDugmesi(0)'), '', 'no package yet: no button');
+  // the package: TYT Geometri with three topics (the last three exams with questions count), and a Fizik block whose topic name must not reach Matematik
+  a.run(`D.turkiyeKiyas={v:1,b:[{k:'GEOMETRİ-T',o:'TYT',s:[],z:{e:[['D1',1],['D2',2],['D3',3],['D4',4]],r:[
+      ['Üçgenlerde Temel Kavramlar',[[0,1,2],[2,1.5,2],[2,1,2],[1,1,1]],[]],
+      ['Üçgenlerde Eşlik ve Benzerlik',[[0,1,2],0,[0,1,1],0],[]],
+      ['Üçgenin Alanı',[[1,1,2],[2,1,3],0,0],[]],
+      ['Sentetik Bilinmeyen Konu',[[1,1,1]],[]]]}},
+    {k:'FİZİK-T',o:'TYT',s:[],z:{e:[['D1',1]],r:[['Üçgenlerde Temel Kavramlar',[[0,1,4]],[]]]}}]}`);
+  // a result the student entered on Üçgenin Alanı: that topic is the student's own and is left alone
+  a.run(`D.log.push([bugunNo()-1,0,${alan[0]},'',3,0,Date.now()])`);
+  const l = a.json('HARITAM.denemeAyari(0).liste');
+  const bul = k => l.find(x => x.ki === k);
+  assert.deepEqual([bul(tk[0]).oran, bul(tk[0]).r, bul(tk[0]).s], [1, .9, 21], 'the last three exams: 5 of 5 (the first exam’s 0 of 2 is older)');
+  assert.deepEqual([bul(eb[0]).oran, bul(eb[0]).r, bul(eb[0]).s], [0, .5, 3], '0 of 3: forgetting');
+  assert.equal(bul(alan[0]), undefined, 'a topic with the student’s own result is not changed');
+  assert.equal(l.length, tk.length + eb.length + alan.length - 1, 'every catalogue entry of the name, the unknown topic and the Fizik block reach nothing else');
+  assert.match(a.run('HARITAM.denemeDugmesi(0)'), /data-deneme-ayarla>Denemeye göre ayarla<\/button> Programa sonradan katıldıysan: \d+ konuyu tek tek ayarlamak yerine/);
+  assert.match(a.run('gorunumHafiza()'), /data-deneme-ayarla/, 'on Hafızam'); assert.match(a.run('HARITAM.gorunum()'), /data-deneme-ayarla/, 'on Haritam');
+  const n = a.run('HARITAM.denemeyeGoreAyarla(0)'); assert.equal(n, l.length);
+  const elle = a.json('D.ogr[0].hafizaElle'), tsler = new Set(Object.values(elle).map(e => e.ts));
+  assert.equal(Object.keys(elle).length, n); assert.equal(tsler.size, 1, 'one press, one time');
+  assert.equal(a.run(`hafizaElleDogru(D.ogr[0].hafizaElle,konuSayisi())`), true, 'a valid own setting, as Düzenle writes');
+  assert(a.json('hafizaDurumu(0).liste.map(x=>x.ki)').includes(tk[0]), 'the topic is in Hafızam');
+  // the map: the nodes these units cover have memory now, and none is safe until YKS
+  const d = a.json(`(()=>{const d=HARITAM.durum(0);return [...d.satir.values()].filter(s=>s.r!==null).map(s=>({id:s.id,yks:s.sinavaKadar}))})()`);
+  assert(d.length > 0, 'nodes have memory'); assert(d.every(x => x.yks !== true), 'never “YKS’ye kadar hafızanda”');
+  assert.equal(a.json('HARITAM.denemeAyari(0).liste').length, 0, 'a second press finds nothing: the settings are the student’s own now');
+  assert.match(a.run('HARITAM.denemeDugmesi(0)'), /Konular deneme sonuçlarına göre ayarlandı\. <button type="button" class="dugme mini" data-deneme-geri>Geri al<\/button>/);
+  assert.equal(a.run('HARITAM.denemeAyariniGeriAl(0)'), n); assert.equal(a.run('D.ogr[0].hafizaElle'), undefined, 'Geri al removes exactly that press');
+  // a viewing teacher, or a teacher's notebook, never gets the button
+  a.run('D.ogr.push({no:2,ad:"X"})'); assert.equal(a.run('HARITAM.denemeDugmesi(0)'), '');
+});
+
 test('the embedded module and the map are in index.html', () => {
   assert.match(source, /const HARITA_VERI = \{/); assert.match(source, /const HAFIZA_AG = /); assert.match(source, /const HARITAM = /);
   assert.match(html, /\/\* BEGIN HARITAM \*\/[\s\S]*\.hm-svg/);

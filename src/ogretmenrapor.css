@@ -178,3 +178,8 @@
   .ogr-formul .et-tablo-kutu{max-height:none;min-height:0;overflow:visible}
   .ogr-ham{font-size:10px}.ogr-ham th{position:static;padding:4px 8px;font-size:9.5px}.ogr-ham td{padding:3px 8px}
 }
+/* Vekil öğretmen panel (screen only) */
+#ogrKok .ogr-vekil-liste{margin:6px 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+#ogrKok .ogr-vekil-liste li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;overflow-wrap:anywhere}
+#ogrKok .ogr-vekil-ekle{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px;margin-top:8px}
+#ogrKok .ogr-vekil-ekle input{min-width:0;max-width:100%}

@@ -198,3 +198,13 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
 ## Not done yet
 
 - Delivering the learnt link values to students (teacher view only for now).
+
+## Denemeye göre ayarla (2026-11-19)
+
+For a student who joins the programme late: one button on Hafızam and Haritam (the student's own device only) fills the topics from the mock exams instead of setting each one with Düzenle.
+
+- **Source:** the topic results the teacher's app sends with the student's package (`D.turkiyeKiyas`, Türkiye karşılaştırması): per topic and exam, the student's right answers d of n questions. Without a package there is no button.
+- **Rule** (`HARITAM.denemeAyari`, `DENEME_AYAR`): a topic's last three exams with questions. At least 75 % right → recalled today at 90 %, 21 days to fall to 90 % (settling, never long-term). 50–75 % → 75 % and 7 days. Under 50 % → 50 % and 3 days (forgetting). With 21 days at most, recall on exam day stays under the target, so no topic set this way is "YKS'ye kadar hafızanda".
+- **Matching:** a deneme topic meets Hafızam's topics by name (the curriculum unit's or the plan topic's) within its subject family (Matematik and Geometri together, Türkçe with Türk Dili ve Edebiyatı, Tarih with İnkılap, Felsefe with Mantık, Psikoloji and Sosyoloji); a school unit then reaches the map's nodes it covers, as a lesson or result on it does.
+- **Written as the student's own setting** (`hafizaElle`, exactly what Düzenle writes): a later result goes on from it, "Algoritmaya bırak" undoes one topic, and **Geri al** (same visit) removes the whole press. A topic with the student's own result or own setting is never changed. A topic answered right by luck counts as known: accepted for the effort saved; the confirmation says so.
+- Tests: `test/haritam-regression.cjs` (the three bands, the last three exams, the subject family, own results kept, a valid setting, Hafızam and the map filled, no "YKS'ye kadar", Geri al, no button for a teacher's notebook).
