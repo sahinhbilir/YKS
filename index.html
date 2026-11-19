@@ -2134,6 +2134,55 @@ button.sr-ad{border:0;background:none;padding:0;font:inherit;color:inherit;text-
 #ydKok .yd-kalite summary{cursor:pointer;font-size:.8125rem;padding:6px 0}
 #ydKok .yd-kalite td,#ydKok .yd-kalite th{white-space:nowrap}
 #ydKok .yd-isaretli td{color:var(--e-bad)}
+/* Deneme karnesi slides (2026-11-20): the rehber's preview (#ydKok's --e-* tokens) and the student's page (the app's tokens), light and dark. */
+.kk{--kk-fg:var(--e-fg,var(--murekkep));--kk-fg2:var(--e-fg2,var(--soluk));--kk-line:var(--e-line,var(--cizgi));--kk-panel:var(--e-panel,var(--kagit));--kk-ok:var(--e-ok,var(--iyi));--kk-bad:var(--e-bad,var(--kritik));--kk-mid:var(--uyari,#946016);
+  display:flex;flex-direction:column;gap:12px;min-width:0;color:var(--kk-fg)}
+.kk-bas h2{margin:0;font-size:1.125rem}
+.kk-alt{margin:2px 0 0;font-size:.8125rem;color:var(--kk-fg2);overflow-wrap:anywhere}
+.kk-sec{display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--kk-fg2);min-width:0}
+.kk-sec select{font:inherit;min-height:40px;max-width:100%;color:var(--kk-fg);background:var(--kk-panel);border:1px solid var(--kk-line);border-radius:6px;padding:8px 10px}
+.kk-cipler{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.kk-cip{font:inherit;font-size:.8125rem;min-height:36px;padding:4px 14px;border-radius:999px;border:1px solid var(--kk-line);background:var(--kk-panel);color:var(--kk-fg2);cursor:pointer;max-width:100%;overflow-wrap:anywhere;text-align:left}
+.kk-cip[aria-pressed="true"]{background:var(--kk-fg);color:var(--kk-panel);border-color:var(--kk-fg)}
+.kk-gezin{display:flex;align-items:center;gap:10px}
+.kk-ok{font:inherit;font-size:1.25rem;line-height:1;width:40px;height:40px;border-radius:999px;border:1px solid var(--kk-line);background:var(--kk-panel);color:var(--kk-fg);cursor:pointer}
+.kk-sayac{font-size:.8125rem;color:var(--kk-fg2)}
+.kk-seri{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,300px);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 10px;overscroll-behavior-x:contain;min-width:0}
+.kk-seri:focus-visible{outline:2px solid var(--kk-fg);outline-offset:2px}
+.kk-slayt{position:relative;scroll-snap-align:start;display:flex;flex-direction:column;gap:10px;min-width:0;border:1px solid var(--kk-line);border-radius:12px;padding:16px;background:var(--kk-panel)}
+.kk-ders{margin:0;font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:var(--kk-fg2)}
+.kk-konu{margin:0;font-size:1rem;line-height:1.3;overflow-wrap:anywhere;min-height:2.6em}
+.kk-olculer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.kk-olcu{display:flex;flex-direction:column;gap:2px;min-width:0}
+.kk-etiket,.kk-say,.kk-tum{font-size:.75rem;color:var(--kk-fg2)}
+.kk-yuzde{font-size:1.75rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.kk-yuzde.kk-yok{color:var(--kk-fg2)}
+.kk-cubuk{display:block;height:6px;border-radius:999px;background:var(--kk-line);overflow:hidden;margin-top:4px}
+.kk-cubuk>span{display:block;height:100%;background:var(--kk-fg)}
+.kk-tum{margin:0}
+.kk-yorum{margin:0;font-size:.8125rem;font-weight:600;padding-left:8px;border-left:3px solid var(--kk-fg2)}
+.kk-yorum.kk-iyi{border-left-color:var(--kk-ok)}.kk-yorum.kk-orta{border-left-color:var(--kk-mid)}.kk-yorum.kk-zayif{border-left-color:var(--kk-bad)}
+.kk-gizli{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.kk-bantlar{width:100%;border-collapse:collapse;font-size:.75rem;font-variant-numeric:tabular-nums}
+.kk-bantlar th{text-align:left;font-weight:400;color:var(--kk-fg2);padding:2px 6px 2px 0;white-space:nowrap}
+.kk-bantlar td{padding:2px 0 2px 6px;text-align:right;white-space:nowrap;color:var(--kk-fg)}
+.kk-bantlar td.kk-bant-cubuk{width:100%;padding-left:0}.kk-bantlar .kk-cubuk{margin:0}
+.kk-bantlar .kk-bant-yok :is(th,td){color:var(--kk-fg2);opacity:.7}
+.kk-slayt-genis{grid-column:span 1}
+.kk-seri:has(.kk-slayt-genis){grid-auto-columns:minmax(300px,440px)}
+.kk-sorular{max-height:360px;overflow:auto;min-width:0}
+.kk-soru-tablo{width:100%;border-collapse:collapse;font-size:.8125rem;font-variant-numeric:tabular-nums}
+.kk-soru-tablo th{text-align:left;font-weight:600;font-size:.75rem;color:var(--kk-fg2);padding:4px 6px;border-bottom:1px solid var(--kk-line);position:sticky;top:0;background:var(--kk-panel)}
+.kk-soru-tablo td{padding:4px 6px;border-bottom:1px solid var(--kk-line);vertical-align:top;overflow-wrap:anywhere}
+.kk-soru-tablo td:last-child{white-space:nowrap;font-weight:600}
+.kk-soru-tablo .kk-sd td:last-child{color:var(--kk-ok)}.kk-soru-tablo .kk-sy td:last-child{color:var(--kk-bad)}.kk-soru-tablo .kk-sb td:last-child{color:var(--kk-fg2)}
+.kk-kit{font-size:.6875rem;border:1px solid var(--kk-line);border-radius:4px;padding:0 4px;color:var(--kk-fg2)}
+@media(max-width:640px){.kk-seri,.kk-seri:has(.kk-slayt-genis){grid-auto-columns:86%}}
+@media print{.kk,.yl-karne{display:none!important}}
+.yl-karne{padding:16px 20px;margin-bottom:14px}
+#ydKok .yd-kk-yayin{display:flex;flex-direction:column;gap:10px;min-width:0}
+#ydKok .yd-kk-durum{margin:0;font-size:.875rem;overflow-wrap:anywhere}
+#ydKok .yd-chip:disabled{opacity:.4;cursor:default}
 /* Ders öğretmenleri: fark soruları. No points and no colours: the data in words under each question. */
 #ydKok .yd-fs-durum{display:flex;flex-direction:column;gap:6px;min-width:0}
 #ydKok .yd-fs-durum p{margin:0;overflow-wrap:anywhere}
@@ -9806,6 +9855,8 @@ function ogrenciPaketi(si) {
     turkiyeKiyas: (() => { try { return typeof OGRETMEN_RAPOR !== 'undefined' && rehberMi() ? OGRETMEN_RAPOR.kiyasOzeti(o) : null; } catch (e) { return null; } })(),
     // Yanlışlar defteri as a list (no pictures), from this device's library (opened before a publish).
     yanlislar: (() => { try { return typeof YANLISLAR !== 'undefined' && rehberMi() ? YANLISLAR.ogrenciListesi(o.no) : null; } catch (e) { return null; } })(),
+    // Deneme karnesi (Yanlışlar defteri → Öğrenciye deneme karnesi): per exam, every question's ders, konu, difficulty band and result; only when the rehber publishes it.
+    konuKarne: (() => { try { return typeof YANLISLAR !== 'undefined' && rehberMi() ? YANLISLAR.ogrenciKarnesi(o.no) : null; } catch (e) { return null; } })(),
     // Okul dışı öğrenci: rehberin tasarlanmış müfredatları, kendi planının konu sırası olarak seçilebilsin diye.
     mufredatlar: okulDisiMufredatlari(o)
   };
@@ -9872,6 +9923,7 @@ function paketiYukle(pk) {
   y.par = {}; if (pk.par && Object.keys(pk.par).length) y.par[0] = pk.par;
   if (pk.turkiyeKiyas && typeof pk.turkiyeKiyas === 'object' && !Array.isArray(pk.turkiyeKiyas)) y.turkiyeKiyas = pk.turkiyeKiyas;
   if (pk.yanlislar && typeof pk.yanlislar === 'object' && !Array.isArray(pk.yanlislar)) y.yanlisListe = pk.yanlislar;
+  if (pk.konuKarne && typeof pk.konuKarne === 'object' && !Array.isArray(pk.konuKarne) && pk.konuKarne.v === 2 && Array.isArray(pk.konuKarne.s)) y.konuKarne = pk.konuKarne;
   if (Array.isArray(pk.mufredatlar)) { const m = pk.mufredatlar.filter(mufredatSecenegiGecerli).slice(0, 60); if (m.length) y.mufredatSecenek = m; }
   y.ayarSurum = VERI_SURUMU; y.katalogImza = KATALOG_IMZA;
   yedekDogrula(y);
@@ -29679,8 +29731,9 @@ function content(){
   const oturumSel=cokOturum?sel('Oturum','oturum',[['TYT+AYT','TYT + AYT'],['TYT','TYT'],['AYT','AYT']].map(([v,l])=>opt(v,l,S.oturum===v)).join('')):'';
   const dersler='<div class="yd-dersler" role="group" aria-label="Dersler">'+dersListesi(exU).map(ad=>'<label><input type="checkbox" data-yd-ders="'+h(ad)+'"'+(S.kapali.has(ad)?'':' checked')+'>'+h(ad)+'</label>').join('')+'</div>';
   const gor=(v,t)=>'<button type="button" class="yd-chip" data-yd-gorunum="'+v+'" aria-pressed="'+(S.gorunum===v)+'">'+h(t)+'</button>';
-  const gorunumSec='<div class="yd-sec yd-gorunum"><span id="ydGorunumEtiket">Defter</span><div class="yd-chips" role="group" aria-labelledby="ydGorunumEtiket">'+gor('ogrenci','Öğrenci defterleri')+gor('ders','Ders öğretmenleri: fark soruları')+'</div></div>';
+  const gorunumSec='<div class="yd-sec yd-gorunum"><span id="ydGorunumEtiket">Defter</span><div class="yd-chips" role="group" aria-labelledby="ydGorunumEtiket">'+gor('ogrenci','Öğrenci defterleri')+gor('ders','Ders öğretmenleri: fark soruları')+gor('karne','Öğrenciye deneme karnesi')+'</div></div>';
   const ilerleme='<span id="ydIlerleme" class="yd-ozet" role="status">'+h(S.ilerleme)+'</span>';
+  if(S.gorunum==='karne'){S.liste=[];S.fark=null;return top+gorunumSec+karneGorunum(exU)}
   if(S.gorunum==='ders'){
     S.liste=[];const M=S.fark=farkModeli(),soru=M.geride.reduce((a,g)=>a+g.soru,0),bos=!soru||!!S.kilit;
     const ogrSel=M.ogretmenli?sel('Öğretmen','ogretmen',opt('','Bütün öğretmenler',!S.ogretmen)+M.ogretmenler.map(o=>opt(o,o,o===S.ogretmen)).join('')):'';
@@ -30110,6 +30163,18 @@ async function farkPdfIndir(){
   finally{S.kilit='';yaz('');render()}
 }
 
+// Deneme karnesi publication (D.konuKarneYayin, in the notebook: the choice, never the data). A viewing teacher changes nothing.
+const karneKaydet=()=>{if(typeof kaydet==='function')kaydet()};
+function karneYayinla(mod){
+  if(typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme())return false;
+  const kodlar=siraliDenemeler().filter(e=>e.sec&&e.rapor&&e.es).map(e=>e.kod);
+  if(mod==='secili'&&!kodlar.length)return false;
+  D.konuKarneYayin=mod==='secili'?{mod,kodlar}:{mod:'hepsi'};karneKaydet();render('[data-yd-kk-kaldir]');return true;
+}
+function karneModu(mod){
+  if(!['hepsi','secili'].includes(mod)||(typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme()))return;
+  S.kkMod=mod;if(yayinGecerli(D.konuKarneYayin))karneYayinla(mod);else render('[data-yd-kk-mod="'+mod+'"]');
+}
 if(typeof document!=='undefined'&&document.addEventListener){
 document.addEventListener('change',ev=>{
   if(!etkin())return;const el=ev.target;
@@ -30120,6 +30185,7 @@ document.addEventListener('change',ev=>{
   if(el.dataset?.ydF==='ogr'){S.ogr=el.value;S.pdfOneri=null;render('[data-yd-f="ogr"]');return}
   if(el.dataset?.ydF==='oturum'){if(['TYT+AYT','TYT','AYT'].includes(el.value))S.oturum=el.value;S.pdfOneri=null;render('[data-yd-f="oturum"]');return}
   if(el.dataset?.ydF==='alan'){if(['ogr',...ALANLAR,'Tümü'].includes(el.value))S.alan=el.value;S.pdfOneri=null;render('[data-yd-f="alan"]');return}
+  if(el.dataset?.ydF==='kkOgr'){S.kkOgr=el.value;render('[data-yd-f="kkOgr"]');return}
   if(el.dataset?.ydF==='ogretmen'){S.ogretmen=el.value;render('[data-yd-f="ogretmen"]');return}
   if(el.dataset?.ydF==='secim'){const v=el.value==='z'?'z':Number(el.value);if(secimGecerli(v))S.secim=v;render('[data-yd-f="secim"]');return}
   if(el.dataset?.ydF==='status'){if(['all','yanlis','bos'].includes(el.value))S.status=el.value;S.pdfOneri=null;render('[data-yd-f="status"]');return}
@@ -30129,7 +30195,11 @@ document.addEventListener('click',ev=>{
   if(!etkin())return;const hedef=ev.target.closest?.bind(ev.target);if(!hedef)return;
   if(hedef('[data-yd-yazdir]')){yazdir();return}
   if(hedef('[data-yd-pdf]')){if(S.gorunum==='ders')farkPdfIndir();else pdfIndir();return}
-  const gr=hedef('[data-yd-gorunum]');if(gr){if(['ogrenci','ders'].includes(gr.dataset.ydGorunum)&&!S.kilit){S.gorunum=gr.dataset.ydGorunum;S.pdfOneri=null;render('[data-yd-gorunum="'+S.gorunum+'"]')}return}
+  const gr=hedef('[data-yd-gorunum]');if(gr){if(['ogrenci','ders','karne'].includes(gr.dataset.ydGorunum)&&!S.kilit){S.gorunum=gr.dataset.ydGorunum;S.pdfOneri=null;render('[data-yd-gorunum="'+S.gorunum+'"]')}return}
+  const km=hedef('[data-yd-kk-mod]');if(km){karneModu(km.dataset.ydKkMod);return}
+  if(hedef('[data-yd-kk-yayinla]')){karneYayinla(S.kkMod==='secili'?'secili':'hepsi');return}
+  if(hedef('[data-yd-kk-guncelle]')){karneYayinla('secili');return}
+  if(hedef('[data-yd-kk-kaldir]')){if(confirm('Deneme karnesi öğrencilere gitmesin mi? Öğrenciler, öğrenci girişlerini yeniden yayınladığınızda karnelerini artık görmez.')){delete D.konuKarneYayin;karneKaydet();render('[data-yd-kk-yayinla]')}return}
   const ps=hedef('[data-yd-pdf-sube]');if(ps){pdfIndir(ps.dataset.ydPdfSube);return}
   const sil=hedef('[data-yd-sil]');
   if(sil){const e=S.denemeler.get(sil.dataset.ydSil);if(e&&confirm('“'+adOf(e)+'” bu cihazdan silinsin mi? Gerekirse dosyaları yeniden ekleyebilirsiniz.'))denemeSil(e.kod);return}
@@ -30218,7 +30288,182 @@ function ogrenciListesi(no){
   }
   return out.length?{v:1,s:out}:null;
 }
-return {farkModeli,farkPlan,dersPlani,farkPdfIndir,farkDosyaAdi,farkSorusu,farkCumle,ekli,farkZ,sinavAnahtari,ESIKLER,okulMaddeleri,bolumMaddeleri,sayilanKural,ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
+/* ---------------------------------------------------------------- Deneme karnesi (2026-11-20): every question of the student, by difficulty
+   For each exam, the student's questions on the tests they are judged on (sayilanKural; Ek Felsefe never): the number in the student's own booklet,
+   the konu (Konu Takibi's sınav özeti, A booklet order; B students through the çözüm map), the difficulty band this page shows (zorlukBilgi: the
+   publisher's network p when the Performans analizi is added; 0 Çok kolay … 4 Çok zor) and the result (1 doğru, 0 yanlış, -1 boş). The student's
+   page adds them up by deneme, ders, konu, or lists the questions, over all or some of the exams; Hafızam's "Denemeye göre ayarla" reads the konu
+   totals (HARITAM). Published only when the rehber turns it on (D.konuKarneYayin: {mod: 'hepsi' | 'secili', kodlar}); it goes in the student's
+   package (ogrenciPaketi → konuKarne) as
+     {v: 2, t, s: [[exam name, date, [konu names], [[ders, oturum, kitapçık, [[no, konu index or -1, band or -1, result], …]], …]], …]},
+   newest first, at most YO_SINAV exams and KARNE_UST characters (older exams are left out first). No picture, no answer letter, no other student. */
+const KARNE_UST=150000;
+// The konu of each question of one report section, by its A booklet position (Konu Takibi's sınav özeti of the same exam and ders); '' where none.
+function konuDizisi(rapor,dersAd,n){
+  const out=Array.from({length:n},()=>'');
+  try{
+    if(typeof KONU_TAKIBI==='undefined'||D.konutakibi===undefined)return out;
+    const v=KONU_TAKIBI.oku().veri,ek=KONU_TAKIBI.ek(rapor.ad||''),dk=KONU_TAKIBI.key(dersAd);
+    for(const z of Object.values(v.zorluk||{})){if(KONU_TAKIBI.ek(z.ad||'')!==ek||!z.ozet)continue;
+      for(const [c,l] of Object.entries(z.ozet))if(KONU_TAKIBI.key(c)===dk&&Array.isArray(l))
+        for(let k=0;k<n;k++)if(!out[k]&&Array.isArray(l[k])){const ad=l[k].map(cd=>KONU_TAKIBI.topicFor(c,cd,v.maps)).find(Boolean);if(ad)out[k]=KONU_TAKIBI.topicName(ad)}}
+  }catch(x){}
+  return out;
+}
+const BANT_NO=b=>ZORLUK.BANTLAR.findIndex(x=>x[0]===b);
+// One student's karne over the given exams; null when the student sat none of them.
+function konuKarnesi(no,sinavlar){
+  if(no===undefined||no===null||no==='')return null;
+  const liste=[...sinavlar].filter(e=>e.rapor&&e.es).sort((a,b)=>String(b.tarih||'').localeCompare(String(a.tarih||''))).slice(0,YO_SINAV),out=[];
+  for(const e of liste){
+    const o=e.rapor.ogrenciler.find(x=>String(x.no)===String(no));if(!o)continue;
+    const kural=sayilanKural(e.rapor,e.es).f(o),za=zorlukBilgi(e),konular=[],ki=new Map(),bolumler=[];
+    e.es.bolumler.forEach((b,i)=>{
+      if(!kural.has(i))return;
+      const ri=b.ri??i,rb=e.rapor.bolumler[ri]||{},ses=b.oturum||'TYT',kit=o.kits?o.kits[ses]:o.kit,anahtar=e.rapor.anahtar[kit];if(!anahtar)return;
+      const adlar=konuDizisi(e.rapor,rb.ad||'',b.n),sorular=[];
+      for(let k=0;k<b.n;k++){
+        const g=b.bas+k,dogru=anahtar[g];if(!harfOK(dogru))continue;
+        const own=b.off+k+1,a=kit==='A'?own:(e.harita?.testler?.[b.test]?.bToA?.[own]??null),ak=a===null?null:a-b.off-1;
+        const konu=ak===null?'':adlar[ak];if(konu&&!ki.has(konu)){ki.set(konu,konular.length);konular.push(konu)}
+        const z=za?.map.get(ri+':'+(a!==null?'A:'+(ak+1):'B:'+(k+1)))||null;
+        sorular.push([own,konu?ki.get(konu):-1,z&&z.bant?BANT_NO(z.bant):-1,o.cev[g]===dogru?1:o.cev[g]?0:-1]);
+      }
+      if(sorular.length)bolumler.push([dersAdi(rb.ad||b.ders),ses,kit||'A',sorular]);
+    });
+    if(bolumler.length)out.push([adOf(e),e.tarih||'',konular,bolumler]);
+  }
+  while(out.length>1&&JSON.stringify(out).length>KARNE_UST)out.pop();
+  return out.length?{v:2,t:typeof bugunNo==='function'?bugunNo():null,s:out}:null;
+}
+// The exams the rehber publishes: every exam of the library, or the ones chosen when it was turned on.
+function karneSinavlari(y=D.konuKarneYayin){
+  const tum=siraliDenemeler().filter(e=>e.rapor&&e.es);
+  return y&&y.mod==='secili'&&Array.isArray(y.kodlar)?tum.filter(e=>y.kodlar.includes(e.kod)):tum;
+}
+const yayinGecerli=y=>!!y&&typeof y==='object'&&(y.mod==='hepsi'||(y.mod==='secili'&&Array.isArray(y.kodlar)&&y.kodlar.length>0));
+// For the package: the student's karne when the rehber publishes it, else null.
+function ogrenciKarnesi(no){return typeof D!=='undefined'&&yayinGecerli(D.konuKarneYayin)?konuKarnesi(no,karneSinavlari()):null}
+
+/* The slides, shared by the rehber's preview and the student's page. karne: the package form; secim: {sinav: Set of exam indices or null (all),
+   ders: '' or "TYT Türkçe", duzey: 'deneme' | 'ders' | 'konu' (default) | 'soru'}; yer: 'ogretmen' | 'ogrenci' (whose state the controls change). */
+const KARNE_DUZEY=[['deneme','Denemeler'],['ders','Dersler'],['konu','Konular'],['soru','Sorular']];
+const karneGecerli=k=>!!k&&k.v===2&&Array.isArray(k.s);
+const bos5=()=>ZORLUK.BANTLAR.map(()=>[0,0]);
+// The questions of the chosen exams and ders: [{sinav: index, ad, tarih, ders, oturum, kit, no, konu, z, d}].
+function karneSorulari(karne,secim={}){
+  const out=[];if(!karneGecerli(karne))return out;
+  karne.s.forEach((s,i)=>{
+    if(secim.sinav&&!secim.sinav.has(i)||!Array.isArray(s)||!Array.isArray(s[3]))return;
+    const konular=Array.isArray(s[2])?s[2]:[];
+    for(const b of s[3]){
+      if(!Array.isArray(b)||typeof b[0]!=='string'||!Array.isArray(b[3]))continue;
+      const ders=String(b[1]||'')+' '+b[0];if(secim.ders&&secim.ders!==ders)continue;
+      for(const q of b[3])if(Array.isArray(q)&&Number.isInteger(q[0]))out.push({sinav:i,ad:String(s[0]||'Deneme'),tarih:String(s[1]||''),ders,dersAd:b[0],oturum:String(b[1]||''),kit:String(b[2]||'A'),no:q[0],
+        konu:Number.isInteger(q[1])&&q[1]>=0&&typeof konular[q[1]]==='string'?konular[q[1]]:'',z:Number.isInteger(q[2])&&q[2]>=0&&q[2]<5?q[2]:-1,d:q[3]===1?1:q[3]===0?0:-1});
+    }
+  });
+  return out;
+}
+// Totals of a group of questions: per band [right, all], unknown band, all, blank, exams.
+function topla(qs){
+  const t={bant:bos5(),bilinmeyen:[0,0],d:0,n:0,bos:0,sinav:new Set(qs.map(q=>q.sinav)).size};
+  for(const q of qs){const h=q.z>=0?t.bant[q.z]:t.bilinmeyen,dg=q.d===1?1:0;h[0]+=dg;h[1]++;t.d+=dg;t.n++;if(q.d===-1)t.bos++}
+  t.kd=t.bant[0][0]+t.bant[1][0];t.kn=t.bant[0][1]+t.bant[1][1];t.zd=t.bant[3][0]+t.bant[4][0];t.zn=t.bant[3][1]+t.bant[4][1];t.b=null;
+  return t;
+}
+// Slides of one level, in the order met (newest exam first; booklet order within).
+function karneTopla(karne,secim={},duzey='konu'){
+  const qs=karneSorulari(karne,secim),grup=new Map(),anahtar={deneme:q=>q.sinav,ders:q=>q.ders,konu:q=>q.konu?q.ders+'|'+q.konu:null,soru:q=>q.sinav+'|'+q.ders}[duzey]||(q=>q.konu?q.ders+'|'+q.konu:null);
+  for(const q of qs){const k=anahtar(q);if(k===null)continue;let g=grup.get(k);if(!g)grup.set(k,g={q,sorular:[]});g.sorular.push(q)}
+  return [...grup.values()].map(({q,sorular})=>Object.assign(topla(sorular),{ad:duzey==='deneme'?q.ad:duzey==='ders'?q.ders:duzey==='soru'?q.ders:q.konu,
+    ust:duzey==='deneme'?tarihYaz(q.tarih):duzey==='ders'?'':duzey==='soru'?q.ad+(tarihYaz(q.tarih)?' · '+tarihYaz(q.tarih):''):q.ders,sorular}));
+}
+function karneYorumu(t){
+  const sv=typeof HARITAM!=='undefined'&&HARITAM.denemeSeviyesi?HARITAM.denemeSeviyesi(t):null;
+  if(sv==='guclu')return ['iyi','Zor sorularını da yapıyorsun: bu konuyu biliyorsun.'];
+  if(sv==='biliyor')return ['iyi','Soruların çoğunu doğru yapıyorsun.'];
+  if(sv==='temel')return ['orta','Kolay sorularını yapıyorsun; zor sorularına çalış.'];
+  if(t.kn&&t.kd<t.kn/2)return ['zayif','Kolay sorularda bile zorlanıyorsun: konuyu baştan tekrar et.'];
+  return ['zayif','Bu konuyu tekrar etmeye değer.'];
+}
+const yz=(d,n)=>n?Math.round(100*d/n):null;
+function olcuHTML(ad,d,n){
+  const p=yz(d,n);
+  return '<div class="kk-olcu"><span class="kk-etiket">'+ad+'</span>'+(n?'<b class="kk-yuzde">%'+p+'</b><span class="kk-say">'+d+' / '+n+' doğru</span><span class="kk-cubuk" aria-hidden="true"><span style="width:'+p+'%"></span></span>'
+    :'<b class="kk-yuzde kk-yok">—</b><span class="kk-say">Bu denemelerde yoktu</span>')+'</div>';
+}
+// The five bands, one line each (a band with no question is shown with a dash), and the questions with no band.
+const bantlarHTML=t=>'<table class="kk-bantlar"><caption class="kk-gizli">Zorluğa göre doğru</caption><tbody>'+ZORLUK.BANTLAR.map(([,ad],i)=>{const [d,n]=t.bant[i],p=yz(d,n);
+  return '<tr'+(n?'':' class="kk-bant-yok"')+'><th scope="row">'+ad+'</th><td class="kk-bant-cubuk"><span class="kk-cubuk" aria-hidden="true"><span style="width:'+(p||0)+'%"></span></span></td><td>'+(n?d+' / '+n:'—')+'</td><td>'+(n?'%'+p:'')+'</td></tr>'}).join('')+
+  (t.bilinmeyen[1]?'<tr class="kk-bant-yok"><th scope="row">Zorluğu bilinmiyor</th><td></td><td>'+t.bilinmeyen[0]+' / '+t.bilinmeyen[1]+'</td><td></td></tr>':'')+'</tbody></table>';
+const SONUC=['Yanlış','Doğru'],sonucAd=d=>d===-1?'Boş':SONUC[d];
+function slaytHTML(t,i,n,duzey){
+  const ad=t.ad,ust=t.ust;
+  const bas='<article class="kk-slayt'+(duzey==='soru'?' kk-slayt-genis':'')+'" aria-roledescription="slayt" aria-label="'+(i+1)+' / '+n+': '+h(ad)+'">'+(ust?'<p class="kk-ders">'+h(ust)+'</p>':'')+'<h3 class="kk-konu">'+h(ad)+'</h3>';
+  const tum='<p class="kk-tum">Bütün sorular: <b>'+t.d+' / '+t.n+'</b> doğru'+(t.bos?' · '+t.bos+' boş':'')+(duzey!=='deneme'&&duzey!=='soru'?' · '+t.sinav+' deneme':'')+'</p>';
+  if(duzey==='soru')return bas+tum+'<div class="kk-sorular"><table class="kk-soru-tablo"><thead><tr><th scope="col">Soru</th><th scope="col">Konu</th><th scope="col">Zorluk</th><th scope="col">Sonuç</th></tr></thead><tbody>'+
+    t.sorular.map(q=>'<tr class="kk-s'+(q.d===1?'d':q.d===0?'y':'b')+'"><td><b>'+q.no+'</b>'+(q.kit==='B'?' <span class="kk-kit">B</span>':'')+'</td><td>'+h(q.konu||'—')+'</td><td>'+(q.z>=0?h(ZORLUK.BANTLAR[q.z][1]):'—')+'</td><td>'+sonucAd(q.d)+'</td></tr>').join('')+'</tbody></table></div></article>';
+  const [tur,yorum]=duzey==='konu'?karneYorumu(t):[null,null];
+  return bas+'<div class="kk-olculer">'+olcuHTML('Kolay sorular',t.kd,t.kn)+olcuHTML('Zor sorular',t.zd,t.zn)+'</div>'+bantlarHTML(t)+tum+(yorum?'<p class="kk-yorum kk-'+tur+'">'+h(yorum)+'</p>':'')+'</article>';
+}
+function karneHTML(karne,secim={},yer='ogrenci'){
+  if(!karneGecerli(karne)||!karne.s.length)return '';
+  const sinavlar=karne.s,secili=secim.sinav&&[...secim.sinav].some(i=>i<sinavlar.length)?secim.sinav:null,duzey=KARNE_DUZEY.some(x=>x[0]===secim.duzey)?secim.duzey:'konu';
+  const dersler=[...new Set(karneSorulari(karne,{sinav:secili}).map(q=>q.ders))],ders=dersler.includes(secim.ders)?secim.ders:'';
+  const liste=karneTopla(karne,{sinav:secili,ders},duzey),birim={deneme:'deneme',ders:'ders',konu:'konu',soru:'ders'}[duzey];
+  const cip=(v,ad,bas,veri='kk-sinav')=>'<button type="button" class="kk-cip" data-'+veri+'="'+v+'" aria-pressed="'+bas+'">'+h(ad)+'</button>';
+  const secimHTML='<div class="kk-sec"><span class="kk-sec-ad" id="kkDuzeyEtiket-'+yer+'">Göster</span><div class="kk-cipler" role="group" aria-labelledby="kkDuzeyEtiket-'+yer+'">'+KARNE_DUZEY.map(([v,ad])=>cip(v,ad,v===duzey,'kk-duzey')).join('')+'</div></div>'+
+    '<div class="kk-sec"><span class="kk-sec-ad" id="kkSinavEtiket-'+yer+'">Denemeler</span><div class="kk-cipler" role="group" aria-labelledby="kkSinavEtiket-'+yer+'">'+cip('hepsi','Bütün denemeler ('+sinavlar.length+')',!secili)+
+    sinavlar.map((s,i)=>cip(i,String(s[0]||'Deneme')+(tarihYaz(s[1])?' · '+tarihYaz(s[1]):''),!!secili&&secili.has(i))).join('')+'</div></div>'+
+    (dersler.length>1?'<label class="kk-sec">Ders<select data-kk-ders>'+'<option value="">Bütün dersler</option>'+dersler.map(d=>'<option value="'+h(d)+'"'+(d===ders?' selected':'')+'>'+h(d)+'</option>').join('')+'</select></label>':'');
+  return '<section class="kk" data-kk-yer="'+yer+'"><div class="kk-bas"><h2>Deneme karnen</h2><p class="kk-alt">Denemelerin, derslerin, konuların ve tek tek soruların: çok kolaydan çok zora her zorlukta kaç sorunun doğru olduğu. Zorluk, o soruyu bütün sınav okullarında doğru yapanların oranına göredir.</p></div>'+secimHTML+
+    (liste.length?'<div class="kk-gezin"><button type="button" class="kk-ok" data-kk-git="-1" aria-label="Önceki">‹</button><span class="kk-sayac" aria-live="polite">'+liste.length+' '+birim+'</span><button type="button" class="kk-ok" data-kk-git="1" aria-label="Sonraki">›</button></div>'+
+      '<div class="kk-seri" tabindex="0" aria-label="Slaytlar">'+liste.map((t,i)=>slaytHTML(t,i,liste.length,duzey)).join('')+'</div>'
+      :'<p class="kk-alt">'+(duzey==='konu'?'Seçilen denemelerde konusu bilinen soru yok.':'Seçilen denemelerde soru yok.')+'</p>')+'</section>';
+}
+// The slides' controls on either page. The state: the student's EK.kk, the rehber's S.kk; the page draws again.
+function karneSecimi(yer){const st=yer==='ogretmen'?(S.kk=S.kk||{}):(EK.kk=EK.kk||{});return st}
+function karneCiz(yer,odak){if(yer==='ogretmen')render(odak);else if(typeof ciz==='function'){ciz();document.querySelector('.kk '+odak)?.focus()}}
+if(typeof document!=='undefined'&&document.addEventListener){
+  document.addEventListener('click',ev=>{
+    const el=ev.target&&ev.target.closest?ev.target.closest('[data-kk-sinav],[data-kk-git],[data-kk-duzey]'):null,kok=el&&el.closest('.kk');if(!kok)return;
+    if(el.dataset.kkGit){const seri=kok.querySelector('.kk-seri'),s1=seri&&seri.querySelector('.kk-slayt');if(seri&&s1)seri.scrollBy({left:(+el.dataset.kkGit)*(s1.getBoundingClientRect().width+12),behavior:'smooth'});return}
+    const yer=kok.dataset.kkYer,st=karneSecimi(yer);
+    if(el.dataset.kkDuzey){if(KARNE_DUZEY.some(x=>x[0]===el.dataset.kkDuzey))st.duzey=el.dataset.kkDuzey;karneCiz(yer,'[data-kk-duzey="'+st.duzey+'"]');return}
+    const v=el.dataset.kkSinav;
+    if(v==='hepsi')st.sinav=null;else{const s=new Set(st.sinav||[]),i=+v;if(s.has(i))s.delete(i);else s.add(i);st.sinav=s.size?s:null}
+    karneCiz(yer,'[data-kk-sinav="'+v+'"]');
+  });
+  document.addEventListener('change',ev=>{
+    const el=ev.target,kok=el&&el.matches&&el.matches('[data-kk-ders]')?el.closest('.kk'):null;if(!kok)return;
+    const yer=kok.dataset.kkYer;karneSecimi(yer).ders=el.value;karneCiz(yer,'[data-kk-ders]');
+  });
+}
+// The rehber's view: what goes to the students, which exams, and one student's slides as the student will see them.
+function karneGorunum(exU){
+  const salt=typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme(),y=yayinGecerli(D.konuKarneYayin)?D.konuKarneYayin:null;
+  const tum=siraliDenemeler().filter(e=>e.rapor&&e.es),secili=tum.filter(e=>e.sec);
+  const mod=y?y.mod:(S.kkMod==='secili'?'secili':'hepsi'),ex=y?karneSinavlari(y):mod==='secili'?secili:tum;
+  const cip=(v,ad)=>'<button type="button" class="yd-chip" data-yd-kk-mod="'+v+'" aria-pressed="'+(mod===v)+'"'+(salt||(v==='secili'&&!secili.length)?' disabled':'')+'>'+h(ad)+'</button>';
+  const yayinAd=y?(y.mod==='hepsi'?'bütün denemeler':ex.map(adOf).join(', ')||'seçilen denemeler bu cihazda yok'):'';
+  const fark=y&&y.mod==='secili'&&(secili.map(e=>e.kod).sort().join()!==[...y.kodlar].sort().join());
+  const bulut=typeof window!=='undefined'&&window.bulut&&window.bulut.yapilandirilmis;
+  const kisiler=kisiTemel(ex.filter(e=>e.es)),no=kisiler.some(k=>k.no===S.kkOgr)?S.kkOgr:(kisiler[0]?.no||'');
+  const karne=no?konuKarnesi(no,ex):null;
+  const durum=y?'<p class="yd-kk-durum"><b>Öğrencilere gidiyor:</b> '+h(yayinAd)+'. Öğrenciler, öğrenci girişlerini yayınladığınızda alır.</p>'
+    :'<p class="yd-kk-durum">Henüz öğrencilere gitmiyor.</p>';
+  const dugmeler=salt?'':'<div class="yd-arac">'+(y?(fark?'<button type="button" class="et-dugme" data-yd-kk-guncelle>Seçili denemelerle güncelle</button>':'')+'<button type="button" class="et-dugme" data-yd-kk-kaldir>Yayından kaldır</button>'
+    :'<button type="button" class="et-dugme birincil" data-yd-kk-yayinla'+(ex.length?'':' disabled')+'>Öğrenciye yayınla</button>')+
+    (y&&bulut?'<button type="button" class="et-dugme birincil" id="ogrenciHesapYayinla">Öğrenci girişlerini yayınla</button>':'')+'</div>';
+  const ogrSel='<label class="yd-sec">Önizleme: öğrenci<select data-yd-f="kkOgr">'+kisiler.map(k=>'<option value="'+h(k.no)+'"'+(k.no===no?' selected':'')+'>'+h(k.ad+' · '+k.no)+'</option>').join('')+'</select></label>';
+  return '<section class="yd-kk-yayin"><p class="yd-yardim">Her öğrenciye kendi deneme karnesi gider: her denemede, derste, konuda ve tek tek her soruda çok kolaydan çok zora her zorlukta kaç sorunun doğru olduğu. Öğrenci bunu kendi Yanlışlar defterinde slayt olarak görür; Hafızam’daki “Denemeye göre ayarla” da konulardan öğrencinin bildiklerini aklında gösterir, hiçbir konuyu düşürmez. Zorluk bu sayfadaki soru zorluğundan (performans analizi eklendiyse Türkiye geneli), konular Konu Takibi’nin sınav özetinden gelir. Soru resimleri, cevap harfleri ve başka öğrenciler gitmez.</p>'+
+    '<div class="yd-sec"><span id="ydKkEtiket">Hangi denemeler</span><div class="yd-chips" role="group" aria-labelledby="ydKkEtiket">'+cip('hepsi','Bütün denemeler ('+tum.length+')')+cip('secili','Seçili denemeler ('+secili.length+')')+'</div></div>'+
+    durum+dugmeler+'</section>'+
+    (kisiler.length?'<div class="yd-filtre">'+ogrSel+'</div>':'')+
+    (karne?karneHTML(karne,S.kk||{},'ogretmen'):'<p class="yd-bos">'+(no?'Bu öğrencinin seçilen denemelerde sorusu yok.':'Seçilen denemelerde öğrenci yok.')+'</p>');
+}
+return {farkModeli,konuKarnesi,ogrenciKarnesi,karneHTML,karneTopla,karneSorulari,karneSinavlari,karneYayinla,karneModu,konuDizisi,farkPlan,dersPlani,farkPdfIndir,farkDosyaAdi,farkSorusu,farkCumle,ekli,farkZ,sinavAnahtari,ESIKLER,okulMaddeleri,bolumMaddeleri,sayilanKural,ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
   dosyalarEkle,topluUygula,dosyaTani,pdfTuru,denemeKoy,kutuphaneKur,kutAc,sakla,geriYukle,metaOf,denemeSil,hepsiniSil,bellekiBosalt,sifirla,birlesik,kisiPlani,pdfPlan,pdfDosyaAdi,pdfIndir,boyutYaz,
   gorunum,yazdir,hazirla,durumu,key,title,kitAc,kitKapat};
 })();
@@ -30227,9 +30472,11 @@ function gorunumYanlislar(){return YANLISLAR.gorunum()}
 // with the student's and the correct answer, how many in the school and across the publisher's schools answered it right, and its konu.
 function gorunumYanlisListem(){
   const L=D.yanlisListe,bas='<div class="baslik"><h1>Yanlışlar defteri</h1><p>Yanlış ya da boş bıraktığın sorular. Kitapçığını açıp yeniden çöz.</p></div>';
-  if(!L||L.v!==1||!Array.isArray(L.s)||!L.s.length)return bas+'<div class="kart" style="padding:20px">Henüz liste yok. Öğretmenin deneme dosyalarını ekleyip planını yayınladığında burada görünür.</div>';
+  // Deneme karnesi: the slides first (the rehber's choice of exams; the student picks all or some of them, and deneme, ders, konu or soru, here).
+  const karne=D.konuKarne?'<div class="kart yl-karne">'+YANLISLAR.karneHTML(D.konuKarne,EK.kk||{},'ogrenci')+'</div>':'';
+  if(!L||L.v!==1||!Array.isArray(L.s)||!L.s.length)return bas+karne+(karne?'':'<div class="kart" style="padding:20px">Henüz liste yok. Öğretmenin deneme dosyalarını ekleyip planını yayınladığında burada görünür.</div>');
   const yz=v=>v===null||v===undefined?'—':'%'+v;
-  return bas+'<div class="arac"><button type="button" class="dugme" id="yanlisYazdir">Yazdır / PDF</button></div>'+L.s.map(s=>{
+  return bas+karne+'<div class="arac"><button type="button" class="dugme" id="yanlisYazdir">Yazdır / PDF</button></div>'+L.s.map(s=>{
     const n=s.d.reduce((t,d)=>t+d[2].length,0);
     return '<section class="kart yl-sinav"><h2>'+kacis(s.ad)+' <span class="mini">'+(s.tarih?kacis(s.tarih.split('-').reverse().join('.'))+' · ':'')+n+' soru</span></h2>'+
       s.d.map(([ders,ot,l])=>'<h3>'+kacis(ders)+' <span class="mini">'+kacis(ot)+' · '+l.length+'</span></h3><table class="yl-tablo"><thead><tr><th>Soru</th><th>Senin</th><th>Doğru</th><th title="Okulundaki öğrencilerden bu soruyu doğru yapanlar">Okulunda doğru</th><th title="Sınava giren bütün okullarda bu soruyu doğru yapanlar">Sınav okullarında doğru</th><th>Konu</th></tr></thead><tbody>'+
@@ -33705,71 +33952,176 @@ function bagla() {
 }
 bagla();
 
-/* ---- Denemeye göre ayarla (2026-11-19): a student who joins late fills Hafızam and the map from their mock exams in one press instead of setting each
-   topic by hand. The source is the topic results the teacher's app sends with the student's package (D.turkiyeKiyas, Türkiye karşılaştırması: per
-   topic and exam, the student's right answers d of n questions). A topic's last three exams with questions decide (DENEME_AYAR):
-     at least 75 % right → recalled today at 90 %, 21 days to fall to 90 % (settling, never long-term: so never "YKS'ye kadar hafızanda");
-     50–75 % → 75 % and 7 days; under 50 % → 50 % and 3 days (forgetting).
-   Written as the student's own setting (Düzenle: hafizaElle), so a later result goes on from it, "Algoritmaya bırak" undoes one topic and Geri al the
-   whole press in the same visit. A topic with the student's own result or own setting is never changed. A deneme topic meets Hafızam's topics by
-   name within its subject (a curriculum unit's or a plan topic's name). A topic answered right by luck counts as known: accepted for the effort saved. */
-const DENEME_AYAR = [[.75, .9, 21], [.5, .75, 7], [0, .5, 3]];
+/* ---- Denemeye göre ayarla (2026-11-19, raise-only since 2026-11-20): a student who studied before joining tells the app "I know these" in one
+   press, instead of setting each topic by hand. It only ever raises a topic: what the app already knows stays, and a topic the student did badly on
+   in the denemeler is left as it is (never turned red by this button).
+   Evidence, per deneme topic (Konu Takibi's topic names), the last three exams with questions on it:
+     - the Deneme karnesi the rehber published from Yanlışlar defteri (D.konuKarne): every question's konu, difficulty band and result; easy =
+       Çok kolay and Kolay, hard = Zor and Çok zor;
+     - else the Türkiye karşılaştırması package (D.turkiyeKiyas): right answers d of n and the network's expected b (Σ p of those questions).
+   Levels (DENEME_AYAR): güçlü = at least 75 % right and the hard ones too (karne: at least half of the hard questions, one at least; Türkiye: the
+   network averaged at most half on these questions), over at least three questions in two exams → 97 % today and 30 days above the student's
+   line (long-term); biliyor = at least 75 % right → 96 %, 14 days above the line; temel (karne only) = at least 75 % of the easy questions (two at
+   least) and half of all → 94 %, a week above the line. The days to 90 % (s) follow from the recall today and the days above the line, under 30 for
+   biliyor and temel so they stay settling (the first version set s alone, so a topic set "known" fell under the line within a week). Recall is
+   never set under the line: at least the target + 2 points. Anything less: nothing.
+   Never lower: a setting replaces a map topic's memory at that moment, so it is decided per map topic. A topic's target is the best level of the
+   deneme topics reaching it (a plan topic of its name, or a school unit covering it); it is written only where it beats today's own memory, as the
+   larger of each (recall today, days to 90 %). It goes on a notebook topic that reaches that map topic alone (the plan topic first); a school unit
+   covering several is written only when it lowers none of them. A topic the student answered or set themselves on or after the newest exam is left
+   alone. Off the map (no YKS map), Hafızam's own value is compared the same way. Written as the student's own setting (hafizaElle, what Düzenle
+   writes): "Algoritmaya bırak" undoes one topic, Geri al the whole press in the same visit (earlier settings come back). */
+// [recall today, days above the line, highest s]
+const DENEME_AYAR = {guclu: [.97, 30, 365], biliyor: [.96, 14, 29], temel: [.94, 7, 29]}, SEVIYE_SIRA = ['temel', 'biliyor', 'guclu'];
 const harfKey = s => String(s ?? '').toLocaleUpperCase('tr').normalize('NFD').replace(/\p{M}/gu, '').replace(/[^A-Z]/g, '');
 const AILE = [[/^(TURKCE|TURKDILI)/, /^(TURKCE|TURKDILI|EDEBIYAT)/], [/^(MATEMATIK|GEOMETRI)/, /^(MATEMATIK|GEOMETRI)/], [/^FIZIK/, /^FIZIK/], [/^KIMYA/, /^KIMYA/],
   [/^BIYOLOJI/, /^BIYOLOJI/], [/^TARIH/, /^(TARIH|INKILAP)/], [/^COGRAFYA/, /^COGRAFYA/], [/^FELSEFE/, /^(FELSEFE|MANTIK|PSIKOLOJI|SOSYOLOJI)/], [/^DIN/, /^DIN/]];
 const kendiDefteri = si => ogrenciMi() && si === 0 && D.ogr.length === 1;
-function denemeAyari(si) {
-  const o = D.ogr[si], oz = kendiDefteri(si) ? D.turkiyeKiyas : null;
-  if (!o || !oz || !Array.isArray(oz.b)) return {kaynak: !!oz, liste: []};
-  const adlar = new Map();
-  for (let ki = 0, n = konuSayisi(); ki < n; ki++) { const k = konuAl(ki); if (!k) continue; const a = konuAdiTamAnahtari(devamsiz(k[3])); (adlar.get(a) || adlar.set(a, []).get(a)).push(ki); }
-  const kendi = new Set((D.log || []).filter(l => l[1] === si).map(l => l[2])), elle = o.hafizaElle || {}, topla = new Map();
-  for (const b of oz.b) {
-    const aile = AILE.find(([re]) => re.test(harfKey(b && b.k))); if (!aile || !b.z || !Array.isArray(b.z.r)) continue;
-    for (const [konu, hucre] of b.z.r) {
-      const son = (Array.isArray(hucre) ? hucre : []).filter(h => Array.isArray(h) && h[2] > 0).slice(-3); if (!son.length) continue;
-      for (const ki of adlar.get(konuAdiTamAnahtari(konu)) || []) {
-        if (!aile[1].test(harfKey(konuDersAdi(ki))) || kendi.has(ki) || elle[ki]) continue;
-        const t = topla.get(ki) || {d: 0, n: 0}; for (const h of son) { t.d += h[0]; t.n += h[2]; } topla.set(ki, t);
+const sayi = x => Number.isFinite(x) && x >= 0 ? x : 0;
+// One topic's evidence: {d, n, b (expected right answers, Türkiye; null with the karne), kd, kn, zd, zn (karne; null without), sinav (exams), gun}.
+function seviye(t) {
+  if (!(t.n > 0)) return null;
+  const a = t.d / t.n, karne = t.kn !== null;
+  const zor = karne ? t.zd >= 1 && t.zd >= t.zn / 2 : t.b !== null && t.b <= t.n / 2;
+  if (a >= .75 && zor && t.n >= 3 && t.sinav >= 2) return 'guclu';
+  if (a >= .75) return 'biliyor';
+  if (karne && t.kn >= 2 && t.kd >= .75 * t.kn && a >= .5) return 'temel';
+  return null;
+}
+// Deneme topic name → its evidence, per subject family. Karne first (it knows the easy and the hard questions); a topic it lacks comes from Türkiye.
+function kanitlar(oz, karne) {
+  const out = new Map(), anahtar = (aile, konu) => AILE.indexOf(aile) + '|' + konuAdiTamAnahtari(konu);
+  const ekle = (aile, konu, satir, kaynak) => { const k = anahtar(aile, konu); if (!out.has(k)) out.set(k, Object.assign({aile, konu, kaynak}, satir)); };
+  if (karne && karne.v === 2 && Array.isArray(karne.s)) {
+    // per exam, oldest first here (the package is newest first), so the last three are the newest; a konu's questions of one exam add up
+    const konular = new Map();
+    [...karne.s].reverse().forEach(s => {
+      if (!Array.isArray(s) || !Array.isArray(s[3])) return; const gun = typeof s[1] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s[1]) ? gunNo(s[1]) : null, adlar = Array.isArray(s[2]) ? s[2] : [];
+      const buSinav = new Map();
+      for (const b of s[3]) {
+        if (!Array.isArray(b) || !Array.isArray(b[3])) continue; const aile = AILE.find(([re]) => re.test(harfKey(b[0]))); if (!aile) continue;
+        for (const q of b[3]) {
+          if (!Array.isArray(q) || !Number.isInteger(q[1]) || typeof adlar[q[1]] !== 'string') continue;
+          const k = anahtar(aile, adlar[q[1]]); let h = buSinav.get(k); if (!h) buSinav.set(k, h = {aile, konu: adlar[q[1]], gun, d: 0, n: 0, kd: 0, kn: 0, zd: 0, zn: 0});
+          const dg = q[3] === 1 ? 1 : 0; h.d += dg; h.n++; if (q[2] === 0 || q[2] === 1) { h.kd += dg; h.kn++; } else if (q[2] === 3 || q[2] === 4) { h.zd += dg; h.zn++; }
+        }
       }
+      buSinav.forEach((h, k) => { let l = konular.get(k); if (!l) konular.set(k, l = {aile: h.aile, konu: h.konu, h: []}); l.h.push(h); });
+    });
+    for (const l of konular.values()) { const son = l.h.slice(-3), t = {d: 0, n: 0, b: null, kd: 0, kn: 0, zd: 0, zn: 0, sinav: son.length, gun: null};
+      for (const h of son) { ['d', 'n', 'kd', 'kn', 'zd', 'zn'].forEach(x => { t[x] += h[x]; }); if (h.gun !== null) t.gun = Math.max(t.gun ?? -Infinity, h.gun); }
+      t.d = Math.min(t.d, t.n); ekle(l.aile, l.konu, t, 'karne'); }
+  }
+  if (oz && Array.isArray(oz.b)) for (const b of oz.b) {
+    const aile = AILE.find(([re]) => re.test(harfKey(b && b.k))); if (!aile || !b.z || !Array.isArray(b.z.r)) continue;
+    const gunler = (Array.isArray(b.z.e) ? b.z.e : []).map(e => Array.isArray(e) && Number.isInteger(e[1]) ? e[1] : null);
+    for (const [konu, hucre] of b.z.r) {
+      const son = (Array.isArray(hucre) ? hucre : []).map((h, i) => [h, i]).filter(([h]) => Array.isArray(h) && h[2] > 0).slice(-3); if (!son.length || typeof konu !== 'string') continue;
+      const t = {d: 0, n: 0, b: 0, kd: null, kn: null, zd: null, zn: null, sinav: son.length, gun: null};
+      for (const [h, i] of son) { t.d += sayi(h[0]); t.b += sayi(h[1]); t.n += h[2]; const g = gunler[i] ?? (Number.isInteger(oz.t) ? oz.t : null); if (g !== null) t.gun = Math.max(t.gun ?? -Infinity, g); }
+      t.d = Math.min(t.d, t.n); ekle(aile, konu, t, 'turkiye');
     }
   }
-  return {kaynak: true, liste: [...topla].map(([ki, t]) => { const oran = Math.min(1, t.d / t.n), [, r, s] = DENEME_AYAR.find(x => oran >= x[0]); return {ki, oran, r, s}; })};
+  return [...out.values()];
+}
+// What one press would write: {kaynak, liste: [{ki, r, s}], konular: map topics and off-map notebook topics raised, seviyeler: count per level}.
+function denemeAyari(si) {
+  const o = D.ogr[si], oz = kendiDefteri(si) ? D.turkiyeKiyas : null, karne = kendiDefteri(si) ? D.konuKarne : null;
+  const kaynak = !!(oz && Array.isArray(oz.b)) || !!(karne && Array.isArray(karne.s) && karne.s.length);
+  const bos = {kaynak, liste: [], konular: 0, seviyeler: {}};
+  if (!o || !kaynak) return bos;
+  const kan = kanitlar(oz, karne).map(t => Object.assign(t, {seviye: seviye(t)})).filter(t => t.seviye);
+  if (!kan.length) return bos;
+  // the notebook's topics by name within the family
+  const adlar = new Map();
+  for (let ki = 0, n = konuSayisi(); ki < n; ki++) { const k = konuAl(ki); if (!k) continue; const a = konuAdiTamAnahtari(devamsiz(k[3])); (adlar.get(a) || adlar.set(a, []).get(a)).push(ki); }
+  const kiKanit = new Map(), daha = (a, b) => !b || SEVIYE_SIRA.indexOf(a.seviye) > SEVIYE_SIRA.indexOf(b.seviye) || (a.seviye === b.seviye && (a.gun ?? -Infinity) > (b.gun ?? -Infinity));
+  for (const t of kan) for (const ki of adlar.get(konuAdiTamAnahtari(t.konu)) || []) if (t.aile[1].test(harfKey(konuDersAdi(ki))) && daha(t, kiKanit.get(ki))) kiKanit.set(ki, t);
+  if (!kiKanit.size) return bos;
+  // s for `gun` days from recall r down to the line: R(t) = (1 + FACTOR·t/s)^DECAY, so t = s·x(R)/FACTOR with x(R) = R^(1/DECAY) − 1.
+  const hedef = hedefTutma(si), x = R => Math.pow(R, 1 / DECAY) - 1;
+  const hedefi = sv => { const [r0, gun, ust] = DENEME_AYAR[sv], r = Math.min(.99, Math.max(r0, hedef + .02)); return {r, s: Math.min(ust, Math.max(1, gun * FACTOR / (x(hedef) - x(r))))}; };
+  // Better than now: a little higher recall or a clearly longer memory (the setting rounds to whole days).
+  const iyiMi = (h, rOz, sGun) => rOz === null || rOz === undefined || h.r > rOz + .01 || h.s > sGun * 1.1 + .5;
+  const birlestir = (h, rOz, sGun) => rOz === null || rOz === undefined ? {r: h.r, s: h.s} : {r: Math.min(1, Math.max(h.r, rOz)), s: Math.min(3650, Math.max(h.s, sGun))};
+  const yuvarla = x => ({r: Math.round(x.r * 1000) / 1000, s: Math.round(x.s * 10) / 10});
+  const liste = [], seviyeler = {}; let konular = 0;
+  const gor = gorunur(o);
+  if (gor.size) {
+    const d = durum(si), ulas = new Map();     // notebook topic → the visible map topics it reaches
+    d.kaynak.forEach((kis, id) => { const k = KONU.get(id); if (!k || k.gizli || !gor.has(id)) return; kis.forEach(ki => (ulas.get(ki) || ulas.set(ki, []).get(ki)).push(id)); });
+    // per map topic: its best evidence, and what it would become
+    const dugum = new Map();
+    kiKanit.forEach((t, ki) => (ulas.get(ki) || []).forEach(id => { const x = dugum.get(id); if (!x || daha(t, x.t)) dugum.set(id, {t}); }));
+    dugum.forEach((x, id) => {
+      const s = d.satir.get(id), h = hedefi(x.t.seviye);
+      // the student's own word on this topic (a result or a setting) on or after the newest exam stays
+      if (s.sonOz !== null && s.sonOz !== undefined && x.t.gun !== null && s.sonOz >= x.t.gun) return;
+      if (iyiMi(h, s.rOz, s.sGun)) x.yeni = yuvarla(birlestir(h, s.rOz, s.sGun));
+    });
+    const tekYazar = id => { const kis = d.kaynak.get(id) || []; return kis.find(ki => (ulas.get(ki) || []).length === 1 && (ulas.get(ki) || [])[0] === id); };
+    const yazilan = new Set();
+    dugum.forEach((x, id) => { if (!x.yeni) return; const ki = tekYazar(id); if (ki === undefined) return; liste.push({ki, ...x.yeni, sonra: 1}); yazilan.add(id); konular++; seviyeler[x.t.seviye] = (seviyeler[x.t.seviye] || 0) + 1; });
+    // A school unit covering several map topics: only for topics no single notebook topic can take, and only when it lowers none of its topics.
+    const birimde = new Set();
+    kiKanit.forEach((t, ki) => {
+      const ids = ulas.get(ki) || []; if (ids.length < 2 || !ids.some(id => dugum.get(id)?.yeni && !yazilan.has(id) && !birimde.has(id))) return;
+      const h = hedefi(t.seviye);
+      const dusurmez = ids.every(id => { const s = d.satir.get(id); return yazilan.has(id) || s.rOz === null || s.rOz === undefined || (h.r >= s.rOz - .005 && h.s >= s.sGun - .5); });
+      const korunur = ids.every(id => { const s = d.satir.get(id); return yazilan.has(id) || s.sonOz === null || s.sonOz === undefined || t.gun === null || s.sonOz < t.gun; });
+      if (!dusurmez || !korunur) return;
+      liste.push({ki, ...yuvarla(h), sonra: 0});
+      ids.forEach(id => { if (!yazilan.has(id) && !birimde.has(id) && dugum.get(id)?.yeni) { birimde.add(id); konular++; seviyeler[t.seviye] = (seviyeler[t.seviye] || 0) + 1; } });
+    });
+  } else {
+    // No map (not a YKS student): Hafızam's own value of the topic.
+    const hd = new Map(hafizaDurumu(si).liste.map(x => [x.ki, x]));
+    kiKanit.forEach((t, ki) => {
+      const x = hd.get(ki), h = hedefi(t.seviye), rOz = x ? x.rKendi ?? x.r : null, sGun = x ? x.sGun : null;
+      const sonOz = Math.max(...(D.log || []).filter(l => l[1] === si && l[2] === ki && sonucNotu(l)).map(l => l[0]), hafizaElleAl(si, ki)?.g ?? -Infinity);
+      if (Number.isFinite(sonOz) && t.gun !== null && sonOz >= t.gun) return;
+      if (!iyiMi(h, rOz, sGun)) return;
+      liste.push({ki, ...yuvarla(birlestir(h, rOz, sGun)), sonra: 1}); konular++; seviyeler[t.seviye] = (seviyeler[t.seviye] || 0) + 1;
+    });
+  }
+  return {kaynak, liste, konular, seviyeler};
 }
 function denemeyeGoreAyarla(si) {
-  const o = D.ogr[si], {liste} = denemeAyari(si); if (!o || !liste.length || !kendiDefteri(si)) return 0;
-  const g = bugunNo(), ts = Date.now(), m = Object.assign({}, o.hafizaElle || {});
-  for (const x of liste) m[x.ki] = {g, r: x.r, s: x.s, ts};
-  o.hafizaElle = m; o.ogrCalismaTs = ts; EK.denemeAyarTs = ts; hafizaKartlariniYenile(si);
-  return liste.length;
+  const o = D.ogr[si], a = denemeAyari(si); if (!o || !a.liste.length || !kendiDefteri(si)) return 0;
+  const g = bugunNo(), ts = Date.now(), m = Object.assign({}, o.hafizaElle || {}), once = {};
+  // a unit first (ts), then the single topics (ts + 1): within a day the later setting is the topic's own
+  for (const x of a.liste) { if (!(x.ki in once)) once[x.ki] = m[x.ki] ? Object.assign({}, m[x.ki]) : null; m[x.ki] = {g, r: x.r, s: x.s, ts: ts + x.sonra}; }
+  o.hafizaElle = m; o.ogrCalismaTs = ts + 1; EK.denemeAyarTs = ts; EK.denemeAyarOnce = once; hafizaKartlariniYenile(si);
+  return a.konular;
 }
 function denemeAyariniGeriAl(si) {
-  const o = D.ogr[si], ts = EK.denemeAyarTs; if (!o || !o.hafizaElle || !ts || !kendiDefteri(si)) return 0;
-  const m = {}; let n = 0; for (const [ki, e] of Object.entries(o.hafizaElle)) { if (e && e.ts === ts) n++; else m[ki] = e; }
+  const o = D.ogr[si], ts = EK.denemeAyarTs, once = EK.denemeAyarOnce || {}; if (!o || !o.hafizaElle || !ts || !kendiDefteri(si)) return 0;
+  const m = Object.assign({}, o.hafizaElle); let n = 0;
+  for (const [ki, e] of Object.entries(o.hafizaElle)) { if (!e || (e.ts !== ts && e.ts !== ts + 1)) continue; n++; if (once[ki]) m[ki] = once[ki]; else delete m[ki]; }
   if (Object.keys(m).length) o.hafizaElle = m; else delete o.hafizaElle;
-  o.ogrCalismaTs = Date.now(); EK.denemeAyarTs = null; hafizaKartlariniYenile(si); return n;
+  o.ogrCalismaTs = Date.now(); EK.denemeAyarTs = null; EK.denemeAyarOnce = null; hafizaKartlariniYenile(si); return n;
 }
 // The line on Hafızam and Haritam (the student's own device, not a viewing teacher).
 function denemeDugmesi(si) {
   if (!kendiDefteri(si) || (typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme())) return '';
-  const a = denemeAyari(si), n = a.liste.length, geri = EK.denemeAyarTs ? ' <button type="button" class="dugme mini" data-deneme-geri>Geri al</button>' : '';
+  const a = denemeAyari(si), n = a.konular, geri = EK.denemeAyarTs ? ' <button type="button" class="dugme mini" data-deneme-geri>Geri al</button>' : '';
   if (!a.kaynak) return '';
-  if (!n) return geri ? '<p class="mini hm-deneme">Konular deneme sonuçlarına göre ayarlandı.' + geri + '</p>' : '';
-  return '<p class="mini hm-deneme"><button type="button" class="dugme mini" data-deneme-ayarla>Denemeye göre ayarla</button> Programa sonradan katıldıysan: ' + n +
-    ' konuyu tek tek ayarlamak yerine deneme sonuçların ayarlasın. Kendi girdiğin sonuçlar ve ayarlar değişmez.' + geri + '</p>';
+  if (!n) return geri ? '<p class="mini hm-deneme">Denemelerde bildiğin konular aklında gösteriliyor.' + geri + '</p>' : '';
+  return '<p class="mini hm-deneme"><button type="button" class="dugme mini" data-deneme-ayarla>Denemeye göre ayarla</button> Bu sistemi kullanmadan çalıştıysan: denemelerde bildiğini gösterdiğin ' + n +
+    ' konu aklında görünsün. Hiçbir konu aşağı inmez; denemede zorlandığın konular olduğu gibi kalır.' + geri + '</p>';
 }
 if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', ev => {
   const a = ev.target && ev.target.closest && ev.target.closest('[data-deneme-ayarla],[data-deneme-geri]'); if (!a || a.disabled) return;
   const si = EK.ogr;
   if (a.hasAttribute('data-deneme-geri')) { if (denemeAyariniGeriAl(si)) { kaydet(); ciz(); } return; }
-  const n = denemeAyari(si).liste.length;
-  if (!n || !confirm('Deneme sonuçlarına göre ' + n + ' konu ayarlanacak: denemelerde çoğunu doğru yaptığın konular aklında, yanlış yaptıkların unutuluyor görünecek. ' +
-    'Şans eseri doğru yaptığın bir konu da aklında sayılabilir; hiçbiri “YKS’ye kadar hafızanda” olmaz. Kendi girdiğin sonuçlar ve ayarlar değişmez. Devam edilsin mi?')) return;
+  const n = denemeAyari(si).konular;
+  if (!n || !confirm(n + ' konu, denemelerdeki doğrularına göre aklında görünecek (zor sorularını da yaptığın konular daha uzun süre). ' +
+    'Hiçbir konu aşağı inmez: zaten aklında olanlar ve denemede zorlandıkların olduğu gibi kalır. Şans eseri doğru yaptığın bir konu da aklında sayılabilir. Devam edilsin mi?')) return;
   if (denemeyeGoreAyarla(si)) { kaydet(); ciz(); }
 });
 // kaynaklar: map topic → the notebook topic ids that feed it (plan topics, then school units)
 const kaynaklar = () => { const {esler, birimler} = cozumle(); return new Map(V.konular.map(k => [k.id, (esler.get(k.id) || []).concat(birimler.filter(b => b.kapsar.includes(k.id)).map(b => b.id))])); };
-return {gorunum, uygun, dersleri, gorunur, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA, denemeAyari, denemeyeGoreAyarla, denemeAyariniGeriAl, denemeDugmesi, DENEME_AYAR};
+return {gorunum, uygun, dersleri, gorunur, durum, girdi, cozumle, kaynaklar, hafizayaUygula, ogren, ogretmenKarti, renk, oklch, TEMA, denemeAyari, denemeyeGoreAyarla, denemeAyariniGeriAl, denemeDugmesi, DENEME_AYAR, denemeSeviyesi: seviye, denemeKanitlari: kanitlar};
 })();
 // END HARITAM
 

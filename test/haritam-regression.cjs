@@ -35,42 +35,79 @@ const ogrenci = (a, alan, sinif) => {
   if (alan) a.run(`kendiPlanKur(0,Object.fromEntries(kendiPlanDersleri('${alan}').map(d=>[d,'bilir'])),'2027-04-23')`);
 };
 
-test('Denemeye göre ayarla: the package’s topic results set Hafızam and the map in one press, within the subject; own results kept; never “YKS’ye kadar hafızanda”; Geri al', () => {
+// Denemeye göre ayarla (raise-only, 2026-11-20). dugum(a, id): a map topic's own recall today, its days to 90 %, its level and its days to the line.
+const dugum = (a, id) => a.json(`(()=>{const s=HARITAM.durum(0).satir.get(${JSON.stringify(id)});return {r:s.r,rOz:s.rOz,sGun:s.sGun,katman:s.katman,sonOz:s.sonOz,gun:s.cizgiGun===null?null:s.cizgiGun-bugunNo()}})()`);
+const sonuc = (a, ki, gun, not) => a.run(`D.log.push([bugunNo()-${gun},0,${ki},${not >= 3 ? 9 : 3},10,${not},Date.now()-${gun}*864e5+${ki}])`);
+const planKi = (a, ad) => a.run(`(()=>{for(let i=KATALOG.length;i<konuSayisi();i++){const k=konuAl(i);if(k&&k[3]===${JSON.stringify(ad)})return i}return -1})()`);
+
+test('Denemeye göre ayarla never lowers a topic: a foundation green from the topics built on it stays green when its unit went badly in a deneme (the reported bug)', () => {
   const a = app(); ogrenci(a, 'SAY', 12);
-  const ki = ad => a.json(`(()=>{const l=[];for(let i=0;i<konuSayisi();i++){const k=konuAl(i);if(k&&k[3]===${JSON.stringify(ad)}&&/Matematik/.test(konuDersAdi(i)))l.push(i)}return l})()`);
-  const tk = ki('Üçgenlerde Temel Kavramlar'), eb = ki('Üçgenlerde Eşlik ve Benzerlik'), alan = ki('Üçgenin Alanı');
-  assert(tk.length && eb.length && alan.length, 'the curriculum units are in the catalogue');
-  assert.equal(a.run('HARITAM.denemeDugmesi(0)'), '', 'no package yet: no button');
-  // the package: TYT Geometri with three topics (the last three exams with questions count), and a Fizik block whose topic name must not reach Matematik
-  a.run(`D.turkiyeKiyas={v:1,b:[{k:'GEOMETRİ-T',o:'TYT',s:[],z:{e:[['D1',1],['D2',2],['D3',3],['D4',4]],r:[
-      ['Üçgenlerde Temel Kavramlar',[[0,1,2],[2,1.5,2],[2,1,2],[1,1,1]],[]],
-      ['Üçgenlerde Eşlik ve Benzerlik',[[0,1,2],0,[0,1,1],0],[]],
-      ['Üçgenin Alanı',[[1,1,2],[2,1,3],0,0],[]],
-      ['Sentetik Bilinmeyen Konu',[[1,1,1]],[]]]}},
-    {k:'FİZİK-T',o:'TYT',s:[],z:{e:[['D1',1]],r:[['Üçgenlerde Temel Kavramlar',[[0,1,4]],[]]]}}]}`);
-  // a result the student entered on Üçgenin Alanı: that topic is the student's own and is left alone
-  a.run(`D.log.push([bugunNo()-1,0,${alan[0]},'',3,0,Date.now()])`);
-  const l = a.json('HARITAM.denemeAyari(0).liste');
-  const bul = k => l.find(x => x.ki === k);
-  assert.deepEqual([bul(tk[0]).oran, bul(tk[0]).r, bul(tk[0]).s], [1, .9, 21], 'the last three exams: 5 of 5 (the first exam’s 0 of 2 is older)');
-  assert.deepEqual([bul(eb[0]).oran, bul(eb[0]).r, bul(eb[0]).s], [0, .5, 3], '0 of 3: forgetting');
-  assert.equal(bul(alan[0]), undefined, 'a topic with the student’s own result is not changed');
-  assert.equal(l.length, tk.length + eb.length + alan.length - 1, 'every catalogue entry of the name, the unknown topic and the Fizik block reach nothing else');
-  assert.match(a.run('HARITAM.denemeDugmesi(0)'), /data-deneme-ayarla>Denemeye göre ayarla<\/button> Programa sonradan katıldıysan: \d+ konuyu tek tek ayarlamak yerine/);
+  // own results on topics that use Birinci Dereceden Denklemler: it is long-term and green by credit only, with no result of its own
+  for (const ad of ['Basit Eşitsizlikler', 'Oran-Orantı', 'Sayı Problemleri', 'Kesir Problemleri', 'Yüzde Problemleri']) { const ki = planKi(a, ad); assert(ki > 0, ad); for (const g of [70, 45, 25, 8]) sonuc(a, ki, g, 4); }
+  const once = dugum(a, 'tytDenklem'), temel = dugum(a, 'tytTemel');
+  assert.equal(once.katman, 'uzun'); assert(once.r >= .9, 'green before'); assert.equal(once.sonOz, null, 'no result of its own');
+  assert.equal(temel.katman, 'uzun'); assert(temel.rOz < .9, 'Temel Kavramlar is under the line before');
+  // the deneme: the unit covering Birinci Dereceden Denklemler 0 of 4 (weak); Sayı Kümeleri 3 of 3 (known); Üslü İfadeler 5 of 5 on hard questions in two exams
+  a.run(`D.turkiyeKiyas={v:1,t:bugunNo()-2,b:[{k:'MATEMATİK-T',o:'TYT',s:[],z:{e:[['D1',bugunNo()-30],['D2',bugunNo()-10]],r:[
+    ['Birinci Dereceden Denklem ve Eşitsizlikler',[[0,1.5,2],[0,1.2,2]],[]],
+    ['Sayı Kümeleri',[[2,1.6,2],[1,.8,1]],[]],
+    ['Üslü İfadeler ve Denklemler',[[2,.8,2],[3,1.2,3]],[]]]}}]}`);
+  const plan = a.json('HARITAM.denemeAyari(0)');
+  assert.deepEqual(plan.seviyeler, {biliyor: 1, guclu: 1}, 'the weak unit raises nothing');
+  assert.match(a.run('HARITAM.denemeDugmesi(0)'), /data-deneme-ayarla>Denemeye göre ayarla<\/button> Bu sistemi kullanmadan çalıştıysan: denemelerde bildiğini gösterdiğin 2 konu aklında görünsün\. Hiçbir konu aşağı inmez/);
   assert.match(a.run('gorunumHafiza()'), /data-deneme-ayarla/, 'on Hafızam'); assert.match(a.run('HARITAM.gorunum()'), /data-deneme-ayarla/, 'on Haritam');
-  const n = a.run('HARITAM.denemeyeGoreAyarla(0)'); assert.equal(n, l.length);
-  const elle = a.json('D.ogr[0].hafizaElle'), tsler = new Set(Object.values(elle).map(e => e.ts));
-  assert.equal(Object.keys(elle).length, n); assert.equal(tsler.size, 1, 'one press, one time');
+  assert.equal(a.run('HARITAM.denemeyeGoreAyarla(0)'), 2);
   assert.equal(a.run(`hafizaElleDogru(D.ogr[0].hafizaElle,konuSayisi())`), true, 'a valid own setting, as Düzenle writes');
-  assert(a.json('hafizaDurumu(0).liste.map(x=>x.ki)').includes(tk[0]), 'the topic is in Hafızam');
-  // the map: the nodes these units cover have memory now, and none is safe until YKS
-  const d = a.json(`(()=>{const d=HARITAM.durum(0);return [...d.satir.values()].filter(s=>s.r!==null).map(s=>({id:s.id,yks:s.sinavaKadar}))})()`);
-  assert(d.length > 0, 'nodes have memory'); assert(d.every(x => x.yks !== true), 'never “YKS’ye kadar hafızanda”');
-  assert.equal(a.json('HARITAM.denemeAyari(0).liste').length, 0, 'a second press finds nothing: the settings are the student’s own now');
-  assert.match(a.run('HARITAM.denemeDugmesi(0)'), /Konular deneme sonuçlarına göre ayarlandı\. <button type="button" class="dugme mini" data-deneme-geri>Geri al<\/button>/);
-  assert.equal(a.run('HARITAM.denemeAyariniGeriAl(0)'), n); assert.equal(a.run('D.ogr[0].hafizaElle'), undefined, 'Geri al removes exactly that press');
+  const sonra = dugum(a, 'tytDenklem');
+  for (const k of ['rOz', 'sGun', 'katman']) assert.equal(sonra[k], once[k], 'Birinci Dereceden Denklemler’s own memory is exactly as before: ' + k);
+  assert(sonra.gun >= once.gun - 1e-9, 'and it stays above the line as long');
+  assert(sonra.r >= once.r, 'its shown recall can only rise (a raised foundation pulls it down less)');
+  for (const id of ['tytDenklem', 'tytEsitsizlik']) assert(dugum(a, id).r >= .9, id + ' stays green');
+  const t2 = dugum(a, 'tytTemel');
+  assert(Math.abs(t2.rOz - .96) < .005 && t2.r >= .9, 'Temel Kavramlar is raised over the line (biliyor: 96 %)'); assert(t2.sGun >= temel.sGun - .5, 'and keeps its long memory'); assert.equal(t2.katman, 'uzun');
+  const u = dugum(a, 'tytUslu'); assert(Math.abs(u.rOz - .97) < .005, 'güçlü: 97 %'); assert.equal(u.katman, 'uzun', 'hard questions right in two exams: long-term');
+  assert(u.gun >= 28 && u.gun <= 32, 'güçlü: about 30 days above the line, ' + u.gun);
+  assert.equal(a.json('HARITAM.denemeAyari(0)').konular, 0, 'a second press finds nothing');
+  assert.match(a.run('HARITAM.denemeDugmesi(0)'), /Denemelerde bildiğin konular aklında gösteriliyor\. <button type="button" class="dugme mini" data-deneme-geri>Geri al<\/button>/);
+  assert.equal(a.run('HARITAM.denemeAyariniGeriAl(0)'), 2); assert.equal(a.run('D.ogr[0].hafizaElle'), undefined, 'Geri al removes exactly that press');
+  assert.equal(dugum(a, 'tytTemel').rOz, temel.rOz, 'and the map is as before');
   // a viewing teacher, or a teacher's notebook, never gets the button
   a.run('D.ogr.push({no:2,ad:"X"})'); assert.equal(a.run('HARITAM.denemeDugmesi(0)'), '');
+});
+
+test('Denemeye göre ayarla reads the deneme karnesi first: zor soruları da doğru = long-term, çoğu doğru = settling, kolaylar = a week; weak topics and the student’s newer word stay; Geri al brings an earlier setting back', () => {
+  const a = app(); ogrenci(a, 'SAY', 12);
+  // The deneme karnesi (v2): every question [no, konu index, band 0–4, result]. kv: a konu's questions from its totals (d of n right; kd of kn easy, band 1;
+  // zd of zn hard, band 3; the rest orta).
+  const kv = (k, d, n, kd, kn, zd, zn) => { const q = [], ekle = (adet, dogru, z) => { for (let i = 0; i < adet; i++) q.push([0, k, z, i < dogru ? 1 : 0]); };
+    ekle(kn, kd, 1); ekle(zn, zd, 3); ekle(n - kn - zn, d - kd - zd, 2); return q; };
+  const sinav = (ad, gun, konular, qs) => `[${JSON.stringify(ad)},isoDan(bugunNo()-${gun}),${JSON.stringify(konular)},[['Matematik','TYT','A',${JSON.stringify(qs.flat().map((q, i) => [i + 1, ...q.slice(1)]))}]]]`;
+  // newest first, as the package sends it
+  a.run(`D.konuKarne={v:2,t:bugunNo(),s:[${sinav('D2', 10, ['Üslü İfadeler ve Denklemler', 'Sayı Kümeleri', 'Bölünebilme Kuralları', 'Kümelerde Temel Kavramlar'],
+    [kv(0, 2, 2, 1, 1, 1, 1), kv(1, 2, 2, 2, 2, 0, 0), kv(2, 3, 5, 3, 3, 0, 2), kv(3, 1, 4, 1, 2, 0, 2)])},${sinav('D1', 30, ['Üslü İfadeler ve Denklemler'], [kv(0, 3, 3, 1, 1, 2, 2)])}]}`);
+  // Türkiye says the student knew Kümeler: the karne (which knows the easy and the hard ones) decides
+  a.run(`D.turkiyeKiyas={v:1,t:bugunNo()-2,b:[{k:'MATEMATİK-T',o:'TYT',s:[],z:{e:[['D2',bugunNo()-10]],r:[['Kümelerde Temel Kavramlar',[[2,1.5,2]],[]]]}}]}`);
+  const sv = x => a.run(`HARITAM.denemeSeviyesi(${JSON.stringify(x)})`);
+  assert.equal(sv({d: 5, n: 5, b: null, kd: 2, kn: 2, zd: 3, zn: 3, sinav: 2}), 'guclu');
+  assert.equal(sv({d: 5, n: 5, b: null, kd: 2, kn: 2, zd: 3, zn: 3, sinav: 1}), 'biliyor', 'one exam is not enough for long-term');
+  assert.equal(sv({d: 3, n: 4, b: 1.6, kd: null, kn: null, zd: null, zn: null, sinav: 2}), 'guclu', 'Türkiye: the network averaged at most half');
+  assert.equal(sv({d: 3, n: 4, b: 2.4, kd: null, kn: null, zd: null, zn: null, sinav: 2}), 'biliyor');
+  assert.equal(sv({d: 3, n: 5, b: null, kd: 3, kn: 3, zd: 0, zn: 2, sinav: 1}), 'temel');
+  assert.equal(sv({d: 1, n: 4, b: 2, kd: null, kn: null, zd: null, zn: null, sinav: 1}), null);
+  // the student's own word: a result on Bölme ve Bölünebilme after the exam stays; an earlier own setting on Temel Kavramlar is raised and comes back with Geri al
+  const bolme = planKi(a, 'Bölme ve Bölünebilme'), temelKi = planKi(a, 'Temel Kavramlar, Tek-Çift ve Negatif-Pozitif Sayılar');
+  sonuc(a, bolme, 3, 2);
+  a.run(`D.ogr[0].hafizaElle={${temelKi}:{g:bugunNo()-15,r:.6,s:3,ts:1}}`);
+  const oncekiBolme = dugum(a, 'tytBolme');
+  const plan = a.json('HARITAM.denemeAyari(0)');
+  assert.deepEqual(plan.seviyeler, {guclu: 1, biliyor: 1}, 'Bölünebilme (own result after the exam) and Kümeler (weak in the karne) are left');
+  assert.equal(a.run('HARITAM.denemeyeGoreAyarla(0)'), 2);
+  assert.equal(dugum(a, 'tytKume').r, null, 'a weak topic is not turned red');
+  const b2 = dugum(a, 'tytBolme'); for (const k of ['rOz', 'sGun', 'katman', 'sonOz']) assert.equal(b2[k], oncekiBolme[k], 'Bölünebilme’s own memory stays: ' + k); assert(b2.r >= oncekiBolme.r);
+  assert.equal(dugum(a, 'tytUslu').katman, 'uzun');
+  const t = dugum(a, 'tytTemel'); assert(Math.abs(t.rOz - .96) < .005, 'biliyor: 96 %'); assert(t.gun >= 12.5 && t.gun <= 15.5, 'biliyor: two weeks above the line, ' + t.gun); assert.equal(t.katman, 'orta', 'settling, not long-term');
+  assert.equal(a.run('HARITAM.denemeAyariniGeriAl(0)'), 2);
+  assert.deepEqual(a.json('D.ogr[0].hafizaElle'), {[temelKi]: {g: a.run('bugunNo()-15'), r: .6, s: 3, ts: 1}}, 'the earlier own setting is back');
 });
 
 test('the embedded module and the map are in index.html', () => {

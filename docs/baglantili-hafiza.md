@@ -199,12 +199,24 @@ Each topic keeps the app's FSRS-6 card (S, D), built exactly as Hafızam builds 
 
 - Delivering the learnt link values to students (teacher view only for now).
 
-## Denemeye göre ayarla (2026-11-19)
+## Denemeye göre ayarla (2026-11-19; raise-only since 2026-11-20)
 
-For a student who joins the programme late: one button on Hafızam and Haritam (the student's own device only) fills the topics from the mock exams instead of setting each one with Düzenle.
+For a student who studied before using the app: one button on Hafızam and Haritam (the student's own device only) says "I know these" from the mock exams, instead of setting each topic with Düzenle.
 
-- **Source:** the topic results the teacher's app sends with the student's package (`D.turkiyeKiyas`, Türkiye karşılaştırması): per topic and exam, the student's right answers d of n questions. Without a package there is no button.
-- **Rule** (`HARITAM.denemeAyari`, `DENEME_AYAR`): a topic's last three exams with questions. At least 75 % right → recalled today at 90 %, 21 days to fall to 90 % (settling, never long-term). 50–75 % → 75 % and 7 days. Under 50 % → 50 % and 3 days (forgetting). With 21 days at most, recall on exam day stays under the target, so no topic set this way is "YKS'ye kadar hafızanda".
-- **Matching:** a deneme topic meets Hafızam's topics by name (the curriculum unit's or the plan topic's) within its subject family (Matematik and Geometri together, Türkçe with Türk Dili ve Edebiyatı, Tarih with İnkılap, Felsefe with Mantık, Psikoloji and Sosyoloji); a school unit then reaches the map's nodes it covers, as a lesson or result on it does.
-- **Written as the student's own setting** (`hafizaElle`, exactly what Düzenle writes): a later result goes on from it, "Algoritmaya bırak" undoes one topic, and **Geri al** (same visit) removes the whole press. A topic with the student's own result or own setting is never changed. A topic answered right by luck counts as known: accepted for the effort saved; the confirmation says so.
-- Tests: `test/haritam-regression.cjs` (the three bands, the last three exams, the subject family, own results kept, a valid setting, Hafızam and the map filled, no "YKS'ye kadar", Geri al, no button for a teacher's notebook).
+**It only ever raises a topic.** The first version (2026-11-19) wrote a full setting on every matched topic, also "forgetting" (50 %, 3 days) for a topic with few right answers. A setting replaces a map topic's memory, and a school unit's setting reaches every map topic it covers, so foundations that were green and long-term by credit (Temel Kavramlar, Birinci Dereceden Denklemler: the student's results on the topics built on them) turned red after the press. Now:
+
+- **Evidence**, per deneme topic (Konu Takibi's topic names), its last three exams with questions on it:
+  - the **Deneme karnesi** the rehber publishes from Yanlışlar defteri (`D.konuKarne`, see docs/yanlislar-defteri.md): every question's konu, band and result, added up per konu: all questions, the easy (Çok kolay, Kolay) and the hard (Zor, Çok zor) ones;
+  - else the **Türkiye karşılaştırması** package (`D.turkiyeKiyas`): right answers d of n and b, the right answers an average student of the publisher's network would get (Σ p).
+- **Levels** (`HARITAM.denemeSeviyesi`, `DENEME_AYAR`):
+  - *güçlü*: at least 75 % right and the hard ones too (karne: at least half of the hard questions and one at least; Türkiye: b ≤ n/2, the network averaged at most half), at least three questions in two exams → recall today 97 %, **30 days above the student's line** (long-term, the ring);
+  - *biliyor*: at least 75 % right → 96 %, **14 days** above the line (settling);
+  - *temel* (karne only): at least 75 % of the easy questions (two at least) and half of all → 94 %, **a week** above the line;
+  - anything less: nothing. A topic the student did badly on is left as it is, never turned red by this button.
+  - The days to 90 % (s) follow from the recall today and the days above the line: R(t) = (1 + FACTOR·t/s)^DECAY, so s = days · FACTOR / (x(line) − x(r)) with x(R) = R^(1/DECAY) − 1; at most 29 for biliyor and temel so they stay settling. (Setting s alone, as at first, left a topic set "known" a week above the line.) Recall today is at least the line + 2 points.
+- **Never lower, per map topic.** A map topic's target is the best level of the deneme topics reaching it (a plan topic of its name, or a school unit covering it). It is written only where it beats today's own memory (own recall, days to 90 %), as the larger of each, so a long memory is kept and only the recall rises, or the other way round. A topic's shown recall can only rise as well (a raised foundation pulls the topics above it down less).
+- **Where it is written:** on a notebook topic that reaches that map topic alone (the plan topic of its name first, else a school unit covering only it). A school unit covering several map topics is written only for map topics no single notebook topic reaches, and only when it lowers none of the topics it covers.
+- **The student's word stays:** a map topic with the student's own result or setting on or after the newest exam of its evidence is left alone; an older one is raised like any other (never lowered).
+- Off the map (not a YKS student): Hafızam's own value of the topic is compared the same way.
+- **Written as the student's own setting** (`hafizaElle`, exactly what Düzenle writes): a later result goes on from it, "Algoritmaya bırak" undoes one topic, and **Geri al** (same visit) removes the whole press and brings back an own setting it replaced. A topic answered right by luck can count as known; the confirmation says so.
+- Tests: `test/haritam-regression.cjs` (the reported bug: a credit-green foundation and its unit 0 of 4 in the deneme stay as they were, a red long-term foundation is raised and keeps its ring; the three levels; the karne before Türkiye; a weak topic not turned red; the student's newer result kept; Geri al restoring an earlier setting; no button for a teacher's notebook).

@@ -1263,8 +1263,9 @@ function content(){
   const oturumSel=cokOturum?sel('Oturum','oturum',[['TYT+AYT','TYT + AYT'],['TYT','TYT'],['AYT','AYT']].map(([v,l])=>opt(v,l,S.oturum===v)).join('')):'';
   const dersler='<div class="yd-dersler" role="group" aria-label="Dersler">'+dersListesi(exU).map(ad=>'<label><input type="checkbox" data-yd-ders="'+h(ad)+'"'+(S.kapali.has(ad)?'':' checked')+'>'+h(ad)+'</label>').join('')+'</div>';
   const gor=(v,t)=>'<button type="button" class="yd-chip" data-yd-gorunum="'+v+'" aria-pressed="'+(S.gorunum===v)+'">'+h(t)+'</button>';
-  const gorunumSec='<div class="yd-sec yd-gorunum"><span id="ydGorunumEtiket">Defter</span><div class="yd-chips" role="group" aria-labelledby="ydGorunumEtiket">'+gor('ogrenci','Öğrenci defterleri')+gor('ders','Ders öğretmenleri: fark soruları')+'</div></div>';
+  const gorunumSec='<div class="yd-sec yd-gorunum"><span id="ydGorunumEtiket">Defter</span><div class="yd-chips" role="group" aria-labelledby="ydGorunumEtiket">'+gor('ogrenci','Öğrenci defterleri')+gor('ders','Ders öğretmenleri: fark soruları')+gor('karne','Öğrenciye deneme karnesi')+'</div></div>';
   const ilerleme='<span id="ydIlerleme" class="yd-ozet" role="status">'+h(S.ilerleme)+'</span>';
+  if(S.gorunum==='karne'){S.liste=[];S.fark=null;return top+gorunumSec+karneGorunum(exU)}
   if(S.gorunum==='ders'){
     S.liste=[];const M=S.fark=farkModeli(),soru=M.geride.reduce((a,g)=>a+g.soru,0),bos=!soru||!!S.kilit;
     const ogrSel=M.ogretmenli?sel('Öğretmen','ogretmen',opt('','Bütün öğretmenler',!S.ogretmen)+M.ogretmenler.map(o=>opt(o,o,o===S.ogretmen)).join('')):'';
@@ -1694,6 +1695,18 @@ async function farkPdfIndir(){
   finally{S.kilit='';yaz('');render()}
 }
 
+// Deneme karnesi publication (D.konuKarneYayin, in the notebook: the choice, never the data). A viewing teacher changes nothing.
+const karneKaydet=()=>{if(typeof kaydet==='function')kaydet()};
+function karneYayinla(mod){
+  if(typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme())return false;
+  const kodlar=siraliDenemeler().filter(e=>e.sec&&e.rapor&&e.es).map(e=>e.kod);
+  if(mod==='secili'&&!kodlar.length)return false;
+  D.konuKarneYayin=mod==='secili'?{mod,kodlar}:{mod:'hepsi'};karneKaydet();render('[data-yd-kk-kaldir]');return true;
+}
+function karneModu(mod){
+  if(!['hepsi','secili'].includes(mod)||(typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme()))return;
+  S.kkMod=mod;if(yayinGecerli(D.konuKarneYayin))karneYayinla(mod);else render('[data-yd-kk-mod="'+mod+'"]');
+}
 if(typeof document!=='undefined'&&document.addEventListener){
 document.addEventListener('change',ev=>{
   if(!etkin())return;const el=ev.target;
@@ -1704,6 +1717,7 @@ document.addEventListener('change',ev=>{
   if(el.dataset?.ydF==='ogr'){S.ogr=el.value;S.pdfOneri=null;render('[data-yd-f="ogr"]');return}
   if(el.dataset?.ydF==='oturum'){if(['TYT+AYT','TYT','AYT'].includes(el.value))S.oturum=el.value;S.pdfOneri=null;render('[data-yd-f="oturum"]');return}
   if(el.dataset?.ydF==='alan'){if(['ogr',...ALANLAR,'Tümü'].includes(el.value))S.alan=el.value;S.pdfOneri=null;render('[data-yd-f="alan"]');return}
+  if(el.dataset?.ydF==='kkOgr'){S.kkOgr=el.value;render('[data-yd-f="kkOgr"]');return}
   if(el.dataset?.ydF==='ogretmen'){S.ogretmen=el.value;render('[data-yd-f="ogretmen"]');return}
   if(el.dataset?.ydF==='secim'){const v=el.value==='z'?'z':Number(el.value);if(secimGecerli(v))S.secim=v;render('[data-yd-f="secim"]');return}
   if(el.dataset?.ydF==='status'){if(['all','yanlis','bos'].includes(el.value))S.status=el.value;S.pdfOneri=null;render('[data-yd-f="status"]');return}
@@ -1713,7 +1727,11 @@ document.addEventListener('click',ev=>{
   if(!etkin())return;const hedef=ev.target.closest?.bind(ev.target);if(!hedef)return;
   if(hedef('[data-yd-yazdir]')){yazdir();return}
   if(hedef('[data-yd-pdf]')){if(S.gorunum==='ders')farkPdfIndir();else pdfIndir();return}
-  const gr=hedef('[data-yd-gorunum]');if(gr){if(['ogrenci','ders'].includes(gr.dataset.ydGorunum)&&!S.kilit){S.gorunum=gr.dataset.ydGorunum;S.pdfOneri=null;render('[data-yd-gorunum="'+S.gorunum+'"]')}return}
+  const gr=hedef('[data-yd-gorunum]');if(gr){if(['ogrenci','ders','karne'].includes(gr.dataset.ydGorunum)&&!S.kilit){S.gorunum=gr.dataset.ydGorunum;S.pdfOneri=null;render('[data-yd-gorunum="'+S.gorunum+'"]')}return}
+  const km=hedef('[data-yd-kk-mod]');if(km){karneModu(km.dataset.ydKkMod);return}
+  if(hedef('[data-yd-kk-yayinla]')){karneYayinla(S.kkMod==='secili'?'secili':'hepsi');return}
+  if(hedef('[data-yd-kk-guncelle]')){karneYayinla('secili');return}
+  if(hedef('[data-yd-kk-kaldir]')){if(confirm('Deneme karnesi öğrencilere gitmesin mi? Öğrenciler, öğrenci girişlerini yeniden yayınladığınızda karnelerini artık görmez.')){delete D.konuKarneYayin;karneKaydet();render('[data-yd-kk-yayinla]')}return}
   const ps=hedef('[data-yd-pdf-sube]');if(ps){pdfIndir(ps.dataset.ydPdfSube);return}
   const sil=hedef('[data-yd-sil]');
   if(sil){const e=S.denemeler.get(sil.dataset.ydSil);if(e&&confirm('“'+adOf(e)+'” bu cihazdan silinsin mi? Gerekirse dosyaları yeniden ekleyebilirsiniz.'))denemeSil(e.kod);return}
@@ -1802,7 +1820,182 @@ function ogrenciListesi(no){
   }
   return out.length?{v:1,s:out}:null;
 }
-return {farkModeli,farkPlan,dersPlani,farkPdfIndir,farkDosyaAdi,farkSorusu,farkCumle,ekli,farkZ,sinavAnahtari,ESIKLER,okulMaddeleri,bolumMaddeleri,sayilanKural,ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
+/* ---------------------------------------------------------------- Deneme karnesi (2026-11-20): every question of the student, by difficulty
+   For each exam, the student's questions on the tests they are judged on (sayilanKural; Ek Felsefe never): the number in the student's own booklet,
+   the konu (Konu Takibi's sınav özeti, A booklet order; B students through the çözüm map), the difficulty band this page shows (zorlukBilgi: the
+   publisher's network p when the Performans analizi is added; 0 Çok kolay … 4 Çok zor) and the result (1 doğru, 0 yanlış, -1 boş). The student's
+   page adds them up by deneme, ders, konu, or lists the questions, over all or some of the exams; Hafızam's "Denemeye göre ayarla" reads the konu
+   totals (HARITAM). Published only when the rehber turns it on (D.konuKarneYayin: {mod: 'hepsi' | 'secili', kodlar}); it goes in the student's
+   package (ogrenciPaketi → konuKarne) as
+     {v: 2, t, s: [[exam name, date, [konu names], [[ders, oturum, kitapçık, [[no, konu index or -1, band or -1, result], …]], …]], …]},
+   newest first, at most YO_SINAV exams and KARNE_UST characters (older exams are left out first). No picture, no answer letter, no other student. */
+const KARNE_UST=150000;
+// The konu of each question of one report section, by its A booklet position (Konu Takibi's sınav özeti of the same exam and ders); '' where none.
+function konuDizisi(rapor,dersAd,n){
+  const out=Array.from({length:n},()=>'');
+  try{
+    if(typeof KONU_TAKIBI==='undefined'||D.konutakibi===undefined)return out;
+    const v=KONU_TAKIBI.oku().veri,ek=KONU_TAKIBI.ek(rapor.ad||''),dk=KONU_TAKIBI.key(dersAd);
+    for(const z of Object.values(v.zorluk||{})){if(KONU_TAKIBI.ek(z.ad||'')!==ek||!z.ozet)continue;
+      for(const [c,l] of Object.entries(z.ozet))if(KONU_TAKIBI.key(c)===dk&&Array.isArray(l))
+        for(let k=0;k<n;k++)if(!out[k]&&Array.isArray(l[k])){const ad=l[k].map(cd=>KONU_TAKIBI.topicFor(c,cd,v.maps)).find(Boolean);if(ad)out[k]=KONU_TAKIBI.topicName(ad)}}
+  }catch(x){}
+  return out;
+}
+const BANT_NO=b=>ZORLUK.BANTLAR.findIndex(x=>x[0]===b);
+// One student's karne over the given exams; null when the student sat none of them.
+function konuKarnesi(no,sinavlar){
+  if(no===undefined||no===null||no==='')return null;
+  const liste=[...sinavlar].filter(e=>e.rapor&&e.es).sort((a,b)=>String(b.tarih||'').localeCompare(String(a.tarih||''))).slice(0,YO_SINAV),out=[];
+  for(const e of liste){
+    const o=e.rapor.ogrenciler.find(x=>String(x.no)===String(no));if(!o)continue;
+    const kural=sayilanKural(e.rapor,e.es).f(o),za=zorlukBilgi(e),konular=[],ki=new Map(),bolumler=[];
+    e.es.bolumler.forEach((b,i)=>{
+      if(!kural.has(i))return;
+      const ri=b.ri??i,rb=e.rapor.bolumler[ri]||{},ses=b.oturum||'TYT',kit=o.kits?o.kits[ses]:o.kit,anahtar=e.rapor.anahtar[kit];if(!anahtar)return;
+      const adlar=konuDizisi(e.rapor,rb.ad||'',b.n),sorular=[];
+      for(let k=0;k<b.n;k++){
+        const g=b.bas+k,dogru=anahtar[g];if(!harfOK(dogru))continue;
+        const own=b.off+k+1,a=kit==='A'?own:(e.harita?.testler?.[b.test]?.bToA?.[own]??null),ak=a===null?null:a-b.off-1;
+        const konu=ak===null?'':adlar[ak];if(konu&&!ki.has(konu)){ki.set(konu,konular.length);konular.push(konu)}
+        const z=za?.map.get(ri+':'+(a!==null?'A:'+(ak+1):'B:'+(k+1)))||null;
+        sorular.push([own,konu?ki.get(konu):-1,z&&z.bant?BANT_NO(z.bant):-1,o.cev[g]===dogru?1:o.cev[g]?0:-1]);
+      }
+      if(sorular.length)bolumler.push([dersAdi(rb.ad||b.ders),ses,kit||'A',sorular]);
+    });
+    if(bolumler.length)out.push([adOf(e),e.tarih||'',konular,bolumler]);
+  }
+  while(out.length>1&&JSON.stringify(out).length>KARNE_UST)out.pop();
+  return out.length?{v:2,t:typeof bugunNo==='function'?bugunNo():null,s:out}:null;
+}
+// The exams the rehber publishes: every exam of the library, or the ones chosen when it was turned on.
+function karneSinavlari(y=D.konuKarneYayin){
+  const tum=siraliDenemeler().filter(e=>e.rapor&&e.es);
+  return y&&y.mod==='secili'&&Array.isArray(y.kodlar)?tum.filter(e=>y.kodlar.includes(e.kod)):tum;
+}
+const yayinGecerli=y=>!!y&&typeof y==='object'&&(y.mod==='hepsi'||(y.mod==='secili'&&Array.isArray(y.kodlar)&&y.kodlar.length>0));
+// For the package: the student's karne when the rehber publishes it, else null.
+function ogrenciKarnesi(no){return typeof D!=='undefined'&&yayinGecerli(D.konuKarneYayin)?konuKarnesi(no,karneSinavlari()):null}
+
+/* The slides, shared by the rehber's preview and the student's page. karne: the package form; secim: {sinav: Set of exam indices or null (all),
+   ders: '' or "TYT Türkçe", duzey: 'deneme' | 'ders' | 'konu' (default) | 'soru'}; yer: 'ogretmen' | 'ogrenci' (whose state the controls change). */
+const KARNE_DUZEY=[['deneme','Denemeler'],['ders','Dersler'],['konu','Konular'],['soru','Sorular']];
+const karneGecerli=k=>!!k&&k.v===2&&Array.isArray(k.s);
+const bos5=()=>ZORLUK.BANTLAR.map(()=>[0,0]);
+// The questions of the chosen exams and ders: [{sinav: index, ad, tarih, ders, oturum, kit, no, konu, z, d}].
+function karneSorulari(karne,secim={}){
+  const out=[];if(!karneGecerli(karne))return out;
+  karne.s.forEach((s,i)=>{
+    if(secim.sinav&&!secim.sinav.has(i)||!Array.isArray(s)||!Array.isArray(s[3]))return;
+    const konular=Array.isArray(s[2])?s[2]:[];
+    for(const b of s[3]){
+      if(!Array.isArray(b)||typeof b[0]!=='string'||!Array.isArray(b[3]))continue;
+      const ders=String(b[1]||'')+' '+b[0];if(secim.ders&&secim.ders!==ders)continue;
+      for(const q of b[3])if(Array.isArray(q)&&Number.isInteger(q[0]))out.push({sinav:i,ad:String(s[0]||'Deneme'),tarih:String(s[1]||''),ders,dersAd:b[0],oturum:String(b[1]||''),kit:String(b[2]||'A'),no:q[0],
+        konu:Number.isInteger(q[1])&&q[1]>=0&&typeof konular[q[1]]==='string'?konular[q[1]]:'',z:Number.isInteger(q[2])&&q[2]>=0&&q[2]<5?q[2]:-1,d:q[3]===1?1:q[3]===0?0:-1});
+    }
+  });
+  return out;
+}
+// Totals of a group of questions: per band [right, all], unknown band, all, blank, exams.
+function topla(qs){
+  const t={bant:bos5(),bilinmeyen:[0,0],d:0,n:0,bos:0,sinav:new Set(qs.map(q=>q.sinav)).size};
+  for(const q of qs){const h=q.z>=0?t.bant[q.z]:t.bilinmeyen,dg=q.d===1?1:0;h[0]+=dg;h[1]++;t.d+=dg;t.n++;if(q.d===-1)t.bos++}
+  t.kd=t.bant[0][0]+t.bant[1][0];t.kn=t.bant[0][1]+t.bant[1][1];t.zd=t.bant[3][0]+t.bant[4][0];t.zn=t.bant[3][1]+t.bant[4][1];t.b=null;
+  return t;
+}
+// Slides of one level, in the order met (newest exam first; booklet order within).
+function karneTopla(karne,secim={},duzey='konu'){
+  const qs=karneSorulari(karne,secim),grup=new Map(),anahtar={deneme:q=>q.sinav,ders:q=>q.ders,konu:q=>q.konu?q.ders+'|'+q.konu:null,soru:q=>q.sinav+'|'+q.ders}[duzey]||(q=>q.konu?q.ders+'|'+q.konu:null);
+  for(const q of qs){const k=anahtar(q);if(k===null)continue;let g=grup.get(k);if(!g)grup.set(k,g={q,sorular:[]});g.sorular.push(q)}
+  return [...grup.values()].map(({q,sorular})=>Object.assign(topla(sorular),{ad:duzey==='deneme'?q.ad:duzey==='ders'?q.ders:duzey==='soru'?q.ders:q.konu,
+    ust:duzey==='deneme'?tarihYaz(q.tarih):duzey==='ders'?'':duzey==='soru'?q.ad+(tarihYaz(q.tarih)?' · '+tarihYaz(q.tarih):''):q.ders,sorular}));
+}
+function karneYorumu(t){
+  const sv=typeof HARITAM!=='undefined'&&HARITAM.denemeSeviyesi?HARITAM.denemeSeviyesi(t):null;
+  if(sv==='guclu')return ['iyi','Zor sorularını da yapıyorsun: bu konuyu biliyorsun.'];
+  if(sv==='biliyor')return ['iyi','Soruların çoğunu doğru yapıyorsun.'];
+  if(sv==='temel')return ['orta','Kolay sorularını yapıyorsun; zor sorularına çalış.'];
+  if(t.kn&&t.kd<t.kn/2)return ['zayif','Kolay sorularda bile zorlanıyorsun: konuyu baştan tekrar et.'];
+  return ['zayif','Bu konuyu tekrar etmeye değer.'];
+}
+const yz=(d,n)=>n?Math.round(100*d/n):null;
+function olcuHTML(ad,d,n){
+  const p=yz(d,n);
+  return '<div class="kk-olcu"><span class="kk-etiket">'+ad+'</span>'+(n?'<b class="kk-yuzde">%'+p+'</b><span class="kk-say">'+d+' / '+n+' doğru</span><span class="kk-cubuk" aria-hidden="true"><span style="width:'+p+'%"></span></span>'
+    :'<b class="kk-yuzde kk-yok">—</b><span class="kk-say">Bu denemelerde yoktu</span>')+'</div>';
+}
+// The five bands, one line each (a band with no question is shown with a dash), and the questions with no band.
+const bantlarHTML=t=>'<table class="kk-bantlar"><caption class="kk-gizli">Zorluğa göre doğru</caption><tbody>'+ZORLUK.BANTLAR.map(([,ad],i)=>{const [d,n]=t.bant[i],p=yz(d,n);
+  return '<tr'+(n?'':' class="kk-bant-yok"')+'><th scope="row">'+ad+'</th><td class="kk-bant-cubuk"><span class="kk-cubuk" aria-hidden="true"><span style="width:'+(p||0)+'%"></span></span></td><td>'+(n?d+' / '+n:'—')+'</td><td>'+(n?'%'+p:'')+'</td></tr>'}).join('')+
+  (t.bilinmeyen[1]?'<tr class="kk-bant-yok"><th scope="row">Zorluğu bilinmiyor</th><td></td><td>'+t.bilinmeyen[0]+' / '+t.bilinmeyen[1]+'</td><td></td></tr>':'')+'</tbody></table>';
+const SONUC=['Yanlış','Doğru'],sonucAd=d=>d===-1?'Boş':SONUC[d];
+function slaytHTML(t,i,n,duzey){
+  const ad=t.ad,ust=t.ust;
+  const bas='<article class="kk-slayt'+(duzey==='soru'?' kk-slayt-genis':'')+'" aria-roledescription="slayt" aria-label="'+(i+1)+' / '+n+': '+h(ad)+'">'+(ust?'<p class="kk-ders">'+h(ust)+'</p>':'')+'<h3 class="kk-konu">'+h(ad)+'</h3>';
+  const tum='<p class="kk-tum">Bütün sorular: <b>'+t.d+' / '+t.n+'</b> doğru'+(t.bos?' · '+t.bos+' boş':'')+(duzey!=='deneme'&&duzey!=='soru'?' · '+t.sinav+' deneme':'')+'</p>';
+  if(duzey==='soru')return bas+tum+'<div class="kk-sorular"><table class="kk-soru-tablo"><thead><tr><th scope="col">Soru</th><th scope="col">Konu</th><th scope="col">Zorluk</th><th scope="col">Sonuç</th></tr></thead><tbody>'+
+    t.sorular.map(q=>'<tr class="kk-s'+(q.d===1?'d':q.d===0?'y':'b')+'"><td><b>'+q.no+'</b>'+(q.kit==='B'?' <span class="kk-kit">B</span>':'')+'</td><td>'+h(q.konu||'—')+'</td><td>'+(q.z>=0?h(ZORLUK.BANTLAR[q.z][1]):'—')+'</td><td>'+sonucAd(q.d)+'</td></tr>').join('')+'</tbody></table></div></article>';
+  const [tur,yorum]=duzey==='konu'?karneYorumu(t):[null,null];
+  return bas+'<div class="kk-olculer">'+olcuHTML('Kolay sorular',t.kd,t.kn)+olcuHTML('Zor sorular',t.zd,t.zn)+'</div>'+bantlarHTML(t)+tum+(yorum?'<p class="kk-yorum kk-'+tur+'">'+h(yorum)+'</p>':'')+'</article>';
+}
+function karneHTML(karne,secim={},yer='ogrenci'){
+  if(!karneGecerli(karne)||!karne.s.length)return '';
+  const sinavlar=karne.s,secili=secim.sinav&&[...secim.sinav].some(i=>i<sinavlar.length)?secim.sinav:null,duzey=KARNE_DUZEY.some(x=>x[0]===secim.duzey)?secim.duzey:'konu';
+  const dersler=[...new Set(karneSorulari(karne,{sinav:secili}).map(q=>q.ders))],ders=dersler.includes(secim.ders)?secim.ders:'';
+  const liste=karneTopla(karne,{sinav:secili,ders},duzey),birim={deneme:'deneme',ders:'ders',konu:'konu',soru:'ders'}[duzey];
+  const cip=(v,ad,bas,veri='kk-sinav')=>'<button type="button" class="kk-cip" data-'+veri+'="'+v+'" aria-pressed="'+bas+'">'+h(ad)+'</button>';
+  const secimHTML='<div class="kk-sec"><span class="kk-sec-ad" id="kkDuzeyEtiket-'+yer+'">Göster</span><div class="kk-cipler" role="group" aria-labelledby="kkDuzeyEtiket-'+yer+'">'+KARNE_DUZEY.map(([v,ad])=>cip(v,ad,v===duzey,'kk-duzey')).join('')+'</div></div>'+
+    '<div class="kk-sec"><span class="kk-sec-ad" id="kkSinavEtiket-'+yer+'">Denemeler</span><div class="kk-cipler" role="group" aria-labelledby="kkSinavEtiket-'+yer+'">'+cip('hepsi','Bütün denemeler ('+sinavlar.length+')',!secili)+
+    sinavlar.map((s,i)=>cip(i,String(s[0]||'Deneme')+(tarihYaz(s[1])?' · '+tarihYaz(s[1]):''),!!secili&&secili.has(i))).join('')+'</div></div>'+
+    (dersler.length>1?'<label class="kk-sec">Ders<select data-kk-ders>'+'<option value="">Bütün dersler</option>'+dersler.map(d=>'<option value="'+h(d)+'"'+(d===ders?' selected':'')+'>'+h(d)+'</option>').join('')+'</select></label>':'');
+  return '<section class="kk" data-kk-yer="'+yer+'"><div class="kk-bas"><h2>Deneme karnen</h2><p class="kk-alt">Denemelerin, derslerin, konuların ve tek tek soruların: çok kolaydan çok zora her zorlukta kaç sorunun doğru olduğu. Zorluk, o soruyu bütün sınav okullarında doğru yapanların oranına göredir.</p></div>'+secimHTML+
+    (liste.length?'<div class="kk-gezin"><button type="button" class="kk-ok" data-kk-git="-1" aria-label="Önceki">‹</button><span class="kk-sayac" aria-live="polite">'+liste.length+' '+birim+'</span><button type="button" class="kk-ok" data-kk-git="1" aria-label="Sonraki">›</button></div>'+
+      '<div class="kk-seri" tabindex="0" aria-label="Slaytlar">'+liste.map((t,i)=>slaytHTML(t,i,liste.length,duzey)).join('')+'</div>'
+      :'<p class="kk-alt">'+(duzey==='konu'?'Seçilen denemelerde konusu bilinen soru yok.':'Seçilen denemelerde soru yok.')+'</p>')+'</section>';
+}
+// The slides' controls on either page. The state: the student's EK.kk, the rehber's S.kk; the page draws again.
+function karneSecimi(yer){const st=yer==='ogretmen'?(S.kk=S.kk||{}):(EK.kk=EK.kk||{});return st}
+function karneCiz(yer,odak){if(yer==='ogretmen')render(odak);else if(typeof ciz==='function'){ciz();document.querySelector('.kk '+odak)?.focus()}}
+if(typeof document!=='undefined'&&document.addEventListener){
+  document.addEventListener('click',ev=>{
+    const el=ev.target&&ev.target.closest?ev.target.closest('[data-kk-sinav],[data-kk-git],[data-kk-duzey]'):null,kok=el&&el.closest('.kk');if(!kok)return;
+    if(el.dataset.kkGit){const seri=kok.querySelector('.kk-seri'),s1=seri&&seri.querySelector('.kk-slayt');if(seri&&s1)seri.scrollBy({left:(+el.dataset.kkGit)*(s1.getBoundingClientRect().width+12),behavior:'smooth'});return}
+    const yer=kok.dataset.kkYer,st=karneSecimi(yer);
+    if(el.dataset.kkDuzey){if(KARNE_DUZEY.some(x=>x[0]===el.dataset.kkDuzey))st.duzey=el.dataset.kkDuzey;karneCiz(yer,'[data-kk-duzey="'+st.duzey+'"]');return}
+    const v=el.dataset.kkSinav;
+    if(v==='hepsi')st.sinav=null;else{const s=new Set(st.sinav||[]),i=+v;if(s.has(i))s.delete(i);else s.add(i);st.sinav=s.size?s:null}
+    karneCiz(yer,'[data-kk-sinav="'+v+'"]');
+  });
+  document.addEventListener('change',ev=>{
+    const el=ev.target,kok=el&&el.matches&&el.matches('[data-kk-ders]')?el.closest('.kk'):null;if(!kok)return;
+    const yer=kok.dataset.kkYer;karneSecimi(yer).ders=el.value;karneCiz(yer,'[data-kk-ders]');
+  });
+}
+// The rehber's view: what goes to the students, which exams, and one student's slides as the student will see them.
+function karneGorunum(exU){
+  const salt=typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme(),y=yayinGecerli(D.konuKarneYayin)?D.konuKarneYayin:null;
+  const tum=siraliDenemeler().filter(e=>e.rapor&&e.es),secili=tum.filter(e=>e.sec);
+  const mod=y?y.mod:(S.kkMod==='secili'?'secili':'hepsi'),ex=y?karneSinavlari(y):mod==='secili'?secili:tum;
+  const cip=(v,ad)=>'<button type="button" class="yd-chip" data-yd-kk-mod="'+v+'" aria-pressed="'+(mod===v)+'"'+(salt||(v==='secili'&&!secili.length)?' disabled':'')+'>'+h(ad)+'</button>';
+  const yayinAd=y?(y.mod==='hepsi'?'bütün denemeler':ex.map(adOf).join(', ')||'seçilen denemeler bu cihazda yok'):'';
+  const fark=y&&y.mod==='secili'&&(secili.map(e=>e.kod).sort().join()!==[...y.kodlar].sort().join());
+  const bulut=typeof window!=='undefined'&&window.bulut&&window.bulut.yapilandirilmis;
+  const kisiler=kisiTemel(ex.filter(e=>e.es)),no=kisiler.some(k=>k.no===S.kkOgr)?S.kkOgr:(kisiler[0]?.no||'');
+  const karne=no?konuKarnesi(no,ex):null;
+  const durum=y?'<p class="yd-kk-durum"><b>Öğrencilere gidiyor:</b> '+h(yayinAd)+'. Öğrenciler, öğrenci girişlerini yayınladığınızda alır.</p>'
+    :'<p class="yd-kk-durum">Henüz öğrencilere gitmiyor.</p>';
+  const dugmeler=salt?'':'<div class="yd-arac">'+(y?(fark?'<button type="button" class="et-dugme" data-yd-kk-guncelle>Seçili denemelerle güncelle</button>':'')+'<button type="button" class="et-dugme" data-yd-kk-kaldir>Yayından kaldır</button>'
+    :'<button type="button" class="et-dugme birincil" data-yd-kk-yayinla'+(ex.length?'':' disabled')+'>Öğrenciye yayınla</button>')+
+    (y&&bulut?'<button type="button" class="et-dugme birincil" id="ogrenciHesapYayinla">Öğrenci girişlerini yayınla</button>':'')+'</div>';
+  const ogrSel='<label class="yd-sec">Önizleme: öğrenci<select data-yd-f="kkOgr">'+kisiler.map(k=>'<option value="'+h(k.no)+'"'+(k.no===no?' selected':'')+'>'+h(k.ad+' · '+k.no)+'</option>').join('')+'</select></label>';
+  return '<section class="yd-kk-yayin"><p class="yd-yardim">Her öğrenciye kendi deneme karnesi gider: her denemede, derste, konuda ve tek tek her soruda çok kolaydan çok zora her zorlukta kaç sorunun doğru olduğu. Öğrenci bunu kendi Yanlışlar defterinde slayt olarak görür; Hafızam’daki “Denemeye göre ayarla” da konulardan öğrencinin bildiklerini aklında gösterir, hiçbir konuyu düşürmez. Zorluk bu sayfadaki soru zorluğundan (performans analizi eklendiyse Türkiye geneli), konular Konu Takibi’nin sınav özetinden gelir. Soru resimleri, cevap harfleri ve başka öğrenciler gitmez.</p>'+
+    '<div class="yd-sec"><span id="ydKkEtiket">Hangi denemeler</span><div class="yd-chips" role="group" aria-labelledby="ydKkEtiket">'+cip('hepsi','Bütün denemeler ('+tum.length+')')+cip('secili','Seçili denemeler ('+secili.length+')')+'</div></div>'+
+    durum+dugmeler+'</section>'+
+    (kisiler.length?'<div class="yd-filtre">'+ogrSel+'</div>':'')+
+    (karne?karneHTML(karne,S.kk||{},'ogretmen'):'<p class="yd-bos">'+(no?'Bu öğrencinin seçilen denemelerde sorusu yok.':'Seçilen denemelerde öğrenci yok.')+'</p>');
+}
+return {farkModeli,konuKarnesi,ogrenciKarnesi,karneHTML,karneTopla,karneSorulari,karneSinavlari,karneYayinla,karneModu,konuDizisi,farkPlan,dersPlani,farkPdfIndir,farkDosyaAdi,farkSorusu,farkCumle,ekli,farkZ,sinavAnahtari,ESIKLER,okulMaddeleri,bolumMaddeleri,sayilanKural,ogrenciListesi,okulOranlari,dersAdi,dersOnek,kitapcikCoz,raporCoz,esle,esOturum,cozumEtiketleri,ortalamaCoz,ortalamaDogrula,performansCoz,performansMi,performansDogrula,etiketler,haritaKur,defterKur,difficultyIndex,zorlukAnaliz,filterDefter,acikBolumler,ogrAlani,oturumKume,soruKirp,
   dosyalarEkle,topluUygula,dosyaTani,pdfTuru,denemeKoy,kutuphaneKur,kutAc,sakla,geriYukle,metaOf,denemeSil,hepsiniSil,bellekiBosalt,sifirla,birlesik,kisiPlani,pdfPlan,pdfDosyaAdi,pdfIndir,boyutYaz,
   gorunum,yazdir,hazirla,durumu,key,title,kitAc,kitKapat};
 })();
@@ -1811,9 +2004,11 @@ function gorunumYanlislar(){return YANLISLAR.gorunum()}
 // with the student's and the correct answer, how many in the school and across the publisher's schools answered it right, and its konu.
 function gorunumYanlisListem(){
   const L=D.yanlisListe,bas='<div class="baslik"><h1>Yanlışlar defteri</h1><p>Yanlış ya da boş bıraktığın sorular. Kitapçığını açıp yeniden çöz.</p></div>';
-  if(!L||L.v!==1||!Array.isArray(L.s)||!L.s.length)return bas+'<div class="kart" style="padding:20px">Henüz liste yok. Öğretmenin deneme dosyalarını ekleyip planını yayınladığında burada görünür.</div>';
+  // Deneme karnesi: the slides first (the rehber's choice of exams; the student picks all or some of them, and deneme, ders, konu or soru, here).
+  const karne=D.konuKarne?'<div class="kart yl-karne">'+YANLISLAR.karneHTML(D.konuKarne,EK.kk||{},'ogrenci')+'</div>':'';
+  if(!L||L.v!==1||!Array.isArray(L.s)||!L.s.length)return bas+karne+(karne?'':'<div class="kart" style="padding:20px">Henüz liste yok. Öğretmenin deneme dosyalarını ekleyip planını yayınladığında burada görünür.</div>');
   const yz=v=>v===null||v===undefined?'—':'%'+v;
-  return bas+'<div class="arac"><button type="button" class="dugme" id="yanlisYazdir">Yazdır / PDF</button></div>'+L.s.map(s=>{
+  return bas+karne+'<div class="arac"><button type="button" class="dugme" id="yanlisYazdir">Yazdır / PDF</button></div>'+L.s.map(s=>{
     const n=s.d.reduce((t,d)=>t+d[2].length,0);
     return '<section class="kart yl-sinav"><h2>'+kacis(s.ad)+' <span class="mini">'+(s.tarih?kacis(s.tarih.split('-').reverse().join('.'))+' · ':'')+n+' soru</span></h2>'+
       s.d.map(([ders,ot,l])=>'<h3>'+kacis(ders)+' <span class="mini">'+kacis(ot)+' · '+l.length+'</span></h3><table class="yl-tablo"><thead><tr><th>Soru</th><th>Senin</th><th>Doğru</th><th title="Okulundaki öğrencilerden bu soruyu doğru yapanlar">Okulunda doğru</th><th title="Sınava giren bütün okullarda bu soruyu doğru yapanlar">Sınav okullarında doğru</th><th>Konu</th></tr></thead><tbody>'+
