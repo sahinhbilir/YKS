@@ -274,6 +274,7 @@ async function turDegistir(id,tur){
   const {veri,hata}=oku();if(!veri)throw new Error(hata);
   const s=veri.sinavlar.find(x=>x.id===id);if(!s)throw new Error('Sınav bulunamadı.');
   if(!tur||tur===addanTur(s.ad))delete s.tur;else s.tur=tur;
+  s.ts=Math.max(Date.now(),s.ts+1);
   // Update the same dated school results in the same local save as the classification.
   // Publication remains queued for the existing publish flow.
   const changed=[], anahtar=denemeAdAnahtari(s.ad), yeniTur=s.tur||addanTur(s.ad);
@@ -675,7 +676,13 @@ async function raporBaytlari(id,cift){
   if(!R||neden_)throw new Error(neden_||'Rapor bulunamadı.');
   // Exam timestamps change with every stored list, so a notebook replaced from the cloud never reuses an old PDF.
   const anahtar=[R.id,prev.id,prev.ts,cur.id,cur.ts,R.sirala?JSON.stringify(veri.tercih):''].join('|');
-  if(!ONBELLEK.has(anahtar)){const L=await kutuphane();ONBELLEK.set(anahtar,await R.yap(L,cur,prev,veri.tercih))}
+  if(!ONBELLEK.has(anahtar)){
+    const L=await kutuphane();
+    if(ONBELLEK.size>=12)ONBELLEK.delete(ONBELLEK.keys().next().value);
+    ONBELLEK.set(anahtar,await R.yap(L,cur,prev,veri.tercih));
+  }else{
+    const v=ONBELLEK.get(anahtar);ONBELLEK.delete(anahtar);ONBELLEK.set(anahtar,v);
+  }
   return {R,cur,prev,bytes:ONBELLEK.get(anahtar)};
 }
 async function hepsiBaytlari(cift){
@@ -871,9 +878,12 @@ document.addEventListener('change',async ev=>{
     const yeni=m[3]+'.'+m[2]+'.'+m[1];
     if(!confirm(s.ad+' sınavının tarihi '+yeni+' olsun mu? Öğrencilerin bu sınavdaki sonuçları da bu tarihe taşınır.')){yenidenCiz();return}
     ISLEM=true;
+    const oncekiSiralama=D.siralama;
     try{
       const r=await tarihDegistir(s.id,yeni);let mesaj=r.ad+' tarihi '+yeni+' oldu.';
-      const n=await denemeOkulTarihTasi(r.ad,r.eski.map(isoTarih),el.value);
+      let n=0;
+      try{n=await denemeOkulTarihTasi(r.ad,r.eski.map(isoTarih),el.value);}
+      catch(e){D.siralama=oncekiSiralama;await kaydet(true);throw e;}
       if(n){durum(mesaj+' '+n+' öğrencinin sonucu taşındı; yayınlanıyor…');mesaj+=' '+n+' öğrencinin sonucu taşındı. '+await denemeBekleyenleriYayinla(durum)}
       durum(mesaj);
     }catch(e){durum('Tarih değiştirilemedi: '+e.message)}

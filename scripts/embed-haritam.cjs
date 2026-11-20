@@ -14,7 +14,7 @@ for(const [source,open,close,anchor] of [
  [lf(fs.readFileSync('src/haritam.css','utf8')).trim(),'/* BEGIN HARITAM */','/* END HARITAM */',html.includes('/* BEGIN REPORT_THEME */')?'/* BEGIN REPORT_THEME */':'</style>']
 ]) {
  const block=open+'\n'+source+'\n'+close+'\n';
- if(html.includes(open)) html=html.slice(0,html.indexOf(open))+block+html.slice(html.indexOf(close)+close.length+1);
+ if(html.includes(open)) {const a=html.indexOf(open),z=html.indexOf(close,a);if(z<0)throw new Error('Missing end marker: '+close);html=html.slice(0,a)+block+html.slice(z+close.length+1);}
  else {if(!html.includes(anchor))throw new Error('Missing embedding anchor');html=html.replace(anchor,()=>block+'\n'+anchor);}
 }
 if(process.argv.includes('--check')) {if(html!==lf(original))throw new Error('Run node scripts/embed-haritam.cjs');}

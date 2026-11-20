@@ -142,7 +142,7 @@ service cloud.firestore {
           && request.resource.data.kaynak.size() <= 100;
       }
       allow get, list: if defterYetkilisi(uid);
-      allow create: if defterYetkilisi(uid) && geriNoktasiGecerli();
+      allow create: if defterYetkilisi(uid) && kilitUygun(uid) && geriNoktasiGecerli();
       allow update, delete: if false;
     }
 
@@ -165,20 +165,28 @@ service cloud.firestore {
         return raporId.matches(request.auth.uid + '-' + raporGunKodu(bugun) + '-[1-3]')
           || raporId.matches(request.auth.uid + '-' + raporGunKodu(dun) + '-[1-3]');
       }
-      function raporOgrenciBagi() {
+      function raporYuvaUygun(syncId) {
+        let yuvaYolu = /databases/$(database)/documents/ogrenciler/$(syncId);
+        let yuva = exists(yuvaYolu) ? get(yuvaYolu).data : null;
+        return yuva != null
+          && yuva.bagliUid == request.auth.uid
+          && yuva.durum == 'aktif'
+          && yuva.ogretmenUid == uid
+          && yuva.ogrenciBulutId == request.resource.data.ogrenciBulutId;
+      }
+      function raporHesapUygun() {
         let hesapYolu = /databases/$(database)/documents/ogrenciHesaplari/$(request.auth.uid);
+        let hesap = exists(hesapYolu) ? get(hesapYolu).data : null;
+        return hesap != null
+          && hesap.aktif == true
+          && hesap.syncId is string
+          && raporYuvaUygun(hesap.syncId);
+      }
+      function raporOgrenciBagi() {
         return request.auth.token.firebase.sign_in_provider == 'password'
           && request.auth.token.email is string
           && request.auth.token.email.matches('ogr-[0-9a-f]{40}@student[.]ykstekrar[.]app')
-          && exists(hesapYolu)
-          && get(hesapYolu).data.aktif == true
-          && get(hesapYolu).data.syncId is string
-          && exists(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId))
-          && get(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId)).data.bagliUid == request.auth.uid
-          && get(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId)).data.durum == 'aktif'
-          && get(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId)).data.ogretmenUid == uid
-          && get(/databases/$(database)/documents/ogrenciler/$(get(hesapYolu).data.syncId)).data.ogrenciBulutId
-              == request.resource.data.ogrenciBulutId;
+          && raporHesapUygun();
       }
       function raporFotoGecerli(l, i) {
         return l.size() <= i
@@ -274,6 +282,8 @@ service cloud.firestore {
       allow create, update: if ogretmenYetkisi()
         && request.resource.data.keys().hasOnly(['yeniUid','ts'])
         && request.resource.data.yeniUid is string
+        && request.resource.data.yeniUid.size() > 0
+        && request.resource.data.yeniUid != request.auth.uid
         && request.resource.data.ts is int;
       allow delete: if ogretmenYetkisi();
     }
@@ -339,6 +349,9 @@ service cloud.firestore {
       // Şifresi öğretmence sıfırlanan Kaydol hesabının yeni hesabı eski defteri bir kez okuyup taşır.
       function devralan() {
         return request.auth != null
+          && request.auth.token.firebase.sign_in_provider == 'password'
+          && request.auth.token.email is string
+          && request.auth.token.email.matches('uye-[0-9a-f]{40}@uye[.]ykstekrar[.]app')
           && exists(/databases/$(database)/documents/devir/$(uid))
           && get(/databases/$(database)/documents/devir/$(uid)).data.yeniUid == request.auth.uid;
       }
@@ -371,12 +384,22 @@ service cloud.firestore {
           && request.resource.data.veri.size() <= 900000
           && request.resource.data.syncId is string
           && request.resource.data.syncId.size() > 0
+          && !request.resource.data.syncId.matches('.*[/].*')
           && request.resource.data.aktif is bool
           && request.resource.data.ts is int
           && request.resource.data.surum is int;
       }
+      function yuvaSahibiVeyaBos(sid) {
+        let yol = /databases/$(database)/documents/ogrenciler/$(sid);
+        return !exists(yol)
+          || (defterYetkilisi(get(yol).data.ogretmenUid) && kilitUygun(get(yol).data.ogretmenUid));
+      }
       allow get: if request.auth != null && request.auth.uid == uid && resource.data.aktif == true;
-      allow create, update: if ogretmenYetkisi() && hesapBelgesiGecerli();
+      allow create: if ogretmenYetkisi() && hesapBelgesiGecerli()
+        && yuvaSahibiVeyaBos(request.resource.data.syncId);
+      allow update: if ogretmenYetkisi() && hesapBelgesiGecerli()
+        && yuvaSahibiVeyaBos(resource.data.syncId)
+        && yuvaSahibiVeyaBos(request.resource.data.syncId);
       allow delete, list: if false;
     }
 
@@ -441,7 +464,7 @@ service cloud.firestore {
           );
       }
 
-      allow create: if request.auth != null && defterYetkilisi(request.resource.data.ogretmenUid) && denemeOkulGecerli()
+      allow create: if request.auth != null && defterYetkilisi(request.resource.data.ogretmenUid) && kilitUygun(request.resource.data.ogretmenUid) && denemeOkulGecerli()
         && (request.resource.data.bagliUid == null
           || (request.resource.data.bagliUid is string
             && yayinlanmisHesap(request.resource.data.bagliUid)))
@@ -460,12 +483,19 @@ service cloud.firestore {
       // öğrenemez. Öğretmen erişimi allowlist'e bağlı kalır.
       // İzleyici öğretmen, sahibinin mevcut yuvalarını yalnızca okur (yazma dallarının hiçbiri ona açık değildir);
       // ortak öğretmen ise sahibin yetkileriyle okur ve yazar (defterYetkilisi).
-      allow get: if request.auth != null &&
-        ((ogretmenYetkisi() &&
-            (!exists(/databases/$(database)/documents/ogrenciler/$(syncId)) ||
-              defterYetkilisi(resource.data.ogretmenUid)))
-          || (request.auth.uid == resource.data.bagliUid && resource.data.durum == 'aktif')
-          || (exists(/databases/$(database)/documents/ogrenciler/$(syncId)) && izleyici(resource.data.ogretmenUid)));
+      allow get: if request.auth != null && (
+        resource == null
+          ? ogretmenYetkisi()
+          : (
+              (request.auth.uid == resource.data.bagliUid
+                && resource.data.durum == 'aktif'
+                && (request.auth.token.firebase.sign_in_provider == 'anonymous'
+                  || (request.auth.token.firebase.sign_in_provider == 'password'
+                    && yayinlanmisHesap(request.auth.uid))))
+              || defterYetkilisi(resource.data.ogretmenUid)
+              || izleyici(resource.data.ogretmenUid)
+            )
+      );
 
       allow update: if request.auth != null && kimlikAlanlariAyni() && (
         (
@@ -507,6 +537,7 @@ service cloud.firestore {
           // sonrakiSyncId değişir; bagliUid (denetim için) ve paket (öğretmen zaten
           // transaction içinde okudu) dokunulmaz.
           defterYetkilisi(resource.data.ogretmenUid)
+          && kilitUygun(resource.data.ogretmenUid)
           && resource.data.durum == 'aktif' && request.resource.data.durum == 'iptal'
           && request.resource.data.sonrakiSyncId is string
           && request.resource.data.bagliUid == resource.data.bagliUid
@@ -520,6 +551,7 @@ service cloud.firestore {
           // bağlayabilir. Yalnızca bagliUid değişebilir ve hedef hesabın bu syncId için
           // önceden yayınlanmış olması zorunludur.
           defterYetkilisi(resource.data.ogretmenUid)
+          && kilitUygun(resource.data.ogretmenUid)
           && resource.data.durum == 'aktif' && request.resource.data.durum == 'aktif'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bagliUid'])
           && request.resource.data.bagliUid is string
@@ -528,6 +560,7 @@ service cloud.firestore {
         ||
         (
           defterYetkilisi(resource.data.ogretmenUid)
+          && kilitUygun(resource.data.ogretmenUid)
           && resource.data.durum == 'aktif'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['denemeOkul'])
           && denemeOkulGecerli()

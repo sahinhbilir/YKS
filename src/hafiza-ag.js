@@ -331,7 +331,7 @@ function karistir(m) { let h = 2166136261; for (let i = 0; i < m.length; i++) h 
 // girdi.sadece: [anahtar] limits a call to some links, so the work can be spread (about 1 s per student per full pass
 // on a 90-link map). Each value is judged by its direct effect only (see the kume comment below).
 function ogren(girdi, opts) {
-  const o = ayarKur(opts), F = fsrsAl(opts), ag = agKur(girdi.konular, girdi.baglar, girdi.birimler), K = o.ozGuven;
+  const o = ayarKur(opts), F = fsrsAl(opts), ag = girdi._ag || agKur(girdi.konular, girdi.baglar, girdi.birimler), K = o.ozGuven;
   const onceki = girdi.parametreler || {}, paylasilan = JSON.parse(JSON.stringify(onceki.paylasilan || {}));
   const ogrenci = {}; (girdi.ogrenciler || []).forEach(s => { ogrenci[s.anahtar] = JSON.parse(JSON.stringify(((onceki.ogrenci || {})[s.anahtar]) || {})); });
   const ll = (p, y) => { const q = sinirla(p, 1e-4, 1 - 1e-4); return y ? Math.log(q) : Math.log(1 - q); };
@@ -346,7 +346,11 @@ function ogren(girdi, opts) {
       const kok = p === 'kredi' ? alt : ust, kume = new Set([kok, ...ag.temeller.get(kok)]);
       const toplam = IZGARA.map(() => 0), kisisel = [];
       for (const s of girdi.ogrenciler || []) {
-        const ilgili = (s.sonuclar || []).some(r => { const id = ag.takma.get(r.id); return id === alt || id === ust || ag.kullananlar.get(alt).has(id); });
+        const ilgili = (s.sonuclar || []).some(r => {
+          const id = ag.takma.get(r.id), b = id == null ? ag.birim.get(r.id) : null;
+          const ids = id != null ? [id] : b ? b.kapsar : [];
+          return ids.some(x => x === alt || x === ust || ag.kullananlar.get(alt).has(x));
+        });
         if (!ilgili) { kisisel.push(null); continue; }
         const kayitlar = IZGARA.map(g => {
           const k = []; calistir(Object.assign({}, girdi, s), o, F, ag, paramOkuyucu({paylasilan, ogrenci: ogrenci[s.anahtar]}, o, {anahtar: e.anahtar, p, deger: g}), k, null, kume);

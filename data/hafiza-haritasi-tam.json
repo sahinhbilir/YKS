@@ -8865,25 +8865,6 @@
    }
   },
   {
-   "sinav": "TYT",
-   "ders": "Geometri",
-   "konu": "Analitik Geometri",
-   "yillar": {
-    "2018": 1,
-    "2019": 1,
-    "2020": 0,
-    "2021": 1,
-    "2022": 1,
-    "2023": 0,
-    "2024": 0,
-    "2025": 0
-   },
-   "paylar": {
-    "geoNokta": 0.5,
-    "geoDogru": 0.5
-   }
-  },
-  {
    "sinav": "AYT",
    "ders": "Geometri",
    "konu": "Doğruda ve Üçgende Açı",
@@ -8976,78 +8957,6 @@
    }
   },
   {
-   "sinav": "TYT",
-   "ders": "Matematik",
-   "konu": "Köklü İfadeler",
-   "yillar": {
-    "2018": 2,
-    "2019": 1,
-    "2020": 0,
-    "2021": 1,
-    "2022": 1,
-    "2023": 1,
-    "2024": 1,
-    "2025": 1
-   },
-   "paylar": {
-    "tytKok": 1
-   }
-  },
-  {
-   "sinav": "TYT",
-   "ders": "Matematik",
-   "konu": "Oran-Orantı",
-   "yillar": {
-    "2018": 0,
-    "2019": 0,
-    "2020": 1,
-    "2021": 1,
-    "2022": 1,
-    "2023": 1,
-    "2024": 0,
-    "2025": 1
-   },
-   "paylar": {
-    "tytOran": 1
-   }
-  },
-  {
-   "sinav": "TYT",
-   "ders": "Matematik",
-   "konu": "Denklem Çözme",
-   "yillar": {
-    "2018": 0,
-    "2019": 2,
-    "2020": 0,
-    "2021": 0,
-    "2022": 1,
-    "2023": 1,
-    "2024": 0,
-    "2025": 1
-   },
-   "paylar": {
-    "tytDenklem": 1
-   }
-  },
-  {
-   "sinav": "TYT",
-   "ders": "Matematik",
-   "konu": "Çarpanlara Ayırma",
-   "yillar": {
-    "2018": 0,
-    "2019": 1,
-    "2020": 0,
-    "2021": 0,
-    "2022": 0,
-    "2023": 0,
-    "2024": 0,
-    "2025": 0
-   },
-   "paylar": {
-    "tytCarpan": 1
-   }
-  },
-  {
    "sinav": "AYT",
    "ders": "Matematik",
    "konu": "Çarpanlara Ayırma",
@@ -9091,24 +9000,6 @@
     "aytSinCos": 0.1,
     "aytToplamFark": 0.13,
     "aytDenklem": 0.12
-   }
-  },
-  {
-   "sinav": "TYT",
-   "ders": "Fizik",
-   "konu": "Hareket ve Kuvvet",
-   "yillar": {
-    "2018": 1,
-    "2019": 1,
-    "2020": 1,
-    "2021": 1,
-    "2022": 1,
-    "2023": 1,
-    "2024": 0,
-    "2025": 1
-   },
-   "paylar": {
-    "fizNewton": 0.5
    }
   },
   {

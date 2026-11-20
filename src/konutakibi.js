@@ -792,18 +792,26 @@ const ORDER={
 const order=(list,sira)=>[...list].sort((a,b)=>{for(const f of ORDER[sira]||ORDER.soru){const r=f(a,b);if(r)return r}return a.name.localeCompare(b.name,'tr')});
 function model(v,selection={},school=[]){
   const students=[...new Map(v.exams.flatMap(e=>e.blocks.map(b=>[studentKey(b.student),b.student]))).entries()].map(([id,s])=>({...s,id})).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
-  const classes=[...new Set(students.map(s=>s.cls))].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true}));
+  const classCount=new Map(),classExams=new Map();
+  for(const s of students)classCount.set(s.cls,(classCount.get(s.cls)||0)+1);
+  for(const e of v.exams)for(const b of e.blocks){let set=classExams.get(b.student.cls);if(!set){set=new Set();classExams.set(b.student.cls,set)}set.add(e.ad+'\0'+b.course.slice(-2))}
+  const classes=[...classCount.keys()].sort((a,b)=>a.localeCompare(b,'tr',{numeric:true}));
   // Open on the class with the most loaded exams (a TYT and an AYT exam are two), then the most pupils, then name.
-  const examCount=c=>new Set(v.exams.flatMap(e=>e.blocks.filter(b=>b.student.cls===c).map(b=>JSON.stringify([e.ad,b.course.slice(-2)])))).size;
-  const richest=[...classes].sort((a,b)=>examCount(b)-examCount(a)||students.filter(s=>s.cls===b).length-students.filter(s=>s.cls===a).length)[0];
+  const richest=[...classes].sort((a,b)=>(classExams.get(b)?.size||0)-(classExams.get(a)?.size||0)||(classCount.get(b)||0)-(classCount.get(a)||0))[0];
   const cls=classes.includes(selection.cls)?selection.cls:richest,ss=students.filter(s=>s.cls===cls);
   // Views: one pupil, the whole class (default) or every class of the same grade. Never mixes grades.
   const grade=gradeOf(cls),gradeStudents=grade?students.filter(s=>gradeOf(s.cls)===grade):[],one=ss.find(s=>s.id===selection.student);
   const scope=one?'student':selection.student==='*sinif'&&grade?'grade':'class',student=one||null;
   const ids=new Set((scope==='student'?[one]:scope==='grade'?gradeStudents:ss).map(s=>s.id));
   const blocks=v.exams.flatMap(e=>e.blocks.filter(b=>ids.has(studentKey(b.student))).map(b=>({...b,ad:e.ad,date:examDate(e,school)})));
-  const index=new Map();for(const b of blocks){const k=JSON.stringify([ek(b.ad),b.course]);if(!index.has(k))index.set(k,[]);index.get(k).push(b)}
-  const blocksOf=(e,part)=>index.get(JSON.stringify([ek(e.ad),part]))||[];
+  const byExamPartSid=new Map(),sessionByExam=new Map();
+  for(const b of blocks){
+    const ekey=ek(b.ad),sid=studentKey(b.student),k=ekey+'\0'+b.course+'\0'+sid;
+    let arr=byExamPartSid.get(k);if(!arr){arr=[];byExamPartSid.set(k,arr)}arr.push(b);
+    const sk=ekey+'\0'+b.course.slice(-2);
+    let ss_=sessionByExam.get(sk);if(!ss_){ss_=new Set();sessionByExam.set(sk,ss_)}ss_.add(sid);
+  }
+  const blocksOfSid=(e,part,sid)=>byExamPartSid.get(ek(e.ad)+'\0'+part+'\0'+sid)||[];
   const courses=[...new Set(blocks.map(b=>b.course))].sort((a,b)=>a.localeCompare(b,'tr'));
   const sessions=['TYT','AYT'].filter(s=>courses.some(c=>c.endsWith(s==='TYT'?'-T':'-A'))),session=sessions.includes(selection.session)?selection.session:sessions[0];
   const sfx=session==='TYT'?'-T':'-A',cs=courses.filter(c=>c.endsWith(sfx)),pick=n=>cs.find(c=>key(c)===key(n+sfx));
@@ -811,7 +819,7 @@ function model(v,selection={},school=[]){
   const merged=pick('MATEMATİK')&&pick('GEOMETRİ')?MG+sfx:null,options=merged?[merged,...cs]:cs;
   const course=options.includes(selection.course)?selection.course:options[0],parts=course===merged?[pick('MATEMATİK'),pick('GEOMETRİ')]:[course];
   // Exams in this session and how many included pupils have each (one pupil = no count shown).
-  const sessionExams=v.exams.map(e=>({ad:e.ad,n:new Set(blocks.filter(b=>ek(b.ad)===ek(e.ad)&&b.course.endsWith(sfx)).map(b=>studentKey(b.student))).size})).filter(x=>x.n);
+  const sessionExams=v.exams.map(e=>({ad:e.ad,n:sessionByExam.get(ek(e.ad)+'\0'+sfx)?.size||0})).filter(x=>x.n);
   const sira=SIRA.some(s=>s[0]===selection.sira)?selection.sira:'soru';
   const taban=selection.taban==='turkiye'?'turkiye':'okul';
   const topics=new Map(),unknown=new Map(),zi=zorlukIndex(v.zorluk,taban),zExams=new Set(),zBad=new Set();let zTot=null,zSkip=0;
@@ -819,7 +827,7 @@ function model(v,selection={},school=[]){
     const combined=new Map(),zx=zi.get(ek(e.ad));
     // Per pupil and subject the summary/detail rule applies once; only then are pupils and subjects added up.
     for(const sid of ids)for(const part of parts){
-      const bs=blocksOf(e,part).filter(b=>studentKey(b.student)===sid),detail=bs.find(b=>b.kind==='outcome'),summary=bs.find(b=>b.kind==='topic'),groups=new Map(),zc=zx?.courses.get(key(part));
+      const bs=blocksOfSid(e,part,sid),detail=bs.find(b=>b.kind==='outcome'),summary=bs.find(b=>b.kind==='topic'),groups=new Map(),zc=zx?.courses.get(key(part));
       if(bs.length&&bs.every(alinmadi))continue;
       if(bs.length&&zx?.bad.some(c=>key(c)===key(part)))zBad.add(part);
       const get=n=>{const id=key(n);if(!groups.has(id))groups.set(id,{name:topicName(n),detail:[],summary:null});return groups.get(id)};
@@ -854,7 +862,7 @@ function model(v,selection={},school=[]){
   for(const e of v.exams){
     let any=false;
     for(const sid of ids)for(const part of parts){
-      const bs=blocksOf(e,part).filter(b=>studentKey(b.student)===sid),src=bs.find(b=>b.kind==='topic')||bs.find(b=>b.kind==='outcome');
+      const bs=blocksOfSid(e,part,sid),src=bs.find(b=>b.kind==='topic')||bs.find(b=>b.kind==='outcome');
       if(src){ozetC=src.rows.reduce((a,r)=>sum(a,r.slice(1)),ozetC);any=true;ozetS.add(sid)}
     }
     if(any)ozetN++;
@@ -924,24 +932,32 @@ function turkiyeKiyas(v,sel={}){
   const satir=g=>({id:g.id,ad:g.ad,alt:g.alt||'',...grupOlc(g.qs),sinav:new Set(g.qs.map(q=>q.k)).size,sorular:g.qs.map(q=>({ad:q.ad,no:q.no,ps:q.ps,pt:q.pt,n:q.n}))});
   const dersler=bol(Qe,q=>[[q.ck,courseLabel(q.course),'']]).map(satir).sort((a,b)=>a.fark-b.fark);
   const course=dersler.some(d=>d.id===sel.course)?sel.course:'*',seviye=TR_DUZEY.some(x=>x[0]===sel.seviye)?sel.seviye:'konu',olcu=sel.olcu==='goreli'?'goreli':'mutlak',sira=TR_SIRA.some(x=>x[0]===sel.sira)?sel.sira:'fark';
-  let rows=[];
-  if(course!=='*'){
+  const konuAnahtar=q=>{if(!q.codes.length)return [['∅','Kazanım haritası yok','Sınav özeti yüklenmedi']];const t=new Map();for(const c of q.codes){const n=topicFor(q.course,c,v.maps);t.set(n?key(n):'?',n?topicName(n):'Konusu eşleşmeyen kazanımlar')}return [...t].map(([id,ad])=>[id,ad,''])};
+  let rows=[],tumKonular=null;
+  if(sel._tumKonular){
+    const dersAd=new Map(dersler.map(d=>[d.id,d.ad])),byCourse=new Map();
+    for(const q of Qe){let l=byCourse.get(q.ck);if(!l){l=[];byCourse.set(q.ck,l)}l.push(q)}
+    tumKonular=[];
+    for(const d of dersler){
+      const list=byCourse.get(d.id)||[];
+      for(const r of bol(list,konuAnahtar).map(satir))if(r.id!=='∅'&&r.id!=='?')tumKonular.push({...r,ders:dersAd.get(d.id)||d.ad,dersId:d.id});
+    }
+  }else if(course!=='*'){
     const list=Qe.filter(q=>q.ck===course);
     if(seviye==='soru')rows=bol(list,q=>[[q.k+'|'+q.no,'Soru '+q.no,(exams.length>1?q.ad+' · ':'')+(q.codes.length?q.codes.map(c=>adlar.get(c)||c).join(' · '):'kazanım haritası yok')]]).map(satir);
     else if(seviye==='kazanim')rows=bol(list,q=>q.codes.length?q.codes.map(c=>[c,adlar.get(c)||c,c]):[['∅','Kazanım haritası yok','Sınav özeti yüklenmedi']]).map(satir);
-    else rows=bol(list,q=>{if(!q.codes.length)return [['∅','Kazanım haritası yok','Sınav özeti yüklenmedi']];const t=new Map();for(const c of q.codes){const n=topicFor(q.course,c,v.maps);t.set(n?key(n):'?',n?topicName(n):'Konusu eşleşmeyen kazanımlar')}return [...t].map(([id,ad])=>[id,ad,''])}).map(satir);
+    else rows=bol(list,konuAnahtar).map(satir);
   }
   const deger=r=>olcu==='goreli'?r.goreli:r.fark;
   const diz=l=>[...l].sort((a,b)=>sira==='ad'?a.ad.localeCompare(b.ad,'tr',{numeric:true}):sira==='soru'?b.m-a.m||deger(a)-deger(b):sira==='ileri'?deger(b)-deger(a):deger(a)-deger(b));
   return {var:girdiler.length>0,veri:Qe.length>0,duzeyler,duzey,sessions,session,exams,exam,course,seviye,olcu,sira,dersler:[...dersler].sort((a,b)=>a.fark-b.fark),rows:diz(rows),genel:Qe.length?grupOlc(Qe):null,uyusmayan,ozetYok,
     ogrenci:Qe.length?Math.round(Qe.reduce((a,q)=>a+q.n,0)/Qe.length):0,soru:Qe.length,
-    dosyalar:hepsi.map(([k,e])=>({k,ad:e.ad,ozet:!!e.ozet,madde:!!e.madde,turkiye:!!e.turkiye}))};
+    dosyalar:hepsi.map(([k,e])=>({k,ad:e.ad,ozet:!!e.ozet,madde:!!e.madde,turkiye:!!e.turkiye})),...(tumKonular?{_tumKonular:tumKonular}:{})};
 }
 // The topics of every ders in one list, the established gaps first: the summary other pages show (Türkiye geneli, the teacher's home).
 function geridekiKonular(v,sel={},adet=5){
-  const m=turkiyeKiyas(v,{...sel,course:'*'});if(!m.veri)return {var:false,dosyalar:m.dosyalar,geride:0,toplam:0,liste:[],dersler:[]};
-  const liste=[];
-  for(const d of m.dersler){const k=turkiyeKiyas(v,{duzeyNo:m.duzey,session:m.session,exam:m.exam,course:d.id,seviye:'konu',olcu:'mutlak',sira:'fark'});for(const r of k.rows)if(r.id!=='∅'&&r.id!=='?')liste.push({...r,ders:d.ad,dersId:d.id})}
+  const m=turkiyeKiyas(v,{...sel,course:'*',_tumKonular:true});if(!m.veri)return {var:false,dosyalar:m.dosyalar,geride:0,toplam:0,liste:[],dersler:[]};
+  const liste=m._tumKonular||[];
   liste.sort((a,b)=>(a.durum==='geride'?0:1)-(b.durum==='geride'?0:1)||a.fark-b.fark);
   return {var:true,session:m.session,duzey:m.duzey,sinav:m.exams.length,geride:liste.filter(r=>r.durum==='geride').length,toplam:liste.length,liste:liste.slice(0,adet),dersler:m.dersler,genel:m.genel};
 }
@@ -1200,7 +1216,7 @@ function turkiyeCoz(pages){
   // An exam with a code ("27-YKS-1202 SINAVI ANALİZLERİ") is named by its code; one without ("27-TYT_SIFIR_POZİTİF SINAVI
   // ANALİZLERİ") by its full name, the name its karneler and Sınav özeti give it, so the files still meet under one exam.
   const sayfalar=pages.map(items=>({items:Array.isArray(items)?items:[]}));let perf;
-  try{perf=YANLISLAR.performansCoz(sayfalar)}catch(e){if(!/Sınav kodu/u.test(e.message))throw e;perf=YANLISLAR.performansCoz(sayfalar,{tamAd:true})}
+  try{perf=YANLISLAR.performansCoz(sayfalar)}catch(e){if(!/Sınav (?:kodu|adı)/u.test(e.message))throw e;perf=YANLISLAR.performansCoz(sayfalar,{tamAd:true})}
   const dersler={},yanlis={};
   for(const d of perf.dersler){dersler[d.ad]=d.maddeler.map(x=>Math.round(x.p*10000)/10000);yanlis[d.ad]=d.maddeler.map(yanlisPayi)}
   const o=new Set(Object.keys(dersler).map(c=>c.endsWith('-T')?'TYT':'AYT'));
@@ -1241,8 +1257,8 @@ async function pdfEkle(files){
   if(reports.length||zparts.length){
     await ekle(reports,owner,previous,zparts);
     // Say so at once when the two difficulty files of an exam do not fit each other.
-    const zi=zorlukIndex(oku().veri?.zorluk);
-    for(const k of new Set(zparts.map(p=>ek(p.ad)))){const x=zi.get(k),ad=oku().veri?.zorluk?.[k]?.ad||k;if(!x)continue;
+    const zv=oku().veri?.zorluk,zi=zorlukIndex(zv);
+    for(const k of new Set(zparts.map(p=>ek(p.ad)))){const x=zi.get(k),ad=zv?.[k]?.ad||k;if(!x)continue;
       if(x.bad.length)extra.push(ad+': Zorluk verisi uyuşmuyor: '+x.bad.map(courseLabel).join(', ')+'.');
       for(const o of x.eksik.ozet)extra.push(ad+': '+o+' Sınav özeti yok; '+o+' dersleri konu ve kazanım düzeyinde eşlenemez. '+o+' Sınav özetini (Excel) ekleyin.')}
   }

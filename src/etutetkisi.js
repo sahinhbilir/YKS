@@ -881,7 +881,7 @@ function grafikleriCiz(){
   };
   const secili=m.capraz.hocalar.some(h=>h.key===EK.eeHoca)?EK.eeHoca:'',cap={ogrenciler:m.capraz.ogrenciler,hocalar:m.capraz.hocalar,ozet:m.capraz.ozet};
   const yh=ortakY(m),sh_=ortakS(m);
-  m.hocalar.forEach((h,i)=>{const o=m.hocaOlay[h.key];if(o)cizim('#eeHocaGrafik .ee-hoca-kart:nth-of-type('+(i+1)+') .et-grafik',h.key+'|'+yh.join()+'|'+sh_+'|'+o.noktalar.map(p=>[p.n,p.etut.ort,p.kontrol.ort,(p.etut.ci||[]).join(),(p.kontrol.ci||[]).join()].join(':')).join('/'),W=>olaySvg(o,W,{y:yh,sy:sh_,net:true}))});
+  m.hocalar.filter(h=>m.hocaOlay&&m.hocaOlay[h.key]&&m.hocaOlay[h.key].n>=1).forEach((h,i)=>{const o=m.hocaOlay[h.key];cizim('#eeHocaGrafik .ee-hoca-kart:nth-of-type('+(i+1)+') .et-grafik',h.key+'|'+yh.join()+'|'+sh_+'|'+o.noktalar.map(p=>[p.n,p.etut.ort,p.kontrol.ort,(p.etut.ci||[]).join(),(p.kontrol.ci||[]).join()].join(':')).join('/'),W=>olaySvg(o,W,{y:yh,sy:sh_,net:true}))});
   cizim('#eeOlay .et-grafik',m.olay.noktalar.map(p=>[p.n,p.etut.ort,p.kontrol.ort,(p.etut.ci||[]).join(),(p.kontrol.ci||[]).join()].join(':')).join('/'),W=>olaySvg(m.olay,W));
   if(cap.ozet&&cap.ogrenciler.length)cizim('#eeFark .et-grafik',secili+'|'+cap.ogrenciler.map(o=>o.fark+':'+o.n).join()+'|'+cap.ozet.b+'|'+cap.hocalar.map(h=>h.b).join(),W=>farkSvg(cap,W,secili));
   cizim('#eeArtis .et-grafik',m.cubuklar.map(c=>c.n+':'+c.ort+':'+(c.ci||[]).join()).join(),W=>artisSvg(m,W));
@@ -1027,11 +1027,22 @@ function nasilBlogu(m){
     '<p><b>Ayrıntı bölümü</b> iki eski karşılaştırmayı tutar: öğrencilerin birbiriyle karşılaştırılması (çalışkanlığı da içerir) ve iki deneme arasındaki etüt sayısına göre artış.</p>'+
     (m.kip==='ham'?'<p><b>Bu sayfada ham net kullanıldı</b> (Türkiye geneli listesi olmadığı için); sonuç denemelerin zorluğundan etkilenebilir.</p>':'')+'</div></details>';
 }
+let MODEL_ONBELLEK=null;
 function icerik(){
   const baslik='<h1 class="et-baslik">Etüt etkisi</h1>';
-  let t;try{t=OGRENCI_RAPOR.temelOgrenciler()}catch(e){SON=null;return '<header class="et-bas">'+baslik+'</header><p class="et-uyari">'+kacis(e.message)+'</p>'}
-  let tv=null,trFn=null;try{tv=TURKIYE.oku().veri;if(tv)trFn=TURKIYE.ortalamalar(tv)}catch(e){tv=null;trFn=null}
-  const m=model(t.students,secimler(),t.etutKapsam,trFn);
+  const sec=secimler(),temelFn=typeof OGRENCI_RAPOR!=='undefined'?OGRENCI_RAPOR.temelOgrenciler:null,trOkuFn=typeof TURKIYE!=='undefined'?TURKIYE.oku:null;
+  const anahtar=[D.rev||0,sec.duzey??'',sec.oturum??'',sec.ders??'',sec.donem??''].join('|');
+  let t,tv,m,st;
+  if(MODEL_ONBELLEK&&MODEL_ONBELLEK.D===D&&MODEL_ONBELLEK.sr===D.siralama&&MODEL_ONBELLEK.et===D.etut&&MODEL_ONBELLEK.ep===D.etutPlani&&MODEL_ONBELLEK.tr===D.turkiye&&MODEL_ONBELLEK.anahtar===anahtar&&MODEL_ONBELLEK.temelFn===temelFn&&MODEL_ONBELLEK.trOkuFn===trOkuFn){
+    ({t,tv,m,st}=MODEL_ONBELLEK);
+  }else{
+    try{t=OGRENCI_RAPOR.temelOgrenciler()}catch(e){SON=null;MODEL_ONBELLEK=null;return '<header class="et-bas">'+baslik+'</header><p class="et-uyari">'+kacis(e.message)+'</p>'}
+    tv=null;let trFn=null;try{tv=TURKIYE.oku().veri;if(tv)trFn=TURKIYE.ortalamalar(tv)}catch(e){tv=null;trFn=null}
+    m=model(t.students,sec,t.etutKapsam,trFn);
+    const ogrD=m.durum==='tamam'?t.students.filter(s=>s&&Array.isArray(s.exams)&&duzeyAl(s.cls)===m.duzey):[];
+    st=m.durum==='tamam'?durus(ogrD,m,tv):null;
+    MODEL_ONBELLEK={D,sr:D.siralama,et:D.etut,ep:D.etutPlani,tr:D.turkiye,anahtar,temelFn,trOkuFn,t,tv,m,st};
+  }
   const uyari=(t.warnings||[]).length?'<p class="mini ee-durum" id="eeDurum">Eşleştirme: '+kacis(t.warnings.slice(0,3).join(' '))+(t.warnings.length>3?' (+'+fi(t.warnings.length-3)+')':'')+'</p>':'';
   const bos=(yazi)=>'<header class="et-bas">'+baslik+'</header><section class="et-panel et-bos"><b>'+yazi[0]+'</b><p>'+yazi[1]+'</p><div class="et-arac">'+gitDugme('siralamalar','Sıralamalar')+gitDugme('etutler','Etütler')+'</div></section>';
   if(m.durum!=='tamam')SON=null;
@@ -1043,7 +1054,6 @@ function icerik(){
     return '<header class="et-bas">'+baslik+'</header>'+arac(m)+uyari+
       '<section class="et-panel et-bos"><b>Dönemde etüt kaydı yok</b><p>'+kacis(e[0].etiket)+' – '+kacis(e[e.length-1].etiket)+' arasında bu oturumun derslerinden etüt alan öğrenci bulunamadı. Etüt raporunun tarih aralığını ve öğrenci adlarının denemelerle eşleştiğini kontrol edin.</p><div class="et-arac">'+gitDugme('etutler','Etütler')+'</div></section>';
   }
-  const ogrD=t.students.filter(s=>s&&Array.isArray(s.exams)&&duzeyAl(s.cls)===m.duzey),st=durus(ogrD,m,tv);
   SON=m.hepsi.length?{m,st}:null;
   const hamUyari=m.kip==='ham'?'<div class="ee-uyari-satir"><p class="et-uyari" id="eeHamUyari">'+HAM_UYARI+'</p>'+gitDugme('turkiye','Türkiye geneli')+'</div>':'';
   const listesiz=m.listesiz.length?'<div class="ee-uyari-satir"><p class="et-uyari" id="eeListesiz">Türkiye geneli listesi olmayan denemeler hesaba katılmadı: '+kacis(m.listesiz.join(', '))+'.</p>'+gitDugme('turkiye','Türkiye geneli')+'</div>':'';

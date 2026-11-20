@@ -59,28 +59,36 @@ function rasch(X) {
   const c = ik.map(i => pk.reduce((s, n) => s + X[n][i], 0));
   let b = c.map(v => Math.log((N - v) / v)); { const m = ort(b); b = b.map(v => v - m) }
   const th = Array(L + 1).fill(0); for (let s = 1; s < L; s++) th[s] = Math.log(s / (L - s));
-  const clamp = (v, m) => Math.max(-m, Math.min(m, v));
+  const clamp = (v, m) => Math.max(-m, Math.min(m, v)), LOGIT_UST = 10;
   for (let it = 0; it < 500; it++) {
     for (let s = 1; s < L; s++) {
       if (!cnt[s]) continue;
       for (let k = 0; k < 40; k++) {
         let E = 0, V = 0; for (const bi of b) { const p = sig(th[s] - bi); E += p; V += p * (1 - p) }
-        const d = clamp((s - E) / V, 1); th[s] += d; if (Math.abs(d) < 1e-9) break;
+        if (V < 1e-12) break;
+        const d = clamp((s - E) / V, 1), yeni = clamp(th[s] + d, LOGIT_UST), adim = yeni - th[s];
+        th[s] = yeni; if (Math.abs(adim) < 1e-9) break;
       }
     }
     let mx = 0;
-    const nb = b.map((bi, j) => { let E = 0, V = 0; for (let s = 1; s < L; s++) if (cnt[s]) { const p = sig(th[s] - bi); E += cnt[s] * p; V += cnt[s] * p * (1 - p) } const d = clamp((E - c[j]) / V, 1); mx = Math.max(mx, Math.abs(d)); return bi + d });
-    const m = ort(nb); b = nb.map(v => v - m);
+    const nb = b.map((bi, j) => {
+      let E = 0, V = 0;
+      for (let s = 1; s < L; s++) if (cnt[s]) { const p = sig(th[s] - bi); E += cnt[s] * p; V += cnt[s] * p * (1 - p) }
+      if (V < 1e-12) return bi;
+      const d = clamp((E - c[j]) / V, 1), yeni = clamp(bi + d, LOGIT_UST);
+      mx = Math.max(mx, Math.abs(yeni - bi)); return yeni;
+    });
+    const m = ort(nb); b = nb.map(v => clamp(v - m, LOGIT_UST));
     if (mx < 1e-7) break;
   }
-  const V = b.map(bi => { let v = 0; for (let s = 1; s < L; s++) if (cnt[s]) { const p = sig(th[s] - bi); v += cnt[s] * p * (1 - p) } return v });
+  const V = b.map(bi => { let v = 0; for (let s = 1; s < L; s++) if (cnt[s]) { const p = sig(th[s] - bi); v += cnt[s] * p * (1 - p) } return Math.max(v, 1e-12) });
   const f = (L - 1) / L, bc = b.map(v => v * f), thc = th.map(v => v * f), sec = V.map(v => f / Math.sqrt(v));
   // fit mean squares (Wright & Masters 1982): infit = Σ(x − P)² / ΣP(1 − P), outfit = mean of the squared standardised residuals
   const infit = [], outfit = [];
   ik.forEach((_, j) => {
     let num = 0, den = 0, z2 = 0;
-    pk.forEach((n, q) => { const p = sig(thc[skor[q]] - bc[j]), r2 = (X[n][ik[j]] - p) ** 2, v = p * (1 - p); num += r2; den += v; z2 += r2 / v });
-    infit.push(num / den); outfit.push(z2 / N);
+    pk.forEach((n, q) => { const p = sig(thc[skor[q]] - bc[j]), r2 = (X[n][ik[j]] - p) ** 2, v = Math.max(p * (1 - p), 1e-12); num += r2; den += v; z2 += r2 / v });
+    infit.push(num / Math.max(den, 1e-12)); outfit.push(z2 / N);
   });
   const out = {...bos, uygun: true, b: Array(L0).fill(null), se: Array(L0).fill(null), infit: Array(L0).fill(null), outfit: Array(L0).fill(null), uc: Array(L0).fill(true)};
   ik.forEach((i, j) => { out.b[i] = bc[j]; out.se[i] = sec[j]; out.infit[i] = infit[j]; out.outfit[i] = outfit[j]; out.uc[i] = false });

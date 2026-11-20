@@ -49,10 +49,14 @@ async function zipDosyalari(buf) {
     if (v.getUint32(p, true) !== 0x02014b50) break;
     const yontem = v.getUint16(p + 10, true), boy = v.getUint32(p + 20, true), adBoy = v.getUint16(p + 28, true);
     const ek = v.getUint16(p + 30, true), yorum = v.getUint16(p + 32, true), yerel = v.getUint32(p + 42, true);
+    if (p + 46 + adBoy + ek + yorum > buf.byteLength) throw new Error('Excel dosyası açılamadı (bozuk .xlsx).');
     const ad = td.decode(u8.subarray(p + 46, p + 46 + adBoy));
     p += 46 + adBoy + ek + yorum;
     if (!/^xl\/(sharedStrings\.xml|workbook\.xml|worksheets\/sheet\d+\.xml)$/.test(ad)) continue;
-    const bas = yerel + 30 + v.getUint16(yerel + 26, true) + v.getUint16(yerel + 28, true), veri = u8.slice(bas, bas + boy);
+    if (yerel + 30 > buf.byteLength || v.getUint32(yerel, true) !== 0x04034b50) throw new Error('Excel dosyası açılamadı (bozuk .xlsx).');
+    const bas = yerel + 30 + v.getUint16(yerel + 26, true) + v.getUint16(yerel + 28, true);
+    if (bas < yerel + 30 || bas + boy > buf.byteLength) throw new Error('Excel dosyası açılamadı (bozuk .xlsx).');
+    const veri = u8.slice(bas, bas + boy);
     if (yontem === 0) out.set(ad, td.decode(veri));
     else if (yontem === 8) out.set(ad, await new Response(new Blob([veri]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text());
   }
@@ -79,8 +83,12 @@ async function xlsxMetni(f) {
         const vv = (c.match(/<v>([\s\S]*?)<\/v>/) || [])[1];
         let deger = t === 's' ? ortak[+vv] ?? '' : t === 'inlineStr' ? xmlMetni(c) : vv === undefined ? '' : xmlCoz(vv);
         if (t === 'b') deger = deger === '1' ? 'DOĞRU' : 'YANLIŞ';
-        hucreler[ref ? sutunNo(ref) : hucreler.length] = String(deger).replace(/[\t\r\n]+/g, ' ').trim();
+        const temiz = String(deger).replace(/[\t\r\n]+/g, ' ').trim();
+        // Skip empty styled cells that carry an explicit column ref (e.g. out to XFD) so rows never explode with trailing tabs.
+        if (ref && !temiz) continue;
+        hucreler[ref ? sutunNo(ref) : hucreler.length] = temiz;
       }
+      while (hucreler.length && !hucreler[hucreler.length - 1]) hucreler.pop();
       if (hucreler.some(Boolean)) satirlar.push(Array.from(hucreler, x => x || '').join('\t'));
     }
     if (satirlar.length) parcalar.push('## Sayfa: ' + (adlar[i] || 'Sayfa ' + (i + 1)) + '\n' + satirlar.join('\n'));
@@ -214,12 +222,22 @@ function denemeRaporu(y, dosyaAdi, model) {
   if (metin(y.uyari, 300)) uyarilar.unshift('Yapay zekâ notu: ' + metin(y.uyari, 300));
   if (!tarih) uyarilar.unshift('Sınav tarihi dosyada okunamadı; bugünün tarihi yazıldı. Aktarmadan önce düzeltin.');
   // A grade's own exam (a TYT without some 12. sınıf lesson) has its own question counts.
+  // A 12. sınıf TYT whose Matematik + Geometri are printed together only omits geo: stamp mat=40 without shrinking other subjects.
   const tyt = rapor.satirlar.filter(r => r.oturum === 'TYT'), kodlar = new Set(tyt.flatMap(r => r.dersler.map(d => d.kod)));
-  if (tyt.length && DENEME_DERSLER.TYT.some(d => d[0] !== 'sf' && !kodlar.has(d[0])))
+  const eksik = tyt.length ? DENEME_DERSLER.TYT.filter(d => d[0] !== 'sf' && !kodlar.has(d[0])).map(d => d[0]) : [];
+  const matEnCok = kodlar.has('mat') ? Math.max(...tyt.flatMap(r => r.dersler.filter(d => d.kod === 'mat').map(d => d.dogru + d.yanlis))) : 0;
+  const birlesikMat = eksik.length === 1 && eksik[0] === 'geo' && kodlar.has('mat') && (matEnCok > 30 || tyt.every(r => r.dersler.every(d => {
+    const std = DENEME_DERSLER.TYT.find(x => x[0] === d.kod)?.[2];
+    return !std || d.kod === 'mat' || d.dogru + d.yanlis <= std;
+  })));
+  if (birlesikMat) {
+    for (const r of tyt) for (const d of r.dersler) if (d.kod === 'mat') d.soru = 40;
+  } else if (eksik.length) {
     for (const kod of kodlar) {
       const soru = denemeSoruTahmini(kod, Math.max(...tyt.flatMap(r => r.dersler.filter(d => d.kod === kod).map(d => d.dogru + d.yanlis))));
       for (const r of tyt) for (const d of r.dersler) if (d.kod === kod) d.soru = soru;
     }
+  }
   rapor.siralama = siralamaListesi(rapor, ogrenciler);
   if (!rapor.siralama && rapor.satirlar.length) uyarilar.push('Liste Sıralamalar’a eklenmeyecek: bunun için her öğrencinin numarası olmalı ve her satırın neti dosyayla doğrulanmalı.');
   return rapor;
@@ -231,11 +249,12 @@ function siralamaListesi(rapor, ogrenciler) {
   const birlesik = rapor.satirlar.some(r => r.oturum === 'AYT'), tur_ = birlesik ? 'F' : 'T';
   const K = birlesik ? [...SIRALAMA.TYT_KEYS, ...SIRALAMA.AYT_KEYS] : SIRALAMA.TYT_KEYS;
   const r2 = x => Math.round(x * 100) / 100;
+  const noAnahtar = x => { const t = metin(String(x ?? ''), 20); return /^\d{1,12}$/.test(t) ? String(Number(t)) : t; };
   const ogr = new Map();
   for (const r of rapor.satirlar) {
     const k = String(r.no);
     if (!ogr.has(k)) {
-      const kaynak = ogrenciler.find(s => metin(String(s.no ?? ''), 20) === k) || {}, p = kaynak.puan && typeof kaynak.puan === 'object' ? kaynak.puan : {};
+      const kaynak = ogrenciler.find(s => noAnahtar(s.no) === k) || {}, p = kaynak.puan && typeof kaynak.puan === 'object' ? kaynak.puan : {};
       ogr.set(k, {no:k, ad:r.ad, snf:r.sinif || '', n:K.map(() => null), dy:K.map(() => null),
         p:['TYT','SAY','EA','SOZ'].map(x => typeof p[x] === 'number' && p[x] >= 0 && p[x] <= 1000 ? r2(p[x]) : null), r:['','','','']});
     }

@@ -88,11 +88,12 @@ function varsayilanKapsam(t,ks){
 // counts: lessons no list of the view printed are left out, and counts come from the most questions
 // a student answered (denemeSoruTahmini). The 12. sınıf lessons keep their counts.
 function dersleriAyarla(O,rows){
-  const var_=k=>rows.some(r=>r.o.dy[k]!=null),tek=O.dersler.filter(d=>!d.uyeler);
+  const var_=k=>rows.some(r=>r.o.dy[k]!=null||r.o.net[k]!=null),tek=O.dersler.filter(d=>!d.uyeler);
   if(!tek.some(d=>!/^S\.F/.test(d.kod)&&!var_(d.kod)))return O;
-  const enCok=k=>Math.max(0,...rows.map(r=>{const p=String(r.o.dy[k]||'').split('/').map(Number);return p.length===2&&p.every(Number.isFinite)?p[0]+p[1]:0}));
+  const enCok=k=>Math.max(0,...rows.map(r=>{const p=String(r.o.dy[k]||'').split('/').map(Number);if(p.length===2&&p.every(Number.isFinite))return p[0]+p[1];const n=r.o.net[k];return Number.isFinite(n)&&n>0?Math.ceil(n):0}));
   // A test with one printed lesson is that lesson (9. sınıf Matematik + Geometri is Matematik).
   const dersler=O.dersler.filter(d=>(d.uyeler||[d.kod]).filter(var_).length>(d.uyeler?1:0)).map(d=>({...d,soru:(d.uyeler||[d.kod]).filter(var_).reduce((a,k)=>a+denemeSoruTahmini(DENEME_SIRA_KODU[k],enCok(k)),0)}));
+  if(!dersler.length)return O;
   return {...O,dersler,ust:dersler.filter(d=>!d.uyeler).reduce((a,d)=>a+d.soru,0)};
 }
 function gorunumModeli(t,O,K,sec){
@@ -182,9 +183,11 @@ function ogrenciTrFark(o,w,tr){
 }
 function olcutUygula(m,s,olcut,tr){
   if(!s)return;
+  let u=m.O.ust;
+  for(const o of m.ogrenciler){const c=o.k[s];if(!c)continue;if(c.once!==null&&c.once>u)u=c.once;if(c.son!==null&&c.son>u)u=c.son}
   for(const o of m.ogrenciler){const c=o.k[s];if(!c)continue;
     c.yuzde=c.fark!==null&&c.once>0?c.fark/c.once*100:null;
-    c.logFark=c.fark!==null?Math.log((m.O.ust-c.once+1)/(m.O.ust-c.son+1)):null;
+    c.logFark=c.fark!==null?Math.log((u-c.once+1)/(u-c.son+1)):null;
     c.trFark=c.fark===null?null:ogrenciTrFark(o,m.pencere[s],tr)}
   const k=OLCUT_ALAN[olcut];if(!k)return;
   const l=m.ogrenciler.filter(o=>o.k[s][k]!==null).sort((a,b)=>b.k[s][k]-a.k[s][k]);
@@ -506,7 +509,7 @@ function cumle(st){
   const bas=st.s==='sec'?kacis(m.sinavlar[m.onceki].ad)+' → '+kacis(son.ad)+' ('+gunAy(son.g,m.yil)+'): ':tarihli(st.s)?tarihliAd(st)+' ('+tarihliAralik(st)+'): ':st.s===1?'Son deneme ('+kacis(son.ad)+', '+gunAy(son.g,m.yil)+'): ':'Son '+st.s+' deneme: ';
   return kapsam+bas+kacis(m.O.ad)+' ortalaması '+b(f1(o.son))+' net, '+
     (st.s==='sec'?'öncekine':tarihli(st.s)?'başlangıçtaki denemeye':st.s===1?'önceki denemeye':'önceki '+st.s+' denemeye')+' göre '+b(isaret(o.fark))+
-    (o.ayni===null?'':' (iki dönemde de giren '+fi(o.ayniN)+' öğrencinin kendi değişimi '+b(isaret(o.ayni))+')')+'. En çok değişen ders: '+kacis(en.ad)+' '+b(isaret(en.k[st.s].fark))+'. '+
+    (o.ayni===null?'':' (iki dönemde de giren '+fi(o.ayniN)+' öğrencinin kendi değişimi '+b(isaret(o.ayni))+')')+(en?'. En çok değişen ders: '+kacis(en.ad)+' '+b(isaret(en.k[st.s].fark)):'')+'. '+
     b(fi(o.artan))+' öğrenci en az '+ESIK+' net yükseldi, '+b(fi(o.azalan))+' öğrenci düştü.';
 }
 // The headline strip: one primary tile (the same students' change, the most honest progress figure) and
@@ -679,10 +682,13 @@ const logYazi=v=>v===null?'—':(v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleStrin
 // Average rows above the students, as in Sıralamalar: the scope and, for a grade, each class. The
 // change is the current average minus the earlier average of those who have one.
 function ortalamaSatirlari(st){
-  const m=st.mo,s=st.s,w=s?m.pencere[s]:null,u=m.O.ust;
+  const m=st.mo,s=st.s,w=s?m.pencere[s]:null;
+  let u=m.O.ust;
+  if(w)for(const o of m.ogrenciler){const c=o.k[s];if(!c)continue;if(c.once!==null&&c.once>u)u=c.once;if(c.son!==null&&c.son>u)u=c.son}
   const grup=(ad,l)=>{const sonlar=l.map(o=>w?o.k[s].son:o.sonNet).filter(v=>v!==null&&v!==undefined),oncel=w?l.map(o=>o.k[s].once).filter(v=>v!==null):[];
     if(!sonlar.length)return null;const son=ort(sonlar),once=oncel.length?ort(oncel):null,fark=once===null?null:son-once;
-    return {ad,n:sonlar.length,son,once,fark,trFark:trGore(fark,st.tr),yuzde:fark!==null&&once>0?fark/once*100:null,logFark:fark===null?null:Math.log((u-once+1)/(u-son+1)),
+    const tavan=Math.max(u,son,once??-Infinity);
+    return {ad,n:sonlar.length,son,once,fark,trFark:trGore(fark,st.tr),yuzde:fark!==null&&once>0?fark/once*100:null,logFark:fark===null?null:Math.log((tavan-once+1)/(tavan-son+1)),
       seri:m.sinavlar.map((_,i)=>ort(l.map(o=>o.seri[i]).filter(v=>v!==null)))}};
   const subeler=[...new Set(m.ogrenciler.map(o=>o.sinif).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));
   return [grup(st.K.ad,m.ogrenciler),...(subeler.length>1?subeler.map(c=>grup(c,m.ogrenciler.filter(o=>o.sinif===c))):[])].filter(Boolean);

@@ -151,11 +151,12 @@ function ayna(bas,bit){
     const d=ic[ic.length-1]-ic[0];el.innerHTML=a.hap(d,isaretli(d,a.fmt));
   });
 }
+const dokunmaEngelle=ev=>{if(O&&O.dokunma&&ev.cancelable)ev.preventDefault()};
 function basla(kutu,a,clientX,id,dokunma){
   const b=a.bilgi(kutu);if(!b||!b.xs.length)return;
   const i=yer(b,a.yakin(kutu,clientX));if(i<0)return;
   O={kutu,a,b,i0:i,i1:i,x0:clientX,id,suruklendi:false,dokunma};
-  if(dokunma)surukle();
+  if(dokunma){if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('touchmove',dokunmaEngelle,{passive:false});surukle();}
   ciz();
 }
 // From here on it is a measurement: the tooltip goes (a highlighted line stays), the pointer stays with the chart.
@@ -165,6 +166,7 @@ function surukle(){
 }
 function bitir(){
   if(BEKLEYEN){clearTimeout(BEKLEYEN.t);BEKLEYEN=null}
+  if(typeof document!=='undefined'&&document.removeEventListener)document.removeEventListener('touchmove',dokunmaEngelle);
   if(!O)return;const {kutu,a}=O;temizle(kutu.closest(a.kok)||kutu);O=null;
 }
 if(typeof document!=='undefined'&&document.addEventListener){
@@ -190,14 +192,13 @@ if(typeof document!=='undefined'&&document.addEventListener){
   });
   document.addEventListener('pointerup',()=>{
     if(BEKLEYEN){clearTimeout(BEKLEYEN.t);BEKLEYEN=null}
-    if(ESC||O&&O.suruklendi)YUT=Date.now()+600;ESC=false;bitir();
+    if(ESC||O&&O.suruklendi)YUT=Date.now()+150;ESC=false;bitir();
   });
   document.addEventListener('pointercancel',bitir);
   // The click that ends a drag is not a click on the chart.
   document.addEventListener('click',ev=>{if(YUT&&Date.now()<YUT){YUT=0;ev.stopPropagation();ev.preventDefault()}},true);
   document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&(O||BEKLEYEN)){ESC=!!O;bitir()}},true);
-  // While a touch measures, the page does not scroll and no context menu opens.
-  document.addEventListener('touchmove',ev=>{if(O&&O.dokunma&&ev.cancelable)ev.preventDefault()},{passive:false});
+  // While a touch measures, no context menu opens (touchmove is attached only while dragging).
   document.addEventListener('contextmenu',ev=>{if(O||BEKLEYEN)ev.preventDefault()});
 }
 // True while a range is being dragged: the pages leave their hover readouts alone.

@@ -151,7 +151,9 @@ function hafizayaUygula(si, liste, hedef) {
   for (const x of liste) {
     const l = dugum.get(x.ki); if (!l) continue;
     const ort = f => l.reduce((t, s) => t + f(s), 0) / l.length, r = ort(s => s.r), alt = r < hedef - 1e-9;
-    const cizgiGun = l.length === 1 ? l[0].cizgiGun : alt ? Math.max(...l.filter(s => s.r < hedef).map(s => s.cizgiGun)) : Math.min(...l.filter(s => s.r >= hedef).map(s => s.cizgiGun));
+    const grup = alt ? l.filter(s => s.r < hedef - 1e-9) : l.filter(s => s.r >= hedef - 1e-9);
+    const havuz = grup.length ? grup : l;
+    const cizgiGun = l.length === 1 ? l[0].cizgiGun : alt ? Math.max(...havuz.map(s => s.cizgiGun)) : Math.min(...havuz.map(s => s.cizgiGun));
     Object.assign(x, {rKendi: x.r, r, altinda: alt, cizgiGun, sGun: ort(s => s.sGun), harita: l.map(s => s.id)});
   }
 }
@@ -170,22 +172,29 @@ function sikistir(p) {
 }
 async function ogren(ilerleme) {
   if (ogreniyor) return ogreniyor;
+  const owner = D;
+  const devamMi = () => D === owner && (typeof rehberMi !== 'function' || rehberMi()) && (typeof yalnizcaGoruntuleme !== 'function' || !yalnizcaGoruntuleme());
+  if (!devamMi()) return false;
   ogreniyor = (async () => {
     const cz = cozumle(), ogrenciler = [];
     (D.ogr || []).forEach((o, si) => { if (o && o.aktif !== false && dersleri(o).length) { const g = girdi(si, cz); if (g.sonuclar.length) ogrenciler.push({anahtar: g.anahtar, sonuclar: g.sonuclar, bugun: g.bugun, konuEk: g.konuEk, birimEk: g.birimEk, ayarlar: g.ayarlar, anlatimlar: g.anlatimlar}); } });
     const ilk = ogrenciler.length ? girdi(D.ogr.findIndex(o => o && ogrAnahtar(o) === ogrenciler[0].anahtar), cz) : null;
+    const _ag = ilk ? HAFIZA_AG.agKur(ilk.konular, V.baglar, ilk.birimler) : null;
     let p = (D.hafizaAg && D.hafizaAg.parametreler) || {paylasilan: {}, ogrenci: {}}, notlar = [];
     if (ilk) for (let i = 0; i < LINKLER.length; i++) {
+      if (!devamMi()) return false;
       // one link at a time, yielding between links so the page stays responsive
-      const r = HAFIZA_AG.ogren({konular: ilk.konular, baglar: V.baglar, birimler: ilk.birimler, ogrenciler, parametreler: p, sadece: [LINKLER[i]]});
+      const r = HAFIZA_AG.ogren({konular: ilk.konular, baglar: V.baglar, birimler: ilk.birimler, _ag, ogrenciler, parametreler: p, sadece: [LINKLER[i]]});
       p = {paylasilan: Object.assign({}, p.paylasilan, r.paylasilan), ogrenci: r.ogrenci};
       notlar = notlar.filter(n => n.anahtar !== LINKLER[i]).concat(r.notlar);
       if (ilerleme) ilerleme((i + 1) / LINKLER.length);
       await new Promise(res => setTimeout(res, 0));
     }
+    if (!devamMi()) return false;
     D.hafizaAg = {parametreler: sikistir(p), son: Date.now(), ogrenciSayisi: ogrenciler.length, sonucSayisi: ogrenciler.reduce((t, s) => t + s.sonuclar.length, 0), notlar: notlar.map(n => ({anahtar: n.anahtar, deger: yuvarla(n.deger), n: n.n}))};
+    return true;
   })();
-  try { await ogreniyor; } finally { ogreniyor = null; }
+  try { return await ogreniyor; } finally { ogreniyor = null; }
 }
 function ogretmenKarti() {
   const h = D.hafizaAg || {}, salt = typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntuleme();
@@ -314,10 +323,13 @@ function cizim(si, d, dersler, secili) {
 }
 
 /* ---- the Hafızam card for a map topic ---- */
-function kart(si, d, id) {
+function kart(si, d, id, onb) {
   const k = KONU.get(id), s = d.satir.get(id), asil = k.gizli ? k.parcasi : id, kis = d.kaynak.get(asil) || [], ki = kis[0];
   // The card of the notebook topic Hafızam knows (plan topic first, then a school unit covering it).
-  const hd = hafizaDurumu(si), x = kis.map(i => hd.liste.find(y => y.ki === i)).find(Boolean) || null;
+  const gecerli = onb && onb.si === si && onb.rev === (D.rev || 0);
+  const hd = (gecerli && onb.hd) || hafizaDurumu(si);
+  if (gecerli && !onb.hd) { onb.hd = hd; onb.hdMap = new Map(hd.liste.map(y => [y.ki, y])); }
+  const x = (gecerli && onb.hdMap ? kis.map(i => onb.hdMap.get(i)) : kis.map(i => hd.liste.find(y => y.ki === i))).find(Boolean) || null;
   const parca = k.gizli ? '<p class="mini hm-parca">' + kac(k.ad) + ' · ' + kac(KONU.get(k.parcasi).ad) + ' konusunun parçası</p>' : '';
   if (!x || s.r == null) return '<div class="hf-oge hm-bos"><div class="hf-ad"><span class="d">' + kac(dersAd(KONU.get(asil).ders)) + '</span><span class="k">' + kac(KONU.get(asil).ad) + '</span></div>' + parca +
     '<p class="mini">' + (ki === undefined ? 'Bu konu senin planında yok.' : 'Henüz çalışmadın: derste işlendiğinde ya da sonucunu girdiğinde burada parlar.') + '</p></div>';
@@ -326,7 +338,9 @@ function kart(si, d, id) {
   const a = d.satir.get(asil), r = a.r ?? s.r, birlikte = !!x.harita && x.harita.length > 1;
   const y = x.harita && !birlikte ? x : Object.assign({}, x, {r, altinda: r < d.hedef - 1e-9, cizgiGun: a.cizgiGun ?? s.cizgiGun, sGun: a.sGun ?? s.sGun, rKendi: undefined});
   const unite = birlikte ? '<p class="mini hm-parca">Okuldaki ' + kac(konuGorunenAdi(x.ad)) + ' ünitesinden · Hafızam’da ünitenin ortalaması %' + Math.round(x.r * 100) + '</p>' : '';
-  return parca + unite + hafizaSatiri(si, y, hd, hafizaPlani(si));
+  const hp = (gecerli && onb.hp) || hafizaPlani(si);
+  if (gecerli && !onb.hp) onb.hp = hp;
+  return parca + unite + hafizaSatiri(si, y, hd, hp);
 }
 
 /* ---- page ---- */
@@ -343,14 +357,14 @@ function gorunum() {
   if (!tum.length) return '<div class="baslik"><h1>' + baslik + '</h1><p>Harita, YKS’ye hazırlanan öğrencinin konularını gösterir.</p></div>';
   const filtre = tum.includes(EK.haritamDers) ? EK.haritamDers : '', dersler = filtre ? [filtre] : tum;
   const d = durum(si), secili = d.satir.has(EK.haritamSecili) ? EK.haritamSecili : null, c = cizim(si, d, dersler, secili);
-  son = {si, d, P: c.P, W: c.W, H: c.H};
+  son = {si, d, P: c.P, W: c.W, H: c.H, rev: D.rev || 0, hd: null, hdMap: null, hp: null};
   const t = koyuMu() ? TEMA.koyu : TEMA.acik;
   const cipler = '<div class="hm-cipler" role="group" aria-label="Ders">' + [['', 'Tümü']].concat(tum.map(x => [x, dersAd(x)])).map(([v, ad]) =>
     '<button type="button" class="dugme mini' + (v === filtre ? ' secili' : '') + '" data-hm-ders="' + kac(v) + '" aria-pressed="' + (v === filtre) + '">' + kac(ad) + '</button>').join('') + '</div>';
   const alarmlar = d.out.ust3.filter(id => d.satir.has(id)).map(id => { const s = d.satir.get(id), k = KONU.get(id), c2 = renk(t, s.r, d.hedef);
     const ne = {gri: 'Eksik temel', kirmizi: 'Unutuluyor', turuncu: 'Kontrol testi', sari: 'Henüz kalıcı değil'}[s.alarm];
     return '<button type="button" class="hm-alarm-cip" data-hm-sec="' + kac(id) + '"><i style="background:' + c2 + ';box-shadow:0 0 8px ' + c2 + '"></i><b>' + kac(k.ad) + '</b><span>' + ne + '</span></button>'; }).join('');
-  const kartHtml = secili ? kart(si, d, secili) : '', yer = secili ? kartYeri(c.P, c.W, c.H, secili) : null;
+  const kartHtml = secili ? kart(si, d, secili, son) : '', yer = secili ? kartYeri(c.P, c.W, c.H, secili) : null;
   const ornek = (cls, svg) => '<span class="hm-ornek ' + cls + '"><svg viewBox="-12 -8 24 16" width="24" height="16" aria-hidden="true">' + svg + '</svg>';
   const n = t.nane, g = (r, a) => '<circle r="' + r + '" fill="' + n + '" opacity="' + a + '"/>';
   const lejant = '<div class="hm-lejant">' +
@@ -397,14 +411,14 @@ function bagla() {
     if (!harita || !yer) return;
     if (!g || !harita.contains(g)) { if (!ev.target.closest || !ev.target.closest('[data-hm-kart]')) { yer.hidden = true; vurgula(harita.querySelector('svg'), null); } return; }
     const id = g.dataset.hm, p = kartYeri(son.P, son.W, son.H, id);
-    try { yer.innerHTML = kart(son.si, son.d, id); } catch (e) { return; }
+    try { yer.innerHTML = kart(son.si, son.d, id, son); } catch (e) { return; }
     yer.style.left = p.x + '%'; yer.style.top = p.y + '%'; yer.hidden = false; vurgula(harita.querySelector('svg'), id);
   });
   document.addEventListener('click', async ev => {
     const id = ev.target && ev.target.id;
     if (id === 'hmOgren') {
       const btn = ev.target, bar = document.getElementById('hmIlerleme'); btn.disabled = true; if (bar) bar.hidden = false;
-      try { await ogren(f => { if (bar) bar.value = f; }); await kaydet(true); } finally { ciz(); }
+      try { if (await ogren(f => { if (bar) bar.value = f; })) await kaydet(true); } finally { ciz(); }
       return;
     }
     if (id === 'hmOgrAc') { const sel = document.getElementById('hmOgrSec'); EK.ogr = +sel.value; EK.haritamSecili = undefined; EK.haritamDers = undefined; EK.sekme = 'haritam'; ciz(); return; }

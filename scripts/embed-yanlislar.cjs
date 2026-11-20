@@ -11,8 +11,8 @@ for(const [name,open,close,anchor] of [
 ]) {
  const source=lf(fs.readFileSync('src/yanlislar.'+name,'utf8')).trim();
  const block=open+'\n'+source+'\n'+close+'\n';
- if(html.includes(open)) html=html.slice(0,html.indexOf(open))+block+html.slice(html.indexOf(close)+close.length+1);
- else {if(!html.includes(anchor))throw new Error('Missing embedding anchor');html=html.replace(anchor,block+'\n'+anchor);}
+ if(html.includes(open)) {const a=html.indexOf(open),z=html.indexOf(close,a);if(z<0)throw new Error('Missing end marker: '+close);html=html.slice(0,a)+block+html.slice(z+close.length+1);}
+ else {if(!html.includes(anchor))throw new Error('Missing embedding anchor');html=html.replace(anchor,()=>block+'\n'+anchor);}
 }
 if(process.argv.includes('--check')) {if(html!==lf(original))throw new Error('Run node scripts/embed-yanlislar.cjs');}
 else fs.writeFileSync('index.html',eol==='\n'?html:html.replace(/\n/g,eol));
