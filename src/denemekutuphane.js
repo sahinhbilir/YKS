@@ -117,7 +117,7 @@ function olustur({ uid, adaptor, tahmin } = {}) {
       const veri = {};
       for (const [s, v] of Object.entries(yeni)) {
         const ab = await bytes(v);
-        if (!ab || new Uint8Array(ab, 0, 4).reduce((a, c) => a + String.fromCharCode(c), '') !== '%PDF') return { kalici: false, hata: 'pdf' };
+        if (!ab || ab.byteLength < 4 || new Uint8Array(ab, 0, 4).reduce((a, c) => a + String.fromCharCode(c), '') !== '%PDF') return { kalici: false, hata: 'pdf' };
         veri[s] = ab;
       }
       const tut = (ek = {}) => {

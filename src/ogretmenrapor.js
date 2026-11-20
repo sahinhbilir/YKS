@@ -164,7 +164,7 @@ function konuIzgarasi(v,siniflar,oturum,kod,c=baglam(null,v),gorulen,nolar){
   if(!sinavlar.length)return null;
   // The şube's plan order: the block's classes, or the student's own class.
   const planSiniflari=siniflar.length?siniflar:nolar&&c.k&&c.k.t?[...nolar].map(n=>c.k.t.kisi.get(String(n))).filter(Boolean).map(k=>sinifK(k.sinif)):[];
-  const liste=planListesi(planSiniflari,kod,oturum);if(liste)planaGore(konular,liste);
+  const liste=planListesi(planSiniflari,kod,oturum,c);if(liste)planaGore(konular,liste);
   return izgaraKur(sinavlar,konular);
 }
 // The order topics are taught in: a kazanım code's numbers after the lesson's letters (E.GEO.9.4.3.1 → 9, 4, 3, 1: grade, unit,
@@ -191,11 +191,12 @@ function planDersi(plan,kod,oturum){
   const adlar=[...new Set(plan.flatMap(h=>Object.keys(h||{})))],aday=adlar.filter(d=>planNorm(d)===taban||planNorm(d).startsWith(taban+' ')&&!(taban==='TURK'&&/TURKCE/.test(planNorm(d))));
   return aday.find(d=>planNorm(d).split(' ').includes(oturum))||aday.find(d=>!/ (TYT|AYT)$/.test(planNorm(d)))||aday[0]||null;
 }
-function planListesi(siniflar,kod,oturum){
+function planListesi(siniflar,kod,oturum,c){
   if(typeof D==='undefined'||!D||!D.konuPlani)return null;
-  const kodlar={};try{const pl=typeof ETUTPLANI!=='undefined'?ETUTPLANI.oku().plan:null;for(const [s,x] of Object.entries((pl&&pl.programlar)||{}))if(x&&x.kod)kodlar[sinifK(s)]=String(x.kod)}catch(e){}
-  for(const c of siniflar){
-    const plan=D.konuPlani[kodlar[c]]||D.konuPlani[c];if(!Array.isArray(plan))continue;
+  let kodlar=c&&c.sinifKodlari;
+  if(!kodlar){kodlar={};try{const pl=typeof ETUTPLANI!=='undefined'?ETUTPLANI.oku().plan:null;for(const [s,x] of Object.entries((pl&&pl.programlar)||{}))if(x&&x.kod)kodlar[sinifK(s)]=String(x.kod)}catch(e){}if(c)c.sinifKodlari=kodlar}
+  for(const cl of siniflar){
+    const plan=D.konuPlani[kodlar[cl]]||D.konuPlani[cl];if(!Array.isArray(plan))continue;
     const ders=planDersi(plan,kod,oturum);if(!ders)continue;
     const l=[];for(const h of plan)for(const t of (h&&h[ders])||[]){if(planNorm(t)==='GENEL TEKRAR'||l.includes(t))continue;const tag=/\((TYT|AYT)\)\s*$/.exec(t);if(tag&&tag[1]!==oturum)continue;l.push(t)}
     if(l.length)return l;
@@ -546,10 +547,11 @@ function hamKonu(b){
 // The appendix for whoever wants to check a figure: the rules with their formulas, and every raw number. Folded; printed only
 // when it is open.
 function hamVeri(b,i){
-  const seri=b.seri.length?'<div class="et-tablo-kutu"><table class="et-tablo ogr-ham"><thead><tr><th scope="col">Deneme</th><th scope="col" class="sayi">Öğrenci</th><th scope="col" class="sayi">Ortalama net</th><th scope="col" class="sayi">Türkiye ort. (yayınevinin bütün kurumları)</th><th scope="col" class="sayi">Fark</th><th scope="col" class="sayi">İlk 100 listesinde okulun yeri</th></tr></thead><tbody>'+
-    b.seri.map(p=>'<tr><td>'+kacis(p.ad)+'</td><td class="sayi">'+fi(p.n)+'</td><td class="sayi">'+f2(p.net)+'</td><td class="sayi">'+(p.genel===null?'—':f2(p.genel))+'</td><td class="sayi">'+(p.fark===null?'—':isaret(p.fark,f2))+'</td>'+'</tr>').join('')+'</tbody></table></div>':'';
+  const ogr=yz(b).ogrenci;
+  const seri=b.seri.length?'<div class="et-tablo-kutu"><table class="et-tablo ogr-ham"><thead><tr><th scope="col">Deneme</th><th scope="col" class="sayi">Öğrenci</th><th scope="col" class="sayi">Ortalama net</th><th scope="col" class="sayi">Türkiye ort. (yayınevinin bütün kurumları)</th><th scope="col" class="sayi">Fark</th>'+(ogr?'':'<th scope="col" class="sayi">İlk 100 listesinde okulun yeri</th>')+'</tr></thead><tbody>'+
+    b.seri.map(p=>'<tr><td>'+kacis(p.ad)+'</td><td class="sayi">'+fi(p.n)+'</td><td class="sayi">'+f2(p.net)+'</td><td class="sayi">'+(p.genel===null?'—':f2(p.genel))+'</td><td class="sayi">'+(p.fark===null?'—':isaret(p.fark,f2))+'</td>'+(ogr?'':'<td class="sayi">'+(p.sira===undefined?'—':yerYazisi(p))+'</td>')+'</tr>').join('')+'</tbody></table></div>':'';
   const konu=b.izgara?'<div class="ogr-ham-konu" data-ogr-ham-konu="'+i+'"></div>':'';
-  if(yz(b).ogrenci)return '<details class="ogr-formul" data-ogr-ham="'+i+'"><summary>Hesaplama ayrıntıları ve ham veriler</summary>'+
+  if(ogr)return '<details class="ogr-formul" data-ogr-ham="'+i+'"><summary>Hesaplama ayrıntıları ve ham veriler</summary>'+
     '<p><b>Net grafiği:</b> her denemede bu dersteki netin ve yayınevinin bütün kurumlarındaki öğrencilerin ortalama neti (o denemenin performans analizinden). İki çizgi arası yeşilse Türkiye’nin üstündesin, kırmızıysa altında.</p>'+
     '<p><b>Konu tablosu:</b> her hücre, o denemede o konunun sorularında senin doğru sayını (d), aynı soruları çözen Türkiye geneli öğrencilerinin başarı oranlarından beklenen doğru sayısıyla (b) karşılaştırır. Fark = 100 · (d − b) / n puan; n o konudaki soru sayısıdır. Zor sorular konuyu haksız yere kırmızıya boyamaz: aynı soruda Türkiye de zorlanmışsa beklenen de düşüktür.</p>'+
     '<p><b>Renk:</b> koyu kırmızıdan turuncu ve sarıya, oradan koyu yeşile uzanan tek bir renk yelpazesi: kırmızı = Türkiye’nin gerisinde, sarı = Türkiye ile aşağı yukarı aynı, yeşil = önünde. Rengi farkın büyüklüğü değil, tesadüf olup olmadığı belirler: fark tesadüf olamayacak kadar belirginse (z = (d − b) / √(n·p·(1 − p) · (1 + (soru − 1) · 0,2)), |z| ≥ 1,96) kare kırmızı ya da yeşildir, fark büyüdükçe koyulaşır; tesadüf olabilirse ortaya yakın çizilir, en fazla turuncu olur. Tek öğrencide bir konunun birkaç sorusu olduğu için çoğu kare ortaya yakın çıkar: yönü okumak için koyu karelere ve tekrar eden renge bakın.</p>'+seri+konu+'</details>';
@@ -626,19 +628,25 @@ function vekilHtml(){
     '<p class="mini">İzindeki öğretmenin bir şubesini bu raporda vekil öğretmene verir. Ders programı ve uygulamanın başka hiçbir yeri değişmez; kayıt siz kaldırana kadar kalır.</p>'+liste+form+'</details>';
 }
 function vekilEkle(){
+  if((typeof rehberMi==='function'&&!rehberMi())||(typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme()))return;
   const sinif=document.getElementById('ogrVekilSinif')?.value||'',asil=document.getElementById('ogrVekilAsil')?.value||'',vekil=yaz(document.getElementById('ogrVekilAd')?.value||'').slice(0,60);
   const durum=m=>{const el=document.getElementById('ogrVekilDurum');if(el)el.textContent=m};
   if(!sinif||!asil)return durum('Şube ve öğretmen seçin.');
   if(!vekil)return durum('Vekil öğretmenin adını yazın.');
   if(katla(vekil)===katla(asil))return durum('Vekil, öğretmenin kendisi olamaz.');
-  const eski=Array.isArray(D.ogrVekil)?D.ogrVekil:[];
+  const defter=D,onceki=Array.isArray(D.ogrVekil)?D.ogrVekil.slice():undefined;
+  const eski=onceki||[];
   D.ogrVekil=[...eski.filter(v=>!(v&&sinifK(v.sinif)===sinifK(sinif)&&katla(v.asil)===katla(asil))),{sinif,asil,vekil}].slice(-60);
-  EK.ogrHoca=undefined;if(typeof kaydet==='function')kaydet();ciz();
+  EK.ogrHoca=undefined;ciz();
+  if(typeof kaydet==='function')Promise.resolve(kaydet(true)).then(ok=>{if(ok===false&&D===defter){if(onceki===undefined)delete D.ogrVekil;else D.ogrVekil=onceki;EK.ogrHoca=undefined;ciz();durum('Kaydedilemedi.')}},()=>{if(D===defter){if(onceki===undefined)delete D.ogrVekil;else D.ogrVekil=onceki;EK.ogrHoca=undefined;ciz();durum('Kaydedilemedi.')}});
 }
 function vekilSil(i){
-  const V=Array.isArray(D.ogrVekil)?D.ogrVekil:[];if(!(i>=0&&i<V.length))return;
+  if((typeof rehberMi==='function'&&!rehberMi())||(typeof yalnizcaGoruntuleme==='function'&&yalnizcaGoruntuleme()))return;
+  const defter=D,V=Array.isArray(D.ogrVekil)?D.ogrVekil:[];if(!(i>=0&&i<V.length))return;
+  const onceki=V.slice();
   D.ogrVekil=V.filter((_,k)=>k!==i);if(!D.ogrVekil.length)delete D.ogrVekil;
-  EK.ogrHoca=undefined;if(typeof kaydet==='function')kaydet();ciz();
+  EK.ogrHoca=undefined;ciz();
+  if(typeof kaydet==='function')Promise.resolve(kaydet(true)).then(ok=>{if(ok===false&&D===defter){D.ogrVekil=onceki;EK.ogrHoca=undefined;ciz()}},()=>{if(D===defter){D.ogrVekil=onceki;EK.ogrHoca=undefined;ciz()}});
 }
 // Öğrenci raporu (Türkiye): the same blocks for one student: every exam subject the student has nets or topic answers in, TYT
 // before AYT. The student is found by the school number in the lists and in Konu Takibi.
@@ -694,7 +702,8 @@ function kiyasOzeti(o){
     z:izVar&&b.izgara?{e:b.izgara.sinavlar.map(e=>[e.ad,e.g]),r:b.izgara.satir.map(r=>[r.ad,r.hucre.map(hc),altVar?(r.alt||[]).map(a=>[a.kod,a.ad,a.hucre.map(hc)]):[]])}:null});
   for(const [altVar,izVar] of [[true,true],[false,true],[false,false]]){
     const oz={v:KIYAS_SURUM,t:typeof bugunNo==='function'?bugunNo():null,sinif:m.sinif,b:m.bloklar.map(b=>blok(b,altVar,izVar))};
-    if(JSON.stringify(oz).length<=KIYAS_UST)return oz;
+    const ozJson=JSON.stringify(oz);
+    if((typeof baytBoyu==='function'?baytBoyu(ozJson):ozJson.length)<=KIYAS_UST)return oz;
   }
   return null;
 }

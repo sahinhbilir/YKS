@@ -41,11 +41,12 @@ fs.writeFileSync(path.join(cikti, ad + '-konular.csv'), '﻿' + csv([['Konu', 'D
 // ---- picture: one for the whole map and one per subject. Layers by longest path from foundations (inside the drawn
 // set); order inside a layer by the mean position of neighbours. In a subject picture, foundations from other subjects
 // are listed under the topic and the topics in other subjects that use it are counted.
-const DERS = ['Geometri', 'Matematik TYT', 'Matematik AYT', 'Fizik', 'Kimya', 'Biyoloji', 'Türkçe', 'Türk Dili ve Edebiyatı', 'T.C. İnkılap Tarihi ve Atatürkçülük', 'Coğrafya', 'Felsefe (+ Felsefe Grubu)'];
+const DERS = ['Geometri', 'Matematik TYT', 'Matematik AYT', 'Fizik', 'Kimya', 'Biyoloji', 'Türkçe', 'Türk Dili ve Edebiyatı', 'Tarih', 'T.C. İnkılap Tarihi ve Atatürkçülük', 'Coğrafya', 'Felsefe (+ Felsefe Grubu)', 'Din Kültürü'];
 const RENK = {'Geometri': '#2a7f62', 'Matematik TYT': '#8a5cc2', 'Matematik AYT': '#2f6db5', 'Fizik': '#c2602f', 'Kimya': '#b5367a', 'Biyoloji': '#4f8a2a', 'Türkçe': '#a07a12',
-  'Türk Dili ve Edebiyatı': '#8f4b2e', 'T.C. İnkılap Tarihi ve Atatürkçülük': '#b03030', 'Coğrafya': '#1f7f8f', 'Felsefe (+ Felsefe Grubu)': '#5a5aa8'};
+  'Türk Dili ve Edebiyatı': '#8f4b2e', 'Tarih': '#7a4a1f', 'T.C. İnkılap Tarihi ve Atatürkçülük': '#b03030', 'Coğrafya': '#1f7f8f', 'Felsefe (+ Felsefe Grubu)': '#5a5aa8',
+  'Din Kültürü': '#3d7a6b'};
 const KISA = {'Geometri': 'Geo', 'Matematik TYT': 'TYT', 'Matematik AYT': 'AYT', 'Fizik': 'Fiz', 'Kimya': 'Kim', 'Biyoloji': 'Bio', 'Türkçe': 'Trk', 'Türk Dili ve Edebiyatı': 'Edb',
-  'T.C. İnkılap Tarihi ve Atatürkçülük': 'Ink', 'Coğrafya': 'Cog', 'Felsefe (+ Felsefe Grubu)': 'Fel'};
+  'Tarih': 'Tar', 'T.C. İnkılap Tarihi ve Atatürkçülük': 'Ink', 'Coğrafya': 'Cog', 'Felsefe (+ Felsefe Grubu)': 'Fel', 'Din Kültürü': 'Din'};
 const tumKenar = [];
 ag.asagi.forEach((l, ust) => l.forEach(e => tumKenar.push({alt: e.id, ust, u: e.u, ic: e.ic})));
 const enBuyuk = Math.max(...out.konular.map(s => s.onem), 1);

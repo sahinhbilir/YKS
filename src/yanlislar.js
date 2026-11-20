@@ -1329,15 +1329,19 @@ function baskiHazirla(){
 async function yazdir(){
   if(S.kilit)return false;
   S.kilit='yazdir';
+  let temiz=false,yazdirildi=false;
+  const bitir=()=>{if(temiz)return;temiz=true;S.kilit='';baskiBitir();if(etkin())render()};
   try{
     render();await hazirla(true);
     if(!baskiHazirla())return false;
     const imgs=[...document.querySelectorAll('#ydBaski img')];
     await Promise.all(imgs.map(i=>i.complete&&i.naturalWidth?0:new Promise(r=>{i.addEventListener('load',r,{once:true});i.addEventListener('error',r,{once:true});setTimeout(r,5000)})));
-    try{window.print();return true}catch(e){baskiBitir();return false}
+    // Register before window.print(): desktop browsers fire afterprint synchronously inside print().
+    window.addEventListener('afterprint',bitir,{once:true});
+    try{yazdirildi=true;window.print();return true}catch(e){yazdirildi=false;window.removeEventListener('afterprint',bitir);return false}
   }finally{
     S.kilit='';
-    window.addEventListener('afterprint',()=>{baskiBitir();if(etkin())render()},{once:true});
+    if(!yazdirildi){window.removeEventListener('afterprint',bitir);bitir()}
   }
 }
 if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('beforeprint',()=>{if(etkin()&&!document.body.classList.contains('yd-yazdir'))baskiHazirla()});
@@ -1799,14 +1803,38 @@ function okulMaddeleri(e){
 }
 // The share of the school's students who answered each question right, keyed by "test:A number".
 function okulOranlari(e){const m=new Map();for(const [k,v] of okulMaddeleri(e))m.set(k,v.p);return m}
+// Cached (examKey|dersKey -> topicName[]) index over Konu Takibi's sınav özeti so publishing
+// 200 students does not decompress and revalidate D.konutakibi tens of thousands of times.
+let KONU_HARITA_ONBELLEK=null;
+function konuHaritasi(){
+  if(typeof KONU_TAKIBI==='undefined'||D.konutakibi===undefined)return null;
+  const z=D.konutakibi,okuFn=KONU_TAKIBI.oku;
+  const imza=(D.rev||0)+'|'+(z&&typeof z==='object'?Object.keys(z.zorluk||{}).length+':'+Object.keys(z.maps||{}).length:'');
+  if(KONU_HARITA_ONBELLEK&&KONU_HARITA_ONBELLEK.ref===z&&KONU_HARITA_ONBELLEK.imza===imza&&KONU_HARITA_ONBELLEK.okuFn===okuFn)return KONU_HARITA_ONBELLEK.map;
+  const v=okuFn().veri;if(!v)return null;
+  const map=new Map();
+  for(const e of Object.values(v.zorluk||{})){
+    if(!e||!e.ozet)continue;
+    const ek=KONU_TAKIBI.ek(e.ad||'');
+    for(const [c,l] of Object.entries(e.ozet)){
+      if(!Array.isArray(l))continue;
+      const k=ek+'|'+KONU_TAKIBI.key(c);
+      let arr=map.get(k);if(!arr){arr=[];map.set(k,arr);}
+      for(let i=0;i<l.length;i++)if(!arr[i]&&Array.isArray(l[i])){
+        const ad=l[i].map(cd=>KONU_TAKIBI.topicFor(c,cd,v.maps)).find(Boolean);
+        if(ad)arr[i]=KONU_TAKIBI.topicName(ad);
+      }
+    }
+  }
+  KONU_HARITA_ONBELLEK={ref:z,imza,okuFn,map};
+  return map;
+}
 // The question's konu from Konu Takibi (sınav özeti of the same exam and ders; A booklet order).
 function konuBul(rapor,dersAd,k){
   try{
-    if(typeof KONU_TAKIBI==='undefined'||D.konutakibi===undefined)return '';
-    const v=KONU_TAKIBI.oku().veri,ek=KONU_TAKIBI.ek(rapor.ad||''),dk=KONU_TAKIBI.key(dersAd);
-    for(const z of Object.values(v.zorluk||{})){if(KONU_TAKIBI.ek(z.ad||'')!==ek||!z.ozet)continue;
-      for(const [c,l] of Object.entries(z.ozet))if(KONU_TAKIBI.key(c)===dk&&Array.isArray(l)&&Array.isArray(l[k])){
-        const ad=l[k].map(cd=>KONU_TAKIBI.topicFor(c,cd,v.maps)).find(Boolean);if(ad)return KONU_TAKIBI.topicName(ad)}}
+    const m=konuHaritasi();if(!m)return '';
+    const arr=m.get(KONU_TAKIBI.ek(rapor.ad||'')+'|'+KONU_TAKIBI.key(dersAd));
+    return (arr&&arr[k])||'';
   }catch(x){}
   return '';
 }
@@ -1837,11 +1865,9 @@ const KARNE_UST=150000;
 function konuDizisi(rapor,dersAd,n){
   const out=Array.from({length:n},()=>'');
   try{
-    if(typeof KONU_TAKIBI==='undefined'||D.konutakibi===undefined)return out;
-    const v=KONU_TAKIBI.oku().veri,ek=KONU_TAKIBI.ek(rapor.ad||''),dk=KONU_TAKIBI.key(dersAd);
-    for(const z of Object.values(v.zorluk||{})){if(KONU_TAKIBI.ek(z.ad||'')!==ek||!z.ozet)continue;
-      for(const [c,l] of Object.entries(z.ozet))if(KONU_TAKIBI.key(c)===dk&&Array.isArray(l))
-        for(let k=0;k<n;k++)if(!out[k]&&Array.isArray(l[k])){const ad=l[k].map(cd=>KONU_TAKIBI.topicFor(c,cd,v.maps)).find(Boolean);if(ad)out[k]=KONU_TAKIBI.topicName(ad)}}
+    const m=konuHaritasi();if(!m)return out;
+    const arr=m.get(KONU_TAKIBI.ek(rapor.ad||'')+'|'+KONU_TAKIBI.key(dersAd));
+    if(arr)for(let k=0;k<n;k++)if(arr[k])out[k]=arr[k];
   }catch(x){}
   return out;
 }
@@ -1869,7 +1895,8 @@ function konuKarnesi(no,sinavlar){
     });
     if(bolumler.length)out.push([adOf(e),e.tarih||'',konular,bolumler]);
   }
-  while(out.length>1&&JSON.stringify(out).length>KARNE_UST)out.pop();
+  const bayt=s=>typeof baytBoyu==='function'?baytBoyu(s):s.length;
+  while(out.length>1&&bayt(JSON.stringify(out))>KARNE_UST)out.pop();
   return out.length?{v:2,t:typeof bugunNo==='function'?bugunNo():null,s:out}:null;
 }
 // The exams the rehber publishes: every exam of the library, or the ones chosen when it was turned on.

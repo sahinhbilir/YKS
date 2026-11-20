@@ -152,7 +152,7 @@ def build(programs, nets, reference_year):
             continue
         # A programme in a foreign campus must not inherit the home university's city.
         label = (text(p['birimAdi']) + ' ' + text(p.get('fymkAdi')) + ' ' + text(p.get('universiteAdi'))).upper()
-        if any(s in label for s in ('LEFKOŞA', 'LEFKOSA', 'KIBRIS', 'KKTC', 'GİRNE', 'GIRNE', 'GAZİMAĞUSA', 'GAZIMAGUSA', 'CYPRUS', 'NICOSIA', 'FAMAGUSTA', 'KYRENIA')):
+        if any(s in label for s in ('LEFKOŞA', 'LEFKOSA', 'KIBRIS', 'KKTC', 'GİRNE', 'GIRNE', 'GAZİMAĞUSA', 'GAZIMAĞUSA', 'GAZIMAGUSA', 'CYPRUS', 'NICOSIA', 'FAMAGUSTA', 'KYRENIA')):
             counts['excludedForeignCampus'] += 1
             continue
         if p.get('fymkIlKodu') not in (None, p['ilKodu']) or p.get('uniIlKodu') not in CITIES:

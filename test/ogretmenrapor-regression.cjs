@@ -171,8 +171,8 @@ const kaynakKur = () => run(`(()=>{const kisi=new Map([['1001',{no:'1001',ad:'SE
     // What the block covers: the classes and the number of exams.
     assert.match(h, /<p class="ogr-kapsam">12\/A · 2 deneme<\/p>/);
     assert(!/≈|tahmini|dilim|ilk %/.test(yazi + svg), 'nothing estimated');
-    // Raw numbers: the nets, the Türkiye averages and the gaps.
-    const ham = h.slice(h.indexOf('<table'));assert.match(ham, /<td>27-YKS-1201<\/td><td class="sayi">2<\/td><td class="sayi">15,00<\/td><td class="sayi">12,00<\/td><td class="sayi">\+3,00<\/td><\/tr>/);
+    // Raw numbers: the nets, the Türkiye averages, the gaps and the school's İlk 100 place.
+    const ham = h.slice(h.indexOf('<table'));assert.match(ham, /<td>27-YKS-1201<\/td><td class="sayi">2<\/td><td class="sayi">15,00<\/td><td class="sayi">12,00<\/td><td class="sayi">\+3,00<\/td><td class="sayi">40\.<\/td><\/tr>/);
   });
   await check('topic grid: correct answers against Türkiye on the same questions, gap in points, z with the design effect, three in a row (hand-worked)', () => {
     konuKur();

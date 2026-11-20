@@ -6,7 +6,7 @@ let html=lf(original);
 const open='/* BEGIN REPORT_THEME */',close='/* END REPORT_THEME */';
 const source=lf(fs.readFileSync('src/report-theme.css','utf8')).trim();
 const block=open+'\n'+source+'\n'+close+'\n';
-if(html.includes(open))html=html.slice(0,html.indexOf(open))+html.slice(html.indexOf(close)+close.length+1);
+if(html.includes(open)){const a=html.indexOf(open),z=html.indexOf(close,a);if(z<0)throw new Error('Missing end marker: '+close);html=html.slice(0,a)+html.slice(z+close.length+1);}
 const anchor=html.indexOf('</style>');
 if(anchor<0)throw new Error('Missing main style embedding anchor');
 html=html.slice(0,anchor)+block+html.slice(anchor);

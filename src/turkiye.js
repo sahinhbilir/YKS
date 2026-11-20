@@ -1099,7 +1099,8 @@ document.addEventListener('change',async ev=>{
   if(el.dataset.tgSinif){
     if(ISLEM||izleme())return;const id=el.dataset.tgSinif,d=el.value===''?null:Number(el.value);
     ISLEM=true;try{await duzeyKaydet(id,d);durum('Sınıf kaydedildi.')}catch(e){durum(e.message)}finally{ISLEM=false}
-    yenidenCiz('[data-tg-sinif="'+id+'"]');
+    const escId=typeof CSS!=='undefined'&&typeof CSS.escape==='function'?CSS.escape(id):String(id).replace(/["\\]/g,'\\$&');
+    yenidenCiz('[data-tg-sinif="'+escId+'"]');
   }
 });
 function imlecGoster(ev){

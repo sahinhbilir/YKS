@@ -268,11 +268,12 @@ function alanDurumlari(student,kip,secim={},si=EK.ogr){
 /* ---------------- the lists ---------------- */
 const yerlesir=p=>!!p.nets&&finite(p.points,0,700);
 const siraKarsilastir=(a,b)=>(a.rank??Infinity)-(b.rank??Infinity)||a.university.localeCompare(b.university,'tr')||a.program.localeCompare(b.program,'tr')||a.id.localeCompare(b.id);
-function suzgec(p,f){return (!f.city||p.city===+f.city)&&(!f.kind||p.type===f.kind)&&(!f.query||norm(p.university+' '+p.program+' '+p.group).includes(norm(f.query)))}
+function suzgec(p,f,q){return (!f.city||p.city===+f.city)&&(!f.kind||p.type===f.kind)&&(!q||(p._ara||(p._ara=norm(p.university+' '+p.program+' '+p.group))).includes(q))}
 // yukari: the nearest programmes with taban puan above the estimate, the nearest last. asagi: the highest at or below it.
 // yok: programmes the search finds that cannot be placed (no net profile or no puan).
 function listele(alan,puan,f={},adet=SAYFA){
- const hepsi=catalog.programs.filter(p=>p.field===alan&&suzgec(p,f)),yer=hepsi.filter(yerlesir);
+ const q=f.query?norm(f.query):'';
+ const hepsi=catalog.programs.filter(p=>p.field===alan&&suzgec(p,f,q)),yer=hepsi.filter(yerlesir);
  const ust=Number.isFinite(puan)?yer.filter(p=>p.points>puan).sort((a,b)=>a.points-b.points||siraKarsilastir(a,b)):[];
  const alt=Number.isFinite(puan)?yer.filter(p=>p.points<=puan).sort((a,b)=>b.points-a.points||siraKarsilastir(a,b)):[];
  const yok=f.query?hepsi.filter(p=>!yerlesir(p)).sort(siraKarsilastir):[];
@@ -390,14 +391,14 @@ function content(){
  const secili=catalog.programs.find(p=>p.id===o.universiteHedef?.id);
  let pin='';
  if(o.universiteHedef){
-  let fark='';
+  let fark='',e=null;
   if(secili){
-   const e=secili.field===alan?est:(()=>{const m=merkezBul(o,state.merkez,secili.field,secim);return m.tyt&&m.ayt?tahmin(secili.field,m.tyt.net,m.ayt.net,o.diplomaNotu):null})();
+   e=secili.field===alan?est:(()=>{const m=merkezBul(o,state.merkez,secili.field,secim);return m.tyt&&m.ayt?tahmin(secili.field,m.tyt.net,m.ayt.net,o.diplomaNotu):null})();
    fark=!yerlesir(secili)?'puan verisi yok':!e?'':secili.points>e.puan?'Hedefe +'+dec(secili.points-e.puan,1)+' puan':'hedefin üstünde';
   }
   const netBtn=izinli&&secili?.nets&&secili.field===o.alan?'<button class="dugme" data-ya-netler'+(saving?' disabled':'')+'>Net hedeflerini bu programa göre ayarla</button>':'';
   pin='<section class="ya-hedef"><div class="ya-heading"><h2>Hedef'+(o.universiteHedef.yil!==catalog.referenceYear?' · '+o.universiteHedef.yil:'')+'</h2>'+(fark?'<strong class="ya-hedef-fark">'+kacis(fark)+'</strong>':'')+'</div>'+
-   (secili?baslikHtml+satirHtml(secili,{puan:est?.puan??null,secili:true}):'<p>Seçilen program ('+kacis(o.universiteHedef.id)+') güncel katalogda yok.</p>')+
+   (secili?baslikHtml+satirHtml(secili,{puan:e?.puan??null,secili:true}):'<p>Seçilen program ('+kacis(o.universiteHedef.id)+') güncel katalogda yok.</p>')+
    '<div class="ya-actions">'+netBtn+(izinli?'<button class="dugme" data-ya-clear>Hedefi kaldır</button>':'')+'</div></section>';
  }
  const L=listele(alan,est?.puan,filtre,SAYFA*(state.more+1));
@@ -409,7 +410,25 @@ function content(){
   '<div class="ya-cizgi" role="separator"><span>'+(mk.kip==='gidisat'?'YKS günü: ':mk.kip==='eniyi'?'Her dersin en iyisi: ':'')+'TYT netin: '+num(mk.tyt.net)+' · AYT netin: '+num(mk.ayt.net)+'</span><strong>≈ '+dec(est.puan,1)+' puan</strong></div>'+
   '<section class="ya-liste"><div class="ya-heading"><h2>Düşersen / şu an</h2></div>'+baslikHtml+(L.asagi.length?rows(L.asagi,{puan:est.puan}):bos)+daha(L.asagiKalan)+'</section>':'';
  const yokListe=L.yok.length?'<section class="ya-liste"><div class="ya-heading"><h2>Puan verisi yok</h2></div>'+rows(L.yok,{})+(L.yokKalan?'<button class="dugme ya-daha" data-ya-more>Daha fazla</button>':'')+'</section>':'';
- return head+panel+pin+filters+listeler+yokListe+'<p class="ya-kaynak">YÖK Atlas · '+catalog.referenceYear+' yerleşme verisi</p><p id="yaStatus" role="status"></p>';
+ const listelerHtml=listeler+yokListe;
+ return head+panel+pin+filters+'<div id="yaListeler" style="display:contents">'+listelerHtml+'</div><p class="ya-kaynak">YÖK Atlas · '+catalog.referenceYear+' yerleşme verisi</p><p id="yaStatus" role="status"></p>';
+}
+function drawListeler(){
+ const kutu=document.getElementById('yaListeler');if(!kutu){draw();return}
+ if(!catalog||typeof D==='undefined'||!D.ogr?.[EK.ogr]){draw();return}
+ const o=D.ogr[EK.ogr],alan=AYT[state.field]?state.field:AYT[o.alan]?o.alan:'SAY',secim={tyt:state.tyt,ayt:state.ayt};
+ const mk=merkezBul(o,state.merkez,alan,secim),est=mk.tyt&&mk.ayt?tahmin(alan,mk.tyt.net,mk.ayt.net,o.diplomaNotu):null;
+ const izinli=!yalnizcaGoruntuleme(),filtre={city:state.city,kind:state.kind,query:state.query};
+ const L=listele(alan,est?.puan,filtre,SAYFA*(state.more+1));
+ const rows=(l,opts)=>l.map(p=>satirHtml(p,{...opts,izinli:izinli&&p.field===o.alan,secili:p.id===o.universiteHedef?.id})).join('');
+ const daha=(n)=>n>0?'<button class="dugme ya-daha" data-ya-more>Daha fazla</button>':'';
+ const bos='<p class="ya-soluk">Bu filtrelerle bölüm yok.</p>';
+ const listeler=est?
+  '<section class="ya-liste"><div class="ya-heading"><h2>Yükselirsen</h2></div>'+daha(L.yukariKalan)+baslikHtml+(L.yukari.length?rows(L.yukari,{puan:est.puan}):bos)+'</section>'+
+  '<div class="ya-cizgi" role="separator"><span>'+(mk.kip==='gidisat'?'YKS günü: ':mk.kip==='eniyi'?'Her dersin en iyisi: ':'')+'TYT netin: '+num(mk.tyt.net)+' · AYT netin: '+num(mk.ayt.net)+'</span><strong>≈ '+dec(est.puan,1)+' puan</strong></div>'+
+  '<section class="ya-liste"><div class="ya-heading"><h2>Düşersen / şu an</h2></div>'+baslikHtml+(L.asagi.length?rows(L.asagi,{puan:est.puan}):bos)+daha(L.asagiKalan)+'</section>':'';
+ const yokListe=L.yok.length?'<section class="ya-liste"><div class="ya-heading"><h2>Puan verisi yok</h2></div>'+rows(L.yok,{})+(L.yokKalan?'<button class="dugme ya-daha" data-ya-more>Daha fazla</button>':'')+'</section>':'';
+ kutu.innerHTML=listeler+yokListe;
 }
 function draw(){if(EK.sekme==='universite'&&document.getElementById('yaKok'))document.getElementById('yaKok').innerHTML=content()}
 function gorunum(){return '<div id="yaKok">'+content()+'</div>'}
@@ -431,7 +450,7 @@ document.addEventListener('change',async e=>{
 });
 document.addEventListener('input',e=>{
  if(e.target.id!=='yaSearch'||!e.target.closest?.('#yaKok'))return;
- const pos=e.target.selectionStart;state.query=e.target.value.slice(0,120);state.more=0;draw();const box=document.getElementById('yaSearch');box?.focus();if(pos!==null)box?.setSelectionRange(pos,pos);
+ state.query=e.target.value.slice(0,120);state.more=0;drawListeler();
 });
 document.addEventListener('click',async e=>{
  const b=e.target.closest?.('#yaKok button');if(!b)return;

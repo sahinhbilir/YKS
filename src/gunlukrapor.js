@@ -20,8 +20,10 @@ const KAPALI = 'Günlük rapor henüz açık değil.';
 const KURAL_NOTU = 'Günlük raporlar için firestore.rules dosyası yayınlanmalı: Firebase konsolu → Firestore Database → Rules → Publish.';
 const JPEG_BICIMI = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/;
 // Used only when the AI could not answer: a report that clearly mentions harming oneself or abuse is
-// still put at the top of the teacher's list.
-const KRIZ = /intihar|kendime zarar|kendimi (?:öldür|kes|yarala)|ölmek istiyorum|yaşamak istemiyorum|canıma kıy|istismar|tacız|dayak(?:la)? |şiddet gör/i;
+// still put at the top of the teacher's list. Tested on the text as written and Turkish-lowercased: JavaScript's /i does
+// not fold "İ" to "i", so "İNTİHAR" only matches after toLocaleLowerCase('tr-TR').
+const KRIZ = /intihar|kendime zarar|kendimi (?:öldür|kes|yarala)|ölmek istiyorum|yaşamak istemiyorum|canıma kıy|istismar|taciz|dayak(?:la)?(?![a-zçğıöşüâîû])|şiddet gör/i;
+const krizMi = metin => { const s = String(metin || ''); return KRIZ.test(s) || KRIZ.test(s.toLocaleLowerCase('tr-TR')); };
 
 /* ---------------- small helpers ---------------- */
 const hazir = () => typeof window !== 'undefined' && !!window.bulut && !!window.bulut.yapilandirilmis;
@@ -165,7 +167,7 @@ async function yapayZekaYaniti({metin, fotograflar, tercih}) {
     const t = String(ham || '').trim().replace(/^```[^\n]*\n?/, '').replace(/```\s*$/, '').trim();
     return {...yanitiDogrula(JSON.parse(t), tercih), yzBasarisiz: false};
   } catch (e) {
-    return {yanit: YZ_YOK, onemli: KRIZ.test(String(metin || '')), yzBasarisiz: true};
+    return {yanit: YZ_YOK, onemli: krizMi(metin), yzBasarisiz: true};
   }
 }
 
@@ -267,7 +269,7 @@ function ogrenciGorunum() {
 }
 
 /* ---------------- teacher page ---------------- */
-let T = {sahip: '', liste: null, yukleniyor: false, izinYok: false, hata: '', durum: '', buyuk: null};
+let T = {sahip: '', liste: null, sayi: 0, yukleniyor: false, izinYok: false, hata: '', durum: '', buyuk: null};
 const sahipUid = () => {
   const u = hazir() && window.bulut.mevcutKullanici && window.bulut.mevcutKullanici();
   return u && !u.isAnonymous ? defterUid(u) : '';
@@ -276,13 +278,14 @@ const salt = () => typeof yalnizcaGoruntuleme === 'function' && yalnizcaGoruntul
 async function yukle() {
   const sahip = sahipUid();
   if (!sahip || T.yukleniyor) return;
-  if (T.sahip !== sahip) T = {sahip, liste: null, yukleniyor: false, izinYok: false, hata: '', durum: '', buyuk: null};
+  if (T.sahip !== sahip) T = {sahip, liste: null, sayi: 0, yukleniyor: false, izinYok: false, hata: '', durum: '', buyuk: null};
   T.yukleniyor = true; T.hata = ''; T.izinYok = false;
   const b = window.bulut;
   try {
     const a = await sureSinirli(b.getDocs(b.collection(b.db, 'ogretmenYedek', sahip, 'gunlukRapor')), YAZMA_ZAMAN_ASIMI, 'Günlük raporlar zamanında alınamadı.');
     if (T.sahip !== sahipUid()) return;
     T.liste = a.docs.map(d => ({id: d.id, ...d.data()}));
+    T.sayi = T.liste.length;
   } catch (e) {
     if (T.sahip !== sahipUid()) return;
     if (izinHatasiMi(e)) T.izinYok = true; else T.hata = e && e.message ? e.message : 'Günlük raporlar alınamadı.';
@@ -290,14 +293,30 @@ async function yukle() {
   tazele();
 }
 // The count is fetched once per notebook owner, when the menu first renders; no live listener.
+// Uses getCountFromServer when available so login does not download base64 photos just for the badge.
 let SAYI_DENENDI = '';
-function sayiyiYukle() {
+async function sayiyiYukle() {
   const sahip = sahipUid();
   if (!sahip || SAYI_DENENDI === sahip || typeof rehberMi !== 'function' || !rehberMi()) return;
-  SAYI_DENENDI = sahip; yukle();
+  SAYI_DENENDI = sahip;
+  const b = window.bulut;
+  if (b && typeof b.getCountFromServer === 'function') {
+    if (T.sahip !== sahip) T = {sahip, liste: null, sayi: 0, yukleniyor: false, izinYok: false, hata: '', durum: '', buyuk: null};
+    try {
+      const snap = await sureSinirli(b.getCountFromServer(b.collection(b.db, 'ogretmenYedek', sahip, 'gunlukRapor')), YAZMA_ZAMAN_ASIMI, 'Günlük rapor sayısı alınamadı.');
+      if (T.sahip !== sahipUid() || T.liste !== null) return;
+      T.sayi = Number(snap && typeof snap.data === 'function' ? snap.data().count : 0) || 0;
+      if (typeof rayCiz === 'function') { try { rayCiz(); } catch (e) {} }
+      return;
+    } catch (e) {
+      if (T.sahip !== sahipUid()) return;
+      if (izinHatasiMi(e)) { T.izinYok = true; return; }
+    }
+  }
+  yukle();
 }
 function rozet(id) {
-  const n = T.liste && T.liste.length;
+  const n = T.liste ? T.liste.length : T.sayi;
   return n && (id === 'gunlukrapor' || id === 'ogrenciler') ? ' <span class="gr-sayi" aria-label="' + n + ' okunmamış günlük rapor">' + n + '</span>' : '';
 }
 const etkin = () => typeof EK !== 'undefined' && EK.sekme === 'gunlukrapor';
@@ -321,7 +340,7 @@ function ogeHtml(r, saltOkunur) {
     (fotos.length ? '<div class="gr-fotolar">' + fotos.map((f, i) => '<button type="button" class="gr-kucuk" data-gr-buyut="' + kacis(r.id) + ':' + i +
       '" aria-label="Fotoğrafı büyüt"><img src="' + kacis(f) + '" alt="Öğrencinin fotoğrafı ' + (i + 1) + '"></button>').join('') + '</div>' : '') +
     '<div class="gr-yz"><span class="mini">Yapay zekâ yanıtı</span><p class="gr-metin">' + kacis(r.yzYanit || '') + '</p></div>' +
-    (saltOkunur ? '' : '<div class="gr-satir"><button type="button" class="dugme birincil" data-gr-gordum="' + kacis(r.id) + '">Gördüm</button></div>') + '</article>';
+    (saltOkunur ? '' : '<div class="gr-satir"><button type="button" class="dugme birincil" data-gr-gordum="' + kacis(r.id) + '"' + (T.siliniyor ? ' disabled' : '') + '>Gördüm</button></div>') + '</article>';
 }
 function ogretmenIcerik() {
   const saltOkunur = salt(), liste = T.liste ? sirala(T.liste) : null;
@@ -333,8 +352,8 @@ function ogretmenIcerik() {
   else if (!liste.length) gov = '<section class="gr-kart gr-bos"><b>Okunmamış günlük rapor yok</b></section>';
   else gov = liste.map(r => ogeHtml(r, saltOkunur)).join('');
   return '<div class="baslik"><h1>Günlük raporlar</h1>' + (liste && liste.length ? '<p>' + liste.length + ' okunmamış</p>' : '') + '</div>' +
-    '<div class="arac"><button type="button" class="dugme" id="grYenile"' + (T.yukleniyor ? ' disabled' : '') + '>Yenile</button>' +
-    (!saltOkunur && liste && liste.length ? '<button type="button" class="dugme" id="grTumu">Tümünü gördüm</button>' : '') + '</div>' +
+    '<div class="arac"><button type="button" class="dugme" id="grYenile"' + (T.yukleniyor || T.siliniyor ? ' disabled' : '') + '>Yenile</button>' +
+    (!saltOkunur && liste && liste.length ? '<button type="button" class="dugme" id="grTumu"' + (T.siliniyor ? ' disabled' : '') + '>Tümünü gördüm</button>' : '') + '</div>' +
     '<p id="grDurum" class="gr-durum" role="status" aria-live="polite">' + kacis(durum) + '</p>' + gov +
     (T.buyuk ? '<div class="gr-ortu" id="grOrtu" role="dialog" aria-modal="true" aria-label="Fotoğraf"><button type="button" class="dugme" id="grKapat">Kapat</button><img src="' + kacis(T.buyuk) + '" alt="Büyütülmüş fotoğraf"></div>' : '');
 }
@@ -344,20 +363,24 @@ function ogretmenGorunum() {
   return '<div id="grKok">' + ogretmenIcerik() + '</div>';
 }
 async function sil(idler) {
-  const sahip = sahipUid(), b = window.bulut;
-  if (!sahip || salt()) return;
+  const sahip = sahipUid(), b = window.bulut, durumT = T;
+  if (!sahip || salt() || durumT.siliniyor) return;
   let silinen = 0;
+  durumT.siliniyor = true; tazele();
   try {
     for (const id of idler) {
       await sureSinirli(b.deleteDoc(b.doc(b.db, 'ogretmenYedek', sahip, 'gunlukRapor', id)), YAZMA_ZAMAN_ASIMI, 'Silme zamanında tamamlanamadı.');
-      if (T.sahip !== sahip) return;
-      T.liste = T.liste.filter(r => r.id !== id); silinen++;
+      if (T !== durumT || T.sahip !== sahip) return;
+      // the list may have been cleared (Yenile, logout) while the delete was on its way
+      if (Array.isArray(T.liste)) { T.liste = T.liste.filter(r => r.id !== id); T.sayi = T.liste.length; }
+      silinen++;
     }
-    T.durum = '';
+    durumT.durum = '';
   } catch (e) {
-    T.durum = izinHatasiMi(e) ? 'Silinemedi: izin yok. Defteri başka biri düzenliyor olabilir ya da firestore.rules yayınlanmamış.'
+    if (T !== durumT || T.sahip !== sahip) return;
+    durumT.durum = izinHatasiMi(e) ? 'Silinemedi: izin yok. Defteri başka biri düzenliyor olabilir ya da firestore.rules yayınlanmamış.'
       : 'Silinemedi: ' + (e && e.message ? e.message : 'bağlantı hatası') + (silinen ? ' (' + silinen + ' rapor silindi.)' : '');
-  }
+  } finally { durumT.siliniyor = false; }
   tazele();
 }
 
@@ -408,7 +431,9 @@ document.addEventListener('click', ev => {
     if (n && confirm(n + ' raporun hepsi görüldü olarak silinsin mi?')) sil(T.liste.map(r => r.id));
   } else if (el.dataset.grBuyut) {
     const [id, i] = el.dataset.grBuyut.split(':'), r = (T.liste || []).find(x => x.id === id);
-    T.buyuk = r && r.fotograflar[Number(i)] || null; tazele();
+    // the thumbnails number only the valid photos (see the card), so look the index up in the same filtered list
+    const fotos = r && Array.isArray(r.fotograflar) ? r.fotograflar.filter(f => typeof f === 'string' && JPEG_BICIMI.test(f)) : [];
+    T.buyuk = fotos[Number(i)] || null; tazele();
   } else if (el.id === 'grKapat') { T.buyuk = null; tazele(); }
 });
 document.addEventListener('click', ev => { if (ogretmenEtkin() && T.buyuk && ev.target.id === 'grOrtu') { T.buyuk = null; tazele(); } });
@@ -420,7 +445,7 @@ document.addEventListener('change', ev => {
   if (dosyalar.length) fotoEkle(dosyalar);
 });
 // A different student or teacher on this tab starts from an empty form and an empty list.
-function sifirla() { S = {metin: '', fotos: [], tercih: '', durum: '', mesgul: false, sonuc: null}; T = {sahip: '', liste: null, yukleniyor: false, izinYok: false, hata: '', durum: '', buyuk: null};
+function sifirla() { S = {metin: '', fotos: [], tercih: '', durum: '', mesgul: false, sonuc: null}; T = {sahip: '', liste: null, sayi: 0, yukleniyor: false, izinYok: false, hata: '', durum: '', buyuk: null};
   SAYI_DENENDI = ''; SAHIP_ONBELLEK = null; BEKLEYEN = null; BELLEK.clear(); }
 return {KOTA, METIN_UST, YANIT_UST, FOTO_UST, FOTO_KARAKTER, FOTO_HEDEF, ONEKLER, YZ_YOK, KAPALI, KURAL_NOTU, gunKodu, raporId, onEk, dogrula, istem, parcalar, yanitiDogrula,
   yapayZekaYaniti, gonder, olcek, sikistirDizi, fotoSikistir, uygun, ogrenciGorunum, ogretmenGorunum, yukle, sayiyiYukle, rozet, sirala, sifirla,

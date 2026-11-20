@@ -711,6 +711,10 @@ for ix, kap in B.items():
     if anahtar not in var_b: var_b.add(anahtar); birimler.append({'ders': KISA[k[0]], 'sinif': k[1], 'ad': k[3], 'kapsar': kap})
 yalniz = [k['id'] for k in konular if not any(b['alt'] == k['id'] or b['ust'] == k['id'] for b in baglar) and not k.get('gizli')]
 if hata: print('\n'.join(hata)); sys.exit(1)
+# A pilot row that this file defines again (the school's TYT table rows of 2026-11-18 were later copied into the pilot) is
+# counted once, the later definition winning; otherwise its expected questions were summed twice.
+son = {(r['sinav'], r['ders'], r['konu']): i_ for i_, r in enumerate(S)}
+S[:] = [r for i_, r in enumerate(S) if son[(r['sinav'], r['ders'], r['konu'])] == i_]
 cikti = {'surum': '2026-11-18-yks', 'not': 'Tam harita: YKS planlarının bütün dersleri (Geometri, Matematik TYT ve AYT, Fizik, Kimya, Biyoloji, Türkçe, Türk Dili ve Edebiyatı, Tarih, İnkılap Tarihi, Coğrafya, Felsefe grubu, Din Kültürü); her konunun hangi sınavda sorulduğu (sinav). Pilot olduğu gibi korunur. "Genel Tekrar" bir konu değil; "(devamı)" konuları kendi konusunu besler (uygulama eşler).',
          'konular': konular, 'baglar': baglar, 'sinavSatirlari': S, 'birimler': birimler}
 json.dump(cikti, open('data/hafiza-haritasi-tam.json', 'w', encoding='utf8'), ensure_ascii=False, indent=1)

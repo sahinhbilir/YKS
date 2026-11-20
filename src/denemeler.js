@@ -289,7 +289,7 @@ function denemeBul(id) {
 }
 function denemeOkulUygula(si, veri) {
   if (veri === undefined) return false;
-  if (typeof veri !== 'string' || veri.length>300000) throw new Error('Okul deneme verisi geçersiz.');
+  if (typeof veri !== 'string' || (typeof baytBoyu === 'function' ? baytBoyu(veri) : veri.length) > 300000) throw new Error('Okul deneme verisi geçersiz.');
   const gelen=denemeDogrula(JSON.parse(veri));
   if(gelen.some(r=>!r.id.startsWith('p:')))throw new Error('Okul deneme kimliği geçersiz.');
   const o=D.ogr[si], yeni=denemeBirlestir(o.denemeOkul,gelen);
@@ -369,12 +369,19 @@ function denemePdfCoz(sayfalar) {
   }
   if (!rapor.satirlar.length) throw new Error('PDF’de aktarılabilir sonuç yok.');
   // A grade's own exam (a TYT without some 12. sınıf lesson) has its own question counts.
+  // A 12. sınıf TYT whose Matematik + Geometri are printed together only omits geo: stamp mat=40 without shrinking other subjects.
   const tyt=rapor.satirlar.filter(r=>r.oturum==='TYT'), kodlar=new Set(tyt.flatMap(r=>r.dersler.map(d=>d.kod)));
-  if (tyt.length && DENEME_DERSLER.TYT.some(d=>d[0]!=='sf' && !kodlar.has(d[0])))
+  const eksik=tyt.length?DENEME_DERSLER.TYT.filter(d=>d[0]!=='sf' && !kodlar.has(d[0])).map(d=>d[0]):[];
+  const matEnCok=kodlar.has('mat')?Math.max(...tyt.flatMap(r=>r.dersler.filter(d=>d.kod==='mat').map(d=>d.dogru+d.yanlis))):0;
+  const birlesikMat=eksik.length===1 && eksik[0]==='geo' && kodlar.has('mat') && (matEnCok>30 || tyt.every(r=>r.dersler.every(d=>{const std=DENEME_DERSLER.TYT.find(x=>x[0]===d.kod)?.[2];return !std || d.kod==='mat' || d.dogru+d.yanlis<=std;})));
+  if (birlesikMat) {
+    for (const r of tyt) for (const d of r.dersler) if (d.kod==='mat') d.soru=40;
+  } else if (eksik.length) {
     for (const kod of kodlar) {
       const soru=denemeSoruTahmini(kod,Math.max(...tyt.flatMap(r=>r.dersler.filter(d=>d.kod===kod).map(d=>d.dogru+d.yanlis))));
       for (const r of tyt) for (const d of r.dersler) if (d.kod===kod) d.soru=soru;
     }
+  }
   delete rapor.sutunlar;
   return rapor;
 }
@@ -439,13 +446,28 @@ function denemeOgrenciEsle(row) {
   const aday=row.no===null?adlar:adlar.filter(({o})=>Number(o.no)===row.no);
   return aday.length===1?aday[0].i:-1;
 }
+let DENEME_SIRA_TUR_ONBELLEK=null;
 function denemePdfSinavTuru(rapor) {
   const varsayilan = /tarama/.test(String(rapor.ad || '').toLocaleLowerCase('tr-TR')) ? 'tarama' : 'genel';
   if (typeof SIRALAMA === 'undefined') return varsayilan;
-  const veri = SIRALAMA.oku().veri;
-  const aday = (veri?.sinavlar || []).filter(s => denemeAdAnahtari(s.ad) === denemeAdAnahtari(rapor.ad));
-  const tarihler = s => [s.tarih,s.T?.tarih,s.F?.tarih].filter(Boolean).map(t => { const m=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t); return m ? m[3]+'-'+m[2]+'-'+m[1] : t; });
-  const eslesen = aday.filter(s => tarihler(s).includes(rapor.tarih));
+  const ham = typeof D !== 'undefined' ? D.siralama : null, okuFn = SIRALAMA.oku;
+  const imza = ham && Array.isArray(ham.sinavlar) ? ham.sinavlar.map(s => (s.id || '') + ':' + (s.ts || 0) + ':' + (s.tur || '') + ':' + (s.tarih || '')).join('|') : '';
+  let byAd;
+  if (DENEME_SIRA_TUR_ONBELLEK && DENEME_SIRA_TUR_ONBELLEK.ham === ham && DENEME_SIRA_TUR_ONBELLEK.imza === imza && DENEME_SIRA_TUR_ONBELLEK.okuFn === okuFn) {
+    byAd = DENEME_SIRA_TUR_ONBELLEK.byAd;
+  } else {
+    const veri = okuFn().veri;
+    byAd = new Map();
+    const normT = t => { const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(t); return m ? m[3] + '-' + m[2] + '-' + m[1] : t; };
+    for (const s of veri?.sinavlar || []) {
+      const k = denemeAdAnahtari(s.ad), ts = [s.tarih, s.T?.tarih, s.F?.tarih].filter(Boolean).map(normT);
+      let l = byAd.get(k); if (!l) { l = []; byAd.set(k, l); }
+      l.push({ tur: s.tur || '', tarihler: ts });
+    }
+    DENEME_SIRA_TUR_ONBELLEK = { ham, imza, okuFn, byAd };
+  }
+  const aday = byAd.get(denemeAdAnahtari(rapor.ad)) || [];
+  const eslesen = aday.filter(s => s.tarihler.includes(rapor.tarih));
   return eslesen.length === 1 ? (eslesen[0].tur || varsayilan) : varsayilan;
 }
 // The day of one session of a report: a combined TYT+AYT file has a day per session (denemeImportHazirla fills them);
@@ -568,7 +590,7 @@ function denemeDinlemeyiBaslat() {
       // Receiving teacher data is not a student edit. Advancing ogrCalismaTs here
       // would let an idle device overwrite another device's newer working plan.
       const sonra=JSON.stringify(o.denemeOkul || []);
-      try { await LOCAL_STORE.set('yks_veri',JSON.stringify(D)); }
+      try { const j=JSON.stringify(D); await (typeof yerelVeriYazSirali==='function'?yerelVeriYazSirali(j):LOCAL_STORE.set('yks_veri',j)); }
       catch(e) { if(D===defter && JSON.stringify(o.denemeOkul || [])===sonra)o.denemeOkul=JSON.parse(once); throw e; }
       if((EK.sekme==='denemeler' && !DENEME_FORM)||EK.sekme==='universite')ciz();
     } }
@@ -1207,6 +1229,15 @@ document.addEventListener('click',async ev=>{
     let srNot='';
     try {
       if(el.id==='dnImportKaydet'){
+        if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');
+        const staged=new Map();
+        for(const p of DENEME_IMPORT || [])for(const row of p.satirlar.filter(r=>r.secili)){
+          if(!D.ogr[row.si] || D.ogr[row.si].silindi)throw new Error('Seçilen her satıra hedef öğrenci atayın.');
+          if(row.hedefKimlik!==denemeHedefKimligi(D.ogr[row.si]))throw new Error('Öğrenci listesi değişti. PDF’yi yeniden seçip eşleşmeleri kontrol edin.');
+          const r=denemePdfKaydi(p,row),old=staged.get(row.si)||D.ogr[row.si].denemeOkul||[],same=old.find(x=>x.id===r.id);
+          if(same)r.ts=Math.max(r.ts,same.ts+1);
+          staged.set(row.si,denemeKayitDegistir(old,r));
+        }
         // Sıralamalar keeps the school's whole list, even when no student row is selected here.
         // The lists keep the days the teacher confirmed: one day for a plain file, a day per session for a combined one.
         const iki=iso=>iso?iso.slice(8)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4):'';
@@ -1217,14 +1248,6 @@ document.addEventListener('click',async ev=>{
         const listeler=(DENEME_IMPORT || []).map(p=>p.siralama).filter(Boolean);
         if(listeler.length){try{await siralamaKaydet(listeler);srNot=' Sıralama listesi Sıralamalar’a eklendi.';}catch(e){srNot=' Sıralama listesi eklenemedi: '+e.message;}}
         if(D!==defter || !rehberMi())throw new Error('Oturum değişti.');
-        const staged=new Map();
-        for(const p of DENEME_IMPORT || [])for(const row of p.satirlar.filter(r=>r.secili)){
-          if(!D.ogr[row.si] || D.ogr[row.si].silindi)throw new Error('Seçilen her satıra hedef öğrenci atayın.');
-          if(row.hedefKimlik!==denemeHedefKimligi(D.ogr[row.si]))throw new Error('Öğrenci listesi değişti. PDF’yi yeniden seçip eşleşmeleri kontrol edin.');
-          const r=denemePdfKaydi(p,row),old=staged.get(row.si)||D.ogr[row.si].denemeOkul||[],same=old.find(x=>x.id===r.id);
-          if(same)r.ts=Math.max(r.ts,same.ts+1);
-          staged.set(row.si,denemeKayitDegistir(old,r));
-        }
         if(!staged.size)throw new Error('Aktarılacak sonuç seçilmedi.');
         await denemeTopluYerelKaydet(staged);
         DENEME_IMPORT=null;

@@ -267,8 +267,8 @@ const TYT_WEEKLY = (() => {
   function actionable(si,x,gun) {
     if(!Number.isInteger(gun)||gun>bugunNo())return false;
     const real=ledger(si),topics=TYT_METOT.topics(si).filter(t=>t.tyt&&t.c);
-    if(x.metotTur==='recall')return real.videos.has(x.ki)&&real.videos.get(x.ki)+3===gun;
-    if(x.metotTur==='overviewRecall')return real.intros.has('g|TYT|tr')&&real.intros.get('g|TYT|tr')+3===gun;
+    if(x.metotTur==='recall')return real.videos.has(x.ki)&&real.videos.get(x.ki)+3<=gun;
+    if(x.metotTur==='overviewRecall')return real.intros.has('g|TYT|tr')&&real.intros.get('g|TYT|tr')+3<=gun;
     if(x.metotTur==='branch') {
       const group=x.metotDers==='sos'?SOCIAL:x.metotDers==='fen'?SCIENCE:[x.metotDers];
       const xs=topics.filter(t=>group.includes(t.c));
